@@ -267,7 +267,7 @@
       quadPuzzleAction: 'Position better',
       quadDog: 'Dogs',
       quadDogHint: 'Few orders, low contribution',
-      quadDogAction: 'Review',
+      quadDogAction: 'Rework or remove',
       matrixLabelStar: 'STARS',
       matrixHintStar: 'High contribution · high volume',
       matrixLabelPlow: 'TO OPTIMIZE',
@@ -304,6 +304,23 @@
       insightStale: 'Cost sheets with purchase prices older than 90 days: {items}. Update the prices.',
       insightNone: 'Nothing to flag for this period.',
       insightOpenSheet: 'Open the cost sheets',
+      mxTitle: 'Menu matrix',
+      mxSub: 'Each dot is a dish that sold and has a cost. Further right: sells more. Higher up: contributes more per item. The dashed lines are the medians of your own menu.',
+      mxMedianQty: 'median · {n} sold',
+      mxMedianProfit: 'median · {amount}',
+      mxPerUnit: '{amount} per item',
+      mxSoldN: '{n} sold',
+      mxMore: '+ {n} more',
+      mxEmptyQuad: 'No dish here',
+      mxTooFew: 'At least two dishes that sold and have a complete cost are needed to compare them. Complete the recipes of the dishes you sell.',
+      mxCluster: '{n} dishes at the same spot',
+      mxBasis: 'Based on {n} dishes',
+      mxAxisY: 'Contribution per item',
+      mxAxisX: 'Sold · last {n} days',
+      mxSize: 'Dot size = sales',
+      mxRateSub: 'of the costed dishes’ sales',
+      perfDetail: 'Detail by item',
+      mxContribution: '{amount} contribution',
       recipeDraftTitle: 'Draft, not saved',
       recipeDraftFrom: 'Taken from the cost sheet “{name}”. Check each ingredient against your stock, then save: until then nothing changes.',
       recipeDraftExisting: 'The current recipe stays in place until you save.',
@@ -669,7 +686,7 @@
       quadPuzzleAction: 'تحسين الموضع',
       quadDog: 'أعباء (Dogs)',
       quadDogHint: 'طلب ضعيف ومساهمة منخفضة',
-      quadDogAction: 'مراجعة',
+      quadDogAction: 'إعادة العمل أو الحذف',
       matrixLabelStar: 'نجوم (STARS)',
       matrixHintStar: 'مساهمة عالية · حجم مبيعات قوي',
       matrixLabelPlow: 'للتحسين',
@@ -706,6 +723,23 @@
       insightStale: 'بطاقات تكلفة بأسعار شراء أقدم من 90 يوماً: {items}. حدّث الأسعار.',
       insightNone: 'لا شيء يستدعي الانتباه في هذه الفترة.',
       insightOpenSheet: 'فتح بطاقات التكلفة',
+      mxTitle: 'مصفوفة القائمة',
+      mxSub: 'كل نقطة طبق بيع وله تكلفة. إلى اليمين: يُباع أكثر. إلى الأعلى: يساهم أكثر لكل وحدة. الخطوط المتقطعة هي وسيط قائمتك.',
+      mxMedianQty: 'الوسيط · {n} مبيعة',
+      mxMedianProfit: 'الوسيط · {amount}',
+      mxPerUnit: '{amount} للوحدة',
+      mxSoldN: '{n} مبيعة',
+      mxMore: '+ {n} أخرى',
+      mxEmptyQuad: 'لا طبق هنا',
+      mxTooFew: 'يلزم طبقان على الأقل بيعا ولهما تكلفة كاملة للمقارنة بينهما. أكمل وصفات الأطباق التي تبيعها.',
+      mxCluster: '{n} أطباق في الموضع نفسه',
+      mxBasis: 'محسوب على {n} أطباق',
+      mxAxisY: 'المساهمة لكل منتج',
+      mxAxisX: 'المبيعات · آخر {n} يوماً',
+      mxSize: 'حجم النقطة = المبيعات',
+      mxRateSub: 'من مبيعات الأطباق المحسوبة',
+      perfDetail: 'التفاصيل حسب المنتج',
+      mxContribution: 'مساهمة {amount}',
       recipeDraftTitle: 'مسودة غير محفوظة',
       recipeDraftFrom: 'مأخوذة من بطاقة التكلفة «{name}». راجع كل مكوّن مقابل مخزونك ثم احفظ: لا يتغير شيء قبل ذلك.',
       recipeDraftExisting: 'الوصفة الحالية تبقى كما هي حتى تحفظ.',
@@ -1074,7 +1108,7 @@
       quadPuzzleAction: 'Mieux les positionner',
       quadDog: 'Dogs',
       quadDogHint: 'Peu commandés, contribution faible',
-      quadDogAction: 'À revoir',
+      quadDogAction: 'Retravailler ou retirer',
       matrixLabelStar: 'STARS',
       matrixHintStar: 'Forte contribution · volume fort',
       matrixLabelPlow: 'À OPTIMISER',
@@ -1111,6 +1145,23 @@
       insightStale: 'Fiches de coût aux prix d’achat de plus de 90 jours : {items}. Mettez les prix à jour.',
       insightNone: 'Rien à signaler sur cette période.',
       insightOpenSheet: 'Ouvrir les fiches de coût',
+      mxTitle: 'Matrice de la carte',
+      mxSub: 'Chaque point est un plat vendu et chiffré. Plus à droite : il se vend plus. Plus haut : il rapporte plus par article. Les pointillés sont les médianes de votre propre carte.',
+      mxMedianQty: 'médiane · {n} vendus',
+      mxMedianProfit: 'médiane · {amount}',
+      mxPerUnit: '{amount} par article',
+      mxSoldN: '{n} vendus',
+      mxMore: '+ {n} autres',
+      mxEmptyQuad: 'Aucun plat ici',
+      mxTooFew: 'Il faut au moins deux plats vendus et entièrement chiffrés pour les comparer. Complétez les recettes des plats que vous vendez.',
+      mxCluster: '{n} plats au même endroit',
+      mxBasis: 'Calculé sur {n} plats',
+      mxAxisY: 'Contribution par article',
+      mxAxisX: 'Vendus · {n} derniers jours',
+      mxSize: 'Taille du point = chiffre d’affaires',
+      mxRateSub: 'du chiffre d’affaires des plats chiffrés',
+      perfDetail: 'Détail par article',
+      mxContribution: '{amount} de contribution',
       recipeDraftTitle: 'Brouillon, non enregistré',
       recipeDraftFrom: 'Tiré de la fiche de coût « {name} ». Vérifiez chaque ingrédient face à votre stock, puis enregistrez : d’ici là, rien ne change.',
       recipeDraftExisting: 'La recette actuelle reste en place tant que vous n’enregistrez pas.',
@@ -1589,28 +1640,84 @@
   }
   function perfQuads(){
     return {
-      star:{title:ui('quadStar'),hint:ui('quadStarHint'),action:ui('quadStarAction')},
-      plow:{title:ui('quadPlow'),hint:ui('quadPlowHint'),action:ui('quadPlowAction')},
-      puzzle:{title:ui('quadPuzzle'),hint:ui('quadPuzzleHint'),action:ui('quadPuzzleAction')},
-      dog:{title:ui('quadDog'),hint:ui('quadDogHint'),action:ui('quadDogAction')},
+      star:{title:ui('legendStar'),hint:ui('quadStarHint'),action:ui('quadStarAction')},
+      plow:{title:ui('legendPlow'),hint:ui('quadPlowHint'),action:ui('quadPlowAction')},
+      puzzle:{title:ui('legendPuzzle'),hint:ui('quadPuzzleHint'),action:ui('quadPuzzleAction')},
+      dog:{title:ui('legendDog'),hint:ui('quadDogHint'),action:ui('quadDogAction')},
     };
   }
+  const pct1=(v)=>(window.KiwiNumber?.format(v,{minimumFractionDigits:1,maximumFractionDigits:1})??(+v).toLocaleString(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1}))+' %';
+  const perfNum=(v)=>window.KiwiNumber?.format(v,{})??(+v).toLocaleString(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{maximumFractionDigits:2});
+  /* La matrice de la carte. Échelles linéaires (une racine écrasait tout
+     contre le bord droit), marge intérieure pour qu'aucun point ne colle au
+     cadre, chaque plat nommé à côté de son point quand la place le permet,
+     plats superposés regroupés en un seul point numéroté. Le placement des
+     noms se calcule sur une toile nominale : sur téléphone, seuls les plus
+     gros chiffres d'affaires gardent leur nom, la liste des quadrants
+     nomme tout le reste. */
+  const MX_W=680,MX_H=340;
+  function perfMatrixLayout(p){
+    const pts=[...p.measured].sort((a,b)=>b.revenue-a.revenue);
+    const maxQ=Math.max(...pts.map(r=>r.qty)),ups=pts.map(r=>r.unitProfit),maxP=Math.max(0,...ups),minP=Math.min(0,...ups),maxRev=Math.max(1,...pts.map(r=>r.revenue));
+    const xMax=(maxQ||1)*1.1,yMin=minP<0?minP*1.2:0,yMax=(maxP>0?maxP:1)*1.18;
+    const X=(v)=>4+92*(v/xMax),Y=(v)=>5+88*((v-yMin)/(yMax-yMin));
+    const clusters=[];
+    pts.forEach(r=>{
+      const x=X(r.qty),y=Y(r.unitProfit),size=12+Math.sqrt(r.revenue/maxRev)*16,px=x/100*MX_W,py=y/100*MX_H;
+      const hit=clusters.find(c=>Math.hypot(c.px-px,c.py-py)<(c.size+size)*0.3);
+      if(hit){hit.members.push(r);hit.size=Math.min(34,hit.size+3);return;}
+      clusters.push({x,y,px,py,size,members:[r],quadrant:r.quadrant});
+    });
+    const boxes=[],hits=(b)=>b.x0<0||b.y0<0||b.x1>MX_W||b.y1>MX_H||boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0)||clusters.some(c=>{const r=c.size/2;return b.x0<c.px+r&&b.x1>c.px-r&&b.y0<c.py+r&&b.y1>c.py-r;});
+    clusters.forEach((c,i)=>{
+      const first=t(c.members[0].item.name),text=c.members.length>1?`${first} +${c.members.length-1}`:first;
+      const w=Math.min(150,text.length*6.3+14),h=18,r=c.size/2;
+      const cand={r:{x0:c.px+r+5,x1:c.px+r+5+w,y0:c.py-h/2,y1:c.py+h/2},l:{x0:c.px-r-5-w,x1:c.px-r-5,y0:c.py-h/2,y1:c.py+h/2},t:{x0:c.px-w/2,x1:c.px+w/2,y0:c.py+r+4,y1:c.py+r+4+h},b:{x0:c.px-w/2,x1:c.px+w/2,y0:c.py-r-4-h,y1:c.py-r-4}};
+      const own=clusters.filter(o=>o!==c);
+      const free=(bx)=>!(bx.x0<0||bx.y0<0||bx.x1>MX_W||bx.y1>MX_H||boxes.some(o=>bx.x0<o.x1&&bx.x1>o.x0&&bx.y0<o.y1&&bx.y1>o.y0)||own.some(o=>{const rr=o.size/2;return bx.x0<o.px+rr&&bx.x1>o.px-rr&&bx.y0<o.py+rr&&bx.y1>o.py-rr;}));
+      const pos=['r','l','t','b'].find(k=>free(cand[k]));
+      if(pos){boxes.push(cand[pos]);c.label={text,pos,keep:i<3};}
+    });
+    return {clusters,vx:X(p.medQty),hy:Y(p.medProfit),zero:yMin<0?Y(0):null};
+  }
   function performanceMatrix(p){
-    const maxQty=Math.max(1,...p.measured.map(x=>x.qty)),maxProfit=Math.max(1,...p.measured.map(x=>Math.max(0,x.unitProfit))),maxRevenue=Math.max(1,...p.measured.map(x=>x.revenue));
-    const x=v=>Math.sqrt(Math.max(0,v)/maxQty)*100,y=v=>Math.sqrt(Math.max(0,v)/maxProfit)*100;
-    const counts={star:0,plow:0,puzzle:0,dog:0};p.measured.forEach(r=>counts[r.quadrant]++);
-    const legend=[['star',ui('legendStar')],['puzzle',ui('legendPuzzle')],['plow',ui('legendPlow')],['dog',ui('legendDog')]].map(([q,label])=>`<span class="${q}"><i></i>${esc(label)}<b>${counts[q]}</b></span>`).join('');
-    const dots=p.measured.map((r,i)=>{const size=11+Math.sqrt(r.revenue/maxRevenue)*19;const cName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('article');const itName=t(r.item.name);return `<button class="rmw-perf-dot ${r.quadrant}" style="left:${x(r.qty).toFixed(2)}%;bottom:${y(r.unitProfit).toFixed(2)}%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;z-index:${i+1}" data-action="rmw-recipe-edit" data-arg="${esc(r.item.id)}" aria-label="${esc(itName)}"><span><em>${esc(cName)}</em><b>${esc(itName)}</b><small><i>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui('colSold').toLowerCase())}</i><i>${cash(r.revenue)} ${esc(ui('colRevenueDesc'))}</i><i>${cash(r.profit)} ${esc(ui('colProfitDesc'))}</i></small><strong>${r.marginPct==null?'·':r.marginPct.toFixed(1)+' %'} ${esc(ui('colMarginDesc'))}</strong></span></button>`;}).join('');
-    return `<div class="rmw-perf-matrix"><div class="rmw-perf-legend">${legend}</div><div class="rmw-perf-chart"><div class="rmw-perf-y">${esc(ui('grossProfitPerItem'))}</div><div class="rmw-perf-plot"><i class="rmw-perf-v" style="left:${x(p.medQty).toFixed(2)}%"></i><i class="rmw-perf-h" style="bottom:${y(p.medProfit).toFixed(2)}%"></i><div class="rmw-perf-label puzzle"><b>${esc(ui('matrixLabelPuzzle'))}</b><small>${esc(ui('matrixHintPuzzle'))}</small></div><div class="rmw-perf-label star"><b>${esc(ui('matrixLabelStar'))}</b><small>${esc(ui('matrixHintStar'))}</small></div><div class="rmw-perf-label dog"><b>${esc(ui('matrixLabelDog'))}</b><small>${esc(ui('matrixHintDog'))}</small></div><div class="rmw-perf-label plow"><b>${esc(ui('matrixLabelPlow'))}</b><small>${esc(ui('matrixHintPlow'))}</small></div>${dots}</div><div class="rmw-perf-x">${esc(ui('popularityXDays', { n: p.days }))}</div></div><div class="rmw-perf-caption"><span>${esc(ui('perfDotSizeHint'))}</span><span>${esc(ui('perfAxesHint'))}</span><span>${esc(ui('perfClickHint'))}</span></div></div>`;
+    if(p.measured.length<2)return `<section class="mi-section rmw-mx"><div class="rmw-mx-head"><div><h3>${esc(ui('mxTitle'))}</h3></div></div><div class="rmw-mx-few"><p>${esc(ui('mxTooFew'))}</p></div></section>`;
+    const quads=perfQuads(),M=perfMatrixLayout(p),pc=(v)=>v.toFixed(2)+'%';
+    const zone=(k,css)=>`<div class="rmw-mx-zone ${k}" style="${css}"><em>${esc(quads[k].title)}</em></div>`;
+    const zones=zone('puzzle',`left:0;top:0;width:${pc(M.vx)};height:${pc(100-M.hy)}`)+zone('star',`left:${pc(M.vx)};right:0;top:0;height:${pc(100-M.hy)}`)+zone('dog',`left:0;bottom:0;width:${pc(M.vx)};height:${pc(M.hy)}`)+zone('plow',`left:${pc(M.vx)};right:0;bottom:0;height:${pc(M.hy)}`);
+    const tipRow=(r)=>`<span class="rmw-mx-tip-row"><b>${esc(t(r.item.name))}</b><small>${esc(ui('mxSoldN',{n:perfNum(r.qty)}))} · ${cash(r.revenue)} ${esc(ui('colRevenueDesc'))}</small><small>${esc(ui('mxPerUnit',{amount:cash(r.unitProfit)}))} · ${r.marginPct==null?'·':pct1(r.marginPct)} ${esc(ui('colMarginDesc'))}</small></span>`;
+    const dots=M.clusters.map((c,i)=>{
+      const one=c.members.length===1,r=c.members[0],q=quads[c.quadrant];
+      const side=(c.x>72?' end':c.x<28?' start':'')+(c.y>62?' down':'');
+      const name=one?t(r.item.name):ui('mxCluster',{n:c.members.length});
+      const tip=`<span class="rmw-mx-tip" role="tooltip"><em>${esc(q.title)}</em>${one?'':`<strong>${esc(name)}</strong>`}${c.members.map(tipRow).join('')}</span>`;
+      const attrs=one?` data-action="rmw-recipe-edit" data-arg="${esc(r.item.id)}"`:'';
+      const dot=`<button type="button" class="rmw-mx-dot ${c.quadrant}${side}" style="left:${pc(c.x)};bottom:${pc(c.y)};--s:${c.size.toFixed(1)}px;z-index:${10+i}"${attrs} aria-label="${esc(name+' · '+q.title)}">${one?'':`<b>${c.members.length}</b>`}${tip}</button>`;
+      const lab=c.label?`<span class="rmw-mx-lab ${c.label.pos}${c.label.keep?' keep':''}" style="left:${pc(c.x)};bottom:${pc(c.y)};--r:${(c.size/2).toFixed(1)}px" aria-hidden="true">${esc(c.label.text)}</span>`:'';
+      return dot+lab;
+    }).join('');
+    const med=`<i class="rmw-mx-med v" style="left:${pc(M.vx)}"><span>${esc(ui('mxMedianQty',{n:perfNum(Math.round(p.medQty*10)/10)}))}</span></i><i class="rmw-mx-med h" style="bottom:${pc(M.hy)}"><span>${esc(ui('mxMedianProfit',{amount:cash(Math.round(p.medProfit*100)/100)}))}</span></i>${M.zero!=null?`<i class="rmw-mx-zero" style="bottom:${pc(M.zero)}"><span>0 MAD</span></i>`:''}`;
+    return `<section class="mi-section rmw-mx" data-mx><div class="rmw-mx-head"><div><h3>${esc(ui('mxTitle'))}</h3><p>${esc(ui('mxSub'))}</p></div><div class="rmw-mx-key"><span><i style="width:8px;height:8px"></i><i style="width:14px;height:14px"></i>${esc(ui('mxSize'))}</span><span>${esc(ui('mxBasis',{n:p.measured.length}))}</span></div></div><div class="rmw-mx-body"><figure class="rmw-mx-chart"><figcaption class="rmw-mx-axis y">${esc(ui('mxAxisY'))}</figcaption><div class="rmw-mx-plot" dir="ltr"><div class="rmw-mx-zones">${zones}</div>${med}${dots}</div><div class="rmw-mx-axis x">${esc(ui('mxAxisX',{n:p.days}))}</div></figure>${perfQuadPanel(p,quads)}</div></section>`;
+  }
+  /* Les quatre quadrants, rangés comme sur la matrice : chaque plat nommé,
+     cliquable vers sa recette, avec ses deux chiffres. */
+  function perfQuadPanel(p,quads){
+    return `<div class="rmw-mx-quads">${['puzzle','star','dog','plow'].map(k=>{
+      const list=p.measured.filter(x=>x.quadrant===k).sort((a,b)=>b.profit-a.profit),total=list.reduce((n,x)=>n+x.profit,0);
+      const rows=list.slice(0,4).map(x=>`<li><button type="button" data-action="rmw-recipe-edit" data-arg="${esc(x.item.id)}">${esc(t(x.item.name))}</button><small>${esc(ui('mxSoldN',{n:perfNum(x.qty)}))} · ${esc(ui('mxPerUnit',{amount:cash(x.unitProfit)}))}</small></li>`).join('');
+      return `<article class="rmw-mx-q ${k}" data-quad="${k}"><header><i></i><b>${esc(quads[k].title)}</b><span>${list.length}</span></header><p>${esc(quads[k].hint)}</p>${list.length?`<ul>${rows}</ul>${list.length>4?`<small class="more">${esc(ui('mxMore',{n:list.length-4}))}</small>`:''}<footer><b>${esc(quads[k].action)}</b><span>${esc(ui('mxContribution',{amount:cash(total)}))}</span></footer>`:`<p class="none">${esc(ui('mxEmptyQuad'))}</p>`}</article>`;
+    }).join('')}</div>`;
   }
   /* Le registre de la période, AVANT l'analyse par plat : ventes brutes,
      remboursements, net, puis la part que les recettes peuvent expliquer.
      Chaque écart entre ces chiffres est nommé ; aucun sous-ensemble n'est
      présenté comme le chiffre d'affaires du commerce. */
   function perfLedger(p){
-    const L=p.ledger,share=(v)=>L.gross>0?Math.round(v/L.gross*100)+' %':'·';
-    const notes=ledgerNotes(L,'ledgerLoading');
-    return `<div class="rmw-perf-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('ledgerEligible'))}</span><b>${cash(L.attributed)}</b><small>${esc(ui('ledgerEligibleSub',{share:share(L.attributed)}))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
+    const L=p.ledger,share=L.gross>0?Math.round(L.attributed/L.gross*100)+' %':'·',notes=ledgerNotes(L,'ledgerLoading');
+    const costed=p.measured.length,costedNet=p.measured.reduce((n,x)=>n+x.net,0),rate=costed&&costedNet>0?p.grossProfit/costedNet*100:null;
+    const sold=p.items.reduce((n,x)=>n+x.qty,0),cov=p.totalRevenue?Math.max(0,Math.min(100,p.coverage)):0;
+    const soldLabel=ui(sold===1?'itemSold':'itemsSold');
+    return `<section class="rmw-sum" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div class="rmw-sum-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${perfNum(sold)} ${esc(soldLabel)} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted',{n:costed}))}</small></div><div><span>${esc(ui('colMargin'))}</span><b>${rate==null?'·':pct1(rate)}</b><small>${esc(ui('mxRateSub'))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><i class="rmw-sum-bar"><i style="width:${cov.toFixed(1)}%"></i></i><small>${esc(ui('costCoverageSub'))}</small></div></div><div class="rmw-sum-recon"><span>${esc(ui('ledgerGross'))} <b>${cash(L.gross)}</b> <small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></span><i aria-hidden="true">−</i><span>${esc(ui('ledgerRefunds'))} <b>${cash(L.refunds)}</b></span><i aria-hidden="true">=</i><span>${esc(ui('ledgerNet'))} <b>${cash(L.net)}</b></span><i aria-hidden="true">·</i><span>${esc(ui('ledgerEligible'))} <b>${cash(L.attributed)}</b> <small>${esc(share)}</small></span></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}</section>`;
   }
   /* Les remarques du registre, communes à la Performance et aux Ventes : ce
      qui manque, ce qui est écarté, ce qui n'est pas attribué. */
@@ -1668,15 +1775,15 @@
     return `<section class="mi-section rmw-perf-insights"><div class="mi-section-head"><h3>${esc(ui('insightsTitle'))}</h3></div><p class="rmw-perf-insights-sub">${esc(ui('insightsSub'))}</p>${list.length?`<ul>${li}</ul>`:`<p class="rmw-perf-insights-none">${esc(ui('insightNone'))}</p>`}</section>`;
   }
   function performancePanel(){
-    const p=performanceData(30),costed=p.measured.length,buckets={star:[],plow:[],puzzle:[],dog:[]},est=costEstimates();
-    p.measured.forEach(x=>buckets[x.quadrant].push(x));
-    const quads = perfQuads();
-    const cards=Object.entries(quads).map(([key,q])=>{const list=buckets[key].sort((a,b)=>b.profit-a.profit),names=list.slice(0,3).map(x=>esc(t(x.item.name))).join(' · ')||'·',profit=list.reduce((n,x)=>n+x.profit,0);const countStr = list.length === 1 ? `1 ${ui('article')}` : `${list.length} ${ui('articles')}`;return `<div class="rmw-perf-q ${key}"><h4>${esc(q.title.toUpperCase())}</h4><strong>${countStr}</strong><p>${esc(q.hint)}</p><div><span>Top</span>${names}</div><footer><b>${cash(profit)}</b> ${esc(ui('colProfit').toLowerCase())} <small>${esc(q.action)}</small></footer></div>`;}).join('');
-    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}${estimateNote(est,r)}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
+    const p=performanceData(30),costed=p.measured.length,est=costEstimates(),quads=perfQuads();
+    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}${estimateNote(est,r)}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${pct1(r.marginPct)}</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
     const offRows=p.offMenu.map(o=>`<tr class="rmw-perf-off"><td><b>${esc(o.name)}</b><small>${esc(o.free?ui('freeAmountSection'):ui('offMenuSection'))}</small></td><td>${(window.KiwiNumber?.format(o.qty, {}) ?? o.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(o.revenue)}</td><td>·</td><td>·</td><td>·</td><td>${esc(o.free?ui('freeAmountReadout'):ui('offMenuReadout'))}</td></tr>`).join('');
     if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
-    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui(Math.abs(p.items.reduce((n,x)=>n+x.qty,0))<2&&lang()==='fr'||(p.items.reduce((n,x)=>n+x.qty,0))===1?'itemSold':'itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}${emptySales?'':insightsBlock(perfInsights(p,est))}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
+    const head=`<div class="rmw-perf-head"><div><h2>${esc(ui('perfTitle'))}</h2><p>${esc(ui('perfSub'))}</p></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>`;
+    if(emptySales)return `<div class="rmw-performance">${head}<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div></section></div>`;
+    const matrix=costed?performanceMatrix(p):`<section class="mi-section rmw-mx"><div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div></section>`;
+    return `<div class="rmw-performance">${head}${perfLedger(p)}${matrix}${insightsBlock(perfInsights(p,est))}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('perfDetail'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
   /* ═══ VENTES PAR CATÉGORIE ET PAR ARTICLE ═══════════════════════════════
      Le même registre que la Performance (KiwiCost.ledger) : annulations,
@@ -2171,28 +2278,78 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
 .rmw-perf-insights-none{margin:0;color:var(--n-500);font-size:12.5px}
 .rmw-perf-table td small.rmw-perf-est{color:var(--n-600)}
 @media(max-width:620px){.rmw-perf-insights li{flex-direction:column;gap:6px}}
-.rmw-perf-matrix{margin-top:24px;padding:0;border:1px solid #151a17;border-radius:18px;background:#080b09;color:#f7faf8;box-shadow:0 22px 50px rgba(4,9,6,.12)}
-.rmw-perf-legend{display:flex;align-items:center;gap:8px;min-height:58px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.015);border-radius:17px 17px 0 0}
-.rmw-perf-legend>span{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.09);border-radius:999px;color:rgba(255,255,255,.68);font-size:11px}
-.rmw-perf-legend i{width:7px;height:7px;border-radius:50%;background:var(--perf-color)}
-.rmw-perf-legend b{display:grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font:600 9px var(--mono)}
-.rmw-perf-legend .star{--perf-color:#73f0b2}.rmw-perf-legend .puzzle{--perf-color:#9db8ff}.rmw-perf-legend .plow{--perf-color:#edca73}.rmw-perf-legend .dog{--perf-color:#f28d79}
-.rmw-perf-chart{position:relative;padding:30px 28px 27px 58px;background:radial-gradient(circle at 82% 12%,rgba(56,202,132,.11),transparent 34%),radial-gradient(circle at 15% 92%,rgba(157,184,255,.06),transparent 30%)}
-.rmw-perf-plot{position:relative;height:390px;border-left:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);background:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:25% 25%;border-radius:0 12px 0 0}
-.rmw-perf-y{position:absolute;left:-103px;top:210px;width:270px;transform:rotate(-90deg);text-align:center;font:500 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.42)}
-.rmw-perf-x{text-align:center;margin-top:11px;font:500 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.42)}
-.rmw-perf-caption{display:flex;align-items:center;justify-content:center;gap:24px;min-height:52px;margin:0;padding:10px 18px;border-top:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.48);font-size:11px;text-align:left}
-.rmw-perf-caption span{display:flex;align-items:center;gap:7px}.rmw-perf-caption span:before{content:'';width:3px;height:3px;border-radius:50%;background:#73f0b2}
-.rmw-perf-v,.rmw-perf-h{position:absolute;z-index:0;background:transparent;opacity:.75}.rmw-perf-v{top:0;bottom:0;width:1px;border-left:1px dashed rgba(115,240,178,.32)}.rmw-perf-h{left:0;right:0;height:1px;border-top:1px dashed rgba(115,240,178,.32)}
-.rmw-perf-label{position:absolute;z-index:0;pointer-events:none;font:inherit;letter-spacing:0}.rmw-perf-label b{display:block;font:650 10px var(--mono);letter-spacing:.12em;color:rgba(255,255,255,.78)}.rmw-perf-label small{display:block;margin-top:5px;font:10px var(--sans);letter-spacing:0;color:rgba(255,255,255,.34)}
-.rmw-perf-label.puzzle{left:16px;top:16px}.rmw-perf-label.star{right:16px;top:16px;text-align:right}.rmw-perf-label.dog{left:16px;bottom:16px}.rmw-perf-label.plow{right:16px;bottom:16px;text-align:right}
-.rmw-perf-label.star b{color:#73f0b2}.rmw-perf-label.puzzle b{color:#9db8ff}.rmw-perf-label.plow b{color:#edca73}.rmw-perf-label.dog b{color:#f28d79}
-.rmw-perf-dot{--perf-color:#73f0b2;--perf-glow:rgba(115,240,178,.22);position:absolute;transform:translate(-50%,50%);border:2px solid #080b09;border-radius:50%;background:var(--perf-color);box-shadow:0 0 0 1px var(--perf-glow),0 0 18px var(--perf-glow);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
-.rmw-perf-dot.star{--perf-color:#73f0b2;--perf-glow:rgba(115,240,178,.24)}.rmw-perf-dot.plow{--perf-color:#edca73;--perf-glow:rgba(237,202,115,.22)}.rmw-perf-dot.puzzle{--perf-color:#9db8ff;--perf-glow:rgba(157,184,255,.22)}.rmw-perf-dot.dog{--perf-color:#f28d79;--perf-glow:rgba(242,141,121,.22)}
-.rmw-perf-dot:hover,.rmw-perf-dot:focus-visible{transform:translate(-50%,50%) scale(1.18);outline:0;box-shadow:0 0 0 2px #080b09,0 0 0 4px var(--perf-color),0 0 28px var(--perf-glow);z-index:400!important}
-.rmw-perf-dot>span{display:none;position:absolute;left:50%;bottom:calc(100% + 13px);width:230px;max-width:none;transform:translateX(-50%);padding:13px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#111713;color:#fff;text-align:left;font:11px/1.45 var(--sans);box-shadow:0 18px 42px rgba(0,0,0,.45)}
-.rmw-perf-dot>span:after{content:'';position:absolute;left:calc(50% - 5px);top:100%;border:5px solid transparent;border-top-color:#111713}.rmw-perf-dot>span em{display:block;margin-bottom:5px;color:var(--perf-color);font:500 8.5px var(--mono);font-style:normal;letter-spacing:.12em;text-transform:uppercase}.rmw-perf-dot>span b{display:block;margin-bottom:9px;font-size:13px}.rmw-perf-dot>span small{display:grid;gap:3px;color:rgba(255,255,255,.56)}.rmw-perf-dot>span small i{font-style:normal}.rmw-perf-dot>span strong{display:block;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09);color:#fff;font-size:11px}.rmw-perf-dot:hover>span,.rmw-perf-dot:focus-visible>span{display:block}
-@media(max-width:900px){.rmw-perf-legend{overflow:auto}.rmw-perf-chart{padding-left:48px}.rmw-perf-plot{height:310px}.rmw-perf-caption{align-items:flex-start;flex-direction:column;gap:6px}}
+.rmw-performance{gap:16px}
+.rmw-perf-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:2px 2px 0}
+.rmw-perf-head h2{margin:0;font:650 26px/1.15 var(--sans);letter-spacing:-.025em;color:var(--ink)}
+.rmw-perf-head p{margin:6px 0 0;font-size:13px;color:var(--n-500)}
+.rmw-sum{display:grid;gap:14px;padding:18px 20px;border:1px solid var(--n-200);border-radius:16px;background:var(--surface)}
+.rmw-sum-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.rmw-sum-kpis>div{display:flex;flex-direction:column;gap:5px;min-width:0;padding:0 18px;border-inline-start:1px solid var(--n-200)}
+.rmw-sum-kpis>div:first-child{padding-inline-start:0;border:0}
+.rmw-sum-kpis span{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}
+.rmw-sum-kpis b{font:650 24px/1.15 var(--sans);letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.rmw-sum-kpis small{font-size:11.5px;line-height:1.4;color:var(--n-500)}
+.rmw-sum-bar{display:block;height:4px;margin:2px 0;border-radius:99px;background:var(--n-200);overflow:hidden}
+.rmw-sum-bar>i{display:block;height:100%;border-radius:inherit;background:var(--atlas)}
+.rmw-sum-recon{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding-top:12px;border-top:1px solid var(--n-200);font-size:12.5px;color:var(--n-600)}
+.rmw-sum-recon b{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+.rmw-sum-recon small{color:var(--n-500)}
+.rmw-sum-recon>i{font-style:normal;color:var(--n-400,var(--n-500))}
+.rmw-sum .rmw-perf-notes{margin:0}
+.rmw-mx{padding:20px}
+.rmw-mx-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
+.rmw-mx-head h3{margin:0;font:650 17px var(--sans);letter-spacing:-.01em;color:var(--ink)}
+.rmw-mx-head p{max-width:64ch;margin:5px 0 0;font-size:12.5px;line-height:1.5;color:var(--n-500)}
+.rmw-mx-key{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto;font-size:11.5px;color:var(--n-500)}
+.rmw-mx-key>span{display:flex;align-items:center;gap:6px}
+.rmw-mx-key i{display:inline-block;border-radius:50%;background:var(--n-300)}
+.rmw-mx-body{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:18px;align-items:stretch}
+.rmw-mx-chart{display:flex;flex-direction:column;gap:7px;min-width:0;margin:0}
+.rmw-mx-axis{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}
+.rmw-mx-axis.x{padding-top:12px;text-align:end}
+.rmw-mx-plot{--z-r:13px;position:relative;flex:1;min-height:360px;border:1px solid var(--n-200);border-radius:14px;background:var(--surface)}
+.rmw-mx-zones{position:absolute;inset:0;overflow:hidden;border-radius:var(--z-r)}
+.rmw-mx-zone{position:absolute;background:color-mix(in srgb,var(--q) 9%,transparent)}
+.rmw-mx-zone>em{position:absolute;font:700 9.5px var(--mono);font-style:normal;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb,var(--q) 78%,var(--ink))}
+.rmw-mx-zone.puzzle>em{top:12px;left:14px}.rmw-mx-zone.star>em{top:12px;right:14px}.rmw-mx-zone.dog>em{bottom:12px;left:14px}.rmw-mx-zone.plow>em{bottom:12px;right:14px}
+.rmw-mx-zone.star,.rmw-mx-q.star,.rmw-mx-dot.star{--q:#1d9c67}.rmw-mx-zone.puzzle,.rmw-mx-q.puzzle,.rmw-mx-dot.puzzle{--q:#357fad}.rmw-mx-zone.plow,.rmw-mx-q.plow,.rmw-mx-dot.plow{--q:#d49a25}.rmw-mx-zone.dog,.rmw-mx-q.dog,.rmw-mx-dot.dog{--q:#cb5238}
+.rmw-mx-med,.rmw-mx-zero{position:absolute;z-index:1;border:0 dashed color-mix(in srgb,var(--ink) 24%,transparent)}
+.rmw-mx-med.v{top:0;bottom:0;border-left-width:1px}.rmw-mx-med.h,.rmw-mx-zero{left:0;right:0;border-top-width:1px}.rmw-mx-zero{border-top-style:solid}
+.rmw-mx-med>span,.rmw-mx-zero>span{position:absolute;padding:2px 8px;border:1px solid var(--n-200);border-radius:99px;background:var(--surface);font:600 10px/1.4 var(--mono);white-space:nowrap;color:var(--n-600)}
+.rmw-mx-med.v>span{bottom:-11px;transform:translateX(-50%)}.rmw-mx-med.h>span{top:-11px;left:12px}.rmw-mx-zero>span{top:-11px;left:12px}
+.rmw-mx-dot{position:absolute;width:var(--s);height:var(--s);padding:0;transform:translate(-50%,50%);border:2px solid var(--surface);border-radius:50%;background:var(--q);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;transition:transform 160ms ease,box-shadow 160ms ease}
+.rmw-mx-dot:not([data-action]){cursor:default}
+.rmw-mx-dot>b{position:absolute;inset:0;display:grid;place-items:center;font:700 10px var(--mono);color:#fff}
+.rmw-mx-dot:hover,.rmw-mx-dot:focus-visible{z-index:60!important;transform:translate(-50%,50%) scale(1.14);outline:0;box-shadow:0 0 0 4px color-mix(in srgb,var(--q) 28%,transparent)}
+.rmw-mx-lab{position:absolute;z-index:2;max-width:150px;overflow:hidden;padding:0 6px;border-radius:6px;background:color-mix(in srgb,var(--surface) 84%,transparent);font:600 11px/18px var(--sans);text-overflow:ellipsis;white-space:nowrap;color:var(--ink);pointer-events:none}
+.rmw-mx-lab.r{transform:translate(calc(var(--r) + 5px),50%)}.rmw-mx-lab.l{transform:translate(calc(-100% - var(--r) - 5px),50%)}.rmw-mx-lab.t{transform:translate(-50%,calc(-1 * var(--r) - 4px))}.rmw-mx-lab.b{transform:translate(-50%,calc(100% + var(--r) + 4px))}
+.rmw-mx-tip{display:none;position:absolute;bottom:calc(100% + 10px);left:50%;width:230px;padding:11px 12px;transform:translateX(-50%);border-radius:12px;background:#101612;color:#F7F5F0;text-align:start;font:12px/1.45 var(--sans);box-shadow:0 14px 36px rgba(0,0,0,.3);pointer-events:none}
+.rmw-mx-dot.down>.rmw-mx-tip{top:calc(100% + 10px);bottom:auto}.rmw-mx-dot.end>.rmw-mx-tip{left:auto;right:-8px;transform:none}.rmw-mx-dot.start>.rmw-mx-tip{left:-8px;transform:none}
+.rmw-mx-dot:hover>.rmw-mx-tip,.rmw-mx-dot:focus-visible>.rmw-mx-tip{display:grid;gap:8px}
+.rmw-mx-tip>em{font:700 9px var(--mono);font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:color-mix(in srgb,var(--q) 70%,#fff)}
+.rmw-mx-tip>strong{font-size:12px}
+.rmw-mx-tip-row{display:grid;gap:2px}.rmw-mx-tip-row b{font-size:13px}.rmw-mx-tip-row small{color:rgba(247,245,240,.66);font-size:11px;font-variant-numeric:tabular-nums}
+.rmw-mx-quads{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;min-width:0}
+.rmw-mx-q{display:flex;flex-direction:column;gap:7px;min-width:0;padding:12px 14px;border:1px solid var(--n-200);border-top:3px solid var(--q);border-radius:12px;background:var(--surface)}
+.rmw-mx-q header{display:flex;align-items:center;gap:7px}
+.rmw-mx-q header i{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--q)}
+.rmw-mx-q header b{font:650 13px var(--sans);color:var(--ink)}
+.rmw-mx-q header span{min-width:22px;margin-inline-start:auto;padding:1px 7px;border-radius:99px;background:color-mix(in srgb,var(--q) 14%,transparent);font:700 11px/1.5 var(--mono);text-align:center;color:color-mix(in srgb,var(--q) 80%,var(--ink))}
+.rmw-mx-q>p{margin:0;font-size:11.5px;line-height:1.4;color:var(--n-500)}
+.rmw-mx-q ul{display:grid;gap:6px;margin:2px 0 0;padding:0;list-style:none}
+.rmw-mx-q li{display:flex;flex-direction:column;min-width:0}
+.rmw-mx-q li button{overflow:hidden;padding:0;border:0;background:none;font:600 12.5px/1.35 var(--sans);text-align:start;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);cursor:pointer}
+.rmw-mx-q li button:hover,.rmw-mx-q li button:focus-visible{color:var(--atlas);text-decoration:underline}
+.rmw-mx-q li small,.rmw-mx-q .more{font-size:11px;font-variant-numeric:tabular-nums;color:var(--n-500)}
+.rmw-mx-q footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin-top:auto;padding-top:8px;border-top:1px solid var(--n-200);font-size:11px;color:var(--n-500)}
+.rmw-mx-q footer b{font-weight:650;color:var(--n-600)}
+.rmw-mx-q .none{margin:auto 0;color:var(--n-500);font-size:12px}
+.rmw-mx-few{padding:26px 18px;text-align:center;color:var(--n-500);font-size:13px}
+.rmw-mx-few p{max-width:60ch;margin:0 auto;line-height:1.5}
+@media(max-width:1100px){.rmw-mx-body{grid-template-columns:1fr}}
+@media(max-width:900px){.rmw-sum-kpis{grid-template-columns:1fr 1fr;gap:16px 0}.rmw-sum-kpis>div:nth-child(3){padding-inline-start:0;border:0}}
+@media(max-width:700px){.rmw-mx{padding:14px}.rmw-mx-head{flex-direction:column}.rmw-mx-key{align-items:flex-start}.rmw-mx-plot{min-height:270px}.rmw-mx-lab:not(.keep){display:none}.rmw-mx-zone>em{font-size:8.5px}.rmw-perf-head h2{font-size:22px}}
+@media(max-width:480px){.rmw-mx-quads{grid-template-columns:1fr;grid-auto-rows:auto}.rmw-sum{padding:16px}.rmw-sum-kpis b{font-size:20px}}
 `;document.head.appendChild(s);}
   function hoursStyle(){if($('#rmw-hours-css'))return;const s=document.createElement('style');s.id='rmw-hours-css';s.textContent=`
 /* Analyse du menu : hors de .catalog-rail, la pastille active gardait le texte clair du dégradé sur la lentille claire. Même lecture que la rangée du menu. */

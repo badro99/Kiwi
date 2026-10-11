@@ -540,7 +540,9 @@ Covered by `foodcost-api-test.mjs` (28) and `simple-food-cost-test.mjs` (42).
 
 | MC5 | The restaurant till wrote no cost on its sale lines, so Analyse du menu applied today's cost to every past sale: a purchase-price rise rewrote past contributions. | **Fixed.** `recordSale()` freezes `unitCost` per line through `KiwiCost.of` (complete recipe, else typed cost), the dashboard's own engine. Unknown, offered (0 MAD), formula and free-amount lines get nothing, never 0. The dashboard already prefers a frozen cost. Sales made before this change keep the "coût actuel appliqué au passé" note. |
 
-Covered by `menu-insights-test.mjs` (36 checks) and `caisse-frozen-cost-test.mjs` (12); `menu-ledger-test.mjs` follows the new wording.
+| MC6 | The Performance matrix was a black slab on a light page. A square-root scale pushed popular dishes against the right edge, overlapping dishes hid each other, and no dish was named without hovering. Quadrants were called "Plowhorses / Puzzles / Dogs" in French, and the numbers repeated across three card rows. | **Redesigned.** One summary strip (dish sales, contribution, contribution rate, cost coverage, then gross minus refunds equals net). A light matrix on a linear scale with inner margins and tinted quadrants. Each dish is named beside its dot when there is room; overlapping dishes become one numbered dot; both medians carry their value. A 2×2 quadrant panel, laid out like the chart, lists every dish (clickable to its recipe) with sold and contribution per item. Fewer than two costed dishes: an explanation, not a fake matrix. Percentages follow the language. Phone: one column, only the three biggest names. |
+
+Covered by `menu-insights-test.mjs` (44 checks) and `caisse-frozen-cost-test.mjs` (12); `menu-ledger-test.mjs` follows the new wording.
 
 Still open: the recipe editor's own summary says "Marge théorique / observée" on the price including VAT. Aligning it with the HT contribution needs the VAT basis in that modal, a separate pass.
 

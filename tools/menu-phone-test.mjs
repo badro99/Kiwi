@@ -7,7 +7,8 @@
  * skin, no invented selection style) and becomes a swipeable row on phones.
  * #0150: desktop-wide panels bled past the phone viewport. Guard: the 7-column
  * perf table scrolls inside its wrapper, the rotated matrix axis becomes a
- * normal caption on phones, and the hours grid minimums fit 360px.
+ * menu matrix stacks and thins its labels on phones, and the hours grid
+ * minimums fit 360px.
  *
  *   node tools/menu-phone-test.mjs
  */
@@ -49,8 +50,10 @@ ok('perf table scrolls inside its wrapper', () => {
   assert.ok(/\.mi-list-wrap\s*\{[^}]*overflow-x:\s*auto/.test(rmw), '.mi-list-wrap needs overflow-x:auto');
 });
 
-ok('matrix axis becomes a normal caption on phones', () => {
-  assert.ok(/max-width:\s*700px[^{]*\{[^}]*\.rmw-perf-y\s*\{[^}]*position:\s*static/.test(rmw), 'phone caption rule missing');
+ok('menu matrix fits a phone: one column, shorter plot, only the top names', () => {
+  assert.ok(/max-width:1100px\)\{\.rmw-mx-body\{grid-template-columns:1fr\}/.test(rmw), 'matrix and quadrant panel must stack');
+  assert.ok(/max-width:700px\)\{[^\n]*\.rmw-mx-plot\{min-height:270px\}[^\n]*\.rmw-mx-lab:not\(\.keep\)\{display:none\}/.test(rmw), 'phone plot height and label thinning missing');
+  assert.ok(/max-width:480px\)\{\.rmw-mx-quads\{grid-template-columns:1fr/.test(rmw), 'quadrant cards must go single column');
 });
 
 ok('hours grid minimums fit a 360px phone', () => {

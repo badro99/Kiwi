@@ -180,6 +180,22 @@ const sheet = (id, itemId, perPortion, priceDate, extra = {}) => ({
   ok(typeof B.wl['kiwi:simple-food-cost'] === 'object' && B.wl['kiwi:simple-food-cost'].length >= 1, 'la page se redessine quand les fiches changent (kiwi:simple-food-cost)');
 }
 
+/* ── 4b · la matrice ── */
+{
+  const B = await boot({ features: {} });
+  const html = B.render();
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  ok(!/rmw-perf-matrix|#080b09/.test(html) && /<section class="mi-section rmw-mx" data-mx>/.test(html), 'la matrice est sur la page, sans l’ancien bloc noir');
+  const dots = [...html.matchAll(/class="rmw-mx-dot ([a-z]+)[^"]*" style="left:([\d.]+)%;bottom:([\d.]+)%/g)];
+  ok(dots.length === 3 && dots.every((d) => +d[2] >= 4 && +d[2] <= 96 && +d[3] >= 5 && +d[3] <= 93), 'trois plats chiffrés, aucun point collé au bord du cadre', JSON.stringify(dots.map((d) => d.slice(1))));
+  ok(['Tajine', 'Couscous', 'Thé'].every((n) => new RegExp(`class="rmw-mx-lab[^"]*"[^>]*>${n}<`).test(html)), 'chaque plat est nommé à côté de son point');
+  ok(['Tajine', 'Couscous', 'Thé'].every((n) => new RegExp(`data-quad="[a-z]+"[\\s\\S]*?data-arg="[a-z]+">${n}</button>`).test(html)), 'chaque plat est listé dans son quadrant, cliquable vers sa recette');
+  ok(/À développer/.test(text) && /À optimiser/.test(text) && /À revoir/.test(text) && !/Plowhorses|Puzzles|Dogs/.test(text), 'quadrants nommés en français, plus de jargon anglais');
+  ok(/médiane · [\d,]+ vendus/.test(text) && /médiane · [\d,]+ MAD/.test(text), 'les deux médianes sont chiffrées sur la matrice');
+  ok(/Calculé sur 3 plats/.test(text), 'la base de calcul est dite (3 plats)');
+  ok(!/\d\.\d %/.test(text), 'les pourcentages suivent la langue (virgule en français)', (text.match(/\d\.\d %/) || [''])[0]);
+}
+
 /* ── 5 · fiche → brouillon de recette ── */
 {
   const B = await boot({});
