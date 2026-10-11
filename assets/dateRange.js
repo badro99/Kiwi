@@ -4881,6 +4881,69 @@
     b.style.display = ownData() ? 'none' : '';
   }
 
+  /* Le bandeau « garde » de la pharmacie. Lit les fiches du tableau de bord ; les heures sont
+     celles du magasin (KiwiTradeSchema.wallNow), jamais celles de l'appareil. */
+  /* Ces destinations n'ont pas de gestionnaire écrit à la main : trade-workspaces.js enregistre
+     « nav-<route> » pour chaque fiche du métier. On les nomme ici pour que le lien soit lisible. */
+  const BAND_NAV = { duty: 'nav-duty', bookorders: 'nav-bookorders' };
+  function dutyBand(lang, t) {
+    const W = window.KiwiTradeWorkspaces, S = window.KiwiTradeSchema;
+    if (!W || !S || !W.config || !W.config('duty')) return null;
+    const rows = (W.rows('duty') || []).map((r) => ({ r, v: r.values || {} }));
+    const now = S.wallNow();
+    const cur = rows.filter((x) => (+x.r.status || 0) === 2 || ((+x.r.status || 0) < 3 && String(x.v.startAt || '') <= now && now <= String(x.v.endAt || ''))).sort((a, b) => String(a.v.startAt).localeCompare(String(b.v.startAt)))[0];
+    const next = rows.filter((x) => (+x.r.status || 0) < 2 && String(x.v.startAt || '') > now).sort((a, b) => String(a.v.startAt).localeCompare(String(b.v.startAt)))[0];
+    const S2 = {
+      fr: { on: 'EN GARDE', until: (x) => `jusqu’à ${x}`, since: (x) => `depuis ${x}`, next: 'PROCHAINE GARDE', open: 'Ouvrir Gardes & relève' },
+      en: { on: 'ON DUTY', until: (x) => `until ${x}`, since: (x) => `since ${x}`, next: 'NEXT DUTY', open: 'Open Duty & handover' },
+      ar: { on: 'في الحراسة', until: (x) => `حتى ${x}`, since: (x) => `منذ ${x}`, next: 'الحراسة القادمة', open: 'فتح الحراسة والتسليم' },
+    }[lang] || null;
+    const L2 = S2 || { on: 'EN GARDE', until: (x) => `jusqu’à ${x}`, since: (x) => `depuis ${x}`, next: 'PROCHAINE GARDE', open: 'Ouvrir Gardes & relève' };
+    const fmt = (k) => { try { return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(String(k).slice(0, 16) + ':00')); } catch (_) { return String(k); } };
+    const cta = `<div class="instant" data-action="${BAND_NAV.duty}"><div style="font-weight:500;">${L2.open}</div></div>`;
+    const hand = (x) => (x.v.handover ? `<div style="font-size:12px;opacity:.7;margin-top:8px;line-height:1.45;">${escTxt(String(x.v.handover).slice(0, 160))}</div>` : '');
+    if (cur) {
+      return `<div class="lbl">${L2.on}</div><div class="big" style="font-size:30px;">${escTxt(cur.r.title || '')}</div>` +
+        `<div class="sub">${L2.since(escTxt(fmt(cur.v.startAt)))} · ${L2.until(escTxt(fmt(cur.v.endAt)))}</div>${hand(cur)}${cta}`;
+    }
+    if (next) {
+      return `<div class="lbl">${L2.next}</div><div class="big" style="font-size:30px;">${escTxt(fmt(next.v.startAt))}</div>` +
+        `<div class="sub">${escTxt(next.r.title || '')} · ${L2.until(escTxt(fmt(next.v.endAt)))}</div>${hand(next)}${cta}`;
+    }
+    return `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
+      `<div style="font-size:14px;font-weight:600;">${t.head}</div>` +
+      `<div style="font-size:12px;opacity:.7;margin-top:6px;line-height:1.5;">${t.msg}</div></div>${cta}`;
+  }
+
+  /* Librairie, épicerie : « fin de journée » n'est pas un service du soir avec des tables à réserver.
+     L'ancien bandeau disait « Réservations non configurées, ajoutez vos tables » à un libraire. La
+     librairie y voit ses commandes spéciales (fiches du tableau de bord, que la caisse écrit) ;
+     l'épicerie, qui n'a aucune donnée à y mettre, un état vide honnête sans renvoi vers les tables. */
+  function retailBand(lang, t) {
+    let trade = '';
+    try { const v = window.KiwiVenue?.getCurrentVenueData?.() || {}; trade = String(v.subtype || v.type || ''); } catch (_) {}
+    if (trade !== 'librairie' && trade !== 'epicerie') return null;
+    const W = window.KiwiTradeWorkspaces;
+    const T = {
+      fr: { lbl: 'COMMANDES SPÉCIALES', arrived: (n) => `${n} ${n > 1 ? 'arrivées' : 'arrivée'} à retirer`, waiting: (n) => `${n} en attente de livraison`, open: 'Ouvrir Commandes de livres' },
+      en: { lbl: 'SPECIAL ORDERS', arrived: (n) => `${n} arrived, to collect`, waiting: (n) => `${n} awaiting delivery`, open: 'Open Special orders' },
+      ar: { lbl: 'الطلبات الخاصة', arrived: (n) => `${n} وصلت للاستلام`, waiting: (n) => `${n} في انتظار التسليم`, open: 'فتح الطلبات الخاصة' },
+    }[lang] || null;
+    const L2 = T || { lbl: 'COMMANDES SPÉCIALES', arrived: (n) => `${n} ${n > 1 ? 'arrivées' : 'arrivée'} à retirer`, waiting: (n) => `${n} en attente de livraison`, open: 'Ouvrir Commandes de livres' };
+    if (trade === 'librairie' && W && W.config && W.config('bookorders')) {
+      const rows = (W.rows('bookorders') || []).filter((r) => (+r.status || 0) < 2);
+      const arrived = rows.filter((r) => (+r.status || 0) === 1).length, waiting = rows.length - arrived;
+      if (rows.length) {
+        return `<div class="lbl">${L2.lbl}</div><div class="big">${rows.length}</div>` +
+          `<div class="sub">${L2.arrived(arrived)} · ${L2.waiting(waiting)}</div>` +
+          `<div class="instant" data-action="${BAND_NAV.bookorders}"><div style="font-weight:500;">${L2.open}</div></div>`;
+      }
+    }
+    return `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
+      `<div style="font-size:14px;font-weight:600;">${t.head}</div>` +
+      `<div style="font-size:12px;opacity:.7;margin-top:6px;line-height:1.5;">${t.msg}</div></div>`;
+  }
+
   function renderEvening() {
     const el = document.querySelector('[data-evening-card]');
     if (!el) return;
@@ -4888,6 +4951,10 @@
     if (ownData()) {
       const lang = getLang();
       const t = tradeStr('eveningEmpty', EVENING_EMPTY[lang] || EVENING_EMPTY.fr);
+      /* Pharmacie : ce soir = la garde (fiches « Gardes & relève », que la caisse ouvre et ferme),
+         pas des réservations de tables. */
+      const dutyHtml = dutyBand(lang, t) || retailBand(lang, t);
+      if (dutyHtml) { el['inner' + 'HTML'] = dutyHtml; return; }
       let doc = null;
       try { doc = window.KiwiReservations?.get?.(); } catch (_) {}
       const now = Date.now(), currentDay = merchantDayKey(now, activeMerchantSlug()), currentWindow = merchantDayBounds(currentDay, activeMerchantSlug()), start = currentWindow.from, end = currentWindow.to;

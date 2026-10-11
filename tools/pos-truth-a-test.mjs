@@ -208,7 +208,7 @@ ok('pluriel français : 0 et 1 au singulier, 2 et plus au pluriel, dans les huit
 ok('librairie : un stock absent n’est pas un stock à zéro', () => {
   const m = MOD.librairie;
   const ctx = vm.createContext({ Number });
-  vm.runInContext([line(m, /  const trk +=[^\n]*;/), line(m, /  const stockLabel = [^\n]*;/), 'this.s = stockLabel;'].join('\n'), ctx);
+  vm.runInContext(['const pvReal = () => false;', line(m, /  const trk +=[^\n]*;/), line(m, /  const stockLabel = [^\n]*;/), 'this.s = stockLabel;'].join('\n'), ctx);
   assert.equal(ctx.s(null), 'stock non suivi');
   assert.equal(ctx.s(undefined), 'stock non suivi');
   assert.equal(ctx.s(0), 'épuisé');
@@ -229,7 +229,7 @@ ok('boulangerie : trk/isOut ne barrent pas un produit dont le restant n’est pa
 ok('pharmacie : un médicament dont le stock n’est pas suivi n’est ni « rupture » ni « bientôt épuisé »', () => {
   const m = MOD.pharmacie;
   const ctx = vm.createContext({});
-  vm.runInContext('const STOCK = { a: 0, b: 4, c: null };\n' + line(m, /  const tracked = [^\n]*;/) + '\n' + line(m, /  const isOut +=[^\n]*;/) + '\nthis.t = tracked; this.o = isOut;', ctx);
+  vm.runInContext('const pvReal = () => false;\nconst STOCK = { a: 0, b: 4, c: null };\n' + line(m, /  const tracked = [^\n]*;/) + '\n' + line(m, /  const isOut +=[^\n]*;/) + '\nthis.t = tracked; this.o = isOut;', ctx);
   assert.equal(ctx.t('c'), false); assert.equal(ctx.o('c'), false); assert.equal(ctx.t('zzz'), false);
   assert.equal(ctx.o('a'), true); assert.equal(ctx.o('b'), false);
 });

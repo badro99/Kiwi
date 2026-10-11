@@ -45,7 +45,8 @@
   const fmtDT  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const fmtDay = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
   const fmtTime = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  const fmtExp = (d) => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  /* Réel : la date exacte saisie (le 20 oct. 2026), pas le mois seul. */
+  const fmtExp = (d) => (pvReal() ? `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}` : `${MONTHS[d.getMonth()]} ${d.getFullYear()}`);
   const DAY = 86400 * 1000;
   const initials = (name) => name.replace(/^(Dr|M|Mme|Mlle)\.?\s+/i, '').split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   const moveCaretEnd = (input) => { const v = input.value; input.value = ''; input.value = v; };
@@ -112,6 +113,17 @@
     sans:  { id: 'sans',  label: 'Sans mutuelle', rate: 0, color: '#9A9A9A' },
   };
   const MUT_LIST = ['cnops', 'cnss', 'axa', 'saham', 'sans'];
+  /* Réel : « CNOPS 70 %, AXA 80 % » sont des taux inventés, et la prise en charge dépend de
+     l'organisme ET du médicament. Une vraie pharmacie découpait donc chaque ticket sur un
+     pourcentage que personne n'avait posé. Réel : aucun organisme tant que la pharmacie n'a pas
+     saisi les siens, avec SON taux (tableau de bord › Organismes & taux). */
+  if (pvReal()) {
+    Object.keys(MUTUELLES).forEach((k) => { if (k !== 'sans') delete MUTUELLES[k]; });
+    MUT_LIST.splice(0, MUT_LIST.length, 'sans');
+  }
+  /* Une fiche patient peut citer un organisme retiré depuis : on le dit, on ne plante pas. */
+  const mutOf = (id) => MUTUELLES[id] || { id: String(id || 'sans'), label: id && id !== 'sans' ? 'Organisme retiré' : 'Sans mutuelle', rate: 0 };
+  const r2 = (n) => Math.round(n * 100) / 100;
 
   /* ───────────────────────── médicaments (vignette, Tanger 2026) ─────────────
      rx     = liste I/II — délivrance sur ordonnance
@@ -165,6 +177,11 @@
   ];
   const ITEMS = {};
   CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS[it.id] = it; }));
+  /* Réel : la pharmacie vend SES produits au prix qu'ELLE a posé. Ces cinq rayons de Tanger (Doliprane
+     12,50, Augmentin 78…) sont le décor de la démo : une vraie pharmacie encaissait un
+     Augmentin à 78 MAD qu'elle n'avait jamais référencé. Le catalogue réel vient de l'inventaire du
+     tableau de bord, partagé avec la caisse (rebuildReal, plus bas). */
+  if (pvReal()) { CATALOG.splice(0, CATALOG.length); Object.keys(ITEMS).forEach((id) => delete ITEMS[id]); }
 
   /* stock state — units on hand. DÉMO seulement : « 12 + longueur de l'identifiant
      × 7 % 40 » n'est pas un stock, c'est un décor. Une vraie pharmacie qui voyait
@@ -181,10 +198,13 @@
     STOCK.gelhydro = 6;
   }
   const tracked = (id) => STOCK[id] != null;
-  const isOut   = (id) => tracked(id) && STOCK[id] <= 0;
+  /* Réel : un stock à 0 est une INFORMATION (« stock 0 »), pas un verrou : la boîte est dans la main
+     du pharmacien, et le 0 peut être un stock jamais saisi. Démo : comportement d'origine. */
+  const isOut   = (id) => !pvReal() && tracked(id) && STOCK[id] <= 0;
+  const zeroStock = (id) => pvReal() && tracked(id) && STOCK[id] <= 0;
   const inStock = (id) => !tracked(id) || STOCK[id] > 0;
-  const stockCap = (id) => (tracked(id) ? STOCK[id] : Infinity);
-  const FRIDGE = new Set(['ventoline']);   /* chaîne du froid (démo) */
+  const stockCap = (id) => (!pvReal() && tracked(id) ? STOCK[id] : Infinity);
+  const FRIDGE = new Set(pvReal() ? [] : ['ventoline']);   /* chaîne du froid (démo) */
 
   /* ───────────────────────── lots qui périment (péremption) ───────────────── */
   const NOW = Date.now();
@@ -197,8 +217,17 @@
     { id: 'vitc', lot: 'VTC-9912', qty: 9, exp: new Date(NOW + 81 * DAY) },
     { id: 'serumphy', lot: 'SER-4408', qty: 14, exp: new Date(NOW + 88 * DAY) },
   ];
-  function expTag(d) {
-    const days = Math.round((d.getTime() - Date.now()) / DAY);
+  /* Jours restants, au calendrier du commerce (voir KiwiTradeSchema.dayDiff) : l'ancien
+     arrondi sur 24 h comptait « 0 j » pour un lot périmé la veille. */
+  function lotDays(l) {
+    const S = window.KiwiTradeSchema;
+    if (l.expKey && S) return S.dayDiff(S.dateKey(), l.expKey);
+    return Math.round((l.exp.getTime() - Date.now()) / DAY);
+  }
+  function expTag(l) {
+    const days = lotDays(l);
+    if (days < 0) return { cls: 'crit', label: 'périmé' };
+    if (days === 0) return { cls: 'crit', label: 'aujourd’hui' };
     if (days <= 30) return { cls: 'crit', label: `${days} j` };
     if (days <= 45) return { cls: 'urgent', label: `${days} j` };
     return { cls: 'soon', label: `${days} j` };
@@ -304,8 +333,9 @@
     snapshot() {
       return {
         v: 2,                /* v1 contenait les décors de démo : voir restore() */
-        stock: STOCK,
-        lots: LOTS,
+        stock: pvReal() ? undefined : STOCK,   /* réel : le stock est celui du catalogue partagé */
+        lots: pvReal() ? undefined : LOTS,     /* réel : les lots sont ceux des fiches du tableau de bord */
+        dutyId: state.dutyId || '',
         medecins: MEDECINS,
         patients: PATIENTS,
         saleSeq,
@@ -321,7 +351,7 @@
       /* Une fiche v1 a été écrite par l'ancien autosave avec le stock et les lots
          de démo dedans : on ne peut pas les distinguer d'une saisie. On les
          écarte (le stock repart « non suivi »), le reste de la fiche reste. */
-      const trusted = saved.v >= 2;
+      const trusted = saved.v >= 2 && !pvReal();
       if (trusted && saved.stock && typeof saved.stock === 'object') {
         Object.keys(STOCK).forEach((id) => delete STOCK[id]);
         Object.assign(STOCK, saved.stock);
@@ -339,6 +369,7 @@
       if (Array.isArray(saved.insurerReceivables)) insurerReceivables = saved.insurerReceivables;
       if (saved.gross && typeof saved.gross === 'object') state.gross = saved.gross;
       if (typeof saved.night === 'boolean') state.night = saved.night;
+      if (typeof saved.dutyId === 'string') state.dutyId = saved.dutyId;
       if (saved.ticket) state.ticket = saved.ticket;
     },
   });
@@ -373,13 +404,13 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function saleLines(t) {
+  function saleLines(t, used) {
     return t.lines.map((ln) => {
       const it = ITEMS[ln.itemId];
       const split = lineSplit(ln);
       const lot = LOTS.find((x) => x.id === ln.itemId);
       return {
-        itemId: it.id, variantId: lot ? lot.lot : '', name: it.label,
+        itemId: it.id, variantId: (used && used[ln.itemId]) || (!pvReal() && lot ? lot.lot : ''), name: it.label,
         category: it.cat, qty: ln.qty, unit: it.unit || 'piece', kind: 'product',
         total: split.pat,
       };
@@ -395,11 +426,159 @@
      Démo : journal vide, aucun effet. */
   try { if (window.KiwiPosSale) saleSeq = window.KiwiPosSale.nextSeq('pharmacie', saleSeq); } catch (_) {}
 
+  /* ═══════════════════════ RÉEL : catalogue, fiches, lots, organismes ═══════════════════════
+     Le catalogue (nom, prix, code-barres, stock) est celui du tableau de bord, la même base que la
+     caisse boutique ; les fiches médicament, les lots, les organismes sont les documents du
+     tableau de bord (Fiches médicaments, Lots à surveiller, Organismes & taux), lus et écrits ici
+     par le même document synchronisé. Rien n'est inventé : un produit sans fiche est un produit
+     libre, sans ordonnance ni remboursement. */
+  const WS = () => window.KiwiPosWorkspaces || null;
+  const TS = () => window.KiwiTradeSchema || null;
+  const stockOfProduct = (p) => Object.keys(p.sizes || {}).reduce((n, k) => n + (+p.sizes[k] || 0), 0);
+  function rebuildReal() {
+    if (!pvReal()) return false;
+    const w = WS();
+    if (!w || !w.catalog) return false;
+    const comp = w.catalog.compat();
+    if (!comp) return false;
+    const sheets = {}, recProduct = {};
+    w.values('drugs').forEach((r) => {
+      if (r.status > 0 || !r.values.product) return;
+      sheets[r.values.product] = r.values; recProduct[r.id] = r.values.product;
+    });
+    CATALOG.splice(0, CATALOG.length);
+    Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+    FRIDGE.clear();
+    comp.RAYONS.forEach((r) => {
+      const items = r.items.map((p) => {
+        const a = sheets[p.id] || {};
+        const sub = a.substitute ? recProduct[a.substitute] : '';
+        const it = { id: p.id, label: p.name, art: 'boite', dci: a.dci || '', form: '', unit: 'boîte',
+          price: +p.price > 0 ? +p.price : 0, noPrice: !(+p.price > 0), rx: !!a.rx, remb: !!a.remb,
+          gen: sub && sub !== p.id ? sub : undefined, ean: p.ean || '', cat: r.id };
+        if (a.coldChain) FRIDGE.add(p.id);
+        ITEMS[p.id] = it; STOCK[p.id] = stockOfProduct(p);
+        return it;
+      });
+      CATALOG.push({ id: r.id, label: r.label, items });
+    });
+    Object.keys(STOCK).forEach((id) => { if (!ITEMS[id]) delete STOCK[id]; });
+    /* lots (fiches « Lots à surveiller ») */
+    LOTS.splice(0, LOTS.length);
+    w.values('expiries').forEach((r) => {
+      const v = r.values;
+      if (r.status >= 2 || !v.product || !ITEMS[v.product] || !(+v.qty > 0) || !/^\d{4}-\d{2}-\d{2}/.test(String(v.expiryAt || ''))) return;
+      LOTS.push({ id: v.product, lot: v.lot, qty: +v.qty, exp: new Date(String(v.expiryAt).slice(0, 10) + 'T12:00:00'), expKey: String(v.expiryAt).slice(0, 10), recId: r.id });
+    });
+    /* organismes et leurs taux */
+    Object.keys(MUTUELLES).forEach((k) => { if (k !== 'sans') delete MUTUELLES[k]; });
+    MUT_LIST.splice(0, MUT_LIST.length);
+    w.values('payers').forEach((r) => {
+      const rate = Math.max(0, Math.min(100, +r.values.rate || 0));
+      if (r.status > 0 || !rate) return;
+      MUTUELLES[r.id] = { id: r.id, label: r.title, rate: rate / 100, color: '#1F5D3C' };
+      MUT_LIST.push(r.id);
+    });
+    MUT_LIST.push('sans');
+    /* bon grossiste : les produits sous LEUR seuil de réassort (fixé dans l'inventaire) */
+    GROSSISTE_SUGGEST.splice(0, GROSSISTE_SUGGEST.length);
+    try {
+      comp.RAYONS.forEach((r) => r.items.forEach((p) => {
+        const prod = w.catalog.product(p.id), lvl = prod ? +prod.reorderLevel : 0;
+        if (lvl > 0 && STOCK[p.id] <= lvl) GROSSISTE_SUGGEST.push({ id: p.id, reason: STOCK[p.id] <= 0 ? 'rupture' : `stock bas · ${STOCK[p.id]}` });
+      }));
+    } catch (_) {}
+    GROSSISTE_SUGGEST.forEach((g) => { if (state.gross[g.id] == null) state.gross[g.id] = 0; });
+    if (state.ticket && state.ticket.lines) state.ticket.lines = state.ticket.lines.filter((l) => ITEMS[l.itemId]);
+    return true;
+  }
+  function repaintReal() {
+    if (!root || !rebuildReal()) return;
+    renderGrid(); renderTicket(); renderBadges();
+    if (state.view === 'stock') renderStock();
+    icons();
+  }
+  let realBound = false;
+  function bindReal() {
+    if (!pvReal() || realBound) return;
+    const w = WS(); if (!w) return;
+    realBound = true;
+    try { w.subscribe(() => repaintReal()); } catch (_) {}
+    try { w.catalog.subscribe(() => repaintReal()); } catch (_) {}
+  }
+  /* Lots encore vendables d'un produit, le plus proche de sa péremption d'abord. Un lot périmé
+     n'est JAMAIS vendable. */
+  const liveLots = (id) => LOTS.filter((l) => l.id === id && l.qty > 0 && lotDays(l) >= 0).sort((a, b) => a.expKey < b.expKey ? -1 : a.expKey > b.expKey ? 1 : 0);
+  const lotsOf = (id) => LOTS.filter((l) => l.id === id && l.qty > 0);
+  /* Tous les lots saisis d'un produit sont périmés : la caisse ne le délivre pas. */
+  const onlyExpiredLots = (id) => { const all = lotsOf(id); return all.length > 0 && !all.some((l) => lotDays(l) >= 0); };
+  function lotLine(id) {
+    if (!pvReal()) return '';
+    const l = liveLots(id)[0];
+    if (l) return `<span class="ph-flag out" style="background:var(--paper-mute);color:var(--ink-3);">Lot ${esc(l.lot)} · ${esc(fmtExp(l.exp))}</span>`;
+    return onlyExpiredLots(id) ? '<span class="ph-flag out">lots périmés</span>' : '';
+  }
+  /* La vente sort du stock : le catalogue partagé (même base que le tableau de bord) puis, lot
+     par lot, le plus proche de sa péremption d'abord. Rend, par produit, les lots prélevés. */
+  function takeFromStock(t) {
+    const used = {};
+    if (!pvReal()) {
+      t.lines.forEach((ln) => { if (STOCK[ln.itemId] != null) STOCK[ln.itemId] = Math.max(0, STOCK[ln.itemId] - ln.qty); });
+      return used;
+    }
+    const w = WS();
+    t.lines.forEach((ln) => {
+      let left = ln.qty; const parts = [];
+      try { w && w.catalog.sell(ln.itemId, ln.qty, t.num); } catch (_) {}
+      liveLots(ln.itemId).forEach((l) => {
+        if (left <= 0) return;
+        const take = Math.min(left, l.qty); left -= take; l.qty -= take; parts.push(take > 1 ? `${l.lot} ×${take}` : l.lot);
+        try { w && w.patch('expiries', l.recId, { qty: l.qty }, l.qty <= 0 ? 2 : undefined); } catch (_) {}
+      });
+      if (parts.length) used[ln.itemId] = parts.join(', ');
+      STOCK[ln.itemId] = Math.max(0, (STOCK[ln.itemId] || 0) - ln.qty);
+    });
+    return used;
+  }
+  /* Ce que la vente laisse au tableau de bord : l'ordonnance délivrée et, s'il y a une part
+     mutuelle, le dossier tiers payant À ENVOYER. Kiwi ne transmet rien à l'organisme. */
+  const medName = (id) => ((MED[id] && MED[id].name) || id || '');
+  function recordDelivery(t, split) {
+    const w = WS(), S = TS();
+    if (!pvReal() || !w || !S) return;
+    try {
+      const needsRx = state.mode === 'ordonnance' || t.lines.some((l) => ITEMS[l.itemId] && ITEMS[l.itemId].rx);
+      if (needsRx && t.patient) {
+        w.upsert('prescriptions', { id: 'rx-' + t.num, title: 'Ordonnance ' + t.num, status: 3, values: {
+          patient: t.patient.name, phone: t.patient.phone || '', doctor: medName(t.medecin), receivedAt: S.wallNow(),
+          items: t.lines.map((l) => l.qty + ' x ' + ITEMS[l.itemId].label).join('\n'), amount: split.gross } });
+      }
+      if (split.mut > 0 && t.patient) {
+        w.upsert('insurers', { id: 'cl-' + t.num, title: 'Dossier ' + t.num, status: 0, values: {
+          patient: t.patient.name, insurer: mutOf(t.patient.mut).label, claimAmount: split.mut, reimbursed: 0 } });
+      }
+    } catch (_) {}
+  }
+  /* Allergie au dossier : le nom du produit ou sa DCI contient une allergie saisie. Les
+     pénicillines sont une famille : une allergie « pénicilline » couvre amoxicilline, Augmentin… */
+  const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const PENICILLINS = /amoxicilline|ampicilline|penicilline|augmentin|clamoxyl|oracilline|bristopen/;
+  function allergyHit(p, it) {
+    const hay = fold(it.label + ' ' + (it.dci || ''));
+    for (const a of (p && p.allergies) || []) {
+      const k = fold(a).trim();
+      if (k.length < 3) continue;
+      if (hay.includes(k) || (/penicilline/.test(k) && PENICILLINS.test(hay))) return a;
+    }
+    return '';
+  }
+
   /* ═══════════════════════ ROOT ═══════════════════════ */
   let root = null;
 
   function build(rootEl) {
     if (pharmacieOps) pharmacieOps.hydrate();
+    bindReal(); rebuildReal();
     root = rootEl;
     root.innerHTML = `
       <aside class="ph-rail">
@@ -447,7 +626,7 @@
               </div>
               <div class="ph-search">
                 <i data-lucide="search"></i>
-                <input id="ph-q" placeholder="Doliprane, Augmentin, Ventoline, vitamine C…" autocomplete="off" />
+                <input id="ph-q" placeholder="${pvReal() ? 'Nom, DCI ou code-barres…' : 'Doliprane, Augmentin, Ventoline, vitamine C…'}" autocomplete="off" />
                 <button class="scan" id="ph-scan-btn"><i data-lucide="scan-line"></i>Scanner</button>
               </div>
               <div class="ph-grid-scroll" id="ph-gridwrap"></div>
@@ -519,7 +698,11 @@
   function renderBadges() {
     const cart = state.ticket.lines.reduce((s, l) => s + l.qty, 0);
     const renew = PATIENTS.filter((p) => p.chronic && p.chronic.dueIn <= 0).length;
-    const lowOrOut = Object.keys(STOCK).filter((id) => tracked(id) && STOCK[id] <= 6).length;
+    /* Réel : sous LE seuil de réassort du commerçant + lots à 30 jours ou périmés. Le « ≤ 6 » unique
+       pour tous les produits était un seuil que personne n'avait posé. */
+    const lowOrOut = pvReal()
+      ? GROSSISTE_SUGGEST.length + LOTS.filter((l) => lotDays(l) <= 30).length
+      : Object.keys(STOCK).filter((id) => tracked(id) && STOCK[id] <= 6).length;
     const setBadge = (sel, n) => { const el = $(sel, root); el.textContent = n || ''; el.style.display = n ? '' : 'none'; };
     setBadge('#ph-badge-cart', cart);
     setBadge('#ph-badge-pat', renew);
@@ -545,9 +728,12 @@
     return it.label.toLowerCase().includes(ql) || (it.dci || '').toLowerCase().includes(ql);
   }
 
+  const subLine = (it) => [it.dci, it.form].filter(Boolean).join(' · ');
   function cardFlags(it) {
     const out = [];
     if (isOut(it.id)) out.push('<span class="ph-flag out"><i data-lucide="package-x"></i>rupture</span>');
+    if (zeroStock(it.id)) out.push('<span class="ph-flag out"><i data-lucide="package-x"></i>stock 0</span>');
+    if (it.noPrice) out.push('<span class="ph-flag out"><i data-lucide="tag"></i>prix à saisir</span>');
     if (it.rx) out.push('<span class="ph-flag rx"><i data-lucide="clipboard-list"></i>ordonnance</span>');
     if (it.remb) out.push('<span class="ph-flag vig"><i data-lucide="shield-check"></i>remb.</span>');
     if (it.gen) out.push('<span class="ph-flag gen"><i data-lucide="repeat"></i>générique</span>');
@@ -562,7 +748,7 @@
         <span class="ph-card-art">${ART[it.art] || ART.boite}</span>
         <span class="ph-card-id">
           <span class="ph-card-name">${esc(it.label)}</span>
-          <span class="ph-card-form">${esc(it.dci)} · ${esc(it.form)}</span>
+          <span class="ph-card-form">${esc(subLine(it))}</span>
         </span>
       </span>
       <span class="ph-card-foot">
@@ -584,9 +770,10 @@
            <div class="ph-grid">${hits.map((it) => itemCard(it, i++)).join('')}</div>`
         : `<div class="ph-grid-empty">Aucun médicament pour « ${esc(q)} ».<br>Vérifiez l'orthographe ou la DCI, ou scannez la vignette.</div>`;
     } else {
-      wrap.innerHTML = CATALOG.map((c) => `
+      wrap.innerHTML = CATALOG.length ? CATALOG.map((c) => `
         <div class="ph-cat-head">${esc(c.label)}</div>
-        <div class="ph-grid">${c.items.map((it) => itemCard(it, i++)).join('')}</div>`).join('');
+        <div class="ph-grid">${c.items.map((it) => itemCard(it, i++)).join('')}</div>`).join('')
+        : `<div class="ph-grid-empty">Votre catalogue est vide.<br>Ajoutez vos médicaments et produits, avec leur prix, dans le tableau de bord (Stock & péremptions), ou scannez-les.</div>`;
     }
     wrap.onclick = (e) => {
       const b = e.target.closest('[data-ph-item]');
@@ -601,7 +788,7 @@
      = reste. Sans mutuelle (ou article non remboursable) → 100 % patient. */
   function ticketMut() {
     const p = state.ticket.patient;
-    return p ? MUTUELLES[p.mut] : MUTUELLES.sans;
+    return p ? mutOf(p.mut) : MUTUELLES.sans;
   }
   function lineCovered(ln) {
     const it = ITEMS[ln.itemId];
@@ -611,8 +798,9 @@
     const it = ITEMS[ln.itemId];
     const gross = it.price * ln.qty;
     if (!lineCovered(ln)) return { gross, mut: 0, pat: gross };
-    const mut = Math.round(it.price * ticketMut().rate) * ln.qty;
-    return { gross, mut, pat: gross - mut };
+    /* Au centime : 12,50 × 70 % = 8,75. L'ancien arrondi à l'unité faisait payer 3,50 au patient. */
+    const mut = r2(it.price * ln.qty * ticketMut().rate);
+    return { gross: r2(gross), mut, pat: r2(gross - mut) };
   }
   function ticketSplit() {
     return state.ticket.lines.reduce((acc, ln) => {
@@ -633,7 +821,7 @@
         <span class="edit">Chercher</span></button>`;
     }
     const p = t.patient;
-    const m = MUTUELLES[p.mut];
+    const m = mutOf(p.mut);
     return `<button class="ph-tk-row is-set" id="ph-tk-patient"><i data-lucide="user-check"></i>
       <span class="l"><b>${esc(p.name)}</b><span>${esc(p.phone)}${p.aff ? ` · ${esc(p.aff)}` : ''}</span></span>
       <span class="ph-mut-chip ${p.mut === 'sans' ? 'none' : ''}">${esc(m.label)}</span>
@@ -671,7 +859,7 @@
         <span class="ph-line-art">${ART[it.art] || ART.boite}</span>
         <span class="ph-line-mid">
           <span class="ph-line-name">${esc(it.label)}</span>
-          <span class="ph-line-sub"><span class="dci">${esc(it.dci)}</span> · ${esc(it.unit)}</span>
+          <span class="ph-line-sub"><span class="dci">${esc(it.dci)}</span>${it.dci ? ' · ' : ''}${esc(it.unit)}</span>
         </span>
         <span class="ph-line-right">
           <span class="ph-line-price">${fmtMAD(s.gross)}</span>
@@ -750,7 +938,7 @@
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
-        if (tracked(ln.itemId) && ln.qty >= STOCK[ln.itemId]) { toast(`Stock limité, ${STOCK[ln.itemId]} en rayon`); return; }
+        if (!pvReal() && tracked(ln.itemId) && ln.qty >= STOCK[ln.itemId]) { toast(`Stock limité, ${STOCK[ln.itemId]} en rayon`); return; }
         ln.qty++;
       } else { ln.qty--; if (ln.qty <= 0) t.lines.splice(idx, 1); }
       renderTicket(); renderBadges(); icons();
@@ -778,6 +966,10 @@
 
   function openSheet(itemId) {
     const it = ITEMS[itemId];
+    if (!it) return;
+    /* Un produit sans prix n'est pas un produit à 0 MAD : on ne vend pas un prix que le
+       commerçant n'a pas posé. */
+    if (it.noPrice) { toast(`${it.label}, prix non renseigné. Fixez-le dans le tableau de bord (Stock).`, 3200); return; }
     if (isOut(it.id)) {
       toast(`${it.label}, rupture de stock. Ajoutez-le à la commande grossiste.`);
       return;
@@ -795,14 +987,14 @@
     const genAvail = genItem && inStock(genItem.id);
     const savePct = genAvail ? Math.round((1 - genItem.price / it.price) * 100) : 0;
     const covered = !!it.remb && ticketMut().rate > 0;
-    const partMut = covered ? Math.round(it.price * ticketMut().rate) : 0;
+    const partMut = covered ? r2(it.price * ticketMut().rate) : 0;
     el.innerHTML = `
       <button class="ph-modal-x" data-ph-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="ph-sheet-head">
         <span class="ph-sheet-art">${ART[it.art] || ART.boite}</span>
         <span class="ph-sheet-title">
           <h3>${esc(it.label)}</h3>
-          <span class="sub">${esc(CATALOG.find((c) => c.id === it.cat).label)} · ${esc(it.form)}</span>
+          <span class="sub">${esc(((CATALOG.find((c) => c.id === it.cat) || {}).label) || '')}${it.form ? ' · ' + esc(it.form) : ''}</span>
           <span class="dci">${esc(it.dci)}</span>
         </span>
         <span class="ph-sheet-price"><span class="val" id="ph-sheet-total">${fmtMAD(it.price * sheet.qty)}</span><span class="per">${fmtNum(it.price)} MAD × ${sheet.qty}</span></span>
@@ -813,6 +1005,7 @@
         ${it.remb ? '<span class="ph-flag vig"><i data-lucide="shield-check"></i>Remboursable</span>' : ''}
         ${FRIDGE.has(it.id) ? '<span class="ph-flag fridge"><i data-lucide="thermometer"></i>Chaîne du froid 2-8°C</span>' : ''}
         ${tracked(it.id) ? `<span class="ph-flag out" style="background:var(--paper-mute);color:var(--ink-3);">Stock ${STOCK[it.id]}</span>` : ''}
+        ${lotLine(it.id)}
       </div>
 
       ${genAvail ? `<div class="ph-sub">
@@ -836,7 +1029,7 @@
         </div>
         ${covered ? `<div class="ph-f">
           <div class="ph-f-lbl">Tiers payant <span class="opt">· ${esc(ticketMut().label)}</span></div>
-          <div class="ph-poso"><i data-lucide="shield-check"></i><span class="l">Part mutuelle <b>${fmtNum(partMut)} MAD</b> · part patient <b>${fmtNum(it.price - partMut)} MAD</b> par ${esc(it.unit)}</span></div>
+          <div class="ph-poso"><i data-lucide="shield-check"></i><span class="l">Part mutuelle <b>${fmtNum(partMut)} MAD</b> · part patient <b>${fmtNum(r2(it.price - partMut))} MAD</b> par ${esc(it.unit)}</span></div>
         </div>` : ''}
       </div>
 
@@ -858,7 +1051,7 @@
     };
     $('#ph-qty-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refresh(); } };
     $('#ph-qty-plus', el).onclick = () => {
-      if (tracked(it.id) && sheet.qty >= STOCK[it.id]) { toast(`Stock limité, ${STOCK[it.id]} en rayon`); return; }
+      if (!pvReal() && tracked(it.id) && sheet.qty >= STOCK[it.id]) { toast(`Stock limité, ${STOCK[it.id]} en rayon`); return; }
       sheet.qty++; refresh();
     };
     $('#ph-sheet-add', el).onclick = () => addToTicket(it.id, sheet.qty);
@@ -904,7 +1097,7 @@
         ${mode === 'search' ? `
           <div class="ph-pt-results" id="ph-pt-results">
             ${hits.map((p) => {
-              const m = MUTUELLES[p.mut];
+              const m = mutOf(p.mut);
               return `<button class="ph-pt-row" data-ph-pt="${p.id}">
                 <span class="ph-pt-ava">${esc(initials(p.name))}</span>
                 <span class="ph-pt-mid">
@@ -925,10 +1118,12 @@
             <div class="ph-in-row">
               <input class="ph-in" id="ph-pt-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(/^[\\d\\s.+-]+$/.test(q || '') ? q : '')}" />
               <select class="ph-select" id="ph-pt-mut">
-                ${MUT_LIST.map((id) => `<option value="${id}">${esc(MUTUELLES[id].label)}</option>`).join('')}
+                ${MUT_LIST.map((id) => `<option value="${id}">${esc(mutOf(id).label)}</option>`).join('')}
               </select>
             </div>
+            ${pvReal() && MUT_LIST.length < 2 ? '<div class="ph-garde-empty" style="padding:6px 2px;text-align:left;">Aucun organisme configuré : ajoutez-les, avec leur taux, dans le tableau de bord (Organismes & taux).</div>' : ''}
             <input class="ph-in" id="ph-pt-aff" placeholder="N° d'affiliation (optionnel)" />
+            <input class="ph-in" id="ph-pt-allerg" placeholder="Allergies connues, séparées par des virgules (optionnel)" />
             <div class="ph-sheet-foot" style="margin-top:4px;">
               <button class="ph-btn secondary" id="ph-pt-back">Retour</button>
               <button class="ph-btn primary" id="ph-pt-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -941,7 +1136,7 @@
           const p = PAT[b.dataset.phPt];
           state.ticket.patient = p;
           closeVeil('#ph-patient-veil');
-          const m = MUTUELLES[p.mut];
+          const m = mutOf(p.mut);
           toast(p.mut === 'sans' ? `${p.name}, sans mutuelle, vente directe` : `${p.name}, ${m.label}, tiers payant actif`);
           renderTicket(); renderBadges(); icons();
         };
@@ -960,11 +1155,12 @@
         const aff = $('#ph-pt-aff', el).value.trim();
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
         const id = 'px' + Date.now().toString(36);
-        const p = { id, name, phone: tel, mut, aff, age: null, chronic: null, allergies: [], visits: 0 };
+        const allergies = ($('#ph-pt-allerg', el).value || '').split(/[,;]/).map((x) => x.trim()).filter(Boolean).slice(0, 12);
+        const p = { id, name, phone: tel, mut, aff, age: null, chronic: null, allergies, visits: 0 };
         PATIENTS.unshift(p); PAT[id] = p;
         state.ticket.patient = p;
         closeVeil('#ph-patient-veil');
-        toast(`Fiche créée, ${name} · ${MUTUELLES[mut].label}`);
+        toast(`Fiche créée, ${name} · ${mutOf(mut).label}`);
         renderTicket(); renderBadges(); icons();
       };
     };
@@ -975,7 +1171,7 @@
   }
 
   function recoPanel(p) {
-    const m = MUTUELLES[p.mut];
+    const m = mutOf(p.mut);
     return `<div class="ph-reco">
       <div class="ph-reco-head"><i data-lucide="sparkles"></i>${esc(p.name)}, fiche reconnue</div>
       <div class="ph-reco-rows">
@@ -1037,13 +1233,18 @@
       if (!t.patient) { openPatientPicker(); toast("Rattachez le patient avant de valider l'ordonnance"); return; }
       if (!t.medecin) { openMedecinPicker(); toast('Indiquez le médecin prescripteur'); return; }
     }
-    /* allergie croisée simple : si un antibiotique pénicilline + allergie connue */
-    if (t.patient && (t.patient.allergies || []).some((a) => /pénicilline|penicilline/i.test(a))) {
-      const pen = t.lines.find((l) => /amoxicilline|augmentin|clamoxyl/i.test(ITEMS[l.itemId].dci + ITEMS[l.itemId].label));
-      if (pen) {
-        toast(`Vente bloquée, ${t.patient.name} a une allergie Pénicilline au dossier`, 4200);
-        return;
+    /* allergie au dossier du patient : jamais délivrée sans qu'on le voie */
+    if (t.patient) {
+      for (const l of t.lines) {
+        const hit = allergyHit(t.patient, ITEMS[l.itemId]);
+        if (hit) { toast(`Vente bloquée, ${t.patient.name} a une allergie ${hit} au dossier`, 4200); return; }
       }
+    }
+    /* un lot périmé ne se délivre pas : si tous les lots saisis d'un produit sont périmés, on retire
+       d'abord ces lots (Lots à surveiller) ou on saisit le lot en rayon. */
+    if (pvReal()) {
+      const bad = t.lines.find((l) => onlyExpiredLots(l.itemId));
+      if (bad) { toast(`Vente bloquée, ${ITEMS[bad.itemId].label} : tous les lots enregistrés sont périmés`, 4200); return; }
     }
     openReceipt(t);
   }
@@ -1129,8 +1330,8 @@
 
     const finalize = (method, rendu) => {
       /* décrémenter le stock, consigner, repartir sur un ticket vierge */
-      t.lines.forEach((ln) => { if (STOCK[ln.itemId] != null) STOCK[ln.itemId] = Math.max(0, STOCK[ln.itemId] - ln.qty); });
-      if (split.mut && t.patient) {
+      const lotsUsed = takeFromStock(t);
+      if (split.mut && t.patient && !pvReal()) {
         insurerReceivables.unshift({
           id: `${t.num}-${t.patient.id}`,
           ticket: t.num,
@@ -1149,7 +1350,8 @@
       /* Seule la part patient rentre au comptoir. La part mutuelle est facturée
          au tiers payant plus tard : la journaliser ici gonflerait la recette du
          jour d'un encaissement qui n'a pas eu lieu. */
-      postDay(due, method, tkLabel(t), t.num, saleLines(t));
+      postDay(due, method, tkLabel(t), t.num, saleLines(t, lotsUsed));
+      recordDelivery(t, split);
       saleSeq++;
       const wasNum = t.num;
       freshTicket();
@@ -1297,7 +1499,7 @@
   }
 
   function patientCard(p) {
-    const m = MUTUELLES[p.mut];
+    const m = mutOf(p.mut);
     const renewDue = p.chronic && p.chronic.dueIn <= 0;
     return `<button class="ph-pcard ${p.due || renewDue ? 'is-due' : ''}" data-ph-pcard="${p.id}">
       <div class="ph-pcard-top">
@@ -1325,7 +1527,7 @@
   function openPatientDetail(id) {
     const p = PAT[id];
     if (!p) return;
-    const m = MUTUELLES[p.mut];
+    const m = mutOf(p.mut);
     const el = $('#ph-ptdetailm', root);
     el.innerHTML = `
       <button class="ph-modal-x" data-ph-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1468,8 +1670,26 @@
     icons();
   }
 
+  /* Réel : armer la garde ouvre une fiche « Gardes & relève » au tableau de bord, la désarmer la
+     ferme avec ce que la nuit a rapporté. Avant, l'écran Garde du tableau de bord restait vide. */
+  function dutyRecord(arming) {
+    const w = WS(), S = TS();
+    if (!pvReal() || !w || !S) return;
+    try {
+      if (arming) {
+        state.dutyId = 'duty-' + Date.now().toString(36);
+        w.upsert('duty', { id: state.dutyId, title: 'Garde de nuit', status: 2, values: {
+          startAt: S.wallNow(), endAt: S.wallNow(Date.now() + 12 * 3600000), handover: 'Garde en cours, journal de nuit tenu à la caisse.' } });
+      } else if (state.dutyId) {
+        const sales = queuedSales.length, total = queuedSales.reduce((n, x) => n + (+x.amt || 0), 0);
+        w.patch('duty', state.dutyId, { endAt: S.wallNow(), handover: `${sales} ${plu(sales, 'vente')} de nuit · ${fmtNum(total)} MAD encaissés` }, 3);
+        state.dutyId = '';
+      }
+    } catch (_) {}
+  }
   function toggleNight() {
     state.night = !state.night;
+    dutyRecord(state.night);
     root.classList.toggle('is-night', state.night);
     renderNight();
     renderBadges();

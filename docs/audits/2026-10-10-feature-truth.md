@@ -518,7 +518,33 @@ Covered by `food-trades-truth-test.mjs` (49 checks).
 
 Covered by `service-trades-truth-test.mjs` (26 checks).
 
+## Commerces spécialisés (pharmacie, librairie, épicerie): done
+
+| ID | Finding | Status |
+|---|---|---|
+| S1 | On a real account the three tills sold an invented catalogue and demo stock. | **Fixed.** They read the shared catalogue (`KiwiBoutiqueCatalog`, `/api/catalog`): price, EAN/ISBN and stock are the merchant's. A product with no price is not sold. |
+| S2 | Pharmacy medicine sheets, batches and insurers were constants. | **Fixed.** Médicaments (DCI, prescription, reimbursable, cold chain), Lots et péremption (FEFO; an expired batch cannot be sold) and Organismes (rates) live in the tenant-scoped `workspaces` doc. |
+| S3 | Insurer share rounded to the dirham; third-party claims and dispensed prescriptions never reached the dashboard. | **Fixed.** Share to the centime; claim "À envoyer" and prescription "délivrée" written to the same doc. |
+| S4 | Bookshop school lists and special orders lived only on the till. | **Fixed.** Lists resolve against the catalogue (an unmatched line reads "sans prix"); special orders sync both ways; deposit and balance enter the day's takings. |
+| S5 | Grocery weighed items and scans were demo-only. | **Fixed.** Sold by kg or L, scanned through the catalogue, rounded to the centime. |
+| S6 | A sale did not draw stock. | **Fixed.** Stock leaves the catalogue with the ticket reference. |
+| S7 | Accueil said "Réservations non configurées" for a pharmacy or bookshop; expiry counted in device hours. | **Fixed.** Duty pharmacy and special orders replace it; expiry in calendar days, Casablanca time. |
+| S8 | A record edited in another tab was not seen by the till. | **Fixed.** The till listens to `storage` events. |
+| S9 | "Ventes aujourd'hui" on trade pages used device midnight. | **Fixed** (merged with the earlier rule): business day from `KiwiDateRange.bounds`, then `KiwiDayReport`, refunds excluded. |
+
+Covered by `specialty-retail-truth-test.mjs` (29 checks); `pos-truth-a-test` and `trade-workspaces-test` follow the new contract.
+
 ## Open, logged for their own pass
+
+- **Pharmacy health data on the counter device.** Prescriptions and
+  allergies sit in the `workspaces` store doc, which a paired till token can
+  read (like `costs`). It needs its own owner/pharmacist scope before real
+  patient data is entered.
+- **Bookshop deposit and balance are recorded as cash** whatever the tender.
+- **Weighed grocery stock is not tracked**; only unit products draw stock.
+- **School lists show "BALANCE 0 MAD"** in the generic summary strip, which
+  means nothing for a list.
+- **Boutique and maison Accueil still say "Bookings not configured".**
 
 
 

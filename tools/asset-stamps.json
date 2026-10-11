@@ -232,8 +232,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "60",
-    "sha": "6bee9e965bc2fdcb"
+    "v": "61",
+    "sha": "8c08ec7f5c4f094e"
   },
   "assets/day-report-dash.js": {
     "v": "28",
@@ -704,16 +704,16 @@
     "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "79",
-    "sha": "7b5b1a3d8b6978a7"
+    "v": "80",
+    "sha": "c335cafd51651916"
   },
   "assets/pos-epicerie.css": {
-    "v": "6",
+    "v": "7",
     "sha": "2ef8ca4ef7968710"
   },
   "assets/pos-epicerie.js": {
-    "v": "6",
-    "sha": "4284572643806211"
+    "v": "7",
+    "sha": "aced2d913723bfd3"
   },
   "assets/pos-fastfood.css": {
     "v": "8",
@@ -760,12 +760,12 @@
     "sha": "cefa5398eda98703"
   },
   "assets/pos-librairie.css": {
-    "v": "6",
+    "v": "7",
     "sha": "9e38290620c45b6c"
   },
   "assets/pos-librairie.js": {
-    "v": "6",
-    "sha": "44d87887cc0e29e3"
+    "v": "7",
+    "sha": "ce6ca70c2dce30ef"
   },
   "assets/pos-maison.css": {
     "v": "58",
@@ -784,12 +784,12 @@
     "sha": "de898c74559fc037"
   },
   "assets/pos-pharmacie.css": {
-    "v": "6",
+    "v": "7",
     "sha": "48f9f2f85cf97f7d"
   },
   "assets/pos-pharmacie.js": {
-    "v": "6",
-    "sha": "1ece261863c7c8fc"
+    "v": "7",
+    "sha": "f3d8d82d1572d160"
   },
   "assets/pos-pizzeria.css": {
     "v": "5",
@@ -828,8 +828,8 @@
     "sha": "c667db1491956d82"
   },
   "assets/pos-workspaces.js": {
-    "v": "6",
-    "sha": "30c1c4dd0b50c2ce"
+    "v": "7",
+    "sha": "e662cb6d95631f46"
   },
   "assets/pressing-caisse.css": {
     "v": "41",
@@ -996,16 +996,16 @@
     "sha": "27e6fd8ef97f9f49"
   },
   "assets/trade-workspace-schema.js": {
-    "v": "5",
-    "sha": "f1ad3e287cbd2e34"
+    "v": "6",
+    "sha": "2e30dd549a170543"
   },
   "assets/trade-workspaces.css": {
     "v": "6",
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "7",
-    "sha": "bd57dd8fbe27a3b8"
+    "v": "8",
+    "sha": "582fc12818ecad2d"
   },
   "assets/trades.js": {
     "v": "6",
@@ -1028,8 +1028,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "44",
-    "sha": "185f2a61adddccd0"
+    "v": "45",
+    "sha": "af1dcd009dba9cfe"
   },
   "assets/vertical-state.js": {
     "v": "3",

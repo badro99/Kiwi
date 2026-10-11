@@ -9,8 +9,8 @@
     pizzeria:[['kds',L('File du four','Oven queue','قائمة الفرن')],['delivery',L('Livraisons','Deliveries','التوصيلات')]],
     traiteur:[['tables',L('Événements','Events','الفعاليات')],['kds',L('Production','Production','الإنتاج')],['quotes',L('Devis','Quotes','العروض')],['deposits',L('Acomptes','Deposits','التسبيقات')]],
     foodtruck:[['tables',L('Tournée','Route','الجولة')],['kds',L('File','Queue','القائمة')],['vehicle',L('Camion','Truck','الشاحنة')]],
-    epicerie:[['returns',L('Casse','Breakage','التالف')],['credit',L('Crédit','Credit','الديون')],['suppliers',L('Fournisseurs','Suppliers','الموردون')]],
-    pharmacie:[['prescriptions',L('Ordonnances','Prescriptions','الوصفات')],['insurers',L('Tiers payant','Claims','الدفع الثالث')],['expiries',L('Péremptions','Expiries','الصلاحية')],['returns',L('Retours','Returns','المرتجعات')],['duty',L('Relève','Handover','التسليم')]],
+    epicerie:[['returns',L('Casse','Breakage','التالف')],['credit',L('Crédit','Credit','الديون')],['suppliers',L('Fournisseurs','Suppliers','الموردون')],['weighed',L('Au poids','By weight','بالوزن')]],
+    pharmacie:[['prescriptions',L('Ordonnances','Prescriptions','الوصفات')],['insurers',L('Tiers payant','Claims','الدفع الثالث')],['expiries',L('Péremptions','Expiries','الصلاحية')],['drugs',L('Fiches','Drug sheets','البطاقات')],['payers',L('Organismes','Payers','الجهات')],['returns',L('Retours','Returns','المرتجعات')],['duty',L('Relève','Handover','التسليم')]],
     librairie:[['bookorders',L('Commandes','Orders','الطلبات')],['schoollists',L('Listes scolaires','School lists','اللوائح المدرسية')],['returns',L('Retours','Returns','المرتجعات')]],
     fleuriste:[['flowerorders',L('Commandes','Orders','الطلبات')],['delivery',L('Livraisons','Deliveries','التوصيلات')],['freshness',L('Fraîcheur','Freshness','الطزاجة')],['returns',L('Pertes','Losses','الخسائر')]],
     spa:[['appointments',L('Agenda','Diary','المواعيد')],['packages',L('Cures','Packages','الباقات')],['clients',L('Clients','Guests','العملاء')],['services',L('Soins','Treatments','العلاجات')],['practitioners',L('Praticiens','Practitioners','الممارسون')],['products',L('Boutique','Shop','المتجر')]],
@@ -30,6 +30,11 @@
   const key=()=>`kiwi:workspaces:v1:${paired().venueId||paired().merchant||'demo'}`;
   const blank=()=>({trade:posTrade(String(paired().subtype||paired().type||'')),records:{}});
   function read(){try{const d=JSON.parse(localStorage.getItem(key())||'null');return d&&d.records?d:blank();}catch(_){return blank();}}
+  const listeners=new Set();
+  function notify(){listeners.forEach(fn=>{try{fn();}catch(e){try{console.warn('KiwiPosWorkspaces: un écran n\u2019a pas pu se rafraîchir',e&&e.message);}catch(_){}}});}
+  /* Le tableau de bord ouvert dans un autre onglet du MÊME navigateur écrit directement dans le stockage
+     local : sans cet écouteur, la caisse relisait la fiche modifiée mais ne s'en apercevait pas. */
+  try{window.addEventListener('storage',e=>{if(e&&e.key===key())notify();});}catch(_){}
   function write(d){try{localStorage.setItem(key(),JSON.stringify(d&&d.records?d:blank()));}catch(_){}renderOpen();notify();}
   function merge(a,b){const out={trade:(a&&a.trade)||(b&&b.trade)||'',records:{}};const ar=a?.records||{},br=b?.records||{};new Set([...Object.keys(ar),...Object.keys(br)]).forEach(nav=>{const ids={};[...(ar[nav]||[]),...(br[nav]||[])].forEach(r=>{if(r?.id&&(!ids[r.id]||(+r.updatedAt||0)>=(+ids[r.id].updatedAt||0)))ids[r.id]=r;});out.records[nav]=Object.values(ids).sort((x,y)=>(+y.updatedAt||0)-(+x.updatedAt||0)).slice(0,500);});return out;}
   let cloud=null,openState=null;
@@ -44,7 +49,7 @@
   /* les centimes se voient quand il y en a : 280,50 MAD ne devient pas 281 MAD */
   function money(n){const v=Math.round((+n||0)*100)/100;try{return v.toLocaleString(lang()==='ar'?'ar-MA':'fr-FR',{minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2})+' MAD';}catch(_){return String(v)+' MAD';}}
   function field(sc,id){return sc?.fields?.find(f=>f.id===id);}
-  function valueLabel(sc,id,value){const f=field(sc,id);if(value==null||value==='')return'';if(f?.type==='money'||/balance$|cost$|price$|fee$|target$/i.test(id))return money(value);if(f?.type==='checkbox')return value?pick(L('Oui','Yes','نعم')):pick(L('Non','No','لا'));if(f?.type==='select'){return pick((f.values||[]).find(o=>o.value===value)?.label)||String(value);}if(f?.type==='relation'){return window.KiwiTradeSchema.relationOptions(sc,allRecords(),f).find(o=>o.value===value)?.label||value;}if(f?.type==='datetime-local')return String(value).replace('T',' ');return String(value);}
+  function valueLabel(sc,id,value){const f=field(sc,id);if(value==null||value==='')return'';if(f?.type==='product')return window.KiwiTradeSchema.productName(value)||pick(L('Produit supprimé','Removed product','منتج محذوف'));if(f?.suffix)return String(value).replace('.',',')+' '+f.suffix;if(f?.type==='money'||/balance$|cost$|price$|fee$|target$/i.test(id))return money(value);if(f?.type==='checkbox')return value?pick(L('Oui','Yes','نعم')):pick(L('Non','No','لا'));if(f?.type==='select'){return pick((f.values||[]).find(o=>o.value===value)?.label)||String(value);}if(f?.type==='relation'){return window.KiwiTradeSchema.relationOptions(sc,allRecords(),f).find(o=>o.value===value)?.label||value;}if(f?.type==='datetime-local')return String(value).replace('T',' ');return String(value);}
 
   function openPressing(root){
     const s=window.KiwiPressingOps?.summary?.()||{},badge=sel=>Math.max(0,parseInt(root.querySelector(sel)?.textContent||'0',10)||0),activeCount=(+s.active||badge('#px-badge-cmd')),ready=(+s.ready||badge('#px-badge-rt')),racks=(+s.racks||badge('#px-badge-rack'));
@@ -53,7 +58,7 @@
 
   function fieldControl(sc,f,rec){const v=rec.values?.[f.id]??f.default??'',id='twpos-'+f.id,req=f.required?' required':'';let c='';const common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;
     if(f.type==='textarea')c=`<textarea ${common} maxlength="${f.max||2400}">${esc(v)}</textarea>`;
-    else if(f.type==='select'||f.type==='relation'){const opts=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);c=`<select ${common}><option value="">·</option>${opts.map(o=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
+    else if(f.type==='select'||f.type==='relation'||f.type==='product'){let opts=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):f.type==='product'?window.KiwiTradeSchema.productOptions():(f.values||[]);if(f.type==='product'&&v&&!opts.some(o=>o.value===v))opts=opts.concat([{value:v,label:pick(L('Produit supprimé du catalogue','Product removed from the catalogue','منتج محذوف من الكتالوج'))}]);c=`<select ${common}><option value="">·</option>${opts.map(o=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
     else if(f.type==='checkbox')c=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else c=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='number'||f.type==='money'?` step="${f.step||'0.01'}"`:''}>`;
     return `<label class="twpos-field${f.full||f.type==='textarea'?' full':''}"><span>${esc(pick(f.label))}${f.required?' *':''}</span>${c}<small data-twpos-error="${esc(f.id)}"></small></label>`;}
@@ -76,9 +81,6 @@
    * « Brouillon » ni « Archivé », et son interrupteur « Actif » pas sur Non) ;
    * un prix à 0 est un prix NON saisi (le schéma convertit un champ vide en 0) :
    * la caisse le demande plutôt que de vendre à 0 MAD. */
-  const subs=new Set();
-  function notify(){subs.forEach(fn=>{try{fn();}catch(_){}});}
-  function subscribe(fn){subs.add(fn);return()=>subs.delete(fn);}
   function isRealTill(){try{return !!(window.KiwiEnv?.isReal?.()||window.KiwiPlatform?.isPaired?.()||JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null'));}catch(_){return false;}}
   function defaultStatus(){return currentSchema()?.stageKey==='catalog'?1:0;}
   function boardValues(trade,nav,r){const sc=window.KiwiTradeSchema?.get?.(posTrade(trade),nav);return sc?window.KiwiTradeSchema.normalize(sc,r).values:(r.values||{});}
@@ -156,5 +158,43 @@
     watching=setInterval(()=>{if(document.visibilityState==='hidden')return;try{cloud?.pull?.(false);}catch(_){}fetchRoster(false);},45000);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{cloud?.pull?.(false);}catch(_){}fetchRoster(false);}});
   }
-  window.KiwiPosWorkspaces={mount,open,read,write,merge,boards:BY_POS,services,staff,rows,board,subscribe,watch,active,real:isRealTill};
+  /* ── API pour les caisses métier (pharmacie, librairie, épicerie) ─────────────
+     Elles lisent et écrivent LES MÊMES fiches que le tableau de bord (document « workspaces »,
+     même fusion, même synchro serveur) : lots, fiches médicament, organismes, listes scolaires,
+     commandes spéciales, dossiers tiers payant, ordonnances. */
+  function trade(){return posTrade(String(paired().subtype||paired().type||''));}
+  function values(nav){
+    bind();const sc=window.KiwiTradeSchema?.get?.(trade(),nav);
+    return active(nav).map(r=>{const n=sc?window.KiwiTradeSchema.normalize(sc,r):r;return{id:r.id,title:n.title||r.title||'',status:+r.status||0,note:r.note||'',values:n.values||{},createdAt:r.createdAt||0,updatedAt:r.updatedAt||0,raw:r};});
+  }
+  function upsert(nav,rec){
+    bind();const sc=window.KiwiTradeSchema?.get?.(trade(),nav),now=Date.now();
+    const base={...rec,id:rec.id||('tw-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,7)),status:+rec.status||0,createdAt:rec.createdAt||now,updatedAt:now,deletedAt:0};
+    const norm=sc?window.KiwiTradeSchema.normalize(sc,base):base;
+    const out={...base,title:norm.title||base.title||'',note:norm.note||base.note||'',values:norm.values||base.values||{}};
+    save(nav,out);return out;
+  }
+  function patch(nav,id,fields,status){
+    const r=active(nav).find(x=>x.id===id);if(!r)return null;
+    const sc=window.KiwiTradeSchema?.get?.(trade(),nav),cur=sc?window.KiwiTradeSchema.normalize(sc,r).values:(r.values||{});
+    return upsert(nav,{...r,values:{...cur,...fields},status:status==null?r.status:status});
+  }
+  function remove(nav,id){const r=active(nav).find(x=>x.id===id);if(r)save(nav,{...r,deletedAt:Date.now(),updatedAt:Date.now()});}
+  function subscribe(fn){listeners.add(fn);bind();return()=>listeners.delete(fn);}
+  /* Le catalogue du commerçant, vu de la caisse : le MÊME que l'inventaire du tableau de bord
+     (clé = commerce appairé). La vente en tire le stock, variante par variante, et le journal
+     des mouvements garde le numéro de ticket. Un stock insuffisant ne bloque pas (voir caisses). */
+  const catalog={
+    cat(){return window.KiwiTradeSchema?.catalog?.()||null;},
+    compat(){const c=catalog.cat();try{return c?c.compat():null;}catch(_){return null;}},
+    product(id){const c=catalog.cat();try{const g=c?c.getProduct(id):null;return g&&g.product?g.product:null;}catch(_){return null;}},
+    resolve(code){const c=catalog.cat();try{return c&&c.resolveScan?c.resolveScan(code):null;}catch(_){return null;}},
+    subscribe(fn){const c=catalog.cat();try{return c?c.subscribe(fn):()=>{};}catch(_){return()=>{};}},
+    sell(id,qty,ref){
+      const c=catalog.cat();if(!c)return 0;try{window.KiwiMaisonStock?.enable('boutique');}catch(_){}let left=Math.max(0,Math.trunc(+qty||0)),taken=0;
+      try{c.listVariants(id).forEach(v=>{const have=Math.max(0,+v.stock||0);if(left<=0||!have)return;const t=Math.min(left,have);c.adjustStock(v.id,-t,'vente',{ref:ref||''});left-=t;taken+=t;});}catch(_){}
+      return taken;
+    }
+  };
+  window.KiwiPosWorkspaces={mount,open,read,write,merge,boards:BY_POS,services,staff,rows,board,subscribe,watch,active,real:isRealTill,values,upsert,patch,remove,bind,trade,catalog};
 })();

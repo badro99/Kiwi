@@ -33,16 +33,19 @@
     P('epicerie','returns','checklist',L('Retours & casse','Returns & breakage','المرتجعات والتالف'),L('Tracez les retours, écarts, produits cassés et pertes.','Track returns, discrepancies, breakage and loss.','تتبع المرتجعات والفروقات والتالف والخسائر.'),L('incident','incident','حادث'),{money:true}),
     P('epicerie','credit','ledger',L('Carnet de crédit','Credit ledger','دفتر الديون'),L('Suivez chaque crédit client et son règlement, sans perdre le contexte.','Track every customer credit and settlement with full context.','تتبع كل دين للعميل وتسويته مع كامل التفاصيل.'),L('crédit','credit entry','دين'),{money:true}),
     P('epicerie','suppliers','schedule',L('Fournisseurs','Suppliers','الموردون'),L('Commandes, livraisons attendues et problèmes fournisseur.','Orders, expected deliveries and supplier issues.','الطلبات والتوصيلات المتوقعة ومشاكل الموردين.'),L('livraison fournisseur','supplier delivery','توصيل مورد'),{money:true}),
+    P('epicerie','weighed','catalog',L('Produits au poids','Weighed products','المنتجات بالوزن'),L('Les produits du catalogue vendus à la balance : leur prix est alors le prix du kilo (ou du litre).','Catalogue products sold by weight: their price is then the price per kilo (or litre).','منتجات الكتالوج التي تباع بالميزان: سعرها هو سعر الكيلوغرام (أو اللتر).'),L('produit','product','منتج'),{money:false,date:false}),
 
     P('pharmacie','returns','checklist',L('Retours laboratoires','Lab returns','مرتجعات المختبرات'),L('Isolez et suivez chaque lot retourné au laboratoire.','Isolate and follow every lot returned to the lab.','اعزل وتتبع كل دفعة معادة للمختبر.'),L('retour','return','إرجاع'),{money:true}),
     P('pharmacie','prescriptions','queue',L('Ordonnances','Prescriptions','الوصفات الطبية'),L('Une file claire de la réception à la délivrance.','A clear queue from intake to dispensing.','قائمة واضحة من الاستلام إلى التسليم.'),L('ordonnance','prescription','وصفة'),{money:true}),
-    P('pharmacie','insurers','ledger',L('Tiers payant','Third-party payer','الدفع من طرف ثالث'),L('Suivez les dossiers envoyés, acceptés, rejetés ou réglés.','Track submitted, accepted, rejected and paid claims.','تتبع الملفات المرسلة والمقبولة والمرفوضة والمؤداة.'),L('dossier','claim','ملف'),{money:true}),
-    P('pharmacie','expiries','checklist',L('Lots à surveiller','Expiry watch','مراقبة الصلاحية'),L('Priorisez les lots proches de leur date limite.','Prioritise lots approaching their limit date.','أعط الأولوية للدفعات القريبة من انتهاء الصلاحية.'),L('lot','lot','دفعة'),{money:true}),
+    P('pharmacie','insurers','ledger',L('Tiers payant','Third-party payer','الدفع من طرف ثالث'),L('Chaque part mutuelle à facturer, de l’envoi au règlement. Kiwi ne transmet rien à l’organisme : vous gardez la main.','Every third-party share to bill, from submission to payment. Kiwi sends nothing to the payer: you stay in control.','كل حصة طرف ثالث للفوترة، من الإرسال إلى الأداء. لا يرسل Kiwi شيئاً إلى الجهة: أنتم من يتحكم.'),L('dossier','claim','ملف'),{money:true}),
+    P('pharmacie','expiries','checklist',L('Lots à surveiller','Expiry watch','مراقبة الصلاحية'),L('Les lots que vous saisissez ici, avec leur péremption. La caisse vend d’abord celui qui périme le plus tôt et ne vend jamais un lot périmé.','The lots you enter here, with their expiry date. The till sells the earliest expiry first and never sells an expired lot.','الدفعات التي تدخلونها هنا مع تاريخ انتهائها. يبيع الصندوق أولاً الأقرب انتهاءً ولا يبيع دفعة منتهية أبداً.'),L('lot','lot','دفعة'),{money:true}),
+    P('pharmacie','drugs','catalog',L('Fiches médicaments','Drug sheets','بطاقات الأدوية'),L('Ordonnance, remboursement, froid : ce que la caisse doit savoir de chaque produit de votre catalogue.','Prescription, reimbursement, cold chain: what the till needs to know about each catalogue product.','وصفة وتعويض وتبريد: ما يحتاج الصندوق معرفته عن كل منتج في الكتالوج.'),L('fiche','sheet','بطاقة'),{money:false,date:false}),
+    P('pharmacie','payers','catalog',L('Organismes & taux','Payers & rates','الجهات والنسب'),L('Les organismes que vous facturez et le taux que vous appliquez à chacun. Sans organisme saisi, la caisse ne découpe aucune part.','The payers you bill and the rate you apply to each. With none entered, the till splits no share.','الجهات التي تفوترونها والنسبة المطبقة على كل واحدة. بدون جهة مدخلة لا يقسّم الصندوق أي حصة.'),L('organisme','payer','جهة'),{money:false,date:false}),
     P('pharmacie','duty','schedule',L('Gardes & relève','Duty & handover','الحراسة والتسليم'),L('Organisez les gardes et les points de relève importants.','Organise duty shifts and important handover notes.','نظم الحراسة وملاحظات التسليم المهمة.'),L('relève','handover','تسليم'),{money:false}),
 
     P('librairie','returns','checklist',L('Retours éditeurs','Publisher returns','مرتجعات الناشرين'),L('Regroupez les titres à retourner et leur validation.','Group titles to return and their approval.','اجمع العناوين المراد إرجاعها وموافقتها.'),L('retour','return','إرجاع'),{money:true}),
     P('librairie','bookorders','queue',L('Commandes spéciales','Special orders','الطلبات الخاصة'),L('Retrouvez chaque demande lecteur jusqu’à sa remise.','Follow every reader request through hand-off.','تتبع كل طلب قارئ حتى التسليم.'),L('commande','order','طلب'),{money:true}),
-    P('librairie','schoollists','checklist',L('Listes scolaires','School lists','اللوائح المدرسية'),L('Préparez les listes par école, niveau et famille.','Prepare lists by school, year and family.','حضّر اللوائح حسب المدرسة والمستوى والعائلة.'),L('liste','list','لائحة'),{money:true}),
+    P('librairie','schoollists','checklist',L('Listes scolaires','School lists','اللوائح المدرسية'),L('Une liste par école et niveau, lue contre votre catalogue par la caisse, qui la met au panier à vos prix.','One list per school and year, read against your catalogue by the till, which adds it to the basket at your prices.','لائحة لكل مدرسة ومستوى، يقرؤها الصندوق على كتالوجكم ويضيفها إلى السلة بأسعاركم.'),L('liste','list','لائحة'),{money:true}),
 
     P('fleuriste','returns','checklist',L('Pertes & invendus','Waste & unsold','الفاقد وغير المباع'),L('Mesurez les pertes par variété et par arrivage.','Measure waste by variety and arrival.','قس الخسائر حسب الصنف والوصول.'),L('perte','loss','خسارة'),{money:true}),
     P('fleuriste','flowerorders','schedule',L('Commandes & occasions','Orders & occasions','الطلبات والمناسبات'),L('Brief, carte, budget et heure promise dans une seule fiche.','Brief, card, budget and promised time in one record.','التفاصيل والبطاقة والميزانية والموعد في ملف واحد.'),L('commande','order','طلب'),{money:true}),
@@ -88,6 +91,8 @@
     name:L('Nom ou référence','Name or reference','الاسم أو المرجع'), date:L('Date ou échéance','Date or deadline','التاريخ أو الموعد'), amount:L('Montant (MAD)','Amount (MAD)','المبلغ (درهم)'), status:L('Statut','Status','الحالة'), note:L('Détails utiles','Useful details','تفاصيل مفيدة'),
     cancel:L('Annuler','Cancel','إلغاء'), save:L('Enregistrer','Save','حفظ'), saved:L('Enregistré','Saved','تم الحفظ'), deleted:L('Supprimé','Deleted','تم الحذف'),
     deleteTitle:L('Supprimer cet élément ?','Delete this item?','حذف هذا العنصر؟'), deleteHint:L('Il disparaîtra aussi des autres appareils synchronisés.','It will also disappear from synced devices.','سيختفي أيضاً من الأجهزة المتزامنة.'),
+    gone:L('Produit supprimé du catalogue','Product removed from the catalogue','منتج محذوف من الكتالوج'),
+    noProducts:L('Votre catalogue est vide. Ajoutez d’abord vos produits dans l’inventaire.','Your catalogue is empty. Add your products in the inventory first.','الكتالوج فارغ. أضيفوا منتجاتكم أولاً في المخزون.'),
     currency:L('MAD','MAD','درهم'), noDate:L('Sans échéance','No deadline','بدون موعد'), required:L('Ce champ est obligatoire.','This field is required.','هذا الحقل إلزامي.'), invalid:L('Vérifiez cette valeur.','Check this value.','تحقق من هذه القيمة.'), unique:L('Cette référence existe déjà.','This reference already exists.','هذا المرجع موجود بالفعل.'),
   };
   const STATUS = {
@@ -153,6 +158,16 @@
     if (i < 0) all.unshift(record); else all[i] = record;
     d.records[cfg.nav] = all.slice(0,500); write(d); bindCloud(); cloud?.push?.(0);
   }
+  /* « Aujourd'hui » = la journée commerciale du magasin (coupure à 5 h, fuseau du commerce), pas le
+     minuit de l'appareil : même fenêtre que le rapport journalier et la caisse. */
+  function businessWindow() {
+    try { const b=window.KiwiDateRange?.bounds?.('aujourdhui'); if (b && Number.isFinite(+b[0]) && Number.isFinite(+b[1])) return {from:+b[0],to:+b[1]}; } catch (_) {}
+    try {
+      const R=window.KiwiDayReport;
+      if(R?.businessDay&&R?.dayBounds){const b=R.dayBounds(R.businessDay(Date.now()));if(b&&b.from&&b.to)return b;}
+    } catch (_) {}
+    const a=new Date();a.setHours(0,0,0,0);return {from:a.getTime(),to:a.getTime()+86400000};
+  }
   function currentSales() {
     try { return window.KiwiSales?.list?.(venueId()) || []; } catch (_) { return []; }
   }
@@ -180,6 +195,8 @@
   function displayValue(sc,id,value){
     const f=fieldById(sc,id);if(value==null||value==='')return'';
     if(f?.type==='checkbox')return value?pick(L('Oui','Yes','نعم')):pick(L('Non','No','لا'));
+    if(f?.type==='product')return window.KiwiTradeSchema.productName(value)||pick(UI.gone);
+    if(f?.suffix)return String(value).replace('.',',')+' '+f.suffix;
     if(f?.type==='money'||/balance$|cost$|price$|fee$|target$/i.test(id))return money(value)+' '+pick(UI.currency);
     if(f?.type==='date'||f?.type==='datetime-local')try{return new Date(value+(f.type==='date'?'T12:00:00':'')).toLocaleString(lang()==='ar'?'ar-MA':lang(),f.type==='date'?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}catch(_){return value;}
     if(f?.type==='select'){const o=(f.values||[]).find((x)=>x.value===value);return o?pick(o.label):value;}
@@ -188,7 +205,7 @@
   }
   function recordCard(cfg, r) {
     const sc=schema(cfg),rich=sc?window.KiwiTradeSchema.derived(sc,r):r,v=rich.values||rich,a=statusList(cfg),done=(+r.status||0)>=a.length-1;
-    const ids=(sc?.card||[]).filter((id)=>v[id]!==''&&v[id]!=null&&v[id]!==false),meta=ids.map((id)=>`<span><b>${esc(pick(fieldById(sc,id)?.label||({balance:L('Solde','Balance','الرصيد'),claimBalance:L('Reste','Outstanding','المتبقي'),sessionsLeft:L('Séances restantes','Sessions left','الجلسات المتبقية'),spotsLeft:L('Places restantes','Spots left','الأماكن المتبقية'),wasteQty:L('Perte','Waste','الخسارة')}[id]||L(id,id,id))))}</b>${esc(displayValue(sc,id,v[id]))}</span>`).join('');
+    const ids=(sc?.card||[]).filter((id)=>v[id]!==''&&v[id]!=null&&v[id]!==false&&!(id==='purchaseCost'&&!+v[id])),meta=ids.map((id)=>`<span><b>${esc(pick(fieldById(sc,id)?.label||({balance:L('Solde','Balance','الرصيد'),claimBalance:L('Reste','Outstanding','المتبقي'),sessionsLeft:L('Séances restantes','Sessions left','الجلسات المتبقية'),spotsLeft:L('Places restantes','Spots left','الأماكن المتبقية'),wasteQty:L('Perte','Waste','الخسارة')}[id]||L(id,id,id))))}</b>${esc(displayValue(sc,id,v[id]))}</span>`).join('');
     return `<article class="tw-card${rich.derived?.alert?' has-alert':''}" data-tw-id="${esc(r.id)}">
       <div class="tw-card-head"><h3>${esc(r.title)}</h3><span class="tw-pill">${esc(statusLabel(cfg,r.status))}</span></div>
       ${rich.derived?.late?`<div class="tw-alert">${esc(pick(L('Échéance dépassée','Overdue','تجاوز الموعد')))}</div>`:''}${rich.derived?.expired?`<div class="tw-alert">${esc(pick(L('Expiré','Expired','منتهي')))}</div>`:''}${rich.derived?.expiring?`<div class="tw-alert">${esc(pick(L('Expire bientôt','Expiring soon','ينتهي قريباً')))}</div>`:''}${rich.derived?.belowThreshold?`<div class="tw-alert">${esc(pick(L('Sous le seuil','Below threshold','تحت الحد')))}</div>`:''}
@@ -290,14 +307,10 @@
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
     openPage=cfg; bindCloud();
     const active=rows(nav),sc=schema(cfg),sum=sc?window.KiwiTradeSchema.summary(sc,active):{active:active.length,alerts:0,balance:0};
-    /* « Aujourd'hui » = le service du commerçant (jour ouvré de 5 h, fuseau du
-       commerce), pas minuit du navigateur : à 02 h du matin, les ventes de la
-       veille au soir étaient comptées pour le lendemain. Repli minuit si le
-       module de période n'est pas chargé. */
-    let t0=0,t1=Infinity;
-    try { const b=window.KiwiDateRange?.bounds?.('aujourdhui'); if (b && Number.isFinite(+b[0])) { t0=+b[0]; t1=+b[1]; } } catch (_) {}
-    if (!t0) { const start=new Date(); start.setHours(0,0,0,0); t0=start.getTime(); }
-    const sales=currentSales().filter((s)=>{ const ts=+s.ts||0; return ts>=t0 && ts<t1 && String(s.kind||'')!=='refund'; });
+    /* « Aujourd'hui » = la journée commerciale (coupure à 5 h, fuseau du commerce) ; un
+       remboursement n'est pas une vente du jour. */
+    const win=businessWindow();
+    const sales=currentSales().filter((s)=>{ const ts=+s.ts||0; return ts>=win.from && ts<win.to && String(s.kind||'')!=='refund'; });
     const revenue=sales.reduce((n,s)=>n+(+s.amount||0),0);
     const till=tillSection(cfg);
     const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : till ? '' : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
@@ -308,12 +321,16 @@
     const out=window.Kiwi.appPage(nav,{title:pick(cfg.title),subtitle:(venue().name||'')+' · '+pick(cfg.subtitle),body});
     wire(out?.el || document.querySelector('[data-tw-page]'),cfg); return true;
   }
-  function fieldControl(sc,f,r){const v=r.values?.[f.id]??r[f.id]??f.default??'',id='tw-'+f.id,req=f.required?' required':'',full=f.full||f.type==='textarea'?' full':'',common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;let control='';
+  function fieldControl(sc,f,r){let hint='';const v=r.values?.[f.id]??r[f.id]??f.default??'',id='tw-'+f.id,req=f.required?' required':'',full=f.full||f.type==='textarea'?' full':'',common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;let control='';
     if(f.type==='textarea')control=`<textarea ${common} maxlength="${f.max||2400}">${esc(v)}</textarea>`;
-    else if(f.type==='select'||f.type==='relation'){const options=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);control=`<select ${common}><option value="">·</option>${options.map((o)=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
+    else if(f.type==='select'||f.type==='relation'||f.type==='product'){let options=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):f.type==='product'?window.KiwiTradeSchema.productOptions():(f.values||[]);
+      /* Un produit supprimé depuis ne disparaît pas de la fiche : on le dit au lieu de vider le champ. */
+      if(f.type==='product'&&v&&!options.some((o)=>o.value===v))options=options.concat([{value:v,label:pick(UI.gone)}]);
+      control=`<select ${common}><option value="">·</option>${options.map((o)=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;
+      if(f.type==='product'&&!options.length)hint=pick(UI.noProducts);}
     else if(f.type==='checkbox')control=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else control=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='money'||f.type==='number'?` step="${f.step||'0.01'}"`:''}${f.autocomplete?` autocomplete="${esc(f.autocomplete)}"`:''}>`;
-    return `<div class="tw-field${full}"><label for="${esc(id)}">${esc(pick(f.label))}${f.required?' *':''}</label>${control}<small data-tw-error="${esc(f.id)}"></small></div>`;}
+    return `<div class="tw-field${full}"><label for="${esc(id)}">${esc(pick(f.label))}${f.required?' *':''}</label>${control}${hint?`<small class="tw-hint">${esc(hint)}</small>`:''}<small data-tw-error="${esc(f.id)}"></small></div>`;}
   /* Une prestation, un coach ou une fiche qu'on vient de créer commençait en
      « Brouillon » (l'index 0 de la liste) : la caisse ne vend que le statut
      « Actif », donc ce que le commerçant saisissait sans toucher à la liste

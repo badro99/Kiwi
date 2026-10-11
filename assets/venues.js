@@ -684,6 +684,7 @@
         { nav: 'returns',    label: { fr: 'Retours & casse', en: 'Returns & breakage', ar: 'المرتجعات والتالف' } },
         { nav: 'credit',      icon: ICONS.card, label: { fr: 'Carnet de crédit', en: 'Credit ledger', ar: 'دفتر الديون' } },
         { nav: 'suppliers',   icon: ICONS.truck, label: { fr: 'Fournisseurs', en: 'Suppliers', ar: 'الموردون' } },
+        { nav: 'weighed',     icon: ICONS.stock, label: { fr: 'Produits au poids', en: 'Weighed products', ar: 'المنتجات بالوزن' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -748,6 +749,8 @@
         { nav: 'prescriptions', icon: ICONS.operations, label: { fr: 'Ordonnances', en: 'Prescriptions', ar: 'الوصفات الطبية' } },
         { nav: 'insurers',      icon: ICONS.card, label: { fr: 'Tiers payant', en: 'Third-party payer', ar: 'الدفع من طرف ثالث' } },
         { nav: 'expiries',      icon: ICONS.alert, label: { fr: 'Lots à surveiller', en: 'Expiry watch', ar: 'مراقبة الصلاحية' } },
+        { nav: 'drugs',         icon: ICONS.operations, label: { fr: 'Fiches médicaments', en: 'Drug sheets', ar: 'بطاقات الأدوية' } },
+        { nav: 'payers',        icon: ICONS.card, label: { fr: 'Organismes & taux', en: 'Payers & rates', ar: 'الجهات والنسب' } },
         { nav: 'duty',          icon: ICONS.operations, label: { fr: 'Gardes & relève', en: 'Duty & handover', ar: 'الحراسة والتسليم' } },
       ],
       kpis: [

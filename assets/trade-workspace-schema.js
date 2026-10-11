@@ -16,6 +16,10 @@
   const B = (id, label, opts) => F(id, 'checkbox', label, opts);
   const S = (id, label, values, opts) => F(id, 'select', label, { values, ...(opts || {}) });
   const R = (id, label, relation, opts) => F(id, 'relation', label, { relation, ...(opts || {}) });
+  /* Un produit du CATALOGUE du commerçant (celui du tableau de bord, partagé avec
+     la caisse), pas un libellé libre : c'est ce qui permet à la caisse de savoir
+     quel article porte ce lot, cette ordonnance obligatoire, ce prix au poids. */
+  const PR = (id, label, opts) => F(id, 'product', label, opts || {});
   const O = (value, fr, en, ar) => ({ value, label: L(fr, en, ar) });
   const required = { required: true };
   const title = (label, opts) => T('title', label, { ...required, ...(opts || {}) });
@@ -36,6 +40,13 @@
     checklist:[L('À traiter','To do','للمعالجة'),L('En cours','In progress','قيد التنفيذ'),L('Terminé','Done','مكتمل')],
     claim:[L('À envoyer','To submit','للإرسال'),L('Envoyé','Submitted','مرسل'),L('Accepté','Accepted','مقبول'),L('Réglé','Paid','مؤدى')],
     catalog:[L('Brouillon','Draft','مسودة'),L('Actif','Active','نشط'),L('Archivé','Archived','مؤرشف')],
+    /* Une fiche qui n'a pas de « flux » : elle est en vigueur ou rangée. */
+    active:[L('Actif','Active','نشط'),L('Archivé','Archived','مؤرشف')],
+    /* Un lot de pharmacie : le troisième état sort le lot de la vente et de la
+       surveillance (épuisé, rendu au laboratoire, détruit). */
+    lot:[L('En stock','In stock','في المخزون'),L('Action en cours','Action in progress','إجراء جارٍ'),L('Épuisé ou retiré','Sold out or removed','نفد أو سُحب')],
+    /* Les trois étapes que la caisse de la librairie connaît déjà. */
+    bookorder:[L('Commandé','Ordered','تم الطلب'),L('Arrivé','Arrived','وصل'),L('Retiré','Picked up','تم الاستلام')],
   };
   const defs = Object.create(null);
   const add = (trade, nav, fields, opts) => { defs[trade + ':' + nav] = { trade, nav, fields, ...(opts || {}), stageKey: (opts && opts.stages) || 'checklist', stages: stages[(opts && opts.stages) || 'checklist'] }; };
@@ -63,16 +74,33 @@
   add('epicerie','returns',[title(L('Produit','Product','المنتج')),T('barcode',L('Code-barres / lot','Barcode / lot','الباركود / الدفعة')),qty,S('reason',L('Motif','Reason','السبب'),[O('return','Retour client','Customer return','إرجاع عميل'),O('breakage','Casse','Breakage','تالف'),O('shortage','Écart','Discrepancy','فرق'),O('expiry','Périmé','Expired','منتهي')],required),T('supplier',L('Fournisseur','Supplier','المورد')),D('date',L('Date','Date','التاريخ'),{required:true}),amount,note],{stages:'checklist',card:['barcode','qty','reason','supplier','amount']});
   add('epicerie','credit',[title(L('Client','Customer','العميل')),phone,T('reference',L('Référence ticket','Receipt reference','مرجع التذكرة')),total,paid,D('dueAt',L('Échéance convenue','Promised due date','موعد الأداء'),{deadline:true}),note],{stages:'ledger',card:['phone','reference','dueAt','balance'],deadline:'dueAt',calc:{balance:['total','paid']}});
   add('epicerie','suppliers',[title(L('Fournisseur','Supplier','المورد')),T('contact',L('Contact','Contact','جهة الاتصال')),phone,T('orderRef',L('Référence commande','Order reference','مرجع الطلب')),DT('expectedAt',L('Livraison attendue','Expected delivery','التوصيل المتوقع'),{deadline:true}),total,paid,note],{stages:'appointment',card:['contact','orderRef','expectedAt','balance'],deadline:'expectedAt',calc:{balance:['total','paid']}});
+  /* Un produit au poids : le prix du catalogue est alors le prix du kilo (ou du litre) et la caisse le
+     pèse. Son stock en pièces n'a pas de sens, la caisse ne le décompte pas. */
+  add('epicerie','weighed',[PR('product',L('Produit du catalogue','Catalogue product','منتج الكتالوج'),{required:true,unique:true}),S('unit',L('Vendu au','Sold per','يباع بـ'),[O('kg','Kilo (prix = prix du kg)','Kilo (price = price per kg)','كيلوغرام (السعر = سعر الكلغ)'),O('l','Litre (prix = prix du litre)','Litre (price = price per litre)','لتر (السعر = سعر اللتر)')],{required:true,default:'kg'}),note],{stages:'active',titleFrom:'product',card:['unit']});
 
   add('pharmacie','returns',[title(L('Médicament / produit','Medicine / product','الدواء / المنتج')),T('lot',L('Numéro de lot','Lot number','رقم الدفعة'),required),T('supplier',L('Laboratoire / grossiste','Lab / wholesaler','المختبر / الموزع'),required),qty,S('reason',L('Motif','Reason','السبب'),[O('recall','Rappel','Recall','سحب'),O('expiry','Péremption','Expiry','انتهاء الصلاحية'),O('damage','Endommagé','Damaged','تالف'),O('error','Erreur livraison','Delivery error','خطأ توصيل')],required),D('date',L('Date d’isolement','Isolation date','تاريخ العزل'),{required:true}),amount,note],{stages:'checklist',card:['lot','supplier','qty','reason','date']});
   add('pharmacie','prescriptions',[title(L('Référence ordonnance','Prescription reference','مرجع الوصفة')),T('patient',L('Patient','Patient','المريض'),required),phone,T('doctor',L('Prescripteur','Prescriber','الطبيب')),A('items',L('Produits à préparer','Items to prepare','المنتجات للتحضير'),{required:true,full:true,max:1600}),DT('receivedAt',L('Reçue à','Received at','تم الاستلام في'),{required:true}),DT('promisedAt',L('Délivrance prévue','Dispensing promise','موعد التسليم'),{deadline:true}),amount,note],{stages:'order',card:['patient','doctor','receivedAt','promisedAt','amount'],deadline:'promisedAt'});
+  /* Le dossier tiers payant : la caisse en ouvre un (« À envoyer ») à chaque vente avec une part
+     mutuelle. Kiwi ne transmet RIEN à l'organisme : envoyer, relancer et encaisser restent faits
+     par la pharmacie, qui fait avancer l'étape. */
   add('pharmacie','insurers',[title(L('Référence dossier','Claim reference','مرجع الملف')),T('patient',L('Patient','Patient','المريض'),required),T('insurer',L('Organisme','Insurer','الجهة المؤمنة'),required),D('submittedAt',L('Date d’envoi','Submission date','تاريخ الإرسال')),M('claimAmount',L('Montant demandé','Claim amount','المبلغ المطلوب'),{min:0,required:true}),M('reimbursed',L('Montant remboursé','Reimbursed amount','المبلغ المسترجع'),{min:0,lte:'claimAmount'}),D('dueAt',L('Relance prévue','Follow-up date','موعد المتابعة'),{deadline:true}),note],{stages:'claim',card:['patient','insurer','claimAmount','reimbursed','claimBalance'],deadline:'dueAt',calc:{claimBalance:['claimAmount','reimbursed']}});
-  add('pharmacie','expiries',[title(L('Médicament / produit','Medicine / product','الدواء / المنتج')),T('lot',L('Numéro de lot','Lot number','رقم الدفعة'),{required:true,unique:true}),D('expiryAt',L('Date de péremption','Expiry date','تاريخ الانتهاء'),{required:true,expiry:true}),qty,M('purchaseCost',L('Valeur du lot','Lot value','قيمة الدفعة'),{min:0}),B('coldChain',L('Chaîne du froid','Cold chain','سلسلة التبريد')),S('action',L('Action prévue','Planned action','الإجراء المخطط'),[O('watch','Surveiller','Monitor','مراقبة'),O('rotate','Prioriser la vente','Prioritise sale','أولوية البيع'),O('return','Retour fournisseur','Supplier return','إرجاع للمورد'),O('isolate','Isoler','Isolate','عزل')]),note],{stages:'checklist',card:['lot','expiryAt','qty','purchaseCost','coldChain'],expiry:'expiryAt'});
+  /* Un lot est rattaché à un produit du catalogue : la caisse y prend la vente (le lot qui périme
+     d'abord part d'abord) et dit lequel. Sans produit, un lot ne pourrait rien à la vente. */
+  add('pharmacie','expiries',[PR('product',L('Produit du catalogue','Catalogue product','منتج الكتالوج'),{required:true}),T('lot',L('Numéro de lot','Lot number','رقم الدفعة'),{required:true,uniqueWith:'product'}),D('expiryAt',L('Date de péremption','Expiry date','تاريخ الانتهاء'),{required:true,expiry:true}),N('qty',L('Quantité de ce lot','Quantity in this lot','كمية هذه الدفعة'),{min:0,step:1,required:true}),M('purchaseCost',L('Valeur du lot','Lot value','قيمة الدفعة'),{min:0}),B('coldChain',L('Chaîne du froid','Cold chain','سلسلة التبريد')),S('action',L('Action prévue','Planned action','الإجراء المخطط'),[O('watch','Surveiller','Monitor','مراقبة'),O('rotate','Prioriser la vente','Prioritise sale','أولوية البيع'),O('return','Retour fournisseur','Supplier return','إرجاع للمورد'),O('isolate','Isoler','Isolate','عزل')]),note],{stages:'lot',titleFrom:'product',expiryDays:90,card:['lot','expiryAt','qty','purchaseCost','coldChain'],expiry:'expiryAt'});
+  /* La fiche du médicament : ce que la caisse ne peut pas deviner d'un nom et d'un prix. */
+  add('pharmacie','drugs',[PR('product',L('Produit du catalogue','Catalogue product','منتج الكتالوج'),{required:true,unique:true}),T('dci',L('DCI / substance active','Active substance (INN)','المادة الفعالة')),B('rx',L('Délivrance sur ordonnance','Prescription only','بوصفة طبية فقط')),B('remb',L('Remboursable (tiers payant)','Reimbursable (third-party payer)','قابل للتعويض')),B('coldChain',L('Chaîne du froid 2-8 °C','Cold chain 2-8 °C','سلسلة التبريد 2-8 °م')),R('substitute',L('Générique moins cher à proposer','Cheaper generic to suggest','دواء جنيس أرخص للاقتراح'),'drugs'),note],{stages:'active',titleFrom:'product',card:['dci','rx','remb','coldChain']});
+  /* Le taux de prise en charge est celui que la pharmacie applique à chaque organisme : Kiwi n'en
+     connaît aucun. Sans organisme saisi ici, la caisse ne découpe aucune part mutuelle. */
+  add('pharmacie','payers',[title(L('Organisme (CNSS, CNOPS, mutuelle…)','Payer (CNSS, CNOPS, insurer…)','الجهة (CNSS، CNOPS، تأمين…)')),N('rate',L('Taux de prise en charge (%)','Coverage rate (%)','نسبة التغطية (%)'),{min:1,max:100,step:0.5,required:true,suffix:'%'}),note],{stages:'active',card:['rate']});
   add('pharmacie','duty',[title(L('Responsable de garde','Duty lead','مسؤول الحراسة')),DT('startAt',L('Début','Start','البداية'),{required:true}),DT('endAt',L('Fin','End','النهاية'),{required:true,gte:'startAt'}),T('handoverTo',L('Relève à','Handover to','التسليم إلى')),A('handover',L('Points de relève','Handover points','نقاط التسليم'),{required:true,full:true}),note],{stages:'appointment',card:['startAt','endAt','handoverTo']});
 
   add('librairie','returns',[title(L('Titre','Title','العنوان')),T('isbn',L('ISBN / référence','ISBN / reference','ISBN / المرجع')),T('publisher',L('Éditeur / distributeur','Publisher / distributor','الناشر / الموزع'),required),qty,D('returnBy',L('Retour avant','Return by','الإرجاع قبل'),{deadline:true}),amount,note],{stages:'checklist',card:['isbn','publisher','qty','returnBy','amount'],deadline:'returnBy'});
-  add('librairie','bookorders',[title(L('Livre demandé','Requested book','الكتاب المطلوب')),T('isbn',L('ISBN','ISBN','ISBN')),T('customer',L('Lecteur / client','Reader / customer','القارئ / العميل'),required),phone,T('supplier',L('Fournisseur','Supplier','المورد')),DT('promisedAt',L('Retrait promis','Promised pickup','موعد الاستلام'),{deadline:true}),total,paid,note],{stages:'order',card:['isbn','customer','supplier','promisedAt','balance'],deadline:'promisedAt',calc:{balance:['total','paid']}});
-  add('librairie','schoollists',[title(L('École / liste','School / list','المدرسة / اللائحة')),T('level',L('Niveau / classe','Year / class','المستوى / القسم'),required),T('family',L('Famille / élève','Family / student','العائلة / التلميذ'),required),phone,A('items',L('Titres et quantités','Titles and quantities','العناوين والكميات'),{required:true,full:true,max:2400}),D('neededAt',L('Nécessaire avant','Needed by','مطلوب قبل'),{deadline:true}),total,paid,note],{stages:'order',card:['level','family','neededAt','balance'],deadline:'neededAt',calc:{balance:['total','paid']}});
+  /* Même modèle que la caisse (commandé, arrivé, retiré) : c'est la MÊME commande des deux côtés. */
+  add('librairie','bookorders',[title(L('Livre demandé','Requested book','الكتاب المطلوب')),T('isbn',L('ISBN','ISBN','ISBN')),T('customer',L('Lecteur / client','Reader / customer','القارئ / العميل'),required),phone,T('supplier',L('Fournisseur','Supplier','المورد')),N('qty',L('Exemplaires','Copies','النسخ'),{min:1,step:1,default:1}),DT('promisedAt',L('Retrait promis','Promised pickup','موعد الاستلام'),{deadline:true}),total,paid,B('notified',L('Client prévenu de l’arrivée','Customer told it has arrived','تم إخبار العميل بالوصول')),note],{stages:'bookorder',card:['isbn','customer','supplier','promisedAt','balance'],deadline:'promisedAt',calc:{balance:['total','paid']}});
+  /* Une liste = une école et un niveau. Chaque ligne « 2 x titre » ou « ISBN x 1 » est lue contre le
+     catalogue par la caisse, qui la met au panier aux prix du catalogue. Une ligne qui n'y est pas est
+     signalée « hors catalogue », jamais vendue à un prix inventé. */
+  add('librairie','schoollists',[title(L('École / liste','School / list','المدرسة / اللائحة')),T('level',L('Niveau / classe','Year / class','المستوى / القسم'),required),T('family',L('Famille / élève (liste personnalisée)','Family / student (personal list)','العائلة / التلميذ (لائحة شخصية)')),phone,A('items',L('Titres et quantités (une ligne par article : « 2 x titre » ou « ISBN x 1 »)','Titles and quantities (one line per item: “2 x title” or “ISBN x 1”)','العناوين والكميات (سطر لكل عنصر: «2 x عنوان» أو «ISBN x 1»)'),{required:true,full:true,max:2400}),D('neededAt',L('Nécessaire avant','Needed by','مطلوب قبل'),{deadline:true}),total,paid,note],{stages:'order',card:['level','family','neededAt','balance'],deadline:'neededAt',calc:{balance:['total','paid']}});
 
   add('fleuriste','returns',[title(L('Variété / produit','Variety / product','الصنف / المنتج')),T('arrivalRef',L('Arrivage / lot','Arrival / lot','الوصول / الدفعة')),qty,S('reason',L('Motif','Reason','السبب'),[O('wilted','Fané','Wilted','ذابل'),O('damaged','Abîmé','Damaged','تالف'),O('unsold','Invendu','Unsold','غير مباع'),O('supplier','Retour fournisseur','Supplier return','إرجاع للمورد')],required),D('date',L('Date','Date','التاريخ'),{required:true}),amount,note],{stages:'checklist',card:['arrivalRef','qty','reason','date','amount']});
   add('fleuriste','flowerorders',[title(L('Référence commande','Order reference','مرجع الطلب')),T('customer',L('Client payeur','Paying customer','العميل الدافع'),required),phone,T('recipient',L('Destinataire','Recipient','المستفيد'),required),P('recipientPhone',L('Téléphone destinataire','Recipient phone','هاتف المستفيد')),S('occasion',L('Occasion','Occasion','المناسبة'),[O('birthday','Anniversaire','Birthday','عيد ميلاد'),O('wedding','Mariage','Wedding','زفاف'),O('birth','Naissance','New baby','مولود'),O('condolence','Condoléances','Condolence','تعزية'),O('other','Autre','Other','أخرى')]),A('message',L('Texte de la carte','Card message','نص البطاقة'),{full:true,max:500}),DT('promisedAt',L('Heure promise','Promised time','الوقت الموعود'),{deadline:true}),total,paid,note],{stages:'order',card:['recipient','occasion','promisedAt','balance'],deadline:'promisedAt',calc:{balance:['total','paid']}});
@@ -113,6 +141,60 @@
   add('autre','workflows',[title(L('Dossier / prestation','Job / service','الملف / الخدمة')),T('customer',L('Client','Customer','العميل')),phone,T('owner',L('Responsable','Owner','المسؤول')),DT('dueAt',L('Échéance','Deadline','الموعد'),{deadline:true}),total,paid,note],{stages:'order',card:['customer','owner','dueAt','balance'],deadline:'dueAt',calc:{balance:['total','paid']}});
   add('autre','returns',[title(L('Référence incident','Incident reference','مرجع الحادث')),T('customer',L('Client','Customer','العميل')),S('kind',L('Type','Type','النوع'),[O('return','Retour','Return','إرجاع'),O('complaint','Réclamation','Complaint','شكوى'),O('damage','Dommage','Damage','ضرر'),O('other','Autre','Other','أخرى')],required),DT('reportedAt',L('Signalé à','Reported at','تم الإبلاغ في'),{required:true}),amount,A('resolution',L('Résolution','Resolution','الحل'),{full:true}),note],{stages:'checklist',card:['customer','kind','reportedAt','amount','resolution']});
 
+  /* ── Horloge du commerce ─────────────────────────────────────────────────────── */
+  function venueZone() {
+    try { const R = window.KiwiDayReport; const z = R && R.timezone && R.timezone(); if (z) return z; } catch (_) {}
+    try { const c = window.KiwiConfig; const z = c && (c.timezone || c.timeZone); if (z) return z; } catch (_) {}
+    return 'Africa/Casablanca';
+  }
+  function zoneParts(ts) {
+    const out = {};
+    try {
+      new Intl.DateTimeFormat('en-CA', { timeZone: venueZone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(ts == null ? Date.now() : ts)).forEach((p) => { out[p.type] = p.value; });
+    } catch (_) {
+      const d = new Date(ts == null ? Date.now() : ts), z = (n) => String(n).padStart(2, '0');
+      return { year: String(d.getFullYear()), month: z(d.getMonth() + 1), day: z(d.getDate()), hour: z(d.getHours()), minute: z(d.getMinutes()) };
+    }
+    return out;
+  }
+  function dateKey(ts) { const p = zoneParts(ts); return p.year + '-' + p.month + '-' + p.day; }
+  function wallNow(ts) { const p = zoneParts(ts); return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute; }
+  function dayDiff(a, b) {
+    const t = (k) => Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10));
+    return Math.round((t(b) - t(a)) / 86400000);
+  }
+
+  /* ── Le catalogue du commerçant, vu depuis le tableau de bord ET depuis la caisse ──
+     Même clé que l'inventaire (dashboard : KiwiBoutiqueVenueKey ; caisse : le commerce appairé),
+     donc un seul catalogue des deux côtés. Rend null tant qu'il n'est pas chargé. */
+  function catalogKey() {
+    try { if (typeof window.KiwiBoutiqueVenueKey === 'function') { const k = window.KiwiBoutiqueVenueKey(); if (k) return String(k); } } catch (_) {}
+    try {
+      const p = (window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue()) || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (p) return String(p.merchant || window.__kiwiPairedBoutiqueVenue || p.venueId || '');
+    } catch (_) {}
+    return '';
+  }
+  function catalog() {
+    const c = window.KiwiBoutiqueCatalog, k = catalogKey();
+    if (!c || !k) return null;
+    try { if (c.currentVenue && c.currentVenue() !== k) c.use(k); } catch (_) { return null; }
+    return c;
+  }
+  function productOptions() {
+    const c = catalog(); if (!c) return [];
+    try {
+      const cats = {}; (c.listCategories() || []).forEach((x) => { cats[x.id] = x.name; });
+      return c.listProducts().map((p) => ({ value: p.id, label: p.name + (p.categoryId && cats[p.categoryId] ? ' · ' + cats[p.categoryId] : '') }))
+        .sort((x, y) => String(x.label).localeCompare(String(y.label), 'fr'));
+    } catch (_) { return []; }
+  }
+  function productName(id) {
+    const c = catalog(); if (!c || !id) return '';
+    try { const g = c.getProduct(id); return g && g.product ? g.product.name : ''; } catch (_) { return ''; }
+  }
+
   function get(trade, nav) { return defs[String(trade || '') + ':' + String(nav || '')] || null; }
   function scalar(field, raw) {
     if (field.type === 'checkbox') return raw === true || raw === 'true' || raw === '1' || raw === 'yes';
@@ -127,6 +209,12 @@
     if (!values.amount && old.amount) values.amount = Math.max(0, Number(old.amount) || 0);
     if (!values.total && old.amount) values.total = Math.max(0, Number(old.amount) || 0);
     if (!values.dueAt && !values.promisedAt && !values.expiryAt && old.date) values.date = String(old.date).slice(0, 16);
+    /* Une fiche rattachée à un produit du catalogue porte SON nom : un titre saisi à la main
+       divergerait dès qu'on renomme le produit. */
+    if (schema && schema.titleFrom && values[schema.titleFrom]) {
+      const name = productName(values[schema.titleFrom]);
+      if (name) values.title = name + (schema.titleFrom && values.lot ? ' · lot ' + values.lot : '');
+    }
     return { ...old, title: values.title || String(old.title || ''), note: values.note || '', values };
   }
   function compareValue(type, value) {
@@ -145,7 +233,9 @@
       if (field.lte && compareValue(field.type, value) > compareValue(field.type, rec.values[field.lte])) errors[field.id] = 'lte';
       if (field.gte && compareValue(field.type, value) < compareValue(field.type, rec.values[field.gte])) errors[field.id] = 'gte';
       if (field.type === 'tel' && value && !(window.KiwiPhone ? window.KiwiPhone.valid(value) : /^[+()\d\s.-]{6,24}$/.test(value))) errors[field.id] = 'phone';
-      if (field.unique && value && (existingRows || []).some((r) => r.id !== rec.id && normalize(schema, r).values[field.id] === value)) errors[field.id] = 'unique';
+      if (field.unique && value && (existingRows || []).some((r) => r.id !== rec.id && !r.deletedAt && normalize(schema, r).values[field.id] === value)) errors[field.id] = 'unique';
+      /* Un numéro de lot se répète d'un produit à l'autre : il est unique PAR produit. */
+      if (field.uniqueWith && value && (existingRows || []).some((r) => { if (r.id === rec.id || r.deletedAt) return false; const o = normalize(schema, r).values; return o[field.id] === value && o[field.uniqueWith] === rec.values[field.uniqueWith]; })) errors[field.id] = 'unique';
     });
     return { ok: !Object.keys(errors).length, errors, record: rec };
   }
@@ -154,15 +244,20 @@
     Object.entries((schema && schema.calc) || {}).forEach(([id, pair]) => { out[id] = Math.max(0, (Number(v[pair[0]]) || 0) - (Number(v[pair[1]]) || 0)); });
     const final = (+rec.status || 0) >= Math.max(0, (schema && schema.stages || []).length - 1);
     const clock = now == null ? Date.now() : +now;
+    /* L'horloge est celle du COMMERCE (Africa/Casablanca), pas celle de l'appareil qui regarde :
+       une échéance saisie « 2026-10-12 17:00 » est une heure murale du magasin. */
     if (schema && schema.deadline && v[schema.deadline]) {
-      const due = new Date(v[schema.deadline] + (String(v[schema.deadline]).length === 10 ? 'T23:59:59' : '')).getTime();
-      out.late = !final && Number.isFinite(due) && due < clock;
+      const raw = String(v[schema.deadline]);
+      out.late = !final && (raw.length === 10 ? dateKey(clock) > raw : wallNow(clock) > raw.slice(0, 16));
     }
-    if (schema && schema.expiry && v[schema.expiry]) {
-      const expiry = new Date(v[schema.expiry] + 'T23:59:59').getTime();
-      out.daysToExpiry = Number.isFinite(expiry) ? Math.ceil((expiry - clock) / 86400000) : null;
-      out.expired = out.daysToExpiry != null && out.daysToExpiry < 0;
-      out.expiring = out.daysToExpiry != null && out.daysToExpiry >= 0 && out.daysToExpiry <= 30;
+    if (schema && schema.expiry && /^\d{4}-\d{2}-\d{2}/.test(String(v[schema.expiry] || ''))) {
+      /* Jours calendaires : un lot périmé le 10 reste valable toute la journée du 10 (0 jour) et
+         est périmé dès le 11 (−1). L'ancien calcul sur 23:59:59 laissait « bientôt périmé » un
+         lot déjà périmé pendant 24 h, et comptait 1 jour le jour même. */
+      out.daysToExpiry = dayDiff(dateKey(clock), String(v[schema.expiry]).slice(0, 10));
+      /* Un lot sorti (épuisé, rendu, détruit) n'est plus à surveiller. */
+      out.expired = !final && out.daysToExpiry < 0;
+      out.expiring = !final && out.daysToExpiry >= 0 && out.daysToExpiry <= (schema.expiryDays || 30);
     }
     if (schema && schema.threshold) out.belowThreshold = (Number(v[schema.threshold[0]]) || 0) < (Number(v[schema.threshold[1]]) || 0);
     if (Object.prototype.hasOwnProperty.call(v, 'passed')) out.failed = v.passed === false;
@@ -184,5 +279,5 @@
     return ((allRecords && allRecords[field.relation]) || []).filter((r) => !r.deletedAt).map((r) => ({ value: r.id, label: normalize(get(schema.trade, field.relation) || schema, r).title || r.id }));
   }
 
-  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions };
+  window.KiwiTradeSchema = { L, defs, get, normalize, validate, derived, summary, relationOptions, catalog, catalogKey, productOptions, productName, dateKey, wallNow, dayDiff, venueZone };
 })();

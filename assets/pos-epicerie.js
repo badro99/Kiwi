@@ -192,7 +192,13 @@
      encaissement écrivait ces stocks dans sa fiche (autosave). Réel : stock
      NON SUIVI (null, comme les recharges, déjà traitées ainsi par le module) ;
      la liste de réassort se compose alors à la main depuis tout le catalogue. */
-  if (pvReal()) CATALOG.forEach((c) => c.items.forEach((it) => { it.stock = null; }));
+  /* Réel : l'épicerie vend SES produits à SES prix. Sidi Ali à 8 MAD, Coca-Cola à 10, le fromage
+     à 90 le kilo et les recharges Orange sont le décor de la démo : une vraie épicerie
+     encaissait des prix qu'elle n'avait jamais posés, et des recharges télécom qu'elle ne vend
+     pas. Le catalogue réel est l'inventaire du tableau de bord, partagé avec la caisse
+     (rebuildReal, plus bas). */
+  if (pvReal()) { CATALOG.splice(0, CATALOG.length); Object.keys(ITEMS).forEach((id) => delete ITEMS[id]); Object.keys(BY_EAN).forEach((e) => delete BY_EAN[e]); }
+  const r2 = (n) => Math.round(n * 100) / 100;
   /* Français : 0 et 1 au singulier. */
   const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
   const isWeigh = (it) => it.unit === 'weigh';
@@ -334,7 +340,7 @@
     snapshot() {
       return {
         v: 2,
-        catalog: CATALOG,
+        catalog: pvReal() ? undefined : CATALOG,
         carnet: CARNET,
         day,
         ticketSeq,
@@ -347,15 +353,17 @@
       if (!saved || typeof saved !== 'object') return;
       /* Fiche v1 : catalogue de démo avec ses stocks inventés, écrit par l'ancien
          autosave. Aucun éditeur de catalogue ici : on l'écarte. */
-      if (saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
-      Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
-      Object.keys(BY_EAN).forEach((ean) => delete BY_EAN[ean]);
-      CATALOG.forEach((c) => c.items.forEach((it) => {
-        it.cat = c.id;
-        it.catLabel = c.label;
-        ITEMS[it.id] = it;
-        if (it.ean) BY_EAN[it.ean] = it;
-      }));
+      if (!pvReal() && saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      if (!pvReal()) {
+        Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+        Object.keys(BY_EAN).forEach((ean) => delete BY_EAN[ean]);
+        CATALOG.forEach((c) => c.items.forEach((it) => {
+          it.cat = c.id;
+          it.catLabel = c.label;
+          ITEMS[it.id] = it;
+          if (it.ean) BY_EAN[it.ean] = it;
+        }));
+      }
       if (Array.isArray(saved.carnet)) CARNET.splice(0, CARNET.length, ...saved.carnet);
       CARNET.forEach((customer) => customer.hist.forEach((entry) => {
         if (entry.at) entry.at = new Date(entry.at);
@@ -399,10 +407,69 @@
     return parts[0];
   }
 
+  /* ═══════════════════════ RÉEL : catalogue, EAN, produits au poids ═══════════════════════
+     Catalogue = inventaire du tableau de bord (nom, prix, EAN en code-barres, stock, seuil de
+     réassort). « Produits au poids » = fiches du tableau de bord : leur prix est le prix du kilo
+     (ou du litre). Le stock au poids n'est pas suivi : l'inventaire compte des unités entières. */
+  const WS = () => window.KiwiPosWorkspaces || null;
+  const fold = (x) => String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const artFor = (cat, name) => {
+    const k = fold(cat + ' ' + name);
+    return /legume|fruit|tomate|oignon|pomme/.test(k) ? 'legume' : /olive/.test(k) ? 'olives' : /eau|boisson|jus|soda|limonade/.test(k) ? 'soda' : /pain|khobz|baguette/.test(k) ? 'khobz'
+      : /lait|yaourt|fromage|cremerie|frais/.test(k) ? 'lait' : /oeuf/.test(k) ? 'oeuf' : /savon|menage|hygiene|lessive|javel/.test(k) ? 'savon' : /cafe/.test(k) ? 'cafe' : /the\b/.test(k) ? 'the'
+      : /biscuit|gouter|chips/.test(k) ? 'biscuit' : /huile/.test(k) ? 'huile' : /sucre/.test(k) ? 'sucre' : /farine/.test(k) ? 'farine' : /pate/.test(k) ? 'pates' : /conserve|thon/.test(k) ? 'conserve' : 'sachet';
+  };
+  let realBound = false;
+  function rebuildReal() {
+    if (!pvReal()) return false;
+    const w = WS();
+    if (!w || !w.catalog) return false;
+    const comp = w.catalog.compat();
+    if (!comp) return false;
+    const weighed = {};
+    w.values('weighed').forEach((r) => { if (r.status < 1 && r.values.product) weighed[r.values.product] = r.values.unit === 'l' ? 'l' : 'kg'; });
+    CATALOG.splice(0, CATALOG.length);
+    Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+    Object.keys(BY_EAN).forEach((e) => delete BY_EAN[e]);
+    comp.RAYONS.forEach((r) => {
+      const items = r.items.map((p) => {
+        const prod = w.catalog.product(p.id) || {};
+        const wu = weighed[p.id];
+        const it = { id: p.id, art: artFor(r.label, p.name), label: p.name, price: +p.price > 0 ? +p.price : 0, noPrice: !(+p.price > 0),
+          ean: p.ean || '', cat: r.id, catLabel: r.label,
+          /* au poids : stock non suivi (l'inventaire compte des unités entières) */
+          stock: wu ? null : Object.keys(p.sizes || {}).reduce((n, k) => n + (+p.sizes[k] || 0), 0),
+          reorder: +prod.reorderLevel > 0 ? +prod.reorderLevel : 0 };
+        if (wu) { it.unit = 'weigh'; it.weighUnit = wu; it.presets = [0.25, 0.5, 0.75, 1]; }
+        ITEMS[p.id] = it;
+        return it;
+      });
+      CATALOG.push({ id: r.id, label: r.label, items });
+    });
+    Object.keys(comp.BY_EAN || {}).forEach((code) => { const it = ITEMS[comp.BY_EAN[code]]; if (it) BY_EAN[code] = it; });
+    if (state.cat !== 'tous' && !CATALOG.some((c) => c.id === state.cat)) state.cat = 'tous';
+    if (state.ticket) state.ticket.lines = state.ticket.lines.filter((l) => ITEMS[l.itemId]);
+    return true;
+  }
+  function repaintReal() {
+    if (!root || !rebuildReal()) return;
+    renderCats(); renderGrid(); renderTicket(); renderBadges();
+    if (state.view === 'stock') renderStock();
+    icons();
+  }
+  function bindReal() {
+    if (!pvReal() || realBound) return;
+    const w = WS(); if (!w) return;
+    realBound = true;
+    try { w.subscribe(() => repaintReal()); } catch (_) {}
+    try { w.catalog.subscribe(() => repaintReal()); } catch (_) {}
+  }
+
   /* ═══════════════════════ ROOT / MOUNT ═══════════════════════ */
   let root = null;
   function mount(rootEl) {
     if (epicerieOps) epicerieOps.hydrate();
+    bindReal(); rebuildReal();
     root = rootEl;
     root.innerHTML = `
       <aside class="ep-rail">
@@ -514,7 +581,7 @@
   }
   function renderBadges() {
     const debtors = CARNET.filter((c) => balanceOf(c) > 0).length;
-    const low = stockItems().filter((it) => it.stock <= it.reorder).length;
+    const low = stockItems().filter((it) => (pvReal() ? it.reorder > 0 && it.stock <= it.reorder : it.stock <= it.reorder)).length;
     const bC = $('#ep-badge-carnet', root);
     const bS = $('#ep-badge-stock', root);
     if (bC) { bC.textContent = debtors || ''; bC.style.display = debtors ? '' : 'none'; }
@@ -547,25 +614,29 @@
   }
 
   function priceLabel(it) {
-    if (isWeigh(it)) return `${it.price} MAD<span class="per">/kg</span>`;
+    if (isWeigh(it)) return `${fmtMAD2(it.price).replace(' MAD', '')} MAD<span class="per">/${it.weighUnit === 'l' ? 'L' : 'kg'}</span>`;
     if (isUnit(it)) return `${fmtMAD2(it.price).replace(' MAD', '')} MAD<span class="per"> / pièce</span>`;
-    return `${it.price} MAD`;
+    return fmtMAD2(it.price);
   }
 
   function renderGrid() {
     const cats = state.cat === 'tous' ? CATALOG : CATALOG.filter((c) => c.id === state.cat);
     let i = 0;
+    if (pvReal() && !CATALOG.length) {
+      $('#ep-gridwrap', root).innerHTML = '<div class="ep-reassort-empty" style="margin:24px;"><div>Votre catalogue est vide.<br>Ajoutez vos produits, avec leur prix et leur code-barres, dans le tableau de bord (Stock), ou importez-les.</div></div>';
+      return;
+    }
     $('#ep-gridwrap', root).innerHTML = cats.map((c) => `
       <div class="ep-cat-head">${esc(c.label)}</div>
       <div class="ep-grid">${c.items.map((it) => {
         const out = typeof it.stock === 'number' && it.stock <= 0;
         const low = typeof it.stock === 'number' && it.stock > 0 && it.stock <= it.reorder;
-        const flag = isWeigh(it) ? '<span class="ep-card-flag weigh">au poids</span>'
+        const flag = it.noPrice ? '<span class="ep-card-flag">prix à saisir</span>' : isWeigh(it) ? '<span class="ep-card-flag weigh">au poids</span>'
                    : isUnit(it) ? "<span class=\"ep-card-flag unit\">à l'unité</span>"
                    : it.telco ? `<span class="ep-card-flag">${esc(it.telco)}</span>` : '';
         const stockChip = typeof it.stock === 'number'
           ? `<span class="ep-card-stock ${out ? 'out' : low ? 'low' : ''}">${out ? '0' : it.stock}</span>` : '';
-        return `<button class="ep-card ${out ? 'is-out' : ''}" data-ep-item="${it.id}" style="--i:${i++}">
+        return `<button class="ep-card ${out && !pvReal() ? 'is-out' : ''}" data-ep-item="${it.id}" style="--i:${i++}">
           ${stockChip}
           <span class="ep-card-art">${ART[it.art] || ''}</span>
           <span class="ep-card-name">${esc(it.label)}</span>
@@ -584,7 +655,10 @@
   function addItem(itemId, opts) {
     const it = ITEMS[itemId];
     if (!it) return;
-    if (typeof it.stock === 'number' && it.stock <= 0) {
+    /* Un produit sans prix n'est pas un produit à 0 MAD : on ne vend pas un prix que l'épicier n'a pas posé. */
+    if (it.noPrice) { toast(`${it.label}, prix non renseigné. Fixez-le dans le tableau de bord (Stock).`, 3200); return; }
+    /* Réel : un stock à 0 se vend quand même (l'article est dans la main ; le 0 peut être un stock jamais saisi). */
+    if (!pvReal() && typeof it.stock === 'number' && it.stock <= 0) {
       toast(`${it.label}, rupture. Ajoutez-le au réassort dans Stock rapide.`);
       return;
     }
@@ -606,10 +680,10 @@
 
   function lineTotal(ln) {
     const it = ITEMS[ln.itemId];
-    if (ln.weight != null) return it.price * ln.weight;
-    return it.price * ln.qty;
+    if (ln.weight != null) return r2(it.price * ln.weight);
+    return r2(it.price * ln.qty);
   }
-  function ticketTotal(t) { return t.lines.reduce((s, ln) => s + lineTotal(ln), 0); }
+  function ticketTotal(t) { return r2(t.lines.reduce((s, ln) => s + lineTotal(ln), 0)); }
   function ticketCount(t) { return t.lines.reduce((s, ln) => s + (ln.weight != null ? 1 : ln.qty), 0); }
 
   function flashLastLine(isNew) {
@@ -628,10 +702,10 @@
         <span class="ep-line-name">${esc(it.label)}</span>
         <span class="ep-line-sub">
           ${weigh
-            ? `<span class="weigh"><i data-lucide="scale"></i>${fmtKg(ln.weight)} kg</span> × ${it.price} MAD/kg`
+            ? `<span class="weigh"><i data-lucide="scale"></i>${fmtKg(ln.weight)} kg</span> × ${fmtMAD2(it.price)}/kg`
             : isUnit(it)
               ? `<span class="u">${ln.qty} × ${fmtMAD2(it.price).replace(' MAD', '')} MAD</span> · à l'unité`
-              : `<span class="u">${ln.qty} × ${it.price} MAD</span>`}
+              : `<span class="u">${ln.qty} × ${fmtMAD2(it.price)}</span>`}
         </span>
       </span>
       <span class="ep-line-right">
@@ -706,7 +780,8 @@
     const code = (raw || '').replace(/\s/g, '');
     const inp = $('#ep-scan-input', root);
     if (!code) { focusScan(); return; }
-    const it = BY_EAN[code];
+    let it = BY_EAN[code];
+    if (!it && pvReal() && WS()) { const hit = WS().catalog.resolve(code); if (hit && ITEMS[hit.pid]) it = ITEMS[hit.pid]; }
     if (it) {
       addItem(it.id);
       toast(`${it.label}, ajouté`);
@@ -793,7 +868,7 @@
         <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <div class="ep-weigh-head">
           <span class="ep-weigh-art">${ART[it.art] || ''}</span>
-          <span class="ep-weigh-title"><h3>${esc(it.label)}</h3><span class="sub">${it.price} MAD / kg, sur la balance</span></span>
+          <span class="ep-weigh-title"><h3>${esc(it.label)}</h3><span class="sub">${fmtMAD2(it.price)} / ${it.weighUnit === 'l' ? 'L' : 'kg'}, sur la balance</span></span>
         </div>
         <div class="ep-scale"><span class="kg" id="ep-scale-kg">${fmtKg(weight)}</span><span class="unit">kg</span></div>
         <div class="ep-weigh-presets" id="ep-weigh-presets">
@@ -804,7 +879,7 @@
           <div class="scale-ticks"><span>0,05 kg</span><span>${fmtKg(maxW / 2)} kg</span><span>${fmtKg(maxW)} kg</span></div>
         </div>
         <div class="ep-weigh-result">
-          <span class="lbl">À payer <span class="calc" id="ep-weigh-calc">${fmtKg(weight)} kg × ${it.price} MAD</span></span>
+          <span class="lbl">À payer <span class="calc" id="ep-weigh-calc">${fmtKg(weight)} ${it.weighUnit === 'l' ? 'L' : 'kg'} × ${fmtMAD2(it.price)}</span></span>
           <span class="val" id="ep-weigh-val">${fmtMAD2(it.price * weight)}</span>
         </div>
         <div class="ep-weigh-foot">
@@ -816,7 +891,7 @@
         $('#ep-scale-kg', el).textContent = fmtKg(weight);
         $('#ep-weigh-val', el).textContent = fmtMAD2(it.price * weight);
         $('#ep-weigh-cta', el).textContent = fmtMAD2(it.price * weight);
-        $('#ep-weigh-calc', el).textContent = `${fmtKg(weight)} kg × ${it.price} MAD`;
+        $('#ep-weigh-calc', el).textContent = `${fmtKg(weight)} ${it.weighUnit === 'l' ? 'L' : 'kg'} × ${fmtMAD2(it.price)}`;
         $$('[data-ep-w]', el).forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.epW - weight) < 0.0005));
       };
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-weigh-veil'); });
@@ -972,6 +1047,12 @@
   function decrementStock(t) {
     t.lines.forEach((ln) => {
       const it = ITEMS[ln.itemId];
+      if (!it) return;
+      /* Réel : le stock est celui de l'inventaire du tableau de bord, partagé ; le mouvement garde le ticket. */
+      if (pvReal()) {
+        if (ln.weight == null && WS()) { try { WS().catalog.sell(ln.itemId, ln.qty, t.num); } catch (_) {} }
+        return;
+      }
       if (typeof it.stock !== 'number') return;
       if (ln.weight != null) it.stock = Math.max(0, Math.round((it.stock - ln.weight) * 100) / 100);
       else it.stock = Math.max(0, it.stock - ln.qty);
@@ -986,6 +1067,7 @@
       const row = day.top.find((r) => r.id === ln.itemId);
       const add = ln.weight != null ? 1 : ln.qty;
       if (row) row.qty += add;
+      else if (pvReal()) day.top.push({ id: ln.itemId, qty: add });
     });
     /* Journal partagé : le serveur (donc le tableau de bord de la patronne) et
        la reprise après rechargement. Sans ça la recette vivait uniquement dans
@@ -1439,7 +1521,7 @@
     const items = stockItems();
     const out = items.filter((it) => it.stock <= 0);
     const low = items.filter((it) => it.stock > 0 && it.stock <= it.reorder);
-    const ok = items.filter((it) => it.stock > it.reorder);
+    const ok = items.filter((it) => it.stock > 0 && !(it.stock <= it.reorder));
     /* Réel : tout le catalogue est « non suivi » ; on le liste pour pouvoir y
        piocher la liste de réassort (les recharges ne se stockent pas). */
     const untracked = Object.values(ITEMS).filter((it) => typeof it.stock !== 'number' && !it.telco);
@@ -1610,7 +1692,7 @@
             <div class="ep-jr-panel">
               <h2><i data-lucide="star"></i>Top produits du jour <span class="ct">qté vendue</span></h2>
               <div class="ep-top">
-                ${day.top.slice().sort((a, b) => b.qty - a.qty).map((r) => {
+                ${day.top.slice().sort((a, b) => b.qty - a.qty).filter((r) => ITEMS[r.id]).map((r) => {
                   const it = ITEMS[r.id];
                   return `<div class="ep-top-row">
                     <span class="ep-top-art">${ART[it.art] || ''}</span>

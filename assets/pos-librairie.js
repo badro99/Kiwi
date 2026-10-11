@@ -152,6 +152,11 @@
   const ITEM = {};
   CATALOG.forEach((r) => r.items.forEach((it) => { it.rayon = r.id; ITEM[it.id] = it; }));
   const RAYON = Object.fromEntries(CATALOG.map((r) => [r.id, r]));
+  /* Réel : la librairie vend SES titres, à SES prix. Le catalogue ci-dessus (Le Pain nu à 75 MAD,
+     des ISBN « xxxxx ») est le décor de la démo : une vraie librairie encaissait un prix que le
+     libraire n'avait jamais posé. Le catalogue réel est l'inventaire du tableau de bord, partagé
+     avec les autres caisses (rebuildReal, plus bas). */
+  if (pvReal()) { CATALOG.splice(0, CATALOG.length); Object.keys(ITEM).forEach((id) => delete ITEM[id]); Object.keys(RAYON).forEach((id) => delete RAYON[id]); }
   /* Les « stock: 6 », « stock: 0 » du catalogue ci-dessus sont des chiffres de
      DÉMO (aucune vente ne les décrémente jamais). Dans une vraie librairie ils
      disaient « épuisé » sur des titres en rayon et « 6 en stock » sur des titres
@@ -160,10 +165,12 @@
      d'où ces trois gardes au lieu de comparaisons nues. */
   if (pvReal()) CATALOG.forEach((r) => r.items.forEach((it) => { it.stock = null; }));
   const trk  = (n) => Number.isFinite(n);
-  const outOf  = (n) => trk(n) && n <= 0;
-  const haveOf = (n) => !trk(n) || n > 0;
+  /* Réel : un stock à 0 est une information (« stock 0 »), pas un verrou, car la caisse n'est pas
+     l'inventaire : le livre peut être sur l'étagère sans avoir été saisi. Démo : « épuisé » bloque. */
+  const outOf  = (n) => !pvReal() && trk(n) && n <= 0;
+  const haveOf = (n) => pvReal() || !trk(n) || n > 0;
   const stockClass = (n) => (!trk(n) ? '' : n <= 0 ? 'out' : n <= 3 ? 'low' : 'ok');
-  const stockLabel = (n) => (trk(n) ? (n <= 0 ? 'épuisé' : `${n} en stock`) : 'stock non suivi');
+  const stockLabel = (n) => (trk(n) ? (n <= 0 ? (pvReal() ? 'stock 0' : 'épuisé') : `${n} en stock`) : 'stock non suivi');
   /* Français : 0 et 1 au singulier. */
   const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
 
@@ -292,11 +299,153 @@
 
   /* resolve a school-list line into a uniform shape (catalog or inline ref) */
   function resolveLine(ln) {
-    if (ln.itemId) {
+    if (ln.itemId && ITEM[ln.itemId]) {
       const it = ITEM[ln.itemId];
-      return { key: it.id, title: it.title, author: it.author, price: it.price, art: it.art, stock: it.stock, qty: ln.qty, itemId: it.id };
+      return { key: it.id, title: it.title, author: it.author, price: it.price, art: it.art, stock: it.stock, qty: ln.qty, itemId: it.id, noPrice: !!it.noPrice };
     }
+    /* Réel : un titre de la liste absent du catalogue n'a PAS de prix (on n'en invente pas) : il se
+       commande, il ne s'encaisse pas. */
+    if (ln.unresolved) return { key: ln.ref, title: ln.title, author: ln.author || '', price: 0, art: 'cahier', stock: null, qty: ln.qty || 1, itemId: null, noPrice: true, unresolved: true };
     return { key: ln.ref, title: ln.title, author: ln.author, price: ln.price, art: ln.art || 'cahier', stock: ln.stock != null ? ln.stock : 5, qty: ln.qty || 1, itemId: null };
+  }
+
+  /* ═══════════════════ RÉEL : catalogue, listes scolaires, commandes ═══════════════════
+     Catalogue = inventaire du tableau de bord (nom, prix, ISBN en code-barres, stock). Listes
+     scolaires = fiches « Listes scolaires » du tableau de bord, lues contre CE catalogue : le
+     prix d'une ligne est celui du livre, jamais un prix recopié dans la liste. Commandes
+     spéciales = fiches « Commandes de livres », écrites par la caisse et lues par le tableau de bord. */
+  const WS = () => window.KiwiPosWorkspaces || null;
+  const fold = (x) => String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const artFor = (label) => {
+    const l = fold(label);
+    return /scolaire|manuel/.test(l) ? 'scolaire' : /papeter|fourniture|cahier/.test(l) ? 'cahier' : /jeun|enfant/.test(l) ? 'jeunesse' : /\bbd\b|bande/.test(l) ? 'bd' : /essai|document/.test(l) ? 'essai' : 'roman';
+  };
+  const stockOfProduct = (p) => Object.keys(p.sizes || {}).reduce((n, k) => n + (+p.sizes[k] || 0), 0);
+  function parseListLines(text) {
+    return String(text || '').split(/\n+/).map((x) => x.trim()).filter(Boolean).map((raw) => {
+      let qty = 1, ref = raw, m;
+      if ((m = raw.match(/^(\d+)\s*[x×]\s*(.+)$/i))) { qty = +m[1]; ref = m[2].trim(); }
+      else if ((m = raw.match(/^(.+?)\s*[x×]\s*(\d+)$/i))) { qty = +m[2]; ref = m[1].trim(); }
+      return { qty: Math.max(1, Math.min(99, qty || 1)), ref, raw };
+    });
+  }
+  function itemForRef(ref, byEan) {
+    const digits = String(ref).replace(/[^0-9Xx]/g, '');
+    if (digits.length >= 8 && byEan && byEan[digits]) return ITEM[byEan[digits]] || null;
+    const k = fold(ref);
+    if (!k) return null;
+    const all = CATALOG.flatMap((r) => r.items);
+    const exact = all.filter((it) => fold(it.title) === k);
+    if (exact.length === 1) return exact[0];
+    const part = all.filter((it) => fold(it.title).includes(k));
+    return part.length === 1 ? part[0] : null;
+  }
+  let realBound = false, syncing = false;
+  function rebuildReal() {
+    if (!pvReal()) return false;
+    const w = WS();
+    if (!w || !w.catalog) return false;
+    const comp = w.catalog.compat();
+    if (!comp) return false;
+    CATALOG.splice(0, CATALOG.length);
+    Object.keys(ITEM).forEach((id) => delete ITEM[id]);
+    Object.keys(RAYON).forEach((id) => delete RAYON[id]);
+    comp.RAYONS.forEach((r) => {
+      const items = r.items.map((p) => {
+        const it = { id: p.id, title: p.name, author: p.marque || '', price: +p.price > 0 ? +p.price : 0, noPrice: !(+p.price > 0),
+          isbn: p.ean || '', art: artFor(r.label), stock: stockOfProduct(p), rayon: r.id, flag: '' };
+        ITEM[p.id] = it;
+        return it;
+      });
+      const rayon = { id: r.id, label: r.label, items };
+      CATALOG.push(rayon); RAYON[r.id] = rayon;
+    });
+    if (state.rayon !== 'tous' && !RAYON[state.rayon]) state.rayon = 'tous';
+    if (state.cart) state.cart.lines = state.cart.lines.filter((l) => ITEM[l.key]);
+    /* listes scolaires, depuis les fiches du tableau de bord */
+    SCHOOLS.splice(0, SCHOOLS.length);
+    const bySchool = {};
+    w.values('schoollists').forEach((r) => {
+      if (r.status >= 3) return;     /* livrée / terminée : plus à préparer */
+      const name = String(r.title || '').trim() || 'Liste';
+      const key = fold(name);
+      let sc = bySchool[key];
+      if (!sc) { sc = { id: 'sl-' + key.replace(/[^a-z0-9]+/g, '-').slice(0, 40), name, area: '', niveaux: [] }; bySchool[key] = sc; SCHOOLS.push(sc); }
+      const lines = parseListLines(r.values.items).map((p) => {
+        const it = itemForRef(p.ref, comp.BY_EAN);
+        return it ? { itemId: it.id, qty: p.qty } : { ref: 'x-' + fold(p.ref).replace(/[^a-z0-9]+/g, '-').slice(0, 30), title: p.ref, qty: p.qty, unresolved: true };
+      });
+      sc.niveaux.push({ id: r.id, label: [r.values.level, r.values.family].filter(Boolean).join(' · ') || 'Liste', groups: [{ label: 'Articles', lines }] });
+    });
+    reconcileCmds(w);
+    return true;
+  }
+  /* Commandes spéciales ↔ fiches « Commandes de livres ». La caisse écrit ; ce qu'on crée au
+     tableau de bord apparaît ici ; un statut changé d'un côté est repris de l'autre. */
+  const STATUS_OF = { commande: 0, arrivee: 1, retiree: 2 };
+  const STATUS_BACK = ['commande', 'arrivee', 'retiree'];
+  function reconcileCmds(w) {
+    if (syncing) return;
+    const recs = {};
+    w.values('bookorders').forEach((r) => { recs[r.id] = r; });
+    CMDS.forEach((c) => {
+      const r = c.recId && recs[c.recId];
+      if (!r) return;
+      const st = STATUS_BACK[Math.min(2, Math.max(0, r.status))];
+      if (st !== c.status) {
+        c.status = st;
+        if (st === 'arrivee' && !c.arrivedAt) c.arrivedAt = new Date();
+        if (st === 'retiree' && !c.pickedAt) c.pickedAt = new Date();
+      }
+      if (!!r.values.notified !== !!c.notified) c.notified = !!r.values.notified;
+      if (+r.values.paid > c.acompte && c.status !== 'retiree') c.acompte = Math.min(c.price * c.qty, +r.values.paid);
+    });
+    Object.keys(recs).forEach((id) => {
+      if (CMDS.some((c) => c.recId === id)) return;
+      const r = recs[id], v = r.values;
+      cmdSeq++;
+      CMDS.push({
+        id: 'C-' + cmdSeq, n: cmdSeq, recId: id, title: r.title || v.title || 'Livre', author: '', isbn: v.isbn || '',
+        custId: null, guest: { name: v.customer || 'Client', phone: v.phone || '' },
+        qty: Math.max(1, +v.qty || 1), price: (+v.total || 0) / Math.max(1, +v.qty || 1), acompte: +v.paid || 0,
+        status: STATUS_BACK[Math.min(2, Math.max(0, r.status))], notified: !!v.notified,
+        orderedAt: new Date(r.createdAt || Date.now()), arrivedAt: r.status >= 1 ? new Date(r.updatedAt || Date.now()) : null, pickedAt: r.status >= 2 ? new Date(r.updatedAt || Date.now()) : null,
+      });
+    });
+    CMDS.sort((a, b) => (b.n || 0) - (a.n || 0));
+  }
+  function pushCmds() {
+    const w = WS();
+    if (!pvReal() || !w) return;
+    syncing = true;
+    try {
+      CMDS.forEach((c) => {
+        c.recId = c.recId || ('bo-' + c.id + '-' + Date.now().toString(36));
+        const cu = cmdCust(c);
+        w.upsert('bookorders', { id: c.recId, title: c.title, status: STATUS_OF[c.status] || 0, createdAt: c.orderedAt instanceof Date ? c.orderedAt.getTime() : undefined,
+          values: { isbn: c.isbn || '', customer: cu.name || 'Client', phone: cu.phone || '', qty: c.qty, total: c.price * c.qty,
+            paid: c.status === 'retiree' ? c.price * c.qty : c.acompte, notified: !!c.notified } });
+      });
+      /* une commande annulée à la caisse disparaît du tableau de bord (jamais une fiche créée là-bas) */
+      w.values('bookorders').forEach((r) => {
+        if (/^bo-C-/.test(r.id) && !CMDS.some((c) => c.recId === r.id)) w.remove('bookorders', r.id);
+      });
+    } catch (_) {}
+    syncing = false;
+  }
+  function repaintReal() {
+    if (!root || !rebuildReal()) return;
+    renderRayons(); renderGrid(); renderPanier(); renderBadges();
+    if (state.view === 'listes') renderListes();
+    if (state.view === 'commandes') renderCmd();
+    icons();
+  }
+  function bindReal() {
+    if (!pvReal() || realBound) return;
+    const w = WS(); if (!w) return;
+    realBound = true;
+    try { w.subscribe(() => repaintReal()); } catch (_) {}
+    try { w.catalog.subscribe(() => repaintReal()); } catch (_) {}
   }
 
   /* ───────────────────────── state ───────────────────────── */
@@ -318,14 +467,14 @@
   const librairieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'librairie',
     snapshot() {
-      return { v: 2, catalog: CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
+      return { v: 2, catalog: pvReal() ? undefined : CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
       /* Une fiche v1 portait le catalogue de démo avec ses stocks inventés
          (l'ancien autosave l'y avait écrit). Aucun éditeur de catalogue n'existe
          ici : tout ce qui y différait du défaut venait de ce décor. On l'écarte. */
-      if (saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      if (!pvReal() && saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
       Object.keys(ITEM).forEach((id) => delete ITEM[id]);
       Object.keys(RAYON).forEach((id) => delete RAYON[id]);
       CATALOG.forEach((rayon) => {
@@ -335,6 +484,8 @@
       if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
       Object.keys(CUST).forEach((id) => delete CUST[id]);
       CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      /* Réel : les commandes sont les fiches du tableau de bord ; une fiche locale ne sert qu'à
+         retrouver le lien (recId) avec elles. */
       if (Array.isArray(saved.commands)) CMDS.splice(0, CMDS.length, ...saved.commands);
       CMDS.forEach((command) => {
         ['orderedAt', 'arrivedAt', 'pickedAt'].forEach((key) => {
@@ -349,6 +500,7 @@
 
   function queueIfOffline(label) {
     if (librairieOps) librairieOps.save(label);
+    pushCmds();
     if (!state.offline) return false;
     if (pvReal()) {
       toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
@@ -403,6 +555,7 @@
   let root = null;
   function mount(rootEl) {
     if (librairieOps) librairieOps.hydrate();
+    bindReal(); rebuildReal();
     root = rootEl;
     if (!state.cart) freshCart();
     root.innerHTML = `
@@ -477,6 +630,9 @@
       e.preventDefault();
       const q = e.target.value.trim();
       if (!q) return;
+      /* Réel : le livre peut avoir plusieurs codes-barres ; l'inventaire sait les retrouver tous. */
+      const scanned = pvReal() && WS() ? WS().catalog.resolve(q) : null;
+      if (scanned && scanned.pid && ITEM[scanned.pid]) { e.target.value = ''; state.query = ''; renderGrid(); icons(); openSheet(scanned.pid); return; }
       const hits = CATALOG.flatMap((r) => r.items).filter((it) => matchItem(it, q));
       if (hits.length === 1) { e.target.value = ''; state.query = ''; renderGrid(); icons(); openSheet(hits[0].id); }
       else if (!hits.length) toast(`Aucun titre pour « ${q} » ; vous pouvez le commander pour le client`);
@@ -552,8 +708,8 @@
     const digits = q.replace(/\D/g, '');
     return it.title.toLowerCase().includes(ql) ||
       (it.author || '').toLowerCase().includes(ql) ||
-      (digits.length >= 3 && it.isbn.replace(/\D/g, '').includes(digits)) ||
-      it.isbn.toLowerCase().includes(ql);
+      (digits.length >= 3 && (it.isbn || '').replace(/\D/g, '').includes(digits)) ||
+      (it.isbn || '').toLowerCase().includes(ql);
   }
 
   function renderGrid() {
@@ -567,12 +723,16 @@
         <div class="lb-grid">${items.map((it) => cardHTML(it, i++)).join('')}</div>`;
     }).filter(Boolean).join('');
 
-    $('#lb-gridwrap', root).innerHTML = blocks || `
+    $('#lb-gridwrap', root).innerHTML = blocks || (pvReal() && !q && !CATALOG.length ? `
+      <div class="lb-empty-grid">
+        <i data-lucide="book-open"></i>
+        <div>Votre catalogue est vide.<br>Ajoutez vos livres et fournitures, avec leur prix et leur ISBN, dans le tableau de bord (Stock), ou importez-les.</div>
+      </div>` : `
       <div class="lb-empty-grid">
         <i data-lucide="book-open"></i>
         <div>Aucun article pour « ${esc(q)} ».<br>Pas en rayon ? On peut le commander pour le client.</div>
         <button class="lb-order-cta" id="lb-grid-order"><i data-lucide="truck"></i>Commande spéciale${q ? ` · « ${esc(q)} »` : ''}</button>
-      </div>`;
+      </div>`);
 
     $('#lb-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-lb-item]');
@@ -586,7 +746,8 @@
   function cardHTML(it, i) {
     const sc = stockClass(it.stock);
     return `<button class="lb-card ${outOf(it.stock) ? 'is-out' : ''}" data-lb-item="${it.id}" style="--i:${i}">
-      ${trk(it.stock) ? `<span class="lb-card-stock ${sc}">${it.stock <= 0 ? 'épuisé' : it.stock}</span>` : ''}
+      ${trk(it.stock) ? `<span class="lb-card-stock ${sc}">${it.stock <= 0 ? (pvReal() ? 'stock 0' : 'épuisé') : it.stock}</span>` : ''}
+      ${it.noPrice ? '<span class="lb-card-flag">prix à saisir</span>' : ''}
       <span class="lb-card-art">${ART[it.art] || ART.roman}</span>
       <span class="lb-card-name">${esc(it.title)}</span>
       <span class="lb-card-author">${esc(it.author || '')}</span>
@@ -682,7 +843,7 @@
       <span class="lb-line-art">${ART[it.art] || ART.roman}</span>
       <span class="lb-line-mid">
         <span class="lb-line-name">${esc(it.title)}</span>
-        <span class="lb-line-sub"><span class="unit">${fmtMAD(it.price)}</span> · ${esc(it.author || RAYON[it.rayon].label)}</span>
+        <span class="lb-line-sub"><span class="unit">${fmtMAD(it.price)}</span> · ${esc(it.author || (RAYON[it.rayon] || {}).label || '')}</span>
       </span>
       <span class="lb-line-right">
         <span class="lb-line-price">${fmtMAD(it.price * l.qty)}</span>
@@ -696,10 +857,15 @@
   /* ═══════════════════════ BOOK DETAIL SHEET ═══════════════════════ */
   function openSheet(itemId) {
     const it = ITEM[itemId];
+    if (!it) return;
+    /* Un titre sans prix n'est pas un titre à 0 MAD : la caisse ne vend pas un prix que le libraire n'a pas posé. */
+    if (it.noPrice) { toast(`${it.title}, prix non renseigné. Fixez-le dans le tableau de bord (Stock).`, 3200); return; }
     let qty = 1;
     const el = $('#lb-sheetm', root);
     const sc = stockClass(it.stock);
     const stockLine = !trk(it.stock) ? ''
+      : it.stock <= 0 && pvReal()
+      ? `<div class="lb-sheet-stockline out"><i data-lucide="archive"></i>Stock 0 au catalogue. Si le livre est en rayon, vendez-le ; sinon proposez une <b>commande spéciale</b>.</div>`
       : it.stock <= 0
       ? `<div class="lb-sheet-stockline out"><i data-lucide="truck"></i>Épuisé en rayon, proposez une <b>commande spéciale</b>.</div>`
       : it.stock <= 3
@@ -711,8 +877,8 @@
         <span class="lb-sheet-art">${ART[it.art] || ART.roman}</span>
         <span class="lb-sheet-title">
           <h3>${esc(it.title)}</h3>
-          <span class="sub">${esc(it.author || '')}${it.author ? ' · ' : ''}${esc(RAYON[it.rayon].label)}${it.flag ? ` · ${esc(it.flag)}` : ''}</span>
-          ${/x{3,}/i.test(it.isbn || '') ? '' : `<span class="isbn">ISBN ${esc(it.isbn)}</span>`}
+          <span class="sub">${esc(it.author || '')}${it.author ? ' · ' : ''}${esc((RAYON[it.rayon] || {}).label || '')}${it.flag ? ` · ${esc(it.flag)}` : ''}</span>
+          ${!it.isbn || /x{3,}/i.test(it.isbn || '') ? '' : `<span class="isbn">ISBN ${esc(it.isbn)}</span>`}
         </span>
         <span class="lb-sheet-price"><span class="val">${fmtMAD(it.price)}</span></span>
       </div>
@@ -730,6 +896,7 @@
           ? `<button class="lb-btn secondary" data-lb-close>Annuler</button>
              <button class="lb-btn primary" id="lb-sheet-order"><i data-lucide="truck"></i>Le commander pour le client</button>`
           : `<button class="lb-btn secondary" data-lb-close>Annuler</button>
+             ${pvReal() && trk(it.stock) && it.stock <= 0 ? '<button class="lb-btn secondary" id="lb-sheet-order"><i data-lucide="truck"></i>Le commander</button>' : ''}
              <button class="lb-btn primary" id="lb-sheet-add"><i data-lucide="plus"></i>Ajouter · <span id="lb-sheet-cta">${fmtMAD(it.price)}</span></button>`}
       </div>`;
     openVeil('#lb-sheet-veil');
@@ -1036,6 +1203,7 @@
         earnMsg = ` · +${total} pts fidélité`;
       }
       postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
+      if (pvReal() && WS()) c.lines.forEach((l) => { try { WS().catalog.sell(l.key, l.qty, c.num); } catch (_) {} });
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
       freshCart();
@@ -1081,7 +1249,7 @@
       ${c.author ? `<span class="lb-ocard-author">${esc(c.author)}${c.qty > 1 ? ` · ×${c.qty}` : ''}</span>` : ''}
       <span class="lb-ocard-client"><i data-lucide="${cu.school ? 'building-2' : 'user'}"></i>${esc(cu.name)}</span>
       <span class="lb-ocard-meta">
-        <span class="lb-pill isbn">${esc((c.isbn || '').slice(-6))}</span>
+        ${c.isbn ? `<span class="lb-pill isbn">${esc(c.isbn.slice(-6))}</span>` : ''}
         ${c.acompte ? `<span class="lb-pill ok">Acompte ${c.acompte} MAD</span>` : ''}
         ${due > 0 && c.status !== 'retiree' ? `<span class="lb-pill due">Solde ${due} MAD</span>` : ''}
         ${toNotify ? '<span class="lb-pill wa"><i data-lucide="message-circle"></i>à prévenir</span>' : c.notified && c.status === 'arrivee' ? '<span class="lb-pill ok">notifié</span>' : ''}
@@ -1140,7 +1308,7 @@
         <div class="lb-dt-titlewrap">
           <h3>${esc(c.title)}</h3>
           <div class="lb-dt-sub">
-            ${c.author ? `${esc(c.author)}` : ''}${c.author ? '<span class="isbnv">·</span>' : ''}<span class="isbnv">ISBN ${esc(c.isbn)}</span>
+            ${c.author ? `${esc(c.author)}` : ''}${c.author ? '<span class="isbnv">·</span>' : ''}${c.isbn ? `<span class="isbnv">ISBN ${esc(c.isbn)}</span>` : ''}
             ${c.qty > 1 ? `<span class="lb-pill">×${c.qty}</span>` : ''}
           </div>
         </div>
@@ -1216,6 +1384,7 @@
     queueIfOffline('Statut commande');
     if (s === 'retiree') {
       const due = cmdDue(c);
+      if (pvReal() && due > 0 && !c.soldeRecorded) { c.soldeRecorded = true; postDay(due, 'especes', `Solde ${c.id}`, `${c.id}-S`, []); }
       closeVeil('#lb-detail-veil');
       toast(`${c.id} remis à ${cmdCust(c).name.split(' ')[0]}${due > 0 ? `, solde ${due} MAD encaissé` : ''}`);
       renderCmd(); renderBadges(); icons();
@@ -1305,7 +1474,7 @@
         cmdSeq++;
         const cmd = {
           id: `C-${cmdSeq}`, n: cmdSeq,
-          title: draft.title.trim(), author: '', isbn: draft.isbn.trim() || `EAN-${cmdSeq}`,
+          title: draft.title.trim(), author: '', isbn: draft.isbn.trim() || (pvReal() ? '' : `EAN-${cmdSeq}`),   /* réel : pas d'identifiant inventé */
           custId: draft.client && draft.client.id ? draft.client.id : null,
           guest: draft.client && !draft.client.id ? { name: draft.client.name, phone: draft.client.phone } : (draft.client ? null : { name: 'Client de passage', phone: '' }),
           qty: draft.qty, price: +draft.price, acompte: draft.acompte,
@@ -1313,6 +1482,9 @@
           orderedAt: new Date(), arrivedAt: null, pickedAt: null,
         };
         CMDS.unshift(cmd);
+        /* Réel : l'acompte est de l'argent pris au comptoir, il entre dans la recette du jour (le
+           solde, lui, y entrera à la remise : jamais le prix entier deux fois). */
+        if (pvReal() && cmd.acompte > 0) postDay(cmd.acompte, 'especes', `Acompte ${cmd.id}`, `${cmd.id}-A`, []);
         closeVeil('#lb-newcmd-veil');
         queueIfOffline(`Commande ${cmd.id}`);
         toast(`${cmd.id} passée, ${cmd.title}${cmd.acompte ? ` · acompte ${cmd.acompte} MAD encaissé` : ''}`);
@@ -1458,7 +1630,7 @@
     return out;
   }
   function listTotal() {
-    return listLines().filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock))
+    return listLines().filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock) && !r.unresolved)
       .reduce((s, r) => s + r.price * r.qty, 0);
   }
   function listFullTotal() {
@@ -1475,7 +1647,7 @@
           ${SCHOOLS.map((sc) => `
             <div class="lb-school ${state.listPick.school === sc.id ? 'on' : ''}" data-lb-school="${sc.id}">
               <div class="lb-school-name"><i data-lucide="building-2"></i>${esc(sc.name)}</div>
-              <div class="lb-school-sub">${esc(sc.area)} · ${sc.niveaux.length} liste${sc.niveaux.length > 1 ? 's' : ''}</div>
+              <div class="lb-school-sub">${sc.area ? esc(sc.area) + ' · ' : ''}${sc.niveaux.length} liste${sc.niveaux.length > 1 ? 's' : ''}</div>
               ${state.listPick.school === sc.id ? `<div class="lb-niveaux">
                 ${sc.niveaux.map((n) => `<button class="lb-niveau ${state.listPick.niveau === n.id ? 'on' : ''}" data-lb-niveau="${n.id}">${esc(n.label)}</button>`).join('')}
               </div>` : ''}
@@ -1517,10 +1689,10 @@
       if (addAll) addAll.onclick = addListToCart;
       const orderMissing = $('#lb-li-order-missing', body);
       if (orderMissing) orderMissing.onclick = () => {
-        const missing = listLines().filter((r) => outOf(r.stock));
+        const missing = listLines().filter((r) => outOf(r.stock) || r.unresolved);
         if (!missing.length) return;
         switchView('commandes');
-        setTimeout(() => openNewCmd(missing[0].title, { isbn: '', price: missing[0].price }), 60);
+        setTimeout(() => openNewCmd(missing[0].title, { isbn: '', price: missing[0].price || '' }), 60);
       };
     }
     icons();
@@ -1546,14 +1718,14 @@
     });
     const total = listTotal();
     const full = listFullTotal();
-    const missing = lines.filter((r) => outOf(r.stock));
-    const checkedCount = lines.filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock)).length;
-    const inStockCount = lines.filter((r) => haveOf(r.stock)).length;
+    const missing = lines.filter((r) => outOf(r.stock) || r.unresolved);
+    const checkedCount = lines.filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock) && !r.unresolved).length;
+    const inStockCount = lines.filter((r) => haveOf(r.stock) && !r.unresolved).length;
     return `
       <div class="lb-li-top">
         <div>
           <h2>${esc(a.school.name)} · ${esc(a.niveau.label)}</h2>
-          <div class="sub">${lines.length} ${plu(lines.length, 'article')} · ${esc(a.school.area)}</div>
+          <div class="sub">${lines.length} ${plu(lines.length, 'article')}${a.school.area ? ' · ' + esc(a.school.area) : ''}</div>
         </div>
         <div class="lb-li-total"><div class="val">${fmtMAD(full)}</div><div class="lbl">liste complète</div></div>
       </div>
@@ -1563,7 +1735,7 @@
           ${g.rows.map((r) => listRowHTML(r)).join('')}
         `).join('')}
         ${missing.length ? `<div style="margin-top:14px;">
-          <button class="lb-btn secondary" id="lb-li-order-missing" style="width:100%;"><i data-lucide="truck"></i>Commander les ${missing.length} article${missing.length > 1 ? 's' : ''} épuisé${missing.length > 1 ? 's' : ''} pour la famille</button>
+          <button class="lb-btn secondary" id="lb-li-order-missing" style="width:100%;"><i data-lucide="truck"></i>${missing.length > 1 ? `Commander les ${missing.length} articles manquants pour la famille` : 'Commander l’article manquant pour la famille'}</button>
         </div>` : ''}
       </div>
       <div class="lb-li-foot">
@@ -1579,14 +1751,14 @@
     const out = outOf(r.stock);
     const on = !out && state.listChecked[r.key] !== false;
     const sc = stockClass(r.stock);
-    return `<div class="lb-li-row ${on ? 'on' : ''} ${out ? 'is-out' : ''}" ${out ? '' : `data-lb-toggle="${esc(r.key)}"`}>
+    return `<div class="lb-li-row ${on && !r.unresolved ? 'on' : ''} ${out || r.unresolved ? 'is-out' : ''}" ${out || r.unresolved ? '' : `data-lb-toggle="${esc(r.key)}"`}>
       <span class="lb-li-art">${ART[r.art] || ART.cahier}</span>
       <span class="lb-li-mid">
         <span class="lb-li-name">${esc(r.title)}${r.qty > 1 ? ` <span style="color:var(--ink-3);font-weight:600;">×${r.qty}</span>` : ''}</span>
-        <span class="lb-li-meta">${esc(r.author || '')}<span class="lb-li-stock ${sc}">${out ? 'épuisé · à commander' : stockLabel(r.stock)}</span></span>
+        <span class="lb-li-meta">${esc(r.author || '')}<span class="lb-li-stock ${sc}">${r.unresolved ? 'hors catalogue · à commander' : out ? 'épuisé · à commander' : stockLabel(r.stock)}</span></span>
       </span>
       <span class="lb-li-right">
-        <span class="lb-li-price">${fmtMAD(r.price * r.qty)}</span>
+        <span class="lb-li-price">${r.unresolved ? 'sans prix' : fmtMAD(r.price * r.qty)}</span>
         <span class="lb-li-check"><i data-lucide="check"></i></span>
       </span>
     </div>`;
@@ -1596,15 +1768,17 @@
     const a = activeNiveau();
     if (!a || !a.niveau) return;
     let added = 0, items = 0;
+    let skipped = 0;
     listLines().forEach((r) => {
       if (outOf(r.stock)) return;
       if (state.listChecked[r.key] === false) return;
-      if (!r.itemId) return;        /* hors-catalogue : ignoré pour le panier (se commande) */
+      if (!r.itemId) { if (r.unresolved) skipped++; return; }        /* hors-catalogue : ignoré pour le panier (se commande) */
+      if (r.noPrice) { skipped++; return; }
       addToCart(r.itemId, r.qty);
       added += r.qty; items++;
     });
     if (!added) { toast('Rien à ajouter, tout est décoché ou épuisé'); return; }
-    toast(`Cartable ${a.school.name} · ${a.niveau.label}, ${added} article${added > 1 ? 's' : ''} (${items} référence${items > 1 ? 's' : ''}) au panier`);
+    toast(`Cartable ${a.school.name} · ${a.niveau.label}, ${added} article${added > 1 ? 's' : ''} (${items} référence${items > 1 ? 's' : ''}) au panier${skipped ? ` · ${skipped} sans prix au catalogue, à commander` : ''}`);
     switchView('vente');
     renderPanier(); icons();
   }

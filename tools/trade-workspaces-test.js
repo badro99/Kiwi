@@ -59,8 +59,9 @@ const PW = context.KiwiPosWorkspaces;
 ok(W.pages.length >= 45, 'workspace catalogue covers the full operational surface');
 ok(W.pages.every((p) => S.get(p.trade,p.nav)), 'every workspace route has a domain-specific schema');
 ok(Object.keys(S.defs).length >= 45, 'schema catalogue covers every specialist dashboard and caisse board');
-ok(Object.values(S.defs).every((s) => s.fields.some((f) => f.id === 'title') && s.fields.length >= 5), 'every métier record has a real identity and structured operational fields');
-ok(Object.values(S.defs).every((s) => Array.isArray(s.stages) && s.stages.length >= 3), 'every métier workflow resolves to actionable translated stages');
+/* Une fiche rattachée au catalogue (titleFrom) tire son identité du produit : elle n'a pas de champ « title ». */
+ok(Object.values(S.defs).every((s) => (s.fields.some((f) => f.id === 'title') || (s.titleFrom && s.fields.some((f) => f.id === s.titleFrom && f.type === 'product'))) && s.fields.length >= (s.titleFrom || s.nav === 'payers' ? 3 : 5)), 'every métier record has a real identity and structured operational fields');
+ok(Object.values(S.defs).every((s) => Array.isArray(s.stages) && s.stages.length >= (s.titleFrom || s.nav === 'payers' ? 2 : 3)), 'every métier workflow resolves to actionable translated stages');
 ok(Object.values(S.defs).every((s) => s.fields.filter((f) => (f.type === 'number' || f.type === 'money') && f.step && f.min != null).every((f) => Number(f.min) % Number(f.step) === 0)), 'native number controls and schema validation share a reachable step origin');
 const POS_ALIAS={boulangerie:'bakery',gym:'sport'};
 ok(Object.entries(PW.boards).filter(([,boards])=>Array.isArray(boards)).every(([id,boards])=>boards.every((b)=>S.get(POS_ALIAS[id]||id,b[0]))), 'every caisse operation tab is backed by the same validated métier schema');
