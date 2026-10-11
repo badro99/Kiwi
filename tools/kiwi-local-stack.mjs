@@ -77,7 +77,18 @@ function statement(sql, args = []) {
       const r = prep().run(...args);
       return { success: true, meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } };
     },
-    __run() { const r = prep().run(...args); return { success: true, meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } }; },
+    /* D1's batch() answers each statement with its rows: a SELECT inside a
+       batch comes back as { results: [...] }. Running every statement with
+       run() returned no rows, so a route that reads through batch() (the
+       public booking page, for one) saw an empty database and said
+       "booking-closed" for a store that had just opened it. */
+    __run() {
+      if (/^\s*(SELECT|WITH|PRAGMA)\b/i.test(sql) || /\bRETURNING\b/i.test(sql)) {
+        return { results: prep().all(...args), success: true, meta: {} };
+      }
+      const r = prep().run(...args);
+      return { success: true, meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } };
+    },
   };
 }
 const DB = {
