@@ -210,5 +210,18 @@ ok('ouvert ou fermé à l’heure de Casablanca, quel que soit le fuseau du tél
   }
 });
 
+ok('un magasin déclaré hors du Maroc lit ses heures à sa propre horloge', () => {
+  const win = { KiwiConfig: { timezone: 'Europe/Paris' } };
+  const c = vm.createContext({ window: win, document: { addEventListener() {}, documentElement: { lang: 'fr' } },
+    localStorage: { getItem: () => null, setItem() {} }, Date, Math, JSON, Object, Array, String, Number, Intl, setTimeout });
+  vm.runInContext(HOURS, c);
+  const H = win.KiwiHours;
+  const doc = H.normalize({ v: 1, week: { mon: { open: true, periods: [{ from: '09:00', to: '19:00' }] } } });
+  const parisHalfSix = Date.UTC(2026, 9, 12, 16, 30);              // 18:30 in Paris (UTC+2), 17:30 in Casablanca
+  assert.equal(H.summaryOf(doc, parisHalfSix, 'fr').text, 'Ouvert · ferme à 19:00', 'store zone from KiwiConfig');
+  assert.equal(H.statusOf(doc, Date.UTC(2026, 9, 12, 17, 30)).open, false, '19:30 in Paris is closed');
+  assert.equal(H.statusOf(doc, Date.UTC(2026, 9, 12, 17, 30), 'Africa/Casablanca').open, true, 'an explicit zone wins');
+});
+
 console.log(`\nbooking-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

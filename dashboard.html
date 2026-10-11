@@ -6326,7 +6326,7 @@
 <script src="assets/venue-store.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/vertical-state.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/vertical-state.js?v=2" defer fetchpriority="low"></script>
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
@@ -6337,7 +6337,7 @@
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
      assistant) interroge KiwiHours · aucun de ces modules n'a de réglage à lui.
      Après venue-store.js, dont il tient sa fiche par établissement. -->
-<script src="assets/hours.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/hours.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/morocco-holidays.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/hours-ui.js?v=2" defer fetchpriority="low"></script>
 <!-- Le reçu de caisse. receipt.js n'a pas de DOM : il porte la fiche légale de
@@ -6356,7 +6356,7 @@
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
      rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
 <script src="assets/cost.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/inventory-consumption.js?v=12" defer fetchpriority="low"></script>
+<script src="assets/inventory-consumption.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js?v=10" defer fetchpriority="low"></script>
@@ -6394,20 +6394,20 @@
 <script src="assets/boutique-promos-dashboard.js?v=13" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
-<script src="assets/day-report.js?v=20" defer fetchpriority="low"></script>
+<script src="assets/day-report.js?v=21" defer fetchpriority="low"></script>
 <script src="assets/z-reconciliation.js?v=25" defer fetchpriority="low"></script>
 <script src="assets/month-report.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/month-report-tools.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/month-report-csv.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/month-report-pdf.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/month-report-ui.js?v=7" defer fetchpriority="low"></script>
-<script src="assets/day-report-export.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/day-report-export.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=27" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=71" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
-<script src="assets/team.js?v=296" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=297" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -6422,8 +6422,8 @@
      from a barista whatever wording the role was filed under. Fail-soft · the
      gate falls back to its own small map for the access-critical values. -->
 <script src="assets/staff-roles.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/help-centre.css?v=4">
-<script src="assets/help-centre.js?v=5" defer fetchpriority="low"></script>
+<link rel="stylesheet" href="assets/help-centre.css?v=5">
+<script src="assets/help-centre.js?v=6" defer fetchpriority="low"></script>
 <script src="assets/account.js?v=29" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>

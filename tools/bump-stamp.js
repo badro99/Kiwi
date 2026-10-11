@@ -161,6 +161,7 @@ function bumpSwGeneration() {
 
 let scanned = S.scan();
 let bumped = 0;
+const done = new Set();
 
 if (SYNC_ONLY) {
   console.log('Ré-scellement du manifeste, sans bump.');
@@ -181,7 +182,21 @@ if (SYNC_ONLY) {
     /* Une verticale POS partage son rev entre .js et .css : si les deux sont
        demandés, le second bump annulerait le premier. On re-scanne à chaque
        fois pour lire l'état réel plutôt que l'état d'il y a une ligne. */
-    if (bump(asset, scanned)) { bumped++; scanned = S.scan(); }
+    if (bump(asset, scanned)) { bumped++; scanned = S.scan(); done.add(asset); }
+  }
+  /* Cascade : bumper une verticale POS réécrit son `rev` DANS
+     assets/pos-dispatch.js, qui est lui-même un asset estampillé. Il changeait
+     donc de contenu sans changer d'URL, et le manifeste re-scellé plus bas le
+     déclarait à jour : un second `--all` répondait « rien à bumper » et seul
+     stamp-drift-test voyait le trou (mesuré le 2026-10-11, ?v=72 resté en
+     place). Tout fichier que ce run a réécrit et qui est lui-même estampillé
+     suit donc, jusqu'à ce que plus rien ne bouge. */
+  for (let pass = 0, moved = true; moved && pass < 5; pass++) {
+    moved = false;
+    for (const f of [...touched]) {
+      if (done.has(f) || !scanned.has(f) || !S.exists(f) || !manifest[f] || manifest[f].sha === S.sha(f)) continue;
+      if (bump(f, scanned)) { bumped++; scanned = S.scan(); done.add(f); moved = true; }
+    }
   }
 }
 

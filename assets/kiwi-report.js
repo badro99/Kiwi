@@ -11,8 +11,16 @@
   };
   var nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
   var nf2 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  var mad = function (c) { return nf.format(Math.round((Number(c) || 0) / 100)) + ' MAD'; };
+  /* graduations de l'axe : 1,5 k et non « 2 k » (le tiers d'un maximum rond n'est pas entier) */
+  var nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+  /* Les ventes se règlent au centime (« 17,50 MAD »). Arrondir chaque montant
+     à l'entier faisait que le total du mois, la ligne « Espèces » et celle
+     « Carte » ne s'additionnaient plus (18 + 12 ≠ 30 pour 29,50). On garde les
+     centimes dès qu'il y en a, et seulement alors. */
   var madExact = function (c) { return nf2.format((Number(c) || 0) / 100) + ' MAD'; };
+  var mad = function (c) { var v = Number(c) || 0; return v % 100 === 0 ? nf.format(v / 100) + ' MAD' : madExact(v); };
+  /* « 0 vente », « 1 vente », « 2 ventes » : le français met le singulier à 0 et 1. */
+  var ventes = function (n) { return nf.format(n) + (n >= 2 ? ' ventes' : ' vente'); };
   var monthName = function (m) {
     var s = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(m + '-15T12:00:00Z'));
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -68,7 +76,7 @@
     for (var k = 0; k <= 3; k++) {
       var v = max * k / 3, y = pad.t + ih - ih * k / 3;
       svg += '<line class="grid" x1="' + pad.l + '" x2="' + (W - pad.r) + '" y1="' + y + '" y2="' + y + '"/>';
-      svg += '<text class="ax" x="' + (pad.l - 6) + '" y="' + (y + 4) + '" text-anchor="end">' + (v >= 1e5 ? Math.round(v / 1e5) + ' k' : nf.format(Math.round(v / 100))) + '</text>';
+      svg += '<text class="ax" x="' + (pad.l - 6) + '" y="' + (y + 4) + '" text-anchor="end">' + (v >= 1e5 ? nf1.format(v / 1e5) + ' k' : nf.format(Math.round(v / 100))) + '</text>';
     }
     days.forEach(function (d, i) {
       var h = Math.max(0, d.cents) / max * ih, x = pad.l + i * slot + 1, y = pad.t + ih - h;
@@ -113,11 +121,11 @@
             '</td><td class="n">' + nf.format(m.count) + '</td><td class="n">' + esc(mad(m.cents)) + ' <small>(' + Math.round(share) + ' %)</small></td></tr>';
         }).join('') + '</tbody></table>' : '<p class="kr-note">Aucune vente ce mois-ci.</p>') + '</section>';
 
-    html += '<section class="kr-sec"><h2>Jours de la semaine</h2><table class="kr-table"><tbody>' +
-      week.map(function (w) { return '<tr><td>' + WEEK[w.w] + '</td><td class="n">' + nf.format(w.count) + ' ventes</td><td class="n">' + esc(mad(w.cents)) + '</td></tr>'; }).join('') +
+    html += '<section class="kr-sec"><h2>Jours de la semaine</h2><p class="sub">Ventes encaissées, remboursements non déduits.</p><table class="kr-table"><tbody>' +
+      week.map(function (w) { return '<tr><td>' + WEEK[w.w] + '</td><td class="n">' + ventes(w.count) + '</td><td class="n">' + esc(mad(w.cents)) + '</td></tr>'; }).join('') +
       '</tbody></table></section></div>';
 
-    html += '<section class="kr-sec"><h2>Heures d’affluence</h2><p class="sub">Chiffre d’affaires par heure de la journée, heure locale du magasin.</p>' +
+    html += '<section class="kr-sec"><h2>Heures d’affluence</h2><p class="sub">Ventes encaissées par heure de la journée, heure locale du magasin. Les remboursements ne sont pas déduits ici.</p>' +
       '<div class="kr-hours" id="kr-hours">' + d.hours.map(function (h) {
         return '<span class="' + (h.cents > 0 ? '' : 'zero') + '" data-h="' + h.h + '" data-c="' + h.cents + '" data-n="' + h.count + '" style="height:' + Math.max(2, h.cents / hourMax * 100).toFixed(1) + '%"></span>';
       }).join('') + '</div><div class="kr-hours-ax">' + d.hours.map(function (h) { return '<i>' + (h.h % 3 === 0 ? h.h + 'h' : '') + '</i>'; }).join('') + '</div></section>';
@@ -135,8 +143,8 @@
     html += '</section>';
 
     var notes = [];
-    if (t.refunds) notes.push(nf.format(t.refunds) + ' remboursement(s) pour ' + madExact(-t.refundsCents) + ', déjà déduits du chiffre d’affaires.');
-    if (d.voided.count) notes.push(nf.format(d.voided.count) + ' vente(s) annulée(s) pour ' + madExact(d.voided.cents) + ', exclues du chiffre d’affaires.');
+    if (t.refunds) notes.push(nf.format(t.refunds) + (t.refunds >= 2 ? ' remboursements' : ' remboursement') + ' pour ' + madExact(-t.refundsCents) + ', ' + (t.refunds >= 2 ? 'déjà déduits' : 'déjà déduit') + ' du chiffre d’affaires.');
+    if (d.voided.count) notes.push(nf.format(d.voided.count) + (d.voided.count >= 2 ? ' ventes annulées' : ' vente annulée') + ' pour ' + madExact(d.voided.cents) + ', ' + (d.voided.count >= 2 ? 'exclues' : 'exclue') + ' du chiffre d’affaires.');
     if (d.truncated) notes.push('Plus de ' + nf.format(d.rowCap) + ' ventes : le détail par jour, heure et produit porte sur les ' + nf.format(d.rowCap) + ' premières.');
     if (notes.length) html += '<section class="kr-sec"><h2>À savoir</h2>' + notes.map(function (n) { return '<p class="kr-note">' + esc(n) + '</p>'; }).join('') + '</section>';
 
@@ -149,11 +157,11 @@
     $('kr-bar-note').textContent = d.complete ? '' : 'Mois en cours : chiffres provisoires.';
 
     $('kr-days').querySelectorAll('.bar').forEach(function (b) {
-      b.addEventListener('pointermove', function (ev) { showTip(dayLong(b.dataset.d) + ' · ' + mad(b.dataset.c) + ' · ' + b.dataset.n + ' ventes', ev.clientX, ev.clientY); });
+      b.addEventListener('pointermove', function (ev) { showTip(dayLong(b.dataset.d) + ' · ' + mad(b.dataset.c) + ' · ' + ventes(Number(b.dataset.n)), ev.clientX, ev.clientY); });
       b.addEventListener('pointerleave', hideTip);
     });
     $('kr-hours').querySelectorAll('span').forEach(function (s) {
-      s.addEventListener('pointermove', function (ev) { showTip(s.dataset.h + ' h – ' + (Number(s.dataset.h) + 1) + ' h · ' + mad(s.dataset.c) + ' · ' + s.dataset.n + ' ventes', ev.clientX, ev.clientY); });
+      s.addEventListener('pointermove', function (ev) { showTip(s.dataset.h + ' h – ' + (Number(s.dataset.h) + 1) + ' h · ' + mad(s.dataset.c) + ' · ' + ventes(Number(s.dataset.n)), ev.clientX, ev.clientY); });
       s.addEventListener('pointerleave', hideTip);
     });
   }

@@ -21,6 +21,7 @@ for (const search of ['?pair=1&op=1&direct=1&merchant=shop', '?op=1&merchant=sho
     URLSearchParams, location: { search }, document: { getElementById: element },
     pinScreen: element('pin-screen'), $$: () => [], setTimeout() {},
     currentMerchantSlug: () => 'shop', shiftOpenedAt: null, shiftMerchant: '',
+    storeIsReal: () => false, floatChosen: false,
     doOpenService: () => opens++, hoursAllowOpening: () => ({ ok: true }),
     loadPersistedShift: () => { reads++; return saved; },
     restoreShift: () => resumes++, enterShellDirectly() {}, startEmployeeSaleJournalSync: () => syncs++,

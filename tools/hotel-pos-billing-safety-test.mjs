@@ -218,9 +218,15 @@ await check('new extras record calendar timestamps; invoice preserves and escape
   h.api.openChargeSheet(101, 'diner');
   h.node('#ht-ch-reveal').onclick();
   h.node('#ht-ch-match').onclick();
+  /* A real hotel has no price list for extras: without a typed price nothing is posted. */
+  await h.node('#ht-ch-add').onclick();
+  assert.equal(h.stay.charges.length, 0);
+  h.node('#ht-ch-unit').oninput({ target: { value: '120,5' } });
   await h.node('#ht-ch-add').onclick();
   assert.equal(h.stay.charges.length, 1);
   const charge = h.stay.charges[0];
+  assert.equal(charge.unit, 120.5);
+  assert.equal(h.api.stayTotals(h.stay).extras, 120.5);
   assert(charge.at.includes(String(new Date().getFullYear())));
   assert(!charge.at.includes('auj.'));
   assert(h.api.factureHTML(h.stay, true).includes(charge.at));

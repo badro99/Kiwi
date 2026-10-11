@@ -2176,7 +2176,7 @@
                   <span class="bq-cl-name">${esc(c.name)} ${c.vip ? '<span class="bq-vip-chip">VIP</span>' : ''}</span>
                   <span class="bq-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
                 </span>
-                <span class="bq-cl-right"><b>${c.points} pts</b>${c.achats} achats${av ? `<span class="av"><i data-lucide="ticket"></i>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
+                <span class="bq-cl-right"><b>${c.points} pts</b>${c.achats} achat${c.achats > 1 ? 's' : ''}${av ? `<span class="av"><i data-lucide="ticket"></i>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
               </button>`;
             }).join('') || `<div class="bq-empty">Aucune fiche pour « ${esc(q)} »</div>`}
           </div>
@@ -2270,7 +2270,7 @@
                 <span class="bq-clcard-stats">
                   <span class="bq-mini ok"><i data-lucide="star"></i>${c.points} pts</span>
                   <span class="bq-mini"><i data-lucide="ruler"></i>taille ${esc(c.taille)}</span>
-                  <span class="bq-mini"><i data-lucide="receipt"></i>${c.achats} achats</span>
+                  <span class="bq-mini"><i data-lucide="receipt"></i>${c.achats} achat${c.achats > 1 ? 's' : ''}</span>
                   ${av ? `<span class="bq-mini warn"><i data-lucide="ticket"></i>avoir ${fmtMAD(av.balance)}</span>` : ''}
                 </span>
               </button>`;
@@ -5476,7 +5476,7 @@
     panel.innerHTML = `
       <div class="bqi">
         <header class="bq-head" style="padding:22px 22px 0;">
-          <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} produits · ${st.variants} variantes, base partagée avec le dashboard</div></div>
+          <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
         </header>
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
@@ -5803,7 +5803,7 @@
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="bqi-modh"><div><h3>Supprimer « ${esc(d.product.name)} » ?</h3><span>${d.variants.length} variantes et leurs codes-barres seront supprimés.</span></div></div>
+      <div class="bqi-modh"><div><h3>Supprimer « ${esc(d.product.name)} » ?</h3><span>${d.variants.length} ${d.variants.length > 1 ? 'variantes et leurs codes-barres seront supprimés' : 'variante et son code-barres sera supprimée'}.</span></div></div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Annuler</button><button class="bq-btn danger" id="bqi-del-ok"><i data-lucide="trash-2"></i>Supprimer définitivement</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));

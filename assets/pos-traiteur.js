@@ -122,9 +122,11 @@
     { id: 'service',   label: 'Service en salle',        sub: '1 serveur / 20 invités',      calc: (g) => ({ qty: Math.ceil(g / 20), unit: 'serveur',  each: 300 }) },
     { id: 'nappage',   label: 'Nappage & déco de table', sub: '1 table / 8 invités',         calc: (g) => ({ qty: Math.ceil(g / 8),  unit: 'table',    each: 90 }) },
     { id: 'vaisselle', label: 'Vaisselle & verrerie',    sub: 'couvert complet',             calc: (g) => ({ qty: g,                 unit: 'couvert',  each: 12 }) },
-    { id: 'livraison', label: 'Livraison & installation', sub: 'camion réfrigéré · Tanger',  calc: () => ({ qty: 1,                  unit: 'forfait',  each: 600 }) },
+    { id: 'livraison', label: 'Livraison & installation', sub: pvReal() ? 'camion réfrigéré' : 'camion réfrigéré · Tanger',  calc: () => ({ qty: 1,                  unit: 'forfait',  each: 600 }) },
   ];
   const EXTRA = Object.fromEntries(EXTRAS.map((x) => [x.id, x]));
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
   const extraCost = (id, g) => { const c = EXTRA[id].calc(g); return c.qty * c.each; };
   const extraLine = (id, g) => {
     const c = EXTRA[id].calc(g);
@@ -154,15 +156,33 @@
     const extrasTotal = ev.extras.reduce((s, id) => s + extraCost(id, ev.guests), 0);
     return { pp, menuTotal, extrasTotal, total: menuTotal + extrasTotal };
   }
+  /* Conditions du devis. Le 30 / 50 / 20 et les « 7 jours » étaient écrits en dur
+     dans le devis imprimé ET dans le WhatsApp envoyé au client, au nom du traiteur,
+     sans que celui-ci les ait jamais choisis. Ils restent la valeur par défaut,
+     mais se règlent maintenant sur chaque devis (bloc « Échéancier »), et tout
+     ce qui est affiché ou envoyé est lu depuis le devis lui-même. L'échéance
+     « J−7 » reste le repère de la deuxième tranche. */
+  const DEFAULT_TERMS = { c: 30, j7: 50, valid: 7 };
+  function termsOf(x) {
+    const t = (x && x.terms) || DEFAULT_TERMS;
+    let c = Math.round(+t.c), j7 = Math.round(+t.j7), valid = Math.round(+t.valid);
+    if (!Number.isFinite(c) || c < 1) c = DEFAULT_TERMS.c;
+    if (!Number.isFinite(j7) || j7 < 1) j7 = DEFAULT_TERMS.j7;
+    if (c + j7 > 99) { c = DEFAULT_TERMS.c; j7 = DEFAULT_TERMS.j7; }
+    if (!Number.isFinite(valid) || valid < 1) valid = DEFAULT_TERMS.valid;
+    return { c, j7, valid, solde: 100 - c - j7 };
+  }
+  const schemeLabel = (x) => { const t = termsOf(x); return `${t.c} / ${t.j7} / ${t.solde}`; };
   function buildTranches(ev) {
     const { total } = evTotals(ev);
-    const t1 = Math.round(total * 0.30);
-    const t2 = Math.round(total * 0.50);
+    const tm = termsOf(ev);
+    const t1 = Math.round(total * tm.c / 100);
+    const t2 = Math.round(total * tm.j7 / 100);
     const j7 = new Date(ev.date.getTime() - 7 * DAY);
     return [
-      { id: 't1', pct: 30, label: 'À la confirmation', amount: t1,             due: ev.confirmedAt || null, paid: null },
-      { id: 't2', pct: 50, label: 'À J−7',        amount: t2,             due: j7,                     paid: null },
-      { id: 't3', pct: 20, label: 'Le jour J · solde', amount: total - t1 - t2, due: ev.date,               paid: null },
+      { id: 't1', pct: tm.c, label: 'À la confirmation', amount: t1,             due: ev.confirmedAt || null, paid: null },
+      { id: 't2', pct: tm.j7, label: 'À J−7',        amount: t2,             due: j7,                     paid: null },
+      { id: 't3', pct: tm.solde, label: 'Le jour J · solde', amount: total - t1 - t2, due: ev.date,               paid: null },
     ];
   }
   function trancheState(ev, t) {
@@ -289,8 +309,8 @@
     }),
   ];
   const findEvent = (id) => EVENTS.find((e) => e.id === id);
-  let evSeq = 246;
-  let dvSeq = 1027;
+  let evSeq = pvReal() ? 1 : 246;      /* réel : le premier événement est EV-1, pas le 246e */
+  let dvSeq = pvReal() ? 1 : 1027;     /* idem pour les devis (DV-1) */
 
   /* ───────────────────────── state ───────────────────────── */
   const state = {
@@ -302,6 +322,7 @@
 
   /* le devis en cours — la démo ouvre déjà au milieu d'un brouillon */
   const blankDraft = () => ({
+    terms: Object.assign({}, DEFAULT_TERMS),
     client: '', phone: '', type: 'mariage', guests: 100,
     date: localDate(new Date(NOW + 30 * DAY)), lieu: '',
     menu: [], extras: [],
@@ -329,6 +350,10 @@
   function queueIfOffline(label) {
     cateringOps?.save?.(label || 'operation');
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -381,7 +406,7 @@
           <button class="tr-nav-it" data-tr-view="jourj"><i data-lucide="truck"></i><span>Jour J</span><b class="tr-nav-badge" id="tr-badge-jj"></b></button>
         </nav>
         <div class="tr-rail-foot">
-          <button class="tr-net" id="tr-net" title="Simuler une coupure réseau">
+          <button class="tr-net" id="tr-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="tr-net-dot"></i><span class="tr-net-label">En ligne</span>
           </button>
           <button class="tr-lock" id="tr-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -408,6 +433,7 @@
     });
     $('#tr-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#tr-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
@@ -527,7 +553,7 @@
         ${STATUS_ORDER.map((s) => `<button class="tr-cat ${state.evFilter === s ? 'on' : ''}" data-tr-f="${s}">${STATUSES[s].label} <span class="tr-cat-ct">${counts[s]}</span></button>`).join('')}
       </div>
       <div class="tr-evscroll"><div class="tr-evlist">
-        ${list.map((ev, i) => evCard(ev, i)).join('') || `<div class="tr-empty">Aucun événement pour « ${esc(state.evQuery)} », vérifiez le nom ou le filtre.</div>`}
+        ${list.map((ev, i) => evCard(ev, i)).join('') || `<div class="tr-empty">${state.evQuery ? `Aucun événement pour « ${esc(state.evQuery)} », vérifiez le nom ou le filtre.` : (state.evFilter === 'tous' ? 'Aucun événement au carnet. Composez un devis pour ouvrir le premier.' : 'Aucun événement à cette étape.')}</div>`}
       </div></div>`;
 
     $('#tr-ev-q', panel).oninput = (e) => {
@@ -613,9 +639,9 @@
           </div>
         </div>
         <div>
-          <div class="tr-dt-sec"><i data-lucide="hand-coins"></i>Échéancier 30 / 50 / 20</div>
+          <div class="tr-dt-sec"><i data-lucide="hand-coins"></i>Échéancier ${schemeLabel(ev)}</div>
           ${ev.status === 'devis'
-            ? `<div class="tr-ech-off">L’échéancier s’active à la confirmation :<br>30 % à la confirmation · 50 % à J−7 · solde le jour J.</div>
+            ? `<div class="tr-ech-off">L’échéancier s’active à la confirmation :<br>${ev.tranches[0].pct} % à la confirmation · ${ev.tranches[1].pct} % à J−7 · solde le jour J.</div>
                <div class="tr-ech" style="margin-top:7px;">${ev.tranches.map((t) => `
                  <div class="tr-ech-row"><span class="tr-ech-dot"></span>
                    <span class="tr-ech-mid"><span class="tr-ech-lbl">${t.pct} % · ${esc(t.label)}</span></span>
@@ -662,7 +688,7 @@
         });
       } catch (_) {}
       queueIfOffline('Confirmation événement');
-      toast(`${ev.name} confirmé, tranche 1 (30 %) à encaisser`);
+      toast(`${ev.name} confirmé, tranche 1 (${ev.tranches[0].pct} %) à encaisser`);
       openDetail(ev.id);
       refreshAll();
     };
@@ -830,7 +856,8 @@
     const foot = $('#tr-q-foot', root);
     if (!sum || !foot) return;
     const byCourse = COURSES.map((c) => ({ c, items: draft.menu.filter((id) => DISH[id].course === c.id) })).filter((x) => x.items.length);
-    const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
+    const tm = termsOf(draft);
+    const t1 = Math.round(total * tm.c / 100), t2 = Math.round(total * tm.j7 / 100);
 
     sum.innerHTML = `
       <div class="tr-q-sum">
@@ -848,11 +875,24 @@
       </div>
       ${total > 0 ? `
       <div class="tr-q-ech">
-        <div class="tr-q-ech-head"><i data-lucide="hand-coins"></i>Échéancier proposé</div>
-        <div class="tr-q-ech-row"><span>30 % à la confirmation</span><b>${fmtMAD(t1)}</b></div>
-        <div class="tr-q-ech-row"><span>50 % à J−7</span><b>${fmtMAD(t2)}</b></div>
-        <div class="tr-q-ech-row"><span>Solde le jour J</span><b>${fmtMAD(total - t1 - t2)}</b></div>
+        <div class="tr-q-ech-head"><i data-lucide="hand-coins"></i>Échéancier proposé <span style="font-weight:500;opacity:.7;">· à régler selon vos conditions</span></div>
+        <div class="tr-q-ech-row"><span><input id="tr-q-tc" type="number" inputmode="numeric" min="1" max="98" value="${tm.c}" aria-label="Pourcentage à la confirmation" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> % à la confirmation</span><b>${fmtMAD(t1)}</b></div>
+        <div class="tr-q-ech-row"><span><input id="tr-q-tj" type="number" inputmode="numeric" min="1" max="98" value="${tm.j7}" aria-label="Pourcentage à J moins 7" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> % à J−7</span><b>${fmtMAD(t2)}</b></div>
+        <div class="tr-q-ech-row"><span>Solde le jour J (${tm.solde} %)</span><b>${fmtMAD(total - t1 - t2)}</b></div>
+        <div class="tr-q-ech-row"><span>Devis valable <input id="tr-q-tv" type="number" inputmode="numeric" min="1" max="90" value="${tm.valid}" aria-label="Validité du devis en jours" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> ${plu(tm.valid, 'jour')}</span><b></b></div>
       </div>` : ''}`;
+    /* On valide au changement (pas à chaque frappe) : re-rendre ce bloc pendant
+       la saisie ferait perdre le focus. Un jeu de pourcentages impossible
+       (somme > 99) est refusé et dit pourquoi. */
+    const tcIn = $('#tr-q-tc', sum), tjIn = $('#tr-q-tj', sum), tvIn = $('#tr-q-tv', sum);
+    const applyTerms = () => {
+      const c = Math.round(+tcIn.value), j7 = Math.round(+tjIn.value), valid = Math.round(+tvIn.value);
+      if (!(c >= 1) || !(j7 >= 1) || c + j7 > 99) { toast('La confirmation et le J−7 doivent laisser au moins 1 % pour le solde'); renderQuote(); return; }
+      draft.terms = { c, j7, valid: valid >= 1 ? Math.min(valid, 90) : DEFAULT_TERMS.valid };
+      cateringOps?.save?.('Conditions du devis');
+      renderQuote(); icons();
+    };
+    [tcIn, tjIn, tvIn].forEach((el) => { if (el) el.onchange = applyTerms; });
 
     foot.innerHTML = `
       <div class="tr-q-tot-row"><span>Menu ${pp} MAD × ${draft.guests} invités</span><span>${fmtMAD(menuTotal)}</span></div>
@@ -886,6 +926,7 @@
       status: 'devis', sentAt: null, confirmedAt: null, deliveredAt: null,
       menu: draft.menu.slice(), extras: draft.extras.slice(),
       team: null, loaded: false, lastWa: null,
+      terms: termsOf(draft),
     };
     ev.tranches = buildTranches(ev);
     ev.checklist = buildChecklist(ev);
@@ -936,7 +977,7 @@
 
     panel.innerHTML = `
       <header class="tr-head">
-        <div><h1>Acomptes & échéanciers</h1><div class="tr-head-sub">La règle de la maison, 30 % à la confirmation · 50 % à J−7 · solde le jour J</div></div>
+        <div><h1>Acomptes & échéanciers</h1><div class="tr-head-sub">Chaque devis porte son échéancier : une part à la confirmation, une part à J−7, le solde le jour J</div></div>
       </header>
       <div class="tr-payscroll">
         <div class="tr-stats">
@@ -945,7 +986,7 @@
           <div class="tr-stat is-due"><div class="tr-stat-lbl"><i data-lucide="clock"></i>En retard</div><div class="tr-stat-val">${fmtMAD(retard)}</div><div class="tr-stat-sub">${retard ? 'à relancer sans attendre' : 'rien, tout est propre'}</div></div>
         </div>
         <div class="tr-paylist">
-          ${active.map((ev) => paycCard(ev)).join('') || '<div class="tr-empty">Aucun échéancier actif, confirmez un devis pour démarrer le 30 / 50 / 20.</div>'}
+          ${active.map((ev) => paycCard(ev)).join('') || '<div class="tr-empty">Aucun échéancier actif, confirmez un devis pour démarrer son échéancier.</div>'}
           ${devisCt ? `<div class="tr-payc-note" style="padding:0 4px;"><i data-lucide="clipboard-list"></i>${devisCt} devis envoyé${devisCt > 1 ? 's' : ''}, l’échéancier s’activera à la confirmation.</div>` : ''}
           ${settled.map((ev) => `
             <div class="tr-payc is-settled">
@@ -1158,28 +1199,29 @@
   function waMessage(ev, kind) {
     const first = firstName(ev.client) || 'sidi';
     const { pp, total } = evTotals(ev);
-    const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
+    const tm = termsOf(ev);
+    const t1 = Math.round(total * tm.c / 100), t2 = Math.round(total * tm.j7 / 100);
     if (kind === 'devis') {
       return `Bonjour ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
         + `\n${TYPES[ev.type].label} · ${ev.guests} invités · ${fmtDay(ev.date)} · ${ev.lieu}`
         + `\nMenu ${pp} MAD / personne : ${ev.menu.map((id) => DISH[id].label.toLowerCase()).join(', ')}.`
         + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
-        + `\nTotal : ${fmtMAD(total)}, 30 % à la confirmation (${fmtMAD(t1)}), 50 % à J-7 (${fmtMAD(t2)}), solde le jour J.`
-        + `\nRépondez OUI pour confirmer, la date reste bloquée 7 jours.`
-        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\nTotal : ${fmtMAD(total)}, ${tm.c} % à la confirmation (${fmtMAD(t1)}), ${tm.j7} % à J-7 (${fmtMAD(t2)}), solde le jour J.`
+        + `\nRépondez OUI pour confirmer, la date reste bloquée ${tm.valid} ${plu(tm.valid, 'jour')}.`
+        + `\n${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'relance') {
       return `Bonjour ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
         + ` (${TYPES[ev.type].label.toLowerCase()} · ${ev.guests} invités · ${fmtDay(ev.date)}) est toujours réservé.`
         + `\nLa date du ${fmtDay(ev.date)} part vite en saison, répondez OUI pour la bloquer définitivement.`
-        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'route') {
       const arr = new Date(ev.date.getTime() - 45 * 60000);
       return `Bonjour ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
         + `\nArrivée prévue vers ${timeOf(arr)}, installation puis service à ${timeOf(ev.date)}.`
         + `\nTout est chargé et contrôlé. À tout de suite !`
-        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     /* rappel d'échéance */
     const t = nextTranche(ev);
@@ -1187,7 +1229,7 @@
       + `\nla tranche « ${t ? t.label : 'solde'} » de ${t ? fmtMAD(t.amount) : ''} arrive à échéance.`
       + `\nVous pouvez régler en espèces au labo, par carte ou par virement.`
       + `\nChoukran, l’lah ikhellik.`
-      + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+      + `\n${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
   }
 
   function openWa(ev, kind) {
@@ -1207,7 +1249,7 @@
       <div class="tr-wa-bubblewrap">
         <div class="tr-wa-bubble">
           <textarea id="tr-wa-text">${esc(waMessage(ev, kind))}</textarea>
-          <div class="tr-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} ✓✓</div>
+          <div class="tr-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} · brouillon, non envoyé</div>
         </div>
       </div>
       ${isDevis ? `
@@ -1309,7 +1351,7 @@
       </div>`;
     }
     /* devis */
-    const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
+    const t1 = Math.round(total * termsOf(ev).c / 100), t2 = Math.round(total * termsOf(ev).j7 / 100);
     return `<div class="tr-doc">${head}
       <div class="c b">DEVIS · ${esc(ev.devisRef)}</div>
       <hr>
@@ -1326,11 +1368,11 @@
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${fmtN(total)} MAD</span></div>
       <hr>
-      <div class="row"><span>30 % à la confirmation</span><span>${fmtN(t1)}</span></div>
-      <div class="row"><span>50 % à J-7</span><span>${fmtN(t2)}</span></div>
+      <div class="row"><span>${termsOf(ev).c} % à la confirmation</span><span>${fmtN(t1)}</span></div>
+      <div class="row"><span>${termsOf(ev).j7} % à J-7</span><span>${fmtN(t2)}</span></div>
       <div class="row"><span>Solde le jour J</span><span>${fmtN(total - t1 - t2)}</span></div>
       <hr>
-      <div class="c mut">Devis valable 7 jours · la date est bloquée à<br>réception de l’acompte de confirmation.</div>
+      <div class="c mut">Devis valable ${termsOf(ev).valid} ${plu(termsOf(ev).valid, 'jour')} · la date est bloquée à<br>réception de l’acompte de confirmation.</div>
     </div>`;
   }
 
@@ -1505,7 +1547,21 @@
   }
 
   /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
       toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
@@ -1518,15 +1574,15 @@
   function renderNet() {
     const net = $('#tr-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.tr-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.tr-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.tr-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'tr-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#tr-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#tr-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

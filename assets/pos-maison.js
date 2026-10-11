@@ -2344,8 +2344,8 @@
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
           ${ln.format === 'service' ? `<span class="mz-line-fmt">Service (${ln.servicePieces || p.servicePieces || 18} pcs)</span>` : (ln.isPiece ? '<span class="mz-line-fmt">À la pièce</span>' : '')}
           ${(ln.motif || p.motif) ? `<span class="mz-line-motif">${esc(ln.motif || p.motif)}</span>` : ''}
-          ${(ln.fragile || p.fragile) ? '<span class="mz-line-fragile">⚠️ Fragile</span>' : ''}
-          ${ln.registryTitle ? `<span class="mz-line-reg">🎁 ${esc(ln.registryTitle)}</span>` : ''}
+          ${(ln.fragile || p.fragile) ? '<span class="mz-line-fragile">Fragile</span>' : ''}
+          ${ln.registryTitle ? `<span class="mz-line-reg">Liste : ${esc(ln.registryTitle)}</span>` : ''}
           ${pr ? `<span class="mz-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
           ${ln.remise ? `<span class="mz-line-rem">−${ln.remise} %</span>` : ''}
         </span>
@@ -2561,7 +2561,7 @@
           <span class="sub">
             ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
             ${p.motif ? ` · Motif : <b>${esc(p.motif)}</b>` : ''}
-            ${p.fragile ? ` · <span style="color:#B25E00;font-weight:700;">⚠️ Fragile</span>` : ''}
+            ${p.fragile ? ` · <span style="color:#B25E00;font-weight:700;">Fragile</span>` : ''}
             ${p.ean ? ` · ${esc(p.ean)}` : ''}
           </span>
         </span>
@@ -2851,7 +2851,7 @@
                   <span class="mz-cl-name">${esc(c.name)} ${c.vip ? '<span class="mz-vip-chip">VIP</span>' : ''}</span>
                   <span class="mz-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
                 </span>
-                <span class="mz-cl-right"><b>${c.points} pts</b>${av ? `<span class="av">avoir ${fmtMAD(av.balance)}</span>` : `${c.achats} achats`}</span>
+                <span class="mz-cl-right"><b>${c.points} pts</b>${av ? `<span class="av">avoir ${fmtMAD(av.balance)}</span>` : `${c.achats} achat${c.achats > 1 ? 's' : ''}`}</span>
               </button>`;
             }).join('') || `<div class="mz-empty">Aucune fiche pour « ${esc(q)} »</div>`}
           </div>
@@ -2945,7 +2945,7 @@
                 <span class="mz-clcard-stats">
                   <span class="mz-mini ok"><i data-lucide="star"></i>${c.points} pts</span>
                   <span class="mz-mini"><i data-lucide="ruler"></i>taille ${esc(c.taille)}</span>
-                  <span class="mz-mini"><i data-lucide="receipt"></i>${c.achats} achats</span>
+                  <span class="mz-mini"><i data-lucide="receipt"></i>${c.achats} achat${c.achats > 1 ? 's' : ''}</span>
                   ${av ? `<span class="mz-mini warn"><i data-lucide="ticket"></i>avoir ${fmtMAD(av.balance)}</span>` : ''}
                 </span>
               </button>`;
@@ -3497,7 +3497,7 @@
               <div class="mz-reg-head">
                 <div>
                   <h3 class="mz-reg-title">${esc(reg.title)}</h3>
-                  <div class="mz-reg-sub">${esc(reg.beneficiaries)} · 📞 ${esc(reg.phone)} · Événement : ${esc(reg.eventDate)}</div>
+                  <div class="mz-reg-sub">${esc(reg.beneficiaries)} · Tél. ${esc(reg.phone)} · Événement : ${esc(reg.eventDate)}</div>
                 </div>
                 <span class="mz-reg-badge">${esc(reg.typeLabel || 'Mariage')}</span>
               </div>
@@ -3532,7 +3532,7 @@
                 <button class="mz-btn secondary sm" data-mz-reg-item-add="${reg.id}"><i data-lucide="plus"></i>Ajouter un article</button>
                 <button class="mz-btn secondary sm" data-mz-reg-delete="${reg.id}"><i data-lucide="trash-2"></i>Supprimer</button>
               </div>
-              ${reg.note ? `<div style="font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:8px;">📝 ${esc(reg.note)}</div>` : ''}
+              ${reg.note ? `<div style="font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:8px;">Note : ${esc(reg.note)}</div>` : ''}
             </div>`;
           }).join('') || `<div class="mz-empty" style="grid-column:1/-1;min-height:240px;"><i data-lucide="gift"></i><b>Aucune liste cadeau</b><span>Créez une liste de mariage, naissance ou événement, puis ajoutez les articles du catalogue.</span></div>`}
         </div>
@@ -3989,7 +3989,7 @@
         </label>
         <label style="flex-direction:row; align-items:center; gap:8px; margin-top:4px;">
           <input type="checkbox" id="mz-del-wrap" ${d.reinforcedWrap ? 'checked' : ''} />
-          <span style="font-size:12.5px; font-weight:600; color:var(--riad,#053B2C);">⚠️ Emballage renforcé requis (Protection bulle + calage)</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--riad,#053B2C);">Emballage renforcé requis (Protection bulle + calage)</span>
         </label>
         <label><span>Instructions de transport</span>
           <input id="mz-del-inst" placeholder="Instructions chauffeur" value="${esc(d.instructions)}" />
@@ -4045,7 +4045,7 @@
           <div style="font-size:11px; color:#777;">${fmtDT(new Date())} · Conseiller: ${esc((STAFF && STAFF.caissiere && STAFF.caissiere.name) || 'Caisse')}</div>
         </div>
         <div style="background:rgba(217,154,43,0.18); border:1px solid #B25E00; border-radius:8px; padding:10px; margin-bottom:14px; text-align:center;">
-          <b style="color:#B25E00; font-size:13px; text-transform:uppercase; display:block;">⚠️ ATTENTION TRÈS FRAGILE ⚠️</b>
+          <b style="color:#B25E00; font-size:13px; text-transform:uppercase; display:block;">ATTENTION TRÈS FRAGILE</b>
           <span style="font-size:11px; color:#8A6210;">Articles en céramique & verrerie fine · Maintenir à plat, ne pas superposer de charges lourdes.</span>
         </div>
         <div style="margin-bottom:14px; font-size:12.5px; line-height:1.5;">
@@ -7204,7 +7204,7 @@
       };
       const fillVariants = () => {
         const variants = productSelect.value ? (cat.listVariants(productSelect.value) || []) : [];
-        variantSelect.innerHTML = variants.map((v) => `<option value="${esc(v.id)}">${esc([v.size, variantColor(v).label].filter(Boolean).join(' · '))} — ${v.stock} en stock</option>`).join('') || '<option value="">Aucune variante</option>';
+        variantSelect.innerHTML = variants.map((v) => `<option value="${esc(v.id)}">${esc([v.size, variantColor(v).label].filter(Boolean).join(' · '))} · ${v.stock} en stock</option>`).join('') || '<option value="">Aucune variante</option>';
         next.disabled = !productSelect.value || !variantSelect.value;
       };
       fillProducts('');
@@ -7239,7 +7239,7 @@
     panel.innerHTML = `
       <div class="bqi mz-page">
         <header class="mz-head">
-          <div><h1>Inventaire</h1><div class="mz-head-sub">Douchette + imprimante étiquettes · ${st.products} produits · ${st.variants} variantes, base partagée avec le dashboard</div></div>
+          <div><h1>Inventaire</h1><div class="mz-head-sub">Douchette + imprimante étiquettes · ${st.products} ${st.products > 1 ? 'produits' : 'produit'} · ${st.variants} ${st.variants > 1 ? 'variantes' : 'variante'}, base partagée avec le dashboard</div></div>
         </header>
         <div class="mzi-tools">
           <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>

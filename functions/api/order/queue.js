@@ -2403,7 +2403,9 @@ function cleanLines(raw) {
     const line = {
       name,
       qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(l.qty) || 1))),
-      unitPrice: Math.max(0, Math.round(Number(l.unitPrice) || 0)),
+      /* Centimes conservés : arrondir au dirham transformait un 14,50 MAD du
+       * comptoir en 15 sur le bon de cuisine et sur le total de la commande. */
+      unitPrice: Math.max(0, Math.round((Number(l.unitPrice) || 0) * 100) / 100),
       note: String(l.note || '').slice(0, 200),
       visuals: (Array.isArray(l.visuals) ? l.visuals.slice(0, 12) : [])
         .map((v) => ({
@@ -2489,7 +2491,7 @@ async function createTicket(context, env, merchant, c, now) {
   const ticketSession = mode === 'table' && table
     ? await ensureServiceTableSession(env, merchant, table, now) : null;
   const sessionId = ticketSession && ticketSession.id ? ticketSession.id : null;
-  const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  const total = lines.reduce((s, l) => s + Math.round(l.unitPrice * 100) * l.qty, 0) / 100;
   const linesJson = JSON.stringify(lines);
 
   /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la

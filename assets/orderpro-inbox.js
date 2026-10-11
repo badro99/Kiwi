@@ -23,7 +23,15 @@
   var state = { orders: {}, sessions: [], closedSessions: [], expired: [], since: 0, open: false, timer: null, seen: {}, expiryWarned: {}, updating: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
-  function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  /* Le client règle 17,50 MAD (la carte accepte les centimes) : la carte de
+     commande de la caisse affichait « 18 », un arrondi à l'entier. La caissière
+     annonçait donc un montant que le client ne devait pas. Centimes seulement
+     s'il y en a. */
+  function fmt(n) {
+    var v = Math.round((Number(n) || 0) * 100) / 100;
+    var o = Number.isInteger(v) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    try { return (window.KiwiNumber?.format(v, o) ?? v.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', o)); } catch (_) { return String(v); }
+  }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }

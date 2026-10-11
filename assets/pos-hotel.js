@@ -23,7 +23,8 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons   = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -111,13 +112,26 @@
   /* extras — the visual quick-grid posted onto the folio */
   const CHARGES = [
     { id: 'minibar',   label: 'Minibar',            sub: 'eau · soda · snacks',      unit: 45,  per: 'la consommation' },
-    { id: 'hammam',    label: 'Hammam 30 min',      sub: 'gommage savon noir',       unit: 280, per: 'par personne' },
+    { id: 'hammam',    label: DEMO_HOTEL ? 'Hammam 30 min' : 'Hammam', sub: 'gommage savon noir', unit: 280, per: 'par personne' },
     { id: 'diner',     label: 'Dîner riad',         sub: 'menu du soir',             unit: 290, per: 'par personne' },
     { id: 'transfert', label: 'Transfert aéroport', sub: 'Ibn Battouta · trajet',    unit: 220, per: 'par trajet' },
     { id: 'lessive',   label: 'Lessive',            sub: 'sachet rendu 24 h',        unit: 120, per: 'le sachet' },
     { id: 'the',       label: 'Thé & pâtisseries',  sub: 'plateau au salon',         unit: 60,  per: 'le plateau' },
   ];
   const CHARGE = Object.fromEntries(CHARGES.map((c) => [c.id, c]));
+
+  /* Prix des extras. La grille ci-dessus (Minibar 45, Hammam 280, Dîner 290,
+     Transfert 220 MAD…) est la carte de la DÉMO. Elle partait telle quelle sur
+     le folio d'un vrai client ET dans le journal des ventes du dashboard
+     (KiwiPosSale.record) : le réceptionniste touchait « Hammam » et 280 MAD
+     étaient postés sur la chambre, quel que soit le tarif de la maison. En
+     session réelle l'hôtelier saisit donc le prix au moment de poster, et la
+     caisse retient le dernier prix saisi par extra (EXTRA_PRICES) pour
+     le proposer la fois suivante. Un séjour enregistré avant ce correctif n'a
+     pas de prix sur sa charge : il garde le prix de la grille, qui est bien
+     celui qui a été posté à l'époque. */
+  const EXTRA_PRICES = {};
+  const chargeUnit = (cid) => (DEMO_HOTEL ? CHARGE[cid].unit : (Number.isFinite(EXTRA_PRICES[cid]) && EXTRA_PRICES[cid] > 0 ? EXTRA_PRICES[cid] : null));
 
   /* ───────────────────────── rooms (8 — riad scale) ─────────────────────────
      status: occ | depart | libre | menage | hs */
@@ -303,7 +317,7 @@
   }
 
   /* ───────────────────────── folio math ───────────────────────── */
-  function chargeAmt(c) { return CHARGE[c.cid].unit * c.qty; }
+  function chargeAmt(c) { return (Number.isFinite(c.unit) ? c.unit : CHARGE[c.cid].unit) * c.qty; }
   // Old saved stays have no rate snapshot; keep their existing catalogue fallback.
   function stayRate(st) {
     return Number.isFinite(st.nightlyRate) && st.nightlyRate >= 0 ? st.nightlyRate : roomRate(st.room);
@@ -381,10 +395,13 @@
 
   const hotelOps = window.KiwiVerticalState?.open?.('hotel', {
     schema: 2,
-    snapshot: () => ({ catalogSource: DEMO_HOTEL ? 'demo' : 'rooms-doc-v4', rooms: DEMO_HOTEL ? ROOMS : {}, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid }),
+    snapshot: () => ({ catalogSource: DEMO_HOTEL ? 'demo' : 'rooms-doc-v4', rooms: DEMO_HOTEL ? ROOMS : {}, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid, extraPrices: EXTRA_PRICES }),
     restore: (d) => {
       if (DEMO_HOTEL) {
         Object.keys(ROOMS).forEach(k => delete ROOMS[k]); Object.assign(ROOMS, d.rooms || {});
+      }
+      if (!DEMO_HOTEL && d.extraPrices && typeof d.extraPrices === 'object') {
+        Object.keys(d.extraPrices).forEach((k) => { const v = +d.extraPrices[k]; if (CHARGE[k] && v > 0) EXTRA_PRICES[k] = v; });
       }
       Object.keys(STAYS).forEach(k => delete STAYS[k]);
       Object.entries(d.stays || {}).forEach(([k, st]) => { st.inAt = new Date(st.inAt); st.outAt = new Date(st.outAt); STAYS[k] = st; });
@@ -395,6 +412,12 @@
 
   function queueIfOffline(label) {
     hotelOps?.save?.(label || 'operation');
+    if (pvReal()) {
+      syncNet();
+      if (!state.offline) return false;
+      toast(`${label}, enregistré sur cette tablette`);
+      return true;
+    }
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -467,7 +490,7 @@
           <button class="ht-nav-it" data-ht-view="clients"><i data-lucide="heart-handshake"></i><span>Hospitality+</span></button>
         </nav>
         <div class="ht-rail-foot">
-          <button class="ht-net" id="ht-net" title="Simuler une coupure réseau">
+          <button class="ht-net" id="ht-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="ht-net-dot"></i><span class="ht-net-label">En ligne</span>
           </button>
           <button class="ht-lock" id="ht-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -499,11 +522,12 @@
     });
 
     state.queued = roomChargeRows().length;
+    bindNet();
     renderAll();
     flushRoomCharges();
   }
 
-  function onShow() { roomCloud?.pull?.(false); state.queued = roomChargeRows().length; renderAll(); flushRoomCharges(); }
+  function onShow() { roomCloud?.pull?.(false); state.queued = roomChargeRows().length; syncNet(); renderAll(); flushRoomCharges(); }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
@@ -625,7 +649,7 @@
       <header class="ht-head">
         <div><h1>Réception</h1><div class="ht-head-sub">${fmtDT(new Date())} · le folio suit le client, pas la caisse</div></div>
         <div class="ht-day-stats">
-          <span class="ht-day-stat"><b>${inHouse}/8</b>en maison</span>
+          <span class="ht-day-stat"><b>${inHouse}/${Object.keys(ROOMS).length}</b>en maison</span>
           <span class="ht-day-stat"><b>${arrLeft}</b>arrivée${arrLeft > 1 ? 's' : ''} à venir</span>
           <span class="ht-day-stat ${depLeft ? 'warn' : ''}"><b>${depLeft}</b>départ${depLeft > 1 ? 's' : ''} à encaisser</span>
         </div>
@@ -770,7 +794,10 @@
         } else if (act === 'menage') {
           setRoom(n, 'menage', 'Remise demandée par la réception');
           queueIfOffline(`Ménage Ch. ${n}`);
-          toast(`Ch. ${n} passée en ménage, ${HOUSEKEEPERS[n % HOUSEKEEPERS.length]} prévenue`);
+          /* « prévenue » : aucune notification ne part vers le personnel d'étage, seul le
+             statut de la chambre change. La démo joue la scène avec ses deux femmes de
+             chambre ; une maison réelle n'a que le statut, et le toast ne dit que ça. */
+          toast(DEMO_HOTEL ? `Ch. ${n} passée en ménage, ${HOUSEKEEPERS[n % HOUSEKEEPERS.length]} prévenue` : `Ch. ${n} passée en ménage`);
         } else if (act === 'hs') {
           setRoom(n, 'hs', 'Signalée par la réception');
           queueIfOffline(`Hors service Ch. ${n}`);
@@ -1110,10 +1137,10 @@
                 <button class="ht-charge" data-ht-charge="${c.id}" style="--i:${i++}">
                   <span class="ht-charge-art">${ART[c.id] || ''}</span>
                   <span class="ht-charge-name">${esc(c.label)}</span>
-                  <span class="ht-charge-price">${c.unit} MAD · ${esc(c.per)}</span>
+                  <span class="ht-charge-price">${chargeUnit(c.id) != null ? fmtMAD(chargeUnit(c.id)) : 'prix à saisir'} · ${esc(c.per)}</span>
                 </button>`).join('')}
             </div>
-            <div class="ht-foot-note">Restaurant et hammam postent ici automatiquement quand leurs caisses Kiwi sont liées, un seul compte.</div>
+            <div class="ht-foot-note">${DEMO_HOTEL ? 'Restaurant et hammam postent ici automatiquement quand leurs caisses Kiwi sont liées, un seul compte.' : 'Un extra posté ici s’ajoute au folio du séjour et au journal des ventes de la journée.'}</div>
           </div>
         </div>
         <aside class="ht-folio-panel">
@@ -1140,7 +1167,7 @@
                 <span class="ht-fline-art">${ART[c.cid] || ''}</span>
                 <span class="ht-fline-mid">
                   <span class="ht-fline-name">${esc(def.label)}${c.note ? ` · ${esc(c.note)}` : ''}</span>
-                  <span class="ht-fline-sub">${esc(c.at)} · ${def.unit} MAD</span>
+                  <span class="ht-fline-sub">${esc(c.at)} · ${fmtMAD(Number.isFinite(c.unit) ? c.unit : def.unit)}</span>
                   ${c.saleId ? `<span class="ht-fline-sub">${esc(POSTED_CHARGE_LOCK)}</span>` : ''}
                 </span>
                 <span class="ht-fline-right">
@@ -1205,7 +1232,8 @@
     const st = STAYS[roomN];
     if (!st) return;
     const def = CHARGE[cid];
-    const sheet = { qty: 1, note: '', stage: 'ask', busy: false };
+    const sheet = { qty: 1, note: '', stage: 'ask', busy: false, unit: chargeUnit(cid) || 0 };
+    const sheetTotal = () => Math.round((sheet.unit > 0 ? sheet.unit : 0) * sheet.qty * 100) / 100;
     const el = $('#ht-chargem', root);
     const veil = openVeil('#ht-charge-veil');
     veil.classList.add('ht-identity-veil');
@@ -1226,10 +1254,11 @@
           <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-lucide="check"></i>Le nom correspond</button></div>`;
       } else {
         el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-          <div class="ht-ch-head"><span class="ht-ch-art">${ART[cid] || ''}</span><span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">Ch. ${roomN} · identité vérifiée · ${esc(def.per)}</span></span><span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(def.unit * sheet.qty)}</span><span class="per">${def.unit} MAD × <span id="ht-ch-qn">${sheet.qty}</span></span></span></div>
+          <div class="ht-ch-head"><span class="ht-ch-art">${ART[cid] || ''}</span><span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">Ch. ${roomN} · identité vérifiée · ${esc(def.per)}</span></span><span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(sheetTotal())}</span><span class="per">${sheet.unit > 0 ? sheet.unit : '?'} MAD × <span id="ht-ch-qn">${sheet.qty}</span></span></span></div>
+          ${DEMO_HOTEL ? '' : `<div class="ht-ci-f"><div class="ht-ci-lbl">Prix unitaire <span class="opt">· en MAD, ${esc(def.per)}</span></div><input class="ht-note-free" id="ht-ch-unit" inputmode="decimal" autocomplete="off" value="${sheet.unit > 0 ? sheet.unit : ''}" placeholder="saisir le tarif de la maison" /></div>`}
           <div class="ht-ci-f"><div class="ht-ci-lbl">Quantité</div><div class="ht-stepper"><button id="ht-ch-minus" aria-label="Moins">−</button><b id="ht-ch-qty">${sheet.qty}</b><button id="ht-ch-plus" aria-label="Plus">+</button></div></div>
           <div class="ht-ci-f"><div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div><input class="ht-note-free" id="ht-ch-note" value="${esc(sheet.note)}" placeholder="ex. « sans sucre », « chambre à 19h »…" /></div>
-          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy ? 'disabled' : ''}><i data-lucide="plus"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(def.unit * sheet.qty)}</button></div>`;
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy || !(sheet.unit > 0) ? 'disabled' : ''}><i data-lucide="plus"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(sheetTotal())}</button></div>`;
       }
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = close; });
@@ -1239,10 +1268,21 @@
       const minus = $('#ht-ch-minus', el); if (minus) minus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; render(); } };
       const plus = $('#ht-ch-plus', el); if (plus) plus.onclick = () => { sheet.qty++; render(); };
       const note = $('#ht-ch-note', el); if (note) note.oninput = (e) => { sheet.note = e.target.value; };
+      /* le prix se tape sans reconstruire la feuille, pour que le champ garde le focus */
+      const unitIn = $('#ht-ch-unit', el);
+      if (unitIn) unitIn.oninput = (e) => {
+        const v = Number(String(e.target.value).replace(',', '.').replace(/\s/g, ''));
+        sheet.unit = Number.isFinite(v) && v > 0 && v <= 100000 ? Math.round(v * 100) / 100 : 0;
+        const t = $('#ht-ch-total', el); if (t) t.textContent = fmtMAD(sheetTotal());
+        const per = $('.ht-ch-price .per', el); if (per && per.firstChild) per.firstChild.textContent = `${sheet.unit > 0 ? sheet.unit : '?'} MAD × `;
+        const addBtn = $('#ht-ch-add', el);
+        if (addBtn) { addBtn.disabled = !(sheet.unit > 0); if (addBtn.lastChild) addBtn.lastChild.textContent = 'Poster sur le folio · ' + fmtMAD(sheetTotal()); }
+      };
       const add = $('#ht-ch-add', el); if (add) add.onclick = async () => {
         if (sheet.busy) return;
         sheet.note = String($('#ht-ch-note', el)?.value || sheet.note).trim();
-        const total = def.unit * sheet.qty;
+        if (!(sheet.unit > 0)) { toast('Saisissez le prix unitaire avant de poster', 3200); return; }
+        const total = sheetTotal();
         let saleId = '';
         if (pvReal()) {
           const ctx = roomChargeContext();
@@ -1267,7 +1307,8 @@
             return;
           }
         }
-        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: new Date().toLocaleString('fr-FR'), note: sheet.note, saleId });
+        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, unit: sheet.unit, at: new Date().toLocaleString('fr-FR'), note: sheet.note, saleId });
+        if (!DEMO_HOTEL) EXTRA_PRICES[cid] = sheet.unit;
         close();
         queueIfOffline(`Charge ${def.label}`);
         toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(total)})`);
@@ -1466,7 +1507,7 @@
       <hr>
       <div class="row"><span class="nm">Nuitées · ${esc(roomName(st.room))} ×${st.nights}</span><span>${t.nuitees}</span></div>
       ${st.charges.map((c) => `<div class="row"><span class="nm">${c.at ? `${esc(c.at)} · ` : ''}${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
-      <div class="row b"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. ×${st.nights} nuits</span><span>${t.taxe}</span></div>
+      <div class="row b"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. ×${st.nights} nuit${st.nights > 1 ? 's' : ''}</span><span>${t.taxe}</span></div>
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${t.total} MAD</span></div>
       ${st.payments.map((p) => `<div class="row"><span class="nm">${esc(p.label)}</span><span>−${p.amount}</span></div>`).join('')}
@@ -1507,26 +1548,55 @@
     };
   }
 
-  /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* ═══════════════════════ RÉSEAU ═══════════════════════════════════════════
+     Démo : coupure SIMULÉE par le bouton. Session réelle : l'indicateur suit
+     navigator.onLine, et la file affichée est la vraie file des charges
+     chambre (roomChargeRows). Le bouton n'inverse plus un drapeau, et plus
+     aucun toast ne déclare « synchronisée » une action dont on n'a rien
+     vérifié : l'ancien drapeau suffisait d'ailleurs à bloquer flushRoomCharges,
+     donc à retenir de vraies charges chambre sur une tablette en ligne. */
+  function syncNet() {
+    if (!pvReal()) return;
+    state.offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.queued = roomChargeRows().length;
+    if (root) renderNet();
+  }
+  let netBound = false;
+  function bindNet() {
+    if (netBound || !pvReal()) return;
+    netBound = true;
+    window.addEventListener('online', syncNet);
+    window.addEventListener('offline', syncNet);
+    syncNet();
+  }
   function toggleOffline() {
+    if (pvReal()) {
+      syncNet();
+      toast(state.offline ? 'Wi-Fi indisponible, les opérations restent sur cette tablette'
+        : state.queued ? `${state.queued} ${state.queued > 1 ? 'charges chambre' : 'charge chambre'} en cours d’envoi`
+          : 'Tablette en ligne, aucune charge chambre en attente d’envoi');
+      return;
+    }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
-      toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
+      toast(`Réseau simulé rétabli, file de démonstration vidée (${state.queued})`);
       state.queued = 0;
     } else if (state.offline) {
-      toast('Mode hors-ligne, la réception continue, tout est mis en file');
+      toast('Mode hors-ligne simulé, la réception continue');
     } else {
-      toast('De retour en ligne');
+      toast('Réseau simulé rétabli');
     }
     renderNet();
   }
   function renderNet() {
     const net = $('#ht-net', root);
     if (!net) return;
+    const real = pvReal();
     net.classList.toggle('is-off', state.offline);
-    $('.ht-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    $('.ht-net-label', net).textContent = state.offline ? 'Hors-ligne' : (real && state.queued) ? 'Envoi en cours' : 'En ligne';
+    net.title = real ? 'État du réseau' : 'Simuler une coupure réseau';
     let q = $('.ht-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((real || state.offline) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'ht-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();

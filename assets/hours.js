@@ -125,13 +125,23 @@
    * servait jusqu'à 23:00. On décale l'instant de sorte que les getters
    * locaux lisent l'horloge murale de Casablanca, et on retire le décalage
    * des instants rendus. Sur un appareil au Maroc, le décalage vaut 0. */
-  var ZONE = 'Africa/Casablanca', zoneFmt = null;
-  function zoneShift(t) {
+  /* Le fuseau, par ordre : celui qu'on nous passe (la page client le reçoit
+   * de /api/menu), celui que la caisse du magasin a déclaré (KiwiConfig,
+   * /api/timezone), sinon Casablanca. Un magasin Kiwi Ultra hors du Maroc
+   * lit donc ses heures à sa propre horloge, pas à celle de Casablanca. */
+  var ZONE = 'Africa/Casablanca', zoneFmts = {};
+  function zoneOf(zone) {
+    if (zone) return String(zone);
+    try { var c = window.KiwiConfig && window.KiwiConfig.timezone; if (c) return String(c); } catch (_) {}
+    return ZONE;
+  }
+  function zoneShift(t, zone) {
     try {
-      zoneFmt = zoneFmt || new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23',
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      var z = zoneOf(zone);
+      var fmt = zoneFmts[z] || (zoneFmts[z] = new Intl.DateTimeFormat('en-US', { timeZone: z, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       var o = {};
-      zoneFmt.formatToParts(new Date(t)).forEach(function (x) { o[x.type] = +x.value; });
+      fmt.formatToParts(new Date(t)).forEach(function (x) { o[x.type] = +x.value; });
       var wall = new Date(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second).getTime();
       var d = wall - Math.floor(t / 1000) * 1000;
       return isFinite(d) ? Math.round(d / 60000) * 60000 : 0;
@@ -365,10 +375,10 @@
    * saisie, qui n'est pas encore enregistrée. Sans ça il faudrait écrire le
    * brouillon dans le magasin pour le résumer — c'est-à-dire publier à chaque
    * clic un horaire que le propriétaire n'a pas validé. */
-  function statusOf(doc, ts) {
+  function statusOf(doc, ts, zone) {
     doc = normalize(doc);
     var t0 = (ts instanceof Date) ? ts.getTime() : (+ts || Date.now());
-    var z = zoneShift(t0), t = t0 + z;
+    var z = zoneShift(t0, zone), t = t0 + z;
     if (!configured(doc)) {
       return { known: false, open: false, configured: false, reason: 'unset', exception: null,
                closesAt: null, opensAt: null, minutesToClose: null };
@@ -423,18 +433,18 @@
   };
   function hhmm(ms) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
   /* Un instant rendu par statusOf, relu à l'horloge de Casablanca. */
-  function wall(ms) { return ms + zoneShift(ms); }
+  function wall(ms, zone) { return ms + zoneShift(ms, zone); }
   function summary(ts, venueId, L) { return summaryOf(get(venueId), ts, L); }
-  function summaryOf(doc, ts, L) {
+  function summaryOf(doc, ts, L, zone) {
     L = L || lang();
     var T = SUM_T[L] || SUM_T.fr;
     var t = (ts instanceof Date) ? ts.getTime() : (+ts || Date.now());
-    var st = statusOf(doc, t);
+    var st = statusOf(doc, t, zone);
     if (!st.configured) return { text: T.unset, tone: 'unset' };
     if (st.open) {
       /* 24 h : la fermeture est au-delà d'une journée pleine. */
       if (st.minutesToClose >= MIN_DAY - 1) return { text: T.open24, tone: 'open' };
-      var txt = T.openTill(hhmm(wall(st.closesAt)));
+      var txt = T.openTill(hhmm(wall(st.closesAt, zone)));
       if (st.exception) txt += ' · ' + (st.exception.label || T.exHours(''));
       return { text: txt, tone: 'open' };
     }
@@ -442,7 +452,7 @@
       return { text: st.exception.label ? T.exClosed + ' · ' + st.exception.label : T.exClosed, tone: 'closed' };
     }
     if (st.opensAt) {
-      var o = wall(st.opensAt), now = wall(t);
+      var o = wall(st.opensAt, zone), now = wall(t, zone);
       var same = ymd(new Date(o)) === ymd(new Date(now));
       if (same) return { text: T.opensAt(hhmm(o)), tone: 'soon' };
       var dl = (DAY_LABEL[L] || DAY_LABEL.fr)[DOW[new Date(o).getDay()]];

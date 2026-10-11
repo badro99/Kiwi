@@ -37,6 +37,8 @@
   const pad2   = (n) => String(n).padStart(2, '0');
   const fmtDT  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const fmtTime = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
   const MIN = 60 * 1000;
   const agoMin = (d) => {
     const m = Math.max(0, Math.round((Date.now() - d.getTime()) / MIN));
@@ -83,7 +85,15 @@
   const ITEM = Object.fromEntries(MENU.map((m) => [m.id, m]));
 
   /* ───────────────────────── emplacements (rotation Tanger) ─────────────── */
-  const SPOTS = [
+  /* Réel : « Marina Bay » et « Plage Achakar » sont deux emplacements de la démo
+     (Tanger), affichés comme LE camion, avec leurs horaires et leurs notes. Un vrai
+     camion ne roule pas là. Il n'y a pas d'éditeur d'emplacements : on garde les
+     deux services (midi, soir), qui sont ce que la recette ventile, sans nom de
+     lieu inventé. */
+  const SPOTS = pvReal() ? [
+    { id: 'marina',  label: 'Service de midi', when: 'Midi',  hours: '', icon: 'sun',  note: '' },
+    { id: 'achakar', label: 'Service du soir', when: 'Soir',  hours: '', icon: 'moon', note: '' },
+  ] : [
     { id: 'marina',  label: 'Marina Bay',    when: 'Service de midi', hours: '11:30 – 15:00', icon: 'sun',
       note: 'Corniche, face au port de plaisance, gros flux déjeuner, bureaux et promeneurs.' },
     { id: 'achakar', label: 'Plage Achakar', when: 'Service du soir', hours: '18:00 – 22:30', icon: 'moon',
@@ -91,7 +101,8 @@
   ];
   const SPOT = Object.fromEntries(SPOTS.map((s) => [s.id, s]));
   /* rotation indicative de la semaine (dim → sam) */
-  const ROTA = [
+  /* La rotation est un planning inventé : réel, aucune (la section disparaît). */
+  const ROTA = pvReal() ? [] : [
     { day: 'dim', midi: 'Relâche', soir: '·' },
     { day: 'lun', midi: 'Marina Bay', soir: 'Plage Achakar' },
     { day: 'mar', midi: 'Gare routière', soir: 'Plage Achakar' },
@@ -106,7 +117,7 @@
      moitié pleine, Bilal déjà appelé, et Hamid (le taxi habitué) qui paiera
      au retrait, comme toujours. */
   const NOW = Date.now();
-  let seq = 48;                                     /* prochain numéro d'appel */
+  let seq = pvReal() ? 1 : 48;                                     /* prochain numéro d'appel */
 
   function mkSeed(n, name, lines, method, atMin, status, readyMin, servedMin) {
     const ls = lines.map(([id, qty]) => ({ id, qty }));
@@ -157,19 +168,26 @@
     spot: 'marina',
     fileSeg: 'active',
     ticket: { lines: [], name: '' },
-    vitals: { pain: 24, gaz: 'ok', batterie: 76, fonds: 300 },
-    waits: [5, 6, 8, 5, 7, 9],         /* minutes commande → appel (jour) */
+    /* Réel : rien de tout cela n'est connu. Le pain, le gaz et le fonds de caisse
+       se saisissent (null = « à renseigner », jamais un nombre de démo qui
+       entrait dans l'« Attendu » du comptage) ; la batterie du camion ne peut pas
+       être lue par une page web, la tuile disparaît. */
+    vitals: pvReal() ? { pain: null, gaz: null, batterie: null, fonds: null } : { pain: 24, gaz: 'ok', batterie: 76, fonds: 300 },
+    waits: pvReal() ? [] : [5, 6, 8, 5, 7, 9],         /* minutes commande → appel (jour) */
     painWarned: false,
     offline: false, queued: 0,
   };
   const truckOps = window.KiwiVerticalState?.open?.('foodtruck', {
     schema: 1,
-    snapshot: () => ({ queue: QUEUE, served: SERVED, recette, sold, seq, ticket: state.ticket, spot: state.spot, vitals: state.vitals, waits: state.waits, painWarned: state.painWarned }),
+    snapshot: () => ({ v: 2, queue: QUEUE, served: SERVED, recette, sold, seq, ticket: state.ticket, spot: state.spot, vitals: state.vitals, waits: state.waits, painWarned: state.painWarned }),
     restore: (d) => {
       const revive = o => { o.at = new Date(o.at); o.readyAt = o.readyAt ? new Date(o.readyAt) : null; o.servedAt = o.servedAt ? new Date(o.servedAt) : null; return o; };
       QUEUE.splice(0, QUEUE.length, ...((d.queue || []).map(revive))); SERVED.splice(0, SERVED.length, ...((d.served || []).map(revive)));
       Object.keys(recette).forEach(k => delete recette[k]); Object.assign(recette, d.recette || {}); Object.keys(sold).forEach(k => delete sold[k]); Object.assign(sold, d.sold || {});
-      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || { lines: [], name: '' }; state.spot = d.spot || 'marina'; state.vitals = d.vitals || state.vitals; state.waits = d.waits || []; state.painWarned = !!d.painWarned;
+      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || { lines: [], name: '' }; state.spot = d.spot || 'marina'; state.painWarned = !!d.painWarned;
+      /* Fiche v1 : pain/gaz/batterie/fonds et temps d'attente de démo écrits par
+         l'ancien autosave. Écartés : ils repartent « à renseigner ». */
+      if (d.v >= 2) { state.vitals = d.vitals || state.vitals; state.waits = d.waits || []; }
     },
   });
 
@@ -186,7 +204,8 @@
   const carteTotal  = () => recette.marina.carte + recette.achakar.carte;
   const ordersTotal = () => recette.marina.orders + recette.achakar.orders;
   const dayTotal    = () => cashTotal() + carteTotal();
-  const avgWait     = () => Math.round(state.waits.reduce((a, b) => a + b, 0) / Math.max(1, state.waits.length));
+  const avgWait     = () => (state.waits.length ? Math.round(state.waits.reduce((a, b) => a + b, 0) / state.waits.length) : null);
+  const waitLabel   = () => (avgWait() == null ? 'attente moy. n/d' : `attente moy. ~${avgWait()} min`);
   const itemsSummary = (o) => o.lines.map((l) => `${l.qty} × ${ITEM[l.id].label}`).join(' · ');
   const findQ = (id) => QUEUE.find((o) => o.id === id);
 
@@ -239,6 +258,10 @@
   function queueIfOffline(label) {
     truckOps?.save?.(label || 'operation');
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -265,7 +288,7 @@
           <button class="ft-nav-it" data-ft-view="recette"><i data-lucide="wallet"></i><span>Recette</span></button>
         </nav>
         <div class="ft-rail-foot">
-          <button class="ft-net" id="ft-net" title="Simuler une coupure réseau">
+          <button class="ft-net" id="ft-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="ft-net-dot"></i><span class="ft-net-label">En ligne</span>
           </button>
           <button class="ft-lock" id="ft-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -334,6 +357,7 @@
     });
     $('#ft-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#ft-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
@@ -388,7 +412,12 @@
       const recall = e.target.closest('[data-ft-recall]');
       if (recall) {
         const o = findQ(recall.dataset.ftRecall);
-        if (o) { toast(`« ${o.name} ! », rappelé au micro`); queueIfOffline('Rappel'); }
+        if (o) {
+          toast(announce(`${o.name}, c'est prêt`)
+            ? `« ${o.name} ! », rappelé à voix haute sur la tablette`
+            : `Pas de voix sur cet appareil : rappelez ${o.name} à voix haute`);
+          queueIfOffline('Rappel');
+        }
         return;
       }
       const remit = e.target.closest('[data-ft-remit]');
@@ -455,7 +484,7 @@
   /* ═══════════════════════ VENTE ÉCLAIR ═══════════════════════ */
   function renderVente() {
     $('#ft-vente-sub', root).textContent =
-      `${fmtDT(new Date())} · ${SPOT[state.spot].label}, ${SPOT[state.spot].when.toLowerCase()}`;
+      `${fmtDT(new Date())} · ${SPOT[state.spot].label}${pvReal() ? '' : ', ' + SPOT[state.spot].when.toLowerCase()}`;
     renderVenteQueue();
     renderTicket();
   }
@@ -464,7 +493,7 @@
   function renderVenteQueue() {
     const el = $('#ft-vente-queue', root);
     if (!el) return;
-    el.innerHTML = `<i data-lucide="megaphone"></i> file ${QUEUE.length} · ~${avgWait()} min`;
+    el.innerHTML = `<i data-lucide="megaphone"></i> file ${QUEUE.length}${avgWait() == null ? '' : ` · ~${avgWait()} min`}`;
   }
 
   function renderMenu() {
@@ -611,6 +640,7 @@
   function consumeBread(lines) {
     const used = lines.reduce((s, l) => s + ((ITEM[l.id].bread) ? l.qty : 0), 0);
     if (!used) return;
+    if (state.vitals.pain == null) return;      /* pain non renseigné : rien à décompter */
     const before = state.vitals.pain;
     state.vitals.pain = Math.max(0, before - used);
     if (state.vitals.pain < 10 && !state.painWarned) {
@@ -733,7 +763,7 @@
 
   /* ═══════════════════════ FILE D'APPEL ═══════════════════════ */
   function renderFile() {
-    $('#ft-wait-val', root).textContent = `attente moy. ~${avgWait()} min`;
+    $('#ft-wait-val', root).textContent = waitLabel();
     $$('[data-ft-fseg]', root).forEach((x) => x.classList.toggle('on', x.dataset.ftFseg === state.fileSeg));
     renderFileList();
   }
@@ -793,6 +823,21 @@
       : '<div class="ft-qempty">File vide, tout le monde est servi.<br>Retour à la vente éclair pour la remplir.</div>';
   }
 
+  /* « annoncé au micro » : aucune voix ne sortait nulle part, seul le statut
+     changeait. On fait parler la tablette quand elle sait (Web Speech), et le
+     message dit ce qui s'est réellement passé, jamais plus. */
+  function announce(text) {
+    try {
+      const ss = window.speechSynthesis;
+      if (!ss || typeof window.SpeechSynthesisUtterance !== 'function') return false;
+      const u = new window.SpeechSynthesisUtterance(text);
+      u.lang = 'fr-FR';
+      u.onerror = () => toast('Annonce vocale impossible sur cet appareil, appelez à voix haute');
+      ss.cancel();
+      ss.speak(u);
+      return true;
+    } catch (_) { return false; }
+  }
   function callOrder(id) {
     const o = findQ(id);
     if (!o || o.status !== 'prep') return;
@@ -800,7 +845,9 @@
     o.readyAt = new Date();
     state.waits.push(Math.max(1, Math.round((o.readyAt - o.at) / MIN)));
     queueIfOffline('Appel client');
-    toast(`« ${o.name} ! C'est prêt ! », annoncé au micro`);
+    toast(announce(`${o.name}, c'est prêt`)
+      ? `« ${o.name} ! C'est prêt ! », annoncé à voix haute sur la tablette`
+      : `${o.name} est prêt. Pas de voix sur cet appareil : appelez-le à voix haute`);
     renderFile(); renderBadges(); renderVenteQueue(); icons();
   }
 
@@ -840,10 +887,11 @@
   /* ═══════════════════════ EMPLACEMENT & CAMION ═══════════════════════ */
   function renderSpot() {
     const v = state.vitals;
-    const gaz = GAZ[v.gaz];
+    const gaz = GAZ[v.gaz] || { label: 'À renseigner', cls: '', next: 'ok' };
     const today = ROTA[new Date().getDay()];
-    $('#ft-spot-sub', root).textContent =
-      `Aujourd'hui : midi ${today.midi} · soir ${today.soir}`;
+    $('#ft-spot-sub', root).textContent = today
+      ? `Aujourd'hui : midi ${today.midi} · soir ${today.soir}`
+      : SPOT[state.spot].label;
 
     $('#ft-spot-body', root).innerHTML = `
       <div class="ft-spot-grid">
@@ -855,8 +903,8 @@
               ${live ? '<span class="ft-live"><i></i>EN SERVICE</span>' : `<span class="ft-next">${esc(s.when)}</span>`}
             </div>
             <div class="ft-spot-name">${esc(s.label)}</div>
-            <div class="ft-spot-sub">${esc(s.when)} · <b>${s.hours}</b></div>
-            <div class="ft-spot-note">${esc(s.note)}</div>
+            <div class="ft-spot-sub">${esc(s.when)}${s.hours ? ` · <b>${s.hours}</b>` : ''}</div>
+            ${s.note ? `<div class="ft-spot-note">${esc(s.note)}</div>` : ''}
             ${live
               ? '<div class="ft-spot-cta is-live"><i data-lucide="check"></i> Caisse rattachée ici</div>'
               : `<button class="ft-spot-cta" data-ft-spot-act="${s.id}"><i data-lucide="navigation"></i> Démarrer le service ici</button>`}
@@ -866,34 +914,34 @@
 
       <div class="ft-sec-lbl"><i data-lucide="truck"></i> Camion, l'essentiel</div>
       <div class="ft-vitals">
-        <div class="ft-vital ${v.pain < 10 ? 'warn' : ''}">
+        <div class="ft-vital ${v.pain != null && v.pain < 10 ? 'warn' : ''}">
           <div class="ft-vital-lbl">Pain restant</div>
           <div class="ft-vital-row">
             <button class="ft-vstep" data-ft-pain="-1" aria-label="Moins un pain">−</button>
-            <b class="ft-vital-val mono">${v.pain}</b>
+            <b class="ft-vital-val mono">${v.pain == null ? '·' : v.pain}</b>
             <button class="ft-vstep" data-ft-pain="1" aria-label="Plus un pain">+</button>
           </div>
-          <div class="ft-vital-sub">burgers &amp; hot-dogs · décompte auto à chaque vente</div>
+          <div class="ft-vital-sub">${v.pain == null ? 'comptez vos pains avec + : le décompte suit ensuite chaque vente' : 'burgers &amp; hot-dogs · décompte auto à chaque vente'}</div>
         </div>
         <button class="ft-vital ${gaz.cls}" data-ft-gaz>
           <span class="ft-vital-lbl">Gaz</span>
           <span class="ft-vital-val">${gaz.label}</span>
           <span class="ft-vital-sub">bouteille de la plancha · toucher pour changer l'état</span>
         </button>
-        <button class="ft-vital" data-ft-batt>
+        ${v.batterie == null ? '' : `<button class="ft-vital" data-ft-batt>
           <span class="ft-vital-lbl">Batterie</span>
           <span class="ft-vital-val mono">${v.batterie} %</span>
           <span class="ft-battbar"><i style="width:${v.batterie}%"></i></span>
           <span class="ft-vital-sub">frigo + caisse · toucher pour l'autonomie estimée</span>
-        </button>
+        </button>`}
         <button class="ft-vital" data-ft-fonds>
           <span class="ft-vital-lbl">Fonds de caisse</span>
-          <span class="ft-vital-val mono">${fmtMAD(v.fonds)}</span>
-          <span class="ft-vital-sub">monnaie de départ · toucher pour ajuster</span>
+          <span class="ft-vital-val mono">${v.fonds == null ? 'À saisir' : fmtMAD(v.fonds)}</span>
+          <span class="ft-vital-sub">monnaie de départ · toucher pour ${v.fonds == null ? 'saisir' : 'ajuster'}</span>
         </button>
       </div>
 
-      <div class="ft-sec-lbl"><i data-lucide="calendar"></i> Rotation de la semaine</div>
+      ${ROTA.length ? `<div class="ft-sec-lbl"><i data-lucide="calendar"></i> Rotation de la semaine</div>` : ''}
       <div class="ft-rota">
         ${ROTA.map((r, i) => `
           <div class="ft-rota-row ${i === new Date().getDay() ? 'today' : ''}">
@@ -909,20 +957,20 @@
     if (!SPOT[id] || state.spot === id) return;
     state.spot = id;
     queueIfOffline('Changement de spot');
-    toast(`Service déplacé, ${SPOT[id].label}. Les ventes se ventilent ici.`);
+    toast(pvReal() ? `${SPOT[id].label} démarré. Les ventes se ventilent ici.` : `Service déplacé, ${SPOT[id].label}. Les ventes se ventilent ici.`);
     renderSpot();
     if (state.view === 'vente') renderVente();
     icons();
   }
 
   function adjustPain(delta) {
-    state.vitals.pain = Math.max(0, Math.min(99, state.vitals.pain + delta));
+    state.vitals.pain = Math.max(0, Math.min(99, (state.vitals.pain == null ? 0 : state.vitals.pain) + delta));
     if (state.vitals.pain >= 10) state.painWarned = false;
     renderSpot();
   }
 
   function cycleGaz() {
-    state.vitals.gaz = GAZ[state.vitals.gaz].next;
+    state.vitals.gaz = (GAZ[state.vitals.gaz] || { next: 'ok' }).next;
     const g = GAZ[state.vitals.gaz];
     toast(`Gaz, ${g.label.toLowerCase()}${state.vitals.gaz === 'changer' ? ' : prévoir une bouteille avant le service du soir' : ''}`);
     renderSpot();
@@ -936,7 +984,7 @@
       <p class="modal-subtle">La monnaie de départ du service, elle compte dans l'attendu au comptage.</p>
       <div class="cash-input-row" style="margin-bottom:14px;">
         <label class="cash-input-label" for="ft-fonds-in">Montant (MAD)</label>
-        <input class="cash-input mono" id="ft-fonds-in" type="number" inputmode="numeric" min="0" step="10" value="${state.vitals.fonds}" />
+        <input class="cash-input mono" id="ft-fonds-in" type="number" inputmode="numeric" min="0" step="10" value="${state.vitals.fonds == null ? '' : state.vitals.fonds}" placeholder="0" />
       </div>
       <div class="ft-count-actions">
         <button class="ft-btn secondary" data-ft-close>Annuler</button>
@@ -971,22 +1019,22 @@
     $('#ft-rec-sub', root).textContent = `${fmtDT(new Date())}${pvReal() ? (pvName('') ? ' · caisse ' + pvName('') : '') : ' · caisse Karavan'}`;
     $('#ft-rec-body', root).innerHTML = `
       <div class="ft-rec-hero">
-        <div class="ft-rec-lbl">Recette du jour · ${orders} commandes</div>
+        <div class="ft-rec-lbl">Recette du jour · ${orders} ${plu(orders, 'commande')}</div>
         <div class="ft-rec-val">${fmtMAD(total)}</div>
-        <div class="ft-rec-sub">panier moyen ${fmtMAD(avg)} · hier ${fmtMAD(HIER_TOTAL)} sur les deux services</div>
+        <div class="ft-rec-sub">panier moyen ${fmtMAD(avg)}${pvReal() ? '' : ` · hier ${fmtMAD(HIER_TOTAL)} sur les deux services`}</div>
       </div>
 
       <div class="ft-rec-grid">
         <div class="ft-rcard">
           <div class="ft-rcard-title"><i data-lucide="map-pin"></i> Par emplacement</div>
           <div class="ft-split-row ${state.spot === 'marina' ? '' : 'mut'}">
-            <span class="who">${state.spot === 'marina' ? '<i></i>' : ''}Marina Bay <span>midi</span></span>
+            <span class="who">${state.spot === 'marina' ? '<i></i>' : ''}${esc(SPOT.marina.label)} <span>${pvReal() ? '' : 'midi'}</span></span>
             <span class="ct">${recette.marina.orders} cmd</span>
             <span class="amt">${fmtMAD(recette.marina.especes + recette.marina.carte)}</span>
           </div>
           <div class="ft-split-row ${state.spot === 'achakar' ? '' : 'mut'}">
-            <span class="who">${state.spot === 'achakar' ? '<i></i>' : ''}Plage Achakar <span>soir</span></span>
-            <span class="ct">${recette.achakar.orders ? `${recette.achakar.orders} cmd` : 'dès 18:00'}</span>
+            <span class="who">${state.spot === 'achakar' ? '<i></i>' : ''}${esc(SPOT.achakar.label)} <span>${pvReal() ? '' : 'soir'}</span></span>
+            <span class="ct">${recette.achakar.orders ? `${recette.achakar.orders} cmd` : (pvReal() ? '·' : 'dès 18:00')}</span>
             <span class="amt">${recette.achakar.orders ? fmtMAD(recette.achakar.especes + recette.achakar.carte) : '·'}</span>
           </div>
         </div>
@@ -1033,13 +1081,13 @@
     const el = $('#ft-countm', root);
     const veil = openVeil('#ft-count-veil');
     const counts = Object.fromEntries(DENOMS.map((d) => [d, 0]));
-    const expected = () => state.vitals.fonds + cashTotal();
+    const expected = () => (state.vitals.fonds || 0) + cashTotal();
     const counted = () => DENOMS.reduce((s, d) => s + d * counts[d], 0);
 
     el.innerHTML = `
       <button class="ft-modal-x" data-ft-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Compter la caisse</h3>
-      <p class="modal-subtle">Attendu : fonds ${fmtMAD(state.vitals.fonds)} + espèces du jour ${fmtMAD(cashTotal())} = <b>${fmtMAD(expected())}</b></p>
+      <p class="modal-subtle">Attendu : fonds ${state.vitals.fonds == null ? 'non saisi (0 MAD)' : fmtMAD(state.vitals.fonds)} + espèces du jour ${fmtMAD(cashTotal())} = <b>${fmtMAD(expected())}</b></p>
       <div class="ft-dens">
         ${DENOMS.map((d) => `
           <div class="ft-den">
@@ -1107,7 +1155,21 @@
   }
 
   /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline) {
       if (state.queued) {
@@ -1124,15 +1186,15 @@
 
   function renderNet() {
     const net = $('#ft-net', root);
-    net.classList.toggle('is-off', state.offline);
-    $('.ft-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.ft-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.ft-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'ft-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#ft-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#ft-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

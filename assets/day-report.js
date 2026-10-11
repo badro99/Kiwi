@@ -471,7 +471,13 @@
         return p && p.method !== 'credit' && p.method !== 'delivery';
       }) : null);
     return {
-      id: String(s.id || s.ref || ('s' + ts)),
+      /* Le feed du tableau de bord ne porte PAS d'`id` : l'identifiant du serveur
+         y est `saleId`. Retomber sur `ref` donnait au rapport la même identité
+         à deux ventes distinctes (« À emporter · part 1 » d'une addition
+         partagée, ou n° de ticket repris par une autre caisse) : le dédoublonnage
+         par id écartait la seconde, et le rapport journalier du patron perdait
+         des ventes que le Z de la caisse comptait. */
+      id: String(s.id || s.saleId || s.ref || ('s' + ts)),
       ts: ts,
       amount: amount,
       method: String(s.method || 'cash').toLowerCase(),

@@ -23,7 +23,10 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
+  /* Pluriel français : 0 et 1 prennent le singulier (« 1 visite », « 0 passage »). */
+  const pl = (n, one, many) => (Math.abs(n) < 2 ? one : many);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const rescanLens = () => { if (window.KiwiLens) try { KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -79,7 +82,15 @@
   /* real store: strip staff identities, keep id/color/length so assignment & commission logic holds */
   if (pvReal()) STAFF.forEach((s, i) => { s.name = 'Coiffeur ' + (i + 1); s.short = 'C' + (i + 1); s.role = ''; });
   const SF = Object.fromEntries(STAFF.map((s) => [s.id, s]));
-  const COMMISSION = 0.40;
+  /* Taux de commission. 40 % était écrit en dur et appliqué à TOUS les salons
+     (colonne « Commission 40 % » de la fin de journée, ticket de clôture) : une
+     part de CA que le patron n'a jamais fixée, lue comme ce qu'il doit à son
+     équipe. Session réelle : aucun taux tant que le salon n'en saisit pas un
+     (fin de journée) ; démo : 40 %. */
+  let commissionRate = pvReal() ? null : 0.40;
+  const comPct = () => (commissionRate == null ? null : Math.round(commissionRate * 1000) / 10);
+  const comOf = (ca) => (commissionRate == null ? null : Math.round(ca * commissionRate));
+  const comTxt = (ca) => (commissionRate == null ? 'à définir' : fmtMAD(comOf(ca)));
 
   function ava(staffId, cls) {
     const s = SF[staffId];
@@ -274,6 +285,47 @@
     mkDone(null, 'sara', 'brushing', 'court', [], 0),
   ];
 
+  /* ledger des pourboires encaissés en séance (s'ajoute aux seeds DONE_TODAY).
+     Déclaré ICI et non près de renderJournee : KiwiVerticalState.register()
+     appelle snapshot() à l'instant même où il est enregistré, et snapshot() lit
+     TIP_LEDGER. Déclaré plus bas (const), il était encore dans sa zone morte :
+     « Cannot access 'TIP_LEDGER' before initialization », le module s'arrêtait
+     avant de s'inscrire auprès du dispatcheur et la caisse coiffure ne
+     s'ouvrait JAMAIS (« module indisponible »), démo comme salon réel. */
+  const TIP_LEDGER = [];
+
+  /* ───────────────────────── journée d'exploitation ─────────────────────────
+     « CA du jour », pourboires et passages servis (DONE_TODAY / TIP_LEDGER) sont
+     désormais conservés d'une session à l'autre — et personne ne les remettait
+     à zéro : le lendemain, un salon réel relisait la veille sous « aujourd'hui »,
+     avec les passages de la veille encore dans la file et les rendez-vous d'hier
+     dans l'agenda. La journée suit la coupure du reste de Kiwi (KiwiDayReport,
+     5 h), pas minuit. Les ventes, elles, sont au journal partagé : rien ne se
+     perd. Démo : rollDay ne fait rien. */
+  let DAY_KEY = '';
+  function bizDay() {
+    try {
+      const R = window.KiwiDayReport;
+      const d = R && typeof R.today === 'function' ? R.today() : '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    } catch (_) {}
+    const t = new Date(Date.now() - 5 * 3600 * 1000);
+    return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+  function rollDay() {
+    if (!pvReal()) return false;
+    const today = bizDay();
+    if (!DAY_KEY) { DAY_KEY = today; return false; }
+    if (DAY_KEY === today) return false;
+    if (today < DAY_KEY) { DAY_KEY = today; return false; }
+    DONE_TODAY.splice(0, DONE_TODAY.length);
+    TIP_LEDGER.splice(0, TIP_LEDGER.length);
+    PASSAGES.splice(0, PASSAGES.length);
+    RDV.splice(0, RDV.length);
+    DAY_KEY = today;
+    return true;
+  }
+
   /* ───────────────────────── state ───────────────────────── */
   const state = {
     view: 'file',
@@ -305,6 +357,8 @@
         tips: TIP_LEDGER,
         passSeq,
         ticket: state.ticket,
+        commission: commissionRate,
+        dayKey: DAY_KEY,
       };
     },
     restore(saved) {
@@ -329,15 +383,23 @@
       if (Array.isArray(saved.doneToday)) DONE_TODAY.splice(0, DONE_TODAY.length, ...saved.doneToday);
       if (Array.isArray(saved.tips)) TIP_LEDGER.splice(0, TIP_LEDGER.length, ...saved.tips);
       if (Number.isFinite(saved.passSeq)) passSeq = saved.passSeq;
+      if (saved.commission === null || (Number.isFinite(saved.commission) && saved.commission >= 0 && saved.commission <= 1)) commissionRate = saved.commission;
+      if (typeof saved.dayKey === 'string') DAY_KEY = saved.dayKey;
       if (saved.ticket) state.ticket = saved.ticket;
     },
   });
   function queueIfOffline(label) {
     if (coiffureOps) coiffureOps.save(label);
+    if (pvReal()) {
+      syncNet();
+      if (!state.offline) return false;
+      toast(`${label}, enregistré sur cette caisse`);
+      return true;
+    }
     if (!state.offline) return false;
     state.queued++;
     renderNet();
-    toast(`${label}, mis en file hors-ligne (${state.queued} en attente)`);
+    toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
@@ -363,6 +425,7 @@
   function mount(rootEl) {
     if (coiffureOps) coiffureOps.hydrate();
     root = rootEl;
+    bindNet();
     if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="cf-rail">
@@ -378,7 +441,7 @@
           <button class="cf-nav-it" data-cf-view="journee"><i data-lucide="layout-dashboard"></i><span>Fin de journée</span></button>
         </nav>
         <div class="cf-rail-foot">
-          <button class="cf-net" id="cf-net" title="Simuler une coupure réseau">
+          <button class="cf-net" id="cf-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="cf-net-dot"></i><span class="cf-net-label">En ligne</span>
           </button>
           <button class="cf-lock" id="cf-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -430,7 +493,7 @@
         <section class="cf-view" data-cf-panel="journee">
           <header class="cf-head">
             <div><h1>Fin de journée</h1><div class="cf-head-sub" id="cf-journee-sub"></div></div>
-            <div class="cf-head-right"><span class="cf-head-hint">Commission 40 % par coiffeur·se, déjà calculée.</span></div>
+            <div class="cf-head-right"><span class="cf-head-hint" id="cf-com-hint">Commission par coiffeur·se.</span></div>
           </header>
           <div class="cf-day" id="cf-journee-body"></div>
         </section>
@@ -499,7 +562,12 @@
 
   function renderFile() {
     $('#cf-clock-val', root).textContent = fmtTime(new Date());
-    $('#cf-file-sub', root).textContent = `${fmtDay(new Date())} · le salon tourne, 2 fauteuils occupés, ${PASSAGES.filter((p) => p.state === 'attente').length} en attente`;
+    rollDay();
+    /* les fauteuils occupés sont comptés dans la file : « 2 fauteuils occupés »
+       était écrit en dur, y compris pour un salon dont la file était vide. */
+    const busy = PASSAGES.filter((p) => p.state === 'bac' || p.state === 'cours').length;
+    const waiting = PASSAGES.filter((p) => p.state === 'attente').length;
+    $('#cf-file-sub', root).textContent = `${fmtDay(new Date())} · ${busy} ${pl(busy, 'fauteuil occupé', 'fauteuils occupés')}, ${waiting} en attente`;
     renderQueue();
     renderRdv();
     icons();
@@ -673,7 +741,7 @@
         <span class="edit">Changer</span></button>`;
     }
     const c = CUST[t.customer.id];
-    const sub = c.formula ? `Formule : ${fmtFormula(c.formula)}` : `${c.visits} visites · ${fmtDay(c.last)}`;
+    const sub = c.formula ? `Formule : ${fmtFormula(c.formula)}` : `${c.visits} ${pl(c.visits, 'visite', 'visites')} · ${fmtDay(c.last)}`;
     return `<button class="cf-tk-row is-set" id="cf-tk-client"><i data-lucide="user-check"></i>
       <span class="l"><b>${esc(c.name)}</b><span>${esc(sub)}</span></span>
       <span class="edit">Changer</span></button>`;
@@ -1013,7 +1081,7 @@
                   <span class="cf-cl-name">${esc(c.name)} ${c.formula ? '<span class="cf-cl-badge">formule</span>' : ''}</span>
                   <span class="cf-cl-sub">${esc(c.phone)}</span>
                 </span>
-                <span class="cf-cl-right"><b>${c.visits} visites</b>${esc(fmtDay(c.last))}</span>
+                <span class="cf-cl-right"><b>${c.visits} ${pl(c.visits, 'visite', 'visites')}</b>${esc(fmtDay(c.last))}</span>
               </button>`).join('') || `<div class="cf-fq-empty">Aucune fiche pour « ${esc(q)} »</div>`}
           </div>
           <button class="cf-cl-new" id="cf-cl-new"><i data-lucide="user-plus"></i>Nouvelle fiche${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
@@ -1036,7 +1104,7 @@
           if (mode === 'browse') { closeVeil('#cf-client-veil'); openFiche(c.id); return; }
           state.ticket.customer = { type: 'known', id: c.id };
           closeVeil('#cf-client-veil');
-          toast(c.formula ? `${c.name}, formule en mémoire : ${fmtFormula(c.formula)}` : `${c.name}, ${c.visits} visites`);
+          toast(c.formula ? `${c.name}, formule en mémoire : ${fmtFormula(c.formula)}` : `${c.name}, ${c.visits} ${pl(c.visits, 'visite', 'visites')}`);
           renderTicket(); renderBadges(); icons();
         };
       });
@@ -1090,7 +1158,7 @@
           <h3>${esc(c.name)}</h3>
           <div class="cf-fiche-tel">${esc(c.phone || 'sans téléphone')}</div>
           <div class="cf-fiche-stats">
-            <span class="cf-fiche-stat"><b>${c.visits}</b><span>visites</span></span>
+            <span class="cf-fiche-stat"><b>${c.visits}</b><span>${pl(c.visits, 'visite', 'visites')}</span></span>
             <span class="cf-fiche-stat"><b>${esc(fmtDay(c.last))}</b><span>dernière visite</span></span>
             ${c.formula ? `<span class="cf-fiche-stat"><b>${esc(c.formula.base)}</b><span>base couleur</span></span>` : ''}
           </div>
@@ -1430,12 +1498,10 @@
     openVeil('#cf-pay-veil');
   }
 
-  /* ledger des pourboires encaissés en séance (s'ajoute aux seeds DONE_TODAY) */
-  const TIP_LEDGER = [];
-
   /* ═══════════════════════ FIN DE JOURNÉE ═══════════════════════ */
   function renderJournee() {
-    /* agréger par coiffeur·se : passages, CA, commission 40 %, pourboires */
+    rollDay();
+    /* agréger par coiffeur·se : passages, CA, commission (taux du salon), pourboires */
     const seedTips = DONE_TODAY.reduce((s, d) => s + (d.tip || 0), 0);
     const liveTips = TIP_LEDGER.reduce((s, t) => s + t.amt, 0);
     const byStaff = {};
@@ -1448,10 +1514,12 @@
     const totalCA = STAFF.reduce((s, st) => s + byStaff[st.id].ca, 0);
     const totalTip = seedTips + liveTips;
     const totalPass = DONE_TODAY.length;
-    const totalCom = Math.round(totalCA * COMMISSION);
+    const totalCom = comOf(totalCA);
     const maxCA = Math.max(1, ...STAFF.map((s) => byStaff[s.id].ca));
 
-    $('#cf-journee-sub', root).textContent = `${fmtDay(new Date())} · ${totalPass} passages servis aujourd'hui`;
+    $('#cf-journee-sub', root).textContent = `${fmtDay(new Date())} · ${totalPass} ${pl(totalPass, 'passage servi', 'passages servis')} aujourd'hui`;
+    const comHint = $('#cf-com-hint', root);
+    if (comHint) comHint.textContent = commissionRate == null ? 'Taux de commission non défini.' : `Commission ${comPct()} % par coiffeur·se, déjà calculée.`;
     const el = $('#cf-journee-body', root);
     el.innerHTML = `
       <div class="cf-day-inner">
@@ -1459,14 +1527,20 @@
           <div class="cf-day-kpi"><div class="lbl"><i data-lucide="scissors"></i>Passages</div><div class="val">${totalPass}</div></div>
           <div class="cf-day-kpi accent"><div class="lbl"><i data-lucide="banknote"></i>CA du jour</div><div class="val">${fmtMAD(totalCA)}</div></div>
           <div class="cf-day-kpi"><div class="lbl"><i data-lucide="hand-coins"></i>Pourboires</div><div class="val">${fmtMAD(totalTip)}</div></div>
-          <div class="cf-day-kpi"><div class="lbl"><i data-lucide="percent"></i>Commissions 40 %</div><div class="val">${fmtMAD(totalCom)}</div></div>
+          <div class="cf-day-kpi"><div class="lbl"><i data-lucide="percent"></i>Commissions${commissionRate == null ? '' : ' ' + comPct() + ' %'}</div><div class="val">${commissionRate == null ? 'à définir' : fmtMAD(totalCom)}</div></div>
+        </div>
+
+        <div class="cf-day-com" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;">
+          <label for="cf-com-rate" style="font-size:12.5px;">Taux de commission des coiffeur·se·s</label>
+          <input class="cf-in" id="cf-com-rate" type="number" inputmode="decimal" min="0" max="100" step="0.5" style="width:96px;" value="${commissionRate == null ? '' : comPct()}" placeholder="non défini" /> <span>%</span>
+          <button class="cf-btn secondary" id="cf-com-save">Enregistrer</button>
+          ${commissionRate == null ? '<span style="font-size:12px;opacity:.7;">Sans taux, les commissions ne sont pas calculées.</span>' : ''}
         </div>
 
         <div class="cf-day-staff-lbl"><i data-lucide="users" style="width:12px;height:12px"></i> Par coiffeur·se</div>
         <div class="cf-day-cards">
           ${STAFF.map((s) => {
             const b = byStaff[s.id];
-            const com = Math.round(b.ca * COMMISSION);
             const pct = Math.round((b.ca / maxCA) * 100);
             return `<div class="cf-day-card">
               <span class="av" style="background:${s.color}">${esc(s.short[0])}</span>
@@ -1474,7 +1548,7 @@
               <span class="cf-day-metrics">
                 <span class="cf-day-metric"><span class="m-lbl">Passages</span><span class="m-val">${b.passages}</span></span>
                 <span class="cf-day-metric"><span class="m-lbl">CA</span><span class="m-val">${fmtMAD(b.ca)}</span></span>
-                <span class="cf-day-metric com"><span class="m-lbl">Commission 40 %</span><span class="m-val">${fmtMAD(com)}</span></span>
+                <span class="cf-day-metric com"><span class="m-lbl">Commission${commissionRate == null ? '' : ' ' + comPct() + ' %'}</span><span class="m-val">${comTxt(b.ca)}</span></span>
                 <span class="cf-day-metric tip"><span class="m-lbl">Pourboires</span><span class="m-val">${fmtMAD(b.tip)}</span></span>
               </span>
               <span class="cf-day-bar"><i style="width:${pct}%"></i></span>
@@ -1488,54 +1562,117 @@
         </div>
       </div>`;
     icons();
+    $('#cf-com-save', root).onclick = () => {
+      const raw = String($('#cf-com-rate', root).value || '').replace(',', '.').trim();
+      if (raw === '') { commissionRate = null; }
+      else {
+        const v = Number(raw);
+        if (!Number.isFinite(v) || v < 0 || v > 100) { toast('Taux invalide, saisissez un pourcentage entre 0 et 100'); return; }
+        commissionRate = Math.round(v * 10) / 1000;
+      }
+      queueIfOffline('Taux de commission');
+      renderJournee();
+      toast(commissionRate == null ? 'Taux de commission retiré' : `Commission fixée à ${comPct()} %`);
+    };
     $('#cf-day-print', root).onclick = () => {
       const P = window.KiwiOperationalPrint;
       if (!P) { toast('Impression indisponible'); return; }
       const lines = [
         { label:'Passages', value:totalPass }, { label:'CA du jour', value:fmtMAD(totalCA) },
-        { label:'Pourboires', value:fmtMAD(totalTip) }, { label:'Commissions', value:fmtMAD(totalCom) },
+        { label:'Pourboires', value:fmtMAD(totalTip) },
       ];
-      STAFF.forEach((s) => { const b = byStaff[s.id]; lines.push({ label:s.name, value:`${b.passages} passages · ${fmtMAD(b.ca)} · commission ${fmtMAD(Math.round(b.ca * COMMISSION))}` }); });
+      if (commissionRate != null) lines.push({ label:'Commissions ' + comPct() + ' %', value:fmtMAD(totalCom) });
+      STAFF.forEach((s) => { const b = byStaff[s.id]; lines.push({ label:s.name, value:`${b.passages} ${pl(b.passages, 'passage', 'passages')} · ${fmtMAD(b.ca)}${commissionRate == null ? '' : ` · commission ${fmtMAD(comOf(b.ca))}`}` }); });
       P.printText({ title:'Clôture salon', subtitle:fmtDay(new Date()), paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
     };
     $('#cf-day-close', root).onclick = () => {
       if (PASSAGES.some((p) => p.state !== 'fini')) {
-        toast(`${PASSAGES.filter((p) => p.state !== 'fini').length} passage(s) encore en cours, terminez d'abord la file`);
+        const open = PASSAGES.filter((p) => p.state !== 'fini').length;
+        toast(`${open} ${pl(open, 'passage encore en cours', 'passages encore en cours')}, terminez d'abord la file`);
         return;
       }
+      /* « Journée clôturée » ne faisait rien : le récapitulatif restait affiché et
+         cumulait le lendemain. La clôture remet maintenant le récapitulatif du
+         salon à zéro (les ventes restent au journal de la caisse et du tableau
+         de bord, elles ne dépendent pas de ce récapitulatif). */
+      DONE_TODAY.splice(0, DONE_TODAY.length);
+      TIP_LEDGER.splice(0, TIP_LEDGER.length);
       queueIfOffline('Clôture journée');
-      toast('Journée clôturée, bsahtkom, à demain');
+      renderJournee(); renderBadges();
+      toast('Récapitulatif remis à zéro, les ventes restent au journal de la caisse');
     };
   }
 
-  /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* ═══════════════════════ RÉSEAU ═══════════════════════════════════════════
+     Démo : coupure SIMULÉE par le bouton. Session réelle : l'indicateur dit ce
+     que le navigateur sait (navigator.onLine) et la vraie file de ventes
+     (KiwiLive.queueStatus). Il ne se bascule plus à la main, et plus aucun toast
+     n'annonce « tout est synchronisé » sans l'avoir vérifié : le bouton affichait
+     « Réseau de retour, tout est synchronisé » alors qu'il venait seulement de
+     changer un drapeau. */
+  function liveQueue() {
+    try {
+      const q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus();
+      return q ? { pending: +q.pending || 0, blocked: +q.blocked || 0, storageError: !!q.storageError } : null;
+    } catch (_) { return null; }
+  }
+  function syncNet() {
+    if (!pvReal()) return;
+    const q = liveQueue();
+    state.offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.queued = q ? q.pending : 0;
+    state.syncBlocked = !!q && (q.storageError || q.blocked > 0);
+    if (root) renderNet();
+  }
+  let netBound = false;
+  function bindNet() {
+    if (netBound || !pvReal()) return;
+    netBound = true;
+    window.addEventListener('online', syncNet);
+    window.addEventListener('offline', syncNet);
+    window.addEventListener('kiwi:sale-queue', syncNet);
+    syncNet();
+  }
   function toggleOffline() {
+    if (pvReal()) {
+      syncNet();
+      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
+        : state.offline ? 'Wi-Fi indisponible, les opérations restent sur cette caisse'
+          : state.queued ? `${state.queued} ${state.queued > 1 ? 'ventes' : 'vente'} en cours de synchronisation`
+            : 'Caisse en ligne, aucune vente en attente d\'envoi');
+      return;
+    }
     state.offline = !state.offline;
     if (!state.offline) {
-      if (state.queued) {
-        toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
-        state.queued = 0;
-      } else {
-        toast('Réseau de retour, tout est synchronisé');
-      }
+      toast(state.queued ? `Réseau simulé rétabli, file de démonstration vidée (${state.queued})` : 'Réseau simulé rétabli');
+      state.queued = 0;
     } else {
-      toast('Mode hors-ligne, le salon continue, tout est mis en file');
+      toast('Mode hors-ligne simulé, le salon continue');
     }
     renderNet();
   }
   function renderNet() {
     const net = $('#cf-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.cf-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    const real = pvReal();
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.cf-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (real && state.queued) ? 'Synchronisation' : 'En ligne';
+    net.title = real ? 'État du réseau' : 'Simuler une coupure réseau';
     let q = $('.cf-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((real || state.offline) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'cf-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#cf-offline-note', root);
-    note.hidden = !state.offline;
-    $('#cf-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    note.hidden = !state.offline && !state.syncBlocked;
+    const base = note.dataset.base || (note.dataset.base = note.textContent.replace(/\s+/g, ' ').trim());
+    note.innerHTML = '';
+    note.appendChild(document.createTextNode((state.syncBlocked
+      ? 'La synchronisation est bloquée. Les ventes restent sur cette caisse : contactez le support avant de vider les données du navigateur. '
+      : base + ' ')));
+    const cnt = document.createElement('b'); cnt.id = 'cf-queue-count';
+    cnt.textContent = state.queued ? `${state.queued} en attente` : '';
+    note.appendChild(cnt);
   }
 
   /* ═══════════════════════ register ═══════════════════════ */

@@ -53,7 +53,7 @@ var SHELL = [
   '/assets/pages-pro.css?v=3',
   '/assets/catalog-workspace.css?v=21',
   '/assets/catalog-workspace.js?v=5',
-  '/assets/help-centre.css?v=4',
+  '/assets/help-centre.css?v=5',
   '/assets/polish-dashboard.css',
   '/assets/pressing-catalog.css?v=4',
   '/assets/pressing-dashboard.css?v=11',
@@ -143,7 +143,7 @@ var SHELL = [
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=3',
   '/assets/pages.js?v=12',
-  '/assets/help-centre.js?v=5',
+  '/assets/help-centre.js?v=6',
   '/assets/account.js?v=29',
   '/assets/production-action-guard.js?v=2',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
@@ -173,10 +173,10 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=20',
+  '/assets/day-report.js?v=21',
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=27',
-  '/assets/day-report-export.js?v=10',
+  '/assets/day-report-export.js?v=11',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
   '/assets/month-report-csv.js?v=4',
@@ -187,7 +187,7 @@ var SHELL = [
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js?v=3',
+  '/assets/hours.js?v=4',
   '/assets/morocco-holidays.js?v=1',
   '/assets/hours-ui.js?v=2',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
@@ -213,7 +213,7 @@ var SHELL = [
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
-  '/assets/caisse-hardware.js?v=4',
+  '/assets/caisse-hardware.js?v=5',
   '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=12',
@@ -229,7 +229,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=13',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=16',
+  '/assets/caisse-lang.js?v=17',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -254,12 +254,12 @@ var SHELL = [
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
   '/assets/employee-live.js?v=552',
-  '/assets/employee-planning.js?v=13',
+  '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=296',
+  '/assets/team.js?v=297',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=92',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
@@ -270,7 +270,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=2',
-  '/assets/orderpro-inbox.js?v=30',
+  '/assets/orderpro-inbox.js?v=31',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
@@ -282,7 +282,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=72',
+  '/assets/pos-dispatch.js?v=74',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -295,41 +295,41 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=50',
-  '/assets/pos-boutique.js?v=50',
+  '/assets/pos-boutique.css?v=51',
+  '/assets/pos-boutique.js?v=51',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=5',
-  '/assets/pos-spa.js?v=5',
-  '/assets/pos-hotel.css?v=15',
-  '/assets/pos-hotel.js?v=15',
-  '/assets/pos-fastfood.css?v=6',
-  '/assets/pos-fastfood.js?v=6',
-  '/assets/pos-boulangerie.css?v=7',
-  '/assets/pos-boulangerie.js?v=7',
-  '/assets/pos-pizzeria.css?v=3',
-  '/assets/pos-pizzeria.js?v=3',
-  '/assets/pos-traiteur.css?v=5',
-  '/assets/pos-traiteur.js?v=5',
-  '/assets/pos-foodtruck.css?v=5',
-  '/assets/pos-foodtruck.js?v=5',
-  '/assets/pos-epicerie.css?v=5',
-  '/assets/pos-epicerie.js?v=5',
-  '/assets/pos-pharmacie.css?v=5',
-  '/assets/pos-pharmacie.js?v=5',
-  '/assets/pos-librairie.css?v=5',
-  '/assets/pos-librairie.js?v=5',
-  '/assets/pos-fleuriste.css?v=7',
-  '/assets/pos-fleuriste.js?v=7',
-  '/assets/pos-coiffure.css?v=5',
-  '/assets/pos-coiffure.js?v=5',
-  '/assets/pos-gym.css?v=5',
-  '/assets/pos-gym.js?v=5',
+  '/assets/pos-spa.css?v=6',
+  '/assets/pos-spa.js?v=6',
+  '/assets/pos-hotel.css?v=16',
+  '/assets/pos-hotel.js?v=16',
+  '/assets/pos-fastfood.css?v=7',
+  '/assets/pos-fastfood.js?v=7',
+  '/assets/pos-boulangerie.css?v=8',
+  '/assets/pos-boulangerie.js?v=8',
+  '/assets/pos-pizzeria.css?v=4',
+  '/assets/pos-pizzeria.js?v=4',
+  '/assets/pos-traiteur.css?v=6',
+  '/assets/pos-traiteur.js?v=6',
+  '/assets/pos-foodtruck.css?v=6',
+  '/assets/pos-foodtruck.js?v=6',
+  '/assets/pos-epicerie.css?v=6',
+  '/assets/pos-epicerie.js?v=6',
+  '/assets/pos-pharmacie.css?v=6',
+  '/assets/pos-pharmacie.js?v=6',
+  '/assets/pos-librairie.css?v=6',
+  '/assets/pos-librairie.js?v=6',
+  '/assets/pos-fleuriste.css?v=8',
+  '/assets/pos-fleuriste.js?v=8',
+  '/assets/pos-coiffure.css?v=6',
+  '/assets/pos-coiffure.js?v=6',
+  '/assets/pos-gym.css?v=6',
+  '/assets/pos-gym.js?v=6',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=56',
-  '/assets/pos-maison.js?v=56',
+  '/assets/pos-maison.css?v=57',
+  '/assets/pos-maison.js?v=57',
   '/assets/caisse-pairing.js?v=26',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

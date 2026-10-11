@@ -162,5 +162,24 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
+/* C · cascade : bumper une verticale réécrit son rev DANS pos-dispatch.js ;
+   si le dispatcher est lui-même estampillé, il doit suivre dans le même run
+   (sinon il change de contenu en gardant son URL, et `--all` dit « rien »). */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-bump-'));
+  fixture(dir);
+  const w = (rel, txt) => fs.writeFileSync(path.join(dir, rel), txt);
+  w('kiwi-caisse.html', rd(dir, 'kiwi-caisse.html') + '<script src="assets/pos-dispatch.js?v=10"></script>\n');
+  w('kiwi-sw.js', rd(dir, 'kiwi-sw.js').replace("'/assets/procurement.js'", "'/assets/procurement.js','/assets/pos-dispatch.js?v=10','/assets/pos-boutique.js?v=3'"));
+  ok(run(dir, ['--sync']).status === 0, 'cascade · fixture scellée');
+  fs.appendFileSync(path.join(dir, 'assets/pos-boutique.js'), '// changed\n');
+  const r = run(dir, ['--all']);
+  ok(r.status === 0 && /rev: '4'/.test(rd(dir, 'assets/pos-dispatch.js')), 'cascade · le rev de la verticale avance');
+  ok(/pos-dispatch\.js\?v=11/.test(rd(dir, 'kiwi-caisse.html')) && /pos-dispatch\.js\?v=11/.test(rd(dir, 'kiwi-sw.js')), 'cascade · le dispatcher réécrit reçoit sa propre estampille');
+  const drift = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+  ok(drift.status === 0, 'cascade · stamp-drift vert après un seul --all');
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}
+
 console.log(`\n${failures.length ? '✗' : '✓'} ${passed} passed · ${failures.length} failed`);
 if (failures.length) { failures.forEach((f) => console.log(`  ✗ ${f}`)); process.exit(1); }

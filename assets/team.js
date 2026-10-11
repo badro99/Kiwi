@@ -885,6 +885,12 @@
    * team document (locks), and `at` decides between two devices: the later
    * validate or unlock wins, so an unlock is never undone by a merge. */
   if (!window.__kiwiTeamV2.locksByVenue) window.__kiwiTeamV2.locksByVenue = {};
+  /* Salariés supprimés, par établissement : [{ id, ts }]. La fusion est une
+   * UNION de membres, donc sans pierre tombale un salarié retiré ici revenait
+   * dès qu'une autre copie (le serveur, l'iPad du comptoir) le portait encore,
+   * et le serveur, qui refuse un document vide, ne pouvait jamais enregistrer la
+   * suppression du dernier salarié : il gardait son accès à l'app employé. */
+  if (!window.__kiwiTeamV2.removedByVenue) window.__kiwiTeamV2.removedByVenue = {};
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -1004,10 +1010,23 @@
           root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
           root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
           root.locksByVenue[k] = cleanLocks((raw.locksByVenue || {})[k]);
+          root.removedByVenue[k] = cleanRemoved((raw.removedByVenue || {})[k]);
         }
       });
     } catch (_) {}
   }
+  const REMOVED_CAP = 200;
+  function cleanRemoved(src) {
+    const byId = Object.create(null);
+    (Array.isArray(src) ? src : []).forEach((r) => {
+      const id = r && typeof r.id === 'string' ? r.id.slice(0, 96) : '';
+      if (!id) return;
+      const ts = Number(r.ts) || 0;
+      if (!byId[id] || ts > byId[id].ts) byId[id] = { id, ts };
+    });
+    return Object.keys(byId).map((id) => byId[id]).sort((a, b) => b.ts - a.ts).slice(0, REMOVED_CAP);
+  }
+  function mergeRemoved(a, b) { return cleanRemoved([].concat(a || [], b || [])); }
   const LOCK_KEY_RE = /^(week|fortnight|month):\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$/;
   function cleanLocks(src) {
     const out = {};
@@ -1030,7 +1049,7 @@
   function persistTeams() {
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {} };
+      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = root.byVenue[k];
@@ -1038,6 +1057,7 @@
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
           out.planningByVenue[k] = root.planningByVenue[k] || {};
           out.locksByVenue[k] = root.locksByVenue[k] || {};
+          out.removedByVenue[k] = root.removedByVenue[k] || [];
         }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
@@ -1120,12 +1140,16 @@
   }
   function scopeTeamDoc(doc, slug) {
     const src = doc || {};
+    const removed = cleanRemoved(src.removed);
+    const gone = Object.create(null);
+    removed.forEach((r) => { gone[r.id] = 1; });
     const members = (Array.isArray(src.members) ? src.members : [])
-      .filter((m) => memberBelongsToStore(m, slug));
+      .filter((m) => memberBelongsToStore(m, slug) && !(m && gone[m.id]));
     const alive = Object.create(null);
     members.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
     return {
       members,
+      removed,
       hours: mergeByDay(src.hours, null, alive),
       shifts: mergeByDay(src.shifts, null, alive),
       planning: window.KiwiPlanningCore?.normalize?.(src.planning, members) || src.planning || {},
@@ -1158,11 +1182,17 @@
     theirs = scopeTeamDoc(theirs, slug);
     const seen = Object.create(null);
     const members = [];
-    const take = (m) => { const id = m && m.id; if (!id || seen[id]) return; seen[id] = 1; members.push(m); };
+    /* Une suppression EST enregistrée : l'union ne ressuscite plus un salarié
+     * dont l'un des deux côtés porte la pierre tombale. */
+    const removed = mergeRemoved(mine && mine.removed, theirs && theirs.removed);
+    const gone = Object.create(null);
+    removed.forEach((r) => { gone[r.id] = 1; });
+    const take = (m) => { const id = m && m.id; if (!id || seen[id] || gone[id]) return; seen[id] = 1; members.push(m); };
     ((mine && mine.members) || []).forEach(take);
     ((theirs && theirs.members) || []).forEach(take);
     return {
       members,
+      removed,
       hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
       shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
       planning: window.KiwiPlanningCore?.merge?.(mine && mine.planning, theirs && theirs.planning, members) || mine.planning || theirs.planning || {},
@@ -1179,9 +1209,10 @@
       read: () => {
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
-        if (!k) return { members: [], hours: {}, shifts: {}, planning: {}, locks: {} };
+        if (!k) return { members: [], removed: [], hours: {}, shifts: {}, planning: {}, locks: {} };
         return scopeTeamDoc({
           members: root.byVenue[k] || [],
+          removed: root.removedByVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
           planning: root.planningByVenue[k] || {},
@@ -1194,6 +1225,7 @@
         const root = window.__kiwiTeamV2;
         const clean = scopeTeamDoc(doc, teamSlug());
         root.byVenue[k] = clean.members;
+        root.removedByVenue[k] = clean.removed;
         root.hoursByVenue[k] = clean.hours;
         root.shiftsByVenue[k] = clean.shifts;
         root.planningByVenue[k] = clean.planning;
@@ -1203,7 +1235,7 @@
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
       merge: mergeTeamDoc,
-      isEmpty: (d) => !d || !(d.members && d.members.length),
+      isEmpty: (d) => !d || !((d.members && d.members.length) || (d.removed && d.removed.length)),
       // Le roster vient d'arriver du serveur : la page ouverte doit le montrer,
       // sinon le commerçant regarde une équipe vide qui n'existe plus.
       onPulled: () => { if (pageActive) { try { render(); } catch (_) {} } },
@@ -2906,6 +2938,8 @@
     const removed = members.splice(idx, 1)[0];
     const h = window.__kiwiTeamV2.hoursByVenue[venueType] || {};
     delete h[id];
+    const root = window.__kiwiTeamV2;
+    root.removedByVenue[venueType] = mergeRemoved(root.removedByVenue[venueType], [{ id, ts: Date.now() }]);
     saveCustomTeams();
     if (window.__kiwiTeamConfirmModal) { try { window.__kiwiTeamConfirmModal.close(); } catch (_) {} window.__kiwiTeamConfirmModal = null; }
     if (window.__kiwiTeamProfileDrawer) { try { window.__kiwiTeamProfileDrawer.close(); } catch (_) {} window.__kiwiTeamProfileDrawer = null; }

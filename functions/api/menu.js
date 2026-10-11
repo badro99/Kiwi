@@ -30,6 +30,7 @@ import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } 
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
+import { merchantZone } from './_business-day.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const MENU_ALLERGENS = [
@@ -537,14 +538,19 @@ export async function onRequestGet(context) {
     return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, menuNutrition: false, suspended: true });
   }
 
-  const [orderpro, menuLangs, menuNutrition] = await Promise.all([
+  const [orderpro, menuLangs, menuNutrition, zone] = await Promise.all([
     orderProEnabled(env, merchant), menuLangsEnabled(env, merchant), menuNutritionEnabled(env, merchant),
+    merchantZone(env, merchant),
   ]);
   if (menu) menu = publicMenu(menu, menuNutrition);
   // A published-but-empty menu is treated as "nothing to show yet" too.
   if (menu && !(menu.items && menu.items.length)) menu = null;
   if (shop && !(shop.products && shop.products.length)) shop = null;
-  return json({ name, type, menu, shop, orderpro, menuLangs, menuNutrition });
+  /* `zone` : le fuseau du magasin (celui que sa caisse déclare). Les horaires
+   * publiés sont des heures MURALES du magasin ; la page client les comparait à
+   * l'horloge du téléphone, donc un client en voyage, ou un téléphone mal réglé,
+   * voyait « ouvert » un commerce fermé. */
+  return json({ name, type, menu, shop, orderpro, menuLangs, menuNutrition, zone });
 }
 
 export async function onRequestPost(context) {

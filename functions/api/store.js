@@ -519,6 +519,31 @@ async function isHotelMerchant(env, merchant) {
   }
 }
 
+/* Pierres tombales du document `team` : [{ id, ts }]. Le navigateur fusionne par
+ * UNION de membres, donc un appareil resté sur l'ancien roster (ou une version
+ * d'assets/team.js qui ignore `removed`) renvoyait le salarié supprimé, et le
+ * serveur le réinscrivait dans `employee-access` : la personne retirée gardait
+ * sa connexion à l'app employé. Le serveur garde donc l'union des deux listes et
+ * retire ces ids du roster entrant, quel que soit le client qui écrit. */
+function keepTeamTombstones(previous, incoming) {
+  if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return incoming;
+  const byId = new Map();
+  const add = (list) => (Array.isArray(list) ? list : []).forEach((r) => {
+    const id = r && typeof r.id === 'string' ? r.id.slice(0, 96) : '';
+    if (!id) return;
+    const ts = Number(r.ts) || 0;
+    if (!byId.has(id) || ts > byId.get(id).ts) byId.set(id, { id, ts });
+  });
+  add(previous && previous.removed);
+  add(incoming.removed);
+  if (!byId.size) return incoming;
+  const removed = [...byId.values()].sort((a, b) => b.ts - a.ts).slice(0, 200);
+  const gone = new Set(removed.map((r) => r.id));
+  const members = (Array.isArray(incoming.members) ? incoming.members : [])
+    .filter((m) => !(m && gone.has(String(m.id || ''))));
+  return { ...incoming, members, removed };
+}
+
 async function employeeAccessFromTeam(env, team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
   let previous = { members: [] };
@@ -744,6 +769,11 @@ export async function onRequestPost(context) {
        les deux lignes actives, et la même chambre partait deux fois. */
     const doubled = reservationOverlapConflict(mine, clean.value);
     if (doubled) return json({ error: 'resource-double-booked', feature, ...doubled }, 409);
+  }
+
+  if ('team' === feature) {
+    clean.value = keepTeamTombstones(mine, clean.value);
+    text = JSON.stringify(clean.value);
   }
 
   if (feature === HOTEL_UNITS_FEATURE) {

@@ -152,8 +152,20 @@
   const ITEM = {};
   CATALOG.forEach((r) => r.items.forEach((it) => { it.rayon = r.id; ITEM[it.id] = it; }));
   const RAYON = Object.fromEntries(CATALOG.map((r) => [r.id, r]));
-  const stockClass = (n) => (n <= 0 ? 'out' : n <= 3 ? 'low' : 'ok');
-  const stockLabel = (n) => (n <= 0 ? 'épuisé' : n <= 3 ? `${n} en stock` : `${n} en stock`);
+  /* Les « stock: 6 », « stock: 0 » du catalogue ci-dessus sont des chiffres de
+     DÉMO (aucune vente ne les décrémente jamais). Dans une vraie librairie ils
+     disaient « épuisé » sur des titres en rayon et « 6 en stock » sur des titres
+     absents, et l'autosave les écrivait dans sa fiche. Réel : stock NON SUIVI
+     (null), ni « épuisé » ni compteur. Attention : null <= 0 est vrai en JS,
+     d'où ces trois gardes au lieu de comparaisons nues. */
+  if (pvReal()) CATALOG.forEach((r) => r.items.forEach((it) => { it.stock = null; }));
+  const trk  = (n) => Number.isFinite(n);
+  const outOf  = (n) => trk(n) && n <= 0;
+  const haveOf = (n) => !trk(n) || n > 0;
+  const stockClass = (n) => (!trk(n) ? '' : n <= 0 ? 'out' : n <= 3 ? 'low' : 'ok');
+  const stockLabel = (n) => (trk(n) ? (n <= 0 ? 'épuisé' : `${n} en stock`) : 'stock non suivi');
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
 
   /* ───────────────────────── fidélité — 1 MAD = 1 point, palier –5 % ────────
      Le palier « fidèle » s'ouvre à 500 points : –5 % sur l'achat du jour. */
@@ -184,7 +196,7 @@
     retiree:  { label: 'Retiré',    short: 'remis au client', dot: 'var(--ink-4)', icon: 'check-check' },
   };
   const NOW = Date.now();
-  let cmdSeq = 318;
+  let cmdSeq = pvReal() ? 1 : 318;
   function mkCmd(cfg) {
     return {
       id: `C-${cfg.n}`, n: cfg.n,
@@ -222,7 +234,10 @@
      École → niveau → bundle. Chaque ligne pointe un item du catalogue (avec
      son stock réel) OU un item « hors-catalogue » défini inline (qui aura un
      drapeau « à commander » si besoin). Groupé manuels / cahiers / fournitures. */
-  const SCHOOLS = [
+  /* Réel : aucune liste. « G.S. Ibn Khaldoun » est une vraie école de Tanger dont
+     les listes, prix et stocks ci-dessous sont inventés ; l'onglet Listes
+     affichait un compteur de listes qui n'existent pas. Démo seulement. */
+  const SCHOOLS = pvReal() ? [] : [
     { id: 'ibnkhaldoun', name: 'G.S. Ibn Khaldoun', area: 'Tanger · Iberia',
       niveaux: [
         { id: 'cm2', label: 'CM2', groups: [
@@ -285,7 +300,7 @@
   }
 
   /* ───────────────────────── state ───────────────────────── */
-  let saleSeq = 4821;
+  let saleSeq = pvReal() ? 1 : 4821;    /* réel : la première vente est V-1, pas la 4821e */
   const state = {
     view: 'vente',
     rayon: 'tous',
@@ -303,11 +318,14 @@
   const librairieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'librairie',
     snapshot() {
-      return { catalog: CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
+      return { v: 2, catalog: CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
-      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      /* Une fiche v1 portait le catalogue de démo avec ses stocks inventés
+         (l'ancien autosave l'y avait écrit). Aucun éditeur de catalogue n'existe
+         ici : tout ce qui y différait du défaut venait de ce décor. On l'écarte. */
+      if (saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
       Object.keys(ITEM).forEach((id) => delete ITEM[id]);
       Object.keys(RAYON).forEach((id) => delete RAYON[id]);
       CATALOG.forEach((rayon) => {
@@ -332,6 +350,10 @@
   function queueIfOffline(label) {
     if (librairieOps) librairieOps.save(label);
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -397,7 +419,7 @@
           <button class="lb-nav-it" data-lb-view="clients"><i data-lucide="users"></i><span>Clients</span><b class="lb-nav-badge" id="lb-badge-cl"></b></button>
         </nav>
         <div class="lb-rail-foot">
-          <button class="lb-net" id="lb-net" title="Simuler une coupure réseau">
+          <button class="lb-net" id="lb-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="lb-net-dot"></i><span class="lb-net-label">En ligne</span>
           </button>
           <button class="lb-lock" id="lb-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -445,7 +467,20 @@
     });
     $('#lb-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#lb-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $('#lb-q', root).addEventListener('input', (e) => { state.query = e.target.value; renderGrid(); icons(); });
+    /* Entrée (la douchette en termine chaque lecture) : un seul titre qui
+       correspond, on ouvre sa fiche ; zéro, on le dit ; plusieurs, la grille
+       filtrée reste la réponse. */
+    $('#lb-q', root).addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const q = e.target.value.trim();
+      if (!q) return;
+      const hits = CATALOG.flatMap((r) => r.items).filter((it) => matchItem(it, q));
+      if (hits.length === 1) { e.target.value = ''; state.query = ''; renderGrid(); icons(); openSheet(hits[0].id); }
+      else if (!hits.length) toast(`Aucun titre pour « ${q} » ; vous pouvez le commander pour le client`);
+    });
     $('#lb-scan', root).addEventListener('click', openScan);
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
@@ -550,8 +585,8 @@
 
   function cardHTML(it, i) {
     const sc = stockClass(it.stock);
-    return `<button class="lb-card ${it.stock <= 0 ? 'is-out' : ''}" data-lb-item="${it.id}" style="--i:${i}">
-      <span class="lb-card-stock ${sc}">${it.stock <= 0 ? 'épuisé' : it.stock}</span>
+    return `<button class="lb-card ${outOf(it.stock) ? 'is-out' : ''}" data-lb-item="${it.id}" style="--i:${i}">
+      ${trk(it.stock) ? `<span class="lb-card-stock ${sc}">${it.stock <= 0 ? 'épuisé' : it.stock}</span>` : ''}
       <span class="lb-card-art">${ART[it.art] || ART.roman}</span>
       <span class="lb-card-name">${esc(it.title)}</span>
       <span class="lb-card-author">${esc(it.author || '')}</span>
@@ -664,7 +699,8 @@
     let qty = 1;
     const el = $('#lb-sheetm', root);
     const sc = stockClass(it.stock);
-    const stockLine = it.stock <= 0
+    const stockLine = !trk(it.stock) ? ''
+      : it.stock <= 0
       ? `<div class="lb-sheet-stockline out"><i data-lucide="truck"></i>Épuisé en rayon, proposez une <b>commande spéciale</b>.</div>`
       : it.stock <= 3
         ? `<div class="lb-sheet-stockline low"><i data-lucide="archive"></i>Plus que <b>${it.stock}</b> en rayon, à réassortir.</div>`
@@ -676,7 +712,7 @@
         <span class="lb-sheet-title">
           <h3>${esc(it.title)}</h3>
           <span class="sub">${esc(it.author || '')}${it.author ? ' · ' : ''}${esc(RAYON[it.rayon].label)}${it.flag ? ` · ${esc(it.flag)}` : ''}</span>
-          <span class="isbn">ISBN ${esc(it.isbn)}</span>
+          ${/x{3,}/i.test(it.isbn || '') ? '' : `<span class="isbn">ISBN ${esc(it.isbn)}</span>`}
         </span>
         <span class="lb-sheet-price"><span class="val">${fmtMAD(it.price)}</span></span>
       </div>
@@ -690,7 +726,7 @@
         </div>
       </div>
       <div class="lb-foot">
-        ${it.stock <= 0
+        ${outOf(it.stock)
           ? `<button class="lb-btn secondary" data-lb-close>Annuler</button>
              <button class="lb-btn primary" id="lb-sheet-order"><i data-lucide="truck"></i>Le commander pour le client</button>`
           : `<button class="lb-btn secondary" data-lb-close>Annuler</button>
@@ -750,7 +786,7 @@
                   <span class="lb-cl-name">${esc(c.name)} ${fidTier(c.points) ? '<span class="lb-fid-chip">−5 %</span>' : ''}</span>
                   <span class="lb-cl-sub">${esc(c.phone)}</span>
                 </span>
-                <span class="lb-cl-right"><b>${c.points} pts</b>${c.visits} achats</span>
+                <span class="lb-cl-right"><b>${c.points} pts</b>${c.visits} ${plu(c.visits, 'achat')}</span>
               </button>`).join('') || `<div class="lb-cempty">Aucun client pour « ${esc(q)} »</div>`}
           </div>
           ${hits.length === 1 ? recoPanel(hits[0]) : ''}
@@ -820,7 +856,7 @@
         ${c.note ? `<div class="lb-reco-row"><i data-lucide="heart"></i>${esc(c.note)}</div>` : ''}
         ${c.contact ? `<div class="lb-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
         ${openCmds.map((x) => `<div class="lb-reco-row"><i data-lucide="truck"></i><b>${x.id}</b> · ${esc(x.title)}, ${CMD_STATUS[x.status].label}</div>`).join('')}
-        <div class="lb-reco-row"><i data-lucide="star"></i><b>${pts} points</b> · ${c.visits} achats</div>
+        <div class="lb-reco-row"><i data-lucide="star"></i><b>${pts} ${plu(pts, 'point')}</b> · ${c.visits} ${plu(c.visits, 'achat')}</div>
       </div>
       <div class="lb-fid-gauge">
         <div class="lb-fid-bar"><i style="width:${tier ? 100 : pct}%"></i></div>
@@ -1358,7 +1394,7 @@
       <div class="lb-wa-bubblewrap">
         <div class="lb-wa-bubble">
           <textarea id="lb-wa-text">${esc(waMessage(c))}</textarea>
-          <div class="lb-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} ✓✓</div>
+          <div class="lb-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} · brouillon, non envoyé</div>
         </div>
       </div>
       <button class="lb-wa-cover" id="lb-wa-cover">
@@ -1422,7 +1458,7 @@
     return out;
   }
   function listTotal() {
-    return listLines().filter((r) => state.listChecked[r.key] !== false && r.stock > 0)
+    return listLines().filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock))
       .reduce((s, r) => s + r.price * r.qty, 0);
   }
   function listFullTotal() {
@@ -1481,7 +1517,7 @@
       if (addAll) addAll.onclick = addListToCart;
       const orderMissing = $('#lb-li-order-missing', body);
       if (orderMissing) orderMissing.onclick = () => {
-        const missing = listLines().filter((r) => r.stock <= 0);
+        const missing = listLines().filter((r) => outOf(r.stock));
         if (!missing.length) return;
         switchView('commandes');
         setTimeout(() => openNewCmd(missing[0].title, { isbn: '', price: missing[0].price }), 60);
@@ -1491,6 +1527,9 @@
   }
 
   function listEmptyHTML(a) {
+    if (!SCHOOLS.length) {
+      return `<div class="lb-li-empty"><i data-lucide="graduation-cap"></i><div>Aucune liste scolaire enregistrée.<br>Kiwi n’importe pas encore les listes de vos écoles : rien n’est affiché ici tant que vous n’en avez pas.</div></div>`;
+    }
     if (a && !a.niveau) {
       return `<div class="lb-li-empty"><i data-lucide="graduation-cap"></i><div>${esc(a.school.name)}<br>Choisissez un niveau dans la colonne de gauche.</div></div>`;
     }
@@ -1507,14 +1546,14 @@
     });
     const total = listTotal();
     const full = listFullTotal();
-    const missing = lines.filter((r) => r.stock <= 0);
-    const checkedCount = lines.filter((r) => state.listChecked[r.key] !== false && r.stock > 0).length;
-    const inStockCount = lines.filter((r) => r.stock > 0).length;
+    const missing = lines.filter((r) => outOf(r.stock));
+    const checkedCount = lines.filter((r) => state.listChecked[r.key] !== false && haveOf(r.stock)).length;
+    const inStockCount = lines.filter((r) => haveOf(r.stock)).length;
     return `
       <div class="lb-li-top">
         <div>
           <h2>${esc(a.school.name)} · ${esc(a.niveau.label)}</h2>
-          <div class="sub">${lines.length} fournitures · ${esc(a.school.area)}</div>
+          <div class="sub">${lines.length} ${plu(lines.length, 'article')} · ${esc(a.school.area)}</div>
         </div>
         <div class="lb-li-total"><div class="val">${fmtMAD(full)}</div><div class="lbl">liste complète</div></div>
       </div>
@@ -1537,7 +1576,7 @@
   }
 
   function listRowHTML(r) {
-    const out = r.stock <= 0;
+    const out = outOf(r.stock);
     const on = !out && state.listChecked[r.key] !== false;
     const sc = stockClass(r.stock);
     return `<div class="lb-li-row ${on ? 'on' : ''} ${out ? 'is-out' : ''}" ${out ? '' : `data-lb-toggle="${esc(r.key)}"`}>
@@ -1558,7 +1597,7 @@
     if (!a || !a.niveau) return;
     let added = 0, items = 0;
     listLines().forEach((r) => {
-      if (r.stock <= 0) return;
+      if (outOf(r.stock)) return;
       if (state.listChecked[r.key] === false) return;
       if (!r.itemId) return;        /* hors-catalogue : ignoré pour le panier (se commande) */
       addToCart(r.itemId, r.qty);
@@ -1632,7 +1671,7 @@
         <div class="lb-ccard-next">${tier ? '<b>Palier −5 % actif</b> sur chaque achat' : `<b>${toNext} pts</b> avant le palier −5 %`}</div>
       </div>
       <div class="lb-ccard-foot">
-        <span class="lb-ccard-stat"><i data-lucide="shopping-bag"></i>${c.visits} achats</span>
+        <span class="lb-ccard-stat"><i data-lucide="shopping-bag"></i>${c.visits} ${plu(c.visits, 'achat')}</span>
         ${openCmds ? `<span class="lb-ccard-stat"><i data-lucide="truck"></i>${openCmds} commande${openCmds > 1 ? 's' : ''}</span>` : ''}
         ${c.note ? `<span class="lb-ccard-stat"><i data-lucide="heart"></i>${esc(c.note)}</span>` : ''}
         ${arrived ? `<button class="lb-pill wa" data-lb-cwa="${c.id}" style="cursor:pointer;"><i data-lucide="message-circle"></i>prévenir, arrivé</button>` : ''}
@@ -1642,8 +1681,19 @@
 
   /* ═══════════════════════ SCAN / ISBN ═══════════════════════ */
   function openScan() {
+    /* Réel : l'animation ci-dessous tirait un livre AU HASARD dans le catalogue et
+       affichait « ISBN lu, <titre> » sans rien lire. La douchette USB tape le
+       code dans le champ de recherche (qui comprend l'ISBN) ; on l'active, et la
+       touche Entrée ouvre la fiche si un seul titre correspond. */
+    if (pvReal()) {
+      const q = $('#lb-q', root);
+      switchView('vente');
+      if (q) { q.focus(); q.select(); }
+      toast('Champ actif, scannez avec la douchette ou tapez l’ISBN, puis Entrée');
+      return;
+    }
     /* pick a plausible in-rayon hit to "resolve" to */
-    const pool = CATALOG.flatMap((r) => r.items).filter((it) => it.stock > 0);
+    const pool = CATALOG.flatMap((r) => r.items).filter((it) => haveOf(it.stock));
     const target = pool[Math.floor(Math.random() * pool.length)];
     const el = $('#lb-scanm', root);
     el.innerHTML = `
@@ -1668,7 +1718,21 @@
   }
 
   /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline) {
       if (state.queued) {
@@ -1685,15 +1749,15 @@
   function renderNet() {
     const net = $('#lb-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.lb-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.lb-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.lb-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'lb-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#lb-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#lb-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

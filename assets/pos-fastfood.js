@@ -318,6 +318,36 @@
       ] }),
   ];
 
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
+  /* « le n°1 », « broche du jour » : des affirmations que le commerçant n'a pas
+     faites. Réel : on n'affiche que les mentions descriptives. */
+  const flagOf = (it) => ((pvReal() && /n°1|du jour|classique/i.test(it.flag || '')) ? '' : (it.flag || ''));
+  /* Heure du COMMERCE (Casablanca), pas celle de l'appareil. */
+  const casaSlot = (ts) => {
+    try {
+      const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(ts));
+      const h = +(p.find((x) => x.type === 'hour') || {}).value % 24, m = +(p.find((x) => x.type === 'minute') || {}).value;
+      return h * 2 + (m >= 30 ? 1 : 0);
+    } catch (_) { const d = new Date(ts); return d.getHours() * 2 + (d.getMinutes() >= 30 ? 1 : 0); }
+  };
+  /* « Commandes / heure » : en réel chaque commande tombait dans la dernière barre,
+     étiquetée « 13h » quelle que soit l'heure (le tableau n'avait que les sept
+     créneaux de la démo, 10h à 13h), et le pied de page affirmait « le pic était
+     à 12h30 ». Réel : les barres viennent des horaires des ventes du journal du
+     jour, par demi-heure, jusqu'au créneau en cours. */
+  function hoursFromSales() {
+    let sales = [];
+    try { sales = (window.KiwiPosSale && window.KiwiPosSale.today('fastfood')) || []; } catch (_) {}
+    const nowSlot = casaSlot(Date.now());
+    const cnt = {};
+    let first = nowSlot;
+    sales.forEach((sale) => { const k = casaSlot(sale.ts); cnt[k] = (cnt[k] || 0) + 1; if (k < first) first = k; });
+    const out = [];
+    for (let k = Math.max(first, nowSlot - 11); k <= nowSlot; k++) out.push({ t: `${Math.floor(k / 2)}h${k % 2 ? '30' : ''}`, n: cnt[k] || 0, now: k === nowSlot });
+    return out;
+  }
+
   /* le service en chiffres — vit avec chaque vente (coup de feu + caisse) */
   /* invariant tenu : especes + carte + glovo + soldes dus = revenue */
   const tally = pvReal() ? {
@@ -370,6 +400,10 @@
   function queueIfOffline(label) {
     fastfoodOps?.save?.(label || 'operation');
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -444,7 +478,7 @@
           <button class="ff-nav-it" data-ff-view="rush"><i data-lucide="flame"></i><span>Coup de feu</span></button>
         </nav>
         <div class="ff-rail-foot">
-          <button class="ff-net" id="ff-net" title="Simuler une coupure réseau">
+          <button class="ff-net" id="ff-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="ff-net-dot"></i><span class="ff-net-label">En ligne</span>
           </button>
           <button class="ff-lock" id="ff-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -481,6 +515,7 @@
     });
     $('#ff-lock').addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#ff-net').addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
@@ -512,7 +547,7 @@
   }
   function renderClock() {
     const el = $('#ff-today');
-    if (el) el.textContent = `${fmtDT(new Date())}, service du midi`;
+    if (el) el.textContent = pvReal() ? fmtDT(new Date()) : `${fmtDT(new Date())}, service du midi`;
   }
   function refreshOps() {
     renderBadges();
@@ -541,7 +576,7 @@
           <span class="ff-card-art">${ART[it.id] || ''}</span>
           <span class="ff-card-name">${esc(it.label)}</span>
           <span class="ff-card-price">dès ${minPrice(it)} MAD${it.combo ? ' · menu +15' : ''}</span>
-          ${it.flag ? `<span class="ff-card-flag">${esc(it.flag)}</span>` : ''}
+          ${flagOf(it) ? `<span class="ff-card-flag">${esc(flagOf(it))}</span>` : ''}
         </button>`).join('')}
       </div>`).join('');
     $('#ff-gridwrap').onclick = (e) => {
@@ -588,7 +623,7 @@
       </div>
       <div class="ff-tk-foot">
         <div class="ff-tk-tot">
-          <span class="pcs"><i data-lucide="clipboard-list"></i> ${count} article${count > 1 ? 's' : ''}</span>
+          <span class="pcs"><i data-lucide="clipboard-list"></i> ${count} ${plu(count, 'article')}</span>
           ${menus ? `<span>${menus} menu${menus > 1 ? 's' : ''} · +${fmtMAD(menus * COMBO_PRICE)}</span>` : ''}
         </div>
         <div class="ff-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
@@ -686,7 +721,7 @@
       <button class="ff-modal-x" data-ff-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="ff-sheet-head">
         <span class="ff-sheet-art">${ART[item.id] || ''}</span>
-        <span class="ff-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATS.find((c) => c.id === item.cat).label)}${item.flag ? ` · ${esc(item.flag)}` : ''}</span></span>
+        <span class="ff-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATS.find((c) => c.id === item.cat).label)}${flagOf(item) ? ` · ${esc(flagOf(item))}` : ''}</span></span>
         <span class="ff-sheet-price"><span class="val" id="ff-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per" id="ff-sheet-per">${unit} MAD × ${sheet.qty}</span></span>
       </div>
 
@@ -836,8 +871,7 @@
       tally.items[l.itemId] = (tally.items[l.itemId] || 0) + l.qty;
       if (l.combo) tally.menus += l.qty;
     });
-    const hb = tally.hours[tally.hours.length - 1];
-    hb.n++;
+    if (!pvReal()) { const hb = tally.hours[tally.hours.length - 1]; hb.n++; }
     freshTicket();
     renderTicket();
     renderBadges();
@@ -1382,7 +1416,9 @@
   /* ═══════════════════════ COUP DE FEU ═══════════════════════ */
   function renderRush() {
     const panel = $('[data-ff-panel="rush"]');
-    const maxH = Math.max(...tally.hours.map((h) => h.n), 1);
+    const hours = pvReal() ? hoursFromSales() : tally.hours;
+    const maxH = Math.max(...hours.map((h) => h.n), 1);
+    const peak = hours.reduce((b, h) => (h.n > b.n ? h : b), { n: 0 });
     const panier = tally.orders ? Math.round(tally.revenue / tally.orders) : 0;
     const menuRate = tally.orders ? Math.round((tally.menus / tally.orders) * 100) : 0;
     const top = Object.entries(tally.items)
@@ -1391,28 +1427,28 @@
     panel.innerHTML = `
       <div class="ff-rush">
         <header class="ff-head">
-          <div><h1>Coup de feu</h1><div class="ff-head-sub">Service du midi · ${tally.orders} commandes depuis l’ouverture · prochain nº ${state.seq}</div></div>
+          <div><h1>Coup de feu</h1><div class="ff-head-sub">${pvReal() ? 'Service en cours' : 'Service du midi'} · ${tally.orders} ${plu(tally.orders, 'commande')} depuis l’ouverture · prochain nº ${state.seq}</div></div>
           <div class="ff-head-hint">Les chiffres bougent à chaque vente</div>
         </header>
         <div class="ff-rush-grid">
           <div class="ff-panel">
             <div class="ff-panel-h">Commandes / heure <span class="hint">· par demi-heure</span></div>
             <div class="ff-bars">
-              ${tally.hours.map((h, i) => `
+              ${hours.map((h, i) => `
                 <div class="ff-barcol ${h.now ? 'now' : ''}">
                   <span class="ff-bar-n">${h.n}</span>
                   <div class="ff-bar ${h.now ? 'now' : ''}" style="height:${Math.max(5, Math.round((h.n / maxH) * 100))}%;--i:${i}"></div>
                   <span class="ff-bar-t">${esc(h.t)}</span>
                 </div>`).join('')}
             </div>
-            <div class="ff-bars-foot"><i></i>demi-heure en cours, le pic était à 12h30</div>
+            <div class="ff-bars-foot"><i></i>demi-heure en cours${pvReal() ? (peak.n ? `, le pic est à ${esc(peak.t)}` : '') : ', le pic était à 12h30'}</div>
           </div>
           <div class="ff-rush-side">
             <div class="ff-kpi-row">
               <div class="ff-kpi">
                 <div class="lbl">Panier moyen</div>
                 <div class="val">${fmtMAD(panier)}</div>
-                <div class="sub">${fmtMAD(tally.revenue)} de CA ce midi</div>
+                <div class="sub">${fmtMAD(tally.revenue)} de CA ${pvReal() ? 'aujourd’hui' : 'ce midi'}</div>
               </div>
               <div class="ff-kpi">
                 <div class="lbl">Commandes</div>
@@ -1424,12 +1460,12 @@
                 <div>
                   <div class="lbl">Taux de menu, l’upsell qui paie</div>
                   <div class="val">${menuRate} %</div>
-                  <div class="sub">${tally.menus} menus × +${COMBO_PRICE} MAD = +${fmtMAD(tally.menus * COMBO_PRICE)} ce midi</div>
+                  <div class="sub">${tally.menus} ${plu(tally.menus, 'menu')} × +${COMBO_PRICE} MAD = +${fmtMAD(tally.menus * COMBO_PRICE)} ${pvReal() ? 'aujourd’hui' : 'ce midi'}</div>
                 </div>
               </div>
             </div>
             <div class="ff-panel">
-              <div class="ff-panel-h">Top 3 du midi</div>
+              <div class="ff-panel-h">${pvReal() ? 'Top 3 du jour' : 'Top 3 du midi'}</div>
               <div class="ff-top">
                 ${top.map(([id, n], i) => `
                   <div class="ff-top-row">
@@ -1450,7 +1486,21 @@
   }
 
   /* ═══════════════════════ HORS-LIGNE (file simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
       toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
@@ -1465,15 +1515,15 @@
   function renderNet() {
     const net = $('#ff-net');
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.ff-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.ff-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.ff-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'ff-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#ff-offline-note');
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#ff-queue-count').textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

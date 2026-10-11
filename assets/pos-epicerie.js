@@ -34,7 +34,10 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Un ticket de 3,60 MAD (3 khobz à 1,20) s'affichait « 4 MAD » : fmtMAD arrondissait à
+     l'unité alors que la caisse encaisse le montant exact. Les centimes comptent dans un
+     hanout ; fmtMAD2 les garde dès qu'il y en a, fmtMAD n'est plus qu'un alias. */
+  const fmtMAD = (n) => fmtMAD2(n);
   /* prix au poids → 2 décimales, virgule française */
   const fmtMAD2 = (n) => {
     const r = Math.round(n * 100) / 100;
@@ -183,6 +186,15 @@
     ITEMS[it.id] = it;
     if (it.ean) BY_EAN[it.ean] = it;
   }));
+  /* Les « stock: 3, reorder: 12 » du catalogue sont des chiffres de DÉMO. Dans une
+     vraie épicerie, « Coca-Cola : bientôt épuisé, 3 en rayon » l'envoyait
+     réassortir un produit qu'elle avait peut-être en réserve, et le premier
+     encaissement écrivait ces stocks dans sa fiche (autosave). Réel : stock
+     NON SUIVI (null, comme les recharges, déjà traitées ainsi par le module) ;
+     la liste de réassort se compose alors à la main depuis tout le catalogue. */
+  if (pvReal()) CATALOG.forEach((c) => c.items.forEach((it) => { it.stock = null; }));
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
   const isWeigh = (it) => it.unit === 'weigh';
   const isUnit  = (it) => it.unit === 'piece';
   const stockItems = () => Object.values(ITEMS).filter((it) => typeof it.stock === 'number');
@@ -302,7 +314,7 @@
   reconcileDay();
 
   /* ───────────────────────── state ───────────────────────── */
-  let ticketSeq = 642;
+  let ticketSeq = pvReal() ? 1 : 642;   /* réel : le premier ticket est T-1, pas le 642e */
   try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('epicerie', ticketSeq); } catch (_) {}
   const state = {
     view: 'caisse',
@@ -321,6 +333,7 @@
     vertical: 'epicerie',
     snapshot() {
       return {
+        v: 2,
         catalog: CATALOG,
         carnet: CARNET,
         day,
@@ -332,7 +345,9 @@
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
-      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      /* Fiche v1 : catalogue de démo avec ses stocks inventés, écrit par l'ancien
+         autosave. Aucun éditeur de catalogue ici : on l'écarte. */
+      if (saved.v >= 2 && Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
       Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
       Object.keys(BY_EAN).forEach((ean) => delete BY_EAN[ean]);
       CATALOG.forEach((c) => c.items.forEach((it) => {
@@ -361,6 +376,10 @@
   function queueIfOffline(label) {
     if (epicerieOps) epicerieOps.save(label);
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -399,7 +418,7 @@
           <button class="ep-nav-it" data-ep-view="journee"><i data-lucide="trending-up"></i><span>Journée</span></button>
         </nav>
         <div class="ep-rail-foot">
-          <button class="ep-net" id="ep-net" title="Simuler une coupure réseau">
+          <button class="ep-net" id="ep-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="ep-net-dot"></i><span class="ep-net-label">En ligne</span>
           </button>
           <button class="ep-lock" id="ep-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -445,6 +464,7 @@
     });
     $('#ep-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#ep-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
@@ -641,12 +661,12 @@
             </div>
             <div style="font-weight:600; font-size:14px; color:var(--ink);">Le ticket est vide.</div>
             <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Scannez un produit, ou touchez-le dans la grille.</div>
-            <div class="ep-empty-hint">essayez « Scanner » pour la démo</div>
+            ${pvReal() ? '' : '<div class="ep-empty-hint">essayez « Scanner » pour la démo</div>'}
           </div>`}
       </div>
       <div class="ep-tk-foot">
         <div class="ep-tk-tot">
-          <span class="pcs"><i data-lucide="shopping-cart"></i> ${count} article${count > 1 ? 's' : ''}</span>
+          <span class="pcs"><i data-lucide="shopping-cart"></i> ${count} ${plu(count, 'article')}</span>
           ${t.lines.length ? '<span>espèces · carte · ardoise</span>' : ''}
         </div>
         <div class="ep-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD2(total)}</span></div>
@@ -1107,7 +1127,7 @@
           </div>
           <div class="ep-carnet-scroll">
             <div class="ep-carnet-grid">
-              ${list.map(ardoiseCard).join('') || `<div class="ep-sr-empty" style="grid-column:1/-1;">Aucun voisin pour « ${esc(state.carnetQuery)} ».</div>`}
+              ${list.map(ardoiseCard).join('') || `<div class="ep-sr-empty" style="grid-column:1/-1;">${state.carnetQuery ? `Aucun voisin pour « ${esc(state.carnetQuery)} ».` : 'Le carnet est vide, personne n’a de crédit en cours.'}</div>`}
             </div>
           </div>
         </div>
@@ -1420,6 +1440,9 @@
     const out = items.filter((it) => it.stock <= 0);
     const low = items.filter((it) => it.stock > 0 && it.stock <= it.reorder);
     const ok = items.filter((it) => it.stock > it.reorder);
+    /* Réel : tout le catalogue est « non suivi » ; on le liste pour pouvoir y
+       piocher la liste de réassort (les recharges ne se stockent pas). */
+    const untracked = Object.values(ITEMS).filter((it) => typeof it.stock !== 'number' && !it.telco);
     const reassortCount = Object.keys(state.reassort).filter((k) => state.reassort[k] > 0).length;
     panel.innerHTML = `
       <div class="ep-stock">
@@ -1434,14 +1457,17 @@
             ${low.length ? `
               <div class="ep-stock-sec-head alert"><i data-lucide="package"></i>Bientôt épuisé <span class="ct">${low.length}</span></div>
               <div class="ep-stock-grid">${low.map(stkCard).join('')}</div>` : ''}
-            <div class="ep-stock-sec-head"><i data-lucide="check-circle-2"></i>Bien approvisionné <span class="ct">${ok.length}</span></div>
-            <div class="ep-stock-grid">${ok.map(stkCard).join('')}</div>
+            ${items.length ? `<div class="ep-stock-sec-head"><i data-lucide="check-circle-2"></i>Bien approvisionné <span class="ct">${ok.length}</span></div>
+            <div class="ep-stock-grid">${ok.map(stkCard).join('')}</div>` : ''}
+            ${untracked.length ? `<div class="ep-stock-sec-head"><i data-lucide="package"></i>Stock non suivi <span class="ct">${untracked.length}</span></div>
+            <div class="ep-reassort-empty" style="margin:0 0 12px;"><div>Kiwi ne connaît pas encore vos quantités en rayon, rien n’est annoncé « bientôt épuisé ». Touchez « + » sur ce qu’il vous faut commander.</div></div>
+            <div class="ep-stock-grid">${untracked.map(stkCard).join('')}</div>` : ''}
           </div>
         </div>
         <aside class="ep-reassort">
           <div class="ep-reassort-head">
             <h2><i data-lucide="truck"></i>Liste de réassort</h2>
-            <div class="sub">${pvReal() ? 'Pour le passage' : 'Pour Si Brahim quand il va'} au grossiste du Souk. Ajoutez ce qui manque.</div>
+            <div class="sub">${pvReal() ? 'Pour votre prochain passage chez le grossiste.' : 'Pour Si Brahim quand il va au grossiste du Souk.'} Ajoutez ce qui manque.</div>
           </div>
           <div class="ep-reassort-list" id="ep-reassort-list">
             ${reassortCount ? Object.keys(state.reassort).filter((k) => state.reassort[k] > 0).map(reassortRow).join('') : `
@@ -1483,8 +1509,13 @@
       let message = ['Bonjour,', 'Liste de réassort', ...lines.map((line) => `• ${line.name} · ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
       let order = null;
       if (P) {
-        let supplier = P.doc().suppliers.find((row) => row.name === 'Grossiste du Souk');
-        if (!supplier) supplier = P.addSupplier({ name: 'Grossiste du Souk' });
+        /* « Grossiste du Souk » est celui de la démo. Réel : on n'invente aucun
+           fournisseur dans le carnet de l'épicerie ; le bon se rattache au sien
+           s'il en a un, sinon le texte est seulement copié. */
+        let supplier = pvReal()
+          ? ((P.doc().suppliers || [])[0] || null)
+          : P.doc().suppliers.find((row) => row.name === 'Grossiste du Souk');
+        if (!supplier && !pvReal()) supplier = P.addSupplier({ name: 'Grossiste du Souk' });
         if (P.isUltra() && supplier) {
           order = P.createOrder({ supplierId: supplier.id, lines, note: 'Liste de réassort épicerie à confirmer' });
           if (order && !order.error) message = P.message(order.id) || message;
@@ -1493,8 +1524,8 @@
       navigator.clipboard?.writeText?.(message).catch(() => {});
       queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste de réassort');
       toast(order && !order.error
-        ? `${order.number} créé en brouillon, texte copié · ${n} référence${n > 1 ? 's' : ''}`
-        : `Liste de réassort copiée · ${n} référence${n > 1 ? 's' : ''}`);
+        ? `${order.number} créé en brouillon, texte copié · ${n} ${plu(n, 'référence')}`
+        : `Liste de réassort copiée · ${n} ${plu(n, 'référence')}`);
       renderStock(); icons();
     };
     const clear = $('#ep-reassort-clear', panel);
@@ -1503,15 +1534,16 @@
   }
 
   function stkCard(it) {
-    const out = it.stock <= 0;
-    const low = it.stock > 0 && it.stock <= it.reorder;
+    const known = typeof it.stock === 'number';
+    const out = known && it.stock <= 0;
+    const low = known && it.stock > 0 && it.stock <= it.reorder;
     const queued = (state.reassort[it.id] || 0) > 0;
-    const unitTxt = isWeigh(it) ? `${fmtKg(it.stock)} kg` : isUnit(it) ? `${it.stock} à l'unité` : `${it.stock} en rayon`;
+    const unitTxt = !known ? 'non suivi' : isWeigh(it) ? `${fmtKg(it.stock)} kg` : isUnit(it) ? `${it.stock} à l'unité` : `${it.stock} en rayon`;
     return `<div class="ep-stk ${out ? 'out' : low ? 'alert' : ''} ${queued ? 'queued' : ''}">
       <span class="ep-stk-art">${ART[it.art] || ''}</span>
       <span class="ep-stk-mid">
         <span class="ep-stk-name">${esc(it.label)}</span>
-        <span class="ep-stk-reste ${out ? 'out' : low ? 'low' : ''}">reste ${esc(unitTxt)}${low && !out ? ` · seuil ${it.reorder}` : ''}</span>
+        <span class="ep-stk-reste ${out ? 'out' : low ? 'low' : ''}">${known ? 'reste ' : 'stock '}${esc(unitTxt)}${low && !out ? ` · seuil ${it.reorder}` : ''}</span>
       </span>
       <button class="ep-stk-add" data-ep-stk-add="${it.id}" title="${queued ? 'Déjà sur la liste' : 'Ajouter au réassort'}">
         <i data-lucide="${queued ? 'check' : 'plus'}"></i>
@@ -1526,7 +1558,7 @@
       <span class="ep-rl-art">${ART[it.art] || ''}</span>
       <span class="ep-rl-mid">
         <span class="ep-rl-name">${esc(it.label)}</span>
-        <span class="ep-rl-sub">reste ${isWeigh(it) ? fmtKg(it.stock) + ' kg' : it.stock}</span>
+        <span class="ep-rl-sub">${typeof it.stock !== 'number' ? 'stock non suivi' : `reste ${isWeigh(it) ? fmtKg(it.stock) + ' kg' : it.stock}`}</span>
       </span>
       <span class="ep-rl-qty">
         <button data-ep-rs-minus="${id}" aria-label="Moins">−</button>
@@ -1538,7 +1570,7 @@
 
   function toggleReassort(id) {
     if ((state.reassort[id] || 0) > 0) { delete state.reassort[id]; toast(`${ITEMS[id].label} retiré du réassort`); }
-    else { state.reassort[id] = ITEMS[id].reorder ? Math.max(1, ITEMS[id].reorder) : 6; toast(`${ITEMS[id].label} ajouté au réassort`); }
+    else { state.reassort[id] = ITEMS[id].reorder ? Math.max(1, ITEMS[id].reorder) : 6;   /* quantité de départ, modifiable avec − et + */ toast(`${ITEMS[id].label} ajouté au réassort`); }
     renderStock(); icons();
   }
 
@@ -1560,12 +1592,12 @@
             <div class="ep-jr-stat">
               <div class="ep-jr-stat-lbl"><i data-lucide="banknote"></i>Recette encaissée</div>
               <div class="ep-jr-stat-val">${fmtMAD(recette)}</div>
-              <div class="ep-jr-stat-foot">${day.tickets} tickets aujourd'hui</div>
+              <div class="ep-jr-stat-foot">${day.tickets} ${plu(day.tickets, 'ticket')} aujourd'hui</div>
             </div>
             <div class="ep-jr-stat hero">
               <div class="ep-jr-stat-lbl"><i data-lucide="notebook"></i>Crédit en cours dehors</div>
               <div class="ep-jr-stat-val">${fmtMAD(credit)}</div>
-              <div class="ep-jr-stat-foot">${debtors.length} voisin${debtors.length > 1 ? 's' : ''} · +${fmtMAD(day.creditAdded)} mis aujourd'hui</div>
+              <div class="ep-jr-stat-foot">${debtors.length} ${plu(debtors.length, 'voisin')} · +${fmtMAD(day.creditAdded)} mis aujourd'hui</div>
             </div>
             <div class="ep-jr-stat">
               <div class="ep-jr-stat-lbl"><i data-lucide="wallet"></i>Caisse + à recouvrer</div>
@@ -1634,7 +1666,21 @@
   }
 
   /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
       toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
@@ -1647,15 +1693,15 @@
   function renderNet() {
     const net = $('#ep-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.ep-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.ep-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.ep-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'ep-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#ep-offline-note', root);
-    if (note) { note.hidden = !state.offline; $('#ep-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : ''; }
+    if (note) { note.hidden = !state.offline && !state.syncBlocked; $('#ep-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : ''; }
   }
 
   /* ═══════════════════════ REGISTER ═══════════════════════ */

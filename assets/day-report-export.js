@@ -141,7 +141,7 @@
     (list || []).forEach(function (s) {
       var ts = +(s && (s.ts != null ? s.ts : s.time));
       if (!ts || ts < b.from || ts >= b.to) return;
-      var id = String(s.id || s.ref || (ts + ':' + num(s.amount != null ? s.amount : s.total)));
+      var id = String(s.id || s.saleId || s.ref || (ts + ':' + num(s.amount != null ? s.amount : s.total)));
       if (seen[id]) return; seen[id] = 1;
       out.push({
         id: id, ref: String(s.ref || s.id || ''), ts: ts,

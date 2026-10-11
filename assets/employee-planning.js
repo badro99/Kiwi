@@ -180,6 +180,23 @@
   });
   if (typeof MutationObserver === 'function') new MutationObserver(() => render()).observe(document.documentElement, {attributes:true, attributeFilter:['lang']});
   document.addEventListener('kiwi-employee-authenticated', refresh);
+  /* La carte ne se rafraîchissait que sur ses propres actions et au changement
+   * de jour. Le sondage du service (et chaque pointage) relit pourtant /api/employee
+   * toutes les quelques secondes : la décision du patron (congé approuvé, planning
+   * publié, échange accepté) arrivait dans l'app sans jamais atteindre cette carte,
+   * qui continuait d'afficher « 0 demande » jusqu'à un rechargement. On se branche
+   * sur la lecture qui a déjà eu lieu au lieu d'en refaire une. */
+  document.addEventListener('kiwi-employee-data', (event) => {
+    if (!event.detail || !event.detail.employee) return;
+    lastData = event.detail; mount(); render();
+  });
+  /* Hors service (« Consulter sans pointer ») rien ne sonde : au retour dans
+   * l'app, on relit, au plus une fois toutes les 30 s. */
+  let lastVisibleRead = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !lastData || Date.now() - lastVisibleRead < 30000) return;
+    lastVisibleRead = Date.now(); refresh();
+  });
   window.addEventListener('load', () => { mount(); refresh(); });
   function redrawOnDayChange() {
     if (!lastData || renderedDay === todayKey()) return;

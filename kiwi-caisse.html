@@ -92,7 +92,7 @@
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=12" defer></script>
   <script src="assets/printer-bridge.js?v=19" defer></script>
-  <script src="assets/caisse-hardware.js?v=4" defer></script>
+  <script src="assets/caisse-hardware.js?v=5" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
@@ -127,13 +127,13 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=16" defer></script>
+  <script src="assets/caisse-lang.js?v=17" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=72" defer></script>
+  <script src="assets/pos-dispatch.js?v=74" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -1299,6 +1299,15 @@
       user-select: none;
     }
     .menu-item:hover { background: var(--wash); transform: translateY(-1px); }
+    .menu-item.is-86 { opacity: .5; cursor: not-allowed; }
+    .menu-item.is-86:hover, .menu-item.is-86:active { background: var(--paper-mute); transform: none; }
+    .menu-item.is-86 .menu-item-art { filter: grayscale(1); }
+    .menu-item.is-86 .menu-item-name, .menu-item.is-86 .menu-item-price { text-decoration: line-through; color: var(--ink-3); }
+    .menu-item-86 {
+      position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      background: var(--ink-bg, #0A0F0D); color: var(--paper, #F7F5F0);
+    }
     .menu-item:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .menu-item:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
     .menu-item-art {
@@ -2261,6 +2270,7 @@
       transition: opacity 240ms ease;
     }
     .modal-foot.is-visible { opacity: 1; }
+    .modal-foot [hidden] { display: none; }
     .modal-foot a, .modal-foot button, .modal-foot-btn {
       min-height: 46px;
       min-width: 140px;
@@ -3113,6 +3123,13 @@
       animation: ci-float-open 220ms cubic-bezier(0.32, 0.72, 0, 1);
     }
     .clockin-float-custom[hidden] { display: none; }
+    .ci-float-last {
+      font-size: 12px; color: rgba(255,255,255,0.6); background: none; border: 0;
+      padding: 4px 8px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+    }
+    .ci-float-last:hover { color: #fff; }
+    .ci-float-last[hidden], .ci-float-err[hidden] { display: none; }
+    .ci-float-err { font-size: 12px; color: var(--mint); max-width: 320px; text-align: center; line-height: 1.4; }
     .clockin-float-custom:focus-within {
       border-color: var(--mint); background: rgba(125,242,176,0.08);
     }
@@ -5604,13 +5621,13 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=20" defer></script>
+  <script src="assets/day-report.js?v=21" defer></script>
   <script src="assets/z-reconciliation.js?v=25" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
-  <script src="assets/vertical-state.js?v=1" defer></script>
+  <script src="assets/vertical-state.js?v=2" defer></script>
   <script src="assets/image-proof.js?v=1" defer></script>
   <script src="assets/operational-print.js?v=1" defer></script>
   <script src="assets/inventory-ledger.js?v=12" defer></script>
@@ -5625,7 +5642,7 @@
        dérogation nommée, et la journée commerciale du Z suit l'heure de
        fermeture réelle au lieu d'un seuil fixe. Après venue-store.js, dont il
        tient sa fiche par établissement. -->
-  <script src="assets/hours.js?v=3" defer></script>
+  <script src="assets/hours.js?v=4" defer></script>
   <!-- Le reçu. La caisse ne fabrique plus le sien : elle demande celui que le
        propriétaire a réglé sur le tableau de bord · mentions légales comprises,
        qu'elle n'avait aucun moyen de connaître avant (elle imprimait un ICE de
@@ -5637,7 +5654,7 @@
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=4" defer></script>
-  <script src="assets/inventory-consumption.js?v=12" defer></script>
+  <script src="assets/inventory-consumption.js?v=13" defer></script>
   <script src="assets/procurement.js?v=4" defer></script>
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
@@ -5655,7 +5672,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=30" defer></script>
+  <script src="assets/orderpro-inbox.js?v=31" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=6" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -5737,7 +5754,7 @@
         <span class="clockin-float-label">Fond d'ouverture</span>
         <div class="clockin-float-chips" id="ci-float-chips">
           <button class="ci-float-chip" data-float="300">300 MAD</button>
-          <button class="ci-float-chip is-active" data-float="500">500 MAD</button>
+          <button class="ci-float-chip" data-float="500">500 MAD</button>
           <button class="ci-float-chip" data-float="1000">1 000 MAD</button>
           <!-- Trois montants ronds ne sont que les trois plus fréquents, pas la
                liste des fonds possibles : un patron ouvre avec ce qu'il a dans le
@@ -5750,6 +5767,11 @@
                  aria-label="Fond d'ouverture, montant libre en dirhams">
           <span class="ci-float-cur" aria-hidden="true">MAD</span>
         </div>
+        <!-- Sur un vrai commerce rien n'est présélectionné : le fond est ce que
+             le caissier a COMPTÉ dans le tiroir. Le dernier fond saisi n'est
+             qu'un raccourci à toucher, jamais une valeur prise d'office. -->
+        <button type="button" class="ci-float-last" id="ci-float-last" hidden></button>
+        <div class="ci-float-err" id="ci-float-err" role="alert" hidden>Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
       </div>
     </div>
     <div class="clockin-bottom">
@@ -5995,7 +6017,7 @@
         </button>
         <div class="stat-row">
           <div class="stat-card compact">
-            <div class="stat-label">Moyenne table</div>
+            <div class="stat-label">Ticket moyen</div>
             <div class="stat-value" id="stat-avg">135 MAD</div>
           </div>
           <div class="stat-card compact">
@@ -6643,7 +6665,8 @@
         <div class="reader-status" id="reader-status">Approchez la carte ou le téléphone<span class="ellipsis"></span></div>
         <div class="reader-method" id="reader-method">Kiwi Tap · NFC · QR</div>
       </div>
-      <div class="modal-foot is-visible" id="card-foot">
+      <div class="modal-foot is-visible" id="card-foot" style="gap:10px;flex-wrap:wrap;">
+        <button class="ma-btn modal-foot-btn" id="card-confirm" type="button" hidden style="background:var(--atlas);color:#fff;border-color:transparent;">Paiement reçu · enregistrer</button>
         <button class="ma-btn secondary modal-foot-btn" data-modal-action="close" type="button">Fermer</button>
       </div>
     </div>
@@ -7109,7 +7132,7 @@
   <div class="modal-veil" id="msg-modal" role="dialog" aria-modal="true" aria-labelledby="msg-title">
     <div class="modal modal-msg">
       <div class="split-badge">Message</div>
-      <h3 class="modal-title" id="msg-title">Préparer un message</h3>
+      <h3 class="modal-title" id="msg-title">Envoyer un message</h3>
       <div class="msg-target" id="msg-target">
         <span class="team-avatar" id="msg-target-avatar" style="background:#3FB67A;">YA</span>
         <span><b id="msg-target-name">Yassir A.</b> <span style="color:var(--ink-4);" id="msg-target-status">· En service</span></span>
@@ -7124,7 +7147,7 @@
       <div class="nt-actions">
         <button class="ma-btn secondary" id="msg-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="msg-send" style="flex:2;">
-          <i data-lucide="copy"></i> Copier le message
+          <i data-lucide="send"></i> Envoyer le message
         </button>
       </div>
     </div>
@@ -9238,6 +9261,10 @@
       });
       const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
       carteState.formulaItems = allItems;
+      /* Un plat épuisé (« 86 ») reste sur la carte, grisé et non vendable : le
+         faire disparaître laissait le serveur chercher un plat qu'il croyait
+         encore au menu, et le client en commander un qui n'existe plus. */
+      carteState.soldOut = allItems.filter((it) => it.avail === false && !it.formulaOnly && !it.archived);
       carteState.catI18n = catI18n;
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats: cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (loose) {
@@ -9693,14 +9720,22 @@
     })();
 
     function renderMenu() {
-      if (!menuItems.length) {
+      const soldOutAll = Array.isArray(carteState.soldOut) ? carteState.soldOut : [];
+      if (!menuItems.length && !soldOutAll.length) {
         $('#menu-grid').innerHTML = emptyMenuHTML();
         if (window.lucide) try { window.lucide.createIcons(); } catch (_) {}
         return;
       }
-      const items = activeCat === 'all'
-        ? menuItems
-        : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
+      const inView = (m) => activeCat === 'all' || (m.cat === activeCat && (!activeSub || m.subId === activeSub));
+      const items = activeCat === 'all' ? menuItems : menuItems.filter(inView);
+      const soldOutTiles = soldOutAll.filter(inView).map(m => `
+          <div class="menu-item is-86" data-86="${escTeam(String(m.id))}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="-1" aria-disabled="true">
+            <span class="menu-item-86">Épuisé</span>
+            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name)}</span>
+            <span class="menu-item-cat">${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
+            <span class="menu-item-name">${escTeam(menuName(m))}</span>
+            <span class="menu-item-foot"><span class="menu-item-price mono">${fmtMAD(m.price)}</span></span>
+          </div>`).join('');
       // In order mode, qty comes from the table's live order; otherwise from cart
       const activeSource = (mode !== 'vrap' && selectedId)
         ? (tableOrders[selectedId] || []) : cart;
@@ -9724,12 +9759,12 @@
             <span class="menu-item-cat">${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
             <span class="menu-item-name">${escTeam(menuName(m))}</span>
             <span class="menu-item-foot">
-              <span class="menu-item-price mono">${m.price} MAD</span>
+              <span class="menu-item-price mono">${fmtMAD(m.price)}</span>
               ${control}
             </span>
           </div>
         `;
-      }).join('');
+      }).join('') + soldOutTiles;
     }
 
     /* ─── Les options d'un produit ─────────────────────────────────────────
@@ -10322,6 +10357,7 @@
 
       // Menu card body → add one (to table order or cart depending on mode)
       const menuCard = e.target.closest('.menu-item');
+      if (menuCard && menuCard.classList.contains('is-86')) { toast('Plat épuisé · retiré de la vente'); return; }
       if (menuCard) {
         if (mode === 'order') {
           if (selectedId) {
@@ -10849,6 +10885,7 @@
       status: $('#reader-status'),
       method: $('#reader-method'),
       foot: $('#card-foot'),
+      confirm: $('#card-confirm'),
     };
     let cardSuccessTimer = null;
     let cardAttemptSeq = 0;
@@ -11038,7 +11075,21 @@
       reader.status.classList.remove('is-success');
       reader.status.innerHTML = 'Approchez la carte ou le téléphone<span class="ellipsis"></span>';
       reader.method.style.display = '';
+      reader.method.textContent = 'Kiwi Tap · NFC · QR';
       reader.foot.classList.remove('is-visible');
+      /* Sans lecteur branché, « Carte » veut dire : le client paie sur le TPE du
+         commerçant. Aucun lecteur n'est en attente d'une carte, et rien ne dit
+         que le client a payé · c'est au caissier de le confirmer. Avant, la vente
+         s'écrivait toute seule deux secondes après le toucher de « Carte ». */
+      const hw0 = window.KiwiHardware;
+      const externalTerminal = !!(hw0 && hw0.externalCardTerminal && hw0.externalCardTerminal());
+      if (reader.confirm) reader.confirm.hidden = !externalTerminal;
+      if (externalTerminal) {
+        reader.disc.classList.remove('is-pulsing');
+        reader.status.textContent = 'Faites payer sur votre terminal, puis confirmez';
+        reader.method.textContent = 'Terminal de paiement externe';
+        reader.foot.classList.add('is-visible');
+      }
       // Reset the tip so the figure opens on the base addition.
       resetPayTip();
       $('#card-amount').textContent = fmtMADcents(currentTotal());
@@ -11046,6 +11097,7 @@
       renderPayTip();
       lucide.createIcons();
 
+      if (externalTerminal) return;
       cardSuccessTimer = setTimeout(() => {
         const hw = window.KiwiHardware;
         if (!hw || !hw.authorizeCard) {
@@ -11138,6 +11190,21 @@
       splitPayCallback = null;
       restorePayBindings();
     }
+    /* Le caissier confirme que le client a payé sur son terminal : c'est cet
+       acte, et lui seul, qui écrit la vente carte. */
+    if (reader.confirm) reader.confirm.addEventListener('click', () => {
+      if (cardPaymentCommitted || tenderInFlight || !cardModal.classList.contains('is-open')) return;
+      const hw = window.KiwiHardware;
+      if (!hw || !hw.authorizeCard) return;
+      const attempt = cardAttemptSeq;
+      reader.confirm.disabled = true;
+      Promise.resolve(hw.authorizeCard(currentTotal() + payTipAmount(), reader.disc, reader.status))
+        .then((result) => {
+          reader.confirm.disabled = false;
+          if (attempt !== cardAttemptSeq || !cardModal.classList.contains('is-open')) return;
+          if (result && result.approved) triggerCardSuccess(result);
+        }, () => { reader.confirm.disabled = false; });
+    });
     $('#pay-card').addEventListener('click', openCardModal);
     const payQrButton = $('#pay-qr');
     if (payQrButton) payQrButton.addEventListener('click', function () {
@@ -13282,6 +13349,10 @@
             total: money(info.totalQty * unitPrice / splitState.numParts),
             cat: lineCat(info.itemId || null, name),
             itemId: info.itemId || '',
+            /* Chaque part porte le plat ENTIER à 1/N du prix pour que son reçu
+               se lise bien. Le journal, le rapport Z et le stock, eux, doivent
+               compter 1/N de plat par part : voir recordSale(). */
+            shareDen: splitState.numParts,
           };
         });
         for (let i = 0; i < splitState.numParts; i++) {
@@ -14195,7 +14266,7 @@
     /* Record one completed tender (table payment, vente rapida, or split part).
        `amount` stays the base addition; `tip` (pourboire) is recorded alongside.
        `lines` (optional) · itemised order [{ name, qty, total }] for the receipt. */
-    function accountActiveDiscount(settlementTable) {
+    function accountActiveDiscount(settlementTable, saleDiscount) {
       let d = null, cut = 0;
       const tId = settlementTable || selectedId;
       if (mode === 'vrap') {
@@ -14206,6 +14277,13 @@
         d = tables[tId].discount;
         const gross = generateOrder(tId, tables[tId]).reduce((s, l) => s + l.total, 0);
         cut = discountAmountFor(tId, gross);
+      }
+      /* À l'emporter, `finalizeTender` a déjà envoyé le panier en cuisine et l'a
+         vidé quand on arrive ici : la remise recalculée sur le panier valait 0 et
+         le Z affichait « Réductions accordées 0 » pour une remise bien écrite en
+         base. La vente porte sa propre remise (activeSaleDiscount) : on s'y fie. */
+      if (!(cut > 0) && saleDiscount && saleDiscount.discountAmountCents > 0) {
+        cut = saleDiscount.discountAmountCents / 100;
       }
       /* New discounts explicitly carry `accounted:false`. Legacy persisted
          discounts have no flag and were already added at approval time. */
@@ -14323,7 +14401,8 @@
               cat: l.cat || '',
             },
             l.itemId ? { itemId: l.itemId } : null,
-            l.kind ? { kind: l.kind } : null);
+            l.kind ? { kind: l.kind } : null,
+            l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null);
           if (Array.isArray(l.formulaChoices)) {
             saved.formulaChoices = l.formulaChoices.map(choice => ({
               name: String((choice && choice.name) || 'Choix'),
@@ -14360,12 +14439,22 @@
           } : null,
         };
       }
-      accountActiveDiscount(settlementTable);
+      accountActiveDiscount(settlementTable, split ? null : discount);
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets
          de juillet ne se réécrivent pas : une réimpression ressort celui qui a
          été remis au client, avec son numéro. */
       attachReceipt(entry);
+      /* Une addition partagée à parts égales écrivait le plat entier dans CHAQUE
+         part : trois parts d'un tajine comptaient trois tajines au rapport Z, au
+         tableau de bord et dans la sortie de stock. Le reçu (figé ci-dessus) garde
+         « 1× Tajine · 1/3 » ; la ligne comptable compte 1/3 de plat, de sorte que
+         les N parts additionnées redonnent exactement le plat vendu. */
+      if (Array.isArray(entry.lines)) {
+        entry.lines.forEach(l => {
+          if (l && l.shareDen > 1) { l.qty = Math.round((Number(l.qty) || 1) / l.shareDen * 1000) / 1000; delete l.shareDen; }
+        });
+      }
       journal.push(entry);
       lastSaleId = entry.id;
       /* Do not leave a five-second loss window between taking money and the
@@ -15122,8 +15211,13 @@
       const txd = document.getElementById('stat-txns-delta'); if (txd) txd.textContent = 'Carte 0% · Cash 0%';
       /* Les remises d'amorçage (95 MAD, 2 remises) sont du décor de démo. Sur un
          vrai commerce elles se retrouvaient dans le Z et dans le rapport du
-         patron comme si quelqu'un les avait vraiment accordées. */
-      shift.discounts = 0; shift.discountsCount = 0; shift.cancels = 0;
+         patron comme si quelqu'un les avait vraiment accordées.
+         Mais cette fonction rejoue aussi à la saisie du code (`kiwi-staff`), APRÈS
+         qu'un service en cours a été relu : remettre à zéro à ce moment-là effaçait
+         les remises et les autorisations manager déjà accordées, donc le Z de
+         fin de service affichait « Réductions accordées 0 » après un simple
+         rechargement de la caisse. On ne purge que le décor, jamais un service ouvert. */
+      if (!shiftOpenedAt) { shift.discounts = 0; shift.discountsCount = 0; shift.cancels = 0; }
       try { if (typeof renderShiftStats === 'function') renderShiftStats(); } catch (_) {}
       // Static demo defaults inside modals (server-row, message-target, and the
       // clôture card "Café Atlas · Othmane N.") · shown before their render fns
@@ -15389,6 +15483,13 @@
           return;
         }
       }
+      /* Un vrai tiroir s'ouvre sur un montant que le caissier a indiqué, pas sur
+         une valeur présélectionnée. Rien n'est écrit tant que ce n'est pas fait. */
+      if (storeIsReal() && !floatChosen) {
+        const err = document.getElementById('ci-float-err');
+        if (err) err.hidden = false;
+        return;
+      }
       /* Le contrôle horaire passe AVANT toute écriture d'état : reposer la
        * question après avoir ouvert le poste laisserait un service à moitié
        * commencé si le responsable annule. */
@@ -15637,7 +15738,14 @@
       const pct    = Math.round(tot.revenue / DAILY_OBJECTIF * 100);
       const hlIcon = $('#cloture-modal .clo-highlight-icon');
       const hlText = $('#clo-highlight-text');
-      if (tot.revenue >= DAILY_OBJECTIF) {
+      if (storeIsReal()) {
+        /* L'objectif de 18 000 MAD est une valeur de démonstration : un vrai
+           commerce n'en a défini aucun sur la caisse. On dit seulement ce qui a
+           été encaissé, jamais « à 2 % de l'objectif » d'un but que personne
+           n'a fixé. */
+        if (hlIcon) hlIcon.innerHTML = '<i data-lucide="receipt-text"></i>';
+        if (hlText) hlText.innerHTML = `<em>${fmtMAD(tot.revenue)}</em> encaissés sur ce service.`;
+      } else if (tot.revenue >= DAILY_OBJECTIF) {
         if (hlIcon) hlIcon.innerHTML = '<i data-lucide="trophy"></i>';
         if (hlText) hlText.innerHTML = `Objectif d'lyoum dépassé, <em>${fmtMAD(tot.revenue)}</em> encaissés. Beau service.`;
       } else {
@@ -16730,6 +16838,13 @@
     const floatCustom = $('#ci-float-custom');
     const floatInput  = $('#ci-float-input');
 
+    const floatLast = $('#ci-float-last');
+    const floatErr  = $('#ci-float-err');
+    /* Le caissier a-t-il dit combien il y a dans le tiroir ? Sur un vrai
+       commerce l'ouverture est refusée tant que non : un fond présélectionné
+       puis jamais compté devenait l'« attendu » que la clôture rapproche. */
+    let floatChosen = false;
+    function showFloatErr(on) { if (floatErr) floatErr.hidden = !on; }
     function readFloatInput() {
       const v = parseFloat(floatInput && floatInput.value);
       return Number.isFinite(v) && v > 0 ? v : 0;
@@ -16755,10 +16870,14 @@
       if (chip.dataset.float === 'custom') {
         showFloatCustom(true, true);
         openingFloat = readFloatInput();
+        /* « Autre » n'engage rien tant qu'aucun montant n'est tapé (0 compte) */
+        floatChosen = !!(floatInput && floatInput.value !== '');
+        if (floatChosen) showFloatErr(false);
         return;
       }
       showFloatCustom(false);
       openingFloat = parseInt(chip.dataset.float, 10) || 500;
+      floatChosen = true; showFloatErr(false);
       rememberFloat(openingFloat);
     });
 
@@ -16768,7 +16887,8 @@
            corrige à la frappe plutôt que de refuser l'ouverture plus tard. */
         if (floatInput.value && parseFloat(floatInput.value) < 0) floatInput.value = floatInput.value.replace('-', '');
         openingFloat = readFloatInput();
-        rememberFloat(openingFloat);
+        floatChosen = floatInput.value !== '';
+        if (floatChosen) { showFloatErr(false); rememberFloat(openingFloat); }
       });
       /* Entrée = « j'ai fini de taper », pas « ouvre la caisse » : ouvrir sur une
          touche du clavier tablette ouvrirait des services par accident. */
@@ -16781,16 +16901,46 @@
     function restoreFloat() {
       let saved = NaN;
       try { saved = parseFloat(localStorage.getItem(floatMemKey())); } catch (_) {}
-      if (!Number.isFinite(saved) || saved < 0) return;
+      const hasSaved = Number.isFinite(saved) && saved >= 0;
+      const other = floatChips && floatChips.querySelector('[data-float="custom"]');
+      /* Vrai commerce : rien n'est présélectionné. Le dernier fond n'est qu'un
+         raccourci proposé · c'est un contact du caissier qui l'engage. */
+      if (storeIsReal()) {
+        if (floatChosen) return;
+        openingFloat = 0; markFloatChip(null); showFloatCustom(false);
+        if (floatLast) {
+          if (hasSaved) {
+            floatLast.textContent = 'Dernier fond : ' + saved + ' MAD';
+            floatLast.dataset.value = String(saved);
+            floatLast.hidden = false;
+          } else floatLast.hidden = true;
+        }
+        return;
+      }
+      /* Démo / appareil non appairé : le fond d'usage (500) reste présélectionné. */
+      if (floatLast) floatLast.hidden = true;
+      if (!hasSaved) {
+        const d = floatChips && floatChips.querySelector('[data-float="500"]');
+        openingFloat = 500; if (d) markFloatChip(d); showFloatCustom(false);
+        return;
+      }
       openingFloat = saved;
       const preset = floatChips && floatChips.querySelector(`[data-float="${saved}"]`);
       if (preset) { markFloatChip(preset); showFloatCustom(false); return; }
-      const other = floatChips && floatChips.querySelector('[data-float="custom"]');
       if (!other || !floatInput) return;
       markFloatChip(other);
       floatInput.value = String(saved);
       showFloatCustom(true, false);
     }
+    if (floatLast) floatLast.addEventListener('click', () => {
+      const v = parseFloat(floatLast.dataset.value);
+      if (!Number.isFinite(v) || v < 0) return;
+      const preset = floatChips && floatChips.querySelector(`[data-float="${v}"]`);
+      openingFloat = v; floatChosen = true; showFloatErr(false);
+      if (preset) { markFloatChip(preset); showFloatCustom(false); return; }
+      const other = floatChips && floatChips.querySelector('[data-float="custom"]');
+      if (other && floatInput) { markFloatChip(other); floatInput.value = String(v); showFloatCustom(true, false); }
+    });
     restoreFloat();
     document.addEventListener('kiwi-paired', () => { try { restoreFloat(); } catch (_) {} });
 
@@ -17130,7 +17280,7 @@
           ? `En service depuis ${s.since} · ${myTables} table${myTables !== 1 ? 's' : ''} actives`
           : (s.role ? escTeam(s.role) : 'Sur le service');
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message">
             <i data-lucide="message-square"></i>
           </button>
           <button class="team-btn danger" data-team-action="start-pause" data-server="${s.id}" title="Donner une pause">
@@ -17141,7 +17291,7 @@
         const mn = pauseElapsedMn(s);
         meta = `<span class="pause-tick">En pause · ${mn} mn</span>`;
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message">
             <i data-lucide="message-square"></i>
           </button>
           <button class="team-btn primary" data-team-action="end-pause" data-server="${s.id}" title="Fin de pause">
@@ -17151,7 +17301,7 @@
       } else {
         meta = 'Pas en service · fin de shift';
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message" disabled style="opacity:.35;">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message" disabled style="opacity:.35;">
             <i data-lucide="message-square"></i>
           </button>
         `;
@@ -17280,7 +17430,9 @@
         av.textContent = '∀';
         av.style.background = 'var(--ink)';
         nm.textContent = 'Toute l\'équipe';
-        st.textContent = `· ${activeServerCount()} serveurs en service`;
+        /* Singulier pour 0 et 1 : « 1 serveurs en service » ne se dit pas. */
+        const n = activeServerCount();
+        st.textContent = `· ${n} serveur${n > 1 ? 's' : ''} en service`;
       } else {
         const s = servers[targetId];
         av.textContent = serverInitials(s);
@@ -17288,7 +17440,7 @@
         nm.textContent = s.name;
         st.textContent = s.status === 'on' ? '· En service'
                        : s.status === 'pause' ? `· en pause depuis ${pauseElapsedMn(s)} mn`
-                       : '· hors service';
+                       : '· hors service · il le verra à son pointage';
       }
       $('#msg-input').value = '';
       $('#msg-modal').classList.add('is-open');
@@ -17310,8 +17462,9 @@
     $('#msg-send').addEventListener('click', async () => {
       const text = $('#msg-input').value.trim();
       if (!text) { toast('Écris un message d\'abord'); return; }
+      const sentTo = activeServerCount();
       const target = msgTargetId === 'ALL'
-        ? `équipe (${activeServerCount()} serveurs)`
+        ? `équipe (${sentTo} serveur${sentTo > 1 ? 's' : ''} en service)`
         : servers[msgTargetId].name;
       const button = $('#msg-send');
       button.disabled = true;

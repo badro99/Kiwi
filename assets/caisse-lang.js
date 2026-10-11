@@ -55,6 +55,11 @@
       'version commerçant': 'merchant edition', '· version commerçant': '· merchant edition', 'Bonjour': 'Hello',
       'Caissier': 'Cashier', 'Fond d’ouverture': 'Opening float',
       "Fond d'ouverture": 'Opening float', 'Ouvrir la caisse': 'Open till',
+      "Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.": 'Count the drawer and enter the opening float before opening the till.',
+      'encaissés sur ce service.': 'collected this service.', 'Plat épuisé · retiré de la vente': 'Dish sold out · taken off sale', 'Dernier fond : {n} MAD': 'Last float: {n} MAD', 'Ticket moyen': 'Average ticket',
+      'Faites payer sur votre terminal, puis confirmez': 'Take payment on your terminal, then confirm',
+      'Terminal de paiement externe': 'External payment terminal', 'Paiement reçu · enregistrer': 'Payment received · record it',
+      'Paiement carte enregistré · terminal externe': 'Card payment recorded · external terminal',
       /* ── restaurant till: floor, tables, bill sheet, payment (native app, 2026-09-27) ── */
       'Identifiant caisse': 'Till ID', 'Inactif': 'Off', 'Annuler une vente': 'Cancel a sale', 'Remboursement': 'Refund',
       'Mouvement caisse': 'Cash movement', 'Passation caisse': 'Till handover', 'Ouvrir le tiroir': 'Open drawer',
@@ -335,6 +340,11 @@
       'version commerçant': 'نسخة التاجر', '· version commerçant': '· نسخة التاجر', 'Bonjour': 'مرحباً',
       'Caissier': 'أمين الصندوق', 'Fond d’ouverture': 'رصيد الافتتاح',
       "Fond d'ouverture": 'رصيد الافتتاح', 'Ouvrir la caisse': 'افتح الصندوق',
+      "Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.": 'عدّ الدرج وأدخل رصيد الافتتاح قبل فتح الصندوق.',
+      'encaissés sur ce service.': 'تم تحصيلها في هذه الخدمة.', 'Plat épuisé · retiré de la vente': 'الطبق نفد · أُزيل من البيع', 'Dernier fond : {n} MAD': 'آخر رصيد: {n} MAD', 'Ticket moyen': 'متوسط التذكرة',
+      'Faites payer sur votre terminal, puis confirmez': 'اطلب من الزبون الدفع على جهازك ثم أكّد',
+      'Terminal de paiement externe': 'جهاز دفع خارجي', 'Paiement reçu · enregistrer': 'تم استلام الدفع · سجّل',
+      'Paiement carte enregistré · terminal externe': 'تم تسجيل الدفع بالبطاقة · جهاز خارجي',
       /* ── caisse restaurant : salle, tables, addition, paiement (app native, 2026-09-27) ── */
       'Identifiant caisse': 'معرّف الصندوق', 'Inactif': 'متوقفة', 'Annuler une vente': 'إلغاء بيع', 'Remboursement': 'استرداد',
       'Mouvement caisse': 'حركة نقدية', 'Passation caisse': 'تسليم الصندوق', 'Ouvrir le tiroir': 'فتح الدرج',

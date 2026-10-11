@@ -263,6 +263,22 @@
     return 'inv-sale-' + hash([merchant, ref, lineIndex, itemId, part || 0].join('|'));
   }
 
+  /* Un article du stock est un article que le registre CONNAÎT : il a au moins
+   * un mouvement (solde d'ouverture, réception, inventaire). Un plat de carte
+   * sans fiche technique n'en est pas un : lui écrire « -1 » créait un article
+   * fantôme au stock, une sortie que personne n'a jamais comptée et que la
+   * valorisation prenait pour de la marchandise. Sans recette complète, un plat
+   * ne sort rien. */
+  function ledgerKnows(itemId) {
+    var I = window.KiwiInventory;
+    try {
+      var snap = I && I.snapshot ? I.snapshot() : null;
+      if (!snap) return true;                       // registre sans instantané : ne rien deviner
+      var want = String(itemId);
+      return Object.keys(snap).some(function (k) { return k.split('|')[0] === want; });
+    } catch (_) { return true; }
+  }
+
   function record(sale) {
     var I = window.KiwiInventory;
     if (!I || !I.isReal?.() || !sale || !Array.isArray(sale.lines)) return { written: 0, skipped: 0 };
@@ -286,6 +302,7 @@
         if (!ingredients) { skipped++; return; }
         itemId = alias;
       }
+      if (!ingredients && !ledgerKnows(itemId)) { skipped++; return; }
       var targets = ingredients || [{ itemId: itemId, qty: qty, direct: true }];
       targets.forEach(function (x, part) {
         var baseCost = x.direct

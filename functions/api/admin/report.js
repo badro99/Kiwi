@@ -96,14 +96,14 @@ export async function onRequestGet({ request, env }) {
     const hours = Array.from({ length: 24 }, (_, h) => ({ h, cents: 0, count: 0 }));
     const weekdays = Array.from({ length: 7 }, (_, w) => ({ w, cents: 0, count: 0 }));
     const products = new Map();
-    let cents = 0, count = 0, refundsCents = 0, refunds = 0, detailed = 0;
+    let cents = 0, gross = 0, count = 0, refundsCents = 0, refunds = 0, detailed = 0;
 
     for (const r of rows) {
       const c = Number(r.cents) || 0;
       const d = businessDate(r.ts, cutoff, zone);
       const i = dayIndex.get(d);
       cents += c;
-      if (c > 0) count++; else if (c < 0) { refunds++; refundsCents += c; }
+      if (c > 0) { count++; gross += c; } else if (c < 0) { refunds++; refundsCents += c; }
       if (i !== undefined) { days[i].cents += c; if (c > 0) days[i].count++; }
       const m = String(r.method || 'autre').slice(0, 16);
       const mm = methods.get(m) || { method: m, cents: 0, count: 0 };
@@ -144,7 +144,13 @@ export async function onRequestGet({ request, env }) {
       truncated, rowCap: ROW_CAP,
       currency: 'MAD',
       totals: {
-        cents, count, basketCents: count ? Math.round(cents / count) : 0,
+        cents, count, grossCents: gross,
+        /* Le panier moyen est le brut encaissé divisé par le nombre de ventes,
+           comme dans « Rapport journalier » du tableau de bord (aggregate() de
+           assets/report.js). Il se calculait sur le NET : un mois avec un gros
+           remboursement affichait un panier plus bas que celui de la caisse, pour
+           les mêmes ventes. */
+        basketCents: count ? Math.round(gross / count) : 0,
         refunds, refundsCents,
         openDays: open, avgOpenDayCents: open ? Math.round(cents / open) : 0,
         best: best && best.cents > 0 ? { d: best.d, cents: best.cents } : null,

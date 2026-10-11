@@ -4875,7 +4875,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/employee-live.js?v=552" defer></script>
-  <script src="assets/employee-planning.js?v=13" defer></script>
+  <script src="assets/employee-planning.js?v=14" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=4" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
@@ -4919,7 +4919,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     function svHosted() { try { var h = (location.hostname || '').toLowerCase(); return !(h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '' || /\.local$/.test(h)); } catch (_) { return false; } }
     function svReal()   { return !!svMerchant() || svHosted(); }
+    /* Le nom que le serveur donne au commerce (merchant_config.name) l'emporte sur
+       tout ce qu'on peut déduire du slug : « Cafe Local Test » est un identifiant
+       mis en majuscules, pas l'enseigne du commerçant (« Café Amira »). Il est
+       posé par applyEmployeeLive dès que /api/employee a répondu. */
+    var svStoreName = '';
     function svName(demo) {
+      if (svStoreName) return svStoreName;
       var p = svPaired(); if (p && p.name) return p.name;
       if (svReal()) { try { var m = svMerchant(); if (m) return m.split('-').filter(Boolean).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' '); } catch (_) {} return ''; }
       return demo;
@@ -4982,6 +4988,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Code de pointage incorrect ou expiré": "Clock-in code is incorrect or expired",
         "Trop d'essais · réessayez plus tard": "Too many attempts · try again later",
         "Email ou code personnel incorrect": "Incorrect email or personal code",
+        "Email ou code personnel incorrect.": "Incorrect email or personal code.",
+        "Entrez votre email et votre code à 4 chiffres.": "Enter your email and your 4-digit code.",
+        "Trop d’essais. Réessayez dans quelques minutes.": "Too many attempts. Try again in a few minutes.",
+        "Cet établissement est suspendu.": "This establishment is suspended.",
+        "Cet email existe dans plusieurs établissements. Contactez votre responsable.": "This email exists in several establishments. Contact your manager.",
+        "Service momentanément indisponible. Réessayez.": "Service temporarily unavailable. Try again.",
+        "Connexion indisponible. Vérifiez le réseau et réessayez.": "Connection unavailable. Check the network and try again.",
+        "Session expirée · reconnectez-vous": "Session expired · sign in again",
+        "Pointage non enregistré · réessayez": "Clock-in not recorded · try again",
+        "Connexion indisponible · vérifiez le réseau": "Connection unavailable · check the network",
+        "Opération impossible · réessayez": "Could not complete · try again",
+        "Code saisi · il sera vérifié au pointage": "Code entered · it is checked when you clock",
         "Équipe": "Team",
         "Bonjour": "Hello",
         "Entrez votre code": "Enter your code",
@@ -5147,6 +5165,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Code de pointage incorrect ou expiré": "رمز بدء الوردية غير صحيح أو منتهي الصلاحية",
         "Trop d'essais · réessayez plus tard": "محاولات كثيرة · أعد المحاولة لاحقاً",
         "Email ou code personnel incorrect": "البريد الإلكتروني أو الرمز الشخصي غير صحيح",
+        "Email ou code personnel incorrect.": "البريد الإلكتروني أو الرمز الشخصي غير صحيح.",
+        "Entrez votre email et votre code à 4 chiffres.": "أدخل بريدك الإلكتروني ورمزك المكوّن من 4 أرقام.",
+        "Trop d’essais. Réessayez dans quelques minutes.": "محاولات كثيرة. أعد المحاولة بعد دقائق.",
+        "Cet établissement est suspendu.": "هذا الفرع موقوف.",
+        "Cet email existe dans plusieurs établissements. Contactez votre responsable.": "هذا البريد موجود في عدة فروع. تواصل مع مسؤولك.",
+        "Service momentanément indisponible. Réessayez.": "الخدمة غير متاحة مؤقتاً. أعد المحاولة.",
+        "Connexion indisponible. Vérifiez le réseau et réessayez.": "لا يوجد اتصال. تحقّق من الشبكة وأعد المحاولة.",
+        "Session expirée · reconnectez-vous": "انتهت الجلسة · سجّل الدخول من جديد",
+        "Pointage non enregistré · réessayez": "لم يُسجَّل الحضور · أعد المحاولة",
+        "Connexion indisponible · vérifiez le réseau": "لا يوجد اتصال · تحقّق من الشبكة",
+        "Opération impossible · réessayez": "تعذّر إتمام العملية · أعد المحاولة",
+        "Code saisi · il sera vérifié au pointage": "تم إدخال الرمز · سيُتحقَّق منه عند التسجيل",
         "Équipe": "الفريق",
         "Bonjour": "مرحباً",
         "Entrez votre code": "أدخل رمزك",
@@ -6368,13 +6398,32 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     let liveEmployeeState = null;
     let pinBusy = false;
 
-    function pinError(code) {
-      const msg = code === 'store-suspended' ? 'Cet établissement est suspendu'
-        : code === 'not-configured' ? 'Service momentanément indisponible'
+    /* Tout échec retombait sur « Email ou code personnel incorrect » : une coupure
+       réseau, un pointage non écrit ou une session révoquée accusaient le code
+       de l'employé, qui le retapait en boucle. Chaque cause dit maintenant la
+       sienne ; sans code ni statut c'est le réseau (fetch a levé avant toute
+       réponse). Retourne true quand la session n'existe plus. */
+    function pinError(code, status) {
+      const gone = code === 'employee-session-required' || status === 401;
+      const msg = gone ? 'Session expirée · reconnectez-vous'
+        : code === 'store-suspended' ? 'Cet établissement est suspendu'
+        : (code === 'not-configured' || code === 'rate-limit-unavailable') ? 'Service momentanément indisponible'
         : code === 'attendance-code-invalid' ? 'Code de pointage incorrect ou expiré'
         : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'
-        : 'Email ou code personnel incorrect';
+        : code === 'attendance-write-failed' ? 'Pointage non enregistré · réessayez'
+        : (!code && !status) ? 'Connexion indisponible · vérifiez le réseau'
+        : 'Opération impossible · réessayez';
       toast(msg);
+      return gone;
+    }
+    /* Le propriétaire a retiré cet employé (ou son code a changé) pendant qu'il
+       était en service : /api/employee répond 401 à chaque sondage. L'app restait
+       ouverte, sans erreur, sur des données figées. On referme proprement. */
+    function endRevokedSession() {
+      if (SV_DEMO) return;
+      stopServiceSync();
+      clearEmployeeOperationalState();
+      resetToEmployeePortal('Session expirée · reconnectez-vous');
     }
 
     async function handlePinKey(key) {
@@ -6481,8 +6530,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         openEmployeeSession(await window.KiwiEmployeeLive.login(email, pin));
         $('#employee-pin').value = '';
       } catch (err) {
-        error.textContent = err && err.code === 'too_many_attempts'
-          ? 'Trop d’essais. Réessayez dans quelques minutes.'
+        const c = err && err.code;
+        error.textContent = c === 'too_many_attempts' ? 'Trop d’essais. Réessayez dans quelques minutes.'
+          : c === 'store-suspended' ? 'Cet établissement est suspendu.'
+          : c === 'employee-access-ambiguous' ? 'Cet email existe dans plusieurs établissements. Contactez votre responsable.'
+          : (c === 'not-configured' || c === 'rate-limit-unavailable' || (err && err.status >= 500)) ? 'Service momentanément indisponible. Réessayez.'
+          : (err && !err.status && !c) ? 'Connexion indisponible. Vérifiez le réseau et réessayez.'
           : 'Email ou code personnel incorrect.';
       } finally {
         pinBusy = false; button.disabled = false;
@@ -6682,6 +6735,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       });
       SCHEDULE_DATA[emp.id] = employeeSchedule(data);
       const storeName = data.store && data.store.name || '';
+      /* Le serveur renvoie le slug quand le commerce n'a pas de nom enregistré :
+         ce n'est pas une enseigne, on laisse alors le repli habituel. */
+      if (storeName && storeName !== data.merchant) svStoreName = storeName;
       document.querySelectorAll('.ci-restaurant').forEach((el) => { el.textContent = storeName; });
       const sc = document.getElementById('kg-sc-meta'); if (sc) sc.textContent = storeName;
     }
@@ -7101,7 +7157,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           activeRole = resolveRole('');
           applyRoleToMain();
           svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });
-        }).catch(() => {});
+        }).catch((err) => { if (err && err.status === 401) endRevokedSession(); });
       }
       if (activeRole.restricted) return;
       /* Menu edits made by the owner on another device reach the service app
@@ -7283,10 +7339,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!SV_DEMO && attendanceCode.length !== 6) return;
       nfcTapped = true;
       const z = $('#nfc-zone'), c = $('#nfc-caption'), b = $('#ci-button');
-      if (z) z.classList.add('is-tapped');
-      if (c) c.textContent = attendanceAction === 'clock-out'
-        ? `Départ autorisé · ${activeRole.name}`
-        : `Arrivée autorisée · ${activeRole.name}`;
+      if (SV_DEMO) {
+        if (z) z.classList.add('is-tapped');
+        if (c) c.textContent = attendanceAction === 'clock-out'
+          ? `Départ autorisé · ${activeRole.name}`
+          : `Arrivée autorisée · ${activeRole.name}`;
+      } else if (c) {
+        /* Six chiffres tapés ne prouvent rien : « Arrivée autorisée » et la coche
+           s'affichaient avant que le serveur ait comparé le code à celui de la
+           caisse, puis un code faux se faisait refuser après coup. Ici on dit
+           seulement que le code est saisi ; l'autorisation vient de la réponse. */
+        c.textContent = 'Code saisi · il sera vérifié au pointage';
+      }
       if (b) b.disabled = false;
     }
     $('#attendance-code').addEventListener('input', (event) => {
@@ -7320,7 +7384,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           consumeAttendanceCode();
         } catch (err) {
           btn.classList.remove('is-loading');
-          pinError(err && err.code);
+          if (pinError(err && err.code, err && err.status)) endRevokedSession();
           return;
         }
       }
@@ -7583,8 +7647,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         return;
       }
       finishClockOut().catch((error) => {
-        pinError(error && error.code);
-        toast('Pointage non synchronisé · vérifiez la connexion');
+        if (pinError(error && error.code, error && error.status)) endRevokedSession();
       });
     }
 
@@ -9905,14 +9968,33 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (window.lucide) lucide.createIcons();
     }
 
+    /* Temps travaillé du service en cours, PAUSES DÉDUITES. Les tuiles et le
+       bandeau comptaient « maintenant moins l'arrivée » : une heure de pause
+       restait comptée, puis la fiche d'heures enregistrée au départ (déduite,
+       elle, côté serveur) était plus courte que ce que l'employé avait vu
+       s'afficher toute la soirée. Même règle que /api/employee clock-out. */
+    function shiftElapsedMs() {
+      if (!shiftStart) return 0;
+      const now = Date.now();
+      let ms = now - shiftStart.getTime();
+      const open = !SV_DEMO && liveEmployeeState && liveEmployeeState.attendance && liveEmployeeState.attendance.open;
+      if (open) {
+        (Array.isArray(open.breaks) ? open.breaks : []).forEach((b) => {
+          const a = Number(b && b.inTs) || 0, z = Number(b && b.outTs) || 0;
+          if (a && z > a) ms -= (z - a);
+        });
+        if (open.pauseTs) ms -= Math.max(0, now - Number(open.pauseTs));
+      }
+      return Math.max(0, ms);
+    }
+
     /* ---------- Profil tab ---------- */
     function renderProfil() {
       if (!shiftStart) return;
       renderPauseControl();
       $('#profil-shift-start').textContent = shiftStart.toLocaleTimeString(employeeLocale(), { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
-      const elapsed = Date.now() - shiftStart.getTime();
-      const totalMin = Math.floor(elapsed / 60000);
+      const totalMin = Math.floor(shiftElapsedMs() / 60000);
       const h = Math.floor(totalMin / 60);
       const m = totalMin % 60;
       $('#profil-shift-duration').textContent = `${h}h ${String(m).padStart(2,'0')}`;
@@ -10032,38 +10114,55 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         document.dispatchEvent(new CustomEvent('kiwi-demo-schedule', {detail:{schedule}}));
       }
       // "Prochain service": today's shift while it has not ended, else the
-      // next non-rest day. It skipped today, so at 01:00 the card said
+      // next working day. It skipped today, so at 01:00 the card said
       // Thursday while the list below still showed tonight's shift.
-      let nextIdx = -1, wrap = false;
-      const nowClock = new Date(), todayShift = sched.week[todayIdx];
-      if (todayShift) {
-        const [oh, om] = todayShift.out.split(':').map(Number), [ih, im] = todayShift.in.split(':').map(Number);
-        const endMin = (oh * 60 + om) <= (ih * 60 + im) ? oh * 60 + om + 1440 : oh * 60 + om;
-        if (nowClock.getHours() * 60 + nowClock.getMinutes() < endMin) nextIdx = todayIdx;
-      }
-      for (let i = todayIdx + 1; nextIdx === -1 && i < 7; i++) {
-        if (sched.week[i]) { nextIdx = i; break; }
-      }
-      if (nextIdx === -1) {
-        for (let i = 0; i <= todayIdx; i++) {
-          if (sched.week[i]) { nextIdx = i; wrap = true; break; }
+      // Il ne regardait QUE la semaine affichée et l'horloge de l'appareil :
+      // un planning publié la semaine suivante donnait « aucun service », et
+      // un téléphone réglé sur un autre fuseau décidait seul si le service du
+      // soir était fini. On lit maintenant le planning daté du serveur sur 14
+      // jours, avec l'heure du commerce.
+      const nowMin = (() => {
+        try {
+          const parts = new Intl.DateTimeFormat('en-GB', { timeZone: employeeStoreZone || undefined, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+          const get = (type) => Number((parts.find((x) => x.type === type) || {}).value) || 0;
+          return get('hour') * 60 + get('minute');
+        } catch (_) { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+      })();
+      const shiftAtOffset = (offset) => {
+        if (svReal()) {
+          const d = new Date(today); d.setDate(today.getDate() + offset);
+          const raw = sched.dates && sched.dates[employeeCivilKey(d)];
+          return raw && !raw.off && raw.start && raw.end ? { in: raw.start, out: raw.end } : null;
         }
+        return sched.week[(todayIdx + offset) % 7];
+      };
+      let nextOffset = -1, s = null;
+      for (let off = 0; off < 14 && nextOffset === -1; off++) {
+        const candidate = shiftAtOffset(off);
+        if (!candidate) continue;
+        if (off === 0) {
+          const [oh, om] = candidate.out.split(':').map(Number), [ih, im] = candidate.in.split(':').map(Number);
+          const endMin = (oh * 60 + om) <= (ih * 60 + im) ? oh * 60 + om + 1440 : oh * 60 + om;
+          if (nowMin >= endMin) continue;
+        }
+        nextOffset = off; s = candidate;
       }
       const dayEl  = $('#kg-sched-next-day');
       const timeEl = $('#kg-sched-next-time');
       const wrapEl = $('#kg-sched-next');
-      if (nextIdx >= 0 && dayEl && timeEl) {
+      if (nextOffset >= 0 && dayEl && timeEl) {
         const dafrFull = Array.from({ length: 7 }, (_, i) => {
           const day = new Date(2026, 7, 3 + i, 12);
           return day.toLocaleDateString(employeeLocale(), { weekday: 'long' });
         });
-        const prefix = nextIdx === todayIdx && !wrap ? (employeeLanguage === 'en' ? 'Today' : employeeLanguage === 'ar' ? 'اليوم' : "Aujourd'hui")
-                     : wrap                          ? (employeeLanguage === 'en' ? 'Next week' : employeeLanguage === 'ar' ? 'الأسبوع القادم' : 'Semaine prochaine')
-                     : (nextIdx === todayIdx + 1)    ? (employeeLanguage === 'en' ? 'Tomorrow' : employeeLanguage === 'ar' ? 'غداً' : 'Demain')
-                     : (nextIdx === todayIdx + 2)    ? (employeeLanguage === 'en' ? 'The day after tomorrow' : employeeLanguage === 'ar' ? 'بعد غدٍ' : 'Après-demain')
+        const nextIdx = (todayIdx + nextOffset) % 7;
+        const wrap = todayIdx + nextOffset >= 7;
+        const prefix = nextOffset === 0                ? (employeeLanguage === 'en' ? 'Today' : employeeLanguage === 'ar' ? 'اليوم' : "Aujourd'hui")
+                     : nextOffset === 1                ? (employeeLanguage === 'en' ? 'Tomorrow' : employeeLanguage === 'ar' ? 'غداً' : 'Demain')
+                     : nextOffset === 2                ? (employeeLanguage === 'en' ? 'The day after tomorrow' : employeeLanguage === 'ar' ? 'بعد غدٍ' : 'Après-demain')
+                     : wrap                            ? (employeeLanguage === 'en' ? 'Next week' : employeeLanguage === 'ar' ? 'الأسبوع القادم' : 'Semaine prochaine')
                      :                                  dafrFull[nextIdx];
         dayEl.textContent = `${prefix} · ${dafrFull[nextIdx]}`;
-        const s = sched.week[nextIdx];
         timeEl.textContent = `${s.in} → ${s.out}`;
         if (wrapEl) wrapEl.style.display = '';
       } else if (wrapEl) {
@@ -10162,7 +10261,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const todayEl = $('#kg-h-today');
       let todayMin = 0;
       if (shiftStart) {
-        todayMin = Math.max(0, Math.floor((Date.now() - shiftStart.getTime()) / 60000));
+        todayMin = Math.floor(shiftElapsedMs() / 60000);
       }
       if (todayEl) todayEl.textContent = `${Math.floor(todayMin / 60)}h ${String(todayMin % 60).padStart(2, '0')}`;
 
@@ -10198,8 +10297,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Update topbar shift meta every minute */
     function updateShiftMeta() {
       if (!shiftStart) return;
-      const elapsed = Date.now() - shiftStart.getTime();
-      const totalMin = Math.floor(elapsed / 60000);
+      const totalMin = Math.floor(shiftElapsedMs() / 60000);
       const h = Math.floor(totalMin / 60);
       const m = totalMin % 60;
       $('#tb-shift-meta').textContent = `${employeeTranslation('En service')} · ${h}h ${String(m).padStart(2,'0')}`;

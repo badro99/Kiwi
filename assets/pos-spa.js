@@ -30,7 +30,10 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
+  /* Pluriel français : 0 et 1 prennent le singulier (« 1 séance », « 0 visite »). */
+  const pl = (n, one, many) => (Math.abs(n) < 2 ? one : many);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -145,6 +148,11 @@
   ];
   const PRESTA = Object.fromEntries(PRESTAS.map((p) => [p.id, p]));
 
+  /* Session réelle : le stock est INCONNU (null), pas celui de la démo. Les
+     « × 14 », « × 22 », « stock bas · 3 » ci-dessous étaient affichés comme le
+     stock du spa, et surtout BLOQUAIENT la vente au-delà (« Stock insuffisant »)
+     d'un produit que le spa a peut-être en rayon. Un stock inconnu ne s'affiche
+     pas, ne se décompte pas et ne bloque rien. */
   const PRODUCTS = [
     { id: 'argan_oil', name: "Huile d'argan 100 ml",       price: 180, stock: 14 },
     { id: 'savon',     name: 'Savon noir beldi 200 g',     price: 60,  stock: 22 },
@@ -153,7 +161,9 @@
     { id: 'rose',      name: 'Eau de rose 100 ml',         price: 90,  stock: 9 },
     { id: 'ambre',     name: 'Huile de massage ambrée',    price: 220, stock: 3 },
   ];
+  if (pvReal()) PRODUCTS.forEach((p) => { p.stock = null; });
   const PROD = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+  const stockKnown = (p) => !!p && Number.isFinite(p.stock);
 
   /* ───────────────────────── forfaits (cures à poinçonner) ───────────────── */
   const FORFAITS = [
@@ -212,7 +222,16 @@
 
   /* ───────────────────────── planning du jour (seed mid-shift) ─────────────
      Journée simulée : il est 14:30. 10:00 → 20:00, ~60 % de remplissage. */
-  const OPEN = 600, CLOSE = 1200, NOW_MIN = 870;          /* minutes depuis minuit */
+  const OPEN = 600, CLOSE = 1200;                         /* minutes depuis minuit */
+  /* « Maintenant » : 14:30 figé en démo (journée simulée). En session réelle c'est
+     l'heure de la tablette : la ligne « maintenant » du planning et le premier
+     créneau libre proposé étaient calés sur 14:30 quelle que soit l'heure. */
+  const NOW_DEMO = 870;
+  const nowMin = () => {
+    if (!pvReal()) return NOW_DEMO;
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  };
   const CELL = 30, CELL_PX = 34, PX_MIN = CELL_PX / CELL;
   const COL_H = (CLOSE - OPEN) * PX_MIN;
 
@@ -261,11 +280,41 @@
     clQuery: '',
     offline: false, queued: 0,
   };
+  /* ───────────────────────── journée d'exploitation ─────────────────────────
+     Le planning est celui DU JOUR (créneaux en minutes depuis 10:00, sans date) et
+     il est conservé d'une session à l'autre : sans remise à zéro, les rendez-vous
+     d'hier réapparaissaient aujourd'hui aux mêmes heures. La journée suit la
+     coupure du reste de Kiwi (KiwiDayReport, 5 h). Les cures (cartes de
+     fidélité sur plusieurs jours) et les clientes ne bougent pas. Démo : rien. */
+  let DAY_KEY = '';
+  function bizDay() {
+    try {
+      const R = window.KiwiDayReport;
+      const d = R && typeof R.today === 'function' ? R.today() : '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    } catch (_) {}
+    const t = new Date(Date.now() - 5 * 3600 * 1000);
+    return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+  function rollDay() {
+    if (!pvReal()) return false;
+    const today = bizDay();
+    if (!DAY_KEY) { DAY_KEY = today; return false; }
+    if (DAY_KEY === today || today < DAY_KEY) { DAY_KEY = today; return false; }
+    APPTS.splice(0, APPTS.length);
+    freshTicket();
+    DAY_KEY = today;
+    return true;
+  }
   const spaOps = window.KiwiVerticalState?.open?.('spa', {
     schema: 1,
-    snapshot: () => ({ products: PRODUCTS, clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket }),
+    snapshot: () => ({ products: PRODUCTS, clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket, v: 2, dayKey: DAY_KEY }),
     restore: (d) => {
-      PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || [])); Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
+      /* Document réel écrit avant ce correctif : ses stocks sont ceux de la démo
+         (14, 22, 18, 30, 9, 3). On garde le catalogue, on oublie les quantités. */
+      const legacy = pvReal() && d.v !== 2;
+      PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || []).map((p) => (legacy && p ? { ...p, stock: null } : p)));
+      if (typeof d.dayKey === 'string') DAY_KEY = d.dayKey; Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
       CLIENTES.splice(0, CLIENTES.length, ...(d.clients || [])); Object.keys(CL).forEach(k => delete CL[k]); CLIENTES.forEach(c => { if (c?.id) CL[c.id] = c; });
       CURES.splice(0, CURES.length, ...(d.cures || [])); APPTS.splice(0, APPTS.length, ...(d.appointments || []));
       cureSeq = Math.max(cureSeq, +d.cureSeq || 0); apptSeq = Math.max(apptSeq, +d.apptSeq || 0); ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0); state.ticket = d.ticket || null;
@@ -276,6 +325,12 @@
   }
   function queueIfOffline(label) {
     spaOps?.save?.(label || 'operation');
+    if (pvReal()) {
+      syncNet();
+      if (!state.offline) return false;
+      toast(`${label}, enregistré sur cette caisse`);
+      return true;
+    }
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -329,6 +384,7 @@
   function mount(rootEl) {
     spaOps?.hydrate?.();
     root = rootEl;
+    bindNet();
     root.innerHTML = `
       <aside class="sp-rail">
         <div class="sp-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -344,7 +400,7 @@
           <button class="sp-nav-it" data-sp-view="clientes"><i data-lucide="users"></i><span>Clientes</span></button>
         </nav>
         <div class="sp-rail-foot">
-          <button class="sp-net" id="sp-net" title="Simuler une coupure réseau">
+          <button class="sp-net" id="sp-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="sp-net-dot"></i><span class="sp-net-label">En ligne</span>
           </button>
           <button class="sp-lock" id="sp-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -395,6 +451,7 @@
 
   function onShow() {
     if (!root) return;
+    rollDay();
     const today = $('#sp-today', root);
     if (today) today.textContent = headDate();
     renderBadges();
@@ -407,7 +464,7 @@
   const closeVeil = (v) => { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); };
 
   function headDate() {
-    return `${fmtDay(new Date())} · journée simulée à ${fmtHM(NOW_MIN)}`;
+    return pvReal() ? fmtDay(new Date()) : `${fmtDay(new Date())} · journée simulée à ${fmtHM(NOW_DEMO)}`;
   }
 
   /* ═══════════════════════ NAV ═══════════════════════ */
@@ -429,7 +486,7 @@
     const remaining = APPTS.filter((a) => a.status !== 'done').length;
     const due = dueAppts().length;
     const actives = CURES.filter((cu) => cu.used < cu.size).length;
-    const lowStock = PRODUCTS.filter((p) => p.stock <= 3).length;
+    const lowStock = PRODUCTS.filter((p) => stockKnown(p) && p.stock <= 3).length;
     const set = (id, val, dueStyle) => {
       const el = $(id, root);
       el.textContent = val || '';
@@ -470,7 +527,7 @@
     return cells;
   }
   function nextFree(prId) {
-    const c = freeCells(prId).find((t) => t >= NOW_MIN);
+    const c = freeCells(prId).find((t) => t >= nowMin());
     return c != null ? c : freeCells(prId)[0];
   }
 
@@ -499,16 +556,19 @@
   }
 
   function renderPlanning() {
+    rollDay();
     const panel = $('[data-sp-panel="planning"]', root);
     const booked = APPTS.reduce((s, a) => s + a.dur, 0);
     const fill = Math.round((booked / ((CLOSE - OPEN) * PRACTS.length)) * 100);
     const remaining = APPTS.filter((a) => a.status !== 'done').length;
-    const nowTop = (NOW_MIN - OPEN) * PX_MIN;
+    const nowM = nowMin();
+    const nowTop = (nowM - OPEN) * PX_MIN;
+    const nowIn = nowM >= OPEN && nowM <= CLOSE;   /* hors des heures d'ouverture il n'y a pas de ligne « maintenant » */
 
     panel.innerHTML = `
       <div class="sp-plan">
         <header class="sp-head">
-          <div><h1>Planning du jour</h1><div class="sp-head-sub">${headDate()} · ${fill} % de remplissage · ${remaining} séances à venir</div></div>
+          <div><h1>Planning du jour</h1><div class="sp-head-sub">${headDate()} · ${fill} % de remplissage · ${remaining} ${pl(remaining, 'séance à venir', 'séances à venir')}</div></div>
           <div class="sp-head-hint">Touchez un créneau libre pour une réservation walk-in</div>
         </header>
         <div class="sp-legend">
@@ -541,8 +601,8 @@
                   `<button class="sp-freeslot" data-sp-free="${p.id}:${t}" style="top:${(t - OPEN) * PX_MIN + 2}px; height:${CELL_PX - 4}px"
                      aria-label="Réserver ${fmtHM(t)} avec ${esc(p.short)}"><i data-lucide="plus"></i></button>`).join('')}
                 ${apptsOf(p.id).map(apptBlock).join('')}
-                <div class="sp-nowline" style="top:${nowTop}px"></div>
-                <div class="sp-nowline-lbl" style="top:${nowTop}px">${fmtHM(NOW_MIN)}</div>
+                ${nowIn ? `<div class="sp-nowline" style="top:${nowTop}px"></div>
+                <div class="sp-nowline-lbl" style="top:${nowTop}px">${fmtHM(nowM)}</div>` : ''}
               </div>`).join('')}
           </div>
         </div>
@@ -586,7 +646,7 @@
       <div class="sp-ap-rows">
         <div class="sp-ap-row"><i data-lucide="sparkles"></i><b>${esc(p.name)}</b><span class="r">${p.dur} min · ${fmtMAD(p.price)}</span></div>
         <div class="sp-ap-row"><i data-lucide="user"></i>Praticienne <b>${esc(pr.name)}</b><span class="r">${fmtHM(a.start)}–${fmtHM(a.start + a.dur)}</span></div>
-        ${cl ? `<div class="sp-ap-row"><i data-lucide="history"></i>${cl.visits} visites · dernière ${esc(fmtRel(cl.lastDays))}</div>` : ''}
+        ${cl ? `<div class="sp-ap-row"><i data-lucide="history"></i>${cl.visits} ${pl(cl.visits, 'visite', 'visites')} · dernière ${esc(fmtRel(cl.lastDays))}</div>` : ''}
         ${cure ? `<div class="sp-ap-row"><i data-lucide="tags"></i>Cure active <b>${esc(cureName(cure))}</b><span class="r">${cure.used}/${cure.size}</span></div>` : ''}
       </div>
       <div class="sp-sheet-foot" style="flex-wrap:wrap;">
@@ -712,7 +772,7 @@
         <button class="sp-tk-row ${cl ? 'is-set' : ''}" id="sp-bk-client">
           <i data-lucide="${cl ? 'user-check' : 'user-plus'}"></i>
           <span class="l"><b>${cl ? esc(cl.name) : 'Cliente de passage'}</b>
-          <span>${cl ? `${esc(cl.phone)} · ${cl.visits} visites` : 'Recherche par téléphone, la fiche garde allergies et cures'}</span></span>
+          <span>${cl ? `${esc(cl.phone)} · ${cl.visits} ${pl(cl.visits, 'visite', 'visites')}` : 'Recherche par téléphone, la fiche garde allergies et cures'}</span></span>
           ${cl && cl.allergies.length ? '<span class="alg">ALLERGIE</span>' : ''}
           <span class="edit">${cl ? 'Changer' : 'Chercher'}</span>
         </button>
@@ -810,7 +870,7 @@
       const items = c.id === 'boutique'
         ? PRODUCTS.map((p) => `
             <button class="sp-card" data-sp-prod="${p.id}" style="--i:${i++}">
-              <span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : `× ${p.stock}`}</span>
+              ${stockKnown(p) ? `<span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : `× ${p.stock}`}</span>` : ''}
               <span class="sp-card-art">${ART[p.id] || ''}</span>
               <span class="sp-card-name">${esc(p.name)}</span>
               <span class="sp-card-price">${fmtMAD(p.price)}</span>
@@ -836,7 +896,7 @@
     const p = PROD[prodId];
     const line = state.ticket.lines.find((l) => l.type === 'prod' && l.refId === prodId);
     const inTicket = line ? line.qty : 0;
-    if (inTicket + 1 > p.stock) {
+    if (stockKnown(p) && inTicket + 1 > p.stock) {
       toast(p.stock ? `Stock insuffisant, il reste ${p.stock} « ${p.name} »` : `« ${p.name} » est épuisé, réassort à commander`);
       return;
     }
@@ -936,7 +996,7 @@
     }
     const c = CL[t.clientId];
     return `<button class="sp-tk-row is-set" id="sp-tk-client"><i data-lucide="user-check"></i>
-      <span class="l"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${c.visits} visites${c.prefs.length ? ` · ${esc(c.prefs[0])}` : ''}</span></span>
+      <span class="l"><b>${esc(c.name)}</b><span>${esc(c.phone)} · ${c.visits} ${pl(c.visits, 'visite', 'visites')}${c.prefs.length ? ` · ${esc(c.prefs[0])}` : ''}</span></span>
       ${c.allergies.length ? '<span class="alg">ALLERGIE</span>' : ''}
       <span class="edit">Changer</span></button>`;
   }
@@ -977,7 +1037,7 @@
           </div>`}
       </div>
       <div class="sp-tk-foot">
-        <div class="sp-tk-tot"><span>${t.lines.reduce((s, l) => s + l.qty, 0)} ligne${t.lines.length > 1 ? 's' : ''}</span>
+        <div class="sp-tk-tot"><span>${t.lines.reduce((s, l) => s + l.qty, 0)} ${pl(t.lines.reduce((s, l) => s + l.qty, 0), 'article', 'articles')}</span>
           <span>${t.clientId ? esc(CL[t.clientId].name) : 'Cliente de passage'}</span></div>
         <div class="sp-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="sp-validate" id="sp-validate" ${t.lines.length ? '' : 'disabled'}>
@@ -1013,7 +1073,7 @@
       if (idx < 0) return;
       const l = t.lines[idx];
       if (plus) {
-        if (l.type === 'prod' && l.qty + 1 > PROD[l.refId].stock) {
+        if (l.type === 'prod' && stockKnown(PROD[l.refId]) && l.qty + 1 > PROD[l.refId].stock) {
           toast(`Stock insuffisant, il reste ${PROD[l.refId].stock} « ${PROD[l.refId].name} »`);
           return;
         }
@@ -1207,7 +1267,7 @@
           { itemId: ctx.familyId, variantId: String(ctx.size), name: ctx.name, category: 'forfait', qty: 1, unit: 'forfait', kind: 'service', total: ctx.price },
         ]);
         queueIfOffline('Vente forfait');
-        toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} séances pour ${CL[ctx.clientId].name}`);
+        toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} ${pl(ctx.size, 'séance', 'séances')} pour ${CL[ctx.clientId].name}`);
         toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
         if (state.view !== 'cures') switchView('cures');
         refreshOps();
@@ -1219,7 +1279,7 @@
         const a = findAppt(t.apptId);
         if (a) a.paid = { via: method };
       }
-      t.lines.forEach((l) => { if (l.type === 'prod') PROD[l.refId].stock = Math.max(0, PROD[l.refId].stock - l.qty); });
+      t.lines.forEach((l) => { if (l.type === 'prod' && stockKnown(PROD[l.refId])) PROD[l.refId].stock = Math.max(0, PROD[l.refId].stock - l.qty); });
       if (t.clientId) { const c = CL[t.clientId]; c.visits++; c.lastDays = 0; }
       const parts = tipSplit(tip, t.lines);
       /* Prestations ET pourboire : c'est le montant que la cliente a réellement
@@ -1315,7 +1375,7 @@
                 <div class="sp-ff-sizes">
                   ${[5, 10].map((sz) => `
                     <button class="sp-ff-size" data-sp-sell="${f.id}:${sz}">
-                      <b>${sz} séances</b>
+                      <b>${sz} ${pl(sz, 'séance', 'séances')}</b>
                       <span class="px">${fmtMAD(f.sizes[sz])}</span>
                       <span class="eco">économie <b>${fmtMAD(ffSaving(f, sz))}</b></span>
                     </button>`).join('')}
@@ -1462,13 +1522,13 @@
           <div class="sp-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));">
             ${PRODUCTS.map((p, i) => `
               <button class="sp-card" data-sp-shop="${p.id}" style="--i:${i}">
-                <span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : p.stock <= 3 ? `stock bas · ${p.stock}` : `× ${p.stock}`}</span>
+                ${stockKnown(p) ? `<span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : p.stock <= 3 ? `stock bas · ${p.stock}` : `× ${p.stock}`}</span>` : ''}
                 <span class="sp-card-art" style="width:66px;height:66px;">${ART[p.id] || ''}</span>
                 <span class="sp-card-name">${esc(p.name)}</span>
                 <span class="sp-card-price">${fmtMAD(p.price)}</span>
               </button>`).join('')}
           </div>
-          <div class="sp-foot-note">Le stock se décompte à l'encaissement, sous 3 unités, la pastille passe en alerte.</div>
+          <div class="sp-foot-note">${PRODUCTS.some(stockKnown) ? 'Le stock se décompte à l\'encaissement, sous 3 unités, la pastille passe en alerte.' : 'Le stock de ces produits n\'est pas suivi sur cette caisse : aucune quantité n\'est affichée ni décomptée.'}</div>
         </div>
       </div>`;
     panel.onclick = (e) => {
@@ -1517,7 +1577,7 @@
                     ${c.prefs.length ? `<span class="sp-pill"><i data-lucide="heart"></i>${esc(c.prefs[0])}</span>` : ''}
                   </span>
                 </span>
-                <span class="sp-cl-right"><b>${c.visits}</b>visites</span>
+                <span class="sp-cl-right"><b>${c.visits}</b>${pl(c.visits, 'visite', 'visites')}</span>
               </button>`;
             }).join('') || `<div class="sp-cl-empty">Aucune fiche pour « ${esc(q)} », vérifiez le numéro.</div>`}
           </div>
@@ -1551,7 +1611,7 @@
           <div class="sp-fh-name">${esc(c.name)}${c.vip ? ' · VIP' : ''}</div>
           <div class="sp-fh-sub">${esc(c.phone)} · dernière visite ${esc(fmtRel(c.lastDays))}</div>
         </div>
-        <div class="sp-fh-right"><b>${c.visits}</b>visites</div>
+        <div class="sp-fh-right"><b>${c.visits}</b>${pl(c.visits, 'visite', 'visites')}</div>
       </div>
 
       <div class="sp-f">
@@ -1635,7 +1695,7 @@
                 <span class="sp-ava">${esc(initials(c.name))}</span>
                 <span class="sp-cl-mid">
                   <span class="sp-cl-name">${esc(c.name)}${c.vip ? ' · VIP' : ''}</span>
-                  <span class="sp-cl-sub">${esc(c.phone)} · ${c.visits} visites${c.allergies.length ? ' · allergie au dossier' : ''}</span>
+                  <span class="sp-cl-sub">${esc(c.phone)} · ${c.visits} ${pl(c.visits, 'visite', 'visites')}${c.allergies.length ? ' · allergie au dossier' : ''}</span>
                 </span>
                 ${curesOf(c.id).length ? `<span class="sp-pill mint">cure ${curesOf(c.id)[0].used}/${curesOf(c.id)[0].size}</span>` : ''}
               </button>`).join('') || `<div class="sp-cl-empty">Aucune fiche pour « ${esc(q)} »</div>`}
@@ -1697,32 +1757,76 @@
     setTimeout(() => { const i = $('#sp-pk-q', el); if (i) i.focus(); }, 60);
   }
 
-  /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* ═══════════════════════ RÉSEAU ═══════════════════════════════════════════
+     Démo : coupure SIMULÉE par le bouton. Session réelle : l'indicateur dit ce
+     que le navigateur sait (navigator.onLine) et la vraie file de ventes
+     (KiwiLive.queueStatus). Il ne se bascule plus à la main, et plus aucun toast
+     n'annonce « tout est synchronisé » sans l'avoir vérifié : le bouton affichait
+     « Réseau de retour, tout est synchronisé » alors qu'il venait seulement de
+     changer un drapeau. */
+  function liveQueue() {
+    try {
+      const q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus();
+      return q ? { pending: +q.pending || 0, blocked: +q.blocked || 0, storageError: !!q.storageError } : null;
+    } catch (_) { return null; }
+  }
+  function syncNet() {
+    if (!pvReal()) return;
+    const q = liveQueue();
+    state.offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.queued = q ? q.pending : 0;
+    state.syncBlocked = !!q && (q.storageError || q.blocked > 0);
+    if (root) renderNet();
+  }
+  let netBound = false;
+  function bindNet() {
+    if (netBound || !pvReal()) return;
+    netBound = true;
+    window.addEventListener('online', syncNet);
+    window.addEventListener('offline', syncNet);
+    window.addEventListener('kiwi:sale-queue', syncNet);
+    syncNet();
+  }
   function toggleOffline() {
+    if (pvReal()) {
+      syncNet();
+      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
+        : state.offline ? 'Wi-Fi indisponible, les opérations restent sur cette caisse'
+          : state.queued ? `${state.queued} ${state.queued > 1 ? 'ventes' : 'vente'} en cours de synchronisation`
+            : 'Caisse en ligne, aucune vente en attente d\'envoi');
+      return;
+    }
     state.offline = !state.offline;
-    if (!state.offline && state.queued) {
-      toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
+    if (!state.offline) {
+      toast(state.queued ? `Réseau simulé rétabli, file de démonstration vidée (${state.queued})` : 'Réseau simulé rétabli');
       state.queued = 0;
-    } else if (state.offline) {
-      toast('Mode hors-ligne, le spa continue, tout est mis en file');
     } else {
-      toast('Réseau de retour, rien en attente, tout est synchronisé');
+      toast('Mode hors-ligne simulé, le spa continue');
     }
     renderNet();
   }
   function renderNet() {
     const net = $('#sp-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.sp-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    const real = pvReal();
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.sp-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (real && state.queued) ? 'Synchronisation' : 'En ligne';
+    net.title = real ? 'État du réseau' : 'Simuler une coupure réseau';
     let q = $('.sp-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((real || state.offline) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'sp-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#sp-offline-note', root);
-    note.hidden = !state.offline;
-    $('#sp-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    note.hidden = !state.offline && !state.syncBlocked;
+    const base = note.dataset.base || (note.dataset.base = note.textContent.replace(/\s+/g, ' ').trim());
+    note.innerHTML = '';
+    note.appendChild(document.createTextNode((state.syncBlocked
+      ? 'La synchronisation est bloquée. Les ventes restent sur cette caisse : contactez le support avant de vider les données du navigateur. '
+      : base + ' ')));
+    const cnt = document.createElement('b'); cnt.id = 'sp-queue-count';
+    cnt.textContent = state.queued ? `${state.queued} en attente` : '';
+    note.appendChild(cnt);
   }
 
   /* ═══════════════════════ register ═══════════════════════ */

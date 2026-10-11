@@ -26,8 +26,11 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
+  /* Pluriel français : 0 et 1 prennent le singulier (« 1 passage », « 0 présent »). */
+  const pl = (n, one, many) => (Math.abs(n) < 2 ? one : many);
 
   /* real-store detection : neutralize seeded demo PEOPLE for a paired merchant,
      while the local demo (pvReal() === false) stays byte-identical. */
@@ -124,7 +127,12 @@
   /* ticket — séance unique / pass journée */
   ART.pass = art(`<path class="fill" d="M12 25h40v7a4 4 0 0 0 0 8v7H12v-7a4 4 0 0 0 0-8z"/><path d="M12 25h40v7a4 4 0 0 0 0 8v7H12v-7a4 4 0 0 0 0-8z"/><path class="thin" d="M40 27v18"/><path class="thin" d="M19 32h12M19 38h9"/>`);
 
-  const CLASSES = [
+  /* Session réelle : aucun cours inventé. Le club n'a pas (encore) de planning
+     dans cette caisse, et l'horaire de démonstration (RPM 07:00, CrossFit 17:00
+     « en cours » à n'importe quelle heure, coachs Salma/Amine/Réda) se lisait
+     comme le sien. Mesuré en session appairée : « CrossFit · WOD, en cours,
+     Amine » à 17:51 pour un club sans coach de ce nom. */
+  const CLASSES = pvReal() ? [] : [
     { id: 'rpm',      label: 'RPM · Cycle',    art: 'spin',    room: 'Studio cycle', coach: 'Coach Salma', dur: 45 },
     { id: 'bodypump', label: 'Body Pump',      art: 'barbell', room: 'Studio 1',     coach: 'Coach Amine', dur: 55 },
     { id: 'yoga',     label: 'Yoga Vinyasa',   art: 'yoga',    room: 'Studio 2',     coach: 'Coach Salma', dur: 60 },
@@ -149,11 +157,9 @@
       { id: 's6', classId: 'rpm',      time: '19:00', state: 'upcoming', cap: 18, booked: ['m4', 'm6', 'm10'],   extra: 15, checkedIn: [],            wait: ['m8'], waitExtra: 1 },
       { id: 's7', classId: 'zumba',    time: '20:00', state: 'upcoming', cap: 22, booked: ['m4', 'm10'],         extra: 6,  checkedIn: [],            wait: [], waitExtra: 0 },
     ];
-    /* real store : keep the class catalog (times/caps) but strip the seeded
-       attendance that references demo member ids — a real gym starts empty. */
-    return pvReal()
-      ? seed.map((s) => ({ id: s.id, classId: s.classId, time: s.time, state: s.state, cap: s.cap, booked: [], extra: 0, checkedIn: [], wait: [], waitExtra: 0 }))
-      : seed;
+    /* real store : empty. Les états « en cours / terminé » du seed sont figés
+       sur la journée de démo, ils ne suivent pas l'horloge d'un vrai club. */
+    return pvReal() ? [] : seed;
   })();
 
   /* ───────────────────────── coaching personnel (PT) ─────────────────────────
@@ -254,6 +260,10 @@
     { lbl: '18–21', count: 0 },
     { lbl: '21–24', count: 0 },
   ];
+  /* Session réelle : la courbe part de zéro et ne se remplit que des entrées
+     réellement pointées (noteEntry). Les 4/6/5/8 du seed, eux, s'affichaient
+     tels quels, avec « prévoir un coach de plus en salle » dessous. */
+  if (pvReal()) PEAK_SLOTS.forEach((slot) => { slot.count = 0; });
 
   const state = {
     view: 'checkin',
@@ -268,11 +278,74 @@
     passesToday: pvReal() ? 0 : 3,   /* séances uniques / pass journée vendus */
   };
 
-  const addRevenue = (bucket, amount) => { state.dayRevenue[bucket] = (state.dayRevenue[bucket] || 0) + amount; };
+  const addRevenue = (bucket, amount) => { rollDay(); state.dayRevenue[bucket] = (state.dayRevenue[bucket] || 0) + amount; };
   const revenueTotal = () => Object.values(state.dayRevenue).reduce((s, v) => s + v, 0);
 
   const passagesToday = () => MEMBERS.reduce((s, m) => s + (m.checkedToday ? 1 : 0), 0) + BASE_PASSAGES;
-  let BASE_PASSAGES = 23 - MEMBERS.filter((m) => m.checkedToday).length;  /* keep live counter at 23 at boot */
+  /* démo : le compteur démarre à 23 ; session réelle : 0 (il affichait 23
+     passages à un club qui n'en avait pointé aucun). */
+  let BASE_PASSAGES = pvReal() ? 0 : 23 - MEMBERS.filter((m) => m.checkedToday).length;
+
+  /* ───────────────────────── journée d'exploitation ─────────────────────────
+     Le compteur de passages, la courbe des heures de pointe, la recette du jour
+     et le « pointé aujourd'hui » de chaque fiche étaient posés une fois puis
+     jamais remis à zéro : le lendemain, un club réel relisait la veille sous
+     « aujourd'hui », et « passages ce mois » ne bougeait jamais d'un pointage.
+     La journée suit la même coupure que la caisse et le tableau de bord
+     (KiwiDayReport.today, 5 h), pas minuit. Démo : inchangée (rollDay no-op). */
+  let DAY_KEY = '';
+  let ATTEND_HIST = {};   /* 'YYYY-MM-DD' → passages, les 14 derniers jours */
+  function bizDay() {
+    try {
+      const R = window.KiwiDayReport;
+      const d = R && typeof R.today === 'function' ? R.today() : '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    } catch (_) {}
+    const t = new Date(Date.now() - 5 * 3600 * 1000);
+    return t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+  }
+  const dayGap = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / DAY);
+  function rollDay() {
+    if (!pvReal()) return false;
+    const today = bizDay();
+    if (!DAY_KEY) { DAY_KEY = today; return false; }
+    if (DAY_KEY === today) return false;
+    const gap = dayGap(DAY_KEY, today);
+    if (!(gap > 0)) { DAY_KEY = today; return false; }
+    ATTEND_HIST[DAY_KEY] = passagesToday();
+    Object.keys(ATTEND_HIST).sort().slice(0, -14).forEach((k) => { delete ATTEND_HIST[k]; });
+    const newMonth = DAY_KEY.slice(0, 7) !== today.slice(0, 7);
+    MEMBERS.forEach((m) => {
+      m.lastVisitD = (Number.isFinite(m.lastVisitD) ? m.lastVisitD : 0) - gap;
+      m.checkedToday = false;
+      if (newMonth) m.visits = 0;
+    });
+    PEAK_SLOTS.forEach((slot) => { slot.count = 0; });
+    BASE_PASSAGES = 0;
+    state.inGym = 0;
+    state.passesToday = 0;
+    Object.keys(state.dayRevenue).forEach((k) => { state.dayRevenue[k] = 0; });
+    SCHEDULE.forEach((sess) => { sess.booked = []; sess.extra = 0; sess.checkedIn = []; sess.wait = []; sess.waitExtra = 0; });
+    DAY_KEY = today;
+    return true;
+  }
+  /* Une entrée pointée : compteur du jour, passages du mois, courbe des heures
+     de pointe (tranche de l'heure réelle). Une seule fois par membre et par jour. */
+  function noteEntry(m) {
+    rollDay();
+    if (!m || m.checkedToday) return false;
+    m.checkedToday = true;
+    m.visits = (m.visits || 0) + 1;
+    m.lastVisitD = 0;
+    state.inGym++;
+    peakAdd(1);
+    return true;
+  }
+  function peakAdd(n) {
+    const h = new Date().getHours();
+    const slot = PEAK_SLOTS[h < 6 ? -1 : Math.min(PEAK_SLOTS.length - 1, Math.floor((h - 6) / 3))];
+    if (slot) slot.count += n;
+  }
 
   const gymOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'gym',
@@ -292,10 +365,20 @@
         dayRevenue: state.dayRevenue,
         inGym: state.inGym,
         passesToday: state.passesToday,
+        /* v:2 = les graines de démo ne sont plus écrites par une session réelle ;
+           dayKey / attendHist alimentent la remise à zéro quotidienne. */
+        v: 2,
+        dayKey: DAY_KEY,
+        attendHist: ATTEND_HIST,
       };
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
+      /* Un document réel écrit AVANT ce correctif embarque le planning, la
+         courbe des heures de pointe et les 23 passages de la démo (l'autosave
+         écrivait tout l'instantané). On les laisse de côté plutôt que de les
+         relire comme les chiffres du club. */
+      const legacy = pvReal() && saved.v !== 2;
       if (Array.isArray(saved.plans)) PLANS.splice(0, PLANS.length, ...saved.plans);
       Object.keys(PLAN).forEach((id) => delete PLAN[id]);
       PLANS.forEach((plan) => { PLAN[plan.id] = plan; });
@@ -306,11 +389,11 @@
       Object.keys(COACH).forEach((id) => delete COACH[id]);
       Object.keys(COACH_BY_NAME).forEach((name) => delete COACH_BY_NAME[name]);
       COACHES.forEach((coach) => { COACH[coach.id] = coach; COACH_BY_NAME[coach.name] = coach; });
-      if (Array.isArray(saved.classes)) CLASSES.splice(0, CLASSES.length, ...saved.classes);
+      if (Array.isArray(saved.classes) && !legacy) CLASSES.splice(0, CLASSES.length, ...saved.classes);
       Object.keys(CLASS).forEach((id) => delete CLASS[id]);
       CLASSES.forEach((klass) => { CLASS[klass.id] = klass; });
-      if (Array.isArray(saved.schedule)) SCHEDULE.splice(0, SCHEDULE.length, ...saved.schedule);
-      if (saved.ptToday && typeof saved.ptToday === 'object') {
+      if (Array.isArray(saved.schedule) && !legacy) SCHEDULE.splice(0, SCHEDULE.length, ...saved.schedule);
+      if (saved.ptToday && typeof saved.ptToday === 'object' && !legacy) {
         Object.keys(PT_TODAY).forEach((id) => delete PT_TODAY[id]);
         Object.assign(PT_TODAY, saved.ptToday);
       }
@@ -324,8 +407,10 @@
       });
       Object.keys(MEMBER).forEach((id) => delete MEMBER[id]);
       MEMBERS.forEach((member) => { MEMBER[member.id] = member; });
-      if (Array.isArray(saved.peakSlots)) PEAK_SLOTS.splice(0, PEAK_SLOTS.length, ...saved.peakSlots);
-      if (Number.isFinite(saved.basePassages)) BASE_PASSAGES = saved.basePassages;
+      if (Array.isArray(saved.peakSlots) && !legacy) PEAK_SLOTS.splice(0, PEAK_SLOTS.length, ...saved.peakSlots);
+      if (Number.isFinite(saved.basePassages)) BASE_PASSAGES = legacy ? Math.max(0, saved.basePassages - 23) : saved.basePassages;
+      if (typeof saved.dayKey === 'string') DAY_KEY = saved.dayKey;
+      if (saved.attendHist && typeof saved.attendHist === 'object') ATTEND_HIST = saved.attendHist;
       if (Array.isArray(saved.cart)) state.cart = saved.cart;
       if (saved.dayRevenue && typeof saved.dayRevenue === 'object') state.dayRevenue = saved.dayRevenue;
       if (Number.isFinite(saved.inGym)) state.inGym = saved.inGym;
@@ -335,6 +420,12 @@
 
   function queueIfOffline(label) {
     if (gymOps) gymOps.save(label);
+    if (pvReal()) {
+      syncNet();
+      if (!state.offline) return false;
+      toast(`${label}, enregistré sur cette caisse`);
+      return true;
+    }
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -391,14 +482,40 @@
       .sort((a, b) => a.time.localeCompare(b.time))[0] || null;
   }
 
-  const activeCount = () => CLUB.activeBase;
+  /* Club réel : les chiffres du club sont CEUX DES FICHES de cette caisse, rien
+     d'autre. activeBase restait à 0 pendant que le comptoir vendait des
+     abonnements (« 0 membres actifs » avec 12 fiches), et le MRR, les nouveaux,
+     les partis et la répartition des formules ne bougeaient jamais. La démo
+     garde le club de 247 membres du seed. */
+  const countsAsActive = (m) => { const st = memberStatus(m); return st === 'active' || st === 'expiring'; };
+  const monthlyOf = (m) => Math.round(planPrice(m.plan, m.student) / Math.max(1, PLAN[m.plan].days / 30.4));
+  function clubFigures() {
+    if (!pvReal()) {
+      return { active: CLUB.activeBase, mrr: CLUB.mrr, newM: CLUB.newThisMonth, churn: CLUB.churnThisMonth, mix: CLUB.mix };
+    }
+    const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
+    const act = MEMBERS.filter(countsAsActive);
+    const inMonth = (d) => d && d.getFullYear() === y && d.getMonth() === mo;
+    const byPlan = {};
+    act.forEach((m) => { byPlan[m.plan] = (byPlan[m.plan] || 0) + 1; });
+    return {
+      active: act.length,
+      mrr: act.reduce((n, m) => n + monthlyOf(m), 0),
+      newM: MEMBERS.filter((m) => inMonth(m.start)).length,
+      churn: MEMBERS.filter((m) => memberStatus(m) === 'expired' && inMonth(m.end)).length,
+      mix: PLANS.filter((p) => byPlan[p.id]).map((p) => ({ id: p.id, pct: Math.round((byPlan[p.id] / act.length) * 100) })),
+    };
+  }
+  const activeCount = () => clubFigures().active;
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
 
   function mount(rootEl) {
     if (gymOps) gymOps.hydrate();
+    rollDay();
     root = rootEl;
+    bindNet();
     root.innerHTML = `
       <aside class="gy-rail">
         <div class="gy-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -416,7 +533,7 @@
           <button class="gy-nav-it" data-gy-view="pilotage"><i data-lucide="layout-dashboard"></i><span>Pilotage</span><b class="gy-nav-badge" id="gy-badge-pilotage"></b></button>
         </nav>
         <div class="gy-rail-foot">
-          <button class="gy-net" id="gy-net" title="Simuler une coupure réseau">
+          <button class="gy-net" id="gy-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="gy-net-dot"></i><span class="gy-net-label">En ligne</span>
           </button>
           <button class="gy-lock" id="gy-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -687,6 +804,7 @@
   }
 
   function renderBadges() {
+    rollDay();
     const exp = MEMBERS.filter((m) => { const s = memberStatus(m); return s === 'expiring' || s === 'expired'; }).length;
     const cartCt = state.cart.reduce((s, l) => s + l.qty, 0);
     const bC = $('#gy-badge-checkin', root), bA = $('#gy-badge-abos', root),
@@ -712,11 +830,11 @@
 
   /* ═══════════════════════ CHECK-IN — la signature ═══════════════════════ */
   function renderCheckin() {
+    rollDay();
     $('#gy-ci-sub', root).textContent =
       `${fmtDT(new Date())} · présentez le badge, l'écran confirme l'accès`;
     renderQuickCodes();
     renderCounter();
-    renderPeak();
     if (!$('#gy-ci-result', root).dataset.shown) clearCheckinResult();
   }
 
@@ -737,18 +855,27 @@
     $('#gy-ci-count-sub', root).textContent = checkedNames.length
       ? `dont ${checkedNames.slice(-2).join(', ')} à l'instant`
       : 'la salle se remplit';
+    /* une entrée ou un pass vient de bouger les tranches : le graphique suit */
+    if ($('#gy-peak-bars', root)) renderPeak();
   }
 
   function renderPeak() {
     const max = Math.max(...PEAK_SLOTS.map((s) => s.count), 1);
     const peakIdx = PEAK_SLOTS.reduce((bi, s, i, a) => s.count > a[bi].count ? i : bi, 0);
     $('#gy-peak-bars', root).innerHTML = PEAK_SLOTS.map((s, i) => `
-      <div class="gy-peak-bar ${i === peakIdx ? 'peak' : ''} ${s.count === 0 ? 'empty' : ''}">
+      <div class="gy-peak-bar ${i === peakIdx && s.count > 0 ? 'peak' : ''} ${s.count === 0 ? 'empty' : ''}">
         <span class="gy-peak-col"><i style="height:${Math.round((s.count / max) * 100)}%"></i></span>
         <span class="gy-peak-ct">${s.count || ''}</span>
         <span class="gy-peak-lbl">${s.lbl}</span>
       </div>`).join('');
-    $('#gy-peak-foot', root).textContent = `Pic vers ${PEAK_SLOTS[peakIdx].lbl} h, prévoir un coach de plus en salle.`;
+    /* Sans passage pointé il n'y a pas de pic : on ne désigne pas la première
+       tranche, et on ne recommande un coach de plus qu'à la démo. */
+    const total = PEAK_SLOTS.reduce((n, x) => n + x.count, 0);
+    $('#gy-peak-foot', root).textContent = !total
+      ? 'Aucun passage pointé pour l\'instant aujourd\'hui.'
+      : pvReal()
+        ? `Pic vers ${PEAK_SLOTS[peakIdx].lbl} h, d'après les entrées pointées aujourd'hui.`
+        : `Pic vers ${PEAK_SLOTS[peakIdx].lbl} h, prévoir un coach de plus en salle.`;
   }
 
   function clearCheckinResult() {
@@ -826,8 +953,7 @@
     const frozenBlocked = status === 'frozen';
 
     if (open) {
-      if (!m.checkedToday) state.inGym++;
-      m.checkedToday = true;
+      noteEntry(m);
       queueIfOffline('Pointage entrée');
       el.className = 'gy-ci-result is-green gy-flash';
       const until = `jusqu'au ${fmtLong(m.end)}`;
@@ -1195,7 +1321,7 @@
       <div class="gy-cart-foot">
         <div class="gy-cart-tot"><span class="lbl">Total</span><span class="val mono" id="gy-cart-val">${fmtMAD(total)}</span></div>
         <button class="gy-cart-pay" id="gy-cart-pay" ${dis}><i data-lucide="banknote"></i> Encaisser</button>
-        <div class="gy-cart-note">Rendu calculé automatiquement à l'espèces.</div>
+        <div class="gy-cart-note">Rendu calculé automatiquement pour un paiement en espèces.</div>
       </div>`;
     icons();
   }
@@ -1339,7 +1465,7 @@
     if (!q) hits.sort((a, b) => statusRank(a) - statusRank(b) || a.end - b.end);
     const body = $('#gy-mem-body', root);
     body.innerHTML = hits.length ? `<div class="gy-mem-grid">${hits.map(memberCard).join('')}</div>` :
-      `<div class="gy-empty">Aucun membre pour « ${esc(q)} », vérifiez le numéro, le nom ou le code badge.</div>`;
+      `<div class="gy-empty">${q ? `Aucun membre pour « ${esc(q)} », vérifiez le numéro, le nom ou le code badge.` : 'Aucun membre enregistré sur cette caisse.'}</div>`;
     icons();
   }
   function statusRank(m) { return { expired: 0, expiring: 1, frozen: 2, active: 3 }[memberStatus(m)]; }
@@ -1451,8 +1577,7 @@
     $('[data-gy-mb-pt]', el).onclick = () => { closeVeil('#gy-member-veil'); openPtSell(m); };
     const ci = $('[data-gy-mb-checkin]', el);
     if (ci) ci.onclick = () => {
-      if (!m.checkedToday) state.inGym++;
-      m.checkedToday = true;
+      noteEntry(m);
       queueIfOffline('Pointage entrée');
       toast(`${firstName(m.name)}, entrée pointée`);
       renderBadges(); openMember(m.id);
@@ -1478,7 +1603,7 @@
     const s = memberStatus(m);
     const d = daysLeft(m);
     if (s === 'expired') {
-      return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} jours.`
+      return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} ${pl(Math.abs(d), 'jour', 'jours')}.`
         + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${planPrice(m.plan, m.student)} MAD) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
         + `\nUne séance et on repart fort, nchallah.`
         + `\n·${gymVenue}, via Kiwi`;
@@ -1489,7 +1614,7 @@
         + `\nObjectif « ${m.goal} » : on y est presque, lâche rien !`
         + `\n·${gymVenue}, via Kiwi`;
     }
-    return `Salam ${first} ! Petit message d'${gymVenue}, continue comme ça, ${m.visits} passages ce mois, c'est du sérieux.`
+    return `Salam ${first} ! Petit message d'${gymVenue}, continue comme ça, ${m.visits} ${pl(m.visits, 'passage', 'passages')} ce mois, c'est du sérieux.`
       + `\nBesoin d'un coup de main sur ton objectif « ${m.goal} » ? ${m.coach !== 'Sans coach' ? m.coach : 'Un coach'} est dispo cette semaine.`
       + `\n·${gymVenue}, via Kiwi`;
   }
@@ -1507,7 +1632,7 @@
       <div class="gy-wa-bubblewrap">
         <div class="gy-wa-bubble">
           <textarea id="gy-wa-text">${esc(waMessage(m))}</textarea>
-          <div class="gy-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} ✓✓</div>
+          <div class="gy-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} · brouillon, pas encore envoyé</div>
         </div>
       </div>
       <div class="gy-wa-tone" id="gy-wa-tone">
@@ -1553,7 +1678,7 @@
     const first = firstName(m.name);
     const gymVenue = pvName('Atlas Fitness') || 'notre salle';
     if (tone === 'court') {
-      return `Salam ${first} ! Ton abonnement ${gymVenue} ${memberStatus(m) === 'expired' ? 'a expiré' : 'expire bientôt'}. On te garde ta place, passe quand tu veux., ${gymVenue}, via Kiwi`;
+      return `Salam ${first} ! Ton abonnement ${gymVenue} ${memberStatus(m) === 'expired' ? 'a expiré' : 'expire bientôt'}. On te garde ta place, passe quand tu veux.\n·${gymVenue}, via Kiwi`;
     }
     if (tone === 'offre') {
       return `Salam ${first} ! Offre fidélité ${gymVenue} : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
@@ -1577,6 +1702,13 @@
     const next = order.filter((s) => s.state === 'soon' || s.state === 'upcoming').sort((a, b) => a.time.localeCompare(b.time));
     const done = order.filter((s) => s.state === 'done').sort((a, b) => a.time.localeCompare(b.time));
     const totalBooked = SCHEDULE.reduce((n, s) => n + sessionBooked(s), 0);
+    if (!SCHEDULE.length) {
+      /* Aucun cours n'existe dans cette caisse : on le dit, au lieu d'afficher
+         l'horaire de démonstration comme celui du club. */
+      body.innerHTML = `<div class="gy-empty">Aucun cours collectif n'est programmé sur cette caisse. La programmation des cours n'y est pas encore disponible.</div>`;
+      icons();
+      return;
+    }
     body.innerHTML = `
       <div class="gy-plan-summary">
         <div class="gy-plan-sum-cell"><b>${SCHEDULE.length}</b><span>cours aujourd'hui</span></div>
@@ -1613,7 +1745,7 @@
     const booked = sessionBooked(s), places = sessionPlaces(s), full = sessionFull(s);
     const pct = Math.min(100, Math.round((booked / s.cap) * 100));
     const capLine = s.state === 'done'
-      ? `${sessionPresent(s)} présents · ${booked}/${s.cap} inscrits`
+      ? `${sessionPresent(s)} ${pl(sessionPresent(s), 'présent', 'présents')} · ${booked}/${s.cap} inscrits`
       : full
         ? (sessionWait(s) ? `complet · ${sessionWait(s)} en liste d'attente` : 'complet')
         : `${booked}/${s.cap} inscrits · ${places} place${places > 1 ? 's' : ''} libre${places > 1 ? 's' : ''}`;
@@ -1656,14 +1788,14 @@
           <span class="gy-class-state ${s.state}">${s.state === 'live' ? '<i class="gy-live-dot"></i> ' : ''}${STATE_LBL[s.state]}</span>
         </div>
         <div class="gy-rost-cap">
-          <div class="gy-rost-cap-l"><b>${booked}</b> / ${s.cap} inscrits${s.state === 'done' || s.state === 'live' ? ` · <b>${present + (s.state === 'done' ? Math.round(s.extra * 0.82) : 0)}</b> présents` : full ? ` · complet` : ` · ${places} place${places > 1 ? 's' : ''}`}</div>
+          <div class="gy-rost-cap-l"><b>${booked}</b> / ${s.cap} inscrits${s.state === 'done' || s.state === 'live' ? ` · <b>${present + (s.state === 'done' ? Math.round(s.extra * 0.82) : 0)}</b> ${pl(present + (s.state === 'done' ? Math.round(s.extra * 0.82) : 0), 'présent', 'présents')}` : full ? ` · complet` : ` · ${places} place${places > 1 ? 's' : ''}`}</div>
           <div class="gy-class-capbar lg"><i style="width:${pct}%" class="${full ? 'full' : ''}"></i></div>
         </div>
         ${canCheck ? `<div class="gy-rost-hint"><i data-lucide="info"></i> Pointez chaque membre à son arrivée, la présence compte aussi comme une entrée salle.</div>` : ''}
         <div class="gy-f-lbl" style="margin-top:6px">Inscrits ${named.length ? `· ${named.length} nominatifs` : ''}</div>
         <div class="gy-rost-list">
           ${named.map((m) => rosterRow(s, m.id, canCheck)).join('') || '<div class="gy-empty">Aucun inscrit nominatif.</div>'}
-          ${s.extra > 0 ? `<div class="gy-rost-extra"><span class="gy-mem-ava mut">+${s.extra}</span><span class="gy-rost-l"><b>${s.extra} autres membres</b><span>réservés via l'app Kiwi Membre</span></span></div>` : ''}
+          ${s.extra > 0 ? `<div class="gy-rost-extra"><span class="gy-mem-ava mut">+${s.extra}</span><span class="gy-rost-l"><b>${s.extra} ${pl(s.extra, 'autre membre', 'autres membres')}</b><span>réservés via l'app Kiwi Membre</span></span></div>` : ''}
         </div>
         ${sessionWait(s) ? `
           <div class="gy-f-lbl" style="margin-top:14px">Liste d'attente · ${sessionWait(s)}</div>
@@ -1710,7 +1842,7 @@
     if (s.checkedIn.includes(mid)) return;
     s.checkedIn.push(mid);
     const m = MEMBER[mid];
-    if (m && !m.checkedToday) { m.checkedToday = true; state.inGym++; }
+    if (m) noteEntry(m);
     queueIfOffline('Présence cours');
     toast(`${m ? firstName(m.name) : 'Membre'}, présent au cours`);
   }
@@ -1748,7 +1880,7 @@
           <span class="gy-mem-ava ${memberStatus(m) === 'expired' ? 'expired' : memberStatus(m) === 'expiring' ? 'soon' : memberStatus(m) === 'frozen' ? 'frozen' : ''}">${esc(initials(m.name))}</span>
           <span class="gy-cl-mid"><span class="gy-cl-name">${esc(m.name)}</span><span class="gy-cl-sub">${esc(PLAN[m.plan].label)} · ${esc(m.phone)}</span></span>
           <span class="gy-cl-right">${statusPill(m)}</span>
-        </button>`).join('') : `<div class="gy-empty">Aucun membre pour « ${esc(q)} ».</div>`;
+        </button>`).join('') : `<div class="gy-empty">${q ? `Aucun membre pour « ${esc(q)} ».` : 'Aucun membre enregistré sur cette caisse.'}</div>`;
       icons();
     };
     renderList('');
@@ -1773,7 +1905,7 @@
       <div class="gy-coach-intro">
         <div class="gy-coach-intro-l">
           <b>Coaching personnel</b>
-          <span>Vendez des packs de séances, suivez la journée de chaque coach. <b class="gy-ci-strong">${totalCredits}</b> séances créditées chez les membres · <b class="gy-ci-strong">${ptToday}</b> séances perso aujourd'hui.</span>
+          <span>Vendez des packs de séances, suivez la journée de chaque coach. <b class="gy-ci-strong">${totalCredits}</b> ${pl(totalCredits, 'séance créditée', 'séances créditées')} chez les membres · <b class="gy-ci-strong">${ptToday}</b> ${pl(ptToday, 'séance perso', 'séances perso')} aujourd'hui.</span>
         </div>
       </div>
       <div class="gy-coach-grid">${COACHES.map(coachCard).join('')}</div>`;
@@ -1792,7 +1924,7 @@
         <i data-lucide="chevron-right" class="gy-coach-chev"></i>
       </div>
       <div class="gy-coach-stats">
-        <span><b>${classCount}</b> cours</span><span><b>${ptCount}</b> perso</span><span><b>${mem.length}</b> suivis</span>
+        <span><b>${classCount}</b> cours</span><span><b>${ptCount}</b> perso</span><span><b>${mem.length}</b> ${pl(mem.length, 'suivi', 'suivis')}</span>
       </div>
       <div class="gy-coach-tl">
         ${day.length ? day.map(coachRow).join('') : '<div class="gy-coach-tl-empty">Journée libre, disponible pour une séance.</div>'}
@@ -1941,14 +2073,28 @@
   /* ═══════════════════════ PILOTAGE — le tableau de bord du gérant ═══════════ */
   function renderPilotage() {
     const body = $('#gy-pilot-body', root);
+    rollDay();
+    const real = pvReal();
+    const fig = clubFigures();
     const passages = passagesToday();
     const exp = MEMBERS.filter((m) => { const s = memberStatus(m); return s === 'expiring' || s === 'expired'; }).length;
     const occ = Math.min(100, Math.round((state.inGym / CLUB.capacity) * 100));
     const rev = state.dayRevenue, revTot = revenueTotal();
-    const attend = CLUB.attend7.slice(); attend[6] = passages;
+    /* Fréquentation : démo = série du seed ; session réelle = les passages
+       qu'on a réellement comptés (ATTEND_HIST), 0 pour un jour sans caisse
+       ouverte. Les initiales suivent les vrais jours, la dernière barre est
+       aujourd'hui (elle portait toujours « D »). */
+    const attend = real ? [] : CLUB.attend7.slice();
+    const wd = [];
+    const letters = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * DAY);
+      wd.push(letters[d.getDay()]);
+      if (real) attend.push(i === 0 ? passages : (ATTEND_HIST[new Date(Date.parse(bizDay() + 'T12:00:00Z') - i * DAY).toISOString().slice(0, 10)] || 0));
+    }
+    attend[6] = passages;
     const maxA = Math.max.apply(null, attend.concat([1]));
-    const wd = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    const newM = CLUB.newThisMonth, churn = CLUB.churnThisMonth, net = newM - churn;
+    const newM = fig.newM, churn = fig.churn, net = newM - churn;
     body.innerHTML = `
       <div class="gy-kpi-grid">
         <div class="gy-kpi">
@@ -1958,8 +2104,8 @@
         </div>
         <div class="gy-kpi">
           <div class="gy-kpi-top"><span class="gy-kpi-ic"><i data-lucide="repeat"></i></span><span class="gy-kpi-trend">/ mois</span></div>
-          <div class="gy-kpi-val">${esc(fmtMAD(CLUB.mrr))}</div>
-          <div class="gy-kpi-lbl">Revenu récurrent (MRR)</div>
+          <div class="gy-kpi-val">${esc(fmtMAD(fig.mrr))}</div>
+          <div class="gy-kpi-lbl">${real ? 'Revenu récurrent estimé (MRR)' : 'Revenu récurrent (MRR)'}</div>
         </div>
         <div class="gy-kpi feat">
           <div class="gy-kpi-top"><span class="gy-kpi-ic"><i data-lucide="banknote"></i></span><span class="gy-kpi-trend live"><i class="gy-live-dot"></i> en direct</span></div>
@@ -1971,12 +2117,16 @@
           <div class="gy-kpi-val">${passages}</div>
           <div class="gy-kpi-lbl">Passages aujourd'hui</div>
         </div>
-        <div class="gy-kpi">
+        ${real ? `<div class="gy-kpi">
+          <div class="gy-kpi-top"><span class="gy-kpi-ic"><i data-lucide="ticket"></i></span></div>
+          <div class="gy-kpi-val">${state.passesToday}</div>
+          <div class="gy-kpi-lbl">${pl(state.passesToday, 'Pass vendu', 'Pass vendus')} aujourd'hui</div>
+        </div>` : `<div class="gy-kpi">
           <div class="gy-kpi-top"><span class="gy-kpi-ic"><i data-lucide="activity"></i></span><span class="gy-kpi-trend mono">${state.inGym}/${CLUB.capacity}</span></div>
           <div class="gy-kpi-val">${occ}<span class="gy-kpi-unit">%</span></div>
           <div class="gy-kpi-lbl">Occupation salle</div>
           <div class="gy-kpi-bar"><i style="width:${occ}%"></i></div>
-        </div>
+        </div>`}
       </div>
 
       <div class="gy-pilot-cols">
@@ -1997,9 +2147,9 @@
 
       <div class="gy-pilot-cols">
         <div class="gy-pilot-card">
-          <div class="gy-pilot-card-h"><b>Répartition des formules</b><span>${activeCount()} actifs</span></div>
-          <div class="gy-mix">${CLUB.mix.map((x) => `<div class="gy-mix-row"><span class="gy-mix-lbl">${esc(PLAN[x.id].label)}</span><span class="gy-mix-bar"><i class="m-${x.id}" style="width:${x.pct}%"></i></span><span class="gy-mix-pct mono">${x.pct}%</span></div>`).join('')}</div>
-          <div class="gy-mix-foot"><span><b class="up">+${newM}</b> nouveaux</span><span><b class="down">−${churn}</b> partis</span><span>net <b>${net >= 0 ? '+' : ''}${net}</b></span></div>
+          <div class="gy-pilot-card-h"><b>Répartition des formules</b><span>${activeCount()} ${pl(activeCount(), 'actif', 'actifs')}</span></div>
+          <div class="gy-mix">${fig.mix.map((x) => `<div class="gy-mix-row"><span class="gy-mix-lbl">${esc(PLAN[x.id].label)}</span><span class="gy-mix-bar"><i class="m-${x.id}" style="width:${x.pct}%"></i></span><span class="gy-mix-pct mono">${x.pct}%</span></div>`).join('')}</div>
+          <div class="gy-mix-foot"><span><b class="up">+${newM}</b> ${pl(newM, 'nouveau', 'nouveaux')}</span><span><b class="down">−${churn}</b> ${pl(churn, 'parti', 'partis')}</span><span>net <b>${net >= 0 ? '+' : ''}${net}</b></span></div>
         </div>
         <button class="gy-pilot-card relance" data-gy-pilot-relance>
           <div class="gy-pilot-card-h"><b>À relancer</b><span class="gy-pill ${exp ? 'red' : 'ok'}">${exp || '0'}</span></div>
@@ -2008,7 +2158,7 @@
         </button>
       </div>
 
-      <div class="gy-pilot-foot">Données de démonstration, le club entier (${activeCount()} membres) ; les 10 fiches nominatives sont l'échantillon manipulable du comptoir.</div>`;
+      ${real ? '' : `<div class="gy-pilot-foot">Données de démonstration, le club entier (${activeCount()} membres) ; les 10 fiches nominatives sont l'échantillon manipulable du comptoir.</div>`}`;
     icons();
   }
 
@@ -2048,9 +2198,11 @@
         openPay({
           amount: p.price, title: p.label, sub: 'Accès visiteur, sans abonnement',
           onPaid: (method, rendu) => {
+            rollDay();
             BASE_PASSAGES += (p.id === 'duo' ? 2 : 1);
             state.passesToday += 1;
             state.inGym += (p.id === 'duo' ? 2 : 1);
+            peakAdd(p.id === 'duo' ? 2 : 1);
             addRevenue('pass', p.price);
             postDay(p.price, method, `Pass · ${p.label}`, '', [
               { itemId: `pass-${p.id}`, name: p.label, category: 'pass', qty: 1, unit: 'pass', kind: 'service', total: p.price },
@@ -2077,18 +2229,55 @@
     icons();
   }
 
-  /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════ */
+  /* ═══════════════════════ RÉSEAU ═══════════════════════════════════════════
+     Démo : une coupure SIMULÉE (le bouton bascule un drapeau, la file est fictive).
+     Session réelle : l'indicateur dit ce que le navigateur sait (navigator.onLine)
+     et la vraie file de ventes (KiwiLive.queueStatus). Il ne se bascule plus à la
+     main, et plus aucun toast n'annonce « tout est synchronisé » sans l'avoir
+     vérifié : le bouton affichait « Réseau de retour, tout est synchronisé » alors
+     qu'il venait seulement de changer un drapeau. */
+  function liveQueue() {
+    try {
+      const q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus();
+      return q ? { pending: +q.pending || 0, blocked: +q.blocked || 0, storageError: !!q.storageError } : null;
+    } catch (_) { return null; }
+  }
+  function syncNet() {
+    if (!pvReal()) return;
+    const q = liveQueue();
+    state.offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.queued = q ? q.pending : 0;
+    state.syncBlocked = !!q && (q.storageError || q.blocked > 0);
+    if (root) renderNet();
+  }
+  let netBound = false;
+  function bindNet() {
+    if (netBound || !pvReal()) return;
+    netBound = true;
+    window.addEventListener('online', syncNet);
+    window.addEventListener('offline', syncNet);
+    window.addEventListener('kiwi:sale-queue', syncNet);
+    syncNet();
+  }
   function toggleOffline() {
+    if (pvReal()) {
+      syncNet();
+      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
+        : state.offline ? 'Wi-Fi indisponible, les opérations restent sur cette caisse'
+          : state.queued ? `${state.queued} ${pl(state.queued, 'vente', 'ventes')} en cours de synchronisation`
+            : 'Caisse en ligne, aucune vente en attente d\'envoi');
+      return;
+    }
     state.offline = !state.offline;
     if (!state.offline) {
       if (state.queued) {
-        toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
+        toast(`Réseau simulé rétabli, file de démonstration vidée (${state.queued})`);
         state.queued = 0;
       } else {
-        toast('Réseau de retour, tout est synchronisé');
+        toast('Réseau simulé rétabli');
       }
     } else {
-      toast('Mode hors-ligne, la salle continue de tourner, tout est mis en file');
+      toast('Mode hors-ligne simulé, la salle continue de tourner');
     }
     renderNet();
   }
@@ -2096,15 +2285,20 @@
   function renderNet() {
     const net = $('#gy-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.gy-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    const real = pvReal();
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.gy-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (real && state.queued) ? 'Synchronisation' : 'En ligne';
+    net.title = real ? 'État du réseau' : 'Simuler une coupure réseau';
     let q = $('.gy-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((real || state.offline) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'gy-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#gy-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
+    note.innerHTML = (state.syncBlocked
+      ? 'La synchronisation est bloquée. Les ventes restent sur cette caisse : contactez le support avant de vider les données du navigateur. '
+      : 'Hors-ligne, les pointages et ventes restent sur la tablette et partent à la synchro au retour du réseau. ') + '<b id="gy-queue-count"></b>';
     $('#gy-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 
@@ -2119,6 +2313,7 @@
     mount(rootEl) { mount(rootEl); },
     onShow() {
       if (!root) return;
+      if (rollDay() && gymOps) gymOps.save('Nouvelle journée');
       renderAll();
       setTimeout(() => { const i = $('#gy-ci-input', root); if (i && state.view === 'checkin') i.focus(); }, 80);
     },

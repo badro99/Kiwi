@@ -8,15 +8,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Café Atlas" />
+  <meta name="apple-mobile-web-app-title" content="Kiwi Order" />
   <meta name="theme-color" content="#F7F5F0" />
   <meta name="format-detection" content="telephone=no" />
 
   <!-- Kiwi Order — Kiwi's white-label self-order web app (QR → menu → commande → paiement → appeler le serveur).
        Demo tenant shown here: "Café Atlas". To white-label per client, swap the tenant strings
        (currently "Café Atlas") — moving them into one TENANT config block is the planned next step. -->
-  <title>Kiwi Order, Café Atlas</title>
-  <meta name="description" content="Commandez depuis votre table · Café Atlas" />
+  <title>Kiwi Order</title>
+  <meta name="description" content="Commandez depuis votre table" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,7 +33,7 @@
        sont des fonctions pures — aucun stockage, aucune session. C'est ce qui
        permet de dire « fermé, nous rouvrons demain à 12:00 » au lieu de prendre
        la commande d'un commerce fermé. -->
-  <script src="assets/hours.js?v=3" defer></script>
+  <script src="assets/hours.js?v=4" defer></script>
 
   <style>
     /* =========================================================
@@ -2559,6 +2559,21 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Greeting em-clip behaves the same in RTL — just measured by the script */
 
     /* Real merchant with no published carte yet (tenant path only) */
+    /* Order Pro éteint : la carte se lit, elle ne se commande pas. Le bandeau le
+       dit, et plus rien ne propose d'ajouter ce que le serveur refusera. */
+    .oo-banner {
+      /* 16px de haut : le sélecteur de langue est flottant et mordait sur le bandeau */
+      margin: 16px 20px 12px; padding: 12px 14px; border-radius: 14px;
+      background: var(--mint-tint); border: 1px solid var(--mint-edge);
+      color: var(--forest-deep); font-size: 13.5px; line-height: 1.45;
+    }
+    .oo-banner[hidden] { display: none; }
+    .bill-note { margin: 6px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
+    .bill-note[hidden] { display: none; }
+    body.ordering-off .item-add, body.ordering-off .video-add,
+    body.ordering-off .cart-pill, body.ordering-off .service-bar,
+    body.ordering-off #screen-mode .mode-cards,
+    body.ordering-off #custom-add-btn, body.ordering-off .custom-note-section { display: none !important; }
     .menu-comingsoon {
       margin: 48px 20px;
       padding: 40px 24px;
@@ -2673,6 +2688,8 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
       </div>
 
+      <div class="oo-banner" id="oo-banner" role="status" hidden></div>
+
       <div class="service-bar" id="service-bar">
         <span class="table-badge" id="menu-badge">
           <i data-lucide="utensils"></i>
@@ -2717,7 +2734,7 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> · <em id="success-status" data-i18n="success_status_pending">en attente de confirmation</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
           <div id="success-items"></div>
@@ -2776,8 +2793,8 @@ em, i, cite, dfn, var { font-style: normal; }
             <line x1="6" y1="17" x2="18" y2="17"/>
           </svg>
         </div>
-        <h1 class="prep-title"><span data-i18n="prep_title_pre">En préparation</span> <em data-i18n="prep_title_em">en cuisine.</em></h1>
-        <div class="prep-eta-row">
+        <h1 class="prep-title" id="prep-title"><span data-i18n="prep_title_pre">En préparation</span> <em data-i18n="prep_title_em">en cuisine.</em></h1>
+        <div class="prep-eta-row" id="prep-eta-row">
           <div class="prep-eta"><span data-i18n="prep_ready_in">Prêt dans</span> <strong id="prep-eta">8 s</strong></div>
           <div class="prep-bar" aria-hidden="true"><div class="prep-bar-fill" id="prep-bar-fill"></div></div>
         </div>
@@ -2880,6 +2897,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <span data-i18n="bill_subtotal">Sous-total</span>
           <span class="val" id="bill-subtotal-value">0 MAD</span>
         </div>
+        <p class="bill-note" id="bill-note" data-i18n="bill_note" hidden>Commandes passées depuis ce téléphone. L'addition définitive est celle de la table.</p>
 
         <!-- Tip section — gamified -->
         <div class="tip-section">
@@ -3086,7 +3104,7 @@ em, i, cite, dfn, var { font-style: normal; }
         table_ask_pre: "Quel est votre",
         table_ask_em: "numéro de table",
         table_ask_post: "?",
-        table_hint: "Le numéro est gravé sur le bois de la table",
+        table_hint: "Entrez le numéro de votre table.",
         btn_continue: "Continuer",
         menu_loc: "Médina · Tanger",
         coming_soon: "Menu bientôt disponible",
@@ -3172,7 +3190,7 @@ em, i, cite, dfn, var { font-style: normal; }
         session_unavailable: "Impossible de relier cette table à la caisse. Réessayez ou appelez un serveur.",
         order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé · réessayez.",
         success_title_a: "Commande envoyée",
-        success_title_em: "en cuisine.",
+        success_title_em: "au comptoir.",
         success_eta_pre: "Table",
         success_eta_mid: "· prêt dans",
         success_eta_em: "4–6 min",
@@ -3185,8 +3203,8 @@ em, i, cite, dfn, var { font-style: normal; }
         cashier_instr_post: "pour régler.",
         cashier_recap: "Votre commande",
         cashier_total: "Total",
-        cashier_confirm: "Paiement confirmé à la caisse",
-        cashier_hint: "Le caissier valide votre paiement. Une fois validé, vous pouvez sortir, on vous prévient quand c'est prêt.",
+        cashier_confirm: "Suivre ma commande",
+        cashier_hint: "Le comptoir encaisse et accepte votre commande. Gardez cette page ouverte, son état se met à jour ici.",
         prep_eyebrow_pre: "commande #",
         prep_title_pre: "En préparation",
         prep_title_em: "en cuisine.",
@@ -3194,21 +3212,21 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_rejected: "La caisse n'a pas pu accepter votre commande. Passez au comptoir.",
         prep_now: "maintenant",
         prep_perm_default: "Recevez une notification quand c'est prêt, gardez votre téléphone à côté.",
-        prep_perm_granted_html: "<strong>Notifications activées.</strong> On vous prévient même si vous quittez la page.",
+        prep_perm_granted_html: "<strong>Notifications activées.</strong> Elles partent tant que cette page reste ouverte.",
         prep_perm_denied: "Notifications refusées, gardez la page ouverte, vibration et son utilisés.",
         prep_perm_unsupported: "Ce navigateur ne gère pas les notifications, gardez la page ouverte, on vous prévient ici.",
         prep_perm_btn: "Activer",
-        prep_note_pre: "Vous pouvez attendre",
-        prep_note_em: "où vous voulez",
-        prep_note_post: ". Votre téléphone vibre et sonne dès que c'est prêt.",
+        prep_note_pre: "Gardez cette page",
+        prep_note_em: "ouverte",
+        prep_note_post: ". Elle sonne, et fait vibrer le téléphone s'il le permet, dès que c'est prêt.",
         ready_title_a: "Votre commande est",
         ready_title_em: "prête.",
-        ready_loc_post: " · Café Atlas · Médina",
+        ready_loc_post: " · Café Atlas",
         ready_cta: "Récupérer au comptoir",
         bill_title: "Votre addition",
         bill_empty: "Aucune commande passée, ajoutez d'abord au menu.",
         bill_subtotal: "Sous-total",
-        tip_eyebrow: "Pourboire pour l'équipe",
+        tip_eyebrow: "Pourboire pour l'équipe, à remettre à la table",
         tip_level_0: "Pas de pourboire",
         tip_level_1: "Un petit geste, merci",
         tip_level_2: "C'est sympa, merci",
@@ -3216,7 +3234,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_4: "Très généreux, bravo",
         tip_level_5: "Pourboire de chef",
         bill_total: "Total à régler",
-        bill_confirm: "Le serveur arrive avec l'addition",
+        bill_confirm: "Demander l'addition",
         split_open: "Diviser l'addition",
         split_title: "Diviser l'addition",
         split_subtitle_tpl: "Table {n} · {total} {cur} à partager",
@@ -3230,16 +3248,34 @@ em, i, cite, dfn, var { font-style: normal; }
         split_per_person: "Par personne",
         split_select_person: "Sélectionnez la personne",
         split_tap_items: "Tapez les articles consommés",
-        split_confirm: "Confirmer le partage",
+        split_confirm: "Terminé",
         split_person_pre: "Conv.",
-        toast_split_egal: "Addition divisée ·",
+        toast_split_egal: "Partage indicatif ·",
         toast_added: "ajouté",
-        toast_server_coming_pre: "Un serveur arrive · Table",
-        toast_bill_asked_pre: "Addition demandée ·",
+        toast_server_coming_pre: "Appel envoyé au serveur · Table",
+        toast_bill_asked_pre: "Addition demandée · Table",
         toast_bill_tip_post: "pourboire",
         notif_ready_title: "Café Atlas",
         notif_ready_body_pre: "Commande #",
         notif_ready_body_post: "prête à récupérer.",
+        success_status_pending: "en attente de confirmation",
+        success_status_accepted: "acceptée, en préparation",
+        success_status_ready: "prête",
+        success_status_served: "servie",
+        success_status_rejected: "refusée, appelez un serveur",
+        success_status_demo: "prêt dans 4–6 min",
+        prep_title_wait_pre: "En attente de",
+        prep_title_wait_em: "la caisse.",
+        service_closed_takeout: "Le comptoir n'est pas ouvert pour le moment. Réessayez plus tard ou passez au comptoir.",
+        ordering_off_note: "Carte à consulter : la commande depuis le téléphone n'est pas activée ici. Commandez au comptoir.",
+        menu_changed: "La carte vient de changer. Vérifiez votre panier puis réessayez.",
+        menu_unpublished: "La carte n'est pas publiée. Commandez au comptoir.",
+        opt_choose_one_required: "obligatoire",
+        opt_choose_many_required: "au moins 1",
+        opt_required_toast: "Choisissez une option pour continuer.",
+        service_err: "Impossible de prévenir le serveur. Réessayez.",
+        bill_note: "Commandes passées depuis ce téléphone. L'addition définitive est celle de la table.",
+        service_no_table: "Cette table n'est pas encore configurée à la caisse. Faites signe à un serveur.",
         currency: "MAD",
       },
       en: {
@@ -3263,7 +3299,7 @@ em, i, cite, dfn, var { font-style: normal; }
         table_ask_pre: "What's your",
         table_ask_em: "table number",
         table_ask_post: "?",
-        table_hint: "The number is engraved on the table",
+        table_hint: "Enter your table number.",
         btn_continue: "Continue",
         menu_loc: "Médina · Tangier",
         coming_soon: "Menu coming soon",
@@ -3348,8 +3384,8 @@ em, i, cite, dfn, var { font-style: normal; }
         service_closed: "The till looks asleep. Retrying on its own · otherwise call a waiter.",
         session_unavailable: "We couldn't connect this table to the till. Retry or call a waiter.",
         order_send_failed: "The order was not sent. Your cart is safe · please retry.",
-        success_title_a: "Order sent to",
-        success_title_em: "the kitchen.",
+        success_title_a: "Order sent",
+        success_title_em: "to the counter.",
         success_eta_pre: "Table",
         success_eta_mid: "· ready in",
         success_eta_em: "4–6 min",
@@ -3362,8 +3398,8 @@ em, i, cite, dfn, var { font-style: normal; }
         cashier_instr_post: "to pay.",
         cashier_recap: "Your order",
         cashier_total: "Total",
-        cashier_confirm: "Payment confirmed at counter",
-        cashier_hint: "The cashier validates your payment. Once validated, you can step out, we'll notify you when it's ready.",
+        cashier_confirm: "Follow my order",
+        cashier_hint: "The counter takes payment and accepts your order. Keep this page open, its status updates here.",
         prep_eyebrow_pre: "order #",
         prep_title_pre: "Preparing",
         prep_title_em: "in the kitchen.",
@@ -3371,21 +3407,21 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_rejected: "The counter could not accept your order. Please come to the counter.",
         prep_now: "now",
         prep_perm_default: "Get notified when it's ready, keep your phone nearby.",
-        prep_perm_granted_html: "<strong>Notifications on.</strong> We'll alert you even if you leave this page.",
+        prep_perm_granted_html: "<strong>Notifications on.</strong> They fire as long as this page stays open.",
         prep_perm_denied: "Notifications denied, keep the page open, vibration and sound will play.",
         prep_perm_unsupported: "This browser doesn't support notifications, keep the page open, we'll notify you here.",
         prep_perm_btn: "Enable",
-        prep_note_pre: "You can wait",
-        prep_note_em: "wherever you like",
-        prep_note_post: ". Your phone vibrates and chimes the moment it's ready.",
+        prep_note_pre: "Keep this page",
+        prep_note_em: "open",
+        prep_note_post: ". It chimes, and vibrates if your phone allows it, the moment it's ready.",
         ready_title_a: "Your order is",
         ready_title_em: "ready.",
-        ready_loc_post: " · Café Atlas · Médina",
+        ready_loc_post: " · Café Atlas",
         ready_cta: "Pick up at the counter",
         bill_title: "Your check",
         bill_empty: "No orders placed, add something from the menu first.",
         bill_subtotal: "Subtotal",
-        tip_eyebrow: "Tip for the team",
+        tip_eyebrow: "Tip for the team, handed over at the table",
         tip_level_0: "No tip",
         tip_level_1: "A small gesture, thanks",
         tip_level_2: "That's nice, thanks",
@@ -3393,7 +3429,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_4: "Very generous, bravo",
         tip_level_5: "A chef's tip",
         bill_total: "Total to pay",
-        bill_confirm: "Your waiter is bringing the check",
+        bill_confirm: "Ask for the check",
         split_open: "Split the bill",
         split_title: "Split the bill",
         split_subtitle_tpl: "Table {n} · {total} {cur} to split",
@@ -3407,16 +3443,34 @@ em, i, cite, dfn, var { font-style: normal; }
         split_per_person: "Per person",
         split_select_person: "Pick the person",
         split_tap_items: "Tap the items they had",
-        split_confirm: "Confirm the split",
+        split_confirm: "Done",
         split_person_pre: "Pers.",
-        toast_split_egal: "Bill split ·",
+        toast_split_egal: "Indicative split ·",
         toast_added: "added",
-        toast_server_coming_pre: "Waiter coming · Table",
-        toast_bill_asked_pre: "Check requested ·",
+        toast_server_coming_pre: "Waiter called · Table",
+        toast_bill_asked_pre: "Check requested · Table",
         toast_bill_tip_post: "tip",
         notif_ready_title: "Café Atlas",
         notif_ready_body_pre: "Order #",
         notif_ready_body_post: "ready to pick up.",
+        success_status_pending: "waiting for confirmation",
+        success_status_accepted: "accepted, being prepared",
+        success_status_ready: "ready",
+        success_status_served: "served",
+        success_status_rejected: "declined, please call a waiter",
+        success_status_demo: "ready in 4–6 min",
+        prep_title_wait_pre: "Waiting for",
+        prep_title_wait_em: "the counter.",
+        service_closed_takeout: "The counter isn't open right now. Try again later or step up to the counter.",
+        ordering_off_note: "Menu for browsing: ordering from your phone isn't enabled here. Please order at the counter.",
+        menu_changed: "The menu just changed. Check your cart and try again.",
+        menu_unpublished: "The menu isn't published. Please order at the counter.",
+        opt_choose_one_required: "required",
+        opt_choose_many_required: "at least 1",
+        opt_required_toast: "Pick an option to continue.",
+        service_err: "We couldn't reach the waiter. Please retry.",
+        bill_note: "Orders placed from this phone. The final check is the table's.",
+        service_no_table: "This table isn't set up at the counter yet. Please wave a waiter over.",
         currency: "MAD",
       },
       ar: {
@@ -3440,7 +3494,7 @@ em, i, cite, dfn, var { font-style: normal; }
         table_ask_pre: "شنو هو",
         table_ask_em: "رقم الطاولة ديالك",
         table_ask_post: "؟",
-        table_hint: "الرقم مكتوب على الطاولة",
+        table_hint: "دخل رقم الطاولة ديالك.",
         btn_continue: "كمل",
         menu_loc: "المدينة · طنجة",
         coming_soon: "القائمة قريبا",
@@ -3526,7 +3580,7 @@ em, i, cite, dfn, var { font-style: normal; }
         session_unavailable: "تعذر ربط الطاولة بصندوق الدفع. أعد المحاولة أو اطلب النادل.",
         order_send_failed: "لم يتم إرسال الطلب. سلة طلبك محفوظة، أعد المحاولة.",
         success_title_a: "الطلب تصيفط",
-        success_title_em: "للمطبخ.",
+        success_title_em: "للكونطوار.",
         success_eta_pre: "طاولة",
         success_eta_mid: "· غادي يكون واجد ف",
         success_eta_em: "4–6 دقايق",
@@ -3539,8 +3593,8 @@ em, i, cite, dfn, var { font-style: normal; }
         cashier_instr_post: "باش تخلص.",
         cashier_recap: "الطلب ديالك",
         cashier_total: "المجموع",
-        cashier_confirm: "الخلاص تأكد فالكيسة",
-        cashier_hint: "الكيسة كتصادق على الخلاص ديالك. ملي تصادق، تقدر تخرج، غادي نخبروك ملي يكون واجد.",
+        cashier_confirm: "تبع الطلب ديالي",
+        cashier_hint: "الكونطوار كيخلص وكيقبل الطلب ديالك. خلي هاد الصفحة محلولة، الحالة كتتبدل هنا.",
         prep_eyebrow_pre: "طلب رقم #",
         prep_title_pre: "فالتحضير",
         prep_title_em: "فالمطبخ.",
@@ -3548,21 +3602,21 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_rejected: "ما تقبلش الطلب ديالك. تفضل للكونطوار.",
         prep_now: "دابا",
         prep_perm_default: "خد إشعار ملي يكون واجد، خلي تلفونك معاك.",
-        prep_perm_granted_html: "<strong>الإشعارات مفعلة.</strong> غادي نخبروك حتى إلا خرجتي من الصفحة.",
+        prep_perm_granted_html: "<strong>الإشعارات مفعلة.</strong> كتخدم حتى كتبقى هاد الصفحة محلولة.",
         prep_perm_denied: "الإشعارات مرفوضة، خلي الصفحة محلولة، الاهتزاز والصوت غادي يخدمو.",
         prep_perm_unsupported: "هاد المتصفح ما كيدعمش الإشعارات، خلي الصفحة محلولة، غادي نخبروك هنا.",
         prep_perm_btn: "فعّل",
-        prep_note_pre: "تقدر تستنى",
-        prep_note_em: "فين بغيتي",
-        prep_note_post: ". تلفونك غادي يهز ويصوّت ملي يكون واجد.",
+        prep_note_pre: "خلي هاد الصفحة",
+        prep_note_em: "محلولة",
+        prep_note_post: ". غادي تصوّت وتهز التلفون (إلا كان كيدعم) ملي يكون واجد.",
         ready_title_a: "الطلب ديالك",
         ready_title_em: "واجد.",
-        ready_loc_post: " · كافي أطلس · المدينة",
+        ready_loc_post: " · كافي أطلس",
         ready_cta: "خد الطلب من الكونتوار",
         bill_title: "الحساب ديالك",
         bill_empty: "ما عندك حتى طلب، زيد شي حاجة من المنيو أول.",
         bill_subtotal: "المجموع الفرعي",
-        tip_eyebrow: "البقشيش للفريق",
+        tip_eyebrow: "البقشيش للفريق، كيتعطى فالطاولة",
         tip_level_0: "بلا بقشيش",
         tip_level_1: "شوية، شكراً",
         tip_level_2: "مزيان، شكراً",
@@ -3570,7 +3624,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_4: "كريم بزاف، برافو",
         tip_level_5: "بقشيش ديال الشيف",
         bill_total: "المجموع للخلاص",
-        bill_confirm: "الجارسون جاي بالحساب",
+        bill_confirm: "طلب الحساب",
         split_open: "قسّم الحساب",
         split_title: "قسّم الحساب",
         split_subtitle_tpl: "طاولة {n} · {total} {cur} للتقسيم",
@@ -3584,16 +3638,34 @@ em, i, cite, dfn, var { font-style: normal; }
         split_per_person: "للواحد",
         split_select_person: "اختار الشخص",
         split_tap_items: "كبس على الطلبات اللي كلاهم",
-        split_confirm: "أكد التقسيم",
+        split_confirm: "سالا",
         split_person_pre: "ش.",
-        toast_split_egal: "الحساب تقسم ·",
+        toast_split_egal: "تقسيم تقريبي ·",
         toast_added: "تزاد",
-        toast_server_coming_pre: "الجارسون جاي · طاولة",
-        toast_bill_asked_pre: "الحساب تطلب ·",
+        toast_server_coming_pre: "تصيفط النداء للجارسون · طاولة",
+        toast_bill_asked_pre: "الحساب تطلب · طاولة",
         toast_bill_tip_post: "بقشيش",
         notif_ready_title: "كافي أطلس",
         notif_ready_body_pre: "طلب #",
         notif_ready_body_post: "واجد، تقدر تخدو.",
+        success_status_pending: "كيتسنى التأكيد",
+        success_status_accepted: "تقبل، فالتحضير",
+        success_status_ready: "واجد",
+        success_status_served: "تخدم",
+        success_status_rejected: "تحيد، عيط للجارسون",
+        success_status_demo: "غادي يكون واجد ف 4–6 دقايق",
+        prep_title_wait_pre: "فانتظار",
+        prep_title_wait_em: "الكيسة.",
+        service_closed_takeout: "الكونطوار ماشي محلول دابا. عاود من بعد ولا دوز للكونطوار.",
+        ordering_off_note: "القائمة للاطلاع فقط: الطلب بالتلفون ماشي مفعل هنا. طلب من الكونطوار.",
+        menu_changed: "القائمة تبدلات. شوف السلة وعاود.",
+        menu_unpublished: "القائمة ماشي منشورة. طلب من الكونطوار.",
+        opt_choose_one_required: "ضروري",
+        opt_choose_many_required: "على الأقل 1",
+        opt_required_toast: "ختار خيار باش تكمل.",
+        service_err: "ما قدرناش نخبرو الجارسون. عاود.",
+        bill_note: "الطلبات من هاد التلفون. الحساب النهائي هو ديال الطاولة.",
+        service_no_table: "هاد الطاولة ماشي مسجلة فالكيسة. عيط للجارسون.",
         currency: "درهم",
       },
     };
@@ -3978,7 +4050,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <button class="item-body item-detail" type="button" data-detail="${escapeHtml(m.id)}" aria-label="${escapeHtml(i.name)}">
             <div class="item-name">${escapeHtml(i.name)}</div>
             <div class="item-desc">${escapeHtml(i.desc)}</div>
-            <div class="item-price">${escapeHtml(m.price)} ${cur()}</div>
+            <div class="item-price">${fmt(escapeHtml(m.price))} ${cur()}</div>
             ${nutritionSummary(m)}
           </button>
           <button class="item-add" type="button" data-add="${escapeHtml(m.id)}" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
@@ -4004,7 +4076,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="video-meta">
             <div class="video-name">${escapeHtml(i.name)}</div>
             <div class="video-foot">
-              <span class="video-price">${escapeHtml(m.price)} ${cur()}</span>
+              <span class="video-price">${fmt(escapeHtml(m.price))} ${cur()}</span>
               <button type="button" class="video-add" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
             </div>
           </div>
@@ -4019,6 +4091,17 @@ em, i, cite, dfn, var { font-style: normal; }
     const descOf  = id => itemI18n(id).desc || itemOf(id)?.desc || '';
     const basePriceOf = id => itemOf(id)?.price || 0;
     const cur = () => t('currency');
+    /* « 14,50 MAD », pas « 14.5 MAD ». Les centimes ne s'affichent que s'il y en
+       a (« 12 MAD ») ; la virgule suit la langue de la page. La carte accepte
+       les centimes, et l'affichage les coupait ou les rendait avec un point. */
+    function fmt(n) {
+      const v = Math.round((Number(n) || 0) * 100) / 100;
+      const loc = currentLang === 'en' ? 'en-US' : 'fr-FR';
+      try {
+        return Number.isInteger(v) ? v.toLocaleString(loc)
+          : v.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } catch (_) { return String(v); }
+    }
 
     function lineKey(id, options, note) {
       const parts = [id];
@@ -4041,8 +4124,13 @@ em, i, cite, dfn, var { font-style: normal; }
           || OPT[optKey]?.choices.find(c => c.id === choiceId)?.label
           || choiceId;
     }
+    /* t() renvoie la CLÉ quand elle ne trouve rien, donc `t(...) || label` ne
+       retombait jamais sur le nom du groupe : le client lisait « opt_label_og_4 »
+       au lieu de « Taille ». On interroge le dictionnaire directement ; le nom
+       du groupe publié (déjà localisé par applyLang) vient ensuite. */
     function groupLabel(optKey) {
-      return t(`opt_label_${optKey}`) || OPT[optKey]?.label || optKey;
+      const key = `opt_label_${optKey}`;
+      return I18N[currentLang]?.[key] || I18N.fr[key] || OPT[optKey]?.label || optKey;
     }
     function choiceEmoji(optKey, choiceId) {
       return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
@@ -4066,6 +4154,24 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       }
       return parts.join(' · ');
+    }
+    /* Ce que le serveur sait lire : les IDENTIFIANTS du groupe et du choix. Il
+       en tire le prix et le libellé de la carte publiée. Sans eux, un plat à
+       option obligatoire était refusé (« carte modifiée ») à chaque envoi, et un
+       supplément choisi (« Grand +3 ») n'était jamais facturé. */
+    function describeOptionChoices(line) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
+        ids.forEach((id) => {
+          if (!id) return;
+          out.push({ group: opt.key, choiceId: id, label: choiceLabel(opt.key, id) });
+        });
+      }
+      return out;
     }
     function describeOptionVisuals(line) {
       const item = itemOf(line.id);
@@ -4095,8 +4201,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const { count, total } = totals();
       const pill = $('#cart-pill');
       $('#cart-count').textContent = count;
-      $('#cart-total').textContent = `${total} ${cur()}`;
-      $('#cart-grand').textContent = `${total} ${cur()}`;
+      $('#cart-total').textContent = `${fmt(total)} ${cur()}`;
+      $('#cart-grand').textContent = `${fmt(total)} ${cur()}`;
       pill.classList.toggle('is-visible', count > 0);
       $('#send-btn').disabled = count === 0;
       syncSendGate();
@@ -4122,7 +4228,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <span>${line.qty}</span>
               <button type="button" data-inc="${safe}" aria-label="+">+</button>
             </span>
-            <span class="row-price">${line.qty * line.unitPrice} ${cur()}</span>
+            <span class="row-price">${fmt(line.qty * line.unitPrice)} ${cur()}</span>
           </li>
         `;
       }).join('');
@@ -4178,7 +4284,9 @@ em, i, cite, dfn, var { font-style: normal; }
       // Initialize with defaults
       customizerSelections = {};
       for (const opt of item.options || []) {
-        if (opt.type === 'single') customizerSelections[opt.key] = opt.default || opt.choices[0].id;
+        /* Un groupe FACULTATIF de la carte ne présélectionne rien : le client
+           payait le premier supplément (« Grand +3 ») sans l'avoir choisi. */
+        if (opt.type === 'single') customizerSelections[opt.key] = opt.default || (opt._src && !opt.required ? '' : opt.choices[0].id);
         else customizerSelections[opt.key] = [];
       }
       customizerNote = '';
@@ -4187,7 +4295,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const i = itemI18n(item.id);
       $('#custom-name').textContent = i.name;
       $('#custom-desc').textContent = i.desc;
-      $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
+      $('#custom-base').textContent = `${t('custom_from')} ${fmt(item.price)} ${cur()}`;
       const nutritionEl = $('#custom-nutrition');
       const nutritionHtml = nutritionDetail(item);
       nutritionEl.innerHTML = nutritionHtml;
@@ -4201,15 +4309,15 @@ em, i, cite, dfn, var { font-style: normal; }
       opts.innerHTML = (item.options || []).map(opt => `
         <div class="option-group" data-opt="${opt.key}">
           <div class="option-group-label">
-            <span>${groupLabel(opt.key)}</span>
-            <span class="opt-type">${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}</span>
+            <span>${escapeHtml(groupLabel(opt.key))}</span>
+            <span class="opt-type">${optTypeLabel(opt)}</span>
           </div>
           <div class="option-chips">
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
-                <span>${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
-                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}
+                <span>${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${escapeHtml(choiceLabel(opt.key, c.id))}</span>
+                ${c.delta ? `<span class="delta">+${fmt(c.delta)} ${cur()}</span>` : ''}
               </button>
             `).join('')}
           </div>
@@ -4230,6 +4338,11 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-sheet').setAttribute('aria-hidden', 'false');
       if (window.lucide) window.lucide.createIcons();
     }
+    function optTypeLabel(opt) {
+      if (!opt._src) return opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one');
+      if (opt.type === 'multi') return opt.required ? `${t('opt_choose_many')} · ${t('opt_choose_many_required')}` : t('opt_choose_many');
+      return opt.required ? `${t('opt_choose_one')} · ${t('opt_choose_one_required')}` : t('custom_note_optional');
+    }
     function closeCustomizer() {
       $('#custom-sheet').classList.remove('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'true');
@@ -4237,7 +4350,9 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function selectCustomizerChoice(optKey, choiceId, type) {
       if (type === 'single') {
-        customizerSelections[optKey] = choiceId;
+        const og = (customizerItem && customizerItem.options || []).find((o) => o.key === optKey);
+        /* un groupe facultatif se décoche en retouchant le choix actif */
+        customizerSelections[optKey] = (og && og._src && !og.required && customizerSelections[optKey] === choiceId) ? '' : choiceId;
       } else {
         const arr = customizerSelections[optKey] || [];
         const i = arr.indexOf(choiceId);
@@ -4249,7 +4364,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!group) return;
       if (type === 'single') {
         $$('.option-chip', group).forEach(c => {
-          c.classList.toggle('is-active', c.dataset.choice === choiceId);
+          c.classList.toggle('is-active', c.dataset.choice === customizerSelections[optKey]);
         });
       } else {
         $$('.option-chip', group).forEach(c => {
@@ -4276,10 +4391,20 @@ em, i, cite, dfn, var { font-style: normal; }
       return p;
     }
     function refreshCustomizerPrice() {
-      $('#custom-price-value').textContent = `${customizerUnitPrice()} ${cur()}`;
+      $('#custom-price-value').textContent = `${fmt(customizerUnitPrice())} ${cur()}`;
     }
     function confirmCustomizer() {
       if (!customizerItem) return;
+      /* Un groupe obligatoire sans choix : la caisse refuserait la commande. On
+         le dit ici, avant, plutôt que de laisser échouer l'envoi. */
+      for (const opt of customizerItem.options || []) {
+        if (!opt._src || !opt.required) continue;
+        const sel = customizerSelections[opt.key];
+        if (opt.type === 'multi' ? !(Array.isArray(sel) && sel.length) : !sel) {
+          showToast(t('opt_required_toast'), 3000);
+          return;
+        }
+      }
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
         id: customizerItem.id,
@@ -4291,11 +4416,45 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ Service bar (table mode) ============ */
+    /* « Un serveur arrive » s'affichait sans rien envoyer : le bouton ne
+       prévenait personne. Il écrit maintenant la demande sur la table (même
+       route que OrderPro.html : /api/order/session, action call-server ou
+       ask-bill), et ne dit « envoyé » qu'une fois le serveur d'accord. */
+    let serviceBusy = false;
+    function sendServiceRequest(action) {
+      const T = KiwiTenant;
+      if (!T || !T.hasTenant) return Promise.resolve({ ok: true, demo: true });
+      return ensureTableSession().then((session) => {
+        if (!session) throw sessionError('session-required');
+        return fetch('/api/order/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ merchant: T.slug, session: session, action: action }),
+        });
+      }).then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data || !data.ok) throw sessionError((data && data.error) || 'service-request-failed');
+        return data;
+      });
+    }
+    function serviceErrKey(err) {
+      const code = err && err.code;
+      if (code === 'session-closed' || code === 'session-required' || code === 'orderpro-off'
+          || code === 'subscription-required' || code === 'service-closed') return tableSessionErrKey(err);
+      /* La table existe pour la commande mais pas dans le plan de salle : aucun
+         serveur n'est joignable depuis la caisse, réessayer n'y changera rien. */
+      if (code === 'floor-table-required') return 'service_no_table';
+      return 'service_err';
+    }
     function callServer() {
+      if (serviceBusy) return;
+      serviceBusy = true;
       const pill = document.querySelector('[data-service="call-server"]');
       pill.classList.add('is-pulled');
-      showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
-      setTimeout(() => pill.classList.remove('is-pulled'), 4000);
+      sendServiceRequest('call-server')
+        .then(() => showToast(`${t('toast_server_coming_pre')} ${tableNumber}`, 3500))
+        .catch((err) => showToast(t(serviceErrKey(err)), 5000))
+        .finally(() => { serviceBusy = false; setTimeout(() => pill.classList.remove('is-pulled'), 4000); });
     }
 
     /* ============ Bill sheet + gamified tip ============ */
@@ -4323,7 +4482,7 @@ em, i, cite, dfn, var { font-style: normal; }
                 <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
                 ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
-              <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
+              <div class="bill-row-price">${fmt(l.qty * l.unitPrice)} ${cur()}</div>
             </li>
           `;
         }).join('');
@@ -4333,8 +4492,13 @@ em, i, cite, dfn, var { font-style: normal; }
       const subtitleEl = $('#bill-subtitle');
       if (subtitleEl) subtitleEl.innerHTML = `${escapeHtml(t('badge_table'))} <span id="bill-table">${escapeHtml(tableNumber)}</span> · ${escapeHtml(VENUE_NAME)}`;
 
-      $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
-      setTipPercent(billItems.length === 0 ? 0 : 15);
+      $('#bill-subtotal-value').textContent = `${fmt(sessionTotal)} ${cur()}`;
+      /* Le pourboire n'est enregistré nulle part : présélectionner 15 % gonflait
+         le « Total à régler » d'une somme que personne ne facturera. Il part à 0
+         chez un vrai commerçant ; la démo garde son 15 % de vitrine. */
+      const live = !!(KiwiTenant && KiwiTenant.hasTenant);
+      const note = $('#bill-note'); if (note) note.hidden = !live;
+      setTipPercent(billItems.length === 0 || live ? 0 : 15);
 
       $('#bill-sheet').classList.add('is-open');
       $('#bill-sheet').setAttribute('aria-hidden', 'false');
@@ -4359,7 +4523,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const total = sessionTotal + tipAmt;
 
       const tipAmtEl = $('#tip-amount');
-      tipAmtEl.textContent = pct === 0 ? `+0 ${cur()}` : `+${tipAmt} ${cur()}`;
+      tipAmtEl.textContent = pct === 0 ? `+0 ${cur()}` : `+${fmt(tipAmt)} ${cur()}`;
       tipAmtEl.classList.toggle('is-zero', pct === 0);
 
       // Jar fill — 20% tip fills jar to top, 25%+ overflows
@@ -4388,16 +4552,20 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       // Total
-      $('#bill-total-value').textContent = `${total} ${cur()}`;
+      $('#bill-total-value').textContent = `${fmt(total)} ${cur()}`;
     }
 
+    /* Demande l'addition de LA TABLE au serveur. Ni le sous-total de ce
+       téléphone ni un pourboire n'y voyagent : l'ancien message annonçait
+       « Addition demandée · 33 MAD (+3 pourboire) » alors que rien n'était
+       envoyé, ni montant ni pourboire. */
     function confirmBill() {
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
-      closeBill();
-      const msg = tipAmt > 0
-        ? `${t('toast_bill_asked_pre')} ${sessionTotal + tipAmt} ${cur()} (+${tipAmt} ${t('toast_bill_tip_post')})`
-        : `${t('toast_bill_asked_pre')} ${sessionTotal} ${cur()}`;
-      showToast(msg);
+      if (serviceBusy) return;
+      serviceBusy = true;
+      sendServiceRequest('ask-bill')
+        .then(() => { closeBill(); showToast(`${t('toast_bill_asked_pre')} ${tableNumber}`, 3500); })
+        .catch((err) => showToast(t(serviceErrKey(err)), 5000))
+        .finally(() => { serviceBusy = false; });
     }
 
     /* ============ Split-bill (égal / par article) ============ */
@@ -4460,14 +4628,14 @@ em, i, cite, dfn, var { font-style: normal; }
       if (subtitleEl) {
         subtitleEl.textContent = t('split_subtitle_tpl')
           .replace('{n}', tableNumber)
-          .replace('{total}', grand)
+          .replace('{total}', fmt(grand))
           .replace('{cur}', cur());
       }
       if (splitState.mode === 'egal') {
-        $('#split-egal-subtotal').textContent = `${subtotal} ${cur()}`;
-        $('#split-egal-tip').textContent = `${tipAmt} ${cur()}`;
-        const per = Math.ceil(grand / splitState.egalCount);
-        $('#split-egal-per').textContent = `${per} ${cur()}`;
+        $('#split-egal-subtotal').textContent = `${fmt(subtotal)} ${cur()}`;
+        $('#split-egal-tip').textContent = `${fmt(tipAmt)} ${cur()}`;
+        const per = Math.ceil(Math.round(grand * 100) / splitState.egalCount) / 100;
+        $('#split-egal-per').textContent = `${fmt(per)} ${cur()}`;
       } else {
         renderSplitArticle();
       }
@@ -4495,7 +4663,7 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <button class="split-person-tab ${isActive ? 'is-active' : ''}" type="button" data-split-person="${i}">
             <span class="name">${t('split_person_pre')} ${i + 1}</span>
-            <span class="val">${total} ${cur()}</span>
+            <span class="val">${fmt(total)} ${cur()}</span>
           </button>
         `;
       }).join('');
@@ -4512,7 +4680,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <span class="qty">${line.qty}×</span>
               <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
-            <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
+            <span class="price">${fmt(line.qty * line.unitPrice)} ${cur()}</span>
           </div>
         `;
       }).join('');
@@ -4524,8 +4692,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const grand = subtotal + tipAmt;
       let msg;
       if (splitState.mode === 'egal') {
-        const per = Math.ceil(grand / splitState.egalCount);
-        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${per} ${cur()}`;
+        const per = Math.ceil(Math.round(grand * 100) / splitState.egalCount) / 100;
+        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${fmt(per)} ${cur()}`;
       } else {
         const totals = [];
         for (let i = 0; i < splitState.articleCount; i++) {
@@ -4534,7 +4702,7 @@ em, i, cite, dfn, var { font-style: normal; }
           const tipShare = subtotal > 0 ? Math.round(tipAmt * (sub / subtotal)) : 0;
           totals.push(sub + tipShare);
         }
-        msg = `${t('toast_split_egal')} ${totals.map(x => `${x}`).join(' · ')} ${cur()}`;
+        msg = `${t('toast_split_egal')} ${totals.map(x => fmt(x)).join(' · ')} ${cur()}`;
       }
       closeSplit();
       closeBill();
@@ -4543,12 +4711,14 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ toast ============ */
     let toastTimer = null;
-    function showToast(text) {
+    /* 1,4 s suffit pour « Café crème · ajouté », pas pour une phrase d'erreur :
+       celles-ci restent à l'écran le temps de se lire (ms). */
+    function showToast(text, ms) {
       const t = $('#toast');
       $('#toast-text').textContent = text;
       t.classList.add('is-visible');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => t.classList.remove('is-visible'), 1400);
+      toastTimer = setTimeout(() => t.classList.remove('is-visible'), ms || 1400);
     }
 
     /* ============ cart sheet ============ */
@@ -4606,7 +4776,13 @@ em, i, cite, dfn, var { font-style: normal; }
     function tableSessionErrKey(err) {
       const code = err && err.code;
       if (code === 'session-closed' || code === 'session-required') return 'session_closed';
-      if (code === 'service-closed') return 'service_closed';
+      /* Order Pro éteint, ou abonnement en attente : réessayer ne servira à rien. */
+      if (code === 'orderpro-off' || code === 'subscription-required') return 'ordering_off_note';
+      if (code === 'menu-changed' || code === 'archived' || code === 'formula_only') return 'menu_changed';
+      if (code === 'menu-not-published') return 'menu_unpublished';
+      /* « on réessaie tout seul » n'existe que pour une table : un retrait n'a
+         pas de session à relancer. */
+      if (code === 'service-closed') return orderMode === 'takeout' ? 'service_closed_takeout' : 'service_closed';
       return orderMode === 'table' ? 'session_unavailable' : 'order_send_failed';
     }
     function setTableSessionClosed() {
@@ -4706,18 +4882,27 @@ em, i, cite, dfn, var { font-style: normal; }
       liveOrderId = null;
       const T = KiwiTenant;
       if (!T || !T.hasTenant || !T.slug) return Promise.resolve({ ok: true, demo: true });
+      /* Identifiants et quantités, rien d'autre : le prix et le libellé viennent
+         de la carte publiée (priceOrder). Envoyer aussi un nom et un prix, c'était
+         laisser croire au client que ce qu'il voit est ce qui sera facturé. */
       const lines = linesCopy.map((l) => ({
-        id: String(l.id || ''), name: nameOf(l.id), qty: l.qty, unitPrice: l.unitPrice,
+        id: String(l.id || ''), qty: l.qty,
         options: describeOptions(l),
+        optionChoices: describeOptionChoices(l),
         visuals: describeOptionVisuals(l),
         note: String(l.note || ''),
       }));
+      /* Une clé par envoi : un double tap, un réseau qui repasse ou un onglet
+         rechargé retrouvent LEUR commande au lieu d'en créer une deuxième. Elle
+         dépend du contenu du panier, donc un panier modifié après un refus ne
+         rejoue jamais l'ancienne commande. */
+      const ref = orderRef(lines);
       return ensureTableSession().then((session) => fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           merchant: T.slug, mode: orderMode === 'takeout' ? 'takeout' : 'table',
-          table: tableNumber, session: session || undefined, total: totalNow, lines: lines,
+          table: tableNumber, session: session || undefined, ref: ref, lines: lines,
         }),
       })).then(async (r) => {
         const data = await r.json().catch(() => null);
@@ -4727,8 +4912,16 @@ em, i, cite, dfn, var { font-style: normal; }
           throw sessionError(code);
         }
         liveOrderId = data.id;
+        sendSeed = Math.random().toString(36).slice(2, 8);
         return data;
       });
+    }
+    let sendSeed = Math.random().toString(36).slice(2, 8);
+    function orderRef(lines) {
+      const str = JSON.stringify(lines) + '|' + orderMode + '|' + tableNumber;
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+      return 'kq-' + sendSeed + '-' + (h >>> 0).toString(36);
     }
 
     function sendOrder() {
@@ -4744,12 +4937,21 @@ em, i, cite, dfn, var { font-style: normal; }
       const summary = [...cart.entries()]
         .map(([, line]) => `${line.qty}× ${nameOf(line.id)}`)
         .join(' · ');
-      const totalNow = totals().total;
+      let totalNow = totals().total;
       // Snapshot current cart into sentLines (for à-table bill aggregation)
-      const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
+      let linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
       postOrderToTill(totalNow, linesCopy).then((sent) => {
         btn.classList.remove('is-loading');
         closeCart();
+        /* Le total qui compte est celui de la caisse, calculé sur la carte
+           publiée. S'il diffère de l'affichage du téléphone (prix changé entre
+           deux), c'est lui qu'on montre : le client règle CE montant. */
+        if (sent && !sent.demo && Number.isFinite(Number(sent.total))) {
+          totalNow = Number(sent.total);
+          if (Array.isArray(sent.lines) && sent.lines.length === linesCopy.length) {
+            linesCopy = linesCopy.map((l, i) => ({ ...l, unitPrice: Number(sent.lines[i].unitPrice) }));
+          }
+        }
         if (orderMode === 'takeout') {
           /* Le numéro vient de la caisse quand elle a répondu : c'est celui que
              le personnel appellera. Le numéro inventé à partir de performance.now()
@@ -4768,7 +4970,7 @@ em, i, cite, dfn, var { font-style: normal; }
           $('#prep-number').textContent = orderNumber;
           $('#ready-number').textContent = orderNumber;
           $('#cashier-items').textContent = summary || '·';
-          $('#cashier-total').textContent = `${totalNow} ${cur()}`;
+          $('#cashier-total').textContent = `${fmt(totalNow)} ${cur()}`;
           gotoScreen('screen-cashier');
         } else {
           // Table mode — accumulate into the session for the bill
@@ -4776,15 +4978,72 @@ em, i, cite, dfn, var { font-style: normal; }
           sessionTotal += totalNow;
           $('#success-table').textContent = tableNumber;
           $('#success-items').textContent = summary || '·';
+          if (sent && sent.id && !sent.demo) trackTableOrder(sent.id);
+          else setSuccessStatus('demo');
           gotoScreen('screen-success');
         }
         cart.clear();
         refreshCartUI();
       }).catch((err) => {
         btn.classList.remove('is-loading');
-        showToast(t(tableSessionErrKey(err)));
+        showToast(t(tableSessionErrKey(err)), 5000);
+        /* La carte a bougé : on la relit, et on retire du panier ce qui n'y est
+           plus, au lieu de laisser le client renvoyer la même commande refusée. */
+        const code = err && err.code;
+        if (code === 'menu-changed' || code === 'archived' || code === 'formula_only') reloadMenuQuietly();
         syncSendGate();
       });
+    }
+
+    /* ── Relire la carte sans repartir de zéro ─────────────────────────────── */
+    function reloadMenuQuietly() {
+      if (!KiwiTenant || !KiwiTenant.hasTenant) return;
+      fetch('/api/menu?merchant=' + encodeURIComponent(KiwiTenant.slug), { headers: { Accept: 'application/json' } })
+        .then((r) => (r && r.ok) ? r.json() : null)
+        .then((data) => {
+          const menu = data && data.menu;
+          if (!menu || !menu.items) return;
+          TENANT_HOURS = menu.hours || null;
+          adaptServerMenu(menu);
+          [...cart.keys()].forEach((k) => { if (!itemOf(cart.get(k).id)) cart.delete(k); });
+          const active = document.querySelector('.menu-tab.is-active');
+          renderMenu(active ? active.dataset.tab : 'all');
+          refreshCartUI();
+          if (window.lucide) window.lucide.createIcons();
+        }).catch(() => {});
+    }
+
+    /* ── L'état d'une commande de TABLE, lu à la caisse ────────────────────────
+       « Commande envoyée en cuisine · prêt dans 4–6 min » était écrit en dur : la
+       commande attend d'abord que le comptoir l'accepte, et personne n'a jamais
+       estimé un délai. On interroge l'état réel (le plus mince : statut + numéro)
+       et on le dit tel qu'il est. */
+    let tableTrackTimer = null, tableTrackId = null;
+    function setSuccessStatus(status) {
+      const el = $('#success-status'); if (!el) return;
+      const key = 'success_status_' + status;
+      el.dataset.i18n = key;
+      el.textContent = t(key);
+    }
+    function trackTableOrder(id) {
+      tableTrackId = id;
+      if (tableTrackTimer) { clearInterval(tableTrackTimer); tableTrackTimer = null; }
+      setSuccessStatus('pending');
+      const T = KiwiTenant;
+      const url = '/api/order?merchant=' + encodeURIComponent(T.slug) + '&id=' + encodeURIComponent(id);
+      const tick = () => {
+        if (tableTrackId !== id) return;
+        fetch(url, { headers: { Accept: 'application/json' } })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (!d || !d.ok || tableTrackId !== id) return;
+            const st = d.status === 'archived' ? 'served' : d.status;
+            if (['pending', 'accepted', 'ready', 'served', 'rejected'].includes(st)) setSuccessStatus(st);
+            if (['served', 'rejected'].includes(st)) { clearInterval(tableTrackTimer); tableTrackTimer = null; }
+          }).catch(() => {});
+      };
+      tableTrackTimer = setInterval(tick, 5000);
+      setTimeout(tick, 1200);
     }
 
     /* ============ restart (back to menu after order sent) ============ */
@@ -4861,31 +5120,50 @@ em, i, cite, dfn, var { font-style: normal; }
        la caisse l'a dit. La démo garde sa barre de 10 s : elle n'a pas de
        cuisine, et la démonstration doit rester lisible. */
     let readyPollId = null;
+    /* « En préparation » ne veut dire qu'une chose : la caisse a ACCEPTÉ. Tant
+       que la commande est `pending`, l'écran dit qu'on attend la caisse. Pas de
+       « Prêt dans … » non plus : aucun délai n'existe côté serveur. */
+    function setPrepState(status) {
+      const title = $('#prep-title'); if (!title) return;
+      const wait = status === 'pending';
+      title.innerHTML = wait
+        ? `<span data-i18n="prep_title_wait_pre">${t('prep_title_wait_pre')}</span> <em data-i18n="prep_title_wait_em">${t('prep_title_wait_em')}</em>`
+        : `<span data-i18n="prep_title_pre">${t('prep_title_pre')}</span> <em data-i18n="prep_title_em">${t('prep_title_em')}</em>`;
+    }
     function pollUntilReady() {
       const T = KiwiTenant;
       if (!liveOrderId || !T || !T.slug) return false;
       if (readyPollId) { clearInterval(readyPollId); readyPollId = null; }
-      const url = '/api/order?merchant=' + encodeURIComponent(T.slug) + '&id=' + encodeURIComponent(liveOrderId);
-      readyPollId = setInterval(() => {
+      const row = $('#prep-eta-row'); if (row) row.style.display = 'none';
+      setPrepState('pending');
+      const id = liveOrderId;
+      const url = '/api/order?merchant=' + encodeURIComponent(T.slug) + '&id=' + encodeURIComponent(id);
+      const stop = () => { clearInterval(readyPollId); readyPollId = null; };
+      const tick = () => {
+        if (liveOrderId !== id) return stop();
         fetch(url, { headers: { Accept: 'application/json' } })
           .then((r) => (r.ok ? r.json() : null))
           .then((d) => {
-            if (!d || !d.ok) return;
-            if (d.status === 'ready') { clearInterval(readyPollId); readyPollId = null; triggerReady(); }
-            else if (d.status === 'rejected') { clearInterval(readyPollId); readyPollId = null; triggerRejected(); }
+            if (!d || !d.ok || liveOrderId !== id) return;
+            if (d.status === 'pending' || d.status === 'accepted') setPrepState(d.status);
+            else if (d.status === 'ready' || d.status === 'served' || d.status === 'archived') { stop(); triggerReady(); }
+            else if (d.status === 'rejected') { stop(); triggerRejected(); }
           })
           .catch(() => {});
-      }, 5000);
+      };
+      readyPollId = setInterval(tick, 5000);
+      /* Revenu sur la page après un écran verrouillé : on relit tout de suite,
+         sans attendre les cinq secondes. */
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && readyPollId) tick(); });
+      tick();
       return true;
     }
 
     function startPreparing() {
       // Vraie commande partie à la caisse → on suit SON état, pas un minuteur.
-      if (pollUntilReady()) {
-        const eta0 = $('#prep-eta');
-        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '·';
-        return;
-      }
+      if (pollUntilReady()) return;
+      const row0 = $('#prep-eta-row'); if (row0) row0.style.display = '';
+      setPrepState('accepted');
       const totalMs = 10000; // 10s demo — real life: pull from KDS estimate
       const startedAt = performance.now();
       const bar = $('#prep-bar-fill');
@@ -4921,9 +5199,9 @@ em, i, cite, dfn, var { font-style: normal; }
     /* The till refused the order. The customer used to stay on « En
        préparation » forever, waiting for food nobody was making. */
     function triggerRejected() {
-      const eta = $('#prep-eta');
-      if (eta && eta.parentNode) eta.parentNode.textContent = t('prep_rejected');
-      showToast(t('prep_rejected'));
+      const title = $('#prep-title');
+      if (title) title.textContent = t('prep_rejected');
+      showToast(t('prep_rejected'), 5000);
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
 
@@ -5050,7 +5328,7 @@ em, i, cite, dfn, var { font-style: normal; }
         if (!src || !d) return;
         Object.keys(src).forEach((k) => {
           if (typeof src[k] !== 'string') return;
-          d[k] = src[k].split('Café Atlas').join(VENUE_NAME).split('café Atlas').join(VENUE_NAME);
+          d[k] = src[k].split('Café Atlas').join(VENUE_NAME).split('café Atlas').join(VENUE_NAME).split('كافي أطلس').join(VENUE_NAME);
         });
         ['menu_loc', 'brand_tag', 'greet_sub_loc'].forEach((k) => { if (k in d) d[k] = ''; });
       });
@@ -5137,9 +5415,10 @@ em, i, cite, dfn, var { font-style: normal; }
      * client pour un formulaire vide. Le blocage n'existe que lorsque
      * l'établissement a explicitement déclaré ses heures. */
     let TENANT_HOURS = null;
+    let TENANT_ZONE = '';       // fuseau du magasin (/api/menu → zone) : les horaires sont ses heures murales
     function shopStatus() {
       if (!TENANT_HOURS || !window.KiwiHours) return null;
-      try { return window.KiwiHours.statusOf(TENANT_HOURS, Date.now()); } catch (_) { return null; }
+      try { return window.KiwiHours.statusOf(TENANT_HOURS, Date.now(), TENANT_ZONE); } catch (_) { return null; }
     }
     function shopClosed() {
       const st = shopStatus();
@@ -5149,7 +5428,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!TENANT_HOURS || !window.KiwiHours) return '';
       try {
         const L = currentLang === 'en' ? 'en' : currentLang === 'ar' ? 'ar' : 'fr';
-        return window.KiwiHours.summaryOf(TENANT_HOURS, Date.now(), L).text;
+        return window.KiwiHours.summaryOf(TENANT_HOURS, Date.now(), L, TENANT_ZONE).text;
       } catch (_) { return ''; }
     }
     /* Le bandeau. Il dit POURQUOI et QUAND ça rouvre — un « indisponible » sec
@@ -5162,7 +5441,10 @@ em, i, cite, dfn, var { font-style: normal; }
         el = document.createElement('div');
         el.id = 'kh-closed';
         el.style.cssText = 'position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:9px;' +
-          'padding:11px 16px;background:#fdecec;color:#8a1c1c;font-size:13px;line-height:1.45;' +
+          /* Le sélecteur de langue (absolute, en haut à droite) se posait sur le
+             texte du bandeau : « Rouvre mardi à 09:00 » était à moitié caché.
+             On réserve sa place côté bout de ligne (gauche en arabe). */
+          'padding:11px 16px;padding-inline-end:210px;min-height:58px;box-sizing:border-box;background:#fdecec;color:#8a1c1c;font-size:13px;line-height:1.45;' +
           'font-family:var(--sans,system-ui);border-bottom:1px solid #f3c9c9;';
         const host = document.querySelector('.app') || document.body;
         host.insertBefore(el, host.firstChild);
@@ -5191,9 +5473,31 @@ em, i, cite, dfn, var { font-style: normal; }
        ouverte depuis 20 minutes doit le voir sans recharger. */
     setInterval(refreshHoursGate, 60000);
 
+    /* Order Pro est une option payante, éteinte tant qu'un opérateur ne l'a pas
+       allumée : le serveur refuse alors toute commande (403 orderpro-off). La page
+       l'ignorait et proposait quand même « + », « Passer commande » et « Envoyer
+       en cuisine », puis répondait « réessayez » à un client qui ne pouvait jamais
+       réussir. Elle lit désormais le drapeau que /api/menu publie. */
+    let ORDERING = null;           // null = pas encore su
+    function applyOrderingGate(payload, hasMenu) {
+      ORDERING = !!(payload && payload.orderpro === true && !payload.suspended && hasMenu);
+      document.body.classList.toggle('ordering-off', !ORDERING);
+      const oo = $('#oo-banner');
+      if (oo) {
+        const show = !ORDERING && hasMenu;
+        oo.hidden = !show;
+        if (show) { oo.dataset.i18n = 'ordering_off_note'; oo.textContent = t('ordering_off_note'); }
+      }
+      /* Rien à commander : on n'impose pas l'écran « à table / à emporter ». */
+      if (!ORDERING) {
+        const modeScreen = document.getElementById('screen-mode');
+        if (modeScreen && modeScreen.classList.contains('is-active')) gotoScreen('screen-menu');
+      }
+    }
     function applyTenant(payload) {
       const menu = payload && payload.menu;
       TENANT_HOURS = (menu && menu.hours) || null;
+      TENANT_ZONE = (payload && typeof payload.zone === 'string') ? payload.zone : '';
       patchTenantIdentity((payload && payload.name) || prettySlug(KiwiTenant.slug));
       if (menu && menu.items && menu.items.length) {
         configuredLangs = MENU_LANG && payload.menuLangs === true ? MENU_LANG.langs(menu) : (MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en']);
@@ -5211,6 +5515,12 @@ em, i, cite, dfn, var { font-style: normal; }
         buildLanguagePicker();
         applyLang(currentLang);
         showComingSoon();           // real venue, carte not published yet
+      }
+      applyOrderingGate(payload, !!(menu && menu.items && menu.items.length));
+      /* QR de table (?table=7) : la visite s'ouvre ici, une fois qu'on SAIT que
+         commander est possible, pas avant. */
+      if (KiwiTenant.table && ORDERING) {
+        ensureTableSession().catch((err) => { showToast(t(tableSessionErrKey(err)), 5000); });
       }
       refreshHoursGate();
       if (window.lucide) window.lucide.createIcons();
@@ -5387,9 +5697,9 @@ em, i, cite, dfn, var { font-style: normal; }
         if (modeScreen) modeScreen.classList.remove('is-active');
         if (menuScreen) menuScreen.classList.add('is-active');
         if (typeof applyMenuMode === 'function') applyMenuMode();
-        ensureTableSession().catch((err) => {
-          showToast(t(tableSessionErrKey(err)));
-        });
+        // Un vrai commerçant : la visite s'ouvre dans applyTenant, une fois la
+        // carte lue (Order Pro allumé ou non). La démo n'a pas de caisse.
+        if (!KiwiTenant.hasTenant) ensureTableSession().catch(() => {});
       }
 
       // Greeting plays on landing — demo-only flourish (its hero copy names the

@@ -241,6 +241,87 @@ merchant with real clicks; switch it off and try every way in (sidebar,
 
 Covered by `module-gate-test.mjs` and `terminaux-truth-test.mjs` (14 of 17 fail on the old code) and `operations-system-test.mjs`.
 
+## Caisse (restaurant): done
+
+Measured on the local stack with real clicks: open a service, ring
+take-away and table bills, split equally, discount, refund, close the Z, and
+compare the till, D1 and the dashboard's Rapport journalier.
+
+| ID | Finding | Status |
+|---|---|---|
+| K1 | **"Fond d'ouverture" opened with 500 MAD preselected.** A till opened without counting expected 500 MAD nobody counted. | **Fixed.** A real store has nothing preselected; the till opens once a chip or an amount (0 counts) is chosen. The last float is a tap-to-use hint. |
+| K2 | **"Carte" booked the sale by itself** two seconds after "Approchez la carte", with no reader attached. | **Fixed.** Without a reader the till says "Faites payer sur votre terminal, puis confirmez"; only the cashier's confirmation writes the sale. |
+| K3 | The Z read "À 2 % de l'objectif", against an 18 000 MAD goal nobody set. | **Fixed.** "X MAD encaissés sur ce service". |
+| K4 | A take-away discount of 5,70 MAD read "Réductions accordées 0" on the Z; a code entry after a reload reset discounts to 0. | **Fixed.** Counted from the sale itself; reset only when no service is open. |
+| K5 | "Moyenne table" was revenue ÷ transactions, shown with zero tables. | **Fixed.** "Ticket moyen" (FR/EN/AR). |
+| K6 | **Each equal-split part counted the whole dish**: 8 dishes read 11 on the Z, and stock would leave three times. | **Fixed.** Each part counts 1/N; the receipt still reads "1× … · 1/3". |
+| K7 | A sold-out (86) dish vanished from the grid. | **Fixed.** A greyed "Épuisé" tile that adds nothing. Tile prices now read "14,50 MAD", not "14.5 MAD". |
+| K8 | A dish without a recipe wrote a −1 movement on its own id. | **Fixed.** Direct movements only for articles the ledger knows (retail products are seeded on creation). |
+| K9 | **Rapport journalier dropped every split part after the first split of the day**: net 444,24 instead of 650,91. The feed carries no `id`, and "À emporter · part 1" collided. | **Fixed.** Sales are keyed by the server `saleId` (report and export). Measured: 650,91 MAD and 13 transactions, as in D1 and the till. |
+
+Verified honest: change and tip arithmetic, refunds to D1, cash moves,
+no-sale with no printer, Z reconciliation `matched`. Covered by
+`till-truth-test.mjs`.
+
+## Commande QR et rapport mensuel: done
+
+| ID | Finding | Status |
+|---|---|---|
+| Q1 | **A 14,50 MAD café was charged 15**; "Grand +3" came to 18 instead of 17,50. The relay rounded every price to the dirham. | **Fixed.** `priceOrder` and the queue count in centimes. Phone, server, till and sale all read 17,50. |
+| Q2 | **Every dish with a required option was refused** ("carte modifiée"): the page sent text only, and supplements were never charged. | **Fixed.** It sends `{group, choiceId}` and an idempotency ref; price comes from the published menu. |
+| Q3 | "Un serveur arrive" and "Addition demandée" sent nothing. | **Fixed.** Both write to `/api/order/session`; a table missing from the plan says so. |
+| Q4 | "Prêt dans 4–6 min" was hard-coded and the progress bar a timer. | **Fixed.** The page shows the real order status. |
+| Q5 | With Order Pro off, "+" and "Envoyer" stayed live and failed. | **Fixed.** Ordering hidden, with a banner. |
+| Q6 | Opening hours on the phone's clock. | **Fixed.** `/api/menu` publishes the store's zone; `hours.js` takes an explicit zone, else the till-declared zone (`KiwiConfig.timezone`), else Casablanca. A store outside Morocco reads its own clock. |
+| Q7 | A default 15 % tip was added to "Total à régler" and recorded nowhere. | **Fixed.** 0 for a real store. |
+| Q8 | Every merchant's page was titled "Café Atlas"; a raw `opt_label_og_4` label showed. | **Fixed.** |
+| Q9 | Monthly report: basket on net, not gross as in Rapport journalier; amounts rounded to the dirham; "1 ventes". | **Fixed.** |
+
+Verified honest: the order reaches "Commandes clients" and "Encaisser" books
+it at 17,50; "Paiement à la caisse", no online payment claimed; the report
+is operator-only. Covered by `order-truth-test.mjs`.
+
+## Verticales POS (14): done
+
+A static sweep listed 99 leads; two passes re-measured each one on a paired
+till of every trade.
+
+| ID | Finding | Status |
+|---|---|---|
+| V1 | **Real tills showed demo books**: stock, expiry lots, duty rota, doctors, school lists, truck spots, classes, "247 membres", MRR, bouquets. Autosave then wrote them into the merchant's own record. | **Fixed.** Real sessions start empty; old saved docs carrying demo data are guarded. `vertical-state.js` no longer marks itself hydrated before the terminal is real. |
+| V2 | **Hotel extras posted demo prices** (Hammam 280 MAD) to real folios. | **Fixed.** The price is typed per posting; zero disables the button. |
+| V3 | Untracked stock read as zero: whole shelves "épuisé". | **Fixed.** "Non suivi". |
+| V4 | Prices lost their centimes (12,50 → 13). | **Fixed** (pharmacie, épicerie). |
+| V5 | "Réseau de retour, tout est synchronisé" after a hand-flipped toggle. | **Fixed.** `navigator.onLine` plus the real sale queue (`KiwiVerticalNet`). Demo keeps its simulation. |
+| V6 | "✓✓" delivered ticks on unsent WhatsApp drafts. | **Fixed.** "Brouillon, pas encore envoyé". |
+| V7 | Librairie "Scanner ISBN" printed a random demo title; pharmacie scan, call and wholesaler list were fake. | **Fixed.** The real scanner, `tel:` and a real list. |
+| V8 | Ticket counters started at demo numbers (2480, 4821…). Fast-food "commandes / heure" put every order at 13h. | **Fixed.** Start at 1; the chart is built from real sale times. |
+| V9 | "Annoncé au micro" with no speaker. | **Fixed.** Speech synthesis, and says so when the device cannot speak. |
+| V10 | Traiteur quotes printed fixed 30/50/20 % terms. | **Fixed.** Editable per quote. |
+| V11 | Coiffure did not open at all (`TIP_LEDGER` read before its declaration); its 40 % commission was invented. | **Fixed.** Commission "à définir" until set. |
+| V12 | Gym, coiffure and spa counts ignored the 5 h business day. | **Fixed.** |
+| V13 | Plurals ("1 achats", "1 pièces"), an em dash and four emojis in Maison labels. | **Fixed.** |
+
+Covered by `pos-truth-a-test.mjs` and `pos-truth-b-test.mjs`.
+
+## App employé et support: done
+
+| ID | Finding | Status |
+|---|---|---|
+| W1 | **A removed employee kept her login.** The server refused the empty roster and the union merge brought her back. | **Fixed.** Removals are tombstones (`removed: [{id, ts}]`) kept by the server; login and session honour them. Measured: the open app returned to login within 9 s. |
+| W2 | 6 digits showed "Arrivée autorisée" before the server compared the code. | **Fixed.** "Code saisi · il sera vérifié au pointage". |
+| W3 | The attendance code had no attempt limit. | **Fixed.** The login limiter: 8 wrong codes give 403, then 429. |
+| W4 | Every failure said "Email ou code personnel incorrect". | **Fixed.** One message per cause, FR/EN/AR; a 401 closes the session. |
+| W5 | Worked hours counted breaks. | **Fixed.** |
+| W6 | "Prochain service" looked only at the displayed week, on the phone's clock. | **Fixed.** 14 days, venue time. |
+| W7 | "Planning & demandes" ignored polls: approved leave showed after a reload only. | **Fixed.** |
+| W8 | The till's "Copier le message" button sent the message; "1 serveurs". | **Fixed.** |
+| S1 | Help centre promised "a tracked request"; the merchant could never see one. | **Fixed.** "Vos demandes" lists them. |
+| S2 | The help hero's text was invisible on its green card. | **Fixed.** |
+
+Verified honest: planning draft/published, no pay figure in `/api/employee`,
+the ticket confirmation copy. Covered by `employee-truth-test.mjs`.
+
 ## Small items, closed
 
 | Item | What it said | Now |
@@ -261,15 +342,7 @@ Covered by `module-gate-test.mjs` and `terminaux-truth-test.mjs` (14 of 17 fail 
 
 ## Open, logged for their own pass
 
-- **A dish sold without a recipe** writes a −1 movement on the dish's own
-  id (`it_2`), an id no stock article carries. It is right for retail, where
-  the product is the stock article, and noise for a restaurant dish.
 
-- **Till opening float.** "Fond d'ouverture" opens with 500 MAD
-  preselected. A till opened without counting records 500 MAD nobody
-  counted, which the cash reconciliation then expects. For the till pass.
-- **86 items vanish from the till grid** when others remain. Common in POS,
-  but a greyed "86" tile would let the cashier tell the customer.
 
 - **What a pending store may save.** `entitlements-v2.js` says configuring
   (a dish, a room) is not held back during installation, but the server
@@ -283,6 +356,20 @@ Covered by `module-gate-test.mjs` and `terminaux-truth-test.mjs` (14 of 17 fail 
 - **Till ticket numbering after C4.** A contaminated shift keeps its
   `kdsOrderSeq` (53 and up) until the service is closed. Not rewritten, since
   those numbers may already be printed.
+
+- **Default tariffs with no editor.** Librairie catalogue, pizzeria prices
+  and delivery fees, traiteur dishes, fast-food menu, gym plans, coiffure and
+  spa services, fleuriste stems: real tills still sell at these (the service
+  trades are in their own pass). Staff rosters are "Coach 1–3".
+- **Tips are not in D1.** The `sales` table has no tip column; the dashboard
+  learns tips only from the closing Z, so an open day shows none.
+- **Equal splits** count one transaction per part (defensible per payment).
+- **Hours not enforced server-side** for QR orders: the page blocks, the API
+  accepts.
+- **Removed employee clocked in**: the open attendance entry stays.
+- **No alert to Kiwi staff** on a new support ticket.
+- **Per-device unpair** is impossible: the till token carries no device id.
+- **Pharmacie** has no UI to enter stock or lots.
 
 ## Inventory · next features
 
@@ -302,6 +389,6 @@ book orders, flower orders, freshness, vehicle, points of sale, quotes,
 deposits, waste, economat, workflows, delivery) · hotel (chambres, séjours,
 folios, check-ins, ménage, canaux, tarifs, hotel intel).
 
-Other surfaces: the till (restaurant and the 14 `pos-*` verticals) ·
-kiwi-serveur · kiwi-cuisine · employee app · ~~booking.html~~ · kiwi-order.html ·
-kiwi-report.html · support/tickets.
+Other surfaces: ~~the till (restaurant and the 14 `pos-*` verticals)~~ ·
+kiwi-serveur · kiwi-cuisine · ~~employee app~~ · ~~booking.html~~ · ~~kiwi-order.html~~ ·
+~~kiwi-report.html~~ · ~~support/tickets~~.

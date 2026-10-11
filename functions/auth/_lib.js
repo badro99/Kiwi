@@ -541,7 +541,13 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     const teamIsNewer = !pair.access
       || Number((pair.team && pair.team.updated_ts) || 0) > Number(pair.access.updated_ts || 0);
     const members = accessIdentity ? [accessIdentity] : (teamIsNewer ? teamMembers : []);
+    /* Pierres tombales (assets/team.js › removed) : un salarié que le
+     * propriétaire a retiré ne se reconnecte pas, même si une copie périmée du
+     * roster ou du miroir d'accès le porte encore. */
+    const gone = new Set((Array.isArray(teamDoc && teamDoc.removed) ? teamDoc.removed : [])
+      .map((r) => String((r && r.id) || '')));
     for (const member of members) {
+      if (gone.has(String((member && member.id) || ''))) continue;
       const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
       const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
       const venue = String((member && member.venueSlug) || '').trim();

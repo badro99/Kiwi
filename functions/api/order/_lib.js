@@ -211,6 +211,19 @@ export async function deskOpen(env, merchant) {
  * l'était pas. */
 const MAX_LINE_QTY = 99;
 
+/* Un prix de carte est en dirhams ET centimes. Il était arrondi au dirham
+ * entier ici (Math.round) : un café à 14,50 MAD affiché sur la carte et sur le
+ * téléphone du client sortait de ce relais à 15 MAD, la ligne « Grand +3 » à
+ * 18 au lieu de 17,50, et le ticket de la caisse ne recoupait plus ce que le
+ * client avait vu. L'éditeur de carte accepte les centimes (14,5), la caisse et
+ * les ventes comptent en centimes : seul ce relais les perdait. On garde donc
+ * deux décimales, et on additionne en centimes entiers pour que 3 × 14,55 ne
+ * dérive pas en 43,650000000000006. */
+const price2 = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0;
+};
+
 export async function priceOrder(env, merchant, rawLines) {
   let menuRow = null;
   try {
@@ -258,7 +271,7 @@ export async function priceOrder(env, merchant, rawLines) {
             const cObj = {
               id: String(choice.id || '').trim(),
               name: String(choice.name || '').trim(),
-              price: Math.max(0, Math.round(Number(choice.price) || 0)),
+              price: price2(choice.price),
               emoji: String(choice.emoji || '').trim().slice(0, 16),
             };
             if (cObj.name) {
@@ -287,7 +300,7 @@ export async function priceOrder(env, merchant, rawLines) {
           if (!it || !it.id) continue;
           index.set(String(it.id), {
             name: String(it.name || ''),
-            price: Math.max(0, Math.round(Number(it.price) || 0)),
+            price: price2(it.price),
             avail: it.avail !== false,
             formulaOnly: it.formulaOnly === true,
             archived: it.archived === true,
@@ -300,7 +313,7 @@ export async function priceOrder(env, merchant, rawLines) {
                 max: Math.max(1, Math.round(Number(slot && slot.max) || 1)),
                 choices: new Map((Array.isArray(slot && slot.choices) ? slot.choices : [])
                   .filter((choice) => choice && choice.itemId)
-                  .map((choice) => [String(choice.itemId), Math.max(0, Math.round(Number(choice.extra) || 0))])),
+                  .map((choice) => [String(choice.itemId), price2(choice.extra)])),
               })).filter((slot) => slot.id && slot.choices.size),
             } : null,
             station: categoryStations.get(String(it.catId || '')) || fallbackStation,
@@ -329,7 +342,7 @@ export async function priceOrder(env, merchant, rawLines) {
             const k = String(p.id);
             index.set(k, {
               name: String(p.name || ''),
-              price: Math.max(0, Math.round(Number(p.priceMAD) || 0)),
+              price: price2(p.priceMAD),
               avail: stock.has(k) ? stock.get(k) > 0 : true,
               /* Une boutique n'a pas de catégories de préparation ; elle a
                  néanmoins un poste par défaut dès qu'un écran existe. */
@@ -348,7 +361,7 @@ export async function priceOrder(env, merchant, rawLines) {
   const formulaOnly = [];
   const archived = [];
   const invalidOptions = [];
-  let total = 0;
+  let totalCents = 0;
 
   /* Rien contre quoi vérifier ⇒ on ne devine pas, on le DIT. L'appelant en fait
    * un 409 explicite ; il n'écrit jamais une commande dont il ne connaît pas le
@@ -519,7 +532,7 @@ export async function priceOrder(env, merchant, rawLines) {
       options = labels.join(' · ').slice(0, 200);
     }
     const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;
-    const unitPrice = kind === 'formula-part' ? 0 : ref.price + optionExtra + formulaExtra;
+    const unitPrice = kind === 'formula-part' ? 0 : price2(ref.price + optionExtra + formulaExtra);
     const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
                    station: ref.station || '' };
     if (l && l.uid) line.uid = String(l.uid).slice(0, 60);
@@ -537,8 +550,9 @@ export async function priceOrder(env, merchant, rawLines) {
         && formulaContext.choiceExtras.get(l)) || 0);
     }
     lines.push(line);
-    total += unitPrice * qty;
+    totalCents += Math.round(unitPrice * 100) * qty;
   }
+  const total = totalCents / 100;
 
   return {
     lines, total,

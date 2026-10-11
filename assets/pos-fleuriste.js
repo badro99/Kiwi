@@ -33,7 +33,10 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
+  /* Pluriel français : 0 et 1 prennent le singulier (« 1 tige », « 0 variété »). */
+  const pl = (n, one, many) => (Math.abs(n) < 2 ? one : many);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -102,7 +105,11 @@
   const STEM = Object.fromEntries(STEMS.map((s) => [s.id, s]));
 
   /* bouquets signatures — composition figée, prix forfaitaire */
-  const PRESETS = [
+  /* Session réelle : aucun bouquet signature. « Bouquet Détroit » (180 MAD) et
+     « Brassée Kasbah » (260 MAD) sont la carte de la boutique de démonstration,
+     avec le nom de SON quartier ; ils s'affichaient comme les bouquets maison de
+     n'importe quel fleuriste. */
+  const PRESETS = pvReal() ? [] : [
     { id: 'detroit', label: 'Bouquet Détroit', price: 180, art: 'rose_rouge', flag: 'signature',
       makeup: { rose_rouge: 9, eucalyptus: 4, gypsophile: 3 }, sub: 'roses rouges, eucalyptus, gypsophile' },
     { id: 'kasbah',  label: 'Brassée Kasbah',  price: 260, art: 'pivoine', flag: 'signature',
@@ -218,7 +225,12 @@
   /* ───────────────────────── arrivages du matin ─────────────────────────
      Fraîcheur : fresh (plusieurs jours) · soon (2 j) · today (à écouler).
      Les "today" portent une promo –30 % opt-in qui se reprice en direct. */
-  const ARRIVALS = [
+  /* Session réelle : aucun arrivage n'est connu de la caisse. Les 372 tiges
+     « reçues ce matin », l'« Arrivage Hollande 06h » et les restes « de mardi »
+     ci-dessous sont ceux de la démo. Chaque tige reste listée pour pouvoir
+     activer la promo −30 %, mais sa quantité et sa fraîcheur sont INCONNUES
+     (qty/fresh à null) et ne sont ni affichées ni comptées. */
+  const ARRIVALS_DEMO = [
     { id: 'rose_rouge',  qty: 120, fresh: 'fresh', sale: false },
     { id: 'pivoine',     qty: 40,  fresh: 'soon',  sale: false, batch: 'Arrivage Hollande · ce matin 06h' },
     { id: 'tulipe',      qty: 60,  fresh: 'fresh', sale: false },
@@ -227,6 +239,9 @@
     { id: 'gypsophile',  qty: 80,  fresh: 'today', sale: true,  batch: 'Bottes ouvertes, à écouler' },
     { id: 'tournesol',   qty: 18,  fresh: 'fresh', sale: false },
   ];
+  const ARRIVALS = pvReal()
+    ? ['rose_rouge', 'pivoine', 'tulipe', 'lys', 'renoncule', 'gypsophile', 'tournesol'].map((id) => ({ id, qty: null, fresh: null, sale: false }))
+    : ARRIVALS_DEMO;
   const SALE_RATE = 0.30;
   const FRESH = {
     fresh: { label: 'Fraîche', sub: 'tient 4–5 jours' },
@@ -314,6 +329,12 @@
 
   function queueIfOffline(label) {
     if (fleuristeOps) fleuristeOps.save(label);
+    if (pvReal()) {
+      syncNet();
+      if (!state.offline) return false;
+      toast(`${label}, enregistré sur cette caisse`);
+      return true;
+    }
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -368,6 +389,8 @@
         deliveries: DELIVERIES,
         arrivals: ARRIVALS,
         saleState,
+        /* v:2 = une session réelle n'écrit plus les arrivages de démo. */
+        v: 2,
         deliverySeq,
         bouquetSeq,
         bouquet: state.bouquet,
@@ -383,8 +406,12 @@
         if (delivery.createdAt) delivery.createdAt = new Date(delivery.createdAt);
         if (delivery.doneAt) delivery.doneAt = new Date(delivery.doneAt);
       });
-      if (Array.isArray(saved.arrivals)) ARRIVALS.splice(0, ARRIVALS.length, ...saved.arrivals);
-      if (saved.saleState && typeof saved.saleState === 'object') {
+      /* Un document réel écrit AVANT ce correctif contient les arrivages de la
+         démo (372 tiges « reçues ce matin », promos déjà actives) : on ne les relit
+         pas comme ceux de la boutique. */
+      const legacy = pvReal() && saved.v !== 2;
+      if (Array.isArray(saved.arrivals) && !legacy) ARRIVALS.splice(0, ARRIVALS.length, ...saved.arrivals);
+      if (saved.saleState && typeof saved.saleState === 'object' && !legacy) {
         Object.keys(saleState).forEach((id) => delete saleState[id]);
         Object.assign(saleState, saved.saleState);
       }
@@ -398,6 +425,7 @@
   function mount(rootEl) {
     if (fleuristeOps) fleuristeOps.hydrate();
     root = rootEl;
+    bindNet();
     if (!state.bouquet) freshBouquet();
     root.innerHTML = `
       <aside class="fl-rail">
@@ -413,7 +441,7 @@
           <button class="fl-nav-it" data-fl-view="arrivages"><i data-lucide="sprout"></i><span>Arrivages</span><b class="fl-nav-badge" id="fl-badge-ar"></b></button>
         </nav>
         <div class="fl-rail-foot">
-          <button class="fl-net" id="fl-net" title="Simuler une coupure réseau">
+          <button class="fl-net" id="fl-net" title="${pvReal() ? 'État du réseau' : 'Simuler une coupure réseau'}">
             <i class="fl-net-dot"></i><span class="fl-net-label">En ligne</span>
           </button>
           <button class="fl-lock" id="fl-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -509,7 +537,7 @@
   function renderCats() {
     $('#fl-cats', root).innerHTML =
       `<button class="fl-cat ${state.cat === 'tous' ? 'on' : ''}" data-fl-cat="tous">Tiges <span class="fl-cat-ct">${STEMS.length}</span></button>` +
-      `<button class="fl-cat ${state.cat === 'signature' ? 'on' : ''}" data-fl-cat="signature">Bouquets signatures <span class="fl-cat-ct">${PRESETS.length}</span></button>` +
+      (PRESETS.length ? `<button class="fl-cat ${state.cat === 'signature' ? 'on' : ''}" data-fl-cat="signature">Bouquets signatures <span class="fl-cat-ct">${PRESETS.length}</span></button>` : '') +
       `<button class="fl-cat ${state.cat === 'promo' ? 'on' : ''}" data-fl-cat="promo">À écouler <span class="fl-cat-ct">${ARRIVALS.filter((a) => saleActive(a.id)).length}</span></button>`;
     $('#fl-cats', root).onclick = (e) => {
       const b = e.target.closest('[data-fl-cat]');
@@ -548,7 +576,7 @@
     let i = 0;
     if (state.cat === 'tous' || state.cat === 'signature') {
       if (state.cat === 'tous') {
-        html += `<div class="fl-grid-head">Bouquets signatures</div><div class="fl-grid">${PRESETS.map((p) => presetCard(p, i++)).join('')}</div>`;
+        if (PRESETS.length) html += `<div class="fl-grid-head">Bouquets signatures</div><div class="fl-grid">${PRESETS.map((p) => presetCard(p, i++)).join('')}</div>`;
         html += `<div class="fl-grid-head">Tiges, au détail</div><div class="fl-grid">${STEMS.map((s) => stemCard(s, i++)).join('')}</div>`;
       } else {
         html += `<div class="fl-grid-head">Bouquets signatures, composition figée</div><div class="fl-grid">${PRESETS.map((p) => presetCard(p, i++)).join('')}</div>`;
@@ -1234,7 +1262,7 @@
 
   function delivCard(d) {
     const occ = OCC[d.occ];
-    const itemsLabel = d.items.map((it) => it.kind === 'preset' ? `${it.n > 1 ? it.n + '× ' : ''}${it.label}` : `${it.label} · ${it.n} tiges`).join(' + ');
+    const itemsLabel = d.items.map((it) => it.kind === 'preset' ? `${it.n > 1 ? it.n + '× ' : ''}${it.label}` : `${it.label} · ${it.n} ${pl(it.n, 'tige', 'tiges')}`).join(' + ');
     return `<button class="fl-dcard ${occ.deuil ? 'deuil' : ''}" data-fl-deliv="${d.id}">
       <span class="fl-dcard-top">
         <span class="fl-dcard-id">${d.id}</span>
@@ -1445,7 +1473,7 @@
       <div class="fl-wa-bubblewrap">
         <div class="fl-wa-bubble">
           <textarea id="fl-wa-text">${esc(waMessage(d))}</textarea>
-          <div class="fl-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} ✓✓</div>
+          <div class="fl-wa-meta">${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())} · brouillon, pas encore envoyé</div>
         </div>
       </div>
       <button class="fl-wa-photo ${withPhoto ? 'on' : ''}" id="fl-wa-photo" ${d.photo ? '' : 'disabled style="opacity:.5"'}>
@@ -1486,7 +1514,11 @@
   function renderArrivages() {
     const panel = $('[data-fl-panel="arrivages"]', root);
     const saleCt = ARRIVALS.filter((a) => saleActive(a.id)).length;
-    const totalStems = ARRIVALS.reduce((s, a) => s + a.qty, 0);
+    const totalStems = ARRIVALS.reduce((s, a) => s + (a.qty || 0), 0);
+    const known = ARRIVALS.some((a) => Number.isFinite(a.qty));
+    const banner = known
+      ? `${totalStems} tiges reçues ce matin · ${saleCt} ${pl(saleCt, 'variété', 'variétés')} à écouler`
+      : (saleCt ? `${saleCt} ${pl(saleCt, 'variété', 'variétés')} à écouler` : 'Aucune variété à écouler');
     panel.innerHTML = `
       <header class="fl-head">
         <div><h1>Arrivages &amp; fraîcheur</h1><div class="fl-head-sub">L'arrivage du matin, et ce qu'il faut écouler avant la fermeture</div></div>
@@ -1495,7 +1527,7 @@
         <div class="fl-arriv-inner">
           <div class="fl-arriv-banner">
             <span class="ic"><i data-lucide="sprout"></i></span>
-            <span class="l"><b>${totalStems} tiges reçues ce matin · ${saleCt} variété${saleCt > 1 ? 's' : ''} à écouler</b><span>Activez une promo −30 % : le prix se met à jour partout, en boutique comme à la composition.</span></span>
+            <span class="l"><b>${banner}</b><span>Activez une promo −30 % : le prix se met à jour partout, en boutique comme à la composition.</span></span>
           </div>
           <div class="fl-arriv-list" id="fl-arriv-list">
             ${ARRIVALS.map(arrivalRow).join('')}
@@ -1515,14 +1547,14 @@
     const s = STEM[a.id];
     const onSale = saleActive(a.id);
     const u = unitPrice(a.id);
-    const fr = FRESH[a.fresh];
+    const fr = FRESH[a.fresh] || null;
     return `<div class="fl-arow ${onSale ? 'is-sale' : ''}">
       <span class="fl-arow-art">${ART[a.id] || ''}</span>
       <span class="fl-arow-mid">
-        <span class="fl-arow-name">${esc(s.label)}<span class="fl-fresh-dot ${a.fresh}"></span></span>
+        <span class="fl-arow-name">${esc(s.label)}${fr ? `<span class="fl-fresh-dot ${a.fresh}"></span>` : ''}</span>
         <span class="fl-arow-sub">
-          <span class="fresh"><i data-lucide="leaf"></i>${esc(fr.label)} · ${esc(fr.sub)}</span>
-          <span>· ${a.qty} tiges${a.batch ? ' · ' + esc(a.batch) : ''}</span>
+          ${fr ? `<span class="fresh"><i data-lucide="leaf"></i>${esc(fr.label)} · ${esc(fr.sub)}</span>` : '<span class="fresh">Quantité et fraîcheur non suivies</span>'}
+          ${Number.isFinite(a.qty) ? `<span>· ${a.qty} ${pl(a.qty, 'tige', 'tiges')}${a.batch ? ' · ' + esc(a.batch) : ''}</span>` : ''}
         </span>
       </span>
       <span class="fl-arow-right">
@@ -1652,34 +1684,76 @@
     icons();
   }
 
-  /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════ */
+  /* ═══════════════════════ RÉSEAU ═══════════════════════════════════════════
+     Démo : coupure SIMULÉE par le bouton. Session réelle : l'indicateur dit ce
+     que le navigateur sait (navigator.onLine) et la vraie file de ventes
+     (KiwiLive.queueStatus). Il ne se bascule plus à la main, et plus aucun toast
+     n'annonce « tout est synchronisé » sans l'avoir vérifié : le bouton affichait
+     « Réseau de retour, tout est synchronisé » alors qu'il venait seulement de
+     changer un drapeau. */
+  function liveQueue() {
+    try {
+      const q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus();
+      return q ? { pending: +q.pending || 0, blocked: +q.blocked || 0, storageError: !!q.storageError } : null;
+    } catch (_) { return null; }
+  }
+  function syncNet() {
+    if (!pvReal()) return;
+    const q = liveQueue();
+    state.offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.queued = q ? q.pending : 0;
+    state.syncBlocked = !!q && (q.storageError || q.blocked > 0);
+    if (root) renderNet();
+  }
+  let netBound = false;
+  function bindNet() {
+    if (netBound || !pvReal()) return;
+    netBound = true;
+    window.addEventListener('online', syncNet);
+    window.addEventListener('offline', syncNet);
+    window.addEventListener('kiwi:sale-queue', syncNet);
+    syncNet();
+  }
   function toggleOffline() {
+    if (pvReal()) {
+      syncNet();
+      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
+        : state.offline ? 'Wi-Fi indisponible, les opérations restent sur cette caisse'
+          : state.queued ? `${state.queued} ${state.queued > 1 ? 'ventes' : 'vente'} en cours de synchronisation`
+            : 'Caisse en ligne, aucune vente en attente d\'envoi');
+      return;
+    }
     state.offline = !state.offline;
     if (!state.offline) {
-      if (state.queued) {
-        toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
-        state.queued = 0;
-      } else {
-        toast('Réseau de retour, tout est synchronisé');
-      }
+      toast(state.queued ? `Réseau simulé rétabli, file de démonstration vidée (${state.queued})` : 'Réseau simulé rétabli');
+      state.queued = 0;
     } else {
-      toast('Mode hors-ligne, la boutique continue, tout est mis en file');
+      toast('Mode hors-ligne simulé, la boutique continue');
     }
     renderNet();
   }
   function renderNet() {
     const net = $('#fl-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.fl-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    const real = pvReal();
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.fl-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (real && state.queued) ? 'Synchronisation' : 'En ligne';
+    net.title = real ? 'État du réseau' : 'Simuler une coupure réseau';
     let q = $('.fl-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((real || state.offline) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'fl-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#fl-offline-note', root);
-    note.hidden = !state.offline;
-    $('#fl-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    note.hidden = !state.offline && !state.syncBlocked;
+    const base = note.dataset.base || (note.dataset.base = note.textContent.replace(/\s+/g, ' ').trim());
+    note.innerHTML = '';
+    note.appendChild(document.createTextNode((state.syncBlocked
+      ? 'La synchronisation est bloquée. Les ventes restent sur cette caisse : contactez le support avant de vider les données du navigateur. '
+      : base + ' ')));
+    const cnt = document.createElement('b'); cnt.id = 'fl-queue-count';
+    cnt.textContent = state.queued ? `${state.queued} en attente` : '';
+    note.appendChild(cnt);
   }
 
   /* ═══════════════════════ register ═══════════════════════ */

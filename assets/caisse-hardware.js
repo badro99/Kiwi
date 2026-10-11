@@ -153,6 +153,10 @@
     // as external-terminal card tenders; authorization-only operations fail.
     readCard: readCard,
     authorizeCard: authorizeCard,
+    // True when "Carte" can only be a declaration about the merchant's own
+    // standalone TPE (no reader answers). The till must then ask its cashier to
+    // confirm that the customer paid, instead of booking the sale on a timer.
+    externalCardTerminal: function () { return realTill(); },
     // Pré-réchauffe le canal thermique dès qu'une intention d'encaissement apparaît,
     // évitant la latence de réveil (15–20 s) au premier ticket après une accalmie.
     warmPrinter: function (target) {

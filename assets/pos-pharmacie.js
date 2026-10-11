@@ -27,8 +27,17 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
-  const fmtNum = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n));
+  /* Le Doliprane 1000 à 12,50 MAD s'affichait « 13 MAD » sur la vignette, le ticket, le
+     reçu et le bouton « Encaisser » alors que 12,50 était réellement encaissé : l'affichage
+     arrondissait à l'unité. Les prix de pharmacie ont des centimes (7,50 ; 9,90) : on les
+     garde dès qu'il y en a. */
+  const fmtNum = (n) => {
+    const v = Math.round(n * 100) / 100;
+    return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v);
+  };
+  const fmtMAD = (n) => fmtNum(n) + ' MAD';
+  /* Français : 0 et 1 sont au singulier (« 1 lot », « 0 vente »), pluriel dès 2. */
+  const plu    = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -157,18 +166,29 @@
   const ITEMS = {};
   CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS[it.id] = it; }));
 
-  /* stock state — units on hand; a couple are out / low (mid-shift reality) */
+  /* stock state — units on hand. DÉMO seulement : « 12 + longueur de l'identifiant
+     × 7 % 40 » n'est pas un stock, c'est un décor. Une vraie pharmacie qui voyait
+     « Stock 3 » sur l'Augmentin et « rupture » sur la Ventoline se faisait dire de
+     commander ou de refuser une vente d'après ces chiffres inventés, et le premier
+     encaissement les écrivait dans sa fiche (autosave). Réel : AUCUN stock saisi ;
+     une référence absente de STOCK est « non suivie » (jamais « 0 », jamais bloquée). */
   const STOCK = {};
-  Object.keys(ITEMS).forEach((id) => { STOCK[id] = 12 + (id.length * 7) % 40; });
-  STOCK.ventoline = 0;          /* rupture — la démo le signale honnêtement */
-  STOCK.augmentin1g = 3;        /* bas */
-  STOCK.testangine = 4;
-  STOCK.gelhydro = 6;
+  if (!pvReal()) {
+    Object.keys(ITEMS).forEach((id) => { STOCK[id] = 12 + (id.length * 7) % 40; });
+    STOCK.ventoline = 0;          /* rupture — la démo le signale honnêtement */
+    STOCK.augmentin1g = 3;        /* bas */
+    STOCK.testangine = 4;
+    STOCK.gelhydro = 6;
+  }
+  const tracked = (id) => STOCK[id] != null;
+  const isOut   = (id) => tracked(id) && STOCK[id] <= 0;
+  const inStock = (id) => !tracked(id) || STOCK[id] > 0;
+  const stockCap = (id) => (tracked(id) ? STOCK[id] : Infinity);
   const FRIDGE = new Set(['ventoline']);   /* chaîne du froid (démo) */
 
   /* ───────────────────────── lots qui périment (péremption) ───────────────── */
   const NOW = Date.now();
-  const LOTS = [
+  const LOTS = pvReal() ? [] : [
     { id: 'augmentin1g', lot: 'AUG-2412', qty: 3,  exp: new Date(NOW + 26 * DAY) },
     { id: 'amoxicilline1g', lot: 'AMX-1180', qty: 7, exp: new Date(NOW + 41 * DAY) },
     { id: 'betadine', lot: 'BET-7741', qty: 5, exp: new Date(NOW + 58 * DAY) },
@@ -185,7 +205,10 @@
   }
 
   /* ───────────────────────── commande grossiste (CoopharMa style) ─────────── */
-  const GROSSISTE_SUGGEST = [
+  /* Suggestions chiffrées (« stock bas · 3 ») : elles citent le stock démo. Réel :
+     aucune suggestion tant que le stock n'est pas suivi, la pharmacie compose son
+     bon à la main (voir renderStock). */
+  const GROSSISTE_SUGGEST = pvReal() ? [] : [
     { id: 'ventoline', reason: 'rupture' },
     { id: 'augmentin1g', reason: 'stock bas · 3' },
     { id: 'testangine', reason: 'stock bas · 4' },
@@ -233,7 +256,11 @@
   const PAT = Object.fromEntries(PATIENTS.map((p) => [p.id, p]));
 
   /* ───────────────────────── garde — pharmacies de Tanger cette semaine ───── */
-  const PHARMA_GARDE = [
+  /* Le tableau des gardes est PUBLIC et officiel (par ville, par semaine). Kiwi n'y
+     est pas relié : les quatre confrères ci-dessous sont un décor de démo. En
+     réel ils envoyaient le public et la pharmacie vers de fausses adresses de
+     garde. Réel : aucune liste, l'écran le dit (renderGarde). */
+  const PHARMA_GARDE = pvReal() ? [] : [
     { name: pvName('Pharmacie Ibn Batouta') || 'Ma pharmacie', zone: 'Centre · Bd Pasteur', me: true },
     { name: 'Pharmacie du Détroit', zone: 'Marshan' },
     { name: 'Pharmacie Al Andalous', zone: 'Iberia' },
@@ -242,7 +269,7 @@
   ];
 
   /* ───────────────────────── état ───────────────────────── */
-  let saleSeq = 2480;
+  let saleSeq = pvReal() ? 1 : 2480;    /* réel : la première vente est V-1, pas la 2480e */
   let queuedSales = [];        /* ventes de garde déjà enregistrées ce soir */
   let insurerReceivables = []; /* tiers payant réellement dû, jamais confondu avec la recette encaissée */
   const state = {
@@ -259,7 +286,9 @@
   GROSSISTE_SUGGEST.forEach((g) => { state.gross[g.id] = 0; });
 
   /* garde — ventes de nuit déjà passées (mid-shift si la garde est armée) */
-  const GARDE_SALES = [
+  /* Démo seulement : en réel ces quatre « ventes de nuit » (188,50 MAD) s'ajoutaient
+     au vrai journal et au « Total encaissé · nuit ». */
+  const GARDE_SALES = pvReal() ? [] : [
     { t: '21:14', item: 'Doliprane 1000', who: 'Passage', amt: 12.5 },
     { t: '22:02', item: 'Augmentin 1 g', who: 'Ordonnance · garde', amt: 78 },
     { t: '23:37', item: 'Smecta + Spasfon', who: 'Passage', amt: 65 },
@@ -274,6 +303,7 @@
     vertical: 'pharmacie',
     snapshot() {
       return {
+        v: 2,                /* v1 contenait les décors de démo : voir restore() */
         stock: STOCK,
         lots: LOTS,
         medecins: MEDECINS,
@@ -288,11 +318,15 @@
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
-      if (saved.stock && typeof saved.stock === 'object') {
+      /* Une fiche v1 a été écrite par l'ancien autosave avec le stock et les lots
+         de démo dedans : on ne peut pas les distinguer d'une saisie. On les
+         écarte (le stock repart « non suivi »), le reste de la fiche reste. */
+      const trusted = saved.v >= 2;
+      if (trusted && saved.stock && typeof saved.stock === 'object') {
         Object.keys(STOCK).forEach((id) => delete STOCK[id]);
         Object.assign(STOCK, saved.stock);
       }
-      if (Array.isArray(saved.lots)) LOTS.splice(0, LOTS.length, ...saved.lots);
+      if (trusted && Array.isArray(saved.lots)) LOTS.splice(0, LOTS.length, ...saved.lots);
       LOTS.forEach((lot) => { if (lot.exp) lot.exp = new Date(lot.exp); });
       if (Array.isArray(saved.medecins)) MEDECINS.splice(0, MEDECINS.length, ...saved.medecins);
       Object.keys(MED).forEach((id) => delete MED[id]);
@@ -311,6 +345,12 @@
   function queueIfOffline(label) {
     if (pharmacieOps) pharmacieOps.save(label);
     if (!state.offline) return false;
+    if (pvReal()) {
+      /* La vente est déjà dans la file d'envoi réelle (live-link) : on ne compte
+         pas une seconde file locale, on dit juste où elle est. */
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -377,7 +417,7 @@
           <button class="ph-nav-it" data-ph-view="stock"><i data-lucide="package"></i><span>Stock & péremption</span><b class="ph-nav-badge warn" id="ph-badge-stock"></b></button>
         </nav>
         <div class="ph-rail-foot">
-          <button class="ph-net" id="ph-net" title="Simuler une coupure réseau">
+          <button class="ph-net" id="ph-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="ph-net-dot"></i><span class="ph-net-label">En ligne</span>
           </button>
           <button class="ph-lock" id="ph-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -432,6 +472,7 @@
     });
     $('#ph-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#ph-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $('#ph-mode-seg', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-ph-mode]');
       if (b) setMode(b.dataset.phMode);
@@ -478,7 +519,7 @@
   function renderBadges() {
     const cart = state.ticket.lines.reduce((s, l) => s + l.qty, 0);
     const renew = PATIENTS.filter((p) => p.chronic && p.chronic.dueIn <= 0).length;
-    const lowOrOut = Object.keys(STOCK).filter((id) => STOCK[id] <= 6).length;
+    const lowOrOut = Object.keys(STOCK).filter((id) => tracked(id) && STOCK[id] <= 6).length;
     const setBadge = (sel, n) => { const el = $(sel, root); el.textContent = n || ''; el.style.display = n ? '' : 'none'; };
     setBadge('#ph-badge-cart', cart);
     setBadge('#ph-badge-pat', renew);
@@ -506,7 +547,7 @@
 
   function cardFlags(it) {
     const out = [];
-    if (STOCK[it.id] <= 0) out.push('<span class="ph-flag out"><i data-lucide="package-x"></i>rupture</span>');
+    if (isOut(it.id)) out.push('<span class="ph-flag out"><i data-lucide="package-x"></i>rupture</span>');
     if (it.rx) out.push('<span class="ph-flag rx"><i data-lucide="clipboard-list"></i>ordonnance</span>');
     if (it.remb) out.push('<span class="ph-flag vig"><i data-lucide="shield-check"></i>remb.</span>');
     if (it.gen) out.push('<span class="ph-flag gen"><i data-lucide="repeat"></i>générique</span>');
@@ -515,7 +556,7 @@
   }
 
   function itemCard(it, i) {
-    const out = STOCK[it.id] <= 0;
+    const out = isOut(it.id);
     return `<button class="ph-card ${out ? 'is-out' : ''}" data-ph-item="${it.id}" style="--i:${i}">
       <span class="ph-card-top">
         <span class="ph-card-art">${ART[it.art] || ART.boite}</span>
@@ -617,7 +658,7 @@
     const covered = lineCovered(ln);
     const genItem = it.gen ? ITEMS[it.gen] : null;
     let genStrip = '';
-    if (genItem && STOCK[genItem.id] > 0) {
+    if (genItem && inStock(genItem.id)) {
       const savePct = Math.round((1 - genItem.price / it.price) * 100);
       genStrip = `<div class="ph-line-gen">
         <i data-lucide="repeat"></i>
@@ -709,7 +750,7 @@
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
-        if (STOCK[ln.itemId] != null && ln.qty >= STOCK[ln.itemId]) { toast(`Stock limité, ${STOCK[ln.itemId]} en rayon`); return; }
+        if (tracked(ln.itemId) && ln.qty >= STOCK[ln.itemId]) { toast(`Stock limité, ${STOCK[ln.itemId]} en rayon`); return; }
         ln.qty++;
       } else { ln.qty--; if (ln.qty <= 0) t.lines.splice(idx, 1); }
       renderTicket(); renderBadges(); icons();
@@ -737,7 +778,7 @@
 
   function openSheet(itemId) {
     const it = ITEMS[itemId];
-    if (STOCK[it.id] <= 0) {
+    if (isOut(it.id)) {
       toast(`${it.label}, rupture de stock. Ajoutez-le à la commande grossiste.`);
       return;
     }
@@ -751,7 +792,7 @@
     const it = ITEMS[sheet.itemId];
     const el = $('#ph-sheetm', root);
     const genItem = it.gen ? ITEMS[it.gen] : null;
-    const genAvail = genItem && STOCK[genItem.id] > 0;
+    const genAvail = genItem && inStock(genItem.id);
     const savePct = genAvail ? Math.round((1 - genItem.price / it.price) * 100) : 0;
     const covered = !!it.remb && ticketMut().rate > 0;
     const partMut = covered ? Math.round(it.price * ticketMut().rate) : 0;
@@ -771,7 +812,7 @@
         ${it.rx ? '<span class="ph-flag rx"><i data-lucide="clipboard-list"></i>Liste · ordonnance</span>' : ''}
         ${it.remb ? '<span class="ph-flag vig"><i data-lucide="shield-check"></i>Remboursable</span>' : ''}
         ${FRIDGE.has(it.id) ? '<span class="ph-flag fridge"><i data-lucide="thermometer"></i>Chaîne du froid 2-8°C</span>' : ''}
-        <span class="ph-flag out" style="background:var(--paper-mute);color:var(--ink-3);">Stock ${STOCK[it.id]}</span>
+        ${tracked(it.id) ? `<span class="ph-flag out" style="background:var(--paper-mute);color:var(--ink-3);">Stock ${STOCK[it.id]}</span>` : ''}
       </div>
 
       ${genAvail ? `<div class="ph-sub">
@@ -817,19 +858,19 @@
     };
     $('#ph-qty-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refresh(); } };
     $('#ph-qty-plus', el).onclick = () => {
-      if (sheet.qty >= STOCK[it.id]) { toast(`Stock limité, ${STOCK[it.id]} en rayon`); return; }
+      if (tracked(it.id) && sheet.qty >= STOCK[it.id]) { toast(`Stock limité, ${STOCK[it.id]} en rayon`); return; }
       sheet.qty++; refresh();
     };
     $('#ph-sheet-add', el).onclick = () => addToTicket(it.id, sheet.qty);
     const genBtn = $('#ph-sheet-gen', el);
-    if (genBtn) genBtn.onclick = () => { sheet.itemId = genItem.id; sheet.qty = Math.min(sheet.qty, STOCK[genItem.id]); renderSheet(); icons(); toast(`Générique sélectionné, ${genItem.label}`); };
+    if (genBtn) genBtn.onclick = () => { sheet.itemId = genItem.id; sheet.qty = Math.min(sheet.qty, stockCap(genItem.id)); renderSheet(); icons(); toast(`Générique sélectionné, ${genItem.label}`); };
     $$('[data-ph-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ph-sheet-veil'); });
   }
 
   function addToTicket(itemId, qty) {
     const t = state.ticket;
     const existing = t.lines.find((l) => l.itemId === itemId);
-    if (existing) existing.qty = Math.min(STOCK[itemId], existing.qty + qty);
+    if (existing) existing.qty = Math.min(stockCap(itemId), existing.qty + qty);
     else t.lines.push({ itemId, qty });
     closeVeil('#ph-sheet-veil');
     const it = ITEMS[itemId];
@@ -870,7 +911,7 @@
                   <span class="ph-pt-name">${esc(p.name)} <span class="ph-mut-chip ${p.mut === 'sans' ? 'none' : ''}">${esc(m.label)}</span></span>
                   <span class="ph-pt-sub">${esc(p.phone)}${p.aff ? ` · ${esc(p.aff)}` : ''}</span>
                 </span>
-                <span class="ph-pt-right">${dueOf(p) ? `<span class="due">solde ${fmtNum(dueOf(p))} MAD</span>` : `${p.visits} visites`}</span>
+                <span class="ph-pt-right">${dueOf(p) ? `<span class="due">solde ${fmtNum(dueOf(p))} MAD</span>` : `${p.visits} ${plu(p.visits, 'visite')}`}</span>
               </button>`;
             }).join('') || `<div class="ph-grid-empty" style="padding:18px;">Aucun patient pour « ${esc(q)} »</div>`}
           </div>
@@ -1166,7 +1207,7 @@
         <div class="cash-grid">
           <div class="cash-input-row">
             <label class="cash-input-label" for="ph-cash-in">Espèces reçues</label>
-            <input class="cash-input mono" id="ph-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${Math.round(due)}" />
+            <input class="cash-input mono" id="ph-cash-in" type="number" inputmode="decimal" min="0" step="0.01" value="${Math.round(due * 100) / 100}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
             <button class="cash-preset" data-add="20">+20</button>
@@ -1268,7 +1309,7 @@
         <span class="ph-pill ${p.mut === 'sans' ? 'none' : 'mut'}">${esc(m.label)}</span>
       </div>
       <div class="ph-pcard-meta">
-        <span class="ph-pill"><i data-lucide="history"></i>${p.visits} visite${p.visits > 1 ? 's' : ''}</span>
+        <span class="ph-pill"><i data-lucide="history"></i>${p.visits} ${plu(p.visits, 'visite')}</span>
         ${p.mut !== 'sans' ? `<span class="ph-pill ok"><i data-lucide="shield-check"></i>${Math.round(m.rate * 100)} %</span>` : ''}
         ${(p.allergies || []).length ? `<span class="ph-pill allerg"><i data-lucide="triangle-alert"></i>${p.allergies.length} allergie${p.allergies.length > 1 ? 's' : ''}</span>` : ''}
         ${p.due ? `<span class="ph-pill due"><i data-lucide="hand-coins"></i>solde ${fmtNum(p.due)} MAD</span>` : ''}
@@ -1319,7 +1360,7 @@
 
       <div class="ph-ptd-sec">
         <div class="ph-ptd-sec-lbl"><i data-lucide="triangle-alert"></i>Allergies & notes</div>
-        ${(p.allergies || []).length ? `<div class="ph-allerg-row">${p.allergies.map((a) => `<span class="ph-pill allerg"><i data-lucide="triangle-alert"></i>${esc(a)}</span>`).join('')}</div>` : '<div style="font-size:12.5px;color:var(--ink-3);">Aucune allergie connue.</div>'}
+        ${(p.allergies || []).length ? `<div class="ph-allerg-row">${p.allergies.map((a) => `<span class="ph-pill allerg"><i data-lucide="triangle-alert"></i>${esc(a)}</span>`).join('')}</div>` : '<div style="font-size:12.5px;color:var(--ink-3);">Aucune allergie enregistrée. À confirmer avec le patient.</div>'}
       </div>
 
       <div class="ph-ptd-actions">
@@ -1331,7 +1372,14 @@
     $$('[data-ph-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ph-ptdetail-veil'); });
     const ren = $('[data-ph-renew]', el);
     if (ren) ren.onclick = () => { closeVeil('#ph-ptdetail-veil'); startRenewal(p.id); };
-    $('#ph-ptd-call', el).onclick = () => toast(`Appel, ${p.phone} (démo)`);
+    /* Réel : « Appeler » ouvre vraiment le numéro (tel:) ; le toast « Appel »
+       n'appelait personne. Démo : reste un toast, signalé comme tel. */
+    $('#ph-ptd-call', el).onclick = () => {
+      if (!pvReal()) { toast(`Appel, ${p.phone} (démo)`); return; }
+      const num = String(p.phone || '').replace(/[^\d+]/g, '');
+      if (!num) { toast('Aucun numéro enregistré pour ce patient'); return; }
+      window.location.href = 'tel:' + num;
+    };
     $('#ph-ptd-sell', el).onclick = () => {
       state.ticket.patient = p;
       closeVeil('#ph-ptdetail-veil');
@@ -1396,9 +1444,10 @@
 
           <div class="ph-panel">
             <div class="ph-panel-hd">
-              <span class="t"><i data-lucide="map-pin"></i>Pharmacies de garde · Tanger</span>
-              <span class="ct">cette semaine</span>
+              <span class="t"><i data-lucide="map-pin"></i>Pharmacies de garde${pvReal() ? '' : ' · Tanger'}</span>
+              <span class="ct">${pvReal() ? '' : 'cette semaine'}</span>
             </div>
+            ${pvReal() ? `<div class="ph-garde-empty">Kiwi n’affiche pas encore le tableau des gardes de votre ville.<br>Reportez-vous au tableau officiel de votre secteur ; le journal de nuit ci-contre reste tenu par ce terminal.</div>` : ''}
             <div class="ph-degarde">
               ${PHARMA_GARDE.map((ph) => {
                 /* The "VOUS" row is the store's own identity — on a real store it
@@ -1434,6 +1483,15 @@
   }
 
   /* ═══════════════════════ STOCK & PÉREMPTION ═══════════════════════ */
+  /* Lignes du bon grossiste : les suggestions (démo) puis tout ce que la
+     pharmacie a elle-même ajouté. Réel : seulement ce qu'elle a ajouté. */
+  function grossRows() {
+    const rows = GROSSISTE_SUGGEST.slice();
+    Object.keys(state.gross).forEach((id) => {
+      if (state.gross[id] > 0 && ITEMS[id] && !rows.some((g) => g.id === id)) rows.push({ id, reason: 'ajouté au bon' });
+    });
+    return rows;
+  }
   function renderStock() {
     const panel = $('[data-ph-panel="stock"]', root);
     const lots = LOTS.slice().sort((a, b) => a.exp - b.exp);
@@ -1447,8 +1505,9 @@
           <div class="ph-panel">
             <div class="ph-panel-hd">
               <span class="t"><i data-lucide="calendar-x"></i>Lots à surveiller</span>
-              <span class="ct">${lots.length} lots · &lt; 3 mois</span>
+              <span class="ct">${lots.length ? `${lots.length} ${plu(lots.length, 'lot')} · &lt; 3 mois` : ''}</span>
             </div>
+            ${lots.length || !pvReal() ? '' : `<div class="ph-garde-empty">Aucun lot enregistré.<br>Kiwi ne connaît pas encore vos numéros de lot ni vos dates de péremption : rien n’est surveillé tant que vous ne les saisissez pas.</div>`}
             ${lots.map((lot) => {
               const it = ITEMS[lot.id];
               const tag = expTag(lot.exp);
@@ -1467,9 +1526,9 @@
           <div class="ph-panel">
             <div class="ph-gross-hd">
               <span class="ic"><i data-lucide="truck"></i></span>
-              <span class="l"><b>Commande grossiste</b><span>CoopharMa · livraison J+1 avant 8h</span></span>
+              <span class="l"><b>Commande grossiste</b><span>${pvReal() ? 'Bon à envoyer à votre grossiste' : 'CoopharMa · livraison J+1 avant 8h'}</span></span>
             </div>
-            ${GROSSISTE_SUGGEST.map((g) => {
+            ${grossRows().map((g) => {
               const it = ITEMS[g.id];
               const qty = state.gross[g.id] || 0;
               return `<div class="ph-gross-row ${qty > 0 ? 'on' : ''}" data-ph-grossrow="${g.id}">
@@ -1482,12 +1541,18 @@
                 </span>
               </div>`;
             }).join('')}
+            ${pvReal() ? `<div class="ph-gross-add" style="margin:10px 0 8px;"><select class="ph-select" id="ph-gross-add" aria-label="Ajouter une référence au bon">
+              <option value="">Ajouter une référence au bon…</option>
+              ${CATALOG.map((c) => `<optgroup label="${esc(c.label)}">${c.items.filter((it) => !grossRows().some((g) => g.id === it.id)).map((it) => `<option value="${it.id}">${esc(it.label)}</option>`).join('')}</optgroup>`).join('')}
+            </select></div>` : ''}
             <button class="ph-gross-send" id="ph-gross-send" ${grossCount ? '' : 'disabled'}>
               <i data-lucide="file-plus-2"></i>Préparer le bon${grossCount ? ` · ${grossCount} réf.` : ''}
             </button>
           </div>
         </div>
       </div>`;
+    const addSel = $('#ph-gross-add', panel);
+    if (addSel) addSel.onchange = () => { if (addSel.value) { state.gross[addSel.value] = 1; renderStock(); icons(); } };
     panel.onclick = (e) => {
       const lotBtn = e.target.closest('[data-ph-lot]');
       if (lotBtn) { state.gross[lotBtn.dataset.phLot] = (state.gross[lotBtn.dataset.phLot] || 0) + 1; renderStock(); icons(); toast(`${ITEMS[lotBtn.dataset.phLot].label}, ajouté à la commande`); return; }
@@ -1508,8 +1573,14 @@
       let message = ['Bonjour,', 'Demande de disponibilité pharmacie', ...lines.map((line) => `• ${line.name} · ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
       let order = null;
       if (P) {
-        let supplier = P.doc().suppliers.find((row) => row.name === 'CoopharMa');
-        if (!supplier) supplier = P.addSupplier({ name: 'CoopharMa', leadDays: 1 });
+        /* CoopharMa est le grossiste de la démo. Réel : on ne crée aucun
+           fournisseur de l'extérieur dans le carnet de la pharmacie ; si elle en
+           a déjà un, le bon lui est rattaché, sinon le texte est simplement
+           copié (il n'est envoyé à personne dans tous les cas). */
+        let supplier = pvReal()
+          ? ((P.doc().suppliers || [])[0] || null)
+          : P.doc().suppliers.find((row) => row.name === 'CoopharMa');
+        if (!supplier && !pvReal()) supplier = P.addSupplier({ name: 'CoopharMa', leadDays: 1 });
         if (P.isUltra() && supplier) {
           order = P.createOrder({ supplierId: supplier.id, lines, note: 'Commande pharmacie à confirmer au grossiste' });
           if (order && !order.error) message = P.message(order.id) || message;
@@ -1518,8 +1589,8 @@
       navigator.clipboard?.writeText?.(message).catch(() => {});
       queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste grossiste');
       toast(order && !order.error
-        ? `${order.number} créé en brouillon, texte copié · ${refs.length} réf. · ${units} unités`
-        : `Liste grossiste copiée, ${refs.length} réf. · ${units} unités`, 3200);
+        ? `${order.number} créé en brouillon, texte copié · ${refs.length} réf. · ${units} ${plu(units, 'unité')}`
+        : `Liste grossiste copiée, ${refs.length} réf. · ${units} ${plu(units, 'unité')}`, 3200);
       renderStock(); renderBadges(); icons();
     };
     icons();
@@ -1527,9 +1598,18 @@
 
   /* ═══════════════════════ SCAN (vignette) ═══════════════════════ */
   function openScan() {
+    /* Réel : cette animation tirait un médicament au hasard dans le catalogue et
+       annonçait « Vignette lue » sans rien lire. Le vrai scan (caméra ou
+       douchette) est le scan continu partagé ; on y renvoie, sinon on le dit. */
+    if (pvReal()) {
+      let ok = false;
+      try { ok = !!(window.KiwiRetailScan && window.KiwiRetailScan.open('pharmacie', root)); } catch (_) {}
+      if (!ok) toast('Scan indisponible sur ce terminal');
+      return;
+    }
     /* cibler un médicament en rayon, joué comme un scan de vignette */
     const pool = [];
-    CATALOG.forEach((c) => c.items.forEach((it) => { if (STOCK[it.id] > 0) pool.push(it); }));
+    CATALOG.forEach((c) => c.items.forEach((it) => { if (inStock(it.id)) pool.push(it); }));
     const target = pool[(Date.now() >> 8) % pool.length] || pool[0];
     const el = $('#ph-scanm', root);
     el.innerHTML = `
@@ -1552,7 +1632,22 @@
   }
 
   /* ═══════════════════════ OFFLINE ═══════════════════════ */
+  /* Réel : l'état du réseau vient du navigateur et de la file d'envoi des ventes
+     (live-link), jamais d'un interrupteur. Un tap dit ce qui est vrai à l'instant.
+     Démo : la coupure reste simulée, c'est dit sur le bouton. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
       toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
@@ -1565,15 +1660,15 @@
   function renderNet() {
     const net = $('#ph-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.ph-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.ph-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.ph-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'ph-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#ph-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#ph-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

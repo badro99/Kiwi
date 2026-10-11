@@ -26,6 +26,11 @@
   const icons  = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { KiwiLens.rescan(); } catch (e) {} };
   const pad2   = (n) => String(n).padStart(2, '0');
+  /* Français : 0 et 1 au singulier. */
+  const plu    = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
+  /* « pêche du jour », « la classique » : des affirmations que le commerçant n'a pas
+     faites. Réel : on n'affiche que les mentions descriptives. */
+  const flagOf = (it) => ((pvReal() && /du jour|classique/i.test(it.flag || '')) ? '' : (it.flag || ''));
 
   /* Real / paired-store identity — a real store never shows the demo name
    * ("Pizzeria La Marsa"). Local demo (unpaired localhost) keeps it. */
@@ -174,11 +179,14 @@
   const DRINK = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
 
   /* ───────────────────────── livraison — zones Tanger & livreurs ───────────────────────── */
+  /* Réel : les délais (« 20–30 min ») sont une promesse faite au client, et ce
+     sont ceux de la démo. Aucune pizzeria ne les a saisis : on ne les affiche plus.
+     Les frais restent le tarif par défaut (pas d'éditeur de zones, voir rapport). */
   const ZONES = [
-    { id: 'centre',     label: 'Centre ville', fee: 10, eta: '20–30 min' },
-    { id: 'malabata',   label: 'Malabata',     fee: 15, eta: '25–35 min' },
-    { id: 'achakar',    label: 'Achakar',      fee: 20, eta: '35–45 min' },
-    { id: 'california', label: 'California',   fee: 15, eta: '25–35 min' },
+    { id: 'centre',     label: 'Centre ville', fee: 10, eta: pvReal() ? '' : '20–30 min' },
+    { id: 'malabata',   label: 'Malabata',     fee: 15, eta: pvReal() ? '' : '25–35 min' },
+    { id: 'achakar',    label: 'Achakar',      fee: 20, eta: pvReal() ? '' : '35–45 min' },
+    { id: 'california', label: 'California',   fee: 15, eta: pvReal() ? '' : '25–35 min' },
   ];
   const ZONE = Object.fromEntries(ZONES.map((z) => [z.id, z]));
   /* Staff/livreurs roster — a real store never shows the demo cast. Real ⇒
@@ -362,7 +370,7 @@
 
   /* ───────────────────────── state ───────────────────────── */
   let root = null;
-  let seq = 208;
+  let seq = pvReal() ? 1 : 208;   /* réel : la première commande est M-1, pas la 208e */
   let ticking = null;
   const state = { view: 'carte', ticket: null, offline: false, queued: 0 };
   const pizzeriaOps = window.KiwiVerticalState?.open?.('pizzeria', {
@@ -381,6 +389,10 @@
   function queueIfOffline(label) {
     pizzeriaOps?.save?.(label || 'operation');
     if (!state.offline) return false;
+    if (pvReal()) {
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -450,7 +462,7 @@
           <button class="pz-nav-it" data-pz-view="livraison"><i data-lucide="bike"></i><span>Livraison</span><b class="pz-nav-badge" id="pz-badge-liv"></b></button>
         </nav>
         <div class="pz-rail-foot">
-          <button class="pz-net" id="pz-net" title="Simuler une coupure réseau">
+          <button class="pz-net" id="pz-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="pz-net-dot"></i><span class="pz-net-label">En ligne</span>
           </button>
           <button class="pz-lock" id="pz-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -486,6 +498,7 @@
     });
     $('#pz-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#pz-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) v.classList.remove('is-open'); });
     });
@@ -518,7 +531,7 @@
   function renderStats() {
     const paid = ORDERS.reduce((s, o) => s + o.pay.paid, 0);
     $('#pz-stats', root).innerHTML =
-      `Service du soir, <b>${ORDERS.length}</b> commandes · <b>${fmtMAD(paid)}</b> encaissés`;
+      `${pvReal() ? 'Service' : 'Service du soir'}, <b>${ORDERS.length}</b> ${plu(ORDERS.length, 'commande')} · <b>${fmtMAD(paid)}</b> ${paid >= 2 ? 'encaissés' : 'encaissé'}`;
   }
   function refreshOps() {
     renderBadges();
@@ -551,7 +564,7 @@
           <span class="pz-card-name">${esc(p.label)}</span>
           <span class="pz-card-sub">${esc(p.sub)}</span>
           <span class="pz-card-price">dès ${minPrice(p)} MAD</span>
-          ${p.flag ? `<span class="pz-card-flag">${esc(p.flag)}</span>` : ''}
+          ${flagOf(p) ? `<span class="pz-card-flag">${esc(flagOf(p))}</span>` : ''}
         </button>`).join('')}
       </div>
       <div class="pz-cat-head">Boissons · ${DRINKS.length}</div>
@@ -600,7 +613,7 @@
       } else {
         const c = t.customer.type === 'known' ? CUST[t.customer.id] : { name: t.customer.name || 'Client de passage', phone: '' };
         rows.push(`<button class="pz-tk-row is-set" id="pz-tk-client"><i data-lucide="user-check"></i>
-          <span class="l"><b>${esc(c.name)}</b><span>${esc(c.phone || 'sans téléphone')}${c.orders ? ` · ${c.orders} commandes` : ''}${c.pref ? ` · ${esc(c.pref)}` : ''}</span></span>
+          <span class="l"><b>${esc(c.name)}</b><span>${esc(c.phone || 'sans téléphone')}${c.orders ? ` · ${c.orders} ${plu(c.orders, 'commande')}` : ''}${c.pref ? ` · ${esc(c.pref)}` : ''}</span></span>
           <span class="edit">Changer</span></button>`);
       }
     }
@@ -970,7 +983,7 @@
             if (c.address) t.address = c.address;
           }
           closeVeil('#pz-client-veil');
-          toast(`${c.name}, ${c.orders} commandes${forLiv && c.zone ? ` · zone ${ZONE[c.zone].label} pré-remplie` : ''}`);
+          toast(`${c.name}, ${c.orders} ${plu(c.orders, 'commande')}${forLiv && c.zone ? ` · zone ${ZONE[c.zone].label} pré-remplie` : ''}`);
           renderTicket(); icons(); lens();
         };
       });
@@ -1020,7 +1033,7 @@
         <p class="modal-subtle">Les frais s'ajoutent au total et reviennent au livreur.</p>
         <div class="pz-zones">
           ${ZONES.map((z) => `<button class="pz-zone-chip ${picked === z.id ? 'on' : ''}" data-pz-zn="${z.id}">
-            <b><i data-lucide="map-pin"></i>${esc(z.label)}</b><span>${z.fee} MAD · ${esc(z.eta)}</span>
+            <b><i data-lucide="map-pin"></i>${esc(z.label)}</b><span>${z.fee} MAD${z.eta ? ` · ${esc(z.eta)}` : ''}</span>
           </button>`).join('')}
         </div>
         <div class="pz-f" style="margin-bottom:0;">
@@ -1044,7 +1057,7 @@
         t.zone = picked;
         t.address = $('#pz-zone-addr', el).value.trim();
         closeVeil('#pz-zone-veil');
-        toast(`${ZONE[picked].label}, ${ZONE[picked].fee} MAD de frais, ${ZONE[picked].eta}`);
+        toast(`${ZONE[picked].label}, ${ZONE[picked].fee} MAD de frais${ZONE[picked].eta ? ', ' + ZONE[picked].eta : ''}`);
         renderTicket(); icons(); lens();
       };
     };
@@ -1489,7 +1502,7 @@
                 <div class="pz-dcard-top"><span class="pz-ocard-num">${o.id}</span>
                   <span class="pz-ocard-when" data-pz-since data-ts="${o.delivery.departedAt}">parti ${esc(fmtSince(o.delivery.departedAt))}</span></div>
                 <div class="pz-dcard-who"><i data-lucide="bike"></i>${esc(COURIER[o.delivery.courier].name)} → ${esc(cust.name)}</div>
-                <div class="pz-dcard-addr">${esc(o.address || ZONE[o.zone].label)} · ${esc(ZONE[o.zone].eta)}</div>
+                <div class="pz-dcard-addr">${esc(o.address || ZONE[o.zone].label)}${ZONE[o.zone].eta ? ` · ${esc(ZONE[o.zone].eta)}` : ''}</div>
                 <div class="pz-dcard-meta">
                   <span class="pz-pill mode">${esc(ZONE[o.zone].label)} · ${ZONE[o.zone].fee} MAD</span>
                   ${itemsPill(o)}
@@ -1597,7 +1610,21 @@
   }
 
   /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline) {
       toast(state.queued
@@ -1612,15 +1639,15 @@
   function renderNet() {
     const net = $('#pz-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.pz-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.pz-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.pz-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'pz-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#pz-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#pz-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 

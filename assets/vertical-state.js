@@ -5,6 +5,76 @@
  * route, modal, query and focus state must stay out of each snapshot. */
 (function () {
   'use strict';
+
+  /* ── Réseau du comptoir : ce que le terminal SAIT, pas ce qu'un bouton prétend ──
+   * Onze métiers affichaient une pastille « En ligne / Hors-ligne » qu'un tap
+   * basculait à la main, puis annonçaient « Réseau de retour, 3 actions
+   * synchronisées » : un drapeau local avait changé, rien n'avait été envoyé ni
+   * vérifié. Les ventes partent réellement par la file de live-link
+   * (kiwiSaleQueue, rejouée au retour du réseau), c'est donc elle, et
+   * navigator.onLine, que le terminal doit montrer.
+   *
+   * Défini AVANT la garde KiwiStore ci-dessous : l'état du réseau ne dépend pas
+   * du stockage des fiches, et un métier doit pouvoir le lire même si ce
+   * dernier ne s'est pas chargé. Rétro-compatible : aucun module existant ne
+   * l'appelle encore. */
+  var netWatchers = [];
+  var netBound = false;
+  function netStatus(snapshot) {
+    var q = snapshot || null;
+    if (!q) { try { q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus(); } catch (_) { q = null; } }
+    q = q || {};
+    var storageError = !!q.storageError;
+    var blocked = (+q.blocked || 0) > 0 || storageError;
+    return {
+      offline: typeof navigator !== 'undefined' && navigator.onLine === false,
+      queued: Math.max(0, +q.pending || 0),
+      blocked: blocked,
+      storageError: storageError,
+    };
+  }
+  function netEmit(snapshot) {
+    var st = netStatus(snapshot);
+    netWatchers.slice().forEach(function (fn) { try { fn(st); } catch (_) {} });
+  }
+  function netWatch(fn) {
+    if (typeof fn !== 'function') return function () {};
+    netWatchers.push(fn);
+    if (!netBound && typeof window !== 'undefined' && window.addEventListener) {
+      netBound = true;
+      window.addEventListener('online', function () { netEmit(); });
+      window.addEventListener('offline', function () { netEmit(); });
+      window.addEventListener('kiwi:sale-queue', function (e) { netEmit(e && e.detail); });
+      window.addEventListener('storage', function (e) { if (!e || e.key === 'kiwiSaleQueue') netEmit(); });
+    }
+    return function () { netWatchers = netWatchers.filter(function (x) { return x !== fn; }); };
+  }
+  /* La phrase que le tap sur la pastille doit dire, vraie à l'instant T. */
+  function netSay(st) {
+    st = st || netStatus();
+    if (st.blocked) return 'Synchronisation bloquée, les ventes restent sur cette caisse. Contactez le support.';
+    if (st.offline) return 'Pas de réseau, les ventes restent sur cette caisse et partiront au retour de la connexion.';
+    if (st.queued) return st.queued + ' vente' + (st.queued > 1 ? 's' : '') + ' en cours d’envoi au serveur.';
+    return 'Caisse en ligne, aucune vente en attente d’envoi.';
+  }
+  /* Message d'un CHANGEMENT d'état (réseau perdu / revenu), ou '' s'il n'y en a pas.
+   * « Réseau de retour, 3 actions synchronisées » se disait dès que le navigateur
+   * repassait en ligne, alors que la file d'envoi ne faisait que commencer à se
+   * vider : on dit ce qui est vrai à cet instant, « en cours d'envoi ». Sur un
+   * terminal appairé, caisse-pwa.js avale déjà le tap sur la pastille et la
+   * rejoue depuis navigator.onLine : c'est donc ce message, pas un tap, qui
+   * informe le caissier. */
+  function netChange(wasOffline, st) {
+    st = st || netStatus();
+    if (!!wasOffline === !!st.offline) return '';
+    if (st.offline) return 'Pas de réseau, les ventes restent sur cette caisse et partiront au retour de la connexion.';
+    if (st.blocked) return 'Réseau de retour, mais la synchronisation est bloquée. Contactez le support.';
+    return st.queued
+      ? 'Réseau de retour, ' + st.queued + ' vente' + (st.queued > 1 ? 's' : '') + ' en cours d’envoi.'
+      : 'Réseau de retour.';
+  }
+  window.KiwiVerticalNet = { status: netStatus, watch: netWatch, say: netSay, change: netChange };
+
   if (!window.KiwiStore?.define) return;
 
   var handles = new Map();
@@ -105,7 +175,13 @@
     }
     function hydrate() {
       selectVenue();
-      if (hydrated || !real() || !activeVenue) { hydrated = true; return false; }
+      if (hydrated) return false;
+      /* Pas encore réel, ou pas encore de commerce : on N'est PAS hydraté.
+       * Verrouiller hydrated=true ici faisait qu'un terminal dont l'identité
+       * arrivait une seconde plus tard (KiwiMe, appairage) n'allait jamais lire
+       * sa fiche enregistrée, puis écrasait celle-ci par les valeurs par
+       * défaut du module au premier changement. save() attend le réel. */
+      if (!real() || !activeVenue) return false;
       var row = store.get(activeVenue)?.verticals?.[name];
       if (row?.data) restore(row.data);
       var current = copy(spec.snapshot()); last = signature(current); hydrated = true; return !!row?.data;

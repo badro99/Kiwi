@@ -21,6 +21,7 @@ const TEAM_FEATURE = 'team';
 const ACCESS_FEATURE = 'employee-access';
 const FLOOR_FEATURE = 'floorplan';
 const MESSAGES_FEATURE = 'team-messages';
+const MESSAGE_WINDOW_MS = 24 * 3600000;
 const PROGRESS_FEATURE = 'employee-progress';
 const MAX_ATTENDANCE = 5000;
 
@@ -107,6 +108,11 @@ async function liveEmployee(request, env) {
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
     const teamIsNewer = !accessRow
       || Number((teamRow && teamRow.updated_ts) || 0) > Number(accessRow.updated_ts || 0);
+    /* Retiré par le propriétaire (pierre tombale du document team) : la session
+       signée ne vaut plus rien, même si le miroir d'accès n'a pas encore suivi. */
+    const revoked = (Array.isArray(team.removed) ? team.removed : [])
+      .some((r) => r && String(r.id || '') === String(session.staffId || ''));
+    if (revoked) return null;
     const member = accessMember
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
@@ -251,7 +257,11 @@ async function payloadFor(request, env) {
     attendance: attendanceView(attendanceRow.data, auth.pin.id),
     colleagues,
     messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])
-      .filter((message) => message && (message.target === 'ALL' || String(message.target || '') === me.id))
+      .filter((message) => message && (message.target === 'ALL' || String(message.target || '') === me.id)
+        // Un message du comptoir vaut pour le service en cours : celui d'hier
+        // soir (« la salle B ferme ») ne doit pas ressortir comme une consigne
+        // d'aujourd'hui, le jour où l'employé rouvre l'app.
+        && Date.now() - (Number(message.ts) || 0) < MESSAGE_WINDOW_MS)
       .slice(-100),
     floor: sanitizedFloor(floorRow.data, members),
   };
@@ -474,10 +484,19 @@ export async function onRequestPost({ request, env }) {
   const attendanceCode = String(body.attendanceCode || '').replace(/\D/g, '').slice(0, 6);
   const codeRow = await readDoc(env, merchant, ATTENDANCE_CODE_FEATURE, {});
   const codeData = codeRow.data || {};
+  /* Le code de présence n'avait AUCUN plafond d'essais : un employé connecté,
+   * chez lui, pouvait en tester un million par scripts pendant les cinq minutes
+   * de validité et « pointer » sans être au comptoir. Même compteur que la
+   * connexion, rattaché à l'employé (pas à son adresse, qui change). */
+  const codeTarget = await targetKey(env.AUTH_SECRET, 'attcode', merchant + ':' + auth.pin.id);
+  const codeLimited = codeTarget ? await limitCheck(request, env, 'attcode', codeTarget) : null;
+  if (codeLimited) return codeLimited;
   if (attendanceCode.length !== 6 || attendanceCode !== String(codeData.code || '')
       || Date.now() > Number(codeData.expiresTs || 0)) {
+    if (codeTarget && !await limitFail(request, env, 'attcode', codeTarget)) return rateLimitUnavailable();
     return json({ error: 'attendance-code-invalid' }, 403);
   }
+  if (codeTarget) await limitClear(request, env, 'attcode', codeTarget);
   const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
   const member = memberFor(teamRow.data, auth.pin);
   const memberId = String((member && member.id) || auth.pin.id);

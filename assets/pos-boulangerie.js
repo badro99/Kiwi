@@ -136,12 +136,34 @@
       { id: 'ghriba',       label: 'Ghriba',                          price: 2,   stock: 38, baked: 50, sold: 12, seuil: 10, batch: 50 },
     ] },
   ];
+  /* Les « stock: 38, baked: 120, sold: 82 » ci-dessus décrivent une matinée de
+     DÉMO. Sur une vraie boulangerie ils affichaient « Khobz 38 », « 82 vendus
+     aujourd'hui », « plus que 12 croissants » avant le premier pain, et
+     l'autosave les écrivait dans sa fiche. Réel : le restant n'est PAS SUIVI
+     (null) tant qu'une fournée n'a pas été sortie du four ; la première sortie
+     le démarre, ensuite chaque vente le débite. Rien n'est bloqué avant :
+     « épuisé » ne veut dire que « suivi et à zéro ». (null <= 0 est vrai en JS,
+     d'où ces gardes plutôt que des comparaisons nues.) */
+  if (pvReal()) CATALOG.forEach((c) => c.items.forEach((p) => { p.stock = null; p.baked = 0; p.sold = 0; }));
+  const trk   = (p) => Number.isFinite(p.stock);
+  const isOut = (p) => trk(p) && p.stock <= 0;
+  const isLow = (p) => trk(p) && p.stock > 0 && p.stock <= p.seuil;
+  /* Français : 0 et 1 au singulier. */
+  const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
+  /* « vendus aujourd'hui » : p.sold ne se remettait jamais à zéro, il cumulait
+     toutes les journées. Chaque produit retient le jour ouvré de son compteur ;
+     un compteur d'un autre jour vaut 0. Les valeurs de la démo (sans jour) restent. */
+  const dayKey = () => { try { return String(window.KiwiDayReport.today()); } catch (_) { return new Date().toDateString(); } };
+  const soldToday = (p) => (p.soldDay && p.soldDay !== dayKey() ? 0 : p.sold);
   const PROD = {};
   CATALOG.forEach((c) => c.items.forEach((p) => { p.cat = c.id; PROD[p.id] = p; }));
 
   /* fournées du jour — sorted by time, status: sortie | four | prevue */
-  let fourSeq = 10;
-  const FOURNEES = [
+  let fourSeq = pvReal() ? 1 : 10;
+  /* Réel : aucune fournée au planning tant que la boulangerie n'en a pas
+     programmé. Les neuf ci-dessous (06:00 à 16:30, « F6 au four ») racontaient une
+     matinée qui n'a pas eu lieu. */
+  const FOURNEES = pvReal() ? [] : [
     { id: 'F1', time: '06:00', prod: 'khobz',     qty: 120, status: 'sortie', out: '06:05' },
     { id: 'F2', time: '06:30', prod: 'baguette',  qty: 80,  status: 'sortie', out: '06:35' },
     { id: 'F3', time: '07:00', prod: 'croissant', qty: 50,  status: 'sortie', out: '07:10' },
@@ -174,7 +196,7 @@
   const OCC = Object.fromEntries(OCCASIONS.map((o) => [o.id, o.label]));
   const PARFUMS = ['Chocolat', 'Vanille-framboise', 'Amande-miel', 'Fruits de saison'];
 
-  let cakeSeq = 116;
+  let cakeSeq = pvReal() ? 1 : 116;
   /* Seeded cake orders carry real-looking customer names + phone numbers —
      a real bakery starts with an empty carnet (renders the "Carnet vide"
      empty state); only the local demo keeps the sample commandes. */
@@ -214,10 +236,16 @@
   };
   const bakeryOps = window.KiwiVerticalState?.open?.('boulangerie', {
     schema: 1,
-    snapshot: () => ({ catalog: CATALOG, batches: FOURNEES, cakes: CAKES, fourSeq, cakeSeq, ticket: state.ticket, seq: state.seq, day: state.day, lastHour: state.lastHour, invAdjust: state.invAdjust, donForm: state.donForm, don: state.don }),
+    snapshot: () => ({ v: 2, catalog: CATALOG, batches: FOURNEES, cakes: CAKES, fourSeq, cakeSeq, ticket: state.ticket, seq: state.seq, day: state.day, lastHour: state.lastHour, invAdjust: state.invAdjust, donForm: state.donForm, don: state.don }),
     restore: (d) => {
-      CATALOG.splice(0, CATALOG.length, ...(d.catalog || [])); Object.keys(PROD).forEach(k => delete PROD[k]); CATALOG.forEach(c => (c.items || []).forEach(p => { p.cat = c.id; PROD[p.id] = p; }));
-      FOURNEES.splice(0, FOURNEES.length, ...(d.batches || [])); CAKES.splice(0, CAKES.length, ...((d.cakes || []).map(c => { c.retrait = new Date(c.retrait); return c; })));
+      /* Fiche v1 : écrite par l'ancien autosave avec le catalogue de démo (stocks,
+         vendus) et les neuf fournées de démo dedans, indiscernables d'une saisie.
+         On les écarte, le reste (gâteaux, ticket, journée) est gardé. */
+      if (d.v >= 2) {
+        CATALOG.splice(0, CATALOG.length, ...(d.catalog || [])); Object.keys(PROD).forEach(k => delete PROD[k]); CATALOG.forEach(c => (c.items || []).forEach(p => { p.cat = c.id; PROD[p.id] = p; }));
+        FOURNEES.splice(0, FOURNEES.length, ...(d.batches || []));
+      }
+      CAKES.splice(0, CAKES.length, ...((d.cakes || []).map(c => { c.retrait = new Date(c.retrait); return c; })));
       fourSeq = Math.max(fourSeq, +d.fourSeq || 0); cakeSeq = Math.max(cakeSeq, +d.cakeSeq || 0); state.seq = Math.max(state.seq, +d.seq || 0);
       state.ticket = d.ticket || []; state.day = d.day || state.day; state.lastHour = !!d.lastHour; state.invAdjust = d.invAdjust || {}; state.donForm = d.donForm || { assoc: null, note: '' }; state.don = d.don || null;
     },
@@ -230,7 +258,7 @@
   const tkLabel  = () => {
     const l = state.ticket[0];
     if (!l) return 'Vente';
-    const nm = PROD[l.prodId] ? PROD[l.prodId].name : 'Vente';
+    const nm = PROD[l.prodId] ? PROD[l.prodId].label : 'Vente';
     return state.ticket.length > 1 ? `${nm} +${tkCount() - l.qty} art.` : nm;
   };
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
@@ -256,6 +284,11 @@
   function queueIfOffline(label) {
     bakeryOps?.save?.(label || 'operation');
     if (!state.offline) return false;
+    if (pvReal()) {
+      /* La vente est déjà dans la file d'envoi réelle (live-link). */
+      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      return true;
+    }
     state.queued++;
     renderNet();
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
@@ -282,7 +315,7 @@
           <button class="bl-nav-it" data-bl-view="jour"><i data-lucide="sun"></i><span>Fin de journée</span></button>
         </nav>
         <div class="bl-rail-foot">
-          <button class="bl-net" id="bl-net" title="Simuler une coupure réseau">
+          <button class="bl-net" id="bl-net" title="${pvReal() ? 'État du réseau et des ventes en attente d’envoi' : 'Simuler une coupure réseau (démo)'}">
             <i class="bl-net-dot"></i><span class="bl-net-label">En ligne</span>
           </button>
           <button class="bl-lock" id="bl-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -319,6 +352,7 @@
     });
     $('#bl-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#bl-net', root).addEventListener('click', toggleOffline);
+    if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
@@ -330,7 +364,7 @@
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
 
   function renderAll() {
-    $('#bl-today', root).textContent = `${fmtDT(new Date())}, la fournée du matin est sortie`;
+    $('#bl-today', root).textContent = `${fmtDT(new Date())}${pvReal() ? '' : ', la fournée du matin est sortie'}`;
     renderCats();
     renderGrid();
     renderTicket();
@@ -388,6 +422,7 @@
   }
 
   function stockPill(p) {
+    if (!trk(p)) return '';
     if (p.stock <= 0) {
       const nf = nextFournee(p.id);
       if (nf && nf.status === 'four') return '<span class="bl-stock out">au four</span>';
@@ -409,7 +444,7 @@
     $('#bl-gridwrap', root).innerHTML = cats.map((c) => `
       <div class="bl-cat-head">${esc(c.label)}</div>
       <div class="bl-grid">${c.items.map((p) => `
-        <div class="bl-card ${p.stock <= 0 ? 'is-out' : ''}" data-bl-prod="${p.id}" role="button" tabindex="0" style="--i:${i++}">
+        <div class="bl-card ${isOut(p) ? 'is-out' : ''}" data-bl-prod="${p.id}" role="button" tabindex="0" style="--i:${i++}">
           ${stockPill(p)}
           <span class="bl-card-art">${ART[p.id] || ''}</span>
           <span class="bl-card-name">${esc(p.label)}</span>
@@ -444,8 +479,8 @@
   function addToTicket(prodId, qty) {
     const p = PROD[prodId];
     if (!p) return;
-    if (p.stock <= 0) { outOfStockToast(p); return; }
-    const avail = p.stock - inTicket(prodId);
+    if (isOut(p)) { outOfStockToast(p); return; }
+    const avail = trk(p) ? p.stock - inTicket(prodId) : Infinity;
     if (avail <= 0) { toast(`Tout le restant de ${p.label} est déjà sur le ticket`); return; }
     const add = Math.min(qty, avail);
     const line = state.ticket.find((l) => l.prodId === prodId);
@@ -517,7 +552,7 @@
       const l = state.ticket[idx];
       const p = PROD[l.prodId];
       if (plus) {
-        if (l.qty >= p.stock) { toast(`Plus que ${p.stock} ${p.label} en boutique`); return; }
+        if (trk(p) && l.qty >= p.stock) { toast(`Plus que ${p.stock} ${p.label} en boutique`); return; }
         l.qty++;
       } else {
         l.qty--;
@@ -556,7 +591,8 @@
     }));
     state.ticket.forEach((l) => {
       const p = PROD[l.prodId];
-      p.stock = Math.max(0, p.stock - l.qty);
+      if (trk(p)) p.stock = Math.max(0, p.stock - l.qty);
+      if (p.soldDay !== dayKey()) { if (p.soldDay) p.sold = 0; p.soldDay = dayKey(); }
       p.sold += l.qty;
     });
     state.day[method === 'carte' ? 'carte' : 'especes'] += total;
@@ -705,14 +741,17 @@
 
   function restRow(p) {
     const nf = nextFournee(p.id);
-    const low = p.stock <= p.seuil;
-    const pct = p.baked > 0 ? Math.round((p.stock / p.baked) * 100) : 0;
+    const low = trk(p) && p.stock <= p.seuil;
+    const pct = trk(p) && p.baked > 0 ? Math.round((p.stock / p.baked) * 100) : 0;
+    const sold = soldToday(p);
     const sub = nf
       ? (nf.status === 'four' ? `fournée ×${nf.qty} au four` : `fournée ×${nf.qty} prévue ${nf.time}`)
-      : `${p.sold} vendus aujourd'hui`;
+      : `${sold} ${plu(sold, 'vendu')} aujourd'hui`;
     const hint = (low && !nf)
       ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Four à prévoir, programmer <b>${nextSlot()} ×${p.batch}</b></button>`
-      : '';
+      : (!trk(p) && !nf)
+        ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Suivre le restant, programmer <b>${nextSlot()} ×${p.batch}</b></button>`
+        : '';
     return `<div class="bl-rrow ${low ? 'is-low' : ''}">
       <div class="bl-rtop">
         <span class="bl-rart">${ART[p.id] || ''}</span>
@@ -720,7 +759,7 @@
           <div class="bl-rname">${esc(p.label)}</div>
           <div class="bl-rsub">${esc(sub)}</div>
         </div>
-        <div class="bl-rnum"><b>${p.stock}</b><span>restant</span></div>
+        <div class="bl-rnum">${trk(p) ? `<b>${p.stock}</b><span>restant</span>` : '<b>·</b><span>non suivi</span>'}</div>
       </div>
       <div class="bl-rbar"><i style="width:${Math.min(100, pct)}%"></i></div>
       ${hint}
@@ -775,7 +814,7 @@
     const p = PROD[f.prod];
     f.status = 'sortie';
     f.out = hhmm(new Date());
-    p.stock += f.qty;
+    p.stock = (trk(p) ? p.stock : 0) + f.qty;
     p.baked += f.qty;
     queueIfOffline(`Fournée ${p.label}`);
     toast(`Fournée sortie, ${p.label} ×${f.qty} crédités au restant, sa7a!`);
@@ -1242,7 +1281,7 @@
       <div class="bl-wa-bubblewrap">
         <div class="bl-wa-bubble">
           <textarea id="bl-wa-text">${esc(waMessage(c))}</textarea>
-          <div class="bl-wa-meta">${hhmm(new Date())} ✓✓</div>
+          <div class="bl-wa-meta">${hhmm(new Date())} · brouillon, non envoyé</div>
         </div>
       </div>
       <button class="bl-wa-photo on" id="bl-wa-photo">
@@ -1293,9 +1332,9 @@
     const panel = $('[data-bl-panel="jour"]', root);
     const total = state.day.especes + state.day.carte;
     const panier = state.day.tickets ? total / state.day.tickets : 0;
-    const tops = CATALOG.flatMap((c) => c.items).slice().sort((a, b) => b.sold - a.sold).slice(0, 4);
-    const maxSold = tops[0] ? tops[0].sold : 1;
-    const invProds = CATALOG.flatMap((c) => c.items).filter((p) => p.stock > 0);
+    const tops = CATALOG.flatMap((c) => c.items).filter((p) => soldToday(p) > 0).sort((a, b) => soldToday(b) - soldToday(a)).slice(0, 4);
+    const maxSold = tops[0] ? soldToday(tops[0]) : 1;
+    const invProds = CATALOG.flatMap((c) => c.items).filter((p) => trk(p) && p.stock > 0);
     const invTotal = invProds.reduce((s, p) => s + invCount(p), 0);
 
     panel.innerHTML = `
@@ -1315,7 +1354,7 @@
                 ${state.day.gateaux ? `<div class="bl-recette-row"><span>dont gâteaux (acomptes &amp; soldes)</span><b>${fmtMAD(state.day.gateaux)}</b></div>` : ''}
                 <div class="bl-recette-row"><span>Tickets</span><b>${state.day.tickets}</b></div>
                 <div class="bl-recette-row"><span>Panier moyen</span><b>${fmtMAD(panier)}</b></div>
-                ${state.don ? `<div class="bl-recette-row"><span>Don du soir</span><b>${state.don.pieces} pièces · ${esc(state.don.assoc)}</b></div>` : ''}
+                ${state.don ? `<div class="bl-recette-row"><span>Don du soir</span><b>${state.don.pieces} ${plu(state.don.pieces, 'pièce')} · ${esc(state.don.assoc)}</b></div>` : ''}
               </div>
             </div>
             <div class="bl-dcard">
@@ -1324,9 +1363,9 @@
                 <div class="bl-top-row">
                   <span class="bl-top-art">${ART[p.id] || ''}</span>
                   <span class="bl-top-name">${esc(p.label)}</span>
-                  <span class="bl-top-bar"><i style="width:${Math.round((p.sold / maxSold) * 100)}%"></i></span>
-                  <span class="bl-top-ct">${p.sold}</span>
-                </div>`).join('')}
+                  <span class="bl-top-bar"><i style="width:${Math.round((soldToday(p) / maxSold) * 100)}%"></i></span>
+                  <span class="bl-top-ct">${soldToday(p)}</span>
+                </div>`).join('') || '<div class="bl-foot-note" style="margin:14px 0;">Aucune vente enregistrée aujourd’hui.</div>'}
             </div>
           </div>
 
@@ -1343,7 +1382,7 @@
             ${state.don ? `
               <div class="bl-don-done" style="margin-top:12px;">
                 <i data-lucide="check-circle-2"></i>
-                <div><b>${state.don.pieces} pièces</b> données à <b>${esc(state.don.assoc)}</b> à ${hhmm(state.don.at)}.${state.don.note ? `<br>Note : ${esc(state.don.note)}` : ''}<br>Rien ne se jette, sadaqa du soir enregistrée.</div>
+                <div><b>${state.don.pieces} ${plu(state.don.pieces, 'pièce')}</b> ${state.don.pieces > 1 ? 'données' : 'donnée'} à <b>${esc(state.don.assoc)}</b> à ${hhmm(state.don.at)}.${state.don.note ? `<br>Note : ${esc(state.don.note)}` : ''}<br>Rien ne se jette, sadaqa du soir enregistrée.</div>
               </div>
               <div class="bl-sheet-foot"><button class="bl-btn ghost" id="bl-don-redo" style="flex:1;">Refaire un comptage</button></div>` : `
               ${invProds.length ? invProds.map((p) => `
@@ -1355,11 +1394,15 @@
                     <b>${invCount(p)}</b>
                     <button data-bl-inv-plus="${p.id}" aria-label="Plus">+</button>
                   </span>
-                </div>`).join('') : '<div class="bl-foot-note" style="margin:14px 0;">Plus rien en boutique, tout est vendu, sa7a!</div>'}
+                </div>`).join('') : (CATALOG.some((c) => c.items.some((p) => !trk(p)))
+                ? '<div class="bl-foot-note" style="margin:14px 0;">Le restant n’est pas suivi : il l’est dès qu’une fournée est sortie du four (écran Fournées).</div>'
+                : '<div class="bl-foot-note" style="margin:14px 0;">Plus rien en boutique, tout est vendu, sa7a!</div>')}
               <div class="bl-don-sec">
                 <div class="bl-f-lbl">Association <span class="opt">· le don part ce soir</span></div>
                 <div class="bl-chips" id="bl-assocs">
-                  ${ASSOCS.map((a) => `<button class="bl-chip ${state.donForm.assoc === a ? 'on' : ''}" data-bl-assoc="${esc(a)}">${esc(a)}</button>`).join('')}
+                  ${pvReal()
+                    ? `<input class="bl-in" id="bl-don-assoc" placeholder="Nom de l’association ou du bénéficiaire…" value="${esc(state.donForm.assoc || '')}" />`
+                    : ASSOCS.map((a) => `<button class="bl-chip ${state.donForm.assoc === a ? 'on' : ''}" data-bl-assoc="${esc(a)}">${esc(a)}</button>`).join('')}
                 </div>
                 <div class="bl-f" style="margin:10px 0 0;">
                   <input class="bl-in" id="bl-don-note" placeholder="Note (ex. « livraison 20h30 par Hamza »)…" value="${esc(state.donForm.note)}" />
@@ -1403,13 +1446,17 @@
       const ok = e.target.closest('#bl-don-ok');
       if (ok) confirmDon();
     };
+    /* Réel : les trois associations proposées sont celles de la démo ; une vraie
+       boulangerie nomme la sienne. */
+    const assocIn = $('#bl-don-assoc', panel);
+    if (assocIn) assocIn.oninput = (e) => { state.donForm.assoc = e.target.value.trim() || null; };
     const note = $('#bl-don-note', panel);
     if (note) note.oninput = (e) => { state.donForm.note = e.target.value; };
     icons();
   }
 
   function confirmDon() {
-    const invProds = CATALOG.flatMap((c) => c.items).filter((p) => p.stock > 0);
+    const invProds = CATALOG.flatMap((c) => c.items).filter((p) => trk(p) && p.stock > 0);
     const total = invProds.reduce((s, p) => s + invCount(p), 0);
     if (!total) { toast('Aucune pièce comptée, rien à donner ce soir'); return; }
     if (!state.donForm.assoc) { toast('Choisissez une association pour le don'); return; }
@@ -1417,12 +1464,26 @@
     state.don = { assoc: state.donForm.assoc, note: state.donForm.note.trim(), pieces: total, at: new Date() };
     state.invAdjust = {};
     queueIfOffline('Don du soir');
-    toast(`${total} pièces pour ${state.don.assoc}, l'lah ijazikom`);
+    toast(`${total} ${plu(total, 'pièce')} pour ${state.don.assoc}, l'lah ijazikom`);
     refreshOps();
   }
 
   /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════════════ */
+  /* Réel : l'état vient du navigateur et de la file d'envoi des ventes (live-link),
+     pas d'un interrupteur. Démo : la coupure reste simulée. */
+  function syncNet(st) {
+    if (!pvReal()) return;
+    st = st || (window.KiwiVerticalNet && window.KiwiVerticalNet.status()) || { offline: navigator.onLine === false, queued: 0, blocked: false };
+    const was = state.offline;
+    state.offline = !!st.offline;
+    state.queued = st.queued || 0;
+    state.syncBlocked = !!st.blocked;
+    if (root) renderNet();
+    const msg = window.KiwiVerticalNet ? window.KiwiVerticalNet.change(was, st) : '';
+    if (msg && root) toast(msg, 3200);
+  }
   function toggleOffline() {
+    if (pvReal()) { syncNet(); return; }
     state.offline = !state.offline;
     if (!state.offline && state.queued) {
       toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
@@ -1435,15 +1496,15 @@
   function renderNet() {
     const net = $('#bl-net', root);
     if (!net) return;
-    net.classList.toggle('is-off', state.offline);
-    $('.bl-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.classList.toggle('is-off', state.offline || !!state.syncBlocked);
+    $('.bl-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : (pvReal() && state.queued) ? 'Envoi en cours' : 'En ligne';
     let q = $('.bl-net-queue', net);
-    if (state.offline && state.queued) {
+    if ((state.offline || pvReal()) && state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'bl-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#bl-offline-note', root);
-    note.hidden = !state.offline;
+    note.hidden = !state.offline && !state.syncBlocked;
     $('#bl-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 
