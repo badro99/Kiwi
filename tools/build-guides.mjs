@@ -226,6 +226,13 @@ const absolute = (route) => SITE + route;
 const outputPath = (route) => path.join(ROOT, route.replace(/^\//, ''), 'index.html');
 const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages', id, `${locale}.html`);
 // Landing languages are independent of the three published guide languages.
+/* `assets/liquid-lens.js` est la lentille liquide du produit (CLAUDE.md §4 :
+ * « never invent a different selection style »). On la référence SANS `?v=`,
+ * volontairement : son estampille appartient au cycle de `tools/bump-stamp.js`,
+ * qui ne connaît pas les pages de guides générées. Figer un numéro ici le
+ * laisserait diverger en silence, exactement le piège de §3. `_headers` sert
+ * `/assets/*` en `max-age=3600, stale-while-revalidate`, donc une correction de
+ * la lentille atteint les guides en une heure au plus, sans estampille. */
 const LANDING_LOCALES = Object.freeze(['fr', 'en', 'ar', 'de', 'it', 'nl', 'es']);
 const landingRoutes = Object.freeze(Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`])));
 const hubRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])));
@@ -531,8 +538,8 @@ function header(locale, routes) {
   return `<header class="site-header">
     <div class="nav-shell">
       <a class="brand" href="/${locale}/" aria-label="${esc(ui.brandLabel)}"><img src="/images/kiwi-logo-ink.svg" width="855" height="455" alt=""></a>
-      <nav class="nav-center" aria-label="${esc(ui.navLabel)}">
-        <a href="/${locale}/#features">${esc(ui.features)}</a><a href="/${locale}/guides/" aria-current="page">${esc(ui.guides)}</a><a href="/${locale}/#pricing">${esc(ui.pricing)}</a><a href="/dashboard.html">${esc(ui.signIn)}</a>
+      <nav class="nav-center" data-lens-demo aria-label="${esc(ui.navLabel)}">
+        <a data-lens-item href="/${locale}/#features">${esc(ui.features)}</a><a data-lens-item class="on" href="/${locale}/guides/" aria-current="page">${esc(ui.guides)}</a><a data-lens-item href="/${locale}/#pricing">${esc(ui.pricing)}</a><a data-lens-item href="/dashboard.html">${esc(ui.signIn)}</a>
         <a class="button nav-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">${esc(ui.demo)} <span class="arrow" aria-hidden="true">↗</span></a>
       </nav>
       <div class="language-picker" role="group" aria-label="${esc(ui.languagePicker)}">${languageLinks}</div>
@@ -739,6 +746,7 @@ ${alternateLinks(cluster.routes)}
   ${header(locale, cluster.routes)}
   ${pageBody(cluster, locale)}
   ${localizeFooterAnchors(footer, locale)}
+  <script src="/assets/liquid-lens.js" defer></script>
   <script src="/assets/articles/article.js?v=${ASSET_VERSIONS.js}" defer></script>${isArticle ? '' : `
   <script src="/assets/articles/guides-library.js?v=${ASSET_VERSIONS.library}" defer></script>`}
 </body>
