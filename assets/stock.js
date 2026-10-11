@@ -62,8 +62,9 @@
       statusLow: 'STOCK FAIBLE',
       lastDeliv: 'Dernière livraison',
       supplier: 'Fournisseur',
-      impactCost: 'Coût impact estimé',
-      perDayMissed: '/jour de manque à gagner',
+      impactBlocks: (n, names) => `${n > 1 ? `${n} plats en dépendent` : 'Un plat en dépend'} : ${names}`,
+      impactUsage: (q) => `Consommation habituelle : ${q} par jour`,
+      impactNone: 'Aucune fiche technique n’utilise cet article.',
       daysLeft: (d) => `${d} ${d === 1 ? 'jour restant' : 'jours restants'}`,
       level: 'Niveau',
       par: 'Par',
@@ -395,7 +396,7 @@
       alertsNone: 'No item tracked yet · add your ingredients to receive alerts.',
       statusOut: 'OUT OF STOCK', statusLow: 'LOW STOCK',
       lastDeliv: 'Last delivery', supplier: 'Supplier',
-      impactCost: 'Estimated impact cost', perDayMissed: '/day lost revenue',
+      impactBlocks: (n, names) => `${n > 1 ? `${n} dishes depend on it` : 'One dish depends on it'}: ${names}`, impactUsage: (q) => `Usual use: ${q} per day`, impactNone: 'No recipe uses this item.',
       daysLeft: (d) => `${d} ${d === 1 ? 'day left' : 'days left'}`,
       level: 'Level', par: 'Par',
       btnUrgentOrder: 'Urgent order', btnMark86: 'Mark 86 on menu',
@@ -695,7 +696,7 @@
       alertsNone: 'لا يوجد منتج متابع بعد · أضف موادك الأولية لتلقي التنبيهات.',
       statusOut: 'نفد المخزون', statusLow: 'مخزون منخفض',
       lastDeliv: 'آخر تسليم', supplier: 'المورد',
-      impactCost: 'تكلفة التأثير المقدرة', perDayMissed: '/يوم خسارة',
+      impactBlocks: (n, names) => `${n > 1 ? `${n} أطباق تعتمد عليه` : 'طبق واحد يعتمد عليه'}: ${names}`, impactUsage: (q) => `الاستهلاك المعتاد: ${q} في اليوم`, impactNone: 'لا توجد بطاقة تقنية تستعمل هذا الصنف.',
       daysLeft: (d) => `${d} ${d === 1 ? 'يوم متبقي' : 'أيام متبقية'}`,
       level: 'المستوى', par: 'الحد',
       btnUrgentOrder: 'طلب عاجل', btnMark86: 'وضع علامة 86',
@@ -2335,7 +2336,12 @@
     const isOut = st === 'out';
     const days = isOut ? 0 : daysOfStock(it);
     const cur = currentStockFor(it);
-    const dailyMissed = (it.usageThisWeek / 7) * it.costPerUnit * 3.2;
+    /* Une rupture se dit par ce qu'elle bloque, pas par un chiffre inventé :
+     * l'ancien « manque à gagner » multipliait le coût d'achat par 3,2, une
+     * marge supposée. On nomme les plats dont la fiche technique utilise
+     * l'article, et la consommation réelle de la semaine quand elle existe. */
+    const blocked = isOut ? dishesUsing(it) : null;
+    const dailyUse = +it.usageThisWeek > 0 ? it.usageThisWeek / 7 : 0;
     const parPct = it.parLevel > 0 ? (cur / it.parLevel) * 100 : 0;
     const state = stockAlertState(it, cur);
     const supplierMeta = state.supplierEvidence
@@ -2357,7 +2363,7 @@
           </div>
           ${alertMeta ? `<div class="st-alert-meta">${alertMeta}</div>` : ''}
           ${isOut
-            ? `<div class="st-alert-impact">${esc(t('impactCost'))} : <b>${esc(fmtMad(dailyMissed))}</b>${esc(t('perDayMissed'))}</div>`
+            ? `<div class="st-alert-impact">${[blocked == null ? '' : blocked.length ? `<b>${esc(t('impactBlocks', blocked.length, blocked.slice(0, 3).join(', ') + (blocked.length > 3 ? '…' : '')))}</b>` : esc(t('impactNone')), dailyUse ? esc(t('impactUsage', fmtUnit(dailyUse, it.unit))) : ''].filter(Boolean).join('<span class="sep">·</span>')}</div>`
             : `<div class="st-alert-impact">${esc(t('level'))} : <b>${esc(fmtUnit(cur, it.unit))}</b> · ${esc(t('par'))} : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></div>
                <div class="st-alert-bar-wrap"><div class="st-alert-bar"><div class="st-alert-bar-fill" data-stock-bar="${Math.min(100, parPct)}"></div></div></div>`}
         </div>
@@ -2370,6 +2376,21 @@
         </div>
       </div>
     `;
+  }
+
+  // Les plats dont une fiche technique utilise cet article (restaurant seulement ; ailleurs, rien).
+  function dishesUsing(it) {
+    try {
+      const R = window.KiwiRestaurantRecipes;
+      if (!R?.all || !R?.stockFor || !it?.id) return null;
+      const recipes = R.all() || [];
+      if (!recipes.length) return null; // pas de fiches techniques : rien à affirmer
+      const names = [];
+      recipes.forEach((r) => {
+        if ((r.ingredients || []).some((line) => { const s = R.stockFor(line); return s && String(s.id) === String(it.id); })) names.push(r.itemName);
+      });
+      return [...new Set(names.filter(Boolean))];
+    } catch (_) { return null; }
   }
 
   function renderAiCard(title, body, action) {
