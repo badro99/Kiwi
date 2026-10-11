@@ -755,6 +755,9 @@
         type: (opts.store && opts.store.type) || businessType(),
       },
       openedAt: num(sess.openedAt) || first || 0,
+      /* openedAt retombe sur la première vente quand la caisse n'a rien dit ;
+         l'affichage doit savoir lequel des deux il montre. */
+      openedKnown: !!num(sess.openedAt),
       sessionId: String(sess.sessionId || ''),
       terminalId: String(sess.terminalId || ''),
       closedAt: num(sess.closedAt) || 0,

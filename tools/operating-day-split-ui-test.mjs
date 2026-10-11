@@ -36,6 +36,9 @@ const splitHelpers = between('    function splitPaidCount(saved) {', '    functi
 const splitCard = between('    function renderRpSplitCard(id) {', '    /* "Plus tard"');
 const splitPayment = between('    function markSplitPartPaid(partIdx, method) {', '    /* ---- events ---- */');
 const rightPanel = between('    function renderRightPanel(id) {', '    function openTable(id) {');
+/* renderRightPanel écrit le sous-titre des fenêtres de paiement par payMeta,
+ * défini plus bas dans la page : on l'injecte tel quel. */
+const payMeta = between('    function payMeta(m) {', '    function readPayMeta() {');
 /* La tranche part de `vrapIsCounterSale`, pas de `vrapOrderCard` : la carte
  * l'appelle, et une extraction qui s'arrête à la carte donne un
  * ReferenceError dans le bac à sable — la fonction existe bien en production,
@@ -155,7 +158,7 @@ section('Right-panel and takeaway-board display paths');
     window: { CaisseFx: { countTotal() {} } },
     lucide: { createIcons() {} },
   });
-  vm.runInContext(`${splitHelpers}\n${splitCard}\n${rightPanel}\n${takeawayCard}`, context);
+  vm.runInContext(`${splitHelpers}\n${splitCard}\n${payMeta}\n${rightPanel}\n${takeawayCard}`, context);
   context.renderRightPanel('T1');
   ok(get('rp-total').textContent === '25.00 MAD' && get('rp-pay-normal').hidden === true,
     'reloaded table panel shows 25 MAD due and removes the full-bill payment route');

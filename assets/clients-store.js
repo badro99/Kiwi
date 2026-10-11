@@ -282,6 +282,16 @@
     if (!c || !c.model) { c = DEFAULT_CFG(); fidelityStore.set(c, book); }
     return c;
   }
+  /* Le programme tourne quand quelqu'un l'a choisi. Le défaut déduit du métier
+   * (`auto`) sert à pré-remplir l'éditeur, pas à distribuer des récompenses. */
+  function loyaltyOn(book) {
+    book = book || bookId();
+    // La démo montre la fidélité en marche ; elle n'engage aucun commerçant.
+    if (isDemoBook(book) || SEED_VENUES[book]) return true;
+    var c = fidelityStore.get(book);
+    return !!(c && c.model && !c.auto);
+  }
+
   function setConfig(patch, book) {
     book = book || bookId();
     var c = config(book);
@@ -402,7 +412,9 @@
 
     var rewardReady = false;
     var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
-    if (cfg.model === 'amount') {
+    if (!loyaltyOn(book)) {
+      // Pas de programme choisi : le passage compte, la fidélité non.
+    } else if (cfg.model === 'amount') {
       var per = (cfg.amount && cfg.amount.perMad) || 1;
       delta.points = Math.round(amount * per);
       rec.points = (rec.points || 0) + delta.points;
@@ -436,6 +448,7 @@
     var d = readBook(book);
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
     if (!rec) return null;
+    if (!loyaltyOn(book)) return rec;       // aucun programme : rien à remettre
     var cfg = config(book);
     var pointsDelta = 0, stampsDelta = 0;
     if (cfg.model === 'amount') {
@@ -484,7 +497,9 @@
   }
   // progress toward this client's next reward, 0..1, for the stamp/points bar.
   function progress(c, cfg) {
+    if (!cfg && !loyaltyOn()) return 0;
     cfg = cfg || config();
+    if (cfg.auto && !loyaltyOn()) return 0;
     if (cfg.model === 'amount') {
       var thr = (cfg.amount && cfg.amount.threshold) || 100;
       return thr > 0 ? Math.min(1, (c.points || 0) / thr) : 0;
@@ -819,7 +834,7 @@
     // writes
     upsert: upsert, recordPurchase: recordPurchase, redeem: redeem, remove: remove,
     // fidelity config
-    config: config, setConfig: setConfig, defaultModel: defaultModel,
+    config: config, setConfig: setConfig, defaultModel: defaultModel, loyaltyOn: loyaltyOn,
     // analytics
     segment: segment, segmentCounts: segmentCounts, progress: progress,
     // helpers

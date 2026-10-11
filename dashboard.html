@@ -5797,7 +5797,7 @@
                   </svg>
                 </div>
                 <div class="kiwi-ring-meta">
-                  <div class="kiwi-ring-amount" data-mix-center-amt>16 590</div>
+                  <div class="kiwi-ring-amount" data-mix-center-amt>·</div>
                   <div class="slash" data-i18n="dash.mix.center.unit">MAD carte</div>
                 </div>
               </div>
@@ -6204,7 +6204,7 @@
 <script src="assets/lucide.min.js?v=5" defer></script>
 <script src="assets/interactive.js?v=49" defer></script>
 <script src="assets/features.js?v=11" defer></script>
-<script src="assets/invoice.js?v=12" defer></script>
+<script src="assets/invoice.js?v=13" defer></script>
 <script src="assets/invoicing.js?v=9" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=4" defer></script>
@@ -6238,7 +6238,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=16" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=54" defer></script>
+<script src="assets/dateRange.js?v=56" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6254,7 +6254,7 @@
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
 <script defer src="assets/identity.js?v=8"></script>
-<script defer src="assets/live-link.js?v=59"></script>
+<script defer src="assets/live-link.js?v=60"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -6279,10 +6279,10 @@
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
-<script src="assets/caisse-link.js?v=12" defer></script>
+<script src="assets/caisse-link.js?v=13" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/agent-data.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/agent-data.js?v=4" defer fetchpriority="low"></script>
 <!-- Product truth for Kiwi AI: derives the active merchant's capabilities
      from the same trade/profile/workspace registries as the dashboard. -->
 <script src="assets/agent-features.js?v=4" defer fetchpriority="low"></script>
@@ -6359,9 +6359,9 @@
 <script src="assets/inventory-consumption.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=10" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
-<script src="assets/clients-directory.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=26" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
@@ -6394,7 +6394,7 @@
 <script src="assets/boutique-promos-dashboard.js?v=13" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
-<script src="assets/day-report.js?v=19" defer fetchpriority="low"></script>
+<script src="assets/day-report.js?v=20" defer fetchpriority="low"></script>
 <script src="assets/z-reconciliation.js?v=25" defer fetchpriority="low"></script>
 <script src="assets/month-report.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/month-report-tools.js?v=5" defer fetchpriority="low"></script>
@@ -6402,12 +6402,12 @@
 <script src="assets/month-report-pdf.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/month-report-ui.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=10" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=25" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=27" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=68" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
-<script src="assets/team.js?v=295" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=296" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -6429,7 +6429,7 @@
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.
      Low-priority + post-unlock scheduling painted the legacy dashboard first. -->
-<script src="assets/design-vexel-layout.js?v=2090" defer></script>
+<script src="assets/design-vexel-layout.js?v=2092" defer></script>
 <script src="assets/liquid-glass.js?v=1" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
@@ -7137,7 +7137,8 @@
   /* The button knows what it guards · fill the count chip from the number
    * of analysis cards actually behind the fold. */
   const chip = btn.querySelector('[data-dmt-count]');
-  const n = more.querySelectorAll('.block').length;
+  /* Visible analyses only: not a card a skin has hidden, not the integrations utility. */
+  const n = [].filter.call(more.querySelectorAll('.block'), (b) => !b.hidden && !('integCard' in b.dataset)).length;
   if (chip && n) { chip.textContent = n; chip.hidden = false; }
   btn.addEventListener('click', (e) => {
     /* stop the click reaching the global delegation fallback toast */

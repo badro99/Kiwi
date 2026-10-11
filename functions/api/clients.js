@@ -345,9 +345,16 @@ async function applyPurchase(env, merchant, raw) {
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
-  const points = cfg.model === 'amount' || !cfg.model
+  /* Pas de programme enregistré = pas de programme. « Aucun modèle » valait
+   * « un point par dirham » : chaque passage d'un commerce qui n'avait jamais
+   * réglé de fidélité accumulait des points, et la caisse finissait par
+   * annoncer une récompense que personne n'avait promise. Le passage et la
+   * dépense comptent toujours ; les points et tampons, seulement si le
+   * commerçant a choisi un programme (un défaut déduit, `auto`, n'en est pas un). */
+  const on = !!(cfg && cfg.model && !cfg.auto);
+  const points = on && cfg.model === 'amount'
     ? Math.round(amount * Math.max(0, Number(cfg.amount && cfg.amount.perMad) || 1)) : 0;
-  const stamps = cfg.model === 'visit' || cfg.model === 'product' ? 1 : 0;
+  const stamps = on && (cfg.model === 'visit' || cfg.model === 'product') ? 1 : 0;
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }

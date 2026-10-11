@@ -440,12 +440,27 @@
     placeChip(b);
     updateChip();
   }
+  /* The till's own heartbeat, published by live-link.js from /api/feed.
+   * isPaired() only remembers that a till was once paired IN THIS BROWSER: it
+   * said "Caisse connectée" with the till switched off, while Plan de salle
+   * said "Caisse hors ligne", and "Connecter la caisse" for a till paired from
+   * an iPad and ringing right now. A store whose tills never poll the order
+   * queue (boutique, spa) has no heartbeat at all, so `seen === 0` means
+   * "unknown" and the local memory stays the answer there. */
+  function tillPresence() {
+    var p = window.KiwiTillPresence, biz = currentBiz();
+    return p && biz && p.merchant === biz.merchant ? p : null;
+  }
   function updateChip() {
     var b = document.getElementById('kcl-chip'); if (!b) return;
-    var on = isPaired();
-    b.setAttribute('data-state', on ? 'on' : 'off');
-    var t = b.querySelector('.kcl-t'); if (t) t.textContent = on ? 'Caisse connectée' : 'Connecter la caisse';
-    b.setAttribute('aria-label', on ? 'Caisse connectée' : 'Connecter la caisse');
+    var p = tillPresence();
+    var state = isPaired() ? 'on' : 'off';
+    if (p && p.fresh) state = 'on';
+    else if (p && p.seen) state = 'away';
+    var label = state === 'on' ? 'Caisse connectée' : state === 'away' ? 'Caisse hors ligne' : 'Connecter la caisse';
+    b.setAttribute('data-state', state);
+    var t = b.querySelector('.kcl-t'); if (t) t.textContent = label;
+    b.setAttribute('aria-label', label);
   }
 
   function dismissed() { try { return sessionStorage.getItem(SS_DISMISS) === '1'; } catch (_) { return false; } }
@@ -487,6 +502,7 @@
   function boot() {
     // The caisse tab flips a code to status:'connected' → reflect it here live.
     window.addEventListener('storage', function (e) { if (e.key === K.pairings) { updateChip(); if (panel && panel.onStorage) panel.onStorage(); } });
+    document.addEventListener('kiwi:till-presence', function () { try { updateChip(); } catch (_) {} });
     // Rotating a tablet across 860px swaps the sidebar for the drawer — follow it.
     try {
       window.matchMedia(DOCK_MQ).addEventListener('change', function () {

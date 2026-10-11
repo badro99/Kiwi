@@ -47,10 +47,15 @@
       statTotal: 'TOTAL MEMBRES',
       statTotalSub: (n, name) => `${n} actifs · ${name}`,
       statPresent: 'EN SERVICE AUJOURD\'HUI',
-      statPresentSub: 'membres pointés (estimation)',
+      statPresentSub: 'pointés en ce moment',
+      statPresentHoursSub: 'avec des heures saisies aujourd’hui',
       statPresentDemoSub: 'selon les heures de démo du jour',
       statPayroll: 'MASSE SALARIALE · MOIS',
       statPayrollSub: 'salaires de base cumulés',
+      statPayrollNone: 'aucun salaire renseigné',
+      statPayrollPartial: (k, n) => `${k} salaire${k > 1 ? 's' : ''} renseigné${k > 1 ? 's' : ''} sur ${n}`,
+      salaryUnset: 'Non renseigné',
+      noRate: 'Aucun taux horaire renseigné',
       statHours: 'HEURES PÉRIODE EN COURS',
       statHoursSub: 'heures saisies sur la période',
       // Members table
@@ -125,6 +130,9 @@
       payStatVarSub: 'heures × taux horaire',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
+      payStatBaseMonthly: (k, n) => `par mois · ${k} sur ${n} renseigné${k > 1 ? 's' : ''}`,
+      payStatDueProrata: (a, b, d) => `base au prorata de ${d} j + heures, ${a} au ${b}`,
+      payStatNone: 'aucun salaire ni taux horaire renseigné',
       codeKeep: 'Inchangé · 4 chiffres pour le modifier',
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
       plNone: '·', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
@@ -209,10 +217,15 @@
       statTotal: 'TOTAL MEMBERS',
       statTotalSub: (n, name) => `${n} active · ${name}`,
       statPresent: 'ON SHIFT TODAY',
-      statPresentSub: 'members clocked in (estimate)',
+      statPresentSub: 'clocked in right now',
+      statPresentHoursSub: 'with hours logged today',
       statPresentDemoSub: 'from today’s demo hours',
       statPayroll: 'PAYROLL · MONTH',
       statPayrollSub: 'cumulative base salaries',
+      statPayrollNone: 'no salary entered',
+      statPayrollPartial: (k, n) => `${k} of ${n} salaries entered`,
+      salaryUnset: 'Not entered',
+      noRate: 'No hourly rate entered',
       statHours: 'HOURS · CURRENT PERIOD',
       statHoursSub: 'hours logged for the period',
       secAllMembers: 'All members',
@@ -285,6 +298,9 @@
       payStatVarSub: 'hours × hourly rate',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
+      payStatBaseMonthly: (k, n) => `per month · ${k} of ${n} entered`,
+      payStatDueProrata: (a, b, d) => `base pro rata for ${d} days + hours, ${a} to ${b}`,
+      payStatNone: 'no salary or hourly rate entered',
       codeKeep: 'Unchanged · enter 4 digits to change it',
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
       plNone: '·', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
@@ -368,10 +384,15 @@
       statTotal: 'إجمالي الأعضاء',
       statTotalSub: (n, name) => `${n} نشط · ${name}`,
       statPresent: 'في الخدمة اليوم',
-      statPresentSub: 'أعضاء مسجلون (تقدير)',
+      statPresentSub: 'مسجلون الآن',
+      statPresentHoursSub: 'بساعات مسجلة اليوم',
       statPresentDemoSub: 'حسب ساعات العرض التجريبي لهذا اليوم',
       statPayroll: 'كتلة الأجور · الشهر',
       statPayrollSub: 'مجموع الرواتب الأساسية',
+      statPayrollNone: 'لم يُسجَّل أي راتب',
+      statPayrollPartial: (k, n) => `${k} من ${n} رواتب مسجلة`,
+      salaryUnset: 'غير مسجل',
+      noRate: 'لم يُسجَّل أي أجر بالساعة',
       statHours: 'ساعات · الفترة الحالية',
       statHoursSub: 'ساعات مسجلة في الفترة',
       secAllMembers: 'كل الأعضاء',
@@ -444,6 +465,9 @@
       payStatVarSub: 'الساعات × الأجر بالساعة',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
+      payStatBaseMonthly: (k, n) => `شهرياً · ${k} من ${n} مسجلة`,
+      payStatDueProrata: (a, b, d) => `الأساسي بالتناسب لـ ${d} يوماً + الساعات، من ${a} إلى ${b}`,
+      payStatNone: 'لم يُسجَّل أي راتب أو أجر بالساعة',
       codeKeep: 'دون تغيير · أدخل 4 أرقام لتغييره',
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
       plNone: '·', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
@@ -608,6 +632,57 @@
   }
   function catalogFor(venueType) {
     return CATALOG[venueType] || unionCatalog();
+  }
+  /* Le département suit le poste. Le formulaire proposait les deux listes
+     côte à côte sans les relier : un nouveau membre naissait « Chef de cuisine
+     · Cuisine », on choisissait « Serveur », et il restait en Cuisine. Le
+     planning et la masse salariale par département le comptaient alors en
+     cuisine. Pour chaque poste, les départements où il travaille, du plus
+     probable au moins probable ; on prend le premier que le métier propose.
+     Un poste absent d'ici laisse le département tel quel. */
+  const FN_DEPT = {
+    'Chef de cuisine': ['Cuisine', 'Production'], 'Sous-chef': ['Cuisine', 'Production'],
+    'Cuisinier': ['Cuisine', 'Production'], 'Commis': ['Cuisine', 'Production'],
+    'Chef traiteur': ['Production', 'Cuisine'], 'Préparateur': ['Cuisine', 'Comptoir'],
+    'Chef de rang': ['Salle'], 'Serveur': ['Salle', 'Service'], "Maître d'hôtel": ['Salle', 'Service'],
+    'Sommelier': ['Salle', 'Bar'], "Hôte d'accueil": ['Salle', 'Accueil'], 'Serveur événementiel': ['Service', 'Salle'],
+    'Barman': ['Bar'], 'Barista': ['Comptoir', 'Bar'],
+    'Caissier': ['Caisse'], 'Plongeur': ['Plonge', 'Cuisine'],
+    'Pâtissier': ['Pâtisserie'], 'Aide-pâtissier': ['Pâtisserie'], 'Tourier': ['Pâtisserie', 'Fournil'],
+    'Boulanger': ['Fournil'], 'Pizzaiolo': ['Four', 'Cuisine'], 'Aide-pizzaiolo': ['Four', 'Cuisine'],
+    'Équipier polyvalent': ['Comptoir'], 'Équipier food truck': ['Comptoir'],
+    'Manager': ['Management'], 'Responsable': ['Management'], 'Responsable de shift': ['Management'],
+    'Responsable de production': ['Fournil', 'Production', 'Management'],
+    "Responsable d'atelier": ['Atelier', 'Atelier floral', 'Management'],
+    'Responsable de tournée': ['Tournée', 'Management'], 'Responsable logistique': ['Logistique', 'Management'],
+    'Responsable réservations': ['Réservations', 'Management'], 'Responsable commandes': ['Commandes', 'Management'],
+    'Pharmacien titulaire': ['Management', 'Comptoir'], 'Pharmacien assistant': ['Comptoir'],
+    'Préparateur en pharmacie': ['Préparation'],
+    'Vendeur': ['Vente', 'Rayons', 'Comptoir'], 'Vendeur conseil': ['Vente', 'Comptoir'],
+    'Conseiller': ['Vente', 'Opérations'], 'Conseiller abonnements': ['Vente', 'Accueil'],
+    'Conseiller liste de mariage': ['Liste de mariage', 'Vente'], 'Libraire': ['Vente'],
+    'Magasinier': ['Stock', 'Rayons'], 'Réassortisseur': ['Rayons', 'Stock'],
+    'Visual merchandiser': ['Vitrine', 'Vente'], 'Emballeur': ['Emballage'], 'Commercial': ['Commercial', 'Vente'],
+    'Coiffeur': ['Coiffure'], 'Coiffeuse': ['Coiffure'], 'Shampouineur': ['Coiffure'],
+    'Coloriste': ['Coloration', 'Coiffure'], 'Barbier': ['Barbier', 'Coiffure'],
+    'Esthéticienne': ['Esthétique'], 'Maquilleuse': ['Esthétique'], 'Manucure': ['Manucure', 'Esthétique'],
+    'Masseur': ['Massage'], 'Masseuse': ['Massage'],
+    'Réceptionniste': ['Accueil', 'Réception'], 'Agent de réception': ['Accueil', 'Réception'],
+    'Concierge': ['Réception'], 'Veilleur de nuit': ['Réception'], 'Bagagiste': ['Réception'],
+    'Gouvernante': ['Étages'], 'Femme de chambre': ['Étages'], 'Valet de chambre': ['Étages'],
+    'Technicien de maintenance': ['Maintenance'], 'Technicien': ['Maintenance', 'Opérations', 'Service'],
+    'Opérateur lavage': ['Atelier'], 'Détacheur': ['Atelier'], 'Repasseur': ['Repassage', 'Atelier'],
+    'Retoucheur': ['Retouches', 'Atelier'],
+    'Livreur': ['Livraison'], 'Chauffeur-livreur': ['Livraison', 'Logistique'], 'Chauffeur': ['Tournée', 'Livraison'],
+    'Fleuriste': ['Atelier floral'], 'Aide-fleuriste': ['Atelier floral'],
+    'Coach sportif': ['Coaching'], 'Personal trainer': ['Coaching'],
+    'Professeur de cours collectif': ['Cours collectifs'], "Agent d'entretien": ['Entretien'],
+    'Agent polyvalent': ['Opérations'],
+  };
+  function deptForFunction(fn, departments) {
+    const want = FN_DEPT[fn] || [];
+    for (let i = 0; i < want.length; i++) if (departments.indexOf(want[i]) >= 0) return want[i];
+    return '';
   }
   /* The TRADE, which is not the storage key. teamKey() returns a custom venue's
      id so each store keeps its own roster — correct for storage, but it was also
@@ -1327,12 +1402,11 @@
         });
         if (touched) persistTeams();
       }
-      if (signature !== liveTeamSignature) {
-        liveTeamSignature = signature;
-        applyLiveTeam();
-      } else if (liveTeamPendingRender) {
-        applyLiveTeam();
-      }
+      /* La signature est déjà posée plus haut : l'ancien test
+         « signature !== liveTeamSignature » était donc toujours faux, et un
+         pointage à la caisse n'arrivait jamais à l'écran tant que rien
+         d'autre ne redessinait la page. Arrivé ici, quelque chose a changé. */
+      applyLiveTeam();
     }).catch(() => {}).finally(() => { liveTeamBusy = false; });
   }
   /* Le pointage doit battre à la seconde QUAND on le regarde. Ailleurs — c'est
@@ -1540,13 +1614,20 @@
     const cat = catalogFor(tradeKey(venue));
     /* Stats */
     const totalMembers = members.length;
-    const monthlyPayroll = members.reduce((acc, m) => acc + (m.baseSalary || 0), 0);
+    const monthlyPayroll = members.reduce((acc, m) => acc + (+m.baseSalary || 0), 0);
+    /* Un salaire laissé vide n'est pas un salaire de 0 MAD : la tuile disait
+       « 0 MAD · salaires de base cumulés » pour une équipe dont personne
+       n'avait saisi la paie, et chaque ligne « 0 MAD / 0 MAD/h ». */
+    const salaried = members.filter((m) => (+m.baseSalary || 0) > 0).length;
+    const payrollSub = !salaried ? T.statPayrollNone
+      : (salaried < totalMembers ? T.statPayrollPartial(salaried, totalMembers) : T.statPayrollSub);
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     const hours = getHours(venueType);
     // Summary and individual rows must describe the same demo roster.
     const todayKey = toISO(new Date());
+    const presentLive = isCustomVenue() && liveTeam.merchant === teamSlug();
     const present = isCustomVenue()
-      ? (liveTeam.merchant === teamSlug()
+      ? (presentLive
         ? liveTeam.members.filter((member) => member.status === 'on-duty' || member.status === 'on-pause').length
         : members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length)
       : members.filter(m => memberDutyStatus(m, hours, todayKey) === 'on-duty').length;
@@ -1564,8 +1645,8 @@
     const stats = `
       <div class="eq-stats">
         ${tile(T.statTotal,   String(totalMembers),                   T.statTotalSub(totalMembers, venue.name))}
-        ${tile(T.statPresent, String(present),                        isCustomVenue() ? T.statPresentSub : T.statPresentDemoSub)}
-        ${tile(T.statPayroll, fmtMad(monthlyPayroll),                 T.statPayrollSub)}
+        ${tile(T.statPresent, String(present),                        !isCustomVenue() ? T.statPresentDemoSub : (presentLive ? T.statPresentSub : T.statPresentHoursSub))}
+        ${tile(T.statPayroll, salaried ? fmtMad(monthlyPayroll) : '·', payrollSub)}
         ${tile(T.statHours,   fmtHours(totalHours), T.statHoursSub)}
       </div>
     `;
@@ -1634,7 +1715,7 @@
               <span class="eq-av md" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(ini)}</span>
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
-                <div class="eq-member-role">${esc(m.email || '·')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
+                <div class="eq-member-role">${m.email ? esc(m.email) + ' · ' : ''}<span style="color:${liveColor};font-weight:600;">${esc(liveText)}</span></div>
                 <div class="eq-member-phone-role">${esc(m.function)}</div>
                 <div class="eq-member-phone-meta"><span class="eq-venue-badge">${esc(m.department)}</span><span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
               </div>
@@ -1645,7 +1726,9 @@
           <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
           <td><span class="${contractCls}">${esc(m.contract || '·')}</span></td>
           <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
-          <td><div class="eq-salary-v">${fmtMad(m.baseSalary)}</div><div class="eq-salary-sub">${(window.KiwiNumber?.format((m.hourlyRate || 0), {}) ?? (m.hourlyRate || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD/h</div></td>
+          <td>${(+m.baseSalary || 0) > 0 || (+m.hourlyRate || 0) > 0
+            ? `<div class="eq-salary-v">${(+m.baseSalary || 0) > 0 ? fmtMad(m.baseSalary) : '·'}</div><div class="eq-salary-sub">${(+m.hourlyRate || 0) > 0 ? (window.KiwiNumber?.format((+m.hourlyRate), {}) ?? (+m.hourlyRate).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD/h' : '·'}</div>`
+            : `<div class="eq-salary-v">·</div><div class="eq-salary-sub">${esc(T.salaryUnset)}</div>`}</td>
           <td>
             <div class="eq-actions">
               <button class="eq-icon-btn" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}" title="${esc(T.viewProfile)}">${svgIcon(IC.eye, 14)}</button>
@@ -1689,7 +1772,7 @@
     });
 
     const locked = root.periodLocked;
-    let grandHours = 0, grandPay = 0;
+    let grandHours = 0, grandPay = 0, anyRated = false;
 
     const headDays = period.days.map(d => {
       const dt = new Date(d);
@@ -1708,9 +1791,13 @@
           <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
         </td>`;
       }).join('');
-      const pay = total * (m.hourlyRate || 0);
+      /* Sans taux horaire, Kiwi ne calcule rien : « 0 MAD » pour une semaine
+         travaillée se lisait comme un salaire nul. */
+      const rated = (+m.hourlyRate || 0) > 0;
+      const pay = rated ? total * (+m.hourlyRate) : 0;
       grandHours += total;
       grandPay += pay;
+      if (rated) anyRated = true;
       const tone = m.avatarTone || 'a';
       return `
         <tr>
@@ -1723,7 +1810,7 @@
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
-          <td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>
+          <td class="kt-h-pay mono">${rated ? `<b>${(window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
         </tr>
       `;
     }).join('');
@@ -1766,7 +1853,7 @@
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
-                <td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandPay, { maximumFractionDigits: 0 }) ?? grandPay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>
+                <td class="kt-h-foot-tot mono">${anyRated ? `<b>${(window.KiwiNumber?.format(grandPay, { maximumFractionDigits: 0 }) ?? grandPay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span>` : `<b title="${esc(T.noRate)}">·</b>`}</td>
               </tr>
             </tfoot>
           </table>
@@ -2273,11 +2360,11 @@
       const tb = tr.querySelector('.kt-h-total b');
       if (tb) tb.textContent = fmtHours(h);
       const pb = tr.querySelector('.kt-h-pay b');
-      if (pb) pb.textContent = (window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+      if (pb && (+m.hourlyRate || 0) > 0) pb.textContent = (window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
     });
     const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
     if (foot[0]) foot[0].textContent = fmtHours(grandH);
-    if (foot[1]) foot[1].textContent = (window.KiwiNumber?.format(grandC, { maximumFractionDigits: 0 }) ?? grandC.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+    if (foot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) foot[1].textContent = (window.KiwiNumber?.format(grandC, { maximumFractionDigits: 0 }) ?? grandC.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
   }
 
   handlers['kt-filter-dept']     = (_el, v) => { activeFilters.dept = v || ''; render(); };
@@ -2332,34 +2419,36 @@
     const vt = teamKey(venue);
     const members = getMembers(vt);
     const hours = getHours(vt);
+    /* Les jours de la PÉRIODE affichée, pas toutes les heures jamais saisies :
+       taper 8 h un mardi faisait sauter le total de la ligne à la somme de
+       toutes les semaines passées. */
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     let grandH = 0, grandP = 0;
     members.forEach((m, idx) => {
       const row = hours[m.id] || {};
-      const tot = Object.values(row).reduce((a, b) => a + (+b || 0), 0);
-      const pay = tot * (m.hourlyRate || 0);
+      const tot = period.days.reduce((a, d) => a + (+row[d] || 0), 0);
+      const pay = tot * (+m.hourlyRate || 0);
       grandH += tot; grandP += pay;
       const tr = root.querySelectorAll('table.kt-h-table tbody tr')[idx];
       if (tr) {
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
         if (totalCell) totalCell.textContent = fmtHours(tot);
-        if (payCell)   payCell.textContent   = (window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+        if (payCell && (+m.hourlyRate || 0) > 0) payCell.textContent = (window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
     if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
-    if (footTot[1]) footTot[1].textContent = (window.KiwiNumber?.format(grandP, { maximumFractionDigits: 0 }) ?? grandP.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
+    if (footTot[1] && members.some((m) => (+m.hourlyRate || 0) > 0)) footTot[1].textContent = (window.KiwiNumber?.format(grandP, { maximumFractionDigits: 0 }) ?? grandP.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
 
     // On Paie & planning the band above the grid is the headline the owner reads
     // ("à payer · période"). Keep it in step with the cell they just typed in,
     // rather than making them leave the page and come back to see the new total.
     if (pageMode === 'payroll') {
-      const baseMass = members.reduce((a, m) => a + (+m.baseSalary || 0), 0);
+      const pt = payTiles(t(), payrollFigures(members, vt, period), period, members.length);
       const vals = root.querySelectorAll('.eq-stats .eq-stat-v');
-      if (vals[0]) vals[0].textContent = fmtMad(baseMass + grandP);
-      if (vals[1]) vals[1].textContent = fmtHours(grandH);
-      if (vals[2]) vals[2].textContent = fmtMad(grandP);
-      if (vals[3]) vals[3].textContent = fmtMad(baseMass);
+      const subs = root.querySelectorAll('.eq-stats .eq-stat-sub');
+      pt.forEach((x, i) => { if (vals[i]) vals[i].textContent = x.v; if (subs[i]) subs[i].textContent = x.sub; });
     }
   }
 
@@ -2377,7 +2466,7 @@
       firstName: '', lastName: '', email: '', phone: '',
       password: makeCode(),
       function: cat.functions[0] || '',
-      department: cat.departments[0] || '',
+      department: deptForFunction(cat.functions[0], cat.departments) || cat.departments[0] || '',
       contract: 'CDI',
       startDate: toISO(new Date()),
       endDate: '',
@@ -2467,7 +2556,7 @@
             <div class="kt-fseclabel">${esc(T.secRole)}</div>
             <div class="kt-fgrid-2">
               <label><span class="l">${esc(T.function)}</span>
-                <select name="function" required>${fnOpts}</select>
+                <select name="function" required data-kt-function data-depts="${esc(JSON.stringify(cat.departments))}">${fnOpts}</select>
               </label>
               <label><span class="l">${esc(T.department)}</span>
                 <select name="department" required>${deptOpts}</select>
@@ -2577,6 +2666,19 @@
   /* Reactive end-date + avatar initials in the modal */
   document.addEventListener('change', (e) => {
     const mdl = window.__kiwiTeamModal;
+    if (mdl && mdl.el && mdl.el.contains(e.target) && e.target.matches('[data-kt-function]')) {
+      let depts = [];
+      try { depts = JSON.parse(e.target.getAttribute('data-depts') || '[]'); } catch (_) {}
+      const dept = deptForFunction(e.target.value, depts);
+      const sel = mdl.el.querySelector('[data-kt-form] [name="department"]');
+      /* Le <select> est habillé par kiwi-select.js, qui ne relit sa valeur
+         que sur un « change » : sans lui, la liste disait « Salle » et le
+         bouton affiché « Cuisine ». */
+      if (dept && sel && sel.value !== dept && [].some.call(sel.options, (o) => o.value === dept)) {
+        sel.value = dept;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
     if (mdl && mdl.el && mdl.el.contains(e.target) && e.target.matches('[data-kt-contract]')) {
       const wrap = mdl.el.querySelector('[data-kt-end-wrap]');
       if (wrap) {
@@ -3121,19 +3223,47 @@
    * day is both "who is on Tuesday" and "what Tuesday costs" — so entering hours
    * here and in Équipe → Heures travaillées writes the same record, and validating
    * a period locks it in both places. */
+  /* Un salaire de base est MENSUEL. « À payer · période » l'ajoutait entier
+   * aux heures d'une semaine : 7 jours de travail affichaient un mois de paie
+   * plus la semaine. On le ramène aux jours de la période (chaque jour pèse
+   * 1/longueur de son mois, donc une semaine à cheval reste juste ; un mois
+   * entier vaut exactement 1). Et ce que personne n'a saisi n'est pas « 0 ». */
+  function periodMonthShare(days) {
+    return days.reduce((acc, d) => {
+      const m = /^(\d{4})-(\d{2})/.exec(d || '');
+      if (!m) return acc;
+      return acc + 1 / new Date(+m[1], +m[2], 0).getDate();
+    }, 0);
+  }
   function payrollFigures(members, venueType, period) {
     const hours = getHours(venueType);
-    let totalHours = 0, variablePay = 0, baseMass = 0, onDuty = 0;
+    let totalHours = 0, variablePay = 0, baseMass = 0, onDuty = 0, salaried = 0, rated = 0;
     members.forEach((m) => {
       const row = hours[m.id] || {};
       let h = 0;
       period.days.forEach((d) => { h += (+row[d] || 0); });
       if (h > 0) onDuty++;
       totalHours += h;
-      variablePay += h * (+m.hourlyRate || 0);
-      baseMass += (+m.baseSalary || 0);
+      if ((+m.hourlyRate || 0) > 0) { rated++; variablePay += h * (+m.hourlyRate); }
+      if ((+m.baseSalary || 0) > 0) { salaried++; baseMass += (+m.baseSalary); }
     });
-    return { totalHours, variablePay, baseMass, onDuty };
+    const share = Math.min(1, periodMonthShare(period.days));
+    return { totalHours, variablePay, baseMass, onDuty, salaried, rated, share, baseDue: baseMass * share };
+  }
+  /* Les quatre tuiles de Paie & planning, en un seul endroit : le rendu et la
+   * mise à jour pendant la saisie lisaient chacun leurs chiffres. */
+  function payTiles(T, f, period, count) {
+    const whole = f.share >= 0.999;
+    return [
+      { v: (f.salaried || f.rated) ? fmtMad(f.baseDue + f.variablePay) : '·',
+        sub: (f.salaried || f.rated)
+          ? (whole || !f.salaried ? T.payStatDueSub(period.startFr, period.endFr) : T.payStatDueProrata(period.startFr, period.endFr, period.days.length))
+          : T.payStatNone },
+      { v: fmtHours(f.totalHours), sub: T.payStatHoursSub },
+      { v: f.rated ? fmtMad(f.variablePay) : '·', sub: f.rated ? T.payStatVarSub : T.noRate },
+      { v: f.salaried ? fmtMad(f.baseMass) : '·',
+        sub: f.salaried ? T.payStatBaseMonthly(f.salaried, count) : T.statPayrollNone },
+    ];
   }
 
   /* La grille de planning : une personne par ligne, un service par jour. Le
@@ -3197,11 +3327,20 @@
 
   function planningCopy() {
     const lang = trLang();
-    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.', coverage:'Coverage rules', rules:(n)=>`${n} coverage rule${n===1?'':'s'}`, labelHint:'e.g. Lunch service', claims:(n)=>`${n} claim${n===1?'':'s'} received`, more:(n)=>`+${n} more`, openShift:'Open shift', planned:'Planned', worked:'Worked', gaps:'Coverage gaps', opportunities:'Open opportunities', warnings:'Warnings', addRule:'Add a coverage rule', minimum:'Minimum team', role:'Role', allRoles:'All roles', weekdays:'Days', start:'Start', end:'End', date:'Date', label:'Label', delete:'Delete', ruleSaved:'Coverage rule saved.', openSaved:'Open shift shared with employees.', openClaim:'Open shift claim', swap:'Shift exchange', decisionFailed:'The change cannot be approved because it conflicts with the current schedule.' };
-    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', blocked:(n)=>n===1?'تعارض واحد يجب حله':`${n} تعارضات يجب حلها`, pending:(n)=>n===1?'طلب واحد معلق':`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.', coverage:'قواعد التغطية', rules:(n)=>n===1?'قاعدة تغطية واحدة':`${n} قواعد تغطية`, labelHint:'مثال: خدمة الغداء', claims:(n)=>n===1?'ترشيح واحد':`${n} ترشيحات`, more:(n)=>`+${n} أخرى`, openShift:'وردية شاغرة', planned:'مخطط', worked:'منجز', gaps:'نقص التغطية', opportunities:'فرص مفتوحة', warnings:'تنبيهات', addRule:'إضافة قاعدة تغطية', minimum:'الحد الأدنى للفريق', role:'الوظيفة', allRoles:'كل الوظائف', weekdays:'الأيام', start:'البداية', end:'النهاية', date:'التاريخ', label:'التسمية', delete:'حذف', ruleSaved:'تم حفظ قاعدة التغطية.', openSaved:'تم نشر الوردية الشاغرة للموظفين.', openClaim:'طلب وردية شاغرة', swap:'تبادل وردية', decisionFailed:'لا يمكن اعتماد التغيير لأنه يتعارض مع الجدول الحالي.' };
-    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.', coverage:'Règles de couverture', rules:(n)=>`${n} règle${n===1?'':'s'} de couverture`, labelHint:'ex. Service du midi', claims:(n)=>`${n} candidature${n===1?'':'s'} reçue${n===1?'':'s'}`, more:(n)=>`+${n} autre${n===1?'':'s'}`, openShift:'Service à pourvoir', planned:'Planifié', worked:'Réalisé', gaps:'Manques de couverture', opportunities:'Opportunités ouvertes', warnings:'Alertes', addRule:'Ajouter une règle de couverture', minimum:'Équipe minimum', role:'Fonction', allRoles:'Toutes les fonctions', weekdays:'Jours', start:'Début', end:'Fin', date:'Date', label:'Libellé', delete:'Supprimer', ruleSaved:'Règle de couverture enregistrée.', openSaved:'Service partagé avec les employés.', openClaim:'Candidature à un service', swap:'Échange de service', decisionFailed:'Ce changement ne peut pas être approuvé car il entre en conflit avec le planning actuel.' };
+    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', emptyPlan:'Nothing planned yet', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.', coverage:'Coverage rules', rules:(n)=>`${n} coverage rule${n===1?'':'s'}`, labelHint:'e.g. Lunch service', claims:(n)=>`${n} claim${n===1?'':'s'} received`, more:(n)=>`+${n} more`, openShift:'Open shift', planned:'Planned', worked:'Worked', gaps:'Coverage gaps', opportunities:'Open opportunities', warnings:'Warnings', addRule:'Add a coverage rule', minimum:'Minimum team', role:'Role', allRoles:'All roles', weekdays:'Days', start:'Start', end:'End', date:'Date', label:'Label', delete:'Delete', ruleSaved:'Coverage rule saved.', openSaved:'Open shift shared with employees.', openClaim:'Open shift claim', swap:'Shift exchange', decisionFailed:'The change cannot be approved because it conflicts with the current schedule.' };
+    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', emptyPlan:'لا شيء مخطط بعد', blocked:(n)=>n===1?'تعارض واحد يجب حله':`${n} تعارضات يجب حلها`, pending:(n)=>n===1?'طلب واحد معلق':`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.', coverage:'قواعد التغطية', rules:(n)=>n===1?'قاعدة تغطية واحدة':`${n} قواعد تغطية`, labelHint:'مثال: خدمة الغداء', claims:(n)=>n===1?'ترشيح واحد':`${n} ترشيحات`, more:(n)=>`+${n} أخرى`, openShift:'وردية شاغرة', planned:'مخطط', worked:'منجز', gaps:'نقص التغطية', opportunities:'فرص مفتوحة', warnings:'تنبيهات', addRule:'إضافة قاعدة تغطية', minimum:'الحد الأدنى للفريق', role:'الوظيفة', allRoles:'كل الوظائف', weekdays:'الأيام', start:'البداية', end:'النهاية', date:'التاريخ', label:'التسمية', delete:'حذف', ruleSaved:'تم حفظ قاعدة التغطية.', openSaved:'تم نشر الوردية الشاغرة للموظفين.', openClaim:'طلب وردية شاغرة', swap:'تبادل وردية', decisionFailed:'لا يمكن اعتماد التغيير لأنه يتعارض مع الجدول الحالي.' };
+    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', emptyPlan:'Rien de planifié pour l’instant', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.', coverage:'Règles de couverture', rules:(n)=>`${n} règle${n===1?'':'s'} de couverture`, labelHint:'ex. Service du midi', claims:(n)=>`${n} candidature${n===1?'':'s'} reçue${n===1?'':'s'}`, more:(n)=>`+${n} autre${n===1?'':'s'}`, openShift:'Service à pourvoir', planned:'Planifié', worked:'Réalisé', gaps:'Manques de couverture', opportunities:'Opportunités ouvertes', warnings:'Alertes', addRule:'Ajouter une règle de couverture', minimum:'Équipe minimum', role:'Fonction', allRoles:'Toutes les fonctions', weekdays:'Jours', start:'Début', end:'Fin', date:'Date', label:'Libellé', delete:'Supprimer', ruleSaved:'Règle de couverture enregistrée.', openSaved:'Service partagé avec les employés.', openClaim:'Candidature à un service', swap:'Échange de service', decisionFailed:'Ce changement ne peut pas être approuvé car il entre en conflit avec le planning actuel.' };
   }
   function optimizationCopy(){const lang=trLang();if(lang==='en')return{optimize:'Build schedule',optimizeTitle:'Suggested schedule',optimizeCount:(n)=>`${n} shift${n===1?'':'s'} proposed`,optimizeReview:'Review the proposal before applying it. Nothing is published automatically.',optimizeUnresolved:(n)=>`${n} coverage gap${n===1?' remains':'s remain'}`,optimizeApply:'Apply to draft',optimizeDone:'Suggested shifts added to the draft.',optimizeBlocked:'No safe assignment covers these gaps.',optimizeNothing:'The schedule already covers every rule.'};if(lang==='ar')return{optimize:'إنشاء الجدول',optimizeTitle:'الجدول المقترح',optimizeCount:(n)=>`${n} ورديات مقترحة`,optimizeReview:'راجع الاقتراح قبل تطبيقه. لن يتم نشر أي شيء تلقائياً.',optimizeUnresolved:(n)=>`${n} فجوات دون حل آمن`,optimizeApply:'إضافة إلى المسودة',optimizeDone:'تمت إضافة الورديات المقترحة إلى المسودة.',optimizeBlocked:'لا يوجد تعيين آمن لتغطية هذا النقص.',optimizeNothing:'الجدول يغطي جميع القواعد بالفعل.'};return{optimize:'Composer le planning',optimizeTitle:'Planning suggéré',optimizeCount:(n)=>`${n} service${n===1?'':'s'} proposé${n===1?'':'s'}`,optimizeReview:'Vérifiez la proposition avant de l’appliquer. Rien n’est publié automatiquement.',optimizeUnresolved:(n)=>`${n} manque${n===1?' reste':'s restent'} sans solution sûre`,optimizeApply:'Ajouter au brouillon',optimizeDone:'Les services suggérés ont été ajoutés au brouillon.',optimizeBlocked:'Aucune affectation sûre ne couvre ces manques.',optimizeNothing:'Le planning couvre déjà toutes les règles.'};}
+  /* « 2026-10-05 » dans une phrase lue par un gérant : on écrit « lun. 05/10 ». */
+  function planIssueDay(day) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ''));
+    if (!m) return day || '';
+    const dt = new Date(+m[1], +m[2] - 1, +m[3]);
+    const lang = trLang();
+    const wd = dt.toLocaleDateString(lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA' : 'fr-FR', { weekday: 'short' });
+    return wd + ' ' + m[3] + '/' + m[2];
+  }
   function issueLabel(issue) {
     /* Un manque de couverture ne vise personne : il vise une règle. Sans ce
      * repli, la ligne s'ouvrait sur la date et ne disait pas quelle règle. */
@@ -3211,7 +3350,8 @@
       : trLang() === 'ar'
         ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة', 'coverage-gap':`نقص في التغطية: ${issue.scheduled}/${issue.required}`, 'long-shift':'لديه وردية طويلة', 'weekly-hours':'تجاوز حد الساعات الأسبوعية', 'short-rest':'فترة الراحة غير كافية', 'open-shift':'لديه وردية شاغرة', 'closed-day':'مجدول في يوم تكون فيه المؤسسة مغلقة', 'outside-opening-hours':'مجدول خارج ساعات فتح المؤسسة', 'public-holiday':`مجدول خلال ${issue.holiday}؛ راجع التعويض` }
         : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi', 'coverage-gap':`couverture insuffisante : ${issue.scheduled}/${issue.required}`, 'long-shift':'a un service long', 'weekly-hours':'dépasse l’alerte hebdomadaire', 'short-rest':'a trop peu de repos', 'open-shift':'a encore un service à pourvoir', 'closed-day':'est planifié alors que l’établissement est fermé', 'outside-opening-hours':'est planifié hors horaires d’ouverture', 'public-holiday':`est planifié pendant ${issue.holiday} ; vérifiez la compensation` };
-    return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
+    const day = issue.code === 'empty-schedule' ? '' : planIssueDay(issue.day);
+    return [who, day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
   }
 
   function renderPlanningPane(T, venue, venueType, members, options = {}) {
@@ -3240,6 +3380,12 @@
     /* La liste est tronquée à six lignes. `validate()` sort les alertes avant
      * les bloquants, donc la troncature cachait précisément ce qui empêche de
      * publier — on remonte les bloquants et on annonce le reste. */
+    /* Une semaine où rien n'est encore saisi n'est pas « 1 conflit à
+     * résoudre » : c'est un planning à composer. Le blocage de publication
+     * reste (publier du vide n'a pas de sens), mais la page ne le compte plus
+     * comme un conflit, et la ligne ne s'épingle plus au lundi en ISO. */
+    const emptyPlan=blockers.length===1&&blockers[0].code==='empty-schedule';
+    const conflictCount=blockers.length-(emptyPlan?1:0);
     const shownIssues=blockers.concat(warnings).slice(0,6);
     const hiddenIssues=Math.max(0,issues.length-shownIssues.length);
     const pending = (planning.requests || []).filter((request) => request.status === 'pending');
@@ -3296,7 +3442,7 @@
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
-          ${showCosts ? `<td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : ''}
+          ${showCosts ? ((+m.hourlyRate || 0) > 0 ? `<td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : `<td class="kt-h-pay mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
         </tr>`;
     }).join('');
 
@@ -3311,7 +3457,7 @@
       </div>` : '';
 
     const stateText = lifecycle.state === 'published' ? copy.published : lifecycle.state === 'changed' ? copy.changed : copy.draft;
-    const qualityText = blockers.length ? copy.blocked(blockers.length) : copy.healthy;
+    const qualityText = emptyPlan ? copy.emptyPlan : blockers.length ? copy.blocked(blockers.length) : copy.healthy;
     const templates = planning.templates || [];
     const specialDays=period.days.map((day)=>calendarMeta[day]).filter((meta)=>meta.exception||meta.holiday);
     const calendarCopy=trLang()==='en'
@@ -3346,7 +3492,7 @@
           </details>
         </div>
       </div>
-      <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${esc(copy.rules(coverageRuleCount))}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${esc(copy.claims(opportunityClaims))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${issues.length}</strong><span>${esc(copy.blocked(blockers.length))}</span></div></div>
+      <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${esc(copy.rules(coverageRuleCount))}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${esc(copy.claims(opportunityClaims))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${issues.length-(emptyPlan?1:0)}</strong><span>${esc(emptyPlan?copy.emptyPlan:copy.blocked(conflictCount))}</span></div></div>
       ${shownIssues.map((issue)=>`<div class="kt-plan-issue ${issue.severity==='blocker'?'is-blocker':'is-warning'}"><b>${issue.severity==='blocker'?'!':'i'}</b><span>${esc(issueLabel(issue))}</span></div>`).join('')}
       ${hiddenIssues?`<div class="kt-plan-issue is-more"><b>+</b><span>${esc(copy.more(hiddenIssues))}</span></div>`:''}`;
 
@@ -3380,7 +3526,7 @@
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
-                ${showCosts ? `<td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandCost, { maximumFractionDigits: 0 }) ?? grandCost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : ''}
+                ${showCosts ? (members.some((m) => (+m.hourlyRate || 0) > 0) ? `<td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandCost, { maximumFractionDigits: 0 }) ?? grandCost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : `<td class="kt-h-foot-tot mono"><b title="${esc(T.noRate)}">·</b></td>`) : ''}
               </tr>
             </tfoot>
           </table>
@@ -3423,10 +3569,7 @@
     return `
       <div class="dash-equipe">
         <div class="eq-stats">
-          ${tile(T.payStatDue,   fmtMad(f.baseMass + f.variablePay), T.payStatDueSub(period.startFr, period.endFr))}
-          ${tile(T.payStatHours, fmtHours(f.totalHours), T.payStatHoursSub)}
-          ${tile(T.payStatVar,   fmtMad(f.variablePay),              T.payStatVarSub)}
-          ${tile(T.payStatBase,  fmtMad(f.baseMass),                 T.payStatBaseSub(f.onDuty, members.length))}
+          ${(() => { const pt = payTiles(T, f, period, members.length); return [T.payStatDue, T.payStatHours, T.payStatVar, T.payStatBase].map((l, i) => tile(l, pt[i].v, pt[i].sub)).join(''); })()}
         </div>
         <div class="eq-filters">
           <div class="eq-pill-row">

@@ -100,5 +100,29 @@ ok('the guard is cleared once a boot comes up real', () => {
   assert.ok(/if \(window\.__kiwiCaisseBootedAsDemo === false\) \{\s*try \{ sessionStorage\.removeItem\(HANDOFF_RELOAD\); \}/.test(pairing));
 });
 
+/* Les restes. Une caisse passée par ce chemin avant le correctif a sauvegardé
+ * le board cuisine de démo dans le service du vrai commerçant : la page
+ * « À emporter » proposait « Encaisser · 205 MAD » pour une Pastilla jamais
+ * commandée. La reprise du service les écarte ; une vraie commande reste. */
+{
+  const i = caisse.indexOf('const KDS_DEMO_SEED = [');
+  const j = caisse.indexOf('\n    }\n', caisse.indexOf('function isDemoSeedOrder(', i)) + 6;
+  const ctx = vm.createContext({});
+  vm.runInContext(caisse.slice(i, j) + '\nthis.f = isDemoSeedOrder;', ctx);
+  const f = ctx.f;
+  ok('a leftover demo ticket (no opId, same number and dishes) is recognised', () => {
+    assert.equal(f({ num: 51, items: [{ n: 'Pastilla poulet' }, { n: 'Thé à la menthe' }] }), true);
+    assert.equal(f({ num: 40, demoSeed: true, items: [] }), true);
+  });
+  ok('a real order is kept, even one that reuses a demo number', () => {
+    assert.equal(f({ num: 54, opId: 'op-1', items: [{ n: 'Article libre' }] }), false);
+    assert.equal(f({ num: 51, items: [{ n: 'Article libre' }] }), false);
+    assert.equal(f({ num: 51, opId: 'op-2', items: [{ n: 'Pastilla poulet' }, { n: 'Thé à la menthe' }] }), false);
+  });
+  ok('the real-store restore drops them', () => {
+    assert.ok(/staleQueuedServerTicket\(o\) \|\| isDemoSeedOrder\(o\)\) return;/.test(caisse));
+  });
+}
+
 console.log(`\ncaisse-handoff-demo-reload: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

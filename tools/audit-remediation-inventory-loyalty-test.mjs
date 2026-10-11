@@ -202,6 +202,31 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
     'I04 balance is accrued exactly once after retry');
 }
 
+// 2026-10-11 — no programme chosen = no programme. A store that never set up
+// loyalty (no fidelity doc, or only the device-deduced `auto` default) used to
+// earn one point per dirham on every purchase; the till then announced a reward
+// nobody had promised. Visits and spend still count.
+for (const [label, doc] of [['no programme saved', null], ['auto default only', { auto: true, model: 'amount', amount: { perMad: 1 } }]]) {
+  const { raw, DB } = fullDb();
+  const now = Date.now();
+  raw.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
+    .run('audit-owner', 'audit@example.test', 'Audit Owner', 'Audit', 's', 'h', now);
+  raw.prepare('INSERT INTO merchant_config (merchant,features,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?)')
+    .run(MERCHANT, '{}', 'restaurant', 'active', 'Audit', 'audit-owner', now);
+  if (doc) raw.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(MERCHANT, 'fidelity', JSON.stringify(doc), 1, now);
+  raw.prepare('INSERT INTO clients (merchant,id,name,points,stamps,visits,spend,updated_ts,srv_ts) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(MERCHANT, 'client-1', 'Client', 0, 0, 0, 0, now, now);
+  const env = { DB, AUTH_SECRET: SECRET };
+  const res = await clientsPost({ env, request: new Request('https://kiwi.test/api/clients', {
+    method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' },
+    body: JSON.stringify({ merchant: MERCHANT, purchase: { clientId: 'client-1', ref: 'no-programme-1', amount: 66 } }),
+  }) });
+  const row = raw.prepare('SELECT points, stamps, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
+  check(res.status === 200 && Number(row.points) === 0 && Number(row.stamps) === 0 && Number(row.visits) === 1 && Number(row.spend) === 66,
+    `loyalty off (${label}): the visit and spend count, no points or stamps accrue`);
+}
+
 // I05 — additive purchase events preserve both offline tills, unlike snapshot replacement.
 {
   const { raw, DB } = fullDb();

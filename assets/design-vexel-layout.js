@@ -164,9 +164,9 @@
    * salle atteint » à un commerçant qui n'en a jamais fixé. Une part de
    * chiffre d'affaires, elle, se déduit honnêtement du total de la période. */
   var SERVICE_STR = {
-    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', unclassified: 'non classé', goalUnavailable: 'Objectif indisponible', goalUnset: 'Aucun objectif défini', noData: 'Donnée indisponible' },
-    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', unclassified: 'unclassified', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
-    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', unclassified: 'غير مصنف', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
+    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', noSales: 'Aucune vente', unavailable: 'Ventilation par canal indisponible', unclassified: 'non classé', goalUnavailable: 'Objectif indisponible', goalUnset: 'Aucun objectif défini', noData: 'Donnée indisponible' },
+    en: { title: 'Sales by channel', share: 'Share of revenue', noSales: 'No sales', unavailable: 'Channel breakdown unavailable', unclassified: 'unclassified', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
+    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', noSales: 'لا مبيعات', unavailable: 'التوزيع حسب القناة غير متاح', unclassified: 'غير مصنف', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
   };
   /* « atteint » et « Reste » étaient écrits en français quelle que soit la
    * langue : l'interface anglaise affichait « 53 % atteint · Reste 14 837 MAD ». */
@@ -655,7 +655,9 @@
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
     setText(document.querySelector('[data-vexel-client-period]'), period);
     setText(card.querySelector('h2'), copy.title);
-    var splitLabel = hasAmounts ? copy.share : copy.unavailable;
+    /* « Indisponible » ne vaut que s'il y a des ventes sans canal. Avant la
+     * première vente de la journée, il n'y a rien à ventiler : on le dit. */
+    var splitLabel = hasAmounts ? copy.share : (total > 0 ? copy.unavailable : copy.noSales);
     if (hasAmounts && split.total > 0 && split.unknown > 0) {
       splitLabel += ' · ' + Math.round(split.unknown / split.total * 100) + ' % ' + copy.unclassified;
     }
@@ -971,7 +973,9 @@
      * au lieu d'un montant. Sans ce test la carte recopiait « à définir » dans
      * la cible, « — atteint » dans le pourcentage et un « Reste NaN MAD ». */
     var goalUnset = !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalUnset);
-    setText(currentTarget, amountText);
+    /* Sans objectif, le chiffre du jour sous « OBJECTIF DU JOUR » se lisait
+     * comme l'objectif lui-même (« 85,00 · Aucun objectif défini »). */
+    setText(currentTarget, goalUnset ? '·' : amountText);
     setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
     if (goalUnset) {
       if (pctTarget) delete pctTarget.dataset.numericPhrase;
@@ -1089,6 +1093,14 @@
   function init() {
     sync();
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    /* A card the dashboard hides after load (health and benchmark, on a real
+     * store) left the chip saying "4" over two cards, and a hole in the pool
+     * grid. The full pass only runs when the channel split changes. */
+    var pool = document.querySelector('[data-dash-more]');
+    if (pool) new MutationObserver(function () {
+      if (state.active) scheduleBackfill(true);
+      else syncMoreCount();
+    }).observe(pool, { attributes: true, attributeFilter: ['hidden'], subtree: true });
   }
 
   function start() {

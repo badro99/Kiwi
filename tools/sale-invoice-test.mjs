@@ -396,6 +396,39 @@ ok(posReprintSource.includes('KiwiInvoice.generate'), 'pos-reprint.js invokes Ki
 const EXPECTED_COUNT = 72;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
+
+// 2026-10-11 · Seller identity belongs to THIS store only, and "·" is not an ICE.
+// Measured on the local stack: a café with no ICE got "ICE : ·" printed and no
+// missing-mention warning, because the venue record carries the display dash.
+// The fallbacks also swept every store's business doc in localStorage.
+{
+  const store = {
+    'kiwi:business:v1:autre-commerce': JSON.stringify({ name: 'Autre Commerce', legal: { ice: '009999999000011', address: '1 rue Ailleurs' } }),
+    'kiwiSet:biz:v-autre:ice': '008888888000022',
+  };
+  const keys = Object.keys(store);
+  const ls = { getItem: (k) => (k in store ? store[k] : null), setItem: () => {}, get length() { return keys.length; }, key: (i) => keys[i] };
+  const w = {
+    KiwiReceipt: { business: () => ({ name: 'Café Local Test' }), config: () => ({}) },
+    KiwiVenue: { getVenue: () => 'cafe-local-test', getCurrentVenueData: () => ({ id: 'cafe-local-test', ice: '·' }) },
+    KiwiLive: { merchant: () => 'cafe-local-test' },
+    document: { baseURI: 'http://localhost/' },
+    localStorage: ls,
+  };
+  const Inv = new Function('window', 'document', 'localStorage', `${invoiceSource}; return window.KiwiInvoice;`)(w, w.document, ls);
+  const seller = Inv.getSellerBusiness();
+  ok(seller.ice === '', 'a "·" placeholder is not taken for an ICE, nor another store\'s ICE');
+  ok(!/Ailleurs/.test(seller.address || ''), 'another store\'s address never reaches this store\'s invoice');
+  const doc = Inv.build(mockSale1, { seller: { name: 'Café Local Test', ice: '·' } });
+  const out = Inv.html(doc);
+  ok(doc.missingICE === true && out.includes('Mention obligatoire manquante'), 'an invalid ICE raises the missing-mention warning');
+  ok(!/ICE :<\/strong> ·/.test(out) && !/ICE : ·/.test(out), 'the invoice never prints "ICE : ·"');
+  const frozen = Inv.html(Object.assign({}, doc, { missingICE: false }));
+  ok(frozen.includes('Mention obligatoire manquante'), 'a snapshot frozen with missingICE:false and a bad ICE still warns');
+  store['kiwi:business:v1:cafe-local-test'] = JSON.stringify({ legal: { ice: '001 234 567 000 089' } });
+  ok(Inv.getSellerBusiness().ice === '001234567000089', 'this store\'s own ICE is read, spaces normalised');
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);

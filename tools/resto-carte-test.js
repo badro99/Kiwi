@@ -695,7 +695,7 @@ ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
 ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTicket\(o\)\)\.map/.test(caisse),
   'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');
-ok(/if \(!o \|\| staleQueuedServerTicket\(o\)\) return;/.test(caisse),
+ok(/if \(!o \|\| staleQueuedServerTicket\(o\)( \|\| isDemoSeedOrder\(o\))?\) return;/.test(caisse),
   'un ancien ticket C-xxx en attente ne ressuscite pas au rechargement');
 ok(/o\.status === 'cooking'.*age > 6 \* 60 \* 60 \* 1000/.test(caisse),
   'une préparation serveur oubliée expire après six heures au lieu de revenir le lendemain');

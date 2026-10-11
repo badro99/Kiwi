@@ -171,6 +171,7 @@
       cliPointsOf: function (n, p) { return '<b>' + n + '</b> a <b>' + fmt(p) + ' point' + (p > 1 ? 's' : '') + '</b>.'; },
       cliReward: function (r) { return 'Récompense atteinte : il reste ' + r + ' à offrir.'; },
       cliToGo: function (n) { return 'Encore ' + fmt(n) + ' points avant la prochaine récompense.'; },
+      cliToGoStamps: function (n) { return 'Encore ' + fmt(n) + ' passage' + (n > 1 ? 's' : '') + ' avant la prochaine récompense.'; },
       cliNoLoyalty: 'Aucun programme de fidélité n’est actif, les points ne comptent donc pas encore. Vous l’activez dans Clients & Marketing.',
       cliUnknown: function (n) { return 'Je ne trouve personne au nom de « ' + n + ' » dans votre carnet. Vérifiez l’orthographe, ou ouvrez le carnet : je ne devine pas un client que la caisse n’a pas identifié.'; },
       cliWhich: 'De quel client parlez-vous ? Donnez-moi son nom et je vous sors ses points, ses visites et ce qu’il a dépensé.',
@@ -234,6 +235,7 @@
       cliPointsOf: function (n, p) { return '<b>' + n + '</b> has <b>' + fmt(p) + ' point' + (p > 1 ? 's' : '') + '</b>.'; },
       cliReward: function (r) { return 'Reward reached: ' + r + ' is owed.'; },
       cliToGo: function (n) { return fmt(n) + ' more points before the next reward.'; },
+      cliToGoStamps: function (n) { return fmt(n) + ' more visit' + (n === 1 ? '' : 's') + ' before the next reward.'; },
       cliNoLoyalty: 'No loyalty programme is active, so points aren’t counting yet. You turn it on in Clients & Marketing.',
       cliUnknown: function (n) { return 'I can’t find anyone called “' + n + '” in your book. Check the spelling, or open the book: I won’t guess at a client the till never identified.'; },
       cliWhich: 'Which client do you mean? Give me the name and I’ll pull their points, visits and spend.',
@@ -295,6 +297,7 @@
       cliPointsOf: function (n, p) { return 'لدى <b>' + n + '</b> <b>' + fmt(p) + ' نقطة</b>.'; },
       cliReward: function (r) { return 'بلغ المكافأة: ' + r + ' مستحقّة.'; },
       cliToGo: function (n) { return 'بقيت ' + fmt(n) + ' نقطة قبل المكافأة التالية.'; },
+      cliToGoStamps: function (n) { return 'بقيت ' + fmt(n) + ' زيارة قبل المكافأة التالية.'; },
       cliNoLoyalty: 'لا برنامج وفاء مفعّل، فالنقاط لا تُحتسب بعد. تفعّله من Clients & Marketing.',
       cliUnknown: function (n) { return 'لا أجد أحداً باسم «' + n + '» في سجلّك. تحقّق من الكتابة أو افتح السجلّ: لا أخمّن زبوناً لم يعرّفه الصندوق.'; },
       cliWhich: 'عن أي زبون تتحدّث؟ أعطني اسمه وأخرج لك نقاطه وزياراته وما أنفقه.',
@@ -548,10 +551,20 @@
     if (!f.book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
     if (!f.hit) return { text: t.cliWhich, open: open1(L, 'pClients', 'nav-clients') };
     var c = f.hit;
-    var cfg = null;
-    try { cfg = window.KiwiClients.config ? window.KiwiClients.config() : null; } catch (_) { cfg = null; }
+    /* Le programme réel range seuil et récompense par modèle (amount.threshold,
+     * visit.target…). On lisait cfg.on / cfg.threshold / cfg.reward, qui
+     * n'existent pas : l'assistant disait « aucun programme actif » à un
+     * commerçant qui venait d'en activer un. */
+    var cfg = null, on = false;
+    try {
+      cfg = window.KiwiClients.config ? window.KiwiClients.config() : null;
+      on = !!(window.KiwiClients.loyaltyOn && window.KiwiClients.loyaltyOn());
+    } catch (_) { cfg = null; on = false; }
     var pts = +c.points || 0;
-    var thr = cfg && +cfg.threshold ? +cfg.threshold : 0;
+    var stampModel = !!(cfg && (cfg.model === 'visit' || cfg.model === 'product'));
+    var rule = cfg && cfg[cfg.model] || {};
+    var thr = stampModel ? (+rule.target || 0) : (+rule.threshold || 0);
+    var have = stampModel ? (+c.stamps || 0) : pts;
     var d = daysSince(c.lastSeen);
     var r = {
       text: t.cliPointsOf(esc(c.name), pts),
@@ -564,11 +577,11 @@
       prov: { mod: 'clients', count: f.book.length, unit: 'entries' },
       open: open1(L, 'pClients', 'nav-clients'),
     };
-    if (!cfg || !cfg.on) r.note = t.cliNoLoyalty;
+    if (!cfg || !on) r.note = t.cliNoLoyalty;
     else if (thr > 0) {
-      r.verdict = pts >= thr
-        ? { tone: 'good', text: t.cliReward(esc((cfg && cfg.reward) || '')) }
-        : { tone: 'warn', text: t.cliToGo(thr - pts) };
+      r.verdict = have >= thr
+        ? { tone: 'good', text: t.cliReward(esc(rule.reward || '')) }
+        : { tone: 'warn', text: stampModel ? t.cliToGoStamps(thr - have) : t.cliToGo(thr - have) };
     }
     return r;
   }

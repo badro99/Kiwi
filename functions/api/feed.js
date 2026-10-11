@@ -381,5 +381,15 @@ export async function onRequestGet({ request, env }) {
      l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
      comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
   const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
-  return json({ sales: rows, cursor, merchant, voided });
+  /* The till's heartbeat (order_desk, stamped by its authenticated queue poll
+     every few seconds; kitchen and service screens excluded). The dashboard
+     already polls this route, so its "Caisse connectée" chip can say whether a
+     till is actually ON instead of whether one was once paired in this
+     browser. 0 = never seen, or a base without the table. */
+  let tillSeen = 0;
+  try {
+    const desk = await env.DB.prepare('SELECT seen_ts FROM order_desk WHERE merchant = ?').bind(merchant).first();
+    tillSeen = Math.max(0, Number(desk && desk.seen_ts) || 0);
+  } catch (_) {}
+  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now() });
 }

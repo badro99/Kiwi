@@ -401,6 +401,14 @@
     ar: { aujourdhui: 'كثافة الساعات اليوم', hier: 'كثافة الساعات أمس', septJours: 'متوسط الكثافة الساعية، آخر 7 أيام', trenteJours: 'متوسط الكثافة الساعية، آخر 30 يومًا', moisDernier: 'النمط الساعي النموذجي، متوسط طويل المدى', trimestre: 'النمط الساعي النموذجي، متوسط طويل المدى', annee: 'النمط الساعي النموذجي، متوسط طويل المدى', personnalise: 'كثافة الساعات، فترة مخصصة' },
   };
   const COVERS_LABEL = { fr: 'couverts', en: 'guests', ar: 'زبون' };
+  /* Une vente ne porte pas de nombre de couverts : la carte réelle compte des
+   * tickets. « 4 couverts » pour une table de quatre et trois cafés au comptoir
+   * aurait dit 4 dans les deux cas. */
+  const ORDERS_LABEL = {
+    fr: (n) => (n > 1 ? 'commandes' : 'commande'),
+    en: (n) => (n === 1 ? 'order' : 'orders'),
+    ar: () => 'طلب',
+  };
 
   const FEED_TITLE = { fr: { aujourdhui: 'Commandes en direct', hier: 'Commandes · hier', septJours: 'Commandes · 7 derniers jours', trenteJours: 'Commandes · 30 derniers jours', moisDernier: 'Commandes · mois dernier', trimestre: 'Commandes · trimestre', annee: 'Commandes · année', personnalise: 'Commandes en direct' },
                        en: { aujourdhui: 'Live orders', hier: 'Yesterday\'s orders', septJours: 'Orders · last 7 days', trenteJours: 'Orders · last 30 days', moisDernier: 'Orders · last month', trimestre: 'Orders · quarter', annee: 'Orders · year', personnalise: 'Live orders' },
@@ -2100,6 +2108,14 @@
     const endDay = merchantDayKey(to - 1, activeMerchantSlug());
     const spanDays = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
     const baseBounds = shiftedBusinessBounds(from, to, backDays || spanDays);
+    /* The promise above, kept. shiftedBusinessBounds returns WHOLE business
+       days, so a live range (« Aujourd'hui », « 7 jours » ending now) was
+       weighed against complete days: at 11h42, six hours of trading against
+       all of yesterday, and every morning tile read −80 % to −100 %. A live
+       window's baseline stops at the same point of its own day. */
+    if (rangeBounds(range == null ? currentRange : range)[1] === Infinity) {
+      baseBounds[1] = Math.min(baseBounds[1], baseBounds[0] + (to - from));
+    }
     const base = pick(realWindowStats(baseBounds[0], baseBounds[1]));
     if (!base) return null;
     const cur = pick(realWindowStats(from, to));
@@ -2601,7 +2617,7 @@
       }
       const max = Math.max(...rev);
       return labels.map((h, i) => ({
-        hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
+        hour: h, revenue: rev[i], covers: cov[i], unit: 'orders', intensity: max ? rev[i] / max : 0,
       }));
     }
     // Demo fixtures only carry base ranges; mapping is confined to that path.
@@ -2643,7 +2659,7 @@
             <div class="hh-tooltip">
               <div class="hour">${d.hour}</div>
               <div class="met"><b>${frInt(d.revenue)} MAD</b></div>
-              <div class="met">${d.covers} ${COVERS_LABEL[lang] || COVERS_LABEL.fr}</div>
+              <div class="met">${d.covers} ${d.unit === 'orders' ? (ORDERS_LABEL[lang] || ORDERS_LABEL.fr)(d.covers) : (COVERS_LABEL[lang] || COVERS_LABEL.fr)}</div>
             </div>
           </div>
           <div class="hh-h">${d.hour}</div>
@@ -4499,15 +4515,20 @@
           msg: 'بمجرد تتبّع مكوّناتك، ينبّهك Kiwi إلى ما ينزل تحت حدّ التنبيه.' },
   };
 
+  /* Ces deux cartes n'existent que dans la démo. Pour un vrai commerce, Kiwi
+   * ne calcule aucun score de santé et ne détient aucune cohorte de
+   * comparaison : l'état vide promettait « après vos premières semaines » un
+   * chiffre qui ne serait jamais venu. La carte est donc masquée ; le texte
+   * ci-dessous ne sert qu'à ne laisser aucun chiffre de démo dans le DOM. */
   const HEALTH_EMPTY = {
-    fr: { title: 'Score de santé Kiwi', head: 'Votre score se construit', msg: 'Le score de santé Kiwi s’affiche après vos premières semaines d’activité, succès des paiements, conformité, fidélité.' },
-    en: { title: 'Kiwi health score', head: 'Your score is building', msg: 'Your Kiwi health score appears after your first weeks of activity, payment success, compliance, loyalty.' },
-    ar: { title: 'نقاط صحة Kiwi', head: 'يُبنى مؤشّرك', msg: 'تظهر نقاط صحة Kiwi بعد أسابيعك الأولى من النشاط، نجاح المدفوعات والامتثال والولاء.' },
+    fr: { title: 'Score de santé Kiwi', head: 'Non disponible', msg: 'Kiwi ne calcule pas de score de santé pour votre établissement.' },
+    en: { title: 'Kiwi health score', head: 'Not available', msg: 'Kiwi does not compute a health score for your venue.' },
+    ar: { title: 'نقاط صحة Kiwi', head: 'غير متاح', msg: 'لا يحسب Kiwi نقاط صحة لمنشأتك.' },
   };
   const BENCH_EMPTY = {
-    fr: { title: 'Vous vs établissements similaires', head: 'Comparaison à venir', msg: 'Dès que vous accumulez de l’activité, comparez vos performances aux établissements similaires près de chez vous.' },
-    en: { title: 'You vs similar venues', head: 'Benchmark coming soon', msg: 'Once you build up activity, compare your performance against similar venues near you.' },
-    ar: { title: 'أنت مقابل منشآت مماثلة', head: 'المقارنة قريبًا', msg: 'بمجرد تجميع نشاطك، قارن أداءك بالمنشآت المماثلة القريبة منك.' },
+    fr: { title: 'Vous vs établissements similaires', head: 'Non disponible', msg: 'Kiwi ne dispose d’aucune donnée d’établissements comparables.' },
+    en: { title: 'You vs similar venues', head: 'Not available', msg: 'Kiwi holds no data on comparable venues.' },
+    ar: { title: 'أنت مقابل منشآت مماثلة', head: 'غير متاح', msg: 'لا يملك Kiwi بيانات عن منشآت مماثلة.' },
   };
   const PRODUCTS_EMPTY = {
     fr: { sub: 'Aucune vente enregistrée', msg: 'Vos meilleures ventes s’afficheront ici dès la première commande.' },
@@ -4864,6 +4885,7 @@
     if (ownData()) {
       if (card) {
         const t = HEALTH_EMPTY[lang] || HEALTH_EMPTY.fr;
+        card.hidden = true;
         card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
@@ -4872,6 +4894,7 @@
       return;
     }
     if (card) {
+      card.hidden = false;
       card.classList.remove('is-empty-state');
       if (_healthOrig != null && card['inner' + 'HTML'] !== _healthOrig) card['inner' + 'HTML'] = _healthOrig;
     }
@@ -4908,6 +4931,7 @@
     if (ownData() || window.KiwiEnv?.isReal?.()) {
       if (card) {
         const t = BENCH_EMPTY[lang] || BENCH_EMPTY.fr;
+        card.hidden = true;
         card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
@@ -4916,6 +4940,7 @@
       return;
     }
     if (card) {
+      card.hidden = false;
       card.classList.remove('is-empty-state');
       if (_benchOrig != null && card['inner' + 'HTML'] !== _benchOrig) card['inner' + 'HTML'] = _benchOrig;
     }

@@ -5576,7 +5576,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=564" defer></script>
-  <script src="assets/live-link.js?v=59" defer></script>
+  <script src="assets/live-link.js?v=60" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5604,7 +5604,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=19" defer></script>
+  <script src="assets/day-report.js?v=20" defer></script>
   <script src="assets/z-reconciliation.js?v=25" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
@@ -5642,7 +5642,7 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=13" defer></script>
-  <script src="assets/clients-store.js?v=9" defer></script>
+  <script src="assets/clients-store.js?v=10" defer></script>
   <script src="assets/clients-book.js?v=24" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
@@ -5670,7 +5670,7 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=12" defer></script>
+  <script src="assets/invoice.js?v=13" defer></script>
   <script src="assets/pos-reprint.js?v=8" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
@@ -6621,7 +6621,7 @@
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;">
         <div>
           <h3 class="modal-title" id="card-modal-title">Payer par carte</h3>
-          <p class="modal-subtle" id="card-modal-sub" style="margin:0;"><span class="pay-table-prefix">Table </span><span data-bind="table">T2</span><span class="pay-covers-meta"> · <span data-bind="covers">2</span> couverts</span></p>
+          <p class="modal-subtle" id="card-modal-sub" style="margin:0;"><span class="pay-table-prefix">Table </span><span data-bind="table">T2</span><span class="pay-covers-meta"> · <span data-bind="covers">2</span> <span data-bind="covers-unit">couverts</span></span></p>
         </div>
         <button class="modal-close" id="card-modal-close" data-modal-action="close" aria-label="Fermer" type="button">
           <i data-lucide="x"></i>
@@ -6655,7 +6655,7 @@
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;">
         <div>
           <h3 class="modal-title" id="cash-modal-title">Payer en espèces</h3>
-          <p class="modal-subtle" style="margin:0;"><span class="pay-table-prefix">Table </span><span data-bind="table">T2</span><span class="pay-covers-meta"> · <span data-bind="covers">2</span> couverts</span></p>
+          <p class="modal-subtle" style="margin:0;"><span class="pay-table-prefix">Table </span><span data-bind="table">T2</span><span class="pay-covers-meta"> · <span data-bind="covers">2</span> <span data-bind="covers-unit">couverts</span></span></p>
         </div>
         <button class="modal-close" id="cash-modal-close" data-modal-action="close" aria-label="Fermer" type="button">
           <i data-lucide="x"></i>
@@ -8842,8 +8842,7 @@
       window.CaisseFx && window.CaisseFx.countTotal();
 
       // Sync modal labels too
-      $$('[data-bind="table"]').forEach(el => el.textContent = id);
-      $$('[data-bind="covers"]').forEach(el => el.textContent = t.covers);
+      payMeta({ prefix: true, table: id, covers: t.covers, unit: +t.covers > 1 ? 'couverts' : 'couvert' });
       $('#card-amount').textContent = fmtMADcents(net);
       $('#cash-amount').textContent = fmtMADcents(net);
       $('#cash-received').value = net;
@@ -10221,8 +10220,8 @@
       window.CaisseFx && window.CaisseFx.countTotal();
 
       // Sync modal labels
-      $$('[data-bind="table"]').forEach(el => el.textContent = 'À emporter');
-      $$('[data-bind="covers"]').forEach(el => el.textContent = editing ? `#${vrapEditingNum}` : `${itemCount} art.`);
+      payMeta({ prefix: false, table: 'À emporter', covers: editing ? `#${vrapEditingNum}` : itemCount,
+        unit: editing ? '' : (itemCount > 1 ? 'articles' : 'article') });
       $('#card-amount').textContent = fmtMADcents(net);
       $('#cash-amount').textContent = fmtMADcents(net);
       $('#cash-received').value = net;
@@ -12856,23 +12855,36 @@
        la note partagée · « Table Part 2 · T7 » sur une commande à emporter.
        On mémorise donc l'étiquette d'origine pour la remettre dès que le flux
        de partage se termine, qu'il aboutisse ou qu'il soit abandonné. */
+    /* Le sous-titre des fenêtres de paiement. Il était écrit en dur
+       « Table … · N couverts » et seul le chiffre changeait : une vente à
+       emporter s'affichait « Table À emporter · 1 art. couverts », une part de
+       note « Table Part 2 · T7 couverts ». Le préfixe et l'unité suivent
+       maintenant ce qu'on encaisse. */
+    function payMeta(m) {
+      $$('.pay-table-prefix').forEach(el => { el.hidden = !m.prefix; });
+      $$('[data-bind="table"]').forEach(el => el.textContent = m.table);
+      $$('[data-bind="covers"]').forEach(el => el.textContent = m.covers);
+      $$('[data-bind="covers-unit"]').forEach(el => { el.textContent = m.unit; el.hidden = !m.unit; });
+    }
+    function readPayMeta() {
+      const q = (sel) => document.querySelector(sel);
+      return {
+        prefix: !(q('.pay-table-prefix') || {}).hidden,
+        table: q('[data-bind="table"]')?.textContent || '',
+        covers: q('[data-bind="covers"]')?.textContent || '',
+        unit: q('[data-bind="covers-unit"]')?.hidden ? '' : (q('[data-bind="covers-unit"]')?.textContent || ''),
+      };
+    }
     let payBindingsBackup = null;
     function setPayBindings(table, covers) {
-      if (!payBindingsBackup) {
-        payBindingsBackup = {
-          table: document.querySelector('[data-bind="table"]')?.textContent || '',
-          covers: document.querySelector('[data-bind="covers"]')?.textContent || '',
-        };
-      }
-      $$('[data-bind="table"]').forEach(el => el.textContent = table);
-      $$('[data-bind="covers"]').forEach(el => el.textContent = covers);
+      if (!payBindingsBackup) payBindingsBackup = readPayMeta();
+      payMeta({ prefix: false, table, covers, unit: '' });
     }
     function restorePayBindings() {
       if (!payBindingsBackup) return;
       const b = payBindingsBackup;
       payBindingsBackup = null;
-      $$('[data-bind="table"]').forEach(el => el.textContent = b.table);
-      $$('[data-bind="covers"]').forEach(el => el.textContent = b.covers);
+      payMeta(b);
     }
 
     const splitState = {
@@ -14691,6 +14703,9 @@
     function clientProgressLabel(rec) {
       try {
         const KC = window.KiwiClients;
+        /* Sans programme choisi, « 0/10 » annonçait une carte à tampons que le
+           commerce n'a jamais proposée. */
+        if (KC.loyaltyOn && !KC.loyaltyOn()) return '';
         const cfg = (KC.config && KC.config()) || {};
         if (cfg.model === 'amount') return (rec.points || 0) + ' pts';
         const target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
@@ -14831,7 +14846,21 @@
     /* Le carnet complet (fiches, historique, récompenses) reste celui de
        assets/clients-book.js, qui greffe sa propre entrée dans .act-selector. */
     renderSaleClient();
-    try { if (window.KiwiClients && window.KiwiClients.subscribe) window.KiwiClients.subscribe(renderSaleClient); } catch (_) {}
+    /* Ce script s'exécute pendant l'analyse de la page ; clients-store.js est
+       `defer` et n'existe pas encore. Le test d'ici ne s'abonnait donc jamais,
+       et le bouton « Client & fidélité », masqué au démarrage, ne revenait
+       qu'au prochain changement de mode : une caisse ouverte sur À emporter
+       ne proposait jamais d'attacher un client. On s'accroche une fois les
+       scripts différés chargés. */
+    function hookClientBook() {
+      try {
+        if (!window.KiwiClients || !window.KiwiClients.subscribe) return false;
+        window.KiwiClients.subscribe(renderSaleClient);
+        renderSaleClient();
+        return true;
+      } catch (_) { return false; }
+    }
+    if (!hookClientBook()) document.addEventListener('DOMContentLoaded', hookClientBook, { once: true });
     document.addEventListener('kiwi-paired', () => { try { renderSaleClient(); } catch (_) {} });
 
     /* ============ REÇU / TICKET · receipt preview ============ */
@@ -18904,46 +18933,62 @@
     let   kdsTimer = null;
     const kdsEl = $('#kds-screen');
 
+    /* Le board de démonstration. Avant le correctif du passage de main
+       (2026-10), une caisse réelle pouvait démarrer en démo puis s'appairer :
+       ce board était alors sauvegardé dans le service du VRAI commerçant, et
+       sa page « À emporter » proposait d'encaisser une Pastilla à 205 MAD qui
+       n'a jamais été commandée. On garde la liste ici pour reconnaître ces
+       restes à la reprise du service et les écarter. */
+    const KDS_DEMO_SEED = [
+      { num: 38, type: 'dineIn', table: '3', status: 'ready', ago: 1880, readyAt: '13:46', items: [
+        { q: 2, n: 'Couscous royal', stations: ['cuisson'] }, { q: 2, n: 'Thé à la menthe', stations: ['boissons'] } ] },
+      { num: 39, type: 'glovo', code: '2904', status: 'ready', ago: 1645, readyAt: '13:58', items: [
+        { q: 1, n: 'Tajine poulet citron', stations: ['cuisson'] }, { q: 1, n: 'Salade marocaine', stations: ['salade'] } ] },
+      { num: 40, type: 'dineIn', table: '8', status: 'ready', ago: 1390, readyAt: '14:10', items: [
+        { q: 3, n: 'Briouates viande', stations: ['cuisson'] }, { q: 2, n: 'Msemen beurre & miel', stations: ['pastry'] } ] },
+      { num: 41, type: 'takeaway', status: 'ready', ago: 1155, readyAt: '14:22', total: 280, items: [
+        { q: 2, n: 'Méchoui', p: 120, note: 'bien cuit', stations: ['bbq'] }, { q: 2, n: 'Orange pressée', p: 20, stations: ['boissons'] } ] },
+      { num: 42, type: 'dineIn', table: '4', status: 'cooking', ago: 1010, items: [
+        { q: 2, n: 'Tajine kefta œuf', note: 'sans coriandre', stations: ['cuisson'] }, { q: 1, n: 'Salade marocaine', stations: ['salade'] }, { q: 3, n: 'Thé à la menthe', stations: ['boissons'] } ] },
+      { num: 43, type: 'glovo', code: '3412', status: 'cooking', ago: 742, items: [
+        { q: 2, n: 'Tajine poulet citron', stations: ['cuisson'] }, { q: 1, n: 'Cornes de gazelle', stations: ['pastry'] } ] },
+      { num: 44, type: 'dineIn', table: '7', status: 'cooking', ago: 620, items: [
+        { q: 1, n: 'Couscous royal', stations: ['cuisson'] }, { q: 1, n: 'Pastilla poulet', stations: ['cuisson', 'pastry'] } ] },
+      { num: 45, type: 'yassir', code: '8821', status: 'cooking', ago: 388, items: [
+        { q: 3, n: 'Tajine kefta œuf', stations: ['cuisson'] }, { q: 2, n: 'Cocktail mocktail', stations: ['bar'] } ] },
+      { num: 46, type: 'dineIn', table: '2', status: 'cooking', ago: 256, items: [
+        { q: 2, n: 'Crêpe complète', stations: ['crepes'] }, { q: 4, n: 'Café noir double', note: '2 sans sucre', stations: ['boissons'] } ] },
+      { num: 47, type: 'dineIn', table: '9', status: 'new', ago: 184, items: [
+        { q: 4, n: 'Briouates viande', stations: ['cuisson'] }, { q: 2, n: "Caviar d'aubergine", stations: ['salade'] } ] },
+      { num: 48, type: 'glovo', code: '3590', status: 'new', ago: 92, items: [
+        { q: 1, n: 'Méchoui', stations: ['bbq'] }, { q: 1, n: 'Limonade traditionnelle', stations: ['boissons'] } ] },
+      { num: 49, type: 'dineIn', table: '1', status: 'new', ago: 38, items: [
+        { q: 1, n: 'Tajine agneau pruneaux', stations: ['cuisson'] } ] },
+      { num: 50, type: 'takeaway', status: 'cooking', ago: 360, total: 130, items: [
+        { q: 2, n: 'Sandwich kefta', p: 50, stations: ['cuisson'] }, { q: 2, n: 'Café noir double', p: 15, stations: ['boissons'] } ] },
+      { num: 51, type: 'takeaway', status: 'ready', ago: 690, readyAt: '14:30', paid: true, total: 205, items: [
+        { q: 1, n: 'Pastilla poulet', p: 145, stations: ['cuisson', 'pastry'] }, { q: 2, n: 'Thé à la menthe', p: 30, note: 'bien chaud svp', stations: ['boissons'] } ] },
+      { num: 52, type: 'takeaway', status: 'ready', ago: 1500, readyAt: '14:02', paid: true, pickedUp: true, pickedUpAt: '14:09', total: 230, items: [
+        { q: 3, n: 'Briouates viande', p: 65, stations: ['cuisson'] }, { q: 1, n: "Jus d'orange", p: 35, stations: ['boissons'] } ] },
+    ];
+    function isDemoSeedOrder(o) {
+      if (!o) return false;
+      if (o.demoSeed) return true;
+      if (o.opId) return false;
+      const s = KDS_DEMO_SEED.find(x => x.num === o.num);
+      if (!s || !Array.isArray(o.items)) return false;
+      return o.items.map(i => i && i.n).join('|') === s.items.map(i => i.n).join('|');
+    }
+
     function kdsSeed() {
       // A REAL / paired store opens with an EMPTY order board · no demo orders
       // (Méchoui, Pastilla poulet, Thé à la menthe…). They arrive from real sales.
       if (storeIsReal()) return;
-      const seed = [
-        { num: 38, type: 'dineIn', table: '3', status: 'ready', ago: 1880, readyAt: '13:46', items: [
-          { q: 2, n: 'Couscous royal', stations: ['cuisson'] }, { q: 2, n: 'Thé à la menthe', stations: ['boissons'] } ] },
-        { num: 39, type: 'glovo', code: '2904', status: 'ready', ago: 1645, readyAt: '13:58', items: [
-          { q: 1, n: 'Tajine poulet citron', stations: ['cuisson'] }, { q: 1, n: 'Salade marocaine', stations: ['salade'] } ] },
-        { num: 40, type: 'dineIn', table: '8', status: 'ready', ago: 1390, readyAt: '14:10', items: [
-          { q: 3, n: 'Briouates viande', stations: ['cuisson'] }, { q: 2, n: 'Msemen beurre & miel', stations: ['pastry'] } ] },
-        { num: 41, type: 'takeaway', status: 'ready', ago: 1155, readyAt: '14:22', total: 280, items: [
-          { q: 2, n: 'Méchoui', p: 120, note: 'bien cuit', stations: ['bbq'] }, { q: 2, n: 'Orange pressée', p: 20, stations: ['boissons'] } ] },
-        { num: 42, type: 'dineIn', table: '4', status: 'cooking', ago: 1010, items: [
-          { q: 2, n: 'Tajine kefta œuf', note: 'sans coriandre', stations: ['cuisson'] }, { q: 1, n: 'Salade marocaine', stations: ['salade'] }, { q: 3, n: 'Thé à la menthe', stations: ['boissons'] } ] },
-        { num: 43, type: 'glovo', code: '3412', status: 'cooking', ago: 742, items: [
-          { q: 2, n: 'Tajine poulet citron', stations: ['cuisson'] }, { q: 1, n: 'Cornes de gazelle', stations: ['pastry'] } ] },
-        { num: 44, type: 'dineIn', table: '7', status: 'cooking', ago: 620, items: [
-          { q: 1, n: 'Couscous royal', stations: ['cuisson'] }, { q: 1, n: 'Pastilla poulet', stations: ['cuisson', 'pastry'] } ] },
-        { num: 45, type: 'yassir', code: '8821', status: 'cooking', ago: 388, items: [
-          { q: 3, n: 'Tajine kefta œuf', stations: ['cuisson'] }, { q: 2, n: 'Cocktail mocktail', stations: ['bar'] } ] },
-        { num: 46, type: 'dineIn', table: '2', status: 'cooking', ago: 256, items: [
-          { q: 2, n: 'Crêpe complète', stations: ['crepes'] }, { q: 4, n: 'Café noir double', note: '2 sans sucre', stations: ['boissons'] } ] },
-        { num: 47, type: 'dineIn', table: '9', status: 'new', ago: 184, items: [
-          { q: 4, n: 'Briouates viande', stations: ['cuisson'] }, { q: 2, n: "Caviar d'aubergine", stations: ['salade'] } ] },
-        { num: 48, type: 'glovo', code: '3590', status: 'new', ago: 92, items: [
-          { q: 1, n: 'Méchoui', stations: ['bbq'] }, { q: 1, n: 'Limonade traditionnelle', stations: ['boissons'] } ] },
-        { num: 49, type: 'dineIn', table: '1', status: 'new', ago: 38, items: [
-          { q: 1, n: 'Tajine agneau pruneaux', stations: ['cuisson'] } ] },
-        { num: 50, type: 'takeaway', status: 'cooking', ago: 360, total: 130, items: [
-          { q: 2, n: 'Sandwich kefta', p: 50, stations: ['cuisson'] }, { q: 2, n: 'Café noir double', p: 15, stations: ['boissons'] } ] },
-        { num: 51, type: 'takeaway', status: 'ready', ago: 690, readyAt: '14:30', paid: true, total: 205, items: [
-          { q: 1, n: 'Pastilla poulet', p: 145, stations: ['cuisson', 'pastry'] }, { q: 2, n: 'Thé à la menthe', p: 30, note: 'bien chaud svp', stations: ['boissons'] } ] },
-        { num: 52, type: 'takeaway', status: 'ready', ago: 1500, readyAt: '14:02', paid: true, pickedUp: true, pickedUpAt: '14:09', total: 230, items: [
-          { q: 3, n: 'Briouates viande', p: 65, stations: ['cuisson'] }, { q: 1, n: "Jus d'orange", p: 35, stations: ['boissons'] } ] },
-      ];
-      seed.forEach(s => kdsOrders.push({
-        num: s.num, type: s.type, table: s.table || null, code: s.code || null,
+      KDS_DEMO_SEED.forEach(s => kdsOrders.push({
+        demoSeed: true, num: s.num, type: s.type, table: s.table || null, code: s.code || null,
         status: s.status, readyAt: s.readyAt || null,
-        items: s.items, sentAt: new Date(Date.now() - s.ago * 1000),
+        items: s.items.map(i => Object.assign({}, i, { stations: i.stations.slice() })),
+        sentAt: new Date(Date.now() - s.ago * 1000),
         paid: !!s.paid, pickedUp: !!s.pickedUp, pickedUpAt: s.pickedUpAt || null, total: s.total || 0,
       }));
     }
@@ -22467,7 +22512,7 @@
       if (Array.isArray(d.kdsOrders) && storeIsReal()) {
         kdsOrders.length = 0;
         d.kdsOrders.forEach((o) => {
-          if (!o || staleQueuedServerTicket(o)) return;
+          if (!o || staleQueuedServerTicket(o) || isDemoSeedOrder(o)) return;
           const at = new Date(o.sentAt);
           kdsOrders.push(Object.assign({}, o, { sentAt: isNaN(at.getTime()) ? new Date() : at }));
         });

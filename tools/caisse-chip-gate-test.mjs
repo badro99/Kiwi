@@ -56,5 +56,50 @@ ok('unlock listener is attached where dashboard.html dispatches it (window)', ()
     'caisse-link.js must listen on window');
 });
 
+/* 2026-10 · "Caisse connectée" came from local pairing memory alone: green with
+ * the till switched off (while Plan de salle said "hors ligne"), and "Connecter
+ * la caisse" beside a till paired from an iPad and ringing. The chip now reads
+ * the till's heartbeat that /api/feed carries. Run the real functions. */
+{
+  const vm = await import('node:vm');
+  const grab = (name) => {
+    const i = src.indexOf('function ' + name + '(');
+    let d = 0;
+    for (let k = src.indexOf('{', i); k < src.length; k++) {
+      if (src[k] === '{') d++; else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1);
+    }
+    return '';
+  };
+  const run = ({ paired, presence }) => {
+    const chip = { attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, t: { textContent: '' }, querySelector() { return this.t; } };
+    const ctx = vm.createContext({
+      window: { KiwiTillPresence: presence },
+      document: { getElementById: () => chip },
+      currentBiz: () => ({ merchant: 'cafe' }),
+      isPaired: () => paired,
+    });
+    vm.runInContext(grab('tillPresence') + '\n' + grab('updateChip') + '\nupdateChip();', ctx);
+    return chip.attrs['data-state'] + ' ' + chip.t.textContent;
+  };
+  ok('fresh heartbeat → connected, even if paired from another device', () =>
+    assert.equal(run({ paired: false, presence: { merchant: 'cafe', seen: 1, fresh: true } }), 'on Caisse connectée'));
+  ok('stale heartbeat → "Caisse hors ligne", even if paired in this browser', () =>
+    assert.equal(run({ paired: true, presence: { merchant: 'cafe', seen: 1, fresh: false } }), 'away Caisse hors ligne'));
+  ok('no heartbeat ever (boutique/spa tills never poll) → local memory decides', () => {
+    assert.equal(run({ paired: true, presence: { merchant: 'cafe', seen: 0, fresh: false } }), 'on Caisse connectée');
+    assert.equal(run({ paired: false, presence: null }), 'off Connecter la caisse');
+  });
+  ok('another store\'s heartbeat is ignored', () =>
+    assert.equal(run({ paired: false, presence: { merchant: 'other', seen: 1, fresh: true } }), 'off Connecter la caisse'));
+  const live = readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+  const feed = readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
+  ok('/api/feed returns the till heartbeat and live-link publishes it', () => {
+    assert.ok(/SELECT seen_ts FROM order_desk WHERE merchant = \?/.test(feed));
+    assert.ok(/json\(\{ sales: rows, cursor, merchant, voided, tillSeen, now: Date\.now\(\) \}\)/.test(feed));
+    assert.ok(/publishTill\(tenant, data\.tillSeen, data\.now\)/.test(live));
+    assert.ok(/kiwi:till-presence/.test(src), 'the chip listens for presence updates');
+  });
+}
+
 console.log(`\ncaisse-chip-gate: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

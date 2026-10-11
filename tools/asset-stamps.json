@@ -32,8 +32,8 @@
     "sha": "3c6e24a0053bf948"
   },
   "assets/agent-data.js": {
-    "v": "3",
-    "sha": "4c3f7a61afc46fdd"
+    "v": "4",
+    "sha": "13e91b59d7f9bf1d"
   },
   "assets/agent-features.js": {
     "v": "4",
@@ -116,8 +116,8 @@
     "sha": "6cd7c9ab82577498"
   },
   "assets/caisse-link.js": {
-    "v": "12",
-    "sha": "6ea65f0137374824"
+    "v": "13",
+    "sha": "3903bd792b6f25fc"
   },
   "assets/caisse-menu-availability.js": {
     "v": "6",
@@ -184,12 +184,12 @@
     "sha": "9da57f970e60db48"
   },
   "assets/clients-directory.js": {
-    "v": "17",
-    "sha": "14e01bfcfe445855"
+    "v": "18",
+    "sha": "6d225e2cb875c280"
   },
   "assets/clients-store.js": {
-    "v": "9",
-    "sha": "8db364b49f388e56"
+    "v": "10",
+    "sha": "b89c71e8c7855723"
   },
   "assets/cloud-doc.js": {
     "v": "9",
@@ -232,20 +232,20 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "54",
-    "sha": "8a38c68d6034d8da"
+    "v": "56",
+    "sha": "fb59686d8189c3bf"
   },
   "assets/day-report-dash.js": {
-    "v": "25",
-    "sha": "cdcf9b15ee68c8b9"
+    "v": "27",
+    "sha": "8f50554d80696d89"
   },
   "assets/day-report-export.js": {
     "v": "10",
     "sha": "4a94efe6c603aeab"
   },
   "assets/day-report.js": {
-    "v": "19",
-    "sha": "d8303dc60b46f11e"
+    "v": "20",
+    "sha": "6135cf99e50d2eca"
   },
   "assets/demoClock.js": {
     "v": "4",
@@ -268,8 +268,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2090",
-    "sha": "7c1e0c46b2b0ab15"
+    "v": "2092",
+    "sha": "a92246132e258dd0"
   },
   "assets/design-vexel.css": {
     "v": "2113",
@@ -416,8 +416,8 @@
     "sha": "59945120582f82d0"
   },
   "assets/invoice.js": {
-    "v": "12",
-    "sha": "4a586da26775fd98"
+    "v": "13",
+    "sha": "c0eb04ef352d2b12"
   },
   "assets/invoicing.css": {
     "v": "8",
@@ -500,8 +500,8 @@
     "sha": "03104b4c4765d577"
   },
   "assets/live-link.js": {
-    "v": "59",
-    "sha": "76acaaf6df92377d"
+    "v": "60",
+    "sha": "f9e25d5dd61d841c"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -972,8 +972,8 @@
     "sha": "6341af9080886677"
   },
   "assets/team.js": {
-    "v": "295",
-    "sha": "dff053a5047d76dd"
+    "v": "296",
+    "sha": "5ab6300bad401ba6"
   },
   "assets/tenant-purge.js": {
     "v": "2",

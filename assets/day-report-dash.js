@@ -96,6 +96,7 @@
     cancels:   { fr: 'Annulations', en: 'Cancellations', ar: 'الإلغاءات' },
     movesNone: { fr: 'Aucune entrée ni sortie hors ventes.', en: 'No non-sale cash in or out.', ar: 'لا حركات نقدية خارج المبيعات.' },
     openedAt:  { fr: 'Ouverture', en: 'Opened', ar: 'الافتتاح' },
+    firstSale: { fr: 'Première vente', en: 'First sale', ar: 'أول عملية' },
     closedAt:  { fr: 'Fermeture', en: 'Closed', ar: 'الإغلاق' },
     lastSale:  { fr: 'Dernière vente', en: 'Last sale', ar: 'آخر عملية' },
     openedBy:  { fr: 'Ouvert par', en: 'Opened by', ar: 'فتحها' },
@@ -724,7 +725,12 @@
     /* ── qui, quand ── */
     var idCells = [];
     var push = function (lab, val) { if (val) idCells.push('<div class="kdr-id-cell"><span>' + esc(lab) + '</span><b>' + esc(val) + '</b></div>'); };
-    push(T(L.openedAt), hm(r.openedAt || r.firstSaleAt));
+    /* Sans instantané de la caisse, l'heure d'ouverture n'est pas connue : on
+       écrivait celle de la première vente sous « Ouverture » (11:48 pour un
+       service ouvert la veille à 23:50). On nomme ce qu'on montre. */
+    var openedKnown = r.openedAt && r.openedKnown !== false;
+    if (openedKnown) push(T(L.openedAt), hm(r.openedAt));
+    else push(T(L.firstSale), hm(r.firstSaleAt || r.openedAt));
     /* L'astérisque muet d'avant (« 19:42 * ») ne disait pas ce qu'il marquait.
        Une journée non clôturée n'a pas d'heure de fermeture — elle a une
        dernière vente, et c'est ce mot-là qu'on écrit. */
@@ -914,7 +920,7 @@
       title: T(L.title).toUpperCase(),
       dateLabel: dayLabel(r.day),
       copy: isClosed(r) ? '' : 'PROVISOIRE',
-      openedLabel: hm(r.openedAt || r.firstSaleAt),
+      openedLabel: r.openedAt && r.openedKnown !== false ? hm(r.openedAt) : '',
       closedLabel: r.closedAt ? hm(r.closedAt) : '',
       detailTitle: String(V.cats || 'catégories').toUpperCase(),
       drawerTitle: (T(L.drawer) + ' · ' + hm(r.openedAt) + (r.closedAt ? ' · ' + hm(r.closedAt) : '')).toUpperCase(),

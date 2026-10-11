@@ -1053,6 +1053,17 @@
     if (!Number.isSafeInteger(data.cursor) || data.cursor !== cursor) throw new Error('cursor');
     if (data.voided.some(function (v) { return !v || !Number.isSafeInteger(v.c) || v.c <= 0; })) throw new Error('invalid-feed');
   }
+  /* Is a till actually switched on for this store? /api/feed carries the
+   * till's own heartbeat (order_desk). Published once per poll for anything
+   * that would otherwise claim "connectée" from local pairing memory alone
+   * (assets/caisse-link.js). Clock skew comes from the server's `now`. */
+  function publishTill(tenant, seen, serverNow) {
+    var at = Date.now();
+    var skew = (Number(serverNow) || at) - at;
+    window.KiwiTillPresence = { merchant: tenant, seen: Number(seen) || 0, at: at, skew: skew,
+      fresh: !!seen && (at + skew - seen) < 90 * 1000 };
+    try { document.dispatchEvent(new CustomEvent('kiwi:till-presence', { detail: window.KiwiTillPresence })); } catch (_) {}
+  }
   function watchFeed(onSales, intervalMs, options) {
     if (!on()) return function () {};
     var oneShot = !!(options && options.oneShot);
@@ -1103,6 +1114,7 @@
             validateSnapshotPage(data, tenant, since);
           }
           lastSync = Date.now();
+          if (!oneShot && typeof data.tillSeen === 'number') publishTill(tenant, data.tillSeen, data.now);
           /* Les ventes RETIRÉES des livres, avant celles qui arrivent. Le flux
              ne repasse jamais sur un curseur déjà servi, donc c'est le seul
              chemin par lequel une annulation atteint un navigateur qui avait

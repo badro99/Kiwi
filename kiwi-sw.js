@@ -78,7 +78,7 @@ var SHELL = [
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=20',
   '/assets/ai-telemetry.js?v=1',
-  '/assets/agent-data.js?v=3',
+  '/assets/agent-data.js?v=4',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=54',
+  '/assets/dateRange.js?v=56',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=3',
   '/assets/pages.js?v=12',
@@ -167,15 +167,15 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=13',
   '/assets/operations-ui.js?v=20',
-  '/assets/live-link.js?v=59',
+  '/assets/live-link.js?v=60',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=19',
+  '/assets/day-report.js?v=20',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=25',
+  '/assets/day-report-dash.js?v=27',
   '/assets/day-report-export.js?v=10',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
@@ -195,7 +195,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=5',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=12',
+  '/assets/invoice.js?v=13',
   '/assets/merchant-config.js?v=277',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements-v2.js?v=1',
@@ -209,7 +209,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
   '/assets/identity.js?v=8',
-  '/assets/caisse-link.js?v=12',
+  '/assets/caisse-link.js?v=13',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -245,9 +245,9 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
-  '/assets/clients-store.js?v=9',
+  '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
-  '/assets/clients-directory.js?v=17',
+  '/assets/clients-directory.js?v=18',
   '/assets/customer-retention.js?v=4',
   '/assets/menu-catalog.js?v=26',
   '/assets/stock-identity.js?v=2',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=295',
+  '/assets/team.js?v=296',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=89',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

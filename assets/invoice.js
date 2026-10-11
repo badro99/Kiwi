@@ -45,6 +45,11 @@
     return `${dateStr} à ${timeStr}`;
   }
 
+  function validIce(v) {
+    const digits = String(v == null ? '' : v).replace(/[\s.\u00a0\u202f-]/g, '');
+    return /^\d{15}$/.test(digits) ? digits : '';
+  }
+
   function getSellerBusiness(venue) {
     function getLocal(k) {
       try {
@@ -86,89 +91,60 @@
     const vdLegal = (vd.legal && typeof vd.legal === 'object') ? vd.legal : {};
     const legal = Object.assign({}, vdLegal, rawLegal);
 
-    // Thorough scan across all KiwiStore business documents in localStorage
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.indexOf('kiwi:business:v1:') === 0) {
-            const rawBiz = getLocal(k);
-            if (rawBiz) {
-              try {
-                const parsed = JSON.parse(rawBiz);
-                if (parsed && typeof parsed === 'object') {
-                  const pLegal = parsed.legal || {};
-                  const candidateIce = String(pLegal.ice || parsed.ice || '').trim();
-                  if (candidateIce.length > 0) {
-                    if (!legal.ice) legal.ice = candidateIce;
-                    ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
-                      if (!legal[fk] && (pLegal[fk] || parsed[fk])) legal[fk] = pLegal[fk] || parsed[fk];
-                    });
-                    if (!raw.logo && parsed.logo) raw.logo = parsed.logo;
-                    if (!raw.name && parsed.name) raw.name = parsed.name;
-                  }
-                }
-              } catch (_) {}
-            }
-          }
-        }
-      }
-    } catch (_) {}
+    /* Une facture porte l'identité légale de CE commerce, et de lui seul.
+     * Les replis balayaient tout le localStorage (chaque `kiwi:business:v1:*`,
+     * chaque clé finissant par `:ice`) : un navigateur qui avait connu deux
+     * commerces (vue opérateur, changement de compte, démo) imprimait l'ICE,
+     * la raison sociale et l'adresse de l'un sur la facture de l'autre. On ne
+     * lit plus que les clés de ce commerce, sous ses différents alias. */
+    const own = [activeVid, vd.id, vd.slug, vd.merchant,
+      window.KiwiLive?.merchant?.(), getLocal('kiwiLiveMerchant')]
+      .filter(Boolean).map(String);
+    own.slice().forEach((id) => { if (id.indexOf('v-') !== 0) own.push('v-' + id); });
+    own.forEach((id) => {
+      const rawBiz = getLocal('kiwi:business:v1:' + id);
+      if (!rawBiz) return;
+      try {
+        const parsed = JSON.parse(rawBiz);
+        if (!parsed || typeof parsed !== 'object') return;
+        const pLegal = parsed.legal || {};
+        if (!validIce(legal.ice)) legal.ice = validIce(pLegal.ice || parsed.ice) || legal.ice;
+        ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
+          if (!legal[fk] && (pLegal[fk] || parsed[fk])) legal[fk] = pLegal[fk] || parsed[fk];
+        });
+        if (!raw.logo && parsed.logo) raw.logo = parsed.logo;
+        if (!raw.name && parsed.name) raw.name = parsed.name;
+      } catch (_) {}
+    });
 
-    // Fallback across specific localStorage keys if legal fields were saved in legacy slots
+    // Legacy per-venue settings slots (kiwiSet:biz:<venue>:<field>).
     const demoVids = ['cafeAtlas', 'maisonMansour', 'spaBahia'];
     const vidsToCheck = [activeVid, 'primary', 'own', 'scoped', 'default'].filter(Boolean);
     if (demoVids.includes(activeVid)) vidsToCheck.push(activeVid);
-    if (!legal.ice) {
+    if (!validIce(legal.ice)) {
       try {
         for (const vid of vidsToCheck) {
           ['ice', 'fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((k) => {
             const v = getLocal('kiwiSet:biz:' + vid + ':' + k);
-            if (v && !legal[k]) legal[k] = v;
+            if (!v) return;
+            if (k === 'ice') { if (!validIce(legal.ice) && validIce(v)) legal.ice = validIce(v); }
+            else if (!legal[k]) legal[k] = v;
           });
-          if (legal.ice) break;
+          if (validIce(legal.ice)) break;
         }
-      } catch (_) {}
-    }
-
-    // Scan all custom establishment keys in localStorage matching kiwiSet:biz:*:ice
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && /:ice$/.test(k)) {
-            const val = String(getLocal(k) || '').trim();
-            if (val.length > 0) {
-              if (!legal.ice) legal.ice = val;
-              const prefix = k.replace(/:ice$/, ':');
-              ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName', 'logo', 'name'].forEach((fk) => {
-                const sibVal = getLocal(prefix + fk);
-                if (sibVal && !legal[fk]) legal[fk] = sibVal;
-              });
-            }
-          }
-        }
-      }
-    } catch (_) {}
-
-    if (!legal.ice) {
-      try {
-        const directIce = getLocal('kiwiBizICE') || getLocal('kiwiICE') || getLocal('kiwiMerchantICE') || getLocal('kiwiLiveICE');
-        if (directIce) legal.ice = directIce;
       } catch (_) {}
     }
 
     let meData = {};
     try {
-      ['kiwiMe', 'kiwi_account_profile', 'kiwiAccount', 'kiwiProfile', 'kiwiUser'].forEach((key) => {
+      ['kiwiMe', 'kiwiAccount'].forEach((key) => {
         const meRaw = getLocal(key);
         if (meRaw) {
           try {
             const p = JSON.parse(meRaw);
             if (p && typeof p === 'object') {
               meData = Object.assign({}, p, meData);
-              const candIce = String(p.ice || p.legal?.ice || '').trim();
-              if (candIce && !legal.ice) legal.ice = candIce;
+              if (!validIce(legal.ice) && validIce(p.ice || p.legal?.ice)) legal.ice = validIce(p.ice || p.legal?.ice);
               ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
                 if (!legal[fk] && (p[fk] || p.legal?.[fk])) legal[fk] = p[fk] || p.legal[fk];
               });
@@ -185,7 +161,10 @@
     const address = legal.address || raw.address || vd.address || meData.address || '';
     const city = legal.city || raw.city || vd.city || meData.city || 'Maroc';
     const phone = legal.phone || raw.phone || vd.phone || meData.phone || '';
-    const ice = legal.ice || raw.ice || vd.ice || meData.ice || '';
+    /* « · » est le tiret d'affichage d'un champ vide, pas un ICE : le prendre
+     * pour tel imprimait « ICE : · » et taisait l'avertissement de mention
+     * obligatoire. Un ICE marocain fait 15 chiffres ; tout le reste est absent. */
+    const ice = validIce(legal.ice) || validIce(raw.ice) || validIce(raw.legal?.ice) || validIce(vd.ice) || validIce(meData.ice) || '';
     const fiscal = legal.fiscal || legal.if || raw.fiscal || raw.if || vd.fiscal || vd.if || meData.fiscal || meData.if || '';
     const rc = legal.rc || raw.rc || vd.rc || meData.rc || '';
     const patente = legal.patente || raw.patente || vd.patente || meData.patente || '';
@@ -318,7 +297,7 @@
       }];
     }
 
-    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim();
+    const sellerIceStr = validIce(seller.ice) || validIce(seller.legal?.ice);
     const missingICE = !sellerIceStr;
 
     return {
@@ -391,7 +370,7 @@
       sellerAddress ? `${sellerAddress}` : '',
       seller.phone ? `Tél : ${esc(seller.phone)}` : '',
       seller.email ? `Email : ${esc(seller.email)}` : '',
-      seller.ice ? `<strong>ICE :</strong> ${esc(seller.ice)}` : '',
+      validIce(seller.ice) ? `<strong>ICE :</strong> ${esc(validIce(seller.ice))}` : '',
       seller.fiscal ? `<strong>IF :</strong> ${esc(seller.fiscal)}` : '',
       seller.rc ? `<strong>RC :</strong> ${esc(seller.rc)}` : '',
       seller.patente ? `<strong>Patente :</strong> ${esc(seller.patente)}` : '',
@@ -403,10 +382,10 @@
       cust.if ? `<strong>IF :</strong> ${esc(cust.if)}` : '',
     ].filter(Boolean).join('<br>') : '<strong>Client de passage</strong><br>Vente au comptoir';
 
-    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim();
-    const isMissingICE = (doc.missingICE !== undefined)
-      ? Boolean(doc.missingICE)
-      : !sellerIceStr;
+    /* Le drapeau du snapshot ne suffit pas : une facture figée avec « · »
+     * comme ICE le portait à false. On juge sur l'ICE lui-même. */
+    const sellerIceStr = validIce(seller.ice) || validIce(seller.legal?.ice);
+    const isMissingICE = !sellerIceStr || Boolean(doc.missingICE);
 
     const iceBanner = isMissingICE ? `
       <div class="ice-alert">
@@ -527,7 +506,7 @@
 
   <div class="footer">
     <div class="footer-legal">
-      ${esc(biz)}${seller.ice ? ` · ICE : ${esc(seller.ice)}` : ''} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
+      ${esc(biz)}${validIce(seller.ice) ? ` · ICE : ${esc(validIce(seller.ice))}` : ''} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
     </div>
     <div class="footer-powered">
       <span class="pw-txt">Propulsé par</span>
@@ -733,9 +712,10 @@
       const liveSeller = getSellerBusiness();
       cached.seller = Object.assign({}, liveSeller, cached.seller || {});
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
-        if (!cached.seller[k] && liveSeller[k]) cached.seller[k] = liveSeller[k];
+        const empty = k === 'ice' ? !validIce(cached.seller.ice) : !cached.seller[k];
+        if (empty && liveSeller[k]) cached.seller[k] = liveSeller[k];
       });
-      const sellerIce = String(cached.seller.ice || cached.seller.legal?.ice || '').trim();
+      const sellerIce = validIce(cached.seller.ice) || validIce(cached.seller.legal?.ice);
       cached.missingICE = !sellerIce;
       setCachedInvoice(saleId, cached);
       open(cached, mode);
@@ -793,9 +773,10 @@
       const liveSeller = getSellerBusiness();
       finalDoc.seller = Object.assign({}, liveSeller, finalDoc.seller || {});
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
-        if (!finalDoc.seller[k] && liveSeller[k]) finalDoc.seller[k] = liveSeller[k];
+        const empty = k === 'ice' ? !validIce(finalDoc.seller.ice) : !finalDoc.seller[k];
+        if (empty && liveSeller[k]) finalDoc.seller[k] = liveSeller[k];
       });
-      const sellerIce = String(finalDoc.seller.ice || finalDoc.seller.legal?.ice || '').trim();
+      const sellerIce = validIce(finalDoc.seller.ice) || validIce(finalDoc.seller.legal?.ice);
       finalDoc.missingICE = !sellerIce;
 
       setCachedInvoice(saleId, finalDoc);

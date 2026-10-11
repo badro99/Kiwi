@@ -23,7 +23,7 @@ assert.doesNotMatch(
 );
 assert.match(
   layout,
-  /var splitLabel = hasAmounts \? copy\.share : copy\.unavailable/,
+  /var splitLabel = hasAmounts \? copy\.share : \(total > 0 \? copy\.unavailable : copy\.noSales\)/,
   'the subtitle still distinguishes measured shares from unavailable breakdowns'
 );
 assert.match(dashboard, /assets\/channel-sales\.js\?v=\d+/);
