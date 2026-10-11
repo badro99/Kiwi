@@ -1375,6 +1375,7 @@ section('Whole-project regressions');
     'simple-food-cost-test.mjs',
     'menu-insights-test.mjs',
     'restaurant-recipe-layout-test.mjs',
+    'restaurant-item-editor-test.mjs',
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',

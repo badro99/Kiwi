@@ -369,7 +369,7 @@
 .hx-hotel-modal .kiwi-modal-head { padding:28px 30px 18px; }
 .hx-hotel-modal .kiwi-modal-head h3 { font-size:24px; line-height:1.15; }
 .hx-hotel-modal .kiwi-modal-body { padding:2px 30px 30px; }
-.hx-hotel-modal .kiwi-modal-close { top:20px; right:20px; }
+.hx-hotel-modal .kiwi-modal-close { top:20px; inset-inline-end:20px; }
 .hx-hotel-modal .hx-room-form label > span {
   color:var(--ink);
   font-size:11px;

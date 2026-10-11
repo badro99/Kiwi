@@ -409,14 +409,15 @@ ar: {
   .kiwi-backdrop.in { opacity: 1; }
   .kiwi-modal { background: var(--paper); border-radius: 22px; width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; position: relative; transform: translateY(20px) scale(0.985); transition: transform 320ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
   .kiwi-backdrop.in .kiwi-modal { transform: translateY(0) scale(1); }
-  .kiwi-modal-head { padding: 24px 28px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  /* The close button is absolute: the head keeps its width free, and both follow the reading direction. */
+  .kiwi-modal-head { padding: 24px 28px 16px; padding-inline-end: 64px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
   .kiwi-modal-head h3 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.025em; }
   .kiwi-modal-head p { margin: 5px 0 0; font-size: 14px; color: var(--n-500); line-height: 1.45; }
   .kiwi-modal-head .tag { display: inline-block; margin-bottom: 10px; padding: 4px 10px; background: var(--mint-soft); color: var(--riad); border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
   html[data-theme="dark"] .kiwi-modal-head .tag { color: var(--mint, #7DF2B0); background: rgba(125,242,176,0.14); }
   .kiwi-modal-body { padding: 0 28px 24px; overscroll-behavior: contain; }
   .kiwi-modal-foot { padding: 16px 28px; border-top: 1px solid var(--n-200); display: flex; justify-content: flex-end; gap: 10px; background: color-mix(in srgb, var(--surface) 50%, transparent); border-radius: 0 0 22px 22px; }
-  .kiwi-modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; z-index: 2; }
+  .kiwi-modal-close { position: absolute; top: 18px; inset-inline-end: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; z-index: 2; }
   .kiwi-modal-close:hover { color: var(--ink); border-color: var(--n-400); }
 
   /* Drawer */

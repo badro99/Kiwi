@@ -116,15 +116,16 @@ body.design-2026 :is(.acc-search, .topbar input, .acc-f) {
  * Glass stays on ambient chrome. A sheet people read and type into is solid:
  * a form read over a blurred page behind it is a form nobody can read
  * (owner, 2026-10-11). The doubled classes outrank the legacy `glass-clear`
- * rules in design-ios27.css, which load later. */
-html body.design-2026 :is(.kiwi-modal.kiwi-modal.kiwi-modal, .kiwi-drawer.kiwi-drawer.kiwi-drawer) {
+ * rules in design-ios27.css, which load later. The native app keeps its own
+ * opaque sheets (native-runtime.css), hence :not(.kiwi-native). */
+html:not(.kiwi-native) body.design-2026 :is(.kiwi-modal.kiwi-modal.kiwi-modal, .kiwi-drawer.kiwi-drawer.kiwi-drawer) {
   background: var(--paper) !important;
   -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   border: 1px solid var(--n-200) !important;
   border-radius: 24px !important;
   box-shadow: 0 30px 80px -30px rgba(2, 38, 28, 0.45) !important;
 }
-html body.design-2026 .kiwi-menu.kiwi-menu.kiwi-menu {
+html:not(.kiwi-native) body.design-2026 .kiwi-menu.kiwi-menu.kiwi-menu {
   background: var(--paper) !important;
   -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   border: 1px solid var(--n-200) !important; border-radius: 16px !important;
@@ -132,11 +133,11 @@ html body.design-2026 .kiwi-menu.kiwi-menu.kiwi-menu {
 }
 /* Dark: --paper-muted is a 4 % white wash under Vexel, not a fill. Mixing two
  * opaque tokens keeps the sheet solid, one step lighter than the page. */
-html[data-theme="dark"] body.design-2026 :is(.kiwi-modal.kiwi-modal.kiwi-modal, .kiwi-drawer.kiwi-drawer.kiwi-drawer, .kiwi-menu.kiwi-menu.kiwi-menu) {
+html[data-theme="dark"]:not(.kiwi-native) body.design-2026 :is(.kiwi-modal.kiwi-modal.kiwi-modal, .kiwi-drawer.kiwi-drawer.kiwi-drawer, .kiwi-menu.kiwi-menu.kiwi-menu) {
   background: color-mix(in srgb, var(--ink) 7%, var(--paper)) !important;
 }
-html body.design-2026 .kiwi-modal-foot { background: var(--paper) !important; }
-html[data-theme="dark"] body.design-2026 .kiwi-modal-foot { background: color-mix(in srgb, var(--ink) 7%, var(--paper)) !important; }
+html:not(.kiwi-native) body.design-2026 .kiwi-modal-foot { background: var(--paper) !important; }
+html[data-theme="dark"]:not(.kiwi-native) body.design-2026 .kiwi-modal-foot { background: color-mix(in srgb, var(--ink) 7%, var(--paper)) !important; }
 /* Vexel fills every field with --paper-muted; the custom select follows inside sheets, or one row mixes a filled field and a white one. */
 body.design-vexel :is(.kiwi-modal, .kiwi-drawer) .kiwi-select-trigger { background: var(--paper-muted); }
 body.design-2026 :is(.kiwi-modal-backdrop, .kiwi-drawer-backdrop) {

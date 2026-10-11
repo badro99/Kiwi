@@ -59,12 +59,12 @@ var SHELL = [
   '/assets/pressing-dashboard.css?v=11',
   '/assets/trade-workspaces.css?v=6',
   '/assets/reservations.css?v=9',
-  '/assets/hotel.css?v=39',
+  '/assets/hotel.css?v=40',
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=8',
   '/assets/sold-insights.js?v=10',
-  '/assets/design-2026.css?v=2',
+  '/assets/design-2026.css?v=3',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
   '/assets/design-vitrine.js?v=1',
@@ -91,7 +91,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=49',
+  '/assets/interactive.js?v=50',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=297',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=106',
+  '/assets/restaurant-menu-workspace.js?v=109',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
