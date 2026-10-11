@@ -147,6 +147,9 @@ button { color: inherit; font: inherit; }
 .brand { width: 100px; min-height: 44px; display: flex; align-items: center; }
 .brand img { width: 100px; height: auto; }
 
+/* La barre flotte au-dessus du papier : elle garde le verre de la landing,
+ * en clair. C'est la seule surface de cette feuille qui porte un
+ * `backdrop-filter` ; les surfaces de lecture et les cartes restent opaques. */
 .nav-center {
   height: 64px;
   display: flex;
@@ -154,10 +157,23 @@ button { color: inherit; font: inherit; }
   justify-content: space-between;
   gap: 4px;
   padding: 8px 8px 8px 28px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(10, 15, 13, .07);
   border-radius: 999px;
+  background: rgba(252, 251, 248, .72);
+  box-shadow: 0 1px 2px rgba(10, 15, 13, .04), 0 10px 30px rgba(10, 15, 13, .07);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* La lentille liquide (assets/liquid-lens.js) porte l'état actif. Sa teinte
+ * « brand » est un dégradé vert plein, pensé pour un fond sombre ; sur une
+ * barre claire il écrasait le reste. On la reskine en pastille claire posée
+ * sur le verre, la lecture exacte de la pastille de la landing. Le mouvement,
+ * lui, n'est pas touché : même ressort, même durée, partagés avec le tableau
+ * de bord et la caisse. */
+.nav-center .kw-lens--brand {
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 2px rgba(10, 15, 13, .08), inset 0 0 0 1px rgba(10, 15, 13, .05);
 }
 
 .nav-center > a:not(.button) {
@@ -174,10 +190,8 @@ button { color: inherit; font: inherit; }
 
 .nav-center > a:not(.button):hover { color: var(--ink); }
 
-.nav-center > a[aria-current="page"] {
-  color: var(--atlas);
-  font-weight: 500;
-}
+.nav-center > a[aria-current="page"],
+.nav-center > a.on { color: var(--ink); font-weight: 500; }
 
 .language-picker {
   position: relative;
@@ -185,9 +199,12 @@ button { color: inherit; font: inherit; }
   display: flex;
   align-items: center;
   padding: 4px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(10, 15, 13, .07);
   border-radius: 999px;
-  background: var(--surface);
+  background: rgba(252, 251, 248, .72);
+  box-shadow: 0 1px 2px rgba(10, 15, 13, .04), 0 10px 30px rgba(10, 15, 13, .07);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
 
 .language-picker a {
@@ -1099,11 +1116,6 @@ html[lang="ar"] .card-title { letter-spacing: 0; line-height: 1.42; }
 .path-name { color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1.4; }
 .path-length { margin: 16px 0 0; color: var(--ink-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-.method-block { margin-block-start: 8px; }
-.method-grid { display: grid; grid-template-columns: minmax(0, var(--reading)) 1fr; gap: 40px; align-items: start; }
-.method-grid .checklist { margin-block: 0 0 !important; }
-.method-grid .aside-note { position: static; max-width: none; }
-
 /* ── Guides liés (bas d'article) ──────────────────────────────────────────── */
 .related { padding-block: 104px 110px; background: var(--paper-soft); border-block-start: 1px solid var(--line); }
 .related-inner { width: var(--page); margin-inline: auto; }
@@ -1398,7 +1410,6 @@ body > footer .kw-foot-mark {
   .article-aside { display: none; }
   .article-sequence,
   .library-shell { width: min(980px, calc(100vw - 48px)); }
-  .method-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .paths-grid { grid-template-columns: minmax(0, 1fr); }
 }
 

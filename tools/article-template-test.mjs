@@ -89,7 +89,13 @@ ok(/background:\s*var\(--paper\)/.test(css) && !/background:\s*var\(--black\)/.t
 ok(/sketchfab\.com\/tamminen/.test(html), 'the landing footer keeps its Tamminen model credit');
 ok(!/\.site-backdrop/.test(css), 'the fixed dark atmosphere layer is removed from the guides skin');
 ok(/\.site-header\s*\{[\s\S]*?height:\s*104px/.test(css) && /\.nav-center\s*\{[\s\S]*?height:\s*64px/.test(css), 'desktop header and glass navigation match landing geometry');
-ok(!/backdrop-filter/.test(css), 'no glassmorphism remains anywhere in the guides skin');
+/* Le verre reste autorisé sur le chrome flottant, qui doit se lire comme la
+ * barre de la landing, et interdit partout où l'on lit. */
+const glassSurfaces = (css.match(/\.[A-Za-z][\w-]*[^{}]*\{[^}]*backdrop-filter[^}]*\}/g) || [])
+  .map((rule) => rule.slice(0, rule.indexOf('{')).trim());
+ok(glassSurfaces.every((sel) => /nav-center|language-picker|kw-lens/.test(sel)),
+  'glassmorphism is confined to the floating navigation, never on a reading surface: ' + glassSurfaces.join(' / '));
+ok(/\.nav-center\s*\{[\s\S]*?backdrop-filter:\s*blur/.test(css), 'the floating navigation keeps the landing glass');
 ok(/\.article-shell\s*\{[\s\S]*?background:\s*var\(--surface\)/.test(css), 'the reading surface is an opaque light card');
 ok(/grid-template-columns:\s*170px minmax\(0, var\(--reading\)\) 150px/.test(articleShellRule) && /gap:\s*30px/.test(articleShellRule), 'the desktop grid preserves the 720px reading column');
 ok(/class="operation-panel"/.test(html) && /class="operation-flow"/.test(html), 'the proof figure uses an operational product scene');
@@ -266,6 +272,13 @@ for (const locale of PUBLISHED_LOCALES) {
   ok(FEATURED.every((id) => hub.includes(`data-id="${id}"`)) && (hub.match(/guide-card--featured/g) || []).length === FEATURED.length, `${label} library features the manifested guides`);
   ok(PATHS.every((path) => hub.includes(path.titles[locale]) && path.steps.every((step) => hub.includes(`data-path-link="${path.id}"`))), `${label} library publishes every learning path`);
   ok((hub.match(/<h1\b/g) || []).length === 1 && /class="hero-facts"/.test(hub), `${label} library hero states a counted fact under a single H1`);
+  /* CLAUDE.md §4 : la sélection passe par la lentille liquide partagée, jamais
+   * par un style de sélection inventé pour cette surface. */
+  ok(/<nav class="nav-center" data-lens-demo/.test(hub)
+    && (hub.match(/data-lens-item/g) || []).length === 4
+    && /<a data-lens-item class="on"[^>]*aria-current="page"/.test(hub)
+    && /src="\/assets\/liquid-lens\.js"/.test(hub),
+    `${label} navigation marks its active item with the shared liquid lens`);
   ok(hub.includes(`>${TOPICS.length}<`) || hub.includes(`<bdi dir="ltr">${TOPICS.length}</bdi>`), `${label} library hero publishes the real number of guides`);
 
   /* La carte et l'article doivent annoncer la MÊME durée : les deux viennent
