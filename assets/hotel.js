@@ -4714,17 +4714,17 @@
           return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <span style="color:var(--warn-ink);">En attente de calcul</span></div>`;
         }
         totalCentsAll += q.totalCents;
-        const roomMad = (q.totalCents / 100).toFixed(2);
+        const roomMad = cuDraftMoney(q.totalCents);
         const nights = q.rows.length;
-        const rates = q.rows.map(row => row.amountCents / 100);
-        const minRate = Math.min(...rates).toFixed(2);
-        const maxRate = Math.max(...rates).toFixed(2);
+        const rates = q.rows.map(row => row.amountCents);
+        const minRate = cuDraftMoney(Math.min(...rates));
+        const maxRate = cuDraftMoney(Math.max(...rates));
         const rateSummary = minRate === maxRate ? `${minRate} MAD/nuit` : `de ${minRate} à ${maxRate} MAD/nuit`;
         const taxLabel = q.taxBasis === 'exclusive' ? 'HT' : 'TTC';
         return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <b>${roomMad} MAD ${taxLabel}</b> (${nights} nuit${nights > 1 ? 's' : ''} · ${rateSummary})</div>`;
       });
       if (allQuoted && selected.length > 0) {
-        const totalMadAll = (totalCentsAll / 100).toFixed(2);
+        const totalMadAll = cuDraftMoney(totalCentsAll);
         const groupTax = Object.values(quoteBreakdown)[0]?.taxBasis === 'exclusive' ? 'HT' : 'TTC';
         lines.push(`<div style="margin-top:4px;font-weight:700;color:var(--ink);border-top:1px dashed var(--n-200);padding-top:4px;">Total commercial groupe : ${totalMadAll} MAD ${groupTax}</div>`);
       }
@@ -4776,10 +4776,10 @@
               : `sans tarif « ${esc(cuBoards[board] || board)} » pour « ${esc(roomTypeOf(r.n).name)} »`;
             return `<div>Ch. ${r.n} : <span style="color:var(--warn-ink);">En attente de tarif — ${what}. Renseignez-le dans Types de chambres, ou réservez cette chambre en prix convenu depuis sa fiche individuelle.</span></div>`;
           }
-          return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <b>${(q.totalCents / 100).toFixed(2)} MAD TTC</b> (${q.nights} nuit${q.nights > 1 ? 's' : ''})</div>`;
+          return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <b>${cuDraftMoney(q.totalCents)} MAD TTC</b> (${q.nights} nuit${q.nights > 1 ? 's' : ''})</div>`;
         });
         if (dq.allOk && selected.length > 0) {
-          lines.push(`<div style="margin-top:4px;font-weight:700;color:var(--ink);border-top:1px dashed var(--n-200);padding-top:4px;">Total groupe (tarifs maison) : ${(dq.totalCents / 100).toFixed(2)} MAD TTC</div>`);
+          lines.push(`<div style="margin-top:4px;font-weight:700;color:var(--ink);border-top:1px dashed var(--n-200);padding-top:4px;">Total groupe (tarifs maison) : ${cuDraftMoney(dq.totalCents)} MAD TTC</div>`);
         }
         quoteSlot.innerHTML = `
           <div class="hx-quote-group-card">
@@ -6282,7 +6282,7 @@
     const occupancyLabel = ['', 'Single · 1 personne', 'Double · 2 personnes', 'Triple · 3 personnes'][q.contract?.occupancy] || (q.contract?.occupancy ? `${q.contract.occupancy} pers.` : '');
     const accountName = q.account?.name || '';
     const boardLabel = cuBoards[q.contract?.board] || q.contract?.board || '';
-    return `<div class="hx-simulation-notice"><strong>Simulation contractuelle informative</strong> · Aucune réservation ni blocage créé à cette étape.${accountName ? `<div>Compte : <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · Échéance ${q.account.paymentDays} j` : ''}</div>` : ''}${occupancyLabel ? `<div>Formule : ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${period})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total formule : </span><b>${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
+    return `<div class="hx-simulation-notice"><strong>Simulation contractuelle informative</strong> · Aucune réservation ni blocage créé à cette étape.${accountName ? `<div>Compte : <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · Échéance ${q.account.paymentDays} j` : ''}</div>` : ''}${occupancyLabel ? `<div>Formule : ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${period})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${cuDraftMoney(r.unitCents)} = <b>${cuDraftMoney(r.amountCents)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total formule : </span><b>${cuDraftMoney(q.totalCents)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
   }
   async function cuWireStayCommercial(form, booking) {
     const box = form.querySelector('[data-hx-commercial-stay]');
@@ -6379,8 +6379,8 @@
         const area = box.querySelector('[data-hx-direct-breakdown]');
         if (area) {
           const when = Number(sp.acceptedAt) > 0 ? new Date(sp.acceptedAt).toLocaleDateString('fr-FR') : '';
-          const rows = (sp.rows || []).map(r => `<div><span>${esc(r.date)} · Logement ${(Number(r.roomCents || 0) / 100).toFixed(2)}${Number(r.mealCents || 0) ? ` + repas ${((Number(r.mealCents || 0) * Number(r.quantity || 1)) / 100).toFixed(2)} (${Number(r.quantity || 1)} pers.)` : ''}</span><span><b>${(Number(r.amountCents || 0) / 100).toFixed(2)} MAD</b></span></div>`).join('');
-          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p class="hx-total-band"><span>Total séjour : </span><b>${(Number(sp.totalCents || 0) / 100).toFixed(2)} MAD TTC</b></p>`
+          const rows = (sp.rows || []).map(r => `<div><span>${esc(r.date)} · Logement ${cuDraftMoney(Number(r.roomCents || 0))}${Number(r.mealCents || 0) ? ` + repas ${cuDraftMoney((Number(r.mealCents || 0) * Number(r.quantity || 1)))} (${Number(r.quantity || 1)} pers.)` : ''}</span><span><b>${cuDraftMoney(Number(r.amountCents || 0))} MAD</b></span></div>`).join('');
+          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p class="hx-total-band"><span>Total séjour : </span><b>${cuDraftMoney(Number(sp.totalCents || 0))} MAD TTC</b></p>`
             + (sp.agreed
               ? `<small>Prix convenu accepté${when ? ' le ' + esc(when) : ''} · motif : ${esc(sp.reason || '—')}${sp.agreedBy ? ` · par ${esc(sp.agreedBy.role || '')} ${esc(sp.agreedBy.id || '')}` : ''} · conservé tant que le séjour ne change pas.</small>`
               : `<small>Tarif accepté${when ? ' le ' + esc(when) : ''} · conservé tant que les dates, la chambre, la formule ou le compte ne changent pas.</small>`);
@@ -6401,7 +6401,7 @@
       if (q.ok) {
         form.__directQuote = { rows: q.rows, totalCents: q.totalCents, nights: q.nights };
         if (area) {
-          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${(r.roomCents / 100).toFixed(2)}${r.mealCents ? ` + repas ${esc(String((r.mealCents * r.quantity / 100).toFixed(2)))} (${r.quantity} pers.)` : ''}</span><span><b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total séjour : </span><b>${(q.totalCents / 100).toFixed(2)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
+          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${cuDraftMoney(r.roomCents)}${r.mealCents ? ` + repas ${esc(cuDraftMoney(r.mealCents * r.quantity))} (${r.quantity} pers.)` : ''}</span><span><b>${cuDraftMoney(r.amountCents)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total séjour : </span><b>${cuDraftMoney(q.totalCents)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
         }
         if (agreedBox) { agreedBox.hidden = true; const cb = agreedBox.querySelector('[data-hx-agreed-confirm]'); if (cb) cb.checked = false; }
         // Explicit reviewed repricing (defect 1): on an edit whose inputs
@@ -6412,7 +6412,7 @@
           rw.hidden = !needReprice;
           if (needReprice) {
             const label = rw.querySelector('[data-hx-reprice-label]');
-            if (label) label.textContent = `Le nouveau total est de ${(q.totalCents / 100).toFixed(2)} MAD TTC — je l’ai vérifié.`;
+            if (label) label.textContent = `Le nouveau total est de ${cuDraftMoney(q.totalCents)} MAD TTC, je l’ai vérifié.`;
           } else {
             const cb = rw.querySelector('[data-hx-reprice-confirm]');
             if (cb) cb.checked = false;
@@ -6552,7 +6552,7 @@
       <p class="hx-commercial-feedback" role="status">${esc(st.error || (st.loading ? 'Chargement du répertoire…' : `${accounts.length} compte(s) · ${contracts.filter(r => !r.archived).length} tarif(s) actif(s) dans cette sélection`))}</p>
       <div class="hx-commercial-grid">${accounts.map(a => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${cuKinds[a.kind]}${a.archived ? ' · ARCHIVÉ' : ''}</span><h3>${esc(a.name)}</h3><p>${esc(a.legalName || a.contact || 'Identité de facturation à compléter')}</p><small>${esc([a.city, a.ice ? 'ICE ' + a.ice : '', 'Échéance ' + a.paymentDays + ' j'].filter(Boolean).join(' · '))}</small></div><div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-account-edit" data-arg="${esc(a.id)}">Modifier <span class="sr-only">${esc(a.name)}</span></button><button class="hx-btn ghost" data-action="hx-account-stays" data-arg="${esc(a.id)}">Voir les séjours <span class="sr-only">${esc(a.name)}</span></button></div></article>`).join('') || '<p>Aucun compte dans cette sélection. Créez une agence, une société ou un particulier.</p>'}</div>
       <div class="hx-h"><span class="t">Grille contractuelle</span><span class="s">Bornes inclusives · MAD · aucun tarif implicite hors période</span></div>
-      <div class="hx-commercial-grid">${contracts.map(r => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(st.accounts.find(a => a.id === r.accountId)?.name || 'Compte indisponible')}${r.archived ? ' · ARCHIVÉ' : ''}</span><h3>${esc(r.name)}</h3><p>${esc(cuTypes().find(t => t.id === r.roomTypeId)?.name || r.roomTypeId)} · ${['', 'Single', 'Double', 'Triple'][r.occupancy]} · ${cuBoards[r.board]}</p><small>${esc(r.from)} → ${esc(r.to)}</small><p class="hx-commercial-price">${(r.amountCents / 100).toFixed(2)} <small>MAD / ${r.unit === 'person' ? 'personne' : 'chambre'} / nuit · ${r.taxBasis === 'inclusive' ? 'TTC' : 'HT'}</small></p></div><button class="hx-btn ghost" data-action="hx-contract-edit" data-arg="${esc(r.id)}">Modifier <span class="sr-only">${esc(r.name)}</span></button></article>`).join('') || '<p class="hx-commercial-empty">Aucun tarif dans cette sélection. Ajoutez une période négociée avec ses dates exactes. Septembre à décembre doit être défini explicitement.</p>'}</div></div>`;
+      <div class="hx-commercial-grid">${contracts.map(r => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(st.accounts.find(a => a.id === r.accountId)?.name || 'Compte indisponible')}${r.archived ? ' · ARCHIVÉ' : ''}</span><h3>${esc(r.name)}</h3><p>${esc(cuTypes().find(t => t.id === r.roomTypeId)?.name || r.roomTypeId)} · ${['', 'Single', 'Double', 'Triple'][r.occupancy]} · ${cuBoards[r.board]}</p><small>${esc(r.from)} → ${esc(r.to)}</small><p class="hx-commercial-price">${cuDraftMoney(r.amountCents)} <small>MAD / ${r.unit === 'person' ? 'personne' : 'chambre'} / nuit · ${r.taxBasis === 'inclusive' ? 'TTC' : 'HT'}</small></p></div><button class="hx-btn ghost" data-action="hx-contract-edit" data-arg="${esc(r.id)}">Modifier <span class="sr-only">${esc(r.name)}</span></button></article>`).join('') || '<p class="hx-commercial-empty">Aucun tarif dans cette sélection. Ajoutez une période négociée avec ses dates exactes. Septembre à décembre doit être défini explicitement.</p>'}</div></div>`;
   }
   const cuProductionByScope = new Map();
   function cuProductionState() {

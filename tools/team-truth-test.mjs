@@ -77,8 +77,11 @@ ok('un poste inconnu ne touche pas au département', () => {
   assert.equal(deptForFunction('Propriétaire', CATALOG.restaurant.departments), '');
 });
 ok('le formulaire est branché : nouveau membre cohérent, et changement de poste écouté', () => {
-  assert.ok(/department: deptForFunction\(cat\.functions\[0\], cat\.departments\)/.test(SRC), 'default');
-  assert.ok(/<select name="function" required data-kt-function data-depts=/.test(SRC), 'select tagged');
+  /* 2026-10-12 · a new member no longer starts as the catalogue's first post:
+     role and department stay empty until someone picks them, and picking a
+     role still fills in its department (team-member-editor-test). */
+  assert.ok(/function: '',\n\s+department: '',/.test(SRC), 'nothing chosen on the new member\'s behalf');
+  assert.ok(/<select class="kt-ed-in" name="function" required data-kt-function data-depts=/.test(SRC), 'select tagged');
   assert.ok(/e\.target\.matches\('\[data-kt-function\]'\)[\s\S]{0,400}deptForFunction\(e\.target\.value, depts\)[\s\S]{0,600}sel\.dispatchEvent\(new Event\('change'/.test(SRC), 'listener notifies the custom select');
 });
 

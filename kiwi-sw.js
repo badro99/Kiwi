@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=61',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=3',
+  '/assets/liquid-lens.js?v=4',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
   '/assets/account.js?v=29',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=297',
+  '/assets/team.js?v=298',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=109',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

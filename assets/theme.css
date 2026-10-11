@@ -307,8 +307,14 @@ html[dir="rtl"] .mono { direction: ltr; unicode-bidi: embed; }
 html[dir="rtl"] .hero-amount, html[dir="rtl"] .fs-hero-amount { direction: ltr; unicode-bidi: isolate; }
 html[dir="rtl"] .hero-breakdown .v { direction: ltr; unicode-bidi: isolate; }
 html[dir="rtl"] .breadcrumb { flex-direction: row-reverse; }
-/* Flip directional arrow SVGs in CTAs */
-html[dir="rtl"] .btn svg, html[dir="rtl"] .kb svg, html[dir="rtl"] .simple-btn svg, html[dir="rtl"] .link-atlas svg { transform: scaleX(-1); }
+/* Flip directional arrow SVGs in CTAs, and only those. The rule used to
+ * mirror every icon in a button, so under Arabic « Ajouter le membre »'s check
+ * read as a chevron, and trash, copy, edit and eye icons all turned around.
+ * Named icons (Material through the lucide shim) flip when they point
+ * somewhere; an unnamed inline SVG keeps the old flip, since those were the
+ * hand-drawn arrows this rule was written for. */
+html[dir="rtl"] :is(.btn, .kb, .simple-btn, .link-atlas) svg:not([data-lucide]):not([data-material-symbol]),
+html[dir="rtl"] :is(.btn, .kb, .simple-btn, .link-atlas) svg:is([data-lucide*="arrow"], [data-lucide*="chevron"], [data-material-symbol*="arrow"], [data-material-symbol*="chevron"]) { transform: scaleX(-1); }
 html[dir="rtl"] .chev, html[dir="rtl"] .help-card .chev { transform: scaleX(-1); }
 
 /* Line-height bump for Arabic */

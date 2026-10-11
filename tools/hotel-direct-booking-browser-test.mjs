@@ -385,8 +385,16 @@ async function submitStay(page, timeout = 25000) {
   return { outcome, ref };
 }
 
+/* The page writes money in its locale since 2026-10-12 (« 2 240,00 MAD »);
+ * the checks below compare the plain « 2240.00 » form of the same amount. */
+function plainMoney(text) {
+  return String(text || '')
+    .replace(/(\d)[\s\u202f\u00a0](?=\d{3}(?:\D|$))/g, '$1')
+    .replace(/(\d),(\d{2})(?!\d)/g, '$1.$2');
+}
+
 async function directBreakdown(page) {
-  return page.$eval('[data-hx-direct-breakdown]', (el) => el.textContent || '').catch(() => '');
+  return plainMoney(await page.$eval('[data-hx-direct-breakdown]', (el) => el.textContent || '').catch(() => ''));
 }
 
 async function simulateAndAccept(page) {
@@ -798,7 +806,7 @@ await withCtx({}, async (ctx) => {
   await fillT(0, 'Salma Idrissi', 'room:101');
   await fillT(1, 'Mehdi Idrissi', 'room:102');
   const card = await page.$eval('[data-hx-group-quote-slot]', (el) => el.textContent || '');
-  ok(/4720\.00/.test(card), 'group direct total displayed (2 × 2360)');
+  ok(/4720\.00/.test(plainMoney(card)), 'group direct total displayed (2 × 2360)');
   const dossier = await page.evaluate(() => document.querySelector('[data-hx-group-review] code')?.textContent.trim() || '');
   ok(dossier.length > 0, 'dossier reference shown');
   await page.click(`${form}[data-hx-group-submit]`);
@@ -944,7 +952,7 @@ await withCtx({}, async (ctx) => {
   const wrapVisible = await page.$eval('[data-hx-reprice-wrap]', (el) => !el.hidden).catch(() => false);
   ok(wrapVisible, 'reprice confirmation appears with the new total');
   const wrapText = await page.$eval('[data-hx-reprice-label]', (el) => el.textContent || '');
-  ok(/2400\.00/.test(wrapText), 'reprice total reflects the moved catalogue (900+300)×2');
+  ok(/2400\.00/.test(plainMoney(wrapText)), 'reprice total reflects the moved catalogue (900+300)×2');
   const blocked = await submitStay(page);
   ok(String(blocked.outcome).startsWith('settled:'), 'unconfirmed reprice is blocked');
   ok(/revalorisation|tarif a changé/.test(await readError(page)), 'block message demands review');
@@ -971,7 +979,7 @@ await withCtx({}, async (ctx) => {
   await page.click('[data-hx-commercial-stay] [data-hx-quote]');
   await page.waitForSelector('[data-hx-commercial-stay] [data-hx-accept-quote]', { timeout: 15000 });
   const card = await page.$eval('[data-hx-quote-result]', (el) => el.textContent || '');
-  ok(/1700\.00/.test(card), 'contract total displayed before acceptance (1700)');
+  ok(/1700\.00/.test(plainMoney(card)), 'contract total displayed before acceptance (1700)');
   await page.click('[data-hx-commercial-stay] [data-hx-accept-quote]');
   const done2 = await submitStay(page);
   ok(done2.outcome === 'closed', 'contract transition saves');
@@ -1035,7 +1043,7 @@ await withCtx({}, async (ctx) => {
   step('reopen: amount, reason and authorizer loaded, confirm unset');
   await openStayForEdit(ctx, b.id);
   const agreedShown = await page.$eval('[data-hx-direct-breakdown]', (el) => el.textContent || '');
-  ok(/950\.00/.test(agreedShown) && /geste commercial/.test(agreedShown), 'stored agreement displayed with amount and reason');
+  ok(/950\.00/.test(plainMoney(agreedShown)) && /geste commercial/.test(agreedShown), 'stored agreement displayed with amount and reason');
   const confirmChecked = await page.$eval('[data-hx-commercial-stay] [data-hx-agreed-confirm]', (el) => el.checked).catch(() => 'absent');
   ok(confirmChecked === false || confirmChecked === 'absent', 'no pre-checked acceptance that would re-stamp');
   step('phone-only edit preserves authorization verbatim');
@@ -1161,7 +1169,7 @@ await withCtx({}, async (ctx) => {
   await setField(page, '[data-hx-commercial-stay] select[name="board"]', 'hb_dinner');
   await page.click('[data-hx-commercial-stay] [data-hx-quote]');
   await page.waitForSelector('[data-hx-commercial-stay] [data-hx-accept-quote]', { timeout: 15000 });
-  ok(/850\.00/.test(await page.$eval('[data-hx-commercial-stay] [data-hx-quote-result]', (el) => el.textContent || '')), 'contract simulation prices the stay');
+  ok(/850\.00/.test(plainMoney(await page.$eval('[data-hx-commercial-stay] [data-hx-quote-result]', (el) => el.textContent || ''))), 'contract simulation prices the stay');
   await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', '');
   await setField(page, '[data-hx-commercial-stay] select[name="board"]', 'bb');
   v = await vis();
@@ -1195,7 +1203,7 @@ await withCtx({}, async (ctx) => {
   await setField(page, '[data-hx-stay-form] input[name="checkOut"]', ymd(10));
   ok(await wrapDisp() !== 'none', 'reprice row becomes visible on moved dates');
   const label = await page.$eval('[data-hx-commercial-stay] [data-hx-reprice-label]', (el) => el.textContent || '');
-  ok(/3150\.00/.test(label), 'reprice confirmation names the new total');
+  ok(/3150\.00/.test(plainMoney(label)), 'reprice confirmation names the new total');
   const unconfirmed = await submitStay(page);
   ok(String(unconfirmed.outcome).startsWith('settled:') && /vérifiez le nouveau total/.test(String(unconfirmed.outcome)), 'unchecked reprice blocks the save with guidance');
   await page.click('[data-hx-commercial-stay] [data-hx-reprice-confirm]');
@@ -1351,7 +1359,7 @@ await withCtx({}, async (ctx) => {
     nameKept: (document.querySelector('[data-hx-stay-form] input[name="name"]') || {}).value,
   }));
   ok(after.backdrops === 1 && after.nameKept === nameBefore, 'type editor closes back onto the same draft');
-  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 15000 });
+  await page.waitForFunction(() => /2[\s\u202f\u00a0]?240[.,]00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 15000 });
   await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
   ok(true, 'server acknowledgment reprices in place and re-enables the same draft');
   const done = await submitStay(page);
@@ -1392,7 +1400,7 @@ await withCtx({}, async (ctx) => {
   ok(!ctx.log.some((x) => x.type === 'stay-post' && x.via === 'browser'), 'failed tariff cannot leak into a booking request');
   rejectRooms = false;
   await page.click('[data-action="hx-tariff-retry"]');
-  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 20000 });
+  await page.waitForFunction(() => /2[\s\u202f\u00a0]?240[.,]00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 20000 });
   await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
   ok(true, 'manual retry receives acknowledgment and re-enables the draft');
   page.off('request', failRoomsPost);
@@ -1432,7 +1440,7 @@ await withCtx({}, async (ctx) => {
   ok(!!(await page.$('[data-action="hx-tariff-retry"]')), 'offline state keeps an emergency retry button available');
   disconnectRooms = false;
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 25000 });
+  await page.waitForFunction(() => /2[\s\u202f\u00a0]?240[.,]00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 25000 });
   await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
   ok(true, 'browser online event automatically synchronizes and unlocks the draft');
   page.off('request', disconnectRoomsPost);

@@ -434,7 +434,9 @@ ok(teamSource.includes('function fmtHours(value)')
   && teamSource.includes('input.value = fmtHours(input.dataset.hoursValue)')
   && !teamSource.includes("total.toFixed(2).replace('.', ',')"),
   'Paie affiche les heures pointées en heures et minutes, sans décimales ambiguës comme 0,61 h');
-ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
+ok(/edInput\('email', 'email', m\.email, T\.ph\.email, 'required /.test(teamSource)
+  && /\['firstName', 'lastName', 'email', 'function'\]\.forEach/.test(teamSource),
+  "l'email est obligatoire dans la fiche employé");
 ok(teamSource.includes('`scoped:${String(venue.slug)}`')
   && teamSource.includes('slug: () => teamSlug()'),
   "Équipe synchronise aussi le bon magasin depuis un dashboard ouvert en God Mode");

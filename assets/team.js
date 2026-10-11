@@ -43,6 +43,8 @@
       filterAllContract: 'Tous les contrats',
       filterAllLang: 'Toutes les langues',
       noMatch: 'Aucun membre ne correspond aux filtres.',
+      noMembersYet: "Aucun membre pour l'instant",
+      noMembersHint: "Ajoutez chaque personne une fois : son code ouvre la caisse et l'app employé.",
       // Stats
       statTotal: 'TOTAL MEMBRES',
       statTotalSub: (n, name) => `${n} actifs · ${name}`,
@@ -73,9 +75,16 @@
       liveOffDuty: 'Hors service',
       // Profile modal
       viewProfile: 'Voir le profil',
+      pvTitle: 'Fiche membre',
+      pvNotSet: 'Non renseigné',
+      pvShow: 'Afficher',
+      pvHide: 'Masquer',
+      pvNoCode: 'Aucun code enregistré',
+      pvCodeHint: "Ouvre la caisse et l'app employé. Ne le montrez qu'à la personne concernée.",
+      pvIdEmergency: "Identité et contact d'urgence",
       editBtn:   'Modifier',
       deleteBtn: 'Supprimer',
-      profileSub: (role, dept) => `${role} · ${dept}`,
+      profileSub: (role, dept) => [role, dept].filter(Boolean).join(' · '),
       secIdentity:    'Identité',
       secContact:     'Contact',
       secAccess:      'Compte employé Kiwi',
@@ -111,7 +120,6 @@
       editTitle: 'Modifier le membre',
       photoLabel:'Photo',
       uploadPhoto:'Téléverser une photo',
-      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: 'Rue 12, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '06… / +33…', notes: 'Allergie crustacés · disponibilité étendue le week-end' },
       vRequired: 'Prénom, nom, email et fonction requis',
       vInvalidEmail: 'Email invalide',
       vDuplicateEmail: 'Cet email est déjà utilisé par un autre membre',
@@ -134,6 +142,21 @@
       payStatDueProrata: (a, b, d) => `base au prorata de ${d} j + heures, ${a} au ${b}`,
       payStatNone: 'aucun salaire ni taux horaire renseigné',
       codeKeep: 'Inchangé · 4 chiffres pour le modifier',
+      edReq: 'obligatoire',
+      edEmailHint: "Son identifiant dans l'app employé",
+      edChooseFn: 'Choisir un poste',
+      edChooseDept: 'Choisir un département',
+      edRoleUnset: 'Poste à choisir',
+      edSalary: 'Salaire mensuel',
+      edHourly: 'Taux horaire',
+      edPerMonth: 'MAD / mois',
+      edPerHour: 'MAD / heure',
+      edCompHint: "Laissez vide ce qui ne s'applique pas : la masse salariale n'additionne que ce qui est renseigné.",
+      edCodeT: 'Code personnel',
+      edCodeHint: "Ouvre la caisse et l'app employé. Quatre chiffres, propres à cette personne.",
+      edErrRequired: 'À renseigner',
+      edCheck: 'Vérifiez les champs signalés',
+      ph: { email: 'nom@exemple.ma', phone: '06 00 00 00 00', address: 'Rue, quartier, ville', cin: 'ex. AB123456', emergencyName: 'Nom et lien, ex. sœur', notes: 'Allergies, disponibilités, remarques…' },
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
       plNone: '·', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
       plApply: 'Valider en heures réalisées', plClear: 'Effacer cette période',
@@ -214,6 +237,8 @@
       filterAllContract: 'All contracts',
       filterAllLang: 'All languages',
       noMatch: 'No member matches the filters.',
+      noMembersYet: 'No team members yet',
+      noMembersHint: 'Add each person once: their code opens the till and the employee app.',
       statTotal: 'TOTAL MEMBERS',
       statTotalSub: (n, name) => `${n} active · ${name}`,
       statPresent: 'ON SHIFT TODAY',
@@ -241,9 +266,16 @@
       liveOnDuty: 'On duty',
       liveOffDuty: 'Off duty',
       viewProfile: 'View profile',
+      pvTitle: 'Member profile',
+      pvNotSet: 'Not set',
+      pvShow: 'Show',
+      pvHide: 'Hide',
+      pvNoCode: 'No code on file',
+      pvCodeHint: 'Opens the till and the employee app. Only show it to the person it belongs to.',
+      pvIdEmergency: 'Identity and emergency contact',
       editBtn:   'Edit',
       deleteBtn: 'Remove',
-      profileSub: (role, dept) => `${role} · ${dept}`,
+      profileSub: (role, dept) => [role, dept].filter(Boolean).join(' · '),
       secIdentity:    'Identity',
       secContact:     'Contact',
       secAccess:      'Kiwi employee account',
@@ -279,7 +311,6 @@
       editTitle: 'Edit member',
       photoLabel:'Photo',
       uploadPhoto:'Upload a photo',
-      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: '12 Rue, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '06… / +33…', notes: 'Shellfish allergy · extended weekend availability' },
       vRequired: 'First name, last name, email and function are required',
       vInvalidEmail: 'Invalid email',
       vDuplicateEmail: 'Another member already uses this email',
@@ -302,6 +333,21 @@
       payStatDueProrata: (a, b, d) => `base pro rata for ${d} days + hours, ${a} to ${b}`,
       payStatNone: 'no salary or hourly rate entered',
       codeKeep: 'Unchanged · enter 4 digits to change it',
+      edReq: 'required',
+      edEmailHint: 'Their sign-in for the employee app',
+      edChooseFn: 'Choose a role',
+      edChooseDept: 'Choose a department',
+      edRoleUnset: 'No role yet',
+      edSalary: 'Monthly salary',
+      edHourly: 'Hourly rate',
+      edPerMonth: 'MAD / month',
+      edPerHour: 'MAD / hour',
+      edCompHint: 'Leave blank what does not apply: payroll only adds up what is filled in.',
+      edCodeT: 'Personal code',
+      edCodeHint: 'Opens the till and the employee app. Four digits, unique to this person.',
+      edErrRequired: 'Required',
+      edCheck: 'Check the highlighted fields',
+      ph: { email: 'name@example.com', phone: '06 00 00 00 00', address: 'Street, area, city', cin: 'e.g. AB123456', emergencyName: 'Name and relation, e.g. sister', notes: 'Allergies, availability, remarks…' },
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
       plNone: '·', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
       plApply: 'Confirm as hours worked', plClear: 'Clear this period',
@@ -381,6 +427,8 @@
       filterAllContract: 'كل العقود',
       filterAllLang: 'كل اللغات',
       noMatch: 'لا يوجد عضو يطابق الفلاتر.',
+      noMembersYet: 'لا يوجد أعضاء بعد',
+      noMembersHint: 'أضف كل شخص مرة واحدة: رمزه يفتح الصندوق وتطبيق الموظف.',
       statTotal: 'إجمالي الأعضاء',
       statTotalSub: (n, name) => `${n} نشط · ${name}`,
       statPresent: 'في الخدمة اليوم',
@@ -408,9 +456,16 @@
       liveOnDuty: 'في الخدمة',
       liveOffDuty: 'خارج الخدمة',
       viewProfile: 'عرض الملف',
+      pvTitle: 'ملف العضو',
+      pvNotSet: 'غير محدد',
+      pvShow: 'إظهار',
+      pvHide: 'إخفاء',
+      pvNoCode: 'لا يوجد رمز مسجل',
+      pvCodeHint: 'يفتح الصندوق وتطبيق الموظف. لا تُظهره إلا لصاحبه.',
+      pvIdEmergency: 'الهوية وجهة الاتصال في الطوارئ',
       editBtn:   'تعديل',
       deleteBtn: 'حذف',
-      profileSub: (role, dept) => `${role} · ${dept}`,
+      profileSub: (role, dept) => [role, dept].filter(Boolean).join(' · '),
       secIdentity:    'الهوية',
       secContact:     'الاتصال',
       secAccess:      'حساب موظف Kiwi',
@@ -446,7 +501,6 @@
       editTitle: 'تعديل العضو',
       photoLabel:'الصورة',
       uploadPhoto:'تحميل صورة',
-      placeholder: { firstName: 'سارة', lastName: 'بلقاضي', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: 'شارع 12، المعاريف، الدار البيضاء', cin: 'BK 384721', emergencyName: 'كريم بلقاضي', emergencyPhone: '06… / +33…', notes: 'حساسية من القشريات · توفر موسع نهاية الأسبوع' },
       vRequired: 'الاسم والنسب والبريد الإلكتروني والوظيفة مطلوبة',
       vInvalidEmail: 'بريد إلكتروني غير صالح',
       vDuplicateEmail: 'هذا البريد مستعمل من طرف موظف آخر',
@@ -469,6 +523,21 @@
       payStatDueProrata: (a, b, d) => `الأساسي بالتناسب لـ ${d} يوماً + الساعات، من ${a} إلى ${b}`,
       payStatNone: 'لم يُسجَّل أي راتب أو أجر بالساعة',
       codeKeep: 'دون تغيير · أدخل 4 أرقام لتغييره',
+      edReq: 'إلزامي',
+      edEmailHint: 'معرّف الدخول إلى تطبيق الموظف',
+      edChooseFn: 'اختر منصبًا',
+      edChooseDept: 'اختر قسمًا',
+      edRoleUnset: 'لم يُحدَّد المنصب',
+      edSalary: 'الراتب الشهري',
+      edHourly: 'الأجر بالساعة',
+      edPerMonth: 'درهم / شهر',
+      edPerHour: 'درهم / ساعة',
+      edCompHint: 'اترك الحقل فارغًا إن لم ينطبق: كتلة الأجور لا تجمع إلا ما تم إدخاله.',
+      edCodeT: 'الرمز الشخصي',
+      edCodeHint: 'يفتح الصندوق وتطبيق الموظف. أربعة أرقام خاصة بهذا الشخص.',
+      edErrRequired: 'حقل مطلوب',
+      edCheck: 'تحقّق من الحقول المشار إليها',
+      ph: { email: 'name@example.com', phone: '06 00 00 00 00', address: 'الشارع، الحي، المدينة', cin: 'مثال: AB123456', emergencyName: 'الاسم وصلة القرابة، مثال: أخت', notes: 'الحساسية، التوفر، ملاحظات…' },
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
       plNone: '·', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
       plApply: 'اعتمادها كساعات منجزة', plClear: 'مسح هذه الفترة',
@@ -1603,7 +1672,7 @@
     if (!target) return;
     const visible = members.filter(memberMatchesFilters);
     target.innerHTML = visible.length === 0
-      ? `<div class="eq-section" style="text-align:center; color:var(--n-500); padding:36px 14px;">${esc(T.noMatch)}</div>`
+      ? `<div class="eq-section" style="text-align:center; color:var(--n-500); padding:36px 14px;">${esc(members.length ? T.noMatch : T.noMembersYet)}</div>`
       : renderMembersTable(T, visible, venueType);
     /* Also keep the badge count fresh */
     const badge = root.querySelector('[data-kt-count-badge]');
@@ -1687,7 +1756,7 @@
     const deptList = ['<button class="eq-pill' + (!activeFilters.dept ? ' on' : '') + '" type="button" data-action="kt-filter-dept" data-arg="">' + esc(T.filterAllDept) + '</button>',
       ...cat.departments.map(d => `<button class="eq-pill${activeFilters.dept === d ? ' on' : ''}" type="button" data-action="kt-filter-dept" data-arg="${esc(d)}">${esc(d)}</button>`)].join('');
     const ctList = ['<button class="eq-pill' + (!activeFilters.contract ? ' on' : '') + '" type="button" data-action="kt-filter-contract" data-arg="">' + esc(T.filterAllContract) + '</button>',
-      ...CONTRACT_TYPES.map(c => `<button class="eq-pill${activeFilters.contract === c ? ' on' : ''}" type="button" data-action="kt-filter-contract" data-arg="${esc(c)}">${esc(c)}</button>`)].join('');
+      ...CONTRACT_TYPES.map(c => `<button class="eq-pill${activeFilters.contract === c ? ' on' : ''}" type="button" data-action="kt-filter-contract" data-arg="${esc(c)}">${esc(contractLabel(T, c))}</button>`)].join('');
 
     const visible = members.filter(memberMatchesFilters);
 
@@ -1716,8 +1785,9 @@
                 <div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;">
                   <svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
                 </div>
-                <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(T.noMatch)}</div>
-                <button class="kb atlas" type="button" data-action="nav-equipe" style="margin-top:10px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+                <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(members.length ? T.noMatch : T.noMembersYet)}</div>
+                ${members.length ? '' : `<div style="max-width:44ch;line-height:1.45;">${esc(T.noMembersHint)}</div>`}
+                <button class="kb atlas" type="button" data-action="kt-add-member" style="margin-top:12px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
               </div>`
             : renderMembersTable(T, visible, venueType)}
         </div>
@@ -1734,7 +1804,7 @@
       const contractCls = contractTone === 'ok' ? 'kt-tag kt-tag-ok'
         : contractTone === 'pend' ? 'kt-tag kt-tag-pend'
         : 'kt-tag kt-tag-neutral';
-      const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
+      const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(langLabel(T, l))}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
       const status = memberDutyStatus(m, hours, todayKey);
       const liveText = status === 'on-pause' ? T.livePaused
         : status === 'on-duty' ? T.liveOnDuty : T.liveOffDuty;
@@ -1749,14 +1819,14 @@
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
                 <div class="eq-member-role">${m.email ? esc(m.email) + ' · ' : ''}<span style="color:${liveColor};font-weight:600;">${esc(liveText)}</span></div>
                 <div class="eq-member-phone-role">${esc(m.function)}</div>
-                <div class="eq-member-phone-meta"><span class="eq-venue-badge">${esc(m.department)}</span><span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
+                <div class="eq-member-phone-meta">${m.department ? `<span class="eq-venue-badge">${esc(m.department)}</span>` : ''}<span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
               </div>
             </div>
             <button class="eq-member-open" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}: ${esc(memberFullName(m))}"></button>
           </td>
           <td><div class="kt-cell-strong">${esc(m.function)}</div></td>
-          <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
-          <td><span class="${contractCls}">${esc(m.contract || '·')}</span></td>
+          <td>${m.department ? `<span class="eq-venue-badge">${esc(m.department)}</span>` : '<span class="eq-cell-empty">·</span>'}</td>
+          <td><span class="${contractCls}">${esc(m.contract ? contractLabel(T, m.contract) : '·')}</span></td>
           <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
           <td>${(+m.baseSalary || 0) > 0 || (+m.hourlyRate || 0) > 0
             ? `<div class="eq-salary-v">${(+m.baseSalary || 0) > 0 ? fmtMad(m.baseSalary) : '·'}</div><div class="eq-salary-sub">${(+m.hourlyRate || 0) > 0 ? (window.KiwiNumber?.format((+m.hourlyRate), {}) ?? (+m.hourlyRate).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD/h' : '·'}</div>`
@@ -2485,6 +2555,173 @@
   }
 
   /* ═══════════════ ADD / EDIT MEMBER MODAL (UNCHANGED) ═══════════════ */
+  /* ═══════════════ MEMBER EDITOR (2026-10-12) ═══════════════
+   * The form behind « Ajouter un membre » / « Modifier ». It was one long
+   * column of grey fields whose placeholders read like a filled-in record
+   * (« Sara », « Belkadi », « BK 384721 », « Allergie crustacés… »), with a
+   * new member pre-set as « Chef de cuisine · Cuisine » speaking French and
+   * Arabic, nobody having said so. Language and contract names showed in
+   * French under EN and AR, and a missing field only raised a toast.
+   * Now: the recipe sheet's layout (sections on the left; who, and the code
+   * that opens the till, on the right), placeholders that are formats and not
+   * people, nothing chosen on anyone's behalf, a contract picker on the
+   * liquid lens, and errors written under the field they concern. */
+  const LANG_KEY = { 'Français': 'langFr', 'Arabe': 'langAr', 'Anglais': 'langEn', 'Espagnol': 'langEs', 'Tamazight': 'langTz', 'Darija': 'langDr' };
+  const CONTRACT_KEY = { CDI: 'ctCdi', CDD: 'ctCdd', Stage: 'ctStage', Freelance: 'ctFreelance', 'Intérim': 'ctInterim' };
+  const langLabel = (T, l) => (LANG_KEY[l] && T[LANG_KEY[l]]) || l;
+  const contractLabel = (T, c) => (CONTRACT_KEY[c] && T[CONTRACT_KEY[c]]) || c;
+  const rolePreview = (T, fn, dept) => [fn, dept].filter(Boolean).join(' · ') || T.edRoleUnset;
+  function edInput(type, name, val, ph, extra) {
+    return `<input class="kt-ed-in" type="${type}" name="${name}" value="${esc(val == null ? '' : val)}"${ph ? ` placeholder="${esc(ph)}"` : ''} ${extra || ''} />`;
+  }
+  function edField(T, name, label, control, o) {
+    o = o || {};
+    return `<label class="kt-ed-f${o.wide ? ' kt-ed-wide' : ''}" data-f="${name}">
+      <span class="kt-ed-l">${esc(label)}${o.req ? `<span class="kt-ed-tag">${esc(T.edReq)}</span>` : ''}</span>
+      ${control}
+      ${o.hint ? `<span class="kt-ed-hint">${esc(o.hint)}</span>` : ''}
+      <span class="kt-ed-err" data-err-for="${name}" hidden></span>
+    </label>`;
+  }
+  /* Writes (or clears, msg = '') the error under one field. */
+  function edError(root, name, msg) {
+    const input = root.querySelector(`[name="${name}"]`);
+    const err = root.querySelector(`[data-err-for="${name}"]`);
+    if (input) {
+      if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+      const wrap = input.closest('.kiwi-select');
+      if (wrap) wrap.classList.toggle('is-invalid', !!msg);
+    }
+    if (err) { err.textContent = msg || ''; err.hidden = !msg; }
+  }
+  function edPreview(root) {
+    const T = t();
+    const form = root.querySelector('[data-kt-form]'); if (!form) return;
+    const v = (n) => { const el = form.querySelector(`[name="${n}"]`); return el ? String(el.value || '').trim() : ''; };
+    /* initials() answers « ? » for a blank name: the person icon says it better. */
+    const ini = (v('firstName') || v('lastName')) ? initials(v('firstName'), v('lastName')) : '';
+    const av = root.querySelector('[data-kt-avdisp]');
+    if (av) {
+      const s = av.querySelector('[data-kt-av-ini]');
+      if (s) s.textContent = ini;
+      av.classList.toggle('has-ini', !!ini);
+    }
+    const n = root.querySelector('[data-kt-name-prev]');
+    if (n) n.textContent = [v('firstName'), v('lastName')].filter(Boolean).join(' ') || T.addTitle;
+    const r = root.querySelector('[data-kt-role-prev]');
+    if (r) r.textContent = rolePreview(T, v('function'), v('department'));
+  }
+
+  /* Read-only member sheet. Shares the editor's opaque sheet (.kt-ed-modal)
+     and its card, field and button vocabulary. */
+  const PROFILE_CSS = `
+    .kt-pv { display: grid; gap: 14px; color: var(--ink); }
+    .kt-pv-head { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; align-items: center; padding: 18px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--kt-card); }
+    .kt-pv-av { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 18px; color: var(--paper); font: 600 22px var(--mono); }
+    .kt-pv-id { min-width: 0; }
+    .kt-pv-name { font: 600 19px var(--sans); letter-spacing: -0.015em; color: var(--ink); overflow-wrap: anywhere; }
+    .kt-pv-role { margin-top: 2px; font-size: 13px; color: var(--n-500); }
+    .kt-pv-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .kt-pv-tags:empty { display: none; }
+    .kt-pv-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 999px; background: var(--kt-field); font: 500 12px var(--sans); color: var(--n-700); }
+    .kt-pv-tag.is-ct { color: var(--atlas); border-color: color-mix(in srgb, var(--atlas) 30%, transparent); background: color-mix(in srgb, var(--atlas) 8%, var(--kt-field)); font-weight: 600; }
+    .kt-pv-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+    .kt-pv-sec { min-width: 0; padding: 16px 18px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--kt-card); }
+    .kt-pv-sec.is-wide { grid-column: 1 / -1; }
+    .kt-pv-sec > h4 { margin: 0 0 12px; font: 600 14px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+    .kt-pv-sec dl { display: grid; gap: 12px; margin: 0; }
+    .kt-pv-sec dl.kt-pv-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+    .kt-pv-sec dl > div { display: grid; gap: 3px; min-width: 0; }
+    .kt-pv-sec dt { font-size: 11.5px; font-weight: 600; color: var(--n-500); }
+    .kt-pv-sec dd { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
+    .kt-pv-none { color: var(--n-400, var(--n-500)); }
+    .kt-pv-num { font-variant-numeric: tabular-nums; }
+    .kt-pv-num i { font-style: normal; font-size: 12px; color: var(--n-500); }
+    .kt-pv-code-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .kt-pv-code-row b { font: 600 24px var(--mono); letter-spacing: 0.32em; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .kt-pv-code-row .kt-ed-btn { flex: none; min-width: 112px; }
+    .kt-pv-code-row .kt-ed-btn[aria-pressed="true"] { border-color: var(--atlas); color: var(--atlas); }
+    .kt-pv-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--n-500); }
+    .kt-pv-notes { margin: 0; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 640px) {
+      .kt-pv-grid, .kt-pv-sec dl.kt-pv-cols { grid-template-columns: 1fr; }
+      .kt-pv-head { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 14px; }
+      .kt-pv-av { width: 52px; height: 52px; border-radius: 15px; font-size: 18px; }
+      .kt-pv-sec { padding: 14px; }
+    }
+  `;
+  const EDITOR_CSS = `
+    .kiwi-backdrop.kt-ed-modal .kiwi-modal.kiwi-modal { --kt-bg: var(--paper); --kt-card: color-mix(in srgb, var(--paper) 55%, #fff); --kt-field: var(--paper); background: var(--kt-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 1px solid var(--n-200); }
+    html[data-theme="dark"] .kiwi-backdrop.kt-ed-modal .kiwi-modal.kiwi-modal,
+    body[data-vexel-mode="dark"] .kiwi-backdrop.kt-ed-modal .kiwi-modal.kiwi-modal { --kt-bg: #0F1512; --kt-card: #151C18; --kt-field: #0B100E; }
+    .kiwi-backdrop.kt-ed-modal .kiwi-modal-foot.kiwi-modal-foot { background: var(--kt-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-top: 1px solid var(--n-200); }
+    .kt-ed { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 20px; align-items: start; color: var(--ink); }
+    .kt-ed-main { display: grid; gap: 14px; min-width: 0; }
+    .kt-ed-sec { min-width: 0; padding: 16px 18px 4px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--kt-card); }
+    .kt-ed-sec > h4 { margin: 0 0 12px; font: 600 14.5px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+    .kt-ed-sec > p { max-width: 58ch; margin: -6px 0 12px; font-size: 12px; line-height: 1.45; color: var(--n-500); }
+    .kt-ed-sec > .kt-ed-f, .kt-ed-sec > .kt-ed-langs { margin-bottom: 14px; }
+    .kt-ed-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+    .kt-ed-wide { grid-column: 1 / -1; }
+    /* .kt-ed scope: MODAL_CSS sets « [data-kt-form] label { display: block } », which ran the hint and the error into one line. */
+    .kt-ed .kt-ed-f { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; align-content: start; min-width: 0; margin: 0 0 12px; }
+    .kt-ed-l { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--n-600); }
+    .kt-ed-tag { font-size: 11px; font-weight: 500; color: var(--n-400, var(--n-500)); }
+    .kt-ed-in { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--kt-field); color: var(--ink); font: 500 13.5px var(--sans); transition: border-color 140ms, box-shadow 140ms; }
+    .kt-ed-in::placeholder { color: var(--n-400, var(--n-500)); font-weight: 400; }
+    textarea.kt-ed-in { height: auto; min-height: 84px; padding: 10px 12px; line-height: 1.5; resize: vertical; }
+    .kt-ed-in:focus { outline: 0; border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent); }
+    .kiwi-backdrop.kt-ed-modal .kt-ed .kiwi-select.is-invalid .kiwi-select-trigger,
+    .kt-ed-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #cb5238) 14%, transparent); }
+    .kt-ed-hint { font-size: 11.5px; line-height: 1.4; color: var(--n-500); }
+    .kt-ed-err { font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--danger, #cb5238); }
+    .kt-ed-err[hidden], .kt-ed [data-kt-end-wrap][hidden] { display: none; }
+    .kt-ed-suffix { position: relative; display: block; }
+    .kt-ed-suffix .kt-ed-in { padding-inline-end: 92px; font-variant-numeric: tabular-nums; }
+    .kt-ed-suffix i { position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%); font: 500 12px var(--sans); font-style: normal; color: var(--n-500); pointer-events: none; }
+    .kiwi-backdrop.kt-ed-modal .kt-ed .kiwi-select-trigger { min-height: 40px; padding: 0 10px 0 12px; padding-inline: 12px 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--kt-field); box-shadow: none; font: 500 13.5px var(--sans); }
+    .kt-ed-seg { position: relative; display: flex; gap: 2px; width: max-content; max-width: 100%; padding: 3px; overflow-x: auto; border-radius: 12px; background: color-mix(in srgb, var(--ink) 6%, var(--kt-field)); scrollbar-width: none; }
+    .kt-ed-segi { position: relative; flex: none; cursor: pointer; }
+    .kt-ed-segi input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .kt-ed-segi span { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 9px; font: 500 13px var(--sans); color: var(--n-600); white-space: nowrap; transition: color 160ms; }
+    .kt-ed-segi.on span { color: var(--ink); font-weight: 600; }
+    .kt-ed-seg:not([data-kw-lens]) .kt-ed-segi.on span { background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+    .kt-ed-segi input:focus-visible + span { box-shadow: 0 0 0 2px var(--atlas); }
+    .kt-ed-langs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .kt-ed-chip { height: 34px; padding: 0 14px; border: 1px solid var(--n-200); border-radius: 999px; background: var(--kt-field); color: var(--n-700); font: 500 13px var(--sans); cursor: pointer; transition: background-color 140ms, border-color 140ms, color 140ms; }
+    .kt-ed-chip:hover { border-color: var(--atlas); color: var(--atlas); }
+    .kt-ed-chip.on { background: var(--atlas); border-color: var(--atlas); color: var(--paper); }
+    .kt-ed-chip:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .kt-ed-side { position: sticky; top: 0; display: grid; gap: 14px; min-width: 0; }
+    .kt-ed-card { padding: 18px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--kt-card); }
+    .kt-ed-who { display: grid; justify-items: center; gap: 4px; text-align: center; }
+    .kt-ed-av { width: 84px; height: 84px; margin-bottom: 8px; display: grid; place-items: center; border-radius: 22px; color: var(--paper); font: 600 28px var(--mono); }
+    .kt-ed-av [data-kt-av-ini] { display: none; }
+    .kt-ed-av.has-ini [data-kt-av-ini] { display: block; }
+    .kt-ed-av.has-ini > i, .kt-ed-av.has-ini > svg { display: none; }
+    .kt-ed-who-n { max-width: 100%; font: 600 16px var(--sans); letter-spacing: -0.01em; color: var(--ink); overflow-wrap: anywhere; }
+    .kt-ed-who-r { font-size: 12.5px; color: var(--n-500); }
+    .kt-ed-code .kt-ed-f { margin-bottom: 10px; }
+    .kt-ed-pin { height: 52px; text-align: center; font: 600 24px var(--mono); letter-spacing: 0.4em; padding-inline-start: calc(12px + 0.4em); font-variant-numeric: tabular-nums; }
+    .kt-ed-pin::placeholder { font: 400 13px var(--sans); letter-spacing: 0; }
+    .kt-ed-code-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .kt-ed-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--kt-field); color: var(--n-700); font: 500 12.5px var(--sans); cursor: pointer; transition: border-color 140ms, color 140ms, background-color 140ms; }
+    .kt-ed-btn:hover { border-color: var(--atlas); color: var(--atlas); }
+    .kt-ed-btn:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .kt-ed-code .kt-ed-hint { margin: 0; }
+    @media (max-width: 860px) {
+      .kt-ed { grid-template-columns: 1fr; }
+      .kt-ed-side { position: static; order: -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .kt-ed-who { grid-template-columns: auto 1fr; justify-items: start; align-items: center; text-align: start; column-gap: 12px; }
+      .kt-ed-av { grid-row: span 2; width: 56px; height: 56px; margin: 0; border-radius: 16px; font-size: 19px; }
+    }
+    @media (max-width: 560px) {
+      .kt-ed-grid, .kt-ed-side { grid-template-columns: 1fr; }
+      .kt-ed-in, .kiwi-backdrop.kt-ed-modal .kt-ed .kiwi-select-trigger { font-size: 16px; }
+      .kt-ed-sec { padding: 14px 14px 2px; }
+    }
+  `;
+
   function openMemberModal(memberId) {
     const T = t();
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant', name: 'Votre établissement' };
@@ -2497,16 +2734,18 @@
       id: 'mem-' + Math.random().toString(36).slice(2, 9),
       firstName: '', lastName: '', email: '', phone: '',
       password: makeCode(),
-      function: cat.functions[0] || '',
-      department: deptForFunction(cat.functions[0], cat.departments) || cat.departments[0] || '',
-      contract: 'CDI',
+      /* Nothing chosen on their behalf: a member saved without touching the
+         role was filed as the catalogue's first post (« Chef de cuisine »). */
+      function: '',
+      department: '',
+      contract: '',
       startDate: toISO(new Date()),
       endDate: '',
       /* Empty, not 4 500 / 50: a member saved without touching these fields
          was booked at an invented salary, and Masse salariale summed it. */
       baseSalary: '',
       hourlyRate: '',
-      languages: ['Français', 'Arabe'],
+      languages: [],
       address: '',
       cin: '',
       emergencyName: '',
@@ -2533,105 +2772,109 @@
     };
     const fnOpts   = optsWithCurrent(cat.functions, m.function);
     const deptOpts = optsWithCurrent(cat.departments, m.department);
-    const ctOpts   = optsWithCurrent(CONTRACT_TYPES, m.contract);
+    const ctList = (m.contract && CONTRACT_TYPES.indexOf(m.contract) < 0) ? [m.contract].concat(CONTRACT_TYPES) : CONTRACT_TYPES;
+    const ctSeg = ctList.map((c) => `<label class="kt-ed-segi${c === m.contract ? ' on' : ''}"><input type="radio" name="contract" value="${esc(c)}"${c === m.contract ? ' checked' : ''} /><span>${esc(contractLabel(T, c))}</span></label>`).join('');
     const langChips = LANGS.map(l => {
       const on = (m.languages || []).includes(l);
-      return `<button type="button" class="kt-lang-chip${on ? ' on' : ''}" data-action="kt-lang-toggle" data-arg="${esc(l)}">${esc(l)}</button>`;
+      return `<button type="button" class="kt-ed-chip${on ? ' on' : ''}" data-action="kt-lang-toggle" data-arg="${esc(l)}" aria-pressed="${on}">${esc(langLabel(T, l))}</button>`;
     }).join('');
 
     const mdl = modal({
       title: editing ? T.editTitle : T.addTitle,
-      width: 640,
+      width: 960,
       body: `
-        <style>${MODAL_CSS}</style>
-        <form data-kt-form data-mid="${esc(m.id)}" data-editing="${editing ? '1' : '0'}">
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secIdentity)}</div>
-            <div class="kt-frow">
-              <div class="kt-photo">
-                <div class="av-disp" data-kt-avdisp style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName)) || '?'}</div>
+        <style>${MODAL_CSS}${EDITOR_CSS}</style>
+        <form class="kt-ed" data-kt-form data-mid="${esc(m.id)}" data-editing="${editing ? '1' : '0'}" novalidate>
+          <div class="kt-ed-main">
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secIdentity)}</h4>
+              <div class="kt-ed-grid">
+                ${edField(T, 'firstName', T.firstName, edInput('text', 'firstName', m.firstName, '', 'required autocomplete="given-name"'), { req: true })}
+                ${edField(T, 'lastName', T.lastName, edInput('text', 'lastName', m.lastName, '', 'required autocomplete="family-name"'), { req: true })}
+                ${edField(T, 'cin', T.cin, edInput('text', 'cin', m.cin, T.ph.cin, 'autocomplete="off"'), { opt: true })}
               </div>
-              <div class="kt-fgrow">
-                <div class="kt-fgrid-2">
-                  <label><span class="l">${esc(T.firstName)}</span><input type="text" name="firstName" value="${esc(m.firstName)}" placeholder="${esc(T.placeholder.firstName)}" required /></label>
-                  <label><span class="l">${esc(T.lastName)}</span><input type="text" name="lastName" value="${esc(m.lastName)}" placeholder="${esc(T.placeholder.lastName)}" required /></label>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secContact)}</h4>
+              <div class="kt-ed-grid">
+                ${edField(T, 'email', T.email, edInput('email', 'email', m.email, T.ph.email, 'required autocomplete="email" inputmode="email"'), { req: true, hint: T.edEmailHint })}
+                ${edField(T, 'phone', T.phone, edInput('tel', 'phone', m.phone, T.ph.phone, 'autocomplete="tel"'), { opt: true })}
+                ${edField(T, 'address', T.address, edInput('text', 'address', m.address, T.ph.address, 'autocomplete="street-address"'), { opt: true, wide: true })}
+              </div>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secRole)}</h4>
+              <div class="kt-ed-grid">
+                ${edField(T, 'function', T.function, `<select class="kt-ed-in" name="function" required data-kt-function data-depts="${esc(JSON.stringify(cat.departments))}">${editing ? '' : `<option value=""${m.function ? '' : ' selected'}>${esc(T.edChooseFn)}</option>`}${fnOpts}</select>`, { req: true })}
+                ${edField(T, 'department', T.department, `<select class="kt-ed-in" name="department">${editing ? '' : `<option value=""${m.department ? '' : ' selected'}>${esc(T.edChooseDept)}</option>`}${deptOpts}</select>`)}
+              </div>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secContract)}</h4>
+              <div class="kt-ed-grid">
+                <div class="kt-ed-f kt-ed-wide">
+                  <span class="kt-ed-l" id="kt-ed-ct-l">${esc(T.contractType)}</span>
+                  <div class="kt-ed-seg" role="radiogroup" aria-labelledby="kt-ed-ct-l" data-kt-contract-group>${ctSeg}</div>
                 </div>
-                <label><span class="l">${esc(T.cin)}</span><input type="text" name="cin" value="${esc(m.cin)}" placeholder="${esc(T.placeholder.cin)}" /></label>
+                ${edField(T, 'startDate', T.startDate, edInput('date', 'startDate', m.startDate, '', ''))}
+                <div data-kt-end-wrap${isCddOrStage(m.contract) ? '' : ' hidden'}>${edField(T, 'endDate', T.endDate, edInput('date', 'endDate', m.endDate, '', ''))}</div>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secContact)}</div>
-            <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.email)}</span><input type="email" name="email" value="${esc(m.email)}" placeholder="${esc(T.placeholder.email)}" autocomplete="email" required /></label>
-              <label><span class="l">${esc(T.phone)}</span><input type="tel" name="phone" value="${esc(m.phone)}" placeholder="${esc(T.placeholder.phone)}" /></label>
-            </div>
-            <label><span class="l">${esc(T.address)}</span><input type="text" name="address" value="${esc(m.address)}" placeholder="${esc(T.placeholder.address)}" /></label>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secAccess)}</div>
-            <label class="kt-pwd-label">
-              <span class="l">${esc(T.password)}</span>
-              <div class="kt-pwd-row">
-                <input type="text" name="password" value="${esc(isCode(m.password) ? m.password : '')}" data-kt-pwd
-                  inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off"
-                  placeholder="${esc(isCode(m.password) ? '' : T.codeKeep)}" />
-                <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 11)} ${esc(T.generate)}</button>
-                <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-copy">${svgIcon(IC.copy, 11)} ${esc(T.copy)}</button>
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secComp)}</h4>
+              <p>${esc(T.edCompHint)}</p>
+              <div class="kt-ed-grid">
+                ${edField(T, 'baseSalary', T.edSalary, `<span class="kt-ed-suffix">${edInput('number', 'baseSalary', m.baseSalary, '', 'min="0" step="50" inputmode="decimal"')}<i>${esc(T.edPerMonth)}</i></span>`)}
+                ${edField(T, 'hourlyRate', T.edHourly, `<span class="kt-ed-suffix">${edInput('number', 'hourlyRate', m.hourlyRate, '', 'min="0" step="0.5" inputmode="decimal"')}<i>${esc(T.edPerHour)}</i></span>`)}
               </div>
-            </label>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.languages)}</h4>
+              <div class="kt-ed-langs" data-kt-langs>${langChips}</div>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secEmergency)}</h4>
+              <div class="kt-ed-grid">
+                ${edField(T, 'emergencyName', T.emergencyName, edInput('text', 'emergencyName', m.emergencyName, T.ph.emergencyName, 'autocomplete="off"'), { opt: true })}
+                ${edField(T, 'emergencyPhone', T.emergencyPhone, edInput('tel', 'emergencyPhone', m.emergencyPhone, T.ph.phone, 'autocomplete="off"'), { opt: true })}
+              </div>
+            </section>
+
+            <section class="kt-ed-sec">
+              <h4>${esc(T.secNotes)}</h4>
+              <label class="kt-ed-f"><textarea class="kt-ed-in" name="notes" rows="3" placeholder="${esc(T.ph.notes)}">${esc(m.notes)}</textarea></label>
+            </section>
           </div>
 
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secRole)}</div>
-            <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.function)}</span>
-                <select name="function" required data-kt-function data-depts="${esc(JSON.stringify(cat.departments))}">${fnOpts}</select>
+          <aside class="kt-ed-side">
+            <div class="kt-ed-card kt-ed-who">
+              <div class="kt-ed-av${(m.firstName || m.lastName) ? ' has-ini' : ''}" data-kt-avdisp style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">
+                <span data-kt-av-ini>${esc((m.firstName || m.lastName) ? initials(m.firstName, m.lastName) : '')}</span>${svgIcon('user', 34)}
+              </div>
+              <div class="kt-ed-who-n" data-kt-name-prev>${esc([m.firstName, m.lastName].map(x => String(x || '').trim()).filter(Boolean).join(' ') || T.addTitle)}</div>
+              <div class="kt-ed-who-r" data-kt-role-prev>${esc(rolePreview(T, m.function, m.department))}</div>
+            </div>
+            <div class="kt-ed-card kt-ed-code">
+              <label class="kt-ed-f" data-f="password">
+                <span class="kt-ed-l">${esc(T.edCodeT)}</span>
+                <input class="kt-ed-in kt-ed-pin" type="text" name="password" value="${esc(isCode(m.password) ? m.password : '')}" data-kt-pwd
+                  inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" spellcheck="false"
+                  placeholder="${esc(isCode(m.password) ? '' : (editing ? T.codeKeep : '0000'))}" />
+                <span class="kt-ed-err" data-err-for="password" hidden></span>
               </label>
-              <label><span class="l">${esc(T.department)}</span>
-                <select name="department" required>${deptOpts}</select>
-              </label>
+              <div class="kt-ed-code-acts">
+                <button type="button" class="kt-ed-btn" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 16)}<span>${esc(T.generate)}</span></button>
+                <button type="button" class="kt-ed-btn" data-action="kt-pwd-copy">${svgIcon(IC.copy, 16)}<span>${esc(T.copy)}</span></button>
+              </div>
+              <p class="kt-ed-hint">${esc(T.edCodeHint)}</p>
             </div>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secContract)}</div>
-            <div class="kt-fgrid-3">
-              <label><span class="l">${esc(T.contractType)}</span>
-                <select name="contract" data-kt-contract>${ctOpts}</select>
-              </label>
-              <label><span class="l">${esc(T.startDate)}</span><input type="date" name="startDate" value="${esc(m.startDate)}" /></label>
-              <label data-kt-end-wrap${isCddOrStage(m.contract) ? '' : ' hidden'}><span class="l">${esc(T.endDate)}</span><input type="date" name="endDate" value="${esc(m.endDate)}" /></label>
-            </div>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secComp)}</div>
-            <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.baseSalary)}</span><input type="number" name="baseSalary" min="0" step="50" value="${esc(m.baseSalary)}" placeholder="0" /></label>
-              <label><span class="l">${esc(T.hourlyRate)}</span><input type="number" name="hourlyRate" min="0" step="0.5" value="${esc(m.hourlyRate)}" placeholder="0" /></label>
-            </div>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.languages)}</div>
-            <div class="kt-langwrap" data-kt-langs>${langChips}</div>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secEmergency)}</div>
-            <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.emergencyName)}</span><input type="text" name="emergencyName" value="${esc(m.emergencyName)}" placeholder="${esc(T.placeholder.emergencyName)}" /></label>
-              <label><span class="l">${esc(T.emergencyPhone)}</span><input type="tel" name="emergencyPhone" value="${esc(m.emergencyPhone)}" placeholder="${esc(T.placeholder.emergencyPhone)}" /></label>
-            </div>
-          </div>
-
-          <div class="kt-fsec">
-            <div class="kt-fseclabel">${esc(T.secNotes)}</div>
-            <label><textarea name="notes" rows="3" placeholder="${esc(T.placeholder.notes)}">${esc(m.notes)}</textarea></label>
-          </div>
+          </aside>
         </form>
       `,
       foot: `
@@ -2639,6 +2882,7 @@
         <button class="kb atlas" data-action="kt-submit-member">${svgIcon(IC.check, 13)}${esc(editing ? T.submitEdit : T.submitAdd)}</button>
       `,
     });
+    mdl.el.classList.add('kt-ed-modal');
     mdl.el.addEventListener('click', (e) => { if (e.target.closest('[data-dismiss]')) mdl.close(); });
     mdl.el.__ktState = {
       editing,
@@ -2673,6 +2917,7 @@
     const mdl = window.__kiwiTeamModal; if (!mdl || !mdl.el) return;
     const input = mdl.el.querySelector('[data-kt-pwd]');
     if (input) input.value = makeCode();
+    edError(mdl.el, 'password', '');
     Kiwi.toast(t().tPwdGen, { type: 'success' });
   };
   handlers['kt-pwd-copy'] = () => {
@@ -2692,13 +2937,14 @@
     const st = mdl.el.__ktState; if (!st) return;
     const idx = st.languages.indexOf(lang);
     if (idx === -1) st.languages.push(lang); else st.languages.splice(idx, 1);
-    if (el) el.classList.toggle('on');
+    if (el) { el.classList.toggle('on', idx === -1); el.setAttribute('aria-pressed', String(idx === -1)); }
   };
 
-  /* Reactive end-date + avatar initials in the modal */
+  /* Reactive end-date, contract segment, live preview, cleared errors */
   document.addEventListener('change', (e) => {
     const mdl = window.__kiwiTeamModal;
-    if (mdl && mdl.el && mdl.el.contains(e.target) && e.target.matches('[data-kt-function]')) {
+    if (!mdl || !mdl.el || !mdl.el.contains(e.target)) return;
+    if (e.target.matches('[data-kt-function]')) {
       let depts = [];
       try { depts = JSON.parse(e.target.getAttribute('data-depts') || '[]'); } catch (_) {}
       const dept = deptForFunction(e.target.value, depts);
@@ -2711,34 +2957,25 @@
         sel.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
-    if (mdl && mdl.el && mdl.el.contains(e.target) && e.target.matches('[data-kt-contract]')) {
+    if (e.target.name === 'contract') {
+      mdl.el.querySelectorAll('.kt-ed-segi').forEach((l) => {
+        const r = l.querySelector('input');
+        l.classList.toggle('on', !!(r && r.checked));
+      });
       const wrap = mdl.el.querySelector('[data-kt-end-wrap]');
       if (wrap) {
         if (e.target.value === 'CDD' || e.target.value === 'Stage') wrap.removeAttribute('hidden');
-        else wrap.setAttribute('hidden', '');
+        else { wrap.setAttribute('hidden', ''); edError(mdl.el, 'endDate', ''); }
       }
     }
-    if (mdl && mdl.el && mdl.el.contains(e.target) && (e.target.name === 'firstName' || e.target.name === 'lastName')) {
-      const form = mdl.el.querySelector('[data-kt-form]');
-      if (form) {
-        const f = form.querySelector('[name="firstName"]').value;
-        const l = form.querySelector('[name="lastName"]').value;
-        const av = mdl.el.querySelector('[data-kt-avdisp]');
-        if (av) av.textContent = initials(f, l) || '?';
-      }
-    }
+    if (e.target.name && e.target.getAttribute('aria-invalid') === 'true') edError(mdl.el, e.target.name, '');
+    edPreview(mdl.el);
   });
   document.addEventListener('input', (e) => {
     const mdl = window.__kiwiTeamModal;
-    if (mdl && mdl.el && mdl.el.contains(e.target) && (e.target.name === 'firstName' || e.target.name === 'lastName')) {
-      const form = mdl.el.querySelector('[data-kt-form]');
-      if (form) {
-        const f = form.querySelector('[name="firstName"]').value;
-        const l = form.querySelector('[name="lastName"]').value;
-        const av = mdl.el.querySelector('[data-kt-avdisp]');
-        if (av) av.textContent = initials(f, l) || '?';
-      }
-    }
+    if (!mdl || !mdl.el || !mdl.el.contains(e.target)) return;
+    if (e.target.name && e.target.getAttribute('aria-invalid') === 'true') edError(mdl.el, e.target.name, '');
+    if (e.target.name === 'firstName' || e.target.name === 'lastName') edPreview(mdl.el);
   });
 
   handlers['kt-submit-member'] = () => {
@@ -2747,31 +2984,45 @@
     const st = mdl.el.__ktState; if (!st) return;
     const form = mdl.el.querySelector('[data-kt-form]'); if (!form) return;
     const data = Object.fromEntries(new FormData(form).entries());
+    const root = mdl.el;
 
-    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim() || !data.function?.trim()) {
-      Kiwi.toast(T.vRequired, { type: 'pend' }); return;
-    }
-    if (data.email && !/^\S+@\S+\.\S+$/.test(data.email)) {
-      Kiwi.toast(T.vInvalidEmail, { type: 'pend' }); return;
-    }
+    /* Every problem is written under its own field, all at once, and the
+       first one gets the focus · a toast alone named a field nobody could
+       see at the bottom of a long form. */
+    const errs = [];
+    ['firstName', 'lastName', 'email', 'function'].forEach((n) => {
+      if (!String(data[n] || '').trim()) errs.push([n, T.edErrRequired]);
+    });
+    const email = String(data.email || '').trim();
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.push(['email', T.vInvalidEmail]);
     if ((data.contract === 'CDD' || data.contract === 'Stage') && data.endDate && data.startDate && data.endDate < data.startDate) {
-      Kiwi.toast(T.vEndAfterStart, { type: 'pend' }); return;
+      errs.push(['endDate', T.vEndAfterStart]);
     }
     // The till's pad is four digits — accepting anything else here hands the
     // owner a code their cashier physically cannot enter.
     const code = (data.password || '').trim();
-    if (code && !isCode(code)) { Kiwi.toast(T.vCode, { type: 'pend' }); return; }
+    if (code && !isCode(code)) errs.push(['password', T.vCode]);
 
     const venueType = st.venueType;
     const members = getMembers(venueType);
     const prev = st.editing ? members.find((x) => x.id === st.memberId) : null;
-    const emailKey = String(data.email || '').trim().toLocaleLowerCase('en');
-    if (members.some((x) => x.id !== st.memberId && String(x.email || '').trim().toLocaleLowerCase('en') === emailKey)) {
-      Kiwi.toast(T.vDuplicateEmail, { type: 'pend' }); return;
+    const emailKey = email.toLocaleLowerCase('en');
+    if (emailKey && members.some((x) => x.id !== st.memberId && String(x.email || '').trim().toLocaleLowerCase('en') === emailKey)) {
+      errs.push(['email', T.vDuplicateEmail]);
     }
     const effectiveCode = code || (prev && (prev.pinCode || prev.password)) || '';
     if (effectiveCode && members.some((x) => x.id !== st.memberId && String(x.pinCode || x.password || '').trim() === effectiveCode)) {
-      Kiwi.toast(T.vDuplicateCode, { type: 'pend' }); return;
+      errs.push(['password', T.vDuplicateCode]);
+    }
+    ['firstName', 'lastName', 'email', 'function', 'endDate', 'password'].forEach((n) => edError(root, n, ''));
+    if (errs.length) {
+      const seen = {};
+      errs.forEach(([n, msg]) => { if (!seen[n]) { seen[n] = 1; edError(root, n, msg); } });
+      const first = root.querySelector('[aria-invalid="true"]');
+      const target = first && ((first.closest('.kiwi-select') && first.closest('.kiwi-select').querySelector('.kiwi-select-trigger')) || first);
+      try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.focus({ preventScroll: true }); } catch (_) {}
+      Kiwi.toast(T.edCheck, { type: 'pend' });
+      return;
     }
     const member = {
       id: st.memberId,
@@ -2787,8 +3038,8 @@
       password: code || (prev && prev.password) || makeCode(),
       pinCode: code || (prev && prev.pinCode) || '',   // en phase avec la caisse
       function: data.function,
-      department: data.department,
-      contract: data.contract,
+      department: data.department || '',
+      contract: data.contract || '',
       startDate: data.startDate || '',
       endDate: (data.contract === 'CDD' || data.contract === 'Stage') ? (data.endDate || '') : '',
       baseSalary: parseFloat(data.baseSalary) || 0,
@@ -2829,61 +3080,107 @@
     const m = getMembers(venueType).find(x => x.id === id);
     if (!m) return;
 
-    const subtitle = T.profileSub(m.function, m.department);
+    /* The read-only sheet. It used to print « 0 MAD » for a salary nobody
+       entered, ISO dates, « Serveur · » when no department was set, and the
+       personal code in clear the moment it opened, for anyone standing at
+       the counter. An empty field now says so, and the code stays masked
+       until the owner asks to see it. */
+    const notSet = `<span class="kt-pv-none">${esc(T.pvNotSet)}</span>`;
+    const txt = (v) => (v == null || String(v).trim() === '') ? notSet : esc(String(v).trim());
+    const day = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))
+      ? esc(fromISO(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' }))
+      : notSet);
+    const pay = (n, per) => ((+n || 0) > 0
+      ? `<span class="kt-pv-num">${esc(window.KiwiNumber?.format((+n), {}) ?? (+n).toLocaleString(dateLocale(), {}))} MAD <i>${esc(per)}</i></span>`
+      : notSet);
+    const row = (label, html) => `<div><dt>${esc(label)}</dt><dd>${html}</dd></div>`;
+    const code = isCode(m.password) ? String(m.password).trim() : (isCode(m.pinCode) ? String(m.pinCode).trim() : '');
+    const isFixed = m.contract === 'CDD' || m.contract === 'Stage';
     const profileM = modal({
-      title: memberFullName(m),
-      desc: subtitle,
-      width: 620,
+      title: T.pvTitle,
+      width: 720,
       body: `
-        <style>${MODAL_CSS}</style>
-        <div class="kt-profile">
-          <div class="kt-profile-head">
-            <div class="av-disp" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}; width:62px; height:62px; font-size:21px; border-radius:18px; display:flex; align-items:center; justify-content:center; color:var(--paper); font-family:var(--mono); font-weight:600;">${esc(initials(m.firstName, m.lastName))}</div>
-            <div class="kt-profile-meta">
-              <div class="kt-profile-name">${esc(memberFullName(m))}</div>
-              <div class="kt-profile-role">${esc(m.function)} · ${esc(m.department)}</div>
-              <div class="kt-profile-tags">
-                <span class="kt-tag ${m.contract === 'CDI' ? 'kt-tag-ok' : (m.contract === 'CDD' || m.contract === 'Stage') ? 'kt-tag-pend' : 'kt-tag-neutral'}">${esc(m.contract)}</span>
-                ${(m.languages || []).slice(0, 4).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('')}
+        <style>${MODAL_CSS}${EDITOR_CSS}${PROFILE_CSS}</style>
+        <div class="kt-pv">
+          <header class="kt-pv-head">
+            <div class="kt-pv-av" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</div>
+            <div class="kt-pv-id">
+              <div class="kt-pv-name">${esc(memberFullName(m))}</div>
+              <div class="kt-pv-role">${esc(rolePreview(T, m.function, m.department))}</div>
+              <div class="kt-pv-tags">
+                ${m.contract ? `<span class="kt-pv-tag is-ct">${esc(contractLabel(T, m.contract))}</span>` : ''}
+                ${(m.languages || []).map(l => `<span class="kt-pv-tag">${esc(langLabel(T, l))}</span>`).join('')}
               </div>
             </div>
+          </header>
+
+          <div class="kt-pv-grid">
+            <section class="kt-pv-sec">
+              <h4>${esc(T.secContact)}</h4>
+              <dl>
+                ${row(T.email, txt(m.email))}
+                ${row(T.phone, txt(m.phone))}
+                ${row(T.address, txt(m.address))}
+              </dl>
+            </section>
+
+            <section class="kt-pv-sec kt-pv-code">
+              <h4>${esc(T.edCodeT)}</h4>
+              ${code ? `<div class="kt-pv-code-row">
+                <b data-kt-pv-code aria-live="polite">••••</b>
+                <button type="button" class="kt-ed-btn" data-kt-pv-reveal aria-pressed="false">${svgIcon('eye', 16)}<span>${esc(T.pvShow)}</span></button>
+              </div>
+              <p class="kt-pv-hint">${esc(T.pvCodeHint)}</p>` : `<p class="kt-pv-hint">${esc(T.pvNoCode)}</p>`}
+            </section>
+
+            <section class="kt-pv-sec">
+              <h4>${esc(T.secContract)}</h4>
+              <dl>
+                ${row(T.contractType, m.contract ? esc(contractLabel(T, m.contract)) : notSet)}
+                ${row(T.startDate, day(m.startDate))}
+                ${isFixed ? row(T.endDate, day(m.endDate)) : ''}
+              </dl>
+            </section>
+
+            <section class="kt-pv-sec">
+              <h4>${esc(T.secComp)}</h4>
+              <dl>
+                ${row(T.edSalary, pay(m.baseSalary, T.edPerMonth))}
+                ${row(T.edHourly, pay(m.hourlyRate, T.edPerHour))}
+              </dl>
+            </section>
+
+            <section class="kt-pv-sec is-wide">
+              <h4>${esc(T.pvIdEmergency)}</h4>
+              <dl class="kt-pv-cols">
+                ${row(T.cin, txt(m.cin))}
+                ${row(T.emergencyName, txt(m.emergencyName))}
+                ${row(T.emergencyPhone, txt(m.emergencyPhone))}
+              </dl>
+            </section>
+
+            ${m.notes ? `<section class="kt-pv-sec is-wide">
+              <h4>${esc(T.secNotes)}</h4>
+              <p class="kt-pv-notes">${esc(m.notes)}</p>
+            </section>` : ''}
           </div>
-
-          ${profileSection(T.secContact, [
-            [T.email, m.email],
-            [T.phone, m.phone],
-            [T.address, m.address],
-          ])}
-
-          ${profileSection(T.secAccess, [
-            [T.password, `<span class="mono">${esc(m.password || T.placeholderPwd)}</span>`],
-          ], true)}
-
-          ${profileSection(T.secContract, [
-            [T.contractType, m.contract],
-            [T.startDate, m.startDate || '·'],
-            ...(m.contract === 'CDD' || m.contract === 'Stage' ? [[T.endDate, m.endDate || '·']] : []),
-          ])}
-
-          ${profileSection(T.secComp, [
-            [T.baseSalary, `<span class="mono">${(window.KiwiNumber?.format((m.baseSalary || 0), {}) ?? (m.baseSalary || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</span>`],
-            [T.hourlyRate, `<span class="mono">${(window.KiwiNumber?.format((m.hourlyRate || 0), {}) ?? (m.hourlyRate || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</span>`],
-          ], true)}
-
-          ${profileSection(T.cin, [['', m.cin || '·']], true)}
-
-          ${profileSection(T.secEmergency, [
-            [T.emergencyName, m.emergencyName || '·'],
-            [T.emergencyPhone, m.emergencyPhone || '·'],
-          ])}
-
-          ${m.notes ? profileSection(T.secNotes, [['', m.notes]]) : ''}
         </div>
       `,
       foot: `
         <button class="kb ghost" data-action="kt-delete-member" data-arg="${esc(m.id)}" style="color:var(--danger);">${svgIcon(IC.trash, 13)}${esc(T.deleteBtn)}</button>
         <button class="kb atlas" data-action="kt-edit-member" data-arg="${esc(m.id)}">${svgIcon(IC.edit, 13)}${esc(T.editBtn)}</button>
       `,
+    });
+    profileM.el.classList.add('kt-ed-modal');
+    profileM.el.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-kt-pv-reveal]');
+      if (!btn || !code) return;
+      const shown = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(shown));
+      const out = profileM.el.querySelector('[data-kt-pv-code]');
+      if (out) out.textContent = shown ? code : '••••';
+      const lbl = btn.querySelector('span');
+      if (lbl) lbl.textContent = shown ? T.pvHide : T.pvShow;
     });
     window.__kiwiTeamProfileDrawer = profileM;
   };
@@ -2916,7 +3213,7 @@
           <span class="eq-av sm" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
           <div>
             <div style="font-weight:600;">${esc(memberFullName(m))}</div>
-            <div style="font-size:11.5px; color:var(--n-500);">${esc(m.function)} · ${esc(m.department)}</div>
+            <div style="font-size:11.5px; color:var(--n-500);">${esc(rolePreview(T, m.function, m.department))}</div>
           </div>
         </div>`,
       foot: `

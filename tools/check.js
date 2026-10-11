@@ -1346,6 +1346,7 @@ section('Whole-project regressions');
     'caisse-pay-subtitle-test.mjs',
     'dashboard-truth-test.mjs',
     'team-truth-test.mjs',
+    'team-member-editor-test.mjs',
     'booking-truth-test.mjs',
     'onboarding-truth-test.mjs',
     'menu-truth-test.mjs',

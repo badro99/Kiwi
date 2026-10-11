@@ -516,8 +516,9 @@ async function twoRoomSetup(page, d, commercial) {
 
 function displayedGroupTotal(page) {
   return page.$eval(SEL.breakdown, (el) => {
-    const m = (el.textContent || '').match(/Total commercial groupe\s*:\s*([\d.,]+)\s*MAD/);
-    return m ? Number(m[1].replace(',', '.')) : null;
+    /* Amounts are written in the page's locale (« 2 400,00 »), not « 2400.00 ». */
+    const m = (el.textContent || '').match(/Total commercial groupe\s*:\s*(\d[\d\s.,]*?)\s*MAD/);
+    return m ? Number(m[1].replace(/\s/g, '').replace(',', '.')) : null;
   });
 }
 

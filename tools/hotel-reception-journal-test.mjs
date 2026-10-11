@@ -189,7 +189,8 @@ test('late commercial reads cannot expose another hotel directory', async () => 
 test('commercial quote view keeps cents, escapes labels and calls itself a simulation', () => {
   const f = boot();
   const html = f.api.cuQuoteRows({ totalCents: 10005, taxBasis: 'inclusive', rows: [{ date: TODAY, label: '<img src=x>', quantity: 1, unitCents: 10005, amountCents: 10005 }] });
-  assert.match(html, /100\.05 MAD/); assert.match(html, /pas une facture/); assert.match(html, /&lt;img/); assert.doesNotMatch(html, /<img/);
+  /* Amounts follow the page's locale since 2026-10-12 (« 100,05 MAD »); the cents are what matter. */
+  assert.match(html, /100[.,]05 MAD/); assert.match(html, /pas une facture/); assert.match(html, /&lt;img/); assert.doesNotMatch(html, /<img/);
 });
 test('quote response after a date edit cannot become an accepted price', async () => {
   const f = boot(), form = formFixture(), click = {}, result = { textContent: '', innerHTML: '' }, button = { addEventListener(type, fn) { click[type] = fn; } };
