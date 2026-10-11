@@ -1430,7 +1430,13 @@
     if (n == null || isNaN(n)) return '0';
     return window.KiwiNumber?.number(n, dec) || new Intl.NumberFormat(localeFor(), { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
   };
-  const fmtMad = (n) => `${fmtNum(Math.round(n))} MAD`;
+  /* Les centimes comptent quand le montant est petit : 0,2 L de lait à 9 MAD
+     coûte 1,80 MAD, pas « 2 MAD », et une semaine de coût matière à 5,40
+     n'est pas « 5 MAD ». Au-delà de 1 000 MAD, le dirham suffit. */
+  const fmtMad = (n) => {
+    const v = Math.round((+n || 0) * 100) / 100;
+    return `${fmtNum(v, Number.isInteger(v) || Math.abs(v) >= 1000 ? 0 : 2)} MAD`;
+  };
   const fmtUnit = (q, u) => {
     const dec = Number.isInteger(q) ? 0 : (Math.abs(q) < 10 ? 1 : 0);
     return `${fmtNum(q, dec)} ${u}`;

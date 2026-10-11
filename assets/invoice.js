@@ -606,17 +606,17 @@
           <p style="margin:0 0 14px;font-size:12.5px;color:#64748b;line-height:1.45;">Renseignez les informations de facturation du client (facultatif).</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div>
-              <label style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Nom ou Raison sociale</label>
-              <input data-inv-cust-name class="st-mb-input" placeholder="Ex. Société Maghreb Tech" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <label for="inv-cust-name" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Nom ou Raison sociale</label>
+              <input id="inv-cust-name" data-inv-cust-name class="st-mb-input" placeholder="Ex. Société Maghreb Tech" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
             <div>
-              <label style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">ICE (15 chiffres)</label>
-              <input data-inv-cust-ice class="st-mb-input mono" placeholder="001234567000089" maxlength="15" inputmode="numeric" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <label for="inv-cust-ice" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">ICE (15 chiffres)</label>
+              <input id="inv-cust-ice" data-inv-cust-ice class="st-mb-input mono" placeholder="001234567000089" maxlength="15" inputmode="numeric" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
               <div data-inv-ice-error style="color:#dc2626;font-size:11px;margin-top:2px;display:none;">L'ICE doit comporter exactement 15 chiffres.</div>
             </div>
             <div>
-              <label style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Identifiant Fiscal (IF)</label>
-              <input data-inv-cust-if class="st-mb-input mono" placeholder="Ex. 12345678" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <label for="inv-cust-if" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Identifiant Fiscal (IF)</label>
+              <input id="inv-cust-if" data-inv-cust-if class="st-mb-input mono" placeholder="Ex. 12345678" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">

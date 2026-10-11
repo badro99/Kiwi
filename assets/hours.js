@@ -118,6 +118,25 @@
     return m ? new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0, 0) : null;
   }
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return o; } }
+  /* L'heure du commerce, pas celle de l'appareil. Tout le moteur raisonne en
+   * heure locale (minuit, getDay, getHours) ; c'était l'heure du téléphone.
+   * Un client dont le téléphone est resté à l'heure de Paris voyait la page
+   * de commande « Fermé » à 22:30 alors que le restaurant, à Casablanca,
+   * servait jusqu'à 23:00. On décale l'instant de sorte que les getters
+   * locaux lisent l'horloge murale de Casablanca, et on retire le décalage
+   * des instants rendus. Sur un appareil au Maroc, le décalage vaut 0. */
+  var ZONE = 'Africa/Casablanca', zoneFmt = null;
+  function zoneShift(t) {
+    try {
+      zoneFmt = zoneFmt || new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      var o = {};
+      zoneFmt.formatToParts(new Date(t)).forEach(function (x) { o[x.type] = +x.value; });
+      var wall = new Date(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second).getTime();
+      var d = wall - Math.floor(t / 1000) * 1000;
+      return isFinite(d) ? Math.round(d / 60000) * 60000 : 0;
+    } catch (_) { return 0; }
+  }
 
   /* ═══════════ la forme vide ═══════════ */
   function blankDay() { return { open: false, periods: [] }; }
@@ -348,7 +367,8 @@
    * clic un horaire que le propriétaire n'a pas validé. */
   function statusOf(doc, ts) {
     doc = normalize(doc);
-    var t = (ts instanceof Date) ? ts.getTime() : (+ts || Date.now());
+    var t0 = (ts instanceof Date) ? ts.getTime() : (+ts || Date.now());
+    var z = zoneShift(t0), t = t0 + z;
     if (!configured(doc)) {
       return { known: false, open: false, configured: false, reason: 'unset', exception: null,
                closesAt: null, opensAt: null, minutesToClose: null };
@@ -369,7 +389,7 @@
       }
       return {
         known: true, open: true, configured: true, reason: cur.exception ? 'exception' : 'week',
-        exception: cur.exception || null, closesAt: end, opensAt: null,
+        exception: cur.exception || null, closesAt: end - z, opensAt: null,
         minutesToClose: Math.max(0, Math.round((end - t) / 60000)),
       };
     }
@@ -378,7 +398,7 @@
       known: true, open: false, configured: true,
       reason: today.exception ? 'exception' : (today.periods.length ? 'between' : 'closedDay'),
       exception: today.exception || null,
-      closesAt: null, opensAt: next ? next.start : null, minutesToClose: null,
+      closesAt: null, opensAt: next ? next.start - z : null, minutesToClose: null,
     };
   }
   function isOpenAt(ts, venueId) { var s = statusAt(ts, venueId); return s.known && s.open; }
@@ -387,21 +407,23 @@
   var SUM_T = {
     fr: { unset: 'Horaires non renseignés', openTill: function (h) { return 'Ouvert · ferme à ' + h; },
           open24: 'Ouvert 24 h/24', closedToday: 'Fermé aujourd’hui',
-          opensAt: function (h) { return 'Ouvre à ' + h; }, opensOn: function (d, h) { return 'Ouvre ' + d + ' à ' + h; },
+          opensAt: function (h) { return 'Ouvre à ' + h; }, opensTomorrow: function (h) { return 'Ouvre demain à ' + h; }, opensOn: function (d, h) { return 'Ouvre ' + d.toLowerCase() + ' à ' + h; },
           exClosed: 'Fermé exceptionnellement', exHours: function (l) { return l ? 'Horaires ' + l : 'Horaires exceptionnels'; },
           closedAll: 'Fermé' },
     en: { unset: 'Opening hours not set', openTill: function (h) { return 'Open · closes at ' + h; },
           open24: 'Open 24 hours', closedToday: 'Closed today',
-          opensAt: function (h) { return 'Opens at ' + h; }, opensOn: function (d, h) { return 'Opens ' + d + ' at ' + h; },
+          opensAt: function (h) { return 'Opens at ' + h; }, opensTomorrow: function (h) { return 'Opens tomorrow at ' + h; }, opensOn: function (d, h) { return 'Opens ' + d + ' at ' + h; },
           exClosed: 'Closed exceptionally', exHours: function (l) { return l ? l + ' hours' : 'Special hours'; },
           closedAll: 'Closed' },
     ar: { unset: 'ساعات العمل غير محددة', openTill: function (h) { return 'مفتوح · يغلق في ' + h; },
           open24: 'مفتوح 24 ساعة', closedToday: 'مغلق اليوم',
-          opensAt: function (h) { return 'يفتح في ' + h; }, opensOn: function (d, h) { return 'يفتح ' + d + ' في ' + h; },
+          opensAt: function (h) { return 'يفتح في ' + h; }, opensTomorrow: function (h) { return 'يفتح غدًا في ' + h; }, opensOn: function (d, h) { return 'يفتح ' + d + ' في ' + h; },
           exClosed: 'مغلق استثنائيًا', exHours: function (l) { return l ? 'ساعات ' + l : 'ساعات استثنائية'; },
           closedAll: 'مغلق' },
   };
   function hhmm(ms) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  /* Un instant rendu par statusOf, relu à l'horloge de Casablanca. */
+  function wall(ms) { return ms + zoneShift(ms); }
   function summary(ts, venueId, L) { return summaryOf(get(venueId), ts, L); }
   function summaryOf(doc, ts, L) {
     L = L || lang();
@@ -412,7 +434,7 @@
     if (st.open) {
       /* 24 h : la fermeture est au-delà d'une journée pleine. */
       if (st.minutesToClose >= MIN_DAY - 1) return { text: T.open24, tone: 'open' };
-      var txt = T.openTill(hhmm(st.closesAt));
+      var txt = T.openTill(hhmm(wall(st.closesAt)));
       if (st.exception) txt += ' · ' + (st.exception.label || T.exHours(''));
       return { text: txt, tone: 'open' };
     }
@@ -420,12 +442,15 @@
       return { text: st.exception.label ? T.exClosed + ' · ' + st.exception.label : T.exClosed, tone: 'closed' };
     }
     if (st.opensAt) {
-      var same = ymd(new Date(st.opensAt)) === ymd(new Date(t));
-      if (same) return { text: T.opensAt(hhmm(st.opensAt)), tone: 'soon' };
-      var dl = (DAY_LABEL[L] || DAY_LABEL.fr)[DOW[new Date(st.opensAt).getDay()]];
-      var tomorrow = ymd(new Date(st.opensAt)) === ymd(new Date(t + MIN_DAY * 60000));
-      return { text: tomorrow ? T.closedToday + ' · ' + T.opensAt(hhmm(st.opensAt))
-                              : T.opensOn(dl, hhmm(st.opensAt)), tone: 'closed' };
+      var o = wall(st.opensAt), now = wall(t);
+      var same = ymd(new Date(o)) === ymd(new Date(now));
+      if (same) return { text: T.opensAt(hhmm(o)), tone: 'soon' };
+      var dl = (DAY_LABEL[L] || DAY_LABEL.fr)[DOW[new Date(o).getDay()]];
+      var tomorrow = ymd(new Date(o)) === ymd(new Date(now + MIN_DAY * 60000));
+      /* « Fermé aujourd’hui · Ouvre à 09:00 » se lisait comme ce matin-là,
+         alors que c’est demain. On nomme le jour. */
+      return { text: tomorrow ? T.closedToday + ' · ' + T.opensTomorrow(hhmm(o))
+                              : T.opensOn(dl, hhmm(o)), tone: 'closed' };
     }
     return { text: T.closedAll, tone: 'closed' };
   }
@@ -576,5 +601,7 @@
     dayLabel: function (d, L) { return (DAY_LABEL[L || lang()] || DAY_LABEL.fr)[d] || d; },
     dayShort: function (d, L) { return (DAY_SHORT[L || lang()] || DAY_SHORT.fr)[d] || d; },
     toMin: toMin, fromMin: fromMin, span: span, ymd: ymd,
+    /* l'heure murale de Casablanca d'un instant, pour formater opensAt/closesAt */
+    wallClock: wall,
   };
 }());

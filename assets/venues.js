@@ -314,7 +314,7 @@
         { nav: 'menu',    label: 'Menu & modificateurs', i18n: 'sidebar.restaurant.menu',                 icon: ICONS.menu },
         { nav: 'kds',     label: 'Écran cuisine (KDS)',  i18n: 'sidebar.restaurant.kds',                  icon: ICONS.kds },
         { nav: 'stock',   label: 'Stock & approvisionnement', i18n: 'sidebar.restaurant.stock',           icon: ICONS.stock },
-        { nav: 'finance', label: 'Marges & budget',      i18n: 'sidebar.restaurant.finance', tag: 'LIVE', icon: ICONS.finance },
+        { nav: 'finance', label: 'Marges',               i18n: 'sidebar.restaurant.finance', tag: 'LIVE', icon: ICONS.finance },
       ],
     },
     boutique: {
@@ -455,7 +455,7 @@
         { nav: 'menu',    label: { fr: 'Carte & boissons', en: 'Menu & drinks', ar: 'القائمة والمشروبات' } },
         { nav: 'kds',     label: { fr: 'Écran barista', en: 'Barista screen', ar: 'شاشة الباريستا' } },
         { nav: 'stock',   label: { fr: 'Stock café & frais', en: 'Coffee & fresh stock', ar: 'مخزون القهوة والطازج' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',       label: { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' } },
@@ -491,7 +491,7 @@
         { nav: 'kds',     label: { fr: 'Écran cuisine (KDS)', en: 'Kitchen display (KDS)', ar: 'شاشة المطبخ' } },
         { nav: 'channels', icon: ICONS.route, label: { fr: 'Livraison & canaux', en: 'Delivery & channels', ar: 'التوصيل والقنوات' } },
         { nav: 'stock',   label: { fr: 'Stock & surgelés', en: 'Stock & frozen', ar: 'المخزون والمجمدات' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',       label: { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' } },
@@ -527,7 +527,7 @@
         { nav: 'kds',     label: { fr: 'Écran fournil', en: 'Bakehouse screen', ar: 'شاشة المخبز' } },
         { nav: 'waste',   icon: ICONS.alert, label: { fr: 'Invendus & dons', en: 'Unsold & donations', ar: 'غير المباع والتبرعات' } },
         { nav: 'stock',   label: { fr: 'Farines & matières', en: 'Flour & ingredients', ar: 'الدقيق والمواد' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',       label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -567,7 +567,7 @@
         { nav: 'kds',     label: { fr: 'Écran four', en: 'Oven screen', ar: 'شاشة الفرن' } },
         { nav: 'delivery', icon: ICONS.route, label: { fr: 'Livraisons', en: 'Deliveries', ar: 'التوصيلات' } },
         { nav: 'stock',   label: { fr: 'Pâte & ingrédients', en: 'Dough & toppings', ar: 'العجين والمكونات' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',       label: { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' } },
@@ -604,7 +604,7 @@
         { nav: 'quotes',   icon: ICONS.operations, label: { fr: 'Devis & événements', en: 'Quotes & events', ar: 'العروض والفعاليات' } },
         { nav: 'deposits', icon: ICONS.card, label: { fr: 'Acomptes & soldes', en: 'Deposits & balances', ar: 'التسبيقات والأرصدة' } },
         { nav: 'stock',   label: { fr: 'Stock & commandes', en: 'Stock & purchasing', ar: 'المخزون والمشتريات' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' } },
@@ -643,7 +643,7 @@
         { nav: 'kds',     label: { fr: 'Écran cuisine', en: 'Kitchen screen', ar: 'شاشة المطبخ' } },
         { nav: 'vehicle',  icon: ICONS.truck, label: { fr: 'Camion & tournée', en: 'Truck & route', ar: 'الشاحنة والجولة' } },
         { nav: 'stock',   label: { fr: 'Stock embarqué', en: 'Onboard stock', ar: 'المخزون المحمول' } },
-        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
+        { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges', en: 'Margins', ar: 'الهوامش' } },
       ],
       kpis: [
         { key: 'tx',       label: { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' } },
@@ -2120,7 +2120,13 @@
         crmLabel.textContent = 'Hospitality+';
       } else {
         crmLabel.setAttribute('data-i18n', 'dash.sidebar.crm');
-        const labels = { fr: 'Clients & Marketing', en: 'Customers & Marketing', ar: 'العملاء والتسويق' };
+        /* « & Marketing » seulement quand les campagnes existent pour ce
+           commerce (ultraCampaigns) : sans elles, la page est un carnet de
+           clients, et les relances vivent dans Fidélisation. */
+        const campaigns = window.KiwiConfig?.features?.ultraCampaigns === true;
+        const labels = campaigns
+          ? { fr: 'Clients & Marketing', en: 'Customers & Marketing', ar: 'العملاء والتسويق' }
+          : { fr: 'Clients', en: 'Customers', ar: 'العملاء' };
         crmLabel.textContent = labels[subLang()] || labels.fr;
       }
     }

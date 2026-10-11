@@ -4241,7 +4241,7 @@ Object.assign(PDS_STR.fr, {
   liveUpcoming: 'Réservations du jour', liveUnplaced: 'Sans table', livePlace: 'Placer',
   livePlaced: (n, t) => `${n} placé·e à la table ${t}`, liveNoFit: 'Aucune table libre ne convient',
   liveNoBookings: 'Aucune réservation aujourd’hui.', liveToday: 'Aujourd’hui',
-  liveTurns: (n) => `${n} tour${n > 1 ? 's' : ''}`, liveAvg: (m) => `${m} min en moyenne`,
+  liveTurns: (n) => `${n} tour${n > 1 ? 's' : ''}`, liveOpen: (n) => `${n} en cours`, liveAvg: (m) => `${m} min en moyenne`,
   liveRevSeat: (v) => `${v} par place`, liveNoStats: 'Les tours et le chiffre par table apparaissent dès la première addition encaissée.',
   checkTable: 'à vérifier', since: (l) => `depuis ${l}`, nextAt: (t, n) => `${t} · ${n}`,
   tillStatus: 'Statut de la caisse', tillStatusHint: 'Ce statut vient de la caisse. Il change quand l’équipe encaisse ou ouvre la table.',
@@ -4326,7 +4326,7 @@ Object.assign(PDS_STR.en, {
   liveUpcoming: 'Today’s bookings', liveUnplaced: 'No table', livePlace: 'Seat',
   livePlaced: (n, t) => `${n} placed at table ${t}`, liveNoFit: 'No free table fits',
   liveNoBookings: 'No bookings today.', liveToday: 'Today',
-  liveTurns: (n) => `${n} turn${n > 1 ? 's' : ''}`, liveAvg: (m) => `${m} min on average`,
+  liveTurns: (n) => `${n} turn${n > 1 ? 's' : ''}`, liveOpen: (n) => `${n} in progress`, liveAvg: (m) => `${m} min on average`,
   liveRevSeat: (v) => `${v} per seat`, liveNoStats: 'Turns and revenue per table appear after the first bill is paid.',
   checkTable: 'check', since: (l) => `for ${l}`, nextAt: (t, n) => `${t} · ${n}`,
   tillStatus: 'Till status', tillStatusHint: 'This status comes from the till. It changes when the team opens or settles the table.',
@@ -4411,7 +4411,7 @@ Object.assign(PDS_STR.ar, {
   liveUpcoming: 'حجوزات اليوم', liveUnplaced: 'بدون طاولة', livePlace: 'إجلاس',
   livePlaced: (n, t) => `${n} على الطاولة ${t}`, liveNoFit: 'لا توجد طاولة فارغة مناسبة',
   liveNoBookings: 'لا حجوزات اليوم.', liveToday: 'اليوم',
-  liveTurns: (n) => `${n} دورة`, liveAvg: (m) => `${m} د في المتوسط`,
+  liveTurns: (n) => `${n} دورة`, liveOpen: (n) => `${n} جارية`, liveAvg: (m) => `${m} د في المتوسط`,
   liveRevSeat: (v) => `${v} لكل مقعد`, liveNoStats: 'تظهر الدورات ورقم المعاملات لكل طاولة بعد أول حساب مدفوع.',
   checkTable: 'للتحقق', since: (l) => `منذ ${l}`, nextAt: (t, n) => `${t} · ${n}`,
   tillStatus: 'حالة الصندوق', tillStatusHint: 'هذه الحالة تأتي من الصندوق وتتغيّر عندما يفتح الفريق الطاولة أو يدفع الحساب.',
@@ -6351,20 +6351,20 @@ function pdsRenderLivePanel(state, T) {
   if (PDS_LIVE && PDS_LIVE.live) {
     const zones = state.zones.map(z => {
       const ts = state.tables.filter(t => t.zone === z.id);
-      let turns = 0, minutes = 0, timed = 0, rev = 0;
+      let turns = 0, open = 0, minutes = 0, timed = 0, rev = 0;
       ts.forEach(t => {
         const st = pdsStatsOf(t);
         if (!st) return;
-        turns += st.turns || 0; rev += st.revenueCents || 0;
+        turns += st.turns || 0; open += st.open || 0; rev += st.revenueCents || 0;
         if (st.avgMinutes) { minutes += st.avgMinutes * (st.turns || 1); timed += st.turns || 1; }
       });
       const seats = ts.reduce((n, t) => n + pdsGeom(t).seats, 0);
-      return { z, turns, avg: timed ? Math.round(minutes / timed) : 0, perSeat: seats ? rev / 100 / seats : 0 };
-    }).filter(x => x.turns);
+      return { z, turns, open, avg: timed ? Math.round(minutes / timed) : 0, perSeat: seats ? rev / 100 / seats : 0 };
+    }).filter(x => x.turns || x.open);
     html += `<div class="pds-live-sec"><div class="pds-live-sub">${pdsEsc(T.liveToday)}</div>`;
     html += zones.length
       ? zones.map(x => `<div class="pds-live-stat"><b>${pdsEsc(x.z.name)}</b>
-          <span>${pdsEsc(T.liveTurns(x.turns))}${x.avg ? ' · ' + pdsEsc(T.liveAvg(x.avg)) : ''}</span>
+          <span>${pdsEsc(T.liveTurns(x.turns))}${x.open ? ' · ' + pdsEsc(T.liveOpen(x.open)) : ''}${x.avg ? ' · ' + pdsEsc(T.liveAvg(x.avg)) : ''}</span>
           <em>${pdsEsc(T.liveRevSeat(T.mad(x.perSeat)))}</em></div>`).join('')
       : `<p class="pds-live-note">${pdsEsc(T.liveNoStats)}</p>`;
     html += `</div>`;
@@ -18679,7 +18679,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                      b: ['Plannings hebdomadaires par personne', 'Pointage directement sur la caisse', 'Heures cumulées prêtes pour la paie'] },
     reservations:  { t: 'Réservations & RDV', d: 'Votre agenda client, connecté à la caisse.',
                      b: ['Réservations et rendez-vous au même endroit', 'Réservations en ligne ou saisies par l\'équipe', 'Statut de chaque réservation : confirmée, arrivée, absente'] },
-    finance:       { t: 'Marges & budget',    d: 'Vos marges réelles, calculées depuis vos ventes.',
+    finance:       { t: 'Marges',    d: 'Vos marges réelles, calculées depuis vos ventes.',
                      b: ['Marge brute par produit et par famille', 'Coût d\'achat renseigné par article', 'Tendances dès vos premières semaines'] },
     tables:        { t: 'Plan de salle',      d: 'Votre salle, vue de la caisse.',
                      b: ['Dessinez vos zones et vos tables', 'État en direct pendant le service', 'Encaissement directement depuis la table'] },

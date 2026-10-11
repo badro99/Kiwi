@@ -98,6 +98,8 @@ ok(T['9'] && T['9'].status === 'khawya' && T['9'].requests === 0, 'table 9 · a 
 ok(!T['B1'], 'an unknown status is ignored, not invented');
 const S = r.body.stats || {};
 ok(S['9'] && S['9'].turns === 1 && S['9'].avgMinutes === 40, 'table 9 · one turn today, 40 minutes');
+ok(S['4'] && S['4'].turns === 0 && S['4'].open === 1, 'table 4 · still seated: in progress, not a turn');
+ok(S['9'] && S['9'].open === 0, 'table 9 · a visit that ended is not in progress');
 ok(S['9'] && S['9'].revenueCents === 21000, 'table 9 · today\'s revenue counts the live sale and skips the voided one');
 ok(!/tsx-/.test(JSON.stringify(r.body)), 'no visit id ever leaves the route');
 ok(writes === 0, 'reading the room writes nothing');
@@ -157,6 +159,8 @@ ok(bk.byTable.t4 && bk.byTable.t4.length === 1 && bk.byTable.t7 && bk.byTable.t7
 
 /* ── The rotation is fair over a cycle (assets/pages-pro.js › pdsRotateStep) ── */
 const PRO = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+ok(/liveOpen: \(n\) => `\$\{n\} en cours`/.test(PRO) && /x\.open \? ' · ' \+ pdsEsc\(T\.liveOpen\(x\.open\)\)/.test(PRO) && /\.filter\(x => x\.turns \|\| x\.open\)/.test(PRO),
+  'the plan says "en cours" beside the turns, and a zone with only seated tables still shows');
 const grab = (name) => {
   const i = PRO.indexOf('function ' + name + '(');
   let d = 0;

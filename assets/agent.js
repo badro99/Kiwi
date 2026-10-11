@@ -266,11 +266,11 @@
   const PERM = {
     fr: {
       text: 'Les marges, les charges, les salaires et la trésorerie sont réservés au propriétaire du compte. Votre badge ouvre la caisse, les ventes, le stock et les opérations, et je réponds sur tout ça sans réserve.',
-      note: 'Ce n’est pas un refus de ma part : c’est le même accès que votre menu latéral, qui masque déjà Marges & budget, Dépenses et Paie. Si ce chiffre vous est nécessaire, le propriétaire l’a dans son tableau de bord.',
+      note: 'Ce n’est pas un refus de ma part : c’est le même accès que votre menu latéral, qui masque déjà Marges, Dépenses et Paie. Si ce chiffre vous est nécessaire, le propriétaire l’a dans son tableau de bord.',
     },
     en: {
       text: 'Margins, costs, salaries and cash are reserved for the account owner. Your badge opens the till, sales, stock and operations, and I answer on all of that without reservation.',
-      note: 'This is not my refusal: it is the same access your sidebar already applies, which hides Margins & budget, Expenses and Payroll. If you need that figure, the owner has it in their dashboard.',
+      note: 'This is not my refusal: it is the same access your sidebar already applies, which hides Margins, Expenses and Payroll. If you need that figure, the owner has it in their dashboard.',
     },
     ar: {
       text: 'الهوامش والمصاريف والأجور والخزينة محجوزة لصاحب الحساب. شارتك تفتح الصندوق والمبيعات والمخزون والعمليات، وأجيب عن كل ذلك دون تحفّظ.',

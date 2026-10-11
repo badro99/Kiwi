@@ -35,7 +35,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=20',
+  '/assets/booking.js?v=21',
   '/assets/booking.css?v=13',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
@@ -78,12 +78,12 @@ var SHELL = [
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=20',
   '/assets/ai-telemetry.js?v=1',
-  '/assets/agent-data.js?v=4',
+  '/assets/agent-data.js?v=6',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
-  '/assets/i18n.js?v=20',
+  '/assets/i18n.js?v=21',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -101,11 +101,11 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=40',
+  '/assets/venues.js?v=41',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
-  '/assets/reservations.js?v=23',
+  '/assets/reservations.js?v=24',
   '/assets/pressing-ops.js?v=8',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=7',
@@ -187,7 +187,7 @@ var SHELL = [
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js?v=1',
+  '/assets/hours.js?v=3',
   '/assets/morocco-holidays.js?v=1',
   '/assets/hours-ui.js?v=2',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
@@ -195,7 +195,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=5',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=13',
+  '/assets/invoice.js?v=14',
   '/assets/merchant-config.js?v=277',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements-v2.js?v=2',
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=70',
+  '/assets/stock.js?v=71',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -248,7 +248,7 @@ var SHELL = [
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=18',
-  '/assets/customer-retention.js?v=5',
+  '/assets/customer-retention.js?v=6',
   '/assets/menu-catalog.js?v=26',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=296',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=91',
+  '/assets/restaurant-menu-workspace.js?v=92',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

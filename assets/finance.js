@@ -31,7 +31,7 @@
   /* ──────────────────────────── i18n ──────────────────────────── */
   const STR = {
     fr: {
-      breadcrumb: 'Marges & budget',
+      breadcrumb: 'Marges',
       pageTitle: 'Marges & budget',
       pageSub: (n) => `Vos résultats à jour · ${n}`,
       // P&L
@@ -94,7 +94,7 @@
       noteUpdatePolicy: 'Toutes les valeurs sont calculées à partir des ventes du jour, du stock et de votre effectif. Aucune écriture comptable n\'est produite.',
     },
     en: {
-      breadcrumb: 'Margins & budget',
+      breadcrumb: 'Margins',
       pageTitle: 'Margins & budget',
       pageSub: (n) => `Live financials · ${n}`,
       pnlEyebrow: 'Today\'s result',
@@ -151,7 +151,7 @@
       noteUpdatePolicy: 'All values are computed from today\'s sales, stock and headcount. No accounting entries are produced.',
     },
     ar: {
-      breadcrumb: 'الهامش والميزانية',
+      breadcrumb: 'الهوامش',
       pageTitle: 'الهامش والميزانية',
       pageSub: (n) => `النتائج المالية مباشرة · ${n}`,
       pnlEyebrow: 'نتيجة اليوم',

@@ -107,6 +107,16 @@ ok('accueil : « 1 article est au-dessus de son seuil », « 2 articles … de l
   assert.equal(c.S.fr(2), 'Rien à recommander : 2 articles sont au-dessus de leur seuil configuré.');
   assert.equal(c.S.en(1), 'Nothing to reorder: 1 item is above its configured threshold.');
 });
+ok('un petit montant garde ses centimes : 1,80 MAD, pas « 2 MAD »', () => {
+  const c = vm.createContext({ window: { KiwiNumber: { number: (n, d) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n) } }, Intl, Math, Number, isNaN, lang: () => 'fr' });
+  const pick = (start) => { const i = STOCK.indexOf(start); return STOCK.slice(i, STOCK.indexOf('\n  const ', i + 10)); };
+  vm.runInContext(pick('  const localeFor') + pick('  const fmtNum') + pick('  const fmtMad') + '\nthis.f = fmtMad;', c);
+  const nb = (x) => x.replace(/[\u202f\u00a0]/g, ' ');
+  assert.equal(nb(c.f(1.8)), '1,80 MAD');
+  assert.equal(nb(c.f(88.2)), '88,20 MAD');
+  assert.equal(nb(c.f(90)), '90 MAD');
+  assert.equal(nb(c.f(8920.4)), '8 920 MAD');
+});
 
 console.log(`\nstock-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

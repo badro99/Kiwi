@@ -59,6 +59,7 @@
       th: { name: 'Client', visits: 'Visites', last: 'Dernière visite', rhythm: 'Rythme habituel', spend: 'Dépensé', loyalty: 'Fidélité', group: 'Groupe' },
       days: function (d) { return d === 0 ? 'aujourd’hui' : 'il y a ' + d + ' j'; }, every: function (d) { return 'tous les ' + d + ' j'; }, none: '·',
       emptyBook: 'Aucun client identifié pour l’instant', emptyBookText: 'Attachez un client à une vente en caisse : ses visites apparaîtront ici.',
+      loyaltyOff: 'carte de fidélité désactivée',
       marginMeasured: function (m, c) { return 'Mesurée par Kiwi sur vos 30 derniers jours : ' + m + ' (sur ' + c + ' de vos ventes, celles dont le coût est connu).'; },
       th2: { regularDays: 'Régulier si venu depuis moins de', inactiveDays: 'Inactif après', rhythm: 'Vient moins souvent si l’absence dépasse', rhythmUnit: '× son rythme habituel', margin: 'Marge brute moyenne', marginUnit: '%', daysUnit: 'jours' },
       thresholdsTitle: 'Seuils des groupes', thresholdsSub: 'Vous décidez à partir de quand un client est régulier, moins assidu ou inactif.',
@@ -95,6 +96,7 @@
       th: { name: 'Customer', visits: 'Visits', last: 'Last visit', rhythm: 'Usual rhythm', spend: 'Spent', loyalty: 'Loyalty', group: 'Group' },
       days: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, every: function (d) { return 'every ' + d + 'd'; }, none: '·',
       emptyBook: 'No identified customers yet', emptyBookText: 'Attach a customer to a sale at the till: their visits will appear here.',
+      loyaltyOff: 'loyalty card is off',
       marginMeasured: function (m, c) { return 'Measured by Kiwi over your last 30 days: ' + m + ' (on ' + c + ' of your sales, those with a known cost).'; },
       th2: { regularDays: 'Regular if seen within', inactiveDays: 'Inactive after', rhythm: 'Visiting less often if the absence exceeds', rhythmUnit: '× their usual rhythm', margin: 'Average gross margin', marginUnit: '%', daysUnit: 'days' },
       thresholdsTitle: 'Group thresholds', thresholdsSub: 'You decide when a customer counts as regular, less frequent or inactive.',
@@ -131,6 +133,7 @@
       th: { name: 'العميل', visits: 'الزيارات', last: 'آخر زيارة', rhythm: 'الإيقاع المعتاد', spend: 'الإنفاق', loyalty: 'الوفاء', group: 'الفئة' },
       days: function (d) { return d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, every: function (d) { return 'كل ' + d + ' ي'; }, none: '·',
       emptyBook: 'لا يوجد عملاء معرّفون بعد', emptyBookText: 'اربط عميلاً ببيع في الصندوق: ستظهر زياراته هنا.',
+      loyaltyOff: 'بطاقة الولاء غير مفعلة',
       marginMeasured: function (m, c) { return 'قاسه Kiwi على آخر 30 يومًا: ' + m + ' (على ' + c + ' من مبيعاتك، تلك التي تُعرف تكلفتها).'; },
       th2: { regularDays: 'دائم إذا زار خلال', inactiveDays: 'غير نشط بعد', rhythm: 'يأتي أقل إذا تجاوز الغياب', rhythmUnit: '× إيقاعه المعتاد', margin: 'متوسط الهامش الإجمالي', marginUnit: '%', daysUnit: 'يوم' },
       thresholdsTitle: 'حدود الفئات', thresholdsSub: 'أنت من يحدد متى يكون العميل دائماً أو أقل حضوراً أو غير نشط.',
@@ -484,7 +487,15 @@
       var offers = '<div class="cr-card"><h3>' + esc(T.offersTitle) + '</h3><p class="cr-sub">' + esc(T.offersSub) + '</p>' + GROUPS.map(function (g) {
         var o = doc.offers[g];
         var p = function (k) { return g + '.' + k; };
-        var typeSel = '<select name="' + p('type') + '">' + OFFER_TYPES.map(function (t) { return '<option value="' + t + '"' + (o.type === t ? ' selected' : '') + '>' + esc(T.offerType[t]) + '</option>'; }).join('') + '</select>';
+        /* « Récompense fidélité » sans carte de fidélité active : une offre
+           qu'aucun client ne peut recevoir. On la grise, sauf si elle est déjà
+           choisie (le patron doit pouvoir la voir pour la changer). */
+        var loyaltyOff = false;
+        try { loyaltyOff = !!(window.KiwiClients && KiwiClients.loyaltyOn && !KiwiClients.loyaltyOn()); } catch (_) {}
+        var typeSel = '<select name="' + p('type') + '">' + OFFER_TYPES.map(function (t) {
+          var off = t === 'reward' && loyaltyOff && o.type !== t;
+          return '<option value="' + t + '"' + (o.type === t ? ' selected' : '') + (off ? ' disabled' : '') + '>' + esc(T.offerType[t]) + (off ? ' · ' + esc(T.loyaltyOff) : '') + '</option>';
+        }).join('') + '</select>';
         var valueUnit = o.type === 'percent' ? T.f.percentU : T.f.madU;
         var valueLabel = (o.type === 'item' || o.type === 'reward') ? T.f.itemCost : T.f.value;
         return '<div class="cr-offer" data-cr-offer="' + g + '"><h4><span class="cr-tag ' + g + '">' + esc(T.group[g]) + '</span></h4><div class="cr-grid">' +

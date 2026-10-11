@@ -32,8 +32,8 @@
     "sha": "3c6e24a0053bf948"
   },
   "assets/agent-data.js": {
-    "v": "4",
-    "sha": "13e91b59d7f9bf1d"
+    "v": "6",
+    "sha": "13d2dc09c718583b"
   },
   "assets/agent-features.js": {
     "v": "4",
@@ -60,8 +60,8 @@
     "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "29",
-    "sha": "78b5cb9e73cd4194"
+    "v": "30",
+    "sha": "b31a010cbe5dcfb2"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -80,8 +80,8 @@
     "sha": "9197252b6851e04a"
   },
   "assets/booking.js": {
-    "v": "20",
-    "sha": "ce7a8129ee6d3679"
+    "v": "21",
+    "sha": "173297a153289ce0"
   },
   "assets/boutique-catalog.js": {
     "v": "9",
@@ -208,8 +208,8 @@
     "sha": "71b2ab3cbbcb0e16"
   },
   "assets/customer-retention.js": {
-    "v": "5",
-    "sha": "d2b48a706adf1fa2"
+    "v": "6",
+    "sha": "dfab8fc201637772"
   },
   "assets/dark-fixes.js": {
     "v": "3",
@@ -328,8 +328,8 @@
     "sha": "4ab84021a239bd81"
   },
   "assets/finance.js": {
-    "v": "3",
-    "sha": "fc64bd229707b9d6"
+    "v": "4",
+    "sha": "81629568bc50f205"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -380,12 +380,12 @@
     "sha": "9e0948c90bc096a3"
   },
   "assets/hours.js": {
-    "v": "1",
-    "sha": "b45b0260ef0d82b2"
+    "v": "3",
+    "sha": "f1104c5a75f246ea"
   },
   "assets/i18n.js": {
-    "v": "20",
-    "sha": "b2f6e046fe5ce839"
+    "v": "21",
+    "sha": "cc46fd4965723d53"
   },
   "assets/identity.js": {
     "v": "8",
@@ -416,8 +416,8 @@
     "sha": "59945120582f82d0"
   },
   "assets/invoice.js": {
-    "v": "13",
-    "sha": "c0eb04ef352d2b12"
+    "v": "14",
+    "sha": "83782651b6006c39"
   },
   "assets/invoicing.css": {
     "v": "8",
@@ -460,8 +460,8 @@
     "sha": "35571c6a73eb331e"
   },
   "assets/kiwi-select.js": {
-    "v": "2",
-    "sha": "af05f19e306ca3d8"
+    "v": "3",
+    "sha": "153aee54c2b43a53"
   },
   "assets/landing-demo-funnel.css": {
     "v": "2",
@@ -628,8 +628,8 @@
     "sha": "380167a745c162c8"
   },
   "assets/pages-pro.js": {
-    "v": "2147",
-    "sha": "059a1c63e62ed436"
+    "v": "2149",
+    "sha": "80ce9e974ce51eb5"
   },
   "assets/pages.js": {
     "v": "12",
@@ -904,12 +904,12 @@
     "sha": "e0c1975882b9cc50"
   },
   "assets/reservations.js": {
-    "v": "23",
-    "sha": "66648c2f708de1be"
+    "v": "24",
+    "sha": "d1bb0f362b2be61d"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "91",
-    "sha": "3334504a0e94127b"
+    "v": "92",
+    "sha": "4461e5f81b95fbab"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",
@@ -964,8 +964,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "70",
-    "sha": "af9c4edff8bfcd2e"
+    "v": "71",
+    "sha": "02fd6c86cb40b1af"
   },
   "assets/store-templates.js": {
     "v": "3",
@@ -1024,8 +1024,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "40",
-    "sha": "66c71a0b2d29b7a0"
+    "v": "41",
+    "sha": "38dcd6360c53cbb5"
   },
   "assets/vertical-state.js": {
     "v": "1",

@@ -90,21 +90,25 @@ export function assemble({ states, requests, sessions, bills, turns, sales, now 
   (turns || []).forEach((row) => {
     const k = tableKey(row.table_no);
     if (!k) return;
-    const d = (day[k] = day[k] || { turns: 0, minutes: 0, timed: 0, revenueCents: 0 });
-    d.turns += 1;
+    const d = (day[k] = day[k] || { turns: 0, open: 0, minutes: 0, timed: 0, revenueCents: 0 });
+    /* A turn is a visit that ended. A table still seated is "en cours":
+       counting it as a turn made a room of four seated tables read
+       "4 tours" before anyone had left. */
     const o = Number(row.opened_ts) || 0, c = Number(row.closed_ts) || 0;
+    if (!c) { d.open += 1; return; }
+    d.turns += 1;
     if (o && c > o) { d.minutes += (c - o) / 60000; d.timed += 1; }
   });
   (sales || []).forEach((row) => {
     const k = tableKey(row.table_no);
     if (!k) return;
-    const d = (day[k] = day[k] || { turns: 0, minutes: 0, timed: 0, revenueCents: 0 });
+    const d = (day[k] = day[k] || { turns: 0, open: 0, minutes: 0, timed: 0, revenueCents: 0 });
     d.revenueCents += Math.max(0, Math.round(Number(row.cents) || 0));
   });
   const stats = Object.create(null);
   Object.keys(day).forEach((k) => {
     const d = day[k];
-    stats[k] = { turns: d.turns, avgMinutes: d.timed ? Math.round(d.minutes / d.timed) : 0, revenueCents: d.revenueCents };
+    stats[k] = { turns: d.turns, open: d.open, avgMinutes: d.timed ? Math.round(d.minutes / d.timed) : 0, revenueCents: d.revenueCents };
   });
   return { tables: out, stats, now };
 }

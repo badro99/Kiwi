@@ -300,6 +300,21 @@
       }
     });
     select.addEventListener('change', function () { sync(control); });
+    /* Code that sets `select.value` (or `selectedIndex`) fires no `change`
+       and moves no attribute, so the trigger kept showing the old choice
+       while the form submitted the new one. Each enhanced select repaints
+       on its own assignments; the native setter still does the work. */
+    ['value', 'selectedIndex'].forEach(function (prop) {
+      var native = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, prop);
+      if (!native || !native.set) return;
+      try {
+        Object.defineProperty(select, prop, {
+          configurable: true, enumerable: true,
+          get: function () { return native.get.call(this); },
+          set: function (v) { native.set.call(this, v); sync(control); },
+        });
+      } catch (_) { /* a frozen element keeps the old behaviour */ }
+    });
     select.addEventListener('invalid', function (event) {
       event.preventDefault();
       sync(control);

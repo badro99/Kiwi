@@ -138,6 +138,10 @@ ok('the margin that caps suggested discounts shows what Kiwi measured, without o
   assert.match(src, /'<\/div>' \+ measuredMarginHtml\(\) \+ '<\/div>'/);
   assert.doesNotMatch(src, /marginPct\s*=\s*cov\./);
 });
+ok('a loyalty reward cannot be offered while the loyalty card is off', () => {
+  assert.match(src, /var off = t === 'reward' && loyaltyOff && o\.type !== t;/);
+  assert.match(src, /loyaltyOff: 'carte de fidélité désactivée'/);
+});
 
 console.log(`\ncustomer-retention: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

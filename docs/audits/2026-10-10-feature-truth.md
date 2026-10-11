@@ -220,26 +220,35 @@ second with the dashboard page left open.
 
 Covered by `tools/customer-retention-test.mjs`.
 
+## Small items, closed
+
+| Item | What it said | Now |
+|---|---|---|
+| Small food costs | Stock rounded 5,40 to "5 MAD" (1,80 to "2 MAD"); Marges showed 5,40. | Amounts under 1 000 MAD keep their centimes, larger ones stay whole. Covered in `stock-truth-test.mjs`. |
+| "Récompense fidélité" offer | Selectable with the loyalty card off. | Disabled, with a note, unless the card is on (or it was already chosen). Covered in `customer-retention-test.mjs`. |
+| Sidebar "Marges & budget" | A store has margins, no budget. | "Marges" in FR, EN, AR, the breadcrumbs and the assistant. |
+| Sidebar "Clients & Marketing" | The page holds no marketing while campaigns are off. | "Clients", unless `ultraCampaigns` is on. |
+| Opening-hours status | A closed Sunday read "Ouvre à 09:00". | "Ouvre demain à 09:00" when the next opening is tomorrow. Covered in `booking-truth-test.mjs`. |
+| Booking copy | "gérer ce rendez-vous" for a table. | "gérer cette réservation". |
+| Item price field | `type=number` without `step`: 14,50 was a step mismatch. | `step="0.01"`, `inputmode="decimal"` on prices and choice surcharges. |
+| Invoice prompt | Labels with no `for`/`id`. | Each label names its input. |
+| Opening hours on the phone's clock | `hours.js` judged "open" by the device clock. The public order page disables "Envoyer" on it: a phone left on Paris time saw a restaurant open until 19:00 as closed from 18:00 Casablanca time ("Ouvre Lundi à 09:00"). | The engine reads Africa/Casablanca whatever the device zone, and returns true instants. FR day names are lower case mid-sentence. Covered in `booking-truth-test.mjs`, run under Paris, New York and Casablanca. |
+| Plan "Tours" | A table still seated counted as a turn: four seated tables read "4 tours" before anyone left. | A turn is a visit that ended. Seated tables read "en cours" beside it ("1 tour · 2 en cours"). Covered in `floor-live-test.mjs`. |
+| Programmatic `<select>` changes | `kiwi-select.js` repainted only on `change`: code that set `select.value` left the old choice on screen while the form sent the new one. | Each enhanced select repaints on its own `value` / `selectedIndex` assignments. Covered by `kiwi-select-programmatic-test.mjs` in a real Chrome (red on the old file). |
+| Booking "Supprimer" | Logged as a hard delete. Measured: it deleted nothing, it set the booking to "annulée", the same as "Annuler la réservation" right below it. | The duplicate button is gone; cancelling has one name. |
+| Booking settings checkboxes | Logged as "accessible name on". | Measured again: each sits inside its label. Not a bug. |
+
 ## Open, logged for their own pass
 
 - **A dish sold without a recipe** writes a −1 movement on the dish's own
   id (`it_2`), an id no stock article carries. It is right for retail, where
   the product is the stock article, and noise for a restaurant dish.
-- **Small food costs round to whole dirhams** on the Stock page ("5 MAD"
-  for 5,40). The Marges page shows 5,40.
-- **"Récompense fidélité" offer** can be chosen while the loyalty card is
-  off.
-- **Sidebar "Marges & budget".** A real store has margins but no budget.
-  Rename it, or build budgets (fixed costs, a monthly target) for real.
 
 - **Till opening float.** "Fond d'ouverture" opens with 500 MAD
   preselected. A till opened without counting records 500 MAD nobody
   counted, which the cash reconciliation then expects. For the till pass.
 - **86 items vanish from the till grid** when others remain. Common in POS,
   but a greyed "86" tile would let the cashier tell the customer.
-- **Item price field** is `type=number` without `step`, so 14.5 is an
-  HTML step mismatch (saved fine here, since the form does not use native
-  validation).
 
 - **What a pending store may save.** `entitlements-v2.js` says configuring
   (a dish, a room) is not held back during installation, but the server
@@ -249,21 +258,7 @@ Covered by `tools/customer-retention-test.mjs`.
   on the same browser. On another device they are missing until then.
   A product decision, not a bug to patch quietly.
 - **Hotel occupancy tile.** Still a formula nobody chose. Out of R6's scope.
-- **Opening-hours status.** On a closed Sunday it reads "Ouvre à 09:00"
-  without naming Monday.
-- **Booking copy.** The public form says "rendez-vous" for a table.
-- **Booking settings checkboxes** have the accessible name "on".
-- **Bookings can be hard-deleted** from the staff form ("Supprimer"),
-  alongside the cancel lifecycle.
 
-- **Programmatic `<select>` changes.** `kiwi-select.js` repaints only on a
-  `change` event. Any code that sets `select.value` without dispatching one
-  shows the old choice. E2 handles its own case. Others may exist.
-- **Plan "Tours".** A table still seated counts as a turn. It is defensible,
-  but say "en cours" if we keep it.
-- **Sidebar "Clients & Marketing".** The page holds no marketing (campaigns
-  are off). Rename, or ship the campaigns.
-- **Invoice prompt.** Its labels have no `for`/`id`.
 - **Till ticket numbering after C4.** A contaminated shift keeps its
   `kdsOrderSeq` (53 and up) until the service is closed. Not rewritten, since
   those numbers may already be printed.
@@ -276,6 +271,15 @@ Dashboard: ~~Accueil~~ · ~~Commandes~~ · ~~Rapport journalier~~ · ~~Clients~~
 
 \* Operator modules, off for a new store (`merchant-config.js`): a merchant
 never reaches them until the console switches them on. Audit them that way.
+
+Trade dashboards (destinations other trades see, from `venues.js`):
+retail (inventory, categories, promos, returns, sold, credit, suppliers) ·
+appointments (services, practitioners, appointments, chairs, packages,
+renewals, formulas) · pressing (orders, workshop, services, quality, pickup,
+delivery) · specialty (prescriptions, insurers, expiries, duty, school lists,
+book orders, flower orders, freshness, vehicle, points of sale, quotes,
+deposits, waste, economat, workflows, delivery) · hotel (chambres, séjours,
+folios, check-ins, ménage, canaux, tarifs, hotel intel).
 
 Other surfaces: the till (restaurant and the 14 `pos-*` verticals) ·
 kiwi-serveur · kiwi-cuisine · employee app · ~~booking.html~~ · kiwi-order.html ·

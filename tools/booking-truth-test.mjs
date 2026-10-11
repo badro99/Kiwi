@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -163,9 +164,50 @@ ok('un seul service : présélectionné, et « Sans frais » plutôt que « 0 MA
   assert.ok(/free: 'Sans frais'/.test(DASH) && /free: 'Free'/.test(DASH));
 });
 
+ok('pas de « Supprimer » qui ne fait qu’annuler : une seule action, sous son vrai nom', () => {
+  assert.ok(!/data-kr-delete/.test(DASH));
+});
 ok('« Annuler » ferme le formulaire ; annuler la réservation se dit en toutes lettres', () => {
   assert.ok(/buttons\.push\(\['cancelled',t\('cancelBooking'\)\]\)/.test(DASH));
   assert.ok(/cancelBooking: 'Annuler la réservation'/.test(DASH) && /cancelBooking: 'Cancel booking'/.test(DASH));
+});
+
+/* The hours engine itself: closed on Sunday, open Monday 09:00–19:00. */
+const HOURS = readFileSync(path.join(ROOT, 'assets/hours.js'), 'utf8');
+ok('fermé le dimanche : « Ouvre demain à 09:00 », pas « Ouvre à 09:00 »', () => {
+  const win = {};
+  const c = vm.createContext({ window: win, document: { addEventListener() {}, documentElement: { lang: 'fr' } },
+    localStorage: { getItem: () => null, setItem() {} }, Date, Math, JSON, Object, Array, String, Number, Intl, setTimeout });
+  vm.runInContext(HOURS, c);
+  const H = win.KiwiHours;
+  const doc = H.normalize({ v: 1, week: { mon: { open: true, periods: [{ from: '09:00', to: '19:00' }] }, sun: { open: false, periods: [] } } });
+  const sunday = new Date(2026, 9, 11, 12, 0).getTime();     // device-local Sunday noon
+  assert.equal(H.summaryOf(doc, sunday, 'fr').text, 'Fermé aujourd’hui · Ouvre demain à 09:00');
+  assert.equal(H.summaryOf(doc, sunday, 'en').text, 'Closed today · Opens tomorrow at 09:00');
+});
+
+ok('ouvert ou fermé à l’heure de Casablanca, quel que soit le fuseau du téléphone', () => {
+  // Monday 09:00–19:00. 18:30 in Casablanca is 19:30 in Paris and 13:30 in New York:
+  // the order page must still say open, and name 19:00 as the closing time.
+  const script = `
+    const vm = require('vm'), fs = require('fs'), win = {};
+    const c = vm.createContext({ window: win, document: { addEventListener() {}, documentElement: { lang: 'fr' } },
+      localStorage: { getItem: () => null, setItem() {} }, Date, Math, JSON, Object, Array, String, Number, Intl, setTimeout });
+    vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), c);
+    const H = win.KiwiHours;
+    const doc = H.normalize({ v: 1, week: { mon: { open: true, periods: [{ from: '09:00', to: '19:00' }] } } });
+    const at = (h, m) => Date.UTC(2026, 9, 12, h - 1, m);   // Casablanca is UTC+1 in October 2026
+    const s1 = H.statusOf(doc, at(18, 30)), s2 = H.statusOf(doc, at(8, 30));
+    process.stdout.write(JSON.stringify({
+      open: s1.open, closes: s1.closesAt === at(19, 0), late: H.summaryOf(doc, at(18, 30), 'fr').text,
+      early: H.summaryOf(doc, at(8, 30), 'fr').text, week: H.summaryOf(doc, at(19, 5), 'fr').text, opens: s2.opensAt === at(9, 0), after: H.statusOf(doc, at(19, 5)).open,
+    }));`;
+  for (const TZ of ['Europe/Paris', 'America/New_York', 'Africa/Casablanca']) {
+    const r = spawnSync(process.execPath, ['-e', script, path.join(ROOT, 'assets/hours.js')], { env: { ...process.env, TZ }, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    const o = JSON.parse(r.stdout);
+    assert.deepEqual(o, { open: true, closes: true, late: 'Ouvert · ferme à 19:00', early: 'Ouvre à 09:00', week: 'Ouvre lundi à 09:00', opens: true, after: false }, TZ);
+  }
 });
 
 console.log(`\nbooking-truth: ${passed} passed, ${failed} failed`);

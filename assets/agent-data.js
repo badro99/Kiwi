@@ -172,7 +172,7 @@
       cliReward: function (r) { return 'Récompense atteinte : il reste ' + r + ' à offrir.'; },
       cliToGo: function (n) { return 'Encore ' + fmt(n) + ' points avant la prochaine récompense.'; },
       cliToGoStamps: function (n) { return 'Encore ' + fmt(n) + ' passage' + (n > 1 ? 's' : '') + ' avant la prochaine récompense.'; },
-      cliNoLoyalty: 'Aucun programme de fidélité n’est actif, les points ne comptent donc pas encore. Vous l’activez dans Clients & Marketing.',
+      cliNoLoyalty: 'Aucun programme de fidélité n’est actif, les points ne comptent donc pas encore. Vous l’activez dans Clients.',
       cliUnknown: function (n) { return 'Je ne trouve personne au nom de « ' + n + ' » dans votre carnet. Vérifiez l’orthographe, ou ouvrez le carnet : je ne devine pas un client que la caisse n’a pas identifié.'; },
       cliWhich: 'De quel client parlez-vous ? Donnez-moi son nom et je vous sors ses points, ses visites et ce qu’il a dépensé.',
       cliNoBook: 'Votre carnet client n’est pas encore actif. Dès que vos clients sont identifiés en caisse (téléphone ou carte de fidélité), je peux vous dire qui revient, qui dépense le plus et combien de points chacun a.',
@@ -197,7 +197,7 @@
       hrOpen24: 'Oui, vous êtes <b>ouvert</b> · 24 h/24 aujourd’hui.',
       hrShut: function (s) { return 'Non, vous êtes <b>fermé</b> en ce moment. ' + s + '.'; },
       hrCloseAt: function (h) { return 'Vous fermez à <b>' + h + '</b>.'; },
-      hrCloseNext: function (d, h) { return 'Vous êtes fermé en ce moment. La prochaine fermeture est ' + d + ' à <b>' + h + '</b>.'; },
+      hrCloseNext: function (d, h) { return 'Vous êtes fermé en ce moment. La prochaine fermeture est ' + String(d).toLowerCase() + ' à <b>' + h + '</b>.'; },
       hrUntil: function (n) { return n >= 60 ? 'Il reste <b>' + Math.floor(n / 60) + ' h ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> avant la fermeture.' : 'Il reste <b>' + n + ' min</b> avant la fermeture.'; },
       hrUntilShut: 'Vous êtes déjà fermé, il n’y a pas de compte à rebours.',
       hrAtOk: function (d, h) { return 'Oui · ' + d + ' à ' + h + ', vous êtes ouvert.'; },
@@ -236,7 +236,7 @@
       cliReward: function (r) { return 'Reward reached: ' + r + ' is owed.'; },
       cliToGo: function (n) { return fmt(n) + ' more points before the next reward.'; },
       cliToGoStamps: function (n) { return fmt(n) + ' more visit' + (n === 1 ? '' : 's') + ' before the next reward.'; },
-      cliNoLoyalty: 'No loyalty programme is active, so points aren’t counting yet. You turn it on in Clients & Marketing.',
+      cliNoLoyalty: 'No loyalty programme is active, so points aren’t counting yet. You turn it on in Customers.',
       cliUnknown: function (n) { return 'I can’t find anyone called “' + n + '” in your book. Check the spelling, or open the book: I won’t guess at a client the till never identified.'; },
       cliWhich: 'Which client do you mean? Give me the name and I’ll pull their points, visits and spend.',
       cliNoBook: 'Your client book isn’t active yet. Once clients are identified at the till (phone or loyalty card), I can tell you who comes back, who spends most and how many points each one has.',
@@ -298,7 +298,7 @@
       cliReward: function (r) { return 'بلغ المكافأة: ' + r + ' مستحقّة.'; },
       cliToGo: function (n) { return 'بقيت ' + fmt(n) + ' نقطة قبل المكافأة التالية.'; },
       cliToGoStamps: function (n) { return 'بقيت ' + fmt(n) + ' زيارة قبل المكافأة التالية.'; },
-      cliNoLoyalty: 'لا برنامج وفاء مفعّل، فالنقاط لا تُحتسب بعد. تفعّله من Clients & Marketing.',
+      cliNoLoyalty: 'لا برنامج وفاء مفعّل، فالنقاط لا تُحتسب بعد. تفعّله من العملاء.',
       cliUnknown: function (n) { return 'لا أجد أحداً باسم «' + n + '» في سجلّك. تحقّق من الكتابة أو افتح السجلّ: لا أخمّن زبوناً لم يعرّفه الصندوق.'; },
       cliWhich: 'عن أي زبون تتحدّث؟ أعطني اسمه وأخرج لك نقاطه وزياراته وما أنفقه.',
       cliNoBook: 'سجلّ زبنائك غير مفعّل بعد. بمجرد تعريف الزبناء في الصندوق (هاتف أو بطاقة وفاء)، أقول لك من يعود ومن ينفق أكثر وكم نقطة لكل واحد.',
@@ -688,8 +688,10 @@
 
     var now = Date.now();
     var st = KH.statusAt(now);
+    /* À l'heure de Casablanca, comme le moteur qui a rendu l'instant. */
+    var wallOf = function (ms) { return KH.wallClock ? KH.wallClock(ms) : ms; };
     var hhmm = function (ms) {
-      var d = new Date(ms);
+      var d = new Date(wallOf(ms));
       return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     };
     var sum = function (ts) { return KH.summary(ts || now, undefined, L).text; };
@@ -710,7 +712,7 @@
          * c'est précisément le genre de phrase sur laquelle un patron cale un
          * planning de personnel. */
         if (nxt.closesAt) {
-          var dayL = KH.dayLabel(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(nxt.closesAt).getDay()], L);
+          var dayL = KH.dayLabel(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(wallOf(nxt.closesAt)).getDay()], L);
           return { text: t.hrCloseNext(dayL, hhmm(nxt.closesAt)), stats: stats, prov: prov, open: openBtn };
         }
       }
