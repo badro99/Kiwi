@@ -8,11 +8,11 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, runAiWithGateway } from './_run.js';
-import { runWithPayloadFallback } from './_payload-fallback.js';
+import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 export const MODEL = '@cf/zai-org/glm-5.3-flash';
-export const FALLBACK_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+export const FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1800;
 const TEMPERATURE = 0.1;
@@ -90,7 +90,7 @@ async function runVisionInspect(env, dataUrl, promptText) {
     reasoning_effort: 'low',
   };
 
-  return runWithPayloadFallback(env, MODEL, payload, FALLBACK_MODEL);
+  return runVisionPair(env, MODEL, FALLBACK_MODEL, payload);
 }
 
 export function validateVisionData(raw) {

@@ -1,0 +1,440 @@
+{
+  "note": "Synthétique : établissements et prix inventés, aucune donnée marchande. Régénérer avec build-fixtures.mjs.",
+  "fixtures": [
+    {
+      "id": "menu-cafe-fr",
+      "route": "menu-import",
+      "file": "menu-cafe-fr.png",
+      "title": "Carte de café, français, prix à centimes",
+      "items": [
+        {
+          "name": "Espresso",
+          "price": 12,
+          "cat": "Cafés"
+        },
+        {
+          "name": "Café crème",
+          "price": 14.5,
+          "cat": "Cafés"
+        },
+        {
+          "name": "Cappuccino",
+          "price": 18,
+          "cat": "Cafés"
+        },
+        {
+          "name": "Latte macchiato",
+          "price": 22,
+          "cat": "Cafés"
+        },
+        {
+          "name": "Café frappé",
+          "price": 24.5,
+          "cat": "Cafés"
+        },
+        {
+          "name": "Thé à la menthe",
+          "price": 10,
+          "cat": "Thés et infusions"
+        },
+        {
+          "name": "Thé vert gunpowder",
+          "price": 12.5,
+          "cat": "Thés et infusions"
+        },
+        {
+          "name": "Verveine",
+          "price": 11,
+          "cat": "Thés et infusions"
+        },
+        {
+          "name": "Chocolat chaud",
+          "price": 19.5,
+          "cat": "Thés et infusions"
+        },
+        {
+          "name": "Croissant beurre",
+          "price": 8,
+          "cat": "Viennoiseries"
+        },
+        {
+          "name": "Pain au chocolat",
+          "price": 9.5,
+          "cat": "Viennoiseries"
+        },
+        {
+          "name": "Msemen au miel",
+          "price": 7.5,
+          "cat": "Viennoiseries"
+        },
+        {
+          "name": "Baghrir",
+          "price": 9,
+          "cat": "Viennoiseries"
+        },
+        {
+          "name": "Orange pressée",
+          "price": 15,
+          "cat": "Jus frais"
+        },
+        {
+          "name": "Avocat banane",
+          "price": 22.5,
+          "cat": "Jus frais"
+        },
+        {
+          "name": "Citronnade",
+          "price": 14,
+          "cat": "Jus frais"
+        },
+        {
+          "name": "Smoothie fraise",
+          "price": 26,
+          "cat": "Jus frais"
+        }
+      ]
+    },
+    {
+      "id": "menu-bilingual-fr-ar",
+      "route": "menu-import",
+      "file": "menu-bilingual-fr-ar.png",
+      "title": "Carte bilingue FR/AR, noms de plats en arabe",
+      "items": [
+        {
+          "name": "Harira",
+          "aliases": [
+            "حريرة"
+          ],
+          "price": 25,
+          "cat": "Entrées",
+          "catAliases": [
+            "المقبلات"
+          ]
+        },
+        {
+          "name": "Salade marocaine",
+          "aliases": [
+            "سلطة مغربية"
+          ],
+          "price": 28.5,
+          "cat": "Entrées",
+          "catAliases": [
+            "المقبلات"
+          ]
+        },
+        {
+          "name": "Zaalouk",
+          "aliases": [
+            "زعلوك"
+          ],
+          "price": 30,
+          "cat": "Entrées",
+          "catAliases": [
+            "المقبلات"
+          ]
+        },
+        {
+          "name": "Briouates au fromage",
+          "aliases": [
+            "بريوات بالجبن"
+          ],
+          "price": 35,
+          "cat": "Entrées",
+          "catAliases": [
+            "المقبلات"
+          ]
+        },
+        {
+          "name": "Tajine d'agneau aux pruneaux",
+          "aliases": [
+            "طاجين لحم بالبرقوق"
+          ],
+          "price": 95,
+          "cat": "Plats",
+          "catAliases": [
+            "الأطباق"
+          ]
+        },
+        {
+          "name": "Tajine de poulet aux olives",
+          "aliases": [
+            "طاجين دجاج بالزيتون"
+          ],
+          "price": 80,
+          "cat": "Plats",
+          "catAliases": [
+            "الأطباق"
+          ]
+        },
+        {
+          "name": "Couscous royal",
+          "aliases": [
+            "كسكس ملكي"
+          ],
+          "price": 110,
+          "cat": "Plats",
+          "catAliases": [
+            "الأطباق"
+          ]
+        },
+        {
+          "name": "Pastilla au poulet",
+          "aliases": [
+            "بسطيلة بالدجاج"
+          ],
+          "price": 85.5,
+          "cat": "Plats",
+          "catAliases": [
+            "الأطباق"
+          ]
+        },
+        {
+          "name": "Rfissa",
+          "aliases": [
+            "رفيسة"
+          ],
+          "price": 75,
+          "cat": "Plats",
+          "catAliases": [
+            "الأطباق"
+          ]
+        },
+        {
+          "name": "Chebakia",
+          "aliases": [
+            "شباكية"
+          ],
+          "price": 20,
+          "cat": "Desserts",
+          "catAliases": [
+            "الحلويات"
+          ]
+        },
+        {
+          "name": "Cornes de gazelle",
+          "aliases": [
+            "كعب الغزال"
+          ],
+          "price": 30,
+          "cat": "Desserts",
+          "catAliases": [
+            "الحلويات"
+          ]
+        },
+        {
+          "name": "Salade d’oranges à la cannelle",
+          "aliases": [
+            "سلطة البرتقال بالقرفة"
+          ],
+          "price": 32.5,
+          "cat": "Desserts",
+          "catAliases": [
+            "الحلويات"
+          ]
+        },
+        {
+          "name": "Thé à la menthe",
+          "aliases": [
+            "أتاي بالنعناع"
+          ],
+          "price": 15,
+          "cat": "Boissons",
+          "catAliases": [
+            "المشروبات"
+          ]
+        },
+        {
+          "name": "Jus d’orange",
+          "aliases": [
+            "عصير البرتقال"
+          ],
+          "price": 18,
+          "cat": "Boissons",
+          "catAliases": [
+            "المشروبات"
+          ]
+        },
+        {
+          "name": "Eau minérale",
+          "aliases": [
+            "ماء معدني"
+          ],
+          "price": 10,
+          "cat": "Boissons",
+          "catAliases": [
+            "المشروبات"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "menu-board-handwritten",
+      "route": "menu-import",
+      "file": "menu-board-handwritten.png",
+      "title": "Ardoise manuscrite, prix « 25 dh »",
+      "items": [
+        {
+          "name": "Sandwich kefta",
+          "price": 25,
+          "cat": "Sandwichs"
+        },
+        {
+          "name": "Panini poulet",
+          "price": 28,
+          "cat": "Sandwichs"
+        },
+        {
+          "name": "Tacos viande hachée",
+          "price": 35,
+          "cat": "Sandwichs"
+        },
+        {
+          "name": "Pizza margherita",
+          "price": 40,
+          "cat": "Sandwichs"
+        },
+        {
+          "name": "Salade composée",
+          "price": 22,
+          "cat": "Salades"
+        },
+        {
+          "name": "Salade de fruits",
+          "price": 17.5,
+          "cat": "Salades"
+        },
+        {
+          "name": "Café",
+          "price": 8,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Thé",
+          "price": 7,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Jus d’avocat",
+          "price": 17.5,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Coca-Cola",
+          "price": 10,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Eau",
+          "price": 5,
+          "cat": "Boissons"
+        }
+      ]
+    },
+    {
+      "id": "menu-lowlight-rotated",
+      "route": "menu-import",
+      "file": "menu-lowlight-rotated.png",
+      "title": "Photo penchée, sombre, grain",
+      "items": [
+        {
+          "name": "Cheeseburger",
+          "price": 32,
+          "cat": "Burgers"
+        },
+        {
+          "name": "Double burger",
+          "price": 45,
+          "cat": "Burgers"
+        },
+        {
+          "name": "Chicken burger",
+          "price": 38.5,
+          "cat": "Burgers"
+        },
+        {
+          "name": "Tacos poulet",
+          "price": 30,
+          "cat": "Burgers"
+        },
+        {
+          "name": "Frites maison",
+          "price": 12,
+          "cat": "Accompagnements"
+        },
+        {
+          "name": "Onion rings",
+          "price": 16.5,
+          "cat": "Accompagnements"
+        },
+        {
+          "name": "Coca-Cola",
+          "price": 10,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Orangina",
+          "price": 11.5,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Eau minérale",
+          "price": 6,
+          "cat": "Boissons"
+        },
+        {
+          "name": "Milkshake vanille",
+          "price": 24.9,
+          "cat": "Boissons"
+        }
+      ]
+    },
+    {
+      "id": "salle-restaurant-sketch",
+      "route": "salle-import",
+      "file": "salle-restaurant-sketch.png",
+      "title": "Croquis : 6 rondes de 4, 4 carrées de 2, comptoir",
+      "salle": {
+        "venue": "restaurant",
+        "outdoor": false,
+        "counter": true,
+        "tables": [
+          {
+            "shape": "round",
+            "seats": 4,
+            "count": 6
+          },
+          {
+            "shape": "square",
+            "seats": 2,
+            "count": 4
+          }
+        ],
+        "tableCount": 10
+      }
+    },
+    {
+      "id": "salle-terrasse-sketch",
+      "route": "salle-import",
+      "file": "salle-terrasse-sketch.png",
+      "title": "Croquis de terrasse : 5 rectangulaires de 6, 8 rondes de 2",
+      "salle": {
+        "venue": "cafe",
+        "outdoor": true,
+        "counter": false,
+        "tables": [
+          {
+            "shape": "rect",
+            "seats": 6,
+            "count": 5
+          },
+          {
+            "shape": "round",
+            "seats": 2,
+            "count": 8
+          }
+        ],
+        "tableCount": 13
+      }
+    }
+  ]
+}

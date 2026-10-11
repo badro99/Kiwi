@@ -35,9 +35,14 @@ const sourceFiles = [
   'vision-inspect.js', 'expense-ocr.js', 'tpe-reconcile.js', 'voice.js',
   'menu-import.js', 'salle-import.js',
 ];
+/* Les routes vision passent par _vision.js, qui donne à chaque modèle sa forme
+ * de requête puis délègue au même garde (_payload-fallback.js) : le garde reste
+ * le seul chemin, une couche plus bas. */
+const visionSource = fs.readFileSync(new URL('../functions/api/ai/_vision.js', import.meta.url), 'utf8');
+check(visionSource.includes("./_payload-fallback.js") && /runWithPayloadFallback\(/.test(visionSource), '_vision.js delegates to the guarded payload helper');
 for (const file of sourceFiles) {
   const source = fs.readFileSync(new URL(`../functions/api/ai/${file}`, import.meta.url), 'utf8');
-  check(source.includes("./_payload-fallback.js"), `${file} routes fallback through the guarded payload helper`);
+  check(source.includes("./_payload-fallback.js") || (source.includes("./_vision.js") && /runVisionPair\(/.test(source)), `${file} routes fallback through the guarded payload helper`);
 }
 
 check(shopify.translate({ total_price: '12.35', line_items: [{ price: '12.35', quantity: 1, title: 'item' }] }).total === 12.35,

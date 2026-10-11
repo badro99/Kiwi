@@ -442,6 +442,20 @@ The misses over-alert ("mot de passe oublié" read as blocking). Covered by
 | QR bill tip (OrderPro) | A 15 % tip was pre-ticked and added to "Total à régler", a total the till never sees: the phone sends no tip anywhere. "Le serveur arrive avec l'addition" promised a waiter; the split calculator toasted "Addition divisée". | No tip pre-selected; the sheet says the tip is handed to the waiter and is not added to the bill; "Demander l'addition"; the split result reads "À annoncer au serveur". FR/EN/AR. Covered in `order-truth-test.mjs`. |
 | Booking settings checkboxes | Logged as "accessible name on". | Measured again: each sits inside its label. Not a bug. |
 
+## Lecture d'images (IA vision): done
+
+| ID | Finding | Status |
+|---|---|---|
+| V1 | Menu import and floor-plan import read photos with Llama 3.2 11B vision. Measured on real models: it read the menu but answered in Markdown instead of the requested JSON (3 % exact prices). That is not a call error, so the fallback never ran and the merchant saw "lecture impossible". | **Fixed.** GLM 5.3 Flash first, Gemma 4 26B as fallback, on all nine vision routes. |
+| V2 | Every model got the same request shape. | **Fixed.** `_vision.js` builds each model's own payload (reasoning effort for GLM only, native shape for Llama). |
+| V3 | No way to measure a model change before shipping it. | **Fixed.** `tools/ai-model-eval.mjs` scores synthetic menus and floor plans (`tools/fixtures/ai-eval/`) to the centime, with a dry mode for CI. |
+
+Measured on 2026-10-11 (6 fixtures, 2 runs each, real Workers AI): GLM 5.3
+Flash 100 % exact prices, PRIMARY-READY; Gemma 4 accurate when it answers
+(0.965 to 1.000) but slow (median 41 s, one 120 s timeout), so fallback only;
+Llama 0.078. Covered by `ai-vision-models-test.mjs` (62 checks) and
+`menu-scan-test.mjs`.
+
 ## Analyse du menu, phase 1: done
 
 The restaurant's "Marges" page becomes **Analyse du menu**: the overview it

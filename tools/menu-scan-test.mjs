@@ -107,7 +107,7 @@ ok(/quotaOk\(env,\s*who,\s*'menuimport',\s*DAILY_CAP\)/.test(routeSrc), 'quota p
 ok(/menuimport:\s*60/.test(quotaSrc), '_quota.js déclare le plafond menuimport');
 ok(/const who = await tenantFor\(request, env, body\.merchant\)/.test(routeSrc) && /if \(!who\) return json\(\{ ok: false, error: 'auth' \}, 401\)/.test(routeSrc), 'tenantFor obligatoire — 401 sans session/appairage');
 ok(/import \{ parseModelResponse \} from '\.\/invoice\.js'/.test(routeSrc), 'lecture des réponses modèle partagée avec invoice.js (pas de copie)');
-ok(/export const MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(routeSrc) && /export const FALLBACK_MODEL = '@cf\/zai-org\/glm-4.7-flash'/.test(routeSrc) && /export const VISION_MODEL = '@cf\/meta\/llama-3\.2-11b-vision-instruct'/.test(routeSrc), 'les trois modèles sont hébergés Cloudflare (@cf/)');
+ok(/export const MODEL = '@cf\/qwen\/qwen3-30b-a3b-fp8'/.test(routeSrc) && /export const FALLBACK_MODEL = '@cf\/zai-org\/glm-4.7-flash'/.test(routeSrc) && /export const VISION_MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(routeSrc) && /export const VISION_FALLBACK_MODEL = '@cf\/google\/gemma-4-26b-a4b-it'/.test(routeSrc), 'les modèles texte et vision (GLM 5.3 Flash, secours Gemma 4) sont hébergés Cloudflare (@cf/)');
 ok(!/console\.(log|info|warn|error)/.test(routeSrc), 'la route ne journalise jamais le contenu d\'un menu');
 ok(/\^data:image\\\/\(jpeg\|png\|webp\);base64,/.test(routeSrc) && /MAX_IMAGE_DATAURL/.test(routeSrc), 'les images sont typées et bornées avant le modèle vision');
 ok(/reason: fetched\.error/.test(routeSrc) && /'js-only'/.test(routeSrc), 'une page JavaScript-only répond js-only (le client propose la photo)');

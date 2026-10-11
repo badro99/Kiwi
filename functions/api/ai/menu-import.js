@@ -16,8 +16,8 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
-import { runWithFallback, runAiWithGateway } from './_run.js';
-import { runWithPayloadFallback } from './_payload-fallback.js';
+import { runWithFallback } from './_run.js';
+import { visionMessages, runVisionPair } from './_vision.js';
 // Une seule lecture des réponses Workers AI pour toutes les routes : la forme
 // varie (objet déjà parsé, chaîne, clôture ```json, choices[0].message) et
 // invoice.js a déjà payé pour l'apprendre.
@@ -27,10 +27,26 @@ import { parseModelResponse } from './invoice.js';
  * ~0,0006 $ l'appel, secours chez un autre éditeur. */
 export const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
-/* Les photos de menus passent par le modèle vision Cloudflare. */
-export const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+/* Les photos de menus passent par un duo vision Cloudflare : GLM 5.3 Flash
+ * (natif multimodal) d'abord, Gemma 4 26B en secours. Avant : llama-3.2-11b-vision
+ * (2024) seul, lu deux fois dans deux formes de requête. Les formes de requête
+ * par modèle vivent dans _vision.js ; tools/ai-model-eval.mjs mesure le duo. */
+/* Lecture de photo : GLM 5.3 Flash devant, Gemma 4 26B en secours, comme les
+ * sept autres routes vision. Mesuré le 2026-10-11 par `node tools/ai-model-eval.mjs`
+ * (vrais modèles, 6 fixtures × 2 passages) : GLM 100 % de prix exacts et
+ * PRIMARY-READY ; Llama 3.2 vision, l'ancien lecteur, lisait la carte mais la
+ * rendait en Markdown au lieu du JSON demandé (3 % de prix exacts), et ce
+ * n'est pas une erreur d'appel : le secours ne se déclenchait jamais, le
+ * marchand voyait « lecture impossible ». Gemma lit juste quand il répond
+ * (0,965 à 1,000) mais lentement (médiane 41 s) : il ne sert que si GLM tombe. */
+export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
+export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 4000;
+/* Une carte de 150 articles tient dans ~5 000 tokens de JSON, avant même le
+ * raisonnement du modèle : à 4 000 elle sortait tronquée, donc « illisible »
+ * précisément pour les grandes cartes. On ne paie que les tokens émis. */
+const MAX_VISION_TOKENS = 8000;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = 60;
@@ -236,51 +252,28 @@ function textPayload(text, targetLang = 'fr') {
   };
 }
 
-/* Les modèles Meta sont sous licence : le premier appel du COMPTE doit être
- * le prompt littéral « agree » (erreur 5016 sinon). Une fois accepté, c'est
- * acquis pour toujours · mais un compte neuf (staging, migration) retombe
- * dessus, donc l'acceptation se rejoue d'elle-même au lieu d'exiger une
- * manipulation console. */
-async function agreeIfGated(env, err) {
-  if (!/5016|submit the prompt 'agree'/i.test(String((err && err.message) || err || ''))) return false;
-  try { await runAiWithGateway(env, VISION_MODEL, { prompt: 'agree' }); return true; }
-  catch (_) { return false; }
-}
-
-/* Le schéma d'entrée des modèles vision varie d'un modèle Workers AI à
- * l'autre : forme OpenAI (content en tableau de blocs image_url/text) ou forme
- * native (prompt + image en tableau d'octets). On tente la première, on se
- * replie sur la seconde · même philosophie multi-formes que parseModelResponse. */
-async function runVision(env, dataUrl, targetLang = 'fr') {
-  try { return await runVisionOnce(env, dataUrl, targetLang); }
-  catch (e) {
-    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl, targetLang);
-    throw e;
-  }
-}
-
-async function runVisionOnce(env, dataUrl, targetLang = 'fr') {
-  const prompt = buildSystemPrompt(targetLang);
-  const openaiShape = {
-    messages: [
-      { role: 'system', content: prompt },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Voici la photo de la carte. Extrais tous les articles et traduis-les si besoin.' },
-          { type: 'image_url', image_url: { url: dataUrl } },
-        ],
-      },
-    ],
-    max_tokens: MAX_TOKENS,
+/* La requête vision, au format GLM : le secours Gemma la reçoit traduite par
+ * payloadForModel() (sans reasoning_effort, absent de son schéma).
+ * Exportée pour tools/ai-model-eval.mjs, qui rejoue le VRAI prompt.
+ * Le texte utilisateur disait « traduis-les si besoin » alors que le prompt
+ * système interdit de traduire : sur une carte bilingue FR/AR, le modèle
+ * obéissait au dernier ordre et les noms arabes ressortaient francisés. */
+export function buildMenuVisionPayload(dataUrl, targetLang = 'fr') {
+  return {
+    messages: visionMessages({
+      system: buildSystemPrompt(targetLang),
+      text: "Voici la photo de la carte. Extrais tous les articles, recopiés tels qu'ils sont écrits, sans traduire.",
+      dataUrl,
+    }),
+    max_tokens: MAX_VISION_TOKENS,
     temperature: TEMPERATURE,
+    top_p: TOP_P,
+    reasoning_effort: 'low',
   };
-  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-  const bin = atob(b64);
-  const bytes = new Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const nativeShape = { prompt: prompt + '\n\nVoici la photo de la carte. Extrais tous les articles.', image: bytes, max_tokens: MAX_TOKENS };
-  return runWithPayloadFallback(env, VISION_MODEL, openaiShape, VISION_MODEL, nativeShape);
+}
+
+export async function runVision(env, dataUrl, targetLang = 'fr') {
+  return runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, buildMenuVisionPayload(dataUrl, targetLang));
 }
 
 export async function onRequestPost(context) {

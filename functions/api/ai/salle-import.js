@@ -17,12 +17,23 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
-import { runAiWithGateway, runWithFallback } from './_run.js';
-import { runWithPayloadFallback } from './_payload-fallback.js';
+import { runWithFallback } from './_run.js';
+import { visionMessages, runVisionPair } from './_vision.js';
 import { parseModelResponse } from './invoice.js';
 
-/* Le même modèle vision que le scan de cartes — vérifié sur photos réelles. */
-export const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+/* Le même duo vision que le scan de cartes : GLM 5.3 Flash (natif multimodal)
+ * d'abord, Gemma 4 26B en secours. Avant : llama-3.2-11b-vision (2024) seul.
+ * Les formes de requête par modèle vivent dans _vision.js. */
+/* Lecture de photo : GLM 5.3 Flash devant, Gemma 4 26B en secours, comme les
+ * sept autres routes vision. Mesuré le 2026-10-11 par `node tools/ai-model-eval.mjs`
+ * (vrais modèles, 6 fixtures × 2 passages) : GLM 100 % de prix exacts et
+ * PRIMARY-READY ; Llama 3.2 vision, l'ancien lecteur, lisait la carte mais la
+ * rendait en Markdown au lieu du JSON demandé (3 % de prix exacts), et ce
+ * n'est pas une erreur d'appel : le secours ne se déclenchait jamais, le
+ * marchand voyait « lecture impossible ». Gemma lit juste quand il répond
+ * (0,965 à 1,000) mais lentement (médiane 41 s) : il ne sert que si GLM tombe. */
+export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
+export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 /* Le duo texte du repêchage : le modèle vision décrit parfois la salle en
  * prose française au lieu du JSON demandé (vérifié sur croquis réel : « 8
  * tables rondes de 4 places et 4 tables carrées de 2 places » — la bonne
@@ -31,7 +42,9 @@ export const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
 export const TEXT_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 export const TEXT_FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 
-const MAX_TOKENS = 2200;
+/* Le JSON d'une salle est minuscule, mais GLM raisonne avant de répondre
+ * (reasoning_effort 'low' le borne, pas à zéro) : 2 200 laissait peu de marge. */
+const MAX_TOKENS = 3000;
 const TEMPERATURE = 0.1;
 const DAILY_CAP = 20;
 const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire — le client réduit avant envoi
@@ -85,7 +98,7 @@ function rawText(aiRes) {
   return '';
 }
 
-const SYSTEM_PROMPT = `Tu analyses la photo d'un espace de restauration (salle, terrasse, café, snack…) ou le croquis d'un plan de salle, pour préparer un plan de salle numérique.
+export const SYSTEM_PROMPT = `Tu analyses la photo d'un espace de restauration (salle, terrasse, café, snack…) ou le croquis d'un plan de salle, pour préparer un plan de salle numérique.
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire, avec cette structure exacte :
 {
   "venue": "restaurant",
@@ -103,49 +116,24 @@ Règles :
 - Compte TOUTES les tables visibles, même partiellement ou en arrière-plan.
 - Si l'image ne montre ni un espace de restauration ni un croquis de salle, réponds {"error":"not-a-room"}.`;
 
-/* Les modèles Meta sont sous licence : le premier appel du COMPTE doit être
- * le prompt littéral « agree » (erreur 5016 sinon). Une fois accepté, c'est
- * acquis pour toujours — mais un compte neuf (staging, migration) retombe
- * dessus, donc l'acceptation se rejoue d'elle-même au lieu d'exiger une
- * manipulation console. */
-async function agreeIfGated(env, err) {
-  if (!/5016|submit the prompt 'agree'/i.test(String((err && err.message) || err || ''))) return false;
-  try { await runAiWithGateway(env, VISION_MODEL, { prompt: 'agree' }); return true; }
-  catch (_) { return false; }
-}
-
-/* Le schéma d'entrée des modèles vision varie d'un modèle Workers AI à
- * l'autre : forme OpenAI, puis repli sur la forme native — même stratégie
- * multi-formes que menu-import.js. */
-async function runVision(env, dataUrl) {
-  try { return await runVisionOnce(env, dataUrl); }
-  catch (e) {
-    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl);
-    throw e;
-  }
-}
-
-async function runVisionOnce(env, dataUrl) {
-  const openaiShape = {
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Voici la photo de la salle. Extrais les faits.' },
-          { type: 'image_url', image_url: { url: dataUrl } },
-        ],
-      },
-    ],
+/* La requête vision, au format GLM : le secours Gemma la reçoit traduite par
+ * payloadForModel() (sans reasoning_effort, absent de son schéma). Exportée
+ * pour tools/ai-model-eval.mjs, qui rejoue le VRAI prompt. */
+export function buildSallePayload(dataUrl) {
+  return {
+    messages: visionMessages({
+      system: SYSTEM_PROMPT,
+      text: 'Voici la photo de la salle. Extrais les faits.',
+      dataUrl,
+    }),
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
+    reasoning_effort: 'low',
   };
-  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-  const bin = atob(b64);
-  const bytes = new Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const nativeShape = { prompt: SYSTEM_PROMPT + '\n\nVoici la photo de la salle. Extrais les faits.', image: bytes, max_tokens: MAX_TOKENS };
-  return runWithPayloadFallback(env, VISION_MODEL, openaiShape, VISION_MODEL, nativeShape);
+}
+
+export async function runVision(env, dataUrl) {
+  return runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, buildSallePayload(dataUrl));
 }
 
 export async function onRequestPost(context) {
@@ -169,9 +157,11 @@ export async function onRequestPost(context) {
   if (!(await quotaOk(env, who, 'salleimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
   let aiRes;
+  let usedModel = VISION_MODEL;
   try {
     const r = await runVision(env, dataUrl);
     aiRes = r.result;
+    usedModel = r.model;
   } catch (e) {
     /* Jamais un statut 5xx ici : l'edge Cloudflare REMPLACE un 502 rendu par
      * la Function par sa propre page HTML, et le navigateur ne voit jamais
@@ -211,10 +201,10 @@ export async function onRequestPost(context) {
      * Sans lui, « illisible » est indiagnosticable depuis le navigateur. */
     let raw = '';
     try { raw = (typeof aiRes === 'string' ? aiRes : JSON.stringify(aiRes)).slice(0, 240); } catch (_) {}
-    return json({ ok: false, reason: 'unparsed', detail: raw }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
+    return json({ ok: false, reason: 'unparsed', detail: raw }, 200, { 'x-kiwi-ai-model': usedModel });
   }
   if (validated.error) {
-    return json({ ok: false, reason: 'not-a-room' }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
+    return json({ ok: false, reason: 'not-a-room' }, 200, { 'x-kiwi-ai-model': usedModel });
   }
 
   return json({
@@ -224,5 +214,5 @@ export async function onRequestPost(context) {
     counter: validated.counter,
     tables: validated.tables,
     tableCount: validated.tableCount,
-  }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
+  }, 200, { 'x-kiwi-ai-model': usedModel });
 }

@@ -6,13 +6,14 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
+import { runVisionPair } from './_vision.js';
 import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 export const MODEL = '@cf/zai-org/glm-5.3-flash';
 export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 export const VISION_MODEL = '@cf/zai-org/glm-5.3-flash';
-export const VISION_FALLBACK_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+export const VISION_FALLBACK_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const MAX_TOKENS = 1600;
 const TEMPERATURE = 0.2;
@@ -95,7 +96,7 @@ export async function onRequestPost(context) {
         ],
         max_tokens: MAX_TOKENS, temperature: TEMPERATURE, reasoning_effort: 'low',
       };
-      runRes = await runWithFallback(env, VISION_MODEL, VISION_FALLBACK_MODEL, payload);
+      runRes = await runVisionPair(env, VISION_MODEL, VISION_FALLBACK_MODEL, payload);
     } else {
       const payload = {
         messages: [
