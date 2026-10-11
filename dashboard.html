@@ -1674,6 +1674,8 @@
   html.kiwi-native .kiwi-lock-caisse { display: none !important; }
   .kiwi-lock-caisse { margin-top: 4px; }
   .kiwi-lock-caisse svg { width: 14px; height: 14px; }
+  /* The phone tab bar (z 1200) must not float, live, over the lock (z 800). */
+  html.kiwi-gate-up .kw-tabbar { display: none !important; }
   /* Hidden input · captures keystrokes */
   .kiwi-pin-input {
     position: absolute; opacity: 0; left: -9999px;
@@ -1710,56 +1712,29 @@
     opacity: 1;
   }
   .kiwi-greet h1 {
-    margin: 0; line-height: 1.12;
+    margin: 0 auto; line-height: 1.12; max-width: 16em;
     font-size: clamp(30px, 6.4vw, 64px); font-weight: 600; letter-spacing: -0.034em;
     color: var(--ink);
-    /* Light shadow only · heavy blur on text repaints every animation
-     * frame and tanks fluidity. */
-    text-shadow: 0 2px 6px rgba(10,15,13,0.05);
-    white-space: nowrap;
+    /* A long name wraps instead of running off the screen; balance keeps
+       the two lines even. The wish itself never splits (.em-clip). */
+    white-space: normal; text-wrap: balance;
   }
-  /* The em itself stays plain inline so its baseline aligns naturally
-   * with the surrounding sans. All the reveal mechanics happen on the
-   * wrapper. */
   .kiwi-greet h1 em {
-    font-family: var(--serif); font-weight: 400;
+    font-family: var(--sans); font-style: normal; font-weight: inherit;
     color: var(--atlas);
-    display: inline;
   }
-  /* The wrapper does the smooth max-width reveal · single CSS transition,
-   * GPU-friendly, no setTimeout drift. vertical-align:top aligns the
-   * inline-block's top to the parent line box's top, so its inner text
-   * baseline lines up with the surrounding text baseline. */
+  /* The wish is laid out at full width from the first frame and wiped in
+   * with a clip-path (composited, no reflow), in reading direction. The
+   * negative insets keep descenders and ink overflow inside the clip. */
   .kiwi-greet h1 .em-clip {
-    position: relative;
     display: inline-block;
-    overflow: hidden;
-    max-width: 0;
     white-space: nowrap;
-    vertical-align: top;
-    /* NO padding · padding has a fixed length that browsers won't shrink
-     * below, so even with max-width:0 the padding box would render and
-     * leak the first glyph. The +24px buffer baked into naturalW (JS)
-     * gives the accent ink all the trailing room it needs without padding. */
-    transition: max-width 960ms cubic-bezier(0.32, 0.72, 0, 1);
+    clip-path: inset(-0.25em 100% -0.25em -0.1em);
+    transition: clip-path 720ms cubic-bezier(0.32, 0.72, 0, 1);
   }
-  .kiwi-greet h1 .em-clip.is-revealed {
-    max-width: var(--em-w, 700px);
-  }
-  /* Blinking caret sits at the right edge of the clip-wrapper and so
-   * tracks the reveal edge as the width animates. */
-  .kiwi-greet h1 .em-clip.is-typing::after {
-    content: '';
-    position: absolute;
-    right: 0; top: 18%; bottom: 16%;
-    width: 2.5px;
-    background: var(--atlas);
-    animation: kw-greet-cursor 0.7s steps(1) infinite;
-  }
-  @keyframes kw-greet-cursor {
-    0%, 55%   { opacity: 1; }
-    56%, 100% { opacity: 0; }
-  }
+  [dir="rtl"] .kiwi-greet h1 .em-clip { clip-path: inset(-0.25em -0.1em -0.25em 100%); }
+  .kiwi-greet h1 .em-clip.is-revealed,
+  [dir="rtl"] .kiwi-greet h1 .em-clip.is-revealed { clip-path: inset(-0.25em -0.1em -0.25em -0.1em); }
 
   /* Dashboard dive-in (.app + .demo-bar revealed after greeting fades). */
   .kw-app-hidden {
@@ -1774,14 +1749,34 @@
   .demo-bar {
     transition: opacity 480ms cubic-bezier(0.32, 0.72, 0, 1);
   }
+  /* « Amira Cafe · Ouvert · ferme à 23:00 » · the shop the dashboard opens
+     on, and what its own opening hours say. No hours, no status, no dot. */
   .kiwi-greet-sub {
-    font-family: var(--mono); font-size: 11.5px;
-    letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--n-500);
+    display: inline-flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center;
     margin-top: 22px;
+    font-family: var(--sans); font-size: 14px; font-weight: 500; letter-spacing: 0;
+    color: var(--n-600);
   }
+  .kiwi-greet-sub[hidden] { display: none !important; }
+  .kiwi-greet-sub b { font-weight: 600; color: var(--ink); }
+  .kiwi-greet-place { display: inline-flex; align-items: center; }
+  .kiwi-greet-sep { margin-inline: 7px; }
+  @media (max-width: 480px) {
+    html body .kiwi-greet .kiwi-greet-sub { flex-direction: column; gap: 2px; border-radius: 18px; padding: 10px 18px; }
+    .kiwi-greet-sep { display: none; }
+  }
+  .kiwi-greet-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: none; margin-inline-end: 8px;
+    background: var(--n-400, #9aa39e);
+  }
+  .kiwi-greet-dot[data-tone="open"] { background: var(--atlas); }
+  .kiwi-greet-dot[data-tone="soon"] { background: #d49a25; }
   @media (max-width: 720px) {
     .kiwi-greet h1 { font-size: 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kiwi-greet, .kiwi-greet-inner, .kiwi-lock, .kiwi-lock-inner { transition-property: opacity !important; transform: none !important; filter: none !important; }
+    .kiwi-greet h1 .em-clip { transition: none; clip-path: none; }
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -5246,7 +5241,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2113" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2114" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=11" />
@@ -5348,14 +5343,14 @@
       <div class="kiwi-pin-cell" data-cell="3"></div>
     </div>
     <input type="tel" inputmode="numeric" maxlength="4" class="kiwi-pin-input" data-kiwi-pin-input autocomplete="off" autofocus />
-    <div class="kiwi-lock-help" data-i18n="dash.lock.help">Saisis ton <b>code à 4 chiffres</b> pour ouvrir le tableau de bord</div>
+    <div class="kiwi-lock-help" data-i18n="dash.lock.help">Entrez votre <b>code à 4 chiffres</b> pour ouvrir le tableau de bord</div>
     <button type="button" class="kiwi-lock-skip" data-kiwi-skip data-i18n="dash.lock.skip">Entrer dans la démo →</button>
     <a class="kiwi-lock-switch kiwi-lock-caisse" href="kiwi-caisse.html" data-i18n="dash.lock.caisse" aria-label="Ouvrir la caisse">
       <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Z"/></svg>
       Ouvrir la caisse
     </a>
     <a class="kiwi-lock-switch" href="/auth/logout" data-i18n="dash.lock.switch" aria-label="Se déconnecter et changer de compte">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
       Changer de compte
     </a>
   </div>
@@ -5364,8 +5359,8 @@
 <!-- One-time greeting flash, revealed once after PIN unlock then dismissed -->
 <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
   <div class="kiwi-greet-inner">
-    <h1><span data-i18n="dash.hello">Bonjour Rachid,</span> <em data-i18n="dash.day">bonne journée.</em></h1>
-    <div class="kiwi-greet-sub" data-kiwi-greet-sub><span class="greet-live-dot" style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 8px currentColor;"></span> Café Atlas · service ouvert</div>
+    <h1><span data-greet-hello>Bonjour,</span> <em data-greet-wish>bonne journée.</em></h1>
+    <div class="kiwi-greet-sub" data-kiwi-greet-sub hidden></div>
   </div>
 </div>
 
@@ -6193,7 +6188,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=2" defer></script>
-<script src="assets/i18n.js?v=22" defer></script>
+<script src="assets/i18n.js?v=23" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6242,7 +6237,7 @@
 <script src="assets/demoClock.js?v=4" defer></script>
 <script src="assets/dateRange.js?v=61" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
-<script defer src="assets/pwa-update.js?v=359"></script>
+<script defer src="assets/pwa-update.js?v=360"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
 <script defer src="assets/dashboard-native.js?v=3"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
@@ -6255,7 +6250,7 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
-<script defer src="assets/identity.js?v=8"></script>
+<script defer src="assets/identity.js?v=9"></script>
 <script defer src="assets/live-link.js?v=60"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
@@ -6512,7 +6507,10 @@
   function demosOn() { return !(window.KiwiEnv && window.KiwiEnv.demosAllowed === false); }
   const pinRow   = document.querySelector('[data-kiwi-pin]');
   const helpEl   = document.querySelector('.kiwi-lock-help');
-  const helpHTML = helpEl ? helpEl.innerHTML : '';
+  /* What the help line said before an error replaced it. Captured at the
+     moment of the error, not at boot: the boot copy is the French original,
+     and restoring it put French back under an English or Arabic session. */
+  let helpHTML = helpEl ? helpEl.innerHTML : '';
   /* Which ACCESS TIER a stored role means. Roles reach us in three shapes from
    * three places: the onboarding wizard writes owner/manager/staff, the operator
    * console files a catalogue id (proprietaire, caisse, serveur…), and the Équipe
@@ -6686,6 +6684,7 @@
     cells.forEach((c) => { c.classList.remove('is-filled'); c.textContent = ''; });
     if (pinRow) { pinRow.classList.remove('is-wrong'); void pinRow.offsetWidth; pinRow.classList.add('is-wrong'); }
     if (helpEl) {
+      if (!helpEl.classList.contains('is-error')) helpHTML = helpEl.innerHTML;
       let lang = 'fr';
       try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
       if (reason === 'offline') {
@@ -6719,6 +6718,7 @@
   function maybeShowNoOwnerHelp() {
     if (demosOn() || !helpEl || pinInput.value) return;
     if (serverRosterSize() > 0 && !hasDashboardCode()) {
+      if (!helpEl.classList.contains('is-error')) helpHTML = helpEl.innerHTML;
       let lang = 'fr';
       try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
       const msg = {
@@ -6738,19 +6738,166 @@
    *    their name, business and team codes · so the entry stops being
    *    "Bonjour Rachid · Café Atlas" and becomes theirs. ─────────────────── */
   const store = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+
+  /* ── What the greeting says, and why each word is true ─────────────────
+   * It used to be written once, in French, at boot: « Bonjour Rachid, bonne
+   * journée. » over « Café Atlas · service ouvert ». At 00:12 that wished a
+   * good day; the pill claimed a service was open with nothing behind it; it
+   * named the account's first shop while the dashboard opened on another; and
+   * identity.js re-wrote it in French over an English or Arabic session.
+   * Now it is composed at the moment it is shown:
+   *   · the hello and the wish follow the clock (morning, afternoon, evening,
+   *     night) in FR / EN / AR;
+   *   · the name is the person whose code just opened the door, else the
+   *     account owner, else nobody · the demo's Rachid only on a demo;
+   *   · the place is the shop the dashboard opens on, and its status is the
+   *     one its own opening hours give (KiwiHours.summary). No hours on file,
+   *     no status: the pill just names the shop. */
+  const GREET_T = {
+    fr: { hello: ['Bonjour', 'Bonjour', 'Bonsoir', 'Bonsoir'],
+          wish: ['bonne journée.', 'bon après-midi.', 'bonne soirée.', 'bonne fin de soirée.'], comma: ',' },
+    en: { hello: ['Good morning', 'Good afternoon', 'Good evening', 'Good evening'],
+          wish: ['have a great day.', 'have a great afternoon.', 'have a great evening.', 'have a calm night.'], comma: ',' },
+    ar: { hello: ['صباح الخير', 'مساء الخير', 'مساء الخير', 'مساء الخير'],
+          wish: ['يوماً موفقاً.', 'بقية يوم موفقة.', 'أمسية سعيدة.', 'ليلة هادئة.'], comma: '،' },
+  };
+  /* 05–12 morning · 12–18 afternoon · 18–22 evening · 22–05 night. */
+  function daySlot(d) {
+    const h = (d || new Date()).getHours();
+    return h >= 5 && h < 12 ? 0 : h >= 12 && h < 18 ? 1 : h >= 18 && h < 22 ? 2 : 3;
+  }
+  function greetLang() {
+    let l = store('kiwiLang') || document.documentElement.lang || 'fr';
+    l = String(l).slice(0, 2).toLowerCase();
+    return GREET_T[l] ? l : 'fr';
+  }
+  /* A role is not a name: onboarding files an owner who gave none as
+     « Propriétaire » / « Owner » / « المالك », and « Bonsoir Propriétaire, »
+     greets a job title. Those read as no name at all. */
+  const ROLE_WORD = /^(propri[ée]taire|owner|المالك|manager|g[ée]rant|g[ée]rante|admin|direction|patron)$/i;
+  const firstName = (n) => {
+    const f = String(n || '').trim().split(/\s+/)[0] || '';
+    return ROLE_WORD.test(f) ? '' : f;
+  };
+  function helloText(name, lang, date) {
+    const T = GREET_T[lang || greetLang()], n = firstName(name);
+    return T.hello[daySlot(date)] + (n ? ' ' + n : '') + T.comma;
+  }
+  function wishText(lang, date) { return GREET_T[lang || greetLang()].wish[daySlot(date)]; }
+  function isNativeShell() {
+    try { return document.documentElement.classList.contains('kiwi-native') || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
+    catch (_) { return false; }
+  }
+  function isDemoSession() {
+    try { return !(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) && demosOn(); }
+    catch (_) { return false; }
+  }
+  /* who: the person whose code opened the door (finishUnlock).
+     name / place: what the account says (identity.js, onboarding). */
+  const greetState = { who: '', name: '', place: '' };
+  function accountName() {
+    if (greetState.name) return greetState.name;
+    if (scopedView()) return '';
+    return store('kiwiOwnerName') || store('kiwiSet:ownerName') || (window.KiwiMe && window.KiwiMe.name) || '';
+  }
+  /* The shop the dashboard is about to open on. A real store the venue engine
+     selected wins: an account's own `business` is only its FIRST shop, and a
+     multi-store owner who left Amira Cafe selected was greeted with Amira
+     Boutique. On a scoped (operator) view this browser's own shop never counts. */
+  function greetPlace() {
+    try {
+      const KV = window.KiwiVenue;
+      const v = KV && KV.getVenue && KV.getVenue();
+      if (v && v !== 'own' && v !== 'scoped') {
+        const vd = KV.getCurrentVenueData && KV.getCurrentVenueData();
+        const label = vd && (vd.name || vd.fullDisplay);
+        if (label) return String(label);
+      }
+    } catch (_) {}
+    if (scopedView()) return '';
+    return greetState.place || store('kiwiBizName') || store('kiwiSet:bizName')
+      || (window.KiwiMe && window.KiwiMe.business) || '';
+  }
+  function greetStatus(lang) {
+    try {
+      const H = window.KiwiHours;
+      if (!H || typeof H.summary !== 'function') return null;
+      const s = H.summary(Date.now(), undefined, lang);
+      return s && s.tone && s.tone !== 'unset' && s.text ? s : null;
+    } catch (_) { return null; }
+  }
+  function renderGreeting() {
+    const lang = greetLang(), now = new Date();
+    const demo = isDemoSession();
+    const name = greetState.who || accountName() || (demo ? 'Rachid' : '');
+    const hello = greet.querySelector('[data-greet-hello]');
+    const wish = greet.querySelector('[data-greet-wish]');
+    if (hello) hello.textContent = helloText(name, lang, now);
+    if (wish) wish.textContent = wishText(lang, now);
+    const sub = greet.querySelector('[data-kiwi-greet-sub]');
+    if (!sub) return;
+    const place = greetPlace() || (demo ? 'Café Atlas' : '');
+    const status = greetStatus(lang);
+    sub.textContent = '';
+    sub.hidden = !place && !status;
+    if (sub.hidden) return;
+    /* [● Amira Cafe] [·] [Ouvert · ferme à 23:00] · one line on a desktop,
+       two on a phone (the separator drops instead of dangling). */
+    const head = document.createElement('span');
+    head.className = 'kiwi-greet-place';
+    if (status) {
+      const dot = document.createElement('span');
+      dot.className = 'kiwi-greet-dot';
+      dot.dataset.tone = status.tone;
+      dot.setAttribute('aria-hidden', 'true');
+      head.appendChild(dot);
+    }
+    if (place) {
+      const b = document.createElement('b');
+      b.textContent = place;
+      head.appendChild(b);
+    }
+    sub.appendChild(head);
+    if (status) {
+      if (place) {
+        const sep = document.createElement('span');
+        sep.className = 'kiwi-greet-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '·';
+        sub.appendChild(sep);
+      }
+      const t = document.createElement('span');
+      t.className = 'kiwi-greet-state';
+      t.textContent = status.text;
+      sub.appendChild(t);
+    }
+  }
+  /* The lock names the shop it opens instead of a generic « Bienvenue ».
+     Web only: the native app writes its own title (app/src/native-runtime.js). */
+  const lockTitle = lock.querySelector('.kiwi-lock-title');
+  function paintLockTitle() {
+    if (!lockTitle || !lock.isConnected || isNativeShell()) return;
+    const place = greetPlace();
+    if (!place) return;
+    lockTitle.removeAttribute('data-i18n');
+    lockTitle.textContent = place;
+    lockTitle.dataset.place = '1';
+  }
   function setGreetName(name) {
-    if (!name) return;
-    const s = greet.querySelector('[data-i18n="dash.hello"]') || greet.querySelector('h1 span');
-    if (s) { s.textContent = 'Bonjour ' + name + ','; s.removeAttribute('data-i18n'); }
+    greetState.name = String(name || '').trim();
+    renderGreeting();
+  }
+  function setGreetPlace(place) {
+    greetState.place = String(place || '').trim();
+    renderGreeting();
+    paintLockTitle();
   }
   (function personalize() {
-    const owner = store('kiwiOwnerName') || store('kiwiSet:ownerName') || (window.KiwiMe && window.KiwiMe.name) || '';
-    const biz = store('kiwiBizName') || store('kiwiSet:bizName') || (window.KiwiMe && window.KiwiMe.business) || '';
-    if (owner) setGreetName(owner);
-    if (biz) {
-      const sub = greet.querySelector('[data-kiwi-greet-sub]');
-      if (sub) sub.innerHTML = '<span class="greet-live-dot" style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 8px currentColor;"></span> ' + String(biz).replace(/[&<>"]/g, '') + ' · service ouvert';
-    }
+    renderGreeting();
+    paintLockTitle();
+    document.addEventListener('kiwi-identity', () => { renderGreeting(); paintLockTitle(); });
+    window.addEventListener('kiwi:langchange', renderGreeting);
+    [700, 1800].forEach((ms) => setTimeout(paintLockTitle, ms));
     /* A staff-tier team code gets its own restricted-view badge label. */
     if ((store('kiwiRole') || '') === 'staff') {
       const b = document.querySelector('[data-role-badge] span');
@@ -6779,9 +6926,14 @@
     dashboardReadyAnnounced = true;
     window.dispatchEvent(new Event('kiwi:dashboard-unlocked'));
   }
+  /* html.kiwi-gate-up while the door (or the greeting behind it) owns the
+     screen. The phone tab bar sits at z 1200, above the lock's 800, and its
+     buttons stayed live over a locked dashboard. */
+  const gate = (on) => document.documentElement.classList.toggle('kiwi-gate-up', !!on);
+  gate(true);
   window.__kiwiLock = {
-    hide() { resetToDashboard(); lock.style.display = 'none'; announceDashboardReady(); },
-    show() { resetToDashboard(); lock.style.display = ''; document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
+    hide() { resetToDashboard(); lock.style.display = 'none'; gate(false); announceDashboardReady(); },
+    show() { resetToDashboard(); lock.style.display = ''; gate(true); document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
     reveal() { skipToApp(); },
     /* Face ID on the native app: opens with the access tier a real code gave
        on this device, exactly as that code would. */
@@ -6792,6 +6944,9 @@
       return true;
     },
     setGreetName,
+    setGreetPlace,
+    /* identity.js greets the (hidden) dashboard hero with the same words. */
+    helloText: (name) => helloText(name),
   };
 
   /* No persistence · the lock + greeting flow ALWAYS replays on reload
@@ -6809,6 +6964,13 @@
   setTimeout(refocus, 180);
   lock.addEventListener('click', refocus);
   document.addEventListener('keydown', (e) => {
+    /* The code has been accepted and the greeting is up: any key moves on.
+       Safe, because the door is already open (unlocked). Modifier keys alone
+       don't count, or Cmd-Tab away would skip it. */
+    if (unlocked && !done && greet.classList.contains('is-visible')) {
+      if (!/^(Shift|Control|Alt|Meta|CapsLock)$/.test(e.key)) skipToApp();
+      return;
+    }
     /* While the onboarding wizard is up, the lock is hidden · let it own the keyboard. */
     if (lock.style.display === 'none') return;
     /* Escape collapses the intro from either the lock or the greeting. */
@@ -6828,6 +6990,8 @@
     cells.forEach((c, i) => {
       const filled = i < val.length;
       c.classList.toggle('is-filled', filled);
+      /* Where the next digit lands · drawn only while the field has focus. */
+      c.classList.toggle('is-active', i === val.length);
       c.textContent = filled ? '•' : '';
     });
     if (val.length === 4) {
@@ -6930,7 +7094,9 @@
          un palier ; pas de seconde lecture ici. */
       if (!reserved && hit) {
         role = hit.access;
-        if (hit.name) setGreetName(hit.name);
+        /* The person who typed the code, not the account owner: identity.js
+           sets the owner's name later and must not overwrite a manager's. */
+        if (hit.name) greetState.who = String(hit.name);
       }
     } catch (_) {}
     window.__kiwiRole = role;
@@ -6960,30 +7126,19 @@
   if (app)     app.classList.add('kw-app-hidden');
   if (demoBar) demoBar.classList.add('kw-bar-hidden');
 
-  /* Wrap the greeting's <em> in a clip-span and measure its natural
-   * width up-front. The reveal becomes a single GPU-friendly max-width
-   * transition · no per-character textContent mutation, no setTimeout
-   * drift, perfectly 60 fps fluid. Em stays plain display:inline so its
-   * baseline aligns with the surrounding sans correctly. */
+  /* The wish (« bonne soirée. ») is wrapped in a clip-span and wiped in with
+   * a clip-path. Its box is laid out at full width from the start, so a long
+   * name that wraps the line on a phone decides the break once · the old
+   * max-width typewriter grew the box and pushed the wish onto a second line
+   * halfway through the animation. */
   const greetH1 = greet.querySelector('h1');
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   let emClip = null;
   if (greetH1) {
     const greetEm = greetH1.querySelector('em');
     if (greetEm) {
-      /* Measure em's natural inline width. em is plain inline in our
-       * CSS so getBoundingClientRect gives the real text width. */
-      /* +72px: serif glyphs (esp. terminal "?" / "é") can paint past
-       * their advance-width · "ink overflow". Combined with the 2.5px
-       * caret pinned to the right edge, we need generous trailing room
-       * so overflow:hidden doesn't shave the tail off. Erring high here
-       * is safe · the extra px is invisible whitespace at sentence end. */
-      const naturalW = Math.ceil(greetEm.getBoundingClientRect().width) + 72;
-
-      /* Wrap em in the clip-span; the wrapper handles overflow + the
-       * max-width transition, em itself is undisturbed. */
       emClip = document.createElement('span');
       emClip.className = 'em-clip';
-      emClip.style.setProperty('--em-w', naturalW + 'px');
       greetEm.parentNode.insertBefore(emClip, greetEm);
       emClip.appendChild(greetEm);
     }
@@ -7001,6 +7156,7 @@
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
       if (greet && greet.parentNode) greet.remove();
       document.body.classList.add('cards-enter');
+      gate(false);
       announceDashboardReady();
     }, 880);
     setTimeout(() => {
@@ -7027,60 +7183,49 @@
     } catch (_) {}
     /* Stagger the success pop on each cell (left -> right). */
     cells.forEach((c, i) => {
-      setTimeout(() => c.classList.add('is-success'), i * 60);
+      setTimeout(() => c.classList.add('is-success'), i * 50);
     });
 
-    /* 360 ms: cells settled. Fade out the lock and reveal the greeting
-     *         flash (its inner card slides up + fades in smoothly). */
+    /* The whole greeting is under two seconds and any key or click ends it:
+     * a merchant opens this dashboard many times a day.
+     *   300 ms  cells settled · the lock fades, the greeting comes up
+     *   600 ms  the wish wipes in (at once under reduced motion)
+     *   650 ms  lock gone
+     *  1900 ms  the greeting fades as the dashboard dives in
+     *  2500 ms  greeting gone · the dashboard is announced ready */
     setTimeout(() => {
+      renderGreeting();
       lock.classList.add('is-unlocking');
       greet.classList.add('is-visible');
       greet.setAttribute('aria-hidden', 'false');
-    }, 360);
+      if (reduceMotion && emClip) emClip.classList.add('is-revealed');
+    }, 300);
 
-    /* 850 ms: lock fade done, remove from DOM. */
+    setTimeout(() => { if (emClip) emClip.classList.add('is-revealed'); }, 600);
+
     setTimeout(() => {
       if (lock.parentNode) lock.remove();
       document.documentElement.style.overflow = '';
-    }, 850);
+    }, 650);
 
-    /* 1050 ms: trigger the em's max-width typewriter reveal. */
-    setTimeout(() => {
-      if (emClip) {
-        const innerEm = emClip.querySelector('em');
-        if (innerEm) {
-          const fontPx = parseFloat(getComputedStyle(innerEm).fontSize) || 64;
-          const liveW = Math.ceil(innerEm.getBoundingClientRect().width) + Math.ceil(fontPx * 1.5);
-          emClip.style.setProperty('--em-w', liveW + 'px');
-        }
-        emClip.classList.add('is-revealed', 'is-typing');
-      }
-    }, 1050);
-
-    /* 1950 ms: reveal complete · drop the caret. */
-    setTimeout(() => {
-      if (emClip) emClip.classList.remove('is-typing');
-    }, 1950);
-
-    /* 2600 ms: sentence revealed. Fade out the greeting AND dive in the dashboard. */
     setTimeout(() => {
       greet.classList.remove('is-visible');
       greet.setAttribute('aria-hidden', 'true');
       if (app)     app.classList.remove('kw-app-hidden');
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
       document.body.classList.add('cards-enter');
+      gate(false);
       if (window.__kiwiMarketingTease && window.KiwiMarketingTease) {
         setTimeout(() => {
           try { window.KiwiMarketingTease.play(); } catch (_) {}
         }, 700);
       }
-    }, 2600);
+    }, 1900);
 
-    /* 3200 ms: greeting fully faded · remove from DOM. */
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
       announceDashboardReady();
-    }, 3200);
+    }, 2500);
   }
 
   /* ── Skip control ──────────────────────────────────────────────────
@@ -7097,6 +7242,7 @@
     if (app)     app.classList.remove('kw-app-hidden');
     if (demoBar) demoBar.classList.remove('kw-bar-hidden');
     document.body.classList.add('cards-enter');
+    gate(false);
     announceDashboardReady();
     if (lock && lock.parentNode) {
       lock.classList.add('is-unlocking');
@@ -7123,6 +7269,14 @@
   });
 
   pinInput.addEventListener('input', paintCells);
+  /* The cell that will take the next digit shows a caret, but only while the
+     hidden field really has focus · a caret that blinks while typing goes
+     nowhere is a lie. */
+  if (cells[0]) cells[0].classList.add('is-active');
+  const markFocus = () => { if (pinRow) pinRow.classList.toggle('is-focused', document.activeElement === pinInput); };
+  pinInput.addEventListener('focus', markFocus);
+  pinInput.addEventListener('blur', markFocus);
+  markFocus();
 })();
 </script>
 

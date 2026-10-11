@@ -83,7 +83,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
-  '/assets/i18n.js?v=22',
+  '/assets/i18n.js?v=23',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
-  '/assets/pwa-update.js?v=359',
+  '/assets/pwa-update.js?v=360',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=1',
@@ -208,7 +208,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=8',
+  '/assets/identity.js?v=9',
   '/assets/caisse-link.js?v=13',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',

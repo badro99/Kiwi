@@ -141,13 +141,21 @@
     } catch (_) { return false; }
   }
 
+  function helloFor(first) {
+    try { if (window.__kiwiLock && window.__kiwiLock.helloText) return window.__kiwiLock.helloText(first); } catch (_) {}
+    return 'Bonjour' + (first ? ' ' + first : '') + ',';
+  }
+
   function apply(id) {
     var first = firstName(id.name);
 
-    // Greeting — "Bonjour Rachid," (dashboard hero + lock copy, two elements).
+    // Greeting — the entry flash belongs to the lock controller in
+    // dashboard.html, which composes it in the session's language and for the
+    // hour of the day; it only needs the name. The (hidden) hero takes the
+    // same words from it instead of a hard-coded French « Bonjour ».
     if (first) {
       var greets = document.querySelectorAll('[data-i18n="dash.hello"], .greet-text');
-      for (var i = 0; i < greets.length; i++) setText(greets[i], 'Bonjour ' + first + ',');
+      for (var i = 0; i < greets.length; i++) setText(greets[i], helloFor(first));
       try { if (window.__kiwiLock && window.__kiwiLock.setGreetName) window.__kiwiLock.setGreetName(first); } catch (_) {}
     }
 
@@ -157,8 +165,9 @@
     // with the account's primary business is what desynced a multi-store switcher
     // (see venueEngineOwnsStore).
     if (id.business) {
-      var sub = document.querySelector('[data-kiwi-greet-sub]');
-      if (sub) sub.textContent = id.business + ' · service ouvert';
+      // No « · service ouvert »: nothing here knows whether service is open.
+      // The controller pairs the shop with what its opening hours say.
+      try { if (window.__kiwiLock && window.__kiwiLock.setGreetPlace) window.__kiwiLock.setGreetPlace(id.business); } catch (_) {}
       if (!venueEngineOwnsStore()) {
         var locs = document.querySelectorAll('[data-loc-name]');
         for (var j = 0; j < locs.length; j++) locs[j].textContent = id.business;
@@ -190,10 +199,11 @@
    * in the sidebar/subtext instead. Never runs on the local demo (isReal false). */
   function neutralize() {
     var biz = venueLabel();
-    var greets = document.querySelectorAll('[data-i18n="dash.hello"], .greet-text, .kiwi-greet h1 > span:not(.em-clip)');
-    for (var i = 0; i < greets.length; i++) { greets[i].textContent = 'Bonjour,'; if (greets[i].removeAttribute) greets[i].removeAttribute('data-i18n'); }
-    var subs = document.querySelectorAll('[data-kiwi-greet-sub], .kiwi-greet-sub');
-    for (var s = 0; s < subs.length; s++) subs[s].textContent = biz ? (biz + ' · service ouvert') : 'service ouvert';
+    // The entry flash composes itself (no demo name on a real session); only
+    // the hero is reset here.
+    var greets = document.querySelectorAll('[data-i18n="dash.hello"], .greet-text');
+    for (var i = 0; i < greets.length; i++) { greets[i].textContent = helloFor(''); if (greets[i].removeAttribute) greets[i].removeAttribute('data-i18n'); }
+    try { if (biz && window.__kiwiLock && window.__kiwiLock.setGreetPlace) window.__kiwiLock.setGreetPlace(biz); } catch (_) {}
     document.querySelectorAll('.merchant .n, .merchant .avatar').forEach(el => { el.textContent = '·'; });
     document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.setAttribute('aria-label', '·'); });
   }

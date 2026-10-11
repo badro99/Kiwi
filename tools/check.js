@@ -1379,6 +1379,7 @@ section('Whole-project regressions');
     'stock-alert-truth-test.mjs',
     'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
+    'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',

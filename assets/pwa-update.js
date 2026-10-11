@@ -66,6 +66,18 @@
     return true;
   }
 
+  var COPY = {
+    fr: { ready: 'Nouvelle version prête', go: 'Rafraîchir', aria: 'Nouvelle version de Kiwi prête. Rafraîchir maintenant.' },
+    en: { ready: 'New version ready', go: 'Refresh', aria: 'A new version of Kiwi is ready. Refresh now.' },
+    ar: { ready: 'إصدار جديد جاهز', go: 'تحديث', aria: 'إصدار جديد من كيوي جاهز. حدّث الآن.' }
+  };
+  function copy() {
+    var l = '';
+    try { l = document.documentElement.lang || localStorage.getItem('kiwiLang') || ''; } catch (_) {}
+    l = String(l || 'fr').slice(0, 2).toLowerCase();
+    return COPY[l] || COPY.fr;
+  }
+
   function show() {
     if (shown || document.getElementById('kiwi-update-ready')) return;
     if (justRefreshed()) return;
@@ -74,8 +86,12 @@
     var button = document.createElement('button');
     button.id = 'kiwi-update-ready';
     button.type = 'button';
-    button.setAttribute('aria-label', 'Nouvelle version Kiwi prête. Rafraîchir maintenant.');
-    button.innerHTML = '<span aria-hidden="true">↻</span><span>Nouvelle version prête</span><strong>Rafraîchir</strong>';
+    /* In the operator's language (the page's own <html lang>, which the
+       dashboard, the caisse and Serveur each set), and on one line: on a
+       phone the French copy used to wrap into a three-line pill. */
+    var t = copy();
+    button.setAttribute('aria-label', t.aria);
+    button.innerHTML = '<span aria-hidden="true">↻</span><span style="white-space:nowrap">' + t.ready + '</span><strong style="white-space:nowrap">' + t.go + '</strong>';
     button.style.cssText = [
       'position:fixed', 'left:50%', 'bottom:max(18px,env(safe-area-inset-bottom))',
       'transform:translateX(-50%)', 'z-index:2147483000', 'display:flex',
@@ -86,7 +102,7 @@
       'font:600 14px/1.2 "Inter Tight",system-ui,sans-serif', 'cursor:pointer'
     ].join(';');
     var strong = button.querySelector('strong');
-    if (strong) strong.style.cssText = 'color:#7DF2B0;font-weight:750';
+    if (strong) strong.style.cssText = 'color:#7DF2B0;font-weight:700;white-space:nowrap';
     button.addEventListener('click', function () { refresh(button); });
     (document.body || document.documentElement).appendChild(button);
   }

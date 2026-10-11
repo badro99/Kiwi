@@ -1541,8 +1541,12 @@ body.design-vexel .kiwi-greet::before {
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(55% 45% at 50% 50%, rgba(0, 255, 174, 0.12), transparent 70%);
+    radial-gradient(55% 45% at 50% 50%, rgba(11, 110, 79, 0.07), transparent 70%);
   pointer-events: none;
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet::before,
+html[data-theme="dark"] body.design-vexel .kiwi-greet::before {
+  background: radial-gradient(55% 45% at 50% 50%, rgba(125, 242, 176, 0.07), transparent 70%);
 }
 body.design-vexel .kiwi-greet.is-visible {
   opacity: 1;
@@ -1562,66 +1566,68 @@ body.design-vexel .kiwi-greet.is-visible .kiwi-greet-inner {
   opacity: 1;
 }
 
+/* Upright, 600, no glow: the greeting is a sentence, not a neon sign.
+   It wraps (balanced) rather than running off a phone; the wish itself
+   never splits. */
 body.design-vexel .kiwi-greet h1 {
   font-size: clamp(34px, 5.5vw, 62px);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.15;
   color: #08241A;
-  text-shadow: 0 2px 18px rgba(12, 107, 78, 0.08);
-  white-space: nowrap;
+  text-shadow: none;
+  white-space: normal;
+  text-wrap: balance;
 }
 body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1,
 html[data-theme="dark"] .kiwi-greet h1 {
   color: #F5FAF7;
-  text-shadow: 0 4px 28px rgba(0, 255, 174, 0.25);
+  text-shadow: none;
 }
 
 body.design-vexel .kiwi-greet h1 em {
   font-family: var(--sans);
   font-style: normal;
-  font-weight: 700;
+  font-weight: inherit;
   color: #0C6B4E;
 }
 body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1 em,
 html[data-theme="dark"] .kiwi-greet h1 em {
-  color: #00FFAE;
+  color: var(--mint, #7DF2B0);
 }
 
-body.design-vexel .kiwi-greet h1 .em-clip.is-typing::after {
-  background: #0C6B4E;
-  box-shadow: 0 0 10px rgba(12, 107, 78, 0.6);
-}
-body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1 .em-clip.is-typing::after,
-html[data-theme="dark"] .kiwi-greet h1 .em-clip.is-typing::after {
-  background: #00FFAE;
-  box-shadow: 0 0 14px #00FFAE;
-}
-
+/* The shop and what its opening hours say, in sentence case. */
 body.design-vexel .kiwi-greet-sub {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-  padding: 8px 20px;
+  gap: 0;
+  margin-top: 22px;
+  padding: 9px 18px;
   border-radius: 999px;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  background: #E8F8F0;
-  color: #0C6B4E;
-  border: 1px solid rgba(12, 107, 78, 0.20);
-  box-shadow: 0 4px 20px -4px rgba(12, 107, 78, 0.16);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  background: rgba(11, 110, 79, 0.06);
+  color: var(--n-600);
+  border: 1px solid rgba(11, 110, 79, 0.14);
+  box-shadow: none;
 }
+body.design-vexel .kiwi-greet-sub b { color: #08241A; font-weight: 600; }
 body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-sub,
 html[data-theme="dark"] .kiwi-greet-sub {
-  background: rgba(0, 255, 174, 0.12);
-  color: #00FFAE;
-  border: 1px solid rgba(0, 255, 174, 0.30);
-  box-shadow: 0 4px 24px -4px rgba(0, 255, 174, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(245, 250, 247, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: none;
 }
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-sub b,
+html[data-theme="dark"] .kiwi-greet-sub b { color: #F5FAF7; }
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-dot[data-tone="open"],
+html[data-theme="dark"] .kiwi-greet-dot[data-tone="open"] { background: var(--mint, #7DF2B0); }
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-dot:not([data-tone="open"]):not([data-tone="soon"]),
+html[data-theme="dark"] .kiwi-greet-dot:not([data-tone="open"]):not([data-tone="soon"]) { background: rgba(245, 250, 247, 0.38); }
 
 body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-legacy, .reset-brand-legacy) {
   display: none;
@@ -1658,8 +1664,10 @@ body.design-vexel .kiwi-lock-title {
   font-family: var(--sans);
   font-size: 30px;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.03em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 body.design-vexel .kiwi-lock-sub {
@@ -1689,7 +1697,12 @@ body.design-vexel .kiwi-pin-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  transition: background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 220ms ease;
 }
 body.design-vexel[data-vexel-mode="dark"] .kiwi-pin-cell,
 html[data-theme="dark"] .kiwi-pin-cell {
@@ -1734,6 +1747,178 @@ body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):hover {
 body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):focus-visible {
   color: var(--ink);
   outline-color: var(--vx-accent);
+}
+
+/* ── 13b · The PIN lock, web (2026-10-12) ─────────────────────────────────
+ * An opaque warm card instead of frosted white glass (no pure white, no
+ * neon halo). One centred column, then the two exits · Ouvrir la caisse,
+ * Changer de compte · side by side under a hairline, stacking on a phone.
+ * The four cells shrink to fit a 360 px screen, and the one that takes the
+ * next digit shows a caret while the field has focus.
+ * The native app draws its own lock (app/src/native-runtime.css), hence
+ * html:not(.kiwi-native) on every rule here. Scoped to .kiwi-lock-inner:
+ * .kob-card and .vx-auth-card keep the shared rule above. */
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  justify-items: center;
+  align-items: start;
+  column-gap: 8px;
+  padding: 40px 32px 16px;
+  background: #FFFDFA;
+  border: 1px solid rgba(10, 15, 13, 0.08);
+  box-shadow: 0 1px 2px rgba(10, 15, 13, 0.04), 0 28px 64px -28px rgba(5, 59, 44, 0.28);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-inner > * { grid-column: 1 / -1; }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-inner > .kiwi-lock-switch { grid-column: auto; }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-brand { margin-bottom: 22px; }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-sub { margin-bottom: 28px; color: #0C6B4E; }
+/* Arabic is a joined script: tracking pulls its letters apart. */
+html[dir="rtl"]:not(.kiwi-native) body.design-vexel .kiwi-lock-sub { letter-spacing: 0; font-family: var(--sans); font-size: 13px; text-transform: none; }
+
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin {
+  width: 100%;
+  max-width: 292px;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-pin-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: 64px;
+  height: auto;
+  aspect-ratio: 64 / 76;
+  border-radius: 18px;
+  background: rgba(10, 15, 13, 0.03);
+  border: 1.5px solid rgba(10, 15, 13, 0.12);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: #0C6B4E;
+  font-size: 30px;
+  font-weight: 600;
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-pin-cell.is-filled {
+  background: #EAF5EF;
+  border-color: #0C6B4E;
+  box-shadow: 0 0 0 3px rgba(11, 110, 79, 0.10);
+  transform: translateY(-1px);
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin.is-focused .kiwi-pin-cell.is-active {
+  background: #FFFDFA;
+  border-color: #0C6B4E;
+  box-shadow: 0 0 0 4px rgba(11, 110, 79, 0.12);
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin.is-focused .kiwi-pin-cell.is-active::after {
+  content: "";
+  width: 2px;
+  height: 34%;
+  border-radius: 1px;
+  background: currentColor;
+  animation: kw-pin-caret 1.06s steps(1) infinite;
+}
+@keyframes kw-pin-caret { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
+  border-color: var(--danger, #cb5238);
+  box-shadow: 0 0 0 3px rgba(203, 82, 56, 0.14);
+}
+
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-help {
+  justify-self: stretch;
+  margin: 0 0 12px;
+  padding: 0 12px 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--n-600);
+  text-wrap: balance;
+  box-shadow: 0 1px 0 rgba(10, 15, 13, 0.07);
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-help b { color: var(--ink); font-family: var(--sans); font-weight: 600; }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-help.is-error,
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-help.is-error b { color: var(--danger, #cb5238); }
+
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-switch {
+  justify-self: stretch;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--n-600);
+  text-decoration: none;
+  white-space: nowrap;
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-switch svg { width: 18px; height: 18px; flex: none; opacity: 1; }
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-switch:hover {
+  background: rgba(10, 15, 13, 0.05);
+  color: var(--ink);
+  text-decoration: none;
+}
+html:not(.kiwi-native) body.design-vexel .kiwi-lock-switch:focus-visible { outline: 2px solid #0C6B4E; outline-offset: 1px; }
+html[dir="rtl"]:not(.kiwi-native) body.design-vexel .kiwi-lock-switch:not(.kiwi-lock-caisse) svg { transform: scaleX(-1); }
+
+/* Dark: the same card in deep green, hairlines instead of glow. */
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-inner,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-inner {
+  background: #0E1915;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.75);
+  color: #F5FAF7;
+}
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-sub,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-sub { color: var(--mint, #7DF2B0); }
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-pin-cell,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-pin-cell {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--mint, #7DF2B0);
+}
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-pin-cell.is-filled,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-pin-cell.is-filled {
+  background: rgba(125, 242, 176, 0.10);
+  border-color: var(--mint, #7DF2B0);
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.12);
+}
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-pin.is-focused .kiwi-pin-cell.is-active,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-pin.is-focused .kiwi-pin-cell.is-active {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--mint, #7DF2B0);
+  box-shadow: 0 0 0 4px rgba(125, 242, 176, 0.14);
+}
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-help,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-help {
+  color: rgba(245, 250, 247, 0.62);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-help b,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-help b { color: #F5FAF7; }
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-help.is-error,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-help.is-error,
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-help.is-error b,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-help.is-error b { color: #FF9D8A; }
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-switch,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-switch { color: rgba(245, 250, 247, 0.66); }
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-switch:hover,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-switch:hover { background: rgba(255, 255, 255, 0.06); color: #F5FAF7; }
+html:not(.kiwi-native) body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-switch:focus-visible,
+html[data-theme="dark"]:not(.kiwi-native) body.design-vexel .kiwi-lock-switch:focus-visible { outline-color: var(--mint, #7DF2B0); }
+
+@media (max-width: 480px) {
+  html:not(.kiwi-native) body.design-vexel .kiwi-lock-inner { width: calc(100% - 32px); padding: 32px 20px 12px; }
+  html:not(.kiwi-native) body.design-vexel .kiwi-lock-title { font-size: 26px; }
+  html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not(.kiwi-native) body.design-vexel .kiwi-lock-pin.is-focused .kiwi-pin-cell.is-active::after { animation: none; }
+  html:not(.kiwi-native) body.design-vexel .kiwi-pin-cell.is-filled { transform: none; }
 }
 
 body.design-vexel .kob-root { color: var(--ink); }
