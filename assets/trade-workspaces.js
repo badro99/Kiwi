@@ -161,7 +161,8 @@
   /* « Aujourd'hui » = la journée commerciale du magasin (coupure à 5 h, fuseau du commerce), pas le
      minuit de l'appareil : même fenêtre que le rapport journalier et la caisse. */
   function businessWindow() {
-    try { const b=window.KiwiDateRange?.bounds?.('aujourdhui'); if (b && Number.isFinite(+b[0]) && Number.isFinite(+b[1])) return {from:+b[0],to:+b[1]}; } catch (_) {}
+    /* « Aujourd'hui » finit à Infinity dans KiwiDateRange (la journée est en cours) : c'est une borne valide. */
+    try { const b=window.KiwiDateRange?.bounds?.('aujourdhui'); if (b && Number.isFinite(+b[0]) && +b[1] > +b[0]) return {from:+b[0],to:+b[1]}; } catch (_) {}
     try {
       const R=window.KiwiDayReport;
       if(R?.businessDay&&R?.dayBounds){const b=R.dayBounds(R.businessDay(Date.now()));if(b&&b.from&&b.to)return b;}

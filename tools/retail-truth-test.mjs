@@ -206,6 +206,14 @@ ok('« Ventes aujourd’hui » suit le service du commerçant, hors remboursemen
   assert.match(TW, /String\(s\.kind\|\|''\)!=='refund'/);
 });
 
+ok('« Aujourd’hui » ouvert (fin à Infinity) est bien la borne retenue, pas un repli', () => {
+  const fn = TW.match(/function businessWindow\(\) \{[\s\S]*?\n  \}/)[0];
+  const run = (w) => new Function('window', fn + ';return businessWindow();')(w);
+  const b = run({ KiwiDateRange: { bounds: () => [1000, Infinity] }, KiwiDayReport: { businessDay: () => 'x', dayBounds: () => ({ from: 7, to: 9 }) } });
+  assert.equal(b.from, 1000);
+  assert.equal(b.to, Infinity);
+});
+
 ok('Vendus dit qu’il compte les ventes brutes', () => {
   assert.match(SOLD, /ventes brutes, les retours ne sont pas déduits/);
 });
