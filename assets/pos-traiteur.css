@@ -805,6 +805,20 @@
   .tr-bl-grid .tr-bl-col:last-child { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line-soft); }
   .tr-stats { grid-template-columns: 1fr; }
 }
+/* Phone: the desk header put a 300 px search beside the title, the due bar
+   kept its two buttons on the sentence's line (the sentence went one word per
+   line), and the event card's right column took the room its name needed. */
+@media (max-width: 600px) {
+  .tr-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .tr-search { width: auto; }
+  .tr-duebar { flex-wrap: wrap; }
+  .tr-duebar-txt { flex: 1 1 calc(100% - 31px); }
+  .tr-duebar .tr-btn { flex: 1 1 0; justify-content: center; min-height: 44px; }
+  .tr-evcard { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; row-gap: 10px; align-items: start; }
+  .tr-evdate { width: 56px; flex-basis: auto; grid-row: span 2; }
+  .tr-evsub { flex-wrap: wrap; }
+  .tr-evright { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+}
 @media (prefers-reduced-motion: reduce) {
   .tr-evcard, .tr-dish, .tr-payc, .tr-bl { animation: none !important; }
   .tr-dish-tick { animation: none !important; }

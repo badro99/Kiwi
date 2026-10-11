@@ -55,13 +55,13 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '41', label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '51', label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '52', label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '7', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '17', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '8', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '9', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '5', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '7', label: 'Traiteur · Dar Zellij' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '8', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '7', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '7', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '7', label: 'Pharmacie · Ibn Batouta' },
@@ -289,11 +289,20 @@
     const real = !!p || (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
     const me = window.KiwiStaff || null;
     const who = me && (me.first || me.name);
-    const line1 = who ? ('Bonjour ' + escGreet(who) + ',')
-      : (real ? 'Bonjour,' : (greet.line1 || 'Bonjour,'));
-    const sub   = real ? (p && p.name ? escGreet(p.name) : '') : (greet.sub || '');
+    /* The trades write their greeting in French. In English or Arabic, say
+       hello in the till's language and keep only the store name from the
+       demo's French flavour line, rather than greet a cashier in French. */
+    const L = window.KiwiCaisseLang;
+    const lang = L && L.get ? L.get() : 'fr';
+    const tr = (s) => (lang !== 'fr' && L && L.t ? L.t(s) : s);
+    const demoName = (/^Bonjour\s+(.+?),?\s*$/.exec(greet.line1 || '') || [])[1] || '';
+    const name = who ? escGreet(who) : (real ? '' : demoName);
+    const line1 = lang === 'fr' && !who && !real && greet.line1 ? greet.line1
+      : tr('Bonjour') + (name ? ' ' + name : '') + ',';
+    let sub = real ? (p && p.name ? escGreet(p.name) : '') : (greet.sub || '');
+    if (lang !== 'fr' && !real) sub = sub.split(/\s*<em>·<\/em>\s*|\s+·\s+/)[0];
     g.innerHTML = `<div class="kiwi-greet-inner">
-      <h1>${line1} <em>${greet.em || 'bienvenue.'}</em></h1>
+      <h1>${line1} <em>${tr(greet.em || 'bienvenue.')}</em></h1>
       <div class="kiwi-greet-sub">${sub}</div>
     </div>`;
     document.body.appendChild(g);

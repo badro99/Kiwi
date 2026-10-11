@@ -112,8 +112,8 @@
     "sha": "440fdb3d7a46937d"
   },
   "assets/caisse-lang.js": {
-    "v": "18",
-    "sha": "4e5124f592ce83dc"
+    "v": "19",
+    "sha": "35126a40cb089495"
   },
   "assets/caisse-link.js": {
     "v": "13",
@@ -628,8 +628,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.css": {
-    "v": "3",
-    "sha": "380167a745c162c8"
+    "v": "4",
+    "sha": "7a41eecb68e6f07c"
   },
   "assets/pages-pro.js": {
     "v": "2150",
@@ -688,11 +688,11 @@
     "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
-    "v": "51",
-    "sha": "3966a6796d909226"
+    "v": "52",
+    "sha": "a49ca772ef238cbd"
   },
   "assets/pos-boutique.js": {
-    "v": "51",
+    "v": "52",
     "sha": "a6c3f4556b4ac6a7"
   },
   "assets/pos-coiffure.css": {
@@ -704,8 +704,8 @@
     "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "80",
-    "sha": "c335cafd51651916"
+    "v": "81",
+    "sha": "8c77538011f30734"
   },
   "assets/pos-epicerie.css": {
     "v": "7",
@@ -780,8 +780,8 @@
     "sha": "9cae03a3a01f29dc"
   },
   "assets/pos-mobile.js": {
-    "v": "7",
-    "sha": "de898c74559fc037"
+    "v": "8",
+    "sha": "45b5e8a90a6b9d00"
   },
   "assets/pos-pharmacie.css": {
     "v": "7",
@@ -816,11 +816,11 @@
     "sha": "7a0e3f88e251c0fe"
   },
   "assets/pos-traiteur.css": {
-    "v": "7",
-    "sha": "45d7b1720fd65004"
+    "v": "8",
+    "sha": "969e6269331fe6a4"
   },
   "assets/pos-traiteur.js": {
-    "v": "7",
+    "v": "8",
     "sha": "110a4f70d1841970"
   },
   "assets/pos-workspaces.css": {

@@ -35,11 +35,22 @@
     return out;
   }
 
+  /* Docked carts that predate the naming convention. Untagged, they kept
+   * their desk width on a phone: the librairie's basket covered the books,
+   * and the fleuriste's bouquet had no way up at all, so nothing could be
+   * paid for from a phone. */
+  var ALIASES = { ticket: ['lb-panier', 'fl-bouquet', 'gy-cart', 'tr-quote'] };
+
   function tagRoles(screen) {
     for (var r = 0; r < ROLES.length; r++) {
       var role = ROLES[r];
       var found = findAll(screen, role);
       for (var i = 0; i < found.length; i++) found[i].classList.add('vx-' + role);
+      var alias = ALIASES[role] || [];
+      for (var a = 0; a < alias.length; a++) {
+        var extra = screen.querySelectorAll('.' + alias[a]);
+        for (var j = 0; j < extra.length; j++) extra[j].classList.add('vx-' + role);
+      }
     }
   }
 

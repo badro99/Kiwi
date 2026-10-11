@@ -907,6 +907,31 @@ html[data-theme="dark"] .b-promo-seg { background: var(--paper-soft); }
 }
 html[data-theme="dark"] .b-ret-policy { background: var(--paper-soft); }
 @media (max-width: 720px) { .b-ret-policy { grid-template-columns: 1fr; } }
+/* Phone: the five desktop columns left the product column 0 px wide (the
+   chip and three buttons took the rest), so names, reasons and amounts were
+   painted over each other. Picture, product and amount on top; the
+   reference, then status and actions each get the full width underneath, so
+   the action buttons never steal the product column. */
+@media (max-width: 720px) {
+  .b-ret-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas: "thumb body amt" ". id id" ". act act";
+    column-gap: 12px; row-gap: 8px; align-items: start;
+  }
+  .b-ret-row > .b-ret-thumb { grid-area: thumb; }
+  .b-ret-row > .b-ret-body { grid-area: body; }
+  .b-ret-row > .b-ret-amt { grid-area: amt; text-align: end; white-space: nowrap; }
+  .b-ret-row > .b-ret-id { grid-area: id; align-self: center; min-width: 0; overflow-wrap: anywhere; }
+  .b-ret-row > .b-ret-id br { display: none; }
+  .b-ret-row > .b-ret-id span { margin-inline-start: 6px; font-size: 11px !important; }
+  .b-ret-row > :last-child:not(.b-ret-amt) { grid-area: act; justify-content: flex-end; flex-wrap: wrap; }
+  .b-ret-row > :last-child:not(.b-ret-amt) > .chip { margin-inline-end: auto; }
+  .b-ret-row > :last-child .kb { min-width: 44px; min-height: 44px; justify-content: center; }
+  .b-ret-body .n, .b-ret-body .reason, .b-ret-body .who { overflow-wrap: anywhere; }
+  /* Rows inside one card are rows, not cards in a card. */
+  body.design-vexel .p-card > .b-ret-row { background: none; border: 0; border-top: 1px solid var(--n-200); border-radius: 0; box-shadow: none; padding: 14px 0; }
+  body.design-vexel .p-card > .b-ret-row:first-of-type { border-top: 0; }
+}
 
 .b-ret-policy .field { font-size: 12.5px; }
 .b-ret-policy .lbl {

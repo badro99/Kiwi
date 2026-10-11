@@ -784,6 +784,9 @@
 }
 @media (max-width: 860px) {
   .bq-sell-scan { margin: 8px 14px 10px; }
+  /* No Enter key to point at on a phone or tablet; the tag only cut the
+     placeholder off mid-word (« …l'ajouter au ti »). A scanner still sends Enter. */
+  .bq-sell-scan-tag { display: none; }
 }
 .bq-sell-scan:focus-within { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(63,182,122,0.12); }
 .bq-sell-scan > svg { width: 18px; height: 18px; color: var(--ink-3); flex-shrink: 0; }

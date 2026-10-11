@@ -52,7 +52,7 @@
       "Rechercher, table, montant, réf": "Search table, amount or reference",
       "Rechercher une transaction": "Search transactions",
       /* Native opening screen uses the same chosen language as setup. */
-      'version commerçant': 'merchant edition', '· version commerçant': '· merchant edition', 'Bonjour': 'Hello',
+      'version commerçant': 'merchant edition', '· version commerçant': '· merchant edition', 'Bonjour': 'Hello', 'bienvenue.': 'welcome.',
       'Caissier': 'Cashier', 'Fond d’ouverture': 'Opening float',
       "Fond d'ouverture": 'Opening float', 'Ouvrir la caisse': 'Open till',
       "Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.": 'Count the drawer and enter the opening float before opening the till.',
@@ -337,7 +337,7 @@
       "Khtar la transaction à rembourser, journal d'lyoum.": "اختر معاملة لاستردادها من سجل اليوم.",
       "Rechercher, table, montant, réf": "ابحث بالطاولة أو المبلغ أو المرجع",
       "Rechercher une transaction": "البحث في المعاملات",
-      'version commerçant': 'نسخة التاجر', '· version commerçant': '· نسخة التاجر', 'Bonjour': 'مرحباً',
+      'version commerçant': 'نسخة التاجر', '· version commerçant': '· نسخة التاجر', 'Bonjour': 'مرحباً', 'bienvenue.': 'أهلاً بك.',
       'Caissier': 'أمين الصندوق', 'Fond d’ouverture': 'رصيد الافتتاح',
       "Fond d'ouverture": 'رصيد الافتتاح', 'Ouvrir la caisse': 'افتح الصندوق',
       "Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.": 'عدّ الدرج وأدخل رصيد الافتتاح قبل فتح الصندوق.',
