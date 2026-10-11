@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* Performance et Heures de pointe vivent dans « Analyse du menu » : la page les rend par KiwiRestaurantMenuWorkspace.analysis, les mêmes panneaux qu'avant. */
 'use strict';
 
 const fs = require('fs');
@@ -44,7 +45,7 @@ window.window = window;
 window.document = document;
 vm.createContext(context);
 new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
-window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'hours' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 
 let html = root.innerHTML;
 assert.match(html, /Performance par moment de la journée/);
@@ -56,18 +57,20 @@ assert.match(html, /190 MAD/, 'lunch revenue comes from real sale lines');
 assert.doesNotMatch(html, /Café noir/, 'a closed morning is not mixed into lunch performance');
 
 window.Kiwi.handlers['rmw-hours-period']({ dataset: { period: 'soir' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 html = root.innerHTML;
 assert.match(html, />6<\/b>/, 'evening includes the six detailed items sold in that period');
 assert.match(html, /200 MAD/, 'evening revenue comes from real sale lines');
 assert.match(html, /Shawarma poulet/);
 assert.match(html, /données réelles de la caisse/i);
 window.KiwiHours.isConfigured = () => false;
-window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'hours' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 html = root.innerHTML;
 assert.doesNotMatch(html, /Renseignez les horaires/, 'missing opening hours cannot hide recorded sales');
 assert.match(html, /09h-10h/);
 assert.match(html, /500 MAD/, 'fallback selects the busiest recorded hour');
 window.Kiwi.handlers['rmw-hours-period']({ dataset: { period: 'hour-20' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 assert.match(root.innerHTML, /200 MAD/, 'hourly fallback shares itemId matching');
 
 console.log('✓ restaurant peak hours follows opening hours, overnight closing and real cashier lines');

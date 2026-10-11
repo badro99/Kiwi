@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* Performance et Heures de pointe vivent dans « Analyse du menu » : la page les rend par KiwiRestaurantMenuWorkspace.analysis, les mêmes panneaux qu'avant. */
 'use strict';
 /* Restaurant MixMax, septembre 2026. « Performance des articles · 30 derniers
  * jours » affichait 20 980 MAD alors que le registre de la même période portait
@@ -97,7 +98,7 @@ refundRows = [
 ];
 
 function render() {
-  window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'performance' } });
+  root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.performance();
   return root.innerHTML;
 }
 const money = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(n) + ' MAD';
@@ -138,7 +139,7 @@ window.KiwiHours = { isConfigured: () => false, get: () => null, subscribe() {} 
 const evening = DR.dayBounds(DR.shiftDay(today, -1)).from + 16.5 * 3600e3; // yesterday 05:00 + 16h30 = 21:30 Casablanca
 salesRows = [sale({ saleId: 'h1', ts: evening, amount: 60, amountCents: 6000, ref: 'H1', lines: [line('it_30', 'King Shawarma', 1, 60)] })];
 refundRows = [];
-window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'hours' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 assert.match(root.innerHTML, /21h-22h/, 'peak hours bucket sales in the merchant timezone, not the browser timezone');
 assert.doesNotMatch(root.innerHTML, /22h-23h/, 'no bucket at the Berlin wall-clock hour');
 

@@ -442,6 +442,26 @@ The misses over-alert ("mot de passe oublié" read as blocking). Covered by
 | QR bill tip (OrderPro) | A 15 % tip was pre-ticked and added to "Total à régler", a total the till never sees: the phone sends no tip anywhere. "Le serveur arrive avec l'addition" promised a waiter; the split calculator toasted "Addition divisée". | No tip pre-selected; the sheet says the tip is handed to the waiter and is not added to the bill; "Demander l'addition"; the split result reads "À annoncer au serveur". FR/EN/AR. Covered in `order-truth-test.mjs`. |
 | Booking settings checkboxes | Logged as "accessible name on". | Measured again: each sits inside its label. Not a bug. |
 
+## Analyse du menu, phase 1: done
+
+The restaurant's "Marges" page becomes **Analyse du menu**: the overview it
+already had (margins on the costed share of sales, products still to cost),
+plus **Performance** and **Heures de pointe**, moved out of Menu &
+modificateurs. That page now keeps only what configures the menu (Menu,
+Traductions, Postes, Recettes, Nutrition, Alertes, NFC).
+
+| ID | Change | How it stays true |
+|---|---|---|
+| MA1 | Nav key, console module key and owner-only gate unchanged (`finance`). Label "Analyse du menu" / "Menu analysis" / "تحليل القائمة" for the restaurant only; other trades keep "Marges". | A merchant's existing on/off setting carries over untouched. |
+| MA2 | Performance and Heures de pointe are rendered by the same functions as before (`KiwiRestaurantMenuWorkspace.analysis`), not copies. | The performance, peak-hours and ledger-reconciliation suites run unchanged against the moved panels. |
+| MA3 | An old link to either tab opens the analysis on that tab, through the owner gate. | A manager following it is refused, as on the page itself. |
+| MA4 | Three tabs on the liquid lens; the period choice stays on the overview, Performance keeps its 30 business days. | The open tab is remembered; an unknown saved value falls back to the overview. |
+
+Covered by `menu-analysis-test.mjs` (35 checks, red on the previous files).
+Next phases: one margin engine with refunds and frozen line costs, revenue by
+category and item over the six period presets, then Simple Food Cost as an
+owner-only opt-in with its own storage (no stock, no movements).
+
 ## Open, logged for their own pass
 
 
@@ -478,6 +498,9 @@ The misses over-alert ("mot de passe oublié" read as blocking). Covered by
 - **Removed employee clocked in**: the open attendance entry stays.
 - **Per-device unpair** is impossible: the till token carries no device id.
 - **Pharmacie** has no UI to enter stock or lots.
+- **A paired till can read `costs` and `recipes`.** Stock consumption on the
+  till needs the recipes, so the read cannot simply be removed; Simple Food
+  Cost gets its own owner-only storage instead of extending these documents.
 
 ## Inventory · next features
 

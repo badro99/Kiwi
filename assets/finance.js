@@ -807,6 +807,7 @@
       '.fin-seg button:focus-visible{outline:2px solid var(--atlas);outline-offset:2px;}',
       '.fin-real{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start;}',
       '.fin-real>.fin-products{grid-column:1/-1;}',
+      '.fin-tabrow{margin:4px 0 18px;overflow-x:auto;}',
       '@media (max-width:980px){.fin-real{grid-template-columns:minmax(0,1fr);}}',
       '.fin-note-line{font-size:12.5px;color:var(--n-600);line-height:1.5;margin-top:10px;}',
       '.fin-miss{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--n-200);font-size:13px;}',
@@ -824,9 +825,27 @@
     document.head.appendChild(st);
   }
   function finReal(v) {
+    const parts = finRealParts(v);
+    if (parts.empty) return parts.empty;
+    const c = rt();
+    return `<div class="fin-page">
+      <div class="fin-head">
+        <div>
+          <div class="fin-title">${esc(c.title)}</div>
+          <div class="fin-sub">${esc(c.sub(venueName(v)))}</div>
+        </div>
+        ${parts.seg}
+      </div>
+      ${parts.body}
+    </div>`;
+  }
+  /* Le contenu de la page réelle, sans son en-tête : « Analyse du menu » le
+     range sous son onglet « Vue d'ensemble », les autres métiers gardent la
+     page « Marges » telle quelle. */
+  function finRealParts(v) {
     const c = rt();
     const items = finMenuItems();
-    if (!items.length) return finEmpty();
+    if (!items.length) return { empty: finEmpty() };
     finCss();
     const C = window.KiwiCost;
     const [from, to] = finBounds(finPeriod);
@@ -896,16 +915,7 @@
       </table></div>
     </div>`;
 
-    return `<div class="fin-page">
-      <div class="fin-head">
-        <div>
-          <div class="fin-title">${esc(c.title)}</div>
-          <div class="fin-sub">${esc(c.sub(venueName(v)))}</div>
-        </div>
-        ${seg}
-      </div>
-      <div class="fin-real">${pnl}${missing}${products}</div>
-    </div>`;
+    return { seg, body: `<div class="fin-real">${pnl}${missing}${products}</div>` };
   }
   document.addEventListener('click', (e) => {
     const b = e.target && e.target.closest && e.target.closest('[data-fin-period]');
@@ -924,12 +934,85 @@
     try { window.KiwiSales && window.KiwiSales.subscribe && window.KiwiSales.subscribe(again); } catch (_) {}
     try { window.KiwiCost && window.KiwiCost.subscribe && window.KiwiCost.subscribe(again); } catch (_) {}
     try { window.KiwiMenuStore && window.KiwiMenuStore.subscribe && window.KiwiMenuStore.subscribe(again); } catch (_) {}
+    /* Les onglets Performance et Heures lisent aussi les recettes et les services. */
+    try { window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.subscribe && window.KiwiRestaurantRecipes.subscribe(again); } catch (_) {}
+    try { window.KiwiHours && window.KiwiHours.subscribe && window.KiwiHours.subscribe(again); } catch (_) {}
+    try { window.addEventListener('kiwi:langchange', again); } catch (_) {}
+  }
+
+  /* ═══════════════════ ANALYSE DU MENU (restaurant) ═══════════════════
+   * Chez un restaurant, cette page devient « Analyse du menu » : la vue
+   * d'ensemble des marges, puis la Performance des articles et les Heures de
+   * pointe, déplacées depuis Menu & modificateurs (qui ne garde que la
+   * configuration de la carte). Les deux onglets déplacés sont rendus par
+   * restaurant-menu-workspace.js lui-même (`.analysis`) : mêmes données, même
+   * fenêtre de 30 journées commerciales, même comportement. Les autres métiers
+   * gardent la page « Marges » sans onglets. */
+  const ANALYSIS = {
+    fr: { title: 'Analyse du menu', sub: (v) => `Ce que votre carte vend, et ce qu’elle vous laisse · ${v}`, aria: 'Sections de l’analyse',
+      tabs: { overview: 'Vue d’ensemble', performance: 'Performance', hours: 'Heures de pointe' } },
+    en: { title: 'Menu analysis', sub: (v) => `What your menu sells, and what it leaves you · ${v}`, aria: 'Analysis sections',
+      tabs: { overview: 'Overview', performance: 'Performance', hours: 'Peak hours' } },
+    ar: { title: 'تحليل القائمة', sub: (v) => `ما تبيعه قائمتك، وما تتركه لك · ${v}`, aria: 'أقسام التحليل',
+      tabs: { overview: 'نظرة عامة', performance: 'الأداء', hours: 'ساعات الذروة' } },
+  };
+  const at = () => ANALYSIS[lang()] || ANALYSIS.fr;
+  const FIN_TABS = ['overview', 'performance', 'hours'];
+  let finTab = 'overview';
+  try { const saved = localStorage.getItem('kiwiMenuAnalysisTab'); if (FIN_TABS.indexOf(saved) >= 0) finTab = saved; } catch (_) {}
+  function menuAnalysis() {
+    try {
+      const W = window.KiwiRestaurantMenuWorkspace;
+      return W && W.analysis && W.isRestaurant && W.isRestaurant() ? W.analysis : null;
+    } catch (_) { return null; }
+  }
+  function analysisPage(v, A) {
+    const a = at();
+    const tabs = `<div class="fin-seg fin-tabs" data-lens-demo role="tablist" aria-label="${esc(a.aria)}">` +
+      FIN_TABS.map((k) => `<button type="button" role="tab" data-lens-item data-fin-tab="${k}" class="${k === finTab ? 'on' : ''}" aria-selected="${k === finTab}">${esc(a.tabs[k])}</button>`).join('') +
+      `</div>`;
+    let seg = '';
+    let body = '';
+    if (finTab === 'performance') body = A.performance();
+    else if (finTab === 'hours') body = A.hours();
+    else if (finShowReal(v)) {
+      const parts = finRealParts(v);
+      if (parts.empty) body = parts.empty;
+      else { seg = parts.seg; body = parts.body; }
+    } else {
+      body = `<div class="fin-grid">${pnlHtml()}${budgetHtml()}${breakevenHtml()}${serviceHtml()}${priceHtml()}</div>
+        <div class="fin-note">${esc(t('noteUpdatePolicy'))}</div>`;
+    }
+    return `<div class="fin-page fin-analysis" data-fin-tab-open="${finTab}">
+      <div class="fin-head">
+        <div>
+          <div class="fin-title">${esc(a.title)}</div>
+          <div class="fin-sub">${esc(a.sub(venueName(v)))}</div>
+        </div>
+        ${seg}
+      </div>
+      <div class="fin-tabrow">${tabs}</div>
+      ${body}
+    </div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest && e.target.closest('[data-fin-tab]');
+    if (!b || !pageActive) return;
+    openTab(b.getAttribute('data-fin-tab'));
+  });
+  function openTab(k) {
+    if (FIN_TABS.indexOf(k) < 0) return;
+    finTab = k;
+    try { localStorage.setItem('kiwiMenuAnalysisTab', k); } catch (_) {}
+    if (pageActive) render();
   }
 
   function render() {
     const root = document.querySelector('[data-finance-root]');
     if (!root) return;
     const v = currentVenueId();
+    const A = menuAnalysis();
+    if (A) { finCss(); finBindLive(); root.innerHTML = analysisPage(v, A); return; }
     if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); return; }
     root.innerHTML = `
       <div class="fin-page">
@@ -959,7 +1042,7 @@
     if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('finance');
     else document.body.classList.add('page-finance');
     const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(t('breadcrumb'))}</b>`;
+    if (bc) bc.innerHTML = `${esc(lang() === 'en' ? 'Home' : lang() === 'ar' ? 'الرئيسية' : 'Accueil')} <span class="sep">/</span> <b>${esc(menuAnalysis() ? at().title : t('breadcrumb'))}</b>`;
     window.Kiwi?.setActivePage?.('finance');
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     document.querySelector('.sidebar nav a[data-nav="finance"]')?.classList.add('active');
@@ -1012,6 +1095,10 @@
   /* Public surface for any external hooks. */
   window.KiwiFinance = {
     showPage, showDashboard, render,
+    /* Ouvre « Analyse du menu » sur un onglet : les anciens liens vers les
+       onglets Performance / Heures de Menu & modificateurs arrivent ici. */
+    open(tab) { if (FIN_TABS.indexOf(tab) >= 0) { finTab = tab; try { localStorage.setItem('kiwiMenuAnalysisTab', tab); } catch (_) {} } window.Kiwi?.handlers?.['nav-finance']?.(); },
+    isActive: () => pageActive,
     /* Computation helpers — exposed for tests + the KPI strip if needed. */
     todayRevenue, foodCostPct, laborCostPct,
     FIXED_COSTS, MONTHLY_TARGET, SERVICE_SPLIT, MTD_REVENUE,

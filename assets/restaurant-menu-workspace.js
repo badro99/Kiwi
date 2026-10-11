@@ -1080,7 +1080,7 @@
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
   const TAB_ICONS={menu:'restaurant',i18n:'translate',stations:'soup_kitchen',recipes:'menu_book',nutrition:'eco',performance:'bar_chart',hours:'schedule',alerts:'warning',nfc:'nfc'};
   function tabList(){
-    return [['menu',ui('tabMenu')],['i18n',ui('tabI18n')],['stations',ui('tabStations')],['recipes',ui('tabRecipes')],['nutrition',ui('tabNutrition')],['performance',ui('tabPerformance')],['hours',ui('tabHours')],['alerts',ui('tabAlerts')],['nfc',ui('tabNfc')]];
+    return [['menu',ui('tabMenu')],['i18n',ui('tabI18n')],['stations',ui('tabStations')],['recipes',ui('tabRecipes')],['nutrition',ui('tabNutrition')],['alerts',ui('tabAlerts')],['nfc',ui('tabNfc')]];
   }
   /* #0149 · Nine tabs do not fit a phone. A sideways strip hides most of them
      and moves under the thumb, so on a phone one button names the open tab
@@ -1094,7 +1094,7 @@
     const rows=tabList().map(([id,l])=>`<button type="button" class="rmw-tabpick-row${tab===id?' on':''}" data-pick="${id}"${tab===id?' aria-current="page"':''}>${catalogIcon(TAB_ICONS[id])}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}${tab===id?catalogIcon('check'):''}</button>`).join('');
     const m=modal({tag:ui("title"),body:`<div class="rmw-tabpick-list">${rows}</div>`,width:420});
     if(!m?.el)return;
-    m.el.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;tab=b.dataset.pick;m.close();render();$('[data-menu-root]')?.scrollIntoView({block:'start'});});
+    m.el.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;if(ANALYSIS_TABS[b.dataset.pick]){m.close();openAnalysis(b.dataset.pick);return;}tab=b.dataset.pick;m.close();render();$('[data-menu-root]')?.scrollIntoView({block:'start'});});
   }
   function tabs(){
     const n=D().items.filter(x=>x.avail===false).length;
@@ -1104,8 +1104,6 @@
       ['stations', ui('tabStations'), 'station'],
       ['recipes', ui('tabRecipes'), 'book'],
       ['nutrition', ui('tabNutrition'), 'leaf'],
-      ['performance', ui('tabPerformance'), 'chart'],
-      ['hours', ui('tabHours'), 'clock'],
       ['alerts', ui('tabAlerts'), 'alert'],
       ['nfc', ui('tabNfc'), 'tag']
     ].map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');
@@ -1151,7 +1149,17 @@
     });
     if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));
   }
-  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,nutrition:nutritionPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
+  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,nutrition:nutritionPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
+  /* Performance et Heures de pointe vivent désormais dans « Analyse du menu »
+     (finance.js) : Menu & modificateurs garde la configuration de la carte.
+     Les panneaux restent ici, inchangés, et la page d'analyse les rend par
+     KiwiRestaurantMenuWorkspace.analysis. Un lien vers l'ancien onglet y mène. */
+  const ANALYSIS_TABS={performance:1,hours:1};
+  function openAnalysis(k){
+    if(window.KiwiFinance?.open){window.KiwiFinance.open(k);return true;}
+    return false;
+  }
+  function analysisActive(){return !!(window.KiwiFinance?.isActive?.());}
   function shownItems(){const q=query.trim().toLowerCase();return D().items.filter(x=>(filter==='all'||x.catId===filter)&&(filter==='all'||!subFilter||(subFilter==='__none'?!x.subId:x.subId===subFilter))&&(!q||`${t(x.name)} ${x.name} ${x.desc||''}`.toLowerCase().includes(q)));}
   const subsOf=(cid)=>cat(cid)?.sub||[];
   function subChips(){
@@ -1763,9 +1771,9 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
   function wire(){
     const H=window.Kiwi?.handlers;if(!H)return false;
     H['rmw-section-actions']=()=>openSectionActions();
-    H['rmw-tab']=e=>{tab=e.dataset.tab;render();};
+    H['rmw-tab']=e=>{const k=e.dataset.tab;if(ANALYSIS_TABS[k]&&openAnalysis(k))return;if(ANALYSIS_TABS[k])return;tab=k;render();};
     H['rmw-tab-pick']=()=>openTabPicker();
-    H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;render();};
+    H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;if(analysisActive())window.KiwiFinance.render();else render();};
     H['rmw-cat-filter']=e=>{filter=e.dataset.cat;subFilter=null;render();};
     H['rmw-cat-move']=(_e,arg)=>{const[id,delta]=String(arg||'').split('::');S().moveCategory(id,+delta);};
     H['rmw-sub-filter']=e=>{subFilter=e.dataset.sub||null;render();};
@@ -1860,6 +1868,8 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
 @media(max-width:900px){.rmw-perf-legend{overflow:auto}.rmw-perf-chart{padding-left:48px}.rmw-perf-plot{height:310px}.rmw-perf-caption{align-items:flex-start;flex-direction:column;gap:6px}}
 `;document.head.appendChild(s);}
   function hoursStyle(){if($('#rmw-hours-css'))return;const s=document.createElement('style');s.id='rmw-hours-css';s.textContent=`
+/* Analyse du menu : hors de .catalog-rail, la pastille active gardait le texte clair du dégradé sur la lentille claire. Même lecture que la rangée du menu. */
+.rmw-analysis-panel .mi-pill-row[data-kw-lens] .mi-pill.on{color:var(--ink)!important;background:transparent!important;box-shadow:none!important}
 .rmw-hours-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}.rmw-hours-page>*{min-width:0}.rmw-hours-pills{margin-top:16px}.rmw-hours-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.rmw-hours-kpis>div{display:grid;gap:7px;padding:17px 18px;background:var(--surface);border:1px solid var(--n-200);border-radius:13px}.rmw-hours-kpis span{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--n-500)}.rmw-hours-kpis b{font-size:24px;line-height:1.1;letter-spacing:-.03em}.rmw-hours-kpis>div:last-child b{font-size:18px}.rmw-hours-kpis small{color:var(--n-500)}.rmw-hours-list-title{margin:22px 0 12px;color:var(--n-500);font-size:11px}.rmw-hours-bars{display:grid;gap:9px}.rmw-hours-row{display:grid;grid-template-columns:minmax(120px,190px) minmax(180px,1fr) 55px;align-items:center;gap:14px}.rmw-hours-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.rmw-hours-track{height:12px;border-radius:4px;background:var(--n-100);overflow:hidden}.rmw-hours-track i{display:block;height:100%;min-width:3px;border-radius:4px;background:var(--atlas)}.rmw-hours-row>b{text-align:right;font:600 11px var(--mono)}.rmw-hours-insight{padding:22px 24px;border-radius:16px;background:#08100c;color:#fff;box-shadow:0 16px 38px rgba(4,9,6,.10)}.rmw-hours-insight>span{color:#73f0b2;font:600 9px var(--mono);letter-spacing:.12em}.rmw-hours-insight h3{margin:10px 0 7px;font-size:20px}.rmw-hours-insight p{max-width:780px;margin:0;color:rgba(255,255,255,.62);font-size:12px;line-height:1.6}.rmw-hours-notables{display:grid;gap:8px}.rmw-hours-notable{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--n-200)}.rmw-hours-notable:last-child{border-bottom:0}.rmw-hours-notable>i{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--atlas);flex:0 0 auto}.rmw-hours-notable b,.rmw-hours-notable span{display:block}.rmw-hours-notable b{font-size:12.5px}.rmw-hours-notable span{margin-top:4px;color:var(--n-500);font-size:11.5px}@media(max-width:800px){.rmw-hours-kpis{grid-template-columns:1fr}.rmw-hours-row{grid-template-columns:110px minmax(120px,1fr) 42px}.rmw-hours-insight{padding:19px}}
 `;document.head.appendChild(s);}
   function catalogSheet(title, actions){
@@ -1924,7 +1934,10 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
      * independent copy with the same stages, choices, extras and options, then
      * opens that copy immediately so only its name/price need adapting. */
     window.Kiwi.handlers['rmw-formula-duplicate']=(_e,id)=>{const before=new Set(D().items.map(it=>it.id));S().duplicateItem(id);const copy=D().items.find(it=>!before.has(it.id));if(copy)openItem(copy);};
-    window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant};
+    window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant,analysis:{
+      performance(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${performancePanel()}</div>`;},
+      hours(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${hoursPanel()}</div>`;}
+    }};
     if(!S()){setTimeout(boot,50);return;}
     if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();};S().subscribe(refresh);S().subscribe(scheduleAutoTranslate);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();});}catch(_){}}
     if(document.body.classList.contains('page-menu')&&isRestaurant())show();

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* Performance et Heures de pointe vivent dans « Analyse du menu » : la page les rend par KiwiRestaurantMenuWorkspace.analysis, les mêmes panneaux qu'avant. */
 'use strict';
 
 const fs = require('fs');
@@ -58,7 +59,7 @@ window.window = window;
 window.document = document;
 vm.createContext(context);
 new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
-window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'performance' } });
+root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.performance();
 
 const html = root.innerHTML;
 assert.match(html, /Performance des articles/);

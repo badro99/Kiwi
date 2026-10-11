@@ -314,7 +314,7 @@
         { nav: 'menu',    label: 'Menu & modificateurs', i18n: 'sidebar.restaurant.menu',                 icon: ICONS.menu },
         { nav: 'kds',     label: 'Écran cuisine (KDS)',  i18n: 'sidebar.restaurant.kds',                  icon: ICONS.kds },
         { nav: 'stock',   label: 'Stock & approvisionnement', i18n: 'sidebar.restaurant.stock',           icon: ICONS.stock },
-        { nav: 'finance', label: 'Marges',               i18n: 'sidebar.restaurant.finance', tag: 'LIVE', icon: ICONS.finance },
+        { nav: 'finance', label: 'Analyse du menu',      i18n: 'sidebar.restaurant.finance', tag: 'LIVE', icon: ICONS.finance },
       ],
     },
     boutique: {
