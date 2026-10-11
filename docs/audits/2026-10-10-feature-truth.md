@@ -494,6 +494,23 @@ have shown two different margins for the same days.
 Covered by `menu-ledger-test.mjs` (26 checks: the ledger rules, then one
 fixture rendered by both tabs, same 221 MAD).
 
+## Analyse du menu, phase 2: sales by category and item: done
+
+A fourth tab, **Ventes**, between the overview and Performance. It reads the
+same `KiwiCost.ledger` as Performance, so gross and net agree to the centime
+between the two tabs (asserted).
+
+| ID | Rule | How |
+|---|---|---|
+| MS1 | Six periods, all in business days. | Today, yesterday, 7 and 30 days, this month (from the 1st at 05:00), last month (the whole previous calendar month). A sale at 04:59 on the 1st belongs to the previous month. Without `KiwiDayReport` the period is named without dates rather than dated wrongly. |
+| MS2 | Money collected only. | Per line, VAT included, after the ticket discount spread over that ticket's lines. No cost, profit or margin on this tab. |
+| MS3 | A formula keeps its price. | Its components add quantity only ("1 en formule"); average price divides by paid units. |
+| MS4 | Nothing is attached by guess. | Off-menu and free-amount lines keep their names in their own rows, after the menu. |
+| MS5 | Shares say what they are shares of. | Of item lines, with the total printed; refunds and amounts without item detail stay in the strip above. |
+| MS6 | States. | Empty period, history still loading ("partial for this period"), offline, ledger missing (error, no figure). The chosen period is remembered per device. Phone: rows become labelled cards. |
+
+Covered by `menu-sales-test.mjs` (31 checks, crashes on the previous code).
+
 ## Métiers de bouche (pizzeria, boulangerie, fast-food, food truck, traiteur): done
 
 | ID | Finding | Status |
@@ -535,6 +552,12 @@ Covered by `service-trades-truth-test.mjs` (26 checks).
 Covered by `specialty-retail-truth-test.mjs` (29 checks); `pos-truth-a-test` and `trade-workspaces-test` follow the new contract.
 
 ## Open, logged for their own pass
+
+- **Dashboard period labels claim calendar periods the maths does not use.**
+  In `assets/dateRange.js`, `moisDernier` is labelled "Last month" but
+  `RANGE_DAYS` makes it the last 30 days to now; `trimestre` ("This quarter")
+  is the last 90 days and `annee` ("This year") the last 365. The Ventes tab
+  does not use these; the global date picker does.
 
 - **Pharmacy health data on the counter device.** Prescriptions and
   allergies sit in the `workspaces` store doc, which a paired till token can

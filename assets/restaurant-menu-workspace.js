@@ -206,6 +206,37 @@
     costSrcFlat: 'Entered cost',
     costSrcVariant: 'Purchase price',
     costObserved: 'observed {amount}',
+    salesTitle: 'Sales by category and item',
+    salesSub: 'What each line of a ticket collected, VAT included, after ticket discounts spread over its lines. A formula keeps its price; its components count in quantity only.',
+    salesPeriodAria: 'Period',
+    salesPresetToday: 'Today',
+    salesPresetYesterday: 'Yesterday',
+    salesPreset7: '7 days',
+    salesPreset30: '30 days',
+    salesPresetMonth: 'This month',
+    salesPresetLastMonth: 'Last month',
+    salesDayLabel: '{day} · business day',
+    salesAvgTicket: 'Average ticket',
+    salesAvgTicketSub: 'gross sales ÷ tickets',
+    salesByCategory: 'By category',
+    salesByItem: 'By item',
+    salesColCategory: 'Category',
+    salesColQty: 'Sold',
+    salesColRevenue: 'Collected',
+    salesColShare: 'Share',
+    salesColAvgPrice: 'Average price',
+    salesItemsCount: '{n} items',
+    salesItemsCount1: '1 item',
+    salesInFormula: '{n} in a formula',
+    salesAtZero: '{n} at 0 MAD',
+    salesUnsold: '{n} menu items had no sale in this period.',
+    salesUnsold1: '1 menu item had no sale in this period.',
+    salesNone: 'No sales in this period',
+    salesNoneDesc: 'Pick another period, or come back after the next service.',
+    salesLoading: 'Sales history is still loading on this device. These figures are partial for this period.',
+    salesOffline: 'Offline: these are the sales this device holds. They will be completed when it reconnects.',
+    salesError: 'Sales could not be read on this device. Reload the page; nothing has been changed.',
+    salesShareNote: 'Shares are of item lines ({amount}). Refunds and amounts without item detail are in the strip above, not in these tables.',
       ledgerRefundLines: 'Refunds reduce net revenue. They are not removed item by item from the table below.',
       noItemsToAnalyze: 'No items to analyze',
       noItemsToAnalyzeDesc: 'Add your dishes in Menu & modifiers. Performance will appear after the first sales.',
@@ -560,6 +591,37 @@
     costSrcFlat: 'تكلفة مُدخلة',
     costSrcVariant: 'سعر الشراء',
     costObserved: 'ملاحَظة {amount}',
+    salesTitle: 'المبيعات حسب الفئة والمنتج',
+    salesSub: 'ما حصّله كل سطر من التذكرة، شاملاً الضريبة، بعد توزيع خصم التذكرة على سطورها. تحتفظ الوجبة المركبة بسعرها؛ ومكوناتها تُحتسب بالكمية فقط.',
+    salesPeriodAria: 'الفترة',
+    salesPresetToday: 'اليوم',
+    salesPresetYesterday: 'أمس',
+    salesPreset7: '7 أيام',
+    salesPreset30: '30 يوماً',
+    salesPresetMonth: 'هذا الشهر',
+    salesPresetLastMonth: 'الشهر الماضي',
+    salesDayLabel: '{day} · يوم عمل',
+    salesAvgTicket: 'متوسط التذكرة',
+    salesAvgTicketSub: 'المبيعات الإجمالية ÷ التذاكر',
+    salesByCategory: 'حسب الفئة',
+    salesByItem: 'حسب المنتج',
+    salesColCategory: 'الفئة',
+    salesColQty: 'المبيع',
+    salesColRevenue: 'المحصّل',
+    salesColShare: 'الحصة',
+    salesColAvgPrice: 'متوسط السعر',
+    salesItemsCount: '{n} منتجات',
+    salesItemsCount1: 'منتج واحد',
+    salesInFormula: '{n} ضمن وجبة مركبة',
+    salesAtZero: '{n} بـ 0 درهم',
+    salesUnsold: '{n} منتجات من القائمة لم تُبع خلال هذه الفترة.',
+    salesUnsold1: 'منتج واحد من القائمة لم يُبع خلال هذه الفترة.',
+    salesNone: 'لا مبيعات في هذه الفترة',
+    salesNoneDesc: 'اختر فترة أخرى، أو عد بعد الخدمة القادمة.',
+    salesLoading: 'سجل المبيعات ما زال قيد التحميل على هذا الجهاز. هذه الأرقام جزئية لهذه الفترة.',
+    salesOffline: 'غير متصل: هذه هي المبيعات الموجودة على هذا الجهاز. ستكتمل عند عودة الاتصال.',
+    salesError: 'تعذرت قراءة المبيعات على هذا الجهاز. أعد تحميل الصفحة؛ لم يتغير شيء.',
+    salesShareNote: 'الحصص محسوبة من سطور المنتجات ({amount}). المستردات والمبالغ بدون تفاصيل موجودة في الشريط أعلاه، لا في هذه الجداول.',
       ledgerRefundLines: 'المستردات تنقص صافي المداخيل ولا تحذف منتجاً بمنتج من الجدول أدناه.',
       noItemsToAnalyze: 'لا توجد منتجات للتحليل',
       noItemsToAnalyzeDesc: 'أضف أطباقك في القائمة والإضافات. سيظهر الأداء بعد أولى المبيعات.',
@@ -915,6 +977,37 @@
     costSrcFlat: 'Coût saisi',
     costSrcVariant: 'Prix d’achat',
     costObserved: 'observé {amount}',
+    salesTitle: 'Ventes par catégorie et par article',
+    salesSub: 'Ce que chaque ligne de ticket a encaissé, TTC, après répartition des remises du ticket sur ses lignes. Une formule garde son prix ; ses composants ne comptent qu’en quantité.',
+    salesPeriodAria: 'Période',
+    salesPresetToday: 'Aujourd’hui',
+    salesPresetYesterday: 'Hier',
+    salesPreset7: '7 jours',
+    salesPreset30: '30 jours',
+    salesPresetMonth: 'Ce mois-ci',
+    salesPresetLastMonth: 'Mois dernier',
+    salesDayLabel: '{day} · journée commerciale',
+    salesAvgTicket: 'Ticket moyen',
+    salesAvgTicketSub: 'ventes brutes ÷ tickets',
+    salesByCategory: 'Par catégorie',
+    salesByItem: 'Par article',
+    salesColCategory: 'Catégorie',
+    salesColQty: 'Vendus',
+    salesColRevenue: 'Encaissé',
+    salesColShare: 'Part',
+    salesColAvgPrice: 'Prix moyen',
+    salesItemsCount: '{n} articles',
+    salesItemsCount1: '{n} article',
+    salesInFormula: '{n} en formule',
+    salesAtZero: '{n} à 0 MAD',
+    salesUnsold: '{n} plats de la carte sans vente sur la période.',
+    salesUnsold1: '{n} plat de la carte sans vente sur la période.',
+    salesNone: 'Aucune vente sur cette période',
+    salesNoneDesc: 'Choisissez une autre période, ou revenez après le prochain service.',
+    salesLoading: 'L’historique des ventes est encore en cours de chargement sur cet appareil. Ces chiffres sont partiels pour cette période.',
+    salesOffline: 'Hors ligne : ce sont les ventes que cet appareil détient. Elles seront complétées à la reconnexion.',
+    salesError: 'Les ventes n’ont pas pu être lues sur cet appareil. Rechargez la page ; rien n’a été modifié.',
+    salesShareNote: 'Les parts portent sur les lignes d’articles ({amount}). Remboursements et montants sans détail sont dans le bandeau ci-dessus, pas dans ces tableaux.',
       ledgerRefundLines: 'Les remboursements réduisent le chiffre net. Ils ne sont pas retirés plat par plat du tableau ci-dessous.',
       noItemsToAnalyze: 'Aucun article à analyser',
       noItemsToAnalyzeDesc: 'Ajoutez vos plats dans Menu & modificateurs. Les performances apparaîtront après les premières ventes.',
@@ -1462,8 +1555,14 @@
      présenté comme le chiffre d'affaires du commerce. */
   function perfLedger(p){
     const L=p.ledger,share=(v)=>L.gross>0?Math.round(v/L.gross*100)+' %':'·';
+    const notes=ledgerNotes(L,'ledgerLoading');
+    return `<div class="rmw-perf-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('ledgerEligible'))}</span><b>${cash(L.attributed)}</b><small>${esc(ui('ledgerEligibleSub',{share:share(L.attributed)}))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
+  }
+  /* Les remarques du registre, communes à la Performance et aux Ventes : ce
+     qui manque, ce qui est écarté, ce qui n'est pas attribué. */
+  function ledgerNotes(L,loadingKey){
     const notes=[];
-    if(L.completeness==='loading')notes.push(`<p class="warn">${esc(ui('ledgerLoading'))}</p>`);
+    if(L.completeness==='loading')notes.push(`<p class="warn">${esc(ui(loadingKey))}</p>`);
     else if(L.completeness==='unknown')notes.push(`<p class="warn">${esc(ui('ledgerUnknown'))}</p>`);
     if(L.dupN)notes.push(`<p>${esc(ui('ledgerDuplicates',{n:L.dupN,amount:cash(L.dupAmt)}))}</p>`);
     if(L.offMenu)notes.push(`<p>${esc(ui('ledgerOffMenu',{amount:cash(L.offMenu),free:cash(L.freeAmount)}))}</p>`);
@@ -1472,7 +1571,7 @@
     if(L.basis&&L.basis.mode==='rate'&&L.basis.included)notes.push(`<p>${esc(ui('ledgerVatBasis',{rate:L.basis.rate}))}</p>`);
     if(L.todayCostQty>0)notes.push(`<p>${esc(ui('ledgerTodayCost'))}</p>`);
     if(L.refunds)notes.push(`<p>${esc(ui('ledgerRefundLines'))}</p>`);
-    return `<div class="rmw-perf-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('ledgerEligible'))}</span><b>${cash(L.attributed)}</b><small>${esc(ui('ledgerEligibleSub',{share:share(L.attributed)}))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
+    return notes;
   }
   /* #0150 · On a phone each table row becomes a card. The column names ride
      on the table as CSS strings so every cell stays labelled once the header
@@ -1491,6 +1590,112 @@
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
     return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui(Math.abs(p.items.reduce((n,x)=>n+x.qty,0))<2&&lang()==='fr'||(p.items.reduce((n,x)=>n+x.qty,0))===1?'itemSold':'itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
+  /* ═══ VENTES PAR CATÉGORIE ET PAR ARTICLE ═══════════════════════════════
+     Le même registre que la Performance (KiwiCost.ledger) : annulations,
+     doublons, remboursements, remises et TVA y suivent les mêmes règles. Ici
+     on ne parle que d'argent encaissé, jamais de coût. Six périodes, toutes en
+     journées commerciales (coupure 5 h, fuseau du commerce) : « Ce mois-ci »
+     part du 1er à 5 h, « Mois dernier » est le mois civil précédent entier. */
+  const SALES_PRESETS=['today','yesterday','d7','d30','month','lastMonth'];
+  const SALES_LABEL={today:'salesPresetToday',yesterday:'salesPresetYesterday',d7:'salesPreset7',d30:'salesPreset30',month:'salesPresetMonth',lastMonth:'salesPresetLastMonth'};
+  let salesPeriod='d30';
+  try{const saved=localStorage.getItem('kiwiMenuSalesPeriod');if(SALES_PRESETS.includes(saved))salesPeriod=saved;}catch(_){}
+  function salesWindow(id){
+    const DR=window.KiwiDayReport,now=Date.now(),cap=now+5*60e3;
+    try{
+      if(DR?.today&&DR?.dayBounds&&DR?.shiftDay){
+        const today=DR.today();let first=today,last=today;
+        if(id==='yesterday')first=last=DR.shiftDay(today,-1);
+        else if(id==='d7')first=DR.shiftDay(today,-6);
+        else if(id==='d30')first=DR.shiftDay(today,-29);
+        else if(id==='month')first=today.slice(0,8)+'01';
+        else if(id==='lastMonth'){last=DR.shiftDay(today.slice(0,8)+'01',-1);first=last.slice(0,8)+'01';}
+        const from=DR.dayBounds(first).from,end=DR.dayBounds(last).to;
+        if(Number.isFinite(from)&&Number.isFinite(end)&&end>from)return{id,from,to:Math.min(end,cap),first,last,zone:DR.timezone?.()||'Africa/Casablanca',exact:true};
+      }
+    }catch(_){}
+    /* Sans le module du rapport journalier : minuit de l'appareil, et la
+       période est nommée sans dates pour ne rien affirmer de faux. */
+    const d=new Date();d.setHours(0,0,0,0);const t=d.getTime(),y=d.getFullYear(),m=d.getMonth();
+    const span={today:[t,now],yesterday:[t-864e5,t],d7:[t-6*864e5,now],d30:[t-29*864e5,now],month:[new Date(y,m,1).getTime(),now],lastMonth:[new Date(y,m-1,1).getTime(),new Date(y,m,1).getTime()]}[id]||[t-29*864e5,now];
+    return{id,from:span[0],to:span[1],first:'',last:'',zone:'',exact:false};
+  }
+  function salesRangeLabel(w){
+    if(!w.exact)return ui(SALES_LABEL[w.id]||'salesPreset30');
+    if(w.first===w.last){const [y,m,d]=w.first.split('-').map(Number);return ui('salesDayLabel',{day:new Intl.DateTimeFormat(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)))});}
+    return rangeLabel(w);
+  }
+  function salesData(id){
+    const w=salesWindow(id),items=D().items.map(x=>({item:x,qty:0,pricedQty:0,formulaQty:0,zeroQty:0,revenue:0}));
+    const L=menuLedger(w,items);
+    if(!L)return null;
+    const match=saleLineMatcher(items),offMenu=new Map();let attributed=0,offAmt=0,freeAmt=0;
+    L.lines.forEach(x=>{
+      const row=match(x.line);
+      if(row){
+        row.qty+=x.qty;row.revenue+=x.collected;attributed+=x.collected;
+        if(x.collected>0)row.pricedQty+=x.qty;
+        else if(String(x.kind||x.line?.kind||'')==='formula-part')row.formulaQty+=x.qty;
+        else row.zeroQty+=x.qty;
+        return;
+      }
+      const line=x.line,lid=String(line?.itemId??line?.i??line?.id??''),name=String(line?.baseName||line?.bn||line?.name||line?.n||'').trim();
+      const free=lid==='libre'||/^article libre$/i.test(name),k=free?'libre':(lid?'id:'+lid:'name:'+norm(name));
+      const o=offMenu.get(k)||{key:k,name:free?ui('freeAmountItem'):(name||ui('article')),free,qty:0,revenue:0};
+      o.qty+=x.qty;o.revenue+=x.collected;offMenu.set(k,o);offAmt+=x.collected;if(free)freeAmt+=x.collected;
+    });
+    const cats=new Map();
+    items.filter(r=>r.qty>0).forEach(r=>{
+      const c=cat(r.item.catId),key=c?'c:'+c.id:'none';
+      const g=cats.get(key)||{key,name:c?.name?t(c.name):ui('noSection'),qty:0,revenue:0,n:0};
+      g.qty+=r.qty;g.revenue+=r.revenue;g.n++;cats.set(key,g);
+    });
+    [...offMenu.values()].forEach(o=>{
+      const key=o.free?'free':'off',g=cats.get(key)||{key,name:ui(o.free?'freeAmountSection':'offMenuSection'),qty:0,revenue:0,n:0,off:true};
+      g.qty+=o.qty;g.revenue+=o.revenue;g.n++;cats.set(key,g);
+    });
+    const ledger={grossN:L.grossN,gross:L.gross,refundN:L.refundN,refunds:L.refunds,net:L.net,attributed,offMenu:0,offAmt,freeAmount:freeAmt,unitemisedN:L.unitemisedN,unitemised:L.unitemisedAmt,discounts:L.discounts,dupN:L.dupN,dupAmt:L.dupAmt,todayCostQty:0,basis:{mode:'none'},completeness:feedCompleteness()};
+    const byRev=(a,b)=>b.revenue-a.revenue||b.qty-a.qty;
+    return{window:w,ledger,itemised:L.collected,
+      categories:[...cats.values()].sort((a,b)=>(a.off?1:0)-(b.off?1:0)||byRev(a,b)),
+      items:items.filter(r=>r.qty>0).sort(byRev),
+      offMenu:[...offMenu.values()].sort(byRev),
+      unsold:items.filter(r=>!r.qty&&!r.item.archived&&r.item.avail!==false).length};
+  }
+  function salesPanel(){
+    const pills=SALES_PRESETS.map(k=>`<button class="mi-pill${k===salesPeriod?' on':''}" type="button" role="tab" aria-selected="${k===salesPeriod}" data-action="rmw-sales-period" data-period="${k}">${esc(ui(SALES_LABEL[k]))}</button>`).join('');
+    let p=null;try{p=salesData(salesPeriod);}catch(_){p=null;}
+    const head=`<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('salesTitle'))}</div><div class="mi-sub">${esc(ui('salesSub'))}</div></div>${p?`<div class="rmw-perf-period" data-sales-from="${p.window.from}" data-sales-to="${p.window.to}" title="${esc(p.window.zone||'')}">${esc(salesRangeLabel(p.window))}</div>`:''}</div><div class="mi-pill-row rmw-sales-pills" role="tablist" aria-label="${esc(ui('salesPeriodAria'))}">${pills}</div></section>`;
+    if(!p)return `<div class="rmw-sales" data-sales-state="error">${head}<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('salesError'))}</h3></div></section></div>`;
+    const L=p.ledger,notes=ledgerNotes(L,'salesLoading');
+    let offline=false;try{offline=navigator.onLine===false;}catch(_){}
+    if(offline)notes.unshift(`<p class="warn">${esc(ui('salesOffline'))}</p>`);
+    const num=(v)=>window.KiwiNumber?.format(v,{})??v.toLocaleString(lang()==='en'?'en-GB':'fr-FR');
+    const pct=(v)=>p.itemised>0?(v/p.itemised*100).toFixed(v/p.itemised*100<10?1:0)+' %':'·';
+    const strip=`<div class="rmw-perf-ledger rmw-sales-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('salesAvgTicket'))}</span><b>${L.grossN?cash(L.gross/L.grossN):'·'}</b><small>${esc(ui('salesAvgTicketSub'))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
+    if(!L.grossN&&!p.items.length&&!p.offMenu.length){
+      const empty=!D().items.length?`<h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p>`:`<h3>${esc(ui('salesNone'))}</h3><p>${esc(ui('salesNoneDesc'))}</p>`;
+      return `<div class="rmw-sales" data-sales-state="${L.completeness==='loading'?'loading':'empty'}">${head}${strip}<section class="mi-section"><div class="rmw-empty">${empty}</div></section></div>`;
+    }
+    const max=Math.max(1,...p.categories.map(g=>g.revenue));
+    const catRows=p.categories.map(g=>`<tr class="${g.off?'rmw-perf-off':''}" data-sales-cat="${esc(g.key)}"><td><b>${esc(g.name)}</b><small>${esc(ui('salesItemsCount',{n:g.n}))}</small></td><td>${num(g.qty)}</td><td>${cash(g.revenue)}</td><td><div class="rmw-sales-share"><i style="width:${(Math.max(0,g.revenue)/max*100).toFixed(1)}%"></i><span>${pct(g.revenue)}</span></div></td></tr>`).join('');
+    const itemRow=(name,sub,r,off)=>{const extra=[];if(r.formulaQty)extra.push(ui('salesInFormula',{n:num(r.formulaQty)}));if(r.zeroQty)extra.push(ui('salesAtZero',{n:num(r.zeroQty)}));return `<tr class="${off?'rmw-perf-off':''}"><td><b>${esc(name)}</b><small>${esc(sub)}</small></td><td>${num(r.qty)}${extra.length?`<small>${esc(extra.join(' · '))}</small>`:''}</td><td>${cash(r.revenue)}</td><td>${pct(r.revenue)}</td><td>${r.pricedQty?cash(r.revenue/r.pricedQty):'·'}</td></tr>`;};
+    const itemRows=p.items.map(r=>itemRow(t(r.item.name),cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection'),r,false)).join('')+p.offMenu.map(o=>itemRow(o.name,ui(o.free?'freeAmountSection':'offMenuSection'),{qty:o.qty,revenue:o.revenue,pricedQty:o.revenue>0?o.qty:0},true)).join('');
+    const lbl=(keys)=>keys.map((k,i)=>`--l${i+1}:${JSON.stringify(ui(k))}`).join(';');
+    return `<div class="rmw-sales" data-sales-state="ready">${head}${strip}
+      <section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('salesByCategory'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-sales-table" style="${esc(lbl(['salesColCategory','salesColQty','salesColRevenue','salesColShare']))}"><thead><tr><th>${esc(ui('salesColCategory'))}</th><th>${esc(ui('salesColQty'))}</th><th>${esc(ui('salesColRevenue'))}</th><th>${esc(ui('salesColShare'))}</th></tr></thead><tbody>${catRows}</tbody></table></div></section>
+      <section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('salesByItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-sales-table" style="${esc(lbl(['colItem','salesColQty','salesColRevenue','salesColShare','salesColAvgPrice']))}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('salesColQty'))}</th><th>${esc(ui('salesColRevenue'))}</th><th>${esc(ui('salesColShare'))}</th><th>${esc(ui('salesColAvgPrice'))}</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+      <div class="rmw-perf-notes"><p>${esc(ui('salesShareNote',{amount:cash(p.itemised)}))}</p>${p.unsold?`<p>${esc(ui('salesUnsold',{n:p.unsold}))}</p>`:''}</div></section></div>`;
+  }
+  function salesStyle(){if($('#rmw-sales-css'))return;const s=document.createElement('style');s.id='rmw-sales-css';s.textContent=`
+.rmw-sales-pills{margin-top:14px}
+.rmw-sales-table td small{display:block;margin-top:3px;color:var(--n-500);font-size:11px}
+.rmw-sales-table td:not(:first-child),.rmw-sales-table th:not(:first-child){text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rmw-sales-share{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.rmw-sales-share i{display:block;height:6px;min-width:2px;max-width:120px;flex:0 1 120px;border-radius:999px;background:var(--atlas)}
+.rmw-sales-share span{min-width:44px}
+@media (max-width:720px){.rmw-sales-table thead{display:none}.rmw-sales-table,.rmw-sales-table tbody{display:block}.rmw-sales-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:12px 0;border-bottom:1px solid var(--n-200)}.rmw-sales-table td{display:block;text-align:start!important;padding:0}.rmw-sales-table td:first-child{grid-column:1/-1}.rmw-sales-table td:nth-child(2)::before{content:var(--l2);display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-sales-table td:nth-child(3)::before{content:var(--l3);display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-sales-table td:nth-child(4)::before{content:var(--l4);display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-sales-table td:nth-child(5)::before{content:var(--l5);display:block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-sales-share{justify-content:flex-start}}
+`;document.head.appendChild(s);}
   const SERVICE_WINDOWS=[
     {id:'matin',name:'Matin',from:5*60,to:11*60},
     {id:'midi',name:'Midi',from:11*60,to:15*60},
@@ -1798,6 +2003,7 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-section-actions']=()=>openSectionActions();
     H['rmw-tab']=e=>{const k=e.dataset.tab;if(ANALYSIS_TABS[k]&&openAnalysis(k))return;if(ANALYSIS_TABS[k])return;tab=k;render();};
     H['rmw-tab-pick']=()=>openTabPicker();
+    H['rmw-sales-period']=e=>{const k=e.dataset.period;if(!SALES_PRESETS.includes(k))return;salesPeriod=k;try{localStorage.setItem('kiwiMenuSalesPeriod',k);}catch(_){}if(analysisActive())window.KiwiFinance.render();};
     H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;if(analysisActive())window.KiwiFinance.render();else render();};
     H['rmw-cat-filter']=e=>{filter=e.dataset.cat;subFilter=null;render();};
     H['rmw-cat-move']=(_e,arg)=>{const[id,delta]=String(arg||'').split('::');S().moveCategory(id,+delta);};
@@ -1962,6 +2168,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
     window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant,analysis:{
       performance(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${performancePanel()}</div>`;},
       hours(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${hoursPanel()}</div>`;},
+      sales(){style();performanceStyle();hoursStyle();salesStyle();return `<div class="rmw-analysis-panel">${salesPanel()}</div>`;},
       /* Le registre et le coût par plat que lit la Performance : la vue
          d'ensemble d'« Analyse du menu » les lit aussi, pour ne jamais
          afficher une autre marge que celle de l'onglet d'à côté. */

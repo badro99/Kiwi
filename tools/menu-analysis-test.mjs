@@ -9,7 +9,7 @@
  *   2. Les panneaux déplacés sont les mêmes fonctions (pas de copie) : les
  *      suites restaurant-menu-performance / peak-hours / ledger-reconciliation
  *      les vérifient chiffre par chiffre par KiwiRestaurantMenuWorkspace.analysis.
- *   3. finance.js : restaurant ⇒ titre, fil d'Ariane, trois onglets sur la
+ *   3. finance.js : restaurant ⇒ titre, fil d'Ariane, quatre onglets sur la
  *      lentille liquide ; autre métier ⇒ « Marges » sans onglets.
  *   4. La page reste réservée au propriétaire, y compris par l'ancien lien.
  *   5. Libellés FR / EN / AR et console alignés ; les autres métiers gardent
@@ -130,8 +130,8 @@ function bootFinance({ restaurant = true, role = 'owner', lang = 'fr', saved = n
   ok(/class="fin-title">Analyse du menu</.test(html), 'restaurant : la page s’appelle « Analyse du menu »', html.slice(0, 300));
   ok(/<b>Analyse du menu<\/b>/.test(f.breadcrumb.innerHTML), 'restaurant : le fil d’Ariane dit « Analyse du menu »', f.breadcrumb.innerHTML);
   const tabs = html.match(/data-fin-tab="(\w+)"/g) || [];
-  ok(tabs.join() === 'data-fin-tab="overview",data-fin-tab="performance",data-fin-tab="hours"', 'trois onglets : Vue d’ensemble · Performance · Heures de pointe', tabs.join());
-  ok(/class="fin-seg fin-tabs" data-lens-demo role="tablist"/.test(html) && (html.match(/role="tab" data-lens-item/g) || []).length === 3, 'les onglets passent par la lentille liquide (data-lens-demo / data-lens-item)');
+  ok(tabs.join() === 'data-fin-tab="overview",data-fin-tab="sales",data-fin-tab="performance",data-fin-tab="hours"', 'quatre onglets : Vue d’ensemble · Ventes · Performance · Heures de pointe', tabs.join());
+  ok(/class="fin-seg fin-tabs" data-lens-demo role="tablist"/.test(html) && (html.match(/role="tab" data-lens-item/g) || []).length === 4, 'les onglets passent par la lentille liquide (data-lens-demo / data-lens-item)');
   ok(/data-fin-tab="overview" class="on" aria-selected="true"/.test(html) && /data-fin-tab-open="overview"/.test(html), 'par défaut, la vue d’ensemble est ouverte');
   ok(!/data-stub=/.test(html), 'la vue d’ensemble ne rend ni Performance ni Heures');
 
