@@ -28,7 +28,14 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Les tarifs du catalogue acceptent les centimes (12,50). Arrondir à l'entier
+     faisait lire 13 à la caisse un article vendu 12,50 : on garde deux décimales
+     dès qu'il y en a, jamais de « 12.5 ». */
+  const fmtMAD  = (n) => {
+    n = Math.round((Number(n) || 0) * 100) / 100;
+    const whole = Math.abs(n - Math.round(n)) < 0.005;
+    return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 }).format(n) + ' MAD';
+  };
   const icons   = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
   /* Google Material Symbols · Outlined 400 for primary navigation. Product
      artwork stays garment-specific because the Google set has no complete
@@ -558,7 +565,12 @@
   ORDERS.forEach((o) => { if (o.rack) rackSlots[o.rack] = o.id; });
 
   /* ───────────────────────── state ───────────────────────── */
-  let ticketSeq = 1045;
+  /* 1045 est le compteur de la démonstration. Un vrai commerce commence à son
+     premier bon : lui afficher P-1045 pour sa première commande, c'est lui
+     laisser croire à un millier de bons qu'il n'a jamais faits. nextSeq() le
+     fait repartir au-delà du dernier encaissé après un rechargement. */
+  let ticketSeq = pvReal() ? 1 : 1045;
+  const mirroredClients = new Set();   /* fiches déjà reflétées dans KiwiClients */
   const PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:';
   let pressingCloudHandle = null;
   const persistedOrderHashes = Object.create(null);
@@ -701,7 +713,7 @@
       if (!raw || !raw.id || !Array.isArray(raw.lines) || !raw.lines.length) return;
       const lines = raw.lines.filter((l) => l && ITEMS[l.itemId]).map((l) => {
         const row = {
-          itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SERVICES.some((x) => x.id === s)).slice(0, 8) : [],
+          itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SVC[s]).slice(0, 8) : [],
           qty: Math.max(1, Math.min(500, +l.qty || 1)), color: COLOR[l.color] ? l.color : 'blanc',
           notes: Array.isArray(l.notes) ? l.notes.map((n) => String(n).slice(0, 100)).slice(0, 12) : [],
           freeNote: String(l.freeNote || '').slice(0, 500), photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
@@ -737,6 +749,7 @@
     });
     ensurePublicOrderNumbers(ORDERS);
     ticketSeq = Math.max(ticketSeq, +doc.seq || 0, 1);
+    try { mirrorAllClients(); } catch (_) {}
     Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
     rackConflicts = Array.isArray(doc.rackConflicts) ? doc.rackConflicts.slice(0, 100) : [];
     ORDERS.forEach((o) => {
@@ -835,7 +848,7 @@
     if (!l) return 'Pressing';
     const nm = l.label || (ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing');
     const n = o.lines.reduce((s, x) => s + x.qty, 0);
-    return o.lines.length > 1 ? `${nm} +${n - l.qty} pièces` : nm;
+    return o.lines.length > 1 ? `${nm} +${n - l.qty} ${n - l.qty < 2 ? 'pièce' : 'pièces'}` : nm;
   };
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le comptoir encaissait dans o.pay, et ORDERS meurt avec l'onglet : la
@@ -847,6 +860,35 @@
   function posRef(n) {
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
+  }
+  /* Le carnet clients du tableau de bord (KiwiClients) est celui que lit la page
+     « Clients », qui annonce « enregistrez un client à la caisse, il apparaît
+     ici ». Le comptoir pressing gardait ses fiches dans son propre document :
+     le carnet restait vide. On reflète donc chaque fiche avec un numéro, et
+     chaque encaissement, dans le carnet partagé — commerce réel seulement, la
+     démonstration garde ses fiches à elle. */
+  function mirrorClient(c) {
+    if (!c || !c.name || !c.phone || !pvReal() || !window.KiwiClients || !KiwiClients.upsert) return null;
+    try {
+      const rec = KiwiClients.findByPhone(c.phone) || KiwiClients.upsert({ name: c.name, phone: c.phone, source: 'caisse' });
+      mirroredClients.add(c.id);
+      return rec;
+    } catch (_) { return null; }
+  }
+  function mirrorAllClients() {
+    CUSTOMERS.forEach((c) => { if (c && !mirroredClients.has(c.id)) mirrorClient(c); });
+  }
+  function recordClientPurchase(order, amount, method, ref) {
+    if (!(amount > 0) || !pvReal() || !window.KiwiClients || !KiwiClients.recordPurchase) return;
+    try {
+      const c = custOf(order);
+      const rec = c && c.phone ? mirrorClient(c) : null;
+      if (!rec) return;
+      KiwiClients.recordPurchase(rec.id, {
+        amount, method, saleRef: ref, eventRef: ref, createdAt: Date.now(),
+        items: (order.lines || []).map((ln) => ({ name: ln.label || (ITEMS[ln.itemId] ? ITEMS[ln.itemId].label : 'Article'), qty: ln.qty, total: lineTotal(ln) })),
+      });
+    } catch (_) {}
   }
   function postDay(total, method, label, ref, lines) {
     try {
@@ -1126,7 +1168,7 @@
           <span class="px-card-art">${garmentIcon(it)}</span>
           <span class="px-card-cat">${esc(category.label)}</span>
           <span class="px-card-name">${esc(it.label)}</span>
-          <span class="px-card-price">dès ${minPrice(it)} MAD${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
+          <span class="px-card-price">dès ${fmtMAD(minPrice(it))}${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
       </div>` : `<div class="px-grid-empty"><i data-lucide="search-x"></i><b>Aucun article trouvé</b><span>Essayez un autre nom ou choisissez une autre catégorie.</span></div>`;
@@ -1294,13 +1336,13 @@
       <div class="px-sheet-head">
         <span class="px-sheet-art">${garmentIcon({ ...item, variantId: sheet.variantId })}</span>
         <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
-        <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${unit} MAD × ${sheet.qty}</span></span>
+        <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${fmtMAD(unit)} × ${sheet.qty}</span></span>
       </div>
 
       <div class="px-f">
         <div class="px-f-lbl">Service <span class="opt">· combinables, ex. lavage + repassage</span></div>
         <div class="px-seg is-multi" id="px-svc-seg">
-          ${avail.map((s) => `<button class="px-seg-it ${sheet.services.includes(s.id) ? 'on' : ''}" data-px-svc="${s.id}" aria-pressed="${sheet.services.includes(s.id)}">${esc(s.short)}<small>${priceTable(item, sheet.variantId)[s.id]} MAD</small></button>`).join('')}
+          ${avail.map((s) => `<button class="px-seg-it ${sheet.services.includes(s.id) ? 'on' : ''}" data-px-svc="${s.id}" aria-pressed="${sheet.services.includes(s.id)}">${esc(s.short)}<small>${fmtMAD(priceTable(item, sheet.variantId)[s.id])}</small></button>`).join('')}
         </div>
       </div>
 
@@ -1345,7 +1387,7 @@
       const u = sheetUnit();
       $('#px-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#px-sheet-cta-price', el).textContent = fmtMAD(u * sheet.qty);
-      $('.px-sheet-price .per', el).textContent = `${u} MAD × ${sheet.qty}`;
+      $('.px-sheet-price .per', el).textContent = `${fmtMAD(u)} × ${sheet.qty}`;
       $('#px-qty-val', el).textContent = sheet.qty;
     };
 
@@ -1509,7 +1551,7 @@
         b.onclick = () => {
           state.ticket.customer = { type: 'known', id: b.dataset.pxCl };
           const c = CUST[b.dataset.pxCl];
-          toast(c.b2b ? `${c.name}, compte B2B, remise –15 % appliquée` : `${c.name}, ${c.orders} commandes, bienvenue`);
+          toast(c.b2b ? `${c.name}, compte B2B, remise –15 % appliquée` : `${c.name}, ${c.orders} ${c.orders < 2 ? 'commande' : 'commandes'}, bienvenue`);
           completeSelection();
         };
       });
@@ -1533,6 +1575,7 @@
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
         CUSTOMERS.unshift(c); CUST[id] = c;
+        mirrorClient(c);
         persistPressing();
         state.ticket.customer = { type: 'known', id };
         pressingOps?.save?.('customer-created');
@@ -1705,12 +1748,12 @@
         return `<div class="row"><span class="nm">${ln.qty} × ${esc(ln.label || item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
       }).join('')}
       <hr>
-      <div class="row"><span>Sous-total</span><span>${sub} MAD</span></div>
-      ${remise ? `<div class="row"><span>Remise B2B –15 %</span><span>−${remise} MAD</span></div>` : ''}
-      <div class="row tot"><span>TOTAL</span><span>${total} MAD</span></div>
+      <div class="row"><span>Sous-total</span><span>${fmtMAD(sub)}</span></div>
+      ${remise ? `<div class="row"><span>Remise B2B –15 %</span><span>−${fmtMAD(remise)}</span></div>` : ''}
+      <div class="row tot"><span>TOTAL</span><span>${fmtMAD(total)}</span></div>
       ${o.pay.mode === 'compte' ? `<div class="row"><span>Règlement</span><span>SUR COMPTE</span></div>` :
-        `<div class="row"><span>Payé</span><span>${o.pay.paid} MAD</span></div>
-         ${due ? `<div class="row due"><span>SOLDE AU RETRAIT</span><span>${due} MAD</span></div>` : ''}`}
+        `<div class="row"><span>Payé</span><span>${fmtMAD(o.pay.paid)}</span></div>
+         ${due ? `<div class="row due"><span>SOLDE AU RETRAIT</span><span>${fmtMAD(due)}</span></div>` : ''}`}
       <div class="row"><span>Pièces</span><span>${o.pieces.length} · ${o.pieces.length} étiq.</span></div>
       <hr>
       <div class="c">${barcode(publicOrderNo(o), 26)}</div>
@@ -1778,8 +1821,8 @@
         const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
         return { qty: ln.qty, name: `${ln.label || item.label}${variant ? ` (${variant})` : ''} · ${svcCodes(ln.services)}`, price: lineTotal(ln) };
       }),
-      total: `${total} MAD`,
-      method: order.pay.mode === 'compte' ? 'Sur compte' : (order.pay.paid ? `${order.pay.paid} MAD payés` : 'Solde au retrait'),
+      total: fmtMAD(total),
+      method: order.pay.mode === 'compte' ? 'Sur compte' : (order.pay.paid ? `${fmtMAD(order.pay.paid)} payés` : 'Solde au retrait'),
       footer: `PRÊT LE ${fmtDT(order.readyAt)} · ${n} pièce${plural}`,
     };
 
@@ -2101,8 +2144,15 @@
         order.pay.method = method;
         pressingOps?.save?.('balance-paid');
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
-           c'est ici qu'il devient une recette, pas à la prise de la commande. */
-        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id, saleLines(order, amount));
+           c'est ici qu'il devient une recette, pas à la prise de la commande.
+           Sa référence doit être distincte de celle de l'acompte : le serveur
+           déduplique les ventes par référence, donc un solde posté sous le même
+           numéro de bon que l'acompte était pris pour un doublon et jamais
+           enregistré (le CA du tableau de bord perdait le solde). Le suffixe
+           porte le cumul encaissé, stable si le même solde est renvoyé. */
+        const settleRef = `${order.id}-S${Math.round(order.pay.paid * 100)}`;
+        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, settleRef, saleLines(order, amount));
+        recordClientPurchase(order, amount, method, settleRef);
         syncOwnerOps();
         closeVeil('#px-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -2123,7 +2173,10 @@
          prennent rien au comptoir. Seul l'argent réellement encaissé (paiement
          complet ou acompte) est une recette, le solde sera journalisé par la
          branche `settle` au retrait. */
-      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id, saleLines(order, order.pay.paid));
+      if (order.pay.paid > 0) {
+        postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id, saleLines(order, order.pay.paid));
+        recordClientPurchase(order, order.pay.paid, order.pay.method, order.id);
+      }
       if (fresh) {
         ORDERS.unshift(order);
         if (order.custId && CUST[order.custId]) CUST[order.custId].orders = (+CUST[order.custId].orders || 0) + 1;
@@ -2153,8 +2206,8 @@
     if (o.pay.mode === 'compte') return '<span class="px-pill ok">Compte B2B</span>';
     const due = Math.max(0, total - o.pay.paid);
     if (due <= 0) return '<span class="px-pill ok">Payé</span>';
-    if (o.pay.paid > 0) return `<span class="px-pill warn">Acompte · solde ${due} MAD</span>`;
-    return `<span class="px-pill due">Au retrait · ${due} MAD</span>`;
+    if (o.pay.paid > 0) return `<span class="px-pill warn">Acompte · solde ${fmtMAD(due)}</span>`;
+    return `<span class="px-pill due">Au retrait · ${fmtMAD(due)}</span>`;
   }
 
   function matchesQuery(o, q) {
@@ -2370,11 +2423,11 @@
         ${delivered ? '' : `
           ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-lucide="loader"></i>Noter en cours</button>' : ''}`}
         <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
-        ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${due} MAD</button>` : ''}
+        ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${fmtMAD(due)}</button>` : ''}
         ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
         ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
-        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${due} MAD` : 'Passer au retrait'}</button>` : ''}
+        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${fmtMAD(due)}` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
         ${!delivered ? '<button class="px-btn ghost danger" id="px-dt-cancel" style="color:var(--danger,#b53b31);border-color:rgba(181,59,49,0.3);"><i data-lucide="ban"></i>Annuler</button>' : ''}
       </div>`;
@@ -2516,7 +2569,7 @@
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `Bonjour ${first}, votre commande ${publicOrderNo(o)} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant.`
-      + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
+      + (due > 0 ? `\nSolde à régler au retrait : ${fmtMAD(due)}.` : '')
       + `\n·envoyé via Kiwi`;
   }
 

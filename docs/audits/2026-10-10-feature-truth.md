@@ -381,6 +381,44 @@ checked in or completed; ADR = revenue over priced nights; RevPAR = revenue
 over active rooms × days; a 0 MAD stay is unpriced, not a nil rate; no room
 inventory gives no occupancy. Covered by `hotel-truth-test.mjs`.
 
+## Pressing (dashboard and till): done
+
+| ID | Finding | Status |
+|---|---|---|
+| P1 | Accueil "Dépôts" and "Bon moyen" counted payments: tickets of 226, 64 and 90 MAD read "2 dépôts · 57 MAD". | **Fixed.** Counted from the tickets by drop-off date, cancelled excluded: "3 · 62 MAD" after one cancellation. |
+| P2 | **A balance payment reused the deposit's sale ref, so the server dropped it as a duplicate: revenue short.** | **Fixed.** Its own ref (`…-S3050`); both rows in `sales`. |
+| P3 | Dashboard "Annuler" wrote in the browser only (the server answered 409); the till kept the order alive. | **Fixed.** `/api/pressing/cancel` accepts the signed-in owner (or a named operator) without a till code. |
+| P4 | Card headers used undefined classes: giant black icons. | **Fixed.** |
+| P5 | Services editor: 12,50 refused, "dès 12.5 MAD", "0 traitements", dry-clean items shown "À la caisse". | **Fixed.** |
+| P6 | Real stores numbered tickets from the demo's 1045. | **Fixed.** |
+| P7 | Historic dry-clean lines vanished on reload. | **Fixed.** |
+| P8 | Plurals, "Retiré" vs "Remis". | **Fixed.** |
+| P9 | Quality, Services, Delivery, Workshop pages and the assistant promised photos, rework, rounds and supplements that do not exist. | **Fixed.** The copy says what the product does. |
+| P10 | Times on the device clock; "today" from device midnight. | **Fixed.** Venue zone, business day. |
+| P11 | Pressing customers never reached the Clients book. | **Fixed.** |
+| P12 | Pages never refreshed while open. | **Fixed.** Every 20 s while visible. |
+| P13 | Dashboard French only. | **Fixed** (FR/EN/AR); the till and catalogue editor stay French. |
+
+Measured on a local stack with a pressing signed up through onboarding and a
+paired till. Covered by `pressing-truth-test.mjs` (66 checks, red on the old
+code). Open: cancelling a paid order refunds nothing (the prompt says so); the
+pressing till and catalogue editor are French only.
+
+## Support: tri automatique (Clef): done
+
+| ID | Finding | Status |
+|---|---|---|
+| T1 | A ticket was "urgent" only when a regex matched "paiement" or "bloqu": darija and Arabic were invisible. | **Fixed.** `@cf/cloudflare/clef-flash` answers category, urgency and the probability that the merchant cannot sell, after the ticket is written, never blocking it. A screenshot re-triages it. Quota 60 per merchant per day. |
+| T2 | No alert to Kiwi staff on a new ticket. | **Fixed, opt-in.** One e-mail per ticket via `MAIL_WEBHOOK` when `SUPPORT_ALERT_EMAIL` is set; the console shows "sent", "unconfigured" or "failed". |
+| T3 | The console showed no category, urgency or confidence. | **Fixed.** Urgent first, probability shown, "à vérifier" under 60 %, "Non triée" when the model did not answer. |
+| T4 | The merchant must never see the labels. | **Verified.** |
+
+Measured on the real model on 2026-10-11 (31 synthetic tickets, FR, EN,
+darija, AR): category 93.5 %, urgency 77.4 %, alert recall 90.9 % (10/11),
+false alerts 20 % (4/20), inside the thresholds fixed before measuring.
+The misses over-alert ("mot de passe oublié" read as blocking). Covered by
+`support-triage-test.mjs`; `support-triage-eval.mjs` reruns the measure.
+
 ## Small items, closed
 
 | Item | What it said | Now |
@@ -438,7 +476,6 @@ inventory gives no occupancy. Covered by `hotel-truth-test.mjs`.
 - **Hours not enforced server-side** for QR orders: the page blocks, the API
   accepts.
 - **Removed employee clocked in**: the open attendance entry stays.
-- **No alert to Kiwi staff** on a new support ticket.
 - **Per-device unpair** is impossible: the till token carries no device id.
 - **Pharmacie** has no UI to enter stock or lots.
 

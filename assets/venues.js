@@ -713,7 +713,7 @@
         { nav: 'pressing-workshop', icon: MATERIAL_PRESSING.workshop,               material: true, label: { fr: 'Atelier & flux', en: 'Workshop & workflow', ar: 'الورشة وسير العمل' } },
         { nav: 'pressing-pickup',   icon: MATERIAL_PRESSING.pickup,                 material: true, label: { fr: 'Retraits & rack', en: 'Pick-up & rack', ar: 'الاستلام والتعليق' } },
         { nav: 'pressing-services', icon: MATERIAL_PRESSING.services,               material: true, label: { fr: 'Services & tarifs', en: 'Services & pricing', ar: 'الخدمات والأسعار' } },
-        { nav: 'pressing-quality',  icon: MATERIAL_PRESSING.quality,                material: true, label: { fr: 'Qualité & incidents', en: 'Quality & issues', ar: 'الجودة والملاحظات' } },
+        { nav: 'pressing-quality',  icon: MATERIAL_PRESSING.quality,                material: true, label: { fr: 'Qualité & vigilances', en: 'Quality & care notes', ar: 'الجودة والملاحظات' } },
         { nav: 'pressing-delivery', icon: MATERIAL_PRESSING.delivery,               material: true, label: { fr: 'Collecte & livraison', en: 'Collection & delivery', ar: 'الجمع والتوصيل' } },
       ],
       kpis: [

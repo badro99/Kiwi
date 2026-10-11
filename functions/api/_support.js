@@ -6,7 +6,7 @@ export const SUPPORT_WHATSAPP_PHONE = '212624495159';
 export const SUPPORT_TABLES = [
   `CREATE TABLE IF NOT EXISTS support_articles (id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, category TEXT NOT NULL, store_types TEXT NOT NULL DEFAULT '["all"]', feature_key TEXT NOT NULL DEFAULT '', feature_hash TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', revision INTEGER NOT NULL DEFAULT 1, title_fr TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '', title_ar TEXT NOT NULL DEFAULT '', body_fr TEXT NOT NULL DEFAULT '', body_en TEXT NOT NULL DEFAULT '', body_ar TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, published_ts INTEGER, actor TEXT NOT NULL DEFAULT 'system')`,
   `CREATE TABLE IF NOT EXISTS support_article_versions (id TEXT PRIMARY KEY, article_id TEXT NOT NULL, revision INTEGER NOT NULL, snapshot TEXT NOT NULL, actor TEXT NOT NULL, ts INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS support_tickets (id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE, merchant TEXT NOT NULL, store_type TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, priority TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', channel TEXT NOT NULL, contact TEXT NOT NULL, summary TEXT NOT NULL, diagnostics TEXT NOT NULL DEFAULT '{}', assignee TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, closed_ts INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS support_tickets (id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE, merchant TEXT NOT NULL, store_type TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, priority TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', channel TEXT NOT NULL, contact TEXT NOT NULL, summary TEXT NOT NULL, diagnostics TEXT NOT NULL DEFAULT '{}', assignee TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, closed_ts INTEGER, triage TEXT, triage_alert TEXT)`,
   `CREATE TABLE IF NOT EXISTS support_messages (id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL, kind TEXT NOT NULL, channel TEXT NOT NULL, author TEXT NOT NULL, body TEXT NOT NULL, delivery TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS support_attachments (id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL, merchant TEXT NOT NULL, object_key TEXT NOT NULL UNIQUE, name TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL, created_ts INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS support_searches (id TEXT PRIMARY KEY, phrase TEXT NOT NULL, lang TEXT NOT NULL, store_type TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL)`,
@@ -20,9 +20,23 @@ export const SUPPORT_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_support_feedback_article ON support_feedback (article_id, ts)`,
 ];
 
+/* La base de production a été créée avant le tri automatique : CREATE TABLE IF NOT
+ * EXISTS ne rajoute pas de colonne à une table qui existe déjà. On les ajoute une
+ * fois par isolat ; « colonne déjà là » n'est pas une erreur. Tant que l'ALTER n'a
+ * pas réussi, le drapeau reste levé et l'appel suivant réessaie, et le tri
+ * (_support-triage.js) échoue en douceur : la demande reste non triée. */
+const triageColumns = new WeakSet();
 export async function ensureSupport(env) {
   if (!env || !env.DB) throw new Error('no-db');
   for (const sql of SUPPORT_TABLES) await env.DB.prepare(sql).run();
+  if (!triageColumns.has(env.DB)) {
+    let ready = true;
+    for (const column of ['triage', 'triage_alert']) {
+      try { await env.DB.prepare('ALTER TABLE support_tickets ADD COLUMN ' + column + ' TEXT').run(); }
+      catch (e) { if (!/duplicate column/i.test(String(e && e.message || e))) ready = false; }
+    }
+    if (ready) triageColumns.add(env.DB);
+  }
 }
 
 const L = (fr, en, ar) => ({ fr, en, ar });

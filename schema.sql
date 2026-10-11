@@ -968,7 +968,11 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   assignee        TEXT NOT NULL DEFAULT '',
   created_ts      INTEGER NOT NULL,
   updated_ts      INTEGER NOT NULL,
-  closed_ts       INTEGER
+  closed_ts       INTEGER,
+  -- Tri automatique Clef (JSON : probabilités, modèle, verdict) et état de
+  -- l'alerte équipe. Jamais montrés au commerçant. NULL = demande non triée.
+  triage          TEXT,
+  triage_alert    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_support_tickets_queue ON support_tickets (status, priority, updated_ts);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_merchant ON support_tickets (merchant, updated_ts);

@@ -118,7 +118,11 @@
       var total = helpers.total ? helpers.total(o) : o.total;
       return sanitizeOrder(o, customer, total);
     }).filter(function (o) { return o.id; });
-    try { localStorage.setItem(k, JSON.stringify(safe)); } catch (_) { return false; }
+    var json = JSON.stringify(safe), previous = null;
+    try { previous = localStorage.getItem(k); localStorage.setItem(k, json); } catch (_) { return false; }
+    /* Une relecture périodique qui ne change rien ne doit pas reconstruire la
+       page : on ne prévient les abonnés que si le contenu a bougé. */
+    if (previous === json) return true;
     listeners.forEach(function (fn) { try { fn(safe); } catch (_) {} });
     try { window.dispatchEvent(new CustomEvent('kiwi:pressing-ops', { detail: { scope: scope(explicit) } })); } catch (_) {}
     return true;
@@ -148,6 +152,24 @@
       if (st === 'pret' && !o.notified) out.unnotified++;
     });
     return out;
+  }
+
+  /* Les dépôts d'une fenêtre : combien de bons ont été DÉPOSÉS, et pour quel
+     montant. L'Accueil lisait « Dépôts » et « Bon moyen » dans le journal des
+     encaissements : un bon payé au retrait n'y entre qu'au retrait, un acompte
+     puis son solde y comptent deux fois, un bon annulé y reste. Trois bons
+     déposés (226, 64 et 90 MAD) s'affichaient « 2 dépôts · bon moyen 57 MAD ».
+     Ici on compte les bons eux-mêmes, par date de dépôt, annulés exclus. */
+  function dropoffStats(from, to, explicit) {
+    var lo = +from || 0, hi = to == null || to === Infinity ? Infinity : +to;
+    var count = 0, total = 0;
+    read(explicit).forEach(function (o) {
+      if (!o || o.cancelledAt || o.status === 'annule') return;
+      var ts = o.droppedAt ? Date.parse(o.droppedAt) : NaN;
+      if (!Number.isFinite(ts) || ts < lo || ts >= hi) return;
+      count++; total += number(o.total);
+    });
+    return { count: count, total: total, basket: count ? total / count : 0 };
   }
 
   function subscribe(fn) {
@@ -216,6 +238,7 @@
     });
   }
 
+
   function writeFull(doc) {
     var k = storeKey();
     if (!k || !doc) return;
@@ -227,6 +250,7 @@
     if (cloudHandle) {
       projectFull(readFull());
       cloudHandle.bind();
+      startLive();
       return cloudHandle;
     }
     if (!window.KiwiCloudDoc || !scope()) return cloudHandle;
@@ -238,6 +262,7 @@
     });
     projectFull(readFull());
     cloudHandle.bind();
+    startLive();
     return cloudHandle;
   }
 
@@ -273,6 +298,23 @@
     return true;
   }
 
+  /* Le tableau de bord ne relisait la copie serveur qu'à l'ouverture et au
+     retour sur l'onglet : une page « Dépôts & commandes » laissée ouverte
+     pendant que la caisse travaille restait figée. Tant que l'onglet est
+     visible, on relit toutes les 20 s ; projectFull() ne notifie que si les
+     commandes ont réellement changé, pour ne pas reconstruire la page sous le
+     curseur à vide. */
+  var LIVE_MS = 20000, liveTimer = null;
+  function liveTick() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    if (!cloudHandle || !cloudHandle.pull) return;
+    try { var r = cloudHandle.pull(false); if (r && r.catch) r.catch(function () {}); } catch (_) {}
+  }
+  function startLive() {
+    if (liveTimer) return;
+    liveTimer = setInterval(liveTick, LIVE_MS);
+  }
+
   window.addEventListener('storage', function (e) {
     if (e.key && e.key.indexOf(STORE_PREFIX) === 0) { projectFull(readFull()); return; }
     if (!e.key || e.key.indexOf(PREFIX) !== 0) return;
@@ -283,5 +325,5 @@
   /* `orderStatus` is exported so the owner dashboard derives readiness the same
      way `summary()` does. The snapshot's stored `status` is frozen at sync time;
      anything reading it after an order crosses `readyAt` gets a stale answer. */
-  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus };
+  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus, dropoffStats: dropoffStats };
 })();

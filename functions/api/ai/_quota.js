@@ -14,6 +14,7 @@ export const DAILY_CAPS = {
   transcribe: 100,
   image: 20,
   visioninspect: 150,
+  supporttriage: 60,
 };
 
 function today() {

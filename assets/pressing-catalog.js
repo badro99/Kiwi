@@ -215,8 +215,16 @@
   function priceInputs(item, variant, services) {
     var prices = variant ? variant.prices : item.prices;
     return services.map(function (s) {
-      return '<label class="pce-price"><span>' + esc(s.short) + '</span><span class="pce-money"><input type="number" min="0" max="100000" step="1" inputmode="decimal" data-pce-price="' + esc(s.id) + '"' + (variant ? ' data-pce-variant="' + esc(variant.id) + '"' : '') + ' value="' + esc(prices[s.id] || '') + '" aria-label="' + esc(s.label + ' · ' + item.label) + '"><b>MAD</b></span></label>';
+      return '<label class="pce-price"><span>' + esc(s.short) + '</span><span class="pce-money"><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" data-pce-price="' + esc(s.id) + '"' + (variant ? ' data-pce-variant="' + esc(variant.id) + '"' : '') + ' value="' + esc(prices[s.id] || '') + '" aria-label="' + esc(s.label + ' · ' + item.label) + '"><b>MAD</b></span></label>';
     }).join('');
+  }
+  /* « 12,50 » et « 25 » : les centimes d'un tarif ne doivent ni disparaître ni
+     s'écrire avec un point (« dès 12.5 MAD »). */
+  function fmtMoney(n) {
+    n = Number(n) || 0;
+    var whole = Math.abs(n - Math.round(n)) < 0.005;
+    try { if (window.KiwiNumber && KiwiNumber.number) return KiwiNumber.number(n, whole ? 0 : 2); } catch (_) {}
+    return whole ? String(Math.round(n)) : n.toFixed(2).replace('.', ',');
   }
   function itemMin(item) {
     var values = [];
@@ -239,11 +247,15 @@
       ? '<div class="pce-variants">' + item.variants.map(function (v) { return '<div class="pce-variant"><b>' + esc(v.label) + '</b><div class="pce-prices">' + priceInputs(item,v,doc.services) + '</div></div>'; }).join('') + '</div>'
       : '<div class="pce-prices">' + priceInputs(item,null,doc.services) + '</div>';
     var min = itemMin(item);
+    /* « À la caisse » doit dire vrai : la caisse n'affiche un article que s'il a
+       au moins un traitement vendable. Un article dont le seul prix est celui du
+       nettoyage à sec (retiré du comptoir) est actif ici mais absent de la caisse. */
+    var sellable = item.active && itemServiceCount(item) > 0;
     return '<article class="pce-item' + (item.active ? '' : ' is-hidden') + (open ? ' is-open' : '') + '" data-pce-item="' + esc(item.id) + '">' +
       '<button type="button" class="pce-summary" data-pce-toggle aria-expanded="' + (open ? 'true' : 'false') + '">' +
         '<span class="pce-item-photo">' + garmentPhoto(item) + '</span><span class="pce-summary-copy"><b>' + esc(item.label) + '</b><small>' + esc(category.label) + '</small></span>' +
-        '<span class="pce-summary-price"><b>' + (min ? 'dès ' + esc(min) + ' MAD' : 'Sans prix') + '</b><small>' + itemServiceCount(item) + ' traitement' + (itemServiceCount(item) === 1 ? '' : 's') + '</small></span>' +
-        '<span class="pce-status ' + (item.active ? 'is-live' : '') + '">' + (item.active ? 'À la caisse' : 'Masqué') + '</span>' + mi('more','pce-chevron') + '</button>' +
+        '<span class="pce-summary-price"><b>' + (min ? 'dès ' + esc(fmtMoney(min)) + ' MAD' : 'Sans prix') + '</b><small>' + itemServiceCount(item) + ' traitement' + (itemServiceCount(item) < 2 ? '' : 's') + '</small></span>' +
+        '<span class="pce-status ' + (sellable ? 'is-live' : '') + '">' + (!item.active ? 'Masqué' : sellable ? 'À la caisse' : 'Absent de la caisse') + '</span>' + mi('more','pce-chevron') + '</button>' +
       (open ? '<div class="pce-item-body"><div class="pce-item-main"><label><span>Nom affiché</span><input class="pce-name" maxlength="100" value="' + esc(item.label) + '" data-pce-name></label>' +
       '<label><span>Catégorie</span><select data-pce-cat>' + categoryOptions + '</select></label>' +
       '<label class="pce-visible"><input type="checkbox" data-pce-active' + (item.active ? ' checked' : '') + '><span>Visible à la caisse</span></label></div>' + prices +
@@ -268,7 +280,7 @@
       '<div class="pce-toolbar"><div><h3>Catalogue du comptoir</h3><p>Les changements s’appliquent aux prochains dépôts sur toutes les caisses de cet établissement.</p></div><button type="button" class="pxd-btn primary" data-pce-new>+ Nouvel article</button></div>' +
       '<div class="pce-navigator"><label class="pce-search">' + mi('search') + '<input type="search" value="' + esc(state.q) + '" placeholder="Rechercher un article…" aria-label="Rechercher un article" data-pce-search></label><div class="pce-filters" role="group" aria-label="Filtrer par catégorie"><button type="button" class="pce-filter' + (state.cat === 'all' ? ' on' : '') + '" data-pce-filter="all">Tous <b>' + countFor('all') + '</b></button>' + doc.categories.map(function(c){return '<button type="button" class="pce-filter' + (state.cat === c.id ? ' on' : '') + '" data-pce-filter="' + esc(c.id) + '">' + esc(c.label) + ' <b>' + countFor(c.id) + '</b></button>';}).join('') + '</div></div>' +
       '<div class="pce-new" data-pce-new-form' + (state.newOpen ? '' : ' hidden') + '><label><span>Nom</span><input maxlength="100" data-pce-new-name placeholder="Ex. Gilet"></label><label><span>Catégorie</span><select data-pce-new-cat>' + doc.categories.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>';}).join('') + '</select></label>' +
-      '<div class="pce-prices">' + editorDoc.services.map(function(s){return '<label class="pce-price"><span>'+esc(s.short)+'</span><span class="pce-money"><input type="number" min="0" max="100000" step="1" inputmode="decimal" data-pce-new-price="'+esc(s.id)+'" placeholder="·"><b>MAD</b></span></label>';}).join('') + '</div><div class="pce-new-actions"><span data-pce-note>Renseignez au moins un prix.</span><button type="button" class="pxd-btn" data-pce-cancel>Annuler</button><button type="button" class="pxd-btn primary" data-pce-create>Ajouter</button></div></div>' +
+      '<div class="pce-prices">' + editorDoc.services.map(function(s){return '<label class="pce-price"><span>'+esc(s.short)+'</span><span class="pce-money"><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" data-pce-new-price="'+esc(s.id)+'" placeholder="·"><b>MAD</b></span></label>';}).join('') + '</div><div class="pce-new-actions"><span data-pce-note>Renseignez au moins un prix.</span><button type="button" class="pxd-btn" data-pce-cancel>Annuler</button><button type="button" class="pxd-btn primary" data-pce-create>Ajouter</button></div></div>' +
       '<div class="pce-resultbar"><span>' + (filtered.length ? (first+1) + '–' + Math.min(first+pageSize,filtered.length) + ' sur ' + filtered.length : 'Aucun article') + '</span><div class="pce-pages"><button type="button" data-pce-prev aria-label="Page précédente"' + (state.page ? '' : ' disabled') + '>' + mi('left') + '</button><b>Page ' + (state.page+1) + ' / ' + pageCount + '</b><button type="button" data-pce-next aria-label="Page suivante"' + (state.page < pageCount-1 ? '' : ' disabled') + '>' + mi('right') + '</button></div></div>' +
       '<div class="pce-list">' + (visible.length ? visible.map(function(item){return itemRow(item,editorDoc,state);}).join('') : '<div class="pce-empty">Aucun article ne correspond à cette recherche.</div>') + '</div></div>';
 

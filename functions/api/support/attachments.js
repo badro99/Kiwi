@@ -1,6 +1,7 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { ensureSupport, cleanText } from '../_support.js';
+import { triageAfterImage } from '../_support-triage.js';
 
 const TYPES = {
   'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf',
@@ -20,7 +21,7 @@ export function hasSignature(mime, buffer) {
   return false;
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!env || !env.DB || !env.AUTH_SECRET) return json({ error:'not-configured' },503);
   if (!env.MEDIA) return json({ error:'no-media' },503);
   const url = new URL(request.url);
@@ -29,7 +30,7 @@ export async function onRequestPost({ request, env }) {
   merchant = await tenantFor(request,env,merchant,{strict:true});
   if (!merchant || !ticketId) return json({ error:'forbidden' },403);
   await ensureSupport(env);
-  const ticket = await env.DB.prepare(`SELECT id FROM support_tickets WHERE id=? AND merchant=?`).bind(ticketId,merchant).first();
+  const ticket = await env.DB.prepare(`SELECT id,reference,summary,store_type FROM support_tickets WHERE id=? AND merchant=?`).bind(ticketId,merchant).first();
   if (!ticket) return json({ error:'ticket-not-found' },404);
   const mime = (request.headers.get('Content-Type') || '').split(';')[0].toLowerCase();
   const ext = TYPES[mime]; if (!ext) return json({ error:'bad-type', accepted:Object.keys(TYPES) },415);
@@ -49,5 +50,9 @@ export async function onRequestPost({ request, env }) {
     try { await env.MEDIA.delete(key); } catch (_) {}
     throw e;
   }
+  /* Les captures arrivent après la création de la demande : la première image relance
+     le tri, cette fois avec ce que le commerçant montre. Fail-soft, jamais attendu. */
+  const retriage = triageAfterImage(env, { id: ticket.id, reference: ticket.reference, merchant, summary: ticket.summary, storeType: ticket.store_type }, mime, bytes).catch(() => null);
+  if (typeof waitUntil === 'function') waitUntil(retriage); else await retriage;
   return json({ok:true,attachment:{id,name,mime,size:bytes.byteLength}});
 }

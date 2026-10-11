@@ -1,6 +1,7 @@
 import { json, readSession, readCookie, SESS_COOKIE, sendMail } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { ensureSupport, cleanText, classify, SUPPORT_WHATSAPP_PHONE } from '../_support.js';
+import { triageSupportTicket } from '../_support-triage.js';
 
 async function diagnostics(env, merchant, client) {
   const out = { captured_ts: Date.now(), client: client || {} };
@@ -34,7 +35,7 @@ export async function onRequestGet({ request, env }) {
   return json({ tickets: rows.results || [] });
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!env || !env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   let body; try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   let merchant = cleanText(body && body.merchant, 64);
@@ -67,6 +68,14 @@ export async function onRequestPost({ request, env }) {
   await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`)
     .bind('msg-' + crypto.randomUUID(),id,'client',channel,'client',summary,'received',now).run();
 
+  /* Tri automatique (Clef) : lancé APRÈS l'écriture de la demande, pendant l'envoi du
+     courriel de confirmation, et jamais attendu pour répondre. Sans liaison AI, quota
+     épuisé ou erreur du modèle, la demande reste exactement comme avant, non triée.
+     Rien du tri n'est renvoyé au commerçant. */
+  const triage = triageSupportTicket(env, { id, reference, merchant, summary, storeType: cleanText(cfg.type || body.store_type || '', 40) })
+    .catch(() => null);
+  if (typeof waitUntil === 'function') waitUntil(triage);
+
   let confirmation = { ok: true, channel: 'whatsapp', reason: 'recorded' };
   if (channel === 'email') {
     confirmation = await sendMail(env, {
@@ -80,5 +89,6 @@ export async function onRequestPost({ request, env }) {
       text: `${reference} · ${summary}`,
     };
   }
+  if (typeof waitUntil !== 'function') await triage;
   return json({ ok: true, ticket: { id, reference, category: routed.category, priority: routed.priority, channel }, confirmation });
 }

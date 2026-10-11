@@ -1361,6 +1361,8 @@ section('Whole-project regressions');
     'serveur-kitchen-truth-test.mjs',
     'retail-truth-test.mjs',
     'hotel-truth-test.mjs',
+    'pressing-truth-test.mjs',
+    'support-triage-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

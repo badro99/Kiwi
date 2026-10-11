@@ -2102,7 +2102,7 @@
    * before this one; with it, the SAME slice N days earlier — so at 14h « vs
    * semaine » weighs today-so-far against last week up to 14h, not against a
    * full day it hasn't finished yet. */
-  function realDeltaPct(range, pick, backDays) {
+  function realDeltaPct(range, pick, backDays, stats = realWindowStats) {
     const [from, to] = closedBounds(range);
     const startDay = merchantDayKey(from + 1, activeMerchantSlug());
     const endDay = merchantDayKey(to - 1, activeMerchantSlug());
@@ -2116,9 +2116,9 @@
     if (rangeBounds(range == null ? currentRange : range)[1] === Infinity) {
       baseBounds[1] = Math.min(baseBounds[1], baseBounds[0] + (to - from));
     }
-    const base = pick(realWindowStats(baseBounds[0], baseBounds[1]));
+    const base = pick(stats(baseBounds[0], baseBounds[1]));
     if (!base) return null;
-    const cur = pick(realWindowStats(from, to));
+    const cur = pick(stats(from, to));
     return Math.round(((cur - base) / base) * 1000) / 10;
   }
   // Round a max value up to a clean axis ceiling (1/2/5 × 10ⁿ).
@@ -3046,10 +3046,26 @@
        * répartir. */
       const tender = w.card + w.cash;
       const cardPct = tender ? Math.round((w.card / tender) * 100) : 0;
+      /* Pressing : « Dépôts » et « Bon moyen » comptent les BONS déposés, pas les
+       * encaissements. Le journal des ventes enregistre un bon quand il est payé
+       * (au retrait pour un « payer au retrait », deux fois pour un acompte puis
+       * son solde) : trois bons déposés (226, 64, 90 MAD) s'affichaient
+       * « 2 dépôts · bon moyen 57 MAD ». Les bons viennent du document
+       * pressing-orders, par date de dépôt, annulés exclus. Tant que ce document
+       * n'est pas arrivé, on garde le journal plutôt qu'un zéro faux. */
+      const pressingStats = (() => {
+        const ops = window.KiwiPressingOps;
+        if (!ops?.dropoffStats || (activeVenue?.subtype || activeVenue?.trade) !== 'pressing') return null;
+        try { if (!ops.read().length) return null; } catch (_) { return null; }
+        return (from, to) => ops.dropoffStats(from, to);
+      })();
+      const txNow = pressingStats ? pressingStats(wFrom, wTo) : null;
       data = {
         ...data,
-        tx:     { ...(data.tx || {}),     value: t.count,              delta: realDeltaPct(rng, (s) => s.count) },
-        panier: { ...(data.panier || {}), value: Math.round(t.basket), delta: realDeltaPct(rng, (s) => s.basket) },
+        tx:     { ...(data.tx || {}),     value: txNow ? txNow.count : t.count,
+                  delta: txNow ? realDeltaPct(rng, (s) => s.count, undefined, pressingStats) : realDeltaPct(rng, (s) => s.count) },
+        panier: { ...(data.panier || {}), value: Math.round(txNow ? txNow.basket : t.basket),
+                  delta: txNow ? realDeltaPct(rng, (s) => s.basket, undefined, pressingStats) : realDeltaPct(rng, (s) => s.basket) },
         /* Le CA EXACT, additionné vente par vente. Il n'était pas transmis, si
          * bien que revOf() le reconstituait à partir du panier arrondi
          * ci-dessus et que le tableau de bord ne tombait jamais juste face au
@@ -5924,6 +5940,10 @@
   document.addEventListener('kiwi:operator-snapshot', () => {
     renderHero(); renderGoal(); renderKpiBand(); renderRevChart();
   });
+  /* Les dépôts du pressing arrivent par le document pressing-orders, après le
+     premier rendu : sans cet abonnement la tuile restait sur le journal des
+     ventes jusqu'au prochain changement de période. */
+  window.addEventListener('kiwi:pressing-ops', () => { try { renderKpiBand(); } catch (_) {} });
   if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startDashboardRendering);
   else startDashboardRendering();
 

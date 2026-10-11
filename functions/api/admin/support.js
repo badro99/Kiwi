@@ -1,5 +1,6 @@
 import { json, isOperator, isSeniorOperator, sendMail } from '../../auth/_lib.js';
 import { ensureSupport, cleanText, parseJson, supportActor } from '../_support.js';
+import { publicTriage, consoleRank } from '../_support-triage.js';
 
 async function guard(request,env,write){
   const ok=write?await isSeniorOperator(request,env):await isOperator(request,env);
@@ -12,7 +13,10 @@ async function hydrate(env,row){
     env.DB.prepare(`SELECT id,kind,channel,author,body,delivery,ts FROM support_messages WHERE ticket_id=? ORDER BY ts`).bind(row.id).all(),
     env.DB.prepare(`SELECT id,name,mime,size,created_ts FROM support_attachments WHERE ticket_id=? ORDER BY created_ts`).bind(row.id).all(),
   ]);
-  return {...row,diagnostics:parseJson(row.diagnostics,{}),messages:messages.results||[],attachments:attachments.results||[]};
+  /* Le tri automatique (Clef) n'existe que côté équipe. `triage_alert` est fondu dans
+     `triage.alert` ; une demande jamais triée a `triage: null` (affiché « non triée »). */
+  const {triage_alert,...rest}=row;
+  return {...rest,triage:publicTriage(row),diagnostics:parseJson(row.diagnostics,{}),messages:messages.results||[],attachments:attachments.results||[]};
 }
 export async function onRequestGet({request,env}){
   const bad=await guard(request,env,false); if(bad)return bad;
@@ -23,6 +27,9 @@ export async function onRequestGet({request,env}){
   const sql=`SELECT * FROM support_tickets ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY CASE priority WHEN 'urgent' THEN 0 ELSE 1 END, updated_ts DESC LIMIT 200`;
   const rows=await env.DB.prepare(sql).bind(...binds).all();
   const tickets=[]; for(const row of rows.results||[])tickets.push(await hydrate(env,row));
+  /* Tri stable : alerte IA d'abord, puis urgence par mots-clés ou « à vérifier », puis le reste ;
+     à rang égal l'ordre SQL (récent d'abord) est conservé. */
+  tickets.sort((a,b)=>consoleRank(a)-consoleRank(b));
   return json({tickets});
 }
 export async function onRequestPatch({request,env}){

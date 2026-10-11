@@ -1,7 +1,18 @@
 // POST /api/pressing/cancel — authorize and durably cancel one pressing order.
 // The PIN is accepted only here, server-side; the browser receives the proven
 // manager identity and never gets a comparison list or a raw PIN record.
-import { employeeRoleOpensDashboard, json, slugMerchant, verifyStaffPin } from '../../auth/_lib.js';
+//
+// Deux façons de prouver qui annule :
+//   · le comptoir envoie le code manager ({merchant, orderId, pin}) ;
+//   · le tableau de bord n'a pas de code à saisir : le propriétaire y est déjà
+//     connecté, et un opérateur nommé aussi. Sans cette voie le bouton
+//     « Annuler » du tableau de bord écrivait l'annulation dans le navigateur
+//     seulement, le serveur refusait ensuite cette copie (une annulation ne
+//     s'enregistre qu'ici) et la caisse gardait la commande vivante.
+import {
+  activeAccountSession, employeeRoleOpensDashboard, entitledMerchant, isOperator, json,
+  operatorActor, slugMerchant, verifyStaffPin,
+} from '../../auth/_lib.js';
 import { poke } from '../_live.js';
 
 const MAX_DOCUMENT = 1500000;
@@ -15,15 +26,39 @@ export async function onRequestPost(context) {
   const merchant = slugMerchant(body && body.merchant);
   const orderId = String(body && body.orderId || '').trim().slice(0, 40);
   const pin = String(body && body.pin || '').trim();
-  if (!merchant || !orderId || !/^\d{4}$/.test(pin)) return json({ error: 'bad-request' }, 400);
+  if (!merchant || !orderId) return json({ error: 'bad-request' }, 400);
 
-  const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
-  if (!verified.ok) {
-    if (verified.response) return verified.response;
-    return json({ error: verified.error || 'unauthorized' }, verified.status || 403);
-  }
-  if (!employeeRoleOpensDashboard(verified.staff && verified.staff.role)) {
-    return json({ error: 'manager-required' }, 403);
+  /* Le propriétaire connecté (ou l'opérateur nommé) n'a pas de code à fournir.
+     entitledMerchant() retombe sur les marchands de démonstration quand il n'y
+     a ni session ni opérateur : on exige donc une vraie session active. */
+  let staff = null;
+  if (!pin) {
+    try {
+      const sess = await activeAccountSession(request, env);
+      if (sess && sess.aid && (await entitledMerchant(request, env, merchant)) === merchant) {
+        let name = '';
+        try {
+          const acc = await env.DB.prepare('SELECT name FROM accounts WHERE id = ?').bind(sess.aid).first();
+          name = String((acc && acc.name) || '');
+        } catch (_) {}
+        staff = { id: 'account:' + sess.aid, name: name || 'Propriétaire', role: 'owner' };
+      } else if (await isOperator(request, env)) {
+        const op = await operatorActor(request, env);
+        staff = { id: op.id ? 'operator:' + op.id : 'operator', name: op.label || 'equipe', role: 'operator' };
+      }
+    } catch (_) { staff = null; }
+    if (!staff) return json({ error: 'bad-request' }, 400);
+  } else {
+    if (!/^\d{4}$/.test(pin)) return json({ error: 'bad-request' }, 400);
+    const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+    if (!verified.ok) {
+      if (verified.response) return verified.response;
+      return json({ error: verified.error || 'unauthorized' }, verified.status || 403);
+    }
+    if (!employeeRoleOpensDashboard(verified.staff && verified.staff.role)) {
+      return json({ error: 'manager-required' }, 403);
+    }
+    staff = verified.staff;
   }
 
   let current;
@@ -41,9 +76,9 @@ export async function onRequestPost(context) {
   if (!order) return json({ error: 'order-not-found' }, 404);
 
   const actor = {
-    id: String(verified.staff.id || '').slice(0, 80),
-    name: String(verified.staff.name || '').slice(0, 100),
-    role: String(verified.staff.role || '').slice(0, 40),
+    id: String(staff.id || '').slice(0, 80),
+    name: String(staff.name || '').slice(0, 100),
+    role: String(staff.role || '').slice(0, 40),
   };
   if (!actor.id && !actor.name) return json({ error: 'identity-unavailable' }, 503);
   if (order.cancelledAt) {
