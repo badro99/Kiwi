@@ -249,7 +249,7 @@
   function renderDashboard() {
     ensureStyle(); var a = analyze(dashboardSales(),dashboardRange || dashboardDays);
     if (!window.Kiwi || !Kiwi.appPage) return;
-    Kiwi.appPage('sold',{title:'Vendus',subtitle:'Analyse de vos produits vendus · données de cette boutique',body:shell(a,true,false)});
+    Kiwi.appPage('sold',{title:'Vendus',subtitle:'Analyse de vos produits vendus · ventes brutes, les retours ne sont pas déduits',body:shell(a,true,false)});
     wire(document, false);
   }
   function wire(root, till) {

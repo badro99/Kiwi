@@ -195,8 +195,14 @@
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
     openPage=cfg; bindCloud();
     const active=rows(nav),sc=schema(cfg),sum=sc?window.KiwiTradeSchema.summary(sc,active):{active:active.length,alerts:0,balance:0};
-    const start=new Date(); start.setHours(0,0,0,0);
-    const sales=currentSales().filter((s)=>(+s.ts||0)>=start.getTime());
+    /* « Aujourd'hui » = le service du commerçant (jour ouvré de 5 h, fuseau du
+       commerce), pas minuit du navigateur : à 02 h du matin, les ventes de la
+       veille au soir étaient comptées pour le lendemain. Repli minuit si le
+       module de période n'est pas chargé. */
+    let t0=0,t1=Infinity;
+    try { const b=window.KiwiDateRange?.bounds?.('aujourdhui'); if (b && Number.isFinite(+b[0])) { t0=+b[0]; t1=+b[1]; } } catch (_) {}
+    if (!t0) { const start=new Date(); start.setHours(0,0,0,0); t0=start.getTime(); }
+    const sales=currentSales().filter((s)=>{ const ts=+s.ts||0; return ts>=t0 && ts<t1 && String(s.kind||'')!=='refund'; });
     const revenue=sales.reduce((n,s)=>n+(+s.amount||0),0);
     const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
     const body=`<section class="tw-shell" data-tw-page="${esc(nav)}">

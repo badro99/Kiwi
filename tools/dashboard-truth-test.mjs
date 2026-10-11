@@ -108,5 +108,18 @@ ok('loyalty runs only once the merchant chose a programme (store, till, assistan
   assert.ok(!/cfg\.on\b/.test(AG) && /window\.KiwiClients\.loyaltyOn/.test(AG), 'the assistant reads the real switch');
 });
 
+ok('day report top products: "1 plat", never "1 plats" / "1 dishes"', () => {
+  const D = read('assets/day-report-dash.js');
+  const top = D.slice(D.indexOf('function topHtml('), D.indexOf('function topHtml(') + 1200);
+  assert.ok(!/esc\(qty\(p\.q\)\) \+ ' ' \+ esc\(V\.items\)/.test(top), 'the plural is no longer printed unconditionally');
+  assert.ok(/Math\.abs\(\+p\.q \|\| 0\) === 1 \? \(V\.item \|\| V\.items\) : V\.items/.test(top), 'one takes the singular');
+});
+
+ok('day report payment header is the sum of the (net) method rows, not the gross', () => {
+  const D = read('assets/day-report-dash.js');
+  assert.ok(!/esc\(T\(L\.payments\)\) \+ '<\/span><em>' \+ esc\(money\(r\.gross\)\)/.test(D), 'no gross over net rows');
+  assert.ok(/var mSum = Object\.keys\(r\.methods \|\| \{\}\)\.reduce/.test(D), 'the header sums the rows');
+});
+
 console.log(`\ndashboard-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

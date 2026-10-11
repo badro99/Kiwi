@@ -12571,10 +12571,23 @@ function _bqxTillCode(trade) {
   const tr = trade !== undefined ? String(trade || '') : (_bqxCopy().trade || '');
   return ({ boutique: '0002', maison: '0017' })[tr] || '';
 }
+/* Seules les caisses boutique et maison lisent ce catalogue partagé ; les autres
+   métiers de commerce (épicerie, pharmacie, librairie, fleuriste, autre) ont
+   leur propre caisse (pos-*.js) et n'en reçoivent rien. On décide sur le MÉTIER,
+   pas sur le type de base : getVenueType() renvoie « boutique » pour tous. Un
+   métier inconnu (compte sans sous-type) reste sur la caisse boutique. */
+function _bqxTillReads(trade) {
+  const tr = trade !== undefined ? String(trade || '') : (_bqxCopy().trade || '');
+  return !tr || tr === 'boutique' || tr === 'maison';
+}
+/* Un vrai commerçant a déjà son code en main ; le code de démo n'a de sens que
+   sur la démo, où il sert à ouvrir la caisse de présentation. */
 function _bqxTillHint(trade) {
+  if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) return '';
   const code = _bqxTillCode(trade);
   return code ? ` (code ${code})` : '';
 }
+function _bqxShared() { return _bqxTillReads() ? ' · base partagée avec la caisse' : ''; }
 function _kindOptions(sel, trade) {
   const copy = _bqxCopy(trade);
   const effectiveSel = sel || copy.defaultKind;
@@ -12604,7 +12617,7 @@ function _bqxGridHtml() {
   const products = _bqxVisibleProducts();
   if (!products.length) {
     if (_bqxFilter === _BQX_ARCHIVED) return `<div class="kx-foot-hint"><div class="lh">Aucun produit archivé</div><div class="rh">${
-      _bqxQuery ? 'Aucun résultat pour cette recherche.' : 'Un produit archivé quitte la caisse sans perdre son historique. Il réapparaît ici.'}</div></div>`;
+      _bqxQuery ? 'Aucun résultat pour cette recherche.' : (_bqxTillReads() ? 'Un produit archivé quitte la caisse sans perdre son historique. Il réapparaît ici.' : 'Un produit archivé sort du catalogue sans perdre son historique. Il réapparaît ici.')}</div></div>`;
     /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
        plutôt que de constater le vide. Un filtre ou une recherche sans résultat
        reste un simple constat — le magasin, lui, n'est pas vide. */
@@ -12621,7 +12634,7 @@ function _bqxGridHtml() {
       _bqxLowOnly ? 'Rien à réassortir dans cette sélection.'
         : _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
         : _bqxQuery ? 'Aucun résultat pour cette recherche.'
-        : 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.'}</div></div>`;
+        : (_bqxTillReads() ? 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.' : 'Créez votre premier produit ici.')}</div></div>`;
   }
   if (_bqxView === 'list') {
     return `<div class="bqx-list">
@@ -12871,7 +12884,7 @@ function _bqxTag() {
 }
 
 /* fr pluralisation for the boutique counters — "1 produit", "2 produits". */
-function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : (many || one + 's')); }
+function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) < 2 ? one : (many || one + 's')); }
 
 /* Base d'affichage de « VALEUR DE STOCK ». Une boutique RÉELLE voit ce que sa
    marchandise a COÛTÉ — le seul chiffre exploitable en compta, en assurance ou
@@ -12883,10 +12896,12 @@ function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : (many
 function _bqxStockKPI(st) {
   const real = !!(window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.());
   if (!real) return { amount: st.stockValue, note: '' };
-  return {
-    amount: st.stockCost,
-    note: st.costed ? ` · potentiel ${_mad(st.stockValue)} MAD` : '',
-  };
+  /* Trois cas, jamais un mélange sous le même libellé : aucun coût saisi (on le
+     dit, le chiffre est au prix de vente), coûts partiels (le coût des seuls
+     produits chiffrés, la part est annoncée), coûts complets (potentiel rappelé). */
+  if (!st.costed) return { amount: st.stockValue, note: ' · au prix de vente, coûts non saisis' };
+  if (st.costed < st.products) return { amount: st.stockCostKnown, note: ` · ${st.costed} produit${st.costed < 2 ? '' : 's'} sur ${st.products} au coût d’achat` };
+  return { amount: st.stockCost, note: ` · potentiel ${_mad(st.stockValue)} MAD` };
 }
 
 /* Les rayons tout prêts (assets/store-templates.js). Le bouton n'apparaît que
@@ -12921,7 +12936,7 @@ function _renderInventory() {
   ].join('');
   window.Kiwi.appPage('inventory', {
     title: 'Inventaire produits',
-    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · base partagée avec la caisse`,
+    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'}${_bqxShared()}`,
     body: `<div class="bqx-inv">
       <div class="kx-kpi-strip bqx-kpis">
         <div class="kx-kpi"><div class="l">Produits</div><div class="v">${st.products}</div><div class="d">${_bqxN(st.variants, 'variante')}</div></div>
@@ -13075,14 +13090,14 @@ handlers['bqx-sel-archive'] = () => {
   if (!ids.length) return;
   _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, true)));
   _bqxSelDone(_bqxN(ids.length, 'produit') + ' archivé' + (ids.length > 1 ? 's' : ''),
-    'Retirés de la caisse, historique conservé. Retrouvez-les dans « Archivés ».');
+    (_bqxTillReads() ? 'Retirés de la caisse, historique conservé. Retrouvez-les dans « Archivés ».' : 'Historique conservé. Retrouvez-les dans « Archivés ».'));
 };
 handlers['bqx-sel-restore'] = () => {
   const ids = [..._bqxSel];
   if (!ids.length) return;
   _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, false)));
   _bqxFilter = 'all';
-  _bqxSelDone(_bqxN(ids.length, 'produit') + ' restauré' + (ids.length > 1 ? 's' : ''), 'De nouveau en vente à la caisse.');
+  _bqxSelDone(_bqxN(ids.length, 'produit') + ' restauré' + (ids.length > 1 ? 's' : ''), (_bqxTillReads() ? 'De nouveau en vente à la caisse.' : 'De nouveau au catalogue.'));
 };
 handlers['bqx-sel-move'] = () => {
   const ids = [..._bqxSel];
@@ -13117,7 +13132,7 @@ handlers['bqx-sel-del'] = () => {
   _bqxModal = modal({
     title: `Supprimer ${_bqxN(ids.length, 'produit')} ?`, width: 480,
     desc: `${names.map((x) => '« ' + _esc(x) + ' »').join(', ')}${ids.length > 5 ? ` et ${ids.length - 5} autre${ids.length - 5 > 1 ? 's' : ''}` : ''} · ${_bqxN(nVar, 'variante')} (codes-barres inclus) seront supprimés définitivement.`,
-    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Les produits disparaissent de la caisse et du dashboard.</li><li>Les codes-barres associés sont libérés.</li>${archivedView ? '' : '<li>Pour simplement les retirer de la vente en gardant l’historique, archivez-les.</li>'}</ul></div>`,
+    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Les produits disparaissent ${_bqxTillReads() ? 'de la caisse et du dashboard' : 'du dashboard'}.</li><li>Les codes-barres associés sont libérés.</li>${archivedView ? '' : '<li>Pour simplement les retirer de la vente en gardant l’historique, archivez-les.</li>'}</ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button>${archivedView ? '' : '<button class="kb ghost" data-action="bqx-sel-archive">Archiver plutôt</button>'}<button class="kb danger" data-action="bqx-sel-del-ok">${_ICN.trash}Supprimer définitivement</button>`,
   });
 };
@@ -13251,7 +13266,7 @@ function _bqxProductBody(pid) {
     <div class="kx-stat-3">
       <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
       <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
-      <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${data.colors.length} couleurs</div></div>
+      <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${_bqxN(data.colors.length, 'couleur')}</div></div>
     </div>
     ${_bqxFactsHtml(p, data, cost)}
     <div class="bqx-vwrap">
@@ -13611,7 +13626,7 @@ handlers['bqx-prod-print'] = (_el, arg) => {
   if (!data) return;
   const labels = data.variants.map((v) => _bqxLabelFor(arg, v)).filter(Boolean);
   if (!labels.length) { toast('Aucun code à imprimer', { desc: 'Générez au moins un EAN-13 pour ce produit.', type: 'warn' }); return; }
-  _bqxAskCopies((copies) => { BC().printLabels(labels, { copies }); }, `${labels.length} variante(s) avec code-barres`);
+  _bqxAskCopies((copies) => { BC().printLabels(labels, { copies }); }, `${_bqxN(labels.length, 'variante')} avec code-barres`);
 };
 
 function _bqxAskCopies(cb, note) {
@@ -14077,8 +14092,8 @@ handlers['bqx-prod-del'] = (_el, arg) => {
   if (!data) return;
   _bqxModal = modal({
     title: 'Supprimer ce produit ?', width: 460,
-    desc: `« ${data.product.name} » et ses ${data.variants.length} variantes (codes-barres inclus) seront supprimés définitivement.`,
-    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Le produit disparaît de la caisse et du dashboard.</li><li>Les codes-barres associés sont libérés.</li></ul></div>`,
+    desc: `Supprimer « ${data.product.name} » efface aussi ${_bqxN(data.variants.length, 'variante')} (codes-barres inclus), définitivement.`,
+    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Le produit disparaît ${_bqxTillReads() ? 'de la caisse et du dashboard' : 'du dashboard'}.</li><li>Les codes-barres associés sont libérés.</li></ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-prod-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer définitivement</button>`,
   });
 };
@@ -14102,7 +14117,7 @@ function _renderCategories() {
   const st = cat.stats();
   window.Kiwi.appPage('categories', {
     title: 'Catégories',
-    subtitle: `${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products === 1 ? '' : 's'} · base partagée avec la caisse`,
+    subtitle: `${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products < 2 ? '' : 's'}${_bqxShared()}`,
     body: `
       <div class="kx-kpi-strip cols-3">
         <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${cats.length}</div><div class="d">Créez / supprimez librement</div></div>
@@ -14133,7 +14148,7 @@ function _renderCategories() {
 
       <div class="kx-foot-hint">
         <div class="lh">Conseil</div>
-        <div class="rh">Les couleurs de catégorie apparaissent aussi en caisse${_bqxTillHint()}. Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
+        <div class="rh">${_bqxTillReads() ? 'Vos catégories deviennent les rayons de la caisse' + _bqxTillHint() + '. ' : ''}Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
       </div>
     `,
   });
@@ -14169,7 +14184,7 @@ handlers['bqx-cat-new-save'] = () => {
   if (_bqxModal) _bqxModal.close();
   /* Only the boutique and maison tills read this catalogue; the épicerie till
      keeps its own (pos-epicerie.js). Say « en caisse » only where it is true. */
-  const catTill = ['boutique', 'maison'].includes(String(window.KiwiVenue?.getVenueType?.() || window.KiwiConfig?.type || '').toLowerCase());
+  const catTill = _bqxTillReads();
   toast('Catégorie créée', { desc: catTill ? `« ${name} » est disponible en caisse et au dashboard.` : `« ${name} » est disponible au dashboard.`, type: 'success' });
 };
 handlers['bqx-cat-color'] = (_el, arg) => {
@@ -14845,12 +14860,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return r.status === 'pend' ? '<span class="rx-tag pend">En attente</span>' : r.status === 'ok' ? '<span class="rx-tag">Approuvé</span>'
         : r.status === 'ref' ? '<span class="rx-tag out">Refusé</span>' : '<span class="rx-tag exch">Échangé</span>';
     };
+    /* Un retour de 14,50 MAD s'affichait « 15 » (0 décimale) : entiers sans
+       décimales, sinon deux. */
+    const fmtAmt = (n) => fmtMAD(n, Math.round(Number(n || 0) * 100) % 100 === 0 ? 0 : 2);
     const retRow = (r) => `
       <div class="rx-row" data-ret-row data-ret-search="${esc([r.id, r.name, r.reason, r.client, r.actor].join(' ').toLowerCase())}" ${real ? '' : `data-action="ret-detail" data-arg="${esc(r.id)}"`}>
         <span class="rx-when"><b>${esc(r.d)}</b><small title="${esc(r.id)}">${esc(r.id)}</small></span>
         <span class="rx-what"><b>${esc(r.name)}</b><small>${esc(r.reason)}</small></span>
         <span class="rx-who">${esc(r.client)}${real ? `<small>${esc(r.actor)}</small>` : ''}</span>
-        <span class="rx-amt">${fmtMAD(r.amt, 0)} MAD</span>
+        <span class="rx-amt">${fmtAmt(r.amt)} MAD</span>
         <span class="rx-state">${statusChip(r)}${r.status === 'pend' ? `
           <button class="rx-mini" data-action="ret-approve" data-arg="${esc(r.id)}" data-bubble="stop" title="Approuver" aria-label="Approuver">${SVG.check}</button>
           <button class="rx-mini danger" data-action="ret-refuse" data-arg="${esc(r.id)}" data-bubble="stop" title="Refuser" aria-label="Refuser">${SVG.x}</button>
@@ -14881,11 +14899,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <div class="kx-kpi-strip rx-kpis">
           ${real ? `
           <div class="kx-kpi"><div class="l">Articles retournés</div><div class="v">${pending.length}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'échange')}</div></div>
-          <div class="kx-kpi"><div class="l">Montant retourné</div><div class="v">${fmtMAD(sumAmt, 0)}<span class="u">MAD</span></div><div class="d">Valeur des articles rendus</div></div>
+          <div class="kx-kpi"><div class="l">Montant retourné</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">Valeur des articles rendus</div></div>
           <div class="kx-kpi"><div class="l">Avoirs actifs</div><div class="v">${activeCredits.length}</div><div class="d">${plural(creditRows.length, 'bon')} émis au total</div></div>
-          <div class="kx-kpi"><div class="l">Solde des avoirs</div><div class="v">${fmtMAD(creditBalance, 0)}<span class="u">MAD</span></div><div class="d">Encore utilisable en caisse</div></div>` : `
+          <div class="kx-kpi"><div class="l">Solde des avoirs</div><div class="v">${fmtAmt(creditBalance)}<span class="u">MAD</span></div><div class="d">Encore utilisable en caisse</div></div>` : `
           <div class="kx-kpi warn"><div class="l">En attente</div><div class="v">${nPend}</div><div class="d">Fenêtre de retour 14 jours</div></div>
-          <div class="kx-kpi"><div class="l">Montant concerné</div><div class="v">${fmtMAD(sumAmt, 0)}<span class="u">MAD</span></div><div class="d">${plural(pending.length, 'demande')}</div></div>
+          <div class="kx-kpi"><div class="l">Montant concerné</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">${plural(pending.length, 'demande')}</div></div>
           <div class="kx-kpi"><div class="l">Taux de retour 30 j</div><div class="v">4,8 %</div><div class="d">Taux d'échange 12,1 %</div></div>
           <div class="kx-kpi"><div class="l">Clients signalés</div><div class="v">${flagged.length}</div><div class="d">3 retours ou plus en 30 jours</div></div>`}
         </div>

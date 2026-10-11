@@ -177,6 +177,12 @@ check(enKeys.length >= 100, `le dictionnaire couvre le comptoir (${enKeys.length
 for (const fr of ['À emporter', 'Tout', 'Plan de salle', 'Libre', 'Envoyer en cuisine', 'Payer en espèces', 'Pourboire', 'Confirmer', 'Nouvelle table', 'Ouvrir la table', 'Combien de couverts?', "Liste d'attente", 'Vider la commande']) {
   check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse restaurant traduite : « ${fr} »`);
 }
+/* Annuler ou rouvrir une vente depuis « Réimprimer » (pos-reprint.js) : la
+   fenêtre du code manager et ses refus restaient en français. */
+for (const fr of ['Annuler et rouvrir la note', 'Confirmer l’annulation', 'Annuler définitivement', 'Code manager incorrect.',
+  'Cette vente est déjà annulée.', 'Annulation impossible. Vérifiez la connexion et réessayez.', 'Note rouverte', 'Vente annulée']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `annulation depuis Réimprimer traduite : « ${fr} »`);
+}
 check(EN['En cours'] === 'In progress', '« En cours » se lit « In progress » (une table n\'est pas « Running »)');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

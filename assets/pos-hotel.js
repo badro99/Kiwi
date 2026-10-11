@@ -430,7 +430,7 @@
      passée en ménage. Démo : no-op. */
   function staySaleLines(st, received) {
     const rows = [
-      { itemId: `chambre-${ROOMS[st.room].type}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: stayRate(st) * st.nights },
+      { itemId: `chambre-${ROOMS[st.room]?.type || 'inconnue'}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: stayRate(st) * st.nights },
       { itemId: 'taxe-sejour', name: 'Taxe de séjour', category: 'taxes', qty: st.adults * st.nights, unit: 'nuit-personne', kind: 'tax', base: TPT * st.adults * st.nights },
       ...st.charges.map((c) => ({ itemId: c.cid, variantId: c.uid, name: CHARGE[c.cid].label, category: 'extras', qty: c.qty, unit: CHARGE[c.cid].per, kind: 'service', base: chargeAmt(c) })),
     ].filter((r) => r.base > 0);
@@ -1030,7 +1030,7 @@
          jamais au tableau de bord. La caution, elle, n'est pas une recette :
          elle est rendue au départ, on ne la journalise pas. */
       if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`, [
-        { itemId: `chambre-${ROOMS[a.room].type}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
+        { itemId: `chambre-${ROOMS[a.room]?.type || 'inconnue'}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
       ]);
       queueIfOffline(`Check-in Ch. ${a.room}`);
       toast(`Check-in Ch. ${a.room}, ${a.guest} · bienvenue`);
@@ -1060,7 +1060,7 @@
       <div class="ht-folist">
         ${list.map((st, i) => {
           const t = stayTotals(st);
-          const departing = ROOMS[st.room].status === 'depart';
+          const departing = ROOMS[st.room]?.status === 'depart';
           return `<button class="ht-focard" data-ht-fo="${st.room}" style="--i:${i}">
             <div class="ht-focard-top">
               <span class="ht-focard-room">Ch. ${st.room} <span style="color:var(--ink-4);font-weight:500;">· ${esc(roomName(st.room))}</span></span>
@@ -1119,7 +1119,7 @@
     const st = STAYS[state.folioRoom];
     const n = st.room;
     const t = stayTotals(st);
-    const departing = ROOMS[n].status === 'depart';
+    const departing = ROOMS[n]?.status === 'depart';
     let i = 0;
     panel.innerHTML = `
       <div class="ht-folio-view">
@@ -1223,7 +1223,7 @@
       queueIfOffline('Folio modifié');
       renderFolioDetail(); renderBadges(); icons();
     };
-    $('#ht-fp-facture', panel).onclick = () => openFacture(st, { provisional: ROOMS[n].status !== 'depart' || stayTotals(st).due > 0 });
+    $('#ht-fp-facture', panel).onclick = () => openFacture(st, { provisional: ROOMS[n]?.status !== 'depart' || stayTotals(st).due > 0 });
     $('#ht-fp-checkout', panel).onclick = () => openCheckout(n);
   }
 

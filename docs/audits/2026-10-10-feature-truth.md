@@ -322,6 +322,65 @@ Covered by `pos-truth-a-test.mjs` and `pos-truth-b-test.mjs`.
 Verified honest: planning draft/published, no pay figure in `/api/employee`,
 the ticket confirmation copy. Covered by `employee-truth-test.mjs`.
 
+## Serveur et cuisine: done
+
+| ID | Finding | Status |
+|---|---|---|
+| SV1 | **A cash sale was recorded at "Fermer", not at "Confirmer".** The sheet said "Espèces confirmées" first; an app closed, a locked phone or a call between the two taps and the cash taken existed nowhere. | **Fixed.** "Confirmer" posts the sale and shows the success step only once the server agrees; a refusal keeps the sheet on the amount. "Fermer" only closes. Split parts follow the same rule. |
+| SV2 | The table timer counted from when the phone first saw the table. | **Fixed.** It reads the session's `opened_ts`. |
+| SV3 | The "Espèces confirmées" step could paint under the amount step (`.cash-grid` ignored `[hidden]`). | **Fixed.** |
+| SV4 | Outside the demo, the card sheet approved itself after a delay, with an invented "TXN #KW-" number; a tap on the backdrop while waiting settled the table. | **Fixed.** The waiter confirms "Paiement reçu"; the backdrop closes without paying; the TXN number exists in the demo only. |
+| SV5 | "Ticket" and "SMS / WA" buttons toasted "Ticket en impression…" and "Envoyé" and did neither. | **Removed.** |
+| SV6 | "Flous reçu" in the French UI. | **Fixed.** "Montant reçu", FR and EN. |
+| SV7 | The shift tally (tables, revenue) reset on reload. | **Fixed.** Kept per service, reset at the next one. |
+| SV8 | A freed table kept its old cover count. | **Fixed.** |
+| K1 | The kitchen's link badge said "Comptoir lié"; the pass reads the server, not the counter. | **Fixed.** "En ligne", FR/EN/AR. |
+| K2 | An offline "Je prends" / "Prête" lived in memory: a reload or an iOS recycle lost it, and the ticket came back "en cuisson". | **Fixed.** The queue is stored per merchant and replayed; a gesture older than the service is dropped. |
+| K3 | The till's kitchen drawer was titled "Servies aujourd'hui" for tickets that were ready, not served. | **Fixed.** "Prêtes aujourd'hui". |
+| K4 | "God Mode" in front of the brigade and the cashier; a promise that orders "continue to print normally" with no printer known. | **Fixed.** Neutral copy, FR/EN/AR, no printing claim. |
+| Q10 | **A QR order was accepted when the till had never been seen.** `deskOpen` let a merchant whose till never polled take orders: the customer read "commande envoyée" into a queue nobody reads, since the till is what reads it. | **Fixed.** Never seen means closed; only a missing `order_desk` table (migration not run) still lets orders through. |
+
+Covered by `serveur-kitchen-truth-test.mjs` (SV1 runs the real confirm
+handler: one sale, success only after the server, none on refusal) and
+`orderpro-relay-test.js` (Q10).
+
+## Commerce de détail (dashboard): done
+
+| ID | Finding | Status |
+|---|---|---|
+| R1 | Épicerie, pharmacie, librairie, fleuriste and "autre" read "base partagée avec la caisse", "disponible en caisse", "Synchronisé avec la caisse". Only the boutique and maison tills read that catalogue. | **Fixed.** Decided on the trade, not the base type (which is "boutique" for all of them). |
+| R2 | A real merchant was shown "(code 0002)", the demo till's code. | **Fixed.** Demo only. |
+| R3 | "Valeur du stock" summed cost for costed products and sale price for the rest, under one label. | **Fixed.** No costs: "au prix de vente, coûts non saisis". Partial: the cost of the costed products only, "2 produits sur 3 au coût d'achat". Complete: cost, with the potential. |
+| R4 | A promotion on "Divers" (uncategorised) matched no article. | **Fixed.** |
+| R5 | "Les couleurs de catégorie apparaissent aussi en caisse": false. | **Fixed.** Says what is true, where it is. |
+| R6 | "1 variantes", "1 couleurs", "0 pièces", "1 dernières", "ses 1 variantes". | **Fixed.** |
+| R7 | A 14,50 MAD return showed "15". | **Fixed.** |
+| R8 | "Marges" sent retail merchants to a "Marge brute" tile their band does not offer. | **Fixed.** FR/EN/AR copy says where the purchase price is used today. |
+| R9 | "Ventes aujourd'hui" on trade pages counted from device midnight and included refunds. | **Fixed.** 5 h business day, refunds excluded. |
+| R10 | Vendus counts gross sales. | **Disclosed** in its subtitle; netting returns is open. |
+
+Covered by `retail-truth-test.mjs`.
+
+## Hôtel (dashboard): done
+
+| ID | Finding | Status |
+|---|---|---|
+| H1 | **The band showed "Occupation 0,0 % · ADR 0 · RevPAR 0 · 0 / 0", hard-coded.** Two rooms sold out of eight read 0 %. | **Fixed.** New `GET /api/hotel/performance` computes them from `hotel_reservations` and the `rooms` document (owner session or named operator only, never a paired till). Unknown is "·", loading is "…", never 0. Matched against independent SQL on the local stack for Hier, Aujourd'hui, 7 and 30 jours. |
+| H2 | Deltas compared different slices. | **Fixed.** The previous window of equal length, same formulas. |
+| H3 | The band's range used device midnight. | **Fixed.** Business day. |
+| H4 | The band did not move after a stay was created or changed. | **Fixed.** On stay events and every 30 s while visible. |
+| H5 | Ménage read 0. | **Fixed.** Real room states; "·" when no room is declared. |
+| H6 | Réception strip, Tarifs ("ADR, RevPAR s'activent ici"), Intelligence hôtel and the Folios tiles were empty or claimed what was not measured. | **Fixed.** Same definitions as the band. |
+| H7 | Réservations' hotel occupancy tile was a formula nobody chose. | **Fixed.** Uses the shared figures. |
+| H8 | Canaux: "Réservation directe" always said "non connectée". | **Fixed.** Says whether the booking link is open. |
+| H9 | ISO dates shown to the receptionist; "1 nuits". | **Fixed.** |
+| H10 | The hotel till's folio list threw when a stay's room had been deleted. | **Fixed.** Covered in `pos-truth-b-test.mjs`. |
+
+Definitions (in `functions/api/hotel/_performance.js`): sold = confirmed,
+checked in or completed; ADR = revenue over priced nights; RevPAR = revenue
+over active rooms × days; a 0 MAD stay is unpriced, not a nil rate; no room
+inventory gives no occupancy. Covered by `hotel-truth-test.mjs`.
+
 ## Small items, closed
 
 | Item | What it said | Now |
@@ -338,6 +397,10 @@ the ticket confirmation copy. Covered by `employee-truth-test.mjs`.
 | Plan "Tours" | A table still seated counted as a turn: four seated tables read "4 tours" before anyone left. | A turn is a visit that ended. Seated tables read "en cours" beside it ("1 tour · 2 en cours"). Covered in `floor-live-test.mjs`. |
 | Programmatic `<select>` changes | `kiwi-select.js` repainted only on `change`: code that set `select.value` left the old choice on screen while the form sent the new one. | Each enhanced select repaints on its own `value` / `selectedIndex` assignments. Covered by `kiwi-select-programmatic-test.mjs` in a real Chrome (red on the old file). |
 | Booking "Supprimer" | Logged as a hard delete. Measured: it deleted nothing, it set the booking to "annulée", the same as "Annuler la réservation" right below it. | The duplicate button is gone; cancelling has one name. |
+| Till "God Mode" toasts | Cash moves, drawer, refunds, handover and the maison catalogue told the cashier a module was off "dans la console God Mode", the operator console's internal name. | "… désactivé(e)s pour cet établissement", FR/EN/AR. Covered in `till-truth-test.mjs`. |
+| Cancel or reopen from "Réimprimer" | The manager-code window and its refusals stayed in French on an English or Arabic till. | Translated. Covered in `caisse-lang-test.js`. |
+| Day report top products | "1 plats" / "1 dishes". | Singular for one. Covered in `dashboard-truth-test.mjs`. |
+| Day report payment header | Showed the gross above method rows that are net of refunds: 500 over rows totalling 450. | The header is the sum of its rows. Covered in `dashboard-truth-test.mjs`. |
 | Booking settings checkboxes | Logged as "accessible name on". | Measured again: each sits inside its label. Not a bug. |
 
 ## Open, logged for their own pass
@@ -351,7 +414,14 @@ the ticket confirmation copy. Covered by `employee-truth-test.mjs`.
   unsynced, and only reach the server after activation. Measured: they did,
   on the same browser. On another device they are missing until then.
   A product decision, not a bug to patch quietly.
-- **Hotel occupancy tile.** Still a formula nobody chose. Out of R6's scope.
+- **Hotel walk-ins** (`hx-walkin-room`, `hx-checkout-pay`) use a ledger the
+  band does not count; only `hotel_reservations` is measured.
+- **Room charges** are recorded by the hotel till as a card sale, not as
+  "charged to room".
+- **Retail tills other than boutique/maison** ship demo catalogues and do not
+  read the shared catalogue; the boutique till posts no credit note to
+  `/api/store-credits`, and its exchange replacement is missing from the
+  stock ledger. "Personnaliser" previews KPIs from demo data.
 
 - **Till ticket numbering after C4.** A contaminated shift keeps its
   `kdsOrderSeq` (53 and up) until the service is closed. Not rewritten, since
@@ -390,5 +460,5 @@ deposits, waste, economat, workflows, delivery) · hotel (chambres, séjours,
 folios, check-ins, ménage, canaux, tarifs, hotel intel).
 
 Other surfaces: ~~the till (restaurant and the 14 `pos-*` verticals)~~ ·
-kiwi-serveur · kiwi-cuisine · ~~employee app~~ · ~~booking.html~~ · ~~kiwi-order.html~~ ·
+~~kiwi-serveur~~ · ~~kiwi-cuisine~~ · ~~employee app~~ · ~~booking.html~~ · ~~kiwi-order.html~~ ·
 ~~kiwi-report.html~~ · ~~support/tickets~~.

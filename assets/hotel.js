@@ -1036,7 +1036,7 @@
     return `
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
         ${srcPill(f.src)}
-        <span style="font-size:12px;color:var(--n-500);">${f.pax} pers · séjour ${f.nights} nuits · ${roomTypeOf(room).name}</span>
+        <span style="font-size:12px;color:var(--n-500);">${f.pax} pers · séjour ${f.nights} nuit${f.nights > 1 ? 's' : ''} · ${roomTypeOf(room).name}</span>
       </div>
       ${gHtml}
       <div class="hx-fol-tot"><span>Total folio</span><span class="am">${MAD(total)}</span></div>
@@ -1117,8 +1117,10 @@
   function counts() {
     if (isCustomHotel()) {
       const rs = Object.values(R());
+      const tonight = cuTonight();
       return {
-        occToNight: rs.filter((r) => cuRoomStatus(r).key === 'occ').length,
+        occToNight: tonight.sold,
+        tonightKnown: tonight.known,
         toClean: rs.filter((r) => cuRoomStatus(r).key === 'sale').length,
         arrDone: 0, depPending: 0,
       };
@@ -1252,7 +1254,7 @@
       body: `
         <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
           <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Statut</span><b>${esc(liveStatus.label)}</b></div>
-          ${liveRoom ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Dossier</span><b>${esc(liveRoom.stay.hotel.checkIn)} → ${esc(liveRoom.stay.hotel.checkOut)}</b></div>` : ''}
+          ${liveRoom ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Dossier</span><b>${esc(cuDay(liveRoom.stay.hotel.checkIn))} → ${esc(cuDay(liveRoom.stay.hotel.checkOut))}</b></div>` : ''}
           <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Tarif de base</span><b style="font-family:var(--mono);">${MAD(roomTypeOf(n).base)} / nuit</b></div>
           ${r.view ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Vue</span><b>Vue ${esc(cuViewLabel(r.view))}</b></div>` : ''}
           ${(r.characteristics && r.characteristics.length) ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Équipements</span><b>${esc(r.characteristics.map((c) => cuCharLabel(c)).join(', '))}</b></div>` : ''}
@@ -1495,7 +1497,7 @@
         <div>
           <div style="font-weight:600;color:var(--ink);font-size:13.5px;">Ch. ${f.room} · ${f.guest} ${r.status === 'depart' ? '<span class="hx-pill late">DÉPART EN RETARD</span>' : ''}</div>
           <div style="font-size:11.5px;color:var(--n-500);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${srcPill(f.src)} ${f.nights} nuits · ${f.pax} pers
+            ${srcPill(f.src)} ${f.nights} nuit${f.nights > 1 ? 's' : ''} · ${f.pax} pers
             ${resto ? `<span><span class="hx-srcdot resto"></span> resto ${MAD(resto)}</span>` : ''}
             ${spa ? `<span><span class="hx-srcdot spa"></span> hammam ${MAD(spa)}</span>` : ''}
             <span><span class="hx-srcdot taxe"></span> taxe incluse</span>
@@ -1678,17 +1680,25 @@
     </div>`;
   }
   function cuStrip() {
+    cuWarmStays();
     const c = counts();
     const total = totalRooms();
     const free = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'libre').length;
-    const pct = total ? (window.KiwiNumber?.number((c.occToNight / total * 100), 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format((c.occToNight / total * 100))) : '0,0';
+    const fmtPct = (v) => (window.KiwiNumber?.number(v, 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format(v));
+    /* Pas de chambre déclarée, ou séjours pas encore lus : « · », pas « 0 / 0 »
+     * ni « 0,0 % », qui se liraient comme une mesure. */
+    const known = total > 0 && c.tonightKnown !== false;
+    cuStripUnknown = !known && total > 0;
+    const occ = known ? `${c.occToNight} / ${total}` : '·';
+    const occNote = total === 0 ? 'aucune chambre déclarée' : (known ? `${fmtPct(c.occToNight / total * 100)} % · nuit du ${cuToday().split('-').reverse().join('/')}` : 'lecture des séjours…');
     return `<div class="hx-strip">
-      <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / ${total}</div><div class="d">${pct} % · se met à jour à chaque vente</div></div>
+      <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${occ}</div><div class="d">${occNote}</div></div>
       <div class="hx-kpi"><div class="l">Libres · propres</div><div class="v">${free}</div><div class="d">prêtes à vendre</div></div>
       <div class="hx-kpi"><div class="l">À remettre à blanc</div><div class="v">${c.toClean}</div><div class="d">${c.toClean ? 'voir Ménage' : 'tout est propre ✓'}</div></div>
       <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${cuState().baseRate == null ? '·' : fmt(cuState().baseRate) + ' <small>MAD</small>'}</div><div class="d">réglable dans Tarifs</div></div>
     </div>`;
   }
+  let cuStripUnknown = false;
   function cuEvaluateStayExceptions(b, today) {
     const errs = [];
     if (!b || !b.hotel || b.status === 'cancelled' || b.status === 'no_show') return errs;
@@ -1809,7 +1819,7 @@
       ${['inhouse', 'attention'].includes(filter.view) ? '<p class="hx-daily-note">Cette vue suit les statuts actuels, indépendamment de la date des mouvements choisie.</p>' : ''}
       <div class="hx-daily-list">${rows.map((b) => {
         const room = rooms.find((r) => r.id === b.resourceId);
-        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}${b.status === 'completed' ? `<button class="hx-btn ghost" data-action="hx-stay-reopen" data-arg="${esc(b.id)}" aria-label="${esc('Rouvrir le dossier de ' + (b.customer?.name || 'client') + ' pour corriger sa facturation')}">Rouvrir le dossier</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Annuler l’arrivée enregistrée pour ' + (b.customer?.name || 'client'))}">Annuler l’arrivée</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc('Marquer ' + (b.customer?.name || 'client') + ' comme non présenté')}">Non présenté</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(cuDay(b.hotel.checkIn))} → ${esc(cuDay(b.hotel.checkOut))} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}${b.status === 'completed' ? `<button class="hx-btn ghost" data-action="hx-stay-reopen" data-arg="${esc(b.id)}" aria-label="${esc('Rouvrir le dossier de ' + (b.customer?.name || 'client') + ' pour corriger sa facturation')}">Rouvrir le dossier</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Annuler l’arrivée enregistrée pour ' + (b.customer?.name || 'client'))}">Annuler l’arrivée</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc('Marquer ' + (b.customer?.name || 'client') + ' comme non présenté')}">Non présenté</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
       }).join('') || '<p class="hx-empty">Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.</p>'}</div>
       <p class="hx-daily-note">Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.</p>
     </section>`;
@@ -1867,7 +1877,7 @@
         const badgesHtml = errs.map((e) => `<span class="hx-exc-badge ${e.severity}" title="${esc(e.detail)}">${esc(e.label)}</span>`).join('');
         return `<div class="hx-exc-row">
           <div>
-            <div class="hx-exc-meta"><b>${esc(roomLabel)}</b> · ${esc(b.customer?.name || 'Client')} <span>(${b.hotel.checkIn} → ${b.hotel.checkOut})</span></div>
+            <div class="hx-exc-meta"><b>${esc(roomLabel)}</b> · ${esc(b.customer?.name || 'Client')} <span>(${cuDay(b.hotel.checkIn)} → ${cuDay(b.hotel.checkOut)})</span></div>
             <div class="hx-exc-badges">${badgesHtml}</div>
           </div>
           <button class="hx-btn ghost hx-btn-sm" data-action="hx-stay-edit" data-arg="${esc(b.id)}">Compléter fiche →</button>
@@ -2258,6 +2268,14 @@
     const st = cuState();
     return cuFloorRows().map((f) => ({ id: f.id, lbl: f.name, rooms: Object.keys(st.rooms).map(Number).filter((n) => st.rooms[n].floorId === f.id).sort((a, b) => a - b) }));
   }
+  /* « 2026-10-11 » est une clé, pas du texte pour un réceptionniste : on écrit
+   * « dim. 11/10 », comme les autres pages. */
+  function cuDay(ymd) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+    if (!m) return String(ymd || '');
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+    return ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'][d.getUTCDay()] + ' ' + m[3] + '/' + m[2];
+  }
   function cuToday() {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   }
@@ -2326,6 +2344,59 @@
     if (room.status === 'arrivee') return { key: 'arrivee', label: 'Arrivée attendue' };
     if (room.status === 'sale') return { key: 'sale', label: 'À nettoyer' };
     return { key: 'libre', label: 'Libre · propre' };
+  }
+  /* Les chambres vendues CETTE NUIT. « Occupation ce soir » comptait les
+   * chambres dont l'état était « occupée », départs du jour compris : un client
+   * qui part ce matin comptait pour ce soir, et une arrivée attendue ce soir
+   * (déjà vendue) n'était pas comptée. Une nuit vendue, c'est un séjour qui
+   * couvre la nuit d'aujourd'hui (arrivée <= aujourd'hui < départ), confirmé ou
+   * en maison, comme la bande de l'Accueil (/api/hotel/performance) et la
+   * Production mensuelle. Les ventes « walk-in » du plan n'ont pas de séjour :
+   * leur chambre est marquée occupée dans le document des chambres, on la
+   * compte une fois si aucun séjour ne la couvre déjà. */
+  function cuStaysKnown() {
+    const load = cuStayLoads.get(cuStayScope());
+    return cuWarmState.at > 0 || !!(load && !load.loading && !load.error);
+  }
+  function cuTonight() {
+    const today = cuToday();
+    const rooms = Object.values(R() || {}).filter((r) => r && r.id);
+    const covered = new Set();
+    let sold = 0;
+    cuAllStays().forEach((b) => {
+      const h = b && b.hotel;
+      if (!h || h.dayUse === true || !['confirmed', 'checked_in'].includes(b.status)) return;
+      if (h.checkIn <= today && today < h.checkOut) { sold++; if (b.resourceId) covered.add(b.resourceId); }
+    });
+    rooms.forEach((r) => { if (r.status === 'occ' && !covered.has(r.id)) sold++; });
+    return { sold, total: rooms.length, known: cuStaysKnown() };
+  }
+  /* La bande « Accueil » et « Intelligence hôtel » lisent les mêmes séjours que
+   * le plan, mais ne passent pas par lui : une réservation prise, un départ
+   * encaissé doivent les atteindre sans recharger la page. */
+  function cuStaysChanged() {
+    try { window.dispatchEvent(new CustomEvent('kiwi-hotel-stays-changed')); } catch (_) {}
+  }
+  /* Ménage vu de l'Accueil : mêmes règles que le plan (cuRoomStatus), donc le
+   * même nombre que « À nettoyer » sur le plan des chambres. */
+  function cuHousekeeping() {
+    if (!isCustomHotel()) return null;
+    const rooms = Object.values(R() || {}).filter((r) => r && r.id);
+    return { total: rooms.length, toClean: rooms.filter((r) => cuRoomStatus(r).key === 'sale').length, loading: cuWarmState.loading };
+  }
+  /* « À nettoyer » dépend des départs terminés, qui ne sont dans le cache de
+   * séjours qu'après une visite du plan ou de la réception. L'Accueil les
+   * charge lui-même (60 jours en arrière, demain en avant), au plus une fois
+   * par 30 s, puis prévient la bande. */
+  const cuWarmState = { at: 0, loading: false };
+  function cuWarmStays() {
+    if (!isCustomHotel() || cuWarmState.loading || Date.now() - cuWarmState.at < 30000) return;
+    cuWarmState.loading = true;
+    const day = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
+    cuFetchStaysForWindow(day(-60), day(1)).finally(() => {
+      cuWarmState.loading = false; cuWarmState.at = Date.now();
+      try { window.dispatchEvent(new CustomEvent('kiwi-hotel-stays-loaded')); } catch (_) {}
+    });
   }
   function cuResetRackFilter() {
     cuRackFilter.floor = 'all';
@@ -2924,6 +2995,77 @@
       </div>
     </div>`;
   }
+  /* ═══ Performance réelle d'un hôtel (occupation, ADR, RevPAR) ═══
+   * « Tarifs & occupation » promettait « ADR, RevPAR et tarification IA
+   * s'activent ici » avec « suggestions IA » et « occupation prévisionnelle sur
+   * 12 mois » : aucune de ces trois choses n'existe. Ce qui existe, et qui est
+   * vrai, c'est le registre des séjours : /api/hotel/performance en tire
+   * l'occupation, l'ADR et le RevPAR (mêmes définitions que la bande de
+   * l'Accueil, voir functions/api/hotel/_performance.js). */
+  const cuPerfByScope = new Map();
+  const cuPerfWindows = () => {
+    const day = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
+    return { past: { from: day(-30), to: day(-1) }, ahead: { from: day(0), to: day(29) } };
+  };
+  function cuPerfState() {
+    const scope = cuStayScope();
+    if (!cuPerfByScope.has(scope)) cuPerfByScope.set(scope, { past: null, ahead: null, error: '', loading: false, at: 0 });
+    return cuPerfByScope.get(scope);
+  }
+  async function cuLoadPerformance(force) {
+    const slug = cuMerchantSlug(), st = cuPerfState();
+    if (!slug || st.loading || (!force && Date.now() - st.at < 30000)) return;
+    st.loading = true;
+    const w = cuPerfWindows();
+    const read = async (win) => {
+      const res = await fetch('/api/hotel/performance?' + new URLSearchParams({ merchant: slug, from: win.from, to: win.to }), { cache: 'no-store' });
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok || !b.ok) throw new Error(b.error || 'unavailable');
+      return b;
+    };
+    try { const [past, ahead] = await Promise.all([read(w.past), read(w.ahead)]); st.past = past; st.ahead = ahead; st.error = ''; }
+    catch (e) { st.error = e.message || 'unavailable'; }
+    finally {
+      st.loading = false; st.at = Date.now();
+      if (openDrawer?.page === 'tarifs') rerender();
+    }
+  }
+  function cuPerformanceBlock() {
+    cuLoadPerformance();
+    const st = cuPerfState(), p = st.past, a = st.ahead;
+    const pct = (v) => (v == null ? '·' : (window.KiwiNumber?.number(v, 1) ?? String(v).replace('.', ',')) + ' <small>%</small>');
+    const money = (v) => (v == null ? '·' : fmt(v) + ' <small>MAD</small>');
+    const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+    if (!p || !a) {
+      return `<div class="hx-h"><span class="t">Performance réelle</span><span class="s">calculée sur vos séjours</span></div>
+        <div class="block" style="padding:16px 18px;"><p style="margin:0;font-size:13px;color:var(--n-500);">${st.error ? 'Calcul indisponible pour le moment. Aucun chiffre n’est estimé : le registre des séjours est nécessaire.' : 'Lecture des séjours…'}</p></div>`;
+    }
+    if (!p.rooms || !p.rooms.total) {
+      return `<div class="hx-h"><span class="t">Performance réelle</span><span class="s">calculée sur vos séjours</span></div>
+        <div class="block" style="padding:16px 18px;"><p style="margin:0;font-size:13px;color:var(--n-500);">Déclarez vos chambres dans le plan : l’occupation se calcule sur le nombre de chambres que vous vendez.</p></div>`;
+    }
+    const maxNights = Math.max(p.rooms.total, ...a.perDay.map((d) => d.nights));
+    const bars = a.perDay.map((d) => {
+      const h = Math.max(2, Math.round(d.nights / maxNights * 64));
+      const [, mm, dd] = d.date.split('-');
+      return `<div title="${esc(dd + '/' + mm + ' · ' + plural(d.nights, 'chambre vendue', 'chambres vendues') + ' sur ' + p.rooms.total)}" style="flex:1;min-width:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;">
+        <div style="width:100%;height:${h}px;border-radius:3px;background:${d.nights ? 'var(--atlas)' : 'var(--n-200)'};"></div>
+        <span style="font-size:9px;color:var(--n-500);font-family:var(--mono);">${dd}</span></div>`;
+    }).join('');
+    const unpriced = p.unpricedNights + a.unpricedNights;
+    return `<div class="hx-h"><span class="t">Performance réelle</span><span class="s">30 dernières nuits · séjours confirmés, en maison et terminés · TTC</span></div>
+      <div class="hx-strip">
+        <div class="hx-kpi"><div class="l">Occupation</div><div class="v">${pct(p.occupancyPct)}</div><div class="d">${plural(p.nights, 'nuitée vendue', 'nuitées vendues')} sur ${fmt(p.availableNights)}</div></div>
+        <div class="hx-kpi"><div class="l">ADR · prix moyen / nuit</div><div class="v">${money(p.adr)}</div><div class="d">${p.adr == null ? 'aucune nuit chiffrée' : 'revenu ÷ nuitées vendues'}</div></div>
+        <div class="hx-kpi"><div class="l">RevPAR</div><div class="v">${money(p.revpar)}</div><div class="d">revenu ÷ nuitées disponibles</div></div>
+        <div class="hx-kpi"><div class="l">Revenu hébergement</div><div class="v">${money(p.revenue)}</div><div class="d">logement + formule repas</div></div>
+      </div>
+      <div class="hx-h" style="margin-top:18px;"><span class="t">Occupation à venir</span><span class="s">30 prochaines nuits · ${pct(a.occupancyPct)} réservées sur ${plural(p.rooms.total, 'chambre', 'chambres')}</span></div>
+      <div class="block" style="padding:14px 16px 10px;">
+        <div style="display:flex;gap:3px;align-items:flex-end;height:84px;">${bars}</div>
+        <p style="margin:10px 0 0;font-size:11.5px;color:var(--n-500);line-height:1.5;">Une barre = les chambres déjà vendues cette nuit-là, jour d’arrivée compris, jour de départ exclu. Ce n’est pas une prévision : ce sont vos réservations.${p.rooms.outOfService ? ' ' + plural(p.rooms.outOfService, 'chambre hors-service reste', 'chambres hors-service restent') + ' dans l’inventaire.' : ''}${unpriced ? ' ' + plural(unpriced, 'nuitée sans prix est exclue', 'nuitées sans prix sont exclues') + ' de l’ADR et du revenu.' : ''}</p>
+      </div>`;
+  }
   function cuTarifsBody() {
     const st = cuState();
     const typeCards = cuTypes().map((t) => {
@@ -2945,34 +3087,53 @@
       </div>
       <div class="hx-h" style="margin-top:18px;"><span class="t">Tarifs par type</span><span class="s">un changement met à jour toutes les chambres concernées</span><button class="hx-btn atlas" data-action="hx-room-type-new">+ Nouveau type</button></div>
       <div class="hx-type-list">${typeCards}</div>
-      <div class="block" style="padding:8px 14px;margin-top:14px;">
-        ${cuStarter(
-          'ADR, RevPAR et tarification IA s\'activent ici.',
-          'Avec vos premières nuitées, Kiwi calcule votre prix moyen réel et suggère des tarifs par jour, weekends, saisons, Ramadan et Aïd compris.',
-          ['Calendrier tarifaire par type de chambre', 'Suggestions IA appliquables en un geste', 'Occupation prévisionnelle sur 12 mois']
-        )}
-      </div>
+      <div style="margin-top:18px;">${cuPerformanceBlock()}</div>
     </div>`;
   }
   function cuFoliosBody() {
+    cuWarmStays();
     const fl = Object.values(F());
+    /* Les séjours en maison : leur note est le dossier (nuits, formule repas,
+     * consommations postées sur la chambre depuis une caisse). La page ne
+     * listait que les « folios » du document des chambres, c'est-à-dire les
+     * walk-in : « Folios ouverts · 0 » avec trois clients en maison, et un texte
+     * qui promettait qu'un check-in ouvre la note et que la taxe de séjour s'y
+     * range ligne par ligne, ce que rien ne fait. */
+    const rooms = new Map(Object.values(R() || {}).map((r) => [r.id, r]));
+    const inHouse = Array.from(cuAllStays().values())
+      .filter((b) => b?.hotel && b.status === 'checked_in')
+      .sort((x, y) => String(x.hotel.checkOut).localeCompare(String(y.hotel.checkOut)));
+    const stayRows = inHouse.map((b) => {
+      const room = rooms.get(b.resourceId);
+      const nights = b.hotel.dayUse ? 0 : Math.max(1, Math.round((Date.parse(b.hotel.checkOut + 'T12:00:00Z') - Date.parse(b.hotel.checkIn + 'T12:00:00Z')) / 86400000));
+      return `
+      <div class="hx-arr">
+        <span class="tm">${room ? 'Ch. ' + esc(room.n) : 'Sans chambre'}</span>
+        <div class="who"><b>${esc(b.customer?.name || 'Voyageur')}</b><div class="sub">${esc(cuDay(b.hotel.checkIn))} → ${esc(cuDay(b.hotel.checkOut))} · ${b.hotel.dayUse ? 'day-use' : nights + ' nuit' + (nights > 1 ? 's' : '')} · ${b.partySize || 1} pers.</div></div>
+        <span style="font-family:var(--mono);font-weight:600;">${MAD(+b.hotel.total || 0)}</span>
+        <button class="hx-btn ghost" data-action="hx-dossier" data-arg="${esc(b.id)}">Ouvrir le dossier</button>
+      </div>`;
+    }).join('');
     const rows = fl.map((f) => `
       <div class="hx-arr">
         <span class="tm">Ch. ${f.room}</span>
-        <div class="who"><b>${f.guest}</b><div class="sub">${f.nights} nuit${f.nights > 1 ? 's' : ''} · ${f.pax} pers · ${f.lines.length} ligne${f.lines.length > 1 ? 's' : ''}</div></div>
+        <div class="who"><b>${esc(f.guest)}</b><div class="sub">walk-in · ${f.nights} nuit${f.nights > 1 ? 's' : ''} · ${f.pax} pers · ${f.lines.length} ligne${f.lines.length > 1 ? 's' : ''}</div></div>
         <span style="font-family:var(--mono);font-weight:600;">${MAD(folioTotal(f))}</span>
         <button class="hx-btn ghost" data-action="hx-folio" data-arg="${f.room}">Ouvrir</button>
       </div>`).join('');
+    const known = cuStaysKnown();
+    cuStripUnknown = !known;
+    const total = inHouse.length + fl.length;
     return `<div class="hx-page">
-      <div class="hx-h"><span class="t">Folios ouverts · ${fl.length}</span><span class="s">une seule note par séjour, chambre + extras + taxe</span></div>
-      <div class="block" style="padding:8px 14px;">
-        ${fl.length ? `<div class="hx-list">${rows}</div>` : cuStarter(
-          'Aucun folio ouvert.',
-          'Chaque check-in ouvre la note du séjour : nuits, restaurant, spa et taxe de séjour s\'y regroupent jusqu\'à l\'encaissement du départ.',
-          ['Charges restaurant / spa postées automatiquement', 'Taxe de séjour incluse ligne par ligne', 'Encaissement en un geste au check-out'],
-          '<button class="hx-btn atlas" data-action="hx-walkin">+ Walk-in · ouvrir un premier folio</button>'
-        )}
-      </div>
+      <div class="hx-h"><span class="t">Notes en cours · ${known ? total : '·'}</span><span class="s">séjours en maison et ventes walk-in, une note par séjour</span></div>
+      ${inHouse.length ? `<div class="block" style="padding:8px 14px;"><div class="hx-h" style="margin:6px 0;"><span class="t" style="font-size:13px;">Séjours en maison · ${inHouse.length}</span><span class="s">le montant est celui du séjour (logement et formule) ; les consommations postées depuis une caisse s’ajoutent dans le dossier</span></div><div class="hx-list">${stayRows}</div></div>` : ''}
+      ${fl.length ? `<div class="block" style="padding:8px 14px;${inHouse.length ? 'margin-top:14px;' : ''}"><div class="hx-h" style="margin:6px 0;"><span class="t" style="font-size:13px;">Ventes walk-in · ${fl.length}</span></div><div class="hx-list">${rows}</div></div>` : ''}
+      ${total ? '' : `<div class="block" style="padding:8px 14px;">${cuStarter(
+          known ? 'Aucune note en cours.' : 'Lecture des séjours…',
+          'Un séjour passe en maison au check-in, depuis la Réception. Son dossier regroupe les nuits, la formule repas et les consommations postées sur la chambre depuis une caisse.',
+          ['Check-in et check-out depuis la Réception', 'Consommations de la caisse postées sur la chambre', 'Note détaillée imprimable depuis le dossier'],
+          '<button class="hx-btn atlas" data-action="nav-reception">Ouvrir la Réception</button>'
+        )}</div>`}
     </div>`;
   }
   function cuSejoursBody() {
@@ -3004,7 +3165,7 @@
       const channel = channels[b.hotel.channel] ? b.hotel.channel : (b.source === 'public' ? 'direct' : 'other');
       const left = from / 14 * 100, width = Math.max(.1, (to - from) / 14 * 100);
       const caption=(b.hotel.dayUse?'Day-use · '+b.hotel.arrivalTime+'–'+b.hotel.departureTime:channels[channel]);
-      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)} ${b.hotel.conflict ? 'has-conflict' : ''}" style="left:${left}%;width:calc(${width}% - 1px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.hotel.conflict ? 'CONFLIT À RÉSOUDRE · ' : '') + (b.customer?.name || '') + ' · ' + caption + ' · ' + b.hotel.checkIn + ' → ' + b.hotel.checkOut)}"><b>${esc(b.customer?.name || 'Séjour')}</b><span>${b.hotel.conflict ? '⚠ CONFLIT' : esc(caption)}</span></button>`;
+      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)} ${b.hotel.conflict ? 'has-conflict' : ''}" style="left:${left}%;width:calc(${width}% - 1px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.hotel.conflict ? 'CONFLIT À RÉSOUDRE · ' : '') + (b.customer?.name || '') + ' · ' + caption + ' · ' + cuDay(b.hotel.checkIn) + ' → ' + cuDay(b.hotel.checkOut))}"><b>${esc(b.customer?.name || 'Séjour')}</b><span>${b.hotel.conflict ? '⚠ CONFLIT' : esc(caption)}</span></button>`;
     }).join('');
     const dateHead = dates.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<div class="${d === today ? 'today' : ''}"><b>${new Intl.DateTimeFormat('fr-FR', { weekday: 'short', timeZone: 'UTC' }).format(dt).replace('.', '')}</b><span>${dt.getUTCDate()}</span></div>`; }).join('');
     const rows = rooms.map((room) => `<div class="hx-cu-tape-row"><div class="hx-cu-room"><b>${room.n}</b><span>${esc(roomTypeOf(room.n).name)}</span></div><div class="hx-cu-days">${dates.map((d) => `<i class="${d === today ? 'today' : ''}"></i>`).join('')}${barsFor(room)}</div></div>`).join('');
@@ -3831,7 +3992,7 @@
     return `<article class="hx-billing-line" data-hx-billing-line="${esc(l.id)}" data-amount="${l.amountCents}"><header><div><b>${esc(l.label)}</b><span>${esc(l.date)} · ${esc(cuDraftRoom(l.roomId))} · ${l.quantity} unité(s)${l.board ? ' · '+esc(cuBoards[l.board] || l.board) : ''}</span></div><strong>${cuDraftMoney(l.amountCents)} MAD</strong></header><div class="hx-room-form hx-type-form"><label><span>Payeur principal</span><select data-hx-payer>${options(parts[0]?.payer || l.payer)}</select></label><label><span>Part du second payeur · MAD</span><input data-hx-part inputmode="decimal" value="${((parts[1]?.amountCents || 0)/100).toFixed(2)}"></label><label><span>Second payeur · si partage</span><select data-hx-second><option value="">Aucun</option>${options(parts[1]?.payer)}</select></label></div>${l.kind==='extra'?'<button class="hx-btn ghost" type="button" data-hx-remove-extra>Retirer ce supplément proposé</button>':''}</article>`;
   }
   function cuDossierRooms(data) {
-    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || 'Séjour')}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(r.checkIn)} → ${esc(r.checkOut)}${r.dayUse?' · Day-use '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">Modifier cette chambre</button></article>`).join('')}</div>`;
+    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || 'Séjour')}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(cuDay(r.checkIn))} → ${esc(cuDay(r.checkOut))}${r.dayUse?' · Day-use '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">Modifier cette chambre</button></article>`).join('')}</div>`;
   }
   /* A billing breakage hides no room: the dossier lists its rooms with a
    * targeted reason instead of the blanket "indisponible", and the money form
@@ -4834,7 +4995,7 @@
       counterHtml += ` · Capacité totale : ${totalCapacity} personnes · Estimation base : ${MAD(totalEst)} (${nights} nuit${nights > 1 ? 's' : ''})`;
       roomsCounter.innerHTML = counterHtml;
 
-      form.querySelector('[data-hx-rev-dates]').textContent = `${form.elements.checkIn.value} → ${form.elements.checkOut.value} (${nights} nuit${nights > 1 ? 's' : ''})`;
+      form.querySelector('[data-hx-rev-dates]').textContent = `${cuDay(form.elements.checkIn.value)} → ${cuDay(form.elements.checkOut.value)} (${nights} nuit${nights > 1 ? 's' : ''})`;
       form.querySelector('[data-hx-rev-rooms]').textContent = `${selected.length} chambre(s) (${Object.keys(savedRooms).length} validée(s))`;
       form.querySelector('[data-hx-rev-guests]').textContent = `${travelers.length} voyageur(s)`;
 
@@ -5625,6 +5786,7 @@
           savedRooms[room.id] = returned;
           delete failedRooms[room.id];
           initialCache.set(returned.id, returned);
+          cuStaysChanged();
           // First proven room freezes the dossier identity (defects 1+3):
           // the locked controls stop feeding submissions from here on.
           if (!committedTerms) { freezeTerms(terms); lockCommittedFields(); }
@@ -5852,6 +6014,7 @@
         if (body.booking && (body.error === 'stay-conflict' || body.error === 'expected-updated-at-required')) {
           try {
             cache.set(body.booking.id, body.booking);
+      cuStaysChanged();
             const live = window.KiwiReservations?.get?.();
             if (live && Array.isArray(live.bookings)) {
               const at = live.bookings.findIndex((x) => x.id === body.booking.id);
@@ -5862,6 +6025,7 @@
         error.textContent = messages[body.error] || cuCommercialError(body.error); return;
       }
       cache.set(body.booking.id, body.booking);
+      cuStaysChanged();
       if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
       const doc = window.KiwiReservations?.get?.();
       if (doc && Array.isArray(doc.bookings)) {
@@ -5871,7 +6035,7 @@
       }
       modal?.close?.();
       if (openModal?.el === modal?.el) openModal = null;
-      toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: body.booking.hotel.checkIn + ' → ' + body.booking.hotel.checkOut + ' · ' + (body.booking.hotel.channel || 'direct') });
+      toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: cuDay(body.booking.hotel.checkIn) + ' → ' + cuDay(body.booking.hotel.checkOut) + ' · ' + (body.booking.hotel.channel || 'direct') });
       rerender();
     } catch (_) { error.textContent = 'Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'; }
     finally {
@@ -5890,6 +6054,7 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) { toast('Annulation impossible', { type: 'warn', desc: body.error || 'Réessayez.' }); return; }
       cache.set(body.booking.id, body.booking);
+      cuStaysChanged();
       if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
       const doc = window.KiwiReservations?.get?.();
       if (doc && Array.isArray(doc.bookings)) {
@@ -5951,6 +6116,7 @@
         return;
       }
       cache.set(body.booking.id, body.booking);
+      cuStaysChanged();
       if (scope !== cuStayScope() || cuMerchantSlug() !== slug) return;
       const doc = window.KiwiReservations?.get?.();
       if (doc && Array.isArray(doc.bookings)) {
@@ -6432,7 +6598,7 @@
       const b = await res.json();
       if (scope !== cuStayScope()) { m.close(); return; }
       if (!res.ok || !Array.isArray(b.stays)) throw new Error('unavailable');
-      host.innerHTML = `<p>${b.stays.length} dossier(s)${b.capped ? ' · limite de lecture atteinte, liste incomplète' : ''}${b.coverage === 'document' ? ' · document actif seulement, historique non vérifié' : ''}</p><div class="hx-commercial-grid">${b.stays.map(s => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(s.code)} · ${esc(({ confirmed: 'Confirmé', requested: 'Demandé', checked_in: 'En maison', completed: 'Terminé', cancelled: 'Annulé', no_show: 'No-show' })[s.status] || s.status)}</span><h3>${esc(s.customer?.name || '')}</h3><p>${esc(s.hotel?.checkIn)} → ${esc(s.hotel?.checkOut)} · ${esc(cuBoards[s.commercial?.board] || 'Logement seul')}</p><p>${Number(s.hotel?.total || 0).toFixed(2)} MAD réservés</p><small>${esc(s.commercial?.voucher || 'Sans voucher / bon de commande')}</small></div></article>`).join('') || '<p>Aucun séjour rattaché. Sélectionnez ce compte dans le dossier de réservation.</p>'}</div>`;
+      host.innerHTML = `<p>${b.stays.length} dossier(s)${b.capped ? ' · limite de lecture atteinte, liste incomplète' : ''}${b.coverage === 'document' ? ' · document actif seulement, historique non vérifié' : ''}</p><div class="hx-commercial-grid">${b.stays.map(s => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(s.code)} · ${esc(({ confirmed: 'Confirmé', requested: 'Demandé', checked_in: 'En maison', completed: 'Terminé', cancelled: 'Annulé', no_show: 'No-show' })[s.status] || s.status)}</span><h3>${esc(s.customer?.name || '')}</h3><p>${esc(cuDay(s.hotel?.checkIn))} → ${esc(cuDay(s.hotel?.checkOut))} · ${esc(cuBoards[s.commercial?.board] || 'Logement seul')}</p><p>${Number(s.hotel?.total || 0).toFixed(2)} MAD réservés</p><small>${esc(s.commercial?.voucher || 'Sans voucher / bon de commande')}</small></div></article>`).join('') || '<p>Aucun séjour rattaché. Sélectionnez ce compte dans le dossier de réservation.</p>'}</div>`;
     } catch (_) { host.textContent = 'Historique indisponible. Aucun dossier n’a été modifié.'; }
   }
   async function cuCommercialEditor(kind, id) {
@@ -6535,6 +6701,12 @@
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
     openModal = { el: m.el, close: m.close };
   }
+  /* Le lien de réservation publique est-il ouvert ? La tuile disait « source de
+   * réservations non connectée » quoi qu'il arrive, y compris avec le lien ouvert
+   * et des clients qui réservent. */
+  function cuDirectOpen() {
+    try { return window.KiwiReservations?.get?.()?.settings?.published === true; } catch (_) { return false; }
+  }
   function cuCanauxBody() {
     const connected = cuChannelState.rows.map((c) => `<div class="hx-arr">
       <span class="tm ${c.lastError ? 'red' : ''}">${({ airbnb: 'AIRBNB', expedia: 'EXPEDIA', agoda: 'AGODA' })[c.channel] || 'BOOKING'}</span>
@@ -6545,7 +6717,7 @@
     const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'},{id:'expedia',name:'Expedia'},{id:'agoda',name:'Agoda'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Importer un calendrier</button></div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">·</div><div class="d">source de réservations non connectée</div></div>
+        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">${cuDirectOpen() ? 'En ligne' : '·'}</div><div class="d">${cuDirectOpen() ? 'lien de réservation ouvert · les arrivées apparaissent dans la Réception' : 'lien de réservation fermé · à ouvrir dans Réservations &amp; RDV'}</div></div>
         <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">${cuChannelState.loaded ? cuChannelState.rows.filter((x)=>x.status==='active').length : '·'}</div><div class="d">calendriers actifs</div></div>
       </div>
       <div class="hx-h"><span class="t">Calendriers connectés</span><span class="s">les liens privés ne sont jamais renvoyés au navigateur</span><button class="hx-btn ghost" data-action="hx-channel-sync" ${cuChannelState.loading?'disabled':''}>${cuChannelState.loading?'Actualisation…':'Actualiser maintenant'}</button></div>
@@ -6777,39 +6949,49 @@
     cuLoadEconomat(true);
   }
   function cuIntelBody() {
+    cuWarmStays();
     const st = cuState();
     const rooms = Object.values(st.rooms || {});
     const folios = Object.values(st.folios || {}).filter(Boolean);
-    const occupied = rooms.filter((room) => ['occ', 'depart'].includes(room.status)).length;
-    const arrivals = rooms.filter((room) => room.status === 'arrivee').length;
-    const dirty = rooms.filter((room) => room.status === 'sale').length;
+    /* Les séjours, pas l'état du document des chambres : personne ne repasse
+     * une chambre en « occupée » quand un client arrive, de sorte que cette page
+     * disait « 0 % · 0 occupée » avec un client en maison et « 0 arrivée » avec
+     * une arrivée au planning, puis en tirait « Occupation basse ». */
+    const tonight = cuTonight();
+    const today = cuToday();
+    const stays = Array.from(cuAllStays().values()).filter((b) => b?.hotel && b.hotel.dayUse !== true);
+    const arrivals = stays.filter((b) => b.hotel.checkIn === today && ['confirmed', 'checked_in', 'completed'].includes(b.status)).length;
+    const dirty = rooms.filter((room) => cuRoomStatus(room).key === 'sale').length;
     const unavailable = rooms.filter((room) => room.status === 'hs').length;
-    const sellable = Math.max(0, rooms.length - unavailable);
-    const occupancy = sellable ? Math.round(occupied / sellable * 100) : 0;
+    const total = rooms.length;
+    const known = total > 0 && tonight.known;
+    const occupied = tonight.sold;
+    const occupancy = known ? Math.round(occupied / total * 100) : null;
+    cuStripUnknown = total > 0 && !tonight.known;
     const openBalance = folios.reduce((sum, folio) => sum + folioTotal(folio), 0);
-    const configuredRates = cuTypes().map((type) => type.rate == null ? st.baseRate : type.rate).filter((rate) => Number.isFinite(+rate));
+    const configuredRates = cuTypes().map((type) => type.rate == null ? st.baseRate : type.rate).filter((rate) => rate != null && Number.isFinite(+rate));
     const averageRate = configuredRates.length ? Math.round(configuredRates.reduce((sum, rate) => sum + +rate, 0) / configuredRates.length) : null;
     const activeChannels = cuChannelState.loaded ? cuChannelState.rows.filter((row) => row.status === 'active').length : null;
     const recommendations = [];
     if (!rooms.length) recommendations.push(['Configurer les chambres', 'Le plan, les séjours, le ménage et les prévisions ont besoin de chambres réelles.']);
     if (rooms.length && averageRate == null) recommendations.push(['Définir les tarifs', 'Aucun revenu potentiel ne peut être calculé tant que le tarif général ou les tarifs par type sont vides.']);
     if (dirty) recommendations.push(['Prioriser le ménage', `${dirty} chambre${dirty === 1 ? '' : 's'} ne ${dirty === 1 ? 'peut' : 'peuvent'} pas être revendue${dirty === 1 ? '' : 's'} immédiatement.`]);
-    if (sellable && occupancy >= 80 && averageRate != null) recommendations.push(['Demande forte', `Occupation actuelle ${occupancy} %. Vérifiez les prochaines dates avant d’augmenter les tarifs, sans modifier les réservations existantes.`]);
-    if (sellable && occupancy < 40) recommendations.push(['Occupation basse', `Occupation actuelle ${occupancy} %. Travaillez d’abord la vente directe et les dates creuses plutôt qu’une remise générale.`]);
+    if (known && occupancy >= 80 && averageRate != null) recommendations.push(['Demande forte', `${occupied} chambre${occupied === 1 ? '' : 's'} vendue${occupied === 1 ? '' : 's'} sur ${total} ce soir (${occupancy} %). Vérifiez les prochaines dates avant d’augmenter les tarifs, sans modifier les réservations existantes.`]);
+    if (known && occupancy < 40 && total > 0) recommendations.push(['Occupation basse ce soir', `${occupied} chambre${occupied === 1 ? '' : 's'} vendue${occupied === 1 ? '' : 's'} sur ${total} (${occupancy} %). Travaillez d’abord la vente directe et les dates creuses plutôt qu’une remise générale.`]);
     if (activeChannels === 0) recommendations.push(['Connecter les calendriers OTA', 'Booking.com et Airbnb doivent bloquer la même disponibilité que les réservations directes.']);
     if (!recommendations.length) recommendations.push(['Aucune urgence opérationnelle', 'Les chambres, tarifs, folios et canaux ne montrent pas de blocage immédiat.']);
     return `<div class="hx-page">
       <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Occupation actuelle</div><div class="v">${occupancy} %</div><div class="d">${occupied} occupée${occupied === 1 ? '' : 's'} · ${sellable} vendable${sellable === 1 ? '' : 's'}</div></div>
-        <div class="hx-kpi"><div class="l">Arrivées attendues</div><div class="v">${arrivals}</div><div class="d">selon le plan des chambres</div></div>
+        <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${occupancy == null ? '·' : occupancy + ' %'}</div><div class="d">${total === 0 ? 'aucune chambre déclarée' : (known ? `${occupied} vendue${occupied === 1 ? '' : 's'} sur ${total}${unavailable ? ` · ${unavailable} hors-service` : ''}` : 'lecture des séjours…')}</div></div>
+        <div class="hx-kpi"><div class="l">Arrivées du jour</div><div class="v">${tonight.known ? arrivals : '·'}</div><div class="d">selon les réservations</div></div>
         <div class="hx-kpi"><div class="l">Folios ouverts</div><div class="v">${folios.length}</div><div class="d">${MAD(openBalance)} à suivre</div></div>
-        <div class="hx-kpi"><div class="l">Tarif moyen configuré</div><div class="v">${averageRate == null ? '·' : fmt(averageRate) + ' <small>MAD</small>'}</div><div class="d">types de chambres actifs</div></div>
+        <div class="hx-kpi"><div class="l">Tarif moyen configuré</div><div class="v">${averageRate == null ? '·' : fmt(averageRate) + ' <small>MAD</small>'}</div><div class="d">moyenne des tarifs de vos types</div></div>
       </div>
       <div class="hx-h"><span class="t">Décisions du jour</span><span class="s">calculées uniquement avec les données visibles de cet établissement</span></div>
       <div class="block" style="padding:8px 14px;">
         <div class="hx-list">${recommendations.map(([title, detail], index) => `<div class="hx-arr"><span class="tm">${String(index + 1).padStart(2, '0')}</span><div class="who"><b>${esc(title)}</b><div class="sub">${esc(detail)}</div></div><span class="hx-pill ${index ? 'neutral' : 'ok'}">${index ? 'À SUIVRE' : 'PRIORITÉ'}</span></div>`).join('')}</div>
       </div>
-      <div class="block" style="padding:16px 18px;margin-top:14px;"><div class="hx-h" style="margin:0;"><span class="t">Limite des données</span><span class="s">Kiwi n’affiche pas encore de prévision 12 mois ni de risque no-show tant que l’historique quotidien requis n’existe pas.</span></div></div>
+      <div class="block" style="padding:16px 18px;margin-top:14px;"><div class="hx-h" style="margin:0;"><span class="t">Limite des données</span><span class="s">Kiwi n’affiche pas de prévision 12 mois ni de risque no-show : il faudrait un historique quotidien que Kiwi ne tient pas encore. L’occupation à venir (Tarifs &amp; occupation) compte vos réservations, elle ne prédit rien.</span></div></div>
       ${cuEconomatBody()}
     </div>`;
   }
@@ -6981,6 +7163,12 @@
     try { window.KiwiVenue.subscribe(() => { bindCuCloud(); }); } catch (_) {}
     if (!cuReservationEventsBound) {
       cuReservationEventsBound = true;
+      /* La première lecture des séjours remplace le « · » des bandeaux : une
+       * seule fois (cuStripUnknown), jamais sous le curseur d'un champ. */
+      window.addEventListener('kiwi-hotel-stays-loaded', () => {
+        if (!cuStripUnknown || !isCustomHotel()) return;
+        if (['reception', 'sejours', 'tarifs', 'hotelintel', 'chambres', 'menage', 'folios'].includes(openDrawer?.page)) rerender();
+      });
       window.addEventListener('kiwi-reservations-changed', () => {
         if (isCustomHotel() && ['sejours', 'reception'].includes(openDrawer?.page)) rerender();
       });
@@ -7007,7 +7195,7 @@
       ? page('menage', 'Ménage', 'Remise à blanc · chaque départ encaissé pousse sa chambre ici', cuMenageBody)
       : page('menage', 'Ménage', 'File de remise à blanc · assignation · inspection gouvernante', menageBody);
     handlers['nav-tarifs'] = () => cu()
-      ? page('tarifs', 'Tarifs & occupation', 'Tarif de base · ADR, RevPAR et IA s\'activent avec vos nuitées', cuTarifsBody)
+      ? page('tarifs', 'Tarifs & occupation', 'Tarifs par type · occupation, ADR et RevPAR calculés sur vos séjours', cuTarifsBody)
       : page('tarifs', 'Tarifs & occupation', 'ADR · RevPAR · calendrier tarifaire propriétaire + suggestions IA', tarifsBody);
     /* Backward-compatible alias for old bookmarks only. The hotel-specific
      * guest mock was removed from the sidebar; Hospitality+ is the real shared
@@ -7039,7 +7227,7 @@
     handlers['hx-contract-new'] = () => cuCommercialEditor('contract');
     handlers['hx-contract-edit'] = (el, id) => cuCommercialEditor('contract', id);
     handlers['nav-folios'] = () => cu()
-      ? page('folios', 'Notes clients · folios', 'Chambres + extras + taxe de séjour, une seule note par séjour', cuFoliosBody)
+      ? page('folios', 'Notes clients · folios', 'Une note par séjour : nuits, formule repas et consommations de la chambre', cuFoliosBody)
       : page('folios', 'Notes clients · folios', 'Chambres + restaurant + hammam + taxe de séjour, une seule note par séjour', foliosBody);
     handlers['nav-canaux'] = () => cu()
       ? (page('canaux', 'Canaux & OTA', 'Calendriers importés et limites de synchronisation', cuCanauxBody), setTimeout(()=>cuLoadChannels(false),0))
@@ -7479,7 +7667,7 @@
     if (!booking) return;
 
       openModal?.close?.();
-      const m = K().modal({ tag: 'ANNULATION', title: 'Libérer cette chambre ?', desc: booking.customer.name + ' · ' + booking.hotel.checkIn + ' → ' + booking.hotel.checkOut, width: 460,
+      const m = K().modal({ tag: 'ANNULATION', title: 'Libérer cette chambre ?', desc: booking.customer.name + ' · ' + cuDay(booking.hotel.checkIn) + ' → ' + cuDay(booking.hotel.checkOut), width: 460,
         body: '<p style="font-size:13px;line-height:1.6;color:var(--n-600);">Le séjour restera dans l’historique avec le statut annulé. La chambre redeviendra immédiatement réservable en direct et sur la saisie OTA.</p><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-stay-cancel-close">Garder le séjour</button><button class="hx-btn warn" data-action="hx-stay-cancel-confirm" data-arg="' + esc(booking.id) + '">Annuler et libérer</button></div>' });
       openModal = { el: m.el, close: m.close };
     };
@@ -8500,6 +8688,9 @@
   /* Small model surface for the POS/hotel shells and the regression harness.
    * Mutations still go through the handlers above; consumers receive copies. */
   window.KiwiHotelRooms = Object.freeze({
+    housekeeping: () => cuHousekeeping(),
+    tonight: () => { if (!isCustomHotel()) return null; cuWarmStays(); return cuTonight(); },
+    warm: () => cuWarmStays(),
     current: () => cuDocument(cuState()),
     merge: (mine, theirs) => cuMerge(mine, theirs),
     hydrate: (doc) => {

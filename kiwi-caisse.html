@@ -114,12 +114,12 @@
        choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
        normaliser les variantes existantes. -->
   <script src="assets/color-palette.js?v=5" defer></script>
-  <script src="assets/boutique-catalog.js?v=9" defer></script>
-  <script src="assets/sold-insights.js?v=9" defer></script>
+  <script src="assets/boutique-catalog.js?v=10" defer></script>
+  <script src="assets/sold-insights.js?v=10" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promos.js?v=2" defer></script>
+  <script src="assets/promos.js?v=3" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=8" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=2" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
@@ -127,13 +127,13 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=17" defer></script>
+  <script src="assets/caisse-lang.js?v=18" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=74" defer></script>
+  <script src="assets/pos-dispatch.js?v=76" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -16692,7 +16692,7 @@
     }
     function openCashMove() {
       if (isFeatureOff('cash-move') || isFeatureOff('cashMove')) {
-        toast('Module mouvements de caisse désactivé dans la console God Mode');
+        toast('Mouvements de caisse désactivés pour cet établissement');
         return;
       }
       cmType = 'out';
@@ -16752,7 +16752,7 @@
      * rapport journalier montrent qui a fait sonner le tiroir et quand. */
     function openDrawerNoSale() {
       if (isFeatureOff('open-drawer') || isFeatureOff('openDrawer')) {
-        toast('Ouverture manuelle du tiroir désactivée dans la console God Mode');
+        toast('Ouverture manuelle du tiroir désactivée pour cet établissement');
         return;
       }
       requireManager('Ouvrir le tiroir sans vente', () => {
@@ -18244,7 +18244,7 @@
     }
     function openRefund() {
       if (isFeatureOff('remboursement') || isFeatureOff('refund')) {
-        toast('Module remboursement désactivé dans la console God Mode');
+        toast('Remboursements désactivés pour cet établissement');
         return;
       }
       refundState.search = '';
@@ -18613,7 +18613,7 @@
 
     function openHandover() {
       if (isFeatureOff('passation')) {
-        toast('Passation de caisse désactivée dans la console God Mode');
+        toast('Passation de caisse désactivée pour cet établissement');
         return;
       }
       handoverState.counted = 0;
@@ -19380,9 +19380,12 @@
       $('#kit-cook').innerHTML =
         `<div class="kit-col-head"><span>En préparation</span><span class="kit-col-ct">${cookList.length}</span></div>`
         + `<div class="kit-grid3">${cookList.length ? cookList.map(kdsOrderCard).join('') : kdsEmpty('Aucune commande en préparation')}</div>`;
+      /* Ce volet liste les bons PRÊTS (`kdsGroup('ready')`), chaque ligne dit
+         « Prête 14:20 » : l'intitulé « Servies aujourd'hui » annonçait une
+         remise au client que la caisse ne sait pas, elle, constater. */
       $('#kit-history-inner').innerHTML =
-        `<div class="kit-col-head"><span>Servies aujourd'hui</span><span class="kit-col-ct">${readyList.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
-        + `<div class="kit-history-rows">${readyList.length ? readyList.map(kdsHistoryRow).join('') : kdsEmpty('Aucune commande servie pour l\'instant')}</div>`;
+        `<div class="kit-col-head"><span>Prêtes aujourd'hui</span><span class="kit-col-ct">${readyList.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
+        + `<div class="kit-history-rows">${readyList.length ? readyList.map(kdsHistoryRow).join('') : kdsEmpty('Aucune commande prête pour l\'instant')}</div>`;
       updateKdsCount();
     }
 
@@ -19527,7 +19530,7 @@
 
     function openKds() {
       if (isKdsOff()) {
-        toast('Écran cuisine désactivé dans la console God Mode');
+        toast('Écran cuisine désactivé pour cet établissement');
         return;
       }
       kdsPaint();

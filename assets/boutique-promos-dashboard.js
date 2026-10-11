@@ -29,9 +29,12 @@
    * also offered to épicerie, pharmacie, librairie, fleuriste and autre, where
    * « Synchronisé avec la caisse » and « la caisse est à jour » were false. */
   function tillApplies() {
+    /* Le MÉTIER (sous-type), pas le type de base : getVenueType() renvoie
+     * « boutique » pour l'épicerie aussi, dont la caisse ne lit pas les promotions. */
     var t = '';
-    try { t = String((window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType()) || (window.KiwiConfig && window.KiwiConfig.type) || '').toLowerCase(); } catch (_) {}
-    return t === 'boutique' || t === 'maison';
+    try { t = String((window.KiwiStoreTemplates && window.KiwiStoreTemplates.currentTrade && window.KiwiStoreTemplates.currentTrade()) || ''); } catch (_) {}
+    t = t.toLowerCase();
+    return !t || t === 'boutique' || t === 'maison';
   }
   function venueKey() { return window.KiwiBoutiqueVenueKey ? window.KiwiBoutiqueVenueKey() : 'maisonMansour'; }
   function ready() { return !!(CAT() && PRM()); }

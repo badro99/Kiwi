@@ -294,7 +294,17 @@
      * (dateRange.js › realGrossProfit, via KiwiCost); say so, and say plainly
      * that the per-product table below is not built for real data yet. */
     if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
-      const T = ({
+      /* Un commerce de détail n'a ni « carte » ni tuile Marge brute dans sa bande
+       * (elle n'est pas proposée par « Personnaliser » : la démo boutique n'en porte
+       * pas). Pointer vers cette tuile renvoyait le commerçant nulle part ; on dit
+       * donc où le prix d'achat sert réellement aujourd'hui. */
+      const retail = (window.KiwiVenue?.getVenueType?.() || '') === 'boutique';
+      const R = ({
+        fr: { s: 'Marge réelle', h: 'Le détail des marges n’est pas encore affiché ici', d: 'Le prix d’achat saisi dans la fiche produit (Inventaire) sert déjà à valoriser votre stock au coût et à prévenir d’une promotion qui vendrait sous le prix d’achat.' },
+        en: { s: 'Real margin', h: 'The margin breakdown is not shown here yet', d: 'The purchase price set on the product sheet (Inventory) already values your stock at cost and warns you when a promotion would sell below purchase price.' },
+        ar: { s: 'الهامش الحقيقي', h: 'تفاصيل الهوامش غير معروضة هنا بعد', d: 'سعر الشراء المُدخل في بطاقة المنتج (المخزون) يُستعمل فعلاً لتقييم مخزونك بالتكلفة وللتنبيه عند عرض ترويجي يبيع بأقل من سعر الشراء.' },
+      })[lang];
+      const T = (retail && R) || ({
         fr: { s: 'Marge réelle', h: 'Votre marge se lit dans la tuile Marge brute', d: 'Kiwi calcule la marge sur les produits dont le coût d\'achat est renseigné dans votre carte, et indique la part de vos ventes qu\'elle couvre. Le détail produit par produit n\'est pas encore disponible ici.' },
         en: { s: 'Real margin', h: 'Your margin shows in the Gross margin tile', d: 'Kiwi computes margin on the products whose purchase cost is set in your menu, and shows how much of your sales it covers. A product-by-product breakdown is not available here yet.' },
         ar: { s: 'الهامش الحقيقي', h: 'يظهر هامشك في خانة الهامش الإجمالي', d: 'يحسب Kiwi الهامش على المنتجات التي أُدخلت تكلفة شرائها في قائمتك، ويبيّن نسبة المبيعات التي يغطيها. التفصيل منتجاً بمنتج غير متاح هنا بعد.' },

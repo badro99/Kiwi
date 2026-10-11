@@ -646,7 +646,7 @@
     var cards = all.slice(0, 3).map(function (p, i) {
       return '<div class="kdr-top-c"><span class="kdr-top-r">' + (i + 1) + '</span>'
         + '<span class="kdr-top-m"><span class="kdr-top-n">' + esc(p.n) + '</span>'
-        + '<span class="kdr-top-s">' + esc(qty(p.q)) + ' ' + esc(V.items) + ' · ' + esc(money(p.t)) + ' MAD</span>'
+        + '<span class="kdr-top-s">' + esc(qty(p.q)) + ' ' + esc(LANG() !== 'ar' && Math.abs(+p.q || 0) === 1 ? (V.item || V.items) : V.items) + ' · ' + esc(money(p.t)) + ' MAD</span>'
         + '</span></div>';
     }).join('');
     return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.top)) + '</span></div>'
@@ -759,7 +759,11 @@
       .filter(function (k) { return r.methods[k]; })
       .sort(function (a, b) { return r.methods[b] - r.methods[a]; })
       .map(function (k) { return row(methodLabel(k), money(r.methods[k]) + ' MAD'); }).join('');
-    var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(r.gross)) + ' MAD</em></div>' + mRows + '</div>' : '';
+    /* L'en-tête est la somme des lignes qu'il chapeaute. Les lignes sont nettes
+       des remboursements (day-report.js les déduit par moyen) : y poser le brut
+       affichait 500 au-dessus de lignes qui font 450 dès qu'on remboursait. */
+    var mSum = Object.keys(r.methods || {}).reduce(function (s, k) { return s + (+r.methods[k] || 0); }, 0);
+    var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' MAD</em></div>' + mRows + '</div>' : '';
     var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
         + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' MAD')

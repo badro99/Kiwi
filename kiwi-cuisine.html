@@ -659,9 +659,8 @@
     <div class="kds-disabled-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg>
     </div>
-    <h2>Écran cuisine désactivé</h2>
-    <p>Le module KDS est actuellement désactivé pour cet établissement dans la console d'administration (God Mode).</p>
-    <p class="kds-disabled-sub">✓ Les commandes continuent de s’imprimer normalement sur les imprimantes thermiques de cuisine.</p>
+    <h2 data-i18n="kds.off.title">Écran cuisine désactivé</h2>
+    <p data-i18n="kds.off.body">L'écran cuisine est désactivé pour cet établissement. Demandez à votre responsable de le réactiver.</p>
   </div>
 </div>
 
@@ -813,8 +812,10 @@
       'pair.err.commit': document.documentElement.classList.contains('kiwi-native') ? 'Appairage impossible. Relancez l’application.' : 'Appairage impossible. Recharge la page.',
       'pair.err.net': document.documentElement.classList.contains('kiwi-native') ? 'Connexion impossible. Vérifiez le Wi-Fi.' : 'Connexion impossible. Vérifie le wifi.',
       'link.wait': 'Connexion…',
-      'link.up': 'Comptoir lié',
+      'link.up': 'En ligne',
       'link.down': 'Hors ligne',
+      'kds.off.title': 'Écran cuisine désactivé',
+      'kds.off.body': 'L’écran cuisine est désactivé pour cet établissement. Demandez à votre responsable de le réactiver.',
       'tool.sound': 'Son des nouvelles commandes',
       'tool.full': 'Plein écran',
       'tool.theme': 'Jour ou nuit',
@@ -861,8 +862,10 @@
       'pair.err.commit': 'Pairing failed. Reload the page.',
       'pair.err.net': 'No connection. Check the wifi.',
       'link.wait': 'Connecting…',
-      'link.up': 'Counter linked',
+      'link.up': 'Online',
       'link.down': 'Offline',
+      'kds.off.title': 'Kitchen display turned off',
+      'kds.off.body': 'The kitchen display is turned off for this venue. Ask your manager to turn it back on.',
       'tool.sound': 'Sound for new orders',
       'tool.full': 'Full screen',
       'tool.theme': 'Day or night',
@@ -907,8 +910,10 @@
       'pair.err.commit': 'تعذّر الربط. أعد تحميل الصفحة.',
       'pair.err.net': 'لا يوجد اتصال. تحقّق من الواي فاي.',
       'link.wait': 'جارٍ الاتصال…',
-      'link.up': 'مرتبط بالكاشير',
+      'link.up': 'متصل',
       'link.down': 'غير متصل',
+      'kds.off.title': 'شاشة المطبخ متوقفة',
+      'kds.off.body': 'شاشة المطبخ متوقفة لهذه المنشأة. اطلب من المسؤول إعادة تشغيلها.',
       'tool.sound': 'صوت الطلبات الجديدة',
       'tool.full': 'ملء الشاشة',
       'tool.theme': 'نهار أو ليل',
@@ -1118,19 +1123,51 @@
      Un geste qui échoue reste en file et repart avant chaque sondage. */
   var BUMP_TRIES = 40;
   S.pendingBumps = {};
+  /* La file vivait en mémoire seulement : une tablette qui perd le Wi-Fi,
+     puis que iOS recycle ou que le cuisinier recharge, oubliait « Prête » et
+     le bon revenait « en cuisson » au retour du réseau, sans que la caisse
+     ni le serveur aient jamais su que le plat était parti. Elle est donc
+     écrite dans le stockage, par commerce appairé, et relue au premier envoi ;
+     un geste plus vieux que le service (STALE_MS) n'est pas rejoué. Le serveur
+     refuse déjà une transition impossible : rejouer un geste est sans risque. */
+  function bumpsKey() {
+    var m = (window.KiwiKitchenRelay && KiwiKitchenRelay.merchant && KiwiKitchenRelay.merchant()) || '';
+    return m ? 'kiwi:kitchen-bumps-v1:' + m : '';
+  }
+  function saveBumps() {
+    var k = bumpsKey(); if (!k) return;
+    try {
+      if (Object.keys(S.pendingBumps).length) localStorage.setItem(k, JSON.stringify(S.pendingBumps));
+      else localStorage.removeItem(k);
+    } catch (_) {}
+  }
+  function restoreBumps() {
+    if (S.bumpsRestored) return;
+    var k = bumpsKey(); if (!k) return;
+    S.bumpsRestored = true;
+    try {
+      var saved = JSON.parse(localStorage.getItem(k) || '{}') || {};
+      Object.keys(saved).forEach(function (key) {
+        var j = saved[key];
+        if (j && j.id && j.status && (Date.now() - (Number(j.at) || 0)) < STALE_MS && !S.pendingBumps[key]) S.pendingBumps[key] = j;
+      });
+    } catch (_) {}
+  }
   function sendBump(id, status, station) {
     var key = id + '|' + status + '|' + (station || '');
-    var job = S.pendingBumps[key] || { id: id, status: status, station: station || '', tries: 0 };
+    var job = S.pendingBumps[key] || { id: id, status: status, station: station || '', tries: 0, at: Date.now() };
     job.tries++;
     S.pendingBumps[key] = job;
+    saveBumps();
     return KiwiKitchenRelay.bump(id, status, station).then(function (r) {
-      if (r && r.ok !== false) { delete S.pendingBumps[key]; return true; }
-      if (job.tries >= BUMP_TRIES) delete S.pendingBumps[key];
+      if (r && r.ok !== false) { delete S.pendingBumps[key]; saveBumps(); return true; }
+      if (job.tries >= BUMP_TRIES) { delete S.pendingBumps[key]; saveBumps(); }
       setLive(false);
       return false;
     });
   }
   function flushBumps() {
+    restoreBumps();
     var jobs = Object.keys(S.pendingBumps).map(function (k) { return S.pendingBumps[k]; });
     return Promise.all(jobs.map(function (j) { return sendBump(j.id, j.status, j.station); }));
   }

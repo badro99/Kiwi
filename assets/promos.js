@@ -214,7 +214,7 @@
     if (!p || !item) return false;
     var sc = p.scope || {};
     if (sc.type === 'tout') return true;
-    if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0;
+    if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0 || (!!item.uncat && (sc.ids || []).indexOf('_uncat') >= 0);
     if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;
     if (sc.type === 'avant') {
       var bef = toTs(sc.before);

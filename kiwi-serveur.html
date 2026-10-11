@@ -1782,6 +1782,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       padding-right: 4px;
     }
     .cat-pills::-webkit-scrollbar { display: none; }
+    .cat-pills[hidden] { display: none; }  /* sans sous-catégorie, plus de bande vide sous les filtres */
     .cat-pill {
       padding: 8px 15px;
       border-radius: 999px;
@@ -3123,6 +3124,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     /* Cash modal */
     .cash-grid { display: flex; flex-direction: column; gap: 12px; }
+    /* `display:flex` bat `[hidden]` : les deux étapes de l'encaissement
+       s'affichaient ensemble, et « Espèces confirmées · rendu au client »
+       apparaissait AVANT que le serveur ait confirmé quoi que ce soit. */
+    .cash-grid[hidden] { display: none; }
     .cash-input-row { display: flex; flex-direction: column; gap: 6px; }
     .cash-input-label { font-size: 11px; color: var(--ink-3); font-weight: 500; }
     .cash-input {
@@ -3159,6 +3164,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .cash-rendu .val { font-size: 20px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; }
     .cash-rendu.is-positive .val { color: var(--emerald); }
     .cash-rendu.is-short .val { color: var(--danger-mute); font-size: 13px; font-weight: 600; }
+    .cash-confirm[hidden] { display: none; }
     .cash-confirm {
       width: 100%;
       height: 52px;
@@ -4661,6 +4667,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             <div class="reader-method" id="reader-method">Kiwi Tap · NFC · QR</div>
             <div class="reader-txn" id="reader-txn" hidden></div>
           </div>
+          <button class="cash-confirm" id="card-confirm" type="button" hidden>Paiement reçu</button>
           <!-- === Gamification · rank chip (customer-facing) === -->
           <div class="kg-rank-chip" id="kg-card-rank-chip">
             <span class="kg-rank-chip-dot"></span>
@@ -4668,14 +4675,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             <span>·</span>
             <span class="kg-rank-chip-role" id="kg-card-rank-role">serveur</span>
           </div>
-          <div class="modal-actions" id="card-actions">
-            <button class="ma-btn primary" data-modal-action="print">
-              <i data-lucide="printer"></i><span>Ticket</span>
-            </button>
-            <button class="ma-btn secondary" data-modal-action="send">
-              <i data-lucide="message-square"></i><span>SMS / WA</span>
-            </button>
-          </div>
+          <div class="modal-actions" id="card-actions"></div>
           <div class="modal-foot" id="card-foot">
             <a data-modal-action="close">Fermer</a>
           </div>
@@ -4692,7 +4692,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
           <div class="cash-grid" id="cash-step-input">
             <div class="cash-input-row">
-              <label class="cash-input-label" for="cash-received">Flous reçu</label>
+              <label class="cash-input-label" for="cash-received">Montant reçu</label>
               <input class="cash-input" id="cash-received" type="number" inputmode="numeric" min="0" step="1" value="530" />
             </div>
             <div class="cash-presets">
@@ -4717,14 +4717,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             </div>
             <div class="cash-success-label">Rendu au client</div>
             <div class="cash-success-rendu" id="cash-success-rendu">0,00 MAD</div>
-            <div class="modal-actions is-visible">
-              <button class="ma-btn primary" data-modal-action="print">
-                <i data-lucide="printer"></i><span>Ticket</span>
-              </button>
-              <button class="ma-btn secondary" data-modal-action="send">
-                <i data-lucide="message-square"></i><span>SMS / WA</span>
-              </button>
-            </div>
             <div class="modal-foot is-visible">
               <a data-modal-action="close">Fermer</a>
             </div>
@@ -5108,6 +5100,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         'Rendu': 'Change',
         'Rendu au client': 'Change due',
         'Espèces confirmées': 'Cash confirmed',
+        'Montant reçu': 'Amount received',
+        'Encaissez sur le terminal carte, puis confirmez': 'Take the card payment on the terminal, then confirm',
+        'Paiement reçu': 'Payment received',
+        'Paiement carte confirmé': 'Card payment confirmed',
         'Nom ou téléphone': 'Name or phone',
         'Retour': 'Back',
         'Repos': 'Off',
@@ -5285,6 +5281,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         'Rendu': 'الباقي',
         'Rendu au client': 'الباقي للعميل',
         'Espèces confirmées': 'تم تأكيد الدفع النقدي',
+        'Montant reçu': 'المبلغ المستلم',
+        'Encaissez sur le terminal carte, puis confirmez': 'حصّل الدفع على جهاز البطاقة ثم أكّد',
+        'Paiement reçu': 'تم استلام الدفع',
+        'Paiement carte confirmé': 'تم تأكيد الدفع بالبطاقة',
         'Nom ou téléphone': 'الاسم أو رقم الهاتف',
         'Retour': 'رجوع',
         'Repos': 'عطلة',
@@ -6728,7 +6728,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const previous = serviceStateVersion.has(id) ? (previousTables[id] || null) : null;
         tables[id] = {
           zone: t.zone || 'salle', zoneLabel: zoneNames[t.zone] || 'Salle', server: assigned, servers: assignedIds,
-          covers: tableSeats(t),
+          covers: tableSeats(t), seats: tableSeats(t),
           status: previous ? previous.status : (t.status === 'occupied' ? 'ka-yaklo' : 'khawya'),
           elapsed: previous ? (previous.elapsed || 0) : 0,
         };
@@ -6951,12 +6951,25 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       ((data.service && data.service.pausedTables) || []).forEach((id) => servicePausedTables.add(serviceTableId(id) || String(id)));
       serviceTableSessions.clear();
       serviceTableSessionRevisions.clear();
+      /* « En cours · N mn » vient de l'heure d'ouverture que le serveur a
+         écrite (`opened_ts`), pas d'un compteur local. Le compteur repartait
+         de zéro à chaque rechargement, et une table ouverte depuis une heure
+         par un collègue ou par la caisse affichait « 0 mn » ; un téléphone
+         verrouillé, dont setInterval est suspendu, prenait du retard. On
+         oublie l'heure de toute table avant de relire les sessions vivantes :
+         une table sans session retombe sur le compteur, jamais sur une heure
+         périmée. */
+      Object.keys(tables).forEach((k) => { delete tables[k].openedTs; });
       (data.sessions || []).forEach((session) => {
         if (!session || session.mode !== 'table') return;
         const id = serviceTableId(session.table);
         if (id && session.id) {
           serviceTableSessions.set(id, String(session.id));
           serviceTableSessionRevisions.set(id, Number(session.seen_ts) || 0);
+          if (tables[id] && Number(session.opened_ts) > 0) {
+            tables[id].openedTs = Number(session.opened_ts);
+            tables[id].elapsed = Math.max(0, Math.floor((Date.now() - tables[id].openedTs) / 60000));
+          }
         }
         const canonical = serviceStateVersion.get(id);
         if (id && tables[id] && tables[id].status === 'khawya' && !(canonical && canonical.status === 'khawya')) {
@@ -7773,7 +7786,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           ${lockChip}
           <div class="tc-num">${esc(id)}</div>
           <div class="tc-info">
-            <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers)} ${orderProBadge} ${serverChip} ${urgentDot}</div>
+            <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers || t.seats || 0)} ${orderProBadge} ${serverChip} ${urgentDot}</div>
             <div class="tc-line2">${line2}</div>
           </div>
           <div class="tc-right">
@@ -8019,7 +8032,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const t = tables[id];
       const order = ensureTableOrder(id);
       if (!serviceReopenedBillsAvailable) {
-        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
+        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers || t.seats || 0)}`;
         $('#td-table-meta').textContent = 'Vérification des notes indisponible';
         $('#td-body').innerHTML = '<div class="td-pending-banner"><div class="td-pending-copy"><strong>Vérification indisponible</strong><span>La caisse peut encaisser. Le serveur ne peut pas confirmer ici qu’une note rouverte est encore due.</span></div></div>';
         $('#td-footer').innerHTML = '<button class="td-btn ghost" disabled>Vérification en cours · encaisser au comptoir</button>';
@@ -8031,7 +8044,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
          * kitchen rows remain paid on the closed visit, so show the due part
          * without offering a misleading zero-MAD employee payment or a second
          * kitchen send. The cashier owns this split until it is settled. */
-        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
+        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers || t.seats || 0)}`;
         $('#td-table-meta').textContent = 'Note rouverte · règlement au comptoir';
         const pill = $('#td-status-pill');
         pill.dataset.status = 'bgha-ykhlass';
@@ -8077,7 +8090,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </div>
       ` : '';
 
-      $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
+      $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers || t.seats || 0)}`;
       $('#td-table-meta').textContent = (t.status === 'khawya' || t.status === 'khlass')
         ? employeeTranslation(statusLabel[t.status])
         : `${employeeTranslation(statusLabel[t.status])} · ${employeeMinuteCount(t.elapsed)}`;
@@ -10311,7 +10324,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       Object.keys(tables).forEach(id => {
         const t = tables[id];
         if (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'ka-tkhdam') {
-          t.elapsed += 1;
+          t.elapsed = t.openedTs
+            ? Math.max(0, Math.floor((Date.now() - t.openedTs) / 60000))
+            : t.elapsed + 1;
         }
       });
       if (currentTab === 'tables') svWhenIdle('tables', () => { if (currentTab === 'tables') renderTables(); });
@@ -10477,6 +10492,26 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       foot: $('#card-foot'),
     };
 
+    /* ── LE LECTEUR CARTE N'EXISTE PAS SUR LE TÉLÉPHONE ─────────────────────
+       Deux secondes après l'ouverture, la feuille affichait « Carte approuvée »
+       et un numéro « TXN #KW-28xxx » tiré au hasard, puis le serveur enregistrait
+       un paiement carte que personne n'avait vu passer. Pire : toucher le fond
+       de la feuille PENDANT l'attente soldait la table. En session réelle, le
+       serveur encaisse sur le terminal du commerce et CONFIRME lui-même ; rien
+       n'est inventé, rien ne se solde sans ce geste. La démo garde sa mise en
+       scène. */
+    let cardApproved = false;
+    const cardConfirmBtn = $('#card-confirm');
+    function cardReaderArm(tableId) {
+      cardApproved = false;
+      if (cardConfirmBtn) cardConfirmBtn.hidden = true;
+      if (SV_DEMO) { cardSuccessTimer = setTimeout(() => triggerCardSuccess(tableId), 2000); return; }
+      reader.disc.classList.remove('is-pulsing');
+      reader.status.textContent = 'Encaissez sur le terminal carte, puis confirmez';
+      reader.method.style.display = 'none';
+      if (cardConfirmBtn) cardConfirmBtn.hidden = false;
+    }
+    if (cardConfirmBtn) cardConfirmBtn.addEventListener('click', () => triggerCardSuccess(payTableId));
     function openCardModal(tableId) {
       // Initial setup
       $$('[data-bind="table"]').forEach(el => el.textContent = tableId);
@@ -10506,7 +10541,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       cardModal.classList.add('is-open');
       lucide.createIcons();
-      cardSuccessTimer = setTimeout(() => triggerCardSuccess(tableId), 2000);
+      cardReaderArm(tableId);
     }
 
     function triggerCardSuccess(tableId) {
@@ -10514,11 +10549,16 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       reader.disc.classList.add('flash', 'is-success');
       reader.disc.innerHTML = '<i data-lucide="check"></i>';
       reader.status.classList.add('is-success');
-      reader.status.textContent = 'Carte approuvée';
+      cardApproved = true;
+      if (cardConfirmBtn) cardConfirmBtn.hidden = true;
       reader.method.style.display = 'none';
-      reader.txn.textContent = 'TXN #KW-' + (28000 + Math.floor(Math.random()*999));
-      reader.txn.hidden = false;
-      reader.actions.classList.add('is-visible');
+      if (SV_DEMO) {
+        reader.status.textContent = 'Carte approuvée';
+        reader.txn.textContent = 'TXN #KW-' + (28000 + Math.floor(Math.random()*999));
+        reader.txn.hidden = false;
+      } else {
+        reader.status.textContent = 'Paiement carte confirmé';
+      }
       lucide.createIcons();
       setTimeout(() => reader.disc.classList.remove('flash'), 600);
       cardFootTimer = setTimeout(() => reader.foot.classList.add('is-visible'), 1000);
@@ -10538,8 +10578,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (tableId && tables[tableId]?.status === 'ka-tkhdam') {
           tables[tableId].status = 'bgha-ykhlass';
           if (currentTab === 'tables') renderTables();
-          if (activeTableId === tableId) renderTableDetail();
         }
+        /* Toujours relire la fiche : le sondage peut avoir ramené la table à
+           « en cours » pendant que la feuille était ouverte, et la fiche
+           restait alors bloquée sur « Paiement en cours… » sans bouton. */
+        if (tableId && activeTableId === tableId) renderTableDetail();
         return;
       }
       if (splitPayCallback) {
@@ -10554,10 +10597,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     cardModal.addEventListener('click', (e) => {
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       const tableId = payTableId;
-      if (e.target === cardModal && !splitPayCallback) closeCardModal({ paid: true, tableId });
+      if (e.target === cardModal && !splitPayCallback) closeCardModal({ paid: cardApproved, tableId });
       if (action === 'close') closeCardModal({ paid: true, tableId });
-      if (action === 'print') { toast('Ticket en impression…'); closeCardModal({ paid: true, tableId }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');   closeCardModal({ paid: true, tableId }); }
     });
 
     /* ---------- CASH modal ---------- */
@@ -10593,6 +10634,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     function openCashModal(tableId) {
       $$('[data-bind="table"]').forEach(el => el.textContent = tableId);
+      cashSettled = false;
+      if (!splitPayCallback) cashPay = null;
       cashStepInput.hidden = false;
       cashStepSuccess.hidden = true;
       const total = currentPayAmount(tableId);
@@ -10614,6 +10657,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     function closeCashModal({ paid = false, tableId = null } = {}) {
       cashAmountOverride = null;
+      if (!paid) { cashSettled = false; cashPay = null; }
       cashModal.classList.remove('is-open');
       // Cancelled mid-split flow → restore split modal
       if (!paid && splitPayCallback) {
@@ -10625,17 +10669,22 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (tableId && tables[tableId]?.status === 'ka-tkhdam') {
           tables[tableId].status = 'bgha-ykhlass';
           if (currentTab === 'tables') renderTables();
-          if (activeTableId === tableId) renderTableDetail();
         }
+        /* Toujours relire la fiche : le sondage peut avoir ramené la table à
+           « en cours » pendant que la feuille était ouverte, et la fiche
+           restait alors bloquée sur « Paiement en cours… » sans bouton. */
+        if (tableId && activeTableId === tableId) renderTableDetail();
         return;
       }
+      cashSettled = false;
+      cashPay = null;
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
         cb();
         return;
       }
-      if (tableId) markTablePaid(tableId, 'cash');
+      /* La vente est déjà enregistrée par « Confirmer ». */
     }
 
     cashInput.addEventListener('input', updateRendu);
@@ -10643,9 +10692,27 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       cashInput.value = (parseFloat(cashInput.value) || 0) + parseFloat(b.dataset.add);
       updateRendu();
     }));
-    cashConfirm.addEventListener('click', () => {
-      const total = currentPayAmount(payTableId);
+    /* « Confirmer » ENREGISTRE la vente ; « Fermer » ne fait que fermer.
+       Avant, l'écran disait « Espèces confirmées » dès « Confirmer », et la
+       vente ne partait qu'au « Fermer » suivant : une app fermée, un
+       téléphone verrouillé ou un appel entre les deux, et l'argent encaissé
+       n'existait nulle part. Le succès ne s'affiche qu'une fois le serveur
+       d'accord ; un refus laisse la feuille ouverte, montant intact. */
+    let cashSettled = false;
+    let cashPay = null;                      // paiement d'une part (addition partagée)
+    cashConfirm.addEventListener('click', async () => {
+      if (cashConfirm.dataset.busy === '1' || cashSettled) return;
+      const tableId = payTableId;
+      const total = currentPayAmount(tableId);
       const got = parseFloat(cashInput.value) || 0;
+      cashConfirm.dataset.busy = '1';
+      cashConfirm.disabled = true;
+      let ok = false;
+      try { ok = cashPay ? await cashPay() : (tableId ? await markTablePaid(tableId, 'cash') : false); }
+      catch (_) { ok = false; }
+      cashConfirm.dataset.busy = '';
+      if (!ok) { updateRendu(); return; }
+      cashSettled = true;
       cashStepInput.hidden = true;
       cashStepSuccess.hidden = false;
       cashSuccessRendu.textContent = fmtMADcents(got - total);
@@ -10654,10 +10721,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     cashModal.addEventListener('click', (e) => {
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       const tableId = payTableId;
-      if (e.target === cashModal) closeCashModal({ paid: cashStepInput.hidden, tableId });
-      if (action === 'close') closeCashModal({ paid: true, tableId });
-      if (action === 'print') { toast('Ticket en impression…'); closeCashModal({ paid: true, tableId }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');   closeCashModal({ paid: true, tableId }); }
+      if (e.target === cashModal) closeCashModal({ paid: cashSettled, tableId });
+      if (action === 'close') closeCashModal({ paid: cashSettled, tableId });
     });
 
     /* ---------- Mark paid ---------- */
@@ -11242,12 +11307,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         reader.foot.classList.remove('is-visible');
         cardModal.classList.add('is-open');
         lucide.createIcons();
-        cardSuccessTimer = setTimeout(() => triggerCardSuccess(payTableId), 2000);
+        cardReaderArm(payTableId);
       } else {
         cashAmountOverride = part.amount;
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
+        cashPay = () => markSplitPartPaid(partIdx, 'cash');
+        cashSettled = false;
         splitPayCallback = () => {
-          markSplitPartPaid(partIdx, 'cash');
           $('#split-modal').classList.add('is-open');
         };
         cashStepInput.hidden = false;
@@ -11558,6 +11624,36 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       let kgShareLine    = 'Service bouclé';
       const kgBroke      = { bestNight: false, bestSpeed: false };
 
+      /* ── LE DÉCOMPTE DU SERVICE SURVIT AU RECHARGEMENT ─────────────────────
+         « Tables réglées », « Défi du soir » (40 / 500 MAD) et l'XP versée à la
+         fin du service ne vivaient qu'en mémoire : un rechargement, un onglet
+         recyclé par iOS, et un serveur qui avait encaissé cinq tables lisait
+         « 0 / 500 MAD » puis perdait ses points. On écrit le décompte, par
+         commerce et par employé, avec l'heure de début du service ; il n'est
+         relu que pour LE MÊME service (un nouveau pointage ne l'hérite pas). */
+      let kgTallyFor = 0, kgTallyLast = '';
+      function kgTallyKey() { return 'kiwi:service-shift-tally-v1:' + (svSlug() || 'store') + ':' + (currentUser || kgInitials); }
+      function kgTallySync() {
+        if (!shiftStart || SV_DEMO) return;
+        const start = shiftStart.getTime();
+        if (kgTallyFor !== start) {
+          kgTallyFor = start;
+          try {
+            const d = JSON.parse(localStorage.getItem(kgTallyKey()) || 'null');
+            if (d && d.start === start) {
+              tablesPaid = Math.max(tablesPaid, Number(d.paid) || 0);
+              kgShiftRevenue = Math.max(kgShiftRevenue, Number(d.rev) || 0);
+              kgShiftTurnMin = Math.max(kgShiftTurnMin, Number(d.turn) || 0);
+            }
+          } catch (_) {}
+        }
+        const now = JSON.stringify({ start: start, paid: tablesPaid, rev: kgShiftRevenue, turn: kgShiftTurnMin });
+        if (now !== kgTallyLast) {
+          kgTallyLast = now;
+          try { localStorage.setItem(kgTallyKey(), now); } catch (_) {}
+        }
+      }
+
       /* --- helpers --- */
       const kgNum = n => new Intl.NumberFormat(employeeLocale(), { useGrouping: true }).format(Math.round(n || 0));
       function kgFmtDur(min) {
@@ -11605,6 +11701,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       /* --- live shift snapshot (computed; never mutates app state) --- */
       function kgSnapshot() {
+        kgTallySync();
         const durMin = shiftStart ? Math.max(0, Math.floor((Date.now() - shiftStart.getTime()) / 60000)) : 0;
         const paid = tablesPaid;
         const occupied = Object.values(tables).filter(t =>
@@ -11811,6 +11908,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         kgState.updatedTs = Date.now(); kgSave();
         /* reset shift-local accumulators for the next shift */
         kgShiftRevenue = 0; kgShiftTurnMin = 0;
+        try { localStorage.removeItem(kgTallyKey()); } catch (_) {}
+        kgTallyFor = 0; kgTallyLast = '';
         kgBroke.bestNight = false; kgBroke.bestSpeed = false;
       }
 

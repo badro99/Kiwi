@@ -2882,6 +2882,120 @@
     return c.labels[lang + ':' + venueType] || T[c.i18n] || c.labels[lang] || c.labels[venueType] || c.labels.default;
   }
 
+  /* ═══════════════ HÔTEL · performance réelle de la bande ═══════════════
+   * La bande d'un vrai hôtel affichait « Occupation 0,0 % · ADR 0 MAD · RevPAR
+   * 0 MAD · 0 / 0 » codés en dur : deux chambres vendues sur huit se lisaient
+   * « 0 % », et un zéro écrit à la main se lit comme une mesure. Les chiffres
+   * viennent maintenant de /api/hotel/performance (registre `hotel_reservations`
+   * + inventaire du document `rooms`), la même source que la Production mensuelle.
+   * Ce qui ne peut pas être calculé honnêtement s'affiche « · », jamais 0. */
+  const HOTEL_PERF_TTL = 30000;
+  const hotelPerf = new Map();
+  function hotelMerchant() {
+    try {
+      const id = window.KiwiVenue?.getVenue?.();
+      return String(window.KiwiStore?.slugFor?.(id) || window.KiwiVenue?.getCurrentVenueData?.()?.slug || window.KiwiMe?.merchant || '').trim();
+    } catch (_) { return ''; }
+  }
+  /* Les nuits d'une plage : la journée d'activité du commerçant, pas minuit de
+   * l'appareil. À 02 h, « Aujourd'hui » est encore la nuit d'hier. */
+  function hotelRangeNights(range) {
+    const [from, to] = closedBounds(range);
+    const slug = activeMerchantSlug();
+    return { from: merchantDayKey(from + 1, slug), to: merchantDayKey(to - 1, slug) };
+  }
+  function hotelPreviousNights(w) {
+    const span = Math.max(1, Math.round((Date.parse(w.to + 'T00:00:00Z') - Date.parse(w.from + 'T00:00:00Z')) / 864e5) + 1);
+    return { from: addMerchantDays(w.from, -span), to: addMerchantDays(w.from, -1) };
+  }
+  /* Lit (et au besoin recharge) la performance d'une plage. Rend toujours une
+   * entrée : { data } quand on sait, { error } quand le serveur ne sait pas,
+   * ni l'un ni l'autre tant que la première réponse n'est pas arrivée. */
+  function hotelPerfEntry(w) {
+    const merchant = hotelMerchant();
+    const key = merchant + '|' + w.from + '|' + w.to;
+    let e = hotelPerf.get(key);
+    if (!e) { e = { data: null, error: '', ts: 0, loading: false }; hotelPerf.set(key, e); }
+    if (merchant && !e.loading && Date.now() - e.ts > HOTEL_PERF_TTL) {
+      e.loading = true;
+      fetch('/api/hotel/performance?' + new URLSearchParams({ merchant, from: w.from, to: w.to }), { cache: 'no-store', credentials: 'same-origin' })
+        .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+        .then(({ ok, b }) => {
+          const next = ok && b && b.ok ? b : null;
+          const before = JSON.stringify([e.data, e.error]);
+          e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
+          e.changed = before !== JSON.stringify([e.data, e.error]);
+        })
+        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
+        .finally(() => {
+          e.loading = false; e.ts = Date.now();
+          /* Repeindre seulement si quelque chose a bougé : le rafraîchissement
+           * périodique ne doit pas rejouer l'animation des tuiles pour rien. */
+          if (e.changed) { e.changed = false; try { renderKpiBand(); } catch (_) {} }
+        });
+    }
+    return e;
+  }
+  const hotelDelta = (cur, prev) => (cur != null && prev != null && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null);
+  /* Pure : les six tuiles hôtel à partir de deux lectures (période, période
+   * précédente de même durée) et de l'état du ménage. Une valeur inconnue est
+   * « · » ; une lecture pas encore arrivée est « … » pour que la bande ne
+   * clignote pas entre trois et six tuiles. */
+  function hotelTilesFrom(cur, prev, clean) {
+    const dash = { text: '·', unit: '', delta: null };
+    const wait = { text: '…', unit: '', delta: null };
+    const pd = prev && prev.data;
+    let out;
+    if (cur && cur.data) {
+      const d = cur.data;
+      const num = (v, unit, fmt, prevV) => (v == null ? { ...dash } : { value: v, unit, fmt, delta: hotelDelta(v, prevV) });
+      out = {
+        occupation: num(d.occupancyPct, '%', 'pct1', pd && pd.occupancyPct),
+        adr: num(d.adr, 'MAD', 'int', pd && pd.adr),
+        revpar: num(d.revpar, 'MAD', 'int', pd && pd.revpar),
+        /* Mouvements de la période : une arrivée attendue compte. Aucun
+         * dossier = « 0 / 0 » est ici une mesure (il n'y a pas de mouvement). */
+        arrdep: { text: `${d.arrivals} / ${d.departures}`, unit: '', delta: null },
+      };
+    } else {
+      const blank = cur && cur.error ? dash : wait;
+      out = { occupation: { ...blank }, adr: { ...blank }, revpar: { ...blank }, arrdep: { ...blank } };
+    }
+    out.menage = clean && clean.total > 0
+      ? { value: clean.toClean, unit: `/ ${clean.total}`, fmt: 'int', delta: null }
+      : { ...(clean && clean.loading ? wait : dash) };
+    /* « Mix revenu · ch · resto · spa » : aucune source n'attribue encore le
+     * revenu par point de vente. */
+    out.mixRev = { ...dash };
+    return out;
+  }
+  function hotelBandTiles(range) {
+    const w = hotelRangeNights(range);
+    const cur = hotelPerfEntry(w);
+    const prev = hotelPerfEntry(hotelPreviousNights(w));
+    let clean = null;
+    try { clean = window.KiwiHotelRooms?.housekeeping?.() || null; } catch (_) {}
+    return hotelTilesFrom(cur, prev, clean);
+  }
+  /* Une réservation prise (réception, page publique, canal) ou un séjour qui
+   * bouge doit atteindre la bande sans recharger la page. */
+  function hotelPerfInvalidate() {
+    hotelPerf.forEach((e) => { e.ts = 0; });
+    if (window.KiwiVenue?.getVenueType?.() === 'hotel') { try { renderKpiBand(); } catch (_) {} }
+  }
+  window.addEventListener('kiwi-hotel-stays-changed', hotelPerfInvalidate);
+  window.addEventListener('kiwi-hotel-stays-loaded', () => {
+    if (window.KiwiVenue?.getVenueType?.() === 'hotel') { try { renderKpiBand(); } catch (_) {} }
+  });
+  /* Un hôtel ouvert toute la journée au comptoir : la bande se relit toute seule.
+   * Les harnais qui chargent ce fichier sans minuteur (vm nu) ne la reçoivent pas. */
+  if (typeof setInterval === 'function') setInterval(() => {
+    if (document.visibilityState === 'hidden') return;
+    if (window.KiwiVenue?.getVenueType?.() !== 'hotel' || !document.querySelector('[data-kpi-band]')) return;
+    hotelPerf.forEach((e) => { e.ts = Math.min(e.ts, Date.now() - HOTEL_PERF_TTL - 1); });
+    try { hotelBandTiles(currentRange); } catch (_) {}
+  }, HOTEL_PERF_TTL);
+
   function renderKpiBand() {
     if (guardOperatorFigures('[data-kpi-band]')) {
       const wrap = document.querySelector('[data-kpi-band]');
@@ -2990,20 +3104,13 @@
         data.profit = { ...dash };
         data.cogs = { ...dash };
       }
-      // A custom HOTEL's band needs the hotel tiles — there is no hotel demo
-      // sibling on this dashboard to zero-clone, so build them blank here.
-      // The ménage denominator follows the step-2 « Nombre de chambres ».
+      /* Hôtel : les tuiles viennent du registre des séjours (voir
+       * hotelBandTiles), plus des zéros écrits à la main. Le dénominateur du
+       * ménage suit les chambres réellement déclarées, pas la réponse
+       * facultative de l'étape 2 de l'installation. */
       if (window.KiwiVenue?.getVenueType?.() === 'hotel') {
-        const rooms = +((window.KiwiVenue?.getCurrentVenueData?.() || {}).profileInfo?.rooms) || 0;
-        data = {
-          ...data,
-          occupation: { value: 0, unit: '%',   fmt: 'pct1', delta: null },
-          adr:        { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
-          revpar:     { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
-          arrdep:     { text: '0 / 0', unit: '', delta: null },
-          menage:     { value: 0, unit: rooms ? `/ ${rooms}` : '', fmt: 'int', delta: null },
-          mixRev:     { text: '·', unit: '', delta: null },
-        };
+        data = { ...data, ...hotelBandTiles(rng) };
+        try { window.KiwiHotelRooms?.warm?.(); } catch (_) {}
       }
 
       /* Tout le reste de la bande vient du clone démo remis à zéro : la valeur
@@ -3013,7 +3120,7 @@
        * la comparaison partout où elle n'a PAS été recalculée depuis les ventes
        * réelles, plutôt que d'énumérer les tuiles une à une — une tuile ajoutée
        * demain est couverte sans y penser. */
-      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue']);
+      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue', 'occupation', 'adr', 'revpar']);
       Object.keys(data).forEach((k) => {
         const tile = data[k];
         if (tile && typeof tile === 'object' && 'delta' in tile && !REAL_DELTAS.has(k)) {
@@ -4455,7 +4562,7 @@
           cumTx = sim?.cumTx ?? 0;
         }
         const n = rows.length;
-        const word = lang === 'en' ? 'last' : lang === 'ar' ? 'آخر' : 'dernières';
+        const word = lang === 'en' ? 'last' : lang === 'ar' ? 'آخر' : (n < 2 ? 'dernière' : 'dernières');
         const total = lang === 'en' ? `· ${cumTx} today`
                     : lang === 'ar' ? `· ${cumTx} اليوم`
                     : `· ${cumTx} commande${cumTx > 1 ? 's' : ''} aujourd'hui`;

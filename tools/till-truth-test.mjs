@@ -126,5 +126,15 @@ ok('7 · un plat épuisé reste sur la grille, grisé et non vendable',
 }
 ok('9 · l\'export du rapport ne perd pas non plus ces ventes', /s\.id \|\| s\.saleId \|\| s\.ref/.test(R('assets/day-report-export.js')));
 
+/* 10 · « God Mode » est le nom interne de la console opérateur : le caissier ne
+   le voit jamais, un module coupé l'est « pour cet établissement ». */
+{
+  const strip = (src) => src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const f of ['kiwi-caisse.html', 'assets/pos-maison.js']) {
+    const hits = (strip(R(f)).match(/[^\n]*God Mode[^\n]*/g) || []).map((l) => l.trim().slice(0, 80));
+    ok('10 · aucun « God Mode » montré au caissier dans ' + f, !hits.length, hits.join(' | '));
+  }
+}
+
 if (fails.length) { console.error('\n✗ ' + fails.length + ' contrôle(s) rouge(s)\n  - ' + fails.join('\n  - ')); process.exit(1); }
 console.log('✓ till-truth: ' + pass + ' contrôles verts');

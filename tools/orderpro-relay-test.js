@@ -379,7 +379,9 @@ async function get(fn, qs, headers = {}) {
 
   DB._db.prepare('DELETE FROM order_desk').run();
   r = await post(openSession, { merchant: SLUG, mode: 'table', table: '9' });
-  ok('comptoir JAMAIS vu ⇒ on laisse passer (migration, 1er jour)', r.status === 200 && r.body.ok);
+  ok('comptoir JAMAIS vu ⇒ fermé : personne ne lirait la commande', r.status === 409 && r.body.error === 'service-closed', JSON.stringify(r.body));
+  r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i1')] });
+  ok('…et une commande à emporter non plus', r.status === 409 && r.body.error === 'service-closed', JSON.stringify(r.body));
   DB._db.prepare('DELETE FROM table_sessions').run();
   deskAt(Date.now());
 

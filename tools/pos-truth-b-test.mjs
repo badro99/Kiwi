@@ -209,6 +209,16 @@ ok('hôtel : la file regardée est celle des charges chambre', () => {
   assert.ok(/roomChargeRows\(\)/.test(text['pos-hotel.js']));
 });
 
+ok('hôtel : un séjour dont la chambre a été supprimée ne fait plus planter les folios', () => {
+  const code = text['pos-hotel.js'];
+  // lectures non gardées : on retire d'abord les « ROOMS[n] && (…ROOMS[n].x…) »
+  const unguarded = code.replace(/ROOMS\[(\w+)\] && \([^\n]*/g, '');
+  const bare = (unguarded.match(/ROOMS\[[^\]]+\]\.(status|type)\b/g) || []);
+  // seule écriture autorisée : setRoom, gardée par « if (!ROOMS[n]) return; »
+  assert.deepEqual(bare, ['ROOMS[n].status'], bare.join(', '));
+  assert.match(code, /if \(!ROOMS\[n\]\) return;\s*ROOMS\[n\]\.status = status/);
+});
+
 console.log('\n5. hôtel : un extra se pose au prix saisi, jamais au prix de la démo');
 {
   const code = text['pos-hotel.js'];

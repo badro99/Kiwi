@@ -150,11 +150,15 @@ export const SESSION_ID = /^tsx-[A-Za-z0-9]{22}$/;
  * qui se ferme toute seule le soir, sans horaire à saisir et sans horloge à
  * régler.
  *
- * Le repli est délibéré et documenté : une base où `order_desk` n'existe pas
- * encore, ou un commerçant dont la caisse n'a JAMAIS sondé, laisse passer. Le
- * serveur ne peut pas distinguer « fermé » de « migration pas encore faite »,
- * et refuser dans le doute couperait la commande chez quelqu'un qui vient
- * d'activer l'option. Dès que la caisse a sondé une seule fois, la règle mord. */
+ * Un seul repli : une base où la TABLE `order_desk` n'existe pas encore
+ * (migration pas faite) laisse passer, faute de pouvoir savoir.
+ *
+ * Une caisse qui n'a JAMAIS sondé, en revanche, c'est « fermé ». Avant
+ * (2026-10-11), elle laissait passer : le client voyait « commande envoyée »
+ * pour une commande versée dans une file que personne ne lit, puisque c'est
+ * justement la caisse qui la lit. Le coût du « fermé » est minime : une caisse
+ * allumée sonde toutes les six secondes, donc le commerçant qui vient
+ * d'activer l'option est ouvert dès qu'il ouvre sa caisse. */
 export const DESK_FRESH_MS = 5 * 60 * 1000;   // le comptoir sonde toutes les 6 s
 
 export async function deskTouch(env, merchant) {
@@ -171,7 +175,7 @@ export async function deskOpen(env, merchant) {
     const row = await env.DB.prepare(
       'SELECT seen_ts FROM order_desk WHERE merchant = ?'
     ).bind(merchant).first();
-    if (!row) return true;                 // jamais vue ⇒ inconnue, pas « fermée »
+    if (!row) return false;                // jamais vue ⇒ personne ne lirait la commande
     return (Date.now() - (row.seen_ts || 0)) < DESK_FRESH_MS;
   } catch (_) { return true; }             // table absente ⇒ idem
 }

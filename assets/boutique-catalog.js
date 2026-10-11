@@ -1942,7 +1942,7 @@
        étaient présentées à 4 050 MAD, soit 2,25× de trop. Repli sur le prix de
        vente quand aucun coût n'est saisi — mieux vaut trop haut que zéro, et
        `costed` dit au rendu s'il peut se fier à la base coût. */
-    let totalStock = 0, stockValue = 0, stockCost = 0, ruptures = 0, low = 0, costed = 0;
+    let totalStock = 0, stockValue = 0, stockCost = 0, stockCostKnown = 0, ruptures = 0, low = 0, costed = 0;
     const byProd = groupVariants();
     products.forEach((p) => {
       const s = (byProd[p.id] || []).reduce((acc, v) => acc + (v.stock || 0), 0);
@@ -1951,10 +1951,13 @@
       totalStock += s;
       stockValue += s * price;
       stockCost += s * (cost > 0 ? cost : price);
-      if (cost > 0) costed++;
+      /* stockCostKnown : seulement les produits dont le coût est saisi. stockCost
+         (repli prix) reste tel quel pour les caisses ; le dashboard, lui, ne mélange
+         pas coût réel et prix de vente sous un seul libellé. */
+      if (cost > 0) { costed++; stockCostKnown += s * cost; }
       if (s === 0) ruptures++; else if (s <= 5) low++;
     });
-    return { products: products.length, variants: db.variants.length, totalStock, stockValue, stockCost, costed, ruptures, low, categories: db.categories.length };
+    return { products: products.length, variants: db.variants.length, totalStock, stockValue, stockCost, stockCostKnown, costed, ruptures, low, categories: db.categories.length };
   }
 
   // Reconstruct the caisse's { RAYONS, P, BY_EAN } shape from the DB so
@@ -2007,6 +2010,11 @@
       if (p.legacyId && !P[p.legacyId]) P[p.legacyId] = item;
       let bucket = rayonById[p.categoryId];
       if (!bucket) { if (!uncat) { uncat = { id: '_uncat', label: 'Divers', items: [] }; RAYONS.push(uncat); } bucket = uncat; }
+      /* Le rayon « Divers » (id '_uncat') est un seau fabriqué ici : item.rayon garde
+         l'id de catégorie d'origine (vide ou orphelin) pour ne pas changer ce que la
+         vente enregistre. `uncat` dit au moteur de promotions que l'article y vit,
+         sinon une promo « Divers » ne visait aucun article. */
+      if (bucket === uncat) item.uncat = true;
       bucket.items.push(item);
     });
     return { RAYONS: RAYONS.filter((r) => r.items.length), P, BY_EAN };
