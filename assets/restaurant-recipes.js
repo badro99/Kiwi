@@ -80,7 +80,12 @@
       (window.KiwiSales?.list?.(venue(id)) || []).forEach((sale) => {
         if ((+sale.ts || 0) < since) return;
         (sale.lines || []).forEach((line) => {
-          if ((line.id && String(line.id) === String(itemId)) || norm(line.name) === norm(itemName)) qty += number(line.qty);
+          /* La caisse écrit `itemId`, jamais `id`, et un plat vendu avec une
+             option porte son libellé complet (« Café crème (Lait entier) ») :
+             le test sur `id` puis sur le nom ne retrouvait aucune vente avec
+             option, et l'usage théorique comptait un café crème sur trois. */
+          const lineId = line.itemId || line.id;
+          if ((lineId && String(lineId) === String(itemId)) || (!lineId && norm(line.name) === norm(itemName))) qty += number(line.qty);
         });
       });
     } catch (_) {}

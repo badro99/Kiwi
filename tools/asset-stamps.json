@@ -80,8 +80,8 @@
     "sha": "9197252b6851e04a"
   },
   "assets/booking.js": {
-    "v": "18",
-    "sha": "9b1aa8127fc5dfd6"
+    "v": "20",
+    "sha": "ce7a8129ee6d3679"
   },
   "assets/boutique-catalog.js": {
     "v": "9",
@@ -208,8 +208,8 @@
     "sha": "71b2ab3cbbcb0e16"
   },
   "assets/customer-retention.js": {
-    "v": "4",
-    "sha": "cc794e8049361558"
+    "v": "5",
+    "sha": "d2b48a706adf1fa2"
   },
   "assets/dark-fixes.js": {
     "v": "3",
@@ -232,8 +232,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "56",
-    "sha": "fb59686d8189c3bf"
+    "v": "57",
+    "sha": "1f7987be266b592f"
   },
   "assets/day-report-dash.js": {
     "v": "27",
@@ -308,8 +308,8 @@
     "sha": "21da6396c5303181"
   },
   "assets/entitlements-v2.js": {
-    "v": "1",
-    "sha": "b3c69af09c53e860"
+    "v": "2",
+    "sha": "9731af93699e3500"
   },
   "assets/entitlements.css": {
     "v": "5",
@@ -328,8 +328,8 @@
     "sha": "4ab84021a239bd81"
   },
   "assets/finance.js": {
-    "v": "2",
-    "sha": "2820264f71cee104"
+    "v": "3",
+    "sha": "fc64bd229707b9d6"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -384,8 +384,8 @@
     "sha": "b45b0260ef0d82b2"
   },
   "assets/i18n.js": {
-    "v": "19",
-    "sha": "c67a3f7c09ac7bf0"
+    "v": "20",
+    "sha": "b2f6e046fe5ce839"
   },
   "assets/identity.js": {
     "v": "8",
@@ -576,8 +576,8 @@
     "sha": "f4edc45753433b2a"
   },
   "assets/onboarding.js": {
-    "v": "2085",
-    "sha": "d5fb33b3379a7aa9"
+    "v": "2087",
+    "sha": "29fc3ccdecd4ab4d"
   },
   "assets/operational-print.js": {
     "v": "1",
@@ -904,16 +904,16 @@
     "sha": "e0c1975882b9cc50"
   },
   "assets/reservations.js": {
-    "v": "20",
-    "sha": "ea0269539dd7df83"
+    "v": "23",
+    "sha": "66648c2f708de1be"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "89",
-    "sha": "066f51a76024afe9"
+    "v": "91",
+    "sha": "3334504a0e94127b"
   },
   "assets/restaurant-recipes.js": {
-    "v": "8",
-    "sha": "5b5e9551978cca41"
+    "v": "9",
+    "sha": "76cf1d0bb91c5494"
   },
   "assets/restaurant-units.js": {
     "v": "1",
@@ -964,8 +964,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "68",
-    "sha": "024210f9d0749e25"
+    "v": "70",
+    "sha": "af9c4edff8bfcd2e"
   },
   "assets/store-templates.js": {
     "v": "3",

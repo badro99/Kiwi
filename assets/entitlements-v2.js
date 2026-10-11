@@ -216,6 +216,12 @@
     else{clearPillTimer();if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall(false);}
   }
   document.addEventListener('kiwi-config',function(e){acceptConfig(e.detail||window.KiwiConfig);});
+  /* L'identité est lue UNE fois, au chargement. Un commerçant qui termine
+     l'installation sans recharger la page restait donc « en installation » :
+     ses écritures partaient vers un serveur qui les refuse (magasin en
+     attente), et l'écran affichait « enregistré », « en ligne ». La fin de
+     l'assistant (assets/onboarding.js) le dit ici, dans la même page. */
+  document.addEventListener('kiwi-onboarded',function(){onboarded=true;identitySettled=true;refreshPill();});
   function confirmIdentity(state){
     identitySettled=true;
     operator=!!(state&&state.operator===true);privacy=operator&&wantsPrivacy;

@@ -285,8 +285,16 @@ async function readRows(env, merchant) {
   const first = (r) => r?.results?.[0] || null;
   return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data), hotel:safeHotel(first(rows[4])?.data) };
 }
-function publicConfig(merchant, meta, doc, slots) {
-  return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
+/* Une boutique peut ouvrir la réservation en ligne sans avoir saisi un seul
+   horaire : la page publique proposait alors quatorze jours, tous « Aucun
+   créneau disponible ». On le dit une fois, à l'entrée. */
+function hasBookableHours(hours, doc) {
+  const anyWeek = (w) => !!w && typeof w === 'object' && Object.values(w).some((d) => d && d.open !== false && Array.isArray(d.periods) && d.periods.length);
+  return anyWeek(hours?.week) || doc.resources.some((r) => r.active && anyWeek(r.week))
+    || (hours?.exceptions || []).some((x) => x && x.kind === 'hours' && Array.isArray(x.periods) && x.periods.length);
+}
+function publicConfig(merchant, meta, doc, slots, hoursSet = true) {
+  return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), hoursSet, settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
 }
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
@@ -339,7 +347,7 @@ export async function onRequestGet({ request, env }) {
   const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
   if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
-  return json(publicConfig(merchant, rows.merchant, doc, slots),200,{ 'Cache-Control':'no-store' });
+  return json(publicConfig(merchant, rows.merchant, doc, slots, hasBookableHours(rows.hours, doc)),200,{ 'Cache-Control':'no-store' });
 }
 /* Annulation par la cliente. Le jeton de gestion est le SEUL justificatif —
  * il n'est jamais renvoyé par une consultation, il n'est pas devinable, et il

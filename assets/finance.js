@@ -623,72 +623,314 @@
     } catch (_) {}
     return false;
   }
-  /* L'écran d'attente d'un vrai commerçant.
+  /* LA PAGE D'UN VRAI COMMERÇANT.
    *
-   * Il promettait « dès vos premières ventes et dépenses, Kiwi calcule votre
-   * compte de résultat, votre point mort, vos marges par service et votre TVA,
-   * automatiquement ». Aucune de ces quatre choses n'existait, et aucune vente
-   * n'a jamais fait apparaître quoi que ce soit : la promesse ne pouvait pas se
-   * tenir, et le commerçant revenait vérifier.
+   * Elle était un écran d'attente : « Chiffrez votre carte, et vos marges se
+   * calculent · 1 produit sur 1 reste à chiffrer ». Le compte ne regardait que
+   * les coûts saisis à la main (`costs.items`) ; une carte entièrement chiffrée
+   * par fiches techniques restait donc « à chiffrer », pendant que la tuile
+   * Marge de l'accueil, elle, affichait la vraie marge. Et même chiffrée, la
+   * page n'affichait jamais rien : elle renvoyait vers l'accueil.
    *
-   * Ce qu'il dit maintenant : ce qu'il manque, combien il en manque, et où
-   * aller le saisir. Le seul chiffre affiché — le nombre de produits pas encore
-   * chiffrés — est compté pour de vrai. */
-  function finCoverage() {
+   * Elle lit maintenant le même moteur que l'accueil (KiwiCost.coverage, les
+   * mêmes bornes de journée que KiwiDateRange) et dit, pour la période :
+   * ce qui a été vendu, sur quelle part la marge est connue, le coût matière,
+   * la marge brute, ce qu'il reste à chiffrer en priorité, et la marge de
+   * chaque produit. Aucun loyer, aucun salaire, aucun objectif : Kiwi ne les
+   * connaît pas, et la page ne les invente pas. */
+  const REAL = {
+    fr: {
+      title: 'Marges',
+      sub: (v) => `Ce que vous gardez sur ce que vous vendez · ${v}`,
+      periods: { aujourdhui: 'Aujourd’hui', septJours: '7 jours', trenteJours: '30 jours' },
+      periodAria: 'Période',
+      pnl: 'Résultat matière',
+      sales: 'Ventes de la période',
+      costed: (p) => `dont chiffrées · ${p}`,
+      net: 'Ventes chiffrées, hors TVA',
+      cost: 'Coût matière',
+      margin: 'Marge brute',
+      noSales: 'Aucune vente sur la période.',
+      partial: (p) => `Marge calculée sur ${p} de vos ventes. Le reste attend un coût.`,
+      noDetail: (p) => `${p} des ventes n’ont pas de détail article (montant libre, lien de paiement) : elles comptent dans les ventes, jamais dans la marge.`,
+      full: 'Marge calculée sur toutes vos ventes de la période.',
+      excl: 'Avant loyer, salaires et charges : Kiwi ne les connaît pas.',
+      missingT: 'À chiffrer en priorité',
+      missingS: 'Classés par chiffre d’affaires sur la période',
+      missingRow: (u, r) => `${u} vendu${u > 1 ? 's' : ''} · ${r}`,
+      missingNone: 'Tout ce qui s’est vendu sur la période a un coût.',
+      productsT: 'Marge par produit',
+      productsS: (n) => `${n} produit${n > 1 ? 's' : ''} à la carte`,
+      cols: ['Produit', 'Prix', 'Coût', 'Marge', 'Marge %', 'Vendus'],
+      src: { recipe: 'fiche technique', flat: 'saisi', variant: 'catalogue' },
+      toCost: 'à chiffrer',
+      cta: 'Ouvrir ma carte',
+      none: 'Créez d’abord votre carte : c’est elle qui porte vos produits.',
+      emptyH: 'Vos marges commencent avec votre carte',
+    },
+    en: {
+      title: 'Margins',
+      sub: (v) => `What you keep from what you sell · ${v}`,
+      periods: { aujourdhui: 'Today', septJours: '7 days', trenteJours: '30 days' },
+      periodAria: 'Period',
+      pnl: 'Food-cost result',
+      sales: 'Sales for the period',
+      costed: (p) => `of which costed · ${p}`,
+      net: 'Costed sales, excl. VAT',
+      cost: 'Cost of goods',
+      margin: 'Gross margin',
+      noSales: 'No sales in this period.',
+      partial: (p) => `Margin computed on ${p} of your sales. The rest is waiting for a cost.`,
+      noDetail: (p) => `${p} of sales carry no item detail (free amount, payment link): they count in sales, never in the margin.`,
+      full: 'Margin computed on all of this period’s sales.',
+      excl: 'Before rent, wages and overheads: Kiwi does not know them.',
+      missingT: 'Cost these first',
+      missingS: 'Ranked by revenue over the period',
+      missingRow: (u, r) => `${u} sold · ${r}`,
+      missingNone: 'Everything sold in this period has a cost.',
+      productsT: 'Margin by product',
+      productsS: (n) => `${n} product${n === 1 ? '' : 's'} on the menu`,
+      cols: ['Product', 'Price', 'Cost', 'Margin', 'Margin %', 'Sold'],
+      src: { recipe: 'recipe', flat: 'entered', variant: 'catalogue' },
+      toCost: 'needs a cost',
+      cta: 'Open my menu',
+      none: 'Start with your menu: that is what carries your products.',
+      emptyH: 'Your margins start with your menu',
+    },
+    ar: {
+      title: 'الهوامش',
+      sub: (v) => `ما تحتفظ به مما تبيعه · ${v}`,
+      periods: { aujourdhui: 'اليوم', septJours: '7 أيام', trenteJours: '30 يومًا' },
+      periodAria: 'الفترة',
+      pnl: 'نتيجة المواد',
+      sales: 'مبيعات الفترة',
+      costed: (p) => `منها محسوبة التكلفة · ${p}`,
+      net: 'المبيعات المحسوبة، دون الضريبة',
+      cost: 'تكلفة المواد',
+      margin: 'الهامش الإجمالي',
+      noSales: 'لا توجد مبيعات في هذه الفترة.',
+      partial: (p) => `الهامش محسوب على ${p} من مبيعاتك. الباقي ينتظر تكلفة.`,
+      noDetail: (p) => `${p} من المبيعات بدون تفاصيل المنتجات (مبلغ حر، رابط دفع): تُحتسب في المبيعات، لا في الهامش.`,
+      full: 'الهامش محسوب على كل مبيعات الفترة.',
+      excl: 'قبل الإيجار والأجور والمصاريف: Kiwi لا يعرفها.',
+      missingT: 'احسب تكلفتها أولًا',
+      missingS: 'مرتبة حسب رقم المعاملات في الفترة',
+      missingRow: (u, r) => `${u} مبيع · ${r}`,
+      missingNone: 'كل ما بيع في هذه الفترة له تكلفة.',
+      productsT: 'الهامش لكل منتج',
+      productsS: (n) => `${n} منتج في القائمة`,
+      cols: ['المنتج', 'السعر', 'التكلفة', 'الهامش', 'الهامش %', 'المبيعات'],
+      src: { recipe: 'بطاقة تقنية', flat: 'مُدخلة', variant: 'الكتالوج' },
+      toCost: 'بدون تكلفة',
+      cta: 'افتح القائمة',
+      none: 'ابدأ بقائمتك: هي التي تحمل منتجاتك.',
+      emptyH: 'هوامشك تبدأ بقائمتك',
+    },
+  };
+  const rt = () => REAL[lang()] || REAL.fr;
+  const FIN_PERIODS = ['aujourdhui', 'septJours', 'trenteJours'];
+  let finPeriod = 'septJours';
+  /* Les bornes de l'accueil : une journée de caisse commence à 5 h, pas à
+     minuit, et les deux pages doivent tomber sur les mêmes ventes. */
+  function finBounds(p) {
+    try {
+      const b = window.KiwiDateRange && window.KiwiDateRange.bounds && window.KiwiDateRange.bounds(p);
+      if (Array.isArray(b) && b.length === 2 && isFinite(b[0]) && isFinite(b[1])) return b;
+    } catch (_) {}
+    const to = Date.now();
+    return [to - (p === 'trenteJours' ? 30 : p === 'septJours' ? 7 : 1) * 864e5, to];
+  }
+  /* Deux décimales quand il y en a, aucune pour un montant rond : 1,80 MAD
+     de coût ne s'arrondit pas à 2. */
+  const cash = (n) => {
+    const v = Math.round((+n || 0) * 100) / 100;
+    const d = Number.isInteger(v) ? 0 : 2;
+    try { return `${new Intl.NumberFormat(lang() === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v)} MAD`; }
+    catch (_) { return `${v.toFixed(d)} MAD`; }
+  };
+  const pct = (n) => (n == null ? '·' : fmtPct(n));
+  function finMenuItems() {
     try {
       const M = window.KiwiMenuStore;
       const items = (M && typeof M.items === 'function' && M.items()) || [];
-      const costs = (window.KiwiCost && window.KiwiCost.doc && window.KiwiCost.doc().items) || {};
-      const total = items.length;
-      let done = 0;
-      items.forEach((it) => { if (it && costs[it.id] && +costs[it.id].cost > 0) done++; });
-      return { total, done };
-    } catch (_) { return { total: 0, done: 0 }; }
+      return items.filter((it) => it && it.id && !it.archived && !it.formulaOnly);
+    } catch (_) { return []; }
+  }
+  function finSales(v) {
+    try { return (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list(v)) || []; } catch (_) { return []; }
+  }
+  /* Unités vendues par produit sur la période : par identifiant, et par nom
+     seulement pour une ligne qui n'en porte pas. */
+  function finUnits(sales, from, to) {
+    const byId = new Map(); const byName = new Map();
+    const norm = (x) => String(x == null ? '' : x).trim().toLowerCase();
+    sales.forEach((e) => {
+      const ts = +(e && e.ts) || 0;
+      if (ts < from || ts >= to || !Array.isArray(e.lines)) return;
+      e.lines.forEach((l) => {
+        if (!l) return;
+        const q = Math.max(0, +l.qty || 0);
+        if (!q) return;
+        const id = l.itemId || l.id;
+        if (id) byId.set(String(id), (byId.get(String(id)) || 0) + q);
+        else { const k = norm(l.baseName || l.name); byName.set(k, (byName.get(k) || 0) + q); }
+      });
+    });
+    return (it) => (byId.get(String(it.id)) || 0) + (byName.get(norm(it.name)) || 0);
+  }
+  function finCoverage() {
+    const C = window.KiwiCost;
+    const items = finMenuItems();
+    let done = 0;
+    items.forEach((it) => {
+      try { const c = C && C.of ? C.of({ kind: 'menu', id: it.id, name: it.name }) : null; if (c && c.mad != null && c.mad > 0) done++; } catch (_) {}
+    });
+    return { total: items.length, done };
   }
   function finEmpty() {
-    const cv = finCoverage();
-    const left = Math.max(0, cv.total - cv.done);
-    const L = lang();
-    const c = ({
-      fr: {
-        h: 'Chiffrez votre carte, et vos marges se calculent',
-        p: 'Kiwi connaît déjà ce que vous vendez. Il lui manque ce que chaque produit vous coûte · vous le saisissez une fois dans votre carte, et la marge de chaque vente se calcule toute seule.',
-        n: (a, b) => `${a} produit${a > 1 ? 's' : ''} sur ${b} reste${a > 1 ? 'nt' : ''} à chiffrer.`,
-        ok: (b) => `Vos ${b} produits sont chiffrés. Vos marges apparaissent sur le tableau de bord.`,
-        none: 'Créez d’abord votre carte : c’est elle qui porte vos produits.',
-        cta: 'Ouvrir ma carte',
-      },
-      en: {
-        h: 'Cost your menu, and your margins compute themselves',
-        p: 'Kiwi already knows what you sell. What it is missing is what each product costs you · enter it once in your menu, and every sale’s margin follows.',
-        n: (a, b) => `${a} of ${b} product${b > 1 ? 's' : ''} still need${a > 1 ? '' : 's'} a cost.`,
-        ok: (b) => `All ${b} products are costed. Your margins now show on the dashboard.`,
-        none: 'Start with your menu: that is what carries your products.',
-        cta: 'Open my menu',
-      },
-      ar: {
-        h: 'حسب تكلفة قائمتك، والهوامش كتحسب بوحدها',
-        p: 'Kiwi عارف فاش كتبيع. اللي خاصو هو شحال كيكلفك كل منتج · دخّلو مرة وحدة فالقائمة، والهامش ديال كل بيعة كيتحسب بوحدو.',
-        n: (a, b) => `${a} منتج من ${b} مازال خاصهم التكلفة.`,
-        ok: (b) => `${b} منتج كاملين محسوبين. الهوامش ديالك كتبان فلوحة التحكم.`,
-        none: 'بدا بالقائمة ديالك: هي اللي فيها المنتجات.',
-        cta: 'افتح القائمة',
-      },
-    })[L] || {};
-    const line = cv.total === 0 ? c.none : (left > 0 ? c.n(left, cv.total) : c.ok(cv.total));
+    const c = rt();
     return `<div class="fin-page"><div class="fin-empty" style="padding:56px 24px;text-align:center;max-width:520px;margin:0 auto;">
-      <div style="font-size:17px;font-weight:640;letter-spacing:-.01em;margin-bottom:8px;">${esc(c.h)}</div>
-      <div style="font-size:13.5px;color:var(--n-500);line-height:1.6;">${esc(c.p)}</div>
-      <div style="font-size:13px;color:var(--ink);font-weight:560;margin-top:14px;">${esc(line)}</div>
+      <div style="font-size:17px;font-weight:640;letter-spacing:-.01em;margin-bottom:8px;">${esc(c.emptyH)}</div>
+      <div style="font-size:13px;color:var(--ink);font-weight:560;margin-top:14px;">${esc(c.none)}</div>
       <button class="kb atlas" type="button" data-action="nav-menu" style="margin-top:18px;">${esc(c.cta)}</button>
     </div></div>`;
+  }
+  function finCss() {
+    if (document.getElementById('fin-real-css')) return;
+    const st = document.createElement('style');
+    st.id = 'fin-real-css';
+    st.textContent = [
+      '.fin-seg{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);}',
+      '.fin-seg button{border:0;background:transparent;color:var(--n-600);font:inherit;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;}',
+      '.fin-seg button.on{color:var(--ink);}',
+      '.fin-seg:not([data-kw-lens]) button.on{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.08);}',
+      '.fin-seg button:focus-visible{outline:2px solid var(--atlas);outline-offset:2px;}',
+      '.fin-real{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start;}',
+      '.fin-real>.fin-products{grid-column:1/-1;}',
+      '@media (max-width:980px){.fin-real{grid-template-columns:minmax(0,1fr);}}',
+      '.fin-note-line{font-size:12.5px;color:var(--n-600);line-height:1.5;margin-top:10px;}',
+      '.fin-miss{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--n-200);font-size:13px;}',
+      '.fin-miss:first-of-type{border-top:0;}',
+      '.fin-miss b{font-weight:560;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.fin-miss span{color:var(--n-500);font-variant-numeric:tabular-nums;white-space:nowrap;}',
+      '.fin-tbl-wrap{overflow-x:auto;}',
+      '.fin-tbl{width:100%;border-collapse:collapse;font-size:13px;}',
+      '.fin-tbl th{text-align:start;font-size:11px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);white-space:nowrap;}',
+      '.fin-tbl td{padding:10px;border-bottom:1px solid var(--n-200);vertical-align:top;}',
+      '.fin-tbl tr:last-child td{border-bottom:0;}',
+      '.fin-tbl .num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+      '.fin-tbl small{display:block;color:var(--n-500);font-size:11.5px;margin-top:2px;}',
+    ].join('');
+    document.head.appendChild(st);
+  }
+  function finReal(v) {
+    const c = rt();
+    const items = finMenuItems();
+    if (!items.length) return finEmpty();
+    finCss();
+    const C = window.KiwiCost;
+    const [from, to] = finBounds(finPeriod);
+    const sales = finSales(v);
+    let cov = null;
+    try { cov = C && C.coverage ? C.coverage(sales, from, to) : null; } catch (_) { cov = null; }
+    const units = finUnits(sales, from, to);
+    const vat = !!(cov && cov.basis && cov.basis.mode === 'rate' && cov.basis.included);
+
+    const seg = `<div class="fin-seg" data-lens-demo role="group" aria-label="${esc(c.periodAria)}">` +
+      FIN_PERIODS.map((p) => `<button type="button" data-lens-item data-fin-period="${p}" class="${p === finPeriod ? 'on' : ''}" aria-pressed="${p === finPeriod}">${esc(c.periods[p])}</button>`).join('') +
+      `</div>`;
+
+    let pnl;
+    if (!cov || !(cov.revenue > 0)) {
+      pnl = `<div class="fin-pnl fin-card"><div class="fin-eyebrow"><span>${esc(c.pnl)}</span></div>` +
+        `<div class="fin-note-line" style="margin-top:0;">${esc(c.noSales)}</div></div>`;
+    } else {
+      const costPct = cov.netCosted > 0 ? (cov.cost / cov.netCosted) * 100 : null;
+      const notes = [];
+      if (cov.pctCosted != null && cov.pctCosted < 100) notes.push(c.partial(pct(cov.pctCosted)));
+      else if (cov.revenueCosted > 0) notes.push(c.full);
+      if (cov.pctDetailed != null && cov.pctDetailed < 100) notes.push(c.noDetail(pct(100 - cov.pctDetailed)));
+      notes.push(c.excl);
+      pnl = `<div class="fin-pnl fin-card">
+        <div class="fin-eyebrow"><span>${esc(c.pnl)}</span><span class="fin-eyebrow-sub">${esc(c.periods[finPeriod])}</span></div>
+        <div class="fin-pnl-rows">
+          <div class="fin-pnl-row"><span class="fin-pnl-l">${esc(c.sales)}</span><span class="fin-pnl-v">${cash(cov.revenue)}</span><span class="fin-pnl-p"></span><span></span></div>
+          <div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">${esc(c.costed(pct(cov.pctCosted)))}</span><span class="fin-pnl-v">${cash(cov.revenueCosted)}</span><span class="fin-pnl-p"></span><span></span></div>
+          ${vat ? `<div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">${esc(c.net)}</span><span class="fin-pnl-v">${cash(cov.netCosted)}</span><span class="fin-pnl-p">100 %</span><span></span></div>` : ''}
+          <div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">− ${esc(c.cost)}</span><span class="fin-pnl-v">${cov.revenueCosted > 0 ? cash(cov.cost) : '·'}</span><span class="fin-pnl-p">${pct(costPct)}</span><span></span></div>
+          <div class="fin-pnl-row fin-pnl-total"><span class="fin-pnl-l">= ${esc(c.margin)}</span><span class="fin-pnl-v">${cov.revenueCosted > 0 ? cash(cov.profit) : '·'}</span><span class="fin-pnl-p">${pct(cov.marginPct)}</span><span></span></div>
+        </div>
+        ${notes.map((n) => `<div class="fin-note-line">${esc(n)}</div>`).join('')}
+      </div>`;
+    }
+
+    const miss = (cov && cov.missing) || [];
+    const missing = `<div class="fin-card">
+      <div class="fin-eyebrow"><span>${esc(c.missingT)}</span>${miss.length ? `<span class="fin-eyebrow-sub">${esc(c.missingS)}</span>` : ''}</div>
+      ${miss.length
+        ? miss.slice(0, 6).map((m) => `<div class="fin-miss"><b>${esc(m.name || '·')}</b><span>${esc(c.missingRow(m.units, cash(m.revenue)))}</span></div>`).join('') +
+          `<button class="kb atlas" type="button" data-action="nav-menu" style="margin-top:14px;">${esc(c.cta)}</button>`
+        : `<div class="fin-note-line" style="margin-top:0;">${esc(cov && cov.revenue > 0 ? c.missingNone : c.noSales)}</div>`}
+    </div>`;
+
+    const rows = items.map((it) => {
+      let hit = null;
+      try { hit = C && C.of ? C.of({ kind: 'menu', id: it.id, name: it.name }) : null; } catch (_) { hit = null; }
+      const costMad = hit && hit.mad != null && hit.mad > 0 ? hit.mad : null;
+      let m = null;
+      try { m = C && C.marginOf ? C.marginOf(it.price, costMad) : null; } catch (_) { m = null; }
+      return { it, costMad, src: hit && hit.src, m, sold: units(it) };
+    }).sort((a, b) => (b.sold * (+b.it.price || 0)) - (a.sold * (+a.it.price || 0)) || String(a.it.name).localeCompare(String(b.it.name), 'fr'));
+    const products = `<div class="fin-card fin-products">
+      <div class="fin-eyebrow"><span>${esc(c.productsT)}</span><span class="fin-eyebrow-sub">${esc(c.productsS(items.length))}</span></div>
+      <div class="fin-tbl-wrap"><table class="fin-tbl">
+        <thead><tr><th>${esc(c.cols[0])}</th><th class="num">${esc(c.cols[1])}</th><th class="num">${esc(c.cols[2])}</th><th class="num">${esc(c.cols[3])}</th><th class="num">${esc(c.cols[4])}</th><th class="num">${esc(c.cols[5])}</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <td>${esc(r.it.name)}</td>
+          <td class="num">${+r.it.price > 0 ? cash(r.it.price) : '·'}</td>
+          <td class="num">${r.costMad != null ? `${cash(r.costMad)}${c.src[r.src] ? `<small>${esc(c.src[r.src])}</small>` : ''}` : `·<small>${esc(c.toCost)}</small>`}</td>
+          <td class="num">${r.m ? cash(r.m.profit) : '·'}</td>
+          <td class="num">${r.m ? pct(r.m.pct) : '·'}</td>
+          <td class="num">${r.sold}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+
+    return `<div class="fin-page">
+      <div class="fin-head">
+        <div>
+          <div class="fin-title">${esc(c.title)}</div>
+          <div class="fin-sub">${esc(c.sub(venueName(v)))}</div>
+        </div>
+        ${seg}
+      </div>
+      <div class="fin-real">${pnl}${missing}${products}</div>
+    </div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest && e.target.closest('[data-fin-period]');
+    if (!b || !pageActive) return;
+    const p = b.getAttribute('data-fin-period');
+    if (FIN_PERIODS.indexOf(p) < 0 || p === finPeriod) return;
+    finPeriod = p;
+    render();
+  });
+  /* Une vente, une fiche, un prix : la page ouverte suit. */
+  let finLiveBound = false;
+  function finBindLive() {
+    if (finLiveBound) return;
+    finLiveBound = true;
+    const again = () => { if (pageActive) { try { render(); } catch (_) {} } };
+    try { window.KiwiSales && window.KiwiSales.subscribe && window.KiwiSales.subscribe(again); } catch (_) {}
+    try { window.KiwiCost && window.KiwiCost.subscribe && window.KiwiCost.subscribe(again); } catch (_) {}
+    try { window.KiwiMenuStore && window.KiwiMenuStore.subscribe && window.KiwiMenuStore.subscribe(again); } catch (_) {}
   }
 
   function render() {
     const root = document.querySelector('[data-finance-root]');
     if (!root) return;
     const v = currentVenueId();
-    if (finShowReal(v)) { root.innerHTML = finEmpty(); return; }
+    if (finShowReal(v)) { finBindLive(); root.innerHTML = finReal(v); return; }
     root.innerHTML = `
       <div class="fin-page">
         <div class="fin-head">

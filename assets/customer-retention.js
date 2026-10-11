@@ -54,11 +54,12 @@
       tabs: { activity: 'Activité', groups: 'Groupes et offres', suggest: 'Suggestions', results: 'Résultats' },
       off: 'La fidélisation est désactivée', offText: 'Activez-la pour classer vos clients en groupes, choisir une offre par groupe et préparer les messages. Rien n’est envoyé sans votre accord.',
       enable: 'Activer la fidélisation', enabled: 'Fidélisation activée', disable: 'Désactiver',
-      group: { regular: 'Réguliers', less: 'Viennent moins souvent', inactive: 'Inactifs' },
-      groupOne: { regular: 'Régulier', less: 'Vient moins souvent', inactive: 'Inactif' },
+      group: { new: 'Première visite', regular: 'Réguliers', less: 'Viennent moins souvent', inactive: 'Inactifs' },
+      groupOne: { new: 'Première visite', regular: 'Régulier', less: 'Vient moins souvent', inactive: 'Inactif' },
       th: { name: 'Client', visits: 'Visites', last: 'Dernière visite', rhythm: 'Rythme habituel', spend: 'Dépensé', loyalty: 'Fidélité', group: 'Groupe' },
       days: function (d) { return d === 0 ? 'aujourd’hui' : 'il y a ' + d + ' j'; }, every: function (d) { return 'tous les ' + d + ' j'; }, none: '·',
       emptyBook: 'Aucun client identifié pour l’instant', emptyBookText: 'Attachez un client à une vente en caisse : ses visites apparaîtront ici.',
+      marginMeasured: function (m, c) { return 'Mesurée par Kiwi sur vos 30 derniers jours : ' + m + ' (sur ' + c + ' de vos ventes, celles dont le coût est connu).'; },
       th2: { regularDays: 'Régulier si venu depuis moins de', inactiveDays: 'Inactif après', rhythm: 'Vient moins souvent si l’absence dépasse', rhythmUnit: '× son rythme habituel', margin: 'Marge brute moyenne', marginUnit: '%', daysUnit: 'jours' },
       thresholdsTitle: 'Seuils des groupes', thresholdsSub: 'Vous décidez à partir de quand un client est régulier, moins assidu ou inactif.',
       offersTitle: 'Offre par groupe', offersSub: 'Une offre par groupe, avec ses limites. Elle est proposée dans les suggestions, jamais envoyée seule.',
@@ -89,11 +90,12 @@
       tabs: { activity: 'Activity', groups: 'Groups and offers', suggest: 'Suggestions', results: 'Results' },
       off: 'Customer retention is off', offText: 'Turn it on to sort your customers into groups, pick an offer per group and prepare messages. Nothing is sent without your approval.',
       enable: 'Turn on customer retention', enabled: 'Customer retention is on', disable: 'Turn off',
-      group: { regular: 'Regulars', less: 'Visiting less often', inactive: 'Inactive' },
-      groupOne: { regular: 'Regular', less: 'Visiting less often', inactive: 'Inactive' },
+      group: { new: 'First visit', regular: 'Regulars', less: 'Visiting less often', inactive: 'Inactive' },
+      groupOne: { new: 'First visit', regular: 'Regular', less: 'Visiting less often', inactive: 'Inactive' },
       th: { name: 'Customer', visits: 'Visits', last: 'Last visit', rhythm: 'Usual rhythm', spend: 'Spent', loyalty: 'Loyalty', group: 'Group' },
       days: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, every: function (d) { return 'every ' + d + 'd'; }, none: '·',
       emptyBook: 'No identified customers yet', emptyBookText: 'Attach a customer to a sale at the till: their visits will appear here.',
+      marginMeasured: function (m, c) { return 'Measured by Kiwi over your last 30 days: ' + m + ' (on ' + c + ' of your sales, those with a known cost).'; },
       th2: { regularDays: 'Regular if seen within', inactiveDays: 'Inactive after', rhythm: 'Visiting less often if the absence exceeds', rhythmUnit: '× their usual rhythm', margin: 'Average gross margin', marginUnit: '%', daysUnit: 'days' },
       thresholdsTitle: 'Group thresholds', thresholdsSub: 'You decide when a customer counts as regular, less frequent or inactive.',
       offersTitle: 'Offer per group', offersSub: 'One offer per group, with its limits. It is proposed in suggestions, never sent on its own.',
@@ -124,11 +126,12 @@
       tabs: { activity: 'النشاط', groups: 'الفئات والعروض', suggest: 'الاقتراحات', results: 'النتائج' },
       off: 'الاحتفاظ بالعملاء متوقف', offText: 'فعّله لتصنيف عملائك في فئات، واختيار عرض لكل فئة، وتحضير الرسائل. لا يُرسل شيء دون موافقتك.',
       enable: 'تفعيل الاحتفاظ بالعملاء', enabled: 'الاحتفاظ بالعملاء مفعّل', disable: 'إيقاف',
-      group: { regular: 'الدائمون', less: 'يأتون أقل', inactive: 'غير النشطين' },
-      groupOne: { regular: 'دائم', less: 'يأتي أقل', inactive: 'غير نشط' },
+      group: { new: 'الزيارة الأولى', regular: 'الدائمون', less: 'يأتون أقل', inactive: 'غير النشطين' },
+      groupOne: { new: 'الزيارة الأولى', regular: 'دائم', less: 'يأتي أقل', inactive: 'غير نشط' },
       th: { name: 'العميل', visits: 'الزيارات', last: 'آخر زيارة', rhythm: 'الإيقاع المعتاد', spend: 'الإنفاق', loyalty: 'الوفاء', group: 'الفئة' },
       days: function (d) { return d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, every: function (d) { return 'كل ' + d + ' ي'; }, none: '·',
       emptyBook: 'لا يوجد عملاء معرّفون بعد', emptyBookText: 'اربط عميلاً ببيع في الصندوق: ستظهر زياراته هنا.',
+      marginMeasured: function (m, c) { return 'قاسه Kiwi على آخر 30 يومًا: ' + m + ' (على ' + c + ' من مبيعاتك، تلك التي تُعرف تكلفتها).'; },
       th2: { regularDays: 'دائم إذا زار خلال', inactiveDays: 'غير نشط بعد', rhythm: 'يأتي أقل إذا تجاوز الغياب', rhythmUnit: '× إيقاعه المعتاد', margin: 'متوسط الهامش الإجمالي', marginUnit: '%', daysUnit: 'يوم' },
       thresholdsTitle: 'حدود الفئات', thresholdsSub: 'أنت من يحدد متى يكون العميل دائماً أو أقل حضوراً أو غير نشط.',
       offersTitle: 'عرض لكل فئة', offersSub: 'عرض واحد لكل فئة مع حدوده. يُقترح في الاقتراحات ولا يُرسل وحده أبداً.',
@@ -247,6 +250,11 @@
     var r = rhythmDays(c, now);
     if (r && (+c.visits || 0) >= 2 && d > Math.max(r * settings.rhythmFactor, 3)) return 'less';
     if (d > settings.regularDays) return 'less';
+    /* Une seule visite ne fait pas un habitué. « Régulier » se disait dès le
+       premier café ; c'est une première visite, sans offre ni relance tant
+       qu'elle est récente. Passé regularDays sans retour, elle rejoint « vient
+       moins souvent » comme avant. */
+    if ((+c.visits || 0) < 2) return 'new';
     return 'regular';
   }
   function avgBasket(c) { var v = +c.visits || 0; return v ? (+c.spend || 0) / v : 0; }
@@ -304,6 +312,7 @@
     '.cr-tbl .num{text-align:end;font-variant-numeric:tabular-nums;}',
     '.cr-muted{color:var(--n-500);}',
     '.cr-tag{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;}',
+    '.cr-tag.new{background:var(--n-100);color:var(--n-700);}',
     '.cr-tag.regular{background:var(--mint-soft);color:var(--atlas);}',
     '.cr-tag.less{background:color-mix(in srgb,#E6B84D 22%,transparent);color:#8A6210;}',
     '.cr-tag.inactive{background:color-mix(in srgb,#C0492F 14%,transparent);color:#C0492F;}',
@@ -353,6 +362,9 @@
     try { var v = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); return (v && v.name) || 'Kiwi'; } catch (_) { return 'Kiwi'; }
   }
   function loyaltyLabel(c) {
+    /* Pas de carte de fidélité active : « 0 / 10 » décrivait une carte que le
+       client n'a jamais eue. */
+    try { if (window.KiwiClients && KiwiClients.loyaltyOn && !KiwiClients.loyaltyOn()) return '·'; } catch (_) {}
     try {
       var cfg = window.KiwiClients && KiwiClients.config ? KiwiClients.config() : { model: 'amount' };
       if (cfg.model === 'amount') return fmt(c.points || 0) + ' pts';
@@ -379,15 +391,18 @@
     var data = (window.KiwiClientsDirectory && KiwiClientsDirectory.load) ? KiwiClientsDirectory.load() : { rows: [], real: isReal() };
     var doc = readDoc();
     var now = Date.now();
-    var rows = data.rows.map(function (c) {
-      var r = Object.assign({}, c);
-      r.lastSeenTs = +c.lastSeen || 0;
-      r.firstSeenTs = Number.isFinite(+c.firstSeen) && c.firstSeen !== Infinity ? now - (+c.firstSeen) * DAY : 0;
-      r.group = groupOf(r, doc.settings, now);
-      r.rhythm = rhythmDays(r, now);
-      r.since = daysSinceLast(r, now);
-      return r;
-    });
+    function buildRows() {
+      return data.rows.map(function (c) {
+        var r = Object.assign({}, c);
+        r.lastSeenTs = +c.lastSeen || 0;
+        r.firstSeenTs = Number.isFinite(+c.firstSeen) && c.firstSeen !== Infinity ? now - (+c.firstSeen) * DAY : 0;
+        r.group = groupOf(r, doc.settings, now);
+        r.rhythm = rhythmDays(r, now);
+        r.since = daysSinceLast(r, now);
+        return r;
+      });
+    }
+    var rows = buildRows();
     var byId = {}; rows.forEach(function (r) { byId[r.id] = r; });
 
     function offerLine(o) {
@@ -416,9 +431,12 @@
     }
 
     function activityHtml() {
-      var counts = { regular: 0, less: 0, inactive: 0 };
+      var counts = { new: 0, regular: 0, less: 0, inactive: 0 };
       rows.forEach(function (r) { if (r.group) counts[r.group]++; });
-      var kpis = '<div class="cr-kpis">' + GROUPS.map(function (g) {
+      /* Les offres restent par groupe (GROUPS) ; l'activité montre aussi les
+         premières visites. Une tuile vide n'apparaît pas pour elles. */
+      var shown = counts.new ? ['new'].concat(GROUPS) : GROUPS;
+      var kpis = '<div class="cr-kpis">' + shown.map(function (g) {
         return '<div class="cr-kpi" data-cr-kpi="' + g + '"><div class="l">' + esc(T.group[g]) + '</div><div class="v">' + fmt(counts[g]) + '</div></div>';
       }).join('') + '</div>';
       var list = rows.filter(function (r) { return r.group; }).sort(function (a, b) { return (b.since || 0) - (a.since || 0); });
@@ -441,6 +459,20 @@
     }
     function input(name, value, attrs) { return '<input name="' + name + '" value="' + esc(value) + '" ' + (attrs || 'type="number" inputmode="numeric" min="0"') + '>'; }
 
+    /* Le plafond des remises suggérées se règle sur une marge que le patron
+       tape (60 % par défaut). Kiwi la mesure déjà, comme la page Marges : on la
+       montre à côté du champ, sans jamais la recopier à sa place. */
+    function measuredMarginHtml() {
+      try {
+        var C = window.KiwiCost, S = window.KiwiSales;
+        if (!isReal() || !C || !C.coverage || !S || !S.list) return '';
+        var to = Date.now();
+        var cov = C.coverage(S.list(), to - 30 * DAY, to);
+        if (!cov || !(cov.revenueCosted > 0) || cov.marginPct == null) return '';
+        var p = function (n) { return (window.KiwiNumber && KiwiNumber.percent) ? KiwiNumber.percent(n, 1) : (Math.round(n * 10) / 10) + ' %'; };
+        return '<p class="cr-note">' + esc(T.marginMeasured(p(cov.marginPct), p(cov.pctCosted))) + '</p>';
+      } catch (_) { return ''; }
+    }
     function groupsHtml() {
       var s = doc.settings;
       var thresholds = '<div class="cr-card"><h3>' + esc(T.thresholdsTitle) + '</h3><p class="cr-sub">' + esc(T.thresholdsSub) + '</p><div class="cr-grid">' +
@@ -448,7 +480,7 @@
         field(T.th2.inactiveDays, input('inactiveDays', s.inactiveDays, 'type="number" inputmode="numeric" min="2" max="730"'), T.th2.daysUnit) +
         field(T.th2.rhythm, input('rhythmFactor', s.rhythmFactor, 'type="number" inputmode="decimal" min="1" max="5" step="0.1"'), T.th2.rhythmUnit) +
         field(T.th2.margin, input('marginPct', s.marginPct, 'type="number" inputmode="numeric" min="1" max="100"'), T.th2.marginUnit) +
-        '</div></div>';
+        '</div>' + measuredMarginHtml() + '</div>';
       var offers = '<div class="cr-card"><h3>' + esc(T.offersTitle) + '</h3><p class="cr-sub">' + esc(T.offersSub) + '</p>' + GROUPS.map(function (g) {
         var o = doc.offers[g];
         var p = function (k) { return g + '.' + k; };
@@ -602,6 +634,32 @@
       if (!cloud || !isReal()) return;
       Promise.resolve(cloud.pull(true)).then(function () { pulled = true; doc = readDoc(); rows.forEach(function (r) { r.group = groupOf(r, doc.settings, now); }); rerender(); }).catch(function () {});
     })();
+
+    /* LE CARNET SUIT LA PAGE OUVERTE.
+       La page lisait le carnet de CE navigateur, une fois, à l'ouverture. Un
+       client rattaché à une vente sur la caisse du comptoir n'y apparaissait
+       donc jamais : « Aucun client identifié pour l'instant », 0 régulier,
+       alors que le serveur le portait déjà avec sa visite. Comme l'annuaire
+       des clients : on relit le carnet partagé à l'ouverture, et chaque
+       changement repeint. Jamais sous la main du patron : pas pendant qu'un
+       champ a le focus, ni sur l'onglet des offres, dont le brouillon ne vit
+       que dans le formulaire. */
+    var offClients = null;
+    function refreshClients() {
+      if (!root || !document.body.contains(root)) { if (offClients) { offClients(); offClients = null; } return; }
+      var a = document.activeElement;
+      if (a && root.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+      if (state.tab === 'groups') return;
+      data = (window.KiwiClientsDirectory && KiwiClientsDirectory.load) ? KiwiClientsDirectory.load() : data;
+      now = Date.now();
+      rows = buildRows();
+      byId = {}; rows.forEach(function (r) { byId[r.id] = r; });
+      rerender();
+    }
+    if (window.KiwiClients && isReal()) {
+      if (KiwiClients.pull) { try { KiwiClients.pull(function (ch) { if (ch) refreshClients(); }); } catch (_) {} }
+      if (KiwiClients.subscribe) offClients = KiwiClients.subscribe(function () { refreshClients(); });
+    }
 
     /* Changing an offer's kind shows its own fields at once. The draft is
        kept on screen and only written when the owner presses Save. */

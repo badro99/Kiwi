@@ -6102,9 +6102,9 @@
       <div class="main-head" data-mode-section="vrap" hidden>
         <div class="main-title">À emporter<em>· vente au comptoir</em></div>
         <div class="vrap-meta">
-          <span id="vrap-cat-count">7 catégories</span>
+          <span id="vrap-cat-count"></span>
           <span class="dot-sep">·</span>
-          <span id="vrap-item-count">35 articles</span>
+          <span id="vrap-item-count"></span>
         </div>
       </div>
 
@@ -9471,8 +9471,9 @@
       ].join('');
       window.CaisseFx && window.CaisseFx.lens();
 
-      $('#vrap-item-count').textContent = `${menuItems.length} articles`;
-      $('#vrap-cat-count').textContent = `${cats.length - 1} catégories`;
+      // French: 0 and 1 take the singular.
+      $('#vrap-item-count').textContent = `${menuItems.length} ${menuItems.length > 1 ? 'articles' : 'article'}`;
+      $('#vrap-cat-count').textContent = `${cats.length - 1} ${cats.length - 1 > 1 ? 'catégories' : 'catégorie'}`;
     }
 
     /* ---------- Menu line-art · forest strokes, mint-tint fills, 64×64.
@@ -9630,7 +9631,20 @@
     /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
        composé la sienne. On le dit, et on dit où la composer · même geste que
        le plan de salle (emptyPlanHTML). */
+    /* …but a menu whose every dish is marked 86 IS composed. Saying
+       « pas encore composée » there sent the cashier to rebuild a menu that
+       exists, while the dishes were only out of stock. */
+    function unavailableMenuCount() {
+      return (carteState.formulaItems || []).filter(m => m && m.avail === false && !m.formulaOnly && !m.archived).length;
+    }
     function emptyMenuHTML() {
+      const off = unavailableMenuCount();
+      if (off) return '' +
+        '<div class="plan-empty" style="grid-column:1 / -1;"><div class="plan-empty-card">' +
+          '<div class="plan-empty-ico"><i data-lucide="utensils-crossed"></i></div>' +
+          '<div class="plan-empty-title">' + (off === 1 ? 'Le seul article de la carte est indisponible' : 'Les ' + off + ' articles de la carte sont indisponibles') + '</div>' +
+          '<div class="plan-empty-sub">Marqués 86 depuis le tableau de bord · <b>Menu</b>. Ils reviendront ici dès qu’ils seront remis en vente.</div>' +
+        '</div></div>';
       return '' +
         /* Rendered inside the product grid: span every column, or the card is
            squeezed into one tile and wraps word by word. */
@@ -18691,6 +18705,22 @@
     setInterval(() => {
       if (!document.hidden) { try { fetchCarte(false); } catch (_) {} }
     }, 6000);
+
+    /* Les fiches techniques arrivent par un autre document, `costs`, que rien
+       n'ouvrait avant la PREMIÈRE vente : c'est inventory-consumption.js qui le
+       lisait, au moment d'encaisser. Une caisse sans copie locale (tablette
+       neuve, stockage vidé) vendait donc ce premier article avec une copie
+       vide, et ne consommait aucun ingrédient. Tant qu'il n'est pas ouvert, le
+       relevé toutes les 30 s de caisse-refresh.js (KiwiCloudDoc.pullAll) ne le
+       connaît pas non plus. On l'ouvre au démarrage et à chaque appairage :
+       get() lit la copie serveur une fois, puis pullAll() la tient à jour. */
+    function bindRecipes() {
+      try { window.KiwiCost && window.KiwiCost.store && window.KiwiCost.store.get(); } catch (_) {}
+    }
+    /* cost.js est différé : pendant l'analyse il n'existe pas encore. */
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindRecipes);
+    else setTimeout(bindRecipes, 0);
+    document.addEventListener('kiwi-paired', bindRecipes);
 
     /* ===========================================================
        ÉCRAN CUISINE · KDS (kitchen display, full-screen)

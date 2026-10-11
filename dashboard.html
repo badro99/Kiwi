@@ -6191,7 +6191,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=2" defer></script>
-<script src="assets/i18n.js?v=19" defer></script>
+<script src="assets/i18n.js?v=20" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6238,7 +6238,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=16" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=56" defer></script>
+<script src="assets/dateRange.js?v=57" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6262,7 +6262,7 @@
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=5">
-  <script defer src="assets/entitlements-v2.js?v=1"></script>
+  <script defer src="assets/entitlements-v2.js?v=2"></script>
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
@@ -6275,7 +6275,7 @@
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js?v=1"></script>
 <script src="assets/liquid-lens.js?v=3" defer></script>
-<script src="assets/onboarding.js?v=2085" defer></script>
+<script src="assets/onboarding.js?v=2087" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -6362,7 +6362,7 @@
 <script src="assets/clients-store.js?v=10" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 <script src="assets/clients-directory.js?v=18" defer fetchpriority="low"></script>
-<script src="assets/customer-retention.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/customer-retention.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=26" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
@@ -6386,10 +6386,10 @@
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/stock-identity.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/menu-nutrition.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/restaurant-recipes.js?v=8" defer fetchpriority="low"></script>
+<script src="assets/restaurant-recipes.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/menu-i18n.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/kiwi-select.js?v=2" defer></script>
-<script src="assets/restaurant-menu-workspace.js?v=89" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=91" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=13" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -6403,7 +6403,7 @@
 <script src="assets/month-report-ui.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=27" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=68" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=70" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
@@ -6414,7 +6414,7 @@
 <script src="assets/cash-sessions.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=20" defer fetchpriority="low"></script>
-<script src="assets/finance.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/finance.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/conformite.js?v=4" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js?v=2" defer fetchpriority="low"></script>
@@ -6443,7 +6443,7 @@
 <script src="assets/trade-workspaces.js?v=4" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=20" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=23" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=13" defer fetchpriority="low"></script>

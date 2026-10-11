@@ -35,7 +35,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=18',
+  '/assets/booking.js?v=20',
   '/assets/booking.css?v=13',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
@@ -83,7 +83,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
-  '/assets/i18n.js?v=19',
+  '/assets/i18n.js?v=20',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -105,7 +105,7 @@ var SHELL = [
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
-  '/assets/reservations.js?v=20',
+  '/assets/reservations.js?v=23',
   '/assets/pressing-ops.js?v=8',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=7',
@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=56',
+  '/assets/dateRange.js?v=57',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=3',
   '/assets/pages.js?v=12',
@@ -198,7 +198,7 @@ var SHELL = [
   '/assets/invoice.js?v=13',
   '/assets/merchant-config.js?v=277',
   '/assets/entitlements.css?v=5',
-  '/assets/entitlements-v2.js?v=1',
+  '/assets/entitlements-v2.js?v=2',
   '/assets/staff-roles.js?v=1',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=68',
+  '/assets/stock.js?v=70',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -248,10 +248,10 @@ var SHELL = [
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=18',
-  '/assets/customer-retention.js?v=4',
+  '/assets/customer-retention.js?v=5',
   '/assets/menu-catalog.js?v=26',
   '/assets/stock-identity.js?v=2',
-  '/assets/restaurant-recipes.js?v=8',
+  '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
   '/assets/employee-live.js?v=552',
   '/assets/employee-planning.js?v=13',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=296',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=89',
+  '/assets/restaurant-menu-workspace.js?v=91',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

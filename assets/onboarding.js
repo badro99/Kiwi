@@ -473,7 +473,20 @@
         </div>
       </div>`;
   }
+  /* « Vous êtes combien à travailler ici ? 3 · vous compris », puis quatre
+     lignes de codes : la liste était figée à propriétaire + gérant + deux
+     caissiers, quel que soit le nombre donné une étape plus tôt. Tant que
+     personne n'a rien saisi dans les lignes de l'équipe, on les ajuste au
+     nombre annoncé (quatre lignes au plus, « + Ajouter » fait le reste). */
+  function fitPinsToTeam() {
+    const rest = S.pins.slice(1);
+    if (rest.some((p) => (p.name || '').trim() || (p.code || '').trim())) return;
+    const others = Math.max(0, Math.min(3, (+S.teamSize || 1) - 1));
+    const roles = others >= 2 ? ['manager'].concat(Array(others - 1).fill('staff')) : Array(others).fill('staff');
+    S.pins = [S.pins[0] || { role: 'owner', name: '', code: '' }].concat(roles.map((role) => ({ role, name: '', code: '' })));
+  }
   function stepAccess() {
+    fitPinsToTeam();
     return {
       body: `
         <div class="kob-anim">
@@ -690,6 +703,13 @@
     if (autoEnter) { clearTimeout(autoEnter); autoEnter = null; }
     const name = S.ownerName.trim();
     close();
+    /* The identity gate answered "not onboarded" when this page loaded. Tell the
+     * subscription gate (assets/entitlements-v2.js) the answer has changed, or a
+     * pending store keeps writing into a server that refuses every save while
+     * the screen says "saved". Sent here, on entry, so its panel never covers
+     * the "your space is ready" card. */
+    try { if (window.KiwiIdentity && KiwiIdentity.state) KiwiIdentity.state.onboarded = true; } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi-onboarded')); } catch (_) {}
     try {
       if (window.__kiwiLock && window.__kiwiLock.reveal) window.__kiwiLock.reveal();
       else {

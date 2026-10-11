@@ -4567,8 +4567,8 @@
     ar: (n) => `${n} منتج تحت العتبة`,
   };
   const STOCK_OK_STR = {
-    fr: (n) => `Rien à recommander : ${n} article${n > 1 ? 's sont' : ' est'} au-dessus de son seuil configuré.`,
-    en: (n) => `Nothing to reorder: ${n} item${n > 1 ? 's are' : ' is'} above its configured threshold.`,
+    fr: (n) => `Rien à recommander : ${n > 1 ? `${n} articles sont au-dessus de leur seuil configuré` : `${n} article est au-dessus de son seuil configuré`}.`,
+    en: (n) => `Nothing to reorder: ${n > 1 ? `${n} items are above their configured thresholds` : `${n} item is above its configured threshold`}.`,
     ar: (n) => `لا شيء لإعادة طلبه: ${n} منتج فوق العتبة المحددة.`,
   };
   const STOCK_NO_THRESHOLDS = {

@@ -116,6 +116,28 @@ ok('no italics and no em dash in user copy', () => {
   assert.doesNotMatch(src, /font-style:\s*italic/);
   assert.doesNotMatch(src, /—/);
 });
+ok('one visit does not make a regular: a recent first visit is its own group', () => {
+  assert.equal(R.groupOf({ visits: 1, history: visitsEvery(1, 1, 0) }, S, NOW), 'new');
+  assert.equal(R.groupOf({ visits: 2, history: visitsEvery(7, 2, 0) }, S, NOW), 'regular');
+  // never an offer, never a suggestion for it: offers stay keyed to the three groups
+  assert.match(src, /var GROUPS = \['regular', 'less', 'inactive'\];/);
+  assert.match(src, /return r\.group === 'less' \|\| r\.group === 'inactive';/);
+  assert.match(src, /group: \{ new: 'Première visite',/);
+});
+ok('no loyalty card on: the column says so instead of « 0 / 10 »', () => {
+  assert.match(src, /if \(window\.KiwiClients && KiwiClients\.loyaltyOn && !KiwiClients\.loyaltyOn\(\)\) return '·';/);
+});
+ok('the open page follows the shared customer book, never under the owner\'s hand', () => {
+  assert.match(src, /KiwiClients\.pull\(function \(ch\) \{ if \(ch\) refreshClients\(\); \}\)/);
+  assert.match(src, /offClients = KiwiClients\.subscribe\(function \(\) \{ refreshClients\(\); \}\)/);
+  assert.match(src, /if \(a && root\.contains\(a\) && \/\^\(INPUT\|TEXTAREA\|SELECT\)\$\/\.test\(a\.tagName\)\) return;/);
+  assert.match(src, /if \(state\.tab === 'groups'\) return;/);
+});
+ok('the margin that caps suggested discounts shows what Kiwi measured, without overwriting the owner\'s figure', () => {
+  assert.match(src, /var cov = C\.coverage\(S\.list\(\), to - 30 \* DAY, to\);/);
+  assert.match(src, /'<\/div>' \+ measuredMarginHtml\(\) \+ '<\/div>'/);
+  assert.doesNotMatch(src, /marginPct\s*=\s*cov\./);
+});
 
 console.log(`\ncustomer-retention: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

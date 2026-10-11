@@ -114,7 +114,147 @@ Covered by `tools/dashboard-truth-test.mjs`.
 
 Covered by `tools/team-truth-test.mjs`.
 
+## Réservations & RDV: done
+
+Run end to end on a fresh store: template, online booking switched on, hours
+set, a TEST KIWI booking from the public page in a Europe/Berlin browser, a
+staff booking from the dashboard, then both cancelled through the product
+(staff lifecycle and the customer's manage link).
+
+| # | Finding | Status |
+|---|---|---|
+| R1 | **The public page showed slots on the visitor's clock.** From Berlin or Paris, an 11:00 table in Casablanca read 12:00, and the first slot of a 09:00 opening read 10:00. The customer would arrive an hour late. | **Fixed.** Labels, slot grouping, the date strip and the default day all use Africa/Casablanca, the zone the API computes in. Verified: 09:00 first slot and "lundi 12 octobre à 11:00", stored as 10:00Z. |
+| R2 | **The dashboard did the same.** The agenda listed that booking at 12:00, and a time typed in the staff form landed an hour off. | **Fixed.** Labels, the day boundary, the header date and the form's datetime-local are read and written in venue time. Verified: "lun. 12 oct., 11:00"; a staff 16:15 stored as 15:15Z. |
+| R3 | **No staff booking could be saved once opening hours were set.** `KiwiHours.periodsOn()` returns `{periods, exception}`; the check read it as an array, found no length, and answered "Ce créneau vient d'être pris", whatever the agenda held. | **Fixed.** Verified: Tuesday 11:00 on an empty agenda was refused before, a booking today at 16:15 saves now. |
+| R4 | Online booking with no hours set: the public link offered fourteen empty days, while the dashboard said "Réservation en ligne ouverte". | **Fixed.** The API reports `hoursSet`; the page says "Cet établissement n'a pas encore publié ses horaires de réservation", and the badge reads "En ligne · aucun créneau, horaires à renseigner". |
+| R5 | The open page never saw an online booking arrive. | **Fixed.** It re-reads the server every 30 s while on screen and visible. Verified: the booking and its cancellation both reached the open page without a click. |
+| R6 | "Occupation 0 % · 5 équipe & ressources": a ratio of nothing to nothing. | **Fixed** outside hotels: "Personnes attendues", with "16 places en même temps". |
+| R7 | The staff form opened on a blank "·" service when there was only one, and priced a free table "0 MAD". | **Fixed.** A single service is preselected; price 0 reads "Sans frais", as on the public page. |
+| R8 | Two "Annuler" buttons in one form: one closes it, one cancels the booking. | **Fixed.** The second reads "Annuler la réservation". |
+| R9 | "1 services", "1 tables". | **Fixed.** Singular forms. |
+
+Covered by `tools/booking-truth-test.mjs`.
+
+## Installation: done
+
+| # | Finding | Status |
+|---|---|---|
+| O1 | **A store that finished setup without a reload kept writing into a refusal.** The subscription gate reads identity once, at load, when the account was not yet onboarded. Finishing the wizard in the same page left it in "installation" mode: a pending store's saves went out, the server refused every one (401), and the screen said "Paramètres enregistrés", then "En ligne" for a booking link that answered "booking-closed". | **Fixed.** Entering the dashboard from the wizard tells the gate. Verified on a fresh signup: the "Prêt à ouvrir" pill appears without a reload, and the first edit opens the panel instead of a false save. |
+| O2 | "Vous êtes combien ? 3", then the codes step offered the same rows whatever the number. | **Fixed.** One row per person announced (up to four), never erasing a row already filled. |
+
+Covered by `tools/onboarding-truth-test.mjs`.
+
+## Menu & modificateurs: done
+
+Run end to end: a section, an item at 14,50, an options group "Lait" (oat
+milk +3), attached; sold at a freshly paired till for 17,50 with the option;
+price changed to 16 and the item marked 86, then put back on sale from
+"Alertes 86", both with the till left open.
+
+What held: the menu reached the server (`menus`), the till showed the item
+and its options, the cart and the stored sale line carried "(Lait d'avoine)"
+at 17,50, the price change and the 86 reached the open till without a
+reload, and Performance read the one real sale (17,50, profit "·" until a
+recipe gives a cost).
+
+| # | Finding | Status |
+|---|---|---|
+| M1 | **With its only item marked 86, the till said "Carte pas encore composée · Ajoutez vos catégories et vos plats".** It sent the cashier off to rebuild a menu that exists. | **Fixed.** "Le seul article de la carte est indisponible" (or "Les N articles…"), "Marqués 86 depuis le tableau de bord · Menu". A truly empty menu keeps its old message. |
+| M2 | "1 catégories · 1 articles" on the till, and "7 catégories · 35 articles" hard-coded until the menu rendered. "1 articles", "1 tickets", "0 remboursements", "1 articles vendus" on the dashboard. | **Fixed.** French singular for 0 and 1, from a `key1` rule in the workspace's `ui()`. |
+| M3 | "14,5 MAD" on the dashboard against "14,50 MAD" on the till. | **Fixed.** Two decimals when there are any, none for a round price. |
+| M4 | With a section created, the empty menu still said "Créez une section" and offered to create another. | **Fixed.** "Vos sections sont prêtes. Ajoutez votre premier article." with "Ajouter un article". |
+| M5 | The button that opens a group's full editor (choices, surcharges) read "Renommer". | **Fixed.** "Modifier les choix". |
+
+Covered by `tools/menu-truth-test.mjs`.
+
+## Stock & approvisionnement: done
+
+Run end to end: an empty restaurant store, then one article "Lait TEST"
+(10 L at 9 MAD/L, par 6, reorder at 4) and a recipe for "Café crème TEST"
+(0,15 L, then 0,2 L). Café crèmes were sold at an open till, and the edit
+to 0,2 L was made while the till stayed open.
+
+What held: the article and the recipe reached the server (`stock`,
+`recipes`, `costs`). Once the till held the recipe, a sale wrote one
+`inventory_movements` row against the milk (−200 milli, at 9 MAD/L), and the
+Stock page read 9,8 L, valued at 88 MAD. The edited recipe reached the open
+till without a reload.
+
+| # | Finding | Status |
+|---|---|---|
+| S1 | **A café crème sold after its recipe was saved took no milk out of stock.** The movement landed on the dish itself (`it_2`, −1). The till first opened the recipe document (`costs`) at its first sale, from inside `inventory-consumption.js`. A till with no local copy (a new tablet, cleared storage) sold that first dish against an empty copy, and `caisse-refresh.js`'s 30 s `pullAll()` didn't know the document existed until then. | **Fixed.** The till opens it at startup and at pairing; the 30 s refresh keeps it current from there. A sale within 30 s of a recipe edit still uses the previous version. |
+| S2 | **Theoretical usage counted one café crème out of three.** `salesFor` matched `line.id`, but till lines carry `itemId`. A dish sold with an option ("Café crème (Lait entier)") then failed the name test too. The recipe's "vendus" count read low the same way. | **Fixed.** It matches on `itemId`. The name is a fallback only for lines that carry no id. |
+| S3 | **"Ratio coût matière : 15,7 %" for 3,6 % real.** The week's recipe cost was scaled to a month (×4,33), divided by 4 for display, then compared with 30 days of real sales. | **Fixed.** For a real store: the week's cost against the same week's sales. Measured after the fix: 5 MAD, 10,9 % (3 × 0,2 L × 9 MAD against 49,50 MAD). |
+| S4 | "Standard restauration marocaine : 28-32 %", an unsourced "Moroccan standard". | **Fixed.** The tooltip says what is computed, then "Repère courant en restauration : 28 à 32 %". |
+| S5 | With nothing tracked: "0 MAD · ratio 0,0 %" against real sales, "Tous les niveaux sont sains", a four-week trend chart with no history behind it, and a food cost that moved ±0,5 % on a timer. | **Fixed.** "·" with "Aucun coût matière connu", "Aucun article suivi". No trend chart and no timer for a real store. |
+| S6 | "paiement T+15 à T+30 sur la majorité" under the supplier count, for a merchant with no suppliers. "1 articles en stock", "1 articles suivis · 0 fournisseurs actifs". | **Fixed.** Invented terms removed, and the singular used for 0 and 1 (FR/EN/AR). |
+| S7 | Home: "2 articles sont au-dessus de son seuil". | **Fixed.** "de leur seuil". |
+
+Covered by `tools/stock-truth-test.mjs`.
+
+## Marges & budget: done
+
+Run on the same store: one product with a complete recipe (1,80 MAD), three
+sales totalling 49,50 MAD.
+
+| # | Finding | Status |
+|---|---|---|
+| F1 | **For a real store the page was only a waiting screen, and its one number was wrong.** "Chiffrez votre carte, et vos marges se calculent · 1 produit sur 1 reste à chiffrer", while the Home margin tile showed 89 % for that same product. It counted only costs typed by hand and ignored recipes. When everything was costed it said "Vos marges apparaissent sur le tableau de bord" and still showed nothing. | **Fixed.** A real page on the same engine as Home (`KiwiCost.coverage`, Home's business-day bounds). Period: today, 7 days or 30 days. Sales, the costed share, material cost, gross margin, what to cost first (ranked by revenue), and each product's price, cost (with its source), unit margin and units sold. Measured: 49,50 MAD, 100 % costed, 5,40 MAD, 44,10 MAD (89,1 %). |
+| F2 | The page's notes say what the margin covers: the costed share, sales with no item detail, "Avant loyer, salaires et charges : Kiwi ne les connaît pas". | **New.** No budget, break-even or targets for a real store: Kiwi knows none of them. |
+
+Covered by `tools/cost-margin-test.js` (renders the page against the real
+`cost.js`).
+
+## Fidélisation: done
+
+Run end to end: the module switched on, a customer "TEST KIWI Client"
+created at the till with consent, and two café crèmes sold to them, the
+second with the dashboard page left open.
+
+| # | Finding | Status |
+|---|---|---|
+| L1 | **The page never showed a customer attached at the till.** It read this browser's copy of the customer book once, when it opened, and never pulled or subscribed. With the till at the counter: "Aucun client identifié pour l'instant", 0 réguliers, while the server already held the customer and their visit. | **Fixed.** Like the Clients directory, it pulls the shared book on open and repaints on each change (the book re-reads the server every 15 s). It never repaints while a field has focus or on the offers tab, whose draft lives only in the form. Measured: the second sale showed up on the open page with no reload. |
+| L2 | **"Régulier" after a single visit.** | **Fixed.** A recent first visit is its own group, "Première visite", with its own tile shown only when it has someone in it. It gets no offer or suggestion. After `regularDays` without a return it becomes "vient moins souvent", as before. |
+| L3 | **"Fidélité 0 / 10" with the loyalty card off.** It described a card the customer never had. | **Fixed.** "·" when no loyalty programme is on. |
+| L4 | Suggested discounts are capped by "Marge brute moyenne", a figure the owner types (60 % by default) while Kiwi measures the real one. | **Improved.** The measured 30-day margin and the share of sales it covers are shown under the field, never copied into it. |
+
+Covered by `tools/customer-retention-test.mjs`.
+
 ## Open, logged for their own pass
+
+- **A dish sold without a recipe** writes a −1 movement on the dish's own
+  id (`it_2`), an id no stock article carries. It is right for retail, where
+  the product is the stock article, and noise for a restaurant dish.
+- **Small food costs round to whole dirhams** on the Stock page ("5 MAD"
+  for 5,40). The Marges page shows 5,40.
+- **"Récompense fidélité" offer** can be chosen while the loyalty card is
+  off.
+- **Sidebar "Marges & budget".** A real store has margins but no budget.
+  Rename it, or build budgets (fixed costs, a monthly target) for real.
+
+- **Till opening float.** "Fond d'ouverture" opens with 500 MAD
+  preselected. A till opened without counting records 500 MAD nobody
+  counted, which the cash reconciliation then expects. For the till pass.
+- **86 items vanish from the till grid** when others remain. Common in POS,
+  but a greyed "86" tile would let the cashier tell the customer.
+- **Item price field** is `type=number` without `step`, so 14.5 is an
+  HTML step mismatch (saved fine here, since the form does not use native
+  validation).
+
+- **What a pending store may save.** `entitlements-v2.js` says configuring
+  (a dish, a room) is not held back during installation, but the server
+  refuses every `store_docs` write from a pending store. The wizard's own
+  team roster and floor plan are therefore kept on the device, marked
+  unsynced, and only reach the server after activation. Measured: they did,
+  on the same browser. On another device they are missing until then.
+  A product decision, not a bug to patch quietly.
+- **Hotel occupancy tile.** Still a formula nobody chose. Out of R6's scope.
+- **Opening-hours status.** On a closed Sunday it reads "Ouvre à 09:00"
+  without naming Monday.
+- **Booking copy.** The public form says "rendez-vous" for a table.
+- **Booking settings checkboxes** have the accessible name "on".
+- **Bookings can be hard-deleted** from the staff form ("Supprimer"),
+  alongside the cancel lifecycle.
 
 - **Programmatic `<select>` changes.** `kiwi-select.js` repaints only on a
   `change` event. Any code that sets `select.value` without dispatching one
@@ -131,9 +271,12 @@ Covered by `tools/team-truth-test.mjs`.
 ## Inventory · next features
 
 Dashboard: ~~Accueil~~ · ~~Commandes~~ · ~~Rapport journalier~~ · ~~Clients~~ ·
-Fidélisation · Terminaux · Conformité · ~~Équipe~~ · ~~Planning~~ · Réservations & RDV ·
-Menu & modificateurs · Stock & approvisionnement · Marges & budget.
+~~Fidélisation~~ · Terminaux* · Conformité* · ~~Équipe~~ · ~~Planning~~ · ~~Réservations & RDV~~ ·
+~~Menu & modificateurs~~ · ~~Stock & approvisionnement~~ · ~~Marges & budget~~.
+
+\* Operator modules, off for a new store (`merchant-config.js`): a merchant
+never reaches them until the console switches them on. Audit them that way.
 
 Other surfaces: the till (restaurant and the 14 `pos-*` verticals) ·
-kiwi-serveur · kiwi-cuisine · employee app · booking.html · kiwi-order.html ·
+kiwi-serveur · kiwi-cuisine · employee app · ~~booking.html~~ · kiwi-order.html ·
 kiwi-report.html · support/tickets.

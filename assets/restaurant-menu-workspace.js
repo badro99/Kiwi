@@ -4,7 +4,8 @@
   let tab='menu', filter='all', subFilter=null, query='', hoursPeriod=null, openItemMenu=null, nutriFilter='all'; // subFilter : sous-catégorie active ('__none' = non classés)
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const cash=(n)=>(window.KiwiNumber?.format(+n||0,{maximumFractionDigits:2}) ?? new Intl.NumberFormat(document.documentElement?.lang==='en'?'en-GB':'fr-FR',{maximumFractionDigits:2}).format(+n||0))+' MAD';
+  // 16 → "16 MAD", 14.5 → "14,50 MAD" (never "14,5"), as on the till.
+  const cash=(n)=>{const v=+n||0,o={minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2};return (window.KiwiNumber?.format(v,o) ?? new Intl.NumberFormat(document.documentElement?.lang==='en'?'en-GB':'fr-FR',o).format(v))+' MAD';};
   const venue=()=>window.KiwiVenue?.getCurrentVenueData?.()?.id||window.KiwiVenue?.getVenue?.()||null;
   const isRestaurant=()=>{const KV=window.KiwiVenue,v=KV?.getCurrentVenueData?.()||{},t=String(KV?.getVenueType?.()||v.type||v.subtype||'').toLowerCase();return ['restaurant','cafe','café','restauration'].includes(t);};
   const S=()=>window.KiwiMenuStore;
@@ -68,6 +69,7 @@
       addSubCat: '+ Subcategory',
       classifyCount: 'Classify {n} item{s}',
       rename: 'Rename',
+      editGroup: 'Edit choices',
       delete: 'Delete',
       withoutSubcat: 'Uncategorized',
       noSection: 'Uncategorized',
@@ -101,6 +103,8 @@
       emptyMenuTitle: 'Your menu is empty',
       emptyMenuDesc: 'Create a section, then add your first item. No demo content will be added.',
       createSectionBtn: 'Create a section',
+      emptyItemsDesc: 'Your sections are ready. Add your first item. No demo content will be added.',
+      addFirstItemBtn: 'Add an item',
       noItemMatch: 'No items match your search.',
       modAndOpts: 'Modifiers & options',
       newGroupBtn: '+ New option group',
@@ -178,8 +182,10 @@
       offMenuReadout: 'Removed, renamed or unmatched item',
       ledgerGross: 'Gross sales',
       ledgerTickets: '{n} tickets',
+      ledgerTickets1: '{n} ticket',
       ledgerRefunds: 'Refunds',
       ledgerRefundCount: '{n} refunds',
+      ledgerRefundCount1: '{n} refund',
       ledgerNet: 'Net revenue',
       ledgerNetSub: 'gross sales minus refunds',
       ledgerEligible: 'Recipe-eligible revenue',
@@ -198,6 +204,7 @@
       completeRecipesForProfitDesc: 'Sales are received. Dish costs are needed to compare their real profit.',
       analyzedRevenue: 'Menu item revenue',
       itemsSold: 'items sold',
+      itemSold: 'item sold',
       grossProfitCalc: 'Calculated gross profit',
       recipesSoldAndCosted: '{n} recipe(s) sold and costed',
       costCoverage: 'Cost coverage',
@@ -407,6 +414,7 @@
       addSubCat: '+ تصنيف فرعي',
       classifyCount: 'تصنيف {n} منتج',
       rename: 'إعادة تسمية',
+      editGroup: 'تعديل الخيارات',
       delete: 'حذف',
       withoutSubcat: 'بدون تصنيف فرعي',
       noSection: 'بدون قسم',
@@ -440,6 +448,8 @@
       emptyMenuTitle: 'قائمتك فارغة',
       emptyMenuDesc: 'أنشئ قسماً ثم أضف أول منتج. لن يتم إضافة أي محتوى تجريبي.',
       createSectionBtn: 'إنشاء قسم',
+      emptyItemsDesc: 'أقسامك جاهزة. أضف أول منتج. لن يتم إضافة أي محتوى تجريبي.',
+      addFirstItemBtn: 'إضافة منتج',
       noItemMatch: 'لا توجد منتجات مطابقة.',
       modAndOpts: 'المعدلات والخيارات',
       newGroupBtn: '+ مجموعة خيارات جديدة',
@@ -746,6 +756,7 @@
       addSubCat: '+ Sous-catégorie',
       classifyCount: 'Classer {n} article{s}',
       rename: 'Renommer',
+      editGroup: 'Modifier les choix',
       delete: 'Supprimer',
       withoutSubcat: 'Sans sous-catégorie',
       noSection: 'Sans section',
@@ -779,6 +790,8 @@
       emptyMenuTitle: 'Votre menu est vide',
       emptyMenuDesc: 'Créez une section, puis ajoutez votre premier article. Aucun contenu de démonstration ne sera ajouté.',
       createSectionBtn: 'Créer une section',
+      emptyItemsDesc: 'Vos sections sont prêtes. Ajoutez votre premier article. Aucun contenu de démonstration ne sera ajouté.',
+      addFirstItemBtn: 'Ajouter un article',
       noItemMatch: 'Aucun article ne correspond.',
       modAndOpts: 'Modificateurs & options',
       newGroupBtn: '+ Nouveau groupe d’options',
@@ -856,8 +869,10 @@
       offMenuReadout: 'Plat retiré, renommé ou non reconnu',
       ledgerGross: 'Ventes brutes',
       ledgerTickets: '{n} tickets',
+      ledgerTickets1: '{n} ticket',
       ledgerRefunds: 'Remboursements',
       ledgerRefundCount: '{n} remboursements',
+      ledgerRefundCount1: '{n} remboursement',
       ledgerNet: 'Chiffre d’affaires net',
       ledgerNetSub: 'ventes brutes moins remboursements',
       ledgerEligible: 'CA analysable en recettes',
@@ -876,6 +891,7 @@
       completeRecipesForProfitDesc: 'Les ventes sont bien reçues. Il manque le coût de chaque plat pour comparer leur profit réel.',
       analyzedRevenue: 'CA des plats analysés',
       itemsSold: 'articles vendus',
+      itemSold: 'article vendu',
       grossProfitCalc: 'Profit brut calculé',
       recipesSoldAndCosted: '{n} recette(s) vendue(s) et chiffrée(s)',
       costCoverage: 'Couverture des coûts',
@@ -1039,6 +1055,12 @@
   };
   function ui(key, params) {
     const l = lang();
+    /* "1 tickets", "0 remboursements": a count takes the singular key
+       (`key1`) when one exists. French counts 0 and 1 as singular. */
+    if (params && typeof params.n === 'number' && (l === 'fr' ? Math.abs(params.n) < 2 : params.n === 1)) {
+      const one = (UI_I18N[l] && UI_I18N[l][key + '1']) || (l === 'fr' && UI_I18N.fr[key + '1']);
+      if (one) key = key + '1';
+    }
     let text = (UI_I18N[l] && UI_I18N[l][key]) || (UI_I18N.fr && UI_I18N.fr[key]) || key;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -1204,19 +1226,19 @@
     const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;
     const gName=t(g.name);
     const choicesHtml=(g.choices||[]).map(c=>`<span class="mi-group-opt-pill">${esc(c.emoji||'')} ${esc(t(c.name))}${c.price?` <span class="price">+${cash(c.price)}</span>`:''}</span>`).join('')||esc(ui('noChoices'));
-    return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('rename'))}</button><button class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
+    return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('editGroup'))}</button><button class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
   }
   function menuPanel(){
     searchStyle();
     const d=D(),list=shownItems(),selected=filter==='all'?null:cat(filter),selectedIndex=selected?d.cats.findIndex(c=>c.id===selected.id):-1;
     const cats=`<div class="mi-cat-bar"><div class="mi-pill-row mi-cat-pills"><button class="mi-pill${filter==='all'?' on':''}" data-action="rmw-cat-filter" data-cat="all">${esc(ui('all'))}</button>${d.cats.map(c=>`<button class="mi-pill${filter===c.id?' on':''}" data-action="rmw-cat-filter" data-cat="${c.id}">${esc(t(c.name))}</button>`).join('')}</div>
-      <div class="mi-cat-bar-acts"><span class="catalog-section-name">${esc(selected?t(selected.name):ui('all'))} · ${list.length} ${esc(ui('articles'))}</span><div class="catalog-primary-actions">
+      <div class="mi-cat-bar-acts"><span class="catalog-section-name">${esc(selected?t(selected.name):ui('all'))} · ${esc(countLabel(list.length))}</span><div class="catalog-primary-actions">
       <button class="btn-slim primary" data-action="rmw-item-add">${ic('plus')} ${esc(ui('newItem').replace(/^\+\s*/,''))}</button>
       <button class="catalog-more" data-action="rmw-section-actions" aria-label="${esc(catalogText('sectionActions','Actions des sections'))}">${catalogIcon('tune')}</button></div></div></div>`;
-    const body=d.items.length?(list.length?gridHtml(list):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:44px 20px;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(ui('noItemMatch'))}</div></div>`):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:48px 20px;"><div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;"><svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">${esc(ui('emptyMenuTitle'))}</h3><p style="font-size:13px;color:var(--n-500);margin:0 0 18px;line-height:1.55;max-width:380px;text-align:center;">${esc(ui('emptyMenuDesc'))}</p><button class="btn-slim primary" data-action="rmw-cat-add">${esc(ui('createSectionBtn'))}</button></div>`;
+    const body=d.items.length?(list.length?gridHtml(list):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:44px 20px;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(ui('noItemMatch'))}</div></div>`):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:48px 20px;"><div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;"><svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">${esc(ui('emptyMenuTitle'))}</h3><p style="font-size:13px;color:var(--n-500);margin:0 0 18px;line-height:1.55;max-width:380px;text-align:center;">${esc(ui((d.cats||[]).length?'emptyItemsDesc':'emptyMenuDesc'))}</p>${(d.cats||[]).length?`<button class="btn-slim primary" data-action="rmw-item-add">${esc(ui('addFirstItemBtn'))}</button>`:`<button class="btn-slim primary" data-action="rmw-cat-add">${esc(ui('createSectionBtn'))}</button>`}</div>`;
     const searching=!!query.trim(),resultLabel=searching?`${list.length} / ${d.items.length}`:`${d.items.length}`;
     const searchIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
-    return `<section class="mi-section"><div class="mi-toolbar rmw-search-toolbar"><label class="rmw-menu-search${searching?' has-query':''}"><span class="rmw-menu-search-icon">${searchIcon}</span><input type="search" value="${esc(query)}" placeholder="${esc(ui('searchPlaceholder'))}" aria-label="${esc(ui('searchPlaceholder'))}" autocomplete="off" data-rmw-search/><span class="rmw-menu-search-count" aria-live="polite"><strong>${resultLabel}</strong><small>${catalogLabel(searching?'results':'items',searching?'résultats':'articles')}</small></span></label></div>${cats}${subChips()}${body}</section><section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('modAndOpts'))}</h3><button class="btn-slim primary" data-action="rmw-group-add">${ic('plus')} ${esc(ui('newGroupBtn').replace(/^\+\s*/,''))}</button></div><div class="mi-groups-grid">${d.opts.map(groupCard).join('')||`<div class="rmw-empty">${esc(ui('noOptGroups'))}</div>`}</div></section>`;
+    return `<section class="mi-section"><div class="mi-toolbar rmw-search-toolbar"><label class="rmw-menu-search${searching?' has-query':''}"><span class="rmw-menu-search-icon">${searchIcon}</span><input type="search" value="${esc(query)}" placeholder="${esc(ui('searchPlaceholder'))}" aria-label="${esc(ui('searchPlaceholder'))}" autocomplete="off" data-rmw-search/><span class="rmw-menu-search-count" aria-live="polite"><strong>${resultLabel}</strong><small>${(searching?list.length:d.items.length)>1?catalogLabel(searching?'results':'items',searching?'résultats':'articles'):catalogLabel(searching?'result':'item',searching?'résultat':'article')}</small></span></label></div>${cats}${subChips()}${body}</section><section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('modAndOpts'))}</h3><button class="btn-slim primary" data-action="rmw-group-add">${ic('plus')} ${esc(ui('newGroupBtn').replace(/^\+\s*/,''))}</button></div><div class="mi-groups-grid">${d.opts.map(groupCard).join('')||`<div class="rmw-empty">${esc(ui('noOptGroups'))}</div>`}</div></section>`;
   }
   function stationsPanel(){
     const d=D(),kid=S().kitchenId(venue());
@@ -1438,7 +1460,7 @@
     const offRows=p.offMenu.map(o=>`<tr class="rmw-perf-off"><td><b>${esc(o.name)}</b><small>${esc(o.free?ui('freeAmountSection'):ui('offMenuSection'))}</small></td><td>${(window.KiwiNumber?.format(o.qty, {}) ?? o.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(o.revenue)}</td><td>·</td><td>·</td><td>·</td><td>${esc(o.free?ui('freeAmountReadout'):ui('offMenuReadout'))}</td></tr>`).join('');
     if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
-    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui('itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
+    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui(Math.abs(p.items.reduce((n,x)=>n+x.qty,0))<2&&lang()==='fr'||(p.items.reduce((n,x)=>n+x.qty,0))===1?'itemSold':'itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
   const SERVICE_WINDOWS=[
     {id:'matin',name:'Matin',from:5*60,to:11*60},

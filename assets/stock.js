@@ -32,7 +32,7 @@
     fr: {
       breadcrumb: 'Stock & approvisionnement',
       title: 'Stock & approvisionnement',
-      sub: (n, sup, val) => `${n} articles suivis · ${sup} fournisseurs actifs · valeur stock ${val}`,
+      sub: (n, sup, val) => `${n} ${n > 1 ? 'articles suivis' : 'article suivi'} · ${sup} ${sup > 1 ? 'fournisseurs actifs' : 'fournisseur actif'} · valeur stock ${val}`,
       btnScan: 'Scanner une facture',
       btnCount: 'Inventaire physique',
       btnAdd: 'Nouvel article',
@@ -47,14 +47,17 @@
       kpiAlertL: 'EN RUPTURE / FAIBLE',
       kpiCostL: 'COÛT MATIÈRES · SEMAINE',
       kpiDelivL: 'PROCHAINE LIVRAISON',
-      kpiValueSub: (n) => `${n} articles en stock`,
+      kpiValueSub: (n) => `${n} ${n > 1 ? 'articles' : 'article'} en stock`,
       kpiAlertSub: (out, low) => `${out} en rupture · ${low} à recommander`,
       kpiAlertOk: 'Tous les niveaux sont sains',
+      kpiAlertNone: 'Aucun article suivi',
+      kpiCostNone: 'Aucun coût matière connu',
       kpiCostSub: (r) => `Ratio coût matière : ${r}`,
-      kpiCostTip: 'Standard restauration marocaine : 28-32 %. Au-delà, votre marge brute est sous pression.',
+      kpiCostTip: 'Coût matière théorique de la semaine (fiches techniques × ventes) rapporté aux ventes de la même semaine. Repère courant en restauration : 28 à 32 %.',
       // Tab 1 alerts
       alertsT: 'À traiter maintenant',
       alertsEmpty: 'Aucune alerte · tous vos niveaux de stock sont sains.',
+      alertsNone: 'Aucun article suivi pour l’instant · ajoutez vos matières premières pour recevoir des alertes.',
       statusOut: 'RUPTURE TOTALE',
       statusLow: 'STOCK FAIBLE',
       lastDeliv: 'Dernière livraison',
@@ -96,7 +99,7 @@
       varTip: (used, theo, cost) => `Utilisé ${used} vs ${theo} théorique (recettes). Impact : ${cost}.`,
       // Tab 3
       supTitle: 'Fournisseurs',
-      supSub: (n) => `${n} fournisseurs actifs · paiement T+15 à T+30 sur la majorité`,
+      supSub: (n) => `${n} ${n > 1 ? 'fournisseurs actifs' : 'fournisseur actif'}`,
       supStatActive: 'FOURNISSEURS ACTIFS',
       supStatSpend: 'DÉPENSES CE MOIS',
       supStatPriceTrend: 'ÉVOLUTION PRIX MOYENNE',
@@ -366,7 +369,7 @@
     en: {
       breadcrumb: 'Stock & procurement',
       title: 'Stock & procurement',
-      sub: (n, sup, val) => `${n} tracked items · ${sup} active suppliers · stock value ${val}`,
+      sub: (n, sup, val) => `${n} tracked ${n === 1 ? 'item' : 'items'} · ${sup} active ${sup === 1 ? 'supplier' : 'suppliers'} · stock value ${val}`,
       btnScan: 'Scan invoice',
       btnCount: 'Physical count',
       btnAdd: 'New item',
@@ -383,10 +386,13 @@
       kpiValueSub: (n) => `${n} items in stock`,
       kpiAlertSub: (out, low) => `${out} out · ${low} to reorder`,
       kpiAlertOk: 'All levels healthy',
+      kpiAlertNone: 'No item tracked',
+      kpiCostNone: 'No ingredient cost known',
       kpiCostSub: (r) => `Cost ratio: ${r}`,
-      kpiCostTip: 'Moroccan F&B standard: 28-32%. Above that, your gross margin is under pressure.',
+      kpiCostTip: 'This week\'s theoretical food cost (recipes × sales) against the same week\'s sales. Common restaurant benchmark: 28 to 32%.',
       alertsT: 'Handle now',
       alertsEmpty: 'No alerts · all stock levels healthy.',
+      alertsNone: 'No item tracked yet · add your ingredients to receive alerts.',
       statusOut: 'OUT OF STOCK', statusLow: 'LOW STOCK',
       lastDeliv: 'Last delivery', supplier: 'Supplier',
       impactCost: 'Estimated impact cost', perDayMissed: '/day lost revenue',
@@ -416,7 +422,7 @@
       tblFoot: (n, val, ok, low, out) => `${n} items · Total value: ${val} · ${ok} OK · ${low} low · ${out} out`,
       varTip: (used, theo, cost) => `Used ${used} vs ${theo} theoretical (recipes). Impact: ${cost}.`,
       supTitle: 'Suppliers',
-      supSub: (n) => `${n} active suppliers · payment T+15 to T+30 on most`,
+      supSub: (n) => `${n} active ${n === 1 ? 'supplier' : 'suppliers'}`,
       supStatActive: 'ACTIVE SUPPLIERS', supStatSpend: 'SPEND THIS MONTH', supStatPriceTrend: 'AVG PRICE CHANGE',
       colSupCat: 'CATEGORY', colSupSpend: 'SPEND / MONTH', colSupPrice: 'LATEST PRICE',
       colSupDeliv: 'DELIVERIES', colSupRate: 'RATING',
@@ -680,10 +686,13 @@
       kpiValueSub: (n) => `${n} منتجًا في المخزون`,
       kpiAlertSub: (out, low) => `${out} نافد · ${low} للطلب`,
       kpiAlertOk: 'جميع المستويات صحية',
+      kpiAlertNone: 'لا يوجد منتج متابع',
+      kpiCostNone: 'لا توجد تكلفة مواد معروفة',
       kpiCostSub: (r) => `نسبة تكلفة المواد: ${r}`,
-      kpiCostTip: 'المعيار في المطاعم المغربية: 28-32%. ما فوق ذلك، هامشك الإجمالي تحت الضغط.',
+      kpiCostTip: 'تكلفة المواد النظرية لهذا الأسبوع (البطاقات التقنية × المبيعات) مقارنة بمبيعات الأسبوع نفسه. مرجع شائع في المطاعم: 28 إلى 32%.',
       alertsT: 'يجب التعامل معه الآن',
       alertsEmpty: 'لا توجد تنبيهات · جميع مستويات المخزون صحية.',
+      alertsNone: 'لا يوجد منتج متابع بعد · أضف موادك الأولية لتلقي التنبيهات.',
       statusOut: 'نفد المخزون', statusLow: 'مخزون منخفض',
       lastDeliv: 'آخر تسليم', supplier: 'المورد',
       impactCost: 'تكلفة التأثير المقدرة', perDayMissed: '/يوم خسارة',
@@ -713,7 +722,7 @@
       tblFoot: (n, val, ok, low, out) => `${n} منتج · القيمة الإجمالية: ${val} · ${ok} OK · ${low} منخفض · ${out} نفد`,
       varTip: (used, theo, cost) => `مستخدم ${used} مقابل ${theo} نظري (وصفات). التأثير: ${cost}.`,
       supTitle: 'الموردون',
-      supSub: (n) => `${n} موردًا نشطًا · الدفع T+15 إلى T+30 للأغلبية`,
+      supSub: (n) => `${n} موردًا نشطًا`,
       supStatActive: 'الموردون النشطون', supStatSpend: 'الإنفاق هذا الشهر', supStatPriceTrend: 'متوسط تغير الأسعار',
       colSupCat: 'الفئة', colSupSpend: 'الإنفاق / شهر', colSupPrice: 'آخر سعر',
       colSupDeliv: 'التسليمات', colSupRate: 'التقييم',
@@ -1791,6 +1800,15 @@
    * si on ne les a pas — première semaine, navigateur neuf qui n'a pas fini de
    * rapatrier le flux — on rend null : la ligne du ratio disparaît au lieu de
    * s'inventer un dénominateur. */
+  function weeklyRevenue() {
+    try {
+      const to = Date.now();
+      const t = window.KiwiSales && window.KiwiSales.totals
+        && window.KiwiSales.totals(currentVenueId(), to - 7 * 864e5, to);
+      const rev = t && +t.revenue;
+      return rev > 0 ? rev : null;
+    } catch (_) { return null; }
+  }
   const VENUE_REVENUE = { cafeAtlas: 825000, maisonMansour: 358000, spaBahia: 269000, fusion: 1452000 };
   function monthlyRevenue() {
     if (stShowReal()) {
@@ -2035,16 +2053,27 @@
     const ok  = items.filter(it => statusOf(it) === 'ok');
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
-    const costWeek = costMonth / 4;
-    const mRev = monthlyRevenue();
-    const ratio = mRev > 0 ? (costMonth / mRev) * 100 : null;
+    /* Chez un vrai commerçant, un coût nul n'est pas un coût bas : c'est
+       qu'aucun article ne porte encore de consommation chiffrée. « 0 MAD ·
+       ratio 0,0 % » s'affichait face à de vraies ventes. */
+    const costKnown = !stShowReal() || costMonth > 0;
+    /* Chez un vrai commerçant, coût et ventes sur la MÊME semaine. L'ancien
+       calcul extrapolait la semaine à un mois (× 4,33), la redivisait par 4
+       pour l'afficher, puis la comparait aux ventes RÉELLES de 30 jours : un
+       commerce ouvert depuis huit jours lisait 15,7 % pour 3,6 % réels. */
+    const costWeek = !costKnown ? null : stShowReal() ? costMonth / 4.33 : costMonth / 4;
+    const wRev = stShowReal() ? weeklyRevenue() : null;
+    const mRev = stShowReal() ? null : monthlyRevenue();
+    const ratio = !costKnown ? null
+      : stShowReal() ? (wRev > 0 ? (costWeek / wRev) * 100 : null)
+      : (mRev > 0 ? (costMonth / mRev) * 100 : null);
     const ratioClass = ratio == null ? '' : ratio < 30 ? 'ok' : ratio < 35 ? '' : 'warn';
 
     // Next delivery — pick the supplier with the soonest scheduled day
     const nextDelivery = computeNextDelivery();
 
-    // Mock 4-week trend bars
-    const trendBars = [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
+    // Demo only: no stock-value history is recorded, so a real store draws no trend.
+    const trendBars = stShowReal() ? '' : [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
 
     // Alerts sorted: out first, then low (by daysOfStock asc), then tierLow
     return `
@@ -2100,7 +2129,7 @@
             <div style="width:28px; height:28px; border-radius:8px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center;">
               <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
             </div>
-            <span style="font-weight:500; color:var(--ink);">${esc(t('alertsEmpty'))}</span>
+            <span style="font-weight:500; color:var(--ink);">${esc(t(items.length ? 'alertsEmpty' : 'alertsNone'))}</span>
           </div>` :
             alerts.map(renderAlertCard).join('')}
         </div>
@@ -2132,18 +2161,18 @@
           <div class="st-kpi-l">${esc(t('kpiValueL'))}<span class="st-kpi-ico">${svg('wallet', 14)}</span></div>
           <div class="st-kpi-v">${esc(fmtMad(totalVal))}</div>
           <div class="st-kpi-sub">${esc(t('kpiValueSub', items.length))}</div>
-          <div class="st-kpi-trend" aria-hidden="true">${trendBars}</div>
+          ${trendBars ? `<div class="st-kpi-trend" aria-hidden="true">${trendBars}</div>` : ''}
         </div>
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${alertColor}">${svg('alertTriangle', 14)}</span></div>
           <div class="st-kpi-v ${alertColor}">${alertCount}</div>
-          <div class="st-kpi-sub">${esc(alertCount === 0 ? t('kpiAlertOk') : t('kpiAlertSub', out.length, low.length + tierLow.length))}</div>
+          <div class="st-kpi-sub">${esc(alertCount === 0 ? t(items.length ? 'kpiAlertOk' : 'kpiAlertNone') : t('kpiAlertSub', out.length, low.length + tierLow.length))}</div>
         </div>
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiCostL'))}<span class="st-kpi-ico">${svg('receipt', 14)}</span></div>
-          <div class="st-kpi-v" data-stock-live-foodcost>${esc(fmtMad(costWeek))}</div>
+          <div class="st-kpi-v" data-stock-live-foodcost>${costWeek == null ? '·' : esc(fmtMad(costWeek))}</div>
           <div class="st-kpi-sub st-kpi-tip">
-            <span class="${ratioClass === 'ok' ? '' : ratioClass === 'warn' ? '' : ''}" style="color: var(--${ratioClass === 'ok' ? 'success' : ratioClass === 'warn' ? 'warning' : 'n-600'}); font-weight: 600;">${ratio == null ? '' : esc(t('kpiCostSub', fmtPct(ratio, 1).replace('+', '')))}</span>
+            <span class="${ratioClass === 'ok' ? '' : ratioClass === 'warn' ? '' : ''}" style="color: var(--${ratioClass === 'ok' ? 'success' : ratioClass === 'warn' ? 'warning' : 'n-600'}); font-weight: 600;">${ratio == null ? (costWeek == null ? esc(t('kpiCostNone')) : '') : esc(t('kpiCostSub', fmtPct(ratio, 1).replace('+', '')))}</span>
             ${svg('info', 11)}
             <div class="st-tt">${esc(t('kpiCostTip'))}</div>
           </div>
@@ -2409,6 +2438,9 @@
   }
 
   function tickFoodCost() {
+    /* A real store's cost does not wobble on a timer: the figure moves when
+       its stock or its sales do, and render() repaints it then. */
+    if (stShowReal()) return;
     if (!stPageActive || stCurrentTab !== 'overview') return;
     const el = document.querySelector('[data-stock-live-foodcost]');
     if (!el) return;

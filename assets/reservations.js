@@ -18,7 +18,7 @@
       today: "Aujourd'hui", upcoming: 'À venir', needs: 'À confirmer', occupancy: 'Occupation',
       add: 'Nouvelle réservation', share: 'Lien de réservation', settings: 'Configurer',
       all: 'Toutes', confirmed: 'Confirmées', requested: 'À confirmer', completed: 'Terminées',
-      emptyTitle: 'Votre agenda est prêt', emptyBody: 'Ajoutez un service et une ressource, puis ouvrez les réservations en ligne.', stepService: 'Un service', stepResource: 'Une ressource', stepOnline: 'Réservations en ligne',
+      emptyTitle: 'Préparez votre agenda', emptyBody: 'Ajoutez un service et une ressource, puis ouvrez les réservations en ligne.', stepService: 'Un service', stepResource: 'Une ressource', stepOnline: 'Réservations en ligne',
       setup: 'Configurer les réservations', noService: 'Aucun service actif', noResource: 'Aucune ressource active',
       client: 'Client', phone: 'Téléphone', email: 'E-mail', service: 'Service', resource: 'Ressource',
       anyResource: 'Première disponibilité', start: 'Date et heure', guests: 'Personnes', note: 'Note interne',
@@ -39,21 +39,21 @@
       requestedStatus: 'À confirmer', confirmedStatus: 'Confirmée', checked_inStatus: 'Client arrivé',
       completedStatus: 'Terminée', cancelledStatus: 'Annulée', no_showStatus: 'Absent',
       sourcePublic: 'En ligne', sourceStaff: 'Équipe', sourceImport: 'Importée',
-      todayEmpty: "Aucune réservation aujourd'hui", onlineOff: 'Réservation en ligne fermée', onlineOn: 'Réservation en ligne ouverte'
+      todayEmpty: "Aucune réservation aujourd'hui", onlineOff: 'Réservation en ligne fermée', onlineOn: 'Réservation en ligne ouverte', onlineNoHours: 'En ligne · aucun créneau, horaires à renseigner', guestsToday: 'Personnes attendues', placesAtOnce: 'places en même temps', free: 'Sans frais', cancelBooking: 'Annuler la réservation'
     },
     en: {
       title: 'Bookings', subtitle: 'A clear diary connected to the real work of your venue.', today: 'Today', upcoming: 'Upcoming', needs: 'To confirm', occupancy: 'Occupancy',
       add: 'New booking', share: 'Booking link', settings: 'Configure', all: 'All', confirmed: 'Confirmed', requested: 'To confirm', completed: 'Completed',
-      emptyTitle: 'Your diary is ready', emptyBody: 'Add a service and a resource, then open online booking.', stepService: 'A service', stepResource: 'A resource', stepOnline: 'Online booking', setup: 'Set up bookings', noService: 'No active service', noResource: 'No active resource',
+      emptyTitle: 'Set up your diary', emptyBody: 'Add a service and a resource, then open online booking.', stepService: 'A service', stepResource: 'A resource', stepOnline: 'Online booking', setup: 'Set up bookings', noService: 'No active service', noResource: 'No active resource',
       client: 'Customer', phone: 'Phone', email: 'Email', service: 'Service', resource: 'Resource', anyResource: 'First available', start: 'Date and time', guests: 'Guests', note: 'Internal note',
       save: 'Save', cancel: 'Cancel', edit: 'Edit', confirm: 'Confirm', checkin: 'Check in', complete: 'Complete', noShow: 'No-show', cancelled: 'Cancelled', conflict: 'That slot was just taken. Choose another time.', invalid: 'Check the required fields.', saved: 'Booking saved',
       setupTitle: 'Booking settings', publicLabel: 'Accept online bookings', notice: 'Minimum notice', window: 'Bookable for', cancelDelay: 'Cancellation deadline', direct: 'Instant confirmation', minutes: 'minutes', days: 'days', hours: 'hours', businessHours: 'Availability follows the venue opening hours.',
       services: 'Services', resources: 'Team & resources', addService: 'Add service', addResource: 'Add resource', name: 'Name', duration: 'Duration', price: 'Price', deposit: 'Deposit', kind: 'Type', active: 'Visible online', person: 'Team member', room: 'Room / space', table: 'Table', capacity: 'Capacity',
       linkCopied: 'Link copied', linkOff: 'Turn on online booking before sharing the link.', linkTitle: 'Your booking link', linkBody: 'This link uses the same availability and bookings as this dashboard.', copy: 'Copy link', openLink: 'Open', settingsSaved: 'Settings saved', overview: 'Diary', configuration: 'Configuration', past: 'Past', status: 'Status', unavailable: 'Configure at least one active service and resource.', delete: 'Delete',
-      requestedStatus: 'To confirm', confirmedStatus: 'Confirmed', checked_inStatus: 'Checked in', completedStatus: 'Completed', cancelledStatus: 'Cancelled', no_showStatus: 'No-show', sourcePublic: 'Online', sourceStaff: 'Team', sourceImport: 'Imported', todayEmpty: 'No bookings today', onlineOff: 'Online booking closed', onlineOn: 'Online booking open'
+      requestedStatus: 'To confirm', confirmedStatus: 'Confirmed', checked_inStatus: 'Checked in', completedStatus: 'Completed', cancelledStatus: 'Cancelled', no_showStatus: 'No-show', sourcePublic: 'Online', sourceStaff: 'Team', sourceImport: 'Imported', todayEmpty: 'No bookings today', onlineOff: 'Online booking closed', onlineOn: 'Online booking open', onlineNoHours: 'Online · no slots, opening hours missing', guestsToday: 'Guests expected', placesAtOnce: 'places at a time', free: 'Free', cancelBooking: 'Cancel booking'
     },
     ar: {
-      title: 'الحجوزات', subtitle: 'جدول واضح مرتبط بالعمل الفعلي للمؤسسة.', today: 'اليوم', upcoming: 'القادمة', needs: 'بانتظار التأكيد', occupancy: 'نسبة الإشغال', add: 'حجز جديد', share: 'رابط الحجز', settings: 'الإعدادات', all: 'الكل', confirmed: 'المؤكدة', requested: 'بانتظار التأكيد', completed: 'المنتهية', emptyTitle: 'جدول الحجوزات جاهز', emptyBody: 'أضف خدمة ومورداً ثم فعّل الحجز عبر الإنترنت.', stepService: 'خدمة', stepResource: 'مورد', stepOnline: 'الحجز عبر الإنترنت', setup: 'إعداد الحجوزات', noService: 'لا توجد خدمة مفعّلة', noResource: 'لا يوجد مورد مفعّل', client: 'العميل', phone: 'الهاتف', email: 'البريد الإلكتروني', service: 'الخدمة', resource: 'المورد', anyResource: 'أول موعد متاح', start: 'التاريخ والوقت', guests: 'عدد الأشخاص', note: 'ملاحظة داخلية', save: 'حفظ', cancel: 'إلغاء', edit: 'تعديل', confirm: 'تأكيد', checkin: 'وصل العميل', complete: 'إنهاء', noShow: 'لم يحضر', cancelled: 'ملغى', conflict: 'تم حجز هذا الموعد للتو. اختر وقتاً آخر.', invalid: 'تحقق من الحقول المطلوبة.', saved: 'تم حفظ الحجز', setupTitle: 'إعدادات الحجز', publicLabel: 'قبول الحجوزات عبر الإنترنت', notice: 'الحد الأدنى للإشعار', window: 'فترة الحجز المتاحة', cancelDelay: 'مهلة الإلغاء', direct: 'تأكيد فوري', minutes: 'دقيقة', days: 'يوماً', hours: 'ساعات', businessHours: 'تتبع المواعيد ساعات عمل المؤسسة.', services: 'الخدمات', resources: 'الفريق والموارد', addService: 'إضافة خدمة', addResource: 'إضافة مورد', name: 'الاسم', duration: 'المدة', price: 'السعر', deposit: 'العربون', kind: 'النوع', active: 'ظاهر على الإنترنت', person: 'عضو من الفريق', room: 'قاعة أو غرفة', table: 'طاولة', capacity: 'السعة', linkCopied: 'تم نسخ الرابط', linkOff: 'فعّل الحجز عبر الإنترنت قبل مشاركة الرابط.', linkTitle: 'رابط الحجز الخاص بك', linkBody: 'يستخدم هذا الرابط نفس المواعيد والحجوزات الموجودة في لوحة التحكم.', copy: 'نسخ الرابط', openLink: 'فتح', settingsSaved: 'تم حفظ الإعدادات', overview: 'الجدول', configuration: 'الإعدادات', past: 'السابقة', status: 'الحالة', unavailable: 'أضف خدمة ومورداً مفعّلين على الأقل.', delete: 'حذف', requestedStatus: 'بانتظار التأكيد', confirmedStatus: 'مؤكد', checked_inStatus: 'وصل العميل', completedStatus: 'منتهٍ', cancelledStatus: 'ملغى', no_showStatus: 'لم يحضر', sourcePublic: 'عبر الإنترنت', sourceStaff: 'الفريق', sourceImport: 'مستوردة', todayEmpty: 'لا توجد حجوزات اليوم', onlineOff: 'الحجز عبر الإنترنت مغلق', onlineOn: 'الحجز عبر الإنترنت مفتوح'
+      title: 'الحجوزات', subtitle: 'جدول واضح مرتبط بالعمل الفعلي للمؤسسة.', today: 'اليوم', upcoming: 'القادمة', needs: 'بانتظار التأكيد', occupancy: 'نسبة الإشغال', add: 'حجز جديد', share: 'رابط الحجز', settings: 'الإعدادات', all: 'الكل', confirmed: 'المؤكدة', requested: 'بانتظار التأكيد', completed: 'المنتهية', emptyTitle: 'جهّز جدول الحجوزات', emptyBody: 'أضف خدمة ومورداً ثم فعّل الحجز عبر الإنترنت.', stepService: 'خدمة', stepResource: 'مورد', stepOnline: 'الحجز عبر الإنترنت', setup: 'إعداد الحجوزات', noService: 'لا توجد خدمة مفعّلة', noResource: 'لا يوجد مورد مفعّل', client: 'العميل', phone: 'الهاتف', email: 'البريد الإلكتروني', service: 'الخدمة', resource: 'المورد', anyResource: 'أول موعد متاح', start: 'التاريخ والوقت', guests: 'عدد الأشخاص', note: 'ملاحظة داخلية', save: 'حفظ', cancel: 'إلغاء', edit: 'تعديل', confirm: 'تأكيد', checkin: 'وصل العميل', complete: 'إنهاء', noShow: 'لم يحضر', cancelled: 'ملغى', conflict: 'تم حجز هذا الموعد للتو. اختر وقتاً آخر.', invalid: 'تحقق من الحقول المطلوبة.', saved: 'تم حفظ الحجز', setupTitle: 'إعدادات الحجز', publicLabel: 'قبول الحجوزات عبر الإنترنت', notice: 'الحد الأدنى للإشعار', window: 'فترة الحجز المتاحة', cancelDelay: 'مهلة الإلغاء', direct: 'تأكيد فوري', minutes: 'دقيقة', days: 'يوماً', hours: 'ساعات', businessHours: 'تتبع المواعيد ساعات عمل المؤسسة.', services: 'الخدمات', resources: 'الفريق والموارد', addService: 'إضافة خدمة', addResource: 'إضافة مورد', name: 'الاسم', duration: 'المدة', price: 'السعر', deposit: 'العربون', kind: 'النوع', active: 'ظاهر على الإنترنت', person: 'عضو من الفريق', room: 'قاعة أو غرفة', table: 'طاولة', capacity: 'السعة', linkCopied: 'تم نسخ الرابط', linkOff: 'فعّل الحجز عبر الإنترنت قبل مشاركة الرابط.', linkTitle: 'رابط الحجز الخاص بك', linkBody: 'يستخدم هذا الرابط نفس المواعيد والحجوزات الموجودة في لوحة التحكم.', copy: 'نسخ الرابط', openLink: 'فتح', settingsSaved: 'تم حفظ الإعدادات', overview: 'الجدول', configuration: 'الإعدادات', past: 'السابقة', status: 'الحالة', unavailable: 'أضف خدمة ومورداً مفعّلين على الأقل.', delete: 'حذف', requestedStatus: 'بانتظار التأكيد', confirmedStatus: 'مؤكد', checked_inStatus: 'وصل العميل', completedStatus: 'منتهٍ', cancelledStatus: 'ملغى', no_showStatus: 'لم يحضر', sourcePublic: 'عبر الإنترنت', sourceStaff: 'الفريق', sourceImport: 'مستوردة', todayEmpty: 'لا توجد حجوزات اليوم', onlineOff: 'الحجز عبر الإنترنت مغلق', onlineOn: 'الحجز عبر الإنترنت مفتوح', onlineNoHours: 'مفتوح · لا مواعيد، ساعات العمل غير محددة', guestsToday: 'الضيوف المنتظرون', placesAtOnce: 'مكاناً في آن واحد', free: 'بدون رسوم', cancelBooking: 'إلغاء الحجز'
     }
   };
 
@@ -61,7 +61,7 @@
     fr: {
       title: 'Démarrer avec un modèle restaurant', body: 'Ajoutez une base prête à adapter. Vos services et vos tables actuels restent intacts.',
       use: 'Ajouter ce modèle', added: 'Modèle ajouté. Vérifiez les détails puis enregistrez.', already: 'Ce modèle est déjà dans votre configuration.',
-      services: 'services', tables: 'tables', seats: 'couverts',
+      services: 'services', tables: 'tables', seats: 'couverts', service1: 'service', table1: 'table', seat1: 'couvert',
       floorTitle: 'Mon plan de salle', floorBody: 'Reprend automatiquement les tables et capacités déjà dessinées.',
       hoursReady: 'Horaires d’ouverture reliés', hoursMissing: 'Horaires à configurer', teamReady: 'Équipe reliée', teamMissing: 'Planning équipe à compléter',
       staffing: "Adapter les créneaux au planning de l’équipe", tablesPerStaff: 'Tables par membre en salle',
@@ -74,7 +74,7 @@
     en: {
       title: 'Start with a restaurant template', body: 'Add a ready-to-edit foundation. Your current services and tables stay intact.',
       use: 'Add this template', added: 'Template added. Review the details, then save.', already: 'This template is already in your configuration.',
-      services: 'services', tables: 'tables', seats: 'seats',
+      services: 'services', tables: 'tables', seats: 'seats', service1: 'service', table1: 'table', seat1: 'seat',
       floorTitle: 'My floor plan', floorBody: 'Automatically uses the tables and capacities already drawn.',
       hoursReady: 'Opening hours connected', hoursMissing: 'Opening hours to configure', teamReady: 'Team connected', teamMissing: 'Team schedule to complete',
       staffing: 'Adapt slots to the team schedule', tablesPerStaff: 'Tables per floor team member',
@@ -87,7 +87,7 @@
     ar: {
       title: 'ابدأ بنموذج جاهز للمطعم', body: 'أضف إعداداً جاهزاً للتعديل. لن يتم حذف خدماتك أو طاولاتك الحالية.',
       use: 'إضافة هذا النموذج', added: 'تمت إضافة النموذج. راجع التفاصيل ثم احفظ.', already: 'هذا النموذج موجود بالفعل في إعداداتك.',
-      services: 'خدمات', tables: 'طاولات', seats: 'مقاعد',
+      services: 'خدمات', tables: 'طاولات', seats: 'مقاعد', service1: 'خدمة', table1: 'طاولة', seat1: 'مقعد',
       floorTitle: 'مخطط القاعة الخاص بي', floorBody: 'يستخدم تلقائياً الطاولات والسعات المرسومة مسبقاً.',
       hoursReady: 'ساعات العمل مرتبطة', hoursMissing: 'ساعات العمل تحتاج إلى إعداد', teamReady: 'الفريق مرتبط', teamMissing: 'جدول الفريق يحتاج إلى استكمال',
       staffing: 'تكييف المواعيد مع جدول الفريق', tablesPerStaff: 'عدد الطاولات لكل عضو في القاعة',
@@ -102,6 +102,8 @@
   function lang() { try { var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang(); return COPY[l] ? l : 'fr'; } catch (_) { return 'fr'; } }
   function t(k) { return (COPY[lang()] || COPY.fr)[k] || COPY.fr[k] || k; }
   function tt(k) { return (TEMPLATE_COPY[lang()] || TEMPLATE_COPY.fr)[k] || TEMPLATE_COPY.fr[k] || k; }
+  /* « 1 services · 2 tables · 5 couverts » : le singulier a sa clé. */
+  function ttn(n, k) { return n + ' ' + tt(n === 1 ? k.replace(/s$/, '') + '1' : k); }
   function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function clone(v) { try { return JSON.parse(JSON.stringify(v)); } catch (_) { return v; } }
   function id(prefix) { return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
@@ -165,7 +167,7 @@
     if (!diningTrade()) return '';
     var hoursReady=false,teamCount=0;try{hoursReady=!!(window.KiwiHours&&window.KiwiHours.isConfigured&&window.KiwiHours.isConfigured(venueId()));}catch(_){}try{teamCount=(window.KiwiTeam&&window.KiwiTeam.roster?window.KiwiTeam.roster():[]).length;}catch(_){}
     return '<section class="kr-template-section"><div class="kr-template-intro"><span>'+esc(tt('title'))+'</span><p>'+esc(tt('body'))+'</p></div><div class="kr-template-smart"><span>'+icon('calendar')+esc(hoursReady?tt('hoursReady'):tt('hoursMissing'))+'</span><span>'+icon('person')+esc(teamCount?tt('teamReady')+' · '+teamCount:tt('teamMissing'))+'</span></div><div class="kr-template-grid">'+restaurantTemplates().map(function (tpl) {
-      return '<article class="kr-template-card"><div class="kr-template-icon"><img src="assets/icons/material/'+tpl.icon+'.svg" alt="" aria-hidden="true"></div><div class="kr-template-copy"><h3>'+esc(tpl.title)+'</h3><p>'+esc(tpl.body)+'</p><div class="kr-template-meta"><span>'+tpl.services.length+' '+esc(tt('services'))+'</span><span>'+tpl.resources.length+' '+esc(tt('tables'))+'</span><span>'+templateSeats(tpl)+' '+esc(tt('seats'))+'</span></div></div><button type="button" class="kr-btn ghost" data-kr-template="'+esc(tpl.id)+'" aria-label="'+esc(tt('use')+' · '+tpl.title)+'">'+esc(tt('use'))+'</button></article>';
+      return '<article class="kr-template-card"><div class="kr-template-icon"><img src="assets/icons/material/'+tpl.icon+'.svg" alt="" aria-hidden="true"></div><div class="kr-template-copy"><h3>'+esc(tpl.title)+'</h3><p>'+esc(tpl.body)+'</p><div class="kr-template-meta"><span>'+esc(ttn(tpl.services.length,'services'))+'</span><span>'+esc(ttn(tpl.resources.length,'tables'))+'</span><span>'+esc(ttn(templateSeats(tpl),'seats'))+'</span></div></div><button type="button" class="kr-btn ghost" data-kr-template="'+esc(tpl.id)+'" aria-label="'+esc(tt('use')+' · '+tpl.title)+'">'+esc(tt('use'))+'</button></article>';
     }).join('')+'</div></section>';
   }
   function cleanText(v, max) { return String(v == null ? '' : v).trim().slice(0, max); }
@@ -319,11 +321,18 @@
     return !doc.blocked.some(function (b) { return (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt); });
   }
   function withinHours(resource, startAt, endAt) {
-    var d = new Date(startAt), periods = [];
+    var d = venueWall(startAt), periods = [];
     if (resource && resource.week) {
       var keys = ['sun','mon','tue','wed','thu','fri','sat'], day = resource.week[keys[d.getDay()]] || {};
       periods = day.open === false ? [] : (day.periods || []);
-    } else if (window.KiwiHours && window.KiwiHours.periodsOn) periods = window.KiwiHours.periodsOn(d, venueId()) || [];
+    } else if (window.KiwiHours && window.KiwiHours.periodsOn) {
+      /* periodsOn rend { periods, exception }, pas un tableau. Lu comme un
+         tableau, il n'avait jamais de longueur : dès que les horaires étaient
+         renseignés, toute réservation saisie au tableau de bord répondait
+         « Ce créneau vient d'être pris », agenda vide ou non. */
+      var on = window.KiwiHours.periodsOn(d, venueId());
+      periods = Array.isArray(on) ? on : ((on && on.periods) || []);
+    }
     if (!periods.length) return !(window.KiwiHours && window.KiwiHours.isConfigured && window.KiwiHours.isConfigured(venueId()));
     var mins = d.getHours() * 60 + d.getMinutes(), end = mins + Math.round((endAt - startAt) / 60000);
     return periods.some(function (p) { var a = window.KiwiHours ? window.KiwiHours.toMin(p.from) : null, z = window.KiwiHours ? window.KiwiHours.toMin(p.to) : null; if (a == null || z == null) return false; if (z <= a) z += 1440; return mins >= a && end <= z; });
@@ -349,13 +358,52 @@
     return { ok: true, service: svc, resource: res, startAt: startAt, endAt: endAt };
   }
   function statusLabel(s) { return t(s + 'Status'); }
-  function dateLabel(ts, withDate) { try { return new Date(ts).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang(), withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }); } catch (_) { return ''; } }
+  /* L'heure de l'établissement, pas celle de l'appareil. La page publique et
+     l'API comptent en Africa/Casablanca ; un tableau de bord ouvert depuis un
+     autre fuseau affichait 12:00 pour une table gardée à 11:00, et une heure
+     saisie tombait une heure à côté. */
+  var VENUE_TZ = 'Africa/Casablanca';
+  function venueParts(ts) {
+    try {
+      var o = {}; new Intl.DateTimeFormat('en-CA', { timeZone: VENUE_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(ts)).forEach(function (p) { if (p.type !== 'literal') o[p.type] = +p.value; });
+      return { y:o.year, m:o.month, d:o.day, h:o.hour % 24, mi:o.minute };
+    } catch (_) { var l = new Date(ts); return { y:l.getFullYear(), m:l.getMonth()+1, d:l.getDate(), h:l.getHours(), mi:l.getMinutes() }; }
+  }
+  // A local Date whose fields read the venue's wall clock (getDay, getHours…).
+  function venueWall(ts) { var p = venueParts(ts); return new Date(p.y, p.m - 1, p.d, p.h, p.mi); }
+  // The instant at which the venue's clock reads y-m-d h:mi.
+  function venueEpoch(y, m, d, h, mi) {
+    var target = Date.UTC(y, m - 1, d, h || 0, mi || 0), guess = target;
+    for (var i = 0; i < 3; i++) { var p = venueParts(guess); guess += target - Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi); }
+    return guess;
+  }
+  function dateLabel(ts, withDate) { var o = withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }, l = lang() === 'ar' ? 'ar-MA' : lang(); try { return new Date(ts).toLocaleString(l, Object.assign({ timeZone: VENUE_TZ }, o)); } catch (_) { try { return new Date(ts).toLocaleString(l, o); } catch (__) { return ''; } } }
   function money(n) { try { return Number(n || 0).toLocaleString(lang() === 'ar' ? 'ar-MA' : 'fr-FR') + ' MAD'; } catch (_) { return n + ' MAD'; } }
-  function dayStart(ts) { var d = new Date(ts || Date.now()); d.setHours(0,0,0,0); return d.getTime(); }
+  function dayStart(ts) { var p = venueParts(ts || Date.now()); return venueEpoch(p.y, p.m, p.d, 0, 0); }
   function icon(name) { var safe = { calendar:'today', add:'today', link:'phonelink', settings:'schedule', person:'schedule', room:'room_service', table:'restaurant', service:'redeem' }[name] || 'today'; return '<img src="assets/icons/material/' + safe + '.svg" alt="" aria-hidden="true">'; }
+  /* Une réservation prise en ligne n'arrivait jamais sur la page ouverte :
+     le document ne se relisait qu'à l'ouverture ou au retour sur l'onglet.
+     Au comptoir, l'agenda restait à « 0 » pendant que les clients
+     réservaient. Tant que la page est À L'ÉCRAN (et l'onglet visible), on
+     relit le serveur toutes les 30 s ; ailleurs, rien. */
+  var pollTimer = null;
+  function schedulePull() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(function () {
+      try {
+        var root = document.querySelector('[data-kr-root]');
+        if (root && root.isConnected && root.offsetParent && document.visibilityState === 'visible') {
+          var c = S() && S().cloud && S().cloud();
+          if (c && c.pull) c.pull(false).catch(function () {});
+        }
+      } catch (_) {}
+      schedulePull();
+    }, 30000);
+  }
   function render() {
     if (!window.Kiwi || !window.Kiwi.appPage) return;
     open = true;
+    if (!pollTimer) schedulePull();
     var doc = get(), now = Date.now(), today = dayStart(now), tomorrow = today + 86400000;
     var active = doc.bookings.filter(function (b) { return !DONE[b.status] && b.endAt >= today; }).sort(function (a,b){ return a.startAt-b.startAt; });
     var todayRows = active.filter(function (b) { return b.startAt >= today && b.startAt < tomorrow; });
@@ -365,14 +413,30 @@
     var configured = hotel ? hotel.rooms.some(function(x){return !x.deletedAt && x.status !== 'hs';}) && hotel.roomTypes.some(function(x){return !x.deletedAt && x.public !== false && (x.rate != null || hotel.baseRate != null);}) : doc.services.some(function (x) { return x.active; }) && doc.resources.some(function (x) { return x.active; });
     var capacity = hotel ? hotel.rooms.filter(function(x){return !x.deletedAt && x.status !== 'hs';}).length : doc.resources.filter(function (x) { return x.active; }).reduce(function (n,x){ return n + (+x.capacity || 1); },0);
     var occupancy = capacity ? Math.min(100, Math.round(todayRows.length / Math.max(1, capacity * 4) * 100)) : 0;
+    /* « Occupation 0 % · 5 équipe & ressources » divisait le NOMBRE de
+       réservations du jour par quatre fois la somme des places : un ratio
+       inventé. Hors hôtel, la tuile dit ce que Kiwi sait : combien de
+       personnes sont attendues aujourd'hui, et combien de places existent en
+       même temps. */
+    var guestsToday = todayRows.reduce(function (n, b) { return n + (+b.partySize || 1); }, 0);
+    /* Ouverte en ligne sans aucun horaire : la page publique n'a aucun
+       créneau à proposer. Le badge ne dit plus « ouverte » tout court. */
+    var hoursMissing = false;
+    if (!hotel && doc.settings.published) {
+      try {
+        var ownWeek = doc.resources.some(function (r) { return r.active && r.week && Object.keys(r.week).length; });
+        hoursMissing = !ownWeek && !!(window.KiwiHours && window.KiwiHours.isConfigured && !window.KiwiHours.isConfigured(venueId()));
+      } catch (_) {}
+    }
+    var onlineText = doc.settings.published ? (hoursMissing ? t('onlineNoHours') : t('onlineOn')) : t('onlineOff');
     var body = '<section class="kr-shell" data-kr-root>' +
       '<header class="kr-command"><div class="kr-command-main"><span class="kr-kicker">KIWI RESERVATIONS</span><h2>' + esc(t('title')) + '</h2><p>' + esc(t('subtitle')) + '</p></div>' +
       /* L'état « en ligne » est une pastille dans l'en-tête (plus une barre pleine largeur) ; les actions dessous, à droite. */
-      '<div class="kr-command-side"><div class="kr-live' + (doc.settings.published ? ' is-on' : '') + '"><span class="kr-live-dot"></span><span>' + esc(doc.settings.published ? t('onlineOn') : t('onlineOff')) + '</span><strong>' + esc(venue().name || '') + '</strong></div>' +
+      '<div class="kr-command-side"><div class="kr-live' + (doc.settings.published && !hoursMissing ? ' is-on' : '') + '"><span class="kr-live-dot"></span><span>' + esc(onlineText) + '</span><strong>' + esc(venue().name || '') + '</strong></div>' +
       '<div class="kr-command-actions"><button type="button" class="kr-btn ghost" data-kr-share>' + icon('link') + esc(t('share')) + '</button><button type="button" class="kr-btn ghost" data-kr-setup>' + icon('settings') + esc(t('settings')) + '</button><button type="button" class="kr-btn primary" data-kr-new>' + icon('add') + esc(t('add')) + '</button></div></div></header>' +
-      '<div class="kr-stats"><article><span>' + esc(t('today')) + '</span><strong>' + todayRows.length + '</strong><small>' + esc(todayRows.length ? dateLabel(todayRows[0].startAt, false) : t('todayEmpty')) + '</small></article><article><span>' + esc(t('upcoming')) + '</span><strong>' + upcoming.length + '</strong>' + (upcoming.length ? '<small>' + esc(dateLabel(upcoming[0].startAt, true)) + '</small>' : '') + '</article><article><span>' + esc(t('needs')) + '</span><strong>' + requested.length + '</strong>' + (requested.length ? '<small>' + esc(requested[0].customer.name) + '</small>' : '') + '</article><article><span>' + esc(t('occupancy')) + '</span><strong>' + occupancy + '%</strong><small>' + esc(capacity + ' ' + (hotel ? (lang()==='ar'?'غرفة':lang()==='en'?'rooms':'chambres') : t('resources').toLowerCase())) + '</small></article></div>' +
+      '<div class="kr-stats"><article><span>' + esc(t('today')) + '</span><strong>' + todayRows.length + '</strong><small>' + esc(todayRows.length ? dateLabel(todayRows[0].startAt, false) : t('todayEmpty')) + '</small></article><article><span>' + esc(t('upcoming')) + '</span><strong>' + upcoming.length + '</strong>' + (upcoming.length ? '<small>' + esc(dateLabel(upcoming[0].startAt, true)) + '</small>' : '') + '</article><article><span>' + esc(t('needs')) + '</span><strong>' + requested.length + '</strong>' + (requested.length ? '<small>' + esc(requested[0].customer.name) + '</small>' : '') + '</article>' + (hotel ? '<article><span>' + esc(t('occupancy')) + '</span><strong>' + occupancy + '%</strong><small>' + esc(capacity + ' ' + (lang()==='ar'?'غرفة':lang()==='en'?'rooms':'chambres')) + '</small></article>' : '<article><span>' + esc(t('guestsToday')) + '</span><strong>' + guestsToday + '</strong><small>' + esc(capacity ? capacity + ' ' + t('placesAtOnce') : '·') + '</small></article>') + '</div>' +
       (!configured ? '<div class="kr-empty"><div class="kr-empty-mark">' + icon('calendar') + '</div><div><h3>' + esc(t('emptyTitle')) + '</h3><p>' + esc(t('emptyBody')) + '</p>' + setupSteps(doc) + '</div><button type="button" class="kr-btn primary" data-kr-setup>' + esc(t('setup')) + '</button></div>' : agenda(doc, todayRows, upcoming)) + '</section>';
-    var host = window.Kiwi.appPage('reservations', { title: t('title'), subtitle: (venue().name || '') + ' · ' + (doc.settings.published ? t('onlineOn') : t('onlineOff')), body: body });
+    var host = window.Kiwi.appPage('reservations', { title: t('title'), subtitle: (venue().name || '') + ' · ' + onlineText, body: body });
     if (host && host.el) host.el.classList.add('kr-page');
     wire(host && host.el);
   }
@@ -391,20 +455,20 @@
   function agenda(doc, todayRows, upcoming) {
     var services = byId(doc.services), resources = byId(doc.resources);
     function card(b) { var svc = services[b.serviceId] || {}, res = resources[b.resourceId] || {}, label=b.hotel?(b.hotel.roomTypeName+' · '+b.hotel.nights+' '+(lang()==='en'?'nights':lang()==='ar'?'ليالٍ':'nuits')+' · '+money(b.hotel.total)):(svc.name || '')+' · '+(res.name || ''); return '<article class="kr-booking status-' + esc(b.status) + '" data-kr-booking="' + esc(b.id) + '"><div class="kr-time"><strong>' + esc(dateLabel(b.startAt, false)) + '</strong><span>' + esc(b.hotel?(b.hotel.checkIn+' → '+b.hotel.checkOut):((svc.duration || '')+' min')) + '</span></div><div class="kr-booking-main"><div class="kr-booking-title"><h3>' + esc(b.customer.name) + '</h3><span class="kr-status">' + esc(statusLabel(b.status)) + '</span></div><p>' + esc(label) + (b.partySize > 1 ? ' · ' + esc(b.partySize) : '') + '</p><small>' + esc((b.customer.phone || b.customer.email || '') + (b.source ? ' · ' + t('source' + b.source.charAt(0).toUpperCase() + b.source.slice(1)) : '')) + '</small></div><button type="button" class="kr-more" data-kr-edit="' + esc(b.id) + '" aria-label="' + esc(t('edit')) + '">•••</button></article>'; }
-    return '<div class="kr-agenda"><section class="kr-day"><div class="kr-section-head"><div><span>' + esc(new Date().toLocaleDateString(lang()==='ar'?'ar-MA':lang(),{weekday:'long',day:'numeric',month:'long'})) + '</span><h3>' + esc(t('today')) + '</h3></div><span class="kr-count">' + todayRows.length + '</span></div><div class="kr-list">' + (todayRows.length ? todayRows.map(card).join('') : '<div class="kr-list-empty">' + esc(t('todayEmpty')) + '</div>') + '</div></section><aside class="kr-next"><div class="kr-section-head"><div><span>' + esc(t('overview')) + '</span><h3>' + esc(t('upcoming')) + '</h3></div><span class="kr-count">' + upcoming.length + '</span></div><div class="kr-list compact">' + (upcoming.length ? upcoming.slice(0,12).map(function(b){ var svc=services[b.serviceId]||{}; return '<button type="button" class="kr-mini" data-kr-edit="'+esc(b.id)+'"><span>'+esc(dateLabel(b.startAt,true))+'</span><strong>'+esc(b.customer.name)+'</strong><small>'+esc(svc.name||'')+'</small></button>'; }).join('') : '<div class="kr-list-empty">·</div>') + '</div></aside></div>';
+    return '<div class="kr-agenda"><section class="kr-day"><div class="kr-section-head"><div><span>' + esc((function(){var o={weekday:'long',day:'numeric',month:'long'},l=lang()==='ar'?'ar-MA':lang();try{return new Date().toLocaleDateString(l,Object.assign({timeZone:VENUE_TZ},o));}catch(_){return new Date().toLocaleDateString(l,o);}})()) + '</span><h3>' + esc(t('today')) + '</h3></div><span class="kr-count">' + todayRows.length + '</span></div><div class="kr-list">' + (todayRows.length ? todayRows.map(card).join('') : '<div class="kr-list-empty">' + esc(t('todayEmpty')) + '</div>') + '</div></section><aside class="kr-next"><div class="kr-section-head"><div><span>' + esc(t('overview')) + '</span><h3>' + esc(t('upcoming')) + '</h3></div><span class="kr-count">' + upcoming.length + '</span></div><div class="kr-list compact">' + (upcoming.length ? upcoming.slice(0,12).map(function(b){ var svc=services[b.serviceId]||{}; return '<button type="button" class="kr-mini" data-kr-edit="'+esc(b.id)+'"><span>'+esc(dateLabel(b.startAt,true))+'</span><strong>'+esc(b.customer.name)+'</strong><small>'+esc(svc.name||'')+'</small></button>'; }).join('') : '<div class="kr-list-empty">·</div>') + '</div></aside></div>';
   }
   function formField(label, control, full) { return '<label class="kr-field' + (full ? ' full' : '') + '"><span>' + esc(label) + '</span>' + control + '</label>'; }
   function bookingModal(existing) {
     var doc = get(), b = existing || {}, services = doc.services.filter(function(x){return x.active;}), resources=doc.resources.filter(function(x){return x.active;});
     if (!services.length || !resources.length) { window.Kiwi.toast(t('unavailable'), { type:'warning' }); return setupModal(); }
     var start = b.startAt ? new Date(b.startAt) : new Date(Date.now() + Math.max(60, doc.settings.minNoticeMinutes) * 60000); start.setMinutes(Math.ceil(start.getMinutes()/15)*15,0,0);
-    var val = function(d){ var z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,16); };
+    var val = function(d){ var p=venueParts(d.getTime()), z=function(n){return (n<10?'0':'')+n;}; return p.y+'-'+z(p.m)+'-'+z(p.d)+'T'+z(p.h)+':'+z(p.mi); };
     var m = window.Kiwi.modal({ title: existing ? t('edit') : t('add'), width: 700, body:'<form class="kr-form" data-kr-form>' +
       formField(t('client'), '<input name="name" maxlength="100" required autocomplete="name" value="'+esc(b.customer&&b.customer.name||'')+'">') +
       formField(t('phone'), '<input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="'+esc(b.customer&&b.customer.phone||'')+'">') +
       formField(t('email'), '<input name="email" maxlength="160" type="email" autocomplete="email" value="'+esc(b.customer&&b.customer.email||'')+'">') +
       formField(t('guests'), '<input name="partySize" type="number" min="1" max="999" value="'+esc(b.partySize||1)+'">') +
-      formField(t('service'), '<select name="serviceId" required><option value="">·</option>'+services.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.serviceId?' selected':'')+'>'+esc(x.name)+' · '+esc(x.duration)+' min · '+esc(money(x.price))+'</option>';}).join('')+'</select>') +
+      formField(t('service'), '<select name="serviceId" required>'+(services.length>1?'<option value="">·</option>':'')+services.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.serviceId||services.length===1?' selected':'')+'>'+esc(x.name)+' · '+esc(x.duration)+' min · '+esc(x.price>0?money(x.price):t('free'))+'</option>';}).join('')+'</select>') +
       formField(t('resource'), '<select name="resourceId"><option value="">'+esc(t('anyResource'))+'</option>'+resources.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.resourceId?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select>') +
       formField(t('start'), '<input name="startAt" type="datetime-local" required value="'+esc(val(start))+'">') +
       formField(t('note'), '<textarea name="note" maxlength="600">'+esc(b.note||'')+'</textarea>', true) +
@@ -412,10 +476,10 @@
     var form=m.el.querySelector('[data-kr-form]');
     m.el.querySelector('[data-kr-close]').onclick=function(){m.close();};
     var del=m.el.querySelector('[data-kr-delete]'); if(del) del.onclick=function(){ var d=get(); d.bookings=d.bookings.map(function(x){return x.id===existing.id?Object.assign({},x,{status:'cancelled',updatedAt:Date.now()}):x;}); set(d); m.close(); render(); };
-    form.onsubmit=function(e){ e.preventDefault(); var fd=new FormData(form), rawPhone=cleanText(fd.get('phone'),32), phone=normalizePhone(rawPhone), startAt=new Date(fd.get('startAt')).getTime(), input={customer:{name:fd.get('name'),phone:phone,email:fd.get('email')},serviceId:fd.get('serviceId'),resourceId:fd.get('resourceId'),startAt:startAt,partySize:fd.get('partySize'),note:fd.get('note')}; if(rawPhone&&!phone){form.querySelector('[data-kr-error]').textContent=lang()==='ar'?'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':lang()==='en'?'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.';return;} var d=get(), check=validate(input,d,existing&&existing.id); if(!check.ok){form.querySelector('[data-kr-error]').textContent=t(check.error);return;} var now=Date.now(), rec={ id:existing&&existing.id||id('bk'), code:existing&&existing.code||('K'+Math.random().toString(36).slice(2,8).toUpperCase()), customer:{name:cleanText(input.customer.name,100),phone:phone,email:cleanText(input.customer.email,160)}, serviceId:check.service.id,resourceId:check.resource.id,startAt:check.startAt,endAt:check.endAt,partySize:number(input.partySize,1,999,1),status:existing&&existing.status||'confirmed',source:existing&&existing.source||'staff',note:cleanText(input.note,600),manageToken:existing&&existing.manageToken||'',createdAt:existing&&existing.createdAt||now,updatedAt:now}; var i=d.bookings.findIndex(function(x){return x.id===rec.id;}); if(i<0)d.bookings.push(rec);else d.bookings[i]=rec;set(d);m.close();window.Kiwi.toast(t('saved'),{type:'success'});render(); };
+    form.onsubmit=function(e){ e.preventDefault(); var fd=new FormData(form), rawPhone=cleanText(fd.get('phone'),32), phone=normalizePhone(rawPhone), startAt=(function(v){var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(v||''));return m?venueEpoch(+m[1],+m[2],+m[3],+m[4],+m[5]):NaN;})(fd.get('startAt')), input={customer:{name:fd.get('name'),phone:phone,email:fd.get('email')},serviceId:fd.get('serviceId'),resourceId:fd.get('resourceId'),startAt:startAt,partySize:fd.get('partySize'),note:fd.get('note')}; if(rawPhone&&!phone){form.querySelector('[data-kr-error]').textContent=lang()==='ar'?'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':lang()==='en'?'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.';return;} var d=get(), check=validate(input,d,existing&&existing.id); if(!check.ok){form.querySelector('[data-kr-error]').textContent=t(check.error);return;} var now=Date.now(), rec={ id:existing&&existing.id||id('bk'), code:existing&&existing.code||('K'+Math.random().toString(36).slice(2,8).toUpperCase()), customer:{name:cleanText(input.customer.name,100),phone:phone,email:cleanText(input.customer.email,160)}, serviceId:check.service.id,resourceId:check.resource.id,startAt:check.startAt,endAt:check.endAt,partySize:number(input.partySize,1,999,1),status:existing&&existing.status||'confirmed',source:existing&&existing.source||'staff',note:cleanText(input.note,600),manageToken:existing&&existing.manageToken||'',createdAt:existing&&existing.createdAt||now,updatedAt:now}; var i=d.bookings.findIndex(function(x){return x.id===rec.id;}); if(i<0)d.bookings.push(rec);else d.bookings[i]=rec;set(d);m.close();window.Kiwi.toast(t('saved'),{type:'success'});render(); };
     wireLifecycle(m, existing);
   }
-  function lifecycle(b){ if(DONE[b.status])return''; var buttons=[]; if(b.status==='requested')buttons.push(['confirmed',t('confirm')]); if(b.status==='confirmed')buttons.push(['checked_in',t('checkin')]); if(b.status==='checked_in')buttons.push(['completed',t('complete')]); buttons.push(['no_show',t('noShow')]); buttons.push(['cancelled',t('cancel')]); return '<div class="kr-lifecycle">'+buttons.map(function(x){return '<button type="button" data-kr-status="'+x[0]+'">'+esc(x[1])+'</button>';}).join('')+'</div>'; }
+  function lifecycle(b){ if(DONE[b.status])return''; var buttons=[]; if(b.status==='requested')buttons.push(['confirmed',t('confirm')]); if(b.status==='confirmed')buttons.push(['checked_in',t('checkin')]); if(b.status==='checked_in')buttons.push(['completed',t('complete')]); buttons.push(['no_show',t('noShow')]); buttons.push(['cancelled',t('cancelBooking')]); return '<div class="kr-lifecycle">'+buttons.map(function(x){return '<button type="button" data-kr-status="'+x[0]+'">'+esc(x[1])+'</button>';}).join('')+'</div>'; }
   function wireLifecycle(m,b){ if(!b)return;m.el.querySelectorAll('[data-kr-status]').forEach(function(btn){btn.onclick=function(){var d=get();d.bookings=d.bookings.map(function(x){return x.id===b.id?Object.assign({},x,{status:btn.dataset.krStatus,updatedAt:Date.now()}):x;});set(d);m.close();render();};}); }
   function hotelSettingsModal() {
     var doc=get(),s=doc.settings,inventory=hotelInventory();

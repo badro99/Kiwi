@@ -186,7 +186,7 @@ try {
   await page.waitForSelector('body.page-stock [data-stock-root] .st-title');
   const stockOverview = await page.$eval('[data-stock-root]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   if (process.env.KIWI_TEST_DEBUG) console.log(JSON.stringify({ stockOverview }, null, 2));
-  ok(/1 articles suivis/i.test(stockOverview) && /560 MAD/.test(stockOverview) && /160 MAD/.test(stockOverview) && !/Tomates|Boucherie|Marché Central/i.test(stockOverview), 'supplier workspace computes Amira retail stock and purchasing totals without restaurant fixtures');
+  ok(/1 article suivi\b/i.test(stockOverview) && /560 MAD/.test(stockOverview) && /160 MAD/.test(stockOverview) && !/Tomates|Boucherie|Marché Central/i.test(stockOverview), 'supplier workspace computes Amira retail stock and purchasing totals without restaurant fixtures');
   await click('[data-action="stock-tab"][data-tab="items"]');
   await page.waitForFunction(() => /Vase Atlas/.test(document.querySelector('.st-tab-body')?.textContent || ''));
   const itemProjection = await page.evaluate((productId) => {

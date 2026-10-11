@@ -367,6 +367,16 @@ const MENU = [
  * Chercher « TVA » dans le fichier ne prouve rien : les notes de suppression
  * citent forcément ce qu'elles suppriment. On rend donc la page pour de vrai,
  * dans les deux modes, et on lit ce qui sort. */
+/* Pain complet chiffré à 2 MAD, Café noir à 1 MAD, Msemen sans coût. Trois
+   pains et un msemen vendus dans l'heure : 25 MAD de ventes, dont 15 chiffrées
+   (60 %), 6 MAD de coût matière, 9 MAD de marge. */
+const FIN_COST = bootCost({ menu: MENU });
+FIN_COST.setItemCost('it_1', 2);
+FIN_COST.setItemCost('it_2', 1);
+const FIN_SALES = [{ ts: Date.now() - 3600e3, amount: 25, lines: [
+  { itemId: 'it_1', name: 'Pain complet', qty: 3, total: 15 },
+  { itemId: 'it_3', name: 'Msemen', qty: 1, total: 10 },
+] }];
 function renderFinance(real) {
   const noop = () => {};
   const root = { innerHTML: '' };
@@ -381,7 +391,10 @@ function renderFinance(real) {
     KiwiEnv: { isReal: () => real, demosAllowed: !real },
     KiwiI18n: { getLang: () => 'fr' },
     KiwiMenuStore: { items: () => MENU },
-    KiwiCost: { doc: () => ({ items: { it_1: { cost: 2 } } }) },
+    /* Le VRAI moteur de coûts : la page réelle lit of(), coverage() et
+       marginOf(), plus seulement le document brut. */
+    KiwiCost: FIN_COST,
+    KiwiSales: { list: () => FIN_SALES },
     addEventListener: noop, setTimeout, clearTimeout, console, scrollTo: noop,
   };
   win.window = win;
@@ -399,9 +412,17 @@ function renderFinance(real) {
   ok('rendu réel : aucune TVA à l\'écran', !/TVA|VAT/.test(realHtml), realHtml.slice(0, 160));
   ok('rendu réel : aucun « téléchargement simulé »', !/simulé/.test(realHtml));
   ok('rendu réel : aucun chiffre du Café Atlas', !/Café Atlas|27 512|825 000|800 000|500 000/.test(realHtml));
-  ok('rendu réel : dit ce qu\'il reste à faire', /chiffrer|Chiffrez/.test(realHtml), realHtml.slice(0, 200));
-  ok('rendu réel : compte les produits pour de vrai',
-    /2 produits sur 3/.test(realHtml), realHtml.replace(/<[^>]+>/g, ' ').slice(0, 300));
+  const realText = realHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  ok('rendu réel : dit ce qu\'il reste à faire, classé par chiffre d\'affaires',
+    /À chiffrer en priorité/.test(realText) && /Msemen 1 vendu · 10 MAD/.test(realText), realText.slice(0, 300));
+  ok('rendu réel : la marge se dit sur la part chiffrée, et le dit',
+    /dont chiffrées · 60[.,]0\s?%/.test(realText) && /Marge calculée sur 60[.,]0\s?% de vos ventes/.test(realText)
+      && /Coût matière 6 MAD/.test(realText) && /Marge brute 9 MAD/.test(realText), realText.slice(0, 400));
+  ok('rendu réel : chaque produit, son coût et sa marge, ou « à chiffrer »',
+    /3 produits à la carte/.test(realText) && /Pain complet 5 MAD 2 MAD saisi 3 MAD 60[.,]0\s?% 3/.test(realText)
+      && /Msemen 10 MAD · à chiffrer · · 1/.test(realText), realText.slice(-400));
+  ok('rendu réel : rien d\'inventé sur les charges', !/Budget|Cible|Seuil de rentabilité|Loyer \d/.test(realText)
+    && /Avant loyer, salaires et charges : Kiwi ne les connaît pas\./.test(realText));
   ok('rendu réel : propose d\'ouvrir la carte', /data-action="nav-menu"/.test(realHtml));
 
   const demoHtml = renderFinance(false);
