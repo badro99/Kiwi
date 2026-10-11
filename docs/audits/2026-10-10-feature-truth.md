@@ -401,6 +401,7 @@ inventory gives no occupancy. Covered by `hotel-truth-test.mjs`.
 | Cancel or reopen from "Réimprimer" | The manager-code window and its refusals stayed in French on an English or Arabic till. | Translated. Covered in `caisse-lang-test.js`. |
 | Day report top products | "1 plats" / "1 dishes". | Singular for one. Covered in `dashboard-truth-test.mjs`. |
 | Day report payment header | Showed the gross above method rows that are net of refunds: 500 over rows totalling 450. | The header is the sum of its rows. Covered in `dashboard-truth-test.mjs`. |
+| QR bill tip (OrderPro) | A 15 % tip was pre-ticked and added to "Total à régler", a total the till never sees: the phone sends no tip anywhere. "Le serveur arrive avec l'addition" promised a waiter; the split calculator toasted "Addition divisée". | No tip pre-selected; the sheet says the tip is handed to the waiter and is not added to the bill; "Demander l'addition"; the split result reads "À annoncer au serveur". FR/EN/AR. Covered in `order-truth-test.mjs`. |
 | Booking settings checkboxes | Logged as "accessible name on". | Measured again: each sits inside its label. Not a bug. |
 
 ## Open, logged for their own pass

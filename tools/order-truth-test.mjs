@@ -248,5 +248,15 @@ ok('les libellés d’options viennent de la carte du commerçant : échappés a
   assert.match(HTML, /\$\{escapeHtml\(groupLabel\(opt\.key\)\)\}/);
 });
 
+ok('OrderPro bill: no tip preselected, the tip is said to be outside the bill, the button only asks', () => {
+  const OP = read('OrderPro.html');
+  assert.match(OP, /let tipPercent = 0;/);
+  assert.match(OP, /setTipPercent\(0\);/);
+  assert.ok(!/class="tip-chip is-active" type="button" data-tip="15"/.test(OP), '15 % is not pre-ticked');
+  assert.equal((OP.match(/tip_note: "/g) || []).length, 3, 'tip note in FR, EN and AR');
+  assert.ok(!/Le serveur arrive avec l'addition|Your waiter is bringing the check|الجارسون جاي بالحساب/.test(OP), 'no promise that the waiter is coming');
+  assert.ok(!/Addition divisée ·|Bill split ·/.test(OP), 'the split calculator does not claim the bill was split');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

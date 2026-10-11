@@ -2172,6 +2172,7 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 2px 0 0;
       transition: color 280ms ease;
     }
+    .tip-note { margin-top: 8px; font-size: 12px; line-height: 1.4; color: var(--ink-3); text-align: center; }
     .tip-level.is-empty {
       font-family: var(--sans);
       font-style: normal;
@@ -3509,25 +3510,26 @@ em, i, cite, dfn, var { font-style: normal; }
               <rect x="24" y="12" width="52" height="15" rx="3" fill="#262420"/>
               <rect x="28" y="14" width="44" height="3" rx="1.5" fill="#5A5852"/>
             </svg>
-            <div class="tip-amount" id="tip-amount">+0 MAD</div>
+            <div class="tip-amount is-zero" id="tip-amount">+0 MAD</div>
           </div>
-          <div class="tip-level" id="tip-level">L'équipe vous remercie</div>
+          <div class="tip-level is-empty" id="tip-level">Pas de pourboire</div>
+          <div class="tip-note" data-i18n="tip_note">Indicatif : ce téléphone ne paie rien, le pourboire se remet au serveur et n’est pas ajouté à l’addition.</div>
           <div class="tip-chips" id="tip-chips">
-            <button class="tip-chip is-zero" type="button" data-tip="0" aria-label="Pas de pourboire">0%</button>
+            <button class="tip-chip is-zero is-active" type="button" data-tip="0" aria-label="Pas de pourboire">0%</button>
             <button class="tip-chip" type="button" data-tip="10">10%</button>
-            <button class="tip-chip is-active" type="button" data-tip="15">15%</button>
+            <button class="tip-chip" type="button" data-tip="15">15%</button>
             <button class="tip-chip" type="button" data-tip="20">20%</button>
             <button class="tip-chip" type="button" data-tip="25">25%</button>
           </div>
         </div>
 
         <div class="bill-total">
-          <span data-i18n="bill_total">Total à régler</span>
+          <span data-i18n="bill_total">Total, pourboire compris</span>
           <span class="val" id="bill-total-value">0 MAD</span>
         </div>
         <button class="bill-confirm-btn" type="button" id="bill-confirm-btn">
           <i data-lucide="hand-platter"></i>
-          <span data-i18n="bill_confirm">Le serveur arrive avec l'addition</span>
+          <span data-i18n="bill_confirm">Demander l'addition</span>
         </button>
         <button class="bill-split-btn" type="button" id="open-split-btn">
           <i data-lucide="split-square-vertical"></i>
@@ -3819,8 +3821,9 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_3: "L'équipe vous remercie",
         tip_level_4: "Très généreux, bravo",
         tip_level_5: "Pourboire de chef",
-        bill_total: "Total à régler",
-        bill_confirm: "Le serveur arrive avec l'addition",
+        bill_total: "Total, pourboire compris",
+        tip_note: "Indicatif : ce téléphone ne paie rien, le pourboire se remet au serveur et n’est pas ajouté à l’addition.",
+        bill_confirm: "Demander l'addition",
         split_open: "Diviser l'addition",
         split_title: "Diviser l'addition",
         split_subtitle_tpl: "Table {n} · {total} {cur} à partager",
@@ -3836,7 +3839,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_tap_items: "Tapez les articles consommés",
         split_confirm: "Confirmer le partage",
         split_person_pre: "Conv.",
-        toast_split_egal: "Addition divisée ·",
+        toast_split_egal: "À annoncer au serveur ·",
         toast_added: "ajouté",
         toast_server_coming_pre: "Demande transmise à l’équipe · Table",
         toast_bill_asked_pre: "Addition demandée ·",
@@ -4004,8 +4007,9 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_3: "The team thanks you",
         tip_level_4: "Very generous, bravo",
         tip_level_5: "A chef's tip",
-        bill_total: "Total to pay",
-        bill_confirm: "Your waiter is bringing the check",
+        bill_total: "Total, tip included",
+        tip_note: "For guidance only: this phone pays nothing; hand the tip to your waiter, it is not added to the bill.",
+        bill_confirm: "Ask for the bill",
         split_open: "Split the bill",
         split_title: "Split the bill",
         split_subtitle_tpl: "Table {n} · {total} {cur} to split",
@@ -4021,7 +4025,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_tap_items: "Tap the items they had",
         split_confirm: "Confirm the split",
         split_person_pre: "Pers.",
-        toast_split_egal: "Bill split ·",
+        toast_split_egal: "Tell your waiter ·",
         toast_added: "added",
         toast_server_coming_pre: "Request sent to the team · Table",
         toast_bill_asked_pre: "Check requested ·",
@@ -4186,8 +4190,9 @@ em, i, cite, dfn, var { font-style: normal; }
         tip_level_3: "الفريق كيشكروك",
         tip_level_4: "كريم بزاف، برافو",
         tip_level_5: "بقشيش ديال الشيف",
-        bill_total: "المجموع للخلاص",
-        bill_confirm: "الجارسون جاي بالحساب",
+        bill_total: "المجموع، مع البقشيش",
+        tip_note: "غير ملزم: هاد التيليفون ما كيخلص والو، البقشيش كيتعطى للجارسون وما كيتزادش فالحساب.",
+        bill_confirm: "طلب الحساب",
         split_open: "قسّم الحساب",
         split_title: "قسّم الحساب",
         split_subtitle_tpl: "طاولة {n} · {total} {cur} للتقسيم",
@@ -4203,7 +4208,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_tap_items: "كبس على الطلبات اللي كلاهم",
         split_confirm: "أكد التقسيم",
         split_person_pre: "ش.",
-        toast_split_egal: "الحساب تقسم ·",
+        toast_split_egal: "قول للجارسون ·",
         toast_added: "تزاد",
         toast_server_coming_pre: "تم إرسال الطلب للطاقم · طاولة",
         toast_bill_asked_pre: "الحساب تطلب ·",
@@ -4381,7 +4386,9 @@ em, i, cite, dfn, var { font-style: normal; }
     // Already-sent orders (table mode session — used for bill)
     const sentLines = []; // [{ id, options, note, unitPrice, qty }]
     let sessionTotal = 0;
-    let tipPercent = 15; // default selection in bill
+    /* Aucun pourboire présélectionné : un 15 % coché d'office gonflait le « Total »
+       d'un montant que le client n'avait pas choisi. */
+    let tipPercent = 0;
 
     // Split state
     let splitState = {
@@ -5098,7 +5105,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span>`;
 
       $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
-      setTipPercent(billItems.length === 0 ? 0 : 15);
+      setTipPercent(0);
 
       $('#bill-sheet').classList.add('is-open');
       $('#bill-sheet').setAttribute('aria-hidden', 'false');
