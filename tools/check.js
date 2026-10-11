@@ -1370,6 +1370,8 @@ section('Whole-project regressions');
     'service-trades-truth-test.mjs',
     'specialty-retail-truth-test.mjs',
     'menu-sales-test.mjs',
+    'foodcost-api-test.mjs',
+    'simple-food-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

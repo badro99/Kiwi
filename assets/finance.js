@@ -950,7 +950,9 @@
   function finBindLive() {
     if (finLiveBound) return;
     finLiveBound = true;
-    const again = () => { if (pageActive) { try { render(); } catch (_) {} } };
+    /* « Coût simple » ne lit ni les ventes ni les heures, et redessiner sous
+       les doigts du patron lui ferait perdre le champ qu'il remplit. */
+    const again = () => { if (pageActive && !(finTab === 'cost' && costOn() && document.querySelector('[data-sfc-root]'))) { try { render(); } catch (_) {} } };
     try { window.KiwiSales && window.KiwiSales.subscribe && window.KiwiSales.subscribe(again); } catch (_) {}
     try { window.KiwiCost && window.KiwiCost.subscribe && window.KiwiCost.subscribe(again); } catch (_) {}
     try { window.KiwiMenuStore && window.KiwiMenuStore.subscribe && window.KiwiMenuStore.subscribe(again); } catch (_) {}
@@ -980,7 +982,12 @@
       tabs: { overview: 'نظرة عامة', sales: 'المبيعات', performance: 'الأداء', hours: 'ساعات الذروة' } },
   };
   const at = () => ANALYSIS[lang()] || ANALYSIS.fr;
-  const FIN_TABS = ['overview', 'sales', 'performance', 'hours'];
+  const FIN_TABS = ['overview', 'sales', 'performance', 'hours', 'cost'];
+  /* « Coût simple » n'existe que là où l'option `simple_food_cost` est
+     explicitement allumée (assets/simple-food-cost.js › available). Un onglet
+     retenu qui n'est plus disponible retombe sur la vue d'ensemble. */
+  const costOn = () => { try { return !!(window.KiwiSimpleFoodCost && window.KiwiSimpleFoodCost.available()); } catch (_) { return false; } };
+  const tabsNow = () => FIN_TABS.filter((k) => k !== 'cost' || costOn());
   let finTab = 'overview';
   try { const saved = localStorage.getItem('kiwiMenuAnalysisTab'); if (FIN_TABS.indexOf(saved) >= 0) finTab = saved; } catch (_) {}
   function menuAnalysis() {
@@ -991,12 +998,14 @@
   }
   function analysisPage(v, A) {
     const a = at();
+    if (finTab === 'cost' && !costOn()) finTab = 'overview';
     const tabs = `<div class="fin-seg fin-tabs" data-lens-demo role="tablist" aria-label="${esc(a.aria)}">` +
-      FIN_TABS.map((k) => `<button type="button" role="tab" data-lens-item data-fin-tab="${k}" class="${k === finTab ? 'on' : ''}" aria-selected="${k === finTab}">${esc(a.tabs[k])}</button>`).join('') +
+      tabsNow().map((k) => `<button type="button" role="tab" data-lens-item data-fin-tab="${k}" class="${k === finTab ? 'on' : ''}" aria-selected="${k === finTab}">${esc(k === 'cost' ? window.KiwiSimpleFoodCost.tabLabel() : a.tabs[k])}</button>`).join('') +
       `</div>`;
     let seg = '';
     let body = '';
-    if (finTab === 'sales' && A.sales) body = A.sales();
+    if (finTab === 'cost') body = window.KiwiSimpleFoodCost.panel();
+    else if (finTab === 'sales' && A.sales) body = A.sales();
     else if (finTab === 'performance') body = A.performance();
     else if (finTab === 'hours') body = A.hours();
     else if (finShowReal(v)) {

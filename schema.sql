@@ -1882,3 +1882,26 @@ CREATE TABLE IF NOT EXISTS sale_settlement_keys (
   created_ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, session_id, order_number, business_day)
 );
+
+-- ── Coût simple · fiches de coût (option `simple_food_cost`, opt-in) ─────────
+-- Une calculatrice, pas un inventaire : aucune de ces tables ne touche au stock.
+-- Lues et écrites par la session du propriétaire ou un opérateur nommé
+-- (functions/api/foodcost.js), jamais par une caisse appairée. `version`
+-- monte à chaque enregistrement ; foodcost_snapshots garde chaque version
+-- telle qu'enregistrée, qui et quand, et n'est jamais modifiée. La route crée
+-- ces tables à la première utilisation (ensureSchema).
+CREATE TABLE IF NOT EXISTS foodcost_sheets (
+  merchant TEXT NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'sheet', data TEXT NOT NULL,
+  version INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS idx_foodcost_sheets_upd ON foodcost_sheets (merchant, updated_ts DESC);
+CREATE TABLE IF NOT EXISTS foodcost_snapshots (
+  merchant TEXT NOT NULL, sheet_id TEXT NOT NULL, version INTEGER NOT NULL,
+  name TEXT NOT NULL, data TEXT NOT NULL, actor TEXT NOT NULL DEFAULT '',
+  actor_kind TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sheet_id, version)
+);

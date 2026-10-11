@@ -511,6 +511,23 @@ between the two tabs (asserted).
 
 Covered by `menu-sales-test.mjs` (31 checks, crashes on the previous code).
 
+## Analyse du menu, phase 3: Simple Food Cost: done
+
+An opt-in calculator, the "Coût simple" tab of Analyse du menu. It is not
+inventory: nothing it does moves, reserves or counts stock.
+
+| ID | Rule | How |
+|---|---|---|
+| SF1 | Opt-in, per store. | `features.simple_food_cost === true` only (console: "Options à la demande", off by default). Turned off: the tab disappears, the API stays readable, writes are refused, nothing is deleted. |
+| SF2 | Owner or named operator, enforced on the server. | `functions/api/foodcost.js`: the account session that owns the store, or a named operator. A paired till, an employee, another account or a visitor get 403, read and write. Its own tables (`foodcost_sheets`, `foodcost_snapshots`), not the till-readable `costs` document. |
+| SF3 | Unknown is never 0. | An empty price, quantity or an incompatible unit (ml of a product bought by the bottle) makes the line unknown; the total shows "au moins X" and the % is not computed. |
+| SF4 | Honest maths. | Pack price ÷ pack qty × qty used (safe unit conversion) ÷ yield; food and packaging apart; batch ÷ portions; % on the price excluding VAT when VAT is included; "contribution", not profit; price for the target. |
+| SF5 | Stale and frozen. | A purchase price older than 90 days is flagged; an undated one says so. Every save is a frozen version (who, when) that later menu or price changes never alter. |
+| SF6 | No silent overwrite. | Each save carries the version it read; a newer one online returns 409 with who changed it, and the typed sheet is kept until the owner chooses. |
+| SF7 | States and export. | Loading, empty, forbidden, error, read-only, offline (calculate, save later), conflict. Templates, duplicate, archive, CSV export with formula-injection guard. Typing only repaints figures, and live sales no longer redraw the form. |
+
+Covered by `foodcost-api-test.mjs` (28) and `simple-food-cost-test.mjs` (42).
+
 ## Métiers de bouche (pizzeria, boulangerie, fast-food, food truck, traiteur): done
 
 | ID | Finding | Status |
