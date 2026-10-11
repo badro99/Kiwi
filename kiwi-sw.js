@@ -64,7 +64,7 @@ var SHELL = [
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=8',
   '/assets/sold-insights.js?v=10',
-  '/assets/design-2026.css?v=1',
+  '/assets/design-2026.css?v=2',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
   '/assets/design-vitrine.js?v=1',

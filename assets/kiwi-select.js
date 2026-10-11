@@ -95,6 +95,8 @@
     control.wrapper.classList.toggle('is-disabled', select.disabled);
     control.wrapper.classList.toggle('is-invalid', !select.validity.valid);
     control.trigger.setAttribute('aria-label', selectLabel(select) + ': ' + label.textContent);
+    // A long label is cut with an ellipsis; the full text stays one hover away.
+    control.trigger.title = label.textContent + (meta.textContent ? ' · ' + meta.textContent : '');
   }
 
   function visibleOptions(control) {
