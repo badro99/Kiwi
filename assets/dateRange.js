@@ -2830,9 +2830,9 @@
     regulars:   { labels: { default: 'Clients réguliers', boutique: 'Clients fidèles', spa: 'Clients fidèles' }, i18n: 'dash.kpi.regular',
                   desc: 'Clients déjà venus sur la période', derive: (d) => d.regulars || null },
     retention:  { labels: { default: 'Taux de fidélité' }, i18n: 'dash.kpi.retention',
-                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
+                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'pct1', delta: null }; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
     newClients: { labels: { default: 'Nouveaux clients' }, i18n: 'dash.kpi.newClients',
-                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
+                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'int', delta: null }; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
     txPerDay:   { labels: { default: 'Ventes par jour', spa: 'RDV par jour' }, i18n: 'dash.kpi.txPerDay',
                   desc: 'Nombre de ventes moyen par jour', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
     occupation: { labels: { default: "Taux d'occupation" }, i18n: 'dash.kpi.occupancy',
@@ -3074,7 +3074,12 @@
         collected: { value: t.collected, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.collected) },
         receivable: { value: t.receivable, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.receivable) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '·', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
-        regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
+        /* Kiwi n'identifie pas encore les clients à la caisse : « réguliers » n'a
+         * aucune source. Un 0 faisait dire à « Nouveaux clients » que TOUTES les
+         * ventes étaient des premières visites, et à « Fidélité » 0,0 %. Le tiret
+         * (déjà le vocabulaire des tuiles sans source) se propage aux deux
+         * dérivées ci-dessous, et la bande remplace les tuiles mortes. */
+        regulars: data.regulars ? { ...data.regulars, text: '·', value: 0, unit: '', delta: null } : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
          * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
          * Kiwi ne compte ni les paiements refusés ni les retours. Le clone de

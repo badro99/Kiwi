@@ -232,8 +232,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "59",
-    "sha": "df87ba6e2c12b2f8"
+    "v": "60",
+    "sha": "6bee9e965bc2fdcb"
   },
   "assets/day-report-dash.js": {
     "v": "28",
@@ -342,6 +342,10 @@
   "assets/food-production-print.js": {
     "v": "2",
     "sha": "882eee0288f15d96"
+  },
+  "assets/food-trade-settings.js": {
+    "v": "1",
+    "sha": "f742ac928cbee701"
   },
   "assets/genpage.css": {
     "v": "5",
@@ -676,12 +680,12 @@
     "sha": "019e8bedf6fd09fd"
   },
   "assets/pos-boulangerie.css": {
-    "v": "8",
+    "v": "9",
     "sha": "22851f6616c8cc46"
   },
   "assets/pos-boulangerie.js": {
-    "v": "8",
-    "sha": "77e4d7e264639830"
+    "v": "9",
+    "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
     "v": "51",
@@ -700,8 +704,8 @@
     "sha": "c72c86666bbe7bdc"
   },
   "assets/pos-dispatch.js": {
-    "v": "77",
-    "sha": "b08877c7df75090d"
+    "v": "78",
+    "sha": "7c13228c35c9e26c"
   },
   "assets/pos-epicerie.css": {
     "v": "6",
@@ -712,12 +716,12 @@
     "sha": "4284572643806211"
   },
   "assets/pos-fastfood.css": {
-    "v": "7",
+    "v": "8",
     "sha": "339dff04cdb82825"
   },
   "assets/pos-fastfood.js": {
-    "v": "7",
-    "sha": "bdee06d0c8e393c0"
+    "v": "8",
+    "sha": "50a2d3c75f7962f3"
   },
   "assets/pos-fleuriste.css": {
     "v": "8",
@@ -728,12 +732,12 @@
     "sha": "a51f2b59ce4c28a0"
   },
   "assets/pos-foodtruck.css": {
-    "v": "6",
+    "v": "7",
     "sha": "30250c7a8e40a516"
   },
   "assets/pos-foodtruck.js": {
-    "v": "6",
-    "sha": "0dccb2391e2271ce"
+    "v": "7",
+    "sha": "597c54c0b6528fe5"
   },
   "assets/pos-gym.css": {
     "v": "6",
@@ -788,12 +792,12 @@
     "sha": "1ece261863c7c8fc"
   },
   "assets/pos-pizzeria.css": {
-    "v": "4",
+    "v": "5",
     "sha": "1a1795ad2525dc1c"
   },
   "assets/pos-pizzeria.js": {
-    "v": "4",
-    "sha": "0c879193358c5354"
+    "v": "5",
+    "sha": "49df3f7ed5cfae9a"
   },
   "assets/pos-reprint.js": {
     "v": "8",
@@ -812,12 +816,12 @@
     "sha": "e5cc5e0a9771b6dc"
   },
   "assets/pos-traiteur.css": {
-    "v": "6",
+    "v": "7",
     "sha": "45d7b1720fd65004"
   },
   "assets/pos-traiteur.js": {
-    "v": "6",
-    "sha": "e49224424c0e0ce2"
+    "v": "7",
+    "sha": "110a4f70d1841970"
   },
   "assets/pos-workspaces.css": {
     "v": "4",
@@ -908,8 +912,8 @@
     "sha": "564289e55caa6564"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "95",
-    "sha": "d4cb621b51558e70"
+    "v": "96",
+    "sha": "5065e236de8b446f"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",
@@ -996,12 +1000,12 @@
     "sha": "4b5bd14061b03143"
   },
   "assets/trade-workspaces.css": {
-    "v": "5",
-    "sha": "0d177857ab8af3b9"
+    "v": "6",
+    "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "5",
-    "sha": "238821033267eedc"
+    "v": "6",
+    "sha": "c2f9fc9a9958f964"
   },
   "assets/trades.js": {
     "v": "6",
@@ -1028,8 +1032,8 @@
     "sha": "577f7848aac1ec14"
   },
   "assets/vertical-state.js": {
-    "v": "2",
-    "sha": "0016468a28529dc2"
+    "v": "3",
+    "sha": "9a3d1faca1ed4b90"
   },
   "assets/vexel-neon.js": {
     "v": "2047",

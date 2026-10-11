@@ -144,7 +144,7 @@
      le démarre, ensuite chaque vente le débite. Rien n'est bloqué avant :
      « épuisé » ne veut dire que « suivi et à zéro ». (null <= 0 est vrai en JS,
      d'où ces gardes plutôt que des comparaisons nues.) */
-  if (pvReal()) CATALOG.forEach((c) => c.items.forEach((p) => { p.stock = null; p.baked = 0; p.sold = 0; }));
+  if (pvReal()) CATALOG.splice(0, CATALOG.length);   /* réel : le catalogue de démo ne se vend pas, la carte du commerçant le remplace (applyCarte) */
   const trk   = (p) => Number.isFinite(p.stock);
   const isOut = (p) => trk(p) && p.stock <= 0;
   const isLow = (p) => trk(p) && p.stock > 0 && p.stock <= p.seuil;
@@ -179,7 +179,7 @@
       .sort((a, b) => a.time.localeCompare(b.time))[0] || null;
 
   /* ───────────────────────── gâteaux sur commande ───────────────────────── */
-  const PARTS = [
+  const PARTS = pvReal() ? [] : [
     { id: 'p8',  label: '8 parts',  sub: 'goûter',        price: 160 },
     { id: 'p12', label: '12 parts', sub: 'famille',       price: 240 },
     { id: 'p20', label: '20 parts', sub: 'fête',          price: 350 },
@@ -194,7 +194,7 @@
     { id: 'autre',       label: 'Autre' },
   ];
   const OCC = Object.fromEntries(OCCASIONS.map((o) => [o.id, o.label]));
-  const PARFUMS = ['Chocolat', 'Vanille-framboise', 'Amande-miel', 'Fruits de saison'];
+  const PARFUMS = pvReal() ? [] : ['Chocolat', 'Vanille-framboise', 'Amande-miel', 'Fruits de saison'];
 
   let cakeSeq = pvReal() ? 1 : 116;
   /* Seeded cake orders carry real-looking customer names + phone numbers —
@@ -214,6 +214,9 @@
       inscription: 'Joyeux anniversaire Rayan', parts: 'p8', parfum: 'Vanille-framboise',
       price: 160, paid: 0, retrait: dayAt(3, 11, 0), status: 'encours', notified: false },
   ];
+  /* Le format d'un gâteau voyage avec la commande (partsLabel) : une carte de
+     formats retouchée au tableau de bord ne doit pas rendre le carnet illisible. */
+  const cakeWhat = (c) => [c.partsLabel || (PART[c.parts] && PART[c.parts].label) || '', c.parfum].filter(Boolean).join(' · ') || 'Gâteau';
   const cakeDue = (c) => Math.max(0, c.price - c.paid);
   const findCake = (id) => CAKES.find((c) => c.id === id);
   const firstName = (n) => String(n || '').split(/\s+/)[0];
@@ -247,11 +250,14 @@
       }
       CAKES.splice(0, CAKES.length, ...((d.cakes || []).map(c => { c.retrait = new Date(c.retrait); return c; })));
       fourSeq = Math.max(fourSeq, +d.fourSeq || 0); cakeSeq = Math.max(cakeSeq, +d.cakeSeq || 0); state.seq = Math.max(state.seq, +d.seq || 0);
-      state.ticket = d.ticket || []; state.day = d.day || state.day; state.lastHour = !!d.lastHour; state.invAdjust = d.invAdjust || {}; state.donForm = d.donForm || { assoc: null, note: '' }; state.don = d.don || null;
+      state.ticket = d.ticket || [];
+      if (pvReal()) { state.ticket.forEach(ensureSnap); state.ticket = state.ticket.filter((l) => PROD[l.prodId]); if (carteSnap) applyCarte(carteSnap); }
+      state.day = d.day || state.day; state.lastHour = !!d.lastHour; state.invAdjust = d.invAdjust || {}; state.donForm = d.donForm || { assoc: null, note: '' }; state.don = d.don || null;
     },
   });
   const tNum = () => `T-${pad2(state.seq).padStart(3, '0')}`;
-  const effPrice = (p) => state.lastHour ? Math.round(p.price * 50) / 100 : p.price;
+  let LH_PCT = 50;                          /* remise « dernière heure » (réel : Menu › Caisse) */
+  const effPrice = (p) => state.lastHour ? Math.round(p.price * (100 - LH_PCT)) / 100 : p.price;
   const tkCount  = () => state.ticket.reduce((s, l) => s + l.qty, 0);
   const tkTotal  = () => state.ticket.reduce((s, l) => s + effPrice(PROD[l.prodId]) * l.qty, 0);
   const inTicket = (prodId) => { const l = state.ticket.find((x) => x.prodId === prodId); return l ? l.qty : 0; };
@@ -281,6 +287,65 @@
   }
   reconcileDay();
 
+  /* ───────────────────────── la carte et les réglages du commerçant ─────────────────────────
+     Les douze produits, leurs prix, les quatre formats de gâteau (160 à 650 MAD) et
+     les quatre parfums ci-dessus sont ceux de la démo. Une vraie boulangerie vend sa
+     carte (tableau de bord › Menu, assets/vertical-state.js › KiwiVerticalCarte) :
+     un article = un produit, une catégorie = un rayon. Le RESTANT, les fournées et
+     les vendus restent à la caisse : on les rattache au produit par son id, ils
+     survivent donc à une carte retouchée. Un produit retiré de la carte reste connu
+     de PROD (ticket en cours, fournée du jour) mais n'est plus proposé.
+     Un produit à options (« garniture ») vend un produit dérivé : son prix est celui
+     de la carte + les suppléments choisis, figé sur la ligne (`snap`). */
+  const carteApi = window.KiwiVerticalCarte;
+  const settingsApi = window.KiwiVerticalSettings;
+  let carteSnap = null, carteSkipped = 0;
+  function applyCarte(c) {
+    if (!pvReal()) return;
+    carteSnap = c;
+    carteSkipped = c && c.skipped ? c.skipped.formulas : 0;
+    const prev = Object.assign({}, PROD);
+    const byCat = Object.create(null), order = [];
+    ((c && c.items) || []).forEach((it) => {
+      const cid = it.catId || '_';
+      if (!byCat[cid]) { byCat[cid] = { id: cid, label: it.catName || 'Produits', items: [] }; order.push(cid); }
+      const old = prev[it.id];
+      const keep = old && !old.derived && !old.free ? old : null;
+      const p = {
+        id: it.id, label: it.name, sub: it.desc || '', price: it.price,
+        stock: keep ? keep.stock : null, baked: keep ? keep.baked : 0, sold: keep ? keep.sold : 0, soldDay: keep ? keep.soldDay : undefined,
+        seuil: keep ? keep.seuil : 0, batch: keep ? keep.batch : 0, cat: cid, groups: it.groups || [], station: it.station || '',
+      };
+      byCat[cid].items.push(p);
+      PROD[p.id] = p;
+    });
+    CATALOG.splice(0, CATALOG.length, ...order.map((id) => byCat[id]));
+    if (state.cat !== 'tous' && !byCat[state.cat]) state.cat = 'tous';
+    /* Une fournée ou un ticket dont le produit n'est plus connu ne doit pas faire planter l'écran. */
+    for (let i = FOURNEES.length - 1; i >= 0; i--) if (!PROD[FOURNEES[i].prod]) FOURNEES.splice(i, 1);
+    state.ticket = state.ticket.filter((l) => { ensureSnap(l); return PROD[l.prodId]; });
+    if (root) { try { renderCats(); if (state.view === 'comptoir') { renderGrid(); renderTicket(); } else refreshOps(); icons(); } catch (_) {} }
+  }
+  /* Un produit dérivé ou libre vit dans PROD sous l'id de sa ligne ; un rechargement
+     le refait depuis l'instantané porté par la ligne. */
+  function ensureSnap(l) {
+    if (!l || !l.snap || PROD[l.prodId]) return;
+    const sn = l.snap;
+    PROD[l.prodId] = { id: l.prodId, label: sn.label, sub: '', price: sn.price, stock: null, baked: 0, sold: 0, seuil: 0, batch: 0, cat: sn.cat || 'libre', parent: sn.parent || '', free: !!sn.free, derived: !!sn.parent, o: sn.o || [], groups: [] };
+  }
+  function applySettings() {
+    if (!pvReal() || !settingsApi) return;
+    const st = settingsApi.get('boulangerie') || {};
+    const pct = Math.round(+st.lastHourPct);
+    LH_PCT = pct >= 1 && pct <= 90 ? pct : 50;
+    PARTS.splice(0, PARTS.length, ...(Array.isArray(st.cakeParts) ? st.cakeParts : [])
+      .filter((x) => x && x.id && x.label && +x.price > 0)
+      .map((x) => ({ id: String(x.id), label: String(x.label), sub: String(x.sub || ''), price: Math.round(+x.price * 100) / 100 })));
+    Object.keys(PART).forEach((k) => { delete PART[k]; }); PARTS.forEach((x) => { PART[x.id] = x; });
+    PARFUMS.splice(0, PARFUMS.length, ...(Array.isArray(st.parfums) ? st.parfums : []).map((x) => String(x).trim()).filter(Boolean));
+    if (root) { try { renderGrid(); renderTicket(); if (state.view === 'jour') renderJour(); } catch (_) {} }
+  }
+
   function queueIfOffline(label) {
     bakeryOps?.save?.(label || 'operation');
     if (!state.offline) return false;
@@ -298,9 +363,14 @@
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
 
+  /* La carte et les réglages du commerçant, lus une fois puis suivis. Démo : rien ne bouge. */
+  if (pvReal() && carteApi) { applyCarte(carteApi.read()); carteApi.watch(applyCarte); }
+  if (pvReal() && settingsApi) { applySettings(); try { settingsApi.subscribe(applySettings); } catch (_) {} }
+
   function mount(rootEl) {
     bakeryOps?.hydrate?.();
     root = rootEl;
+    if (pvReal()) { try { window.KiwiCaisseCarte && window.KiwiCaisseCarte.fetch(); } catch (_) {} }
     root.innerHTML = `
       <aside class="bl-rail">
         <div class="bl-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -441,6 +511,15 @@
   function renderGrid() {
     const cats = state.cat === 'tous' ? CATALOG : CATALOG.filter((c) => c.id === state.cat);
     let i = 0;
+    if (pvReal() && !CATALOG.length) {
+      /* Pas de carte : on le dit, et on laisse taper un article et son prix. */
+      const host = $('#bl-gridwrap', root);
+      host.innerHTML = carteApi ? carteApi.freePriceHtml({ namePh: 'Pain, viennoiserie…', cta: 'Ajouter au ticket' }) : '';
+      if (carteApi) carteApi.freePriceBind(host, addFree);
+      host.onclick = null;
+      $('#bl-counter-hint', root).textContent = 'Saisissez l’article et son prix';
+      return;
+    }
     $('#bl-gridwrap', root).innerHTML = cats.map((c) => `
       <div class="bl-cat-head">${esc(c.label)}</div>
       <div class="bl-grid">${c.items.map((p) => `
@@ -448,17 +527,17 @@
           ${stockPill(p)}
           <span class="bl-card-art">${ART[p.id] || ''}</span>
           <span class="bl-card-name">${esc(p.label)}</span>
-          <span class="bl-card-price">${priceLine(p)}${p.sub ? ` · ${esc(p.sub)}` : ''}</span>
-          <span class="bl-mults">
+          <span class="bl-card-price">${p.groups && p.groups.length ? 'dès ' : ''}${priceLine(p)}${p.sub ? ` · ${esc(p.sub)}` : ''}</span>
+          ${p.groups && p.groups.length ? '' : `<span class="bl-mults">
             <button class="bl-mult" data-bl-mult="2" data-bl-of="${p.id}">×2</button>
             <button class="bl-mult" data-bl-mult="6" data-bl-of="${p.id}">×6</button>
             <button class="bl-mult" data-bl-mult="12" data-bl-of="${p.id}" title="la douzaine">×12</button>
-          </span>
+          </span>`}
         </div>`).join('')}
-      </div>`).join('');
+      </div>`).join('') + (pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : '');
     const hint = $('#bl-counter-hint', root);
     hint.innerHTML = state.lastHour
-      ? '<span class="bl-lh-chip"><i data-lucide="percent"></i>Dernière heure, tout à −50 %</span>'
+      ? `<span class="bl-lh-chip"><i data-lucide="percent"></i>Dernière heure, tout à −${LH_PCT} %</span>`
       : 'Touchez un produit, ×2 ×6 ×12 pour la douzaine';
     $('#bl-gridwrap', root).onclick = (e) => {
       const m = e.target.closest('[data-bl-mult]');
@@ -476,9 +555,35 @@
     else toast(`${p.label} épuisé pour aujourd'hui, prévoyez une fournée à l'écran Fournées`);
   }
 
+  /* Article libre (pas de carte) : un produit à usage unique, son instantané sur la ligne. */
+  function addFree(f) {
+    const id = `libre:${Math.round(f.price * 100)}:${f.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`;
+    const snap = { label: f.name, price: f.price, cat: 'libre', free: true };
+    if (!PROD[id]) PROD[id] = { id, label: f.name, sub: '', price: f.price, stock: null, baked: 0, sold: 0, seuil: 0, batch: 0, cat: 'libre', free: true, groups: [] };
+    const line = state.ticket.find((l) => l.prodId === id);
+    if (line) line.qty++; else state.ticket.push({ prodId: id, qty: 1, snap });
+    renderTicket(); icons();
+  }
+  /* Produit à options : la feuille partagée, puis un produit dérivé au prix figé. */
+  function addWithOptions(p, qty) {
+    carteApi.sheet({
+      title: p.label, sub: p.sub, price: p.price, groups: p.groups,
+      onConfirm: (r) => {
+        const key = r.stamp(1).map((x) => x.id).sort().join('+');
+        const id = `${p.id}~${key}`;
+        const label = r.names.length ? `${p.label} (${r.names.join(', ')})` : p.label;
+        const snap = { label, price: r.unit, cat: p.cat, parent: p.id, o: r.stamp(1) };
+        if (!PROD[id]) PROD[id] = { id, label, sub: '', price: r.unit, stock: null, baked: 0, sold: 0, seuil: 0, batch: 0, cat: p.cat, parent: p.id, derived: true, o: snap.o, groups: [] };
+        const line = state.ticket.find((l) => l.prodId === id);
+        if (line) line.qty += qty; else state.ticket.push({ prodId: id, qty, snap });
+        renderTicket(); icons();
+      },
+    });
+  }
   function addToTicket(prodId, qty) {
     const p = PROD[prodId];
     if (!p) return;
+    if (pvReal() && carteApi && p.groups && p.groups.length) { addWithOptions(p, qty); return; }
     if (isOut(p)) { outOfStockToast(p); return; }
     const avail = trk(p) ? p.stock - inTicket(prodId) : Infinity;
     if (avail <= 0) { toast(`Tout le restant de ${p.label} est déjà sur le ticket`); return; }
@@ -506,13 +611,13 @@
               <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
             </div>
             <div style="font-weight:600; font-size:14px; color:var(--ink);">Le ticket est vide.</div>
-            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez khobz, msemen ou croissant, la vente part en deux gestes.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">${pvReal() ? 'Touchez un produit, la vente part en deux gestes.' : 'Touchez khobz, msemen ou croissant, la vente part en deux gestes.'}</div>
           </div>`}
       </div>
       <div class="bl-tk-foot">
         <div class="bl-tk-tot">
           <span class="pcs"><i data-lucide="wheat"></i> ${count} pièce${count > 1 ? 's' : ''}</span>
-          ${state.lastHour ? '<span class="bl-lh-chip"><i data-lucide="percent"></i>−50 % dernière heure</span>' : `<span>${state.day.tickets} tickets ce matin</span>`}
+          ${state.lastHour ? `<span class="bl-lh-chip"><i data-lucide="percent"></i>−${LH_PCT} % dernière heure</span>` : `<span>${state.day.tickets} ${plu(state.day.tickets, 'ticket')} ce matin</span>`}
         </div>
         <div class="bl-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
         <div class="bl-paybtns">
@@ -570,7 +675,7 @@
       <span class="bl-line-art">${ART[p.id] || ''}</span>
       <span class="bl-line-mid">
         <span class="bl-line-name">${esc(p.label)}</span>
-        <span class="bl-line-sub">${l.qty} × ${fmtN(u)}${state.lastHour ? ' <span class="promo">−50 %</span>' : ''}</span>
+        <span class="bl-line-sub">${l.qty} × ${fmtN(u)}${state.lastHour ? ` <span class="promo">−${LH_PCT} %</span>` : ''}</span>
       </span>
       <span class="bl-line-right">
         <span class="bl-line-price">${fmtMAD(u * l.qty)}</span>
@@ -584,13 +689,18 @@
   function finalizeSale(method, rendu) {
     const total = tkTotal();
     const num = tNum();
-    const lines = state.ticket.map((l) => ({
-      itemId: l.prodId, name: PROD[l.prodId].label, cat: PROD[l.prodId].cat,
-      qty: l.qty, unit: 'piece', kind: 'product',
-      total: Math.round(effPrice(PROD[l.prodId]) * l.qty * 100) / 100,
-    }));
+    const lines = state.ticket.map((l) => {
+      const pr = PROD[l.prodId];
+      const row = {
+        itemId: pr.free ? '' : (pr.parent || l.prodId), name: pr.label, cat: pr.cat,
+        qty: l.qty, unit: 'piece', kind: 'product',
+        total: Math.round(effPrice(pr) * l.qty * 100) / 100,
+      };
+      if (pr.o && pr.o.length) row.options = pr.o.map((x) => ({ id: x.id, qty: l.qty }));
+      return row;
+    });
     state.ticket.forEach((l) => {
-      const p = PROD[l.prodId];
+      const p = PROD[l.prodId].parent ? (PROD[PROD[l.prodId].parent] || PROD[l.prodId]) : PROD[l.prodId];
       if (trk(p)) p.stock = Math.max(0, p.stock - l.qty);
       if (p.soldDay !== dayKey()) { if (p.soldDay) p.sold = 0; p.soldDay = dayKey(); }
       p.sold += l.qty;
@@ -748,9 +858,9 @@
       ? (nf.status === 'four' ? `fournée ×${nf.qty} au four` : `fournée ×${nf.qty} prévue ${nf.time}`)
       : `${sold} ${plu(sold, 'vendu')} aujourd'hui`;
     const hint = (low && !nf)
-      ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Four à prévoir, programmer <b>${nextSlot()} ×${p.batch}</b></button>`
+      ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Four à prévoir, programmer <b>${nextSlot()}${p.batch ? ' ×' + p.batch : ''}</b></button>`
       : (!trk(p) && !nf)
-        ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Suivre le restant, programmer <b>${nextSlot()} ×${p.batch}</b></button>`
+        ? `<button class="bl-rhint" data-bl-prevoir="${p.id}"><i data-lucide="flame"></i>Suivre le restant, programmer <b>${nextSlot()}${p.batch ? ' ×' + p.batch : ''}</b></button>`
         : '';
     return `<div class="bl-rrow ${low ? 'is-low' : ''}">
       <div class="bl-rtop">
@@ -831,10 +941,40 @@
     refreshOps();
   }
 
-  function prevoirFournee(prodId) {
+  /* Réel : la taille d'une fournée est celle du four de la boulangerie, pas une
+     valeur par défaut de la démo. On la demande une fois, puis on la retient pour
+     ce produit (p.batch, gardé dans la fiche de la caisse). */
+  function askQty(title, hint, cb) {
+    if (carteApi) carteApi.optionsHtml([], {});          /* injecte la feuille de style partagée */
+    const veil = document.createElement('div');
+    veil.className = 'vc-veil';
+    veil.innerHTML = `<div class="vc-sheet"><div class="vc-sheet-h"><div><b>${esc(title)}</b><span>${esc(hint)}</span></div></div>
+      <div class="vc-free-row" style="margin-top:12px;"><input type="number" min="1" step="1" inputmode="numeric" data-bl-qty placeholder="Nombre de pièces" aria-label="Nombre de pièces" style="flex:1;"></div>
+      <div class="vc-err" data-bl-qerr hidden>Saisissez un nombre de pièces</div>
+      <div class="vc-sheet-f"><button type="button" class="vc-b2" data-bl-qno>Annuler</button><button type="button" class="vc-b1" data-bl-qok>Programmer</button></div></div>`;
+    document.body.appendChild(veil);
+    const inp = veil.querySelector('[data-bl-qty]');
+    const close = () => { if (veil.parentNode) veil.parentNode.removeChild(veil); };
+    const ok = () => {
+      const n = Math.floor(+inp.value || 0);
+      if (!(n >= 1)) { veil.querySelector('[data-bl-qerr]').hidden = false; inp.focus(); return; }
+      close(); cb(n);
+    };
+    veil.addEventListener('click', (e) => {
+      if (e.target === veil || e.target.closest('[data-bl-qno]')) { close(); return; }
+      if (e.target.closest('[data-bl-qok]')) ok();
+    });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') close(); });
+    try { inp.focus(); } catch (_) {}
+  }
+  function prevoirFournee(prodId, qty) {
     const p = PROD[prodId];
+    if (pvReal() && !(qty >= 1) && !(p.batch >= 1)) {
+      askQty(`Fournée ${p.label}`, 'Combien de pièces sort ce four ?', (n) => { p.batch = n; prevoirFournee(prodId, n); });
+      return;
+    }
     const time = nextSlot();
-    const fournee = { id: `F${fourSeq++}`, time, prod: prodId, qty: p.batch, status: 'prevue' };
+    const fournee = { id: `F${fourSeq++}`, time, prod: prodId, qty: qty >= 1 ? qty : p.batch, status: 'prevue' };
     FOURNEES.push(fournee);
     try {
       if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
@@ -843,7 +983,7 @@
       });
     } catch (_) {}
     queueIfOffline(`Fournée prévue ${p.label}`);
-    toast(`Fournée ${p.label} ×${p.batch} programmée à ${time}, le four est à vous`);
+    toast(`Fournée ${p.label} ×${fournee.qty} programmée à ${time}, le four est à vous`);
     refreshOps();
   }
 
@@ -876,7 +1016,7 @@
           <div class="bl-script">« ${esc(c.inscription || 'sans inscription')} »</div>
           <div class="bl-cc-meta">
             <span class="bl-pill">${esc(OCC[c.occasion] || 'Autre')}</span>
-            <span class="bl-pill">${esc(PART[c.parts].label)} · ${esc(c.parfum)}</span>
+            <span class="bl-pill">${esc(cakeWhat(c))}</span>
             ${cakeStatusPill(c)}
             ${cakePayPill(c)}
             ${c.notified ? '<span class="bl-pill wa"><i data-lucide="check-check"></i>Notifié</span>' : ''}
@@ -1000,7 +1140,7 @@
       ${cakeStage(c.inscription)}
       <div class="bl-dt-rows">
         <div class="bl-dt-row"><span>Client</span><b>${esc(c.name)} · <span style="font-family:var(--mono);font-size:11px;">${esc(c.phone)}</span></b></div>
-        <div class="bl-dt-row"><span>Gâteau</span><b>${esc(PART[c.parts].label)} · ${esc(c.parfum)}</b></div>
+        <div class="bl-dt-row"><span>Gâteau</span><b>${esc(cakeWhat(c))}</b></div>
         <div class="bl-dt-row"><span>Inscription</span><b>${esc(c.inscription || '·')}</b></div>
         <div class="bl-dt-row"><span>Prix</span><b class="mono">${fmtMAD(c.price)}</b></div>
         <div class="bl-dt-row"><span>Acompte versé</span><b class="mono">${fmtMAD(c.paid)}</b></div>
@@ -1023,7 +1163,7 @@
       P.printText({ title:`Bon de commande ${c.id}`, paper:'80', lines:[
         { label:'Client', value:`${c.name} · ${c.phone}` },
         { label:'Retrait', value:fmtWhen(c.retrait) },
-        { label:'Gâteau', value:`${PART[c.parts].label} · ${c.parfum}` },
+        { label:'Gâteau', value:cakeWhat(c) },
         { label:'Inscription', value:c.inscription || '·' },
         { label:'Prix', value:fmtMAD(c.price) },
         { label:'Acompte', value:fmtMAD(c.paid) },
@@ -1052,7 +1192,7 @@
   /* ---------- nouvelle commande ---------- */
   function openCakeForm() {
     const form = {
-      occasion: 'anniv', inscription: '', parts: 'p12', parfum: PARFUMS[0],
+      occasion: 'anniv', inscription: '', parts: pvReal() ? ((PARTS[0] && PARTS[0].id) || '') : 'p12', parfum: PARFUMS[0] || '', price: 0,
       retrait: dayAt(1, 12, 0), name: '', phone: '',
     };
     const el = $('#bl-cakemm', root);
@@ -1078,18 +1218,27 @@
           ${OCCASIONS.map((o) => `<button class="bl-chip ${o.id === form.occasion ? 'on' : ''}" data-bl-occ="${o.id}">${esc(o.label)}</button>`).join('')}
         </div>
       </div>
-      <div class="bl-f">
+      ${pvReal() && !PARTS.length ? `<div class="bl-f">
+        <div class="bl-f-lbl">Format et prix <span class="opt">· aucun format enregistré (tableau de bord, Menu › Caisse)</span></div>
+        <div class="bl-row-2">
+          <input class="bl-in" id="bl-ck-flab" maxlength="30" placeholder="Ex. 12 parts" aria-label="Format" />
+          <input class="bl-in" id="bl-ck-fprice" type="number" min="0" step="1" inputmode="decimal" placeholder="Prix MAD" aria-label="Prix en MAD" />
+        </div>
+      </div>` : `<div class="bl-f">
         <div class="bl-f-lbl">Taille</div>
         <div class="bl-seg" data-lens-demo id="bl-ck-parts">
-          ${PARTS.map((p) => `<button class="bl-seg-it ${p.id === form.parts ? 'on' : ''}" data-lens-item data-bl-part="${p.id}">${esc(p.label)}<small>${fmtN(p.price)} MAD</small></button>`).join('')}
+          ${PARTS.map((p) => `<button class="bl-seg-it ${p.id === form.parts ? 'on' : ''}" data-lens-item data-bl-part="${esc(p.id)}">${esc(p.label)}<small>${fmtN(p.price)} MAD</small></button>`).join('')}
         </div>
-      </div>
-      <div class="bl-f">
+      </div>`}
+      ${pvReal() && !PARFUMS.length ? `<div class="bl-f">
+        <div class="bl-f-lbl">Parfum <span class="opt">· optionnel</span></div>
+        <input class="bl-in" id="bl-ck-fparf" maxlength="40" placeholder="Ex. chocolat" />
+      </div>` : `<div class="bl-f">
         <div class="bl-f-lbl">Parfum</div>
         <div class="bl-chips" id="bl-ck-parf">
           ${PARFUMS.map((p) => `<button class="bl-chip ${p === form.parfum ? 'on' : ''}" data-bl-parf="${esc(p)}">${esc(p)}</button>`).join('')}
         </div>
-      </div>
+      </div>`}
       <div class="bl-f">
         <div class="bl-f-lbl">Retrait</div>
         <div class="bl-date-chips" id="bl-ck-dates">
@@ -1111,7 +1260,7 @@
       </div>
       <div class="bl-sheet-foot">
         <button class="bl-btn secondary" data-bl-close>Annuler</button>
-        <button class="bl-btn primary" id="bl-ck-save"><i data-lucide="check"></i>Enregistrer · <span id="bl-ck-price">${fmtMAD(PART[form.parts].price)}</span></button>
+        <button class="bl-btn primary" id="bl-ck-save"><i data-lucide="check"></i>Enregistrer · <span id="bl-ck-price">${fmtMAD(PART[form.parts] ? PART[form.parts].price : 0)}</span></button>
       </div>`;
     openVeil('#bl-cake-veil');
     icons(); lens();
@@ -1131,18 +1280,22 @@
       form.occasion = b.dataset.blOcc;
       $$('[data-bl-occ]', el).forEach((x) => x.classList.toggle('on', x === b));
     };
-    $('#bl-ck-parts', el).onclick = (e) => {
+    if ($('#bl-ck-parts', el)) $('#bl-ck-parts', el).onclick = (e) => {
       const b = e.target.closest('[data-bl-part]');
       if (!b) return;
       form.parts = b.dataset.blPart;
       $$('[data-bl-part]', el).forEach((x) => x.classList.toggle('on', x === b));
       $('#bl-ck-price', el).textContent = fmtMAD(PART[form.parts].price);
     };
-    $('#bl-ck-parf', el).onclick = (e) => {
+    if ($('#bl-ck-parf', el)) $('#bl-ck-parf', el).onclick = (e) => {
       const b = e.target.closest('[data-bl-parf]');
       if (!b) return;
       form.parfum = b.dataset.blParf;
       $$('[data-bl-parf]', el).forEach((x) => x.classList.toggle('on', x === b));
+    };
+    if ($('#bl-ck-fprice', el)) $('#bl-ck-fprice', el).oninput = (e) => {
+      form.price = Math.max(0, Math.round((+String(e.target.value).replace(',', '.') || 0) * 100) / 100);
+      $('#bl-ck-price', el).textContent = fmtMAD(form.price);
     };
     $('#bl-ck-dates', el).onclick = (e) => {
       const b = e.target.closest('[data-bl-d]');
@@ -1161,19 +1314,24 @@
     $('#bl-ck-save', el).onclick = () => {
       if (!form.name.trim()) { toast('Le nom du client est requis, le gâteau porte un nom'); return; }
       if (form.retrait.getTime() < Date.now()) { toast('La date de retrait est déjà passée, choisissez un créneau à venir'); return; }
+      const freeSize = pvReal() && !PARTS.length;
+      const price = freeSize ? form.price : (PART[form.parts] ? PART[form.parts].price : 0);
+      if (pvReal() && !(price > 0)) { toast('Saisissez le prix du gâteau'); const fp = $('#bl-ck-fprice', el); if (fp) fp.focus(); return; }
+      if (pvReal() && !PARFUMS.length && $('#bl-ck-fparf', el)) form.parfum = ($('#bl-ck-fparf', el).value || '').trim();
       const cake = {
         id: `G-${cakeSeq++}`,
         name: form.name.trim(), phone: form.phone.trim(),
         occasion: form.occasion, inscription: form.inscription.trim(),
         parts: form.parts, parfum: form.parfum,
-        price: PART[form.parts].price, paid: 0,
+        partsLabel: freeSize ? ($('#bl-ck-flab', el).value || '').trim() : (PART[form.parts] ? PART[form.parts].label : ''),
+        price, paid: 0,
         retrait: form.retrait, status: 'encours', notified: false,
       };
       CAKES.push(cake);
       try {
         if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
           trade: 'bakery', ref: cake.id, destination: `${cake.name} · retrait ${fmtWhen(cake.retrait)}`,
-          lines: [{ qty: 1, name: `${PART[cake.parts].label} · ${cake.parfum}`,
+          lines: [{ qty: 1, name: cakeWhat(cake),
             note: [OCC[cake.occasion], cake.inscription && `Inscription : ${cake.inscription}`].filter(Boolean).join(' · '), station: 'Pâtisserie' }],
         });
       } catch (_) {}
@@ -1372,8 +1530,8 @@
           <div class="bl-dcard">
             <div class="bl-lhrow">
               <span class="bl-top-art"><i data-lucide="percent"></i></span>
-              <span class="l"><b>Dernière heure · −50 %</b><span>Tout le comptoir à moitié prix avant la fermeture, mieux vendu que jeté.</span></span>
-              <button class="bl-switch ${state.lastHour ? 'on' : ''}" id="bl-lh-switch" role="switch" aria-checked="${state.lastHour}" aria-label="Dernière heure moins cinquante pour cent"></button>
+              <span class="l"><b>Dernière heure · −${LH_PCT} %</b><span>${LH_PCT === 50 ? 'Tout le comptoir à moitié prix' : `Tout le comptoir à −${LH_PCT} %`} avant la fermeture, mieux vendu que jeté.</span></span>
+              <button class="bl-switch ${state.lastHour ? 'on' : ''}" id="bl-lh-switch" role="switch" aria-checked="${state.lastHour}" aria-label="Dernière heure moins ${LH_PCT} pour cent"></button>
             </div>
           </div>
 
@@ -1419,7 +1577,7 @@
     $('#bl-lh-switch', panel).onclick = () => {
       state.lastHour = !state.lastHour;
       toast(state.lastHour
-        ? 'Dernière heure, tout le comptoir passe à −50 %'
+        ? `Dernière heure, tout le comptoir passe à −${LH_PCT} %`
         : 'Prix normaux rétablis sur le comptoir');
       renderJour(); renderGrid(); renderTicket(); icons();
     };

@@ -28,7 +28,10 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Deux décimales dès qu'il y en a : « 12,50 MAD », jamais « 13 MAD » pour un prix de 12,50
+     que le commerçant a saisi (la carte réelle n'est plus faite d'entiers de démo). */
+  const fmtMAD  = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
+  const fmtN2   = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(+n) ? 0 : 2, maximumFractionDigits: 2 }).format(+n || 0);
   const fmtN    = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n));
   const icons   = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens    = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
@@ -93,13 +96,13 @@
   };
 
   /* ───────────────────────── carte traiteur (MAD / personne) ───────────────────────── */
-  const COURSES = [
+  const COURSES = pvReal() ? [] : [
     { id: 'entrees',  label: 'Entrées' },
     { id: 'plats',    label: 'Plats' },
     { id: 'desserts', label: 'Desserts' },
     { id: 'boissons', label: 'Boissons' },
   ];
-  const DISHES = [
+  const DISHES = pvReal() ? [] : [
     { id: 'salades',       course: 'entrees',  label: 'Salades marocaines', sub: 'assortiment 7 coupelles', price: 35, pack: (g) => `${Math.ceil(g / 10)} plateaux de 10` },
     { id: 'pastilla',      course: 'entrees',  label: 'Pastilla au poulet', sub: 'amandes & cannelle',      price: 45, pack: (g) => `${Math.ceil(g / 8)} pastillas (8 parts)` },
     { id: 'briouates',     course: 'entrees',  label: 'Briouates assortis', sub: '3 pièces / pers',         price: 30, pack: (g) => `${fmtN(g * 3)} pièces · ${Math.ceil((g * 3) / 60)} plateaux` },
@@ -118,7 +121,7 @@
   ];
   const DISH = Object.fromEntries(DISHES.map((d) => [d.id, d]));
 
-  const EXTRAS = [
+  const EXTRAS = pvReal() ? [] : [
     { id: 'service',   label: 'Service en salle',        sub: '1 serveur / 20 invités',      calc: (g) => ({ qty: Math.ceil(g / 20), unit: 'serveur',  each: 300 }) },
     { id: 'nappage',   label: 'Nappage & déco de table', sub: '1 table / 8 invités',         calc: (g) => ({ qty: Math.ceil(g / 8),  unit: 'table',    each: 90 }) },
     { id: 'vaisselle', label: 'Vaisselle & verrerie',    sub: 'couvert complet',             calc: (g) => ({ qty: g,                 unit: 'couvert',  each: 12 }) },
@@ -127,10 +130,35 @@
   const EXTRA = Object.fromEntries(EXTRAS.map((x) => [x.id, x]));
   /* Français : 0 et 1 au singulier. */
   const plu = (n, one, many) => (Math.abs(+n) >= 2 ? (many || one + 's') : one);
-  const extraCost = (id, g) => { const c = EXTRA[id].calc(g); return c.qty * c.each; };
-  const extraLine = (id, g) => {
-    const c = EXTRA[id].calc(g);
-    return c.qty === 1 && c.unit === 'forfait' ? 'forfait' : `${c.qty} ${c.unit}${c.qty > 1 ? 's' : ''} × ${c.each}`;
+  /* ── Ce que le devis vend : la carte du commerçant, figée sur chaque devis ──
+     Les quinze plats, leurs prix par personne et les quatre extras (un serveur
+     pour 20 invités à 300 MAD, une table pour 8 à 90 MAD…) ci-dessus sont ceux
+     de la démo. Une vraie maison de traiteur compose son menu dans « Menu » du
+     tableau de bord (le prix de la carte = le prix PAR PERSONNE) et fixe ses
+     extras dans Menu › Caisse. Un événement qui a quatre mois ne doit pas changer
+     de total parce que la carte a bougé : le devis emporte l'instantané des plats
+     et des extras qu'il utilise (`ev.snap`), et c'est lui qui fait foi. */
+  const genericPack = (g) => `${fmtN(g)} ${plu(g, 'personne')}`;
+  function dishOf(x, id) {
+    const sn = x && x.snap && x.snap.dishes && x.snap.dishes[id];
+    if (sn) return Object.assign({ pack: genericPack }, sn);
+    return DISH[id] || { id, label: String(id), sub: '', course: 'libre', price: 0, pack: genericPack };
+  }
+  function extraCalc(def, g) {
+    const each = Math.max(0, +def.each || 0);
+    if (def.mode === 'invite') return { qty: g, unit: def.unit || 'couvert', each };
+    if (def.mode === 'groupe') return { qty: Math.max(1, Math.ceil(g / Math.max(1, +def.per || 1))), unit: def.unit || 'unité', each };
+    return { qty: 1, unit: 'forfait', each };
+  }
+  function extraOf(x, id) {
+    const sn = x && x.snap && x.snap.extras && x.snap.extras[id];
+    if (sn) return Object.assign({}, sn, { calc: (g) => extraCalc(sn, g) });
+    return EXTRA[id] || { id, label: String(id), sub: '', calc: () => ({ qty: 1, unit: 'forfait', each: 0 }) };
+  }
+  const extraCost = (id, g, x) => { const c = extraOf(x, id).calc(g); return c.qty * c.each; };
+  const extraLine = (id, g, x) => {
+    const c = extraOf(x, id).calc(g);
+    return c.qty === 1 && c.unit === 'forfait' ? 'forfait' : `${c.qty} ${c.unit}${c.qty > 1 ? 's' : ''} × ${fmtMAD(c.each)}`;
   };
 
   const TYPES = {
@@ -149,11 +177,11 @@
   const METHODS = { especes: 'espèces', carte: 'carte', virement: 'virement' };
 
   /* ───────────────────────── totals & échéancier ───────────────────────── */
-  function perPerson(ev) { return ev.menu.reduce((s, id) => s + DISH[id].price, 0); }
+  function perPerson(ev) { return ev.menu.reduce((s, id) => s + dishOf(ev, id).price, 0); }
   function evTotals(ev) {
     const pp = perPerson(ev);
     const menuTotal = pp * ev.guests;
-    const extrasTotal = ev.extras.reduce((s, id) => s + extraCost(id, ev.guests), 0);
+    const extrasTotal = ev.extras.reduce((s, id) => s + extraCost(id, ev.guests, ev), 0);
     return { pp, menuTotal, extrasTotal, total: menuTotal + extrasTotal };
   }
   /* Conditions du devis. Le 30 / 50 / 20 et les « 7 jours » étaient écrits en dur
@@ -162,15 +190,16 @@
      mais se règlent maintenant sur chaque devis (bloc « Échéancier »), et tout
      ce qui est affiché ou envoyé est lu depuis le devis lui-même. L'échéance
      « J−7 » reste le repère de la deuxième tranche. */
-  const DEFAULT_TERMS = { c: 30, j7: 50, valid: 7 };
+  let DEFAULT_TERMS = { c: 30, j7: 50, valid: 7, off: 7 };     /* réel : Menu › Caisse */
   function termsOf(x) {
     const t = (x && x.terms) || DEFAULT_TERMS;
-    let c = Math.round(+t.c), j7 = Math.round(+t.j7), valid = Math.round(+t.valid);
+    let c = Math.round(+t.c), j7 = Math.round(+t.j7), valid = Math.round(+t.valid), off = Math.round(+t.off);
     if (!Number.isFinite(c) || c < 1) c = DEFAULT_TERMS.c;
     if (!Number.isFinite(j7) || j7 < 1) j7 = DEFAULT_TERMS.j7;
     if (c + j7 > 99) { c = DEFAULT_TERMS.c; j7 = DEFAULT_TERMS.j7; }
     if (!Number.isFinite(valid) || valid < 1) valid = DEFAULT_TERMS.valid;
-    return { c, j7, valid, solde: 100 - c - j7 };
+    if (!Number.isFinite(off) || off < 1 || off > 90) off = DEFAULT_TERMS.off || 7;
+    return { c, j7, valid, off, solde: 100 - c - j7 };
   }
   const schemeLabel = (x) => { const t = termsOf(x); return `${t.c} / ${t.j7} / ${t.solde}`; };
   function buildTranches(ev) {
@@ -178,10 +207,10 @@
     const tm = termsOf(ev);
     const t1 = Math.round(total * tm.c / 100);
     const t2 = Math.round(total * tm.j7 / 100);
-    const j7 = new Date(ev.date.getTime() - 7 * DAY);
+    const j7 = new Date(ev.date.getTime() - tm.off * DAY);       /* « J−n » : n se règle sur le devis (7 par défaut) */
     return [
       { id: 't1', pct: tm.c, label: 'À la confirmation', amount: t1,             due: ev.confirmedAt || null, paid: null },
-      { id: 't2', pct: tm.j7, label: 'À J−7',        amount: t2,             due: j7,                     paid: null },
+      { id: 't2', pct: tm.j7, label: `À J−${tm.off}`, amount: t2,             due: j7,                     paid: null },
       { id: 't3', pct: tm.solde, label: 'Le jour J · solde', amount: total - t1 - t2, due: ev.date,               paid: null },
     ];
   }
@@ -209,7 +238,7 @@
   }
 
   function buildChecklist(ev) {
-    const items = ev.menu.map((id) => ({ label: `${DISH[id].label}, ${DISH[id].pack(ev.guests)}`, done: false }));
+    const items = ev.menu.map((id) => ({ label: `${dishOf(ev, id).label}, ${dishOf(ev, id).pack(ev.guests)}`, done: false }));
     if (ev.extras.includes('nappage')) items.push({ label: `Nappage & déco, ${Math.ceil(ev.guests / 8)} tables`, done: false });
     if (ev.extras.includes('vaisselle')) items.push({ label: `Vaisselle & verrerie, ${fmtN(ev.guests)} couverts`, done: false });
     items.push({ label: 'Réchauds & bonbonnes de gaz', done: false });
@@ -320,9 +349,49 @@
     offline: false, queued: 0,
   };
 
+  /* ───────────────────────── la carte et les réglages du commerçant ─────────────────────────
+     Lus une fois (démo : rien ne bouge), puis suivis : la carte par sondage, les
+     réglages (extras, conditions de règlement) par abonnement au réglage `foodtrade`. */
+  const carteApi = window.KiwiVerticalCarte;
+  const settingsApi = window.KiwiVerticalSettings;
+  let carteSkipped = 0;
+  function applyCarte(c) {
+    if (!pvReal()) return;
+    carteSkipped = c && c.skipped ? c.skipped.formulas : 0;
+    const items = (c && c.items) || [];
+    const cats = [], seen = {};
+    items.forEach((it) => {
+      const cid = it.catId || '_';
+      if (!seen[cid]) { seen[cid] = 1; cats.push({ id: cid, label: it.catName || 'Menu' }); }
+      DISH[it.id] = { id: it.id, course: cid, label: it.name, sub: it.desc || '', price: it.price, station: it.station || '', pack: genericPack };
+    });
+    COURSES.splice(0, COURSES.length, ...cats);
+    DISHES.splice(0, DISHES.length, ...items.map((it) => DISH[it.id]));
+    if (root && $('[data-tr-panel="devis"] #tr-build-scroll', root)) { try { renderDevis(); icons(); lens(); } catch (_) {} }
+  }
+  function applySettings() {
+    if (!pvReal() || !settingsApi) return;
+    const st = settingsApi.get('traiteur') || {};
+    const tm = st.terms || {};
+    const num = (v, lo, hi, d) => { const n = Math.round(+v); return Number.isFinite(n) && n >= lo && n <= hi ? n : d; };
+    let c = num(tm.c, 1, 98, 30), j7 = num(tm.j7, 1, 98, 50);
+    if (c + j7 > 99) { c = 30; j7 = 50; }
+    DEFAULT_TERMS = { c, j7, valid: num(tm.valid, 1, 90, 7), off: num(tm.off, 1, 90, 7) };
+    const list = (Array.isArray(st.extras) ? st.extras : []).filter((x) => x && x.id && x.label && +x.each >= 0).map((x) => {
+      const def = { id: String(x.id), label: String(x.label), sub: String(x.sub || ''), mode: ['invite', 'groupe'].indexOf(x.mode) >= 0 ? x.mode : 'forfait', each: Math.max(0, +x.each || 0), per: Math.max(1, +x.per || 1), unit: String(x.unit || '') };
+      return Object.assign({}, def, { calc: (g) => extraCalc(def, g) });
+    });
+    EXTRAS.splice(0, EXTRAS.length, ...list);
+    Object.keys(EXTRA).forEach((k) => { delete EXTRA[k]; }); EXTRAS.forEach((x) => { EXTRA[x.id] = x; });
+    if (root && $('#tr-extras', root)) { try { renderExtras(); renderQuote(); icons(); } catch (_) {} }
+  }
+
   /* le devis en cours — la démo ouvre déjà au milieu d'un brouillon */
   const blankDraft = () => ({
-    terms: Object.assign({}, DEFAULT_TERMS),
+    /* Pas de copie des conditions par défaut : un devis neuf suit celles du commerçant
+       (Menu › Caisse), qui n'arrivent qu'après le chargement. Elles ne se figent sur le
+       brouillon que si la caissière les modifie, puis sur l'événement à l'envoi. */
+    terms: null,
     client: '', phone: '', type: 'mariage', guests: 100,
     date: localDate(new Date(NOW + 30 * DAY)), lieu: '',
     menu: [], extras: [],
@@ -341,9 +410,9 @@
     },
   });
   function draftTotals() {
-    const pp = draft.menu.reduce((s, id) => s + DISH[id].price, 0);
+    const pp = draft.menu.reduce((s, id) => s + dishOf(draft, id).price, 0);
     const menuTotal = pp * draft.guests;
-    const extrasTotal = draft.extras.reduce((s, id) => s + extraCost(id, draft.guests), 0);
+    const extrasTotal = draft.extras.reduce((s, id) => s + extraCost(id, draft.guests, draft), 0);
     return { pp, menuTotal, extrasTotal, total: menuTotal + extrasTotal };
   }
 
@@ -366,10 +435,10 @@
      Pas de reprise de compteur : la référence journalisée est la référence
      BANCAIRE de la tranche, pas un numéro de ticket à incrémenter. */
   function eventSaleLines(ev, received) {
-    const rows = ev.menu.map((id) => ({ itemId: id, name: DISH[id].label, category: DISH[id].course, qty: ev.guests, unit: 'personne', kind: 'service', base: DISH[id].price * ev.guests }));
+    const rows = ev.menu.map((id) => ({ itemId: id, name: dishOf(ev, id).label, category: dishOf(ev, id).course, qty: ev.guests, unit: 'personne', kind: 'service', base: dishOf(ev, id).price * ev.guests }));
     ev.extras.forEach((id) => {
-      const c = EXTRA[id].calc(ev.guests);
-      rows.push({ itemId: id, name: EXTRA[id].label, category: 'extras', qty: c.qty, unit: c.unit, kind: 'service', base: c.qty * c.each });
+      const c = extraOf(ev, id).calc(ev.guests);
+      rows.push({ itemId: id, name: extraOf(ev, id).label, category: 'extras', qty: c.qty, unit: c.unit, kind: 'service', base: c.qty * c.each });
     });
     const gross = rows.reduce((s, r) => s + r.base, 0);
     let allocated = 0;
@@ -389,8 +458,12 @@
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
 
+  if (pvReal() && carteApi) { applyCarte(carteApi.read()); carteApi.watch(applyCarte); }
+  if (pvReal() && settingsApi) { applySettings(); try { settingsApi.subscribe(applySettings); } catch (_) {} }
+
   function mount(rootEl) {
     cateringOps?.hydrate?.();
+    if (pvReal()) { try { window.KiwiCaisseCarte && window.KiwiCaisseCarte.fetch(); } catch (_) {} }
     root = rootEl;
     root.innerHTML = `
       <aside class="tr-rail">
@@ -629,11 +702,11 @@
         <div>
           <div class="tr-dt-sec"><i data-lucide="utensils"></i>Menu, ${pp} MAD / personne</div>
           <div class="tr-dt-menu">
-            ${ev.menu.map((id) => `<div class="tr-dt-line"><span class="art">${ART[id] || ''}</span><span class="nm">${esc(DISH[id].label)}</span><span class="vl">${DISH[id].price} MAD</span></div>`).join('')}
+            ${ev.menu.map((id) => `<div class="tr-dt-line"><span class="art">${ART[id] || ''}</span><span class="nm">${esc(dishOf(ev, id).label)}</span><span class="vl">${fmtMAD(dishOf(ev, id).price)}</span></div>`).join('')}
           </div>
           <div class="tr-dt-tot">
             <div class="row"><span>Menu · ${pp} MAD × ${ev.guests}</span><span class="vl">${fmtMAD(menuTotal)}</span></div>
-            ${ev.extras.map((id) => `<div class="row"><span>${esc(EXTRA[id].label)} · ${esc(extraLine(id, ev.guests))}</span><span class="vl">${fmtMAD(extraCost(id, ev.guests))}</span></div>`).join('')}
+            ${ev.extras.map((id) => `<div class="row"><span>${esc(extraOf(ev, id).label)} · ${esc(extraLine(id, ev.guests, ev))}</span><span class="vl">${fmtMAD(extraCost(id, ev.guests, ev))}</span></div>`).join('')}
             <div class="row big"><span>Total</span><span class="vl">${fmtMAD(total)}</span></div>
             ${due > 0 && ev.status !== 'devis' ? `<div class="row"><span>Reste à encaisser</span><span class="vl" style="color:var(--danger-mute);font-weight:700;">${fmtMAD(due)}</span></div>` : ''}
           </div>
@@ -641,7 +714,7 @@
         <div>
           <div class="tr-dt-sec"><i data-lucide="hand-coins"></i>Échéancier ${schemeLabel(ev)}</div>
           ${ev.status === 'devis'
-            ? `<div class="tr-ech-off">L’échéancier s’active à la confirmation :<br>${ev.tranches[0].pct} % à la confirmation · ${ev.tranches[1].pct} % à J−7 · solde le jour J.</div>
+            ? `<div class="tr-ech-off">L’échéancier s’active à la confirmation :<br>${ev.tranches[0].pct} % à la confirmation · ${ev.tranches[1].pct} % à J−${termsOf(ev).off} · solde le jour J.</div>
                <div class="tr-ech" style="margin-top:7px;">${ev.tranches.map((t) => `
                  <div class="tr-ech-row"><span class="tr-ech-dot"></span>
                    <span class="tr-ech-mid"><span class="tr-ech-lbl">${t.pct} % · ${esc(t.label)}</span></span>
@@ -680,10 +753,10 @@
           trade: 'traiteur', ref: ev.id, at: ev.confirmedAt,
           destination: `${ev.name} · ${fmtN(ev.guests)} pers. · ${fmtDay(ev.date)}`,
           lines: ev.menu.map((id) => ({
-            qty: 1, name: DISH[id].label, note: DISH[id].pack(ev.guests),
-            station: DISH[id].course === 'entrees' ? 'Entrées'
-              : DISH[id].course === 'desserts' ? 'Pâtisserie'
-              : DISH[id].course === 'boissons' ? 'Boissons' : 'Cuisine',
+            qty: 1, name: dishOf(ev, id).label, note: dishOf(ev, id).pack(ev.guests),
+            station: dishOf(ev, id).station || (dishOf(ev, id).course === 'entrees' ? 'Entrées'
+              : dishOf(ev, id).course === 'desserts' ? 'Pâtisserie'
+              : dishOf(ev, id).course === 'boissons' ? 'Boissons' : 'Cuisine'),
           })),
         });
       } catch (_) {}
@@ -728,6 +801,7 @@
           <div class="tr-head-sub" style="padding-bottom:2px;">Touchez un plat pour l’ajouter au menu</div>
         </header>
         <div class="tr-build-scroll" id="tr-build-scroll">
+          ${pvReal() && !DISHES.length ? '<div id="tr-free-dish"></div>' : ''}
           ${COURSES.map((c) => `
             <div class="tr-course-head">${esc(c.label)} <span class="pp">· prix par personne</span></div>
             <div class="tr-dishgrid">
@@ -737,12 +811,13 @@
                   <span class="tr-dish-art">${ART[d.id] || ''}</span>
                   <span class="tr-dish-name">${esc(d.label)}</span>
                   <span class="tr-dish-sub">${esc(d.sub)}</span>
-                  <span class="tr-dish-price">+${d.price} MAD / pers</span>
+                  <span class="tr-dish-price">+${fmtMAD(d.price)} / pers</span>
                   ${d.flag ? `<span class="tr-dish-flag">${esc(d.flag)}</span>` : ''}
                 </button>`).join('')}
             </div>`).join('')}
           <div class="tr-course-head">Extras <span class="pp">· calculés sur ${`<span id="tr-extras-g">${draft.guests}</span>`} invités</span></div>
           <div class="tr-extras" id="tr-extras"></div>
+          ${pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : ''}
         </div>
       </div>
       <aside class="tr-quote">
@@ -824,6 +899,18 @@
     $('#tr-q-gminus', panel).onclick = () => { if (draft.guests > 10) { draft.guests = Math.max(10, draft.guests - 10); guestsChanged(panel); } };
     $('#tr-q-gplus', panel).onclick = () => { draft.guests = Math.min(2000, draft.guests + 10); guestsChanged(panel); };
 
+    const fd = $('#tr-free-dish', panel);
+    if (fd && carteApi) {
+      fd.innerHTML = carteApi.freePriceHtml({ title: 'Aucun plat dans la carte', hint: 'Composez la carte dans le tableau de bord, rubrique Menu (le prix est celui d’une personne). En attendant, saisissez le plat et son prix par personne.', namePh: 'Plat ou formule', cta: 'Ajouter au menu' });
+      carteApi.freePriceBind(fd, (f) => {
+        const id = `libre:${Math.round(f.price * 100)}:${f.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`;
+        draft.snap = draft.snap || { dishes: {}, extras: {} };
+        draft.snap.dishes[id] = { id, label: f.name, sub: '', course: 'libre', price: f.price, station: 'Cuisine' };
+        if (!draft.menu.includes(id)) draft.menu.push(id);
+        renderQuote(); icons();
+        toast(`${f.name} ajouté au menu`);
+      });
+    }
     renderExtras();
     renderQuote();
     icons();
@@ -840,14 +927,26 @@
   function renderExtras() {
     const wrap = $('#tr-extras', root);
     if (!wrap) return;
-    wrap.innerHTML = EXTRAS.map((x) => {
+    const custom = Object.values((draft.snap && draft.snap.extras) || {}).filter((x) => !EXTRA[x.id]).map((x) => extraOf(draft, x.id));
+    wrap.innerHTML = EXTRAS.concat(custom).map((x) => {
       const on = draft.extras.includes(x.id);
       return `<button class="tr-extra ${on ? 'on' : ''}" data-tr-extra="${x.id}">
         <span class="tr-extra-tick"><i data-lucide="check"></i></span>
         <span class="tr-extra-mid"><span class="tr-extra-name">${esc(x.label)}</span><span class="tr-extra-sub">${esc(x.sub)}</span></span>
-        <span class="tr-extra-amt">${fmtMAD(extraCost(x.id, draft.guests))}<small>${esc(extraLine(x.id, draft.guests))}</small></span>
+        <span class="tr-extra-amt">${fmtMAD(extraCost(x.id, draft.guests, draft))}<small>${esc(extraLine(x.id, draft.guests, draft))}</small></span>
       </button>`;
-    }).join('');
+    }).join('') + (pvReal() && !EXTRAS.length && carteApi
+      ? carteApi.freePriceHtml({ title: 'Aucune prestation enregistrée', hint: 'Service, vaisselle, livraison : fixez-les dans Menu › Caisse au tableau de bord. En attendant, saisissez la prestation et son montant.', namePh: 'Prestation', cta: 'Ajouter la prestation' })
+      : '');
+    if (pvReal() && !EXTRAS.length && carteApi) {
+      carteApi.freePriceBind(wrap, (f) => {
+        const id = `libre-x:${Math.round(f.price * 100)}:${f.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`;
+        draft.snap = draft.snap || { dishes: {}, extras: {} };
+        draft.snap.extras[id] = { id, label: f.name, sub: 'forfait', mode: 'forfait', each: f.price, unit: 'forfait' };
+        if (!draft.extras.includes(id)) draft.extras.push(id);
+        renderExtras(); renderQuote(); icons();
+      });
+    }
   }
 
   function renderQuote() {
@@ -855,15 +954,18 @@
     const sum = $('#tr-q-sum', root);
     const foot = $('#tr-q-foot', root);
     if (!sum || !foot) return;
-    const byCourse = COURSES.map((c) => ({ c, items: draft.menu.filter((id) => DISH[id].course === c.id) })).filter((x) => x.items.length);
+    const byCourse = COURSES.map((c) => ({ c, items: draft.menu.filter((id) => dishOf(draft, id).course === c.id) })).filter((x) => x.items.length);
+    const known = new Set(COURSES.map((c) => c.id));
+    const loose = draft.menu.filter((id) => !known.has(dishOf(draft, id).course));
+    if (loose.length) byCourse.push({ c: { id: '_', label: 'Autres' }, items: loose });
     const tm = termsOf(draft);
     const t1 = Math.round(total * tm.c / 100), t2 = Math.round(total * tm.j7 / 100);
 
     sum.innerHTML = `
       <div class="tr-q-sum">
         ${draft.menu.length ? `
-          ${byCourse.map((x) => x.items.map((id) => `<div class="tr-q-line"><span class="nm">${esc(DISH[id].label)}</span><span class="vl">${DISH[id].price} MAD</span></div>`).join('')).join('')}
-          <div class="tr-q-line is-pp"><span class="nm">Menu / personne</span><span class="vl">${pp} MAD</span></div>`
+          ${byCourse.map((x) => x.items.map((id) => `<div class="tr-q-line"><span class="nm">${esc(dishOf(draft, id).label)}</span><span class="vl">${fmtMAD(dishOf(draft, id).price)}</span></div>`).join('')).join('')}
+          <div class="tr-q-line is-pp"><span class="nm">Menu / personne</span><span class="vl">${fmtMAD(pp)}</span></div>`
         : `<div class="tr-q-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
             <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
               <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
@@ -871,28 +973,28 @@
             <div style="font-weight:600; font-size:14px; color:var(--ink);">Le menu est vide.</div>
             <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez les plats à gauche, le prix par personne se calcule automatiquement.</div>
           </div>`}
-        ${draft.extras.map((id) => `<div class="tr-q-line"><span class="nm">${esc(EXTRA[id].label)}</span><span class="vl">${fmtMAD(extraCost(id, draft.guests))}</span></div>`).join('')}
+        ${draft.extras.map((id) => `<div class="tr-q-line"><span class="nm">${esc(extraOf(draft, id).label)}</span><span class="vl">${fmtMAD(extraCost(id, draft.guests, draft))}</span></div>`).join('')}
       </div>
       ${total > 0 ? `
       <div class="tr-q-ech">
         <div class="tr-q-ech-head"><i data-lucide="hand-coins"></i>Échéancier proposé <span style="font-weight:500;opacity:.7;">· à régler selon vos conditions</span></div>
         <div class="tr-q-ech-row"><span><input id="tr-q-tc" type="number" inputmode="numeric" min="1" max="98" value="${tm.c}" aria-label="Pourcentage à la confirmation" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> % à la confirmation</span><b>${fmtMAD(t1)}</b></div>
-        <div class="tr-q-ech-row"><span><input id="tr-q-tj" type="number" inputmode="numeric" min="1" max="98" value="${tm.j7}" aria-label="Pourcentage à J moins 7" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> % à J−7</span><b>${fmtMAD(t2)}</b></div>
+        <div class="tr-q-ech-row"><span><input id="tr-q-tj" type="number" inputmode="numeric" min="1" max="98" value="${tm.j7}" aria-label="Pourcentage avant l’événement" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> % à J−<input id="tr-q-to" type="number" inputmode="numeric" min="1" max="90" value="${tm.off}" aria-label="Nombre de jours avant l’événement" style="width:48px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /></span><b>${fmtMAD(t2)}</b></div>
         <div class="tr-q-ech-row"><span>Solde le jour J (${tm.solde} %)</span><b>${fmtMAD(total - t1 - t2)}</b></div>
         <div class="tr-q-ech-row"><span>Devis valable <input id="tr-q-tv" type="number" inputmode="numeric" min="1" max="90" value="${tm.valid}" aria-label="Validité du devis en jours" style="width:54px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--paper);" /> ${plu(tm.valid, 'jour')}</span><b></b></div>
       </div>` : ''}`;
     /* On valide au changement (pas à chaque frappe) : re-rendre ce bloc pendant
        la saisie ferait perdre le focus. Un jeu de pourcentages impossible
        (somme > 99) est refusé et dit pourquoi. */
-    const tcIn = $('#tr-q-tc', sum), tjIn = $('#tr-q-tj', sum), tvIn = $('#tr-q-tv', sum);
+    const tcIn = $('#tr-q-tc', sum), tjIn = $('#tr-q-tj', sum), tvIn = $('#tr-q-tv', sum), toIn = $('#tr-q-to', sum);
     const applyTerms = () => {
-      const c = Math.round(+tcIn.value), j7 = Math.round(+tjIn.value), valid = Math.round(+tvIn.value);
-      if (!(c >= 1) || !(j7 >= 1) || c + j7 > 99) { toast('La confirmation et le J−7 doivent laisser au moins 1 % pour le solde'); renderQuote(); return; }
-      draft.terms = { c, j7, valid: valid >= 1 ? Math.min(valid, 90) : DEFAULT_TERMS.valid };
+      const c = Math.round(+tcIn.value), j7 = Math.round(+tjIn.value), valid = Math.round(+tvIn.value), off = Math.round(+(toIn ? toIn.value : 0));
+      if (!(c >= 1) || !(j7 >= 1) || c + j7 > 99) { toast('La confirmation et l’échéance avant l’événement doivent laisser au moins 1 % pour le solde'); renderQuote(); return; }
+      draft.terms = { c, j7, valid: valid >= 1 ? Math.min(valid, 90) : DEFAULT_TERMS.valid, off: off >= 1 ? Math.min(off, 90) : DEFAULT_TERMS.off };
       cateringOps?.save?.('Conditions du devis');
       renderQuote(); icons();
     };
-    [tcIn, tjIn, tvIn].forEach((el) => { if (el) el.onchange = applyTerms; });
+    [tcIn, tjIn, tvIn, toIn].forEach((el) => { if (el) el.onchange = applyTerms; });
 
     foot.innerHTML = `
       <div class="tr-q-tot-row"><span>Menu ${pp} MAD × ${draft.guests} invités</span><span>${fmtMAD(menuTotal)}</span></div>
@@ -928,6 +1030,15 @@
       team: null, loaded: false, lastWa: null,
       terms: termsOf(draft),
     };
+    if (pvReal()) {
+      /* Instantané : les plats et extras de CE devis, au prix de ce jour. */
+      ev.snap = { dishes: {}, extras: {} };
+      ev.menu.forEach((id) => { const d = dishOf(draft, id); ev.snap.dishes[id] = { id, label: d.label, sub: d.sub || '', course: d.course, price: d.price, station: d.station || '' }; });
+      ev.extras.forEach((id) => {
+        const x = extraOf(draft, id);
+        ev.snap.extras[id] = { id, label: x.label, sub: x.sub || '', mode: x.mode || 'forfait', each: x.each, per: x.per, unit: x.unit };
+      });
+    }
     ev.tranches = buildTranches(ev);
     ev.checklist = buildChecklist(ev);
     return ev;
@@ -977,7 +1088,7 @@
 
     panel.innerHTML = `
       <header class="tr-head">
-        <div><h1>Acomptes & échéanciers</h1><div class="tr-head-sub">Chaque devis porte son échéancier : une part à la confirmation, une part à J−7, le solde le jour J</div></div>
+        <div><h1>Acomptes & échéanciers</h1><div class="tr-head-sub">Chaque devis porte son échéancier : une part à la confirmation, une part avant l’événement (J−${DEFAULT_TERMS.off} par défaut), le solde le jour J</div></div>
       </header>
       <div class="tr-payscroll">
         <div class="tr-stats">
@@ -1157,7 +1268,7 @@
           <div class="tr-bl-sec"><i data-lucide="package"></i>Quantités · <span class="ct">${ev.menu.length} préparations</span></div>
           ${ev.menu.map((id) => `<div class="tr-qty">
             <span class="tr-qty-art">${ART[id] || ''}</span>
-            <span class="tr-qty-mid"><span class="tr-qty-name">${esc(DISH[id].label)}</span><span class="tr-qty-pack">${esc(DISH[id].pack(ev.guests))}</span></span>
+            <span class="tr-qty-mid"><span class="tr-qty-name">${esc(dishOf(ev, id).label)}</span><span class="tr-qty-pack">${esc(dishOf(ev, id).pack(ev.guests))}</span></span>
           </div>`).join('')}
         </div>
         <div class="tr-bl-col">
@@ -1204,9 +1315,9 @@
     if (kind === 'devis') {
       return `Bonjour ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
         + `\n${TYPES[ev.type].label} · ${ev.guests} invités · ${fmtDay(ev.date)} · ${ev.lieu}`
-        + `\nMenu ${pp} MAD / personne : ${ev.menu.map((id) => DISH[id].label.toLowerCase()).join(', ')}.`
-        + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
-        + `\nTotal : ${fmtMAD(total)}, ${tm.c} % à la confirmation (${fmtMAD(t1)}), ${tm.j7} % à J-7 (${fmtMAD(t2)}), solde le jour J.`
+        + `\nMenu ${fmtMAD(pp)} / personne : ${ev.menu.map((id) => dishOf(ev, id).label.toLowerCase()).join(', ')}.`
+        + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => extraOf(ev, id).label.toLowerCase()).join(', ')}.` : '')
+        + `\nTotal : ${fmtMAD(total)}, ${tm.c} % à la confirmation (${fmtMAD(t1)}), ${tm.j7} % à J-${tm.off} (${fmtMAD(t2)}), solde le jour J.`
         + `\nRépondez OUI pour confirmer, la date reste bloquée ${tm.valid} ${plu(tm.valid, 'jour')}.`
         + `\n${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
@@ -1325,8 +1436,8 @@
         <div class="row"><span>Contact</span><span>${esc(ev.client)} · ${esc(ev.phone)}</span></div>
         <div class="row"><span>Couverts</span><span class="b">${ev.guests}</span></div>
         <hr>
-        ${ev.menu.map((id) => `<div class="row"><span class="nm">${esc(DISH[id].label)}</span><span>${esc(DISH[id].pack(ev.guests))}</span></div>`).join('')}
-        ${ev.extras.filter((id) => id !== 'service').map((id) => `<div class="row"><span class="nm">${esc(EXTRA[id].label)}</span><span>${esc(extraLine(id, ev.guests))}</span></div>`).join('')}
+        ${ev.menu.map((id) => `<div class="row"><span class="nm">${esc(dishOf(ev, id).label)}</span><span>${esc(dishOf(ev, id).pack(ev.guests))}</span></div>`).join('')}
+        ${ev.extras.filter((id) => id !== 'service').map((id) => `<div class="row"><span class="nm">${esc(extraOf(ev, id).label)}</span><span>${esc(extraLine(id, ev.guests, ev))}</span></div>`).join('')}
         <hr>
         <div class="row"><span>Équipe</span><span>${ev.team ? ev.team.length : 2} personnes</span></div>
         <div class="row${due > 0 ? ' due' : ''}"><span>Règlement</span><span>${due > 0 ? `SOLDE DÛ ${fmtMAD(due)}` : 'SOLDÉ'}</span></div>
@@ -1361,15 +1472,15 @@
       <div class="row"><span>Date</span><span>${esc(fmtDay(ev.date))}</span></div>
       <div class="row"><span>Lieu</span><span>${esc(ev.lieu)}</span></div>
       <hr>
-      ${ev.menu.map((id) => `<div class="row"><span class="nm">${esc(DISH[id].label)}</span><span>${DISH[id].price} /pers</span></div>`).join('')}
+      ${ev.menu.map((id) => `<div class="row"><span class="nm">${esc(dishOf(ev, id).label)}</span><span>${fmtN2(dishOf(ev, id).price)} /pers</span></div>`).join('')}
       <div class="row b"><span>MENU / PERSONNE</span><span>${pp} MAD</span></div>
       <div class="row"><span>× ${ev.guests} invités</span><span>${fmtN(menuTotal)}</span></div>
-      ${ev.extras.length ? '<hr>' + ev.extras.map((id) => `<div class="row"><span class="nm">${esc(EXTRA[id].label)} (${esc(extraLine(id, ev.guests))})</span><span>${fmtN(extraCost(id, ev.guests))}</span></div>`).join('') : ''}
+      ${ev.extras.length ? '<hr>' + ev.extras.map((id) => `<div class="row"><span class="nm">${esc(extraOf(ev, id).label)} (${esc(extraLine(id, ev.guests, ev))})</span><span>${fmtN(extraCost(id, ev.guests, ev))}</span></div>`).join('') : ''}
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${fmtN(total)} MAD</span></div>
       <hr>
       <div class="row"><span>${termsOf(ev).c} % à la confirmation</span><span>${fmtN(t1)}</span></div>
-      <div class="row"><span>${termsOf(ev).j7} % à J-7</span><span>${fmtN(t2)}</span></div>
+      <div class="row"><span>${termsOf(ev).j7} % à J-${termsOf(ev).off}</span><span>${fmtN(t2)}</span></div>
       <div class="row"><span>Solde le jour J</span><span>${fmtN(total - t1 - t2)}</span></div>
       <hr>
       <div class="c mut">Devis valable ${termsOf(ev).valid} ${plu(termsOf(ev).valid, 'jour')} · la date est bloquée à<br>réception de l’acompte de confirmation.</div>

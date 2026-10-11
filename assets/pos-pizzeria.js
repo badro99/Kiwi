@@ -22,7 +22,9 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Deux décimales dès qu'il y en a : « 12,50 MAD », jamais « 13 MAD » pour un prix de 12,50
+     que le commerçant a saisi (la carte réelle n'est plus faite d'entiers de démo). */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons  = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { KiwiLens.rescan(); } catch (e) {} };
   const pad2   = (n) => String(n).padStart(2, '0');
@@ -139,7 +141,7 @@
   </svg>`;
 
   /* ───────────────────────── carte & tarifs (MAD, Tanger 2026) ───────────────────────── */
-  const SIZES = [
+  const SIZES = pvReal() ? [] : [
     { id: 's', label: 'S', cm: '25 cm' },
     { id: 'm', label: 'M', cm: '33 cm' },
     { id: 'l', label: 'L', cm: '40 cm' },
@@ -149,18 +151,18 @@
     { id: 'fine',    label: 'Fine' },
     { id: 'epaisse', label: 'Épaisse' },
   ];
-  const SUPPS = [
+  const SUPPS = pvReal() ? [] : [
     { id: 'fromage',     label: 'Fromage',     price: 8 },
     { id: 'thon',        label: 'Thon',        price: 10 },
     { id: 'olives',      label: 'Olives',      price: 5 },
     { id: 'champignons', label: 'Champignons', price: 7 },
   ];
   const SUPP = Object.fromEntries(SUPPS.map((s) => [s.id, s]));
-  const HALF_FEE = 5;
-  const BAKE_MS = 12 * 60 * 1000;          /* 12 min par pizza, four à bois */
+  let HALF_FEE = pvReal() ? null : 5;     /* réel : pas de moitié-moitié tant que le commerçant n'a pas fixé le supplément */
+  let BAKE_MS = 12 * 60 * 1000;            /* 12 min par pizza, four à bois (réglable : Menu › Caisse) */
   const OVEN_CAP = 4;
 
-  const PIZZAS = [
+  const PIZZAS = pvReal() ? [] : [
     { id: 'margherita',  label: 'Margherita',     sub: 'tomate, mozzarella, basilic',          prices: { s: 35, m: 45, l: 60 } },
     { id: 'thon_olives', label: 'Thon & olives',  sub: 'thon, olives noires, oignon doux',     prices: { s: 42, m: 55, l: 72 }, flag: 'la classique' },
     { id: 'poulet',      label: 'Poulet fumé',    sub: 'poulet fumé, poivron, origan',         prices: { s: 45, m: 60, l: 78 } },
@@ -170,7 +172,7 @@
     { id: 'calzone',     label: 'Calzone',        sub: 'pliée, dinde fumée, fromage, oeuf',   prices: { s: 38, m: 50 }, flag: 'pizza fermée', noHalf: true },
   ];
   const PIZZA = Object.fromEntries(PIZZAS.map((p) => [p.id, p]));
-  const DRINKS = [
+  const DRINKS = pvReal() ? [] : [
     { id: 'coca',    label: 'Coca-Cola', sub: '33 cl',           price: 10 },
     { id: 'hawai',   label: 'Hawai',     sub: '33 cl · ananas',  price: 10 },
     { id: 'oulmes',  label: 'Oulmès',    sub: '50 cl · gazeuse', price: 12 },
@@ -178,11 +180,85 @@
   ];
   const DRINK = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
 
+  /* ───────────────────────── la carte et les réglages du commerçant ─────────────────────────
+     Les sept pizzas, leurs prix S/M/L, les suppléments à 8 MAD, le supplément
+     moitié-moitié à 5 MAD et les frais de livraison ci-dessus sont ceux de la
+     démo. Une vraie pizzeria vend ce que son patron a composé dans « Menu » du
+     tableau de bord (assets/vertical-state.js › KiwiVerticalCarte) :
+       · une pizza = un article ; son prix est celui de la plus petite taille ;
+       · un groupe d'options « Taille » (un choix) donne les tailles, chaque choix
+         ajoutant son supplément au prix de la carte ; « Pâte » donne la pâte ; tout
+         autre groupe (suppléments, cuisson) passe par la feuille d'options ;
+       · les articles d'une catégorie « Boissons » sont les boissons.
+     La livraison (zones, frais), le supplément moitié-moitié et le temps de cuisson
+     viennent de « Menu › Caisse » (réglage `foodtrade`, lecture seule ici).
+     Une ligne réelle porte son libellé et son prix unitaire (instantané) : une
+     commande en file ne change pas de prix, ni ne casse, parce que la carte a bougé. */
+  const carteApi = window.KiwiVerticalCarte;
+  const settingsApi = window.KiwiVerticalSettings;
+  const DRINK_CAT = /boisson|drink|soda|\bjus\b|\beau\b|th[eé]|caf[eé]|مشروب|عصير|مياه/i;
+  const SIZE_G = /taille|size|format|حجم|مقاس/i;
+  const PATE_G = /p[âa]te|dough|crust|عجين/i;
+  let carteSkipped = 0;
+  function applyCarte(c) {
+    if (!pvReal()) return;
+    const items = (c && c.items) || [];
+    carteSkipped = c && c.skipped ? c.skipped.formulas : 0;
+    const sizes = [], seen = {}, pizzas = [], drinks = [];
+    items.forEach((it) => {
+      if (DRINK_CAT.test(it.catName || '')) {
+        drinks.push({ id: it.id, label: it.name, sub: it.desc || '', price: it.price, groups: it.groups, station: it.station });
+        return;
+      }
+      const sg = it.groups.find((g) => g.kind === 'one' && SIZE_G.test(g.name));
+      const pg = it.groups.find((g) => g.kind === 'one' && g !== sg && PATE_G.test(g.name));
+      const prices = {}, sizeCh = {};
+      if (sg) {
+        /* La clé d'une taille est son nom, pas l'id du choix : deux pizzas ont
+           chacune leur choix « Grande », et la moitié-moitié doit les apparier. */
+        sg.choices.forEach((ch) => {
+          const k = (ch.name.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, '') || ch.id);
+          prices[k] = Math.round((it.price + ch.price) * 100) / 100;
+          sizeCh[k] = ch;
+          if (!seen[k]) { seen[k] = 1; sizes.push({ id: k, label: ch.name, cm: '' }); }
+        });
+      } else {
+        prices.u = it.price;
+        if (!seen.u) { seen.u = 1; sizes.push({ id: 'u', label: 'Prix', cm: '' }); }
+      }
+      pizzas.push({ id: it.id, label: it.name, sub: it.desc || '', prices, sizeCh, sizeG: sg || null, pateG: pg || null, pates: pg ? pg.choices : null, extra: it.groups.filter((g) => g !== sg && g !== pg), station: it.station });
+    });
+    SIZES.splice(0, SIZES.length, ...sizes);
+    Object.keys(SIZE).forEach((k) => { delete SIZE[k]; }); SIZES.forEach((x) => { SIZE[x.id] = x; });
+    PIZZAS.splice(0, PIZZAS.length, ...pizzas);
+    Object.keys(PIZZA).forEach((k) => { delete PIZZA[k]; }); PIZZAS.forEach((x) => { PIZZA[x.id] = x; });
+    DRINKS.splice(0, DRINKS.length, ...drinks);
+    Object.keys(DRINK).forEach((k) => { delete DRINK[k]; }); DRINKS.forEach((x) => { DRINK[x.id] = x; });
+    if (root && $('#pz-gridwrap', root)) renderGrid();
+  }
+  function applySettings() {
+    if (!pvReal() || !settingsApi) return;
+    const st = settingsApi.get('pizzeria') || {};
+    ZONES.splice(0, ZONES.length, ...(Array.isArray(st.zones) ? st.zones : [])
+      .filter((z) => z && z.id && z.label)
+      .map((z) => ({ id: String(z.id), label: String(z.label), fee: Math.max(0, +z.fee || 0), eta: String(z.eta || '') })));
+    Object.keys(ZONE).forEach((k) => { delete ZONE[k]; }); ZONES.forEach((z) => { ZONE[z.id] = z; });
+    HALF_FEE = (st.halfFee == null || st.halfFee === '' || !Number.isFinite(+st.halfFee)) ? null : Math.max(0, +st.halfFee);
+    BAKE_MS = Math.max(1, +st.bakeMin || 12) * 60 * 1000;
+    if (root) { try { renderAll(); } catch (_) {} }
+  }
+  /* La zone d'une commande : l'instantané pris à la commande d'abord (une zone
+     supprimée ou rééditée au tableau de bord ne change pas une livraison en
+     cours), la zone courante ensuite. */
+  const zoneOf = (x) => (x && x.zoneSnap) || (x && ZONE[x.zone]) || { id: (x && x.zone) || '', label: 'Livraison', fee: 0, eta: '' };
+  const jobSz = (j) => (j.sl != null ? (j.sl ? ' · ' + esc(j.sl) : '') : ' · ' + String(j.size).toUpperCase());
+  const drinkOf = (ln) => DRINK[ln.did] || { label: ln.label || 'Boisson', sub: ln.sub || '', price: +ln.unit || 0 };
+
   /* ───────────────────────── livraison — zones Tanger & livreurs ───────────────────────── */
   /* Réel : les délais (« 20–30 min ») sont une promesse faite au client, et ce
      sont ceux de la démo. Aucune pizzeria ne les a saisis : on ne les affiche plus.
      Les frais restent le tarif par défaut (pas d'éditeur de zones, voir rapport). */
-  const ZONES = [
+  const ZONES = pvReal() ? [] : [
     { id: 'centre',     label: 'Centre ville', fee: 10, eta: pvReal() ? '' : '20–30 min' },
     { id: 'malabata',   label: 'Malabata',     fee: 15, eta: pvReal() ? '' : '25–35 min' },
     { id: 'achakar',    label: 'Achakar',      fee: 20, eta: pvReal() ? '' : '35–45 min' },
@@ -222,6 +298,7 @@
   const NOW = Date.now();
 
   function jobLabel(ln) {
+    if (ln.label) return ln.label;
     if (ln.pidB) return `½ ${PIZZA[ln.pid].label} · ½ ${PIZZA[ln.pidB].label}`;
     return PIZZA[ln.pid].label;
   }
@@ -233,7 +310,7 @@
         n++;
         jobs.push({
           jid: `${o.id}-${n}`, orderId: o.id,
-          pid: ln.pid, pidB: ln.pidB || null, size: ln.size,
+          pid: ln.pid, pidB: ln.pidB || null, size: ln.size, sl: ln.sl,
           label: jobLabel(ln),
           status: 'file', slot: null, startAt: null, endAt: null, alerted: false,
         });
@@ -243,6 +320,7 @@
   }
 
   function linePrice(ln) {
+    if (ln.unit != null) return (+ln.unit || 0) * ln.qty;      /* ligne réelle : prix instantané */
     if (ln.kind === 'drink') return DRINK[ln.did].price * ln.qty;
     const p = PIZZA[ln.pid];
     let base = p.prices[ln.size] || 0;
@@ -252,7 +330,7 @@
   }
   function orderTotal(o) {
     const sub = o.lines.reduce((s, ln) => s + linePrice(ln), 0);
-    const fee = o.mode === 'livraison' && o.zone ? ZONE[o.zone].fee : 0;
+    const fee = o.mode === 'livraison' && o.zone ? zoneOf(o).fee : 0;
     return { sub, fee, total: sub + fee };
   }
   function orderDue(o) { return Math.max(0, orderTotal(o).total - o.pay.paid); }
@@ -271,7 +349,7 @@
   function destLabel(o) {
     if (o.mode === 'surplace') return o.table ? `Table ${o.table}` : 'Sur place';
     if (o.mode === 'emporter') return 'Emporter';
-    return o.zone ? `Livraison · ${ZONE[o.zone].label}` : 'Livraison';
+    return o.zone ? `Livraison · ${zoneOf(o).label}` : 'Livraison';
   }
   function findOrder(id) { return ORDERS.find((o) => o.id === id); }
   function courierOrder(cid) {
@@ -411,7 +489,7 @@
   }
   function saleLines(o, received) {
     const productTotal = o.lines.reduce((s, ln) => s + linePrice(ln), 0);
-    const delivery = o.mode === 'livraison' && o.zone ? ZONE[o.zone].fee : 0;
+    const delivery = o.mode === 'livraison' && o.zone ? zoneOf(o).fee : 0;
     const gross = productTotal + delivery;
     const raw = o.lines.map((ln) => ({ ln, base: linePrice(ln) }));
     if (delivery) raw.push({ delivery: true, base: delivery });
@@ -421,13 +499,17 @@
         ? Math.max(0, received - allocated)
         : Math.round((received * row.base / Math.max(1, gross)) * 100) / 100;
       allocated += total;
-      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${ZONE[o.zone].label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'service', total };
+      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${zoneOf(o).label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'service', total };
       const ln = row.ln;
-      if (ln.kind === 'drink') return { itemId: ln.did, name: DRINK[ln.did].label, category: 'boissons', qty: ln.qty, unit: 'piece', kind: 'product', total };
+      if (ln.kind === 'drink') {
+        const dr = { itemId: ln.free ? '' : ln.did, name: drinkOf(ln).label, category: ln.free ? 'libre' : 'boissons', qty: ln.qty, unit: 'piece', kind: 'product', total };
+        if (ln.o && ln.o.length) dr.options = ln.o.map((x) => ({ id: x.id, qty: ln.qty }));
+        return dr;
+      }
       return {
         itemId: ln.pid, variantId: [ln.pidB || '', ln.size || '', ln.pate || ''].join(':'), name: jobLabel(ln),
         category: 'pizzas', qty: ln.qty, unit: 'piece', kind: 'product', total,
-        options: (ln.supps || []).map((id) => ({ itemId: id, qty: ln.qty })),
+        options: ln.o ? ln.o.map((x) => ({ id: x.id, qty: ln.qty })) : (ln.supps || []).map((id) => ({ itemId: id, qty: ln.qty })),
       };
     });
   }
@@ -443,12 +525,18 @@
 
   const lineArt = (ln) => ln.kind === 'drink' ? (ART[ln.did] || '') : (ln.pidB ? halfArt(ln.pid, ln.pidB) : (ART[ln.pid] || ''));
   const jobArt  = (j) => j.pidB ? halfArt(j.pid, j.pidB) : (ART[j.pid] || '');
-  const lineName = (ln) => ln.kind === 'drink' ? DRINK[ln.did].label : jobLabel(ln);
+  const lineName = (ln) => ln.kind === 'drink' ? drinkOf(ln).label : jobLabel(ln);
+
+  /* Carte et réglages du commerçant : lus une fois ici, puis suivis (sondage de
+     la carte, abonnement au réglage). Démo : rien ne bouge. */
+  if (pvReal() && carteApi) { applyCarte(carteApi.read()); carteApi.watch(applyCarte); }
+  if (pvReal() && settingsApi) { applySettings(); try { settingsApi.subscribe(applySettings); } catch (_) {} }
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
     pizzeriaOps?.hydrate?.();
     root = rootEl;
+    if (pvReal()) { try { window.KiwiCaisseCarte && window.KiwiCaisseCarte.fetch(); } catch (_) {} }
     root.innerHTML = `
       <aside class="pz-rail">
         <div class="pz-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -555,28 +643,36 @@
   /* ═══════════════════════ CARTE — grid ═══════════════════════ */
   function minPrice(p) { return Math.min.apply(null, Object.values(p.prices)); }
   function renderGrid() {
+    const host = $('#pz-gridwrap', root);
+    if (pvReal() && !PIZZAS.length && !DRINKS.length) {
+      host.innerHTML = carteApi ? carteApi.freePriceHtml({ namePh: 'Pizza, boisson…', cta: 'Ajouter à la commande' }) : '';
+      if (carteApi) carteApi.freePriceBind(host, addFree);
+      host.onclick = null;
+      return;
+    }
     let i = 0;
-    $('#pz-gridwrap', root).innerHTML = `
-      <div class="pz-cat-head">Pizzas, four à bois · ${PIZZAS.length}</div>
+    host.innerHTML = `
+      ${PIZZAS.length || !pvReal() ? `<div class="pz-cat-head">Pizzas${pvReal() ? '' : ', four à bois'} · ${PIZZAS.length}</div>
       <div class="pz-grid">${PIZZAS.map((p) => `
-        <button class="pz-card" data-pz-pizza="${p.id}" style="--i:${i++}">
+        <button class="pz-card" data-pz-pizza="${esc(p.id)}" style="--i:${i++}">
           <span class="pz-card-art">${ART[p.id] || ''}</span>
           <span class="pz-card-name">${esc(p.label)}</span>
           <span class="pz-card-sub">${esc(p.sub)}</span>
-          <span class="pz-card-price">dès ${minPrice(p)} MAD</span>
+          <span class="pz-card-price">${Object.keys(p.prices).length > 1 ? 'dès ' : ''}${fmtMAD(minPrice(p))}</span>
           ${flagOf(p) ? `<span class="pz-card-flag">${esc(flagOf(p))}</span>` : ''}
         </button>`).join('')}
-      </div>
-      <div class="pz-cat-head">Boissons · ${DRINKS.length}</div>
+      </div>` : ''}
+      ${DRINKS.length || !pvReal() ? `<div class="pz-cat-head">Boissons · ${DRINKS.length}</div>
       <div class="pz-grid">${DRINKS.map((d) => `
-        <button class="pz-card" data-pz-drink="${d.id}" style="--i:${i++}">
+        <button class="pz-card" data-pz-drink="${esc(d.id)}" style="--i:${i++}">
           <span class="pz-card-art">${ART[d.id] || ''}</span>
           <span class="pz-card-name">${esc(d.label)}</span>
           <span class="pz-card-sub">${esc(d.sub)}</span>
-          <span class="pz-card-price">${d.price} MAD</span>
+          <span class="pz-card-price">${d.groups && d.groups.length ? 'dès ' : ''}${fmtMAD(d.price)}</span>
         </button>`).join('')}
-      </div>`;
-    $('#pz-gridwrap', root).onclick = (e) => {
+      </div>` : ''}
+      ${pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : ''}`;
+    host.onclick = (e) => {
       const pz = e.target.closest('[data-pz-pizza]');
       if (pz) { openSheet(pz.dataset.pzPizza); return; }
       const dr = e.target.closest('[data-pz-drink]');
@@ -585,10 +681,37 @@
   }
   function addDrink(did) {
     const t = state.ticket;
+    const d = DRINK[did];
+    if (pvReal() && d && d.groups && d.groups.length && carteApi) {
+      carteApi.sheet({
+        title: d.label, sub: d.sub || '', price: d.price, groups: d.groups,
+        onConfirm: (r) => { pushDrink(d, r); },
+      });
+      return;
+    }
+    if (pvReal() && d) { pushDrink(d, null); return; }
     const ex = t.lines.find((ln) => ln.kind === 'drink' && ln.did === did);
     if (ex) ex.qty++;
     else t.lines.push({ kind: 'drink', did, qty: 1 });
     toast(`${DRINK[did].label}, sur la commande`);
+    renderTicket(); icons(); lens();
+  }
+  /* Boisson réelle : libellé + choix, prix = carte + suppléments (instantané). */
+  function pushDrink(d, r) {
+    const t = state.ticket;
+    const unit = r ? r.unit : d.price;
+    const label = r && r.names.length ? `${d.label} (${r.names.join(', ')})` : d.label;
+    const ex = t.lines.find((ln) => ln.kind === 'drink' && ln.did === d.id && ln.label === label && ln.unit === unit);
+    if (ex) ex.qty++;
+    else t.lines.push({ kind: 'drink', did: d.id, qty: 1, label, unit, sub: d.sub || '', o: r ? r.stamp(1) : [] });
+    toast(`${label}, sur la commande`);
+    renderTicket(); icons(); lens();
+  }
+  function addFree(f) {
+    const t = state.ticket;
+    const ex = t.lines.find((ln) => ln.free && ln.label === f.name && ln.unit === f.price);
+    if (ex) ex.qty++;
+    else t.lines.push({ kind: 'drink', did: 'libre', qty: 1, label: f.name, unit: f.price, sub: '', free: true, o: [] });
     renderTicket(); icons(); lens();
   }
 
@@ -601,7 +724,7 @@
             <span class="l"><b>Table ${esc(t.table)}</b><span>Service en salle, encaissement à table possible</span></span>
             <span class="edit">Changer</span></button>`
         : `<button class="pz-tk-row" id="pz-tk-table"><i data-lucide="utensils"></i>
-            <span class="l"><b>Choisir la table</b><span>T1 à T8, ou le comptoir</span></span>
+            <span class="l"><b>Choisir la table</b><span>${pvReal() ? 'Son numéro ou son nom, ou le comptoir' : 'T1 à T8, ou le comptoir'}</span></span>
             <span class="edit">Choisir</span></button>`);
     }
     if (t.mode === 'emporter' || t.mode === 'livraison') {
@@ -620,16 +743,17 @@
     if (t.mode === 'livraison') {
       rows.push(t.zone
         ? `<button class="pz-tk-row is-set" id="pz-tk-zone"><i data-lucide="map-pin"></i>
-            <span class="l"><b>${esc(ZONE[t.zone].label)} · ${ZONE[t.zone].fee} MAD</b><span>${esc(t.address || ZONE[t.zone].eta)}</span></span>
+            <span class="l"><b>${esc(zoneOf(t).label)} · ${fmtMAD(zoneOf(t).fee)}</b><span>${esc(t.address || zoneOf(t).eta)}</span></span>
             <span class="edit">Changer</span></button>`
         : `<button class="pz-tk-row" id="pz-tk-zone"><i data-lucide="map-pin"></i>
-            <span class="l"><b>Choisir la zone</b><span>Centre 10 · Malabata 15 · Achakar 20 · California 15</span></span>
+            <span class="l"><b>${pvReal() && !ZONES.length ? 'Saisir les frais de livraison' : 'Choisir la zone'}</b><span>${pvReal() ? (ZONES.length ? esc(ZONES.map((z) => `${z.label} ${fmtMAD(z.fee)}`).join(' · ')) : 'Aucune zone enregistrée, Menu › Caisse au tableau de bord') : 'Centre 10 · Malabata 15 · Achakar 20 · California 15'}</span></span>
             <span class="edit">Choisir</span></button>`);
     }
     return rows.join('');
   }
 
   function lineSub(ln) {
+    if (ln.sub != null && ln.unit != null) return esc(ln.sub) + (ln.note ? `${ln.sub ? ' · ' : ''}« ${esc(ln.note)} »` : '');       /* ligne réelle : le résumé est écrit à la prise */
     if (ln.kind === 'drink') return esc(DRINK[ln.did].sub);
     const bits = [`<span class="sz">${SIZE[ln.size].label}</span> ${SIZE[ln.size].cm}`, `pâte ${esc(ln.pate === 'epaisse' ? 'épaisse' : 'fine')}`];
     if (ln.supps && ln.supps.length) bits.push(ln.supps.map((s) => `+${esc(SUPP[s].label.toLowerCase())}`).join(' '));
@@ -640,7 +764,7 @@
   function renderTicket() {
     const t = state.ticket;
     const sub = t.lines.reduce((s, ln) => s + linePrice(ln), 0);
-    const fee = t.mode === 'livraison' && t.zone ? ZONE[t.zone].fee : 0;
+    const fee = t.mode === 'livraison' && t.zone ? zoneOf(t).fee : 0;
     const total = sub + fee;
     const nPz = t.lines.reduce((s, ln) => s + (ln.kind === 'pizza' ? ln.qty : 0), 0);
     const el = $('#pz-ticket', root);
@@ -682,7 +806,7 @@
       </div>
       <div class="pz-tk-foot">
         <div class="pz-tk-tot"><span>${nPz} pizza${nPz > 1 ? 's' : ''} · sous-total</span><span class="val">${fmtMAD(sub)}</span></div>
-        ${fee ? `<div class="pz-tk-tot"><span>Livraison ${esc(ZONE[t.zone].label)}</span><span class="val">+${fmtMAD(fee)}</span></div>` : ''}
+        ${fee ? `<div class="pz-tk-tot"><span>Livraison ${esc(zoneOf(t).label)}</span><span class="val">+${fmtMAD(fee)}</span></div>` : ''}
         <div class="pz-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="pz-validate" id="pz-validate" ${t.lines.length ? '' : 'disabled'}>
           <i data-lucide="flame"></i>Envoyer en cuisine · ${fmtMAD(total)}
@@ -719,14 +843,16 @@
   }
 
   /* ═══════════════════════ CONFIG SHEET — taille, pâte, supps, moitié-moitié ═══════════════════════ */
-  const sheet = { pid: null, size: 'm', pate: 'fine', supps: [], qty: 1, half: false, pidB: null, note: '' };
+  const sheet = { pid: null, size: 'm', pate: 'fine', supps: [], qty: 1, half: false, pidB: null, note: '', picks: {} };
 
   function openSheet(pid) {
     const p = PIZZA[pid];
+    const sz0 = pvReal() ? (Object.keys(p.prices)[0] || 'u') : (p.prices.m != null ? 'm' : 's');
     Object.assign(sheet, {
       pid,
-      size: p.prices.m != null ? 'm' : 's',
-      pate: 'fine', supps: [], qty: 1, half: false, pidB: null, note: '',
+      size: sz0,
+      pate: pvReal() ? ((p.pates && p.pates[0] && p.pates[0].id) || '') : 'fine',
+      supps: [], qty: 1, half: false, pidB: null, note: '', picks: {},
     });
     renderSheet();
     openVeil('#pz-sheet-veil');
@@ -740,20 +866,22 @@
     if (sheet.half && sheet.pidB) {
       const b2 = PIZZA[sheet.pidB].prices[sizeId];
       if (b2 == null) return null;
-      return Math.max(b, b2) + HALF_FEE;
+      return Math.max(b, b2) + (HALF_FEE || 0);
     }
     return b;
   }
   function sheetUnit() {
+    if (pvReal()) return Math.round(((sheetBase(sheet.size) || 0) + pateSur(PIZZA[sheet.pid], sheet.pate) + (carteApi ? carteApi.extra(PIZZA[sheet.pid].extra, sheet.picks) : 0)) * 100) / 100;
     return (sheetBase(sheet.size) || 0) + sheet.supps.reduce((s, id) => s + SUPP[id].price, 0);
   }
+  const pateSur = (p, id) => { const c = p && p.pates && p.pates.find((x) => x.id === id); return c ? c.price : 0; };
 
   function renderSheet() {
     const p = PIZZA[sheet.pid];
     const sizes = SIZES.filter((s) => sheetBase(s.id) != null);
     if (!sizes.some((s) => s.id === sheet.size)) sheet.size = sizes[0].id;
     const unit = sheetUnit();
-    const others = PIZZAS.filter((x) => !x.noHalf && x.id !== sheet.pid);
+    const others = PIZZAS.filter((x) => !x.noHalf && x.id !== sheet.pid && (!pvReal() || (x.prices[sheet.size] != null && !(x.extra && x.extra.some((g) => g.required)))));
     const el = $('#pz-sheetm', root);
     el.innerHTML = `
       <button class="pz-modal-x" data-pz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -763,32 +891,37 @@
           <h3 id="pz-sheet-name">${sheet.half && sheet.pidB ? `½ ${esc(p.label)} · ½ ${esc(PIZZA[sheet.pidB].label)}` : esc(p.label)}</h3>
           <span class="sub">${esc(p.sub)}</span>
         </span>
-        <span class="pz-sheet-price"><span class="val" id="pz-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per" id="pz-sheet-per">${unit} MAD × ${sheet.qty}</span></span>
+        <span class="pz-sheet-price"><span class="val" id="pz-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per" id="pz-sheet-per">${fmtMAD(unit)} × ${sheet.qty}</span></span>
       </div>
 
       <div class="pz-row-2">
-        <div class="pz-f">
-          <div class="pz-f-lbl">Taille</div>
+        <div class="pz-f"${pvReal() && sizes.length === 1 && sizes[0].id === 'u' ? ' hidden' : ''}>
+          <div class="pz-f-lbl">${esc(pvReal() && p.sizeG ? p.sizeG.name : 'Taille')}</div>
           <div class="pz-seg" data-lens-demo id="pz-size-seg">
-            ${sizes.map((s) => `<button class="pz-seg-it ${s.id === sheet.size ? 'on' : ''}" data-lens-item data-pz-size="${s.id}">${s.label} · ${s.cm}<small>${sheetBase(s.id)} MAD</small></button>`).join('')}
+            ${sizes.map((s) => `<button class="pz-seg-it ${s.id === sheet.size ? 'on' : ''}" data-lens-item data-pz-size="${s.id}">${esc(s.label)}${s.cm ? ' · ' + esc(s.cm) : ''}<small>${fmtMAD(sheetBase(s.id))}</small></button>`).join('')}
           </div>
         </div>
-        <div class="pz-f" style="flex:0 0 168px;">
+        ${pvReal() ? (p.pates && p.pates.length ? `<div class="pz-f" style="flex:0 0 168px;">
+          <div class="pz-f-lbl">${esc(p.pateG ? p.pateG.name : 'Pâte')}</div>
+          <div class="pz-seg" data-lens-demo id="pz-pate-seg">
+            ${p.pates.map((pa) => `<button class="pz-seg-it ${pa.id === sheet.pate ? 'on' : ''}" data-lens-item data-pz-pate="${esc(pa.id)}">${esc(pa.name)}${pa.price ? `<small>+${fmtMAD(pa.price)}</small>` : ''}</button>`).join('')}
+          </div>
+        </div>` : '') : `<div class="pz-f" style="flex:0 0 168px;">
           <div class="pz-f-lbl">Pâte</div>
           <div class="pz-seg" data-lens-demo id="pz-pate-seg">
             ${PATES.map((pa) => `<button class="pz-seg-it ${pa.id === sheet.pate ? 'on' : ''}" data-lens-item data-pz-pate="${pa.id}">${esc(pa.label)}<small>${pa.id === 'fine' ? 'croustillante' : 'moelleuse'}</small></button>`).join('')}
           </div>
-        </div>
+        </div>`}
       </div>
 
-      <div class="pz-f">
+      ${pvReal() ? (p.extra && p.extra.length && carteApi ? `<div class="pz-f" id="pz-supps">${carteApi.optionsHtml(p.extra, sheet.picks)}</div>` : '<div id="pz-supps" hidden></div>') : `<div class="pz-f">
         <div class="pz-f-lbl">Suppléments <span class="opt">· sur toute la pizza</span></div>
         <div class="pz-chips" id="pz-supps">
           ${SUPPS.map((s) => `<button class="pz-chip ${sheet.supps.includes(s.id) ? 'on' : ''}" data-pz-supp="${s.id}" aria-pressed="${sheet.supps.includes(s.id)}">+ ${esc(s.label)}<small>${s.price} MAD</small></button>`).join('')}
         </div>
-      </div>
+      </div>`}
 
-      ${p.noHalf ? `
+      ${pvReal() && (HALF_FEE == null || p.noHalf || !others.length) ? '' : p.noHalf ? `
       <div class="pz-f">
         <div class="pz-f-lbl">Moitié-moitié</div>
         <div class="pz-foot-note" style="text-align:left;margin-top:0;">La calzone est pliée et scellée au four, pas de moitié-moitié sur celle-ci.</div>
@@ -797,7 +930,7 @@
         <div class="pz-f-lbl">Moitié-moitié <span class="opt">· deux pizzas, un seul plateau</span></div>
         <button class="pz-half-toggle ${sheet.half ? 'on' : ''}" id="pz-half-toggle" aria-pressed="${sheet.half}">
           <i data-lucide="pizza"></i>
-          <span class="l">Couper en deux goûts<span>prix = la plus chère + ${HALF_FEE} MAD</span></span>
+          <span class="l">Couper en deux goûts<span>prix = la plus chère + ${fmtMAD(HALF_FEE || 0)}</span></span>
           <span class="tick"><i data-lucide="check"></i></span>
         </button>
         ${sheet.half ? `
@@ -839,7 +972,7 @@
       const u = sheetUnit();
       $('#pz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#pz-sheet-cta', el).textContent = fmtMAD(u * sheet.qty);
-      $('#pz-sheet-per', el).textContent = `${u} MAD × ${sheet.qty}`;
+      $('#pz-sheet-per', el).textContent = `${fmtMAD(u)} × ${sheet.qty}`;
       $('#pz-qty-val', el).textContent = sheet.qty;
     };
 
@@ -851,13 +984,22 @@
       $$('[data-pz-size]', el).forEach((x) => x.classList.toggle('on', x.dataset.pzSize === sheet.size));
       refreshPrice();
     };
-    $('#pz-pate-seg', el).onclick = (e) => {
+    const pateSeg = $('#pz-pate-seg', el);          /* réel : absent si la pizza n'a pas de groupe « Pâte » */
+    if (pateSeg) pateSeg.onclick = (e) => {
       const b = e.target.closest('[data-pz-pate]');
       if (!b) return;
       sheet.pate = b.dataset.pzPate;
       $$('[data-pz-pate]', el).forEach((x) => x.classList.toggle('on', x.dataset.pzPate === sheet.pate));
+      refreshPrice();
     };
     $('#pz-supps', el).onclick = (e) => {
+      if (pvReal()) {
+        const c = e.target.closest('[data-vc-g]');
+        if (!c || !carteApi) return;
+        carteApi.toggle(PIZZA[sheet.pid].extra, sheet.picks, c.dataset.vcG, c.dataset.vcC);
+        renderSheet(); icons(); lens();
+        return;
+      }
       const b = e.target.closest('[data-pz-supp]');
       if (!b) return;
       const id = b.dataset.pzSupp;
@@ -870,9 +1012,9 @@
     const halfT = $('#pz-half-toggle', el);
     if (halfT) halfT.onclick = () => {
       sheet.half = !sheet.half;
-      if (sheet.half && !sheet.pidB) sheet.pidB = (PIZZAS.find((x) => !x.noHalf && x.id !== sheet.pid) || {}).id || null;
+      if (sheet.half && !sheet.pidB) sheet.pidB = (others[0] || {}).id || null;
       /* la taille doit exister des deux côtés */
-      if (sheet.half && sheetBase(sheet.size) == null) sheet.size = 'm';
+      if (sheet.half && sheetBase(sheet.size) == null) sheet.size = pvReal() ? ((SIZES.find((x) => sheetBase(x.id) != null) || {}).id || sheet.size) : 'm';
       renderSheet(); icons(); lens();
     };
     $$('[data-pz-halfb]', el).forEach((b) => {
@@ -885,6 +1027,28 @@
     $('#pz-qty-plus', el).onclick = () => { sheet.qty++; refreshPrice(); };
     $('#pz-note-free', el).oninput = (e) => { sheet.note = e.target.value; };
     $('#pz-sheet-add', el).onclick = () => {
+      if (pvReal()) {
+        const miss = carteApi ? carteApi.missing(p.extra, sheet.picks) : '';
+        if (miss) { toast(`Choisissez : ${miss}`); return; }
+        const sz = SIZE[sheet.size] || { id: sheet.size, label: '' };
+        const pc = p.pates && p.pates.find((x) => x.id === sheet.pate);
+        const szCh = p.sizeCh && p.sizeCh[sheet.size];
+        const bits = [sz.id !== 'u' ? sz.label : '', pc ? pc.name : '']
+          .concat(carteApi ? carteApi.names(p.extra, sheet.picks) : []).filter(Boolean);
+        const pB = sheet.half && sheet.pidB ? PIZZA[sheet.pidB] : null;
+        const label = pB ? `½ ${p.label} · ½ ${pB.label}` : p.label;
+        const stamp = (szCh ? [{ id: szCh.id, qty: 1 }] : []).concat(pc ? [{ id: pc.id, qty: 1 }] : [])
+          .concat(carteApi ? carteApi.stamp(p.extra, sheet.picks, 1) : []);
+        state.ticket.lines.push({
+          kind: 'pizza', pid: sheet.pid, pidB: pB ? pB.id : null, size: sheet.size, sl: sz.id !== 'u' ? sz.label : '',
+          pate: sheet.pate, supps: [], qty: sheet.qty, note: sheet.note.trim(),
+          label, unit: sheetUnit(), sub: bits.join(' · '), o: stamp,
+        });
+        closeVeil('#pz-sheet-veil');
+        toast(`${label}${sz.id !== 'u' && sz.label ? ' ' + sz.label : ''} × ${sheet.qty}, sur la commande`);
+        renderTicket(); icons(); lens();
+        return;
+      }
       state.ticket.lines.push({
         kind: 'pizza', pid: sheet.pid,
         pidB: sheet.half && sheet.pidB ? sheet.pidB : null,
@@ -909,12 +1073,25 @@
       <button class="pz-modal-x" data-pz-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Quelle table ?</h3>
       <p class="modal-subtle">Une table occupée peut recevoir une deuxième tournée.</p>
+      ${pvReal() ? `<div class="vc-free-row" style="margin-bottom:12px;"><input type="text" id="pz-tb-free" maxlength="14" placeholder="Numéro ou nom de la table" aria-label="Table" value="${esc(t.table && t.table !== 'Comptoir' ? t.table : '')}" style="flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(10,15,13,.2);font:600 15px/1 inherit;"><button class="pz-btn primary" id="pz-tb-ok">Valider</button></div>` : ''}
       <div class="pz-tables">
-        ${tables.map((tb) => `<button class="pz-table-chip ${t.table === tb ? 'on' : ''}" data-pz-tb="${tb}">${tb}<span>${taken[tb] ? `occupée · ${taken[tb]}` : 'libre'}</span></button>`).join('')}
+        ${(pvReal() ? ['Comptoir'] : tables).map((tb) => `<button class="pz-table-chip ${t.table === tb ? 'on' : ''}" data-pz-tb="${tb}">${tb}<span>${taken[tb] ? `occupée · ${taken[tb]}` : 'libre'}</span></button>`).join('')}
       </div>`;
     openVeil('#pz-table-veil');
     icons();
     $$('[data-pz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#pz-table-veil'); });
+    const okTb = $('#pz-tb-ok', el);
+    if (okTb) {
+      const go = () => {
+        const v = ($('#pz-tb-free', el).value || '').trim().slice(0, 14);
+        if (!v) { $('#pz-tb-free', el).focus(); return; }
+        t.table = v; closeVeil('#pz-table-veil');
+        toast(`Commande ${t.num}, table ${t.table}`);
+        renderTicket(); icons(); lens();
+      };
+      okTb.onclick = go;
+      $('#pz-tb-free', el).onkeydown = (e) => { if (e.key === 'Enter') go(); };
+    }
     $$('[data-pz-tb]', el).forEach((b) => {
       b.onclick = () => {
         t.table = b.dataset.pzTb;
@@ -935,7 +1112,7 @@
     const el = $('#pz-clientm', root);
     const t = state.ticket;
     const forLiv = t.mode === 'livraison';
-    let mode = 'search';
+    let mode = 'search', lastQ = '';
     const render = (q) => {
       const digits = (q || '').replace(/\D/g, '');
       const ql = (q || '').toLowerCase();
@@ -958,7 +1135,7 @@
                   <span class="pz-cl-name">${esc(c.name)}</span>
                   <span class="pz-cl-sub"><span class="tel">${esc(c.phone)}</span>${forLiv ? ` · ${esc(c.address)}` : ''}</span>
                 </span>
-                <span class="pz-cl-right"><b>${c.orders} cmd</b>${c.zone ? esc(ZONE[c.zone].label) : ''}</span>
+                <span class="pz-cl-right"><b>${c.orders} cmd</b>${c.zone && ZONE[c.zone] ? esc(ZONE[c.zone].label) : ''}</span>
               </button>`).join('') || `<div class="pz-bempty">Aucun client pour « ${esc(q)} »</div>`}
           </div>
           <button class="pz-cl-new" id="pz-cl-new"><i data-lucide="user-plus"></i>Nouveau client${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
@@ -972,7 +1149,16 @@
               <button class="pz-btn primary" id="pz-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
             </div>
           </div>`}`;
-      $('#pz-cl-q', el).oninput = (e) => { render(e.target.value); icons(); const i = $('#pz-cl-q', el); i.focus(); moveCaretEnd(i); };
+      /* Le formateur de téléphone réécrit « 0600000001 » en « 06 00 00 00 01 » au
+         blur, donc à la pression du doigt sur un résultat : l'événement input qui
+         en sort reconstruisait la liste entre l'appui et le relâchement, et la
+         première touche sur le client était perdue. Même recherche = pas de rendu. */
+      lastQ = q || '';
+      $('#pz-cl-q', el).oninput = (e) => {
+        const key = (v) => String(v).replace(/[\s.+-]/g, '').toLowerCase();
+        if (key(e.target.value) === key(lastQ)) { lastQ = e.target.value; return; }
+        render(e.target.value); icons(); const i = $('#pz-cl-q', el); i.focus(); moveCaretEnd(i);
+      };
       $$('[data-pz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#pz-client-veil'); });
       $$('[data-pz-cl]', el).forEach((b) => {
         b.onclick = () => {
@@ -983,7 +1169,7 @@
             if (c.address) t.address = c.address;
           }
           closeVeil('#pz-client-veil');
-          toast(`${c.name}, ${c.orders} ${plu(c.orders, 'commande')}${forLiv && c.zone ? ` · zone ${ZONE[c.zone].label} pré-remplie` : ''}`);
+          toast(`${c.name}, ${c.orders} ${plu(c.orders, 'commande')}${forLiv && c.zone && ZONE[c.zone] ? ` · zone ${ZONE[c.zone].label} pré-remplie` : ''}`);
           renderTicket(); icons(); lens();
         };
       });
@@ -1032,10 +1218,14 @@
         <h3 class="modal-title">Zone de livraison</h3>
         <p class="modal-subtle">Les frais s'ajoutent au total et reviennent au livreur.</p>
         <div class="pz-zones">
-          ${ZONES.map((z) => `<button class="pz-zone-chip ${picked === z.id ? 'on' : ''}" data-pz-zn="${z.id}">
-            <b><i data-lucide="map-pin"></i>${esc(z.label)}</b><span>${z.fee} MAD${z.eta ? ` · ${esc(z.eta)}` : ''}</span>
+          ${ZONES.map((z) => `<button class="pz-zone-chip ${picked === z.id ? 'on' : ''}" data-pz-zn="${esc(z.id)}">
+            <b><i data-lucide="map-pin"></i>${esc(z.label)}</b><span>${fmtMAD(z.fee)}${z.eta ? ` · ${esc(z.eta)}` : ''}</span>
           </button>`).join('')}
         </div>
+        ${pvReal() ? `<div class="vc-free" style="margin:10px 0 12px;"><b>${ZONES.length ? 'Autre zone' : 'Aucune zone enregistrée'}</b>
+          <p>${ZONES.length ? 'Hors des zones ci-dessus, saisissez le quartier et les frais.' : 'Fixez-les au tableau de bord, Menu › Caisse. En attendant, saisissez le quartier et les frais de cette livraison.'}</p>
+          <div class="vc-free-row"><input type="text" id="pz-zone-fname" maxlength="40" placeholder="Quartier" aria-label="Quartier" value="${esc(picked === 'libre' ? (t.zoneSnap && t.zoneSnap.label) || '' : '')}">
+          <input type="number" id="pz-zone-ffee" min="0" step="0.5" inputmode="decimal" placeholder="Frais MAD" aria-label="Frais en MAD" value="${picked === 'libre' && t.zoneSnap ? t.zoneSnap.fee : ''}"></div></div>` : ''}
         <div class="pz-f" style="margin-bottom:0;">
           <div class="pz-f-lbl">Adresse</div>
           <input class="pz-in" id="pz-zone-addr" placeholder="Immeuble, rue, repère…" value="${esc(t.address)}" />
@@ -1046,6 +1236,10 @@
         </div>`;
       icons();
       $$('[data-pz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#pz-zone-veil'); });
+      ['#pz-zone-fname', '#pz-zone-ffee'].forEach((q) => {
+        const f = $(q, el);
+        if (f) f.oninput = () => { picked = 'libre'; $$('[data-pz-zn]', el).forEach((x) => x.classList.remove('on')); };
+      });
       $$('[data-pz-zn]', el).forEach((b) => {
         b.onclick = () => {
           picked = b.dataset.pzZn;
@@ -1053,11 +1247,20 @@
         };
       });
       $('#pz-zone-ok', el).onclick = () => {
-        if (!picked) { toast('Choisissez une zone, les frais en dépendent'); return; }
-        t.zone = picked;
+        const fn = pvReal() ? ($('#pz-zone-fname', el).value || '').trim() : '';
+        const ff = pvReal() ? $('#pz-zone-ffee', el).value : '';
+        if (pvReal() && (fn || ff !== '') && !ZONE[picked]) {
+          /* Livraison hors zone enregistrée : le quartier et les frais tapés font
+             foi, et voyagent avec la commande (zoneSnap). */
+          const fee = Math.max(0, Math.round((+String(ff).replace(',', '.') || 0) * 100) / 100);
+          t.zone = 'libre'; t.zoneSnap = { id: 'libre', label: fn || 'Livraison', fee, eta: '' };
+        } else {
+          if (!picked || !ZONE[picked]) { toast('Choisissez une zone, les frais en dépendent'); return; }
+          t.zone = picked; t.zoneSnap = pvReal() ? Object.assign({}, ZONE[picked]) : null;
+        }
         t.address = $('#pz-zone-addr', el).value.trim();
         closeVeil('#pz-zone-veil');
-        toast(`${ZONE[picked].label}, ${ZONE[picked].fee} MAD de frais${ZONE[picked].eta ? ', ' + ZONE[picked].eta : ''}`);
+        toast(`${zoneOf(t).label}, ${fmtMAD(zoneOf(t).fee)} de frais${zoneOf(t).eta ? ', ' + zoneOf(t).eta : ''}`);
         renderTicket(); icons(); lens();
       };
     };
@@ -1078,6 +1281,7 @@
       custId: t.customer && t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer && t.customer.type === 'guest' ? (t.customer.name || null) : null,
       zone: t.mode === 'livraison' ? t.zone : null,
+      zoneSnap: t.mode === 'livraison' && t.zoneSnap ? Object.assign({}, t.zoneSnap) : null,
       address: t.mode === 'livraison' ? t.address : '',
       lines: t.lines.map((ln) => Object.assign({}, ln, { supps: ln.supps ? ln.supps.slice() : undefined })),
       createdAt: Date.now(),
@@ -1102,8 +1306,10 @@
       if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
         trade: 'pizzeria', ref: o.id, at: o.createdAt, destination: destLabel(o),
         lines: o.lines.map((ln) => ({
-          qty: ln.qty, name: lineName(ln), station: ln.kind === 'drink' ? 'Comptoir' : 'Four',
-          note: ln.kind === 'pizza'
+          qty: ln.qty, name: lineName(ln), station: ln.kind === 'drink' ? ((pvReal() && DRINK[ln.did] && DRINK[ln.did].station) || 'Comptoir') : ((pvReal() && PIZZA[ln.pid] && PIZZA[ln.pid].station) || 'Four'),
+          note: ln.kind === 'pizza' && ln.unit != null
+            ? [ln.sub, ln.note].filter(Boolean).join(' · ')
+            : ln.kind === 'pizza'
             ? [SIZE[ln.size] && SIZE[ln.size].label, ln.pate && `Pâte ${PATES.find((p) => p.id === ln.pate)?.label || ln.pate}`,
                 (ln.supps || []).length && `Suppléments : ${ln.supps.map((id) => SUPP[id] ? SUPP[id].label : id).join(', ')}`, ln.note]
                 .filter(Boolean).join(' · ')
@@ -1286,7 +1492,7 @@
         <span class="pz-slot-art">${jobArt(j)}</span>
       </div>
       <b class="pz-slot-time" data-pz-time>${isDone ? 'Dorée, sortez-la' : fmtMS(rem)}</b>
-      <div class="pz-slot-meta"><b>${j.orderId}</b> · ${esc(j.label)} · ${j.size.toUpperCase()}</div>
+      <div class="pz-slot-meta"><b>${j.orderId}</b> · ${esc(j.label)}${jobSz(j)}</div>
       ${isDone ? `<button class="pz-sortir" data-pz-sortir="${j.jid}"><i data-lucide="check"></i>Sortir du four</button>` : ''}
     </div>`;
   }
@@ -1327,8 +1533,8 @@
         ${due > 0 ? `<span class="pz-pill due">${o.pay.deferred === 'livraison' ? 'à la livraison' : 'à encaisser'} · ${due} MAD</span>` : '<span class="pz-pill ok">Payée</span>'}
       </div>
       <div class="pz-ocard-items">
-        ${o.jobs.map((j) => `<div class="pz-oitem"><span class="art">${jobArt(j)}</span><span class="nm">${esc(j.label)} · ${j.size.toUpperCase()}</span>${jobStatusHTML(j)}</div>`).join('')}
-        ${drinks.map((ln) => `<div class="pz-oitem"><span class="art">${ART[ln.did] || ''}</span><span class="nm">${ln.qty} × ${esc(DRINK[ln.did].label)}</span><span class="st prete">prête</span></div>`).join('')}
+        ${o.jobs.map((j) => `<div class="pz-oitem"><span class="art">${jobArt(j)}</span><span class="nm">${esc(j.label)}${jobSz(j)}</span>${jobStatusHTML(j)}</div>`).join('')}
+        ${drinks.map((ln) => `<div class="pz-oitem"><span class="art">${ART[ln.did] || ''}</span><span class="nm">${ln.qty} × ${esc(drinkOf(ln).label)}</span><span class="st prete">prête</span></div>`).join('')}
       </div>
       <div class="pz-ocard-meta" style="margin-top:7px;">
         <span class="pz-pill"><i data-lucide="user"></i>${esc(cust.name)}</span>
@@ -1346,7 +1552,7 @@
     panel.innerHTML = `
       <div class="pz-four">
         <header class="pz-head">
-          <div><h1>Le four</h1><div class="pz-head-sub">Capacité <b>${OVEN_CAP} pizzas</b> · cuisson <b>12 min</b>, sortez-les dès que c'est doré</div></div>
+          <div><h1>Le four</h1><div class="pz-head-sub">Capacité <b>${OVEN_CAP} pizzas</b> · cuisson <b>${Math.round(BAKE_MS / 60000)} min</b>, sortez-les dès que c'est doré</div></div>
           <div class="pz-head-hint">${freeSlots ? `${freeSlots} place${freeSlots > 1 ? 's' : ''} libre${freeSlots > 1 ? 's' : ''}` : 'Four complet'} · ${queue.length} en file</div>
         </header>
         <div class="pz-four-scroll">
@@ -1356,7 +1562,7 @@
             ${queue.map((j) => `
               <div class="pz-qcard">
                 <span class="pz-qcard-art">${jobArt(j)}</span>
-                <span class="pz-qcard-mid"><span class="pz-qcard-name">${esc(j.label)}</span><span class="pz-qcard-sub">${j.orderId} · ${j.size.toUpperCase()}</span></span>
+                <span class="pz-qcard-mid"><span class="pz-qcard-name">${esc(j.label)}</span><span class="pz-qcard-sub">${j.orderId}${jobSz(j)}</span></span>
                 <button class="pz-enfourner" data-pz-enfourner="${j.jid}" ${freeSlots ? '' : 'disabled'}><i data-lucide="flame"></i>Enfourner</button>
               </div>`).join('') || '<div class="pz-bempty">File vide, tout est au four ou déjà prêt.</div>'}
           </div>
@@ -1460,7 +1666,7 @@
     panel.innerHTML = `
       <div class="pz-liv">
         <header class="pz-head">
-          <div><h1>Livraison</h1><div class="pz-head-sub">Zones Tanger, ${ZONES.map((z) => `${esc(z.label)} <b>${z.fee}</b>`).join(' · ')} MAD</div></div>
+          <div><h1>Livraison</h1><div class="pz-head-sub">${pvReal() ? (ZONES.length ? 'Zones, ' : 'Aucune zone enregistrée, frais saisis à chaque livraison') : 'Zones Tanger, '}${ZONES.map((z) => `${esc(z.label)} <b>${pvReal() ? fmtMAD(z.fee) : z.fee}</b>`).join(' · ')}${pvReal() ? '' : ' MAD'}</div></div>
           <div class="pz-head-hint">${cooking ? `${cooking} commande${cooking > 1 ? 's' : ''} livraison encore au four` : 'Tout ce qui doit partir est prêt'}</div>
         </header>
         <div class="pz-couriers">
@@ -1468,7 +1674,7 @@
             const cur = courierOrder(c.id);
             return `<div class="pz-courier ${cur ? 'is-course' : 'is-libre'}">
               <span class="ava"><i data-lucide="bike"></i></span>
-              <span class="l"><b>${esc(c.name)}</b><span>${cur ? `en course, ${cur.id} · ${esc(ZONE[cur.zone].label)}` : `libre · ${esc(c.sub)}`}</span></span>
+              <span class="l"><b>${esc(c.name)}</b><span>${cur ? `en course, ${cur.id} · ${esc(zoneOf(cur).label)}` : `libre · ${esc(c.sub)}`}</span></span>
             </div>`;
           }).join('')}
         </div>
@@ -1480,9 +1686,9 @@
               return `<div class="pz-dcard">
                 <div class="pz-dcard-top"><span class="pz-ocard-num">${o.id}</span><span class="pz-ocard-when">commandée ${esc(fmtSince(o.createdAt))}</span></div>
                 <div class="pz-dcard-who"><i data-lucide="user"></i>${esc(cust.name)}${cust.phone ? ` · <span style="font-family:var(--mono);font-size:11px;color:var(--ink-3);">${esc(cust.phone)}</span>` : ''}</div>
-                <div class="pz-dcard-addr">${esc(o.address || ZONE[o.zone].label)}</div>
+                <div class="pz-dcard-addr">${esc(o.address || zoneOf(o).label)}</div>
                 <div class="pz-dcard-meta">
-                  <span class="pz-pill mode">${esc(ZONE[o.zone].label)} · ${ZONE[o.zone].fee} MAD</span>
+                  <span class="pz-pill mode">${esc(zoneOf(o).label)} · ${fmtMAD(zoneOf(o).fee)}</span>
                   ${itemsPill(o)}
                   ${payFlag(o)}
                 </div>
@@ -1502,9 +1708,9 @@
                 <div class="pz-dcard-top"><span class="pz-ocard-num">${o.id}</span>
                   <span class="pz-ocard-when" data-pz-since data-ts="${o.delivery.departedAt}">parti ${esc(fmtSince(o.delivery.departedAt))}</span></div>
                 <div class="pz-dcard-who"><i data-lucide="bike"></i>${esc(COURIER[o.delivery.courier].name)} → ${esc(cust.name)}</div>
-                <div class="pz-dcard-addr">${esc(o.address || ZONE[o.zone].label)}${ZONE[o.zone].eta ? ` · ${esc(ZONE[o.zone].eta)}` : ''}</div>
+                <div class="pz-dcard-addr">${esc(o.address || zoneOf(o).label)}${zoneOf(o).eta ? ` · ${esc(zoneOf(o).eta)}` : ''}</div>
                 <div class="pz-dcard-meta">
-                  <span class="pz-pill mode">${esc(ZONE[o.zone].label)} · ${ZONE[o.zone].fee} MAD</span>
+                  <span class="pz-pill mode">${esc(zoneOf(o).label)} · ${fmtMAD(zoneOf(o).fee)}</span>
                   ${itemsPill(o)}
                   ${payFlag(o)}
                 </div>
@@ -1520,7 +1726,7 @@
               const cust = custOf(o);
               return `<div class="pz-dcard is-done">
                 <div class="pz-dcard-top"><span class="pz-ocard-num">${o.id}</span><span class="pz-ocard-when">${fmtClock(o.delivery.deliveredAt)}</span></div>
-                <div class="pz-dcard-who"><i data-lucide="check-circle-2"></i>${esc(cust.name)} · ${esc(ZONE[o.zone].label)}</div>
+                <div class="pz-dcard-who"><i data-lucide="check-circle-2"></i>${esc(cust.name)} · ${esc(zoneOf(o).label)}</div>
                 <div class="pz-dcard-meta">
                   <span class="pz-pill">par ${esc(o.delivery.courier ? COURIER[o.delivery.courier].name : 'livreur')}</span>
                   <span class="pz-pill ok">${orderDue(o) > 0 ? 'solde ouvert' : `payée · ${o.pay.method === 'carte' ? 'carte' : 'espèces'}`}</span>
@@ -1551,7 +1757,7 @@
     o.delivery.departedAt = Date.now();
     queueIfOffline('Départ livreur');
     const due = orderDue(o);
-    toast(`${COURIER[cid].name} parti vers ${ZONE[o.zone].label}, ${o.id}${due > 0 ? ` · il encaisse ${fmtMAD(orderTotal(o).total)}` : ''}`);
+    toast(`${COURIER[cid].name} parti vers ${zoneOf(o).label}, ${o.id}${due > 0 ? ` · il encaisse ${fmtMAD(orderTotal(o).total)}` : ''}`);
     refreshOps();
   }
 

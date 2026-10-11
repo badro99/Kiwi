@@ -30,7 +30,9 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Deux décimales dès qu'il y en a : « 12,50 MAD », jamais « 13 MAD » pour un prix de 12,50
+     que le commerçant a saisi (la carte réelle n'est plus faite d'entiers de démo). */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -83,6 +85,30 @@
     { id: 'msemen',   label: 'Msemen au miel',   price: 12 },
   ];
   const ITEM = Object.fromEntries(MENU.map((m) => [m.id, m]));
+
+  /* ───────────────────────── la carte du commerçant ─────────────────────────
+     Les huit articles ci-dessus et leurs prix sont ceux de la démo. Un vrai camion
+     vend ce que son patron a composé dans « Menu » du tableau de bord (même carte
+     que la caisse restaurant, assets/vertical-state.js › KiwiVerticalCarte), pas
+     un smash burger à 35 MAD qu'il n'a jamais saisi. Carte vide : la caisse le
+     dit et laisse taper un article et son prix.
+     Une ligne porte son propre nom et son prix (instantané, suppléments d'options
+     compris) : une commande déjà en file ne doit pas changer de prix ni
+     disparaître parce que la carte a bougé depuis. */
+  const carteApi = window.KiwiVerticalCarte;
+  let carteSkipped = 0;
+  const nameOf = (l) => l.name || (ITEM[l.id] ? ITEM[l.id].label : 'Article');
+  const unitOf = (l) => (l.price != null ? (+l.price || 0) : (ITEM[l.id] ? ITEM[l.id].price : 0));
+  function applyCarte(c) {
+    if (!pvReal()) return;
+    const items = (c && c.items) || [];
+    carteSkipped = c && c.skipped ? c.skipped.formulas : 0;
+    MENU.splice(0, MENU.length, ...items.map((it) => ({ id: it.id, label: it.name, price: it.price, cat: it.catName || 'carte', sub: it.desc, groups: it.groups, station: it.station })));
+    Object.keys(ITEM).forEach((k) => { delete ITEM[k]; });
+    MENU.forEach((m) => { ITEM[m.id] = m; });
+    if (root && $('#ft-menu', root)) renderMenu();
+  }
+  if (pvReal() && carteApi) { applyCarte(carteApi.read()); carteApi.watch(applyCarte); }
 
   /* ───────────────────────── emplacements (rotation Tanger) ─────────────── */
   /* Réel : « Marina Bay » et « Plage Achakar » sont deux emplacements de la démo
@@ -198,7 +224,7 @@
   };
 
   /* ───────────────────────── derived ───────────────────────── */
-  const ticketTotal = () => state.ticket.lines.reduce((s, l) => s + ITEM[l.id].price * l.qty, 0);
+  const ticketTotal = () => state.ticket.lines.reduce((s, l) => s + unitOf(l) * l.qty, 0);
   const ticketCount = () => state.ticket.lines.reduce((s, l) => s + l.qty, 0);
   const cashTotal   = () => recette.marina.especes + recette.achakar.especes;
   const carteTotal  = () => recette.marina.carte + recette.achakar.carte;
@@ -206,15 +232,17 @@
   const dayTotal    = () => cashTotal() + carteTotal();
   const avgWait     = () => (state.waits.length ? Math.round(state.waits.reduce((a, b) => a + b, 0) / state.waits.length) : null);
   const waitLabel   = () => (avgWait() == null ? 'attente moy. n/d' : `attente moy. ~${avgWait()} min`);
-  const itemsSummary = (o) => o.lines.map((l) => `${l.qty} × ${ITEM[l.id].label}`).join(' · ');
+  const itemsSummary = (o) => o.lines.map((l) => `${l.qty} × ${nameOf(l)}`).join(' · ');
   const findQ = (id) => QUEUE.find((o) => o.id === id);
 
   /* Point de passage unique de la recette : la vente éclair et l'encaissement
      au retrait finissent tous les deux ici, donc le journal partagé aussi. */
   function orderLines(lines) {
     return lines.map((l) => {
-      const it = ITEM[l.id];
-      return { itemId: it.id, name: it.label, category: it.cat || 'carte', qty: l.qty, unit: 'piece', kind: 'product', total: it.price * l.qty };
+      const it = ITEM[l.id] || {};
+      const row = { itemId: l.free ? '' : l.id, name: nameOf(l), category: it.cat || 'carte', qty: l.qty, unit: 'piece', kind: 'product', total: unitOf(l) * l.qty };
+      if (l.o && l.o.length) row.options = l.o.map((x) => ({ id: x.id, qty: l.qty }));
+      return row;
     });
   }
   function addRecette(spotId, method, amount, ref, lines) {
@@ -274,6 +302,9 @@
   function mount(rootEl) {
     truckOps?.hydrate?.();
     root = rootEl;
+    /* La carte du commerçant d'abord : le miroir peut dater d'hier, le serveur
+       dit ce qui est vrai maintenant (la caisse restaurant fait de même). */
+    if (pvReal()) { try { window.KiwiCaisseCarte && window.KiwiCaisseCarte.fetch(); } catch (_) {} }
     root.innerHTML = `
       <aside class="ft-rail">
         <div class="ft-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -497,18 +528,44 @@
   }
 
   function renderMenu() {
-    $('#ft-menu', root).innerHTML = MENU.map((m, i) => `
-      <button class="ft-card" data-ft-item="${m.id}" style="--i:${i}" aria-label="Ajouter ${esc(m.label)}">
+    const host = $('#ft-menu', root);
+    if (pvReal() && !MENU.length) {
+      host.innerHTML = carteApi ? carteApi.freePriceHtml({ namePh: 'Article', cta: 'Ajouter à la commande' }) : '';
+      if (carteApi) carteApi.freePriceBind(host, addFree);
+      return;
+    }
+    host.innerHTML = MENU.map((m, i) => `
+      <button class="ft-card" data-ft-item="${esc(m.id)}" style="--i:${i}" aria-label="Ajouter ${esc(m.label)}">
         <span class="ft-card-art">${ART[m.id] || ''}</span>
         <span class="ft-card-name">${esc(m.label)}</span>
-        <span class="ft-card-price">${m.price} MAD</span>
-      </button>`).join('');
+        <span class="ft-card-price">${m.groups && m.groups.length ? 'dès ' : ''}${fmtPrice(m.price)}</span>
+      </button>`).join('') + (pvReal() && carteSkipped ? `<p class="vc-note" style="grid-column:1/-1">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : '');
+  }
+  /* « 12,50 MAD » : deux décimales dès qu'il y en a (le prix du tableau de bord,
+     pas un entier arrondi). */
+  const fmtPrice = (n) => (carteApi ? carteApi.money(n) : n + ' MAD');
+  function addFree(f) {
+    const ex = state.ticket.lines.find((l) => l.free && l.name === f.name && unitOf(l) === f.price);
+    if (ex) ex.qty = Math.min(30, ex.qty + 1);
+    else state.ticket.lines.push({ id: 'libre', qty: 1, name: f.name, price: f.price, free: true });
+    renderTicket(); renderBadges(); icons();
   }
 
   function addItem(id, cardEl) {
-    const ln = state.ticket.lines.find((l) => l.id === id);
-    if (ln) ln.qty = Math.min(30, ln.qty + 1);
-    else state.ticket.lines.push({ id, qty: 1 });
+    const m = ITEM[id];
+    if (pvReal() && m && m.groups && m.groups.length && carteApi) {
+      carteApi.sheet({
+        title: m.label, sub: m.sub || '', price: m.price, groups: m.groups,
+        onConfirm: (r) => { pushLine(m, r); renderTicket(); renderBadges(); icons(); },
+      });
+      return;
+    }
+    if (pvReal() && m) { pushLine(m, null); }
+    else {
+      const ln = state.ticket.lines.find((l) => l.id === id);
+      if (ln) ln.qty = Math.min(30, ln.qty + 1);
+      else state.ticket.lines.push({ id, qty: 1 });
+    }
     renderTicket(); renderBadges(); icons();
     /* feedback : +1 flottant sur la carte, bump du total */
     if (cardEl) {
@@ -526,16 +583,24 @@
     }
   }
 
+  /* Ligne d'un article de la carte réelle : nom + choix, prix = carte + suppléments. */
+  function pushLine(m, r) {
+    const unit = r ? r.unit : m.price;
+    const name = r && r.names.length ? `${m.label} (${r.names.join(', ')})` : m.label;
+    const ex = state.ticket.lines.find((l) => l.id === m.id && !l.free && nameOf(l) === name && unitOf(l) === unit);
+    if (ex) ex.qty = Math.min(30, ex.qty + 1);
+    else state.ticket.lines.push({ id: m.id, qty: 1, name, price: unit, o: r ? r.stamp(1) : [] });
+  }
+
   function lineRow(ln, i) {
-    const it = ITEM[ln.id];
     return `<div class="ft-line">
       <span class="ft-line-art">${ART[ln.id] || ''}</span>
       <span class="ft-line-mid">
-        <span class="ft-line-name">${esc(it.label)}</span>
-        <span class="ft-line-sub">${it.price} MAD / u</span>
+        <span class="ft-line-name">${esc(nameOf(ln))}</span>
+        <span class="ft-line-sub">${fmtMAD(unitOf(ln))} / u</span>
       </span>
       <span class="ft-line-right">
-        <span class="ft-line-price">${fmtMAD(it.price * ln.qty)}</span>
+        <span class="ft-line-price">${fmtMAD(unitOf(ln) * ln.qty)}</span>
         <span class="ft-line-qty">
           <button data-ft-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-ft-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -609,7 +674,7 @@
     const name = t.name.trim();
     const o = {
       id: `K-${seq}`, n: seq, name: name || `N° ${seq}`, anon: !name,
-      lines: t.lines.map((l) => ({ id: l.id, qty: l.qty })),
+      lines: t.lines.map((l) => ({ id: l.id, qty: l.qty, name: l.name, price: l.price, o: l.o, free: l.free })),
       total,
       pay: { method, paid: total },
       spot: state.spot,
@@ -627,8 +692,8 @@
         trade: 'foodtruck', ref: o.id, at: o.at,
         destination: `${SPOT[o.spot] ? SPOT[o.spot].label : 'Food truck'} · ${o.name}`,
         lines: o.lines.map((l) => ({
-          qty: l.qty, name: ITEM[l.id].label,
-          station: ['jus', 'the', 'limonada'].includes(l.id) ? 'Boissons' : 'Cuisine',
+          qty: l.qty, name: nameOf(l),
+          station: pvReal() ? ((ITEM[l.id] && ITEM[l.id].station) || 'Cuisine') : (['jus', 'the', 'limonada'].includes(l.id) ? 'Boissons' : 'Cuisine'),
         })),
       });
     } catch (_) {}
@@ -638,7 +703,7 @@
   }
 
   function consumeBread(lines) {
-    const used = lines.reduce((s, l) => s + ((ITEM[l.id].bread) ? l.qty : 0), 0);
+    const used = lines.reduce((s, l) => s + ((ITEM[l.id] && ITEM[l.id].bread) ? l.qty : 0), 0);
     if (!used) return;
     if (state.vitals.pain == null) return;      /* pain non renseigné : rien à décompter */
     const before = state.vitals.pain;

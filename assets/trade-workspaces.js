@@ -160,7 +160,11 @@
     return Number.isNaN(d.getTime()) ? '' : [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   }
   function todayKey() { return dayKey(new Date().toISOString()); }
-  function money(n) { try { return Math.round(+n || 0).toLocaleString(lang()==='ar'?'ar-MA':'fr-FR'); } catch (_) { return String(Math.round(+n || 0)); } }
+  /* Les centimes comptent : 330,50 MAD ne devient pas « 331 » (un prix réel n'est plus un entier de démo). */
+  function money(n) {
+    const v = Math.round((+n || 0) * 100) / 100, frac = Math.abs(v - Math.round(v)) > 0.004;
+    try { return v.toLocaleString(lang()==='ar'?'ar-MA':'fr-FR', { minimumFractionDigits: frac ? 2 : 0, maximumFractionDigits: frac ? 2 : 0 }); } catch (_) { return String(v); }
+  }
   function displayDate(v) {
     if (!v) return pick(UI.noDate);
     try { return new Date(v + 'T12:00:00').toLocaleDateString(lang()==='ar'?'ar-MA':lang(), { day:'numeric', month:'short', year:'numeric' }); } catch (_) { return v; }
@@ -191,6 +195,95 @@
       <div class="tw-card-actions">${done?'':`<button class="tw-action primary" type="button" data-tw-next="${esc(r.id)}">${esc(pick(UI.advance))}</button>`}<button class="tw-action" type="button" data-tw-edit="${esc(r.id)}">${esc(pick(UI.edit))}</button><button class="tw-action danger" type="button" data-tw-delete="${esc(r.id)}">${esc(pick(UI.remove))}</button></div>
     </article>`;
   }
+  /* ── Ce que la caisse a déjà enregistré ──────────────────────────────────────
+     Les planches ci-dessous sont des fiches saisies à la main. Le traiteur,
+     la pizzeria et la boulangerie ont pourtant leur vrai métier SUR LA CAISSE
+     (devis, échéances, livraisons, fournées, gâteaux) : le tableau de bord disait
+     « Tout est prêt pour commencer » devant un carnet de devis plein. On lit donc
+     l'état de la caisse (document `verticalops`, assets/vertical-state.js) et on
+     l'affiche en LECTURE SEULE au-dessus des fiches, avec ce que la caisse sait et
+     rien de plus. Démo : jamais, la caisse de démo n'enregistre rien. */
+  const TILL = {
+    title:L('Depuis la caisse','From the till','من الصندوق'), hint:L('Lecture seule, enregistré par la caisse.','Read only, recorded by the till.','للقراءة فقط، مسجل من الصندوق.'),
+    client:L('Client','Customer','العميل'), date:L('Date','Date','التاريخ'), total:L('Montant','Amount','المبلغ'), received:L('Reçu','Received','المستلم'), left:L('Reste','Remaining','المتبقي'),
+    next:L('Prochaine échéance','Next instalment','القسط التالي'), guests:L('Invités','Guests','المدعوون'), place:L('Lieu','Venue','المكان'), late:L('Échéance dépassée','Overdue','تجاوز الموعد'),
+    quote:L('Devis envoyé','Quote sent','عرض مرسل'), confirmed:L('Confirmé','Confirmed','مؤكد'), partial:L('Acompte reçu','Deposit received','تم استلام التسبيق'), delivered:L('Livré','Delivered','تم التسليم'),
+    cooking:L('En cuisine','In the kitchen','في المطبخ'), ready:L('Prête','Ready','جاهزة'), onRoad:L('En course','On the road','في الطريق'), done:L('Livrée','Delivered','تم التوصيل'),
+    zone:L('Zone','Area','المنطقة'), address:L('Adresse','Address','العنوان'), paid:L('Payée','Paid','مدفوعة'), toPay:L('À encaisser','To collect','للتحصيل'),
+    pickup:L('Retrait','Pickup','الاستلام'), balance:L('Solde','Balance','الرصيد'), cake:L('Gâteau','Cake','كعكة'), prep:L('En préparation','In preparation','قيد التحضير'),
+    batchPlanned:L('Prévue','Planned','مبرمجة'), batchOven:L('Au four','In the oven','في الفرن'), batchOut:L('Sortie','Out','خرجت'), time:L('Heure','Time','الساعة'),
+    pizzas:L('Pizzas','Pizzas','البيتزا'), queued:L('En file','Queued','في الانتظار'), baking:L('Au four','Baking','في الفرن'), orders:L('Commande','Order','الطلب'),
+    donation:L('Don du soir','Evening donation','تبرع المساء'), pieces:L('Pièces','Pieces','القطع'), beneficiary:L('Bénéficiaire','Recipient','المستفيد'),
+  };
+  function tillDoc(vertical) {
+    try {
+      if (!window.KiwiEnv?.isReal?.()) return null;
+      const VS = window.KiwiVerticalState;
+      const d = VS?.store?.get?.(venueId());
+      const row = d && d.verticals && d.verticals[vertical];
+      return row && row.data ? row.data : null;
+    } catch (_) { return null; }
+  }
+  function when(v, withTime) {
+    if (!v) return '';
+    const d = new Date(v); if (Number.isNaN(d.getTime())) return '';
+    try { return d.toLocaleString(lang()==='ar'?'ar-MA':lang(), withTime ? { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { day:'numeric', month:'short' }); } catch (_) { return ''; }
+  }
+  const mad = (n) => money(n) + ' ' + pick(UI.currency);
+  const evTotal = (ev) => (ev.tranches || []).reduce((n, t) => n + (+t.amount || 0), 0);
+  const evPaid = (ev) => (ev.tranches || []).reduce((n, t) => n + (t.paid ? (+t.amount || 0) : 0), 0);
+  function tillCards(cfg) {
+    const key = cfg.trade + ':' + cfg.nav;
+    const out = [];
+    if (cfg.trade === 'traiteur') {
+      const evs = (tillDoc('traiteur')?.events || []).filter((e) => e && e.id);
+      const label = { devis:TILL.quote, confirme:TILL.confirmed, acompte:TILL.partial, livre:TILL.delivered };
+      if (cfg.nav === 'quotes') {
+        evs.filter((e) => e.status === 'devis').forEach((e) => out.push({ title:(e.devisRef ? e.devisRef + ' · ' : '') + (e.name || e.client || e.id), status:pick(TILL.quote), meta:[[TILL.client, e.client],[TILL.date, when(e.date, true)],[TILL.total, mad(evTotal(e))],[TILL.guests, e.guests]] }));
+      } else if (cfg.nav === 'deposits') {
+        evs.filter((e) => e.status === 'confirme' || e.status === 'acompte').forEach((e) => {
+          const nx = (e.tranches || []).find((t) => !t.paid), late = !!(nx && nx.due && new Date(nx.due).getTime() < Date.now() - 864e5);
+          out.push({ title:e.name || e.client || e.id, status:pick(label[e.status] || TILL.confirmed), alert:late ? pick(TILL.late) : '',
+            meta:[[TILL.received, mad(evPaid(e))],[TILL.left, mad(Math.max(0, evTotal(e) - evPaid(e)))],[TILL.next, nx ? ((nx.pct ? nx.pct + ' % ' : '') + (nx.due ? when(nx.due) : '') + ' · ' + mad(nx.amount)) : '']] });
+        });
+      } else if (cfg.nav === 'tables') {
+        evs.filter((e) => e.status !== 'devis').sort((a, b) => new Date(a.date) - new Date(b.date)).forEach((e) => out.push({ title:e.name || e.client || e.id, status:pick(label[e.status] || TILL.confirmed), meta:[[TILL.date, when(e.date, true)],[TILL.guests, e.guests],[TILL.place, e.lieu],[TILL.client, e.client]] }));
+      }
+    } else if (cfg.trade === 'pizzeria') {
+      const d = tillDoc('pizzeria'), orders = (d?.orders || []).filter((o) => o && o.id);
+      const cust = (o) => { const c = (d?.customers || []).find((x) => x && x.id === o.custId); return (c && c.name) || o.guest || ''; };
+      const total = (o) => (o.lines || []).reduce((n, l) => n + (+l.unit || 0) * (+l.qty || 0), 0) + (o.mode === 'livraison' ? (+(o.zoneSnap && o.zoneSnap.fee) || 0) : 0);
+      if (cfg.nav === 'delivery') {
+        orders.filter((o) => o.mode === 'livraison').sort((a, b) => (+b.createdAt || 0) - (+a.createdAt || 0)).forEach((o) => {
+          const cooked = (o.jobs || []).every((j) => j.status === 'prete');
+          const st = o.delivery && o.delivery.deliveredAt ? TILL.done : o.delivery && o.delivery.departedAt ? TILL.onRoad : cooked ? TILL.ready : TILL.cooking;
+          out.push({ title:o.id, status:pick(st), meta:[[TILL.client, cust(o)],[TILL.zone, o.zoneSnap && o.zoneSnap.label],[TILL.address, o.address],[TILL.total, mad(total(o)) + ' · ' + pick((o.pay && o.pay.paid >= total(o) - 0.005) ? TILL.paid : TILL.toPay)]] });
+        });
+      } else if (cfg.nav === 'kds') {
+        orders.filter((o) => (o.jobs || []).some((j) => j.status !== 'prete')).sort((a, b) => (+a.createdAt || 0) - (+b.createdAt || 0)).forEach((o) => {
+          const q = (o.jobs || []).filter((j) => j.status === 'file').length, f = (o.jobs || []).filter((j) => j.status === 'four').length;
+          out.push({ title:o.id, status:pick(f ? TILL.baking : TILL.queued), meta:[[TILL.pizzas, (o.jobs || []).length],[TILL.queued, q],[TILL.baking, f],[TILL.date, when(o.createdAt, true)]] });
+        });
+      }
+    } else if (cfg.trade === 'bakery') {
+      const d = tillDoc('boulangerie');
+      if (cfg.nav === 'tables') {
+        (d?.cakes || []).filter((c) => c && c.id && c.status !== 'remis').sort((a, b) => new Date(a.retrait) - new Date(b.retrait)).forEach((c) => out.push({ title:c.id + ' · ' + (c.name || ''), status:pick(c.status === 'pret' ? TILL.ready : TILL.prep),
+          meta:[[TILL.cake, [c.partsLabel, c.parfum].filter(Boolean).join(' · ')],[TILL.pickup, when(c.retrait, true)],[TILL.total, mad(c.price)],[TILL.balance, mad(Math.max(0, (+c.price || 0) - (+c.paid || 0)))]] }));
+      } else if (cfg.nav === 'kds') {
+        const names = {}; (d?.catalog || []).forEach((cat) => (cat.items || []).forEach((p) => { names[p.id] = p.label; }));
+        (d?.batches || []).filter((b) => b && b.id).sort((a, b) => String(a.time).localeCompare(String(b.time))).forEach((b) => out.push({ title:(b.qty || '') + ' × ' + (names[b.prod] || b.prod), status:pick(b.status === 'sortie' ? TILL.batchOut : b.status === 'four' ? TILL.batchOven : TILL.batchPlanned), meta:[[TILL.time, b.time + (b.out ? ' → ' + b.out : '')]] }));
+      } else if (cfg.nav === 'waste' && d?.don) {
+        out.push({ title:pick(TILL.donation), status:pick(TILL.done), meta:[[TILL.beneficiary, d.don.assoc],[TILL.pieces, d.don.pieces],[TILL.date, when(d.don.at, true)]] });
+      }
+    }
+    return out;
+  }
+  function tillSection(cfg) {
+    const cards = tillCards(cfg);
+    if (!cards.length) return '';
+    return `<section class="tw-till" aria-label="${esc(pick(TILL.title))}"><div class="tw-till-h"><strong>${esc(pick(TILL.title))}</strong><span>${esc(pick(TILL.hint))}</span></div><div class="tw-grid">${cards.map((c) => `<article class="tw-card tw-card-till${c.alert ? ' has-alert' : ''}"><div class="tw-card-head"><h3>${esc(c.title)}</h3><span class="tw-pill">${esc(c.status)}</span></div>${c.alert ? `<div class="tw-alert">${esc(c.alert)}</div>` : ''}<div class="tw-meta">${c.meta.filter((m) => m[1] !== '' && m[1] != null).map((m) => `<span><b>${esc(pick(m[0]))}</b>${esc(m[1])}</span>`).join('')}</div></article>`).join('')}</div></section>`;
+  }
   function render(nav) {
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
     openPage=cfg; bindCloud();
@@ -204,11 +297,12 @@
     if (!t0) { const start=new Date(); start.setHours(0,0,0,0); t0=start.getTime(); }
     const sales=currentSales().filter((s)=>{ const ts=+s.ts||0; return ts>=t0 && ts<t1 && String(s.kind||'')!=='refund'; });
     const revenue=sales.reduce((n,s)=>n+(+s.amount||0),0);
-    const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
+    const till=tillSection(cfg);
+    const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : till ? '' : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
     const body=`<section class="tw-shell" data-tw-page="${esc(nav)}">
       <div class="tw-summary"><div class="tw-stat"><span>${esc(pick(UI.active))}</span><strong>${sum.active}</strong></div><div class="tw-stat"><span>${esc(pick(UI.alerts))}</span><strong>${sum.alerts}</strong></div><div class="tw-stat"><span>${sum.balance?esc(pick(UI.balance)):esc(pick(UI.sales))}</span><strong>${sum.balance?money(sum.balance)+' '+esc(pick(UI.currency)):sales.length+' · '+money(revenue)+' '+esc(pick(UI.currency))}</strong></div></div>
       <div class="tw-toolbar"><div class="tw-toolbar-copy"><strong>${esc(pick(cfg.title))}</strong><span>${esc(pick(cfg.subtitle))}</span></div><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div>
-      <div class="tw-board">${board}</div></section>`;
+      <div class="tw-board">${till}${board}</div></section>`;
     const out=window.Kiwi.appPage(nav,{title:pick(cfg.title),subtitle:(venue().name||'')+' · '+pick(cfg.subtitle),body});
     wire(out?.el || document.querySelector('[data-tw-page]'),cfg); return true;
   }
@@ -242,5 +336,7 @@
   }
   document.addEventListener('click',(e)=>{const a=e.target.closest?.('.sidebar a[data-nav]');if(!a)return;const nav=a.dataset.nav;if(!config(nav))return;e.preventDefault();e.stopImmediatePropagation();render(nav);},true);
   window.addEventListener('load',()=>{setTimeout(()=>{bindCloud();install();},280);window.KiwiVenue?.subscribe?.(()=>{openPage=null;bindCloud();setTimeout(install,0);});window.KiwiSales?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});window.addEventListener('kiwi:langchange',()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});});
+  /* La caisse écrit son état dans `verticalops` : la planche ouverte se met à jour toute seule. */
+  window.addEventListener('load',()=>{try{window.KiwiVerticalState?.store?.subscribe?.(()=>{if(openPage&&document.querySelector('[data-tw-page]'))render(openPage.nav);});}catch(_){}});
   window.KiwiTradeWorkspaces={pages,config,read,write,merge,render,rows};
 })();

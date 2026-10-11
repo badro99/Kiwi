@@ -97,6 +97,15 @@ const FEATURES = {
   attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
   discountpolicy: { keys: ['percentages'], max: 2000 },
+  /* Les réglages de CAISSE des métiers de bouche autres que le restaurant
+   * (pizzeria, traiteur, boulangerie) : frais de livraison par zone, supplément
+   * moitié-moitié, tarif des extras d'un devis, échéancier par défaut, prix des
+   * gâteaux sur commande. Avant ce document, ces prix étaient des constantes
+   * de la démo écrites dans pos-*.js : une vraie pizzeria facturait 10 MAD de
+   * livraison au centre-ville parce que la démo le dit. Le propriétaire écrit
+   * (OWNER_EDIT_FEATURES), la caisse appairée lit et n'écrit jamais : un prix
+   * se pose au bureau. */
+  foodtrade:    { keys: ['pizzeria', 'traiteur', 'boulangerie'],   max: 60000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
   /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
@@ -491,7 +500,7 @@ export function ownBriefingDays(doc, merchant) {
   if (!doc || typeof doc !== 'object' || !Array.isArray(doc.days)) return doc;
   return { ...doc, days: doc.days.filter((d) => d && typeof d === 'object' && d.venue === merchant) };
 }
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport']);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du

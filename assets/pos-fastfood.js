@@ -34,7 +34,9 @@
   const $$ = (s, r) => Array.from((r || root || document).querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* Deux décimales dès qu'il y en a : « 12,50 MAD », jamais « 13 MAD » pour un prix de 12,50
+     que le commerçant a saisi (la carte réelle n'est plus faite d'entiers de démo). */
+  const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -174,12 +176,48 @@
     { id: 'sides', label: 'Sides & boissons' },
   ];
 
+  /* ───────────────────────── la carte du commerçant ─────────────────────────
+     Tacos à 35 MAD, « menu +15 », sauces offertes : la carte de la démo. Un vrai
+     fast-food vend ce que son patron a composé dans « Menu » du tableau de bord
+     (assets/vertical-state.js › KiwiVerticalCarte) : ses articles, ses prix, ses
+     groupes d'options (taille, garniture, sauce, menu) avec leurs suppléments.
+     Chaque article réel est à une seule « taille » ; tout le reste passe par la
+     feuille d'options de la carte. Carte vide : la caisse le dit et laisse taper
+     un article et son prix.
+     Une ligne réelle porte son nom et son prix unitaire (instantané) : une
+     commande déjà en file ne change pas de prix, et ne casse pas, parce que la
+     carte a bougé. */
+  const carteApi = window.KiwiVerticalCarte;
+  let carteSkipped = 0;
+  function applyCarte(c) {
+    if (!pvReal()) return;
+    const items = (c && c.items) || [];
+    carteSkipped = c && c.skipped ? c.skipped.formulas : 0;
+    const cats = [];
+    const seen = {};
+    items.forEach((it) => {
+      const id = it.catId || '_autres';
+      if (!seen[id]) { seen[id] = 1; cats.push({ id, label: it.catName || 'Autres' }); }
+    });
+    CATS.splice(0, CATS.length, ...cats);
+    MENU.splice(0, MENU.length, ...items.map((it) => ({
+      id: it.id, label: it.name, cat: it.catId || '_autres', sub: it.desc, groups: it.groups, station: it.station,
+      sizes: [{ id: 'u', label: '', price: it.price }],
+    })));
+    Object.keys(ITEM).forEach((k) => { delete ITEM[k]; });
+    MENU.forEach((m) => { ITEM[m.id] = m; });
+    if (root && $('#ff-gridwrap')) renderGrid();
+  }
+
+  if (pvReal() && carteApi) { applyCarte(carteApi.read()); carteApi.watch(applyCarte); }
+
   const sizeOf = (item, id) => item.sizes.find((s) => s.id === id) || item.sizes[0];
   const variantOf = (item, id) => (item.variants || []).find((v) => v.id === id) || null;
   const minPrice = (item) => Math.min(...item.sizes.map((s) => s.price));
 
   /* ticket line: { itemId, variantId, sizeId, qty, sauces[], combo, drink } */
   function unitPrice(ln) {
+    if (ln.unit != null) return +ln.unit || 0;      /* ligne réelle : prix instantané */
     const item = ITEM[ln.itemId];
     const v = variantOf(item, ln.variantId);
     return sizeOf(item, ln.sizeId).price + (v ? v.d : 0) + (ln.combo ? COMBO_PRICE : 0);
@@ -192,7 +230,7 @@
     const factor = full > 0 ? Math.max(0, +received || 0) / full : 0;
     let allocated = 0;
     return o.lines.map((ln, idx) => {
-      const it = ITEM[ln.itemId];
+      const it = ITEM[ln.itemId] || {};
       const raw = lineTotal(ln) * factor;
       const total = idx === o.lines.length - 1
         ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
@@ -201,15 +239,17 @@
       const options = [];
       if (ln.combo) options.push({ id: 'menu', qty: ln.qty }, { id: `boisson:${ln.drink || 'coca'}`, qty: ln.qty });
       (ln.sauces || []).forEach((s) => options.push({ id: `sauce:${s}`, qty: ln.qty }));
+      (ln.o || []).forEach((x) => options.push({ id: x.id, qty: ln.qty }));
       return {
-        itemId: ln.itemId, variantId: [ln.variantId || '', ln.sizeId || ''].join(':'),
-        name: it.label, cat: it.cat || '', kind: 'product', unit: 'piece',
+        itemId: ln.free ? '' : ln.itemId, variantId: [ln.variantId || '', ln.sizeId || ''].join(':'),
+        name: ln.name || it.label, cat: it.catName || it.cat || '', kind: 'product', unit: 'piece',
         qty: ln.qty, total, options,
       };
     });
   }
 
   function lineName(ln) {
+    if (ln.name) return ln.name;
     const item = ITEM[ln.itemId];
     const v = variantOf(item, ln.variantId);
     const sz = sizeOf(item, ln.sizeId);
@@ -417,7 +457,7 @@
     const l = o.lines[0];
     if (!l) return 'Commande';
     const n = o.lines.reduce((s, x) => s + x.qty, 0);
-    return o.lines.length > 1 ? `${ITEM[l.itemId].label} +${n - l.qty} art.` : ITEM[l.itemId].label;
+    return o.lines.length > 1 ? `${lineName(l)} +${n - l.qty} art.` : lineName(l);
   };
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le comptoir encaissait tout le service dans `tally` et rien d'autre : la
@@ -463,6 +503,9 @@
   function mount(rootEl) {
     fastfoodOps?.hydrate?.();
     root = rootEl;
+    /* La carte du commerçant d'abord : le miroir peut dater d'hier, le serveur dit
+       ce qui est vrai maintenant. */
+    if (pvReal()) { try { window.KiwiCaisseCarte && window.KiwiCaisseCarte.fetch(); } catch (_) {} }
     if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="ff-rail">
@@ -568,21 +611,45 @@
 
   /* ═══════════════════════ VENTE RAPIDE — la grille ═══════════════════════ */
   function renderGrid() {
+    const host = $('#ff-gridwrap');
+    if (pvReal() && !MENU.length) {
+      host.innerHTML = carteApi ? carteApi.freePriceHtml({ namePh: 'Article', cta: 'Ajouter à la commande' }) : '';
+      if (carteApi) carteApi.freePriceBind(host, addFree);
+      host.onclick = null;
+      return;
+    }
     let i = 0;
-    $('#ff-gridwrap').innerHTML = CATS.map((c) => `
+    host.innerHTML = CATS.map((c) => `
       <div class="ff-cat-head">${esc(c.label)}</div>
       <div class="ff-grid">${MENU.filter((m) => m.cat === c.id).map((it) => `
-        <button class="ff-card" data-ff-item="${it.id}" style="--i:${i++}">
+        <button class="ff-card" data-ff-item="${esc(it.id)}" style="--i:${i++}">
           <span class="ff-card-art">${ART[it.id] || ''}</span>
           <span class="ff-card-name">${esc(it.label)}</span>
-          <span class="ff-card-price">dès ${minPrice(it)} MAD${it.combo ? ' · menu +15' : ''}</span>
+          <span class="ff-card-price">${pvReal() ? `${it.groups && it.groups.length ? 'dès ' : ''}${fmtMAD(minPrice(it))}` : `dès ${minPrice(it)} MAD${it.combo ? ' · menu +15' : ''}`}</span>
           ${flagOf(it) ? `<span class="ff-card-flag">${esc(flagOf(it))}</span>` : ''}
         </button>`).join('')}
-      </div>`).join('');
-    $('#ff-gridwrap').onclick = (e) => {
+      </div>`).join('') + (pvReal() && carteSkipped ? `<p class="vc-note">${carteSkipped} ${plu(carteSkipped, 'formule')} de la carte ${carteSkipped > 1 ? 'ne sont pas proposées' : 'n’est pas proposée'} sur cette caisse.</p>` : '');
+    host.onclick = (e) => {
       const b = e.target.closest('[data-ff-item]');
       if (b) openSheet(b.dataset.ffItem);
     };
+  }
+  /* Article réel : une feuille d'options si la carte en porte, sinon un tap. */
+  function addCarteLine(it, r) {
+    const unit = r ? r.unit : it.sizes[0].price;
+    const name = r && r.names.length ? `${it.label} (${r.names.join(', ')})` : it.label;
+    const key = (l) => [l.itemId, l.name, l.unit].join('~');
+    const line = { itemId: it.id, variantId: null, sizeId: 'u', qty: 1, sauces: [], combo: false, drink: 'coca', name, unit, o: r ? r.stamp(1) : [] };
+    const twin = state.ticket.lines.find((l) => key(l) === key(line));
+    if (twin) twin.qty += 1; else state.ticket.lines.push(line);
+    toast(`${name} × 1, sur la commande`);
+    renderTicket(); icons(); lens();
+  }
+  function addFree(f) {
+    const line = { itemId: 'libre', variantId: null, sizeId: 'u', qty: 1, sauces: [], combo: false, drink: 'coca', name: f.name, unit: f.price, free: true, o: [] };
+    const twin = state.ticket.lines.find((l) => l.free && l.name === f.name && l.unit === f.price);
+    if (twin) twin.qty += 1; else state.ticket.lines.push(line);
+    renderTicket(); icons(); lens();
   }
 
   /* ═══════════════════════ TICKET ═══════════════════════ */
@@ -698,6 +765,12 @@
 
   function openSheet(itemId) {
     const item = ITEM[itemId];
+    if (pvReal() && item && carteApi) {
+      if (item.groups && item.groups.length) {
+        carteApi.sheet({ title: item.label, sub: item.sub || '', price: item.sizes[0].price, groups: item.groups, onConfirm: (r) => addCarteLine(item, r) });
+      } else addCarteLine(item, null);
+      return;
+    }
     Object.assign(sheet, {
       itemId,
       variantId: item.variants ? item.variants[0].id : null,
@@ -885,11 +958,11 @@
         destination: order.channel === 'surplace' ? `Comptoir #${order.num}` : CHANNELS[order.channel].label,
         lines: order.lines.map((ln) => {
           const item = ITEM[ln.itemId];
-          const counter = item && item.cat === 'sides' && (ln.itemId === 'jus' || ln.itemId === 'soda');
+          const counter = pvReal() ? false : (item && item.cat === 'sides' && (ln.itemId === 'jus' || ln.itemId === 'soda'));
           const notes = [];
           if (ln.combo) notes.push(`Menu · ${DRINK[ln.drink] ? DRINK[ln.drink].label : 'boisson'}`);
           if ((ln.sauces || []).length) notes.push(`Sauces : ${ln.sauces.join(', ')}`);
-          return { qty: ln.qty, name: lineName(ln), note: notes.join(' · '), station: counter ? 'Boissons' : 'Cuisine' };
+          return { qty: ln.qty, name: lineName(ln), note: notes.join(' · '), station: pvReal() ? ((item && item.station) || 'Cuisine') : (counter ? 'Boissons' : 'Cuisine') };
         }),
       });
     } catch (_) {}
@@ -1455,14 +1528,14 @@
                 <div class="val">${tally.orders}</div>
                 <div class="sub">${ORDERS.filter((o) => o.status !== 'remis').length} encore en file</div>
               </div>
-              <div class="ff-kpi hero">
+              ${pvReal() && !tally.menus ? '' : `<div class="ff-kpi hero">
                 <span class="ic"><i data-lucide="sparkles"></i></span>
                 <div>
                   <div class="lbl">Taux de menu, l’upsell qui paie</div>
                   <div class="val">${menuRate} %</div>
                   <div class="sub">${tally.menus} ${plu(tally.menus, 'menu')} × +${COMBO_PRICE} MAD = +${fmtMAD(tally.menus * COMBO_PRICE)} ${pvReal() ? 'aujourd’hui' : 'ce midi'}</div>
                 </div>
-              </div>
+              </div>`}
             </div>
             <div class="ff-panel">
               <div class="ff-panel-h">${pvReal() ? 'Top 3 du jour' : 'Top 3 du midi'}</div>

@@ -25,3 +25,7 @@
 html[dir="rtl"] .tw-action.primary{margin-right:0;margin-left:auto}
 @media(max-width:760px){.dash-genpage .genpage-head h1{font-size:28px}.tw-shell{gap:12px}.tw-summary{grid-template-columns:1fr 1fr}.tw-stat:last-child{grid-column:1/-1}.tw-stat{min-height:70px;padding:13px 14px}.tw-stat strong{font-size:20px}.tw-toolbar{align-items:flex-start;flex-direction:column}.tw-add{width:100%}.tw-board{padding:10px}.tw-grid{grid-template-columns:1fr}.tw-form{grid-template-columns:1fr}.tw-field.full{grid-column:auto}.tw-card-actions{flex-wrap:wrap}.tw-action.primary{flex:1 1 100%;margin:0}.tw-empty{min-height:220px;padding:28px 14px}}
 @media(prefers-reduced-motion:reduce){.tw-add,.tw-action,.tw-card{transition:none!important}}
+/* Ce que la caisse a enregistré, en lecture seule au-dessus des fiches saisies. */
+.tw-till{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.tw-till-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.tw-till-h strong{font-size:14px;color:var(--ink)}.tw-till-h span{font-size:12px;color:var(--n-500)}
+.tw-card-till{background:var(--surface)}

@@ -369,16 +369,16 @@ ok('traiteur : les conditions du devis viennent du devis, avec des valeurs sûre
   const m = MOD.traiteur;
   const ctx = vm.createContext({ Math, Number });
   vm.runInContext([
-    line(m, /  const DEFAULT_TERMS = [^\n]*;/),
+    line(m, /  (?:const|let) DEFAULT_TERMS = [^\n]*;/),
     grab(m, 'function termsOf(x)'),
     line(m, /  const schemeLabel = [^\n]*;/),
     'this.termsOf = termsOf; this.schemeLabel = schemeLabel; this.D = DEFAULT_TERMS;',
   ].join('\n'), ctx);
   const t = (x) => JSON.parse(JSON.stringify(ctx.termsOf(x)));
-  assert.deepEqual(t(null), { c: 30, j7: 50, valid: 7, solde: 20 });
-  assert.deepEqual(t({ terms: { c: 50, j7: 20, valid: 14 } }), { c: 50, j7: 20, valid: 14, solde: 30 });
-  assert.deepEqual(t({ terms: { c: 40, j7: 40, valid: 3 } }), { c: 40, j7: 40, valid: 3, solde: 20 });
-  assert.deepEqual(t({ terms: { c: 60, j7: 50, valid: 7 } }), { c: 30, j7: 50, valid: 7, solde: 20 }, 'somme > 99 : valeurs par défaut');
+  assert.deepEqual(t(null), { c: 30, j7: 50, valid: 7, off: 7, solde: 20 });
+  assert.deepEqual(t({ terms: { c: 50, j7: 20, valid: 14 } }), { c: 50, j7: 20, valid: 14, off: 7, solde: 30 });
+  assert.deepEqual(t({ terms: { c: 40, j7: 40, valid: 3 } }), { c: 40, j7: 40, valid: 3, off: 7, solde: 20 });
+  assert.deepEqual(t({ terms: { c: 60, j7: 50, valid: 7 } }), { c: 30, j7: 50, valid: 7, off: 7, solde: 20 }, 'somme > 99 : valeurs par défaut');
   assert.equal(t({ terms: { c: 0, j7: 50, valid: 7 } }).c, 30, 'zéro ne passe pas');
   assert.equal(t({ terms: { c: 30, j7: 50, valid: 'abc' } }).valid, 7);
   assert.equal(ctx.schemeLabel({ terms: { c: 50, j7: 20, valid: 7 } }), '50 / 20 / 30');
@@ -391,7 +391,7 @@ ok('traiteur : l’échéancier suit les conditions choisies et ne perd pas un d
   const ctx = vm.createContext({ Math, Number, Date, DAY });
   vm.runInContext([
     'const evTotals = (ev) => ({ total: ev.__total });',
-    line(m, /  const DEFAULT_TERMS = [^\n]*;/),
+    line(m, /  (?:const|let) DEFAULT_TERMS = [^\n]*;/),
     grab(m, 'function termsOf(x)'),
     grab(m, 'function buildTranches(ev)'),
     'this.build = buildTranches;',
@@ -413,7 +413,7 @@ ok('traiteur : WhatsApp et devis imprimé lisent les conditions du devis, pas de
   const wa = grab(m, 'function waMessage(ev, kind)');
   assert.match(wa, /const tm = termsOf\(ev\);/);
   assert.match(wa, /\$\{tm\.c\} % à la confirmation/);
-  assert.match(wa, /\$\{tm\.j7\} % à J-7/);
+  assert.match(wa, /\$\{tm\.j7\} % à J-\$\{tm\.off\}/);
   assert.match(wa, /\$\{tm\.valid\} \$\{plu\(tm\.valid, 'jour'\)\}/);
   assert.doesNotMatch(wa, /30 % à la confirmation|50 % à J-7|bloquée 7 jours/);
   assert.match(m, /Échéancier \$\{schemeLabel\(ev\)\}/);
