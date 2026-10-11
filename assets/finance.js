@@ -960,6 +960,7 @@
     try { window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.subscribe && window.KiwiRestaurantRecipes.subscribe(again); } catch (_) {}
     try { window.KiwiHours && window.KiwiHours.subscribe && window.KiwiHours.subscribe(again); } catch (_) {}
     try { window.addEventListener('kiwi:langchange', again); } catch (_) {}
+    try { window.addEventListener('kiwi:simple-food-cost', again); } catch (_) {}
   }
 
   /* ═══════════════════ ANALYSE DU MENU (restaurant) ═══════════════════

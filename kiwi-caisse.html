@@ -14316,6 +14316,21 @@
       };
     }
     function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
+      /* Le coût du plat GELÉ au moment de la vente (fiche technique complète,
+         sinon coût saisi, via KiwiCost.of, le même moteur que le dashboard).
+         Sans lui, l'Analyse du menu appliquait le coût d'aujourd'hui à toutes
+         les ventes passées : une hausse du prix d'achat réécrivait l'historique.
+         Inconnu : rien n'est écrit, jamais 0. */
+      function frozenUnitCost(l) {
+        try {
+          if (!l || !l.itemId || l.kind === 'formula' || l.kind === 'formula-part' || !(+l.total > 0)) return null;
+          const C = window.KiwiCost;
+          if (!C || typeof C.of !== 'function') return null;
+          const hit = C.of({ kind: l.kind || '', id: String(l.itemId), name: l.baseName || l.name || '' });
+          const c = hit ? Number(hit.mad) : NaN;
+          return Number.isFinite(c) && c > 0 ? Math.round(c * 100) / 100 : null;
+        } catch (_) { return null; }
+      }
       amount = money(amount);
       /* A cashier ticket can temporarily have no server visit (offline relay).
          Its immutable order number is still enough to recognize a second tap
@@ -14403,6 +14418,8 @@
             l.itemId ? { itemId: l.itemId } : null,
             l.kind ? { kind: l.kind } : null,
             l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null);
+          const frozenCost = frozenUnitCost(l);
+          if (frozenCost != null) saved.unitCost = frozenCost;
           if (Array.isArray(l.formulaChoices)) {
             saved.formulaChoices = l.formulaChoices.map(choice => ({
               name: String((choice && choice.name) || 'Choix'),

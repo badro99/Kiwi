@@ -170,12 +170,12 @@ function bare(opts) {
   win.KiwiFinance.open('performance');
   const perf = roots.fin.innerHTML;
   const ptext = perf.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const kpi = (perf.match(/PROFIT BRUT CALCUL[ÉE][^<]*<\/span><b>([^<]+)<\/b>/i) || perf.match(/Profit brut calculé<\/span><b>([^<]+)<\/b>/) || [])[1];
-  ok(kpi && /^221(,00)? MAD$/.test(kpi.trim()), 'Performance (30 journées) : le même profit, 221 MAD', kpi || ptext.slice(0, 500));
+  const kpi = (perf.match(/CONTRIBUTION CALCUL[ÉE]E[^<]*<\/span><b>([^<]+)<\/b>/i) || [])[1];
+  ok(kpi && /^221(,00)? MAD$/.test(kpi.trim()), 'Performance (30 journées) : la même contribution, 221 MAD', kpi || ptext.slice(0, 500));
   ok(/data-ledger-gross="418\.00"/.test(perf) && /data-ledger-net="396\.00"/.test(perf), 'Performance : brut 418, net 396 (annulée et doublon exclus, remboursement déduit)', (perf.match(/data-ledger-[a-z]+="[^"]+"/g) || []).join(' '));
   ok(/Tajine[\s\S]{0,400}?Recette · observé 46 MAD/.test(perf), 'Performance : le coût de la fiche technique, le coût observé affiché à côté, jamais à la place');
   ok(/Thé[\s\S]{0,300}?Coût saisi/.test(perf), 'Performance : un coût forfaitaire saisi compte aussi (il était ignoré)');
-  ok(/Profit et marge calculés hors TVA \(10 % incluse/.test(ptext), 'Performance : la base hors TVA est dite');
+  ok(/Contribution calculée hors TVA \(10 % incluse/.test(ptext), 'Performance : la base hors TVA est dite');
 }
 
 console.log(`\n${fail ? '✗' : '✓'} ${pass} contrôles verts${fail ? `, ${fail} en échec` : ''}`);

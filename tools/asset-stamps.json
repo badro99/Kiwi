@@ -328,8 +328,8 @@
     "sha": "4ab84021a239bd81"
   },
   "assets/finance.js": {
-    "v": "8",
-    "sha": "41512ceb419509ca"
+    "v": "9",
+    "sha": "813413a1164bb75d"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -912,8 +912,8 @@
     "sha": "564289e55caa6564"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "97",
-    "sha": "fc115635e4c80fc3"
+    "v": "99",
+    "sha": "442f75ad2f3cad48"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",
@@ -952,8 +952,8 @@
     "sha": "acfbe70ced4b8e86"
   },
   "assets/simple-food-cost.js": {
-    "v": "3",
-    "sha": "3254ec144b2c63a8"
+    "v": "6",
+    "sha": "32870fad3e707bc4"
   },
   "assets/simple.js": {
     "v": "10",

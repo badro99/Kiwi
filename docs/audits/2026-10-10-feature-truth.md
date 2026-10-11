@@ -528,6 +528,22 @@ inventory: nothing it does moves, reserves or counts stock.
 
 Covered by `foodcost-api-test.mjs` (28) and `simple-food-cost-test.mjs` (42).
 
+## Analyse du menu, phase 4: contribution and "À faire": done
+
+| ID | Finding | Status |
+|---|---|---|
+| MC1 | Performance called price minus food cost "profit brut" / "gross profit" / "الربح". It is a contribution: no labour, rent or overheads come off it. | **Fixed.** "Contribution", "Taux de contribution", "Contribution calculée" in FR, EN and AR; quadrant and matrix hints follow. |
+| MC2 | A Simple Food Cost sheet linked to a dish was invisible from Performance. | **Fixed.** Shown beside the recipe and observed costs as "Fiche de coût · X MAD" (or "fiche incomplète", or "prix de plus de 90 jours"). It never enters a contribution, a quadrant or a unit cost. Templates and archived sheets don't count; the newest sheet per dish wins. Off, forbidden or unread: nothing shown, never 0. |
+| MC3 | The page described the menu but never said what to do. | **Fixed.** "À faire": sales with no known cost, observed vs recipe gap of 15 % or more, sheet vs recipe gap of 15 % or more, popular low-contribution dishes, high-contribution dishes that sell little, sheets with prices older than 90 days. Each line comes from a figure on the page and carries its action (open the recipe, open the sheets). A dish without a complete cost gets no gap and no quadrant. |
+
+| MC4 | A cost sheet could not become a recipe; the merchant retyped every line. | **Fixed.** "Créer un brouillon de recette" on a sheet linked to a dish. A confirmation says what carries over (named food lines, gross quantity = used ÷ yield), what doesn't (packaging), and whether the dish already has a recipe. The recipe editor then opens pre-filled under a "Brouillon, non enregistré" banner. Nothing is written until its Save button; the sheet never changes. |
+
+| MC5 | The restaurant till wrote no cost on its sale lines, so Analyse du menu applied today's cost to every past sale: a purchase-price rise rewrote past contributions. | **Fixed.** `recordSale()` freezes `unitCost` per line through `KiwiCost.of` (complete recipe, else typed cost), the dashboard's own engine. Unknown, offered (0 MAD), formula and free-amount lines get nothing, never 0. The dashboard already prefers a frozen cost. Sales made before this change keep the "coût actuel appliqué au passé" note. |
+
+Covered by `menu-insights-test.mjs` (36 checks) and `caisse-frozen-cost-test.mjs` (12); `menu-ledger-test.mjs` follows the new wording.
+
+Still open: the recipe editor's own summary says "Marge théorique / observée" on the price including VAT. Aligning it with the HT contribution needs the VAT basis in that modal, a separate pass.
+
 ## Métiers de bouche (pizzeria, boulangerie, fast-food, food truck, traiteur): done
 
 | ID | Finding | Status |

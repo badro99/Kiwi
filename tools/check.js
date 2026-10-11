@@ -1372,6 +1372,8 @@ section('Whole-project regressions');
     'menu-sales-test.mjs',
     'foodcost-api-test.mjs',
     'simple-food-cost-test.mjs',
+    'menu-insights-test.mjs',
+    'caisse-frozen-cost-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

@@ -60,6 +60,7 @@
       conflict: 'Cette fiche a été modifiée ailleurs ({who}, {when}). Votre saisie est gardée ici.', reloadServer: 'Prendre la version en ligne', keepMine: 'Enregistrer ma version par-dessus',
       unsaved: 'Des modifications ne sont pas enregistrées. Quitter quand même ?',
       historyTitle: 'Versions enregistrées', version: 'Version {v}', view: 'Voir', close: 'Fermer', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Version figée, lecture seule.',
+      toRecipe: 'Créer un brouillon de recette', toRecipeConfirm: 'Créer un brouillon de recette pour « {item} » à partir de cette fiche ?\n\n· {n} ingrédient(s) repris, en quantité brute (le rendement est appliqué).\n· {pack} ligne(s) d’emballage non reprises.\n· Rien n’est enregistré : l’éditeur de recette s’ouvre, vous vérifiez, puis vous enregistrez.\n· Une fois enregistrée, la recette pilote le stock et le coût théorique. Cette fiche ne change pas.', toRecipeExisting: '\n· Ce plat a déjà une recette : elle reste en place tant que vous n’enregistrez pas le brouillon.', toRecipeEmpty: 'Aucune ligne alimentaire nommée à reprendre.',
       copyName: '{name} (copie)', templateName: 'Modèle · {name}', newName: 'Nouvelle fiche',
       csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion',
     },
@@ -97,6 +98,7 @@
       conflict: 'This sheet was changed elsewhere ({who}, {when}). Your input is kept here.', reloadServer: 'Take the online version', keepMine: 'Save my version over it',
       unsaved: 'Some changes are not saved. Leave anyway?',
       historyTitle: 'Saved versions', version: 'Version {v}', view: 'View', close: 'Close', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Frozen version, read only.',
+      toRecipe: 'Create a draft recipe', toRecipeConfirm: 'Create a draft recipe for "{item}" from this sheet?\n\n· {n} ingredient(s) carried over, as gross quantities (yield applied).\n· {pack} packaging line(s) left out.\n· Nothing is saved: the recipe editor opens, you check, then you save.\n· Once saved, the recipe drives stock and theoretical cost. This sheet does not change.', toRecipeExisting: '\n· This dish already has a recipe: it stays in place until you save the draft.', toRecipeEmpty: 'No named food line to carry over.',
       copyName: '{name} (copy)', templateName: 'Template · {name}', newName: 'New sheet',
       csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion',
     },
@@ -134,6 +136,7 @@
       conflict: 'عُدّلت هذه البطاقة في مكان آخر ({who}، {when}). إدخالك محفوظ هنا.', reloadServer: 'أخذ النسخة المحفوظة', keepMine: 'حفظ نسختي فوقها',
       unsaved: 'هناك تعديلات غير محفوظة. المغادرة رغم ذلك؟',
       historyTitle: 'النسخ المحفوظة', version: 'النسخة {v}', view: 'عرض', close: 'إغلاق', snapshotOf: 'النسخة {v} · {when} · {who}', frozen: 'نسخة مثبتة، للقراءة فقط.',
+      toRecipe: 'إنشاء مسودة وصفة', toRecipeConfirm: 'إنشاء مسودة وصفة لـ «{item}» انطلاقاً من هذه البطاقة؟\n\n· {n} مكوّن منقول، بالكمية الإجمالية (مع تطبيق المردود).\n· {pack} سطر تغليف غير منقول.\n· لا يُحفظ شيء: يُفتح محرر الوصفة، تتحقق ثم تحفظ.\n· بعد الحفظ، تتحكم الوصفة في المخزون والتكلفة النظرية. هذه البطاقة لا تتغير.', toRecipeExisting: '\n· لهذا الطبق وصفة: تبقى كما هي حتى تحفظ المسودة.', toRecipeEmpty: 'لا يوجد سطر غذائي مسمّى لنقله.',
       copyName: '{name} (نسخة)', templateName: 'نموذج · {name}', newName: 'بطاقة جديدة',
       csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة',
     },
@@ -246,6 +249,33 @@
     return { name: tr('newName'), kind: 'sheet', menuItemId: '', menuItemName: '', sellingPrice: null, ...vatDefault(), portions: 1, targetPct: 30, note: '', lines: [] };
   }
 
+  /* Fiche → brouillon de recette. Seules les lignes alimentaires nommées
+     passent ; la quantité devient brute (utilisée ÷ rendement), puisque c'est
+     ce qui sort du stock. Rien n'est écrit ici : l'éditeur de recette s'ouvre
+     pré-rempli et seul son bouton Enregistrer crée la recette. */
+  function recipeSeed(d) {
+    const U = units(), lines = Array.isArray(d && d.lines) ? d.lines : [];
+    const food = lines.filter((l) => l && l.type !== 'packaging' && String(l.name || '').trim());
+    const ingredients = food.map((l) => {
+      const y = isNum(l.yieldPct) && +l.yieldPct > 0 && +l.yieldPct <= 100 ? +l.yieldPct / 100 : 1;
+      const unit = l.useUnit || l.packUnit || '';
+      return { stockId: '', name: String(l.name).trim(), qty: isNum(l.useQty) ? Math.round(+l.useQty / y * 1000) / 1000 : 0, unit: (U && U.normalize ? U.normalize(unit, '') : unit) || '' };
+    });
+    return { seed: { itemName: d.menuItemName || d.name || '', portions: isNum(d.portions) && +d.portions >= 1 ? Math.round(+d.portions) : 1, prepMinutes: 0, ingredients, steps: [], note: d.note || '' }, packaging: lines.filter((l) => l && l.type === 'packaging').length };
+  }
+  const recipeBridge = () => { try { const w = window.KiwiRestaurantMenuWorkspace; return w && typeof w.recipeFromSheet === 'function' ? w : null; } catch (_) { return null; } };
+  function toRecipe() {
+    const d = S.draft, it = d && d.menuItemId ? menuItem(d.menuItemId) : null, bridge = recipeBridge();
+    if (!d || !it || !bridge) return false;
+    const r = recipeSeed(d);
+    if (!r.seed.ingredients.length) { S.message = tr('toRecipeEmpty'); S.messageKind = 'warn'; paint(); return false; }
+    let existing = false;
+    try { existing = !!(window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.get && window.KiwiRestaurantRecipes.get(it.id, it.name)); } catch (_) { existing = false; }
+    const text = tr('toRecipeConfirm', { item: it.name, n: r.seed.ingredients.length, pack: r.packaging }) + (existing ? tr('toRecipeExisting') : '');
+    if (!window.confirm(text)) return false;
+    return bridge.recipeFromSheet(it.id, r.seed, { sheet: d.name || '' });
+  }
+
   /* ── réseau ──────────────────────────────────────────────────────────── */
   async function api(method, query, body) {
     const url = '/api/foodcost' + (query ? '?' + query : '');
@@ -266,10 +296,33 @@
       else { S.status = 'ready'; S.enabled = r.data.enabled === true; S.canEdit = r.data.canEdit === true; S.sheets = Array.isArray(r.data.sheets) ? r.data.sheets : []; }
     } catch (_) { S.status = online() ? 'error' : 'offline-empty'; }
     paint();
+    changed();
   }
+  /* La Performance lit les estimations : elle se redessine quand elles bougent. */
+  function changed() { try { window.dispatchEvent(new CustomEvent('kiwi:simple-food-cost')); } catch (_) {} }
   function replaceSheet(sheet) {
     const i = S.sheets.findIndex((x) => x.id === sheet.id);
     if (i < 0) S.sheets.unshift(sheet); else S.sheets[i] = sheet;
+    changed();
+  }
+  /* Une estimation par plat, pour la Performance : seules les fiches (pas les
+     modèles) non archivées et liées à un plat comptent, la plus récente
+     l'emporte. null tant que les fiches ne sont pas lues : jamais un 0. */
+  function estimates() {
+    if (!available()) return null;
+    if (S.merchant && S.merchant !== merchant()) { S.status = 'idle'; S.sheets = []; S.draft = null; S.openId = null; }
+    if (S.status === 'idle') { S.status = 'loading'; setTimeout(load, 0); }
+    if (S.status !== 'ready') return null;
+    const out = {};
+    S.sheets.filter((x) => x && !x.archived && x.kind !== 'template' && x.data && x.data.menuItemId)
+      .sort((a, b) => (b.updatedTs || 0) - (a.updatedTs || 0))
+      .forEach((x) => {
+        const id = String(x.data.menuItemId);
+        if (out[id]) return;
+        const c = calc(x.data);
+        out[id] = { sheetId: x.id, name: x.name || x.data.name || '', perPortion: c.perPortion, complete: c.complete, stale: c.stale.length > 0, status: c.status, pct: c.pct };
+      });
+    return out;
   }
   function openSheet(sheet) {
     S.openId = sheet ? sheet.id : null;
@@ -325,7 +378,7 @@
 
   /* ── export ──────────────────────────────────────────────────────────── */
   /* Une cellule qui commence par = + - @ serait une formule dans un tableur. */
-  const cell = (v) => { let s = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const cell = (v) => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s) || /^[\t\r]/.test(s)) s = "'" + s; return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const n2 = (v) => (v == null || !Number.isFinite(+v) ? '' : (+v).toFixed(2).replace('.', ','));
   function download(name, rows) {
     const text = '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
@@ -406,7 +459,7 @@
     const lines = (d.lines || []).map((l, i) => `<tr data-sfc-line="${i}"><td>${inp('name', l.name, ` maxlength="120" aria-label="${esc(tr('lName'))}"`)}</td><td data-sfc-linecost="${i}">${lineCostCell(c.lines[i])}</td><td><select data-sfc-field="type"${editable() ? '' : ' disabled'}><option value="food"${l.type !== 'packaging' ? ' selected' : ''}>${esc(tr('food'))}</option><option value="packaging"${l.type === 'packaging' ? ' selected' : ''}>${esc(tr('packaging'))}</option></select></td><td>${numIn('packPrice', l.packPrice)}</td><td>${numIn('packQty', l.packQty)}</td><td><select data-sfc-field="packUnit"${editable() ? '' : ' disabled'}>${unitOptions(l.packUnit)}</select></td><td>${numIn('useQty', l.useQty)}</td><td><select data-sfc-field="useUnit"${editable() ? '' : ' disabled'}>${unitOptions(l.useUnit || l.packUnit)}</select></td><td>${numIn('yieldPct', l.yieldPct == null ? 100 : l.yieldPct, ' max="100"')}</td><td>${inp('priceDate', l.priceDate, ' type="date"')}</td><td>${editable() ? `<button type="button" class="sfc-btn ghost" data-sfc="remove-line" data-i="${i}" aria-label="${esc(tr('remove'))}">${esc(tr('remove'))}</button>` : ''}</td></tr>`).join('');
     const lbl = ['lName', 'lCost', 'lType', 'lPackPrice', 'lPackQty', 'lPackUnit', 'lUseQty', 'lUseUnit', 'lYield', 'lDate'].map((k, i) => `--l${i + 1}:${JSON.stringify(tr(k))}`).join(';');
     const history = S.history ? `<div class="sfc-history" data-sfc-history><div class="sfc-history-h"><b>${esc(tr('historyTitle'))}</b><button type="button" class="sfc-btn ghost" data-sfc="close-history">${esc(tr('close'))}</button></div>${S.history.map((h) => `<div class="sfc-hrow"><span>${esc(tr('version', { v: h.version }))} · ${esc(when(h.ts))} · ${esc(h.actor || '')}</span><button type="button" class="sfc-btn ghost" data-sfc="view-version" data-v="${h.version}">${esc(tr('view'))}</button></div>`).join('')}${S.snapshot ? snapshotView(S.snapshot) : ''}</div>` : '';
-    const actions = `<div class="sfc-actions">${editable() ? `<button type="button" class="sfc-btn primary" data-sfc="save"${S.saving ? ' disabled' : ''}>${esc(tr(S.saving ? 'saving' : 'save'))}</button>` : ''}${sheet && editable() ? `<button type="button" class="sfc-btn" data-sfc="duplicate">${esc(tr('duplicate'))}</button><button type="button" class="sfc-btn" data-sfc="save-template">${esc(tr('saveTemplate'))}</button><button type="button" class="sfc-btn" data-sfc="archive">${esc(tr(sheet.archived ? 'unarchive' : 'archive'))}</button>` : ''}${sheet ? `<button type="button" class="sfc-btn" data-sfc="history">${esc(tr('history'))}</button>` : ''}<button type="button" class="sfc-btn" data-sfc="export-sheet">${esc(tr('exportSheet'))}</button></div>`;
+    const actions = `<div class="sfc-actions">${editable() ? `<button type="button" class="sfc-btn primary" data-sfc="save"${S.saving ? ' disabled' : ''}>${esc(tr(S.saving ? 'saving' : 'save'))}</button>` : ''}${sheet && editable() ? `<button type="button" class="sfc-btn" data-sfc="duplicate">${esc(tr('duplicate'))}</button><button type="button" class="sfc-btn" data-sfc="save-template">${esc(tr('saveTemplate'))}</button><button type="button" class="sfc-btn" data-sfc="archive">${esc(tr(sheet.archived ? 'unarchive' : 'archive'))}</button>` : ''}${d.kind !== 'template' && it && recipeBridge() ? `<button type="button" class="sfc-btn" data-sfc="to-recipe">${esc(tr('toRecipe'))}</button>` : ''}${sheet ? `<button type="button" class="sfc-btn" data-sfc="history">${esc(tr('history'))}</button>` : ''}<button type="button" class="sfc-btn" data-sfc="export-sheet">${esc(tr('exportSheet'))}</button></div>`;
     return `<div class="sfc-toolbar"><button type="button" class="sfc-btn ghost" data-sfc="back">${esc(tr('back'))}</button>${d.kind === 'template' ? `<span class="sfc-st tpl">${esc(tr('kindTemplate'))}</span>` : ''}${sheet ? `<small class="sfc-hint">${esc(tr('version', { v: sheet.version }))} · ${esc(when(sheet.updatedTs))} · ${esc(sheet.updatedBy || '')}</small>` : ''}</div>${conflict}${msg}
       <div class="sfc-form">
         <label class="wide"><span>${esc(tr('name'))}</span>${inp('sheet.name', d.name, ' maxlength="120"')}</label>
@@ -512,6 +565,7 @@
     }
     if (act === 'remove-line') { S.draft.lines.splice(+b.getAttribute('data-i'), 1); S.dirty = true; return paint(); }
     if (act === 'use-menu-price') { const it = menuItem(S.draft.menuItemId); if (it) { S.draft.sellingPrice = +it.price; S.dirty = true; paint(); } return; }
+    if (act === 'to-recipe') return toRecipe();
     if (act === 'save') return save(false);
     if (act === 'keep-mine') return save(true);
     if (act === 'take-server' && S.conflict) { const srv = S.conflict; S.conflict = null; return openSheet(srv); }
@@ -603,5 +657,5 @@
   }
 
   bind();
-  window.KiwiSimpleFoodCost = { available, panel, compute, tabLabel: () => tr('tab'), _state: S, _exportRows: sheetRows };
+  window.KiwiSimpleFoodCost = { available, panel, compute, estimates, recipeSeed, tabLabel: () => tr('tab'), _state: S, _toRecipe: toRecipe, _exportRows: sheetRows };
 }());

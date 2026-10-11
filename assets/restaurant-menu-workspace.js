@@ -174,7 +174,7 @@
       allergen_celeri: 'Celery', allergen_moutarde: 'Mustard', allergen_sesame: 'Sesame', allergen_sulfites: 'Sulphites',
       allergen_lupin: 'Lupin', allergen_mollusques: 'Molluscs',
       perfTitle: 'Item performance',
-      perfSub: 'Popularity, revenue and gross profit · Last 30 days · Real POS data.',
+      perfSub: 'Popularity, revenue and contribution · Last 30 days · Real POS data.',
       daysCount: '{n} days',
       rangeLabel: '{from} to {to} · business days',
       menuItemsOnly: 'current menu items only',
@@ -199,8 +199,8 @@
       ledgerOffMenu: '{amount} of item lines are outside the current menu, including {free} in free-amount items. They count in sales but cannot have a recipe.',
       ledgerUnitemised: '{amount} of sales is not explained by item lines (service charges, or {n} tickets without detail).',
     ledgerDiscounts: '{amount} of ticket discounts, spread pro rata over the lines of their ticket, as the VAT base is.',
-    ledgerVatBasis: 'Profit and margin exclude VAT ({rate} % included in prices).',
-    ledgerTodayCost: 'These sales did not freeze their cost: each dish\'s current cost is applied to the past. A change in purchase price will change these margins.',
+    ledgerVatBasis: 'Contribution excludes VAT ({rate} % included in prices).',
+    ledgerTodayCost: 'These sales did not freeze their cost: each dish’s current cost is applied to the past. A change in purchase price will change these contributions.',
     costSrcRecipe: 'Recipe',
     costSrcFrozen: 'Cost frozen at sale',
     costSrcFlat: 'Entered cost',
@@ -242,40 +242,40 @@
       noItemsToAnalyzeDesc: 'Add your dishes in Menu & modifiers. Performance will appear after the first sales.',
       noSalesYet: 'No item sales yet',
       noSalesYetDesc: 'Once the till records detailed receipts, Kiwi will automatically classify dishes.',
-      completeRecipesForProfit: 'Complete recipes to view profitability',
-      completeRecipesForProfitDesc: 'Sales are received. Dish costs are needed to compare their real profit.',
+      completeRecipesForProfit: 'Complete recipes to see each dish’s contribution',
+      completeRecipesForProfitDesc: 'Sales are received. Dish costs are needed to compare what each one contributes.',
       analyzedRevenue: 'Menu item revenue',
       itemsSold: 'items sold',
       itemSold: 'item sold',
-      grossProfitCalc: 'Calculated gross profit',
+      grossProfitCalc: 'Calculated contribution',
       recipesSoldAndCosted: '{n} recipe(s) sold and costed',
       costCoverage: 'Cost coverage',
       costCoverageSub: 'share of revenue with complete recipe',
-      grossProfitPerItem: 'Gross profit per item',
+      grossProfitPerItem: 'Contribution per item',
       popularityXDays: 'Popularity · sales over {n} days',
       perfDotSizeHint: 'Dot size = revenue',
       perfAxesHint: 'Axes = medians of your own menu',
       perfClickHint: 'Click an item to open its recipe',
       quadStar: 'Stars',
-      quadStarHint: 'Popular and profitable',
+      quadStarHint: 'Popular, high contribution',
       quadStarAction: 'Promote',
       quadPlow: 'Plowhorses',
-      quadPlowHint: 'Popular, margin needs optimization',
+      quadPlowHint: 'Popular, low contribution',
       quadPlowAction: 'Review cost or price',
       quadPuzzle: 'Puzzles',
-      quadPuzzleHint: 'Profitable, low order volume',
+      quadPuzzleHint: 'High contribution, few orders',
       quadPuzzleAction: 'Position better',
       quadDog: 'Dogs',
-      quadDogHint: 'Low orders and low margin',
+      quadDogHint: 'Few orders, low contribution',
       quadDogAction: 'Review',
       matrixLabelStar: 'STARS',
-      matrixHintStar: 'Profitable · high volume',
+      matrixHintStar: 'High contribution · high volume',
       matrixLabelPlow: 'TO OPTIMIZE',
-      matrixHintPlow: 'Popular · low margin',
+      matrixHintPlow: 'Popular · low contribution',
       matrixLabelPuzzle: 'TO DEVELOP',
-      matrixHintPuzzle: 'Profitable · low volume',
+      matrixHintPuzzle: 'High contribution · low volume',
       matrixLabelDog: 'TO REVIEW',
-      matrixHintDog: 'Low margin & volume',
+      matrixHintDog: 'Low contribution & volume',
       legendStar: 'Stars',
       legendPlow: 'To optimize',
       legendPuzzle: 'To develop',
@@ -285,13 +285,31 @@
       colRevenue: 'Revenue',
       colRevenueDesc: 'revenue',
       colUnitCost: 'Cost / item',
-      colProfit: 'Gross profit',
-      colProfitDesc: 'gross profit',
-      colMargin: 'Margin',
-      colMarginDesc: 'margin',
+      colProfit: 'Contribution',
+      colProfitDesc: 'contribution',
+      colMargin: 'Contribution rate',
+      colMarginDesc: 'contribution rate',
       colReadout: 'Status',
       completeRecipeLink: 'Complete recipe',
-      marginMissing: 'Missing margin',
+      estimateLabel: 'Cost sheet · {amount}',
+      estimateStale: 'prices older than 90 days',
+      estimateIncomplete: 'sheet incomplete',
+      insightsTitle: 'What to do',
+      insightsSub: 'Drawn from the sales and costs above. Nothing changes without you.',
+      insightUncosted: '{amount} of sales with no known cost ({n} dishes): complete their recipe to see what they contribute.',
+      insightObservedGap: '{item}: observed cost {observed}, recipe {theory} ({gap}). Check the quantities used and the waste.',
+      insightEstimateGap: '{item}: the cost sheet says {estimate}, the recipe {theory} ({gap}). One of the two is out of date.',
+      insightPlow: '{items}: ordered a lot, low contribution. Review the price or the portion.',
+      insightPuzzle: '{items}: high contribution, few orders. Feature them on the menu and with the servers.',
+      insightStale: 'Cost sheets with purchase prices older than 90 days: {items}. Update the prices.',
+      insightNone: 'Nothing to flag for this period.',
+      insightOpenSheet: 'Open the cost sheets',
+      recipeDraftTitle: 'Draft, not saved',
+      recipeDraftFrom: 'Taken from the cost sheet “{name}”. Check each ingredient against your stock, then save: until then nothing changes.',
+      recipeDraftExisting: 'The current recipe stays in place until you save.',
+      insightOpenRecipe: 'Open the recipe',
+      insightUncosted1: '{amount} of sales with no known cost (1 dish): complete its recipe to see what it contributes.',
+      marginMissing: 'Contribution unknown',
       noSaleRecorded: 'No sales',
       hoursTitle: 'Performance by time of day',
       hoursSub: 'Which items sell when · Last {n} days · Real POS data',
@@ -561,7 +579,7 @@
       allergen_celeri: 'الكرفس', allergen_moutarde: 'الخردل', allergen_sesame: 'السمسم', allergen_sulfites: 'الكبريتيت',
       allergen_lupin: 'الترمس', allergen_mollusques: 'الرخويات',
       perfTitle: 'أداء المنتجات',
-      perfSub: 'الشعبية، رقم المعاملات والربح الإجمالي · آخر 30 يوماً · بيانات حقيقية من الصندوق.',
+      perfSub: 'الشعبية، رقم المعاملات والمساهمة · آخر 30 يوماً · بيانات حقيقية من الصندوق.',
       daysCount: '{n} يوماً',
       rangeLabel: 'من {from} إلى {to} · أيام العمل',
       menuItemsOnly: 'منتجات القائمة الحالية فقط',
@@ -584,8 +602,8 @@
       ledgerOffMenu: '{amount} من سطور المنتجات خارج القائمة الحالية، منها {free} بمبلغ حر. تحتسب في المبيعات لكن لا يمكن ربطها بوصفة.',
       ledgerUnitemised: '{amount} من المبيعات غير مفسرة بسطور المنتجات (رسوم خدمة، أو {n} تذكرة بدون تفاصيل).',
     ledgerDiscounts: '{amount} تخفيضات على التذكرة، موزعة بالتناسب على سطور تذكرتها، كما في وعاء الضريبة على القيمة المضافة.',
-    ledgerVatBasis: 'الربح والهامش محسوبان دون الضريبة على القيمة المضافة ({rate} % مدرجة في الأسعار).',
-    ledgerTodayCost: 'هذه المبيعات لم تثبّت تكلفتها: تُطبَّق التكلفة الحالية لكل طبق على الماضي. أي تغيير في سعر الشراء سيغيّر هذه الهوامش.',
+    ledgerVatBasis: 'المساهمة محسوبة دون الضريبة على القيمة المضافة ({rate} % مدرجة في الأسعار).',
+    ledgerTodayCost: 'هذه المبيعات لم تثبّت تكلفتها: تُطبَّق التكلفة الحالية لكل طبق على الماضي. أي تغيير في سعر الشراء سيغيّر هذه المساهمات.',
     costSrcRecipe: 'وصفة',
     costSrcFrozen: 'تكلفة مثبتة عند البيع',
     costSrcFlat: 'تكلفة مُدخلة',
@@ -627,39 +645,39 @@
       noItemsToAnalyzeDesc: 'أضف أطباقك في القائمة والإضافات. سيظهر الأداء بعد أولى المبيعات.',
       noSalesYet: 'لا توجد مبيعات بعد لكل منتج',
       noSalesYetDesc: 'بمجرد تسجيل الصندوق للتذاكر المفصلة، يصنف Kiwi الأطباق تلقائياً.',
-      completeRecipesForProfit: 'أكمل الوصفات لمعرفة الربحية',
-      completeRecipesForProfitDesc: 'تم استلام المبيعات. تنقص تكلفة الأطباق لمقارنة ربحها الفعلي.',
+      completeRecipesForProfit: 'أكمل الوصفات لمعرفة مساهمة كل طبق',
+      completeRecipesForProfitDesc: 'تم استلام المبيعات. تنقص تكلفة الأطباق لمقارنة مساهمة كل منها.',
       analyzedRevenue: 'رقم المعاملات المحلل',
       itemsSold: 'منتجات مباعة',
-      grossProfitCalc: 'الربح الإجمالي المحسوب',
+      grossProfitCalc: 'المساهمة المحسوبة',
       recipesSoldAndCosted: '{n} وصفة مباعة ومسعرة',
       costCoverage: 'تغطية التكاليف',
       costCoverageSub: 'نسبة المبيعات ذات الوصفة المكتملة',
-      grossProfitPerItem: 'الربح الإجمالي لكل منتج',
+      grossProfitPerItem: 'المساهمة لكل منتج',
       popularityXDays: 'الشعبية · المبيعات خلال {n} يوماً',
       perfDotSizeHint: 'حجم النقطة = رقم المعاملات',
       perfAxesHint: 'المحاور = متوسطات قائمتك الخاصة',
       perfClickHint: 'انقر على منتج لفتح وصفته',
       quadStar: 'نجوم (Stars)',
-      quadStarHint: 'شعبية ومربحة',
+      quadStarHint: 'شعبية بمساهمة عالية',
       quadStarAction: 'إبرازها',
       quadPlow: 'أحصنة الجر (Plowhorses)',
-      quadPlowHint: 'شعبية بهامش ربح منخفض',
+      quadPlowHint: 'شعبية بمساهمة منخفضة',
       quadPlowAction: 'مراجعة السعر أو التكلفة',
       quadPuzzle: 'ألغاز (Puzzles)',
-      quadPuzzleHint: 'مربحة قليلة الطلب',
+      quadPuzzleHint: 'مساهمة عالية وطلب قليل',
       quadPuzzleAction: 'تحسين الموضع',
       quadDog: 'أعباء (Dogs)',
-      quadDogHint: 'طلب ضعيف وهامش منخفض',
+      quadDogHint: 'طلب ضعيف ومساهمة منخفضة',
       quadDogAction: 'مراجعة',
       matrixLabelStar: 'نجوم (STARS)',
-      matrixHintStar: 'مربح · حجم مبيعات قوي',
+      matrixHintStar: 'مساهمة عالية · حجم مبيعات قوي',
       matrixLabelPlow: 'للتحسين',
-      matrixHintPlow: 'شعبي · هامش ضعيف',
+      matrixHintPlow: 'شعبي · مساهمة ضعيفة',
       matrixLabelPuzzle: 'للتطوير',
-      matrixHintPuzzle: 'مربح · حجم مبيعات ضعيف',
+      matrixHintPuzzle: 'مساهمة عالية · حجم مبيعات ضعيف',
       matrixLabelDog: 'للمراجعة',
-      matrixHintDog: 'هامش وحجم مبيعات ضعيفان',
+      matrixHintDog: 'مساهمة وحجم مبيعات ضعيفان',
       legendStar: 'نجوم',
       legendPlow: 'للتحسين',
       legendPuzzle: 'للتطوير',
@@ -669,13 +687,31 @@
       colRevenue: 'رقم المعاملات',
       colRevenueDesc: 'رقم المعاملات',
       colUnitCost: 'التكلفة / منتج',
-      colProfit: 'الربح الإجمالي',
-      colProfitDesc: 'ربح إجمالي',
-      colMargin: 'الهامش',
-      colMarginDesc: 'هامش الربح',
+      colProfit: 'المساهمة',
+      colProfitDesc: 'مساهمة',
+      colMargin: 'نسبة المساهمة',
+      colMarginDesc: 'نسبة المساهمة',
       colReadout: 'الحالة',
       completeRecipeLink: 'استكمال الوصفة',
-      marginMissing: 'الهامش غير متوفر',
+      estimateLabel: 'بطاقة التكلفة · {amount}',
+      estimateStale: 'أسعار أقدم من 90 يوماً',
+      estimateIncomplete: 'بطاقة غير مكتملة',
+      insightsTitle: 'ما يجب فعله',
+      insightsSub: 'مستخلصة من المبيعات والتكاليف أعلاه. لا يتغيّر شيء دونك.',
+      insightUncosted: '{amount} من المبيعات بلا تكلفة معروفة ({n} أطباق): أكمل وصفاتها لمعرفة مساهمتها.',
+      insightObservedGap: '{item}: التكلفة الملاحَظة {observed}، الوصفة {theory} ({gap}). راجع الكميات المستعملة والهدر.',
+      insightEstimateGap: '{item}: بطاقة التكلفة تقول {estimate} والوصفة {theory} ({gap}). إحداهما لم تعد محدّثة.',
+      insightPlow: '{items}: طلب كثير ومساهمة منخفضة. راجع السعر أو الحصة.',
+      insightPuzzle: '{items}: مساهمة عالية وطلب قليل. أبرزها في القائمة ولدى النُدُل.',
+      insightStale: 'بطاقات تكلفة بأسعار شراء أقدم من 90 يوماً: {items}. حدّث الأسعار.',
+      insightNone: 'لا شيء يستدعي الانتباه في هذه الفترة.',
+      insightOpenSheet: 'فتح بطاقات التكلفة',
+      recipeDraftTitle: 'مسودة غير محفوظة',
+      recipeDraftFrom: 'مأخوذة من بطاقة التكلفة «{name}». راجع كل مكوّن مقابل مخزونك ثم احفظ: لا يتغير شيء قبل ذلك.',
+      recipeDraftExisting: 'الوصفة الحالية تبقى كما هي حتى تحفظ.',
+      insightOpenRecipe: 'فتح الوصفة',
+      insightUncosted1: '{amount} من المبيعات بلا تكلفة معروفة (طبق واحد): أكمل وصفته لمعرفة مساهمته.',
+      marginMissing: 'المساهمة غير معروفة',
       noSaleRecorded: 'لا توجد مبيعات',
       hoursTitle: 'الأداء حسب أوقات اليوم',
       hoursSub: 'ما المنتجات التي تباع ومتى · آخر {n} يوماً · بيانات حقيقية من الصندوق',
@@ -945,7 +981,7 @@
       allergen_celeri: 'Céleri', allergen_moutarde: 'Moutarde', allergen_sesame: 'Sésame', allergen_sulfites: 'Sulfites',
       allergen_lupin: 'Lupin', allergen_mollusques: 'Mollusques',
       perfTitle: 'Performance des articles',
-      perfSub: 'Popularité, chiffre d’affaires et profit brut · 30 derniers jours · données réelles de la caisse.',
+      perfSub: 'Popularité, chiffre d’affaires et contribution · 30 derniers jours · données réelles de la caisse.',
       daysCount: '{n} jours',
       rangeLabel: 'Du {from} au {to} · journées commerciales',
       menuItemsOnly: 'plats de la carte actuelle uniquement',
@@ -970,8 +1006,8 @@
       ledgerOffMenu: '{amount} de lignes sont hors de la carte actuelle, dont {free} en articles libres. Elles comptent dans les ventes mais ne peuvent pas avoir de recette.',
       ledgerUnitemised: '{amount} de ventes ne sont pas expliqués par les lignes d’articles (frais de service, ou {n} tickets sans détail).',
     ledgerDiscounts: '{amount} de remises au ticket, réparties au prorata sur les lignes de leur ticket, comme la base de TVA.',
-    ledgerVatBasis: 'Profit et marge calculés hors TVA ({rate} % incluse dans les prix).',
-    ledgerTodayCost: 'Ces ventes n’ont pas gelé leur coût : le coût actuel de chaque plat est appliqué au passé. Un changement de prix d’achat modifiera ces marges.',
+    ledgerVatBasis: 'Contribution calculée hors TVA ({rate} % incluse dans les prix).',
+    ledgerTodayCost: 'Ces ventes n’ont pas gelé leur coût : le coût actuel de chaque plat est appliqué au passé. Un changement de prix d’achat modifiera ces contributions.',
     costSrcRecipe: 'Recette',
     costSrcFrozen: 'Coût gelé à la vente',
     costSrcFlat: 'Coût saisi',
@@ -1013,40 +1049,40 @@
       noItemsToAnalyzeDesc: 'Ajoutez vos plats dans Menu & modificateurs. Les performances apparaîtront après les premières ventes.',
       noSalesYet: 'Pas encore de ventes par article',
       noSalesYetDesc: 'Dès que la caisse enregistre des tickets détaillés, Kiwi classe automatiquement les plats.',
-      completeRecipesForProfit: 'Complétez les recettes pour voir la rentabilité',
-      completeRecipesForProfitDesc: 'Les ventes sont bien reçues. Il manque le coût de chaque plat pour comparer leur profit réel.',
+      completeRecipesForProfit: 'Complétez les recettes pour voir la contribution de chaque plat',
+      completeRecipesForProfitDesc: 'Les ventes sont bien reçues. Il manque le coût de chaque plat pour comparer ce que chacun rapporte.',
       analyzedRevenue: 'CA des plats analysés',
       itemsSold: 'articles vendus',
       itemSold: 'article vendu',
-      grossProfitCalc: 'Profit brut calculé',
+      grossProfitCalc: 'Contribution calculée',
       recipesSoldAndCosted: '{n} recette(s) vendue(s) et chiffrée(s)',
       costCoverage: 'Couverture des coûts',
       costCoverageSub: 'part du CA avec recette complète',
-      grossProfitPerItem: 'Profit brut par article',
+      grossProfitPerItem: 'Contribution par article',
       popularityXDays: 'Popularité · ventes sur {n} jours',
       perfDotSizeHint: 'Taille du point = chiffre d’affaires',
       perfAxesHint: 'Axes = médianes de votre propre carte',
       perfClickHint: 'Cliquez sur un article pour ouvrir sa recette',
       quadStar: 'Stars',
-      quadStarHint: 'Populaires et rentables',
+      quadStarHint: 'Populaires, forte contribution',
       quadStarAction: 'À mettre en avant',
       quadPlow: 'Plowhorses',
-      quadPlowHint: 'Populaires, marge à optimiser',
+      quadPlowHint: 'Populaires, contribution faible',
       quadPlowAction: 'Revoir coût ou prix',
       quadPuzzle: 'Puzzles',
-      quadPuzzleHint: 'Rentables, peu commandés',
+      quadPuzzleHint: 'Forte contribution, peu commandés',
       quadPuzzleAction: 'Mieux les positionner',
       quadDog: 'Dogs',
-      quadDogHint: 'Peu commandés et faible marge',
+      quadDogHint: 'Peu commandés, contribution faible',
       quadDogAction: 'À revoir',
       matrixLabelStar: 'STARS',
-      matrixHintStar: 'Rentable · volume fort',
+      matrixHintStar: 'Forte contribution · volume fort',
       matrixLabelPlow: 'À OPTIMISER',
-      matrixHintPlow: 'Populaire · marge faible',
+      matrixHintPlow: 'Populaire · contribution faible',
       matrixLabelPuzzle: 'À DÉVELOPPER',
-      matrixHintPuzzle: 'Rentable · volume faible',
+      matrixHintPuzzle: 'Forte contribution · volume faible',
       matrixLabelDog: 'À REVOIR',
-      matrixHintDog: 'Marge et volume faibles',
+      matrixHintDog: 'Contribution et volume faibles',
       legendStar: 'Stars',
       legendPlow: 'À optimiser',
       legendPuzzle: 'À développer',
@@ -1056,13 +1092,31 @@
       colRevenue: 'Chiffre d’affaires',
       colRevenueDesc: 'de CA',
       colUnitCost: 'Coût / article',
-      colProfit: 'Profit brut',
-      colProfitDesc: 'de profit brut',
-      colMargin: 'Marge',
-      colMarginDesc: 'de marge',
+      colProfit: 'Contribution',
+      colProfitDesc: 'de contribution',
+      colMargin: 'Taux de contribution',
+      colMarginDesc: 'de taux de contribution',
       colReadout: 'Lecture',
       completeRecipeLink: 'Compléter la recette',
-      marginMissing: 'Marge manquante',
+      estimateLabel: 'Fiche de coût · {amount}',
+      estimateStale: 'prix de plus de 90 jours',
+      estimateIncomplete: 'fiche incomplète',
+      insightsTitle: 'À faire',
+      insightsSub: 'Tiré des ventes et des coûts ci-dessus. Rien ne change sans vous.',
+      insightUncosted: '{amount} de ventes sans coût connu ({n} plats) : complétez leur recette pour voir ce qu’ils rapportent.',
+      insightObservedGap: '{item} : coût observé {observed}, recette {theory} ({gap}). Vérifiez les quantités utilisées et les pertes.',
+      insightEstimateGap: '{item} : la fiche de coût dit {estimate}, la recette {theory} ({gap}). L’une des deux n’est plus à jour.',
+      insightPlow: '{items} : très commandés, contribution faible. Revoyez le prix ou la portion.',
+      insightPuzzle: '{items} : forte contribution, peu commandés. Mettez-les en avant sur la carte et auprès des serveurs.',
+      insightStale: 'Fiches de coût aux prix d’achat de plus de 90 jours : {items}. Mettez les prix à jour.',
+      insightNone: 'Rien à signaler sur cette période.',
+      insightOpenSheet: 'Ouvrir les fiches de coût',
+      recipeDraftTitle: 'Brouillon, non enregistré',
+      recipeDraftFrom: 'Tiré de la fiche de coût « {name} ». Vérifiez chaque ingrédient face à votre stock, puis enregistrez : d’ici là, rien ne change.',
+      recipeDraftExisting: 'La recette actuelle reste en place tant que vous n’enregistrez pas.',
+      insightOpenRecipe: 'Ouvrir la recette',
+      insightUncosted1: '{amount} de ventes sans coût connu (1 plat) : complétez sa recette pour voir ce qu’il rapporte.',
+      marginMissing: 'Contribution inconnue',
       noSaleRecorded: 'Aucune vente',
       hoursTitle: 'Performance par moment de la journée',
       hoursSub: 'Quels articles se vendent quand · {n} derniers jours · données réelles de la caisse',
@@ -1522,7 +1576,7 @@
         row.profit=row.net-row.cost;
         row.marginPct=row.net>0?row.profit/row.net*100:null;
       }
-      const rc=R.of(row);if(rc&&rc.observed!=null)row.observedCost=rc.observed;
+      const rc=R.of(row);if(rc){row.theoCost=rc.mad;if(rc.observed!=null)row.observedCost=rc.observed;}
     });
     const measured=items.filter(x=>x.qty>0&&x.unitProfit!=null&&Number.isFinite(x.unitProfit));
     const medQty=median(measured.map(x=>x.qty)),medProfit=median(measured.map(x=>x.unitProfit));
@@ -1579,16 +1633,50 @@
   function perfLabels(){
     return ['colItem','colSold','colRevenue','colUnitCost','colProfit','colMargin','colReadout'].map((k,i)=>`--l${i+1}:${JSON.stringify(ui(k))}`).join(';');
   }
+  /* Coût simple (option) : l'estimation d'une fiche de coût liée au plat.
+     Affichée À CÔTÉ du coût de la recette et du coût observé, jamais à leur
+     place : elle n'entre dans aucune contribution ni aucun quadrant. */
+  function costEstimates(){try{return window.KiwiSimpleFoodCost?.estimates?.()||null;}catch(_){return null;}}
+  function estimateNote(est,r){
+    const e=est&&est[String(r.item.id)];if(!e)return '';
+    const known=e.complete&&e.perPortion!=null,flag=known&&e.stale?ui('estimateStale'):'';
+    return `<small class="rmw-perf-est" data-estimate="${esc(r.item.id)}">${esc(ui('estimateLabel',{amount:known?cash(e.perPortion):ui('estimateIncomplete')}))}${flag?' · '+esc(flag):''}</small>`;
+  }
+  /* « À faire » : des constats tirés des chiffres affichés au-dessus, chacun
+     avec son action. Rien n'est inventé : un plat sans coût complet ne donne
+     ni écart ni quadrant, il apparaît dans « ventes sans coût ». */
+  const GAP_PCT=15;
+  function perfInsights(p,est){
+    const out=[],names=(list)=>list.slice(0,3).map(x=>t(x.item.name)).join(', ');
+    const gap=(a,b)=>(a-b)/b*100,fmtGap=(g)=>(g>0?'+':'−')+Math.abs(g).toFixed(0)+'\u00a0%';
+    const uncosted=p.items.filter(x=>x.pricedQty>0&&x.unitCost==null).sort((a,b)=>b.revenue-a.revenue);
+    if(uncosted.length)out.push({key:'uncosted',amount:uncosted.reduce((n,x)=>n+x.revenue,0),text:ui(uncosted.length===1?'insightUncosted1':'insightUncosted',{amount:cash(uncosted.reduce((n,x)=>n+x.revenue,0)),n:uncosted.length}),item:uncosted[0].item});
+    p.items.filter(x=>x.qty>0&&x.theoCost>0&&x.observedCost!=null&&Math.abs(gap(x.observedCost,x.theoCost))>=GAP_PCT)
+      .sort((a,b)=>Math.abs(gap(b.observedCost,b.theoCost))*b.qty-Math.abs(gap(a.observedCost,a.theoCost))*a.qty).slice(0,3)
+      .forEach(x=>out.push({key:'observed',text:ui('insightObservedGap',{item:t(x.item.name),observed:cash(x.observedCost),theory:cash(x.theoCost),gap:fmtGap(gap(x.observedCost,x.theoCost))}),item:x.item}));
+    if(est)p.items.filter(x=>x.theoCost>0&&est[String(x.item.id)]?.perPortion>0&&Math.abs(gap(est[String(x.item.id)].perPortion,x.theoCost))>=GAP_PCT).slice(0,3)
+      .forEach(x=>{const e=est[String(x.item.id)];out.push({key:'estimate',text:ui('insightEstimateGap',{item:t(x.item.name),estimate:cash(e.perPortion),theory:cash(x.theoCost),gap:fmtGap(gap(e.perPortion,x.theoCost))}),item:x.item});});
+    const plow=p.measured.filter(x=>x.quadrant==='plow').sort((a,b)=>b.qty-a.qty);
+    if(plow.length)out.push({key:'plow',text:ui('insightPlow',{items:names(plow)}),item:plow[0].item});
+    const puzzle=p.measured.filter(x=>x.quadrant==='puzzle').sort((a,b)=>b.unitProfit-a.unitProfit);
+    if(puzzle.length)out.push({key:'puzzle',text:ui('insightPuzzle',{items:names(puzzle)})});
+    if(est){const stale=Object.values(est).filter(e=>e.stale);if(stale.length)out.push({key:'stale',text:ui('insightStale',{items:stale.slice(0,3).map(e=>e.name).join(', ')}),sheets:true});}
+    return out;
+  }
+  function insightsBlock(list){
+    const li=list.map(x=>`<li data-insight="${x.key}"><p>${esc(x.text)}</p>${x.item?`<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="${esc(x.item.id)}">${esc(ui(x.key==='uncosted'?'completeRecipeLink':'insightOpenRecipe'))}</button>`:x.sheets?`<button class="rmw-perf-link" data-fin-tab="cost">${esc(ui('insightOpenSheet'))}</button>`:''}</li>`).join('');
+    return `<section class="mi-section rmw-perf-insights"><div class="mi-section-head"><h3>${esc(ui('insightsTitle'))}</h3></div><p class="rmw-perf-insights-sub">${esc(ui('insightsSub'))}</p>${list.length?`<ul>${li}</ul>`:`<p class="rmw-perf-insights-none">${esc(ui('insightNone'))}</p>`}</section>`;
+  }
   function performancePanel(){
-    const p=performanceData(30),costed=p.measured.length,buckets={star:[],plow:[],puzzle:[],dog:[]};
+    const p=performanceData(30),costed=p.measured.length,buckets={star:[],plow:[],puzzle:[],dog:[]},est=costEstimates();
     p.measured.forEach(x=>buckets[x.quadrant].push(x));
     const quads = perfQuads();
     const cards=Object.entries(quads).map(([key,q])=>{const list=buckets[key].sort((a,b)=>b.profit-a.profit),names=list.slice(0,3).map(x=>esc(t(x.item.name))).join(' · ')||'·',profit=list.reduce((n,x)=>n+x.profit,0);const countStr = list.length === 1 ? `1 ${ui('article')}` : `${list.length} ${ui('articles')}`;return `<div class="rmw-perf-q ${key}"><h4>${esc(q.title.toUpperCase())}</h4><strong>${countStr}</strong><p>${esc(q.hint)}</p><div><span>Top</span>${names}</div><footer><b>${cash(profit)}</b> ${esc(ui('colProfit').toLowerCase())} <small>${esc(q.action)}</small></footer></div>`;}).join('');
-    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
+    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}${estimateNote(est,r)}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
     const offRows=p.offMenu.map(o=>`<tr class="rmw-perf-off"><td><b>${esc(o.name)}</b><small>${esc(o.free?ui('freeAmountSection'):ui('offMenuSection'))}</small></td><td>${(window.KiwiNumber?.format(o.qty, {}) ?? o.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(o.revenue)}</td><td>·</td><td>·</td><td>·</td><td>${esc(o.free?ui('freeAmountReadout'):ui('offMenuReadout'))}</td></tr>`).join('');
     if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
-    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui(Math.abs(p.items.reduce((n,x)=>n+x.qty,0))<2&&lang()==='fr'||(p.items.reduce((n,x)=>n+x.qty,0))===1?'itemSold':'itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
+    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui(Math.abs(p.items.reduce((n,x)=>n+x.qty,0))<2&&lang()==='fr'||(p.items.reduce((n,x)=>n+x.qty,0))===1?'itemSold':'itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}${emptySales?'':insightsBlock(perfInsights(p,est))}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
   /* ═══ VENTES PAR CATÉGORIE ET PAR ARTICLE ═══════════════════════════════
      Le même registre que la Performance (KiwiCost.ledger) : annulations,
@@ -1831,7 +1919,7 @@
   function recipeIngredientRow(line,idx){return `<div class="rmw-recipe-ing" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}"><input class="kf-input" list="rmw-stock-ingredients" data-ing-name value="${esc(line?.name||'')}" placeholder="Ingrédient du stock"/><input class="kf-input" type="number" min="0" step="0.001" data-ing-qty value="${+line?.qty||0}" placeholder="0"/><select class="kf-input" data-ing-unit>${recipeUnitOptions(line?.unit)}</select><button class="mi-ic-btn danger" type="button" data-ing-delete aria-label="${esc(ui('delete'))}">${ic('trash')}</button></div>`;}
   function recipeDraft(root,x,api){const inv=api.inventory(venue()),units=window.KiwiRestaurantUnits;return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>{const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};}).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};}
   function recipeSummary(x,draft,api,hide){const m=api.metrics(x,draft,venue()),price=+x.price||0,pending=(l)=>`<span class="rmw-pending">${esc(l)}</span>`,gain=m.profit==null?pending('À compléter'):`${m.profit.toFixed(2)} MAD`,actual=m.actualCost==null?pending('À mesurer'):`${m.actualCost.toFixed(2)} MAD`;let cls='neutral',title='Recette à compléter',detail='Ajoutez les quantités et reliez les ingrédients au stock.';if(m.costComplete&&m.actualCost==null){cls='ok';title='Recette chiffrée';detail='Le coût réel se comparera à cette fiche après les premières consommations.';}if(m.actualCost!=null){const gap=Math.abs(m.variancePct||0),bad=gap>15;cls=bad?'danger':gap>5?'warn':'ok';title=bad?'Écart à vérifier':gap>5?'Coût à surveiller':'Coût conforme';detail=`${gap.toFixed(0)} % ${m.variancePct>0?'au-dessus':'sous'} du coût prévu · contrôlez les portions et sorties de stock.`;}const n=api.nutrition?.(draft,venue()),hasLines=(draft.ingredients||[]).some(l=>+l.qty>0),missing=n?[...new Set([...(n.missingNutrition||[]),...(n.missingConversion||[]),...(n.missingAllergens||[])])]:[];const toggle=`<label class="rmw-nutri-toggle" title="${esc(ui('nutritionHideHint'))}"><input type="checkbox" data-hide-nutrition${hide?' checked':''}/><span>${esc(ui('nutritionHide'))}</span></label>`;let nutrition;if(!hasLines)nutrition=`<div class="rmw-nutrition-state empty"><div class="rmw-nutri-head"><span class="rmw-nutri-dot mode"><i></i>${esc(ui('nutritionShort'))}</span><span class="rmw-nutri-muted">${esc(ui('nutritionAwaitsRecipe'))}</span></div>${toggle}</div>`;else if(n?.complete)nutrition=`<div class="rmw-nutrition-state complete"><div class="rmw-nutri-head"><span class="rmw-nutri-dot req"><i></i>${esc(ui('nutritionComplete'))}</span>${toggle}</div><div class="rmw-nutrition-values"><bdi dir="ltr">${n.nutrition.kcal} kcal</bdi><bdi dir="ltr">P ${n.nutrition.protein} g</bdi><bdi dir="ltr">G ${n.nutrition.carbs} g</bdi><bdi dir="ltr">L ${n.nutrition.fat} g</bdi></div><div class="rmw-nutrition-allergens"><b>${esc(ui('nutritionAllergens'))}</b><span>${esc(n.allergens.length?n.allergens.map(key=>ui(`allergen_${key}`)).join(' · '):ui('nutritionNone'))}</span></div><small>${esc(ui('nutritionIndicative'))}</small></div>`;else nutrition=`<div class="rmw-nutrition-state incomplete"><div class="rmw-nutri-head"><span class="rmw-nutri-dot opt"><i></i>${esc(ui('nutritionIncomplete'))}</span><span class="rmw-nutri-muted">${esc(ui('nutritionMissing',{n:missing.length}))}</span></div><div class="rmw-nutri-head-acts"><button class="btn-slim" type="button" data-nutrition-fix>${esc(ui('nutritionFix'))}</button>${toggle}</div></div>`;return `<div class="rmw-recipe-state ${cls}"><i></i><div><b>${title}</b><span>${detail}</span></div></div><div class="rmw-recipe-costs"><div><span>Prix de vente</span><b>${price.toFixed(2)} MAD</b></div><div><span>Coût théorique</span><b>${m.costComplete?`${m.theoreticalCost.toFixed(2)} MAD`:'À compléter'}</b></div><div><span>Coût observé</span><b>${actual}</b><small>${m.actualCost==null?'Après ventes + suivi stock':`${price?((m.actualCost/price)*100).toFixed(1):0} % du prix`}</small></div><div class="total"><span>${m.actualCost==null?'Marge théorique':'Marge observée'}</span><b>${gain}</b><small>par portion</small></div></div>${nutrition}`;}
-  function openRecipe(x){const api=window.KiwiRestaurantRecipes,r=api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];const m=modal({title:`Recette · ${esc(t(x.name))}`,desc:`${esc(cat(x.catId)?.name?t(cat(x.catId).name):'')}`+` · ${cash(x.price)} prix de vente`,width:940,body:`<div class="rmw-recipe-editor"><datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist><div data-recipe-summary>${recipeSummary(x,r,api,!!x.hideNutrition)}</div><section class="rmw-recipe-section rmw-recipe-composition"><div class="rmw-recipe-section-head"><div><span>Fiche technique</span><h4>Composition</h4><p>Quantités par recette : elles pilotent le coût, la marge, le stock et la nutrition.</p></div><div class="rmw-recipe-top"><label><span>Portions</span><input class="kf-input" type="number" min="1" step="1" data-portions value="${r.portions||1}"/></label><label><span>Préparation</span><span class="rmw-recipe-suffix"><input class="kf-input" type="number" min="0" step="1" data-minutes value="${r.prepMinutes||0}"/><b>min</b></span></label></div></div><div class="rmw-recipe-ing-head"><span>Ingrédient</span><span>Quantité / recette</span><span>Unité</span><span></span></div><div data-recipe-ingredients>${rows.map(recipeIngredientRow).join('')}</div><button class="btn-slim rmw-recipe-add" type="button" data-ing-add>+ Ajouter un ingrédient</button>${inv.length?'':'<p class="kf-help">Ajoutez d’abord vos matières premières dans Stock &amp; approvisionnement pour calculer leur coût.</p>'}</section><div class="rmw-recipe-notes"><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Exécution</span><h4>Étapes de préparation</h4><textarea class="kf-input rmw-textarea" data-steps placeholder="Une étape par ligne">${esc((r.steps||[]).join('\n'))}</textarea></section><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Transmission</span><h4>Notes d’équipe</h4><textarea class="kf-input rmw-textarea" data-note placeholder="Allergènes, calibrage, dressage…">${esc(r.note||'')}</textarea></section></div></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});m.el.classList.add('rmw-recipe-modal');let hideDraft=!!x.hideNutrition;const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{$('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api,hideDraft);};m.el.addEventListener('change',e=>{if(e.target.matches('[data-hide-nutrition]'))hideDraft=!!e.target.checked;});m.el.addEventListener('input',e=>{if(e.target.matches('[data-hide-nutrition]'))return;const row=e.target.closest('[data-recipe-ing]');if(row&&e.target.matches('[data-ing-name]')){const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());row.dataset.stockId=hit?.id||'';if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';}refresh();});m.el.addEventListener('click',e=>{if(!e.target.closest('[data-nutrition-fix]'))return;m.close();window.Kiwi?.handlers?.['nav-stock']?.();});wrap.onclick=e=>{const del=e.target.closest('[data-ing-delete]');if(!del)return;del.closest('[data-recipe-ing]').remove();if(!wrap.children.length)wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},0));refresh();};$('[data-ing-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},wrap.children.length));$('[data-ing-name]',wrap.lastElementChild).focus();};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const draft=recipeDraft(m.el,x,api);if(!draft.ingredients.some(line=>line.qty>0)){toast('Quantités manquantes','Ajoutez au moins un ingrédient avec une quantité.','warn');return;}if(draft.ingredients.some(line=>!line.unit)){toast('Unités manquantes','Choisissez une unité pour chaque ingrédient.','warn');return;}S().updateItem(x.id,{hideNutrition:hideDraft});api.save(x.id,draft,venue());m.close();render();toast('Recette enregistrée','Stock, marges et nutrition mis à jour');};}
+  function openRecipe(x,seed,from){const api=window.KiwiRestaurantRecipes,had=!!api?.get(x.id,x.name,venue()),r=seed||api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];const m=modal({title:`Recette · ${esc(t(x.name))}`,desc:`${esc(cat(x.catId)?.name?t(cat(x.catId).name):'')}`+` · ${cash(x.price)} prix de vente`,width:940,body:`<div class="rmw-recipe-editor">${seed?`<div class="rmw-recipe-state warn" data-recipe-draft><i></i><div><b>${esc(ui('recipeDraftTitle'))}</b><span>${esc(ui('recipeDraftFrom',{name:from?.sheet||''}))}${had?' '+esc(ui('recipeDraftExisting')):''}</span></div></div>`:''}<datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist><div data-recipe-summary>${recipeSummary(x,r,api,!!x.hideNutrition)}</div><section class="rmw-recipe-section rmw-recipe-composition"><div class="rmw-recipe-section-head"><div><span>Fiche technique</span><h4>Composition</h4><p>Quantités par recette : elles pilotent le coût, la marge, le stock et la nutrition.</p></div><div class="rmw-recipe-top"><label><span>Portions</span><input class="kf-input" type="number" min="1" step="1" data-portions value="${r.portions||1}"/></label><label><span>Préparation</span><span class="rmw-recipe-suffix"><input class="kf-input" type="number" min="0" step="1" data-minutes value="${r.prepMinutes||0}"/><b>min</b></span></label></div></div><div class="rmw-recipe-ing-head"><span>Ingrédient</span><span>Quantité / recette</span><span>Unité</span><span></span></div><div data-recipe-ingredients>${rows.map(recipeIngredientRow).join('')}</div><button class="btn-slim rmw-recipe-add" type="button" data-ing-add>+ Ajouter un ingrédient</button>${inv.length?'':'<p class="kf-help">Ajoutez d’abord vos matières premières dans Stock &amp; approvisionnement pour calculer leur coût.</p>'}</section><div class="rmw-recipe-notes"><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Exécution</span><h4>Étapes de préparation</h4><textarea class="kf-input rmw-textarea" data-steps placeholder="Une étape par ligne">${esc((r.steps||[]).join('\n'))}</textarea></section><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Transmission</span><h4>Notes d’équipe</h4><textarea class="kf-input rmw-textarea" data-note placeholder="Allergènes, calibrage, dressage…">${esc(r.note||'')}</textarea></section></div></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});m.el.classList.add('rmw-recipe-modal');let hideDraft=!!x.hideNutrition;const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{$('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api,hideDraft);};m.el.addEventListener('change',e=>{if(e.target.matches('[data-hide-nutrition]'))hideDraft=!!e.target.checked;});m.el.addEventListener('input',e=>{if(e.target.matches('[data-hide-nutrition]'))return;const row=e.target.closest('[data-recipe-ing]');if(row&&e.target.matches('[data-ing-name]')){const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());row.dataset.stockId=hit?.id||'';if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';}refresh();});m.el.addEventListener('click',e=>{if(!e.target.closest('[data-nutrition-fix]'))return;m.close();window.Kiwi?.handlers?.['nav-stock']?.();});wrap.onclick=e=>{const del=e.target.closest('[data-ing-delete]');if(!del)return;del.closest('[data-recipe-ing]').remove();if(!wrap.children.length)wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},0));refresh();};$('[data-ing-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},wrap.children.length));$('[data-ing-name]',wrap.lastElementChild).focus();};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const draft=recipeDraft(m.el,x,api);if(!draft.ingredients.some(line=>line.qty>0)){toast('Quantités manquantes','Ajoutez au moins un ingrédient avec une quantité.','warn');return;}if(draft.ingredients.some(line=>!line.unit)){toast('Unités manquantes','Choisissez une unité pour chaque ingrédient.','warn');return;}S().updateItem(x.id,{hideNutrition:hideDraft});api.save(x.id,draft,venue());m.close();render();toast('Recette enregistrée','Stock, marges et nutrition mis à jour');};}
   function confirm(title,run,detail='Cette action supprimera définitivement cet élément.'){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="kb danger" data-confirm>${esc(ui('delete'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
   let legacyMenuHandler=null;
   function restaurantMenuHandler(){
@@ -2075,6 +2163,14 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
 @media(max-width:620px){.rmw-menu-search{width:100%;grid-template-columns:36px minmax(0,1fr);min-height:50px;padding:6px 9px;border-radius:14px}.rmw-menu-search-icon{width:36px;height:36px}.rmw-menu-search-count{display:none}}
 `;document.head.appendChild(s)}
   function performanceStyle(){if($('#rmw-performance-css'))return;const s=document.createElement('style');s.id='rmw-performance-css';s.textContent=`
+.rmw-perf-insights-sub{margin:-4px 0 12px;color:var(--n-500);font-size:12px}
+.rmw-perf-insights ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.rmw-perf-insights li{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--n-200);border-radius:12px;background:var(--surface);font-size:13px;line-height:1.45}
+.rmw-perf-insights li p{margin:0;min-width:0}
+.rmw-perf-insights li .rmw-perf-link{flex:0 0 auto;white-space:nowrap;font-size:12px}
+.rmw-perf-insights-none{margin:0;color:var(--n-500);font-size:12.5px}
+.rmw-perf-table td small.rmw-perf-est{color:var(--n-600)}
+@media(max-width:620px){.rmw-perf-insights li{flex-direction:column;gap:6px}}
 .rmw-perf-matrix{margin-top:24px;padding:0;border:1px solid #151a17;border-radius:18px;background:#080b09;color:#f7faf8;box-shadow:0 22px 50px rgba(4,9,6,.12)}
 .rmw-perf-legend{display:flex;align-items:center;gap:8px;min-height:58px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.015);border-radius:17px 17px 0 0}
 .rmw-perf-legend>span{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.09);border-radius:999px;color:rgba(255,255,255,.68);font-size:11px}
@@ -2165,7 +2261,10 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
      * independent copy with the same stages, choices, extras and options, then
      * opens that copy immediately so only its name/price need adapting. */
     window.Kiwi.handlers['rmw-formula-duplicate']=(_e,id)=>{const before=new Set(D().items.map(it=>it.id));S().duplicateItem(id);const copy=D().items.find(it=>!before.has(it.id));if(copy)openItem(copy);};
-    window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant,analysis:{
+    /* Coût simple → brouillon : l'éditeur de recette s'ouvre pré-rempli ; rien
+       n'est écrit avant son bouton Enregistrer. */
+    const recipeFromSheet=(id,seed,from)=>{const x=item(id);if(!x||!seed||!window.KiwiRestaurantRecipes)return false;openRecipe(x,seed,from||{});return true;};
+    window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant,recipeFromSheet,analysis:{
       performance(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${performancePanel()}</div>`;},
       hours(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${hoursPanel()}</div>`;},
       sales(){style();performanceStyle();hoursStyle();salesStyle();return `<div class="rmw-analysis-panel">${salesPanel()}</div>`;},
@@ -2173,6 +2272,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
          d'ensemble d'« Analyse du menu » les lit aussi, pour ne jamais
          afficher une autre marge que celle de l'onglet d'à côté. */
       ledger(w){return menuLedger(w);},
+      insights(){const p=performanceData(30),est=costEstimates();return perfInsights(p,est).map(x=>({key:x.key,text:x.text,item:x.item?x.item.id:null}));},
       costOf(item){const hit=recipeCostResolver([{item}]).of({item});if(hit)return hit;try{return window.KiwiCost?.of?.({kind:'menu',id:item.id,name:item.name})||null;}catch(_){return null;}}
     }};
     if(!S()){setTimeout(boot,50);return;}
