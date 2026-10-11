@@ -420,6 +420,7 @@
         { nav: 'practitioners', label: { fr: 'Praticien·ne·s', en: 'Practitioners', ar: 'الممارسون' } },
         { nav: 'clients', label: { fr: 'Parcours clients', en: 'Guest journeys', ar: 'مسار العملاء' } },
         { nav: 'packages', icon: ICONS.card, label: { fr: 'Cures & cartes cadeaux', en: 'Packages & gift cards', ar: 'الباقات وبطاقات الهدايا' } },
+        { nav: 'products', icon: ICONS.card, label: { fr: 'Boutique & produits', en: 'Shop & products', ar: 'المتجر والمنتجات' } },
       ],
       questions: [
       { k: 'cabins',  type: 'number', ph: 'Ex. 4',             label: { fr: 'Cabines de soin', en: 'Treatment rooms', ar: 'غرف العناية' } },
@@ -895,6 +896,7 @@
         { nav: 'clients',       label: { fr: 'Adhérents', en: 'Members', ar: 'الأعضاء' } },
         { nav: 'checkins',      icon: ICONS.usercheck, label: { fr: 'Contrôle d’accès', en: 'Access control', ar: 'مراقبة الدخول' } },
         { nav: 'renewals',      icon: ICONS.card, label: { fr: 'Renouvellements', en: 'Renewals', ar: 'التجديدات' } },
+        { nav: 'shop',          icon: ICONS.card, label: { fr: 'Comptoir, coaching & pass', en: 'Counter, coaching & passes', ar: 'الكاونتر والتدريب والتذاكر' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Passages', en: 'Check-ins', ar: 'الدخول' } },

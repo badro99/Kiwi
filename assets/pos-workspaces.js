@@ -13,9 +13,9 @@
     pharmacie:[['prescriptions',L('Ordonnances','Prescriptions','الوصفات')],['insurers',L('Tiers payant','Claims','الدفع الثالث')],['expiries',L('Péremptions','Expiries','الصلاحية')],['returns',L('Retours','Returns','المرتجعات')],['duty',L('Relève','Handover','التسليم')]],
     librairie:[['bookorders',L('Commandes','Orders','الطلبات')],['schoollists',L('Listes scolaires','School lists','اللوائح المدرسية')],['returns',L('Retours','Returns','المرتجعات')]],
     fleuriste:[['flowerorders',L('Commandes','Orders','الطلبات')],['delivery',L('Livraisons','Deliveries','التوصيلات')],['freshness',L('Fraîcheur','Freshness','الطزاجة')],['returns',L('Pertes','Losses','الخسائر')]],
-    spa:[['appointments',L('Agenda','Diary','المواعيد')],['packages',L('Cures','Packages','الباقات')],['clients',L('Clients','Guests','العملاء')],['services',L('Soins','Treatments','العلاجات')],['practitioners',L('Praticiens','Practitioners','الممارسون')]],
+    spa:[['appointments',L('Agenda','Diary','المواعيد')],['packages',L('Cures','Packages','الباقات')],['clients',L('Clients','Guests','العملاء')],['services',L('Soins','Treatments','العلاجات')],['practitioners',L('Praticiens','Practitioners','الممارسون')],['products',L('Boutique','Shop','المتجر')]],
     coiffure:[['appointments',L('Rendez-vous','Appointments','المواعيد')],['chairs',L('Fauteuils','Chairs','الكراسي')],['formulas',L('Couleurs','Colours','الألوان')],['clients',L('Clients','Clients','العملاء')],['services',L('Prestations','Services','الخدمات')],['practitioners',L('Coiffeurs','Stylists','المصففون')]],
-    gym:[['checkins',L('Passages','Check-ins','الدخول')],['renewals',L('Renouvellements','Renewals','التجديدات')],['appointments',L('Cours','Classes','الحصص')],['clients',L('Adhérents','Members','الأعضاء')],['services',L('Abonnements','Memberships','الاشتراكات')],['practitioners',L('Coachs','Coaches','المدربون')]],
+    gym:[['checkins',L('Passages','Check-ins','الدخول')],['renewals',L('Renouvellements','Renewals','التجديدات')],['appointments',L('Cours','Classes','الحصص')],['clients',L('Adhérents','Members','الأعضاء')],['services',L('Abonnements','Memberships','الاشتراكات')],['practitioners',L('Coachs','Coaches','المدربون')],['shop',L('Comptoir','Counter','الكاونتر')]],
     autre:[['workflows',L('Suivi','Tracking','التتبع')],['returns',L('Incidents','Incidents','الحوادث')]],
   };
   const TRADE_ALIAS={boulangerie:'bakery',gym:'sport'};
@@ -30,7 +30,7 @@
   const key=()=>`kiwi:workspaces:v1:${paired().venueId||paired().merchant||'demo'}`;
   const blank=()=>({trade:posTrade(String(paired().subtype||paired().type||'')),records:{}});
   function read(){try{const d=JSON.parse(localStorage.getItem(key())||'null');return d&&d.records?d:blank();}catch(_){return blank();}}
-  function write(d){try{localStorage.setItem(key(),JSON.stringify(d&&d.records?d:blank()));}catch(_){}renderOpen();}
+  function write(d){try{localStorage.setItem(key(),JSON.stringify(d&&d.records?d:blank()));}catch(_){}renderOpen();notify();}
   function merge(a,b){const out={trade:(a&&a.trade)||(b&&b.trade)||'',records:{}};const ar=a?.records||{},br=b?.records||{};new Set([...Object.keys(ar),...Object.keys(br)]).forEach(nav=>{const ids={};[...(ar[nav]||[]),...(br[nav]||[])].forEach(r=>{if(r?.id&&(!ids[r.id]||(+r.updatedAt||0)>=(+ids[r.id].updatedAt||0)))ids[r.id]=r;});out.records[nav]=Object.values(ids).sort((x,y)=>(+y.updatedAt||0)-(+x.updatedAt||0)).slice(0,500);});return out;}
   let cloud=null,openState=null;
   function bind(){if(!cloud&&window.KiwiCloudDoc?.attach)cloud=window.KiwiCloudDoc.attach({feature:'workspaces',read,write,merge,localKey:key,isEmpty:d=>!d?.records||!Object.values(d.records).some(a=>a?.some(r=>r&&!r.deletedAt))});try{cloud?.bind?.();}catch(_){}}
@@ -41,7 +41,8 @@
   function currentSchema(){return window.KiwiTradeSchema?.get?.(posTrade(openState?.id),openState?.nav)||null;}
   function stages(){return currentSchema()?.stages||[L('À traiter','To do','للمعالجة'),L('En cours','In progress','قيد التنفيذ'),L('Prêt','Ready','جاهز'),L('Terminé','Done','مكتمل')];}
   function statusName(n){const list=stages();return pick(list[Math.max(0,Math.min(list.length-1,+n||0))]);}
-  function money(n){try{return Math.round(+n||0).toLocaleString(lang()==='ar'?'ar-MA':'fr-FR')+' MAD';}catch(_){return String(n||0)+' MAD';}}
+  /* les centimes se voient quand il y en a : 280,50 MAD ne devient pas 281 MAD */
+  function money(n){const v=Math.round((+n||0)*100)/100;try{return v.toLocaleString(lang()==='ar'?'ar-MA':'fr-FR',{minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2})+' MAD';}catch(_){return String(v)+' MAD';}}
   function field(sc,id){return sc?.fields?.find(f=>f.id===id);}
   function valueLabel(sc,id,value){const f=field(sc,id);if(value==null||value==='')return'';if(f?.type==='money'||/balance$|cost$|price$|fee$|target$/i.test(id))return money(value);if(f?.type==='checkbox')return value?pick(L('Oui','Yes','نعم')):pick(L('Non','No','لا'));if(f?.type==='select'){return pick((f.values||[]).find(o=>o.value===value)?.label)||String(value);}if(f?.type==='relation'){return window.KiwiTradeSchema.relationOptions(sc,allRecords(),f).find(o=>o.value===value)?.label||value;}if(f?.type==='datetime-local')return String(value).replace('T',' ');return String(value);}
 
@@ -56,10 +57,104 @@
     else if(f.type==='checkbox')c=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else c=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='number'||f.type==='money'?` step="${f.step||'0.01'}"`:''}>`;
     return `<label class="twpos-field${f.full||f.type==='textarea'?' full':''}"><span>${esc(pick(f.label))}${f.required?' *':''}</span>${c}<small data-twpos-error="${esc(f.id)}"></small></label>`;}
-  function showEditor(existing){const sc=currentSchema(),host=openState?.panel?.querySelector('[data-twpos-editor]');if(!sc||!host)return;const rec=window.KiwiTradeSchema.normalize(sc,existing||{}),list=stages();host.hidden=false;host.innerHTML=`<form class="twpos-form" data-twpos-editform><div class="twpos-form-head"><strong>${esc(pick(existing?UI.edit:UI.add))}</strong><button type="button" data-twpos-canceledit>×</button></div><div class="twpos-fields">${sc.fields.map(f=>fieldControl(sc,f,rec)).join('')}<label class="twpos-field"><span>${esc(pick(L('Statut','Status','الحالة')))}</span><select name="status">${list.map((s,i)=>`<option value="${i}"${(+rec.status||0)===i?' selected':''}>${esc(pick(s))}</option>`).join('')}</select></label></div><div class="twpos-form-actions"><button type="button" data-twpos-canceledit>${esc(pick(UI.cancel))}</button><button type="submit">${esc(pick(UI.save))}</button></div></form>`;const form=host.querySelector('form');host.querySelectorAll('[data-twpos-canceledit]').forEach(b=>b.onclick=()=>{host.hidden=true;host.innerHTML='';});form.onsubmit=e=>{e.preventDefault();const fd=new FormData(form),values={};sc.fields.forEach(f=>{values[f.id]=f.type==='checkbox'?form.elements[f.id]?.checked:fd.get(f.id);});const now=Date.now(),base={...rec,id:rec.id||('tw-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,7)),values,status:+fd.get('status')||0,createdAt:rec.createdAt||now,updatedAt:now,deletedAt:0},check=window.KiwiTradeSchema.validate(sc,base,active(openState.nav));host.querySelectorAll('[data-twpos-error]').forEach(n=>n.textContent='');if(!check.ok){Object.entries(check.errors).forEach(([id])=>{const n=[...host.querySelectorAll('[data-twpos-error]')].find((el)=>el.dataset.twposError===id);if(n)n.textContent=pick(UI.invalid);});return;}save(openState.nav,{...check.record,id:base.id,status:base.status,createdAt:base.createdAt,updatedAt:now,deletedAt:0});host.hidden=true;host.innerHTML='';};}
+  function showEditor(existing){const sc=currentSchema(),host=openState?.panel?.querySelector('[data-twpos-editor]');if(!sc||!host)return;const rec=window.KiwiTradeSchema.normalize(sc,existing||{}),list=stages();host.hidden=false;host.innerHTML=`<form class="twpos-form" data-twpos-editform><div class="twpos-form-head"><strong>${esc(pick(existing?UI.edit:UI.add))}</strong><button type="button" data-twpos-canceledit>×</button></div><div class="twpos-fields">${sc.fields.map(f=>fieldControl(sc,f,rec)).join('')}<label class="twpos-field"><span>${esc(pick(L('Statut','Status','الحالة')))}</span><select name="status">${list.map((s,i)=>`<option value="${i}"${(existing?(+rec.status||0):defaultStatus())===i?' selected':''}>${esc(pick(s))}</option>`).join('')}</select></label></div><div class="twpos-form-actions"><button type="button" data-twpos-canceledit>${esc(pick(UI.cancel))}</button><button type="submit">${esc(pick(UI.save))}</button></div></form>`;const form=host.querySelector('form');host.querySelectorAll('[data-twpos-canceledit]').forEach(b=>b.onclick=()=>{host.hidden=true;host.innerHTML='';});form.onsubmit=e=>{e.preventDefault();const fd=new FormData(form),values={};sc.fields.forEach(f=>{values[f.id]=f.type==='checkbox'?form.elements[f.id]?.checked:fd.get(f.id);});const now=Date.now(),base={...rec,id:rec.id||('tw-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,7)),values,status:+fd.get('status')||0,createdAt:rec.createdAt||now,updatedAt:now,deletedAt:0},check=window.KiwiTradeSchema.validate(sc,base,active(openState.nav));host.querySelectorAll('[data-twpos-error]').forEach(n=>n.textContent='');if(!check.ok){Object.entries(check.errors).forEach(([id])=>{const n=[...host.querySelectorAll('[data-twpos-error]')].find((el)=>el.dataset.twposError===id);if(n)n.textContent=pick(UI.invalid);});return;}save(openState.nav,{...check.record,id:base.id,status:base.status,createdAt:base.createdAt,updatedAt:now,deletedAt:0});host.hidden=true;host.innerHTML='';};}
 
   function renderOpen(){if(!openState?.panel?.isConnected)return;const sc=currentSchema();if(!sc)return;const rows=active(openState.nav),sum=window.KiwiTradeSchema.summary(sc,rows);openState.panel.querySelector('[data-twpos-tabs]').innerHTML=openState.boards.map(x=>`<button class="twpos-tab${x[0]===openState.nav?' on':''}" data-twpos-tab="${esc(x[0])}" type="button">${esc(pick(x[1]))}<span class="twpos-count">${active(x[0]).length}</span></button>`).join('');openState.panel.querySelector('[data-twpos-summary]').innerHTML=`<span><b>${esc(pick(UI.active))}</b>${sum.active}</span><span><b>${esc(pick(UI.alerts))}</b>${sum.alerts}</span><span><b>${esc(pick(UI.balance))}</b>${money(sum.balance)}</span>`;openState.panel.querySelector('[data-twpos-list]').innerHTML=rows.length?rows.map(raw=>{const r=window.KiwiTradeSchema.derived(sc,raw),ids=(sc.card||[]).filter(id=>r.values[id]!==''&&r.values[id]!=null).slice(0,4),max=stages().length-1;return `<article class="twpos-row${r.derived.alert?' has-alert':''}"><div><h3>${esc(r.title)}</h3><p>${esc(statusName(r.status))}</p><div class="twpos-meta">${ids.map(id=>`<span>${esc(valueLabel(sc,id,r.values[id]))}</span>`).join('')}</div></div><div class="twpos-row-actions">${(+r.status||0)<max?`<button data-twpos-next="${esc(r.id)}" type="button">${esc(pick(UI.next))}</button>`:''}<button data-twpos-edit="${esc(r.id)}" type="button">${esc(pick(UI.edit))}</button><button data-twpos-del="${esc(r.id)}" type="button">${esc(pick(UI.remove))}</button></div></article>`;}).join(''):`<div class="twpos-empty">${esc(pick(UI.empty))}</div>`;}
-  function open(root,id){if(id==='pressing')return openPressing(root);const boards=BY_POS[id];if(!boards)return;bind();const back=document.createElement('div');back.className='twpos-backdrop';back.innerHTML=`<section class="twpos-panel" role="dialog" aria-modal="true"><header class="twpos-head"><div><h2>${esc(pick(UI.title))}</h2><p>${esc(pick(UI.sub))}</p></div><button class="twpos-close" data-twpos-close type="button" aria-label="${esc(pick(UI.close))}">×</button></header><div class="twpos-tabs" data-twpos-tabs></div><div class="twpos-summary" data-twpos-summary></div><button class="twpos-add" data-twpos-add type="button">＋ ${esc(pick(UI.add))}</button><div class="twpos-editor" data-twpos-editor hidden></div><div class="twpos-list" data-twpos-list></div></section>`;root.appendChild(back);openState={root,id,boards,nav:boards[0][0],panel:back};renderOpen();const close=()=>{back.remove();openState=null;};back.querySelector('[data-twpos-close]').onclick=close;back.addEventListener('click',e=>{if(e.target===back)return close();const tab=e.target.closest('[data-twpos-tab]');if(tab){openState.nav=tab.dataset.twposTab;openState.panel.querySelector('[data-twpos-editor]').hidden=true;renderOpen();return;}if(e.target.closest('[data-twpos-add]'))return showEditor();const next=e.target.closest('[data-twpos-next]');if(next){const r=active(openState.nav).find(x=>x.id===next.dataset.twposNext);if(r)save(openState.nav,{...r,status:Math.min(stages().length-1,(+r.status||0)+1),updatedAt:Date.now()});return;}const edit=e.target.closest('[data-twpos-edit]');if(edit){const r=active(openState.nav).find(x=>x.id===edit.dataset.twposEdit);if(r)showEditor(r);return;}const del=e.target.closest('[data-twpos-del]');if(del&&window.confirm(pick(L('Supprimer cet élément ?','Delete this item?','حذف هذا العنصر؟')))){const r=active(openState.nav).find(x=>x.id===del.dataset.twposDel);if(r)save(openState.nav,{...r,deletedAt:Date.now(),updatedAt:Date.now()});}});}
+  function open(root,id,startNav){if(id==='pressing')return openPressing(root);const boards=BY_POS[id];if(!boards)return;bind();const back=document.createElement('div');back.className='twpos-backdrop';back.innerHTML=`<section class="twpos-panel" role="dialog" aria-modal="true"><header class="twpos-head"><div><h2>${esc(pick(UI.title))}</h2><p>${esc(pick(UI.sub))}</p></div><button class="twpos-close" data-twpos-close type="button" aria-label="${esc(pick(UI.close))}">×</button></header><div class="twpos-tabs" data-twpos-tabs></div><div class="twpos-summary" data-twpos-summary></div><button class="twpos-add" data-twpos-add type="button">＋ ${esc(pick(UI.add))}</button><div class="twpos-editor" data-twpos-editor hidden></div><div class="twpos-list" data-twpos-list></div></section>`;root.appendChild(back);openState={root,id,boards,nav:(startNav&&boards.some(x=>x[0]===startNav))?startNav:boards[0][0],panel:back};renderOpen();const close=()=>{back.remove();openState=null;};back.querySelector('[data-twpos-close]').onclick=close;back.addEventListener('click',e=>{if(e.target===back)return close();const tab=e.target.closest('[data-twpos-tab]');if(tab){openState.nav=tab.dataset.twposTab;openState.panel.querySelector('[data-twpos-editor]').hidden=true;renderOpen();return;}if(e.target.closest('[data-twpos-add]'))return showEditor();const next=e.target.closest('[data-twpos-next]');if(next){const r=active(openState.nav).find(x=>x.id===next.dataset.twposNext);if(r)save(openState.nav,{...r,status:Math.min(stages().length-1,(+r.status||0)+1),updatedAt:Date.now()});return;}const edit=e.target.closest('[data-twpos-edit]');if(edit){const r=active(openState.nav).find(x=>x.id===edit.dataset.twposEdit);if(r)showEditor(r);return;}const del=e.target.closest('[data-twpos-del]');if(del&&window.confirm(pick(L('Supprimer cet élément ?','Delete this item?','حذف هذا العنصر؟')))){const r=active(openState.nav).find(x=>x.id===del.dataset.twposDel);if(r)save(openState.nav,{...r,deletedAt:Date.now(),updatedAt:Date.now()});}});}
   function mount(root,id){if(!root||!BY_POS[id]||root.querySelector('[data-twpos-launch]'))return;const nav=root.querySelector('nav');if(!nav)return;const btn=document.createElement('button');btn.type='button';btn.className='twpos-launch';btn.dataset.twposLaunch='';btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6l1 3h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h3z"/><path d="M8 12h8M8 16h5"/></svg><span>'+esc(pick(UI.title))+'</span>';btn.onclick=()=>open(root,id);nav.appendChild(btn);bind();window.KiwiCaisseLang?.apply?.(btn);}
-  window.KiwiPosWorkspaces={mount,open,read,write,merge,boards:BY_POS};
+  /* ═══ LE CATALOGUE ET L'ÉQUIPE DU COMMERÇANT, LUS PAR LA CAISSE ═══════════════
+   * Le tableau de bord tient déjà « Prestations & forfaits », « Abonnements »,
+   * « Soins & rituels » et « Coiffeur·euse·s / Coachs / Praticien·ne·s » dans ce
+   * même document (`workspaces`). Les caisses coiffure, spa et salle de sport,
+   * elles, vendaient la grille de démonstration : 120 MAD une coupe femme, 250
+   * MAD un mois de salle, quoi que le commerçant ait saisi, et leurs équipes
+   * s'appelaient « Coiffeur 1 », « Coach 2 ». Rien ne reliait le document à la
+   * vente. Cette API est ce lien : elle ne fabrique rien, elle relit ce que le
+   * commerçant a tenu sur l'un ou l'autre appareil.
+   *
+   * Une prestation se vend quand elle est ACTIVE (statut « Actif », ni
+   * « Brouillon » ni « Archivé », et son interrupteur « Actif » pas sur Non) ;
+   * un prix à 0 est un prix NON saisi (le schéma convertit un champ vide en 0) :
+   * la caisse le demande plutôt que de vendre à 0 MAD. */
+  const subs=new Set();
+  function notify(){subs.forEach(fn=>{try{fn();}catch(_){}});}
+  function subscribe(fn){subs.add(fn);return()=>subs.delete(fn);}
+  function isRealTill(){try{return !!(window.KiwiEnv?.isReal?.()||window.KiwiPlatform?.isPaired?.()||JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null'));}catch(_){return false;}}
+  function defaultStatus(){return currentSchema()?.stageKey==='catalog'?1:0;}
+  function boardValues(trade,nav,r){const sc=window.KiwiTradeSchema?.get?.(posTrade(trade),nav);return sc?window.KiwiTradeSchema.normalize(sc,r).values:(r.values||{});}
+  const num=(x)=>{const n=Number(x);return Number.isFinite(n)?n:0;};
+  const byCreation=(rows)=>rows.slice().sort((a,b)=>((+a.createdAt||+a.updatedAt||0)-(+b.createdAt||+b.updatedAt||0))||String(a.id).localeCompare(String(b.id)));
+  /* Un tableau quelconque, normalisé : {id,title,status,v}. `rows` rend tout ce
+   * qui n'est pas supprimé (agenda, cours) ; `board` ne rend que le catalogue
+   * qui se vend (statut « Actif », interrupteur pas sur Non) et compte en
+   * `.draft` ce qui attend encore (brouillons). */
+  function rows(trade,nav){
+    return byCreation(active(nav)).map(r=>{const v=boardValues(trade,nav,r);return{id:String(r.id),title:String(v.title||r.title||'').trim(),status:+r.status||0,v};});
+  }
+  function board(trade,nav){
+    let draft=0;
+    const list=rows(trade,nav).filter(r=>{
+      if(r.status===1&&r.v.active!=='no')return !!r.title;
+      if(!r.status)draft++;
+      return false;
+    });
+    list.draft=draft;return list;
+  }
+  /* Les prestations du commerçant : {id,name,category,price,durationMinutes,
+   * durationDays,commission,terms}. `price` = 0 quand il n'a pas été saisi.
+   * `.draft` compte celles qui existent mais ne se vendent pas encore, pour que
+   * la caisse puisse le dire. */
+  function services(trade){
+    const out=[];let draft=0;
+    /* dans l'ordre où le commerçant les a créées : la grille ne se réarrange pas
+       à chaque modification (le document les range par dernière édition) */
+    byCreation(active('services')).forEach(r=>{
+      const v=boardValues(trade,'services',r);
+      if(!((+r.status||0)===1&&v.active!=='no')){if(!(+r.status||0))draft++;return;}
+      const com=num(v.commissionRate);
+      out.push({id:String(r.id),name:String(v.title||r.title||'').trim(),category:String(v.category||'').trim(),price:Math.round(num(v.price)*100)/100,durationMinutes:num(v.durationMinutes),durationDays:num(v.durationDays),commission:com>0?Math.min(100,com)/100:null,terms:String(v.terms||v.protocol||'').trim()});
+    });
+    const list=out.filter(s=>s.name);list.draft=draft;return list;
+  }
+  /* L'équipe qui réalise les prestations. D'abord la fiche « Coiffeur·euse·s /
+   * Coachs / Praticien·ne·s » (c'est elle qui porte spécialité et commission) ;
+   * à défaut, l'Équipe du tableau de bord : noms et rôles seulement, jamais un
+   * code (/api/team/live ne les envoie pas). */
+  let teamRoster=null,teamAt=0,teamBusy=false;
+  function fetchRoster(force){
+    const m=String(paired().merchant||'');
+    if(!m||!isRealTill()||teamBusy)return;
+    if(!force&&Date.now()-teamAt<30000)return;
+    teamBusy=true;
+    fetch('/api/team/live?merchant='+encodeURIComponent(m),{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(d&&Array.isArray(d.members)){teamAt=Date.now();const next=d.members.filter(x=>x&&x.id&&x.name).map(x=>({id:String(x.id),name:String(x.name),role:String(x.role||x.department||'')}));if(JSON.stringify(next)!==JSON.stringify(teamRoster)){teamRoster=next;notify();}}})
+      .catch(()=>{}).finally(()=>{teamBusy=false;});
+  }
+  function staff(trade){
+    const out=[];
+    byCreation(active('practitioners')).forEach(r=>{
+      const v=boardValues(trade,'practitioners',r);
+      if(!((+r.status||0)===1&&v.active!=='no'))return;
+      const name=String(v.title||r.title||'').trim();if(!name)return;
+      const com=num(v.commissionRate);
+      out.push({id:String(r.id),name,role:String(v.specialty||'').trim(),commission:com>0?Math.min(100,com)/100:null,source:'board'});
+    });
+    if(out.length)return out;
+    (teamRoster||[]).forEach(m=>out.push({id:m.id,name:m.name,role:m.role,commission:null,source:'team'}));
+    return out;
+  }
+  let watching=0;
+  function watch(){
+    if(!isRealTill())return;
+    bind();
+    try{cloud?.pull?.(false);}catch(_){}
+    fetchRoster(true);
+    if(watching)return;
+    /* Le commerçant règle ses tarifs sur le tableau de bord pendant que la caisse
+     * reste ouverte : on relit toutes les 45 s tant que l'écran est visible. */
+    watching=setInterval(()=>{if(document.visibilityState==='hidden')return;try{cloud?.pull?.(false);}catch(_){}fetchRoster(false);},45000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{cloud?.pull?.(false);}catch(_){}fetchRoster(false);}});
+  }
+  window.KiwiPosWorkspaces={mount,open,read,write,merge,boards:BY_POS,services,staff,rows,board,subscribe,watch,active,real:isRealTill};
 })();

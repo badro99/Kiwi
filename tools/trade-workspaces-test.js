@@ -64,7 +64,7 @@ ok(Object.values(S.defs).every((s) => Array.isArray(s.stages) && s.stages.length
 ok(Object.values(S.defs).every((s) => s.fields.filter((f) => (f.type === 'number' || f.type === 'money') && f.step && f.min != null).every((f) => Number(f.min) % Number(f.step) === 0)), 'native number controls and schema validation share a reachable step origin');
 const POS_ALIAS={boulangerie:'bakery',gym:'sport'};
 ok(Object.entries(PW.boards).filter(([,boards])=>Array.isArray(boards)).every(([id,boards])=>boards.every((b)=>S.get(POS_ALIAS[id]||id,b[0]))), 'every caisse operation tab is backed by the same validated métier schema');
-ok(PW.boards.spa.length===5 && PW.boards.coiffure.length===6 && PW.boards.gym.length===6, 'service businesses can manage their complete client, staff, catalogue and booking data from the caisse');
+ok(PW.boards.spa.length===6 && PW.boards.coiffure.length===6 && PW.boards.gym.length===7, 'service businesses can manage their complete client, staff, catalogue and booking data from the caisse');
 ok(W.config('kds').trade === 'fastfood' && W.config('channels').trade === 'fastfood', 'exact subtype resolves its own pages');
 ok(W.config('appointments') === null, 'an unrelated generic page is never replaced');
 const merged = W.merge(

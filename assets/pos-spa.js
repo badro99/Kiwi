@@ -121,8 +121,21 @@
   ];
   /* Real spa (paired/hosted) → neutralize the demo praticiennes: a real merchant
      names their own team, we never leak the Spa Bahia cast. Local demo unchanged. */
-  if (pvReal()) PRACTS.forEach((p, i) => { p.name = 'Praticien ' + (i + 1); p.short = 'P' + (i + 1); p.role = ''; });
-  const PR = Object.fromEntries(PRACTS.map((p) => [p.id, p]));
+  /* Spa réel : l'équipe est CELLE DU COMMERÇANT (fiche « Praticien·ne·s » du
+     tableau de bord, à défaut son Équipe), relue par refreshReal(). « Praticien 1
+     · 2 · 3 » étaient trois postes inventés. Sans équipe saisie, un seul poste
+     neutre « Spa » porte les soins. Une personne retirée depuis reste lisible
+     sur un rendez-vous ou un ticket (fiche fantôme, sans nom inventé). */
+  const SPA_POST = { id: '_spa', name: 'Spa', short: 'Spa', role: '', color: '#8A948F', placeholder: true };
+  if (pvReal()) PRACTS.splice(0, PRACTS.length, Object.assign({}, SPA_POST));
+  const PR_T = Object.fromEntries(PRACTS.map((p) => [p.id, p]));
+  const PR = pvReal() ? new Proxy(PR_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, name: 'Ancienne praticienne', short: '·', role: '', color: '#8A948F', ghost: true };
+    },
+  }) : PR_T;
+  const defaultPr = () => (PRACTS[0] ? PRACTS[0].id : 'NH');
 
   /* ───────────────────────── prestations & produits ───────────────────────── */
   const CATS = [
@@ -146,7 +159,18 @@
     { id: 'antiage',   cat: 'soin',    name: 'Soin anti-âge argan',      dur: 75,  price: 650, oily: true },
     { id: 'duo',       cat: 'duo',     name: 'Hammam + massage duo',     dur: 120, price: 950, oily: true, flag: '2 pers.' },
   ];
-  const PRESTA = Object.fromEntries(PRESTAS.map((p) => [p.id, p]));
+  /* Spa réel : les soins sont CEUX DU COMMERÇANT (tableau de bord, « Soins &
+     rituels » : prix, durée, catégorie). 150 MAD le hammam, 550 le massage argan,
+     650 l'anti-âge étaient ceux de Marrakech 2026, vendus sans que le spa les ait
+     jamais saisis. Sans prix saisi, la caisse le demande. */
+  if (pvReal()) { PRESTAS.length = 0; CATS.length = 0; }
+  const PRESTA_T = Object.fromEntries(PRESTAS.map((p) => [p.id, p]));
+  const PRESTA = pvReal() ? new Proxy(PRESTA_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, cat: 'libre', name: 'Soin retiré', dur: 30, price: 0, oily: false, ghost: true };
+    },
+  }) : PRESTA_T;
 
   /* Session réelle : le stock est INCONNU (null), pas celui de la démo. Les
      « × 14 », « × 22 », « stock bas · 3 » ci-dessous étaient affichés comme le
@@ -161,8 +185,16 @@
     { id: 'rose',      name: 'Eau de rose 100 ml',         price: 90,  stock: 9 },
     { id: 'ambre',     name: 'Huile de massage ambrée',    price: 220, stock: 3 },
   ];
-  if (pvReal()) PRODUCTS.forEach((p) => { p.stock = null; });
-  const PROD = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+  /* Boutique réelle : les produits du commerçant (tableau de bord, « Boutique &
+     produits »), jamais l'huile d'argan à 180 MAD de la démo. Stock inconnu. */
+  if (pvReal()) PRODUCTS.length = 0;
+  const PROD_T = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+  const PROD = pvReal() ? new Proxy(PROD_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, name: 'Produit retiré', price: 0, stock: null, ghost: true };
+    },
+  }) : PROD_T;
   const stockKnown = (p) => !!p && Number.isFinite(p.stock);
 
   /* ───────────────────────── forfaits (cures à poinçonner) ───────────────── */
@@ -172,7 +204,18 @@
     { id: 'fr', presta: 'rituel',  name: 'Cure rituel complet', sizes: { 5: 2050, 10: 3600 } },
     { id: 'fe', presta: 'eclat',   name: 'Cure soin éclat',     sizes: { 5: 1750, 10: 3100 } },
   ];
-  const FORFAIT = Object.fromEntries(FORFAITS.map((f) => [f.id, f]));
+  /* Spa réel : aucune cure n'est saisie sur le tableau de bord. 650 / 1 200 MAD
+     les 5 / 10 hammams, 2 450 / 4 400 le massage : des prix et des remises de la
+     démo. Une cure réelle = le soin du commerçant × le nombre de séances, au prix
+     de l'unité (aucune remise inventée). */
+  if (pvReal()) FORFAITS.length = 0;
+  const FORFAIT_T = Object.fromEntries(FORFAITS.map((f) => [f.id, f]));
+  const FORFAIT = pvReal() ? new Proxy(FORFAIT_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, presta: '_none', name: 'Cure retirée', sizes: { 5: 0, 10: 0 }, ghost: true };
+    },
+  }) : FORFAIT_T;
   const ffSaving = (f, size) => PRESTA[f.presta].price * size - f.sizes[size];
 
   /* ───────────────────────── clientes (fiche phone-first) ───────────────── */
@@ -306,15 +349,148 @@
     DAY_KEY = today;
     return true;
   }
+  /* ───────────── Spa réel : soins, produits, équipe et cures du commerçant ─────────────
+     Le tableau de bord tient « Soins & rituels », « Boutique & produits » et
+     « Praticien·ne·s » dans le document `workspaces`. La caisse les relit
+     (KiwiPosWorkspaces) au lieu de vendre la carte de la démo. Une prestation
+     ou un article hors catalogue se vend à un prix saisi (FREE_ITEMS, rangés
+     dans l'instantané de la caisse pour que le ticket garde son libellé). */
+  const FREE_ITEMS = [];
+  let freeSeq = 0;
+  let realSig = '';
+  let realDraft = { svc: 0, prod: 0 };
+  const slug = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '');
+  const numOf = (x) => { const n = Number(x); return Number.isFinite(n) ? n : 0; };
+  const OILY_RX = /huile|argan|massage|visage|gommage|enveloppement|rituel|soin/i;
+  const PR_COLORS = ['#1F5D3C', '#3FB67A', '#D99A2B', '#33588C', '#A8423A', '#7A5BC9', '#2B5C68', '#B26B0F'];
+  const metaOf = (p) => (pvReal()
+    ? ((p.durUnset ? '' : p.dur + ' min · ') + (p.price > 0 ? fmtMAD(p.price) : 'prix à saisir'))
+    : `${p.dur} min · ${fmtMAD(p.price)}`);
+  function realCatalog() {
+    const W = window.KiwiPosWorkspaces;
+    if (!W || !W.services) return null;
+    const svc = W.services('spa');
+    const prod = W.board('spa', 'products');
+    const staff = W.staff('spa');
+    const catMap = new Map();
+    const prestas = svc.map((x, i) => {
+      const label = x.category || 'Soins';
+      const cid = 'cat-' + (slug(label.toLowerCase()) || 'x' + i);
+      if (!catMap.has(cid)) catMap.set(cid, { id: cid, label });
+      return {
+        id: 'svc-' + slug(x.id), cat: cid, name: x.name, dur: x.durationMinutes > 0 ? Math.round(x.durationMinutes) : 30,
+        durUnset: !(x.durationMinutes > 0), price: x.price, unset: !(x.price > 0), oily: OILY_RX.test(x.name + ' ' + label),
+      };
+    });
+    const products = prod.map((r) => {
+      const price = Math.round(numOf(r.v.price) * 100) / 100;
+      return { id: 'prd-' + slug(r.id), name: r.title, price, unset: !(price > 0), stock: null };
+    });
+    const team = staff.length
+      ? staff.map((m, i) => ({ id: m.id, name: m.name, short: (String(m.name).trim().split(/\s+/)[0] || '·').slice(0, 12), role: m.role || '', color: PR_COLORS[i % PR_COLORS.length] }))
+      : [Object.assign({}, SPA_POST)];
+    const forfaits = prestas.filter((x) => x.price > 0).map((x) => ({
+      id: 'ff-' + x.id, presta: x.id, name: 'Cure ' + x.name,
+      sizes: { 5: Math.round(x.price * 5 * 100) / 100, 10: Math.round(x.price * 10 * 100) / 100 }, derived: true,
+    }));
+    return { cats: Array.from(catMap.values()).concat([{ id: 'boutique', label: 'Boutique' }]), prestas, products, team, forfaits, draft: { svc: svc.draft || 0, prod: prod.draft || 0 } };
+  }
+  /* Relit le catalogue du commerçant ; vrai quand quelque chose a changé. */
+  function refreshReal(force) {
+    if (!pvReal()) return false;
+    const c = realCatalog();
+    if (!c) return false;
+    const sig = JSON.stringify([c, FREE_ITEMS]);
+    if (!force && sig === realSig) return false;
+    realSig = sig;
+    realDraft = c.draft;
+    const fill = (arr, map, list) => { arr.splice(0, arr.length, ...list); Object.keys(map).forEach((k) => { delete map[k]; }); arr.forEach((x) => { map[x.id] = x; }); };
+    fill(PRESTAS, PRESTA_T, c.prestas);
+    fill(PRODUCTS, PROD_T, c.products);
+    fill(PRACTS, PR_T, c.team);
+    fill(FORFAITS, FORFAIT_T, c.forfaits);
+    CATS.splice(0, CATS.length, ...c.cats);
+    FREE_ITEMS.forEach((f) => { (f.kind === 'prod' ? PROD_T : PRESTA_T)[f.id] = f.item; });
+    if (state.cat !== 'tous' && !CATS.some((x) => x.id === state.cat)) state.cat = 'tous';
+    return true;
+  }
+  /* « Prestation libre » / « Article libre » / prix à saisir : la caisse demande,
+     elle ne fixe pas. */
+  function askSpaPrice(cfg) {
+    const el = $('#sp-svcm', root);
+    el.innerHTML = `
+      <button class="sp-modal-x" data-sp-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">${esc(cfg.title)}</h3>
+      <p class="modal-subtle">${esc(cfg.sub || '')}</p>
+      ${cfg.name ? `<div class="sp-f"><div class="sp-f-lbl">Intitulé</div><input class="sp-in" id="sp-fp-name" maxlength="60" value="${esc(cfg.label || '')}" placeholder="${esc(cfg.ph || '')}" /></div>` : ''}
+      <div class="sp-f"><div class="sp-f-lbl">Prix (MAD)</div><input class="sp-in" id="sp-fp-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0" style="${'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(10,15,13,.16);border-radius:10px;font:inherit;font-size:15px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)'}" /></div>
+      ${cfg.dur ? `<div class="sp-f"><div class="sp-f-lbl">Durée (min) <span class="opt">· optionnel</span></div><input class="sp-in" id="sp-fp-dur" type="text" inputmode="numeric" autocomplete="off" placeholder="30" /></div>` : ''}
+      <div class="sp-sheet-foot">
+        <button class="sp-btn secondary" data-sp-close>Annuler</button>
+        <button class="sp-btn primary" id="sp-fp-ok"><i data-lucide="check"></i>Continuer</button>
+      </div>`;
+    $$('[data-sp-close]', el).forEach((b) => { b.onclick = () => closeVeil('#sp-svc-veil'); });
+    $('#sp-fp-ok', el).onclick = () => {
+      const nm = cfg.name ? String($('#sp-fp-name', el).value || '').trim() : '';
+      const price = Math.round((Number(String($('#sp-fp-price', el).value).replace(',', '.')) || 0) * 100) / 100;
+      const dur = cfg.dur ? Math.max(0, Math.round(Number($('#sp-fp-dur', el).value) || 0)) : 0;
+      if (cfg.name && !nm) { toast('Donnez un intitulé'); return; }
+      if (!(price > 0)) { toast('Saisissez le prix'); return; }
+      closeVeil('#sp-svc-veil');
+      cfg.ok(nm, price, dur);
+    };
+    openVeil('#sp-svc-veil');
+    icons();
+    const f = $(cfg.name ? '#sp-fp-name' : '#sp-fp-price', el); if (f) f.focus();
+  }
+  function askFreeItem(kind) {
+    askSpaPrice({
+      title: kind === 'prod' ? 'Article libre' : 'Prestation libre',
+      sub: kind === 'prod' ? 'Un article qui n\'est pas dans votre boutique' : 'Un soin qui n\'est pas dans votre liste',
+      name: true, label: '', ph: kind === 'prod' ? 'Ex. Bougie parfumée' : 'Ex. Soin des mains', dur: kind !== 'prod',
+      ok: (nm, price, dur) => {
+        const id = 'free:' + Date.now().toString(36) + (++freeSeq);
+        const item = kind === 'prod'
+          ? { id, name: nm, price, stock: null, free: true }
+          : { id, cat: 'libre', name: nm, dur: dur || 30, durUnset: !dur, price, oily: false, free: true };
+        FREE_ITEMS.push({ kind, id, item });
+        (kind === 'prod' ? PROD_T : PRESTA_T)[id] = item;
+        if (kind === 'prod') addProduct(id); else openSvcSheet(id);
+      },
+    });
+  }
+  function openBoard(nav) {
+    const W = window.KiwiPosWorkspaces;
+    if (W && W.open) W.open(root, 'spa', nav);
+    else toast('Renseignez-les sur le tableau de bord');
+  }
+  /* repeint quand le catalogue ou l'équipe changent, jamais sous une feuille ouverte */
+  let pendingRepaint = false;
+  function repaintReal() {
+    if (!root) return;
+    if ($$('.modal-veil.is-open', root).length) { pendingRepaint = true; return; }
+    pendingRepaint = false;
+    refreshOps();
+  }
+
   const spaOps = window.KiwiVerticalState?.open?.('spa', {
     schema: 1,
-    snapshot: () => ({ products: PRODUCTS, clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket, v: 2, dayKey: DAY_KEY }),
+    snapshot: () => ({ ...(pvReal() ? { freeItems: FREE_ITEMS, freeSeq } : { products: PRODUCTS }), clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket, v: 2, dayKey: DAY_KEY }),
     restore: (d) => {
       /* Document réel écrit avant ce correctif : ses stocks sont ceux de la démo
          (14, 22, 18, 30, 9, 3). On garde le catalogue, on oublie les quantités. */
       const legacy = pvReal() && d.v !== 2;
-      PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || []).map((p) => (legacy && p ? { ...p, stock: null } : p)));
-      if (typeof d.dayKey === 'string') DAY_KEY = d.dayKey; Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
+      if (pvReal()) {
+        /* réel : le catalogue vient du tableau de bord (refreshReal) ; seules les
+           ventes libres sont à relire ici */
+        if (Array.isArray(d.freeItems)) FREE_ITEMS.splice(0, FREE_ITEMS.length, ...d.freeItems.filter((f) => f && f.id && f.item));
+        freeSeq = Math.max(freeSeq, +d.freeSeq || 0);
+        FREE_ITEMS.forEach((f) => { (f.kind === 'prod' ? PROD_T : PRESTA_T)[f.id] = f.item; });
+      } else {
+        PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || []).map((p) => (legacy && p ? { ...p, stock: null } : p)));
+        Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
+      }
+      if (typeof d.dayKey === 'string') DAY_KEY = d.dayKey;
       CLIENTES.splice(0, CLIENTES.length, ...(d.clients || [])); Object.keys(CL).forEach(k => delete CL[k]); CLIENTES.forEach(c => { if (c?.id) CL[c.id] = c; });
       CURES.splice(0, CURES.length, ...(d.cures || [])); APPTS.splice(0, APPTS.length, ...(d.appointments || []));
       cureSeq = Math.max(cureSeq, +d.cureSeq || 0); apptSeq = Math.max(apptSeq, +d.apptSeq || 0); ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0); state.ticket = d.ticket || null;
@@ -384,6 +560,15 @@
   function mount(rootEl) {
     spaOps?.hydrate?.();
     root = rootEl;
+    if (pvReal()) {
+      refreshReal(true);
+      const W = window.KiwiPosWorkspaces;
+      if (W && W.subscribe && !mount._ws) {
+        mount._ws = true;
+        W.subscribe(() => { if (refreshReal() && root) repaintReal(); });
+        W.watch();
+      }
+    }
     bindNet();
     root.innerHTML = `
       <aside class="sp-rail">
@@ -461,7 +646,7 @@
   }
 
   const openVeil  = (id) => { const v = $(id, root); v.classList.add('is-open'); return v; };
-  const closeVeil = (v) => { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); };
+  const closeVeil = (v) => { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); if (pendingRepaint) repaintReal(); };
 
   function headDate() {
     return pvReal() ? fmtDay(new Date()) : `${fmtDay(new Date())} · journée simulée à ${fmtHM(NOW_DEMO)}`;
@@ -707,20 +892,27 @@
 
   function loadApptOnTicket(a) {
     const p = PRESTA[a.presta];
-    freshTicket();
-    state.ticket.lines.push({ type: 'svc', refId: a.presta, prId: a.pr, qty: 1, price: p.price });
-    state.ticket.clientId = a.clientId;
-    state.ticket.guest = !a.clientId;
-    state.ticket.apptId = a.id;
-    switchView('encaisser');
-    toast(`Séance de ${apptWho(a)} chargée sur le ticket, ajoutez la boutique si besoin`);
+    const load = (unit) => {
+      freshTicket();
+      state.ticket.lines.push({ type: 'svc', refId: a.presta, prId: a.pr, qty: 1, price: unit });
+      state.ticket.clientId = a.clientId;
+      state.ticket.guest = !a.clientId;
+      state.ticket.apptId = a.id;
+      switchView('encaisser');
+      toast(`Séance de ${apptWho(a)} chargée sur le ticket, ajoutez la boutique si besoin`);
+    };
+    if (pvReal() && !(p.price > 0)) {
+      askSpaPrice({ title: p.name, sub: 'Aucun prix n\'est saisi pour ce soin sur le tableau de bord', name: false, ok: (nm, price) => load(price) });
+      return;
+    }
+    load(p.price);
   }
 
   /* ---------- réservation walk-in (créneau libre touché) ---------- */
-  const book = { prId: 'NH', start: 600, prestaId: null, clientId: null, guest: true };
+  const book = { prId: defaultPr(), start: 600, prestaId: null, clientId: null, guest: true };
 
   function openBook(cfg) {
-    book.prId = cfg.prId || 'NH';
+    book.prId = cfg.prId || defaultPr();
     book.start = cfg.start != null ? cfg.start : (nextFree(book.prId) || OPEN);
     book.prestaId = cfg.prestaId || null;
     book.clientId = cfg.clientId || null;
@@ -762,8 +954,8 @@
           ${PRESTAS.map((x) => `
             <button class="sp-presta-it ${x.id === book.prestaId ? 'on' : ''}" data-sp-bkp="${x.id}">
               <span class="a">${ART[x.id] || ''}</span>
-              <span class="l"><b>${esc(x.name)}</b><span>${x.dur} min · ${fmtMAD(x.price)}</span></span>
-            </button>`).join('')}
+              <span class="l"><b>${esc(x.name)}</b><span>${metaOf(x)}</span></span>
+            </button>`).join('') || '<div class="sp-cl-empty">Aucun soin n\'est saisi pour ce spa. Ajoutez vos soins sur le tableau de bord.</div>'}
         </div>
       </div>
 
@@ -863,6 +1055,26 @@
     };
   }
 
+  /* Spa réel : prestation / article libres, et le raccourci vers les tableaux du
+     tableau de bord. Sans catalogue, la caisse le dit au lieu de vendre la démo. */
+  function offCatalog() {
+    if (!pvReal()) return '';
+    const none = !PRESTAS.length && !PRODUCTS.length;
+    return `<div class="sp-cat-head">Hors catalogue</div>
+      <div class="sp-grid">
+        <button class="sp-card" data-sp-free="svc"><span class="sp-card-name">Prestation libre</span><span class="sp-card-price">prix à saisir</span></button>
+        <button class="sp-card" data-sp-free="prod"><span class="sp-card-name">Article libre</span><span class="sp-card-price">prix à saisir</span></button>
+      </div>
+      <div class="sp-foot-note">
+        ${none ? 'Aucun soin ni produit n\'est saisi pour ce spa. Ajoutez-les avec leur prix sur le tableau de bord, ou vendez une prestation libre. ' : ''}
+        ${realDraft.svc || realDraft.prod ? `${realDraft.svc + realDraft.prod} ${pl(realDraft.svc + realDraft.prod, 'fiche en brouillon n\'est', 'fiches en brouillon ne sont')} pas encore en vente. ` : ''}
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="sp-btn secondary" data-sp-addboard="services" style="flex:0 0 auto;padding:9px 14px">${PRESTAS.length ? 'Modifier mes soins' : 'Ajouter mes soins'}</button>
+          <button class="sp-btn secondary" data-sp-addboard="products" style="flex:0 0 auto;padding:9px 14px">${PRODUCTS.length ? 'Modifier mes produits' : 'Ajouter mes produits'}</button>
+        </div>
+      </div>`;
+  }
+
   function renderGrid() {
     const cats = state.cat === 'tous' ? CATS : CATS.filter((c) => c.id === state.cat);
     let i = 0;
@@ -873,18 +1085,22 @@
               ${stockKnown(p) ? `<span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : `× ${p.stock}`}</span>` : ''}
               <span class="sp-card-art">${ART[p.id] || ''}</span>
               <span class="sp-card-name">${esc(p.name)}</span>
-              <span class="sp-card-price">${fmtMAD(p.price)}</span>
+              <span class="sp-card-price">${pvReal() && p.unset ? 'prix à saisir' : fmtMAD(p.price)}</span>
             </button>`)
         : PRESTAS.filter((p) => p.cat === c.id).map((p) => `
             <button class="sp-card" data-sp-svc="${p.id}" style="--i:${i++}">
               <span class="sp-card-art">${ART[p.id] || ''}</span>
               <span class="sp-card-name">${esc(p.name)}</span>
-              <span class="sp-card-price">${p.dur} min · ${fmtMAD(p.price)}</span>
+              <span class="sp-card-price">${metaOf(p)}</span>
               ${p.flag ? `<span class="sp-card-flag">${esc(p.flag)}</span>` : ''}
             </button>`);
       return `<div class="sp-cat-head">${esc(c.label)}</div><div class="sp-grid">${items.join('')}</div>`;
-    }).join('');
+    }).join('') + offCatalog();
     $('#sp-gridwrap', root).onclick = (e) => {
+      const fr = e.target.closest('[data-sp-free]');
+      if (fr) { askFreeItem(fr.dataset.spFree); return; }
+      const ab = e.target.closest('[data-sp-addboard]');
+      if (ab) { openBoard(ab.dataset.spAddboard); return; }
       const svc = e.target.closest('[data-sp-svc]');
       if (svc) { openSvcSheet(svc.dataset.spSvc); return; }
       const prod = e.target.closest('[data-sp-prod]');
@@ -900,6 +1116,14 @@
       toast(p.stock ? `Stock insuffisant, il reste ${p.stock} « ${p.name} »` : `« ${p.name} » est épuisé, réassort à commander`);
       return;
     }
+    if (pvReal() && !line && !(p.price > 0)) {
+      /* aucun prix saisi pour ce produit : on le demande, la ligne garde CE prix */
+      askSpaPrice({
+        title: p.name, sub: 'Aucun prix n\'est saisi pour ce produit sur le tableau de bord', name: false,
+        ok: (nm, price) => { state.ticket.lines.push({ type: 'prod', refId: prodId, qty: 1, price }); toast(`${p.name}, sur le ticket`); renderTicket(); icons(); if (state.view === 'boutique') renderBoutique(); },
+      });
+      return;
+    }
     if (line) line.qty++;
     else state.ticket.lines.push({ type: 'prod', refId: prodId, qty: 1, price: p.price });
     toast(`${p.name}, sur le ticket`);
@@ -907,7 +1131,7 @@
   }
 
   /* ---------- fiche prestation → praticienne (la lentille voyage) ---------- */
-  const svcSheet = { prestaId: null, prId: 'NH' };
+  const svcSheet = { prestaId: null, prId: defaultPr() };
   function openSvcSheet(prestaId) {
     svcSheet.prestaId = prestaId;
     /* par défaut : la praticienne la moins chargée en séances restantes */
@@ -923,7 +1147,7 @@
         <span class="sp-ff-art" style="width:56px;height:56px;">${ART[prestaId] || ''}</span>
         <div style="flex:1;">
           <h3 class="modal-title" style="margin:0;">${esc(p.name)}</h3>
-          <p class="modal-subtle" style="margin:2px 0 0;">${p.dur} min · ${fmtMAD(p.price)}</p>
+          <p class="modal-subtle" style="margin:2px 0 0;">${metaOf(p)}</p>
         </div>
       </div>
       ${cl && cl.allergies.length && p.oily ? `
@@ -936,9 +1160,10 @@
           ${PRACTS.map((pr) => `<button class="sp-seg-it ${pr.id === svcSheet.prId ? 'on' : ''}" data-lens-item data-sp-svcpr="${pr.id}">${esc(pr.short)}<small>${apptsOf(pr.id).filter((x) => x.status !== 'done').length} à venir</small></button>`).join('')}
         </div>
       </div>
+      ${pvReal() && p.unset && !p.free ? `<div class="sp-f"><div class="sp-f-lbl">Prix (MAD) <span class="opt">· aucun prix saisi sur le tableau de bord</span></div><input class="sp-in" id="sp-svc-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0" /></div>` : ''}
       <div class="sp-sheet-foot">
         <button class="sp-btn secondary" data-sp-close>Annuler</button>
-        <button class="sp-btn primary" id="sp-svc-add"><i data-lucide="plus"></i>Ajouter · ${fmtMAD(p.price)}</button>
+        <button class="sp-btn primary" id="sp-svc-add"><i data-lucide="plus"></i>Ajouter${pvReal() && p.unset && !p.free ? '' : ' · ' + fmtMAD(p.price)}</button>
       </div>`;
     openVeil('#sp-svc-veil');
     icons(); lens();
@@ -950,7 +1175,12 @@
       $$('[data-sp-svcpr]', el).forEach((x) => x.classList.toggle('on', x === b));
     };
     $('#sp-svc-add', el).onclick = () => {
-      state.ticket.lines.push({ type: 'svc', refId: prestaId, prId: svcSheet.prId, qty: 1, price: p.price });
+      let unit = p.price;
+      if (pvReal() && p.unset && !p.free) {
+        unit = Math.round((Number(String(($('#sp-svc-price', el) || {}).value || '').replace(',', '.')) || 0) * 100) / 100;
+        if (!(unit > 0)) { toast('Saisissez le prix de la prestation'); return; }
+      }
+      state.ticket.lines.push({ type: 'svc', refId: prestaId, prId: svcSheet.prId, qty: 1, price: unit });
       closeVeil('#sp-svc-veil');
       toast(`${p.name} · ${PR[svcSheet.prId].short}, sur le ticket`);
       renderTicket(); icons();
@@ -1268,7 +1498,7 @@
         ]);
         queueIfOffline('Vente forfait');
         toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} ${pl(ctx.size, 'séance', 'séances')} pour ${CL[ctx.clientId].name}`);
-        toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
+        if (ffSaving(FORFAIT[ctx.familyId], ctx.size) > 0) toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
         if (state.view !== 'cures') switchView('cures');
         refreshOps();
         if (typeof ctx.onDone === 'function') ctx.onDone(cu);
@@ -1334,7 +1564,7 @@
         </div>
         <div class="sp-cure-actions">
           ${full
-            ? `<button class="sp-btn primary" data-sp-renew="${cu.id}"><i data-lucide="sparkles"></i>Renouveler, économie ${fmtMAD(ffSaving(f, cu.size))}</button>`
+            ? `<button class="sp-btn primary" data-sp-renew="${cu.id}"><i data-lucide="sparkles"></i>Renouveler${ffSaving(f, cu.size) > 0 ? `, économie ${fmtMAD(ffSaving(f, cu.size))}` : ''}</button>`
             : `<button class="sp-btn secondary" data-sp-fiche-cl="${c.id}">Fiche</button>
                <button class="sp-btn primary" data-sp-punch="${cu.id}"><i data-lucide="check"></i>Décompter une séance</button>`}
         </div>
@@ -1362,6 +1592,7 @@
             <div class="sp-sec-head">Cures terminées, à renouveler · ${fulls.length}</div>
             <div class="sp-cure-grid">${fulls.map((cu) => cureCard(cu, opts && opts.popCure === cu.id ? { pop: true } : null)).join('')}</div>` : ''}
           <div class="sp-sec-head">Vendre un forfait</div>
+          ${pvReal() && !FORFAITS.length ? '<div class="sp-cl-empty">Aucune cure à proposer : ajoutez vos soins avec leur prix sur le tableau de bord. Une cure se vend au prix du soin multiplié par le nombre de séances.</div>' : ''}
           <div class="sp-ff-grid">
             ${FORFAITS.map((f) => `
               <div class="sp-ff">
@@ -1369,7 +1600,7 @@
                   <span class="sp-ff-art">${ART[f.presta] || ART.cure}</span>
                   <div>
                     <div class="sp-ff-name">${esc(f.name)}</div>
-                    <div class="sp-ff-unit">séance à l'unité : ${fmtMAD(PRESTA[f.presta].price)}</div>
+                    <div class="sp-ff-unit">séance à l'unité : ${fmtMAD(PRESTA[f.presta].price)}${pvReal() ? ' · sans remise' : ''}</div>
                   </div>
                 </div>
                 <div class="sp-ff-sizes">
@@ -1377,7 +1608,7 @@
                     <button class="sp-ff-size" data-sp-sell="${f.id}:${sz}">
                       <b>${sz} ${pl(sz, 'séance', 'séances')}</b>
                       <span class="px">${fmtMAD(f.sizes[sz])}</span>
-                      <span class="eco">économie <b>${fmtMAD(ffSaving(f, sz))}</b></span>
+                      ${ffSaving(f, sz) > 0 ? `<span class="eco">économie <b>${fmtMAD(ffSaving(f, sz))}</b></span>` : '<span class="eco">au prix de l\'unité</span>'}
                     </button>`).join('')}
                 </div>
               </div>`).join('')}
@@ -1461,14 +1692,14 @@
       <h3 class="modal-title">Cure terminée, ${cu.used}/${cu.size}</h3>
       <p class="modal-subtle">${esc(c.name)} a fini sa ${esc(f.name.toLowerCase())}, le bon moment pour renouveler.</p>
       <div class="sp-punch-preview">${punchRow(cu, { pop: true })}</div>
-      <div class="sp-callout mint" style="margin-top:14px;"><i data-lucide="sparkles"></i>
+      ${ffSaving(f, cu.size) > 0 ? `<div class="sp-callout mint" style="margin-top:14px;"><i data-lucide="sparkles"></i>
         <span>Sur cette cure, ${esc(c.name.split(' ')[0])} a économisé <b>${fmtMAD(ffSaving(f, cu.size))}</b> vs séances à l'unité.</span>
-      </div>
+      </div>` : ''}
       <div class="sp-pay-opts" style="margin-top:4px;">
-        ${[5, 10].map((sz) => `
+        ${[5, 10].filter((sz) => !pvReal() || f.sizes[sz] > 0).map((sz) => `
           <button class="sp-pay-opt" data-sp-rn="${sz}">
             <span class="ic"><i data-lucide="tags"></i></span>
-            <span class="l"><b>Renouveler × ${sz} · ${fmtMAD(f.sizes[sz])}</b><span>économie ${fmtMAD(ffSaving(f, sz))} vs l'unité</span></span>
+            <span class="l"><b>Renouveler × ${sz} · ${fmtMAD(f.sizes[sz])}</b><span>${ffSaving(f, sz) > 0 ? `économie ${fmtMAD(ffSaving(f, sz))} vs l'unité` : 'au prix de l\'unité'}</span></span>
           </button>`).join('')}
       </div>
       <div class="sp-sheet-foot">
@@ -1513,7 +1744,7 @@
     panel.innerHTML = `
       <div class="sp-cures">
         <header class="sp-head">
-          <div><h1>Boutique</h1><div class="sp-head-sub">Le rituel continue à la maison, argan, beldi, ghassoul, kessa</div></div>
+          <div><h1>Boutique</h1><div class="sp-head-sub">${pvReal() ? 'Les produits de votre boutique' : 'Le rituel continue à la maison, argan, beldi, ghassoul, kessa'}</div></div>
           ${inTicket ? `<button class="sp-btn primary" id="sp-shop-go" style="flex:0 0 auto; padding:11px 16px;"><i data-lucide="banknote"></i>Ticket · ${inTicket} article${inTicket > 1 ? 's' : ''}</button>`
             : '<div class="sp-head-hint">Touchez un produit, il part sur le ticket de la caisse</div>'}
         </header>
@@ -1525,15 +1756,21 @@
                 ${stockKnown(p) ? `<span class="sp-card-stock ${p.stock <= 0 ? 'out' : p.stock <= 3 ? 'low' : ''}">${p.stock <= 0 ? 'épuisé' : p.stock <= 3 ? `stock bas · ${p.stock}` : `× ${p.stock}`}</span>` : ''}
                 <span class="sp-card-art" style="width:66px;height:66px;">${ART[p.id] || ''}</span>
                 <span class="sp-card-name">${esc(p.name)}</span>
-                <span class="sp-card-price">${fmtMAD(p.price)}</span>
+                <span class="sp-card-price">${pvReal() && p.unset ? 'prix à saisir' : fmtMAD(p.price)}</span>
               </button>`).join('')}
+            ${pvReal() ? '<button class="sp-card" data-sp-free="prod"><span class="sp-card-name">Article libre</span><span class="sp-card-price">prix à saisir</span></button>' : ''}
           </div>
+          ${pvReal() ? `<div class="sp-foot-note">${PRODUCTS.length ? '' : 'Aucun produit n\'est saisi pour ce spa. Ajoutez vos produits avec leur prix, ou vendez un article libre. '}<div style="margin-top:8px"><button class="sp-btn secondary" data-sp-addboard="products" style="flex:0 0 auto;padding:9px 14px">${PRODUCTS.length ? 'Modifier mes produits' : 'Ajouter mes produits'}</button></div></div>` : ''}
           <div class="sp-foot-note">${PRODUCTS.some(stockKnown) ? 'Le stock se décompte à l\'encaissement, sous 3 unités, la pastille passe en alerte.' : 'Le stock de ces produits n\'est pas suivi sur cette caisse : aucune quantité n\'est affichée ni décomptée.'}</div>
         </div>
       </div>`;
     panel.onclick = (e) => {
       const go = e.target.closest('#sp-shop-go');
       if (go) { switchView('encaisser'); return; }
+      const fr = e.target.closest('[data-sp-free]');
+      if (fr) { askFreeItem(fr.dataset.spFree); return; }
+      const ab = e.target.closest('[data-sp-addboard]');
+      if (ab) { openBoard(ab.dataset.spAddboard); return; }
       const b = e.target.closest('[data-sp-shop]');
       if (!b) return;
       addProduct(b.dataset.spShop);
@@ -1663,7 +1900,7 @@
       closeVeil('#sp-fiche-veil');
       /* préférence praticienne si notée sur la fiche */
       const prefPr = PRACTS.find((p) => c.prefs.some((x) => x.toLowerCase().includes(p.short.toLowerCase())));
-      const prId = prefPr ? prefPr.id : 'NH';
+      const prId = prefPr ? prefPr.id : defaultPr();
       openBook({ prId, start: nextFree(prId), clientId: c.id });
     };
     $('#sp-fiche-sell', el).onclick = () => {

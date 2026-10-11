@@ -101,10 +101,10 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=43',
+  '/assets/venues.js?v=44',
   '/assets/phone.js?v=1',
-  '/assets/trade-workspace-schema.js?v=4',
-  '/assets/trade-workspaces.js?v=6',
+  '/assets/trade-workspace-schema.js?v=5',
+  '/assets/trade-workspaces.js?v=7',
   '/assets/reservations.js?v=25',
   '/assets/pressing-ops.js?v=9',
   '/assets/pressing-garment-icons.js?v=2',
@@ -282,7 +282,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=78',
+  '/assets/pos-dispatch.js?v=79',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -291,7 +291,7 @@ var SHELL = [
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=7',
   '/assets/pos-workspaces.css?v=4',
-  '/assets/pos-workspaces.js?v=5',
+  '/assets/pos-workspaces.js?v=6',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
@@ -300,8 +300,8 @@ var SHELL = [
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=6',
-  '/assets/pos-spa.js?v=6',
+  '/assets/pos-spa.css?v=7',
+  '/assets/pos-spa.js?v=7',
   '/assets/pos-hotel.css?v=17',
   '/assets/pos-hotel.js?v=17',
   '/assets/pos-fastfood.css?v=8',
@@ -320,12 +320,12 @@ var SHELL = [
   '/assets/pos-pharmacie.js?v=6',
   '/assets/pos-librairie.css?v=6',
   '/assets/pos-librairie.js?v=6',
-  '/assets/pos-fleuriste.css?v=8',
-  '/assets/pos-fleuriste.js?v=8',
-  '/assets/pos-coiffure.css?v=6',
-  '/assets/pos-coiffure.js?v=6',
-  '/assets/pos-gym.css?v=6',
-  '/assets/pos-gym.js?v=6',
+  '/assets/pos-fleuriste.css?v=9',
+  '/assets/pos-fleuriste.js?v=9',
+  '/assets/pos-coiffure.css?v=7',
+  '/assets/pos-coiffure.js?v=7',
+  '/assets/pos-gym.css?v=7',
+  '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
   '/assets/pos-maison.css?v=58',

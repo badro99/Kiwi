@@ -56,7 +56,7 @@
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '41', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '51', label: 'Boutique · Maison Mansour' },
-    '0003': { id: 'spa',         file: 'pos-spa',         rev: '6', label: 'Spa · Spa Bahia' },
+    '0003': { id: 'spa',         file: 'pos-spa',         rev: '7', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '17', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '8', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '9', label: 'Boulangerie · Bab Kasbah' },
@@ -66,9 +66,9 @@
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '6', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '6', label: 'Pharmacie · Ibn Batouta' },
     '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '6', label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '8', label: 'Fleuriste · Fleurs du Détroit' },
-    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '6', label: 'Coiffure · Salon Yasmine' },
-    '0015': { id: 'gym',         file: 'pos-gym',         rev: '6', label: 'Salle de sport · Atlas Fitness' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '9', label: 'Fleuriste · Fleurs du Détroit' },
+    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '7', label: 'Coiffure · Salon Yasmine' },
+    '0015': { id: 'gym',         file: 'pos-gym',         rev: '7', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '5', label: 'Autre activité · caisse polyvalente' },
     '0017': { id: 'maison',      file: 'pos-maison',      rev: '58', label: 'Maison · Vogue Home' },
   };

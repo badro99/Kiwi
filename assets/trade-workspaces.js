@@ -53,6 +53,7 @@
     P('spa','services','catalog',L('Soins & rituels','Treatments & rituals','العلاجات والطقوس'),L('Tenez les durées, prix et protocoles à jour.','Keep durations, prices and protocols current.','حافظ على تحديث المدد والأسعار والبروتوكولات.'),L('soin','treatment','علاج'),{money:true,date:false}),
     P('spa','practitioners','people',L('Praticien·ne·s','Practitioners','الممارسون'),L('Spécialités, disponibilité et notes d’équipe.','Specialties, availability and team notes.','التخصصات والتوفر وملاحظات الفريق.'),L('praticien·ne','practitioner','ممارس'),{money:false,date:false}),
     P('spa','clients','people',L('Parcours clients','Guest journeys','مسار العملاء'),L('Préférences, contre-indications et suivi relationnel.','Preferences, contraindications and relationship history.','التفضيلات وموانع الاستعمال وتتبع العلاقة.'),L('client','guest','عميل'),{money:false,date:false}),
+    P('spa','products','catalog',L('Boutique & produits','Shop & products','المتجر والمنتجات'),L('Les produits que vous vendez au comptoir, avec leur prix.','The products you sell at the counter, with their price.','المنتجات التي تبيعها في الكاونتر مع أسعارها.'),L('produit','product','منتج'),{money:true,date:false}),
     P('spa','packages','ledger',L('Cures & cartes cadeaux','Packages & gift cards','الباقات وبطاقات الهدايا'),L('Suivez les séances consommées, restantes et les cartes cadeaux.','Track used and remaining sessions and gift cards.','تتبع الجلسات المستعملة والمتبقية وبطاقات الهدايا.'),L('formule','package','باقة'),{money:true}),
 
     P('coiffure','appointments','schedule',L('Agenda & rendez-vous','Diary & appointments','المفكرة والمواعيد'),L('Heure, prestation, fauteuil et préparation client.','Time, service, chair and client preparation.','الوقت والخدمة والكرسي وتحضير العميل.'),L('rendez-vous','appointment','موعد'),{money:true}),
@@ -67,6 +68,7 @@
     P('sport','practitioners','people',L('Coachs','Coaches','المدربون'),L('Spécialités, disponibilités et cours assignés.','Specialties, availability and assigned classes.','التخصصات والتوفر والحصص المسندة.'),L('coach','coach','مدرب'),{money:false,date:false}),
     P('sport','clients','people',L('Adhérents','Members','الأعضاء'),L('Statut, formule et notes utiles pour chaque adhérent.','Status, plan and useful notes for every member.','الحالة والاشتراك والملاحظات لكل عضو.'),L('adhérent','member','عضو'),{money:true,date:false}),
     P('sport','checkins','queue',L('Contrôle d’accès','Access control','مراقبة الدخول'),L('Une file de passages fiable pour l’accueil.','A reliable check-in flow for the front desk.','تدفق دخول موثوق للاستقبال.'),L('passage','check-in','دخول'),{money:false}),
+    P('sport','shop','catalog',L('Comptoir, coaching & pass','Counter, coaching & passes','الكاونتر والتدريب والتذاكر'),L('Articles du comptoir, packs de séances et pass visiteur, avec leur prix.','Counter items, session packs and visitor passes, with their price.','أصناف الكاونتر وباقات الحصص وتذاكر الزوار مع أسعارها.'),L('article','item','صنف'),{money:true,date:false}),
     P('sport','renewals','ledger',L('Renouvellements','Renewals','التجديدات'),L('Anticipez les échéances et suivez les relances.','Anticipate expiry dates and track follow-ups.','توقع تواريخ الانتهاء وتتبع المتابعات.'),L('renouvellement','renewal','تجديد'),{money:true}),
 
     P('autre','workflows','queue',L('Suivi d’activité','Work tracking','تتبع النشاط'),L('Créez votre propre flux et faites avancer chaque dossier.','Create your own flow and move every job forward.','أنشئ مسارك الخاص وحرّك كل ملف.'),L('dossier','job','ملف'),{money:true}),
@@ -312,12 +314,18 @@
     else if(f.type==='checkbox')control=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else control=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='money'||f.type==='number'?` step="${f.step||'0.01'}"`:''}${f.autocomplete?` autocomplete="${esc(f.autocomplete)}"`:''}>`;
     return `<div class="tw-field${full}"><label for="${esc(id)}">${esc(pick(f.label))}${f.required?' *':''}</label>${control}<small data-tw-error="${esc(f.id)}"></small></div>`;}
+  /* Une prestation, un coach ou une fiche qu'on vient de créer commençait en
+     « Brouillon » (l'index 0 de la liste) : la caisse ne vend que le statut
+     « Actif », donc ce que le commerçant saisissait sans toucher à la liste
+     n'arrivait jamais à la caisse. Un nouvel élément de catalogue démarre actif ;
+     les autres tableaux (commandes, files) gardent leur première étape. */
+  function defaultStatus(sc) { return sc && sc.stageKey === 'catalog' ? 1 : 0; }
   function modalForm(cfg, existing) {
     if (!window.Kiwi?.modal) return;
     const sc=schema(cfg),r=sc?window.KiwiTradeSchema.normalize(sc,existing||{}):(existing||{}),statuses=statusList(cfg);
     const m=window.Kiwi.modal({title:(existing?pick(UI.edit):pick(UI.add))+' '+pick(cfg.noun),width:620,body:`<form class="tw-form" data-tw-form>
       ${sc?sc.fields.map((f)=>fieldControl(sc,f,r)).join(''):`<div class="tw-field full"><label for="tw-title">${esc(pick(UI.name))}</label><input id="tw-title" name="title" required maxlength="140" value="${esc(r.title||'')}"></div>`}
-      <div class="tw-field${cfg.date===false&&!cfg.money?' full':''}"><label for="tw-status">${esc(pick(UI.status))}</label><select id="tw-status" name="status">${statuses.map((s,i)=>`<option value="${i}"${(+r.status||0)===i?' selected':''}>${esc(pick(s))}</option>`).join('')}</select></div>
+      <div class="tw-field${cfg.date===false&&!cfg.money?' full':''}"><label for="tw-status">${esc(pick(UI.status))}</label><select id="tw-status" name="status">${statuses.map((s,i)=>`<option value="${i}"${(existing?(+r.status||0):defaultStatus(sc))===i?' selected':''}>${esc(pick(s))}</option>`).join('')}</select></div>
       <div class="tw-field full tw-modal-actions"><button class="tw-cancel" type="button" data-tw-cancel>${esc(pick(UI.cancel))}</button><button class="tw-save" type="submit">${esc(pick(UI.save))}</button></div></form>`});
     const form=m.el.querySelector('[data-tw-form]');
     m.el.querySelector('[data-tw-cancel]').onclick=()=>m.close();

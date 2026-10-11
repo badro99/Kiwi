@@ -1367,6 +1367,7 @@ section('Whole-project regressions');
     'ai-vision-models-test.mjs',
     'menu-ledger-test.mjs',
     'food-trades-truth-test.mjs',
+    'service-trades-truth-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

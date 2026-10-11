@@ -79,9 +79,25 @@
     { id: 'karim',   name: 'Karim',   role: 'Coupe homme · barbe · bac',  short: 'Kar', color: '#33588C' },
     { id: 'sara',    name: 'Sara',    role: 'Coloriste · mèches & soin',  short: 'Sar', color: '#A8423A' },
   ];
-  /* real store: strip staff identities, keep id/color/length so assignment & commission logic holds */
-  if (pvReal()) STAFF.forEach((s, i) => { s.name = 'Coiffeur ' + (i + 1); s.short = 'C' + (i + 1); s.role = ''; });
-  const SF = Object.fromEntries(STAFF.map((s) => [s.id, s]));
+  /* Salon réel : l'équipe est CELLE DU COMMERÇANT (fiche « Coiffeur·euse·s » du
+     tableau de bord, à défaut son Équipe), relue par refreshReal() ci-dessous.
+     Elle s'appelait « Coiffeur 1 · 2 · 3 » : trois fauteuils inventés, qu'aucun
+     salon n'avait saisis, et que la patronne ne reconnaissait pas sur ses tickets.
+     Tant qu'elle n'a saisi personne, un seul poste neutre « Salon » porte les
+     prestations (la caisse reste utilisable) et le dit. */
+  const STAFF_COLORS = ['#1F5D3C', '#33588C', '#A8423A', '#3FB67A', '#D99A2B', '#7A5BC9', '#2B5C68', '#B26B0F'];
+  const SALON_POST = { id: '_salon', name: 'Salon', role: '', short: 'S', color: '#8A948F', placeholder: true };
+  if (pvReal()) STAFF.splice(0, STAFF.length, Object.assign({}, SALON_POST));
+  const SF_T = Object.fromEntries(STAFF.map((s) => [s.id, s]));
+  /* Une prestation encore sur un ticket ou dans l'agenda peut désigner quelqu'un
+     que le commerçant a retiré depuis : une fiche fantôme évite le crash, sans
+     inventer de nom. */
+  const SF = new Proxy(SF_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, name: 'Ancien membre', role: '', short: '·', color: '#8A948F', ghost: true };
+    },
+  });
   /* Taux de commission. 40 % était écrit en dur et appliqué à TOUS les salons
      (colonne « Commission 40 % » de la fin de journée, ticket de clôture) : une
      part de CA que le patron n'a jamais fixée, lue comme ce qu'il doit à son
@@ -91,6 +107,11 @@
   const comPct = () => (commissionRate == null ? null : Math.round(commissionRate * 1000) / 10);
   const comOf = (ca) => (commissionRate == null ? null : Math.round(ca * commissionRate));
   const comTxt = (ca) => (commissionRate == null ? 'à définir' : fmtMAD(comOf(ca)));
+  /* La commission d'UNE personne : le taux de sa fiche (« Commission (%) » du
+     tableau de bord) s'il existe, sinon le taux du salon, sinon aucun. */
+  const rateOfStaff = (staffId) => { const s = SF[staffId]; return s && s.commission != null ? s.commission : commissionRate; };
+  const comOfStaff = (staffId, ca) => { const r = rateOfStaff(staffId); return r == null ? null : Math.round(ca * r); };
+  const comTxtStaff = (staffId, ca) => { const v = comOfStaff(staffId, ca); return v == null ? 'à définir' : fmtMAD(v); };
 
   function ava(staffId, cls) {
     const s = SF[staffId];
@@ -132,8 +153,71 @@
       { id: 'lissage',  label: 'Lissage', price: 600, dur: 150, flag: 'kératine' },
     ] },
   ];
-  const ITEMS = {};
-  CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS[it.id] = it; }));
+  const ITEMS_T = {};
+  CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS_T[it.id] = it; }));
+  /* Une ligne de ticket garde l'identifiant de sa prestation ; si le commerçant
+     l'a archivée entre-temps, la fiche fantôme évite le crash sans inventer de
+     prix (0 MAD, libellé neutre). */
+  const ITEMS = new Proxy(ITEMS_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Prestation retirée', price: 0, dur: 0, cat: 'libre', ghost: true };
+    },
+  });
+  /* Salon réel : la grille est le CATALOGUE DU COMMERÇANT, plus la carte de la
+     démo. 120 MAD la coupe femme, 60 la coupe homme, 600 le lissage : des prix de
+     Tanger 2026 posés sur n'importe quel salon, vendus au comptoir sans que la
+     patronne les ait jamais saisis. Elle les tient déjà sur le tableau de bord
+     (« Prestations & forfaits », prix, durée, catégorie, commission) : la caisse
+     les relit (KiwiPosWorkspaces.services). Sans catalogue, elle le dit et laisse
+     saisir un prix : elle ne vend jamais un tarif que personne n'a fixé. */
+  if (pvReal()) CATALOG.splice(0, CATALOG.length);
+  let realDraft = 0;
+  let freeSeq = 0;
+  const FORMULA_RX = /coul|color|m[eè]che|balayage|ombr[eé]|d[eé]color/i;
+  function realCatalog() {
+    const W = window.KiwiPosWorkspaces;
+    const list = W && W.services ? W.services('coiffure') : [];
+    const byCat = new Map();
+    list.forEach((s) => {
+      const label = s.category || 'Prestations';
+      const cid = 'cat:' + label.toLowerCase();
+      if (!byCat.has(cid)) byCat.set(cid, { id: cid, label, items: [] });
+      byCat.get(cid).items.push({
+        id: 'svc:' + s.id, label: s.name, price: s.price, dur: s.durationMinutes || 0,
+        priceUnset: !(s.price > 0), formula: FORMULA_RX.test(s.name + ' ' + s.category),
+      });
+    });
+    return { cats: Array.from(byCat.values()), draft: list.draft || 0 };
+  }
+  function realStaffList() {
+    const W = window.KiwiPosWorkspaces;
+    const list = W && W.staff ? W.staff('coiffure') : [];
+    if (!list.length) return [Object.assign({}, SALON_POST)];
+    return list.map((m, i) => ({
+      id: m.id, name: m.name, role: m.role || '', short: (String(m.name).trim().split(/\s+/)[0] || '·').slice(0, 3),
+      color: STAFF_COLORS[i % STAFF_COLORS.length], commission: m.commission,
+    }));
+  }
+  let realSig = '';
+  /* Relit catalogue et équipe ; vrai quand quelque chose a changé. */
+  function refreshReal() {
+    if (!pvReal()) return false;
+    const cat = realCatalog(), staffList = realStaffList();
+    const sig = JSON.stringify([cat, staffList]);
+    if (sig === realSig) return false;
+    realSig = sig;
+    CATALOG.splice(0, CATALOG.length, ...cat.cats);
+    CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS_T[it.id] = it; }));
+    realDraft = cat.draft;
+    if (state.cat !== 'tous' && !CATALOG.some((c) => c.id === state.cat)) state.cat = 'tous';
+    STAFF.splice(0, STAFF.length, ...staffList);
+    Object.keys(SF_T).forEach((id) => delete SF_T[id]);
+    STAFF.forEach((s) => { SF_T[s.id] = s; });
+    return true;
+  }
+  const durTxt = (d) => (d > 0 ? `${d} min` : 'durée libre');
+  const catLabelOf = (item) => { const c = CATALOG.find((x) => x.id === item.cat); return c ? c.label : (item.free ? 'Prestation libre' : 'Prestation'); };
 
   function priceOf(item, variantId) {
     if (item.variants) { const v = item.variants.find((x) => x.id === variantId) || item.variants[0]; return v.price; }
@@ -152,6 +236,10 @@
     { id: 'olaplex',   label: 'Olaplex', price: 60 },
   ];
   const ADDON = Object.fromEntries(ADDONS.map((a) => [a.id, a]));
+  /* Les compléments (Olaplex +60, Masque +40) sont des prix de la démo. Un salon
+     réel les vend comme des prestations, avec son propre prix : plus de liste
+     fantôme (ADDON reste pour relire d'anciens tickets). */
+  if (pvReal()) ADDONS.length = 0;
 
   /* ───────────────────────── couleur — la formule (signature) ─────────────
      Une formule = base + nuance + oxydant + temps de pose + marque/notes.
@@ -347,9 +435,16 @@
   const coiffureOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'coiffure',
     snapshot() {
+      const real = pvReal();
       return {
-        staff: STAFF,
-        catalog: CATALOG,
+        /* Salon réel : équipe et grille sont DÉRIVÉES du tableau de bord à chaque
+           ouverture, jamais rangées ici (un vieux document gardait la grille de
+           la démo et la rejouait par-dessus les tarifs du commerçant). Seules
+           les prestations libres des tickets en cours sont conservées. */
+        staff: real ? [] : STAFF,
+        catalog: real ? [] : CATALOG,
+        freeItems: real ? Object.values(ITEMS_T).filter((i) => i.free) : [],
+        freeSeq,
         customers: CUSTOMERS,
         passages: PASSAGES,
         appointments: RDV,
@@ -363,12 +458,20 @@
     },
     restore(saved) {
       if (!saved || typeof saved !== 'object') return;
-      if (Array.isArray(saved.staff)) STAFF.splice(0, STAFF.length, ...saved.staff);
-      Object.keys(SF).forEach((id) => delete SF[id]);
-      STAFF.forEach((person) => { SF[person.id] = person; });
-      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
-      Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
-      CATALOG.forEach((category) => category.items.forEach((item) => { item.cat = category.id; ITEMS[item.id] = item; }));
+      if (pvReal()) {
+        /* voir snapshot() : l'équipe et la grille viennent du tableau de bord */
+        (Array.isArray(saved.freeItems) ? saved.freeItems : []).forEach((it) => { if (it && it.id && it.free) ITEMS_T[it.id] = it; });
+        if (Number.isFinite(saved.freeSeq)) freeSeq = Math.max(freeSeq, saved.freeSeq);
+        realSig = '';
+        refreshReal();
+      } else {
+        if (Array.isArray(saved.staff)) STAFF.splice(0, STAFF.length, ...saved.staff);
+        Object.keys(SF).forEach((id) => delete SF[id]);
+        STAFF.forEach((person) => { SF[person.id] = person; });
+        if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+        Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+        CATALOG.forEach((category) => category.items.forEach((item) => { item.cat = category.id; ITEMS[item.id] = item; }));
+      }
       if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
       CUSTOMERS.forEach((customer) => {
         if (customer.last) customer.last = new Date(customer.last);
@@ -413,6 +516,23 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
+  /* Le libellé de la vente au journal partagé (80 caractères). Il nomme qui a
+     fait la prestation : le journal du serveur ne porte pas le coiffeur ailleurs,
+     et la patronne retrouve ainsi « par Salma » sur le tableau de bord. Le nom
+     passe en dernier mais jamais coupé : ce sont les prestations qu'on abrège. */
+  function saleLabel(p) {
+    const names = [];
+    p.lines.forEach((ln) => {
+      const s = SF[ln.staffId || p.staffId];
+      if (s && !s.placeholder && !s.ghost && names.indexOf(s.name) < 0) names.push(s.name);
+    });
+    const who = names.length ? ' · par ' + names.join(', ') : '';
+    const cust = ' · ' + passCustName(p);
+    let svc = p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ');
+    const room = Math.max(12, 80 - cust.length - who.length);
+    if (svc.length > room) svc = svc.slice(0, room - 1) + '…';
+    return svc + cust + who;
+  }
   function postDay(total, method, label, ref, lines) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref, lines });
@@ -425,6 +545,15 @@
   function mount(rootEl) {
     if (coiffureOps) coiffureOps.hydrate();
     root = rootEl;
+    if (pvReal()) {
+      refreshReal();
+      const W = window.KiwiPosWorkspaces;
+      if (W && W.subscribe && !mount._ws) {
+        mount._ws = true;
+        W.subscribe(() => { if (refreshReal() && root) repaintReal(); });
+        W.watch();
+      }
+    }
     bindNet();
     if (!state.ticket) freshTicket();
     root.innerHTML = `
@@ -521,7 +650,20 @@
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
-  function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
+  function closeVeil(v) {
+    (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open');
+    if (pendingRepaint) repaintReal();
+  }
+  /* Le catalogue ou l'équipe viennent de changer sur le tableau de bord : on
+     repeint, mais jamais sous une feuille ouverte (prestation en cours de saisie,
+     encaissement) : le changement attend sa fermeture. */
+  let pendingRepaint = false;
+  function repaintReal() {
+    if (!root) return;
+    if ($$('.modal-veil.is-open', root).length) { pendingRepaint = true; return; }
+    pendingRepaint = false;
+    renderBadges(); switchView(state.view);
+  }
 
   /* ═══════════════════════ NAV ═══════════════════════ */
   function switchView(view) {
@@ -692,7 +834,7 @@
     $('#cf-cats', root).innerHTML =
       `<button class="cf-cat ${state.cat === 'tous' ? 'on' : ''}" data-cf-cat="tous">Toutes <span class="cf-cat-ct">${all}</span></button>` +
       CATALOG.map((c) =>
-        `<button class="cf-cat ${state.cat === c.id ? 'on' : ''}" data-cf-cat="${c.id}">${esc(c.label)} <span class="cf-cat-ct">${counts[c.id]}</span></button>`
+        `<button class="cf-cat ${state.cat === c.id ? 'on' : ''}" data-cf-cat="${esc(c.id)}">${esc(c.label)} <span class="cf-cat-ct">${counts[c.id]}</span></button>`
       ).join('');
     $('#cf-cats', root).onclick = (e) => {
       const b = e.target.closest('[data-cf-cat]');
@@ -705,19 +847,44 @@
   function renderGrid() {
     const cats = state.cat === 'tous' ? CATALOG : CATALOG.filter((c) => c.id === state.cat);
     let i = 0;
-    $('#cf-gridwrap', root).innerHTML = cats.map((c) => `
+    const real = pvReal();
+    /* Salon réel sans catalogue, ou avec des prestations encore en brouillon :
+       on le dit, et on laisse saisir un prix (voir askPrice). */
+    const draftNote = real && realDraft
+      ? `<div class="cf-fq-empty" style="margin:10px 0">${realDraft} ${pl(realDraft, 'prestation en brouillon ne se vend pas', 'prestations en brouillon ne se vendent pas')} encore : passez-${pl(realDraft, 'la', 'les')} au statut « Actif » sur le tableau de bord.</div>` : '';
+    const emptyBlock = real && !CATALOG.length ? `
+      <div class="cf-fq-empty" style="margin:18px 0">
+        <b>Aucune prestation tarifée.</b><br>
+        Kiwi ne vend aucun tarif que vous n'avez pas fixé. Saisissez vos prestations, leur prix et leur durée sur le tableau de bord (Prestations &amp; forfaits) ou ici, ou encaissez une prestation au prix que vous saisissez.
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px">
+          <button class="cf-btn primary" id="cf-add-svc"><i data-lucide="plus"></i>Ajouter mes prestations</button>
+        </div>
+      </div>` : '';
+    const freeTile = real ? `
+      <div class="cf-cat-head">Prix à saisir</div>
+      <div class="cf-grid"><button class="cf-card" data-cf-free="1" style="--i:${i + 90}">
+        <span class="cf-card-art"><svg class="cf-art" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 14v36M14 32h36" style="stroke-width:3"/></svg></span>
+        <span class="cf-card-name">Prestation libre</span>
+        <span class="cf-card-price">prix saisi</span>
+      </button></div>` : '';
+    $('#cf-gridwrap', root).innerHTML = emptyBlock + cats.map((c) => `
       <div class="cf-cat-head">${esc(c.label)}</div>
       <div class="cf-grid">${c.items.map((it) => `
-        <button class="cf-card" data-cf-item="${it.id}" style="--i:${i++}">
+        <button class="cf-card" data-cf-item="${esc(it.id)}" style="--i:${i++}">
           <span class="cf-card-art">${ART[it.id] || ART.coupe_f}</span>
           <span class="cf-card-name">${esc(it.label)}</span>
-          <span class="cf-card-price">${it.variants ? 'dès ' : ''}${minPrice(it)} MAD</span>
+          <span class="cf-card-price">${it.priceUnset ? 'prix à saisir' : (it.variants ? 'dès ' : '') + fmtMAD(minPrice(it))}</span>
           ${it.flag ? `<span class="cf-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
-      </div>`).join('');
+      </div>`).join('') + draftNote + freeTile;
     $('#cf-gridwrap', root).onclick = (e) => {
+      if (e.target.closest('#cf-add-svc')) { openServicesEditor(); return; }
+      if (e.target.closest('[data-cf-free]')) { askPrice(null); return; }
       const b = e.target.closest('[data-cf-item]');
-      if (b) openSheet(b.dataset.cfItem);
+      if (!b) return;
+      const it = ITEMS[b.dataset.cfItem];
+      if (it && it.priceUnset) { askPrice(it); return; }
+      openSheet(b.dataset.cfItem);
     };
   }
 
@@ -822,6 +989,7 @@
   const sheet = { itemId: null, variantId: null, addons: [], staffId: null, formula: null, note: '', editIdx: null };
 
   function defaultStaffFor(item) {
+    if (pvReal()) return STAFF[0] ? STAFF[0].id : null;
     if (item.cat === 'couleur') return 'yasmine';
     if (item.id === 'coupe_h' || item.id === 'barbe') return 'karim';
     return 'yasmine';
@@ -850,6 +1018,50 @@
     rescanLens();
   }
 
+  /* Prix saisi à la caisse : une prestation sans prix sur le tableau de bord, ou
+     une prestation libre. La caisse n'invente jamais un tarif : elle le demande,
+     puis le ticket porte CE prix-là (voir l'article libre 'free:n', qui suit le
+     document du salon pour survivre à un rechargement avec le ticket en cours). */
+  function askPrice(base) {
+    const el = $('#cf-sheetm', root);
+    el.innerHTML = `
+      <button class="cf-modal-x" data-cf-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="cf-sheet-head">
+        <span class="cf-sheet-title"><h3>${base ? esc(base.label) : 'Prestation libre'}</h3><span class="sub">${base ? 'Aucun prix saisi sur le tableau de bord pour cette prestation' : 'Une prestation qui n\'est pas dans votre catalogue'}</span></span>
+      </div>
+      <div class="cf-f"><div class="cf-f-lbl">Intitulé</div>
+        <input class="cf-note-free" id="cf-fp-name" maxlength="60" value="${base ? esc(base.label) : ''}" placeholder="Ex. Coupe enfant" /></div>
+      <div class="cf-f"><div class="cf-f-lbl">Prix (MAD)</div>
+        <input class="cf-in" id="cf-fp-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0" /></div>
+      <div class="cf-f"><div class="cf-f-lbl">Durée (min) <span class="opt">· optionnel</span></div>
+        <input class="cf-in" id="cf-fp-dur" type="number" inputmode="numeric" min="0" step="5" value="${base && base.dur ? base.dur : ''}" /></div>
+      <div class="cf-sheet-foot">
+        <button class="cf-btn secondary" data-cf-close>Annuler</button>
+        <button class="cf-btn primary" id="cf-fp-ok"><i data-lucide="check"></i>Continuer</button>
+      </div>`;
+    $$('[data-cf-close]', el).forEach((b) => { b.onclick = () => closeVeil('#cf-sheet-veil'); });
+    $('#cf-fp-ok', el).onclick = () => {
+      const name = String($('#cf-fp-name', el).value || '').trim();
+      const price = Math.round((Number(String($('#cf-fp-price', el).value).replace(',', '.')) || 0) * 100) / 100;
+      const dur = Math.max(0, Math.round(Number($('#cf-fp-dur', el).value) || 0));
+      if (!name) { toast('Donnez un intitulé à la prestation'); return; }
+      if (!(price > 0)) { toast('Saisissez le prix de la prestation'); return; }
+      const id = 'free:' + (++freeSeq);
+      ITEMS_T[id] = { id, label: name, price, dur, cat: 'libre', free: true, formula: !!(base && base.formula) };
+      openSheet(id);
+    };
+    openVeil('#cf-sheet-veil');
+    icons();
+    const f = $('#cf-fp-price', el); if (f) f.focus();
+  }
+  /* Ajouter / modifier les prestations depuis la caisse : le même tableau que sur
+     le tableau de bord (Suivi opérationnel › Prestations), un seul document. */
+  function openServicesEditor() {
+    const W = window.KiwiPosWorkspaces;
+    if (W && W.open) W.open(root, 'coiffure', 'services');
+    else toast('Ajoutez vos prestations sur le tableau de bord');
+  }
+
   function sheetUnit() {
     return priceOf(ITEMS[sheet.itemId], sheet.variantId) + sheet.addons.reduce((s, a) => s + ADDON[a].price, 0);
   }
@@ -865,7 +1077,7 @@
       <button class="cf-modal-x" data-cf-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="cf-sheet-head">
         <span class="cf-sheet-art">${ART[item.id] || ART.coupe_f}</span>
-        <span class="cf-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)} · ${dur} min</span></span>
+        <span class="cf-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(catLabelOf(item))} · ${durTxt(dur)}</span></span>
         <span class="cf-sheet-price"><span class="val" id="cf-sheet-total">${fmtMAD(unit)}</span><span class="per">prestation</span></span>
       </div>
 
@@ -878,8 +1090,9 @@
       <div class="cf-f">
         <div class="cf-f-lbl">Coiffeur·se</div>
         <div class="cf-staff-seg" data-lens-demo id="cf-staff-seg">
-          ${STAFF.map((s) => `<button class="cf-staff-it ${sheet.staffId === s.id ? 'on' : ''}" data-lens-item data-cf-staff="${s.id}">${ava(s.id)}${esc(s.name)}</button>`).join('')}
+          ${STAFF.map((s) => `<button class="cf-staff-it ${sheet.staffId === s.id ? 'on' : ''}" data-lens-item data-cf-staff="${esc(s.id)}">${ava(s.id)}${esc(s.name)}</button>`).join('')}
         </div>
+        ${pvReal() && STAFF.length === 1 && STAFF[0].placeholder ? '<div class="cf-fq-empty" style="margin-top:8px">Votre équipe n\'est pas encore saisie : ajoutez-la sur le tableau de bord (Équipe ou Coiffeur·euse·s) pour attribuer chaque prestation.</div>' : ''}
       </div>
 
       ${item.variants ? `<div class="cf-f">
@@ -891,12 +1104,12 @@
 
       ${item.formula ? renderFormulaBlock() : ''}
 
-      <div class="cf-f">
+      ${ADDONS.length ? `<div class="cf-f">
         <div class="cf-f-lbl">Compléments <span class="opt">· optionnel</span></div>
         <div class="cf-chips" id="cf-addons">
           ${ADDONS.map((a) => `<button class="cf-chip-opt ${sheet.addons.includes(a.id) ? 'on' : ''}" data-cf-addon="${a.id}">${esc(a.label)} <small>+${a.price}</small></button>`).join('')}
         </div>
-      </div>
+      </div>` : ''}
 
       <div class="cf-f">
         <div class="cf-f-lbl">Note <span class="opt">· optionnel</span></div>
@@ -912,7 +1125,7 @@
       const u = sheetUnit();
       $('#cf-sheet-total', el).textContent = fmtMAD(u);
       $('#cf-sheet-cta', el).textContent = fmtMAD(u);
-      $('.cf-sheet-head .sub', el).textContent = `${CATALOG.find((c) => c.id === item.cat).label} · ${durOf(item, sheet.variantId)} min`;
+      $('.cf-sheet-head .sub', el).textContent = `${catLabelOf(item)} · ${durTxt(durOf(item, sheet.variantId))}`;
     };
 
     $('#cf-staff-seg', el).onclick = (e) => {
@@ -929,7 +1142,8 @@
       $$('[data-cf-var]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
-    $('#cf-addons', el).onclick = (e) => {
+    const addonsEl = $('#cf-addons', el);
+    if (addonsEl) addonsEl.onclick = (e) => {
       const b = e.target.closest('[data-cf-addon]');
       if (!b) return;
       const id = b.dataset.cfAddon;
@@ -1482,12 +1696,12 @@
         const amount = priceOf(item, ln.variantId) + (ln.addons || []).reduce((s, a) => s + ADDON[a].price, 0);
         return {
           itemId: ln.itemId, variantId: ln.variantId || '', name: item.label,
-          cat: item.cat || '', kind: 'service', unit: 'service', qty: 1, total: amount,
+          cat: pvReal() ? catLabelOf(item) : (item.cat || ''), kind: 'service', unit: 'service', qty: 1, total: amount,
           options: (ln.addons || []).map((id) => ({ id, qty: 1 })),
         };
       });
       if (tt > 0) saleLines.push({ itemId: 'pourboire', name: 'Pourboire', kind: 'tip', unit: 'payment', qty: 1, total: tt });
-      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`, saleLines);
+      postDay(total + tt, method, saleLabel(p), p.num || `S-${p.id}`, saleLines);
       closeVeil('#cf-pay-veil');
       queueIfOffline('Encaissement');
       toast(`${passCustName(p)}, ${fmtMAD(total + tt)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${tt ? ` · pourboire ${fmtMAD(tt)}` : ''}`);
@@ -1505,21 +1719,33 @@
     const seedTips = DONE_TODAY.reduce((s, d) => s + (d.tip || 0), 0);
     const liveTips = TIP_LEDGER.reduce((s, t) => s + t.amt, 0);
     const byStaff = {};
-    STAFF.forEach((s) => { byStaff[s.id] = { passages: 0, ca: 0, tip: 0 }; });
+    /* Les lignes de la journée : l'équipe d'aujourd'hui PLUS quiconque a encaissé
+       aujourd'hui puis a été retiré du tableau de bord. Sans cela, le CA d'une
+       personne retirée en cours de journée disparaissait du total (la somme ne
+       retombait plus sur la recette). */
+    const rows = STAFF.slice();
+    DONE_TODAY.forEach((d) => { if (d.staffId && !rows.some((s) => s.id === d.staffId)) rows.push(SF[d.staffId]); });
+    rows.forEach((s) => { byStaff[s.id] = { passages: 0, ca: 0, tip: 0 }; });
     DONE_TODAY.forEach((d) => {
       const b = byStaff[d.staffId]; if (!b) return;
       b.passages++; b.ca += d.amt; b.tip += d.tip || 0;
     });
     TIP_LEDGER.forEach((t) => { if (byStaff[t.staffId]) byStaff[t.staffId].tip += t.amt; });
-    const totalCA = STAFF.reduce((s, st) => s + byStaff[st.id].ca, 0);
+    const totalCA = rows.reduce((s, st) => s + byStaff[st.id].ca, 0);
     const totalTip = seedTips + liveTips;
     const totalPass = DONE_TODAY.length;
-    const totalCom = comOf(totalCA);
-    const maxCA = Math.max(1, ...STAFF.map((s) => byStaff[s.id].ca));
+    /* commission : le taux de chaque fiche, sinon celui du salon ; rien tant
+       qu'aucun des deux n'existe */
+    const comParts = rows.map((s) => comOfStaff(s.id, byStaff[s.id].ca));
+    const totalCom = comParts.some((v) => v != null) ? comParts.reduce((a, v) => a + (v || 0), 0) : null;
+    const perStaffRates = rows.some((s) => s.commission != null);
+    const maxCA = Math.max(1, ...rows.map((s) => byStaff[s.id].ca));
 
     $('#cf-journee-sub', root).textContent = `${fmtDay(new Date())} · ${totalPass} ${pl(totalPass, 'passage servi', 'passages servis')} aujourd'hui`;
     const comHint = $('#cf-com-hint', root);
-    if (comHint) comHint.textContent = commissionRate == null ? 'Taux de commission non défini.' : `Commission ${comPct()} % par coiffeur·se, déjà calculée.`;
+    if (comHint) comHint.textContent = perStaffRates
+      ? (commissionRate == null ? 'Commission selon la fiche de chaque coiffeur·se.' : `Commission selon la fiche de chacun·e, sinon ${comPct()} %.`)
+      : commissionRate == null ? 'Taux de commission non défini.' : `Commission ${comPct()} % par coiffeur·se, déjà calculée.`;
     const el = $('#cf-journee-body', root);
     el.innerHTML = `
       <div class="cf-day-inner">
@@ -1527,28 +1753,29 @@
           <div class="cf-day-kpi"><div class="lbl"><i data-lucide="scissors"></i>Passages</div><div class="val">${totalPass}</div></div>
           <div class="cf-day-kpi accent"><div class="lbl"><i data-lucide="banknote"></i>CA du jour</div><div class="val">${fmtMAD(totalCA)}</div></div>
           <div class="cf-day-kpi"><div class="lbl"><i data-lucide="hand-coins"></i>Pourboires</div><div class="val">${fmtMAD(totalTip)}</div></div>
-          <div class="cf-day-kpi"><div class="lbl"><i data-lucide="percent"></i>Commissions${commissionRate == null ? '' : ' ' + comPct() + ' %'}</div><div class="val">${commissionRate == null ? 'à définir' : fmtMAD(totalCom)}</div></div>
+          <div class="cf-day-kpi"><div class="lbl"><i data-lucide="percent"></i>Commissions${commissionRate == null || perStaffRates ? '' : ' ' + comPct() + ' %'}</div><div class="val">${totalCom == null ? 'à définir' : fmtMAD(totalCom)}</div></div>
         </div>
 
         <div class="cf-day-com" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;">
           <label for="cf-com-rate" style="font-size:12.5px;">Taux de commission des coiffeur·se·s</label>
           <input class="cf-in" id="cf-com-rate" type="number" inputmode="decimal" min="0" max="100" step="0.5" style="width:96px;" value="${commissionRate == null ? '' : comPct()}" placeholder="non défini" /> <span>%</span>
           <button class="cf-btn secondary" id="cf-com-save">Enregistrer</button>
-          ${commissionRate == null ? '<span style="font-size:12px;opacity:.7;">Sans taux, les commissions ne sont pas calculées.</span>' : ''}
+          ${commissionRate == null ? `<span style="font-size:12px;opacity:.7;">${perStaffRates ? 'Taux du salon, pour qui n\'a pas de commission sur sa fiche.' : 'Sans taux, les commissions ne sont pas calculées.'}</span>` : ''}
         </div>
 
         <div class="cf-day-staff-lbl"><i data-lucide="users" style="width:12px;height:12px"></i> Par coiffeur·se</div>
         <div class="cf-day-cards">
-          ${STAFF.map((s) => {
+          ${rows.map((s) => {
             const b = byStaff[s.id];
             const pct = Math.round((b.ca / maxCA) * 100);
+            const sr = rateOfStaff(s.id);
             return `<div class="cf-day-card">
               <span class="av" style="background:${s.color}">${esc(s.short[0])}</span>
               <span class="who"><b>${esc(s.name)}</b><span>${esc(s.role)}</span></span>
               <span class="cf-day-metrics">
                 <span class="cf-day-metric"><span class="m-lbl">Passages</span><span class="m-val">${b.passages}</span></span>
                 <span class="cf-day-metric"><span class="m-lbl">CA</span><span class="m-val">${fmtMAD(b.ca)}</span></span>
-                <span class="cf-day-metric com"><span class="m-lbl">Commission${commissionRate == null ? '' : ' ' + comPct() + ' %'}</span><span class="m-val">${comTxt(b.ca)}</span></span>
+                <span class="cf-day-metric com"><span class="m-lbl">Commission${sr == null ? '' : ' ' + Math.round(sr * 1000) / 10 + ' %'}</span><span class="m-val">${comTxtStaff(s.id, b.ca)}</span></span>
                 <span class="cf-day-metric tip"><span class="m-lbl">Pourboires</span><span class="m-val">${fmtMAD(b.tip)}</span></span>
               </span>
               <span class="cf-day-bar"><i style="width:${pct}%"></i></span>
@@ -1581,8 +1808,8 @@
         { label:'Passages', value:totalPass }, { label:'CA du jour', value:fmtMAD(totalCA) },
         { label:'Pourboires', value:fmtMAD(totalTip) },
       ];
-      if (commissionRate != null) lines.push({ label:'Commissions ' + comPct() + ' %', value:fmtMAD(totalCom) });
-      STAFF.forEach((s) => { const b = byStaff[s.id]; lines.push({ label:s.name, value:`${b.passages} ${pl(b.passages, 'passage', 'passages')} · ${fmtMAD(b.ca)}${commissionRate == null ? '' : ` · commission ${fmtMAD(comOf(b.ca))}`}` }); });
+      if (totalCom != null) lines.push({ label:'Commissions', value:fmtMAD(totalCom) });
+      rows.forEach((s) => { const b = byStaff[s.id]; const c = comOfStaff(s.id, b.ca); lines.push({ label:s.name, value:`${b.passages} ${pl(b.passages, 'passage', 'passages')} · ${fmtMAD(b.ca)}${c == null ? '' : ` · commission ${fmtMAD(c)}`}` }); });
       P.printText({ title:'Clôture salon', subtitle:fmtDay(new Date()), paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
     };
     $('#cf-day-close', root).onclick = () => {

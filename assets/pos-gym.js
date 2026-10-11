@@ -80,9 +80,25 @@
     { id: 'trimestriel', label: 'Trimestriel',  price: 650,  days: 92,  sub: '3 mois · ~217 MAD/mois',          icon: 'calendar-clock', flag: 'populaire' },
     { id: 'annuel',      label: 'Annuel',       price: 2200, days: 366, sub: '12 mois · 2 mois offerts',        icon: 'crown',          flag: 'le malin' },
   ];
-  const PLAN = Object.fromEntries(PLANS.map((p) => [p.id, p]));
-  const STUDENT_OFF = 0.20;
-  const planPrice = (planId, student) => Math.round(PLAN[planId].price * (student ? 1 - STUDENT_OFF : 1));
+  /* Salle réelle : les formules sont CELLES DU COMMERÇANT (tableau de bord,
+     « Abonnements »), relues par refreshReal() plus bas. Mensuel 250, trimestriel
+     650, annuel 2 200 et « tarif étudiant 20 % » étaient des prix de Tanger 2026
+     posés sur n'importe quelle salle : la caisse les vendait sans que le gérant
+     les ait jamais saisis. Une formule retirée depuis reste lisible sur la fiche
+     d'un membre (fiche fantôme, sans prix inventé). */
+  if (pvReal()) PLANS.length = 0;
+  const PLAN_T = Object.fromEntries(PLANS.map((p) => [p.id, p]));
+  const PLAN = pvReal() ? new Proxy(PLAN_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Formule retirée', price: 0, days: 30, sub: '', icon: 'calendar', ghost: true };
+    },
+  }) : PLAN_T;
+  /* la remise étudiante n'existe pas dans le tableau de bord : aucun taux inventé */
+  const STUDENT_OFF = pvReal() ? 0 : 0.20;
+  const planPrice = (planId, student) => Math.round(PLAN[planId].price * (student ? 1 - STUDENT_OFF : 1) * 100) / 100;
+  /* ce que CE membre a réellement payé (formule sans prix saisi, formule libre) */
+  const memberPrice = (m) => (pvReal() && m.paid > 0 ? m.paid : planPrice(m.plan, m.student));
 
   /* ───────────────────────── comptoir (extras) ───────────────────────── */
   const SHOP = [
@@ -92,7 +108,16 @@
     { id: 'serviette',  label: 'Location serviette', price: 10,  art: 'serviette' },
     { id: 'coach',      label: 'Séance coach perso', price: 150, art: 'coach', flag: '1 h' },
   ];
-  const SHOP_ITEM = Object.fromEntries(SHOP.map((s) => [s.id, s]));
+  /* Comptoir réel : les articles du gérant (tableau de bord, « Comptoir, coaching
+     & pass »), jamais l'eau à 6 MAD ni la séance coach à 150 MAD de la démo. */
+  if (pvReal()) SHOP.length = 0;
+  const SHOP_ITEM_T = Object.fromEntries(SHOP.map((s) => [s.id, s]));
+  const SHOP_ITEM = pvReal() ? new Proxy(SHOP_ITEM_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Article retiré', price: 0, art: 'barre', ghost: true };
+    },
+  }) : SHOP_ITEM_T;
 
   /* ───────────────────────── coachs ─────────────────────────
      Objets désormais (id, tag spécialité). Les membres référencent toujours
@@ -106,9 +131,18 @@
     ];
     /* real store : keep id/length so member.coach references + filters hold,
        but blank the named identities (name → "Coach N", tag → ''). */
-    return pvReal() ? seed.map((c, i) => ({ id: c.id, name: 'Coach ' + (i + 1), tag: '' })) : seed;
+    /* real store : l'équipe est celle du commerçant (fiche « Coachs » du tableau
+       de bord, à défaut son Équipe), relue par refreshReal(). « Coach 1 · 2 · 3 »
+       étaient trois coachs inventés. */
+    return pvReal() ? [] : seed;
   })();
-  const COACH = Object.fromEntries(COACHES.map((c) => [c.id, c]));
+  const COACH_T = Object.fromEntries(COACHES.map((c) => [c.id, c]));
+  const COACH = pvReal() ? new Proxy(COACH_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, name: 'Ancien coach', tag: '', ghost: true };
+    },
+  }) : COACH_T;
   const COACH_BY_NAME = Object.fromEntries(COACHES.map((c) => [c.name, c]));
 
   /* ───────────────────────── cours collectifs (planning) ─────────────────────
@@ -141,7 +175,13 @@
     { id: 'zumba',    label: 'Zumba',          art: 'dance',   room: 'Studio 1',     coach: 'Coach Salma', dur: 45 },
     { id: 'hiit',     label: 'HIIT Express',   art: 'hiit',    room: 'Studio 2',     coach: 'Coach Réda',  dur: 30 },
   ];
-  const CLASS = Object.fromEntries(CLASSES.map((c) => [c.id, c]));
+  const CLASS_T = Object.fromEntries(CLASSES.map((c) => [c.id, c]));
+  const CLASS = pvReal() ? new Proxy(CLASS_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Cours retiré', art: 'spin', room: '', coach: '', dur: 0, ghost: true };
+    },
+  }) : CLASS_T;
 
   /* Planning du jour — calé MID-SHIFT (~17 h) : le matin est passé (terminé),
      le CrossFit de 17 h est EN COURS, et la soirée se réserve (un RPM complet
@@ -170,6 +210,8 @@
     { id: 'pt5',  n: 5,  price: 650,  sub: '5 séances · 130 MAD/séance', flag: 'populaire' },
     { id: 'pt10', n: 10, price: 1200, sub: '10 séances · 120 MAD/séance', flag: 'le malin' },
   ];
+  /* real store : les packs sont ceux du gérant (« Comptoir, coaching & pass »). */
+  if (pvReal()) PT_PACKS.length = 0;
   /* real store : no seeded 1:1 sessions (they embed demo member ids). */
   const PT_TODAY = pvReal() ? {} : {
     amine: [
@@ -347,14 +389,127 @@
     if (slot) slot.count += n;
   }
 
+  /* ───────────── Salle réelle : formules, comptoir, coachs et cours du gérant ─────────────
+     Le tableau de bord tient déjà « Abonnements », « Comptoir, coaching & pass »,
+     « Coachs » et « Planning & cours » dans le document `workspaces`. La caisse
+     les relit (KiwiPosWorkspaces) au lieu de vendre la grille de la démo, et ne
+     vend jamais un prix que personne n'a fixé : sans prix saisi elle le demande.
+     Les ventes « libres » (formule, article, pass) restent possibles et se
+     rangent dans l'instantané de la caisse, pas dans le catalogue du gérant. */
+  const FREE_PLANS = [];
+  const SESS_KEEP = {};
+  const numTxt = (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+  const IN_STYLE = 'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(10,15,13,.16);border-radius:10px;font:inherit;font-size:15px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)';
+  let realSig = '';
+  let realDraft = { plans: 0, shop: 0 };
+  const slug = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '');
+  const numOf = (x) => { const n = Number(x); return Number.isFinite(n) ? n : 0; };
+  const artOfShop = (t) => (/eau|water|boisson|jus/i.test(t) ? 'eau' : /shaker|whey|prot[eé]ine en|poudre/i.test(t) ? 'shaker' : /serviette|towel/i.test(t) ? 'serviette' : /coach/i.test(t) ? 'coach' : 'barre');
+  const artOfClass = (t) => (/spin|rpm|cycl|v[eé]lo/i.test(t) ? 'spin' : /pump|body|muscu|renfo|halt/i.test(t) ? 'barbell' : /yoga|pilates|stretch/i.test(t) ? 'yoga' : /box|ring|muay|mma/i.test(t) ? 'boxe' : /cross|wod|kettle|functional/i.test(t) ? 'kettle' : /zumba|danse|dance/i.test(t) ? 'dance' : /hiit|tabata|circuit/i.test(t) ? 'hiit' : 'spin');
+  const hhmm = (ms) => { const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+  const sessionStateOf = (st, en) => { const now = Date.now(); return now >= en ? 'done' : now >= st ? 'live' : st - now <= 3600000 ? 'soon' : 'upcoming'; };
+  function realBoards() {
+    const W = window.KiwiPosWorkspaces;
+    if (!W || !W.services) return null;
+    const plansIn = W.services('sport');
+    const shopIn = W.board('sport', 'shop');
+    const coachIn = W.staff('sport');
+    const apptIn = W.rows('sport', 'appointments');
+    const plans = plansIn.map((x) => {
+      const days = x.durationDays > 0 ? Math.round(x.durationDays) : 30;
+      return { id: 'svc-' + slug(x.id), label: x.name, price: x.price, days, sub: days + ' ' + pl(days, 'jour', 'jours') + (x.terms ? ' · ' + x.terms.slice(0, 44) : ''), icon: 'calendar', unset: !(x.price > 0) };
+    });
+    const shop = [], packs = [], passes = [];
+    shopIn.forEach((r) => {
+      const price = Math.round(numOf(r.v.price) * 100) / 100;
+      const kind = r.v.kind || 'counter';
+      if (kind === 'coaching') {
+        const n = Math.max(1, Math.round(numOf(r.v.sessions)) || 1);
+        packs.push({ id: 'pk-' + slug(r.id), n, price, sub: r.title, unset: !(price > 0) });
+      } else if (kind === 'pass') {
+        const persons = Math.max(1, Math.round(numOf(r.v.persons)) || 1);
+        passes.push({ id: 'ps-' + slug(r.id), label: r.title, price, persons, sub: persons > 1 ? persons + ' personnes · 1 séance' : 'accès visiteur, sans abonnement', unset: !(price > 0) });
+      } else {
+        shop.push({ id: 'sh-' + slug(r.id), label: r.title, price, art: artOfShop(r.title), unset: !(price > 0) });
+      }
+    });
+    const coaches = coachIn.map((c) => ({ id: c.id, name: c.name, tag: c.role || '' }));
+    /* les cours de la journée d'activité (5 h du matin → 5 h) */
+    const dayStart = Date.parse(bizDay() + 'T05:00:00');
+    const dayEnd = dayStart + 24 * 3600 * 1000;
+    const tms = (v) => { const t = Date.parse(String(v || '')); return Number.isFinite(t) ? t : 0; };
+    const classes = [], sessions = [];
+    apptIn.forEach((r) => {
+      const st = tms(r.v.startAt);
+      if (!st || st < dayStart || st >= dayEnd) return;
+      const en = tms(r.v.endAt) > st ? tms(r.v.endAt) : st + 3600000;
+      const coachRec = coachIn.find((c) => c.id === r.v.coachRef);
+      const cap = Math.max(1, Math.round(numOf(r.v.capacity)) || 1);
+      classes.push({ id: 'cl-' + slug(r.id), label: r.title, art: artOfClass(r.title), room: String(r.v.room || '').trim(), coach: coachRec ? coachRec.name : '', dur: Math.max(5, Math.round((en - st) / 60000)) });
+      sessions.push({ id: 's-' + slug(r.id), classId: 'cl-' + slug(r.id), time: hhmm(st), startMs: st, endMs: en, cap, extra0: Math.min(cap, Math.max(0, Math.round(numOf(r.v.booked)))) });
+    });
+    sessions.sort((a, b) => a.startMs - b.startMs);
+    return { plans, shop, packs, passes, coaches, classes, sessions, draft: { plans: plansIn.draft || 0, shop: shopIn.draft || 0 } };
+  }
+  /* Relit les tableaux du gérant ; vrai quand quelque chose a changé. */
+  function refreshReal(force) {
+    if (!pvReal()) return false;
+    const b = realBoards();
+    if (!b) return false;
+    const sig = JSON.stringify([b, FREE_PLANS]);
+    if (!force && sig === realSig) return syncStates();
+    realSig = sig;
+    realDraft = b.draft;
+    const fill = (arr, map, list) => { arr.splice(0, arr.length, ...list); Object.keys(map).forEach((k) => { delete map[k]; }); arr.forEach((x) => { map[x.id] = x; }); };
+    fill(PLANS, PLAN_T, b.plans.concat(FREE_PLANS));
+    fill(SHOP, SHOP_ITEM_T, b.shop);
+    PT_PACKS.splice(0, PT_PACKS.length, ...b.packs);
+    DAY_PASSES.splice(0, DAY_PASSES.length, ...b.passes);
+    fill(COACHES, COACH_T, b.coaches);
+    Object.keys(COACH_BY_NAME).forEach((k) => { delete COACH_BY_NAME[k]; });
+    COACHES.forEach((c) => { COACH_BY_NAME[c.name] = c; });
+    fill(CLASSES, CLASS_T, b.classes);
+    const old = {};
+    SCHEDULE.forEach((x) => { old[x.id] = x; });
+    SCHEDULE.splice(0, SCHEDULE.length, ...b.sessions.map((x) => {
+      const o = old[x.id] || SESS_KEEP[x.id] || null;
+      return {
+        id: x.id, classId: x.classId, time: x.time, startMs: x.startMs, endMs: x.endMs, cap: x.cap,
+        state: sessionStateOf(x.startMs, x.endMs),
+        booked: o ? o.booked || [] : [], extra: o && Number.isFinite(o.extra) ? o.extra : x.extra0,
+        checkedIn: o ? o.checkedIn || [] : [], wait: o ? o.wait || [] : [], waitExtra: o ? o.waitExtra || 0 : 0,
+      };
+    }));
+    return true;
+  }
+  /* « en cours / bientôt / terminé » suivent l'horloge de la salle */
+  function syncStates() {
+    if (!pvReal()) return false;
+    let ch = false;
+    SCHEDULE.forEach((x) => {
+      if (!x.endMs) return;
+      const st = sessionStateOf(x.startMs, x.endMs);
+      if (st !== x.state) { x.state = st; ch = true; }
+    });
+    return ch;
+  }
+  /* formule libre vendue au comptoir : elle entre dans la liste des formules de
+     cette caisse (la fiche du membre doit pouvoir relire son libellé et sa durée) */
+  function materializeFreePlan(sel, price) {
+    const id = 'free-' + Date.now().toString(36) + (++FREE_SEQ);
+    const plan = { id, label: sel.freeLabel, price, days: sel.freeDays, sub: 'formule libre', icon: 'calendar', free: true };
+    FREE_PLANS.push(plan); PLANS.push(plan); PLAN_T[id] = plan;
+    sel.plan = id;
+  }
+  let FREE_SEQ = 0;
+
   const gymOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'gym',
     snapshot() {
       return {
-        plans: PLANS,
-        shop: SHOP,
-        coaches: COACHES,
-        classes: CLASSES,
+        /* réel : formules, comptoir, coachs et cours viennent du tableau de bord,
+           on n'en garde pas de copie périmée dans l'instantané */
+        ...(pvReal() ? { freePlans: FREE_PLANS } : { plans: PLANS, shop: SHOP, coaches: COACHES, classes: CLASSES }),
         schedule: SCHEDULE,
         ptToday: PT_TODAY,
         club: CLUB,
@@ -379,6 +534,14 @@
          écrivait tout l'instantané). On les laisse de côté plutôt que de les
          relire comme les chiffres du club. */
       const legacy = pvReal() && saved.v !== 2;
+      if (pvReal()) {
+        /* réel : le catalogue vient du tableau de bord (refreshReal) ; seules les
+           ventes libres et l'état des réservations du jour sont à relire ici */
+        if (Array.isArray(saved.freePlans)) FREE_PLANS.splice(0, FREE_PLANS.length, ...saved.freePlans.filter((x) => x && x.id));
+        if (Array.isArray(saved.schedule) && !legacy) {
+          saved.schedule.forEach((x) => { if (x && x.id) SESS_KEEP[x.id] = { booked: x.booked, extra: x.extra, checkedIn: x.checkedIn, wait: x.wait, waitExtra: x.waitExtra }; });
+        }
+      } else {
       if (Array.isArray(saved.plans)) PLANS.splice(0, PLANS.length, ...saved.plans);
       Object.keys(PLAN).forEach((id) => delete PLAN[id]);
       PLANS.forEach((plan) => { PLAN[plan.id] = plan; });
@@ -393,6 +556,7 @@
       Object.keys(CLASS).forEach((id) => delete CLASS[id]);
       CLASSES.forEach((klass) => { CLASS[klass.id] = klass; });
       if (Array.isArray(saved.schedule) && !legacy) SCHEDULE.splice(0, SCHEDULE.length, ...saved.schedule);
+      }
       if (saved.ptToday && typeof saved.ptToday === 'object' && !legacy) {
         Object.keys(PT_TODAY).forEach((id) => delete PT_TODAY[id]);
         Object.assign(PT_TODAY, saved.ptToday);
@@ -441,6 +605,11 @@
      une ligne — mieux vaut ne rien restaurer que fausser la ventilation. */
   function postDay(total, method, label, ref, lines) {
     try {
+      /* La référence est l'identité de la vente côté serveur : le code membre
+         seul faisait refuser (409) toute seconde vente au même membre, un
+         abonnement puis un pack de séances par exemple, et la recette
+         disparaissait en silence. On y ajoute un jeton de l'instant. */
+      ref = ref ? String(ref).slice(0, 18) + '-' + Date.now().toString(36).slice(-5) : '';
       if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref, lines });
     } catch (_) {}
   }
@@ -488,7 +657,7 @@
      les partis et la répartition des formules ne bougeaient jamais. La démo
      garde le club de 247 membres du seed. */
   const countsAsActive = (m) => { const st = memberStatus(m); return st === 'active' || st === 'expiring'; };
-  const monthlyOf = (m) => Math.round(planPrice(m.plan, m.student) / Math.max(1, PLAN[m.plan].days / 30.4));
+  const monthlyOf = (m) => Math.round(memberPrice(m) / Math.max(1, PLAN[m.plan].days / 30.4));
   function clubFigures() {
     if (!pvReal()) {
       return { active: CLUB.activeBase, mrr: CLUB.mrr, newM: CLUB.newThisMonth, churn: CLUB.churnThisMonth, mix: CLUB.mix };
@@ -515,6 +684,17 @@
     if (gymOps) gymOps.hydrate();
     rollDay();
     root = rootEl;
+    if (pvReal()) {
+      refreshReal(true);
+      const W = window.KiwiPosWorkspaces;
+      if (W && W.subscribe && !mount._ws) {
+        mount._ws = true;
+        W.subscribe(() => { if (refreshReal() && root) repaintReal(); });
+        W.watch();
+        /* « en cours / terminé » suivent l'horloge */
+        setInterval(() => { if (root && syncStates()) repaintReal(); }, 60000);
+      }
+    }
     bindNet();
     root.innerHTML = `
       <aside class="gy-rail">
@@ -605,7 +785,7 @@
           <div class="gy-shop">
             <div class="gy-shop-main">
               <header class="gy-head">
-                <div><h1>Comptoir</h1><div class="gy-head-sub">Eau, snacks, serviette, séance coach, toucher pour ajouter.</div></div>
+                <div><h1>Comptoir</h1><div class="gy-head-sub">${pvReal() ? 'Les articles de votre comptoir, toucher pour ajouter.' : 'Eau, snacks, serviette, séance coach, toucher pour ajouter.'}</div></div>
               </header>
               <div class="gy-shop-gridwrap"><div class="gy-shop-grid" id="gy-shop-grid"></div></div>
             </div>
@@ -627,7 +807,7 @@
         <section class="gy-view" data-gy-panel="planning">
           <header class="gy-head">
             <div><h1>Planning</h1><div class="gy-head-sub">Cours collectifs du jour, réserver, pointer les présences, gérer la liste d'attente.</div></div>
-            <div class="gy-head-right"><div class="gy-week" id="gy-week"></div></div>
+            <div class="gy-head-right">${pvReal() ? '<button class="gy-btn primary sm" data-gy-addboard="appointments"><i data-lucide="plus"></i> Ajouter un cours</button>' : ''}<div class="gy-week" id="gy-week"></div></div>
           </header>
           <div class="gy-plan-scroll" id="gy-plan-body"></div>
         </section>
@@ -661,6 +841,13 @@
       <div class="modal-veil" id="gy-ptpack-veil"><div class="modal gy-ptpack gy-rel" id="gy-ptpackm"></div></div>
       <div class="modal-veil" id="gy-pass-veil"><div class="modal gy-rel" id="gy-passm"></div></div>`;
     /* root is already attached to the DOM by the dispatcher (#pos-gym) */
+    if (!root._gyBoardBound) {
+      root._gyBoardBound = true;
+      root.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-gy-addboard]');
+        if (b) openBoard(b.dataset.gyAddboard);
+      });
+    }
 
     /* ---- static bindings (delegation on persistent containers) ---- */
     $('#gy-nav', root).addEventListener('click', (e) => {
@@ -714,7 +901,11 @@
     /* ---- comptoir ---- */
     $('#gy-shop-grid', root).addEventListener('click', (e) => {
       const card = e.target.closest('[data-gy-shop]');
-      if (card) addToCart(card.dataset.gyShop, card);
+      if (!card) return;
+      const sid = card.dataset.gyShop;
+      /* article libre, ou article sans prix saisi pas encore au panier : on demande le prix */
+      if (pvReal() && (sid === '_free' || (SHOP_ITEM_T[sid] && SHOP_ITEM_T[sid].unset && !state.cart.some((l) => l.id === sid)))) { askShopPrice(sid); return; }
+      addToCart(sid, card);
     });
     const cart = $('#gy-cart', root);
     cart.addEventListener('click', (e) => {
@@ -778,7 +969,24 @@
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
-  function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
+  function closeVeil(v) {
+    (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open');
+    if (pendingRepaint) repaintReal();
+  }
+  /* Les tarifs, l'équipe ou le planning viennent de changer sur le tableau de
+     bord : on repeint, mais jamais sous une feuille ouverte (vente en cours). */
+  let pendingRepaint = false;
+  function repaintReal() {
+    if (!root) return;
+    if ($$('.modal-veil.is-open', root).length) { pendingRepaint = true; return; }
+    pendingRepaint = false;
+    renderShop(); refreshOps();
+  }
+  function openBoard(nav) {
+    const W = window.KiwiPosWorkspaces;
+    if (W && W.open) W.open(root, 'gym', nav);
+    else toast('Renseignez-les sur le tableau de bord');
+  }
 
   /* ═══════════════════════ NAV / RENDER ROOT ═══════════════════════ */
   function switchView(view) {
@@ -1056,11 +1264,19 @@
               ${p.flag ? `<span class="gy-plan-flag">${esc(p.flag)}</span>` : ''}
               <span class="gy-plan-ic"><i data-lucide="${p.icon}"></i></span>
               <span class="gy-plan-name">${esc(p.label)}</span>
-              <span class="gy-plan-price"><b>${p.price}</b> MAD</span>
+              <span class="gy-plan-price">${pvReal() ? (p.price > 0 ? `<b>${esc(numTxt(p.price))}</b> MAD` : '<b style="font-size:15px">prix à saisir</b>') : `<b>${p.price}</b> MAD`}</span>
               <span class="gy-plan-sub">${esc(p.sub)}</span>
-              <span class="gy-plan-student"><i data-lucide="percent"></i> étudiant ${esc(planPrice(p.id, true))} MAD</span>
+              ${STUDENT_OFF > 0 ? `<span class="gy-plan-student"><i data-lucide="percent"></i> étudiant ${esc(planPrice(p.id, true))} MAD</span>` : ''}
             </button>`).join('')}
         </div>
+        ${pvReal() ? `<div class="gy-abo-sec">
+          ${PLANS.length ? '' : '<div class="gy-empty">Aucune formule n\'est saisie pour cette salle. Ajoutez vos abonnements avec leur prix, ou vendez une formule libre.</div>'}
+          ${realDraft.plans ? `<div class="gy-pass-note"><i data-lucide="info"></i> ${realDraft.plans} ${pl(realDraft.plans, 'formule en brouillon n\'est', 'formules en brouillon ne sont')} pas encore en vente.</div>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            <button class="gy-btn secondary" data-gy-plan-pick="_free"><i data-lucide="plus"></i> Vendre une autre formule</button>
+            <button class="gy-btn ghost" data-gy-addboard="services"><i data-lucide="settings"></i> ${PLANS.length ? 'Modifier mes formules' : 'Ajouter mes formules'}</button>
+          </div>
+        </div>` : ''}
         <div class="gy-abo-sec">
           <div class="gy-abo-sec-head"><i data-lucide="snowflake"></i> Gel d'abonnement</div>
           <div class="gy-freeze-card">
@@ -1121,19 +1337,41 @@
   function openSell(member, ctx) {
     ctx = ctx || {};
     const el = $('#gy-sellm', root);
+    const real = pvReal();
     const sel = {
-      plan: ctx.presetPlan || (member ? member.plan : 'mensuel'),
+      plan: ctx.presetPlan || (member ? member.plan : (PLANS[0] ? PLANS[0].id : '_free')),
       student: member ? member.student : false,
       member: member || null,
       renew: !!ctx.renew,
+      freeLabel: '', freeDays: 30, typed: '',
+    };
+    const planOf = () => (sel.plan === '_free'
+      ? { id: '_free', label: sel.freeLabel.trim() || 'Formule libre', price: 0, days: Math.max(1, Math.round(Number(sel.freeDays)) || 30), free: true }
+      : PLAN[sel.plan]);
+    const typedPrice = () => Math.round((Number(String(sel.typed).replace(',', '.')) || 0) * 100) / 100;
+    /* une formule sans prix saisi (ou libre) : la caisse demande le prix, elle n'en invente pas */
+    const needsTyped = () => real && (sel.plan === '_free' || !(PLAN[sel.plan].price > 0));
+    const priceNow = () => (needsTyped() ? typedPrice() : planPrice(sel.plan, sel.student));
+    const endNow = () => {
+      const base = sel.member && sel.member.end > new Date() ? sel.member.end : new Date();
+      return startOfDay(new Date(base.getTime() + planOf().days * DAY));
+    };
+    const paint = () => {
+      const price = priceNow();
+      const set = (id, t) => { const n = $(id, el); if (n) n.textContent = t; };
+      set('#gy-sell-totlbl', `À encaisser · valable ${fmtLong(endNow())}`);
+      set('#gy-sell-totval', fmtMAD(price));
+      set('#gy-sell-sumlbl', real ? planOf().label : `Formule ${planOf().label.toLowerCase()}`);
+      set('#gy-sell-sumval', fmtMAD(price));
+      const b = $('#gy-sell-pay', el);
+      if (b) b.innerHTML = `<i data-lucide="banknote"></i> Encaisser${price > 0 ? ' ' + esc(fmtMAD(price)) : ''}`;
+      icons();
     };
 
     const render = () => {
-      const price = planPrice(sel.plan, sel.student);
-      const p = PLAN[sel.plan];
-      /* compute the new end date: renew extends from max(today, current end) */
-      const base = sel.member && sel.member.end > new Date() ? sel.member.end : new Date();
-      const newEnd = startOfDay(new Date(base.getTime() + p.days * DAY));
+      const price = priceNow();
+      const p = planOf();
+      const newEnd = endNow();
       el.innerHTML = `
         <button class="gy-modal-x" data-gy-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${sel.renew ? 'Renouveler l\'abonnement' : 'Nouvel abonnement'}</h3>
@@ -1145,27 +1383,41 @@
             ${PLANS.map((pl) => `
               <button class="gy-plan-opt ${pl.id === sel.plan ? 'on' : ''}" data-gy-sp="${pl.id}">
                 <span class="gy-plan-opt-name">${esc(pl.label)}</span>
-                <span class="gy-plan-opt-price mono">${esc(planPrice(pl.id, sel.student))} MAD</span>
+                <span class="gy-plan-opt-price mono">${real ? (pl.price > 0 ? esc(fmtMAD(planPrice(pl.id, sel.student))) : 'prix à saisir') : esc(planPrice(pl.id, sel.student)) + ' MAD'}</span>
                 <span class="gy-plan-opt-sub">${esc(pl.sub)}</span>
               </button>`).join('')}
+            ${real ? `<button class="gy-plan-opt ${sel.plan === '_free' ? 'on' : ''}" data-gy-sp="_free">
+                <span class="gy-plan-opt-name">Autre formule</span>
+                <span class="gy-plan-opt-price mono">prix libre</span>
+                <span class="gy-plan-opt-sub">intitulé, durée et prix à saisir</span>
+              </button>` : ''}
           </div>
         </div>
 
-        <button class="gy-student-toggle ${sel.student ? 'on' : ''}" id="gy-sell-student">
+        ${needsTyped() ? `<div class="gy-f">
+          ${sel.plan === '_free'
+            ? `<div class="gy-f-lbl">Intitulé de la formule</div><input id="gy-sell-fl" style="${IN_STYLE}" maxlength="40" value="${esc(sel.freeLabel)}" placeholder="Ex. Pass 10 entrées" />
+               <div class="gy-f-lbl" style="margin-top:10px">Durée (jours)</div><input id="gy-sell-fd" type="number" inputmode="numeric" min="1" step="1" style="${IN_STYLE}" value="${esc(sel.freeDays)}" />`
+            : `<div class="gy-pass-note"><i data-lucide="info"></i> Aucun prix n'est saisi pour cette formule sur le tableau de bord : saisissez le prix de cette vente.</div>`}
+          <div class="gy-f-lbl" style="margin-top:10px">Prix (MAD)</div>
+          <input id="gy-sell-fp" type="text" inputmode="decimal" autocomplete="off" style="${IN_STYLE}" value="${esc(sel.typed)}" placeholder="0" />
+        </div>` : ''}
+
+        ${STUDENT_OFF > 0 ? `<button class="gy-student-toggle ${sel.student ? 'on' : ''}" id="gy-sell-student">
           <span class="gy-student-tick"><i data-lucide="check"></i></span>
           <span class="gy-student-l"><b>Tarif étudiant, 20 % de remise</b><span>Sur présentation de la carte étudiante</span></span>
-          <span class="gy-student-amt">${sel.student ? `−${PLAN[sel.plan].price - price} MAD` : 'appliquer'}</span>
-        </button>
+          <span class="gy-student-amt">${sel.student ? `−${p.price - price} MAD` : 'appliquer'}</span>
+        </button>` : ''}
 
         <div class="gy-sell-summary">
-          <div class="gy-sell-sum-row"><span>Formule ${esc(p.label.toLowerCase())}${sel.student ? ' · étudiant' : ''}</span><b>${esc(fmtMAD(PLAN[sel.plan].price))}</b></div>
-          ${sel.student ? `<div class="gy-sell-sum-row mut"><span>Remise étudiant −20 %</span><b>−${esc(fmtMAD(PLAN[sel.plan].price - price))}</b></div>` : ''}
-          <div class="gy-sell-sum-row total"><span>À encaisser · valable ${esc(fmtLong(newEnd))}</span><b class="mono">${esc(fmtMAD(price))}</b></div>
+          <div class="gy-sell-sum-row"><span id="gy-sell-sumlbl">${real ? esc(p.label) : `Formule ${esc(p.label.toLowerCase())}`}${sel.student ? ' · étudiant' : ''}</span><b id="gy-sell-sumval">${esc(fmtMAD(needsTyped() ? price : p.price))}</b></div>
+          ${sel.student ? `<div class="gy-sell-sum-row mut"><span>Remise étudiant −20 %</span><b>−${esc(fmtMAD(p.price - price))}</b></div>` : ''}
+          <div class="gy-sell-sum-row total"><span id="gy-sell-totlbl">À encaisser · valable ${esc(fmtLong(newEnd))}</span><b class="mono" id="gy-sell-totval">${esc(fmtMAD(price))}</b></div>
         </div>
 
         <div class="gy-sell-foot">
           <button class="gy-btn ghost" data-gy-close>Annuler</button>
-          <button class="gy-btn primary" id="gy-sell-pay"><i data-lucide="banknote"></i> Encaisser ${esc(fmtMAD(price))}</button>
+          <button class="gy-btn primary" id="gy-sell-pay"><i data-lucide="banknote"></i> Encaisser${price > 0 || !real ? ' ' + esc(fmtMAD(price)) : ''}</button>
         </div>`;
       icons();
       $$('[data-gy-close]', el).forEach((b) => { b.onclick = () => closeVeil('#gy-sell-veil'); });
@@ -1175,15 +1427,33 @@
         sel.plan = b.dataset.gySp;
         render();
       };
-      $('#gy-sell-student', el).onclick = () => { sel.student = !sel.student; render(); };
+      const st = $('#gy-sell-student', el);
+      if (st) st.onclick = () => { sel.student = !sel.student; render(); };
+      const fl = $('#gy-sell-fl', el), fd = $('#gy-sell-fd', el), fp = $('#gy-sell-fp', el);
+      if (fl) fl.oninput = () => { sel.freeLabel = fl.value; paint(); };
+      if (fd) fd.oninput = () => { sel.freeDays = fd.value; paint(); };
+      if (fp) fp.oninput = () => { sel.typed = fp.value; paint(); };
       $('#gy-sell-pay', el).onclick = () => {
-        const finalPrice = planPrice(sel.plan, sel.student);
+        if (real) {
+          if (sel.plan !== '_free' && PLAN[sel.plan].ghost) { toast('Choisissez une formule'); return; }
+          if (sel.plan === '_free' && !sel.freeLabel.trim()) { toast('Donnez un intitulé à la formule'); return; }
+          if (!(priceNow() > 0)) { toast('Saisissez le prix de cette vente'); return; }
+        }
+        const finalPrice = priceNow();
+        const endAt = endNow();
         closeVeil('#gy-sell-veil');
         openPay({
           amount: finalPrice,
           title: sel.renew ? 'Renouvellement' : 'Abonnement',
-          sub: `${sel.member ? esc(sel.member.name) : 'Nouveau membre'} · ${esc(PLAN[sel.plan].label.toLowerCase())}`,
-          onPaid: (method, rendu) => commitSell(sel, finalPrice, method, rendu, newEnd),
+          sub: `${sel.member ? esc(sel.member.name) : 'Nouveau membre'} · ${esc(planOf().label.toLowerCase())}`,
+          onPaid: (method, rendu) => {
+            if (sel.plan === '_free') {
+              sel.freeLabel = sel.freeLabel.trim();
+              sel.freeDays = planOf().days;
+              materializeFreePlan(sel, finalPrice);
+            }
+            commitSell(sel, finalPrice, method, rendu, endAt);
+          },
         });
       };
     };
@@ -1197,6 +1467,7 @@
       m.plan = sel.plan;
       m.student = sel.student;
       m.end = newEnd;
+      if (pvReal()) m.paid = price;
       if (m.frozen) { m.frozen = false; m.frozenUntil = null; }
       queueIfOffline('Renouvellement');
       toast(`${firstName(m.name)}, renouvelé ${PLAN[sel.plan].label.toLowerCase()}, jusqu'au ${fmtLong(m.end)}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1210,6 +1481,7 @@
         coach: 'Sans coach', goal: 'À définir',
       });
       m.end = newEnd;
+      if (pvReal()) m.paid = price;
       MEMBERS.push(m); MEMBER[id] = m;
       CLUB.activeBase++; CLUB.newThisMonth++;
       queueIfOffline('Nouvel abonnement');
@@ -1268,16 +1540,79 @@
   function renderShop() { renderShopGrid(); renderCart(); }
 
   function renderShopGrid() {
-    $('#gy-shop-grid', root).innerHTML = SHOP.map((s, i) => `
+    const real = pvReal();
+    let html = SHOP.map((s, i) => `
       <button class="gy-shop-card" data-gy-shop="${s.id}" style="--i:${i}" aria-label="Ajouter ${esc(s.label)}">
         ${s.flag ? `<span class="gy-shop-flag">${esc(s.flag)}</span>` : ''}
         <span class="gy-shop-art">${ART[s.art] || ''}</span>
         <span class="gy-shop-name">${esc(s.label)}</span>
-        <span class="gy-shop-price">${s.price} MAD</span>
+        <span class="gy-shop-price">${real ? (s.unset ? 'prix à saisir' : esc(fmtMAD(s.price))) : s.price + ' MAD'}</span>
       </button>`).join('');
+    if (real) {
+      html += `
+      <button class="gy-shop-card" data-gy-shop="_free" style="--i:${SHOP.length}" aria-label="Ajouter un article libre">
+        <span class="gy-shop-art">${ART.barre}</span>
+        <span class="gy-shop-name">Article libre</span>
+        <span class="gy-shop-price">prix à saisir</span>
+      </button>
+      <div style="grid-column:1/-1;padding:6px 2px 12px;font-size:13px;color:var(--ink-3,#55605a)">
+        ${SHOP.length ? '' : 'Aucun article n\'est saisi au comptoir. Ajoutez vos articles avec leur prix, ou vendez un article libre.'}
+        ${realDraft.shop ? `${realDraft.shop} ${pl(realDraft.shop, 'article en brouillon n\'est', 'articles en brouillon ne sont')} pas encore en vente.` : ''}
+        <div style="margin-top:8px"><button class="gy-btn ghost sm" data-gy-addboard="shop"><i data-lucide="settings"></i> ${SHOP.length ? 'Modifier mes articles' : 'Ajouter mes articles'}</button></div>
+      </div>`;
+    }
+    $('#gy-shop-grid', root).innerHTML = html;
   }
 
-  const cartTotal = () => state.cart.reduce((s, l) => s + SHOP_ITEM[l.id].price * l.qty, 0);
+  /* Un article du panier : le catalogue du gérant, ou une ligne libre / au prix
+     saisi qui porte elle-même son libellé et son prix. */
+  const lineItem = (l) => {
+    const it = SHOP_ITEM_T[l.id];
+    return { label: it ? it.label : (l.label || 'Article retiré'), price: l.price != null ? l.price : (it ? it.price : 0), art: it ? it.art : 'barre' };
+  };
+
+  /* Prix saisi à la caisse : un article sans prix sur le tableau de bord, un
+     article libre, un pass libre. La caisse le demande, elle n'en fixe pas. */
+  function askFree(cfg) {
+    const el = $('#gy-passm', root);
+    el.innerHTML = `
+      <button class="gy-modal-x" data-gy-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">${esc(cfg.title)}</h3>
+      <p class="modal-subtle">${esc(cfg.sub || '')}</p>
+      ${cfg.name ? `<div class="gy-f"><div class="gy-f-lbl">Intitulé</div><input id="gy-fp-name" style="${IN_STYLE}" maxlength="60" value="${esc(cfg.label || '')}" placeholder="Ex. Bouteille d'eau" /></div>` : ''}
+      <div class="gy-f"><div class="gy-f-lbl">Prix (MAD)</div><input id="gy-fp-price" type="text" inputmode="decimal" autocomplete="off" style="${IN_STYLE}" placeholder="0" /></div>
+      <div class="gy-sell-foot">
+        <button class="gy-btn ghost" data-gy-close>Annuler</button>
+        <button class="gy-btn primary" id="gy-fp-ok"><i data-lucide="check"></i> Continuer</button>
+      </div>`;
+    $$('[data-gy-close]', el).forEach((b) => { b.onclick = () => closeVeil('#gy-pass-veil'); });
+    $('#gy-fp-ok', el).onclick = () => {
+      const nm = cfg.name ? String($('#gy-fp-name', el).value || '').trim() : '';
+      const price = Math.round((Number(String($('#gy-fp-price', el).value).replace(',', '.')) || 0) * 100) / 100;
+      if (cfg.name && !nm) { toast('Donnez un intitulé'); return; }
+      if (!(price > 0)) { toast('Saisissez le prix'); return; }
+      closeVeil('#gy-pass-veil');
+      cfg.ok(nm, price);
+    };
+    openVeil('#gy-pass-veil');
+    icons();
+    const f = $(cfg.name ? '#gy-fp-name' : '#gy-fp-price', el); if (f) f.focus();
+  }
+  function askShopPrice(sid) {
+    const it = sid === '_free' ? null : SHOP_ITEM_T[sid];
+    askFree({
+      title: it ? it.label : 'Article libre',
+      sub: it ? 'Aucun prix n\'est saisi pour cet article sur le tableau de bord' : 'Un article qui n\'est pas dans votre comptoir',
+      name: !it, label: '',
+      ok: (nm, price) => {
+        if (it) state.cart.push({ id: sid, qty: 1, price });
+        else state.cart.push({ id: 'free-' + Date.now().toString(36) + (++FREE_SEQ), qty: 1, price, label: nm });
+        renderCart(); renderBadges(); icons();
+      },
+    });
+  }
+
+  const cartTotal = () => state.cart.reduce((s, l) => s + lineItem(l).price * l.qty, 0);
 
   function addToCart(id, cardEl) {
     const ln = state.cart.find((l) => l.id === id);
@@ -1303,10 +1638,10 @@
       </div>
       <div class="gy-cart-lines" id="gy-cart-lines">
         ${state.cart.length ? state.cart.map((ln, i) => {
-          const it = SHOP_ITEM[ln.id];
+          const it = lineItem(ln);
           return `<div class="gy-cart-line">
             <span class="gy-cart-art">${ART[it.art] || ''}</span>
-            <span class="gy-cart-mid"><span class="gy-cart-name">${esc(it.label)}</span><span class="gy-cart-sub">${it.price} MAD / u</span></span>
+            <span class="gy-cart-mid"><span class="gy-cart-name">${esc(it.label)}</span><span class="gy-cart-sub">${pvReal() ? esc(fmtMAD(it.price)) : it.price} ${pvReal() ? '/ u' : 'MAD / u'}</span></span>
             <span class="gy-cart-right">
               <span class="gy-cart-price">${fmtMAD(it.price * ln.qty)}</span>
               <span class="gy-cart-qty"><button data-gy-cminus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-gy-cplus="${i}" aria-label="Ajouter">+</button></span>
@@ -1329,13 +1664,13 @@
   function payCart() {
     if (!state.cart.length) return;
     const total = cartTotal();
-    const summary = state.cart.map((l) => `${l.qty} × ${SHOP_ITEM[l.id].label}`).join(' · ');
+    const summary = state.cart.map((l) => `${l.qty} × ${lineItem(l).label}`).join(' · ');
     openPay({
       amount: total,
       title: 'Comptoir',
       sub: esc(summary),
       onPaid: (method, rendu) => {
-        const lines = state.cart.map((l) => ({ itemId: l.id, name: SHOP_ITEM[l.id].label, category: 'comptoir', qty: l.qty, unit: 'piece', kind: l.id === 'coach' || l.id === 'serviette' ? 'service' : 'product', total: SHOP_ITEM[l.id].price * l.qty }));
+        const lines = state.cart.map((l) => ({ itemId: l.id, name: lineItem(l).label, category: 'comptoir', qty: l.qty, unit: 'piece', kind: l.id === 'coach' || l.id === 'serviette' ? 'service' : 'product', total: lineItem(l).price * l.qty }));
         state.cart = [];
         addRevenue('shop', total);
         postDay(total, method, `Comptoir · ${summary}`, '', lines);
@@ -1521,7 +1856,7 @@
         <div class="gy-mb-cell">
           <div class="gy-mb-cell-lbl">Formule</div>
           <div class="gy-mb-cell-val">${esc(PLAN[m.plan].label)}</div>
-          <div class="gy-mb-cell-sub">${esc(fmtMAD(planPrice(m.plan, m.student)))}${m.student ? ' · étudiant' : ''}</div>
+          <div class="gy-mb-cell-sub">${esc(fmtMAD(memberPrice(m)))}${m.student ? ' · étudiant' : ''}</div>
         </div>
         <div class="gy-mb-cell">
           <div class="gy-mb-cell-lbl">Début</div>
@@ -1604,13 +1939,13 @@
     const d = daysLeft(m);
     if (s === 'expired') {
       return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} ${pl(Math.abs(d), 'jour', 'jours')}.`
-        + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${planPrice(m.plan, m.student)} MAD) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
+        + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${fmtMAD(memberPrice(m))}) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
         + `\nUne séance et on repart fort, nchallah.`
         + `\n·${gymVenue}, via Kiwi`;
     }
     if (s === 'expiring') {
       return `Salam ${first} ! Ton abonnement ${gymVenue} se termine ${d === 0 ? "aujourd'hui" : 'dans ' + d + ' jour' + (d > 1 ? 's' : '')}.`
-        + `\nRenouvelle dès maintenant pour ne pas couper ton élan, ${PLAN[m.plan].label.toLowerCase()} à ${planPrice(m.plan, m.student)} MAD.`
+        + `\nRenouvelle dès maintenant pour ne pas couper ton élan, ${PLAN[m.plan].label.toLowerCase()} à ${fmtMAD(memberPrice(m))}.`
         + `\nObjectif « ${m.goal} » : on y est presque, lâche rien !`
         + `\n·${gymVenue}, via Kiwi`;
     }
@@ -1682,7 +2017,7 @@
     }
     if (tone === 'offre') {
       return `Salam ${first} ! Offre fidélité ${gymVenue} : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
-        + `\n${PLAN[m.plan].label} à ${planPrice(m.plan, m.student)} MAD. On t'attend !`
+        + `\n${PLAN[m.plan].label} à ${fmtMAD(memberPrice(m))}. On t'attend !`
         + `\n·${gymVenue}, via Kiwi`;
     }
     return waMessage(m);
@@ -1695,6 +2030,7 @@
   const STATE_LBL = { live: 'en cours', soon: 'commence bientôt', upcoming: 'à venir', done: 'terminé' };
 
   function renderPlanning() {
+    syncStates();
     renderWeekStrip();
     const body = $('#gy-plan-body', root);
     const order = SCHEDULE.slice().sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || a.time.localeCompare(b.time));
@@ -1705,7 +2041,7 @@
     if (!SCHEDULE.length) {
       /* Aucun cours n'existe dans cette caisse : on le dit, au lieu d'afficher
          l'horaire de démonstration comme celui du club. */
-      body.innerHTML = `<div class="gy-empty">Aucun cours collectif n'est programmé sur cette caisse. La programmation des cours n'y est pas encore disponible.</div>`;
+      body.innerHTML = `<div class="gy-empty">Aucun cours collectif n'est programmé aujourd'hui. Ajoutez vos cours (coach, horaire, salle, capacité) : ils apparaissent ici et sur le tableau de bord.<div style="margin-top:12px"><button class="gy-btn primary" data-gy-addboard="appointments"><i data-lucide="plus"></i> Ajouter un cours</button></div></div>`;
       icons();
       return;
     }
@@ -1898,6 +2234,7 @@
 
   /* ═══════════════════════ COACHS — séances perso (PT) ═══════════════════════ */
   function renderCoachs() {
+    syncStates();
     const body = $('#gy-coach-body', root);
     const totalCredits = MEMBERS.reduce((n, m) => n + m.ptCredits, 0);
     const ptToday = Object.values(PT_TODAY).reduce((s, arr) => s + arr.length, 0);
@@ -1908,7 +2245,8 @@
           <span>Vendez des packs de séances, suivez la journée de chaque coach. <b class="gy-ci-strong">${totalCredits}</b> ${pl(totalCredits, 'séance créditée', 'séances créditées')} chez les membres · <b class="gy-ci-strong">${ptToday}</b> ${pl(ptToday, 'séance perso', 'séances perso')} aujourd'hui.</span>
         </div>
       </div>
-      <div class="gy-coach-grid">${COACHES.map(coachCard).join('')}</div>`;
+      ${COACHES.length || !pvReal() ? `<div class="gy-coach-grid">${COACHES.map(coachCard).join('')}</div>` : '<div class="gy-empty">Aucun coach n\'est saisi pour cette salle. Ajoutez vos coachs sur le tableau de bord pour les retrouver ici et sur les cours.</div>'}
+      ${pvReal() ? `<div style="margin-top:12px"><button class="gy-btn ghost sm" data-gy-addboard="practitioners"><i data-lucide="settings"></i> ${COACHES.length ? 'Modifier mes coachs' : 'Ajouter mes coachs'}</button></div>` : ''}`;
     icons();
   }
 
@@ -1995,9 +2333,25 @@
   /* ───────────────────────── vendre un pack de séances ─────────────────────── */
   function openPtSell(member, coachId) {
     const el = $('#gy-ptpackm', root);
-    const sel = { pack: 'pt5', member: member || null, coach: coachId || (member && member.coach !== 'Sans coach' && COACH_BY_NAME[member.coach] ? COACH_BY_NAME[member.coach].id : null) };
+    const sel = { pack: pvReal() ? (PT_PACKS[0] ? PT_PACKS[0].id : '_free') : 'pt5', typed: '', freeN: 5, member: member || null, coach: coachId || (member && member.coach !== 'Sans coach' && COACH_BY_NAME[member.coach] ? COACH_BY_NAME[member.coach].id : null) };
+    /* pack effectif : prix du gérant, ou prix (et nombre de séances) saisis */
+    const ptEff = () => {
+      if (!pvReal()) return PT_PACKS.find((p) => p.id === sel.pack);
+      const base = sel.pack === '_free'
+        ? { id: '_free', n: 1, price: 0, sub: 'séances et prix à saisir', free: true }
+        : (PT_PACKS.find((p) => p.id === sel.pack) || { id: '_free', n: 1, price: 0, sub: 'séances et prix à saisir', free: true });
+      const typedP = Math.round((Number(String(sel.typed).replace(',', '.')) || 0) * 100) / 100;
+      const needs = !!base.free || !(base.price > 0);
+      return Object.assign({}, base, { n: base.free ? Math.max(1, Math.round(Number(sel.freeN)) || 1) : base.n, price: needs ? typedP : base.price, needsTyped: needs });
+    };
+    const paintPt = () => {
+      const k = ptEff();
+      const lbl = $('[data-gy-pt-lbl]', el); if (lbl) lbl.textContent = `${k.n} séance${k.n > 1 ? 's' : ''} de coaching${sel.coach ? ' · ' + COACH[sel.coach].name : ''}`;
+      $$('[data-gy-pt-amt]', el).forEach((n) => { n.textContent = fmtMAD(k.price); });
+      const b = $('[data-gy-pt-btn]', el); if (b) b.textContent = 'Encaisser' + (k.price > 0 ? ' ' + fmtMAD(k.price) : '');
+    };
     const render = () => {
-      const pk = PT_PACKS.find((p) => p.id === sel.pack);
+      const pk = ptEff();
       el.innerHTML = `
         <button class="gy-modal-x" data-gy-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Vendre des séances de coaching</h3>
@@ -2007,10 +2361,19 @@
             <button class="gy-plan-opt ${p.id === sel.pack ? 'on' : ''}" data-gy-pp="${p.id}">
               ${p.flag ? `<span class="gy-pp-flag">${esc(p.flag)}</span>` : ''}
               <span class="gy-plan-opt-name">${p.n} séance${p.n > 1 ? 's' : ''}</span>
-              <span class="gy-plan-opt-price mono">${esc(fmtMAD(p.price))}</span>
+              <span class="gy-plan-opt-price mono">${esc(pvReal() && !(p.price > 0) ? 'prix à saisir' : fmtMAD(p.price))}</span>
               <span class="gy-plan-opt-sub">${esc(p.sub)}</span>
-            </button>`).join('')}</div>
+            </button>`).join('')}${pvReal() ? `
+            <button class="gy-plan-opt ${sel.pack === '_free' ? 'on' : ''}" data-gy-pp="_free">
+              <span class="gy-plan-opt-name">Pack libre</span>
+              <span class="gy-plan-opt-price mono">prix libre</span>
+              <span class="gy-plan-opt-sub">séances et prix à saisir</span>
+            </button>` : ''}</div>
         </div>
+        ${pk.needsTyped ? `<div class="gy-f">
+          ${pk.free ? `<div class="gy-f-lbl">Nombre de séances</div><input id="gy-pt-n" type="number" inputmode="numeric" min="1" step="1" style="${IN_STYLE}" value="${esc(sel.freeN)}" />` : `<div class="gy-pass-note"><i data-lucide="info"></i> Aucun prix n'est saisi pour ce pack sur le tableau de bord : saisissez le prix de cette vente.</div>`}
+          <div class="gy-f-lbl" style="margin-top:10px">Prix (MAD)</div><input id="gy-pt-p" type="text" inputmode="decimal" autocomplete="off" style="${IN_STYLE}" value="${esc(sel.typed)}" placeholder="0" />
+        </div>` : ''}
         <div class="gy-f"><div class="gy-f-lbl">Membre</div>
           <button class="gy-ptsell-mem ${sel.member ? 'set' : ''}" id="gy-pt-mem">
             ${sel.member
@@ -2022,14 +2385,17 @@
           <div class="gy-coach-chips">${COACHES.map((c) => `<button class="gy-coach-chip ${sel.coach === c.id ? 'on' : ''}" data-gy-cc="${c.id}">${esc(c.name)}</button>`).join('')}</div>
         </div>
         <div class="gy-sell-summary">
-          <div class="gy-sell-sum-row"><span>${pk.n} séance${pk.n > 1 ? 's' : ''} de coaching${sel.coach ? ' · ' + esc(COACH[sel.coach].name) : ''}</span><b>${esc(fmtMAD(pk.price))}</b></div>
-          <div class="gy-sell-sum-row total"><span>À encaisser</span><b class="mono">${esc(fmtMAD(pk.price))}</b></div>
+          <div class="gy-sell-sum-row"><span data-gy-pt-lbl>${pk.n} séance${pk.n > 1 ? 's' : ''} de coaching${sel.coach ? ' · ' + esc(COACH[sel.coach].name) : ''}</span><b data-gy-pt-amt>${esc(fmtMAD(pk.price))}</b></div>
+          <div class="gy-sell-sum-row total"><span>À encaisser</span><b class="mono" data-gy-pt-amt>${esc(fmtMAD(pk.price))}</b></div>
         </div>
         <div class="gy-sell-foot">
           <button class="gy-btn ghost" data-gy-close>Annuler</button>
-          <button class="gy-btn primary" id="gy-pt-pay" ${sel.member ? '' : 'disabled'}><i data-lucide="banknote"></i> Encaisser ${esc(fmtMAD(pk.price))}</button>
+          <button class="gy-btn primary" id="gy-pt-pay" ${sel.member ? '' : 'disabled'}><i data-lucide="banknote"></i> <span data-gy-pt-btn>Encaisser${pk.price > 0 || !pvReal() ? ' ' + esc(fmtMAD(pk.price)) : ''}</span></button>
         </div>`;
       icons();
+      const ptn = $('#gy-pt-n', el), ptp = $('#gy-pt-p', el);
+      if (ptn) ptn.oninput = () => { sel.freeN = ptn.value; paintPt(); };
+      if (ptp) ptp.oninput = () => { sel.typed = ptp.value; paintPt(); };
       $$('[data-gy-close]', el).forEach((b) => { b.onclick = () => closeVeil('#gy-ptpack-veil'); });
       $$('[data-gy-pp]', el).forEach((b) => { b.onclick = () => { sel.pack = b.dataset.gyPp; render(); }; });
       $$('[data-gy-cc]', el).forEach((b) => { b.onclick = () => { sel.coach = sel.coach === b.dataset.gyCc ? null : b.dataset.gyCc; render(); }; });
@@ -2046,19 +2412,21 @@
       };
       const pay = $('#gy-pt-pay', el);
       if (pay) pay.onclick = () => {
+        const pkN = ptEff();
+        if (pvReal() && !(pkN.price > 0)) { toast('Saisissez le prix du pack'); return; }
         closeVeil('#gy-ptpack-veil');
         openPay({
-          amount: pk.price, title: 'Séances de coaching',
-          sub: `${esc(sel.member.name)} · ${pk.n} séance${pk.n > 1 ? 's' : ''}`,
+          amount: pkN.price, title: 'Séances de coaching',
+          sub: `${esc(sel.member.name)} · ${pkN.n} séance${pkN.n > 1 ? 's' : ''}`,
           onPaid: (method, rendu) => {
-            sel.member.ptCredits += pk.n;
+            sel.member.ptCredits += pkN.n;
             if (sel.coach && sel.member.coach === 'Sans coach') sel.member.coach = COACH[sel.coach].name;
-            addRevenue('coaching', pk.price);
-            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '', [
-              { itemId: pk.id, variantId: sel.coach || '', name: `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''}`, category: 'coaching', qty: pk.n, unit: 'seance', kind: 'service', total: pk.price },
+            addRevenue('coaching', pkN.price);
+            postDay(pkN.price, method, `Coaching · ${pkN.n} séance${pkN.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '', [
+              { itemId: pkN.id, variantId: sel.coach || '', name: `Coaching · ${pkN.n} séance${pkN.n > 1 ? 's' : ''}`, category: 'coaching', qty: pkN.n, unit: 'seance', kind: 'service', total: pkN.price },
             ]);
             queueIfOffline('Vente séances coaching');
-            toast(`${firstName(sel.member.name)}, ${pk.n} séance${pk.n > 1 ? 's' : ''} ajoutée${pk.n > 1 ? 's' : ''}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+            toast(`${firstName(sel.member.name)}, ${pkN.n} séance${pkN.n > 1 ? 's' : ''} ajoutée${pkN.n > 1 ? 's' : ''}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();
           },
         });
@@ -2173,8 +2541,11 @@
     { id: 'jour',   label: 'Pass journée',  price: 80, sub: 'accès illimité · journée', flag: 'tout compris' },
     { id: 'duo',    label: 'Pass duo',      price: 90, sub: '2 personnes · 1 séance' },
   ];
+  /* real store : les pass sont ceux du gérant (50 / 80 / 90 MAD étaient ceux de la démo). */
+  if (pvReal()) DAY_PASSES.length = 0;
   function openDayPass() {
     const el = $('#gy-passm', root);
+    const real = pvReal();
     el.innerHTML = `
       <button class="gy-modal-x" data-gy-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Séance unique / Pass journée</h3>
@@ -2184,35 +2555,57 @@
           ${p.flag ? `<span class="gy-shop-flag">${esc(p.flag)}</span>` : ''}
           <span class="gy-pass-art">${ART.pass}</span>
           <span class="gy-pass-name">${esc(p.label)}</span>
-          <span class="gy-pass-price"><b>${p.price}</b> MAD</span>
+          <span class="gy-pass-price">${real && !(p.price > 0) ? '<b style="font-size:14px">prix à saisir</b>' : `<b>${real ? esc(numTxt(p.price)) : p.price}</b> MAD`}</span>
           <span class="gy-pass-sub">${esc(p.sub)}</span>
-        </button>`).join('')}</div>
+        </button>`).join('')}${real ? `
+        <button class="gy-pass-card" data-gy-pass="_free">
+          <span class="gy-pass-art">${ART.pass}</span>
+          <span class="gy-pass-name">Pass libre</span>
+          <span class="gy-pass-price"><b style="font-size:14px">prix à saisir</b></span>
+          <span class="gy-pass-sub">intitulé et prix à saisir</span>
+        </button>` : ''}</div>
+      ${real ? `<div class="gy-pass-note"><i data-lucide="info"></i> ${DAY_PASSES.length ? 'Vos séances uniques et pass viennent du tableau de bord.' : 'Aucun pass n\'est saisi sur le tableau de bord : vendez un pass libre, ou ajoutez vos pass avec leur prix.'} <button class="gy-btn ghost sm" data-gy-addboard="shop">${DAY_PASSES.length ? 'Modifier' : 'Ajouter mes pass'}</button></div>` : ''}
       <div class="gy-pass-note"><i data-lucide="info"></i> Le pass ouvre le tourniquet une fois. Proposez l'abonnement si le visiteur revient, c'est là que la conversion se joue.</div>`;
     openVeil('#gy-pass-veil');
     icons();
     $$('[data-gy-close]', el).forEach((b) => { b.onclick = () => closeVeil('#gy-pass-veil'); });
+    const sellPass = (p) => {
+      openPay({
+        amount: p.price, title: p.label, sub: 'Accès visiteur, sans abonnement',
+        onPaid: (method, rendu) => {
+          rollDay();
+          const heads = p.id === 'duo' ? 2 : (p.persons || 1);
+          BASE_PASSAGES += heads;
+          state.passesToday += 1;
+          state.inGym += heads;
+          peakAdd(heads);
+          addRevenue('pass', p.price);
+          postDay(p.price, method, `Pass · ${p.label}`, '', [
+            { itemId: `pass-${p.id}`, name: p.label, category: 'pass', qty: 1, unit: 'pass', kind: 'service', total: p.price },
+          ]);
+          queueIfOffline('Séance unique / pass');
+          toast(`${p.label} vendu, accès ouvert${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+          refreshOps();
+          if (state.view === 'checkin') renderCounter();
+        },
+      });
+    };
     $$('[data-gy-pass]', el).forEach((b) => {
       b.onclick = () => {
-        const p = DAY_PASSES.find((x) => x.id === b.dataset.gyPass);
+        const id = b.dataset.gyPass;
+        const p0 = id === '_free' ? { id: 'free', label: 'Pass libre', price: 0, persons: 1, free: true } : DAY_PASSES.find((x) => x.id === id);
+        if (!p0) return;
         closeVeil('#gy-pass-veil');
-        openPay({
-          amount: p.price, title: p.label, sub: 'Accès visiteur, sans abonnement',
-          onPaid: (method, rendu) => {
-            rollDay();
-            BASE_PASSAGES += (p.id === 'duo' ? 2 : 1);
-            state.passesToday += 1;
-            state.inGym += (p.id === 'duo' ? 2 : 1);
-            peakAdd(p.id === 'duo' ? 2 : 1);
-            addRevenue('pass', p.price);
-            postDay(p.price, method, `Pass · ${p.label}`, '', [
-              { itemId: `pass-${p.id}`, name: p.label, category: 'pass', qty: 1, unit: 'pass', kind: 'service', total: p.price },
-            ]);
-            queueIfOffline('Séance unique / pass');
-            toast(`${p.label} vendu, accès ouvert${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
-            refreshOps();
-            if (state.view === 'checkin') renderCounter();
-          },
-        });
+        if (real && (p0.free || !(p0.price > 0))) {
+          askFree({
+            title: p0.free ? 'Pass libre' : p0.label,
+            sub: p0.free ? 'Un pass qui n\'est pas dans votre liste' : 'Aucun prix n\'est saisi pour ce pass sur le tableau de bord',
+            name: !!p0.free, label: p0.free ? '' : p0.label,
+            ok: (nm, price) => sellPass(Object.assign({}, p0, { label: nm || p0.label, price })),
+          });
+          return;
+        }
+        sellPass(p0);
       };
     });
   }

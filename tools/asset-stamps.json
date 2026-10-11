@@ -696,16 +696,16 @@
     "sha": "a6c3f4556b4ac6a7"
   },
   "assets/pos-coiffure.css": {
-    "v": "6",
+    "v": "7",
     "sha": "8e3713916dc1f3ab"
   },
   "assets/pos-coiffure.js": {
-    "v": "6",
-    "sha": "c72c86666bbe7bdc"
+    "v": "7",
+    "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "78",
-    "sha": "7c13228c35c9e26c"
+    "v": "79",
+    "sha": "7b5b1a3d8b6978a7"
   },
   "assets/pos-epicerie.css": {
     "v": "6",
@@ -724,12 +724,12 @@
     "sha": "50a2d3c75f7962f3"
   },
   "assets/pos-fleuriste.css": {
-    "v": "8",
+    "v": "9",
     "sha": "c2b364c5627b7afd"
   },
   "assets/pos-fleuriste.js": {
-    "v": "8",
-    "sha": "a51f2b59ce4c28a0"
+    "v": "9",
+    "sha": "b0c7c5e428768434"
   },
   "assets/pos-foodtruck.css": {
     "v": "7",
@@ -740,12 +740,12 @@
     "sha": "597c54c0b6528fe5"
   },
   "assets/pos-gym.css": {
-    "v": "6",
+    "v": "7",
     "sha": "afcedd82cdc715c3"
   },
   "assets/pos-gym.js": {
-    "v": "6",
-    "sha": "8cb58fb149cb81c0"
+    "v": "7",
+    "sha": "c259fdd2afc1db2d"
   },
   "assets/pos-hotel.css": {
     "v": "17",
@@ -808,12 +808,12 @@
     "sha": "dcd8b453855c92ab"
   },
   "assets/pos-spa.css": {
-    "v": "6",
+    "v": "7",
     "sha": "9d7374ff923841b1"
   },
   "assets/pos-spa.js": {
-    "v": "6",
-    "sha": "e5cc5e0a9771b6dc"
+    "v": "7",
+    "sha": "7a0e3f88e251c0fe"
   },
   "assets/pos-traiteur.css": {
     "v": "7",
@@ -828,8 +828,8 @@
     "sha": "c667db1491956d82"
   },
   "assets/pos-workspaces.js": {
-    "v": "5",
-    "sha": "db013f562c2367ef"
+    "v": "6",
+    "sha": "30c1c4dd0b50c2ce"
   },
   "assets/pressing-caisse.css": {
     "v": "41",
@@ -996,16 +996,16 @@
     "sha": "27e6fd8ef97f9f49"
   },
   "assets/trade-workspace-schema.js": {
-    "v": "4",
-    "sha": "4b5bd14061b03143"
+    "v": "5",
+    "sha": "f1ad3e287cbd2e34"
   },
   "assets/trade-workspaces.css": {
     "v": "6",
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "6",
-    "sha": "c2f9fc9a9958f964"
+    "v": "7",
+    "sha": "bd57dd8fbe27a3b8"
   },
   "assets/trades.js": {
     "v": "6",
@@ -1028,8 +1028,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "43",
-    "sha": "577f7848aac1ec14"
+    "v": "44",
+    "sha": "185f2a61adddccd0"
   },
   "assets/vertical-state.js": {
     "v": "3",

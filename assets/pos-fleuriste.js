@@ -102,7 +102,20 @@
     { id: 'gypsophile',  label: 'Gypsophile',  price: 6,  color: '#EDEDE8', note: 'la touche nuage' },
     { id: 'eucalyptus',  label: 'Eucalyptus',  price: 5,  color: '#6E8A6E', note: 'feuillage' },
   ];
-  const STEM = Object.fromEntries(STEMS.map((s) => [s.id, s]));
+  /* Fleuriste réel : les fleurs et leurs prix sont CEUX DU COMMERÇANT (catalogue
+     de l'inventaire du tableau de bord, KiwiBoutiqueCatalog), relus par
+     refreshReal(). 8 MAD la rose, 15 la pivoine, 12 le lys étaient les prix de
+     Tanger 2026, vendus sans que le fleuriste les ait jamais saisis. Une fleur
+     sans prix se vend à un prix saisi ; sans catalogue, la caisse le dit. Une
+     fleur retirée depuis reste lisible sur un bouquet en cours (fiche fantôme). */
+  if (pvReal()) STEMS.length = 0;
+  const STEM_T = Object.fromEntries(STEMS.map((s) => [s.id, s]));
+  const STEM = pvReal() ? new Proxy(STEM_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Fleur retirée', price: 0, color: '#8A948F', ghost: true };
+    },
+  }) : STEM_T;
 
   /* bouquets signatures — composition figée, prix forfaitaire */
   /* Session réelle : aucun bouquet signature. « Bouquet Détroit » (180 MAD) et
@@ -122,7 +135,16 @@
     { id: 'kraft', label: 'Kraft', price: 10 },
     { id: 'satin', label: 'Satin', price: 15 },
   ];
-  const WRAP = Object.fromEntries(WRAPS.map((w) => [w.id, w]));
+  /* Réel : « Kraft 10 MAD » et « Satin 15 MAD » sont de la démo. Un emballage
+     réel est un article du catalogue (papier, kraft, satin, ruban) à son prix. */
+  if (pvReal()) WRAPS.splice(1, WRAPS.length);
+  const WRAP_T = Object.fromEntries(WRAPS.map((w) => [w.id, w]));
+  const WRAP = pvReal() ? new Proxy(WRAP_T, {
+    get(t, k) {
+      if (typeof k !== 'string' || k in t) return t[k];
+      return { id: k, label: 'Emballage retiré', price: 0, ghost: true };
+    },
+  }) : WRAP_T;
 
   /* ───────────────────────── occasions ─────────────────────────
      Le deuil change la copie : ton sobre, pas de festivité, pas d'emoji. */
@@ -239,9 +261,9 @@
     { id: 'gypsophile',  qty: 80,  fresh: 'today', sale: true,  batch: 'Bottes ouvertes, à écouler' },
     { id: 'tournesol',   qty: 18,  fresh: 'fresh', sale: false },
   ];
-  const ARRIVALS = pvReal()
-    ? ['rose_rouge', 'pivoine', 'tulipe', 'lys', 'renoncule', 'gypsophile', 'tournesol'].map((id) => ({ id, qty: null, fresh: null, sale: false }))
-    : ARRIVALS_DEMO;
+  /* Réel : une ligne par fleur du catalogue (refreshReal), quantité et fraîcheur
+     non suivies. Les sept variétés de la démo n'existent pas chez un vrai fleuriste. */
+  const ARRIVALS = pvReal() ? [] : ARRIVALS_DEMO;
   const SALE_RATE = 0.30;
   const FRESH = {
     fresh: { label: 'Fraîche', sub: 'tient 4–5 jours' },
@@ -290,10 +312,12 @@
     const stems = bqStemsTotal(b);
     const presets = bqPresetsTotal(b);
     const wrap = WRAP[b.wrap].price;
-    const sub = Math.round(stems + presets + wrap);
+    /* réel : au centime, un prix saisi à 8,50 ne devient pas 9 */
+    const rd = (x) => (pvReal() ? Math.round(x * 100) / 100 : Math.round(x));
+    const sub = rd(stems + presets + wrap);
     const b2b = b.customer && b.customer.type === 'known' && CUST[b.customer.id] && CUST[b.customer.id].b2b;
-    const remise = b2b ? Math.round(sub * B2B_REMISE) : 0;
-    return { stems: Math.round(stems), presets, wrap, sub, remise, total: sub - remise, b2b };
+    const remise = b2b ? rd(sub * B2B_REMISE) : 0;
+    return { stems: rd(stems), presets, wrap, sub, remise, total: rd(sub - remise), b2b };
   }
   function bqSize(n) {
     if (n <= 0) return null;
@@ -309,7 +333,7 @@
   function saleActive(stemId) { return !!saleState[stemId]; }
   function unitPrice(stemId) {
     const base = STEM[stemId].price;
-    return saleActive(stemId) ? Math.round(base * (1 - SALE_RATE)) : base;
+    return saleActive(stemId) ? (pvReal() ? Math.round(base * (1 - SALE_RATE) * 100) / 100 : Math.round(base * (1 - SALE_RATE))) : base;
   }
 
   function findDelivery(id) { return DELIVERIES.find((d) => d.id === id); }
@@ -381,6 +405,106 @@
      même numéro. Démo : journal vide, aucun effet. */
   try { if (window.KiwiPosSale) bouquetSeq = window.KiwiPosSale.nextSeq('fleuriste', bouquetSeq); } catch (_) {}
 
+  /* ───────────── Fleuriste réel : les fleurs du catalogue du commerçant ─────────────
+     Le tableau de bord tient le catalogue (inventaire : nom, prix) dans
+     KiwiBoutiqueCatalog, sous la clé du commerçant ; la caisse le relit au lieu de
+     vendre la carte de la démo. Un article dont le nom dit « emballage / papier /
+     kraft / satin / ruban » devient un choix d'emballage, les autres des fleurs. */
+  const FREE_STEMS = [];
+  const STEM_PRICES = {};
+  let freeSeq = 0;
+  let realSig = '';
+  const slug = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '');
+  const WRAP_RX = /emball|papier|kraft|satin|ruban|wrap/i;
+  const STEM_COLORS = ['#A8423A', '#D98AA0', '#E0A24C', '#6E8A6E', '#C75D6E', '#E2B33A', '#C98AA8', '#8A6EA8', '#4C8A8A', '#B0875A'];
+  const numTxt = (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+  const mad = (n) => (pvReal() ? numTxt(n) : String(n));
+  function catalogKey() {
+    const pv = pvPaired();
+    return (pvReal() && pv && pv.merchant) || window.__kiwiPairedBoutiqueVenue || (pv && (pv.venueId || pv.merchant)) || (pvReal() ? 'boutique-live' : '');
+  }
+  function realCatalog() {
+    const C = window.KiwiBoutiqueCatalog;
+    if (!C || !C.listProducts) return null;
+    const cats = {};
+    try { (C.listCategories() || []).forEach((c) => { cats[c.id] = c.name || ''; }); } catch (_) {}
+    const stems = [], wraps = [];
+    (C.listProducts() || []).forEach((pr, i) => {
+      const id = slug(pr.id);
+      const price = Math.round((+pr.priceMAD || 0) * 100) / 100;
+      const name = String(pr.name || '').trim();
+      if (!name) return;
+      if (WRAP_RX.test(name + ' ' + (cats[pr.categoryId] || ''))) { wraps.push({ id: 'w-' + id, label: name, price }); return; }
+      const typed = STEM_PRICES['p-' + id];
+      const eff = price > 0 ? price : (typed > 0 ? typed : 0);
+      stems.push({ id: 'p-' + id, label: name, price: eff, color: STEM_COLORS[i % STEM_COLORS.length], unset: !(eff > 0), note: cats[pr.categoryId] || '' });
+    });
+    return { stems, wraps };
+  }
+  /* Relit le catalogue du commerçant ; vrai quand quelque chose a changé. */
+  function refreshReal(force) {
+    if (!pvReal()) return false;
+    const c = realCatalog();
+    if (!c) return false;
+    const sig = JSON.stringify([c, FREE_STEMS]);
+    if (!force && sig === realSig) return false;
+    realSig = sig;
+    const fill = (arr, map, list) => { arr.splice(0, arr.length, ...list); Object.keys(map).forEach((k) => { delete map[k]; }); arr.forEach((x) => { map[x.id] = x; }); };
+    fill(STEMS, STEM_T, c.stems.concat(FREE_STEMS));
+    fill(WRAPS, WRAP_T, [{ id: 'none', label: 'Sans', price: 0 }].concat(c.wraps));
+    /* une ligne d'arrivage par fleur ; l'état « à écouler » suit saleState */
+    const next = STEMS.map((st) => ({ id: st.id, qty: null, fresh: null, sale: !!saleState[st.id] }));
+    ARRIVALS.splice(0, ARRIVALS.length, ...next);
+    ARRIVALS.forEach((a) => { if (!(a.id in saleState)) saleState[a.id] = false; });
+    if (state.cat === 'signature' && !PRESETS.length) state.cat = 'tous';
+    return true;
+  }
+  /* Fleur libre / prix à saisir : la caisse demande, elle ne fixe pas. */
+  function askFlower(cfg) {
+    const el = $('#fl-sheetm', root);
+    el.innerHTML = `
+      <button class="fl-modal-x" data-fl-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="fl-sheet-head"><span class="fl-sheet-title"><h3>${esc(cfg.title)}</h3><span class="sub">${esc(cfg.sub || '')}</span></span></div>
+      ${cfg.name ? `<div class="fl-f"><div class="fl-f-lbl">Intitulé</div><input class="fl-in" id="fl-fp-name" maxlength="60" value="" placeholder="Ex. Orchidée" style="${'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(10,15,13,.16);border-radius:10px;font:inherit;font-size:15px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)'}" /></div>` : ''}
+      <div class="fl-f" style="margin-top:10px"><div class="fl-f-lbl">Prix à la tige (MAD)</div><input class="fl-in" id="fl-fp-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0" style="${'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(10,15,13,.16);border-radius:10px;font:inherit;font-size:15px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)'}" /></div>
+      <div class="fl-sheet-foot">
+        <button class="fl-btn secondary" data-fl-close>Annuler</button>
+        <button class="fl-btn primary" id="fl-fp-ok"><i data-lucide="check"></i>Continuer</button>
+      </div>`;
+    $$('[data-fl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#fl-sheet-veil'); });
+    $('#fl-fp-ok', el).onclick = () => {
+      const nm = cfg.name ? String($('#fl-fp-name', el).value || '').trim() : '';
+      const price = Math.round((Number(String($('#fl-fp-price', el).value).replace(',', '.')) || 0) * 100) / 100;
+      if (cfg.name && !nm) { toast('Donnez un intitulé'); return; }
+      if (!(price > 0)) { toast('Saisissez le prix'); return; }
+      closeVeil('#fl-sheet-veil');
+      cfg.ok(nm, price);
+    };
+    openVeil('#fl-sheet-veil');
+    icons();
+    const f = $(cfg.name ? '#fl-fp-name' : '#fl-fp-price', el); if (f) f.focus();
+  }
+  function askFreeStem() {
+    askFlower({
+      title: 'Fleur libre', sub: 'Une fleur qui n\'est pas dans votre catalogue', name: true,
+      ok: (nm, price) => {
+        const id = 'free:' + Date.now().toString(36) + (++freeSeq);
+        const st = { id, label: nm, price, color: '#8A948F', free: true };
+        FREE_STEMS.push(st); STEM_T[id] = st; STEMS.push(st);
+        ARRIVALS.push({ id, qty: null, fresh: null, sale: false }); saleState[id] = false;
+        openStemSheet(id);
+      },
+    });
+  }
+  /* repeint quand le catalogue change, jamais sous une feuille ouverte */
+  let pendingRepaint = false;
+  function repaintReal() {
+    if (!root) return;
+    if ($$('.modal-veil.is-open', root).length) { pendingRepaint = true; return; }
+    pendingRepaint = false;
+    renderAll();
+  }
+
   const fleuristeOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
     vertical: 'fleuriste',
     snapshot() {
@@ -388,6 +512,7 @@
         customers: CUSTOMERS,
         deliveries: DELIVERIES,
         arrivals: ARRIVALS,
+        ...(pvReal() ? { stemPrices: STEM_PRICES, freeStems: FREE_STEMS, freeSeq } : {}),
         saleState,
         /* v:2 = une session réelle n'écrit plus les arrivages de démo. */
         v: 2,
@@ -415,6 +540,11 @@
         Object.keys(saleState).forEach((id) => delete saleState[id]);
         Object.assign(saleState, saved.saleState);
       }
+      if (pvReal()) {
+        if (saved.stemPrices && typeof saved.stemPrices === 'object') Object.assign(STEM_PRICES, saved.stemPrices);
+        if (Array.isArray(saved.freeStems)) FREE_STEMS.splice(0, FREE_STEMS.length, ...saved.freeStems.filter((x) => x && x.id));
+        freeSeq = Math.max(freeSeq, +saved.freeSeq || 0);
+      }
       if (Number.isFinite(saved.deliverySeq)) deliverySeq = saved.deliverySeq;
       if (Number.isFinite(saved.bouquetSeq)) bouquetSeq = saved.bouquetSeq;
       if (saved.bouquet) state.bouquet = saved.bouquet;
@@ -425,6 +555,16 @@
   function mount(rootEl) {
     if (fleuristeOps) fleuristeOps.hydrate();
     root = rootEl;
+    if (pvReal()) {
+      /* le catalogue de CE commerçant, sous la clé que le tableau de bord écrit */
+      try { const key = catalogKey(); if (key && window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.use) window.KiwiBoutiqueCatalog.use(key); } catch (_) {}
+      refreshReal(true);
+      const C = window.KiwiBoutiqueCatalog;
+      if (C && C.subscribe && !mount._ws) {
+        mount._ws = true;
+        C.subscribe(() => { if (refreshReal() && root) repaintReal(); });
+      }
+    }
     bindNet();
     if (!state.bouquet) freshBouquet();
     root.innerHTML = `
@@ -494,7 +634,7 @@
   }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
-  function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
+  function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); if (pendingRepaint) repaintReal(); }
 
   /* ═══════════════════════ NAV / GLOBAL RENDER ═══════════════════════ */
   function switchView(view) {
@@ -555,7 +695,7 @@
       ${n ? `<span class="fl-card-count">${n}</span>` : ''}
       <span class="fl-card-art">${ART[s.id] || ''}</span>
       <span class="fl-card-name">${esc(s.label)}</span>
-      <span class="fl-card-price">${u} MAD / tige${onSale ? ` · <s style="opacity:.6">${s.price}</s>` : ''}</span>
+      <span class="fl-card-price">${pvReal() && s.unset ? 'prix à saisir' : `${mad(u)} MAD / tige${onSale ? ` · <s style="opacity:.6">${mad(s.price)}</s>` : ''}`}</span>
       ${onSale ? '<span class="fl-card-flag sale">à écouler −30 %</span>' : (s.flag ? `<span class="fl-card-flag">${esc(s.flag)}</span>` : '')}
       <span class="fl-card-quick" data-fl-stem-minus="${s.id}" aria-label="Retirer une tige">−</span>
     </button>`;
@@ -577,7 +717,8 @@
     if (state.cat === 'tous' || state.cat === 'signature') {
       if (state.cat === 'tous') {
         if (PRESETS.length) html += `<div class="fl-grid-head">Bouquets signatures</div><div class="fl-grid">${PRESETS.map((p) => presetCard(p, i++)).join('')}</div>`;
-        html += `<div class="fl-grid-head">Tiges, au détail</div><div class="fl-grid">${STEMS.map((s) => stemCard(s, i++)).join('')}</div>`;
+        html += `<div class="fl-grid-head">Tiges, au détail</div><div class="fl-grid">${STEMS.map((s) => stemCard(s, i++)).join('')}${pvReal() ? `<button class="fl-card" data-fl-free="stem" style="--i:${i++}"><span class="fl-card-art"></span><span class="fl-card-name">Fleur libre</span><span class="fl-card-price">prix à saisir</span></button>` : ''}</div>`;
+        if (pvReal() && !STEMS.length) html += `<div class="fl-bq-empty" style="padding:30px 0;"><i data-lucide="sprout"></i><div>Aucune fleur n'est saisie pour ce fleuriste.<br>Ajoutez vos fleurs et leurs prix dans l'inventaire du tableau de bord, ou vendez une fleur libre.</div></div>`;
       } else {
         html += `<div class="fl-grid-head">Bouquets signatures, composition figée</div><div class="fl-grid">${PRESETS.map((p) => presetCard(p, i++)).join('')}</div>`;
       }
@@ -596,6 +737,8 @@
         removeStem(minus.dataset.flStemMinus);
         return;
       }
+      const free = e.target.closest('[data-fl-free]');
+      if (free) { askFreeStem(); return; }
       const stem = e.target.closest('[data-fl-stem]');
       if (stem) { openStemSheet(stem.dataset.flStem); return; }
       const preset = e.target.closest('[data-fl-preset]');
@@ -630,7 +773,7 @@
   function openStemSheet(stemId) {
     const s = STEM[stemId];
     const onSale = saleActive(stemId);
-    const u = unitPrice(stemId);
+    let u = unitPrice(stemId);
     let n = state.bouquet.stems[stemId] || 1;
     const el = $('#fl-sheetm', root);
     const render = () => {
@@ -641,9 +784,10 @@
           <span class="fl-sheet-title"><h3>${esc(s.label)}</h3><span class="sub">${onSale ? 'À écouler, reprisée −30 %' : (s.note ? esc(s.note) : 'à la tige')}</span></span>
           <span class="fl-sheet-price">
             <span class="val" id="fl-sheet-total">${fmtMAD(u * n)}</span>
-            <span class="per">${onSale ? `<span class="was">${s.price}</span> ` : ''}${u} MAD × ${n}</span>
+            <span class="per">${onSale ? `<span class="was">${mad(s.price)}</span> ` : ''}${pvReal() && s.unset ? 'prix à saisir' : `${mad(u)} MAD × ${n}`}</span>
           </span>
         </div>
+        ${pvReal() && s.unset ? `<div class="fl-f" style="margin-bottom:12px"><div class="fl-f-lbl">Prix à la tige (MAD) <span class="opt">· aucun prix saisi dans l'inventaire</span></div><input class="fl-in" id="fl-sheet-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0" style="${'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(10,15,13,.16);border-radius:10px;font:inherit;font-size:15px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)'}" /></div>` : ''}
         <div class="fl-stepper-big">
           <button id="fl-sheet-minus" aria-label="Moins">−</button>
           <span class="ct"><b id="fl-sheet-n">${n}</b><span>tige${n > 1 ? 's' : ''}</span></span>
@@ -658,11 +802,22 @@
         $('#fl-sheet-n', el).textContent = n;
         $('#fl-sheet-cta', el).textContent = n;
         $('.fl-stepper-big .ct span', el).textContent = `tige${n > 1 ? 's' : ''}`;
-        $('.fl-sheet-price .per', el).innerHTML = `${onSale ? `<span class="was">${s.price}</span> ` : ''}${u} MAD × ${n}`;
+        $('.fl-sheet-price .per', el).innerHTML = `${onSale ? `<span class="was">${mad(s.price)}</span> ` : ''}${pvReal() && s.unset ? 'prix à saisir' : `${mad(u)} MAD × ${n}`}`;
+      };
+      const pin = $('#fl-sheet-price', el);
+      if (pin) pin.oninput = () => {
+        u = Math.round((Number(String(pin.value).replace(',', '.')) || 0) * 100) / 100;
+        $('#fl-sheet-total', el).textContent = fmtMAD(u * n);
+        $('.fl-sheet-price .per', el).innerHTML = u > 0 ? `${mad(u)} MAD × ${n}` : 'prix à saisir';
       };
       $('#fl-sheet-minus', el).onclick = () => { if (n > 1) { n--; refresh(); } };
       $('#fl-sheet-plus', el).onclick = () => { n++; refresh(); };
       $('#fl-sheet-set', el).onclick = () => {
+        if (pvReal() && s.unset) {
+          if (!(u > 0)) { toast('Saisissez le prix de la fleur'); return; }
+          /* le prix saisi suit cette fleur sur cette caisse (le catalogue n'en a pas) */
+          s.price = u; s.unset = false; STEM_PRICES[stemId] = u; realSig = '';
+        }
         state.bouquet.stems[stemId] = n;
         closeVeil('#fl-sheet-veil');
         toast(`${s.label} × ${n}, sur le bouquet`);
@@ -716,12 +871,12 @@
           ${Object.keys(b.stems).map((id) => stemLine(id)).join('')}`}
       </div>
 
-      <div class="fl-wrap">
+      ${pvReal() && WRAPS.length < 2 ? '' : `<div class="fl-wrap">
         <div class="fl-wrap-lbl">Emballage</div>
         <div class="fl-wrap-opts" id="fl-wrap-opts">
-          ${WRAPS.map((w) => `<button class="fl-wrap-opt ${b.wrap === w.id ? 'on' : ''}" data-fl-wrap="${w.id}"><b>${esc(w.label)}</b><span>${w.price ? '+' + w.price + ' MAD' : 'inclus'}</span></button>`).join('')}
+          ${WRAPS.map((w) => `<button class="fl-wrap-opt ${b.wrap === w.id ? 'on' : ''}" data-fl-wrap="${w.id}"><b>${esc(w.label)}</b><span>${w.price ? '+' + mad(w.price) + ' MAD' : 'inclus'}</span></button>`).join('')}
         </div>
-      </div>
+      </div>`}
 
       <div class="fl-bq-foot">
         <div class="fl-bq-row">
@@ -763,7 +918,7 @@
       <span class="fl-line-art">${ART[id] || ''}</span>
       <span class="fl-line-mid">
         <span class="fl-line-name">${esc(s.label)}</span>
-        <span class="fl-line-sub"><span class="unit">${u} MAD</span> / tige${onSale ? ' · à écouler' : ''}</span>
+        <span class="fl-line-sub"><span class="unit">${mad(u)} MAD</span> / tige${onSale ? ' · à écouler' : ''}</span>
       </span>
       <span class="fl-line-right">
         <span class="fl-line-price">${fmtMAD(u * n)}</span>
@@ -905,8 +1060,8 @@
     const occ = OCC[b.occ];
     const loose = bqLooseCount(b);
     return `<div class="fl-receipt">
-      <div class="c b lg">FLEURS DU DÉTROIT</div>
-      <div class="c mut">Marché central, Tanger<br>05 39 33 XX XX · propulsé par Kiwi</div>
+      <div class="c b lg">${pvReal() ? esc(String(pvName('') || 'Ma boutique').toUpperCase()) : 'FLEURS DU DÉTROIT'}</div>
+      <div class="c mut">${pvReal() ? ((pvCity('') ? esc(pvCity('')) + '<br>' : '') + 'propulsé par Kiwi') : 'Marché central, Tanger<br>05 39 33 XX XX · propulsé par Kiwi'}</div>
       <hr>
       <div class="row"><span>Bon</span><span class="b">${b.num}</span></div>
       <div class="row"><span>Client</span><span>${esc(cust.name)}</span></div>
@@ -1558,7 +1713,7 @@
         </span>
       </span>
       <span class="fl-arow-right">
-        <span class="fl-arow-price ${onSale ? 'sale' : ''}">${onSale ? `<span class="was">${s.price}</span>` : ''}${u} MAD</span>
+        <span class="fl-arow-price ${onSale ? 'sale' : ''}">${onSale ? `<span class="was">${mad(s.price)}</span>` : ''}${pvReal() && s.unset ? 'prix à saisir' : mad(u) + ' MAD'}</span>
         <button class="fl-sale-toggle ${onSale ? 'on' : ''}" data-fl-sale="${a.id}"><i data-lucide="percent"></i>${onSale ? 'En promo' : 'Écouler −30 %'}</button>
       </span>
     </div>`;
@@ -1568,7 +1723,7 @@
     saleState[stemId] = !saleState[stemId];
     queueIfOffline('Promo arrivage');
     toast(saleState[stemId]
-      ? `${STEM[stemId].label} en promo −30 %, ${unitPrice(stemId)} MAD la tige`
+      ? `${STEM[stemId].label} en promo −30 %, ${mad(unitPrice(stemId))} MAD la tige`
       : `${STEM[stemId].label}, retour au prix plein`);
     renderArrivages();
     /* live reprice everywhere the stem appears — grid prices + bouquet total */

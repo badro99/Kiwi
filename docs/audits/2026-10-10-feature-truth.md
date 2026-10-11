@@ -494,6 +494,30 @@ have shown two different margins for the same days.
 Covered by `menu-ledger-test.mjs` (26 checks: the ledger rules, then one
 fixture rendered by both tabs, same 221 MAD).
 
+## Métiers de bouche (pizzeria, boulangerie, fast-food, food truck, traiteur): done
+
+| ID | Finding | Status |
+|---|---|---|
+| G1 | The five tills sold the demo catalogue at demo prices whatever the merchant had set; with no catalogue, demo items passed as the merchant's own. | **Fixed.** They read the dashboard carte (same mirror as the restaurant till). A real till with an empty carte says so and takes a typed price. |
+| G2 | Pizza sizes, dough, extras, delivery zones and fees, traiteur dishes, extras and terms, cake formats were constants in code. | **Fixed.** From the carte's option groups, or the new owner-written `foodtrade` store doc the paired till only reads. Half-and-half exists once a supplement is set. |
+| G3 | Changing the carte changed the total of an existing catering quote. | **Fixed.** A quote freezes its dishes and extras (`ev.snap`); J-n is set per quote (1 to 90). |
+| G4 | Dashboard quote, deposit, delivery, kitchen and cake pages ignored the till; Accueil showed every sale as a new client. | **Fixed.** Read-only "Depuis la caisse" cards, never in demo; new clients show a dash. |
+
+Covered by `food-trades-truth-test.mjs` (49 checks).
+
+## Métiers de service (coiffure, spa, gym, fleuriste): done
+
+| ID | Finding | Status |
+|---|---|---|
+| F1 | Tills sold the demo grid (120 MAD a cut) and named staff "Coiffeur 1-3". | **Fixed.** Merchant catalogue through `KiwiPosWorkspaces`; staff from the practitioners board or the roster (names only, never codes); commission only when set. |
+| F2 | Drafts, archived items and unset prices could be sold. | **Fixed.** Drafts are not sold and the till says so; an unset price is typed. |
+| F3 | Gym: a second sale to the same member was refused (409) because the ref was the member code. Money taken, never counted. | **Fixed.** Unique ref per sale. |
+| F4 | Number fields read "24,5" as 245. | **Fixed.** Text inputs accept a comma. |
+| F5 | Spa cures showed an invented saving; fleuriste receipts printed the demo shop's name. | **Fixed.** Cures at unit price, "sans remise"; receipt uses the merchant's name. |
+| F6 | Gym had no way to create a class, counter item, pass or coaching pack; spa had no products page. | **Fixed.** "Comptoir, coaching & pass" and "Boutique & produits" boards. |
+
+Covered by `service-trades-truth-test.mjs` (26 checks).
+
 ## Open, logged for their own pass
 
 
@@ -530,6 +554,13 @@ fixture rendered by both tabs, same 221 MAD).
 - **Removed employee clocked in**: the open attendance entry stays.
 - **Per-device unpair** is impossible: the till token carries no device id.
 - **Pharmacie** has no UI to enter stock or lots.
+- **Coiffure appointment panel** is not linked to the `appointments` board;
+  fleuriste delivery default still names "Tanger".
+- **Food trades**: delivery fee lines appear as "to cost" in margins;
+  pizzeria customer order counts stay at 0; traiteur ignores carte option
+  groups (per-person price only); restoring a remote till snapshot can
+  replace an in-progress ticket (`KiwiVerticalState`, pre-existing).
+- **`txPerDay`** divides by the range length, not by days open.
 - **The restaurant till does not freeze a cost on its sale lines** (`k`).
   Until it does, a purchase price change rewrites past margins; both
   analysis tabs say so. Needs the till to read the recipe cost at sale time.
