@@ -55,8 +55,8 @@ const metrics = window.KiwiRestaurantRecipes.metrics({ id: 'plat', name: 'Salade
 assert.strictEqual(metrics.theoreticalCost, 10, '500 g must cost half of a 20 MAD/kg stock unit');
 assert.strictEqual(window.KiwiRestaurantRecipes.theoreticalUsage('tomate', 'resto', 7), 1, 'two sales at 500 g must consume one kg');
 
-assert.match(workspaceSource, /<select class="kf-input" data-ing-unit>/, 'recipe units must be selected');
-assert.doesNotMatch(workspaceSource, /<input class="kf-input" data-ing-unit/, 'recipe units must not remain free text');
+assert.match(workspaceSource, /<select class="rmw-rx-unit" data-ing-unit\b/, 'recipe units must be selected');
+assert.doesNotMatch(workspaceSource, /<input[^>]*data-ing-unit/, 'recipe units must not remain free text');
 assert.match(stockSource, /data-stock-add-unit/, 'new stock items must use the shared selector');
 assert.match(stockSource, /data-stock-scan-unit/, 'received stock must use the shared selector');
 assert.ok(dashboard.indexOf('assets/restaurant-units.js') < dashboard.indexOf('assets/restaurant-recipes.js'), 'unit catalogue must load before recipes');
