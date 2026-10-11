@@ -117,4 +117,95 @@
     updateBreakEvenCalculator();
   }
 
+  /* ── Mesure · première partie, sans cookie et sans réseau ──────────────────
+   * docs/seo/MEASUREMENT.md pose la règle du dépôt : aucun chiffre inventé, et
+   * la mesure d'audience passe par Search Console. On n'ajoute donc PAS de
+   * traceur tiers ici : il faudrait un script externe (que
+   * tools/article-template-test.mjs interdit à juste titre), une bannière de
+   * consentement et une mise à jour de la page de confidentialité.
+   *
+   * Ce qui est fourni, c'est la couche d'événements : impressions, clics de
+   * carte, termes de recherche, profondeur de lecture, clics de guides liés et
+   * conversions CTA sont émis en clair dans la page, où un collecteur
+   * first-party pourra les lire le jour où le propriétaire en choisit un.
+   * Rien ne quitte le navigateur, rien n'est stocké, aucun identifiant n'est
+   * fabriqué. */
+  var api = window.kiwiGuides = window.kiwiGuides || {};
+  api.events = api.events || [];
+
+  api.emit = function (name, detail) {
+    if (!name) return null;
+    var payload = {
+      event: name,
+      locale: pageLanguage,
+      path: location.pathname,
+      at: Date.now(),
+      detail: detail || {}
+    };
+    api.events.push(payload);
+    if (api.events.length > 200) api.events.shift();
+    try {
+      document.dispatchEvent(new CustomEvent('kiwi:guides', { detail: payload }));
+    } catch (error) { /* CustomEvent indisponible : la file reste lisible. */ }
+    return payload;
+  };
+
+  var emit = api.emit;
+
+  /* Profondeur de lecture : un palier n'est émis qu'une fois, et seulement
+   * quand il est réellement atteint. */
+  if (article) {
+    var depthMarks = [25, 50, 75, 100];
+    var depthSeen = {};
+    var watchDepth = function () {
+      var height = Math.max(1, article.offsetHeight - window.innerHeight);
+      var reached = Math.round(Math.min(1, Math.max(0, (window.scrollY - article.offsetTop) / height)) * 100);
+      for (var i = 0; i < depthMarks.length; i += 1) {
+        var mark = depthMarks[i];
+        if (reached >= mark && !depthSeen[mark]) {
+          depthSeen[mark] = true;
+          emit('read_depth', { percent: mark });
+        }
+      }
+    };
+    window.addEventListener('scroll', watchDepth, { passive: true });
+    watchDepth();
+  }
+
+  emit(article ? 'article_view' : 'library_view', {
+    title: (document.title || '').replace(/ · Kiwi$/, '')
+  });
+
+  /* Un seul écouteur délégué couvre les guides liés, le précédent/suivant, les
+   * cartes de la bibliothèque, les parcours et les CTA. */
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+
+    var cta = target.closest('[data-cta]');
+    if (cta) {
+      emit('cta_click', { placement: cta.getAttribute('data-cta'), href: cta.getAttribute('href') || '' });
+      return;
+    }
+    var card = target.closest('[data-guide-link]');
+    if (card) {
+      emit('card_click', { guide: card.getAttribute('data-guide-link'), href: card.getAttribute('href') || '' });
+      return;
+    }
+    var path = target.closest('[data-path-link]');
+    if (path) {
+      emit('path_click', { path: path.getAttribute('data-path-link'), href: path.getAttribute('href') || '' });
+      return;
+    }
+    var sequence = target.closest('.sequence-link');
+    if (sequence) {
+      emit('sequence_click', { rel: sequence.getAttribute('rel'), href: sequence.getAttribute('href') || '' });
+      return;
+    }
+    var related = target.closest('.related-card');
+    if (related) {
+      emit('related_click', { href: related.getAttribute('href') || '' });
+    }
+  }, { passive: true });
+
 }());

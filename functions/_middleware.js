@@ -228,6 +228,32 @@ async function routeRequest(context) {
   // no merchant data.
   if (isRead && (path === '/sitemap.xml' || path === '/robots.txt')) return next();
 
+  /* ── /guide et /guides · la bibliothèque publique, pas l'écran de connexion
+   * Ces deux chemins n'ont jamais existé. Sans préfixe de langue ils ne
+   * correspondaient à aucune entrée de la liste publique ci-dessous, donc ils
+   * tombaient dans le gate de compte et répondaient par l'écran de connexion
+   * marchand : un visiteur qui tapait kiwi-os.com/guides, ou un lien partagé
+   * sans la langue, atterrissait sur un formulaire de mot de passe au lieu des
+   * guides. La bibliothèque vit sous /fr/guides/, /en/guides/ et /ar/guides/.
+   *
+   * On redirige AVANT le gate, en permanent, pour que robots et visiteurs
+   * reçoivent la même réponse en un seul saut et sans JavaScript. La langue est
+   * négociée comme ailleurs sur le site (?lang, cookie, référent, puis
+   * Accept-Language), d'où le Vary : la cible dépend de l'en-tête, et un cache
+   * partagé ne doit pas servir /ar/guides/ à un visiteur francophone.
+   * `/guide` reste au singulier pour les liens déjà imprimés. */
+  if (isRead && (path === '/guide' || path === '/guides' || path === '/guide/' || path === '/guides/')) {
+    const guidesLanguage = requestedLanguage(request);
+    return new Response(null, {
+      status: 308,
+      headers: {
+        Location: `/${guidesLanguage}/guides/`,
+        'Cache-Control': 'public, max-age=3600',
+        Vary: 'Accept-Language',
+      },
+    });
+  }
+
   // The marketing landing page is public. Keep the merchant application and
   // its APIs behind the account/staff gate below, but let visitors reach the
   // homepage (and the static Next assets it renders) before signing in.

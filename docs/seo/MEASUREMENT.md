@@ -36,6 +36,33 @@ Le tableau mensuel doit montrer les pages manifestées valides et indexées, les
 - clics, impressions, CTR et position non disponibles à ce stade, donc aucune valeur zéro n'est enregistrée à leur place ;
 - première revue glissante de 28 jours prévue le 21 septembre 2026, puis revue mensuelle par locale et par guide.
 
+## Mesure côté page · couche d'événements, pas de traceur
+
+Depuis le 11 octobre 2026, `assets/articles/article.js` émet les événements que
+la bibliothèque et les articles produisent : `library_view`, `article_view`,
+`card_click`, `library_search` (terme et nombre de résultats),
+`library_filter_category`, `library_filter_goal`, `library_sort`,
+`library_reset`, `path_click`, `sequence_click`, `related_click`,
+`cta_click` et `read_depth` aux paliers 25, 50, 75 et 100 %.
+
+Chaque événement est poussé dans `window.kiwiGuides.events` (file bornée à 200)
+et diffusé sur `document` sous le nom `kiwi:guides`.
+
+**Rien n'est transmis, rien n'est stocké, aucun identifiant n'est fabriqué.**
+C'est délibéré, pour trois raisons :
+
+- le dépôt n'embarque aucune dépendance et `tools/article-template-test.mjs`
+  interdit tout script externe sur une page publiée ;
+- un traceur tiers imposerait une bannière de consentement et une mise à jour
+  de la page de confidentialité, décisions qui appartiennent au propriétaire ;
+- la règle « aucun chiffre inventé » de ce document vaut aussi pour l'audience.
+
+Brancher un collecteur first-party est donc une décision à prendre, pas une
+dette technique : un écouteur de quelques lignes sur `kiwi:guides` suffirait à
+poster vers un endpoint du domaine. Tant qu'aucun collecteur n'existe, les
+impressions et les clics restent mesurés par Search Console, et les événements
+ci-dessus ne servent qu'au diagnostic dans la console du navigateur.
+
 ## Conversion et AEO
 
 Pour les guides, la conversion utile est un clic vers la démonstration WhatsApp ou une autre prise de contact confirmée. Aucun nouveau traceur n’est ajouté par ce chantier. Si une mesure consentie existe déjà, nommer l’événement une seule fois et conserver la page, la locale et le placement du CTA.

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { HUBS, PUBLISHED_LOCALES, TOPICS } from '../content/guides/manifest.mjs';
+import { CATEGORIES, FEATURED, GOALS, HUBS, PATHS, PUBLISHED_LOCALES, TOPIC_CARDS, TOPIC_CATEGORY, TOPICS } from '../content/guides/manifest.mjs';
 
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const html = read('docs/templates/article.html');
@@ -78,11 +78,19 @@ ok(/html\[lang="ar"\]/.test(css) && /\[dir="rtl"\]/.test(css), 'Arabic type and 
 ok(/@media \(max-width: 620px\)/.test(css), 'small-phone layout has a dedicated breakpoint');
 ok(!/<script[^>]+src="https?:\/\//.test(html), 'no external JavaScript is required');
 ok((html.match(/<h1\b/g) || []).length === 1, 'the article has exactly one H1');
-ok(/\/model\/poster-landscape\.webp/.test(html) && /\/model\/poster-portrait\.webp/.test(html), 'the article reuses the landing camera treatment in both orientations');
+/* La skin claire est une décision du propriétaire (11 octobre 2026) : les
+ * guides sont un centre de ressources, pas une page produit. Les trois
+ * assertions qui épinglaient le poster sombre, le fond fixe et le verre sont
+ * remplacées par des assertions de force équivalente sur la palette papier,
+ * pour que personne ne puisse réintroduire le noir plein écran par accident. */
+ok(!/site-backdrop/.test(html) && !/poster-landscape|poster-portrait/.test(html), 'the dark photographic backdrop is gone from the guides template');
+ok(/--paper:\s*#F7F5F0/i.test(css) && /--surface:\s*#FFFDFA/i.test(css) && /--ink:\s*#0A0F0D/i.test(css) && /--atlas:\s*#0B6E4F/i.test(css), 'the brand light editorial palette is declared');
+ok(/background:\s*var\(--paper\)/.test(css) && !/background:\s*var\(--black\)/.test(css) && !/--black:/.test(css), 'the guides page surface is paper, never a black fill');
 ok(/sketchfab\.com\/tamminen/.test(html), 'the landing footer keeps its Tamminen model credit');
-ok(/\.site-backdrop\s*\{[\s\S]*?position:\s*fixed/.test(css), 'the landing atmosphere remains fixed behind the editorial scenes');
+ok(!/\.site-backdrop/.test(css), 'the fixed dark atmosphere layer is removed from the guides skin');
 ok(/\.site-header\s*\{[\s\S]*?height:\s*104px/.test(css) && /\.nav-center\s*\{[\s\S]*?height:\s*64px/.test(css), 'desktop header and glass navigation match landing geometry');
-ok(/\.article-shell\s*\{[\s\S]*?backdrop-filter:\s*blur\(28px\)/.test(css), 'the reading surface keeps the landing glass depth');
+ok(!/backdrop-filter/.test(css), 'no glassmorphism remains anywhere in the guides skin');
+ok(/\.article-shell\s*\{[\s\S]*?background:\s*var\(--surface\)/.test(css), 'the reading surface is an opaque light card');
 ok(/grid-template-columns:\s*170px minmax\(0, var\(--reading\)\) 150px/.test(articleShellRule) && /gap:\s*30px/.test(articleShellRule), 'the desktop grid preserves the 720px reading column');
 ok(/class="operation-panel"/.test(html) && /class="operation-flow"/.test(html), 'the proof figure uses an operational product scene');
 ok((html.match(/class="related-scene(?:\s|")/g) || []).length === 3, 'every related guide carries a visual scene');
@@ -166,6 +174,26 @@ for (const page of published) {
   publishedImages.add(page.image);
   const localeFooter = landingFooterByLocale[page.locale];
   ok(footerText(footerFrom(source)) === footerText(localeFooter) && JSON.stringify(footerHrefs(footerFrom(source), page.locale)) === JSON.stringify(footerHrefs(localeFooter, page.locale)), `${page.path} preserves the exact ${page.locale.toUpperCase()} landing footer`);
+  /* Le pied de page de la landing porte des ancres nues (`#pricing`), justes
+   * sur `/fr/` et fausses une fois recopiées dans `/fr/guides/` : le visiteur
+   * cliquait « Tarifs » et ne bougeait pas. Le générateur les relocalise, donc
+   * aucune page publiée ne doit plus contenir d'ancre nue dans son pied. */
+  ok(!/href="#/.test(footerFrom(source)), `${page.path} footer sections point at the landing, not at missing anchors inside the guide`);
+  /* FAQPage ne doit exister que si la page montre vraiment des questions. */
+  const showsFaq = /<section class="faq"/.test(source) && /<details>/.test(source);
+  const declaresFaq = graph.some((item) => item['@type'] === 'FAQPage');
+  ok(showsFaq === declaresFaq, `${page.path} declares FAQ structured data only when it visibly answers questions`);
+  if (page.type === 'Article') {
+    const position = TOPICS.findIndex((topic) => topic.routes[page.locale] === decodeURI(new URL(page.url).pathname));
+    const expectPrevious = position > 0 ? TOPICS[position - 1].routes[page.locale] : null;
+    const expectNext = position < TOPICS.length - 1 ? TOPICS[position + 1].routes[page.locale] : null;
+    const previousHref = source.match(/<a class="sequence-link sequence-link--prev" rel="prev" href="([^"]+)"/)?.[1];
+    const nextHref = source.match(/<a class="sequence-link sequence-link--next" rel="next" href="([^"]+)"/)?.[1];
+    ok(previousHref === (expectPrevious || undefined) && nextHref === (expectNext || undefined), `${page.path} previous and next navigation follows the manifest order`);
+    const articleNode = graph.find((item) => item['@type'] === 'Article');
+    ok(/^PT\d+M$/.test(articleNode?.timeRequired || ''), `${page.path} structured data states a measured reading duration`);
+    ok(articleNode?.articleSection === CATEGORIES.find((entry) => entry.id === TOPIC_CATEGORY[TOPICS[position].id]).labels[page.locale], `${page.path} structured data names its library category`);
+  }
   ok(!/<script[^>]+src="https?:\/\//.test(source), `${page.path} needs no external JavaScript`);
   ok(!source.includes('—'), `${page.path} follows the no-em-dash brand voice`);
   ok(page.locale !== 'ar' || /<bdi dir="ltr">/.test(source), `${page.path} isolates Arabic numeric runs`);
@@ -192,7 +220,68 @@ for (const locale of PUBLISHED_LOCALES) {
   ok(stronglyConnected, `${locale.toUpperCase()} article graph is strongly connected`);
 }
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
-ok(publishedVersions.size === 1 && publishedVersions.has('10:4'), 'all published guides use the current shared asset versions');
+ok(publishedVersions.size === 1 && publishedVersions.has('11:5'), 'all published guides use the current shared asset versions');
+
+/* ── La bibliothèque · une page de centre de ressources, pas une liste ─────
+ * Ces contrôles tiennent la promesse du redesign : la page des guides offre
+ * une recherche, des entrées par objectif, des catégories, un tri, un état
+ * vide et des parcours, dans les TROIS langues, et ses cartes décrivent
+ * exactement les guides du manifeste. */
+const libraryJs = read('assets/articles/guides-library.js');
+ok(!/\bimport\b|\brequire\(|https?:\/\//.test(libraryJs), 'the library script has no dependency and loads nothing');
+try {
+  new vm.Script(libraryJs, { filename: 'assets/articles/guides-library.js' });
+  ok(true, 'library JavaScript parses cleanly');
+} catch (error) {
+  ok(false, 'library JavaScript parses cleanly · ' + error.message);
+}
+ok(/js-library/.test(libraryJs) && /\.library-tools,\s*\n\.library-controls \{ display: none; \}/.test(css.replace(/\r/g, '')), 'the filters stay hidden until the script can answer them');
+
+for (const locale of PUBLISHED_LOCALES) {
+  const hub = read(`${locale}/guides/index.html`);
+  const label = locale.toUpperCase();
+
+  ok(/data-guides-search/.test(hub) && /role="search"/.test(hub), `${label} library offers an accessible search field`);
+  ok(/data-guides-sort/.test(hub) && (hub.match(/<option value="(?:recommended|recent|reading)"/g) || []).length === 3, `${label} library sorts by recommendation, recency and reading time`);
+  ok(/data-guides-empty/.test(hub) && /data-guides-reset/.test(hub), `${label} library has an empty state with a reset control`);
+  ok(/data-guides-count/.test(hub) && /aria-live="polite"/.test(hub), `${label} library announces how many guides are shown`);
+
+  const goals = [...hub.matchAll(/data-goal="([^"]+)"/g)].map((match) => match[1]);
+  ok(goals.length === GOALS.length && GOALS.every((goal) => goals.includes(goal.id)), `${label} library exposes every goal-based entry point`);
+  const categories = [...hub.matchAll(/data-category="([^"]+)"/g)].map((match) => match[1]);
+  ok(categories.includes('all') && CATEGORIES.every((category) => categories.includes(category.id)), `${label} library exposes the full category taxonomy`);
+  ok(GOALS.every((goal) => hub.includes(goal.labels[locale])) && CATEGORIES.every((category) => hub.includes(category.labels[locale])), `${label} library labels its goals and categories in its own language`);
+
+  /* Une carte par guide publié, ni plus ni moins, et chacune porte la
+   * catégorie, le résumé et la durée du manifeste. */
+  const cards = [...hub.matchAll(/<li class="guide-card"[^>]*data-id="([^"]+)"[^>]*data-category="([^"]+)"[^>]*data-reading="(\d+)"/g)];
+  ok(cards.length === TOPICS.length, `${label} library shows exactly one card per published guide`);
+  ok(TOPICS.every((topic) => cards.some((card) => card[1] === topic.id)), `${label} library card set matches the manifest`);
+  ok(cards.every((card) => card[2] === TOPIC_CATEGORY[card[1]]), `${label} library cards carry their manifested category`);
+  ok(TOPICS.every((topic) => hub.includes(TOPIC_CARDS[topic.id][locale])), `${label} library cards use the localized card summary`);
+  /* Le résumé de carte remplace les deux paragraphes que la page répétait
+   * pour chaque article. */
+  ok(!TOPICS.some((topic) => hub.includes(topic.pages[locale].ogDescription) && topic.pages[locale].ogDescription.length > 90), `${label} library no longer repeats full article paragraphs`);
+
+  ok(FEATURED.every((id) => hub.includes(`data-id="${id}"`)) && (hub.match(/guide-card--featured/g) || []).length === FEATURED.length, `${label} library features the manifested guides`);
+  ok(PATHS.every((path) => hub.includes(path.titles[locale]) && path.steps.every((step) => hub.includes(`data-path-link="${path.id}"`))), `${label} library publishes every learning path`);
+  ok((hub.match(/<h1\b/g) || []).length === 1 && /class="hero-facts"/.test(hub), `${label} library hero states a counted fact under a single H1`);
+  ok(hub.includes(`>${TOPICS.length}<`) || hub.includes(`<bdi dir="ltr">${TOPICS.length}</bdi>`), `${label} library hero publishes the real number of guides`);
+
+  /* La carte et l'article doivent annoncer la MÊME durée : les deux viennent
+   * désormais de la même mesure. */
+  for (const card of cards) {
+    const topic = TOPICS.find((entry) => entry.id === card[1]);
+    const articleSource = read(topic.routes[locale].slice(1) + 'index.html');
+    const byline = articleSource.match(/<div class="byline">[\s\S]*?<\/div>/)?.[0] || '';
+    ok(new RegExp(`\\b${card[3]}\\b`).test(byline.replace(/<[^>]+>/g, ' ')), `${label} ${topic.id} card and article agree on the reading time (${card[3]} min)`);
+  }
+
+  const collection = JSON.parse(hub.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/)[1])['@graph'];
+  const itemList = collection.find((node) => node['@type'] === 'CollectionPage')?.mainEntity;
+  ok(itemList?.['@type'] === 'ItemList' && itemList.numberOfItems === TOPICS.length && itemList.itemListElement.length === TOPICS.length, `${label} library publishes CollectionPage and ItemList structured data`);
+  ok(collection.some((node) => node['@type'] === 'Organization' && node.knowsAbout?.length === CATEGORIES.length), `${label} library states Kiwi's operational expertise`);
+}
 const sitemapGuideRows = (sitemap.match(/<url>[\s\S]*?<\/url>/g) || []).filter((row) => /<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)\/guides\//.test(row));
 ok(sitemapGuideRows.length === guideClusters.length * PUBLISHED_LOCALES.length, 'sitemap has exactly one row for every manifested localized guide page');
 const sitemapRows = sitemap.match(/<url>[\s\S]*?<\/url>/g) || [];
