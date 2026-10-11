@@ -1346,6 +1346,8 @@ section('Whole-project regressions');
     'menu-truth-test.mjs',
     'stock-truth-test.mjs',
     'kiwi-select-programmatic-test.mjs',
+    'module-gate-test.mjs',
+    'terminaux-truth-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

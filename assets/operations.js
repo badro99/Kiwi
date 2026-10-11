@@ -64,7 +64,7 @@
      s'effondre à trois lignes — une par type d'application — et « santé des
      appareils » ne veut plus rien dire.  Le jeton ne dit rien de la personne
      qui tient l'appareil : il ne sert qu'à reconnaître la machine. */
-  function deviceId() {
+  function deviceBase() {
     var stored = '';
     try { stored = clean(localStorage.getItem('kiwiDeviceId'), 80); } catch (_) {}
     if (stored) return stored;
@@ -72,10 +72,48 @@
     try { localStorage.setItem('kiwiDeviceId', minted); } catch (_) {}
     return minted;
   }
+  /* UNE LIGNE PAR APPLICATION, PAS PAR NAVIGATEUR.  La caisse et le tableau de
+     bord ouverts dans le même navigateur (le geste « Ouvrir la caisse sur cet
+     appareil », celui de tout petit commerce) lisent le même localStorage, donc
+     le même identifiant.  Résultat mesuré : une seule ligne dont `app` basculait
+     à chaque battement, et la clé d'idempotence du battement (appareil + tranche
+     de cinq minutes) faisait refuser celui de la caisse dès que le tableau de
+     bord avait battu le premier — la caisse n'apparaissait jamais comme caisse.
+     La caisse garde l'identifiant historique (sa ligne existe déjà côté
+     serveur) ; le tableau de bord, qui est une console et non un équipement,
+     prend un suffixe. */
+  function deviceId() {
+    var base = deviceBase();
+    return appName() === 'dashboard' ? clean(base + ':web', 80) : base;
+  }
   function appName() {
     if (location.pathname.indexOf('kiwi-caisse') >= 0) return 'caisse';
     if (location.pathname.indexOf('serveur') >= 0) return 'serveur';
     return 'dashboard';
+  }
+  /* Ce que l'appareil sait de lui-même, dit sans rien inventer : le système et le
+     navigateur lus dans l'agent utilisateur, et pour une caisse les six derniers
+     caractères de son identifiant de terminal, ceux que la caisse affiche en
+     haut de l'écran (« ID · 3CC8E2 ») — c'est ce qui permet au patron de
+     reconnaître la ligne.  Jamais l'identifiant technique de l'appareil. */
+  function platformLabel() {
+    var ua = '', touch = 0;
+    try { ua = String(navigator.userAgent || ''); touch = Number(navigator.maxTouchPoints) || 0; } catch (_) {}
+    var os = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1) ? 'iPad'
+      : /iPhone/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows'
+      : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+    var browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
+      : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+    return [os, browser].filter(Boolean).join(' · ');
+  }
+  function deviceLabel() {
+    var parts = [platformLabel()];
+    if (appName() === 'caisse') {
+      var terminal = '';
+      try { terminal = clean(localStorage.getItem('kiwi:caisse:terminal-id:v1'), 96); } catch (_) {}
+      if (terminal) parts.push('ID ' + terminal.slice(-6).toUpperCase());
+    }
+    return clean(parts.filter(Boolean).join(' · '), 80);
   }
   function printerState() {
     var P = window.KiwiPrinter;
@@ -84,7 +122,11 @@
       connected: !!(P && P.isConnected && P.isConnected()),
     };
   }
-  function beat() {
+  /* `force` : un battement qui rapporte un changement (le ticket d'essai vient
+     de réussir ou d'échouer) ne doit pas partager la clé de la tranche de cinq
+     minutes — le serveur le prendrait pour un doublon du battement du
+     chargement et garderait l'ancien état de l'imprimante. */
+  function beat(force) {
     var printer = printerState();
     var sync = null;
     if (appName() === 'caisse') {
@@ -99,11 +141,11 @@
       } catch (_) {}
     }
     return create('device', 'heartbeat', {
-      deviceId: deviceId(), app: appName(), at: Date.now(),
+      deviceId: deviceId(), app: appName(), label: deviceLabel(), at: Date.now(),
       online: navigator.onLine !== false, standalone: !!navigator.standalone,
       printerConfigured: printer.configured, printerConnected: printer.connected,
       sync: sync,
-    }, { idempotencyKey: 'heartbeat:' + K.tenant() + ':' + deviceId() + ':' + Math.floor(Date.now() / 300000) });
+    }, { idempotencyKey: 'heartbeat:' + (force === true ? 'now-' + Date.now() : Math.floor(Date.now() / 300000)) + ':' + deviceId() });
   }
   function needed(domain, action) {
     if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
@@ -256,6 +298,11 @@
     if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 50))));
     return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
   }
+  /* Les ponts d'impression appairés : ce que le relais sait d'eux (dernier signe,
+     version, en ligne ou non).  Lecture réservée au commerce côté serveur. */
+  async function printBridges() {
+    return responseJson(await fetch('/api/print/bridges?merchant=' + encodeURIComponent(K.tenant()), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
   /* Un vrai ticket sur une vraie imprimante.  Le serveur ouvre la commande en
      « processing » ; c'est cet appareil-ci qui imprime et rapporte le
      résultat, réussite comme échec.  Rien n'est déclaré imprimé sans l'avoir
@@ -275,11 +322,16 @@
     try { await transition(command.id, ok ? 'completed' : 'failed', { confirmed: true }); } catch (_) {}
     /* Un battement immédiat : l'état de l'imprimante vient de changer sous nos
        yeux, le parc doit le refléter sans attendre cinq minutes. */
-    beat().catch(function () {});
+    beat(true).catch(function () {});
     return { ok: true, command: command, printed: ok, via: clean(outcome && outcome.via, 24), reason: ok ? '' : clean(outcome && outcome.reason, 120) || 'print-failed' };
   }
   async function ackAlert(id) {
     return create('device', 'ack-alert', { deviceId: clean(id, 80) || deviceId() });
+  }
+  /* Un nom vide rend l'appareil à celui qu'il se donne lui-même. */
+  async function renameDevice(id, name) {
+    return create('device', 'rename', { deviceId: clean(id, 80), name: clean(name, 80) },
+      { idempotencyKey: 'rename:' + Date.now() + ':' + clean(id, 80) });
   }
   async function payslips(opts) {
     opts = opts || {};
@@ -358,7 +410,7 @@
 
   window.KiwiOperations = {
     version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, payments: payments, transition: transition, flush: flush,
-    devices: devices, testPrint: testPrint, ackAlert: ackAlert, deviceId: deviceId, heartbeat: beat,
+    devices: devices, printBridges: printBridges, testPrint: testPrint, ackAlert: ackAlert, renameDevice: renameDevice, deviceId: deviceId, heartbeat: beat,
     notifications: notifications, notify: notify, setNotifyPreferences: setNotifyPreferences,
     orders: orders, agentAllowed: agentAllowed, agentRun: agentRun,
     allowed: allowed, whoami: whoami, actor: function () { return actorFresh() ? Object.assign({}, actor) : null; }, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },

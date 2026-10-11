@@ -94,12 +94,16 @@
           dvDenied:'Droit d’exploitation requis', dvDeniedD:'Votre session ne peut pas faire taire une alarme de parc. Kiwi le dit avant de vous faire cliquer.',
           dvLoading:'Lecture du parc…', dvNone:'Aucun appareil ne s’est manifesté depuis trente jours.',
           dvRefresh:'Rafraîchir', dvAlerts:'Alarmes ouvertes', dvOffline:'Appareils muets', dvHeads:'Appareils',
-          dvHint:'Un appareil éteint n’écrit rien : c’est son silence qui le déclare absent, pas un message. Le seuil vaut trois battements manqués.',
+          dvHint:'Un appareil éteint n’écrit rien : c’est son silence qui le déclare absent, pas un message. Le seuil vaut trois battements manqués. Le tableau de bord est votre console, pas un équipement : il se lit tant qu’il est ouvert, et ne lève jamais d’alarme.',
           dvApp:{ caisse:'Caisse', serveur:'Salle', dashboard:'Tableau de bord' },
           dvAlert:{ 'device-offline':'Muet depuis trop longtemps', 'printer-unreachable':'Imprimante injoignable', 'printer-unconfigured':'Imprimante non configurée' },
           dvOk:'Aucune alarme', dvSilent:'Silence', dvBeats:'Battements', dvFirst:'Premier contact', dvLast:'Dernier battement',
           dvSync:'Ventes non confirmées', dvBlocked:'Bloquées', dvOldest:'Plus ancienne', dvAckSale:'Dernière vente confirmée', dvSyncUnknown:'État financier non communiqué', dvSyncWarning:'Connectée ne signifie pas synchronisée.', dvSyncSelf:'Déclaré par la caisse',
           dvThis:'Cet appareil', dvAck:'Faire taire', dvAcked:'Acquittée', dvAckedBy:'par',
+          dvRename:'Renommer', dvRenameField:'Nom de l’appareil', dvRenameSave:'Enregistrer', dvRenameCancel:'Annuler',
+          dvRenameHint:'Laissez vide pour reprendre le nom que l’appareil se donne.', dvRenamed:'Nom enregistré.', dvRenamedOwn:'Nom d’origine rétabli.',
+          dvBridges:'Ponts d’impression', dvBridgesHint:'Le Kiwi Printer Bridge du comptoir envoie les tickets des iPad et des tablettes vers l’imprimante. Il s’appaire et se retire depuis la caisse. « En ligne » veut dire vu dans les 45 dernières secondes.',
+          dvBridgeNone:'Aucun pont d’impression appairé.', dvBridgeUp:'En ligne', dvBridgeDown:'Hors ligne', dvBridgeSeen:'Dernier signe', dvBridgePaired:'Appairé le', dvBridgeVersion:'Version', dvBridgeOff:'Le relais d’impression n’est pas activé sur ce compte.',
           dvAckHint:'Faire taire n’éteint pas la cause : l’alarme se rouvre si le problème revient, et se referme seule quand il disparaît.',
           dvTest:'Ticket d’essai', dvTestHint:'Le ticket part vraiment sur l’imprimante de cet appareil. Kiwi rapporte ce que le pont répond, réussite comme échec.',
           dvPrinted:'Ticket imprimé.', dvNotPrinted:'Rien n’a été imprimé',
@@ -264,12 +268,16 @@
           dvDenied:'Operations right required', dvDeniedD:'Your session cannot silence a fleet alert. Kiwi says so before letting you click.',
           dvLoading:'Reading the fleet…', dvNone:'No device has reported in thirty days.',
           dvRefresh:'Refresh', dvAlerts:'Open alerts', dvOffline:'Silent devices', dvHeads:'Devices',
-          dvHint:'A device that is switched off writes nothing: its silence is what marks it absent, not a message. The threshold is three missed heartbeats.',
+          dvHint:'A device that is switched off writes nothing: its silence is what marks it absent, not a message. The threshold is three missed heartbeats. The dashboard is your console, not equipment: it is listed while it is open and never raises an alert.',
           dvApp:{ caisse:'Register', serveur:'Floor', dashboard:'Dashboard' },
           dvAlert:{ 'device-offline':'Silent for too long', 'printer-unreachable':'Printer unreachable', 'printer-unconfigured':'Printer not configured' },
           dvOk:'No alert', dvSilent:'Silence', dvBeats:'Heartbeats', dvFirst:'First seen', dvLast:'Last heartbeat',
           dvSync:'Unconfirmed sales', dvBlocked:'Blocked', dvOldest:'Oldest', dvAckSale:'Last confirmed sale', dvSyncUnknown:'Financial sync state not reported', dvSyncWarning:'Online does not mean synchronized.', dvSyncSelf:'Reported by register',
           dvThis:'This device', dvAck:'Acknowledge', dvAcked:'Acknowledged', dvAckedBy:'by',
+          dvRename:'Rename', dvRenameField:'Device name', dvRenameSave:'Save', dvRenameCancel:'Cancel',
+          dvRenameHint:'Leave empty to go back to the name the device gives itself.', dvRenamed:'Name saved.', dvRenamedOwn:'Original name restored.',
+          dvBridges:'Print bridges', dvBridgesHint:'The counter’s Kiwi Printer Bridge carries receipts from iPads and tablets to the printer. It is paired and removed from the register. “Online” means seen in the last 45 seconds.',
+          dvBridgeNone:'No print bridge paired.', dvBridgeUp:'Online', dvBridgeDown:'Offline', dvBridgeSeen:'Last seen', dvBridgePaired:'Paired on', dvBridgeVersion:'Version', dvBridgeOff:'The print relay is not enabled on this account.',
           dvAckHint:'Acknowledging does not fix the cause: the alert reopens if the problem returns, and closes itself once it is gone.',
           dvTest:'Test print', dvTestHint:'The slip really goes to this device’s printer. Kiwi reports what the bridge answers, success or failure.',
           dvPrinted:'Slip printed.', dvNotPrinted:'Nothing was printed',
@@ -434,12 +442,16 @@
           dvDenied:'يلزم حق التشغيل', dvDeniedD:'جلستك لا يمكنها إسكات إنذار في الأسطول. يقولها Kiwi قبل أن تضغط.',
           dvLoading:'قراءة الأسطول…', dvNone:'لم يظهر أي جهاز منذ ثلاثين يومًا.',
           dvRefresh:'تحديث', dvAlerts:'إنذارات مفتوحة', dvOffline:'أجهزة صامتة', dvHeads:'الأجهزة',
-          dvHint:'الجهاز المطفأ لا يكتب شيئًا: صمته هو ما يعلن غيابه، لا رسالة. العتبة ثلاث نبضات ضائعة.',
+          dvHint:'الجهاز المطفأ لا يكتب شيئًا: صمته هو ما يعلن غيابه، لا رسالة. العتبة ثلاث نبضات ضائعة. لوحة القيادة هي واجهتك لا معدّة: تُعرض ما دامت مفتوحة ولا تُطلق أي إنذار.',
           dvApp:{ caisse:'الصندوق', serveur:'القاعة', dashboard:'لوحة القيادة' },
           dvAlert:{ 'device-offline':'صامت منذ وقت طويل', 'printer-unreachable':'الطابعة غير متاحة', 'printer-unconfigured':'الطابعة غير مهيّأة' },
           dvOk:'لا إنذار', dvSilent:'الصمت', dvBeats:'النبضات', dvFirst:'أول اتصال', dvLast:'آخر نبضة',
           dvSync:'مبيعات غير مؤكدة', dvBlocked:'محظورة', dvOldest:'الأقدم', dvAckSale:'آخر بيع مؤكد', dvSyncUnknown:'حالة المزامنة المالية غير مُبلَّغ عنها', dvSyncWarning:'الاتصال لا يعني المزامنة.', dvSyncSelf:'مبلّغ عنها من الصندوق',
           dvThis:'هذا الجهاز', dvAck:'إسكات', dvAcked:'مُقرّ به', dvAckedBy:'بواسطة',
+          dvRename:'إعادة التسمية', dvRenameField:'اسم الجهاز', dvRenameSave:'حفظ', dvRenameCancel:'إلغاء',
+          dvRenameHint:'اتركه فارغًا للعودة إلى الاسم الذي يعطيه الجهاز لنفسه.', dvRenamed:'تم حفظ الاسم.', dvRenamedOwn:'تمت استعادة الاسم الأصلي.',
+          dvBridges:'جسور الطباعة', dvBridgesHint:'جسر الطباعة Kiwi Printer Bridge في الكاونتر ينقل التذاكر من الآيباد واللوحات إلى الطابعة. يُقرَن ويُزال من الصندوق. «متصل» تعني أنه شوهد خلال آخر 45 ثانية.',
+          dvBridgeNone:'لا يوجد جسر طباعة مقرون.', dvBridgeUp:'متصل', dvBridgeDown:'غير متصل', dvBridgeSeen:'آخر ظهور', dvBridgePaired:'تاريخ الاقتران', dvBridgeVersion:'الإصدار', dvBridgeOff:'ترحيل الطباعة غير مفعّل على هذا الحساب.',
           dvAckHint:'الإسكات لا يطفئ السبب: يعود الإنذار إن عاد العطل، ويُغلق وحده حين يزول.',
           dvTest:'تذكرة اختبار', dvTestHint:'تخرج التذكرة فعلًا من طابعة هذا الجهاز. يبلّغ Kiwi بما يردّه الجسر، نجاحًا كان أو فشلًا.',
           dvPrinted:'طُبعت التذكرة.', dvNotPrinted:'لم يُطبع شيء',
@@ -753,7 +765,7 @@
            couleur d'un avertissement, jamais celle d'une décoration. */
         '.ops-dv-card{margin-bottom:12px;}',
         '.ops-dv-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
-        '.ops-dv-name{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px;letter-spacing:.02em;overflow-wrap:anywhere;}',
+        '.ops-dv-name{font-size:15px;font-weight:600;letter-spacing:-.005em;overflow-wrap:anywhere;}',
         '.ops-dv-app{font-size:12.5px;color:var(--n-500);}',
         '.ops-dv-state{font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
         '.ops-dv-state.ok{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
@@ -763,6 +775,10 @@
         '.ops-dv-meta div .k{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
         '.ops-dv-meta div .v{font-size:13px;font-variant-numeric:tabular-nums;}',
         '.ops-dv-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}',
+        '.ops-dv-rename{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;}',
+        '.ops-dv-rename[hidden]{display:none;}',
+        '.ops-dv-rename input{flex:1 1 220px;min-width:0;box-sizing:border-box;padding:9px 12px;border:1px solid var(--n-300);border-radius:9px;font:inherit;font-size:13px;background:var(--surface);color:var(--ink);}',
+        '.ops-dv-sect{margin:26px 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500);font-weight:600;}',
         '.ops-dv-this{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--atlas);font-weight:600;}',
         /* Le registre ressemble volontairement à la flotte : une carte, un état,
            quelques champs.  Ce qu'il ajoute, ce sont les boutons de décision —
@@ -1889,8 +1905,11 @@
         var mine = device.deviceId === (O.deviceId ? O.deviceId() : '');
         var state = device.alert ? (c.dvAlert[device.alert] || device.alert) : c.dvOk;
         var tone = device.alert ? (device.acknowledged ? 'acked' : 'bad') : 'ok';
-        var name = device.label || device.deviceId;
-        return '<div class="p-card ops-dv-card" data-dv-row data-dv-id="' + esc(device.deviceId) + '">' +
+        /* Un identifiant technique n'est pas un nom : à défaut de libellé, l'appli et
+           les quatre derniers caractères, de quoi distinguer deux lignes. */
+        var short = String(device.deviceId || '').replace(/[^0-9a-z]/gi, '').slice(-4).toUpperCase();
+        var name = device.label || ((c.dvApp[device.app] || device.app || '·') + (short ? ' · ' + short : ''));
+        return '<div class="p-card ops-dv-card" data-dv-row data-dv-id="' + esc(device.deviceId) + '" data-dv-name="' + esc(device.renamed ? device.label : '') + '">' +
           '<div class="ops-dv-head">' +
             '<div><div class="ops-dv-name">' + esc(name) + '</div>' +
               '<div class="ops-dv-app">' + esc(c.dvApp[device.app] || device.app || '·') +
@@ -1920,27 +1939,60 @@
           '</div>' : '') +
           /* Ce que le serveur refuserait n'est pas peint : pas d'alarme, pas de
              bouton pour la faire taire ; pas cet appareil-ci, pas de ticket. */
-          ((device.alert && !device.acknowledged) || mine
-            ? '<div class="ops-dv-btns">' +
-              (device.alert && !device.acknowledged ? '<button class="kb ghost xs" type="button" data-dv-ack>' + esc(c.dvAck) + '</button>' : '') +
-              (mine ? '<button class="kb ghost xs" type="button" data-dv-test>' + esc(c.dvTest) + '</button>' : '') +
-              '</div>'
-            : '') +
+          '<div class="ops-dv-btns">' +
+            (device.alert && !device.acknowledged ? '<button class="kb ghost xs" type="button" data-dv-ack>' + esc(c.dvAck) + '</button>' : '') +
+            (mine ? '<button class="kb ghost xs" type="button" data-dv-test>' + esc(c.dvTest) + '</button>' : '') +
+            '<button class="kb ghost xs" type="button" data-dv-rename>' + esc(c.dvRename) + '</button>' +
+          '</div>' +
+          '<div class="ops-dv-rename" data-dv-rename-form hidden>' +
+            '<input type="text" maxlength="80" aria-label="' + esc(c.dvRenameField) + '" placeholder="' + esc(c.dvRenameField) + '" data-dv-rename-input>' +
+            '<button class="kb atlas xs" type="button" data-dv-rename-save>' + esc(c.dvRenameSave) + '</button>' +
+            '<button class="kb ghost xs" type="button" data-dv-rename-cancel>' + esc(c.dvRenameCancel) + '</button>' +
+            '<p class="ops-dv-hint" style="flex-basis:100%;margin:0">' + esc(c.dvRenameHint) + '</p>' +
+          '</div>' +
           '<div class="ops-dv-out" data-dv-row-out></div>' +
           '</div>';
+      }
+
+      /* Le pont d'impression est un appareil du parc comme un autre, mais il ne
+         bat pas dans le même registre : il se manifeste auprès du relais
+         (/api/print/bridges) à chaque fois qu'il vient chercher un ticket. */
+      function bridgeCard(b) {
+        var up = !!b.online;
+        return '<div class="p-card ops-dv-card">' +
+          '<div class="ops-dv-head"><div><div class="ops-dv-name">' + esc(b.name || c.dvBridges) + '</div>' +
+          '<div class="ops-dv-app">' + esc([b.platform, b.version ? c.dvBridgeVersion + ' ' + b.version : ''].filter(Boolean).join(' · ') || '·') + '</div></div>' +
+          '<span class="ops-dv-state ' + (up ? 'ok' : 'bad') + '">' + esc(up ? c.dvBridgeUp : c.dvBridgeDown) + '</span></div>' +
+          '<div class="ops-dv-meta">' +
+            '<div><span class="k">' + esc(c.dvBridgeSeen) + '</span><span class="v">' + esc(b.last_seen_ts ? ago(Date.now() - Number(b.last_seen_ts)) : '·') + '</span></div>' +
+            '<div><span class="k">' + esc(c.dvBridgePaired) + '</span><span class="v">' + esc(stamp(b.created_ts)) + '</span></div>' +
+          '</div></div>';
+      }
+      function bridgesHtml(result) {
+        var body;
+        if (result && result.error) body = '<p class="ops-dv-hint">' + esc(result.error === 'relay-not-provisioned' ? c.dvBridgeOff : acctError(result.error)) + '</p>';
+        else if (!(result.bridges || []).length) body = '<p class="ops-dv-hint">' + esc(c.dvBridgeNone) + '</p>';
+        else body = result.bridges.map(bridgeCard).join('');
+        return '<div class="ops-dv-sect">' + esc(c.dvBridges) + '</div><p class="ops-dv-hint">' + esc(c.dvBridgesHint) + '</p>' + body;
       }
 
       async function loadFleet() {
         host.innerHTML = '<p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvLoading) + '</p>';
         try {
-          var data = await O.devices({ limit:200 });
-          var fleet = (data && data.devices) || [];
+          var both = await Promise.all([
+            O.devices({ limit:200 }),
+            O.printBridges ? O.printBridges().catch(function (e) { return { error:(e && (e.code || e.message)) || 'operation-failed' }; }) : Promise.resolve({ bridges:[] }),
+          ]);
+          var data = both[0], fleet = (data && data.devices) || [];
+          /* Les équipements d'abord (caisses, salle), la console ensuite. */
+          fleet = fleet.filter(function (d) { return d.app !== 'dashboard'; }).concat(fleet.filter(function (d) { return d.app === 'dashboard'; }));
           host.innerHTML = '<div class="ops-dv-kpis">' +
             kpi(c.dvHeads, String(fleet.length)) +
             kpi(c.dvAlerts, String((data && data.alerts) || 0)) +
             kpi(c.dvOffline, String((data && data.offline) || 0)) +
             '</div>' +
-            (fleet.length ? fleet.map(deviceCard).join('') : '<p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvNone) + '</p>');
+            (fleet.length ? fleet.map(deviceCard).join('') : '<p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvNone) + '</p>') +
+            bridgesHtml(both[1]);
         } catch (error) { card(host, error && (error.code || error.message)); }
       }
 
@@ -1951,6 +2003,28 @@
         var row = event.target.closest('[data-dv-row]');
         if (!row) return;
         var out = row.querySelector('[data-dv-row-out]');
+
+        var form = row.querySelector('[data-dv-rename-form]');
+        var input = form && form.querySelector('[data-dv-rename-input]');
+        if (event.target.closest('[data-dv-rename]')) {
+          form.hidden = !form.hidden;
+          if (!form.hidden) { input.value = row.getAttribute('data-dv-name') || ''; input.focus(); }
+          return;
+        }
+        if (event.target.closest('[data-dv-rename-cancel]')) { form.hidden = true; return; }
+        var save = event.target.closest('[data-dv-rename-save]');
+        if (save) {
+          save.disabled = true; out.innerHTML = '';
+          try {
+            var wanted = String(input.value || '').trim();
+            var renamed = linkOutcome(await O.renameDevice(row.getAttribute('data-dv-id'), wanted));
+            if (renamed.queued) { save.disabled = false; return; }
+            if (renamed.error) { save.disabled = false; return card(out, renamed.error); }
+            Kiwi.toast(wanted ? c.dvRenamed : c.dvRenamedOwn, { type:'success' });
+            loadFleet();
+          } catch (error) { save.disabled = false; card(out, error && (error.code || error.message)); }
+          return;
+        }
 
         var ack = event.target.closest('[data-dv-ack]');
         if (ack) {

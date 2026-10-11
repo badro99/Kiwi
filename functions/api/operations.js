@@ -18,7 +18,7 @@ const ACTIONS = {
   payroll: new Set(['export-payroll', 'prepare-payslips', 'submit-cnss']),
   accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
   payment: new Set(['create-link', 'cancel-link', 'refund-link', 'settle-link']),
-  device: new Set(['heartbeat', 'test-print', 'ack-alert']),
+  device: new Set(['heartbeat', 'test-print', 'ack-alert', 'rename']),
   ai: new Set(['stock-adjust', 'reprint', 'update-order-status', 'message-customer', 'create-po']),
 };
 const CONFIRM = new Set([
@@ -1845,12 +1845,21 @@ async function payments(env, row, payload) {
 const BEAT_MS = 300000;                          /* période du battement client */
 const DEVICE_OFFLINE_MS = 3 * BEAT_MS + 60000;   /* trois battements manqués */
 const DEVICE_STALE_MS = 30 * 24 * 3600 * 1000;   /* un appareil oublié sort du parc */
+/* Un tableau de bord n'est pas un équipement : c'est la console du patron, ouverte
+   quand il la regarde et fermée le reste du temps. Il se lit tant qu'il bat (le
+   seuil des trois battements manqués) ; après, ce n'est plus qu'une session
+   fermée ou oubliée (un autre navigateur, un profil vidé : chacun naît sous un
+   nouvel identifiant), pas un appareil du parc. Les caisses et les téléphones de
+   salle gardent, eux, les trente jours. */
+const CONSOLE_STALE_MS = DEVICE_OFFLINE_MS;
+let customLabelReady = false;
 
 async function ensureDevices(env) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS device_health (
       merchant TEXT NOT NULL, device_id TEXT NOT NULL,
       app TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '',
+      custom_label TEXT NOT NULL DEFAULT '',
       online INTEGER NOT NULL DEFAULT 1, standalone INTEGER NOT NULL DEFAULT 0,
       printer_configured INTEGER NOT NULL DEFAULT 0, printer_connected INTEGER NOT NULL DEFAULT 0,
       alert TEXT NOT NULL DEFAULT '', alert_since_ts INTEGER NOT NULL DEFAULT 0,
@@ -1860,6 +1869,13 @@ async function ensureDevices(env) {
       PRIMARY KEY (merchant, device_id)
     )`
   ).run();
+  /* Les bases créées avant le renommage n'ont pas la colonne : on l'ajoute une
+     fois par isolat, et « déjà présente » n'est pas une erreur. */
+  if (!customLabelReady) {
+    try { await env.DB.prepare("ALTER TABLE device_health ADD COLUMN custom_label TEXT NOT NULL DEFAULT ''").run(); }
+    catch (_) { /* colonne déjà là */ }
+    customLabelReady = true;
+  }
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_seen ON device_health (merchant, last_seen_ts)').run();
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS device_alerts (
@@ -1875,7 +1891,10 @@ async function ensureDevices(env) {
    fois, par ordre de gravité : un appareil muet passe avant son imprimante. */
 function deviceAlarm(row, at) {
   if (!row) return '';
-  if (at - Number(row.last_seen_ts || 0) > DEVICE_OFFLINE_MS) return 'device-offline';
+  /* Se taire est l'état normal d'un tableau de bord (onglet fermé, portable
+     replié) : en faire une alarme « appareil muet » remplissait le parc de
+     fausses urgences, une par navigateur déjà ouvert un jour. */
+  if (clean(row.app, 24) !== 'dashboard' && at - Number(row.last_seen_ts || 0) > DEVICE_OFFLINE_MS) return 'device-offline';
   if (Number(row.printer_configured) && !Number(row.printer_connected)) return 'printer-unreachable';
   if (clean(row.app, 24) === 'caisse' && !Number(row.printer_configured)) return 'printer-unconfigured';
   return '';
@@ -1912,7 +1931,9 @@ async function reconcileAlert(env, merchant, deviceId, before, code, at) {
 function deviceView(row, code, at) {
   const held = code && code === clean(row.alert, 40);
   return {
-    deviceId: clean(row.device_id, 80), app: clean(row.app, 24), label: clean(row.label, 80),
+    deviceId: clean(row.device_id, 80), app: clean(row.app, 24),
+    /* Le nom que le patron a donné gagne sur celui que l'appareil se donne. */
+    label: clean(row.custom_label, 80) || clean(row.label, 80), renamed: !!clean(row.custom_label, 80),
     online: !!Number(row.online), standalone: !!Number(row.standalone),
     printerConfigured: !!Number(row.printer_configured), printerConnected: !!Number(row.printer_connected),
     alert: code, alertSince: held ? Number(row.alert_since_ts) || at : at,
@@ -1980,6 +2001,19 @@ async function devices(env, row, payload) {
     ).bind(at, by, merchant, deviceId, code).run();
     return update(env, row, 'completed', 'kiwi-device',
       { deviceId: deviceId, code: code, acknowledged: true, ackedBy: by }, '');
+  }
+
+  /* Renommer : « Caisse comptoir » se retrouve, un identifiant ne se lit pas.
+     Le nom du patron vit dans sa propre colonne : le battement réécrit `label`
+     toutes les cinq minutes, il ne doit jamais effacer ce que le patron a écrit.
+     Un nom vide rend l'appareil à son nom d'origine. */
+  if (row.action === 'rename') {
+    if (!known) return fail('device-unknown');
+    const name = clean(payload.name, 80).replace(/[\u0000-\u001f\u007f]/g, '').trim();
+    await env.DB.prepare(
+      'UPDATE device_health SET custom_label = ? WHERE merchant = ? AND device_id = ?'
+    ).bind(name, merchant, deviceId).run();
+    return update(env, row, 'completed', 'kiwi-device', { deviceId: deviceId, label: name, renamed: !!name }, '');
   }
 
   if (row.action === 'test-print') {
@@ -2314,6 +2348,7 @@ export async function onRequestGet({ request, env }) {
       }
       const fleet = [];
       for (const device of (seen && seen.results) || []) {
+        if (clean(device.app, 24) === 'dashboard' && at - Number(device.last_seen_ts || 0) > CONSOLE_STALE_MS) continue;
         const code = deviceAlarm(device, at);
         const view = deviceView(device, code, at);
         if (view.app === 'caisse') view.sync = syncByDevice.get(view.deviceId) || null;

@@ -115,7 +115,10 @@
    * assets/team.js still reads `payroll:false` to withhold pay figures; it no
    * longer means "remove scheduling". */
   var HANDLER_ALIASES = {
-    terminaux: ['nav-terminals'],
+    /* `nav-terminals` n'a jamais existé : la page s'ouvre par `nav-terminaux`
+       (déduit de la clé). Les deux entrées qui restent sont celles de la
+       fiche matériel de démonstration, que la porte doit couvrir aussi. */
+    terminaux: ['terminal-catalog', 'add-terminal'],
     depenses: ['open-depenses'],
     orderpro: ['orderpro-tags'],
     crm: ['clients-directory', 'growth-crm'],
@@ -397,15 +400,52 @@
    * Les identifiants de nav SONT les clés de modules (venues.js), donc
    * `nav-<clé>` se déduit. Les alias sont les entrées qui portent un autre nom.
    */
+  /* LA PORTE TIENT, MÊME SI LE MODULE RÉÉCRIT SON HANDLER APRÈS.
+   *
+   * Avant, gateOne remplaçait `H[name]` par une enveloppe, une fois, au moment
+   * où la config arrivait. Or conformite.js (au DOMContentLoaded) et
+   * operations-ui.js (au chargement, priorité basse) réécrivent
+   * `H['nav-conformite']` / `H['nav-terminaux']` APRÈS, et leur version, elle,
+   * n'était pas gardée : mesuré sur la pile locale, module coupé par
+   * l'opérateur, `Kiwi.handlers['nav-terminaux']()` ouvrait le parc d'appareils
+   * et `nav-conformite` ouvrait la page, alors que `__kiwiGate` valait
+   * `undefined` sur les deux. Le commentaire ci-dessus promettait le contraire,
+   * et ⌘K, la carte de l'accueil et Kiwi AI passent tous par là.
+   *
+   * La garde est donc posée sur la PROPRIÉTÉ, pas sur la valeur : le setter
+   * range ce qu'on lui donne, le getter rend toujours cette valeur sous
+   * enveloppe. Une réécriture tardive reste gardée ; `featureOff` est relu à
+   * chaque appel, donc rallumer le module le rouvre sans rien restaurer.
+   * L'enveloppe recopie les marqueurs `__kiwi*` de la fonction qu'elle garde
+   * (production-action-guard y lit `__kiwiProductionHonesty` pour ne pas se
+   * ré-envelopper à chaque passage). */
   function gateOne(H, name, key) {
-    var fn = H[name];
-    if (typeof fn !== 'function' || fn.__kiwiGate) return;
-    var wrapped = function () {
-      if (featureOff(key)) return;          // ce module ne fait pas partie de leur Kiwi
-      return fn.apply(this, arguments);
-    };
-    wrapped.__kiwiGate = key;
-    H[name] = wrapped;
+    var desc = Object.getOwnPropertyDescriptor(H, name);
+    if (!desc) return;
+    if (desc.get && desc.get.__kiwiGateAccessor) return;   // déjà posée
+    if (desc.configurable === false) return;
+    var raw = desc.value;
+    if (typeof raw !== 'function') return;
+    var cachedFor = null, cachedWrap = null;
+    function guard(fn) {
+      if (typeof fn !== 'function') return fn;
+      if (cachedFor === fn) return cachedWrap;
+      var wrapped = function () {
+        if (featureOff(key)) return;          // ce module ne fait pas partie de leur Kiwi
+        return fn.apply(this, arguments);
+      };
+      Object.keys(fn).forEach(function (k) { if (k.indexOf('__kiwi') === 0) wrapped[k] = fn[k]; });
+      wrapped.__kiwiGate = key;
+      cachedFor = fn; cachedWrap = wrapped;
+      return wrapped;
+    }
+    var getter = function () { return guard(raw); };
+    getter.__kiwiGateAccessor = true;
+    Object.defineProperty(H, name, {
+      configurable: true, enumerable: true,
+      get: getter,
+      set: function (fn) { raw = fn; }
+    });
   }
   function gateHandlers() {
     var H = null;
@@ -738,6 +778,9 @@
     } catch (_) {}
   }
 
+  /* Un handler enregistré APRÈS l'arrivée de la config (les modules chargés en
+     priorité basse) n'a pas encore de porte : on repasse quand tout est chargé. */
+  window.addEventListener('load', function () { gateHandlers(); setTimeout(gateHandlers, 400); });
   window.addEventListener('focus', function () { fetchConfig(); });
   window.addEventListener('kiwi:business-cutoff-changed', function () {
     reportTillZone(cfg.timezone, cfg.businessCutoff);

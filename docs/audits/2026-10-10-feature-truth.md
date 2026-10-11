@@ -220,6 +220,27 @@ second with the dashboard page left open.
 
 Covered by `tools/customer-retention-test.mjs`.
 
+## Terminaux & Conformité: done
+
+Operator modules, off for a new store. Measured through the real operator
+console on the local stack: switch each module on, then use it as the
+merchant with real clicks; switch it off and try every way in (sidebar,
+⌘K, the home card, a direct handler call).
+
+| ID | Finding | Status |
+|---|---|---|
+| T1 | **A module switched off still opened.** The gate wrapped `nav-terminaux` and `nav-conformite` once, then `operations-ui.js` and `conformite.js` reassigned them, unguarded. | **Fixed.** The gate sits on the property (accessor), so a later assignment is guarded too, and `featureOff` is read on every call. Re-verified in the browser at `merchant-config.js?v=278`: both handlers carry the gate and open nothing; an enabled page (Stock) still opens. `module-gate-test.mjs`. |
+| T2 | The `terminaux` alias pointed at `nav-terminals`, a handler that never existed. | **Fixed.** It covers `terminal-catalog` and `add-terminal`. |
+| T3 | The till and the dashboard on one machine shared a device id and overwrote each other: the till never appeared as its own row. | **Fixed.** The dashboard's id is suffixed `:web`. Measured: two rows. |
+| T4 | The dashboard was listed as equipment and raised "appareil muet" once its tab closed, one false alarm per browser ever opened. | **Fixed.** A dashboard never alarms, and is listed only while it beats. |
+| T5 | "Test d'impression" reused a heartbeat up to five minutes old, or did nothing. | **Fixed.** It forces a fresh heartbeat; with no printer it says so. |
+| T6 | Rows showed raw ids, with no way to name a device. | **Fixed.** A readable default ("Mac · Chrome") and a rename kept in its own column, so the heartbeat never overwrites it. |
+| T7 | No view of the print bridges. | **Fixed.** "Ponts d'impression" with the real paired state; "En ligne" means seen in the last 45 s. |
+| T8 | Unpair one device. | **Open.** The till token carries no device identity, so a per-device unpair would be fake. Pairing and revoke stay on the till. |
+| C1 | Conformité for a real store. | **Verified honest.** An empty card, no invented Z history, HACCP or certificates; the demo drawers are unreachable for a real merchant. |
+
+Covered by `module-gate-test.mjs` and `terminaux-truth-test.mjs` (14 of 17 fail on the old code) and `operations-system-test.mjs`.
+
 ## Small items, closed
 
 | Item | What it said | Now |
@@ -266,7 +287,7 @@ Covered by `tools/customer-retention-test.mjs`.
 ## Inventory · next features
 
 Dashboard: ~~Accueil~~ · ~~Commandes~~ · ~~Rapport journalier~~ · ~~Clients~~ ·
-~~Fidélisation~~ · Terminaux* · Conformité* · ~~Équipe~~ · ~~Planning~~ · ~~Réservations & RDV~~ ·
+~~Fidélisation~~ · ~~Terminaux*~~ · ~~Conformité*~~ · ~~Équipe~~ · ~~Planning~~ · ~~Réservations & RDV~~ ·
 ~~Menu & modificateurs~~ · ~~Stock & approvisionnement~~ · ~~Marges & budget~~.
 
 \* Operator modules, off for a new store (`merchant-config.js`): a merchant

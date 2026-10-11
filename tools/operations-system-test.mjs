@@ -313,7 +313,7 @@ ok(unreachable.data.command.result.alert === 'printer-unreachable', 'a configure
 /* Un battement daté d'une heure passe le contrôle d'ancienneté (24 h) mais
    dépasse largement les trois battements manqués : l'alarme tombe à l'écriture,
    sans horloge truquée. */
-const aged = await post(ownerCookie, command({ id: 'op:dev-old-01', idempotencyKey: 'op:dev-old-01', domain: 'device', action: 'heartbeat', payload: { app: 'dashboard', deviceId: 'dev-old-01', label: 'Tablette salle', at: Date.now() - 3600000 } }));
+const aged = await post(ownerCookie, command({ id: 'op:dev-old-01', idempotencyKey: 'op:dev-old-01', domain: 'device', action: 'heartbeat', payload: { app: 'serveur', deviceId: 'dev-old-01', label: 'Tablette salle', at: Date.now() - 3600000 } }));
 ok(aged.data.command.status === 'completed' && aged.data.command.result.alert === 'device-offline',
   'an appliance whose last word is an hour old is offline, whatever it claims about itself');
 
