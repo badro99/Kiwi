@@ -176,3 +176,18 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   attempt stopped on `hotel-direct-booking-browser-test` at load average 172
   (176 of 176 alone), so the script was rerun rather than bypassed. Build
   number 36, `com.kiwios.pro`, signature verified.
+- **Build 37 never uploaded.** Its gate stopped on `check-guard-test`: the
+  "normal child" case ran under the hang test's 400 ms cap and a cold node
+  start under load took longer. Fixed in `c265521b` (that case gets its own
+  30 s guard).
+- **Build 38 uploaded** (`c265521b`, the commit Cloudflare Pages had deployed):
+  "Upload succeeded", processing. The iPad till speaks English (takeaway card,
+  left rail, builder header, service stats), a lemon chicken tajine shows
+  tajine art instead of juice, the iPad dashboard keeps its page title and gets
+  styled account links (no `:hover` in that block: it blanked the iPad lock in
+  WKWebView on a cold launch). Full `node tools/check.js` green on the third
+  attempt. The first stopped because the release worktree had no
+  `app/node_modules` (51 browser suites could not load puppeteer); the second
+  on two timeouts at load average 50, both green alone
+  (`landing-es-browser-test` 207, `native-qa-six-fixes-test` 47). Build number
+  38, `com.kiwios.pro`, a 26.8 MB `.ipa`.
