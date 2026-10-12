@@ -1163,6 +1163,8 @@ section('Whole-project regressions');
     'kitchen-print-queue-test.mjs',
     'kitchen-void-slip-test.mjs',
     'course-firing-browser-test.mjs',
+    'kds-recall-test.mjs',
+    'kds-recall-browser-test.mjs',
     'print-relay-idempotency-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',

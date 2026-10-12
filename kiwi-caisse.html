@@ -5019,6 +5019,10 @@
     .kit-act-accept:hover { background: var(--atlas); }
     .kit-act-ready { background: var(--atlas); color: var(--inverse-ink); }
     .kit-act-ready:hover { background: var(--brand-deep); }
+    /* Rappeler : un geste de correction, pas d'avancement. Il ne prend donc
+       pas la dalle pleine des deux autres, il reste en contour. */
+    .kit-act-recall { background: var(--paper-soft); color: var(--ink); box-shadow: inset 0 1px 0 var(--line); }
+    .kit-act-recall:hover { background: var(--paper); }
     .kit-act:focus-visible { outline: 3px solid var(--mint); outline-offset: -4px; }
     .kit-act:active { filter: brightness(0.93); }
     .kit-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 40px 20px; text-align: center; background: var(--paper-soft); border: 1px dashed var(--line); border-radius: 13px; }
@@ -19531,7 +19535,12 @@
         const hasRec = kdsHasRecipe(i.n);
         return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRec ? ' has-recipe' : ''}"${hasRec ? ` data-kit-recipe="${kdsEsc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${kdsEsc(i.n)}${visualHtml}${note ? `<span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(note)}</span></span>` : ''}</span>${hasRec ? KDS_SVG.book : ''}</li>`;
       }).join('');
-      const act = isReady ? ''
+      /* Un bon prêt se rappelle depuis la vue agrandie (l'historique y mène) :
+         « Prête » tapé par erreur au coup de feu ne doit pas faire disparaître
+         un plat qui n'est pas fait. Pas sur une carte de colonne, et jamais
+         sur une commande déjà remise au client. */
+      const act = isReady ? (withEye || o.pickedUp ? ''
+          : `<button class="kit-act kit-act-recall" data-kit-recall="${o.num}">Rappeler en cuisine</button>`)
         : isNew ? `<button class="kit-act kit-act-accept" data-kit-accept="${o.num}">Accepter</button>`
         : `<button class="kit-act kit-act-ready" data-kit-ready="${o.num}">${KDS_SVG.check}Prête</button>`;
       const eye = withEye ? `<button class="kit-eye" data-kit-eye="${o.num}" aria-label="Agrandir #${o.num}">${KDS_SVG.eye}</button>` : '';
@@ -19545,7 +19554,7 @@
         </div>
         <div class="kit-order-meta">
           ${kdsTypeChip(o)}
-          <span class="kit-status">${isReady ? 'Servie' : isNew ? 'Nouvelle' : 'En préparation'}</span>
+          <span class="kit-status">${isReady ? (o.pickedUp ? 'Servie' : 'Prête') : isNew ? 'Nouvelle' : 'En préparation'}</span>
         </div>
         <ul class="kit-items">${items}</ul>
         ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}
@@ -19689,6 +19698,49 @@
         : `Commande ${ticketNo(o)} prête`);
     }
 
+    /* ── RAPPELER UN BON MARQUÉ PRÊT PAR ERREUR ───────────────────────────
+       Le serveur refuse `ready → accepted` en transition ordinaire : le rappel
+       est un geste nommé (`recall`), journalisé, et marqué sur les lignes
+       (`recalledAt`) pour que les autres écrans le suivent. Ici on le montre
+       tout de suite, et on le défait si le serveur ne le confirme pas (bon
+       servi entre-temps, réseau tombé) : l'écran ne doit pas mentir. */
+    function kdsRecall(num) {
+      const o = kdsOrders.find(x => x.num === num);
+      if (!o || o.pickedUp || kdsViewStatus(o, kdsActiveStation) !== 'ready') return;
+      const station = kdsActiveStation === 'all' ? '' : kdsActiveStation;
+      const before = { status: o.status, readyAt: o.readyAt,
+        ready: o.items.map(i => i.stationReady), accepted: o.items.map(i => i.stationAccepted) };
+      const wasReady = o.status === 'ready';
+      o.items.forEach(i => {
+        if (!station || i.stations.includes(station)) { i.stationReady = false; i.stationAccepted = true; }
+        else if (wasReady) i.stationReady = true;
+      });
+      o.status = 'cooking';
+      o.readyAt = null;
+      /* Une échéance plutôt qu'un drapeau : un instantané sauvé pendant le vol
+         et rechargé ne doit pas geler ce bon pour toujours. */
+      o.recallPendingUntil = Date.now() + 30000;
+      kdsPaint();
+      if (o.type === 'takeaway') renderVrapBoard();
+      toast(`${ticketNo(o)} rappelée en cuisine`);
+      Promise.resolve(opPush(o, 'recall', station ? { station } : {})).then((j) => {
+        o.recallPendingUntil = 0;
+        if (j && j.ok) {
+          o.recallSeen = Math.max(Number(o.recallSeen) || 0,
+            ...(Array.isArray(j.lines) ? j.lines : []).map(l => Number(l && l.recalledAt) || 0));
+          return;
+        }
+        if (!o.opId) return;
+        o.status = before.status;
+        o.readyAt = before.readyAt;
+        o.items.forEach((i, k) => { i.stationReady = before.ready[k]; i.stationAccepted = before.accepted[k]; });
+        kdsPaint();
+        if (o.type === 'takeaway') renderVrapBoard();
+        if (!j) toast(`Rappel de ${ticketNo(o)} non confirmé · réessayez`);
+        else if (j.httpStatus === 409 && j.error === 'bad-transition') toast(`${ticketNo(o)} est déjà servie`);
+      }).catch(() => { o.recallPendingUntil = 0; });
+    }
+
     function kdsOpenZoom(o) {
       document.querySelectorAll('.kit-zoom-backdrop').forEach(b => b.remove());
       const bd = document.createElement('div');
@@ -19708,6 +19760,8 @@
         if (acc) { kdsAccept(Number(acc.dataset.kitAccept)); close(); return; }
         const rdy = e.target.closest('[data-kit-ready]');
         if (rdy) { kdsReady(Number(rdy.dataset.kitReady)); close(); return; }
+        const rcl = e.target.closest('[data-kit-recall]');
+        if (rcl) { kdsRecall(Number(rcl.dataset.kitRecall)); close(); return; }
         const rec = e.target.closest('[data-kit-recipe]');
         if (rec) { kdsOpenRecipe(rec.dataset.kitRecipe); return; }
         if (!e.target.closest('.kit-zoom')) close();
@@ -22124,18 +22178,41 @@
       /* Partial KDS readiness is stored on the canonical order lines. Pull it
          back into the local ticket so bar and kitchen tablets immediately see
          each other's progress without completing the entire order. */
-      (o.lines || []).forEach((line, index) => {
-        if (known.items && known.items[index]) {
-          known.items[index].stationReady = line.stationReady === true;
-          known.items[index].stationAccepted = line.stationAccepted === true;
+      /* Un rappel (« Rappeler en cuisine », ici ou sur la tablette) laisse
+         `recalledAt` sur les lignes. Le seul moyen de distinguer un bon
+         rappelé d'un sondage parti AVANT le rappel, qui le dirait encore
+         prêt : le rappel le plus récent vu, et l'horodatage de la réponse. */
+      const recalledAt = (o.lines || []).reduce((m, l) => Math.max(m, Number(l && l.recalledAt) || 0), 0);
+      const recallSeen = Number(known.recallSeen) || 0;
+      const recallInFlight = (Number(known.recallPendingUntil) || 0) > Date.now();
+      const staleAfterRecall = recallInFlight
+        || (recallSeen > 0 && recalledAt < recallSeen && (Number(o.updated_ts) || 0) < recallSeen);
+      if (!staleAfterRecall) {
+        (o.lines || []).forEach((line, index) => {
+          if (known.items && known.items[index]) {
+            known.items[index].stationReady = line.stationReady === true;
+            known.items[index].stationAccepted = line.stationAccepted === true;
+          }
+        });
+      }
+      if (recalledAt > recallSeen && !recallInFlight) {
+        known.recallSeen = recalledAt;
+        if (o.status === 'accepted' && known.status === 'ready' && !known.pickedUp) {
+          known.status = 'cooking';
+          known.readyAt = null;
+          try {
+            toast(known.table ? `Table ${known.table} · ${ticketNo(known)} rappelée en cuisine`
+                              : `${ticketNo(known)} rappelée en cuisine`);
+          } catch (_) {}
+          if (known.type === 'takeaway') { try { renderVrapBoard(); } catch (_) {} }
         }
-      });
+      }
 
       /* Déjà connue : on ne suit QUE ce que le serveur peut nous apprendre de
          neuf (une autre caisse, ou le téléphone du client). L'état local de la
          cuisine · `cooking` · n'existe pas côté serveur et ne doit donc jamais
          être écrasé par ce sondage. */
-      if (o.status === 'ready' && known.status !== 'ready') {
+      if (o.status === 'ready' && known.status !== 'ready' && !staleAfterRecall) {
         known.status = 'ready'; known.readyAt = known.readyAt || kdsNowHM();
         /* La cuisine vient de bumper depuis SA tablette. Sans un mot ici, le
            plat attendait au passe pendant que le comptoir regardait ailleurs ·

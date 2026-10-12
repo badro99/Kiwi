@@ -521,6 +521,12 @@
     .tk-act:disabled:active { transform: none; filter: none; }
     .act-accept { background: var(--fill-strong); color: var(--on-strong); }
     .act-ready   { background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%); color: var(--on-forest); }
+    .tk-recall {
+      display: block; width: 100%; margin-top: 8px; padding: 10px 12px; border: 0; background: transparent;
+      color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+      text-decoration: underline; text-underline-offset: 3px;
+    }
+    .tk-recall:active { color: var(--ink); }
     .act-served  { background: var(--paper-mute); color: var(--ink-2); border: 1px solid var(--line); height: 56px; font-size: 15px; }
     .tk.pass { border-color: var(--tint-pass-edge); background: var(--mint-tint); }
     .tk.pass .tk-items li { font-size: 16px; }
@@ -917,6 +923,7 @@
       'act.ready': 'Prête',
       'act.served': 'Remise au serveur',
       'act.stationReady': 'Poste prêt',
+      'act.recall': 'Rappeler en cuisine',
       'void.title': 'ANNULATION',
       'void.errServer': 'Annulation non confirmée par le serveur · vérifiez la connexion et réessayez.',
       'void.errSync': 'Annulation non confirmée · réessayez après synchronisation.',
@@ -978,6 +985,7 @@
       'act.ready': 'Ready',
       'act.served': 'Handed over',
       'act.stationReady': 'Station done',
+      'act.recall': 'Back to the kitchen',
       'void.title': 'CANCELLED',
       'void.errServer': 'Cancellation not confirmed by the server · check the connection and try again.',
       'void.errSync': 'Cancellation not confirmed · try again after syncing.',
@@ -1037,6 +1045,7 @@
       'act.ready': 'جاهز',
       'act.served': 'سُلّم للنادل',
       'act.stationReady': 'المركز جاهز',
+      'act.recall': 'إرجاع إلى المطبخ',
       'void.title': 'إلغاء',
       'void.errServer': 'لم يؤكد الخادم الإلغاء · تحقق من الاتصال وأعد المحاولة.',
       'void.errSync': 'لم يتم تأكيد الإلغاء · أعد المحاولة بعد المزامنة.',
@@ -1538,6 +1547,17 @@
       if (!o) return;
       if (job.status === 'served') { delete S.orders[job.id]; delete S.cooking[job.id]; return; }
       var lines = (o.lines || []).filter(function (l) { return l && (!job.station || l.station === job.station); });
+      if (job.status === 'recall') {
+        var whole = o.status === 'ready';
+        (o.lines || []).forEach(function (l) {
+          if (!l) return;
+          if (!job.station || l.station === job.station) { l.stationReady = false; l.stationAccepted = true; }
+          else if (whole) l.stationReady = true;
+        });
+        o.status = 'accepted';
+        S.cooking[job.id] = true;
+        return;
+      }
       if (job.status === 'cooking') lines.forEach(function (l) { l.stationAccepted = true; });
       if (job.status === 'ready') {
         lines.forEach(function (l) { l.stationReady = true; });
@@ -1555,7 +1575,7 @@
     var list = S.bumpsDropped;
     if (!list || !list.length) return;
     S.bumpsDropped = [];
-    var act = { cooking: 'act.take', ready: 'act.ready', served: 'act.served' };
+    var act = { cooking: 'act.take', ready: 'act.ready', served: 'act.served', recall: 'act.recall' };
     var refs = list.map(function (j) {
       var o = (j && S.orders[j.id]) || (j && j.ref);
       return T('sync.ticket').replace('{n}', o ? ticketNo(o) : '?').replace('{a}', T(act[j && j.status] || 'act.ready'));
@@ -1796,7 +1816,10 @@
         ? '<button class="tk-act act-ready" data-ready="' + esc(o.id) + '">' + SVG.check + T('act.ready') + '</button>'
         : (o.status === 'ready'
           ? '<button class="tk-act act-served" data-served="' + esc(o.id) + '">' + T('act.served') + '</button>'
-          : '<button class="tk-act act-served" disabled>' + T('act.stationReady') + '</button>');
+          : '<button class="tk-act act-served" disabled>' + T('act.stationReady') + '</button>')
+          /* « Prête » tapé trop tôt : le bon revient en préparation au lieu
+             d'attendre au passe un plat qui n'est pas fait. */
+          + '<button class="tk-recall" data-recall="' + esc(o.id) + '">' + T('act.recall') + '</button>';
     var right = kind === 'pass'
       ? '<span class="tk-timer ok">' + SVG.check + hm(o.updated_ts) + '</span>'
       : '<span class="tk-timer ' + u + '">' + SVG.clock + '<span>' + mmss(el) + '</span></span>';
@@ -2054,6 +2077,32 @@
       o.updated_ts = Date.now();
       saveCooking(); paint();
       sendBump(id, 'ready', station).then(afterBump);
+      return;
+    }
+    var rcl = e.target.closest('[data-recall]');
+    if (rcl) {
+      var rid = rcl.dataset.recall, ro = S.orders[rid];
+      if (!ro) return;
+      var rst = S.station === 'all' ? '' : S.station;
+      var readyKey = rid + '|ready|' + rst;
+      var flights = S.bumpFlights || {};
+      var unsent = S.pendingBumps[readyKey] && !flights[readyKey];
+      var wasReady = ro.status === 'ready';
+      (ro.lines || []).forEach(function (line) {
+        if (!line) return;
+        if (!rst || line.station === rst) { line.stationReady = false; line.stationAccepted = true; }
+        else if (wasReady) line.stationReady = true;
+      });
+      ro.status = 'accepted';
+      ro.updated_ts = Date.now();
+      S.cooking[rid] = true;
+      /* Le « Prête » n'est jamais parti (réseau tombé) : le serveur ne l'a pas
+         vu, il n'y a rien à rappeler, il suffit de l'oublier. */
+      if (unsent) { delete S.pendingBumps[readyKey]; saveBumps(); saveCooking(); paint(); return; }
+      saveCooking(); paint();
+      /* Il est en vol : le rappel part derrière lui, jamais devant. */
+      var after = flights[readyKey] || Promise.resolve();
+      after.then(function () { return sendBump(rid, 'recall', rst); }).then(afterBump);
       return;
     }
     var srv = e.target.closest('[data-served]');
