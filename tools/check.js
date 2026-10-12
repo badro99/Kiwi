@@ -1404,6 +1404,10 @@ section('Whole-project regressions');
        une mise à jour) ; une vraie nouvelle génération se recharge toujours en
        silence sur une page jeune, ou montre la pastille après un geste. */
     'pwa-first-install-browser-test.mjs',
+    /* Le banc des suites navigateur (tools/browser-trace.mjs) : trace.md à
+       l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
+       captures comparées à leur référence. */
+    'browser-trace-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page

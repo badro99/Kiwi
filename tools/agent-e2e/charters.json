@@ -1,0 +1,8 @@
+[
+  { "id": "till-ticket-totals", "target": "caisse", "agent": "numbers", "goal": "On the till, build a ticket with at least four different items, change a quantity, remove one line, and check that the ticket total and every line amount add up. Stop before any real payment screen." },
+  { "id": "till-first-sale", "target": "caisse", "agent": "newcomer", "goal": "As a first-time cashier, find how to sell two items and reach the payment step. Report anything confusing on the way. Stop before confirming a payment." },
+  { "id": "dashboard-orders-figures", "target": "dashboard", "agent": "numbers", "goal": "On the dashboard home and the orders page, check that the headline figures agree with each other and with the lists they summarise." },
+  { "id": "dashboard-language-switch", "target": "dashboard", "agent": "newcomer", "goal": "Switch the dashboard to English, then to Arabic, visit three pages in each, and report any text left in the wrong language or laid out the wrong way." },
+  { "id": "serveur-table-order", "target": "serveur", "agent": "edges", "goal": "In the waiter app, open a table, add items with unusual quantities and notes, and check what is refused, what is kept, and whether anything freezes." },
+  { "id": "till-reload-keeps-ticket", "target": "caisse", "agent": "reload", "goal": "Put three items on a ticket, reload the page, and check whether the ticket is kept, lost, or duplicated. Then do the same after switching language." }
+]

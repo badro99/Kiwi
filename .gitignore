@@ -81,3 +81,10 @@ app/plugins/*/android/build/
 
 # Rapports d audit de securite · jamais commites (ils citent des chemins de credentials)
 .security-audit/
+
+# Traces of failed browser tests (tools/browser-trace.mjs): screenshots and app logs, never committed
+.kiwi/
+
+# Bug-bash pilot (tools/agent-e2e): its packages and its exploration output
+tools/agent-e2e/node_modules/
+tools/agent-e2e/.e2e/

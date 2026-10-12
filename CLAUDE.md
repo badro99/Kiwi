@@ -199,6 +199,17 @@ nothing.** If you add a suite, wire it in. And a red run isn't automatically you
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
 
+**New browser suites use `tools/browser-trace.mjs`.** Run each scenario through
+`suite(name).run()` and `t.watch(page)`: a failure then writes
+`.kiwi/results/<suite>/<test>/trace.md` (steps, every page load and the script
+that started it, console errors, 4xx/5xx, screen, accessibility tree) and
+prints its path, which check.js shows. A launch or navigation timeout exits 3,
+and check-guard runs that suite once more before calling it red. Staff codes go
+through `secretFromEnv()` + `fillSecret()`, never a string. `expectScreenshot()`
+compares against `tools/__screenshots__/`; `KIWI_UPDATE_SNAPSHOTS=1` rewrites a
+baseline you meant to change. The AI bug-bash pilot in `tools/agent-e2e/` is
+**parked: the owner will not pay for its model tokens. Do not run it.**
+
 **Prod D1 lags `schema.sql`.** Every time. Never assume the live database has a table
 just because the schema file does — query the live DB. `migrations/` exists but is
 barely used; formalising `wrangler d1 migrations` is on the roadmap.

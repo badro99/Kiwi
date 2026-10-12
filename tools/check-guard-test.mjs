@@ -52,6 +52,31 @@ ok('an explicit timeout from the call site is respected', () => {
   spy(process.execPath, [quick], {});
   assert.deepEqual(seen, [123456, 400]);
 });
+ok('a test that fails on the environment (exit 3) runs once more and can recover', () => {
+  const flaky = path.join(dir, 'flaky-test.mjs');
+  const mark = path.join(dir, 'flaky.mark');
+  writeFileSync(flaky, `import fs from 'node:fs'; if (!fs.existsSync(${JSON.stringify(mark)})) { fs.writeFileSync(${JSON.stringify(mark)}, '1'); process.exit(3); } console.log('second time fine');\n`);
+  cp.spawnSync = realSpawnSync;
+  const msgs = [];
+  guard.install({ timeoutMs: 30000, log: (m) => msgs.push(m) });
+  const r = cp.spawnSync(process.execPath, [flaky], { encoding: 'utf8' });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /first run exited 3 on the environment/);
+  assert.ok(msgs.some((m) => /flaky-test\.mjs failed on the environment \(exit 3\), running it once more/.test(m)));
+});
+ok('exit 3 twice stays red and says why; exit 1 is never retried', () => {
+  const env = path.join(dir, 'env-test.mjs');
+  writeFileSync(env, 'process.exit(3);\n');
+  const runs = [];
+  const spy = guard.install({ timeoutMs: 30000, log: () => {}, spawnSync: (c, a) => { runs.push(a[0]); return { status: /env-test/.test(a[0]) ? 3 : 1, stdout: '', stderr: '' }; } });
+  const r = spy(process.execPath, [env], {});
+  assert.equal(r.status, 3);
+  assert.match(r.stderr, /env-test\.mjs failed on the environment twice/);
+  runs.length = 0;
+  const r1 = spy(process.execPath, [quick], {});
+  assert.equal(r1.status, 1);
+  assert.equal(runs.length, 1, 'an assertion failure ran once');
+});
 cp.spawnSync = realSpawnSync;
 
 /* ── one run at a time ─────────────────────────────────────────────────────── */

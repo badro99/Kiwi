@@ -16,7 +16,11 @@
  *     "TIMED OUT" and names the test instead of "exited null";
  *   - a test that runs longer than SLOW_MS is announced, so progress is visible;
  *   - one check run at a time per machine: a second run waits for the first
- *     (stale locks from dead PIDs are ignored; KIWI_CHECK_NO_LOCK=1 opts out).
+ *     (stale locks from dead PIDs are ignored; KIWI_CHECK_NO_LOCK=1 opts out);
+ *   - a test that exits 3 said « the environment failed, not the product »
+ *     (tools/browser-trace.mjs: no Chromium, a launch or navigation timeout,
+ *     a closed target). It runs once more before it counts as red, and the
+ *     output says so. Exit 1 (an assertion) is never retried.
  * Zero dependencies, like check.js itself. */
 const cp = require('child_process');
 const fs = require('fs');
@@ -25,6 +29,7 @@ const path = require('path');
 
 const DEFAULT_TIMEOUT_MS = 300000;
 const SLOW_MS = 60000;
+const ENV_EXIT = 3;
 const LOCK = path.join(os.tmpdir(), 'kiwi-check.lock');
 
 function sleep(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
@@ -40,9 +45,15 @@ function install(opts) {
     if (!o.timeout) o.timeout = timeout;
     if (!o.killSignal) o.killSignal = 'SIGKILL';
     const t0 = Date.now();
-    const r = real.call(cp, cmd, args, o);
-    const dt = Date.now() - t0;
+    let r = real.call(cp, cmd, args, o);
     const name = (Array.isArray(args) && args.length ? String(args[args.length - 1]) : String(cmd)).replace(/^.*\//, '');
+    if (r && r.status === ENV_EXIT && !o.kiwiNoRetry) {
+      log(`  … ${name} failed on the environment (exit ${ENV_EXIT}), running it once more`);
+      r = real.call(cp, cmd, args, o);
+      if (r && r.status === ENV_EXIT) r.stderr = (r.stderr || '') + `\n  ✗ ${name} failed on the environment twice (exit ${ENV_EXIT}: Chromium, the server or the machine, not an assertion). Check the load, then rerun it alone.`;
+      else if (r) r.stdout = `(first run exited ${ENV_EXIT} on the environment, second run below)\n` + (r.stdout || '');
+    }
+    const dt = Date.now() - t0;
     if (r && (r.error && r.error.code === 'ETIMEDOUT' || (r.status === null && r.signal === 'SIGKILL' && dt >= o.timeout - 50))) {
       r.stderr = (r.stderr || '') + `\n  ✗ ${name} TIMED OUT after ${Math.round(o.timeout / 1000)}s and was killed (hung, or the machine is overloaded: raise KIWI_CHECK_TIMEOUT_MS only after checking load)`;
     } else if (dt >= SLOW_MS) {
@@ -88,4 +99,4 @@ function acquireLock(opts) {
   return release;
 }
 
-module.exports = { install, acquireLock, DEFAULT_TIMEOUT_MS, SLOW_MS };
+module.exports = { install, acquireLock, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
