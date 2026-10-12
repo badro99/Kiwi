@@ -45,7 +45,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css',
-  '/assets/theme.css',
+  '/assets/theme.css?v=1',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
   '/assets/simple.css',

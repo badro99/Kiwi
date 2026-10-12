@@ -272,8 +272,8 @@
     "sha": "a92246132e258dd0"
   },
   "assets/design-vexel.css": {
-    "v": "2118",
-    "sha": "829717a6cda1c578"
+    "v": "2119",
+    "sha": "0fd039be08ad401f"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -986,6 +986,10 @@
   "assets/tenant-purge.js": {
     "v": "2",
     "sha": "64673f83b7dd7b23"
+  },
+  "assets/theme.css": {
+    "v": "1",
+    "sha": "a2e4f607ce5bf630"
   },
   "assets/tickets.css": {
     "v": "4",

@@ -2858,9 +2858,38 @@ body.design-vexel[data-vexel-mode] .topbar > .topbar-inner {
   gap: 12px;
 }
 
-body.design-vexel[data-vexel-mode] .topbar :is(.breadcrumb, .hours-pill),
+body.design-vexel[data-vexel-mode] .topbar .hours-pill,
 body.design-vexel[data-vexel-mode] .topbar .icon-btn[aria-label="Paramètres"] {
   display: none !important;
+}
+
+/* Fil d'Ariane · « Accueil / Stock & approvisionnement ». It used to be hidden
+ * here, so the open page's name only lived in the page heading and the crumb
+ * Kiwi.breadcrumb() keeps in the screen's language never painted. It sits
+ * left of the search, on the black chrome in both themes: home and separator
+ * muted, the page name lit. It gives way before the search does (min-width 0,
+ * ellipsis on the name). Phones keep mobile.css's compact header, which hides
+ * it below 861px. */
+@media (min-width: 861px) {
+  body.design-vexel[data-vexel-mode] .topbar .breadcrumb {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 13px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.52);
+  }
+  body.design-vexel[data-vexel-mode] .topbar .breadcrumb .sep { color: rgba(255, 255, 255, 0.26); }
+  body.design-vexel[data-vexel-mode] .topbar .breadcrumb b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.92);
+  }
 }
 
 /* The search was 659px of fully transparent nothing — no border, no fill, no

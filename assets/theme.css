@@ -306,7 +306,6 @@ html[dir="rtl"] .mono { direction: ltr; unicode-bidi: embed; }
  * Same for the hero-breakdown values ("9 577 MAD" was reading "MAD 577 9"). */
 html[dir="rtl"] .hero-amount, html[dir="rtl"] .fs-hero-amount { direction: ltr; unicode-bidi: isolate; }
 html[dir="rtl"] .hero-breakdown .v { direction: ltr; unicode-bidi: isolate; }
-html[dir="rtl"] .breadcrumb { flex-direction: row-reverse; }
 /* Flip directional arrow SVGs in CTAs, and only those. The rule used to
  * mirror every icon in a button, so under Arabic « Ajouter le membre »'s check
  * read as a chevron, and trash, copy, edit and eye icons all turned around.

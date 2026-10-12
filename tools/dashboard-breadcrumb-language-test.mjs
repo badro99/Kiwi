@@ -12,6 +12,8 @@
  * 1 · le peintre seul, avec les vrais i18n.js et interactive.js ;
  * 2 · le vrai dashboard.html en démo, chaque page ouverte d'un vrai clic sur
  *     la barre latérale, puis FR → EN → AR → accueil → FR ;
+ *     Le fil est vraiment peint sous le skin Vexel par défaut, de droite à
+ *     gauche sous l'arabe, et absent du header compact des téléphones ;
  * 3 · plus aucun « Accueil » littéral écrit dans le fil.
  */
 import assert from 'node:assert/strict';
@@ -64,6 +66,13 @@ const crumb = (p) => p.evaluate(() => {
 });
 const setLang = async (p, l) => { await p.evaluate((x) => KiwiI18n.setLang(x), l); await sleep(250); };
 const reads = (c, lang, title) => c.home === HOME[lang] && c.title === title && c.homes === 1;
+/* Ce que l'œil voit : le fil est-il peint dans la barre du haut, et dans quel ordre ? */
+const seen = (p) => p.evaluate(() => {
+  const bc = document.querySelector('.topbar .breadcrumb');
+  const box = (el) => { const r = el ? el.getBoundingClientRect() : { width: 0, height: 0, left: 0, right: 0 }; return { w: r.width, h: r.height, l: r.left, r: r.right }; };
+  return { vexel: document.body.classList.contains('design-vexel') && !!document.body.dataset.vexelMode, display: getComputedStyle(bc).display,
+    bc: box(bc), home: box(bc.querySelector('.breadcrumb-home')), title: box(bc.querySelector('b')), search: box(document.querySelector('.topbar .search-big')) };
+});
 
 try {
   /* ── 1 · Le peintre ─────────────────────────────────────────────────── */
@@ -141,6 +150,9 @@ try {
 
   let c = await crumb(page);
   check(reads(c, 'fr', DASH.fr) && c.page === '', 'the demo opens on « Accueil / Tableau de bord »');
+  let v = await seen(page);
+  check(v.vexel && v.display === 'flex' && v.home.w > 0 && v.title.w > 0 && v.bc.h > 0 && v.bc.r <= v.search.l,
+    'under the default Vexel skin the crumb is painted in the top bar, left of the search (it used to be display:none)');
 
   const PAGES = [
     ['stock', { fr: 'Stock & approvisionnement', en: 'Stock & procurement', ar: 'المخزون والتموين' }],
@@ -167,6 +179,21 @@ try {
     check(reads(home, 'ar', DASH.ar) && reads(back, 'fr', DASH.fr) && back.page === '',
       `${nav} → Accueil: « الرئيسية / لوحة التحكم », then « Accueil / Tableau de bord », nothing reopened on the switch`);
   }
+
+  /* Sous l'arabe le fil se lit de droite à gauche : « الرئيسية » à droite, le titre à sa gauche. */
+  await go('stock');
+  await setLang(page, 'ar');
+  v = await seen(page);
+  check(v.display === 'flex' && v.home.l > v.title.r && v.bc.l >= v.search.r,
+    'under Arabic the crumb reads right to left (« الرئيسية » rightmost, then the page name) and sits right of the search');
+  await setLang(page, 'fr');
+  await page.setViewport({ width: 390, height: 844 });
+  await sleep(300);
+  v = await seen(page);
+  check(v.display === 'none', 'on a phone the compact header still leaves the crumb out (mobile.css, below 861px)');
+  await page.setViewport({ width: 1366, height: 900 });
+  await sleep(300);
+  await go('accueil');
 
   /* L'équipe se relit elle-même : la page n'écoutait pas le changement de langue. */
   await go('equipe');
