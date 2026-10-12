@@ -92,7 +92,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=55',
+  '/assets/interactive.js?v=56',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=65',
+  '/assets/dateRange.js?v=66',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=12',

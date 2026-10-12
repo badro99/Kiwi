@@ -982,6 +982,23 @@ section('CA au grand livre (tools/kpi-ledger-test.js)');
   }
 }
 
+/* ── 9ter · les pourboires sont ceux qui ont été déclarés ────────────────────
+ * La tuile valait CA × 7,2 % chez un vrai commerçant : un montant inventé sous
+ * « Pourboires ». Elle lit les pourboires déclarés à la clôture des journées
+ * de la période, et « · » tant qu'aucune n'est close. (tools/tips-truth-test.mjs) */
+section('Pourboires déclarés (tools/tips-truth-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'tips-truth-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').reverse().find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`tips-truth-test.mjs exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9 bis · la marge se mesure ──────────────────────────────────────────────
  * Trois tuiles — Marge brute, Bénéfice brut, Coût matière — dérivaient d'un
  * chiffre qui rapprochait le LIBELLÉ du ticket (un résumé de panier : « Pain

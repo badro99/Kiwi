@@ -2183,6 +2183,27 @@
    * compris : le dénominateur honnête de « CA moyen par jour ». RANGE_DAYS
    * divisait une période personnalisée par 1 (la moyenne valait le total) et
    * l'année en cours par 365. */
+  /* Les pourboires déclarés par les journées CLOSES de la fenêtre. Une journée
+   * encore ouverte n'a rien déclaré : on ne la compte pas, on ne l'estime pas.
+   * null quand le classeur n'est pas chargé (rien à dire). */
+  function realClosedTips(range) {
+    const DR = window.KiwiDayReport;
+    if (!DR || typeof DR.list !== 'function') return null;
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    const slug = activeMerchantSlug();
+    const first = merchantDayKey(from + 1, slug);
+    const last = to === Infinity ? merchantDayKey(Date.now(), slug) : merchantDayKey(to - 1, slug);
+    let sum = 0, days = 0;
+    let reports = [];
+    try { reports = DR.list() || []; } catch (_) { return null; }
+    reports.forEach((r) => {
+      if (!r || !r.closed || !r.day || r.day < first || r.day > last) return;
+      const t = Number(r.tips);
+      days++;
+      if (Number.isFinite(t) && t > 0) sum += t;
+    });
+    return { sum: Math.round(sum * 100) / 100, days };
+  }
   function windowDays(range) {
     const [from, to] = closedBounds(range);
     const slug = activeMerchantSlug();
@@ -2912,8 +2933,23 @@
                   desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a + b) }; } },
     cogs:       { labels: { default: 'Coût matière' }, i18n: 'dash.kpi.cogs',
                   desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a - b) }; } },
+    /* Chez un vrai commerçant, les pourboires sont ceux que la caisse a
+       DÉCLARÉS à la clôture des journées de la période (KiwiDayReport, synchro
+       store_docs « dayreports »). Ils valaient jusqu'ici CA × 7,2 % : un
+       montant inventé, affiché sous « Pourboires » sans qu'un seul dirham de
+       pourboire ait été saisi. Aucune journée close sur la période : « · »,
+       et la bande par défaut le remplace par un indicateur qui a une valeur.
+       La démo garde son estimation : tout y est illustratif. */
     tips:       { labels: { default: 'Pourboires' }, i18n: 'dash.kpi.tips',
-                  desc: 'Pourboires estimés encaissés', derive: (d, ctx) => { const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0; return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+                  desc: 'Pourboires déclarés à la clôture', derive: (d, ctx) => {
+                    if (ownData()) {
+                      const real = realClosedTips(ctx.range);
+                      if (!real) return null;
+                      return real.days ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null } : { text: '·', value: 0, unit: '', fmt: 'int', delta: null };
+                    }
+                    const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0;
+                    return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: revDelta(d) };
+                  } },
     success:    { labels: { default: 'Taux succès', spa: 'Taux remplissage' }, i18n: 'dash.kpi.success',
                   desc: 'Paiements aboutis · créneaux remplis', derive: (d) => d.success || null },
     ratio:      { labels: { default: 'Ratio card / cash' }, i18n: 'dash.kpi.ratio',
@@ -3295,7 +3331,7 @@
      *   · le vivier est court. « CA/jour » et « ventes/jour » valent
      *     exactement « CA » et « ventes » sur une journée : on ne les propose
      *     que sur une plage multi-jours, sinon la bande afficherait deux fois
-     *     le même nombre sous deux titres. Pourboires (estimation), marge et
+     *     le même nombre sous deux titres. Pourboires (journées closes), marge et
      *     coût (marge inconnue), rétention et nouveaux clients (dérivés des
      *     réguliers, donc de 0) sont exclus par construction.
      *
@@ -6026,6 +6062,14 @@
       setTimeout(subSales, 30);
     };
     subSales();
+    /* « Pourboires » lit les journées closes du classeur, qui arrive du
+     * serveur après le premier rendu (et à chaque clôture d'une autre caisse) :
+     * la bande se repeint quand il change. day-report.js est chargé en différé. */
+    const subDayReports = (tries = 0) => {
+      if (window.KiwiDayReport?.subscribe) { window.KiwiDayReport.subscribe(() => { try { renderKpiBand(); } catch (_) {} }); return; }
+      if (tries < 200) setTimeout(() => subDayReports(tries + 1), 80);
+    };
+    subDayReports();
 
     /* Operational cards repaint from their own domain stores. Previously they
      * only refreshed after a page reload, which made a truthful source look
