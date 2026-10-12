@@ -183,6 +183,7 @@
       cancel: 'Annuler',
       delTitle: 'Supprimer ce membre ?',
       delDesc:  'Action irréversible. Le compte Kiwi Caisse sera désactivé immédiatement.',
+      delOnDuty: (hm) => `En service depuis ${hm}. Son pointage sera clos à la suppression.`,
       delConfirm: 'Supprimer',
       tAdded:    (n) => `${n} ajouté·e à l'équipe`,
       tAddedDesc:(e) => `Se connecte à l'app employé avec ${e} et son code personnel, sur sa fiche`,
@@ -374,6 +375,7 @@
       cancel: 'Cancel',
       delTitle: 'Remove this member?',
       delDesc:  'Permanent. The Kiwi Caisse account will be disabled immediately.',
+      delOnDuty: (hm) => `On duty since ${hm}. Their shift closes when you remove them.`,
       delConfirm: 'Remove',
       tAdded:    (n) => `${n} added to the team`,
       tAddedDesc:(e) => `Signs in to the employee app with ${e} and the personal code on their profile`,
@@ -564,6 +566,7 @@
       cancel: 'إلغاء',
       delTitle: 'إزالة هذا العضو؟',
       delDesc:  'إجراء نهائي. سيتم تعطيل حساب Kiwi Caisse فورًا.',
+      delOnDuty: (hm) => `في الخدمة منذ \u2066${hm}\u2069. يُغلق تسجيل دوامه عند الحذف.`,
       delConfirm: 'إزالة',
       tAdded:    (n) => `تمت إضافة ${n} إلى الفريق`,
       tAddedDesc:(e) => `يدخل إلى تطبيق الموظف بـ \u2068${e}\u2069 والرمز الشخصي المعروض في ملفه`,
@@ -606,6 +609,151 @@
     },
   };
   const t = () => STR[trLang()] || STR.fr;
+  /* Fonctions et services s'ENREGISTRENT en français : c'est la clé des filtres,
+   * de la suggestion fonction → service, des exports, des rapports et de
+   * l'assistant. Ils se LISENT dans la langue de l'écran. Sous l'anglais et
+   * l'arabe, la page Équipe, l'accueil et le planning disaient « Caissier »,
+   * « Salle », « Propriétaire ». Un intitulé saisi à la main n'a pas de
+   * traduction : il reste tel que le gérant l'a écrit. */
+  const JOB_FN = {
+    "Agent d'entretien": { en: "Cleaning staff", ar: "عامل نظافة" },
+    "Agent de réception": { en: "Reception agent", ar: "عون الاستقبال" },
+    "Agent polyvalent": { en: "General staff", ar: "موظف متعدد المهام" },
+    "Aide-fleuriste": { en: "Florist assistant", ar: "مساعد بائع الزهور" },
+    "Aide-pizzaiolo": { en: "Pizza assistant", ar: "مساعد صانع البيتزا" },
+    "Aide-pâtissier": { en: "Pastry assistant", ar: "مساعد الحلواني" },
+    "Bagagiste": { en: "Porter", ar: "حامل الأمتعة" },
+    "Barbier": { en: "Barber", ar: "حلاق" },
+    "Barista": { en: "Barista", ar: "باريستا" },
+    "Barman": { en: "Bartender", ar: "نادل البار" },
+    "Boulanger": { en: "Baker", ar: "خباز" },
+    "Caissier": { en: "Cashier", ar: "أمين الصندوق" },
+    "Chauffeur": { en: "Driver", ar: "سائق" },
+    "Chauffeur-livreur": { en: "Delivery driver", ar: "سائق توصيل" },
+    "Chef de cuisine": { en: "Head chef", ar: "رئيس الطهاة" },
+    "Chef de rang": { en: "Head waiter", ar: "رئيس الخدمة" },
+    "Chef traiteur": { en: "Catering chef", ar: "طاهي التموين" },
+    "Coach sportif": { en: "Fitness coach", ar: "مدرب رياضي" },
+    "Coiffeur": { en: "Hairdresser", ar: "مصفف شعر" },
+    "Coiffeuse": { en: "Hairdresser", ar: "مصففة شعر" },
+    "Coloriste": { en: "Colourist", ar: "أخصائي صبغ الشعر" },
+    "Commercial": { en: "Sales representative", ar: "مندوب مبيعات" },
+    "Commis": { en: "Kitchen assistant", ar: "مساعد طباخ" },
+    "Concierge": { en: "Concierge", ar: "موظف الكونسيرج" },
+    "Conseiller": { en: "Advisor", ar: "مستشار" },
+    "Conseiller abonnements": { en: "Membership advisor", ar: "مستشار الاشتراكات" },
+    "Conseiller liste de mariage": { en: "Wedding registry advisor", ar: "مستشار قوائم الأعراس" },
+    "Cuisinier": { en: "Cook", ar: "طباخ" },
+    "Détacheur": { en: "Stain specialist", ar: "أخصائي إزالة البقع" },
+    "Emballeur": { en: "Packer", ar: "عامل التغليف" },
+    "Esthéticienne": { en: "Beautician", ar: "أخصائية تجميل" },
+    "Femme de chambre": { en: "Room attendant", ar: "عاملة الغرف" },
+    "Fleuriste": { en: "Florist", ar: "بائع الزهور" },
+    "Gouvernante": { en: "Head housekeeper", ar: "مشرفة الغرف" },
+    "Hôte d'accueil": { en: "Host", ar: "مضيف الاستقبال" },
+    "Libraire": { en: "Bookseller", ar: "بائع الكتب" },
+    "Livreur": { en: "Delivery rider", ar: "عامل توصيل" },
+    "Magasinier": { en: "Stock keeper", ar: "أمين المخزن" },
+    "Manager": { en: "Manager", ar: "مدير" },
+    "Manucure": { en: "Manicurist", ar: "أخصائية العناية بالأظافر" },
+    "Maquilleuse": { en: "Make-up artist", ar: "خبيرة مكياج" },
+    "Masseur": { en: "Massage therapist", ar: "مدلّك" },
+    "Masseuse": { en: "Massage therapist", ar: "مدلّكة" },
+    "Maître d'hôtel": { en: "Maître d'hôtel", ar: "رئيس الصالة" },
+    "Opérateur lavage": { en: "Washing operator", ar: "عامل الغسيل" },
+    "Personal trainer": { en: "Personal trainer", ar: "مدرب شخصي" },
+    "Pharmacien assistant": { en: "Assistant pharmacist", ar: "صيدلي مساعد" },
+    "Pharmacien titulaire": { en: "Head pharmacist", ar: "الصيدلي المسؤول" },
+    "Pizzaiolo": { en: "Pizza maker", ar: "صانع البيتزا" },
+    "Plongeur": { en: "Dishwasher", ar: "غاسل الأواني" },
+    "Professeur de cours collectif": { en: "Group class instructor", ar: "مدرب الحصص الجماعية" },
+    "Propriétaire": { en: "Owner", ar: "المالك" },
+    "Préparateur": { en: "Food preparer", ar: "معدّ الطعام" },
+    "Préparateur en pharmacie": { en: "Pharmacy technician", ar: "تقني صيدلة" },
+    "Pâtissier": { en: "Pastry chef", ar: "حلواني" },
+    "Repasseur": { en: "Presser", ar: "عامل الكي" },
+    "Responsable": { en: "Supervisor", ar: "مسؤول" },
+    "Responsable commandes": { en: "Orders lead", ar: "مسؤول الطلبيات" },
+    "Responsable d'atelier": { en: "Workshop lead", ar: "مسؤول الورشة" },
+    "Responsable de production": { en: "Production lead", ar: "مسؤول الإنتاج" },
+    "Responsable de shift": { en: "Shift lead", ar: "مسؤول الوردية" },
+    "Responsable de tournée": { en: "Route lead", ar: "مسؤول الجولة" },
+    "Responsable logistique": { en: "Logistics lead", ar: "مسؤول اللوجستيك" },
+    "Responsable réservations": { en: "Reservations lead", ar: "مسؤول الحجوزات" },
+    "Retoucheur": { en: "Alterations tailor", ar: "خياط التعديلات" },
+    "Réassortisseur": { en: "Shelf stocker", ar: "عامل تعبئة الرفوف" },
+    "Réceptionniste": { en: "Receptionist", ar: "موظف الاستقبال" },
+    "Serveur": { en: "Waiter", ar: "نادل" },
+    "Serveur événementiel": { en: "Event server", ar: "نادل الحفلات" },
+    "Shampouineur": { en: "Shampoo assistant", ar: "مساعد غسل الشعر" },
+    "Sommelier": { en: "Sommelier", ar: "خبير النبيذ" },
+    "Sous-chef": { en: "Sous-chef", ar: "نائب رئيس الطهاة" },
+    "Technicien": { en: "Technician", ar: "تقني" },
+    "Technicien de maintenance": { en: "Maintenance technician", ar: "تقني الصيانة" },
+    "Tourier": { en: "Dough maker", ar: "صانع العجين" },
+    "Valet de chambre": { en: "Room attendant", ar: "عامل الغرف" },
+    "Veilleur de nuit": { en: "Night porter", ar: "الحارس الليلي" },
+    "Vendeur": { en: "Sales assistant", ar: "بائع" },
+    "Vendeur conseil": { en: "Sales advisor", ar: "بائع مستشار" },
+    "Visual merchandiser": { en: "Visual merchandiser", ar: "منسق العرض" },
+    "Équipier": { en: "Team member", ar: "عضو الفريق" },
+    "Équipier food truck": { en: "Food truck crew", ar: "عضو طاقم شاحنة الطعام" },
+    "Équipier polyvalent": { en: "All-round crew", ar: "عضو فريق متعدد المهام" },
+  };
+  const JOB_DEPT = {
+    "Accueil": { en: "Welcome desk", ar: "الاستقبال" },
+    "Atelier": { en: "Workshop", ar: "الورشة" },
+    "Atelier floral": { en: "Floral studio", ar: "ورشة الزهور" },
+    "Bar": { en: "Bar", ar: "البار" },
+    "Barbier": { en: "Barbering", ar: "الحلاقة" },
+    "Caisse": { en: "Till", ar: "الصندوق" },
+    "Coaching": { en: "Coaching", ar: "التدريب" },
+    "Coiffure": { en: "Hair", ar: "تصفيف الشعر" },
+    "Coloration": { en: "Colour", ar: "صبغ الشعر" },
+    "Commandes": { en: "Orders", ar: "الطلبيات" },
+    "Commercial": { en: "Business development", ar: "التطوير التجاري" },
+    "Comptoir": { en: "Counter", ar: "منضدة البيع" },
+    "Cours collectifs": { en: "Group classes", ar: "الحصص الجماعية" },
+    "Cuisine": { en: "Kitchen", ar: "المطبخ" },
+    "Direction": { en: "Leadership", ar: "الإدارة العامة" },
+    "Emballage": { en: "Packing", ar: "التغليف" },
+    "Entretien": { en: "Cleaning", ar: "النظافة" },
+    "Esthétique": { en: "Beauty", ar: "التجميل" },
+    "Four": { en: "Oven", ar: "الفرن" },
+    "Fournil": { en: "Bakehouse", ar: "المخبز" },
+    "Liste de mariage": { en: "Wedding registry", ar: "قوائم الأعراس" },
+    "Livraison": { en: "Delivery", ar: "التوصيل" },
+    "Logistique": { en: "Logistics", ar: "اللوجستيك" },
+    "Maintenance": { en: "Maintenance", ar: "الصيانة" },
+    "Management": { en: "Management", ar: "الإدارة" },
+    "Manucure": { en: "Nails", ar: "العناية بالأظافر" },
+    "Massage": { en: "Massage", ar: "التدليك" },
+    "Opérations": { en: "Operations", ar: "العمليات" },
+    "Plonge": { en: "Dish room", ar: "غسل الأواني" },
+    "Production": { en: "Production", ar: "الإنتاج" },
+    "Préparation": { en: "Preparation", ar: "التحضير" },
+    "Pâtisserie": { en: "Pastry", ar: "الحلويات" },
+    "Rayons": { en: "Shop floor", ar: "الرفوف" },
+    "Repassage": { en: "Pressing", ar: "الكي" },
+    "Restauration": { en: "Food and beverage", ar: "المطعم" },
+    "Retouches": { en: "Alterations", ar: "التعديلات" },
+    "Réception": { en: "Front desk", ar: "مكتب الاستقبال" },
+    "Réservations": { en: "Reservations", ar: "الحجوزات" },
+    "Salle": { en: "Dining room", ar: "القاعة" },
+    "Service": { en: "Service", ar: "الخدمة" },
+    "Stock": { en: "Stock", ar: "المخزون" },
+    "Tournée": { en: "Route", ar: "الجولة" },
+    "Vente": { en: "Sales", ar: "المبيعات" },
+    "Vitrine": { en: "Display", ar: "الواجهة" },
+    "Étages": { en: "Housekeeping", ar: "الطوابق" },
+  };
+  const jobName = (value, kind) => {
+    const key = String(value == null ? '' : value);
+    const lang = trLang();
+    if (!key || lang === 'fr') return key;
+    const row = (kind === 'dept' ? JOB_DEPT[key] || JOB_FN[key] : JOB_FN[key] || JOB_DEPT[key]);
+    return (row && row[lang]) || key;
+  };
 
   /* ═══════════════ VENUE-AWARE ROLE CATALOGUE ═══════════════ */
   const CATALOG = {
@@ -1491,10 +1639,13 @@
       if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
         const root = window.__kiwiTeamV2;
         const venueHours = root.hoursByVenue[venueKey] || (root.hoursByVenue[venueKey] = {});
+        // Un membre retiré ne récupère pas ses heures à la réponse suivante.
+        const gone = new Set((root.removedByVenue[venueKey] || []).map((r) => String(r && r.id || '')));
         /* Une écriture localStorage par seconde pour des heures inchangées :
          * on ne persiste que ce qui a réellement bougé. */
         let touched = false;
         Object.keys(data.pointedHours).forEach((memberId) => {
+          if (gone.has(memberId)) return;
           const before = JSON.stringify(venueHours[memberId] || {});
           const merged = Object.assign({}, venueHours[memberId] || {}, data.pointedHours[memberId] || {});
           if (JSON.stringify(merged) === before) return;
@@ -1546,7 +1697,7 @@
     const { search, dept, contract, lang } = activeFilters;
     if (search) {
       const q = search.toLowerCase();
-      const hay = `${memberFullName(m)} ${m.function} ${m.department} ${m.email}`.toLowerCase();
+      const hay = `${memberFullName(m)} ${m.function} ${m.department} ${jobName(m.function)} ${jobName(m.department, 'dept')} ${m.email}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (dept && m.department !== dept) return false;
@@ -1754,7 +1905,7 @@
 
     /* Filter pill rows */
     const deptList = ['<button class="eq-pill' + (!activeFilters.dept ? ' on' : '') + '" type="button" data-action="kt-filter-dept" data-arg="">' + esc(T.filterAllDept) + '</button>',
-      ...cat.departments.map(d => `<button class="eq-pill${activeFilters.dept === d ? ' on' : ''}" type="button" data-action="kt-filter-dept" data-arg="${esc(d)}">${esc(d)}</button>`)].join('');
+      ...cat.departments.map(d => `<button class="eq-pill${activeFilters.dept === d ? ' on' : ''}" type="button" data-action="kt-filter-dept" data-arg="${esc(d)}">${esc(jobName(d, 'dept'))}</button>`)].join('');
     const ctList = ['<button class="eq-pill' + (!activeFilters.contract ? ' on' : '') + '" type="button" data-action="kt-filter-contract" data-arg="">' + esc(T.filterAllContract) + '</button>',
       ...CONTRACT_TYPES.map(c => `<button class="eq-pill${activeFilters.contract === c ? ' on' : ''}" type="button" data-action="kt-filter-contract" data-arg="${esc(c)}">${esc(contractLabel(T, c))}</button>`)].join('');
 
@@ -1818,14 +1969,14 @@
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
                 <div class="eq-member-role">${m.email ? esc(m.email) + ' · ' : ''}<span style="color:${liveColor};font-weight:600;">${esc(liveText)}</span></div>
-                <div class="eq-member-phone-role">${esc(m.function)}</div>
-                <div class="eq-member-phone-meta">${m.department ? `<span class="eq-venue-badge">${esc(m.department)}</span>` : ''}<span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
+                <div class="eq-member-phone-role">${esc(jobName(m.function))}</div>
+                <div class="eq-member-phone-meta">${m.department ? `<span class="eq-venue-badge">${esc(jobName(m.department, 'dept'))}</span>` : ''}<span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
               </div>
             </div>
             <button class="eq-member-open" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}: ${esc(memberFullName(m))}"></button>
           </td>
-          <td><div class="kt-cell-strong">${esc(m.function)}</div></td>
-          <td>${m.department ? `<span class="eq-venue-badge">${esc(m.department)}</span>` : '<span class="eq-cell-empty">·</span>'}</td>
+          <td><div class="kt-cell-strong">${esc(jobName(m.function))}</div></td>
+          <td>${m.department ? `<span class="eq-venue-badge">${esc(jobName(m.department, 'dept'))}</span>` : '<span class="eq-cell-empty">·</span>'}</td>
           <td><span class="${contractCls}">${esc(m.contract ? contractLabel(T, m.contract) : '·')}</span></td>
           <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
           <td>${(+m.baseSalary || 0) > 0 || (+m.hourlyRate || 0) > 0
@@ -1907,7 +2058,7 @@
             <span class="eq-av sm" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
             <div>
               <div class="n">${esc(memberFullName(m))}</div>
-              <div class="r">${esc(m.function)}</div>
+              <div class="r">${esc(jobName(m.function))}</div>
             </div>
           </td>
           ${cells}
@@ -2154,7 +2305,7 @@
   function planningRoleOptions(ctx, selected) {
     const copy = planningCopy();
     const roles = Array.from(new Set(ctx.members.map((member)=>String(member.function || member.department || '').trim()).filter(Boolean))).sort();
-    return `<option value="">${esc(copy.allRoles)}</option>${roles.map((role)=>`<option value="${esc(role)}"${role===selected?' selected':''}>${esc(role)}</option>`).join('')}`;
+    return `<option value="">${esc(copy.allRoles)}</option>${roles.map((role)=>`<option value="${esc(role)}"${role===selected?' selected':''}>${esc(jobName(role))}</option>`).join('')}`;
   }
   function planningDaysInput(selected) {
     const labels=trLang()==='ar'?['ح','ن','ث','ر','خ','ج','س']:trLang()==='en'?['S','M','T','W','T','F','S']:['D','L','M','M','J','V','S'];
@@ -2570,7 +2721,7 @@
   const CONTRACT_KEY = { CDI: 'ctCdi', CDD: 'ctCdd', Stage: 'ctStage', Freelance: 'ctFreelance', 'Intérim': 'ctInterim' };
   const langLabel = (T, l) => (LANG_KEY[l] && T[LANG_KEY[l]]) || l;
   const contractLabel = (T, c) => (CONTRACT_KEY[c] && T[CONTRACT_KEY[c]]) || c;
-  const rolePreview = (T, fn, dept) => [fn, dept].filter(Boolean).join(' · ') || T.edRoleUnset;
+  const rolePreview = (T, fn, dept) => [jobName(fn), jobName(dept, 'dept')].filter(Boolean).join(' · ') || T.edRoleUnset;
   function edInput(type, name, val, ph, extra) {
     return `<input class="kt-ed-in" type="${type}" name="${name}" value="${esc(val == null ? '' : val)}"${ph ? ` placeholder="${esc(ph)}"` : ''} ${extra || ''} />`;
   }
@@ -2766,12 +2917,13 @@
      * rien toucher, le rétrogradait en « Vendeur conseil · Vente ». On injecte
      * la valeur courante en tête quand elle manque : le formulaire ne peut plus
      * modifier ce que l'utilisateur n'a pas modifié. */
-    const optsWithCurrent = (listed, current) => {
+    // La valeur reste la clé française ; seul le texte de l'option se lit.
+    const optsWithCurrent = (listed, current, kind) => {
       const all = (current && listed.indexOf(current) < 0) ? [current].concat(listed) : listed;
-      return all.map((v) => `<option value="${esc(v)}"${current === v ? ' selected' : ''}>${esc(v)}</option>`).join('');
+      return all.map((v) => `<option value="${esc(v)}"${current === v ? ' selected' : ''}>${esc(jobName(v, kind))}</option>`).join('');
     };
     const fnOpts   = optsWithCurrent(cat.functions, m.function);
-    const deptOpts = optsWithCurrent(cat.departments, m.department);
+    const deptOpts = optsWithCurrent(cat.departments, m.department, 'dept');
     const ctList = (m.contract && CONTRACT_TYPES.indexOf(m.contract) < 0) ? [m.contract].concat(CONTRACT_TYPES) : CONTRACT_TYPES;
     const ctSeg = ctList.map((c) => `<label class="kt-ed-segi${c === m.contract ? ' on' : ''}"><input type="radio" name="contract" value="${esc(c)}"${c === m.contract ? ' checked' : ''} /><span>${esc(contractLabel(T, c))}</span></label>`).join('');
     const langChips = LANGS.map(l => {
@@ -3210,10 +3362,17 @@
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
     const m = members.find(x => x.id === id); if (!m) return;
+    /* Retirer quelqu'un en plein service clôt son pointage (functions/api/store.js
+       › closeRemovedShifts) : le gérant doit le savoir avant de confirmer. */
+    const live = (liveTeam.members || []).find((x) => x && x.id === id);
+    const since = live && live.status !== 'off-duty' && Number(live.since) ? new Date(Number(live.since)) : null;
+    const onDuty = since
+      ? `<p data-kt-del-onduty style="margin:10px 0 0; color:var(--ink); font-size:13px; line-height:1.55; font-weight:600;">${esc(T.delOnDuty(String(since.getHours()).padStart(2, '0') + ':' + String(since.getMinutes()).padStart(2, '0')))}</p>`
+      : '';
     const confirmM = modal({
       title: T.delTitle,
       width: 460,
-      body: `<p style="margin:0; color:var(--n-600); font-size:13px; line-height:1.55;">${esc(T.delDesc)}</p>
+      body: `<p style="margin:0; color:var(--n-600); font-size:13px; line-height:1.55;">${esc(T.delDesc)}</p>${onDuty}
         <div style="margin-top:14px; padding:12px 14px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; display:flex; gap:11px; align-items:center;">
           <span class="eq-av sm" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
           <div>
@@ -3298,7 +3457,7 @@
         <style>${MODAL_CSS}</style>
         <div class="kt-qe-form">
           <label><span class="l">${esc(T.qeMember)}</span>
-            <select name="member" data-kt-qe-member>${members.map(m => `<option value="${esc(m.id)}">${esc(memberFullName(m))} · ${esc(m.function)}</option>`).join('')}</select>
+            <select name="member" data-kt-qe-member>${members.map(m => `<option value="${esc(m.id)}">${esc(memberFullName(m))} · ${esc(jobName(m.function))}</option>`).join('')}</select>
           </label>
           <div class="kt-fgrid-2">
             <label><span class="l">${esc(T.qeDate)}</span><input type="date" data-kt-qe-date value="${esc(today)}" /></label>
@@ -3773,7 +3932,7 @@
             <span class="eq-av sm" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
             <div>
               <div class="n">${esc(memberFullName(m))}</div>
-              <div class="r">${esc(m.function)}</div>
+              <div class="r">${esc(jobName(m.function))}</div>
             </div>
           </td>
           ${cells}
@@ -4313,7 +4472,7 @@
       return members.map((m) => ({
         id: m.id,
         name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '·',
-        role: m.function || m.department || '',
+        role: m.function ? jobName(m.function) : jobName(m.department || '', 'dept'),
         avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
         status: memberDutyStatus(m, hours, todayKey),
         hoursToday: liveMember(m.id)

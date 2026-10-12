@@ -81,20 +81,31 @@ function liveMembers(roster, attendance) {
 function dateKey(ts, zone) {
   return businessDate(ts, 0, zone);
 }
-function pointedHours(attendance, now, zone) {
+/* Un pointage resté ouvert pour un salarié retiré (écrit avant que /api/store
+ * ne le close au retrait) s'arrête à l'heure du retrait, pas à « maintenant ». */
+function removedAt(team) {
+  const at = new Map();
+  (Array.isArray(team && team.removed) ? team.removed : []).forEach((r) => {
+    const ts = Number(r && r.ts) || 0;
+    if (r && r.id && ts) at.set(String(r.id), ts);
+  });
+  return at;
+}
+function pointedHours(attendance, now, zone, gone = new Map()) {
   const hours = {};
   (Array.isArray(attendance && attendance.entries) ? attendance.entries : []).forEach((entry) => {
     if (!entry || !entry.inTs) return;
     const memberId = String(entry.memberId || entry.staffId || '');
     if (!memberId) return;
-    const end = Number(entry.outTs) || now;
     const start = Number(entry.inTs) || 0;
+    const cut = gone.get(memberId);
+    const end = Number(entry.outTs) || (cut ? Math.max(start, Math.min(now, cut)) : now);
     if (end <= start) return;
     let pauseMs = (Array.isArray(entry.breaks) ? entry.breaks : []).reduce((sum, pause) => {
       const a = Number(pause && pause.inTs) || 0, b = Number(pause && pause.outTs) || 0;
       return sum + (a && b > a ? b - a : 0);
     }, 0);
-    if (!entry.outTs && entry.pauseTs) pauseMs += Math.max(0, now - Number(entry.pauseTs));
+    if (!entry.outTs && entry.pauseTs) pauseMs += Math.max(0, end - Number(entry.pauseTs));
     const day = dateKey(start, zone);
     const row = hours[memberId] || (hours[memberId] = {});
     row[day] = Math.round(((Number(row[day]) || 0) + Math.max(0, end - start - pauseMs) / 3600000) * 100) / 100;
@@ -118,7 +129,7 @@ export async function onRequestGet({ request, env }) {
     ok: true,
     merchant,
     members: liveMembers(rosterFor(team.data, access.data), attendance.data),
-    pointedHours: pointedHours(attendance.data, Date.now(), zone),
+    pointedHours: pointedHours(attendance.data, Date.now(), zone, removedAt(team.data)),
     recentAttendance: (Array.isArray(attendance.data.entries) ? attendance.data.entries : [])
       .slice(-20).reverse().map((entry) => ({
         id: String(entry && entry.id || ''),

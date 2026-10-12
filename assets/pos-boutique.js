@@ -1964,7 +1964,7 @@
       <div class="bq-f">
         <div class="bq-f-lbl">Couleur</div>
         <div id="bq-colors">
-          ${KC() ? KC().picker('bq-color', sheet.color, { ids: p.colors, size: 'lg', label: 'Couleur', hint: 'Touchez une pastille pour lire son nom' }) : ''}
+          ${KC() ? KC().picker('bq-color', sheet.color, { ids: p.colors, size: 'lg' }) : ''}
         </div>
       </div>
 

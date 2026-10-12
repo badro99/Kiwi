@@ -130,7 +130,7 @@ ok('the personal code is masked until the owner presses « Afficher »', () => {
 ok('no dangling « · » when a member has no department', () => {
   assert.equal((team.match(/profileSub: \(role, dept\) => \[role, dept\]\.filter\(Boolean\)\.join\(' · '\),/g) || []).length, 3);
   assert.ok(!/\$\{esc\(m\.function\)\} · \$\{esc\(m\.department\)\}/.test(team));
-  assert.match(team, /\$\{m\.department \? `<span class="eq-venue-badge">\$\{esc\(m\.department\)\}<\/span>` : ''\}/);
+  assert.match(team, /\$\{m\.department \? `<span class="eq-venue-badge">\$\{esc\(jobName\(m\.department, 'dept'\)\)\}<\/span>` : ''\}/);
 });
 ok('the sheet is the editor\'s opaque sheet, and its words exist in FR, EN and AR', () => {
   assert.match(profile, /profileM\.el\.classList\.add\('kt-ed-modal'\);/);

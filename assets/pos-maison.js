@@ -2614,7 +2614,7 @@
       <div class="mz-f">
         <div class="mz-f-lbl">Couleur / Motif</div>
         <div id="mz-colors">
-          ${KC() ? KC().picker('mz-color', sheet.color, { ids: p.colors, size: 'lg', label: 'Couleur', hint: 'Touchez une pastille pour lire son nom' }) : ''}
+          ${KC() ? KC().picker('mz-color', sheet.color, { ids: p.colors, size: 'lg' }) : ''}
         </div>
       </div>
 

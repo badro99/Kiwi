@@ -420,10 +420,16 @@ ok(settledSession.status === 'closed'
   && settledFloor.states['1'].status === 'khawya'
   && db.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant=? AND table_no='1' AND paid_ts IS NULL").get(merchant).n === 0,
   "le même acquittement libère la table, ferme OrderPro et solde ses tickets avant de répondre");
+/* Depuis 69538f9d, l'identifiant d'un paiement est celui que le client envoie
+   (sa clé d'idempotence), et non plus un « visit-<session>-emp » fabriqué par
+   le serveur. Ce qui compte n'a pas changé : le retry rend le MÊME
+   identifiant, et une seule ligne existe pour cette addition. */
+const firstPaymentId = paid.body && paid.body.id;
 paid = await employeeSale(saraCookie, employeePayment);
-const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id='visit-sess-payment-table-1-emp'").all(merchant);
+const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND amount=180 AND lines LIKE '%Tajine%'").all(merchant);
 const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
-ok(paid.response.status === 200 && savedPayments.length === 1 && savedPayments[0].amount === 180
+ok(paid.response.status === 200 && !!firstPaymentId && paid.body.id === firstPaymentId
+  && savedPayments.length === 1 && savedPayments[0].id === firstPaymentId && savedPayments[0].amount === 180
   && savedLines[0].n === 'Tajine' && savedLines[0].q === 2,
   "un retry Wi-Fi du paiement reste unique et conserve les articles pour l'historique");
 

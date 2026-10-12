@@ -553,6 +553,55 @@ function keepTeamTombstones(previous, incoming) {
   return { ...incoming, members, removed };
 }
 
+/* Un salarié retiré pendant son service gardait son pointage OUVERT. Plus
+ * personne ne pouvait le clore : son app employé est déconnectée, la caisse ne
+ * l'affiche plus. Et /api/team/live comptait ses heures jusqu'à « maintenant »,
+ * à chaque lecture, pour toujours. Le retrait clôt donc le pointage à l'heure
+ * du retrait, quel que soit l'appareil qui l'a fait, et le marque comme tel.
+ * Une pause en cours devient une pause close au même instant. Idempotent : un
+ * pointage déjà clos n'est jamais touché. */
+async function closeRemovedShifts(env, merchant, removed) {
+  const at = new Map();
+  (Array.isArray(removed) ? removed : []).forEach((r) => {
+    const id = r && typeof r.id === 'string' ? r.id : '';
+    const ts = Number(r && r.ts) || 0;
+    if (id && ts) at.set(id, ts);
+  });
+  if (!at.size) return;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
+      .bind(merchant).first();
+    if (!row) return;
+    let doc = null;
+    try { doc = JSON.parse(row.data || '{}'); } catch (_) { return; }
+    const entries = Array.isArray(doc && doc.entries) ? doc.entries : [];
+    const now = Date.now();
+    let changed = false;
+    const next = entries.map((entry) => {
+      if (!entry || entry.outTs || !entry.inTs) return entry;
+      const ts = at.get(String(entry.memberId || entry.staffId || ''));
+      if (!ts) return entry;
+      // Une horloge d'appareil en retard ne rouvre rien : jamais avant l'entrée,
+      // jamais après maintenant.
+      const end = Math.max(Number(entry.inTs) || 0, Math.min(ts, now));
+      const closed = { ...entry, outTs: end, closedBy: 'removal' };
+      if (entry.pauseTs) {
+        const from = Math.min(Number(entry.pauseTs) || end, end);
+        closed.breaks = [...(Array.isArray(entry.breaks) ? entry.breaks : []), { inTs: from, outTs: end }];
+        closed.pauseTs = 0;
+      }
+      changed = true;
+      return closed;
+    });
+    if (!changed) return;
+    const rev = Number(row.rev) || 0;
+    const result = await env.DB.prepare(
+      "UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'attendance' AND rev = ?"
+    ).bind(JSON.stringify({ ...doc, entries: next }), rev + 1, now, merchant, rev).run();
+    if (Number(result && result.meta && result.meta.changes) > 0) { await poke(env, merchant, 'attendance'); return; }
+  }
+}
+
 async function employeeAccessFromTeam(env, team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
   let previous = { members: [] };
@@ -894,6 +943,7 @@ export async function onRequestPost(context) {
            data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
       ).bind(merchant, accessText, now);
       await env.DB.batch([writeDoc, writeAccess]);
+      try { await closeRemovedShifts(env, merchant, clean.value.removed); } catch (_) {}
     } else {
       const written = await writeDoc.run();
       if (CAS_FEATURES.has(feature) && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);

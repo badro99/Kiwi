@@ -26,7 +26,7 @@ check(/pointedHours\(attendanceRow\.data, me\.id, auth\.pin\.id, zone\)/.test(em
 check(/dateKey\(changedEntry\.inTs, zone\)/.test(employee), 'clock-out hours persisted on store date');
 check(/store: \{[^\n]*timezone: zone/.test(employee), 'employee client receives store zone');
 const live = src('functions/api/team/live.js');
-check(/pointedHours\(attendance\.data, Date\.now\(\), zone\)/.test(live), 'manager hours keyed to store date');
+check(/pointedHours\(attendance\.data, Date\.now\(\), zone[,)]/.test(live), 'manager hours keyed to store date');
 
 function browser(file, apiName, data) {
   const code = src(file).replace(/\}\)\(\);\s*$/, `window.__tzTest = { dateKey: typeof dateKey === 'function' ? dateKey : null, todayKey: typeof todayKey === 'function' ? todayKey : null, timeLabel: typeof timeLabel === 'function' ? timeLabel : null, nextShift: typeof nextShift === 'function' ? nextShift : null, futureSchedule: typeof futureSchedule === 'function' ? futureSchedule : null, setData: d => { lastData = d; } };})();`);

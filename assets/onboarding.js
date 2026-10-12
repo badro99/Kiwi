@@ -95,7 +95,7 @@
     step: 0,
     ownerName: '', bizName: '', typeId: 'restaurant',
     venueCount: 1, city: '',
-    teamSize: 3,
+    teamSize: 3, teamGiven: false,
     goals: [], dailyGoal: '',
     pins: [ { role: 'owner', name: '', code: '' }, { role: 'manager', name: '', code: '' }, { role: 'staff', name: '', code: '' }, { role: 'staff', name: '', code: '' } ],
   };
@@ -107,7 +107,7 @@
     const safe = {
       step: Math.max(0, Math.min(6, Number(S.step) || 0)),
       ownerName: S.ownerName, bizName: S.bizName, typeId: S.typeId,
-      venueCount: S.venueCount, city: S.city, teamSize: S.teamSize,
+      venueCount: S.venueCount, city: S.city, teamSize: S.teamSize, teamGiven: !!S.teamGiven,
       goals: Array.isArray(S.goals) ? S.goals.slice(0, GOALS.length) : [],
       dailyGoal: S.dailyGoal,
       pins: (Array.isArray(S.pins) ? S.pins : []).slice(0, 20).map((p) => ({
@@ -129,6 +129,7 @@
     S.venueCount = Math.max(1, Math.min(60, Number(d.venueCount) || 1));
     S.city = String(d.city || '').slice(0, 30);
     S.teamSize = Math.max(1, Math.min(200, Number(d.teamSize) || 1));
+    S.teamGiven = !!d.teamGiven;
     S.goals = Array.isArray(d.goals) ? d.goals.filter((g) => GOALS.some((x) => x.id === g)).slice(0, GOALS.length) : [];
     S.dailyGoal = String(d.dailyGoal || '').slice(0, 24);
     if (Array.isArray(d.pins) && d.pins.length) {
@@ -319,16 +320,19 @@
   /* ── Shared bits ─────────────────────────────────────────────────────── */
   function unitFor(field) {
     const v = S[field];
+    // L'arabe accorde le nom compté : 1 et 2 au singulier et au duel, 3 à 10
+    // au pluriel, 11 et plus au singulier accusatif.
+    const ar = (one, two, few, many) => (v === 1 ? one : v === 2 ? two : v <= 10 ? few : many);
     return field === 'venueCount'
-      ? tr({ fr: v > 1 ? 'établissements' : 'établissement', en: v > 1 ? 'locations' : 'location', ar: 'محل' })
-      : tr({ fr: v > 1 ? 'personnes' : 'personne', en: v > 1 ? 'people' : 'person', ar: 'أشخاص' });
+      ? tr({ fr: v > 1 ? 'établissements' : 'établissement', en: v > 1 ? 'locations' : 'location', ar: ar('محل', 'محلان', 'محلات', 'محلًا') })
+      : tr({ fr: v > 1 ? 'personnes' : 'personne', en: v > 1 ? 'people' : 'person', ar: ar('شخص', 'شخصان', 'أشخاص', 'شخصًا') });
   }
   function stepper(field, min, max) {
     return `
       <div class="kob-step" data-stepper="${field}" data-min="${min}" data-max="${max}">
-        <button type="button" data-inc="-1" aria-label="moins">&minus;</button>
+        <button type="button" data-inc="-1" aria-label="${tr({ fr: 'Moins', en: 'Fewer', ar: 'أقل' })}">&minus;</button>
         <div class="kob-num" data-stepval>${S[field]}<small>${unitFor(field)}</small></div>
-        <button type="button" data-inc="1" aria-label="plus">+</button>
+        <button type="button" data-inc="1" aria-label="${tr({ fr: 'Plus', en: 'More', ar: 'أكثر' })}">+</button>
       </div>`;
   }
   function footNav(o) {
@@ -518,7 +522,7 @@
             ${row(tr({ fr: 'Établissement', en: 'Business', ar: 'النشاط' }), S.bizName || '·')}
             ${row(tr({ fr: 'Activité', en: 'Type', ar: 'النوع' }), tr(t.label))}
             ${row(tr({ fr: 'Points de vente', en: 'Locations', ar: 'نقاط البيع' }), String(S.venueCount) + (S.city ? ' · ' + S.city : ''))}
-            ${row(tr({ fr: 'Équipe', en: 'Team', ar: 'الفريق' }), tr({ fr: String(S.teamSize) + ' personnes', en: String(S.teamSize) + ' people', ar: String(S.teamSize) + ' أشخاص' }))}
+            ${row(tr({ fr: 'Équipe', en: 'Team', ar: 'الفريق' }), S.teamGiven ? String(S.teamSize) + ' ' + unitFor('teamSize') : tr({ fr: 'Non renseignée', en: 'Not given', ar: 'غير محدد' }))}
             ${goalNames.length ? row(tr({ fr: 'Priorités', en: 'Priorities', ar: 'الأولويات' }), goalNames.slice(0, 2).join(', ') + (goalNames.length > 2 ? ' +' + (goalNames.length - 2) : '')) : ''}
             ${row(tr({ fr: "Codes d'accès", en: 'Access codes', ar: 'رموز الدخول' }), tr({ fr: codes + ' actif' + (codes > 1 ? 's' : ''), en: codes + ' active', ar: codes + ' نشط' }))}
           </div>
@@ -530,6 +534,15 @@
   }
 
   const STEPS = [stepWelcome, stepName, stepBusiness, stepPlaces, stepTeam, stepGoals, stepAccess, stepFinish];
+
+  /* « Passer » sur l'étape équipe veut dire « pas renseignée ». Le 3 affiché
+     par défaut n'est pas une réponse : le récapitulatif annonçait « Équipe ·
+     3 personnes » et le magasin était créé avec trois salariés que personne
+     n'avait déclarés. « Continuer » et le compteur, eux, valent réponse. */
+  function noteTeamAnswer(goBtn) {
+    if (STEPS[S.step] !== stepTeam || !goBtn || goBtn.dataset.go !== 'next') return;
+    S.teamGiven = !goBtn.hasAttribute('data-skip');
+  }
 
   /* ── Render current step ─────────────────────────────────────────────── */
   function render() {
@@ -637,7 +650,7 @@
         name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
         location: S.city.trim(), pins: validPins,
         goal: parsedDailyGoal() || 0,
-        staffCount: S.teamSize,
+        staffCount: S.teamGiven ? S.teamSize : 0,
         profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
       });
     } catch (_) {}
@@ -652,7 +665,7 @@
     LS.set('kiwiBizType', S.typeId);
     LS.set('kiwiCity', S.city.trim());
     LS.set('kiwiVenueCount', String(S.venueCount));
-    LS.set('kiwiTeamSize', String(S.teamSize));
+    if (S.teamGiven) LS.set('kiwiTeamSize', String(S.teamSize)); else LS.del('kiwiTeamSize');
     LS.set('kiwiGoals', JSON.stringify(S.goals));
     LS.set('kiwiPins', JSON.stringify(validPins));
     // PINs and type were sent with the confirmed creation to the NEW slug.
@@ -763,14 +776,14 @@
     root.className = 'kob-root';
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
-    root.setAttribute('aria-label', 'Configuration Kiwi');
+    root.setAttribute('aria-label', tr({ fr: 'Configuration Kiwi', en: 'Kiwi setup', ar: 'إعداد Kiwi' }));
     const card = document.createElement('div'); card.className = 'kob-card';
     root.appendChild(card);
     document.body.appendChild(root);
 
     root.addEventListener('click', (e) => {
       const goBtn = e.target.closest('[data-go]');
-      if (goBtn) { go(goBtn.dataset.go); return; }
+      if (goBtn) { noteTeamAnswer(goBtn); go(goBtn.dataset.go); return; }
       if (e.target.closest('[data-explore]')) { exploreDemo(); return; }
       const signin = e.target.closest('[data-signin]');
       if (signin) {
@@ -821,6 +834,7 @@
         const wrap = inc.closest('[data-stepper]');
         const f = wrap.dataset.stepper, min = +wrap.dataset.min, max = +wrap.dataset.max;
         S[f] = Math.max(min, Math.min(max, (+S[f] || min) + (+inc.dataset.inc)));
+        if (f === 'teamSize') S.teamGiven = true;
         saveDraft();
         const numEl = wrap.querySelector('[data-stepval]');
         numEl.innerHTML = `${S[f]}<small>${unitFor(f)}</small>`;
