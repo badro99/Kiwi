@@ -945,8 +945,8 @@
     // Exactly one page shell at a time — see Kiwi.pageShell.
     if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('conformite');
     else document.body.classList.add('page-conformite');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(t('breadcrumb'))}</b>`;
+    // « Accueil / Conformité » in the screen's language, repainted on a switch.
+    window.Kiwi?.breadcrumb?.(() => t('breadcrumb'));
     window.Kiwi?.setActivePage?.('conformite');
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     document.querySelector('.sidebar nav a[data-nav="conformite"]')?.classList.add('active');
@@ -957,8 +957,7 @@
     if (!document.body.classList.contains('page-conformite')) return;
     pageActive = false;
     document.body.classList.remove('page-conformite');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+    window.Kiwi?.breadcrumb?.();
     window.Kiwi?.setActivePage?.('accueil');
   }
 

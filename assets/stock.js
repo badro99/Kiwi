@@ -1881,8 +1881,8 @@
     // Exactly one page shell at a time — see Kiwi.pageShell.
     if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('stock');
     else document.body.classList.add('page-stock');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(t('breadcrumb'))}</b>`;
+    // « Accueil / Stock » in the screen's language, repainted on a switch.
+    window.Kiwi?.breadcrumb?.(() => t('breadcrumb'));
     /* Pin sidebar selector on Stock via Kiwi.setActivePage — drawers/modals
      * opened from here close back into this highlight, not Accueil. */
     window.Kiwi?.setActivePage?.('stock');
@@ -1902,8 +1902,7 @@
     if (!document.body.classList.contains('page-stock')) return;
     stPageActive = false;
     document.body.classList.remove('page-stock');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+    window.Kiwi?.breadcrumb?.();
     if (stDemoClockUnsub) { try { stDemoClockUnsub(); } catch (_) {} stDemoClockUnsub = null; }
     window.Kiwi?.setActivePage?.('accueil');
   }

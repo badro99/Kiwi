@@ -1322,6 +1322,26 @@
     });
   }
 
+  /* One [data-i18n] node in `lang`: the T entry, else the captured French. */
+  function paintKey(el, lang) {
+    const key = el.dataset.i18n;
+    if (lang === 'fr') {
+      if (ORIG[key] !== undefined) el.innerHTML = ORIG[key];
+    } else if (T[lang]?.[key] !== undefined) {
+      el.innerHTML = T[lang][key];
+    } else if (ORIG[key] !== undefined) {
+      el.innerHTML = ORIG[key]; // fallback to FR
+    }
+  }
+
+  /* Give a [data-i18n] node a module wrote over back to its own key, in the
+   * current language. The topbar breadcrumb is the case: a page paints
+   * « Accueil / Stock », and closing it hands the crumb back to
+   * dash.breadcrumb rather than to a second French-only copy of it. */
+  function apply(el) {
+    if (el && el.dataset && el.dataset.i18n) paintKey(el, getLang());
+  }
+
   /* ─── setLang ─── */
   function setLang(lang) {
     if (!['fr','en','ar'].includes(lang)) lang = 'fr';
@@ -1336,16 +1356,7 @@
       + '; Path=/; Max-Age=2592000; SameSite=Lax'
       + (location.protocol === 'https:' ? '; Secure' : '');
 
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.dataset.i18n;
-      if (lang === 'fr') {
-        if (ORIG[key] !== undefined) el.innerHTML = ORIG[key];
-      } else if (T[lang]?.[key] !== undefined) {
-        el.innerHTML = T[lang][key];
-      } else if (ORIG[key] !== undefined) {
-        el.innerHTML = ORIG[key]; // fallback to FR
-      }
-    });
+    document.querySelectorAll('[data-i18n]').forEach(el => paintKey(el, lang));
 
     document.querySelectorAll('[data-i18n-attr]').forEach(el => {
       const map = ORIG_ATTR.get(el) || {};
@@ -1448,6 +1459,6 @@
   else init();
 
   /* ─── Expose API ─── */
-  window.KiwiI18n = { setLang, setTheme, getLang, getTheme, T };
+  window.KiwiI18n = { setLang, setTheme, getLang, getTheme, apply, T };
 
 })();

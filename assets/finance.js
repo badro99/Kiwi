@@ -1075,8 +1075,8 @@
     // Exactly one page shell at a time — see Kiwi.pageShell.
     if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('finance');
     else document.body.classList.add('page-finance');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = `${esc(lang() === 'en' ? 'Home' : lang() === 'ar' ? 'الرئيسية' : 'Accueil')} <span class="sep">/</span> <b>${esc(menuAnalysis() ? at().title : t('breadcrumb'))}</b>`;
+    // « Accueil / Marges » in the screen's language, repainted on a switch.
+    window.Kiwi?.breadcrumb?.(() => (menuAnalysis() ? at().title : t('breadcrumb')));
     window.Kiwi?.setActivePage?.('finance');
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     document.querySelector('.sidebar nav a[data-nav="finance"]')?.classList.add('active');
@@ -1091,8 +1091,7 @@
     if (!document.body.classList.contains('page-finance')) return;
     pageActive = false;
     document.body.classList.remove('page-finance');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+    window.Kiwi?.breadcrumb?.();
     if (venueUnsub) { try { venueUnsub(); } catch (_) {} venueUnsub = null; }
     window.Kiwi?.setActivePage?.('accueil');
   }

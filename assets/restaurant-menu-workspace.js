@@ -1645,7 +1645,7 @@
   let readyTimer=0,readyTries=0;
   function show(forceRestaurantRoute=false){
     if(!forceRestaurantRoute&&!isRestaurant())return false;
-    window.Kiwi?.pageShell?.('menu');document.body.classList.add('page-menu');$$('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.nav==='menu'));const bc=$('.breadcrumb');if(bc)bc.innerHTML=`${esc(ui('home'))} <span class="sep">/</span> <b>${esc(ui('title'))}</b>`;
+    window.Kiwi?.pageShell?.('menu');document.body.classList.add('page-menu');$$('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.nav==='menu'));window.Kiwi?.breadcrumb?.(()=>ui('title'));
     const root=$('[data-menu-root]');if(root)root.hidden=false;
     if(!S()||!isRestaurant()){
       if(root)root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${esc(ui('loading'))}</div></div></div>`;

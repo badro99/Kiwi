@@ -1395,6 +1395,11 @@ section('Whole-project regressions');
     'genpage-breadcrumb-language-test.mjs',
     'demo-morning-band-test.mjs',
     'caisse-pay-subtitle-test.mjs',
+    /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
+       « Home » / « الرئيسية » sur chaque page, et un changement de langue page
+       ouverte garde le titre de la page ; le retour à l'accueil rend le nœud à
+       dash.breadcrumb. Vrai dashboard.html, vrais clics. */
+    'dashboard-breadcrumb-language-test.mjs',
     'dashboard-truth-test.mjs',
     'team-truth-test.mjs',
     'team-member-editor-test.mjs',

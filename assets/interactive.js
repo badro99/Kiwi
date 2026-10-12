@@ -4722,6 +4722,10 @@ ar: {
   const setActivePage = (key) => {
     activePage = key || 'accueil';
     syncSidebar();
+    /* Home again, and the page that painted the crumb no longer owns <body>:
+     * an appPage() page has no showDashboard() of its own to reset it, so
+     * « Accueil / Réservations » stayed over the dashboard. */
+    if (activePage === 'accueil') crumbHome();
   };
 
   /* ─── Expose a tiny API for inline usage if needed ─── */
@@ -4752,28 +4756,55 @@ ar: {
      * sibling), because that is structural and other modules depend on it. */
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
-  /* Breadcrumb of an appPage() page: « Accueil / <title> ». The home word used
-   * to be a literal « Accueil » under every language; it goes through tr() now,
-   * in the same .breadcrumb-home span as i18n.js's dash.breadcrumb. */
-  const GENPAGE_HOME = { fr: 'Accueil', en: 'Home', ar: 'الرئيسية' };
-  let genpageTitle = null;
-  function paintGenpageCrumb(bc, title) {
+  /* ─── Topbar breadcrumb · « Accueil / <page> » ───────────────────────────
+   * The one painter for every full-page view (appPage, Stock, Équipe,
+   * Conformité, Marges, Menu, Paie). Each used to write its own innerHTML with
+   * a literal « Accueil », so English and Arabic read « Accueil / Team ».
+   *
+   *   Kiwi.breadcrumb(title)  title is a string, a {fr, en, ar} map, or a
+   *                           function returning either. A map or a function
+   *                           is read again on every language switch.
+   *   Kiwi.breadcrumb()       back to the dashboard: hands the node back to
+   *                           i18n.js's dash.breadcrumb, in the current language.
+   *
+   * setLang() rewrites every [data-i18n] node, this one included, BEFORE it
+   * fires kiwi:langchange, so an open page's crumb came back as « Home /
+   * Dashboard ». The listener below repaints it, but only while the page that
+   * painted it still owns <body> (its page-* class): a page closed without a
+   * reset must not come back over the dashboard. */
+  const CRUMB_HOME = { fr: 'Accueil', en: 'Home', ar: 'الرئيسية' };
+  let crumb = null; // { title, page } of the open page's crumb, null on the dashboard
+  const bodyPage = () => [...document.body.classList].find((c) => c.indexOf('page-') === 0) || '';
+  function crumbText(title) {
+    const t = typeof title === 'function' ? title() : title;
+    return t != null && typeof t === 'object' ? tr(t) : String(t ?? '');
+  }
+  function paintCrumb(bc, text) {
     bc.textContent = '';
-    const home = document.createElement('span'); home.className = 'breadcrumb-home'; home.textContent = tr(GENPAGE_HOME); bc.appendChild(home);
+    const home = document.createElement('span'); home.className = 'breadcrumb-home'; home.textContent = tr(CRUMB_HOME); bc.appendChild(home);
     bc.appendChild(document.createTextNode(' '));
     const sep = document.createElement('span'); sep.className = 'sep'; sep.setAttribute('aria-hidden', 'true'); sep.textContent = '/'; bc.appendChild(sep);
     bc.appendChild(document.createTextNode(' '));
-    const b = document.createElement('b'); b.textContent = title; bc.appendChild(b);
+    const b = document.createElement('b'); b.textContent = text; bc.appendChild(b);
   }
-  /* setLang() rewrites every [data-i18n] node before it fires kiwi:langchange,
-   * and the breadcrumb is one (dash.breadcrumb): an open page's crumb came back
-   * as « Home / Dashboard ». Repaint it in the new language with the page's own
-   * title. A caller that re-renders on langchange calls appPage() again, which
-   * repaints it with its translated title. */
-  window.addEventListener('kiwi:langchange', () => {
-    if (genpageTitle == null || !document.body.classList.contains('page-genpage')) return;
+  function breadcrumb(title) {
     const bc = document.querySelector('.breadcrumb');
-    if (bc) paintGenpageCrumb(bc, genpageTitle);
+    if (title === undefined) {
+      crumb = null;
+      if (bc) window.KiwiI18n?.apply?.(bc);
+      return;
+    }
+    crumb = { title, page: bodyPage() };
+    if (bc) paintCrumb(bc, crumbText(title));
+  }
+  function crumbHome() {
+    if (crumb && bodyPage() !== crumb.page) breadcrumb();
+  }
+  window.addEventListener('kiwi:langchange', () => {
+    if (!crumb) return;
+    if (bodyPage() !== crumb.page) { crumb = null; return; }
+    const bc = document.querySelector('.breadcrumb');
+    if (bc) paintCrumb(bc, crumbText(crumb.title));
   });
   function appPage(navKey, opts) {
     const o = opts || {};
@@ -4815,9 +4846,9 @@ ar: {
     if (o.foot) { const f = document.createElement('div'); f.className = 'genpage-foot'; f.insertAdjacentHTML('beforeend', o.foot); host.appendChild(f); }
     // Swap into the page: clear any active page class, mark this one.
     pageShell('genpage');
-    genpageTitle = o.title || '';
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) paintGenpageCrumb(bc, genpageTitle);
+    /* The title is the caller's string: a language switch keeps it as is, and
+     * a caller that re-renders on kiwi:langchange calls appPage() again. */
+    breadcrumb(o.title || '');
     setActivePage(navKey);
     if (navKey !== 'payroll' && navKey !== 'equipe') {
       try { window.__kiwiTeamDeactivate?.(); } catch (_) {}
@@ -4854,7 +4885,7 @@ ar: {
 
   window.Kiwi = {
     toast, buttonFeedback, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
-    setActivePage, syncSidebar, pageShell,
+    setActivePage, syncSidebar, pageShell, breadcrumb,
     scrollLock: { acquire() {
       lockPageScroll();
       let held = true;

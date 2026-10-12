@@ -83,7 +83,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=9',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
-  '/assets/i18n.js?v=23',
+  '/assets/i18n.js?v=24',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -91,7 +91,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=52',
+  '/assets/interactive.js?v=53',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',
@@ -101,11 +101,11 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=48',
+  '/assets/venues.js?v=49',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=6',
   '/assets/trade-workspaces.js?v=9',
-  '/assets/reservations.js?v=25',
+  '/assets/reservations.js?v=26',
   '/assets/pressing-ops.js?v=9',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=8',
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=74',
+  '/assets/stock.js?v=75',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -259,9 +259,9 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=303',
+  '/assets/team.js?v=304',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=110',
+  '/assets/restaurant-menu-workspace.js?v=111',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

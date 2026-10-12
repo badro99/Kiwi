@@ -89,6 +89,9 @@ function world({ type, sidebar = [], workspace = 'ready', lang = 'fr', pageMenu 
       handlers,
       toast: (title, opts) => calls.push('toast:' + title + ' | ' + (opts && opts.desc)),
       setActivePage: (p) => calls.push('active:' + p),
+      /* interactive.js's painter: no title hands the crumb back to
+         dash.breadcrumb (« Accueil / Tableau de bord » in the screen's language). */
+      breadcrumb: (title) => { crumb.innerHTML = title === undefined ? 'Accueil / Tableau de bord' : 'Accueil / ' + title; calls.push('crumb:' + (title === undefined ? 'dashboard' : title)); },
     },
     KiwiI18n: { getLang: () => lang },
     KiwiRestaurantMenuWorkspace: workspace === 'ready' ? W : undefined,
@@ -165,7 +168,7 @@ for (const [lang, title] of [['fr', 'Pas de carte ici'], ['en', 'No menu here'],
   w.handlers['nav-accueil'] = () => w.calls.push('pages-pro accueil');
   w.fireLoad();
   w.handlers['nav-accueil']();
-  check(w.calls.includes('pages-pro accueil') && !w.bodyClasses.has('page-menu') && /Tableau de bord/.test(w.crumb.innerHTML) && w.calls.includes('active:accueil'),
+  check(w.calls.includes('pages-pro accueil') && !w.bodyClasses.has('page-menu') && w.calls.includes('crumb:dashboard') && /Tableau de bord/.test(w.crumb.innerHTML) && w.calls.includes('active:accueil'),
     'going home from the workspace still clears the menu page, even after pages.js / pages-pro.js replaced nav-accueil');
 }
 check(/refreshMenu: \(\) => \{\n\s+if \(!document\.body\.classList\.contains\('page-menu'\) \|\| !menuOwnedByWorkspace\(\)\) return;\n\s+menuWorkspace\(\)\?\.render\?\.\(\);/.test(venues),

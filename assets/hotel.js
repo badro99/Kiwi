@@ -8588,15 +8588,17 @@
       });
       /* A language switch re-reads the open hotel page: title, context line,
        * breadcrumb, then the body. appPage() is not called again, so the
-       * page keeps its scroll and the sidebar keeps its focus. */
+       * page keeps its scroll and the sidebar keeps its focus. The page host
+       * outlives a return to the dashboard (hidden, still connected), so
+       * « open » is also « <body> still shows a genpage »: otherwise the
+       * hotel title landed in the dashboard's own « Home / Dashboard ». */
       window.addEventListener('kiwi:langchange', () => {
         const d = openDrawer;
-        if (!d || !d.el || !d.el.isConnected) return;
+        if (!d || !d.el || !d.el.isConnected || !document.body.classList.contains('page-genpage')) return;
         const title = String(d.titleFn ? d.titleFn() : '');
         const h1 = d.el.querySelector('.genpage-head h1');
         if (h1) h1.textContent = title;
-        const crumb = document.querySelector('.breadcrumb b');
-        if (crumb) crumb.textContent = title;
+        window.Kiwi?.breadcrumb?.(title);
         const p = d.el.querySelector('.genpage-head p');
         const sub = d.subFn ? d.subFn() : '';
         if (p && sub) {

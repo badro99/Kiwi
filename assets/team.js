@@ -1721,14 +1721,13 @@
 
   /* ═══════════════ PAGE SHOW / HIDE ═══════════════ */
   function showPage() {
-    const T = t();
     pageActive = true;
     pageMode = 'equipe';
     // Exactly one page shell at a time — see Kiwi.pageShell.
     if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('equipe');
     else document.body.classList.add('page-equipe');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(T.breadcrumb)}</b>`;
+    // « Accueil / Équipe » in the screen's language, repainted on a switch.
+    window.Kiwi?.breadcrumb?.(() => t().breadcrumb);
     window.Kiwi?.setActivePage?.('equipe');
     document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
     document.querySelector('.sidebar nav a[data-nav="equipe"]')?.classList.add('active');
@@ -1741,7 +1740,7 @@
     /* Re-render when the venue or language changes. */
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
-        if (!pageActive) return;
+        if (!pageActive || !teamOnScreen()) return;
         const v2 = window.KiwiVenue.getCurrentVenueData();
         ensureVenueData(v2);
         liveTeam = { merchant: '', members: [] }; liveTeamSignature = '';
@@ -1749,11 +1748,27 @@
         render();
       });
     }
-    if (!unsubscribeLang && window.KiwiI18n?.onLangChange) {
-      window.KiwiI18n.onLangChange(() => { if (pageActive) render(); });
-      unsubscribeLang = true;
-    }
+    bindLangChange();
     render();
+  }
+
+  /* Re-render in the new language, Équipe and Paie alike. The old guard waited
+     for KiwiI18n.onLangChange, which does not exist: the page stayed in the
+     language it was opened in. setLang() fires kiwi:langchange after it has
+     rewritten the [data-i18n] copy. pageActive outlives a jump from Paie to
+     Stock (no showDashboard() runs on that path), so it is not enough on its
+     own: render() in payroll mode would reopen Paie over the Stock page. The
+     venue subscriptions ask the same question. */
+  function teamOnScreen() {
+    const b = document.body.classList;
+    return pageMode === 'payroll'
+      ? b.contains('page-genpage') && window.Kiwi?.activePage === 'payroll'
+      : b.contains('page-equipe');
+  }
+  function bindLangChange() {
+    if (unsubscribeLang) return;
+    window.addEventListener('kiwi:langchange', () => { if (pageActive && teamOnScreen()) render(); });
+    unsubscribeLang = true;
   }
 
   function deactivateTeam() {
@@ -1769,8 +1784,7 @@
     scheduleLiveTeam();          // plus personne ne regarde : on leve le pied
     pageMode = null;
     document.body.classList.remove('page-equipe');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+    window.Kiwi?.breadcrumb?.();
     if (unsubscribeVenue) { try { unsubscribeVenue(); } catch (_) {} unsubscribeVenue = null; }
     window.Kiwi?.setActivePage?.('accueil');
   }
@@ -4107,11 +4121,14 @@
       subtitle: `${venue.name || 'Votre établissement'} · ${access === 'planning' ? managerCopy.sub : T.paySub}`,
       body: renderPayrollBody(T, venue, venueType, members, access),
     });
-    // The venue/language subscriptions live on showPage(); mirror the venue one so
-    // switching store while on Paie repaints instead of showing the old roster.
+    // The venue subscription lives on showPage(); mirror it so switching store
+    // while on Paie repaints instead of showing the old roster.
+    bindLangChange();
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
-        if (!pageActive) return;
+        /* setVenue() has already put the dashboard back: Paie left behind by a
+           jump to Stock must not reopen over it. */
+        if (!pageActive || !teamOnScreen()) return;
         ensureVenueData(window.KiwiVenue.getCurrentVenueData());
         render();
       });

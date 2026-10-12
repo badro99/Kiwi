@@ -5480,7 +5480,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=2" defer></script>
-<script src="assets/i18n.js?v=23" defer></script>
+<script src="assets/i18n.js?v=24" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -5491,7 +5491,7 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/material-icons.js?v=2" defer></script>
-<script src="assets/interactive.js?v=52" defer></script>
+<script src="assets/interactive.js?v=53" defer></script>
 <script src="assets/features.js?v=11" defer></script>
 <script src="assets/invoice.js?v=14" defer></script>
 <script src="assets/invoicing.js?v=9" defer></script>
@@ -5520,7 +5520,7 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=48" defer></script>
+<script src="assets/venues.js?v=49" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=9" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
@@ -5681,7 +5681,7 @@
 <!-- Réglages caisse des métiers de bouche (zones de livraison, extras de devis, formats de gâteau) :
      l’onglet « Réglages caisse » du Menu. Après vertical-state.js, dont il tient le réglage `foodtrade`. -->
 <script src="assets/food-trade-settings.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=110" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=111" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=14" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -5695,11 +5695,11 @@
 <script src="assets/month-report-ui.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=28" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=74" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=75" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
-<script src="assets/team.js?v=303" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=304" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -5707,8 +5707,8 @@
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=20" defer fetchpriority="low"></script>
 <script src="assets/simple-food-cost.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/finance.js?v=9" defer fetchpriority="low"></script>
-<script src="assets/conformite.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/finance.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/conformite.js?v=5" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js?v=3" defer fetchpriority="low"></script>
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
@@ -5728,7 +5728,7 @@
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
-<script src="assets/hotel.js?v=76" defer fetchpriority="low"></script>
+<script src="assets/hotel.js?v=77" defer fetchpriority="low"></script>
 <script src="assets/hotel-economat.js?v=3" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
@@ -5736,7 +5736,7 @@
 <script src="assets/trade-workspaces.js?v=9" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=25" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=26" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=14" defer fetchpriority="low"></script>
@@ -6234,8 +6234,8 @@
       window.Kiwi?.setActivePage?.('accueil');
       document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
       document.querySelector('.sidebar nav a[data-nav="accueil"]')?.classList.add('active');
-      const bc = document.querySelector('.breadcrumb');
-      if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+      // Hands the crumb back to i18n's dash.breadcrumb, in the screen's language.
+      window.Kiwi?.breadcrumb?.();
       window.scrollTo({ top: 0 });
     } catch (_) {}
   }

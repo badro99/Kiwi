@@ -94,13 +94,16 @@ function bootWorkspace({ finance } = {}) {
 function bootFinance({ restaurant = true, role = 'owner', lang = 'fr', saved = null } = {}) {
   const noop = () => {};
   const root = { innerHTML: '' };
-  const breadcrumb = { innerHTML: '' };
+  /* finance.js hands its title to Kiwi.breadcrumb() (interactive.js paints the
+     localized « Accueil / … » and repaints it on a language switch). The stub
+     keeps what it was handed, read the way the painter reads it. */
+  const breadcrumb = { title: null, read() { const t = typeof this.title === 'function' ? this.title() : this.title; return t == null ? '' : String(t); } };
   const el = () => ({ classList: { add: noop, remove: noop, contains: () => false }, setAttribute: noop,
     removeAttribute: noop, appendChild: noop, addEventListener: noop, querySelector: () => null,
     querySelectorAll: () => [], innerHTML: '', textContent: '', style: {}, dataset: {} });
   const store = new Map(saved == null ? [] : [['kiwiMenuAnalysisTab', saved]]);
   const win = {
-    Kiwi: { handlers: {}, toast: noop, setActivePage: noop, pageShell: noop, modal: noop },
+    Kiwi: { handlers: {}, toast: noop, setActivePage: noop, pageShell: noop, modal: noop, breadcrumb: (t) => { breadcrumb.title = t; } },
     KiwiVenue: { getVenue: () => 'v-test', getVenueData: () => ({ name: 'Restaurant test' }), isCustom: () => true, subscribe: noop },
     KiwiEnv: { isReal: () => true, demosAllowed: false },
     KiwiI18n: { getLang: () => lang },
@@ -117,7 +120,7 @@ function bootFinance({ restaurant = true, role = 'owner', lang = 'fr', saved = n
   win.window = win;
   const document = { readyState: 'complete', body: el(), documentElement: el(), head: el(),
     addEventListener: noop, createElement: el, getElementById: () => null,
-    querySelector: (s) => (s === '[data-finance-root]' ? root : s === '.breadcrumb' ? breadcrumb : null), querySelectorAll: () => [] };
+    querySelector: (s) => (s === '[data-finance-root]' ? root : null), querySelectorAll: () => [] };
   const ctx = vm.createContext({ window: win, Kiwi: win.Kiwi, document, console, setTimeout, clearTimeout,
     localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) } });
   vm.runInContext(R('assets/finance.js'), ctx, { filename: 'finance.js' });
@@ -128,7 +131,7 @@ function bootFinance({ restaurant = true, role = 'owner', lang = 'fr', saved = n
   f.win.Kiwi.handlers['nav-finance']();
   const html = f.root.innerHTML;
   ok(/class="fin-title">Analyse du menu</.test(html), 'restaurant : la page s’appelle « Analyse du menu »', html.slice(0, 300));
-  ok(/<b>Analyse du menu<\/b>/.test(f.breadcrumb.innerHTML), 'restaurant : le fil d’Ariane dit « Analyse du menu »', f.breadcrumb.innerHTML);
+  ok(f.breadcrumb.read() === 'Analyse du menu', 'restaurant : le fil d’Ariane dit « Analyse du menu »', f.breadcrumb.read());
   const tabs = html.match(/data-fin-tab="(\w+)"/g) || [];
   ok(tabs.join() === 'data-fin-tab="overview",data-fin-tab="sales",data-fin-tab="performance",data-fin-tab="hours"', 'quatre onglets : Vue d’ensemble · Ventes · Performance · Heures de pointe', tabs.join());
   ok(/class="fin-seg fin-tabs" data-lens-demo role="tablist"/.test(html) && (html.match(/role="tab" data-lens-item/g) || []).length === 4, 'les onglets passent par la lentille liquide (data-lens-demo / data-lens-item)');
@@ -159,10 +162,10 @@ function bootFinance({ restaurant = true, role = 'owner', lang = 'fr', saved = n
   const other = bootFinance({ restaurant: false });
   other.win.Kiwi.handlers['nav-finance']();
   ok(other.root.innerHTML.length > 100 && !/Analyse du menu/.test(other.root.innerHTML) && !/data-fin-tab=/.test(other.root.innerHTML), 'autre métier : la page « Marges » d’avant, sans onglets ni titre d’analyse', other.root.innerHTML.slice(0, 200));
-  ok(/<b>Marges<\/b>/.test(other.breadcrumb.innerHTML), 'autre métier : le fil d’Ariane reste « Marges »');
+  ok(other.breadcrumb.read() === 'Marges', 'autre métier : le fil d’Ariane reste « Marges »', other.breadcrumb.read());
 
   const en = bootFinance({ lang: 'en' }); en.win.Kiwi.handlers['nav-finance']();
-  ok(/Menu analysis/.test(en.root.innerHTML) && /Peak hours/.test(en.root.innerHTML) && /Home/.test(en.breadcrumb.innerHTML), 'anglais : « Menu analysis », « Peak hours »');
+  ok(/Menu analysis/.test(en.root.innerHTML) && /Peak hours/.test(en.root.innerHTML) && en.breadcrumb.read() === 'Menu analysis', 'anglais : « Menu analysis », « Peak hours », et le fil d’Ariane aussi');
   const ar = bootFinance({ lang: 'ar' }); ar.win.Kiwi.handlers['nav-finance']();
   ok(/تحليل القائمة/.test(ar.root.innerHTML) && /ساعات الذروة/.test(ar.root.innerHTML), 'arabe : « تحليل القائمة », « ساعات الذروة »');
   const all = [html, en.root.innerHTML, ar.root.innerHTML].join('');

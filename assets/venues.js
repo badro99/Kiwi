@@ -1823,8 +1823,7 @@
     try {
       window.Kiwi?.pageShell?.();
       window.Kiwi?.setActivePage?.('accueil');
-      const bc = document.querySelector('.breadcrumb');
-      if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+      window.Kiwi?.breadcrumb?.();
       window.scrollTo({ top: 0 });
     } catch (_) {}
     renderAll();
@@ -3875,8 +3874,7 @@
   function menuShowDashboard() {
     if (!document.body.classList.contains('page-menu')) return;
     document.body.classList.remove('page-menu');
-    const bc = document.querySelector('.breadcrumb');
-    if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+    window.Kiwi?.breadcrumb?.();
     window.Kiwi?.setActivePage?.('accueil');
   }
   function menuWireHandlers() {
