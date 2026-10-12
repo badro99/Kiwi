@@ -93,5 +93,32 @@ ok('every new string exists in FR, EN and AR, without an em dash', () => {
   assert.ok(blocks.every((b) => !b.includes('\u2014')));
 });
 
+console.log('reorder level, measured');
+const reorder = new Function(`${fnSrc('reorderFromHistory')} return reorderFromHistory;`)();
+ok('consumption × the usual gap between deliveries, worked by hand', () => {
+  const r = reorder(2, ['2026-10-01', '2026-10-04', '2026-10-07', '2026-10-10']);
+  assert.deepEqual(r, { perDay: 2, gap: 3, deliveries: 4, qty: 6 });
+  const u = reorder(2.5, ['2026-10-01', '2026-10-04', '2026-10-08']);
+  assert.equal(u.gap, 3.5);
+  assert.equal(u.qty, 8.8, '2,5 × 3,5 = 8,75, rounded UP: rounding down would run out');
+});
+ok('the last four deliveries only, one per day, in date order', () => {
+  const r = reorder(1, ['2026-09-01', '2026-10-10', '2026-10-01', '2026-10-01', '2026-10-04', '2026-10-07']);
+  assert.equal(r.deliveries, 4);
+  assert.equal(r.gap, 3);
+});
+ok('nothing is proposed without both measures', () => {
+  assert.equal(reorder(2, ['2026-10-01', '2026-10-04']), null, 'two deliveries are one gap: not enough');
+  assert.equal(reorder(0, ['2026-10-01', '2026-10-04', '2026-10-07']), null, 'no measured consumption');
+  assert.equal(reorder(2, ['bad', '2026-10-04', '2026-10-07']), null, 'a malformed day is dropped, not guessed');
+});
+ok('the proposal shows on an existing article only, and enters the field only on a click', () => {
+  assert.match(form, /const reorderSugg = isEdit \? reorderSuggestionFor\(existing\) : null;/);
+  assert.match(form, /data-st-if-reorder-use="\$\{esc\(stItemVal\(reorderSugg\.qty\)\)\}"/);
+  assert.match(form, /f\.value = ev\.currentTarget\.getAttribute\('data-st-if-reorder-use'\)/);
+  assert.match(src, /r\.reason === 'receipt' && \+r\.occurredTs > 0/, 'deliveries come from the ledger receipts');
+  for (const k of ['itemReorderMeasured', 'itemReorderUse']) assert.equal((src.match(new RegExp(`\\b${k}: `, 'g')) || []).length, 3, `${k} in FR, EN and AR`);
+});
+
 console.log(`\nstock-item-form: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

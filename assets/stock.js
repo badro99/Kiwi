@@ -315,6 +315,8 @@
       itemReorderHint: 'Sous ce seuil, l’article passe en stock bas.',
       itemReorderAuto: (q) => `Laissé vide : stock bas sous ${q}, soit 40 % du par level.`,
       itemReorderNone: 'Laissé vide : aucune alerte de stock bas.',
+      itemReorderMeasured: (use, gap, n, q) => `Mesuré : ${use} par jour, une livraison tous les ${gap} jours (${n} dernières). Sous ${q}, le stock ne tient plus jusqu’à la suivante.`,
+      itemReorderUse: (q) => `Utiliser ${q}`,
       itemCostLabel: 'Coût par unité',
       addItemToast: (name) => `${name} ajouté au catalogue`,
       // Edit / delete item
@@ -636,6 +638,8 @@
       itemReorderHint: 'Below this level the item shows as low stock.',
       itemReorderAuto: (q) => `Left empty: low stock below ${q}, 40% of the par level.`,
       itemReorderNone: 'Left empty: no low-stock alert.',
+      itemReorderMeasured: (use, gap, n, q) => `Measured: ${use} a day, a delivery every ${gap} days (last ${n}). Below ${q}, stock no longer lasts until the next one.`,
+      itemReorderUse: (q) => `Use ${q}`,
       itemCostLabel: 'Cost per unit',
       addItemToast: (name) => `${name} added to catalogue`,
       editItemTitle: 'Edit item',
@@ -947,6 +951,8 @@
       itemReorderHint: 'تحت هذا الحد تظهر السلعة كمخزون منخفض.',
       itemReorderAuto: (q) => `إن تُرك فارغاً: مخزون منخفض تحت ${q}، أي 40٪ من الحد.`,
       itemReorderNone: 'إن تُرك فارغاً: لا تنبيه بانخفاض المخزون.',
+      itemReorderMeasured: (use, gap, n, q) => `مقاس: ${use} في اليوم، توصيل كل ${gap} أيام (آخر ${n}). تحت ${q} لا يكفي المخزون حتى التوصيل التالي.`,
+      itemReorderUse: (q) => `استعمال ${q}`,
       itemCostLabel: 'التكلفة لكل وحدة',
       addItemToast: (name) => `${name} تمت إضافته للكتالوج`,
       editItemTitle: 'تعديل المنتج',
@@ -7335,6 +7341,9 @@
       .st-if-num.wide .st-if-in { padding-inline-end: 96px; }
       .st-if-unit { position: absolute; inset-inline-end: 12px; top: 50%; max-width: 56%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-50%); font: 500 12px var(--sans); color: var(--n-500); pointer-events: none; }
       .st-if-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); }
+      .st-if-use { justify-self: start; align-self: start; margin-top: 2px; padding: 5px 10px; border: 1px solid var(--n-200); border-radius: 8px; background: transparent; color: var(--atlas); font: 600 12px var(--sans); cursor: pointer; }
+      .st-if-use:hover { background: color-mix(in srgb, var(--atlas) 8%, transparent); }
+      .st-if-use:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
       .st-if-err { font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--danger, #cb5238); }
       .st-if-note { display: block; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 5%, var(--if-field)); font-size: 12.5px; line-height: 1.45; color: var(--n-600); }
       .st-if-newcat { display: flex; gap: 6px; margin-top: 2px; }
@@ -7360,8 +7369,30 @@
     `;
     document.head.appendChild(st);
   }
+  /* Le niveau de réappro, mesuré. Sous ce qu'on consomme entre deux
+     livraisons, le stock ne tient plus jusqu'à la suivante. Il faut les deux
+     mesures : la consommation réelle de la semaine (usageThisWeek) et au
+     moins trois livraisons enregistrées au registre, soit deux intervalles ;
+     sinon rien n'est proposé. Le chiffre n'est qu'une proposition : il
+     n'entre dans le champ que si le commerçant clique. */
+  function reorderFromHistory(perDay, receiptDays) {
+    const days = [...new Set((receiptDays || []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-4);
+    if (!(perDay > 0) || days.length < 3) return null;
+    let sum = 0;
+    for (let i = 1; i < days.length; i++) sum += (Date.parse(days[i] + 'T12:00:00Z') - Date.parse(days[i - 1] + 'T12:00:00Z')) / 864e5;
+    const gap = sum / (days.length - 1);
+    if (!(gap >= 1)) return null;
+    return { perDay, gap: Math.round(gap * 10) / 10, deliveries: days.length, qty: Math.ceil(perDay * gap * 10) / 10 };
+  }
+  function reorderSuggestionFor(it) {
+    if (!it) return null;
+    let rows = [];
+    try { rows = itemHistory(it).filter((r) => (+r.qty || 0) > 0 && r.reason === 'receipt' && +r.occurredTs > 0); } catch (_) { rows = []; }
+    return reorderFromHistory(+it.usageThisWeek > 0 ? it.usageThisWeek / 7 : 0, rows.map((r) => stockBusinessDate(+r.occurredTs)));
+  }
   function openItemForm(existing) {
     const isEdit = !!existing;
+    const reorderSugg = isEdit ? reorderSuggestionFor(existing) : null;
     const title = isEdit ? t('editItemTitle') : t('addItemTitle');
     const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
     const unitOptions = stockUnitOptions(existing?.unit || 'unité');
@@ -7431,6 +7462,7 @@
                 <span class="st-if-l">${esc(t('addItemReorder'))}${opt}</span>
                 ${num('reorder', stItemVal(existing?.reorderLevel))}
                 <span class="st-if-hint" data-st-if-reorder-hint></span>
+                ${reorderSugg ? `<span class="st-if-hint" data-st-if-reorder-measured>${esc(t('itemReorderMeasured', fmtUnit(Math.round(reorderSugg.perDay * 10) / 10, existing.unit), stItemVal(reorderSugg.gap), reorderSugg.deliveries, fmtUnit(reorderSugg.qty, existing.unit)))}</span><button type="button" class="st-if-use" data-st-if-reorder-use="${esc(stItemVal(reorderSugg.qty))}">${esc(t('itemReorderUse', fmtUnit(reorderSugg.qty, existing.unit)))}</button>` : ''}
               </label>
             </div>
           </section>
@@ -7472,6 +7504,14 @@
       const auto = Math.max(0, Math.round((p.n || 0) * 0.4));
       hint.textContent = auto > 0 ? t('itemReorderAuto', fmtUnit(auto, u)) : t('itemReorderNone');
     };
+    q('[data-st-if-reorder-use]')?.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const f = q('[data-stock-add-reorder]');
+      if (!f) return;
+      f.value = ev.currentTarget.getAttribute('data-st-if-reorder-use') || '';
+      f.dispatchEvent(new Event('input', { bubbles: true }));
+      f.focus();
+    });
     q('[data-stock-add-unit]')?.addEventListener('change', paintUnits);
     ['name', 'current', 'par', 'reorder', 'cost'].forEach((k) => q(`[data-stock-add-${k}]`)?.addEventListener('input', () => { mark(k, ''); paintUnits(); }));
     q('[data-stock-add-cat]')?.addEventListener('change', () => mark('newcat', ''));
