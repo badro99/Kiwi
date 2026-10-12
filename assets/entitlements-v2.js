@@ -42,6 +42,11 @@
   function node(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
   /* La ligne qui explique un geste retenu parle la langue de l'écran. */
   function L(fr,en,ar){var l=String(document.documentElement.getAttribute('lang')||'fr').slice(0,2);return l==='ar'?ar:l==='en'?en:fr;}
+  function langNow(){return L('fr','en','ar');}
+  /* Le message pré-rempli part dans la langue du commerçant : un compte
+     anglais ou arabe envoyait une phrase française qu'il n'avait pas écrite. */
+  function waLink(){return WA.split('?')[0]+'?text='+encodeURIComponent(L('Bonjour Kiwi, je souhaite activer mon abonnement pour mon établissement.','Hello Kiwi, I would like to activate the subscription for my business.','مرحبًا كيوي، أودّ تفعيل اشتراك مؤسستي.'));}
+  function pillText(){return L('Prêt à ouvrir · en parler à Kiwi','Ready to open · talk to Kiwi','جاهز للافتتاح · تحدّث مع كيوي');}
   /* UNE ligne à la fois. Un champ retenu reçoit une frappe par touche, un
      bouton se reclique : empiler une bulle par geste couvrait l'écran de
      la même phrase. La ligne est rafraîchie, pas dupliquée. */
@@ -122,28 +127,31 @@
        qui ne répondent rien, c'était dix minutes de panne apparente. */
     if(paywallCoolingDown()){heldLine(L('Cette action s\u2019ouvre \u00e0 l\u2019activation de votre \u00e9tablissement.','This action opens once your business is activated.','\u064a\u064f\u062a\u0627\u062d \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621 \u0628\u0639\u062f \u062a\u0641\u0639\u064a\u0644 \u0645\u0624\u0633\u0633\u062a\u0643.'),true);return false;}
     try{lastFocus=document.activeElement;}catch(_){lastFocus=null;}
+    /* Construit une fois et gardé : il est reconstruit si la langue a changé
+       depuis, sinon il reparlerait la langue de sa première ouverture. */
+    if(modal&&modal.getAttribute('data-lang')!==langNow()){modal.remove();modal=null;}
     if(modal){openPaywall();focusFirst();return false;}
-    modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Ouvrir votre établissement avec Kiwi');
-    var card=node('section','kiwi-entitlement-card');card.tabIndex=-1;var head=node('div','kiwi-entitlement-head'),kick=node('div','kiwi-entitlement-kicker');kick.append(node('span'),document.createTextNode(' Prêt à ouvrir'));
+    modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('data-lang',langNow());modal.setAttribute('aria-label',L('Ouvrir votre établissement avec Kiwi','Open your business with Kiwi','افتح مؤسستك مع كيوي'));
+    var card=node('section','kiwi-entitlement-card');card.tabIndex=-1;var head=node('div','kiwi-entitlement-head'),kick=node('div','kiwi-entitlement-kicker');kick.append(node('span'),document.createTextNode(' '+L('Prêt à ouvrir','Ready to open','جاهز للافتتاح')));
     /* La croix : une sortie visible, avant même de lire les boutons du bas. */
-    var x=node('button','kiwi-entitlement-x');x.type='button';x.setAttribute('aria-label','Fermer et continuer à regarder');x.textContent='\u00d7';x.onclick=function(){closePaywall();};
+    var x=node('button','kiwi-entitlement-x');x.type='button';x.setAttribute('aria-label',L('Fermer et continuer à regarder','Close and keep looking','أغلق وتابع التصفّح'));x.textContent='\u00d7';x.onclick=function(){closePaywall();};
     /* Ce panneau ne s'ouvre plus qu'une fois l'installation terminée : il peut
        donc parler d'un travail FAIT plutôt que d'un accès manquant. La première
        phrase reconnaît ce que le commerçant vient de monter ; le reste dit la
        suite sans jamais prononcer « payez ». */
-    head.append(kick,node('h2','',"Tout est en place."),node('p','',"Vos articles, votre équipe, vos réglages : votre établissement est prêt. On en parle cinq minutes, on choisit ensemble la formule qui correspond à votre maison, et vous travaillez dès aujourd'hui · avec tout ce que vous venez de préparer, tel quel."));
+    head.append(kick,node('h2','',L('Tout est en place.','Everything is in place.','كل شيء جاهز.')),node('p','',L('Vos articles, votre équipe, vos réglages : votre établissement est prêt. On en parle cinq minutes, on choisit ensemble la formule qui correspond à votre maison, et vous travaillez dès aujourd’hui, avec tout ce que vous venez de préparer, tel quel.','Your items, your team, your settings: your business is ready. We talk for five minutes, choose together the plan that fits your business, and you start working today, with everything you just prepared, exactly as it is.','منتجاتك وفريقك وإعداداتك: مؤسستك جاهزة. نتحدث خمس دقائق، ونختار معًا الباقة التي تناسب نشاطك، وتبدأ العمل اليوم بكل ما أعددته، كما هو.')));
     var benefits=node('div','kiwi-entitlement-benefits');
     /* « God Mode » est notre mot d'atelier, pas celui du commerçant : il lisait
        ici le nom d'une console qu'il ne verra jamais. */
-    [['Votre travail reste','Tout ce que vous avez saisi demeure : rien à ressaisir, rien à réinstaller.'],
-     ['Quelqu\u2019un vous répond','Une vraie personne de l\u2019équipe, qui connaît votre métier. Pas un formulaire.'],
-     ['Vous ouvrez le jour même','Dès l\u2019accord, votre établissement encaisse. Sans délai et sans technicien.']].forEach(function(x2,i){var d=node('div');d.append(node('em','',String(i+1)),node('b','',x2[0]),node('span','',x2[1]));benefits.append(d);});
-    var actions=node('div','kiwi-entitlement-actions'),cta=node('a','',"En parler avec Kiwi"),later=node('button','',"Plus tard, je regarde encore");
-    cta.href=WA;cta.target='_blank';cta.rel='noopener';
+    [[L('Votre travail reste','Your work stays','عملك باقٍ'),L('Tout ce que vous avez saisi demeure : rien à ressaisir, rien à réinstaller.','Everything you entered stays: nothing to type again, nothing to reinstall.','كل ما أدخلته يبقى: لا شيء تعيد إدخاله، ولا شيء تعيد تثبيته.')],
+     [L('Quelqu’un vous répond','Someone answers','شخص يردّ عليك'),L('Une vraie personne de l’équipe, qui connaît votre métier. Pas un formulaire.','A real person from the team, who knows your trade. Not a form.','شخص حقيقي من الفريق يعرف مهنتك. لا استمارة.')],
+     [L('Vous ouvrez le jour même','You open the same day','تفتح في اليوم نفسه'),L('Dès l’accord, votre établissement encaisse. Sans délai et sans technicien.','Once we agree, your business takes payments. No wait and no technician.','بمجرد الاتفاق تبدأ مؤسستك في التحصيل. بلا انتظار وبلا تقني.')]].forEach(function(x2,i){var d=node('div');d.append(node('em','',String(i+1)),node('b','',x2[0]),node('span','',x2[1]));benefits.append(d);});
+    var actions=node('div','kiwi-entitlement-actions'),cta=node('a','',L('En parler avec Kiwi','Talk to Kiwi','تحدّث مع كيوي')),later=node('button','',L('Plus tard, je regarde encore','Later, I’m still looking','لاحقًا، ما زلت أتصفّح'));
+    cta.href=waLink();cta.target='_blank';cta.rel='noopener';
     cta.onclick=function(){closePaywall();};
     later.type='button';later.className='kiwi-entitlement-later';later.onclick=function(){closePaywall();};
     actions.append(cta,later);
-    var foot=node('div','kiwi-entitlement-foot','Aucune urgence : tout ce que vous avez préparé vous attend, aussi longtemps qu\u2019il le faudra.');
+    var foot=node('div','kiwi-entitlement-foot',L('Aucune urgence : tout ce que vous avez préparé vous attend, aussi longtemps qu’il le faudra.','No rush: everything you prepared will wait for you, as long as it takes.','لا عجلة: كل ما أعددته ينتظرك، مهما طال الوقت.'));
     card.append(x,head,benefits,actions,foot);modal.append(card);
     /* Le fond ferme, la carte non : un clic dans la carte ne doit pas la fermer. */
     modal.addEventListener('mousedown',function(e){if(e.target===modal)closePaywall();});
@@ -165,7 +173,7 @@
      reçoit le focus (tabindex=-1), la lecture d'écran annonce le dialogue, et
      la première tabulation tombe sur la croix. */
   function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
-  function showPill(){if(pill||operator||!pending||!onboarded)return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=showPaywall;document.body.append(pill);}
+  function showPill(){if(pill||operator||!pending||!onboarded)return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),node('span','',pillText()));pill.onclick=showPaywall;document.body.append(pill);}
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
@@ -209,6 +217,7 @@
   }
   function installSubscription(){
     document.addEventListener('pointerdown',markGesture,true);document.addEventListener('keydown',markGesture,true);
+    window.addEventListener('kiwi:langchange',function(){var s=pill&&pill.querySelector('span');if(s)s.textContent=pillText();if(modal&&modal.classList.contains('is-off')){modal.remove();modal=null;}});
     document.addEventListener('click',function(e){var el=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');if(heldBack(el)){e.preventDefault();e.stopImmediatePropagation();if(onboarded)showPaywall();else installToast();}},true);
     /* Saisir, cocher, envoyer un formulaire : c'est l'installation elle-même.
        Tant qu'elle n'est pas finie, on ne s'interpose pas entre le commerçant

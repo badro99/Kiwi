@@ -68,7 +68,22 @@
   function trStr(fr, map) {
     const lang = getLang();
     if (lang === 'fr' || !fr) return fr;
-    return (map[fr] && map[fr][lang]) || fr;
+    return (map[fr] && map[fr][lang]) || trTemplate(fr, map, lang) || fr;
+  }
+  /* Les libellés à nombre (« 31 DERNIERS JOURS », « Total 92 jours ») : la clé
+   * exacte d'abord, puis le gabarit « # ». Sans lui, la plage réelle d'un
+   * commerçant retombait en français dès qu'elle ne faisait pas 7 ou 30 jours. */
+  function trTemplate(fr, map, lang) {
+    const m = /\d+/.exec(fr);
+    if (!m) return null;
+    const e = map[fr.replace(m[0], '#')];
+    const f = e && e[lang];
+    return typeof f === 'function' ? f(+m[0]) : null;
+  }
+  function arDays(n) {
+    if (n === 1) return 'يوم واحد';
+    if (n === 2) return 'يومين';
+    return (n % 100 >= 3 && n % 100 <= 10) ? n + ' أيام' : n + ' يومًا';
   }
   // Translate "PREFIX · rest" — only the prefix is localized, the rest
   // (usually a formatted amount) is kept verbatim.
@@ -76,9 +91,9 @@
     const lang = getLang();
     if (lang === 'fr' || !fr) return fr;
     const i = fr.indexOf(' · ');
-    if (i < 0) return (map[fr] && map[fr][lang]) || fr;
+    if (i < 0) return (map[fr] && map[fr][lang]) || trTemplate(fr, map, lang) || fr;
     const pre = fr.slice(0, i);
-    return ((map[pre] && map[pre][lang]) || pre) + fr.slice(i);
+    return ((map[pre] && map[pre][lang]) || trTemplate(pre, map, lang) || pre) + fr.slice(i);
   }
   const getDateRange = () => currentRange;
   const getShowComparison = () => showComparison;
@@ -442,6 +457,15 @@
     'HIER · COMPLET':     { en: 'YESTERDAY · COMPLETE',  ar: 'أمس · مكتمل' },
     '7 DERNIERS JOURS':   { en: 'LAST 7 DAYS',           ar: 'آخر 7 أيام' },
     '30 DERNIERS JOURS':  { en: 'LAST 30 DAYS',          ar: 'آخر 30 يومًا' },
+    /* Ce que dit la carte d'un commerçant réel (realRevSeries) : ces clés
+     * manquaient, et la carte restait en français sous EN et AR. */
+    "AUJOURD'HUI":           { en: 'TODAY',          ar: 'اليوم' },
+    'HIER':                  { en: 'YESTERDAY',      ar: 'أمس' },
+    'PÉRIODE PERSONNALISÉE': { en: 'CUSTOM PERIOD',  ar: 'فترة مخصّصة' },
+    'MOIS DERNIER':          { en: 'LAST MONTH',     ar: 'الشهر الماضي' },
+    'CE TRIMESTRE':          { en: 'THIS QUARTER',   ar: 'هذا الربع' },
+    'CETTE ANNÉE':           { en: 'THIS YEAR',      ar: 'هذه السنة' },
+    '# DERNIERS JOURS':      { en: (n) => `LAST ${n} DAYS`, ar: (n) => `آخر ${arDays(n)}` },
   };
   const REV_SUB = {
     'Cumul horaire · service en cours':      { en: 'Hourly cumulative · service in progress', ar: 'تراكم بالساعة · الخدمة جارية' },
@@ -450,6 +474,13 @@
     'Cumul horaire · réservations en cours': { en: 'Hourly cumulative · bookings in progress',ar: 'تراكم بالساعة · الحجوزات جارية' },
     'Total journalier · 7 derniers jours':   { en: 'Daily total · last 7 days',               ar: 'الإجمالي اليومي · آخر 7 أيام' },
     'Total journalier · 30 derniers jours':  { en: 'Daily total · last 30 days',              ar: 'الإجمالي اليومي · آخر 30 يومًا' },
+    "Cumul horaire · aujourd'hui":            { en: 'Hourly cumulative · today',               ar: 'تراكم بالساعة · اليوم' },
+    'Cumul horaire · hier':                   { en: 'Hourly cumulative · yesterday',           ar: 'تراكم بالساعة · أمس' },
+    'Total journalier · période sélectionnée': { en: 'Daily total · selected period',          ar: 'الإجمالي اليومي · الفترة المحدّدة' },
+    'Total journalier · mois dernier':        { en: 'Daily total · last month',                ar: 'الإجمالي اليومي · الشهر الماضي' },
+    'Total journalier · ce trimestre':        { en: 'Daily total · this quarter',              ar: 'الإجمالي اليومي · هذا الربع' },
+    'Total journalier · cette année':         { en: 'Daily total · this year',                 ar: 'الإجمالي اليومي · هذه السنة' },
+    'Total journalier · # derniers jours':    { en: (n) => `Daily total · last ${n} days`,     ar: (n) => `الإجمالي اليومي · آخر ${arDays(n)}` },
   };
   // Legend prefix (the part before the " · NN MAD" amount).
   const LEGEND_PREFIX = {
@@ -460,6 +491,9 @@
     '7 jours précédents':  { en: 'Previous 7 days',       ar: '7 أيام السابقة' },
     'Total 30 jours':      { en: '30-day total',          ar: 'إجمالي 30 يومًا' },
     '30 jours précédents': { en: 'Previous 30 days',      ar: '30 يومًا السابقة' },
+    'Cumul':               { en: 'Cumulative',            ar: 'التراكم' },
+    'Total # jours':       { en: (n) => `${n}-day total`,  ar: (n) => `إجمالي ${arDays(n)}` },
+    '# jours précédents':  { en: (n) => `Previous ${n} days`, ar: (n) => `${arDays(n)} السابقة` },
   };
 
   /* ─── Benchmark · row metric labels + peer/city wording (FR captured in data) ─── */
@@ -1850,6 +1884,36 @@
     return realSalesList().concat(realRefundList().map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' })));
   }
   // Window bounds [from, to) in ms for a range, relative to now.
+  /* « Mois dernier », « Ce trimestre », « Cette année » sont des périodes du
+   * CALENDRIER. Le sélecteur les affiche ainsi (« Septembre 2026 »,
+   * « 1 Jul – 12 Oct 2026 », « 2026 ») et les tuiles disent « vs mois préc. » ;
+   * les bornes, elles, étaient les 30, 90 et 365 derniers jours. Le 12
+   * octobre, « Septembre 2026 » totalisait du 13 septembre au 12 octobre, et
+   * « 2026 » remontait au 13 octobre 2025. Clés de journée en texte : pas de
+   * fuseau, la journée de caisse reste celle de merchantDayBounds. */
+  function calendarStartKey(dayKey, unit, back) {
+    let y = +dayKey.slice(0, 4), m = +dayKey.slice(5, 7) - 1;
+    if (unit === 'year') { y -= back; m = 0; }
+    else {
+      m = (unit === 'quarter' ? Math.floor(m / 3) * 3 : m) - (unit === 'quarter' ? 3 : 1) * back;
+      while (m < 0) { m += 12; y--; }
+      while (m > 11) { m -= 12; y++; }
+    }
+    return y + '-' + String(m + 1).padStart(2, '0') + '-01';
+  }
+  /* [début, fin) de la période, `back` périodes en arrière. « Mois dernier »
+   * est le mois précédent ENTIER ; trimestre et année courent depuis leur
+   * premier jour, ouverts jusqu'à maintenant. null hors calendrier. */
+  function calendarBounds(range, back) {
+    const unit = range === 'moisDernier' ? 'month' : range === 'trimestre' ? 'quarter' : range === 'annee' ? 'year' : '';
+    if (!unit) return null;
+    const slug = activeMerchantSlug();
+    const todayDay = merchantDayKey(Date.now(), slug);
+    const shift = (range === 'moisDernier' ? 1 : 0) + (back || 0);
+    const from = merchantDayBounds(calendarStartKey(todayDay, unit, shift), slug).from;
+    if (range !== 'moisDernier' && !back) return [from, Infinity];
+    return [from, merchantDayBounds(calendarStartKey(todayDay, unit, shift - 1), slug).from];
+  }
   function rangeBounds(range) {
     /* A merchant-picked range is exact. Demo tables may use a presentation
      * bucket, but live ledgers must never turn "3–5 August" into "last 7
@@ -1868,6 +1932,8 @@
       const yesterday = merchantDayBounds(addMerchantDays(todayDay, -1), slug);
       return [yesterday.from, yesterday.to];
     }
+    const calendar = calendarBounds(range, 0);
+    if (calendar) return calendar;
     const days = RANGE_DAYS[range] || 1;
     return [merchantDayBounds(addMerchantDays(todayDay, -(days - 1)), slug).from, Infinity];
   }
@@ -2102,12 +2168,25 @@
    * before this one; with it, the SAME slice N days earlier — so at 14h « vs
    * semaine » weighs today-so-far against last week up to 14h, not against a
    * full day it hasn't finished yet. */
+  /* Le nombre de journées de caisse que couvre la fenêtre, aujourd'hui
+   * compris : le dénominateur honnête de « CA moyen par jour ». RANGE_DAYS
+   * divisait une période personnalisée par 1 (la moyenne valait le total) et
+   * l'année en cours par 365. */
+  function windowDays(range) {
+    const [from, to] = closedBounds(range);
+    const slug = activeMerchantSlug();
+    const a = merchantDayKey(from + 1, slug), b = merchantDayKey(to - 1, slug);
+    return Math.max(1, Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5) + 1);
+  }
   function realDeltaPct(range, pick, backDays, stats = realWindowStats) {
     const [from, to] = closedBounds(range);
     const startDay = merchantDayKey(from + 1, activeMerchantSlug());
     const endDay = merchantDayKey(to - 1, activeMerchantSlug());
     const spanDays = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
-    const baseBounds = shiftedBusinessBounds(from, to, backDays || spanDays);
+    /* « vs mois préc. », « vs trimestre préc. », « vs année préc. » : la période
+       du calendrier d'avant, pas les N jours qui précèdent. */
+    const calendarBase = backDays ? null : calendarBounds(range == null ? currentRange : range, 1);
+    const baseBounds = calendarBase || shiftedBusinessBounds(from, to, backDays || spanDays);
     /* The promise above, kept. shiftedBusinessBounds returns WHOLE business
        days, so a live range (« Aujourd'hui », « 7 jours » ending now) was
        weighed against complete days: at 11h42, six hours of trading against
@@ -2233,8 +2312,9 @@
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
       total = rev.reduce((s, x) => s + x, 0);
       prevTotal = prev.reduce((s, x) => s + x, 0);
-      rangeBadge = range === 'personnalise' ? 'PÉRIODE PERSONNALISÉE' : days + ' DERNIERS JOURS';
-      sub = range === 'personnalise' ? 'Total journalier · période sélectionnée' : 'Total journalier · ' + days + ' derniers jours';
+      const named = { moisDernier: ['MOIS DERNIER', 'mois dernier'], trimestre: ['CE TRIMESTRE', 'ce trimestre'], annee: ['CETTE ANNÉE', 'cette année'] }[range];
+      rangeBadge = range === 'personnalise' ? 'PÉRIODE PERSONNALISÉE' : named ? named[0] : days + ' DERNIERS JOURS';
+      sub = range === 'personnalise' ? 'Total journalier · période sélectionnée' : 'Total journalier · ' + (named ? named[1] : days + ' derniers jours');
       cmpPrefix = days + ' jours précédents';
     }
 
@@ -2243,7 +2323,7 @@
     // clipped off the top of the box the moment the comparison is switched on.
     const top = niceCeil(Math.max(1, ...rev.filter(v => v != null), ...(hasPrev ? prev : [])));
     const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
-    const legendPrimary = (hourly ? 'Cumul' : ('Total ' + (RANGE_DAYS[range] || rev.length) + ' jours')) + ' · ' + frInt(total) + ' MAD';
+    const legendPrimary = (hourly ? 'Cumul' : ('Total ' + rev.length + ' jours')) + ' · ' + frInt(total) + ' MAD';
     return {
       rev, revPrev: hasPrev ? prev : null, total, prevTotal: hasPrev ? prevTotal : null,
       yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
@@ -3156,7 +3236,7 @@
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
     const savedLayout = getKpiLayout(venueType);
     let layout = savedLayout || defaultKpiKeys(venueType);
-    const ctx = { venueType, range: effRange(), nbDays: RANGE_DAYS[effRange()] || 1 };
+    const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? windowDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
     const deriveTile = (k) => {
       const c = KPI_CATALOG[k];
       return c ? c.derive(data, ctx) : (data[k] || null);

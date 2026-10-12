@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=61',
+  '/assets/dateRange.js?v=62',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=6',
   '/assets/pages.js?v=12',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
-  '/assets/pwa-update.js?v=361',
+  '/assets/pwa-update.js?v=362',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
@@ -197,8 +197,8 @@ var SHELL = [
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=14',
   '/assets/merchant-config.js?v=278',
-  '/assets/entitlements.css?v=6',
-  '/assets/entitlements-v2.js?v=3',
+  '/assets/entitlements.css?v=7',
+  '/assets/entitlements-v2.js?v=4',
   '/assets/staff-roles.js?v=1',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un

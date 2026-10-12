@@ -232,8 +232,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "61",
-    "sha": "8c08ec7f5c4f094e"
+    "v": "62",
+    "sha": "0e30870970d81720"
   },
   "assets/day-report-dash.js": {
     "v": "28",
@@ -308,12 +308,12 @@
     "sha": "21da6396c5303181"
   },
   "assets/entitlements-v2.js": {
-    "v": "3",
-    "sha": "cc39249ee62b6b4c"
+    "v": "4",
+    "sha": "0bb3a01c6f75b978"
   },
   "assets/entitlements.css": {
-    "v": "6",
-    "sha": "10bc0d15c44b30f7"
+    "v": "7",
+    "sha": "06ffe2c1aad9bba1"
   },
   "assets/err-reporter.js": {
     "v": "1",
@@ -884,8 +884,8 @@
     "sha": "b68358ca7f3d005f"
   },
   "assets/pwa-update.js": {
-    "v": "361",
-    "sha": "c7952bd69a155802"
+    "v": "362",
+    "sha": "f0e6e21f888323bb"
   },
   "assets/qrcode.js": {
     "v": "1",

@@ -1,6 +1,6 @@
 :root{--kiwi-paywall-deep:#052b20;--kiwi-paywall-green:#19d89a}
-.kiwi-entitlement-pill{position:fixed;right:24px;bottom:24px;z-index:2147483000;display:flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid rgba(125,242,176,.35);border-radius:999px;background:#052b20;color:#fff;box-shadow:0 18px 55px rgba(5,43,32,.28);font:700 13px/1.2 Inter,system-ui,sans-serif;cursor:pointer}
-.kiwi-entitlement-pill i{width:8px;height:8px;border-radius:50%;background:#7df2b0;box-shadow:0 0 0 5px rgba(125,242,176,.12)}
+.kiwi-entitlement-pill{position:fixed;inset-inline-end:24px;bottom:24px;z-index:1250;max-width:calc(100vw - 48px);box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid rgba(125,242,176,.35);border-radius:999px;background:#052b20;color:#fff;box-shadow:0 18px 55px rgba(5,43,32,.28);font:700 13px/1.2 Inter,system-ui,sans-serif;cursor:pointer}
+.kiwi-entitlement-pill i{flex:none;width:8px;height:8px;border-radius:50%;background:#7df2b0;box-shadow:0 0 0 5px rgba(125,242,176,.12)}
 /* La fermeture passe par une CLASSE, jamais par le seul attribut [hidden] : la
    règle display ci-dessous vient de NOTRE feuille et bat celle du navigateur,
    donc `hidden` seul laissait le panneau peint et son bouton sans effet. */
@@ -16,7 +16,7 @@
 .kiwi-entitlement-card{position:relative;width:min(620px,100%);max-height:calc(100vh - 48px);overflow:hidden auto;overscroll-behavior:contain;border:1px solid rgba(125,242,176,.2);border-radius:28px;background:linear-gradient(155deg,#0a4735 0%,#052b20 55%,#03150f 100%);color:#fff;box-shadow:0 30px 90px rgba(0,0,0,.45);font-family:'Inter Tight',Inter,system-ui,sans-serif;animation:kiwi-ent-rise .34s cubic-bezier(.22,1,.3,1) both}
 .kiwi-entitlement-card:focus{outline:none}
 /* La sortie, visible avant d'avoir lu quoi que ce soit. */
-.kiwi-entitlement-x{position:absolute;right:14px;top:14px;z-index:2;width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);font:400 20px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
+.kiwi-entitlement-x{position:absolute;inset-inline-end:14px;top:14px;z-index:2;width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);font:400 20px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
 .kiwi-entitlement-x:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
 .kiwi-entitlement-x:focus-visible{outline:2px solid #7df2b0;outline-offset:2px}
 .kiwi-entitlement-card:before{content:"";position:absolute;right:-100px;top:-120px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(125,242,176,.22),transparent 67%);pointer-events:none}
@@ -46,6 +46,21 @@
 .kiwi-held-toast span{min-width:0}
 .kiwi-held-toast button{flex:none;appearance:none;border:0;border-radius:999px;min-height:32px;padding:0 14px;background:#7DF2B0;color:#052b20;font:700 12.5px/1 'Inter Tight',Inter,system-ui,sans-serif;cursor:pointer}
 .kiwi-held-toast button:focus-visible{outline:2px solid #7DF2B0;outline-offset:2px}
-@media (max-width:700px){.kiwi-held-toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}}
-@media(max-width:640px){.kiwi-entitlement-pill{left:14px;right:14px;justify-content:center;bottom:14px}.kiwi-entitlement-layer{padding:10px}.kiwi-entitlement-card{border-radius:22px;max-height:calc(100vh - 20px)}.kiwi-entitlement-head{padding:30px 22px 4px}.kiwi-entitlement-card h2{max-width:none}.kiwi-entitlement-benefits{padding:18px 22px 14px}.kiwi-entitlement-actions{padding:4px 22px 0;flex-direction:column-reverse}.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{width:100%}.kiwi-entitlement-foot{padding:14px 22px 24px}.kiwi-privacy-bar{top:46px;max-width:calc(100vw - 16px);white-space:nowrap}}
+/* Jusqu'à 860 px le tableau de bord porte sa barre d'onglets en bas
+   (mobile.css). La pastille s'y posait par-dessus, pleine largeur :
+   Accueil, Commandes, Vendre, Kiwi AI et Menu ne se touchaient plus. Elle
+   se pose au-dessus, à droite, la puce du rapport du jour gardant la
+   gauche (à gauche aussi en arabe). */
+@media (max-width:860px){
+  .kiwi-held-toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .kiwi-entitlement-pill{inset-inline-end:auto;left:auto;right:14px;bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 90px)}
+}
+.kiwi-entitlement-pill span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Derrière la porte à code, rien à activer : on y tape son code. Même
+   règle que la barre d'onglets (dashboard.html › html.kiwi-gate-up). */
+html.kiwi-gate-up .kiwi-entitlement-pill{display:none}
+/* La pastille vit sous les fenêtres et les feuilles (9990+) et sous le menu
+   du téléphone, au-dessus de la barre d'onglets : tout en haut de la pile,
+   elle couvrait le calendrier de la feuille de dates. */
+@media(max-width:640px){.kiwi-entitlement-layer{padding:10px}.kiwi-entitlement-card{border-radius:22px;max-height:calc(100vh - 20px)}.kiwi-entitlement-head{padding:30px 22px 4px}.kiwi-entitlement-card h2{max-width:none}.kiwi-entitlement-benefits{padding:18px 22px 14px}.kiwi-entitlement-actions{padding:4px 22px 0;flex-direction:column-reverse}.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{width:100%}.kiwi-entitlement-foot{padding:14px 22px 24px}.kiwi-privacy-bar{top:46px;max-width:calc(100vw - 16px);white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.kiwi-entitlement-layer{backdrop-filter:none;animation:none}.kiwi-entitlement-card{animation:none}.kiwi-entitlement-actions a:hover,.kiwi-entitlement-actions button:hover{transform:none}}

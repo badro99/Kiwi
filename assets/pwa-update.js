@@ -100,6 +100,29 @@
     }
     return false;
   }
+  /* The dashboard's phone tab bar (mobile.css, up to 860 px) owns the bottom
+     edge. Centred there, the pill sat on « Vendre », the button a merchant
+     reaches for most, after every deploy until they refreshed. While a bar
+     is showing, the pill rides 12 px above the whole bottom cluster: the
+     bar, the day-report chip on its left and the activation pill on its
+     right. The caisse, Serveur and the employee portal have no bar and
+     keep the bottom edge. */
+  var BASE_BOTTOM = 'max(18px,env(safe-area-inset-bottom))';
+  function shows(el) {
+    if (!el || !el.getClientRects().length) return false;
+    var cs = window.getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden';
+  }
+  function floorTop() {
+    if (!shows(document.querySelector('.kw-tabbar'))) return 0;
+    var top = 0, list = document.querySelectorAll('.kw-tabbar, .kcl-chip, .kiwi-entitlement-pill');
+    for (var i = 0; i < list.length; i++) {
+      if (!shows(list[i])) continue;
+      var t = list[i].getBoundingClientRect().top;
+      if (t > 0 && t < window.innerHeight && (!top || t < top)) top = t;
+    }
+    return top;
+  }
   function keepClear(button) {
     var queued = false;
     function sync() {
@@ -109,6 +132,8 @@
       button.style.visibility = hide ? 'hidden' : 'visible';
       button.style.pointerEvents = hide ? 'none' : 'auto';
       if (hide) button.setAttribute('aria-hidden', 'true'); else button.removeAttribute('aria-hidden');
+      var top = floorTop();
+      button.style.bottom = top ? Math.max(18, Math.round(window.innerHeight - top + 12)) + 'px' : BASE_BOTTOM;
     }
     function queue() { if (!queued) { queued = true; (window.requestAnimationFrame || setTimeout)(sync); } }
     sync();
@@ -119,6 +144,7 @@
     } catch (_) {}
     window.addEventListener('transitionend', queue, true);
     window.addEventListener('animationend', queue, true);
+    window.addEventListener('resize', queue);
   }
 
   function show() {
@@ -136,7 +162,7 @@
     button.setAttribute('aria-label', t.aria);
     button.innerHTML = REFRESH_ICON + '<span style="white-space:nowrap">' + t.ready + '</span><strong style="white-space:nowrap">' + t.go + '</strong>';
     button.style.cssText = [
-      'position:fixed', 'left:50%', 'bottom:max(18px,env(safe-area-inset-bottom))',
+      'position:fixed', 'left:50%', 'bottom:' + BASE_BOTTOM,
       'transform:translateX(-50%)', 'z-index:2147483000', 'display:flex',
       'align-items:center', 'gap:10px', 'max-width:calc(100vw - 32px)',
       'padding:12px 16px', 'border:1px solid rgba(125,242,176,.45)',
