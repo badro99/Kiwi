@@ -5478,9 +5478,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       [/^Erreur réseau : (.+)$/, 'Network error: $1', 'خطأ في الشبكة: $1'],
       [/^Hors ligne · dernière mise à jour (\d{1,2}:\d{2})$/, 'Offline · last updated $1', 'غير متصل · آخر تحديث $1'],
       [/^Table (.+?) · paiement non confirmé, réessayez$/, 'Table $1 · payment not confirmed, try again', 'الطاولة $1 · لم يتأكد الدفع، أعد المحاولة'],
+      [/^Table (.+?) · paiement non confirmé, ne repassez pas la carte, réessayez$/, 'Table $1 · payment not confirmed, do not run the card again, just retry', 'الطاولة $1 · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط'],
       [/^Table (.+?) · hors ligne · commande NON envoyée, réessayez$/, 'Table $1 · offline · order NOT sent, try again', 'الطاولة $1 · غير متصل · لم يُرسَل الطلب، أعد المحاولة'],
       [/^Table (.+?) · pas de réponse du serveur · commande NON confirmée, réessayez$/, 'Table $1 · no answer from the server · order NOT confirmed, try again', 'الطاولة $1 · لا رد من الخادم · لم يتأكد الطلب، أعد المحاولة'],
       [/^Table (.*?) · part (\d+) non confirmée, réessayez$/, 'Table $1 · share $2 not confirmed, try again', 'الطاولة $1 · لم يتأكد الجزء $2، أعد المحاولة'],
+      [/^Table (.*?) · part (\d+) non confirmée, ne repassez pas la carte, réessayez$/, 'Table $1 · share $2 not confirmed, do not run the card again, just retry', 'الطاولة $1 · لم يتأكد الجزء $2، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط'],
       [/^Table (.*?) · part (\d+) non enregistrée, réessayez$/, 'Table $1 · share $2 not saved, try again', 'الطاولة $1 · لم يُسجَّل الجزء $2، أعد المحاولة'],
     ];
     function employeeTranslation(value) {
@@ -11198,7 +11200,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (activeTableId === id) renderTableDetail();
         /* Refus du serveur, pas de réponse à temps (la vente a PU passer :
            on ne dit pas « non enregistré »), ou réseau tombé avant l'envoi. */
-        if (payCtl && payCtl.signal.aborted) toast(`Table ${id} · paiement non confirmé, réessayez`, 6000);
+        /* Une carte a peut-être déjà été débitée au terminal : la relance rejoue
+           la même vente (identifiant stable), repasser la carte la débiterait deux fois. */
+        if (payCtl && payCtl.signal.aborted) toast((method || 'card') === 'card'
+          ? `Table ${id} · paiement non confirmé, ne repassez pas la carte, réessayez`
+          : `Table ${id} · paiement non confirmé, réessayez`, 6000);
         else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
         else toast(`Table ${id} · paiement non enregistré, réessayez`, 5200);
         return false;
@@ -11813,7 +11819,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }
         }
       } catch (err) {
-        if (payCtl && payCtl.signal.aborted) toast(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, 6000);
+        if (payCtl && payCtl.signal.aborted) toast(payMethod === 'card'
+          ? `Table ${tableId || ''} · part ${partIdx + 1} non confirmée, ne repassez pas la carte, réessayez`
+          : `Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, 6000);
         else if (err && !err.refused) toast("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 6000);
         else toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
         return false;

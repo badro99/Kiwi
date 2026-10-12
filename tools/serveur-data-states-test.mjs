@@ -331,7 +331,7 @@ function payer({ fetch, offline = false }) {
   ok('l’encaissement a un délai réel (15 s)', [...slow.timers.timers.values()].some((t) => t.ms === 15000) && log[0].opts.signal);
   slow.timers.fire(15000);
   ok('sans réponse : « paiement non confirmé », la table revient', (await run) === false
-    && slow.toasts[0] === 'Table 3 · paiement non confirmé, réessayez' && slow.t.status === 'bgha-ykhlass');
+    && slow.toasts[0] === 'Table 3 · paiement non confirmé, ne repassez pas la carte, réessayez' && slow.t.status === 'bgha-ykhlass');
   ok('le minuteur est rendu', slow.timers.timers.size === 0);
 
   const refused = payer({ fetch: () => json(409, { ok: false, error: 'session-closed' }) });
@@ -382,8 +382,10 @@ ok('une addition demandée hors ligne échoue tout de suite, sans basculer la ta
     && tr('Hors ligne · dernière mise à jour 21:07', 'ar') === 'غير متصل · آخر تحديث 21:07');
   ok('les messages par table ont leur patron',
     tr('Table 3 · paiement non confirmé, réessayez', 'en') === 'Table 3 · payment not confirmed, try again'
+    && tr('Table 3 · paiement non confirmé, ne repassez pas la carte, réessayez', 'en') === 'Table 3 · payment not confirmed, do not run the card again, just retry'
     && !!tr('Table 3 · pas de réponse du serveur · commande NON confirmée, réessayez', 'ar')
-    && !!tr('Table 3 · part 2 non confirmée, réessayez', 'en'));
+    && !!tr('Table 3 · part 2 non confirmée, réessayez', 'en')
+    && tr('Table 3 · part 2 non confirmée, ne repassez pas la carte, réessayez', 'en') === 'Table 3 · share 2 not confirmed, do not run the card again, just retry');
   ok('aucun tiret cadratin dans les nouveaux textes', fr.every((s) => !s.includes('—')));
 }
 
