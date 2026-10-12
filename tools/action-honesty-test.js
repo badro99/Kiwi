@@ -56,10 +56,13 @@ check(orphans.length === 0, `aucune clé gardée orpheline${orphans.length ? ' �
  * WhatsApp, bulletin « envoyé au gérant », registres exportés. Elles doivent
  * rester gardées. Les exports qui fabriquent un vrai Blob n'y sont pas. */
 const OUTWARD = [
-  'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
+  /* 'eq-publish-plan', 'eq-gap-whatsapp' et 'mi-export' sont partis le
+   * 2026-10-12 avec les anciens écrans Équipe et Menu de assets/venues.js :
+   * plus de bouton, donc plus de promesse à garder. */
+  'eq-export-payroll', 'pay-export',
   'export-payroll', 'stock-send-suggested',
   'stock-program-shortfall', 'audit-export', 'cal-export', 'cf-hyg-export',
-  'hx-taxe-export', 'mi-export', 'resv-sms'
+  'hx-taxe-export', 'resv-sms'
 ];
 const ungarded = OUTWARD.filter((k) => !guarded.includes(k));
 check(ungarded.length === 0, `promesses extérieures gardées${ungarded.length ? ' — manque ' + ungarded.join(', ') : ''}`);

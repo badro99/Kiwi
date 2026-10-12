@@ -8,11 +8,13 @@
  * a new store starts EMPTY and its menu survives reloads — and the caisse
  * reads the SAME record (one brain).
  *
- * Ownership: this module takes over handlers['nav-menu'] ONLY for custom
- * (onboarded) venues. Demo venues (Café Atlas…) keep venues.js's rich demo
- * menu (miShowPage) untouched — the pitch demo can't regress. 'menu' is also
- * added to the starter layer's REAL_FOR_CUSTOM set (pages-pro.js) so the
- * "nothing here yet" placeholder no longer intercepts it.
+ * Ownership: this module keeps the record (persistence, cloud publishing,
+ * the editing modals). The visible page belongs to the restaurant workspace
+ * (assets/restaurant-menu-workspace.js), opened through KiwiVenue.showMenu();
+ * an activity with no restaurant menu is routed to its own catalogue there
+ * (venues.js › MENU · ROUTING). 'menu' is also in the starter layer's
+ * REAL_FOR_CUSTOM set (pages-pro.js) so the "nothing here yet" placeholder
+ * never intercepts it.
  *
  * Load me AFTER assets/venue-store.js and after venues.js.
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -1131,7 +1133,8 @@
   }
 
   /* The store keeps persistence, cloud publishing and editing modals. The
-   * visible menu itself has one owner: venues.js's current card-based screen. */
+   * visible menu itself has one owner: the restaurant workspace, opened
+   * through KiwiVenue.showMenu(). */
   function render() {
     injectCss();
     const KV = window.KiwiVenue;

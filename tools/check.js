@@ -1396,6 +1396,7 @@ section('Whole-project regressions');
     'team-truth-test.mjs',
     'team-member-editor-test.mjs',
     'menu-option-group-editor-test.mjs',
+    'legacy-venue-modals-test.mjs',
     'pin-lockout-truth-test.mjs',
     'boutique-product-form-test.mjs',
     'stock-movement-modal-test.mjs',

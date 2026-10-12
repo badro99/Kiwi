@@ -156,7 +156,10 @@ await apiBaseAbort();
   check('la carte n’est repeinte que si elle a changé, et jamais sous un doigt', /if \(previous === raw && menuItems\.length\) return false;/.test(caisse) && /function rebuildCarteWhenIdle\(\)/.test(caisse));
   check('une caisse de démo le dit à côté du titre', /\(function demoBadge\(\)/.test(caisse) && /badge\.className = 'demo-badge'/.test(caisse));
   check('écran tactile : la réimpression du journal est visible', /@media \(hover: none\) \{\s*\.jr-entry-reprint \{ opacity: 1;/.test(caisse));
-  check('écran tactile : retirer une station est visible', /@media \(hover: none\) \{\s*\.mi-station-x \{ opacity: 1;/.test(dashboard));
+  /* « écran tactile : retirer une station est visible » (.mi-station-x) gardait
+   * un bouton de l'ancienne carte de assets/venues.js, retirée le 2026-10-12
+   * avec sa CSS. tools/legacy-venue-modals-test.mjs veille à ce qu'elle ne
+   * revienne pas. */
   check('la chorégraphie des cartes ne rejoue pas à chaque déverrouillage', /function enterCards\(\)/.test(dashboard) && (dashboard.match(/document\.body\.classList\.add\('cards-enter'\)/g) || []).length === 1);
   check('les statistiques Équipe et Stock sont visibles au repos (l’entrée remplit vers l’arrière)', /@keyframes eq-rise \{ from \{ opacity: 0;/.test(dashboard) && /@keyframes st-rise \{ from \{ opacity: 0;/.test(dashboard) && !/\.eq-stat \{[^}]*opacity: 0;/.test(dashboard));
   {

@@ -15,8 +15,10 @@
     'menu-mass', 'menu-schedule', 'menu-promote', 'menu-publish',
     'kds-bump', 'kds-recall', 'kds-86', 'kds-print-summary',
     /* Équipe, paie et planning : ces boutons annonçaient un envoi WhatsApp et
-     * un PDF « envoyé au gérant » alors que rien ne part. */
-    'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
+     * un PDF « envoyé au gérant » alors que rien ne part. 'eq-publish-plan'
+     * et 'eq-gap-whatsapp' étaient ici : ils vivaient dans l'ancienne Équipe
+     * de assets/venues.js, retirée le 2026-10-12, et n'ont plus rien à garder. */
+    'eq-export-payroll', 'pay-export',
     'export-payroll',
     /* Stock : la commande fournisseur affichait même un montant et un
      * « WhatsApp confirmé » codés en dur. */
@@ -29,8 +31,11 @@
      * assets/finance.js (section 6), donc le bouton n'existe plus et la clé
      * n'a plus rien à garder. Une clé gardée orpheline n'est pas inoffensive :
      * elle laisse croire que quelque chose est tenu. */
+    /* 'mi-export' est parti avec l'ancienne carte de assets/venues.js
+     * (2026-10-12) : la carte du restaurant vit dans
+     * restaurant-menu-workspace.js, qui n'a pas ce bouton. */
     'audit-export', 'cal-export', 'cf-hyg-export', 'hx-taxe-export',
-    'mi-export', 'resv-sms',
+    'resv-sms',
     /* Audit du 2026-10-10 : des toasts de réussite sans effet. Une page réelle
      * ne montre plus ces boutons (Conformité, Dépenses, Terminaux et Équipe
      * ont leur propre état vide honnête), mais un chemin de démo qui change

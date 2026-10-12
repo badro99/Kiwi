@@ -498,26 +498,6 @@
     line-height: 1.18;
   }
 
-  /* ── Performance-ranking cards (Équipe · Classement) ──
-   * Desktop is a 4-up flex row (rank · avatar · body · badge). On a phone
-   * the flexible body collapses to ~60px and the name shatters into
-   * overlapping fragments. Restack: rank + avatar + body across the top,
-   * the badge on its own line below. */
-  .eq-rank {
-    display: grid !important;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas: "num av body" "badge badge badge";
-    column-gap: 12px;
-    row-gap: 10px;
-    align-items: center;
-  }
-  .eq-rank > .eq-rank-num   { grid-area: num; }
-  .eq-rank > .eq-av         { grid-area: av; }
-  .eq-rank > .eq-rank-body  { grid-area: body; min-width: 0; }
-  .eq-rank > .eq-rank-badge { grid-area: badge; justify-self: start; }
-  .eq-rank-name { white-space: normal; }
-  .eq-rank-name .rr { background: transparent !important; }
-
 }
 
 /* Only genuinely tiny phones (≤340px, e.g. iPhone SE 1st-gen) drop to a

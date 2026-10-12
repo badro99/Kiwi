@@ -51,7 +51,7 @@ var SHELL = [
   '/assets/simple.css',
   '/assets/ux.css',
   '/assets/pages-pro.css?v=3',
-  '/assets/catalog-workspace.css?v=22',
+  '/assets/catalog-workspace.css?v=23',
   '/assets/catalog-workspace.js?v=5',
   '/assets/help-centre.css?v=5',
   '/assets/polish-dashboard.css',
@@ -62,7 +62,7 @@ var SHELL = [
   '/assets/hotel.css?v=40',
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=5',
-  '/assets/mobile.css?v=8',
+  '/assets/mobile.css?v=9',
   '/assets/sold-insights.js?v=10',
   '/assets/design-2026.css?v=3',
   '/assets/design-ios27.css',
@@ -101,7 +101,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=47',
+  '/assets/venues.js?v=48',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=6',
   '/assets/trade-workspaces.js?v=9',
@@ -145,7 +145,7 @@ var SHELL = [
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
   '/assets/account.js?v=29',
-  '/assets/production-action-guard.js?v=2',
+  '/assets/production-action-guard.js?v=3',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
@@ -249,7 +249,7 @@ var SHELL = [
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=18',
   '/assets/customer-retention.js?v=6',
-  '/assets/menu-catalog.js?v=27',
+  '/assets/menu-catalog.js?v=28',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',

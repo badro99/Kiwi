@@ -3731,7 +3731,6 @@ body.design-vexel[data-vexel-mode] :is(
 body.design-vexel[data-vexel-mode] :is(
   .p-hero, .p-card, .team-mem,
   .eq-stat, .eq-section,
-  .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
   .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
@@ -3815,7 +3814,6 @@ body.design-vexel[data-vexel-mode="dark"] {
 body.design-vexel[data-vexel-mode] :is(
   .p-hero, .p-card, .team-mem,
   .eq-stat, .eq-section,
-  .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
   .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
@@ -3849,7 +3847,6 @@ body.design-vexel[data-vexel-mode] :is(
 body.design-vexel[data-vexel-mode] :is(
   .p-hero, .p-card, .team-mem,
   .eq-stat, .eq-section,
-  .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
   .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
@@ -3887,7 +3884,7 @@ body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer,
 body.design-vexel[data-vexel-mode="dark"] :is(
   .dash-genpage, .dash-equipe,
   .p-hero, .p-card,
-  .eq-section, .pay-section, .cf-card,
+  .eq-section, .cf-card,
   .resv-section, .sh-section,
   .dep-ledger, .dep-card,
   .cd-tblwrap, .cd-kpi, .crm-tbl, .crm-comp,
@@ -3906,7 +3903,7 @@ body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover,
 body.design-vexel[data-vexel-mode="dark"] :is(
   .dash-genpage, .dash-equipe,
   .cd-tblwrap, .cd-kpi, .crm-tbl, .kt-h-tablewrap,
-  .pay-section, .dep-ledger, .sh-section, .resv-section,
+  .dep-ledger, .sh-section, .resv-section,
   .kdr-cat, .kdr-top-c
 ) tbody tr:hover {
   background: rgba(255, 255, 255, 0.075);
@@ -3921,14 +3918,14 @@ body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover > *:first-
 body.design-vexel[data-vexel-mode="dark"] :is(
   .dash-genpage, .dash-equipe,
   .cd-tblwrap, .cd-kpi, .crm-tbl, .kt-h-tablewrap,
-  .pay-section, .dep-ledger, .sh-section, .resv-section,
+  .dep-ledger, .sh-section, .resv-section,
   .kdr-cat, .kdr-top-c
 ) tbody tr:hover > *:first-child {
   box-shadow: inset 2px 0 0 rgba(0, 255, 174, 0.55);
 }
 
 body.design-vexel[data-vexel-mode="dark"] :is(
-  .rr, .pay-wk-row, .dep-row, .dep-supp, .kdr-r, .kit-hrow, .resv-wait
+  .rr, .dep-row, .dep-supp, .kdr-r, .kit-hrow, .resv-wait
 ):hover {
   background: rgba(255, 255, 255, 0.075);
   box-shadow: inset 2px 0 0 rgba(0, 255, 174, 0.55);
@@ -3989,7 +3986,6 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
   body.design-vexel[data-vexel-mode] :is(
     .p-hero, .p-card, .team-mem,
     .eq-stat, .eq-section,
-    .pay-stat, .pay-section,
     .cf-card, .cf-z-history,
     .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
     .resv-section, .resv-builder,
@@ -4009,7 +4005,6 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
   body.design-vexel[data-vexel-mode] :is(
     .p-hero, .p-card, .team-mem,
     .eq-stat, .eq-section,
-    .pay-stat, .pay-section,
     .cf-card, .cf-z-history,
     .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
     .resv-section, .resv-builder,
