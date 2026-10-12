@@ -18,6 +18,13 @@
   var reg = null;
   var interacted = false;
   var born = Date.now();
+  /* La page avait-elle déjà un worker aux commandes à son ouverture ? Sur une
+     première visite, non : le worker s'installe, fait clients.claim(), et
+     `controllerchange` part alors que rien n'a changé (le shell servi est
+     déjà le plus récent). Ce n'est pas une mise à jour, et la prendre pour
+     une rechargeait la page une seconde fois (2026-10-12). */
+  var hadController = false;
+  try { hadController = !!(navigator.serviceWorker && navigator.serviceWorker.controller); } catch (_) {}
 
   /* Le moindre geste (toucher, clavier) marque la page comme « en cours
      d'usage » : plus aucun rechargement silencieux possible ensuite. */
@@ -190,7 +197,9 @@
         if (worker.state === 'installed' && navigator.serviceWorker.controller) show();
       });
     });
-    navigator.serviceWorker.addEventListener('controllerchange', show, { once: true });
+    /* Un changement de contrôleur n'annonce une mise à jour que si un autre
+       worker contrôlait déjà la page. */
+    if (hadController) navigator.serviceWorker.addEventListener('controllerchange', show, { once: true });
   }
 
   window.KiwiPWAUpdate = { watch: watch, show: show };

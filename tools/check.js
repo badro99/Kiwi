@@ -1399,6 +1399,11 @@ section('Whole-project regressions');
        le vrai dashboard.html en FR, EN et AR, clair et sombre, téléphone. */
     'merchant-health-test.mjs',
     'merchant-health-browser-test.mjs',
+    /* Premier passage : avec le vrai service worker, le tableau de bord, la
+       caisse et Serveur ne se chargent qu'une fois (clients.claim() n'est pas
+       une mise à jour) ; une vraie nouvelle génération se recharge toujours en
+       silence sur une page jeune, ou montre la pastille après un geste. */
+    'pwa-first-install-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page
