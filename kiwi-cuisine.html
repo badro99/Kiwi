@@ -1051,9 +1051,23 @@
     },
   };
 
+  /* La langue du passe, dans l'ordre : le choix fait sur CET écran
+     (kiwiCuisineLang), puis la langue partagée du produit (kiwiLang, posée par
+     le tableau de bord ou l'app), puis celle du navigateur, puis le français.
+     Seul le choix explicite est persisté : une langue déduite suit la source
+     tant que personne n'a touché au bouton FR/EN/ع. */
+  function langOf(v) {
+    var l = String(v == null ? '' : v).toLowerCase().split(/[-_]/)[0];
+    return LANGS.indexOf(l) >= 0 ? l : null;
+  }
   function lang() {
-    var l = ls(LANG_KEY);
-    return LANGS.indexOf(l) >= 0 ? l : 'fr';
+    var l = langOf(ls(LANG_KEY)) || langOf(ls('kiwiLang'));
+    if (l) return l;
+    try {
+      var prefs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language];
+      for (var i = 0; i < prefs.length; i++) { l = langOf(prefs[i]); if (l) return l; }
+    } catch (_) {}
+    return 'fr';
   }
   /* Une clé absente retombe sur le français, jamais sur la clé nue : mieux
      vaut un mot dans la mauvaise langue qu'un « act.ready » sur le passe. */

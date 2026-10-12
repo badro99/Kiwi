@@ -5072,6 +5072,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Plat déjà en cuisine · parlez au chef ou annulez": "Dish already in the kitchen · talk to the chef or cancel",
         "Pointage non synchronisé · vérifiez la connexion": "Clock-in not synced · check the connection",
         "Reprenez le service pour prendre une commande": "Resume your shift to take an order",
+        "Pointez votre arrivée pour prendre une commande ou un paiement": "Clock in to take an order or a payment",
         "Saisissez le code de la caisse pour pointer le départ": "Enter the till code to clock out",
         "Session de service expirée · reconnectez-vous": "Service session expired · sign in again",
         "Session fermée": "Signed out",
@@ -5267,6 +5268,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Plat déjà en cuisine · parlez au chef ou annulez": "الطبق في المطبخ · كلّم الشيف أو ألغِ",
         "Pointage non synchronisé · vérifiez la connexion": "لم تتم مزامنة التسجيل · تحقّق من الاتصال",
         "Reprenez le service pour prendre une commande": "استأنف ورديتك لأخذ طلب",
+        "Pointez votre arrivée pour prendre une commande ou un paiement": "سجّل حضورك لأخذ طلب أو تسجيل دفعة",
         "Saisissez le code de la caisse pour pointer le départ": "أدخل رمز الصندوق لتسجيل الخروج",
         "Session de service expirée · reconnectez-vous": "انتهت جلسة الخدمة · سجّل الدخول مجدداً",
         "Session fermée": "تم تسجيل الخروج",
@@ -6477,6 +6479,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        first request drains any line added while its ACK was in flight, and no
        ACK can mutate a later pending batch. */
     function svSendOrder(tableId) {
+      if (svBrowseMode()) return Promise.resolve({ ok: false, error: 'browse-mode' });
       if (svSendFlights.has(tableId)) return svSendFlights.get(tableId);
       const previous = svSendFlights.get(tableId) || Promise.resolve();
       const run = previous.catch(() => {}).then(() => svSendOrderBatch(tableId));
@@ -6621,8 +6624,42 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       setTimeout(() => el.remove(), ms + 280);
     }
 
+    /* ---------- Browse mode: read-only ----------
+       « Consulter sans pointer » ouvre le planning et les heures, rien d'autre.
+       Un employé non pointé ne prend ni commande ni paiement : le serveur
+       refuse déjà (activeServiceEmployee exige un pointage ouvert), et le
+       client ne le laisse même plus essayer. Trois verrous, du plus large au
+       plus fin : `inert` sur tout ce qui n'est pas le profil, un garde-clic
+       unique en phase de capture, et un garde au pied de chaque fonction qui
+       écrit (commande, paiement, état de table, ouverture, onglet). */
+    const SV_BROWSE_MSG = 'Pointez votre arrivée pour prendre une commande ou un paiement';
+    const SV_BROWSE_OPEN_MODALS = ['month-schedule-modal', 'hours-history-modal'];
+    function svBrowseMode() { return document.body.classList.contains('is-browse-mode'); }
+    function svBrowseGuard() {
+      if (!svBrowseMode()) return false;
+      toast(SV_BROWSE_MSG, 2600);
+      return true;
+    }
+    function svApplyBrowseLock(on) {
+      $$('#screen-main .tab').forEach(t => { t.inert = on && !t.classList.contains('tab-profil'); });
+      const bar = $('#menu-cart-bar');
+      if (bar) bar.inert = on;
+      $$('.modal-veil').forEach(m => { m.inert = on && !SV_BROWSE_OPEN_MODALS.includes(m.id); });
+    }
+    document.addEventListener('click', (e) => {
+      if (!svBrowseMode() || !e.target || !e.target.closest) return;
+      const zone = e.target.closest('#screen-table, #menu-cart-bar, #screen-main .tab:not(.tab-profil), .modal-veil');
+      if (!zone || SV_BROWSE_OPEN_MODALS.includes(zone.id)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      svBrowseGuard();
+    }, true);
+
     /* ---------- Screens ---------- */
     function showScreen(id) {
+      /* Quitter l'écran principal quitte la consultation : une session expirée
+         ou une déconnexion ne doit pas laisser le prochain employé verrouillé. */
+      if (id !== 'screen-main' && svBrowseMode()) exitBrowseMode();
       $$('.screen').forEach(s => {
         const active = s.id === id;
         s.classList.toggle('is-active', active);
@@ -7083,6 +7120,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       try { localStorage.setItem(serviceHistoryKey, JSON.stringify(serviceNotifications.slice(0, 100))); } catch (_) {}
     }
     async function publishServiceTableState(id, status, covers, closeSession) {
+      if (svBrowseMode()) return { ok: false, error: 'browse-mode' };
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       if (!merchant || SV_DEMO) return { ok: !!SV_DEMO, demo: !!SV_DEMO };
       let closeData = null;
@@ -7311,7 +7349,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       serviceEventSince = data.now || serviceEventSince;
       window.KiwiServiceRequests?.ingest(data, {
         merchant: svSlug(), notify: toast, refresh: pollServiceSync,
-        openTable: value => { const id = serviceTableId(value); if (id && tables[id]) { setTab('tables'); openTableDetail(id); } },
+        openTable: value => { const id = serviceTableId(value); if (svBrowseMode()) return; if (id && tables[id]) { setTab('tables'); openTableDetail(id); } },
       });
       if (data.locks && typeof data.locks === 'object') serviceTableLocks = data.locks;
       Object.keys(data.states || {}).forEach((key) => {
@@ -7605,7 +7643,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
      * commande, pas une seconde. */
     let svDrainAt = 0;
     function svDrainPendingBatches() {
-      if (SV_DEMO) return;
+      if (SV_DEMO || svBrowseMode()) return;
       const now = Date.now();
       if (now - svDrainAt < 4000) return;
       svDrainAt = now;
@@ -7837,6 +7875,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        =========================================================== */
     function enterBrowseMode() {
       document.body.classList.add('is-browse-mode');
+      svApplyBrowseLock(true);
       // Hard guarantee: no shift in flight when consulting from home.
       shiftStart = null;
 
@@ -7860,6 +7899,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     function exitBrowseMode() {
       document.body.classList.remove('is-browse-mode');
+      svApplyBrowseLock(false);
       // Reset topbar back to default for the next clock-in cycle.
       const tbMeta = $('#tb-shift-meta');
       if (tbMeta) tbMeta.textContent = 'En service · 0h 00';
@@ -8080,6 +8120,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     window.addEventListener('resize', () => moveBtPill(true));
 
     function setTab(name) {
+      if (svBrowseMode() && name !== 'profil') { svBrowseGuard(); return; }
       const content = $('#main-content');
       if (content && name !== currentTab) content.scrollTop = 0;
       currentTab = name;
@@ -8375,6 +8416,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     /* ---------- Table Detail Screen ---------- */
     function openTableDetail(id) {
+      if (svBrowseGuard()) return;
       const t = tables[id];
       if (!t) return;
       if (isEmployeePaused()) { toast('Reprenez le service pour prendre une commande'); return; }
@@ -9251,6 +9293,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     let newTableCovers = 2;
 
     function openNewTableModal(tableId) {
+      if (svBrowseGuard()) return;
       newTableId = tableId;
       newTableCovers = Math.max(2, tables[tableId]?.covers || 2);
       $('#nt-table-id').textContent = tableId;
@@ -10861,6 +10904,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }).catch(() => { $('#service-client-list').innerHTML = '<p class="modal-subtle">Carnet indisponible.</p>'; });
     }
     function openPayChoice(tableId) {
+      if (svBrowseGuard()) return;
       payTableId = tableId;
       $('#pc-table-id').textContent = tableId;
       $('#pc-total').textContent = fmtMAD(getTableTotal(tableId));
@@ -10940,6 +10984,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     if (cardConfirmBtn) cardConfirmBtn.addEventListener('click', () => triggerCardSuccess(payTableId));
     function openCardModal(tableId) {
+      if (svBrowseGuard()) return;
       // Initial setup
       $$('[data-bind="table"]').forEach(el => el.textContent = tableId);
       const amount = currentPayAmount(tableId);
@@ -11060,6 +11105,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
     }
     function openCashModal(tableId) {
+      if (svBrowseGuard()) return;
       $$('[data-bind="table"]').forEach(el => el.textContent = tableId);
       cashSettled = false;
       if (!splitPayCallback) cashPay = null;
@@ -11155,6 +11201,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* ---------- Mark paid ---------- */
     const employeePaymentsInFlight = new Set();
     async function markTablePaid(id, method) {
+      if (svBrowseGuard()) return false;
       const t = tables[id];
       if (!t || employeePaymentsInFlight.has(id)) return false;
       const hasUnsent = (tableOrders[id] || []).some((line) =>
@@ -11778,6 +11825,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
     }
     async function markSplitPartPaid(partIdx, method) {
+      if (svBrowseGuard()) return false;
       const state = { ...splitState };
       const flow = state.flow;
       const p = flow && flow.parts && flow.parts[partIdx];

@@ -268,7 +268,7 @@ function sender({ fetch, online = true }) {
     svSlug: () => 'test-resto', tableOrders, activeRole: { fullName: 'Test Waiter' },
     serviceTableSessions: new Map([['T1', 'visit-1']]), serviceTableSessionRevisions: new Map(),
     serviceStateVersion: new Map(), serviceBillAwaiting: new Map(), tables: { T1: {} },
-    serviceCanonicalOrders: new Map(), fetch,
+    serviceCanonicalOrders: new Map(), fetch, svBrowseMode: () => false,
   };
   ctx.window = ctx;
   vm.runInNewContext(slice('    const svPendingRef = new Map();', '    /* ---------- Generated orders for occupied tables ---------- */'), ctx);
@@ -305,7 +305,7 @@ function payer({ fetch, offline = false }) {
     liveEmployeeState: { merchant: 'test-resto' }, svSlug: () => 'test-resto',
     serviceCanonicalOrders: new Map(), serviceTableSessions: new Map([['3', 'visit-3']]),
     currentTab: 'tables', renderTables() {}, activeTableId: null, renderTableDetail() {},
-    toast: (m) => toasts.push(m), svKnownOffline: () => offline,
+    svBrowseMode: () => false, svBrowseGuard: () => false, toast: (m) => toasts.push(m), svKnownOffline: () => offline,
     SV_PAY_OFFLINE_MSG: OFFLINE_PAY, SV_PAY_TIMEOUT_MS: 15000, SV_DEMO: false,
     AbortController, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
     fetch, JSON, Math, Number, Date, String, Array, Object, Error, Promise,
@@ -348,7 +348,7 @@ function payer({ fetch, offline = false }) {
     tables: { 3: { status: 'ka-tkhdam' } }, employeePaymentsInFlight: new Set(),
     liveEmployeeState: { merchant: 'test-resto' }, svSlug: () => '', serviceCanonicalOrders: new Map(),
     serviceTableSessions: new Map([['3', 'visit-3']]), serviceTableOrderRef: () => 'T-3',
-    employeePaymentId: (k) => k + '-emp', SV_DEMO: false, toast: (m) => toasts.push(m),
+    employeePaymentId: (k) => k + '-emp', SV_DEMO: false, toast: (m) => toasts.push(m), svBrowseGuard: () => false,
     navigator: { onLine: false }, fetch: () => { fetched++; return json(200, { ok: true }); },
   });
   vm.runInContext(src, ctx);

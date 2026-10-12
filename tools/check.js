@@ -551,6 +551,8 @@ for (const test of [
   'team-job-names-test.mjs',
   'tenant-guard-test.mjs',
   'service-interconnectivity-test.mjs',
+  /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
+  'team-offshift-server-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
   'inventory-waste-test.mjs',
@@ -1338,6 +1340,9 @@ section('Whole-project regressions');
     'native-workspace-ux-test.mjs',
     'native-device-layout-test.mjs',
     'native-pass2-browser-test.mjs',
+    /* « Consulter sans pointer » est en lecture seule, l'écran cuisine web suit la langue. */
+    'team-browse-readonly-browser-test.mjs',
+    'kds-language-fallback-browser-test.mjs',
     'native-face-entry-test.mjs',
     'native-premium-feel-test.mjs',
     'native-pass3-gates-test.mjs',

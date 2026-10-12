@@ -38,6 +38,7 @@ const context = {
   activeRole: { fullName: 'Audit Waiter' },
   serviceTableSessions: new Map([['T1', 'tsx-audit-session']]),
   serviceTableSessionRevisions: new Map([['T1', 7]]),
+  svBrowseMode: () => false,
   serviceStateVersion: new Map(),
   serviceBillAwaiting: new Map(),
   tables: { T1: {} },
