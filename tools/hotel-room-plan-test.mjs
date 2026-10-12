@@ -716,7 +716,7 @@ async function runAllTests() {
     ok(source.includes("'hx-hotel-modal', 'hx-attributes-modal'") && source.includes('hx-attribute-empty') && !source.includes('class="hx-views-config-list" style='), 'views and amenities use the dedicated accessible dialog layout');
     const floorManager = source.slice(source.indexOf('function cuFloorsManager'), source.indexOf('function cuViewsAndCharsManager'));
     ok(!floorManager.includes('hx-views-manage-open'), 'section manager contains only section organization actions');
-    ok(source.includes('data-action="hx-views-manage-open">Gérer les vues & caractéristiques'), 'room-plan toolbar exposes views and characteristics as its own configuration action');
+    ok(source.includes('data-action="hx-views-manage-open">${tx(\'Gérer les vues & caractéristiques\')}'), 'room-plan toolbar exposes views and characteristics as its own configuration action');
     ok(styles.includes('.hx-dispo-table') && styles.includes('.hx-dispo-total'), 'availability grid has dedicated readable table and total-row styling');
   }
 

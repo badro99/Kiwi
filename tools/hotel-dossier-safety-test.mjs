@@ -117,7 +117,7 @@ console.log('■ Hôtel · dossier partagé, statuts et charges chambre');
   ok(/\.\.\.\(reopen \? \{ reopen: true \} : \{\}\)/.test(UI),
     'et n\'est envoyé QUE pour une réouverture');
   ok(/reopen-forbidden/.test(UI), 'un refus de droits se lit en clair dans la réception');
-  ok(/done: 'Dossier rouvert'/.test(UI), 'et la réussite dit ce qui vient de se passer');
+  ok(/done: tx\('Dossier rouvert'\)/.test(UI), 'et la réussite dit ce qui vient de se passer');
 }
 
 /* ═══ #0037 · deux réceptions, aucune saisie perdue ═══════════════════════ */

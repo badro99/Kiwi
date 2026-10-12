@@ -83,7 +83,7 @@ console.log('\n■ 3d. Pricing lifecycle: preserve, reprice explicitly, one tota
   ok(hotelJs.includes('form.__pricingChanged'), 'edit change detection travels on the form');
   ok(hotelJs.includes('data-hx-reprice-confirm'), 'configured reprices need their own confirmation click');
   ok(hotelJs.includes('Précédent prix convenu'), 'agreed box starts deliberate changes from authorized values');
-  ok(hotelJs.includes("'reprice-required': 'Les dates"), 'reprice refusal explains itself in the UI language');
+  ok(hotelJs.includes("'reprice-required': txk('Les dates"), 'reprice refusal explains itself in the UI language');
 }
 
 console.log('\n■ 3. Saved rooms reconcile against the server (defect 3)');

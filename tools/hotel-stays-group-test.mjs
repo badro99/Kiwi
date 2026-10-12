@@ -94,8 +94,8 @@ console.log('\n■ 1. Nationality selector & localized demonym dictionary');
 
 console.log('\n■ 2. Hold (Option) vs Confirmation & Capacity validation');
 {
-  ok(hotelJs.includes("submitBtn.textContent = 'Poser une option (bloquer la chambre)'") &&
-     hotelJs.includes("submitBtn.textContent = 'Confirmer la réservation'"),
+  ok(hotelJs.includes("submitBtn.textContent = tx('Poser une option (bloquer la chambre)')") &&
+     hotelJs.includes("submitBtn.textContent = tx('Confirmer la réservation')"),
     'button dynamically reflects hold (requested) vs confirmed reservation');
   ok(hotelJs.includes('selectedType && partySize > (selectedType.maxGuests || 4)'),
     'dynamic partySize validation checks against room-type maxGuests');

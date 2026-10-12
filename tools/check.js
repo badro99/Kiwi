@@ -1426,6 +1426,9 @@ section('Whole-project regressions');
     'serveur-data-states-test.mjs',
     'retail-truth-test.mjs',
     'hotel-truth-test.mjs',
+    /* L'hôtel d'un vrai marchand se lit en anglais et en arabe : aucun
+       français visible, montants isolés, la page ouverte suit la langue. */
+    'hotel-i18n-test.mjs',
     'pressing-truth-test.mjs',
     'support-triage-test.mjs',
     'menu-analysis-test.mjs',

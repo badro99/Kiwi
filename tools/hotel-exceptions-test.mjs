@@ -65,7 +65,9 @@ function extractFunction(src, name) {
 
 const fnSrc = extractFunction(hotelJs, 'cuEvaluateStayExceptions');
 ok(fnSrc.includes('(b, today)'), 'evaluator keeps its (booking, today) signature');
-const evaluateStayExceptions = new Function(`${fnSrc}; return cuEvaluateStayExceptions;`)();
+// The labels go through hotel.js's tx(); outside the file, French with its {placeholders} filled.
+const frTx = (fr, vars) => (vars ? fr.replace(/\{(\w+)\}/g, (m, k) => (vars[k] == null ? m : String(vars[k]))) : fr);
+const evaluateStayExceptions = new Function('tx', `${fnSrc}; return cuEvaluateStayExceptions;`)(frTx);
 ok(evaluateStayExceptions.length === 2, 'extracted evaluator is callable with 2 args');
 
 const today = '2026-09-02';
@@ -183,7 +185,7 @@ ok(hotelCss.includes('[data-theme="dark"] .hx-exc-badge.danger'), 'exception bad
 ok(hotelCss.includes('[data-theme="dark"] .hx-close-stat'), 'closing stats stay readable in dark mode');
 
 /* Guest-supplied content is escaped where the new blocks interpolate it. */
-ok(hotelJs.includes('${esc(roomLabel)}') && hotelJs.includes("${esc(b.customer?.name || 'Client')}"), 'reception rows escape room and guest names');
+ok(hotelJs.includes('${esc(roomLabel)}') && hotelJs.includes("${esc(b.customer?.name || tx('Client'))}"), 'reception rows escape room and guest names');
 ok(hotelJs.includes('${esc(String(e.label'), 'server exception labels are escaped before render');
 
 console.log(`hotel-exceptions-test: ${controls} controls passed`);
