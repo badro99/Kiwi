@@ -118,5 +118,33 @@ for (const [page, locale] of Object.entries(pages)) {
   ok(!/1[,.  ]?449/.test(section), `${page} shows no discounted Ultra price`);
 }
 
+// 3. The runtime translation table (DE, IT, NL, ES) keeps names and codes.
+// Its DE/IT/NL part is machine translated from a snapshot, which once turned
+// MAD into "mad", the dish name "Thé" into an article and Pro into "Profi".
+const dictionaries = JSON.parse(runtime.match(/const dictionaries = (\{.*?\});\n/s)[1]);
+const articles = new Set(['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'il', 'lo', 'la', 'le', 'gli', 'i', 'un', 'una', 'uno', 'de', 'het', 'een', 'el', 'los', 'las', 'the', 'a', 'an', 'er', 'sie', 'es', 'esso', 'lui', 'lei', 'hij', 'zij', 'ze', 'het', 'ik', 'du', 'tu', 'io', 'wir', 'noi', 'wij']);
+const productNames = ['Basic', 'Pro', 'Ultra', 'Ultimate', 'Kiwi', 'Kiwi IQ'];
+const damaged = ['VERRÜCKT', 'PAZZ', 'Beschädigen', 'Kunnen', 'Kiwi bis', 'Kiwi fino', 'Kiwi tot', 'una fino', 'één tot', 'Aktie', 'Erfolgreich', 'Anwalt', 'Avvocato', 'Advocaat', 'Kekse', 'Biscotti', 'Koekjes', 'Profi', 'Di base', 'Vivere', 'leef', 'Tabelle 4', 'Tabella 4', 'Tabel 4'];
+for (const locale of ['de', 'it', 'nl', 'es']) {
+  const dictionary = dictionaries[locale] || {};
+  ok(Object.keys(dictionary).length > 100, `${locale} runtime dictionary is present`);
+  for (const [key, value] of Object.entries(dictionary)) {
+    if (/\bMAD\b/.test(key)) ok(/\bMAD\b/.test(value), `${locale}: "${key}" keeps the currency code MAD: "${value}"`);
+    if (productNames.includes(key)) ok(value === key, `${locale}: product name "${key}" is not translated: "${value}"`);
+    if (!/\s/.test(key) && key.length > 1) ok(!articles.has(value.toLowerCase()), `${locale}: "${key}" is not translated as an article or pronoun: "${value}"`);
+    for (const word of damaged) ok(!value.includes(word), `${locale}: "${key}" no longer reads "${value}"`);
+  }
+  ok(!('Thé' in dictionary) || /^(?:Tee|Tè|Thee|Té)$/.test(dictionary['Thé']), `${locale}: "Thé" stays the dish name: ${dictionary['Thé']}`);
+}
+// The annual total line is rendered from a template, so it is matched by pattern.
+const templateSource = runtime.match(/const templates = \((\{.*?\})\[lang\]/s);
+ok(templateSource, 'runtime translations match templated lines');
+const templates = templateSource ? JSON.parse(templateSource[1]) : {};
+const annual = { de: '15 Tage kostenlos, danach 1.800 MAD, einmal jährlich abgerechnet.', it: "15 giorni gratuiti, poi 1.800 MAD, fatturati una volta all'anno.", nl: '15 dagen gratis, daarna 1.800 MAD, eenmaal per jaar gefactureerd.' };
+for (const [locale, expected] of Object.entries(annual)) {
+  const rendered = (templates[locale] || []).map(([pattern, value, group]) => { const m = '15 days free, then 1,800 MAD, billed once a year.'.match(new RegExp(pattern)); return m && value.replace('{total}', m[1].replace(/,/g, group)); }).find(Boolean);
+  ok(rendered === expected, `${locale}: the annual total line is translated: ${rendered}`);
+}
+
 console.log(`Landing claims: ${checks - failures.length}/${checks} checks passed.`);
 if (failures.length) { console.error('\nFailures:\n  - ' + failures.join('\n  - ')); process.exit(1); }

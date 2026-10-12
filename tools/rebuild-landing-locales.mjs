@@ -39,7 +39,55 @@ const pricingCopy = {
   it: { 'Ultra': 'Ultra', 'Several locations, in several countries.': 'Più sedi, in più paesi.', '1,499': '1.499', 'MAD': 'MAD', '/month': '/mese', '15 days free, then billed monthly.': '15 giorni gratuiti, poi fatturati mensilmente.', 'Everything in Kiwi Pro': 'Tutto in Kiwi Pro', 'Unlimited locations across countries': 'Sedi illimitate in più paesi', 'Unlimited enterprise API': 'API aziendali illimitate', 'Dedicated account manager, 24/7': 'Account manager dedicato, 24 ore su 24, 7 giorni su 7', 'Contact us': 'Contattaci', 'Ultimate': 'Ultimate', 'A bespoke scope, for a need no plan covers.': "Un perimetro su misura, per un'esigenza che nessun piano copre.", 'Custom quote': 'Preventivo personalizzato', 'We set the price together.': 'Stabiliamo insieme il prezzo.', 'Scope defined with you': 'Perimetro definito con te', 'Number of devices and cashiers agreed together': 'Numero di dispositivi e cassieri concordato insieme', 'Features developed for you': 'Funzionalità sviluppate per te' },
   nl: { 'Ultra': 'Ultra', 'Several locations, in several countries.': 'Meerdere locaties, in meerdere landen.', '1,499': '1.499', 'MAD': 'MAD', '/month': '/maand', '15 days free, then billed monthly.': '15 dagen gratis, daarna maandelijks gefactureerd.', 'Everything in Kiwi Pro': 'Alles in Kiwi Pro', 'Unlimited locations across countries': 'Onbeperkte locaties in verschillende landen', 'Unlimited enterprise API': 'Onbeperkte bedrijfs-API', 'Dedicated account manager, 24/7': 'Toegewijde accountmanager, 24/7', 'Contact us': 'Neem contact met ons op', 'Ultimate': 'Ultimate', 'A bespoke scope, for a need no plan covers.': 'Maatwerk, voor een behoefte die geen abonnement dekt.', 'Custom quote': 'Offerte op maat', 'We set the price together.': 'We bepalen de prijs samen.', 'Scope defined with you': 'Omvang samen met u bepaald', 'Number of devices and cashiers agreed together': 'Aantal apparaten en kassamedewerkers samen afgesproken', 'Features developed for you': 'Functies die voor u zijn ontwikkeld' },
 };
-const pricingCard = '<div class="flex w-full overflow-hidden rounded-xl bg-[rgba(0,0,0,0.3)] backdrop-blur-[10px]"';
+// Product names (Kiwi Basic, Pro, Ultra, Ultimate), the currency code and the
+// French dish names of the QR menu demo stay as written; "Thé à la menthe" is
+// the French sample beside its translations, so it stays French everywhere.
+// Keys holding {total} are templates: the runtime matches the rendered number.
+const keep = { 'Basic': null, 'Pro': null, 'Ultra': null, 'Ultimate': null, 'Thé': null, 'menthe': null };
+const corrections = {
+  de: { ...keep,
+    '68 MAD': '68 MAD',
+    'Mar': 'Mär', 'Feb': 'Feb',
+    'Cash': 'Bargeld', 'Takeaway': 'Zum Mitnehmen', 'Dining room': 'Gastraum',
+    'Goals by service': 'Ziele nach Service',
+    'Eighteen trades': 'Achtzehn Branchen', 'Your trade already has its screen.': 'Ihre Branche hat bereits ihren Bildschirm.',
+    'Kiwi till': 'Kiwi Kasse', 'Table 4 · 2 covers': 'Tisch 4 · 2 Gedecke',
+    'Stock': 'Lager', 'Stock that tells the truth': 'Ein Lager, das die Wahrheit sagt',
+    'Your numbers stay yours.': 'Ihre Zahlen bleiben Ihre.',
+    'Sucre': 'Zucker', 'Café': 'Kaffee', 'Poulet': 'Hähnchen', 'Riz': 'Reis', 'Avocat': 'Avocado',
+    'Till, floor, kitchen, stock, and team': 'Kasse, Gastraum, Küche, Lager und Team',
+    'Proof': 'Belege', 'Cookies': 'Cookies',
+    '15 days free, then {total} MAD, billed once a year.': '15 Tage kostenlos, danach {total} MAD, einmal jährlich abgerechnet.',
+  },
+  it: { ...keep,
+    '26,958 MAD': '26.958 MAD', '68 MAD': '68 MAD', '12,324 MAD': '12.324 MAD', '18 MAD': '18 MAD', 'MAD this month': 'MAD questo mese',
+    '398,000 MAD Cards': '398.000 MAD Carte',
+    'Jan': 'Gen', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Apr', 'May': 'Mag', 'Jun': 'Giu', 'Jul': 'Lug', 'Aug': 'Ago', 'Sep': 'Set', 'Oct': 'Ott', 'Nov': 'Nov', 'Dec': 'Dic',
+    'Revenue': 'Ricavi', 'Dining room': 'Sala', 'Goals by service': 'Obiettivi per servizio',
+    'Eighteen trades, one till': 'Diciotto mestieri, una sola cassa', 'Your trade already has its screen.': 'Il tuo mestiere ha già il suo schermo.',
+    'Kiwi till': 'Cassa Kiwi', 'Table 4 · 2 covers': 'Tavolo 4 · 2 coperti', 'Tables, slots, confirmations': 'Tavoli, fasce orarie, conferme',
+    'Stock': 'Magazzino', 'Stock that tells the truth': 'Un magazzino che dice la verità',
+    'Live': 'Dal vivo', 'Clock-in': 'Timbratura',
+    'Sucre': 'Zucchero', 'Café': 'Caffè', 'Poulet': 'Pollo', 'Riz': 'Riso', 'Avocat': 'Avocado',
+    'Till, floor, kitchen, stock, and team': 'Cassa, sala, cucina, magazzino e squadra',
+    'Cookies': 'Cookie',
+    '15 days free, then {total} MAD, billed once a year.': "15 giorni gratuiti, poi {total} MAD, fatturati una volta all'anno.",
+  },
+  nl: { ...keep,
+    'Jan': 'jan', 'Feb': 'feb', 'Mar': 'mrt', 'Apr': 'apr', 'May': 'mei', 'Jun': 'jun', 'Jul': 'jul', 'Aug': 'aug', 'Sep': 'sep', 'Oct': 'okt', 'Nov': 'nov', 'Dec': 'dec',
+    'Home': 'Start', 'Revenue': 'Omzet', 'On premises': 'Ter plaatse', 'Dining room': 'Zaal', 'Goals by service': 'Doelen per service',
+    'Eighteen trades': 'Achttien branches', 'Eighteen trades, one till': 'Achttien branches, één kassa', 'Your trade already has its screen.': 'Uw branche heeft al een eigen scherm.',
+    'Kiwi till': 'Kiwi-kassa', 'Table 4 · 2 covers': 'Tafel 4 · 2 couverts',
+    'Stock that tells the truth': 'Voorraad die de waarheid vertelt',
+    'Your numbers stay yours.': 'Uw cijfers blijven van u.',
+    'The till, live': 'De kassa, live',
+    'Sucre': 'Suiker', 'Café': 'Koffie', 'Poulet': 'Kip', 'Riz': 'Rijst', 'Avocat': 'Avocado',
+    'Till, floor, kitchen, stock, and team': 'Kassa, zaal, keuken, voorraad en team',
+    'Cookies': 'Cookies',
+    '15 days free, then {total} MAD, billed once a year.': '15 dagen gratis, daarna {total} MAD, eenmaal per jaar gefactureerd.',
+  },
+};
+const pricingCard ='<div class="flex w-full overflow-hidden rounded-xl bg-[rgba(0,0,0,0.3)] backdrop-blur-[10px]"';
 const thirdCard = html => {
   const section = html.indexOf('<section id="pricing"');
   let start = section;
@@ -80,6 +128,16 @@ for (const localePath of localePaths) {
     const localized = translatedText[index];
     if (english !== localized && !replacements.has(english)) replacements.set(english, localized);
   });
+  // The snapshot is machine translated and took several words in the wrong
+  // sense (2026-10-12): the currency MAD as "mad", the French dish name "Thé"
+  // as an article, the tier names as adjectives, "till" as a preposition,
+  // "stock" as a share, "Mar" and "May" as a verb. Corrections win over the
+  // alignment; null keeps the source text as it is written.
+  for (const [english, localized] of Object.entries(corrections[locale])) {
+    if (!english.includes('{total}') && !sourceText.includes(english)) throw new Error(`${localePath}: correction for missing text "${english}"`);
+    if (localized === null) replacements.delete(english);
+    else replacements.set(english, localized);
+  }
   dictionaries[locale] = Object.fromEntries(replacements);
 
   const output = source
@@ -196,10 +254,27 @@ esOutput = esOutput.replace('</body>', `<script src="${assetUrl('assets/landing-
 esOutput = esOutput.replace('</head>', `<link rel="stylesheet" href="${assetUrl('assets/landing-es.css')}"/></head>`);
 fs.writeFileSync('es/index.html', ogHead(esOutput, 'es'));
 
+// Text rendered from a template ("15 days free, then 1,800 MAD, billed once a
+// year.") never equals a dictionary key; match it by pattern and regroup the
+// number the locale's way.
+const grouping = { de: '.', it: '.', nl: '.', es: ' ' };
+const escapeRegExp = part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const templatesFor = (locale, dictionary) => Object.entries(dictionary)
+  .filter(([key]) => key.includes('{total}'))
+  .map(([key, value]) => ['^' + key.split('{total}').map(escapeRegExp).join('([0-9][0-9,]*)') + '$', value, grouping[locale] || ',']);
+const templates = Object.fromEntries(Object.entries(dictionaries).map(([locale, dictionary]) => [locale, templatesFor(locale, dictionary)]));
 const runtime = `(() => {
   const dictionaries = ${JSON.stringify(dictionaries)};
-  const dictionary = dictionaries[document.documentElement.lang.split('-')[0]];
+  const lang = document.documentElement.lang.split('-')[0];
+  const dictionary = dictionaries[lang];
   if (!dictionary) return;
+  const templates = (${JSON.stringify(templates)}[lang] || []).map(([pattern, value, group]) => [new RegExp(pattern), value, group]);
+  const fromTemplate = text => {
+    for (const [pattern, value, group] of templates) {
+      const match = text.match(pattern);
+      if (match) return value.replace('{total}', match[1].replace(/,/g, group));
+    }
+  };
   let observer;
   const observerOptions = { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['aria-label', 'alt', 'placeholder', 'title'] };
   const translate = () => {
@@ -209,7 +284,8 @@ const runtime = `(() => {
     while ((node = walker.nextNode())) {
       if (node.parentElement?.closest('script, style')) continue;
       const text = node.nodeValue.trim();
-      const translation = dictionary[text.replace(/\\u00a0/g, ' ')];
+      const key = text.replace(/\\u00a0/g, ' ');
+      const translation = dictionary[key] || fromTemplate(key);
       if (translation && translation !== text) node.nodeValue = node.nodeValue.replace(text, translation);
     }
     const title = document.title.trim();
