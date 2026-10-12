@@ -1,24 +1,17 @@
-/* Santé Kiwi · la carte de l'accueil et son tiroir (assets/merchant-health.js).
- * Préfixe mhc- : kh- appartient déjà au centre d'aide, aux horaires et à la
- * fenêtre opérateur kiwi-health.css. La coquille de carte Vexel (surface, bord,
- * rayon, ombre, survol, halo) vient de design-vexel.css, où la carte est
- * inscrite dans les mêmes listes que ses voisines ; ici, seulement l'intérieur.
- * Rien en italique, aucune nouvelle couleur : --atlas en clair, --mint en
- * sombre (l'atlas disparaît sur le noir), --warning pour « en partie ». */
+/* Santé Kiwi · la tuile de la rangée « Pour vous » et son tiroir
+ * (assets/merchant-health.js). Préfixe mhc- : kh- appartient déjà au centre
+ * d'aide, aux horaires et à la fenêtre opérateur kiwi-health.css.
+ * La tuile EST une .oppo-card : coquille, taille, survol, entrée et peau Vexel
+ * viennent d'oppo-cards.js et de design-vexel.css, comme pour ses voisines ;
+ * son titre est un .oppo-t, son lien un .oppo-cta. Ici, seulement ce qu'elle a
+ * en propre : la phrase, « Ensuite », l'anneau du score, là où les voisines
+ * ont leur illustration. Rien en italique, aucune nouvelle couleur : --atlas
+ * en clair, --mint en sombre (l'atlas disparaît sur le noir). */
 
 .merchant-health-card {
   --mhc-accent: var(--atlas, #0B6E4F);
   --mhc-muted: var(--n-500, rgba(10, 15, 13, 0.56));
   --mhc-line: var(--vx-card-border, rgba(10, 15, 13, 0.08));
-  margin: 0 0 16px;
-  padding: 18px 20px;
-  border: 1px solid var(--mhc-line);
-  border-radius: var(--vx-card-radius, 18px);
-  background: var(--vx-card-bg, var(--paper, #F7F5F0));
-  color: inherit;
-  /* the Vexel cursor glow is a sprite larger than the card: its neighbours
-   * clip it the same way, or it widens the page on a phone */
-  overflow: hidden;
 }
 .merchant-health-card[hidden] { display: none !important; }
 html[data-theme="dark"] .merchant-health-card,
@@ -30,26 +23,32 @@ body.design-vexel[data-vexel-mode="dark"] .mhc-drawer {
   --mhc-line: var(--vx-card-border, rgba(236, 247, 242, 0.12));
 }
 
-.mhc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.mhc-eyebrow {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--mhc-muted);
-}
-.mhc-eyebrow svg { width: 16px; height: 16px; color: var(--mhc-accent); }
-.mhc-all {
-  border: 1px solid var(--mhc-line); background: transparent; color: inherit;
-  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease;
-}
-.mhc-all:hover { border-color: var(--mhc-accent); }
-.mhc-all:focus-visible, .mhc-go:focus-visible { outline: 2px solid var(--mhc-accent); outline-offset: 2px; }
+/* the ring sits in the bottom corner, where the neighbours keep their
+ * illustration: the lines beside it leave it room, the sentence above it
+ * runs the full width */
+.merchant-health-card > :is(.mhc-tile-next, .mhc-tile-done, .oppo-cta) { max-width: calc(100% - 96px); }
+.mhc-tile-d { margin: 0 0 12px; font-size: 12.5px; line-height: 1.45; color: var(--mhc-muted); }
 
-.mhc-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; }
+/* « Ensuite » : the one next step, a link in three short lines */
+.mhc-tile-next {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0;
+  margin: 0 0 8px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start;
+}
+button.mhc-tile-next { cursor: pointer; }
+button.mhc-tile-next:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+button.mhc-tile-next:focus-visible, .mhc-go:focus-visible { outline: 2px solid var(--mhc-accent); outline-offset: 2px; border-radius: 6px; }
+.mhc-tile-next-k { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mhc-accent); }
+.mhc-tile-next-t { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.mhc-tile-next-t strong { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+.mhc-tile-next-t svg { flex: none; width: 16px; height: 16px; color: var(--mhc-accent); }
+.mhc-tile-next-e { font-size: 11.5px; line-height: 1.35; color: var(--mhc-muted); overflow-wrap: anywhere; }
+[dir="rtl"] .mhc-tile-next svg, [dir="rtl"] .mhc-go svg { transform: scaleX(-1); }
+.mhc-tile-done { display: flex; gap: 6px; align-items: center; margin: 0 0 8px; font-size: 12.5px; }
+.mhc-tile-done svg { width: 16px; height: 16px; color: var(--mhc-accent); flex: none; }
 
-/* the score: a ring with the number in it */
-.mhc-score { position: relative; width: 96px; height: 96px; flex: none; }
-.mhc-ring { width: 96px; height: 96px; display: block; }
+/* the score: a ring with the number in it, in the illustration's corner */
+.mhc-tile-score { position: absolute; inset-inline-end: 18px; bottom: 18px; width: 76px; height: 76px; pointer-events: none; }
+.mhc-ring { width: 100%; height: 100%; display: block; }
 .mhc-ring circle { fill: none; stroke-width: 7; }
 .mhc-ring-track { stroke: var(--mhc-line); }
 .mhc-ring-fill { stroke: var(--mhc-accent); stroke-linecap: round; transition: stroke-dasharray 600ms cubic-bezier(0.34, 1.45, 0.5, 1); }
@@ -57,65 +56,22 @@ body.design-vexel[data-vexel-mode="dark"] .mhc-drawer {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
-.mhc-score-num b { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; }
-.mhc-score-num small { margin-top: 4px; font-size: 10.5px; color: var(--mhc-muted); }
-
-.mhc-title { margin: 2px 0 4px; font-size: 17px; font-weight: 600; line-height: 1.3; }
-.mhc-sub { margin: 0 0 12px; font-size: 12.5px; color: var(--mhc-muted); }
-.mhc-next-label { margin: 0 0 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mhc-muted); }
-.mhc-next { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.mhc-next-row {
-  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center;
-  padding: 8px 10px; border: 1px solid var(--mhc-line); border-radius: 12px;
-}
-.mhc-next-ico {
-  width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
-  background: color-mix(in srgb, var(--mhc-accent) 12%, transparent); color: var(--mhc-accent);
-}
-.mhc-next-ico svg { width: 18px; height: 18px; }
-.mhc-next-text, .mhc-row-text { display: flex; flex-direction: column; min-width: 0; }
-.mhc-next-text strong, .mhc-row-text strong { font-size: 13.5px; font-weight: 600; }
-.mhc-next-text span, .mhc-row-text span { font-size: 12px; color: var(--mhc-muted); overflow-wrap: anywhere; }
-.mhc-go {
-  display: inline-flex; align-items: center; gap: 4px; flex: none;
-  border: 1px solid var(--mhc-line); background: transparent; color: inherit;
-  border-radius: 999px; padding: 6px 10px 6px 12px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
-  min-height: 32px; transition: border-color 160ms ease, color 160ms ease;
-}
-.mhc-go:hover { border-color: var(--mhc-accent); color: var(--mhc-accent); }
-.mhc-go svg { width: 16px; height: 16px; }
-[dir="rtl"] .mhc-go svg { transform: scaleX(-1); }
-.mhc-alldone { display: flex; gap: 8px; align-items: center; margin: 4px 0 0; font-size: 13px; }
-.mhc-alldone svg { width: 18px; height: 18px; color: var(--mhc-accent); flex: none; }
-
-.mhc-down { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; grid-template-columns: none; }
-.mhc-down p { margin: 0; font-size: 13px; color: var(--mhc-muted); }
-.mhc-down .mhc-go svg { transform: none; }
+.mhc-score-num b { font-size: 23px; font-weight: 500; letter-spacing: -0.02em; }
+.mhc-score-num small { margin-top: 3px; font-size: 10px; color: var(--mhc-muted); }
 
 /* loading: quiet bars, still under reduced motion */
-.mhc-loading { align-items: center; }
 .mhc-skel { display: block; border-radius: 8px; background: var(--mhc-line); animation: mhc-pulse 1.4s ease-in-out infinite; }
-.mhc-skel-ring { width: 96px; height: 96px; border-radius: 50%; }
-.mhc-skel-lines { display: grid; gap: 10px; }
-.mhc-skel-lines .mhc-skel { height: 12px; }
-.mhc-skel-lines .mhc-skel:nth-child(1) { width: 60%; height: 16px; }
-.mhc-skel-lines .mhc-skel:nth-child(2) { width: 85%; }
-.mhc-skel-lines .mhc-skel:nth-child(3) { width: 40%; }
+.mhc-tile-score.mhc-skel { border-radius: 50%; }
+.mhc-skel-lines { display: grid; gap: 9px; margin-top: 4px; }
+.mhc-skel-lines .mhc-skel { height: 11px; }
+.mhc-skel-lines .mhc-skel:nth-child(1) { width: 85%; }
+.mhc-skel-lines .mhc-skel:nth-child(2) { width: 60%; }
+.mhc-skel-lines .mhc-skel:nth-child(3) { width: 40%; height: 28px; border-radius: 12px; margin-top: 4px; }
 .mhc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @keyframes mhc-pulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
   .mhc-skel { animation: none; }
   .mhc-ring-fill { transition: none; }
-}
-
-@media (max-width: 600px) {
-  .merchant-health-card { padding: 16px; }
-  .mhc-body { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-  .mhc-score { width: 80px; height: 80px; }
-  .mhc-ring { width: 80px; height: 80px; }
-  .mhc-score-num b { font-size: 24px; }
-  .mhc-loading { grid-template-columns: auto minmax(0, 1fr); }
-  .mhc-skel-ring { width: 80px; height: 80px; }
 }
 
 /* ── the drawer ── */
@@ -138,6 +94,17 @@ body.design-vexel[data-vexel-mode="dark"] .mhc-drawer {
 .mhc-row[data-mhc-state="unmeasured"] .mhc-row-text strong { font-weight: 500; }
 .mhc-badge { font-size: 11.5px; font-weight: 500; color: var(--mhc-muted); white-space: nowrap; }
 .mhc-row[data-mhc-state="done"] .mhc-badge { color: var(--mhc-accent); }
+.mhc-row-text { display: flex; flex-direction: column; min-width: 0; }
+.mhc-row-text strong { font-size: 13.5px; font-weight: 600; }
+.mhc-row-text span { font-size: 12px; color: var(--mhc-muted); overflow-wrap: anywhere; }
+.mhc-go {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  border: 1px solid var(--mhc-line); background: transparent; color: inherit;
+  border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
+  min-height: 32px; transition: border-color 160ms ease, color 160ms ease;
+}
+.mhc-go:hover { border-color: var(--mhc-accent); color: var(--mhc-accent); }
+.mhc-go svg { width: 16px; height: 16px; }
 .mhc-row .mhc-go { padding: 0; width: 32px; justify-content: center; }
 .mhc-go-gap { width: 32px; }
 .mhc-note { margin: 0 0 8px; font-size: 12px; color: var(--mhc-muted); }

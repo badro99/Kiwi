@@ -8,8 +8,11 @@ défaut aux quatre questions (en fin de document) le jour même.
 - `functions/api/_merchant-health.js` · le calcul, pur (faits → score).
 - `functions/api/merchant-health.js` · `GET /api/merchant-health?merchant=`,
   lecture seule, mise en cache deux minutes par établissement.
-- `assets/merchant-health.js` + `.css` · la carte « Santé Kiwi » de l'accueil,
-  entre la bande d'indicateurs et « Pour vous », et son tiroir « Tout voir ».
+- `assets/merchant-health.js` + `.css` · la tuile « Santé Kiwi » de l'accueil,
+  première place de la rangée « Pour vous » (`assets/oppo-cards.js` lui fait
+  la place : une offre de moins), aux pièces et à la hauteur exactes des offres
+  voisines ; score, phrase, prochaine étape, et son tiroir « Tout voir ».
+  Injoignable sur la démo, la place revient à une offre.
 - `tools/merchant-health-test.mjs` (route sur le schéma complet en SQLite) et
   `tools/merchant-health-browser-test.mjs` (la carte dans le vrai dashboard).
 

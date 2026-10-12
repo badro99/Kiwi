@@ -2268,7 +2268,6 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-bottom-row > [data-mix-block],
   .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
-  .dash-standard > .merchant-health-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
   .dash-standard > .dash-more-clip [data-integ-card]
@@ -2284,7 +2283,6 @@ body.design-vexel[data-vexel-mode] :is(
 body.design-vexel[data-vexel-mode] :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .dash-standard > .oppo-band .oppo-card,
-  .dash-standard > .merchant-health-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
   .dash-standard > .dash-more-clip [data-integ-card]
@@ -3518,7 +3516,6 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-bottom-row > [data-mix-block],
   .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
-  .dash-standard > .merchant-health-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
   .dash-standard > .dash-more-clip [data-integ-card]
@@ -3728,7 +3725,6 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-bottom-row > [data-mix-block],
   .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
-  .dash-standard > .merchant-health-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
   .dash-standard > .dash-more-clip [data-integ-card]
@@ -5341,7 +5337,6 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard {
 body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
-  .merchant-health-card,
   .dash-cols .block,
   .dash-cols .settle,
   .vexel-bottom-row .block,
@@ -5357,7 +5352,6 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
 body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
-  .merchant-health-card,
   .dash-cols .block,
   .dash-cols .settle,
   .vexel-bottom-row .block,
@@ -5407,7 +5401,6 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
 body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
-  .merchant-health-card,
   .dash-cols .block,
   .dash-cols .settle,
   .vexel-bottom-row .block,
@@ -5526,7 +5519,6 @@ body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn:hover {
 body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
-  .merchant-health-card,
   .dash-cols .block,
   .dash-cols .settle,
   .dash-more-clip [data-integ-card],

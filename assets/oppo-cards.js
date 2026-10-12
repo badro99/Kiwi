@@ -227,15 +227,23 @@
     if (!band) return;
     const gone = dismissed();
     const real = isReal();
+    /* Santé Kiwi (assets/merchant-health.js) takes the first slot of the row
+     * while it has something to say: one card fewer is dealt, so the row
+     * stays one row. It paints its own tile; this only makes room for it. */
+    const mh = window.KiwiMerchantHealth;
+    const health = !!(mh && typeof mh.shows === 'function' && mh.shows());
     const cards = POOL
       .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]) && !moduleOff(c.feat))
-      .slice(0, SLOTS);
-    if (!cards.length) { setHtml(band, ''); band.style.display = 'none'; return; }
+      .slice(0, SLOTS - (health ? 1 : 0));
+    if (!cards.length && !health) { setHtml(band, ''); band.style.display = 'none'; return; }
     band.style.display = '';
+    const shift = health ? 1 : 0;
     setHtml(band, `
       <div class="oppo-eyebrow">${pick(EYEBROW)}</div>
-      <div class="oppo-grid">${cards.map(cardHtml).join('')}</div>`);
+      <div class="oppo-grid">${health ? '<section class="oppo-card merchant-health-card" style="--i:0;" data-merchant-health></section>' : ''}${cards.map((c, i) => cardHtml(c, i + shift)).join('')}</div>`);
+    if (health) mh.paint();
   }
+  window.KiwiOppo = { render };
 
   /* ─── Dismiss wiring (delegated; CTA clicks ride the global [data-action]) ─── */
   document.addEventListener('click', (e) => {

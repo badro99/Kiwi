@@ -1,19 +1,22 @@
 #!/usr/bin/env node
-/* Santé Kiwi · la carte, dans le vrai dashboard.html.
+/* Santé Kiwi · la tuile de la rangée « Pour vous », dans le vrai dashboard.html.
  *
  * La route est prouvée sur une vraie base par merchant-health-test.mjs ; ici
  * on prouve ce que le commerçant voit. /api/merchant-health est servi par le
  * vrai calcul (functions/api/_merchant-health.js) sur des faits de banc, et le
  * reste de la page est le tableau de bord tel qu'il est livré. Ce que la suite
  * tient :
- *   · la carte dit le score, la phrase et trois actions, en FR, EN et AR,
+ *   · la tuile prend la première place de la rangée « Pour vous », à côté de
+ *     deux offres (une de moins), à leur hauteur exacte ;
+ *   · elle dit le score, la phrase et la prochaine étape, en FR, EN et AR,
  *     en clair et en sombre, et l'arabe se lit de droite à gauche ;
  *   · « Tout voir » ouvre le tiroir, groupé par domaine, avec « non mesuré »
  *     dit comme tel ;
  *   · chaque « Ouvrir » affiché mène quelque part (vrai clic, pas d'événement
  *     synthétique) ;
- *   · route injoignable : la démo cache la carte, aucun chiffre inventé ;
- *   · la réponse d'un autre établissement n'est jamais affichée.
+ *   · route injoignable : la démo rend la place à une offre, aucun chiffre ;
+ *   · la réponse d'un autre établissement n'est jamais affichée, et ne laisse
+ *     pas la tuile en « chargement » pour toujours.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -113,6 +116,11 @@ async function open({ api = 'ok', lang = 'fr', theme = 'light', width = 1366 } =
   return { ctx, page, problems, asked };
 }
 const cardText = (page) => page.$eval('[data-merchant-health]', (e) => ({ hidden: e.hidden, text: e.innerText.replace(/\s+/g, ' ').trim(), dir: e.getAttribute('dir'), html: e.innerHTML }));
+/* the « Pour vous » row: what sits in it, where, how tall */
+const row = (page) => page.$$eval('[data-oppo-band] .oppo-grid > *', (els) => els.map((e) => {
+  const r = e.getBoundingClientRect();
+  return { health: e.hasAttribute('data-merchant-health'), id: e.getAttribute('data-oppo-id'), top: Math.round(r.top), h: Math.round(r.height), text: e.innerText.replace(/\s+/g, ' ') };
+}));
 
 try {
   /* 1 · French, light */
@@ -123,20 +131,23 @@ try {
     check(asked.length >= 1 && asked.every((m) => m && /^[a-z0-9-]+$/.test(m)), `the card asks /api/merchant-health once per load for the current store (${asked[0]})`);
     check(!c.hidden && c.text.includes(String(BODY.score)) && c.text.includes('sur 100'), `the score ${BODY.score} is shown out of 100`);
     check(c.text.includes(`${BODY.used} outils sur ${BODY.measured} pleinement utilisés`), 'the sentence counts the tools fully in use, from the server');
-    const rows = await page.$$eval('[data-merchant-health] .mhc-next-row', (r) => r.map((x) => x.getAttribute('data-mhc-id')));
-    check(rows.join(',') === BODY.next.join(','), `three next actions, in the server's order (${rows.join(', ')})`);
+    const tiles = await row(page);
+    check(tiles[0] && tiles[0].health, 'Santé Kiwi is the first tile of the « Pour vous » row');
+    check(tiles.length === 3 && tiles.slice(1).every((t) => t.id), `two offers beside it, one fewer dealt (${tiles.slice(1).map((t) => t.id).join(', ')})`);
+    check(tiles.every((t) => t.top === tiles[0].top && t.h === tiles[0].h), `one row, one height (${tiles.map((t) => t.h + ' px').join(', ')})`);
+    const nextGo = await page.$$eval('[data-merchant-health] [data-mhc-go]', (b) => b.map((x) => x.getAttribute('data-mhc-go')));
+    check(nextGo.join(',') === BODY.next[0] && /ensuite/i.test(c.text) && c.text.includes('9 plats sur 40 ont une recette'), `« Ensuite » is the server's first next step, with its fact (${nextGo.join(', ')})`);
     check(!/[—]/.test(c.text) && !/NaN|undefined|null/.test(c.text), 'no em dash, no NaN, no undefined in the card');
     const style = await page.$eval('[data-merchant-health]', (e) => {
-      const cs = getComputedStyle(e); const t = e.querySelector('.mhc-title');
-      return { bg: cs.backgroundColor, italic: [...e.querySelectorAll('*')].some((x) => getComputedStyle(x).fontStyle === 'italic'), titleWeight: getComputedStyle(t).fontWeight };
+      const cs = getComputedStyle(e); const t = e.querySelector('.oppo-t');
+      const n = document.querySelector('[data-oppo-band] .oppo-card[data-oppo-id]');
+      const ns = n && getComputedStyle(n), paint = (x) => [x.backgroundColor, x.backgroundImage, x.borderTopColor, x.borderRadius].join(' | ');
+      return { mine: paint(cs), theirs: ns ? paint(ns) : '', italic: [...e.querySelectorAll('*')].some((x) => getComputedStyle(x).fontStyle === 'italic'), titleWeight: getComputedStyle(t).fontWeight };
     });
     check(!style.italic, 'nothing in the card is italic');
-    check(style.bg !== 'rgb(255, 255, 255)', `the card is not painted pure white (${style.bg})`);
+    check(style.theirs && style.mine === style.theirs, 'the tile wears exactly its neighbours\' skin (background, border, radius)');
     if (shots) await (await page.$('[data-merchant-health]')).screenshot({ path: path.join(shots, 'mhc-fr-light.png') });
 
-    /* « Ouvrir » leads somewhere: a real click on each */
-    const gos = await page.$$eval('[data-merchant-health] [data-mhc-go]', (b) => b.map((x) => x.getAttribute('data-mhc-go')));
-    check(gos.length >= 1, `the next actions with a destination carry an « Ouvrir » (${gos.join(', ')})`);
     /* Tout voir → the drawer */
     await page.click('[data-merchant-health] [data-action="merchant-health-open"]');
     await page.waitForSelector('.kiwi-drawer .mhc-drawer', { visible: true, timeout: 5000 });
@@ -179,8 +190,10 @@ try {
     const c = await cardText(page);
     check(c.text.includes(needle), `${lang} · the sentence reads in ${lang === 'ar' ? 'Arabic' : 'English'}`);
     check(c.dir === (lang === 'ar' ? 'rtl' : 'ltr'), `${lang} · the card runs ${c.dir}`);
-    const flip = await page.$eval('[data-merchant-health] .mhc-go svg', (svg) => getComputedStyle(svg).transform);
-    check(lang === 'ar' ? /^matrix\(-1,/.test(flip) : !/^matrix\(-1,/.test(flip), `${lang} · the « Open » chevron points the reading way (${flip})`);
+    const flip = await page.$eval('[data-merchant-health] .mhc-tile-next svg', (svg) => getComputedStyle(svg).transform);
+    check(lang === 'ar' ? /^matrix\(-1,/.test(flip) : !/^matrix\(-1,/.test(flip), `${lang} · the « Next » chevron points the reading way (${flip})`);
+    const tiles = await row(page);
+    check(tiles[0] && tiles[0].health && tiles.every((t) => t.top === tiles[0].top && t.h === tiles[0].h), `${lang} · the tile leads the row, at its neighbours' height`);
     check(!/[A-Za-zÀ-ÿ]{4,}/.test(c.text.replace(/Kiwi IQ|Kiwi|MAD/g, '')) || lang !== 'ar', `${lang} · no French or English words left in the Arabic card`);
     check(!/sur 100|jours d’ouverture/.test(c.text) || lang === 'fr', `${lang} · no French left in the card`);
     const lum = await page.$eval('[data-merchant-health]', (e) => {
@@ -188,7 +201,7 @@ try {
       let el = e, bg = 'rgba(0, 0, 0, 0)';
       while (el && /rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(el).backgroundColor)) el = el.parentElement;
       bg = el ? getComputedStyle(el).backgroundColor : 'rgb(0,0,0)';
-      const [r, g, b] = rgb(bg); const fg = rgb(getComputedStyle(e.querySelector('.mhc-title')).color);
+      const [r, g, b] = rgb(bg); const fg = rgb(getComputedStyle(e.querySelector('.oppo-t')).color);
       const L = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
       const a = L([r, g, b]), t = L(fg); return { dark: a < 0.2, bg, contrast: (Math.max(a, t) + 0.05) / (Math.min(a, t) + 0.05) };
     });
@@ -199,20 +212,21 @@ try {
     await ctx.close();
   }
 
-  /* 3 · down: the demo hides the card, and shows no number */
+  /* 3 · down: the demo gives the slot back to an offer, and shows no number */
   {
     const { ctx, page } = await open({ api: 'down' });
     await sleep(800);
-    const c = await cardText(page);
-    check(c.hidden && !/\d/.test(c.text), 'route down on the demo: the card is hidden and shows no number');
+    const tiles = await row(page);
+    check(!tiles.some((t) => t.health) && tiles.length === 3 && tiles.every((t) => t.id), `route down on the demo: no tile, three offers fill the row (${tiles.map((t) => t.id).join(', ')})`);
     await ctx.close();
   }
-  /* 4 · another store's answer is never shown */
+  /* 4 · another store's answer is never shown, and does not hang */
   {
-    const { ctx, page } = await open({ api: 'other' });
+    const { ctx, page, asked } = await open({ api: 'other' });
     await sleep(800);
-    const c = await cardText(page);
-    check(!c.text.includes(String(BODY.score)) || c.hidden, "an answer for another store is dropped, not shown under this one's name");
+    const tiles = await row(page);
+    check(asked.length >= 1 && !tiles.some((t) => t.health || t.text.includes(String(BODY.score) + ' ')), "an answer for another store is dropped, not shown under this one's name");
+    check(!(await page.$('[data-merchant-health][aria-busy]')), 'and the tile is not left « loading » forever');
     await ctx.close();
   }
   /* 5 · phone width */

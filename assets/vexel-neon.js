@@ -22,7 +22,6 @@
   var CARDS = [
     '[data-kpi-band] > .kpi-m',
     '.oppo-band .oppo-card',
-    '.merchant-health-card',
     '.dash-cols .block',
     '.dash-cols .settle',
     '.vexel-bottom-row .block',

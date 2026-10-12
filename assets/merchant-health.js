@@ -1,7 +1,12 @@
 /* Kiwi · SANTÉ KIWI (carte commerçant) — window.KiwiMerchantHealth
  * ---------------------------------------------------------------------------
- * La carte de l'accueil qui dit au commerçant combien de Kiwi il utilise, et
- * quoi allumer ensuite (docs/specs/kiwi-health.md).
+ * La tuile de l'accueil qui dit au commerçant combien de Kiwi il utilise, et
+ * quoi allumer ensuite (docs/specs/kiwi-health.md). Elle prend la première
+ * place de la rangée « Pour vous » : assets/oppo-cards.js lui fait la place
+ * (une carte de moins) et crée le <section data-merchant-health> ; ce fichier
+ * le peint, avec les pièces mêmes des cartes voisines (oppo-card, oppo-t,
+ * oppo-cta), pour qu'elle en ait la taille, la peau et le rythme. Le détail
+ * ligne par ligne vit dans le tiroir « Tout voir ».
  *
  * Le calcul n'est PAS ici : il vit côté serveur (functions/api/merchant-health.js, pur
  * dans functions/api/_merchant-health.js). Ne pas confondre avec
@@ -36,16 +41,15 @@
 
   const S = {
     name: L('Santé Kiwi', 'Kiwi Health', 'صحة كيوي'),
-    headline: L('{used} outils sur {measured} pleinement utilisés', '{used} of {measured} tools fully in use', '{used} من أصل {measured} أدوات مستعملة بالكامل'),
-    sub: L('Sur les 30 derniers jours, d’après ce que Kiwi voit.', 'Over the last 30 days, from what Kiwi can see.', 'خلال آخر 30 يومًا، حسب ما يراه كيوي.'),
-    next: L('À faire ensuite', 'Next up', 'الخطوات التالية'),
+    headline: L('{used} outils sur {measured} pleinement utilisés, sur 30 jours.', '{used} of {measured} tools fully in use, over 30 days.', '{used} من أصل {measured} أدوات مستعملة بالكامل، خلال 30 يومًا.'),
+    next: L('Ensuite', 'Next', 'التالي'),
     open: L('Ouvrir', 'Open', 'فتح'),
-    all: L('Tout voir', 'See all', 'عرض الكل'),
-    allDone: L('Rien à faire ensuite : tout ce que Kiwi mesure est en place.', 'Nothing left to do: everything Kiwi measures is in place.', 'لا شيء متبقٍّ: كل ما يقيسه كيوي جاهز.'),
+    all: L('Tout voir →', 'See all →', 'عرض الكل ←'),
+    allDone: L('Tout ce que Kiwi mesure est en place.', 'Everything Kiwi measures is in place.', 'كل ما يقيسه كيوي جاهز.'),
     noScore: L('Pas encore assez de données pour un score.', 'Not enough data for a score yet.', 'لا توجد بيانات كافية بعد لحساب النتيجة.'),
     loading: L('Calcul en cours', 'Working it out', 'جارٍ الحساب'),
-    down: L('Santé Kiwi est injoignable pour le moment. Vos données ne sont pas touchées.', 'Kiwi Health can’t be reached right now. Your data is untouched.', 'تعذّر الوصول إلى صحة كيوي حاليًا. بياناتكم لم تُمسّ.'),
-    retry: L('Réessayer', 'Try again', 'إعادة المحاولة'),
+    down: L('Injoignable pour le moment. Vos données ne sont pas touchées.', 'Can’t be reached right now. Your data is untouched.', 'تعذّر الوصول حاليًا. بياناتكم لم تُمسّ.'),
+    retry: L('Réessayer →', 'Try again →', 'إعادة المحاولة ←'),
     scoreOf: L('sur 100', 'out of 100', 'من 100'),
     drawerSub: L('Score {score} sur 100 · 30 derniers jours', 'Score {score} out of 100 · last 30 days', 'النتيجة {score} من 100 · آخر 30 يومًا'),
     optional: L('En option, si cela vous sert', 'Optional, if it helps you', 'اختياري، إن كان يفيدكم'),
@@ -228,27 +232,28 @@
   }
 
   async function load() {
-    const root = document.querySelector(ROOT_SEL);
-    if (!root) return;
     const s = slug();
     const mine = ++seq;
     /* Another store's answer is never shown under this one's name. */
     if (s !== slugNow) data = null;
     slugNow = s;
-    if (!s) { status = 'down'; render(); return; }
-    status = 'loading'; render();
+    if (!s) { status = 'down'; update(); return; }
+    status = 'loading'; update();
     try {
       const res = await fetch('/api/merchant-health?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' });
       if (mine !== seq) return;
       if (!res.ok) throw new Error('http ' + res.status);
       const body = await res.json();
-      if (mine !== seq || !body || body.merchant !== s) return;
+      if (mine !== seq) return;
+      /* an answer for another store is never shown under this one's name: it
+       * counts as no answer at all, not as an endless « loading » */
+      if (!body || body.merchant !== s) throw new Error('other merchant');
       data = body; status = 'ready';
     } catch (_) {
       if (mine !== seq) return;
       data = null; status = 'down';
     }
-    render();
+    update();
   }
 
   function ring(score) {
@@ -260,52 +265,60 @@
     </svg>`;
   }
 
-  function nextRow(c) {
-    const can = !!target(c);
-    return `<li class="mhc-next-row" data-mhc-id="${esc(c.id)}">
-      <span class="mhc-next-ico">${icon(AREA_ICON[c.area] || 'task_alt', 18)}</span>
-      <span class="mhc-next-text"><strong>${esc(title(c))}</strong><span>${esc(evidence(c))}</span></span>
-      ${can ? `<button type="button" class="mhc-go" data-action="merchant-health-go" data-mhc-go="${esc(c.id)}">${esc(pick(S.open))}${icon('chevron_right', 16)}</button>` : ''}
-    </li>`;
+  /* Does the tile take a slot in the row? Loading and ready, yes; down, only
+   * for a real store (it is told plainly). The demo, down, gives the slot
+   * back to an offer. */
+  function shows() {
+    return status === 'loading' || status === 'ready' || (status === 'down' && isReal());
+  }
+  /* The row is oppo-cards.js's: when the tile appears or goes, it re-deals
+   * (and calls paint); otherwise the tile repaints in place. */
+  function update() {
+    const has = !!document.querySelector(ROOT_SEL);
+    if (has !== shows() && window.KiwiOppo && typeof window.KiwiOppo.render === 'function') window.KiwiOppo.render();
+    else paint();
   }
 
-  function render() {
+  function paint() {
     const root = document.querySelector(ROOT_SEL);
     if (!root) return;
-    root.setAttribute('dir', lang() === 'ar' ? 'rtl' : 'ltr');
+    const ar = lang() === 'ar';
+    root.setAttribute('dir', ar ? 'rtl' : 'ltr');
     root.lang = lang();
-    if (status === 'down' && !isReal()) { root.hidden = true; return; }
-    root.hidden = false;
-    const head = `<div class="mhc-head"><span class="mhc-eyebrow">${icon('monitoring', 16)}${esc(pick(S.name))}</span>
-      ${status === 'ready' && data && data.checks && data.checks.length ? `<button type="button" class="mhc-all" data-action="merchant-health-open">${esc(pick(S.all))}</button>` : ''}</div>`;
+    root.setAttribute('aria-label', pick(S.name));
+    const head = `<div class="oppo-t">${esc(pick(S.name))}</div>`;
     if (status === 'loading' || status === 'idle') {
       root.setAttribute('aria-busy', 'true');
-      root.innerHTML = head + `<div class="mhc-body mhc-loading"><div class="mhc-skel mhc-skel-ring"></div><div class="mhc-skel-lines"><span class="mhc-skel"></span><span class="mhc-skel"></span><span class="mhc-skel"></span></div><span class="mhc-sr">${esc(pick(S.loading))}</span></div>`;
+      root.innerHTML = head + `<div class="mhc-skel-lines"><span class="mhc-skel"></span><span class="mhc-skel"></span><span class="mhc-skel"></span></div><div class="mhc-tile-score mhc-skel" aria-hidden="true"></div><span class="mhc-sr">${esc(pick(S.loading))}</span>`;
       return;
     }
     root.removeAttribute('aria-busy');
     if (status === 'down') {
-      root.innerHTML = head + `<div class="mhc-body mhc-down"><p>${esc(pick(S.down))}</p><button type="button" class="mhc-go" data-action="merchant-health-retry">${icon('refresh', 16)}${esc(pick(S.retry))}</button></div>`;
+      root.innerHTML = head + `<p class="mhc-tile-d">${esc(pick(S.down))}</p><button type="button" class="oppo-cta" data-action="merchant-health-retry">${esc(pick(S.retry))}</button>`;
       return;
     }
     const d = data;
     const byId = Object.fromEntries((d.checks || []).map((c) => [c.id, c]));
-    const next = (d.next || []).map((id) => byId[id]).filter(Boolean);
+    const first = (d.next || []).map((id) => byId[id]).filter(Boolean)[0];
     const scoreText = d.score == null ? '·' : num(d.score);
-    const headline = d.score == null ? pick(S.noScore)
+    const line = d.score == null ? pick(S.noScore)
       : pick(S.headline).replace('{used}', num(d.used || 0)).replace('{measured}', num(d.measured || 0));
-    root.innerHTML = head + `<div class="mhc-body">
-      <div class="mhc-score" role="img" aria-label="${esc(pick(S.name) + ' · ' + scoreText + ' ' + pick(S.scoreOf))}">
+    let next = '';
+    if (first) {
+      const can = !!target(first);
+      const inner = `<span class="mhc-tile-next-k">${esc(pick(S.next))}</span><span class="mhc-tile-next-t"><strong>${esc(title(first))}</strong>${can ? icon('chevron_right', 16) : ''}</span><span class="mhc-tile-next-e">${esc(evidence(first))}</span>`;
+      next = can
+        ? `<button type="button" class="mhc-tile-next" data-action="merchant-health-go" data-mhc-go="${esc(first.id)}" aria-label="${esc(pick(S.open) + ' · ' + title(first) + ' · ' + evidence(first))}">${inner}</button>`
+        : `<div class="mhc-tile-next">${inner}</div>`;
+    } else if (d.score != null) {
+      next = `<p class="mhc-tile-done">${icon('task_alt', 16)}${esc(pick(S.allDone))}</p>`;
+    }
+    root.innerHTML = head + `<p class="mhc-tile-d">${esc(line)}</p>${next}
+      ${(d.checks || []).length ? `<button type="button" class="oppo-cta" data-action="merchant-health-open">${esc(pick(S.all))}</button>` : ''}
+      <div class="mhc-tile-score mhc-score" role="img" aria-label="${esc(pick(S.name) + ' · ' + scoreText + ' ' + pick(S.scoreOf))}">
         ${ring(d.score)}
         <span class="mhc-score-num"><b>${esc(scoreText)}</b><small>${esc(pick(S.scoreOf))}</small></span>
-      </div>
-      <div class="mhc-main">
-        <h3 class="mhc-title">${esc(headline)}</h3>
-        <p class="mhc-sub">${esc(pick(S.sub))}</p>
-        ${next.length ? `<p class="mhc-next-label">${esc(pick(S.next))}</p><ul class="mhc-next">${next.map(nextRow).join('')}</ul>`
-          : d.score != null ? `<p class="mhc-alldone">${icon('task_alt', 18)}${esc(pick(S.allDone))}</p>` : ''}
-      </div>
-    </div>`;
+      </div>`;
   }
 
   function drawerBody(d) {
@@ -361,9 +374,11 @@
 
   function boot() {
     wire();
-    if (!document.querySelector(ROOT_SEL)) return;
+    /* only where the « Pour vous » row exists (the dashboard home) */
+    if (!document.querySelector('[data-oppo-band]')) return;
     load();
-    window.addEventListener('kiwi:langchange', () => render());
+    /* a language change re-deals the row (oppo-cards.js), which repaints this */
+    window.addEventListener('kiwi:langchange', () => paint());
     try {
       if (window.KiwiVenue && typeof window.KiwiVenue.subscribe === 'function') {
         window.KiwiVenue.subscribe(() => { if (slug() !== slugNow) load(); });
@@ -371,7 +386,7 @@
     } catch (_) {}
   }
 
-  window.KiwiMerchantHealth = { reload: load, open: openDrawer, get state() { return { status, data }; } };
+  window.KiwiMerchantHealth = { reload: load, open: openDrawer, shows, paint, get state() { return { status, data }; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 })();
