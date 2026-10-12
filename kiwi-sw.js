@@ -232,7 +232,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=14',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=26',
+  '/assets/caisse-lang.js?v=27',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
@@ -289,7 +289,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=86',
+  '/assets/pos-dispatch.js?v=87',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -302,8 +302,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=56',
-  '/assets/pos-boutique.js?v=56',
+  '/assets/pos-boutique.css?v=57',
+  '/assets/pos-boutique.js?v=57',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -333,17 +333,17 @@ var SHELL = [
   '/assets/pos-coiffure.js?v=7',
   '/assets/pos-gym.css?v=7',
   '/assets/pos-gym.js?v=7',
-  '/assets/pos-autre.css?v=5',
-  '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=63',
-  '/assets/pos-maison.js?v=63',
+  '/assets/pos-autre.css?v=7',
+  '/assets/pos-autre.js?v=7',
+  '/assets/pos-maison.css?v=64',
+  '/assets/pos-maison.js?v=64',
   '/assets/caisse-pairing.js?v=27',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=8',
+  '/assets/pos-reprint.js?v=9',
   '/assets/pressing-caisse.js?v=45',
   '/assets/pressing-caisse.css?v=45',
   '/assets/material-icons.js?v=2',
