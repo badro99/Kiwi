@@ -4,6 +4,7 @@ import LocalAuthentication
 import Network
 import Security
 import UIKit
+import WebKit
 #if canImport(Darwin)
 import Darwin
 #endif
@@ -11,6 +12,64 @@ import Darwin
 private final class InvoicePageRenderer: UIPrintPageRenderer {
     override var paperRect: CGRect { CGRect(x: 0, y: 0, width: 595.28, height: 841.89) }
     override var printableRect: CGRect { paperRect.insetBy(dx: 24, dy: 24) }
+}
+
+/// Lays out a document the page asked to print (reports, bons, QR tents) in a
+/// real WebKit view, not the UIKit markup formatter: the page's CSS, fonts and
+/// relative images resolve through the app's own `capacitor://` scheme handler.
+/// The view sits off-screen inside the window (WebKit only paints attached
+/// views) and is released as soon as the PDF exists.
+private final class HtmlPdfJob: NSObject, WKNavigationDelegate {
+    private let webView: WKWebView
+    private let completion: (Data?) -> Void
+    private var finished = false
+
+    init(markup: String, baseURL: URL?, schemeHandler: WKURLSchemeHandler?, scheme: String?, host: UIView, completion: @escaping (Data?) -> Void) {
+        let configuration = WKWebViewConfiguration()
+        if let schemeHandler, let scheme { configuration.setURLSchemeHandler(schemeHandler, forURLScheme: scheme) }
+        webView = WKWebView(frame: CGRect(x: -10_000, y: 0, width: 595, height: 842), configuration: configuration)
+        self.completion = completion
+        super.init()
+        webView.overrideUserInterfaceStyle = .light // paper, whatever the app theme
+        webView.isUserInteractionEnabled = false
+        webView.navigationDelegate = self
+        host.addSubview(webView)
+        webView.loadHTMLString(markup, baseURL: baseURL)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in self?.finish(nil) }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Fonts and images decide pagination; give them up to 3 s, never more.
+        let settle = "await Promise.race([Promise.all([document.fonts ? document.fonts.ready : null].concat(Array.from(document.images, i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })))), new Promise(r => setTimeout(r, 3000))]); return 1;"
+        webView.callAsyncJavaScript(settle, arguments: [:], in: nil, in: .page) { [weak self] _ in self?.render() }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { finish(nil) }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { finish(nil) }
+
+    private func render() {
+        let renderer = InvoicePageRenderer()
+        renderer.addPrintFormatter(webView.viewPrintFormatter(), startingAtPageAt: 0)
+        renderer.prepare(forDrawingPages: NSRange(location: 0, length: 1))
+        let pages = renderer.numberOfPages
+        guard pages > 0, pages <= 200 else { finish(nil); return }
+        let pdf = UIGraphicsPDFRenderer(bounds: renderer.paperRect).pdfData { context in
+            for page in 0..<pages {
+                context.beginPage()
+                renderer.drawPage(at: page, in: renderer.paperRect)
+            }
+        }
+        finish(pdf)
+    }
+
+    private func finish(_ pdf: Data?) {
+        guard !finished else { return }
+        finished = true
+        webView.navigationDelegate = nil
+        webView.stopLoading()
+        webView.removeFromSuperview()
+        completion(pdf)
+    }
 }
 
 private struct SocketOutcome {
@@ -91,6 +150,8 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "KiwiPrinterSocket"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "exportInvoice", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "printHtml", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "shareFile", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "send", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "probe", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "scan", returnType: CAPPluginReturnPromise),
@@ -128,23 +189,81 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
                     renderer.drawPage(at: page, in: renderer.paperRect)
                 }
             }
-            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("KiwiInvoice-" + UUID().uuidString, isDirectory: true)
-            let file = folder.appendingPathComponent((name.isEmpty ? "Facture" : name) + ".pdf")
-            do {
-                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                try pdf.write(to: file, options: [.atomic, .completeFileProtection])
-            } catch { try? FileManager.default.removeItem(at: folder); call.reject("pdf-write-failed"); return }
-            let activity = UIActivityViewController(activityItems: [file], applicationActivities: nil)
-            if let popover = activity.popoverPresentationController {
-                popover.sourceView = presenter.view
-                popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
-                popover.permittedArrowDirections = []
+            self.presentFile(pdf, named: (name.isEmpty ? "Facture" : name) + ".pdf", from: presenter, call: call,
+                             result: ["ok": true, "presented": true, "pages": pages, "bytes": pdf.count])
+        }
+    }
+
+    private var htmlJobs: [ObjectIdentifier: HtmlPdfJob] = [:]
+
+    /// Any document a page opens to print (day report, bon de livraison, QR
+    /// tents, floor plan). Same outcome as a browser's print dialog, honestly
+    /// named: a PDF the user can print, save to Files or share.
+    @objc func printHtml(_ call: CAPPluginCall) {
+        guard let markup = call.getString("html"), !markup.isEmpty, markup.utf8.count <= 4_000_000 else {
+            call.reject("invalid-document"); return
+        }
+        let name = Self.safeName(call.getString("name"), fallback: "Document", keepDot: false)
+        DispatchQueue.main.async {
+            guard let bridge = self.bridge, var presenter = bridge.viewController, let host = presenter.view else {
+                call.reject("no-presenter"); return
             }
-            activity.completionWithItemsHandler = { _, _, _, _ in try? FileManager.default.removeItem(at: folder) }
-            presenter.present(activity, animated: true) {
-                // Presented is not a claim that the user saved or printed it.
-                call.resolve(["ok": true, "presented": true, "pages": pages, "bytes": pdf.count])
+            while let presented = presenter.presentedViewController { presenter = presented }
+            let server = bridge.config.serverURL
+            let scheme = server.scheme
+            let handler = scheme.flatMap { bridge.webView?.configuration.urlSchemeHandler(forURLScheme: $0) }
+            var key: ObjectIdentifier?
+            let job = HtmlPdfJob(markup: markup, baseURL: server, schemeHandler: handler, scheme: handler == nil ? nil : scheme, host: host) { pdf in
+                if let key { self.htmlJobs[key] = nil }
+                guard let pdf else { call.reject("pdf-render-failed"); return }
+                guard !presenter.isBeingDismissed else { call.reject("presenter-busy"); return }
+                self.presentFile(pdf, named: name + ".pdf", from: presenter, call: call,
+                                 result: ["ok": true, "presented": true, "bytes": pdf.count])
             }
+            key = ObjectIdentifier(job)
+            self.htmlJobs[ObjectIdentifier(job)] = job
+        }
+    }
+
+    /// A file the page built in memory (CSV export, PDF blob). WKWebView cannot
+    /// follow a `blob:` download, so the page hands the bytes over instead.
+    @objc func shareFile(_ call: CAPPluginCall) {
+        guard let base64 = call.getString("data"), let data = Data(base64Encoded: base64), !data.isEmpty, data.count <= 25_000_000 else {
+            call.reject("invalid-file"); return
+        }
+        let name = Self.safeName(call.getString("name"), fallback: "kiwi-export", keepDot: true)
+        DispatchQueue.main.async {
+            guard var presenter = self.bridge?.viewController else { call.reject("no-presenter"); return }
+            while let presented = presenter.presentedViewController { presenter = presented }
+            guard !presenter.isBeingDismissed else { call.reject("presenter-busy"); return }
+            self.presentFile(data, named: name, from: presenter, call: call,
+                             result: ["ok": true, "presented": true, "bytes": data.count])
+        }
+    }
+
+    private static func safeName(_ raw: String?, fallback: String, keepDot: Bool) -> String {
+        let cleaned = String((raw ?? "").filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || (keepDot && $0 == ".") }.prefix(120))
+        let trimmed = cleaned.trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        return trimmed.isEmpty ? fallback : trimmed
+    }
+
+    private func presentFile(_ data: Data, named name: String, from presenter: UIViewController, call: CAPPluginCall, result: [String: Any]) {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("KiwiShare-" + UUID().uuidString, isDirectory: true)
+        let file = folder.appendingPathComponent(name)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try data.write(to: file, options: [.atomic, .completeFileProtection])
+        } catch { try? FileManager.default.removeItem(at: folder); call.reject("file-write-failed"); return }
+        let activity = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+        if let popover = activity.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
+        activity.completionWithItemsHandler = { _, _, _, _ in try? FileManager.default.removeItem(at: folder) }
+        presenter.present(activity, animated: true) {
+            // Presented is not a claim that the user saved, printed or sent it.
+            call.resolve(result)
         }
     }
 

@@ -51,6 +51,9 @@ const NATIVE_FONTS = {
   'native-fonts/ibm-plex-sans-arabic-400.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2',
   'native-fonts/ibm-plex-sans-arabic-500.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2',
   'native-fonts/ibm-plex-sans-arabic-600.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2',
+  // Codes and tabular readouts (kitchen tickets, Team, dashboard). The web
+  // loads it from Google Fonts, which the bundle strips (NETWORK_FONT_RE).
+  'native-fonts/jetbrains-mono-latin.woff2': 'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',
 };
 
 /* Ce qui ne part pas dans le bundle : le site vitrine (assets/landing/, sauf
@@ -68,6 +71,9 @@ function excluded(rel) {
     return !(rel === 'assets/landing/kiwi-mark-app-icon.png' || rel.startsWith('assets/landing/icons/'));
   }
   if (/\.(md|map)$/.test(rel) && rel !== 'assets/icons/material/LICENSE') return true;
+  // Brand-book mascot (13 Mo) and the guides' article art (7 Mo): no app page
+  // references either, and they were a fifth of the download.
+  if (rel.startsWith('assets/mascot/') || rel.startsWith('assets/articles/')) return true;
   return false;
 }
 

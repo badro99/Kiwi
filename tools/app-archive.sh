@@ -37,6 +37,9 @@ if [ "$(git rev-parse HEAD)" != "$SOURCE" ] || [ -n "$(git status --porcelain --
   echo 'Source changed during validation; restart the release from a clean commit.' >&2; exit 1
 fi
 cd "$ROOT/app"
+# Install exactly the lockfile: a stale node_modules shipped a build without
+# the Keyboard plugin once, with nothing in the logs saying so.
+npm ci --no-audit --no-fund > "$RUN/npm.log" 2>&1 || { tail -40 "$RUN/npm.log"; exit 1; }
 npm run build > "$RUN/bundle.log" 2>&1
 npx --no-install cap sync ios > "$RUN/sync.log" 2>&1
 # The generated SPM path rewrite is not release source.

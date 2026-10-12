@@ -211,6 +211,9 @@ try {
   /* Native sheet: the Face ID offer and the sign-out question go to iOS. */
   {
     const { page, context, requests } = await phone('light', { hostSheet: true });
+    /* The fixture explores the demo, where the button only leaves the demo and
+       asks nothing (block below). A signed-in account is what the question guards. */
+    await page.evaluate(() => { window.KiwiEnv.isReal = () => true; });
     await page.evaluate(() => document.querySelector('[data-kno-account="sign-out"]').click());
     await sleep(200);
     const ask = await page.evaluate(() => window.__sheets[window.__sheets.length - 1]);
@@ -226,8 +229,10 @@ try {
   }
   {
     const { page, context, requests } = await phone('light', { hostSheet: false });
+    const leave = await page.evaluate(() => document.querySelector('[data-kno-account="sign-out"]').textContent.trim());
+    check(/^(Leave the demo|Quitter la démo|الخروج من العرض التجريبي)$/.test(leave), 'in the demo the button says it leaves the demo (' + leave + ')');
     await page.evaluate(() => document.querySelector('[data-kno-account="sign-out"]').click()); await sleep(400);
-    check(await page.evaluate(() => window.__sheets.length === 0) && requests.some((u) => /\/auth\/logout/.test(u)), 'a host without native sheets keeps the old direct path');
+    check(await page.evaluate(() => window.__sheets.length === 0) && requests.some((u) => /\/auth\/logout/.test(u)), 'leaving the demo asks nothing: there is no password to lose');
     await context.close();
   }
 

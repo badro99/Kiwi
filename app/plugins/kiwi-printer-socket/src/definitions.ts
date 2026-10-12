@@ -62,6 +62,10 @@ export interface LedgerReadResult { value: string | null; }
 export interface KiwiPrinterSocketPlugin {
   /** Presents a local A4 PDF. Saving, printing and sharing remain user actions. */
   exportInvoice(options: { html: string; name: string }): Promise<{ ok: true; presented: true; pages: number; bytes: number }>;
+  /** Lays out any printable page in WebKit and presents it as an A4 PDF (Print, Files, Share). */
+  printHtml(options: { html: string; name: string; baseUrl?: string }): Promise<{ ok: true; presented: true; bytes: number }>;
+  /** Presents bytes built in the page (CSV, PDF blob) in the system share sheet. `data` is base64. */
+  shareFile(options: { name: string; mime: string; data: string }): Promise<{ ok: true; presented: true; bytes: number }>;
   send(options: SendOptions): Promise<SendResult | PrinterSocketError>;
   probe(options: ProbeOptions): Promise<ProbeResult | PrinterSocketError>;
   scan(options?: ScanOptions): Promise<ScanResult | PrinterSocketError>;

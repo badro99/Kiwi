@@ -2,7 +2,8 @@
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-400.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-500.woff2") format("woff2");font-style:normal;font-weight:500;font-display:swap}
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-600.woff2") format("woff2");font-style:normal;font-weight:600;font-display:swap}
-html.kiwi-native{--kiwi-host-safe-top:0px;--kiwi-host-safe-right:0px;--kiwi-host-safe-bottom:0px;--kiwi-host-safe-left:0px;--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top));--kiwi-safe-right:max(env(safe-area-inset-right,0px),var(--kiwi-host-safe-right));--kiwi-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--kiwi-host-safe-bottom));--kiwi-safe-left:max(env(safe-area-inset-left,0px),var(--kiwi-host-safe-left));--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
+@font-face{font-family:"JetBrains Mono";src:url("native-fonts/jetbrains-mono-latin.woff2") format("woff2");font-style:normal;font-weight:100 800;font-display:swap}
+html.kiwi-native{--kiwi-host-safe-top:0px;--kiwi-host-safe-right:0px;--kiwi-host-safe-bottom:0px;--kiwi-host-safe-left:0px;--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top),var(--safe-area-inset-top,0px));--kiwi-safe-right:max(env(safe-area-inset-right,0px),var(--kiwi-host-safe-right),var(--safe-area-inset-right,0px));--kiwi-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--kiwi-host-safe-bottom),var(--safe-area-inset-bottom,0px));--kiwi-safe-left:max(env(safe-area-inset-left,0px),var(--kiwi-host-safe-left),var(--safe-area-inset-left,0px));--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
 html.kiwi-native,html.kiwi-native body{min-height:100%;font-family:"Inter Tight",sans-serif;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 html.kiwi-native[lang="ar"],html.kiwi-native[dir="rtl"]{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
 /* #0121 · Latin tracking breaks Arabic joins, including caisse labels. */
@@ -12,6 +13,8 @@ html.kiwi-native[lang="ar"] *{letter-spacing:0!important}
    here would expose top/bottom gutters and apply the safe area twice. */
 html.kiwi-native body:not(.native-shell-page){min-height:calc(100dvh - var(--kiwi-keyboard));padding-top:var(--kiwi-safe-top)!important;padding-right:var(--kiwi-safe-right)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + var(--kiwi-keyboard))!important;padding-left:var(--kiwi-safe-left)!important;overscroll-behavior:none}
 html.kiwi-native body.native-shell-page{min-height:calc(100dvh - var(--kiwi-keyboard));padding:0!important;overscroll-behavior:none}
+/* The keyboard covers the home indicator: pad by the keyboard alone, not both. */
+html.kiwi-native.kiwi-keyboard-open body:not(.native-shell-page){padding-bottom:var(--kiwi-keyboard)!important}
 html.kiwi-native button,html.kiwi-native [role="button"],html.kiwi-native nav,html.kiwi-native header,html.kiwi-native footer,html.kiwi-native .sidebar,html.kiwi-native .topbar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 html.kiwi-native input,html.kiwi-native textarea,html.kiwi-native [contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 html.kiwi-native .kiwi-native-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -98,8 +101,11 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till .rightpanel{bottom:calc(var(--kiwi-native-tabs) + 8px);max-height:calc(88dvh - var(--kiwi-native-tabs));--rp-peek-h:56px}
   /* The collapsed sheet is moved down with a transform, so the rest of it still painted
      under the native tab capsule. Clip it to the peek until it opens. */
-  html.kiwi-native body.kiwi-native-till .rightpanel{clip-path:inset(0 0 calc(100% - var(--rp-peek-h)) 0 round 18px 18px 0 0);transition:transform .32s var(--spring),clip-path .32s var(--spring)}
+  html.kiwi-native body.kiwi-native-till .rightpanel{clip-path:inset(0 0 calc(100% - var(--rp-peek-h)) 0 round 18px 18px 0 0);transition:transform .32s var(--glide,cubic-bezier(.32,.72,0,1)),clip-path .32s var(--glide,cubic-bezier(.32,.72,0,1))}
   html.kiwi-native body.kiwi-native-till.ticket-open .rightpanel{clip-path:inset(0 0 0 0 round 18px 18px 0 0)}
+  /* With the bill up the capsule is gone (syncTabs): the sheet sits on the edge
+     and pads itself above the home indicator, instead of floating 8 pt up. */
+  html.kiwi-native body.kiwi-native-till.ticket-open:not(.kiwi-native-docked) .rightpanel{bottom:0;max-height:calc(92dvh - var(--kiwi-safe-top));padding-bottom:var(--kiwi-safe-bottom)}
   html.kiwi-native body.kiwi-native-till .rp-peek{box-sizing:border-box;height:56px;min-height:56px;padding:7px 20px;gap:8px;white-space:nowrap}
   html.kiwi-native body.kiwi-native-till .rp-peek::after{content:'⌃';font-size:22px;line-height:1;color:var(--atlas)}
   html.kiwi-native body.kiwi-native-till #toast-stack{bottom:calc(var(--kiwi-native-tabs) + 72px)}
@@ -109,7 +115,7 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till :is(#cash-modal,#card-modal) .pay-tip-chips{display:flex;flex-wrap:nowrap;overflow-x:auto}
   html.kiwi-native body.kiwi-native-till :is(#cash-modal,#card-modal) .pay-tip-chips>*{flex:0 0 auto}
   html.kiwi-native body.kiwi-native-till[data-mode="vrap"] .pay-table-prefix,html.kiwi-native body.kiwi-native-till[data-mode="vrap"] .pay-covers-meta{display:none}
-  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{transform:translateY(100%);pointer-events:none;box-shadow:none;visibility:hidden;transition:transform .32s var(--spring),visibility 0s .32s}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{transform:translateY(100%);pointer-events:none;box-shadow:none;visibility:hidden;transition:transform .32s var(--glide,cubic-bezier(.32,.72,0,1)),visibility 0s .32s}
   /* The till tools drawer owns the screen while open; the bill shelf covered its last rows. */
   html.kiwi-native body.kiwi-native-till.nav-open .rightpanel{visibility:hidden}
   html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .main{padding-bottom:calc(16px + var(--kiwi-native-tabs))}
@@ -585,7 +591,8 @@ html.kiwi-native [data-action="upgrade-pro"],html.kiwi-native [data-action="upgr
 html.kiwi-native .kiwi-native-order-sheet{align-items:flex-end;padding:0}
 html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:calc(100dvh - var(--kiwi-safe-top) - 12px);padding-bottom:calc(20px + var(--kiwi-safe-bottom));overflow-y:auto}
 
-html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transform:translateY(100%);transition:transform 310ms var(--spring,cubic-bezier(0.34,1.45,0.5,1))}
+/* A sheet pinned to the bottom edge glides; the spring's overshoot lifted it off the edge. */
+html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transform:translateY(100%);transition:transform 310ms var(--glide,cubic-bezier(.32,.72,0,1))}
 html.kiwi-native .kiwi-native-order-sheet.in .kiwi-modal{transform:translateY(0)}
 html.kiwi-native .tx-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
 html.kiwi-native .tx-detail-grid dt{color:var(--n-500)}
@@ -1068,3 +1075,72 @@ html[dir="rtl"] .kiwi-paid-label{font-family:"IBM Plex Sans Arabic","Inter Tight
 .kiwi-sync-pill span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html.kiwi-sync-pill-on .kiwi-native-offline{display:none}
 @media(prefers-reduced-motion:reduce){.kiwi-sync-pill{transition:opacity .2s ease}}
+/* Documents a page opens to print (report, invoice, bons, QR tents): in-app
+   full-screen sheet; its own print() becomes a real A4 PDF (native-runtime.js). */
+.kiwi-native-doc{position:fixed;inset:0;z-index:2147483200;display:flex;flex-direction:column;background:#F7F5F0;padding:var(--kiwi-safe-top,0px) 0 var(--kiwi-safe-bottom,0px)}
+.kiwi-native-doc-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;min-height:56px;padding:4px max(12px,var(--kiwi-safe-right,0px)) 4px max(12px,var(--kiwi-safe-left,0px));border-bottom:1px solid rgba(10,15,13,.08);color:#0A0F0D;font:600 calc(16px * var(--type-scale,1))/1.2 "Inter Tight",sans-serif}
+.kiwi-native-doc-title{min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kiwi-native-doc-close,.kiwi-native-doc-share{min-height:44px;padding:0 16px;border:0;border-radius:999px;font:600 calc(15px * var(--type-scale,1))/1 "Inter Tight",sans-serif;background:transparent;color:#0B6E4F}
+.kiwi-native-doc-share{background:#0B6E4F;color:#F7F5F0}
+.kiwi-native-doc-close:active,.kiwi-native-doc-share:active{opacity:.72}
+.kiwi-native-doc-frame{flex:1;width:100%;min-height:0;border:0;background:#F7F5F0}
+@media(prefers-color-scheme:dark){.kiwi-native-doc{background:#0A0F0D}.kiwi-native-doc-bar{color:#F7F5F0;border-color:rgba(247,245,240,.1)}.kiwi-native-doc-close{color:#7DF2B0}.kiwi-native-doc-share{background:#7DF2B0;color:#0A0F0D}}
+
+/* iPad portrait and wide Split View panes (native-runtime sets kiwi-native-docked
+   between 700 and 900 pt wide and 700 pt tall): the bill docks beside the menu
+   as on the desktop till instead of hiding in the phone's bottom sheet. The
+   native capsule is centred over the menu column (trailingInset). */
+html.kiwi-native body.kiwi-native-till.kiwi-native-docked:not(.is-pos):not(#kno) .rightpanel{position:relative!important;inset:auto!important;width:min(320px,40vw)!important;flex:0 0 min(320px,40vw)!important;max-height:none!important;transform:none!important;clip-path:none!important;visibility:visible!important;pointer-events:auto!important;border-radius:0!important;box-shadow:none!important;border-inline-start:1px solid var(--line);z-index:auto;padding-bottom:var(--kiwi-safe-bottom,0px);transition:none}
+html.kiwi-native body.kiwi-native-till.kiwi-native-docked:not(.is-pos):not(#kno) :is(.rp-peek,.kiwi-native-sheet-grabber,.kiwi-native-sheet-scrim,.kiwi-native-cart-more){display:none!important}
+html.kiwi-native body.kiwi-native-till.kiwi-native-docked:not(.is-pos):not(#kno) .rp-active{overflow-y:auto;overscroll-behavior:contain}
+html.kiwi-native body.kiwi-native-till.kiwi-native-docked:not(.is-pos):not(#kno) .main{padding-bottom:calc(16px + var(--kiwi-native-tabs,0px))}
+
+/* Audit 2026-10-12 · the remaining phone polish. */
+/* The account sheet (delete account, AI consent) followed the system theme
+   everywhere except here: a bone card flashed over a dark till at night. */
+@media (prefers-color-scheme:dark){
+  html.kiwi-native .kiwi-native-account{background:rgba(0,0,0,.66)}
+  html.kiwi-native .kiwi-native-account-card{background:#0A0F0D;color:#F7F5F0;box-shadow:0 -16px 38px rgba(0,0,0,.5)}
+  html.kiwi-native .kiwi-native-account-card input{background:#121A16;color:#F7F5F0;border-color:rgba(247,245,240,.28)}
+  html.kiwi-native .kiwi-native-account-actions button{background:transparent;color:#7DF2B0;border-color:rgba(125,242,176,.55)}
+  html.kiwi-native .kiwi-native-account-actions [data-submit]{background:#0B6E4F;color:#F7F5F0;border-color:#0B6E4F}
+}
+@media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
+  /* The till drawer scrolled its rows up under the clock and the battery. A
+     border in the drawer's own colour masks the status bar strip, as the
+     Team and Kitchen menu already does. */
+  html.kiwi-native body.kiwi-native-till .sidebar{border-top:var(--kiwi-safe-top) solid var(--ink-bg,#0A0F0D);padding-top:22px}
+  /* Press feedback where a tap starts a heavier action. */
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row{transition:transform .12s ease,background-color .12s ease}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row:active{transform:scale(.985);background:var(--paper-mute,#EFEDE7)}
+  html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-cart-more:active{background:var(--line,rgba(10,15,13,.1))}
+}
+@media (max-width:600px){
+  /* Kitchen pairing stacks the logo over the word; the side divider of the
+     inline lockup was left hanging beside the word. */
+  html.kiwi-native body:not(#kno) #pair .kw span{border:0;padding:0}
+  /* Every till dialog is a bottom sheet on a phone, as payment already was:
+     centred cards fell under the thumb's reach and under the keyboard. */
+  html.kiwi-native body.kiwi-native-till .modal-veil.is-open{align-items:flex-end;padding:var(--kiwi-safe-top) 0 0}
+  html.kiwi-native body.kiwi-native-till .modal-veil.is-open>.modal{box-sizing:border-box;width:100%;max-width:none;max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-keyboard,0px));margin:0;border-radius:20px 20px 0 0;padding-bottom:calc(20px + var(--kiwi-safe-bottom));overflow-y:auto;overscroll-behavior:contain;animation:kiwi-native-sheet-up .32s var(--glide,cubic-bezier(.32,.72,0,1))}
+  html.kiwi-native body.kiwi-native-till .modal-veil.is-open>.modal::before{content:"";display:block;width:36px;height:5px;border-radius:3px;margin:-14px auto 14px;background:rgba(10,15,13,.18)}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till .modal-veil.is-open>.modal::before{background:rgba(255,255,255,.22)}
+}
+@keyframes kiwi-native-sheet-up{from{transform:translateY(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){html.kiwi-native body.kiwi-native-till .modal-veil.is-open>.modal{animation:none}}
+
+/* The printer dialog is centred with a 20px margin: on a notched phone its top
+   slid under the Dynamic Island. The host publishes the real insets. */
+html.kiwi-native #kpr-ov{padding:calc(var(--kiwi-safe-top) + 8px) max(12px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 8px) max(12px,var(--kiwi-safe-left))!important}
+html.kiwi-native #kpr-card{max-height:100%!important;box-sizing:border-box}
+/* The end-of-shift card is centred in a 20px margin: tall as it is, its top
+   sat under the clock and the Dynamic Island. On a phone it is a bottom sheet
+   below the status bar; elsewhere the veil keeps the insets. No drag-to-close
+   here on purpose: it holds the counted cash. */
+html.kiwi-native body.kiwi-native-till .cloture-veil{padding:calc(var(--kiwi-safe-top) + 8px) max(12px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 8px) max(12px,var(--kiwi-safe-left))}
+html.kiwi-native body.kiwi-native-till .cloture-card{max-height:100%;box-sizing:border-box}
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-till .cloture-veil.is-open{align-items:flex-end;padding:var(--kiwi-safe-top) 0 0}
+  html.kiwi-native body.kiwi-native-till .cloture-veil.is-open .cloture-card{width:100%;max-width:none;max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-keyboard,0px));border-radius:20px 20px 0 0;padding:22px 20px calc(20px + var(--kiwi-safe-bottom));animation:kiwi-native-sheet-up .32s var(--glide,cubic-bezier(.32,.72,0,1))}
+}
+@media (prefers-reduced-motion:reduce){html.kiwi-native body.kiwi-native-till .cloture-veil.is-open .cloture-card{animation:none}}

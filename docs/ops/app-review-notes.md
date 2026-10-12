@@ -49,8 +49,10 @@ the account still needs (owner code, menu, staff).
 > No printer is needed. The first time you open Printer › Test, iOS asks for
 > Local Network access: the app sends ESC/POS tickets to a thermal printer on
 > the Wi-Fi (TCP port 9100). Without a printer, tickets queue and the app keeps
-> working. The camera is only used to scan a barcode or photograph a delivery
-> note.
+> working. The camera is only used when the merchant photographs a delivery
+> note (stock), the floor plan (table setup) or a hotel guest's ID at check-in.
+> The iOS app does not scan barcodes with the camera: WebKit has no barcode
+> detector, and the boutique scan screen says so.
 >
 > There are no in-app purchases, no subscriptions or prices shown in the app,
 > no ads, no tracking and no third-party login.

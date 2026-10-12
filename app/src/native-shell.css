@@ -104,7 +104,7 @@ html[dir="rtl"] .progress li:not(:last-child)::after { left: auto; right: 16px; 
 .login-title { margin: 0; color: var(--n-500); font: 600 calc(11px * var(--type-scale, 1)) / 1 var(--sans); letter-spacing: .1em; text-transform: uppercase; }
 .field { display: flex; flex-direction: column; gap: 6px; /* off-scale: optical alignment between label and 48px input border */ color: var(--n-500); font-size: calc(12px * var(--type-scale, 1)); }
 .field input, .field select { width: 100%; min-height: 48px; padding: var(--space-3) 14px; outline: none; border: 1px solid var(--n-200); border-radius: var(--r-md); background: rgba(247,245,240,.78); color: var(--ink); font: 500 calc(16px * var(--type-scale, 1)) / 1.2 var(--sans); transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease; }
-.field input:focus, .field select:focus { border-color: var(--atlas); background: #fff; box-shadow: 0 0 0 3px rgba(11,110,79,.22); }
+.field input:focus, .field select:focus { border-color: var(--atlas); background: #FFFDFA; box-shadow: 0 0 0 3px rgba(11,110,79,.22); }
 .field input[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: #9B2C2C; }
 .field input[aria-invalid="true"]:focus, .field select[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(155,44,44,.22); }
 .field input[dir="ltr"] { direction: ltr; text-align: start; }

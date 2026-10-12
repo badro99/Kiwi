@@ -68,7 +68,8 @@ ok(/\.acc-avatar \{[^}]*background:#F7F5F0; color:#053B2C/.test(account), 'profi
 ok(/data-vexel-mode="light"\] \.topbar \.vexel-topbar-merchant \.avatar \{\s*color: #053B2C/.test(vexel), 'light top-bar avatar is riad, not mint on white');
 
 // P2 · motion and haptics
-ok(/kiwi-native-order-sheet \.kiwi-modal\{transform:translateY\(100%\);transition:transform 310ms var\(--spring/.test(runtimeCss), 'sheets rise with the brand spring at 310 ms');
+/* A sheet pinned to the bottom edge glides: the spring's overshoot lifted it off the edge (audit 2026-10-12). */
+ok(/kiwi-native-order-sheet \.kiwi-modal\{transform:translateY\(100%\);transition:transform 310ms var\(--glide,cubic-bezier\(\.32,\.72,0,1\)\)/.test(runtimeCss), 'bottom sheets rise in 310 ms on a glide, never overshooting the edge');
 ok(/\.pin-dot\{transition:[^}]*310ms cubic-bezier\(0\.34,1\.45,0\.5,1\)/.test(runtimeCss), 'Team keypad dots fill with the spring');
 ok(/prefers-reduced-motion:reduce\)\{html\.kiwi-native \.pin-dot\{transition:none/.test(runtimeCss), 'Reduce Motion turns the dot spring off');
 ok(/type === 'success'\) hapticNotice\('success'\)/.test(runtime), 'success toasts give a success haptic');

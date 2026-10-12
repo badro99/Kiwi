@@ -51,10 +51,11 @@ if (first) {
   assert(first.manifest.files.some((f) => f.path === 'assets/api-base.js'), 'assets/api-base.js est dans le bundle');
   assert(first.manifest.files.some((f) => f.path === 'index.html'), 'la coquille native (index.html) est dans le bundle');
   assert(first.manifest.files.some((f) => f.path === 'native-runtime.js'), 'le runtime natif partagé est dans le bundle');
-  assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).length === 4, 'Inter Tight et IBM Plex Sans Arabic sont embarquées localement');
+  assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).length === 5, 'Inter Tight, IBM Plex Sans Arabic et JetBrains Mono sont embarquées localement');
   assert(!first.manifest.files.some((f) => / \d+\.[a-z]+$/i.test(f.path)), 'aucune copie de conflit iCloud « fichier 2.js » dans le bundle');
   const hardware = first.manifest.files.filter((f) => f.path.startsWith('assets/media/'));
   assert(hardware.length === 6 && hardware.every((f) => f.path.startsWith('assets/media/hardware/')), 'seules les six photos de terminaux utilisées sont embarquées');
+  assert(!first.manifest.files.some((f) => /^assets\/(mascot|articles)\//.test(f.path)), 'ni la mascotte (13 Mo) ni les illustrations des guides (7 Mo) ne partent dans l\'app');
 
   for (const page of PAGES.concat(['index.html'])) {
     const html = fs.readFileSync(path.join(first.out, page), 'utf8');

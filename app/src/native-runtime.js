@@ -75,6 +75,9 @@
     }
     shield.hidden = !payload.tabs || !payload.tabs.length;
     shield.style.width = 'min(calc(100% - 24px), ' + ((payload.tabs || []).length * 74 + 12) + 'px)';
+    // On an iPad the capsule is centred over the menu, beside the docked bill.
+    var inset = Math.max(0, Number(payload.trailingInset) || 0);
+    shield.style.marginLeft = inset ? ((payload.rtl ? 1 : -1) * inset / 2) + 'px' : '';
   }
   var splashHidden = false;
   var splashFallback = setTimeout(hideLaunchSplash, 8000);
@@ -243,6 +246,14 @@
   function nativeRegisterOpen() {
     return !!(document.body && document.body.classList.contains('is-pos'));
   }
+  /* iPad portrait (and a wide Split View pane): too wide for the phone's bill
+     sheet, too narrow for the desktop's three columns. The bill docks beside
+     the menu, like the desktop till, and the drawer stays off-canvas. */
+  function nativeDockedTill() {
+    if (!document.body || !document.body.classList.contains('kiwi-native-till') || nativeRegisterOpen()) return false;
+    var width = window.innerWidth, height = window.innerHeight;
+    return width >= 700 && width <= 900 && height >= 700;
+  }
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
     if (document.querySelector('#pair.on,.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) return true;
@@ -329,17 +340,29 @@
     var viewport = window.visualViewport;
     var keyboard = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
     root.style.setProperty('--kiwi-keyboard', keyboard > 80 ? keyboard + 'px' : '0px');
+    // The keyboard already covers the home indicator: its height must not be
+    // added on top of the bottom safe area.
+    root.classList.toggle('kiwi-keyboard-open', keyboard > 80);
   }
   function revealFocused(event) {
     var target = event.target;
     if (!target || !target.matches || !target.matches('input,textarea,[contenteditable="true"]')) return;
     setTimeout(function () { try { target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }); } catch (_) {} }, 180);
   }
+  /* Each screen says what being offline actually does to it. Only the till
+     keeps an outbox; the waiter's order is refused (and says so), the kitchen
+     receives nothing new, and the dashboard shows its last figures. */
   function offlineCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
-    if (lang.indexOf('ar') === 0) return 'لا يوجد اتصال. ستتم مزامنة العمليات عند عودة الشبكة.';
-    if (lang.indexOf('en') === 0) return 'Offline. Operations will sync when the network returns.';
-    return 'Hors ligne. Les opérations seront synchronisées au retour du réseau.';
+    var page = location.pathname.split('/').pop();
+    var lines = {
+      'kiwi-caisse.html': ['Hors ligne. Les ventes restent sur cette caisse et partent au retour du réseau.', 'Offline. Sales stay on this till and send when the network returns.', 'لا يوجد اتصال. تبقى المبيعات على هذا الصندوق وتُرسل عند عودة الشبكة.'],
+      'kiwi-serveur.html': ['Hors ligne. Les commandes ne partent pas en cuisine : renvoyez-les au retour du réseau.', 'Offline. Orders do not reach the kitchen: send them again when the network returns.', 'لا يوجد اتصال. لا تصل الطلبات إلى المطبخ: أعد إرسالها عند عودة الشبكة.'],
+      'kiwi-cuisine.html': ['Hors ligne. Les nouveaux bons arriveront au retour du réseau.', 'Offline. New tickets will arrive when the network returns.', 'لا يوجد اتصال. ستصل الطلبات الجديدة عند عودة الشبكة.'],
+      'dashboard.html': ['Hors ligne. Les chiffres affichés datent de la dernière connexion.', 'Offline. Figures shown are from the last connection.', 'لا يوجد اتصال. الأرقام المعروضة من آخر اتصال.']
+    };
+    var line = lines[page] || ['Hors ligne. Vérifiez la connexion de cet appareil.', 'Offline. Check this device’s connection.', 'لا يوجد اتصال. تحقق من اتصال هذا الجهاز.'];
+    return lang.indexOf('ar') === 0 ? line[2] : lang.indexOf('en') === 0 ? line[1] : line[0];
   }
   function ensureOfflineBanner() {
     var banner = document.querySelector('.kiwi-native-offline');
@@ -354,6 +377,8 @@
   }
   function paintNetwork(status) {
     var banner = ensureOfflineBanner();
+    var text = offlineCopy();
+    if (banner.textContent !== text) banner.textContent = text;
     banner.classList.toggle('is-visible', !!status && status.connected === false);
     root.classList.toggle('kiwi-native-is-offline', !!status && status.connected === false);
   }
@@ -366,10 +391,30 @@
     if (document.body && document.body.classList.contains('native-shell-page')) return;
     var dynamicType = plugins.KiwiDynamicType;
     if (!dynamicType) return;
-    function applyScale(scale) {
+    /* --type-scale only reached the native chrome; the pages themselves stayed
+       at their fixed sizes whatever the phone's text setting. On iPhone, WebKit
+       scales the whole page's text through text-size-adjust, so the chrome then
+       keeps scale 1 (both would double it). iPad has no text autosizing and
+       keeps the chrome-only scale. */
+    var iphone = /iPhone|iPod/.test(navigator.userAgent || '');
+    function applyScale(scale, result) {
       if (typeof scale !== 'number' || isNaN(scale)) return;
+      /* Android reports hostTextZoom: the WebView already zooms every font size
+         from the same setting, so a CSS scale on top would count it twice. */
+      if (result && typeof result.hostTextZoom === 'number') scale = 1;
       var capped = Math.min(1.35, Math.max(0.85, scale));
-      if (Math.abs(capped - 1) < 0.005) root.style.removeProperty('--type-scale');
+      var neutral = Math.abs(capped - 1) < 0.005;
+      if (iphone) {
+        var percent = neutral ? '' : Math.round(capped * 100) + '%';
+        [root, document.body].forEach(function (node) {
+          if (!node) return;
+          if (percent) { node.style.setProperty('-webkit-text-size-adjust', percent, 'important'); node.style.setProperty('text-size-adjust', percent, 'important'); }
+          else { node.style.removeProperty('-webkit-text-size-adjust'); node.style.removeProperty('text-size-adjust'); }
+        });
+        root.style.removeProperty('--type-scale');
+        return;
+      }
+      if (neutral) root.style.removeProperty('--type-scale');
       else root.style.setProperty('--type-scale', String(capped));
     }
     if (typeof dynamicType.getDynamicTypeScale === 'function') {
@@ -377,11 +422,11 @@
         Promise.race([
           dynamicType.getDynamicTypeScale(),
           new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 1000); })
-        ]).then(function (result) { if (result) applyScale(result.scale); }).catch(function () {});
+        ]).then(function (result) { if (result) applyScale(result.scale, result); }).catch(function () {});
       } catch (_) {}
     }
     if (typeof dynamicType.addListener === 'function') {
-      try { dynamicType.addListener('dynamicTypeChange', function (result) { if (result) applyScale(result.scale); }); } catch (_) {}
+      try { dynamicType.addListener('dynamicTypeChange', function (result) { if (result) applyScale(result.scale, result); }); } catch (_) {}
     }
   }
 
@@ -742,7 +787,8 @@
 
   function nativeWorkspaceAction(payload) {
     if (!payload) return false;
-    if (payload.action === 'change-role') { location.href = 'index.html?choose=1'; return true; }
+    // replace(): Android's back button must not walk back into the workspace just left.
+    if (payload.action === 'change-role') { location.replace('index.html?choose=1'); return true; }
     if (payload.action === 'ai-privacy') { if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.show(); return true; }
     if (payload.action === 'delete-account') { nativeAccountDeletion(); return true; }
     if (payload.action === 'open-tools') { if (document.body) document.body.classList.add('nav-open'); hapticLight(); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); return true; }
@@ -750,7 +796,7 @@
       if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.reset();
       fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
         localStorage.removeItem('kiwiAppRole');
-        call(socket, 'secureRemove', { key:'app-role' }).then(function () { location.href = 'index.html?setup=1'; });
+        call(socket, 'secureRemove', { key:'app-role' }).then(function () { location.replace('index.html?setup=1'); });
       }).catch(function () { window.alert(root.lang === 'ar' ? 'يتطلب تسجيل الخروج اتصالاً بالشبكة.' : root.lang === 'en' ? 'Sign out needs a network connection.' : 'Déconnexion impossible hors ligne.'); });
       return true;
     }
@@ -766,6 +812,17 @@
     if (lang.indexOf('en') === 0) return { open:'Open menu', close:'Close menu', label:'Account', role:'Change role', out:'Sign out', ai:'Kiwi AI privacy', del:'Delete my account', team:'Kiwi Team', kitchen:'Kitchen' };
     return { open:'Ouvrir le menu', close:'Fermer le menu', label:'Compte', role:'Changer de rôle', out:'Se déconnecter', ai:'Confidentialité Kiwi AI', del:'Supprimer mon compte', team:'Kiwi Équipe', kitchen:'Cuisine' };
   }
+  /* The demo has no account: "Sign out" there only leaves the demo, so it says
+     so and does not ask for a password it never had. Delete stays visible: its
+     sheet explains there is nothing to delete and how to sign in. */
+  function nativeDemoSession() {
+    var env = window.KiwiEnv;
+    try { return !!(env && typeof env.isReal === 'function' && !env.isReal()); } catch (_) { return false; }
+  }
+  function leaveDemoLabel() {
+    var lang = String(root.lang || 'fr');
+    return lang.indexOf('ar') === 0 ? 'الخروج من العرض التجريبي' : lang.indexOf('en') === 0 ? 'Leave the demo' : 'Quitter la démo';
+  }
   function signOutCopy() {
     var lang = String(root.lang || 'fr');
     if (lang.indexOf('ar') === 0) return { title:'تسجيل الخروج من Kiwi Pro؟', message:'ستحتاج إلى بريدك الإلكتروني وكلمة المرور للعودة.', confirm:'تسجيل الخروج', cancel:'إلغاء' };
@@ -780,15 +837,17 @@
   function mountNativeAccountGroup(container, before) {
     if (!container) return;
     var words = nativeMenuCopy();
+    var demo = nativeDemoSession();
+    var key = (root.lang || '') + (demo ? ':demo' : '');
     var box = container.querySelector('.kno-account');
-    if (box && box.getAttribute('data-lang') === root.lang) return;
+    if (box && box.getAttribute('data-lang') === key) return;
     if (box) box.remove();
     box = document.createElement('div');
     box.className = 'kno-account';
     box.setAttribute('role', 'group');
     box.setAttribute('aria-label', words.label);
-    box.setAttribute('data-lang', root.lang || '');
-    box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
+    box.setAttribute('data-lang', key);
+    box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', demo ? leaveDemoLabel() : words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
       return '<button type="button" data-kno-account="' + item[0] + '" class="' + item[3] + '"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
     }).join('');
     box.addEventListener('click', function (event) {
@@ -799,11 +858,15 @@
       var action = button.getAttribute('data-kno-account');
       /* One stray tap used to sign the device out mid-service. With the native
          sheet, signing out asks first, the way iOS does. */
-      if (action === 'sign-out' && nativeSheetAvailable()) {
+      if (action === 'sign-out' && !nativeDemoSession()) {
         var ask = signOutCopy();
-        nativeSheet({ title:ask.title, message:ask.message, actions:[{ id:'sign-out', label:ask.confirm, style:'destructive' }, { id:'cancel', label:ask.cancel }] })
-          .then(function (choice) { if (choice === 'sign-out') nativeWorkspaceAction({ action:'sign-out' }); });
-        return;
+        if (nativeSheetAvailable()) {
+          nativeSheet({ title:ask.title, message:ask.message, actions:[{ id:'sign-out', label:ask.confirm, style:'destructive' }, { id:'cancel', label:ask.cancel }] })
+            .then(function (choice) { if (choice === 'sign-out') nativeWorkspaceAction({ action:'sign-out' }); });
+          return;
+        }
+        // Android has no native sheet: the system dialog still asks first.
+        if (!window.confirm(ask.title + '\n\n' + ask.message)) return;
       }
       nativeWorkspaceAction({ action:action });
     });
@@ -990,10 +1053,26 @@
       window.KiwiLens.refresh();
     }
 
+    var dockedCart = document.querySelector('.rightpanel');
+    function syncDock() {
+      var docked = nativeDockedTill();
+      if (document.body.classList.contains('kiwi-native-docked') !== docked) document.body.classList.toggle('kiwi-native-docked', docked);
+      // A docked bill is always open; the sheet state would hide its actions.
+      if (docked && document.body.classList.contains('ticket-open')) document.body.classList.remove('ticket-open');
+      return docked;
+    }
     function syncTabs() {
+      var docked = syncDock();
       var mode = document.body.dataset.mode || 'salle';
       var drawerOpen = document.body.classList.contains('nav-open');
       var selected = drawerOpen ? 'more' : mode;
+      /* While the bill sheet is up on a phone it owns the bottom of the screen:
+         the capsule floated over its Pay button. Swift hides the host when the
+         list is empty and publishes a zero tab height, so the sheet reaches
+         the bottom on its own. */
+      var sheetUp = !docked && document.body.classList.contains('ticket-open');
+      var trailingInset = 0;
+      if (docked && dockedCart && dockedCart.getClientRects().length) trailingInset = Math.round(dockedCart.getBoundingClientRect().width);
       nav.querySelectorAll('[data-native-tab]').forEach(function (button) {
         var tab = button.getAttribute('data-native-tab');
         var active = tab === selected;
@@ -1001,8 +1080,8 @@
         button.setAttribute('aria-current', active ? 'page' : 'false');
       });
       nativeHostPost({
-        version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected,
-        tabs:nativeBlockingLayer() || nativeRegisterOpen() || window.innerWidth > 900 ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
+        version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected, trailingInset:trailingInset,
+        tabs:nativeBlockingLayer() || nativeRegisterOpen() || sheetUp || window.innerWidth > 900 ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
       });
     }
     function activateNativeTab(mode) {
@@ -1028,6 +1107,14 @@
     window.KiwiNativeHostAction = function (payload) { if (nativeWorkspaceAction(payload)) return; if (payload && payload.action === 'navigate') activateNativeTab(String(payload.id || '')); };
     window.KiwiNativeHostRequestState = syncTabs;
     new MutationObserver(syncTabs).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
+    // Rotating an iPad or resizing a Split View pane crosses the 900 pt line
+    // without any class changing; the tab list and the dock follow the size.
+    var tabsResizeQueued = false;
+    window.addEventListener('resize', function () {
+      if (tabsResizeQueued) return;
+      tabsResizeQueued = true;
+      requestAnimationFrame(function () { tabsResizeQueued = false; syncTabs(); });
+    });
     syncTabs();
 
     var openTillMenu = function () { document.body.classList.add('nav-open'); syncTabs(); };
@@ -1882,6 +1969,52 @@
     });
     app.addListener('backButton', handleNativeBack);
   }
+  /* Every sheet that shows a grab handle can be pulled down to close it, as
+     the bill sheet already could. Only from the handle band at the top of a
+     sheet that sits on the bottom edge; the content below still scrolls. */
+  function initSheetDrag() {
+    var SHEETS = '.kiwi-backdrop .kiwi-modal,.modal-veil.is-open > .modal';
+    var drag = null;
+    function hasHandle(sheet) {
+      if (sheet.querySelector(':scope > .modal-handle')) return true;
+      try { var mark = getComputedStyle(sheet, '::before').content; return !!mark && mark !== 'none' && mark !== 'normal'; } catch (_) { return false; }
+    }
+    document.addEventListener('touchstart', function (event) {
+      drag = null;
+      var touch = event.touches && event.touches.length === 1 ? event.touches[0] : null;
+      var sheet = touch && event.target.closest ? event.target.closest(SHEETS) : null;
+      if (!sheet || event.target.closest('input,textarea,select,button,a')) return;
+      var box = sheet.getBoundingClientRect();
+      if (box.bottom < window.innerHeight - 4 || touch.clientY - box.top > 40 || !hasHandle(sheet)) return;
+      drag = { sheet:sheet, layer:sheet.closest('.kiwi-backdrop,.modal-veil'), y:touch.clientY, t:Date.now(), dy:0 };
+    }, { passive:true });
+    document.addEventListener('touchmove', function (event) {
+      if (!drag || !event.touches || !event.touches[0]) return;
+      drag.dy = Math.max(0, event.touches[0].clientY - drag.y);
+      drag.sheet.style.transition = 'none';
+      drag.sheet.style.transform = 'translateY(' + drag.dy + 'px)';
+    }, { passive:true });
+    function release() {
+      if (!drag) return;
+      var d = drag; drag = null;
+      var speed = d.dy / Math.max(1, Date.now() - d.t);
+      d.sheet.style.transition = 'transform .24s var(--glide,cubic-bezier(.32,.72,0,1))';
+      if (d.dy > 96 || (d.dy > 32 && speed > 0.6)) {
+        hapticLight();
+        d.sheet.style.transform = 'translateY(100%)';
+        dismissNativeLayer(d.layer);
+        // The till and Team hide a closed sheet rather than remove it: clear the
+        // pull so the next opening starts from rest.
+        setTimeout(function () { d.sheet.style.removeProperty('transform'); d.sheet.style.removeProperty('transition'); }, 320);
+      } else {
+        d.sheet.style.removeProperty('transform');
+        setTimeout(function () { d.sheet.style.removeProperty('transition'); }, 260);
+      }
+    }
+    document.addEventListener('touchend', release, { passive:true });
+    document.addEventListener('touchcancel', release, { passive:true });
+  }
+  initSheetDrag();
   initNativeSwipeBack();
   initPeriodSwipe();
   initChipRowFollow();
@@ -2104,7 +2237,21 @@
           var run = cur.blocked && typeof l.retryBlockedSales === 'function'
             ? Promise.resolve(l.retryBlockedSales()).then(function () { return l.flush && l.flush(true); })
             : Promise.resolve(l.flush && l.flush(true));
-          run.catch(function () {}).then(function () { syncing = false; syncPaint(); });
+          run.catch(function () {}).then(function () {
+            syncing = false;
+            syncPaint();
+            /* Say what the tap did: a retry that changes nothing on screen
+               reads as a dead button. */
+            var after = {};
+            try { after = l.queueStatus() || {}; } catch (_) {}
+            var lang = String(document.documentElement.lang || 'fr');
+            var ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
+            var say = window.KiwiCaisseToast;
+            if (typeof say !== 'function') return;
+            if (!after.blocked && !after.pending) say(ar ? 'تم إرسال كل شيء' : en ? 'Everything is sent' : 'Tout est envoyé', 2400, 'success');
+            else if (navigator.onLine === false) say(ar ? 'لا يوجد اتصال · سيبدأ الإرسال عند عودة الشبكة' : en ? 'Offline · sending resumes when the network returns' : 'Hors ligne · l’envoi reprendra au retour du réseau', 3600, 'warn');
+            else if (after.blocked) say(ar ? 'ما زالت محفوظة على هذا الصندوق · لم يُفقد شيء' : en ? 'Still held on this till · nothing is lost' : 'Toujours conservé sur cette caisse · rien n’est perdu', 4200, 'warn', ar ? 'إذا استمر ذلك، اتصل بدعم Kiwi.' : en ? 'If it stays held, contact Kiwi support.' : 'Si cela persiste, contactez le support Kiwi.');
+          });
         });
         document.body.appendChild(syncPill);
       }
@@ -2227,4 +2374,221 @@
     });
   }
   window.addEventListener('pagehide', function () { write('clean'); });
+})();
+
+/* Exports et documents imprimables (audit natif 2026-10-12).
+   WKWebView ne suit ni un téléchargement `blob:` ni une fenêtre vide
+   `window.open('')` : Capacitor annule l'un et renvoie null pour l'autre.
+   Une vingtaine d'exports CSV et une dizaine de documents à imprimer (rapport
+   du jour, factures, bons, chevalets QR, plan de salle) échouaient donc, en
+   silence pour les CSV. Ici, sans toucher aux sites d'appel :
+     · un lien de fichier en mémoire part dans la feuille de partage système ;
+     · une fenêtre vide devient un document plein écran dans l'app, avec
+       Fermer et Imprimer ou partager ; son print() produit un vrai PDF A4. */
+(function () {
+  'use strict';
+  var cap = window.Capacitor;
+  if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
+  // Every path here starts from a blob URL or a document; a host without them has nothing to export.
+  if (typeof URL !== 'function' || typeof URL.createObjectURL !== 'function' || typeof document === 'undefined') return;
+  var plugin = (cap.Plugins || {}).KiwiPrinterSocket;
+  var root = document.documentElement;
+  var COPY = {
+    fr: { close:'Fermer', share:'Imprimer ou partager', failed:'Impossible de préparer le fichier. Réessayez.', untitled:'Document' },
+    en: { close:'Close', share:'Print or share', failed:'Could not prepare the file. Try again.', untitled:'Document' },
+    ar: { close:'إغلاق', share:'طباعة أو مشاركة', failed:'تعذّر تجهيز الملف. حاول مرة أخرى.', untitled:'مستند' }
+  };
+  function copy() {
+    var lang = String(root.lang || 'fr').toLowerCase().slice(0, 2);
+    return COPY[lang] || COPY.fr;
+  }
+  function notify(message) {
+    // The till's toast takes a duration before the kind: toast(msg, ms, kind).
+    try { if (typeof window.KiwiCaisseToast === 'function') { window.KiwiCaisseToast(message, 4200, 'danger'); return; } } catch (_) {}
+    try { if (window.Kiwi && typeof window.Kiwi.toast === 'function') { window.Kiwi.toast(message, { type:'error' }); return; } } catch (_) {}
+  }
+  function can(method) { return !!(plugin && typeof plugin[method] === 'function'); }
+
+  /* ── Fichiers en mémoire ─────────────────────────────────────────────── */
+  var blobs = Object.create(null);
+  var createURL = URL.createObjectURL, revokeURL = URL.revokeObjectURL;
+  function remember(obj, url) {
+    if (url && obj && typeof obj === 'object' && typeof obj.size === 'number') blobs[url] = obj;
+    return url;
+  }
+  URL.createObjectURL = function (obj) { return remember(obj, createURL.apply(URL, arguments)); };
+  // Sites revoke right after click(); the share reads the bytes a beat later.
+  URL.revokeObjectURL = function (url) {
+    var args = arguments;
+    setTimeout(function () { delete blobs[url]; revokeURL.apply(URL, args); }, 60000);
+  };
+  function blobFor(href) {
+    if (blobs[href]) return Promise.resolve(blobs[href]);
+    if (/^data:/i.test(href)) {
+      return new Promise(function (resolve, reject) {
+        try {
+          var comma = href.indexOf(',');
+          var meta = href.slice(5, comma), body = href.slice(comma + 1);
+          var mime = meta.split(';')[0] || 'application/octet-stream';
+          var raw = /;base64/i.test(meta) ? atob(body) : decodeURIComponent(body);
+          var bytes = new Uint8Array(raw.length);
+          for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i) & 255;
+          resolve(new Blob([bytes], { type: mime }));
+        } catch (error) { reject(error); }
+      });
+    }
+    return Promise.reject(new Error('unknown-blob'));
+  }
+  function base64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { var s = String(reader.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsDataURL(blob);
+    });
+  }
+  function isFileLink(a) {
+    var href = a && a.getAttribute && a.getAttribute('href');
+    return !!href && /^(blob:|data:)/i.test(href);
+  }
+  function shareLink(a) {
+    var href = a.getAttribute('href');
+    var name = a.getAttribute('download') || 'kiwi-export';
+    if (!can('shareFile')) { notify(copy().failed); return; }
+    blobFor(href).then(function (blob) {
+      return base64(blob).then(function (data) {
+        return plugin.shareFile({ name: name, mime: blob.type || 'application/octet-stream', data: data });
+      });
+    }).catch(function () { notify(copy().failed); });
+  }
+  function onFileLinkClick(event) {
+    var a = event.target && event.target.closest && event.target.closest('a[href]');
+    if (!a || !isFileLink(a)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    shareLink(a);
+  }
+  function armFileLinks(win) {
+    try {
+      var proto = win.HTMLAnchorElement && win.HTMLAnchorElement.prototype;
+      if (proto && !proto.__kiwiShareArmed) {
+        var click = proto.click;
+        proto.click = function () { if (isFileLink(this)) { shareLink(this); return; } return click.apply(this, arguments); };
+        Object.defineProperty(proto, '__kiwiShareArmed', { value: true });
+      }
+      // document.open() erases a document's listeners; re-adding the same
+      // function is a no-op otherwise, so arm on every write.
+      win.document.addEventListener('click', onFileLinkClick, true);
+    } catch (_) {}
+  }
+  armFileLinks(window);
+
+  /* ── Documents à imprimer ────────────────────────────────────────────── */
+  var nativeOpen = window.open;
+  var lastPrint = 0;
+  function sendToPdf(html, title) {
+    var now = Date.now();
+    if (now - lastPrint < 1500) return; // onload + bouton : un seul PDF
+    lastPrint = now;
+    var name = String(title || copy().untitled).replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+    var method = can('printHtml') ? 'printHtml' : (can('exportInvoice') ? 'exportInvoice' : '');
+    if (!method) { notify(copy().failed); return; }
+    plugin[method]({ html: html, name: name || 'Document', baseUrl: location.origin + '/' }).catch(function () { notify(copy().failed); });
+  }
+  function printDocument(win) {
+    var doc = win.document;
+    sendToPdf('<!doctype html>' + doc.documentElement.outerHTML, doc.title);
+  }
+  /* Tickets, additions, rapports Z et étiquettes sans imprimante thermique :
+     la page peint un « #…-print-root » et appelle window.print(), qui ne fait
+     rien dans WKWebView. On envoie ce seul nœud, avec ses règles d'impression. */
+  var PRINT_TITLES = { 'kpr-print-root':'Ticket', 'kr-print-root':'Recu', 'kbl-print-root':'Etiquettes' };
+  window.print = function () {
+    var roots = document.querySelectorAll('[id$="-print-root"]');
+    var target = roots[roots.length - 1];
+    if (!target) return;
+    /* Print rules live inline (receipts, labels) or in a linked sheet (the
+       pressing ticket and its tags, pressing-caisse.css). A linked sheet is
+       re-linked by its absolute URL so its own url()s still resolve. */
+    var PRINT_RULES = /print-root|\.k(?:pr|r|bl)-|\.px-print|\.ho-slip/;
+    var css = Array.prototype.map.call(document.querySelectorAll('style,link[rel~="stylesheet"]'), function (node) {
+      if (node.tagName === 'STYLE') return PRINT_RULES.test(node.textContent || '') ? node.outerHTML : '';
+      var text = '';
+      try { text = Array.prototype.map.call(node.sheet.cssRules, function (rule) { return rule.cssText; }).join('\n'); } catch (_) {}
+      return PRINT_RULES.test(text) ? '<link rel="stylesheet" href="' + node.href.replace(/"/g, '&quot;') + '">' : '';
+    }).join('')
+      // Screen media hides the root on the page; the PDF must show it either way.
+      + '<style>#' + target.id + '{display:block!important;visibility:visible!important;position:static!important;opacity:1!important}</style>';
+    sendToPdf('<!doctype html><html lang="' + String(root.lang || 'fr') + '"><head><meta charset="utf-8">' + css + '</head><body>' + target.outerHTML + '</body></html>',
+      target.getAttribute('data-print-title') || PRINT_TITLES[target.id] || copy().untitled);
+  };
+  function openDocumentSheet() {
+    var c = copy();
+    var sheet = document.createElement('div');
+    sheet.className = 'kiwi-native-doc';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.innerHTML = '<div class="kiwi-native-doc-bar"><button type="button" class="kiwi-native-doc-close"></button>'
+      + '<span class="kiwi-native-doc-title"></span><button type="button" class="kiwi-native-doc-share"></button></div>'
+      + '<iframe class="kiwi-native-doc-frame" title=""></iframe>';
+    sheet.querySelector('.kiwi-native-doc-close').textContent = c.close;
+    sheet.querySelector('.kiwi-native-doc-share').textContent = c.share;
+    document.body.appendChild(sheet);
+    var frame = sheet.querySelector('iframe');
+    var win = frame.contentWindow;
+    var title = sheet.querySelector('.kiwi-native-doc-title');
+    function arm() {
+      try {
+        Object.defineProperty(win, 'print', { configurable: true, writable: true, value: function () { printDocument(win); } });
+        Object.defineProperty(win, 'close', { configurable: true, writable: true, value: function () { dismiss(); } });
+        armFileLinks(win);
+        var name = win.document.title || '';
+        title.textContent = name;
+        frame.title = name;
+      } catch (_) {}
+    }
+    function dismiss() {
+      if (!sheet.parentNode) return;
+      try { win.dispatchEvent(new win.Event('unload')); } catch (_) {}
+      sheet.parentNode.removeChild(sheet);
+    }
+    var doc = win.document, write = doc.write, open = doc.open, closeDoc = doc.close;
+    doc.open = function () { var out = open.apply(doc, arguments); arm(); return out; };
+    doc.write = function () { var out = write.apply(doc, arguments); arm(); return out; };
+    doc.close = function () { var out = closeDoc.apply(doc, arguments); arm(); return out; };
+    frame.addEventListener('load', arm);
+    sheet.querySelector('.kiwi-native-doc-close').addEventListener('click', dismiss);
+    sheet.querySelector('.kiwi-native-doc-share').addEventListener('click', function () { lastPrint = 0; printDocument(win); });
+    arm();
+    return win;
+  }
+  /* Kiwi's own pages (privacy policy, help, the employee app) open in the
+     in-app Safari sheet on iOS instead of throwing the merchant out to Safari
+     mid-service. Other sites keep the system route; Android keeps its own. */
+  function kiwiPage(href) {
+    try {
+      var u = new URL(href, location.href);
+      return u.protocol === 'https:' && (u.hostname === 'kiwi-os.com' || /\.kiwi-os\.com$/.test(u.hostname)) ? u.href : '';
+    } catch (_) { return ''; }
+  }
+  function safariSheet(href) {
+    var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
+    if (!ios || typeof ios.postMessage !== 'function') return false;
+    try { ios.postMessage({ openURL: href }); return true; } catch (_) { return false; }
+  }
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button) return;
+    var a = event.target.closest && event.target.closest('a[href]');
+    if (!a || a.hasAttribute('download')) return;
+    var href = kiwiPage(a.getAttribute('href'));
+    if (href && safariSheet(href)) event.preventDefault();
+  });
+  window.open = function (url) {
+    var target = url == null ? '' : String(url).trim();
+    if (target === '' || target === 'about:blank') return openDocumentSheet();
+    var page = kiwiPage(target);
+    if (page && safariSheet(page)) return { closed: false, opener: null, close: function () {}, focus: function () {} };
+    return nativeOpen.apply(window, arguments);
+  };
+  window.KiwiNativeDocuments = { open: openDocumentSheet, print: printDocument };
 })();

@@ -74,10 +74,13 @@ private struct KiwiHostContext: Codable {
     var summary: [KiwiHostSummary] = []
     var actions: [KiwiHostAction] = []
     var tabs: [KiwiHostTab] = []
+    /// Width (pt) of a panel docked at the trailing edge (the till's bill on an
+    /// upright iPad). The capsule centres over what is left, not the screen.
+    var trailingInset: Double = 0
 
     private enum CodingKeys: String, CodingKey {
         case version, screen, locale, rtl, kind, progress, progressTotal, eyebrow, title, message
-        case status, statusKind, accountLabel, role, selected, fields, choices, summary, actions, tabs
+        case status, statusKind, accountLabel, role, selected, fields, choices, summary, actions, tabs, trailingInset
     }
 
     init() {}
@@ -104,6 +107,7 @@ private struct KiwiHostContext: Codable {
         summary = try values.decodeIfPresent([KiwiHostSummary].self, forKey: .summary) ?? []
         actions = try values.decodeIfPresent([KiwiHostAction].self, forKey: .actions) ?? []
         tabs = try values.decodeIfPresent([KiwiHostTab].self, forKey: .tabs) ?? []
+        trailingInset = max(0, try values.decodeIfPresent(Double.self, forKey: .trailingInset) ?? 0)
     }
 }
 
@@ -127,6 +131,11 @@ private final class KiwiNativeShellModel: ObservableObject {
         }
     }
 
+    /// The setup flow's way back, if the current step has one.
+    var backAction: KiwiHostAction? {
+        context.actions.first { ($0.id == "back" || $0.id == "manual-return") && $0.enabled }
+    }
+
     func send(_ action: String, id: String = "", values: [String: String] = [:]) {
         var payload = values
         payload["action"] = action
@@ -144,12 +153,23 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     private var tabHost: UIHostingController<KiwiNativeTabRoot>?
     private var tabHeightConstraint: NSLayoutConstraint?
     private var tabWidthConstraint: NSLayoutConstraint?
+    private var tabCenterConstraint: NSLayoutConstraint?
     private var safeAreaInsets = UIEdgeInsets.zero
+    private var uiDelegate: KiwiDialogDelegate?
+    private var edgeBack: UIScreenEdgePanGestureRecognizer?
 
     func attach(to bridge: CAPBridgeViewController) {
         model.bridge = bridge
         bridge.loadViewIfNeeded()
         bridge.webView?.configuration.userContentController.add(self, name: "kiwiShell")
+        // A long press on a link is a Safari gesture, not a till one.
+        bridge.webView?.allowsLinkPreview = false
+        // confirm()/alert()/prompt() in the merchant's language, not Capacitor's English.
+        if let webView = bridge.webView {
+            let dialogs = KiwiDialogDelegate(fallback: webView.uiDelegate) { [weak self] in self?.model.context.locale ?? "fr" }
+            webView.uiDelegate = dialogs
+            uiDelegate = dialogs
+        }
 
         let setup = UIHostingController(rootView: KiwiNativeSetupRoot(model: model))
         setup.view.translatesAutoresizingMaskIntoConstraints = false
@@ -164,6 +184,12 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         ])
         setup.didMove(toParent: bridge)
         setupHost = setup
+        // Setup steps are a stack; the edge swipe goes back a step, like every
+        // iOS navigation. Recognised by UIKit, it cancels the row under the thumb.
+        let edge = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(edgeSwipe(_:)))
+        edge.edges = .left
+        setup.view.addGestureRecognizer(edge)
+        edgeBack = edge
 
         let tabs = UIHostingController(rootView: KiwiNativeTabRoot(model: model))
         tabs.view.translatesAutoresizingMaskIntoConstraints = false
@@ -173,8 +199,10 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         let tabHeightConstraint = tabs.view.heightAnchor.constraint(equalToConstant: Self.tabContentHeight)
         let tabWidthConstraint = tabs.view.widthAnchor.constraint(equalToConstant: 350)
         tabWidthConstraint.priority = .defaultHigh
+        let tabCenterConstraint = tabs.view.centerXAnchor.constraint(equalTo: bridge.view.centerXAnchor)
+        self.tabCenterConstraint = tabCenterConstraint
         NSLayoutConstraint.activate([
-            tabs.view.centerXAnchor.constraint(equalTo: bridge.view.centerXAnchor),
+            tabCenterConstraint,
             tabs.view.leadingAnchor.constraint(greaterThanOrEqualTo: bridge.view.leadingAnchor, constant: 12),
             tabs.view.trailingAnchor.constraint(lessThanOrEqualTo: bridge.view.trailingAnchor, constant: -12),
             tabWidthConstraint,
@@ -212,6 +240,8 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     private func apply(_ context: KiwiHostContext) {
         // One slot per tab; the ≥12pt side margins still win on narrow phones.
         tabWidthConstraint?.constant = CGFloat(max(context.tabs.count, 1)) * 74 + 12
+        tabCenterConstraint?.constant = CGFloat(context.trailingInset / 2) * (context.rtl ? 1 : -1)
+        edgeBack?.edges = context.rtl ? .right : .left
         setupHost?.view.isHidden = context.screen == "workspace"
         tabHost?.view.isHidden = context.screen != "workspace" || context.tabs.isEmpty || (model.bridge?.view.bounds.width ?? 0) > 900
         if let setupView = setupHost?.view, !setupView.isHidden { setupView.superview?.bringSubviewToFront(setupView) }
@@ -224,6 +254,15 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             .map { String(format: "%.2f", Double($0)) + "px" }
         let tabHeight = tabHost?.view.isHidden == false ? Self.tabContentHeight + safeAreaInsets.bottom : 0
         bridgeEvaluate("document.documentElement.style.setProperty('--kiwi-host-safe-top','\(values[0])');document.documentElement.style.setProperty('--kiwi-host-safe-right','\(values[1])');document.documentElement.style.setProperty('--kiwi-host-safe-bottom','\(values[2])');document.documentElement.style.setProperty('--kiwi-host-safe-left','\(values[3])');document.documentElement.style.setProperty('--kiwi-host-tab-height','\(String(format: "%.2f", Double(tabHeight)))px')")
+    }
+
+    @objc private func edgeSwipe(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        guard gesture.state == .ended, let view = gesture.view, !view.isHidden,
+              let back = model.backAction else { return }
+        let travel = gesture.translation(in: view).x * (model.context.rtl ? -1 : 1)
+        let speed = gesture.velocity(in: view).x * (model.context.rtl ? -1 : 1)
+        guard travel > 60 || speed > 500 else { return }
+        model.send(back.id)
     }
 
     private func requestState() {
@@ -467,7 +506,11 @@ private struct KiwiNativeSetupRoot: View {
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 32
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var contentShown = false
+    /// The row just tapped while the next screen loads (1 to 2 s on a till):
+    /// it shows progress instead of looking dead, and no second row can fire.
+    @State private var pendingChoice: String?
 
     var body: some View {
         ZStack {
@@ -487,7 +530,13 @@ private struct KiwiNativeSetupRoot: View {
             focusedField = nil
             passwordVisible = false
             password = ""
+            pendingChoice = nil
             headingFocused = true
+        }
+        .onChange(of: model.revision) { _ in
+            // A new context that still lists the tapped row as unselected means
+            // the tap was answered without leaving (an error, a toggle).
+            if let pending = pendingChoice, model.context.choices.contains(where: { $0.id == pending && !$0.selected }) == false { pendingChoice = nil }
         }
         .onChange(of: model.context.status) { value in
             if !value.isEmpty { UIAccessibility.post(notification: .announcement, argument: value) }
@@ -507,6 +556,10 @@ private struct KiwiNativeSetupRoot: View {
             // Compact empty-field setup on short phones; accessibility text and
             // the keyboard retain the scrollable layout, never clipped controls.
             let compact = geometry.size.height < 720 && !dynamicTypeSize.isAccessibilitySize
+            // iPad: the form and its button stay together in the middle of the
+            // screen instead of the button waiting half a screen below.
+            let regular = sizeClass == .regular && !dynamicTypeSize.isAccessibilitySize
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(spacing: compact ? 8 : 16) {
@@ -531,18 +584,26 @@ private struct KiwiNativeSetupRoot: View {
                         status
                     }
                     .modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
-                    Spacer(minLength: compact ? 12 : 28)
-                    actions.modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
+                    if regular { Color.clear.frame(height: 32) } else { Spacer(minLength: compact ? 12 : 28) }
+                    actions.modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion)).id("kiwi-actions")
                 }
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 22)
                 .padding(.top, 20)
                 .padding(.bottom, 12)
-                .frame(minHeight: geometry.size.height, alignment: .top)
+                .frame(minHeight: geometry.size.height, alignment: regular ? .center : .top)
             }
             .scrollDismissesKeyboardIfAvailable()
             .id(model.context.kind)
+            .onChange(of: focusedField) { field in
+                // Keep the primary action above the keyboard while typing.
+                guard field != nil else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { proxy.scrollTo("kiwi-actions", anchor: .bottom) }
+                }
+            }
+            }
         }
         .onAppear {
             // The mark is already on screen from the launch; the rest arrives.
@@ -571,12 +632,12 @@ private struct KiwiNativeSetupRoot: View {
 
     @ViewBuilder private func content(compact: Bool) -> some View {
         if model.context.kind == "account", !model.context.fields.isEmpty {
-            nativeField(id: "email", label: field("email")?.label ?? "Email", text: $email, secure: false, keyboard: .emailAddress, compact: compact)
-            nativeField(id: "password", label: field("password")?.label ?? "Password", text: $password, secure: true, keyboard: .default, compact: compact)
+            nativeField(id: "email", label: field("email")?.label ?? "Email", placeholder: copy("nom@commerce.ma", "name@business.com", "name@business.com"), text: $email, secure: false, keyboard: .emailAddress, compact: compact)
+            nativeField(id: "password", label: field("password")?.label ?? "Password", placeholder: "", text: $password, secure: true, keyboard: .default, compact: compact)
         }
         if model.context.kind == "printer" {
-            nativeField(id: "host", label: field("host")?.label ?? "IP", text: $host, secure: false, keyboard: .numbersAndPunctuation)
-            nativeField(id: "port", label: field("port")?.label ?? "Port", text: $port, secure: false, keyboard: .numberPad)
+            nativeField(id: "host", label: field("host")?.label ?? "IP", placeholder: "192.168.1.50", text: $host, secure: false, keyboard: .numbersAndPunctuation)
+            nativeField(id: "port", label: field("port")?.label ?? "Port", placeholder: "9100", text: $port, secure: false, keyboard: .numberPad)
         }
         VStack(spacing: 10) {
             ForEach(model.context.choices) { choice in choiceButton(choice) }
@@ -609,14 +670,15 @@ private struct KiwiNativeSetupRoot: View {
         model.context.locale.hasPrefix("ar") ? ar : (model.context.locale.hasPrefix("en") ? en : fr)
     }
 
-    private func nativeField(id: String, label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType, compact: Bool = false) -> some View {
+    private func nativeField(id: String, label: String, placeholder: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType, compact: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(label).font(.footnote.weight(.semibold)).foregroundStyle(kiwiPaper.opacity(0.58))
                 .accessibilityHidden(true)
             HStack(spacing: 4) {
                 Group {
-                    if secure && !passwordVisible { SecureField(text: text, prompt: Text(label).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
-                    else { TextField(text: text, prompt: Text(label).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
+                    // The label above names the field; the placeholder shows an example.
+                    if secure && !passwordVisible { SecureField(text: text, prompt: Text(placeholder).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
+                    else { TextField(text: text, prompt: Text(placeholder).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
                 }
                 .foregroundStyle(kiwiPaper)
                 .tint(kiwiMint)
@@ -654,6 +716,11 @@ private struct KiwiNativeSetupRoot: View {
 
     private func choiceButton(_ choice: KiwiHostChoice) -> some View {
         Button {
+            guard pendingChoice == nil else { return }
+            if choice.group == "role" || choice.group == "store" {
+                pendingChoice = choice.id
+                DispatchQueue.main.asyncAfter(deadline: .now() + 8) { if pendingChoice == choice.id { pendingChoice = nil } }
+            }
             if choice.group == "role" { model.send("select-role", id: choice.id) }
             else if choice.group == "store" { model.send("select-store", id: choice.id) }
             else if choice.group == "paper" { paper = choice.id; model.send("select-paper", id: choice.id) }
@@ -678,7 +745,8 @@ private struct KiwiNativeSetupRoot: View {
                             if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiPaper.opacity(0.58)).fixedSize(horizontal: false, vertical: true) }
                         }
                         Spacer(minLength: 8)
-                        if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(kiwiMint) }
+                        if pendingChoice == choice.id { ProgressView().tint(kiwiMint).accessibilityHidden(true) }
+                        else if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(kiwiMint) }
                         else { Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(kiwiPaper.opacity(0.35)) }
                     }
                 }
@@ -688,6 +756,7 @@ private struct KiwiNativeSetupRoot: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(choice.selected ? kiwiMint.opacity(0.55) : kiwiPaper.opacity(0.05), lineWidth: 1))
             .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }.buttonStyle(KiwiPressStyle())
+            .opacity(pendingChoice != nil && pendingChoice != choice.id ? 0.5 : 1)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(choice.selected ? .isSelected : [])
     }
@@ -760,7 +829,7 @@ private struct KiwiNativeTabRoot: View {
                                 .font(.system(size: 19, weight: .semibold))
                                 .symbolVariant(active ? .fill : .none)
                                 .frame(height: 24)
-                            Text(tab.label).font(.system(size: 10, weight: active ? .semibold : .medium)).lineLimit(1)
+                            Text(tab.label).font(.caption2.weight(active ? .semibold : .medium)).lineLimit(1)
                         }
                         .foregroundStyle(active ? kiwiMint : Color.white.opacity(0.85))
                     }
@@ -768,6 +837,13 @@ private struct KiwiNativeTabRoot: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // A tab bar does not grow with the text size; like UITabBar it
+                // shows the item large on a long press instead.
+                .dynamicTypeSize(...DynamicTypeSize.large)
+                .accessibilityShowsLargeContentViewer {
+                    Image(systemName: symbol(tab.id))
+                    Text(tab.label)
+                }
                 .accessibilityLabel(Text(tab.label))
                 .accessibilityAddTraits(active ? [.isSelected, .isButton] : .isButton)
             }
@@ -795,5 +871,98 @@ private struct KiwiNativeTabRoot: View {
         ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2",
          "accueil":"house", "transactions":"list.bullet.rectangle.portrait", "rapport":"doc.text", "clients":"person.2",
          "tables":"table.furniture", "menu":"menucard", "notifications":"bell", "profil":"person.crop.circle"][id] ?? "circle"
+    }
+}
+
+/// Answers the page's alert(), confirm() and prompt() with system alerts in the
+/// merchant's language. Capacitor's own handler hard-codes "Cancel" / "Ok", so a
+/// French waiter read « Annuler toute la table ? » over an English "Cancel" that
+/// meant the opposite. Everything else (new windows, permissions) is forwarded
+/// to the handler Capacitor installed.
+private final class KiwiDialogDelegate: NSObject, WKUIDelegate {
+    private weak var fallback: WKUIDelegate?
+    private let locale: () -> String
+
+    init(fallback: WKUIDelegate?, locale: @escaping () -> String) {
+        self.fallback = fallback
+        self.locale = locale
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        super.responds(to: aSelector) || (fallback?.responds(to: aSelector) ?? false)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        if fallback?.responds(to: aSelector) == true { return fallback }
+        return super.forwardingTarget(for: aSelector)
+    }
+
+    private func copy(_ fr: String, _ en: String, _ ar: String) -> String {
+        let lang = locale().lowercased()
+        return lang.hasPrefix("ar") ? ar : (lang.hasPrefix("en") ? en : fr)
+    }
+    private var ok: String { copy("OK", "OK", "موافق") }
+    private var cancel: String { copy("Annuler", "Cancel", "إلغاء") }
+
+    /// A confirm that removes, cancels or deletes something gets the system's
+    /// destructive colour on the button that does it.
+    private func isDestructive(_ message: String) -> Bool {
+        let lower = message.lowercased()
+        return ["annuler", "supprimer", "retirer", "effacer", "cancel", "delete", "remove", "إلغاء", "حذف"].contains { lower.contains($0) }
+    }
+    /// A prompt that asks for a code is a secret, typed on the number pad.
+    private func asksForCode(_ message: String) -> Bool {
+        let lower = message.lowercased()
+        return ["code", "pin", "رمز"].contains { lower.contains($0) }
+    }
+
+    private func present(_ alert: UIAlertController, from webView: WKWebView, otherwise fail: () -> Void) {
+        var presenter = webView.window?.rootViewController
+        while let presented = presenter?.presentedViewController { presenter = presented }
+        guard let presenter, !presenter.isBeingDismissed else { fail(); return }
+        presenter.present(alert, animated: true)
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: ok, style: .default) { _ in completionHandler() })
+        present(alert, from: webView) { completionHandler() }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: cancel, style: .cancel) { _ in completionHandler(false) })
+        alert.addAction(UIAlertAction(title: ok, style: isDestructive(message) ? .destructive : .default) { _ in completionHandler(true) })
+        if isDestructive(message) { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+        present(alert, from: webView) { completionHandler(false) }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        // Capacitor runs its synchronous bridge (CapacitorCookies, CapacitorHttp)
+        // through prompt() with a JSON payload carrying a "type". Those are not
+        // dialogs: they go back to Capacitor's own handler untouched, or the
+        // first launch shows a raw {"type":"CapacitorCookies.isEnabled"} box.
+        if let data = prompt.data(using: .utf8),
+           let payload = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) as? [String: Any],
+           payload["type"] is String {
+            if let fallback, fallback.responds(to: #selector(WKUIDelegate.webView(_:runJavaScriptTextInputPanelWithPrompt:defaultText:initiatedByFrame:completionHandler:))) {
+                fallback.webView?(webView, runJavaScriptTextInputPanelWithPrompt: prompt, defaultText: defaultText, initiatedByFrame: frame, completionHandler: completionHandler)
+            } else {
+                completionHandler(nil)
+            }
+            return
+        }
+        let alert = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+        let secret = asksForCode(prompt)
+        alert.addTextField { field in
+            field.text = defaultText
+            if secret {
+                field.isSecureTextEntry = true
+                field.keyboardType = .numberPad
+            }
+        }
+        alert.addAction(UIAlertAction(title: cancel, style: .cancel) { _ in completionHandler(nil) })
+        alert.addAction(UIAlertAction(title: ok, style: .default) { _ in completionHandler(alert.textFields?.first?.text ?? "") })
+        present(alert, from: webView) { completionHandler(nil) }
     }
 }

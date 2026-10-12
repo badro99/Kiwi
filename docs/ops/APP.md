@@ -33,7 +33,7 @@ d'abord sur le web ; l'app la récupère à la release suivante.
 ```bash
 cd app
 npm ci                                  # une fois par clone
-npm run build                           # → app/www (23 Mo, empreinte dans .kiwi-bundle.json)
+npm run build                           # → app/www (~36 Mo, taille exacte et empreinte affichées par le build)
 npx cap sync                            # copie www dans ios/ et android/, met à jour les plugins
 ```
 
@@ -149,12 +149,20 @@ déclare les diagnostics d'erreur, UserDefaults et les métadonnées du registre
 
 ### TestFlight interne
 
-1. Incrémenter `MARKETING_VERSION` et `CURRENT_PROJECT_VERSION` avant l'archive.
-2. Product > Archive, puis Distribute App > App Store Connect > Upload.
+1. Archiver par `tools/app-archive.sh` (voir `APP_STORE.md`) avec
+   `KIWI_BUILD_NUMBER` supérieur au dernier build visible dans App Store Connect.
+   Le `CURRENT_PROJECT_VERSION` du projet Xcode (3) n'est qu'un repli local : les
+   builds TestFlight sont déjà bien au-delà, et un Product > Archive à la main
+   sortirait un numéro refusé à l'envoi. `MARKETING_VERSION` ne bouge qu'à une
+   nouvelle version publique.
+2. Envoi : `tools/app-archive.sh --upload`, ou Xcode Organizer > Distribute App sur
+   l'archive produite par le script.
 3. Dans App Store Connect, remplir App Privacy selon le manifest et confirmer l'absence
    de tracking, d'achat in-app et de prix d'abonnement dans l'app.
-4. Affecter d'abord le build au groupe interne Kiwi. Ne pas ouvrir de groupe externe
-   avant validation réelle sur l'iPad du comptoir.
+4. Le groupe interne **Kiwi Team** est en distribution automatique : chaque build
+   traité lui parvient sans geste. **Kiwi Core** est « Manual for Xcode Builds »
+   (Apple ne permet pas de le changer) : y ajouter le build à la main si besoin. Ne
+   pas ouvrir de groupe externe avant validation réelle sur l'iPad du comptoir.
 5. Conserver le numéro de build, le hash Git et l'empreinte du bundle dans la fiche de
    test. Une validation simulateur seule ne vaut jamais acceptation terrain.
 
@@ -177,14 +185,25 @@ déclare les diagnostics d'erreur, UserDefaults et les métadonnées du registre
 
 ### Android
 
-Android exige JDK 17 et `ANDROID_HOME`. Le manifest v1 demande réseau, caméra et
-notifications; il ne demande pas Bluetooth. Après `npx cap sync android` :
+Android exige **JDK 21** (Capacitor 8 ; sur ce Mac, `brew` fournit `openjdk@21`) et
+`ANDROID_HOME`. Le manifeste demande réseau, caméra (optionnelle : une tablette de
+caisse sans caméra reste éligible sur Play), micro (assistant vocal) ; ni
+notifications ni Bluetooth, et ni sauvegarde ni transfert d'appareil à appareil
+(l'appairage d'une caisse ne doit pas renaître sur un autre téléphone). Après
+`npx cap sync android` :
 
 ```bash
 cd app/android
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21 ANDROID_HOME=$HOME/Library/Android/sdk
 ./gradlew assembleDebug
-./gradlew bundleRelease
+./gradlew bundleRelease -PKIWI_VERSION_CODE=2 -PKIWI_VERSION_NAME=1.0.1
 ```
+
+Play refuse un `versionCode` déjà vu : chaque release passe le suivant
+(`-PKIWI_VERSION_CODE` ou la variable d'environnement du même nom ; 1 par défaut).
+Vérifié le 2026-10-12 : `assembleDebug` compile sans avertissement Kotlin. Aucun
+appareil ni émulateur Android n'est installé ici : le rendu reste à prouver sur
+appareil.
 
 La signature release vient de variables CI ou d'un fichier local ignoré. Aucun
 `*.keystore` ni `google-services.json` ne doit entrer dans Git.
@@ -199,6 +218,12 @@ l'ancien transport configuré. Noter l'heure, le merchant, le device id, le hash
 l'export diagnostic, puis prévenir le comptoir avant toute action distante.
 
 ## 9. État au 2026-08-23
+
+*Instantané historique, conservé tel quel. Depuis : le compte Apple Developer
+(Organisation) est actif, l'app existe dans App Store Connect et les builds partent
+en TestFlight par `tools/app-archive.sh --upload` (groupe Kiwi Team, §8). Les
+« Reste » ci-dessous qui touchent Apple sont donc derrière nous ; la preuve terrain
+sur l'iPad du comptoir reste à faire.*
 
 Fait côté code (semaines 1 à 3 du plan, hors BLE volontairement) : scaffold iOS/Android,
 `api-base.js` + CORS, coquille native (polices embarquées, zones sûres, barre d'état,

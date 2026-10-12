@@ -69,8 +69,10 @@
   function initDynamicType() {
     var p = dynamicTypePlugin();
     if (!p) return;
-    function applyScale(scale) {
+    function applyScale(scale, res) {
       if (typeof scale !== 'number' || isNaN(scale)) return;
+      // Android zooms the WebView text itself (hostTextZoom): scaling again would double it.
+      if (res && typeof res.hostTextZoom === 'number') scale = 1;
       var capped = Math.min(1.35, Math.max(0.85, scale));
       if (Math.abs(capped - 1.0) < 0.005) {
         document.documentElement.style.removeProperty('--type-scale');
@@ -85,7 +87,7 @@
           new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 1000); })
         ]).then(function (res) {
           if (res && typeof res.scale === 'number') {
-            applyScale(res.scale);
+            applyScale(res.scale, res);
           }
         }).catch(function () {});
       } catch (_) {}
@@ -94,7 +96,7 @@
       try {
         p.addListener('dynamicTypeChange', function (data) {
           if (data && typeof data.scale === 'number') {
-            applyScale(data.scale);
+            applyScale(data.scale, data);
           }
         });
       } catch (_) {}
@@ -157,7 +159,8 @@
   function go(role) {
     rememberSecure(role);
     try { if (window.KiwiNative && typeof window.KiwiNative.hapticLight === 'function') window.KiwiNative.hapticLight(); } catch (_) {}
-    location.href = ROLES[role];
+    // replace(): the back button in a workspace must not reopen the setup screen.
+    location.replace(ROLES[role]);
   }
 
   function setStatus(el, text, type) {

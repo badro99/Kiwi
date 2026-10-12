@@ -17,8 +17,9 @@ l'avance, pour que le jour où le compte Apple est payé il n'y ait plus qu'à c
 - **Politique de confidentialité** : section 2.4 « Application Kiwi Pro » (réseau
   local, identité d'appareil dans le Trousseau, diagnostic expurgé, appareil photo,
   pas d'achat intégré). Version 2.2.
-- **Info.plist** : `NSCameraUsageDescription` (le scan code-barres boutique appelle
-  `getUserMedia` dans la WebView ; sans la clé iOS tue l'app au premier scan),
+- **Info.plist** : `NSCameraUsageDescription` (bons de livraison, plan de salle, pièce
+  d'identité à l'hôtel, par `<input capture>` ; sans la clé iOS tue l'app à la première
+  photo. Pas de scan code-barres caméra sur iOS : WebKit n'a pas `BarcodeDetector`),
   `CFBundleLocalizations` fr · en · ar, `UIRequiredDeviceCapabilities` = `arm64`
   (armv7 est retiré des cibles iOS 15+), `ITSAppUsesNonExemptEncryption = NO`,
   `NSLocalNetworkUsageDescription` + `NSBonjourServices`, `PrivacyInfo.xcprivacy`.
@@ -283,33 +284,13 @@ Google, en plus : données chiffrées en transit **Oui** ; l'utilisateur peut de
 la suppression **Oui** (dpo@kiwi-os.com, et le formulaire de §5) ; partage avec des
 prestataires à déclarer selon les définitions de la boutique, dont Cloudflare Workers AI ; l'app est destinée aux **professionnels, 18 ans et plus** ; pas de
 publicité ; questionnaire IARC à compléter honnêtement sur les fonctions du binaire final.
-Permission `CAMERA` : déclarer « scan de codes-barres et photo de bons de livraison ».
+Permission `CAMERA` : déclarer « photo de bons de livraison, du plan de salle et de la pièce d'identité d'un client d'hôtel ; lecture de codes-barres là où le WebView de l'appareil fournit `BarcodeDetector` ».
 
 ## 5. Notes pour la revue (à coller dans App Review Information · App access)
 
-**Remplacé le 2026-09-29 par `docs/ops/app-review-notes.md`** : le texte ci-dessous
-décrit encore le bouton More natif, retiré de tous les rôles (menu ☰ désormais).
-
-> Kiwi Pro is a business app for merchants who already have a Kiwi account
-> (created by Kiwi when they subscribe, outside the app). Sign in with the
-> demo account provided in the Sign-In Information fields.
->
-> After sign-in, choose a role in native setup. Till and Kitchen pair with a
-> code generated under Dashboard › Devices. Kiwi Team uses an employee code
-> shown under Dashboard › Team. On a phone, the native More button in every
-> workspace opens Change role, Sign out and Delete my account.
->
-> The app asks for Local Network access the first time you open Printer › Test:
-> it sends ESC/POS tickets to a thermal printer on the Wi-Fi (TCP port 9100). No
-> printer is needed for review: tickets queue and the app keeps working.
-> Camera is only used when the merchant scans a barcode or photographs a delivery
-> note.
->
-> There are no in-app purchases, no subscriptions sold in the app, no ads, no
-> tracking, no third-party login. Account deletion: native More › Delete my
-> account opens an owner-authenticated request. It asks for the account password
-> and records the request server-side; Kiwi processes it within 30 days. The
-> same request is available under Dashboard › Settings › Security.
+**Le texte à coller est `docs/ops/app-review-notes.md`** (depuis le 2026-09-29).
+L'ancienne version, qui décrivait le bouton More natif retiré de tous les rôles, a
+été enlevée d'ici le 2026-10-12 pour qu'on ne la colle plus par erreur.
 
 Les trois points qu'Apple refuse le plus souvent sur ce genre d'app, et notre
 réponse :
@@ -321,7 +302,7 @@ réponse :
   capacité non vérifiée comme une démonstration réussie.
 - **5.1.1 (v) suppression de compte** → la règle s'applique dès qu'un compte sert
   à se connecter, même créé hors de l'app, et le chemin doit partir **de l'app**.
-  Le parcours natif **Plus › Supprimer mon compte** et Paramètres › Sécurité &
+  Le parcours natif **menu ☰ › Supprimer mon compte** et Paramètres › Sécurité &
   Intégrations appellent `/api/account/deletion-request` après confirmation du mot
   de passe propriétaire. La suppression effective reste un geste de l'opérateur
   dans la console, sous 30 jours ; vérifier cette étape avant soumission.

@@ -86,8 +86,10 @@ check('privacy policy and support URLs are public (Apple and Google fetch them w
   }));
 check('the support page exists and names a contact',
   fs.existsSync(new URL('../support.html', import.meta.url)) && read('support.html').includes('contact@kiwi-os.com'));
-check('Info.plist declares camera usage (the boutique barcode scan calls getUserMedia in the WebView)',
+check('Info.plist declares camera usage (delivery notes, floor plan, hotel guest ID via <input capture>)',
   plist.includes('NSCameraUsageDescription'));
+check('the camera purpose does not promise a barcode scan WebKit cannot do',
+  !/code-barres|barcode/i.test(plist.match(/<key>NSCameraUsageDescription<\/key>\s*<string>([^<]*)/)?.[1] || 'barcode'));
 check('Info.plist declares Face ID usage for biometric idle unlock',
   plist.includes('<key>NSFaceIDUsageDescription</key>'));
 check('Info.plist lists the three store languages', /CFBundleLocalizations[\s\S]*<string>fr<\/string>[\s\S]*<string>en<\/string>[\s\S]*<string>ar<\/string>/.test(plist));
@@ -184,7 +186,7 @@ check('iOS publishes real safe-area insets and sizes its tab host to content plu
   swiftNativeShell.includes('private static let tabContentHeight: CGFloat = 72') &&
   !swiftNativeShell.includes('heightAnchor.constraint(equalToConstant: 100)') &&
   !swiftNativeShell.includes('.padding(.bottom, 34)') &&
-  nativeRuntimeCss.includes('--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top))') &&
+  nativeRuntimeCss.includes('--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top),var(--safe-area-inset-top,0px))') &&
   nativeRuntimeCss.includes('--kiwi-host-tab-height,calc(72px + var(--kiwi-safe-bottom))') &&
   runtime.includes("root.classList.add('kiwi-native-' + platform)"));
 check('iOS till navigation uses an icon-first floating glass capsule instead of a full-width opaque shelf',
