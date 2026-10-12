@@ -404,6 +404,12 @@
       mxSize: 'Dot size = sales',
       mxRateSub: 'of the costed dishes’ sales',
       perfDetail: 'Detail by item',
+      pairsTitle: 'Often ordered together',
+      pairsSub: 'Dishes that land on the same ticket more often than chance would. Material for a set menu, or for teaching the team to suggest the second one.',
+      pairsFew: 'Not enough tickets to tell yet: {n} of the {min} needed.',
+      pairsNone: 'No pair comes up more often than chance in this period.',
+      pairsLine: '{pct} of tickets with {a} also have {b}',
+      pairsMeta: 'together on {n} tickets · {lift}× chance',
       mxContribution: '{amount} contribution',
       recipeDraftTitle: 'Draft, not saved',
       recipeDraftFrom: 'Taken from the cost sheet “{name}”. Check each ingredient against your stock, then save: until then nothing changes.',
@@ -925,6 +931,12 @@
       mxSize: 'حجم النقطة = المبيعات',
       mxRateSub: 'من مبيعات الأطباق المحسوبة',
       perfDetail: 'التفاصيل حسب المنتج',
+      pairsTitle: 'يُطلب معاً غالباً',
+      pairsSub: 'أطباق تجتمع على نفس التذكرة أكثر مما تفسّره الصدفة. مادة لتركيب قائمة ثابتة أو لتدريب الفريق على اقتراح الطبق الثاني.',
+      pairsFew: 'التذاكر غير كافية بعد: {n} من أصل {min} مطلوبة.',
+      pairsNone: 'لا يتكرر أي زوج أكثر من الصدفة في هذه الفترة.',
+      pairsLine: '{pct} من التذاكر التي فيها {a} فيها أيضاً {b}',
+      pairsMeta: 'معاً على {n} تذكرة · {lift}× الصدفة',
       mxContribution: 'مساهمة {amount}',
       recipeDraftTitle: 'مسودة غير محفوظة',
       recipeDraftFrom: 'مأخوذة من بطاقة التكلفة «{name}». راجع كل مكوّن مقابل مخزونك ثم احفظ: لا يتغير شيء قبل ذلك.',
@@ -1449,6 +1461,12 @@
       mxSize: 'Taille du point = chiffre d’affaires',
       mxRateSub: 'du chiffre d’affaires des plats chiffrés',
       perfDetail: 'Détail par article',
+      pairsTitle: 'Souvent pris ensemble',
+      pairsSub: 'Les plats qui se retrouvent sur un même ticket plus souvent que le hasard. De quoi composer une formule, ou apprendre à l’équipe à proposer le second.',
+      pairsFew: 'Pas encore assez de tickets pour le dire : {n} sur les {min} nécessaires.',
+      pairsNone: 'Aucune paire ne revient plus souvent que le hasard sur cette période.',
+      pairsLine: '{pct} des tickets avec {a} prennent aussi {b}',
+      pairsMeta: 'ensemble sur {n} tickets · {lift}× le hasard',
       mxContribution: '{amount} de contribution',
       recipeDraftTitle: 'Brouillon, non enregistré',
       recipeDraftFrom: 'Tiré de la fiche de coût « {name} ». Vérifiez chaque ingrédient face à votre stock, puis enregistrez : d’ici là, rien ne change.',
@@ -2091,6 +2109,52 @@
     const li=list.map(x=>`<li data-insight="${x.key}"><p>${esc(x.text)}</p>${x.item?`<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="${esc(x.item.id)}">${esc(ui(x.key==='uncosted'?'completeRecipeLink':'insightOpenRecipe'))}</button>`:x.sheets?`<button class="rmw-perf-link" data-fin-tab="cost">${esc(ui('insightOpenSheet'))}</button>`:''}</li>`).join('');
     return `<section class="mi-section rmw-perf-insights"><div class="mi-section-head"><h3>${esc(ui('insightsTitle'))}</h3></div><p class="rmw-perf-insights-sub">${esc(ui('insightsSub'))}</p>${list.length?`<ul>${li}</ul>`:`<p class="rmw-perf-insights-none">${esc(ui('insightNone'))}</p>`}</section>`;
   }
+  /* ═══ SOUVENT PRIS ENSEMBLE ═══════════════════════════════════════════════
+     Sur les tickets de la période (le même registre KiwiCost.ledger :
+     annulations, doublons et remboursements déjà écartés), les paires de plats
+     de la carte qui se retrouvent sur un même ticket. Une paire n'est citée
+     que si elle revient sur PAIR_MIN_TOGETHER tickets au moins ET plus souvent
+     que le hasard (lift = n(A et B) × N ÷ (n(A) × n(B)) ≥ PAIR_MIN_LIFT) : deux
+     plats très vendus se croisent forcément, ça ne dit rien. Les lignes à
+     0 MAD (un choix dans une formule) sont ignorées : la formule les impose,
+     ce n'est pas le client qui les associe. Sous PAIR_MIN_TICKETS tickets, on
+     dit qu'on ne sait pas encore. */
+  const PAIR_MIN_TICKETS=40,PAIR_MIN_TOGETHER=5,PAIR_MIN_LIFT=1.2,PAIR_SHOWN=5;
+  function pairsData(days=30){
+    const w=analysisWindow(days),rows=D().items.map(x=>({item:x})),match=saleLineMatcher(rows);
+    const L=menuLedger(w,rows),byTicket=new Map();
+    (L?L.lines:[]).forEach(x=>{
+      if(!(x.listed>0))return;
+      const row=match(x.line);if(!row)return;
+      const k=x.saleId||('ts:'+x.ts);
+      if(!byTicket.has(k))byTicket.set(k,new Set());
+      byTicket.get(k).add(String(row.item.id));
+    });
+    const N=byTicket.size,nOf=new Map(),nPair=new Map(),byId=new Map(rows.map(r=>[String(r.item.id),r.item]));
+    byTicket.forEach(set=>{
+      const ids=[...set].sort();
+      ids.forEach(id=>nOf.set(id,(nOf.get(id)||0)+1));
+      for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){const k=ids[i]+'\u0000'+ids[j];nPair.set(k,(nPair.get(k)||0)+1);}
+    });
+    const pairs=[];
+    if(N>=PAIR_MIN_TICKETS)nPair.forEach((n,k)=>{
+      if(n<PAIR_MIN_TOGETHER)return;
+      const [a,b]=k.split('\u0000'),na=nOf.get(a),nb=nOf.get(b),lift=n*N/(na*nb);
+      if(!(lift>=PAIR_MIN_LIFT))return;
+      /* Le sens le plus parlant : le plat le moins vendu appelle l'autre. */
+      const [from,to,nf]=na<=nb?[a,b,na]:[b,a,nb];
+      pairs.push({from:byId.get(from),to:byId.get(to),together:n,share:n/nf,lift});
+    });
+    pairs.sort((x,y)=>y.together-x.together||y.lift-x.lift);
+    return {window:w,tickets:N,enough:N>=PAIR_MIN_TICKETS,min:PAIR_MIN_TICKETS,pairs:pairs.slice(0,PAIR_SHOWN)};
+  }
+  function pairsBlock(){
+    const q=pairsData(30),num=(v,o)=>window.KiwiNumber?.format(v,o||{})??(+v).toLocaleString(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',o||{});
+    const body=!q.enough?`<p class="rmw-perf-insights-none" data-pairs-few="${q.tickets}">${esc(ui('pairsFew',{n:num(q.tickets),min:num(q.min)}))}</p>`
+      :!q.pairs.length?`<p class="rmw-perf-insights-none" data-pairs-none>${esc(ui('pairsNone'))}</p>`
+      :`<ul>${q.pairs.map(x=>`<li data-pair="${esc(x.from.id)}|${esc(x.to.id)}"><p>${esc(ui('pairsLine',{pct:num(Math.round(x.share*100))+' %',a:'\u0001',b:'\u0002'})).replace('\u0001',`<bdi>${esc(t(x.from.name))}</bdi>`).replace('\u0002',`<bdi>${esc(t(x.to.name))}</bdi>`)}<small style="display:block;color:var(--n-500);margin-top:2px;">${esc(ui('pairsMeta',{n:num(x.together),lift:num(x.lift,{minimumFractionDigits:1,maximumFractionDigits:1})}))}</small></p></li>`).join('')}</ul>`;
+    return `<section class="mi-section rmw-perf-insights" data-pairs><div class="mi-section-head"><h3>${esc(ui('pairsTitle'))}</h3></div><p class="rmw-perf-insights-sub">${esc(ui('pairsSub'))}</p>${body}</section>`;
+  }
   function performancePanel(){
     const p=performanceData(30),costed=p.measured.length,est=costEstimates(),quads=perfQuads();
     const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}${estimateNote(est,r)}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${pct1(r.marginPct)}</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
@@ -2100,7 +2164,7 @@
     const head=`<div class="rmw-perf-head"><div><h2>${esc(ui('perfTitle'))}</h2><p>${esc(ui('perfSub'))}</p></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>`;
     if(emptySales)return `<div class="rmw-performance">${head}<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div></section></div>`;
     const matrix=costed?performanceMatrix(p):`<section class="mi-section rmw-mx"><div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div></section>`;
-    return `<div class="rmw-performance">${head}${perfLedger(p)}${matrix}${insightsBlock(perfInsights(p,est))}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('perfDetail'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
+    return `<div class="rmw-performance">${head}${perfLedger(p)}${matrix}${insightsBlock(perfInsights(p,est))}${pairsBlock()}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('perfDetail'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
   /* ═══ VENTES PAR CATÉGORIE ET PAR ARTICLE ═══════════════════════════════
      Le même registre que la Performance (KiwiCost.ledger) : annulations,
@@ -3169,6 +3233,8 @@ html[data-theme="dark"] .rmw-formula-picker.is-floating{background:color-mix(in 
          afficher une autre marge que celle de l'onglet d'à côté. */
       ledger(w){return menuLedger(w);},
       /* Les quadrants et leurs deux seuils, tels que la matrice les trace. */
+      /* Souvent pris ensemble, tel que la section l'affiche. */
+      pairs(days=30){const q=pairsData(days);return {tickets:q.tickets,enough:q.enough,min:q.min,pairs:q.pairs.map(x=>({from:x.from.id,to:x.to.id,together:x.together,share:x.share,lift:x.lift}))};},
       quadrants(days=30){const p=performanceData(days);return {popularFrom:p.medQty,averageContribution:p.medProfit,items:p.measured.map(x=>({id:x.item?.id??x.id??null,name:x.item?.name??x.name??'',qty:x.qty,unitProfit:x.unitProfit,quadrant:x.quadrant}))};},
       insights(){const p=performanceData(30),est=costEstimates();return perfInsights(p,est).map(x=>({key:x.key,text:x.text,item:x.item?x.item.id:null}));},
       costOf(item){const hit=recipeCostResolver([{item}]).of({item});if(hit)return hit;try{return window.KiwiCost?.of?.({kind:'menu',id:item.id,name:item.name})||null;}catch(_){return null;}}
