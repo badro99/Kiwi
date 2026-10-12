@@ -161,3 +161,14 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   browser suites that timed out at load average 90+; both pass alone
   (`native-qa-six-fixes-test` 47, `ticket151-browser-test` 23). Debug sheet
   demo confirmed absent from the release binary.
+- **Build 36 uploaded** (`8770aafe`, the commit Cloudflare Pages had deployed):
+  "Upload succeeded", processing. Capacitor 8.5.3 (critical internal proxy
+  fix, `d8e12941`; the archive resolved `capacitor-swift-pm @ 8.5.3`), native
+  audit fixes (cash moves in FR/EN/AR, dark Card and Send to kitchen, stacked
+  Take payment on the docked iPad, iOS text zoom no longer doubled), Material
+  icons in place of Lucide, printer and clôture copy in three languages,
+  card-aware payment timeouts on the waiter page, breadcrumbs that say Home /
+  الرئيسية. Full `node tools/check.js` green on that commit with no
+  exceptions; the first attempt stopped on `hotel-direct-booking-browser-test`
+  at load average 172 (176 of 176 alone), so the script was rerun rather
+  than bypassed. Build number 36, `com.kiwios.pro`, signature verified.
