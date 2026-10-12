@@ -704,7 +704,7 @@ function authPage(opts) {
     fr: {
       title: 'Kiwi · Votre compte', welcome: 'Bienvenue <em>chez Kiwi</em>.',
       sub: 'Votre espace commerçant, en un seul lien.', login: 'Se connecter', signup: 'Créer un compte',
-      email: 'E-mail', password: 'Mot de passe', name: 'Nom', business: 'Établissement',
+      email: 'E-mail', password: 'Mot de passe', forgot: 'Mot de passe oublié ?', name: 'Nom', business: 'Établissement',
       language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
       namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.',
       create: 'Créer mon compte', staff: 'Accès équipe', revoked: 'Votre session a été fermée. Reconnectez-vous.',
@@ -716,7 +716,7 @@ function authPage(opts) {
     en: {
       title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
       sub: 'Your entire business, one secure sign-in.', login: 'Sign in', signup: 'Create an account',
-      email: 'Email', password: 'Password', name: 'Name', business: 'Business',
+      email: 'Email', password: 'Password', forgot: 'Forgot your password?', name: 'Name', business: 'Business',
       language: 'Language', emailPlaceholder: 'you@example.com',
       namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.',
       create: 'Create my account', staff: 'Team access', revoked: 'Your session has ended. Please sign in again.',
@@ -728,7 +728,7 @@ function authPage(opts) {
     ar: {
       title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
       sub: 'كل ما تحتاجه لإدارة نشاطك، بحساب واحد.', login: 'تسجيل الدخول', signup: 'إنشاء حساب',
-      email: 'البريد الإلكتروني', password: 'كلمة المرور', name: 'الاسم', business: 'اسم النشاط',
+      email: 'البريد الإلكتروني', password: 'كلمة المرور', forgot: 'نسيت كلمة المرور؟', name: 'الاسم', business: 'اسم النشاط',
       language: 'اللغة', emailPlaceholder: 'name@example.com',
       namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.',
       create: 'إنشاء حسابي', staff: 'دخول فريق العمل', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
@@ -996,6 +996,21 @@ function authPage(opts) {
   .go:hover { transform: translateY(-1px); filter: brightness(1.05); }
   .go:active { transform: translateY(0); }
   .go:disabled { opacity: .55; cursor: default; transform: none; filter: none; }
+  .forgot {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin: -10px 0 -4px;
+    color: var(--atlas);
+    font-size: 13px;
+    font-weight: 540;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .forgot:hover { color: var(--riad); }
+  .forgot:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; border-radius: 4px; }
   .staff-link {
     margin: 20px auto 0;
     display: block;
@@ -1113,6 +1128,9 @@ function authPage(opts) {
   html[data-theme="dark"] .staff button { background: var(--atlas); }
   html[data-theme="dark"] .staff button:hover { background: #0e8560; }
   html[data-theme="dark"] .auth-langs a[aria-current="true"] { color:#0A0F0D; background:var(--mint); }
+  html[data-theme="dark"] .forgot { color: var(--mint); }
+  html[data-theme="dark"] .forgot:hover { color: var(--paper); }
+  html[data-theme="dark"] .forgot:focus-visible { outline-color: var(--mint); }
 </style>
 <link rel="stylesheet" href="/assets/design-vexel.css" />
 <script src="/assets/design-vexel.js"></script>
@@ -1179,6 +1197,7 @@ function authPage(opts) {
       <label>${t.password}
         <input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" required />
       </label>
+      <a class="forgot" id="li-forgot" href="/reset.html?lang=${lang}">${t.forgot}</a>
       <p class="err" id="li-err" role="alert"></p>
       <button class="go" type="submit">${t.login}</button>
     </form>

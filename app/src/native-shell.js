@@ -211,7 +211,9 @@
   });
   var forgot = document.getElementById('login-forgot');
   if (forgot) forgot.addEventListener('click', function () {
-    var url = 'https://kiwi-os.com/support.html#mot-de-passe-oublie';
+    /* The self-serve reset page: the merchant enters their email and the server
+       sends a single-use link (functions/auth/forgot.js). Same flow as the web gate. */
+    var url = 'https://kiwi-os.com/reset.html?lang=' + encodeURIComponent(lang);
     var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
     if (ios && typeof ios.postMessage === 'function') ios.postMessage({ openURL:url });
     else window.open(url, '_blank', 'noopener');

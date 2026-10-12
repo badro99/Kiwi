@@ -64,6 +64,8 @@
   .msg.bad{color:var(--warn)}
   .msg.ok{color:var(--atlas)}
   .back{display:inline-flex; align-items:center; min-height:44px; margin-top:8px; color:var(--atlas); font-size:13.5px; text-decoration:none; font-weight:500}
+  .btn{display:flex; align-items:center; justify-content:center; min-height:44px; width:100%; border-radius:10px; padding:12px 16px; background:var(--atlas); color:#eafff4; font-size:15px; font-weight:600; text-decoration:none; margin:0 0 4px}
+  .btn:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
   .hint{font-size:12px; color:var(--muted); margin:10px 0 0}
   @media (prefers-color-scheme:dark){
     :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
@@ -74,6 +76,7 @@
        n'éclaircit que les rôles d'encre. */
     button{background:var(--atlas)}
     button:hover:not(:disabled){background:#0e8560}
+    .btn:focus-visible{outline-color:var(--mint)}
     input:focus{border-color:var(--mint); box-shadow:0 0 0 3px rgba(125,242,176,.14)}
     .msg.ok{color:var(--mint)}
     .msg.bad{color:#ff9d8a}
@@ -90,6 +93,115 @@
 (function(){
   'use strict';
   var view = document.getElementById('view');
+
+  /* Langue : même règle que la porte de compte (functions/_middleware.js) :
+     ?lang=, puis la langue mémorisée, puis celle du navigateur, puis le français. */
+  var lang = 'fr';
+  try {
+    var q = (new URLSearchParams(location.search).get('lang') || '').toLowerCase();
+    var saved = '';
+    try { saved = (localStorage.getItem('kiwiLang') || '').toLowerCase(); } catch(_){}
+    var nav = String((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase().split('-')[0];
+    [q, saved, nav].some(function(c){ if (c === 'fr' || c === 'en' || c === 'ar') { lang = c; return true; } return false; });
+  } catch(_){}
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+  var COPY = {
+    fr: {
+      title: 'Kiwi · Nouveau mot de passe',
+      checking: 'Vérification du lien…',
+      deadTitle: 'Ce lien n’est plus valable',
+      deadBody: 'Un lien de réinitialisation expire au bout d’une heure et ne fonctionne qu’une seule fois.',
+      again: 'Recevoir un nouveau lien',
+      back: 'Retour à la connexion ›',
+      reqTitle: 'Mot de passe oublié',
+      reqBody: 'Saisissez l’adresse e-mail de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.',
+      email: 'E-mail', emailPh: 'vous@exemple.ma',
+      send: 'Envoyer le lien', sending: 'Envoi…',
+      badEmail: 'Saisissez une adresse e-mail valide.',
+      tooMany: 'Trop de demandes. Réessayez dans quelques minutes.',
+      netBad: 'Réseau indisponible. Réessayez.',
+      unavailable: 'Service momentanément indisponible. Réessayez dans un instant.',
+      sentTitle: 'Vérifiez votre boîte mail',
+      sentBody: 'Si un compte Kiwi existe pour cette adresse, un lien de réinitialisation vient de lui être envoyé. Il est valable une heure et ne fonctionne qu’une fois. Pensez à regarder dans les courriers indésirables.',
+      noMailTitle: 'Contactez-nous pour réinitialiser',
+      noMailBody: 'L’envoi automatique par e-mail n’est pas encore actif. Écrivez-nous ou appelez-nous (WhatsApp compris) : nous envoyons le lien à l’adresse e-mail de votre compte, et uniquement à celle-ci.',
+      noMailCta: 'Contacter le support',
+      call: 'Appeler le +212 6 24 49 51 59',
+      formTitle: 'Choisissez un nouveau mot de passe',
+      formBody: 'Dix caractères minimum. Il remplacera l’ancien immédiatement.',
+      p1: 'Nouveau mot de passe', p2: 'Confirmez',
+      save: 'Enregistrer', saving: 'Enregistrement…',
+      short: 'Dix caractères minimum.', differ: 'Les deux saisies diffèrent.',
+      weakCommon: 'Ce mot de passe est trop courant.', weakPersonal: 'Évitez votre e-mail ou le nom de votre commerce.', weakLong: 'Mot de passe trop long.',
+      saveFail: 'Enregistrement impossible pour le moment. Réessayez dans un instant.',
+      doneTitle: 'Mot de passe enregistré', doneBody: 'Vous êtes connecté. Bonne journée.', open: 'Ouvrir mon tableau de bord'
+    },
+    en: {
+      title: 'Kiwi · New password',
+      checking: 'Checking the link…',
+      deadTitle: 'This link is no longer valid',
+      deadBody: 'A reset link expires after one hour and works only once.',
+      again: 'Get a new link',
+      back: 'Back to sign in ›',
+      reqTitle: 'Forgot your password?',
+      reqBody: 'Enter the email address of your account. We will send you a link to choose a new password.',
+      email: 'Email', emailPh: 'you@example.com',
+      send: 'Send the link', sending: 'Sending…',
+      badEmail: 'Enter a valid email address.',
+      tooMany: 'Too many requests. Try again in a few minutes.',
+      netBad: 'Network unavailable. Please try again.',
+      unavailable: 'Service temporarily unavailable. Please try again shortly.',
+      sentTitle: 'Check your inbox',
+      sentBody: 'If a Kiwi account exists for this address, a reset link has just been sent to it. It is valid for one hour and works only once. Check your spam folder too.',
+      noMailTitle: 'Contact us to reset it',
+      noMailBody: 'Automatic email sending is not active yet. Write to us or call us (WhatsApp works too) and we will send the link to your account email address, and only to that one.',
+      noMailCta: 'Contact support',
+      call: 'Call +212 6 24 49 51 59',
+      formTitle: 'Choose a new password',
+      formBody: 'At least ten characters. It replaces the old one immediately.',
+      p1: 'New password', p2: 'Confirm',
+      save: 'Save', saving: 'Saving…',
+      short: 'At least ten characters.', differ: 'The two entries differ.',
+      weakCommon: 'This password is too common.', weakPersonal: 'Avoid your email or business name.', weakLong: 'Password is too long.',
+      saveFail: 'Could not save right now. Please try again shortly.',
+      doneTitle: 'Password saved', doneBody: 'You are signed in. Have a good day.', open: 'Open my dashboard'
+    },
+    ar: {
+      title: 'Kiwi · كلمة مرور جديدة',
+      checking: 'جارٍ التحقق من الرابط…',
+      deadTitle: 'هذا الرابط لم يعد صالحاً',
+      deadBody: 'ينتهي رابط إعادة التعيين بعد ساعة واحدة ويعمل مرة واحدة فقط.',
+      again: 'الحصول على رابط جديد',
+      back: 'العودة إلى تسجيل الدخول ›',
+      reqTitle: 'نسيت كلمة المرور؟',
+      reqBody: 'أدخل البريد الإلكتروني لحسابك. سنرسل إليك رابطاً لاختيار كلمة مرور جديدة.',
+      email: 'البريد الإلكتروني', emailPh: 'name@example.com',
+      send: 'إرسال الرابط', sending: 'جارٍ الإرسال…',
+      badEmail: 'أدخل بريداً إلكترونياً صحيحاً.',
+      tooMany: 'طلبات كثيرة. حاول مرة أخرى بعد بضع دقائق.',
+      netBad: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.',
+      unavailable: 'الخدمة غير متاحة مؤقتاً. حاول مرة أخرى بعد قليل.',
+      sentTitle: 'تحقق من بريدك',
+      sentBody: 'إذا كان هناك حساب Kiwi بهذا البريد، فقد أُرسل إليه رابط إعادة التعيين. الرابط صالح لمدة ساعة ويعمل مرة واحدة فقط. تحقق أيضاً من البريد غير الهام.',
+      noMailTitle: 'تواصل معنا لإعادة التعيين',
+      noMailBody: 'الإرسال التلقائي بالبريد غير مفعّل بعد. راسلنا أو اتصل بنا (يمكنك استعمال واتساب)، وسنرسل الرابط إلى بريد حسابك فقط.',
+      noMailCta: 'التواصل مع الدعم',
+      call: 'اتصل على +212 6 24 49 51 59',
+      formTitle: 'اختر كلمة مرور جديدة',
+      formBody: 'عشرة أحرف على الأقل. ستحل محل القديمة فوراً.',
+      p1: 'كلمة المرور الجديدة', p2: 'تأكيد كلمة المرور',
+      save: 'حفظ', saving: 'جارٍ الحفظ…',
+      short: 'عشرة أحرف على الأقل.', differ: 'الإدخالان غير متطابقين.',
+      weakCommon: 'كلمة المرور هذه شائعة جداً.', weakPersonal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', weakLong: 'كلمة المرور طويلة جداً.',
+      saveFail: 'تعذر الحفظ حالياً. حاول مرة أخرى بعد قليل.',
+      doneTitle: 'تم حفظ كلمة المرور', doneBody: 'تم تسجيل دخولك. نتمنى لك يوماً سعيداً.', open: 'فتح لوحة التحكم'
+    }
+  };
+  function tr(k){ return (COPY[lang] && COPY[lang][k]) || COPY.fr[k] || k; }
+  document.title = tr('title');
+
   function h(tag, props){
     var n = document.createElement(tag);
     if (props) for (var k in props){
@@ -106,44 +218,103 @@
     return n;
   }
   function clear(){ while (view.firstChild) view.removeChild(view.firstChild); }
+  function backLink(){ return h('a', { class:'back', href:'/dashboard?lang=' + lang }, tr('back')); }
 
   var token = '';
   try { token = new URLSearchParams(location.search).get('token') || ''; } catch(_){}
 
-  /* Un seul écran d'échec pour tous les cas — expiré, déjà utilisé, inventé.
+  /* Un seul écran d'échec pour tous les cas : expiré, déjà utilisé, inventé.
      Le serveur ne les distingue pas non plus (functions/auth/reset.js) : la
-     précision serait un oracle, pas un service. */
+     précision serait un oracle, pas un service. De là, on peut demander un
+     nouveau lien soi-même. */
   function dead(){
     clear();
-    view.appendChild(h('h1', { text:'Ce lien n’est plus valable' }));
-    view.appendChild(h('p', { text:'Un lien de réinitialisation expire au bout d’une heure et ne fonctionne qu’une seule fois. Demandez-en un nouveau à votre interlocuteur Kiwi.' }));
-    view.appendChild(h('a', { class:'back', href:'/' }, 'Retour à la connexion ›'));
+    view.appendChild(h('h1', { text:tr('deadTitle') }));
+    view.appendChild(h('p', { text:tr('deadBody') }));
+    view.appendChild(h('button', { type:'button', onClick:request }, tr('again')));
+    view.appendChild(backLink());
   }
 
   function done(){
     clear();
-    view.appendChild(h('h1', { text:'Mot de passe enregistré' }));
-    view.appendChild(h('p', { text:'Vous êtes connecté. Bonne journée.' }));
-    view.appendChild(h('button', { onClick:function(){ location.href = '/dashboard.html'; } }, 'Ouvrir mon tableau de bord'));
+    view.appendChild(h('h1', { text:tr('doneTitle') }));
+    view.appendChild(h('p', { text:tr('doneBody') }));
+    view.appendChild(h('button', { onClick:function(){ location.href = '/dashboard.html'; } }, tr('open')));
+  }
+
+  /* Demande de lien (« mot de passe oublié »). La réponse du serveur est la même
+     pour une adresse connue et inconnue (functions/auth/forgot.js) : cette page
+     n'affiche donc jamais autre chose que « si un compte existe… ». Le champ
+     `mail` dit seulement si Kiwi sait envoyer des e-mails : sinon on le dit et on
+     renvoie vers le support, au lieu de promettre un courrier qui ne part pas. */
+  function sent(){
+    clear();
+    view.appendChild(h('h1', { text:tr('sentTitle') }));
+    view.appendChild(h('p', { text:tr('sentBody') }));
+    view.appendChild(backLink());
+  }
+  function noMail(){
+    clear();
+    view.appendChild(h('h1', { text:tr('noMailTitle') }));
+    view.appendChild(h('p', { text:tr('noMailBody') }));
+    view.appendChild(h('a', { class:'btn', href:'/support.html#mot-de-passe-oublie' }, tr('noMailCta')));
+    view.appendChild(h('a', { class:'back', href:'tel:+212624495159' }, tr('call')));
+    view.appendChild(h('br'));
+    view.appendChild(backLink());
+  }
+  function request(){
+    clear();
+    view.appendChild(h('h1', { text:tr('reqTitle') }));
+    view.appendChild(h('p', { text:tr('reqBody') }));
+    var em = h('input', { type:'email', id:'fe', autocomplete:'email', inputmode:'email', placeholder:tr('emailPh') });
+    var msg = h('p', { class:'msg', role:'alert' });
+    var btn = h('button', { type:'submit' }, tr('send'));
+    var f = h('form', { novalidate:'novalidate', onSubmit:function(e){
+      e.preventDefault();
+      msg.className = 'msg'; msg.textContent = '';
+      var v = em.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ msg.className = 'msg bad'; msg.textContent = tr('badEmail'); em.focus(); return; }
+      btn.disabled = true; btn.textContent = tr('sending');
+      fetch('/auth/forgot', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ email: v }),
+      }).then(function(r){ return r.json().then(function(j){ return { status:r.status, j:j }; }, function(){ return { status:r.status, j:{} }; }); })
+        .then(function(res){
+          if (res.status === 200 && res.j && res.j.ok) { if (res.j.mail) sent(); else noMail(); return; }
+          btn.disabled = false; btn.textContent = tr('send');
+          msg.className = 'msg bad';
+          msg.textContent = res.status === 429 ? tr('tooMany')
+                          : res.status === 400 ? tr('badEmail')
+                          : tr('unavailable');
+        })
+        .catch(function(){
+          btn.disabled = false; btn.textContent = tr('send');
+          msg.className = 'msg bad'; msg.textContent = tr('netBad');
+        });
+    } },
+      h('label', { for:'fe' }, tr('email')), em, btn, msg);
+    view.appendChild(f);
+    view.appendChild(backLink());
+    setTimeout(function(){ try { em.focus(); } catch(_){} }, 60);
   }
 
   function form(){
     clear();
-    view.appendChild(h('h1', { text:'Choisissez un nouveau mot de passe' }));
-    view.appendChild(h('p', { text:'Huit caractères minimum. Il remplacera l’ancien immédiatement.' }));
+    view.appendChild(h('h1', { text:tr('formTitle') }));
+    view.appendChild(h('p', { text:tr('formBody') }));
 
     var p1 = h('input', { type:'password', id:'p1', autocomplete:'new-password', placeholder:'••••••••' });
     var p2 = h('input', { type:'password', id:'p2', autocomplete:'new-password', placeholder:'••••••••' });
-    var msg = h('p', { class:'msg' });
-    var btn = h('button', { type:'submit' }, 'Enregistrer');
+    var msg = h('p', { class:'msg', role:'alert' });
+    var btn = h('button', { type:'submit' }, tr('save'));
 
     var f = h('form', { onSubmit:function(e){
       e.preventDefault();
       msg.className = 'msg'; msg.textContent = '';
       var a = p1.value, b = p2.value;
-      if (a.length < 8){ msg.className = 'msg bad'; msg.textContent = 'Huit caractères minimum.'; return; }
-      if (a !== b){ msg.className = 'msg bad'; msg.textContent = 'Les deux saisies diffèrent.'; return; }
-      btn.disabled = true; btn.textContent = 'Enregistrement…';
+      if (a.length < 10){ msg.className = 'msg bad'; msg.textContent = tr('short'); return; }
+      if (a !== b){ msg.className = 'msg bad'; msg.textContent = tr('differ'); return; }
+      btn.disabled = true; btn.textContent = tr('saving');
       fetch('/auth/reset', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({ token: token, password: a }),
@@ -152,18 +323,20 @@
           if (res.ok && res.j && res.j.ok) { done(); return; }
           var err = (res.j && res.j.error) || '';
           if (err === 'invalid'){ dead(); return; }
-          btn.disabled = false; btn.textContent = 'Enregistrer';
+          btn.disabled = false; btn.textContent = tr('save');
           msg.className = 'msg bad';
-          msg.textContent = err === 'weak' ? 'Huit caractères minimum.'
-                          : 'Enregistrement impossible pour le moment. Réessayez dans un instant.';
+          var why = res.j && res.j.reason;
+          msg.textContent = err === 'weak'
+            ? (why === 'common' ? tr('weakCommon') : why === 'personal' ? tr('weakPersonal') : why === 'long' ? tr('weakLong') : tr('short'))
+            : tr('saveFail');
         })
         .catch(function(){
-          btn.disabled = false; btn.textContent = 'Enregistrer';
-          msg.className = 'msg bad'; msg.textContent = 'Réseau indisponible. Réessayez.';
+          btn.disabled = false; btn.textContent = tr('save');
+          msg.className = 'msg bad'; msg.textContent = tr('netBad');
         });
     } },
-      h('label', { for:'p1' }, 'Nouveau mot de passe'), p1,
-      h('label', { for:'p2' }, 'Confirmez'), p2,
+      h('label', { for:'p1' }, tr('p1')), p1,
+      h('label', { for:'p2' }, tr('p2')), p2,
       btn, msg);
     view.appendChild(f);
     setTimeout(function(){ try { p1.focus(); } catch(_){} }, 60);
@@ -171,15 +344,14 @@
 
   /* On valide AVANT d'afficher le formulaire : faire saisir deux fois un mot de
      passe pour apprendre ensuite que le lien était mort est une petite cruauté
-     évitable. La validation ne consomme pas le jeton (GET). */
-  view.appendChild(h('p', { text:'Vérification du lien…' }));
-  if (!token) { dead(); }
+     évitable. La validation ne consomme pas le jeton (GET). Sans jeton dans
+     l'URL, on est là pour DEMANDER un lien (porte de compte, app native). */
+  if (!token) { request(); }
   else {
+    view.appendChild(h('p', { text:tr('checking') }));
     /* no-store explicite : la validité d'un lien change entre deux requêtes
-       identiques, donc rien ne doit la mettre en cache — ni le service worker
-       (qui laisse désormais passer tout /auth/, voir kiwi-sw.js), ni le
-       navigateur, ni un proxy en chemin. Un « ce lien est bon » servi de mémoire
-       ferait saisir un mot de passe pour rien. */
+       identiques, donc rien ne doit la mettre en cache, ni le service worker,
+       ni le navigateur, ni un proxy en chemin. */
     fetch('/auth/reset?token=' + encodeURIComponent(token), { cache:'no-store', headers:{ Accept:'application/json' } })
       .then(function(r){ return r.json(); })
       .then(function(j){ if (j && j.valid) form(); else dead(); })
