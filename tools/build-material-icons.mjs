@@ -80,6 +80,7 @@ export function renderRuntime(glyphs, aliases) {
   var ALIASES = ${JSON.stringify(aliases)};
   var NS = 'http://www.w3.org/2000/svg';
   var FALLBACK = 'help';
+  var NAME = /^[a-z0-9_]+$/;
   var missing = [];
 
   function resolve(name) {
@@ -98,11 +99,15 @@ export function renderRuntime(glyphs, aliases) {
     return GLYPHS[FALLBACK];
   }
 
+  /* data-icon is only a placeholder on <i> (or on the <svg> this file drew
+     from one): a <button data-icon> in someone's picker is not ours to replace. */
   function createIcon(element) {
     var legacy = element.hasAttribute('data-lucide');
+    var tag = element.tagName.toLowerCase();
+    if (!legacy && tag !== 'i' && !(tag === 'svg' && element.hasAttribute('data-material-symbol'))) return;
     var asked = (legacy ? element.getAttribute('data-lucide') : element.getAttribute('data-icon')) || FALLBACK;
     var material = resolve(asked);
-    if (element.tagName.toLowerCase() === 'svg' && element.getAttribute('data-material-symbol') === material) return;
+    if (tag === 'svg' && element.getAttribute('data-material-symbol') === material) return;
 
     var svg = document.createElementNS(NS, 'svg');
     for (var i = 0; i < element.attributes.length; i++) {
@@ -130,14 +135,17 @@ export function renderRuntime(glyphs, aliases) {
 
   function render(root) {
     var scope = root && root.querySelectorAll ? root : document;
-    var list = scope.querySelectorAll('[data-lucide], [data-icon]');
+    var list = scope.querySelectorAll('[data-lucide], i[data-icon], svg[data-icon][data-material-symbol]');
     for (var i = 0; i < list.length; i++) createIcon(list[i]);
   }
 
-  /* For template strings that want the markup rather than a placeholder. */
+  /* For template strings that want the markup rather than a placeholder. The
+     name lands inside an attribute, so anything but a plain Material name is
+     drawn as the fallback instead of being written out. */
   function svg(name, size, className) {
-    var asked = name || FALLBACK;
+    var asked = String(name || FALLBACK);
     var material = resolve(asked);
+    if (!NAME.test(material)) { glyph('', asked); material = FALLBACK; }
     var px = Number(size) || 24;
     var cls = ' class="material-symbol' + (className ? ' ' + String(className).replace(/"/g, '&quot;') : '') + '"';
     return '<svg' + cls + ' data-material-symbol="' + material + '" viewBox="0 -960 960 960" width="' + px +

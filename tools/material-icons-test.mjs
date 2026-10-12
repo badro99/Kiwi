@@ -46,6 +46,58 @@ for (const f of files) {
 ok(!unresolved.length, unresolved.length ? `names with no glyph (would draw "?"): ${unresolved.join(', ')}` : `${asked} icon names read from ${files.length} files, all resolve to a vendored glyph`);
 ok(!notMaterial.length, notMaterial.length ? `data-icon / KiwiIcon.svg take Material names, not Lucide ones: ${notMaterial.join(', ')}` : 'data-icon and KiwiIcon.svg are given Material names');
 
+// 4b · data-icon means "icon placeholder" only on <i>. The boutique and maison
+// pickers used to carry data-icon on their <button>s, and the runtime replaced
+// every picker button with an svg; they now say data-icon-key.
+const wrongTag = [];
+for (const f of files) {
+  const text = read(f);
+  for (const m of text.matchAll(/<([a-zA-Z][\w-]*)\b[^<>]*?\sdata-icon\s*=/g)) {
+    if (m[1].toLowerCase() !== 'i') wrongTag.push(`${f}:${text.slice(0, m.index).split('\n').length} <${m[1]}>`);
+  }
+}
+ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (the runtime would ignore it, or a picker would collide): ${wrongTag.join(', ')}` : 'data-icon only ever sits on an <i> placeholder');
+
+// 4c · the runtime itself, in a stub DOM: it leaves a picker <button data-icon>
+// alone, draws an <i data-icon>, and never writes a hostile name into markup.
+{
+  const vm = await import('node:vm');
+  const el = (tag, attrs) => {
+    const a = { ...attrs };
+    return {
+      tagName: tag.toUpperCase(), replaced: null,
+      get attributes() { return Object.entries(a).map(([name, value]) => ({ name, value })); },
+      hasAttribute: (n) => Object.prototype.hasOwnProperty.call(a, n),
+      getAttribute: (n) => (Object.prototype.hasOwnProperty.call(a, n) ? a[n] : null),
+      setAttribute: (n, v) => { a[n] = String(v); },
+      appendChild() {},
+      replaceWith(x) { this.replaced = x; },
+    };
+  };
+  const button = el('button', { 'data-icon': 'robe', class: 'bqi-icon' });
+  const placeholder = el('i', { 'data-icon': 'print' });
+  const warnings = [];
+  const ctx = {
+    console: { warn: (m) => warnings.push(m) },
+    queueMicrotask: () => {},
+    MutationObserver: class { observe() {} },
+    document: {
+      readyState: 'complete', documentElement: {},
+      createElementNS: (_ns, tag) => el(tag, {}),
+      querySelectorAll: () => [button, placeholder],
+      addEventListener() {},
+    },
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(read(RUNTIME), ctx);
+  ctx.KiwiIcon.render(ctx.document);
+  ok(button.replaced === null, 'a picker <button data-icon> is left in place, not replaced by an svg');
+  ok(placeholder.replaced && placeholder.replaced.getAttribute('data-material-symbol') === 'print', 'an <i data-icon="print"> is drawn as the print glyph');
+  const hostile = ctx.KiwiIcon.svg('a"><img src=x onerror=alert(1)>', 18);
+  ok(!/<img|onerror/.test(hostile) && (hostile.match(/"/g) || []).length % 2 === 0, 'KiwiIcon.svg() never writes a hostile name into the markup');
+  ok(ctx.KiwiIcon.missing.includes('a"><img src=x onerror=alert(1)>') && warnings.length > 0, 'and reports it as a missing icon instead');
+}
+
 // 5 · the pages load the Outlined runtime, nobody loads the Rounded shim
 ok(!existsSync(path.join(ROOT, 'assets/lucide.min.js')), 'assets/lucide.min.js (the Rounded shim) is gone');
 const stillLucide = files.filter((f) => /lucide\.min\.js/.test(read(f)) && !f.startsWith('functions/'));

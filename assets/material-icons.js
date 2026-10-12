@@ -13,6 +13,7 @@
   var ALIASES = {"account-balance":"account_balance","activity":"monitoring","alert-circle":"error","alert-triangle":"warning","apple":"nutrition","archive":"archive","archive-restore":"settings_backup_restore","armchair":"chair","arrow-down":"arrow_downward","arrow-down-to-line":"download","arrow-left":"arrow_back","arrow-left-right":"sync_alt","arrow-right":"arrow_forward","arrow-right-left":"swap_horiz","arrow-up":"arrow_upward","arrow-up-from-line":"upload","arrow-up-right":"north_east","baby":"child_care","badge-check":"verified","badge-percent":"percent","ban":"block","banknote":"payments","bar-chart-3":"bar_chart","battery-medium":"battery_5_bar","bed-double":"bed","bell":"notifications","bell-ring":"notifications_active","bike":"two_wheeler","book":"menu_book","book-open":"menu_book","boxes":"inventory_2","briefcase-business":"business_center","building-2":"apartment","cake":"cake","calculator":"calculate","calendar":"calendar_month","calendar-check":"event_available","calendar-clock":"calendar_clock","calendar-days":"calendar_month","calendar-off":"event_busy","calendar-x":"event_busy","camera":"photo_camera","chart-no-axes-column-increasing":"bar_chart","check":"check","check-check":"done_all","check-circle-2":"check_circle","chef-hat":"chef_hat","chevron-left":"chevron_left","chevron-right":"chevron_right","circle":"radio_button_unchecked","circle-check":"check_circle","clipboard-check":"assignment_turned_in","clipboard-list":"assignment","clock":"schedule","cloud-download":"cloud_download","coffee":"local_cafe","coins":"toll","contact":"contacts","contactless":"contactless","cooking-pot":"skillet","copy":"content_copy","corner-up-left":"reply","credit-card":"credit_card","croissant":"bakery_dining","cross":"medical_services","delete":"backspace","dialpad":"dialpad","divide":"calculate","door-open":"door_open","droplets":"water_drop","dumbbell":"fitness_center","edit-3":"edit","equal":"equal","external-link":"open_in_new","eye":"visibility","file-plus":"note_add","file-plus-2":"note_add","file-text":"description","flame":"local_fire_department","flower":"local_florist","flower-2":"local_florist","folder":"folder","folders":"folder_copy","gavel":"gavel","gift":"redeem","git-branch":"account_tree","glass-water":"local_drink","globe":"language","graduation-cap":"school","hand-coins":"payments","hand-platter":"room_service","heart":"favorite","heart-handshake":"volunteer_activism","history":"history","image-plus":"add_photo_alternate","inbox":"inbox","info":"info","inventory-2":"inventory_2","key-round":"key","keyboard":"keyboard","languages":"translate","layers":"layers","layout-dashboard":"dashboard","layout-grid":"grid_view","leaf":"eco","lightbulb":"lightbulb","link":"link","list":"list","list-checks":"checklist","list-filter":"filter_list","loader":"progress_activity","lock":"lock","log-in":"login","log-out":"logout","map-pin":"location_on","maximize":"fullscreen","maximize-2":"fullscreen","megaphone":"campaign","menu":"menu","merge":"merge","message-circle":"chat_bubble","message-square":"chat","message-square-text":"chat","minimize":"fullscreen_exit","minus":"remove","monitor":"desktop_windows","moon":"dark_mode","more-horizontal":"more_horiz","more-vertical":"more_vert","move-horizontal":"swap_horiz","navigation":"navigation","nfc":"nfc","notebook":"menu_book","notebook-tabs":"menu_book","package":"inventory_2","package-check":"inventory","package-minus":"inventory_2","package-open":"inventory_2","package-plus":"add_box","package-x":"inventory","party-popper":"celebration","pause":"pause","pencil":"edit","pencil-line":"edit_note","pending_actions":"pending_actions","percent":"percent","phone":"call","pie-chart":"pie_chart","pill":"medication","pizza":"local_pizza","play":"play_arrow","plus":"add","plus-circle":"add_circle","power":"power_settings_new","printer":"print","qr-code":"qr_code_2","receipt":"receipt","receipt-text":"receipt_long","refresh-cw":"refresh","repeat":"repeat","rotate-ccw":"undo","rotate-cw":"rotate_right","ruler":"straighten","sandwich":"lunch_dining","scale":"scale","scan-barcode":"barcode_scanner","scan-line":"document_scanner","scissors":"content_cut","search":"search","search-x":"search_off","send":"send","send-horizontal":"send","settings":"settings","share-2":"share","shield-alert":"gpp_maybe","shield-check":"verified_user","shirt":"checkroom","shopping-bag":"shopping_bag","shopping-basket":"shopping_basket","shopping-cart":"shopping_cart","smartphone":"smartphone","snowflake":"ac_unit","sort":"sort","sparkles":"auto_awesome","split":"call_split","split-square-vertical":"vertical_split","sprout":"eco","star":"star","stethoscope":"stethoscope","sticky-note":"sticky_note_2","store":"storefront","sun":"light_mode","sun-moon":"brightness_6","swap-vert":"swap_vert","tag":"sell","tags":"sell","target":"target","task_alt":"task_alt","thermometer":"thermometer","thumbs-down":"thumb_down","thumbs-up":"thumb_up","ticket":"confirmation_number","timer":"timer","trash-2":"delete","trending-down":"trending_down","trending-up":"trending_up","triangle-alert":"warning","trophy":"emoji_events","truck":"local_shipping","unlock":"lock_open","user":"person","user-check":"how_to_reg","user-plus":"person_add","user-round-plus":"person_add","user-round-x":"person_remove","user-x":"person_remove","users":"groups","utensils":"restaurant","utensils-crossed":"restaurant","volume-2":"volume_up","wallet":"account_balance_wallet","wand-2":"auto_fix_high","wheat":"grass","x":"close","x-circle":"cancel","x-octagon":"dangerous","zap":"bolt"};
   var NS = 'http://www.w3.org/2000/svg';
   var FALLBACK = 'help';
+  var NAME = /^[a-z0-9_]+$/;
   var missing = [];
 
   function resolve(name) {
@@ -31,11 +32,15 @@
     return GLYPHS[FALLBACK];
   }
 
+  /* data-icon is only a placeholder on <i> (or on the <svg> this file drew
+     from one): a <button data-icon> in someone's picker is not ours to replace. */
   function createIcon(element) {
     var legacy = element.hasAttribute('data-lucide');
+    var tag = element.tagName.toLowerCase();
+    if (!legacy && tag !== 'i' && !(tag === 'svg' && element.hasAttribute('data-material-symbol'))) return;
     var asked = (legacy ? element.getAttribute('data-lucide') : element.getAttribute('data-icon')) || FALLBACK;
     var material = resolve(asked);
-    if (element.tagName.toLowerCase() === 'svg' && element.getAttribute('data-material-symbol') === material) return;
+    if (tag === 'svg' && element.getAttribute('data-material-symbol') === material) return;
 
     var svg = document.createElementNS(NS, 'svg');
     for (var i = 0; i < element.attributes.length; i++) {
@@ -63,14 +68,17 @@
 
   function render(root) {
     var scope = root && root.querySelectorAll ? root : document;
-    var list = scope.querySelectorAll('[data-lucide], [data-icon]');
+    var list = scope.querySelectorAll('[data-lucide], i[data-icon], svg[data-icon][data-material-symbol]');
     for (var i = 0; i < list.length; i++) createIcon(list[i]);
   }
 
-  /* For template strings that want the markup rather than a placeholder. */
+  /* For template strings that want the markup rather than a placeholder. The
+     name lands inside an attribute, so anything but a plain Material name is
+     drawn as the fallback instead of being written out. */
   function svg(name, size, className) {
-    var asked = name || FALLBACK;
+    var asked = String(name || FALLBACK);
     var material = resolve(asked);
+    if (!NAME.test(material)) { glyph('', asked); material = FALLBACK; }
     var px = Number(size) || 24;
     var cls = ' class="material-symbol' + (className ? ' ' + String(className).replace(/"/g, '&quot;') : '') + '"';
     return '<svg' + cls + ' data-material-symbol="' + material + '" viewBox="0 -960 960 960" width="' + px +

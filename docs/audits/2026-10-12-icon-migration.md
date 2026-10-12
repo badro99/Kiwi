@@ -49,7 +49,13 @@ stages, never as a side effect).
   kept, `data-material-symbol` added), so no CSS selector moves. Only the
   geometry changes, from Rounded to Outlined.
 - **New code writes `<i data-icon="print">` with a Material name**, or
-  `KiwiIcon.svg('print', 18)` in a template string. `window.lucide.createIcons()`
+  `KiwiIcon.svg('print', 18)` in a template string. `data-icon` is a
+  placeholder only on `<i>`: the boutique and maison icon pickers carried
+  `data-icon` on their `<button>`s, and the first version of the runtime
+  replaced those buttons with SVGs. The pickers now use `data-icon-key`, and
+  the gate refuses `data-icon` on any other tag. `KiwiIcon.svg()` refuses any
+  name that is not a plain Material identifier, so a name never reaches the
+  markup unescaped. `window.lucide.createIcons()`
   is kept as a compatibility entry point. A name that does not resolve still
   draws the "?" so the layout holds, but it now `console.warn`s once and is
   listed in `KiwiIcon.missing`.

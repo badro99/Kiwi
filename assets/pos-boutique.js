@@ -204,13 +204,13 @@
     'parapluie', 'tag', 'cintre',
   ];
   function iconPickerHtml(sel) {
-    return `<div class="bqi-iconpick">${ICON_KEYS.map((k) => `<button type="button" class="bqi-icon${k === sel ? ' on' : ''}" data-icon="${k}" title="${esc(ICON_LABELS[k] || k)}">${ART[k]}</button>`).join('')}</div>`;
+    return `<div class="bqi-iconpick">${ICON_KEYS.map((k) => `<button type="button" class="bqi-icon${k === sel ? ' on' : ''}" data-icon-key="${k}" title="${esc(ICON_LABELS[k] || k)}">${ART[k]}</button>`).join('')}</div>`;
   }
   function wireIconPicker(el, onPick) {
     el.querySelectorAll('.bqi-icon').forEach((b) => b.addEventListener('click', () => {
       el.querySelectorAll('.bqi-icon').forEach((x) => x.classList.remove('on'));
       b.classList.add('on');
-      if (onPick) onPick(b.getAttribute('data-icon'));
+      if (onPick) onPick(b.getAttribute('data-icon-key'));
     }));
   }
 
