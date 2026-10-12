@@ -461,11 +461,16 @@ async function captureFrame(env, surface, device, theme, lang, outFile) {
     await page.setViewport({ width: dev.w, height: dev.h, deviceScaleFactor: dsf, isMobile: dev.mobile, hasTouch: dev.touch });
     await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: 'no-preference' }]);
     await page.setRequestInterception(true);
+    const localOrigins = { web: new URL(env.web.base).origin, native: new URL(env.native.base).origin };
     page.on('request', (r) => {
       const u = r.url();
-      if (/^(data|blob|about):/.test(u) || u.startsWith(env.web.base) || u.startsWith(env.native.base)) { r.continue(); return; }
-      let host = ''; try { host = new URL(u).hostname; } catch (_) {}
-      if (!env.opts.offline && /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(host)) { r.continue(); return; }
+      if (/^(data|blob|about):/.test(u)) { r.continue(); return; }
+      /* Compare parsed origins, not string prefixes: "http://127.0.0.1:8123@evil"
+         starts with the local base but is another host. */
+      let o = null; try { o = new URL(u); } catch (_) {}
+      if (!o || o.username || o.password) { rec.blocked++; r.abort(); return; }
+      if (o.origin === localOrigins.web || o.origin === localOrigins.native) { r.continue(); return; }
+      if (!env.opts.offline && /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(o.hostname)) { r.continue(); return; }
       rec.blocked++; r.abort();
     });
     page.on('pageerror', (e) => consoleErrors.push(String(e.message || e).slice(0, 160)));
