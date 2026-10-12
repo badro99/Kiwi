@@ -1016,6 +1016,23 @@ section('Clients du carnet (tools/client-mix-test.mjs)');
   }
 }
 
+/* ── 9quinquies · souvent pris ensemble ─────────────────────────────────────
+ * Les paires d'articles que les tickets réels réunissent, sous le classement
+ * des produits, chacune avec sa preuve, et rien sous 20 tickets à plusieurs
+ * articles. (tools/basket-pairs-test.mjs) */
+section('Souvent pris ensemble (tools/basket-pairs-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'basket-pairs-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').reverse().find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`basket-pairs-test.mjs exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9 bis · la marge se mesure ──────────────────────────────────────────────
  * Trois tuiles — Marge brute, Bénéfice brut, Coût matière — dérivaient d'un
  * chiffre qui rapprochait le LIBELLÉ du ticket (un résumé de panier : « Pain

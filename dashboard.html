@@ -1241,6 +1241,17 @@
   .prod-list { display: flex; flex-direction: column; gap: 2px; }
   .prod-row { display: grid; grid-template-columns: 30px 1fr 80px 60px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--n-200); font-size: 13.5px; }
   .prod-row:last-child { border-bottom: 0; }
+  /* « Souvent pris ensemble » : sous le classement, les paires d'articles que
+     les tickets réels réunissent, chacune avec sa preuve (renderProducts). */
+  .prod-pairs { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--n-200); }
+  .prod-pairs .pp-t { font-size: 12px; font-weight: 600; color: var(--n-500); letter-spacing: 0.01em; margin-bottom: 4px; }
+  .prod-pairs .pp-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 13px; }
+  .prod-pairs .pp-row + .pp-row { border-top: 1px solid var(--n-100); }
+  .prod-pairs .pp-n { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+  .prod-pairs .pp-plus { color: var(--atlas); font-weight: 600; padding: 0 4px; }
+  .prod-pairs .pp-why { font-size: 11.5px; color: var(--n-500); white-space: nowrap; }
+  .prod-pairs .pp-wait { font-size: 12px; color: var(--n-500); line-height: 1.5; }
+  @media (max-width: 480px) { .prod-pairs .pp-row { flex-direction: column; gap: 2px; } .prod-pairs .pp-why { white-space: normal; } }
   .prod-row .rank { font-family: var(--mono); font-size: 12px; color: var(--n-500); font-weight: 500; }
   .prod-row .rank.top { color: var(--atlas); font-weight: 600; }
   .prod-row .info .n { font-weight: 500; letter-spacing: -0.005em; }
@@ -5288,6 +5299,7 @@
             </div>
           </div>
           <div class="prod-list" data-products-list></div>
+          <div class="prod-pairs" data-products-pairs hidden></div>
         </div>
         </div><!-- /.dash-col A -->
 
@@ -5530,7 +5542,7 @@
 <script src="assets/pressing-catalog.js?v=8" defer></script>
 <script src="assets/pressing-dashboard.js?v=17" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=69" defer></script>
+<script src="assets/dateRange.js?v=70" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>

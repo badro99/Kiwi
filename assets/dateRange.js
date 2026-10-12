@@ -4990,6 +4990,86 @@
     return { rows, sales: sales.length, covered };
   }
 
+  /* ── « Souvent pris ensemble » ─────────────────────────────────────────────
+   * Les paires d'articles que les tickets RÉELS de la période réunissent. On
+   * ne montre une paire que si elle a été prise ensemble au moins
+   * PAIRS_MIN_TOGETHER fois, et seulement à partir de PAIRS_MIN_BASKETS
+   * tickets à plusieurs articles : en dessous, trois tickets « thé + msemen »
+   * feraient une règle de ce qui n'est qu'un hasard. Chaque paire dit sa
+   * preuve : combien de tickets, et quelle part des tickets de l'article le
+   * moins vendu des deux contenaient aussi l'autre. Mêmes clés d'article que
+   * le classement juste au-dessus (realTopProducts). */
+  const PAIRS_MIN_BASKETS = 20, PAIRS_MIN_TOGETHER = 5, PAIRS_MAX_KEYS = 40;
+  function realPairs(range) {
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    const seen = new Map(), names = new Map(), together = new Map();
+    let baskets = 0;
+    realSalesList().forEach((sale) => {
+      const ts = +sale.ts || 0;
+      if (ts < from || ts >= to) return;
+      const keys = new Set();
+      (Array.isArray(sale.lines) ? sale.lines : []).forEach((l) => {
+        if (!l || !l.name || !((+l.qty || 0) > 0)) return;
+        const k = String(l.itemId || l.variantId || l.name).trim().toLowerCase();
+        if (!k || keys.size >= PAIRS_MAX_KEYS) return;
+        keys.add(k);
+        if (!names.has(k)) names.set(k, String(l.name));
+      });
+      keys.forEach((k) => seen.set(k, (seen.get(k) || 0) + 1));
+      if (keys.size < 2) return;
+      baskets++;
+      const ks = [...keys].sort();
+      for (let i = 0; i < ks.length; i++) {
+        for (let j = i + 1; j < ks.length; j++) {
+          const pk = ks[i] + '\u0000' + ks[j];
+          together.set(pk, (together.get(pk) || 0) + 1);
+        }
+      }
+    });
+    if (baskets < PAIRS_MIN_BASKETS) return { rows: [], baskets };
+    const rows = [...together].filter(([, n]) => n >= PAIRS_MIN_TOGETHER).map(([pk, n]) => {
+      const [x, y] = pk.split('\u0000');
+      const lead = (seen.get(x) || 0) <= (seen.get(y) || 0) ? x : y;
+      const other = lead === x ? y : x;
+      return { lead: names.get(lead), other: names.get(other), together: n, share: n / Math.max(1, seen.get(lead) || 0) };
+    }).sort((p, q) => q.together - p.together || q.share - p.share || String(p.lead).localeCompare(String(q.lead))).slice(0, 3);
+    return { rows, baskets };
+  }
+  const PAIRS_STR = {
+    fr: { t: 'Souvent pris ensemble',
+          why: (n, pct, lead) => `${n} tickets · ${pct} % des tickets avec ${lead}`,
+          wait: (n, min) => `Les articles souvent pris ensemble apparaîtront à partir de ${min} tickets à plusieurs articles sur la période (${n} pour l’instant).`,
+          none: (n) => `Aucune paire ne revient encore assez souvent sur ces ${n} tickets à plusieurs articles.` },
+    en: { t: 'Often bought together',
+          why: (n, pct, lead) => `${n} tickets · ${pct}% of tickets with ${lead}`,
+          wait: (n, min) => `Items often bought together will appear from ${min} multi-item tickets in the period (${n} so far).`,
+          none: (n) => `No pair comes back often enough yet across these ${n} multi-item tickets.` },
+    ar: { t: 'يُشترى معاً غالباً',
+          why: (n, pct, lead) => `${n} تذاكر · ${pct}٪ من التذاكر التي فيها ${lead}`,
+          wait: (n, min) => `ستظهر المنتجات التي تُشترى معاً ابتداءً من ${min} تذكرة بعدة منتجات خلال الفترة (${n} حتى الآن).`,
+          none: (n) => `لا يتكرر أي زوج بما يكفي بعد في هذه التذاكر الـ${n} ذات المنتجات المتعددة.` },
+  };
+  function renderPairs(card, isCustom, lang) {
+    const host = card && card.querySelector('[data-products-pairs]');
+    if (!host) return;
+    const p = isCustom ? realPairs(currentRange) : null;
+    if (!p || !p.baskets) { host.hidden = true; host.replaceChildren(); return; }
+    const S = PAIRS_STR[lang] || PAIRS_STR.fr;
+    const head = `<div class="pp-t">${escTxt(S.t)}</div>`;
+    if (p.baskets < PAIRS_MIN_BASKETS) {
+      host.innerHTML = head + `<div class="pp-wait">${escTxt(S.wait(frInt(p.baskets), frInt(PAIRS_MIN_BASKETS)))}</div>`;
+    } else if (!p.rows.length) {
+      host.innerHTML = head + `<div class="pp-wait">${escTxt(S.none(frInt(p.baskets)))}</div>`;
+    } else {
+      host.innerHTML = head + p.rows.map((r) => `
+        <div class="pp-row">
+          <div class="pp-n">${escTxt(r.lead)}<span class="pp-plus" aria-hidden="true">+</span>${escTxt(r.other)}</div>
+          <div class="pp-why">${escTxt(S.why(frInt(r.together), frInt(Math.round(r.share * 100)), r.lead))}</div>
+        </div>`).join('');
+    }
+    host.hidden = false;
+  }
+
   const STAFF_ONDUTY_STR = {
     fr: (n, tot) => `${n} sur ${tot} en service aujourd'hui`,
     en: (n, tot) => `${n} of ${tot} on shift today`,
@@ -5449,6 +5529,7 @@
       growBars(list);
     }
     if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.prod-row'));
+    try { renderPairs(card, isCustom, lang); } catch (_) {}
     const sub = document.querySelector('[data-products-sub]');
     if (sub) sub.textContent = isCustom
       ? (real && real.rows.length ? (PRODUCTS_COVERAGE[lang] || PRODUCTS_COVERAGE.fr)(real.rows.length, real.covered, real.sales) : pe.sub)
