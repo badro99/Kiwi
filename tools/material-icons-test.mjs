@@ -127,4 +127,9 @@ ok(!grew.length, grew.length
   : `no new data-lucide (${total} left in ${Object.keys(baseline).length} files)`);
 if (shrank.length) console.log(`  · fewer data-lucide in ${shrank.join(', ')}: lock it in with node tools/build-material-icons.mjs --ratchet`);
 
+// 7 · the dashboard shell draws no icon by hand: its last 23 stroke-drawn
+// <svg> became vendored Material paths (2026-10-11 and 2026-10-12).
+const handDrawn = (read('dashboard.html').match(/<svg\b[^>]*\bstroke="currentColor"/g) || []).length;
+ok(handDrawn === 0, handDrawn ? `dashboard.html still draws ${handDrawn} icon(s) by hand: use the vendored Material path` : 'dashboard.html draws no icon by hand');
+
 console.log(`\nmaterial-icons-test · ${checks} checks green`);
