@@ -165,10 +165,14 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   "Upload succeeded", processing. Capacitor 8.5.3 (critical internal proxy
   fix, `d8e12941`; the archive resolved `capacitor-swift-pm @ 8.5.3`), native
   audit fixes (cash moves in FR/EN/AR, dark Card and Send to kitchen, stacked
-  Take payment on the docked iPad, iOS text zoom no longer doubled), Material
-  icons in place of Lucide, printer and clôture copy in three languages,
-  card-aware payment timeouts on the waiter page, breadcrumbs that say Home /
-  الرئيسية. Full `node tools/check.js` green on that commit with no
-  exceptions; the first attempt stopped on `hotel-direct-booking-browser-test`
-  at load average 172 (176 of 176 alone), so the script was rerun rather
-  than bypassed. Build number 36, `com.kiwios.pro`, signature verified.
+  Take payment on the docked iPad; the text-zoom fix is Android only, iOS
+  reports no `hostTextZoom`), Material icons in place of Lucide, printer and
+  clôture copy in three languages, card-aware payment timeouts on the waiter
+  page, breadcrumbs that say Home / الرئيسية. Lighter download: the bundle no
+  longer carries `assets/mascot/` (13 MB) or `assets/articles/` (7.3 MB),
+  which no app page references (`a3af1d58`), and `lucide.min.js` (114 KB) is
+  gone; build 36 is a 26.8 MB `.ipa`, 42 MB installed. Full
+  `node tools/check.js` green on that commit with no exceptions; the first
+  attempt stopped on `hotel-direct-booking-browser-test` at load average 172
+  (176 of 176 alone), so the script was rerun rather than bypassed. Build
+  number 36, `com.kiwios.pro`, signature verified.
