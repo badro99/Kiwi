@@ -12477,7 +12477,7 @@ function _bqxSubscribe() {
 function _colorPicker(sel, opts) {
   const k = window.KiwiColors;
   if (!k) return '';
-  return k.picker('bqx-color', sel, Object.assign({ optional: true, custom: true, label: 'Couleur' }, opts || {}));
+  return k.picker('bqx-color', sel, Object.assign({ optional: true, custom: true }, opts || {}));
 }
 /* La famille qu'une variante affiche, tolérante à un enregistrement écrit avant
    la normalisation (copie serveur d'un ancien build). */
@@ -12494,6 +12494,13 @@ function _bqxShownColor(v) {
   if (k && k.display) return k.display(v.colorId, v.colorLabel, v.colorHex);
   const id = _bqxFam(v);
   return { id, label: v.colorLabel || id, hex: v.colorHex || '#9AA0A6' };
+}
+/* Le nom d'une couleur tel qu'on le LIT, dans la langue de l'écran.
+   L'enregistrement garde le libellé français (colorLabel) : c'est la clé
+   des rapports, des imports et des étiquettes déjà imprimées. */
+function _bqxColorName(c) {
+  const k = window.KiwiColors;
+  return k && k.nameOf ? k.nameOf(c) : ((c && c.label) || '');
 }
 /* Ce qui distingue deux variantes tombant dans la même famille : la précision
    saisie par le commerçant, sinon la nuance d'origine. */
@@ -12900,7 +12907,7 @@ function _bqxColorBar(cat) {
       const on = _bqxColorFilter === c.id;
       return `<button class="kc-sw${c.light ? ' is-light' : ''}${on ? ' is-on' : ''}" ${c.pattern ? `data-kc-pattern="${c.pattern}"` : ''} `
         + `style="${c.pattern ? '' : `background-color:${c.hex};`}" data-action="bqx-cfilter" data-arg="${c.id}" `
-        + `role="button" aria-pressed="${on ? 'true' : 'false'}" title="${_esc(c.label)}" aria-label="${_esc(c.label)}"></button>`;
+        + `role="button" aria-pressed="${on ? 'true' : 'false'}" title="${_esc(_bqxColorName(c))}" aria-label="${_esc(_bqxColorName(c))}"></button>`;
     }).join('')}
     ${_bqxColorFilter ? `<button class="kb ghost xs" data-action="bqx-cfilter" data-arg="">${_esc(t.seeAll)}</button>` : ''}
   </div>`;
@@ -13599,6 +13606,8 @@ function _bqxPieces(raw) {
   return { n: parseInt(s, 10) };
 }
 function _bqxVarLabel(v) { return [_bqxShownColor(v).label, v && v.size].filter(Boolean).join(' · '); }
+/* Le même, pour l'écran ; _bqxVarLabel reste celui qu'on imprime. */
+function _bqxVarName(v) { return [_bqxColorName(_bqxShownColor(v)), v && v.size].filter(Boolean).join(' · '); }
 /* The variant behind an id: the open sheet first, then the whole catalogue. */
 function _bqxVarById(vid) {
   const cat = CAT();
@@ -13698,7 +13707,7 @@ function _variantRow(v, kind) {
   const shown = _bqxShownColor(v);
   const note = _bqxVarNote(v);
   const kc = window.KiwiColors;
-  const label = _bqxVarLabel(v);
+  const label = _bqxVarName(v);
   const id = _esc(v.id);
   const code = primary
     ? `<span class="bqx-vr-bc">${BC().svg(primary.code, { height: 22, module: 1, showText: false })}<span class="bqx-bc-code">${_esc(primary.code)}</span><span class="bqx-badge ${primary.type === 'imported' ? 'imp' : 'gen'}">${_esc(primary.type === 'imported' ? t.bcImported : t.bcGenerated)}</span></span>`
@@ -13710,7 +13719,7 @@ function _variantRow(v, kind) {
   return `<li class="bqx-vr${stock ? '' : ' is-out'}" data-vid="${id}">
     <div class="bqx-vr-main">
       <div class="bqx-ccell">
-        <button type="button" class="bqx-cbtn" data-action="bqx-var-color" data-arg="${id}" title="${_esc(t.actColor)}">${kc ? kc.swatch(shown) : ''}<span>${_esc(shown.label)}</span></button>
+        <button type="button" class="bqx-cbtn" data-action="bqx-var-color" data-arg="${id}" title="${_esc(t.actColor)}">${kc ? kc.swatch(shown) : ''}<span>${_esc(_bqxColorName(shown))}</span></button>
         ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}
       </div>
       <span class="bqx-vr-size">${_esc(v.size)}</span>
@@ -14294,7 +14303,7 @@ function _mzManualModal(preset) {
     if (!q('product')) return;
     const pid = q('product').value;
     const vs = cat.listVariants(pid) || [];
-    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} · ${_esc(fill(t.inStock, { n: v.stock }))}</option>`).join('');
+    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, _bqxColorName(_bqxShownColor(v))].filter(Boolean).join(' · '))} · ${_esc(fill(t.inStock, { n: v.stock }))}</option>`).join('');
     if (preset.variantId && vs.some((v) => v.id === preset.variantId)) q('variant').value = preset.variantId;
     root.querySelector('[data-mzm-variant-wrap]').hidden = !vs.length;
     root.querySelector('[data-mzm-qty-wrap]').hidden = !vs.length;
@@ -14409,7 +14418,7 @@ handlers['bqx-var-del'] = (_el, arg) => {
   ].filter(Boolean);
   _bqxModal = modal({
     title: t.delVarTitle, tag: data ? data.product.name : '',
-    desc: _esc(_bqxVarLabel(v)),
+    desc: _esc(_bqxVarName(v)),
     width: 460,
     body: `<div class="kx-warn-box danger"><div class="hd">${_esc(t.irreversible)}</div><ul>${items.map((x) => `<li>${_esc(x)}</li>`).join('')}</ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb danger" data-action="bqx-var-del-ok" data-arg="${_esc(arg)}">${_bqxIc('trash-2')}${_esc(t.delVarOk)}</button>`,
@@ -14538,7 +14547,7 @@ handlers['bqx-var-reg'] = (_el, arg) => {
   const hit = _bqxVarById(arg);
   _bqxCss(); _bqxPfCss(); _bqxShCss();
   _bqxModal = modal({
-    title: t.regTitle, tag: hit ? _bqxVarLabel(hit.v) : '',
+    title: t.regTitle, tag: hit ? _bqxVarName(hit.v) : '',
     desc: _esc(t.regDesc),
     width: 480,
     body: `<div class="bqx-pf is-one"><div class="bqx-pf-main"><div class="bqx-pf-f">
@@ -14594,7 +14603,7 @@ handlers['bqx-var-reg-save'] = (_el, arg) => {
   }
   if (res.reason === 'doublon' && res.owner) {
     const o = res.owner;
-    _bqxRegSay(b, _bqxPfFill(t.regDup, { product: o.product ? o.product.name : '', variant: o.variant ? _bqxVarLabel(o.variant) : '' }));
+    _bqxRegSay(b, _bqxPfFill(t.regDup, { product: o.product ? o.product.name : '', variant: o.variant ? _bqxVarName(o.variant) : '' }));
   } else {
     _bqxRegSay(b, ({ vide: t.regEmpty, 'trop-court': t.regShort, 'trop-long': t.regLong, illisible: t.regUnreadable })[res.reason] || t.regFail);
   }
@@ -14692,13 +14701,13 @@ function _bqxVaWire(b, pid) {
     const f = _bqxVaRead(b, pid);
     b.querySelectorAll('[data-bqx-size]').forEach((c) => c.classList.toggle('on', f.typed && c.getAttribute('data-bqx-size') === f.size));
     const kc = window.KiwiColors;
-    const sw = f.color && kc && kc.swatch ? kc.swatch(f.color, { name: f.color.label }) : '';
+    const sw = f.color && kc && kc.swatch ? kc.swatch(f.color) : '';
     if (f.dup) {
       prev.className = 'bqx-sh-preview is-dup';
-      prev.innerHTML = `${sw}<span>${_esc(_bqxPfFill(t.dup, { v: _bqxVarLabel(f.dup), n: t.pieces(Math.max(0, +f.dup.stock || 0)) }))}</span>`;
+      prev.innerHTML = `${sw}<span>${_esc(_bqxPfFill(t.dup, { v: _bqxVarName(f.dup), n: t.pieces(Math.max(0, +f.dup.stock || 0)) }))}</span>`;
     } else {
       prev.className = 'bqx-sh-preview';
-      const what = [f.color ? f.color.label : t.colorNone, f.size].join(' · ');
+      const what = [f.color ? _bqxColorName(f.color) : t.colorNone, f.size].join(' · ');
       prev.innerHTML = `${sw}<span><b>${_esc(what)}</b>${f.stock.n != null ? ` · ${_esc(t.pieces(f.stock.n))}` : ''}${f.typed ? '' : ` <small>${_esc(t.sizeTu)}</small>`}</span>`;
     }
     if (go) go.disabled = !!f.dup;
@@ -14751,7 +14760,7 @@ handlers['bqx-var-add-save'] = (_el, arg) => {
   const code = f.bc === 'gen' ? CAT().generateBarcode(res.variant.id) : null;
   if (_bqxModal) _bqxModal.close();
   toast(t.addDone, {
-    desc: [_bqxVarLabel(res.variant), t.pieces(f.stock.n), code ? t.addCode : ''].filter(Boolean).join(' · '),
+    desc: [_bqxVarName(res.variant), t.pieces(f.stock.n), code ? t.addCode : ''].filter(Boolean).join(' · '),
     type: 'success', duration: 2400,
   });
 };
@@ -14771,7 +14780,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
     ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true }
     : _bqxFam(v);
   const selectedSwatch = window.KiwiColors && window.KiwiColors.swatch
-    ? window.KiwiColors.swatch(shown, { name: shown.label }) : '';
+    ? window.KiwiColors.swatch(shown) : '';
   _bqxModal = modal({
     title: t.colorTitle, tag: data ? data.product.name : '',
     desc: _esc(_bqxPfFill(t.colorFor, { size: v.size })),
@@ -14781,7 +14790,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
         <section class="bqx-color-card">
           <div class="bqx-color-head">
             <div class="bqx-color-heading"><span><strong>${_esc(t.colorPick)}</strong><small>${_esc(_bqxTillReads() ? t.colorPickSubTill : t.colorPickSubInv)}</small></span></div>
-            <div class="bqx-color-selected" aria-live="polite"><span data-bqx-vpreview>${selectedSwatch}</span><span data-bqx-vselected>${_esc(shown.label)}</span></div>
+            <div class="bqx-color-selected" aria-live="polite"><span data-bqx-vpreview>${selectedSwatch}</span><span data-bqx-vselected>${_esc(_bqxColorName(shown))}</span></div>
           </div>
           <div class="bqx-color-picker">${_colorPicker(selected, { label: t.color })}</div>
         </section>
@@ -14812,9 +14821,9 @@ handlers['bqx-var-color'] = (_el, arg) => {
     const isCustom = !!(color && color.custom);
     const customApplied = !!(event && event.detail && event.detail.custom);
     if (nameWrap) nameWrap.hidden = !isCustom;
-    if (selectedLabel) selectedLabel.textContent = color ? color.label : t.colorNoSel;
+    if (selectedLabel) selectedLabel.textContent = color ? _bqxColorName(color) : t.colorNoSel;
     if (selectedPreview) selectedPreview.innerHTML = color && window.KiwiColors.swatch
-      ? window.KiwiColors.swatch(color, { name: color.label }) : '';
+      ? window.KiwiColors.swatch(color) : '';
     if (isCustom && nameInput && (customApplied || nameInput.dataset.colorId !== color.id)) {
       nameInput.value = /^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(color.label || '')) ? '' : (color.label || '');
       nameInput.dataset.colorId = color.id;
@@ -14823,7 +14832,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
   const syncTypedName = () => {
     const color = window.KiwiColors && window.KiwiColors.selection(b);
     if (!color || !color.custom || !selectedLabel) return;
-    selectedLabel.textContent = nameInput.value.trim() || color.label;
+    selectedLabel.textContent = nameInput.value.trim() || _bqxColorName(color);
   };
   if (nameInput && custom) nameInput.dataset.colorId = v.colorId;
   if (picker) picker.addEventListener('kc:change', syncName);

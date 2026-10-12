@@ -51,6 +51,42 @@
   const BY_ID = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
   const FALLBACK = BY_ID.gris;
 
+  /* ───────────────── names, read vs stored ─────────────────
+     A colour's name is READ in the screen's language (`en`, `ar` above) and
+     STORED in French (`label`): the French label is the key reports, imports
+     and already-printed tags rely on. The picker used to print the French
+     name everywhere, so an English or Arabic dashboard read « Noir »,
+     « Bleu », « Couleur personnalisée #4A67D6 », and the caption told a
+     phone to « survolez » a swatch it cannot hover. */
+  const UI = {
+    fr: { custom: (h) => `Couleur personnalisée ${h}`, more: 'Plus de couleurs', moreAria: 'Choisir une couleur personnalisée', native: 'Sélecteur de couleur', hex: 'Code hexadécimal', namePh: 'Nom, ex. Bleu clair', nameAria: 'Nom affiché de la couleur', apply: 'Choisir', group: 'Couleur', hover: 'Survolez une pastille pour lire son nom', touch: 'Touchez une pastille pour la choisir' },
+    en: { custom: (h) => `Custom colour ${h}`, more: 'More colours', moreAria: 'Choose a custom colour', native: 'Colour picker', hex: 'Hex code', namePh: 'Name, e.g. Light blue', nameAria: 'Colour display name', apply: 'Choose', group: 'Colour', hover: 'Hover a swatch to read its name', touch: 'Tap a swatch to choose it' },
+    ar: { custom: (h) => `لون مخصّص ${h}`, more: 'ألوان أخرى', moreAria: 'اختر لونًا مخصّصًا', native: 'منتقي الألوان', hex: 'الرمز الست عشري', namePh: 'الاسم، مثل أزرق فاتح', nameAria: 'اسم اللون المعروض', apply: 'اختيار', group: 'اللون', hover: 'مرّر المؤشر على لون لقراءة اسمه', touch: 'المس لونًا لاختياره' },
+  };
+  function lang() {
+    let l = '';
+    try { l = document.documentElement.getAttribute('lang') || ''; } catch (_) {}
+    l = String(l || 'fr').slice(0, 2).toLowerCase();
+    return l === 'en' || l === 'ar' ? l : 'fr';
+  }
+  const ui = () => UI[lang()];
+  const GENERIC = /^Couleur personnalisée\s+(#[0-9a-f]{6})$/i;
+  function nameOf(f) {
+    if (!f) return '';
+    const l = lang();
+    if (f.custom) {
+      const m = GENERIC.exec(String(f.label || ''));
+      return m ? ui().custom(m[1].toUpperCase()) : String(f.label || '');
+    }
+    /* A bare {id, label, hex} (what selection() returns) is resolved through
+       the palette, so a family reads its name wherever it came from. */
+    const fam = (f.en || f.ar) ? f : (f.id && BY_ID[slug(f.id)]);
+    return (l !== 'fr' && fam && fam[l]) || f.label || (fam && fam.label) || '';
+  }
+  function touchOnly() {
+    try { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); } catch (_) { return false; }
+  }
+
   /* ───────────────── shade → family ─────────────────
      Everything Kiwi has ever shipped or is likely to meet in an import. Keys are
      slugged (accents stripped, spaces collapsed), so "Bleu nuit", "bleu-nuit"
@@ -317,7 +353,7 @@
     opts = opts || {};
     const f = typeof idOrFamily === 'object' && idOrFamily ? idOrFamily : display(idOrFamily);
     const a = swAttrs(f, opts.size || 'sm');
-    const name = opts.name || f.label;
+    const name = opts.name || nameOf(f);
     return `<i class="${a.cls}" ${a.pat ? `data-kc-pattern="${a.pat}"` : ''} style="${a.style}" `
       + `title="${esc(name)}" role="img" aria-label="${esc(name)}"></i>`;
   }
@@ -341,21 +377,21 @@
       return `<button type="button" class="${a.cls}" ${a.pat ? `data-kc-pattern="${a.pat}"` : ''} `
         + `style="${a.style}" data-kc-color="${f.id}" value="${f.id}" role="radio" `
         + `aria-checked="${on ? 'true' : 'false'}" tabindex="${on || (!sel && f === list[0]) ? '0' : '-1'}" `
-        + `title="${esc(f.label)}" aria-label="${esc(f.label)}"></button>`;
+        + `title="${esc(nameOf(f))}" aria-label="${esc(nameOf(f))}"></button>`;
     }).join('');
     const customBtn = customSelected && !list.some((f) => f.id === customSelected.id) ? (() => {
       const a = swAttrs(customSelected, size);
-      return `<button type="button" class="${a.cls}" style="${a.style}" data-kc-color="${esc(customSelected.id)}" data-kc-hex="${esc(customSelected.hex)}" value="${esc(customSelected.id)}" role="radio" aria-checked="true" tabindex="0" title="${esc(customSelected.label)}" aria-label="${esc(customSelected.label)}"></button>`;
+      return `<button type="button" class="${a.cls}" style="${a.style}" data-kc-color="${esc(customSelected.id)}" data-kc-hex="${esc(customSelected.hex)}" value="${esc(customSelected.id)}" role="radio" aria-checked="true" tabindex="0" data-kc-label="${esc(customSelected.label)}" title="${esc(nameOf(customSelected))}" aria-label="${esc(nameOf(customSelected))}"></button>`;
     })() : '';
     const customName = customSelected && !/^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(customSelected.label || ''))
       ? customSelected.label : '';
-    const moreButton = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-expanded="false" aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button></span>` : '';
-    const customPanel = opts.custom ? `<div class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="Nom, ex. Bleu clair" aria-label="Nom affiché de la couleur"><button type="button" data-kc-apply>Choisir</button></div>` : '';
+    const moreButton = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-expanded="false" aria-label="${esc(ui().moreAria)}" title="${esc(ui().more)}">+</button></span>` : '';
+    const customPanel = opts.custom ? `<div class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="${esc(ui().native)}"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" dir="ltr" aria-label="${esc(ui().hex)}"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="${esc(ui().namePh)}" aria-label="${esc(ui().nameAria)}"><button type="button" data-kc-apply>${esc(ui().apply)}</button></div>` : '';
     const cap = opts.caption === false ? ''
-      : `<div class="kc-cap" data-kc-cap data-kc-empty="${esc(opts.hint || 'Survolez une pastille pour lire son nom')}">`
-        + `${sel ? esc(BY_ID[sel] ? BY_ID[sel].label : '') : ''}</div>`;
+      : `<div class="kc-cap" data-kc-cap data-kc-empty="${esc(opts.hint || (touchOnly() ? ui().touch : ui().hover))}">`
+        + `${sel ? esc(BY_ID[sel] ? nameOf(BY_ID[sel]) : '') : ''}</div>`;
     return `<div class="kc-picker" data-kc-picker="${esc(name || 'color')}" role="radiogroup" `
-      + `aria-label="${esc(opts.label || 'Couleur')}"><div class="kc-row">${btns}${customBtn}${moreButton}</div>${customPanel}${cap}</div>`;
+      + `aria-label="${esc(opts.label || ui().group)}"><div class="kc-row">${btns}${customBtn}${moreButton}</div>${customPanel}${cap}</div>`;
   }
 
   /* Read the current value out of a rendered picker (or its container). */
@@ -373,7 +409,8 @@
     const on = box && box.querySelector('[aria-checked="true"][data-kc-color]');
     if (!on) return null;
     const id = on.getAttribute('data-kc-color');
-    const f = display(id, on.getAttribute('title'), on.getAttribute('data-kc-hex'));
+    /* The stored label, never the title: the title is the name as READ. */
+    const f = display(id, on.getAttribute('data-kc-label') || on.getAttribute('title'), on.getAttribute('data-kc-hex'));
     return { id, label: f.label, hex: f.hex, custom: !!f.custom };
   }
 
@@ -387,7 +424,7 @@
     const cap = box.querySelector('[data-kc-cap]');
     if (cap) {
       const on = box.querySelector(`[data-kc-color="${id}"]`);
-      cap.textContent = on ? (on.getAttribute('title') || '') : (BY_ID[id] ? BY_ID[id].label : '');
+      cap.textContent = on ? (on.getAttribute('title') || '') : (BY_ID[id] ? nameOf(BY_ID[id]) : '');
     }
   }
 
@@ -433,12 +470,13 @@
           b = document.createElement('button');
           b.type = 'button'; b.className = a.cls; b.style.cssText = a.style;
           b.setAttribute('data-kc-color', id); b.setAttribute('data-kc-hex', hex);
-          b.setAttribute('role', 'radio'); b.setAttribute('title', f.label); b.setAttribute('aria-label', f.label);
+          b.setAttribute('role', 'radio'); b.setAttribute('data-kc-label', label); b.setAttribute('title', nameOf(f)); b.setAttribute('aria-label', nameOf(f));
           box.querySelector('.kc-custom-wrap').before(b);
         } else {
           b.setAttribute('data-kc-hex', hex);
-          b.setAttribute('title', label);
-          b.setAttribute('aria-label', label);
+          b.setAttribute('data-kc-label', label);
+          b.setAttribute('title', nameOf({ custom: true, label }));
+          b.setAttribute('aria-label', nameOf({ custom: true, label }));
         }
         select(box, id); pop.hidden = true;
         const moreButton = box.querySelector('[data-kc-more]');
@@ -520,6 +558,9 @@
     get: (id) => BY_ID[slug(id)] || null,
     normalize, familyId, display,
     label: (id) => (normalize(id).label),
+    /* The name as READ on this screen; `label` stays the stored French. */
+    name: (id, label, hex) => nameOf(display(id, label, hex)),
+    nameOf,
     isFamily: (id) => !!BY_ID[slug(id)],
     slug, hexToHsl, familyFromHex,
     swatch, picker, value, selection, select, injectCss, install,

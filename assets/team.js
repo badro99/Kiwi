@@ -185,7 +185,7 @@
       delDesc:  'Action irréversible. Le compte Kiwi Caisse sera désactivé immédiatement.',
       delConfirm: 'Supprimer',
       tAdded:    (n) => `${n} ajouté·e à l'équipe`,
-      tAddedDesc:(p) => `Code personnel ${p} · compte employé activé`,
+      tAddedDesc:(e) => `Se connecte à l'app employé avec ${e} et son code personnel, sur sa fiche`,
       tUpdated:  (n) => `${n} · profil mis à jour`,
       tDeleted:  (n) => `${n} a été retiré·e de l'équipe`,
       tPwdCopied:'Code caisse copié',
@@ -376,7 +376,7 @@
       delDesc:  'Permanent. The Kiwi Caisse account will be disabled immediately.',
       delConfirm: 'Remove',
       tAdded:    (n) => `${n} added to the team`,
-      tAddedDesc:(p) => `Personal code ${p} · employee account enabled`,
+      tAddedDesc:(e) => `Signs in to the employee app with ${e} and the personal code on their profile`,
       tUpdated:  (n) => `${n} · profile updated`,
       tDeleted:  (n) => `${n} has been removed from the team`,
       tPwdCopied:'Till code copied',
@@ -566,7 +566,7 @@
       delDesc:  'إجراء نهائي. سيتم تعطيل حساب Kiwi Caisse فورًا.',
       delConfirm: 'إزالة',
       tAdded:    (n) => `تمت إضافة ${n} إلى الفريق`,
-      tAddedDesc:(p) => `الرمز الشخصي ${p} · حساب الموظف مفعل`,
+      tAddedDesc:(e) => `يدخل إلى تطبيق الموظف بـ \u2068${e}\u2069 والرمز الشخصي المعروض في ملفه`,
       tUpdated:  (n) => `${n} · تم تحديث الملف`,
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
       tPwdCopied:'تم نسخ رمز الصندوق',
@@ -3067,7 +3067,9 @@
       members.unshift(member);
       const h = window.__kiwiTeamV2.hoursByVenue[venueType] || (window.__kiwiTeamV2.hoursByVenue[venueType] = {});
       h[member.id] = {};
-      Kiwi.toast(T.tAdded(memberFullName(member)), { type: 'success', desc: T.tAddedDesc(member.password) });
+      // Ni le code ni le mot de passe dans un toast : il reste à l'écran, souvent
+      // celui du comptoir. Le code se lit et se copie sur la fiche du membre.
+      Kiwi.toast(T.tAdded(memberFullName(member)), { type: 'success', desc: T.tAddedDesc(member.email) });
     }
     saveCustomTeams();
     mdl.close();

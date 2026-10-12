@@ -1772,8 +1772,14 @@
       if (labelEl) labelEl.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange];
       if (subEl)   subEl.textContent = computeSubLine(currentRange);
     }
-    document.querySelectorAll('.dash-date-range .dr-pill').forEach(p => {
-      const on = p.dataset.range === currentRange;
+    // A period without a pill of its own (Mois dernier, Ce trimestre, Cette
+    // année, kept from the old range menu) is chosen from the calendar, so the
+    // calendar pill is the one lit. Lighting none left the lens on
+    // « Aujourd'hui » under a « Mois dernier » title.
+    const pills = [...document.querySelectorAll('.dash-date-range .dr-pill')];
+    const lit = pills.some(p => p.dataset.range === currentRange) ? currentRange : 'personnalise';
+    pills.forEach(p => {
+      const on = p.dataset.range === lit;
       p.classList.toggle('on', on);
       p.setAttribute('aria-pressed', String(on));
       if (on) requestAnimationFrame(() => p.isConnected && revealDayPill(p));
@@ -5610,7 +5616,9 @@
       if (ro) {
         if (lo && hi) ro.textContent = fmtHumanRange(lo, hi, lang);
         else if (selStart) ro.textContent = fmtHumanRange(selStart, selStart, lang);
-        else ro.textContent = '·';
+        // Nothing picked yet: name the period in effect, in the muted colour,
+        // instead of a lone dot.
+        else ro.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange] || S.hintStart;
         ro.classList.toggle('is-set', !!(lo || selStart));
       }
       const hint = pop.querySelector('[data-drp-hint]');
@@ -5635,7 +5643,7 @@
       const r = shiftMonth(view.y, view.m, 1);
       pop.innerHTML =
         `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(dayMode ? ({ fr: 'Choisir une date', en: 'Pick a date', ar: 'اختر تاريخاً' }[lang] || 'Choisir une date') : S.title)}</div>`
-        + `<div class="drp-readout" data-drp-readout>·</div></div>`
+        + `<div class="drp-readout" data-drp-readout></div></div>`
         + `<button type="button" class="drp-x" data-drp-cancel aria-label="${dpEsc(S.cancel)}">`
         + `<span class="dr-icon dr-icon-close" aria-hidden="true"></span></button></div>`
         + `<div class="drp-body">${dayMode ? '' : `<div class="drp-presets">`
@@ -5832,14 +5840,18 @@
     tryReg();
   }
 
-  function init() {
-    if (!/dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) return;
+  function restoreRange() {
     let stored = null;
     try { stored = localStorage.getItem(STORAGE_KEY); } catch (_) {}
     try { customRange = parseCustom(localStorage.getItem(CUSTOM_KEY)); } catch (_) {}
     currentRange = VALID.includes(stored) ? stored : DEFAULT_RANGE;
     // A stored 'personnalise' only stands if its date pair survived too.
     if (currentRange === 'personnalise' && !customRange) currentRange = DEFAULT_RANGE;
+  }
+
+  function init() {
+    if (!/dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) return;
+    restoreRange();
     try { showComparison = localStorage.getItem(CMP_KEY) === '1'; } catch (_) {}
 
     // Own the custom-picker trigger at capture phase. The shared action router is
@@ -6096,6 +6108,18 @@
      premier rendu : sans cet abonnement la tuile restait sur le journal des
      ventes jusqu'au prochain changement de période. */
   window.addEventListener('kiwi:pressing-ops', () => { try { renderKpiBand(); } catch (_) {} });
+  /* Le titre et les pastilles ne lisent aucune donnée : ils se peignent
+   * derrière l'écran de code, sur la période enregistrée et dans la langue de
+   * l'écran. Ils attendaient le premier rendu complet, qui passe après le
+   * message d'accueil : un commerçant en arabe lisait alors « Aujourd'hui »,
+   * en français, sous la pastille « اليوم » allumée, alors que sa période
+   * était « Mois dernier ». init() repeint ensuite, à l'identique. */
+  function paintSelectorEarly() {
+    if (!/dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) return;
+    try { restoreRange(); renderSelector(); } catch (_) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintSelectorEarly, { once: true });
+  else paintSelectorEarly();
   if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startDashboardRendering);
   else startDashboardRendering();
 

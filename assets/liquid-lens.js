@@ -128,7 +128,17 @@
       for (var i = 0; i < list.length; i++) {
         if (cfg.active(list[i])) { act = list[i]; break; }
       }
-      if (!act || container.offsetWidth === 0) return;
+      if (container.offsetWidth === 0) return;
+      if (!act) {
+        /* Nothing in this row is the selection (a period chosen elsewhere, a
+         * filter cleared). The lens used to stay on the item selected before,
+         * so the row gave one answer and the page another. It steps aside and
+         * forgets where it was: the next selection lands in place instead of
+         * stretching out of a stale one. */
+        lens.style.opacity = '0';
+        st.l = st.w = null;
+        return;
+      }
       /* offsetLeft/Top are relative to the (positioned) container — immune to
        * page scroll AND to the row's own horizontal scroll, RTL included. */
       var l = act.offsetLeft, t = act.offsetTop, w = act.offsetWidth, h = act.offsetHeight;
