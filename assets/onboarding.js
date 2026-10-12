@@ -93,7 +93,9 @@
   /* ── Session state ───────────────────────────────────────────────────── */
   const S = {
     step: 0,
-    ownerName: '', bizName: '', typeId: 'restaurant',
+    /* No type is pre-selected: a shop that taps Continue must not be filed as a
+       restaurant and load the wrong vertical. Continue waits for a choice. */
+    ownerName: '', bizName: '', typeId: '',
     venueCount: 1, city: '',
     teamSize: 3, teamGiven: false,
     goals: [], dailyGoal: '',
@@ -259,6 +261,7 @@
     .kob-btn.primary{flex:1;color:#06231a;background:linear-gradient(135deg,#9dfbc4,var(--mint));box-shadow:0 14px 30px -12px rgba(125,242,176,.6);}
     .kob-btn.primary:hover{transform:translateY(-1px);box-shadow:0 18px 36px -12px rgba(125,242,176,.7);}
     .kob-btn.primary:active{transform:translateY(0);}
+    .kob-btn.primary:disabled,body.design-vexel .kob-btn.primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;filter:grayscale(.3);}
     .kob-btn.ghost{background:rgba(255,255,255,.06);color:rgba(233,239,233,.82);border:1.5px solid rgba(255,255,255,.14);}
     .kob-btn.ghost:hover{background:rgba(255,255,255,.11);color:#fff;}
     .kob-back{background:none;border:0;cursor:pointer;color:rgba(233,239,233,.55);font-family:var(--sans);font-size:13.5px;font-weight:500;
@@ -340,7 +343,7 @@
     return `
       <button class="kob-back" data-go="back">&lsaquo; ${tr({ fr: 'Retour', en: 'Back', ar: 'رجوع' })}</button>
       ${o.skip ? `<button class="kob-skip" data-go="next" data-skip>${tr({ fr: 'Passer', en: 'Skip', ar: 'تخطّي' })}</button>` : ''}
-      <button class="kob-btn primary" data-go="next">${esc(o.nextLabel || tr({ fr: 'Continuer', en: 'Continue', ar: 'متابعة' }))}</button>`;
+      <button class="kob-btn primary" data-go="next"${o.disabled ? ' disabled aria-disabled="true"' : ''}>${esc(o.nextLabel || tr({ fr: 'Continuer', en: 'Continue', ar: 'متابعة' }))}</button>`;
   }
 
   /* ── Step renderers — each returns {body, foot} HTML ─────────────────── */
@@ -377,6 +380,7 @@
     };
   }
 
+  const TYPE_HINT = { fr: 'Choisissez votre type d’activité pour continuer.', en: 'Choose your type of business to continue.', ar: 'اختر نوع نشاطك للمتابعة.' };
   function typeCard(t, hidden) {
     return `<button class="kob-type${t.id === S.typeId ? ' sel' : ''}${hidden ? ' hide kob-xtra' : ''}" data-type="${t.id}">${t.icon}<span>${esc(tr(t.label))}</span></button>`;
   }
@@ -396,8 +400,9 @@
             ${more.map((t) => typeCard(t, true)).join('')}
           </div>
           <button class="kob-more" data-more>${tr({ fr: '+ Voir plus de types', en: '+ More types', ar: '+ المزيد من الأنواع' })} (${more.length})</button>
+          <p class="kob-sub" data-type-hint role="status"${S.typeId ? ' hidden' : ''}>${tr(TYPE_HINT)}</p>
         </div>`,
-      foot: footNav({}),
+      foot: footNav({ disabled: !S.typeId }),
     };
   }
 
@@ -582,6 +587,7 @@
   function validate() {
     if ((S.step === 1 || S.step === 7) && !S.ownerName.trim()) return tr({ fr: 'Indiquez votre prénom.', en: 'Enter your first name.', ar: 'أدخل اسمك.' });
     if ((S.step === 2 || S.step === 7) && !S.bizName.trim()) return tr({ fr: 'Donnez un nom à votre établissement.', en: 'Give your business a name.', ar: 'أدخل اسم نشاطك.' });
+    if ((S.step === 2 || S.step === 7) && !TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
     if (S.step === 5 && parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
     if (S.step === 6 || S.step === 7) {
       const owner = S.pins[0];
@@ -622,7 +628,7 @@
     }
     box.id = 'kiwi-onboarding-error'; box.setAttribute('role','alert'); box.textContent = msg;
     box.scrollIntoView({block:'nearest'});
-    const field = root.querySelector(S.step === 1 ? '[data-f="ownerName"]' : S.step === 2 ? '[data-f="bizName"]' : '[data-f="dailyGoal"]');
+    const field = root.querySelector(S.step === 1 ? '[data-f="ownerName"]' : S.step === 2 ? (S.bizName.trim() ? 'x-none' : '[data-f="bizName"]') : '[data-f="dailyGoal"]');
     if (field) { field.setAttribute('aria-invalid','true'); field.setAttribute('aria-describedby',box.id); }
     window.dispatchEvent(new CustomEvent('kiwi:native-haptic', {detail:{kind:'danger'}}));
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg, { type: 'warn', force: true }); } catch (_) {}
@@ -818,6 +824,13 @@
         S.typeId = tc.dataset.type;
         saveDraft();
         root.querySelectorAll('[data-type]').forEach((x) => x.classList.toggle('sel', x === tc));
+        /* A choice is made: Continue opens, the hint goes away. */
+        const nextBtn = root.querySelector('.kob-foot [data-go="next"]');
+        if (nextBtn) { nextBtn.disabled = false; nextBtn.removeAttribute('aria-disabled'); }
+        const hint = root.querySelector('[data-type-hint]');
+        if (hint) hint.hidden = true;
+        const typeErr = root.querySelector('[data-acc-err]');
+        if (typeErr && typeErr.textContent === tr(TYPE_HINT)) typeErr.textContent = '';
         return;
       }
       const gc = e.target.closest('[data-goal]');

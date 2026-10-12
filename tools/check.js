@@ -1475,6 +1475,7 @@ section('Whole-project regressions');
     'booking-truth-test.mjs',
     'onboarding-truth-test.mjs',
     'onboarding-team-recap-test.mjs',
+    'onboarding-business-type-test.mjs',
     'menu-truth-test.mjs',
     'stock-truth-test.mjs',
     'kiwi-select-programmatic-test.mjs',
