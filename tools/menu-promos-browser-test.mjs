@@ -66,7 +66,11 @@ try {
   await S.run('till · a dessert at −15 %, stacked, and a price frozen when ordered', async (tr) => {
     const { page, errors } = await open(tr, '/kiwi-caisse.html?demo=restaurant');
     await page.waitForSelector('#clockin-btn', { visible: true });
-    tr.step('open the till');
+    tr.step('count the drawer, then open the till');
+    /* No float is pre-selected: "Open till" stays off until the cashier
+       says what is in the drawer, so choose one first. */
+    await page.waitForSelector('.ci-float-chip', { visible: true });
+    await page.click('.ci-float-chip');
     /* The button paints before its deferred script binds it: tap until the
        opening screen actually goes, like a cashier would. */
     for (let i = 0; i < 20; i++) {
