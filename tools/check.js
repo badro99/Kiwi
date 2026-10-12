@@ -999,6 +999,23 @@ section('Pourboires déclarés (tools/tips-truth-test.mjs)');
   }
 }
 
+/* ── 9quater · les clients se comptent au carnet ────────────────────────────
+ * « Nouveaux clients » valait ventes − réguliers : des tickets présentés comme
+ * des personnes. Réguliers, fidélité et nouveaux clients lisent l'historique
+ * d'achats daté du carnet clients. (tools/client-mix-test.mjs) */
+section('Clients du carnet (tools/client-mix-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'client-mix-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').reverse().find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`client-mix-test.mjs exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9 bis · la marge se mesure ──────────────────────────────────────────────
  * Trois tuiles — Marge brute, Bénéfice brut, Coût matière — dérivaient d'un
  * chiffre qui rapprochait le LIBELLÉ du ticket (un résumé de panier : « Pain

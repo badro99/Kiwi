@@ -2204,6 +2204,30 @@
     });
     return { sum: Math.round(sum * 100) / 100, days };
   }
+  /* Les clients du carnet (KiwiClients) venus sur [from, to) : ceux qu'on a
+   * déjà vus avant `from` sont des réguliers, les autres des nouveaux. Seuls
+   * comptent les passages DATÉS, c'est-à-dire l'historique d'achats que la
+   * caisse écrit à chaque vente rattachée (les 50 derniers par client, aussi
+   * côté serveur). Un client créé sans achat n'est pas venu ; une fiche
+   * ancienne sans historique ne peut pas être placée dans le temps, elle ne
+   * compte pas. Un compteur de passages plus grand que l'historique veut dire
+   * que des passages plus anciens existent : le client était déjà venu.
+   * Un client anonyme n'est pas dans le carnet : ces chiffres portent sur les
+   * clients identifiés, jamais sur toutes les ventes. */
+  function realClientMix(from, to) {
+    const KC = window.KiwiClients;
+    let list = [];
+    try { list = (KC && typeof KC.list === 'function' && KC.list()) || []; } catch (_) { list = []; }
+    let visitors = 0, regulars = 0;
+    list.forEach((c) => {
+      const stamps = (Array.isArray(c && c.history) ? c.history : [])
+        .map((h) => Number(h && h.ts)).filter((t) => Number.isFinite(t) && t > 0);
+      if (!stamps.some((t) => t >= from && t < to)) return;
+      visitors++;
+      if (stamps.some((t) => t < from) || Number(c.visits || 0) > stamps.length) regulars++;
+    });
+    return { visitors, regulars, newcomers: visitors - regulars };
+  }
   function windowDays(range) {
     const [from, to] = closedBounds(range);
     const slug = activeMerchantSlug();
@@ -2957,9 +2981,17 @@
     regulars:   { labels: { default: 'Clients réguliers', boutique: 'Clients fidèles', spa: 'Clients fidèles' }, i18n: 'dash.kpi.regular',
                   desc: 'Clients déjà venus sur la période', derive: (d) => d.regulars || null },
     retention:  { labels: { default: 'Taux de fidélité' }, i18n: 'dash.kpi.retention',
-                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'pct1', delta: null }; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
+                  desc: 'Part de clients réguliers parmi les clients venus', derive: (d) => {
+                    /* Vrai commerçant : la part des clients identifiés venus sur la
+                       période qui étaient déjà venus avant (carnet clients). */
+                    if (d.clientMix) return { value: d.clientMix.regulars / d.clientMix.visitors * 100, unit: '%', fmt: 'pct1', delta: d.clientMix.deltaRate };
+                    if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'pct1', delta: null }; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
     newClients: { labels: { default: 'Nouveaux clients' }, i18n: 'dash.kpi.newClients',
-                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'int', delta: null }; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
+                  desc: 'Premières visites sur la période', derive: (d) => {
+                    /* Vrai commerçant : les clients identifiés dont la première
+                       visite tombe dans la période (carnet clients). */
+                    if (d.clientMix) return { value: d.clientMix.newcomers, unit: '', fmt: 'int', delta: d.clientMix.deltaNew };
+                    if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'int', delta: null }; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
     txPerDay:   { labels: { default: 'Ventes par jour', spa: 'RDV par jour' }, i18n: 'dash.kpi.txPerDay',
                   desc: 'Nombre de ventes moyen par jour', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
     occupation: { labels: { default: "Taux d'occupation" }, i18n: 'dash.kpi.occupancy',
@@ -3184,6 +3216,7 @@
       const rng = currentRange;
       const [wFrom, wTo] = closedBounds(rng);
       const w = realWindowStats(wFrom, wTo);
+      const mix = realClientMix(wFrom, wTo);
       /* Le ratio se lit « card / cash ». Les deux parts sortent des ventes
        * encaissées — la même source que l'anneau Mix de paiement juste à côté,
        * pour que deux cartes affichant la même donnée ne puissent plus se
@@ -3220,12 +3253,21 @@
         collected: { value: t.collected, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.collected) },
         receivable: { value: t.receivable, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.receivable) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '·', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
-        /* Kiwi n'identifie pas encore les clients à la caisse : « réguliers » n'a
-         * aucune source. Un 0 faisait dire à « Nouveaux clients » que TOUTES les
-         * ventes étaient des premières visites, et à « Fidélité » 0,0 %. Le tiret
-         * (déjà le vocabulaire des tuiles sans source) se propage aux deux
-         * dérivées ci-dessous, et la bande remplace les tuiles mortes. */
-        regulars: data.regulars ? { ...data.regulars, text: '·', value: 0, unit: '', delta: null } : data.regulars,
+        /* « Réguliers », « Fidélité » et « Nouveaux clients » se lisent au
+         * carnet clients (realClientMix) : les clients identifiés à la caisse
+         * qui sont venus sur la période, déjà vus avant ou non. Ils valaient
+         * « · » faute de source ; avant ça, un 0 faisait dire à « Nouveaux
+         * clients » que TOUTES les ventes étaient des premières visites. Sans
+         * client identifié sur la période, le tiret reste, et la bande remplace
+         * les tuiles mortes. Le dénominateur est le nombre de clients venus,
+         * jamais le nombre de ventes : un client et un ticket ne se divisent
+         * pas l'un par l'autre. */
+        clientMix: mix.visitors ? { ...mix,
+          deltaNew: realDeltaPct(rng, (s) => s.newcomers, undefined, realClientMix),
+          deltaRate: realDeltaPct(rng, (s) => (s.visitors ? (s.regulars / s.visitors) * 100 : 0), undefined, realClientMix) } : null,
+        regulars: data.regulars ? (mix.visitors
+          ? { ...data.regulars, text: undefined, value: mix.regulars, unit: `/ ${mix.visitors}`, fmt: 'int', delta: realDeltaPct(rng, (s) => s.regulars, undefined, realClientMix) }
+          : { ...data.regulars, text: '·', value: 0, unit: '', delta: null }) : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
          * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
          * Kiwi ne compte ni les paiements refusés ni les retours. Le clone de
@@ -3318,7 +3360,8 @@
      *
      * Chez un vrai commerçant, trois indicateurs de la grille par défaut n'ont
      * aucune source : le taux de succès (Kiwi n'enregistre pas les refus de
-     * paiement), les clients réguliers (pas de carnet), et la marge tant que le
+     * paiement), les clients réguliers (aucun client identifié venu sur la
+     * période, voir realClientMix), et la marge tant que le
      * catalogue n'est pas costé. Le tiret reste la bonne réponse — inventer un
      * 0 mentirait — mais trois tirets alignés dans la bande donnent à lire
      * « le tableau de bord est cassé » alors que les ventes, elles, sont là.
@@ -3332,8 +3375,8 @@
      *     exactement « CA » et « ventes » sur une journée : on ne les propose
      *     que sur une plage multi-jours, sinon la bande afficherait deux fois
      *     le même nombre sous deux titres. Pourboires (journées closes), marge et
-     *     coût (marge inconnue), rétention et nouveaux clients (dérivés des
-     *     réguliers, donc de 0) sont exclus par construction.
+     *     coût (marge inconnue), rétention et nouveaux clients (morts avec
+     *     les réguliers, ils lisent le même carnet) sont exclus par construction.
      *
      * Auto-réparateur : le jour où le commerçant saisit ses coûts, `marge` a
      * une valeur, n'est plus morte, et reprend sa place. */
@@ -6070,6 +6113,13 @@
       if (tries < 200) setTimeout(() => subDayReports(tries + 1), 80);
     };
     subDayReports();
+    /* Réguliers, fidélité et nouveaux clients lisent le carnet clients, qui
+     * se synchronise après le premier rendu et bouge à chaque vente rattachée. */
+    const subClientBook = (tries = 0) => {
+      if (window.KiwiClients?.subscribe) { window.KiwiClients.subscribe(() => { try { renderKpiBand(); } catch (_) {} }); return; }
+      if (tries < 200) setTimeout(() => subClientBook(tries + 1), 80);
+    };
+    subClientBook();
 
     /* Operational cards repaint from their own domain stores. Previously they
      * only refreshed after a page reload, which made a truthful source look

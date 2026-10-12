@@ -442,8 +442,10 @@ ok('tableau de bord : l\'onglet « Caisse » du Menu monte l\'éditeur, le scrip
 
 /* ═══════════════ 7 · accueil : « réguliers » sans source ═══════════════ */
 console.log('\naccueil · clients réguliers sans source');
-ok('réel : réguliers = tiret (pas 0), propagé à fidélité et nouveaux clients', () => {
-  assert.match(DR, /regulars: data\.regulars \? \{ \.\.\.data\.regulars, text: '·'/);
+ok('réel : sans client identifié sur la période, réguliers = tiret (pas 0), propagé à fidélité et nouveaux clients', () => {
+  /* La source est le carnet clients (tools/client-mix-test.mjs) ; sans
+     passage identifié, le tiret reste. */
+  assert.match(DR, /regulars: data\.regulars \? \(mix\.visitors[\s\S]{0,300}: \{ \.\.\.data\.regulars, text: '·'/);
   const ret = grab(DR, 'retention:  {');
   assert.match(ret, /d\.regulars\.text === '·'/);
   const nc = grab(DR, 'newClients: {');
