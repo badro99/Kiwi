@@ -36,6 +36,8 @@ const splitHelpers = between('    function splitPaidCount(saved) {', '    functi
 const splitCard = between('    function renderRpSplitCard(id) {', '    /* "Plus tard"');
 const splitPayment = between('    function markSplitPartPaid(partIdx, method) {', '    /* ---- events ---- */');
 const rightPanel = between('    function renderRightPanel(id) {', '    function openTable(id) {');
+/* Le bouton d'envoi de l'addition lit l'état « à suivre » de la table. */
+const holdHelpers = between('    function lineHeld(l, all) {', '    function sendTableToKitchen(tableId, opts) {');
 /* renderRightPanel écrit le sous-titre des fenêtres de paiement par payMeta,
  * défini plus bas dans la page : on l'injecte tel quel. */
 const payMeta = between('    function payMeta(m) {', '    function readPayMeta() {');
@@ -159,7 +161,7 @@ section('Right-panel and takeaway-board display paths');
     window: { CaisseFx: { countTotal() {} } },
     lucide: { createIcons() {} },
   });
-  vm.runInContext(`${splitHelpers}\n${splitCard}\n${payMeta}\n${rightPanel}\n${takeawayCard}`, context);
+  vm.runInContext(`${splitHelpers}\n${splitCard}\n${payMeta}\n${holdHelpers}\n${rightPanel}\n${takeawayCard}`, context);
   context.renderRightPanel('T1');
   ok(get('rp-total').textContent === '25.00 MAD' && get('rp-pay-normal').hidden === true,
     'reloaded table panel shows 25 MAD due and removes the full-bill payment route');

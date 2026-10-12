@@ -124,8 +124,10 @@ ok("resumeTableOrder n'écrase pas la commande en cours",
 // Le compteur de garde doit ignorer ce qui est déjà en cuisine, sinon la
 // sortie qu'on vient d'ouvrir se referme sur toute mesa rouverte.
 const countFn = (CAISSE.match(/function orderInProgressCount\(\)\s*\{[\s\S]{0,400}?\n {4}\}/) || [''])[0];
+// Une suite confirmée (« À suivre », `committed`) fait partie du repas : elle
+// n'est pas un ajout en cours, donc elle ne ferme pas la sortie non plus.
 ok('orderInProgressCount ne compte que ce qui n’est pas encore parti',
-  /l\.sent \? 0 : l\.qty/.test(countFn));
+  /\(l\.sent \|\| l\.committed\) \? 0 : l\.qty/.test(countFn));
 
 // L'empilement d'un article ne doit JAMAIS retomber sur une ligne déjà partie :
 // sinon l'addition monte et aucun bon ne part — facturé, jamais préparé.
@@ -141,7 +143,7 @@ ok('une ligne déjà en cuisine ne se modifie pas depuis la caisse',
 // Annuler sur une mesa qui mange n'efface que les ajouts.
 ok("annuler sur une mesa servie ne jette que les ajouts",
   /tableSentCount\(selectedId\) > 0/.test(cancelFn)
-  && /filter\(l => l\.sent\)/.test(cancelFn));
+  && /filter\(l => l\.sent \|\| l\.committed\)/.test(cancelFn));
 
 /* ── 1 ter. ANNULER UNE TABLE ORDERPRO DEPUIS SALLE ────────────────────────
  * Un client peut ouvrir la table via NFC, consulter la carte, puis partir sans
@@ -170,7 +172,7 @@ ok('releasePhoneTable peut fermer une session sans pastille locale',
   /!seat && !force/.test(releaseFn));
 
 // La cuisine ne reçoit que le neuf — la règle existait, elle doit tenir.
-const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
+const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId, opts\)\s*\{[\s\S]{0,4200}?\n {4}\}/) || [''])[0];
 ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));
 ok('sendTableToKitchen marque les lignes envoyées', /l\.sent = true/.test(sendFn));
 

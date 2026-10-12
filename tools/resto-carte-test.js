@@ -690,11 +690,11 @@ const noPrinter = (() => {
 eq(noPrinter, 0, 'sans imprimante jointe, aucun bon n\'est tenté — et rien ne casse');
 
 /* La salle part en cuisine, elle aussi — et n'y renvoie pas deux fois. */
-ok(/function sendTableToKitchen\(tableId\)/.test(caisse),
+ok(/function sendTableToKitchen\(tableId, opts\)/.test(caisse),
   'une mesa validée a un chemin vers l\'écran cuisine');
-ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent && !l\.orderProPending\)/.test(caisse),
+ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent && !l\.orderProPending && \(fire \|\| !lineHeld\(l, all\)\)\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
-ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
+ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; delete l\.hold; delete l\.committed; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
 ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTicket\(o\)\)\.map/.test(caisse),
   'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');

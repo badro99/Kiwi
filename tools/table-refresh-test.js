@@ -35,6 +35,9 @@ for (const name of ['sendTableToKitchen', 'createTakeawayKitchenOrder']) {
     persistShift() { saved = { count: ctx.kdsOrders.length, sent: lines[0].sent }; }
   };
   vm.createContext(ctx);
+  /* sendTableToKitchen lit l'état « à suivre » de chaque ligne. */
+  const held = src.indexOf('    function lineHeld(');
+  vm.runInContext(src.slice(held, src.indexOf('\n    }', held) + 6), ctx);
   vm.runInContext(src.slice(start, end), ctx);
   ctx[name](name === 'sendTableToKitchen' ? 1 : lines);
   ok(name + ' durably saves its queued order before returning', !!saved && saved.count === 1);

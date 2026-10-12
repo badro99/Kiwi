@@ -89,7 +89,7 @@
   <script src="assets/caisse-viewport.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=13" defer></script>
+  <script src="assets/escpos.js?v=14" defer></script>
   <script src="assets/printer-bridge.js?v=24" defer></script>
   <script src="assets/caisse-hardware.js?v=5" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
@@ -5110,6 +5110,29 @@
     /* the `hidden` attribute is too weak vs. these flex rules · force it */
     #rp-server-row[hidden] { display: none; }
     #rp-send-kitchen[hidden] { display: none; }
+    /* « À suivre » · la note et le choix de garder le plat pour la suite sur
+       une seule ligne, sous le plat. */
+    .rp-item-noterow { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+    .rp-item-noterow .rp-item-note { flex: 1; width: auto; min-width: 0; }
+    .rp-hold {
+      flex: 0 0 auto; min-height: 30px; padding: 0 11px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--paper-soft); color: var(--ink-2);
+      font-family: var(--sans); font-size: 11.5px; font-weight: 600; cursor: pointer;
+      transition: background 150ms, border-color 150ms, color 150ms;
+    }
+    .rp-hold:hover { border-color: var(--forest); color: var(--forest); }
+    .rp-hold.is-on { background: var(--forest); border-color: var(--forest); color: var(--paper); }
+    .rp-hold-mark {
+      display: inline-flex; align-items: center; margin-left: 6px; vertical-align: 1px;
+      font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
+      color: var(--forest); background: var(--mint-tint);
+      border-radius: 999px; padding: 2px 8px;
+    }
+    .kit-following {
+      margin: 0 15px 12px; padding: 6px 9px; border-radius: 8px;
+      border: 1px dashed var(--line); color: var(--ink-2);
+      font-size: 12px; font-weight: 600; line-height: 1.4;
+    }
     /* Client & fidélité sur la note · une seule ligne, discrète tant qu'elle est
        vide, marquée à l'atlas dès qu'un client est attaché. */
     .rp-client { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; text-align: left; transition: background 140ms, border-color 140ms, color 140ms; }
@@ -7579,6 +7602,7 @@
       if (Array.isArray(liveLines) && liveLines.length) {
         return liveLines.map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l), baseName: l.baseName || l.name,
           price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
+          held: lineHeld(l, liveLines),
           orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
           kind: l.kind, formulaUid: l.formulaUid,
           formulaName: l.formulaName, slotLabel: l.slotLabel, promo: l.promo || null }));
@@ -8789,7 +8813,7 @@
       // La note change → la fiche client attachée suit (ou se détache).
       try { renderSaleClient(); } catch (_) {}
 
-      $('#rp-table').textContent = `${id} · ${t.covers} couverts`;
+      $('#rp-table').textContent = `${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
 
       const subEl = $('#rp-substatus');
       const flag = t.status === 'bgha-ykhlass' ? 'bgha-ykhlass' : (t.status === 'a-commander' ? 'a-commander' : 'ka-yaklo');
@@ -8925,8 +8949,10 @@
       const tableKitchenPending = (tableOrders[id] || []).some(l => l && (l.orderProPending || !l.sent));
       kitchenBtn.hidden = !tableKitchenPending;
       const kitchenBtnLabel = kitchenBtn.querySelector('span');
+      const heldQty = tableHeldQty(id);
       if (kitchenBtnLabel) kitchenBtnLabel.textContent = (tableOrders[id] || []).some(l => l && l.orderProPending)
-        ? 'Accepter · envoyer en cuisine' : 'Envoyer en cuisine';
+        ? 'Accepter · envoyer en cuisine'
+        : tableSuiteOnly(id) ? `Envoyer la suite · ${heldQty}` : 'Envoyer en cuisine';
       /* La seule porte de retour vers le menu depuis une addition ouverte. Elle
          n'existe qu'en salle, et pas sur une table déjà encaissée · on ne
          rouvre pas une note soldée, on rouvre une mesa. */
@@ -10467,6 +10493,12 @@
         return;
       }
 
+      const holdBtn = e.target.closest('[data-hold-uid]');
+      if (holdBtn) {
+        if (mode === 'order' && selectedId) toggleLineHold(selectedId, holdBtn.dataset.holdUid);
+        return;
+      }
+
       // Cart qty +/- buttons (vente rapida) · one specific line by uid
       const qtyBtn = e.target.closest('.qty-btn');
       if (qtyBtn) {
@@ -10567,7 +10599,7 @@
                 `}
               </div>
               <div class="or-item-content">
-                <div class="or-item-title">${kdsEsc(l.name)}</div>
+                <div class="or-item-title">${kdsEsc(l.name)}${lineHeld(l, order) ? ' <span class="rp-hold-mark">À suivre</span>' : ''}</div>
                 ${optPills ? `<div class="or-item-opts-row">${optPills}</div>` : ''}
                 <div class="or-item-note-box">
                   <input class="or-note-input" data-review-note-uid="${l.uid}"
@@ -12489,8 +12521,10 @@
          cœur d'un ajout : le serveur rouvre une mesa avec quatre plats en
          cuisine et doit voir, sans compter, que seuls les deux derniers
          partiront au prochain appui. */
-      const fresh = order.filter(l => !l.sent).reduce((s, l) => s + l.qty, 0);
-      const sentQty = itemCount - fresh;
+      const heldQty = order.filter(l => l.kind !== 'formula-part' && lineHeld(l, order)).reduce((s, l) => s + l.qty, 0);
+      const fresh = order.filter(l => !l.sent && !lineHeld(l, order)).reduce((s, l) => s + l.qty, 0);
+      const sentQty = order.filter(l => l.sent).reduce((s, l) => s + l.qty, 0);
+      const heldTxt = heldQty > 0 ? ` · ${heldQty} à suivre` : '';
       const orderProPendingQty = order.filter(l => l.orderProPending).reduce((s, l) => s + l.qty, 0);
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
@@ -12499,8 +12533,8 @@
         : orderProPendingQty > 0
           ? `${orderProPendingQty} OrderPro à accepter · ${fmtMAD(total)}`
         : sentQty > 0
-          ? `${sentQty} en cuisine · ${fresh} à envoyer · ${fmtMAD(total)}`
-          : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(total)}`;
+          ? `${sentQty} en cuisine · ${fresh} à envoyer${heldTxt} · ${fmtMAD(total)}`
+          : `${itemCount} article${itemCount > 1 ? 's' : ''}${heldTxt} · ${fmtMAD(total)}`;
 
       if (order.length === 0) {
         $('#rp-items').innerHTML = `
@@ -12528,9 +12562,13 @@
             </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
-            <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
-              value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
-              aria-label="Note cuisine, ${kdsEsc(l.name)}" />
+            <div class="rp-item-noterow">
+              <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
+                value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
+                aria-label="Note cuisine, ${kdsEsc(l.name)}" />
+              ${l.kind === 'formula-part' ? (lineHeld(l, order) ? '<span class="rp-hold-mark">À suivre</span>' : '') : `<button type="button" class="rp-hold${l.hold ? ' is-on' : ''}" data-hold-uid="${l.uid}"
+                aria-pressed="${l.hold ? 'true' : 'false'}" title="Garder ce plat pour la suite : il part en cuisine au prochain « Envoyer la suite »">À suivre</button>`}
+            </div>
           </div>`).join('');
       }
 
@@ -12553,7 +12591,8 @@
       /* Un AJOUT ou une première commande ? La question se pose AVANT l'envoi,
          parce que c'est l'envoi qui pose les drapeaux `sent`. */
       const wasAddition = tableSentCount(tableId) > 0;
-      const n = (tableOrders[tableId] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
+      const n = tableFreshQty(tableId);
+      const held = tableHeldQty(tableId);
 
       t.status  = 'ka-yaklo';
       if ((tableOrders[tableId] || []).length) startTableTimer(tableId);
@@ -12574,7 +12613,8 @@
          staff closed and reopened the table. Refresh the still-selected bill
          after the flags and canonical kitchen ticket have been created. */
       if (selectedId === tableId) renderRightPanel(tableId);
-      const what = n > 0 ? `${n} article${n > 1 ? 's' : ''} en cuisine` : 'rien de neuf à envoyer';
+      const what = (n > 0 ? `${n} article${n > 1 ? 's' : ''} en cuisine` : 'rien de neuf à envoyer')
+        + (held > 0 ? ` · ${held} à suivre` : '');
       toast(`${wasAddition ? 'Ajout table ' + tableId : 'Table ' + tableId + ' ouverte'} · ${what}`
         + (sent && sent.num ? ` · bon #${sent.num}` : ''));
     }
@@ -12630,12 +12670,62 @@
       });
     }
 
-    function sendTableToKitchen(tableId) {
+    /* ═══════ À SUIVRE · ENVOYER LA SUITE ═══════════════════════════════════
+     * Une table commande entrées et plats d'un coup. Tout partait au même
+     * envoi : la cuisine lançait les tajines avec les salades, et les plats
+     * attendaient vingt minutes au passe, ou le serveur gardait la commande
+     * en tête et la ressaisissait plus tard.
+     *
+     * Un plat marqué « À suivre » reste sur l'addition sans partir. L'envoi
+     * suivant le confirme (`committed` : annuler des ajouts ne l'efface plus)
+     * et le bon de cuisine l'annonce en bas (« À SUIVRE »), pour que la
+     * cuisine sache ce qui vient. « Envoyer la suite » le lance comme un
+     * bon titré SUITE. Encaisser lance tout : un plat payé ne reste jamais
+     * en attente. Une partie de formule suit sa formule. */
+    function lineHeld(l, all) {
+      if (!l || l.sent) return false;
+      if (l.kind === 'formula-part' && l.formulaUid) {
+        const parent = (all || []).find(p => p && p.kind === 'formula' && p.formulaUid === l.formulaUid);
+        return !!(parent && parent.hold);
+      }
+      return !!l.hold;
+    }
+    function tableHeldQty(tableId) {
+      const all = tableOrders[tableId] || [];
+      return all.filter(l => l && l.qty > 0 && l.kind !== 'formula-part' && lineHeld(l, all)).reduce((s, l) => s + l.qty, 0);
+    }
+    function tableFreshQty(tableId) {
+      const all = tableOrders[tableId] || [];
+      return all.filter(l => l && l.qty > 0 && !l.sent && !l.orderProPending && !lineHeld(l, all)).reduce((s, l) => s + l.qty, 0);
+    }
+    /* Rien de neuf à envoyer, mais une suite qui attend : le bouton d'envoi
+       de l'addition devient « Envoyer la suite ». */
+    function tableSuiteOnly(tableId) {
+      return tableFreshQty(tableId) === 0 && tableHeldQty(tableId) > 0
+        && !(tableOrders[tableId] || []).some(l => l && l.orderProPending);
+    }
+    function toggleLineHold(tableId, uid) {
+      const line = (tableOrders[tableId] || []).find(l => l && l.uid === uid);
+      if (!line || line.sent || line.kind === 'formula-part') return;
+      if (line.hold) delete line.hold;
+      else line.hold = true;
+      renderOrderPanel(tableId);
+      try { persistShift(); } catch (_) {}
+    }
+
+    function sendTableToKitchen(tableId, opts) {
+      const fire = !!(opts && opts.fire);
+      const all = tableOrders[tableId] || [];
+      /* Ce qui reste « à suivre » après cet envoi est confirmé : il fait
+         désormais partie du repas, plus d'un ajout qu'on peut annuler. */
+      if (!fire) all.forEach((l) => { if (l && lineHeld(l, all)) l.committed = true; });
       /* Les lignes OrderPro pending ont leur propre identifiant canonique et
          doivent être acceptées comme leur commande d'origine, pas fusionnées
          dans un nouveau bon caisse. */
-      const lines = (tableOrders[tableId] || []).filter(l => l && l.qty > 0 && !l.sent && !l.orderProPending);
+      const lines = all.filter(l => l && l.qty > 0 && !l.sent && !l.orderProPending && (fire || !lineHeld(l, all)));
       if (!lines.length) return null;
+      const firing = fire && lines.some(l => lineHeld(l, all));
+      const following = fire ? [] : all.filter(l => l && l.qty > 0 && lineHeld(l, all));
       const items = kitchenItemsFromLines(lines);
       const order = {
         num: ++kdsOrderSeq, type: 'dineIn', table: tableId, code: null, status: 'new',
@@ -12646,9 +12736,14 @@
         paid: false, pickedUp: false, pickedUpAt: null,
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
       };
+      if (firing) order.course = 'suite';
+      if (following.length) order.following = kitchenItemsFromLines(following);
+      /* La suite est partie : l'annonce « à suivre » des bons précédents de
+         cette table n'a plus rien à annoncer. */
+      if (firing) kdsOrders.forEach((o) => { if (o && o.following && String(o.table) === String(tableId)) delete o.following; });
       kdsOrders.push(order);
       if (tables[tableId] && !tables[tableId].orderNo) tables[tableId].orderNo = ticketNo(order);
-      lines.forEach((l) => { l.sent = true; });
+      lines.forEach((l) => { l.sent = true; delete l.hold; delete l.committed; });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       /* Le relais donne immédiatement au bon son identifiant canonique. La file
@@ -12849,7 +12944,7 @@
        compter aurait re-fermé la sortie qu'on vient d'ouvrir. */
     function orderInProgressCount() {
       if (mode !== 'order' || !selectedId) return 0;
-      return (tableOrders[selectedId] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
+      return (tableOrders[selectedId] || []).reduce((s, l) => s + ((l.sent || l.committed) ? 0 : l.qty), 0);
     }
 
     /* Cette mesa a-t-elle déjà de la matière en cuisine ? C'est ce qui sépare
@@ -12956,10 +13051,10 @@
          s'annule, ce sont SES ajouts · pas le repas en cours. Vider
          `tableOrders` ici et rendre la table « khawya » effacerait une addition
          de quatre couverts au motif qu'on a hésité sur un thé. */
-      if (selectedId && tableSentCount(selectedId) > 0) {
+      if (selectedId && (tableSentCount(selectedId) > 0 || (tableOrders[selectedId] || []).some(l => l && l.committed))) {
         const id = selectedId;
-        const dropped = (tableOrders[id] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
-        tableOrders[id] = (tableOrders[id] || []).filter(l => l.sent);
+        const dropped = (tableOrders[id] || []).reduce((s, l) => s + ((l.sent || l.committed) ? 0 : l.qty), 0);
+        tableOrders[id] = (tableOrders[id] || []).filter(l => l.sent || l.committed);
         renderMenu();
         backToSalle(id);
         toast(dropped > 0
@@ -19416,7 +19511,7 @@
          est acceptée, pour qu'elle reste vraie même si la table change de main
          ensuite. */
       const sv = o.server ? ` <span class="kit-server">· ${kdsEsc(o.server)}</span>` : '';
-      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${sv}</span>`;
+      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${o.course === 'suite' ? ' · Suite' : ''}${sv}</span>`;
     }
 
     function kdsOrderInner(o, withEye) {
@@ -19452,6 +19547,7 @@
           <span class="kit-status">${isReady ? 'Servie' : isNew ? 'Nouvelle' : 'En préparation'}</span>
         </div>
         <ul class="kit-items">${items}</ul>
+        ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}
         ${act}`;
     }
 
@@ -20611,11 +20707,14 @@
           createdAt: jobAt.getTime(),
           station: sid,
           payload: {
-            title: ((options && options.voided) ? 'ANNULÉ · ' : '') + String(names[sid] || 'Cuisine').toUpperCase(),
+            title: ((options && options.voided) ? 'ANNULÉ · ' : order.course === 'suite' ? 'SUITE · ' : '') + String(names[sid] || 'Cuisine').toUpperCase(),
             station: sid,
             table: tableLabel,
             order: order.opNum != null ? '#' + order.opNum : order.num != null ? '#' + order.num : '', time: time,
             items: byStation.get(sid),
+            following: (!(options && options.voided) && Array.isArray(order.following) && order.following.length)
+              ? kitchenPaperItems(order.following, sid, fallback).map(i => ({ qty: i.qty, name: i.name }))
+              : undefined,
           },
         }));
         /* Le chemin normal est durable, réessayable et dédupliqué. Le repli
@@ -20679,9 +20778,14 @@
         return;
       }
       if (mode === 'salle' && selectedId) {
-        const sent = dispatchTableUnsentToKitchen(selectedId, false);
+        /* Rien de neuf, mais une suite qui attend : ce bouton s'appelle alors
+           « Envoyer la suite » et c'est elle qu'il lance. */
+        const suite = tableSuiteOnly(selectedId);
+        const held = suite ? tableHeldQty(selectedId) : 0;
+        const sent = dispatchTableUnsentToKitchen(selectedId, false, suite);
         const count = sent.remote + (sent.local ? 1 : 0);
-        if (count) toast(`${count} commande${count > 1 ? 's' : ''} envoyée${count > 1 ? 's' : ''} en cuisine`);
+        if (suite && sent.local) toast(`Suite envoyée en cuisine · table ${selectedId} · ${held} article${held > 1 ? 's' : ''}`);
+        else if (count) toast(`${count} commande${count > 1 ? 's' : ''} envoyée${count > 1 ? 's' : ''} en cuisine`);
         else toast('Rien de neuf à envoyer');
         renderRightPanel(selectedId);
         return;
@@ -21461,9 +21565,11 @@
       return true;
     }
 
-    function dispatchTableUnsentToKitchen(tableId, paid) {
+    function dispatchTableUnsentToKitchen(tableId, paid, fire) {
       const remote = dispatchPendingOrderProAtTable(tableId, paid);
-      const local = sendTableToKitchen(tableId);
+      /* Payé : tout part, y compris « à suivre ». Un plat encaissé ne doit
+         jamais rester sur une addition sans bon de cuisine. */
+      const local = sendTableToKitchen(tableId, (paid === true || fire === true) ? { fire: true } : null);
       return { remote, local };
     }
 

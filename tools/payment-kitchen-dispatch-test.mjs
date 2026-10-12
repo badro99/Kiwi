@@ -149,8 +149,10 @@ assert.match(source, /async function finalizeTender\(method\)\s*\{[\s\S]{0,900}?
   'every confirmed tender dispatches and resolves its canonical number before sale settlement');
 assert.match(source, /tableKitchenPending[\s\S]{0,220}?kitchenBtn\.hidden = !tableKitchenPending/,
   'the table bill exposes a kitchen button while anything is pending');
-assert.match(source, /mode === 'salle' && selectedId[\s\S]{0,180}?dispatchTableUnsentToKitchen\(selectedId, false\)/,
+assert.match(source, /mode === 'salle' && selectedId[\s\S]{0,600}?dispatchTableUnsentToKitchen\(selectedId, false, suite\)/,
   'the table kitchen button uses the shared dispatch path');
+assert.match(source, /function dispatchTableUnsentToKitchen\(tableId, paid, fire\)[\s\S]{0,400}?sendTableToKitchen\(tableId, \(paid === true \|\| fire === true\) \? \{ fire: true \} : null\)/,
+  'a paid table sends every dish, including those held « à suivre »');
 assert.match(source, /confirmAccepted\(order\)[\s\S]{0,500}?opIngest\(Object\.assign/,
   'successful OrderPro acceptance returns through the idempotent ingestion bridge');
 assert.match(source, /data-vrap-send[\s\S]{0,500}?dispatchHeldTakeaway\(order, false, true\)/,

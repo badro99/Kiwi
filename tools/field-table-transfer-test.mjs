@@ -70,7 +70,7 @@ function context() {
   const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit',
     'locallySettledOrder', 'paidReceiptForCurrentTable', 'tableSaleLabel', 'releasePhoneTable',
     'caisseTableKitchenLocked', 'caisseMobilityIntent', 'applyCaisseMovedVisit',
-    'confirmCaisseTransfer', 'confirmCaisseMerge', 'generateOrder', 'resetTableTimer', 'startTableTimer',
+    'confirmCaisseTransfer', 'confirmCaisseMerge', 'lineHeld', 'generateOrder', 'resetTableTimer', 'startTableTimer',
     'currentTotal', 'tableSentCount', 'cancelOpenTable', 'attachOrderProTable', 'opRepairFormulaParents',
     'opIngest', 'canRecoverCaisseTable', 'retireRejectedKitchenTicket', 'sameMap', 'serverNameFor',
     'staleQueuedServerTicket', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',

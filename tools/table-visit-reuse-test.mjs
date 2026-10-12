@@ -102,7 +102,7 @@ async function setup() {
     'locallySettledOrder', 'paidReceiptForCurrentTable', 'tableSaleLabel', 'releasePhoneTable', 'resetTableTimer',
     'startTableTimer', 'tableSentCount', 'attachOrderProTable', 'opRepairFormulaParents', 'opIngest',
     'canRecoverCaisseTable', 'sameMap', 'staleQueuedServerTicket', 'ticketNo', 'orderServerInitials',
-    'kitchenItemsFromLines', 'relayLinesFromCaisse', 'relayToKitchen', 'sendTableToKitchen'];
+    'kitchenItemsFromLines', 'relayLinesFromCaisse', 'relayToKitchen', 'lineHeld', 'sendTableToKitchen'];
   vm.runInContext(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource, c);
 
   /* Same mapping as assets/orderpro-inbox.js pull() + bridge(). */

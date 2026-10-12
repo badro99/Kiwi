@@ -281,7 +281,7 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /assets\/kitchen-print-queue\.js/.test(CAISSE)
       && /DONE_PREFIX/.test(PRINT_QUEUE) && /function retryNow\(\)/.test(PRINT_QUEUE));
   ok('une mesa envoyée en cuisine part sur le réseau',
-    /function sendTableToKitchen[\s\S]{0,2600}?relayToKitchen\(order\)/.test(CAISSE));
+    /function sendTableToKitchen[\s\S]{0,4200}?relayToKitchen\(order\)/.test(CAISSE));
   ok('une vente à emporter aussi',
     /function createTakeawayKitchenOrder\(lines\)[\s\S]{0,1600}?relayToKitchen\(order\)/.test(CAISSE)
       && /function sendToKitchen\(\)[\s\S]{0,2400}?createTakeawayKitchenOrder\(cart\)/.test(CAISSE));

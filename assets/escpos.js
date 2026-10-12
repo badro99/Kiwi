@@ -344,6 +344,15 @@
         b.size(1, 1).bold(false);
       }
     });
+    /* Ce que la table a commandé pour plus tard (« À suivre ») : la cuisine
+     * le sait sans le lancer. Petit, après un trait, sans quantité en gros :
+     * rien ici ne doit pouvoir se lire comme un plat à faire maintenant. */
+    if (o.following && o.following.length) {
+      b.line(rule(paper)).bold(true).line(fit('À SUIVRE', paper)).bold(false);
+      o.following.forEach(function (it) {
+        wrap((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 1, '   ').forEach(function (l) { b.line(l); });
+      });
+    }
     b.line(rule(paper)).feed(3).cut();
     return b.bytes();
   }
