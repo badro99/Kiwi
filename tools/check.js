@@ -1201,6 +1201,9 @@ section('Whole-project regressions');
     'canonical-origin-test.mjs',
     'landing-es-test.mjs',
     'landing-es-browser-test.mjs',
+    /* Aucune page de la landing ne promet un chiffrement de bout en bout, et
+       les tarifs montrent les quatre paliers de CLAUDE.md §7. */
+    'landing-claims-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',

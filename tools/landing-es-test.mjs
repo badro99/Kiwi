@@ -131,11 +131,26 @@ const keySpanishPhrases = [
   'Una suscripción. Sin comisiones.',
   'El software, en su propio equipo.',
   'Soporte prioritario y Kiwi IQ avanzado. El plan más elegido.',
+  'Varios establecimientos, en varios países.',
+  'Un alcance a medida, para una necesidad que ningún plan cubre.',
+  'Alcance definido con usted',
+  'Número de dispositivos y cajeros acordado juntos',
+  'Presupuesto personalizado',
   'Todos los derechos reservados.'
 ];
 
 for (const phrase of keySpanishPhrases) {
   ok(esHtml.includes(phrase), `es/index.html contains: "${phrase}"`);
+}
+
+// 9b. Four pricing tiers (CLAUDE.md §7), rendered in order, Ultra at 1 499.
+{
+  const pricing = esHtml.slice(esHtml.indexOf('<section id="pricing"'), esHtml.indexOf('</section>', esHtml.indexOf('<section id="pricing"')));
+  const names = [...pricing.matchAll(/<h3[^>]*>([^<]*)<\/h3>/g)].map(m => m[1]);
+  ok(JSON.stringify(names) === JSON.stringify(['Basic', 'Pro', 'Ultra', 'Ultimate']), 'es pricing shows Basic, Pro, Ultra and Ultimate: ' + names);
+  const prices = [...pricing.matchAll(/kw-price-in[^>]*>([^<]*)/g)].map(m => m[1]);
+  ok(JSON.stringify(prices) === JSON.stringify(['199', '399', '1 499', '']), 'es pricing shows 199, 399, 1 499 MAD and a quote: ' + JSON.stringify(prices));
+  ok(!/extremo a extremo/i.test(esHtml), 'es landing does not claim end-to-end encryption');
 }
 
 // 10. Aria labels in Spanish
@@ -310,6 +325,8 @@ export const UNCHANGED_COPY = new Set([
   "199",
   "Pro",
   "399",
+  "Ultra",
+  "Ultimate",
   "+212 624 495 159",
   "contact@kiwi-os.com",
   "Kiwi",
