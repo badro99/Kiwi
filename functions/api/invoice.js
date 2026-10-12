@@ -10,15 +10,19 @@
 
 import { tenantFor } from './_private.js';
 import { json } from '../auth/_lib.js';
+import { iceCompact, iceProblem, ICE_DETAIL } from './_ice.js';
 
 export function validateCustomer(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const name = String(raw.name || '').trim().slice(0, 80);
-  const iceRaw = String(raw.ice || '').trim();
+  const iceRaw = iceCompact(String(raw.ice || '').trim());
   const ifNum = String(raw.if || raw.ifNum || '').trim().slice(0, 30);
 
-  if (iceRaw && !/^\d{15}$/.test(iceRaw)) {
-    throw new Error('invalid-ice');
+  const iceBad = iceProblem(iceRaw);
+  if (iceBad) {
+    const err = new Error('invalid-ice');
+    err.reason = iceBad;
+    throw err;
   }
 
   if (!name && !iceRaw && !ifNum) return null;
@@ -216,7 +220,7 @@ export async function onRequestPost({ request, env }) {
     customerData = validateCustomer(customerData);
   } catch (err) {
     if (err?.message === 'invalid-ice') {
-      return json({ error: 'invalid-ice', detail: 'ICE doit comporter exactement 15 chiffres.' }, 400);
+      return json({ error: 'invalid-ice', reason: err.reason || 'length', detail: ICE_DETAIL[err.reason] || ICE_DETAIL.length }, 400);
     }
     return json({ error: 'invalid-customer' }, 400);
   }

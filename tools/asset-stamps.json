@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "29",
-    "sha": "7e4fbf6c5e5892c9"
+    "v": "30",
+    "sha": "ce895728e8064971"
   },
   "assets/accounting.js": {
     "v": "4",
@@ -120,8 +120,8 @@
     "sha": "b936610448f17eac"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "6",
-    "sha": "7a81070d032c1d93"
+    "v": "7",
+    "sha": "12738734e4f336de"
   },
   "assets/caisse-motion.js": {
     "v": "4",
@@ -184,8 +184,8 @@
     "sha": "992ffacf758f29c6"
   },
   "assets/charges.js": {
-    "v": "1",
-    "sha": "0e900ab25d5a1cae"
+    "v": "2",
+    "sha": "637557dc5c7c47e9"
   },
   "assets/clients-book.js": {
     "v": "24",
@@ -428,8 +428,8 @@
     "sha": "59945120582f82d0"
   },
   "assets/invoice.js": {
-    "v": "14",
-    "sha": "83782651b6006c39"
+    "v": "15",
+    "sha": "797ee9e7e2d167c0"
   },
   "assets/invoicing.css": {
     "v": "8",

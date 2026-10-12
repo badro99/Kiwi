@@ -183,7 +183,23 @@ function withNutrition(target, source) {
   return target;
 }
 
-export function sanitizeMenu(raw) {
+/* Un « 86 » peut avoir une fin : « épuisé jusqu'à 18 h ». `availUntil` est un
+ * instant absolu (ms) posé par la caisse, qui connaît l'heure murale du
+ * commerce. Il n'existe que sur un plat indisponible, et il est résolu ICI, à
+ * chaque lecture : passé l'instant, le plat revient disponible pour tout le
+ * monde (caisse, app serveur, OrderPro, page QR), qui relisent tous la carte
+ * en boucle. Aucun minuteur, aucun appareil ne doit rester allumé pour ça.
+ * Plus de sept jours, c'est une erreur de saisie : on garde le 86 sans fin
+ * plutôt que d'inventer une date de retour. */
+const AVAIL_UNTIL_MAX = 7 * 24 * 3600 * 1000;
+export function availUntilOf(it, now) {
+  const until = Math.floor(Number(it && it.availUntil));
+  if (!(it && it.avail === false) || !Number.isFinite(until) || until <= 0) return null;
+  if (until - now > AVAIL_UNTIL_MAX) return null;
+  return until;
+}
+
+export function sanitizeMenu(raw, now = Date.now()) {
   const out = { langs: CORE.slice(), cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
   out.langs = normalizeMenuLangs(raw.langs);
@@ -238,6 +254,8 @@ export function sanitizeMenu(raw) {
   }, c, 80, 0)).filter((c) => c.id);
   const items = Array.isArray(raw.items) ? raw.items.slice(0, 1000) : [];
   out.items = items.map((it) => {
+    const until = availUntilOf(it, now);
+    const expired = until != null && until <= now;
     const item = {
       id: str(it && it.id, 40),
       name: str(it && it.name, 120),
@@ -245,7 +263,7 @@ export function sanitizeMenu(raw) {
       catId: str(it && it.catId, 40) || null,
       subId: str(it && it.subId, 40) || null,
       desc: str(it && it.desc, 400),
-      avail: !(it && it.avail === false),
+      avail: !(it && it.avail === false) || expired,
       formulaOnly: !!(it && it.formulaOnly),
       // Explicit merchant opt-in: formula-only items are public by design, but
       // their media should only become a visual choice in OrderPro when asked.
@@ -268,6 +286,7 @@ export function sanitizeMenu(raw) {
       photo: mediaUrl(it && it.photo),
       video: mediaUrl(it && it.video),
     };
+    if (until != null && !expired) item.availUntil = until;
     // Les traductions du plat (nom + description), voir sanitizeI18n.
     withI18n(item, it, 120, 400);
     withNutrition(item, it);

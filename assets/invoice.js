@@ -611,7 +611,7 @@
             </div>
             <div>
               <label for="inv-cust-ice" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">ICE (15 chiffres)</label>
-              <input id="inv-cust-ice" data-inv-cust-ice class="st-mb-input mono" placeholder="001234567000089" maxlength="15" inputmode="numeric" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <input id="inv-cust-ice" data-inv-cust-ice class="st-mb-input mono" placeholder="001234567000062" maxlength="24" inputmode="numeric" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
               <div data-inv-ice-error style="color:#dc2626;font-size:11px;margin-top:2px;display:none;">L'ICE doit comporter exactement 15 chiffres.</div>
             </div>
             <div>
@@ -751,7 +751,7 @@
         const err = data;
         if (err?.error === 'invalid-ice') {
           abandon();
-          toast('ICE client invalide (15 chiffres requis).', 'error');
+          toast(err.detail ? 'ICE client · ' + err.detail : 'ICE client invalide (15 chiffres requis).', 'error');
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {

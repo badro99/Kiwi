@@ -2,7 +2,10 @@
 // operational availability without republishing (and potentially overwriting)
 // the whole menu document.
 //
-// Body: { merchant, itemId, available }
+// Body: { merchant, itemId, available, until? }
+// `until` (ms, optional, only with available:false) ends the 86 by itself:
+// « épuisé jusqu'à 18 h ». It must lie in the future and within seven days;
+// sanitizeMenu resolves it on every read (functions/api/menu.js).
 // Auth: the normal owner/operator session or the paired till cookie for that
 // exact merchant. The merchant is always resolved by tenantFor.
 
@@ -21,6 +24,14 @@ export async function onRequestPost({ request, env }) {
   const itemId = clean(body && body.itemId, 40);
   if (!asked || !itemId || typeof (body && body.available) !== 'boolean') {
     return json({ error: 'invalid-availability' }, 400);
+  }
+  const now = Date.now();
+  let until = null;
+  if (body.until != null) {
+    until = Math.floor(Number(body.until));
+    if (body.available || !Number.isFinite(until) || until <= now || until - now > 7 * 24 * 3600 * 1000) {
+      return json({ error: 'invalid-until' }, 400);
+    }
   }
 
   const merchant = await tenantFor(request, env, asked, { strict: true });
@@ -41,11 +52,13 @@ export async function onRequestPost({ request, env }) {
     }
 
     let data;
-    try { data = sanitizeMenu(JSON.parse(row.data)); }
+    try { data = sanitizeMenu(JSON.parse(row.data), now); }
     catch (_) { return json({ error: 'menu-invalid' }, 409); }
     const item = data.items.find((entry) => entry.id === itemId);
     if (!item || item.archived) return json({ error: 'item-not-found' }, 404);
     item.avail = body.available;
+    if (until != null) item.availUntil = until;
+    else delete item.availUntil;
 
     const updatedTs = Math.max(Date.now(), (+row.updated_ts || 0) + 1);
     let result;
@@ -55,7 +68,7 @@ export async function onRequestPost({ request, env }) {
       ).bind(JSON.stringify(data), updatedTs, merchant, +row.updated_ts || 0).run();
     } catch (_) { return json({ error: 'write-failed' }, 500); }
     if (result && result.meta && result.meta.changes === 1) {
-      return json({ ok: true, merchant, itemId, available: body.available, updatedTs });
+      return json({ ok: true, merchant, itemId, available: body.available, until, updatedTs });
     }
   }
 

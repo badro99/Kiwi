@@ -144,7 +144,7 @@ var SHELL = [
   '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
-  '/assets/account.js?v=29',
+  '/assets/account.js?v=30',
   '/assets/production-action-guard.js?v=3',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -197,7 +197,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=8',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=14',
+  '/assets/invoice.js?v=15',
   '/assets/merchant-config.js?v=278',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=4',
@@ -248,7 +248,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=6',
   '/assets/charges-engine.js?v=1',
-  '/assets/charges.js?v=1',
+  '/assets/charges.js?v=2',
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=20',

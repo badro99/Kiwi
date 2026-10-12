@@ -132,6 +132,8 @@
       .acc-f:focus, .acc-sel:focus { border-color:var(--atlas); }
       .acc-lbl { display:block; font-size:11.5px; font-weight:500; color:var(--n-600); margin:13px 0 6px; }
       .acc-hint { font-size:11px; color:var(--n-500); margin:5px 0 0; line-height:1.45; }
+      .acc-err { font-size:12px; color:var(--danger, #B3261E); margin:6px 0 0; line-height:1.45; font-weight:550; }
+      .acc-f[aria-invalid="true"] { border-color:var(--danger, #B3261E); }
       .acc-logo-picker { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--n-200); border-radius:11px; }
       .acc-logo-preview { width:54px; height:54px; border-radius:12px; display:grid; place-items:center; overflow:hidden; background:var(--mint-soft); color:var(--atlas); font-weight:700; flex-shrink:0; }
       .acc-logo-preview img { width:100%; height:100%; object-fit:contain; background:#fff; }
@@ -284,7 +286,7 @@
      * établissement que tout le produit interroge. Ce formulaire en tenait une
      * SECONDE copie, libre, que rien ne lisait — deux réglages pour une même
      * réalité, dont un faux dès que l'autre changeait. */
-    { k: 'ice', sec: 'legal', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"',
+    { k: 'ice', sec: 'legal', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' }, max: 24, attr: 'inputmode="numeric" autocomplete="off"',
       hint: { fr: '15 chiffres', en: '15 digits', ar: '15 رقماً' } },
     { k: 'fiscal', label: { fr: 'Identifiant Fiscal (IF)', en: 'Tax ID (IF)', ar: 'الرقم الضريبي' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"' },
     { k: 'rc', label: { fr: 'Registre de Commerce (RC)', en: 'Trade Register (RC)', ar: 'السجل التجاري' }, max: 30, attr: 'autocomplete="off"' },
@@ -299,10 +301,59 @@
     legal: { label: { fr: 'Mentions légales', en: 'Legal details', ar: 'البيانات القانونية' },
       why: { fr: "S'impriment sur chaque reçu et chaque facture. Une mention laissée vide n'est pas imprimée du tout · un tiret à la place d'un ICE ressemble à un ICE illisible.", en: 'Printed on every receipt and invoice. A detail left blank is not printed at all · a dash in place of an ICE reads as an unreadable ICE.', ar: 'تُطبع على كل وصل وفاتورة. البيان الفارغ لا يُطبع إطلاقاً.' } },
   };
+  /* ── L'ICE SE VÉRIFIE ─────────────────────────────────────────────────
+   * 15 chiffres : 9 pour l'entreprise, 4 pour l'établissement, 2 de contrôle,
+   * et le nombre entier est un multiple de 97 (ISO 7064 mod 97-10, la règle
+   * qu'applique python-stdnum › stdnum/ma/ice.py ; vérifiée sur les exemples
+   * publiés par ice.gov.ma et par les guides de paie). Un ICE faux imprimé sur
+   * un reçu ou une facture B2B la rend irrecevable pour la DGI : on le refuse
+   * à la saisie, au champ, avec la raison. Vide reste permis (non imprimé).
+   * Le contrôle prouve la forme, pas l'immatriculation : seul l'OMPIC le dit. */
+  const iceCompact = (raw) => String(raw == null ? '' : raw).replace(/[\s.\-]/g, '');
+  function iceProblem(raw) {
+    const n = iceCompact(raw);
+    if (!n) return null;
+    if (!/^\d+$/.test(n)) return 'digits';
+    if (n.length !== 15) return 'length';
+    let r = 0;
+    for (const d of n) r = (r * 10 + (d.charCodeAt(0) - 48)) % 97;
+    return r === 0 ? null : 'checksum';
+  }
+  const ICE_MSG = {
+    digits: { fr: "L'ICE ne contient que des chiffres.", en: 'An ICE has digits only.', ar: 'يتكون ICE من أرقام فقط.' },
+    length: { fr: "L'ICE compte 15 chiffres.", en: 'An ICE has 15 digits.', ar: 'يتكون ICE من 15 رقماً.' },
+    checksum: { fr: 'Cet ICE ne passe pas le contrôle. Vérifiez chaque chiffre sur votre attestation.', en: 'This ICE fails its check digits. Check each digit against your certificate.', ar: 'رقم ICE هذا غير صالح. تحقق من كل رقم في شهادتك.' },
+  };
+  window.KiwiICE = { compact: iceCompact, problem: iceProblem };
+  /* Pose les erreurs AU CHAMP (aria-invalid + message relié), place le focus
+   * sur le premier, et rend true s'il y en avait. Une saisie efface l'erreur. */
+  function bizErrors(scope, v) {
+    scope.querySelectorAll('.acc-err').forEach((e) => e.remove());
+    scope.querySelectorAll('[aria-invalid="true"]').forEach((e) => { e.removeAttribute('aria-invalid'); e.removeAttribute('aria-describedby'); });
+    const bad = [];
+    const ice = iceProblem(v.ice);
+    if (ice) bad.push(['ice', ICE_MSG[ice]]);
+    else if (v.ice) v.ice = iceCompact(v.ice);
+    bad.forEach(([k, msg]) => {
+      const input = scope.querySelector('[data-f="' + k + '"]');
+      if (!input) return;
+      const p = document.createElement('p');
+      p.className = 'acc-err';
+      p.id = 'accf-' + k + '-err';
+      p.setAttribute('role', 'alert');
+      p.textContent = pick(msg);
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', p.id);
+      input.insertAdjacentElement('afterend', p);
+      input.addEventListener('input', () => { p.remove(); input.removeAttribute('aria-invalid'); input.removeAttribute('aria-describedby'); }, { once: true });
+    });
+    if (bad.length) { const first = scope.querySelector('[aria-invalid="true"]'); if (first) first.focus(); }
+    return bad.length > 0;
+  }
   const BIZ_DEFAULTS = [
-    { id: 'cafeAtlas', name: 'Café Atlas · Maarif', type: 'Café · Restaurant', city: 'Casablanca', address: '12 Rue Allal Ben Abdellah, Maarif', primary: true, ice: '002593840000047', fiscal: '40512893', rc: 'Casablanca 458921', patente: '31204567', cnss: '8842157', phone: '+212 5 22 39 11 84', hours: '07:00 – 23:00', revenue: 825000, orders: 3240, team: 15 },
-    { id: 'maisonMansour', name: 'Maison Mansour', type: 'Restaurant · Traiteur', city: 'Casablanca', address: "45 Boulevard d'Anfa", primary: false, ice: '002593840000128', fiscal: '40698215', rc: 'Casablanca 472310', patente: '31288901', cnss: '8847720', phone: '+212 5 22 48 60 03', hours: '12:00 – 00:00', revenue: 358000, orders: 1180, team: 9 },
-    { id: 'spaBahia', name: 'Spa Bahia', type: 'Spa · Hammam', city: 'Marrakech', address: '8 Rue de la Liberté, Guéliz', primary: false, ice: '002593840000206', fiscal: '50231764', rc: 'Marrakech 119045', patente: '47120338', cnss: '5521090', phone: '+212 5 24 43 77 21', hours: '10:00 – 21:00', revenue: 269000, orders: 640, team: 6 },
+    { id: 'cafeAtlas', name: 'Café Atlas · Maarif', type: 'Café · Restaurant', city: 'Casablanca', address: '12 Rue Allal Ben Abdellah, Maarif', primary: true, ice: '002593840000029', fiscal: '40512893', rc: 'Casablanca 458921', patente: '31204567', cnss: '8842157', phone: '+212 5 22 39 11 84', hours: '07:00 – 23:00', revenue: 825000, orders: 3240, team: 15 },
+    { id: 'maisonMansour', name: 'Maison Mansour', type: 'Restaurant · Traiteur', city: 'Casablanca', address: "45 Boulevard d'Anfa", primary: false, ice: '002593840000126', fiscal: '40698215', rc: 'Casablanca 472310', patente: '31288901', cnss: '8847720', phone: '+212 5 22 48 60 03', hours: '12:00 – 00:00', revenue: 358000, orders: 1180, team: 9 },
+    { id: 'spaBahia', name: 'Spa Bahia', type: 'Spa · Hammam', city: 'Marrakech', address: '8 Rue de la Liberté, Guéliz', primary: false, ice: '002593840000223', fiscal: '50231764', rc: 'Marrakech 119045', patente: '47120338', cnss: '5521090', phone: '+212 5 24 43 77 21', hours: '10:00 – 21:00', revenue: 269000, orders: 640, team: 6 },
   ];
   const extraBiz = () => { try { return JSON.parse(localStorage.getItem('kiwiBizExtra') || '[]'); } catch (_) { return []; } };
   const setExtraBiz = (a) => { try { localStorage.setItem('kiwiBizExtra', JSON.stringify(a)); } catch (_) {} };
@@ -825,6 +876,7 @@
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
+      if (bizErrors(m.el, v)) return;
       /* Le métier d'abord : il ne se range pas avec le reste, et il repeint le
        * tableau de bord. */
       saveTrade(b, v.type);
@@ -873,6 +925,7 @@
     m.el.addEventListener('click', async (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
+      if (bizErrors(m.el, v)) return;
       if (!v.name) { Kiwi.toast(pick({ fr: 'Le nom est requis.', en: 'Name is required.', ar: 'الاسم مطلوب.' }), { type: 'info', force: true }); return; }
       if (canCreate) {
         const trade = T.resolve(v.type);

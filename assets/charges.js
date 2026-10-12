@@ -77,6 +77,10 @@
       commT: 'Commissions',
       commHelp: 'Le pourcentage que la banque ou la plateforme garde sur chaque vente. Seuls les moyens et canaux vus dans vos ventes sont proposés.',
       commMethods: 'Moyens de paiement',
+      /* Décision Bank Al-Maghrib n° 265/W/2026 du 6 juillet 2026 (communiqué
+       * conjoint BAM et Conseil de la concurrence). Un repère, jamais un
+       * chiffre pré-rempli : le taux du commerçant est celui de son relevé. */
+      commCap: "Repère : depuis le 1er octobre 2026, Bank Al-Maghrib plafonne l'interchange des cartes marocaines à 0,50 % HT, et à 0,15 % pour le commerce de proximité. Votre taux total l'inclut, plus la marge de votre banque : reprenez celui de votre relevé.",
       commChannels: 'Plateformes de vente',
       save: 'Enregistrer',
       cancel: 'Annuler',
@@ -142,6 +146,7 @@
       commT: 'Fees',
       commHelp: 'The percentage the bank or the platform keeps on each sale. Only the methods and channels seen in your sales are listed.',
       commMethods: 'Payment methods',
+      commCap: "For reference: since 1 October 2026, Bank Al-Maghrib caps interchange on Moroccan cards at 0.50 % excl. tax, and 0.15 % for local shops. Your total rate includes it plus your bank's margin: use the one on your statement.",
       commChannels: 'Sales platforms',
       save: 'Save',
       cancel: 'Cancel',
@@ -206,6 +211,7 @@
       commT: 'العمولات',
       commHelp: 'النسبة التي يحتفظ بها البنك أو المنصة من كل عملية بيع. تظهر فقط وسائل الدفع والقنوات الموجودة في مبيعاتك.',
       commMethods: 'وسائل الدفع',
+      commCap: 'للعلم: منذ 1 أكتوبر 2026، يحدد بنك المغرب سقف عمولة التبادل للبطاقات المغربية في 0,50 % دون احتساب الرسوم، و0,15 % لتجارة القرب. يشمل سعرك الإجمالي هذه العمولة وهامش بنكك: استعمل السعر المذكور في كشف حسابك.',
       commChannels: 'منصات البيع',
       save: 'حفظ',
       cancel: 'إلغاء',
@@ -629,6 +635,7 @@
         <div class="kf-help" id="chg-comm-help">${esc(c.commHelp)}</div>
         <div class="chg-sub-h">${esc(c.commMethods)}</div>
         ${methods.map((m) => rateRow('methods', m, methodLabel(m), rateVal(d.commissions.methods, m))).join('')}
+        <div class="kf-help chg-cap" data-chg-cap>${esc(c.commCap)}</div>
         ${channels.length ? `<div class="chg-sub-h">${esc(c.commChannels)}</div>${channels.map((ch) => rateRow('channels', ch, channelLabel(ch), rateVal(d.commissions.channels, ch))).join('')}` : ''}
         <div class="chg-err" data-err-rates hidden></div>
       </div>

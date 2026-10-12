@@ -509,6 +509,9 @@ for (const test of [
   'reservations-test.mjs',
   'serveur-menu-live-test.mjs',
   'menu-availability-test.mjs',
+  /* « Épuisé jusqu'à 18 h » : la fin d'un 86 posée par la caisse, résolue par
+     le serveur à chaque lecture, et le choix de durée au vrai clic. */
+  'menu-86-until-test.mjs',
   'service-settlement-test.mjs',
   'restaurant-payment-identity-test.mjs',
   'restaurant-reopen-test.mjs',
@@ -1514,6 +1517,9 @@ section('Whole-project regressions');
     'receipt-logo-print-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
+    /* L'ICE se vérifie (15 chiffres, multiple de 97) au champ du formulaire
+       Établissement, au vrai clic, et côté serveur pour les factures. */
+    'ice-browser-test.mjs',
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',
     'inventory-count-review-test.mjs',

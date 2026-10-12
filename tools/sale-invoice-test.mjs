@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as ICE from '../functions/api/_ice.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -186,7 +187,8 @@ if (custValMatch && fmtNumMatch && schemaMatch && getOrCreateMatch) {
     ${getOrCreateMatch[0].replace('export async function', 'async function')}
     return { validateCustomer, formatInvoiceNumber, getOrCreateSaleInvoice };
   `;
-  const helpers = new Function(code)();
+  /* validateCustomer lit la règle ICE partagée (functions/api/_ice.js). */
+  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL);
   validateCustomer = helpers.validateCustomer;
   formatInvoiceNumber = helpers.formatInvoiceNumber;
   getOrCreateSaleInvoice = helpers.getOrCreateSaleInvoice;
@@ -197,13 +199,17 @@ if (validateCustomer) {
   ok(validateCustomer(null) === null, 'validateCustomer returns null on null');
   ok(validateCustomer({}) === null, 'validateCustomer returns null on empty object');
 
-  const validCust = validateCustomer({ name: 'Client Pro SARL', ice: '001234567000089', if: '987654' });
+  const validCust = validateCustomer({ name: 'Client Pro SARL', ice: '001234567000062', if: '987654' });
   ok(validCust.name === 'Client Pro SARL', 'customer name preserved');
-  ok(validCust.ice === '001234567000089', 'valid 15-digit ICE preserved');
+  ok(validCust.ice === '001234567000062', 'valid 15-digit ICE preserved');
+  ok(validateCustomer({ name: 'Espaces', ice: '00 1234567 0001 59' }).ice === '001234567000159', 'ICE typed with spaces is compacted');
+  let sumThrew = null;
+  try { validateCustomer({ name: 'Faute de frappe', ice: '001234567000089' }); } catch (e) { sumThrew = e.message + ':' + e.reason; }
+  ok(sumThrew === 'invalid-ice:checksum', 'an ICE that fails its mod-97 check digits is refused');
   ok(validCust.if === '987654', 'IF preserved');
 
   // Nom bridé à 80 caractères
-  const longCust = validateCustomer({ name: 'Z'.repeat(120), ice: '001234567000089' });
+  const longCust = validateCustomer({ name: 'Z'.repeat(120), ice: '001234567000062' });
   ok(longCust.name.length === 80, 'customer name clamped to 80 chars');
 
   // ICE invalide => rejet
@@ -393,7 +399,7 @@ ok(posReprintSource.includes('data-kx-rp-invoice'), 'pos-reprint.js contains dat
 ok(posReprintSource.includes('KiwiInvoice.generate'), 'pos-reprint.js invokes KiwiInvoice.generate on invoice button click');
 
 // ── 7. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 72;
+const EXPECTED_COUNT = 74;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 

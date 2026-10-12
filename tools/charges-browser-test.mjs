@@ -124,6 +124,8 @@ try {
     await page.type('[data-social]', '21');
     const rates = await page.$$eval('[data-rate]', (r) => r.map((x) => `${x.getAttribute('data-rate')}:${x.getAttribute('data-key')}`));
     check(rates.includes('methods:card') && rates.includes('channels:glovo') && !rates.includes('methods:cash'), `only the methods and channels seen in the sales are offered (${rates.join(', ')})`);
+    const cap = await page.evaluate(() => { const n = document.querySelector('[data-chg-cap]'); const card = document.querySelector('[data-rate="methods"][data-key="card"]'); return { text: n && n.textContent, empty: card && card.value === '' }; });
+    check(/0,50 % HT/.test(cap.text || '') && /0,15 %/.test(cap.text || '') && /relevé/.test(cap.text || '') && cap.empty, 'the card rate shows the Bank Al-Maghrib cap as a reference, never as a pre-filled rate');
     await page.type('[data-rate="methods"][data-key="card"]', '1,5');
     await page.type('[data-rate="channels"][data-key="glovo"]', '25');
 
