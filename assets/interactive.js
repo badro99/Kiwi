@@ -4752,6 +4752,29 @@ ar: {
      * sibling), because that is structural and other modules depend on it. */
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
+  /* Breadcrumb of an appPage() page: « Accueil / <title> ». The home word used
+   * to be a literal « Accueil » under every language; it goes through tr() now,
+   * in the same .breadcrumb-home span as i18n.js's dash.breadcrumb. */
+  const GENPAGE_HOME = { fr: 'Accueil', en: 'Home', ar: 'الرئيسية' };
+  let genpageTitle = null;
+  function paintGenpageCrumb(bc, title) {
+    bc.textContent = '';
+    const home = document.createElement('span'); home.className = 'breadcrumb-home'; home.textContent = tr(GENPAGE_HOME); bc.appendChild(home);
+    bc.appendChild(document.createTextNode(' '));
+    const sep = document.createElement('span'); sep.className = 'sep'; sep.setAttribute('aria-hidden', 'true'); sep.textContent = '/'; bc.appendChild(sep);
+    bc.appendChild(document.createTextNode(' '));
+    const b = document.createElement('b'); b.textContent = title; bc.appendChild(b);
+  }
+  /* setLang() rewrites every [data-i18n] node before it fires kiwi:langchange,
+   * and the breadcrumb is one (dash.breadcrumb): an open page's crumb came back
+   * as « Home / Dashboard ». Repaint it in the new language with the page's own
+   * title. A caller that re-renders on langchange calls appPage() again, which
+   * repaints it with its translated title. */
+  window.addEventListener('kiwi:langchange', () => {
+    if (genpageTitle == null || !document.body.classList.contains('page-genpage')) return;
+    const bc = document.querySelector('.breadcrumb');
+    if (bc) paintGenpageCrumb(bc, genpageTitle);
+  });
   function appPage(navKey, opts) {
     const o = opts || {};
     // Mount into the same content wrapper the other .app-swap pages live in
@@ -4792,13 +4815,9 @@ ar: {
     if (o.foot) { const f = document.createElement('div'); f.className = 'genpage-foot'; f.insertAdjacentHTML('beforeend', o.foot); host.appendChild(f); }
     // Swap into the page: clear any active page class, mark this one.
     pageShell('genpage');
+    genpageTitle = o.title || '';
     const bc = document.querySelector('.breadcrumb');
-    if (bc) {
-      bc.textContent = 'Accueil ';
-      const sep = document.createElement('span'); sep.className = 'sep'; sep.textContent = '/'; bc.appendChild(sep);
-      bc.appendChild(document.createTextNode(' '));
-      const b = document.createElement('b'); b.textContent = o.title || ''; bc.appendChild(b);
-    }
+    if (bc) paintGenpageCrumb(bc, genpageTitle);
     setActivePage(navKey);
     if (navKey !== 'payroll' && navKey !== 'equipe') {
       try { window.__kiwiTeamDeactivate?.(); } catch (_) {}
