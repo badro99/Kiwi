@@ -117,6 +117,22 @@ console.log('\n\x1b[1mCharges fixes · le calcul\x1b[0m');
   ok('une contribution négative ne donne pas un seuil négatif', E.breakEven(doc, { recent: { margin: 100, commissions: { total: 200 }, salesTTC: 1000 }, month: '2026-10' }).reason === 'negative');
 }
 
+/* ── 6b. La fiabilité du rythme, rejouée sur les mois passés ───────────────── */
+{
+  const mk = (arr, open) => ({ days: arr.map((v, i) => ({ sold: v, open: open ? open[i] : null })) });
+  const flat = mk(Array(30).fill(100));
+  ok('un mois régulier : le rythme ne se trompe pas', E.paceTrack([flat, flat], 0.5).error === 0);
+  const ramp = mk([...Array(15).fill(50), ...Array(15).fill(150)]);
+  ok('un mois qui double en seconde moitié, coupé au milieu : 50 % d’erreur', E.paceTrack([ramp, ramp], 0.5).error === 50);
+  ok('l’erreur est rapportée aux ventes (WAPE), pas moyennée par mois', E.paceTrack([flat, ramp], 0.5).error === 25);
+  ok('un seul mois ne suffit pas : rien n’est affiché', E.paceTrack([flat], 0.5) === null && E.MIN_PACE_MONTHS === 2);
+  ok('un mois où l’on n’a vendu que moins de la moitié des jours est écarté', E.paceTrack([mk([0, 0, 0, 0, 100, 0]), flat], 0.5) === null);
+  ok('rien avant le premier jour écoulé ni après le dernier', E.paceTrack([flat, flat], 0) === null && E.paceTrack([flat, flat], 1) === null);
+  const open = Array(30).fill(true).map((_, i) => i % 7 !== 6);
+  const shut = mk(Array(30).fill(0).map((_, i) => (i % 7 === 6 ? 0 : 100)), open);
+  ok('horaires connus : seuls les jours d’ouverture comptent, un dimanche fermé n’est pas un trou', E.paceTrack([shut, shut], 0.4).error === 0);
+}
+
 /* ── 7. Le document : bornes, fusion, édition datée ──────────────────────── */
 {
   const d = E.normalize({ lines: [
@@ -231,6 +247,36 @@ function renderMarges(o) {
     sales: sales.concat([{ id: 'm1', ts: now - 3600e3, amount: 20, method: 'cash', lines: [{ itemId: 'p2', name: 'Msemen', qty: 2, unitPrice: 10, total: 20 }] }]) });
   ok('moins de la moitié chiffrée : charges listées, résultat net « · », et pourquoi', /= Résultat net · /.test(half.text) && !/data-net=/.test(half.html)
     && /seules 42[.,]9\s?% des ventes ont un coût/.test(half.text), half.text.slice(0, 900));
+}
+
+/* La carte « Seuil de rentabilité » dit la fiabilité du rythme, calculée sur
+   les trois mois complets qui précèdent, comme E.paceTrack. */
+{
+  const iso = (() => { const t = new Date(Date.now() - 5 * 3600e3); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; })();
+  const menu = [{ id: 'p1', name: 'Pain', price: 5 }];
+  const costs = { items: { p1: { cost: 2, at: 1 } }, ingredients: [], recipes: {}, charges: [], targets: {} };
+  const charges = { v: 1, lines: [{ id: 'rent', label: 'Loyer', cat: 'rent', freq: 'month', versions: [{ from: '2025-01', amount: 3100 }], until: null }], social: { rate: null }, commissions: { methods: {}, channels: {} } };
+  const months = [];
+  let cursor = E.days.addDays(E.days.monthDays(iso)[0], -1);
+  for (let k = 0; k < 3; k++) { const ds = E.days.monthDays(cursor); months.unshift(ds); cursor = E.days.addDays(ds[0], -1); }
+  const sale = (day, k, i) => ({ id: `h${i}`, ts: new Date(`${day}T12:00:00`).getTime(), amount: 5 * k, method: 'card', lines: [{ itemId: 'p1', name: 'Pain', qty: k, unitPrice: 5, total: 5 * k }] });
+  let i = 0;
+  const sales = [];
+  months.forEach((ds) => ds.forEach((d, j) => sales.push(sale(d, 1 + j, i++))));
+  E.days.monthDays(iso).filter((d) => d < iso).forEach((d) => sales.push(sale(d, 3, i++)));
+  sales.push(sale(iso, 2, i++));
+  const r = renderMarges({ menu, sales, costs, charges });
+  const all = E.days.monthDays(iso);
+  const elapsed = all.filter((d) => d < iso).length;
+  if (elapsed === 0) {
+    ok('le 1er du mois : pas de rythme, donc pas de fiabilité affichée', !/data-pace-track/.test(r.html));
+  } else {
+    const want = E.paceTrack(months.map((ds) => ({ days: ds.map((d, j) => ({ sold: 5 * (1 + j), open: null })) })), elapsed / all.length);
+    const shown = +((/data-pace-track="([\d.]+)"/.exec(r.html) || [])[1]);
+    ok('la carte dit la fiabilité du rythme sur les 3 mois passés, égale au calcul', want && shown === want.error && /Sur vos 3 derniers mois, ce rythme s’est trompé de [\d,]+\s?% en moyenne à ce stade du mois\./.test(r.text), { shown, want, t: r.text.slice(-700) });
+  }
+  const fresh = renderMarges({ menu, sales: sales.slice(-elapsed - 1), costs, charges });
+  ok('sans mois passés complets : la carte ne prétend aucune fiabilité', !/data-pace-track/.test(fresh.html));
 }
 
 console.log(`\n${fails ? '\x1b[31m✗' : '\x1b[32m✓'} charges : ${n - fails}/${n}\x1b[0m`);

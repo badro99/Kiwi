@@ -953,7 +953,7 @@
       beNeed: 'Seuil · ventes du mois', beNeedH: 'charges et personnel couverts',
       bePerDay: 'Seuil · par jour', bePerDayH: (open) => (open ? 'par jour d’ouverture' : 'par jour calendaire'),
       beSold: 'Vendu ce mois', beSoldH: 'à ce jour',
-      bePace: 'Au rythme actuel', bePaceH: 'projection sur le mois',
+      bePace: 'Au rythme actuel', bePaceH: 'projection sur le mois', bePaceTrackH: (n, p) => `projection · ${p} d’écart moyen sur vos ${n} derniers mois`,
       beAhead: (a) => `Au rythme des jours écoulés, vous finirez le mois ${a} au-dessus du seuil.`,
       beBehind: (a) => `Au rythme des jours écoulés, il manquera ${a} pour couvrir les charges du mois.`,
       beEarly: 'Le rythme du mois se lira dès la fin de la première journée.',
@@ -977,7 +977,7 @@
       beNeed: 'Break-even · month sales', beNeedH: 'costs and staff covered',
       bePerDay: 'Break-even · per day', bePerDayH: (open) => (open ? 'per opening day' : 'per calendar day'),
       beSold: 'Sold this month', beSoldH: 'so far',
-      bePace: 'At the current pace', bePaceH: 'projected over the month',
+      bePace: 'At the current pace', bePaceH: 'projected over the month', bePaceTrackH: (n, p) => `projection · off by ${p} on average over your last ${n} months`,
       beAhead: (a) => `At the pace of the days so far, you will end the month ${a} above break-even.`,
       beBehind: (a) => `At the pace of the days so far, you will be ${a} short of covering this month’s costs.`,
       beEarly: 'The month’s pace shows once the first day is over.',
@@ -1001,7 +1001,7 @@
       beNeed: 'العتبة · مبيعات الشهر', beNeedH: 'المصاريف والمستخدمون مغطّون',
       bePerDay: 'العتبة · في اليوم', bePerDayH: (open) => (open ? 'لكل يوم عمل' : 'لكل يوم تقويمي'),
       beSold: 'المبيعات هذا الشهر', beSoldH: 'حتى الآن',
-      bePace: 'بالوتيرة الحالية', bePaceH: 'توقّع على الشهر',
+      bePace: 'بالوتيرة الحالية', bePaceH: 'توقّع على الشهر', bePaceTrackH: (n, p) => `توقّع · فارق متوسط ${p} خلال أشهرك الـ${n} الأخيرة`,
       beAhead: (a) => `بوتيرة الأيام الماضية، ستنهي الشهر بـ ${a} فوق العتبة.`,
       beBehind: (a) => `بوتيرة الأيام الماضية، سينقص ${a} لتغطية مصاريف الشهر.`,
       beEarly: 'تظهر وتيرة الشهر بعد انتهاء اليوم الأول.',
@@ -1276,7 +1276,9 @@
       follow: [tr().chips.charges],
     };
     if (be.projection != null) {
-      r.stats.push({ l: t.bePace, v: fmtMad(be.projection), h: t.bePaceH });
+      /* La fiabilité de ce rythme, rejouée sur les mois passés (KiwiChargesEngine.paceTrack). */
+      const trackPct = be.track ? `${String(be.track.error).replace('.', L === 'en' ? '.' : ',')} %` : '';
+      r.stats.push({ l: t.bePace, v: fmtMad(be.projection), h: be.track ? t.bePaceTrackH(be.track.months, trackPct) : t.bePaceH });
       r.verdict = be.gap >= 0 ? { tone: 'good', text: t.beAhead(fmtMad(be.gap)) } : { tone: 'warn', text: t.beBehind(fmtMad(-be.gap)) };
     } else {
       r.verdict = { tone: 'good', text: t.beEarly };

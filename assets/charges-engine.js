@@ -286,6 +286,43 @@
     return out;
   }
 
+  /* Le rythme du mois est-il fiable ? On le rejoue sur les mois passés.
+   *   months : [{ days: [{ sold, open }] }] — des mois COMPLETS, chaque jour
+   *            dans l'ordre, `open` à true/false (horaires connus) ou null ;
+   *   share  : la part du mois en cours déjà écoulée (jours écoulés ÷ jours).
+   * Pour chaque mois, la même règle que breakEven (ventes des e premiers jours
+   * ÷ e × jours du mois), coupée au même point du mois, est comparée à ce que
+   * le mois a vraiment fait. Rend l'erreur absolue rapportée aux ventes
+   * (WAPE : Σ|projection − réel| ÷ Σ réel), sur au moins MIN_PACE_MONTHS mois.
+   * Un mois où le commerce n'a vendu que moins de la moitié de ses jours
+   * (ouverture, fermeture pour travaux) ne dit rien du rythme : écarté.
+   * Méthode de validation « rolling origin » (Nixtla statsforecast, darts),
+   * réduite à la seule règle que Kiwi affiche. */
+  const MIN_PACE_MONTHS = 2;
+  function paceTrack(months, share) {
+    const sh = num(share);
+    if (!(sh > 0 && sh < 1) || !Array.isArray(months)) return null;
+    let absErr = 0, actualSum = 0, n = 0;
+    months.forEach((m) => {
+      const all = Array.isArray(m && m.days) ? m.days : [];
+      const known = all.length && all.every((d) => d && (d.open === true || d.open === false));
+      const days = known ? all.filter((d) => d.open) : all;
+      const D = days.length;
+      if (D < 2) return;
+      const withSales = days.filter((d) => num(d.sold) > 0).length;
+      if (withSales < D / 2) return;
+      const e = Math.min(D - 1, Math.max(1, Math.round(sh * D)));
+      const head = days.slice(0, e).reduce((a, d) => a + Math.max(0, num(d.sold)), 0);
+      const actual = days.reduce((a, d) => a + Math.max(0, num(d.sold)), 0);
+      if (!(actual > 0)) return;
+      absErr += Math.abs(head / e * D - actual);
+      actualSum += actual;
+      n += 1;
+    });
+    if (n < MIN_PACE_MONTHS || !(actualSum > 0)) return null;
+    return { months: n, error: Math.round((absErr / actualSum) * 1000) / 10 };
+  }
+
   /* Une ligne modifiée « à partir de » `from` : la version de ce mois-là est
    * réécrite, les mois d'avant gardent la leur. */
   function setAmount(line, amount, from) {
@@ -312,7 +349,7 @@
   const api = {
     FREQ_MONTHS, MIN_COSTED_PCT, OWN_CHANNELS, MAX_AMOUNT, MAX_RATE,
     blank, normalize, merge, monthlyOf, monthlyTotal, fixedFor, commissionOf, commissionsFor, seenKeys,
-    staffFor, result, breakEven, setAmount, stop, remove,
+    staffFor, result, breakEven, paceTrack, MIN_PACE_MONTHS, setAmount, stop, remove,
     days: { daysInMonth, addDays, lastDays, monthDays, monthOf },
   };
   root.KiwiChargesEngine = api;

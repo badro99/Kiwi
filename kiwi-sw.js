@@ -249,8 +249,8 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=6',
-  '/assets/charges-engine.js?v=1',
-  '/assets/charges.js?v=2',
+  '/assets/charges-engine.js?v=2',
+  '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=20',

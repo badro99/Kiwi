@@ -107,6 +107,7 @@
       bePerDay: (n, open) => `soit ${n} par jour ${open ? 'd’ouverture' : 'calendaire'}`,
       beSold: 'Vendu ce mois à ce jour',
       bePace: 'Au rythme des jours écoulés',
+      beTrack: (n, p) => `Sur vos ${n} derniers mois, ce rythme s’est trompé de ${p} en moyenne à ce stade du mois.`,
       beAhead: (a) => `À ce rythme, ${a} au-dessus du seuil`,
       beBehind: (a) => `À ce rythme, il manquera ${a} pour l’atteindre`,
       beBasis: (p) => `Calculé avec la marge et les commissions des 30 derniers jours (${p} de ce qui reste après coût matière et commissions).`,
@@ -172,6 +173,7 @@
       bePerDay: (n, open) => `that is ${n} per ${open ? 'opening' : 'calendar'} day`,
       beSold: 'Sold this month so far',
       bePace: 'At the pace of the days so far',
+      beTrack: (n, p) => `Over your last ${n} months, this pace was off by ${p} on average at this point of the month.`,
       beAhead: (a) => `At this pace, ${a} above break-even`,
       beBehind: (a) => `At this pace, ${a} short of break-even`,
       beBasis: (p) => `Based on the margin and fees of the last 30 days (${p} left after cost of goods and fees).`,
@@ -237,6 +239,7 @@
       bePerDay: (n, open) => `أي ${n} في كل يوم ${open ? 'عمل' : 'تقويمي'}`,
       beSold: 'المبيعات هذا الشهر حتى الآن',
       bePace: 'بوتيرة الأيام الماضية',
+      beTrack: (n, p) => `خلال أشهرك الـ${n} الأخيرة، أخطأ هذا الإيقاع بنسبة ${p} في المتوسط عند هذه المرحلة من الشهر.`,
       beAhead: (a) => `بهذه الوتيرة، ${a} فوق العتبة`,
       beBehind: (a) => `بهذه الوتيرة، سينقص ${a} لبلوغ العتبة`,
       beBasis: (p) => `محسوبة بهامش وعمولات آخر 30 يومًا (${p} يبقى بعد تكلفة المواد والعمولات).`,
@@ -371,7 +374,33 @@
       openDays: openDays || null, openElapsed: openDays ? openElapsed : null,
       elapsed: elapsed.length, mtdSales: sold(done),
     });
-    return Object.assign(be, { month, soldSoFar: Math.round(sold(sofar) * 100) / 100, socialSet: doc().social.rate != null, recent });
+    /* La fiabilité du rythme : la même règle rejouée sur les six derniers mois
+     * complets, coupée au même point du mois (E.paceTrack). Une seule lecture
+     * du registre, répartie par journée de caisse. */
+    let track = null;
+    if (be.projection != null) {
+      try {
+        const months = [];
+        let cursor = E.days.addDays(all[0], -1);
+        for (let k = 0; k < 6; k++) { const ds = E.days.monthDays(cursor); months.unshift(ds); cursor = E.days.addDays(ds[0], -1); }
+        const dayList = [].concat(...months);
+        const starts = dayList.map(dayStart).concat([monthFrom]);
+        const hist = run(starts[0], monthFrom);
+        const perDay = new Array(dayList.length).fill(0);
+        ((hist.L && hist.L.sales) || []).forEach((x) => {
+          const ts = +x.ts || 0;
+          if (!(ts >= starts[0] && ts < monthFrom)) return;
+          let lo = 0, hi = dayList.length - 1;
+          while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= ts) lo = mid; else hi = mid - 1; }
+          perDay[lo] += Math.max(0, +x.amount || 0);
+        });
+        let i = 0;
+        const hist6 = months.map((ds) => ({ days: ds.map((d) => ({ sold: perDay[i++], open: hoursKnown ? isOpen(d) : null })) }));
+        const share = openDays ? openElapsed / openDays : elapsed.length / all.length;
+        track = E.paceTrack(hist6, share);
+      } catch (_) { track = null; }
+    }
+    return Object.assign(be, { month, soldSoFar: Math.round(sold(sofar) * 100) / 100, socialSet: doc().social.rate != null, recent, track });
   }
   /* Ce que le commerce doit couvrir chaque mois : pour l'assistant et la
    * Santé Kiwi. */
@@ -512,6 +541,7 @@
         <div class="chg-row"><b>${esc(c.beSold)}</b><span>${round0(be.soldSoFar)}</span></div>
         ${be.projection != null ? `<div class="chg-row"><b>${esc(c.bePace)}</b><span>${round0(be.projection)}</span></div>` : ''}
       </div>
+      ${be.track ? `<div class="fin-note-line" data-pace-track="${be.track.error}">${esc(c.beTrack(be.track.months, pctTxt(be.track.error)))}</div>` : ''}
       ${state}
       <div class="fin-note-line">${esc(c.beBasis(pctTxt(be.contribution * 100)))}</div>
       ${be.daysAreOpenDays ? '' : `<div class="fin-note-line">${esc(c.beCivil)}</div>`}

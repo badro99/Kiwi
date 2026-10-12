@@ -174,6 +174,18 @@ try {
     };
     const be = await askIQ('Quel est mon seuil de rentabilité ?', 'Seuil · ventes du mois');
     check(be.includes('Seuil · ventes du mois') && digits(be).includes(digits(cardNeed)) && !/Réglages/.test(be), `Kiwi IQ gives the same break-even as the Marges card (${cardNeed.trim()})`);
+    /* la fiabilité du rythme : même chiffre sur la carte et dans Kiwi IQ */
+    const track = await page.$eval('[data-charges-breakeven]', (e) => { const n = e.querySelector('[data-pace-track]'); return n ? n.getAttribute('data-pace-track') : null; }).catch(() => null);
+    if (track != null) check(be.includes(`${String(track).replace('.', ',')} % d’écart moyen`), `Kiwi IQ quotes the pace's track record like the card (${track} %)`);
+    else check(!/d’écart moyen/.test(be), 'without enough past months, Kiwi IQ claims no track record');
+    /* et quand le moteur en a un, Kiwi IQ le cite tel quel, à côté de la projection */
+    const hasPace = await page.evaluate(() => window.KiwiCharges.breakEven().projection != null);
+    if (hasPace) {
+      await page.evaluate(() => { const o = window.KiwiCharges.breakEven; window.__beOrig = o; window.KiwiCharges.breakEven = (...a) => Object.assign(o(...a), { track: { months: 3, error: 12.5 } }); });
+      const be2 = await askIQ('Quel est mon seuil de rentabilité ?', 'derniers mois');
+      await page.evaluate(() => { window.KiwiCharges.breakEven = window.__beOrig; });
+      check(/Au rythme actuel/.test(be2) && be2.includes('projection · 12,5 % d’écart moyen sur vos 3 derniers mois'), 'Kiwi IQ quotes the pace with its track record from the engine (12,5 % over 3 months)');
+    }
     const ch = await askIQ('Décompose mes charges', 'premier poste');
     check(/Loyer/.test(ch) && /Assurance/.test(ch) && /premier poste/.test(ch), 'Kiwi IQ breaks the costs down from what was entered, rent first');
     await page.evaluate(() => { document.querySelectorAll('.kiwi-drawer-backdrop, .fa-backdrop').forEach((b) => (b.__kiwiClose ? b.__kiwiClose() : null)); });
