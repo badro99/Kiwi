@@ -6981,7 +6981,7 @@
     try { const p = pvPaired(); if (p && p.merchant) return 'kiwi:openingFloat:v1:' + p.merchant; } catch (_) {}
     return 'kiwi:openingFloat:v1:boutique';
   }
-  let bqFloat = 500;
+  let bqFloat = 0;
   function bqMaybeOpenScreen() {
     if (IS_DEMO || bqShift) return;
     bqShowOpenScreen();
@@ -7011,7 +7011,7 @@
           <span class="clockin-float-label">Fond d'ouverture</span>
           <div class="clockin-float-chips" id="bqci-chips">
             <button class="ci-float-chip" data-float="300">300 MAD</button>
-            <button class="ci-float-chip is-active" data-float="500">500 MAD</button>
+            <button class="ci-float-chip" data-float="500">500 MAD</button>
             <button class="ci-float-chip" data-float="1000">1 000 MAD</button>
             <button class="ci-float-chip" data-float="custom" aria-expanded="false" aria-controls="bqci-custom">Autre</button>
           </div>
@@ -7021,10 +7021,14 @@
                    aria-label="Fond d'ouverture, montant libre en dirhams">
             <span class="ci-float-cur" aria-hidden="true">MAD</span>
           </div>
+          <!-- Rien n'est présélectionné : le fond est ce que le caissier a COMPTÉ.
+               Le dernier fond n'est qu'un raccourci à toucher. -->
+          <button type="button" class="ci-float-last" id="bqci-last" hidden></button>
+          <div class="ci-float-err" id="bqci-hint" role="status">Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
         </div>
       </div>
       <div class="clockin-bottom">
-        <button class="clockin-btn" id="bqci-btn">
+        <button class="clockin-btn" id="bqci-btn" disabled aria-describedby="bqci-hint">
           <i data-lucide="unlock" class="clockin-btn-ic"></i>
           <span class="clockin-btn-label">Ouvrir la caisse</span>
           <span class="clockin-btn-check" aria-hidden="true"><i data-lucide="check"></i></span>
@@ -7044,16 +7048,32 @@
       if (on && focus) { input.focus(); input.select(); }
     };
     const remember = () => { try { localStorage.setItem(bqFloatMemKey(), String(bqFloat)); } catch (_) {} };
+    /* Le bouton ne s'enfonce qu'une fois le fond indiqué : jamais de 500
+       présélectionné qu'un seul toucher enregistrerait tel quel. */
+    let chosen = false;
+    const btnOpen = el.querySelector('#bqci-btn');
+    const hint = el.querySelector('#bqci-hint');
+    const last = el.querySelector('#bqci-last');
+    const gate = () => { if (btnOpen) btnOpen.disabled = !chosen; if (hint) hint.hidden = chosen; };
 
     /* Restitution du dernier fond utilisé par CE magasin. */
     let saved = NaN;
     try { saved = parseFloat(localStorage.getItem(bqFloatMemKey())); } catch (_) {}
-    if (Number.isFinite(saved) && saved >= 0) {
-      bqFloat = saved;
-      const preset = chips.querySelector(`[data-float="${saved}"]`);
-      if (preset) mark(preset);
-      else { mark(chips.querySelector('[data-float="custom"]')); input.value = String(saved); showCustom(true, false); }
-    } else bqFloat = 500;
+    bqFloat = 0;
+    if (Number.isFinite(saved) && saved >= 0 && last) {
+      last.textContent = 'Dernier fond : ' + saved + ' MAD';
+      last.dataset.value = String(saved);
+      last.hidden = false;
+      last.addEventListener('click', () => {
+        const v = parseFloat(last.dataset.value);
+        if (!Number.isFinite(v) || v < 0) return;
+        bqFloat = v; chosen = true; gate();
+        const preset = chips.querySelector(`[data-float="${v}"]`);
+        if (preset) { mark(preset); showCustom(false); return; }
+        mark(chips.querySelector('[data-float="custom"]')); input.value = String(v); showCustom(true, false);
+      });
+    }
+    gate();
 
     chips.addEventListener('click', (e) => {
       const chip = e.target.closest('[data-float]');
@@ -7063,17 +7083,20 @@
         showCustom(true, true);
         const v = parseFloat(input.value);
         bqFloat = Number.isFinite(v) && v > 0 ? v : 0;
+        chosen = input.value !== ''; gate();
         return;
       }
       showCustom(false);
-      bqFloat = parseInt(chip.dataset.float, 10) || 500;
+      bqFloat = parseInt(chip.dataset.float, 10) || 0;
+      chosen = true; gate();
       remember();
     });
     input.addEventListener('input', () => {
       if (input.value && parseFloat(input.value) < 0) input.value = input.value.replace('-', '');
       const v = parseFloat(input.value);
       bqFloat = Number.isFinite(v) && v > 0 ? v : 0;
-      remember();
+      chosen = input.value !== ''; gate();
+      if (chosen) remember();
     });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
 
@@ -7087,6 +7110,7 @@
     const timer = setInterval(tick, 10000);
 
     el.querySelector('#bqci-btn').addEventListener('click', () => {
+      if (!chosen) { gate(); return; }
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
       icons();
       bqShift = { openedAt: Date.now(), openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat };

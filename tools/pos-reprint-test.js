@@ -229,6 +229,77 @@ const SALE = {
   }).catch((e) => fails.push(`annulation — ${e && e.message}`));
 }
 
+/* ═══ « Annuler une vente » n'ouvre plus « Réimprimer un ticket » ═══
+ * (audit design 2026-10 : l'entrée Annuler menait à un panneau intitulé
+ * Réimprimer). Les deux entrées partagent le panneau mais pas le titre, l'intro
+ * ni l'action qui mène ; le flux serveur (cancelSale + code manager) est intact. */
+{
+  const box = {
+    innerHTML: '', attrs: {}, clicks: {},
+    setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k]; },
+    querySelector(sel) {
+      const m = /^\[([a-z-]+)\]$/.exec(sel);
+      if (m && this.innerHTML.includes(m[1])) return { addEventListener() {}, disabled: false, title: '' };
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel !== '[data-kx-rp]') return [];
+      return [...this.innerHTML.matchAll(/data-kx-rp="(\d+)"/g)].map((m) => ({
+        getAttribute: () => m[1], addEventListener: (ev, fn) => { box.clicks[m[1]] = fn; },
+      }));
+    },
+  };
+  const veil = { id: '', className: '', classList: { add() {}, remove() {}, contains: () => true },
+    querySelector: (sel) => (sel === '.modal' ? box : null), addEventListener() {}, set innerHTML(v) {} };
+  const doc = stubDom();
+  doc.createElement = (tag) => (tag === 'div' ? veil : stubDom().createElement());
+  const state0 = { built: null, printed: null, fromSnap: null, mintedRef: false, recorded: [] };
+  const ctx = {
+    window: { KiwiReceipt: spyReceipt(state0), KiwiPosSale: { isReal: () => true, today: () => [Object.assign({ saleId: 'sale-9' }, SALE)], record() {}, nextSeq: () => 1 } },
+    document: doc, localStorage: { getItem: () => 'amira-cafe' },
+    fetch: () => Promise.reject(new Error('offline')),
+    setTimeout, clearTimeout, Promise, Date, Math, JSON, Array, String, Number, RegExp, isNaN,
+  };
+  ctx.window.document = doc;
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(SRC, 'utf8'), ctx, { filename: 'pos-reprint.js' });
+  const RP = ctx.window.KiwiPosReprint;
+
+  RP.open('restaurant', { mode: 'cancel' });
+  ok('Annuler : le panneau s\'intitule « Annuler une vente »', box.innerHTML.includes('<h3>Annuler une vente</h3>'));
+  ok('Annuler : plus de titre « Réimprimer un ticket »', !box.innerHTML.includes('Réimprimer un ticket'));
+  eq('Annuler : l\'étiquette d\'accessibilité suit', box.attrs['aria-label'], 'Annuler une vente');
+  ok('Annuler : l\'intro parle d\'annulation et de code manager', /Choisissez la vente à annuler[^<]*code manager/.test(box.innerHTML));
+  ok('Annuler : pas de bouton « Imprimer la liste »', !box.innerHTML.includes('data-kx-rp-all'));
+  ok('Annuler : la liste a au moins une vente à toucher', typeof box.clicks['0'] === 'function');
+  box.clicks['0']();
+  ok('Annuler : la fiche de la vente mène avec « Annuler la vente »', box.innerHTML.includes('data-kx-rp-cancel'));
+  ok('Annuler : la fiche ne propose ni réimpression ni facture', !box.innerHTML.includes('data-kx-rp-print') && !box.innerHTML.includes('data-kx-rp-invoice'));
+  ok('Annuler : « Annuler la vente » vient juste après Retour', box.innerHTML.indexOf('data-kx-rp-back') < box.innerHTML.indexOf('data-kx-rp-cancel'));
+
+  RP.open('restaurant');
+  ok('Réimprimer garde son titre', box.innerHTML.includes('<h3>Réimprimer un ticket</h3>') && !box.innerHTML.includes('<h3>Annuler une vente</h3>'));
+  eq('Réimprimer garde son étiquette', box.attrs['aria-label'], 'Réimprimer un ticket');
+  ok('Réimprimer garde « Imprimer la liste »', box.innerHTML.includes('data-kx-rp-all'));
+  box.clicks['0']();
+  ok('Réimprimer : la fiche garde réimpression, facture et annulation', ['data-kx-rp-print', 'data-kx-rp-invoice', 'data-kx-rp-cancel'].every((k) => box.innerHTML.includes(k)));
+  RP.openCancel('restaurant');
+  eq('openCancel ouvre le mode annulation', box.attrs['data-kx-rp-mode'], 'cancel');
+}
+
+/* L'entrée « Annuler une vente » de la caisse demande bien le mode annulation. */
+{
+  const html = fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8');
+  const at0 = html.indexOf("a === 'cancel-sale'");
+  const seg = html.slice(at0, at0 + 1200);
+  ok('kiwi-caisse.html : cancel-sale ouvre le panneau en mode cancel', /KiwiPosReprint\?\.open\?\.\('restaurant', \{ mode: 'cancel' \}\)/.test(seg));
+  const lang = fs.readFileSync(path.join(__dirname, '..', 'assets', 'caisse-lang.js'), 'utf8');
+  ok('caisse-lang : titre et intro d\'annulation traduits en EN et AR',
+    /'Annuler une vente': 'Cancel a sale'/.test(lang) && /'Annuler une vente': 'إلغاء بيع'/.test(lang)
+    && lang.includes("'Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.'")
+    && lang.includes("'Aucune vente à annuler sur ce terminal.'"));
+}
+
 function done() {
   setTimeout(() => {
     if (fails.length) {

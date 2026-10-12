@@ -698,7 +698,31 @@
       'Ouverture manuelle du tiroir désactivée pour cet établissement': ['Opening the drawer by hand is turned off for this venue', 'فتح الدرج يدويًا متوقف لهذه المنشأة'],
       'Remboursements désactivés pour cet établissement': ['Refunds are turned off for this venue', 'الاسترداد متوقف لهذه المنشأة'],
       'Passation de caisse désactivée pour cet établissement': ['Till handover is turned off for this venue', 'تسليم الصندوق متوقف لهذه المنشأة'],
+      /* ── caisse « autre activité » (pos-autre.js) ── */
+      'Mon activité': ['My business', 'نشاطي'],
+      'Caisse polyvalente': ['General-purpose till', 'صندوق متعدد الاستخدامات'],
+      'Suivi d’activité': ['Activity tracking', 'متابعة النشاط'],
+      'Journée': ['Day', 'اليوم'],
+      'Un catalogue libre pour les activités qui ne rentrent dans aucune case.': ['A free-form catalogue for businesses that fit no box.', 'كتالوج حر للأنشطة التي لا تدخل في أي فئة.'],
+      'Articles et prix se gèrent dans le tableau de bord': ['Items and prices are managed in the dashboard', 'تُدار المنتجات والأسعار من لوحة القيادة'],
+      'Articles et prix se gèrent dans le tableau de bord.': ['Items and prices are managed in the dashboard.', 'تُدار المنتجات والأسعار من لوحة القيادة.'],
+      'Ajoutez vos articles dans le tableau de bord.': ['Add your items in the dashboard.', 'أضف منتجاتك من لوحة القيادة.'],
+      'Saisir un montant': ['Enter an amount', 'أدخل مبلغًا'],
+      'Montant (MAD)': ['Amount (MAD)', 'المبلغ (MAD)'],
+      'Description (facultatif)': ['Description (optional)', 'الوصف (اختياري)'],
+      'Ajouter au ticket': ['Add to the sale', 'أضف إلى التذكرة'],
+      'Saisissez un montant supérieur à zéro.': ['Enter an amount above zero.', 'أدخل مبلغًا أكبر من الصفر.'],
+      'Touchez un article.': ['Tap an item.', 'المس منتجًا.'],
+      'Retirer': ['Remove', 'إزالة'],
+      'Vente encaissée': ['Sale paid', 'تم تحصيل البيع'],
+      'Ventes': ['Sales', 'المبيعات'],
+      'Recette': ['Takings', 'الإيراد'],
+      'Espèces / carte': ['Cash / card', 'نقدًا / بطاقة'],
+      'Uniquement les ventes réellement encaissées sur ce terminal.': ['Only sales actually collected on this terminal.', 'فقط المبيعات المحصَّلة فعليًا على هذا الجهاز.'],
       /* ── annuler ou rouvrir une vente depuis « Réimprimer » (pos-reprint.js) ── */
+      'Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.':
+        ['Choose the sale to cancel. A 4-digit manager code is required, and the cancellation is logged.', 'اختر العملية المراد إلغاؤها. يلزم رمز المدير المكوّن من 4 أرقام، ويُسجَّل الإلغاء.'],
+      'Aucune vente à annuler sur ce terminal.': ['No sale to cancel on this terminal.', 'لا توجد عملية للإلغاء على هذا الجهاز.'],
       'Annuler et rouvrir la note': ['Cancel and reopen the bill', 'إلغاء وإعادة فتح الحساب'],
       'Confirmer l’annulation': ['Confirm the cancellation', 'تأكيد الإلغاء'],
       'Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.':
@@ -1634,26 +1658,35 @@
     return Array.prototype.slice.call(document.querySelectorAll(
       'button[title="Simuler une coupure réseau"], button[data-kiwi-real-net], button.bq-net, button[class$="-net"]'));
   }
+  function makePicker() {
+    var box = document.createElement('div');
+    box.className = 'kcl';
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'Langue');
+    box.setAttribute('data-nolang', '');
+    box.innerHTML = pickerHtml();
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-kcl]');
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      var selected = b.getAttribute('data-kcl');
+      try { if (document.documentElement.classList.contains('kiwi-native')) localStorage.setItem('kiwiNativeLocale', selected); } catch (_) {}
+      set(selected);
+    });
+    return box;
+  }
   function graft() {
     netButtons().forEach(function (net) {
       var host = net.parentElement;
       if (!host || host.querySelector('.kcl')) return;
-      var box = document.createElement('div');
-      box.className = 'kcl';
-      box.setAttribute('role', 'group');
-      box.setAttribute('aria-label', 'Langue');
-      box.setAttribute('data-nolang', '');
-      box.innerHTML = pickerHtml();
-      host.insertBefore(box, net);
+      host.insertBefore(makePicker(), net);
       net.classList.add('kcl-hidden-net');
-      box.addEventListener('click', function (e) {
-        var b = e.target.closest && e.target.closest('[data-kcl]');
-        if (!b) return;
-        e.preventDefault(); e.stopPropagation();
-        var selected = b.getAttribute('data-kcl');
-        try { if (document.documentElement.classList.contains('kiwi-native')) localStorage.setItem('kiwiNativeLocale', selected); } catch (_) {}
-        set(selected);
-      });
+    });
+    /* Un métier sans bouton réseau (la caisse « autre ») déclare l'emplacement
+       du sélecteur lui-même : <div data-kcl-host>. Même pastille, même clic. */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-kcl-host]'), function (host) {
+      if (host.querySelector('.kcl')) return;
+      host.appendChild(makePicker());
     });
   }
 

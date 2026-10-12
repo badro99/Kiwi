@@ -3172,6 +3172,11 @@
     }
     .clockin-btn:hover { transform: translateY(-1px); }
     .clockin-btn:active { transform: scale(0.99); }
+    /* Tant que le caissier n'a pas dit ce qu'il y a dans le tiroir, le bouton
+       ne s'enfonce pas : aucun fond n'est présélectionné. */
+    .clockin-btn:disabled, .clockin-btn:disabled:hover, .clockin-btn:disabled:active {
+      opacity: .4; cursor: not-allowed; transform: none; box-shadow: none;
+    }
     .clockin-btn svg { width: 19px; height: 19px; }
     .clockin-btn.is-confirmed { background: var(--forest); pointer-events: none; }
     .clockin-btn .clockin-btn-check { display: none; }
@@ -5798,11 +5803,11 @@
              le caissier a COMPTÉ dans le tiroir. Le dernier fond saisi n'est
              qu'un raccourci à toucher, jamais une valeur prise d'office. -->
         <button type="button" class="ci-float-last" id="ci-float-last" hidden></button>
-        <div class="ci-float-err" id="ci-float-err" role="alert" hidden>Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
+        <div class="ci-float-err" id="ci-float-err" role="status">Comptez le tiroir et indiquez le fond d'ouverture avant d'ouvrir la caisse.</div>
       </div>
     </div>
     <div class="clockin-bottom">
-      <button class="clockin-btn" id="clockin-btn">
+      <button class="clockin-btn" id="clockin-btn" disabled aria-describedby="ci-float-err">
         <i data-lucide="unlock" class="clockin-btn-ic"></i>
         <span class="clockin-btn-label">Ouvrir la caisse</span>
         <span class="clockin-btn-check" aria-hidden="true"><i data-lucide="check"></i></span>
@@ -10941,7 +10946,7 @@
               lines: entry.lines || [], voided: !!entry.voided,
               reopenSnapshot: entry.reopenSnapshot || null,
             })));
-          window.KiwiPosReprint?.open?.('restaurant');
+          window.KiwiPosReprint?.open?.('restaurant', { mode: 'cancel' });
         }
         else if (a === 'remboursement')   openRefund();
         else if (a === 'open-drawer') openDrawerNoSale();
@@ -13871,7 +13876,7 @@
     /* ===========================================================
        === Shift lifecycle ===  (clock-in · live stats · Clôture)
        =========================================================== */
-    let   openingFloat   = 500;    // fond d'ouverture · MAD (chosen at clock-in)
+    let   openingFloat   = 0;      // fond d'ouverture · MAD (chosen at clock-in, never preselected)
     const cashMovements  = [];     // [{ id, time, type:'in'|'out', amount, reason }]
     const DAILY_OBJECTIF = 18000;  // objectif d'lyoum · MAD
 
@@ -15591,9 +15596,10 @@
           return;
         }
       }
-      /* Un vrai tiroir s'ouvre sur un montant que le caissier a indiqué, pas sur
-         une valeur présélectionnée. Rien n'est écrit tant que ce n'est pas fait. */
-      if (storeIsReal() && !floatChosen) {
+      /* Un tiroir s'ouvre sur un montant que le caissier a indiqué, pas sur
+         une valeur présélectionnée, démo comprise. Rien n'est écrit tant que ce
+         n'est pas fait (le bouton reste d'ailleurs désactivé jusque-là). */
+      if (!floatChosen) {
         const err = document.getElementById('ci-float-err');
         if (err) err.hidden = false;
         return;
@@ -16982,7 +16988,15 @@
        commerce l'ouverture est refusée tant que non : un fond présélectionné
        puis jamais compté devenait l'« attendu » que la clôture rapproche. */
     let floatChosen = false;
-    function showFloatErr(on) { if (floatErr) floatErr.hidden = !on; }
+    /* Le bouton « Ouvrir la caisse » et l'aide suivent le choix : désactivé et
+       aide visible tant que rien n'est choisi. Le mode support (reprise d'un
+       service déjà ouvert) n'a pas de fond à compter : il reste actif. */
+    function syncFloatGate() {
+      const resume = typeof operatorCaisseRequested === 'function' && operatorCaisseRequested();
+      const btn = document.getElementById('clockin-btn');
+      if (btn && !btn.classList.contains('is-confirmed')) btn.disabled = !floatChosen && !resume;
+      if (floatErr) floatErr.hidden = floatChosen || resume;
+    }
     function readFloatInput() {
       const v = parseFloat(floatInput && floatInput.value);
       return Number.isFinite(v) && v > 0 ? v : 0;
@@ -17010,12 +17024,12 @@
         openingFloat = readFloatInput();
         /* « Autre » n'engage rien tant qu'aucun montant n'est tapé (0 compte) */
         floatChosen = !!(floatInput && floatInput.value !== '');
-        if (floatChosen) showFloatErr(false);
+        syncFloatGate();
         return;
       }
       showFloatCustom(false);
       openingFloat = parseInt(chip.dataset.float, 10) || 500;
-      floatChosen = true; showFloatErr(false);
+      floatChosen = true; syncFloatGate();
       rememberFloat(openingFloat);
     });
 
@@ -17026,7 +17040,8 @@
         if (floatInput.value && parseFloat(floatInput.value) < 0) floatInput.value = floatInput.value.replace('-', '');
         openingFloat = readFloatInput();
         floatChosen = floatInput.value !== '';
-        if (floatChosen) { showFloatErr(false); rememberFloat(openingFloat); }
+        syncFloatGate();
+        if (floatChosen) rememberFloat(openingFloat);
       });
       /* Entrée = « j'ai fini de taper », pas « ouvre la caisse » : ouvrir sur une
          touche du clavier tablette ouvrirait des services par accident. */
@@ -17040,11 +17055,10 @@
       let saved = NaN;
       try { saved = parseFloat(localStorage.getItem(floatMemKey())); } catch (_) {}
       const hasSaved = Number.isFinite(saved) && saved >= 0;
-      const other = floatChips && floatChips.querySelector('[data-float="custom"]');
-      /* Vrai commerce : rien n'est présélectionné. Le dernier fond n'est qu'un
-         raccourci proposé · c'est un contact du caissier qui l'engage. */
-      if (storeIsReal()) {
-        if (floatChosen) return;
+      /* Rien n'est présélectionné, sur aucun commerce, démo comprise. Le dernier
+         fond n'est qu'un raccourci proposé · c'est un contact du caissier qui
+         l'engage. */
+      if (!floatChosen) {
         openingFloat = 0; markFloatChip(null); showFloatCustom(false);
         if (floatLast) {
           if (hasSaved) {
@@ -17053,28 +17067,14 @@
             floatLast.hidden = false;
           } else floatLast.hidden = true;
         }
-        return;
       }
-      /* Démo / appareil non appairé : le fond d'usage (500) reste présélectionné. */
-      if (floatLast) floatLast.hidden = true;
-      if (!hasSaved) {
-        const d = floatChips && floatChips.querySelector('[data-float="500"]');
-        openingFloat = 500; if (d) markFloatChip(d); showFloatCustom(false);
-        return;
-      }
-      openingFloat = saved;
-      const preset = floatChips && floatChips.querySelector(`[data-float="${saved}"]`);
-      if (preset) { markFloatChip(preset); showFloatCustom(false); return; }
-      if (!other || !floatInput) return;
-      markFloatChip(other);
-      floatInput.value = String(saved);
-      showFloatCustom(true, false);
+      syncFloatGate();
     }
     if (floatLast) floatLast.addEventListener('click', () => {
       const v = parseFloat(floatLast.dataset.value);
       if (!Number.isFinite(v) || v < 0) return;
       const preset = floatChips && floatChips.querySelector(`[data-float="${v}"]`);
-      openingFloat = v; floatChosen = true; showFloatErr(false);
+      openingFloat = v; floatChosen = true; syncFloatGate();
       if (preset) { markFloatChip(preset); showFloatCustom(false); return; }
       const other = floatChips && floatChips.querySelector('[data-float="custom"]');
       if (other && floatInput) { markFloatChip(other); floatInput.value = String(v); showFloatCustom(true, false); }

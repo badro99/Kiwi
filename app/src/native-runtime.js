@@ -834,11 +834,18 @@
     if (document.body.classList.contains('kw-menu-open') && burger) burger.click();
     document.body.classList.remove('nav-open', 'kiwi-native-menu-open');
   }
-  function mountNativeAccountGroup(container, before) {
+  /* Account-level actions (delete the account, Kiwi AI privacy, leave the demo)
+     belong to the owner's dashboard only. The till and the team app run on a
+     shared counter device that a cashier or a waiter picks up: they get the paths
+     a cashier needs (change role, sign out) and nothing that can erase or
+     reconfigure the owner's account. App Store 5.1.1(v) is met by the owner's
+     drawer, which keeps the full group. */
+  function mountNativeAccountGroup(container, before, scope) {
     if (!container) return;
     var words = nativeMenuCopy();
     var demo = nativeDemoSession();
-    var key = (root.lang || '') + (demo ? ':demo' : '');
+    var owner = scope === 'owner';
+    var key = (root.lang || '') + (demo ? ':demo' : '') + (owner ? ':owner' : ':device');
     var box = container.querySelector('.kno-account');
     if (box && box.getAttribute('data-lang') === key) return;
     if (box) box.remove();
@@ -847,7 +854,12 @@
     box.setAttribute('role', 'group');
     box.setAttribute('aria-label', words.label);
     box.setAttribute('data-lang', key);
-    box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', demo ? leaveDemoLabel() : words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
+    var items = [['change-role', words.role, 'swap_horiz.svg', '']];
+    /* In the demo "Sign out" only leaves the demo: an owner decision, so a
+       shared device keeps Change role as its way out and nothing else. */
+    if (owner || !demo) items.push(['sign-out', demo ? leaveDemoLabel() : words.out, 'logout.svg', '']);
+    if (owner) items.push(['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']);
+    box.innerHTML = items.map(function (item) {
       return '<button type="button" data-kno-account="' + item[0] + '" class="' + item[3] + '"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
     }).join('');
     box.addEventListener('click', function (event) {
@@ -1784,7 +1796,7 @@
     window.addEventListener('kiwi:themechange', function () { paintStatusBar(); });
 
     /* The drawer is the one menu: the full dashboard, then the account. */
-    var mountAccountMenu = function () { var s = sidebar(); mountNativeAccountGroup(s, s && s.querySelector('.merchant-logout')); };
+    var mountAccountMenu = function () { var s = sidebar(); mountNativeAccountGroup(s, s && s.querySelector('.merchant-logout'), 'owner'); };
     mountAccountMenu();
     setTimeout(mountAccountMenu, 1200);
     new MutationObserver(mountAccountMenu).observe(root, { attributes:true, attributeFilter:['lang'] });

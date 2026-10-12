@@ -399,6 +399,11 @@
   }
 
   var veil = null;
+  /* Deux entrées, un seul panneau : « Réimprimer » et « Annuler une vente ».
+     Le mode fixe le titre, l'intro et l'action qui mène, pour que le
+     caissier qui veut annuler n'arrive pas sous le titre « Réimprimer un
+     ticket ». Le flux serveur (cancelSale, code manager) est le même. */
+  var mode = 'reprint';
 
   function close() { if (veil) veil.classList.remove('is-open'); }
 
@@ -427,20 +432,27 @@
       return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || 'Article'))
         + '</span><b>' + esc(mad(l.total || 0)) + '</b></div>';
     }).join('');
+    var cancelling = mode === 'cancel';
+    var reopenBtn = vertical === 'restaurant' && entry.reopenSnapshot
+        && Array.isArray(entry.reopenSnapshot.lines) && entry.reopenSnapshot.lines.length
+        ? '<button type="button" class="ma-btn" data-kx-rp-reopen>Annuler et rouvrir la note</button>' : '';
+    var cancelBtn = '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button>';
+    /* Annuler une vente : l'annulation mène, on ne propose ni réimpression ni
+       facture. Réimprimer : l'ordre d'origine, l'annulation en dernier. */
+    var actions = cancelling
+      ? '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>' + cancelBtn + reopenBtn
+      : '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
+        + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
+        + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>' + cancelBtn + reopenBtn;
     box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || 'Ticket') + '</h3>'
       + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + (entry.method || 'mode inconnu'))
       + ' · ' + esc(mad(entry.total)) + '</p><p>Ticket ' + esc(entry.saleId || entry.ref || 'identifiant indisponible') + '</p></div>'
       + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
-      + '<div class="kx-rp-ticket-actions"><button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
-      + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
-      + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>'
-      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button>'
-      + (vertical === 'restaurant' && entry.reopenSnapshot
-        && Array.isArray(entry.reopenSnapshot.lines) && entry.reopenSnapshot.lines.length
-        ? '<button type="button" class="ma-btn" data-kx-rp-reopen>Annuler et rouvrir la note</button>' : '')
-      + '</div></div>';
+      + '<div class="kx-rp-ticket-actions">' + actions + '</div></div>';
+    box.setAttribute('data-kx-rp-mode', mode);
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
-    box.querySelector('[data-kx-rp-print]').addEventListener('click', function () { close(); reprint(vertical, entry); });
+    var printBtn = box.querySelector('[data-kx-rp-print]');
+    if (printBtn) printBtn.addEventListener('click', function () { close(); reprint(vertical, entry); });
     var invBtn = box.querySelector('[data-kx-rp-invoice]');
     if (invBtn) {
       invBtn.addEventListener('click', function () {
@@ -545,16 +557,23 @@
   }
 
   function open(vertical, opts) {
+    /* Un redessin interne ({ noFetch }) garde le mode en cours ; toute
+       ouverture venue d'un bouton le fixe : « cancel » ou, par défaut, « reprint ». */
+    if (opts && opts.mode) mode = opts.mode === 'cancel' ? 'cancel' : 'reprint';
+    else if (!opts || !opts.noFetch) mode = 'reprint';
+    var cancelling = mode === 'cancel';
     css();
     if (!veil) {
       veil = document.createElement('div');
       veil.className = 'modal-veil';
       veil.id = 'kx-rp-veil';
-      veil.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-label="Réimprimer un ticket"></div>';
+      veil.innerHTML = '<div class="modal" role="dialog" aria-modal="true"></div>';
       veil.addEventListener('click', function (e) { if (e.target === veil) close(); });
       document.body.appendChild(veil);
     }
     var box = veil.querySelector('.modal');
+    box.setAttribute('aria-label', cancelling ? 'Annuler une vente' : 'Réimprimer un ticket');
+    box.setAttribute('data-kx-rp-mode', mode);
     var list = rows(vertical);
 
     var body = '';
@@ -575,20 +594,24 @@
     } else {
       /* Dire POURQUOI c'est vide. « Aucun ticket » laisserait croire à une
        * panne le soir d'une bonne journée, alors qu'il s'agit d'une fenêtre. */
-      body = '<div class="kx-rp-empty">Aucun ticket à ressortir sur ce terminal.<br>'
+      body = cancelling
+        ? '<div class="kx-rp-empty">Aucune vente à annuler sur ce terminal.</div>'
+        : '<div class="kx-rp-empty">Aucun ticket à ressortir sur ce terminal.<br>'
         + 'La liste tient les ventes du jour, et celles des jours précédents dont '
         + 'le ticket a été gardé.</div>';
     }
 
-    box.innerHTML = '<div class="kx-rp-head"><h3>Réimprimer un ticket</h3>'
-      + '<p>Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
-      + 'et l\'heure d\'origine, et porte la mention « duplicata ».</p></div>'
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + (cancelling ? 'Annuler une vente' : 'Réimprimer un ticket') + '</h3>'
+      + (cancelling
+        ? '<p>Choisissez la vente à annuler. Un code manager à 4 chiffres est demandé, et l’annulation est journalisée.</p>'
+        : '<p>Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
+          + 'et l\'heure d\'origine, et porte la mention « duplicata ».</p>') + '</div>'
       + '<div class="kx-rp-list">' + body + '</div>'
       /* « Imprimer la liste » à gauche, « Fermer » à droite, et seulement quand
          il y a quelque chose à imprimer : un bouton qui sort une feuille vide
          est un bouton qu'on n'ose plus toucher. */
       + '<div class="kx-rp-foot">'
-      + (list.length ? '<button type="button" class="ma-btn kx-rp-all" data-kx-rp-all>' + ICON
+      + (list.length && !cancelling ? '<button type="button" class="ma-btn kx-rp-all" data-kx-rp-all>' + ICON
         + '<span>Imprimer la liste</span></button>' : '')
       + '<button type="button" class="ma-btn" data-kx-rp-close>Fermer</button></div>';
 
@@ -642,7 +665,7 @@
   }
 
   window.KiwiPosReprint = {
-    mount: mount, open: open, rows: rows, docFrom: docFrom,
+    mount: mount, open: open, openCancel: function (vertical) { return open(vertical, { mode: 'cancel' }); }, rows: rows, docFrom: docFrom,
     reprint: reprint, printList: printList, provide: provide, cancelSale: cancelSale,
   };
 })();

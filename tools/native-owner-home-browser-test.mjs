@@ -294,6 +294,7 @@ try {
     const { page, ctx, errors } = await phone('fr', 'caisse');
     await page.goto(`${BASE}/kiwi-caisse.html`, { waitUntil: 'networkidle2' });
     await sleep(1800);
+    await click(page, '#ci-float-chips [data-float="500"]'); // no float is preselected: count the drawer first
     await click(page, '#clockin-btn, .clockin-btn');
     await sleep(2200);
     await click(page, '.mode-pill[data-mode="vrap"]');

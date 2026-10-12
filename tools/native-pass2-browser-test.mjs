@@ -235,7 +235,7 @@ try {
       },{raw,screen,lang,dark,base});
       await page.addScriptTag({url:base+'/native-runtime.js'}); await sleep(500);
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${role} ${lang}: isolated phone fixture has no horizontal overflow`);
-      check(await page.evaluate(()=>{const b=document.querySelector('.kiwi-native-burger');if(!b)return false;b.click();return document.body.classList.contains('kiwi-native-menu-open')&&[...document.querySelectorAll('.kiwi-native-menu [data-kno-account]')].map(x=>x.dataset.knoAccount).join(',')==='change-role,sign-out,ai-privacy,delete-account';}),`${role} ${lang}: the header menu opens the account drawer`);
+      check(await page.evaluate(()=>{const b=document.querySelector('.kiwi-native-burger');if(!b)return false;b.click();return document.body.classList.contains('kiwi-native-menu-open')&&[...document.querySelectorAll('.kiwi-native-menu [data-kno-account]')].map(x=>x.dataset.knoAccount).join(',')==='change-role,sign-out';}),`${role} ${lang}: the header menu opens the account drawer, without account deletion or AI privacy (owner-only)`);
       await page.evaluate(()=>document.querySelector('.kiwi-native-menu-close').click());
       if(role==='Team') {
         check(await page.evaluate(()=>window.__host.tabs.map(t=>t.id).join(',')==='tables,menu,notifications,profil'),'Team publishes its actual four routes, no More tab');

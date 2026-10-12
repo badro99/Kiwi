@@ -1351,6 +1351,8 @@ section('Whole-project regressions');
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
     'native-audit-fixes-test.mjs',
+    /* « Delete my account » n'a rien à faire dans le menu du caissier : seul le tiroir du patron le garde. */
+    'native-account-scope-test.mjs',
     'account-deletion-test.mjs',
     'account-deletion-ui-test.mjs',
     'push-registration-test.mjs',
@@ -1479,6 +1481,10 @@ section('Whole-project regressions');
     'module-gate-test.mjs',
     'terminaux-truth-test.mjs',
     'till-truth-test.mjs',
+    /* Aucun fond d'ouverture présélectionné, démo comprise : le bouton reste éteint jusqu'au choix. */
+    'clockin-float-test.mjs',
+    /* La caisse « autre activité » vend dès le premier jour : montant libre, paiement, langues. */
+    'pos-autre-custom-amount-test.mjs',
     'pos-truth-b-test.mjs',
     'order-truth-test.mjs',
     'pos-truth-a-test.mjs',

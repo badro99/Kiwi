@@ -43,7 +43,7 @@ const body = (name) => {
 ok('1 · aucune pastille de fond n\'est présélectionnée dans le gabarit',
   !/class="ci-float-chip is-active"/.test(CAISSE));
 ok('1 · un vrai commerce ne peut pas ouvrir sans fond indiqué',
-  /storeIsReal\(\) && !floatChosen/.test(body('openService')));
+  /if \(!floatChosen\)/.test(body('openService')));
 ok('1 · le dernier fond n\'est qu\'un raccourci, pas une valeur d\'office',
   /id="ci-float-last"/.test(CAISSE) && /Dernier fond : /.test(CAISSE));
 

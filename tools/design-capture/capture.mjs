@@ -218,6 +218,8 @@ const BOOT_TILL = [
   /* till demo: the clock-in screen is the landing; its button opens the shift. */
   { do: 'waitFor', selector: '#clockin-btn', timeout: 15000 },
   { do: 'wait', ms: 600 },
+  /* no opening float is preselected: pick one before the button enables */
+  { do: 'click', selector: '#ci-float-chips [data-float="500"]' },
   { do: 'click', selector: '#clockin-btn' },
   /* the shell lands on the takeaway builder after the greeting flash (~3 s) */
   { do: 'waitFor', selector: 'body.is-unlocked .menu-item', timeout: 25000 },
