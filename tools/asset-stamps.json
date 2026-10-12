@@ -736,12 +736,12 @@
     "sha": "8058d8b428252c34"
   },
   "assets/pos-epicerie.css": {
-    "v": "7",
+    "v": "8",
     "sha": "2ef8ca4ef7968710"
   },
   "assets/pos-epicerie.js": {
-    "v": "7",
-    "sha": "aced2d913723bfd3"
+    "v": "8",
+    "sha": "26aa6c514dc4a5c0"
   },
   "assets/pos-fastfood.css": {
     "v": "11",
@@ -978,6 +978,10 @@
   "assets/salle-scan.js": {
     "v": "2",
     "sha": "bb01565261188f6e"
+  },
+  "assets/scan-wedge.js": {
+    "v": "1",
+    "sha": "f5b140fee5f04dc7"
   },
   "assets/service-requests.js": {
     "v": "1",

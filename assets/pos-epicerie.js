@@ -541,6 +541,14 @@
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(inp.value); } });
     inp.addEventListener('focus', () => $('#ep-scan-field', root).classList.add('is-hot'));
     inp.addEventListener('blur', () => $('#ep-scan-field', root).classList.remove('is-hot'));
+    /* Et quand le champ n'a plus le focus : assets/scan-wedge.js reconnaît la
+       douchette à sa vitesse et lui rend le code, tant que la caisse est à
+       l'écran. */
+    if (window.KiwiScanWedge) window.KiwiScanWedge.attach({
+      id: 'epicerie',
+      active: () => !!(inp.isConnected && inp.offsetParent !== null),
+      onScan: (code) => submitScan(code),
+    });
     $('#ep-scan-mock', root).addEventListener('click', () => {
       if (pvReal()) { focusScan(); toast('Champ actif · scannez avec la douchette ou tapez le code'); }
       else mockScan();

@@ -1409,6 +1409,14 @@
     /* Même barre, sans douchette : la caméra dépose l'article sur le ticket. */
     const sellCam = $('#bq-sell-cam', root);
     if (sellCam) sellCam.onclick = () => openCamScan(commitEan);
+    /* La douchette quand le champ n'a pas le focus (vendeuse qui vient de
+       toucher une tuile) : assets/scan-wedge.js reconnaît le scan à sa vitesse
+       et le dépose ici tant que la barre de vente est à l'écran. */
+    if (window.KiwiScanWedge) window.KiwiScanWedge.attach({
+      id: 'boutique',
+      active: () => { const i = $('#bq-sell-ean', root); return !!(i && i.isConnected && i.offsetParent !== null); },
+      onScan: (code) => commitEan(String(code).trim()),
+    });
 
     /* live catalogue → the sale grid, the sheet and the douchette track the DB.
        A PAIRED caisse (assets/caisse-pairing.js sets __kiwiPairedBoutiqueVenue)

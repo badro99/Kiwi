@@ -1211,6 +1211,7 @@ section('Whole-project regressions');
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',
     'boutique-existing-barcode-test.mjs',
+    'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
     'inventory-ledger-test.mjs',
