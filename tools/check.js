@@ -620,6 +620,23 @@ section('Langue du comptoir (tools/caisse-lang-test.js)');
   }
 }
 
+/* ── 4d-quater · l'imprimante et la clôture dans la langue du comptoir ─────
+ * Le dialogue « Connecter une imprimante » et la feuille de fin de service
+ * écrivent en français et comptent sur le balayage de caisse-lang.js. Le banc
+ * relit leur source et exige une paire anglais + arabe pour chaque phrase. */
+section('Imprimante et clôture en FR/EN/AR (tools/caisse-surface-lang-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-surface-lang-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.trim().split('\n').pop().replace(/^✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`caisse-surface-lang-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4e · production action honesty ────────────────────────────────────────
  * Presentation workflows must fail honestly for a real merchant, even if a
  * later navigation change accidentally exposes one of their buttons. */

@@ -987,6 +987,14 @@
   /* La caisse n'a PAS window.Kiwi.toast (vérifié sur prod) : l'avis de repli
    * doit se suffire à lui-même, sinon il est muet sur la seule surface où il
    * compte · le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
+  /* Ce module écrit en français et laisse la caisse traduire : son balayage
+   * (assets/caisse-lang.js) relit tout ce qui entre dans la page. Une boîte
+   * native (confirm) n'entre pas dans la page · on la passe donc au même
+   * dictionnaire nous-mêmes. Sans caisse-lang.js, le français reste. */
+  function say(fr) {
+    try { return window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(fr) : fr; } catch (_) { return fr; }
+  }
+
   function fallbackNotice(msg) {
     try {
       if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
@@ -1380,7 +1388,7 @@
       '.kpr-status.on{background:#e7f6ee;border:1px solid #bfe6cf;color:#0B6E4F;}' +
       '.kpr-status.on .kpr-d{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.16);}' +
       '.kpr-status a{color:inherit;font-weight:700;text-underline-offset:3px;}' +
-      '.kpr-status button.kpr-recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-left:2px;}' +
+      '.kpr-status button.kpr-recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-inline-start:2px;}' +
       '.kpr-field{margin:0 0 13px;}' +
       '.kpr-field label{display:block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--riad,#053B2C);margin:0 0 6px;}' +
       '.kpr-field input,.kpr-field select{width:100%;font:inherit;padding:11px 13px;border:1.5px solid rgba(0,0,0,.12);border-radius:11px;background:var(--surface);color:var(--ink,#0A0F0D);}' +
@@ -1418,7 +1426,7 @@
       '.kpr-profiles-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}' +
       '.kpr-prof-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.15);padding:5px 10px;border-radius:9px;font-size:.82rem;color:var(--ink,#0A0F0D);}' +
       '.kpr-prof-chip b{font-weight:600;}' +
-      '.kpr-prof-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:2px;}' +
+      '.kpr-prof-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-inline-start:2px;}' +
       '.kpr-prof-del:hover{color:#dc2626;}' +
       '.kpr-st-cards{display:grid;gap:10px;margin-top:10px;}' +
       '.kpr-st-card{background:var(--surface,#fff);border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:14px;display:grid;gap:10px;}' +
@@ -1430,7 +1438,13 @@
       '.kpr-st-badge.receipt{background:#e0f2fe;color:#0369a1;}' +
       '.kpr-st-badge.production{background:#fef3c7;color:#92400e;}' +
       '.kpr-st-sel{width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#0A0F0D);font-size:.85rem;}' +
-      '.kpr-st-sel:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}';
+      '.kpr-st-sel:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}' +
+      /* En arabe (caisse-lang.js pose dir="rtl") : la croix de fermeture passe à
+         gauche avec le reste, et l'espacement des lettres saute · il casse la
+         liaison des lettres arabes. Une adresse IP reste une suite latine. */
+      '[dir="rtl"] .kpr-x{float:left;}' +
+      '[dir="rtl"] #kpr-card .kpr-field label,[dir="rtl"] #kpr-card h2{letter-spacing:0;}' +
+      '[dir="rtl"] #kpr-ip,[dir="rtl"] #kpr-port,[dir="rtl"] #kpr-prof-ip,[dir="rtl"] #kpr-prof-port{direction:ltr;text-align:right;}';
     document.head.appendChild(s);
   }
 
@@ -1577,6 +1591,9 @@
         '</details>' +
       '</div>';
     document.body.appendChild(ov);
+    /* Traduit tout de suite, pas au prochain balayage : sinon le dialogue peint
+       une image en français avant de passer dans la langue de la caisse. */
+    try { if (window.KiwiCaisseLang && window.KiwiCaisseLang.apply) window.KiwiCaisseLang.apply(ov); } catch (_) {}
 
     var $ = function (id) { return ov.querySelector(id); };
     function readForm() {
@@ -1729,7 +1746,7 @@
             : window.KiwiEscPos.kitchenTicket({ title: 'TEST ' + stTitle.toUpperCase(), order: '#TEST', time: '12:00', items: [{ name: 'Article test ' + stTitle, qty: 1 }], paper: paper });
           (prof ? printBytesToTarget(slipBytes, prof) : printBytes(slipBytes)).then(function (res) {
             bTest.textContent = origText; bTest.disabled = false;
-            toast(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec : ' + frReason(res.reason)));
+            toast(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec · ' + frReason(res.reason)));
           }, function () {
             bTest.textContent = origText; bTest.disabled = false;
             toast('Échec d’impression');
@@ -1751,7 +1768,7 @@
           bd.textContent = orig; bd.disabled = false;
           toast(res.ok
             ? 'Impulsion envoyée · tiroir fermé ? Vérifiez le câble RJ11 sur le port DK de l\'imprimante et la clé en position verticale'
-            : ('Échec : ' + frReason(res.reason)));
+            : ('Échec · ' + frReason(res.reason)));
         }, function () {
           bd.textContent = orig; bd.disabled = false;
           toast('Échec de l\'impulsion tiroir');
@@ -1805,7 +1822,7 @@
         var slipBytes = window.KiwiEscPos.testSlip({ title: 'TEST ' + name.toUpperCase(), ip: ip, paper: paper });
         printBytesToTarget(slipBytes, target).then(function (res) {
           btn.textContent = origText; btn.disabled = false;
-          toast(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec : ' + frReason(res.reason)));
+          toast(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec · ' + frReason(res.reason)));
         }, function () {
           btn.textContent = origText; btn.disabled = false;
           toast('Échec d’impression');
@@ -1960,7 +1977,7 @@
         }).join('');
         list.querySelectorAll('[data-relay-revoke]').forEach(function (b) {
           b.addEventListener('click', function () {
-            if (!confirm('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.')) return;
+            if (!confirm(say('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.'))) return;
             relayRevoke(this.getAttribute('data-relay-revoke')).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
           });
         });
@@ -1981,7 +1998,7 @@
       var b = this; b.disabled = true;
       relayPairCode().then(function (j) {
         b.disabled = false;
-        if (!j.ok) { toast('Impossible de générer le code : ' + frReason(j.reason)); return; }
+        if (!j.ok) { toast('Impossible de générer le code · ' + frReason(j.reason)); return; }
         showPairCode(j);
       });
     });
@@ -1989,12 +2006,12 @@
     if (pairLocal) pairLocal.addEventListener('click', function () {
       var b = this; b.disabled = true; var orig = b.textContent; b.textContent = 'Association…';
       relayPairCode().then(function (j) {
-        if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code : ' + frReason(j.reason)); return null; }
+        if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code · ' + frReason(j.reason)); return null; }
         return pairLocalBridge(j.code);
       }).then(function (r) {
         b.disabled = false; b.textContent = orig;
         if (r === null) return;
-        toast(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec : ' + ((r && r.error) || 'pont injoignable')));
+        toast(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec · ' + ((r && r.error) || 'pont injoignable')));
         setTimeout(function () { ping().then(function (j) { localPing = j; paintRelay(); }); }, 800);
       });
     });
@@ -2037,11 +2054,11 @@
       })
         .then(function (j) {
           btn.textContent = orig; btn.disabled = false;
-          toast(j && j.ok ? 'Ticket test envoyé' : ('Échec : ' + ((j && j.error) || 'inconnu')));
+          toast(j && j.ok ? 'Ticket test envoyé' : ('Échec · ' + ((j && j.error) || 'inconnu')));
         })
         .catch(function () {
           to.done(); btn.textContent = orig; btn.disabled = false;
-          toast('Échec : pont injoignable');
+          toast('Échec · pont injoignable');
         });
     });
     if (context.onBrowserPrint) {
@@ -2068,14 +2085,14 @@
         if (/no-web-bluetooth/.test(m)) t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
         else if (/cancel|NotFound|User|chooser/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
         else if (/no-writable/.test(m)) t.textContent = 'Imprimante trouvée mais non compatible (aucun canal d’écriture).';
-        else t.textContent = 'Connexion impossible : ' + m;
+        else t.textContent = 'Connexion impossible · ' + m;
       });
     });
     if ($('#kpr-bt-test')) $('#kpr-bt-test').addEventListener('click', function () {
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
       printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
         btn.textContent = orig; btn.disabled = !btConnected();
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + (res.reason || 'inconnu')));
+        toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu')));
       });
     });
 
@@ -2096,14 +2113,14 @@
           else if (/no-bulk-out/.test(m)) t.textContent = 'Appareil trouvé mais ce n’est pas une imprimante USB standard.';
           else if (/SecurityError|NotAllowed/i.test(m)) t.textContent = 'Accès USB refusé par le navigateur.';
           else if (/access denied|claim|busy|InvalidState/i.test(m)) t.textContent = 'Imprimante déjà utilisée par le système. Retirez-la des imprimantes installées (ou utilisez le port réseau), puis réessayez.';
-          else t.textContent = 'Connexion impossible : ' + m;
+          else t.textContent = 'Connexion impossible · ' + m;
         });
       });
       $('#kpr-usb-test').addEventListener('click', function () {
         var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
         printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
           btn.textContent = orig; btn.disabled = !usbConnected();
-          toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + (res.reason || 'inconnu')));
+          toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + (res.reason || 'inconnu')));
         });
       });
     }
@@ -2138,7 +2155,7 @@
         : bridgePrintBytes(slip, target);
       attempt.then(function (res) {
         btn.textContent = orig; btn.disabled = !(socket || bridgeUp);
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + frReason(res.reason)));
+        toast(res.ok ? 'Ticket test envoyé' : ('Échec · ' + frReason(res.reason)));
       });
     });
 
@@ -2166,7 +2183,7 @@
           if (!out) return;
           if (!j) { out.textContent = 'Pont injoignable · relancez Kiwi Printer Bridge puis réessayez.'; return; }
           if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont · installez la version 1.3 ou plus récente.'; return; }
-          if (!j.ok) { out.textContent = 'Recherche impossible : ' + frReason(j.error); return; }
+          if (!j.ok) { out.textContent = 'Recherche impossible · ' + frReason(j.error); return; }
           if (!j.printers.length) { out.textContent = 'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'; return; }
           out.innerHTML = 'Trouvée' + (j.printers.length > 1 ? 's' : '') + ' : ' + j.printers.map(function (p) {
             return '<button type="button" class="kpr-btc kpr-scan-pick" data-ip="' + esc(p.ip) + '">' + esc(p.ip) + '</button>';

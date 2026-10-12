@@ -105,6 +105,15 @@ check(L.tr('Encaisser · jeu. 30 juil.') === 'Take payment · Thu 30 Jul', 'une 
 check(L.tr('Robe mai') === 'Robe mai', 'un nom d\'article contenant un mois n\'est pas une date');
 check(L.tr('mars') === 'Mar', 'un mois SEUL en est une, en revanche');
 check(L.tr('Caftan mars soirée') === 'Caftan mars soirée', 'et un mois au milieu d\'un nom ne l\'est pas');
+/* En toutes lettres : l'en-tête de la clôture écrit « Lundi 12 octobre ». */
+check(L.tr('Lundi 12 octobre') === 'Monday 12 October', 'un jour et un mois en toutes lettres se traduisent');
+check(L.tr('Caftan octobre') === 'Caftan octobre', '… mais pas un mois dans un nom d\'article');
+check(L.tr('lundi') === 'lundi', 'un jour en minuscules n\'est pas un en-tête de clôture');
+
+/* ── le trou {x} au milieu d'une phrase ──────────────────────────────────── */
+check(L.tr('Imprimante « Bar » enregistrée') === 'Printer “Bar” saved', 'une donnée encadrée par la phrase traverse sans être lue');
+check(L.tr('Ticket test envoyé (Cuisine 2)') === 'Test receipt sent (Cuisine 2)', 'même quand elle contient un nombre');
+check(L.tr('Imprimante Bar') === 'Imprimante Bar', 'un gabarit qui ne colle pas des deux côtés ne s\'applique pas');
 
 /* ── arabe ───────────────────────────────────────────────────────────────── */
 L.set('ar');
@@ -121,6 +130,11 @@ const wrapped = (s, inner) => s.indexOf(LRI + inner + PDI) >= 0;
 check(wrapped(L.bidi('4 785 MAD'), '4 785 MAD'), 'un montant part isolé, devise comprise');
 check(wrapped(L.bidi('−1 115 MAD'), '−1 115 MAD'), 'le signe négatif reste collé au montant');
 check(wrapped(L.bidi('−10 %'), '−10 %'), 'un pourcentage aussi');
+/* La clôture écrit « + 5 848 MAD » et « − 8 MAD », le signe séparé par une
+   espace. Laissé hors de l'îlot, il passait de l'autre côté du nombre. */
+check(wrapped(L.bidi('+ 5 848 MAD'), '+ 5 848 MAD'), 'un signe en tête, suivi d\'une espace, reste avec son montant');
+check(wrapped(L.bidi('− 8 MAD'), '− 8 MAD'), 'un écart négatif aussi');
+check(L.bidi('الجهاز + 78 MAD').indexOf(LRI + '+') < 0, '… mais pas un « + » au milieu d\'une phrase');
 check(wrapped(L.bidi('18:55'), '18:55'), 'une heure ne se relit pas « 55:18 »');
 check(wrapped(L.bidi('المجموع 4 785 MAD'), '4 785 MAD'), 'un montant au milieu d\'une phrase arabe');
 check(L.bidi('المجموع').indexOf(LRI) < 0, 'un texte sans chiffre n\'est pas touché');
@@ -165,9 +179,15 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction',
+  // Le dialogue d'imprimante et la clôture (2026-10-12) : l'arabe change, l'anglais non.
+  'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
+/* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne
+   quand même : la clé existe des deux côtés, le texte non. */
+const empty = enKeys.filter((k) => typeof EN[k] !== 'string' || !EN[k].trim() || typeof AR[k] !== 'string' || !AR[k].trim());
+check(!empty.length, `aucune traduction vide${empty.length ? ' — ' + empty.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);
 check(!lazyAr.length, `aucune traduction arabe oubliée${lazyAr.length ? ' — ' + lazyAr.slice(0, 5).join(', ') : ''}`);
 check(enKeys.length >= 100, `le dictionnaire couvre le comptoir (${enKeys.length} phrases)`);

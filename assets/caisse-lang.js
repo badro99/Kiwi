@@ -910,6 +910,348 @@
     });
   })();
 
+  /* L'imprimante et la clôture (Kiwi Pro iOS, 2026-10-12). Deux écrans restés
+     en français sur une caisse réglée en anglais : le dialogue « Connecter une
+     imprimante » (assets/printer-bridge.js, partagé avec le tableau de bord, ce
+     qui est pourquoi il écrit en français et laisse le balayage traduire) et la
+     feuille de fin de service (kiwi-caisse.html, #cloture-modal, puis le Z et
+     l'ouverture hors horaires qui partagent son voile). La clôture n'était
+     traduite qu'à moitié : « Ticket moyen » et « Fond d'ouverture » étaient
+     déjà au dictionnaire pour un autre écran, le reste non.
+     tools/caisse-surface-lang-test.js relit ces deux surfaces dans leur source
+     et refuse toute phrase qui n'aurait pas sa paire anglais + arabe ici. */
+  (function () {
+    var S = {
+      /* ── le dialogue d'imprimante · en-tête et accès rapide ── */
+      'Connecter une imprimante': ['Connect a printer', 'ربط طابعة'],
+      'Imprimer l’étiquette': ['Print the label', 'طباعة الملصق'],
+      'Imprimer le reçu': ['Print the receipt', 'طباعة الإيصال'],
+      'Imprimez tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.':
+        ['Print right away, or connect a network printer (Wi-Fi or Ethernet) to print directly next time.', 'اطبع الآن، أو اربط طابعة شبكة (Wi-Fi أو Ethernet) للطباعة مباشرة في المرة القادمة.'],
+      'Aucune imprimante n’est connectée à Kiwi. Préparez le PDF du ticket tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.':
+        ['No printer is connected to Kiwi. Prepare the receipt PDF right away, or connect a network printer (Wi-Fi or Ethernet) to print directly next time.', 'لا توجد طابعة متصلة بـ Kiwi. جهّز ملف PDF للتذكرة الآن، أو اربط طابعة شبكة (Wi-Fi أو Ethernet) للطباعة مباشرة في المرة القادمة.'],
+      'Connectez l’imprimante réseau (Wi-Fi ou Ethernet) : Kiwi lui envoie le ticket directement, sans boîte de dialogue.':
+        ['Connect the network printer (Wi-Fi or Ethernet): Kiwi sends it the receipt directly, with no print dialog.', 'اربط طابعة الشبكة (Wi-Fi أو Ethernet): يرسل لها Kiwi التذكرة مباشرة، دون نافذة طباعة.'],
+      'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.':
+        ['Print right away, or connect a printer (Bluetooth or network) to print directly next time.', 'اطبع الآن، أو اربط طابعة (Bluetooth أو شبكة) للطباعة مباشرة في المرة القادمة.'],
+      'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.':
+        ['No printer is connected to Kiwi. If the printer is already installed on this till, print through the system · or connect it over Bluetooth or USB to print without a dialog next time.', 'لا توجد طابعة متصلة بـ Kiwi. إذا كانت الطابعة مثبتة على هذا الصندوق، اطبع عبر النظام · أو اربطها عبر Bluetooth أو USB للطباعة دون نافذة في المرة القادمة.'],
+      'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.':
+        ['Connect the printer over Bluetooth or USB to print without a dialog. If it is already installed on this till, Kiwi can also use it through the system print dialog.', 'اربط الطابعة عبر Bluetooth أو USB للطباعة دون نافذة. إذا كانت مثبتة على هذا الصندوق، يمكن لـ Kiwi أيضًا استخدامها عبر نافذة الطباعة في النظام.'],
+      'Imprimer ou partager le PDF': ['Print or share the PDF', 'اطبع ملف PDF أو شاركه'],
+      'Enregistrer en PDF': ['Save as PDF', 'حفظ كملف PDF'],
+
+      /* ── Bluetooth · USB ── */
+      'Imprimante Bluetooth': ['Bluetooth printer', 'طابعة Bluetooth'],
+      'Sans installation. Kiwi imprime le reçu directement.': ['No setup needed. Kiwi prints the receipt directly.', 'دون تثبيت. يطبع Kiwi الإيصال مباشرة.'],
+      'Connectée': ['Connected', 'متصلة'],
+      'Aucune imprimante connectée.': ['No printer connected.', 'لا توجد طابعة متصلة.'],
+      'Changer d’imprimante': ['Change printer', 'تغيير الطابعة'],
+      'Rechercher une imprimante Bluetooth': ['Find a Bluetooth printer', 'البحث عن طابعة Bluetooth'],
+      'Imprimer un ticket test': ['Print a test receipt', 'طباعة تذكرة تجريبية'],
+      'Imprimante USB': ['USB printer', 'طابعة USB'],
+      'Branchée en USB sur la caisse. Sans installation, sans adresse IP.': ['Plugged into the till over USB. No setup, no IP address.', 'موصولة بالصندوق عبر USB. دون تثبيت، ودون عنوان IP.'],
+      'Aucune imprimante USB connectée.': ['No USB printer connected.', 'لا توجد طابعة USB متصلة.'],
+      'Choisir l’imprimante USB': ['Choose the USB printer', 'اختيار طابعة USB'],
+      'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).': ['Bluetooth is not available in this browser. Use Chrome (computer or Android).', 'Bluetooth غير متاح في هذا المتصفح. استخدم Chrome (حاسوب أو Android).'],
+      'USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).': ['USB is not available in this browser. Use Chrome (computer or Android).', 'USB غير متاح في هذا المتصفح. استخدم Chrome (حاسوب أو Android).'],
+      'Recherche…': ['Searching…', 'جارٍ البحث…'],
+      'Imprimante': ['Printer', 'الطابعة'],
+      'Imprimante Bluetooth connectée': ['Bluetooth printer connected', 'تم ربط طابعة Bluetooth'],
+      'Imprimante USB connectée': ['USB printer connected', 'تم ربط طابعة USB'],
+      'Aucune imprimante sélectionnée.': ['No printer selected.', 'لم يتم اختيار أي طابعة.'],
+      'Imprimante trouvée mais non compatible (aucun canal d’écriture).': ['Printer found but not compatible (no write channel).', 'تم العثور على الطابعة لكنها غير متوافقة (لا توجد قناة كتابة).'],
+      'Appareil trouvé mais ce n’est pas une imprimante USB standard.': ['Device found, but it is not a standard USB printer.', 'تم العثور على الجهاز لكنه ليس طابعة USB قياسية.'],
+      'Accès USB refusé par le navigateur.': ['USB access refused by the browser.', 'رفض المتصفح الوصول إلى USB.'],
+      'Imprimante déjà utilisée par le système. Retirez-la des imprimantes installées (ou utilisez le port réseau), puis réessayez.':
+        ['Printer already in use by the system. Remove it from the installed printers (or use the network port), then try again.', 'الطابعة مستخدمة من طرف النظام. أزلها من الطابعات المثبتة (أو استخدم منفذ الشبكة)، ثم أعد المحاولة.'],
+      'Connexion impossible': ['Cannot connect', 'تعذّر الاتصال'],
+
+      /* ── tickets de production · hub cuisine ── */
+      'Tickets de production automatiques': ['Automatic production tickets', 'تذاكر التحضير التلقائية'],
+      'Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.':
+        ['This station can print orders sent from the till, the staff app and other terminals. Turn this on for one computer per venue only.', 'يمكن لهذا الجهاز طباعة الطلبات المرسلة من الصندوق وتطبيق الموظفين والأجهزة الأخرى. فعّل هذا الخيار على حاسوب واحد فقط لكل مؤسسة.'],
+      'Faire de ce poste le hub d’impression': ['Make this station the print hub', 'جعل هذا الجهاز مركز الطباعة'],
+      '{n} ticket en attente': ['{n} ticket waiting', '{n} تذكرة في الانتظار'],
+      '{n} tickets en attente': ['{n} tickets waiting', '{n} تذاكر في الانتظار'],
+      'nouvelle tentative automatique': ['retrying automatically', 'إعادة المحاولة تلقائيًا'],
+      'Prêt': ['Ready', 'جاهز'],
+      'aucune impression en attente': ['nothing waiting to print', 'لا توجد طباعة في الانتظار'],
+      'Hub actif': ['Hub on', 'المركز مفعّل'],
+      'connectez une imprimante': ['connect a printer', 'اربط طابعة'],
+      'Les commandes de ce poste continuent à s’imprimer localement.': ['Orders from this station keep printing locally.', 'تستمر طلبات هذا الجهاز في الطباعة محليًا.'],
+      'Hub d’impression cuisine activé': ['Kitchen print hub on', 'تم تفعيل مركز طباعة المطبخ'],
+      'Hub d’impression désactivé': ['Print hub off', 'تم إيقاف مركز الطباعة'],
+
+      /* ── imprimante déjà installée (système) ── */
+      'Imprimante déjà installée': ['Printer already installed', 'طابعة مثبتة مسبقًا'],
+      'Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.':
+        ['The one this computer already uses. Kiwi sends it the receipt directly, with no print dialog.', 'الطابعة التي يستخدمها هذا الحاسوب. يرسل لها Kiwi التذكرة مباشرة، دون نافذة طباعة.'],
+      'Choisie': ['Selected', 'مختارة'],
+      'Aucune imprimante choisie.': ['No printer selected.', 'لم يتم اختيار أي طابعة.'],
+      'Utiliser cette imprimante': ['Use this printer', 'استخدام هذه الطابعة'],
+
+      /* ── imprimantes par poste ── */
+      'Imprimantes par poste': ['Printers by station', 'الطابعات حسب المحطة'],
+      'Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.': ['Link each station (till, kitchen, bar…) to its physical printer.', 'اربط كل محطة (الصندوق، المطبخ، البار…) بطابعتها الفعلية.'],
+      '+ Nouvelle imprimante': ['+ New printer', '+ طابعة جديدة'],
+      'Ajouter une imprimante': ['Add a printer', 'إضافة طابعة'],
+      'Nom de l’imprimante': ['Printer name', 'اسم الطابعة'],
+      'ex. Cuisine, Bar, Fournil…': ['e.g. Kitchen, Bar, Bakehouse…', 'مثال: المطبخ، البار، المخبز…'],
+      'Type': ['Type', 'النوع'],
+      'Réseau (IP · Wi-Fi / Ethernet)': ['Network (IP · Wi-Fi / Ethernet)', 'شبكة (IP · Wi-Fi / Ethernet)'],
+      'Imprimante système (installée)': ['System printer (installed)', 'طابعة النظام (مثبتة)'],
+      'USB direct': ['Direct USB', 'USB مباشر'],
+      'Papier': ['Paper', 'الورق'],
+      'Adresse IP': ['IP address', 'عنوان IP'],
+      'Port': ['Port', 'المنفذ'],
+      'Imprimante du système': ['System printer', 'طابعة النظام'],
+      'Tester': ['Test', 'اختبار'],
+      'Enregistrer le routage par poste': ['Save routing by station', 'حفظ التوجيه حسب المحطة'],
+      'Aucune imprimante additionnelle enregistrée. Ajoutez-en une pour router par poste.': ['No extra printer saved. Add one to route by station.', 'لا توجد طابعة إضافية محفوظة. أضف واحدة للتوجيه حسب المحطة.'],
+      'Imprimante retirée': ['Printer removed', 'تمت إزالة الطابعة'],
+      '· Imprimante par défaut (actuelle) ·': ['· Default printer (current) ·', '· الطابعة الافتراضية (الحالية) ·'],
+      '· Même imprimante que la caisse ·': ['· Same printer as the till ·', '· نفس طابعة الصندوق ·'],
+      'Caisse (comptoir)': ['Till (counter)', 'الصندوق (الكاونتر)'],
+      'Reçus clients': ['Customer receipts', 'إيصالات الزبائن'],
+      'Imprimante de la caisse': ['Till printer', 'طابعة الصندوق'],
+      'Imprimante du poste {x}': ['Printer for {x}', 'طابعة محطة {x}'],
+      'Production': ['Prep', 'التحضير'],
+      'Ticket test': ['Test receipt', 'تذكرة تجريبية'],
+      'Tester le tiroir': ['Test the drawer', 'اختبار الدرج'],
+      'Ticket test envoyé': ['Test receipt sent', 'تم إرسال التذكرة التجريبية'],
+      'Ticket test envoyé ({x})': ['Test receipt sent ({x})', 'تم إرسال التذكرة التجريبية ({x})'],
+      'Ticket test envoyé à {x}': ['Test receipt sent to {x}', 'تم إرسال التذكرة التجريبية إلى {x}'],
+      'Échec': ['Failed', 'فشل'],
+      'Échec d’impression': ['Print failed', 'فشلت الطباعة'],
+      'Envoi…': ['Sending…', 'جارٍ الإرسال…'],
+      'Impulsion envoyée': ['Pulse sent', 'تم إرسال النبضة'],
+      "tiroir fermé ? Vérifiez le câble RJ11 sur le port DK de l'imprimante et la clé en position verticale":
+        ['drawer still shut? Check the RJ11 cable on the printer’s DK port and that the key is upright', 'الدرج مغلق؟ تحقق من كابل RJ11 في منفذ DK بالطابعة ومن أن المفتاح في الوضع العمودي'],
+      "Échec de l'impulsion tiroir": ['Drawer pulse failed', 'فشلت نبضة الدرج'],
+      'Saisissez une adresse IP': ['Enter an IP address', 'أدخل عنوان IP'],
+      'Adresse IP invalide': ['Invalid IP address', 'عنوان IP غير صالح'],
+      'Port invalide': ['Invalid port', 'منفذ غير صالح'],
+      'Donnez un nom à cette imprimante (ex. Cuisine, Bar)': ['Name this printer (e.g. Kitchen, Bar)', 'سمِّ هذه الطابعة (مثال: المطبخ، البار)'],
+      'Sélectionnez une imprimante système': ['Select a system printer', 'اختر طابعة النظام'],
+      'Imprimante « {x} » enregistrée': ['Printer “{x}” saved', 'تم حفظ الطابعة «{x}»'],
+      'Routage des imprimantes par poste enregistré': ['Printer routing by station saved', 'تم حفظ توجيه الطابعات حسب المحطة'],
+
+      /* ── le pont local · le relais Kiwi ── */
+      'Imprimer depuis un iPad ou une tablette · relais Kiwi': ['Print from an iPad or tablet · Kiwi relay', 'الطباعة من iPad أو جهاز لوحي · مُرحِّل Kiwi'],
+      'Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.':
+        ['With no bridge on this device, Kiwi sends tickets to the bridge on the counter computer, which prints them on your network printer. Link it once, then everything is automatic.', 'في غياب جسر على هذا الجهاز، يرسل Kiwi التذاكر إلى جسر حاسوب الكاونتر، الذي يطبعها على طابعة الشبكة. يكفي ربط واحد، ثم يصبح كل شيء تلقائيًا.'],
+      'Vérification du relais…': ['Checking the relay…', 'جارٍ التحقق من المُرحِّل…'],
+      'Associer un pont': ['Link a bridge', 'ربط جسر'],
+      'Associer ce pont maintenant': ['Link this bridge now', 'ربط هذا الجسر الآن'],
+      'Connexion directe à l’imprimante depuis l’app Kiwi.': ['Direct connection to the printer from the Kiwi app.', 'اتصال مباشر بالطابعة من تطبيق Kiwi.'],
+      'Vérification du pont…': ['Checking the bridge…', 'جارٍ التحقق من الجسر…'],
+      'Pont détecté': ['Bridge found', 'تم العثور على الجسر'],
+      'mettez à jour Kiwi Printer Bridge pour sécuriser cette caisse.': ['update Kiwi Printer Bridge to secure this till.', 'حدّث Kiwi Printer Bridge لتأمين هذا الصندوق.'],
+      'Pont connecté': ['Bridge connected', 'الجسر متصل'],
+      'impression maintenue, mise à jour de sécurité recommandée': ['printing still works, security update recommended', 'الطباعة مستمرة، يُنصح بتحديث أمني'],
+      'Kiwi Printer Bridge non détecté sur cet appareil.': ['Kiwi Printer Bridge not found on this device.', 'لم يتم العثور على Kiwi Printer Bridge على هذا الجهاز.'],
+      'Télécharger le pont': ['Download the bridge', 'تنزيل الجسر'],
+      'Revérifier': ['Check again', 'إعادة التحقق'],
+      'Relais Kiwi': ['Kiwi relay', 'مُرحِّل Kiwi'],
+      'pont « {x} » en ligne': ['bridge “{x}” online', 'الجسر «{x}» متصل'],
+      'l’imprimante réseau s’imprime via ce pont': ['the network printer prints through this bridge', 'تطبع طابعة الشبكة عبر هذا الجسر'],
+      'jamais vu': ['never seen', 'لم يظهر بعد'],
+      'vu à l’instant': ['seen just now', 'ظهر للتو'],
+      'vu il y a {n} min': ['seen {n} min ago', 'ظهر قبل {n} د'],
+      'vu il y a {n} h': ['seen {n} h ago', 'ظهر قبل {n} س'],
+      'Relais pas encore activé côté serveur.': ['Relay not turned on on the server yet.', 'لم يتم تفعيل المُرحِّل على الخادم بعد.'],
+      'Cet appareil n’est pas reconnu comme la caisse d’un commerce': ['This device is not recognised as a shop’s till', 'هذا الجهاز غير معروف كصندوق لمتجر'],
+      'appairez-le d’abord.': ['pair it first.', 'قم بإقرانه أولًا.'],
+      'Aucun pont associé à ce commerce.': ['No bridge linked to this shop.', 'لا يوجد جسر مرتبط بهذا المتجر.'],
+      '{n} pont en ligne': ['{n} bridge online', '{n} جسر متصل'],
+      '{n} ponts en ligne': ['{n} bridges online', '{n} جسور متصلة'],
+      'Pont associé mais hors ligne': ['Bridge linked but offline', 'الجسر مرتبط لكنه غير متصل'],
+      'lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.': ['start Kiwi Printer Bridge on the counter computer.', 'شغّل Kiwi Printer Bridge على حاسوب الكاونتر.'],
+      'Pont': ['Bridge', 'جسر'],
+      'en ligne': ['online', 'متصل'],
+      'Dissocier': ['Unlink', 'فك الارتباط'],
+      'Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.': ['Unlink this bridge? It will no longer receive tickets from your tablets.', 'فك ارتباط هذا الجسر؟ لن يستقبل بعد الآن تذاكر أجهزتك اللوحية.'],
+      'Pont dissocié': ['Bridge unlinked', 'تم فك ارتباط الجسر'],
+      'Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez': ['On the counter computer, start Kiwi Printer Bridge, then open', 'على حاسوب الكاونتر، شغّل Kiwi Printer Bridge ثم افتح'],
+      'et tapez ce code. Valable {n} min': ['and type this code. Valid for {n} min', 'واكتب هذا الرمز. صالح لمدة {n} د'],
+      'une seule fois.': ['one use only.', 'لمرة واحدة فقط.'],
+      'Impossible de générer le code': ['Cannot create the code', 'تعذّر إنشاء الرمز'],
+      'Association…': ['Linking…', 'جارٍ الربط…'],
+      'Ce pont imprime désormais les tickets de vos tablettes': ['This bridge now prints your tablets’ tickets', 'يطبع هذا الجسر الآن تذاكر أجهزتك اللوحية'],
+      'pont injoignable': ['bridge unreachable', 'تعذّر الوصول إلى الجسر'],
+      'inconnu': ['unknown', 'غير معروف'],
+
+      /* ── l'option avancée · imprimante réseau globale ── */
+      'Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)': ['Advanced option · shared network printer (Wi-Fi / Ethernet)', 'خيار متقدم · طابعة شبكة مشتركة (Wi-Fi / Ethernet)'],
+      'Impression directe disponible dans l’app Kiwi.': ['Direct printing available in the Kiwi app.', 'الطباعة المباشرة متاحة في تطبيق Kiwi.'],
+      'Adresse IP de l’imprimante': ['Printer IP address', 'عنوان IP للطابعة'],
+      'Rechercher sur le réseau': ['Search the network', 'البحث في الشبكة'],
+      'Détecter les imprimantes du réseau': ['Find printers on the network', 'اكتشاف طابعات الشبكة'],
+      'Exporter le diagnostic d’impression': ['Export print diagnostics', 'تصدير تشخيص الطباعة'],
+      'Largeur papier': ['Paper width', 'عرض الورق'],
+      "Format d'étiquette": ['Label size', 'مقاس الملصق'],
+      'Modèle': ['Model', 'الطراز'],
+      'Générique (ESC/POS)': ['Generic (ESC/POS)', 'عام (ESC/POS)'],
+      "Pilote Windows (utile seulement pour les étiquettes ou si l'USB est refusé) :": ['Windows driver (only needed for labels or if USB is refused):', 'برنامج تشغيل Windows (مفيد فقط للملصقات أو إذا رُفض USB):'],
+      'page de téléchargement': ['download page', 'صفحة التنزيل'],
+      'Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale.': ['The bridge runs on the till computer and only talks to your local printer.', 'يعمل الجسر على حاسوب الصندوق ولا يتواصل إلا مع طابعتك المحلية.'],
+      'Cible actuelle : imprimante système « {x} ». Enregistrer une IP ici la remplacera.': ['Current target: system printer “{x}”. Saving an IP here will replace it.', 'الهدف الحالي: طابعة النظام «{x}». حفظ عنوان IP هنا سيستبدلها.'],
+      'Cible actuelle : réseau': ['Current target: network', 'الهدف الحالي: الشبكة'],
+      'Aucune cible réseau enregistrée.': ['No network target saved.', 'لا يوجد هدف شبكة محفوظ.'],
+      'Saisissez d’abord l’adresse IP de l’imprimante': ['Enter the printer’s IP address first', 'أدخل أولًا عنوان IP للطابعة'],
+      'Adresse invalide': ['Invalid address', 'عنوان غير صالح'],
+      'attendu : {n} (ou un nom comme EPSON.local)': ['expected: {n} (or a name like EPSON.local)', 'المتوقع: {n} (أو اسم مثل EPSON.local)'],
+      'un nombre entre {n} et {n} ({n} en général)': ['a number between {n} and {n} (usually {n})', 'رقم بين {n} و{n} (عادة {n})'],
+      'Imprimante enregistrée': ['Printer saved', 'تم حفظ الطابعة'],
+      'Une impression est en cours. La recherche démarrera une fois la file au repos.': ['A print is in progress. The search will start once the queue is idle.', 'هناك طباعة جارية. سيبدأ البحث عندما تفرغ قائمة الانتظار.'],
+      'Recherche en cours…': ['Searching…', 'جارٍ البحث…'],
+      'Pont injoignable': ['Bridge unreachable', 'تعذّر الوصول إلى الجسر'],
+      'relancez Kiwi Printer Bridge puis réessayez.': ['restart Kiwi Printer Bridge, then try again.', 'أعد تشغيل Kiwi Printer Bridge ثم أعد المحاولة.'],
+      'Détection indisponible sur ce pont': ['Detection not available on this bridge', 'الاكتشاف غير متاح على هذا الجسر'],
+      'installez la version {n} ou plus récente.': ['install version {n} or newer.', 'ثبّت الإصدار {n} أو أحدث.'],
+      'Recherche impossible': ['Search failed', 'تعذّر البحث'],
+      'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.': ['No network printer found. Check that it is switched on and on the same network as this computer.', 'لم يتم العثور على طابعة شبكة. تحقق من أنها مشغّلة وعلى نفس شبكة هذا الحاسوب.'],
+      'Trouvée :': ['Found:', 'تم العثور عليها:'],
+      'Trouvées :': ['Found:', 'تم العثور عليها:'],
+      'Adresse remplie': ['Address filled in', 'تم ملء العنوان'],
+      'imprimez un ticket test puis enregistrez': ['print a test receipt, then save', 'اطبع تذكرة تجريبية ثم احفظ'],
+      'Diagnostic indisponible': ['Diagnostics unavailable', 'التشخيص غير متاح'],
+      'Diagnostic exporté': ['Diagnostics exported', 'تم تصدير التشخيص'],
+      'Export impossible': ['Cannot export', 'تعذّر التصدير'],
+      'Réseau local refusé. Kiwi garde la dernière adresse. Ouvrez Réglages > Kiwi Pro > Réseau local.': ['Local network refused. Kiwi keeps the last address. Open Settings > Kiwi Pro > Local Network.', 'تم رفض الشبكة المحلية. يحتفظ Kiwi بآخر عنوان. افتح الإعدادات > Kiwi Pro > الشبكة المحلية.'],
+      'Plusieurs imprimantes ont répondu. Ouvrez Imprimante et choisissez la bonne adresse.': ['Several printers answered. Open Printer and choose the right address.', 'استجابت عدة طابعات. افتح الطابعة واختر العنوان الصحيح.'],
+      'Imprimante retrouvée sur {x}. La file reprend automatiquement.': ['Printer found again at {x}. The queue resumes automatically.', 'تم العثور على الطابعة مجددًا على {x}. تستأنف قائمة الانتظار تلقائيًا.'],
+      /* La largeur du rouleau (assets/escpos.js · paperWidths). */
+      '{n} mm': ['{n} mm', '{n} مم'],
+      '{n} mm (standard)': ['{n} mm (standard)', '{n} مم (قياسي)'],
+      '{n} mm (matricielle / cuisine)': ['{n} mm (dot matrix / kitchen)', '{n} مم (نقطية / مطبخ)'],
+      '{n} mm (large)': ['{n} mm (wide)', '{n} مم (عريض)'],
+      '{n} mm (étiquettes)': ['{n} mm (labels)', '{n} مم (ملصقات)'],
+
+      /* ── les raisons d'un échec (frReason) ── */
+      'Pont introuvable': ['Bridge not found', 'الجسر غير موجود'],
+      'lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette': ['start Kiwi Printer Bridge on this computer, or link a bridge to the Kiwi relay to print from a tablet', 'شغّل Kiwi Printer Bridge على هذا الحاسوب، أو اربط جسرًا بمُرحِّل Kiwi للطباعة من جهاز لوحي'],
+      'Ce pont doit être mis à jour': ['This bridge needs an update', 'يجب تحديث هذا الجسر'],
+      'installez la dernière version de Kiwi Printer Bridge puis revérifiez': ['install the latest Kiwi Printer Bridge, then check again', 'ثبّت أحدث إصدار من Kiwi Printer Bridge ثم أعد التحقق'],
+      'Cette imprimante doit être enregistrée dans le pont': ['This printer must be saved in the bridge', 'يجب حفظ هذه الطابعة في الجسر'],
+      'relancez le test depuis ce poste': ['run the test again from this station', 'أعد الاختبار من هذا الجهاز'],
+      'Le pont refuse cette cible réseau': ['The bridge refuses this network target', 'يرفض الجسر هدف الشبكة هذا'],
+      'utilisez une imprimante locale au poste du comptoir': ['use a printer local to the counter station', 'استخدم طابعة محلية في جهاز الكاونتر'],
+      'Le ticket a peut-être déjà été imprimé': ['The ticket may already have printed', 'ربما تمت طباعة التذكرة بالفعل'],
+      'vérifiez le papier avant toute reprise manuelle': ['check the paper before any manual retry', 'تحقق من الورق قبل أي إعادة يدوية'],
+      'Aucun pont en ligne pour le relais Kiwi': ['No bridge online for the Kiwi relay', 'لا يوجد جسر متصل لمُرحِّل Kiwi'],
+      'vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir': ['check that Kiwi Printer Bridge is running on the counter computer', 'تحقق من أن Kiwi Printer Bridge يعمل على حاسوب الكاونتر'],
+      'Relais d’impression pas encore activé côté serveur': ['Print relay not turned on on the server yet', 'لم يتم تفعيل مُرحِّل الطباعة على الخادم بعد'],
+      'Caisse non reconnue': ['Till not recognised', 'الصندوق غير معروف'],
+      'appairez-la ou reconnectez-vous': ['pair it or sign in again', 'قم بإقرانه أو سجّل الدخول من جديد'],
+      'Le pont n’a pas récupéré le ticket à temps': ['The bridge did not pick up the ticket in time', 'لم يستلم الجسر التذكرة في الوقت المناسب'],
+      'Aucune imprimante configurée': ['No printer set up', 'لم يتم إعداد أي طابعة'],
+      'Accès au réseau local refusé. Ouvrez Réglages > Kiwi Pro > Réseau local': ['Local network access denied. Open Settings > Kiwi Pro > Local Network', 'تم رفض الوصول إلى الشبكة المحلية. افتح الإعدادات > Kiwi Pro > الشبكة المحلية'],
+      'Connexion refusée. Vérifiez le port de l’imprimante': ['Connection refused. Check the printer port', 'تم رفض الاتصال. تحقق من منفذ الطابعة'],
+      'Imprimante introuvable sur ce réseau': ['Printer not found on this network', 'الطابعة غير موجودة على هذه الشبكة'],
+      'Imprimante injoignable': ['Printer unreachable', 'تعذّر الوصول إلى الطابعة'],
+      'vérifiez l’adresse IP et qu’elle est allumée': ['check the IP address and that it is switched on', 'تحقق من عنوان IP ومن أنها مشغّلة'],
+      'Connexion refusée à cette adresse': ['Connection refused at this address', 'تم رفض الاتصال بهذا العنوان'],
+      'ce n’est pas le port d’une imprimante réseau': ['this is not a network printer port', 'هذا ليس منفذ طابعة شبكة'],
+      'Adresse introuvable sur le réseau': ['Address not found on the network', 'العنوان غير موجود على الشبكة'],
+      'vérifiez l’IP': ['check the IP', 'تحقق من IP'],
+
+      /* ── la mise en garde sous le modèle choisi ── */
+      "Les Sunmi sont des terminaux Android à imprimante intégrée : l'impression passe par le terminal, il n'y a pas de pilote Windows à installer.":
+        ['Sunmi devices are Android terminals with a built-in printer: printing goes through the terminal, there is no Windows driver to install.', 'أجهزة Sunmi هي محطات Android بطابعة مدمجة: تتم الطباعة عبر الجهاز، ولا يوجد برنامج تشغيل Windows لتثبيته.'],
+      "Goojprt ne publie pas de page de téléchargement officielle joignable. Ces modèles sont de l'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n'est nécessaire.":
+        ['Goojprt publishes no reachable official download page. These models are generic ESC/POS: connect them over Bluetooth or USB, no driver is needed.', 'لا تنشر Goojprt صفحة تنزيل رسمية متاحة. هذه الطرازات تعمل بـ ESC/POS العام: اربطها عبر Bluetooth أو USB، ولا حاجة لأي برنامج تشغيل.'],
+      "Zjiang ne publie pas de page de téléchargement officielle joignable. Ces imprimantes sont de l'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n'est nécessaire.":
+        ['Zjiang publishes no reachable official download page. These printers are generic ESC/POS: connect them over Bluetooth or USB, no driver is needed.', 'لا تنشر Zjiang صفحة تنزيل رسمية متاحة. هذه الطابعات تعمل بـ ESC/POS العام: اربطها عبر Bluetooth أو USB، ولا حاجة لأي برنامج تشغيل.'],
+      "SNBC ne publie pas de page de téléchargement officielle joignable depuis le Maroc. En Bluetooth ou en USB, aucun pilote n'est nécessaire.":
+        ['SNBC publishes no official download page reachable from Morocco. Over Bluetooth or USB, no driver is needed.', 'لا تنشر SNBC صفحة تنزيل رسمية متاحة من المغرب. عبر Bluetooth أو USB، لا حاجة لأي برنامج تشغيل.'],
+      "WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n'est pas indiqué · beaucoup d'imprimantes d'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.":
+        ['WD8260 (receipts, 80 mm): ESC/POS confirmed on the label, nothing to set. WD8210 (labels, 110 mm): the language is not stated · many label printers speak TSPL. Print a test receipt before going live.', 'WD8260 (إيصالات، 80 مم): ESC/POS مؤكد على اللوحة، لا شيء لضبطه. WD8210 (ملصقات، 110 مم): اللغة غير مذكورة · كثير من طابعات الملصقات تستخدم TSPL. اطبع تذكرة تجريبية قبل التشغيل.'],
+      "Les Star impriment en mode Star Line, pas en ESC/POS. Activez l'émulation ESC/POS sur l'imprimante, sinon le ticket sortira illisible.":
+        ['Star printers print in Star Line mode, not ESC/POS. Turn on ESC/POS emulation on the printer, or the receipt will come out unreadable.', 'تطبع طابعات Star بوضع Star Line وليس ESC/POS. فعّل محاكاة ESC/POS على الطابعة، وإلا ستخرج التذكرة غير مقروءة.'],
+      'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).':
+        ['Zebra printers speak ZPL, not ESC/POS: Kiwi cannot drive them directly over Bluetooth or USB. For your labels, install the Zebra driver on the till and use the “Print” button (browser printing).', 'تستخدم طابعات Zebra لغة ZPL وليس ESC/POS: لا يستطيع Kiwi التحكم فيها مباشرة عبر Bluetooth أو USB. لملصقاتك، ثبّت برنامج تشغيل Zebra على الصندوق واستخدم زر «طباعة» (طباعة المتصفح).'],
+
+      /* ── la clôture de caisse (#cloture-modal) ── */
+      'Clôture de caisse': ['Till close-out', 'إغلاق الصندوق'],
+      'Service ouvert à': ['Service opened at', 'بداية الخدمة'],
+      'Durée du service': ['Service length', 'مدة الخدمة'],
+      '{n} mn': ['{n} min', '{n} د'],
+      '{n}h {n}': ['{n}h {n}', '{n} س {n} د'],
+      'Transactions': ['Transactions', 'المعاملات'],
+      'Tables réglées': ['Tables settled', 'الطاولات المسددة'],
+      'Total encaissé': ['Total taken', 'إجمالي المحصّل'],
+      'dont Carte': ['of which card', 'منها بالبطاقة'],
+      'dont Espèces': ['of which cash', 'منها نقدًا'],
+      'Réductions accordées': ['Discounts given', 'الخصومات الممنوحة'],
+      'Pourboires': ['Tips', 'البقشيش'],
+      'Remboursements': ['Refunds', 'المبالغ المستردة'],
+      'Autorisations manager': ['Manager approvals', 'موافقات المسؤول'],
+      'Passations de caisse': ['Till handovers', 'عمليات تسليم الصندوق'],
+      'Tiroir-caisse': ['Cash drawer', 'درج النقود'],
+      'Espèces encaissées': ['Cash taken', 'النقد المحصّل'],
+      'Pourboires espèces': ['Cash tips', 'البقشيش النقدي'],
+      'Entrées de caisse': ['Cash in', 'الإيداعات النقدية'],
+      'Sorties de caisse': ['Cash out', 'السحوبات النقدية'],
+      'Attendu en caisse': ['Expected in drawer', 'المتوقع في الدرج'],
+      'Espèces comptées': ['Cash counted', 'النقد المعدود'],
+      'Écart': ['Difference', 'الفرق'],
+      'Rapprochement carte': ['Card reconciliation', 'مطابقة البطاقات'],
+      'journée commerciale': ['business day', 'يوم العمل'],
+      'Total carte Kiwi': ['Kiwi card total', 'مجموع البطاقات في Kiwi'],
+      'Total carte du Z terminal': ['Terminal Z card total', 'مجموع بطاقات Z الجهاز'],
+      "Recopiez le total carte imprimé par le terminal, même s'il est à zéro.": ['Copy the card total printed by the terminal, even if it is zero.', 'انسخ مجموع البطاقات المطبوع من الجهاز، حتى لو كان صفرًا.'],
+      'Résultat': ['Result', 'النتيجة'],
+      'À saisir': ['Not entered', 'لم يُدخل بعد'],
+      'Montant invalide': ['Invalid amount', 'مبلغ غير صالح'],
+      'Rapproché': ['Matched', 'متطابق'],
+      'Terminal + {n} MAD': ['Terminal + {n} MAD', 'الجهاز + {n} MAD'],
+      'Imprimer le rapport Z': ['Print Z report', 'طباعة تقرير Z'],
+      'Fermer la caisse': ['Close the till', 'إغلاق الصندوق'],
+      'Clôture en cours…': ['Closing…', 'جارٍ الإغلاق…'],
+      'Clôture en cours': ['Closing in progress', 'الإغلاق جارٍ'],
+      'patientez quelques secondes': ['wait a few seconds', 'انتظر بضع ثوانٍ'],
+      'Continuer le service': ['Continue service', 'متابعة الخدمة'],
+      'Fermeture de caisse': ['Closing the till', 'إغلاق الصندوق'],
+      /* Le bandeau d'objectif, en démonstration seulement (un vrai commerce n'a
+         pas d'objectif fixé sur la caisse). Le montant est dans un <em> : la
+         phrase arrive donc en morceaux, chacun traduit à sa place. */
+      "Objectif d'lyoum dépassé,": ['Today’s target beaten,', 'تم تجاوز هدف اليوم،'],
+      'encaissés. Beau service.': ['collected. Great service.', 'محصّلة. خدمة رائعة.'],
+      'À': ['At', 'وصلت إلى'],
+      "de l'objectif d'lyoum, {n} MAD restants.": ['of today’s target, {n} MAD to go.', 'من هدف اليوم، يتبقى {n} MAD.'],
+      'à bientôt {x}': ['see you soon, {x}', 'إلى اللقاء {x}'],
+
+      /* ── l'écran d'après-clôture (#zsheet-modal) ── */
+      'Journée clôturée': ['Day closed', 'تم إغلاق اليوم'],
+      'Rapport journalier': ['Daily report', 'التقرير اليومي'],
+      'Imprimer le rapport': ['Print the report', 'طباعة التقرير'],
+      'Imprimer à nouveau': ['Print again', 'الطباعة مرة أخرى'],
+      'Continuer sans imprimer': ['Continue without printing', 'المتابعة دون طباعة'],
+      'Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.':
+        ['The report stays available in the dashboard, under Daily report · even after a reload or from another device.', 'يبقى التقرير متاحًا في لوحة القيادة، قسم التقرير اليومي · حتى بعد إعادة التحميل أو من جهاز آخر.'],
+      '{n} transaction': ['{n} transaction', '{n} معاملة'],
+      '{n} transactions': ['{n} transactions', '{n} معاملة'],
+      'Z provisoire': ['Provisional Z', 'Z مؤقت'],
+      'rapprochement distant incomplet': ['remote reconciliation incomplete', 'المطابقة عن بُعد غير مكتملة'],
+      'écart + {n} MAD': ['difference + {n} MAD', 'الفرق + {n} MAD'],
+      'écart − {n} MAD': ['difference − {n} MAD', 'الفرق − {n} MAD'],
+      'carte rapprochée': ['card matched', 'البطاقة متطابقة'],
+
+      /* ── l'ouverture hors horaires (#hours-gate) ── */
+      "Hors horaires d'ouverture": ['Outside opening hours', 'خارج أوقات العمل'],
+      'Ouvrir quand même ?': ['Open anyway?', 'الفتح على أي حال؟'],
+      'Ouvrir le service': ['Open service', 'فتح الخدمة'],
+      "L'ouverture sera enregistrée comme exceptionnelle, avec votre nom et l'heure. Pour changer les horaires habituels, passez par le tableau de bord · Réglages, Heures d'ouverture.":
+        ['The opening will be recorded as an exception, with your name and the time. To change the usual hours, go to the dashboard · Settings, Opening hours.', 'سيُسجَّل هذا الفتح كاستثناء، مع اسمك والوقت. لتغيير الأوقات المعتادة، انتقل إلى لوحة القيادة · الإعدادات، أوقات العمل.'],
+    };
+    Object.keys(S).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = S[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = S[k][1];
+    });
+  })();
+
   /* ───────────────────────── les dates ─────────────────────────
      Une date n'est pas une phrase, c'est un GABARIT À JETONS : « jeu. 30 juil. »
      n'apparaîtra jamais deux fois de suite, aucune clé fixe ne peut l'attraper,
@@ -928,6 +1270,11 @@
       'mai': 'May', 'juin': 'Jun', 'juil.': 'Jul', 'août': 'Aug',
       'sept.': 'Sep', 'oct.': 'Oct', 'nov.': 'Nov', 'déc.': 'Dec',
       'auj.': 'today', 'hier': 'yesterday', 'demain': 'tomorrow',
+      /* En toutes lettres : l'en-tête de la clôture écrit « Lundi 12 octobre ». */
+      'Lundi': 'Monday', 'Mardi': 'Tuesday', 'Mercredi': 'Wednesday', 'Jeudi': 'Thursday',
+      'Vendredi': 'Friday', 'Samedi': 'Saturday', 'Dimanche': 'Sunday',
+      'janvier': 'January', 'février': 'February', 'avril': 'April', 'juillet': 'July',
+      'septembre': 'September', 'octobre': 'October', 'novembre': 'November', 'décembre': 'December',
     },
     ar: {
       'lun.': 'الاثنين', 'mar.': 'الثلاثاء', 'mer.': 'الأربعاء', 'jeu.': 'الخميس',
@@ -936,16 +1283,22 @@
       'mai': 'ماي', 'juin': 'يونيو', 'juil.': 'يوليوز', 'août': 'غشت',
       'sept.': 'شتنبر', 'oct.': 'أكتوبر', 'nov.': 'نونبر', 'déc.': 'دجنبر',
       'auj.': 'اليوم', 'hier': 'أمس', 'demain': 'غدًا',
+      'Lundi': 'الاثنين', 'Mardi': 'الثلاثاء', 'Mercredi': 'الأربعاء', 'Jeudi': 'الخميس',
+      'Vendredi': 'الجمعة', 'Samedi': 'السبت', 'Dimanche': 'الأحد',
+      'janvier': 'يناير', 'février': 'فبراير', 'avril': 'أبريل', 'juillet': 'يوليوز',
+      'septembre': 'شتنبر', 'octobre': 'أكتوبر', 'novembre': 'نونبر', 'décembre': 'دجنبر',
     },
   };
   /* Le garde-fou : on ne remplace un jeton que si le segment RESSEMBLE à une
      date de bout en bout — jour, quantième, mois, heure, rien d'autre. */
+  /* Les jours en toutes lettres portent leur majuscule (c'est ainsi que la
+     caisse les écrit) : « lundi » minuscule dans un nom d'article ne bouge pas. */
   var DATE_LIKE = new RegExp(
-    '^(?:(lun|mar|mer|jeu|ven|sam|dim)\\.|auj\\.|hier|demain)?\\s*' +
+    '^(?:(lun|mar|mer|jeu|ven|sam|dim)\\.|auj\\.|hier|demain|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)?\\s*' +
     '(?:\\d{1,2})?\\s*' +
-    '(?:(janv|févr|avr|juil|sept|oct|nov|déc)\\.|mars|mai|juin|août)?\\s*' +
+    '(?:(janv|févr|avr|juil|sept|oct|nov|déc)\\.|mars|mai|juin|août|janvier|février|avril|juillet|septembre|octobre|novembre|décembre)?\\s*' +
     '(?:\\d{1,2}:\\d{2})?$');
-  var DATE_TOK = /(lun|mar|mer|jeu|ven|sam|dim|janv|févr|avr|juil|sept|oct|nov|déc|auj)\.|\b(mars|mai|juin|août|hier|demain)\b/g;
+  var DATE_TOK = /(lun|mar|mer|jeu|ven|sam|dim|janv|févr|avr|juil|sept|oct|nov|déc|auj)\.|\b(mars|mai|juin|août|hier|demain|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|janvier|février|avril|juillet|septembre|octobre|novembre|décembre)(?![A-Za-zÀ-ÿ])/g;
 
   /* ───────────────────────── état ───────────────────────── */
   var cur = 'fr';
@@ -993,10 +1346,19 @@
        caisse — une vente, un scan, un changement de rayon — et empiler les
        marques ferait grossir le nœud d'un caractère invisible par frappe. */
     if (s.indexOf(LRI) >= 0 || s.indexOf(PDI) >= 0) s = s.replace(/[\u2066\u2069]/g, '');
-    return s.replace(AMOUNT, function (m0) {
+    /* Un signe EN T\u00caTE s\u00e9par\u00e9 par une espace (\u00ab + 5 848 MAD \u00bb, \u00ab \u2212 8 MAD \u00bb :
+       c'est ainsi que la cl\u00f4ture \u00e9crit ses lignes de tiroir et ses \u00e9carts)
+       appartient au montant. Laiss\u00e9 dehors, il passait de l'autre c\u00f4t\u00e9 du
+       nombre : \u00ab 5 848 MAD + \u00bb. Seulement en t\u00eate : au milieu d'une phrase,
+       \u00ab 3 - 4 \u00bb reste une ponctuation. */
+    var lead = /^([-\u2212+][ \u00a0\u202f])(?=\d)/.exec(s);
+    if (lead) s = s.slice(lead[1].length);
+    var out = s.replace(AMOUNT, function (m0) {
       var core = m0.replace(/\s+$/, '');       // l'espace de fin reste dehors
       return core ? LRI + core + PDI + m0.slice(core.length) : m0;
     });
+    if (lead) out = out.charAt(0) === LRI ? LRI + lead[1] + out.slice(1) : lead[1] + out;
+    return out;
   }
   function isRtl() {
     var l = LANGS.filter(function (x) { return x.id === cur; })[0];
@@ -1082,14 +1444,51 @@
     var m = /^([\d][\d\s\u202f\u00a0.,]*)\s(.+)$/.exec(seg);
     if (m && d[m[2]]) return m[1] + ' ' + d[m[2]];
 
-    /* Un mot d'interface suivi d'une DONNÉE : « par Salma ». La clé porte son
-       propre {x} — la donnée traverse sans être lue, et une langue qui préfère
-       mettre le nom devant peut le faire. */
-    var px = /^(\S+)\s+([\s\S]+)$/.exec(seg);
-    if (px && d[px[1] + ' {x}']) return d[px[1] + ' {x}'].replace('{x}', px[2]);
+    /* Une phrase d'interface qui encadre une DONNÉE : « par Salma »,
+       « Imprimante « Cuisine » enregistrée », « Ticket test envoyé (Bar) ».
+       La clé porte son propre {x} — la donnée traverse sans être lue, et une
+       langue qui préfère mettre le nom devant peut le faire. */
+    var hole = translateHole(seg, d);
+    if (hole != null) return hole;
 
     // Une date : des jetons, pas une phrase.
     return translateDate(seg);
+  }
+
+  /* Les clés à trou {x}, rangées par leur premier mot. Le balayage passe sur
+     chaque nœud de la caisse à chaque rendu : on ne parcourt donc pas tout le
+     dictionnaire, on ne regarde que les gabarits qui commencent par le même
+     mot que le segment. Construit une fois par langue — tous les blocs du
+     dictionnaire sont fusionnés au chargement, avant le premier balayage.
+     Une clé qui COMMENCE par {x} n'a pas de mot d'ancrage : elle n'est pas
+     acceptée, sinon chaque nom propre deviendrait candidat. */
+  var holes = {};
+  function holeIndex(d) {
+    if (holes[cur]) return holes[cur];
+    var idx = Object.create(null);
+    Object.keys(d).forEach(function (k) {
+      var at = k.indexOf('{x}');
+      if (at <= 0) return;
+      var pre = k.slice(0, at), suf = k.slice(at + 3);
+      var w = pre.split(/\s/)[0];
+      (idx[w] = idx[w] || []).push({ pre: pre, suf: suf, key: k });
+    });
+    // Le gabarit le plus long d'abord : « Imprimante du poste {x} » avant « Imprimante {x} ».
+    Object.keys(idx).forEach(function (w) {
+      idx[w].sort(function (a, b) { return (b.pre.length + b.suf.length) - (a.pre.length + a.suf.length); });
+    });
+    return (holes[cur] = idx);
+  }
+  function translateHole(seg, d) {
+    var list = holeIndex(d)[seg.split(/\s/)[0]];
+    if (!list) return null;
+    for (var i = 0; i < list.length; i++) {
+      var t = list[i];
+      if (seg.length > t.pre.length + t.suf.length && seg.startsWith(t.pre) && seg.endsWith(t.suf)) {
+        return d[t.key].replace('{x}', seg.slice(t.pre.length, seg.length - t.suf.length));
+      }
+    }
+    return null;
   }
 
   /* On ne touche aux jetons de date QUE si le segment RESSEMBLE de bout en bout
