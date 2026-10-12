@@ -336,6 +336,7 @@ var SHELL = [
   '/assets/pos-maison.css?v=63',
   '/assets/pos-maison.js?v=63',
   '/assets/caisse-pairing.js?v=27',
+  '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
