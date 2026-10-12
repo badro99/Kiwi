@@ -8870,7 +8870,7 @@
         <div class="rp-item">
           <span class="rp-item-qty">${l.qty}×${l.sent && l.kind !== 'formula-part' && l.uid
             ? `<button type="button" class="qty-btn" data-table-void="${kdsEsc(l.uid)}" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>` : ''}</span>
-          <span class="rp-item-name">${lineName(l)}${promoTag(l)}</span>
+          <span class="rp-item-name">${lineName(l)}${promoTag(l)}${l.held ? ' <span class="rp-hold-mark">À suivre</span>' : ''}</span>
           <span class="rp-item-price mono">${fmtMAD(l.total)}</span>
           ${l.note && l.note.trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
         </div>
@@ -12430,6 +12430,7 @@
          ne doit jamais se confondre avec sans salade + sauce blanche. */
       const priced = promoPrice(item, item.price + extra);
       const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
+        && !l.hold && !l.committed
         && !(l.note || '').trim() && (l.optSig || '') === sig && promoKey(l.promo) === promoKey(priced.promo));
       if (line) line.qty++;
       else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name,
