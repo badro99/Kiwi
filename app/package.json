@@ -13,11 +13,11 @@
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/core": "^8.5.0",
+    "@capacitor/core": "^8.5.3",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.5.0",
+    "@capacitor/ios": "^8.5.3",
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/network": "^8.0.1",
     "@capacitor/splash-screen": "8.0.2",
@@ -29,7 +29,7 @@
     "kiwi-printer-socket": "file:plugins/kiwi-printer-socket"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.0",
+    "@capacitor/cli": "^8.5.3",
     "puppeteer-core": "^24.43.1",
     "typescript": "^5.9.0"
   }
