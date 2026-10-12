@@ -115,6 +115,10 @@ try {
       }
       if(step===1) await page.type('[data-f="ownerName"]','Layout Review');
       if(step===2) {
+        // No type is pre-selected (fix-now #11): Continue stays disabled until
+        // one is chosen, so choose first, then prove the empty-name feedback.
+        check(await page.$eval('.kob-foot .primary',e=>e.disabled),'business step waits for a type before Continue opens');
+        await page.click('[data-type]:not(.hide)');
         await page.click('.kob-foot .primary');
         check(await page.$eval('.kob-err',e=>e.getAttribute('role')==='alert' && e.textContent.length>0),'empty business name gives inline accessible feedback');
         await page.type('[data-f="bizName"]','Local Layout Fixture');
