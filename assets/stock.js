@@ -2519,6 +2519,282 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 2 · Articles & stock (Catalogue, Journal des pertes, Historique)
    * ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Journal des pertes, historique des inventaires et revue propriétaire ·
+   * FR / EN / AR. Ce qui est STOCKÉ reste en français (« Propriétaire »,
+   * « Magasin principal », « Déclaration perte · perime », « Remplacé par … ») :
+   * les registres existants et le serveur en dépendent. On traduit au moment
+   * d'afficher, comme jobName() dans team.js et les noms de couleur de
+   * color-palette.js. Sous FR, chaque libellé reste celui d'avant. */
+  const COUNT_STR = {
+    fr: {
+      exportCsv: 'Exporter CSV',
+      rangeToday: "Aujourd'hui", range7: '7 derniers jours', range30: '30 derniers jours', rangeAll: 'Tout l’historique',
+      thDate: 'Date & Heure', thItem: 'Article', thEmployee: 'Employé', thActions: 'Actions', thValueMad: 'Valeur MAD',
+      // Journal des pertes
+      wasteSearchPh: 'Chercher un article, employé, note…', wasteSearchAria: 'Recherche journal des pertes',
+      declareBtn: 'Déclarer une perte', reasonAll: 'Tous motifs',
+      rsPerime: 'Périmé', rsCasse: 'Casse', rsAvarie: 'Avarié / Abîmé', rsAvarieShort: 'Avarié', rsOffert: 'Offert',
+      rsStaff: 'Repas équipe', rsOther: 'Autre perte', rsLoss: 'Perte', rsReversal: 'Annulation',
+      kpiLostValue: 'TOTAL VALEUR PERDUE', kpiLostRecords: (n) => `${n} déclarations de pertes`,
+      kpiLostVolume: "VOLUME D'ARTICLES PERDUS", kpiLostVolumeSub: 'unités / kg sorties',
+      thQty: 'Quantité', thUnit: 'Unité', thReason: 'Motif', thNote: 'Note',
+      lot: (id) => `Lot: ${id}`, cancelLossTitle: 'Annuler cette perte', cancel: 'Annuler',
+      wasteEmpty: 'Aucune perte enregistrée sur cette période.',
+      wasteFoot: (n, v) => `Total : ${n} lignes de pertes · Valeur cumulée : <b>${v}</b>`,
+      moveNotFound: 'Mouvement introuvable',
+      cancelLossConfirm: (q) => `Annuler la perte de ${q} pour cet article ? Un contre-mouvement sera écrit dans le registre.`,
+      lossCancelledToast: 'Perte annulée · contre-mouvement enregistré',
+      // Déclarer une perte
+      declareTitle: 'Déclarer une perte de stock',
+      declareSub: 'Déduction immédiate du registre et traçabilité dans le journal des pertes.',
+      declareItem: 'Article concerné', declareQty: 'Quantité perdue', declareReason: 'Motif de la perte',
+      optPerime: 'Péremption / DLC dépassée', optCasse: 'Casse / Détérioration', optAvarie: 'Avarie / Défaut',
+      optOffert: 'Geste commercial / Offert', optStaff: 'Repas employé / équipe', optOther: 'Autre motif',
+      declareNote: 'Justification / Note (optionnelle)', declareNotePh: 'Ex: DLC au 21/08, bocal brisé à la mise en rayon…',
+      declareSave: 'Enregistrer la perte', qtyInvalid: 'Précisez une quantité valide',
+      lossSavedToast: 'Perte enregistrée et déduite du stock',
+      // Historique des inventaires
+      tabList: 'Liste des inventaires', tabRollup: 'Écarts récurrents (Analyse)', newCount: 'Nouvel inventaire',
+      countSearchPh: 'Chercher un inventaire, employé, magasin…', countSearchAria: 'Recherche inventaires',
+      statusAll: 'Tous statuts', statusPending: (n) => `À valider (${n})`, statusApplied: 'Validés', statusRejected: 'Refusés',
+      kpiCounts: 'INVENTAIRES RÉALISÉS', kpiCountsSub: (n) => `${n} en attente de revue`,
+      kpiNet: 'ÉCART NET EN VALEUR', kpiAbs: (v) => `Écart absolu : ${v}`,
+      thRef: 'Réf.', thStore: 'Magasin', thItems: 'Articles', thNetMad: 'Écart net MAD', thStatus: 'Statut',
+      stPending: 'À valider', stApplied: 'Validé', stRejected: 'Refusé',
+      btnReview: 'Examiner', btnDetails: 'Détails',
+      countsEmpty: 'Aucun inventaire correspondant aux filtres.',
+      countsFoot: (n) => `${n} inventaire${n > 1 ? 's' : ''} affiché${n > 1 ? 's' : ''}`,
+      rollTopItems: 'Articles & déclinaisons aux plus forts écarts',
+      thCountTimes: 'Comptages', thCumDiff: 'Écart cumulé', thImpactMad: 'Impact MAD', sku: (s) => `Réf: ${s}`,
+      rollNoVariance: 'Aucun écart détecté.', rollByEmployee: 'Écarts par employé',
+      thCountsN: 'Inventaires', thAbsCum: 'Écart absolu cumulé', rollNoCount: 'Aucun comptage.',
+      rollByStore: 'Synthèse par établissement', thVenue: 'Établissement', thNet: 'Écart net', thAbs: 'Écart absolu',
+      // Revue propriétaire
+      countNotFound: 'Inventaire introuvable',
+      dTitle: (id) => `Inventaire #${id}`,
+      dDesc: (store, who, date, time) => `${store} · Soumis par ${who} le ${date} à ${time}`,
+      dPending: 'À valider par le propriétaire', dApplied: 'Validé & appliqué',
+      dLines: (n) => `${n} article${n > 1 ? 's' : ''} compté${n > 1 ? 's' : ''}`,
+      dTotal: 'Écart total en valeur :', dReviewNote: 'Note de revue :', dBy: (name) => `(par ${name})`,
+      thItemVariant: 'Article & Déclinaison', thBefore: 'Stock avant', thCounted: 'Compté', thDiff: 'Écart', thRemark: 'Remarque',
+      dNoLines: 'Aucune ligne enregistrée.',
+      dNoteLabel: 'Note ou commentaire de décision (optionnel)', dNotePh: 'Justification de la décision…',
+      dClose: 'Fermer', dReject: "Refuser l'inventaire", dApprove: 'Valider et appliquer le stock',
+      toastApproved: 'Inventaire validé · stock mis à jour', toastRejected: 'Inventaire refusé',
+      // Valeurs stockées, lues dans la langue de l'écran
+      whoOwner: 'Propriétaire', whoEmployee: 'Employé', whoCashier: 'Caissier', whoUnknown: 'Inconnu',
+      storeMain: 'Magasin principal', storeRegister: 'Caisse Principale',
+      roleOwner: 'Propriétaire', roleAdmin: 'Admin', roleManager: 'Manager', roleCashier: 'Caissier', roleServer: 'Serveur', roleEmployee: 'Employé',
+      replacedBy: (id) => `Remplacé par ${id}`, unitDefault: 'unité',
+      wasteNoteDeclared: (r) => `Déclaration perte · ${r}`, wasteNoteCancelled: (ref) => `Annulation perte ${ref}`,
+      // Exports
+      csvCounts: ['ID_Inventaire', 'Date', 'Magasin', 'Employe', 'Role', 'Statut', 'Nb_Lignes', 'Ecart_Net_MAD', 'Ecart_Abs_MAD', 'Validateur', 'Decision', 'Note_Revue'],
+      csvWaste: ['Date', 'Article', 'Quantite', 'Unite', 'Motif', 'Valeur_MAD', 'Employe', 'Note', 'ID_Mouvement'],
+      csvCountsFile: 'historique-inventaires', csvWasteFile: 'journal-pertes',
+    },
+    en: {
+      exportCsv: 'Export CSV',
+      rangeToday: 'Today', range7: 'Last 7 days', range30: 'Last 30 days', rangeAll: 'All history',
+      thDate: 'Date & time', thItem: 'Item', thEmployee: 'Employee', thActions: 'Actions', thValueMad: 'Value MAD',
+      wasteSearchPh: 'Search an item, employee or note…', wasteSearchAria: 'Search the waste journal',
+      declareBtn: 'Record a loss', reasonAll: 'All reasons',
+      rsPerime: 'Expired', rsCasse: 'Breakage', rsAvarie: 'Damaged', rsAvarieShort: 'Damaged', rsOffert: 'Given away',
+      rsStaff: 'Staff meal', rsOther: 'Other loss', rsLoss: 'Loss', rsReversal: 'Cancellation',
+      kpiLostValue: 'TOTAL VALUE LOST', kpiLostRecords: (n) => `${n} loss record${n === 1 ? '' : 's'}`,
+      kpiLostVolume: 'VOLUME OF ITEMS LOST', kpiLostVolumeSub: 'units / kg removed',
+      thQty: 'Quantity', thUnit: 'Unit', thReason: 'Reason', thNote: 'Note',
+      lot: (id) => `Lot: ${id}`, cancelLossTitle: 'Cancel this loss', cancel: 'Cancel',
+      wasteEmpty: 'No loss recorded in this period.',
+      wasteFoot: (n, v) => `Total: ${n} loss line${n === 1 ? '' : 's'} · Cumulative value: <b>${v}</b>`,
+      moveNotFound: 'Movement not found',
+      cancelLossConfirm: (q) => `Cancel the loss of ${q} for this item? A reversing movement will be written to the ledger.`,
+      lossCancelledToast: 'Loss cancelled · reversing movement recorded',
+      declareTitle: 'Record a stock loss',
+      declareSub: 'Deducted from the ledger at once and traced in the waste journal.',
+      declareItem: 'Item concerned', declareQty: 'Quantity lost', declareReason: 'Reason for the loss',
+      optPerime: 'Expired / past use-by date', optCasse: 'Breakage / deterioration', optAvarie: 'Damage / defect',
+      optOffert: 'Goodwill gesture / given away', optStaff: 'Staff meal', optOther: 'Other reason',
+      declareNote: 'Justification / note (optional)', declareNotePh: 'E.g. use-by 21/08, jar broken while shelving…',
+      declareSave: 'Record the loss', qtyInvalid: 'Enter a valid quantity',
+      lossSavedToast: 'Loss recorded and deducted from stock',
+      tabList: 'Count list', tabRollup: 'Recurring variances (analysis)', newCount: 'New count',
+      countSearchPh: 'Search a count, employee or store…', countSearchAria: 'Search counts',
+      statusAll: 'All statuses', statusPending: (n) => `To review (${n})`, statusApplied: 'Approved', statusRejected: 'Rejected',
+      kpiCounts: 'COUNTS COMPLETED', kpiCountsSub: (n) => `${n} awaiting review`,
+      kpiNet: 'NET VARIANCE IN VALUE', kpiAbs: (v) => `Absolute variance: ${v}`,
+      thRef: 'Ref.', thStore: 'Store', thItems: 'Items', thNetMad: 'Net variance MAD', thStatus: 'Status',
+      stPending: 'To review', stApplied: 'Approved', stRejected: 'Rejected',
+      btnReview: 'Review', btnDetails: 'Details',
+      countsEmpty: 'No count matches these filters.',
+      countsFoot: (n) => `${n} count${n === 1 ? '' : 's'} shown`,
+      rollTopItems: 'Items and variants with the largest variances',
+      thCountTimes: 'Counts', thCumDiff: 'Cumulative variance', thImpactMad: 'Impact MAD', sku: (s) => `Ref: ${s}`,
+      rollNoVariance: 'No variance found.', rollByEmployee: 'Variances by employee',
+      thCountsN: 'Counts', thAbsCum: 'Cumulative absolute variance', rollNoCount: 'No counts yet.',
+      rollByStore: 'Summary by location', thVenue: 'Location', thNet: 'Net variance', thAbs: 'Absolute variance',
+      countNotFound: 'Count not found',
+      dTitle: (id) => `Count #${id}`,
+      dDesc: (store, who, date, time) => `${store} · Submitted by ${who} on ${date} at ${time}`,
+      dPending: 'Awaiting owner review', dApplied: 'Approved and applied',
+      dLines: (n) => `${n} item${n === 1 ? '' : 's'} counted`,
+      dTotal: 'Total variance in value:', dReviewNote: 'Review note:', dBy: (name) => `(by ${name})`,
+      thItemVariant: 'Item & variant', thBefore: 'Stock before', thCounted: 'Counted', thDiff: 'Variance', thRemark: 'Remark',
+      dNoLines: 'No line recorded.',
+      dNoteLabel: 'Decision note or comment (optional)', dNotePh: 'Reason for the decision…',
+      dClose: 'Close', dReject: 'Reject the count', dApprove: 'Approve and apply to stock',
+      toastApproved: 'Count approved · stock updated', toastRejected: 'Count rejected',
+      whoOwner: 'Owner', whoEmployee: 'Employee', whoCashier: 'Cashier', whoUnknown: 'Unknown',
+      storeMain: 'Main store', storeRegister: 'Main register',
+      roleOwner: 'Owner', roleAdmin: 'Admin', roleManager: 'Manager', roleCashier: 'Cashier', roleServer: 'Server', roleEmployee: 'Employee',
+      replacedBy: (id) => `Replaced by ${id}`, unitDefault: 'unit',
+      wasteNoteDeclared: (r) => `Loss declared · ${r}`, wasteNoteCancelled: (ref) => `Loss cancelled ${ref}`,
+      csvCounts: ['Count_ID', 'Date', 'Store', 'Employee', 'Role', 'Status', 'Lines', 'Net_Variance_MAD', 'Abs_Variance_MAD', 'Reviewer', 'Decision', 'Review_Note'],
+      csvWaste: ['Date', 'Item', 'Quantity', 'Unit', 'Reason', 'Value_MAD', 'Employee', 'Note', 'Movement_ID'],
+      csvCountsFile: 'count-history', csvWasteFile: 'waste-journal',
+    },
+    ar: {
+      exportCsv: 'تصدير الجدول',
+      rangeToday: 'اليوم', range7: 'آخر 7 أيام', range30: 'آخر 30 يومًا', rangeAll: 'السجل كاملًا',
+      thDate: 'التاريخ والوقت', thItem: 'المنتج', thEmployee: 'الموظف', thActions: 'إجراءات', thValueMad: 'القيمة بالدرهم',
+      wasteSearchPh: 'ابحث عن منتج أو موظف أو ملاحظة…', wasteSearchAria: 'البحث في سجل الهدر',
+      declareBtn: 'تسجيل خسارة', reasonAll: 'كل الأسباب',
+      rsPerime: 'منتهي الصلاحية', rsCasse: 'كسر', rsAvarie: 'تالف', rsAvarieShort: 'تالف', rsOffert: 'هدية',
+      rsStaff: 'وجبة الفريق', rsOther: 'خسارة أخرى', rsLoss: 'خسارة', rsReversal: 'إلغاء',
+      kpiLostValue: 'إجمالي القيمة المفقودة', kpiLostRecords: (n) => `عدد التصريحات: ${n}`,
+      kpiLostVolume: 'حجم المنتجات المفقودة', kpiLostVolumeSub: 'وحدات أو كيلوغرامات خرجت من المخزون',
+      thQty: 'الكمية', thUnit: 'الوحدة', thReason: 'السبب', thNote: 'ملاحظة',
+      lot: (id) => `الدفعة: ${id}`, cancelLossTitle: 'إلغاء هذه الخسارة', cancel: 'إلغاء',
+      wasteEmpty: 'لا توجد خسائر مسجلة في هذه الفترة.',
+      wasteFoot: (n, v) => `عدد أسطر الخسائر: ${n} · القيمة التراكمية: <b>${v}</b>`,
+      moveNotFound: 'الحركة غير موجودة',
+      cancelLossConfirm: (q) => `إلغاء خسارة ${q} لهذا المنتج؟ ستُكتب حركة عكسية في السجل.`,
+      lossCancelledToast: 'أُلغيت الخسارة · سُجّلت حركة عكسية',
+      declareTitle: 'تسجيل خسارة في المخزون',
+      declareSub: 'تُخصم فورًا من السجل وتبقى قابلة للتتبع في سجل الهدر.',
+      declareItem: 'المنتج المعني', declareQty: 'الكمية المفقودة', declareReason: 'سبب الخسارة',
+      optPerime: 'انتهاء الصلاحية', optCasse: 'كسر أو تلف', optAvarie: 'عطب أو عيب',
+      optOffert: 'مجاملة تجارية أو هدية', optStaff: 'وجبة الموظفين أو الفريق', optOther: 'سبب آخر',
+      declareNote: 'المبرر أو ملاحظة (اختياري)', declareNotePh: 'مثال: تنتهي الصلاحية في 21/08، برطمان انكسر أثناء الترتيب…',
+      declareSave: 'تسجيل الخسارة', qtyInvalid: 'أدخل كمية صحيحة',
+      lossSavedToast: 'سُجّلت الخسارة وخُصمت من المخزون',
+      tabList: 'قائمة عمليات الجرد', tabRollup: 'الفروق المتكررة (تحليل)', newCount: 'جرد جديد',
+      countSearchPh: 'ابحث عن جرد أو موظف أو متجر…', countSearchAria: 'البحث في عمليات الجرد',
+      statusAll: 'كل الحالات', statusPending: (n) => `للمراجعة (${n})`, statusApplied: 'المقبولة', statusRejected: 'المرفوضة',
+      kpiCounts: 'عمليات الجرد المنجزة', kpiCountsSub: (n) => `في انتظار المراجعة: ${n}`,
+      kpiNet: 'صافي الفرق بالقيمة', kpiAbs: (v) => `الفرق المطلق: ${v}`,
+      thRef: 'المرجع', thStore: 'المتجر', thItems: 'المنتجات', thNetMad: 'صافي الفرق بالدرهم', thStatus: 'الحالة',
+      stPending: 'للمراجعة', stApplied: 'مقبول', stRejected: 'مرفوض',
+      btnReview: 'مراجعة', btnDetails: 'التفاصيل',
+      countsEmpty: 'لا يوجد جرد يطابق عوامل التصفية.',
+      countsFoot: (n) => `عدد عمليات الجرد المعروضة: ${n}`,
+      rollTopItems: 'المنتجات والأصناف ذات أكبر الفروق',
+      thCountTimes: 'مرات العد', thCumDiff: 'الفرق التراكمي', thImpactMad: 'الأثر بالدرهم', sku: (s) => `المرجع: ${s}`,
+      rollNoVariance: 'لم يُرصد أي فرق.', rollByEmployee: 'الفروق حسب الموظف',
+      thCountsN: 'عمليات الجرد', thAbsCum: 'الفرق المطلق التراكمي', rollNoCount: 'لا توجد عمليات عد.',
+      rollByStore: 'ملخص حسب المؤسسة', thVenue: 'المؤسسة', thNet: 'صافي الفرق', thAbs: 'الفرق المطلق',
+      countNotFound: 'الجرد غير موجود',
+      dTitle: (id) => `الجرد رقم ${id}`,
+      dDesc: (store, who, date, time) => `${store} · أرسله ${who} في ${date} على الساعة ${time}`,
+      dPending: 'في انتظار مراجعة المالك', dApplied: 'مقبول ومُطبَّق',
+      dLines: (n) => `المنتجات المعدودة: ${n}`,
+      dTotal: 'إجمالي الفرق بالقيمة:', dReviewNote: 'ملاحظة المراجعة:', dBy: (name) => `(بواسطة ${name})`,
+      thItemVariant: 'المنتج والصنف', thBefore: 'المخزون قبل العد', thCounted: 'المعدود', thDiff: 'الفرق', thRemark: 'ملاحظة',
+      dNoLines: 'لا توجد أسطر مسجلة.',
+      dNoteLabel: 'ملاحظة أو تعليق على القرار (اختياري)', dNotePh: 'مبرر القرار…',
+      dClose: 'إغلاق', dReject: 'رفض الجرد', dApprove: 'قبول الجرد وتطبيقه على المخزون',
+      toastApproved: 'قُبل الجرد · تم تحديث المخزون', toastRejected: 'رُفض الجرد',
+      whoOwner: 'المالك', whoEmployee: 'موظف', whoCashier: 'أمين الصندوق', whoUnknown: 'غير معروف',
+      storeMain: 'المتجر الرئيسي', storeRegister: 'الصندوق الرئيسي',
+      roleOwner: 'المالك', roleAdmin: 'مسؤول', roleManager: 'مدير', roleCashier: 'أمين الصندوق', roleServer: 'نادل', roleEmployee: 'موظف',
+      replacedBy: (id) => `استُبدل بالجرد ${id}`, unitDefault: 'وحدة',
+      wasteNoteDeclared: (r) => `تصريح بخسارة · ${r}`, wasteNoteCancelled: (ref) => `إلغاء خسارة ${ref}`,
+      csvCounts: ['معرّف الجرد', 'التاريخ', 'المتجر', 'الموظف', 'الدور', 'الحالة', 'عدد الأسطر', 'صافي الفرق بالدرهم', 'الفرق المطلق بالدرهم', 'المراجع', 'القرار', 'ملاحظة المراجعة'],
+      csvWaste: ['التاريخ', 'المنتج', 'الكمية', 'الوحدة', 'السبب', 'القيمة بالدرهم', 'الموظف', 'ملاحظة', 'معرّف الحركة'],
+      csvCountsFile: 'سجل-الجرد', csvWasteFile: 'سجل-الهدر',
+    },
+  };
+  function ct(k, ...args) {
+    const L = COUNT_STR[lang()] || COUNT_STR.fr;
+    const v = L[k] != null ? L[k] : COUNT_STR.fr[k];
+    return typeof v === 'function' ? v(...args) : (v != null ? v : k);
+  }
+  /* Montant : « درهم » sous l'arabe, comme curUnit() du tableau de bord. */
+  function ctMad(n) {
+    const s = fmtMad(n);
+    return lang() === 'ar' ? s.replace(/MAD$/, 'درهم') : s;
+  }
+  /* Quantité : séparateurs de KiwiNumber, jusqu'à trois décimales utiles. */
+  function ctNum(n) {
+    const v = Math.round((+n || 0) * 1000) / 1000;
+    const dec = Number.isInteger(v) ? 0 : Math.min(3, (String(v).split('.')[1] || '').length);
+    return fmtNum(v, dec);
+  }
+  /* Date et heure : la locale des nombres (chiffres latins sous FR et AR). */
+  function ctWhen(ts) {
+    const d = new Date(ts || Date.now());
+    const loc = window.KiwiNumber?.locale?.() || (lang() === 'en' ? 'en-GB' : 'fr-FR');
+    return { date: d.toLocaleDateString(loc), time: d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) };
+  }
+  /* Noms par défaut posés par Kiwi (jamais un vrai prénom) → langue de l'écran. */
+  function ctWho(name) {
+    const s = String(name == null ? '' : name);
+    const key = { 'Propriétaire': 'whoOwner', 'Employé': 'whoEmployee', 'Caissier': 'whoCashier', 'Inconnu': 'whoUnknown' }[s.trim()];
+    if (key) return ct(key);
+    const m = /^(.+) \(Propriétaire\)$/.exec(s);
+    return m ? `${m[1]} (${ct('whoOwner')})` : s;
+  }
+  function ctRole(role) {
+    const s = String(role == null ? '' : role).trim();
+    const code = { owner: 'roleOwner', admin: 'roleAdmin', manager: 'roleManager', cashier: 'roleCashier', server: 'roleServer', employee: 'roleEmployee', staff: 'roleEmployee' }[s.toLowerCase()];
+    if (code) return ct(code);
+    if (lang() === 'fr') return s;
+    const label = { 'Propriétaire': 'roleOwner', 'Admin': 'roleAdmin', 'Manager': 'roleManager', 'Gérant': 'roleManager', 'Gérante': 'roleManager', 'Caissier': 'roleCashier', 'Caissière': 'roleCashier', 'Serveur': 'roleServer', 'Serveuse': 'roleServer', 'Employé': 'roleEmployee', 'Employée': 'roleEmployee' }[s];
+    return label ? ct(label) : s;
+  }
+  function ctStore(name) {
+    const s = String(name == null ? '' : name).trim();
+    if (!s) return ct('storeMain');
+    const key = { 'Magasin principal': 'storeMain', 'Principal': 'storeMain', 'Caisse Principale': 'storeRegister' }[s];
+    return key && lang() !== 'fr' ? ct(key) : s;
+  }
+  function ctReviewNote(note) {
+    const s = String(note == null ? '' : note);
+    const m = /^Remplacé par (.+)$/.exec(s);
+    return m ? ct('replacedBy', m[1]) : s;
+  }
+  /* Motif d'une ligne du journal ; un code inconnu (« waste », …) se lit « Perte ». */
+  function ctReason(code, isReversal) {
+    if (isReversal) return ct('rsReversal');
+    const key = { perime: 'rsPerime', expiry: 'rsPerime', 'Péremption': 'rsPerime', casse: 'rsCasse', avarie: 'rsAvarie', offert: 'rsOffert', gift: 'rsOffert', 'repas-equipe': 'rsStaff', 'staff-meal': 'rsStaff', autre: 'rsOther' }[code];
+    return ct(key || 'rsLoss');
+  }
+  /* Notes générées par Kiwi (déclaration, annulation) ; une note saisie reste telle quelle. */
+  function ctWasteNote(note) {
+    const s = String(note == null ? '' : note);
+    let m = /^Déclaration perte · (\S+)$/.exec(s);
+    if (m) return ct('wasteNoteDeclared', ctReason(m[1]));
+    m = /^Annulation perte (\S+)$/.exec(s);
+    return m ? ct('wasteNoteCancelled', m[1]) : s;
+  }
+  /* Unités canoniques de restaurant-units.js ; sous l'arabe « كغ » comme le
+     reste de la page, sous l'anglais les symboles restent des symboles. */
+  function ctUnit(unit) {
+    const s = String(unit == null ? '' : unit);
+    if (s === 'unité') return ct('unitDefault');
+    const l = lang();
+    if (l !== 'en' && l !== 'ar') return s;
+    const U = {
+      mg: [s, 'ملغ'], g: [s, 'غ'], kg: [s, 'كغ'], ml: [s, 'مل'], cl: [s, 'سل'], L: [s, 'ل'],
+      douzaine: ['dozen', 'دزينة'], lot: ['lot', 'دفعة'], paquet: ['pack', 'رزمة'], sachet: ['sachet', 'كيس صغير'],
+      sac: ['bag', 'كيس'], 'boîte': ['box', 'علبة'], carton: ['carton', 'كرتونة'], barquette: ['tray', 'علبة تغليف'],
+      bouteille: ['bottle', 'قنينة'], canette: ['can', 'علبة معدنية'], bocal: ['jar', 'برطمان'], pot: ['pot', 'وعاء'],
+      bidon: ['jerrycan', 'جالون'], seau: ['bucket', 'سطل'], 'fût': ['keg', 'برميل'], bac: ['tub', 'حوض'],
+      botte: ['bunch', 'حزمة'], caisse: ['crate', 'صندوق'], plateau: ['tray', 'صينية'], rouleau: ['roll', 'لفافة'],
+    }[s];
+    return U ? U[l === 'en' ? 0 : 1] : s;
+  }
+
   function getWasteMovements() {
     const I = window.KiwiInventory;
     if (!I || !I.history) return [];
@@ -2558,8 +2834,8 @@
       wasteRows = wasteRows.filter(r => {
         const it = getInv().find(x => x.id === r.itemId);
         const name = (it ? it.name : r.itemId).toLowerCase();
-        const actor = String(r.actor || '').toLowerCase();
-        const note = String(r.note || '').toLowerCase();
+        const actor = `${r.actor || ''} ${ctWho(r.actor || '')}`.toLowerCase();
+        const note = `${r.note || ''} ${ctWasteNote(r.note || '')}`.toLowerCase();
         return name.includes(q) || actor.includes(q) || note.includes(q);
       });
     }
@@ -2580,68 +2856,55 @@
     const rangePill = (id, label) => `<button class="st-cat-pill${stWasteDateRange === id ? ' on' : ''}" type="button" data-action="stock-waste-range" data-range="${id}">${esc(label)}</button>`;
     const reasonPill = (id, label) => `<button class="st-cat-pill${stWasteFilterReason === id ? ' on' : ''}" type="button" data-action="stock-waste-reason" data-reason="${id}">${esc(label)}</button>`;
 
-    const reasonLabelMap = {
-      'perime': 'Périmé',
-      'casse': 'Casse',
-      'avarie': 'Avarié / Abîmé',
-      'offert': 'Offert',
-      'repas-equipe': 'Repas équipe',
-      'autre': 'Autre perte',
-      'expiry': 'Périmé',
-      'gift': 'Offert',
-      'staff-meal': 'Repas équipe',
-      'loss': 'Perte'
-    };
-
     return `
       <div class="st-section">
         <div class="st-toolbar" style="margin-bottom:16px;">
           <div class="st-search-row">
             <div class="st-search-wrap">
               ${svg('search', 16)}
-              <input class="st-search" type="text" placeholder="Chercher un article, employé, note…" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="Recherche journal des pertes" />
+              <input class="st-search" type="text" placeholder="${esc(ct('wasteSearchPh'))}" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="${esc(ct('wasteSearchAria'))}" />
             </div>
             <button class="st-btn primary" type="button" data-action="stock-open-declare-waste" style="background:#b91c1c;border-color:#991b1b;color:#fff;display:flex;align-items:center;gap:6px;">
-              ${svg('trash2', 14)}<span>Déclarer une perte</span>
+              ${svg('trash2', 14)}<span>${esc(ct('declareBtn'))}</span>
             </button>
             <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
-              ${svg('download', 14)}<span>Exporter CSV</span>
+              ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
             </button>
           </div>
           <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${rangePill('aujourdhui', "Aujourd'hui")}
-            ${rangePill('7j', '7 derniers jours')}
-            ${rangePill('30j', '30 derniers jours')}
-            ${rangePill('tout', 'Tout l’historique')}
+            ${rangePill('aujourdhui', ct('rangeToday'))}
+            ${rangePill('7j', ct('range7'))}
+            ${rangePill('30j', ct('range30'))}
+            ${rangePill('tout', ct('rangeAll'))}
           </div>
           <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${reasonPill('all', 'Tous motifs')}
-            ${reasonPill('perime', 'Périmé')}
-            ${reasonPill('casse', 'Casse')}
-            ${reasonPill('avarie', 'Avarié')}
-            ${reasonPill('offert', 'Offert')}
-            ${reasonPill('repas-equipe', 'Repas équipe')}
+            ${reasonPill('all', ct('reasonAll'))}
+            ${reasonPill('perime', ct('rsPerime'))}
+            ${reasonPill('casse', ct('rsCasse'))}
+            ${reasonPill('avarie', ct('rsAvarieShort'))}
+            ${reasonPill('offert', ct('rsOffert'))}
+            ${reasonPill('repas-equipe', ct('rsStaff'))}
           </div>
         </div>
 
         <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-          <div class="st-kpi"><div class="st-kpi-l">TOTAL VALEUR PERDUE</div><div class="st-kpi-v" style="color:#b91c1c;">${fmtMad(totalVal)}</div><div class="st-kpi-sub">${rows.length} déclarations de pertes</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">VOLUME D'ARTICLES PERDUS</div><div class="st-kpi-v">${Math.round(totalQty * 10) / 10}</div><div class="st-kpi-sub">unités / kg sorties</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiLostValue'))}</div><div class="st-kpi-v" style="color:#b91c1c;">${ctMad(totalVal)}</div><div class="st-kpi-sub">${esc(ct('kpiLostRecords', rows.length))}</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiLostVolume'))}</div><div class="st-kpi-v">${ctNum(Math.round(totalQty * 10) / 10)}</div><div class="st-kpi-sub">${esc(ct('kpiLostVolumeSub'))}</div></div>
         </div>
 
         <div class="st-tbl-wrap">
           <table class="st-tbl">
             <thead>
               <tr>
-                <th>Date &amp; Heure</th>
-                <th>Article</th>
-                <th>Quantité</th>
-                <th>Unité</th>
-                <th>Motif</th>
-                <th>Valeur MAD</th>
-                <th>Employé</th>
-                <th>Note</th>
-                <th style="text-align:right;">Actions</th>
+                <th>${esc(ct('thDate'))}</th>
+                <th>${esc(ct('thItem'))}</th>
+                <th>${esc(ct('thQty'))}</th>
+                <th>${esc(ct('thUnit'))}</th>
+                <th>${esc(ct('thReason'))}</th>
+                <th>${esc(ct('thValueMad'))}</th>
+                <th>${esc(ct('thEmployee'))}</th>
+                <th>${esc(ct('thNote'))}</th>
+                <th style="text-align:right;">${esc(ct('thActions'))}</th>
               </tr>
             </thead>
             <tbody>
@@ -2649,36 +2912,35 @@
                 const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
                 const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
                 const valMAD = Math.abs(+r.qty || 0) * cost;
-                const d = new Date(r.occurredTs);
-                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                const fine = (r.meta && r.meta.wasteReason) || r.reason;
-                const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
+                const when = ctWhen(r.occurredTs);
                 const isReversal = !!r.reversalOf;
+                const reasonLabel = ctReason((r.meta && r.meta.wasteReason) || r.reason, isReversal);
+                const note = ctWasteNote(r.note || '');
                 return `
-                  <tr style="${isReversal ? 'opacity:0.6;font-style:italic;' : ''}">
-                    <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
-                    <td><b>${esc(it.name)}</b>${r.meta?.lotId ? `<div style="font-size:11px;color:var(--n-500);">Lot: ${esc(r.meta.lotId)}</div>` : ''}</td>
-                    <td class="st-mono" style="color:${+r.qty < 0 ? '#b91c1c' : 'var(--atlas)'};font-weight:600;">${+r.qty < 0 ? '−' : '+'}${Math.abs(+r.qty || 0)}</td>
-                    <td>${esc(it.unit)}</td>
+                  <tr style="${isReversal ? 'opacity:0.6;' : ''}">
+                    <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${esc(when.date + ' ' + when.time)}</td>
+                    <td><b>${esc(it.name)}</b>${r.meta?.lotId ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('lot', r.meta.lotId))}</div>` : ''}</td>
+                    <td class="st-mono" style="color:${+r.qty < 0 ? '#b91c1c' : 'var(--atlas)'};font-weight:600;">${+r.qty < 0 ? '−' : '+'}${ctNum(Math.abs(+r.qty || 0))}</td>
+                    <td>${esc(ctUnit(it.unit))}</td>
                     <td><span class="st-badge warn" style="font-size:11px;">${esc(reasonLabel)}</span></td>
-                    <td class="st-mono">${fmtMad(valMAD)}</td>
-                    <td style="font-size:12.5px;">${esc(r.actor || (r.meta && r.meta.actor) || '·')}</td>
-                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.note || '')}">${esc(r.note || '·')}</td>
+                    <td class="st-mono">${ctMad(valMAD)}</td>
+                    <td style="font-size:12.5px;">${esc(ctWho(r.actor || (r.meta && r.meta.actor) || '') || '·')}</td>
+                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(note)}">${esc(note || '·')}</td>
                     <td style="text-align:right;">
                       ${stShowReal() && !isReversal ? `
-                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
-                          Annuler
+                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="${esc(ct('cancelLossTitle'))}" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
+                          ${esc(ct('cancel'))}
                         </button>
                       ` : '·'}
                     </td>
                   </tr>
                 `;
-              }).join('') : `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--n-500);">Aucune perte enregistrée sur cette période.</td></tr>`}
+              }).join('') : `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--n-500);">${esc(ct('wasteEmpty'))}</td></tr>`}
             </tbody>
           </table>
         </div>
         <div class="st-tbl-foot">
-          Total : ${rows.length} lignes de pertes · Valeur cumulée : <b>${fmtMad(totalVal)}</b>
+          ${ct('wasteFoot', rows.length, ctMad(totalVal))}
         </div>
       </div>
     `;
@@ -2687,34 +2949,27 @@
   function exportWasteCsv() {
     const rows = getWasteMovements();
     const inv = getInv();
-    const reasonLabelMap = {
-      'perime': 'Périmé', 'casse': 'Casse', 'avarie': 'Avarié / Abîmé',
-      'offert': 'Offert', 'repas-equipe': 'Repas équipe', 'autre': 'Autre perte',
-      'expiry': 'Périmé', 'gift': 'Offert', 'staff-meal': 'Repas équipe', 'loss': 'Perte'
-    };
     function csvSafe(v) {
       let s = String(v == null ? '' : v);
       if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
       return '"' + s.replace(/"/g, '""') + '"';
     }
-    const header = ['Date', 'Article', 'Quantite', 'Unite', 'Motif', 'Valeur_MAD', 'Employe', 'Note', 'ID_Mouvement'];
+    const header = ct('csvWaste');
     const lines = [header.join(';')];
     rows.forEach(r => {
       const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
       const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
       const valMAD = Math.abs(+r.qty || 0) * cost;
       const d = new Date(r.occurredTs).toISOString().slice(0, 19).replace('T', ' ');
-      const fine = (r.meta && r.meta.wasteReason) || r.reason;
-      const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
       lines.push([
         d,
         csvSafe(it.name),
         Math.abs(+r.qty || 0),
-        csvSafe(it.unit),
-        csvSafe(reasonLabel),
+        csvSafe(ctUnit(it.unit)),
+        csvSafe(ctReason((r.meta && r.meta.wasteReason) || r.reason, !!r.reversalOf)),
         valMAD.toFixed(2),
-        csvSafe(r.actor || ''),
-        csvSafe(r.note || ''),
+        csvSafe(ctWho(r.actor || '')),
+        csvSafe(ctWasteNote(r.note || '')),
         r.id
       ].join(';'));
     });
@@ -2722,7 +2977,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `journal-pertes-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${ct('csvWasteFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
@@ -2732,14 +2987,14 @@
     if (!movementId || !window.KiwiInventory) return;
     const history = window.KiwiInventory.history() || [];
     const m = history.find(r => r.id === movementId);
-    if (!m) { window.Kiwi?.toast?.('Mouvement introuvable', { type: 'warn' }); return; }
-    if (!confirm(`Annuler la perte de ${Math.abs(m.qty)} pour cet article ? Un contre-mouvement sera écrit dans le registre.`)) {
+    if (!m) { window.Kiwi?.toast?.(ct('moveNotFound'), { type: 'warn' }); return; }
+    if (!confirm(ct('cancelLossConfirm', ctNum(Math.abs(m.qty))))) {
       return;
     }
     const rev = window.KiwiInventory.reverse(m, 'manual', `Annulation perte ${m.refId || m.id}`);
     if (rev) {
       window.KiwiInventory.sync();
-      window.Kiwi?.toast?.('Perte annulée · contre-mouvement enregistré', { type: 'success' });
+      window.Kiwi?.toast?.(ct('lossCancelledToast'), { type: 'success' });
       if (stPageActive) render();
     }
   }
@@ -2753,50 +3008,50 @@
 
     const itemOptions = items.map(it => `
       <option value="${esc(it.id)}"${it.id === prefillId ? ' selected' : ''}>
-        ${esc(it.name)} (${it.currentStock} ${esc(it.unit || 'unité')})
+        ${esc(it.name)} (${ctNum(it.currentStock)} ${esc(ctUnit(it.unit || 'unité'))})
       </option>
     `).join('');
 
     const html = `
       <div class="st-modal-head">
         <div>
-          <h3>Déclarer une perte de stock</h3>
-          <p style="margin:2px 0 0;font-size:12.5px;color:var(--n-500);">Déduction immédiate du registre et traçabilité dans le journal des pertes.</p>
+          <h3>${esc(ct('declareTitle'))}</h3>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--n-500);">${esc(ct('declareSub'))}</p>
         </div>
         <button class="st-modal-x" type="button" data-action="stock-modal-close">${svg('x', 18)}</button>
       </div>
       <form class="st-form" id="st-waste-declare-form" style="padding:16px 20px;">
         <div class="st-field" style="margin-bottom:12px;">
-          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Article concerné</label>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareItem'))}</label>
           <select class="st-select" id="st-wf-item" required style="width:100%;">
             ${itemOptions}
           </select>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div class="st-field" style="flex:1;">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Quantité perdue</label>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareQty'))}</label>
             <input class="st-input" id="st-wf-qty" type="number" step="any" min="0.001" value="${prefillQty}" required style="width:100%;" />
           </div>
           <div class="st-field" style="flex:1.5;">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Motif de la perte</label>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareReason'))}</label>
             <select class="st-select" id="st-wf-reason" style="width:100%;">
-              <option value="perime"${prefillReason === 'perime' || prefillReason === 'Péremption' || prefillReason === 'expiry' ? ' selected' : ''}>Péremption / DLC dépassée</option>
-              <option value="casse"${prefillReason === 'casse' ? ' selected' : ''}>Casse / Détérioration</option>
-              <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>Avarie / Défaut</option>
-              <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>Geste commercial / Offert</option>
-              <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>Repas employé / équipe</option>
-              <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>Autre motif</option>
+              <option value="perime"${prefillReason === 'perime' || prefillReason === 'Péremption' || prefillReason === 'expiry' ? ' selected' : ''}>${esc(ct('optPerime'))}</option>
+              <option value="casse"${prefillReason === 'casse' ? ' selected' : ''}>${esc(ct('optCasse'))}</option>
+              <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>${esc(ct('optAvarie'))}</option>
+              <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>${esc(ct('optOffert'))}</option>
+              <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>${esc(ct('optStaff'))}</option>
+              <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>${esc(ct('optOther'))}</option>
             </select>
           </div>
         </div>
         <div class="st-field" style="margin-bottom:16px;">
-          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Justification / Note (optionnelle)</label>
-          <input class="st-input" id="st-wf-note" type="text" placeholder="Ex: DLC au 21/08, bocal brisé à la mise en rayon…" style="width:100%;" />
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">${esc(ct('declareNote'))}</label>
+          <input class="st-input" id="st-wf-note" type="text" placeholder="${esc(ct('declareNotePh'))}" style="width:100%;" />
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="st-btn secondary" type="button" data-action="stock-modal-close">Annuler</button>
+          <button class="st-btn secondary" type="button" data-action="stock-modal-close">${esc(ct('cancel'))}</button>
           <button class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
-            ${svg('trash2', 14)}<span style="margin-left:4px;">Enregistrer la perte</span>
+            ${svg('trash2', 14)}<span style="margin-left:4px;">${esc(ct('declareSave'))}</span>
           </button>
         </div>
       </form>
@@ -2813,7 +3068,7 @@
         const reason = document.getElementById('st-wf-reason')?.value || 'perime';
         const note = (document.getElementById('st-wf-note')?.value || '').trim();
         if (!itemId || !(qty > 0)) {
-          window.Kiwi?.toast?.('Précisez une quantité valide', { type: 'warn' });
+          window.Kiwi?.toast?.(ct('qtyInvalid'), { type: 'warn' });
           return;
         }
         if (window.KiwiInventory) {
@@ -2835,7 +3090,7 @@
             }
           });
           window.KiwiInventory.sync();
-          window.Kiwi?.toast?.('Perte enregistrée et déduite du stock', { type: 'success' });
+          window.Kiwi?.toast?.(ct('lossSavedToast'), { type: 'success' });
           closeModal();
           if (stPageActive) render();
         }
@@ -2929,8 +3184,8 @@
     if (stCountSearch) {
       const q = stCountSearch.toLowerCase();
       rows = rows.filter(r => {
-        const emp = (r.employeeName || '').toLowerCase();
-        const stn = (r.storeName || '').toLowerCase();
+        const emp = `${r.employeeName || ''} ${ctWho(r.employeeName)}`.toLowerCase();
+        const stn = `${r.storeName || ''} ${ctStore(r.storeName)}`.toLowerCase();
         const cid = (r.id || '').toLowerCase();
         return emp.includes(q) || stn.includes(q) || cid.includes(q);
       });
@@ -2961,15 +3216,15 @@
       <div class="st-section">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;gap:6px;">
-            ${tabBtn('list', 'Liste des inventaires')}
-            ${tabBtn('rollup', 'Écarts récurrents (Analyse)')}
+            ${tabBtn('list', ct('tabList'))}
+            ${tabBtn('rollup', ct('tabRollup'))}
           </div>
           <div style="display:flex;gap:8px;">
             <button class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
-              ${svg('download', 14)}<span>Exporter CSV</span>
+              ${svg('download', 14)}<span>${esc(ct('exportCsv'))}</span>
             </button>
             <button class="st-btn primary" type="button" data-action="stock-physical-count">
-              ${svg('plus', 14)}<span>Nouvel inventaire</span>
+              ${svg('plus', 14)}<span>${esc(ct('newCount'))}</span>
             </button>
           </div>
         </div>
@@ -2978,26 +3233,26 @@
           <div class="st-search-row">
             <div class="st-search-wrap">
               ${svg('search', 16)}
-              <input class="st-search" type="text" placeholder="Chercher un inventaire, employé, magasin…" value="${esc(stCountSearch)}" data-stock-count-search aria-label="Recherche inventaires" />
+              <input class="st-search" type="text" placeholder="${esc(ct('countSearchPh'))}" value="${esc(stCountSearch)}" data-stock-count-search aria-label="${esc(ct('countSearchAria'))}" />
             </div>
           </div>
           <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${rangePill('aujourdhui', "Aujourd'hui")}
-            ${rangePill('7j', '7 derniers jours')}
-            ${rangePill('30j', '30 derniers jours')}
-            ${rangePill('tout', 'Tout l’historique')}
+            ${rangePill('aujourdhui', ct('rangeToday'))}
+            ${rangePill('7j', ct('range7'))}
+            ${rangePill('30j', ct('range30'))}
+            ${rangePill('tout', ct('rangeAll'))}
           </div>
           <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
-            ${statusPill('all', 'Tous statuts')}
-            ${statusPill('submitted', `À valider (${pendingCount})`)}
-            ${statusPill('applied', 'Validés')}
-            ${statusPill('rejected', 'Refusés')}
+            ${statusPill('all', ct('statusAll'))}
+            ${statusPill('submitted', ct('statusPending', pendingCount))}
+            ${statusPill('applied', ct('statusApplied'))}
+            ${statusPill('rejected', ct('statusRejected'))}
           </div>
         </div>
 
         <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-          <div class="st-kpi"><div class="st-kpi-l">INVENTAIRES RÉALISÉS</div><div class="st-kpi-v">${filtered.length}</div><div class="st-kpi-sub">${pendingCount} en attente de revue</div></div>
-          <div class="st-kpi"><div class="st-kpi-l">ÉCART NET EN VALEUR</div><div class="st-kpi-v" style="color:${totalEcartsMad < 0 ? '#b91c1c' : 'var(--atlas)'};">${totalEcartsMad > 0 ? '+' : ''}${fmtMad(totalEcartsMad)}</div><div class="st-kpi-sub">Écart absolu : ${fmtMad(totalAbsEcartsMad)}</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiCounts'))}</div><div class="st-kpi-v">${filtered.length}</div><div class="st-kpi-sub">${esc(ct('kpiCountsSub', pendingCount))}</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">${esc(ct('kpiNet'))}</div><div class="st-kpi-v" style="color:${totalEcartsMad < 0 ? '#b91c1c' : 'var(--atlas)'};">${totalEcartsMad > 0 ? '+' : ''}${ctMad(totalEcartsMad)}</div><div class="st-kpi-sub">${esc(ct('kpiAbs', ctMad(totalAbsEcartsMad)))}</div></div>
         </div>
 
         ${stCountSubTab === 'rollup' ? renderCountsRollup(filtered) : `
@@ -3005,49 +3260,48 @@
             <table class="st-tbl">
               <thead>
                 <tr>
-                  <th>Date &amp; Heure</th>
-                  <th>Réf.</th>
-                  <th>Magasin</th>
-                  <th>Employé</th>
-                  <th style="text-align:center;">Articles</th>
-                  <th style="text-align:right;">Écart net MAD</th>
-                  <th style="text-align:center;">Statut</th>
-                  <th style="text-align:right;">Actions</th>
+                  <th>${esc(ct('thDate'))}</th>
+                  <th>${esc(ct('thRef'))}</th>
+                  <th>${esc(ct('thStore'))}</th>
+                  <th>${esc(ct('thEmployee'))}</th>
+                  <th style="text-align:center;">${esc(ct('thItems'))}</th>
+                  <th style="text-align:right;">${esc(ct('thNetMad'))}</th>
+                  <th style="text-align:center;">${esc(ct('thStatus'))}</th>
+                  <th style="text-align:right;">${esc(ct('thActions'))}</th>
                 </tr>
               </thead>
               <tbody>
                 ${filtered.length ? filtered.map(c => {
-                  const d = new Date(c.submittedAt || Date.now());
-                  const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  const stLabel = c.status === 'submitted' ? 'À valider' : (c.status === 'applied' || c.status === 'approved' ? 'Validé' : 'Refusé');
+                  const when = ctWhen(c.submittedAt);
+                  const stLabel = c.status === 'submitted' ? ct('stPending') : (c.status === 'applied' || c.status === 'approved' ? ct('stApplied') : ct('stRejected'));
                   const stClass = c.status === 'submitted' ? 'warn' : (c.status === 'applied' || c.status === 'approved' ? 'ok' : 'bad');
                   const mad = c.totalVarianceCostMAD || 0;
                   return `
                     <tr>
-                      <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
+                      <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${esc(when.date + ' ' + when.time)}</td>
                       <td><b>${esc(c.id)}</b></td>
-                      <td>${esc(c.storeName || 'Magasin principal')}</td>
-                      <td>${esc(c.employeeName || '·')} <span style="font-size:11px;color:var(--n-500);">(${esc(c.employeeRole || '·')})</span></td>
+                      <td>${esc(ctStore(c.storeName))}</td>
+                      <td>${esc(ctWho(c.employeeName) || '·')} <span style="font-size:11px;color:var(--n-500);">(${esc(ctRole(c.employeeRole) || '·')})</span></td>
                       <td style="text-align:center;" class="st-mono">${c.totalLines || 0}</td>
                       <td style="text-align:right;font-weight:600;color:${mad < 0 ? '#b91c1c' : mad > 0 ? 'var(--atlas)' : 'inherit'};" class="st-mono">
-                        ${mad > 0 ? '+' : ''}${fmtMad(mad)}
+                        ${mad > 0 ? '+' : ''}${ctMad(mad)}
                       </td>
                       <td style="text-align:center;">
                         <span class="st-badge ${stClass}" style="font-size:11px;">${esc(stLabel)}</span>
                       </td>
                       <td style="text-align:right;">
                         <button class="st-btn small" type="button" data-action="stock-count-detail" data-count-id="${esc(c.id)}" style="${c.status === 'submitted' ? 'background:#059669;color:#fff;border-color:#047857;' : ''}">
-                          ${c.status === 'submitted' ? 'Examiner' : 'Détails'}
+                          ${esc(c.status === 'submitted' ? ct('btnReview') : ct('btnDetails'))}
                         </button>
                       </td>
                     </tr>
                   `;
-                }).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--n-500);">Aucun inventaire correspondant aux filtres.</td></tr>`}
+                }).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--n-500);">${esc(ct('countsEmpty'))}</td></tr>`}
               </tbody>
             </table>
           </div>
           <div class="st-tbl-foot">
-            ${filtered.length} inventaire${filtered.length > 1 ? 's' : ''} affiché${filtered.length > 1 ? 's' : ''}
+            ${esc(ct('countsFoot', filtered.length))}
           </div>
         `}
       </div>
@@ -3094,19 +3348,19 @@
     return `
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
         <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-          <h4 style="margin:0 0 12px;font-size:15px;">Articles &amp; déclinaisons aux plus forts écarts</h4>
+          <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollTopItems'))}</h4>
           <div class="st-tbl-wrap">
             <table class="st-tbl" style="font-size:12.5px;">
-              <thead><tr><th>Article</th><th>Comptages</th><th style="text-align:right;">Écart cumulé</th><th style="text-align:right;">Impact MAD</th></tr></thead>
+              <thead><tr><th>${esc(ct('thItem'))}</th><th>${esc(ct('thCountTimes'))}</th><th style="text-align:right;">${esc(ct('thCumDiff'))}</th><th style="text-align:right;">${esc(ct('thImpactMad'))}</th></tr></thead>
               <tbody>
                 ${topVariants.length ? topVariants.map(v => `
                   <tr>
-                    <td><b>${esc(v.label)}</b>${v.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(v.sku)}</div>` : ''}</td>
+                    <td><b>${esc(v.label)}</b>${v.sku ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('sku', v.sku))}</div>` : ''}</td>
                     <td class="st-mono">${v.countTimes}</td>
-                    <td style="text-align:right;" class="st-mono">${v.netDiffSum > 0 ? '+' : ''}${Math.round(v.netDiffSum * 10) / 10} ${esc(v.unit)}</td>
-                    <td style="text-align:right;font-weight:600;color:#b91c1c;" class="st-mono">${fmtMad(v.absCostSum)}</td>
+                    <td style="text-align:right;" class="st-mono">${v.netDiffSum > 0 ? '+' : ''}${ctNum(Math.round(v.netDiffSum * 10) / 10)} ${esc(ctUnit(v.unit))}</td>
+                    <td style="text-align:right;font-weight:600;color:#b91c1c;" class="st-mono">${ctMad(v.absCostSum)}</td>
                   </tr>
-                `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun écart détecté.</td></tr>`}
+                `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoVariance'))}</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -3114,37 +3368,37 @@
 
         <div style="display:grid;gap:16px;">
           <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-            <h4 style="margin:0 0 12px;font-size:15px;">Écarts par employé</h4>
+            <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollByEmployee'))}</h4>
             <div class="st-tbl-wrap">
               <table class="st-tbl" style="font-size:12.5px;">
-                <thead><tr><th>Employé</th><th>Inventaires</th><th style="text-align:right;">Écart absolu cumulé</th></tr></thead>
+                <thead><tr><th>${esc(ct('thEmployee'))}</th><th>${esc(ct('thCountsN'))}</th><th style="text-align:right;">${esc(ct('thAbsCum'))}</th></tr></thead>
                 <tbody>
                   ${topEmployees.length ? topEmployees.map(e => `
                     <tr>
-                      <td><b>${esc(e.name)}</b></td>
+                      <td><b>${esc(ctWho(e.name))}</b></td>
                       <td class="st-mono">${e.countTimes}</td>
-                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(e.absCostSum)}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${ctMad(e.absCostSum)}</td>
                     </tr>
-                  `).join('') : `<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                  `).join('') : `<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoCount'))}</td></tr>`}
                 </tbody>
               </table>
             </div>
           </div>
 
           <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
-            <h4 style="margin:0 0 12px;font-size:15px;">Synthèse par établissement</h4>
+            <h4 style="margin:0 0 12px;font-size:15px;">${esc(ct('rollByStore'))}</h4>
             <div class="st-tbl-wrap">
               <table class="st-tbl" style="font-size:12.5px;">
-                <thead><tr><th>Établissement</th><th>Inventaires</th><th style="text-align:right;">Écart net</th><th style="text-align:right;">Écart absolu</th></tr></thead>
+                <thead><tr><th>${esc(ct('thVenue'))}</th><th>${esc(ct('thCountsN'))}</th><th style="text-align:right;">${esc(ct('thNet'))}</th><th style="text-align:right;">${esc(ct('thAbs'))}</th></tr></thead>
                 <tbody>
                   ${stores.length ? stores.map(s => `
                     <tr>
-                      <td><b>${esc(s.name)}</b></td>
+                      <td><b>${esc(ctStore(s.name))}</b></td>
                       <td class="st-mono">${s.countTimes}</td>
-                      <td style="text-align:right;" class="st-mono">${s.netCostSum > 0 ? '+' : ''}${fmtMad(s.netCostSum)}</td>
-                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(s.absCostSum)}</td>
+                      <td style="text-align:right;" class="st-mono">${s.netCostSum > 0 ? '+' : ''}${ctMad(s.netCostSum)}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${ctMad(s.absCostSum)}</td>
                     </tr>
-                  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">${esc(ct('rollNoCount'))}</td></tr>`}
                 </tbody>
               </table>
             </div>
@@ -3168,38 +3422,37 @@
     }
 
     if (!count) {
-      window.Kiwi?.toast?.('Inventaire introuvable', { type: 'warn' });
+      window.Kiwi?.toast?.(ct('countNotFound'), { type: 'warn' });
       return;
     }
 
     const lines = Array.isArray(count.lines) ? count.lines : [];
-    const submittedDate = new Date(count.submittedAt || Date.now());
-    const submittedStr = submittedDate.toLocaleDateString('fr-FR') + ' à ' + submittedDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const submitted = ctWhen(count.submittedAt);
     const isSubmitted = count.status === 'submitted';
     const isApproved = count.status === 'applied' || count.status === 'approved';
     const isRejected = count.status === 'rejected';
 
     const modal = window.Kiwi.modal({
-      title: `Inventaire #${count.id}`,
-      desc: `${count.storeName || 'Magasin principal'} · Soumis par ${count.employeeName || 'Employé'} le ${submittedStr}`,
+      title: ct('dTitle', count.id),
+      desc: esc(ct('dDesc', ctStore(count.storeName), ctWho(count.employeeName || 'Employé'), submitted.date, submitted.time)),
       width: 820,
       body: `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span class="st-badge ${isSubmitted ? 'warn' : isApproved ? 'ok' : 'bad'}" style="font-size:13px;padding:4px 10px;">
-              ${isSubmitted ? 'À valider par le propriétaire' : isApproved ? 'Validé & appliqué' : 'Refusé'}
+              ${esc(isSubmitted ? ct('dPending') : isApproved ? ct('dApplied') : ct('stRejected'))}
             </span>
-            <span style="font-size:13px;color:var(--n-600);">${lines.length} article${lines.length > 1 ? 's' : ''} compté${lines.length > 1 ? 's' : ''}</span>
+            <span style="font-size:13px;color:var(--n-600);">${esc(ct('dLines', lines.length))}</span>
           </div>
           <div style="font-size:14px;">
-            Écart total en valeur : <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${fmtMad(count.totalVarianceCostMAD || 0)}</b>
+            ${esc(ct('dTotal'))} <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${ctMad(count.totalVarianceCostMAD || 0)}</b>
           </div>
         </div>
 
         ${count.reviewNote ? `
           <div class="st-notice ${isApproved ? 'ok' : 'warn'}" style="margin-bottom:14px;">
             ${svg(isApproved ? 'checkCircle' : 'alertTriangle', 14)}
-            <div><b>Note de revue :</b> ${esc(count.reviewNote)} ${count.reviewerName ? `<span style="font-size:11px;color:var(--n-500);">(par ${esc(count.reviewerName)})</span>` : ''}</div>
+            <div><b>${esc(ct('dReviewNote'))}</b> ${esc(ctReviewNote(count.reviewNote))} ${count.reviewerName ? `<span style="font-size:11px;color:var(--n-500);">${esc(ct('dBy', ctWho(count.reviewerName)))}</span>` : ''}</div>
           </div>
         ` : ''}
 
@@ -3207,12 +3460,12 @@
           <table class="st-tbl" style="font-size:12.5px;">
             <thead>
               <tr>
-                <th>Article &amp; Déclinaison</th>
-                <th style="text-align:right;">Stock avant</th>
-                <th style="text-align:right;">Compté</th>
-                <th style="text-align:right;">Écart</th>
-                <th style="text-align:right;">Valeur MAD</th>
-                <th>Remarque</th>
+                <th>${esc(ct('thItemVariant'))}</th>
+                <th style="text-align:right;">${esc(ct('thBefore'))}</th>
+                <th style="text-align:right;">${esc(ct('thCounted'))}</th>
+                <th style="text-align:right;">${esc(ct('thDiff'))}</th>
+                <th style="text-align:right;">${esc(ct('thValueMad'))}</th>
+                <th>${esc(ct('thRemark'))}</th>
               </tr>
             </thead>
             <tbody>
@@ -3225,34 +3478,34 @@
                   <tr>
                     <td>
                       <b>${esc(label)}</b>
-                      ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(l.sku)}</div>` : ''}
+                      ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">${esc(ct('sku', l.sku))}</div>` : ''}
                     </td>
-                    <td style="text-align:right;" class="st-mono">${l.systemQty} ${esc(l.unit)}</td>
-                    <td style="text-align:right;font-weight:700;" class="st-mono">${l.countedQty} ${esc(l.unit)}</td>
-                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${diff} ${esc(l.unit)}</td>
-                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${fmtMad(cost)}</td>
+                    <td style="text-align:right;" class="st-mono">${ctNum(l.systemQty)} ${esc(ctUnit(l.unit))}</td>
+                    <td style="text-align:right;font-weight:700;" class="st-mono">${ctNum(l.countedQty)} ${esc(ctUnit(l.unit))}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${ctNum(diff)} ${esc(ctUnit(l.unit))}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${ctMad(cost)}</td>
                     <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
                       ${esc(l.explanation || l.note || '·')}
                     </td>
                   </tr>
                 `;
-              }).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--n-500);">Aucune ligne enregistrée.</td></tr>`}
+              }).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--n-500);">${esc(ct('dNoLines'))}</td></tr>`}
             </tbody>
           </table>
         </div>
 
         ${isSubmitted ? `
           <div style="background:var(--paper-soft);border:1px solid var(--n-200);border-radius:12px;padding:12px;margin-bottom:12px;">
-            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Note ou commentaire de décision (optionnel)</label>
-            <input class="st-search" id="st-cnt-review-note" placeholder="Justification de la décision…" style="width:100%;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">${esc(ct('dNoteLabel'))}</label>
+            <input class="st-search" id="st-cnt-review-note" placeholder="${esc(ct('dNotePh'))}" style="width:100%;">
           </div>
         ` : ''}
       `,
       foot: `
-        <button class="st-btn" data-dismiss-modal>Fermer</button>
+        <button class="st-btn" data-dismiss-modal>${esc(ct('dClose'))}</button>
         ${isSubmitted ? `
-          <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">Refuser l'inventaire</button>
-          <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">Valider et appliquer le stock</button>
+          <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">${esc(ct('dReject'))}</button>
+          <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">${esc(ct('dApprove'))}</button>
         ` : ''}
       `
     });
@@ -3405,7 +3658,7 @@
 
       try { closeTopModal(); } catch (_) {}
       release();
-      window.Kiwi?.toast?.(decision === 'approved' ? 'Inventaire validé · stock mis à jour' : 'Inventaire refusé', { type: decision === 'approved' ? 'success' : 'info' });
+      window.Kiwi?.toast?.(decision === 'approved' ? ct('toastApproved') : ct('toastRejected'), { type: decision === 'approved' ? 'success' : 'info' });
       if (stPageActive) render();
     } catch (_) {
       release();
@@ -3420,30 +3673,30 @@
       if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
       return '"' + s.replace(/"/g, '""') + '"';
     }
-    const header = ['ID_Inventaire', 'Date', 'Magasin', 'Employe', 'Role', 'Statut', 'Nb_Lignes', 'Ecart_Net_MAD', 'Ecart_Abs_MAD', 'Validateur', 'Decision', 'Note_Revue'];
+    const header = ct('csvCounts');
     const lines = [header.join(';')];
     counts.forEach(c => {
       const d = new Date(c.submittedAt || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
       lines.push([
         csvSafe(c.id),
         d,
-        csvSafe(c.storeName || 'Principal'),
-        csvSafe(c.employeeName || '·'),
-        csvSafe(c.employeeRole || '·'),
+        csvSafe(ctStore(c.storeName || 'Principal')),
+        csvSafe(ctWho(c.employeeName) || '·'),
+        csvSafe(ctRole(c.employeeRole) || '·'),
         csvSafe(c.status),
         c.totalLines || 0,
         (c.totalVarianceCostMAD || 0).toFixed(2),
         (c.absVarianceCostMAD || 0).toFixed(2),
-        csvSafe(c.reviewerName || '·'),
+        csvSafe(ctWho(c.reviewerName) || '·'),
         csvSafe(c.reviewDecision || '·'),
-        csvSafe(c.reviewNote || '·')
+        csvSafe(ctReviewNote(c.reviewNote) || '·')
       ].join(';'));
     });
     const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `historique-inventaires-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${ct('csvCountsFile')}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);

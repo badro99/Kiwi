@@ -1373,6 +1373,9 @@ section('Whole-project regressions');
     'boutique-product-sheet-test.mjs',
     'boutique-inventory-i18n-test.mjs',
     'color-palette-language-test.mjs',
+    /* Historique des inventaires, revue propriétaire, journal des pertes et
+       leurs CSV : lus en FR, EN et AR ; les valeurs stockées restent FR. */
+    'stock-count-history-language-test.mjs',
     'caisse-color-picker-language-test.mjs',
     'booking-truth-test.mjs',
     'onboarding-truth-test.mjs',

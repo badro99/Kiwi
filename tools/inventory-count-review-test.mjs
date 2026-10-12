@@ -39,7 +39,15 @@ function extractFn(name) {
   assert.ok(m, 'extractable: ' + name);
   return m[0];
 }
+/* Les toasts de revue lisent la vraie table FR/EN/AR (COUNT_STR, ct) ; le
+   monde feint parle français, donc le libellé épinglé reste celui d'avant. */
+const COPY_SRC = (() => {
+  const m = src.match(/ {2}const COUNT_STR = \{[\s\S]*?\n {2}\};\n/);
+  assert.ok(m, 'extractable: COUNT_STR');
+  return m[0];
+})();
 const CORE_SRC = [
+  'ct',
   'stReviewBusyTake', 'stReviewBusyRelease',
   'stReviewCountSend', 'stReviewCountErr', 'stReviewCountPlan',
   'reviewCount',
@@ -92,6 +100,7 @@ function makeWorld(over = {}) {
     topBackdrop: () => state.scope,
     stShowReal: () => state.real,
     t: (k) => k,
+    lang: () => 'fr',
     moveStock: (...a) => { spies.moveStock.push(a.map((x) => (x && typeof x === 'object' ? { ...x } : x))); return { id: 'm-local' }; },
     stockLocationId: () => 'principal',
     stSaveOverlay: () => { spies.saveOverlay++; },
@@ -101,7 +110,7 @@ function makeWorld(over = {}) {
     stPageActive: over.pageActive !== false,
     fetch: (...a) => state.fetchImpl(...a),
   });
-  vm.runInContext('let stReviewBusy = false;\n' + CORE_SRC + '\n;window.__rc = { reviewCount, stReviewBusyTake, stReviewBusyRelease, stReviewCountSend, stReviewCountErr, stReviewCountPlan };', ctx,
+  vm.runInContext('let stReviewBusy = false;\n' + COPY_SRC + CORE_SRC + '\n;window.__rc = { reviewCount, stReviewBusyTake, stReviewBusyRelease, stReviewCountSend, stReviewCountErr, stReviewCountPlan };', ctx,
     { filename: 'stock-count-review-core.js' });
   return { ctx, spies, win, state };
 }
