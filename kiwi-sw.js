@@ -153,7 +153,7 @@ var SHELL = [
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=5',
-  '/assets/merchant-health.js?v=3',
+  '/assets/merchant-health.js?v=4',
   '/assets/merchant-health.css?v=3',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
@@ -246,7 +246,9 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=5',
+  '/assets/cost.js?v=6',
+  '/assets/charges-engine.js?v=1',
+  '/assets/charges.js?v=1',
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=20',
@@ -261,7 +263,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=304',
+  '/assets/team.js?v=305',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=111',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

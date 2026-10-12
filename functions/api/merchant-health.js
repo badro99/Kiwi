@@ -112,6 +112,10 @@ export async function gatherFacts(env, merchant, now = Date.now()) {
   }
   const monthreport = await docOf(env, merchant, 'monthreport');
   if (monthreport !== undefined) f.accountantSet = !!(monthreport && String(monthreport.accountantEmail || '').includes('@'));
+  /* At least one fixed cost that still has an amount: a doc left with only
+     removed lines (tombstones) is « not entered ». Amounts are never read. */
+  const charges = await docOf(env, merchant, 'charges');
+  if (charges !== undefined) f.chargesSet = !!(charges && list(charges.lines).some((l) => l && !l.deleted && list(l.versions).length > 0));
   const bridge = await count(env, 'SELECT COUNT(*) AS n FROM print_bridges WHERE merchant = ? AND revoked_ts IS NULL AND last_seen_ts >= ?', merchant, now - 7 * DAY);
   const printed = await count(env, "SELECT COUNT(*) AS n FROM print_jobs WHERE merchant = ? AND done_ts >= ?", merchant, from);
   if (bridge !== undefined || printed !== undefined) f.printerSeen = (bridge || 0) + (printed || 0) > 0;

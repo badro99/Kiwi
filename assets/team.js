@@ -4586,7 +4586,23 @@
       return { configured: currentConfigured || covered.length > 0, members: covered };
     } catch (_) { return { configured: false, members: [] }; }
   }
-  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, planningDay, bookingCoverage });
+  /* La masse salariale d'une liste de journées, pour le résultat net de
+   * Marges (assets/charges.js). Exactement le calcul de Paie & planning, sur
+   * le même roster et les mêmes heures : un salaire saisi une fois dans Équipe
+   * n'est jamais ressaisi ailleurs, et les deux pages ne peuvent pas diverger.
+   * null quand personne n'a ni salaire ni taux horaire : « pas de personnel
+   * connu » n'est pas « personnel gratuit ». */
+  function labour(days) {
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || null;
+    if (!venue) return null;
+    const members = getMembers(teamKey(venue));
+    const list = (Array.isArray(days) ? days : []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+    const f = payrollFigures(members, teamKey(venue), { days: list });
+    if (!f.salaried && !f.rated) return null;
+    return { baseDue: f.baseDue, variablePay: f.variablePay, baseMass: f.baseMass, share: f.share,
+      salaried: f.salaried, rated: f.rated, members: members.length, totalHours: f.totalHours };
+  }
+  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, planningDay, bookingCoverage, labour });
   try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
 
   /* ═══════════════ HYDRATATION AU DÉMARRAGE ═══════════════════════════════

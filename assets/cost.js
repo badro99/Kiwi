@@ -363,6 +363,11 @@
       basis: b, from: from == null ? null : from, to: to == null ? null : to,
       grossN: 0, gross: 0, voidN: 0, dupN: 0, dupAmt: 0, refundN: 0, refunds: 0, net: 0,
       unitemisedN: 0, unitemisedAmt: 0, listed: 0, collected: 0, discounts: 0, lines: [],
+      /* Les ventes gardées, une par ticket : comment elles ont été payées et
+       * par quel canal elles sont arrivées. Les commissions (assets/charges.js)
+       * se calculent sur ces ventes-là et aucune autre, pour qu'un ticket
+       * annulé ou reçu deux fois ne paie pas sa commission non plus. */
+      sales: [],
     };
     const seenId = new Set(), seenKey = new Set(), seenRefund = new Set();
     const refund = (e) => {
@@ -398,6 +403,8 @@
       if (k && seenKey.has(k)) { out.dupN++; out.dupAmt += amt; return; }
       if (k) seenKey.add(k);
       out.grossN++; out.gross += amt;
+      out.sales.push({ id, ts, amount: amt, method: String(e.method || ''), channel: String(e.channel || ''),
+        parts: Array.isArray(e.paymentParts) && e.paymentParts.length ? e.paymentParts : null });
       if (!rows.length) { out.unitemisedN++; out.unitemisedAmt += amt; return; }
       const ratio = sum > 0 ? Math.min(1, amt / sum) : 1;
       if (sum > amt) out.discounts += sum - amt;

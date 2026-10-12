@@ -654,7 +654,21 @@
       partial: (p) => `Marge calculée sur ${p} de vos ventes. Le reste attend un coût.`,
       noDetail: (p) => `${p} des ventes n’ont pas de détail article (montant libre, lien de paiement) : elles comptent dans les ventes, jamais dans la marge.`,
       full: 'Marge calculée sur toutes vos ventes de la période.',
-      excl: 'Avant loyer, salaires et charges : Kiwi ne les connaît pas.',
+      excl: 'Avant loyer, salaires et charges : renseignez-les pour voir votre vrai résultat.',
+      exclBtn: 'Renseigner mes charges',
+      pnlNet: 'Résultat de la période',
+      marginAll: 'Marge brute, toutes ventes',
+      estimated: 'estimée',
+      estimatedNet: 'estimé',
+      commissions: 'Commissions',
+      staff: 'Personnel',
+      staffNoSocial: 'Personnel, hors charges sociales',
+      fixed: (n) => `Charges fixes · ${n} jour${n > 1 ? 's' : ''}`,
+      netRes: 'Résultat net',
+      netEst: (p) => `Marge des ventes sans coût estimée au taux mesuré sur les ventes chiffrées (${p} des ventes).`,
+      netTooFew: (p) => `Résultat net non calculé : seules ${p} des ventes ont un coût. Il en faut au moins la moitié pour ne pas inventer la marge.`,
+      noStaff: 'Aucun salaire dans Équipe : le personnel n’est pas compté.',
+      chargesBasis: 'Charges fixes réparties jour par jour, salaires lus dans Équipe.',
       refundsNote: (a) => `${a} de remboursements sur la période : ils réduisent vos ventes, mais ne disent pas quel plat ils annulent, donc la marge par plat ne les répartit pas.`,
       discountsNote: (a) => `${a} de remises au ticket, réparties au prorata sur les lignes de leur ticket.`,
       todayCost: 'Coûts actuels appliqués aux ventes passées : un changement de prix d’achat modifiera ces marges.',
@@ -687,7 +701,21 @@
       partial: (p) => `Margin computed on ${p} of your sales. The rest is waiting for a cost.`,
       noDetail: (p) => `${p} of sales carry no item detail (free amount, payment link): they count in sales, never in the margin.`,
       full: 'Margin computed on all of this period’s sales.',
-      excl: 'Before rent, wages and overheads: Kiwi does not know them.',
+      excl: 'Before rent, wages and overheads: enter them to see your real result.',
+      exclBtn: 'Enter my costs',
+      pnlNet: 'Result for the period',
+      marginAll: 'Gross margin, all sales',
+      estimated: 'estimated',
+      estimatedNet: 'estimated',
+      commissions: 'Fees',
+      staff: 'Staff',
+      staffNoSocial: 'Staff, excl. social charges',
+      fixed: (n) => `Fixed costs · ${n} day${n > 1 ? 's' : ''}`,
+      netRes: 'Net result',
+      netEst: (p) => `Margin on uncosted sales estimated at the rate measured on costed sales (${p} of sales).`,
+      netTooFew: (p) => `Net result not computed: only ${p} of sales have a cost. At least half is needed so the margin is not invented.`,
+      noStaff: 'No salary in Team: staff is not counted.',
+      chargesBasis: 'Fixed costs spread day by day, salaries read from Team.',
       refundsNote: (a) => `${a} of refunds in the period: they reduce your sales, but do not say which dish they reverse, so the margin per dish does not split them.`,
       discountsNote: (a) => `${a} of ticket discounts, spread pro rata over the lines of their ticket.`,
       todayCost: 'Current costs applied to past sales: a change in purchase price will change these margins.',
@@ -720,7 +748,21 @@
       partial: (p) => `الهامش محسوب على ${p} من مبيعاتك. الباقي ينتظر تكلفة.`,
       noDetail: (p) => `${p} من المبيعات بدون تفاصيل المنتجات (مبلغ حر، رابط دفع): تُحتسب في المبيعات، لا في الهامش.`,
       full: 'الهامش محسوب على كل مبيعات الفترة.',
-      excl: 'قبل الإيجار والأجور والمصاريف: Kiwi لا يعرفها.',
+      excl: 'قبل الإيجار والأجور والمصاريف: أدخلها لترى نتيجتك الحقيقية.',
+      exclBtn: 'إدخال مصاريفي',
+      pnlNet: 'نتيجة الفترة',
+      marginAll: 'الهامش الإجمالي، كل المبيعات',
+      estimated: 'تقديري',
+      estimatedNet: 'تقديرية',
+      commissions: 'العمولات',
+      staff: 'المستخدمون',
+      staffNoSocial: 'المستخدمون، دون التحملات الاجتماعية',
+      fixed: (n) => `المصاريف الثابتة · ${n} يوم`,
+      netRes: 'النتيجة الصافية',
+      netEst: (p) => `هامش المبيعات بدون تكلفة مقدَّر بالنسبة المقيسة على المبيعات المحسوبة (${p} من المبيعات).`,
+      netTooFew: (p) => `النتيجة الصافية غير محسوبة: ${p} فقط من المبيعات لها تكلفة. يلزم النصف على الأقل حتى لا يُخترع الهامش.`,
+      noStaff: 'لا أجور في الفريق: لا تُحتسب كلفة المستخدمين.',
+      chargesBasis: 'المصاريف الثابتة موزعة يومًا بيوم، والأجور مأخوذة من الفريق.',
       refundsNote: (a) => `${a} مبالغ مستردة خلال الفترة: تُنقص مبيعاتك، لكنها لا تحدد الطبق الذي تلغيه، لذلك لا يوزعها الهامش حسب الطبق.`,
       discountsNote: (a) => `${a} تخفيضات على التذكرة، موزعة بالتناسب على سطور تذكرتها.`,
       todayCost: 'التكاليف الحالية مطبقة على المبيعات السابقة: أي تغيير في سعر الشراء سيغيّر هذه الهوامش.',
@@ -815,9 +857,15 @@
       '.fin-seg button:focus-visible{outline:2px solid var(--atlas);outline-offset:2px;}',
       '.fin-real{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start;}',
       '.fin-real>.fin-products{grid-column:1/-1;}',
+      '.fin-col{display:grid;gap:16px;align-content:start;min-width:0;}',
       '.fin-tabrow{margin:4px 0 18px;overflow-x:auto;}',
       '@media (max-width:980px){.fin-real{grid-template-columns:minmax(0,1fr);}}',
       '.fin-note-line{font-size:12.5px;color:var(--n-600);line-height:1.5;margin-top:10px;}',
+      '.fin-pnl-mid{font-weight:600;color:var(--ink);border-bottom:1px solid var(--n-200);}',
+      '.fin-pnl-mid .fin-pnl-v{font-weight:600;}',
+      '.fin-pnl-l small{font-size:11.5px;color:var(--n-500);font-weight:500;}',
+      '.fin-pnl-net .fin-pnl-v{font-weight:650;}',
+      '.fin-note-line .chg-link{border:0;background:none;color:var(--atlas);font:inherit;font-weight:600;padding:0;cursor:pointer;}',
       '.fin-miss{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--n-200);font-size:13px;}',
       '.fin-miss:first-of-type{border-top:0;}',
       '.fin-miss b{font-weight:560;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
@@ -870,6 +918,35 @@
     } catch (_) { L = null; cov = null; }
     const units = finUnits(L);
     const vat = !!(cov && cov.basis && cov.basis.mode === 'rate' && cov.basis.included);
+    /* Le vrai résultat : la marge, moins les commissions, le personnel
+       d'Équipe et les charges fixes de la période (assets/charges.js). */
+    const K = window.KiwiCharges;
+    let net = null;
+    try { net = K && K.result ? K.result({ range: finPeriod, cov, ledger: L }) : null; } catch (_) { net = null; }
+    const showNet = !!(net && (net.configured || net.staff));
+    const ledgerFor = (f, t) => (A && A.ledger ? A.ledger({ from: f, to: t }) : C.ledger(sales, { from: f, to: t }));
+    const netRows = () => {
+      if (!showNet) return '';
+      const row = (cls, label, v, p) => `<div class="fin-pnl-row ${cls}"><span class="fin-pnl-l">${label}</span><span class="fin-pnl-v">${v}</span><span class="fin-pnl-p">${p || ''}</span><span></span></div>`;
+      const out = [];
+      if (net.estimated && net.margin != null) out.push(row('fin-pnl-row-sub', `${esc(c.marginAll)} <small>· ${esc(c.estimated)}</small>`, cash(net.margin), ''));
+      if (net.commissions.total > 0) out.push(row('fin-pnl-row-sub', `− ${esc(c.commissions)}`, cash(net.commissions.total), ''));
+      if (net.staff) out.push(row('fin-pnl-row-sub', `− ${esc(net.staff.socialSet ? c.staff : c.staffNoSocial)}`, cash(net.staff.total), ''));
+      if (net.fixed.total > 0) out.push(row('fin-pnl-row-sub', `− ${esc(c.fixed(K.daysFor(finPeriod).length))}`, cash(net.fixed.total), ''));
+      const netPct = net.net != null && net.salesHT > 0 ? (net.net / net.salesHT) * 100 : null;
+      out.push(row('fin-pnl-total fin-pnl-net', `= ${esc(c.netRes)}${net.estimated ? ` <small>· ${esc(c.estimatedNet)}</small>` : ''}`,
+        net.net == null ? '·' : `<span data-net="${net.net}">${cash(net.net)}</span>`, net.net == null ? '' : pct(netPct)));
+      return out.join('');
+    };
+    const netNotes = () => {
+      if (!showNet) return [`<div class="fin-note-line">${esc(c.excl)} <button class="chg-link" type="button" data-action="charges-open">${esc(c.exclBtn)}</button></div>`];
+      const n = [];
+      if (net.tooFew) n.push(c.netTooFew(pct(net.costedPct)));
+      else if (net.estimated) n.push(c.netEst(pct(net.costedPct)));
+      if (!net.staff) n.push(c.noStaff);
+      n.push(c.chargesBasis);
+      return n.map((x) => `<div class="fin-note-line">${esc(x)}</div>`);
+    };
 
     const seg = `<div class="fin-seg" data-lens-demo role="group" aria-label="${esc(c.periodAria)}">` +
       FIN_PERIODS.map((p) => `<button type="button" data-lens-item data-fin-period="${p}" class="${p === finPeriod ? 'on' : ''}" aria-pressed="${p === finPeriod}">${esc(c.periods[p])}</button>`).join('') +
@@ -877,8 +954,10 @@
 
     let pnl;
     if (!cov || !(cov.revenue > 0)) {
-      pnl = `<div class="fin-pnl fin-card"><div class="fin-eyebrow"><span>${esc(c.pnl)}</span></div>` +
-        `<div class="fin-note-line" style="margin-top:0;">${esc(c.noSales)}</div></div>`;
+      /* Un jour sans vente n'est pas un jour sans charges : le loyer court. */
+      pnl = `<div class="fin-pnl fin-card"><div class="fin-eyebrow"><span>${esc(showNet ? c.pnlNet : c.pnl)}</span>${showNet ? `<span class="fin-eyebrow-sub">${esc(c.periods[finPeriod])}</span>` : ''}</div>` +
+        `<div class="fin-note-line" style="margin-top:0;">${esc(c.noSales)}</div>` +
+        (showNet ? `<div class="fin-pnl-rows">${netRows()}</div>${netNotes().slice(1).join('')}` : '') + `</div>`;
     } else {
       const costPct = cov.netCosted > 0 ? (cov.cost / cov.netCosted) * 100 : null;
       const notes = [];
@@ -889,17 +968,18 @@
       if (cov.refunds >= 0.01) notes.push(c.refundsNote(cash(cov.refunds)));
       if (cov.dupN) notes.push(c.dups(cov.dupN, cash(cov.dupAmt)));
       if (cov.todayCostQty > 0) notes.push(c.todayCost);
-      notes.push(c.excl);
       pnl = `<div class="fin-pnl fin-card">
-        <div class="fin-eyebrow"><span>${esc(c.pnl)}</span><span class="fin-eyebrow-sub">${esc(c.periods[finPeriod])}</span></div>
+        <div class="fin-eyebrow"><span>${esc(showNet ? c.pnlNet : c.pnl)}</span><span class="fin-eyebrow-sub">${esc(c.periods[finPeriod])}</span></div>
         <div class="fin-pnl-rows">
           <div class="fin-pnl-row"><span class="fin-pnl-l">${esc(c.sales)}</span><span class="fin-pnl-v">${cash(cov.revenue)}</span><span class="fin-pnl-p"></span><span></span></div>
           <div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">${esc(c.costed(pct(cov.pctCosted)))}</span><span class="fin-pnl-v">${cash(cov.revenueCosted)}</span><span class="fin-pnl-p"></span><span></span></div>
           ${vat ? `<div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">${esc(c.net)}</span><span class="fin-pnl-v">${cash(cov.netCosted)}</span><span class="fin-pnl-p">100 %</span><span></span></div>` : ''}
           <div class="fin-pnl-row fin-pnl-row-sub"><span class="fin-pnl-l">− ${esc(c.cost)}</span><span class="fin-pnl-v">${cov.revenueCosted > 0 ? cash(cov.cost) : '·'}</span><span class="fin-pnl-p">${pct(costPct)}</span><span></span></div>
-          <div class="fin-pnl-row fin-pnl-total"><span class="fin-pnl-l">= ${esc(c.margin)}</span><span class="fin-pnl-v">${cov.revenueCosted > 0 ? cash(cov.profit) : '·'}</span><span class="fin-pnl-p">${pct(cov.marginPct)}</span><span></span></div>
+          <div class="fin-pnl-row ${showNet ? 'fin-pnl-mid' : 'fin-pnl-total'}"><span class="fin-pnl-l">= ${esc(c.margin)}</span><span class="fin-pnl-v">${cov.revenueCosted > 0 ? cash(cov.profit) : '·'}</span><span class="fin-pnl-p">${pct(cov.marginPct)}</span><span></span></div>
+          ${netRows()}
         </div>
         ${notes.map((n) => `<div class="fin-note-line">${esc(n)}</div>`).join('')}
+        ${netNotes().join('')}
       </div>`;
     }
 
@@ -935,7 +1015,16 @@
       </table></div>
     </div>`;
 
-    return { seg, body: `<div class="fin-real">${pnl}${missing}${products}</div>` };
+    let charges = '', breakEven = '';
+    try { charges = K && K.card ? K.card() : ''; } catch (_) { charges = ''; }
+    try { breakEven = K && K.breakEvenCard ? K.breakEvenCard(ledgerFor) : ''; } catch (_) { breakEven = ''; }
+    /* Deux colonnes qui s'empilent chacune : le résultat et ce qu'il reste à
+       chiffrer à gauche, les charges et le seuil à droite. Une grille simple
+       laissait un trou sous la carte des charges, plus courte que le résultat. */
+    const body = (charges || breakEven)
+      ? `<div class="fin-real"><div class="fin-col">${pnl}${missing}</div><div class="fin-col">${charges}${breakEven}</div>${products}</div>`
+      : `<div class="fin-real">${pnl}${missing}${products}</div>`;
+    return { seg, body };
   }
   document.addEventListener('click', (e) => {
     const b = e.target && e.target.closest && e.target.closest('[data-fin-period]');
@@ -955,6 +1044,7 @@
     const again = () => { if (pageActive && !(finTab === 'cost' && costOn() && document.querySelector('[data-sfc-root]'))) { try { render(); } catch (_) {} } };
     try { window.KiwiSales && window.KiwiSales.subscribe && window.KiwiSales.subscribe(again); } catch (_) {}
     try { window.KiwiCost && window.KiwiCost.subscribe && window.KiwiCost.subscribe(again); } catch (_) {}
+    try { window.KiwiCharges && window.KiwiCharges.subscribe && window.KiwiCharges.subscribe(again); } catch (_) {}
     try { window.KiwiMenuStore && window.KiwiMenuStore.subscribe && window.KiwiMenuStore.subscribe(again); } catch (_) {}
     /* Les onglets Performance et Heures lisent aussi les recettes et les services. */
     try { window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.subscribe && window.KiwiRestaurantRecipes.subscribe(again); } catch (_) {}

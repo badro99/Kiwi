@@ -133,6 +133,13 @@ const FEATURES = {
   verticalops:   { keys: ['verticals', 'commands', 'seq'],             max: 1500000, maxStr: 350000 },
   monthreport:  { keys: ['taxPeriods', 'accountantEmail'], max: 100000 },
   expenses:     { keys: ['list'],                                  max: 400000 },
+  /* Charges fixes et commissions : loyer, électricité, abonnements, le taux
+   * des charges sociales patronales et ce que la carte ou Glovo prélève. C'est
+   * le compte d'exploitation du commerce, pas un réglage de caisse : expurgé
+   * pour la caisse appairée et l'employé connecté, écrit par le seul
+   * propriétaire (REDACT ci-dessous). Les salaires n'y sont pas, ils restent
+   * dans `team` (assets/charges.js). */
+  charges:       { keys: ['lines', 'social', 'commissions'],          max: 200000 },
   /* Assistant approvals and their version trail. Protected from paired tills
    * below because summaries can contain customer and operational identifiers. */
   agentactions:  { keys: ['items', 'versions'],                      max: 250000 },
@@ -487,9 +494,10 @@ function stripTeamCodes(doc) {
 function stripAgentActions() { return { items: [], versions: [] }; }
 function stripBriefing() { return { days: [] }; }
 function stripRetention() { return { settings: null, offers: null, sends: [] }; }
+function stripCharges() { return { lines: [], social: { rate: null }, commissions: { methods: {}, channels: {} } }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
-const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing, retention: stripRetention };
+const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing, retention: stripRetention, charges: stripCharges };
 
 /* A store's briefing holds that store's days only. Each day names the venue it
  * was computed for, and that venue is the slug the browser syncs under; a day

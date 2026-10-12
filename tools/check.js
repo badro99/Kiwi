@@ -991,6 +991,22 @@ section('Marges & coûts (tools/cost-margin-test.js)');
   }
 }
 
+/* ── 9b · charges fixes et résultat net ─────────────────────────────────────
+ * La marge brute ne dit pas si le commerce gagne de l'argent. Loyer, salaires
+ * d'Équipe et charges patronales, commissions de la carte et des plateformes :
+ * chaque règle du calcul (assets/charges-engine.js) tenue au centime, et la
+ * page Marges réelle qui l'affiche. (tools/charges-test.js) ─────────────── */
+section('Charges fixes & résultat net (tools/charges-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'charges-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const bad = out.split('\n').filter((l) => l.includes('✗') && !/charges : \d+\/\d+/.test(l));
+  if (r.status === 0) ok(`charges : ${(/charges : (\d+\/\d+)/.exec(out) || [])[1] || 'ok'}`);
+  else if (bad.length) bad.forEach((l) => fail(l.replace(/\x1b\[[0-9;]*m/g, '').trim()));
+  else fail(`charges-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 10 · les milliers en arabe ──────────────────────────────────────────────
  * « 31 500 MAD » s'affichait « MAD 500 31 » : un chiffre faux sous les yeux du
  * commerçant. Le correctif réécrit des nœuds de texte, donc la garde surveille
@@ -1399,6 +1415,10 @@ section('Whole-project regressions');
        le vrai dashboard.html en FR, EN et AR, clair et sombre, téléphone. */
     'merchant-health-test.mjs',
     'merchant-health-browser-test.mjs',
+    /* Charges fixes : l'éditeur et la page Marges réelle, en vrais clics.
+       Saisie, erreur au champ, résultat net égal au calcul, retrait au mois
+       prochain, arabe de droite à gauche, téléphone sans débordement. */
+    'charges-browser-test.mjs',
     /* Premier passage : avec le vrai service worker, le tableau de bord, la
        caisse et Serveur ne se chargent qu'une fois (clients.claim() n'est pas
        une mise à jour) ; une vraie nouvelle génération se recharge toujours en

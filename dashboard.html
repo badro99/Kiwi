@@ -5498,7 +5498,7 @@
 <script src="assets/invoicing.js?v=9" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=5" defer></script>
-<script src="assets/merchant-health.js?v=3" defer></script>
+<script src="assets/merchant-health.js?v=4" defer></script>
 <script src="assets/insights.js?v=3" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js?v=1" defer></script>
@@ -5581,7 +5581,7 @@
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=9" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=30" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=31" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/agent-vision.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
@@ -5646,7 +5646,12 @@
      APRÈS venue-store.js (il s'y déclare) et receipt.js (il y lit la base TVA
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
      rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
-<script src="assets/cost.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/cost.js?v=6" defer fetchpriority="low"></script>
+<!-- Charges fixes, commissions et résultat net (assets/charges.js) : le calcul
+     pur d'abord, puis le document `charges` et son éditeur. APRÈS cost.js, dont
+     ils lisent le registre ; AVANT finance.js, qui affiche le résultat. -->
+<script src="assets/charges-engine.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/charges.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/inventory-consumption.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/procurement.js?v=4" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
@@ -5701,7 +5706,7 @@
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
-<script src="assets/team.js?v=304" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=305" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -5709,7 +5714,7 @@
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=20" defer fetchpriority="low"></script>
 <script src="assets/simple-food-cost.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/finance.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/finance.js?v=11" defer fetchpriority="low"></script>
 <script src="assets/conformite.js?v=5" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js?v=3" defer fetchpriority="low"></script>

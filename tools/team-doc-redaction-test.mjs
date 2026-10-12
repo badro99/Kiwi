@@ -158,6 +158,39 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
   ok('une caisse appairée ne peut pas réécrire le Centre d’actions (403)', res.status === 403 && /212600000000/.test(row.data));
 }
 
+/* ── 3b. Les charges fixes : le compte d'exploitation n'est pas un réglage de
+ *        caisse. Loyer, taux de commission et charges sociales restent chez le
+ *        propriétaire ; la caisse et l'employé ne les lisent ni ne les écrasent. */
+{
+  const CHARGES = { v: 1, lines: [{ id: 'c1', label: 'Loyer', cat: 'rent', freq: 'month', versions: [{ from: '2026-01', amount: 8765 }], until: null }],
+    social: { rate: 21 }, commissions: { methods: { card: 1.5 }, channels: { glovo: 25 } } };
+  db.prepare(`INSERT INTO store_docs VALUES (?,'charges',?,1,?)`).run(SHOP, JSON.stringify(CHARGES), now);
+  const SECRET = /8765|Loyer|glovo/;
+  for (const [who, cookie] of [['une caisse appairée', till], ['un employé connecté', emp]]) {
+    const res = await get(storeGet, `https://k/api/store?feature=charges&merchant=${SHOP}`, cookie);
+    const body = await res.text();
+    ok(`${who} lit des charges vides, pas le loyer`, (res.status === 200 && !SECRET.test(body)) || res.status === 401 || res.status === 403, `${res.status} ${body.slice(0, 160)}`);
+  }
+  {
+    const res = await get(storeGet, `https://k/api/store?feature=charges&merchant=${SHOP}`, owner);
+    const body = await res.json();
+    ok('le patron lit ses charges entières', res.status === 200 && body.data.lines[0].versions[0].amount === 8765 && body.data.commissions.channels.glovo === 25);
+  }
+  {
+    const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: till },
+      body: JSON.stringify({ feature: 'charges', merchant: SHOP, data: { lines: [], social: { rate: null }, commissions: { methods: {}, channels: {} } }, baseRev: 1 }) }), env });
+    const row = db.prepare(`SELECT data FROM store_docs WHERE merchant = ? AND feature = 'charges'`).get(SHOP);
+    ok('une caisse ne peut pas repousser des charges vides (403), le loyer reste', res.status === 403 && /8765/.test(row.data));
+  }
+  {
+    const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: owner },
+      body: JSON.stringify({ feature: 'charges', merchant: SHOP, data: { ...CHARGES, social: { rate: 20 } }, baseRev: 1 }) }), env });
+    ok('le patron écrit ses charges', res.status === 200);
+  }
+}
+
 /* ── 4. Le miroir dérivé, et les deux surfaces qui le lisent ─────────────── */
 {
   const res = await get(storeGet, `https://k/api/store?feature=employee-access&merchant=${SHOP}`, owner);

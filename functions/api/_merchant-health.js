@@ -145,6 +145,11 @@ function common(f, base) {
   if (known(f.iqUsed)) out.push(check('iq', 'rapports', 1, f.iqUsed ? 1 : 0, { nav: { action: 'open-assistant' } }));
   else out.push(check('iq', 'rapports', 1, null));
 
+  // C13 · fixed costs entered: without them Marges can only say « résultat
+  // matière », never what the business actually earns
+  if (known(f.chargesSet)) out.push(check('charges', 'rapports', 1, f.chargesSet ? 1 : 0, { nav: { action: 'charges-open' } }));
+  else out.push(check('charges', 'rapports', 1, null));
+
   return out;
 }
 

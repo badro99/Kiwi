@@ -138,6 +138,7 @@ const byId = (body, id) => body.checks.find((c) => c.id === id);
   check(byId(body, 'floor').state === 'done', 'floor plan: tables drawn and a table opened');
   check(byId(body, 'stock').value === 0.5, 'stock: items exist, no movement and no count yet (half)');
   check(byId(body, 'waiter').state === 'todo', 'waiter app: no order taken by a named waiter');
+  check(byId(body, 'charges').state === 'todo' && byId(body, 'charges').nav.action === 'charges-open', 'fixed costs: none entered, « Ensuite » opens the editor');
 
   /* not measurable is never zero */
   const printer = byId(body, 'printer');
@@ -152,6 +153,19 @@ const byId = (body, id) => body.checks.find((c) => c.id === id);
 
   /* no code ever leaves */
   check(!r.text.includes(BENCH_CODE) && !/pinCode|"pin"/.test(r.text), 'no team code and no code field in the response');
+}
+
+/* 1b · fixed costs: one live line is « entered », a removed one is not */
+{
+  const w = world();
+  w.sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?,?,?,1,?)")
+    .run(SHOP, 'charges', JSON.stringify({ lines: [{ id: 'r', label: 'Loyer', cat: 'rent', freq: 'month', versions: [{ from: '2026-01', amount: 7777 }] }] }), Date.now());
+  const r = await ask(w, SHOP, await owner('acc-sante'));
+  check(byId(JSON.parse(r.text), 'charges').state === 'done', 'fixed costs: a rent entered is « done »');
+  check(!r.text.includes('7777') && !r.text.includes('Loyer'), 'the amount and the label never leave in the health answer');
+  w.sql.prepare("UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = 'charges'")
+    .run(JSON.stringify({ lines: [{ id: 'r', deleted: true, versions: [] }] }), SHOP);
+  check(byId(JSON.parse((await ask(w, SHOP, await owner('acc-sante'))).text), 'charges').state === 'todo', 'fixed costs: only a removed line left is « todo » again');
 }
 
 /* 2 · a table prod D1 does not have yet makes its lines unmeasured, not zero */

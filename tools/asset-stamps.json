@@ -60,8 +60,8 @@
     "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "30",
-    "sha": "b31a010cbe5dcfb2"
+    "v": "31",
+    "sha": "ebf18a676fc4055c"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -179,6 +179,14 @@
     "v": "3",
     "sha": "ec5fa6bd71818a12"
   },
+  "assets/charges-engine.js": {
+    "v": "1",
+    "sha": "992ffacf758f29c6"
+  },
+  "assets/charges.js": {
+    "v": "1",
+    "sha": "0e900ab25d5a1cae"
+  },
   "assets/clients-book.js": {
     "v": "24",
     "sha": "9da57f970e60db48"
@@ -204,8 +212,8 @@
     "sha": "213ea1c313605bf8"
   },
   "assets/cost.js": {
-    "v": "5",
-    "sha": "c342a95d71829601"
+    "v": "6",
+    "sha": "0df76dd1d300ce79"
   },
   "assets/customer-retention.js": {
     "v": "8",
@@ -328,8 +336,8 @@
     "sha": "4ab84021a239bd81"
   },
   "assets/finance.js": {
-    "v": "10",
-    "sha": "e5e7aa397c920e7f"
+    "v": "11",
+    "sha": "f0e5aee5bd0f8292"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -548,8 +556,8 @@
     "sha": "9a57c1d916eae035"
   },
   "assets/merchant-health.js": {
-    "v": "3",
-    "sha": "834ba6b414897ce3"
+    "v": "4",
+    "sha": "eec9b45556b5c3f9"
   },
   "assets/mobile-nav.js": {
     "v": "7",
@@ -988,8 +996,8 @@
     "sha": "6341af9080886677"
   },
   "assets/team.js": {
-    "v": "304",
-    "sha": "c22b630d4a6dbb52"
+    "v": "305",
+    "sha": "641fdd2dc834a093"
   },
   "assets/tenant-purge.js": {
     "v": "2",

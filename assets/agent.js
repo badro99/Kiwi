@@ -519,7 +519,7 @@
         notrend: 'Je ne peux pas comparer deux périodes : je travaille sur une seule fenêtre de 30 jours, sans historique. Je ne sais donc pas mesurer après coup l’effet d’une décision déjà prise. Ce que je peux faire, c’est simuler ce qu’une décision changerait à partir d’aujourd’hui.',
         illicit: 'Je ne vous aiderai pas sur ce point. Kiwi tient aussi votre comptabilité, je ne vais pas vous aider à dissimuler des recettes, à contourner la CNSS ou à payer sous le minimum légal, et vous exposer à un redressement. En revanche je peux réduire vos coûts par des moyens légaux, voici où votre argent part réellement.',
         unclear: 'Je n’ai pas bien saisi votre question. Je comprends le français, l’anglais et l’arabe, et une bonne partie de la darija, mais pas encore tout. Reformulez-la, ou posez-la autrement : je calcule une embauche, une hausse de prix, un investissement, votre seuil de rentabilité, vos marges, vos charges et votre prévision du mois.',
-        strainPartial: 'Je n’ai pas encore votre trésorerie ni vos charges, je ne peux donc pas calculer combien de temps vous tenez. Renseignez-les dans Réglages et je vous donne ce chiffre, c’est le plus important quand ça se tend.',
+        strainPartial: 'Je n’ai pas encore votre trésorerie ni vos charges, je ne peux donc pas calculer combien de temps vous tenez. Renseignez vos charges dans Marges et votre trésorerie dès qu’elle sera suivie, et je vous donne ce chiffre, c’est le plus important quand ça se tend.',
         market: 'Je ne donne pas de conseil de placement, ni en bourse, ni en crypto : ce n’est pas mon métier et vous engageriez de l’argent sur un avis que je ne peux pas justifier. Ce que je sais faire, c’est vous dire ce que votre commerce rapporte et ce qu’un investissement dedans changerait.',
         secret: 'Je ne donne ni code, ni mot de passe, ni les données d’un autre commerçant. Je ne vois que votre établissement, et c’est volontaire. Pour vos propres accès, passez par Réglages, ou par Équipe pour les codes de vos employés.',
       },
@@ -689,7 +689,7 @@
         notrend: 'I can\'t compare two periods: I work from a single 30-day window with no history. So I can\'t measure after the fact what a decision you already took actually did. What I can do is simulate what a decision would change from today.',
         illicit: 'I won\'t help with that. Kiwi also keeps your books, so I\'m not going to help you hide takings, get around CNSS or pay below the legal minimum, and expose you to a tax reassessment. What I can do is cut your costs by lawful means, here is where your money actually goes.',
         unclear: 'I didn’t quite catch that. I understand French, English and Arabic, and a good deal of Darija, but not all of it yet. Try rephrasing, or ask another way: I can work out a hire, a price rise, an investment, your break-even point, your margins, your costs and this month’s forecast.',
-        strainPartial: 'I don’t have your cash position or your costs yet, so I can’t work out how long you can last. Add them in Settings and I’ll give you that figure, it’s the one that matters most when things get tight.',
+        strainPartial: 'I don’t have your cash position or your costs yet, so I can’t work out how long you can last. Enter your costs in Margins and your cash once it is tracked, and I’ll give you that figure, it’s the one that matters most when things get tight.',
         market: 'I don’t give investment advice, in equities or crypto: it isn’t my job and you’d be committing money on a view I can’t justify. What I can do is tell you what your business earns and what investing in it would change.',
         secret: 'I don’t hand out codes, passwords, or another merchant’s data. I only ever see your own business, and that’s deliberate. For your own access go to Settings, or Team for your staff’s codes.',
       },
@@ -861,7 +861,7 @@
         notrend: 'لا أستطيع مقارنة فترتين: أعمل على نافذة واحدة من 30 يوماً بلا تاريخ سابق. لذلك لا أقدر على قياس أثر قرار اتخذته فعلاً. ما أستطيعه هو محاكاة ما سيغيّره قرار انطلاقاً من اليوم.',
         illicit: 'لن أساعدك في هذا. Kiwi يمسك محاسبتك أيضاً، ولن أساعدك على إخفاء مداخيل أو التحايل على الضمان الاجتماعي أو الأداء دون الحد الأدنى القانوني، وتعريض نفسك لتصحيح ضريبي. لكن يمكنني خفض تكاليفك بطرق قانونية، وهذا هو المسار الحقيقي لأموالك.',
         unclear: 'لم أفهم سؤالك جيداً. أفهم الفرنسية والإنجليزية والعربية، وجزءاً كبيراً من الدارجة، لكن ليس كل شيء بعد. أعد صياغته أو اطرحه بطريقة أخرى: أحسب لك التوظيف، ورفع الأسعار، والاستثمار، ونقطة التعادل، والهوامش، والمصاريف، وتوقّع الشهر.',
-        strainPartial: 'ليست لديّ بعد خزينتك ولا تكاليفك، لذا لا أستطيع حساب المدة التي تصمد فيها. أضفها في الإعدادات وسأعطيك هذا الرقم، فهو الأهم حين تشتدّ الأمور.',
+        strainPartial: 'ليست لديّ بعد خزينتك ولا تكاليفك، لذا لا أستطيع حساب المدة التي تصمد فيها. أدخل مصاريفك في الهوامش وخزينتك حين تُتابَع، وسأعطيك هذا الرقم، فهو الأهم حين تشتدّ الأمور.',
         market: 'لا أقدّم نصائح استثمارية، لا في البورصة ولا في العملات الرقمية: ليس هذا عملي، وستُخاطر بأموالك بناءً على رأي لا أستطيع تبريره. ما أُتقنه هو أن أخبرك بما يدرّه محلّك وبما سيغيّره استثمار فيه.',
         secret: 'لا أعطي رموزاً ولا كلمات سرّ ولا بيانات تاجر آخر. لا أرى سوى مؤسستك أنت، وهذا مقصود. للوصول إلى حسابك مرّ عبر الإعدادات، أو عبر «الفريق» لرموز موظفيك.',
       },
@@ -948,7 +948,20 @@
   const NV = {
     fr: {
       costsNeeded: (n) => `${n} démarre sur Kiwi. Je raisonne sur vos ventes réelles enregistrées, mais je n'ai pas encore votre structure de coûts (loyer, salaires, marge, trésorerie). Je préfère ne rien simuler plutôt que d'inventer des chiffres.`,
-      costsCta: 'Enregistrez vos ventes au fil des jours et renseignez vos charges dans Réglages, je débloque alors les simulations d\'embauche, de prix, de rentabilité et de prévision.',
+      costsCta: 'Enregistrez vos ventes au fil des jours et renseignez vos charges dans Marges, carte « Charges fixes » : je calcule alors votre résultat net et votre seuil de rentabilité.',
+      beText: (fixed, staff, pct) => `Pour couvrir vos charges du mois (${fixed} de charges fixes${staff ? ` et ${staff} de personnel` : ''}), voici ce qu’il faut vendre, à ${pct} de ce qui reste après coût matière et commissions sur 30 jours.`,
+      beNeed: 'Seuil · ventes du mois', beNeedH: 'charges et personnel couverts',
+      bePerDay: 'Seuil · par jour', bePerDayH: (open) => (open ? 'par jour d’ouverture' : 'par jour calendaire'),
+      beSold: 'Vendu ce mois', beSoldH: 'à ce jour',
+      bePace: 'Au rythme actuel', bePaceH: 'projection sur le mois',
+      beAhead: (a) => `Au rythme des jours écoulés, vous finirez le mois ${a} au-dessus du seuil.`,
+      beBehind: (a) => `Au rythme des jours écoulés, il manquera ${a} pour couvrir les charges du mois.`,
+      beEarly: 'Le rythme du mois se lira dès la fin de la première journée.',
+      beNote: 'Le même calcul que la carte « Seuil de rentabilité » de Marges.',
+      chText: (t) => `Ce que le commerce doit couvrir chaque mois : <b>${t}</b>, avant le coût matière.`,
+      chStaff: 'Personnel', chStaffH: (s) => (s ? 'salaires d’Équipe et charges sociales' : 'salaires d’Équipe, charges sociales non réglées'),
+      chShare: (p) => `${p} % du total`,
+      chBiggest: (n, p) => `« ${n} » est votre premier poste (${p} % de ce qu’il faut couvrir).`,
       noSales: (n) => `${n} n'a pas encore de vente enregistrée. Dès la première vente saisie en caisse, je commence à suivre votre chiffre d'affaires, votre panier moyen et vos tendances.`,
       revIntro: 'Voici vos ventes réelles enregistrées à ce jour.',
       revLabel: 'Ventes enregistrées', ordLabel: 'Nombre de ventes', basketLabel: 'Panier moyen',
@@ -959,7 +972,20 @@
     },
     en: {
       costsNeeded: (n) => `${n} is just starting on Kiwi. I reason from your real recorded sales, but I don't have your cost structure yet (rent, payroll, margin, cash). I'd rather simulate nothing than invent figures.`,
-      costsCta: 'Record your sales day to day and add your costs in Settings, I then unlock hiring, pricing, break-even and forecast simulations.',
+      costsCta: 'Record your sales day to day and enter your costs in Margins, “Fixed costs” card: I then compute your net result and your break-even.',
+      beText: (fixed, staff, pct) => `To cover this month’s costs (${fixed} of fixed costs${staff ? ` and ${staff} of staff` : ''}), here is what you need to sell, at ${pct} left after cost of goods and fees over 30 days.`,
+      beNeed: 'Break-even · month sales', beNeedH: 'costs and staff covered',
+      bePerDay: 'Break-even · per day', bePerDayH: (open) => (open ? 'per opening day' : 'per calendar day'),
+      beSold: 'Sold this month', beSoldH: 'so far',
+      bePace: 'At the current pace', bePaceH: 'projected over the month',
+      beAhead: (a) => `At the pace of the days so far, you will end the month ${a} above break-even.`,
+      beBehind: (a) => `At the pace of the days so far, you will be ${a} short of covering this month’s costs.`,
+      beEarly: 'The month’s pace shows once the first day is over.',
+      beNote: 'The same calculation as the “Break-even” card in Margins.',
+      chText: (t) => `What the business has to cover each month: <b>${t}</b>, before cost of goods.`,
+      chStaff: 'Staff', chStaffH: (s) => (s ? 'Team salaries and social charges' : 'Team salaries, social charges not set'),
+      chShare: (p) => `${p} % of the total`,
+      chBiggest: (n, p) => `“${n}” is your largest item (${p} % of what has to be covered).`,
       noSales: (n) => `${n} has no recorded sale yet. As soon as the first sale is rung up, I start tracking your revenue, average basket and trends.`,
       revIntro: 'Here are your real recorded sales so far.',
       revLabel: 'Recorded sales', ordLabel: 'Number of sales', basketLabel: 'Average basket',
@@ -970,7 +996,20 @@
     },
     ar: {
       costsNeeded: (n) => `${n} بدأ للتو على Kiwi. أعتمد على مبيعاتك الحقيقية المسجّلة، لكن ليس لديّ بعد هيكل تكاليفك (الكراء، الأجور، الهامش، السيولة). أفضّل ألّا أحاكي شيئًا على أن أخترع أرقامًا.`,
-      costsCta: 'سجّل مبيعاتك يومًا بيوم وأضف تكاليفك في الإعدادات، عندها أفتح محاكاة التوظيف والأسعار ونقطة التعادل والتوقعات.',
+      costsCta: 'سجّل مبيعاتك يومًا بيوم وأدخل مصاريفك في الهوامش، بطاقة « المصاريف الثابتة »: عندها أحسب نتيجتك الصافية وعتبة مردوديتك.',
+      beText: (fixed, staff, pct) => `لتغطية مصاريف هذا الشهر (${fixed} من المصاريف الثابتة${staff ? ` و${staff} للمستخدمين` : ''})، هذا ما يجب بيعه، بنسبة ${pct} تبقى بعد تكلفة المواد والعمولات خلال 30 يومًا.`,
+      beNeed: 'العتبة · مبيعات الشهر', beNeedH: 'المصاريف والمستخدمون مغطّون',
+      bePerDay: 'العتبة · في اليوم', bePerDayH: (open) => (open ? 'لكل يوم عمل' : 'لكل يوم تقويمي'),
+      beSold: 'المبيعات هذا الشهر', beSoldH: 'حتى الآن',
+      bePace: 'بالوتيرة الحالية', bePaceH: 'توقّع على الشهر',
+      beAhead: (a) => `بوتيرة الأيام الماضية، ستنهي الشهر بـ ${a} فوق العتبة.`,
+      beBehind: (a) => `بوتيرة الأيام الماضية، سينقص ${a} لتغطية مصاريف الشهر.`,
+      beEarly: 'تظهر وتيرة الشهر بعد انتهاء اليوم الأول.',
+      beNote: 'نفس حساب بطاقة « عتبة المردودية » في الهوامش.',
+      chText: (t) => `ما يجب أن يغطيه المحل كل شهر: <b>${t}</b>، قبل تكلفة المواد.`,
+      chStaff: 'المستخدمون', chStaffH: (s) => (s ? 'أجور الفريق والتحملات الاجتماعية' : 'أجور الفريق، التحملات الاجتماعية غير محددة'),
+      chShare: (p) => `${p} % من المجموع`,
+      chBiggest: (n, p) => `« ${n} » هو أكبر بند لديك (${p} % مما يجب تغطيته).`,
       noSales: (n) => `${n} ليس لديه بعد أي عملية بيع مسجّلة. بمجرد تسجيل أول عملية بيع، أبدأ بتتبّع رقم معاملاتك ومتوسط السلة والاتجاهات.`,
       revIntro: 'هذه مبيعاتك الحقيقية المسجّلة حتى الآن.',
       revLabel: 'المبيعات المسجّلة', ordLabel: 'عدد المبيعات', basketLabel: 'متوسط السلة',
@@ -1209,8 +1248,66 @@
     return { text: `${ADVICE_INTRO[lng] || ADVICE_INTRO.fr}${list}`, follow: [tr().chips.price5, tr().chips.forecast] };
   }
 
+  /* Un vrai commerçant qui a renseigné ses charges (assets/charges.js) : le
+     seuil et les postes viennent du même calcul que la page Marges. Sans
+     trésorerie ni historique, le reste du profil reste partiel. */
+  const realCharges = () => {
+    try { const K = window.KiwiCharges; return K && K.configured && (K.configured() || (K.monthly().staff)) ? K : null; } catch (_) { return null; }
+  };
+  function sBreakEvenReal(K) {
+    const t = nv();
+    let be = null;
+    try { be = K.breakEven(); } catch (_) { be = null; }
+    if (!be) return partialReply();
+    if (be.salesNeeded == null) {
+      const why = { 'no-costs': 'beNoCosts', 'too-few': 'beTooFew', 'no-sales': 'beNoSales', negative: 'beNegative' }[be.reason] || 'beNoSales';
+      let txt = '';
+      try { txt = K.text ? K.text(why) : ''; } catch (_) { txt = ''; }
+      return { text: escHtml(txt || t.costsCta), follow: [tr().chips.charges] };
+    }
+    const r = {
+      text: t.beText(fmtMad(be.fixedMonth), be.staffMonth > 0 ? fmtMad(be.staffMonth) : '', `${fmt1(be.contribution * 100)} %`),
+      stats: [
+        { l: t.beNeed, v: fmtMad(be.salesNeeded), h: t.beNeedH },
+        { l: t.bePerDay, v: fmtMad(be.perDay), h: t.bePerDayH(be.daysAreOpenDays) },
+        { l: t.beSold, v: fmtMad(be.soldSoFar), h: t.beSoldH },
+      ],
+      note: t.beNote,
+      follow: [tr().chips.charges],
+    };
+    if (be.projection != null) {
+      r.stats.push({ l: t.bePace, v: fmtMad(be.projection), h: t.bePaceH });
+      r.verdict = be.gap >= 0 ? { tone: 'good', text: t.beAhead(fmtMad(be.gap)) } : { tone: 'warn', text: t.beBehind(fmtMad(-be.gap)) };
+    } else {
+      r.verdict = { tone: 'good', text: t.beEarly };
+    }
+    return r;
+  }
+  function sChargesReal(K) {
+    const t = nv();
+    let m = null;
+    try { m = K.monthly(); } catch (_) { m = null; }
+    if (!m) return partialReply();
+    const labels = tr().opex || {};
+    const catLabel = (k) => {
+      try { return K.catLabel ? K.catLabel(k) : (labels[k] || k); } catch (_) { return labels[k] || k; }
+    };
+    const items = Object.entries(m.byCat).map(([k, v]) => [catLabel(k), v]);
+    if (m.staff && m.staff.total > 0) items.push([t.chStaff, m.staff.total, t.chStaffH(m.staff.socialSet)]);
+    items.sort((a, b) => b[1] - a[1]);
+    const total = items.reduce((n, x) => n + x[1], 0);
+    if (!(total > 0)) return { text: t.costsCta, follow: [tr().chips.breakeven] };
+    const top = items[0];
+    return {
+      text: t.chText(fmtMad(total)),
+      stats: items.slice(0, 6).map((x) => ({ l: escHtml(x[0]), v: fmtMad(x[1]), h: x[2] || t.chShare(fmt1(x[1] / total * 100)) })),
+      verdict: { tone: 'warn', text: t.chBiggest(escHtml(top[0]), fmt1(top[1] / total * 100)) },
+      follow: [tr().chips.breakeven],
+    };
+  }
+
   function sBreakEven() {
-    if (B.partial) return partialReply();
+    if (B.partial) { const K = realCharges(); return K ? sBreakEvenReal(K) : partialReply(); }
     const t = tr().breakeven;
     return {
       text: t.text(),
@@ -1243,7 +1340,7 @@
   }
 
   function sCharges() {
-    if (B.partial) return partialReply();
+    if (B.partial) { const K = realCharges(); return K ? sChargesReal(K) : partialReply(); }
     const t = tr().charges;
     const labels = tr().opex;
     const items = Object.entries(B.opex).sort((a, b) => b[1] - a[1]);

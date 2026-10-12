@@ -422,7 +422,8 @@ function renderFinance(real) {
     /3 produits à la carte/.test(realText) && /Pain complet 5 MAD 2 MAD saisi 3 MAD 60[.,]0\s?% 3/.test(realText)
       && /Msemen 10 MAD · à chiffrer · · 1/.test(realText), realText.slice(-400));
   ok('rendu réel : rien d\'inventé sur les charges', !/Budget|Cible|Seuil de rentabilité|Loyer \d/.test(realText)
-    && /Avant loyer, salaires et charges : Kiwi ne les connaît pas\./.test(realText));
+    && /Avant loyer, salaires et charges : renseignez-les pour voir votre vrai résultat\./.test(realText)
+    && /data-action="charges-open"/.test(realHtml));
   ok('rendu réel : propose d\'ouvrir la carte', /data-action="nav-menu"/.test(realHtml));
 
   const demoHtml = renderFinance(false);

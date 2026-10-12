@@ -39,7 +39,7 @@ const FACTS = {
   codeHolders: 3, teamSize: 5, clockedStaff: 2, shiftsPlanned: 4,
   linkedSales: 6, loyaltySet: true, rewardsGiven: 0,
   identity: { name: true, logo: false, legal: true }, hoursSet: true, printerSeen: false,
-  accountantSet: false, iqUsed: true,
+  accountantSet: false, iqUsed: true, chargesSet: false,
   menuItems: 40, menuWithPhoto: 12, menuWithRecipe: 9, floorTables: 14, tableSessions: 80,
   kitchenSent: 0, stockItems: 25, stockMoves: 30, stockCounts: 0, waiterOrders: 0,
   invoices: 2, promotions: 0, employeeDevices: 0, reservations: 0, kdsStations: 0, purchaseOrders: 0,

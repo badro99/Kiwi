@@ -82,6 +82,7 @@ de traiter le « IQ avancé » comme une question à part.
 | C10 | Imprimante | — | pont vu sur 7 jours ou tâche imprimée | `print_bridges`, `print_jobs` | 1 · **non mesurable** sans pont : Bluetooth et USB ne laissent aucune trace côté serveur |
 | C11 | Le comptable reçoit le mois | adresse du comptable posée | — | `store_docs.monthreport` | 0,5 |
 | C12 | Kiwi IQ | — | briefing ou question IQ dans la fenêtre | `store_docs.briefing`, `ai_usage` | 1 |
+| C13 | Charges fixes | — | au moins une charge fixe avec un montant (une ligne retirée ne compte pas ; les montants ne sont jamais lus) | `store_docs.charges` | 1 |
 | O1 | Factures | — | facture émise | `sale_invoices` | optionnel |
 | O2 | Promotions | — | promotion active | `store_docs.promotions` | optionnel |
 | O3 | Dépenses | — | dépense saisie | `store_docs.expenses` | optionnel (module coupé d'office) |
