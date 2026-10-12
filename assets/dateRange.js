@@ -2183,19 +2183,41 @@
    * compris : le dénominateur honnête de « CA moyen par jour ». RANGE_DAYS
    * divisait une période personnalisée par 1 (la moyenne valait le total) et
    * l'année en cours par 365. */
+  /* Le carnet (clôtures, clients) de l'établissement À L'ÉCRAN, et de lui
+   * seul. KiwiDayReport et KiwiClients savent retrouver un carnet par défaut,
+   * mais leur repli passe par kiwiLiveMerchant ou l'appairage, un réglage
+   * global au navigateur : sur une session réelle dont l'établissement n'est
+   * pas (encore) identifié, ou après qu'un opérateur a consulté un autre
+   * commerce, ce repli désigne un AUTRE commerce. Ces tuiles s'affichent à
+   * côté des ventes de l'établissement à l'écran ; elles lisent donc le même
+   * établissement, par son slug gravé (le même calcul que ces deux carnets en
+   * mode tableau de bord), ou rien du tout. */
+  function screenBook() {
+    try {
+      const KV = window.KiwiVenue;
+      if (!KV || !KV.isCustom || !KV.isCustom() || !KV.getCurrentVenueData) return '';
+      const vd = KV.getCurrentVenueData();
+      if (!vd) return '';
+      if (vd.slug) return String(vd.slug);
+      return String(vd.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    } catch (_) { return ''; }
+  }
   /* Les pourboires déclarés par les journées CLOSES de la fenêtre. Une journée
    * encore ouverte n'a rien déclaré : on ne la compte pas, on ne l'estime pas.
    * null quand le classeur n'est pas chargé (rien à dire). */
   function realClosedTips(range) {
     const DR = window.KiwiDayReport;
     if (!DR || typeof DR.list !== 'function') return null;
+    const book = screenBook();
+    if (!book) return null;
     const [from, to] = rangeBounds(range == null ? currentRange : range);
     const slug = activeMerchantSlug();
     const first = merchantDayKey(from + 1, slug);
     const last = to === Infinity ? merchantDayKey(Date.now(), slug) : merchantDayKey(to - 1, slug);
     let sum = 0, days = 0;
     let reports = [];
-    try { reports = DR.list() || []; } catch (_) { return null; }
+    try { reports = DR.list(book) || []; } catch (_) { return null; }
     reports.forEach((r) => {
       if (!r || !r.closed || !r.day || r.day < first || r.day > last) return;
       const t = Number(r.tips);
@@ -2216,8 +2238,9 @@
    * clients identifiés, jamais sur toutes les ventes. */
   function realClientMix(from, to) {
     const KC = window.KiwiClients;
+    const book = screenBook();
     let list = [];
-    try { list = (KC && typeof KC.list === 'function' && KC.list()) || []; } catch (_) { list = []; }
+    try { list = (book && KC && typeof KC.list === 'function' && KC.list(book)) || []; } catch (_) { list = []; }
     let visitors = 0, regulars = 0;
     list.forEach((c) => {
       const stamps = (Array.isArray(c && c.history) ? c.history : [])
@@ -3283,6 +3306,11 @@
          * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
          * encaissement, deux lignes plus haut. */
         success:    data.success    ? { ...data.success,    text: '·', unit: '', delta: null } : data.success,
+        /* Même chose pour « Temps moyen à table / en cabine » : le tableau de
+         * bord ne reçoit ni l'heure d'installation ni l'heure de départ d'une
+         * table. Le clone remis à zéro affichait « 0 min », une table libérée
+         * à l'instant où elle est prise. */
+        tempsTable: data.tempsTable ? { ...data.tempsTable, text: '·', unit: '', delta: null } : data.tempsTable,
         /* Le taux de retour, lui, a une source : les remboursements passés à
          * la caisse (/api/sale/refund) arrivent dans le même journal que les
          * ventes. C'est la part, en valeur, de ce qui a été vendu sur la
@@ -3339,7 +3367,7 @@
        * la comparaison partout où elle n'a PAS été recalculée depuis les ventes
        * réelles, plutôt que d'énumérer les tuiles une à une — une tuile ajoutée
        * demain est couverte sans y penser. */
-      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue', 'occupation', 'adr', 'revpar']);
+      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue', 'collected', 'receivable', 'regulars', 'tauxRetour', 'occupation', 'adr', 'revpar']);
       Object.keys(data).forEach((k) => {
         const tile = data[k];
         if (tile && typeof tile === 'object' && 'delta' in tile && !REAL_DELTAS.has(k)) {

@@ -22,7 +22,7 @@ let failures = 0, passed = 0;
 const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' + label); } else { failures++; console.log('  ✗ ' + label + (detail ? '\n      ' + detail : '')); } };
 
 console.log('■ Pourboires (tools/tips-truth-test.mjs)');
-const fnFrom = SRC.indexOf('  function realClosedTips(range) {');
+const fnFrom = SRC.indexOf('  function screenBook() {');
 const fnTo = SRC.indexOf('  function windowDays(range) {');
 const tipFrom = SRC.indexOf('    tips:       { labels:');
 const tipTo = SRC.indexOf('    success:    { labels:', tipFrom);
@@ -39,8 +39,12 @@ const bounds = {
   septJours: [Date.parse('2026-10-07T05:00:00Z'), Infinity],
   hier: [Date.parse('2026-10-12T05:00:00Z'), Date.parse('2026-10-13T05:00:00Z')],
 };
-function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false }) {
-  const window = { KiwiDayReport: noBook ? undefined : { list: () => book.slice() } };
+const asked = [];
+function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false, venue = { slug: 'cafe-test', name: 'Café Test' }, custom = true }) {
+  const window = {
+    KiwiDayReport: noBook ? undefined : { list: (slug) => { asked.push(slug); return slug === 'cafe-test' ? book.slice() : [{ day: '2026-10-12', closed: true, tips: 5000 }]; } },
+    KiwiVenue: { isCustom: () => custom, getCurrentVenueData: () => venue },
+  };
   const ctx = vm.createContext({
     window, Date: class extends Date { static now() { return ts(TODAY); } }, Math, Number, Infinity,
     ownData: () => real, currentRange: range,
@@ -75,6 +79,14 @@ const unloaded = run({ real: true, book, range: 'septJours', noBook: true });
 check('report book not loaded: no tile (nothing to say)', unloaded === null, JSON.stringify(unloaded));
 const rich = run({ real: true, book, range: 'septJours', revenue: 999999 });
 check('the revenue no longer moves the tips of a real store', rich && rich.value === 200.4);
+
+asked.length = 0;
+run({ real: true, book, range: 'septJours' });
+check('the report book read is the venue on screen’s, by its slug', asked.length === 1 && asked[0] === 'cafe-test', JSON.stringify(asked));
+const unnamed = run({ real: true, book, range: 'septJours', custom: false });
+check('a store on screen that cannot be identified: no tile, never another store’s book', unnamed === null, JSON.stringify(unnamed));
+const renamed = run({ real: true, book, range: 'septJours', venue: { name: 'Café Test' } });
+check('without an engraved slug, the name gives the same book (Café Test → cafe-test)', renamed && renamed.value === 200.4, JSON.stringify(renamed));
 
 const demo = run({ real: false, book, range: 'septJours', revenue: 10000 });
 check('the demo keeps its illustration (revenue × rate)', demo && demo.value === 720 && demo.delta === 3.2, JSON.stringify(demo));

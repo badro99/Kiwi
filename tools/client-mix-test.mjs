@@ -22,7 +22,7 @@ const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' 
 
 console.log('■ Clients du carnet (tools/client-mix-test.mjs)');
 const cut = (a, b) => { const i = SRC.indexOf(a), j = SRC.indexOf(b, i + 1); return i > 0 && j > i ? SRC.slice(i, j) : ''; };
-const fnSrc = cut('  function realClientMix(from, to) {', '  function windowDays(range) {');
+const fnSrc = cut('  function screenBook() {', '  /* Les pourboires déclarés') + cut('  function realClientMix(from, to) {', '  function windowDays(range) {');
 const tilesSrc = cut('    regulars:   { labels:', '    txPerDay:   { labels:');
 check('realClientMix and the three client tiles are extractable', !!fnSrc && !!tilesSrc);
 if (failures) process.exit(1);
@@ -30,8 +30,10 @@ if (failures) process.exit(1);
 const DAY = 864e5;
 const FROM = Date.parse('2026-10-07T05:00:00Z'), TO = Date.parse('2026-10-14T05:00:00Z');
 const at = (iso) => Date.parse(iso + 'T12:00:00Z');
-function load(list, { throws = false, missing = false } = {}) {
-  const window = missing ? {} : { KiwiClients: { list: () => { if (throws) throw new Error('boom'); return list; } } };
+const asked = [];
+function load(list, { throws = false, missing = false, custom = true, venue = { slug: 'riad-test' } } = {}) {
+  const window = { KiwiVenue: { isCustom: () => custom, getCurrentVenueData: () => venue } };
+  if (!missing) window.KiwiClients = { list: (b) => { asked.push(b); if (throws) throw new Error('boom'); return b === 'riad-test' ? list : [{ id: 'x', visits: 1, history: [{ ts: FROM + 1 }] }]; } };
   const ctx = vm.createContext({ window, Number, Array, Math, withDelta: (ds, f) => ds.reduce(f) });
   vm.runInContext(fnSrc + '\nvar __tiles = {' + tilesSrc + '};', ctx);
   return ctx;
@@ -61,6 +63,10 @@ check('the window start is inclusive', load([{ id: 'z', visits: 1, history: [{ t
 check('empty book: nobody', JSON.stringify(load([]).realClientMix(FROM, TO)) === '{"visitors":0,"regulars":0,"newcomers":0}');
 check('no client store loaded: nobody, no crash', load([], { missing: true }).realClientMix(FROM, TO).visitors === 0);
 check('a store that throws: nobody, no crash', load([], { throws: true }).realClientMix(FROM, TO).visitors === 0);
+
+check('the client book read is the venue on screen’s, by its slug', asked.length > 0 && asked.every((b) => b === 'riad-test'), JSON.stringify([...new Set(asked)]));
+check('a store on screen that cannot be identified: nobody, never another store’s book',
+  load(book, { custom: false }).realClientMix(FROM, TO).visitors === 0);
 
 const T = ctx.__tiles;
 const real = { tx: { value: 140 }, regulars: { value: 2, unit: '/ 4' },

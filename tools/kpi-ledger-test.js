@@ -147,13 +147,25 @@ ok('les journées décalées ne soustraient plus 24 heures',
  * Les retours, eux, se mesurent : les remboursements passent par le même
  * journal que les ventes. Le taux de retour est la part remboursée de ce qui
  * a été vendu sur la période ; sans vente, le tiret. */
-ok('« success » affiche un point médian chez un vrai commerçant, pas un zéro',
-  /success:\s*data\.success\s*\?[^\n]*text: '·'/.test(SRC),
-  'la tuile retombe encore sur le zéro du clone de démonstration');
+['success', 'tempsTable'].forEach((k) => {
+  ok(`« ${k} » affiche un point médian chez un vrai commerçant, pas un zéro`,
+    new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '·'").test(SRC),
+    'la tuile retombe encore sur le zéro du clone de démonstration');
+});
 ok('« tauxRetour » = remboursé ÷ vendu sur la période, en valeur',
   /tauxRetour: data\.tauxRetour \? \(w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(w\.refunds \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
 ok('« tauxRetour » compare le même taux à la période précédente',
   /realDeltaPct\(rng, \(s\) => \(s\.gross \? \(s\.refunds \/ s\.gross\) \* 100 : 0\)\)/.test(SRC));
+{
+  /* La bande efface toute variation qu'elle n'a pas recalculée depuis les
+     ventes réelles (REAL_DELTAS). Une tuile qui calcule la sienne doit y
+     figurer, sinon sa comparaison n'atteint jamais l'écran. */
+  const m = SRC.match(/const REAL_DELTAS = new Set\(\[([^\]]*)\]\)/);
+  const keys = m ? m[1].split(',').map((x) => x.trim().replace(/'/g, '')) : [];
+  ['tx', 'panier', 'ratio', 'revenue', 'collected', 'receivable', 'regulars', 'tauxRetour'].forEach((k) => {
+    ok(`la variation réelle de « ${k} » n'est pas effacée par la bande`, keys.includes(k), JSON.stringify(keys));
+  });
+}
 ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro',
   /w\.gross > 0[\s\S]{0,400}: \{ \.\.\.data\.tauxRetour, text: '·', unit: '', delta: null \}\) : data\.tauxRetour/.test(SRC));
 {
