@@ -1265,6 +1265,9 @@ section('Whole-project regressions');
        porte accepte les origines de l'app sur /api et /auth seulement. */
     'app-bundle-test.mjs',
     'app-release-test.mjs',
+    /* Coquille Android (Compose, manifest, icône, plugins) : contrat statique,
+       aucun JDK ne tourne ici. */
+    'android-native-test.mjs',
     'biometric-unlock-test.mjs',
     'native-workspace-ux-test.mjs',
     'native-device-layout-test.mjs',

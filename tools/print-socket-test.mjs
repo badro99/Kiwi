@@ -42,7 +42,7 @@ ok(/NSBonjourServices[\s\S]*_printer\._tcp[\s\S]*_pdl-datastream\._tcp[\s\S]*_ip
 ok(!plist.includes('NSBluetoothAlwaysUsageDescription'), 'iOS v1 ne demande pas Bluetooth');
 
 const manifest = read('app/android/app/src/main/AndroidManifest.xml');
-for (const permission of ['INTERNET', 'ACCESS_WIFI_STATE', 'ACCESS_NETWORK_STATE', 'CAMERA', 'POST_NOTIFICATIONS']) {
+for (const permission of ['INTERNET', 'ACCESS_WIFI_STATE', 'ACCESS_NETWORK_STATE', 'CAMERA']) {
   ok(manifest.includes('android.permission.' + permission), 'Android déclare ' + permission);
 }
 ok(!manifest.includes('android.permission.BLUETOOTH'), 'Android v1 ne demande pas Bluetooth');

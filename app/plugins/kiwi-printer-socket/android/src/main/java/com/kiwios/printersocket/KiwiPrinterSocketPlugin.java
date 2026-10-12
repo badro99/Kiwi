@@ -1,12 +1,34 @@
 package com.kiwios.printersocket;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
+import android.os.CancellationSignal;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
+import android.print.PageRange;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
+import android.webkit.MimeTypeMap;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -20,6 +42,7 @@ import java.io.File;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.net.ConnectException;
@@ -31,8 +54,12 @@ import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -223,6 +250,325 @@ public class KiwiPrinterSocketPlugin extends Plugin {
         res.put("authenticated", false);
         res.put("fallback", true);
         call.resolve(res);
+    }
+
+    private static final int INVOICE_MAX_BYTES = 2_000_000;
+    private static final int SHARE_MAX_BYTES = 25 * 1024 * 1024;
+    private static final long PRINT_LOAD_TIMEOUT_MS = 20_000L;
+    private static final long SHARE_RETENTION_MS = 60L * 60L * 1000L;
+    // Off-screen renderers stay strongly reachable until the print framework
+    // calls onFinish on their adapter; a collected WebView prints blank pages.
+    private final Set<WebView> printRenderers = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /**
+     * Android counterpart of the iOS A4 export. An off-screen WebView lays the
+     * document out and the system print dialog takes it from there: "Save as
+     * PDF" and every installed printer. Resolves once the job is handed to the
+     * system, which says the dialog was presented, never that the user saved or
+     * printed anything.
+     */
+    @PluginMethod
+    public void exportInvoice(PluginCall call) {
+        printDocument(call);
+    }
+
+    /** Same arguments and behaviour as exportInvoice, for any document a page asks to print. */
+    @PluginMethod
+    public void printHtml(PluginCall call) {
+        printDocument(call);
+    }
+
+    /**
+     * Writes base64 data to a private cache folder and opens the system share
+     * sheet on it through the app's FileProvider. Resolves once the sheet is
+     * presented; what the user does with it is theirs.
+     */
+    @PluginMethod
+    public void shareFile(PluginCall call) {
+        String encoded = call.getString("data");
+        // Refuse an oversized payload before decoding it (base64 is 4/3 of the bytes).
+        if (encoded == null || encoded.isEmpty() || encoded.length() > SHARE_MAX_BYTES / 3L * 4L + 1_048_576L) {
+            call.reject("invalid-file", "invalid-file");
+            return;
+        }
+        final byte[] bytes;
+        try {
+            bytes = Base64.decode(encoded, Base64.DEFAULT);
+        } catch (IllegalArgumentException error) {
+            call.reject("invalid-file", "invalid-file");
+            return;
+        }
+        if (bytes.length == 0 || bytes.length > SHARE_MAX_BYTES) {
+            call.reject("invalid-file", "invalid-file");
+            return;
+        }
+        String name = shareFileName(call.getString("name"));
+        String mime = shareMime(call.getString("mime"), name);
+        final Uri uri;
+        try {
+            File root = new File(getContext().getCacheDir(), "kiwi-share");
+            pruneShares(root);
+            File folder = new File(root, UUID.randomUUID().toString());
+            if (!folder.mkdirs()) throw new IOException("kiwi-share folder");
+            File file = new File(folder, name);
+            try (FileOutputStream output = new FileOutputStream(file)) { output.write(bytes); }
+            uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
+        } catch (Exception error) {
+            call.reject("share-write-failed", "share-write-failed");
+            return;
+        }
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType(mime);
+        send.putExtra(Intent.EXTRA_STREAM, uri);
+        send.setClipData(ClipData.newRawUri(name, uri));
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent chooser = Intent.createChooser(send, null);
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getBridge().executeOnMainThread(() -> {
+            Activity activity = getActivity();
+            if (activity == null || activity.isFinishing()) { call.reject("no-presenter", "no-presenter"); return; }
+            try {
+                activity.startActivity(chooser);
+            } catch (ActivityNotFoundException error) {
+                call.reject("no-share-target", "no-share-target");
+                return;
+            }
+            JSObject result = new JSObject();
+            result.put("ok", true);
+            result.put("presented", true);
+            call.resolve(result);
+        });
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void printDocument(PluginCall call) {
+        String html = call.getString("html");
+        if (html == null || html.isEmpty() || html.getBytes(StandardCharsets.UTF_8).length > INVOICE_MAX_BYTES) {
+            call.reject("invalid-invoice", "invalid-invoice");
+            return;
+        }
+        String jobName = printJobName(call.getString("name"));
+        Uri base = documentBase(call.getString("baseUrl"));
+        getBridge().executeOnMainThread(() -> {
+            Activity activity = getActivity();
+            if (activity == null || activity.isFinishing()) { call.reject("no-presenter", "no-presenter"); return; }
+            WebView renderer = new WebView(activity);
+            renderer.getSettings().setJavaScriptEnabled(true);
+            renderer.getSettings().setAllowFileAccess(false);
+            renderer.getSettings().setAllowContentAccess(false);
+            printRenderers.add(renderer);
+            Handler main = new Handler(Looper.getMainLooper());
+            boolean[] settled = { false };
+            Runnable timeout = () -> {
+                if (settled[0]) return;
+                settled[0] = true;
+                releaseRenderer(renderer);
+                call.reject("render-timeout", "render-timeout");
+            };
+            renderer.setWebViewClient(new WebViewClient() {
+                @Override
+                public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                    // With a base URL, relative images, fonts and CSS resolve to
+                    // https://localhost/<path>: serve them from the bundled web.
+                    return base == null ? null : bundledAsset(request.getUrl());
+                }
+
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    if (settled[0]) return;
+                    settled[0] = true;
+                    main.removeCallbacks(timeout);
+                    // A beat for late layout (web fonts, decoded images) before pagination.
+                    main.postDelayed(() -> handToPrintManager(call, activity, renderer, jobName), 150);
+                }
+            });
+            main.postDelayed(timeout, PRINT_LOAD_TIMEOUT_MS);
+            renderer.loadDataWithBaseURL(base == null ? null : base.toString(), html, "text/html", "utf-8", null);
+        });
+    }
+
+    private void handToPrintManager(PluginCall call, Activity activity, WebView renderer, String jobName) {
+        PrintManager manager = (PrintManager) activity.getSystemService(Context.PRINT_SERVICE);
+        if (manager == null || activity.isFinishing()) {
+            releaseRenderer(renderer);
+            call.reject("print-unavailable", "print-unavailable");
+            return;
+        }
+        PrintAttributes attributes = new PrintAttributes.Builder()
+            .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+            .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+            .build();
+        try {
+            PrintDocumentAdapter adapter = renderer.createPrintDocumentAdapter(jobName);
+            manager.print(jobName, new ReleasingPrintAdapter(adapter, () -> releaseRenderer(renderer)), attributes);
+        } catch (RuntimeException error) {
+            releaseRenderer(renderer);
+            call.reject("print-failed", "print-failed");
+            return;
+        }
+        JSObject result = new JSObject();
+        result.put("ok", true);
+        result.put("presented", true);
+        call.resolve(result);
+    }
+
+    private void releaseRenderer(WebView renderer) {
+        if (!printRenderers.remove(renderer)) return;
+        renderer.stopLoading();
+        renderer.destroy();
+    }
+
+    private WebResourceResponse bundledAsset(Uri url) {
+        if (url == null || !"localhost".equalsIgnoreCase(url.getHost())) return null;
+        String scheme = url.getScheme();
+        if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) return null;
+        String path = url.getPath();
+        if (path == null) return null;
+        while (path.startsWith("/")) path = path.substring(1);
+        if (path.isEmpty() || path.endsWith("/")) return null;
+        for (String segment : path.split("/")) {
+            if (segment.isEmpty() || segment.equals(".") || segment.equals("..")) return null;
+        }
+        String mime = mimeForPath(path);
+        if (mime == null) mime = "application/octet-stream";
+        try {
+            // Capacitor copies the web bundle to assets/public/.
+            InputStream input = getContext().getAssets().open("public/" + path);
+            return new WebResourceResponse(mime, isTextMime(mime) ? "utf-8" : null, input);
+        } catch (IOException missing) {
+            return null;
+        }
+    }
+
+    private static Uri documentBase(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return null;
+        Uri uri = Uri.parse(raw.trim());
+        String scheme = uri.getScheme();
+        if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) return null;
+        return uri.getHost() == null ? null : uri;
+    }
+
+    private static String printJobName(String raw) {
+        StringBuilder clean = new StringBuilder();
+        if (raw != null) {
+            for (int i = 0; i < raw.length() && clean.length() < 80; i++) {
+                char c = raw.charAt(i);
+                if (Character.isLetterOrDigit(c) || c == '-' || c == '_') clean.append(c);
+            }
+        }
+        return clean.length() == 0 ? "Facture" : clean.toString();
+    }
+
+    /** Letters, digits, '-', '_' and '.' only; at most 120 characters, extension kept; never a path. */
+    static String shareFileName(String raw) {
+        StringBuilder clean = new StringBuilder();
+        if (raw != null) {
+            for (int i = 0; i < raw.length(); i++) {
+                char c = raw.charAt(i);
+                if (Character.isLetterOrDigit(c) || c == '-' || c == '_' || c == '.') clean.append(c);
+            }
+        }
+        String name = clean.toString();
+        while (name.startsWith(".")) name = name.substring(1);
+        String base = name;
+        String extension = "";
+        int dot = name.lastIndexOf('.');
+        if (dot > 0 && dot < name.length() - 1 && name.length() - dot <= 16) {
+            base = name.substring(0, dot);
+            extension = name.substring(dot);
+        }
+        if (base.isEmpty()) base = "Kiwi";
+        int room = 120 - extension.length();
+        if (base.length() > room) base = base.substring(0, room);
+        return base + extension;
+    }
+
+    private static String shareMime(String requested, String name) {
+        if (requested != null && requested.matches("^[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,63}/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,127}$")) {
+            return requested.toLowerCase(Locale.ROOT);
+        }
+        String guessed = mimeForPath(name);
+        return guessed == null ? "application/octet-stream" : guessed;
+    }
+
+    private static String mimeForPath(String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot < 0 || dot == path.length() - 1) return null;
+        String extension = path.substring(dot + 1).toLowerCase(Locale.ROOT);
+        switch (extension) {
+            case "html": case "htm": return "text/html";
+            case "css": return "text/css";
+            case "js": case "mjs": return "text/javascript";
+            case "json": return "application/json";
+            case "svg": return "image/svg+xml";
+            case "png": return "image/png";
+            case "jpg": case "jpeg": return "image/jpeg";
+            case "gif": return "image/gif";
+            case "webp": return "image/webp";
+            case "avif": return "image/avif";
+            case "ico": return "image/x-icon";
+            case "woff2": return "font/woff2";
+            case "woff": return "font/woff";
+            case "ttf": return "font/ttf";
+            case "otf": return "font/otf";
+            case "pdf": return "application/pdf";
+            case "csv": return "text/csv";
+            case "txt": return "text/plain";
+            default: return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+    }
+
+    private static boolean isTextMime(String mime) {
+        return mime.startsWith("text/") || mime.equals("application/json") || mime.equals("image/svg+xml");
+    }
+
+    // Shared files cannot be deleted when the receiving app is done with them
+    // (it never says); anything older than an hour is gone by the next share.
+    private static void pruneShares(File root) {
+        File[] folders = root.listFiles();
+        if (folders == null) return;
+        long cutoff = System.currentTimeMillis() - SHARE_RETENTION_MS;
+        for (File folder : folders) {
+            if (folder.lastModified() >= cutoff) continue;
+            File[] files = folder.listFiles();
+            if (files != null) for (File file : files) file.delete();
+            folder.delete();
+        }
+    }
+
+    /** Delegates to the WebView's adapter and frees the renderer when the job is done. */
+    private static final class ReleasingPrintAdapter extends PrintDocumentAdapter {
+        private final PrintDocumentAdapter inner;
+        private final Runnable release;
+
+        ReleasingPrintAdapter(PrintDocumentAdapter inner, Runnable release) {
+            this.inner = inner;
+            this.release = release;
+        }
+
+        @Override
+        public void onStart() {
+            inner.onStart();
+        }
+
+        @Override
+        public void onLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, CancellationSignal cancellationSignal, LayoutResultCallback callback, Bundle extras) {
+            inner.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras);
+        }
+
+        @Override
+        public void onWrite(PageRange[] pages, ParcelFileDescriptor destination, CancellationSignal cancellationSignal, WriteResultCallback callback) {
+            inner.onWrite(pages, destination, cancellationSignal, callback);
+        }
+
+        @Override
+        public void onFinish() {
+            try {
+                inner.onFinish();
+            } finally {
+                release.run();
+            }
+        }
     }
 
     private File ledgerFile(PluginCall call) {

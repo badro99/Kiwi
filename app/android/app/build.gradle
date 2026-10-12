@@ -17,6 +17,19 @@ def releaseKeyAlias = keystoreProperties['keyAlias'] ?: System.getenv('KIWI_ANDR
 def releaseKeyPassword = keystoreProperties['keyPassword'] ?: System.getenv('KIWI_ANDROID_KEY_PASSWORD')
 def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 
+/* Version. Play refuse un versionCode déjà vu : une build de release passe le
+ * numéro suivant explicitement, comme tools/app-archive.sh passe
+ * KIWI_BUILD_NUMBER à xcodebuild côté iOS. Propriété Gradle ou variable
+ * d'environnement, au choix :
+ *   ./gradlew bundleRelease -PKIWI_VERSION_CODE=12 -PKIWI_VERSION_NAME=1.2.0
+ *   KIWI_VERSION_CODE=12 KIWI_VERSION_NAME=1.2.0 ./gradlew bundleRelease
+ * Sans l'une ni l'autre, une build locale garde 1 / "1.0". */
+def kiwiVersionCode = (project.findProperty('KIWI_VERSION_CODE') ?: System.getenv('KIWI_VERSION_CODE') ?: '1').toString().trim().toInteger()
+def kiwiVersionName = (project.findProperty('KIWI_VERSION_NAME') ?: System.getenv('KIWI_VERSION_NAME') ?: '1.0').toString().trim()
+if (kiwiVersionCode < 1) {
+    throw new GradleException("KIWI_VERSION_CODE doit être un entier positif (reçu ${kiwiVersionCode}).")
+}
+
 android {
     namespace = "com.kiwios.pro"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -24,8 +37,8 @@ android {
         applicationId "com.kiwios.pro"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode kiwiVersionCode
+        versionName kiwiVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

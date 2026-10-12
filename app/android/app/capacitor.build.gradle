@@ -12,9 +12,11 @@ dependencies {
     implementation project(':capacitor-community-keep-awake')
     implementation project(':capacitor-app')
     implementation project(':capacitor-haptics')
+    implementation project(':capacitor-keyboard')
     implementation project(':capacitor-network')
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
+    implementation project(':kiwi-dynamic-type')
     implementation project(':kiwi-printer-socket')
 
 }

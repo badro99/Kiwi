@@ -49,8 +49,10 @@ check('active native termination is reported through the shared redacted reporte
 check('background termination is not classified as a crash',
   runtime.includes("event && event.isActive ? 'active' : 'background'"));
 check('failed Capacitor restoration is observable', runtime.includes("appRestoredResult") && runtime.includes('native-restored-result-failed'));
-check('Android v1 requests camera and notifications',
-  manifest.includes('android.permission.CAMERA') && manifest.includes('android.permission.POST_NOTIFICATIONS'));
+check('Android requests the camera as optional hardware and no notification permission it never uses',
+  manifest.includes('android.permission.CAMERA') &&
+  /<uses-feature android:name="android\.hardware\.camera" android:required="false" \/>/.test(manifest) &&
+  !manifest.includes('android.permission.POST_NOTIFICATIONS'));
 check('Android v1 does not request Bluetooth', !manifest.includes('android.permission.BLUETOOTH'));
 check('Apple privacy manifest declares no tracking and diagnostic collection',
   privacy.includes('<key>NSPrivacyTracking</key>') && privacy.includes('NSPrivacyCollectedDataTypeCrashData'));
