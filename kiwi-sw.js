@@ -211,7 +211,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=9',
+  '/assets/identity.js?v=10',
   '/assets/caisse-link.js?v=16',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',

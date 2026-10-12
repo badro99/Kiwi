@@ -528,6 +528,10 @@ for (const test of [
   'z-reconciliation-test.mjs',
   'z-alert-truth-test.mjs',
   'owner-identity-browser-test.mjs',
+  /* /api/me a une échéance : une requête qui ne répond jamais ne bloque plus
+     la porte d'identité, donc plus de vue opérateur figée sur « Chargement
+     du journal… » sans bandeau. */
+  'identity-me-timeout-test.mjs',
   'z-alert-copy-test.mjs',
   'z-reconciliation-client-test.mjs',
   'z-reconciliation-browser-test.mjs',

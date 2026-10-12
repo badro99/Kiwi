@@ -389,10 +389,38 @@
     loadIdentity();
   });
 
+  /* /api/me can hang without ever failing: a slow database, a fetch stalled by
+     the service worker, a laptop waking with a dead socket. Nothing settled the
+     identity gate then, so a God Mode view sat on « Chargement du journal… »
+     forever, without its operator banner, and only a manual reload helped.
+     Each attempt now has a deadline; a hung one is aborted and tried again,
+     and the last failure reaches the catch below like any other: unreachable. */
+  var ME_TIMEOUT_MS = 12000, ME_ATTEMPTS = 3;
+  function fetchMe(url, attempts) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = null;
+    var deadline = new Promise(function (_resolve, reject) {
+      timer = setTimeout(function () {
+        reject(new Error('me-timeout'));
+        try { if (controller) controller.abort(); } catch (_) {}
+      }, ME_TIMEOUT_MS);
+    });
+    var request = fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' },
+      signal: controller ? controller.signal : undefined });
+    return Promise.race([request, deadline]).then(function (r) {
+      clearTimeout(timer); return r;
+    }, function (error) {
+      clearTimeout(timer);
+      var hung = error && (error.message === 'me-timeout' || error.name === 'AbortError');
+      if (hung && attempts > 1) return fetchMe(url, attempts - 1);
+      throw error;
+    });
+  }
+
   var identitySequence = 0;
   function loadIdentity() {
   var sequence = ++identitySequence;
-  fetch(meUrl, { cache: 'no-store', headers: { Accept: 'application/json' } })
+  fetchMe(meUrl, ME_ATTEMPTS)
     .then(function (r) {
       if (r && r.ok) return r.json();
       // 404 = this host simply has no API (a static mirror). Everything else —
