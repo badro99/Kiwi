@@ -3007,7 +3007,7 @@
     mixRev:     { labels: { default: 'Mix revenu · ch · resto · spa' }, i18n: 'dash.kpi.revMix',
                   desc: 'Répartition du revenu : chambres / restaurant / hammam', derive: (d) => d.mixRev || null },
     tauxRetour: { labels: { default: 'Taux retour' }, i18n: 'dash.kpi.returnRate',
-                  desc: 'Part des articles retournés', derive: (d) => d.tauxRetour || null },
+                  desc: 'Part des ventes remboursée', derive: (d) => d.tauxRetour || null },
     tempsTable: { labels: { default: 'Temps moyen à table', spa: 'Temps moyen en cabine', 'en:spa': 'Average time in treatment room', 'ar:spa': 'متوسط المدة في غرفة العلاج' }, i18n: 'dash.kpi.tableTime',
                   desc: 'Durée moyenne d\'occupation d\'une table par couvert', derive: (d) => d.tempsTable || null },
   };
@@ -3269,8 +3269,8 @@
           ? { ...data.regulars, text: undefined, value: mix.regulars, unit: `/ ${mix.visitors}`, fmt: 'int', delta: realDeltaPct(rng, (s) => s.regulars, undefined, realClientMix) }
           : { ...data.regulars, text: '·', value: 0, unit: '', delta: null }) : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
-         * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
-         * Kiwi ne compte ni les paiements refusés ni les retours. Le clone de
+         * Le taux de succès n'a encore aucune source chez un vrai commerçant :
+         * Kiwi ne compte pas les paiements refusés. Le clone de
          * démonstration remis à zéro les affichait donc « Taux succès 0,00 % »
          * — et un taux de succès à zéro ne se lit pas « on ne sait pas », il se
          * lit « AUCUN paiement n'aboutit ». C'est l'alarme la plus grave que
@@ -3283,7 +3283,17 @@
          * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
          * encaissement, deux lignes plus haut. */
         success:    data.success    ? { ...data.success,    text: '·', unit: '', delta: null } : data.success,
-        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '·', unit: '', delta: null } : data.tauxRetour,
+        /* Le taux de retour, lui, a une source : les remboursements passés à
+         * la caisse (/api/sale/refund) arrivent dans le même journal que les
+         * ventes. C'est la part, en valeur, de ce qui a été vendu sur la
+         * période et remboursé sur la même période. Sans vente sur la
+         * période : « · » (rien à rapporter) ; avec des ventes et aucun
+         * remboursement : un vrai 0 %. Un remboursement d'une vente plus
+         * ancienne compte le jour où il est fait, comme dans le CA. */
+        tauxRetour: data.tauxRetour ? (w.gross > 0
+          ? { ...data.tauxRetour, text: undefined, value: Math.round((w.refunds / w.gross) * 1000) / 10, unit: '%', fmt: 'pct1',
+              delta: realDeltaPct(rng, (s) => (s.gross ? (s.refunds / s.gross) * 100 : 0)) }
+          : { ...data.tauxRetour, text: '·', unit: '', delta: null }) : data.tauxRetour,
       };
 
       /* Bénéfice brut, Coût matière et Marge brute dérivent TOUS de `marge` via

@@ -140,15 +140,36 @@ ok('les journées décalées ne soustraient plus 24 heures',
   !/dayStartMs\([^\n]*\)\s*[-+][^\n]*864e5/.test(SRC));
 
 /* ── 7. UN TIRET, PAS UN ZÉRO ──────────────────────────────────────────────
- * Kiwi ne mesure ni les paiements refusés ni les retours. Le clone de démo
- * remis à zéro affichait pourtant « Taux succès 0,00 % » — qui ne se lit pas
- * « on ne sait pas » mais « aucun paiement n'aboutit », l'alarme la plus grave
- * qu'une caisse puisse afficher, sur une tuile qui ne mesure rien. */
-['success', 'tauxRetour'].forEach((k) => {
-  ok(`« ${k} » affiche un point médian chez un vrai commerçant, pas un zéro`,
-    new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '·'").test(SRC),
-    'la tuile retombe encore sur le zéro du clone de démonstration');
-});
+ * Kiwi ne mesure pas les paiements refusés. Le clone de démo remis à zéro
+ * affichait pourtant « Taux succès 0,00 % » — qui ne se lit pas « on ne sait
+ * pas » mais « aucun paiement n'aboutit », l'alarme la plus grave qu'une
+ * caisse puisse afficher, sur une tuile qui ne mesure rien.
+ * Les retours, eux, se mesurent : les remboursements passent par le même
+ * journal que les ventes. Le taux de retour est la part remboursée de ce qui
+ * a été vendu sur la période ; sans vente, le tiret. */
+ok('« success » affiche un point médian chez un vrai commerçant, pas un zéro',
+  /success:\s*data\.success\s*\?[^\n]*text: '·'/.test(SRC),
+  'la tuile retombe encore sur le zéro du clone de démonstration');
+ok('« tauxRetour » = remboursé ÷ vendu sur la période, en valeur',
+  /tauxRetour: data\.tauxRetour \? \(w\.gross > 0\s*\?[^\n]*value: Math\.round\(\(w\.refunds \/ w\.gross\) \* 1000\) \/ 10, unit: '%'/.test(SRC));
+ok('« tauxRetour » compare le même taux à la période précédente',
+  /realDeltaPct\(rng, \(s\) => \(s\.gross \? \(s\.refunds \/ s\.gross\) \* 100 : 0\)\)/.test(SRC));
+ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro',
+  /w\.gross > 0[\s\S]{0,400}: \{ \.\.\.data\.tauxRetour, text: '·', unit: '', delta: null \}\) : data\.tauxRetour/.test(SRC));
+{
+  /* La fenêtre réelle elle-même : ventes et remboursements d'une période. */
+  const wFrom = SRC.indexOf('  function realWindowStats(from, to) {');
+  const wTo = SRC.indexOf('\n  }\n', wFrom) + 4;
+  const vm = require('vm');
+  const sales = [{ ts: 100, amount: 200, method: 'cash' }, { ts: 150, amount: 300, method: 'card' }, { ts: 900, amount: 999, method: 'cash' }];
+  const refunds = [{ ts: 160, amount: -50, method: 'card' }, { ts: 50, amount: -70, method: 'cash' }];
+  const ctx = vm.createContext({ Math, String, realSalesList: () => sales, realRefundList: () => refunds,
+    tenderBucket: (m) => (m === 'cash' || m === 'card' ? m : ''), tenderAmounts: (e) => [{ key: e.method, amount: +e.amount }] });
+  vm.runInContext(SRC.slice(wFrom, wTo), ctx);
+  const w = ctx.realWindowStats(100, 500);
+  ok('la fenêtre compte les remboursements faits dans la période, et seulement eux',
+    w.gross === 500 && w.refunds === 50 && Math.round((w.refunds / w.gross) * 1000) / 10 === 10, JSON.stringify(w));
+}
 
 /* ── 8. LA CARTE DES HEURES DE POINTE SUIT LE COMMERCE ─────────────────────
  * La bande était figée de 11 h à 02 h — les heures d'un restaurant — et TOUTE

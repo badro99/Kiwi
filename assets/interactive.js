@@ -82,7 +82,7 @@
       retention:  'Part des clients venus sur la période qui étaient déjà venus.',
       newClients: 'Clients du carnet venus pour la première fois sur la période.',
       txPerDay:   'Nombre de ventes moyen par jour.',
-      tauxRetour: 'Part des articles retournés.',
+      tauxRetour: 'Part des ventes de la période remboursée, en valeur.',
     },
     en: {
       tx:         'Number of sales over the period.',
@@ -99,7 +99,7 @@
       retention:  'Share of this period\'s customers who had come before.',
       newClients: 'Customers in your book whose first visit falls in the period.',
       txPerDay:   'Average number of sales per day.',
-      tauxRetour: 'Share of items returned.',
+      tauxRetour: 'Share of the period\'s sales refunded, by value.',
     },
     ar: {
       tx:         'عدد المبيعات خلال الفترة.',
@@ -116,7 +116,7 @@
       retention:  'حصة زبائن الفترة الذين سبق أن جاؤوا.',
       newClients: 'زبائن الدفتر الذين جاؤوا لأول مرة خلال الفترة.',
       txPerDay:   'متوسط عدد المبيعات في اليوم.',
-      tauxRetour: 'نسبة المنتجات المرتجعة.',
+      tauxRetour: 'حصة مبيعات الفترة التي تم استردادها، بالقيمة.',
     }
   };
 
