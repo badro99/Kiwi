@@ -48,8 +48,6 @@
       businessPh: 'Café Atlas',
       family: 'Votre activité',
       families: { restaurant: 'Restauration', boutique: 'Commerce', spa: 'Beauté et bien-être', hotel: 'Hôtel ou riad' },
-      trade: 'Plus précisément',
-      tradeAny: 'Sans préciser',
       phone: 'Téléphone',
       phonePh: '06 12 34 56 78',
       email: 'E-mail',
@@ -94,8 +92,6 @@
       businessPh: 'Café Atlas',
       family: 'Your business',
       families: { restaurant: 'Food and drink', boutique: 'Retail', spa: 'Beauty and wellness', hotel: 'Hotel or riad' },
-      trade: 'More precisely',
-      tradeAny: 'Not specified',
       phone: 'Phone',
       phonePh: '+212 6 12 34 56 78',
       email: 'Email',
@@ -140,8 +136,6 @@
       businessPh: 'Café Atlas',
       family: 'نشاطك',
       families: { restaurant: 'مطاعم ومقاه', boutique: 'تجارة', spa: 'تجميل وعناية', hotel: 'فندق أو رياض' },
-      trade: 'بالتحديد',
-      tradeAny: 'بدون تحديد',
       phone: 'الهاتف',
       phonePh: '06 12 34 56 78',
       email: 'البريد الإلكتروني',
@@ -198,7 +192,6 @@
 
   /* ───────────── trades (the product's single list) ───────────── */
   function trades() { return (window.KiwiTrades && window.KiwiTrades.LIST) || []; }
-  function tradesIn(family) { return trades().filter(function (x) { return x.base === family && x.id !== family && x.id !== 'autre'; }); }
   function tradeLabel(id) {
     var tr = trades().filter(function (x) { return x.id === id; })[0];
     if (!tr) return '';
@@ -288,23 +281,43 @@
       return '<button type="button" role="radio" aria-checked="' + on + '" class="' + (on ? 'on' : '') + '" data-seg="' + key + '" data-value="' + v + '">' + esc(labels[v]) + '</button>';
     }).join('') + '</div>';
   }
+  /* Every business type the product knows (trades.js), grouped by family, one
+     tap each: the family is deduced from the type. Four families alone read
+     as « we only do four kinds of shop ». Without trades.js the four family
+     cards remain, so the sheet never loses the question. */
+  function tradeChips() {
+    var list = trades();
+    if (!list.length) return '';
+    var chip = function (x) {
+      var on = state.trade === x.id;
+      return '<button type="button" role="radio" aria-checked="' + on + '" class="kdf-chip' + (on ? ' on' : '') + '" data-trade="' + esc(x.id) + '" data-base="' + esc(x.base) + '">'
+        + '<span class="kdf-chip-ic" aria-hidden="true">' + (x.icon || '') + '</span><span>' + esc(tradeLabel(x.id)) + '</span></button>';
+    };
+    var groups = FAMILIES.map(function (f) {
+      var inFamily = list.filter(function (x) { return x.base === f.id && x.id !== 'autre'; });
+      if (!inFamily.length) return '';
+      return '<div class="kdf-group" role="group" aria-label="' + esc(S().families[f.id]) + '"><p class="kdf-group-name" aria-hidden="true">' + esc(S().families[f.id]) + '</p>'
+        + '<div class="kdf-chips">' + inFamily.map(chip).join('') + '</div></div>';
+    }).join('');
+    var other = list.filter(function (x) { return x.id === 'autre'; });
+    return groups + (other.length ? '<div class="kdf-chips kdf-chips-other">' + other.map(chip).join('') + '</div>' : '');
+  }
   function formHtml() {
+    var chips = tradeChips();
     var fams = FAMILIES.map(function (f) {
       var on = state.family === f.id;
       return '<button type="button" role="radio" aria-checked="' + on + '" class="kdf-fam' + (on ? ' on' : '') + '" data-family="' + f.id + '">'
         + icon(f.icon) + '<span>' + esc(S().families[f.id]) + '</span></button>';
     }).join('');
-    var precise = state.family ? tradesIn(state.family) : [];
-    var tradeSelect = precise.length ? '<div class="kdf-field wide kdf-trade"><label for="kdf-trade">' + esc(t('trade')) + ' <span class="kdf-opt">' + esc(t('optional')) + '</span></label>'
-      + '<select id="kdf-trade" data-field="trade"><option value="">' + esc(t('tradeAny')) + '</option>'
-      + precise.map(function (x) { return '<option value="' + esc(x.id) + '"' + (state.trade === x.id ? ' selected' : '') + '>' + esc(tradeLabel(x.id)) + '</option>'; }).join('')
-      + '</select></div>' : '';
     return '<form class="kdf-form" novalidate>'
       + '<div class="kdf-grid">'
       + textField('firstName', t('firstName'), { ph: t('firstNamePh'), auto: 'given-name', max: 60, required: true })
       + textField('business', t('business'), { ph: t('businessPh'), auto: 'organization', max: 80, required: true })
-      + '<fieldset class="kdf-field wide"><legend>' + esc(t('family')) + '</legend><div class="kdf-fams" role="radiogroup"' + (errors.family ? ' aria-invalid="true" aria-describedby="kdf-err-family"' : '') + '>' + fams + '</div>' + errorFor('family') + '</fieldset>'
-      + tradeSelect
+      + '<fieldset class="kdf-field wide"><legend>' + esc(t('family')) + '</legend>'
+      + (chips
+        ? '<div class="kdf-trades" role="radiogroup" aria-label="' + esc(t('family')) + '"' + (errors.family ? ' aria-invalid="true" aria-describedby="kdf-err-family"' : '') + '>' + chips + '</div>'
+        : '<div class="kdf-fams" role="radiogroup"' + (errors.family ? ' aria-invalid="true" aria-describedby="kdf-err-family"' : '') + '>' + fams + '</div>')
+      + errorFor('family') + '</fieldset>'
       + textField('phone', t('phone'), { ph: t('phonePh'), type: 'tel', auto: 'tel', mode: 'tel', dir: 'ltr', max: 24, required: true })
       + textField('email', t('email'), { ph: t('emailPh'), type: 'email', auto: 'email', mode: 'email', dir: 'ltr', max: 160, optional: true })
       + '<fieldset class="kdf-field wide"><legend>' + esc(t('when')) + '</legend>' + seg('day', DAYS, S().days) + seg('part', PARTS, S().parts)
@@ -455,6 +468,26 @@
     if (!b || !el.contains(b)) return;
     if (b.hasAttribute('data-close')) { close(); return; }
     if (b.hasAttribute('data-retry')) { phase = 'form'; render('title'); return; }
+    if (b.dataset.trade) {
+      /* Toggled in place, like the time slots: no rebuild, no jump. */
+      var picking = state.trade !== b.dataset.trade;
+      state.trade = picking ? b.dataset.trade : '';
+      state.family = picking ? (b.dataset.base === 'autre' ? 'boutique' : b.dataset.base) : '';
+      save();
+      Array.prototype.forEach.call(el.querySelectorAll('[data-trade]'), function (x) {
+        var on = x.dataset.trade === state.trade;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-checked', String(on));
+      });
+      if (errors.family) {
+        delete errors.family;
+        var box = el.querySelector('.kdf-trades');
+        if (box) box.removeAttribute('aria-invalid');
+        var msg = el.querySelector('#kdf-err-family');
+        if (msg) msg.remove();
+      }
+      return;
+    }
     if (b.dataset.family) {
       if (state.family !== b.dataset.family) state.trade = '';
       state.family = b.dataset.family;
@@ -535,6 +568,6 @@
   window.KiwiDemoFunnel = {
     open: open, close: close, STR: STR,
     _state: function () { return state; }, _phase: function () { return phase; },
-    _waText: waText, _payload: payload, _validate: validate,
+    _waText: waText, _payload: payload, _validate: validate, _tradeChips: tradeChips,
   };
 })();

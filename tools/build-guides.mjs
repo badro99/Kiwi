@@ -774,6 +774,7 @@ ${alternateLinks(cluster.routes)}
   ${pageBody(cluster, locale)}
   ${localizeFooterAnchors(footer, locale)}
   <script src="/assets/liquid-lens.js" defer></script>
+  <script src="/assets/trades.js" defer></script>
   <script src="/assets/landing-demo-funnel.js" defer></script>
   <script src="/assets/articles/article.js?v=${ASSET_VERSIONS.js}" defer></script>${isArticle ? '' : `
   <script src="/assets/articles/guides-library.js?v=${ASSET_VERSIONS.library}" defer></script>`}

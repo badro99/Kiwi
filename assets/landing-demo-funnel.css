@@ -81,6 +81,25 @@ html.kdf-lock, html.kdf-lock body { overflow: hidden; }
 .kdf-fam.on { border-color: var(--kdf-mint); background: rgba(125, 242, 176, .08); color: var(--kdf-ink); }
 .kdf-fam.on .kdf-ic { color: var(--kdf-mint); }
 
+/* Every business type, grouped by family, one tap each. */
+.kdf-trades { display: flex; flex-direction: column; gap: 14px; }
+.kdf-group-name { margin: 0 0 8px; font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--kdf-faint); }
+.kdf-back[dir="rtl"] .kdf-group-name { letter-spacing: 0; text-transform: none; font-size: 13px; }
+.kdf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.kdf-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 10px;
+  border: 1px solid var(--kdf-line); border-radius: 999px; background: var(--kdf-card); color: var(--kdf-sub);
+  font: inherit; font-size: 14px; font-weight: 500; line-height: 1.2; text-align: start; cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background-color .15s ease;
+}
+.kdf-back[dir="rtl"] .kdf-chip { padding: 0 10px 0 14px; }
+.kdf-chip:hover { border-color: var(--kdf-line-strong); color: var(--kdf-ink); }
+.kdf-chip.on { border-color: var(--kdf-mint); background: rgba(125, 242, 176, .08); color: var(--kdf-ink); }
+.kdf-chip-ic { display: grid; place-items: center; width: 20px; height: 20px; flex: none; }
+.kdf-chip-ic svg { width: 20px; height: 20px; fill: currentColor; }
+.kdf-chip.on .kdf-chip-ic { color: var(--kdf-mint); }
+.kdf-trades[aria-invalid="true"] .kdf-chip { border-color: var(--kdf-danger); }
+
 .kdf-seg { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--kdf-line); border-radius: 999px; background: var(--kdf-card); }
 .kdf-seg + .kdf-seg { margin-top: 8px; }
 .kdf-seg button {
@@ -131,8 +150,9 @@ html.kdf-lock, html.kdf-lock body { overflow: hidden; }
   .kdf-fams { grid-template-columns: 1fr 1fr; }
   .kdf-fam { min-height: 72px; flex-direction: row; align-items: center; gap: 10px; }
   .kdf-seg button { font-size: 13px; padding: 0 6px; }
+  .kdf-chip { font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kdf-back, .kdf, .kdf-primary, .kdf-secondary, .kdf-seg button { transition: none; }
+  .kdf-back, .kdf, .kdf-primary, .kdf-secondary, .kdf-seg button, .kdf-chip { transition: none; }
   .kdf { transform: none; }
 }

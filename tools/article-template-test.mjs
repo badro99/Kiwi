@@ -259,7 +259,7 @@ for (const locale of PUBLISHED_LOCALES) {
 
   ok(/data-guides-search/.test(hub) && /role="search"/.test(hub), `${label} library offers an accessible search field`);
   ok(!/data-guides-sort|filter-pill|data-category="all"/.test(hub) && /<button type="button" class="goal-pill" data-goal="" aria-pressed="true">/.test(hub), `${label} library has one filter, by problem, with an "all guides" entry (audit H5)`);
-  ok(hub.includes(`<a class="button nav-demo" href="/${locale}/?demo=1" data-kiwi-demo>`) && /<script src="\/assets\/landing-demo-funnel\.js" defer><\/script>/.test(hub), `${label} demo button opens the landing's demo sheet in place`);
+  ok(hub.includes(`<a class="button nav-demo" href="/${locale}/?demo=1" data-kiwi-demo>`) && /<script src="\/assets\/trades\.js" defer><\/script>\s*<script src="\/assets\/landing-demo-funnel\.js" defer><\/script>/.test(hub), `${label} demo button opens the landing's demo sheet in place`);
   ok(/<details class="language-menu">/.test(hub) && PUBLISHED_LOCALES.every((code) => hub.includes(`hreflang="${code}" lang="${code}"`)) && /<details class="nav-menu">/.test(hub) && hub.includes(`href="/${locale}/#security"`), `${label} header keeps languages, Sécurité and a phone menu`);
   ok(/data-guides-empty/.test(hub) && /data-guides-reset/.test(hub), `${label} library has an empty state with a reset control`);
   ok(/data-guides-count/.test(hub) && /aria-live="polite"/.test(hub), `${label} library announces how many guides are shown`);

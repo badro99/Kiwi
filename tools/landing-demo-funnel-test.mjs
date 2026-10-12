@@ -74,6 +74,14 @@ ok('the precise trade comes from trades.js, not a copy', () => {
   assert.ok(W.KiwiTrades.LIST.length >= 18);
   assert.match(src, /window\.KiwiTrades && window\.KiwiTrades\.LIST/);
 });
+ok('every business type in trades.js is offered, one tap each, grouped by family', () => {
+  const html = F._tradeChips();
+  const ids = [...html.matchAll(/data-trade="([^"]+)" data-base="([^"]+)"/g)];
+  assert.equal(ids.length, W.KiwiTrades.LIST.length);
+  for (const t of W.KiwiTrades.LIST) assert.ok(ids.some((m) => m[1] === t.id && m[2] === t.base), t.id);
+  assert.equal((html.match(/class="kdf-group"/g) || []).length, 4);
+  assert.match(src, /state\.family = picking \? \(b\.dataset\.base === 'autre' \? 'boutique' : b\.dataset\.base\) : '';/);
+});
 ok('nothing is sent until the four required fields are there; email and phone are checked', () => {
   fill(F, {});
   assert.deepEqual(Object.keys(F._validate()).sort(), ['business', 'family', 'firstName', 'phone']);
