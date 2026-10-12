@@ -230,8 +230,8 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promos.js?v=3',
-  '/assets/boutique-promos-dashboard.js?v=14',
+  '/assets/promos.js?v=4',
+  '/assets/boutique-promos-dashboard.js?v=15',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=27',
@@ -291,7 +291,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=88',
+  '/assets/pos-dispatch.js?v=89',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -304,8 +304,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=58',
-  '/assets/pos-boutique.js?v=58',
+  '/assets/pos-boutique.css?v=59',
+  '/assets/pos-boutique.js?v=59',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -337,8 +337,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=7',
   '/assets/pos-autre.js?v=7',
-  '/assets/pos-maison.css?v=64',
-  '/assets/pos-maison.js?v=64',
+  '/assets/pos-maison.css?v=65',
+  '/assets/pos-maison.js?v=65',
   '/assets/caisse-pairing.js?v=27',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

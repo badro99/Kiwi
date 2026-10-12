@@ -170,8 +170,30 @@
     return '·';
   }
 
+  /* « Mar, Jeu · 12:00–14:00 » : le créneau tel qu'on l'afficherait en
+     vitrine. Vide quand la promotion court toute la journée, tous les jours. */
+  var DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  var DAY_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  var WEEK = [1, 2, 3, 4, 5, 6, 0];
+  function windowText(p) {
+    var parts = [];
+    if (p.days && p.days.length) parts.push(WEEK.filter(function (d) { return p.days.indexOf(d) >= 0; }).map(function (d) { return DAY_SHORT[d]; }).join(', '));
+    if (p.start && p.end) parts.push(p.start + '–' + p.end);
+    return parts.join(' · ');
+  }
+  function resumeText(p, now) {
+    var next = PRM().nextWindow ? PRM().nextWindow(p, now) : null;
+    if (!next) return 'Hors créneau';
+    var day = next.day === 0 ? 'aujourd’hui' : next.day === 1 ? 'demain' : DAY_LONG[next.weekday];
+    return 'Reprend ' + day + (next.at ? ' à ' + next.at : '');
+  }
   function whenText(p, now) {
     var st = PRM().status(p, now || Date.now());
+    var slot = windowText(p);
+    var base = whenBase(p, st);
+    return slot && st !== 'ended' ? slot + ' · ' + (st === 'waiting' ? resumeText(p, now) + ' · ' : '') + base : base;
+  }
+  function whenBase(p, st) {
     if (st === 'paused') return 'En pause, aucun prix n’est modifié';
     if (st === 'scheduled') { var j = Math.ceil((p.from - Date.now()) / DAY); return 'Démarre ' + (j <= 1 ? 'demain' : 'dans ' + j + ' jours') + ' · ' + fmtDay(new Date(p.from)); }
     if (st === 'ended') return 'Terminée le ' + fmtDay(new Date(p.to));
@@ -201,7 +223,7 @@
     var status = PRM().status(p, now);
     var n = preview(ctx, p).count;
     var tone = status === 'active' ? 'active' : status === 'ended' ? 'ended' : 'soon';
-    var label = status === 'active' ? 'En cours' : status === 'scheduled' ? 'Programmée' : status === 'paused' ? 'En pause' : 'Terminée';
+    var label = status === 'active' ? 'En cours' : status === 'waiting' ? 'Hors créneau' : status === 'scheduled' ? 'Programmée' : status === 'paused' ? 'En pause' : 'Terminée';
     return '<div class="bpd-row ' + tone + '"><span><span class="bpd-off">' + esc(PRM().badgeOf(p)) + '</span></span>' +
       '<span class="bpd-rname"><b>' + esc(p.name) + '</b><span class="bpd-state ' + tone + '">' + label + '</span></span>' +
       '<span class="bpd-rtxt">' + esc(scopeText(ctx, p)) + '</span><span class="bpd-rtxt">' + esc(whenText(p, now)) + '</span>' +
@@ -236,13 +258,17 @@
     var now = Date.now();
     var all = PRM().list();
     var groups = {
-      active: all.filter(function (p) { return PRM().status(p, now) === 'active'; }),
+      /* « Hors créneau » n'est ni fini ni à venir : c'est une promotion en
+         cours qui attend son heure. Elle reste sous « En cours ». */
+      active: all.filter(function (p) { return ['active', 'waiting'].indexOf(PRM().status(p, now)) >= 0; }),
       soon: all.filter(function (p) { return ['scheduled', 'paused'].indexOf(PRM().status(p, now)) >= 0; }),
       ended: all.filter(function (p) { return PRM().status(p, now) === 'ended'; })
     };
     var shown = groups[filter] || groups.active;
     var seen = new Set();
-    groups.active.forEach(function (p) { items(ctx).forEach(function (it) { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); }); });
+    /* Un article n'est « remisé » que par une promotion qui s'applique À CET
+       INSTANT ; celles qui attendent leur créneau restent sous « En cours ». */
+    groups.active.forEach(function (p) { if (PRM().status(p, now) !== 'active') return; items(ctx).forEach(function (it) { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); }); });
     var sub = groups.active.length + ' promotion' + (groups.active.length > 1 ? 's' : '') + ' en cours' + (seen.size ? ' · ' + seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') : '');
     var tab = function (key, lbl) { return '<button class="kx-tab' + (filter === key ? ' on' : '') + '" aria-pressed="' + (filter === key) + '" data-action="bpd-filter" data-arg="' + key + '">' + lbl + '<small>' + groups[key].length + '</small></button>'; };
     var listHtml = shown.length
@@ -278,6 +304,8 @@
     if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
     if (sc.type === 'stock' && !sc.max) return 'Indiquez le seuil de stock';
     if (d.to && d.from && d.to <= d.from) return 'La date de fin doit venir après le début';
+    if (!!d.start !== !!d.end) return 'Indiquez l’heure de début et l’heure de fin, ou aucune';
+    if (d.start && d.start === d.end) return 'L’heure de fin doit différer de l’heure de début';
     return '';
   }
   function autoName(ctx, d) {
@@ -313,7 +341,10 @@
       '<div class="bpd-field"><label>Nom <span>· visible sur le reçu</span></label><input class="bpd-input" id="bpd-name" maxlength="80" placeholder="Soldes d’été, Déstockage…" value="' + esc(d.name) + '"></div>' +
       '<div class="bpd-field"><label>Type de remise</label><div class="bpd-kinds">' + [['percent','Pourcentage','−20 %'],['amount','Montant','−50 MAD'],['fixed','Prix final','99 MAD']].map(function (x) { return '<button class="bpd-choice ' + (d.kind === x[0] ? 'on' : '') + '" aria-pressed="' + (d.kind === x[0]) + '" data-prk="' + x[0] + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><div class="bpd-value"><span class="bpd-value-box"><input class="bpd-input" id="bpd-value" type="number" min="0" value="' + d.value + '"><span class="bpd-unit">' + (d.kind === 'percent' ? '%' : 'MAD') + '</span></span><div class="bpd-chips">' + quick.map(function (n) { return '<button class="bpd-chip ' + (d.value === n ? 'on' : '') + '" data-prv="' + n + '">' + (d.kind === 'percent' ? '−' + n + ' %' : d.kind === 'amount' ? '−' + n : n) + '</button>'; }).join('') + '</div></div></div></div></section>' +
       '<section class="bpd-step"><header><span>2</span><div><b>Choisir les articles</b><small>Kiwi garde cette sélection à jour</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-scopes">' + SCOPES.map(function (x) { return '<button class="bpd-choice ' + (sc.type === x.id ? 'on' : '') + '" aria-pressed="' + (sc.type === x.id) + '" data-prs="' + x.id + '"><i data-lucide="' + x.icon + '"></i><b>' + x.label + '</b></button>'; }).join('') + '</div><div class="bpd-scopebody">' + scopeControl(ctx, d) + '</div></div></div></section>' +
-      '<section class="bpd-step"><header><span>3</span><div><b>Programmer la durée</b><small>Démarrez maintenant ou planifiez</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-chips">' + [['today','Aujourd’hui'],['we','Ce week-end'],['7','7 jours'],['30','30 jours'],['none','Sans fin']].map(function (x) { return '<button class="bpd-chip" data-prw="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div class="bpd-dates"><div><label>Début <span>· vide = maintenant</span></label><input class="bpd-input" id="bpd-from" type="date" value="' + toInput(d.from) + '"></div><div><label>Fin <span>· vide = sans fin</span></label><input class="bpd-input" id="bpd-to" type="date" value="' + toInput(d.to) + '"></div></div></div></div></section>' +
+      '<section class="bpd-step"><header><span>3</span><div><b>Programmer la durée</b><small>Démarrez maintenant ou planifiez</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-chips">' + [['today','Aujourd’hui'],['we','Ce week-end'],['7','7 jours'],['30','30 jours'],['none','Sans fin']].map(function (x) { return '<button class="bpd-chip" data-prw="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div class="bpd-dates"><div><label>Début <span>· vide = maintenant</span></label><input class="bpd-input" id="bpd-from" type="date" value="' + toInput(d.from) + '"></div><div><label>Fin <span>· vide = sans fin</span></label><input class="bpd-input" id="bpd-to" type="date" value="' + toInput(d.to) + '"></div></div></div>' +
+        '<div class="bpd-field"><label>Jours <span>· aucun = tous les jours</span></label><div class="bpd-chips bpd-days" role="group" aria-label="Jours de la promotion">' + WEEK.map(function (wd) { var on = (d.days || []).indexOf(wd) >= 0; return '<button class="bpd-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-prd="' + wd + '">' + DAY_SHORT[wd] + '</button>'; }).join('') + '</div></div>' +
+        '<div class="bpd-field"><label>Heures <span>· vides = toute la journée</span></label><div class="bpd-dates"><div><input class="bpd-input" id="bpd-start" type="time" step="900" aria-label="Heure de début" value="' + esc(d.start || '') + '"></div><div><input class="bpd-input" id="bpd-end" type="time" step="900" aria-label="Heure de fin" value="' + esc(d.end || '') + '"></div></div><div class="bpd-hint">En heure du Maroc. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.</div></div>' +
+        '</div></section>' +
       '</div><aside class="bpd-preview" data-surface="inverse"><span class="bpd-preview-live"><i></i>Aperçu en direct</span><div class="bpd-preview-head"><span>Articles concernés</span><b>' + prev.count + '</b><em>article' + (prev.count > 1 ? 's' : '') + '</em></div>' +
       (prev.count ? '<div class="bpd-swap"><div><span>Prix plein</span><b>' + money(prev.from) + '</b></div><i data-lucide="arrow-right"></i><div class="next"><span>Prix promo</span><b>' + money(prev.to) + '</b></div></div><div class="bpd-give">Vous offrez <b>' + money(prev.from - prev.to) + '</b> si tout part.</div>' + (prev.under ? '<div class="bpd-warn"><i data-lucide="alert-triangle"></i><span><b>' + prev.under + ' article' + (prev.under > 1 ? 's passent' : ' passe') + ' sous le prix d’achat.</b></span></div>' : '') + '<div class="bpd-sample">' + prev.sample.map(function (x) { return '<div class="bpd-srow"><span class="name">' + esc(x.name) + '</span><span class="prices"><s>' + money(x.was) + '</s><b>' + money(x.price) + '</b></span></div>'; }).join('') + '</div>' : '<div class="bpd-none">' + esc(problem || 'Aucun article ne correspond à cette cible.') + '</div>') + '</aside></div>' +
       '<div class="bpd-compose-foot"><span class="bpd-problem">' + (problem ? '<i data-lucide="info"></i>' + esc(problem) : '<i data-lucide="check-circle-2"></i>Prête à être ' + (composer.editing ? 'enregistrée' : 'lancée')) + '</span><span class="bpd-compose-actions"><button class="bpd-btn" data-bpd-cancel>Annuler</button><button class="bpd-btn primary" id="bpd-save" ' + (problem || !prev.count ? 'disabled' : '') + '><i data-lucide="check"></i>' + (composer.editing ? 'Enregistrer' : 'Lancer la promotion') + '</button></span></div></div>';
@@ -335,6 +366,9 @@
     return d;
   }
   function openComposer(seed) {
+    /* Le composeur s'ouvre aussi hors de la page Promotions (un modèle proposé
+       ailleurs) : ses styles ne doivent pas dépendre d'y être passé avant. */
+    injectCss();
     var ctx = context();
     composer.editing = seed && seed.id ? seed.id : null;
     composer.draft = PRM().normalize(seed || { name:'', kind:'percent', value:20, scope:{type:'tout'} });
@@ -373,6 +407,9 @@
     el.querySelectorAll('[data-prw]').forEach(function(b){b.onclick=function(){var key=b.dataset.prw,now=new Date();if(key==='none')d.to=0;else if(key==='today')d.to=endOfDay(now);else if(key==='we')d.to=endOfDay(new Date(now.getTime()+((7-now.getDay())%7)*DAY));else d.to=endOfDay(new Date(now.getTime()+(+key)*DAY));redraw();};});
     var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(new Date(from.value+'T12:00:00')):0;redraw();};
     var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(new Date(to.value+'T12:00:00')):0;redraw();};
+    el.querySelectorAll('[data-prd]').forEach(function(b){b.onclick=function(){var wd=+b.dataset.prd,days=(d.days||[]).slice(),i=days.indexOf(wd);if(i>=0)days.splice(i,1);else days.push(wd);d.days=days.length===7?[]:days.sort(function(a,z){return a-z;});redraw();};});
+    var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';redraw();};
+    var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';redraw();};
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
     var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?d.name+' enregistrée':d.name+(tillApplies()?' lancée, la caisse est à jour':' enregistrée · la remise se saisit au comptoir'),{type:'success'});renderPage();};
   }

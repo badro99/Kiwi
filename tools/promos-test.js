@@ -21,7 +21,7 @@ const localStorage = {
   removeItem: (k) => data.delete(k),
 };
 const window = { localStorage };
-const context = { window, localStorage, console, Set, Math, Date, JSON, Number, Object, Array, String };
+const context = { window, localStorage, console, Set, Math, Date, JSON, Number, Object, Array, String, Intl };
 vm.runInNewContext(source, context, { filename: 'promos.js' });
 const PR = window.KiwiPromos;
 
@@ -161,6 +161,44 @@ check(PR.merge(vieux, frais).promos[0].value === 40, 'la version la plus récent
 const junk = PR.normalize({ kind: 'chelou', value: -40, scope: { type: 'nawak' } });
 check(junk.kind === 'percent' && junk.value === 0 && junk.scope.type === 'tout', 'une promotion illisible retombe sur une valeur inoffensive');
 check(PR.normalize({ kind: 'percent', value: 300 }).value === 100, 'on ne remise pas plus de cent pour cent');
+
+/* ── des jours et des heures ─────────────────────────────────────────────
+   Heure de Casablanca (UTC+1 hors Ramadan) et journée de caisse à 05:00.
+   Le mardi 13 octobre 2026 sert d'étalon. */
+PR.reset();
+const at = (iso) => Date.parse(iso);
+const midi = PR.save({ name: 'Midi du mardi', kind: 'percent', value: 20, scope: { type: 'tout' }, days: [2], start: '12:00', end: '14:00' });
+check(JSON.stringify(midi.days) === '[2]' && midi.start === '12:00' && midi.end === '14:00', 'jours et heures sont gardés tels quels');
+check(PR.status(midi, at('2026-10-13T11:30:00Z')) === 'active', 'mardi 12:30 à Casablanca : la promotion s\'applique');
+check(PR.priceFor(item(), { now: at('2026-10-13T11:30:00Z') }).price === 800, '… et le caftan passe à 800');
+check(PR.status(midi, at('2026-10-13T10:59:00Z')) === 'waiting', 'mardi 11:59 : en attente, pas encore');
+check(PR.status(midi, at('2026-10-13T13:00:00Z')) === 'waiting', 'mardi 14:00 pile : la fin est exclue');
+check(PR.priceFor(item(), { now: at('2026-10-13T13:30:00Z') }) === null, 'hors créneau, aucun prix ne bouge');
+check(PR.status(midi, at('2026-10-14T11:30:00Z')) === 'waiting', 'mercredi midi : pas le bon jour');
+check(PR.stats(at('2026-10-14T11:30:00Z')).waiting === 1, 'stats compte la promotion hors créneau à part');
+const n1 = PR.nextWindow(midi, at('2026-10-13T09:00:00Z'));
+check(n1 && n1.day === 0 && n1.at === '12:00', 'le matin : « reprend aujourd\'hui à 12:00 »');
+const n2 = PR.nextWindow(midi, at('2026-10-14T09:00:00Z'));
+check(n2 && n2.day === 6 && n2.weekday === 2, 'le mercredi : reprend mardi prochain, dans six jours');
+
+PR.reset();
+const nuit = PR.save({ name: 'Nuit du vendredi', kind: 'amount', value: 100, scope: { type: 'tout' }, days: [5], start: '22:00', end: '01:00' });
+check(PR.status(nuit, at('2026-10-16T21:30:00Z')) === 'active', 'vendredi 22:30 : la nuit du vendredi a commencé');
+check(PR.status(nuit, at('2026-10-16T23:30:00Z')) === 'active', 'samedi 00:30 : c\'est encore la journée du vendredi');
+check(PR.status(nuit, at('2026-10-17T00:30:00Z')) === 'waiting', 'samedi 01:30 : la fenêtre est close');
+const n3 = PR.nextWindow(nuit, at('2026-10-17T01:00:00Z'));
+check(n3 && n3.day === 7 && n3.at === '22:00', 'à 02:00 le samedi, le 22:00 du vendredi est derrière : vendredi prochain');
+
+const lone = PR.normalize({ name: 'x', kind: 'percent', value: 10, start: '12:00' });
+check(lone.start === '' && lone.end === '', 'une heure sans l\'autre ne crée aucune fenêtre');
+check(PR.normalize({ name: 'x', kind: 'percent', value: 10, start: '12:00', end: '12:00' }).start === '', 'deux heures égales non plus');
+check(PR.normalize({ name: 'x', kind: 'percent', value: 10, start: '25:00', end: '26:00' }).start === '', 'une heure impossible est ignorée');
+check(PR.normalize({ name: 'x', kind: 'percent', value: 10, days: [0, 1, 2, 3, 4, 5, 6] }).days.length === 0, 'sept jours sur sept, c\'est tous les jours');
+check(JSON.stringify(PR.normalize({ name: 'x', kind: 'percent', value: 10, days: [9, -1, 'a', 3, 3, 1] }).days) === '[1,3]', 'des jours illisibles sont écartés');
+const datedOut = PR.normalize({ name: 'x', kind: 'percent', value: 10, days: [2], start: '12:00', end: '14:00', to: at('2026-10-13T12:00:00Z') });
+check(PR.status(datedOut, at('2026-10-14T11:30:00Z')) === 'ended', 'après sa date de fin, une promotion à créneau est terminée, pas en attente');
+check(PR.nextWindow(datedOut, at('2026-10-13T13:30:00Z')) === null, 'et elle n\'annonce pas un créneau qui n\'arrivera pas');
+check(PR.status(PR.normalize({ name: 'x', kind: 'percent', value: 10 }), at('2026-10-14T03:00:00Z')) === 'active', 'sans créneau, rien ne change : active à toute heure');
 
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de promotions en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de promotions vérifiées.`);

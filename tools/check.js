@@ -1612,6 +1612,7 @@ section('Whole-project regressions');
     'pressing-edge-test.mjs',
     'procurement-test.mjs',
     'promotions-dashboard-test.mjs',
+    'promo-window-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',

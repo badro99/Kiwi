@@ -31,6 +31,17 @@
  * geste d'autorité, le refuser en silence serait pire) — mais pos-boutique.js
  * l'affiche alors ligne à ligne, les deux baisses nommées séparément.
  *
+ * ── Quand : des dates, et si l'on veut des jours et des heures ───────────
+ *   from / to · premier et dernier instant (0 = sans borne) ;
+ *   days      · jours de la semaine (0 = dimanche), vide = tous ;
+ *   start/end · heures « HH:MM » de chaque jour, vides = toute la journée.
+ * « Le mardi », « de 12:00 à 14:00 », « le week-end » : en heure de
+ * Casablanca et sur la journée d'exploitation de la caisse (elle commence à
+ * 05:00), pour qu'une fenêtre 22:00–01:00 du vendredi compte encore pour le
+ * vendredi à 00:30, exactement comme les promotions de la carte
+ * (assets/menu-promos.js). Hors de sa fenêtre, une promotion est « en
+ * attente » : elle n'est pas finie, elle reprend au prochain créneau.
+ *
  * Les prix sont des ENTIERS de dirhams, comme partout ailleurs dans la caisse.
  * Une promotion ne peut pas descendre un prix sous zéro.
  *
@@ -102,6 +113,39 @@
   function num(v, dflt) { var n = +v; return Number.isFinite(n) ? n : (dflt || 0); }
   function str(v) { return String(v == null ? '' : v); }
 
+  /* ───────────────────────── l'horloge de la caisse ─────────────────────────
+     Heure de Casablanca, jamais celle de l'appareil : une tablette réglée sur
+     Paris ouvrirait le « midi » à 11:00. La journée commence à 05:00. */
+  var TZ = 'Africa/Casablanca';
+  var BUSINESS_DAY_START_MIN = 5 * 60;
+  var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  function toMin(v) { var m = HHMM.exec(v || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+  var wallFmt = null;
+  function businessMoment(now) {
+    if (!wallFmt) {
+      wallFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    var parts = {};
+    wallFmt.formatToParts(new Date(now)).forEach(function (x) { parts[x.type] = x.value; });
+    var min = (+parts.hour) * 60 + (+parts.minute);
+    var date = new Date(Date.UTC(+parts.year, +parts.month - 1, +parts.day));
+    if (min < BUSINESS_DAY_START_MIN) date = new Date(date.getTime() - 86400000);
+    return { weekday: date.getUTCDay(), min: min };
+  }
+  /* Le créneau du jour, sans les dates : jours de la semaine, puis heures.
+     Une fenêtre qui finit avant de commencer (22:00–01:00) passe minuit. */
+  function inWindow(p, now) {
+    if (!hasWindow(p)) return true;         /* pas de créneau : l'horloge n'a rien à dire */
+    var b = businessMoment(now);
+    if (p.days && p.days.length && p.days.indexOf(b.weekday) < 0) return false;
+    var a = toMin(p.start), z = toMin(p.end);
+    if (a == null || z == null) return true;
+    if (a < z) return b.min >= a && b.min < z;
+    return b.min >= a || b.min < z;
+  }
+  function hasWindow(p) { return !!((p.days && p.days.length) || (p.start && p.end)); }
+
   function normalize(p) {
     p = p || {};
     var kind = KINDS.indexOf(p.kind) >= 0 ? p.kind : 'percent';
@@ -117,6 +161,14 @@
        se lit comme le magasin entier, c'est le magasin bradé par accident. */
     if (type === 'avant') scope.before = num(sc.before, 0);
     if (type === 'stock') scope.max = Math.max(0, Math.round(num(sc.max, 0)));
+    var days = (Array.isArray(p.days) ? p.days : []).map(Number)
+      .filter(function (d, i, a) { return Number.isInteger(d) && d >= 0 && d <= 6 && a.indexOf(d) === i; })
+      .sort(function (a, b) { return a - b; });
+    var start = HHMM.test(p.start || '') ? p.start : '';
+    var end = HHMM.test(p.end || '') ? p.end : '';
+    /* Une heure sans l'autre, ou deux heures égales, ne disent rien : on n'en
+       garde aucune plutôt que d'inventer une fenêtre. */
+    if (!start || !end || start === end) { start = ''; end = ''; }
     return {
       id: str(p.id) || newId(),
       name: str(p.name).slice(0, 80) || 'Promotion',
@@ -126,6 +178,8 @@
       scope: scope,
       from: num(p.from, 0) || 0,          /* 0 = démarre tout de suite */
       to: num(p.to, 0) || 0,              /* 0 = sans date de fin */
+      days: days.length === 7 ? [] : days, /* vide = tous les jours */
+      start: start, end: end,             /* vides = toute la journée */
       paused: !!p.paused,
       createdAt: num(p.createdAt, 0) || Date.now(),
       updatedAt: num(p.updatedAt, 0) || Date.now(),
@@ -149,7 +203,32 @@
     if (p.paused) return 'paused';
     if (p.to && now > p.to) return 'ended';
     if (p.from && now < p.from) return 'scheduled';
-    return 'active';
+    return inWindow(p, now) ? 'active' : 'waiting';
+  }
+
+  /* Le prochain créneau d'une promotion en attente, dit comme on le dirait au
+     comptoir : { day: 0 (aujourd'hui) … 7, weekday, at: 'HH:MM' | '' }.
+     null quand elle n'a pas de fenêtre ou qu'elle ne reprendra pas. */
+  function nextWindow(p, now) {
+    p = normalize(p);
+    now = now || Date.now();
+    if (!hasWindow(p) || p.paused) return null;
+    var b = businessMoment(now);
+    /* En minutes depuis 05:00 : à 02:00, la journée a commencé hier matin et
+       son 22:00 est derrière nous, pas devant. */
+    var since = function (m) { return (m - BUSINESS_DAY_START_MIN + 1440) % 1440; };
+    var a = toMin(p.start);
+    var nowB = since(b.min);
+    var atB = a == null ? 0 : since(a);
+    for (var k = 0; k <= 7; k++) {
+      var wd = (b.weekday + k) % 7;
+      if (p.days.length && p.days.indexOf(wd) < 0) continue;
+      if (k === 0 && (a == null || nowB >= atB)) continue;     /* déjà passé aujourd'hui */
+      var when = now + k * 86400000 + (atB - nowB) * 60000;
+      if (p.to && when > p.to) return null;
+      return { day: k, weekday: wd, at: p.start || '' };
+    }
+    return null;
   }
   var isRunning = function (p, now) { return status(p, now) === 'active'; };
 
@@ -357,6 +436,7 @@
       total: all.length,
       active: all.filter(function (p) { return status(p, n) === 'active'; }).length,
       scheduled: all.filter(function (p) { return status(p, n) === 'scheduled'; }).length,
+      waiting: all.filter(function (p) { return status(p, n) === 'waiting'; }).length,
       paused: all.filter(function (p) { return status(p, n) === 'paused'; }).length,
       ended: all.filter(function (p) { return status(p, n) === 'ended'; }).length,
     };
@@ -368,6 +448,7 @@
     subscribe: function (fn) { load(); subs.add(fn); return function () { subs.delete(fn); }; },
     list: list, get: get, active: active, save: save, remove: remove, setPaused: setPaused,
     status: status, isRunning: isRunning, badgeOf: badgeOf, normalize: normalize,
+    nextWindow: nextWindow, hasWindow: hasWindow, businessMoment: businessMoment,
     matches: matches, applyTo: applyTo, priceFor: priceFor, preview: preview, stockOf: stockOf,
     merge: merge, isEmpty: isEmpty, cloud: cloud, stats: stats,
     reset: function () { db = blank(); commit(); },

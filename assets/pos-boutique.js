@@ -4870,9 +4870,28 @@
 
   /* La période, en clair, avec ce qu'il reste à courir. « du 12 au 19 » ne dit
      pas si c'est fini ; « se termine dans 3 jours » se lit d'un coup d'œil. */
+  /* Le créneau (« Mar, Jeu · 12:00–14:00 ») d'une promotion à jours ou à
+     heures, et quand elle reprend si elle attend. Posé depuis le tableau de
+     bord ; la caisse le dit, sans quoi « Hors créneau » ne s'expliquerait pas. */
+  const PROMO_DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const PROMO_DAY_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  function promoSlotText(p, st, now) {
+    const parts = [];
+    if (p.days && p.days.length) parts.push([1, 2, 3, 4, 5, 6, 0].filter((d) => p.days.indexOf(d) >= 0).map((d) => PROMO_DAY_SHORT[d]).join(', '));
+    if (p.start && p.end) parts.push(`${p.start}–${p.end}`);
+    if (!parts.length || st === 'ended') return '';
+    if (st === 'waiting') {
+      const next = PRM().nextWindow ? PRM().nextWindow(p, now) : null;
+      parts.push(next ? `Reprend ${next.day === 0 ? 'aujourd\'hui' : next.day === 1 ? 'demain' : PROMO_DAY_LONG[next.weekday]}${next.at ? ` à ${next.at}` : ''}` : 'Hors créneau');
+    }
+    return parts.join(' · ') + ' · ';
+  }
   function promoWhenText(p, now) {
     now = now || Date.now();
     const st = PRM().status(p, now);
+    return promoSlotText(p, st, now) + promoWhenBase(p, st, now);
+  }
+  function promoWhenBase(p, st, now) {
     if (st === 'paused') return 'En pause, aucun prix n\'est modifié';
     if (st === 'scheduled') {
       const j = Math.ceil((p.from - now) / PROMO_DAY);
@@ -4909,7 +4928,7 @@
     /* En pause et programmée vivent dans le même onglet « à venir » : ce sont
        les deux façons d'avoir une promotion prête qui ne s'applique pas encore. */
     const groups = {
-      active: all.filter((p) => pr.status(p, now) === 'active'),
+      active: all.filter((p) => ['active', 'waiting'].indexOf(pr.status(p, now)) >= 0),
       soon: all.filter((p) => ['scheduled', 'paused'].indexOf(pr.status(p, now)) >= 0),
       ended: all.filter((p) => pr.status(p, now) === 'ended'),
     };
@@ -4918,9 +4937,13 @@
     /* Ce que les promotions ont coûté aujourd'hui — la seule mesure qui dit si
        elles marchent. Lue sur les ventes du jour, pas estimée. */
     const offToday = salesToday().reduce((s, x) => s + (+x.promoOff || 0), 0);
-    const touched = groups.active.length ? promoArticleCount(groups.active) : 0;
+    /* Seules celles qui s'appliquent À CET INSTANT remisent un article : une
+       promotion « hors créneau » est sous l'onglet, pas sur l'étiquette. */
+    const running = groups.active.filter((p) => pr.status(p, now) === 'active');
+    const touched = running.length ? promoArticleCount(running) : 0;
     const sub = [
       `${st.active} promotion${st.active > 1 ? 's' : ''} en cours`,
+      st.waiting ? `${st.waiting} hors créneau` : null,
       touched ? `${touched} article${touched > 1 ? 's' : ''} remisé${touched > 1 ? 's' : ''}` : null,
       offToday ? `${fmtMAD(offToday)} offerts aujourd'hui` : null,
     ].filter(Boolean).join(' · ');
@@ -4995,7 +5018,7 @@
         <div class="bq-pr-body">
           <div class="bq-pr-top">
             <h3>${esc(p.name)}</h3>
-            <span class="bq-pr-state ${tone}">${st === 'active' ? 'En cours' : st === 'scheduled' ? 'Programmée' : st === 'paused' ? 'En pause' : 'Terminée'}</span>
+            <span class="bq-pr-state ${tone}">${st === 'active' ? 'En cours' : st === 'waiting' ? 'Hors créneau' : st === 'scheduled' ? 'Programmée' : st === 'paused' ? 'En pause' : 'Terminée'}</span>
           </div>
           <div class="bq-pr-meta">
             <span><i data-lucide="target"></i>${esc(promoScopeText(p))}</span>

@@ -92,8 +92,8 @@
     "sha": "d8fff2734123bb90"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "14",
-    "sha": "1249a7f44a8d1ffe"
+    "v": "15",
+    "sha": "524cc3ab62aa9e64"
   },
   "assets/briefing.js": {
     "v": "22",
@@ -720,12 +720,12 @@
     "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
-    "v": "58",
+    "v": "59",
     "sha": "3966a6796d909226"
   },
   "assets/pos-boutique.js": {
-    "v": "58",
-    "sha": "f7a28e6aa45a3f9b"
+    "v": "59",
+    "sha": "8ee0459bf1659ed5"
   },
   "assets/pos-coiffure.css": {
     "v": "7",
@@ -736,8 +736,8 @@
     "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "88",
-    "sha": "d7fe59ce16f3b9e6"
+    "v": "89",
+    "sha": "4975cd7050c962cd"
   },
   "assets/pos-epicerie.css": {
     "v": "8",
@@ -800,12 +800,12 @@
     "sha": "ce6ca70c2dce30ef"
   },
   "assets/pos-maison.css": {
-    "v": "64",
+    "v": "65",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "64",
-    "sha": "6d2b16c8e18e2c08"
+    "v": "65",
+    "sha": "8952af3126301b4a"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -912,8 +912,8 @@
     "sha": "40e1323d45678bee"
   },
   "assets/promos.js": {
-    "v": "3",
-    "sha": "b68358ca7f3d005f"
+    "v": "4",
+    "sha": "18048067cdc61f15"
   },
   "assets/pwa-update.js": {
     "v": "364",
