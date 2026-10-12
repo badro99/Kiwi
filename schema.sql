@@ -989,6 +989,29 @@ CREATE TABLE IF NOT EXISTS support_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages (ticket_id, ts);
 
+-- Demandes de démo du site public (POST /api/demo-request, console « Démos »).
+-- functions/api/_demo-requests.js la crée aussi au premier usage.
+CREATE TABLE IF NOT EXISTS demo_requests (
+  id          TEXT PRIMARY KEY,
+  reference   TEXT NOT NULL UNIQUE,
+  created_ts  INTEGER NOT NULL,
+  first_name  TEXT NOT NULL,
+  business    TEXT NOT NULL,
+  trade       TEXT NOT NULL DEFAULT '',
+  phone       TEXT NOT NULL,
+  email       TEXT NOT NULL DEFAULT '',
+  slot_day    TEXT NOT NULL DEFAULT '',
+  slot_part   TEXT NOT NULL DEFAULT '',
+  note        TEXT NOT NULL DEFAULT '',
+  lang        TEXT NOT NULL DEFAULT '',
+  page        TEXT NOT NULL DEFAULT '',
+  status      TEXT NOT NULL DEFAULT 'new',
+  handled_by  TEXT NOT NULL DEFAULT '',
+  notified    TEXT NOT NULL DEFAULT '',
+  updated_ts  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_demo_requests_created ON demo_requests(created_ts);
+
 CREATE TABLE IF NOT EXISTS support_attachments (
   id          TEXT PRIMARY KEY,
   ticket_id   TEXT NOT NULL,

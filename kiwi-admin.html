@@ -686,7 +686,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   .crm-cockpit{grid-template-columns:1fr}.crm-stream{grid-column:1}
 }
 @media(max-width:760px){
-  .top{padding:10px 14px;min-height:64px}.top-brand{min-width:0;flex:1}.top-brand img{width:56px}.top-title small{display:none}.top-actions button{font-size:0!important;padding:8px!important;width:38px;justify-content:center}.top-actions button:before{font-size:15px}.top-actions #support-console:before{content:"?"}.top-actions #refresh:before{content:"↻"}.top-actions #quit:before{content:"↗"}
+  .top{padding:10px 14px;min-height:64px}.top-brand{min-width:0;flex:1}.top-brand img{width:56px}.top-title small{display:none}.top-actions button{font-size:0!important;padding:8px!important;width:38px;justify-content:center}.top-actions button:before{font-size:15px}.top-actions #support-console:before{content:"?"}.top-actions #demo-console:before{content:"D"}.top-actions #refresh:before{content:"↻"}.top-actions #quit:before{content:"↗"}
   .wrap{padding:24px 14px 60px}.crm-hero{align-items:flex-start;flex-direction:column}.crm-time{display:none}.ov-grid{grid-template-columns:1fr 1fr;padding:0 12px 12px}.ov-card{min-height:130px;padding:15px}.ov-v{font-size:28px}.ov-body{padding:15px}.ov-body>.ov-split{grid-template-columns:1fr}
   .crm-filter{width:100%;overflow-x:auto}.crm-filter button{flex:1;white-space:nowrap}.crm-sort,.cli-search,.cli-search input{width:100%}.crm-toolbar{gap:8px}
   .crm-pipeline{grid-template-columns:1fr}.crm-lane{min-height:auto}.crm-stream{grid-template-columns:1fr}.crm-signal{border-left:0;border-top:1px solid var(--line)}.crm-signal:first-child{border-top:0}
@@ -724,6 +724,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     </div>
     <button type="button" class="op-search-shortcut" id="op-search-shortcut">Rechercher un client <kbd>⌘ K</kbd></button>
     <div class="top-actions">
+      <button type="button" id="demo-console">Démos</button>
       <button type="button" id="support-console">Support</button>
       <button type="button" id="refresh">Rafraîchir</button>
       <button type="button" id="quit">Quitter</button>
@@ -1040,6 +1041,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   <script src="assets/liquid-lens.js?v=7"></script>
   <link rel="stylesheet" href="assets/admin-support.css?v=2" />
   <script src="assets/admin-support.js?v=8" defer></script>
+  <script src="assets/admin-demo-requests.js?v=1" defer></script>
 
 <script>
 (function(){

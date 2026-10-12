@@ -375,6 +375,11 @@ async function routeRequest(context) {
   // The handler performs its own availability, rate, tenancy and conflict checks;
   // no private list or customer record is exposed through this exception.
   if (method === 'POST' && path === '/api/booking') return next();
+  /* « Demander une démo » sur le site public : un visiteur sans compte envoie
+   * sa demande. Écriture seule, chemin exact ; la route se défend elle-même
+   * (même origine, champ piège, limiteur par IP, champs bornés) et ne renvoie
+   * qu'une référence. La lecture des demandes reste sous /api/admin. */
+  if (method === 'POST' && path === '/api/demo-request') return next();
   // Employee/service app. The page itself contains no merchant data; its single
   // API independently validates a store PIN and then an httpOnly employee
   // session. Exact paths only — no other private API is opened by this exception.

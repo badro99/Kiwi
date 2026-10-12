@@ -1,469 +1,191 @@
-/* Ticket #0171 · Kiwi landing · demo request in five short steps.
+/* Kiwi landing · « Demander une démo », sur une seule feuille.
  *
- * "Demander une démo" used to open WhatsApp cold. This sheet gets to know the
- * visitor first: who they are, which of Kiwi's business types they run, how
- * big the operation is, what costs them time, and when they would like a
- * call. It then hands a tidy WhatsApp message to the visitor to send to the
- * existing business number. Nothing is stored on a server: the time they pick
- * is a preference awaiting confirmation, never a booked slot.
+ * Avant (ticket #0171) : cinq étapes, puis un message WhatsApp que le visiteur
+ * devait encore envoyer lui-même. Une demande remplie jusqu'au bout mais jamais
+ * envoyée n'arrivait nulle part, et personne ne le savait.
  *
- * Plain, self-contained script on top of the static landing export. Business
- * types come from assets/trades.js (window.KiwiTrades), the product's single
- * list. Copy: STR below (fr, en, ar). Other landing locales use English.
- */
+ * Maintenant (2026-10-13) : une feuille, six réponses courtes, et la demande est
+ * ENREGISTRÉE par Kiwi (POST /api/demo-request, table demo_requests) au moment
+ * où le visiteur valide. L'équipe la voit dans la console opérateur (Démos).
+ * WhatsApp reste une suite possible, jamais la seule voie :
+ *   · après l'envoi, « Nous écrire sur WhatsApp » avec la référence ;
+ *   · si le serveur ne répond pas (hors ligne, quota, panne), la même demande
+ *     part par WhatsApp en un geste, préremplie, pour qu'aucune ne se perde.
+ *
+ * Script autonome par-dessus l'export statique de la landing. Les métiers
+ * viennent de assets/trades.js (window.KiwiTrades), la liste du produit.
+ * Textes : STR ci-dessous (fr, en, ar) ; les autres langues lisent l'anglais.
+ * Icônes : Material Symbols vendorisés (assets/icons/material), en masque CSS. */
 (function () {
   'use strict';
   if (window.KiwiDemoFunnel) return;
 
   var WA = '212624495159';
-  var STORE = 'kiwiDemoFunnel';
-  var STEPS = 5;
+  var STORE = 'kiwiDemoFunnel2';
+  var API = '/api/demo-request';
+  /* The stylesheet sits next to this script and carries the same stamp, so a
+     page that loads only the script (a guide) still gets the matching CSS. */
+  var SELF = (document.currentScript && document.currentScript.src) || '';
+  var FAMILIES = [
+    { id: 'restaurant', icon: 'restaurant' },
+    { id: 'boutique', icon: 'storefront' },
+    { id: 'spa', icon: 'spa' },
+    { id: 'hotel', icon: 'hotel' },
+  ];
+  var DAYS = ['today', 'tomorrow', 'week'];
+  var PARTS = ['morning', 'afternoon', 'evening'];
 
   var STR = {
     fr: {
       open: 'Demander une démo',
       close: 'Fermer',
-      back: 'Retour',
-      next: 'Continuer',
-      stepOf: 'Étape {n} sur {total}',
-      waAside: 'Une question rapide ? Écrivez-nous sur WhatsApp',
-      s1Title: 'Faisons connaissance',
-      s1Lead: 'Deux réponses pour commencer, et la démo sera faite pour vous.',
-      firstName: 'Votre prénom',
-      firstNamePh: 'Ex. Salma',
-      business: 'Le nom de votre commerce',
-      businessPh: 'Ex. Café Atlas',
-      s2Title: 'Enchanté, {name}. Que fait {biz} ?',
-      s2Lead: 'Choisissez le métier le plus proche. Kiwi s’adapte à chacun.',
-      s3Title: 'Votre activité au quotidien',
-      s3Lead: 'Pour préparer une démo à la bonne échelle.',
-      locations: 'Combien d’établissements ?',
-      people: 'Combien de personnes dans votre équipe ?',
-      exact: 'Nombre exact',
-      exactPh: 'Saisir',
-      justMe: 'Juste moi',
-      s4Title: 'Qu’est-ce qui vous prend le plus de temps aujourd’hui ?',
-      s4Lead: 'Plusieurs choix possibles.',
-      other: 'Autre chose ? (facultatif)',
-      otherPh: 'En quelques mots',
-      summaryTitle: 'Ce que Kiwi fait pour {biz}',
-      summaryEmpty: 'Choisissez au moins un point pour voir ce que Kiwi peut faire pour vous.',
-      s5Title: 'Quand pouvons-nous vous appeler, {name} ?',
-      s5Lead: 'Choisissez un moment qui vous arrange. Nous le confirmons avec vous avant l’appel.',
-      date: 'Jour souhaité',
-      time: 'Heure souhaitée',
-      timezone: 'Heure du Maroc',
-      timePick: 'Choisir une heure',
+      eyebrow: 'Démo Kiwi · 20 minutes',
+      title: 'Voyons Kiwi sur votre commerce',
+      lead: 'Laissez-nous vos coordonnées : nous vous appelons au moment choisi pour une démo de 20 minutes, sur votre métier.',
+      firstName: 'Prénom',
+      firstNamePh: 'Salma',
+      business: 'Nom du commerce',
+      businessPh: 'Café Atlas',
+      family: 'Votre activité',
+      families: { restaurant: 'Restauration', boutique: 'Commerce', spa: 'Beauté et bien-être', hotel: 'Hôtel ou riad' },
+      trade: 'Plus précisément',
+      tradeAny: 'Sans préciser',
       phone: 'Téléphone',
       phonePh: '06 12 34 56 78',
-      email: 'E-mail (facultatif)',
+      email: 'E-mail',
+      optional: 'facultatif',
       emailPh: 'vous@exemple.ma',
-      recap: 'Récapitulatif',
-      recapBiz: 'Commerce',
-      recapSize: 'Taille',
-      recapNeeds: 'Priorités',
-      recapWhen: 'Créneau souhaité',
-      recapContact: 'Contact',
-      pending: 'Créneau souhaité, en attente de notre confirmation',
-      submit: 'Envoyer ma demande sur WhatsApp',
-      submitNote: 'WhatsApp s’ouvre avec votre message prêt. Il vous reste à l’envoyer.',
-      doneTitle: 'Merci, {name}',
-      doneLead: 'Votre message est prêt dans WhatsApp. Envoyez-le pour que votre demande nous parvienne.',
-      doneNext1: 'Nous lisons votre demande et préparons une démo pour {biz}.',
-      doneNext2: 'Nous vous écrivons pour confirmer le créneau ou en proposer un autre.',
-      doneNext3: 'Le jour venu, nous vous appelons pour une démo d’environ 20 minutes.',
-      doneRetry: 'WhatsApp ne s’est pas ouvert ? Réessayer',
-      doneClose: 'Revenir au site',
-      required: 'Ce champ est nécessaire.',
+      when: 'Quand vous appeler ?',
+      days: { today: 'Aujourd’hui', tomorrow: 'Demain', week: 'Cette semaine' },
+      parts: { morning: 'Matin', afternoon: 'Après-midi', evening: 'Fin de journée' },
+      whenNote: 'Heure du Maroc. Nous confirmons le créneau avec vous.',
+      note: 'Ce que vous aimeriez voir',
+      notePh: 'La caisse, le stock, les rapports…',
+      submit: 'Envoyer ma demande',
+      sending: 'Envoi…',
+      privacy: 'Vos coordonnées servent uniquement à vous rappeler pour cette démo.',
+      waAside: 'Plutôt WhatsApp ? Écrivez-nous',
+      doneTitle: 'C’est noté, {name}.',
+      doneLead: 'Nous vous appelons {slot} au {phone} pour une démo de Kiwi sur {biz}.',
+      doneRef: 'Référence',
+      doneSteps: ['Nous préparons une démo sur votre métier.', 'Nous vous appelons pour confirmer le créneau.', 'La démo dure environ 20 minutes, sans engagement.'],
+      doneWa: 'Nous écrire sur WhatsApp',
+      doneClose: 'Retour au site',
+      failTitle: 'Votre demande n’est pas partie',
+      failLead: 'Le serveur ne répond pas pour l’instant. Envoyez-la par WhatsApp : tout est déjà écrit, il suffit d’appuyer sur Envoyer.',
+      failWa: 'Envoyer par WhatsApp',
+      failRetry: 'Réessayer',
+      slotAny: 'dès que possible',
+      required: 'Ce champ est obligatoire.',
       phoneBad: 'Vérifiez ce numéro.',
       emailBad: 'Vérifiez cette adresse.',
-      pickTrade: 'Choisissez un métier.',
-      pickOne: 'Choisissez au moins un point.',
-      dateBad: 'Choisissez un jour à venir.',
-      locWord: ['établissement', 'établissements'],
-      peopleWord: ['personne', 'personnes'],
-      pains: {
-        stock: 'Écarts de stock',
-        checkout: 'Encaissement trop lent',
-        team: 'Coordination de l’équipe',
-        profit: 'Savoir ce qui rapporte',
-        retention: 'Faire revenir les clients',
-        multisite: 'Gérer plusieurs établissements',
-      },
-      painEx: {
-        restaurant: {
-          stock: 'Ingrédients qui manquent en plein service',
-          checkout: 'Files d’attente et additions à séparer',
-          team: 'Salle et cuisine qui se coordonnent mal',
-          profit: 'Quels plats rapportent vraiment',
-          retention: 'Habitués qui viennent moins souvent',
-          multisite: 'Chaque adresse avec ses propres chiffres',
-        },
-        boutique: {
-          stock: 'Tailles introuvables, écarts au comptage',
-          checkout: 'Saisie des prix à la main',
-          team: 'Qui vend quoi, et quand',
-          profit: 'Marge réelle par produit',
-          retention: 'Clients qui ne reviennent pas',
-          multisite: 'Stock réparti entre plusieurs magasins',
-        },
-        spa: {
-          stock: 'Produits de soin qui manquent',
-          checkout: 'Encaissement des prestations et forfaits',
-          team: 'Plannings et disponibilités',
-          profit: 'Prestations les plus rentables',
-          retention: 'Clientes qui espacent leurs visites',
-          multisite: 'Plusieurs centres à suivre',
-        },
-        hotel: {
-          stock: 'Consommables et minibar',
-          checkout: 'Extras à reporter sur la chambre',
-          team: 'Réception, ménage et service',
-          profit: 'Revenu par chambre et par service',
-          retention: 'Clients qui ne reviennent pas',
-          multisite: 'Plusieurs établissements à piloter',
-        },
-      },
-      features: {
-        stock: {
-          restaurant: 'Stock des ingrédients, alertes avant rupture et comptages d’inventaire guidés.',
-          boutique: 'Stock par variante, codes-barres, alertes de stock bas et historique de chaque mouvement.',
-          spa: 'Inventaire des produits, alertes de stock bas et comptages guidés.',
-          hotel: 'Inventaire des consommables, alertes avant rupture et comptages guidés.',
-        },
-        checkout: {
-          restaurant: 'Caisse tactile avec plan de salle, notes séparées et envoi direct en cuisine.',
-          boutique: 'Caisse rapide avec scan des codes-barres, espèces ou carte, et ticket imprimé.',
-          spa: 'Encaissement des prestations en quelques touches, espèces ou carte.',
-          hotel: 'Encaissement des extras et report sur la chambre.',
-        },
-        team: 'Un code personnel par employé, planning, pointage et droits selon le rôle.',
-        profit: {
-          restaurant: 'Rapport journalier, marge par plat et coût des recettes.',
-          boutique: 'Rapport journalier, marge par produit et valeur du stock.',
-          spa: 'Rapport journalier et chiffre d’affaires par prestation.',
-          hotel: 'Rapport journalier et chiffre d’affaires par service.',
-        },
-        retention: 'Fichier clients, fidélité et relances WhatsApp que vous approuvez une à une.',
-        multisite: 'Tous vos établissements dans un seul tableau de bord, chacun avec ses chiffres.',
-      },
-      wa: {
-        hello: 'Bonjour Kiwi, je souhaite une démo.',
-        name: 'Prénom',
-        biz: 'Commerce',
-        trade: 'Activité',
-        size: 'Taille',
-        needs: 'Priorités',
-        note: 'Précision',
-        when: 'Créneau souhaité (à confirmer)',
-        phone: 'Téléphone',
-        email: 'E-mail',
-      },
+      pickFamily: 'Choisissez votre activité.',
+      wa: { hello: 'Bonjour Kiwi, je souhaite une démo.', name: 'Prénom', biz: 'Commerce', trade: 'Activité', when: 'Rappel souhaité', phone: 'Téléphone', email: 'E-mail', note: 'Précisions', ref: 'Référence' },
     },
     en: {
-      "open": "Request a demo",
-      "close": "Close",
-      "back": "Back",
-      "next": "Continue",
-      "stepOf": "Step {n} of {total}",
-      "waAside": "A quick question? Message us on WhatsApp",
-      "s1Title": "Let's get to know you",
-      "s1Lead": "Two answers to start, and the demo will be built around you.",
-      "firstName": "Your first name",
-      "firstNamePh": "e.g. Salma",
-      "business": "Your business name",
-      "businessPh": "e.g. Café Atlas",
-      "s2Title": "Nice to meet you, {name}. What does {biz} do?",
-      "s2Lead": "Choose the closest trade. Kiwi adapts to each one.",
-      "s3Title": "Your day-to-day activity",
-      "s3Lead": "So we can prepare a demo at the right scale.",
-      "locations": "How many locations?",
-      "people": "How many people are on your team?",
-      "exact": "Exact number",
-      "exactPh": "Enter",
-      "justMe": "Just me",
-      "s4Title": "What takes up most of your time today?",
-      "s4Lead": "You can pick several.",
-      "other": "Anything else? (optional)",
-      "otherPh": "In a few words",
-      "summaryTitle": "What Kiwi does for {biz}",
-      "summaryEmpty": "Choose at least one point to see what Kiwi can do for you.",
-      "s5Title": "When can we call you, {name}?",
-      "s5Lead": "Pick a time that suits you. We will confirm it with you before the call.",
-      "date": "Preferred day",
-      "time": "Preferred time",
-      "timezone": "Morocco time",
-      "timePick": "Choose a time",
-      "phone": "Phone",
-      "phonePh": "06 12 34 56 78",
-      "email": "Email (optional)",
-      "emailPh": "you@example.com",
-      "recap": "Summary",
-      "recapBiz": "Business",
-      "recapSize": "Size",
-      "recapNeeds": "Priorities",
-      "recapWhen": "Preferred slot",
-      "recapContact": "Contact",
-      "pending": "Preferred slot, awaiting our confirmation",
-      "submit": "Send my request on WhatsApp",
-      "submitNote": "WhatsApp opens with your message ready. All you need to do is send it.",
-      "doneTitle": "Thank you, {name}",
-      "doneLead": "Your message is ready in WhatsApp. Send it so your request reaches us.",
-      "doneNext1": "We are reading your request and preparing a demo for {biz}.",
-      "doneNext2": "We will message you to confirm the slot or suggest another.",
-      "doneNext3": "On the day, we will call you for a demo of about 20 minutes.",
-      "doneRetry": "WhatsApp did not open? Try again",
-      "doneClose": "Back to the site",
-      "required": "This field is required.",
-      "phoneBad": "Please check this number.",
-      "emailBad": "Please check this address.",
-      "pickTrade": "Choose a trade.",
-      "pickOne": "Choose at least one point.",
-      "dateBad": "Choose an upcoming day.",
-      "locWord": [
-        "location",
-        "locations"
-      ],
-      "peopleWord": [
-        "person",
-        "people"
-      ],
-      "pains": {
-        "stock": "Stock discrepancies",
-        "checkout": "Slow checkout",
-        "team": "Team coordination",
-        "profit": "Knowing what makes money",
-        "retention": "Bringing customers back",
-        "multisite": "Managing several locations"
-      },
-      "painEx": {
-        "restaurant": {
-          "stock": "Ingredients running out mid-service",
-          "checkout": "Queues and bills to split",
-          "team": "Dining room and kitchen out of sync",
-          "profit": "Which dishes really earn",
-          "retention": "Regulars visiting less often",
-          "multisite": "Each site with its own numbers"
-        },
-        "boutique": {
-          "stock": "Sizes out of stock, counting mismatches",
-          "checkout": "Prices typed in by hand",
-          "team": "Who sells what, and when",
-          "profit": "Real margin per product",
-          "retention": "Customers who never come back",
-          "multisite": "Stock spread across several shops"
-        },
-        "spa": {
-          "stock": "Care products running out",
-          "checkout": "Taking payment for treatments and packages",
-          "team": "Schedules and availability",
-          "profit": "The most profitable treatments",
-          "retention": "Clients spacing out their visits",
-          "multisite": "Several centres to track"
-        },
-        "hotel": {
-          "stock": "Supplies and minibar",
-          "checkout": "Extras to post to the room",
-          "team": "Reception, housekeeping and service",
-          "profit": "Revenue per room and per service",
-          "retention": "Guests who don't come back",
-          "multisite": "Several properties to manage"
-        }
-      },
-      "features": {
-        "stock": {
-          "restaurant": "Ingredient stock, alerts before you run out, and guided stock counts.",
-          "boutique": "Stock by variant, barcodes, low-stock alerts and a history of every movement.",
-          "spa": "Product inventory, low-stock alerts and guided counts.",
-          "hotel": "Supply inventory, alerts before you run out and guided counts."
-        },
-        "checkout": {
-          "restaurant": "Touch till with a floor plan, split bills and direct sending to the kitchen.",
-          "boutique": "Fast till with barcode scanning, cash or card, and a printed receipt.",
-          "spa": "Take payment for treatments in a few taps, cash or card.",
-          "hotel": "Take payment for extras and post them to the room."
-        },
-        "team": "A personal code for each employee, schedules, clock-in and permissions by role.",
-        "profit": {
-          "restaurant": "Daily report, margin per dish and recipe costs.",
-          "boutique": "Daily report, margin per product and stock value.",
-          "spa": "Daily report and revenue per treatment.",
-          "hotel": "Daily report and revenue per service."
-        },
-        "retention": "Customer records, loyalty and WhatsApp follow-ups that you approve one by one.",
-        "multisite": "All your locations on one dashboard, each with its own numbers."
-      },
-      "wa": {
-        "hello": "Hello Kiwi, I would like a demo.",
-        "name": "First name",
-        "biz": "Business",
-        "trade": "Activity",
-        "size": "Size",
-        "needs": "Priorities",
-        "note": "Details",
-        "when": "Preferred slot (to confirm)",
-        "phone": "Phone",
-        "email": "Email"
-      }
+      open: 'Book a demo',
+      close: 'Close',
+      eyebrow: 'Kiwi demo · 20 minutes',
+      title: 'See Kiwi on your business',
+      lead: 'Leave your details: we call you at the time you choose for a 20-minute demo built around your trade.',
+      firstName: 'First name',
+      firstNamePh: 'Salma',
+      business: 'Business name',
+      businessPh: 'Café Atlas',
+      family: 'Your business',
+      families: { restaurant: 'Food and drink', boutique: 'Retail', spa: 'Beauty and wellness', hotel: 'Hotel or riad' },
+      trade: 'More precisely',
+      tradeAny: 'Not specified',
+      phone: 'Phone',
+      phonePh: '+212 6 12 34 56 78',
+      email: 'Email',
+      optional: 'optional',
+      emailPh: 'you@example.com',
+      when: 'When should we call?',
+      days: { today: 'Today', tomorrow: 'Tomorrow', week: 'This week' },
+      parts: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Late afternoon' },
+      whenNote: 'Morocco time. We confirm the slot with you.',
+      note: 'What you would like to see',
+      notePh: 'The till, stock, reports…',
+      submit: 'Send my request',
+      sending: 'Sending…',
+      privacy: 'Your details are only used to call you back about this demo.',
+      waAside: 'Prefer WhatsApp? Message us',
+      doneTitle: 'Got it, {name}.',
+      doneLead: 'We will call you {slot} on {phone} for a demo of Kiwi for {biz}.',
+      doneRef: 'Reference',
+      doneSteps: ['We prepare a demo around your trade.', 'We call you to confirm the slot.', 'The demo takes about 20 minutes, with no commitment.'],
+      doneWa: 'Message us on WhatsApp',
+      doneClose: 'Back to the site',
+      failTitle: 'Your request did not go through',
+      failLead: 'Our server is not answering right now. Send it on WhatsApp instead: everything is already written, just press Send.',
+      failWa: 'Send on WhatsApp',
+      failRetry: 'Try again',
+      slotAny: 'as soon as possible',
+      required: 'This field is required.',
+      phoneBad: 'Please check this number.',
+      emailBad: 'Please check this address.',
+      pickFamily: 'Choose your business.',
+      wa: { hello: 'Hello Kiwi, I would like a demo.', name: 'First name', biz: 'Business', trade: 'Activity', when: 'Preferred call', phone: 'Phone', email: 'Email', note: 'Details', ref: 'Reference' },
     },
     ar: {
-      "open": "طلب عرض توضيحي",
-      "close": "إغلاق",
-      "back": "رجوع",
-      "next": "متابعة",
-      "stepOf": "الخطوة {n} من {total}",
-      "waAside": "سؤال سريع؟ راسلنا عبر WhatsApp",
-      "s1Title": "لنتعرف عليك",
-      "s1Lead": "جوابان للبداية، وسيُعدّ العرض التوضيحي حسب احتياجاتك.",
-      "firstName": "اسمك الأول",
-      "firstNamePh": "مثال: سلمى",
-      "business": "اسم نشاطك التجاري",
-      "businessPh": "مثال: Café Atlas",
-      "s2Title": "أهلاً بك، {name}. ماذا يقدم {biz}؟",
-      "s2Lead": "اختر النشاط الأقرب إليك. Kiwi يتكيف مع كل نشاط.",
-      "s3Title": "نشاطك اليومي",
-      "s3Lead": "لنعدّ عرضاً توضيحياً بالحجم المناسب.",
-      "locations": "كم عدد الفروع؟",
-      "people": "كم عدد الأشخاص في فريقك؟",
-      "exact": "عدد محدد",
-      "exactPh": "أدخل الرقم",
-      "justMe": "أنا وحدي",
-      "s4Title": "ما الذي يستهلك أكبر قدر من وقتك اليوم؟",
-      "s4Lead": "يمكنك اختيار أكثر من خيار.",
-      "other": "شيء آخر؟ (اختياري)",
-      "otherPh": "بكلمات قليلة",
-      "summaryTitle": "ما يقدمه Kiwi لـ {biz}",
-      "summaryEmpty": "اختر نقطة واحدة على الأقل لترى ما يمكن أن يقدمه Kiwi لك.",
-      "s5Title": "متى يمكننا الاتصال بك، {name}؟",
-      "s5Lead": "اختر وقتاً يناسبك. سنؤكده معك قبل المكالمة.",
-      "date": "اليوم المفضل",
-      "time": "الوقت المفضل",
-      "timezone": "بتوقيت المغرب",
-      "timePick": "اختر وقتاً",
-      "phone": "الهاتف",
-      "phonePh": "06 12 34 56 78",
-      "email": "البريد الإلكتروني (اختياري)",
-      "emailPh": "you@example.com",
-      "recap": "الملخص",
-      "recapBiz": "النشاط التجاري",
-      "recapSize": "الحجم",
-      "recapNeeds": "الأولويات",
-      "recapWhen": "الموعد المفضل",
-      "recapContact": "جهة الاتصال",
-      "pending": "الموعد المفضل، بانتظار تأكيدنا",
-      "submit": "أرسل طلبي عبر WhatsApp",
-      "submitNote": "سيُفتح WhatsApp ورسالتك جاهزة. كل ما عليك هو إرسالها.",
-      "doneTitle": "شكراً لك، {name}",
-      "doneLead": "رسالتك جاهزة في WhatsApp. أرسلها ليصل طلبك إلينا.",
-      "doneNext1": "نقرأ طلبك ونعدّ عرضاً توضيحياً لـ {biz}.",
-      "doneNext2": "سنراسلك لتأكيد الموعد أو لاقتراح موعد آخر.",
-      "doneNext3": "في اليوم المحدد، سنتصل بك لعرض توضيحي يدوم نحو 20 دقيقة.",
-      "doneRetry": "لم يُفتح WhatsApp؟ حاول مرة أخرى",
-      "doneClose": "العودة إلى الموقع",
-      "required": "هذا الحقل مطلوب.",
-      "phoneBad": "يرجى التحقق من هذا الرقم.",
-      "emailBad": "يرجى التحقق من هذا العنوان.",
-      "pickTrade": "اختر نشاطاً.",
-      "pickOne": "اختر نقطة واحدة على الأقل.",
-      "dateBad": "اختر يوماً قادماً.",
-      "locWord": [
-        "فرع",
-        "فروع"
-      ],
-      "peopleWord": [
-        "شخص",
-        "أشخاص"
-      ],
-      "pains": {
-        "stock": "فروقات في المخزون",
-        "checkout": "بطء في الدفع",
-        "team": "تنسيق الفريق",
-        "profit": "معرفة ما يحقق الربح",
-        "retention": "إعادة العملاء إليك",
-        "multisite": "إدارة عدة فروع"
-      },
-      "painEx": {
-        "restaurant": {
-          "stock": "مكونات تنفد أثناء الخدمة",
-          "checkout": "طوابير وفواتير تحتاج إلى فصل",
-          "team": "القاعة والمطبخ غير متناسقين",
-          "profit": "أي الأطباق تحقق ربحاً فعلياً",
-          "retention": "الزبائن الدائمون يزورون بتواتر أقل",
-          "multisite": "لكل فرع أرقامه الخاصة"
-        },
-        "boutique": {
-          "stock": "مقاسات غير متوفرة وفروقات في الجرد",
-          "checkout": "إدخال الأسعار يدوياً",
-          "team": "من يبيع ماذا ومتى",
-          "profit": "الهامش الحقيقي لكل منتج",
-          "retention": "عملاء لا يعودون",
-          "multisite": "مخزون موزع على عدة متاجر"
-        },
-        "spa": {
-          "stock": "منتجات العناية تنفد",
-          "checkout": "تحصيل الخدمات والباقات",
-          "team": "جداول العمل والتوفر",
-          "profit": "الخدمات الأكثر ربحاً",
-          "retention": "عملاء تقلّ زياراتهم",
-          "multisite": "عدة مراكز تحتاج إلى متابعة"
-        },
-        "hotel": {
-          "stock": "المستلزمات والميني بار",
-          "checkout": "مصاريف إضافية تُرحَّل إلى الغرفة",
-          "team": "الاستقبال والتنظيف والخدمة",
-          "profit": "الإيراد لكل غرفة ولكل خدمة",
-          "retention": "نزلاء لا يعودون",
-          "multisite": "عدة منشآت تحتاج إلى إدارة"
-        }
-      },
-      "features": {
-        "stock": {
-          "restaurant": "مخزون المكونات، وتنبيهات قبل النفاد، وجرد موجَّه.",
-          "boutique": "مخزون حسب المتغير، والباركود، وتنبيهات انخفاض المخزون، وسجل لكل حركة.",
-          "spa": "جرد المنتجات، وتنبيهات انخفاض المخزون، وجرد موجَّه.",
-          "hotel": "جرد المستلزمات، وتنبيهات قبل النفاد، وجرد موجَّه."
-        },
-        "checkout": {
-          "restaurant": "صندوق باللمس مع مخطط القاعة، وفواتير منفصلة، وإرسال مباشر إلى المطبخ.",
-          "boutique": "صندوق سريع مع مسح الباركود، نقداً أو بالبطاقة، وتذكرة مطبوعة.",
-          "spa": "تحصيل الخدمات بلمسات قليلة، نقداً أو بالبطاقة.",
-          "hotel": "تحصيل المصاريف الإضافية وترحيلها إلى الغرفة."
-        },
-        "team": "رمز شخصي لكل موظف، وجداول عمل، وتسجيل الحضور، وصلاحيات حسب الدور.",
-        "profit": {
-          "restaurant": "تقرير يومي، وهامش لكل طبق، وتكلفة الوصفات.",
-          "boutique": "تقرير يومي، وهامش لكل منتج، وقيمة المخزون.",
-          "spa": "تقرير يومي، والإيرادات لكل خدمة.",
-          "hotel": "تقرير يومي، والإيرادات لكل خدمة."
-        },
-        "retention": "ملف العملاء، والولاء، ومتابعات WhatsApp التي توافق عليها واحدة تلو الأخرى.",
-        "multisite": "كل فروعك في لوحة تحكم واحدة، ولكل فرع أرقامه."
-      },
-      "wa": {
-        "hello": "مرحباً Kiwi، أرغب في عرض توضيحي.",
-        "name": "الاسم الأول",
-        "biz": "النشاط التجاري",
-        "trade": "النشاط",
-        "size": "الحجم",
-        "needs": "الأولويات",
-        "note": "التفاصيل",
-        "when": "الموعد المفضل (للتأكيد)",
-        "phone": "الهاتف",
-        "email": "البريد الإلكتروني"
-      }
+      open: 'اطلب عرضا توضيحيا',
+      close: 'إغلاق',
+      eyebrow: 'عرض Kiwi · 20 دقيقة',
+      title: 'لنشاهد Kiwi على نشاطك',
+      lead: 'اترك بياناتك: نتصل بك في الوقت الذي تختاره لعرض توضيحي مدته 20 دقيقة يناسب نشاطك.',
+      firstName: 'الاسم',
+      firstNamePh: 'سلمى',
+      business: 'اسم المحل',
+      businessPh: 'Café Atlas',
+      family: 'نشاطك',
+      families: { restaurant: 'مطاعم ومقاه', boutique: 'تجارة', spa: 'تجميل وعناية', hotel: 'فندق أو رياض' },
+      trade: 'بالتحديد',
+      tradeAny: 'بدون تحديد',
+      phone: 'الهاتف',
+      phonePh: '06 12 34 56 78',
+      email: 'البريد الإلكتروني',
+      optional: 'اختياري',
+      emailPh: 'you@example.ma',
+      when: 'متى نتصل بك؟',
+      days: { today: 'اليوم', tomorrow: 'غدا', week: 'هذا الأسبوع' },
+      parts: { morning: 'صباحا', afternoon: 'بعد الظهر', evening: 'آخر النهار' },
+      whenNote: 'بتوقيت المغرب. نؤكد معك الموعد.',
+      note: 'ما الذي تود رؤيته',
+      notePh: 'الصندوق، المخزون، التقارير…',
+      submit: 'أرسل طلبي',
+      sending: 'جار الإرسال…',
+      privacy: 'نستعمل بياناتك فقط للاتصال بك بخصوص هذا العرض.',
+      waAside: 'تفضل WhatsApp؟ راسلنا',
+      doneTitle: 'تم التسجيل يا {name}.',
+      doneLead: 'سنتصل بك {slot} على الرقم {phone} لعرض Kiwi على {biz}.',
+      doneRef: 'المرجع',
+      doneSteps: ['نحضّر عرضا يناسب نشاطك.', 'نتصل بك لتأكيد الموعد.', 'يدوم العرض حوالي 20 دقيقة، دون أي التزام.'],
+      doneWa: 'راسلنا على WhatsApp',
+      doneClose: 'العودة إلى الموقع',
+      failTitle: 'لم يُرسل طلبك',
+      failLead: 'الخادم لا يجيب حاليا. أرسله عبر WhatsApp: كل شيء مكتوب، يكفي الضغط على إرسال.',
+      failWa: 'إرسال عبر WhatsApp',
+      failRetry: 'إعادة المحاولة',
+      slotAny: 'في أقرب وقت',
+      required: 'هذا الحقل إلزامي.',
+      phoneBad: 'تحقق من هذا الرقم.',
+      emailBad: 'تحقق من هذا العنوان.',
+      pickFamily: 'اختر نشاطك.',
+      wa: { hello: 'مرحبا Kiwi، أود عرضا توضيحيا.', name: 'الاسم', biz: 'المحل', trade: 'النشاط', when: 'وقت الاتصال المفضل', phone: 'الهاتف', email: 'البريد الإلكتروني', note: 'تفاصيل', ref: 'المرجع' },
     },
   };
 
   /* ───────────── language ───────────── */
   function lang() {
     var l = (document.documentElement.getAttribute('lang') || 'fr').slice(0, 2).toLowerCase();
-    return STR[l] ? l : (STR.en ? 'en' : 'fr');
+    return STR[l] ? l : 'en';
   }
   function S() { return STR[lang()] || STR.fr; }
   function t(key, vars) {
     var v = S()[key];
     if (v == null) v = STR.fr[key];
-    return vars ? fill(v, vars) : String(v == null ? '' : v);
+    return vars ? fill(v, vars) : v;
   }
   function fill(v, vars) {
     return String(v == null ? '' : v).replace(/\{(\w+)\}/g, function (_, k) { return vars && vars[k] != null ? vars[k] : ''; });
@@ -473,336 +195,346 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function trades() { return (window.KiwiTrades && window.KiwiTrades.LIST) || []; }
-  function tradeOf(id) { return trades().filter(function (x) { return x.id === id; })[0] || null; }
-  function tradeLabel(tr) { if (!tr) return ''; var l = tr.label || {}; return l[lang()] || l.en || l.fr || tr.id; }
-  function base() { var tr = tradeOf(state.trade); return (tr && tr.base) || 'boutique'; }
-  function plural(n, pair) { return n + ' ' + (Number(n) > 1 ? pair[1] : pair[0]); }
 
-  /* ───────────── state, kept between steps and reloads of the tab ───────────── */
+  /* ───────────── trades (the product's single list) ───────────── */
+  function trades() { return (window.KiwiTrades && window.KiwiTrades.LIST) || []; }
+  function tradesIn(family) { return trades().filter(function (x) { return x.base === family && x.id !== family && x.id !== 'autre'; }); }
+  function tradeLabel(id) {
+    var tr = trades().filter(function (x) { return x.id === id; })[0];
+    if (!tr) return '';
+    var l = tr.label || {};
+    return l[lang()] || l.en || l.fr || tr.id;
+  }
+
+  /* ───────────── state ───────────── */
   var blank = function () {
-    return { step: 1, first: '', biz: '', trade: '', loc: '', locExact: '', team: '', teamExact: '', pains: [], other: '', date: '', time: '', phone: '', email: '' };
+    return { firstName: '', business: '', family: '', trade: '', phone: '', email: '', day: '', part: '', note: '', website: '' };
   };
   var state = blank();
-  try { var saved = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (saved && typeof saved === 'object') state = Object.assign(blank(), saved); } catch (_) {}
-  function save() { try { sessionStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {} }
+  var phase = 'form';      // form | sending | done | failed
+  var errors = {};
+  var reference = '';
+  try { var saved = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (saved && typeof saved === 'object') state = Object.assign(blank(), saved, { website: '' }); } catch (_) {}
+  function save() { try { var s = Object.assign({}, state); delete s.website; sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (_) {} }
+  function forget() { try { sessionStorage.removeItem(STORE); } catch (_) {} }
 
-  var ui = null, lastFocus = null, errors = {};
+  /* ───────────── rules (mirror functions/api/_demo-requests.js) ───────────── */
+  function phoneOk(v) {
+    var raw = String(v || '').trim();
+    if (!/^[+\d][\d\s().-]*$/.test(raw)) return false;
+    var n = raw.replace(/\D/g, '').length;
+    return n >= 8 && n <= 15;
+  }
+  function emailOk(v) { var e = String(v || '').trim(); return !e || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e); }
+  function validate() {
+    var e = {};
+    if (!state.firstName.trim()) e.firstName = t('required');
+    if (!state.business.trim()) e.business = t('required');
+    if (!state.family) e.family = t('pickFamily');
+    if (!state.phone.trim()) e.phone = t('required'); else if (!phoneOk(state.phone)) e.phone = t('phoneBad');
+    if (!emailOk(state.email)) e.email = t('emailBad');
+    return e;
+  }
+  function slotText() {
+    var d = state.day ? S().days[state.day] : '';
+    var p = state.part ? S().parts[state.part] : '';
+    if (!d && !p) return t('slotAny');
+    return [d, p].filter(Boolean).join(', ').toLowerCase();
+  }
+  function tradeText() { return tradeLabel(state.trade) || (state.family ? S().families[state.family] : ''); }
 
-  function locCount() { return state.loc === 'exact' ? state.locExact : state.loc; }
-  function teamCount() { return state.team === 'exact' ? state.teamExact : state.team; }
-  function sizeText() {
-    var l = locCount(), p = teamCount(), out = [];
-    if (l) out.push(/^\d+$/.test(l) ? plural(+l, S().locWord || STR.fr.locWord) : l + ' ' + (S().locWord || STR.fr.locWord)[1]);
-    if (p) out.push(p === 'me' ? t('justMe') : (/^\d+$/.test(p) ? plural(+p, S().peopleWord || STR.fr.peopleWord) : p + ' ' + (S().peopleWord || STR.fr.peopleWord)[1]));
-    return out.join(' · ');
-  }
-  function painsText() {
-    var P = S().pains || STR.fr.pains;
-    return state.pains.map(function (k) { return P[k] || k; }).join(', ');
-  }
-  function dateText() {
-    if (!state.date) return '';
-    try {
-      var d = new Date(state.date + 'T12:00:00');
-      var loc = { fr: 'fr-MA', en: 'en-GB', ar: 'ar-MA' }[lang()] || 'en-GB';
-      return d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) + (state.time ? ' · ' + state.time : '') + ' · ' + t('timezone');
-    } catch (_) { return state.date + ' ' + state.time; }
-  }
-  function features() {
-    var F = S().features || STR.fr.features, b = base();
-    return state.pains.map(function (k) {
-      var f = F[k]; if (!f) return null;
-      return { key: k, text: typeof f === 'string' ? f : (f[b] || f.boutique) };
-    }).filter(Boolean);
-  }
-  function waText() {
-    var W = S().wa || STR.fr.wa, lines = [W.hello, ''];
-    var row = function (l, v) { if (v) lines.push(l + ' : ' + v); };
-    row(W.name, state.first);
-    row(W.biz, state.biz);
-    row(W.trade, tradeLabel(tradeOf(state.trade)));
-    row(W.size, sizeText());
-    row(W.needs, painsText());
-    row(W.note, state.other.trim());
-    row(W.when, dateText());
+  /* The same request, written for WhatsApp: the fallback when the server
+     cannot take it, and the follow-up once it has. */
+  function waText(ref) {
+    var W = S().wa, lines = [W.hello, ''], sep = lang() === 'fr' ? ' : ' : ': ';
+    var row = function (l, v) { if (v) lines.push(l + sep + v); };
+    row(W.ref, ref);
+    row(W.name, state.firstName.trim());
+    row(W.biz, state.business.trim());
+    row(W.trade, tradeText());
+    row(W.when, slotText());
     row(W.phone, state.phone.trim());
     row(W.email, state.email.trim());
+    row(W.note, state.note.trim());
     return lines.join('\n');
   }
   function waUrl(text) { return 'https://wa.me/' + WA + (text ? '?text=' + encodeURIComponent(text) : ''); }
 
-  /* ───────────── validation, one step at a time ───────────── */
-  function validate(step) {
-    errors = {};
-    if (step === 1) {
-      if (!state.first.trim()) errors.first = t('required');
-      if (!state.biz.trim()) errors.biz = t('required');
-    } else if (step === 2) {
-      if (!state.trade) errors.trade = t('pickTrade');
-    } else if (step === 3) {
-      if (!locCount() || (state.loc === 'exact' && !(+state.locExact >= 1))) errors.loc = t('required');
-      if (!teamCount() || (state.team === 'exact' && !(+state.teamExact >= 1))) errors.team = t('required');
-    } else if (step === 4) {
-      if (!state.pains.length && !state.other.trim()) errors.pains = t('pickOne');
-    } else if (step === 5) {
-      if (!state.date || state.date < todayIso()) errors.date = t('dateBad');
-      if (!state.time) errors.time = t('required');
-      var digits = state.phone.replace(/[^\d]/g, '');
-      if (!state.phone.trim()) errors.phone = t('required');
-      else if (digits.length < 9 || digits.length > 15) errors.phone = t('phoneBad');
-      if (state.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) errors.email = t('emailBad');
-    }
-    return !Object.keys(errors).length;
-  }
-  function todayIso() {
-    var d = new Date(); var p = function (n) { return (n < 10 ? '0' : '') + n; };
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  function payload() {
+    return {
+      firstName: state.firstName.trim(), business: state.business.trim(),
+      trade: state.trade || state.family, phone: state.phone.trim(), email: state.email.trim(),
+      day: state.day || '', part: state.part || '', note: state.note.trim(),
+      lang: lang(), page: String(location.pathname || '').slice(0, 200), website: state.website,
+    };
   }
 
   /* ───────────── markup ───────────── */
-  function field(key, label, input) {
-    var err = errors[key];
-    return '<div class="kdf-field' + (err ? ' has-err' : '') + '"><label for="kdf-' + key + '">' + esc(label) + '</label>' + input
-      + (err ? '<p class="kdf-err" id="kdf-' + key + '-err">' + esc(err) + '</p>' : '') + '</div>';
+  function icon(name) { return '<i class="kdf-ic" aria-hidden="true" style="--kdf-icon:url(/assets/icons/material/' + name + '.svg)"></i>'; }
+  function errorFor(key) { return errors[key] ? '<p class="kdf-err" id="kdf-err-' + key + '">' + esc(errors[key]) + '</p>' : ''; }
+  function textField(key, label, opts) {
+    opts = opts || {};
+    var attrs = ' id="kdf-' + key + '" name="' + key + '" data-field="' + key + '" value="' + esc(state[key]) + '"'
+      + ' placeholder="' + esc(opts.ph || '') + '"' + (opts.type ? ' type="' + opts.type + '"' : ' type="text"')
+      + (opts.auto ? ' autocomplete="' + opts.auto + '"' : '') + (opts.mode ? ' inputmode="' + opts.mode + '"' : '')
+      + (opts.dir ? ' dir="' + opts.dir + '"' : '') + (opts.max ? ' maxlength="' + opts.max + '"' : '')
+      + (errors[key] ? ' aria-invalid="true" aria-describedby="kdf-err-' + key + '"' : '') + (opts.required ? ' required' : '');
+    return '<div class="kdf-field' + (opts.wide ? ' wide' : '') + '"><label for="kdf-' + key + '">' + esc(label)
+      + (opts.optional ? ' <span class="kdf-opt">' + esc(t('optional')) + '</span>' : '') + '</label><input' + attrs + '>' + errorFor(key) + '</div>';
   }
-  function input(key, type, ph, extra) {
-    return '<input id="kdf-' + key + '" data-k="' + key + '" type="' + type + '" value="' + esc(state[key]) + '" placeholder="' + esc(ph || '') + '"'
-      + (errors[key] ? ' aria-invalid="true" aria-describedby="kdf-' + key + '-err"' : '') + (extra || '') + '>';
-  }
-  function chips(key, options) {
-    var cur = state[key];
-    return '<div class="kdf-chips" role="radiogroup">' + options.map(function (o) {
-      var on = cur === o.v;
-      return '<button type="button" role="radio" aria-checked="' + on + '" class="kdf-chip' + (on ? ' on' : '') + '" data-set="' + key + '" data-v="' + esc(o.v) + '">' + esc(o.l) + '</button>';
+  function seg(key, values, labels) {
+    return '<div class="kdf-seg" role="radiogroup" aria-label="' + esc(t('when')) + '">' + values.map(function (v) {
+      var on = state[key] === v;
+      return '<button type="button" role="radio" aria-checked="' + on + '" class="' + (on ? 'on' : '') + '" data-seg="' + key + '" data-value="' + v + '">' + esc(labels[v]) + '</button>';
     }).join('') + '</div>';
   }
-
-  function stepHtml() {
-    var s = state.step, name = esc(state.first.trim()), biz = esc(state.biz.trim());
-    if (s === 1) {
-      return head(t('s1Title'), t('s1Lead'))
-        + field('first', t('firstName'), input('first', 'text', t('firstNamePh'), ' autocomplete="given-name" maxlength="40"'))
-        + field('biz', t('business'), input('biz', 'text', t('businessPh'), ' autocomplete="organization" maxlength="60"'));
-    }
-    if (s === 2) {
-      var cards = trades().map(function (tr) {
-        var on = state.trade === tr.id;
-        return '<button type="button" role="radio" aria-checked="' + on + '" class="kdf-trade' + (on ? ' on' : '') + '" data-set="trade" data-v="' + tr.id + '"><span class="kdf-trade-ic">' + (tr.icon || '') + '</span><span>' + esc(tradeLabel(tr)) + '</span></button>';
-      }).join('');
-      return head(fill(t('s2Title'), { name: name, biz: biz }), t('s2Lead'))
-        + '<div class="kdf-trades" role="radiogroup" aria-label="' + esc(fill(t('s2Title'), { name: state.first, biz: state.biz })) + '">' + cards + '</div>'
-        + (errors.trade ? '<p class="kdf-err" role="alert">' + esc(errors.trade) + '</p>' : '');
-    }
-    if (s === 3) {
-      var loc = chips('loc', [{ v: '1', l: '1' }, { v: '2', l: '2' }, { v: '3', l: '3' }, { v: '4-10', l: '4 – 10' }, { v: 'exact', l: t('exact') }]);
-      var team = chips('team', [{ v: 'me', l: t('justMe') }, { v: '2-5', l: '2 – 5' }, { v: '6-15', l: '6 – 15' }, { v: '16+', l: '16 +' }, { v: 'exact', l: t('exact') }]);
-      return head(t('s3Title'), t('s3Lead'))
-        + '<fieldset class="kdf-set' + (errors.loc ? ' has-err' : '') + '"><legend>' + esc(t('locations')) + '</legend>' + loc
-        + (state.loc === 'exact' ? '<input class="kdf-exact" data-k="locExact" type="number" inputmode="numeric" min="1" max="999" value="' + esc(state.locExact) + '" placeholder="' + esc(t('exactPh')) + '" aria-label="' + esc(t('locations')) + '">' : '')
-        + (errors.loc ? '<p class="kdf-err">' + esc(errors.loc) + '</p>' : '') + '</fieldset>'
-        + '<fieldset class="kdf-set' + (errors.team ? ' has-err' : '') + '"><legend>' + esc(t('people')) + '</legend>' + team
-        + (state.team === 'exact' ? '<input class="kdf-exact" data-k="teamExact" type="number" inputmode="numeric" min="1" max="9999" value="' + esc(state.teamExact) + '" placeholder="' + esc(t('exactPh')) + '" aria-label="' + esc(t('people')) + '">' : '')
-        + (errors.team ? '<p class="kdf-err">' + esc(errors.team) + '</p>' : '') + '</fieldset>';
-    }
-    if (s === 4) {
-      var P = S().pains || STR.fr.pains, EX = (S().painEx || STR.fr.painEx)[base()] || {};
-      var opts = Object.keys(STR.fr.pains).map(function (k) {
-        var on = state.pains.indexOf(k) >= 0;
-        return '<button type="button" role="checkbox" aria-checked="' + on + '" class="kdf-pain' + (on ? ' on' : '') + '" data-pain="' + k + '"><b>' + esc(P[k]) + '</b><small>' + esc(EX[k] || '') + '</small></button>';
-      }).join('');
-      var f = features();
-      var summary = '<div class="kdf-summary" aria-live="polite"><h3>' + esc(fill(t('summaryTitle'), { biz: state.biz.trim() || 'vous' })) + '</h3>'
-        + (f.length ? '<ul>' + f.map(function (x) { return '<li><span>' + esc(P[x.key]) + '</span>' + esc(x.text) + '</li>'; }).join('') + '</ul>' : '<p>' + esc(t('summaryEmpty')) + '</p>') + '</div>';
-      return head(t('s4Title'), t('s4Lead'))
-        + '<div class="kdf-pains">' + opts + '</div>'
-        + (errors.pains ? '<p class="kdf-err" role="alert">' + esc(errors.pains) + '</p>' : '')
-        + field('other', t('other'), '<textarea id="kdf-other" data-k="other" rows="2" maxlength="300" placeholder="' + esc(t('otherPh')) + '">' + esc(state.other) + '</textarea>')
-        + summary;
-    }
-    if (s === 5) {
-      var times = [];
-      for (var h = 9; h <= 18; h++) { times.push((h < 10 ? '0' : '') + h + ':00'); if (h < 18) times.push((h < 10 ? '0' : '') + h + ':30'); }
-      var timeSel = '<select id="kdf-time" data-k="time"' + (errors.time ? ' aria-invalid="true"' : '') + '><option value="">' + esc(t('timePick')) + '</option>'
-        + times.map(function (x) { return '<option' + (state.time === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>';
-      return head(fill(t('s5Title'), { name: name }), t('s5Lead'))
-        + '<div class="kdf-row">' + field('date', t('date'), input('date', 'date', '', ' min="' + todayIso() + '"')) + field('time', t('time'), timeSel) + '</div>'
-        + '<p class="kdf-tz">' + esc(t('timezone')) + ' · ' + esc(t('pending')) + '</p>'
-        + '<div class="kdf-row">' + field('phone', t('phone'), input('phone', 'tel', t('phonePh'), ' autocomplete="tel" inputmode="tel" maxlength="20"'))
-        + field('email', t('email'), input('email', 'email', t('emailPh'), ' autocomplete="email" maxlength="80"')) + '</div>'
-        + recapHtml();
-    }
-    /* done */
-    return '<div class="kdf-done"><div class="kdf-done-mark" aria-hidden="true">' + checkSvg + '</div>'
-      + '<h2 id="kdf-title" tabindex="-1">' + esc(fill(t('doneTitle'), { name: state.first.trim() })) + '</h2><p class="kdf-lead">' + esc(t('doneLead')) + '</p>'
-      + '<ol class="kdf-next"><li>' + esc(fill(t('doneNext1'), { biz: state.biz.trim() })) + '</li><li>' + esc(t('doneNext2')) + '</li><li>' + esc(t('doneNext3')) + '</li></ol>'
-      + '<p class="kdf-pending">' + esc(dateText()) + '<br>' + esc(t('pending')) + '</p>'
-      + '<a class="kdf-link" href="' + esc(waUrl(waText())) + '" target="_blank" rel="noreferrer" data-retry>' + esc(t('doneRetry')) + '</a></div>';
+  function formHtml() {
+    var fams = FAMILIES.map(function (f) {
+      var on = state.family === f.id;
+      return '<button type="button" role="radio" aria-checked="' + on + '" class="kdf-fam' + (on ? ' on' : '') + '" data-family="' + f.id + '">'
+        + icon(f.icon) + '<span>' + esc(S().families[f.id]) + '</span></button>';
+    }).join('');
+    var precise = state.family ? tradesIn(state.family) : [];
+    var tradeSelect = precise.length ? '<div class="kdf-field wide kdf-trade"><label for="kdf-trade">' + esc(t('trade')) + ' <span class="kdf-opt">' + esc(t('optional')) + '</span></label>'
+      + '<select id="kdf-trade" data-field="trade"><option value="">' + esc(t('tradeAny')) + '</option>'
+      + precise.map(function (x) { return '<option value="' + esc(x.id) + '"' + (state.trade === x.id ? ' selected' : '') + '>' + esc(tradeLabel(x.id)) + '</option>'; }).join('')
+      + '</select></div>' : '';
+    return '<form class="kdf-form" novalidate>'
+      + '<div class="kdf-grid">'
+      + textField('firstName', t('firstName'), { ph: t('firstNamePh'), auto: 'given-name', max: 60, required: true })
+      + textField('business', t('business'), { ph: t('businessPh'), auto: 'organization', max: 80, required: true })
+      + '<fieldset class="kdf-field wide"><legend>' + esc(t('family')) + '</legend><div class="kdf-fams" role="radiogroup"' + (errors.family ? ' aria-invalid="true" aria-describedby="kdf-err-family"' : '') + '>' + fams + '</div>' + errorFor('family') + '</fieldset>'
+      + tradeSelect
+      + textField('phone', t('phone'), { ph: t('phonePh'), type: 'tel', auto: 'tel', mode: 'tel', dir: 'ltr', max: 24, required: true })
+      + textField('email', t('email'), { ph: t('emailPh'), type: 'email', auto: 'email', mode: 'email', dir: 'ltr', max: 160, optional: true })
+      + '<fieldset class="kdf-field wide"><legend>' + esc(t('when')) + '</legend>' + seg('day', DAYS, S().days) + seg('part', PARTS, S().parts)
+      + '<p class="kdf-hint">' + esc(t('whenNote')) + '</p></fieldset>'
+      + '<div class="kdf-field wide"><label for="kdf-note">' + esc(t('note')) + ' <span class="kdf-opt">' + esc(t('optional')) + '</span></label>'
+      + '<textarea id="kdf-note" data-field="note" rows="2" maxlength="500" placeholder="' + esc(t('notePh')) + '">' + esc(state.note) + '</textarea></div>'
+      + '</div>'
+      + '<div class="kdf-trap" aria-hidden="true"><label>Website<input tabindex="-1" autocomplete="off" data-field="website" value=""></label></div>'
+      + '<div class="kdf-actions"><button type="submit" class="kdf-primary" data-submit' + (phase === 'sending' ? ' disabled aria-busy="true"' : '') + '>'
+      + esc(phase === 'sending' ? t('sending') : t('submit')) + '</button>'
+      + '<p class="kdf-privacy">' + esc(t('privacy')) + '</p>'
+      + '<a class="kdf-wa" data-wa-aside href="' + esc(waUrl(waText(''))) + '" target="_blank" rel="noopener">' + icon('chat') + '<span>' + esc(t('waAside')) + '</span></a></div>'
+      + '</form>';
   }
-  function recapHtml() {
-    var recap = [
-      [t('recapBiz'), state.biz.trim() + ' · ' + tradeLabel(tradeOf(state.trade))],
-      [t('recapSize'), sizeText()],
-      [t('recapNeeds'), [painsText(), state.other.trim()].filter(Boolean).join(' · ')],
-      [t('recapWhen'), dateText() ? dateText() : ''],
-      [t('recapContact'), [state.phone.trim(), state.email.trim()].filter(Boolean).join(' · ')],
-    ];
-    return '<div class="kdf-recap"><h3>' + esc(t('recap')) + '</h3><dl>' + recap.map(function (r) { return r[1] ? '<div><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>' : ''; }).join('')
-      + '</dl><p class="kdf-pending">' + esc(t('pending')) + '</p></div>';
+  function doneHtml() {
+    var steps = (S().doneSteps || []).map(function (s, i) { return '<li><b>' + (i + 1) + '</b><span>' + esc(s) + '</span></li>'; }).join('');
+    return '<div class="kdf-state" data-state="done">' + icon('check_circle')
+      + '<h2 tabindex="-1" data-title id="kdf-title">' + esc(t('doneTitle', { name: state.firstName.trim() })) + '</h2>'
+      + '<p class="kdf-lead">' + esc(t('doneLead', { slot: slotText(), phone: state.phone.trim(), biz: state.business.trim() })) + '</p>'
+      + (reference ? '<p class="kdf-ref"><span>' + esc(t('doneRef')) + '</span><b dir="ltr">' + esc(reference) + '</b></p>' : '')
+      + '<ol class="kdf-steps">' + steps + '</ol>'
+      + '<div class="kdf-actions"><button type="button" class="kdf-primary" data-close>' + esc(t('doneClose')) + '</button>'
+      + '<a class="kdf-secondary" data-wa-done href="' + esc(waUrl(waText(reference))) + '" target="_blank" rel="noopener">' + icon('chat') + '<span>' + esc(t('doneWa')) + '</span></a></div></div>';
   }
-  function head(title, lead) {
-    return '<h2 id="kdf-title" tabindex="-1">' + esc(title) + '</h2><p class="kdf-lead">' + esc(lead) + '</p>';
+  function failHtml() {
+    return '<div class="kdf-state" data-state="failed">' + icon('chat')
+      + '<h2 tabindex="-1" data-title id="kdf-title">' + esc(t('failTitle')) + '</h2>'
+      + '<p class="kdf-lead">' + esc(t('failLead')) + '</p>'
+      + '<div class="kdf-actions"><a class="kdf-primary" data-wa-fail href="' + esc(waUrl(waText(''))) + '" target="_blank" rel="noopener">' + icon('chat') + '<span>' + esc(t('failWa')) + '</span></a>'
+      + '<button type="button" class="kdf-secondary" data-retry>' + esc(t('failRetry')) + '</button></div></div>';
   }
-  var checkSvg = '<svg viewBox="0 -960 960 960" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>';
-  var closeSvg = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>';
-  var backSvg = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M400-80 0-480l400-400 71 71-329 329 329 329-71 71Z"/></svg>';
-  var waSvg = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-400h320v-80H240v80Zm0-120h480v-80H240v80Zm0-120h480v-80H240v80ZM80-80v-720q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H240L80-80Zm126-240h594v-480H160v525l46-45Zm-46 0v-480 480Z"/></svg>';
-
-  function render(focusTitle) {
-    if (!ui) return;
-    var done = state.step > STEPS;
-    var dir = document.documentElement.getAttribute('dir') === 'rtl' || lang() === 'ar' ? 'rtl' : 'ltr';
-    ui.setAttribute('dir', dir);
-    ui.setAttribute('lang', lang());
-    var pct = Math.round(Math.min(state.step - 1, STEPS) / STEPS * 100);
-    ui.querySelector('.kdf-progress').innerHTML = done ? '' : '<div class="kdf-bar"><i style="width:' + Math.max(8, Math.round(state.step / STEPS * 100)) + '%"></i></div><span>' + esc(fill(t('stepOf'), { n: state.step, total: STEPS })) + '</span>';
-    ui.querySelector('.kdf-progress').setAttribute('aria-valuenow', String(pct));
-    ui.querySelector('.kdf-body').innerHTML = stepHtml();
-    var back = ui.querySelector('[data-back]');
-    back.hidden = done || state.step === 1;
-    var foot = ui.querySelector('.kdf-foot');
-    if (done) {
-      foot.innerHTML = '<button type="button" class="kdf-primary" data-close>' + esc(t('doneClose')) + '</button>';
-    } else if (state.step === STEPS) {
-      foot.innerHTML = '<button type="button" class="kdf-primary" data-submit>' + waSvg + '<span>' + esc(t('submit')) + '</span></button><p class="kdf-foot-note">' + esc(t('submitNote')) + '</p>';
-    } else {
-      foot.innerHTML = '<button type="button" class="kdf-primary" data-next>' + esc(t('next')) + '</button>'
-        + '<a class="kdf-link" href="' + waUrl('') + '" target="_blank" rel="noreferrer">' + esc(t('waAside')) + '</a>';
-    }
-    if (focusTitle) { var h = ui.querySelector('#kdf-title'); if (h) h.focus({ preventScroll: true }); ui.querySelector('.kdf-scroll').scrollTop = 0; }
-  }
-  function focusFirstError() {
-    var el = ui.querySelector('[aria-invalid="true"], .kdf-err');
-    if (el) { (el.matches('input,select,textarea') ? el : (el.closest('.kdf-set, .kdf-field') || el)).scrollIntoView({ block: 'center', behavior: 'smooth' }); if (el.focus && el.matches('input,select,textarea')) el.focus(); }
+  function bodyHtml() {
+    if (phase === 'done') return doneHtml();
+    if (phase === 'failed') return failHtml();
+    return '<p class="kdf-eyebrow">' + esc(t('eyebrow')) + '</p><h2 tabindex="-1" data-title id="kdf-title">' + esc(t('title')) + '</h2>'
+      + '<p class="kdf-lead">' + esc(t('lead')) + '</p>' + formHtml();
   }
 
   /* ───────────── sheet ───────────── */
+  var el = null, ui = null, lastFocus = null;
   function build() {
     injectCss();
-    ui = document.createElement('div');
-    ui.className = 'kdf-back';
-    ui.innerHTML = '<div class="kdf" role="dialog" aria-modal="true" aria-labelledby="kdf-title">'
-      + '<div class="kdf-top"><button type="button" class="kdf-icon" data-back aria-label="' + esc(t('back')) + '">' + backSvg + '</button>'
-      + '<div class="kdf-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>'
-      + '<button type="button" class="kdf-icon" data-close aria-label="' + esc(t('close')) + '">' + closeSvg + '</button></div>'
-      + '<div class="kdf-scroll"><div class="kdf-body"></div></div><div class="kdf-foot"></div></div>';
-    document.body.appendChild(ui);
-    ui.addEventListener('click', onClick);
-    ui.addEventListener('input', onInput);
-    ui.addEventListener('change', onInput);
-    ui.addEventListener('keydown', onKey);
+    el = document.createElement('div');
+    el.className = 'kdf-back';
+    el.setAttribute('dir', lang() === 'ar' ? 'rtl' : 'ltr');
+    el.innerHTML = '<div class="kdf" role="dialog" aria-modal="true" aria-labelledby="kdf-title">'
+      + '<button type="button" class="kdf-close" data-close aria-label="' + esc(t('close')) + '">' + icon('close') + '</button>'
+      + '<div class="kdf-scroll" data-body></div></div>';
+    ui = el.querySelector('.kdf');
+    el.addEventListener('click', onClick);
+    el.addEventListener('input', onInput);
+    el.addEventListener('change', onInput);
+    el.addEventListener('submit', onSubmit);
+    el.addEventListener('keydown', onKey);
+    document.body.appendChild(el);
+  }
+  function render(focus) {
+    if (!el) return;
+    var body = el.querySelector('[data-body]');
+    body.innerHTML = bodyHtml();
+    if (focus === 'title') { var h = body.querySelector('[data-title]'); if (h) h.focus({ preventScroll: true }); body.scrollTop = 0; }
+    else if (focus === 'error') focusFirstError();
+  }
+  function focusFirstError() {
+    var first = el.querySelector('[aria-invalid="true"]');
+    if (!first) return;
+    var target = first.matches('input, select, textarea') ? first : first.querySelector('button');
+    if (target) { target.focus(); try { target.scrollIntoView({ block: 'center' }); } catch (_) {} }
   }
   function open() {
+    if (el) return;
     lastFocus = document.activeElement;
-    if (state.step > STEPS) state.step = 1;
-    if (!ui) build();
+    if (phase !== 'form') { phase = 'form'; reference = ''; }
     errors = {};
-    render(true);
+    build();
     document.documentElement.classList.add('kdf-lock');
-    requestAnimationFrame(function () { ui.classList.add('in'); });
+    render();
+    requestAnimationFrame(function () {
+      el.classList.add('in');
+      var first = el.querySelector('#kdf-firstName');
+      if (first) first.focus({ preventScroll: true });
+    });
   }
   function close() {
-    if (!ui) return;
-    ui.classList.remove('in');
+    if (!el) return;
+    var node = el;
+    el = null; ui = null;
+    node.classList.remove('in');
     document.documentElement.classList.remove('kdf-lock');
-    if (state.step > STEPS) { state = blank(); save(); }
-    var el = ui; ui = null;
-    setTimeout(function () { el.remove(); }, 220);
-    if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (_) {}
+    if (phase === 'done') { state = blank(); forget(); phase = 'form'; reference = ''; }
+    /* Arrived through ?demo=1: closing drops it, so a reload does not reopen. */
+    try {
+      if (/[?&]demo=1(?:&|$)/.test(location.search) && history.replaceState) {
+        var q = location.search.replace(/([?&])demo=1(&|$)/, function (_, a, b) { return b ? a : ''; }).replace(/^&/, '?');
+        history.replaceState(history.state, '', location.pathname + (q === '?' ? '' : q) + location.hash);
+      }
+    } catch (_) {}
+    setTimeout(function () { node.remove(); }, 220);
+    try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (_) {}
   }
-  function go(n) { state.step = n; errors = {}; save(); render(true); }
 
+  function send() {
+    phase = 'sending';
+    render();
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (controller) controller.abort(); }, 15000);
+    return fetch(API, {
+      method: 'POST', credentials: 'same-origin', signal: controller ? controller.signal : undefined,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload()),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, ok: r.ok, body: j }; });
+    }).then(function (res) {
+      clearTimeout(timer);
+      if (res.ok && res.body && res.body.ok) {
+        reference = String(res.body.reference || '');
+        phase = 'done';
+        forget();
+        render('title');
+        return;
+      }
+      if (res.status === 400 && res.body && res.body.field) {
+        phase = 'form';
+        errors = {};
+        errors[res.body.field] = res.body.field === 'phone' ? t('phoneBad') : (res.body.field === 'email' ? t('emailBad') : t('required'));
+        render('error');
+        return;
+      }
+      phase = 'failed';
+      render('title');
+    }, function () {
+      clearTimeout(timer);
+      phase = 'failed';
+      render('title');
+    });
+  }
+
+  function onSubmit(e) {
+    e.preventDefault();
+    if (phase === 'sending') return;
+    errors = validate();
+    if (Object.keys(errors).length) { render('error'); return; }
+    send();
+  }
   function onClick(e) {
+    if (e.target === el) { close(); return; }
     var b = e.target.closest('button, a');
-    if (e.target === ui) { close(); return; }
-    if (!b) return;
+    if (!b || !el.contains(b)) return;
     if (b.hasAttribute('data-close')) { close(); return; }
-    if (b.hasAttribute('data-back')) { if (state.step > 1) go(state.step - 1); return; }
-    if (b.hasAttribute('data-next')) {
-      if (validate(state.step)) go(state.step + 1); else { render(false); focusFirstError(); }
+    if (b.hasAttribute('data-retry')) { phase = 'form'; render('title'); return; }
+    if (b.dataset.family) {
+      if (state.family !== b.dataset.family) state.trade = '';
+      state.family = b.dataset.family;
+      delete errors.family;
+      save(); render();
+      var picked = el.querySelector('[data-family="' + state.family + '"]');
+      if (picked) picked.focus();
       return;
     }
-    if (b.hasAttribute('data-submit')) {
-      if (!validate(5)) { render(false); focusFirstError(); return; }
-      var url = waUrl(waText());
-      window.open(url, '_blank', 'noopener');
-      state.step = STEPS + 1; save(); render(true);
+    if (b.dataset.seg) {
+      var key = b.dataset.seg;
+      state[key] = state[key] === b.dataset.value ? '' : b.dataset.value;
+      save();
+      Array.prototype.forEach.call(el.querySelectorAll('[data-seg="' + key + '"]'), function (x) {
+        var on = state[key] === x.dataset.value;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-checked', String(on));
+      });
       return;
     }
-    if (b.dataset.set) {
-      state[b.dataset.set] = b.dataset.v;
-      delete errors[b.dataset.set];
-      save(); render(false);
-      var again = ui.querySelector('[data-set="' + b.dataset.set + '"][data-v="' + b.dataset.v + '"]'); if (again) again.focus();
-      if (b.dataset.v === 'exact') { var ex = ui.querySelector('[data-k="' + b.dataset.set + 'Exact"]'); if (ex) ex.focus(); }
-      return;
-    }
-    if (b.dataset.pain) {
-      var k = b.dataset.pain, i = state.pains.indexOf(k);
-      if (i >= 0) state.pains.splice(i, 1); else state.pains.push(k);
-      delete errors.pains; save(); render(false);
-      var p = ui.querySelector('[data-pain="' + k + '"]'); if (p) p.focus();
-    }
+    /* The WhatsApp links carry the request as typed right now. */
+    if (b.hasAttribute('data-wa-aside') || b.hasAttribute('data-wa-fail')) b.setAttribute('href', waUrl(waText('')));
   }
   function onInput(e) {
-    var k = e.target.getAttribute('data-k');
-    if (!k) return;
-    state[k] = e.target.value;
-    save();
-    var ek = k === 'locExact' ? 'loc' : k === 'teamExact' ? 'team' : k;
-    if (errors[ek] && e.type === 'change') { delete errors[ek]; var fld = e.target.closest('.kdf-field, .kdf-set'); if (fld) { fld.classList.remove('has-err'); var m = fld.querySelector('.kdf-err'); if (m) m.remove(); } e.target.removeAttribute('aria-invalid'); }
-    if (state.step === 4 && k === 'other') return;
-    if (state.step === 5 && (k === 'date' || k === 'time' || k === 'phone' || k === 'email') && e.type === 'change') {
-      /* Only the recap moves: rebuilding the step here would replace the
-         send button under a finger that is already pressing it. */
-      var rec = ui.querySelector('.kdf-recap');
-      if (rec) rec.outerHTML = recapHtml();
+    var f = e.target && e.target.dataset && e.target.dataset.field;
+    if (!f) return;
+    state[f] = e.target.value;
+    if (f !== 'website') save();
+    if (errors[f]) {
+      delete errors[f];
+      e.target.removeAttribute('aria-invalid');
+      var msg = el.querySelector('#kdf-err-' + f);
+      if (msg) msg.remove();
     }
   }
   function onKey(e) {
     if (e.key === 'Escape') { e.preventDefault(); close(); return; }
-    if (e.key === 'Enter' && e.target.matches('input:not([type="date"])') && state.step <= STEPS) {
-      e.preventDefault();
-      var nx = ui.querySelector('[data-next], [data-submit]'); if (nx) nx.click();
-      return;
-    }
-    if (e.key === 'Tab') {
-      var f = Array.prototype.filter.call(ui.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]'), function (x) { return !x.hidden && !x.disabled && x.offsetParent !== null; });
-      if (!f.length) return;
-      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
-      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
-    }
+    if (e.key !== 'Tab' || !ui) return;
+    var f = Array.prototype.filter.call(ui.querySelectorAll('button, a[href], input, select, textarea'), function (x) {
+      return !x.disabled && x.tabIndex !== -1 && x.offsetParent !== null;
+    });
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
   /* ───────────── the landing's demo buttons open the sheet ───────────── */
   var DEMO = /d[ée]mo|عرض/i;
   document.addEventListener('click', function (e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    var a = e.target.closest && e.target.closest('a[href^="https://wa.me/' + WA + '"]');
-    if (!a || (ui && ui.contains(a))) return;
+    var a = e.target.closest && e.target.closest('a[href^="https://wa.me/' + WA + '"], a[data-kiwi-demo]');
+    if (!a || (el && el.contains(a))) return;
     var href = a.getAttribute('href') || '';
-    if (href.indexOf('?') >= 0) return;
-    if (!DEMO.test(a.textContent || '')) return;
+    if (!a.hasAttribute('data-kiwi-demo')) {
+      if (href.indexOf('?') >= 0) return;
+      if (!DEMO.test(a.textContent || '')) return;
+    }
     e.preventDefault();
     open();
   }, true);
+  /* A link to /?demo=1 (the guides use it) opens the sheet on arrival. */
+  try {
+    if (/[?&]demo=1(?:&|$)/.test(location.search)) {
+      var go = function () { open(); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0);
+    }
+  } catch (_) {}
 
   function injectCss() {
     if (document.getElementById('kdf-css') || document.querySelector('link[href*="landing-demo-funnel.css"]')) return;
     var l = document.createElement('link');
-    l.id = 'kdf-css'; l.rel = 'stylesheet'; l.href = '/assets/landing-demo-funnel.css?v=1';
+    l.id = 'kdf-css'; l.rel = 'stylesheet';
+    l.href = /landing-demo-funnel\.js/.test(SELF) ? SELF.replace('landing-demo-funnel.js', 'landing-demo-funnel.css') : '/assets/landing-demo-funnel.css';
     document.head.appendChild(l);
   }
 
-  window.KiwiDemoFunnel = { open: open, close: close, STR: STR, _state: function () { return state; }, _waText: waText };
+  window.KiwiDemoFunnel = {
+    open: open, close: close, STR: STR,
+    _state: function () { return state; }, _phase: function () { return phase; },
+    _waText: waText, _payload: payload, _validate: validate,
+  };
 })();
