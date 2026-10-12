@@ -303,6 +303,9 @@
     '.cr-card h3{margin:0 0 4px;font-size:15px;font-weight:600;color:var(--ink);}',
     '.cr-card p.cr-sub{margin:0 0 14px;font-size:13px;color:var(--n-500);line-height:1.45;}',
     '.cr-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}',
+    /* The counters and what follows them were siblings with no space between:
+       the tiles sat flush on the list card. */
+    '.cr-kpis+*{margin-top:16px;}',
     '.cr-kpi{border:1px solid var(--n-200);border-radius:18px;background:var(--surface);padding:16px 18px;min-width:0;}',
     '.cr-kpi .l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
     '.cr-kpi .v{font-size:28px;font-weight:600;line-height:1;margin-top:12px;font-variant-numeric:tabular-nums;color:var(--ink);}',
@@ -319,6 +322,10 @@
     '.cr-tag.regular{background:var(--mint-soft);color:var(--atlas);}',
     '.cr-tag.less{background:color-mix(in srgb,#E6B84D 22%,transparent);color:#8A6210;}',
     '.cr-tag.inactive{background:color-mix(in srgb,#C0492F 14%,transparent);color:#C0492F;}',
+    /* Dark: the light inks (#8A6210 on amber, #C0492F on red) sank into the
+       page. Same hues, lifted, as the directory's tags use in the app. */
+    ':is(html[data-theme="dark"],html[data-vexel-mode="dark"]) .cr-tag.less{background:rgba(240,196,90,.14);color:#F1C865;}',
+    ':is(html[data-theme="dark"],html[data-vexel-mode="dark"]) .cr-tag.inactive{background:rgba(255,120,95,.14);color:#FF9A85;}',
     '.cr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}',
     '.cr-field{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;color:var(--n-600);min-width:0;}',
     '.cr-field input,.cr-field select{height:40px;box-sizing:border-box;padding:0 12px;border:1px solid var(--n-200);border-radius:12px;font:inherit;font-size:14px;font-weight:500;background:var(--surface);color:var(--ink);min-width:0;width:100%;}',
@@ -353,7 +360,10 @@
     '.cr-empty p{margin:0;max-width:46ch;color:var(--n-500);font-size:14px;line-height:1.5;}',
     '.cr-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--n-100);color:var(--n-600);}',
     '@media (max-width:640px){.cr-dl{grid-template-columns:1fr;}.cr-btn{width:100%;}.cr-row>.cr-btn{flex:1;}}',
-    '@media (max-width:760px){.cr-tbl th:first-child,.cr-tbl td:first-child{position:sticky;inset-inline-start:0;z-index:1;background:var(--surface);box-shadow:inset -1px 0 0 var(--n-200);}.cr-tab{min-height:44px;}.cr-field input,.cr-field select{font-size:16px;height:44px;}}',
+    /* A pinned cell must hide what scrolls under it. --surface is a translucent
+       lift in the Vexel skin (5.5 % white in dark), so it is laid over the page
+       colour: the same tone as the table, but opaque. */
+    '@media (max-width:760px){.cr-tbl th:first-child,.cr-tbl td:first-child{position:sticky;inset-inline-start:0;z-index:1;background:linear-gradient(var(--surface),var(--surface)),var(--kno-bg,var(--paper));box-shadow:inset -1px 0 0 var(--n-200);}.cr-tab{min-height:44px;}.cr-field input,.cr-field select{font-size:16px;height:44px;}}',
   ].join('');
   function injectCSS() {
     if (document.getElementById('cr-css')) return;
@@ -449,8 +459,8 @@
         '</tr></thead><tbody>' + list.map(function (r) {
           return '<tr data-cr-client="' + esc(r.id) + '"><td><span class="cr-nm">' + esc(r.name || r.phone || T.none) + '</span></td>' +
             '<td class="num">' + fmt(r.visits || 0) + '</td>' +
-            '<td class="cr-muted">' + (r.since == null ? T.none : esc(T.days(r.since))) + '</td>' +
-            '<td class="cr-muted">' + (r.rhythm ? esc(T.every(r.rhythm)) : T.none) + '</td>' +
+            '<td class="cr-muted' + (r.since == null ? ' cr-none' : '') + '">' + (r.since == null ? T.none : esc(T.days(r.since))) + '</td>' +
+            '<td class="cr-muted' + (r.rhythm ? '' : ' cr-none') + '">' + (r.rhythm ? esc(T.every(r.rhythm)) : T.none) + '</td>' +
             '<td class="num">' + fmt(r.spend || 0) + ' MAD</td>' +
             '<td class="num">' + esc(loyaltyLabel(r)) + '</td>' +
             '<td><span class="cr-tag ' + r.group + '">' + esc(T.groupOne[r.group]) + '</span></td></tr>';

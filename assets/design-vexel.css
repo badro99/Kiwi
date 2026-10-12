@@ -3920,9 +3920,14 @@ body.design-vexel[data-vexel-mode="dark"] :is(
   .kt-plan-wrap, .kt-h-tablewrap,
   .kdr-strip, .kdr-top-c, .kdr-cat
 ) {
-  --n-100: 0.06;
+  /* Colours, all three. --n-100 and --n-300 were bare numbers (0.06, 0.18),
+   * which no colour property accepts: every var(--n-100) fill and
+   * var(--n-300) dot, border or track inside these scopes painted nothing,
+   * so a page subtitle's separators vanished and « Café Atlas · Activity ·
+   * groups » read as a row of tabs. */
+  --n-100: rgba(255, 255, 255, 0.06);
   --n-200: rgba(255, 255, 255, 0.10);
-  --n-300: 0.18;
+  --n-300: rgba(255, 255, 255, 0.18);
 }
 
 /* H5 · Long lists need to answer the pointer, or a table of forty rows

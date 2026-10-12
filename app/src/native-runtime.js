@@ -1685,7 +1685,6 @@
     document.body.classList.add('kiwi-native-owner');
     var copy = nativeOwnerCopy();
     var listeners = [];
-    var lastPage = 'accueil';
     var sidebar = function () { return document.getElementById('kw-sidebar'); };
     var navLink = function (id) { var s = sidebar(); return s && s.querySelector('[data-nav="' + id + '"]'); };
     var notify = function () { listeners.forEach(function (fn) { try { fn(); } catch (_) {} }); };
@@ -1694,13 +1693,27 @@
       return !!(layer && layer.offsetParent !== null);
     };
 
+    /* The tab follows the page that is open: Kiwi.activePage, the dashboard's
+       own record, set by every page on entry. The sidebar link is only a
+       fallback, because a page without a sidebar link (Customer retention,
+       Campaigns) leaves no link active, and the tab used to stay on the page
+       visited before: « Orders » over Customer retention. Customers is a
+       section, not one page: the directory, retention and campaigns all
+       belong to its tab. */
+    var CLIENT_PAGES = { crm:1, retention:1, clients:1 };
+    function currentPage() {
+      var page = window.Kiwi && window.Kiwi.activePage;
+      if (typeof page === 'string' && page) return page;
+      var s = sidebar();
+      var active = s && s.querySelector('[data-nav].active');
+      return active ? active.getAttribute('data-nav') : 'accueil';
+    }
     function selected() {
       if (document.body.classList.contains('kw-menu-open') || document.body.classList.contains('nav-open')) return 'more';
       if (clientsOpen()) return 'clients';
-      var s = sidebar();
-      var active = s && s.querySelector('[data-nav].active');
-      if (active) lastPage = active.getAttribute('data-nav');
-      return ({ accueil:'accueil', transactions:'transactions', rapport:'rapport' })[lastPage] || '';
+      var page = currentPage();
+      if (CLIENT_PAGES[page]) return 'clients';
+      return ({ accueil:'accueil', transactions:'transactions', rapport:'rapport' })[page] || '';
     }
     function tabs() {
       return [
@@ -1799,6 +1812,10 @@
         inner.insertBefore(title, brand ? brand.nextSibling : inner.firstChild);
       }
       var page = selected();
+      /* The bar names a tab's own page only. Retention and Campaigns sit
+         under the Customers tab but keep their in-page heading: titled
+         « Customers », the bar would hide that heading and name the wrong page. */
+      if (page === 'clients' && !clientsOpen()) page = '';
       var text = titles[page] || '';
       if (title.textContent !== text) title.textContent = text;
       var key = text ? 'page' : 'home';

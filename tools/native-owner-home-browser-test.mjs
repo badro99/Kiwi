@@ -221,6 +221,49 @@ try {
     check((await host(page)).selected === 'clients', 'the Clients tab tracks the clients page');
     check(clients.rowDisplay === 'grid' && clients.overflow <= 0, 'clients are list rows with no sideways scroll');
 
+    /* Customer retention opens from Customers as its own page, with no
+       sidebar link: the tab used to stay on the page visited before it
+       (Orders, since the route above passed through it) and the bar said
+       « Commandes » over retention. */
+    await page.evaluate(() => document.querySelector('#cd-retention')?.click());
+    await sleep(1200);
+    const retentionHost = await host(page);
+    const retentionHead = await page.evaluate(() => {
+      const title = document.querySelector('.kno-title');
+      const head = document.querySelector('.dash-genpage .genpage-head');
+      return { title: title && getComputedStyle(title).display !== 'none' ? title.textContent : '', head: !!head && getComputedStyle(head).display !== 'none' };
+    });
+    check(retentionHost.selected === 'clients', 'Customer retention keeps the Customers tab selected');
+    check(retentionHead.title === '' && retentionHead.head, 'retention keeps its own heading instead of another page’s title');
+    await page.evaluate(() => [...document.querySelectorAll('[data-cr-root] button')].find((b) => /activer|turn on/i.test(b.textContent))?.click());
+    await sleep(1200);
+    const retention = await page.evaluate(() => {
+      const row = document.querySelector('table.cr-tbl tbody tr');
+      const tiles = [...document.querySelectorAll('.cr-kpis .cr-kpi')].map((k) => k.getBoundingClientRect());
+      const wrap = document.querySelector('.cr-tblwrap');
+      const cells = row ? [...row.children].filter((td) => getComputedStyle(td).display !== 'none').length : 0;
+      return { rowDisplay: row && getComputedStyle(row).display, cells, overflow: document.documentElement.scrollWidth - innerWidth,
+        oneRow: tiles.length > 0 && new Set(tiles.map((r) => Math.round(r.top))).size === 1,
+        gap: wrap && tiles.length ? Math.round(wrap.getBoundingClientRect().top - Math.max(...tiles.map((r) => r.bottom))) : -1 };
+    });
+    check(retention.rowDisplay === 'grid' && retention.cells === 5 && retention.overflow <= 0, 'retention customers are list rows (name, spend, last visit, rhythm, group) with no sideways scroll');
+    check(retention.oneRow && retention.gap >= 12, `retention group counters sit in one row with space before the list (${retention.gap}px)`);
+    const chrome = await page.evaluate(() => {
+      const chip = document.createElement('button'); chip.id = 'kcl-chip'; document.body.appendChild(chip);
+      const chipHidden = getComputedStyle(chip).display === 'none'; chip.remove();
+      return { chipHidden };
+    });
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+    await sleep(300);
+    Object.assign(chrome, await page.evaluate(() => {
+      const bar = document.querySelector('.status-bar').getBoundingClientRect();
+      const tabs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kiwi-host-tab-height')) || 106;
+      return { footBottom: bar.bottom, tabTop: innerHeight - tabs };
+    }));
+    check(chrome.chipHidden, 'the web’s floating « Connect the till » button stays off the app');
+    check(chrome.footBottom <= chrome.tabTop && chrome.tabTop - chrome.footBottom <= 24, `the footer ends just above the tab bar (${Math.round(chrome.tabTop - chrome.footBottom)}px)`);
+    await go(page, 'clients');
+
     await go(page, 'accueil');
     check((await host(page)).selected === 'accueil', 'Home returns to the home route');
     check(errors.length === 0, `no page errors on the owner home${errors.length ? ` (${errors[0]})` : ''}`);

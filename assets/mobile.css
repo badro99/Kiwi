@@ -303,8 +303,10 @@
     font-size: 12.5px !important;
     white-space: nowrap;
   }
+  /* Opaque: --surface is a translucent lift in the Vexel skin, so the pinned
+   * column lays it over the page colour or the scrolled cells show through. */
   .p-table th:first-child, .p-table td:first-child {
-    position: sticky; left: 0; background: var(--surface); z-index: 1;
+    position: sticky; left: 0; background: linear-gradient(var(--surface), var(--surface)), var(--kno-bg, var(--paper)); z-index: 1;
   }
 
   /* … but the transactions table becomes a native list feed —

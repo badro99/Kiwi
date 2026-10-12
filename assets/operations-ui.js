@@ -693,7 +693,7 @@
         '.ops-acct-doc,.ops-proc-num,.ops-pay-num,.ops-lk-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
         '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow:auto;max-height:50vh;margin-top:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-color:var(--n-300) transparent;}',
         '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;min-width:560px;border-collapse:collapse;font-size:12.5px;}',
-        '.ops-acct-table th,.ops-proc-table th,.ops-pay-table th{text-align:start;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
+        '.ops-acct-table th,.ops-proc-table th,.ops-pay-table th{text-align:start;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:linear-gradient(var(--surface),var(--surface)),var(--paper);}',
         '.ops-acct-table td,.ops-proc-table td,.ops-pay-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
         '.ops-acct-n,.ops-proc-n,.ops-pay-n,.ops-lk-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
         /* Saisie multiligne d'un bon : une ligne = une rangée, la référence et

@@ -641,8 +641,9 @@
 .hx-dispo-scroll { overflow:auto; border:1px solid var(--n-200); border-radius:14px; max-width:100%; }
 .hx-dispo-table { width:100%; min-width:980px; border-collapse:separate; border-spacing:0; font-size:12px; }
 .hx-dispo-table th,.hx-dispo-table td { border-right:1px solid var(--n-100); border-bottom:1px solid var(--n-100); padding:9px 7px; text-align:center; white-space:nowrap; }
-.hx-dispo-table thead th { position:sticky; top:0; z-index:2; background:var(--paper-soft); color:var(--n-600); font:600 10px var(--mono); text-transform:uppercase; }
-.hx-dispo-table thead th:first-child,.hx-dispo-table tbody th { position:sticky; left:0; z-index:1; background:var(--surface); text-align:left; }
+.hx-dispo-table thead th { position:sticky; top:0; z-index:2; background:linear-gradient(var(--paper-soft),var(--paper-soft)),var(--paper); color:var(--n-600); font:600 10px var(--mono); text-transform:uppercase; }
+/* Pinned cells lay the translucent Vexel surfaces over the page colour: opaque, or the scrolled grid shows through. */
+.hx-dispo-table thead th:first-child,.hx-dispo-table tbody th { position:sticky; left:0; z-index:1; background:linear-gradient(var(--surface),var(--surface)),var(--paper); text-align:left; }
 .hx-dispo-table thead th:first-child { z-index:3; min-width:150px; }
 .hx-dispo-table thead th b,.hx-dispo-table thead th span { display:block; }
 .hx-dispo-table thead th span { margin-top:2px; font-size:12px; color:var(--ink); }

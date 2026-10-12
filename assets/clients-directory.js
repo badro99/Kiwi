@@ -226,8 +226,10 @@
     '@media(max-width:620px){.cd-history-row{grid-template-columns:1fr auto;}.cd-history-date{grid-column:1/-1}.cd-history-amount{grid-column:2;grid-row:2}.cd-history-items{grid-column:1;grid-row:2}.cd-f-grid{grid-template-columns:1fr;}}',
     'html[data-theme="dark"] .cd-history-list{border-color:var(--n-200);}',
     /* Phone: the table scrolls sideways, so the name stays pinned at the start
-       instead of scrolling away from the spend it explains. */
-    '@media(max-width:760px){.cd-tbl th:first-child,.cd-tbl td:first-child{position:sticky;inset-inline-start:0;z-index:1;background:var(--surface);box-shadow:inset -1px 0 0 var(--n-200);}',
+       instead of scrolling away from the spend it explains. Opaque: --surface
+       is a translucent lift in the Vexel skin, so it is laid over the page
+       colour or the scrolled cells show through the name. */
+    '@media(max-width:760px){.cd-tbl th:first-child,.cd-tbl td:first-child{position:sticky;inset-inline-start:0;z-index:1;background:linear-gradient(var(--surface),var(--surface)),var(--kno-bg,var(--paper));box-shadow:inset -1px 0 0 var(--n-200);}',
     '  .cd-seg{min-height:44px;}.cd-field input,.cd-field select,.cd-f-grid input,.cd-f-grid select,.cd-f-grid textarea{font-size:16px;}}',
   ].join('');
   var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);

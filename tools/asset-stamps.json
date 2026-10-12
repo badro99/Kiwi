@@ -184,8 +184,8 @@
     "sha": "9da57f970e60db48"
   },
   "assets/clients-directory.js": {
-    "v": "18",
-    "sha": "6d225e2cb875c280"
+    "v": "20",
+    "sha": "0652ccc304e43185"
   },
   "assets/clients-store.js": {
     "v": "10",
@@ -208,8 +208,8 @@
     "sha": "c342a95d71829601"
   },
   "assets/customer-retention.js": {
-    "v": "6",
-    "sha": "dfab8fc201637772"
+    "v": "8",
+    "sha": "d43612aed287ec09"
   },
   "assets/dark-fixes.js": {
     "v": "4",
@@ -272,8 +272,8 @@
     "sha": "a92246132e258dd0"
   },
   "assets/design-vexel.css": {
-    "v": "2119",
-    "sha": "0fd039be08ad401f"
+    "v": "2120",
+    "sha": "393c866af8bf2363"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -372,8 +372,8 @@
     "sha": "d85678a7afe63a1a"
   },
   "assets/hotel.css": {
-    "v": "40",
-    "sha": "0629b8ab50af5524"
+    "v": "42",
+    "sha": "8e00f83961ae2732"
   },
   "assets/hotel.js": {
     "v": "77",
@@ -548,8 +548,8 @@
     "sha": "f286a70c2a2dcf2d"
   },
   "assets/mobile.css": {
-    "v": "9",
-    "sha": "27518232a0515ae0"
+    "v": "11",
+    "sha": "e5e84a161c978979"
   },
   "assets/month-report-csv.js": {
     "v": "4",
@@ -588,8 +588,8 @@
     "sha": "d15c2580ef0272ab"
   },
   "assets/operations-ui.js": {
-    "v": "21",
-    "sha": "1a7824a8f3748687"
+    "v": "23",
+    "sha": "6792ee4233351158"
   },
   "assets/operations.js": {
     "v": "14",

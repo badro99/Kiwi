@@ -185,4 +185,17 @@ await apiBaseAbort();
   check('l’archive installe exactement le lockfile avant de construire', /npm ci --no-audit --no-fund/.test(read('tools/app-archive.sh')));
 }
 
+/* ── 9. Fidélisation clients sur téléphone, sombre ──────────────────────── */
+{
+  const vexel = read('assets/design-vexel.css');
+  const bare = vexel.match(/--n-\d{3}:\s*[\d.]+\s*;/g) || [];
+  check('les gris --n-* du skin Vexel sont des couleurs, pas des nombres nus (points de sous-titre invisibles en sombre)', bare.length === 0);
+  const opaque = /background:\s*linear-gradient\(var\(--surface\),\s*var\(--surface\)\),\s*var\(--kno-bg,\s*var\(--paper\)\)/;
+  check('colonne épinglée opaque : fidélisation, répertoire clients, tableaux mobiles', opaque.test(read('assets/customer-retention.js')) && opaque.test(read('assets/clients-directory.js')) && opaque.test(read('assets/mobile.css')));
+  const retention = read('assets/customer-retention.js');
+  check('fidélisation : de l’air entre les compteurs et la liste', /'\.cr-kpis\+\*\{margin-top:16px;\}'/.test(retention));
+  check('fidélisation sombre : « Vient moins souvent » et « Inactif » lisibles', /\.cr-tag\.less\{background:rgba\(240,196,90,\.14\);color:#F1C865;\}/.test(retention) && /\.cr-tag\.inactive\{background:rgba\(255,120,95,\.14\);color:#FF9A85;\}/.test(retention));
+  check('l’onglet suit Kiwi.activePage, plus la dernière page visitée', /var CLIENT_PAGES = \{ crm:1, retention:1, clients:1 \}/.test(runtime) && !/lastPage/.test(runtime));
+}
+
 console.log(`native-audit-fixes-test: ${controls} controls passed`);

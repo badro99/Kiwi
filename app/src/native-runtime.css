@@ -439,6 +439,44 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:nth-child(5){grid-column:3;grid-row:1;justify-self:end;font:600 15px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:nth-child(7){grid-column:3;grid-row:2;justify-self:end;overflow:visible}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:is(:nth-child(2),:nth-child(3),:nth-child(4),:nth-child(6),:nth-child(8)){display:none!important}
+  /* Customer retention reads like the directory it opens from: the name and
+     the spend, then the last visit, the usual rhythm and the group. As a
+     seven-column table it scrolled sideways under a pinned name that the
+     scrolled cells showed through. Visits and loyalty stay on wide screens. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cr-tblwrap{overflow:visible!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl{display:block!important;width:100%!important;min-width:0!important;border:0!important;background:var(--kno-card)!important;border-radius:22px;overflow:hidden}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl thead{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tbody{display:block!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr{position:relative;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;column-gap:6px;row-gap:3px;align-items:center;padding:12px 16px!important;border:0!important;background:transparent!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr+tr::before{content:"";position:absolute;top:0;inset-inline:16px 0;height:.5px;background:var(--kno-line)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl td{display:block;position:static!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 13px/1.25 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(1){grid-column:1/3;grid-row:1;font:600 15px/1.25 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(1) .cr-nm{color:inherit}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(3){grid-column:1;grid-row:2}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(4){grid-column:2;grid-row:2}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(4)::before{content:"·";margin-inline-end:6px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td.cr-none:nth-child(3)+td::before{content:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(5){grid-column:3;grid-row:1;justify-self:end;font:600 15px/1.25 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:nth-child(7){grid-column:3;grid-row:2;justify-self:end;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cr-tbl tr>td:is(:nth-child(2),:nth-child(6),.cr-none){display:none!important}
+  /* Its group counters: one row, figure over label, like the directory's.
+     Only the groups: Results carries five amounts, which need their width. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cr-kpis:has(>[data-cr-kpi="regular"]){grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cr-kpis:has(>[data-cr-kpi="regular"]) .cr-kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px 9px!important;border-radius:14px!important;text-align:center}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cr-kpis:has(>[data-cr-kpi="regular"]) .cr-kpi .v{order:-1;margin:0 0 3px!important;font-size:22px!important;line-height:1.1!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cr-kpis:has(>[data-cr-kpi="regular"]) .cr-kpi .l{font-size:11px!important;font-weight:500!important;line-height:1.2!important;letter-spacing:0!important;text-transform:none!important;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  /* The footer closes the page. On a short page it sat right under the
+     content with an empty band below it down to the tab bar; the page column
+     now fills the space between the header and the tab bar and the footer
+     settles at its foot. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .app{min-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-native-tabs,106px) - 12px)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) main.main{display:flex;flex-direction:column}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) main.main>*{flex-shrink:0}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) main.main>.status-bar{margin-top:auto}
+  /* The web's floating « Connect the till » button. In the app the till is
+     a role on this device (☰ › Change role) or the same account signed in on
+     another one, so the button only covered the page's last rows. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) #kcl-chip:not([data-docked]){display:none!important}
 }
 @media (max-width:600px){
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr::after{background-image:url(assets/icons/material/payments.svg);opacity:.9}
