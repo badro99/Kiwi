@@ -128,13 +128,15 @@ ok(/if\(onboarded\)showPaywall\(\);else installToast\(\);/.test(entSrc),
   'le clic retenu ouvre le panneau une fois installé, et explique pendant l’installation');
 ok((entSrc.match(/else installToast\(\);/g) || []).length >= 2,
   'le clic ET la requête réseau expliquent tous les deux : aucun bouton muet');
+ok(/if\(byHand\(\)\)\{if\(onboarded\)showPaywall\(\);else installToast\(\);\}/.test(entSrc),
+  'la requête réseau n’explique que si elle suit un geste : une synchronisation de fond n’ouvre rien');
 
 /* ── 7 · Le ton ─────────────────────────────────────────────────────────── */
 ok(!/Abonnement Kiwi requis/.test(entSrc), 'plus de « Abonnement requis » comme nom du dialogue');
 ok(/Tout est en place/.test(entSrc), 'le panneau parle du travail accompli, pas d’un accès manquant');
 ok(!/Mode découverte/.test(entSrc), 'la pastille ne classe plus le commerçant en « mode découverte »');
 
-const EXPECTED = 41;
+const EXPECTED = 42;
 ok(passed === EXPECTED, `compte de contrôles épinglé (${passed}/${EXPECTED})`);
 console.log(`\n✓ ${passed} contrôles verts (${failures.length} échec(s))`);
 if (failures.length) process.exit(1);

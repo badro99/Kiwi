@@ -6265,8 +6265,8 @@
 <script defer src="assets/merchant-config.js?v=278"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
-  <link rel="stylesheet" href="assets/entitlements.css?v=5">
-  <script defer src="assets/entitlements-v2.js?v=2"></script>
+  <link rel="stylesheet" href="assets/entitlements.css?v=6">
+  <script defer src="assets/entitlements-v2.js?v=3"></script>
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
@@ -6367,7 +6367,7 @@
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 <script src="assets/clients-directory.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/menu-catalog.js?v=26" defer fetchpriority="low"></script>
+<script src="assets/menu-catalog.js?v=27" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -6384,7 +6384,7 @@
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2154" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2155" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>

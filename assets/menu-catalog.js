@@ -2416,8 +2416,17 @@
               c.updatedTs = +err.updatedTs || c.updatedTs;
               adoptServerMenu(err.data, targetVid);
             }
-            if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', {
-              type: 'warn', force: true, desc: (err && err.error) || 'Publication refusée',
+            /* Le code du serveur n'est pas une phrase : « subscription-required »
+             * s'affichait tel quel sous le titre. Un compte en attente (402) est
+             * déjà expliqué par la garde d'activation, au geste qui a provoqué
+             * l'écriture ; une synchronisation de fond n'affiche rien. */
+            if (r && r.status === 402) return null;
+            const adopted = r && r.status === 409 && err && err.data;
+            if (window.Kiwi?.toast) window.Kiwi.toast(syncSay('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'), {
+              type: 'warn', force: true,
+              desc: adopted
+                ? syncSay('Une version plus récente, enregistrée ailleurs, a été reprise.', 'A newer version, saved elsewhere, was taken instead.', 'تم اعتماد نسخة أحدث محفوظة في مكان آخر.')
+                : syncSay('La carte n’a pas été enregistrée sur le serveur. Elle reste sur cet appareil.', 'The menu was not saved on the server. It stays on this device.', 'لم تُحفظ القائمة على الخادم. تبقى على هذا الجهاز.'),
             });
             return null;
           });
@@ -2426,11 +2435,16 @@
         c.updatedTs = +j.updatedTs || c.updatedTs;
         if (empty) c.explicitEmpty = false;
       }).catch(function () {
-        if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+        if (window.Kiwi?.toast) window.Kiwi.toast(syncSay('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'), { type: 'warn', force: true, desc: syncSay('Pas de connexion. La carte reste sur cet appareil.', 'No connection. The menu stays on this device.', 'لا اتصال. تبقى القائمة على هذا الجهاز.') });
       });
     } catch (_) {
-      if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+      if (window.Kiwi?.toast) window.Kiwi.toast(syncSay('Échec de synchronisation de la carte', 'The menu could not be synced', 'تعذّرت مزامنة القائمة'), { type: 'warn', force: true });
     }
+  }
+  /* La synchronisation de la carte parle la langue de l'écran. */
+  function syncSay(fr, en, ar) {
+    const l = String(document.documentElement.getAttribute('lang') || 'fr').slice(0, 2);
+    return l === 'ar' ? ar : l === 'en' ? en : fr;
   }
   function schedulePublish(vid) {
     if (!isRealSession()) return;

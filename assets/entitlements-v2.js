@@ -40,6 +40,29 @@
   var nativeFetch=window.fetch&&window.fetch.bind(window);
 
   function node(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  /* La ligne qui explique un geste retenu parle la langue de l'écran. */
+  function L(fr,en,ar){var l=String(document.documentElement.getAttribute('lang')||'fr').slice(0,2);return l==='ar'?ar:l==='en'?en:fr;}
+  /* UNE ligne à la fois. Un champ retenu reçoit une frappe par touche, un
+     bouton se reclique : empiler une bulle par geste couvrait l'écran de
+     la même phrase. La ligne est rafraîchie, pas dupliquée. */
+  var heldEl=null,heldTimer=null;
+  function hideHeld(){clearTimeout(heldTimer);heldTimer=null;if(heldEl){heldEl.remove();heldEl=null;}}
+  function heldLine(msg,reopen){
+    if(!heldEl||!heldEl.isConnected){heldEl=node('div','kiwi-privacy-toast kiwi-held-toast');heldEl.setAttribute('role','status');document.body.append(heldEl);}
+    heldEl.textContent='';heldEl.append(node('span','',msg));
+    if(reopen){var b=node('button','',L('Voir l\u2019activation','See activation','\u0639\u0631\u0636 \u0627\u0644\u062a\u0641\u0639\u064a\u0644'));b.type='button';b.onclick=function(){try{window.localStorage.removeItem(PAYWALL_COOLDOWN_KEY);}catch(_){}clearPillTimer();hideHeld();showPaywall();};heldEl.append(b);}
+    clearTimeout(heldTimer);heldTimer=setTimeout(hideHeld,4200);
+  }
+  /* Un geste de la main, pas une synchronisation de fond. Une écriture
+     refusée au réseau n'explique quelque chose que si elle suit un geste
+     de près : la carte qui se resynchronise au chargement ouvrait le grand
+     panneau par-dessus l'écran de verrouillage, sans que personne ait rien
+     touché. */
+  var lastGestureAt=0;
+  /* Taper son code sur l'écran de verrouillage n'est pas un geste payant :
+     la synchronisation qui suit l'ouverture ouvrait le panneau. */
+  function markGesture(e){var t=e&&e.target;if(t&&t.closest&&t.closest('[data-kiwi-lock]'))return;lastGestureAt=Date.now();}
+  function byHand(){return Date.now()-lastGestureAt<1200;}
   /* ── LE PANNEAU D'ACTIVATION ───────────────────────────────────────────────
    * Il s'ouvre quand un compte encore en attente touche une action payante, et
    * il doit se REFERMER : « Continuer à explorer » est la moitié utile de
@@ -94,7 +117,10 @@
        recouvrir l'écran à chaque geste. Une sortie le met en veille dix
        minutes, même après une navigation ou un rechargement. La petite
        pastille reste disponible pour le rouvrir volontairement. */
-    if(paywallCoolingDown())return false;
+    /* En veille, le panneau ne revient pas : c'est sa raison d'être. Mais le
+       geste retenu ne reste pas muet pour autant. Dix minutes de boutons
+       qui ne répondent rien, c'était dix minutes de panne apparente. */
+    if(paywallCoolingDown()){heldLine(L('Cette action s\u2019ouvre \u00e0 l\u2019activation de votre \u00e9tablissement.','This action opens once your business is activated.','\u064a\u064f\u062a\u0627\u062d \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621 \u0628\u0639\u062f \u062a\u0641\u0639\u064a\u0644 \u0645\u0624\u0633\u0633\u062a\u0643.'),true);return false;}
     try{lastFocus=document.activeElement;}catch(_){lastFocus=null;}
     if(modal){openPaywall();focusFirst();return false;}
     modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Ouvrir votre établissement avec Kiwi');
@@ -141,7 +167,7 @@
   function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
   function showPill(){if(pill||operator||!pending||!onboarded)return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=showPaywall;document.body.append(pill);}
   function blockedWord(el){
-    if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill'))return false;
+    if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
     var s=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();
     return /(ajout|nouve|cré|creer|enregistr|sauveg|export|télécharg|telecharg|imprim|génér|gener|import|supprim|modifi|publi|activ|désactiv|desactiv|encaiss|rembours|envoyer|valider|connecter|commander)/.test(s);
@@ -150,7 +176,7 @@
      rembourser, exporter — tout ce qui engage une recette ou sort des données.
      Ajouter un plat ou nommer une salle n'en fait pas partie. */
   function moneyWord(el){
-    if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill'))return false;
+    if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill,.kiwi-held-toast'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
     var s2=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();
     return /(encaiss|rembours|export|télécharg|telecharg)/.test(s2);
@@ -162,27 +188,35 @@
      La peau du bandeau est celle du mode confidentialité : même forme, même
      place, et pas une feuille de style de plus pour trois phrases. */
   function installToast(){
-    var t=node('div','kiwi-privacy-toast','Cette action s\u2019ouvre \u00e0 l\u2019activation. Terminez votre installation, on en parle ensuite.');
-    document.body.append(t);setTimeout(function(){t.remove();},3200);
+    heldLine(L('Cette action s\u2019ouvre \u00e0 l\u2019activation. Terminez votre installation, on en parle ensuite.','This action opens once your account is activated. Finish setting up first, we\u2019ll talk after.','\u064a\u064f\u062a\u0627\u062d \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621 \u0628\u0639\u062f \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628. \u0623\u0643\u0645\u0644 \u0627\u0644\u0625\u0639\u062f\u0627\u062f \u0623\u0648\u0644\u064b\u0627\u060c \u062b\u0645 \u0646\u062a\u062d\u062f\u062b.'),false);
   }
   /* Une seule question, posée au même endroit par tous les écouteurs. */
+  /* L'écran de verrouillage est la porte d'ENTRÉE : on y tape son code, rien
+     ne s'y écrit. Sur un compte en attente, toucher une case du code ouvrait
+     le panneau d'activation par-dessus le verrou, et « Changer de compte »
+     (« Se déconnecter… » contient « connecter ») était retenu : impossible
+     de sortir. Se déconnecter n'est jamais un geste payant, où qu'il soit. */
+  function lockScreen(el){return !!(el&&el.closest&&el.closest('[data-kiwi-lock]'));}
+  function leaving(el){if(!el||!el.getAttribute)return false;var s=((el.getAttribute('data-action')||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.textContent||'')).toLowerCase();return /\/auth\/logout/.test(el.getAttribute('href')||'')||/(d\u00e9connect|deconnect|logout|log out|sign out|\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c)/.test(s);}
   function heldBack(el){
-    if(!pending||operator)return false;
+    if(!pending||operator||lockScreen(el)||leaving(el))return false;
     return onboarded?blockedWord(el):moneyWord(el);
   }
   function explorationControl(el){
+    if(lockScreen(el))return true;
     var s=((el.type||'')+' '+(el.name||'')+' '+(el.id||'')+' '+(el.className||'')+' '+(el.placeholder||'')+' '+(el.getAttribute&&el.getAttribute('aria-label')||'')).toLowerCase();
     return /search|recher|filter|filtr|date|range|period|périod|tri|sort/.test(s)||el.closest('[role="search"],[data-filter]');
   }
   function installSubscription(){
+    document.addEventListener('pointerdown',markGesture,true);document.addEventListener('keydown',markGesture,true);
     document.addEventListener('click',function(e){var el=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');if(heldBack(el)){e.preventDefault();e.stopImmediatePropagation();if(onboarded)showPaywall();else installToast();}},true);
     /* Saisir, cocher, envoyer un formulaire : c'est l'installation elle-même.
        Tant qu'elle n'est pas finie, on ne s'interpose pas entre le commerçant
        et son clavier. */
     document.addEventListener('beforeinput',function(e){if(!pending||operator||!onboarded||explorationControl(e.target))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
     document.addEventListener('click',function(e){if(!pending||operator||!onboarded)return;var el=e.target&&e.target.closest&&e.target.closest('input,select,textarea,[contenteditable="true"]');if(el&&!explorationControl(el)){e.preventDefault();e.stopImmediatePropagation();showPaywall();}},true);
-    document.addEventListener('submit',function(e){if(!pending||operator||!onboarded)return;var f=e.target;if(f&&/search|filter/i.test(String(f.getAttribute('role')||'')+' '+String(f.className||'')))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
-    if(nativeFetch)window.fetch=function(input,init){var method=String((init&&init.method)||'GET').toUpperCase(),url=String(typeof input==='string'?input:(input&&input.url)||'');if(pending&&!operator&&!/^(GET|HEAD|OPTIONS)$/.test(method)&&!/^\/(?:api\/config|api\/me|auth\/|api\/support)/.test(url)&&(onboarded||/^\/(?:api\/sale|api\/payment|api\/refund)/.test(url))){if(onboarded)showPaywall();else installToast();return Promise.resolve(new Response(JSON.stringify({error:'subscription-required'}),{status:402,headers:{'Content-Type':'application/json'}}));}return nativeFetch(input,init);};
+    document.addEventListener('submit',function(e){if(!pending||operator||!onboarded||lockScreen(e.target))return;var f=e.target;if(f&&/search|filter/i.test(String(f.getAttribute('role')||'')+' '+String(f.className||'')))return;e.preventDefault();e.stopImmediatePropagation();showPaywall();},true);
+    if(nativeFetch)window.fetch=function(input,init){var method=String((init&&init.method)||'GET').toUpperCase(),url=String(typeof input==='string'?input:(input&&input.url)||'');if(pending&&!operator&&!/^(GET|HEAD|OPTIONS)$/.test(method)&&!/^\/(?:api\/config|api\/me|auth\/|api\/support)/.test(url)&&(onboarded||/^\/(?:api\/sale|api\/payment|api\/refund)/.test(url))){if(byHand()){if(onboarded)showPaywall();else installToast();}return Promise.resolve(new Response(JSON.stringify({error:'subscription-required'}),{status:402,headers:{'Content-Type':'application/json'}}));}return nativeFetch(input,init);};
   }
   function privacyToast(){var t=node('div','kiwi-privacy-toast','Mode confidentialité : action désactivée pour protéger le client.');document.body.append(t);setTimeout(function(){t.remove();},2600);}
   function sensitive(el){

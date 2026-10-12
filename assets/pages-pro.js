@@ -12580,7 +12580,7 @@ function _bqxTillHint(trade) {
   const code = _bqxTillCode(trade);
   return code ? ` (code ${code})` : '';
 }
-function _bqxShared() { return _bqxTillReads() ? ' · base partagée avec la caisse' : ''; }
+function _bqxShared() { return _bqxTillReads() ? _bqxInvT().shared : ''; }
 function _kindOptions(sel, trade) {
   const copy = _bqxCopy(trade);
   const effectiveSel = sel || copy.defaultKind;
@@ -12591,6 +12591,161 @@ function _kindOptions(sel, trade) {
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1. INVENTAIRE PRODUITS
  * ─────────────────────────────────────────────────────────────────────────── */
+/* La page, en trois langues. Elle était en français sous l'anglais et l'arabe,
+   alors que la fiche qu'elle ouvre parlait déjà la langue de l'écran ; et sa
+   ligne disait « Divers » quand la fiche disait « Sans catégorie ». */
+const _bqxEnN = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const _arProducts = (n) => _bqxArCount(n, 'منتج واحد', 'منتجان', 'منتجات', 'منتجًا', 'منتج');
+const _BQX_INV = {
+  fr: {
+    title: 'Inventaire produits', store: 'Boutique', shared: ' · base partagée avec la caisse', cur: 'MAD',
+    noArchived: 'Aucun produit archivé', noResult: 'Aucun résultat pour cette recherche.',
+    archHintTill: 'Un produit archivé quitte la caisse sans perdre son historique. Il réapparaît ici.',
+    archHint: 'Un produit archivé sort du catalogue sans perdre son historique. Il réapparaît ici.',
+    emptyCat: 'Catalogue vide',
+    emptyTpl: 'Partez d’un modèle de rayons · arts de la table, verrerie, bougies, décoration · puis ajustez les prix et saisissez vos quantités.',
+    tplPick: 'Choisir mes rayons', noProduct: 'Aucun produit', noLow: 'Rien à réassortir dans cette sélection.',
+    noColor: 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.',
+    createTill: 'Créez un produit ici, ou depuis la caisse{hint} avec la douchette.', createFirst: 'Créez votre premier produit ici.',
+    hProduct: 'Produit', hColors: 'Couleurs', hVariants: 'Variantes', hCodes: 'Codes-barres', hPrice: 'Prix', hStock: 'Stock',
+    catB: 'Catégorie B', archived: 'Archivé', noCat: 'Sans catégorie', complete: 'Complets', out: 'Rupture',
+    colorFilter: 'Filtrer par couleur', color: 'Couleur', seeAll: 'Tout voir',
+    kNoCost: ' · au prix de vente, coûts non saisis', kPotential: ' · potentiel {v} {cur}',
+    import: 'Importer un CSV', export: 'Exporter en CSV', templates: 'Modèles de rayons', nfc: 'Tags NFC', moves: 'Mouvements de stock',
+    kProducts: 'Produits', kValue: 'Valeur du stock', kRestock: 'À réassortir', kShelves: 'Rayons', kShelvesSub: 'Gérés dans Catégories',
+    kFilterOn: 'Filtre actif · toucher pour tout revoir', kLowOut: '{low} stock bas · {out} en rupture', kNone: 'Rien sous 5 pièces',
+    search: 'Rechercher un produit, un rayon, un code-barres', searchAria: 'Rechercher dans l’inventaire',
+    view: 'Affichage', grid: 'Grille', list: 'Liste', done: 'Terminer', select: 'Sélectionner',
+    moreAria: 'Plus d’actions', more: 'Plus', newProduct: 'Nouveau produit', all: 'Tous', archivedPill: 'Archivés',
+    selBarAria: 'Actions sur la sélection', tapToSelect: 'Touchez les produits à sélectionner',
+    selAll: 'Tout sélectionner', selNone: 'Tout désélectionner', selAllShort: 'Tout', selNoneShort: 'Aucun',
+    restore: 'Restaurer', archive: 'Archiver', move: 'Changer de catégorie', moveShort: 'Catégorie', delete: 'Supprimer',
+    archivedTill: 'Retirés de la caisse, historique conservé. Retrouvez-les dans « Archivés ».',
+    archivedHist: 'Historique conservé. Retrouvez-les dans « Archivés ».',
+    restoredTill: 'De nouveau en vente à la caisse.', restoredCat: 'De nouveau au catalogue.',
+    moveDesc: '{sel}. Prix, stock et codes-barres ne changent pas.', moveLabel: 'Nouvelle catégorie', cancel: 'Annuler', moveOk: 'Déplacer',
+    movedTo: 'Vers « {c} ».',
+    delDesc: '{names}{more} · {variants} (codes-barres inclus) seront supprimés définitivement.',
+    irreversible: 'Action irréversible', delGoneTill: 'Les produits disparaissent de la caisse et du tableau de bord.',
+    delGone: 'Les produits disparaissent du tableau de bord.', delCodes: 'Les codes-barres associés sont libérés.',
+    delArchiveHint: 'Pour simplement les retirer de la vente en gardant l’historique, archivez-les.',
+    archiveInstead: 'Archiver plutôt', delOk: 'Supprimer définitivement',
+    unavailable: 'Module inventaire indisponible', unavailableDesc: 'Les moteurs catalogue et code-barres ne sont pas chargés. Rechargez la page.',
+    importNA: 'Import indisponible', importNADesc: 'Le module d’import n’est pas chargé. Rechargez la page.',
+    exported: 'Inventaire exporté', exportedDesc: 'Fichier CSV téléchargé (produit, couleur, taille, stock, code-barres).', exportFail: 'Export impossible',
+    products: (n) => _bqxN(n, 'produit'),
+    selected: (n) => `${_bqxN(n, 'produit')} sélectionné${n > 1 ? 's' : ''}`,
+    archivedN: (n) => `${_bqxN(n, 'produit')} archivé${n > 1 ? 's' : ''}`,
+    restoredN: (n) => `${_bqxN(n, 'produit')} restauré${n > 1 ? 's' : ''}`,
+    movedN: (n) => `${_bqxN(n, 'produit')} déplacé${n > 1 ? 's' : ''}`,
+    deletedN: (n) => `${_bqxN(n, 'produit')} supprimé${n > 1 ? 's' : ''}`,
+    delTitle: (n) => `Supprimer ${_bqxN(n, 'produit')} ?`,
+    andMore: (k) => ` et ${k} autre${k > 1 ? 's' : ''}`,
+    missing: (n) => `${n} manquant${n > 1 ? 's' : ''}`,
+    left: (n) => `${n} restant${n > 1 ? 's' : ''}`,
+    inStock: (n) => `${n} en stock`,
+    kSomeCost: (a, b) => ` · ${a} produit${a < 2 ? '' : 's'} sur ${b} au coût d’achat`,
+  },
+  en: {
+    title: 'Product inventory', store: 'Store', shared: ' · shared with the till', cur: 'MAD',
+    noArchived: 'No archived products', noResult: 'Nothing matches this search.',
+    archHintTill: 'An archived product leaves the till without losing its history. It shows up here.',
+    archHint: 'An archived product leaves the catalogue without losing its history. It shows up here.',
+    emptyCat: 'Empty catalogue',
+    emptyTpl: 'Start from a set of shelves · tableware, glassware, candles, decoration · then adjust the prices and enter your quantities.',
+    tplPick: 'Choose my shelves', noProduct: 'No products', noLow: 'Nothing to restock in this selection.',
+    noColor: 'No items in this colour. Tap the swatch again to see everything.',
+    createTill: 'Create a product here, or at the till{hint} with the scanner.', createFirst: 'Create your first product here.',
+    hProduct: 'Product', hColors: 'Colours', hVariants: 'Variants', hCodes: 'Barcodes', hPrice: 'Price', hStock: 'Stock',
+    catB: 'Category B', archived: 'Archived', noCat: 'No category', complete: 'Complete', out: 'Out of stock',
+    colorFilter: 'Filter by colour', color: 'Colour', seeAll: 'Show all',
+    kNoCost: ' · at selling price, no costs entered', kPotential: ' · {v} {cur} at selling price',
+    import: 'Import a CSV', export: 'Export as CSV', templates: 'Shelf templates', nfc: 'NFC tags', moves: 'Stock movements',
+    kProducts: 'Products', kValue: 'Stock value', kRestock: 'To restock', kShelves: 'Shelves', kShelvesSub: 'Managed in Categories',
+    kFilterOn: 'Filter on · tap to see everything', kLowOut: '{low} low · {out} out of stock', kNone: 'Nothing under 5 pieces',
+    search: 'Search a product, a shelf, a barcode', searchAria: 'Search the inventory',
+    view: 'View', grid: 'Grid', list: 'List', done: 'Done', select: 'Select',
+    moreAria: 'More actions', more: 'More', newProduct: 'New product', all: 'All', archivedPill: 'Archived',
+    selBarAria: 'Actions on the selection', tapToSelect: 'Tap the products to select them',
+    selAll: 'Select all', selNone: 'Deselect all', selAllShort: 'All', selNoneShort: 'None',
+    restore: 'Restore', archive: 'Archive', move: 'Change category', moveShort: 'Category', delete: 'Delete',
+    archivedTill: 'Off the till, history kept. Find them under Archived.',
+    archivedHist: 'History kept. Find them under Archived.',
+    restoredTill: 'On sale at the till again.', restoredCat: 'Back in the catalogue.',
+    moveDesc: '{sel}. Price, stock and barcodes do not change.', moveLabel: 'New category', cancel: 'Cancel', moveOk: 'Move',
+    movedTo: 'To {c}.',
+    delDesc: '{names}{more} · {variants} (barcodes included) will be deleted for good.',
+    irreversible: 'This cannot be undone', delGoneTill: 'The products disappear from the till and the dashboard.',
+    delGone: 'The products disappear from the dashboard.', delCodes: 'Their barcodes are released.',
+    delArchiveHint: 'To take them off sale and keep their history, archive them instead.',
+    archiveInstead: 'Archive instead', delOk: 'Delete for good',
+    unavailable: 'Inventory unavailable', unavailableDesc: 'The catalogue and barcode modules did not load. Reload the page.',
+    importNA: 'Import unavailable', importNADesc: 'The import module did not load. Reload the page.',
+    exported: 'Inventory exported', exportedDesc: 'CSV file downloaded (product, colour, size, stock, barcode).', exportFail: 'Export failed',
+    products: (n) => _bqxEnN(n, 'product'),
+    selected: (n) => `${_bqxEnN(n, 'product')} selected`,
+    archivedN: (n) => `${_bqxEnN(n, 'product')} archived`,
+    restoredN: (n) => `${_bqxEnN(n, 'product')} restored`,
+    movedN: (n) => `${_bqxEnN(n, 'product')} moved`,
+    deletedN: (n) => `${_bqxEnN(n, 'product')} deleted`,
+    delTitle: (n) => `Delete ${_bqxEnN(n, 'product')}?`,
+    andMore: (k) => ` and ${k} more`,
+    missing: (n) => `${n} missing`,
+    left: (n) => `${n} left`,
+    inStock: (n) => `${n} in stock`,
+    kSomeCost: (a, b) => ` · ${a} of ${b} products at cost`,
+  },
+  ar: {
+    title: 'جرد المنتجات', store: 'المتجر', shared: ' · مشتركة مع الصندوق', cur: 'درهم',
+    noArchived: 'لا منتجات مؤرشفة', noResult: 'لا نتائج لهذا البحث.',
+    archHintTill: 'المنتج المؤرشف يغادر الصندوق دون أن يفقد سجله. يظهر هنا.',
+    archHint: 'المنتج المؤرشف يخرج من الكتالوج دون أن يفقد سجله. يظهر هنا.',
+    emptyCat: 'الكتالوج فارغ',
+    emptyTpl: 'ابدأ من نموذج أقسام · أدوات المائدة، الزجاجيات، الشموع، الديكور · ثم عدّل الأسعار وأدخل الكميات.',
+    tplPick: 'اختر أقسامي', noProduct: 'لا منتجات', noLow: 'لا شيء لإعادة التزويد في هذا الاختيار.',
+    noColor: 'لا منتجات بهذا اللون. المس الدائرة مرة أخرى لرؤية الكل.',
+    createTill: 'أنشئ منتجًا هنا، أو من الصندوق{hint} بقارئ الرموز.', createFirst: 'أنشئ منتجك الأول هنا.',
+    hProduct: 'المنتج', hColors: 'الألوان', hVariants: 'المتغيّرات', hCodes: 'الرموز الشريطية', hPrice: 'السعر', hStock: 'المخزون',
+    catB: 'الفئة B', archived: 'مؤرشف', noCat: 'بدون فئة', complete: 'مكتملة', out: 'نفد',
+    colorFilter: 'تصفية حسب اللون', color: 'اللون', seeAll: 'عرض الكل',
+    kNoCost: ' · بسعر البيع، التكاليف غير مُدخلة', kPotential: ' · {v} {cur} بسعر البيع',
+    import: 'استيراد ملف CSV', export: 'تصدير بصيغة CSV', templates: 'نماذج الأقسام', nfc: 'وسوم NFC', moves: 'حركات المخزون',
+    kProducts: 'المنتجات', kValue: 'قيمة المخزون', kRestock: 'لإعادة التزويد', kShelves: 'الأقسام', kShelvesSub: 'تُدار في الفئات',
+    kFilterOn: 'التصفية مفعّلة · المس لرؤية الكل', kLowOut: 'منخفض: {low} · نفد: {out}', kNone: 'لا شيء تحت 5 قطع',
+    search: 'ابحث عن منتج أو قسم أو رمز شريطي', searchAria: 'البحث في الجرد',
+    view: 'العرض', grid: 'شبكة', list: 'قائمة', done: 'إنهاء', select: 'تحديد',
+    moreAria: 'إجراءات أخرى', more: 'المزيد', newProduct: 'منتج جديد', all: 'الكل', archivedPill: 'المؤرشفة',
+    selBarAria: 'إجراءات على التحديد', tapToSelect: 'المس المنتجات لتحديدها',
+    selAll: 'تحديد الكل', selNone: 'إلغاء تحديد الكل', selAllShort: 'الكل', selNoneShort: 'لا شيء',
+    restore: 'استعادة', archive: 'أرشفة', move: 'تغيير الفئة', moveShort: 'الفئة', delete: 'حذف',
+    archivedTill: 'أُزيلت من الصندوق مع حفظ السجل. تجدها في «المؤرشفة».',
+    archivedHist: 'السجل محفوظ. تجدها في «المؤرشفة».',
+    restoredTill: 'معروضة للبيع في الصندوق من جديد.', restoredCat: 'عادت إلى الكتالوج.',
+    moveDesc: '{sel}. لا يتغير السعر ولا المخزون ولا الرموز الشريطية.', moveLabel: 'الفئة الجديدة', cancel: 'إلغاء', moveOk: 'نقل',
+    movedTo: 'إلى «{c}».',
+    delDesc: '{names}{more} · ستُحذف {variants} نهائيًا مع رموزها الشريطية.',
+    irreversible: 'إجراء لا رجعة فيه', delGoneTill: 'تختفي المنتجات من الصندوق ولوحة التحكم.',
+    delGone: 'تختفي المنتجات من لوحة التحكم.', delCodes: 'تتحرر رموزها الشريطية.',
+    delArchiveHint: 'لسحبها من البيع مع الاحتفاظ بسجلها، قم بأرشفتها.',
+    archiveInstead: 'الأرشفة بدلًا من ذلك', delOk: 'حذف نهائي',
+    unavailable: 'الجرد غير متاح', unavailableDesc: 'لم تُحمَّل وحدات الكتالوج والرموز الشريطية. أعد تحميل الصفحة.',
+    importNA: 'الاستيراد غير متاح', importNADesc: 'لم تُحمَّل وحدة الاستيراد. أعد تحميل الصفحة.',
+    exported: 'تم تصدير الجرد', exportedDesc: 'تم تنزيل ملف CSV (المنتج، اللون، المقاس، المخزون، الرمز الشريطي).', exportFail: 'تعذّر التصدير',
+    products: (n) => _arProducts(n),
+    selected: (n) => `المحدد: ${_arProducts(n)}`,
+    archivedN: (n) => `تمت أرشفة ${_arProducts(n)}`,
+    restoredN: (n) => `تمت استعادة ${_arProducts(n)}`,
+    movedN: (n) => `تم نقل ${_arProducts(n)}`,
+    deletedN: (n) => `تم حذف ${_arProducts(n)}`,
+    delTitle: (n) => `حذف ${_arProducts(n)}؟`,
+    andMore: (k) => ` و${k} غيرها`,
+    missing: (n) => `بدون رمز: ${n}`,
+    left: (n) => `المتبقي: ${n}`,
+    inStock: (n) => `في المخزون: ${n}`,
+    kSomeCost: (a, b) => ` · ${a} من ${b} بالتكلفة`,
+  },
+};
+function _bqxInvT() { return _BQX_INV[_bqxPfLang()]; }
 /* Ce que la grille montre en ce moment : filtre de rayon (ou « Archivés »),
    recherche et couleur. « Tout sélectionner » s'appuie dessus, pour ne jamais
    cocher ce que l'écran ne montre pas. */
@@ -12607,31 +12762,32 @@ function _bqxVisibleProducts() {
 }
 
 function _bqxGridHtml() {
+  const t = _bqxInvT();
   const products = _bqxVisibleProducts();
   if (!products.length) {
-    if (_bqxFilter === _BQX_ARCHIVED) return `<div class="kx-foot-hint"><div class="lh">Aucun produit archivé</div><div class="rh">${
-      _bqxQuery ? 'Aucun résultat pour cette recherche.' : (_bqxTillReads() ? 'Un produit archivé quitte la caisse sans perdre son historique. Il réapparaît ici.' : 'Un produit archivé sort du catalogue sans perdre son historique. Il réapparaît ici.')}</div></div>`;
+    if (_bqxFilter === _BQX_ARCHIVED) return `<div class="kx-foot-hint"><div class="lh">${_esc(t.noArchived)}</div><div class="rh">${
+      _esc(_bqxQuery ? t.noResult : (_bqxTillReads() ? t.archHintTill : t.archHint))}</div></div>`;
     /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
        plutôt que de constater le vide. Un filtre ou une recherche sans résultat
        reste un simple constat — le magasin, lui, n'est pas vide. */
     const virgin = !_bqxColorFilter && !_bqxQuery && !_bqxLowOnly && _bqxFilter === 'all' && !CAT().listProducts({ includeArchived: true }).length;
     if (virgin && _bqxTemplatesOn()) {
       return `<div class="kx-foot-hint" style="align-items:center;">
-        <div class="lh">Catalogue vide</div>
-        <div class="rh">Partez d'un modèle de rayons · arts de la table, verrerie, bougies, décoration · puis ajustez les prix et saisissez vos quantités.
-          <div style="margin-top:10px;"><button class="kb atlas" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Choisir mes rayons</button></div>
+        <div class="lh">${_esc(t.emptyCat)}</div>
+        <div class="rh">${_esc(t.emptyTpl)}
+          <div style="margin-top:10px;"><button class="kb atlas" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}${_esc(t.tplPick)}</button></div>
         </div>
       </div>`;
     }
-    return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
-      _bqxLowOnly ? 'Rien à réassortir dans cette sélection.'
-        : _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
-        : _bqxQuery ? 'Aucun résultat pour cette recherche.'
-        : (_bqxTillReads() ? 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.' : 'Créez votre premier produit ici.')}</div></div>`;
+    return `<div class="kx-foot-hint"><div class="lh">${_esc(t.noProduct)}</div><div class="rh">${_esc(
+      _bqxLowOnly ? t.noLow
+        : _bqxColorFilter ? t.noColor
+        : _bqxQuery ? t.noResult
+        : (_bqxTillReads() ? _bqxPfFill(t.createTill, { hint: _bqxTillHint() }) : t.createFirst))}</div></div>`;
   }
   if (_bqxView === 'list') {
     return `<div class="bqx-list">
-      <div class="bqx-lhead" aria-hidden="true"><span></span><span>Produit</span><span>Couleurs</span><span class="r">Variantes</span><span>Codes-barres</span><span class="r">Prix</span><span class="r">Stock</span></div>
+      <div class="bqx-lhead" aria-hidden="true"><span></span><span>${_esc(t.hProduct)}</span><span>${_esc(t.hColors)}</span><span class="r">${_esc(t.hVariants)}</span><span>${_esc(t.hCodes)}</span><span class="r">${_esc(t.hPrice)}</span><span class="r">${_esc(t.hStock)}</span></div>
       ${products.map(_bqxRowHtml).join('')}
     </div>`;
   }
@@ -12666,9 +12822,10 @@ function _bqxThumb(p) {
   return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
 }
 function _bqxStockTag(stock) {
-  if (stock <= 0) return '<span class="bqx-stag out">Rupture</span>';
-  if (stock <= 5) return `<span class="bqx-stag low">${stock} restant${stock > 1 ? 's' : ''}</span>`;
-  return `<span class="bqx-stag">${stock} en stock</span>`;
+  const t = _bqxInvT();
+  if (stock <= 0) return `<span class="bqx-stag out">${_esc(t.out)}</span>`;
+  if (stock <= 5) return `<span class="bqx-stag low">${_esc(t.left(stock))}</span>`;
+  return `<span class="bqx-stag">${_esc(t.inStock(stock))}</span>`;
 }
 function _bqxSwatches(colors, max) {
   const kc = window.KiwiColors;
@@ -12691,6 +12848,7 @@ function _bqxSwatchVars(cat, data) {
 }
 
 function _bqxCardHtml(p) {
+  const t = _bqxInvT();
   const data = CAT().getProduct(p.id);
   const cat = data.category;
   return `<div ${_bqxOpenAttrs(p, 'bqx-card')} style="${_bqxSwatchVars(cat, data)}">
@@ -12698,15 +12856,16 @@ function _bqxCardHtml(p) {
       <div class="bqx-thumb">${_bqxThumb(p)}</div>
       <div class="bqx-cbody">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
-          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div></div>
-        <div class="bqx-cmeta"><span class="bqx-dot"></span><span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</span><span aria-hidden="true">·</span><span>${_bqxN(data.variants.length, 'variante')}</span></div>
+          ? `<span class="bqx-ab-b" title="${_esc(t.catB)}">B</span>` : ''}</div></div>
+        <div class="bqx-cmeta"><span class="bqx-dot"></span><span>${p.archived ? _esc(t.archived) : cat ? _esc(cat.name) : _esc(t.noCat)}</span><span aria-hidden="true">·</span><span>${_esc(_bqxShT().variants(data.variants.length))}</span></div>
         <div class="bqx-card-cols">${_bqxSwatches(data.colors, 8)}</div>
-        <div class="bqx-cfoot"><span class="bqx-price">${_bqxPrice(p.priceMAD)}<small>MAD</small></span>${_bqxStockTag(data.stock)}</div>
+        <div class="bqx-cfoot"><span class="bqx-price">${_bqxPrice(p.priceMAD)}<small>${_esc(t.cur)}</small></span>${_bqxStockTag(data.stock)}</div>
       </div>
     </div>`;
 }
 
 function _bqxRowHtml(p) {
+  const t = _bqxInvT();
   const data = CAT().getProduct(p.id);
   const cat = data.category;
   const nVar = data.variants.length;
@@ -12715,11 +12874,11 @@ function _bqxRowHtml(p) {
   return `<div ${_bqxOpenAttrs(p, 'bqx-row')} style="${_bqxSwatchVars(cat, data)}">
       <span class="bqx-rlead">${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : `<span class="bqx-thumb">${_bqxThumb(p)}</span>`}</span>
       <span class="bqx-rname"><b>${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
-        ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</b><small><span class="bqx-dot"></span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</small></span>
+        ? `<span class="bqx-ab-b" title="${_esc(t.catB)}">B</span>` : ''}</b><small><span class="bqx-dot"></span>${p.archived ? _esc(t.archived) : cat ? _esc(cat.name) : _esc(t.noCat)}</small></span>
       <span class="bqx-rcols">${_bqxSwatches(data.colors, 6) || '<i class="nil">·</i>'}</span>
       <span class="bqx-rnum">${nVar}</span>
-      <span class="bqx-rbc${miss > 0 ? ' miss' : ''}">${!nVar ? '<i class="nil">·</i>' : miss > 0 ? `${miss} manquant${miss > 1 ? 's' : ''}` : 'Complets'}</span>
-      <span class="bqx-rnum bqx-rprice">${_bqxPrice(p.priceMAD)} MAD</span>
+      <span class="bqx-rbc${miss > 0 ? ' miss' : ''}">${!nVar ? '<i class="nil">·</i>' : _esc(miss > 0 ? t.missing(miss) : t.complete)}</span>
+      <span class="bqx-rnum bqx-rprice">${_bqxPrice(p.priceMAD)} ${_esc(t.cur)}</span>
       <span class="bqx-rstock">${_bqxStockTag(data.stock)}</span>
     </div>`;
 }
@@ -12734,15 +12893,16 @@ function _bqxColorBar(cat) {
   if (!kc || !cat.colorsInUse) return '';
   const used = cat.colorsInUse();
   if (used.length < 2) return '';
-  return `<div class="bqx-cfilter" role="group" aria-label="Filtrer par couleur">
-    <span class="bqx-cfilter-l">Couleur</span>
+  const t = _bqxInvT();
+  return `<div class="bqx-cfilter" role="group" aria-label="${_esc(t.colorFilter)}">
+    <span class="bqx-cfilter-l">${_esc(t.color)}</span>
     ${used.map((c) => {
       const on = _bqxColorFilter === c.id;
       return `<button class="kc-sw${c.light ? ' is-light' : ''}${on ? ' is-on' : ''}" ${c.pattern ? `data-kc-pattern="${c.pattern}"` : ''} `
         + `style="${c.pattern ? '' : `background-color:${c.hex};`}" data-action="bqx-cfilter" data-arg="${c.id}" `
         + `role="button" aria-pressed="${on ? 'true' : 'false'}" title="${_esc(c.label)}" aria-label="${_esc(c.label)}"></button>`;
     }).join('')}
-    ${_bqxColorFilter ? `<button class="kb ghost xs" data-action="bqx-cfilter" data-arg="">Tout voir</button>` : ''}
+    ${_bqxColorFilter ? `<button class="kb ghost xs" data-action="bqx-cfilter" data-arg="">${_esc(t.seeAll)}</button>` : ''}
   </div>`;
 }
 
@@ -12892,9 +13052,10 @@ function _bqxStockKPI(st) {
   /* Trois cas, jamais un mélange sous le même libellé : aucun coût saisi (on le
      dit, le chiffre est au prix de vente), coûts partiels (le coût des seuls
      produits chiffrés, la part est annoncée), coûts complets (potentiel rappelé). */
-  if (!st.costed) return { amount: st.stockValue, note: ' · au prix de vente, coûts non saisis' };
-  if (st.costed < st.products) return { amount: st.stockCostKnown, note: ` · ${st.costed} produit${st.costed < 2 ? '' : 's'} sur ${st.products} au coût d’achat` };
-  return { amount: st.stockCost, note: ` · potentiel ${_mad(st.stockValue)} MAD` };
+  const t = _bqxInvT();
+  if (!st.costed) return { amount: st.stockValue, note: t.kNoCost };
+  if (st.costed < st.products) return { amount: st.stockCostKnown, note: t.kSomeCost(st.costed, st.products) };
+  return { amount: st.stockCost, note: _bqxPfFill(t.kPotential, { v: _mad(st.stockValue), cur: t.cur }) };
 }
 
 /* Les rayons tout prêts (assets/store-templates.js). Le bouton n'apparaît que
@@ -12920,50 +13081,51 @@ function _renderInventory() {
      la sélection plutôt que d'y rester invisible et compté. */
   _bqxSel.forEach((id) => { if (!cat.getProduct(id)) _bqxSel.delete(id); });
   const k = _bqxStockKPI(st);
+  const t = _bqxInvT();
   const more = [
-    `<button type="button" data-action="bqx-import">${_ICN.download}Importer un CSV</button>`,
-    `<button type="button" data-action="bqx-export">${_ICN.upload}Exporter en CSV</button>`,
-    _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : '',
-    _orderProOn() ? `<button type="button" data-action="orderpro-tags">Tags NFC</button>` : '',
-    (window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button type="button" data-action="nav-stock-movements">Mouvements de stock</button>` : '',
+    `<button type="button" data-action="bqx-import">${_ICN.download}${_esc(t.import)}</button>`,
+    `<button type="button" data-action="bqx-export">${_ICN.upload}${_esc(t.export)}</button>`,
+    _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}${_esc(t.templates)}</button>` : '',
+    _orderProOn() ? `<button type="button" data-action="orderpro-tags">${_esc(t.nfc)}</button>` : '',
+    (window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button type="button" data-action="nav-stock-movements">${_esc(t.moves)}</button>` : '',
   ].join('');
   window.Kiwi.appPage('inventory', {
-    title: 'Inventaire produits',
-    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'}${_bqxShared()}`,
+    title: t.title,
+    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || t.store}${_bqxShared()}`,
     body: `<div class="bqx-inv">
       <div class="kx-kpi-strip bqx-kpis">
-        <div class="kx-kpi"><div class="l">Produits</div><div class="v">${st.products}</div><div class="d">${_bqxN(st.variants, 'variante')}</div></div>
-        <div class="kx-kpi"><div class="l">Valeur du stock</div><div class="v">${_mad(k.amount)}<span class="u">MAD</span></div><div class="d">${_bqxN(st.totalStock, 'pièce')}${k.note}</div></div>
+        <div class="kx-kpi"><div class="l">${_esc(t.kProducts)}</div><div class="v">${st.products}</div><div class="d">${_esc(_bqxShT().variants(st.variants))}</div></div>
+        <div class="kx-kpi"><div class="l">${_esc(t.kValue)}</div><div class="v">${_mad(k.amount)}<span class="u">${_esc(t.cur)}</span></div><div class="d">${_esc(_bqxShT().pieces(st.totalStock) + k.note)}</div></div>
         <button type="button" class="kx-kpi bqx-kpi-btn${need ? ' warn' : ''}${_bqxLowOnly ? ' is-on' : ''}" data-action="bqx-low" aria-pressed="${_bqxLowOnly}"${need ? '' : ' disabled'}>
-          <div class="l">À réassortir</div><div class="v">${need}</div>
-          <div class="d">${need ? (_bqxLowOnly ? 'Filtre actif · toucher pour tout revoir' : `${st.low} stock bas · ${st.ruptures} en rupture`) : 'Rien sous 5 pièces'}</div></button>
-        <div class="kx-kpi"><div class="l">Rayons</div><div class="v">${st.categories}</div><div class="d">Gérés dans Catégories</div></div>
+          <div class="l">${_esc(t.kRestock)}</div><div class="v">${need}</div>
+          <div class="d">${_esc(need ? (_bqxLowOnly ? t.kFilterOn : _bqxPfFill(t.kLowOut, { low: st.low, out: st.ruptures })) : t.kNone)}</div></button>
+        <div class="kx-kpi"><div class="l">${_esc(t.kShelves)}</div><div class="v">${st.categories}</div><div class="d">${_esc(t.kShelvesSub)}</div></div>
       </div>
 
       <div class="p-toolbar bqx-toolbar">
         <div class="p-search"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
-          <input data-bqx-search placeholder="Rechercher un produit, un rayon, un code-barres" value="${_esc(_bqxQuery)}" aria-label="Rechercher dans l'inventaire" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
-        <div class="kx-tabs bqx-view" role="group" aria-label="Affichage">
-          <button type="button" class="kx-tab${_bqxView === 'grid' ? ' on' : ''}" data-action="bqx-view" data-arg="grid" aria-pressed="${_bqxView === 'grid'}">Grille</button>
-          <button type="button" class="kx-tab${_bqxView === 'list' ? ' on' : ''}" data-action="bqx-view" data-arg="list" aria-pressed="${_bqxView === 'list'}">Liste</button>
+          <input data-bqx-search placeholder="${_esc(t.search)}" value="${_esc(_bqxQuery)}" aria-label="${_esc(t.searchAria)}" style="border:none;background:transparent;outline:none;margin-inline-start:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
+        <div class="kx-tabs bqx-view" role="group" aria-label="${_esc(t.view)}">
+          <button type="button" class="kx-tab${_bqxView === 'grid' ? ' on' : ''}" data-action="bqx-view" data-arg="grid" aria-pressed="${_bqxView === 'grid'}">${_esc(t.grid)}</button>
+          <button type="button" class="kx-tab${_bqxView === 'list' ? ' on' : ''}" data-action="bqx-view" data-arg="list" aria-pressed="${_bqxView === 'list'}">${_esc(t.list)}</button>
         </div>
-        <button class="kb ${_bqxSelecting ? 'atlas' : 'ghost'}" data-action="bqx-sel-mode" aria-pressed="${_bqxSelecting}">${_bqxSelecting ? 'Terminer' : 'Sélectionner'}</button>
-        <details class="bqx-more"><summary class="kb ghost" aria-label="Plus d'actions">${_BQX_MORE}<span>Plus</span></summary>
+        <button class="kb ${_bqxSelecting ? 'atlas' : 'ghost'}" data-action="bqx-sel-mode" aria-pressed="${_bqxSelecting}">${_esc(_bqxSelecting ? t.done : t.select)}</button>
+        <details class="bqx-more"><summary class="kb ghost" aria-label="${_esc(t.moreAria)}">${_BQX_MORE}<span>${_esc(t.more)}</span></summary>
           <div class="bqx-more-pop">${more}</div></details>
-        <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
+        <button class="kb primary" data-action="bqx-new">${_ICN.plus}${_esc(t.newProduct)}</button>
       </div>
 
       <div class="bqx-filters">
         <div class="kx-pills" data-pill-group="bqx-cat">
-          <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">Tous <span class="ct">${st.products}</span></button>
+          <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">${_esc(t.all)} <span class="ct">${st.products}</span></button>
           ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
-          ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">Archivés <span class="ct">${archivedN}</span></button>` : ''}
+          ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">${_esc(t.archivedPill)} <span class="ct">${archivedN}</span></button>` : ''}
         </div>
         ${_bqxColorBar(cat)}
       </div>
 
       <div id="bqx-grid">${_bqxGridHtml()}</div>
-      <div class="bqx-selbar" id="bqx-selbar" role="toolbar" aria-label="Actions sur la sélection"${_bqxSelecting ? '' : ' hidden'}>${_bqxSelecting ? _bqxSelBarHtml() : ''}</div>
+      <div class="bqx-selbar" id="bqx-selbar" role="toolbar" aria-label="${_esc(t.selBarAria)}"${_bqxSelecting ? '' : ' hidden'}>${_bqxSelecting ? _bqxSelBarHtml() : ''}</div>
     </div>`,
   });
   setTimeout(() => {
@@ -12999,7 +13161,7 @@ function _renderInventory() {
 }
 
 handlers['nav-inventory'] = () => {
-  if (!_bqxReady()) { toast('Module inventaire indisponible', { desc: 'Les moteurs catalogue/code-barres ne sont pas chargés.', type: 'warn' }); return; }
+  if (!_bqxReady()) { const t = _bqxInvT(); toast(t.unavailable, { desc: t.unavailableDesc, type: 'warn' }); return; }
   _bqxCss(); _bqxSubscribe(); _renderInventory();
 };
 
@@ -13038,14 +13200,15 @@ function _bqxSelBarHtml() {
   const visible = _bqxVisibleProducts();
   const allOn = visible.length > 0 && visible.every((p) => _bqxSel.has(p.id));
   const archived = _bqxFilter === _BQX_ARCHIVED;
-  return `<span class="n" aria-live="polite">${n ? _bqxN(n, 'produit') + ' sélectionné' + (n > 1 ? 's' : '') : 'Touchez les produits à sélectionner'}</span>
-    <button type="button" data-action="bqx-sel-all"${visible.length ? '' : ' disabled'}><span class="lg">${allOn ? 'Tout désélectionner' : 'Tout sélectionner'}</span><span class="sh">${allOn ? 'Aucun' : 'Tout'}</span></button>
+  const t = _bqxInvT();
+  return `<span class="n" aria-live="polite">${_esc(n ? t.selected(n) : t.tapToSelect)}</span>
+    <button type="button" data-action="bqx-sel-all"${visible.length ? '' : ' disabled'}><span class="lg">${_esc(allOn ? t.selNone : t.selAll)}</span><span class="sh">${_esc(allOn ? t.selNoneShort : t.selAllShort)}</span></button>
     ${archived
-      ? `<button type="button" data-action="bqx-sel-restore"${none}>Restaurer</button>`
-      : `<button type="button" data-action="bqx-sel-archive"${none}>Archiver</button>
-         <button type="button" data-action="bqx-sel-move"${none}><span class="lg">Changer de catégorie</span><span class="sh">Catégorie</span></button>`}
-    <button type="button" class="danger" data-action="bqx-sel-del"${none}>${_ICN.trash}Supprimer</button>
-    <button type="button" class="ghost" data-action="bqx-sel-mode">Terminer</button>`;
+      ? `<button type="button" data-action="bqx-sel-restore"${none}>${_esc(t.restore)}</button>`
+      : `<button type="button" data-action="bqx-sel-archive"${none}>${_esc(t.archive)}</button>
+         <button type="button" data-action="bqx-sel-move"${none}><span class="lg">${_esc(t.move)}</span><span class="sh">${_esc(t.moveShort)}</span></button>`}
+    <button type="button" class="danger" data-action="bqx-sel-del"${none}>${_ICN.trash}${_esc(t.delete)}</button>
+    <button type="button" class="ghost" data-action="bqx-sel-mode">${_esc(t.done)}</button>`;
 }
 function _bqxSelBarRefresh() {
   const bar = document.getElementById('bqx-selbar');
@@ -13082,29 +13245,31 @@ handlers['bqx-sel-archive'] = () => {
   const ids = [..._bqxSel];
   if (!ids.length) return;
   _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, true)));
-  _bqxSelDone(_bqxN(ids.length, 'produit') + ' archivé' + (ids.length > 1 ? 's' : ''),
-    (_bqxTillReads() ? 'Retirés de la caisse, historique conservé. Retrouvez-les dans « Archivés ».' : 'Historique conservé. Retrouvez-les dans « Archivés ».'));
+  const t = _bqxInvT();
+  _bqxSelDone(t.archivedN(ids.length), _bqxTillReads() ? t.archivedTill : t.archivedHist);
 };
 handlers['bqx-sel-restore'] = () => {
   const ids = [..._bqxSel];
   if (!ids.length) return;
   _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, false)));
   _bqxFilter = 'all';
-  _bqxSelDone(_bqxN(ids.length, 'produit') + ' restauré' + (ids.length > 1 ? 's' : ''), (_bqxTillReads() ? 'De nouveau en vente à la caisse.' : 'De nouveau au catalogue.'));
+  const t = _bqxInvT();
+  _bqxSelDone(t.restoredN(ids.length), _bqxTillReads() ? t.restoredTill : t.restoredCat);
 };
 handlers['bqx-sel-move'] = () => {
   const ids = [..._bqxSel];
   if (!ids.length) return;
   const cats = CAT().listCategories();
+  const t = _bqxInvT();
   _bqxModal = modal({
-    title: 'Changer de catégorie', width: 440,
-    desc: `${_bqxN(ids.length, 'produit')} sélectionné${ids.length > 1 ? 's' : ''}. Prix, stock et codes-barres ne changent pas.`,
-    body: `<label class="kf-label" for="bqx-sel-cat">Nouvelle catégorie</label>
+    title: t.move, width: 440,
+    desc: _esc(_bqxPfFill(t.moveDesc, { sel: t.selected(ids.length) })),
+    body: `<label class="kf-label" for="bqx-sel-cat">${_esc(t.moveLabel)}</label>
       <select id="bqx-sel-cat" class="kf-input" style="width:100%;">
         ${cats.map((c) => `<option value="${_esc(c.id)}">${_esc(c.name)}</option>`).join('')}
-        <option value="">Divers (sans catégorie)</option>
+        <option value="">${_esc(t.noCat)}</option>
       </select>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-sel-move-ok">Déplacer</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-sel-move-ok">${_esc(t.moveOk)}</button>`,
   });
 };
 handlers['bqx-sel-move-ok'] = () => {
@@ -13114,7 +13279,8 @@ handlers['bqx-sel-move-ok'] = () => {
   const target = sel.value;
   const c = CAT().listCategories().find((x) => x.id === target);
   _bqxBatch(() => ids.forEach((id) => CAT().updateProduct(id, { categoryId: target })));
-  _bqxSelDone(_bqxN(ids.length, 'produit') + ' déplacé' + (ids.length > 1 ? 's' : ''), 'Vers « ' + (c ? c.name : 'Divers') + ' ».');
+  const t = _bqxInvT();
+  _bqxSelDone(t.movedN(ids.length), _bqxPfFill(t.movedTo, { c: c ? c.name : t.noCat }));
 };
 handlers['bqx-sel-del'] = () => {
   const ids = [..._bqxSel];
@@ -13122,18 +13288,24 @@ handlers['bqx-sel-del'] = () => {
   const names = ids.slice(0, 5).map((id) => { const d = CAT().getProduct(id); return d ? d.product.name : ''; }).filter(Boolean);
   const nVar = ids.reduce((sum, id) => { const d = CAT().getProduct(id); return sum + (d ? d.variants.length : 0); }, 0);
   const archivedView = _bqxFilter === _BQX_ARCHIVED;
+  const t = _bqxInvT();
+  const q = _bqxPfLang() === 'ar' ? ['«', '»'] : _bqxPfLang() === 'en' ? ['“', '”'] : ['« ', ' »'];
   _bqxModal = modal({
-    title: `Supprimer ${_bqxN(ids.length, 'produit')} ?`, width: 480,
-    desc: `${names.map((x) => '« ' + _esc(x) + ' »').join(', ')}${ids.length > 5 ? ` et ${ids.length - 5} autre${ids.length - 5 > 1 ? 's' : ''}` : ''} · ${_bqxN(nVar, 'variante')} (codes-barres inclus) seront supprimés définitivement.`,
-    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Les produits disparaissent ${_bqxTillReads() ? 'de la caisse et du dashboard' : 'du dashboard'}.</li><li>Les codes-barres associés sont libérés.</li>${archivedView ? '' : '<li>Pour simplement les retirer de la vente en gardant l’historique, archivez-les.</li>'}</ul></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button>${archivedView ? '' : '<button class="kb ghost" data-action="bqx-sel-archive">Archiver plutôt</button>'}<button class="kb danger" data-action="bqx-sel-del-ok">${_ICN.trash}Supprimer définitivement</button>`,
+    title: t.delTitle(ids.length), width: 480,
+    desc: _esc(_bqxPfFill(t.delDesc, {
+      names: names.map((x) => q[0] + x + q[1]).join(', '),
+      more: ids.length > 5 ? t.andMore(ids.length - 5) : '',
+      variants: _bqxShT().variants(nVar),
+    })),
+    body: `<div class="kx-warn-box danger"><div class="hd">${_esc(t.irreversible)}</div><ul><li>${_esc(_bqxTillReads() ? t.delGoneTill : t.delGone)}</li><li>${_esc(t.delCodes)}</li>${archivedView ? '' : `<li>${_esc(t.delArchiveHint)}</li>`}</ul></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button>${archivedView ? '' : `<button class="kb ghost" data-action="bqx-sel-archive">${_esc(t.archiveInstead)}</button>`}<button class="kb danger" data-action="bqx-sel-del-ok">${_ICN.trash}${_esc(t.delOk)}</button>`,
   });
 };
 handlers['bqx-sel-del-ok'] = () => {
   const ids = [..._bqxSel];
   if (!ids.length) return;
   _bqxBatch(() => ids.forEach((id) => CAT().deleteProduct(id)));
-  _bqxSelDone(_bqxN(ids.length, 'produit') + ' supprimé' + (ids.length > 1 ? 's' : ''), '', 'warn');
+  _bqxSelDone(_bqxInvT().deletedN(ids.length), '', 'warn');
 };
 /* Une pastille déjà active se désactive : c'est le geste attendu d'un filtre à
    choix unique, et ça évite d'ajouter un bouton « tout » de plus. */
@@ -13146,7 +13318,8 @@ handlers['bqx-cfilter'] = (_el, arg) => {
  * the writes; the page only re-renders once the merchant has confirmed. */
 handlers['bqx-import'] = () => {
   if (!window.KiwiCatalogImport) {
-    toast('Import indisponible', { desc: 'Le module d\'import n\'est pas chargé, rechargez la page.', type: 'warn' });
+    const t = _bqxInvT();
+    toast(t.importNA, { desc: t.importNADesc, type: 'warn' });
     return;
   }
   window.KiwiCatalogImport.openBoutique({ onDone: () => _renderInventory() });
@@ -13161,8 +13334,9 @@ handlers['bqx-export'] = () => {
       .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'inventaire';
     a.href = URL.createObjectURL(blob); a.download = `inventaire-${_slug}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
-    toast('Inventaire exporté', { desc: 'Fichier CSV téléchargé (produit, couleur, taille, stock, code-barres).', type: 'success' });
-  } catch (e) { toast('Export impossible', { type: 'warn' }); }
+    const t = _bqxInvT();
+    toast(t.exported, { desc: t.exportedDesc, type: 'success' });
+  } catch (e) { toast(_bqxInvT().exportFail, { type: 'warn' }); }
 };
 
 /* ─── product detail drawer (the variant list) ───────────────────────────────

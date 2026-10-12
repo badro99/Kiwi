@@ -53,8 +53,8 @@ ok(/later\.onclick=function\(\)\{closePaywall\(\);\}/.test(js), '« Continuer à
 ok(/PAYWALL_COOLDOWN_MS=10\*60\*1000/.test(js), 'le grand panneau est limité à une apparition toutes les dix minutes');
 ok(/localStorage\.setItem\(PAYWALL_COOLDOWN_KEY,String\(Date\.now\(\)\+PAYWALL_COOLDOWN_MS\)\)/.test(js),
   'la fermeture mémorise le délai au-delà de la page courante');
-ok(/if\(paywallCoolingDown\(\)\)return false;/.test(js),
-  'les clics protégés restent refusés sans rouvrir le panneau pendant le délai');
+ok(/if\(paywallCoolingDown\(\)\)\{heldLine\([\s\S]*?,true\);return false;\}/.test(js),
+  'les clics protégés restent refusés sans rouvrir le panneau pendant le délai, et le disent en une ligne');
 ok(/if\(paywallCoolingDown\(\)\)\{schedulePillAfterCooldown\(\);return;\}/.test(js),
   'la petite pastille disparaît elle aussi pendant le délai');
 ok(/pillTimer=setTimeout\(function\(\)\{pillTimer=null;refreshPill\(\);\},remaining\+50\)/.test(js),

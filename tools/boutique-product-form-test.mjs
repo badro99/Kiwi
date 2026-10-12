@@ -140,7 +140,7 @@ console.log('what the inventory shows and prints');
 ok('the grid, the list, the sheet and the shelf label print the price and the cost to the centime', () => {
   assert.ok(!src.includes('_mad(p.priceMAD)') && !src.includes('_mad(data.product.priceMAD)'));
   assert.ok(!src.includes('_mad(cost)') && !src.includes('_mad(cost * '), 'the sheet printed a 12,50 cost as 13');
-  assert.match(src, /<span class="bqx-price">\$\{_bqxPrice\(p\.priceMAD\)\}<small>MAD<\/small><\/span>/);
+  assert.match(src, /<span class="bqx-price">\$\{_bqxPrice\(p\.priceMAD\)\}<small>\$\{_esc\(t\.cur\)\}<\/small><\/span>/);
   assert.match(src, /price: _bqxPrice\(p\.priceMAD\), code, format: fmt \};/);
 });
 ok('the edit tag is the product name, escaped once by modal()', () => {

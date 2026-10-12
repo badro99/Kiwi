@@ -74,6 +74,15 @@ function pagesCtx({ trade = 'boutique', real = true } = {}) {
     grab(PAGES, 'function _bqxTillCode('),
     grab(PAGES, 'function _bqxTillReads('),
     grab(PAGES, 'function _bqxTillHint('),
+    // La page parle la langue de l'écran (sans KiwiI18n : le français).
+    grab(PAGES, 'function _bqxArCount('),
+    PAGES.match(/^const _bqxEnN = .*$/m)[0],
+    PAGES.match(/^const _arProducts = .*$/m)[0],
+    grab(PAGES, 'const _BQX_INV = {'),
+    'const _BQX_PF = { fr: 1, en: 1, ar: 1 };',
+    grab(PAGES, 'function _bqxPfLang('),
+    grab(PAGES, 'function _bqxPfFill('),
+    grab(PAGES, 'function _bqxInvT('),
     grab(PAGES, 'function _bqxShared('),
     grab(PAGES, 'function _bqxStockKPI('),
   ].join('\n'), ctx);

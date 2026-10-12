@@ -308,12 +308,12 @@
     "sha": "21da6396c5303181"
   },
   "assets/entitlements-v2.js": {
-    "v": "2",
-    "sha": "9731af93699e3500"
+    "v": "3",
+    "sha": "cc39249ee62b6b4c"
   },
   "assets/entitlements.css": {
-    "v": "5",
-    "sha": "ac57dd60847c3e8d"
+    "v": "6",
+    "sha": "10bc0d15c44b30f7"
   },
   "assets/err-reporter.js": {
     "v": "1",
@@ -524,8 +524,8 @@
     "sha": "529acc4604d2e551"
   },
   "assets/menu-catalog.js": {
-    "v": "26",
-    "sha": "3b0264a154d792f0"
+    "v": "27",
+    "sha": "1c95c00e64adbb02"
   },
   "assets/menu-i18n.js": {
     "v": "5",
@@ -632,8 +632,8 @@
     "sha": "380167a745c162c8"
   },
   "assets/pages-pro.js": {
-    "v": "2154",
-    "sha": "1a293d79473e7dcf"
+    "v": "2155",
+    "sha": "2fc77da1e541687f"
   },
   "assets/pages.js": {
     "v": "12",
