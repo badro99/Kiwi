@@ -1,4 +1,4 @@
-export const ASSET_VERSIONS = Object.freeze({ css: 11, js: 5, library: 1 });
+export const ASSET_VERSIONS = Object.freeze({ css: 12, js: 5, library: 2 });
 export const PUBLISHED_LOCALES = Object.freeze(['fr', 'en', 'ar']);
 // Landing languages are independent of the three published guide languages:
 // a landing without guides of its own links to the English hub.

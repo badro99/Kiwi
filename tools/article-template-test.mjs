@@ -226,7 +226,7 @@ for (const locale of PUBLISHED_LOCALES) {
   ok(stronglyConnected, `${locale.toUpperCase()} article graph is strongly connected`);
 }
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
-ok(publishedVersions.size === 1 && publishedVersions.has('11:5'), 'all published guides use the current shared asset versions');
+ok(publishedVersions.size === 1 && publishedVersions.has('12:5'), 'all published guides use the current shared asset versions');
 
 /* ── La bibliothèque · une page de centre de ressources, pas une liste ─────
  * Ces contrôles tiennent la promesse du redesign : la page des guides offre
@@ -241,27 +241,41 @@ try {
 } catch (error) {
   ok(false, 'library JavaScript parses cleanly · ' + error.message);
 }
-ok(/js-library/.test(libraryJs) && /\.library-tools,\s*\n\.library-controls \{ display: none; \}/.test(css.replace(/\r/g, '')), 'the filters stay hidden until the script can answer them');
+ok(/js-library/.test(libraryJs) && /\n\.library-tools \{ display: none; \}/.test(css.replace(/\r/g, '')), 'the filters stay hidden until the script can answer them');
+
+/* ── Le monde de la landing (propriétaire, 13 octobre 2026) ────────────────
+ * L'en-tête et le pied sont ceux de la landing, la lecture reste sur papier,
+ * et le thème sombre du système est suivi (audit H1). La démo s'ouvre sur
+ * place, et la langue comme la navigation restent atteignables sur téléphone
+ * (audit H2). */
+ok(/\.site-header\s*\{[^}]*background:\s*var\(--night\)/.test(css) && /--night:\s*#050706/.test(css), 'the guides header is the landing\'s dark band');
+ok(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{[^}]*--paper:\s*#0A0F0D/.test(css), 'the guides follow the system dark theme');
+ok(/\.data-table td::before \{ content: attr\(data-label\)/.test(css) && !/min-width:\s*620px/.test(css), 'phone tables become label and value cards instead of a 620 px scroller');
+ok(/\.data-table td\.num \{ text-align: end; font-variant-numeric: tabular-nums;/.test(css), 'numeric table columns are end-aligned and tabular');
 
 for (const locale of PUBLISHED_LOCALES) {
   const hub = read(`${locale}/guides/index.html`);
   const label = locale.toUpperCase();
 
   ok(/data-guides-search/.test(hub) && /role="search"/.test(hub), `${label} library offers an accessible search field`);
-  ok(/data-guides-sort/.test(hub) && (hub.match(/<option value="(?:recommended|recent|reading)"/g) || []).length === 3, `${label} library sorts by recommendation, recency and reading time`);
+  ok(!/data-guides-sort|filter-pill|data-category="all"/.test(hub) && /<button type="button" class="goal-pill" data-goal="" aria-pressed="true">/.test(hub), `${label} library has one filter, by problem, with an "all guides" entry (audit H5)`);
+  ok(hub.includes(`<a class="button nav-demo" href="/${locale}/?demo=1" data-kiwi-demo>`) && /<script src="\/assets\/landing-demo-funnel\.js" defer><\/script>/.test(hub), `${label} demo button opens the landing's demo sheet in place`);
+  ok(/<details class="language-menu">/.test(hub) && PUBLISHED_LOCALES.every((code) => hub.includes(`hreflang="${code}" lang="${code}"`)) && /<details class="nav-menu">/.test(hub) && hub.includes(`href="/${locale}/#security"`), `${label} header keeps languages, Sécurité and a phone menu`);
   ok(/data-guides-empty/.test(hub) && /data-guides-reset/.test(hub), `${label} library has an empty state with a reset control`);
   ok(/data-guides-count/.test(hub) && /aria-live="polite"/.test(hub), `${label} library announces how many guides are shown`);
 
   const goals = [...hub.matchAll(/data-goal="([^"]+)"/g)].map((match) => match[1]);
   ok(goals.length === GOALS.length && GOALS.every((goal) => goals.includes(goal.id)), `${label} library exposes every goal-based entry point`);
   const categories = [...hub.matchAll(/data-category="([^"]+)"/g)].map((match) => match[1]);
-  ok(categories.includes('all') && CATEGORIES.every((category) => categories.includes(category.id)), `${label} library exposes the full category taxonomy`);
+  ok(CATEGORIES.every((category) => categories.includes(category.id)), `${label} library cards cover the full category taxonomy`);
   ok(GOALS.every((goal) => hub.includes(goal.labels[locale])) && CATEGORIES.every((category) => hub.includes(category.labels[locale])), `${label} library labels its goals and categories in its own language`);
 
   /* Une carte par guide publié, ni plus ni moins, et chacune porte la
    * catégorie, le résumé et la durée du manifeste. */
-  const cards = [...hub.matchAll(/<li class="guide-card"[^>]*data-id="([^"]+)"[^>]*data-category="([^"]+)"[^>]*data-reading="(\d+)"/g)];
-  ok(cards.length === TOPICS.length, `${label} library shows exactly one card per published guide`);
+  const cards = [...hub.matchAll(/<li class="guide-card[^"]*"[^>]*data-id="([^"]+)"[^>]*data-category="([^"]+)"[^>]*data-reading="(\d+)"/g)];
+  ok(cards.length === TOPICS.length && new Set(cards.map((card) => card[1])).size === TOPICS.length, `${label} library shows exactly one card per published guide, none repeated`);
+  ok(cards[0]?.[1] === FEATURED[0] && /<li class="guide-card guide-card--featured guide-card--lead"/.test(hub), `${label} library opens on the first featured guide`);
+  ok(!/card-scene/.test(hub) && (hub.match(/class="card-icon"/g) || []).length === TOPICS.length, `${label} library cards say their subject with an icon, not an abstract pattern (audit H8)`);
   ok(TOPICS.every((topic) => cards.some((card) => card[1] === topic.id)), `${label} library card set matches the manifest`);
   ok(cards.every((card) => card[2] === TOPIC_CATEGORY[card[1]]), `${label} library cards carry their manifested category`);
   ok(TOPICS.every((topic) => hub.includes(TOPIC_CARDS[topic.id][locale])), `${label} library cards use the localized card summary`);

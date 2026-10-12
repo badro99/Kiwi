@@ -17,8 +17,8 @@ const UI = Object.freeze({
   fr: {
     dir: 'ltr', language: 'fr-MA', ogLocale: 'fr_MA', home: 'Accueil',
     brandLabel: 'Kiwi · accueil', navLabel: 'Navigation principale', features: 'Fonctionnalités',
-    guides: 'Guides', pricing: 'Tarifs', signIn: 'Se connecter', demo: 'Demander une démo',
-    languagePicker: 'Choisir la langue', skipArticle: 'Aller à l’article', skipHub: 'Aller aux guides',
+    guides: 'Guides', pricing: 'Tarifs', security: 'Sécurité', signIn: 'Se connecter', demo: 'Demander une démo',
+    menu: 'Menu', languagePicker: 'Choisir la langue', languageName: 'Français', skipArticle: 'Aller à l’article', skipHub: 'Aller aux guides',
     author: 'Équipe Kiwi',
     previousGuide: 'Guide précédent', nextGuide: 'Guide suivant',
     sequenceLabel: 'Guide précédent et suivant',
@@ -27,8 +27,8 @@ const UI = Object.freeze({
   en: {
     dir: 'ltr', language: 'en-MA', ogLocale: 'en_US', home: 'Home',
     brandLabel: 'Kiwi · Home', navLabel: 'Main navigation', features: 'Features',
-    guides: 'Guides', pricing: 'Pricing', signIn: 'Sign in', demo: 'Book a demo',
-    languagePicker: 'Choose language', skipArticle: 'Skip to the article', skipHub: 'Skip to the guides',
+    guides: 'Guides', pricing: 'Pricing', security: 'Security', signIn: 'Sign in', demo: 'Book a demo',
+    menu: 'Menu', languagePicker: 'Choose language', languageName: 'English', skipArticle: 'Skip to the article', skipHub: 'Skip to the guides',
     author: 'Kiwi Team',
     previousGuide: 'Previous guide', nextGuide: 'Next guide',
     sequenceLabel: 'Previous and next guide',
@@ -37,8 +37,8 @@ const UI = Object.freeze({
   ar: {
     dir: 'rtl', language: 'ar-MA', ogLocale: 'ar_MA', home: 'الرئيسية',
     brandLabel: 'Kiwi · الرئيسية', navLabel: 'التنقل الرئيسي', features: 'الخصائص',
-    guides: 'الأدلة', pricing: 'الأسعار', signIn: 'تسجيل الدخول', demo: 'اطلب عرضا توضيحيا',
-    languagePicker: 'اختر اللغة', skipArticle: 'انتقل إلى المقال', skipHub: 'انتقل إلى الأدلة',
+    guides: 'الأدلة', pricing: 'الأسعار', security: 'الأمان', signIn: 'تسجيل الدخول', demo: 'اطلب عرضا توضيحيا',
+    menu: 'القائمة', languagePicker: 'اختر اللغة', languageName: 'العربية', skipArticle: 'انتقل إلى المقال', skipHub: 'انتقل إلى الأدلة',
     author: 'فريق Kiwi',
     previousGuide: 'الدليل السابق', nextGuide: 'الدليل التالي',
     sequenceLabel: 'الدليل السابق والتالي',
@@ -58,17 +58,11 @@ const LIB = Object.freeze({
     searchLabel: 'Rechercher un guide',
     searchPlaceholder: 'Rechercher un sujet, une question ou un guide…',
     searchHelp: 'La recherche porte sur les titres, les résumés, les catégories et les mots-clés. Tout se passe dans votre navigateur, sans compte ni envoi de données.',
-    goalsTitle: 'Commencez par le problème que vous voulez régler',
-    goalsLabel: 'Entrées par objectif',
-    categoriesLabel: 'Filtrer par catégorie',
-    allCategories: 'Tous les guides',
-    sortLabel: 'Trier',
-    sortRecommended: 'Recommandés',
-    sortRecent: 'Plus récents',
-    sortReading: 'Temps de lecture',
+    goalsTitle: 'Commencez par le problème à régler',
+    goalsLabel: 'Filtrer les guides par problème',
+    allGoals: 'Tous les guides',
     featuredTitle: 'À lire en premier',
-    featuredDeck: 'Les guides les plus récemment vérifiés.',
-    gridTitle: 'Tous les guides',
+    gridTitle: 'La bibliothèque',
     read: 'Lire le guide',
     category: 'Catégorie',
     minutes: (n) => `${n} min de lecture`,
@@ -81,27 +75,22 @@ const LIB = Object.freeze({
     emptyBody: 'Essayez un autre mot, une autre catégorie, ou revenez à la bibliothèque complète.',
     reset: 'Réinitialiser les filtres',
     pathsTitle: 'Parcours guidés',
-    pathsDeck: 'Des guides déjà publiés, remis dans l’ordre où une décision se prend. Aucun contenu en double.',
+    pathsDeck: 'Les mêmes guides, lus dans l’ordre où la décision se prend.',
     step: (n) => `Étape ${n}`,
     pathLength: (n) => `${n} guides`,
     factGuides: 'Guides publiés', factLanguages: 'Langues', factUpdated: 'Dernière révision',
+    ctaDemo: 'Voir Kiwi sur votre restaurant',
   },
   en: {
     toolsLabel: 'Search and filter the guides',
     searchLabel: 'Search a guide',
     searchPlaceholder: 'Search a topic, a question or a guide…',
     searchHelp: 'Search covers titles, summaries, categories and keywords. It runs in your browser, with no account and nothing sent anywhere.',
-    goalsTitle: 'Start from the problem you need to solve',
-    goalsLabel: 'Entry points by goal',
-    categoriesLabel: 'Filter by category',
-    allCategories: 'All guides',
-    sortLabel: 'Sort',
-    sortRecommended: 'Recommended',
-    sortRecent: 'Most recent',
-    sortReading: 'Reading time',
-    featuredTitle: 'Read these first',
-    featuredDeck: 'The guides verified most recently.',
-    gridTitle: 'All guides',
+    goalsTitle: 'Start from the problem to solve',
+    goalsLabel: 'Filter the guides by problem',
+    allGoals: 'All guides',
+    featuredTitle: 'Start here',
+    gridTitle: 'The library',
     read: 'Read the guide',
     category: 'Category',
     minutes: (n) => `${n} min read`,
@@ -114,10 +103,11 @@ const LIB = Object.freeze({
     emptyBody: 'Try another word, another category, or go back to the full library.',
     reset: 'Reset filters',
     pathsTitle: 'Guided paths',
-    pathsDeck: 'Guides that are already published, put back in the order a decision actually gets made. Nothing is duplicated.',
+    pathsDeck: 'The same guides, read in the order the decision gets made.',
     step: (n) => `Step ${n}`,
     pathLength: (n) => `${n} guides`,
     factGuides: 'Published guides', factLanguages: 'Languages', factUpdated: 'Last reviewed',
+    ctaDemo: 'See Kiwi on your restaurant',
   },
   ar: {
     toolsLabel: 'ابحث في الأدلة وصنفها',
@@ -125,16 +115,10 @@ const LIB = Object.freeze({
     searchPlaceholder: 'ابحث عن موضوع أو سؤال أو دليل…',
     searchHelp: 'يشمل البحث العناوين والملخصات والتصنيفات والكلمات المفتاحية. يعمل داخل متصفحك، دون حساب ودون إرسال أي بيانات.',
     goalsTitle: 'ابدأ من المشكلة التي تريد حلها',
-    goalsLabel: 'مداخل حسب الهدف',
-    categoriesLabel: 'التصفية حسب التصنيف',
-    allCategories: 'كل الأدلة',
-    sortLabel: 'ترتيب',
-    sortRecommended: 'موصى بها',
-    sortRecent: 'الأحدث',
-    sortReading: 'زمن القراءة',
-    featuredTitle: 'ابدأ بهذه',
-    featuredDeck: 'الأدلة التي تمت مراجعتها حديثا.',
-    gridTitle: 'كل الأدلة',
+    goalsLabel: 'تصفية الأدلة حسب المشكلة',
+    allGoals: 'كل الأدلة',
+    featuredTitle: 'ابدأ من هنا',
+    gridTitle: 'المكتبة',
     read: 'اقرأ الدليل',
     category: 'التصنيف',
     minutes: (n) => `<bdi dir="ltr">${n}</bdi> دقيقة قراءة`,
@@ -147,10 +131,11 @@ const LIB = Object.freeze({
     emptyBody: 'جرب كلمة أخرى أو تصنيفا آخر، أو عد إلى المكتبة الكاملة.',
     reset: 'إعادة ضبط التصفية',
     pathsTitle: 'مسارات موجهة',
-    pathsDeck: 'أدلة منشورة بالفعل، أعيد ترتيبها حسب تسلسل القرار الحقيقي. دون أي تكرار للمحتوى.',
+    pathsDeck: 'الأدلة نفسها، مرتبة حسب تسلسل اتخاذ القرار.',
     step: (n) => `الخطوة <bdi dir="ltr">${n}</bdi>`,
     pathLength: (n) => `<bdi dir="ltr">${n}</bdi> أدلة`,
     factGuides: 'أدلة منشورة', factLanguages: 'اللغات', factUpdated: 'آخر مراجعة',
+    ctaDemo: 'شاهد Kiwi في مطعمك',
   },
 });
 
@@ -349,29 +334,22 @@ function loadFragment(cluster, locale) {
 }
 
 /* ── Bibliothèque · balisage généré ──────────────────────────────────────────
- * Les cartes, catégories, objectifs, mises en avant et parcours sont PRODUITS
- * depuis le manifeste, pas écrits à la main dans les trois fragments du hub.
- * C'est la seule façon de garantir que FR, EN et AR listent exactement les
- * mêmes guides : avant, chaque langue répétait deux paragraphes par article à
- * la main, et une page pouvait oublier un guide sans que rien ne le signale.
+ * Les cartes, objectifs, mises en avant et parcours sont PRODUITS depuis le
+ * manifeste, pas écrits à la main dans les trois fragments du hub. C'est la
+ * seule façon de garantir que FR, EN et AR listent exactement les mêmes
+ * guides.
  *
- * Le motif de chaque carte est purement géométrique : aucun mot, donc aucune
- * dette de traduction, et aucun chiffre qui pourrait se lire comme une
- * moyenne du marché. Son étiquette accessible réemploie `imageAlt`, déjà
- * rédigé et relu dans les trois langues. */
-const SCENE_PARTS = Object.freeze({
-  pos: 7, food: 1, stock: 3, menu: 4, breakEven: 4, openRestaurant: 3, loyalty: 3,
+ * Refonte d'octobre 2026 (audit design H4 à H10) : chaque guide apparaît UNE
+ * fois. Les guides mis en avant ouvrent la grille au lieu d'être répétés dans
+ * une section à part ; un seul filtre, par problème, remplace le doublon
+ * objectifs + catégories + tri ; les motifs abstraits cèdent la place à une
+ * icône Material Symbols par sujet, qui dit de quoi parle le guide. */
+const TOPIC_ICONS = Object.freeze({
+  pos: 'point_of_sale', food: 'calculate', stock: 'inventory_2', menu: 'menu_book',
+  breakEven: 'monitoring', openRestaurant: 'storefront', loyalty: 'favorite',
 });
 
-function cardScene(topic, locale, position) {
-  const page = topic.pages[locale];
-  const parts = '<i></i>'.repeat(SCENE_PARTS[topic.id] || 3);
-  const number = locale === 'ar'
-    ? `<bdi dir="ltr">${String(position).padStart(2, '0')}</bdi>`
-    : String(position).padStart(2, '0');
-  return `<span class="card-scene card-scene--${esc(topic.id)}" role="img" aria-label="${esc(page.imageAlt)}">`
-    + `<b>${number}</b><span class="scene-art">${parts}</span></span>`;
-}
+const icon = (name, extra = '') => `<i class="ms${extra ? ' ' + extra : ''}" aria-hidden="true" style="--ms:url(/assets/icons/material/${name}.svg)"></i>`;
 
 /* Le texte sur lequel porte la recherche. Il réunit ce que le visiteur voit
  * (titre, résumé, catégorie) et ce qu'il pourrait taper (rubrique éditoriale,
@@ -387,7 +365,7 @@ function searchHaystack(topic, locale, categoryLabel) {
   ].join(' ')).toLowerCase();
 }
 
-function guideCard(topic, locale, position, { featured = false } = {}) {
+function guideCard(topic, locale, position, { featured = false, lead = false } = {}) {
   const page = topic.pages[locale];
   const lib = LIB[locale];
   const route = topic.routes[locale];
@@ -399,56 +377,67 @@ function guideCard(topic, locale, position, { featured = false } = {}) {
   const freshened = modified !== published;
   const dateLabel = freshened ? lib.updated(formatDate(modified, locale)) : lib.published(formatDate(published, locale));
   const goals = (TOPIC_GOALS[topic.id] || []).join(' ');
-  const headingId = `card-${esc(topic.id)}${featured ? '-featured' : ''}`;
+  const headingId = `card-${esc(topic.id)}`;
+  const classes = ['guide-card', featured && 'guide-card--featured', lead && 'guide-card--lead'].filter(Boolean).join(' ');
 
-  return `<li class="guide-card${featured ? ' guide-card--featured' : ''}" data-guide`
+  return `<li class="${classes}" data-guide`
     + ` data-id="${esc(topic.id)}" data-category="${esc(category.id)}" data-goals="${esc(goals)}"`
     + ` data-modified="${esc(modified)}" data-reading="${minutes}" data-order="${position}"`
     + ` data-haystack="${esc(searchHaystack(topic, locale, categoryLabel))}">`
     + `<article aria-labelledby="${headingId}">`
     + `<a class="card-link" href="${esc(route)}" data-guide-link="${esc(topic.id)}">`
-    + cardScene(topic, locale, position)
+    + `<span class="card-top"><span class="card-icon" role="img" aria-label="${esc(page.imageAlt)}">${icon(TOPIC_ICONS[topic.id] || 'description')}</span>`
     + `<span class="card-category">${esc(categoryLabel)}</span>`
+    + (featured ? `<span class="card-flag">${esc(lib.featuredTitle)}</span>` : '')
+    + `</span>`
     + `<h3 class="card-title" id="${headingId}">${esc(page.ogTitle)}</h3>`
     + `<span class="card-summary">${esc(TOPIC_CARDS[topic.id][locale])}</span>`
-    + `<span class="card-meta"><time datetime="${esc(modified)}">${dateLabel}</time>`
+    + `<span class="card-meta"><span class="card-reading">${lib.minutes(minutes)}</span>`
     + `<span class="card-dot" aria-hidden="true"></span>`
-    + `<span class="card-reading">${lib.minutes(minutes)}</span></span>`
-    + `<span class="card-cta">${esc(lib.read)}<span class="arrow" aria-hidden="true">↗</span></span>`
+    + `<time datetime="${esc(modified)}">${dateLabel}</time>`
+    + `<span class="card-go">${icon('arrow_forward')}<span class="visually-hidden">${esc(lib.read)}</span></span></span>`
     + `</a></article></li>`;
+}
+
+/* La recherche et le filtre par problème vivent dans l'en-tête sombre du hub
+ * (jeton <!--GUIDES_SEARCH--> des fragments) : c'est la première chose qu'un
+ * visiteur voit, au lieu d'un premier guide relégué à 1 480 px sur iPhone. */
+function searchMarkup(locale) {
+  const lib = LIB[locale];
+  const goalPills = [
+    `<li><button type="button" class="goal-pill" data-goal="" aria-pressed="true">${esc(lib.allGoals)}</button></li>`,
+    ...GOALS.map((goal) => `<li><button type="button" class="goal-pill" data-goal="${esc(goal.id)}" aria-pressed="false">${esc(goal.labels[locale])}</button></li>`),
+  ].join('');
+  return `<div class="library-tools" data-library-tools role="search" aria-label="${esc(lib.toolsLabel)}">
+<div class="search-field"><label class="visually-hidden" for="guides-search">${esc(lib.searchLabel)}</label>
+${icon('search', 'search-icon')}
+<input type="search" id="guides-search" data-guides-search placeholder="${esc(lib.searchPlaceholder)}" autocomplete="off" spellcheck="false" aria-describedby="guides-search-help"></div>
+<p class="visually-hidden" id="guides-search-help">${esc(lib.searchHelp)}</p>
+<nav class="goal-rail" aria-labelledby="goals-title">
+<h2 class="rail-title" id="goals-title">${esc(lib.goalsTitle)}</h2>
+<ul class="goal-list" role="group" aria-label="${esc(lib.goalsLabel)}">${goalPills}</ul>
+</nav>
+</div>`;
 }
 
 function libraryMarkup(locale) {
   const lib = LIB[locale];
   const total = TOPICS.length;
-  const orderOf = new Map(TOPICS.map((topic, index) => [topic.id, index + 1]));
-
-  const goalPills = GOALS.map((goal) => `<li><button type="button" class="goal-pill" data-goal="${esc(goal.id)}" aria-pressed="false">${esc(goal.labels[locale])}</button></li>`).join('');
-
-  const categoryFilters = [
-    `<button type="button" class="filter-pill" data-category="all" aria-pressed="true">${esc(lib.allCategories)}</button>`,
-    ...CATEGORIES.map((category) => {
-      const count = TOPICS.filter((topic) => TOPIC_CATEGORY[topic.id] === category.id).length;
-      if (!count) return '';
-      return `<button type="button" class="filter-pill" data-category="${esc(category.id)}" aria-pressed="false">${esc(category.labels[locale])}</button>`;
-    }),
-  ].join('');
-
-  const featuredCards = FEATURED
-    .map((id) => TOPICS.find((topic) => topic.id === id))
-    .filter(Boolean)
-    .map((topic) => guideCard(topic, locale, orderOf.get(topic.id), { featured: true }))
-    .join('');
-
-  const cards = TOPICS.map((topic, index) => guideCard(topic, locale, index + 1)).join('');
+  /* Les guides mis en avant d'abord, le premier en grand, puis les autres dans
+   * l'ordre du manifeste : une seule liste, chaque guide une seule fois. */
+  const featured = FEATURED.map((id) => TOPICS.find((topic) => topic.id === id)).filter(Boolean);
+  const ordered = [...featured, ...TOPICS.filter((topic) => !FEATURED.includes(topic.id))];
+  const cards = ordered.map((topic, index) => guideCard(topic, locale, index + 1, {
+    featured: FEATURED.includes(topic.id), lead: index === 0,
+  })).join('');
 
   const paths = PATHS.map((path) => {
     const steps = path.steps.map((id, index) => {
       const topic = TOPICS.find((entry) => entry.id === id);
       if (!topic) return '';
-      const step = locale === 'ar' ? lib.step(index + 1) : esc(lib.step(index + 1));
+      const step = locale === 'ar' ? `<bdi dir="ltr">${index + 1}</bdi>` : String(index + 1);
       return `<li><a href="${esc(topic.routes[locale])}" data-path-link="${esc(path.id)}">`
-        + `<span class="path-step">${step}</span>`
+        + `<span class="path-step" aria-label="${esc(plainText(lib.step(index + 1)))}">${step}</span>`
         + `<span class="path-name">${esc(topic.pages[locale].ogTitle)}</span></a></li>`;
     }).join('');
     return `<li class="path-card"><h3>${esc(path.titles[locale])}</h3>`
@@ -457,36 +446,10 @@ function libraryMarkup(locale) {
       + `<p class="path-length">${lib.pathLength(path.steps.length)}</p></li>`;
   }).join('');
 
-  /* Les commandes vivent dans un conteneur que le JS révèle. Sans JavaScript,
-   * la grille complète, les mises en avant et les parcours restent servis et
-   * indexables : on cache des boutons inertes, jamais du contenu. */
   return `<div class="library" data-guides-library>
-<div class="library-tools" data-library-tools role="search" aria-label="${esc(lib.toolsLabel)}">
-<div class="search-field"><label class="visually-hidden" for="guides-search">${esc(lib.searchLabel)}</label>
-<span class="search-icon" aria-hidden="true"></span>
-<input type="search" id="guides-search" data-guides-search placeholder="${esc(lib.searchPlaceholder)}" autocomplete="off" spellcheck="false" aria-describedby="guides-search-help"></div>
-<p class="search-help" id="guides-search-help">${esc(lib.searchHelp)}</p>
-</div>
-<nav class="goal-rail" data-library-tools aria-labelledby="goals-title">
-<h2 class="rail-title" id="goals-title">${esc(lib.goalsTitle)}</h2>
-<ul class="goal-list">${goalPills}</ul>
-</nav>
-<div class="library-controls" data-library-tools>
-<div class="filter-group" role="group" aria-label="${esc(lib.categoriesLabel)}">${categoryFilters}</div>
-<div class="sort-field"><label for="guides-sort">${esc(lib.sortLabel)}</label>
-<select id="guides-sort" data-guides-sort>
-<option value="recommended">${esc(lib.sortRecommended)}</option>
-<option value="recent">${esc(lib.sortRecent)}</option>
-<option value="reading">${esc(lib.sortReading)}</option>
-</select></div>
-</div>
-<p class="library-count" data-guides-count role="status" aria-live="polite" data-count-total="${esc(lib.total(total))}" data-count-one="${esc(lib.filteredOne(total))}" data-count-many="${esc(lib.filteredMany(total))}">${lib.total(total)}</p>
-<section class="featured" aria-labelledby="featured-title">
-<div class="section-rule"><h2 id="featured-title">${esc(lib.featuredTitle)}</h2><p>${esc(lib.featuredDeck)}</p></div>
-<ol class="featured-grid">${featuredCards}</ol>
-</section>
 <section class="library-all" aria-labelledby="all-title">
-<div class="section-rule"><h2 id="all-title">${esc(lib.gridTitle)}</h2></div>
+<div class="section-rule"><h2 id="all-title">${esc(lib.gridTitle)}</h2>
+<p class="library-count" data-guides-count role="status" aria-live="polite" data-count-total="${esc(lib.total(total))}" data-count-one="${esc(lib.filteredOne(total))}" data-count-many="${esc(lib.filteredMany(total))}">${lib.total(total)}</p></div>
 <ol class="guide-grid" data-guides-grid>${cards}</ol>
 <div class="library-empty" data-guides-empty hidden>
 <p class="empty-title">${esc(lib.emptyTitle)}</p>
@@ -526,22 +489,47 @@ function alternateLinks(routes) {
   ].join('\n');
 }
 
+/* L'en-tête est celui de la landing (choix du propriétaire, octobre 2026 :
+ * « le même monde que la page d'accueil ») : bande noire, logo clair, barre
+ * centrale en verre avec la lentille liquide, « Se connecter », la démo en
+ * pastille claire et un menu de langue. Sur téléphone, la landing garde la
+ * langue et un menu ; on fait de même avec deux <details>, sans JavaScript,
+ * au lieu de cacher la navigation et la langue (audit H2).
+ *
+ * « Demander une démo » ouvre la feuille de la landing sur place
+ * (assets/landing-demo-funnel.js, chargé par la page, data-kiwi-demo) ; sans
+ * script, le lien mène à la landing qui l'ouvre à l'arrivée (?demo=1). */
 function header(locale, routes) {
   const ui = UI[locale];
   const languageLinks = PUBLISHED_LOCALES.map((code) => {
     const current = code === locale ? ' aria-current="true"' : '';
-    return `<a href="${esc(routes[code])}" hreflang="${code}" lang="${code}"${current}>${code.toUpperCase()}</a>`;
+    return `<a href="${esc(routes[code])}" hreflang="${code}" lang="${code}"${current}><b>${code.toUpperCase()}</b>${esc(UI[code].languageName)}</a>`;
   }).join('');
+  const links = [
+    [`/${locale}/#features`, ui.features], [`/${locale}/#security`, ui.security],
+    [`/${locale}/#pricing`, ui.pricing], [`/${locale}/guides/`, ui.guides, true],
+  ];
+  const lens = links.map(([href, label, on]) => `<a data-lens-item${on ? ' class="on"' : ''} href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`).join('');
+  const sheet = links.map(([href, label, on]) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`).join('');
+  const demo = (extra) => `<a class="button nav-demo${extra}" href="/${locale}/?demo=1" data-kiwi-demo>${esc(ui.demo)} <span class="arrow" aria-hidden="true">${icon('north_east')}</span></a>`;
 
   return `<header class="site-header">
     <div class="nav-shell">
-      <a class="brand" href="/${locale}/" aria-label="${esc(ui.brandLabel)}"><img src="/images/kiwi-logo-ink.svg" width="855" height="455" alt=""></a>
-      <nav class="nav-center" data-lens-demo aria-label="${esc(ui.navLabel)}">
-        <a data-lens-item href="/${locale}/#features">${esc(ui.features)}</a><a data-lens-item class="on" href="/${locale}/guides/" aria-current="page">${esc(ui.guides)}</a><a data-lens-item href="/${locale}/#pricing">${esc(ui.pricing)}</a><a data-lens-item href="/dashboard.html">${esc(ui.signIn)}</a>
-        <a class="button nav-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">${esc(ui.demo)} <span class="arrow" aria-hidden="true">↗</span></a>
-      </nav>
-      <div class="language-picker" role="group" aria-label="${esc(ui.languagePicker)}">${languageLinks}</div>
-      <a class="button mobile-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">${esc(ui.demo)} <span class="arrow" aria-hidden="true">↗</span></a>
+      <a class="brand" href="/${locale}/" aria-label="${esc(ui.brandLabel)}"><img src="/images/kiwi-logo.svg" width="855" height="455" alt=""></a>
+      <nav class="nav-center" data-lens-demo aria-label="${esc(ui.navLabel)}">${lens}</nav>
+      <div class="nav-end">
+        <a class="nav-signin" href="/dashboard.html">${esc(ui.signIn)}</a>
+        <span class="nav-rule" aria-hidden="true"></span>
+        ${demo('')}
+        <details class="language-menu">
+          <summary aria-label="${esc(ui.languagePicker)}"><span>${locale.toUpperCase()}</span>${icon('expand_more')}</summary>
+          <div class="menu-pop" role="group" aria-label="${esc(ui.languagePicker)}">${languageLinks}</div>
+        </details>
+        <details class="nav-menu">
+          <summary aria-label="${esc(ui.menu)}">${icon('menu', 'when-closed')}${icon('close', 'when-open')}</summary>
+          <div class="menu-pop menu-sheet"><nav aria-label="${esc(ui.navLabel)}">${sheet}<a href="/dashboard.html">${esc(ui.signIn)}</a></nav>${demo(' nav-demo--block')}</div>
+        </details>
+      </div>
     </div>
   </header>`;
 }
@@ -552,6 +540,7 @@ function header(locale, routes) {
  * page de guides sans sa bibliothèque. */
 const LIBRARY_PLACEHOLDER = '<!--GUIDES_LIBRARY-->';
 const FACTS_PLACEHOLDER = '<!--GUIDES_FACTS-->';
+const SEARCH_PLACEHOLDER = '<!--GUIDES_SEARCH-->';
 
 /* Le fait affiché dans l'en-tête est COMPTÉ, pas saisi : « 7 guides publiés »
  * vient de la longueur du manifeste et la date de la plus récente révision
@@ -600,20 +589,60 @@ function enrichArticle(cluster, locale, fragment) {
       + '<span class="byline-separator" aria-hidden="true"></span>'
       + `<span>${lib.minutes(minutes)}</span>$1</div>`);
   if (rebuilt === byline[0]) throw new Error(`${cluster.id}/${locale}: la durée de lecture est introuvable dans la signature`);
-  return fragment
+  return readableTables(fragment
     .replace(byline[0], rebuilt)
-    .replace(/<\/main>$/, articleSequence(cluster, locale) + '</main>');
+    .replace(/<\/main>$/, articleSequence(cluster, locale) + '</main>'));
+}
+
+/* Les tableaux, lisibles sur téléphone et alignés comme des chiffres (audit
+ * A1 et A3). Le générateur pose deux choses que le texte ne peut pas porter
+ * seul :
+ *   · `data-label` sur chaque cellule, recopié de l'en-tête de sa colonne :
+ *     sous 620 px chaque ligne devient une fiche « libellé · valeur » au lieu
+ *     d'un tableau de 620 px qui cachait sa dernière colonne hors de l'écran ;
+ *   · `class="num"` sur une colonne dont TOUTES les cellules sont des
+ *     montants, des pourcentages ou des quantités : alignée en fin de ligne,
+ *     en chiffres tabulaires, pour que les virgules se répondent. Une colonne
+ *     de formules (« 42 ÷ 0,80 = 52,50 MAD/kg ») reste du texte. */
+const NUMERIC_CELL = /^[+\-−]?\d[\d\s.,]*(?:\s?(?:%|MAD|DH|dirhams?|درهم|€))?(?:\s?\/\s?[\p{L}]+)?$/iu;
+function readableTables(fragment) {
+  return fragment.replace(/<table class="data-table">([\s\S]*?)<\/table>/g, (whole, inner) => {
+    const head = inner.match(/<thead>[\s\S]*?<\/thead>/);
+    if (!head) return whole;
+    const labels = [...head[0].matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/g)].map((m) => plainText(m[1]));
+    const rows = [...inner.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map((m) => m[1]).filter((row) => /<td\b/.test(row));
+    const numeric = labels.map((_, column) => rows.length > 0 && rows.every((row) => {
+      const cell = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)][column];
+      return cell && NUMERIC_CELL.test(plainText(cell[1]));
+    }));
+    const body = inner.replace(/<tr\b([^>]*)>([\s\S]*?)<\/tr>/g, (row, attrs, cells) => {
+      let column = -1;
+      const marked = cells
+        .replace(/<td\b([^>]*)>/g, (_, rest) => {
+          column += 1;
+          const cls = numeric[column] ? ' class="num"' : '';
+          return `<td${cls} data-label="${esc(labels[column] || '')}"${rest}>`;
+        });
+      column = -1;
+      return `<tr${attrs}>` + marked.replace(/<th\b([^>]*)>/g, (_, rest) => {
+        column += 1;
+        return numeric[column] ? `<th class="num"${rest}>` : `<th${rest}>`;
+      }) + '</tr>';
+    });
+    return `<table class="data-table">${body}</table>`;
+  });
 }
 
 function pageBody(cluster, locale) {
   const fragment = readFragment(cluster, locale);
   if (cluster.type === 'article') return enrichArticle(cluster, locale, fragment);
-  for (const token of [LIBRARY_PLACEHOLDER, FACTS_PLACEHOLDER]) {
+  for (const token of [LIBRARY_PLACEHOLDER, FACTS_PLACEHOLDER, SEARCH_PLACEHOLDER]) {
     if (!fragment.includes(token)) {
       throw new Error(`content/guides/pages/hub/${locale}.html doit contenir ${token}`);
     }
   }
   return fragment
+    .replace(SEARCH_PLACEHOLDER, searchMarkup(locale))
     .replace(FACTS_PLACEHOLDER, heroFacts(locale))
     .replace(LIBRARY_PLACEHOLDER, libraryMarkup(locale));
 }
@@ -745,6 +774,7 @@ ${alternateLinks(cluster.routes)}
   ${pageBody(cluster, locale)}
   ${localizeFooterAnchors(footer, locale)}
   <script src="/assets/liquid-lens.js" defer></script>
+  <script src="/assets/landing-demo-funnel.js" defer></script>
   <script src="/assets/articles/article.js?v=${ASSET_VERSIONS.js}" defer></script>${isArticle ? '' : `
   <script src="/assets/articles/guides-library.js?v=${ASSET_VERSIONS.library}" defer></script>`}
 </body>
