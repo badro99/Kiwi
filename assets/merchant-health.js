@@ -275,20 +275,34 @@
    * ART): a rounded --atlas panel, a --mint badge, --paper marks, rects and
    * circles only. The panel carries the real score as a ring and its number;
    * before there is one, the ring is empty and says nothing. */
+  /* The tile's illustration, drawn like its neighbours in the row (a dark
+   * object, one mint accent, a small mint badge): a gauge on a riad card, the
+   * arc filled to the score and the score inside it, the badge three rising
+   * bars for « how much of Kiwi is in use ». Rects and circles only. While
+   * loading or unreachable: the empty gauge, no number.
+   * The gauge uses the brand values themselves, not --riad / --paper /
+   * --mint: the dark skin turns the first two into translucent black and
+   * black (the drawing vanished into the card, 2026-10-12), and the light
+   * skin turns --mint into atlas, which left the arc unreadable on riad. A faint mint
+   * outline keeps its edge on a black card. */
   function art(score) {
-    const r = 19, len = 2 * Math.PI * r;
+    const R = 23, CX = 55, CY = 65, C = 2 * Math.PI * R, H = C / 2;
     const v = score == null ? 0 : Math.max(0, Math.min(100, score));
+    const RIAD = '#053B2C', PAPER = '#F7F5F0', MINT = '#7DF2B0';
+    const arc = (len, stroke, op) => `<circle cx="${CX}" cy="${CY}" r="${R}" stroke="${stroke}"${op ? ` stroke-opacity="${op}"` : ''} stroke-width="6.5" stroke-linecap="round" stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}" transform="rotate(180 ${CX} ${CY})"/>`;
+    const size = String(Math.round(v)).length > 2 ? 13 : 15.5;
     return `<svg viewBox="0 0 120 96" fill="none" aria-hidden="true" focusable="false">
-        <rect x="14" y="20" width="78" height="62" rx="12" fill="var(--atlas)"/>
-        <circle cx="53" cy="51" r="${r}" stroke="var(--paper)" stroke-opacity="0.24" stroke-width="6"/>
-        ${v > 0 ? `<circle cx="53" cy="51" r="${r}" stroke="var(--mint)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(len * v / 100).toFixed(2)} ${len.toFixed(2)}" transform="rotate(-90 53 51)"/>` : ''}
-        ${score == null ? '' : `<text x="53" y="51" text-anchor="middle" dominant-baseline="central" fill="var(--paper)" font-size="15" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(num(score))}</text>`}
-        <rect x="84" y="10" width="24" height="24" rx="8" fill="var(--mint)"/>
-        <rect x="93.5" y="15" width="5" height="14" rx="1.5" fill="var(--riad)"/>
-        <rect x="89" y="19.5" width="14" height="5" rx="1.5" fill="var(--riad)"/>
+        <rect x="16" y="24" width="78" height="60" rx="12" fill="${RIAD}" stroke="${MINT}" stroke-opacity="0.22"/>
+        ${arc(H, PAPER, '0.18')}
+        ${v > 0 ? arc(H * v / 100, MINT) : ''}
+        ${score == null ? '' : `<text x="${CX}" y="${CY - 6}" text-anchor="middle" dominant-baseline="central" fill="${PAPER}" font-size="${size}" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(num(score))}</text>`}
+        <rect x="${CX - 9}" y="${CY + 6}" width="18" height="4" rx="2" fill="${PAPER}" opacity="0.32"/>
+        <rect x="84" y="12" width="22" height="22" rx="7" fill="${MINT}"/>
+        <rect x="89" y="24" width="3" height="5" rx="1.5" fill="${RIAD}"/>
+        <rect x="93.5" y="20.5" width="3" height="8.5" rx="1.5" fill="${RIAD}"/>
+        <rect x="98" y="17" width="3" height="12" rx="1.5" fill="${RIAD}"/>
       </svg>`;
   }
-
 
   /* Does the tile take a slot in the row? Loading and ready, yes; down, only
    * for a real store (it is told plainly). The demo, down, gives the slot
