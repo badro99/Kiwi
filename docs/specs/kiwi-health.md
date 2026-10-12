@@ -1,7 +1,34 @@
-# Kiwi Health · inventaire des signaux (phase 0, à valider)
+# Kiwi Health · inventaire des signaux
 
-2026-10-12 · brouillon pour validation du propriétaire. Rien n'est construit tant
-que ce tableau et ses poids ne sont pas validés.
+2026-10-12 · **validé et construit.** Le propriétaire a pris les réponses par
+défaut aux quatre questions (en fin de document) le jour même.
+
+## Où ça vit
+
+- `functions/api/_merchant-health.js` · le calcul, pur (faits → score).
+- `functions/api/merchant-health.js` · `GET /api/merchant-health?merchant=`,
+  lecture seule, mise en cache deux minutes par établissement.
+- `assets/merchant-health.js` + `.css` · la carte « Santé Kiwi » de l'accueil,
+  entre la bande d'indicateurs et « Pour vous », et son tiroir « Tout voir ».
+- `tools/merchant-health-test.mjs` (route sur le schéma complet en SQLite) et
+  `tools/merchant-health-browser-test.mjs` (la carte dans le vrai dashboard).
+
+À ne pas confondre avec `assets/kiwi-health.js` / `kiwi-health.html`, la
+fenêtre « Santé de Kiwi » de la console opérateur, ni avec `/api/admin/health`.
+
+## Écarts assumés entre le tableau et la v1
+
+- R4 « Fiches recettes » : part des plats **de la carte** (actifs) dont la fiche
+  a au moins un ingrédient, pas encore la part des plats **vendus**.
+- S3 « Rendez-vous » : fiches `appointments` du document `workspaces` créées
+  dans la fenêtre (la caisse spa remet ses rendez-vous du jour à zéro).
+- H2 « Séjours suivis » : séjours non annulés commencés dans la fenêtre dont le
+  statut est passé à `checked_in` ou `completed`.
+- Les trois prochaines actions : les lignes au plus grand poids restant, à
+  égalité dans l'ordre du tableau ; seules celles qui ont une destination.
+- Démo : la carte lit le locataire de démonstration que le fil des ventes lit
+  déjà (`cafe-atlas` par défaut). Injoignable, la démo cache la carte ; un vrai
+  commerçant lit que Santé Kiwi est injoignable, jamais un chiffre.
 
 ## Ce que la carte mesure
 
@@ -21,7 +48,7 @@ paniers restent dans la bande d'indicateurs et n'entrent pas dans ce score.
   promotions…). Affiché comme suggestion une fois les lignes comptées faites,
   jamais compté contre le commerçant.
 - **Fenêtre** : 30 jours commerciaux (coupure 05:00, fuseau du commerce).
-- **Lecture** : une seule route `GET /api/health`, en lecture seule, bornée par
+- **Lecture** : une seule route `GET /api/merchant-health`, en lecture seule, bornée par
   `tenantFor()`, calculée au chargement du tableau de bord et mise en cache par
   commerce. Aucun nouveau polling. Elle ne lit jamais un document porteur de
   codes pour les renvoyer : le roster se compte dans `staff_pins` (`COUNT(*)`),
@@ -122,7 +149,7 @@ ce n'est pas vérifié.
 Kiwi Pay, Banking et Investing (phases 2–3). Terminaux et Conformité
 (coupés d'office, affaire de l'opérateur). Tout module coupé pour ce commerce.
 
-## Questions pour le propriétaire
+## Questions pour le propriétaire (tranchées le 2026-10-12 : réponses par défaut)
 
 1. Les poids ci-dessus (3 pour la caisse, 2 pour la carte, la salle, les
    recettes et le stock, 1 pour le reste) vous conviennent ?

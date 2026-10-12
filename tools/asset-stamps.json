@@ -272,8 +272,8 @@
     "sha": "a92246132e258dd0"
   },
   "assets/design-vexel.css": {
-    "v": "2120",
-    "sha": "393c866af8bf2363"
+    "v": "2121",
+    "sha": "72d92fccc48a0d64"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -542,6 +542,14 @@
   "assets/merchant-config.js": {
     "v": "278",
     "sha": "4ac165fb33ea7fab"
+  },
+  "assets/merchant-health.css": {
+    "v": "1",
+    "sha": "49d8d9f4f3a07edd"
+  },
+  "assets/merchant-health.js": {
+    "v": "1",
+    "sha": "6a33a682f1932ba1"
   },
   "assets/mobile-nav.js": {
     "v": "7",
@@ -1044,8 +1052,8 @@
     "sha": "9a3d1faca1ed4b90"
   },
   "assets/vexel-neon.js": {
-    "v": "2047",
-    "sha": "640ed8c4c8c5aec8"
+    "v": "2048",
+    "sha": "3dc74ec3714f8631"
   },
   "assets/z-reconciliation.js": {
     "v": "25",

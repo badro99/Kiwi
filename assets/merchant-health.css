@@ -1,0 +1,143 @@
+/* Santé Kiwi · la carte de l'accueil et son tiroir (assets/merchant-health.js).
+ * Préfixe mhc- : kh- appartient déjà au centre d'aide, aux horaires et à la
+ * fenêtre opérateur kiwi-health.css. La coquille de carte Vexel (surface, bord,
+ * rayon, ombre, survol, halo) vient de design-vexel.css, où la carte est
+ * inscrite dans les mêmes listes que ses voisines ; ici, seulement l'intérieur.
+ * Rien en italique, aucune nouvelle couleur : --atlas en clair, --mint en
+ * sombre (l'atlas disparaît sur le noir), --warning pour « en partie ». */
+
+.merchant-health-card {
+  --mhc-accent: var(--atlas, #0B6E4F);
+  --mhc-muted: var(--n-500, rgba(10, 15, 13, 0.56));
+  --mhc-line: var(--vx-card-border, rgba(10, 15, 13, 0.08));
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--mhc-line);
+  border-radius: var(--vx-card-radius, 18px);
+  background: var(--vx-card-bg, var(--paper, #F7F5F0));
+  color: inherit;
+  /* the Vexel cursor glow is a sprite larger than the card: its neighbours
+   * clip it the same way, or it widens the page on a phone */
+  overflow: hidden;
+}
+.merchant-health-card[hidden] { display: none !important; }
+html[data-theme="dark"] .merchant-health-card,
+body.design-vexel[data-vexel-mode="dark"] .merchant-health-card,
+html[data-theme="dark"] .mhc-drawer,
+body.design-vexel[data-vexel-mode="dark"] .mhc-drawer {
+  --mhc-accent: var(--mint, #7DF2B0);
+  --mhc-muted: var(--n-500, rgba(236, 247, 242, 0.6));
+  --mhc-line: var(--vx-card-border, rgba(236, 247, 242, 0.12));
+}
+
+.mhc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.mhc-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--mhc-muted);
+}
+.mhc-eyebrow svg { width: 16px; height: 16px; color: var(--mhc-accent); }
+.mhc-all {
+  border: 1px solid var(--mhc-line); background: transparent; color: inherit;
+  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+.mhc-all:hover { border-color: var(--mhc-accent); }
+.mhc-all:focus-visible, .mhc-go:focus-visible { outline: 2px solid var(--mhc-accent); outline-offset: 2px; }
+
+.mhc-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; }
+
+/* the score: a ring with the number in it */
+.mhc-score { position: relative; width: 96px; height: 96px; flex: none; }
+.mhc-ring { width: 96px; height: 96px; display: block; }
+.mhc-ring circle { fill: none; stroke-width: 7; }
+.mhc-ring-track { stroke: var(--mhc-line); }
+.mhc-ring-fill { stroke: var(--mhc-accent); stroke-linecap: round; transition: stroke-dasharray 600ms cubic-bezier(0.34, 1.45, 0.5, 1); }
+.mhc-score-num {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.mhc-score-num b { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; }
+.mhc-score-num small { margin-top: 4px; font-size: 10.5px; color: var(--mhc-muted); }
+
+.mhc-title { margin: 2px 0 4px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+.mhc-sub { margin: 0 0 12px; font-size: 12.5px; color: var(--mhc-muted); }
+.mhc-next-label { margin: 0 0 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mhc-muted); }
+.mhc-next { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mhc-next-row {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 8px 10px; border: 1px solid var(--mhc-line); border-radius: 12px;
+}
+.mhc-next-ico {
+  width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--mhc-accent) 12%, transparent); color: var(--mhc-accent);
+}
+.mhc-next-ico svg { width: 18px; height: 18px; }
+.mhc-next-text, .mhc-row-text { display: flex; flex-direction: column; min-width: 0; }
+.mhc-next-text strong, .mhc-row-text strong { font-size: 13.5px; font-weight: 600; }
+.mhc-next-text span, .mhc-row-text span { font-size: 12px; color: var(--mhc-muted); overflow-wrap: anywhere; }
+.mhc-go {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  border: 1px solid var(--mhc-line); background: transparent; color: inherit;
+  border-radius: 999px; padding: 6px 10px 6px 12px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
+  min-height: 32px; transition: border-color 160ms ease, color 160ms ease;
+}
+.mhc-go:hover { border-color: var(--mhc-accent); color: var(--mhc-accent); }
+.mhc-go svg { width: 16px; height: 16px; }
+[dir="rtl"] .mhc-go svg { transform: scaleX(-1); }
+.mhc-alldone { display: flex; gap: 8px; align-items: center; margin: 4px 0 0; font-size: 13px; }
+.mhc-alldone svg { width: 18px; height: 18px; color: var(--mhc-accent); flex: none; }
+
+.mhc-down { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; grid-template-columns: none; }
+.mhc-down p { margin: 0; font-size: 13px; color: var(--mhc-muted); }
+.mhc-down .mhc-go svg { transform: none; }
+
+/* loading: quiet bars, still under reduced motion */
+.mhc-loading { align-items: center; }
+.mhc-skel { display: block; border-radius: 8px; background: var(--mhc-line); animation: mhc-pulse 1.4s ease-in-out infinite; }
+.mhc-skel-ring { width: 96px; height: 96px; border-radius: 50%; }
+.mhc-skel-lines { display: grid; gap: 10px; }
+.mhc-skel-lines .mhc-skel { height: 12px; }
+.mhc-skel-lines .mhc-skel:nth-child(1) { width: 60%; height: 16px; }
+.mhc-skel-lines .mhc-skel:nth-child(2) { width: 85%; }
+.mhc-skel-lines .mhc-skel:nth-child(3) { width: 40%; }
+.mhc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@keyframes mhc-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .mhc-skel { animation: none; }
+  .mhc-ring-fill { transition: none; }
+}
+
+@media (max-width: 600px) {
+  .merchant-health-card { padding: 16px; }
+  .mhc-body { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .mhc-score { width: 80px; height: 80px; }
+  .mhc-ring { width: 80px; height: 80px; }
+  .mhc-score-num b { font-size: 24px; }
+  .mhc-loading { grid-template-columns: auto minmax(0, 1fr); }
+  .mhc-skel-ring { width: 80px; height: 80px; }
+}
+
+/* ── the drawer ── */
+.mhc-drawer { --mhc-accent: var(--atlas, #0B6E4F); --mhc-muted: var(--n-500, rgba(10, 15, 13, 0.56)); --mhc-line: var(--vx-card-border, rgba(10, 15, 13, 0.1)); display: grid; gap: 18px; align-content: start; }
+/* a page-wide `section { padding: 96px 0 }` reaches the drawer: the group
+ * is a <section> for its heading, its spacing is ours */
+.mhc-group { margin: 0; padding: 0; }
+.mhc-group h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.mhc-group h4 svg { width: 18px; height: 18px; color: var(--mhc-accent); }
+.mhc-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mhc-row {
+  display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 32px; gap: 10px; align-items: center;
+  padding: 9px 10px; border: 1px solid var(--mhc-line); border-radius: 12px;
+}
+.mhc-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--mhc-muted); }
+.mhc-row[data-mhc-state="done"] .mhc-dot { background: var(--mhc-accent); border-color: var(--mhc-accent); }
+.mhc-row[data-mhc-state="partial"] .mhc-dot { border-color: var(--warning, #9A5A00); background: linear-gradient(90deg, var(--warning, #9A5A00) 50%, transparent 50%); }
+[dir="rtl"] .mhc-row[data-mhc-state="partial"] .mhc-dot { background: linear-gradient(270deg, var(--warning, #9A5A00) 50%, transparent 50%); }
+.mhc-row[data-mhc-state="unmeasured"] .mhc-dot { border-style: dashed; }
+.mhc-row[data-mhc-state="unmeasured"] .mhc-row-text strong { font-weight: 500; }
+.mhc-badge { font-size: 11.5px; font-weight: 500; color: var(--mhc-muted); white-space: nowrap; }
+.mhc-row[data-mhc-state="done"] .mhc-badge { color: var(--mhc-accent); }
+.mhc-row .mhc-go { padding: 0; width: 32px; justify-content: center; }
+.mhc-go-gap { width: 32px; }
+.mhc-note { margin: 0 0 8px; font-size: 12px; color: var(--mhc-muted); }

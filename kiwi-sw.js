@@ -153,6 +153,8 @@ var SHELL = [
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=4',
+  '/assets/merchant-health.js?v=1',
+  '/assets/merchant-health.css?v=1',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=363',

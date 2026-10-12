@@ -1394,6 +1394,11 @@ section('Whole-project regressions');
        un changement de langue page ouverte garde le titre de la page. */
     'genpage-breadcrumb-language-test.mjs',
     'demo-morning-band-test.mjs',
+    /* Santé Kiwi : la route sur une vraie base (chiffres, « non mesuré » hors
+       score, module coupé, propriétaire seul, aucun code), puis la carte dans
+       le vrai dashboard.html en FR, EN et AR, clair et sombre, téléphone. */
+    'merchant-health-test.mjs',
+    'merchant-health-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page

@@ -4537,7 +4537,8 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2120" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2121" />
+<link rel="stylesheet" href="assets/merchant-health.css?v=1" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=11" />
@@ -4546,7 +4547,7 @@
 <!-- Home edge lighting · writes the cursor position that Layer G's glow
      follows. Deferred: it is decorative, and the CSS falls back to a top-edge
      glow if this never loads. -->
-<script src="assets/vexel-neon.js?v=2047" defer></script>
+<script src="assets/vexel-neon.js?v=2048" defer></script>
 <!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
 <link rel="stylesheet" href="assets/invoicing.css?v=8" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
@@ -5002,6 +5003,10 @@
         </button>
       </div>
       <div class="kpi-band" data-kpi-band></div>
+
+      <!-- ═══ SANTÉ KIWI · how much of Kiwi this store uses (assets/merchant-health.js,
+           GET /api/merchant-health). Hidden until it has something true to say. ═══ -->
+      <section class="merchant-health-card" data-merchant-health hidden aria-live="polite"></section>
 
       <!-- ═══ POUR VOUS · opportunity cards (assets/oppo-cards.js) ═══ -->
       <div class="oppo-band" data-oppo-band></div>
@@ -5495,6 +5500,7 @@
 <script src="assets/invoicing.js?v=9" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=4" defer></script>
+<script src="assets/merchant-health.js?v=1" defer></script>
 <script src="assets/insights.js?v=3" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js?v=1" defer></script>
