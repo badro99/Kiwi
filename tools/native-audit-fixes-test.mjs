@@ -169,6 +169,9 @@ await apiBaseAbort();
       ['Mouvement de caisse', 'Caisse actuelle', 'Montant', 'Achat fournisseur', 'Appoint monnaie', 'Mouvements ce service', 'Aucun mouvement enregistré.', 'Entrée de caisse', 'Sortie de caisse']
         .every((k) => lang.includes(`'${k}': [`)));
   }
+  check('nuit : « Carte » s’inverse au lieu de blanc sur presque blanc', /html\[data-caisse-theme="dark"\] #pay-card\.pay-icon \{ color: var\(--paper\); \}/.test(caisse));
+  check('nuit, téléphone et iPad : « Envoyer en cuisine » en menthe, pas en atlas sur charbon', /html\.kiwi-native\[data-caisse-theme="dark"\] body\.kiwi-native-till\[data-mode="vrap"\] #rp-send-kitchen\{color:#7DF2B0;/.test(runtimeCss));
+  check('iPad ancré : « Encaisser » au-dessus du montant, chacun sur une ligne', /kiwi-native-docked:not\(\.is-pos\):not\(#kno\) #pay-charge\{flex-direction:column;/.test(runtimeCss) && /kiwi-native-docked:not\(\.is-pos\):not\(#kno\) #pay-charge \.pay-charge-total\{white-space:nowrap;/.test(runtimeCss));
   check('plus de fond #FFFFFF froid sur les cartes du plan',!/\.tbl-cell\.is-designed \.tbl \{\s*border-color: rgba\(10,15,13,0\.12\);\s*background: #FFFFFF;/.test(caisse));
 }
 

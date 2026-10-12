@@ -2082,6 +2082,9 @@
     .mlibre-add[disabled] { opacity: .35; cursor: not-allowed; }
     .mlibre-add:not([disabled]):hover { transform: translateY(-1px); }
     #pay-card.pay-icon { background: var(--ink); }
+    /* Nuit : --ink devient clair et le blanc fixe de .pay-icon y tombait à
+       1,1:1, « Carte » disparaissait. Le bouton s'inverse : fond clair, texte sombre. */
+    html[data-caisse-theme="dark"] #pay-card.pay-icon { color: var(--paper); }
     .pay-split {
       background: var(--paper-mute);
       color: var(--ink-2);
