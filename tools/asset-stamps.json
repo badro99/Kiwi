@@ -416,8 +416,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "54",
-    "sha": "9e241e9ab4262287"
+    "v": "55",
+    "sha": "67b9ffa97e22ba80"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -1062,6 +1062,10 @@
   "assets/vexel-neon.js": {
     "v": "2049",
     "sha": "640ed8c4c8c5aec8"
+  },
+  "assets/view-link.js": {
+    "v": "1",
+    "sha": "d1b464561a457b9f"
   },
   "assets/z-reconciliation.js": {
     "v": "25",

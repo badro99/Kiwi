@@ -1256,8 +1256,12 @@ function authPage(opts) {
 
   fLogin.addEventListener('submit', function(e){
     e.preventDefault();
+    // Un lien de vue (assets/view-link.js, « #/finance?r=trenteJours ») reçu
+    // avant connexion survit à la connexion. Seule cette forme stricte est
+    // gardée : une page et une période, jamais autre chose.
+    var view = /^[/]dashboard/.test(location.pathname) && new RegExp('^#/[a-z][a-z0-9-]{1,30}([?]r=[a-zA-Z]{2,20})?$').test(location.hash) ? location.hash : '';
     post('/auth/login', { email: val('li-email'), password: val('li-pass') },
-         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard?lang=${lang}');
+         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard?lang=${lang}' + view);
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();

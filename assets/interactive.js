@@ -4733,6 +4733,8 @@ ar: {
   const setActivePage = (key) => {
     activePage = key || 'accueil';
     syncSidebar();
+    /* Le lien de vue (assets/view-link.js) recopie la page dans l'adresse. */
+    try { document.dispatchEvent(new CustomEvent('kiwi:page', { detail: { key: activePage } })); } catch (_) {}
     /* Home again, and the page that painted the crumb no longer owns <body>:
      * an appPage() page has no showDashboard() of its own to reset it, so
      * « Accueil / Réservations » stayed over the dashboard. */

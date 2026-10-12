@@ -1412,6 +1412,9 @@ section('Whole-project regressions');
     /* Le fil d'Ariane des pages Kiwi.appPage() : « Home » / « الرئيسية », et
        un changement de langue page ouverte garde le titre de la page. */
     'genpage-breadcrumb-language-test.mjs',
+    /* Le lien de vue : la page et la période dans l'adresse, rouvertes dans un
+       navigateur neuf et à travers la connexion, jamais un chiffre dedans. */
+    'view-link-browser-test.mjs',
     'demo-morning-band-test.mjs',
     /* Santé Kiwi : la route sur une vraie base (chiffres, « non mesuré » hors
        score, module coupé, propriétaire seul, aucun code), puis la carte dans
