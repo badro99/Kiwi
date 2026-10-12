@@ -1370,6 +1370,8 @@ section('Whole-project regressions');
     'pos-truth-a-test.mjs',
     'employee-truth-test.mjs',
     'serveur-kitchen-truth-test.mjs',
+    'kds-data-states-test.mjs',
+    'serveur-data-states-test.mjs',
     'retail-truth-test.mjs',
     'hotel-truth-test.mjs',
     'pressing-truth-test.mjs',

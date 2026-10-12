@@ -239,16 +239,60 @@
     }, false);
   }
 
-  /* Faire avancer un bon (prête, servie). Même route, même garde. */
+  /* ── Le passe ne doit jamais attendre une réponse qui ne vient pas ────────
+   * Le relevé et les gestes de la cuisine n'avaient aucun délai. Une seule
+   * requête restée pendue (wifi du sous-sol, portail captif, réseau natif qui
+   * ignorait l'annulation) gardait le verrou du sondage de kiwi-cuisine.html :
+   * plus aucun bon n'arrivait, et la pastille disait toujours « En ligne ».
+   * Chaque appel part maintenant avec un délai réel ; au-delà, il est coupé
+   * (AbortError) et compte comme un échec réseau, exactement comme un wifi
+   * tombé. Le temps est remis à zéro seulement quand la RÉPONSE entière est
+   * lue : un corps qui traîne est coupé lui aussi. */
+  var KITCHEN_TIMEOUT_MS = 8000;
+  function withTimeout(ms, run) {
+    var controller = (typeof AbortController === 'function' && typeof setTimeout === 'function')
+      ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, ms) : null;
+    var work;
+    try { work = Promise.resolve(run(controller ? controller.signal : undefined)); }
+    catch (e) { work = Promise.reject(e); }
+    return work.finally(function () { if (timer) clearTimeout(timer); });
+  }
+
+  /* Faire avancer un bon (prête, servie). Même route, même garde.
+   * Trois réponses, que kiwi-cuisine.html traite différemment :
+   *   · le JSON du serveur          le geste est arrivé ;
+   *   · { ok:false, final:true }    le serveur a RÉPONDU et refuse (transition
+   *                                 impossible, bon introuvable) : rejouer ne
+   *                                 changera rien, le prochain relevé dira la
+   *                                 vérité ;
+   *   · null                        rien n'est arrivé (réseau, délai, 5xx,
+   *                                 401/403 d'une caisse surchargée, 408/429,
+   *                                 ou un refus que le serveur marque
+   *                                 `retry: true`) : on garde le geste. */
   function bump(id, status, station) {
     var m = merchant();
     if (!m || !id) return Promise.resolve(null);
-    return fetch('/api/order/queue', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: m, id: id, status: status, station: station || '' }),
-      cache: 'no-store',
-    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    return withTimeout(KITCHEN_TIMEOUT_MS, function (signal) {
+      return fetch('/api/order/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: m, id: id, status: status, station: station || '' }),
+        cache: 'no-store',
+        signal: signal,
+      }).then(function (r) {
+        if (r.ok) return r.json();
+        var retryable = r.status < 400 || r.status >= 500
+          || r.status === 401 || r.status === 403 || r.status === 408 || r.status === 429;
+        if (retryable) return null;
+        return r.json().catch(function () { return null; }).then(function (j) {
+          /* Seul un refus EXPLICITE de notre API est final. Une page HTML
+             (route absente, portail captif) n'est pas une réponse du serveur. */
+          if (!j || !j.error || j.retry === true) return null;
+          return { ok: false, final: true, status: r.status, error: String(j.error) };
+        });
+      });
+    }).catch(function () { return null; });
   }
 
   /* Relever la file. `role: 'kitchen'` dit au serveur de NE PAS compter ce
@@ -259,9 +303,10 @@
     var u = '/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + (since || 0)
       + (role ? '&role=' + encodeURIComponent(role) : '')
       + (cursor ? '&cursor=' + encodeURIComponent(JSON.stringify(cursor)) : '');
-    return fetch(u, { headers: { Accept: 'application/json' }, cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+    return withTimeout(KITCHEN_TIMEOUT_MS, function (signal) {
+      return fetch(u, { headers: { Accept: 'application/json' }, cache: 'no-store', signal: signal })
+        .then(function (r) { return r.ok ? r.json() : null; });
+    }).catch(function () { return null; });
   }
 
   /* Advance the caller's `since` only after the whole window arrived. A
@@ -346,6 +391,7 @@
     pull: pull,
     pullAll: pullAll,
     pending: pending,
+    timeoutMs: KITCHEN_TIMEOUT_MS,
     voidLine: voidLine,
     ackVoid: ackVoid,
     reachable: function () { return !backendAbsent; },

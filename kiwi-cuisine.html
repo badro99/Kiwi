@@ -355,6 +355,53 @@
       .link.down { color: var(--danger-ink); }
     }
 
+    /* ── Ce que l'écran sait, et depuis quand ─────────────────────────────
+       Trois aveux que le passe ne faisait pas. Un tableau vide AVANT la
+       première réponse n'est pas une cuisine calme ; un tableau resté figé
+       hors ligne date de la dernière synchro, pas de maintenant ; et un geste
+       tapé sans réseau n'est pas encore connu de la caisse. Même encre
+       d'avertissement que les minuteurs « ça presse » : rien de nouveau dans
+       la palette. */
+    .stale {
+      flex-shrink: 0; padding: 9px 20px;
+      font-size: 13.5px; font-weight: 600; line-height: 1.35;
+      color: var(--warn-ink); background: var(--tint-warn);
+      border-bottom: 1px solid var(--line);
+    }
+    .sync-pending {
+      flex-shrink: 0; white-space: nowrap;
+      font-size: 12.5px; font-weight: 700; padding: 6px 11px; border-radius: 999px;
+      color: var(--warn-ink); background: var(--tint-warn);
+    }
+    .tk-unsynced {
+      display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+      margin: 10px 15px 0; padding: 5px 10px; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      color: var(--warn-ink); background: var(--tint-warn);
+    }
+    .tk-unsynced svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .empty.is-down { color: var(--danger-ink); }
+    .empty.is-wait svg, .empty.is-down svg { opacity: .85; }
+    /* Un geste abandonné ne disparaît pas en silence : la brigade doit le
+       lire, et le dire au comptoir. Il reste à l'écran jusqu'à « Compris ». */
+    .kds-notice {
+      position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 70;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 12px 12px 16px; border-radius: 15px;
+      background: var(--surface); color: var(--ink);
+      border: 2px solid var(--danger-ink);
+      box-shadow: 0 12px 32px rgba(0,0,0,.18);
+      font-size: 15px; font-weight: 600; line-height: 1.4;
+    }
+    .kds-notice[hidden] { display: none; }
+    .kds-notice svg { width: 24px; height: 24px; color: var(--danger-ink); flex-shrink: 0; }
+    .kds-notice span { flex: 1; min-width: 0; }
+    .kds-notice button {
+      min-height: 56px; padding: 0 20px; border-radius: 13px; flex-shrink: 0;
+      background: var(--fill-strong); color: var(--on-strong);
+      font-size: 15px; font-weight: 700;
+    }
+
     .bar {
       display: flex; align-items: center; gap: 9px; padding: 11px 20px;
       background: var(--surface); border-bottom: 1px solid var(--line);
@@ -492,11 +539,20 @@
       border-radius: var(--r-md);
       padding: 10px 12px;
       margin: 10px 13px 4px;
+      position: relative;
+    }
+    /* Le halo bat en opacité sur un pseudo-élément : animer box-shadow
+       repeignait le bandeau à chaque image, toute la soirée, sur une tablette
+       qui ne s'éteint jamais. L'opacité passe par le compositeur. */
+    .tk-void-banner::after {
+      content: ''; position: absolute; inset: -1.5px; border-radius: inherit;
+      box-shadow: 0 0 0 6px var(--tint-late);
+      opacity: 0; pointer-events: none; will-change: opacity;
       animation: tk-void-pulse 1.4s infinite ease-in-out;
     }
     @keyframes tk-void-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 var(--tint-late); }
-      50% { box-shadow: 0 0 0 6px transparent; }
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
     }
     /* Même raison que le point « hors ligne » : la pulsation est le signal
        d'urgence, et le mode « mouvement réduit » l'éteint. La bordure épaissit
@@ -681,6 +737,7 @@
     <div class="brand"><b data-i18n="app.name">Cuisine</b><span class="store" id="store-name"></span></div>
     <div class="spacer"></div>
     <span class="link" id="link"><i></i><span id="link-txt" data-i18n="link.wait">Connexion…</span></span>
+    <span class="sync-pending" id="sync-pending" role="status" hidden></span>
     <span id="void-error" role="alert" aria-live="assertive" hidden style="color:var(--danger-ink);font-weight:700;font-size:12px;"></span>
     <span class="clock" id="clock">--:--</span>
     <button class="tool" id="sound" data-i18n-attr="aria-label:tool.sound"></button>
@@ -692,6 +749,7 @@
   </header>
 
   <nav class="bar" id="bar" data-i18n-attr="aria-label:bar.aria"></nav>
+  <div class="stale" id="stale" role="status" aria-live="polite" hidden></div>
 
   <div class="coltabs" id="coltabs" role="tablist" data-i18n-attr="aria-label:cols.aria">
     <button class="st on" type="button" role="tab" aria-selected="true" data-col="new"><span data-i18n="col.new">Nouvelles</span><span class="ct" id="t-new">0</span></button>
@@ -712,6 +770,7 @@
       <div class="stack" id="s-pass"></div>
     </section>
   </div>
+  <div class="kds-notice" id="kds-notice" role="alert" hidden></div>
 </div>
 
 <!-- Le transport, partagé avec la caisse : même route, même garde, même
@@ -720,7 +779,7 @@
      un écran de cuisine qui plante au passe ne laissait aucune trace. -->
 <script src="assets/err-reporter.js?v=1"></script>
 <script src="assets/menu-i18n.js?v=5" defer></script>
-<script src="assets/kitchen-relay.js?v=10" defer></script>
+<script src="assets/kitchen-relay.js?v=11" defer></script>
 <!-- L'appairage, partagé avec la caisse. Une tablette du passe change de
      commerçant sans que personne ne se connecte — exactement comme une caisse —
      et doit donc oublier le commerce précédent de la même façon. Ces deux-là
@@ -762,7 +821,14 @@
 (function () {
   'use strict';
 
+  /* Le rythme. 5 s quand tout va bien ; en panne, le sondage s'espace
+     (5 → 10 → 20 → 30 s) pour ne pas vider une batterie à frapper un wifi
+     mort, et revient à 5 s dès la première réponse. Rien du tout tant que
+     l'écran est caché. L'interrupteur « écran cuisine » de /api/config ne
+     change presque jamais : une lecture par minute, plus une au retour. */
   var POLL_MS = 5000;
+  var POLL_MAX_MS = 30000;
+  var CONFIG_POLL_MS = 60000;
   var LATE_S = 900, WARN_S = 480;      // 15 min = en retard, 8 min = ça presse
   var STALE_MS = 6 * 60 * 60 * 1000;  // au-delà, le bon n'appartient plus à ce service
   var COOK_KEY = 'kiwiCuisineCookingV2'; // legacy local fallback; canonical progress now lives per line
@@ -778,6 +844,10 @@
     seenVoids: {},
     live: null,        // null = on n'a pas encore parlé au serveur
     muted: false,
+    loaded: false,     // le serveur a répondu au moins une fois dans cette page
+    lastOkAt: 0,       // heure du dernier relevé réussi
+    snapshotAt: 0,     // tableau repris du stockage, daté de sa dernière synchro
+    fails: 0,          // relevés ratés d'affilée (règle l'espacement)
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -814,6 +884,17 @@
       'link.wait': 'Connexion…',
       'link.up': 'En ligne',
       'link.down': 'Hors ligne',
+      'link.down.since': 'Hors ligne · dernière synchro {t}',
+      'stale.since': 'Hors ligne. Bons tels qu’au dernier contact avec le serveur, à {t}.',
+      'stale.snapshot': 'Bons de la dernière synchro, à {t}. Mise à jour en cours…',
+      'stale.never': 'Le serveur ne répond pas. Aucun bon reçu pour l’instant.',
+      'board.wait': 'Chargement des bons…',
+      'board.down': 'Serveur injoignable. Les bons s’afficheront au retour du réseau.',
+      'sync.pending': 'Pas encore synchronisé',
+      'sync.count': 'Non synchronisé · {n}',
+      'sync.ticket': 'bon {n} ({a})',
+      'sync.dropped': 'Jamais synchronisé, abandonné après {h} h : {list}. Prévenez la caisse.',
+      'notice.ok': 'Compris',
       'kds.off.title': 'Écran cuisine désactivé',
       'kds.off.body': 'L’écran cuisine est désactivé pour cet établissement. Demandez à votre responsable de le réactiver.',
       'tool.sound': 'Son des nouvelles commandes',
@@ -864,6 +945,17 @@
       'link.wait': 'Connecting…',
       'link.up': 'Online',
       'link.down': 'Offline',
+      'link.down.since': 'Offline · last sync {t}',
+      'stale.since': 'Offline. Tickets as of the last contact with the server, at {t}.',
+      'stale.snapshot': 'Tickets from the last sync, at {t}. Updating…',
+      'stale.never': 'The server is not answering. No tickets received yet.',
+      'board.wait': 'Loading tickets…',
+      'board.down': 'Server unreachable. Tickets will appear when the network is back.',
+      'sync.pending': 'Not synced yet',
+      'sync.count': 'Not synced · {n}',
+      'sync.ticket': 'ticket {n} ({a})',
+      'sync.dropped': 'Never synced, dropped after {h} h: {list}. Tell the counter.',
+      'notice.ok': 'Got it',
       'kds.off.title': 'Kitchen display turned off',
       'kds.off.body': 'The kitchen display is turned off for this venue. Ask your manager to turn it back on.',
       'tool.sound': 'Sound for new orders',
@@ -912,6 +1004,17 @@
       'link.wait': 'جارٍ الاتصال…',
       'link.up': 'متصل',
       'link.down': 'غير متصل',
+      'link.down.since': 'غير متصل · آخر مزامنة {t}',
+      'stale.since': 'غير متصل. الطلبات كما كانت عند آخر اتصال بالخادم، الساعة {t}.',
+      'stale.snapshot': 'طلبات آخر مزامنة، الساعة {t}. جارٍ التحديث…',
+      'stale.never': 'الخادم لا يستجيب. لم تصل أي طلبات بعد.',
+      'board.wait': 'جارٍ تحميل الطلبات…',
+      'board.down': 'تعذّر الوصول إلى الخادم. ستظهر الطلبات عند عودة الشبكة.',
+      'sync.pending': 'لم تتم المزامنة بعد',
+      'sync.count': 'لم تتم المزامنة · {n}',
+      'sync.ticket': 'الطلب {n} ({a})',
+      'sync.dropped': 'لم تتم المزامنة، أُلغي بعد {h} ساعات: {list}. أبلغ الكاشير.',
+      'notice.ok': 'حسنًا',
       'kds.off.title': 'شاشة المطبخ متوقفة',
       'kds.off.body': 'شاشة المطبخ متوقفة لهذه المنشأة. اطلب من المسؤول إعادة تشغيلها.',
       'tool.sound': 'صوت الطلبات الجديدة',
@@ -974,7 +1077,7 @@
     });
     var lb = $('lang');
     if (lb) lb.textContent = LANG_LABEL[l];
-    if (S.live !== null) $('link-txt').textContent = T(S.live ? 'link.up' : 'link.down');
+    $('link-txt').textContent = linkText();
     buf = '';
     drawPad();
     paint();
@@ -982,6 +1085,20 @@
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  /* Les lectures secondaires de cet écran (carte des postes, interrupteur
+     KDS) partent avec le même délai réel que la file (assets/kitchen-relay.js) :
+     une requête pendue ne doit rien tenir en otage. */
+  function fetchTimed(url, init) {
+    var ms = (window.KiwiKitchenRelay && KiwiKitchenRelay.timeoutMs) || 8000;
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var t = controller ? setTimeout(function () { controller.abort(); }, ms) : null;
+    var opts = {};
+    Object.keys(init || {}).forEach(function (k) { opts[k] = init[k]; });
+    if (controller) opts.signal = controller.signal;
+    return fetch(url, opts)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .finally(function () { if (t) clearTimeout(t); });
+  }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
@@ -1001,6 +1118,12 @@
     warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M10.3 3.9 1.8 18.4A2 2 0 0 0 3.5 21.4h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4.5"/><path d="M12 17.2h.01"/></svg>',
     sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></svg>',
     moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"/></svg>',
+    /* Les trois états de synchronisation : Material Symbols tels que vendus
+       dans assets/icons/material/ (schedule, wifi_off, warning), tracé intact,
+       remplis par currentColor. */
+    sync: '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z"/></svg>',
+    offline: '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M790-56 414-434q-47 11-87.5 33T254-346l-84-86q32-32 69-56t79-42l-90-90q-41 21-76.5 46.5T84-516L0-602q32-32 66.5-57.5T140-708l-84-84 56-56 736 736-58 56Zm-381-93.5Q380-179 380-220q0-42 29-71t71-29q42 0 71 29t29 71q0 41-29 70.5T480-120q-42 0-71-29.5ZM716-358l-29-29-29-29-144-144q81 8 151.5 41T790-432l-74 74Zm160-158q-77-77-178.5-120.5T480-680q-21 0-40.5 1.5T400-674L298-776q44-12 89.5-18t92.5-6q142 0 265 53t215 145l-84 86Z"/></svg>',
+    alert: '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5ZM440-360h80v-200h-80v200Zm40-100Z"/></svg>',
   };
 
   /* ── L'appairage ─────────────────────────────────────────────────────────── */
@@ -1059,12 +1182,19 @@
              bons « je m'en occupe » désignaient la cuisine d'un autre
              restaurant. La purge partagée emporte déjà COOK_KEY ; la mémoire
              vive de CETTE page, elle, n'appartient qu'à elle. */
-          onTenantSwitch: function () { S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; },
+          onTenantSwitch: function () {
+            S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {};
+            /* Les gestes en attente désignaient les bons de l'ANCIEN commerce :
+               ils restent rangés sous sa clé, ils ne partent pas chez le
+               nouveau. */
+            S.pendingBumps = {}; S.bumpsRestored = false;
+            resetBoardState();
+          },
         });
         if (!res || !res.ok) { padFail(T('pair.err.commit')); return; }
         /* Ré-appairage au MÊME commerce (on rebranche la même cuisine) : rien
            n'a été purgé, mais la file repart d'un état propre comme avant. */
-        if (!res.switched) { put(COOK_KEY, '[]'); S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; }
+        if (!res.switched) { put(COOK_KEY, '[]'); S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; resetBoardState(); }
         start();
       })
       .catch(function () { padFail(T('pair.err.net')); });
@@ -1098,9 +1228,12 @@
     // Le commerce appairé, comme la file (kitchen-relay.js) · voir ticket #0142.
     var m = (window.KiwiKitchenRelay && KiwiKitchenRelay.merchant && KiwiKitchenRelay.merchant()) || ((venue() || {}).merchant) || '';
     if (!m) return;
-    fetch('/api/menu?merchant=' + encodeURIComponent(m), { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
+    S.stationsAt = Date.now();
+    fetchTimed('/api/menu?merchant=' + encodeURIComponent(m), { cache: 'no-store' })
       .then(function (j) {
+        /* Injoignable : on garde ce qu'on a, et le sondage retentera. */
+        S.stationsOk = !!j;
+        if (!j) return;
         var st = (j && j.menu && j.menu.stations) || [];
         /* Les traductions de la carte : le passe affiche le libellé du chef,
            et sa traduction dessous quand l'écran est dans une autre langue. */
@@ -1120,8 +1253,21 @@
      brigade n'attend pas le réseau. Mais un appel perdu l'était pour de bon :
      le sondage ne relit que ce qui a CHANGÉ côté serveur, donc rien ne venait
      corriger l'écran, et la caisse n'apprenait jamais que le plat était prêt.
-     Un geste qui échoue reste en file et repart avant chaque sondage. */
-  var BUMP_TRIES = 40;
+     Un geste qui échoue reste en file et repart avant chaque sondage.
+
+     ── Abandonné à l'ÂGE, jamais au nombre d'essais ──────────────────────────
+     La file abandonnait un geste après 40 essais : à un sondage toutes les
+     5 s, « Prête » tapé dans une coupure de quatre minutes disparaissait
+     pendant que la carte, elle, restait « prête » à l'écran. Le serveur ne
+     l'apprenait jamais, et personne ne le savait. Un geste vit maintenant
+     aussi longtemps que son bon : STALE_MS (6 h), la même borne qui retire le
+     bon du tableau ici et que la file serveur applique (queue.js). Le bon est
+     forcément plus vieux que le geste qui le concerne ; passé STALE_MS, il a
+     quitté le passe et le service est fini, rejouer ne servirait plus à
+     personne. Un geste abandonné est alors ANNONCÉ à la brigade
+     (reportDroppedBumps), avec le numéro du bon : c'est elle qui préviendra
+     le comptoir. Tant qu'il attend, la carte porte « Pas encore
+     synchronisé ». */
   S.pendingBumps = {};
   /* La file vivait en mémoire seulement : une tablette qui perd le Wi-Fi,
      puis que iOS recycle ou que le cuisinier recharge, oubliait « Prête » et
@@ -1147,41 +1293,115 @@
     S.bumpsRestored = true;
     try {
       var saved = JSON.parse(localStorage.getItem(k) || '{}') || {};
+      var dropped = false;
       Object.keys(saved).forEach(function (key) {
         var j = saved[key];
-        if (j && j.id && j.status && (Date.now() - (Number(j.at) || 0)) < STALE_MS && !S.pendingBumps[key]) S.pendingBumps[key] = j;
+        if (!j || !j.id || !j.status || S.pendingBumps[key]) return;
+        if ((Date.now() - (Number(j.at) || 0)) < STALE_MS) {
+          /* Relu du stockage : par définition, le serveur ne l'a pas accusé. */
+          j.failed = true;
+          S.pendingBumps[key] = j;
+        } else {
+          (S.bumpsDropped || (S.bumpsDropped = [])).push(j);
+          dropped = true;
+        }
       });
+      if (dropped) saveBumps();
     } catch (_) {}
   }
   function sendBump(id, status, station) {
     var key = id + '|' + status + '|' + (station || '');
+    /* Un même geste ne part qu'une fois à la fois : le tap et le rejeu d'avant
+       sondage partageaient sinon deux requêtes pour la même transition. */
+    var flights = S.bumpFlights || (S.bumpFlights = {});
+    if (flights[key]) return flights[key];
     var job = S.pendingBumps[key] || { id: id, status: status, station: station || '', tries: 0, at: Date.now() };
-    job.tries++;
+    /* De quoi nommer le bon s'il faut un jour avouer qu'il n'est jamais parti. */
+    var known = S.orders && S.orders[id];
+    if (!job.ref && known) job.ref = { number: known.number, channel: known.channel, server: known.server, mode: known.mode };
+    job.tries = (Number(job.tries) || 0) + 1;
     S.pendingBumps[key] = job;
     saveBumps();
-    return KiwiKitchenRelay.bump(id, status, station).then(function (r) {
-      if (r && r.ok !== false) { delete S.pendingBumps[key]; saveBumps(); return true; }
-      if (job.tries >= BUMP_TRIES) { delete S.pendingBumps[key]; saveBumps(); }
-      setLive(false);
-      return false;
-    });
+    var flight = deliver();
+    flights[key] = flight;
+    flight.then(function () { if (flights[key] === flight) delete flights[key]; });
+    return flight;
+
+    function deliver() {
+      /* Un rejet (relais natif qui rejette une annulation) compte comme un
+         échec réseau : le geste reste en file, le vol se libère. */
+      return KiwiKitchenRelay.bump(id, status, station).catch(function () { return null; }).then(function (r) {
+        if (r && r.ok !== false) { delete S.pendingBumps[key]; saveBumps(); return true; }
+        if (r && r.final) {
+          /* Le serveur a RÉPONDU et refuse (transition déjà faite ailleurs, bon
+             annulé) : ce geste ne passera jamais. On l'oublie et on relit
+             toute la file, pour que l'écran dise ce que le serveur sait. */
+          delete S.pendingBumps[key]; saveBumps();
+          if (S.pulling) S.refetchAll = true; else S.since = 0;
+          return false;
+        }
+        job.failed = true;
+        if (Date.now() - (Number(job.at) || 0) >= STALE_MS) {
+          delete S.pendingBumps[key];
+          (S.bumpsDropped || (S.bumpsDropped = [])).push(job);
+        }
+        saveBumps();
+        setLive(false);
+        return false;
+      });
+    }
   }
   function flushBumps() {
     restoreBumps();
-    var jobs = Object.keys(S.pendingBumps).map(function (k) { return S.pendingBumps[k]; });
+    var now = Date.now(), dropped = false;
+    var jobs = [];
+    Object.keys(S.pendingBumps).forEach(function (k) {
+      var j = S.pendingBumps[k];
+      if (now - (Number(j && j.at) || 0) < STALE_MS) { jobs.push(j); return; }
+      delete S.pendingBumps[k];
+      (S.bumpsDropped || (S.bumpsDropped = [])).push(j);
+      dropped = true;
+    });
+    if (dropped) saveBumps();
     return Promise.all(jobs.map(function (j) { return sendBump(j.id, j.status, j.station); }));
   }
 
   /* ── La file ─────────────────────────────────────────────────────────────── */
   /* Un seul relevé à la fois : sur un réseau lent les sondages de 5 s
-     s'empilaient et leurs réponses pouvaient s'appliquer dans le désordre. */
+     s'empilaient et leurs réponses pouvaient s'appliquer dans le désordre.
+
+     ── LE VERROU QUI NE SE RENDAIT JAMAIS ────────────────────────────────────
+     Ce verrou se posait, puis attendait les gestes en file et la file elle-
+     même, sans aucun délai. Une seule requête pendue (wifi du sous-sol,
+     fetch natif sourd à l'annulation) et plus aucun bon n'entrait, pour
+     toujours, pendant que la pastille affichait « En ligne ». Désormais :
+       · chaque appel du relais est coupé à 8 s (assets/kitchen-relay.js) et
+         compte comme un échec, donc la pastille tombe ;
+       · le verrou se rend dans TOUS les cas, réussite, échec ou exception ;
+       · un relevé qui dépasse PULL_STALL_MS est déclaré mort : sa réponse
+         tardive est ignorée (génération), et un nouveau relevé part.
+     pull() rend la promesse du relevé qu'il lance (vrai = le serveur a
+     répondu), rien si un relevé est déjà en vol (S.pulling) : la boucle s'y
+     règle pour espacer ses tours quand rien ne répond. */
   function pull() {
+    if (S.pulling && Date.now() - (Number(S.pullAt) || 0) >= PULL_STALL_MS) {
+      S.pullGen = (Number(S.pullGen) || 0) + 1;   // sa réponse tardive sera ignorée
+      S.pulling = null;
+      pullFailed();                       // ce relevé-là ne répondra plus
+    }
     if (!window.KiwiKitchenRelay || S.pulling) return;
-    S.pulling = true;
-    flushBumps().then(function () {
+    /* Un geste refusé pendant un relevé a demandé une relecture complète :
+       elle part maintenant, curseur à zéro. */
+    if (S.refetchAll) { S.refetchAll = false; S.since = 0; }
+    var gen = (Number(S.pullGen) || 0) + 1;
+    S.pullGen = gen;
+    S.pullAt = Date.now();
+    var mine = function () { return S.pullGen === gen; };
+    var run = flushBumps().then(function () {
       return KiwiKitchenRelay.pullAll(S.since, 'kitchen');
     }).then(function (j) {
-      if (!j || !j.ok) { setLive(false); return; }
+      if (!mine()) return false;
+      if (!j || !j.ok) { pullFailed(); return false; }
       /* ── UNE BASE MUETTE N'EST PAS UNE CUISINE VIDE ─────────────────────
        * Quand toutes les lectures de la table `orders` échouent, l'API répond
        * 200 avec une liste vide et `ordersAvailable: false` · elle dit la
@@ -1192,14 +1412,37 @@
        * périmés · une panne de base effaçait les plats en cours de cuisson.
        * On sort AVANT d'avoir touché à quoi que ce soit : le tableau garde ce
        * qu'il a, et le bandeau dit que le lien est tombé. */
-      if (j.ordersAvailable === false) { setLive(false); return; }
-      setLive(true);
+      if (j.ordersAvailable === false) { pullFailed(); return false; }
       /* Premier tour après un chargement : on RELIT tout ce qui est encore
          ouvert, ce qui est exactement ce qu'on veut — mais ce n'est pas une
          arrivée. Sonner ici ferait carillonner la tablette à chaque
-         rechargement, en plein service, pour des bons déjà connus. */
-      var firstPass = S.since === 0;
-      S.since = j.now || S.since;
+         rechargement, en plein service, pour des bons déjà connus. Une
+         relecture complète DEMANDÉE plus tard (un geste refusé) n'est pas un
+         rechargement : un bon jamais vu y sonne normalement. */
+      var firstPass = !S.loaded;
+      /* Seule une réponse à since=0 est la liste complète. Le curseur ne
+         bouge pas pendant un relevé (un geste refusé en vol lève
+         S.refetchAll au lieu de le toucher) : S.since est donc ici le
+         curseur réellement demandé. La relecture demandée partira au tour
+         suivant. */
+      var fullRead = S.since === 0;
+      S.since = S.refetchAll ? 0 : (j.now || S.since);
+      S.refetchAll = false;
+      S.loaded = true;
+      S.fails = 0;
+      S.lastOkAt = Date.now();
+      S.snapshotAt = 0;                   // le tableau vient du serveur, plus du stockage
+      setLive(true);
+      /* Une relecture complète est la liste ENTIÈRE des bons ouverts. Ce qui
+         n'y figure pas (repris du stockage, rejeté ou réglé pendant la
+         coupure) n'est plus au passe. */
+      if (fullRead) {
+        var present = {};
+        (j.orders || []).forEach(function (o) { if (o && o.id) present[o.id] = 1; });
+        Object.keys(S.orders).forEach(function (id) {
+          if (!present[id]) { delete S.orders[id]; delete S.cooking[id]; }
+        });
+      }
       var fresh = 0;
       /* Le serveur ne renvoie plus les bons du service précédent. Une tablette
          restée ouverte les a toutefois déjà en mémoire : retire-les même
@@ -1237,11 +1480,114 @@
         }
         S.orders[o.id] = o;
       });
+      /* Un geste tapé ici et pas encore accusé reste vrai à l'écran, même si
+         le serveur renvoie le bon dans son état d'avant. */
+      applyPendingBumps();
       if (newVoidAlerts) announceVoid();
       else if (fresh) announce(fresh);
       saveCooking();
+      saveBoard();
       paint();
-    }).catch(function () { setLive(false); }).then(function () { S.pulling = false; });
+      return true;
+    }).catch(function () {
+      if (mine()) pullFailed();
+      return false;
+    }).then(function (ok) {
+      if (mine()) S.pulling = null;       // le verrou se rend, quoi qu'il arrive
+      reportDroppedBumps();
+      return ok;
+    });
+    S.pulling = run;
+    return run;
+  }
+
+  /* Au-delà, un relevé sans réponse est déclaré mort. Chaque appel du relais
+     est déjà coupé à 8 s ; ce filet ne sert que si l'annulation elle-même ne
+     passe pas. */
+  var PULL_STALL_MS = 45000;
+
+  function pullFailed() {
+    S.fails = (Number(S.fails) || 0) + 1;
+    setLive(false);
+    paint();
+  }
+
+  /* Rejoue sur le tableau les gestes encore en file : « Je prends », « Prête »
+     et « Remise au serveur » tapés hors ligne ne doivent pas s'effacer parce
+     que le serveur, qui ne les connaît pas encore, renvoie l'état d'avant.
+     Mêmes règles que les gestes eux-mêmes, plus bas. */
+  function applyPendingBumps() {
+    var jobs = S.pendingBumps || {};
+    Object.keys(jobs).forEach(function (key) {
+      var job = jobs[key];
+      var o = job && S.orders[job.id];
+      if (!o) return;
+      if (job.status === 'served') { delete S.orders[job.id]; delete S.cooking[job.id]; return; }
+      var lines = (o.lines || []).filter(function (l) { return l && (!job.station || l.station === job.station); });
+      if (job.status === 'cooking') lines.forEach(function (l) { l.stationAccepted = true; });
+      if (job.status === 'ready') {
+        lines.forEach(function (l) { l.stationReady = true; });
+        if ((o.lines || []).length && o.lines.every(function (l) { return l && l.stationReady === true; })) {
+          o.status = 'ready';
+          delete S.cooking[job.id];
+        }
+      }
+    });
+  }
+
+  /* Un geste abandonné (STALE_MS) est dit, avec le numéro du bon : la
+     brigade est la seule à pouvoir prévenir le comptoir. */
+  function reportDroppedBumps() {
+    var list = S.bumpsDropped;
+    if (!list || !list.length) return;
+    S.bumpsDropped = [];
+    var act = { cooking: 'act.take', ready: 'act.ready', served: 'act.served' };
+    var refs = list.map(function (j) {
+      var o = (j && S.orders[j.id]) || (j && j.ref);
+      return T('sync.ticket').replace('{n}', o ? ticketNo(o) : '?').replace('{a}', T(act[j && j.status] || 'act.ready'));
+    });
+    showNotice(T('sync.dropped').replace('{h}', String(Math.round(STALE_MS / 3600000))).replace('{list}', refs.join(', ')));
+  }
+
+  /* ── Le dernier tableau connu ───────────────────────────────────────────
+     Une tablette qui redémarre sans réseau s'ouvrait sur trois colonnes
+     vides : exactement l'image d'un service calme. On garde donc le dernier
+     tableau reçu, par commerce appairé (la clé porte le commerce, rien n'est
+     jamais effacé chez un autre), et il revient au démarrage, daté de sa
+     dernière synchro. */
+  var BOARD_SAVE_MS = 30000;
+  function boardKey() {
+    var m = (window.KiwiKitchenRelay && KiwiKitchenRelay.merchant && KiwiKitchenRelay.merchant()) || '';
+    return m ? 'kiwi:kitchen-board-v1:' + m : '';
+  }
+  function saveBoard() {
+    var k = boardKey(); if (!k) return;
+    var body = JSON.stringify(Object.keys(S.orders).map(function (id) { return S.orders[id]; }));
+    var now = Date.now();
+    /* Écrit quand le tableau change, et au moins toutes les 30 s pour que
+       l'heure de synchro annoncée au redémarrage reste juste. */
+    if (body === S.boardSaved && now - (Number(S.boardSavedAt) || 0) < BOARD_SAVE_MS) return;
+    try {
+      localStorage.setItem(k, '{"at":' + (Number(S.lastOkAt) || now) + ',"orders":' + body + '}');
+      S.boardSaved = body;
+      S.boardSavedAt = now;
+    } catch (_) { /* stockage plein : le service continue, seule la reprise à froid y perd */ }
+  }
+  function loadBoard() {
+    var k = boardKey(); if (!k) return false;
+    try {
+      var snap = JSON.parse(localStorage.getItem(k) || 'null');
+      if (!snap || !Array.isArray(snap.orders)) return false;
+      var now = Date.now(), n = 0;
+      snap.orders.forEach(function (o) {
+        if (!o || !o.id || S.orders[o.id]) return;
+        if (o.created_ts && now - o.created_ts > STALE_MS) return;
+        S.orders[o.id] = o;
+        n++;
+      });
+      if (n) S.snapshotAt = Number(snap.at) || 0;
+      return n > 0;
+    } catch (_) { return false; }
   }
 
   function setLive(up) {
@@ -1249,7 +1595,41 @@
     S.live = up;
     var el = $('link');
     el.className = 'link ' + (up ? 'ok' : 'down');
-    $('link-txt').textContent = T(up ? 'link.up' : 'link.down');
+    $('link-txt').textContent = linkText();
+    paintStatus();
+  }
+  /* « Hors ligne » seul ne dit pas depuis quand l'écran est figé. */
+  function linkText() {
+    if (S.live === null || S.live === undefined) return T('link.wait');
+    if (S.live) return T('link.up');
+    var at = S.lastOkAt || S.snapshotAt;
+    return at ? T('link.down.since').replace('{t}', hm(at)) : T('link.down');
+  }
+  /* Le bandeau sous les postes, et le compteur des gestes en attente. Ni l'un
+     ni l'autre ne porte de bouton : ils peuvent se réécrire sous le doigt. */
+  function paintStatus() {
+    var el = $('stale');
+    if (el) {
+      var at = S.lastOkAt || S.snapshotAt;
+      var msg = '';
+      if (S.live === false) msg = at ? T('stale.since').replace('{t}', hm(at)) : T('stale.never');
+      else if (!S.loaded && S.snapshotAt) msg = T('stale.snapshot').replace('{t}', hm(S.snapshotAt));
+      el.textContent = msg;
+      el.hidden = !msg;
+    }
+    var sp = $('sync-pending');
+    if (sp) {
+      var n = unsyncedIds().length;
+      sp.textContent = n ? T('sync.count').replace('{n}', String(n)) : '';
+      sp.hidden = !n;
+    }
+  }
+  /* Les gestes que le serveur n'a pas accusés après au moins un essai. Un tap
+     qui part et réussit dans la seconde ne fait jamais clignoter d'alerte. */
+  function unsyncedIds() {
+    var jobs = S.pendingBumps || {};
+    return Object.keys(jobs).filter(function (k) { return jobs[k] && jobs[k].failed; })
+      .map(function (k) { return jobs[k].id; });
   }
 
   /* Un bon qui arrive ne doit pas pouvoir passer inaperçu : personne ne
@@ -1425,16 +1805,45 @@
         + '</div></div>';
     }
 
+    /* Un geste fait ici que le serveur n'a pas encore accusé : la carte le
+       DIT, au lieu de laisser croire que la caisse le sait déjà. */
+    var unsynced = !!S.pendingBumps && Object.keys(S.pendingBumps).some(function (k) {
+      var job = S.pendingBumps[k];
+      return job && job.id === o.id && job.failed;
+    });
+    var syncTag = unsynced
+      ? '<div class="tk-unsynced" role="status">' + (SVG.sync || '') + '<span>' + esc(T('sync.pending')) + '</span></div>'
+      : '';
+
     return '<article class="tk ' + (kind === 'new' ? 'is-new' : kind === 'pass' ? 'pass' : '')
       + (u === 'over' && kind !== 'pass' ? ' is-late' : '') + '" data-tk="' + esc(o.id) + '">'
       + '<div class="tk-top"><span class="tk-no">' + esc(ticketNo(o)) + '</span>' + right + '</div>'
       + '<div class="tk-meta">' + whereChip(o)
       + (o.server ? '<span class="chip who">' + esc(o.server) + '</span>' : '') + '</div>'
+      + syncTag
       + '<ul class="tk-items">' + items + '</ul>' + voidBanner + act + '</article>';
   }
 
-  function emptyBox(msg) {
-    return '<div class="empty">' + SVG.empty + '<span>' + esc(msg) + '</span></div>';
+  function emptyBox(msg, kind) {
+    var icon = kind === 'down' ? SVG.offline : kind === 'wait' ? SVG.sync : SVG.empty;
+    return '<div class="empty' + (kind ? ' is-' + kind : '') + '">' + icon + '<span>' + esc(msg) + '</span></div>';
+  }
+  /* Avant la première réponse du serveur, une colonne vide ne prouve rien :
+     « Rien de neuf » n'est écrit qu'une fois la file réellement lue. */
+  function columnEmpty(key) {
+    if (S.loaded) return emptyBox(T(key));
+    return S.live === false ? emptyBox(T('board.down'), 'down') : emptyBox(T('board.wait'), 'wait');
+  }
+
+  /* ── Le message qui reste ───────────────────────────────────────────────── */
+  function showNotice(msg) {
+    var el = $('kds-notice');
+    if (!el) return;
+    S.notices = (S.notices || []).concat(msg).slice(-3);
+    el.innerHTML = SVG.alert + '<span>' + esc(S.notices.join(' ')) + '</span>'
+      + '<button type="button" data-notice-ok>' + esc(T('notice.ok')) + '</button>';
+    el.hidden = false;
+    try { if (navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch (_) {}
   }
 
   function stationBar() {
@@ -1471,26 +1880,67 @@
     }
   }
 
+  /* ── Repeindre seulement ce qui a changé, jamais sous le doigt ────────────
+     Le sondage reconstruisait les trois colonnes toutes les 5 s, même quand
+     rien n'avait bougé : une carte remplacée entre l'appui et le relâché
+     d'un cuisinier avalait son « Prête ». paint() compare maintenant une
+     signature de ce qu'il dessine et ne touche pas au DOM si elle est
+     identique ; et tant qu'un doigt est posé, la peinture attend son
+     relâché (puis le clic qui le suit) avant de passer. Les minuteurs, eux,
+     continuent de tourner en place (tickTimers). */
+  function boardSig() {
+    return JSON.stringify([
+      lang(), S.station, S.stations, S.loaded ? 'loaded' : S.live, unsyncedIds().sort(),
+      Object.keys(S.cooking).sort(),
+      Object.keys(S.orders).sort().map(function (id) { return S.orders[id]; }),
+    ]);
+  }
+  var POINTER_HOLD_MS = 8000;              // un relâché perdu ne gèle pas l'écran
+  function fingerDown() {
+    return !!S.pointerDown && Date.now() - (S.pointerDownAt || 0) < POINTER_HOLD_MS;
+  }
   function paint() {
+    paintStatus();
+    if (fingerDown()) { S.paintPending = true; return; }
+    var sig = boardSig();
+    if (sig === S.paintSig) return;
+    S.paintSig = sig;
+    S.paintPending = false;
     $('bar').innerHTML = stationBar();
     var n = group('new'), c = group('cook'), p = group('pass');
-    $('n-new').textContent = n.length;
-    $('n-cook').textContent = c.length;
-    $('n-pass').textContent = p.length;
-    $('t-new').textContent = n.length;
-    $('t-cook').textContent = c.length;
-    $('t-pass').textContent = p.length;
+    /* Un compteur à 0 avant la première réponse serait la même affirmation
+       que « Rien de neuf » : il attend lui aussi. */
+    var count = function (list) { return (!S.loaded && !list.length) ? '…' : list.length; };
+    $('n-new').textContent = count(n);
+    $('n-cook').textContent = count(c);
+    $('n-pass').textContent = count(p);
+    $('t-new').textContent = count(n);
+    $('t-cook').textContent = count(c);
+    $('t-pass').textContent = count(p);
     $('s-new').innerHTML = n.length ? n.map(function (o) { return card(o, 'new'); }).join('')
-      : emptyBox(T('empty.new'));
+      : columnEmpty('empty.new');
     $('s-cook').innerHTML = c.length ? c.map(function (o) { return card(o, 'cook'); }).join('')
-      : emptyBox(T('empty.cook'));
+      : columnEmpty('empty.cook');
     $('s-pass').innerHTML = p.length ? p.map(function (o) { return card(o, 'pass'); }).join('')
-      : emptyBox(T('empty.pass'));
+      : columnEmpty('empty.pass');
   }
+  document.addEventListener('pointerdown', function () {
+    S.pointerDown = true;
+    S.pointerDownAt = Date.now();
+  }, true);
+  ['pointerup', 'pointercancel'].forEach(function (type) {
+    document.addEventListener(type, function () {
+      S.pointerDown = false;
+      /* Après le clic : il part dans la même tâche que le relâché ou juste
+         derrière, et doit trouver le bouton qu'on a touché. */
+      if (S.paintPending) setTimeout(function () { if (S.paintPending && !fingerDown()) paint(); }, 50);
+    }, true);
+  });
 
   /* Les minuteurs seuls, sans reconstruire le DOM : repeindre une carte sous le
      doigt d'un cuisinier ferait rater le bump d'une seconde sur deux. */
   function tickTimers() {
+    if (document.hidden) return;          // personne ne regarde : rien à recalculer
     document.querySelectorAll('.tk[data-tk]').forEach(function (el) {
       var o = S.orders[el.dataset.tk];
       if (!o || o.status === 'ready') return;
@@ -1506,7 +1956,17 @@
   }
 
   /* ── Les gestes du passe ─────────────────────────────────────────────────── */
+  /* Un geste qui échoue doit montrer « Pas encore synchronisé » tout de suite,
+     pas au prochain sondage ; un geste réussi ne repeint rien (signature). */
+  function afterBump() { paint(); }
+
   document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-notice-ok]')) {
+      var notice = $('kds-notice');
+      S.notices = [];
+      if (notice) { notice.hidden = true; notice.innerHTML = ''; }
+      return;
+    }
     var voidAck = e.target.closest('[data-void-ack]');
     if (voidAck) {
       var vOrderId = voidAck.dataset.voidAck;
@@ -1553,7 +2013,7 @@
       });
       delete S.cooking[takeId];
       saveCooking(); paint();
-      sendBump(takeId, 'cooking', takeStation);
+      sendBump(takeId, 'cooking', takeStation).then(afterBump);
       return;
     }
     var rdy = e.target.closest('[data-ready]');
@@ -1579,15 +2039,18 @@
       }
       o.updated_ts = Date.now();
       saveCooking(); paint();
-      sendBump(id, 'ready', station);
+      sendBump(id, 'ready', station).then(afterBump);
       return;
     }
     var srv = e.target.closest('[data-served]');
     if (srv) {
       var sid = srv.dataset.served;
+      /* Le geste est posé AVANT que la carte quitte le tableau : il garde
+         ainsi le numéro du bon, à annoncer s'il ne passait jamais. */
+      var served = sendBump(sid, 'served');
       delete S.orders[sid];
       paint();
-      sendBump(sid, 'served');
+      served.then(afterBump);
       return;
     }
   });
@@ -1634,17 +2097,38 @@
     if (!navigator.wakeLock) return;
     navigator.wakeLock.request('screen').then(function (l) { lock = l; }).catch(function () {});
   }
+  /* Écran caché : aucun sondage (la boucle s'arrête d'elle-même). Retour :
+     le verrou d'écran, la file ET l'interrupteur KDS tout de suite. */
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') { keepAwake(); pull(); }
+    if (document.visibilityState === 'visible') {
+      keepAwake();
+      if (!paired()) return;
+      S.cfgAt = 0;
+      tick();
+    } else {
+      cancelTick();
+    }
+  });
+  /* Le réseau revient : on n'attend pas la fin de l'espacement. */
+  window.addEventListener('online', function () {
+    if (!paired() || document.hidden) return;
+    S.fails = 0;
+    tick();
+  });
+  /* Le système sait déjà que le wifi est tombé : la pastille aussi. */
+  window.addEventListener('offline', function () {
+    if (!paired()) return;
+    setLive(false);
+    paint();
   });
 
   function checkKdsFeature() {
+    S.cfgAt = Date.now();
     try {
       var v = venue();
       var slug = (v && (v.merchant || v.slug || v.venueId)) || '';
       if (!slug) return;
-      fetch('/api/config?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
-        .then(function (r) { return r.ok ? r.json() : null; })
+      fetchTimed('/api/config?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
         .then(function (cfg) {
           if (!cfg || !cfg.features) return;
           var off = cfg.features.kds === false;
@@ -1654,23 +2138,63 @@
     } catch (_) {}
   }
 
-  /* ── Démarrage ───────────────────────────────────────────────────────────── */
+  /* ── La boucle ───────────────────────────────────────────────────────────
+     Un setTimeout qui se réarme, au lieu d'un setInterval aveugle : le délai suit
+     ce qui vient de se passer. 5 s quand le serveur répond ; 10, 20 puis 30 s
+     d'affilée quand il ne répond plus ; rien quand l'écran est caché. */
+  function nextPollDelay(fails) {
+    var n = Math.max(0, Math.min(10, Number(fails) || 0));
+    return Math.min(POLL_MAX_MS, POLL_MS * Math.pow(2, n));
+  }
   var timer = null;
+  function cancelTick() {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  }
+  function scheduleTick(ms) {
+    cancelTick();
+    if (document.hidden || !paired()) return;
+    timer = setTimeout(tick, ms);
+  }
+  function tick() {
+    cancelTick();
+    if (document.hidden || !paired()) return;
+    var now = Date.now();
+    if (now - (S.cfgAt || 0) >= CONFIG_POLL_MS) checkKdsFeature();
+    if (!S.stationsOk && now - (S.stationsAt || 0) >= CONFIG_POLL_MS) loadStations();
+    /* Le filet : même si ce relevé ne revenait jamais, la boucle repart et
+       pull() le déclarera mort. */
+    scheduleTick(PULL_STALL_MS + 1000);
+    Promise.resolve(pull() || S.pulling).then(function () { scheduleTick(nextPollDelay(S.fails)); });
+  }
+
+  /* ── Démarrage ───────────────────────────────────────────────────────────── */
+  function resetBoardState() {
+    S.pullGen = (Number(S.pullGen) || 0) + 1;   // un relevé en vol ne s'appliquera pas
+    S.pulling = null;
+    S.loaded = false; S.lastOkAt = 0; S.snapshotAt = 0; S.fails = 0;
+    S.paintSig = ''; S.boardSaved = '';
+    S.live = null;
+    $('link').className = 'link';
+    $('link-txt').textContent = linkText();
+  }
   function start() {
-    if (!paired()) { $('pair').classList.add('on'); $('screen').hidden = true; drawPad(); return; }
+    if (!paired()) { cancelTick(); $('pair').classList.add('on'); $('screen').hidden = true; drawPad(); return; }
     $('pair').classList.remove('on');
     $('screen').hidden = false;
     var v = venue();
     if (v && v.name) $('store-name').textContent = v.name;
     loadCooking();
+    restoreBumps();
+    /* Redémarrage sans réseau : le dernier tableau connu, daté, plutôt que
+       trois colonnes vides. Le premier relevé réussi le remplace. */
+    if (!S.loaded && !Object.keys(S.orders).length) loadBoard();
     loadStations();
     paint();
     tickTimers();
     keepAwake();
-    checkKdsFeature();
-    pull();
-    if (timer) clearInterval(timer);
-    timer = setInterval(function () { pull(); checkKdsFeature(); }, POLL_MS);
+    S.cfgAt = 0;
+    tick();
   }
 
   function boot() {

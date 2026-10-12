@@ -1011,6 +1011,31 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       border-radius: 50%;
       display: inline-block;
     }
+    /* ── Données en retard ─────────────────────────────────────────────────
+       Une erreur de synchro était avalée : le plan de salle restait figé,
+       sans le dire, aussi longtemps qu'il fallait. Quand la dernière synchro
+       a échoué (ou date de plus de trois tours), la ligne sous le nom le dit,
+       avec l'heure, à la place du compteur de service. Rien quand tout est
+       frais. */
+    .tb-sync {
+      color: var(--danger-mute);
+      font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-width: 0;
+    }
+    body.sv-stale #tb-shift-meta { display: none; }
+    body.sv-stale .tb-dot { background: var(--danger-mute); }
+    /* Avant la première synchro, ou quand elle échoue : une ligne au-dessus
+       du plan, jamais une affirmation sur des tables « libres ». */
+    .floor-note {
+      display: flex; align-items: center; gap: 8px;
+      margin: 0 0 10px; padding: 9px 12px;
+      border-radius: var(--r-md);
+      background: var(--paper-mute); color: var(--ink-2);
+      font-size: 12.5px; font-weight: 600; line-height: 1.35;
+    }
+    .floor-note.is-down { color: var(--danger-mute); }
+    .floor-note svg, .tables-empty-icon svg.ms { width: 18px; height: 18px; flex: 0 0 18px; }
     .app-reload {
       width: 44px; height: 44px;
       flex: 0 0 44px;
@@ -1310,6 +1335,30 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .table-card[data-status="bgha-ykhlass"] {
       background: var(--urgent-bg);
       color: var(--urgent-ink);
+      /* Le contenu passe AU-DESSUS de la couche qui bat (voir ::before). */
+      isolation: isolate;
+    }
+    /* ── La pulsation, sans repeindre ──────────────────────────────────────
+       Elle animait `background-color` sur la carte même, à l'infini : sur un
+       téléphone allumé tout le service, c'était une repeinture complète de la
+       carte à chaque image. Le battement est maintenant une couche --pulse-hi
+       posée sur la carte, dont seule l'OPACITÉ varie : le compositeur s'en
+       charge seul, sans repeindre. Même sens, même rythme (2,4 s), mêmes deux
+       teintes (--pulse-lo dessous, --pulse-hi au sommet du battement). Avec
+       « mouvement réduit », la règle globale plus bas coupe l'animation : la
+       couche reste à opacité 0 et la carte garde son aplat --urgent-bg. */
+    @media (prefers-reduced-motion: no-preference) {
+      .table-card[data-status="bgha-ykhlass"] { background: var(--pulse-lo); }
+    }
+    .table-card[data-status="bgha-ykhlass"]::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: var(--pulse-hi);
+      opacity: 0;
+      z-index: -1;
+      pointer-events: none;
+      will-change: opacity;
       animation: urgent-pulse 2.4s ease-in-out infinite;
     }
     .table-card[data-status="ka-tkhdam"] {
@@ -1321,8 +1370,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       border: 2px solid var(--emerald);
     }
     @keyframes urgent-pulse {
-      0%, 100% { background-color: var(--pulse-lo); }
-      50%      { background-color: var(--pulse-hi); }
+      0%, 100% { opacity: 0; }
+      50%      { opacity: 1; }
     }
 
     .tc-num {
@@ -1379,16 +1428,37 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       margin-left: 4px;
     }
     .tc-arrow svg { width: 16px; height: 16px; }
+    /* Le point « ça réclame » : une onde qui part du point et s'efface. Elle
+       animait `box-shadow` (repeinture à chaque image) ; c'est maintenant un
+       disque --urgent-halo qui grandit (transform) et s'éteint (opacity), de
+       7 px à 17 px comme l'ancien halo de 5 px, sur le même 1,5 s. */
     .tc-pulse-dot {
+      position: relative;
       width: 7px; height: 7px;
       background: currentColor;
       border-radius: 50%;
+    }
+    .tc-pulse-dot::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: var(--urgent-halo);
+      opacity: 0;
+      pointer-events: none;
+      will-change: transform, opacity;
       animation: pulse-dot 1.5s infinite;
     }
+    .tc-pulse-dot.is-pending { background: var(--mint); }
+    .tc-pulse-dot.is-pending::after { background: rgba(125,242,176,0.35); }
     @keyframes pulse-dot {
-      0%   { box-shadow: 0 0 0 0 var(--urgent-halo); }
-      70%  { box-shadow: 0 0 0 5px transparent; }
-      100% { box-shadow: 0 0 0 0 transparent; }
+      0%   { transform: scale(1);    opacity: 1; }
+      70%  { transform: scale(2.43); opacity: 0; }
+      100% { transform: scale(2.43); opacity: 0; }
+    }
+    /* Mouvement réduit : plus d'onde, mais une commande OrderPro garde son
+       anneau fixe, comme avant (l'ancien style en ligne). */
+    @media (prefers-reduced-motion: reduce) {
+      .tc-pulse-dot.is-pending { box-shadow: 0 0 0 4px rgba(125,242,176,0.35); }
     }
 
     /* ===========================================================
@@ -1718,15 +1788,40 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       transition: width 400ms cubic-bezier(0.32, 0.72, 0, 1);
     }
 
-    /* Lancer la commande — pulses gently to attract attention when dirty */
+    /* Lancer la commande · bat doucement tant que la table a des lignes non
+       envoyées. Le battement animait `box-shadow` (repeinture de tout le
+       bouton à chaque image). L'ombre fixe reste sur le bouton ; l'ombre du
+       sommet du battement vit sur une couche ::after, peinte une fois, dont
+       seule l'opacité varie. */
     .td-btn.lancer-btn {
+      position: relative;
       box-shadow: 0 4px 12px rgba(63,182,122,0.28);
+    }
+    .td-btn.lancer-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      box-shadow: 0 4px 22px rgba(63,182,122,0.55), 0 0 0 6px rgba(63,182,122,0.10);
+      opacity: 0;
+      pointer-events: none;
+      will-change: opacity;
       animation: lancer-pulse 2.4s ease-in-out infinite;
     }
     @keyframes lancer-pulse {
-      0%, 100% { box-shadow: 0 4px 12px rgba(63,182,122,0.28); }
-      50%      { box-shadow: 0 4px 22px rgba(63,182,122,0.55), 0 0 0 6px rgba(63,182,122,0.10); }
+      0%, 100% { opacity: 0; }
+      50%      { opacity: 1; }
     }
+    /* L'envoi est en cours : le bouton le dit, et cesse de battre. */
+    .td-btn.lancer-btn.is-busy { cursor: progress; opacity: 1; }
+    .td-btn.lancer-btn.is-busy::after { animation: none; opacity: 0; }
+    .td-btn-spinner {
+      width: 16px; height: 16px; flex: 0 0 16px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      animation: td-spin 0.8s linear infinite;
+    }
+    @keyframes td-spin { to { transform: rotate(360deg); } }
 
     /* ===========================================================
        MENU TAB
@@ -1771,6 +1866,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .menu-banner svg { width: 18px; height: 18px; color: var(--ink-3); flex: 0 0 18px; }
     .menu-banner-text { flex: 1; font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+    .menu-banner.is-down svg,
+    .menu-banner.is-down .menu-banner-text { color: var(--danger-mute); }
 
     .cat-pills {
       display: flex; gap: 6px;
@@ -4176,6 +4273,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             <div class="tb-meta">
               <span class="tb-dot"></span>
               <span id="tb-shift-meta">En service · 0h 00</span>
+              <span class="tb-sync" id="tb-sync" role="status" aria-live="polite" hidden></span>
             </div>
           </div>
           <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
@@ -5134,6 +5232,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         ,'Approuvée':'Approved'
         ,'Refusée':'Rejected'
         ,'Annulée':'Cancelled'
+        ,'Hors ligne · pas encore synchronisé':'Offline · not synced yet'
+        ,'Chargement de la carte…':'Loading the menu…'
+        ,"Impossible de charger la carte. Elle s'affichera au retour du réseau.":'Could not load the menu. It will appear when the network is back.'
+        ,'Synchronisation des tables…':'Syncing tables…'
+        ,"Serveur injoignable · l'état des tables n'est peut-être pas à jour":'Server unreachable · table status may be out of date'
+        ,'Chargement des tables…':'Loading tables…'
+        ,'Le plan de salle arrive du serveur.':'The floor plan is coming from the server.'
+        ,'Serveur injoignable':'Server unreachable'
+        ,"Les tables s'afficheront au retour du réseau.":'Tables will appear when the network is back.'
+        ,'Aucune table dans le plan de salle':'No tables in the floor plan'
+        ,'Le responsable compose le plan de salle depuis le tableau de bord.':'A manager sets up the floor plan from the dashboard.'
+        ,'Envoi en cours…':'Sending…'
+        ,"Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.":'No network. The payment is not recorded, try again when the network is back.'
+        ,"Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.":'No network. The bill request was not sent, try again when the network is back.'
       },
       ar: {
         "Annulation déjà en attente de la cuisine": "الإلغاء بانتظار المطبخ",
@@ -5315,6 +5427,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         ,'Approuvée':'تمت الموافقة'
         ,'Refusée':'مرفوضة'
         ,'Annulée':'ملغاة'
+        ,'Hors ligne · pas encore synchronisé':'غير متصل · لم تتم المزامنة بعد'
+        ,'Chargement de la carte…':'جارٍ تحميل القائمة…'
+        ,"Impossible de charger la carte. Elle s'affichera au retour du réseau.":'تعذّر تحميل القائمة. ستظهر عند عودة الشبكة.'
+        ,'Synchronisation des tables…':'جارٍ مزامنة الطاولات…'
+        ,"Serveur injoignable · l'état des tables n'est peut-être pas à jour":'تعذّر الوصول إلى الخادم · قد لا تكون حالة الطاولات محدّثة'
+        ,'Chargement des tables…':'جارٍ تحميل الطاولات…'
+        ,'Le plan de salle arrive du serveur.':'مخطط القاعة قادم من الخادم.'
+        ,'Serveur injoignable':'تعذّر الوصول إلى الخادم'
+        ,"Les tables s'afficheront au retour du réseau.":'ستظهر الطاولات عند عودة الشبكة.'
+        ,'Aucune table dans le plan de salle':'لا توجد طاولات في مخطط القاعة'
+        ,'Le responsable compose le plan de salle depuis le tableau de bord.':'يُعِدّ المسؤول مخطط القاعة من لوحة التحكم.'
+        ,'Envoi en cours…':'جارٍ الإرسال…'
+        ,"Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.":'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'
+        ,"Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.":'لا توجد شبكة. لم يُرسَل طلب الفاتورة، أعد المحاولة عند عودة الشبكة.'
       }
     };
     let employeeLanguage = (() => {
@@ -5350,6 +5476,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       [/^(.+) annulé en cuisine$/, '$1 cancelled in the kitchen', 'أُلغي $1 في المطبخ'],
       [/^(.+) · fidélité mise à jour$/, '$1 · loyalty updated', '$1 · تم تحديث الوفاء'],
       [/^Erreur réseau : (.+)$/, 'Network error: $1', 'خطأ في الشبكة: $1'],
+      [/^Hors ligne · dernière mise à jour (\d{1,2}:\d{2})$/, 'Offline · last updated $1', 'غير متصل · آخر تحديث $1'],
+      [/^Table (.+?) · paiement non confirmé, réessayez$/, 'Table $1 · payment not confirmed, try again', 'الطاولة $1 · لم يتأكد الدفع، أعد المحاولة'],
+      [/^Table (.+?) · hors ligne · commande NON envoyée, réessayez$/, 'Table $1 · offline · order NOT sent, try again', 'الطاولة $1 · غير متصل · لم يُرسَل الطلب، أعد المحاولة'],
+      [/^Table (.+?) · pas de réponse du serveur · commande NON confirmée, réessayez$/, 'Table $1 · no answer from the server · order NOT confirmed, try again', 'الطاولة $1 · لا رد من الخادم · لم يتأكد الطلب، أعد المحاولة'],
+      [/^Table (.*?) · part (\d+) non confirmée, réessayez$/, 'Table $1 · share $2 not confirmed, try again', 'الطاولة $1 · لم يتأكد الجزء $2، أعد المحاولة'],
+      [/^Table (.*?) · part (\d+) non enregistrée, réessayez$/, 'Table $1 · share $2 not saved, try again', 'الطاولة $1 · لم يُسجَّل الجزء $2، أعد المحاولة'],
     ];
     function employeeTranslation(value) {
       if (employeeLanguage === 'fr') return value;
@@ -5879,25 +6011,74 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       return seen.join(' + ').toLowerCase();
     }
 
+    /* ── Une seule lecture de la carte à la fois, et pas deux de suite ──────
+     * La carte était demandée par le sondage du service (toutes les 6 s) ET
+     * par l'intervalle de 15 s ci-dessous, sans qu'aucun ne voie l'autre :
+     * deux téléchargements complets qui se chevauchaient. Une lecture en vol
+     * est désormais partagée, et une carte lue il y a moins de
+     * SV_CARTE_FRESH_MS n'est pas relue, sauf `force` (retour sur l'app,
+     * appairage). La lecture a un délai réel, et elle dit ce que la carte EST
+     * pour renderMenu : pas encore lue, lue et vide, ou injoignable. */
     function svFetchCarte() {
       if (SV_DEMO) return;
       const slug = svSlug();
       if (!slug) return;
-      return fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit', cache: 'no-store' })
+      if (svCarteFlight && svCarteFlight.slug === slug) return svCarteFlight.promise;
+      /* Écran éteint : personne ne lit la carte. Le retour à l'écran relit
+         tout de suite (svFetchCarteNow), inutile de réveiller la radio avant. */
+      if (svCarteAt && typeof document !== 'undefined' && document.hidden) return Promise.resolve(svCarteState === 'ok');
+      if (svCarteSlug === slug && Date.now() - svCarteAt < SV_CARTE_FRESH_MS) {
+        return Promise.resolve(svCarteState === 'ok');
+      }
+      if (svCarteSlug !== slug) svCarteState = 'loading';
+      const ctl = (typeof AbortController === 'function' && typeof setTimeout === 'function') ? new AbortController() : null;
+      const timer = ctl ? setTimeout(() => ctl.abort(), SV_CARTE_TIMEOUT_MS) : null;
+      const promise = fetch('/api/menu?merchant=' + encodeURIComponent(slug), {
+        credentials: 'omit', cache: 'no-store', signal: ctl ? ctl.signal : undefined,
+      })
         .then(r => (r.ok ? r.json() : null))
         .then((j) => {
-          const m = j && j.menu;
-          if (!m || !Array.isArray(m.items) || !m.items.length) return false;
+          if (!j) { svCarteState = 'error'; return false; }
+          const m = j.menu;
+          if (!m || !Array.isArray(m.items) || !m.items.length) {
+            /* `unreachable` : le serveur répond mais n'a pas pu lire sa base.
+               Ce n'est pas une carte vide. */
+            svCarteState = j.unreachable ? 'error' : 'empty';
+            return false;
+          }
           try { localStorage.setItem(SV_CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
           /* Paint from the response itself. The mirror is a best-effort offline
              copy, never a prerequisite for showing today's catalogue. */
-          return svApplyCarte(m);
+          const shown = svApplyCarte(m);
+          svCarteState = shown ? 'ok' : 'empty';
+          return shown;
         })
-        .catch(() => false);
+        .catch(() => { svCarteState = 'error'; return false; })
+        .then((shown) => {
+          if (timer) clearTimeout(timer);
+          svCarteAt = Date.now();
+          svCarteSlug = slug;
+          if (svCarteFlight && svCarteFlight.promise === promise) svCarteFlight = null;
+          /* Rien à montrer : l'écran doit passer de « chargement » à l'état
+             réel (vide ou injoignable), pas rester sur une promesse. */
+          if (!shown && !menuItems.length) { try { renderMenu(); } catch (_) {} }
+          return shown;
+        });
+      svCarteFlight = { slug, promise };
+      return promise;
     }
+    const SV_CARTE_FRESH_MS = 10000;
+    const SV_CARTE_TIMEOUT_MS = 10000;
+    let svCarteFlight = null, svCarteAt = 0, svCarteSlug = '';
+    let svCarteState = 'idle';      // idle | loading | ok | empty | error
+    /* Retour à l'écran, appairage : on veut la carte du moment, pas celle
+       d'il y a dix secondes. Une lecture déjà en vol est partagée. */
+    function svFetchCarteNow() { svCarteAt = 0; return svFetchCarte(); }
 
     /* Availability is an operational switch used during service. Keep the
-       employee catalogue in step with the cashier without forcing a reload. */
+       employee catalogue in step with the cashier without forcing a reload.
+       Deduplicated against the service poll above; svFetchCarte itself stays
+       silent while the screen is hidden. */
     if (typeof setInterval === 'function') {
       setInterval(() => { if (!SV_DEMO && svSlug()) svFetchCarte(); }, 15000);
     }
@@ -5931,6 +6112,43 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const svPendingRef = new Map();
     const svPendingBatches = new Map();
     const svSendFlights = new Map();
+    /* ── Aucun appel du service sans délai ─────────────────────────────────
+     * « Lancer », la demande d'addition, l'encaissement et le sondage
+     * partaient sans limite de temps : sur un wifi qui avale les paquets, le
+     * bouton restait grisé sans un mot, et le plan de salle se figeait en
+     * silence. Chaque appel passe maintenant par ici : un délai réel
+     * (AbortController), le corps JSON lu DANS ce délai, et une réponse à
+     * plat { ok, status, data }. Un délai dépassé rejette avec `timeout:
+     * true` ; une coupure réseau rejette telle quelle. Les deux sont des
+     * échecs réseau pour l'appelant, jamais une attente sans fin. */
+    const SV_NET_TIMEOUT_MS = 12000;
+    /* Un encaissement attend un peu plus qu'une lecture : /api/sale écrit le
+       registre et la table dans la même transaction. */
+    const SV_PAY_TIMEOUT_MS = 15000;
+    const SV_PAY_OFFLINE_MSG = "Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.";
+    function svFetchJson(url, init, ms) {
+      const ctl = (typeof AbortController === 'function' && typeof setTimeout === 'function') ? new AbortController() : null;
+      const timer = ctl ? setTimeout(() => ctl.abort(), ms || SV_NET_TIMEOUT_MS) : null;
+      const opts = Object.assign({}, init || {});
+      if (ctl) opts.signal = ctl.signal;
+      return fetch(url, opts)
+        .then((r) => r.json().catch(() => null).then((data) => ({ ok: !!r.ok, status: r.status, data })))
+        .catch((err) => {
+          if (ctl && ctl.signal.aborted) {
+            const timeout = new Error('timeout');
+            timeout.name = 'AbortError';
+            timeout.timeout = true;
+            throw timeout;
+          }
+          throw err;
+        })
+        .finally(() => { if (timer) clearTimeout(timer); });
+    }
+    /* Le système sait déjà qu'il n'y a pas de réseau : inutile d'attendre un
+       délai pour le dire. (navigator absent hors navigateur : on tente.) */
+    function svKnownOffline() {
+      return typeof navigator !== 'undefined' && navigator && navigator.onLine === false;
+    }
     function svPendingKey(id) {
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
       const operator = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
@@ -6045,6 +6263,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       'not-configured':     'service indisponible · commande NON envoyée',
       'no-merchant':        'aucun commerce appairé · commande NON envoyée',
       'offline':            'hors ligne · commande NON envoyée, réessayez',
+      'timeout':            'pas de réponse du serveur · commande NON confirmée, réessayez',
     };
     function serviceOrderInitials(name) {
       const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -6155,7 +6374,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
       const slug = svSlug();
       if (!slug) return Promise.resolve({ ok: false, error: 'no-merchant' });
-      return fetch('/api/order/queue', {
+      /* Le lot est déjà écrit (svWritePending) : sans réseau, on le dit tout
+         de suite au lieu d'attendre un délai ; il repartira au retour du
+         réseau avec la même référence (svDrainPendingBatches). */
+      if (svKnownOffline()) return Promise.resolve({ ok: false, error: 'offline' });
+      return svFetchJson('/api/order/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -6166,9 +6389,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           // Appending an independent ticket depends on the visit identity,
           // not seen_ts: every guest phone refreshes that heartbeat.
         }),
-      })
-        .then(r => r.json().catch(() => null).then(j => ({ status: r.status, j })))
-        .then(({ status, j }) => {
+      }, SV_SEND_TIMEOUT_MS)
+        .then(({ status, data: j }) => {
           if (status === 200 && j && j.ok) {
             /* Acknowledgement is per immutable line batch. A retry must not
                mark a newly-added line as sent merely because the ticket ref
@@ -6219,8 +6441,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }
           return { ok: false, error: (j && j.error) || ('http-' + status) };
         })
-        .catch(() => ({ ok: false, error: 'offline' }));
+        /* Délai dépassé : le serveur a peut-être reçu le lot. Le lot garde sa
+           référence, un nouvel essai sera reconnu comme le même envoi. */
+        .catch((err) => ({ ok: false, error: err && err.timeout ? 'timeout' : 'offline' }));
     }
+    /* « Lancer » ne reste jamais grisé sans fin : au-delà, la réponse est un
+       échec lisible et la commande reste à envoyer. */
+    const SV_SEND_TIMEOUT_MS = 12000;
     /* Serialize sends per table. A second tap shares the first promise; the
        first request drains any line added while its ACK was in flight, and no
        ACK can mutate a later pending batch. */
@@ -6840,21 +7067,21 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
              OrderPro session is still open lets the next queue poll reopen the
              table. The two requests used to race and the UI announced success
              without checking either one. */
-          const response = await fetch('/api/order/queue', {
+          const response = await svFetchJson('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service',
               expectedSession: serviceTableSessions.get(id) || '',
               expectedRevision: serviceTableSessionRevisions.get(id) || undefined }),
           });
-          closeData = await response.json().catch(() => null);
+          closeData = response.data;
           if (!response.ok || !closeData || !closeData.ok) {
             return { ok: false, error: (closeData && closeData.error) || ('close-' + response.status) };
           }
-        } catch (_) { return { ok: false, error: 'offline' }; }
+        } catch (err) { return { ok: false, error: err && err.timeout ? 'timeout' : 'offline' }; }
       }
       try {
-        const response = await fetch('/api/service/events', {
+        const response = await svFetchJson('/api/service/events', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ merchant, state: {
@@ -6865,15 +7092,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                une seconde vérité vivante. */
           } }),
         });
-        const data = await response.json().catch(() => null);
+        const data = response.data;
         return {
           ok: !!(response.ok && data && data.ok),
           error: response.ok ? (data && data.error) : ('state-' + response.status),
           unpaid: Number(closeData && closeData.unpaid) || 0,
           sessionClosed: !!closeData,
         };
-      } catch (_) {
-        return { ok: false, error: 'offline', sessionClosed: !!closeData,
+      } catch (err) {
+        return { ok: false, error: err && err.timeout ? 'timeout' : 'offline', sessionClosed: !!closeData,
           unpaid: Number(closeData && closeData.unpaid) || 0 };
       }
     }
@@ -6929,11 +7156,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const url = '/api/order/queue?merchant=' + encodeURIComponent(merchant)
           + '&since=' + encodeURIComponent(since) + '&role=service'
           + (cursor ? '&cursor=' + encodeURIComponent(JSON.stringify(cursor)) : '');
-        const response = await fetch(url, {
+        const response = await svFetchJson(url, {
           credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-        });
+        }, SV_POLL_TIMEOUT_MS);
         if (!response.ok) return null;
-        const data = await response.json();
+        const data = response.data;
         if (!data || !data.ok || data.ordersAvailable === false) return null;
         orders.push(...(Array.isArray(data.orders) ? data.orders : []));
         if (!data.nextCursor) return { ...data, orders };
@@ -7164,29 +7391,160 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!merchant) return;
       /* Every clocked-in role needs live attendance and manager messages. Only
          floor-service roles continue into orders, tables and KDS events. */
+      const restricted = !!activeRole.restricted;
       if (window.KiwiEmployeeLive) {
         KiwiEmployeeLive.refresh().then((data) => {
           applyEmployeeLive(data);
           activeRole = resolveRole('');
           applyRoleToMain();
           svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });
-        }).catch((err) => { if (err && err.status === 401) endRevokedSession(); });
+          /* Un rôle sans plan de salle n'a que cette lecture pour savoir s'il
+             est à jour. */
+          if (restricted) svSyncMark(true);
+        }).catch((err) => {
+          if (err && err.status === 401) { endRevokedSession(); return; }
+          if (restricted) svSyncMark(false);
+        });
       }
-      if (activeRole.restricted) return;
+      if (restricted) return;
       /* Menu edits made by the owner on another device reach the service app
-         on the same short live-sync cadence as orders and table events. */
+         on the same short live-sync cadence as orders and table events.
+         svFetchCarte shares an in-flight read and skips a fresh one. */
       try { svFetchCarte(); } catch (_) {}
-      fetch('/api/service/events?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceEventSince, {
+      /* ── Une erreur de synchro n'est plus avalée ───────────────────────────
+         Les deux lectures (événements de salle, puis file des commandes) ont
+         chacune un délai. Le tour ne compte comme une synchro réussie que si
+         les DEUX ont répondu ; sinon l'en-tête le dit (svSyncMark), avec
+         l'heure de la dernière mise à jour réelle. */
+      svFetchJson('/api/service/events?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceEventSince, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-      }).then((r) => r.ok ? r.json() : null).then((events) => {
-        if (merchant !== svSlug() || !shiftStart) return null;
+      }, SV_POLL_TIMEOUT_MS).then((r) => (r.ok ? r.data : null)).then((events) => {
+        if (merchant !== svSlug() || !shiftStart) return SV_POLL_SKIP;
         ingestServiceEvents(events);
-        return pollServiceOrders(merchant, serviceOrderSince);
-      }).then(ingestServiceOrders).catch(() => {});
+        return pollServiceOrders(merchant, serviceOrderSince).then((orders) => ({ events, orders }));
+      }).then((res) => {
+        if (res === SV_POLL_SKIP) return;
+        ingestServiceOrders(res.orders);
+        svSyncMark(!!(res.events && res.events.ok && res.orders && res.orders.ok));
+      }).catch(() => { svSyncMark(false); });
       servicePlanTick++;
       /* Team, schedule and floor assignments share this six-second live loop.
          Eighteen seconds was long enough for a newly assigned table to look
          broken during service even though the cloud write had succeeded. */
+    }
+
+    /* ── Ce que l'app sait, et depuis quand ──────────────────────────────────
+     * Les erreurs de synchro étaient avalées (`.catch(() => {})`) : sans
+     * réseau, le plan de salle restait figé, tables « libres » comprises, et
+     * rien ne le disait. svSync retient la dernière synchro RÉUSSIE ; les
+     * données sont « en retard » quand le dernier tour a échoué, quand le
+     * système se sait hors ligne, ou quand aucune synchro n'a réussi depuis
+     * trois tours. Alors, et seulement alors, l'en-tête l'écrit avec l'heure. */
+    const SV_POLL_TIMEOUT_MS = 10000;
+    const SV_POLL_SKIP = {};
+    const svSync = { lastOkAt: 0, failing: false, resumedAt: 0 };
+    function svSyncMark(ok) {
+      const wasFailing = svSync.failing;
+      if (ok) { svSync.lastOkAt = Date.now(); svSync.failing = false; }
+      else svSync.failing = true;
+      svRenderSyncStatus();
+      /* La ligne au-dessus du plan dépend de cet état : on la redessine quand
+         il change, sans attendre (et sans repeindre sous le doigt). */
+      if (wasFailing !== svSync.failing && currentTab === 'tables') {
+        svWhenIdle('tables', () => { try { renderTables(); } catch (_) {} });
+      }
+    }
+    function svSyncReset() {
+      svSync.lastOkAt = 0; svSync.failing = false; svSync.resumedAt = 0;
+      svRenderSyncStatus();
+    }
+    function svDataStale() {
+      if (SV_DEMO || !shiftStart || !liveEmployeeState) return false;
+      if (svKnownOffline() || svSync.failing) return true;
+      if (!svSync.lastOkAt) return false;          // premier tour en cours : la ligne des tables le dit
+      /* Un téléphone verrouillé ne sonde pas : on ne compte le silence qu'à
+         partir du retour à l'écran. */
+      const cadence = (window.KiwiLiveSocket && KiwiLiveSocket.live && KiwiLiveSocket.live()) ? SERVICE_SYNC_LIVE : SERVICE_SYNC_FAST;
+      const since = Math.max(svSync.lastOkAt, svSync.resumedAt || 0);
+      return Date.now() - since > cadence * 3 + SV_POLL_TIMEOUT_MS;
+    }
+    function svClock(ts) {
+      const d = new Date(ts);
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    function svRenderSyncStatus() {
+      const el = document.getElementById('tb-sync');
+      if (!el) return;
+      const stale = svDataStale();
+      document.body.classList.toggle('sv-stale', stale);
+      if (!stale) {
+        el.hidden = true;
+        if (el.dataset.fr) { el.dataset.fr = ''; el.textContent = ''; }
+        return;
+      }
+      /* Écrit en français ; l'observateur de langue le traduit (patron
+         « Hors ligne · dernière mise à jour HH:MM » dans EMPLOYEE_PATTERNS). */
+      const fr = svSync.lastOkAt
+        ? `Hors ligne · dernière mise à jour ${svClock(svSync.lastOkAt)}`
+        : 'Hors ligne · pas encore synchronisé';
+      if (el.dataset.fr !== fr) { el.dataset.fr = fr; el.textContent = fr; }
+      el.hidden = false;
+    }
+    window.addEventListener('online', () => { svRenderSyncStatus(); if (shiftStart && !SV_DEMO) { try { pollServiceSync(); } catch (_) {} } });
+    window.addEventListener('offline', () => {
+      svRenderSyncStatus();
+      if (currentTab === 'tables') svWhenIdle('tables', () => { try { renderTables(); } catch (_) {} });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      svSync.resumedAt = Date.now();
+      svRenderSyncStatus();
+      if (shiftStart && !SV_DEMO && liveEmployeeState) { try { pollServiceSync(); } catch (_) {} }
+    });
+    if (typeof setInterval === 'function') {
+      setInterval(() => { if (!document.hidden) svRenderSyncStatus(); }, 10000);
+    }
+
+    /* Matériel Symbols (assets/icons/material/schedule.svg, wifi_off.svg),
+       tracés intacts, remplis par currentColor. */
+    const SV_ICON_SYNC = '<svg class="ms" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z"/></svg>';
+    const SV_ICON_OFFLINE = '<svg class="ms" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M790-56 414-434q-47 11-87.5 33T254-346l-84-86q32-32 69-56t79-42l-90-90q-41 21-76.5 46.5T84-516L0-602q32-32 66.5-57.5T140-708l-84-84 56-56 736 736-58 56Zm-381-93.5Q380-179 380-220q0-42 29-71t71-29q42 0 71 29t29 71q0 41-29 70.5T480-120q-42 0-71-29.5ZM716-358l-29-29-29-29-144-144q81 8 151.5 41T790-432l-74 74Zm160-158q-77-77-178.5-120.5T480-680q-21 0-40.5 1.5T400-674L298-776q44-12 89.5-18t92.5-6q142 0 265 53t215 145l-84 86Z"/></svg>';
+
+    /* ── Le plan de salle avant sa première synchro ──────────────────────────
+       Le plan (les tables) arrive avec la session ; leur ÉTAT (occupée,
+       addition, libre) n'arrive qu'avec la première synchro. Avant, toutes les
+       tables s'affichaient « libres », ce qui est faux pendant le service :
+       une ligne le dit au-dessus du plan, et un plan vide distingue
+       « chargement », « injoignable » et « réellement vide ». */
+    function svFloorNoteHTML() {
+      if (SV_DEMO || !shiftStart || !liveEmployeeState || serviceCanonicalReady) return '';
+      if (activeRole && activeRole.restricted) return '';
+      if (!Object.keys(tables).length) return '';
+      return (svSync.failing || svKnownOffline())
+        ? `<div class="floor-note is-down" role="status">${SV_ICON_OFFLINE}<span>${esc(employeeTranslation("Serveur injoignable · l'état des tables n'est peut-être pas à jour"))}</span></div>`
+        : `<div class="floor-note" role="status">${SV_ICON_SYNC}<span>${esc(employeeTranslation('Synchronisation des tables…'))}</span></div>`;
+    }
+    function svFloorEmptyHTML() {
+      const floorKnown = SV_DEMO || !!(liveEmployeeState && liveEmployeeState.floor);
+      let icon, title, body;
+      if (floorKnown) {
+        icon = '<i data-lucide="layout-grid"></i>';
+        title = 'Aucune table dans le plan de salle';
+        body = 'Le responsable compose le plan de salle depuis le tableau de bord.';
+      } else if (svSync.failing || svKnownOffline()) {
+        icon = SV_ICON_OFFLINE;
+        title = 'Serveur injoignable';
+        body = "Les tables s'afficheront au retour du réseau.";
+      } else {
+        icon = SV_ICON_SYNC;
+        title = 'Chargement des tables…';
+        body = 'Le plan de salle arrive du serveur.';
+      }
+      return `<div class="tables-empty" role="status">
+        <div class="tables-empty-icon">${icon}</div>
+        <strong>${esc(employeeTranslation(title))}</strong>
+        <p>${esc(employeeTranslation(body))}</p>
+      </div>`;
     }
     /* Six secondes restent la cadence de référence : c'est elle qui tient
        partout tant que le concentrateur temps réel n'est pas déployé, et c'est
@@ -7290,6 +7648,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       serviceHistoryKey = '';
       serviceMineTables.clear();
       servicePausedTables.clear();
+      try { svSyncReset(); } catch (_) {}
     }
 
     /* A service login is an identity boundary, not just a different name in
@@ -7769,7 +8128,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       const displayTotal = total > 0 ? total : (pendingOrder ? pendingOrder.total : 0);
       const showAmount = displayTotal > 0;
-      const urgentDot = (t.status === 'bgha-ykhlass' || pendingOrder) ? `<span class="tc-pulse-dot"${pendingOrder ? ' style="background:var(--mint);box-shadow:0 0 0 4px rgba(125,242,176,0.35);"' : ''}></span>` : '';
+      const urgentDot = (t.status === 'bgha-ykhlass' || pendingOrder) ? `<span class="tc-pulse-dot${pendingOrder ? ' is-pending' : ''}"></span>` : '';
       const orderProBadge = pendingOrder ? `<span class="tc-orderpro-badge" style="font-size:9.5px;font-weight:700;letter-spacing:0.04em;color:var(--forest-deep);background:var(--mint);padding:2px 7px;border-radius:6px;margin-left:6px;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="smartphone" style="width:11px;height:11px;"></i>OrderPro</span>` : '';
       const serverInfo = t.server && servers[t.server];
       const serverChip = (opts.showServer && t.server !== currentUser && serverInfo)
@@ -7836,7 +8195,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       Object.keys(counts).forEach(key => { const el = document.querySelector(`[data-filter-count="${key}"]`); if (el) el.textContent = counts[key]; });
 
       const wrap = $('#tables-zones');
-      wrap.innerHTML = currentScope === 'mine' ? renderOwnTables() : renderAllTables();
+      /* Plan vide : « chargement », « injoignable » ou « réellement vide »,
+         jamais la boîte « modifiez le filtre » quand il n'y a rien à filtrer. */
+      wrap.innerHTML = !Object.keys(tables).length
+        ? svFloorEmptyHTML()
+        : svFloorNoteHTML() + (currentScope === 'mine' ? renderOwnTables() : renderAllTables());
       lucide.createIcons();
     }
 
@@ -8367,8 +8730,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         }
 
         /* Le bouton se verrouille le temps de l'aller-retour — sans cela un
-           serveur pressé tape deux fois et part avant la réponse. */
+           serveur pressé tape deux fois et part avant la réponse. Il DIT
+           aussi qu'il travaille : un bouton simplement grisé, sur un wifi
+           lent, se lisait comme une app plantée. L'envoi a un délai
+           (SV_SEND_TIMEOUT_MS) ; au-delà, l'échec est annoncé et la commande
+           reste à envoyer. */
         btn.disabled = true;
+        btn.classList.add('is-busy');
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = `<span class="td-btn-spinner" aria-hidden="true"></span> ${esc(employeeTranslation('Envoi en cours…'))}`;
         svSendOrder(sentId).then((res) => {
           /* Rien n'est parti : on ne dit PAS « commande envoyée ». Le drapeau
            * « non envoyée » reste, le serveur reste sur la table. Annoncer la
@@ -8403,6 +8773,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       } else if (action === 'ask-bill') {
         const t = tables[activeTableId];
         const id = activeTableId;
+        /* Sans réseau, la demande ne peut pas partir : on le dit tout de suite,
+           sans basculer la table, plutôt que d'attendre un délai. */
+        if (!SV_DEMO && svKnownOffline()) {
+          toast("Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.", 5200);
+          return;
+        }
         const previousStatus = t.status;
         t.status = 'bgha-ykhlass';
         t.elapsed = 0;
@@ -8413,7 +8789,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (!result.ok) {
           t.status = previousStatus;
           renderTableDetail();
-          toast(`Table ${id} · addition non transmise, réessayez`, 5200);
+          toast(result.error === 'offline'
+            ? "Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau."
+            : `Table ${id} · addition non transmise, réessayez`, 5200);
           return;
         }
         toast(`Addition demandée pour ${id}`);
@@ -9200,6 +9578,25 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       lucide.createIcons();
     }
 
+    /* ── Une carte vide n'est pas une carte pas encore arrivée ─────────────
+       « Carte pas encore composée » s'affichait AVANT la première réponse,
+       et aussi quand le serveur était injoignable : le serveur lisait qu'il
+       n'y avait rien à vendre. Trois états désormais : en chargement,
+       injoignable, et réellement vide (le serveur a répondu sans plat). */
+    function svMenuEmptyHTML() {
+      const state = SV_DEMO ? 'empty' : svCarteState;
+      if (state === 'empty' || state === 'ok') {
+        return '<div class="menu-banner"><div class="menu-banner-text">Carte pas encore composée. ' +
+          'Ajoutez vos catégories et vos plats depuis le tableau de bord · <b>Menu</b>.</div></div>';
+      }
+      if (state === 'error' || svKnownOffline()) {
+        return '<div class="menu-banner is-down" role="status">' + SV_ICON_OFFLINE
+          + '<div class="menu-banner-text">' + esc(employeeTranslation("Impossible de charger la carte. Elle s'affichera au retour du réseau.")) + '</div></div>';
+      }
+      return '<div class="menu-banner" role="status">' + SV_ICON_SYNC
+        + '<div class="menu-banner-text">' + esc(employeeTranslation('Chargement de la carte…')) + '</div></div>';
+    }
+
     function renderCatPills() {
       const counts = { all: menuItems.length };
       menuItems.forEach(m => { counts[m.cat] = (counts[m.cat] || 0) + 1; });
@@ -9218,9 +9615,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     function renderMenu() {
       if (!menuItems.length) {
-        $('#menu-grid').innerHTML =
-          '<div class="menu-banner"><div class="menu-banner-text">Carte pas encore composée. ' +
-          'Ajoutez vos catégories et vos plats depuis le tableau de bord · <b>Menu</b>.</div></div>';
+        $('#menu-grid').innerHTML = svMenuEmptyHTML();
         return;
       }
       const rawItems = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
@@ -10756,6 +11151,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         toast(`Table ${id} · paiement impossible`, 4200);
         return false;
       }
+      /* Hors ligne connu : échec immédiat, la table revient à « addition
+         demandée », rien n'est écrit. */
+      if (svKnownOffline()) {
+        if (t.status === 'ka-tkhdam') t.status = 'bgha-ykhlass';
+        if (currentTab === 'tables') renderTables();
+        if (activeTableId === id) renderTableDetail();
+        toast(SV_PAY_OFFLINE_MSG, 6000);
+        return false;
+      }
       employeePaymentsInFlight.add(id);
       const previousStatus = t.status;
       t.status = 'ka-tkhdam';
@@ -10768,10 +11172,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
          `/api/sale` now returns success only after the ledger and table are in
          agreement. Never free a table locally before that acknowledgement. */
       let saved = null;
+      /* Délai réel (SV_PAY_TIMEOUT_MS). L'identifiant de paiement est stable :
+         relancer après un délai rejoue la MÊME vente, jamais une seconde. */
+      const payCtl = (typeof AbortController === 'function') ? new AbortController() : null;
+      const payTimer = payCtl ? setTimeout(() => payCtl.abort(), SV_PAY_TIMEOUT_MS) : null;
       try {
         const response = await fetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
+          signal: payCtl ? payCtl.signal : undefined,
           body: JSON.stringify({
             id: paymentId, merchant, table: id, session, amount: paidAmount,
             amountCents: Math.round(paidAmount * 100),
@@ -10781,14 +11190,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }),
         });
         saved = await response.json().catch(() => null);
-        if (!response.ok || !saved || !saved.ok) throw new Error((saved && saved.error) || ('http-' + response.status));
-      } catch (_) {
+        if (!response.ok || !saved || !saved.ok) throw Object.assign(new Error((saved && saved.error) || ('http-' + response.status)), { refused: true });
+      } catch (err) {
         t.status = previousStatus === 'ka-tkhdam' ? 'bgha-ykhlass' : previousStatus;
         employeePaymentsInFlight.delete(id);
         if (currentTab === 'tables') renderTables();
         if (activeTableId === id) renderTableDetail();
-        toast(`Table ${id} · paiement non enregistré, réessayez`, 5200);
+        /* Refus du serveur, pas de réponse à temps (la vente a PU passer :
+           on ne dit pas « non enregistré »), ou réseau tombé avant l'envoi. */
+        if (payCtl && payCtl.signal.aborted) toast(`Table ${id} · paiement non confirmé, réessayez`, 6000);
+        else if (err && !err.refused) toast(SV_PAY_OFFLINE_MSG, 6000);
+        else toast(`Table ${id} · paiement non enregistré, réessayez`, 5200);
         return false;
+      } finally {
+        if (payTimer) clearTimeout(payTimer);
       }
       if (paidClient && !SV_DEMO) {
         fetch('/api/employee-clients', {
@@ -11350,11 +11765,24 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const orderRef = tableId ? serviceTableOrderRef(tableId) : '';
       const partPaymentId = p.saleId || (tableId ? employeePaymentId(tableId + ':split:' + partIdx) : '');
 
+      /* Hors ligne connu : échec immédiat, la part reste due, la feuille
+         reste ouverte avec son montant. (navigator absent hors navigateur.) */
+      if (!SV_DEMO && typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+        toast("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 6000);
+        return false;
+      }
+
       let saved = null;
+      let payTimer = null;
+      const payCtl = (typeof AbortController === 'function' && typeof setTimeout === 'function') ? new AbortController() : null;
       employeePaymentsInFlight.add(partFlightKey);
       try {
         if (!SV_DEMO) {
+          /* Délai réel (15 s) : l'identifiant de la part est stable, une
+             relance après délai rejoue la même vente, jamais une seconde. */
+          if (payCtl) payTimer = setTimeout(() => payCtl.abort(), 15000);
           const response = await fetch('/api/sale', {
+            ...(payCtl ? { signal: payCtl.signal } : {}),
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -11379,13 +11807,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           });
           saved = await response.json().catch(() => null);
           if (!response.ok || !saved || !saved.ok) {
-            throw new Error((saved && saved.error) || ('http-' + response.status));
+            const refused = new Error((saved && saved.error) || ('http-' + response.status));
+            refused.refused = true;
+            throw refused;
           }
         }
-      } catch (_) {
-        toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
+      } catch (err) {
+        if (payCtl && payCtl.signal.aborted) toast(`Table ${tableId || ''} · part ${partIdx + 1} non confirmée, réessayez`, 6000);
+        else if (err && !err.refused) toast("Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.", 6000);
+        else toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
         return false;
       } finally {
+        if (payTimer) clearTimeout(payTimer);
         employeePaymentsInFlight.delete(partFlightKey);
       }
 
@@ -11535,9 +11968,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        sa tablette entre deux tables et que c'est là que le patron change un prix. */
     try { svRebuildCarte(); svFetchCarte(); } catch (_) {}
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) { try { svFetchCarte(); } catch (_) {} }
+      if (!document.hidden) { try { svFetchCarteNow(); } catch (_) {} }
     });
-    document.addEventListener('kiwi-paired', () => { try { svFetchCarte(); } catch (_) {} });
+    document.addEventListener('kiwi-paired', () => { try { svFetchCarteNow(); } catch (_) {} });
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) lucide.createIcons();
     });
