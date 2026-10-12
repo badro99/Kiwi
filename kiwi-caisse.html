@@ -85,13 +85,13 @@
        match nothing in the restaurant markup, only the data-lens opt-ins of the
        lazy-loaded métiers (dont le pressing). -->
   <script src="assets/liquid-lens.js?v=6" defer></script>
-  <script src="assets/caisse-motion.js?v=1" defer></script>
+  <script src="assets/caisse-motion.js?v=4" defer></script>
   <!-- #0091 · keeps taps aligned after the iPad keyboard closes (see the file header). -->
   <script src="assets/caisse-viewport.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=12" defer></script>
-  <script src="assets/printer-bridge.js?v=19" defer></script>
+  <script src="assets/printer-bridge.js?v=23" defer></script>
   <script src="assets/caisse-hardware.js?v=5" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -127,13 +127,13 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=18" defer></script>
+  <script src="assets/caisse-lang.js?v=23" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=81" defer></script>
+  <script src="assets/pos-dispatch.js?v=84" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -722,6 +722,14 @@
     }
     .main-head[hidden] { display: none; }
     .main-title { font-size: 16px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+    .main-title .demo-badge {
+      display: inline-flex; align-items: center; vertical-align: 2px;
+      margin-inline-start: 10px; padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--surface);
+      color: var(--ink-3, #59615D); font-size: 11px; font-weight: 600;
+      letter-spacing: .02em; text-transform: uppercase;
+    }
+    [lang="ar"] .main-title .demo-badge { letter-spacing: 0; text-transform: none; }
     .main-title em { font-family: var(--serif); color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px; }
 
     /* La légende vit sur sa propre barre noir console · le canvas de la salle
@@ -3487,7 +3495,12 @@
       color: var(--ink-4); opacity: 0;
       transition: opacity 140ms;
     }
-    .jr-entry:hover .jr-entry-reprint { opacity: 1; }
+    .jr-entry:hover .jr-entry-reprint, .jr-entry-reprint:focus-visible { opacity: 1; }
+    /* A touch screen has no hover: the reprint control was invisible on every
+       tablet and phone till. Show it, with a finger-sized target. */
+    @media (hover: none) {
+      .jr-entry-reprint { opacity: 1; width: 36px; min-height: 36px; margin-inline-end: -7px; }
+    }
     .jr-entry-reprint svg { width: 14px; height: 14px; }
     .jr-entry--fresh { animation: jr-fresh 1700ms ease; }
     @keyframes jr-fresh {
@@ -5411,7 +5424,7 @@
   /* La grille-cartes du plan réel · carte papier, trait d'état en encre. */
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl {
     border-color: rgba(10,15,13,0.12);
-    background: #FFFFFF;
+    background: var(--paper-elev, #FFFDFA);
   }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed.is-selected .tbl,
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl.is-selected {
@@ -5421,7 +5434,7 @@
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="a-commander"]  { background: rgba(200,146,53,0.10); border-color: #C89235; }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="ka-yaklo"]     { background: rgba(11,110,79,0.10); border-color: #0B6E4F; }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] { background: rgba(194,69,111,0.10); border-color: #C2456F; }
-  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: #FFFFFF; border: 1.25px dotted rgba(10,15,13,0.35); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: var(--paper-elev, #FFFDFA); border: 1.25px dotted rgba(10,15,13,0.35); }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-covers,
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-status,
@@ -5629,7 +5642,7 @@
   <script src="assets/discount-policy.js?v=4" defer></script>
   <script src="assets/vertical-state.js?v=3" defer></script>
   <script src="assets/image-proof.js?v=1" defer></script>
-  <script src="assets/operational-print.js?v=1" defer></script>
+  <script src="assets/operational-print.js?v=4" defer></script>
   <script src="assets/inventory-ledger.js?v=12" defer></script>
   <script src="assets/maison-stock-movements.js?v=4" defer></script>
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
@@ -5650,7 +5663,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=5" defer></script>
+  <script src="assets/receipt.js?v=8" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=5" defer></script>
@@ -6727,10 +6740,12 @@
   <div class="modal-veil" id="cash-move-modal" role="dialog" aria-modal="true" aria-labelledby="cm-title">
     <div class="modal">
       <h3 class="modal-title" id="cm-title">Mouvement de caisse</h3>
-      <p class="modal-subtle">Caisse actuelle · <span id="cm-current" class="mono">· MAD</span></p>
+      <p class="modal-subtle"><span>Caisse actuelle</span> · <span id="cm-current" class="mono">· MAD</span></p>
+      <!-- « Entrée » est aussi la touche du clavier (le dictionnaire de la caisse
+           la rend par « Enter ») : les deux sens se libellent ici, sans dictionnaire. -->
       <div class="cm-type" id="cm-type">
-        <button class="cm-type-btn is-active" data-cm-type="out"><i data-lucide="arrow-up-from-line"></i> Sortie</button>
-        <button class="cm-type-btn" data-cm-type="in"><i data-lucide="arrow-down-to-line"></i> Entrée</button>
+        <button class="cm-type-btn is-active" data-cm-type="out"><i data-lucide="arrow-up-from-line"></i> <span class="cm-type-label" data-nolang>Sortie</span></button>
+        <button class="cm-type-btn" data-cm-type="in"><i data-lucide="arrow-down-to-line"></i> <span class="cm-type-label" data-nolang>Entrée</span></button>
       </div>
       <div class="cash-input-row" style="margin-bottom:10px;">
         <label class="cash-input-label" for="cm-amount">Montant</label>
@@ -9321,6 +9336,22 @@
        serveur muet, on garde le miroir · on ne vide jamais une caisse qui
        marchait il y a une minute. */
     let _carteAt = 0;
+    /* Le sondage de six secondes reconstruisait toute la grille même quand la
+       carte n'avait pas bougé : une reconstruction pendant un appui avale le
+       clic (et coupait l'animation d'ajout). On ne repeint que si la carte a
+       changé, et jamais sous un doigt posé. */
+    let _carteFingerDown = false;
+    document.addEventListener('pointerdown', () => { _carteFingerDown = true; }, true);
+    ['pointerup', 'pointercancel'].forEach((kind) => document.addEventListener(kind, () => {
+      setTimeout(() => { _carteFingerDown = false; }, 0);
+    }, true));
+    function rebuildCarteWhenIdle() {
+      if (!_carteFingerDown) return rebuildCarte();
+      return new Promise((resolve) => {
+        const wait = () => { if (_carteFingerDown) setTimeout(wait, 120); else resolve(rebuildCarte()); };
+        setTimeout(wait, 120);
+      });
+    }
     function fetchCarte(force) {
       if (IS_DEMO) return Promise.resolve(false);
       const slug = carteSlug();
@@ -9333,8 +9364,12 @@
         .then((j) => {
           const m = j && j.menu;
           if (!m || !Array.isArray(m.items) || !m.items.length) return false;
-          try { localStorage.setItem(CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
-          return rebuildCarte();
+          const raw = JSON.stringify(m);
+          let previous = null;
+          try { previous = localStorage.getItem(CARTE_MIRROR + slug); } catch (_) {}
+          if (previous === raw && menuItems.length) return false;
+          try { localStorage.setItem(CARTE_MIRROR + slug, raw); } catch (_) {}
+          return rebuildCarteWhenIdle();
         })
         .catch(() => false);
     }
@@ -10706,7 +10741,7 @@
             shop: ticket && ticket.title, lines: (ticket && ticket.lines) || [],
             total: ticket && ticket.total, method: ticket && ticket.method,
           })).then(
-            (r) => toast(r && r.ok ? 'Addition envoyée à l\'imprimante système' : 'Impression échouée'),
+            (r) => toast(r && r.ok ? (r.via === 'pdf' ? 'Addition prête · imprimer ou partager le PDF' : 'Addition ouverte dans l\'impression système') : 'Impression échouée'),
             () => toast('Impression échouée')
           );
         } catch (_) { toast('Impression échouée'); }
@@ -15137,7 +15172,9 @@
        la boîte d'impression du système vient de s'ouvrir croit à une panne. */
     function ticketPrintedWord(r) {
       const via = r && r.via;
-      if (via === 'browser') return 'Ticket envoyé à l\'imprimante système';
+      /* Un dialogue d'impression ouvert n'est pas un ticket imprimé. */
+      if (via === 'browser') return 'Ticket ouvert dans l\'impression système';
+      if (via === 'pdf') return 'Ticket prêt · imprimer ou partager le PDF';
       if (via === 'bluetooth') return 'Ticket imprimé · Bluetooth';
       if (via === 'usb') return 'Ticket imprimé · USB';
       if (via === 'network') return 'Ticket imprimé · réseau';
@@ -16025,7 +16062,7 @@
       }
       return window.KiwiPrinter.printDayReport(dayReportPrintOpts(report, copyLabel))
         .then((res) => {
-          if (res && res.ok) toast(res.via === 'browser' ? 'Rapport envoyé au pilote système' : 'Rapport imprimé');
+          if (res && res.ok) toast(res.via === 'pdf' ? 'Rapport prêt · imprimer ou partager le PDF' : res.via === 'browser' ? 'Rapport ouvert dans l\'impression système' : 'Rapport imprimé');
           else toast("Impression impossible · le rapport reste dans le tableau de bord");
           return res || { ok: false };
         }, () => { toast("Impression impossible · le rapport reste dans le tableau de bord"); return { ok: false }; });
@@ -16655,6 +16692,19 @@
       in:  ['Appoint monnaie', 'Correction', 'Autre'],
     };
     let cmType = 'out', cmReason = '';
+    const CM_TYPE_LABEL = {
+      fr: { out: 'Sortie', in: 'Entrée' },
+      en: { out: 'Cash out', in: 'Cash in' },
+      ar: { out: 'سحب', in: 'إيداع' },
+    };
+    function paintCmTypeLabels() {
+      const L = CM_TYPE_LABEL[carteLang()] || CM_TYPE_LABEL.fr;
+      $$('#cm-type .cm-type-btn').forEach(b => {
+        const s = b.querySelector('.cm-type-label');
+        if (s && L[b.dataset.cmType]) s.textContent = L[b.dataset.cmType];
+      });
+    }
+    let cmLangHooked = false;
 
     function updateCmCustomVisibility() {
       const wrap = $('#cm-custom-wrap');
@@ -16714,6 +16764,11 @@
       }
       cmType = 'out';
       $$('#cm-type .cm-type-btn').forEach(b => b.classList.toggle('is-active', b.dataset.cmType === 'out'));
+      paintCmTypeLabels();
+      if (!cmLangHooked && window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) {
+        cmLangHooked = true;
+        window.KiwiCaisseLang.subscribe(paintCmTypeLabels);
+      }
       $('#cm-amount').value = '';
       const customInput = $('#cm-custom-input');
       if (customInput) customInput.value = '';
@@ -18732,8 +18787,12 @@
         const KP = window.KiwiPrinter;
         if (!slip || !KP || !KP.browserPrintHTML) { toast('Impression indisponible sur cet appareil'); return; }
         try {
-          Promise.resolve(KP.browserPrintHTML(slip.innerHTML, '80')).then(
-            (r) => toast(r && r.ok ? 'Bon de passation envoyé à l\'imprimante' : 'Impression échouée'),
+          Promise.resolve(KP.browserPrintHTML(slip.innerHTML, '80', 'Bon de passation')).then(
+            /* Ce chemin est l'impression du système (ou le PDF dans l'app) : rien
+               n'est « envoyé à l'imprimante » tant que personne n'a confirmé. */
+            (r) => toast(!(r && r.ok) ? 'Impression échouée'
+              : r.via === 'pdf' ? 'Bon de passation prêt · imprimer ou partager le PDF'
+              : 'Bon de passation ouvert dans l\'impression système'),
             () => toast('Impression échouée')
           );
         } catch (_) { toast('Impression échouée'); }
@@ -21331,9 +21390,19 @@
             && !order.paid && order.canonicalNumberPromise && !orders.includes(order)) orders.push(order);
         });
       }
-      for (const order of orders) {
-        try { await order.canonicalNumberPromise; } catch (_) {}
-      }
+      if (!orders.length) return;
+      /* Bounded. A Wi-Fi with no Internet used to hold the tender until the
+         relay gave up, cash in the drawer and no sale written. Past this
+         window the sale is recorded with the provisional number, and
+         reconcileReceiptOrderNumber swaps in the permanent one (receipt,
+         journal and the idempotent Dashboard mirror) the moment it lands. */
+      const CANONICAL_NUMBER_WAIT_MS = 2500;
+      let timer = null;
+      const allocated = Promise.all(orders.map(order =>
+        Promise.resolve(order.canonicalNumberPromise).catch(() => null)));
+      const deadline = new Promise(resolve => { timer = setTimeout(resolve, CANONICAL_NUMBER_WAIT_MS); });
+      try { await Promise.race([allocated, deadline]); }
+      finally { clearTimeout(timer); }
     }
 
     function dispatchUnsentKitchenBeforePayment() {
@@ -22926,6 +22995,37 @@
     scheduleEmployeeFloor();
     setTimeout(publishServiceFloor, 800);
     setTimeout(pollEmployeeFloor, 250);
+
+    /* ---------- Démo, dit à l'écran ----------
+       Une caisse de démo montre des tables, des serveurs et un chiffre du jour
+       plausibles. Le seul « DÉMO LIVE » vivait dans la barre du haut, masquée
+       depuis : rien ne disait que ce n'était pas un vrai service. Un badge à
+       côté du titre, tant que la caisse n'est ni un vrai compte ni appairée. */
+    (function demoBadge() {
+      function isDemo() {
+        try { return !(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) { return false; }
+      }
+      function words() {
+        const lang = String(document.documentElement.lang || 'fr');
+        if (lang.startsWith('ar')) return ['تجريبي', 'بيانات نموذجية، ليست خدمة حقيقية'];
+        if (lang.startsWith('en')) return ['Demo', 'Sample data, not a real service'];
+        return ['Démo', 'Données d’exemple, pas un vrai service'];
+      }
+      function paint() {
+        const demo = isDemo(), [label, hint] = words();
+        document.querySelectorAll('.main-head .main-title').forEach((title) => {
+          let badge = title.querySelector(':scope > .demo-badge');
+          if (!demo) { if (badge) badge.remove(); return; }
+          if (!badge) { badge = document.createElement('span'); badge.className = 'demo-badge'; title.appendChild(badge); }
+          if (badge.textContent !== label) badge.textContent = label;
+          badge.title = hint;
+          badge.setAttribute('aria-label', label + ' · ' + hint);
+        });
+      }
+      paint();
+      document.addEventListener('kiwi-paired', paint);
+      new MutationObserver(paint).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    })();
 
     /* ---------- Lucide first paint ---------- */
     document.addEventListener('DOMContentLoaded', () => {

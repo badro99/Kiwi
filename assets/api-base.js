@@ -87,8 +87,37 @@
         init = init ? Object.assign({}, init) : {};
         if (!init.credentials) init.credentials = 'include';
       }
-      return nativeFetch.call(w, target, init);
+      var pending = nativeFetch.call(w, target, init);
+      return native ? honourSignal(pending, (init && init.signal) || (input && input.signal)) : pending;
     };
+  }
+
+  /* Dans l'app, CapacitorHttp sert les POST/PUT/DELETE par URLSession/OkHttp et
+   * ne lit jamais `signal` : un AbortController n'interrompait rien, et chaque
+   * délai « 12 s puis file d'attente » (kitchen-relay, live-link) devenait une
+   * attente de dix minutes sur un Wi-Fi sans Internet. On rend au signal son
+   * contrat web : la promesse rejette en AbortError dès l'abandon. La requête
+   * native peut finir en arrière-plan ; les serveurs sont idempotents par id. */
+  function abortReason(signal) {
+    var reason = signal && signal.reason;
+    if (reason !== undefined && reason !== null) return reason;
+    try { return new w.DOMException('The operation was aborted.', 'AbortError'); }
+    catch (_) { var e = new Error('The operation was aborted.'); e.name = 'AbortError'; return e; }
+  }
+  function honourSignal(pending, signal) {
+    if (!signal || typeof signal.addEventListener !== 'function') return pending;
+    if (signal.aborted) return Promise.reject(abortReason(signal));
+    return new Promise(function (resolve, reject) {
+      function onAbort() { reject(abortReason(signal)); }
+      signal.addEventListener('abort', onAbort, { once: true });
+      Promise.resolve(pending).then(function (value) {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      }, function (error) {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      });
+    });
   }
 
   /* XMLHttpRequest (assets/platform-ops.js envoie les médias en XHR) --------- */

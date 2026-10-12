@@ -325,7 +325,14 @@
     if (c.name === 'customer-message-draft') {
       var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
       var opened = null;
-      try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
+      /* `noopener` makes window.open return null even when the composer
+       * opened, which read as « popup-blocked ». Open, then sever the opener.
+       * In the app links go to the system and no window object comes back. */
+      try {
+        opened = window.open(href, '_blank');
+        if (opened) { try { opened.opener = null; } catch (_) {} }
+        else if (window.KiwiApiBase && window.KiwiApiBase.native) opened = true;
+      } catch (_) {}
       var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
         : { ok: false, reason: 'popup-blocked' };
       if (draft.ok) rememberAction(c.commandId, draft);

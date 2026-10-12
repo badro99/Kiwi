@@ -165,7 +165,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);

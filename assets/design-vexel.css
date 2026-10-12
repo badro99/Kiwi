@@ -4083,7 +4083,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   min-height: 126px;
   padding: 20px 21px;
   border-inline-start: 1px solid var(--vx-card-border) !important;
-  background: #fff !important;
+  background: var(--paper-elev, #FFFDFA) !important;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {

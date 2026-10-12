@@ -1006,7 +1006,7 @@
       customer: order.name ? { name: order.name } : null,
     });
     Promise.resolve(K.print(doc)).then(
-      (result) => toast(result && result.ok ? (result.via === 'browser' ? 'Ticket ouvert dans l’impression système' : 'Ticket imprimé') : 'Impression non confirmée'),
+      (result) => toast(result && result.ok ? (result.via === 'pdf' ? 'Ticket prêt · imprimer ou partager le PDF' : result.via === 'browser' ? 'Ticket ouvert dans l’impression système' : 'Ticket imprimé') : 'Impression non confirmée'),
       () => toast('Impression échouée')
     );
   }

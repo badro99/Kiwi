@@ -1308,11 +1308,16 @@
 
   /* Repeint et ouvre la boîte d'impression. Le root est retiré après coup pour
    * ne pas laisser un reçu fantôme dans le DOM de la caisse. */
-  function browserPrintHTML(html, paper) {
+  function systemPrintVia() {
+    return window.KiwiApiBase && window.KiwiApiBase.native ? 'pdf' : 'browser';
+  }
+  function browserPrintHTML(html, paper, title) {
     var root = document.getElementById('kpr-print-root');
     if (root) root.remove();
     root = document.createElement('div');
     root.id = 'kpr-print-root';
+    // Names the PDF in the app (native-runtime.js) and the job on the web.
+    if (title) root.setAttribute('data-print-title', title);
     root.innerHTML = html;
     document.body.appendChild(root);
     ensureReceiptPrintCss(paper);
@@ -1320,15 +1325,17 @@
       try { window.print(); } catch (_) {}
       setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
     }, 60);
-    return { ok: true, via: 'browser' };
+    /* Dans l'app, window.print() rend un PDF à imprimer ou partager
+     * (native-runtime.js) : pas un « envoi au pilote système ». */
+    return { ok: true, via: systemPrintVia() };
   }
   function browserReceipt(o) {
     o = withPaper(o || {});
-    return browserPrintHTML(receiptHTML(o), o.paper);
+    return browserPrintHTML(receiptHTML(o), o.paper, 'Recu' + (o.ref ? ' ' + o.ref : ''));
   }
   function browserDayReport(o) {
     o = withPaper(o || {});
-    return browserPrintHTML(dayReportHTML(o), o.paper);
+    return browserPrintHTML(dayReportHTML(o), o.paper, 'Rapport journalier' + (o.date ? ' ' + o.date : ''));
   }
 
   /* printDayReport · la voie nominale, avec le repli qui compte.
@@ -1358,7 +1365,7 @@
     if (document.getElementById('kpr-style')) return;
     var s = document.createElement('style'); s.id = 'kpr-style';
     s.textContent =
-      '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:max(20px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}' +
       '.kpr-code{margin:10px 0 4px;padding:14px 16px;border:1px dashed #0B6E4F;border-radius:12px;background:rgba(11,110,79,.06);}' +
       '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
       '.kpr-relay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(10,15,13,.08);}' +
@@ -1401,7 +1408,8 @@
       '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
       '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
       '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}' +
-      '.kpr-st-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
+      '.kpr-st-hdr{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
+      '.kpr-st-hdr>div{flex:1 1 220px;min-width:0;}' +
       '.kpr-st-sub{font-size:.84rem;color:var(--ink,#0A0F0D);opacity:.68;margin:2px 0 0;line-height:1.4;}' +
       '.kpr-st-add-btn{background:var(--atlas,#0B6E4F);color:#fff;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;white-space:nowrap;border:0;cursor:pointer;flex:none;}' +
       '.kpr-st-add-btn:hover{filter:brightness(1.06);}' +
@@ -1438,26 +1446,37 @@
     var socket = nativeSocket();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
     var isLabel = (context.kind || 'label') === 'label';
+    /* The Kiwi Pro app's web view has no Web Bluetooth (WKWebView never, the
+       Android WebView neither): offering "Rechercher une imprimante Bluetooth"
+       there only ended on "utilisez Chrome". In the app, the printer is the
+       network one; on the web, a browser without Bluetooth keeps the block and
+       its explanation. */
+    var inApp = !!socket;
+    var showBt = !!navigator.bluetooth || !inApp;
     ov.innerHTML =
       '<div id="kpr-card">' +
         '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer">×</button>' +
         '<h2>' + (fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
-        '<p class="kpr-sub">' + (fromPrint
+        '<p class="kpr-sub">' + (inApp && !showBt ? (fromPrint
+          ? (isLabel
+            ? 'Imprimez tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.'
+            : 'Aucune imprimante n’est connectée à Kiwi. Préparez le PDF du ticket tout de suite, ou connectez une imprimante réseau (Wi-Fi ou Ethernet) pour imprimer directement la prochaine fois.')
+          : 'Connectez l’imprimante réseau (Wi-Fi ou Ethernet) : Kiwi lui envoie le ticket directement, sans boîte de dialogue.') : fromPrint
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
             : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
-          (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
+          (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + (inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
           (context.onSavePdf ? '<button class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
         '</div>' : '') +
-        '<div class="kpr-bt">' +
+        (showBt ? '<div class="kpr-bt">' +
           '<h3>Imprimante Bluetooth</h3>' +
           '<p>Sans installation. Kiwi imprime le reçu directement.</p>' +
           '<div class="kpr-status ' + (btLive ? 'on' : 'off') + '" id="kpr-bt-status"><span class="kpr-d"></span><span id="kpr-bt-status-t">' + (btLive ? esc('Connectée · ' + bt.name) : 'Aucune imprimante connectée.') + '</span></div>' +
           '<button class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
-        '</div>' +
+        '</div>' : '') +
         (usbSupported() ? '<div class="kpr-bt">' +
           '<h3>Imprimante USB</h3>' +
           '<p>Branchée en USB sur la caisse. Sans installation, sans adresse IP.</p>' +
@@ -1497,7 +1516,7 @@
                 '<option value="ip">Réseau (IP · Wi-Fi / Ethernet)</option>' +
                 '<option value="os">Imprimante système (installée)</option>' +
                 '<option value="usb">USB direct</option>' +
-                '<option value="bt">Bluetooth</option>' +
+                (showBt ? '<option value="bt">Bluetooth</option>' : '') +
               '</select></div>' +
               '<div class="kpr-field"><label for="kpr-prof-paper">Papier</label><select id="kpr-prof-paper"><option value="80">80 mm (standard)</option><option value="58">58 mm</option></select></div>' +
             '</div>' +
@@ -2034,7 +2053,7 @@
       if (sp) sp.addEventListener('click', function () { close(); try { context.onSavePdf(); } catch (_) {} });
     }
 
-    $('#kpr-bt-connect').addEventListener('click', function () {
+    if ($('#kpr-bt-connect')) $('#kpr-bt-connect').addEventListener('click', function () {
       var st = $('#kpr-bt-status'), t = $('#kpr-bt-status-t'), btn = this;
       if (!navigator.bluetooth) { st.className = 'kpr-status off'; t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).'; return; }
       btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Recherche…';
@@ -2052,7 +2071,7 @@
         else t.textContent = 'Connexion impossible : ' + m;
       });
     });
-    $('#kpr-bt-test').addEventListener('click', function () {
+    if ($('#kpr-bt-test')) $('#kpr-bt-test').addEventListener('click', function () {
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
       printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
         btn.textContent = orig; btn.disabled = !btConnected();

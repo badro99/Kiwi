@@ -10263,6 +10263,7 @@ const PDS_INLINE_CSS = `
   .pds-chip-body em { font-style:normal; font-size:11px; color:var(--n-500); font-family:var(--mono); letter-spacing:0.02em; margin-top:1px; }
   .pds-chip-x { flex-shrink:0; width:20px; height:20px; display:grid; place-items:center; padding:0; border:0; border-radius:6px; background:transparent; color:var(--n-500); font-size:15px; line-height:1; cursor:pointer; opacity:0; transition:.16s; }
   .pds-chip:hover .pds-chip-x, .pds-chip-x:focus-visible { opacity:1; }
+  @media (hover: none) { .pds-chip-x { opacity:1; width:32px; height:32px; margin:-6px; } }
   .pds-chip-x:hover { background:var(--n-100); color:var(--ink); }
   .pds-chip-ghost .pds-chip-x { display:none; }
   .pds-roster-empty { padding:10px 2px 2px; font-size:11.5px; line-height:1.5; color:var(--n-500); }

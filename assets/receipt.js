@@ -1290,7 +1290,7 @@
       try { window.print(); } catch (_) {}
       setTimeout(function () { var r = document.getElementById('kr-print-root'); if (r) r.remove(); }, 600);
     }, 60);
-    return { ok: true, via: 'browser' };
+    return { ok: true, via: window.KiwiApiBase && window.KiwiApiBase.native ? 'pdf' : 'browser' };
   }
   /* Le CSS d'impression du reçu Kiwi. printer-bridge en a un pour SES tickets
    * (.kpr-*) ; celui-ci cadre les nôtres (.kr-*) à la largeur du rouleau. */

@@ -1798,11 +1798,15 @@
     const plural = n > 1 ? 's' : '';
 
     if (!(KP.isConnected && KP.isConnected() && window.KiwiEscPos)) {
-      KP.browserPrintHTML(
+      const sent = KP.browserPrintHTML(
         `<div class="px-print"><div class="px-print-receipts">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>`,
-        (KP.getConfig && KP.getConfig().paper) || '80'
+        (KP.getConfig && KP.getConfig().paper) || '80',
+        'Pressing ' + publicOrderNo(order)
       );
-      toast(`Impression système, ticket + duplicata + ${n} étiquette${plural}`);
+      /* Dans l'app, ce n'est pas l'impression système : un PDF à imprimer ou partager. */
+      toast(sent && sent.via === 'pdf'
+        ? `PDF prêt · ticket + duplicata + ${n} étiquette${plural}`
+        : `Impression système, ticket + duplicata + ${n} étiquette${plural}`);
       return;
     }
 
@@ -2619,11 +2623,19 @@
       closeVeil('#px-wa-veil');
       queueIfOffline('Brouillon WhatsApp');
       let opened = null;
+      const waUrl = 'https://wa.me/' + num + '?text=' + encodeURIComponent(body);
       try {
-        opened = window.open('', '_blank');
-        if (opened) {
-          opened.opener = null;
-          opened.location.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent(body);
+        if (window.KiwiApiBase && window.KiwiApiBase.native) {
+          /* The app has no browser windows: the link goes straight to
+             WhatsApp (window.open returns null there even on success). */
+          window.open(waUrl, '_blank');
+          opened = true;
+        } else {
+          opened = window.open('', '_blank');
+          if (opened) {
+            opened.opener = null;
+            opened.location.href = waUrl;
+          }
         }
       } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
       if (!opened) { toast('WhatsApp n’a pas pu s’ouvrir, autorisez les fenêtres puis réessayez'); return; }

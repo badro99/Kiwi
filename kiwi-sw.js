@@ -80,7 +80,7 @@ var SHELL = [
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=6',
   '/assets/agent-features.js?v=5',
-  '/assets/agent-truth.js?v=6',
+  '/assets/agent-truth.js?v=9',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
   '/assets/i18n.js?v=23',
@@ -158,7 +158,7 @@ var SHELL = [
   '/assets/pwa-update.js?v=361',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
-  '/assets/caisse-motion.js?v=1',
+  '/assets/caisse-motion.js?v=4',
   '/assets/caisse-pwa.js?v=564',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=9',
@@ -193,7 +193,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=5',
+  '/assets/receipt.js?v=8',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=14',
   '/assets/merchant-config.js?v=278',
@@ -209,7 +209,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
   '/assets/identity.js?v=9',
-  '/assets/caisse-link.js?v=13',
+  '/assets/caisse-link.js?v=16',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -217,7 +217,7 @@ var SHELL = [
   '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=12',
-  '/assets/printer-bridge.js?v=19',
+  '/assets/printer-bridge.js?v=23',
   '/assets/barcode.js?v=1',
   '/assets/color-palette.js?v=5',
   '/assets/boutique-catalog.js?v=10',
@@ -229,7 +229,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=14',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=18',
+  '/assets/caisse-lang.js?v=23',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=298',
+  '/assets/team.js?v=300',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=110',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
@@ -282,7 +282,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=81',
+  '/assets/pos-dispatch.js?v=84',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -295,8 +295,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=52',
-  '/assets/pos-boutique.js?v=52',
+  '/assets/pos-boutique.css?v=54',
+  '/assets/pos-boutique.js?v=54',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -304,8 +304,8 @@ var SHELL = [
   '/assets/pos-spa.js?v=7',
   '/assets/pos-hotel.css?v=17',
   '/assets/pos-hotel.js?v=17',
-  '/assets/pos-fastfood.css?v=8',
-  '/assets/pos-fastfood.js?v=8',
+  '/assets/pos-fastfood.css?v=11',
+  '/assets/pos-fastfood.js?v=11',
   '/assets/pos-boulangerie.css?v=9',
   '/assets/pos-boulangerie.js?v=9',
   '/assets/pos-pizzeria.css?v=5',
@@ -328,16 +328,16 @@ var SHELL = [
   '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=59',
-  '/assets/pos-maison.js?v=59',
+  '/assets/pos-maison.css?v=61',
+  '/assets/pos-maison.js?v=61',
   '/assets/caisse-pairing.js?v=27',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=8',
-  '/assets/pressing-caisse.js?v=41',
-  '/assets/pressing-caisse.css?v=41',
+  '/assets/pressing-caisse.js?v=45',
+  '/assets/pressing-caisse.css?v=45',
   '/assets/lucide.min.js?v=5',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

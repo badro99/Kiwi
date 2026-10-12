@@ -4,7 +4,15 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* Read once, the setting stuck for the whole shift: turning on Reduce
+     Motion mid-service changed nothing until the till reloaded. */
+  var motionQuery = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  var reduce = !!(motionQuery && motionQuery.matches);
+  if (motionQuery) {
+    var follow = function (event) { reduce = !!event.matches; };
+    if (typeof motionQuery.addEventListener === 'function') motionQuery.addEventListener('change', follow);
+    else if (typeof motionQuery.addListener === 'function') motionQuery.addListener(follow);
+  }
   var SPRING = 'cubic-bezier(0.34, 1.45, 0.5, 1)';
 
   function springIn(el) {

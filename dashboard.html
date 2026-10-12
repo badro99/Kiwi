@@ -1367,7 +1367,7 @@
       0 1px 3px rgba(0, 0, 0, 0.5);
   }
   :root[data-theme="light"] .dr-pill.on {
-    background: #FFFFFF;
+    background: var(--paper-elev, #FFFDFA);
     color: #0B1210 !important;
     font-weight: 600;
     border-color: rgba(0, 0, 0, 0.08);
@@ -1393,7 +1393,7 @@
   .dr-popover {
     position: absolute; top: calc(100% + 10px); inset-inline-end: 0; z-index: 10000;
     width: 716px; max-width: calc(100vw - 48px);
-    background: #FFFFFF; border: 1px solid var(--n-200); border-radius: 18px;
+    background: var(--paper-elev, #FFFDFA); border: 1px solid var(--n-200); border-radius: 18px;
     box-shadow: 0 4px 16px rgba(10,15,13,0.06), 0 28px 64px -22px rgba(10,15,13,0.30);
     overflow: hidden; transform-origin: top right;
     opacity: 0; transform: translateY(-8px) scale(0.985);
@@ -3442,12 +3442,15 @@
   .eq-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
   @media (max-width: 1080px) { .eq-stats { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px)  { .eq-stats { grid-template-columns: 1fr; } }
-  .eq-stat { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 12px; padding: 15px 17px; opacity: 0; transform: translateY(8px); animation: eq-rise 380ms cubic-bezier(0.32,0.72,0,1) forwards; }
+  .eq-stat { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 12px; padding: 15px 17px; animation: eq-rise 380ms cubic-bezier(0.32,0.72,0,1) backwards; }
   .eq-stat:nth-child(1) { animation-delay: 40ms; }
   .eq-stat:nth-child(2) { animation-delay: 100ms; }
   .eq-stat:nth-child(3) { animation-delay: 160ms; }
   .eq-stat:nth-child(4) { animation-delay: 220ms; }
-  @keyframes eq-rise { to { opacity: 1; transform: translateY(0); } }
+  /* Rest is visible: the rise only fills backwards. With `opacity:0` at rest
+     and `forwards`, a stat stayed invisible wherever the animation did not
+     run (reduced motion, a repaint mid-flight). */
+  @keyframes eq-rise { from { opacity: 0; transform: translateY(8px); } }
   .eq-stat-l { font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .eq-stat-ico { width: 26px; height: 26px; border-radius: 7px; background: var(--surface); border: 1px solid var(--n-200); color: var(--atlas); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .eq-stat-v { font-size: 30px; font-weight: 600; letter-spacing: -0.035em; margin-top: 11px; font-feature-settings: "tnum" 1; line-height: 1; color: var(--ink); }
@@ -3879,7 +3882,11 @@
   .mi-station:hover { border-color: var(--n-400); transform: translateY(-1px); }
   .mi-station-x { position: absolute; top: 6px; right: 6px; width: 19px; height: 19px; border-radius: 6px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity 130ms, color 130ms, border-color 130ms; }
   .mi-station-x svg { transform: rotate(45deg); }
-  .mi-station:hover .mi-station-x { opacity: 1; }
+  .mi-station:hover .mi-station-x, .mi-station-x:focus-visible { opacity: 1; }
+  /* No hover on a touch screen: the remove control must be visible to exist. */
+  @media (hover: none) {
+    .mi-station-x { opacity: 1; width: 28px; height: 28px; top: 2px; right: 2px; }
+  }
   .mi-station-x:hover { color: var(--danger); border-color: var(--danger); }
   .mi-station-top { display: flex; align-items: center; gap: 7px; }
   .mi-st-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -4673,12 +4680,12 @@
   .st-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
   @media (max-width: 1080px) { .st-kpis { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px)  { .st-kpis { grid-template-columns: 1fr; } }
-  .st-kpi { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; padding: 16px 18px; opacity: 0; transform: translateY(8px); animation: st-rise 380ms cubic-bezier(0.32,0.72,0,1) forwards; }
+  .st-kpi { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; padding: 16px 18px; animation: st-rise 380ms cubic-bezier(0.32,0.72,0,1) backwards; }
   .st-kpi:nth-child(1) { animation-delay: 40ms; }
   .st-kpi:nth-child(2) { animation-delay: 100ms; }
   .st-kpi:nth-child(3) { animation-delay: 160ms; }
   .st-kpi:nth-child(4) { animation-delay: 220ms; }
-  @keyframes st-rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes st-rise { from { opacity: 0; transform: translateY(8px); } }
   .st-kpi-l { font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--mono); }
   .st-kpi-ico { width: 28px; height: 28px; border-radius: 8px; background: var(--paper-soft); border: 1px solid var(--n-200); color: var(--atlas); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .st-kpi-ico.warn { color: var(--warning); }
@@ -5241,7 +5248,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2114" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2117" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=11" />
@@ -6276,7 +6283,7 @@
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
-<script src="assets/caisse-link.js?v=13" defer></script>
+<script src="assets/caisse-link.js?v=16" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js?v=6" defer fetchpriority="low"></script>
@@ -6286,7 +6293,7 @@
 <!-- Verified capability registry + live read-only operational adapters. It is
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
-<script src="assets/agent-truth.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/agent-truth.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/agent.js?v=30" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/agent-vision.js?v=4" defer fetchpriority="low"></script>
@@ -6305,7 +6312,7 @@
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=12" defer fetchpriority="low"></script>
-<script src="assets/printer-bridge.js?v=19" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=23" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js?v=10" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
@@ -6341,7 +6348,7 @@
      l'établissement, la fiche d'apparence et le moteur de rendu (thermique,
      écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
-<script src="assets/receipt.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/receipt.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/receipt-ui.js?v=1" defer fetchpriority="low"></script>
 <!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
      Le carnet des coûts vit dans son propre document par établissement, jamais
@@ -6377,7 +6384,7 @@
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2151" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2153" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6407,7 +6414,7 @@
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=11">
-<script src="assets/team.js?v=298" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=300" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -7169,6 +7176,14 @@
    * halfway through the animation. */
   const greetH1 = greet.querySelector('h1');
   const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  /* The card choreography is a first impression. Re-played at every unlock
+     (each return after the idle lock, every reload), it became a wait in
+     front of numbers the owner already knew. Once per session. */
+  function enterCards() {
+    let seen = false;
+    try { seen = sessionStorage.getItem('kiwiCardsEntered') === '1'; sessionStorage.setItem('kiwiCardsEntered', '1'); } catch (_) {}
+    if (!seen) document.body.classList.add('cards-enter');
+  }
   let emClip = null;
   if (greetH1) {
     const greetEm = greetH1.querySelector('em');
@@ -7191,7 +7206,7 @@
       if (app)     app.classList.remove('kw-app-hidden');
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
       if (greet && greet.parentNode) greet.remove();
-      document.body.classList.add('cards-enter');
+      enterCards();
       gate(false);
       announceDashboardReady();
     }, 880);
@@ -7249,7 +7264,7 @@
       greet.setAttribute('aria-hidden', 'true');
       if (app)     app.classList.remove('kw-app-hidden');
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
-      document.body.classList.add('cards-enter');
+      enterCards();
       gate(false);
       if (window.__kiwiMarketingTease && window.KiwiMarketingTease) {
         setTimeout(() => {
@@ -7277,7 +7292,7 @@
     document.documentElement.style.overflow = '';
     if (app)     app.classList.remove('kw-app-hidden');
     if (demoBar) demoBar.classList.remove('kw-bar-hidden');
-    document.body.classList.add('cards-enter');
+    enterCards();
     gate(false);
     announceDashboardReady();
     if (lock && lock.parentNode) {

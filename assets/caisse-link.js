@@ -383,6 +383,8 @@
       if (e.target.closest('#kcl-regen')) { var n = generateCode(true); if (n) { setCode(n); refresh(); } return; }
       if (e.target.closest('#kcl-open')) {
         handOff(biz);   // say WHICH store, explicitly — see handOff()
+        /* The app has one window: a second one cannot open, so go there. */
+        if (window.KiwiApiBase && window.KiwiApiBase.native) { location.href = 'kiwi-caisse.html?pair=1'; return; }
         try { window.open('kiwi-caisse.html?pair=1', '_blank'); } catch (_) { location.href = 'kiwi-caisse.html?pair=1'; }
         return;
       }

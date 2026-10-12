@@ -2900,7 +2900,10 @@
     let slug = '';
     try { slug = teamSlug() || window.KiwiConfig?.storeSlug?.() || ''; } catch (_) {}
     if (!slug) { toast('Enregistrez d\'abord cet établissement', { type: 'pend' }); return; }
-    const url = `${location.origin}/kiwi-serveur.html?merchant=${encodeURIComponent(slug)}`;
+    /* In the app location.origin is capacitor://localhost, which no browser
+       can open: show the public link employees actually use. */
+    const origin = (window.KiwiApiBase && window.KiwiApiBase.native && window.KiwiApiBase.base) || location.origin;
+    const url = `${origin}/kiwi-serveur.html?merchant=${encodeURIComponent(slug)}`;
     window.open(url, '_blank', 'noopener');
   };
   handlers['kt-edit-member'] = (_el, id) => {

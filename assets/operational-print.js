@@ -41,7 +41,15 @@
     doc.close();
     return new Promise(function (resolve) {
       setTimeout(function () {
-        try { frame.contentWindow.focus(); frame.contentWindow.print(); resolve({ ok:true, via:'browser' }); }
+        try {
+          frame.contentWindow.focus();
+          /* L'app n'a pas de dialogue d'impression : le même document part en
+           * PDF à imprimer ou partager (native-runtime.js). */
+          if (global.KiwiNativeDocuments && global.KiwiApiBase && global.KiwiApiBase.native) {
+            global.KiwiNativeDocuments.print(frame.contentWindow);
+            resolve({ ok:true, via:'pdf' });
+          } else { frame.contentWindow.print(); resolve({ ok:true, via:'browser' }); }
+        }
         catch (err) { resolve({ ok:false, error:String(err && err.message || err) }); }
         setTimeout(function () { frame.remove(); }, 1200);
       }, 80);

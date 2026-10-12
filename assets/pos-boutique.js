@@ -3432,7 +3432,7 @@
       toast('Impression du reçu…');
       Promise.resolve(K.print(doc)).then(
         (r) => toast(r && r.ok
-          ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : r.via === 'browser' ? 'imprimante système' : 'réseau'))
+          ? (r.via === 'pdf' ? 'Reçu prêt · imprimer ou partager le PDF' : r.via === 'browser' ? 'Reçu ouvert dans l\'impression système' : ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau')))
           : 'Impression échouée'),
         () => toast('Impression échouée')
       );
@@ -6965,7 +6965,7 @@
       methodLabels: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', wallet: 'Wallet', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
       fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
     }).then((res) => {
-      if (res && res.ok) toast(res.via === 'browser' ? 'Rapport envoyé au pilote système' : 'Rapport imprimé');
+      if (res && res.ok) toast(res.via === 'pdf' ? 'Rapport prêt · imprimer ou partager le PDF' : res.via === 'browser' ? 'Rapport ouvert dans l\'impression système' : 'Rapport imprimé');
       else toast('Impression impossible · le rapport reste dans le tableau de bord');
       return res || { ok: false };
     }, () => { toast('Impression impossible · le rapport reste dans le tableau de bord'); return { ok: false }; });

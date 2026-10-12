@@ -1282,6 +1282,7 @@ section('Whole-project regressions');
     'catalog-workspace-test.mjs',
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
+    'native-audit-fixes-test.mjs',
     'account-deletion-test.mjs',
     'account-deletion-ui-test.mjs',
     'push-registration-test.mjs',
