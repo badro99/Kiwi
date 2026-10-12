@@ -59,7 +59,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
-async function open({ api = 'ok', lang = 'fr', theme = 'light', width = 1366 } = {}) {
+async function open({ api = 'ok', lang = 'fr', theme = 'light', width = 1366, store = '' } = {}) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   const problems = [];
@@ -96,9 +96,13 @@ async function open({ api = 'ok', lang = 'fr', theme = 'light', width = 1366 } =
   await page.evaluateOnNewDocument(() => {
     try { if (navigator.serviceWorker) Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
   });
-  await page.evaluateOnNewDocument((lang, theme) => {
-    try { localStorage.setItem('kiwiLang', lang); localStorage.setItem('kiwiTheme', theme); localStorage.setItem('kiwiDashTheme', theme); } catch (_) {}
-  }, lang, theme);
+  await page.evaluateOnNewDocument((lang, theme, store) => {
+    try {
+      localStorage.setItem('kiwiLang', lang); localStorage.setItem('kiwiTheme', theme); localStorage.setItem('kiwiDashTheme', theme);
+      /* once only: a reload must not undo what the scenario changes later */
+      if (store && !sessionStorage.getItem('mhcStoreSet')) { sessionStorage.setItem('mhcStoreSet', '1'); localStorage.setItem('kiwiLiveMerchant', store); }
+    } catch (_) {}
+  }, lang, theme, store);
   let navs = 0;
   page.on('framenavigated', (f) => { if (f === page.mainFrame()) navs++; });
   await page.goto(base + '/dashboard.html', { waitUntil: 'load' });
@@ -126,10 +130,18 @@ try {
   /* 1 · French, light */
   {
     const { ctx, page, problems, asked } = await open();
-    await page.waitForSelector('[data-merchant-health] .mhc-score', { visible: true, timeout: 15000 });
+    await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const c = await cardText(page);
     check(asked.length >= 1 && asked.every((m) => m && /^[a-z0-9-]+$/.test(m)), `the card asks /api/merchant-health once per load for the current store (${asked[0]})`);
-    check(!c.hidden && c.text.includes(String(BODY.score)) && c.text.includes('sur 100'), `the score ${BODY.score} is shown out of 100`);
+    const score = await page.$eval('[data-merchant-health] .mhc-score', (e) => ({ label: e.getAttribute('aria-label'), shown: (e.querySelector('svg text') || {}).textContent }));
+    check(!c.hidden && score.shown === String(BODY.score) && score.label === `Santé Kiwi · ${BODY.score} sur 100`, `the score ${BODY.score} is drawn in the illustration and said out of 100 (${score.label})`);
+    const artBox = await page.evaluate(() => {
+      const box = (e) => { const r = e.getBoundingClientRect(), c = e.closest('.oppo-card').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(c.right - r.right), Math.round(c.bottom - r.bottom)].join(','); };
+      const mine = document.querySelector('[data-merchant-health] .oppo-art');
+      const theirs = document.querySelector('[data-oppo-band] .oppo-card[data-oppo-id] .oppo-art');
+      return { mine: mine && box(mine), theirs: theirs && box(theirs), paths: mine ? mine.querySelectorAll('path').length : -1 };
+    });
+    check(artBox.mine && artBox.mine === artBox.theirs && artBox.paths === 0, `the illustration sits where the neighbours keep theirs, at their size (${artBox.mine} vs ${artBox.theirs}), built from rects and circles`);
     check(c.text.includes(`${BODY.used} outils sur ${BODY.measured} pleinement utilisés`), 'the sentence counts the tools fully in use, from the server');
     const tiles = await row(page);
     check(tiles[0] && tiles[0].health, 'Santé Kiwi is the first tile of the « Pour vous » row');
@@ -186,7 +198,7 @@ try {
   /* 2 · English and Arabic, dark */
   for (const [lang, theme, needle] of [['en', 'dark', `${BODY.used} of ${BODY.measured} tools fully in use`], ['ar', 'dark', `${BODY.used} من أصل ${BODY.measured} أدوات مستعملة بالكامل`]]) {
     const { ctx, page, problems } = await open({ lang, theme });
-    await page.waitForSelector('[data-merchant-health] .mhc-score', { visible: true, timeout: 15000 });
+    await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const c = await cardText(page);
     check(c.text.includes(needle), `${lang} · the sentence reads in ${lang === 'ar' ? 'Arabic' : 'English'}`);
     check(c.dir === (lang === 'ar' ? 'rtl' : 'ltr'), `${lang} · the card runs ${c.dir}`);
@@ -212,18 +224,30 @@ try {
     await ctx.close();
   }
 
-  /* 3 · down: the demo gives the slot back to an offer, and shows no number */
+  /* 3 · down: one quiet retry, then the demo gives the slot back to an offer */
   {
-    const { ctx, page } = await open({ api: 'down' });
-    await sleep(800);
+    const { ctx, page, asked } = await open({ api: 'down' });
+    await sleep(4000);
     const tiles = await row(page);
+    check(asked.length === 2, `a failed request is retried once, quietly, before anything is said (${asked.length} requests)`);
     check(!tiles.some((t) => t.health) && tiles.length === 3 && tiles.every((t) => t.id), `route down on the demo: no tile, three offers fill the row (${tiles.map((t) => t.id).join(', ')})`);
+    await ctx.close();
+  }
+  /* 3b · the store is not known yet when the script runs (a real session
+   * learns its slug a moment later): wait for it, never call that unreachable */
+  {
+    const { ctx, page, asked } = await open({ store: 'pas-encore' });
+    const before = await page.evaluate(() => ({ status: window.KiwiMerchantHealth.state.status, tile: !!document.querySelector('[data-merchant-health]') }));
+    check(before.status === 'idle' && !before.tile && !asked.length, `no store yet: the tile waits, hidden, and asks nothing (${before.status})`);
+    await page.evaluate(() => { localStorage.setItem('kiwiLiveMerchant', 'cafe-atlas'); });
+    await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 20000 });
+    check(asked.length === 1 && asked[0] === 'cafe-atlas', 'the store becomes known: the tile loads it by itself, once');
     await ctx.close();
   }
   /* 4 · another store's answer is never shown, and does not hang */
   {
     const { ctx, page, asked } = await open({ api: 'other' });
-    await sleep(800);
+    await sleep(4000);   /* past the one quiet retry */
     const tiles = await row(page);
     check(asked.length >= 1 && !tiles.some((t) => t.health || t.text.includes(String(BODY.score) + ' ')), "an answer for another store is dropped, not shown under this one's name");
     check(!(await page.$('[data-merchant-health][aria-busy]')), 'and the tile is not left « loading » forever');
@@ -232,7 +256,7 @@ try {
   /* 5 · phone width */
   {
     const { ctx, page } = await open({ width: 390 });
-    await page.waitForSelector('[data-merchant-health] .mhc-score', { visible: true, timeout: 15000 });
+    await page.waitForSelector('[data-merchant-health] .mhc-score[data-ready]', { visible: true, timeout: 15000 });
     const fit = await page.$eval('[data-merchant-health]', (e) => {
       const r = e.getBoundingClientRect();
       const spill = [...e.querySelectorAll('*')].filter((x) => { const q = x.getBoundingClientRect(); return q.width && (q.right > r.right + 1 || q.left < r.left - 1); }).map((x) => x.className);

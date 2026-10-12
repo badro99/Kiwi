@@ -231,13 +231,17 @@
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
   }
 
-  async function load() {
+  async function load(retry) {
     const s = slug();
     const mine = ++seq;
     /* Another store's answer is never shown under this one's name. */
     if (s !== slugNow) data = null;
     slugNow = s;
-    if (!s) { status = 'down'; update(); return; }
+    /* No store known YET is not « unreachable »: a real session learns its
+     * slug after this script runs (on 2026-10-12, amira-cafe at 877 ms had no
+     * slug, said « Injoignable », and never asked). The tile waits, hidden,
+     * and recheck() loads it the moment the store is known. */
+    if (!s) { status = 'idle'; data = null; update(); return; }
     status = 'loading'; update();
     try {
       const res = await fetch('/api/merchant-health?merchant=' + encodeURIComponent(s), { credentials: 'same-origin', cache: 'no-store' });
@@ -251,19 +255,37 @@
       data = body; status = 'ready';
     } catch (_) {
       if (mine !== seq) return;
+      /* one quiet second try before saying anything: a request sent while the
+       * session cookie is still settling fails once and then answers */
+      if (!retry) { setTimeout(() => { if (mine === seq) load(true); }, 2500); return; }
       data = null; status = 'down';
     }
     update();
   }
-
-  function ring(score) {
-    const r = 34, len = 2 * Math.PI * r;
-    const v = score == null ? 0 : Math.max(0, Math.min(100, score));
-    return `<svg class="mhc-ring" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
-      <circle class="mhc-ring-track" cx="40" cy="40" r="${r}"/>
-      <circle class="mhc-ring-fill" cx="40" cy="40" r="${r}" stroke-dasharray="${(len * v / 100).toFixed(2)} ${len.toFixed(2)}" transform="rotate(-90 40 40)"/>
-    </svg>`;
+  /* The store became known, or changed: (re)load. Cheap when nothing moved. */
+  function recheck() {
+    const s = slug();
+    if (s !== slugNow || (s && status === 'idle')) load();
   }
+
+  /* The illustration, in the neighbours' own vocabulary (oppo-cards.js ›
+   * ART): a rounded --atlas panel, a --mint badge, --paper marks, rects and
+   * circles only. The panel carries the real score as a ring and its number;
+   * before there is one, the ring is empty and says nothing. */
+  function art(score) {
+    const r = 19, len = 2 * Math.PI * r;
+    const v = score == null ? 0 : Math.max(0, Math.min(100, score));
+    return `<svg viewBox="0 0 120 96" fill="none" aria-hidden="true" focusable="false">
+        <rect x="14" y="20" width="78" height="62" rx="12" fill="var(--atlas)"/>
+        <circle cx="53" cy="51" r="${r}" stroke="var(--paper)" stroke-opacity="0.24" stroke-width="6"/>
+        ${v > 0 ? `<circle cx="53" cy="51" r="${r}" stroke="var(--mint)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(len * v / 100).toFixed(2)} ${len.toFixed(2)}" transform="rotate(-90 53 51)"/>` : ''}
+        ${score == null ? '' : `<text x="53" y="51" text-anchor="middle" dominant-baseline="central" fill="var(--paper)" font-size="15" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(num(score))}</text>`}
+        <rect x="84" y="10" width="24" height="24" rx="8" fill="var(--mint)"/>
+        <rect x="93.5" y="15" width="5" height="14" rx="1.5" fill="var(--riad)"/>
+        <rect x="89" y="19.5" width="14" height="5" rx="1.5" fill="var(--riad)"/>
+      </svg>`;
+  }
+
 
   /* Does the tile take a slot in the row? Loading and ready, yes; down, only
    * for a real store (it is told plainly). The demo, down, gives the slot
@@ -289,12 +311,12 @@
     const head = `<div class="oppo-t">${esc(pick(S.name))}</div>`;
     if (status === 'loading' || status === 'idle') {
       root.setAttribute('aria-busy', 'true');
-      root.innerHTML = head + `<div class="mhc-skel-lines"><span class="mhc-skel"></span><span class="mhc-skel"></span><span class="mhc-skel"></span></div><div class="mhc-tile-score mhc-skel" aria-hidden="true"></div><span class="mhc-sr">${esc(pick(S.loading))}</span>`;
+      root.innerHTML = head + `<div class="mhc-skel-lines"><span class="mhc-skel"></span><span class="mhc-skel"></span><span class="mhc-skel"></span></div><div class="oppo-art mhc-score" aria-hidden="true">${art(null)}</div><span class="mhc-sr">${esc(pick(S.loading))}</span>`;
       return;
     }
     root.removeAttribute('aria-busy');
     if (status === 'down') {
-      root.innerHTML = head + `<p class="mhc-tile-d">${esc(pick(S.down))}</p><button type="button" class="oppo-cta" data-action="merchant-health-retry">${esc(pick(S.retry))}</button>`;
+      root.innerHTML = head + `<p class="mhc-tile-d">${esc(pick(S.down))}</p><button type="button" class="oppo-cta" data-action="merchant-health-retry">${esc(pick(S.retry))}</button><div class="oppo-art mhc-score" aria-hidden="true">${art(null)}</div>`;
       return;
     }
     const d = data;
@@ -315,10 +337,7 @@
     }
     root.innerHTML = head + `<p class="mhc-tile-d">${esc(line)}</p>${next}
       ${(d.checks || []).length ? `<button type="button" class="oppo-cta" data-action="merchant-health-open">${esc(pick(S.all))}</button>` : ''}
-      <div class="mhc-tile-score mhc-score" role="img" aria-label="${esc(pick(S.name) + ' · ' + scoreText + ' ' + pick(S.scoreOf))}">
-        ${ring(d.score)}
-        <span class="mhc-score-num"><b>${esc(scoreText)}</b><small>${esc(pick(S.scoreOf))}</small></span>
-      </div>`;
+      <div class="oppo-art mhc-score" data-ready role="img" aria-label="${esc(pick(S.name) + ' · ' + scoreText + ' ' + pick(S.scoreOf))}">${art(d.score)}</div>`;
   }
 
   function drawerBody(d) {
@@ -364,7 +383,7 @@
     window.Kiwi = window.Kiwi || {};
     window.Kiwi.handlers = window.Kiwi.handlers || {};
     window.Kiwi.handlers['merchant-health-open'] = () => openDrawer();
-    window.Kiwi.handlers['merchant-health-retry'] = () => load();
+    window.Kiwi.handlers['merchant-health-retry'] = () => load(true);
     window.Kiwi.handlers['merchant-health-go'] = (el) => {
       const id = el && el.getAttribute && el.getAttribute('data-mhc-go');
       const c = find(id);
@@ -380,13 +399,18 @@
     /* a language change re-deals the row (oppo-cards.js), which repaints this */
     window.addEventListener('kiwi:langchange', () => paint());
     try {
-      if (window.KiwiVenue && typeof window.KiwiVenue.subscribe === 'function') {
-        window.KiwiVenue.subscribe(() => { if (slug() !== slugNow) load(); });
-      }
+      if (window.KiwiVenue && typeof window.KiwiVenue.subscribe === 'function') window.KiwiVenue.subscribe(recheck);
     } catch (_) {}
+    /* the account's config lands once the store is known (oppo-cards.js
+     * re-deals on the same event), and the page's own load comes after the
+     * session; a few spaced looks cover a slug that arrives by neither. Not a
+     * poller: it stops after half a minute. */
+    document.addEventListener('kiwi-config', recheck);
+    window.addEventListener('load', recheck);
+    [600, 1500, 3000, 6000, 12000, 25000].forEach((ms) => setTimeout(recheck, ms));
   }
 
-  window.KiwiMerchantHealth = { reload: load, open: openDrawer, shows, paint, get state() { return { status, data }; } };
+  window.KiwiMerchantHealth = { reload: () => load(), open: openDrawer, shows, paint, get state() { return { status, data }; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 })();
