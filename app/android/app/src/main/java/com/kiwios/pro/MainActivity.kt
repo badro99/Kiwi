@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.res.Configuration
 import android.os.Bundle
+import android.text.InputType
 import android.util.Base64
 import android.view.Gravity
 import android.view.View
@@ -39,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Assessment
@@ -53,7 +55,6 @@ import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.PointOfSale
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Receipt
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material.icons.outlined.Storefront
@@ -413,8 +414,12 @@ private class KiwiChromeClient(
 
     override fun onJsPrompt(view: WebView, url: String?, message: String?, defaultValue: String?, result: JsPromptResult): Boolean {
         if (finishing()) { result.cancel(); return true }
+        // Same rule as iOS (asksForCode): a prompt for a code or PIN is masked,
+        // on the number pad, so a manager code never shows on the counter screen.
+        val asksForCode = message.orEmpty().lowercase().let { m -> listOf("code", "pin", "رمز").any { m.contains(it) } }
         val input = EditText(view.context).apply {
             setSingleLine(true)
+            if (asksForCode) inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             setText(defaultValue.orEmpty())
             setSelectAllOnFocus(true)
         }
@@ -551,7 +556,7 @@ private fun choiceIcon(id: String, group: String = ""): ImageVector = when (id) 
     "vrap" -> Icons.Outlined.TakeoutDining
     "waitlist" -> Icons.Outlined.People
     "accueil" -> Icons.Outlined.Home
-    "transactions" -> Icons.Outlined.ReceiptLong
+    "transactions" -> Icons.AutoMirrored.Outlined.ReceiptLong
     "rapport" -> Icons.Outlined.Description
     "clients" -> Icons.Outlined.Group
     "tables" -> Icons.Outlined.TableRestaurant

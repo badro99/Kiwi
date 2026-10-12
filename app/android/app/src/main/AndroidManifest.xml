@@ -58,8 +58,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-    <!-- The camera only scans codes. Without these, CAMERA implies a required
-         camera and Play hides the app from camera-less POS tablets. -->
+    <!-- The camera photographs a delivery note, the floor plan or a hotel guest's
+         ID (same purpose as iOS). Without these, CAMERA implies a required camera
+         and Play hides the app from camera-less POS tablets. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>

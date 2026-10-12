@@ -137,6 +137,9 @@ ok(kt.includes('"ar" -> "إلغاء" to "موافق"') && kt.includes('"en" -> "
   'dialog buttons read fr Annuler/OK, en Cancel/OK, ar إلغاء/موافق, French by default');
 ok(/setCanceledOnTouchOutside\(false\)/.test(kt) && /setOnCancelListener \{ cancel\(\) \}/.test(kt) && /setOnDismissListener \{ cancel\(\) \}/.test(kt) && /if \(!settled\)/.test(kt),
   'a dialog resolves its JsResult exactly once, and a stray outside tap does not dismiss it');
+ok(/listOf\("code", "pin", "رمز"\)/.test(kt) && /if \(asksForCode\) inputType = InputType\.TYPE_CLASS_NUMBER or InputType\.TYPE_NUMBER_VARIATION_PASSWORD/.test(kt),
+  'a prompt for a code or PIN is masked on the number pad, as on iOS');
+ok(/Icons\.AutoMirrored\.Outlined\.ReceiptLong/.test(kt) && !/icons\.outlined\.ReceiptLong/.test(kt), 'the transactions tab uses the auto-mirrored receipt (no deprecation, flips in Arabic)');
 ok(/localStorage\.getItem\('kiwiLang'\)/.test(kt) && /document\.documentElement\.lang/.test(kt), 'the dialog language follows the page (lang attribute, then kiwiLang)');
 
 /* ── 6 · system text size ──────────────────────────────────────────────── */
