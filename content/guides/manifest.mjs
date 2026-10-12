@@ -1,5 +1,8 @@
 export const ASSET_VERSIONS = Object.freeze({ css: 11, js: 5, library: 1 });
 export const PUBLISHED_LOCALES = Object.freeze(['fr', 'en', 'ar']);
+// Landing languages are independent of the three published guide languages:
+// a landing without guides of its own links to the English hub.
+export const LANDING_LOCALES = Object.freeze(['fr', 'en', 'ar', 'de', 'it', 'nl', 'es']);
 
 const article = (title, description, ogTitle, ogDescription, image, imageAlt, section, datePublished, options = {}) => ({
   title, description, ogTitle, ogDescription, image, imageAlt, section,

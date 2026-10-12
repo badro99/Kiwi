@@ -1,25 +1,28 @@
 #!/usr/bin/env node
 
-import { PUBLISHED_LOCALES, TOPICS } from '../content/guides/manifest.mjs';
+import { LANDING_LOCALES, PUBLISHED_LOCALES, TOPICS } from '../content/guides/manifest.mjs';
 
 const SITE = 'https://kiwi-os.com';
+/* Seven landings, three guide languages (content/guides/manifest.mjs). The
+ * contract was written when both were fr/en/ar and failed every week from the
+ * day de/it/nl/es landed, which made the alarm meaningless. */
 const expectedRoutes = [
-  ...PUBLISHED_LOCALES.map((locale) => `/${locale}/`),
+  ...LANDING_LOCALES.map((locale) => `/${locale}/`),
   ...PUBLISHED_LOCALES.map((locale) => `/${locale}/guides/`),
   ...TOPICS.flatMap((topic) => PUBLISHED_LOCALES.map((locale) => topic.routes[locale])),
 ];
 const expectedUrls = expectedRoutes.map((route) => SITE + route);
 const routeClusters = [
-  Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`])),
-  Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])),
-  ...TOPICS.map((topic) => topic.routes),
+  [LANDING_LOCALES, Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`]))],
+  [PUBLISHED_LOCALES, Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`]))],
+  ...TOPICS.map((topic) => [PUBLISHED_LOCALES, topic.routes]),
 ];
-const expectedAlternatesByUrl = new Map(routeClusters.flatMap((routes) => {
+const expectedAlternatesByUrl = new Map(routeClusters.flatMap(([locales, routes]) => {
   const alternates = new Map([
-    ...PUBLISHED_LOCALES.map((locale) => [locale, SITE + routes[locale]]),
+    ...locales.map((locale) => [locale, SITE + routes[locale]]),
     ['x-default', SITE + routes.fr],
   ]);
-  return PUBLISHED_LOCALES.map((locale) => [SITE + routes[locale], alternates]);
+  return locales.map((locale) => [SITE + routes[locale], alternates]);
 }));
 const failures = [];
 
@@ -94,8 +97,15 @@ for (let start = 0; start < expectedUrls.length; start += 6) {
       if (/<meta name="robots" content="[^"]*noindex/i.test(html)) failures.push(`${url} is noindex`);
 
       const locale = new URL(url).pathname.split('/')[1];
+      /* Guides moved from landing cards to the navigation bar: a landing
+       * reaches them through its hub, or the English hub when its language
+       * has no guides yet. The hub itself must still list every guide. */
       if (url === `${SITE}/${locale}/`) {
-        const missingCards = TOPICS.map((topic) => topic.routes[locale]).filter((route) => !html.includes(`href="${route}"`));
+        const hub = `/${PUBLISHED_LOCALES.includes(locale) ? locale : 'en'}/guides/`;
+        if (!html.includes(`href="${hub}"`)) failures.push(`${url} does not link to its guides hub ${hub}`);
+      }
+      if (url === `${SITE}/${locale}/guides/`) {
+        const missingCards = TOPICS.map((topic) => topic.routes[locale]).filter((route) => !html.includes(`href="${route}"`) && !html.includes(`href="${encodeURI(route)}"`));
         if (missingCards.length) failures.push(`${url} is missing ${missingCards.length} manifested guide card(s)`);
       }
     } catch (error) {

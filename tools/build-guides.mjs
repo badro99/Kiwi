@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  ASSET_VERSIONS, CATEGORIES, FEATURED, GOALS, HUBS, PATHS, PUBLISHED_LOCALES,
+  ASSET_VERSIONS, CATEGORIES, FEATURED, GOALS, HUBS, LANDING_LOCALES, PATHS, PUBLISHED_LOCALES,
   TOPIC_CARDS, TOPIC_CATEGORY, TOPIC_GOALS, TOPICS,
 } from '../content/guides/manifest.mjs';
 
@@ -225,7 +225,6 @@ const json = (value) => JSON.stringify(value, null, 2)
 const absolute = (route) => SITE + route;
 const outputPath = (route) => path.join(ROOT, route.replace(/^\//, ''), 'index.html');
 const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages', id, `${locale}.html`);
-// Landing languages are independent of the three published guide languages.
 /* `assets/liquid-lens.js` est la lentille liquide du produit (CLAUDE.md §4 :
  * « never invent a different selection style »). On la référence SANS `?v=`,
  * volontairement : son estampille appartient au cycle de `tools/bump-stamp.js`,
@@ -233,7 +232,6 @@ const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages'
  * laisserait diverger en silence, exactement le piège de §3. `_headers` sert
  * `/assets/*` en `max-age=3600, stale-while-revalidate`, donc une correction de
  * la lentille atteint les guides en une heure au plus, sans estampille. */
-const LANDING_LOCALES = Object.freeze(['fr', 'en', 'ar', 'de', 'it', 'nl', 'es']);
 const landingRoutes = Object.freeze(Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`])));
 const hubRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])));
 
