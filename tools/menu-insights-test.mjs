@@ -191,7 +191,7 @@ const sheet = (id, itemId, perPortion, priceDate, extra = {}) => ({
   ok(['Tajine', 'Couscous', 'Thé'].every((n) => new RegExp(`class="rmw-mx-lab[^"]*"[^>]*>${n}<`).test(html)), 'chaque plat est nommé à côté de son point');
   ok(['Tajine', 'Couscous', 'Thé'].every((n) => new RegExp(`data-quad="[a-z]+"[\\s\\S]*?data-arg="[a-z]+">${n}</button>`).test(html)), 'chaque plat est listé dans son quadrant, cliquable vers sa recette');
   ok(/À développer/.test(text) && /À optimiser/.test(text) && /À revoir/.test(text) && !/Plowhorses|Puzzles|Dogs/.test(text), 'quadrants nommés en français, plus de jargon anglais');
-  ok(/médiane · [\d,]+ vendus/.test(text) && /médiane · [\d,]+ MAD/.test(text), 'les deux médianes sont chiffrées sur la matrice');
+  ok(/populaire dès [\d,]+ vendus/.test(text) && /moyenne · [\d,]+ MAD/.test(text) && !/médiane/.test(text), 'les deux seuils (part équitable, contribution moyenne pondérée) sont chiffrés sur la matrice');
   ok(/Calculé sur 3 plats/.test(text), 'la base de calcul est dite (3 plats)');
   ok(!/\d\.\d %/.test(text), 'les pourcentages suivent la langue (virgule en français)', (text.match(/\d\.\d %/) || [''])[0]);
 }

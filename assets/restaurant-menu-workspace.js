@@ -255,7 +255,7 @@
       grossProfitPerItem: 'Contribution per item',
       popularityXDays: 'Popularity · sales over {n} days',
       perfDotSizeHint: 'Dot size = revenue',
-      perfAxesHint: 'Axes = medians of your own menu',
+      perfAxesHint: 'Lines = 70 % of a fair share of sales, and your menu’s sales-weighted average contribution',
       perfClickHint: 'Click an item to open its recipe',
       quadStar: 'Stars',
       quadStarHint: 'Popular, high contribution',
@@ -389,9 +389,9 @@
       itUploadReady: 'Media ready. Save to keep it.',
       itUploadFailed: 'Upload failed. Try again.',
       mxTitle: 'Menu matrix',
-      mxSub: 'Each dot is a dish that sold and has a cost. Further right: sells more. Higher up: contributes more per item. The dashed lines are the medians of your own menu.',
-      mxMedianQty: 'median · {n} sold',
-      mxMedianProfit: 'median · {amount}',
+      mxSub: 'Each dot is a dish that sold and has a cost. Further right: sells more. Higher up: contributes more per item. Popular means at least 70 % of a fair share of sales; profitable means at or above your menu’s average contribution, weighted by what sells.',
+      mxMedianQty: 'popular from {n} sold',
+      mxMedianProfit: 'average · {amount}',
       mxPerUnit: '{amount} per item',
       mxSoldN: '{n} sold',
       mxMore: '+ {n} more',
@@ -776,7 +776,7 @@
       grossProfitPerItem: 'المساهمة لكل منتج',
       popularityXDays: 'الشعبية · المبيعات خلال {n} يوماً',
       perfDotSizeHint: 'حجم النقطة = رقم المعاملات',
-      perfAxesHint: 'المحاور = متوسطات قائمتك الخاصة',
+      perfAxesHint: 'الخطوط = 70 % من الحصة العادلة للمبيعات، ومتوسط مساهمة قائمتك مرجّحاً بالمبيعات',
       perfClickHint: 'انقر على منتج لفتح وصفته',
       quadStar: 'نجوم (Stars)',
       quadStarHint: 'شعبية بمساهمة عالية',
@@ -910,9 +910,9 @@
       itUploadReady: 'الوسائط جاهزة. احفظ للاحتفاظ بها.',
       itUploadFailed: 'تعذر الرفع. حاول مجدداً.',
       mxTitle: 'مصفوفة القائمة',
-      mxSub: 'كل نقطة طبق بيع وله تكلفة. إلى اليمين: يُباع أكثر. إلى الأعلى: يساهم أكثر لكل وحدة. الخطوط المتقطعة هي وسيط قائمتك.',
-      mxMedianQty: 'الوسيط · {n} مبيعة',
-      mxMedianProfit: 'الوسيط · {amount}',
+      mxSub: 'كل نقطة طبق بيع وله تكلفة. إلى اليمين: يُباع أكثر. إلى الأعلى: يساهم أكثر لكل وحدة. الطبق شائع إذا بلغ 70 % على الأقل من حصته العادلة من المبيعات، ومربح إذا بلغت مساهمته متوسط قائمتك المرجّح بالمبيعات.',
+      mxMedianQty: 'شائع ابتداءً من {n} مبيعة',
+      mxMedianProfit: 'المتوسط · {amount}',
       mxPerUnit: '{amount} للوحدة',
       mxSoldN: '{n} مبيعة',
       mxMore: '+ {n} أخرى',
@@ -1300,7 +1300,7 @@
       grossProfitPerItem: 'Contribution par article',
       popularityXDays: 'Popularité · ventes sur {n} jours',
       perfDotSizeHint: 'Taille du point = chiffre d’affaires',
-      perfAxesHint: 'Axes = médianes de votre propre carte',
+      perfAxesHint: 'Repères = 70 % d’une part équitable des ventes, et la contribution moyenne de votre carte pondérée par les ventes',
       perfClickHint: 'Cliquez sur un article pour ouvrir sa recette',
       quadStar: 'Stars',
       quadStarHint: 'Populaires, forte contribution',
@@ -1434,9 +1434,9 @@
       itUploadReady: 'Média prêt. Enregistrez pour le garder.',
       itUploadFailed: 'Envoi impossible. Réessayez.',
       mxTitle: 'Matrice de la carte',
-      mxSub: 'Chaque point est un plat vendu et chiffré. Plus à droite : il se vend plus. Plus haut : il rapporte plus par article. Les pointillés sont les médianes de votre propre carte.',
-      mxMedianQty: 'médiane · {n} vendus',
-      mxMedianProfit: 'médiane · {amount}',
+      mxSub: 'Chaque point est un plat vendu et chiffré. Plus à droite : il se vend plus. Plus haut : il rapporte plus par article. Populaire : au moins 70 % de sa part équitable des ventes. Rentable : au moins la contribution moyenne de votre carte, pondérée par ce qui se vend.',
+      mxMedianQty: 'populaire dès {n} vendus',
+      mxMedianProfit: 'moyenne · {amount}',
       mxPerUnit: '{amount} par article',
       mxSoldN: '{n} vendus',
       mxMore: '+ {n} autres',
@@ -1938,7 +1938,16 @@
       const rc=R.of(row);if(rc){row.theoCost=rc.mad;if(rc.observed!=null)row.observedCost=rc.observed;}
     });
     const measured=items.filter(x=>x.qty>0&&x.unitProfit!=null&&Number.isFinite(x.unitProfit));
-    const medQty=median(measured.map(x=>x.qty)),medProfit=median(measured.map(x=>x.unitProfit));
+    /* Les deux seuils de l'ingénierie de menu (Kasavana et Smith, 1982), pas
+       des médianes. Une médiane coupe TOUJOURS la carte en deux : une carte où
+       chaque plat se vend bien rangeait quand même la moitié en « peu
+       populaire ». Ici, un plat est populaire s'il fait au moins 70 % de sa part
+       équitable des ventes (1/n), et rentable si sa contribution par article
+       atteint la moyenne PONDÉRÉE par les ventes, celle de la carte entière.
+       Les noms de champs restent medQty/medProfit pour ne rien casser. */
+    const soldQty=measured.reduce((n,x)=>n+x.qty,0);
+    const medQty=measured.length?0.7*soldQty/measured.length:0;
+    const medProfit=soldQty?measured.reduce((n,x)=>n+x.unitProfit*x.qty,0)/soldQty:0;
     measured.forEach(x=>{const popular=x.qty>=medQty,profitable=x.unitProfit>=medProfit;x.quadrant=popular&&profitable?'star':popular?'plow':profitable?'puzzle':'dog';});
     /* `totalRevenue` = le CA des plats de la carte, seul périmètre où une
        recette peut exister. Ce n'est PAS le chiffre d'affaires du commerce :
@@ -3159,6 +3168,8 @@ html[data-theme="dark"] .rmw-formula-picker.is-floating{background:color-mix(in 
          d'ensemble d'« Analyse du menu » les lit aussi, pour ne jamais
          afficher une autre marge que celle de l'onglet d'à côté. */
       ledger(w){return menuLedger(w);},
+      /* Les quadrants et leurs deux seuils, tels que la matrice les trace. */
+      quadrants(days=30){const p=performanceData(days);return {popularFrom:p.medQty,averageContribution:p.medProfit,items:p.measured.map(x=>({id:x.item?.id??x.id??null,name:x.item?.name??x.name??'',qty:x.qty,unitProfit:x.unitProfit,quadrant:x.quadrant}))};},
       insights(){const p=performanceData(30),est=costEstimates();return perfInsights(p,est).map(x=>({key:x.key,text:x.text,item:x.item?x.item.id:null}));},
       costOf(item){const hit=recipeCostResolver([{item}]).of({item});if(hit)return hit;try{return window.KiwiCost?.of?.({kind:'menu',id:item.id,name:item.name})||null;}catch(_){return null;}}
     }};

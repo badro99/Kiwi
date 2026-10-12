@@ -78,4 +78,26 @@ assert.match(html, /données réelles de la caisse/i);
 assert.match(html, /<b>Shawarma<\/b><small>Plats<\/small><\/td><td>72<\/td>/, 'saved itemId includes options and distinguishes duplicate menu names');
 assert.match(html, /<b>Shawarma<\/b><small>Menu Enfants<\/small><\/td><td>0<\/td>/, 'no invented kids sales');
 
-console.log('✓ restaurant Performance uses real 30-day sales, recipe costs, margins and four-quadrant ranking');
+/* Les seuils de Kasavana et Smith, pas des médianes. */
+const q = window.KiwiRestaurantMenuWorkspace.analysis.quadrants();
+const byId = Object.fromEntries(q.items.map((x) => [x.id, x]));
+assert.deepStrictEqual(['star', 'plow', 'puzzle', 'dog'].map((id) => byId[id] && byId[id].quadrant), ['star', 'plow', 'puzzle', 'dog'], 'the four reference dishes keep their quadrant');
+const sold = q.items.reduce((n, x) => n + x.qty, 0);
+assert.ok(Math.abs(q.popularFrom - 0.7 * sold / q.items.length) < 1e-9, 'popular from 70 % of a fair share of sales');
+const weighted = q.items.reduce((n, x) => n + x.unitProfit * x.qty, 0) / sold;
+assert.ok(Math.abs(q.averageContribution - weighted) < 1e-9, 'profitable from the sales-weighted average contribution');
+
+/* Une carte où chaque plat se vend bien : une médiane en rangeait la moitié en
+   « peu populaire » ; la part équitable, aucun. */
+const evenSales = [{ ts: now, lines: [
+  { id: 'star', name: 'Tajine vedette', qty: 10, total: 1000 },
+  { id: 'plow', name: 'Tajine populaire', qty: 9, total: 450 },
+  { id: 'puzzle', name: 'Pastilla rentable', qty: 8, total: 800 },
+  { id: 'dog', name: 'Soupe lente', qty: 7, total: 350 },
+] }];
+window.KiwiSales.list = () => evenSales;
+const even = window.KiwiRestaurantMenuWorkspace.analysis.quadrants();
+assert.strictEqual(even.items.length, 4);
+assert.ok(even.items.every((x) => x.quadrant === 'star' || x.quadrant === 'plow'), 'when every dish sells its share, none is called unpopular: ' + even.items.map((x) => x.id + ':' + x.quadrant).join(', '));
+
+console.log('✓ restaurant Performance uses real 30-day sales, recipe costs, margins and four-quadrant ranking (Kasavana-Smith thresholds)');
