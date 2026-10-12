@@ -182,6 +182,43 @@
     var mid = Math.floor(a.length / 2);
     return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
   }
+  /* Qui a fait le geste, en mots. La caisse enregistre l'identifiant de la
+   * fiche équipe (remise : le responsable qui l'a validée ; annulation :
+   * `staff:<id>`, `account:<id>` ou `operator:<id>`). « Acteur principal :
+   * staff:7f3a… » ne disait rien au commerçant : on lit le NOM dans
+   * KiwiTeam.roster(), qui ne porte ni code ni mot de passe. Une fiche qui
+   * n'est plus dans l'équipe garde une référence courte, pour qu'on puisse la
+   * retrouver sans afficher l'identifiant entier. */
+  function actorName(id, roster) {
+    id = String(id || '');
+    var kind = /^(staff|account|operator):/.exec(id), raw = kind ? id.slice(kind[0].length) : id;
+    if (kind && kind[1] === 'account') return { fr: 'le compte propriétaire', en: 'the owner account', ar: 'حساب المالك' };
+    if (kind && kind[1] === 'operator') return { fr: 'un opérateur Kiwi', en: 'a Kiwi operator', ar: 'مشغّل من Kiwi' };
+    var list = roster;
+    if (!Array.isArray(list)) { try { list = window.KiwiTeam && window.KiwiTeam.roster ? window.KiwiTeam.roster() : []; } catch (_) { list = []; } }
+    var hit = raw && (list || []).filter(function (m) { return m && String(m.id) === raw; })[0];
+    var name = hit && String(hit.name || '').trim();
+    if (name && name !== '·') return { fr: name, en: name, ar: name };
+    var ref = raw ? raw.slice(-6) : '';
+    return ref
+      ? { fr: 'une personne absente de l’équipe actuelle (réf. ' + ref + ')', en: 'someone no longer in the team (ref. ' + ref + ')', ar: 'شخص لم يعد ضمن الفريق (مرجع ' + ref + ')' }
+      : { fr: 'une personne non identifiée', en: 'an unidentified person', ar: 'شخص غير معروف' };
+  }
+  /* Le motif d'annulation, en mots. Sans motif saisi, le serveur enregistre
+   * d'où vient l'annulation (functions/api/sale/cancel.js). */
+  var VOID_REASON = {
+    'employee-cancel': { fr: 'annulation à la caisse', en: 'cancelled at the till', ar: 'إلغاء من الصندوق' },
+    'dashboard-cancel': { fr: 'annulation depuis le tableau de bord', en: 'cancelled from the dashboard', ar: 'إلغاء من لوحة التحكم' },
+    'non-renseigne': { fr: 'sans motif', en: 'no reason given', ar: 'بدون سبب' },
+    'client-change': { fr: 'changement du client', en: 'customer changed their mind', ar: 'تغيير من الزبون' },
+    duplicate: { fr: 'doublon', en: 'duplicate', ar: 'تكرار' }
+  };
+  function reasonWords(key) {
+    var k = String(key || 'non-renseigne'), hit = VOID_REASON[k];
+    if (hit) return hit;
+    var plain = k.replace(/-+/g, ' ');
+    return { fr: plain, en: plain, ar: plain };
+  }
   function salesDropRule(input) {
     input = input || {};
     var ready = input.backfillComplete;
@@ -382,9 +419,12 @@
         var bounds = D.dayBounds(targetDay);
         var cancelled = events.filter(function (event) { return +event.voidedAt >= bounds.from && +event.voidedAt < bounds.to; });
         var active = rows.filter(function (sale) { return +sale.ts >= bounds.from && +sale.ts < bounds.to; }).length;
-        var reasons = Object.create(null);
-        cancelled.forEach(function (event) { var key = String(event.reason || 'non-renseigne'); reasons[key] = (reasons[key] || 0) + 1; });
-        return { cancellations: cancelled.length, total: active + cancelled.length, reasons: reasons };
+        var reasons = Object.create(null), actors = Object.create(null);
+        cancelled.forEach(function (event) {
+          var key = String(event.reason || 'non-renseigne'); reasons[key] = (reasons[key] || 0) + 1;
+          if (event.actorId) actors[event.actorId] = (actors[event.actorId] || 0) + 1;
+        });
+        return { cancellations: cancelled.length, total: active + cancelled.length, reasons: reasons, actors: actors };
       };
       current = stats(day); baselineRates = [];
       for (var i = 1; i <= 4; i += 1) {
@@ -399,12 +439,18 @@
     var reasonRows = Object.keys(current.reasons || {}).map(function (key) { return { key: key, count: +current.reasons[key] || 0 }; }).sort(function (a, b) { return b.count - a.count; });
     var top = reasonRows[0] || { key: 'non-renseigne', count: current.cancellations };
     var rate = Math.round(currentRate * 10) / 10, base = Math.round(baseline * 10) / 10;
+    /* Une seule personne derrière au moins la moitié des annulations (et au
+     * moins deux) : on la nomme. Sinon, rien : l'écart est collectif. */
+    var who = Object.keys(current.actors || {}).map(function (id) { return { id: id, count: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.count - a.count; })[0];
+    var motive = reasonWords(top.key);
+    var named = who && who.count >= 2 && who.count * 2 >= current.cancellations ? actorName(who.id, input.roster) : null;
+    var by = named ? { fr: ' Dont ' + who.count + ' par ' + named.fr + '.', en: ' ' + who.count + ' of them by ' + named.en + '.', ar: ' منها ' + who.count + ' بواسطة ' + named.ar + '.' } : { fr: '', en: '', ar: '' };
     return {
       id: 'cancellation-rate:' + String(day || 'day'), kind: 'cancellation-rate', tone: 'warn', roles: ['owner', 'manager'],
       copy: {
-        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + top.key + ' (' + top.count + '). Seuil : au moins 5 % et 2× la référence.',
-        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + top.key + ' (' + top.count + '). Threshold: at least 5% and 2× baseline.',
-        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + top.key + ' (' + top.count + '). العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + motive.fr + ' (' + top.count + ').' + by.fr + ' Seuil : au moins 5 % et 2× la référence.',
+        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + motive.en + ' (' + top.count + ').' + by.en + ' Threshold: at least 5% and 2× baseline.',
+        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + motive.ar + ' (' + top.count + ').' + by.ar + ' العتبة: 5٪ على الأقل وضعف المرجع.'
       },
       evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list' }
     };
@@ -447,14 +493,14 @@
     var share = (current.discount / current.gross) * 100, baseline = median(baselineShares);
     if (!Number.isFinite(baseline) || share < 5 || share < Math.max(5, baseline * 2)) return null;
     var actorRows = Object.keys(current.actors || {}).map(function (id) { return { id: id, amount: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.amount - a.amount; });
-    var actor = actorRows[0] ? actorRows[0].id : 'id-inconnu';
+    var actor = actorName(actorRows[0] ? actorRows[0].id : '', input.roster);
     var pct = Math.round(share * 10) / 10, base = Math.round(baseline * 10) / 10;
     return {
       id: 'discount-share:' + String(day || 'day'), kind: 'discount-share', tone: 'warn', roles: ['owner'],
       copy: {
-        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Acteur principal : ' + actor + '. Seuil : au moins 5 % et 2× la référence.',
-        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Leading actor: ' + actor + '. Threshold: at least 5% and 2× baseline.',
-        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. المعرّف الرئيسي: ' + actor + '. العتبة: 5٪ على الأقل وضعف المرجع.'
+        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Surtout accordées par ' + actor.fr + '. Seuil : au moins 5 % et 2× la référence.',
+        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Mostly granted by ' + actor.en + '. Threshold: at least 5% and 2× baseline.',
+        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. منحها أساساً: ' + actor.ar + '. العتبة: 5٪ على الأقل وضعف المرجع.'
       },
       evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents' }
     };
@@ -758,7 +804,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

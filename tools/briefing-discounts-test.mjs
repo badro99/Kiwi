@@ -25,7 +25,14 @@ const fixture = { day: '2026-08-20', current: { gross: 100000, discount: 10000, 
 const line = T.discountShareRule(fixture);
 ok(!!line, '10 percent share against low baseline emits');
 ok(line.roles.length === 1 && line.roles[0] === 'owner', 'per-actor trust signal is owner-only');
-ok(/staff:manager-a/.test(line.copy.fr), 'line names the leading actor id');
+ok(/Surtout accordées par une personne absente de l’équipe actuelle \(réf\. ager-a\)/.test(line.copy.fr) && !/staff:/.test(line.copy.fr), 'without a roster entry the line gives a short reference, never the raw id');
+const ROSTER = [{ id: 'manager-a', name: 'Samira B.', role: 'Responsable' }, { id: 'manager-b', name: 'Youssef', role: 'Caissier' }];
+const named = T.discountShareRule({ ...fixture, roster: ROSTER });
+ok(/Surtout accordées par Samira B\./.test(named.copy.fr) && /Mostly granted by Samira B\./.test(named.copy.en) && /منحها أساساً: Samira B\./.test(named.copy.ar), 'with the roster the line names the person, in FR, EN and AR');
+ok(T.actorName('manager-b', ROSTER).fr === 'Youssef', 'the till’s bare roster id resolves too');
+ok(T.actorName('account:acct-a', ROSTER).fr === 'le compte propriétaire' && T.actorName('operator:op1', ROSTER).en === 'a Kiwi operator', 'owner and operator are named for what they are');
+ok(T.actorName('', ROSTER).fr === 'une personne non identifiée', 'no id: unidentified, nothing invented');
+ok(!/pin|code|password/i.test(JSON.stringify(T.actorName('manager-a', [{ id: 'manager-a', name: 'Samira B.', pinCode: '0000', password: 'x' }]))), 'only the name leaves the roster');
 ok(/5 %/.test(line.copy.fr) && /2×/.test(line.copy.fr), 'line states both thresholds');
 ok(!line.action, 'discount signal never acts');
 ok(line.evidence.count === 3 && /discount_amount_cents/.test(line.evidence.source), 'evidence carries count and source');
