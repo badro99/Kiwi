@@ -26,7 +26,11 @@ for (const localePath of localePaths) {
   const locale = localePath.split('/')[0];
   // The first localization commit contains the original locale copy. Read
   // that immutable snapshot so repeated rebuilds never translate translations.
-  const translated = execFileSync('git', ['show', `bf309397:${localePath}`], { encoding: 'utf8' });
+  // Kiwi Basic moved to 199 MAD a month, 149 annually (2026-10-12): the
+  // snapshot still says 249 / 199, so it is read at today's price.
+  const translated = execFileSync('git', ['show', `bf309397:${localePath}`], { encoding: 'utf8' })
+    .replace(/\b249(\s*(?:MAD|درهم)[^0-9<>]{0,40}?)\b199\b/g, '199$1149')
+    .replace(/\b249((?:<!-- --> <!-- -->|\s*)(?:MAD|درهم))/g, '199$1');
   const translatedText = visibleText(translated);
   if (translatedText.length !== sourceText.length) {
     throw new Error(`${localePath}: expected ${sourceText.length} text nodes, found ${translatedText.length}`);
@@ -58,7 +62,7 @@ const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').rep
 // Clone only the landing's client components. Translate their exact string
 // literals too: static HTML alone disagrees with React on its first render.
 // Content-addressed URLs keep these locale-specific exports cache-safe.
-const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w.js'];
+const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-7a5fa432.js'];
 const scriptPaths = new Map();
 fs.mkdirSync('es/chunks', { recursive: true });
 for (const clientPath of clientPaths) {
@@ -79,7 +83,7 @@ for (const clientPath of clientPaths) {
 }
 
 for (const name of fs.readdirSync('es/chunks')) {
-  if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w)-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes('/es/chunks/' + name)) fs.unlinkSync('es/chunks/' + name);
+  if (/^(?:216g4fzfwrgwn|2c2tj5hx4r2-w(?:-[0-9a-f]{8})?)-[0-9a-f]{16}\.js$/.test(name) && ![...scriptPaths.values()].includes('/es/chunks/' + name)) fs.unlinkSync('es/chunks/' + name);
 }
 
 // Translate text, descriptive attributes and metadata, including French source

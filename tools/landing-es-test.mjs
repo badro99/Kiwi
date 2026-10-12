@@ -307,7 +307,7 @@ export const UNCHANGED_COPY = new Set([
   "21",
   "Gluten",
   "Basic",
-  "249",
+  "199",
   "Pro",
   "399",
   "+212 624 495 159",

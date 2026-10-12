@@ -163,11 +163,11 @@ try {
   await page.click('#pricing [role="radio"]:nth-of-type(2)');await delay(450);
   ok(await page.$eval('#pricing [role="radio"]:nth-of-type(2)',e=>e.getAttribute('aria-checked')==='true'),'yearly tab selects');
   const yearly=await page.$eval('#pricing',e=>e.innerText);
-  ok(yearly.includes('199')&&yearly.includes('2 400 MAD')&&!yearly.includes('billed'),'yearly price and total stay Spanish');
+  ok(yearly.includes('149')&&yearly.includes('1 800 MAD')&&!yearly.includes('billed'),'yearly price and total stay Spanish');
   const lens=await page.$eval('#pricing .kw-lens',e=>({width:e.getBoundingClientRect().width,opacity:getComputedStyle(e).opacity}));
   ok(lens.width>20&&+lens.opacity>0,'liquid-lens highlight follows pricing tab');
   await page.click('#pricing [role="radio"]:nth-of-type(1)');await delay(150);
-  ok((await page.$eval('#pricing',e=>e.innerText)).includes('249'),'monthly tab restores price');
+  ok((await page.$eval('#pricing',e=>e.innerText)).includes('199'),'monthly tab restores price');
   results.interactions.push('monthly/yearly price, annual total and liquid lens');
   await page.evaluate(()=>document.querySelector('#stats').scrollIntoView());await delay(600);
   await page.waitForSelector('.kw-more-btn',{timeout:5000});

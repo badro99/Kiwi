@@ -365,10 +365,12 @@ assume the designation extends to Amira's Boutique, Maison, or other venues.
 
 The pitch deck and dashboard story revolve around **Kiwi POS SaaS** — a four-tier
 model:
-- **Kiwi Basic · 199 MAD/month** — software only, on the merchant's own hardware,
+- **Kiwi Basic · 199 MAD/month, 149 on the annual plan** (billed 1 800 MAD a
+  year; owner, 2026-10-12) — software only, on the merchant's own hardware,
   unlimited devices, one établissement, integrated into the existing till, on-site
   training + guides included.
-- **Kiwi Pro · 399 MAD/month** — everything in Basic + priority support with
+- **Kiwi Pro · 399 MAD/month, 349 on the annual plan** (billed 4 200 MAD a
+  year) — everything in Basic + priority support with
   faster response, advanced Kiwi IQ.
 - **Kiwi Ultra · 1 499 MAD/month** — unlimited établissements, multi-pays, API
   enterprise, dedicated 24/7 account manager.
