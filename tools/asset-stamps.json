@@ -716,12 +716,12 @@
     "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
-    "v": "57",
+    "v": "58",
     "sha": "3966a6796d909226"
   },
   "assets/pos-boutique.js": {
-    "v": "57",
-    "sha": "b1fc45b2814fb795"
+    "v": "58",
+    "sha": "f7a28e6aa45a3f9b"
   },
   "assets/pos-coiffure.css": {
     "v": "7",
@@ -732,8 +732,8 @@
     "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "87",
-    "sha": "8058d8b428252c34"
+    "v": "88",
+    "sha": "d7fe59ce16f3b9e6"
   },
   "assets/pos-epicerie.css": {
     "v": "8",
@@ -944,8 +944,8 @@
     "sha": "eb5369eeed16fa96"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "112",
-    "sha": "6432b3a2842ccccf"
+    "v": "113",
+    "sha": "4ea4cef78a0e6d1b"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",
