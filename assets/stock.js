@@ -303,6 +303,19 @@
       'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Mollusques',
       addItemBtn: "Ajouter au catalogue",
       addItemStock: 'Stock actuel',
+      itemSecItem: 'Article', itemSecStock: 'Stock', itemSecCost: 'Coût',
+      itemNamePh: 'Ex. Olives noires', itemNameErr: 'Donnez un nom à l’article.',
+      itemNewCatErr: 'Nommez la nouvelle catégorie et confirmez, ou choisissez-en une.',
+      itemNoSupplierOpt: 'Aucun', itemNoSupplier: 'Aucun fournisseur enregistré. Ajoutez-en depuis l’onglet Fournisseurs.',
+      itemOptional: 'facultatif',
+      itemStockErr: 'Indiquez le stock actuel. Écrivez 0 si vous n’en avez pas.',
+      itemStockHint: 'Ce que vous avez en réserve aujourd’hui. Il devient le stock d’ouverture.',
+      itemNumBad: 'Écrivez un nombre, par exemple 2,5.',
+      itemParHint: 'La quantité à avoir en réserve après une livraison.',
+      itemReorderHint: 'Sous ce seuil, l’article passe en stock bas.',
+      itemReorderAuto: (q) => `Laissé vide : stock bas sous ${q}, soit 40 % du par level.`,
+      itemReorderNone: 'Laissé vide : aucune alerte de stock bas.',
+      itemCostLabel: 'Coût par unité',
       addItemToast: (name) => `${name} ajouté au catalogue`,
       // Edit / delete item
       editItemTitle: "Modifier l'article",
@@ -611,6 +624,19 @@
       'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Molluscs',
       addItemBtn: 'Add to catalogue',
       addItemStock: 'Current stock',
+      itemSecItem: 'Item', itemSecStock: 'Stock', itemSecCost: 'Cost',
+      itemNamePh: 'E.g. Black olives', itemNameErr: 'Give the item a name.',
+      itemNewCatErr: 'Name the new category and confirm it, or pick an existing one.',
+      itemNoSupplierOpt: 'None', itemNoSupplier: 'No supplier saved yet. Add one from the Suppliers tab.',
+      itemOptional: 'optional',
+      itemStockErr: 'Enter the current stock. Write 0 if you have none.',
+      itemStockHint: 'What you hold today. It becomes the opening stock.',
+      itemNumBad: 'Enter a number, for example 2.5.',
+      itemParHint: 'The quantity to hold after a delivery.',
+      itemReorderHint: 'Below this level the item shows as low stock.',
+      itemReorderAuto: (q) => `Left empty: low stock below ${q}, 40% of the par level.`,
+      itemReorderNone: 'Left empty: no low-stock alert.',
+      itemCostLabel: 'Cost per unit',
       addItemToast: (name) => `${name} added to catalogue`,
       editItemTitle: 'Edit item',
       editItemBtn: 'Save changes',
@@ -909,6 +935,19 @@
       'allergen.lupin': 'الترمس', 'allergen.mollusques': 'الرخويات',
       addItemBtn: 'إضافة للكتالوج',
       addItemStock: 'المخزون الحالي',
+      itemSecItem: 'السلعة', itemSecStock: 'المخزون', itemSecCost: 'التكلفة',
+      itemNamePh: 'مثال: زيتون أسود', itemNameErr: 'أدخل اسماً للسلعة.',
+      itemNewCatErr: 'سمِّ الفئة الجديدة وأكّدها، أو اختر فئة موجودة.',
+      itemNoSupplierOpt: 'لا أحد', itemNoSupplier: 'لا يوجد مورّد مسجّل بعد. أضف مورّداً من تبويب الموردين.',
+      itemOptional: 'اختياري',
+      itemStockErr: 'أدخل المخزون الحالي. اكتب 0 إن لم يكن لديك شيء.',
+      itemStockHint: 'ما لديك اليوم. يصبح مخزون الافتتاح.',
+      itemNumBad: 'أدخل رقماً، مثلاً 2,5.',
+      itemParHint: 'الكمية الواجب توفرها بعد كل تسليم.',
+      itemReorderHint: 'تحت هذا الحد تظهر السلعة كمخزون منخفض.',
+      itemReorderAuto: (q) => `إن تُرك فارغاً: مخزون منخفض تحت ${q}، أي 40٪ من الحد.`,
+      itemReorderNone: 'إن تُرك فارغاً: لا تنبيه بانخفاض المخزون.',
+      itemCostLabel: 'التكلفة لكل وحدة',
       addItemToast: (name) => `${name} تمت إضافته للكتالوج`,
       editItemTitle: 'تعديل المنتج',
       editItemBtn: 'حفظ التعديلات',
@@ -6782,10 +6821,10 @@
     if (!sel || !inlineWrap) return;
     sel.addEventListener('change', () => {
       if (sel.value === '__new__') {
-        inlineWrap.style.display = '';
+        inlineWrap.hidden = false;
         inlineInput?.focus();
       } else {
-        inlineWrap.style.display = 'none';
+        inlineWrap.hidden = true;
       }
     });
     inlineBtn?.addEventListener('click', () => {
@@ -6803,7 +6842,9 @@
       if (!id) return;
       // Rebuild the select preserving "+ Nouvelle…" option last, select new id.
       sel.innerHTML = renderCatOptions(id);
-      inlineWrap.style.display = 'none';
+      sel.value = id;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      inlineWrap.hidden = true;
       inlineInput.value = '';
       window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
     });
@@ -6984,76 +7025,234 @@
     const it = getInv().find(x => x.id === itemId);
     if (it) openItemForm(it);
   }
+  /* ── Article de stock · création et modification ──────────────────────────
+   * 2026-10-12, what this form replaced:
+   *  · a new article saved with « Stock actuel » left empty was written with
+   *    its PAR LEVEL as stock, and that invented quantity went to the ledger
+   *    as the opening balance (KiwiInventory.ensureOpening);
+   *  · an empty « Niveau de réappro » became 40 % of the par level without a
+   *    word on screen (the rule stays, the form now says it);
+   *  · numbers went through parseFloat, so « 2,5 » kg was stored as 2;
+   *  · the first supplier was silently picked for every new article (no empty
+   *    option), and « + Nouvelle catégorie… » left unconfirmed saved the
+   *    article under « Légumes »;
+   *  · the « Nom de la catégorie / Confirmer » row was always visible (inline
+   *    display:none followed by display:flex), the unit and the third number
+   *    were cut off on a phone, and an empty name only moved the focus. */
+  function stItemNum(raw) {
+    let s = String(raw == null ? '' : raw)
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+      .replace(/\u066B/g, '.')
+      .replace(/[\s\u00a0\u202F\u066C]/g, '');
+    if (!s) return { empty: true };
+    if (/^\d+,\d{1,3}$/.test(s)) s = s.replace(',', '.');
+    if (!/^\d+(\.\d{1,3})?$/.test(s)) return { bad: true };
+    return { n: Math.round(parseFloat(s) * 1000) / 1000 };
+  }
+  function stItemVal(n) {
+    if (n == null || n === '' || !Number.isFinite(+n)) return '';
+    const s = String(Math.round(+n * 1000) / 1000);
+    return lang() === 'en' ? s : s.replace('.', ',');
+  }
+  function stItemCss() {
+    if (document.getElementById('st-if-css')) return;
+    const st = document.createElement('style');
+    st.id = 'st-if-css';
+    st.textContent = `
+      .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal { --if-bg: var(--paper); --if-card: color-mix(in srgb, var(--paper) 55%, #fff); --if-field: var(--paper); background: var(--if-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 1px solid var(--n-200); }
+      html[data-theme="dark"] .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal,
+      body[data-vexel-mode="dark"] .kiwi-backdrop.st-if-modal .kiwi-modal.kiwi-modal { --if-bg: #0F1512; --if-card: #151C18; --if-field: #0B100E; }
+      .kiwi-backdrop.st-if-modal .kiwi-modal-foot.kiwi-modal-foot { background: var(--if-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-top: 1px solid var(--n-200); }
+      .st-if { display: grid; gap: 14px; color: var(--ink); }
+      .st-if [hidden] { display: none !important; }
+      .st-if-sec { min-width: 0; padding: 16px 18px 2px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--if-card); }
+      .st-if-sec > h4 { margin: 0 0 12px; font: 600 14.5px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+      .st-if-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+      .st-if-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .st-if .st-if-f { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; align-content: start; min-width: 0; margin: 0 0 14px; }
+      .st-if-l { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; font-size: 12px; font-weight: 600; color: var(--n-600); }
+      .st-if-tag { font-size: 11px; font-weight: 500; color: var(--n-400, var(--n-500)); }
+      .st-if-in { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--if-field); color: var(--ink); font: 500 13.5px var(--sans); transition: border-color 140ms, box-shadow 140ms; }
+      .st-if-in::placeholder { color: var(--n-400, var(--n-500)); font-weight: 400; }
+      .st-if-in:focus { outline: 0; border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent); }
+      .st-if-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #cb5238) 14%, transparent); }
+      .kiwi-backdrop.st-if-modal .st-if .kiwi-select-trigger { min-height: 40px; padding-inline: 12px 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--if-field); box-shadow: none; font: 500 13.5px var(--sans); }
+      .st-if-num { position: relative; display: block; }
+      .st-if-num .st-if-in { padding-inline-end: 64px; font-variant-numeric: tabular-nums; }
+      .st-if-num.wide .st-if-in { padding-inline-end: 96px; }
+      .st-if-unit { position: absolute; inset-inline-end: 12px; top: 50%; max-width: 56%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-50%); font: 500 12px var(--sans); color: var(--n-500); pointer-events: none; }
+      .st-if-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); }
+      .st-if-err { font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--danger, #cb5238); }
+      .st-if-note { display: block; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 5%, var(--if-field)); font-size: 12.5px; line-height: 1.45; color: var(--n-600); }
+      .st-if-newcat { display: flex; gap: 6px; margin-top: 2px; }
+      .st-if-newcat .st-if-in { flex: 1; min-width: 0; }
+      .st-if-btn { flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--atlas); border-radius: 10px; background: var(--atlas); color: var(--paper); font: 600 13px var(--sans); cursor: pointer; }
+      .st-if-btn:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+      .st-if .st-nutrition { margin-top: 0; border-color: var(--n-200); border-radius: 14px; background: var(--if-card); }
+      .st-if .st-nutrition > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; list-style: none; }
+      .st-if .st-nutrition > summary::-webkit-details-marker { display: none; }
+      .st-if .st-nutrition > summary::after { content: ''; flex: none; width: 8px; height: 8px; border-inline-end: 1.6px solid var(--n-500); border-bottom: 1.6px solid var(--n-500); transform: rotate(45deg) translateY(-2px); transition: transform 160ms; }
+      .st-if .st-nutrition[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+      .st-if .st-nutrition > summary b { font: 600 14.5px var(--sans); letter-spacing: -0.01em; }
+      .st-if .st-nutrition-body { padding: 0 18px 16px; }
+      @media (max-width: 640px) {
+        .st-if-grid.three { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .st-if-grid.three > :first-child { grid-column: 1 / -1; }
+      }
+      @media (max-width: 480px) {
+        .st-if-grid, .st-if-grid.three { grid-template-columns: minmax(0, 1fr); }
+        .st-if-in, .kiwi-backdrop.st-if-modal .st-if .kiwi-select-trigger { font-size: 16px; }
+        .st-if-sec { padding: 14px 14px 2px; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
   function openItemForm(existing) {
     const isEdit = !!existing;
     const title = isEdit ? t('editItemTitle') : t('addItemTitle');
     const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
     const unitOptions = stockUnitOptions(existing?.unit || 'unité');
+    stItemCss();
+    /* The supplier list starts with « Aucun »: nothing is chosen for the
+       merchant. A supplier already on the article that is no longer in the
+       list stays selected rather than being swapped for another. */
+    const sups = getSup();
+    const supLabel = (s) => `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '');
+    const curSup = existing?.supplier || '';
+    const supHit = curSup ? sups.find((s) => curSup === s.name || curSup.startsWith(s.name)) : null;
+    const supOpts = `<option value="">${esc(t('itemNoSupplierOpt'))}</option>`
+      + (curSup && !supHit ? `<option value="${esc(curSup)}" selected>${esc(curSup)}</option>` : '')
+      + sups.map((s) => { const l = supLabel(s); return `<option value="${esc(l)}"${s === supHit ? ' selected' : ''}>${esc(l)}</option>`; }).join('');
+    const opt = `<span class="st-if-tag">${esc(t('itemOptional'))}</span>`;
+    const num = (key, value, extra) => `<span class="st-if-num${extra || ''}"><input class="st-if-in" inputmode="decimal" autocomplete="off" value="${esc(value)}" data-stock-add-${key} aria-describedby="st-if-e-${key}" /><span class="st-if-unit" data-st-if-unit="${key}" aria-hidden="true"></span></span>
+      <span class="st-if-err" id="st-if-e-${key}" data-st-if-err="${key}" hidden></span>`;
     const m = window.Kiwi.modal({
       title,
       width: 720,
       body: `
-        <div class="st-mb-field" style="margin-bottom:12px;">
-          <label class="st-mb-label">${esc(t('addItemName'))}</label>
-          <input class="st-mb-input" type="text" placeholder="Ex. Olives noires" value="${esc(existing?.name || '')}" data-stock-add-name />
-        </div>
-        <div class="st-mb-row">
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('addItemCat'))}</label>
-            <select class="st-mb-input" data-stock-add-cat>
-              ${renderCatOptions(existing?.category || 'legumes')}
-            </select>
-            <div data-stock-newcat-wrap style="display:none; margin-top:8px; display:flex; gap:6px;">
-              <input class="st-mb-input" type="text" placeholder="${esc(t('addCatName'))}" data-stock-newcat-name style="flex:1;" />
-              <button class="st-btn primary" type="button" data-stock-newcat-confirm>${esc(t('addCatInline'))}</button>
+        <div class="st-if" data-st-if>
+          <section class="st-if-sec">
+            <h4>${esc(t('itemSecItem'))}</h4>
+            <label class="st-if-f">
+              <span class="st-if-l">${esc(t('addItemName'))}</span>
+              <input class="st-if-in" type="text" maxlength="120" required autocomplete="off" placeholder="${esc(t('itemNamePh'))}" value="${esc(existing?.name || '')}" data-stock-add-name aria-describedby="st-if-e-name" />
+              <span class="st-if-err" id="st-if-e-name" data-st-if-err="name" hidden>${esc(t('itemNameErr'))}</span>
+            </label>
+            <div class="st-if-grid">
+              <div class="st-if-f">
+                <label class="st-if-l" for="st-if-cat">${esc(t('addItemCat'))}</label>
+                <select class="st-if-in" id="st-if-cat" data-stock-add-cat>
+                  ${renderCatOptions(existing?.category || 'legumes')}
+                </select>
+                <div class="st-if-newcat" data-stock-newcat-wrap hidden>
+                  <input class="st-if-in" type="text" placeholder="${esc(t('addCatName'))}" data-stock-newcat-name aria-describedby="st-if-e-newcat" />
+                  <button class="st-if-btn" type="button" data-stock-newcat-confirm>${esc(t('addCatInline'))}</button>
+                </div>
+                <span class="st-if-err" id="st-if-e-newcat" data-st-if-err="newcat" hidden>${esc(t('itemNewCatErr'))}</span>
+              </div>
+              <label class="st-if-f">
+                <span class="st-if-l">${esc(t('addItemUnit'))}</span>
+                <select class="st-if-in" data-stock-add-unit>${unitOptions}</select>
+              </label>
             </div>
-          </div>
-          <div class="st-mb-field">
-            <label class="st-mb-label">${esc(t('addItemUnit'))}</label>
-            <select class="st-mb-input" data-stock-add-unit>${unitOptions}</select>
-          </div>
+            <label class="st-if-f">
+              <span class="st-if-l">${esc(t('addItemSupplier'))}${opt}</span>
+              <select class="st-if-in" data-stock-add-sup>${supOpts}</select>
+              ${sups.length ? '' : `<span class="st-if-hint">${esc(t('itemNoSupplier'))}</span>`}
+            </label>
+          </section>
+          <section class="st-if-sec">
+            <h4>${esc(t('itemSecStock'))}</h4>
+            <div class="st-if-grid three">
+              <label class="st-if-f">
+                <span class="st-if-l">${esc(t('addItemStock'))}</span>
+                ${num('current', existing != null ? stItemVal(currentStockFor(existing)) : '')}
+                ${isEdit ? '' : `<span class="st-if-hint">${esc(t('itemStockHint'))}</span>`}
+              </label>
+              <label class="st-if-f">
+                <span class="st-if-l">${esc(t('addItemPar'))}${opt}</span>
+                ${num('par', stItemVal(existing?.parLevel))}
+                <span class="st-if-hint">${esc(t('itemParHint'))}</span>
+              </label>
+              <label class="st-if-f">
+                <span class="st-if-l">${esc(t('addItemReorder'))}${opt}</span>
+                ${num('reorder', stItemVal(existing?.reorderLevel))}
+                <span class="st-if-hint" data-st-if-reorder-hint></span>
+              </label>
+            </div>
+          </section>
+          <section class="st-if-sec">
+            <h4>${esc(t('itemSecCost'))}</h4>
+            <label class="st-if-f">
+              <span class="st-if-l">${esc(t('itemCostLabel'))}${opt}</span>
+              ${num('cost', stItemVal(existing?.costPerUnit), ' wide')}
+            </label>
+          </section>
+          ${nutrientSection(existing)}
         </div>
-        <div class="st-mb-field" style="margin-bottom:12px;">
-          <label class="st-mb-label">${esc(t('addItemSupplier'))}</label>
-          <select class="st-mb-input" data-stock-add-sup>
-            ${renderSupOptions(existing?.supplier)}
-          </select>
-        </div>
-        <div class="st-mb-row three">
-          <div class="st-mb-field"><label class="st-mb-label">${esc(t('addItemStock'))}</label><input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${existing != null ? esc(currentStockFor(existing)) : ''}" data-stock-add-current /></div>
-          <div class="st-mb-field"><label class="st-mb-label">${esc(t('addItemPar'))}</label><input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${esc(existing?.parLevel ?? '')}" data-stock-add-par /></div>
-          <div class="st-mb-field"><label class="st-mb-label">${esc(t('addItemReorder'))}</label><input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${esc(existing?.reorderLevel ?? '')}" data-stock-add-reorder /></div>
-        </div>
-        <div class="st-mb-field" style="margin-bottom:12px;">
-          <label class="st-mb-label">${esc(t('addItemCost'))}</label>
-          <input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${esc(existing?.costPerUnit ?? '')}" data-stock-add-cost />
-        </div>
-        ${nutrientSection(existing)}
       `,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
     });
     const scope = m?.el || topBackdrop();
+    scope?.classList.add('st-if-modal');
     wireDismiss(scope);
     /* Attach listeners synchronously — the modal markup is already in DOM by now
      * (interactive.js's modal() appendChild is synchronous) so we don't need rAF. */
     try { wireCatNewToggle(scope); wireNutrition(scope, existing); } catch (err) { console.error('wireItemForm failed', err); }
+    const q = (sel) => scope?.querySelector(sel);
+    const mark = (key, msg) => {
+      const e = q(`[data-st-if-err="${key}"]`);
+      const f = key === 'newcat' ? q('[data-stock-newcat-name]') : q(`[data-stock-add-${key}]`);
+      if (e) { if (msg) e.textContent = msg; e.hidden = !msg; }
+      if (f) { if (msg) f.setAttribute('aria-invalid', 'true'); else f.removeAttribute('aria-invalid'); }
+    };
+    /* The unit follows every quantity, and the reorder hint says what an
+       empty field will mean before it is saved. */
+    const paintUnits = () => {
+      const u = stockUnit(q('[data-stock-add-unit]')?.value);
+      scope?.querySelectorAll('[data-st-if-unit]').forEach((el) => { el.textContent = el.dataset.stIfUnit === 'cost' ? `MAD / ${u}` : u; });
+      const hint = q('[data-st-if-reorder-hint]');
+      if (!hint) return;
+      const r = stItemNum(q('[data-stock-add-reorder]')?.value);
+      const p = stItemNum(q('[data-stock-add-par]')?.value);
+      if (!r.empty) { hint.textContent = t('itemReorderHint'); return; }
+      const auto = Math.max(0, Math.round((p.n || 0) * 0.4));
+      hint.textContent = auto > 0 ? t('itemReorderAuto', fmtUnit(auto, u)) : t('itemReorderNone');
+    };
+    q('[data-stock-add-unit]')?.addEventListener('change', paintUnits);
+    ['name', 'current', 'par', 'reorder', 'cost'].forEach((k) => q(`[data-stock-add-${k}]`)?.addEventListener('input', () => { mark(k, ''); paintUnits(); }));
+    q('[data-stock-add-cat]')?.addEventListener('change', () => mark('newcat', ''));
+    q('[data-stock-newcat-name]')?.addEventListener('input', () => mark('newcat', ''));
+    paintUnits();
     scope?.querySelector('[data-stock-add-confirm]')?.addEventListener('click', () => {
         const name = (scope.querySelector('[data-stock-add-name]')?.value || '').trim();
-        if (!name) { scope.querySelector('[data-stock-add-name]')?.focus(); return; }
+        const nCur = stItemNum(q('[data-stock-add-current]')?.value);
+        const nPar = stItemNum(q('[data-stock-add-par]')?.value);
+        const nReorder = stItemNum(q('[data-stock-add-reorder]')?.value);
+        const nCost = stItemNum(q('[data-stock-add-cost]')?.value);
         const catSel = scope.querySelector('[data-stock-add-cat]');
-        let category = catSel?.value || 'legumes';
-        if (category === '__new__') category = existing?.category || 'legumes';
+        mark('name', name ? '' : t('itemNameErr'));
+        mark('newcat', catSel?.value === '__new__' ? t('itemNewCatErr') : '');
+        mark('current', nCur.bad ? t('itemNumBad') : (nCur.empty && !isEdit) ? t('itemStockErr') : '');
+        mark('par', nPar.bad ? t('itemNumBad') : '');
+        mark('reorder', nReorder.bad ? t('itemNumBad') : '');
+        mark('cost', nCost.bad ? t('itemNumBad') : '');
+        const firstBad = scope.querySelector('.st-if [aria-invalid="true"]');
+        if (firstBad) { firstBad.focus(); return; }
+        const category = catSel?.value || existing?.category || 'legumes';
         const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
-        const supplier = scope.querySelector('[data-stock-add-sup]')?.value || (existing?.supplier || '');
-        const supplierRow = getSup().find((s) => supplier === s.name || supplier.startsWith(`${s.name} ·`));
-        const cur = parseFloat(scope.querySelector('[data-stock-add-current]')?.value);
-        const par = parseFloat(scope.querySelector('[data-stock-add-par]')?.value);
-        const reorder = parseFloat(scope.querySelector('[data-stock-add-reorder]')?.value);
-        const cost = parseFloat(scope.querySelector('[data-stock-add-cost]')?.value);
-        const parLevel = isNaN(par) ? 0 : par;
-        const reorderLevel = isNaN(reorder) ? Math.max(0, Math.round(parLevel * 0.4)) : reorder;
-        const costPerUnit = isNaN(cost) ? 0 : cost;
-        const currentStock = isNaN(cur) ? (existing ? currentStockFor(existing) : parLevel) : cur;
+        const supSel = scope.querySelector('[data-stock-add-sup]');
+        const supplier = supSel ? supSel.value : (existing?.supplier || '');
+        const supplierRow = supplier ? getSup().find((s) => supplier === s.name || supplier.startsWith(`${s.name} ·`)) : null;
+        const parLevel = nPar.empty ? 0 : nPar.n;
+        /* Empty = the house rule, 40 % of the par level, which the hint under
+           the field spelled out before the merchant pressed the button. */
+        const reorderLevel = nReorder.empty ? Math.max(0, Math.round(parLevel * 0.4)) : nReorder.n;
+        const costPerUnit = nCost.empty ? 0 : nCost.n;
+        /* Never the par level any more: a new article has the stock the
+           merchant typed (required), an edited one keeps its own if cleared. */
+        const currentStock = nCur.empty ? (existing ? currentStockFor(existing) : 0) : nCur.n;
         const nutritionData = readNutrition(scope);
         const nutritionPatch = { nutrition: nutritionData.nutrition, gramsPerUnit: nutritionData.gramsPerUnit };
         if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;

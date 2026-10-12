@@ -12507,10 +12507,6 @@ function _bqxColorSource(v) {
     ? '' : v.colorSource;
 }
 function _bqxVarNote(v) { return (v && (v.note || _bqxColorSource(v))) || ''; }
-function _catOptions(sel, includeNone) {
-  const none = includeNone ? `<option value="">·Sans catégorie</option>` : '';
-  return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
-}
 /* Vocabulaire par métier : boutique garde le caftan/vêtement/taille, maison et les autres reçoivent des termes neutres. */
 function _bqxCopy(trade) {
   const tr = trade !== undefined ? String(trade || '') : (window.KiwiStoreTemplates && window.KiwiStoreTemplates.currentTrade ? window.KiwiStoreTemplates.currentTrade() : '');
@@ -12708,7 +12704,7 @@ function _bqxCardHtml(p) {
           ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div></div>
         <div class="bqx-cmeta"><span class="bqx-dot"></span><span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</span><span aria-hidden="true">·</span><span>${_bqxN(data.variants.length, 'variante')}</span></div>
         <div class="bqx-card-cols">${_bqxSwatches(data.colors, 8)}</div>
-        <div class="bqx-cfoot"><span class="bqx-price">${_mad(p.priceMAD)}<small>MAD</small></span>${_bqxStockTag(data.stock)}</div>
+        <div class="bqx-cfoot"><span class="bqx-price">${_bqxPrice(p.priceMAD)}<small>MAD</small></span>${_bqxStockTag(data.stock)}</div>
       </div>
     </div>`;
 }
@@ -12726,7 +12722,7 @@ function _bqxRowHtml(p) {
       <span class="bqx-rcols">${_bqxSwatches(data.colors, 6) || '<i class="nil">·</i>'}</span>
       <span class="bqx-rnum">${nVar}</span>
       <span class="bqx-rbc${miss > 0 ? ' miss' : ''}">${!nVar ? '<i class="nil">·</i>' : miss > 0 ? `${miss} manquant${miss > 1 ? 's' : ''}` : 'Complets'}</span>
-      <span class="bqx-rnum bqx-rprice">${_mad(p.priceMAD)} MAD</span>
+      <span class="bqx-rnum bqx-rprice">${_bqxPrice(p.priceMAD)} MAD</span>
       <span class="bqx-rstock">${_bqxStockTag(data.stock)}</span>
     </div>`;
 }
@@ -13238,9 +13234,9 @@ function _bqxFactsHtml(p, data, cost) {
   const coded = data.variants.filter((v) => (v.barcodes || []).length).length;
   const row = (l, v) => `<div><span>${l}</span><b>${v}</b></div>`;
   return `<div class="bqx-facts">
-    ${row('Prix d’achat', cost == null ? 'Non renseigné' : `${_mad(cost)} MAD`)}
-    ${row('Valeur au prix de vente', `${_mad((+p.priceMAD || 0) * (+data.stock || 0))} MAD`)}
-    ${row('Valeur au prix d’achat', cost == null ? '·' : `${_mad(cost * (+data.stock || 0))} MAD`)}
+    ${row('Prix d’achat', cost == null ? 'Non renseigné' : `${_bqxPrice(cost)} MAD`)}
+    ${row('Valeur au prix de vente', `${_bqxPrice((+p.priceMAD || 0) * (+data.stock || 0))} MAD`)}
+    ${row('Valeur au prix d’achat', cost == null ? '·' : `${_bqxPrice(cost * (+data.stock || 0))} MAD`)}
     ${row('Variantes épuisées', out.length ? `${out.length} · ${out.map((v) => _esc([_bqxShownColor(v).label, v.size].filter(Boolean).join(" "))).slice(0, 3).join(', ')}${out.length > 3 ? '…' : ''}` : 'Aucune')}
     ${row('Codes-barres', `${coded} / ${data.variants.length}`)}
   </div>`;
@@ -13264,7 +13260,7 @@ function _bqxProductBody(pid) {
     : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">${_esc(copy.varEmpty)}</td></tr>`;
   return `
     <div class="kx-stat-3">
-      <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
+      <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_bqxPrice(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
       <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
       <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${_bqxN(data.colors.length, 'couleur')}</div></div>
     </div>
@@ -13289,7 +13285,7 @@ function _bqxOpenProduct(pid) {
   const p = data.product;
   drawer({
     title: p.name,
-    subtitle: `${data.category ? data.category.name : 'Sans catégorie'} · ${_mad(p.priceMAD)} MAD · ${data.stock} en stock`,
+    subtitle: `${data.category ? data.category.name : 'Sans catégorie'} · ${_bqxPrice(p.priceMAD)} MAD · ${data.stock} en stock`,
     width: 640,
     body: _bqxProductBody(pid),
     foot: `
@@ -13331,7 +13327,7 @@ function _bqxRefreshDrawer() {
   if (!data) { return; }
   body.innerHTML = _bqxProductBody(_bqxDrawerPid);
   const sub = back.querySelector('.kiwi-drawer-head p');
-  if (sub) sub.textContent = `${data.category ? data.category.name : 'Sans catégorie'} · ${_mad(data.product.priceMAD)} MAD · ${data.stock} en stock`;
+  if (sub) sub.textContent = `${data.category ? data.category.name : 'Sans catégorie'} · ${_bqxPrice(data.product.priceMAD)} MAD · ${data.stock} en stock`;
   _bqxMountDrawer(_bqxDrawerPid);
 }
 
@@ -13516,66 +13512,303 @@ handlers['mz-export'] = () => {
  * Le même appel que la caisse (KiwiMaisonStock.record) : le stock bouge et le
  * mouvement s'écrit dans le même geste. On n'offre que les types qu'un humain
  * décide — une « vente » ne se saisit pas à la main, elle se passe en caisse. */
+/* ── Nouveau mouvement de stock (tableau de bord) ────────────────────────────
+ * 2026-10-12, what it replaced: seven bare fields in one column; a « ↑ Entrée ·
+ * » text arrow glued to each motive; the supplier asked for a breakage; no way
+ * to see the stock the gesture would leave before pressing the button; and a
+ * refusal printed the server's code (« Mouvement impossible : non-autorise »).
+ * Now: the direction first, then only its motives, the article, a quantity
+ * with the stock before and after, the supplier only where the motive has one,
+ * every refusal under the field it concerns, in FR, EN and AR. The gesture is
+ * unchanged: KiwiMaisonStock.record moves the stock and writes the line. */
+const _MZ_MV = {
+  fr: {
+    title: 'Nouveau mouvement de stock',
+    desc: 'Le stock de la variante bouge et la ligne s’ajoute au registre des mouvements.',
+    secMove: 'Mouvement', dir: 'Sens', dirIn: 'Entrée', dirOut: 'Sortie', reason: 'Motif', reasonErr: 'Choisissez le motif.',
+    types: { reception: 'Réception fournisseur', reassort: 'Réassort', 'transfert-in': 'Transfert reçu', 'correction-in': 'Correction',
+      casse: 'Article abîmé', perte: 'Perte', echantillon: 'Échantillon', 'usage-interne': 'Usage interne',
+      'retour-fourn': 'Retour fournisseur', 'transfert-out': 'Transfert envoyé', 'correction-out': 'Correction' },
+    secItem: 'Article', product: 'Produit', variant: 'Variante', inStock: '{n} en stock',
+    noVariant: 'Ce produit n’a pas encore de variante. Ajoutez-en une depuis sa fiche.', noProduct: 'Aucun produit au catalogue pour l’instant.',
+    qty: 'Quantité', less: 'Une pièce de moins', more: 'Une pièce de plus', qtyErr: 'Indiquez une quantité entière, au moins 1.',
+    after: 'Stock : {before} → {after}', shortOne: 'Il n’y a qu’une pièce en stock.', shortMany: 'Il n’y a que {n} pièces en stock.', shortNone: 'Cette variante n’a aucune pièce en stock.',
+    secTrace: 'Trace', supplier: 'Fournisseur', phSupplier: 'Nom du fournisseur', ref: 'Référence', phRef: 'Bon de livraison, ticket…',
+    note: 'Note', optional: 'facultatif',
+    cancel: 'Annuler', save: 'Enregistrer le mouvement',
+    denied: 'Votre profil ne permet pas ce mouvement.', failed: 'Le mouvement n’a pas pu être enregistré. Réessayez.',
+    done: 'Mouvement enregistré', doneDesc: 'Stock {before} → {after}.',
+  },
+  en: {
+    title: 'New stock movement',
+    desc: 'The variant’s stock moves and the line is added to the movement log.',
+    secMove: 'Movement', dir: 'Direction', dirIn: 'In', dirOut: 'Out', reason: 'Reason', reasonErr: 'Choose the reason.',
+    types: { reception: 'Supplier delivery', reassort: 'Restock', 'transfert-in': 'Transfer received', 'correction-in': 'Correction',
+      casse: 'Damaged item', perte: 'Loss', echantillon: 'Sample', 'usage-interne': 'Internal use',
+      'retour-fourn': 'Return to supplier', 'transfert-out': 'Transfer sent', 'correction-out': 'Correction' },
+    secItem: 'Item', product: 'Product', variant: 'Variant', inStock: '{n} in stock',
+    noVariant: 'This product has no variant yet. Add one from its sheet.', noProduct: 'No product in the catalogue yet.',
+    qty: 'Quantity', less: 'One piece fewer', more: 'One piece more', qtyErr: 'Enter a whole quantity, at least 1.',
+    after: 'Stock: {before} → {after}', shortOne: 'There is only one piece in stock.', shortMany: 'There are only {n} pieces in stock.', shortNone: 'This variant has no piece in stock.',
+    secTrace: 'Record', supplier: 'Supplier', phSupplier: 'Supplier name', ref: 'Reference', phRef: 'Delivery note, receipt…',
+    note: 'Note', optional: 'optional',
+    cancel: 'Cancel', save: 'Save movement',
+    denied: 'Your profile can’t make this movement.', failed: 'The movement couldn’t be saved. Try again.',
+    done: 'Movement saved', doneDesc: 'Stock {before} → {after}.',
+  },
+  ar: {
+    title: 'حركة مخزون جديدة',
+    desc: 'يتغيّر مخزون المتغيّر ويُضاف السطر إلى سجلّ الحركات.',
+    secMove: 'الحركة', dir: 'الاتجاه', dirIn: 'دخول', dirOut: 'خروج', reason: 'السبب', reasonErr: 'اختر السبب.',
+    types: { reception: 'استلام من المورّد', reassort: 'إعادة تزويد', 'transfert-in': 'تحويل مستلَم', 'correction-in': 'تصحيح',
+      casse: 'سلعة تالفة', perte: 'فقدان', echantillon: 'عيّنة', 'usage-interne': 'استعمال داخلي',
+      'retour-fourn': 'إرجاع إلى المورّد', 'transfert-out': 'تحويل مُرسَل', 'correction-out': 'تصحيح' },
+    secItem: 'السلعة', product: 'المنتج', variant: 'المتغيّر', inStock: '{n} في المخزون',
+    noVariant: 'لا يملك هذا المنتج أي متغيّر بعد. أضف متغيّراً من بطاقته.', noProduct: 'لا يوجد أي منتج في الكتالوج بعد.',
+    qty: 'الكمية', less: 'قطعة أقل', more: 'قطعة أكثر', qtyErr: 'أدخل كمية صحيحة، 1 على الأقل.',
+    after: 'المخزون: {before} → {after}', shortOne: 'لا توجد في المخزون إلا قطعة واحدة.', shortMany: 'لا توجد في المخزون إلا {n} قطع.', shortNone: 'لا توجد أي قطعة من هذا المتغيّر في المخزون.',
+    secTrace: 'التوثيق', supplier: 'المورّد', phSupplier: 'اسم المورّد', ref: 'المرجع', phRef: 'وصل التسليم، تذكرة…',
+    note: 'ملاحظة', optional: 'اختياري',
+    cancel: 'إلغاء', save: 'تسجيل الحركة',
+    denied: 'لا يسمح ملفك بهذه الحركة.', failed: 'تعذّر تسجيل الحركة. أعد المحاولة.',
+    done: 'تم تسجيل الحركة', doneDesc: 'المخزون {before} → {after}.',
+  },
+};
+function _mzMvT() {
+  const l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+  return _MZ_MV[l] || _MZ_MV.fr;
+}
+function _mzMvCss() {
+  _bqxPfCss();
+  if (document.getElementById('mz-mv-css')) return;
+  const st = document.createElement('style');
+  st.id = 'mz-mv-css';
+  st.textContent = `
+    .bqx-pf.mz-mv { grid-template-columns: minmax(0, 1fr); }
+    .mz-mv-seg { position: relative; display: flex; gap: 2px; width: max-content; max-width: 100%; padding: 3px; border-radius: 12px; background: color-mix(in srgb, var(--ink) 6%, var(--pf-field)); }
+    .mz-mv-segi { position: relative; flex: none; cursor: pointer; }
+    .mz-mv-segi input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .mz-mv-segi span { display: inline-flex; align-items: center; height: 34px; padding: 0 18px; border-radius: 9px; font: 500 13px var(--sans); color: var(--n-600); white-space: nowrap; transition: color 160ms; }
+    .mz-mv-segi.on span { color: var(--ink); font-weight: 600; }
+    .mz-mv-seg:not([data-kw-lens]) .mz-mv-segi.on span { background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+    .mz-mv-segi input:focus-visible + span { box-shadow: 0 0 0 2px var(--atlas); }
+    .mz-mv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mz-mv-chip { position: relative; }
+    .mz-mv-chip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .mz-mv-chip span { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--n-200); border-radius: 999px; background: var(--pf-field); color: var(--n-700); font: 500 13px var(--sans); white-space: nowrap; transition: background-color 140ms, border-color 140ms, color 140ms; }
+    .mz-mv-chip:hover span { border-color: var(--atlas); color: var(--atlas); }
+    .mz-mv-chip input:checked + span { background: var(--atlas); border-color: var(--atlas); color: var(--paper); }
+    .mz-mv-chip input:focus-visible + span { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .mz-mv-chips[aria-invalid="true"] .mz-mv-chip span { border-color: var(--danger, #cb5238); }
+    .mz-mv-qty { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .mz-mv-qty .bqx-pf-in { width: 88px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .mz-mv-step { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 1px solid var(--n-200); border-radius: 10px; background: var(--pf-field); color: var(--n-700); cursor: pointer; transition: border-color 140ms, color 140ms; }
+    .mz-mv-step:hover { border-color: var(--atlas); color: var(--atlas); }
+    .mz-mv-step:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .mz-mv-after { flex: 1 1 170px; min-width: 0; margin-inline-start: 6px; font-size: 13px; line-height: 1.4; color: var(--n-600); font-variant-numeric: tabular-nums; }
+    .mz-mv-after.is-short { color: var(--danger, #cb5238); font-weight: 600; }
+    .mz-mv-empty { margin: 0 0 14px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 5%, var(--pf-field)); font-size: 12.5px; line-height: 1.45; color: var(--n-600); }
+  `;
+  document.head.appendChild(st);
+}
 function _mzManualModal(preset) {
   const M = MZS(); const cat = CAT();
   if (!M || !cat) return;
   preset = preset || {};
+  _mzMvCss();
+  const t = _mzMvT();
+  const fill = (s, o) => String(s).replace(/\{(\w+)\}/g, (_, k) => (o && o[k] != null ? o[k] : ''));
   const products = cat.listProducts({}) || [];
-  const manual = M.types().filter((t) => t.manual);
+  const manual = M.types().filter((x) => x.manual);
+  const typeLabel = (x) => t.types[x.id] || x.label;
+  const ico = (n) => (window.KiwiIcon && window.KiwiIcon.svg ? window.KiwiIcon.svg(n, 18) : (n === 'add' ? '+' : '−'));
   const pOpts = products.map((p) => `<option value="${_esc(p.id)}"${p.id === preset.productId ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
+  const opt = (label) => `<span class="bqx-pf-tag">${_esc(label)}</span>`;
   const m = window.Kiwi.modal({
-    title: 'Nouveau mouvement de stock',
+    title: t.title,
+    desc: _esc(t.desc),
+    width: 600,
     body: `
-      <div style="display:grid;gap:10px;">
-        <label style="display:grid;gap:4px;font-size:12px;">Type
-          <select data-mzm="type" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;">
-            ${manual.map((t) => `<option value="${_esc(t.id)}">${t.dir > 0 ? '↑ Entrée · ' : '↓ Sortie · '}${_esc(t.label)}</option>`).join('')}
-          </select></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Produit
-          <select data-mzm="product" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;">${pOpts}</select></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Variante (taille · couleur)
-          <select data-mzm="variant" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;"></select></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Quantité
-          <input data-mzm="qty" type="number" min="1" step="1" value="1" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Fournisseur (facultatif)
-          <input data-mzm="supplier" placeholder="Nom du fournisseur" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Référence (bon de livraison, ticket…)
-          <input data-mzm="ref" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
-        <label style="display:grid;gap:4px;font-size:12px;">Note (facultatif)
-          <input data-mzm="note" maxlength="200" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
-        <div data-mzm="msg" style="font-size:12px;color:#9B2F22;"></div>
+      <div class="bqx-pf mz-mv" data-mz-mv>
+        <div class="bqx-pf-main">
+          <section class="bqx-pf-sec">
+            <h4>${_esc(t.secMove)}</h4>
+            <div class="bqx-pf-f">
+              <span class="bqx-pf-l" id="mz-mv-dir-l">${_esc(t.dir)}</span>
+              <div class="mz-mv-seg" role="radiogroup" aria-labelledby="mz-mv-dir-l">
+                <label class="mz-mv-segi on"><input type="radio" name="mz-mv-dir" value="1" checked data-mzm-dir /><span>${_esc(t.dirIn)}</span></label>
+                <label class="mz-mv-segi"><input type="radio" name="mz-mv-dir" value="-1" data-mzm-dir /><span>${_esc(t.dirOut)}</span></label>
+              </div>
+            </div>
+            <div class="bqx-pf-f">
+              <span class="bqx-pf-l" id="mz-mv-type-l">${_esc(t.reason)}</span>
+              <div class="mz-mv-chips" role="radiogroup" aria-labelledby="mz-mv-type-l" data-mzm-types></div>
+              <span class="bqx-pf-err" data-mzm-err="type" hidden>${_esc(t.reasonErr)}</span>
+            </div>
+          </section>
+          <section class="bqx-pf-sec">
+            <h4>${_esc(t.secItem)}</h4>
+            ${products.length ? `
+            <label class="bqx-pf-f">
+              <span class="bqx-pf-l">${_esc(t.product)}</span>
+              <select class="bqx-pf-in" data-mzm="product">${pOpts}</select>
+            </label>
+            <label class="bqx-pf-f" data-mzm-variant-wrap>
+              <span class="bqx-pf-l">${_esc(t.variant)}</span>
+              <select class="bqx-pf-in" data-mzm="variant"></select>
+              <span class="bqx-pf-err" data-mzm-err="variant" hidden></span>
+            </label>
+            <p class="mz-mv-empty" data-mzm-novar hidden>${_esc(t.noVariant)}</p>
+            <div class="bqx-pf-f" data-mzm-qty-wrap>
+              <span class="bqx-pf-l" id="mz-mv-qty-l">${_esc(t.qty)}</span>
+              <div class="mz-mv-qty">
+                <button type="button" class="mz-mv-step" data-mzm-step="-1" aria-label="${_esc(t.less)}">${ico('remove')}</button>
+                <input class="bqx-pf-in" data-mzm="qty" inputmode="numeric" autocomplete="off" value="1" aria-labelledby="mz-mv-qty-l" />
+                <button type="button" class="mz-mv-step" data-mzm-step="1" aria-label="${_esc(t.more)}">${ico('add')}</button>
+                <span class="mz-mv-after" data-mzm-after aria-live="polite"></span>
+              </div>
+              <span class="bqx-pf-err" data-mzm-err="qty" hidden></span>
+            </div>` : `<p class="mz-mv-empty">${_esc(t.noProduct)}</p>`}
+          </section>
+          <section class="bqx-pf-sec">
+            <h4>${_esc(t.secTrace)}</h4>
+            <label class="bqx-pf-f" data-mzm-sup-wrap hidden>
+              <span class="bqx-pf-l">${_esc(t.supplier)}${opt(t.optional)}</span>
+              <input class="bqx-pf-in" data-mzm="supplier" maxlength="80" placeholder="${_esc(t.phSupplier)}" />
+            </label>
+            <div class="bqx-pf-grid">
+              <label class="bqx-pf-f">
+                <span class="bqx-pf-l">${_esc(t.ref)}${opt(t.optional)}</span>
+                <input class="bqx-pf-in" data-mzm="ref" maxlength="80" placeholder="${_esc(t.phRef)}" />
+              </label>
+              <label class="bqx-pf-f">
+                <span class="bqx-pf-l">${_esc(t.note)}${opt(t.optional)}</span>
+                <input class="bqx-pf-in" data-mzm="note" maxlength="200" />
+              </label>
+            </div>
+          </section>
+          <p class="bqx-pf-err" data-mzm="msg" role="alert" hidden></p>
+        </div>
       </div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb primary" data-mzm="save">Enregistrer le mouvement</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb primary" data-mzm="save"${products.length ? '' : ' disabled'}>${_esc(t.save)}</button>`,
   });
   const root = m && m.el ? m.el : document;
+  if (m && m.el) m.el.classList.add('bqx-pf-modal');
   root.querySelectorAll('[data-dismiss]').forEach((b) => b.addEventListener('click', () => m.close()));
   const q = (k) => root.querySelector(`[data-mzm="${k}"]`);
+  const err = (k, msg) => {
+    const e = root.querySelector(`[data-mzm-err="${k}"]`);
+    const field = k === 'type' ? root.querySelector('[data-mzm-types]') : q(k === 'qty' ? 'qty' : k);
+    if (e) { if (msg) e.textContent = msg; e.hidden = !msg; }
+    if (field) { if (msg) field.setAttribute('aria-invalid', 'true'); else field.removeAttribute('aria-invalid'); }
+  };
+  const dir = () => { const r = root.querySelector('[data-mzm-dir]:checked'); return r && r.value === '-1' ? -1 : 1; };
+  const type = () => { const r = root.querySelector('[data-mzm-type]:checked'); return r ? manual.find((x) => x.id === r.value) || null : null; };
+  const variant = () => {
+    if (!q('product') || !q('variant')) return null;
+    const vid = q('variant').value;
+    return (cat.listVariants(q('product').value) || []).find((v) => v.id === vid) || null;
+  };
+  const qty = () => { const s = String(q('qty') ? q('qty').value : '').trim(); return /^\d+$/.test(s) ? parseInt(s, 10) : NaN; };
+
+  const shortMsg = (n) => (n <= 0 ? t.shortNone : n === 1 ? t.shortOne : fill(t.shortMany, { n }));
+  const paintAfter = () => {
+    const out = root.querySelector('[data-mzm-after]');
+    if (!out) return;
+    const v = variant(), n = qty();
+    out.classList.remove('is-short');
+    if (!v || !(n > 0)) { out.textContent = ''; return; }
+    const before = Math.max(0, +v.stock || 0);
+    if (dir() < 0 && n > before) { out.classList.add('is-short'); out.textContent = shortMsg(before); return; }
+    out.textContent = fill(t.after, { before, after: before + dir() * n });
+  };
+  const paintTypes = (keep) => {
+    const d = dir();
+    const list = manual.filter((x) => (x.dir > 0) === (d > 0));
+    const sel = keep && list.some((x) => x.id === keep) ? keep : (list.length === 1 ? list[0].id : '');
+    root.querySelector('[data-mzm-types]').innerHTML = list.map((x) => `<label class="mz-mv-chip"><input type="radio" name="mz-mv-type" value="${_esc(x.id)}"${x.id === sel ? ' checked' : ''} data-mzm-type /><span>${_esc(typeLabel(x))}</span></label>`).join('');
+    paintSupplier();
+  };
+  const paintSupplier = () => {
+    const w = root.querySelector('[data-mzm-sup-wrap]');
+    const x = type();
+    if (w) w.hidden = !(x && x.supplier);
+  };
   const fillVariants = () => {
+    if (!q('product')) return;
     const pid = q('product').value;
     const vs = cat.listVariants(pid) || [];
-    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} · ${v.stock} en stock</option>`).join('')
-      || '<option value="">Aucune variante</option>';
-    if (preset.variantId) q('variant').value = preset.variantId;
+    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} · ${_esc(fill(t.inStock, { n: v.stock }))}</option>`).join('');
+    if (preset.variantId && vs.some((v) => v.id === preset.variantId)) q('variant').value = preset.variantId;
+    root.querySelector('[data-mzm-variant-wrap]').hidden = !vs.length;
+    root.querySelector('[data-mzm-qty-wrap]').hidden = !vs.length;
+    root.querySelector('[data-mzm-novar]').hidden = !!vs.length;
+    q('save').disabled = !vs.length;
+    err('variant', ''); err('qty', '');
+    paintAfter();
   };
-  fillVariants();
-  q('product').addEventListener('change', fillVariants);
+
+  /* Preset motive (the sheet's « sortie pour casse », say) picks its direction. */
+  if (preset.type) {
+    const pt = manual.find((x) => x.id === preset.type);
+    if (pt && pt.dir < 0) { const r = root.querySelector('[data-mzm-dir][value="-1"]'); if (r) r.checked = true; }
+  }
+  root.querySelectorAll('[data-mzm-dir]').forEach((r) => r.addEventListener('change', () => {
+    root.querySelectorAll('.mz-mv-segi').forEach((l) => l.classList.toggle('on', l.contains(root.querySelector('[data-mzm-dir]:checked'))));
+    const was = type();
+    paintTypes(was && was.id);
+    err('type', '');
+    err('qty', '');
+    paintAfter();
+  }));
+  root.querySelectorAll('.mz-mv-segi').forEach((l) => l.classList.toggle('on', l.contains(root.querySelector('[data-mzm-dir]:checked'))));
+  root.querySelector('[data-mzm-types]').addEventListener('change', () => { err('type', ''); paintSupplier(); });
+  paintTypes(preset.type);
+  if (q('product')) {
+    fillVariants();
+    q('product').addEventListener('change', fillVariants);
+    q('variant').addEventListener('change', () => { err('qty', ''); paintAfter(); });
+    q('qty').addEventListener('input', () => { err('qty', ''); paintAfter(); });
+    root.querySelectorAll('[data-mzm-step]').forEach((b) => b.addEventListener('click', () => {
+      const n = qty();
+      q('qty').value = String(Math.max(1, (n > 0 ? n : 0) + (+b.dataset.mzmStep)));
+      err('qty', '');
+      paintAfter();
+    }));
+  }
+
   q('save').addEventListener('click', () => {
+    const msg = q('msg');
+    msg.hidden = true;
+    const x = type(), v = variant(), n = qty();
+    let bad = false;
+    if (!x) { err('type', t.reasonErr); bad = true; }
+    if (!(n > 0)) { err('qty', t.qtyErr); bad = true; }
+    else if (x && v && x.dir < 0 && n > Math.max(0, +v.stock || 0)) { err('qty', shortMsg(Math.max(0, +v.stock || 0))); bad = true; }
+    if (bad) {
+      const first = root.querySelector('[data-mz-mv] [aria-invalid="true"]');
+      const f = first && (first.matches('input, select') ? first : first.querySelector('input'));
+      if (f) f.focus();
+      return;
+    }
     const res = M.record({
       productId: q('product').value, variantId: q('variant').value,
-      type: q('type').value, qty: parseInt(q('qty').value, 10) || 0,
-      supplier: q('supplier').value.trim(), ref: q('ref').value.trim(),
+      type: x.id, qty: n,
+      supplier: x.supplier ? q('supplier').value.trim() : '', ref: q('ref').value.trim(),
       note: q('note').value.trim(), source: 'dashboard',
       actor: (window.KiwiStaff && window.KiwiStaff.name) || '',
     });
     if (!res.ok) {
-      const why = res.reason === 'stock-insuffisant'
-        ? `Stock insuffisant : il n'y a que ${res.before} pièce(s).`
-        : res.reason === 'quantite' ? 'Indiquez une quantité.' : 'Mouvement impossible : ' + res.reason;
-      q('msg').textContent = why;
+      if (res.reason === 'stock-insuffisant') { err('qty', shortMsg(res.before)); q('qty').focus(); return; }
+      if (res.reason === 'quantite') { err('qty', t.qtyErr); q('qty').focus(); return; }
+      if (res.reason === 'type') { err('type', t.reasonErr); return; }
+      if (res.reason === 'variante-introuvable') { err('variant', t.noVariant); return; }
+      msg.textContent = res.reason === 'non-autorise' ? t.denied : t.failed;
+      msg.hidden = false;
       return;
     }
     m.close();
-    toast('Mouvement enregistré', { desc: `Stock ${res.before} → ${res.after}.`, type: 'success' });
+    toast(t.done, { desc: fill(t.doneDesc, { before: res.before, after: res.after }), type: 'success' });
     _mzRenderPage();
   });
 }
@@ -13609,7 +13842,7 @@ function _bqxLabelFor(pid, v) {
   const code = CAT().primaryBarcode(v);
   if (!code) return null;
   const fmt = BC().isValidEan13(code) ? 'ean13' : 'code128';
-  return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: _mad(p.priceMAD), code, format: fmt };
+  return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: _bqxPrice(p.priceMAD), code, format: fmt };
 }
 function _bqxPrintVariant(vid) {
   const cat = CAT();
@@ -13813,30 +14046,295 @@ function _orderProOn() {
   catch (_) { return false; }
 }
 
-/* ── product photo OR video (shown to shoppers on the phone) ─────────────────
+/* ── product photo OR video ──────────────────────────────────────────────────
    Same deal as a menu item: a garment sells on movement, so a boutique gets a
-   clip as well as a still. One medium per product — a video supersedes a photo
-   and vice-versa — so the card can never show two competing things.
+   clip as well as a still. One medium per product (a video supersedes a photo
+   and vice-versa) so the card can never show two competing things.
 
-   Both pickers are always live. Storage is R2 via KiwiOrderPro.uploadMedia and
-   we keep the URL only: the catalogue lives in localStorage, where a base64
-   image would burn the whole quota in a handful of products. If media storage
-   isn't enabled on the account yet the button says so instead of failing mute. */
+   Storage is R2 via KiwiOrderPro.uploadMedia and we keep the URL only: the
+   catalogue lives in localStorage, where a base64 image would burn the whole
+   quota in a handful of products. If media storage isn't enabled on the
+   account yet the form says so instead of failing mute.
+
+   Where each one shows, read from the code rather than promised: the photo on
+   the inventory grid, on the till of the trades that read this catalogue
+   (pos-boutique draws `p.photo`) and, with Order Pro, on the shopper's phone.
+   A video is drawn by the phone menu alone. The form used to tell every store
+   « Visible par vos clients sur le téléphone », Order Pro or not, and offered
+   a video picker to stores where a video shows nowhere: it is now offered
+   only with Order Pro (or to remove one that is already there). */
 let _bqxPhoto = '';
 let _bqxVideo = '';
+
+/* ── Fiche produit · création et modification ────────────────────────────────
+ * One form for both gestures, in FR, EN and AR. 2026-10-12, what it replaced:
+ *  · the price went through parseInt, so 29,90 MAD (the till writes centimes,
+ *    bqMoney) came back at 29 the first time someone changed the photo here;
+ *  · a cleared price saved the article at 0 MAD, a cleared name kept the old
+ *    one without a word, and « Nom requis » was a toast far from the field;
+ *  · « Prix vente (MAD) » carried the unit in the label, the selects were cut
+ *    to « …ans taille) » on a phone, and « ·Sans catégorie » kept the stray
+ *    dot of a dash that had been removed;
+ *  · every word was French under English and Arabic. */
+const _BQX_PF = {
+  fr: {
+    titleNew: 'Nouveau produit', titleEdit: 'Modifier le produit', tagInv: 'INVENTAIRE',
+    descBoutique: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+    descOther: 'Créez le produit, puis ajoutez ses déclinaisons et leurs codes-barres.',
+    descEdit: 'Les variantes, le stock et les codes-barres se gèrent sur la fiche du produit.',
+    secItem: 'Article', secPrice: 'Prix', secAb: 'Catégorie A / B',
+    name: 'Nom du produit', nameErr: 'Donnez un nom au produit.',
+    phBoutique: 'Ex. Caftan brodé main', phMaison: 'Ex. Vase en terre cuite 30 cm', phOther: 'Ex. Article',
+    cat: 'Catégorie', catNone: 'Sans catégorie', catTill: 'Elle devient le rayon de la caisse.',
+    kind: 'Déclinaison',
+    kindsBoutique: { taille: ['Vêtement', 'Tailles S à XL'], pointure: ['Chaussure', 'Pointures'], tu: ['Taille unique', 'Sans taille'] },
+    kindsOther: { tu: ['Pièce unique', 'Sans taille'], taille: ['Formats', 'S · M · L'], pointure: ['Pointure', 'Pointures'] },
+    price: 'Prix de vente', priceErr: 'Indiquez le prix de vente.', priceZero: 'Le prix de vente doit être supérieur à 0.',
+    moneyBad: 'Écrivez un montant, par exemple 149,90.',
+    cost: 'Coût d’achat', optional: 'facultatif',
+    gap: 'Prix moins coût : {gap} MAD, soit {pct} % du prix de vente.',
+    gapNeg: 'Le coût dépasse le prix de vente de {gap} MAD.',
+    gapNone: 'Ajoutez le coût d’achat pour voir l’écart avec le prix de vente.',
+    abA: 'Catégorie A', abB: 'Catégorie B',
+    abErr: 'Choisissez la catégorie A ou B.',
+    consignor: 'Propriétaire de la marchandise', phConsignor: 'Ex. Baobab Collection',
+    sku: 'Référence commune', phSku: 'Ex. JEAN-501',
+    skuHint: 'La même référence dans vos deux établissements, et la caisse saura dire « il en reste 3 à l’autre boutique » même si les étiquettes diffèrent. Majuscules, tirets et espaces sont ignorés.',
+    media: 'Photo ou vidéo', mediaOne: 'Photo', addPhoto: 'Ajouter une photo', addVideo: 'Ajouter une vidéo',
+    newPhoto: 'Changer de photo', newVideo: 'Changer de vidéo', removeMedia: 'Retirer',
+    whereTillPhone: 'La photo s’affiche dans l’inventaire, sur la caisse et sur le téléphone de vos clients.',
+    whereTill: 'La photo s’affiche dans l’inventaire et sur la caisse.',
+    wherePhone: 'La photo s’affiche dans l’inventaire et sur le téléphone de vos clients.',
+    whereInv: 'La photo s’affiche dans l’inventaire.',
+    videoNote: 'Une vidéo remplace la photo et ne se voit que sur le téléphone de vos clients.',
+    videoHere: 'Cette vidéo ne se voit que sur le téléphone de vos clients, avec Order Pro.',
+    mediaOff: 'Le stockage des photos n’est pas encore activé sur votre compte.',
+    sending: 'Envoi…', sendFail: 'Envoi impossible, réessayez.',
+    cancel: 'Annuler', create: 'Créer le produit', save: 'Enregistrer',
+    created: 'Produit créé', createdBoutique: 'Ajoutez maintenant ses variantes couleur × taille.', createdOther: 'Ajoutez maintenant ses déclinaisons.',
+    updated: 'Produit mis à jour',
+  },
+  en: {
+    titleNew: 'New product', titleEdit: 'Edit product', tagInv: 'INVENTORY',
+    descBoutique: 'Create the product, then add its colour × size variants and their barcodes.',
+    descOther: 'Create the product, then add its variants and their barcodes.',
+    descEdit: 'Variants, stock and barcodes are managed on the product sheet.',
+    secItem: 'Item', secPrice: 'Price', secAb: 'Category A / B',
+    name: 'Product name', nameErr: 'Give the product a name.',
+    phBoutique: 'E.g. Hand-embroidered caftan', phMaison: 'E.g. Terracotta vase 30 cm', phOther: 'E.g. Item',
+    cat: 'Category', catNone: 'No category', catTill: 'It becomes the till’s shelf.',
+    kind: 'Variants by',
+    kindsBoutique: { taille: ['Clothing', 'Sizes S to XL'], pointure: ['Shoes', 'Shoe sizes'], tu: ['One size', 'No size'] },
+    kindsOther: { tu: ['Single piece', 'No size'], taille: ['Formats', 'S · M · L'], pointure: ['Shoe size', 'Shoe sizes'] },
+    price: 'Selling price', priceErr: 'Enter the selling price.', priceZero: 'The selling price must be above 0.',
+    moneyBad: 'Enter an amount, for example 149.90.',
+    cost: 'Purchase cost', optional: 'optional',
+    gap: 'Price minus cost: {gap} MAD, {pct}% of the selling price.',
+    gapNeg: 'The cost is {gap} MAD above the selling price.',
+    gapNone: 'Add the purchase cost to see the gap with the selling price.',
+    abA: 'Category A', abB: 'Category B',
+    abErr: 'Choose category A or B.',
+    consignor: 'Owner of the goods', phConsignor: 'E.g. Baobab Collection',
+    sku: 'Shared reference', phSku: 'E.g. JEAN-501',
+    skuHint: 'Use the same reference in both of your stores and the till can say “3 left at the other shop” even when the labels differ. Capitals, hyphens and spaces are ignored.',
+    media: 'Photo or video', mediaOne: 'Photo', addPhoto: 'Add a photo', addVideo: 'Add a video',
+    newPhoto: 'Change photo', newVideo: 'Change video', removeMedia: 'Remove',
+    whereTillPhone: 'The photo shows in the inventory, on the till and on your customers’ phones.',
+    whereTill: 'The photo shows in the inventory and on the till.',
+    wherePhone: 'The photo shows in the inventory and on your customers’ phones.',
+    whereInv: 'The photo shows in the inventory.',
+    videoNote: 'A video replaces the photo and only shows on your customers’ phones.',
+    videoHere: 'This video only shows on your customers’ phones, with Order Pro.',
+    mediaOff: 'Photo storage isn’t switched on for your account yet.',
+    sending: 'Uploading…', sendFail: 'Upload failed, try again.',
+    cancel: 'Cancel', create: 'Create product', save: 'Save',
+    created: 'Product created', createdBoutique: 'Now add its colour × size variants.', createdOther: 'Now add its variants.',
+    updated: 'Product updated',
+  },
+  ar: {
+    titleNew: 'منتج جديد', titleEdit: 'تعديل المنتج', tagInv: 'المخزون',
+    descBoutique: 'أنشئ المنتج، ثم أضف متغيّرات اللون × المقاس ورموزها الشريطية.',
+    descOther: 'أنشئ المنتج، ثم أضف متغيّراته ورموزها الشريطية.',
+    descEdit: 'تُدار المتغيّرات والمخزون والرموز الشريطية من بطاقة المنتج.',
+    secItem: 'السلعة', secPrice: 'السعر', secAb: 'الفئة A / B',
+    name: 'اسم المنتج', nameErr: 'أدخل اسماً للمنتج.',
+    phBoutique: 'مثال: قفطان مطرّز يدوياً', phMaison: 'مثال: مزهرية فخارية 30 سم', phOther: 'مثال: سلعة',
+    cat: 'الفئة', catNone: 'بدون فئة', catTill: 'تصبح رفّاً في الصندوق.',
+    kind: 'التنويع حسب',
+    kindsBoutique: { taille: ['ملابس', 'المقاسات من S إلى XL'], pointure: ['أحذية', 'مقاسات الأحذية'], tu: ['مقاس واحد', 'بدون مقاس'] },
+    kindsOther: { tu: ['قطعة واحدة', 'بدون مقاس'], taille: ['أحجام', 'S · M · L'], pointure: ['مقاس الحذاء', 'مقاسات الأحذية'] },
+    price: 'سعر البيع', priceErr: 'أدخل سعر البيع.', priceZero: 'يجب أن يكون سعر البيع أكبر من 0.',
+    moneyBad: 'أدخل مبلغاً، مثلاً 149,90.',
+    cost: 'تكلفة الشراء', optional: 'اختياري',
+    gap: 'السعر ناقص التكلفة: {gap} درهم، أي {pct}٪ من سعر البيع.',
+    gapNeg: 'التكلفة تتجاوز سعر البيع بـ {gap} درهم.',
+    gapNone: 'أضف تكلفة الشراء لترى الفرق مع سعر البيع.',
+    abA: 'الفئة A', abB: 'الفئة B',
+    abErr: 'اختر الفئة A أو B.',
+    consignor: 'مالك البضاعة', phConsignor: 'مثال: Baobab Collection',
+    sku: 'المرجع المشترك', phSku: 'مثال: JEAN-501',
+    skuHint: 'استعمل المرجع نفسه في متجريك، فيستطيع الصندوق أن يقول «بقيت 3 في المتجر الآخر» حتى لو اختلفت الملصقات. لا تُحتسب الأحرف الكبيرة والشَّرطات والمسافات.',
+    media: 'صورة أو فيديو', mediaOne: 'صورة', addPhoto: 'إضافة صورة', addVideo: 'إضافة فيديو',
+    newPhoto: 'تغيير الصورة', newVideo: 'تغيير الفيديو', removeMedia: 'إزالة',
+    whereTillPhone: 'تظهر الصورة في المخزون وعلى الصندوق وعلى هواتف زبائنك.',
+    whereTill: 'تظهر الصورة في المخزون وعلى الصندوق.',
+    wherePhone: 'تظهر الصورة في المخزون وعلى هواتف زبائنك.',
+    whereInv: 'تظهر الصورة في المخزون.',
+    videoNote: 'يحلّ الفيديو محلّ الصورة ولا يظهر إلا على هواتف زبائنك.',
+    videoHere: 'لا يظهر هذا الفيديو إلا على هواتف زبائنك، مع Order Pro.',
+    mediaOff: 'تخزين الصور غير مفعّل في حسابك بعد.',
+    sending: 'جارٍ الإرسال…', sendFail: 'تعذّر الإرسال، أعد المحاولة.',
+    cancel: 'إلغاء', create: 'إنشاء المنتج', save: 'حفظ',
+    created: 'تم إنشاء المنتج', createdBoutique: 'أضف الآن متغيّرات اللون × المقاس.', createdOther: 'أضف الآن متغيّراته.',
+    updated: 'تم تحديث المنتج',
+  },
+};
+function _bqxPfLang() {
+  const l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+  return _BQX_PF[l] ? l : 'fr';
+}
+function _bqxPfT() { return _BQX_PF[_bqxPfLang()]; }
+function _bqxPfFill(s, o) { return String(s).replace(/\{(\w+)\}/g, (_, k) => (o && o[k] != null ? o[k] : '')); }
+
+/* Prices are kept to the centime. The till writes 29,90 (bqMoney); the grid,
+   the sheet and the label printed 30, and this form saved 29. */
+function _bqxPrice(n) {
+  const v = Math.round((+n || 0) * 100) / 100;
+  return Number.isInteger(v) ? _mad(v) : _mad2(v);
+}
+/* What the merchant typed, read the way they wrote it: « 149,90 », « 149.90 »,
+   « 1 890 », Arabic-Indic digits. Anything else is refused, never guessed: a
+   « 1.890 » could be 1 890 or 1,89 and is sent back to be rewritten. */
+function _bqxMoneyIn(raw) {
+  let s = String(raw == null ? '' : raw)
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/\u066B/g, '.')
+    .replace(/MAD|DH|درهم/gi, '')
+    .replace(/[\s\u00a0\u202F\u066C']/g, '');
+  if (!s) return { empty: true };
+  if (/^\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return { bad: true };
+  return { n: Math.round(parseFloat(s) * 100) / 100 };
+}
+function _bqxMoneyVal(n) {
+  const v = Math.round((+n || 0) * 100) / 100;
+  if (!v) return '';
+  const s = Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return _bqxPfLang() === 'en' ? s : s.replace('.', ',');
+}
+
+/* Material Symbols (Outlined 400), copied byte for byte from
+   assets/icons/material/ (add_photo_alternate.svg, videocam.svg, delete.svg). */
+const _BQX_PF_ICON = {
+  photo: 'M480-480ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h320v80H200v560h560v-320h80v320q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Zm440-320v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z',
+  video: 'M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h480q33 0 56.5 23.5T720-720v180l160-160v440L720-420v180q0 33-23.5 56.5T640-160H160Zm0-80h480v-480H160v480Zm0 0v-480 480Z',
+  del: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z',
+};
+function _bqxPfIcon(k) {
+  return `<svg viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false"><path d="${_BQX_PF_ICON[k]}"/></svg>`;
+}
+
+function _bqxPfCss() {
+  if (document.getElementById('bqx-pf-css')) return;
+  const st = document.createElement('style');
+  st.id = 'bqx-pf-css';
+  st.textContent = `
+    .kiwi-backdrop.bqx-pf-modal .kiwi-modal.kiwi-modal { --pf-bg: var(--paper); --pf-card: color-mix(in srgb, var(--paper) 55%, #fff); --pf-field: var(--paper); background: var(--pf-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 1px solid var(--n-200); }
+    html[data-theme="dark"] .kiwi-backdrop.bqx-pf-modal .kiwi-modal.kiwi-modal,
+    body[data-vexel-mode="dark"] .kiwi-backdrop.bqx-pf-modal .kiwi-modal.kiwi-modal { --pf-bg: #0F1512; --pf-card: #151C18; --pf-field: #0B100E; }
+    .kiwi-backdrop.bqx-pf-modal .kiwi-modal-foot.kiwi-modal-foot { background: var(--pf-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-top: 1px solid var(--n-200); }
+    .bqx-pf { display: grid; grid-template-columns: minmax(0, 1fr) 248px; gap: 18px; align-items: start; color: var(--ink); }
+    .bqx-pf-main { display: grid; gap: 14px; min-width: 0; }
+    .bqx-pf-sec { min-width: 0; padding: 16px 18px 4px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--pf-card); }
+    .bqx-pf-sec > h4 { margin: 0 0 12px; font: 600 14.5px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+    .bqx-pf-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+    .bqx-pf .bqx-pf-f { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; align-content: start; min-width: 0; margin: 0 0 14px; }
+    .bqx-pf-l { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--n-600); }
+    .bqx-pf-tag { font-size: 11px; font-weight: 500; color: var(--n-400, var(--n-500)); }
+    .bqx-pf-in { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--pf-field); color: var(--ink); font: 500 13.5px var(--sans); transition: border-color 140ms, box-shadow 140ms; }
+    .bqx-pf-in::placeholder { color: var(--n-400, var(--n-500)); font-weight: 400; }
+    .bqx-pf-in:focus { outline: 0; border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent); }
+    .bqx-pf-in[aria-invalid="true"] { border-color: var(--danger, #cb5238); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #cb5238) 14%, transparent); }
+    .kiwi-backdrop.bqx-pf-modal .bqx-pf .kiwi-select-trigger { min-height: 40px; padding: 0 10px 0 12px; padding-inline: 12px 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--pf-field); box-shadow: none; font: 500 13.5px var(--sans); }
+    .bqx-pf-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); }
+    .bqx-pf-err { font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--danger, #cb5238); }
+    .bqx-pf-err[hidden], .bqx-pf [hidden] { display: none; }
+    .bqx-pf-money { position: relative; display: block; }
+    .bqx-pf-money .bqx-pf-in { padding-inline-end: 50px; font-variant-numeric: tabular-nums; }
+    .bqx-pf-unit { position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%); font: 500 12px var(--sans); color: var(--n-500); pointer-events: none; }
+    .bqx-pf-gap { margin: -4px 0 14px; font-size: 12px; line-height: 1.45; color: var(--n-600); font-variant-numeric: tabular-nums; }
+    .bqx-pf-gap.is-neg { color: var(--danger, #cb5238); font-weight: 600; }
+    .bqx-pf-gap.is-none { color: var(--n-500); }
+    .bqx-pf-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+    .bqx-pf-choice { position: relative; display: grid; gap: 2px; min-width: 0; padding: 10px 12px; padding-inline-start: 36px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--pf-field); cursor: pointer; transition: border-color 140ms, box-shadow 140ms; }
+    .bqx-pf-choice input { position: absolute; inset-inline-start: 12px; top: 12px; width: 16px; height: 16px; margin: 0; accent-color: var(--atlas); cursor: pointer; }
+    .bqx-pf-choice b { font: 600 13px/1.3 var(--sans); color: var(--ink); }
+    .bqx-pf-choice small { font-size: 11.5px; line-height: 1.35; color: var(--n-500); }
+    .bqx-pf-choice:hover { border-color: color-mix(in srgb, var(--atlas) 50%, var(--n-200)); }
+    .bqx-pf-choice:has(input:checked) { border-color: var(--atlas); box-shadow: inset 0 0 0 1px var(--atlas); }
+    .bqx-pf-choice:has(input:focus-visible) { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .bqx-pf-choices[aria-invalid="true"] .bqx-pf-choice { border-color: var(--danger, #cb5238); }
+    .bqx-pf-side { position: sticky; top: 0; display: grid; gap: 12px; min-width: 0; }
+    .bqx-pf-card { padding: 12px; border: 1px solid var(--n-200); border-radius: 14px; background: var(--pf-card); }
+    .bqx-pf-thumb { display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: color-mix(in srgb, var(--tint, #9AA09D) 14%, var(--pf-field)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint, #9AA09D) 12%, var(--n-200)); }
+    .bqx-pf-thumb img, .bqx-pf-thumb video { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .bqx-pf-thumb .bqx-ini { font-size: 30px; }
+    .bqx-pf-pn { margin: 10px 2px 0; font: 600 14.5px/1.3 var(--sans); letter-spacing: -0.01em; color: var(--ink); overflow-wrap: anywhere; }
+    .bqx-pf-pn.is-empty { font-weight: 500; color: var(--n-400, var(--n-500)); }
+    .bqx-pf-pm { display: flex; align-items: center; gap: 6px; margin: 3px 2px 0; font-size: 12px; color: var(--n-500); }
+    .bqx-pf-pm .bqx-dot { background: var(--cat, #9AA09D); }
+    .bqx-pf-pp { margin: 8px 2px 2px; font: 600 18px/1 var(--sans); letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .bqx-pf-pp small { font-size: 11px; font-weight: 500; letter-spacing: 0; color: var(--n-500); }
+    .bqx-pf-pp.is-empty { color: var(--n-400, var(--n-500)); }
+    .bqx-pf-macts { display: grid; gap: 6px; margin-top: 12px; }
+    .bqx-pf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--pf-field); color: var(--n-700); font: 500 12.5px var(--sans); cursor: pointer; transition: border-color 140ms, color 140ms; }
+    .bqx-pf-btn:hover { border-color: var(--atlas); color: var(--atlas); }
+    .bqx-pf-btn:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .bqx-pf-btn.is-del:hover { border-color: var(--danger, #cb5238); color: var(--danger, #cb5238); }
+    .bqx-pf-btn:disabled { opacity: .55; cursor: progress; }
+    .bqx-pf-mhint { margin: 10px 2px 0; font-size: 11.5px; line-height: 1.45; color: var(--n-500); }
+    .bqx-pf-mmsg { margin: 6px 2px 0; font-size: 11.5px; font-weight: 600; line-height: 1.4; color: var(--n-700); }
+    .bqx-pf-mmsg:empty { display: none; }
+    @media (max-width: 760px) {
+      .bqx-pf { grid-template-columns: 1fr; }
+      .bqx-pf-side { position: static; }
+      .bqx-pf-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: start; }
+      .bqx-pf-thumb { grid-row: span 3; aspect-ratio: 1; }
+      .bqx-pf-pn { margin-top: 2px; }
+      .bqx-pf-macts, .bqx-pf-mhint, .bqx-pf-mmsg { grid-column: 1 / -1; }
+      .bqx-pf-macts { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .bqx-pf-grid { grid-template-columns: 1fr; }
+      .bqx-pf-in, .kiwi-backdrop.bqx-pf-modal .bqx-pf .kiwi-select-trigger { font-size: 16px; }
+      .bqx-pf-sec { padding: 14px 14px 2px; }
+    }
+  `;
+  document.head.appendChild(st);
+}
+
 function _bqxMediaPreview() {
-  if (_bqxVideo) return `<video class="bqx-photo-prev" src="${_esc(_bqxVideo)}" muted playsinline preload="metadata"></video>`;
-  if (_bqxPhoto) return `<img class="bqx-photo-prev" src="${_esc(_bqxPhoto)}" alt="" />`;
+  if (_bqxVideo) return `<video src="${_esc(_bqxVideo)}" muted playsinline preload="metadata"></video>`;
+  if (_bqxPhoto) return `<img src="${_esc(_bqxPhoto)}" alt="" />`;
   return '';
 }
+/* A video picker only where a video shows (Order Pro), or to take one out. */
 function _bqxMediaActions() {
+  const t = _bqxPfT();
   const has = _bqxPhoto || _bqxVideo;
+  const videoOk = _orderProOn() || !!_bqxVideo;
   return `
-    <div class="bqx-photo-actions">
-      <button class="kb ghost" type="button" data-bqx-pick="photo" style="padding:8px 12px;font-size:12.5px;">Ajouter une photo</button>
-      <button class="kb ghost" type="button" data-bqx-pick="video" style="padding:8px 12px;font-size:12.5px;">Ajouter une vidéo</button>
-      ${has ? `<button class="kb ghost" type="button" data-bqx-media-del style="padding:8px 12px;font-size:12.5px;">Retirer</button>` : ''}
-    </div>`;
+    <button class="bqx-pf-btn" type="button" data-bqx-pick="photo">${_bqxPfIcon('photo')}<span>${_esc(_bqxPhoto ? t.newPhoto : t.addPhoto)}</span></button>
+    ${videoOk ? `<button class="bqx-pf-btn" type="button" data-bqx-pick="video">${_bqxPfIcon('video')}<span>${_esc(_bqxVideo ? t.newVideo : t.addVideo)}</span></button>` : ''}
+    ${has ? `<button class="bqx-pf-btn is-del" type="button" data-bqx-media-del>${_bqxPfIcon('del')}<span>${_esc(t.removeMedia)}</span></button>` : ''}`;
+}
+function _bqxMediaHint() {
+  const t = _bqxPfT();
+  if (_bqxVideo) return t.videoHere;
+  const till = _bqxTillReads(), phone = _orderProOn();
+  const where = till && phone ? t.whereTillPhone : till ? t.whereTill : phone ? t.wherePhone : t.whereInv;
+  return phone ? `${where} ${t.videoNote}` : where;
 }
 /* ── La référence commune ────────────────────────────────────────────────────
  * Ce que le propriétaire pose UNE fois pour dire « le jean de Casa et le jean
@@ -13846,20 +14344,18 @@ function _bqxMediaActions() {
  *
  * Caché sur un compte à magasin unique : un champ dont l'utilité tient à
  * l'existence d'un second magasin n'a rien à faire sur l'écran de celui qui
- * n'en a qu'un — il ne saurait pas quoi y mettre, et le remplirait au hasard.
+ * n'en a qu'un. Il ne saurait pas quoi y mettre, et le remplirait au hasard.
  * La valeur DÉJÀ posée reste en base et ressort le jour où il ouvre le second
  * (voir le `undefined` à l'enregistrement). */
 function _bqxSkuField(sku) {
   if (_bqxSoleStore()) return '';
+  const t = _bqxPfT();
   return `
-    <div class="kf-group">
-      <label class="kf-label">Référence commune (option)</label>
-      <input class="kf-input" value="${_esc(sku || '')}" data-bqx-esku
-             placeholder="ex. JEAN-501" maxlength="48" />
-      <div class="bqx-photo-msg">La même référence dans vos deux établissements, et la caisse saura
-        dire « il en reste 3 à l'autre boutique » même si les étiquettes diffèrent.
-        Majuscules, tirets et espaces sont ignorés.</div>
-    </div>`;
+    <label class="bqx-pf-f">
+      <span class="bqx-pf-l">${_esc(t.sku)}<span class="bqx-pf-tag">${_esc(t.optional)}</span></span>
+      <input class="bqx-pf-in" value="${_esc(sku || '')}" data-bqx-esku placeholder="${_esc(t.phSku)}" maxlength="48" autocomplete="off" spellcheck="false" />
+      <span class="bqx-pf-hint">${_esc(t.skuHint)}</span>
+    </label>`;
 }
 
 /* ── Catégorie A / B : à qui appartient la marchandise ───────────────────────
@@ -13871,7 +14367,10 @@ function _bqxSkuField(sku) {
  *
  * Aucune option n'est pré-cochée à la création : un défaut silencieux ferait
  * entrer toute la marchandise d'un tiers dans le chiffre d'affaires du magasin
- * sans que personne ait rien décidé. Le choix est donc explicite, une fois. */
+ * sans que personne ait rien décidé. Le choix est donc explicite, une fois.
+ * La catégorie se NOMME, elle ne s'explique pas (décision de la patronne,
+ * 2026-08-19, gardée par pos-maison-test) : les cartes disent « Catégorie A »
+ * et « Catégorie B », rien sur la recette. */
 /* L'option est posée par l'opérateur Kiwi, commerce par commerce
    (kiwi-admin.html › Modules → « Dépôt-vente »). Comparaison stricte, comme
    Order Pro : clé absente, backend injoignable, réponse vide → NON. Éteinte,
@@ -13884,29 +14383,34 @@ function _bqxAbField(p) {
   if (!_bqxAbOn()) return '';
   const own = p ? (p.ownership === 'consignment' ? 'consignment' : 'outright') : '';
   const who = p ? (p.consignor || '') : '';
+  const t = _bqxPfT();
   return `
-    <div class="kf-group">
-      <label class="kf-label">Catégorie A / B</label>
-      <div class="bqx-ab">
-        <label><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
-          <div><b>Catégorie A</b></div></label>
-        <label><input type="radio" name="bqx-ab" value="consignment" ${own === 'consignment' ? 'checked' : ''} data-bqx-ab />
-          <div><b>Catégorie B</b></div></label>
+    <section class="bqx-pf-sec">
+      <h4>${_esc(t.secAb)}</h4>
+      <div class="bqx-pf-f">
+        <div class="bqx-pf-choices" role="radiogroup" aria-label="${_esc(t.secAb)}" data-bqx-ab-group>
+          <label class="bqx-pf-choice"><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
+            <b>${_esc(t.abA)}</b></label>
+          <label class="bqx-pf-choice"><input type="radio" name="bqx-ab" value="consignment" ${own === 'consignment' ? 'checked' : ''} data-bqx-ab />
+            <b>${_esc(t.abB)}</b></label>
+        </div>
+        <span class="bqx-pf-err" data-bqx-pf-err="ab" hidden>${_esc(t.abErr)}</span>
       </div>
-    </div>
-    <div class="kf-group" data-bqx-ab-who style="${own === 'consignment' ? '' : 'display:none'}">
-      <label class="kf-label">Propriétaire de la marchandise (option)</label>
-      <input class="kf-input" value="${_esc(who)}" data-bqx-consignor placeholder="Ex. Baobab Collection" maxlength="60" />
-    </div>`;
+      <label class="bqx-pf-f" data-bqx-ab-who ${own === 'consignment' ? '' : 'hidden'}>
+        <span class="bqx-pf-l">${_esc(t.consignor)}<span class="bqx-pf-tag">${_esc(t.optional)}</span></span>
+        <input class="bqx-pf-in" value="${_esc(who)}" data-bqx-consignor placeholder="${_esc(t.phConsignor)}" maxlength="60" />
+      </label>
+    </section>`;
 }
 /* Révèle le nom du déposant quand B est choisie. Le champ vit dans la modale,
    donc on se raccroche au backdrop plutôt qu'au document. */
-function _bqxWireAb() {
-  const b = document.querySelector('.kiwi-backdrop');
+function _bqxWireAb(b) {
+  b = b || document.querySelector('.kiwi-backdrop');
   if (!b) return;
   const who = b.querySelector('[data-bqx-ab-who]');
   b.querySelectorAll('[data-bqx-ab]').forEach((r) => r.addEventListener('change', () => {
-    if (who) who.style.display = r.checked && r.value === 'consignment' ? '' : 'none';
+    if (who) who.hidden = !(r.checked && r.value === 'consignment');
+    _bqxPfMark(b, 'ab', false);
   }));
 }
 /* Ce que les deux formulaires écrivent. `null` = rien de coché : l'appelant
@@ -13922,58 +14426,234 @@ function _bqxAbRead(b) {
   };
 }
 
-function _bqxPhotoField(photo, video) {
-  _bqxPhoto = photo || '';
-  _bqxVideo = video || '';
+/* ── the form itself ─────────────────────────────────────────────────────── */
+function _bqxPfBody(p, catSel) {
+  const t = _bqxPfT();
+  const copy = _bqxCopy();
+  const boutique = copy.trade === 'boutique';
+  const kinds = boutique ? t.kindsBoutique : t.kindsOther;
+  const kindSel = (p && p.kind) || copy.defaultKind;
+  const kindCards = copy.kindList(kindSel).map(([v, fallback]) => {
+    const words = kinds[v] || [fallback, ''];
+    return `<label class="bqx-pf-choice"><input type="radio" name="bqx-pf-kind" value="${_esc(v)}"${v === kindSel ? ' checked' : ''} data-bqx-kind />
+      <b>${_esc(words[0])}</b>${words[1] ? `<small>${_esc(words[1])}</small>` : ''}</label>`;
+  }).join('');
+  const cats = CAT().listCategories();
+  const catOpts = `<option value="">${_esc(t.catNone)}</option>`
+    + cats.map((c) => `<option value="${_esc(c.id)}"${c.id === catSel ? ' selected' : ''}>${_esc(c.name)}</option>`).join('');
+  const ph = boutique ? t.phBoutique : copy.trade === 'maison' ? t.phMaison : t.phOther;
   return `
-    <div class="kf-group">
-      <label class="kf-label">Photo / vidéo (option)</label>
-      <div class="bqx-photo" data-bqx-photo-box>${_bqxMediaPreview()}${_bqxMediaActions()}</div>
-      <div class="bqx-photo-msg" data-bqx-photo-msg>Visible par vos clients sur le téléphone.</div>
-      <input type="file" accept="image/*" data-bqx-photo-input hidden />
-      <input type="file" accept="video/*" data-bqx-video-input hidden />
+    <div class="bqx-pf" data-bqx-pf>
+      <div class="bqx-pf-main">
+        <section class="bqx-pf-sec">
+          <h4>${_esc(t.secItem)}</h4>
+          <label class="bqx-pf-f">
+            <span class="bqx-pf-l">${_esc(t.name)}</span>
+            <input class="bqx-pf-in" value="${_esc(p ? p.name : '')}" placeholder="${_esc(ph)}" maxlength="120" required autocomplete="off" data-bqx-name aria-describedby="bqx-pf-e-name" />
+            <span class="bqx-pf-err" id="bqx-pf-e-name" data-bqx-pf-err="name" hidden>${_esc(t.nameErr)}</span>
+          </label>
+          <label class="bqx-pf-f">
+            <span class="bqx-pf-l">${_esc(t.cat)}</span>
+            <select class="bqx-pf-in" data-bqx-cat>${catOpts}</select>
+            ${_bqxTillReads() ? `<span class="bqx-pf-hint">${_esc(t.catTill)}</span>` : ''}
+          </label>
+          <div class="bqx-pf-f">
+            <span class="bqx-pf-l" id="bqx-pf-kind-l">${_esc(t.kind)}</span>
+            <div class="bqx-pf-choices" role="radiogroup" aria-labelledby="bqx-pf-kind-l">${kindCards}</div>
+          </div>
+        </section>
+        <section class="bqx-pf-sec">
+          <h4>${_esc(t.secPrice)}</h4>
+          <div class="bqx-pf-grid">
+            <label class="bqx-pf-f">
+              <span class="bqx-pf-l">${_esc(t.price)}</span>
+              <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" required value="${_esc(p ? _bqxMoneyVal(p.priceMAD) : '')}" placeholder="${_esc(copy.pricePlaceholder)}" data-bqx-price aria-describedby="bqx-pf-e-price" /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+              <span class="bqx-pf-err" id="bqx-pf-e-price" data-bqx-pf-err="price" hidden></span>
+            </label>
+            <label class="bqx-pf-f">
+              <span class="bqx-pf-l">${_esc(t.cost)}<span class="bqx-pf-tag">${_esc(t.optional)}</span></span>
+              <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" value="${_esc(p ? _bqxMoneyVal(p.cost) : '')}" data-bqx-cost aria-describedby="bqx-pf-e-cost" /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+              <span class="bqx-pf-err" id="bqx-pf-e-cost" data-bqx-pf-err="cost" hidden></span>
+            </label>
+          </div>
+          <p class="bqx-pf-gap" data-bqx-pf-gap aria-live="polite"></p>
+          ${p ? _bqxSkuField(p.sku) : ''}
+        </section>
+        ${p ? _bqxAbField(p) : _bqxAbField(null)}
+      </div>
+      <aside class="bqx-pf-side">
+        <div class="bqx-pf-card" data-bqx-pf-card>
+          <div class="bqx-pf-thumb" data-bqx-photo-box></div>
+          <div class="bqx-pf-pn" data-bqx-pf-pn></div>
+          <div class="bqx-pf-pm"><span class="bqx-dot" aria-hidden="true"></span><span data-bqx-pf-pc></span></div>
+          <div class="bqx-pf-pp" data-bqx-pf-pp></div>
+          <div class="bqx-pf-macts" data-bqx-photo-acts></div>
+          <p class="bqx-pf-mhint" data-bqx-photo-hint></p>
+          <p class="bqx-pf-mmsg" data-bqx-photo-msg role="status"></p>
+          <input type="file" accept="image/*" data-bqx-photo-input hidden />
+          <input type="file" accept="video/*" data-bqx-video-input hidden />
+        </div>
+      </aside>
     </div>`;
 }
-function _bqxWirePhoto(photo, video) {
-  _bqxPhoto = photo || '';
-  _bqxVideo = video || '';
-  const b = document.querySelector('.kiwi-backdrop');
-  if (!b) return;
-  const box = b.querySelector('[data-bqx-photo-box]');
-  const msg = b.querySelector('[data-bqx-photo-msg]');
-  const photoInput = b.querySelector('[data-bqx-photo-input]');
-  const videoInput = b.querySelector('[data-bqx-video-input]');
-  if (!box || !photoInput || !videoInput) return;
 
-  const paint = () => { box.innerHTML = _bqxMediaPreview() + _bqxMediaActions(); };
-  box.addEventListener('click', (e) => {
-    const pick = e.target.closest('[data-bqx-pick]');
-    if (pick) { (pick.dataset.bqxPick === 'video' ? videoInput : photoInput).click(); return; }
-    if (e.target.closest('[data-bqx-media-del]')) { _bqxPhoto = ''; _bqxVideo = ''; paint(); return; }
+/* Show or clear one field's error. `msg` replaces the text when given. */
+function _bqxPfMark(b, key, on, msg) {
+  const err = b.querySelector(`[data-bqx-pf-err="${key}"]`);
+  const field = key === 'ab' ? b.querySelector('[data-bqx-ab-group]') : b.querySelector(`[data-bqx-${key}]`);
+  if (err) { if (msg) err.textContent = msg; err.hidden = !on; }
+  if (field) { if (on) field.setAttribute('aria-invalid', 'true'); else field.removeAttribute('aria-invalid'); }
+}
+/* Reads and checks the form. Every problem is written under its field at
+   once; returns null when anything is wrong, the clean values otherwise. */
+function _bqxPfRead(b) {
+  const t = _bqxPfT();
+  const name = (b.querySelector('[data-bqx-name]').value || '').trim();
+  const price = _bqxMoneyIn(b.querySelector('[data-bqx-price]').value);
+  const cost = _bqxMoneyIn(b.querySelector('[data-bqx-cost]').value);
+  _bqxPfMark(b, 'name', !name);
+  const priceMsg = price.empty ? t.priceErr : price.bad ? t.moneyBad : !(price.n > 0) ? t.priceZero : '';
+  _bqxPfMark(b, 'price', !!priceMsg, priceMsg);
+  _bqxPfMark(b, 'cost', !!cost.bad, t.moneyBad);
+  if (!name || priceMsg || cost.bad) return null;
+  /* No card checked = the product carries a kind this trade does not list
+     (retail-scan writes « unite »). Left as it is, never rewritten to the
+     first card: the old select did exactly that on every save. */
+  const kind = b.querySelector('[data-bqx-kind]:checked');
+  return {
+    name, priceMAD: price.n, cost: cost.empty ? 0 : cost.n,
+    categoryId: b.querySelector('[data-bqx-cat]').value || null,
+    kind: kind ? kind.value : undefined,
+  };
+}
+/* Focus the first field the merchant has to fix, in reading order. */
+function _bqxPfFail(b, extra) {
+  if (extra) _bqxPfMark(b, extra, true);
+  const bad = b.querySelector('.bqx-pf [aria-invalid="true"]');
+  if (!bad) return;
+  const target = bad.matches('input, select') ? bad : bad.querySelector('input');
+  if (target) { target.focus(); if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest' }); }
+}
+
+function _bqxPfWire(b, p) {
+  if (!b) return;
+  const t = _bqxPfT();
+  _bqxPhoto = (p && p.photo) || '';
+  _bqxVideo = (p && p.video) || '';
+  const q = (sel) => b.querySelector(sel);
+  const nameIn = q('[data-bqx-name]'), priceIn = q('[data-bqx-price]'), costIn = q('[data-bqx-cost]'), catIn = q('[data-bqx-cat]');
+  const card = q('[data-bqx-pf-card]'), box = q('[data-bqx-photo-box]'), acts = q('[data-bqx-photo-acts]');
+  const hint = q('[data-bqx-photo-hint]'), msg = q('[data-bqx-photo-msg]');
+  const photoInput = q('[data-bqx-photo-input]'), videoInput = q('[data-bqx-video-input]');
+
+  /* The card on the right follows the form: initials or medium, name,
+     category, price, as the inventory grid will draw them. */
+  const paintCard = () => {
+    const name = (nameIn.value || '').trim();
+    const c = catIn.value ? CAT().listCategories().find((x) => x.id === catIn.value) : null;
+    const hex = c ? (_TAGHEX[c.color] || '#0B6E4F') : '#9AA09D';
+    card.style.setProperty('--tint', hex);
+    card.style.setProperty('--cat', hex);
+    const media = _bqxMediaPreview();
+    box.innerHTML = media || (name ? _bqxThumb({ name }) : '');
+    const pn = q('[data-bqx-pf-pn]');
+    pn.textContent = name || t.name;
+    pn.classList.toggle('is-empty', !name);
+    q('[data-bqx-pf-pc]').textContent = c ? c.name : t.catNone;
+    const pr = _bqxMoneyIn(priceIn.value);
+    const pp = q('[data-bqx-pf-pp]');
+    pp.hidden = !(pr.n > 0);
+    pp.innerHTML = pr.n > 0 ? `${_esc(_bqxPrice(pr.n))} <small>MAD</small>` : '';
+  };
+  const paintGap = () => {
+    const gap = q('[data-bqx-pf-gap]');
+    const pr = _bqxMoneyIn(priceIn.value), co = _bqxMoneyIn(costIn.value);
+    gap.classList.remove('is-neg', 'is-none');
+    if (!(pr.n > 0) || pr.bad || co.bad) { gap.textContent = ''; gap.hidden = true; return; }
+    gap.hidden = false;
+    if (co.empty || !(co.n > 0)) { gap.classList.add('is-none'); gap.textContent = t.gapNone; return; }
+    const d = Math.round((pr.n - co.n) * 100) / 100;
+    if (d < 0) { gap.classList.add('is-neg'); gap.textContent = _bqxPfFill(t.gapNeg, { gap: _bqxPrice(-d) }); return; }
+    gap.textContent = _bqxPfFill(t.gap, { gap: _bqxPrice(d), pct: Math.round((d / pr.n) * 100) });
+  };
+  const paintMedia = () => {
+    acts.innerHTML = _bqxMediaActions();
+    hint.textContent = _bqxMediaHint();
+    paintCard();
+  };
+
+  nameIn.addEventListener('input', () => { _bqxPfMark(b, 'name', false); paintCard(); });
+  priceIn.addEventListener('input', () => { _bqxPfMark(b, 'price', false); paintCard(); paintGap(); });
+  costIn.addEventListener('input', () => { _bqxPfMark(b, 'cost', false); paintGap(); });
+  catIn.addEventListener('change', paintCard);
+  /* Entrée enregistre, comme le bouton du pied. */
+  b.querySelector('[data-bqx-pf]').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing || !e.target.matches('input.bqx-pf-in')) return;
+    e.preventDefault();
+    const go = b.querySelector('.kiwi-modal-foot [data-action="bqx-new-save"], .kiwi-modal-foot [data-action="bqx-prod-edit-save"]');
+    if (go) go.click();
   });
 
+  acts.addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-bqx-pick]');
+    if (pick) { (pick.dataset.bqxPick === 'video' ? videoInput : photoInput).click(); return; }
+    if (e.target.closest('[data-bqx-media-del]')) { _bqxPhoto = ''; _bqxVideo = ''; msg.textContent = ''; paintMedia(); }
+  });
   const upload = async (file, kind) => {
     if (!file) return;
-    if (!window.KiwiOrderPro || !window.KiwiOrderPro.uploadMedia) {
-      msg.textContent = "Stockage média pas encore activé sur votre compte."; return;
-    }
-    msg.textContent = 'Envoi…';
+    if (!window.KiwiOrderPro || !window.KiwiOrderPro.uploadMedia) { msg.textContent = t.mediaOff; return; }
+    msg.textContent = t.sending;
+    acts.querySelectorAll('button').forEach((x) => { x.disabled = true; });
     const res = await window.KiwiOrderPro.uploadMedia(file);
+    if (!b.isConnected) return;
     if (!res || !res.ok) {
-      /* Une échelle de messages recopiée ici disait « fichier trop lourd »
-         sans jamais dire de combien. KiwiOrderPro.uploadError porte les chiffres. */
+      /* KiwiOrderPro.uploadError porte les chiffres (« 12 Mo, maximum 8 »). */
       msg.textContent = (window.KiwiOrderPro && window.KiwiOrderPro.uploadError)
         ? window.KiwiOrderPro.uploadError(res)
-        : 'Envoi impossible, réessayez.';
+        : t.sendFail;
+      acts.querySelectorAll('button').forEach((x) => { x.disabled = false; });
       return;
     }
     if (kind === 'video') { _bqxVideo = res.url; _bqxPhoto = ''; }
     else { _bqxPhoto = res.url; _bqxVideo = ''; }
-    msg.textContent = 'Visible par vos clients sur le téléphone.';
-    paint();
+    msg.textContent = '';
+    paintMedia();
   };
-  photoInput.addEventListener('change', (e) => upload(e.target.files && e.target.files[0], 'photo'));
-  videoInput.addEventListener('change', (e) => upload(e.target.files && e.target.files[0], 'video'));
+  photoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'photo'); e.target.value = ''; });
+  videoInput.addEventListener('change', (e) => { upload(e.target.files && e.target.files[0], 'video'); e.target.value = ''; });
+
+  _bqxWireAb(b);
+  paintMedia();
+  paintGap();
+}
+function _bqxPfOpen(p) {
+  const t = _bqxPfT();
+  _bqxCss();
+  _bqxPfCss();
+  const copy = _bqxCopy();
+  const catSel = p ? p.categoryId : (_bqxFilter !== 'all' ? _bqxFilter : '');
+  _bqxModal = modal({
+    // The store's OWN name: this modal is reachable by every real boutique, and
+    // a hardcoded demo tag put "MAISON MANSOUR" on a real client's screen.
+    // modal() escapes the tag itself: the old `_esc(p.name)` printed « &amp; ».
+    title: p ? t.titleEdit : t.titleNew, tag: p ? p.name : t.tagInv + ' · ' + _bqxTag(),
+    desc: _esc(p ? t.descEdit : (copy.trade === 'boutique' ? t.descBoutique : t.descOther)),
+    width: 820,
+    body: _bqxPfBody(p, catSel),
+    foot: p
+      ? `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${_esc(p.id)}">${_esc(t.save)}</button>`
+      : `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-new-save">${_esc(t.create)}</button>`,
+  });
+  const b = _bqxModal && _bqxModal.el;
+  if (!b) return;
+  b.classList.add('bqx-pf-modal');
+  _bqxPfWire(b, p);
+  if (!p) setTimeout(() => { const i = b.querySelector('[data-bqx-name]'); if (i) i.focus(); }, 60);
+}
+/* The open product form, not just the first backdrop on the page. */
+function _bqxPfRoot() {
+  const el = _bqxModal && _bqxModal.el;
+  return el && el.isConnected && el.querySelector('[data-bqx-pf]') ? el : document.querySelector('.kiwi-backdrop.bqx-pf-modal');
 }
 
 /* new product */
@@ -13985,45 +14665,21 @@ handlers['bqx-templates'] = () => {
 };
 
 handlers['bqx-new'] = () => {
-  const copy = _bqxCopy();
-  _bqxModal = modal({
-    // The store's OWN name — this modal is reachable by every real boutique, and
-    // a hardcoded demo tag put "MAISON MANSOUR" on a real client's screen.
-    title: 'Nouveau produit', tag: 'INVENTAIRE · ' + _bqxTag(),
-    desc: copy.modalDesc,
-    width: 520,
-    body: `
-      <div class="kf-group"><label class="kf-label">Nom du produit</label><input class="kf-input" placeholder="${_esc(copy.namePlaceholder)}" data-bqx-name /></div>
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Catégorie</label><select class="kf-input" data-bqx-cat>${_catOptions(_bqxFilter !== 'all' ? _bqxFilter : '', true)}</select></div>
-        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-kind>${_kindOptions()}</select></div>
-      </div>
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="${_esc(copy.pricePlaceholder)}" data-bqx-price /></div>
-        <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" placeholder="optionnel" data-bqx-cost /></div>
-      </div>
-      ${_bqxAbField(null)}
-      ${_bqxPhotoField('', '')}`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-new-save">Créer le produit</button>`,
-  });
-  _bqxWirePhoto('', '');
-  _bqxWireAb();
-  setTimeout(() => { const i = document.querySelector('.kiwi-backdrop [data-bqx-name]'); if (i) i.focus(); }, 60);
+  _bqxPfOpen(null);
 };
 handlers['bqx-new-save'] = () => {
-  const b = document.querySelector('.kiwi-backdrop');
+  const b = _bqxPfRoot();
   if (!b) return;
-  const name = b.querySelector('[data-bqx-name]').value.trim();
-  if (!name) { toast('Nom requis', { type: 'warn' }); return; }
+  const f = _bqxPfRead(b);
   /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. Option
      éteinte, la question n'est pas posée et rien n'est exigé. */
   const ab = _bqxAbRead(b);
-  if (_bqxAbOn() && !ab) { toast('Choisissez la catégorie', { desc: 'Catégorie A ou Catégorie B.', type: 'warn' }); return; }
+  if (_bqxAbOn() && !ab) { _bqxPfFail(b, 'ab'); return; }
+  if (!f) { _bqxPfFail(b); return; }
   const p = CAT().addProduct({
-    name, categoryId: b.querySelector('[data-bqx-cat]').value || null,
-    kind: b.querySelector('[data-bqx-kind]').value,
-    priceMAD: parseInt(b.querySelector('[data-bqx-price]').value, 10) || 0,
-    cost: parseInt(b.querySelector('[data-bqx-cost]').value, 10) || 0,
+    name: f.name, categoryId: f.categoryId, kind: f.kind || _bqxCopy().defaultKind,
+    priceMAD: f.priceMAD,
+    cost: f.cost,
     /* Option éteinte → `ab` est nul : addProduct retombe alors sur « achetée
        ferme », son défaut, plutôt que de recevoir undefined.ownership. */
     ownership: ab ? ab.ownership : 'outright',
@@ -14032,7 +14688,8 @@ handlers['bqx-new-save'] = () => {
     video: _bqxVideo,
   });
   if (_bqxModal) _bqxModal.close();
-  toast('Produit créé', { desc: _bqxCopy().varCreatedDesc, type: 'success' });
+  const t = _bqxPfT();
+  toast(t.created, { desc: _bqxCopy().trade === 'boutique' ? t.createdBoutique : t.createdOther, type: 'success' });
   setTimeout(() => _bqxOpenProduct(p.id), 260);
 };
 
@@ -14040,52 +14697,35 @@ handlers['bqx-new-save'] = () => {
 handlers['bqx-prod-edit'] = (_el, arg) => {
   const data = CAT().getProduct(arg);
   if (!data) return;
-  const p = data.product;
-  _bqxModal = modal({
-    title: 'Modifier le produit', tag: _esc(p.name), width: 520,
-    body: `
-      <div class="kf-group"><label class="kf-label">Nom</label><input class="kf-input" value="${_esc(p.name)}" data-bqx-ename /></div>
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Catégorie</label><select class="kf-input" data-bqx-ecat>${_catOptions(p.categoryId, true)}</select></div>
-        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-ekind>${_kindOptions(p.kind)}</select></div>
-      </div>
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" value="${p.priceMAD}" data-bqx-eprice /></div>
-        <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" value="${p.cost || 0}" data-bqx-ecost /></div>
-      </div>
-      ${_bqxAbField(p)}
-      ${_bqxSkuField(p.sku)}
-      ${_bqxPhotoField(p.photo, p.video)}`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${arg}">Enregistrer</button>`,
-  });
-  _bqxWirePhoto(p.photo || '', p.video || '');
-  _bqxWireAb();
+  _bqxPfOpen(data.product);
 };
 handlers['bqx-prod-edit-save'] = (_el, arg) => {
-  const b = document.querySelector('.kiwi-backdrop');
+  const b = _bqxPfRoot();
   if (!b) return;
   /* Une fiche ouverte porte déjà sa catégorie : rien de coché ne peut arriver
      ici, mais si cela arrivait, on laisse la valeur en base plutôt que de la
-     réécrire au hasard — d'où les `undefined`. */
+     réécrire au hasard. D'où les `undefined`. */
   const ab = _bqxAbRead(b);
+  const f = _bqxPfRead(b);
+  if (!f) { _bqxPfFail(b); return; }
   CAT().updateProduct(arg, {
     ownership: ab ? ab.ownership : undefined,
     consignor: ab ? ab.consignor : undefined,
-    name: b.querySelector('[data-bqx-ename]').value.trim() || undefined,
-    categoryId: b.querySelector('[data-bqx-ecat]').value || null,
-    kind: b.querySelector('[data-bqx-ekind]').value,
-    priceMAD: parseInt(b.querySelector('[data-bqx-eprice]').value, 10) || 0,
-    cost: parseInt(b.querySelector('[data-bqx-ecost]').value, 10) || 0,
+    name: f.name,
+    categoryId: f.categoryId,
+    kind: f.kind,
+    priceMAD: f.priceMAD,
+    cost: f.cost,
     photo: _bqxPhoto,
     video: _bqxVideo,
     /* Le champ n'est affiché qu'aux comptes multi-magasins. `undefined` quand il
        est absent, jamais '' : updateProduct ne touche que les clés fournies, et
        envoyer '' effacerait la référence d'un compte qui vient de repasser à un
-       seul magasin — puis la perdrait pour de bon à la réouverture du second. */
+       seul magasin, puis la perdrait pour de bon à la réouverture du second. */
     sku: (() => { const el = b.querySelector('[data-bqx-esku]'); return el ? el.value : undefined; })(),
   });
   if (_bqxModal) _bqxModal.close();
-  toast('Produit mis à jour', { type: 'success', duration: 2000 });
+  toast(_bqxPfT().updated, { type: 'success', duration: 2000 });
 };
 handlers['bqx-prod-del'] = (_el, arg) => {
   const data = CAT().getProduct(arg);
@@ -14217,7 +14857,7 @@ handlers['bqx-cat-del'] = (_el, arg) => {
     title: 'Supprimer cette catégorie ?', width: 480,
     desc: `« ${c.name} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
     body: `<div class="kf-group"><label class="kf-label">Déplacer les produits vers</label>
-      <select class="kf-input" data-bqx-reassign><option value="">·Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
+      <select class="kf-input" data-bqx-reassign><option value="">Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
       <div class="kx-warn-box danger"><div class="hd">Suppression</div><ul><li>La catégorie disparaît de la caisse et du dashboard.</li><li>Les produits sont conservés et déplacés, jamais supprimés.</li></ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer</button>`,
   });

@@ -7450,7 +7450,7 @@
   /* ─── new product ─── */
   function catSelectOptions(sel) {
     const cats = catDB().listCategories();
-    return `<option value="">·Sans catégorie</option>` + cats.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    return `<option value="">Sans catégorie</option>` + cats.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   }
   function kindSelectOptions(sel) {
     const opts = [['tu', 'Pièce unique (sans taille)'], ['taille', 'Formats (S · M · L)']];

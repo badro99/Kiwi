@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=61',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=5',
+  '/assets/liquid-lens.js?v=6',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
   '/assets/account.js?v=29',
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=72',
+  '/assets/stock.js?v=73',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -282,7 +282,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=80',
+  '/assets/pos-dispatch.js?v=81',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -295,8 +295,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=51',
-  '/assets/pos-boutique.js?v=51',
+  '/assets/pos-boutique.css?v=52',
+  '/assets/pos-boutique.js?v=52',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -328,8 +328,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=58',
-  '/assets/pos-maison.js?v=58',
+  '/assets/pos-maison.css?v=59',
+  '/assets/pos-maison.js?v=59',
   '/assets/caisse-pairing.js?v=27',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
