@@ -238,7 +238,7 @@ Capture caveats (not design findings):
   - Evidence: the code field comes before the greeting, the time and the action (`team-clock-in/iphone-light-en.png`). "Clock in" is disabled (2.41:1) with no message saying why.
   - A 10: greeting, then the one field, then the button. The disabled state says "Enter the till code".
 - **Major · three code lengths.**
-  - Evidence: staff PIN 4 digits, till code 6 digits ("000000"), kitchen pairing 6 digits, dashboard lock 4 digits. None of the screens says which code is which or where to find it, beyond "Your manager creates your account in Team".
+  - Evidence: staff PIN 4 digits, till code 6 digits, kitchen pairing 6 digits, dashboard lock 4 digits. None of the screens says which code is which or where to find it, beyond "Your manager creates your account in Team".
   - A 10: name the code and where it lives, e.g. "the 6-digit code shown on the till".
 - **Polish · inconsistent bottom-left key.** Dark frames show an empty disc in the bottom-left of the keypad; light frames show nothing there.
 - **Polish · "Change role" and the refresh button not aligned.**
