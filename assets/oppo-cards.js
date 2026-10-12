@@ -18,28 +18,35 @@
   const lang = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
   const pick = (o) => o[lang()] ?? o.fr;
 
-  /* ─── Illustrations — pure SVG, token colors only ─── */
+  /* ─── Illustrations — pure SVG ───
+   * The dark bodies and the light marks use the brand values themselves, not
+   * --riad / --paper: the dark skin turns those into translucent black and
+   * black, and the agent's chat bubble (and every riad drawing) vanished into
+   * its black card (2026-10-12). The accents keep --atlas / --mint, which each
+   * skin keeps visible. A riad body that sits on its own also gets a faint
+   * mint edge so it holds on black. Same rule as Santé Kiwi's gauge. */
+  const RIAD = '#053B2C', PAPER = '#F7F5F0', EDGE = 'stroke="#7DF2B0" stroke-opacity="0.22"';
   const ART = {
     /* Stack of MAD bills (the capital card) */
     capital: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
         <rect x="14" y="58" width="44" height="20" rx="5" fill="var(--atlas)" opacity="0.92"/>
-        <rect x="62" y="58" width="44" height="20" rx="5" fill="var(--riad)"/>
+        <rect x="62" y="58" width="44" height="20" rx="5" fill="${RIAD}"/>
         <rect x="38" y="36" width="44" height="20" rx="5" fill="var(--atlas)"/>
         <rect x="86" y="36" width="26" height="20" rx="5" fill="var(--mint)" opacity="0.85"/>
-        <rect x="60" y="14" width="44" height="20" rx="5" fill="var(--riad)"/>
+        <rect x="60" y="14" width="44" height="20" rx="5" fill="${RIAD}"/>
         <circle cx="82" cy="24" r="5.5" stroke="var(--mint)" stroke-width="1.6"/>
-        <circle cx="60" cy="46" r="5.5" stroke="var(--paper)" stroke-width="1.6" opacity="0.8"/>
-        <circle cx="36" cy="68" r="5.5" stroke="var(--paper)" stroke-width="1.6" opacity="0.8"/>
+        <circle cx="60" cy="46" r="5.5" stroke="${PAPER}" stroke-width="1.6" opacity="0.8"/>
+        <circle cx="36" cy="68" r="5.5" stroke="${PAPER}" stroke-width="1.6" opacity="0.8"/>
       </svg>`,
     /* Phone with a payment-link pill flying out */
     paylink: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
-        <rect x="30" y="10" width="48" height="80" rx="10" fill="var(--riad)"/>
+        <rect x="30" y="10" width="48" height="80" rx="10" fill="${RIAD}" ${EDGE}/>
         <rect x="36" y="18" width="36" height="48" rx="6" fill="var(--atlas)" opacity="0.55"/>
-        <rect x="42" y="74" width="24" height="5" rx="2.5" fill="var(--paper)" opacity="0.5"/>
+        <rect x="42" y="74" width="24" height="5" rx="2.5" fill="${PAPER}" opacity="0.5"/>
         <rect x="58" y="34" width="50" height="18" rx="9" fill="var(--mint)"/>
-        <path d="M70 43h18M84 38l6 5-6 5" stroke="var(--riad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M70 43h18M84 38l6 5-6 5" stroke="${RIAD}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="26" cy="30" r="3.5" fill="var(--mint)" opacity="0.7"/>
         <circle cx="100" cy="64" r="2.6" fill="var(--atlas)" opacity="0.5"/>
       </svg>`,
@@ -47,21 +54,21 @@
     loyalty: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
         <rect x="18" y="22" width="76" height="52" rx="10" fill="var(--atlas)"/>
-        <rect x="26" y="30" width="28" height="7" rx="3.5" fill="var(--paper)" opacity="0.75"/>
-        <circle cx="34" cy="56" r="6" fill="var(--mint)" stroke="var(--paper)" stroke-width="1.4"/>
-        <circle cx="50" cy="56" r="6" fill="var(--mint)" stroke="var(--paper)" stroke-width="1.4"/>
-        <circle cx="66" cy="56" r="6" fill="var(--mint)" stroke="var(--paper)" stroke-width="1.4"/>
-        <circle cx="82" cy="56" r="6" fill="none" stroke="var(--paper)" stroke-width="1.4" opacity="0.55"/>
+        <rect x="26" y="30" width="28" height="7" rx="3.5" fill="${PAPER}" opacity="0.75"/>
+        <circle cx="34" cy="56" r="6" fill="var(--mint)" stroke="${PAPER}" stroke-width="1.4"/>
+        <circle cx="50" cy="56" r="6" fill="var(--mint)" stroke="${PAPER}" stroke-width="1.4"/>
+        <circle cx="66" cy="56" r="6" fill="var(--mint)" stroke="${PAPER}" stroke-width="1.4"/>
+        <circle cx="82" cy="56" r="6" fill="none" stroke="${PAPER}" stroke-width="1.4" opacity="0.55"/>
         <rect x="84" y="12" width="22" height="22" rx="7" fill="var(--mint)"/>
-        <path d="M91 23l3 3 5-6" stroke="var(--riad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M91 23l3 3 5-6" stroke="${RIAD}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`,
     /* AI agent sparkle on a chat bubble */
     agent: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
-        <rect x="20" y="24" width="64" height="44" rx="12" fill="var(--riad)"/>
-        <path d="M36 68l-4 12 14-10" fill="var(--riad)"/>
-        <rect x="30" y="38" width="34" height="6" rx="3" fill="var(--paper)" opacity="0.6"/>
-        <rect x="30" y="50" width="24" height="6" rx="3" fill="var(--paper)" opacity="0.35"/>
+        <rect x="20" y="24" width="64" height="44" rx="12" fill="${RIAD}" ${EDGE}/>
+        <path d="M36 68l-4 12 14-10" fill="${RIAD}"/>
+        <rect x="30" y="38" width="34" height="6" rx="3" fill="${PAPER}" opacity="0.6"/>
+        <rect x="30" y="50" width="24" height="6" rx="3" fill="${PAPER}" opacity="0.35"/>
         <path d="M90 18l3.2 8 8 3.2-8 3.2-3.2 8-3.2-8-8-3.2 8-3.2z" fill="var(--mint)"/>
         <path d="M100 48l1.8 4.4 4.4 1.8-4.4 1.8-1.8 4.4-1.8-4.4-4.4-1.8 4.4-1.8z" fill="var(--atlas)"/>
       </svg>`,
@@ -69,7 +76,7 @@
     zakat: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
         <path d="M74 14a26 26 0 100 44 22 22 0 110-44z" fill="var(--atlas)"/>
-        <ellipse cx="46" cy="74" rx="22" ry="8" fill="var(--riad)"/>
+        <ellipse cx="46" cy="74" rx="22" ry="8" fill="${RIAD}"/>
         <ellipse cx="46" cy="68" rx="22" ry="8" fill="var(--atlas)" opacity="0.85"/>
         <ellipse cx="46" cy="62" rx="22" ry="8" fill="var(--mint)" opacity="0.9"/>
         <ellipse cx="88" cy="76" rx="14" ry="6" fill="var(--atlas)" opacity="0.7"/>
@@ -78,12 +85,12 @@
     /* Kiwi card with a chip + outflow arrow (Dépenses) */
     depenses: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
-        <rect x="18" y="24" width="80" height="50" rx="10" fill="var(--riad)"/>
+        <rect x="18" y="24" width="80" height="50" rx="10" fill="${RIAD}" ${EDGE}/>
         <rect x="18" y="35" width="80" height="9" fill="var(--atlas)" opacity="0.5"/>
         <rect x="28" y="52" width="16" height="12" rx="3" fill="var(--mint)"/>
-        <rect x="54" y="57" width="34" height="5" rx="2.5" fill="var(--paper)" opacity="0.45"/>
+        <rect x="54" y="57" width="34" height="5" rx="2.5" fill="${PAPER}" opacity="0.45"/>
         <circle cx="96" cy="22" r="15" fill="var(--mint)"/>
-        <path d="M96 15v13M90 22l6 6 6-6" stroke="var(--riad)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M96 15v13M90 22l6 6 6-6" stroke="${RIAD}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`,
   };
 
