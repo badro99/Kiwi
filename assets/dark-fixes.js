@@ -67,7 +67,10 @@
    * surlignage disparaît et la ligne redevient un pavé illisible. */
   /* `.ai-btn` : le bouton Kiwi AI de la barre — la peau Vexel le remplit en
    * menthe avec un libellé encre, volontairement ; rien à corriger dessus. */
-  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn';
+  /* `.bqx-vr-bc svg` : le code-barres d'une variante, posé sur du papier en
+   * sombre pour rester lisible, comme l'étiquette imprimée. L'assombrir, c'est
+   * remettre des barres encre sur fond noir. */
+  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn, .bqx-vr-bc svg';
 
   function fix(root) {
     if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;

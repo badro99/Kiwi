@@ -317,7 +317,7 @@ const MENU = [
   ok('pages-pro : plus de « Marge 100 % » sur un produit non chiffré',
     !/const margin = p\.priceMAD \? Math\.round\(\(1 - \(p\.cost \|\| 0\)/.test(pp));
   ok('pages-pro : le produit non chiffré le dit',
-    /Prix d’achat manquant/.test(pp));
+    /costNone: 'Coût d’achat non renseigné'/.test(pp) && /const priceSub = cost == null \? t\.costNone/.test(pp));
 
   const fin = R('assets/finance.js');
   ok('finance : la déclaration de TVA fabriquée est partie', !/TVA_DATA|tvaPayable|tvaDueDate/.test(fin));

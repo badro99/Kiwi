@@ -51,7 +51,7 @@ var SHELL = [
   '/assets/simple.css',
   '/assets/ux.css',
   '/assets/pages-pro.css?v=3',
-  '/assets/catalog-workspace.css?v=21',
+  '/assets/catalog-workspace.css?v=22',
   '/assets/catalog-workspace.js?v=5',
   '/assets/help-centre.css?v=5',
   '/assets/polish-dashboard.css',
@@ -91,7 +91,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=50',
+  '/assets/interactive.js?v=51',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',

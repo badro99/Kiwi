@@ -85,14 +85,17 @@ ok('#0169 inventory toolbar wraps on a phone, new product first', () => {
   assert.match(cw, /\.p-toolbar\.bqx-toolbar \{ display:flex!important;flex-wrap:wrap!important;/);
   assert.match(cw, /\.bqx-toolbar>\.kb\.primary \{ flex-basis:100%!important;order:-1; \}/);
 });
-ok('#0170 product sheet shows purchase price, stock value and sold-out sizes', () => {
-  assert.match(pp, /function _bqxFactsHtml\(p, data, cost\)/);
-  assert.match(pp, /\$\{_bqxFactsHtml\(p, data, cost\)\}/);
-  assert.match(pp, /cost == null \? 'Non renseigné'/);
+ok('#0170 product sheet shows purchase cost, stock value and sold-out variants', () => {
+  assert.match(pp, /function _bqxSummaryHtml\(p, data\)/);
+  assert.match(pp, /\$\{_bqxSummaryHtml\(p, data\)\}/);
+  assert.match(pp, /const priceSub = cost == null \? t\.costNone/);
+  assert.match(pp, /out \? `\$\{t\.variants\(n\)\} · \$\{t\.outN\(out\)\}`/);
+  assert.match(pp, /\$\{stock \? '' : `<span class="bqx-vr-out">\$\{_esc\(t\.out\)\}<\/span>`\}/);
 });
-ok('#0170 variants become cards with the stepper in reach on a phone', () => {
-  assert.match(cw, /\.bqx-vtable thead \{ display:none!important; \}/);
-  assert.match(cw, /\.bqx-vtable tr \{ display:grid!important;/);
+ok('#0170 variants are cards with the stepper in reach on a phone', () => {
+  assert.match(pp, /<ul class="bqx-vlist">/);
+  assert.match(pp, /<li class="bqx-vr\$\{stock \? '' : ' is-out'\}"/);
+  assert.match(cw, /\.bqx-stk>button \{ width:40px;height:40px;/);
   assert.match(cw, /\.kiwi-drawer-foot \[data-action="bqx-prod-edit"\] \{ grid-column:1\/-1;order:-1;/);
 });
 

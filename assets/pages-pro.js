@@ -12201,10 +12201,6 @@ function _bqxCss() {
   const st = document.createElement('style');
   st.id = 'bqx-css';
   st.textContent = `
-    .bqx-vwrap { margin-top: 10px; border: 1px solid var(--line, #e7e3da); border-radius: 12px; overflow: hidden; }
-    .bqx-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .bqx-vtable th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807b); padding: 8px 10px; background: var(--paper-soft, #f3f1ea); }
-    .bqx-vtable td { padding: 9px 10px; border-top: 1px solid var(--line, #eee); vertical-align: middle; }
     /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) · un seul
        dessin pour le tableau de bord et la caisse. Ici : ce qui les entoure. */
     .bqx-cbtn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; padding: 3px 5px; margin: -3px -5px; border-radius: 8px; font: inherit; color: inherit; cursor: pointer; }
@@ -13169,41 +13165,398 @@ handlers['bqx-export'] = () => {
   } catch (e) { toast('Export impossible', { type: 'warn' }); }
 };
 
-/* ─── product detail drawer (the variant matrix) ─── */
+/* ─── product detail drawer (the variant list) ───────────────────────────────
+   La fiche produit, en trois langues. Une variante est une ligne qui se lit sur
+   un téléphone comme sur un bureau : couleur, taille et stock, puis son
+   code-barres et ses gestes. La fiche n'affirme que ce que le catalogue sait. */
+function _bqxArCount(n, one, two, few, acc, gen) {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  const r = n % 100;
+  if (r >= 3 && r <= 10) return `${n} ${few}`;
+  return `${n} ${r >= 11 && r <= 99 ? acc : gen}`;
+}
+const _arPieces = (n) => _bqxArCount(n, 'قطعة واحدة', 'قطعتان', 'قطع', 'قطعة', 'قطعة');
+const _arVariants = (n) => _bqxArCount(n, 'متغيّر واحد', 'متغيّران', 'متغيّرات', 'متغيّراً', 'متغيّر');
+const _BQX_SH = {
+  fr: {
+    close: 'Fermer', edit: 'Modifier le produit', delete: 'Supprimer', cancel: 'Annuler',
+    notFound: 'Produit introuvable.', noCat: 'Sans catégorie', cur: 'MAD', inStock: '{n} en stock',
+    tPrice: 'Prix de vente', costGap: 'Coût {cost} MAD · écart {gap} MAD', costOver: 'Coût {cost} MAD, au-dessus du prix',
+    costNone: 'Coût d’achat non renseigné',
+    tStock: 'En stock', noVariant: 'Aucune variante',
+    tValue: 'Valeur du stock', valueSale: 'Au prix de vente', valueCost: 'Au prix de vente · {v} MAD au coût',
+    tCodes: 'Codes-barres', codesOf: '{a} sur {b}', codesAll: 'Chaque variante a son code',
+    pieces: (n) => `${n} ${n > 1 ? 'pièces' : 'pièce'}`,
+    variants: (n) => `${n} ${n > 1 ? 'variantes' : 'variante'}`,
+    outN: (n) => `${n} ${n > 1 ? 'épuisées' : 'épuisée'}`,
+    codesMissing: (n) => (n > 1 ? `${n} variantes sans code` : '1 variante sans code'),
+    variantsTitle: 'Variantes', addVariant: 'Ajouter une variante',
+    empty: 'Aucune variante pour l’instant. Ajoutez la première : une couleur, une taille et son stock.',
+    genMissing: (n) => (n > 1 ? `Générer les ${n} codes manquants` : 'Générer le code manquant'),
+    printAll: (n) => (n > 1 ? `Imprimer les ${n} étiquettes` : 'Imprimer l’étiquette'),
+    printNone: 'Aucune étiquette à imprimer',
+    out: 'Épuisée', bcGenerated: 'Généré', bcImported: 'Importé', bcNone: 'Aucun code-barres',
+    actLabel: 'Étiquette', actGen: 'Générer un code', actReg: 'Code existant', actDel: 'Supprimer la variante',
+    actDelOf: 'Supprimer la variante {v}', actColor: 'Changer la couleur',
+    stockOf: 'Stock de {v}', minus: 'Retirer une pièce', plus: 'Ajouter une pièce', less: 'Moins', more: 'Plus',
+    stockEmpty: 'Indiquez un nombre de pièces, 0 si aucune.', stockBad: 'Un nombre entier de pièces, 0 ou plus.',
+    irreversible: 'Action irréversible',
+    delVarTitle: 'Supprimer cette variante ?',
+    delStock: (n) => (n > 1 ? `${n} pièces sortent de l’inventaire.` : '1 pièce sort de l’inventaire.'),
+    delNoStock: 'Elle n’a aucune pièce en stock.', delCodes: 'Ses codes-barres sont libérés : {codes}.',
+    delTill: 'La caisse ne la proposera plus.', delVarOk: 'Supprimer la variante', delVarDone: 'Variante supprimée',
+    genDone: 'EAN-13 généré', genDesc: 'Code {code} · imprimez l’étiquette pour l’article.', genFail: 'Aucun code généré',
+    genAllDone: (n) => (n > 1 ? `${n} codes EAN-13 générés` : '1 code EAN-13 généré'),
+    noCode: 'Aucun code à imprimer', noCodeVar: 'Générez d’abord un EAN-13 pour cette variante.',
+    noCodeProd: 'Générez au moins un EAN-13 pour ce produit.',
+    withCode: (n) => (n > 1 ? `${n} variantes avec code-barres` : '1 variante avec code-barres'),
+    printTitle: 'Imprimer les étiquettes', printTag: 'ÉTIQUETTES',
+    printDesc: 'Choisissez le nombre de copies, puis lancez l’impression.',
+    copies: 'Copies par variante', copiesOne: 'Nombre d’étiquettes', copiesBad: 'Entre 1 et 99 copies.',
+    totalLabels: (n) => (n > 1 ? `${n} étiquettes au total` : '1 étiquette au total'),
+    printHint: 'L’aperçu d’impression s’ouvre : envoyez-le vers l’imprimante à étiquettes.', print: 'Imprimer',
+    regTitle: 'Enregistrer un code existant',
+    regDesc: 'Scannez ou saisissez le code déjà présent sur l’article. Il est gardé tel quel, sans réimpression.',
+    regLabel: 'Code-barres', regPh: 'Scannez ou tapez le code',
+    regHint: 'EAN-13, UPC ou tout code de l’ancien système. Il est rattaché à cette couleur et cette taille.',
+    regSave: 'Enregistrer le code', regSaveAnyway: 'Enregistrer tel quel', regEmpty: 'Scannez ou saisissez un code.',
+    regShort: 'Code trop court : 4 caractères au moins. Lecture partielle ? Scannez à nouveau.',
+    regLong: 'Code trop long : 48 caractères au plus.', regUnreadable: 'Lecture illisible. Scannez à nouveau.',
+    regFail: 'Enregistrement impossible.',
+    regCheck: 'Le chiffre de contrôle de ce code {sym} ne correspond pas. Vérifiez la saisie, ou enregistrez-le tel quel.',
+    regDup: 'Ce code est déjà rattaché à {product} ({variant}).',
+    regDone: 'Code enregistré', regAlready: 'Code déjà rattaché',
+    regDescTill: '{code} est rattaché à la variante et se scanne en caisse.', regDescInv: '{code} est rattaché à la variante.',
+    addTitle: 'Ajouter une variante', addDesc: 'Chaque variante est un article distinct, avec son stock et son code-barres.',
+    color: 'Couleur', colorErr: 'Choisissez une couleur.', colorNone: 'Couleur à choisir',
+    note: 'Précision', notePh: 'Ex. rayé, délavé, motif', optional: 'facultatif',
+    noteHint: 'Seulement si deux variantes de même couleur doivent rester reconnaissables.',
+    sizeCloth: 'Taille', sizeShoe: 'Pointure', sizeFormat: 'Format', sizePh: 'Ou tapez une autre valeur',
+    sizeHint: 'Laissée vide, la variante est en taille unique (TU).', sizeTu: 'taille unique',
+    stockAndCode: 'Stock et code-barres', stockInit: 'Stock initial', stockInitHint: 'Les pièces déjà en rayon pour cette variante.',
+    bcTitle: 'Code-barres', bcGen: 'Générer un EAN-13', bcGenSub: 'Kiwi crée le code, vous imprimez l’étiquette.',
+    bcLater: 'Plus tard', bcLaterSub: 'Ou enregistrez le code déjà sur l’article, depuis la fiche.',
+    dup: '{v} existe déjà sur ce produit, avec {n}. Changez son stock dans la liste.',
+    addOk: 'Ajouter la variante', addDone: 'Variante ajoutée', addCode: 'EAN-13 généré', addFail: 'Ajout impossible',
+    colorTitle: 'Modifier la couleur', colorFor: 'Variante en taille {size}.', colorPick: 'Choisissez une couleur',
+    colorPickSubTill: 'Les couleurs standard restent faciles à retrouver en caisse.',
+    colorPickSubInv: 'Les couleurs standard restent faciles à retrouver dans l’inventaire.',
+    colorName: 'Nom de cette couleur', colorNamePh: 'Ex. Bleu clair',
+    colorNameHint: 'Le même nom sera repris pour toutes les tailles de cette couleur exacte.',
+    colorDetail: 'Détail de la variante', colorDetailPh: 'Ex. rayé, délavé, motif',
+    colorDetailHint: 'Ajoutez-le uniquement pour distinguer deux articles de couleur similaire.',
+    colorSafe: 'Le stock, la taille et les codes-barres ne seront pas modifiés.',
+    colorSave: 'Enregistrer les modifications', colorDone: 'Couleur mise à jour', colorNoSel: 'Aucune couleur',
+    colorRenamed: (n) => `Nom appliqué à ${n} variantes.`, optionalCap: 'Facultatif',
+    delProdTitle: 'Supprimer ce produit ?',
+    delProdDesc: 'Supprimer « {name} » efface aussi {n} et leurs codes-barres, définitivement.',
+    delProdDesc0: 'Supprimer « {name} » est définitif.',
+    delProdTill: 'Le produit disparaît de la caisse et du tableau de bord.', delProdInv: 'Le produit disparaît du tableau de bord.',
+    delProdCodes: 'Ses codes-barres sont libérés.', delProdOk: 'Supprimer définitivement', delProdDone: 'Produit supprimé',
+  },
+  en: {
+    close: 'Close', edit: 'Edit product', delete: 'Delete', cancel: 'Cancel',
+    notFound: 'Product not found.', noCat: 'No category', cur: 'MAD', inStock: '{n} in stock',
+    tPrice: 'Selling price', costGap: 'Cost {cost} MAD · gap {gap} MAD', costOver: 'Cost {cost} MAD, above the price',
+    costNone: 'Purchase cost not entered',
+    tStock: 'In stock', noVariant: 'No variants',
+    tValue: 'Stock value', valueSale: 'At selling price', valueCost: 'At selling price · {v} MAD at cost',
+    tCodes: 'Barcodes', codesOf: '{a} of {b}', codesAll: 'Every variant has its code',
+    pieces: (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`,
+    variants: (n) => `${n} ${n === 1 ? 'variant' : 'variants'}`,
+    outN: (n) => `${n} sold out`,
+    codesMissing: (n) => (n === 1 ? '1 variant without a code' : `${n} variants without a code`),
+    variantsTitle: 'Variants', addVariant: 'Add a variant',
+    empty: 'No variants yet. Add the first one: a colour, a size and its stock.',
+    genMissing: (n) => (n === 1 ? 'Generate the missing code' : `Generate the ${n} missing codes`),
+    printAll: (n) => (n === 1 ? 'Print the label' : `Print the ${n} labels`),
+    printNone: 'No labels to print',
+    out: 'Sold out', bcGenerated: 'Generated', bcImported: 'Imported', bcNone: 'No barcode',
+    actLabel: 'Label', actGen: 'Generate a code', actReg: 'Existing code', actDel: 'Delete the variant',
+    actDelOf: 'Delete the variant {v}', actColor: 'Change the colour',
+    stockOf: 'Stock of {v}', minus: 'Remove one piece', plus: 'Add one piece', less: 'Fewer', more: 'More',
+    stockEmpty: 'Enter a number of pieces, 0 if none.', stockBad: 'A whole number of pieces, 0 or more.',
+    irreversible: 'This cannot be undone',
+    delVarTitle: 'Delete this variant?',
+    delStock: (n) => (n === 1 ? '1 piece leaves the inventory.' : `${n} pieces leave the inventory.`),
+    delNoStock: 'It has no pieces in stock.', delCodes: 'Its barcodes are released: {codes}.',
+    delTill: 'The till will no longer offer it.', delVarOk: 'Delete the variant', delVarDone: 'Variant deleted',
+    genDone: 'EAN-13 generated', genDesc: 'Code {code} · print the label for the item.', genFail: 'No code generated',
+    genAllDone: (n) => (n === 1 ? '1 EAN-13 code generated' : `${n} EAN-13 codes generated`),
+    noCode: 'No code to print', noCodeVar: 'Generate an EAN-13 for this variant first.',
+    noCodeProd: 'Generate at least one EAN-13 for this product.',
+    withCode: (n) => (n === 1 ? '1 variant with a barcode' : `${n} variants with a barcode`),
+    printTitle: 'Print labels', printTag: 'LABELS',
+    printDesc: 'Choose the number of copies, then start printing.',
+    copies: 'Copies per variant', copiesOne: 'Number of labels', copiesBad: 'Between 1 and 99 copies.',
+    totalLabels: (n) => (n === 1 ? '1 label in total' : `${n} labels in total`),
+    printHint: 'The print preview opens: send it to the label printer.', print: 'Print',
+    regTitle: 'Register an existing code',
+    regDesc: 'Scan or type the code already on the item. It is kept as it is, with no reprint.',
+    regLabel: 'Barcode', regPh: 'Scan or type the code',
+    regHint: 'EAN-13, UPC or any code from the old system. It is attached to this colour and this size.',
+    regSave: 'Register the code', regSaveAnyway: 'Register as it is', regEmpty: 'Scan or type a code.',
+    regShort: 'Code too short: at least 4 characters. A partial read? Scan again.',
+    regLong: 'Code too long: 48 characters at most.', regUnreadable: 'Unreadable scan. Scan again.',
+    regFail: 'The code could not be registered.',
+    regCheck: 'The check digit of this {sym} code does not match. Check what you typed, or register it as it is.',
+    regDup: 'This code is already attached to {product} ({variant}).',
+    regDone: 'Code registered', regAlready: 'Code already attached',
+    regDescTill: '{code} is attached to the variant and scans at the till.', regDescInv: '{code} is attached to the variant.',
+    addTitle: 'Add a variant', addDesc: 'Each variant is a separate item, with its own stock and barcode.',
+    color: 'Colour', colorErr: 'Choose a colour.', colorNone: 'Colour to choose',
+    note: 'Detail', notePh: 'E.g. striped, washed, print', optional: 'optional',
+    noteHint: 'Only if two variants of the same colour must stay distinguishable.',
+    sizeCloth: 'Size', sizeShoe: 'Shoe size', sizeFormat: 'Format', sizePh: 'Or type another value',
+    sizeHint: 'Left empty, the variant is one size (TU).', sizeTu: 'one size',
+    stockAndCode: 'Stock and barcode', stockInit: 'Opening stock', stockInitHint: 'The pieces already on the shelf for this variant.',
+    bcTitle: 'Barcode', bcGen: 'Generate an EAN-13', bcGenSub: 'Kiwi creates the code, you print the label.',
+    bcLater: 'Later', bcLaterSub: 'Or register the code already on the item, from the product sheet.',
+    dup: '{v} already exists on this product, with {n}. Change its stock in the list.',
+    addOk: 'Add the variant', addDone: 'Variant added', addCode: 'EAN-13 generated', addFail: 'The variant could not be added',
+    colorTitle: 'Edit the colour', colorFor: 'Variant in size {size}.', colorPick: 'Choose a colour',
+    colorPickSubTill: 'Standard colours stay easy to find at the till.',
+    colorPickSubInv: 'Standard colours stay easy to find in the inventory.',
+    colorName: 'Name of this colour', colorNamePh: 'E.g. Light blue',
+    colorNameHint: 'The same name is used for every size of this exact colour.',
+    colorDetail: 'Variant detail', colorDetailPh: 'E.g. striped, washed, print',
+    colorDetailHint: 'Add it only to tell apart two items of a similar colour.',
+    colorSafe: 'Stock, size and barcodes will not change.',
+    colorSave: 'Save changes', colorDone: 'Colour updated', colorNoSel: 'No colour',
+    colorRenamed: (n) => `Name applied to ${n} variants.`, optionalCap: 'Optional',
+    delProdTitle: 'Delete this product?',
+    delProdDesc: 'Deleting “{name}” also erases {n} and their barcodes, for good.',
+    delProdDesc0: 'Deleting “{name}” is final.',
+    delProdTill: 'The product disappears from the till and the dashboard.', delProdInv: 'The product disappears from the dashboard.',
+    delProdCodes: 'Its barcodes are released.', delProdOk: 'Delete for good', delProdDone: 'Product deleted',
+  },
+  ar: {
+    close: 'إغلاق', edit: 'تعديل المنتج', delete: 'حذف', cancel: 'إلغاء',
+    notFound: 'المنتج غير موجود.', noCat: 'بدون فئة', cur: 'درهم', inStock: '{n} في المخزون',
+    tPrice: 'سعر البيع', costGap: 'التكلفة {cost} درهم · الفرق {gap} درهم', costOver: 'التكلفة {cost} درهم، أعلى من السعر',
+    costNone: 'تكلفة الشراء غير مُدخلة',
+    tStock: 'في المخزون', noVariant: 'لا متغيّرات',
+    tValue: 'قيمة المخزون', valueSale: 'بسعر البيع', valueCost: 'بسعر البيع · {v} درهم بالتكلفة',
+    tCodes: 'الرموز الشريطية', codesOf: '{a} من {b}', codesAll: 'لكل متغيّر رمزه',
+    pieces: (n) => _arPieces(n),
+    variants: (n) => _arVariants(n),
+    outN: (n) => `نفد منها: ${n}`,
+    codesMissing: (n) => `بدون رمز: ${n}`,
+    variantsTitle: 'المتغيّرات', addVariant: 'إضافة متغيّر',
+    empty: 'لا متغيّرات بعد. أضف الأول: لوناً ومقاساً ومخزونه.',
+    genMissing: (n) => (n === 1 ? 'توليد الرمز الناقص' : `توليد الرموز الناقصة (${n})`),
+    printAll: (n) => (n === 1 ? 'طباعة الملصق' : `طباعة الملصقات (${n})`),
+    printNone: 'لا ملصقات للطباعة',
+    out: 'نفد', bcGenerated: 'مولَّد', bcImported: 'مستورد', bcNone: 'بدون رمز شريطي',
+    actLabel: 'ملصق', actGen: 'توليد رمز', actReg: 'رمز موجود', actDel: 'حذف المتغيّر',
+    actDelOf: 'حذف المتغيّر {v}', actColor: 'تغيير اللون',
+    stockOf: 'مخزون {v}', minus: 'إنقاص قطعة', plus: 'إضافة قطعة', less: 'أقل', more: 'أكثر',
+    stockEmpty: 'أدخل عدد القطع، 0 إن لم توجد.', stockBad: 'عدد صحيح من القطع، 0 أو أكثر.',
+    irreversible: 'إجراء لا رجعة فيه',
+    delVarTitle: 'حذف هذا المتغيّر؟',
+    delStock: (n) => `المخزون المحذوف: ${_arPieces(n)}.`,
+    delNoStock: 'لا قطع له في المخزون.', delCodes: 'تُحرَّر رموزه الشريطية: {codes}.',
+    delTill: 'لن يعرضه الصندوق بعد الآن.', delVarOk: 'حذف المتغيّر', delVarDone: 'تم حذف المتغيّر',
+    genDone: 'تم توليد EAN-13', genDesc: 'الرمز {code} · اطبع ملصق السلعة.', genFail: 'لم يُولَّد أي رمز',
+    genAllDone: (n) => (n === 1 ? 'تم توليد رمز EAN-13' : `رموز EAN-13 مولَّدة: ${n}`),
+    noCode: 'لا رمز للطباعة', noCodeVar: 'ولّد أولاً رمز EAN-13 لهذا المتغيّر.',
+    noCodeProd: 'ولّد رمز EAN-13 واحداً على الأقل لهذا المنتج.',
+    withCode: (n) => `متغيّرات برمز شريطي: ${n}`,
+    printTitle: 'طباعة الملصقات', printTag: 'الملصقات',
+    printDesc: 'اختر عدد النسخ، ثم ابدأ الطباعة.',
+    copies: 'النسخ لكل متغيّر', copiesOne: 'عدد الملصقات', copiesBad: 'من 1 إلى 99 نسخة.',
+    totalLabels: (n) => `مجموع الملصقات: ${n}`,
+    printHint: 'تُفتح معاينة الطباعة: أرسلها إلى طابعة الملصقات.', print: 'طباعة',
+    regTitle: 'تسجيل رمز موجود',
+    regDesc: 'امسح أو أدخل الرمز الموجود على السلعة. يُحفظ كما هو، دون إعادة طباعة.',
+    regLabel: 'الرمز الشريطي', regPh: 'امسح الرمز أو اكتبه',
+    regHint: 'EAN-13 أو UPC أو أي رمز من النظام القديم. يُربط بهذا اللون وهذا المقاس.',
+    regSave: 'تسجيل الرمز', regSaveAnyway: 'التسجيل كما هو', regEmpty: 'امسح رمزاً أو أدخله.',
+    regShort: 'الرمز قصير جداً: 4 أحرف على الأقل. قراءة ناقصة؟ أعد المسح.',
+    regLong: 'الرمز طويل جداً: 48 حرفاً على الأكثر.', regUnreadable: 'قراءة غير واضحة. أعد المسح.',
+    regFail: 'تعذّر تسجيل الرمز.',
+    regCheck: 'رقم التحقق في رمز {sym} هذا لا يطابق. تحقّق من الإدخال، أو سجّله كما هو.',
+    regDup: 'هذا الرمز مربوط أصلاً بـ {product} ({variant}).',
+    regDone: 'تم تسجيل الرمز', regAlready: 'الرمز مربوط أصلاً',
+    regDescTill: '{code} مربوط بالمتغيّر ويُمسح في الصندوق.', regDescInv: '{code} مربوط بالمتغيّر.',
+    addTitle: 'إضافة متغيّر', addDesc: 'كل متغيّر سلعة مستقلة، بمخزونها ورمزها الشريطي.',
+    color: 'اللون', colorErr: 'اختر لوناً.', colorNone: 'لون لم يُختر بعد',
+    note: 'توضيح', notePh: 'مثال: مخطّط، باهت، بنقشة', optional: 'اختياري',
+    noteHint: 'فقط إذا وجب تمييز متغيّرين من اللون نفسه.',
+    sizeCloth: 'المقاس', sizeShoe: 'مقاس الحذاء', sizeFormat: 'الحجم', sizePh: 'أو اكتب قيمة أخرى',
+    sizeHint: 'إن تُرك فارغاً، يكون المتغيّر بمقاس واحد (TU).', sizeTu: 'مقاس واحد',
+    stockAndCode: 'المخزون والرمز الشريطي', stockInit: 'المخزون الأولي', stockInitHint: 'القطع الموجودة أصلاً على الرف لهذا المتغيّر.',
+    bcTitle: 'الرمز الشريطي', bcGen: 'توليد EAN-13', bcGenSub: 'يُنشئ Kiwi الرمز، وتطبع أنت الملصق.',
+    bcLater: 'لاحقاً', bcLaterSub: 'أو سجّل الرمز الموجود على السلعة، من بطاقة المنتج.',
+    dup: '{v} موجود أصلاً في هذا المنتج، ومخزونه {n}. غيّر مخزونه من القائمة.',
+    addOk: 'إضافة المتغيّر', addDone: 'تمت إضافة المتغيّر', addCode: 'تم توليد EAN-13', addFail: 'تعذّرت إضافة المتغيّر',
+    colorTitle: 'تعديل اللون', colorFor: 'متغيّر بالمقاس {size}.', colorPick: 'اختر لوناً',
+    colorPickSubTill: 'الألوان المعيارية يسهل إيجادها في الصندوق.',
+    colorPickSubInv: 'الألوان المعيارية يسهل إيجادها في المخزون.',
+    colorName: 'اسم هذا اللون', colorNamePh: 'مثال: أزرق فاتح',
+    colorNameHint: 'يُعتمد الاسم نفسه لكل مقاسات هذا اللون بالضبط.',
+    colorDetail: 'تفصيل المتغيّر', colorDetailPh: 'مثال: مخطّط، باهت، بنقشة',
+    colorDetailHint: 'أضفه فقط لتمييز سلعتين بلون متقارب.',
+    colorSafe: 'لن يتغيّر المخزون ولا المقاس ولا الرموز الشريطية.',
+    colorSave: 'حفظ التعديلات', colorDone: 'تم تحديث اللون', colorNoSel: 'بدون لون',
+    colorRenamed: (n) => `طُبّق الاسم على ${_arVariants(n)}.`, optionalCap: 'اختياري',
+    delProdTitle: 'حذف هذا المنتج؟',
+    delProdDesc: 'حذف «{name}» يمحو أيضاً {n} ورموزها الشريطية نهائياً.',
+    delProdDesc0: 'حذف «{name}» نهائي.',
+    delProdTill: 'يختفي المنتج من الصندوق ومن لوحة التحكم.', delProdInv: 'يختفي المنتج من لوحة التحكم.',
+    delProdCodes: 'تُحرَّر رموزه الشريطية.', delProdOk: 'حذف نهائي', delProdDone: 'تم حذف المنتج',
+  },
+};
+function _bqxShT() { return _BQX_SH[_bqxPfLang()]; }
+function _bqxIc(name, px) { return window.KiwiIcon ? window.KiwiIcon.svg(name, px || 18) : ''; }
+/* A count of pieces, as typed: whole, zero or more, Arabic-Indic digits read.
+   « 2,5 » and an empty box are refused, never read as 0: clearing the stock
+   field of a variant used to set it to 0 and write that to the ledger. */
+function _bqxPieces(raw) {
+  const s = String(raw == null ? '' : raw).trim().replace(/[^\x00-\x7F]/g, (d) => {
+    const c = d.charCodeAt(0);
+    if (c >= 0x660 && c <= 0x669) return String(c - 0x660);
+    if (c >= 0x6F0 && c <= 0x6F9) return String(c - 0x6F0);
+    return d;
+  });
+  if (!s) return { empty: true };
+  if (!/^\d{1,6}$/.test(s)) return { bad: true };
+  return { n: parseInt(s, 10) };
+}
+function _bqxVarLabel(v) { return [_bqxShownColor(v).label, v && v.size].filter(Boolean).join(' · '); }
+/* The variant behind an id: the open sheet first, then the whole catalogue. */
+function _bqxVarById(vid) {
+  const cat = CAT();
+  const look = (pid) => (cat.listVariants(pid) || []).find((x) => x.id === vid);
+  if (_bqxDrawerPid) { const v = look(_bqxDrawerPid); if (v) return { v, pid: _bqxDrawerPid }; }
+  for (const p of cat.listProducts({ includeArchived: true })) { const v = look(p.id); if (v) return { v, pid: p.id }; }
+  return null;
+}
+function _bqxShCss() {
+  if (document.getElementById('bqx-sh-css')) return;
+  const st = document.createElement('style');
+  st.id = 'bqx-sh-css';
+  st.textContent = `
+    .bqx-sheet { --sh-card: color-mix(in srgb, var(--paper) 55%, #fff); --sh-field: var(--paper); container-type: inline-size; color: var(--ink); }
+    html[data-theme="dark"] .bqx-sheet, body[data-vexel-mode="dark"] .bqx-sheet { --sh-card: #151C18; --sh-field: #0B100E; }
+    .bqx-sh-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--n-200); border-radius: 14px; background: var(--sh-card); overflow: hidden; }
+    .bqx-sh-c { display: grid; align-content: start; gap: 3px; min-width: 0; padding: 12px 14px; }
+    .bqx-sh-c + .bqx-sh-c { border-inline-start: 1px solid var(--n-200); }
+    .bqx-sh-l { font-size: 12px; font-weight: 600; color: var(--n-600); }
+    .bqx-sh-v { font: 600 17px/1.25 var(--sans); letter-spacing: -0.01em; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .bqx-sh-v small { font-size: 11px; font-weight: 500; letter-spacing: 0; color: var(--n-500); }
+    .bqx-sh-s { font-size: 11.5px; line-height: 1.4; color: var(--n-500); }
+    .bqx-sh-s.is-neg { color: var(--danger, #cb5238); font-weight: 600; }
+    .bqx-sh-sec { margin-top: 18px; padding: 0; }
+    .bqx-sh-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .bqx-sh-head h4 { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 15px var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+    .bqx-sh-head h4 span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: color-mix(in srgb, var(--ink) 7%, transparent); font-size: 12px; font-weight: 600; color: var(--n-600); font-variant-numeric: tabular-nums; }
+    .bqx-sh-head .kb { display: inline-flex; align-items: center; gap: 6px; }
+    .bqx-vlist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .bqx-vr { border: 1px solid var(--n-200); border-radius: 14px; background: var(--sh-card); }
+    .bqx-vr-main { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 10px 12px; }
+    .bqx-vr-main .bqx-ccell { flex: 1 1 96px; min-width: 0; }
+    .bqx-vr-main .bqx-cbtn { max-width: 100%; }
+    .bqx-vr-main .bqx-cbtn span { overflow: hidden; text-overflow: ellipsis; }
+    .bqx-vr-main .bqx-csrc { margin-left: 0; margin-inline-start: 24px; }
+    .bqx-vr-size { display: inline-grid; place-items: center; min-width: 34px; height: 28px; padding: 0 9px; box-sizing: border-box; border: 1px solid var(--n-200); border-radius: 8px; background: var(--sh-field); font: 600 12.5px var(--sans); color: var(--ink); }
+    .bqx-vr-out { padding: 3px 9px; border-radius: 999px; background: rgba(217,154,43,.16); color: #8A6210; font-size: 11.5px; font-weight: 600; }
+    html[data-theme="dark"] .bqx-vr-out, body[data-vexel-mode="dark"] .bqx-vr-out { color: #E2B55C; }
+    .bqx-vr .bqx-stk { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+    .bqx-vr .bqx-stk button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--n-200); border-radius: 10px; background: var(--sh-field); color: var(--ink); cursor: pointer; }
+    .bqx-vr .bqx-stk button:hover:not(:disabled) { border-color: var(--atlas); color: var(--atlas); }
+    .bqx-vr .bqx-stk button:disabled { opacity: .38; cursor: not-allowed; }
+    .bqx-vr .bqx-stk input { box-sizing: border-box; width: 54px; height: 34px; padding: 0 4px; border: 1px solid var(--n-200); border-radius: 10px; background: var(--sh-field); color: var(--ink); text-align: center; font: 600 14px var(--sans); font-variant-numeric: tabular-nums; }
+    .bqx-vr .bqx-stk input:focus { outline: 0; border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 16%, transparent); }
+    .bqx-vr .bqx-stk input[aria-invalid="true"] { border-color: var(--danger, #cb5238); }
+    .bqx-vr-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 8px 12px 10px; border-top: 1px solid var(--n-200); }
+    .bqx-vr-bc { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+    .bqx-vr-bc svg { display: block; flex: none; }
+    /* Les barres sont encre sur transparent : sur une carte sombre elles
+       disparaissaient. En sombre, le code repose sur du papier, comme l'étiquette. */
+    html[data-theme="dark"] .bqx-vr-bc svg, body[data-vexel-mode="dark"] .bqx-vr-bc svg { background: #F7F5F0; padding: 3px 6px; border-radius: 4px; box-sizing: content-box; }
+    .bqx-vr .bqx-badge { text-transform: none; letter-spacing: 0; }
+    .bqx-vr .bqx-vact { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; margin-inline-start: auto; }
+    .bqx-vr-act { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 9px; background: var(--sh-field); color: var(--n-700); font: 500 12.5px var(--sans); white-space: nowrap; cursor: pointer; transition: border-color 140ms, color 140ms; }
+    .bqx-vr-act svg { flex: none; width: 17px; height: 17px; }
+    .bqx-vr-act:hover:not(:disabled) { border-color: var(--atlas); color: var(--atlas); }
+    .bqx-vr-act:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .bqx-vr-act.is-del { justify-content: center; width: 32px; padding: 0; }
+    .bqx-vr-act.is-del:hover { border-color: var(--danger, #cb5238); color: var(--danger, #cb5238); }
+    .bqx-vr-act:disabled { opacity: .5; cursor: not-allowed; }
+    .bqx-vr-err { padding: 0 12px 10px; font-size: 11.5px; font-weight: 600; line-height: 1.4; color: var(--danger, #cb5238); }
+    .bqx-vr-err[hidden] { display: none; }
+    .bqx-vempty { padding: 18px; border: 1px dashed var(--n-200); border-radius: 14px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--n-500); }
+    .bqx-sh-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    @container (max-width: 520px) {
+      .bqx-sh-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bqx-sh-c:nth-child(3) { border-inline-start: 0; }
+      .bqx-sh-c:nth-child(n+3) { border-top: 1px solid var(--n-200); }
+      .bqx-vr-act span { font-size: 12px; }
+    }
+    .bqx-pf.is-one { grid-template-columns: minmax(0, 1fr); }
+    .bqx-sh-step { display: inline-grid; grid-template-columns: 40px 76px 40px; gap: 6px; align-items: center; }
+    .bqx-sh-step button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--n-200); border-radius: 10px; background: var(--pf-field); color: var(--ink); cursor: pointer; }
+    .bqx-sh-step button:hover { border-color: var(--atlas); color: var(--atlas); }
+    .bqx-sh-step .bqx-pf-in { padding: 0 6px; text-align: center; font-variant-numeric: tabular-nums; }
+    .bqx-sh-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bqx-sh-chip { min-width: 42px; height: 34px; padding: 0 12px; border: 1px solid var(--n-200); border-radius: 999px; background: var(--pf-field); color: var(--ink); font: 600 12.5px var(--sans); cursor: pointer; transition: border-color 140ms, color 140ms; }
+    .bqx-sh-chip:hover { border-color: color-mix(in srgb, var(--atlas) 50%, var(--n-200)); }
+    .bqx-sh-chip.on { border-color: var(--atlas); box-shadow: inset 0 0 0 1px var(--atlas); color: var(--atlas); }
+    .bqx-sh-chip:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+    .bqx-sh-picker[data-invalid] { border-radius: 12px; outline: 1px solid var(--danger, #cb5238); outline-offset: 4px; }
+    .bqx-sh-preview { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--atlas) 24%, var(--n-200)); border-radius: 12px; background: color-mix(in srgb, var(--atlas) 7%, var(--pf-card)); font-size: 13px; line-height: 1.45; color: var(--ink); }
+    .bqx-sh-preview small { font-size: 12px; color: var(--n-500); }
+    .bqx-sh-preview.is-dup { border-color: color-mix(in srgb, var(--danger, #cb5238) 32%, var(--n-200)); background: color-mix(in srgb, var(--danger, #cb5238) 7%, var(--pf-card)); color: var(--danger, #cb5238); font-weight: 600; }
+    .bqx-sh-preview:empty { display: none; }
+    .bqx-sh-mono { font-family: var(--mono, ui-monospace, monospace); letter-spacing: .02em; }
+    .bqx-pf-err.is-warn { color: #8A6210; }
+    html[data-theme="dark"] .bqx-pf-err.is-warn, body[data-vexel-mode="dark"] .bqx-pf-err.is-warn { color: #E2B55C; }
+    @media (max-width: 560px) { .bqx-sh-step .bqx-pf-in { font-size: 16px; } }
+  `;
+  document.head.appendChild(st);
+}
 function _variantRow(v, kind) {
+  const t = _bqxShT();
   const primary = (v.barcodes || []).find((b) => b.primary) || (v.barcodes || [])[0];
-  let bcCell;
-  if (primary) {
-    const svg = BC().svg(primary.code, { height: 26, module: 1.1, showText: false });
-    const badge = primary.type === 'imported' ? '<span class="bqx-badge imp">importé</span>' : '<span class="bqx-badge gen">généré</span>';
-    bcCell = `<div class="bqx-bc">${svg}<span><span class="bqx-bc-code">${_esc(primary.code)}</span> ${badge}</span></div>`;
-  } else {
-    bcCell = `<span class="bqx-nocode">aucun code</span>`;
-  }
-  const genOrPrint = primary
-    ? `<button class="kb ghost xs" data-action="bqx-var-print" data-arg="${v.id}" title="Imprimer l'étiquette">${_ICN.upload}Étiquette</button>`
-    : `<button class="kb ghost xs" data-action="bqx-var-gen" data-arg="${v.id}" title="Générer un EAN-13">${_ICN.scan}Générer</button>`;
+  const stock = Math.max(0, +v.stock || 0);
   const shown = _bqxShownColor(v);
   const note = _bqxVarNote(v);
   const kc = window.KiwiColors;
-  return `<tr>
-    <td><div class="bqx-ccell">
-      <button class="bqx-cbtn" data-action="bqx-var-color" data-arg="${v.id}" title="Changer la couleur">
-        ${kc ? kc.swatch(shown) : ''}<span>${_esc(shown.label)}</span></button>
-      ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}</div></td>
-    <td class="mono">${_esc(v.size)}</td>
-    <td><span class="bqx-stk">
-      <button data-action="bqx-var-dec" data-arg="${v.id}" aria-label="−1">−</button>
-      <input type="number" min="0" value="${v.stock}" data-var-stock="${v.id}" />
-      <button data-action="bqx-var-inc" data-arg="${v.id}" aria-label="+1">+</button>
-    </span></td>
-    <td>${bcCell}</td>
-    <td><div class="bqx-vact">
-      ${genOrPrint}
-      <button class="kb ghost xs" data-action="bqx-var-reg" data-arg="${v.id}" title="Enregistrer un code existant">${_ICN.copy}Code existant</button>
-      <button class="kb ghost xs danger-text" data-action="bqx-var-del" data-arg="${v.id}" title="Supprimer la variante">${_ICN.trash}</button>
-    </div></td>
-  </tr>`;
+  const label = _bqxVarLabel(v);
+  const id = _esc(v.id);
+  const code = primary
+    ? `<span class="bqx-vr-bc">${BC().svg(primary.code, { height: 22, module: 1, showText: false })}<span class="bqx-bc-code">${_esc(primary.code)}</span><span class="bqx-badge ${primary.type === 'imported' ? 'imp' : 'gen'}">${_esc(primary.type === 'imported' ? t.bcImported : t.bcGenerated)}</span></span>`
+    : `<span class="bqx-nocode">${_esc(t.bcNone)}</span>`;
+  const first = primary
+    ? `<button type="button" class="bqx-vr-act" data-action="bqx-var-print" data-arg="${id}">${_bqxIc('print')}<span>${_esc(t.actLabel)}</span></button>`
+    : `<button type="button" class="bqx-vr-act" data-action="bqx-var-gen" data-arg="${id}">${_bqxIc('add')}<span>${_esc(t.actGen)}</span></button>`;
+  const of = _esc(_bqxPfFill(t.stockOf, { v: label }));
+  return `<li class="bqx-vr${stock ? '' : ' is-out'}" data-vid="${id}">
+    <div class="bqx-vr-main">
+      <div class="bqx-ccell">
+        <button type="button" class="bqx-cbtn" data-action="bqx-var-color" data-arg="${id}" title="${_esc(t.actColor)}">${kc ? kc.swatch(shown) : ''}<span>${_esc(shown.label)}</span></button>
+        ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}
+      </div>
+      <span class="bqx-vr-size">${_esc(v.size)}</span>
+      ${stock ? '' : `<span class="bqx-vr-out">${_esc(t.out)}</span>`}
+      <span class="bqx-stk" role="group" aria-label="${of}">
+        <button type="button" data-action="bqx-var-dec" data-arg="${id}" aria-label="${_esc(t.minus)}"${stock ? '' : ' disabled'}>${_bqxIc('remove', 16)}</button>
+        <input type="text" inputmode="numeric" autocomplete="off" value="${stock}" data-var-stock="${id}" aria-label="${of}" />
+        <button type="button" data-action="bqx-var-inc" data-arg="${id}" aria-label="${_esc(t.plus)}">${_bqxIc('add', 16)}</button>
+      </span>
+    </div>
+    <div class="bqx-vr-sub">
+      ${code}
+      <div class="bqx-vact">
+        ${first}
+        <button type="button" class="bqx-vr-act" data-action="bqx-var-reg" data-arg="${id}">${_bqxIc('barcode_scanner')}<span>${_esc(t.actReg)}</span></button>
+        <button type="button" class="bqx-vr-act is-del" data-action="bqx-var-del" data-arg="${id}" aria-label="${_esc(_bqxPfFill(t.actDelOf, { v: label }))}" title="${_esc(t.actDel)}">${_bqxIc('trash-2')}</button>
+      </div>
+    </div>
+    <div class="bqx-vr-err" data-var-err="${id}" role="alert" hidden></div>
+  </li>`;
 }
 
 /* L'HISTORIQUE DE LA FICHE PRODUIT.
@@ -13227,72 +13580,84 @@ function _bqxHistoryHtml(pid) {
     </div>`;
 }
 
-/* #0170 · What the owner asks of a product before touching its stock: what
- * it cost, what the shelf is worth, and which sizes are already gone. Only
- * figures the catalog actually holds; a missing purchase price says so. */
-function _bqxFactsHtml(p, data, cost) {
-  const out = data.variants.filter((v) => !(+v.stock > 0));
+/* #0170 · What the owner asks of a product before touching its stock: what it
+ * sells for and what it cost, how many pieces, what the shelf is worth, and
+ * how many variants still have no code. Only figures the catalogue holds; a
+ * missing purchase price says so. One summary, where there were two blocks
+ * that repeated each other and named the same missing category twice
+ * (« Sans catégorie » in the title, « Divers » in the stat). */
+function _bqxSummaryHtml(p, data) {
+  const t = _bqxShT();
+  const price = +p.priceMAD || 0;
+  const cost = +p.cost > 0 ? +p.cost : null;
+  const pieces = Math.max(0, +data.stock || 0);
+  const n = data.variants.length;
+  const out = data.variants.filter((v) => !(+v.stock > 0)).length;
   const coded = data.variants.filter((v) => (v.barcodes || []).length).length;
-  const row = (l, v) => `<div><span>${l}</span><b>${v}</b></div>`;
-  return `<div class="bqx-facts">
-    ${row('Prix d’achat', cost == null ? 'Non renseigné' : `${_bqxPrice(cost)} MAD`)}
-    ${row('Valeur au prix de vente', `${_bqxPrice((+p.priceMAD || 0) * (+data.stock || 0))} MAD`)}
-    ${row('Valeur au prix d’achat', cost == null ? '·' : `${_bqxPrice(cost * (+data.stock || 0))} MAD`)}
-    ${row('Variantes épuisées', out.length ? `${out.length} · ${out.map((v) => _esc([_bqxShownColor(v).label, v.size].filter(Boolean).join(" "))).slice(0, 3).join(', ')}${out.length > 3 ? '…' : ''}` : 'Aucune')}
-    ${row('Codes-barres', `${coded} / ${data.variants.length}`)}
+  const cell = (l, v, s, neg) => `<div class="bqx-sh-c"><span class="bqx-sh-l">${_esc(l)}</span><b class="bqx-sh-v">${v}</b><span class="bqx-sh-s${neg ? ' is-neg' : ''}">${_esc(s)}</span></div>`;
+  const money = (x) => `${_bqxPrice(x)} <small>${_esc(t.cur)}</small>`;
+  const priceSub = cost == null ? t.costNone
+    : price - cost >= 0 ? _bqxPfFill(t.costGap, { cost: _bqxPrice(cost), gap: _bqxPrice(price - cost) })
+      : _bqxPfFill(t.costOver, { cost: _bqxPrice(cost) });
+  return `<div class="bqx-sh-sum">
+    ${cell(t.tPrice, money(price), priceSub, cost != null && cost > price)}
+    ${cell(t.tStock, _esc(t.pieces(pieces)), n ? (out ? `${t.variants(n)} · ${t.outN(out)}` : t.variants(n)) : t.noVariant)}
+    ${cell(t.tValue, money(price * pieces), cost == null ? t.valueSale : _bqxPfFill(t.valueCost, { v: _bqxPrice(cost * pieces) }))}
+    ${cell(t.tCodes, _esc(_bqxPfFill(t.codesOf, { a: coded, b: n })), !n ? t.noVariant : coded < n ? t.codesMissing(n - coded) : t.codesAll)}
   </div>`;
 }
 
 function _bqxProductBody(pid) {
+  const t = _bqxShT();
   const data = CAT().getProduct(pid);
-  if (!data) return '<p>Produit introuvable.</p>';
+  if (!data) return `<p>${_esc(t.notFound)}</p>`;
+  _bqxShCss();
   const p = data.product;
-  /* « Marge 100 % » était le sort réservé à tout produit dont le prix d'achat
-   * n'était pas saisi : `(p.cost || 0)` faisait de l'absence un zéro, et un coût
-   * nul se lit « tout est bénéfice ». C'est exactement le chiffre inventé qu'on
-   * chasse — et il apparaissait par défaut sur CHAQUE produit d'une boutique qui
-   * vient d'importer son stock. null ⇒ la ligne dit « prix d'achat manquant »,
-   * ce qui est à la fois vrai et actionnable. */
-  const copy = _bqxCopy();
-  const cost = +p.cost > 0 ? +p.cost : null;
-  const margin = (cost != null && p.priceMAD > 0) ? Math.round((1 - cost / p.priceMAD) * 100) : null;
-  const rows = data.variants.length
-    ? data.variants.map((v) => _variantRow(v, p.kind)).join('')
-    : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">${_esc(copy.varEmpty)}</td></tr>`;
-  return `
-    <div class="kx-stat-3">
-      <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_bqxPrice(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
-      <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
-      <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${_bqxN(data.colors.length, 'couleur')}</div></div>
+  const n = data.variants.length;
+  const missing = data.variants.filter((v) => !(v.barcodes || []).length).length;
+  const coded = n - missing;
+  const list = n
+    ? `<ul class="bqx-vlist">${data.variants.map((v) => _variantRow(v, p.kind)).join('')}</ul>`
+    : `<div class="bqx-vempty">${_esc(t.empty)}</div>`;
+  return `<div class="bqx-sheet">
+    ${_bqxSummaryHtml(p, data)}
+    <div class="bqx-sh-sec">
+      <div class="bqx-sh-head">
+        <h4>${_esc(t.variantsTitle)} <span>${n}</span></h4>
+        <button type="button" class="kb atlas" data-action="bqx-var-add" data-arg="${_esc(pid)}">${_bqxIc('add')}${_esc(t.addVariant)}</button>
+      </div>
+      ${list}
+      ${n ? `<div class="bqx-sh-foot">
+        ${missing ? `<button type="button" class="bqx-vr-act" data-action="bqx-var-gen-all" data-arg="${_esc(pid)}">${_bqxIc('add')}<span>${_esc(t.genMissing(missing))}</span></button>` : ''}
+        <button type="button" class="bqx-vr-act" data-action="bqx-prod-print" data-arg="${_esc(pid)}"${coded ? '' : ' disabled'}>${_bqxIc('print')}<span>${_esc(coded ? t.printAll(coded) : t.printNone)}</span></button>
+      </div>` : ''}
     </div>
-    ${_bqxFactsHtml(p, data, cost)}
-    <div class="bqx-vwrap">
-      <table class="bqx-vtable">
-        <thead><tr><th>Couleur</th><th>${_esc(copy.sizeColHeader(p.kind))}</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="kb atlas" data-action="bqx-var-add" data-arg="${pid}">${_ICN.plus}Ajouter une variante</button>
-      <button class="kb ghost" data-action="bqx-prod-print" data-arg="${pid}">${_ICN.upload}Imprimer toutes les étiquettes</button>
-    </div>
-    ${_bqxHistoryHtml(pid)}`;
+    ${_bqxHistoryHtml(pid)}
+  </div>`;
+}
+
+function _bqxSheetSub(data) {
+  const t = _bqxShT();
+  return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
 function _bqxOpenProduct(pid) {
+  const t = _bqxShT();
   const data = CAT().getProduct(pid);
-  if (!data) { toast('Produit introuvable', { type: 'warn' }); return; }
+  if (!data) { toast(t.notFound, { type: 'warn' }); return; }
+  _bqxCss();
+  _bqxShCss();
   _bqxDrawerPid = pid;
   const p = data.product;
   drawer({
     title: p.name,
-    subtitle: `${data.category ? data.category.name : 'Sans catégorie'} · ${_bqxPrice(p.priceMAD)} MAD · ${data.stock} en stock`,
+    subtitle: _bqxSheetSub(data),
     width: 640,
     body: _bqxProductBody(pid),
     foot: `
-      <button class="kb ghost" data-dismiss>Fermer</button>
-      <button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${pid}">${_ICN.trash}Supprimer</button>
-      <button class="kb atlas" data-action="bqx-prod-edit" data-arg="${pid}">${_ICN.edit}Modifier le produit</button>`,
+      <button class="kb ghost" data-dismiss>${_esc(t.close)}</button>
+      <button class="kb ghost danger-text" data-action="bqx-prod-del" data-arg="${_esc(pid)}">${_bqxIc('trash-2')}${_esc(t.delete)}</button>
+      <button class="kb atlas" data-action="bqx-prod-edit" data-arg="${_esc(pid)}">${_bqxIc('edit')}${_esc(t.edit)}</button>`,
   });
   _bqxMountDrawer(pid);
   /* re-render the grid behind once the drawer is dismissed */
@@ -13309,11 +13674,27 @@ function _bqxOpenProduct(pid) {
   }
 }
 
+/* The stock field states a count. An empty or malformed entry is sent back
+   with a word under the row; it used to be read as 0 and saved. */
 function _bqxMountDrawer(pid) {
   const root = document.querySelector('.kiwi-drawer-backdrop');
   if (!root) return;
+  const t = _bqxShT();
   root.querySelectorAll('[data-var-stock]').forEach((inp) => {
-    inp.addEventListener('change', () => { CAT().setStock(inp.getAttribute('data-var-stock'), parseInt(inp.value, 10) || 0, 'saisie'); });
+    const id = inp.getAttribute('data-var-stock');
+    const err = Array.from(root.querySelectorAll('[data-var-err]')).find((e) => e.getAttribute('data-var-err') === id);
+    const was = inp.value;
+    const say = (msg) => {
+      if (err) { err.textContent = msg || ''; err.hidden = !msg; }
+      inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+    inp.addEventListener('change', () => {
+      const r = _bqxPieces(inp.value);
+      if (r.n == null) { inp.value = was; say(r.empty ? t.stockEmpty : t.stockBad); return; }
+      say('');
+      if (String(r.n) !== was) CAT().setStock(id, r.n, 'saisie');
+    });
   });
   if (window.lucide) try { window.lucide.createIcons(); } catch (e) {}
 }
@@ -13328,7 +13709,7 @@ function _bqxRefreshDrawer() {
   if (!data) { return; }
   body.innerHTML = _bqxProductBody(_bqxDrawerPid);
   const sub = back.querySelector('.kiwi-drawer-head p');
-  if (sub) sub.textContent = `${data.category ? data.category.name : 'Sans catégorie'} · ${_bqxPrice(data.product.priceMAD)} MAD · ${data.stock} en stock`;
+  if (sub) sub.textContent = _bqxSheetSub(data);
   _bqxMountDrawer(_bqxDrawerPid);
 }
 
@@ -13830,11 +14211,58 @@ handlers['bqx-prod-movements'] = (_el, arg) => {
 
 /* ─── variant actions (all persist via the catalog → subscribe re-renders) ─── */
 handlers['bqx-var-inc'] = (_el, arg) => CAT().adjustStock(arg, +1);
-handlers['bqx-var-dec'] = (_el, arg) => CAT().adjustStock(arg, -1);
-handlers['bqx-var-del'] = (_el, arg) => CAT().deleteVariant(arg);
+/* No −1 below zero. The catalogue kept that move, showed 0, and the next +1
+   fell into the hole: 0 − 1 + 1 left the variant at 0. */
+handlers['bqx-var-dec'] = (_el, arg) => {
+  const hit = _bqxVarById(arg);
+  if (!hit || !(+hit.v.stock > 0)) return;
+  CAT().adjustStock(arg, -1);
+};
+/* Deleting a variant takes its stock and its barcodes with it, so it is asked
+   first; it used to go on a single tap of the bin. */
+handlers['bqx-var-del'] = (_el, arg) => {
+  const t = _bqxShT();
+  const hit = _bqxVarById(arg);
+  if (!hit) return;
+  const { v, pid } = hit;
+  const data = CAT().getProduct(pid);
+  const stock = Math.max(0, +v.stock || 0);
+  const codes = (v.barcodes || []).map((b) => b.code);
+  const items = [
+    stock ? t.delStock(stock) : t.delNoStock,
+    codes.length ? _bqxPfFill(t.delCodes, { codes: codes.join(', ') }) : '',
+    _bqxTillReads() ? t.delTill : '',
+  ].filter(Boolean);
+  _bqxModal = modal({
+    title: t.delVarTitle, tag: data ? data.product.name : '',
+    desc: _esc(_bqxVarLabel(v)),
+    width: 460,
+    body: `<div class="kx-warn-box danger"><div class="hd">${_esc(t.irreversible)}</div><ul>${items.map((x) => `<li>${_esc(x)}</li>`).join('')}</ul></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb danger" data-action="bqx-var-del-ok" data-arg="${_esc(arg)}">${_bqxIc('trash-2')}${_esc(t.delVarOk)}</button>`,
+  });
+};
+handlers['bqx-var-del-ok'] = (_el, arg) => {
+  const t = _bqxShT();
+  const hit = _bqxVarById(arg);
+  const label = hit ? _bqxVarLabel(hit.v) : '';
+  CAT().deleteVariant(arg);
+  if (_bqxModal) _bqxModal.close();
+  toast(t.delVarDone, { desc: label, type: 'warn', duration: 2200 });
+};
 handlers['bqx-var-gen'] = (_el, arg) => {
+  const t = _bqxShT();
   const code = CAT().generateBarcode(arg);
-  if (code) toast('EAN-13 généré', { desc: `Code ${code} · imprimez l'étiquette pour l'article.`, type: 'success', duration: 2600 });
+  if (code) toast(t.genDone, { desc: _bqxPfFill(t.genDesc, { code }), type: 'success', duration: 2600 });
+  else toast(t.genFail, { type: 'warn' });
+};
+handlers['bqx-var-gen-all'] = (_el, arg) => {
+  const t = _bqxShT();
+  const cat = CAT();
+  const todo = (cat.listVariants(arg) || []).filter((v) => !(v.barcodes || []).length);
+  let made = 0;
+  cat.batch(() => { todo.forEach((v) => { if (cat.generateBarcode(v.id)) made++; }); });
+  if (made) toast(t.genAllDone(made), { type: 'success', duration: 2600 });
+  else toast(t.genFail, { type: 'warn' });
 };
 handlers['bqx-var-print'] = (_el, arg) => _bqxPrintVariant(arg);
 
@@ -13846,118 +14274,322 @@ function _bqxLabelFor(pid, v) {
   return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: _bqxPrice(p.priceMAD), code, format: fmt };
 }
 function _bqxPrintVariant(vid) {
-  const cat = CAT();
-  const all = cat.listProducts({ includeArchived: true });
-  let found = null, pid = null;
-  for (const p of all) { const v = cat.listVariants(p.id).find((x) => x.id === vid); if (v) { found = v; pid = p.id; break; } }
-  if (!found) return;
-  const label = _bqxLabelFor(pid, found);
-  if (!label) { toast('Aucun code à imprimer', { desc: 'Générez d\'abord un EAN-13 pour cette variante.', type: 'warn' }); return; }
-  _bqxAskCopies((copies) => { BC().printLabels([label], { copies }); });
+  const t = _bqxShT();
+  const hit = _bqxVarById(vid);
+  if (!hit) return;
+  const label = _bqxLabelFor(hit.pid, hit.v);
+  if (!label) { toast(t.noCode, { desc: t.noCodeVar, type: 'warn' }); return; }
+  _bqxAskCopies((copies) => { BC().printLabels([label], { copies }); }, _bqxVarLabel(hit.v), 1);
 }
 handlers['bqx-prod-print'] = (_el, arg) => {
+  const t = _bqxShT();
   const data = CAT().getProduct(arg);
   if (!data) return;
   const labels = data.variants.map((v) => _bqxLabelFor(arg, v)).filter(Boolean);
-  if (!labels.length) { toast('Aucun code à imprimer', { desc: 'Générez au moins un EAN-13 pour ce produit.', type: 'warn' }); return; }
-  _bqxAskCopies((copies) => { BC().printLabels(labels, { copies }); }, `${_bqxN(labels.length, 'variante')} avec code-barres`);
+  if (!labels.length) { toast(t.noCode, { desc: t.noCodeProd, type: 'warn' }); return; }
+  _bqxAskCopies((copies) => { BC().printLabels(labels, { copies }); }, t.withCode(labels.length), labels.length);
 };
 
-function _bqxAskCopies(cb, note) {
+/* A − / + stepper over a whole-number field, kept between lo and hi. */
+function _bqxWireStep(b, input, lo, hi, after) {
+  b.querySelectorAll('[data-bqx-step]').forEach((btn) => btn.addEventListener('click', () => {
+    const r = _bqxPieces(input.value);
+    input.value = String(Math.min(hi, Math.max(lo, (r.n == null ? lo : r.n) + Number(btn.getAttribute('data-bqx-step')))));
+    if (after) after();
+  }));
+}
+function _bqxStepHtml(t, id, attr, value) {
+  return `<div class="bqx-sh-step">
+    <button type="button" data-bqx-step="-1" aria-label="${_esc(t.less)}">${_bqxIc('remove', 18)}</button>
+    <input id="${id}" class="bqx-pf-in" type="text" inputmode="numeric" autocomplete="off" value="${value}" ${attr} />
+    <button type="button" data-bqx-step="1" aria-label="${_esc(t.more)}">${_bqxIc('add', 18)}</button>
+  </div>`;
+}
+
+function _bqxAskCopies(cb, note, count) {
+  const t = _bqxShT();
+  _bqxCss(); _bqxPfCss(); _bqxShCss();
   _bqxModal = modal({
-    title: 'Imprimer les étiquettes', tag: 'ÉTIQUETTES · IMPRIMANTE',
-    desc: note || 'Choisissez le nombre de copies par variante, puis lancez l\'impression.',
+    title: t.printTitle, tag: t.printTag,
+    desc: _esc(note || t.printDesc),
     width: 440,
-    body: `<div class="kf-group"><label class="kf-label">Copies par variante</label>
-      <input class="kf-input" type="number" min="1" value="1" data-bqx-copies /></div>
-      <div class="kf-help">L'aperçu d'impression s'ouvre, envoyez-le vers l'imprimante à étiquettes.</div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-print-go">Imprimer</button>`,
+    body: `<div class="bqx-pf is-one"><div class="bqx-pf-main"><div class="bqx-pf-f">
+        <label class="bqx-pf-l" for="bqx-copies">${_esc((count || 1) > 1 ? t.copies : t.copiesOne)}</label>
+        ${_bqxStepHtml(t, 'bqx-copies', 'data-bqx-copies data-autofocus data-autofocus-select', 1)}
+        <div class="bqx-pf-hint" data-bqx-copies-total></div>
+        <div class="bqx-pf-err" data-bqx-copies-err role="alert" hidden></div>
+      </div>
+      <div class="bqx-pf-hint">${_esc(t.printHint)}</div></div></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-print-go">${_bqxIc('print')}${_esc(t.print)}</button>`,
   });
   _bqxPrintCb = cb;
+  const b = _bqxModal && _bqxModal.el;
+  if (!b) return;
+  b.classList.add('bqx-pf-modal');
+  const inp = b.querySelector('[data-bqx-copies]');
+  const total = b.querySelector('[data-bqx-copies-total]');
+  const err = b.querySelector('[data-bqx-copies-err]');
+  const per = count || 1;
+  const sync = () => {
+    const r = _bqxPieces(inp.value);
+    total.textContent = r.n > 0 ? t.totalLabels(r.n * per) : '';
+    err.hidden = true; inp.setAttribute('aria-invalid', 'false');
+  };
+  _bqxWireStep(b, inp, 1, 99, sync);
+  inp.addEventListener('input', sync);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handlers['bqx-print-go'](); } });
+  sync();
 }
 let _bqxPrintCb = null;
 handlers['bqx-print-go'] = () => {
-  const n = parseInt(document.querySelector('.kiwi-backdrop [data-bqx-copies]')?.value, 10) || 1;
+  const t = _bqxShT();
+  const b = _bqxModal && _bqxModal.el;
+  const inp = b && b.querySelector('[data-bqx-copies]');
+  const r = _bqxPieces(inp ? inp.value : '1');
+  if (!(r.n >= 1 && r.n <= 99)) {
+    const err = b && b.querySelector('[data-bqx-copies-err]');
+    if (err) { err.textContent = t.copiesBad; err.hidden = false; }
+    if (inp) { inp.setAttribute('aria-invalid', 'true'); inp.focus(); }
+    return;
+  }
   if (_bqxModal) _bqxModal.close();
-  if (_bqxPrintCb) { const cb = _bqxPrintCb; _bqxPrintCb = null; setTimeout(() => cb(Math.max(1, n)), 120); }
+  if (_bqxPrintCb) { const cb = _bqxPrintCb; _bqxPrintCb = null; setTimeout(() => cb(r.n), 120); }
 };
 
-/* register an EXISTING barcode onto a variant (old POS code, kept verbatim) */
+/* register an EXISTING barcode onto a variant (old POS code, kept verbatim).
+   Each refusal is said under the field, in words: it used to be a toast,
+   « Enregistrement impossible », whatever the reason. */
 handlers['bqx-var-reg'] = (_el, arg) => {
+  const t = _bqxShT();
+  const hit = _bqxVarById(arg);
+  _bqxCss(); _bqxPfCss(); _bqxShCss();
   _bqxModal = modal({
-    title: 'Enregistrer un code existant', tag: 'ANCIEN CODE-BARRES',
-    desc: 'Scannez ou saisissez le code-barres déjà présent sur l\'article. Il est conservé tel quel, aucune réimpression.',
+    title: t.regTitle, tag: hit ? _bqxVarLabel(hit.v) : '',
+    desc: _esc(t.regDesc),
     width: 480,
-    body: `<div class="kf-group"><label class="kf-label">Code-barres</label>
-      <input class="kf-input mono" placeholder="Scannez ou tapez le code…" data-bqx-regcode autocomplete="off" /></div>
-      <div class="kf-help">Le code peut être un EAN-13, UPC, ou tout code de l'ancien système. Il sera rattaché à cette couleur/taille.</div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-reg-save" data-arg="${arg}">Enregistrer le code</button>`,
+    body: `<div class="bqx-pf is-one"><div class="bqx-pf-main"><div class="bqx-pf-f">
+        <label class="bqx-pf-l" for="bqx-regcode">${_esc(t.regLabel)}</label>
+        <input id="bqx-regcode" class="bqx-pf-in bqx-sh-mono" placeholder="${_esc(t.regPh)}" data-bqx-regcode data-autofocus autocomplete="off" spellcheck="false" />
+        <div class="bqx-pf-err" data-bqx-reg-err role="alert" hidden></div>
+        <div class="bqx-pf-hint">${_esc(t.regHint)}</div>
+      </div></div></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-reg-save" data-arg="${_esc(arg)}" data-bqx-reg-go>${_esc(t.regSave)}</button>`,
   });
-  setTimeout(() => { const i = document.querySelector('.kiwi-backdrop [data-bqx-regcode]'); if (i) i.focus(); }, 60);
+  const b = _bqxModal && _bqxModal.el;
+  if (!b) return;
+  b.classList.add('bqx-pf-modal');
+  const inp = b.querySelector('[data-bqx-regcode]');
+  inp.addEventListener('input', () => {
+    _bqxRegSay(b, '');
+    delete inp.dataset.confirmed;
+    const go = b.querySelector('[data-bqx-reg-go]');
+    if (go) go.textContent = t.regSave;
+  });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handlers['bqx-var-reg-save'](null, arg); } });
 };
+function _bqxRegSay(b, msg, warn) {
+  const err = b.querySelector('[data-bqx-reg-err]');
+  const inp = b.querySelector('[data-bqx-regcode]');
+  if (err) { err.textContent = msg || ''; err.hidden = !msg; err.classList.toggle('is-warn', !!warn); }
+  if (inp) inp.setAttribute('aria-invalid', msg && !warn ? 'true' : 'false');
+}
 handlers['bqx-var-reg-save'] = (_el, arg) => {
-  const inp = document.querySelector('.kiwi-backdrop [data-bqx-regcode]');
-  const raw = inp ? inp.value.trim() : '';
-  if (!raw) { toast('Code vide', { type: 'warn' }); return; }
+  const t = _bqxShT();
+  const b = _bqxModal && _bqxModal.el;
+  if (!b || !b.isConnected) return;
+  const inp = b.querySelector('[data-bqx-regcode]');
+  if (!inp) return;
+  const raw = inp.value.trim();
+  if (!raw) { _bqxRegSay(b, t.regEmpty); inp.focus(); return; }
+  /* A typed EAN whose check digit fails is most often a typo. Said once; a
+     second press keeps it, since an old system may print such codes. */
+  const KB = window.KiwiBarcode;
+  const val = KB && KB.validate ? KB.validate(raw) : null;
+  if (val && val.ok && val.check === 'bad' && inp.dataset.confirmed !== raw) {
+    inp.dataset.confirmed = raw;
+    _bqxRegSay(b, _bqxPfFill(t.regCheck, { sym: val.label || 'EAN' }), true);
+    const go = b.querySelector('[data-bqx-reg-go]');
+    if (go) go.textContent = t.regSaveAnyway;
+    return;
+  }
   const res = CAT().attachBarcode(arg, raw);
   if (res.ok) {
     if (_bqxModal) _bqxModal.close();
-    toast(res.already ? 'Code déjà rattaché' : 'Code enregistré', { desc: `${raw} rattaché à la variante, scannable en caisse.`, type: 'success', duration: 2600 });
-  } else if (res.reason === 'doublon') {
-    toast('Code déjà utilisé', { desc: `Ce code est déjà rattaché à ${res.owner.product.name} (${res.owner.variant.colorLabel} · ${res.owner.variant.size}).`, type: 'warn', duration: 3600 });
-  } else {
-    toast('Enregistrement impossible', { type: 'warn' });
+    toast(res.already ? t.regAlready : t.regDone, { desc: _bqxPfFill(_bqxTillReads() ? t.regDescTill : t.regDescInv, { code: res.code || raw }), type: 'success', duration: 2600 });
+    return;
   }
+  if (res.reason === 'doublon' && res.owner) {
+    const o = res.owner;
+    _bqxRegSay(b, _bqxPfFill(t.regDup, { product: o.product ? o.product.name : '', variant: o.variant ? _bqxVarLabel(o.variant) : '' }));
+  } else {
+    _bqxRegSay(b, ({ vide: t.regEmpty, 'trop-court': t.regShort, 'trop-long': t.regLong, illisible: t.regUnreadable })[res.reason] || t.regFail);
+  }
+  inp.focus(); inp.select();
 };
 
-/* add a variant (colour × size × stock) */
+/* add a variant (colour × size × stock).
+   It used to call addVariant, which on a colour and size the product already
+   had REPLACED that variant's stock with this form's « Stock initial » (0 by
+   default) and still said « Variante ajoutée ». The form now says the
+   variant exists, before saving, and the save goes through ensureVariant,
+   which never touches an existing count. */
 handlers['bqx-var-add'] = (_el, arg) => {
+  const t = _bqxShT();
   const data = CAT().getProduct(arg);
+  if (!data) return;
+  _bqxCss(); _bqxPfCss(); _bqxShCss();
   const copy = _bqxCopy();
-  const kind = data ? data.product.kind : copy.defaultKind;
-  const presets = CAT().sizePresets(kind);
+  const kind = data.product.kind || copy.defaultKind;
+  const presets = (CAT().sizePresets(kind) || []).slice(0, 14);
+  const sizeL = kind === 'pointure' ? t.sizeShoe : (copy.trade === 'boutique' ? t.sizeCloth : t.sizeFormat);
   _bqxModal = modal({
-    title: 'Ajouter une variante', tag: copy.varTag,
-    desc: 'Chaque variante est un article distinct avec son propre code-barres.',
-    width: 480,
-    body: `
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker('noir')}</div>
-        <div class="kf-group"><label class="kf-label">${_esc(copy.sizeInputLabel(kind))}</label>
-          <input class="kf-input" list="bqx-sizes" data-bqx-vsize value="${_esc(presets[0] || '')}" />
-          <datalist id="bqx-sizes">${presets.map((s) => `<option value="${_esc(s)}">`).join('')}</datalist></div>
-      </div>
-      <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Stock initial</label><input class="kf-input" type="number" min="0" value="0" data-bqx-vstock /></div>
-        <div class="kf-group"><label class="kf-label">Code-barres</label><select class="kf-input" data-bqx-vbc><option value="gen">Générer un EAN-13</option><option value="none">Aucun (plus tard)</option></select></div>
-      </div>
-      <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
-        <input class="kf-input" maxlength="60" data-bqx-vnote placeholder="Ex. rayé, délavé, motif" />
-        <div class="kf-help">À remplir seulement si deux variantes partagent la même couleur et doivent rester reconnaissables.</div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-add-save" data-arg="${arg}">Ajouter</button>`,
+    title: t.addTitle, tag: data.product.name,
+    desc: _esc(t.addDesc),
+    width: 560,
+    body: `<div class="bqx-pf is-one" data-bqx-va><div class="bqx-pf-main">
+      <section class="bqx-pf-sec">
+        <h4>${_esc(t.color)}</h4>
+        <div class="bqx-pf-f">
+          <div class="bqx-sh-picker" data-bqx-va-color>${_colorPicker(null, { label: t.color })}</div>
+          <div class="bqx-pf-err" data-bqx-va-err="color" role="alert" hidden></div>
+        </div>
+        <div class="bqx-pf-f">
+          <label class="bqx-pf-l" for="bqx-va-note">${_esc(t.note)} <span class="bqx-pf-tag">${_esc(t.optional)}</span></label>
+          <input id="bqx-va-note" class="bqx-pf-in" maxlength="60" data-bqx-vnote placeholder="${_esc(t.notePh)}" autocomplete="off" />
+          <div class="bqx-pf-hint">${_esc(t.noteHint)}</div>
+        </div>
+      </section>
+      <section class="bqx-pf-sec">
+        <h4>${_esc(sizeL)}</h4>
+        <div class="bqx-pf-f">
+          ${presets.length ? `<div class="bqx-sh-chips" role="group" aria-label="${_esc(sizeL)}">${presets.map((s) => `<button type="button" class="bqx-sh-chip" data-bqx-size="${_esc(s)}">${_esc(s)}</button>`).join('')}</div>` : ''}
+          <input class="bqx-pf-in" maxlength="24" data-bqx-vsize aria-label="${_esc(sizeL)}" placeholder="${_esc(t.sizePh)}" autocomplete="off" />
+          <div class="bqx-pf-hint">${_esc(t.sizeHint)}</div>
+        </div>
+      </section>
+      <section class="bqx-pf-sec">
+        <h4>${_esc(t.stockAndCode)}</h4>
+        <div class="bqx-pf-f">
+          <label class="bqx-pf-l" for="bqx-va-stock">${_esc(t.stockInit)}</label>
+          ${_bqxStepHtml(t, 'bqx-va-stock', 'data-bqx-vstock', 0)}
+          <div class="bqx-pf-err" data-bqx-va-err="stock" role="alert" hidden></div>
+          <div class="bqx-pf-hint">${_esc(t.stockInitHint)}</div>
+        </div>
+        <div class="bqx-pf-f">
+          <span class="bqx-pf-l">${_esc(t.bcTitle)}</span>
+          <div class="bqx-pf-choices">
+            <label class="bqx-pf-choice"><input type="radio" name="bqx-vbc" value="gen" data-bqx-vbc checked /><b>${_esc(t.bcGen)}</b><small>${_esc(t.bcGenSub)}</small></label>
+            <label class="bqx-pf-choice"><input type="radio" name="bqx-vbc" value="none" data-bqx-vbc /><b>${_esc(t.bcLater)}</b><small>${_esc(t.bcLaterSub)}</small></label>
+          </div>
+        </div>
+      </section>
+      <div class="bqx-sh-preview" data-bqx-va-preview aria-live="polite"></div>
+    </div></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-add-save" data-arg="${_esc(arg)}" data-bqx-va-go>${_esc(t.addOk)}</button>`,
   });
-};
-handlers['bqx-var-add-save'] = (_el, arg) => {
-  const b = document.querySelector('.kiwi-backdrop');
+  const b = _bqxModal && _bqxModal.el;
   if (!b) return;
-  const color = (window.KiwiColors && window.KiwiColors.selection(b)) || { id: 'noir' };
-  const colorId = color.id;
-  const size = b.querySelector('[data-bqx-vsize]').value.trim() || 'TU';
-  const stock = parseInt(b.querySelector('[data-bqx-vstock]').value, 10) || 0;
-  const bc = b.querySelector('[data-bqx-vbc]').value;
-  const note = (b.querySelector('[data-bqx-vnote]') || {}).value || '';
-  const v = CAT().addVariant({ productId: arg, colorId, colorLabel: color.label, colorHex: color.hex, size, stock, note: note.trim() });
-  if (v && bc === 'gen') CAT().generateBarcode(v.id);
+  b.classList.add('bqx-pf-modal');
+  _bqxVaWire(b, arg);
+};
+function _bqxVaRead(b, pid) {
+  const color = (window.KiwiColors && window.KiwiColors.selection(b)) || null;
+  const typed = ((b.querySelector('[data-bqx-vsize]') || {}).value || '').trim().replace(/\s+/g, ' ');
+  const size = typed || 'TU';
+  const stock = _bqxPieces((b.querySelector('[data-bqx-vstock]') || {}).value);
+  const bcEl = b.querySelector('[data-bqx-vbc]:checked');
+  const note = ((b.querySelector('[data-bqx-vnote]') || {}).value || '').trim();
+  const dup = color ? CAT().findVariant(pid, color.id, size) : null;
+  return { color, size, typed: !!typed, stock, bc: bcEl ? bcEl.value : 'gen', note, dup };
+}
+function _bqxVaSay(b, k, msg) {
+  const e = b.querySelector(`[data-bqx-va-err="${k}"]`);
+  if (e) { e.textContent = msg || ''; e.hidden = !msg; }
+  if (k === 'stock') { const i = b.querySelector('[data-bqx-vstock]'); if (i) i.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+  if (k === 'color') { const p = b.querySelector('[data-bqx-va-color]'); if (p) p.toggleAttribute('data-invalid', !!msg); }
+}
+function _bqxVaWire(b, pid) {
+  const t = _bqxShT();
+  const prev = b.querySelector('[data-bqx-va-preview]');
+  const go = b.querySelector('[data-bqx-va-go]');
+  const sizeIn = b.querySelector('[data-bqx-vsize]');
+  const stockIn = b.querySelector('[data-bqx-vstock]');
+  const paint = () => {
+    const f = _bqxVaRead(b, pid);
+    b.querySelectorAll('[data-bqx-size]').forEach((c) => c.classList.toggle('on', f.typed && c.getAttribute('data-bqx-size') === f.size));
+    const kc = window.KiwiColors;
+    const sw = f.color && kc && kc.swatch ? kc.swatch(f.color, { name: f.color.label }) : '';
+    if (f.dup) {
+      prev.className = 'bqx-sh-preview is-dup';
+      prev.innerHTML = `${sw}<span>${_esc(_bqxPfFill(t.dup, { v: _bqxVarLabel(f.dup), n: t.pieces(Math.max(0, +f.dup.stock || 0)) }))}</span>`;
+    } else {
+      prev.className = 'bqx-sh-preview';
+      const what = [f.color ? f.color.label : t.colorNone, f.size].join(' · ');
+      prev.innerHTML = `${sw}<span><b>${_esc(what)}</b>${f.stock.n != null ? ` · ${_esc(t.pieces(f.stock.n))}` : ''}${f.typed ? '' : ` <small>${_esc(t.sizeTu)}</small>`}</span>`;
+    }
+    if (go) go.disabled = !!f.dup;
+  };
+  b.querySelectorAll('[data-bqx-size]').forEach((c) => c.addEventListener('click', () => {
+    sizeIn.value = c.getAttribute('data-bqx-size');
+    paint();
+  }));
+  _bqxWireStep(b, stockIn, 0, 999999, () => { _bqxVaSay(b, 'stock', ''); paint(); });
+  const picker = b.querySelector('[data-kc-picker]');
+  if (picker) picker.addEventListener('kc:change', () => { _bqxVaSay(b, 'color', ''); paint(); });
+  if (sizeIn) sizeIn.addEventListener('input', paint);
+  if (stockIn) stockIn.addEventListener('input', () => { _bqxVaSay(b, 'stock', ''); paint(); });
+  b.querySelectorAll('[data-bqx-vbc]').forEach((r) => r.addEventListener('change', paint));
+  b.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target && e.target.matches && e.target.matches('input.bqx-pf-in')) {
+      e.preventDefault();
+      handlers['bqx-var-add-save'](null, pid);
+    }
+  });
+  paint();
+}
+handlers['bqx-var-add-save'] = (_el, arg) => {
+  const t = _bqxShT();
+  const b = _bqxModal && _bqxModal.el;
+  if (!b || !b.isConnected || !b.querySelector('[data-bqx-va]')) return;
+  const f = _bqxVaRead(b, arg);
+  let first = null;
+  if (!f.color) {
+    _bqxVaSay(b, 'color', t.colorErr);
+    first = first || b.querySelector('[data-kc-picker] [data-kc-color]');
+  }
+  if (f.stock.n == null) {
+    _bqxVaSay(b, 'stock', f.stock.empty ? t.stockEmpty : t.stockBad);
+    first = first || b.querySelector('[data-bqx-vstock]');
+  }
+  if (first) { first.focus(); return; }
+  if (f.dup) return;
+  const res = CAT().ensureVariant({
+    productId: arg, colorId: f.color.id, colorLabel: f.color.label, colorHex: f.color.hex,
+    size: f.size, stock: f.stock.n, note: f.note,
+  });
+  if (!res || !res.variant) { toast(t.addFail, { type: 'warn' }); return; }
+  if (!res.created) {
+    /* Created meanwhile on another device: show it as the existing variant. */
+    const s = b.querySelector('[data-bqx-vsize]');
+    if (s) s.dispatchEvent(new Event('input'));
+    return;
+  }
+  const code = f.bc === 'gen' ? CAT().generateBarcode(res.variant.id) : null;
   if (_bqxModal) _bqxModal.close();
-  toast('Variante ajoutée', { desc: `${color.label || CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
+  toast(t.addDone, {
+    desc: [_bqxVarLabel(res.variant), t.pieces(f.stock.n), code ? t.addCode : ''].filter(Boolean).join(' · '),
+    type: 'success', duration: 2400,
+  });
 };
 
 /* Recolorer une variante existante. Elle garde son stock, ses codes-barres et
    son identité — deux variantes qui tombent sur la même famille restent deux
    articles distincts tant qu'un humain n'a pas décidé le contraire. */
 handlers['bqx-var-color'] = (_el, arg) => {
+  const t = _bqxShT();
   const v = (CAT().listVariants(_bqxDrawerPid) || []).find((x) => x.id === arg);
   if (!v) return;
+  _bqxCss();
   const data = CAT().getProduct(_bqxDrawerPid);
   const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
   const shown = _bqxShownColor(v);
@@ -13967,33 +14599,33 @@ handlers['bqx-var-color'] = (_el, arg) => {
   const selectedSwatch = window.KiwiColors && window.KiwiColors.swatch
     ? window.KiwiColors.swatch(shown, { name: shown.label }) : '';
   _bqxModal = modal({
-    title: 'Modifier la couleur', tag: `VARIANTE · TAILLE ${_esc(v.size)}`,
-    desc: data ? data.product.name : '',
+    title: t.colorTitle, tag: data ? data.product.name : '',
+    desc: _esc(_bqxPfFill(t.colorFor, { size: v.size })),
     width: 520,
     body: `
       <div class="bqx-color-edit">
         <section class="bqx-color-card">
           <div class="bqx-color-head">
-            <div class="bqx-color-heading"><span class="bqx-color-step">1</span><span><strong>Choisissez une couleur</strong><small>Les couleurs standard restent faciles à retrouver en caisse.</small></span></div>
+            <div class="bqx-color-heading"><span><strong>${_esc(t.colorPick)}</strong><small>${_esc(_bqxTillReads() ? t.colorPickSubTill : t.colorPickSubInv)}</small></span></div>
             <div class="bqx-color-selected" aria-live="polite"><span data-bqx-vpreview>${selectedSwatch}</span><span data-bqx-vselected>${_esc(shown.label)}</span></div>
           </div>
-          <div class="bqx-color-picker">${_colorPicker(selected)}</div>
+          <div class="bqx-color-picker">${_colorPicker(selected, { label: t.color })}</div>
         </section>
         <section class="bqx-color-field" data-bqx-vcname-wrap ${custom ? '' : 'hidden'}>
-          <div class="kf-group"><label class="kf-label" for="bqx-vcname">Nom de cette couleur</label>
-            <input class="kf-input" id="bqx-vcname" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="Ex. Bleu clair" autocomplete="off" />
-            <div class="kf-help">Le même nom sera repris pour toutes les tailles de cette couleur exacte.</div></div>
+          <div class="kf-group"><label class="kf-label" for="bqx-vcname">${_esc(t.colorName)}</label>
+            <input class="kf-input" id="bqx-vcname" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="${_esc(t.colorNamePh)}" autocomplete="off" />
+            <div class="kf-help">${_esc(t.colorNameHint)}</div></div>
         </section>
         <section class="bqx-color-field">
-          <div class="kf-group"><label class="kf-label" for="bqx-vcnote"><span>Détail de la variante</span><span class="bqx-color-optional">Facultatif</span></label>
-            <input class="kf-input" id="bqx-vcnote" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. Rayé, délavé, motif…" autocomplete="off" />
-            <div class="kf-help">Ajoutez-le uniquement pour distinguer deux articles de couleur similaire.</div></div>
+          <div class="kf-group"><label class="kf-label" for="bqx-vcnote"><span>${_esc(t.colorDetail)}</span><span class="bqx-color-optional">${_esc(t.optionalCap)}</span></label>
+            <input class="kf-input" id="bqx-vcnote" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="${_esc(t.colorDetailPh)}" autocomplete="off" />
+            <div class="kf-help">${_esc(t.colorDetailHint)}</div></div>
         </section>
-        <div class="bqx-color-safe"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>Le stock, la taille et les codes-barres ne seront pas modifiés.</span></div>
+        <div class="bqx-color-safe">${_bqxIc('verified_user', 15)}<span>${_esc(t.colorSafe)}</span></div>
       </div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer les modifications</button>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${_esc(arg)}">${_esc(t.colorSave)}</button>`,
   });
-  const b = document.querySelector('.kiwi-backdrop');
+  const b = (_bqxModal && _bqxModal.el) || document.querySelector('.kiwi-backdrop');
   const modalPanel = b && b.querySelector('.kiwi-modal');
   if (modalPanel) modalPanel.classList.add('bqx-color-modal');
   const picker = b && b.querySelector('[data-kc-picker]');
@@ -14006,7 +14638,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
     const isCustom = !!(color && color.custom);
     const customApplied = !!(event && event.detail && event.detail.custom);
     if (nameWrap) nameWrap.hidden = !isCustom;
-    if (selectedLabel) selectedLabel.textContent = color ? color.label : 'Aucune couleur';
+    if (selectedLabel) selectedLabel.textContent = color ? color.label : t.colorNoSel;
     if (selectedPreview) selectedPreview.innerHTML = color && window.KiwiColors.swatch
       ? window.KiwiColors.swatch(color, { name: color.label }) : '';
     if (isCustom && nameInput && (customApplied || nameInput.dataset.colorId !== color.id)) {
@@ -14025,7 +14657,8 @@ handlers['bqx-var-color'] = (_el, arg) => {
   syncName();
 };
 handlers['bqx-var-color-save'] = (_el, arg) => {
-  const b = document.querySelector('.kiwi-backdrop');
+  const t = _bqxShT();
+  const b = (_bqxModal && _bqxModal.el && _bqxModal.el.isConnected) ? _bqxModal.el : document.querySelector('.kiwi-backdrop');
   if (!b) return;
   let color = window.KiwiColors && window.KiwiColors.selection(b);
   const name = String((b.querySelector('[data-bqx-vcname]') || {}).value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
@@ -14037,7 +14670,7 @@ handlers['bqx-var-color-save'] = (_el, arg) => {
     if (color && color.custom && name) renamed = CAT().renameColor(color.id, name);
   });
   if (_bqxModal) _bqxModal.close();
-  toast('Couleur mise à jour', { desc: renamed > 1 ? `Nom appliqué à ${renamed} variantes.` : '', type: 'success', duration: 2000 });
+  toast(t.colorDone, { desc: renamed > 1 ? t.colorRenamed(renamed) : '', type: 'success', duration: 2000 });
 };
 
 /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only exists
@@ -14729,22 +15362,31 @@ handlers['bqx-prod-edit-save'] = (_el, arg) => {
   toast(_bqxPfT().updated, { type: 'success', duration: 2000 });
 };
 handlers['bqx-prod-del'] = (_el, arg) => {
+  const t = _bqxShT();
   const data = CAT().getProduct(arg);
   if (!data) return;
+  const n = data.variants.length;
+  const pieces = Math.max(0, +data.stock || 0);
+  const items = [
+    pieces ? t.delStock(pieces) : '',
+    _bqxTillReads() ? t.delProdTill : t.delProdInv,
+    n ? t.delProdCodes : '',
+  ].filter(Boolean);
   _bqxModal = modal({
-    title: 'Supprimer ce produit ?', width: 460,
-    desc: `Supprimer « ${data.product.name} » efface aussi ${_bqxN(data.variants.length, 'variante')} (codes-barres inclus), définitivement.`,
-    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Le produit disparaît ${_bqxTillReads() ? 'de la caisse et du dashboard' : 'du dashboard'}.</li><li>Les codes-barres associés sont libérés.</li></ul></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-prod-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer définitivement</button>`,
+    title: t.delProdTitle, tag: data.product.name, width: 460,
+    desc: _esc(n ? _bqxPfFill(t.delProdDesc, { name: data.product.name, n: t.variants(n) }) : _bqxPfFill(t.delProdDesc0, { name: data.product.name })),
+    body: `<div class="kx-warn-box danger"><div class="hd">${_esc(t.irreversible)}</div><ul>${items.map((x) => `<li>${_esc(x)}</li>`).join('')}</ul></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_esc(t.cancel)}</button><button class="kb danger" data-action="bqx-prod-del-ok" data-arg="${_esc(arg)}">${_bqxIc('trash-2')}${_esc(t.delProdOk)}</button>`,
   });
 };
 handlers['bqx-prod-del-ok'] = (_el, arg) => {
+  const t = _bqxShT();
   CAT().deleteProduct(arg);
   if (_bqxModal) _bqxModal.close();
   const back = document.querySelector('.kiwi-drawer-backdrop');
   if (back && back.__kiwiClose) back.__kiwiClose();
   _bqxDrawerPid = null;
-  toast('Produit supprimé', { type: 'warn', duration: 2200 });
+  toast(t.delProdDone, { type: 'warn', duration: 2200 });
   _renderInventory();
 };
 

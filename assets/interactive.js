@@ -809,6 +809,21 @@ ar: {
   }
 
   /* ═══════════════════════ MODAL ═══════════════════════ */
+  /* Échap ferme la fenêtre du DESSUS, et elle seule. Une fenêtre ouverte
+     depuis un tiroir (supprimer une variante depuis la fiche produit)
+     écoutait Échap comme le tiroir dessous : une touche fermait les deux, et
+     le commerçant perdait la fiche qu'il lisait. Le dessus, c'est la dernière
+     couche ouverte du document ; une couche qui s'efface ne compte plus. */
+  function escOwnedBy(back, e) {
+    if (e.key !== 'Escape' || e.__kiwiEscTaken) return false;
+    const open = Array.prototype.filter.call(
+      document.querySelectorAll('.kiwi-backdrop, .kiwi-drawer-backdrop'),
+      (el) => el.style.pointerEvents !== 'none');
+    if (open[open.length - 1] !== back) return false;
+    e.__kiwiEscTaken = true;
+    return true;
+  }
+
   function modal({title = '', tag = '', desc = '', body = '', foot = '', width = 540}) {
     const back = document.createElement('div');
     const s = GENERAL_STR[kiwiLang()] || GENERAL_STR.fr;
@@ -841,9 +856,15 @@ ar: {
       releaseFocus();
       unlockPageScroll();
     };
-    const esc = (e) => { if (e.key === 'Escape') close(); };
+    const esc = (e) => { if (escOwnedBy(back, e)) close(); };
     document.addEventListener('keydown', esc);
-    back.addEventListener('click', (e) => { if (e.target === back) close(); });
+    /* « Annuler », « Fermer », « Plus tard » : un bouton [data-dismiss] ferme la
+       fenêtre, comme il ferme déjà un tiroir. Jusqu'ici chaque appelant devait
+       le brancher lui-même ; une vingtaine l'avaient oublié (dont la
+       suppression d'un produit), et leur « Annuler » ne faisait rien.
+       close() est idempotent : ceux qui le branchent encore ne ferment pas
+       deux fois. */
+    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-dismiss]')) close(); });
     back.querySelector('.kiwi-modal-close').onclick = close;
     return { close, el: back };
   }
@@ -860,7 +881,15 @@ ar: {
     const focusables = () =>
       Array.prototype.slice.call(panel.querySelectorAll(SEL))
         .filter((el) => el.offsetWidth || el.offsetHeight || el === document.activeElement);
-    requestAnimationFrame(() => { (focusables()[0] || panel).focus(); });
+    /* Une fenêtre qui sert à saisir (un code scanné, un nombre d'étiquettes)
+       désigne son champ par [data-autofocus] : la douchette tape là, et pas
+       dans la croix de fermeture. Un setTimeout côté appelant perdait la
+       course contre cette image sur un appareil lent. */
+    requestAnimationFrame(() => {
+      const want = panel.querySelector('[data-autofocus]');
+      if (want && !want.disabled) { want.focus(); if (want.select && want.hasAttribute('data-autofocus-select')) want.select(); return; }
+      (focusables()[0] || panel).focus();
+    });
     const onKey = (e) => {
       if (e.key !== 'Tab') return;
       const f = focusables();
@@ -992,7 +1021,7 @@ ar: {
         }
       }, 320);
     };
-    const esc = (e) => { if (e.key === 'Escape') close(); };
+    const esc = (e) => { if (escOwnedBy(back, e)) close(); };
     document.addEventListener('keydown', esc);
     back.addEventListener('click', (e) => {
       if (e.target === back || e.target.closest('[data-dismiss]')) close();
