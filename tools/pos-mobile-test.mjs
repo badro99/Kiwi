@@ -25,7 +25,9 @@ ok(css.includes('max-height: calc(100dvh - 24px)'), 'modals remain inside the vi
 ok(css.includes('grid-template-columns: repeat(2'), 'product grids use two phone columns');
 ok(css.includes('grid-template-columns: repeat(3') && css.includes('max-height: 92dvh'), 'landscape phones use three product columns and a short-screen ticket');
 ok(css.includes('safe-area-inset-left') && css.includes('safe-area-inset-right'), 'specialist controls clear landscape notches');
-ok(css.includes('calc(20px + env(safe-area-inset-top') && css.includes('calc(14px + env(safe-area-inset-left'), 'specialist rail preserves its normal padding around safe areas');
+/* #0161 moved the rail's top padding to max(safe-top, 24px) + 16px so the
+ * drawer beats the DNA rail override; the safe area is still honoured. */
+ok(css.includes('padding-top: calc(max(var(--vx-safe-top), 24px) + 16px)') && css.includes('calc(14px + env(safe-area-inset-left'), 'specialist rail preserves its normal padding around safe areas');
 ok(skin.includes('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)'), 'restaurant shell covers large-iPhone landscape');
 ok(skin.includes('max-height: calc(100dvh - 24px') && skin.includes('.modal input, .modal select, .modal textarea { font-size: 16px; }'), 'restaurant dialogs survive the iOS keyboard without zoom');
 ok(skin.includes('.sk-tabs') && skin.includes('overflow-x: auto'), 'restaurant stock tabs stay reachable on phones');
@@ -45,10 +47,14 @@ ok(scan.includes('grid-template-rows: clamp(210px,32dvh,260px) auto'), 'phone sc
 ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses to a useful status strip');
 ok(html.includes('@media (max-width: 600px)') && html.includes('white-space: normal'), 'unlock greeting wraps on narrow phones');
 ok(html.includes('id="cash-received"') && !html.includes('cashInput.focus()'), 'opening cash payment leaves the optional received-amount field unfocused until the cashier taps it');
-ok(html.includes('assets/caisse-skin.css?v=3') && html.includes('assets/pos-mobile.css?v=3') && html.includes('assets/pos-mobile.js?v=3'), 'phone layers are cache-busted');
+/* The stamps move with every edit (bump-stamp.js): what is held is that each
+ * phone layer is stamped, and that the offline shell carries the same stamp. */
+const stampOf = (f) => html.match(new RegExp(f.replace(/\./g, '\\.') + '\\?v=(\\d+)'))?.[1];
+const phoneLayers = ['assets/caisse-skin.css', 'assets/pos-mobile.css', 'assets/pos-mobile.js'].map((f) => [f, stampOf(f)]);
+ok(phoneLayers.every(([, v]) => !!v), 'phone layers are cache-busted');
 const retailScanVersion = html.match(/assets\/retail-scan\.css\?v=(\d+)/)?.[1];
 ok(!!retailScanVersion && sw.includes(`'/assets/retail-scan.css?v=${retailScanVersion}'`), 'scanner iPhone layout is cache-busted consistently');
 const shellVersion = Number(sw.match(/var CACHE = 'kiwi-app-v(\d+)'/)?.[1] || 0);
-ok(shellVersion >= 340 && sw.includes("'/assets/caisse-skin.css?v=3'") && sw.includes("'/assets/pos-mobile.css?v=3'") && !!retailScanVersion, 'offline shell ships the phone and landscape fixes');
+ok(shellVersion >= 340 && phoneLayers.every(([f, v]) => sw.includes(`'/${f}?v=${v}'`)) && !!retailScanVersion, 'offline shell ships the phone and landscape fixes');
 
 console.log(`pos-mobile-test: ${controls} controls`);

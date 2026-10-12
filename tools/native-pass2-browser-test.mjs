@@ -34,6 +34,21 @@ async function phone(lang, dark=false, signedOut=false) {
   await page.setViewport({width:402,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});
   await page.emulateMediaFeatures([{name:'prefers-color-scheme',value:dark?'dark':'light'},{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.setRequestInterception(true);
+  /* The demo serves from about 07:00 (05:00 business-day cut + 2 h). Run
+   * between 05:00 and 10:00, this page reads the clock as 10:00 so every
+   * check below has a morning of demo sales to read; otherwise untouched. */
+  await page.evaluateOnNewDocument(() => {
+    const RealDate = Date;
+    const at = new RealDate();
+    const mins = at.getHours() * 60 + at.getMinutes();
+    if (mins < 300 || mins >= 600) return;
+    const shift = (600 - mins) * 60000;
+    class SuiteDate extends RealDate {
+      constructor(...args) { if (args.length) super(...args); else super(RealDate.now() + shift); }
+      static now() { return RealDate.now() + shift; }
+    }
+    window.Date = SuiteDate;
+  });
   let verificationRequests = 0;
   let authRequests = 0;
   page.on('request', r => {

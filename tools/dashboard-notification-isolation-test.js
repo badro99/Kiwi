@@ -13,7 +13,7 @@ function boot(custom) {
   const document = {
     hidden: false,
     body: { classList: { add() {}, remove() {} }, appendChild() {} },
-    documentElement: { scrollTop: 0 },
+    documentElement: { scrollTop: 0, classList: { contains: () => false } },
     addEventListener(type) { listeners.push(type); },
     querySelector() { return null; },
     createElement() { throw new Error('merchant notification simulator created UI'); }

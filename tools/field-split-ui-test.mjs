@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const { chromium } = require(process.env.KIWI_PLAYWRIGHT_PATH || 'playwright');
+/* Ported from Playwright (never a dependency here, so this suite could not run)
+ * to puppeteer-core, which the rest of tools/ already uses. 2026-10-12. */
+const root = path.resolve(new URL('..', import.meta.url).pathname);
+const require = createRequire(path.join(root, 'app/package.json'));
+const puppeteer = require('puppeteer-core');
+const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
+assert.ok(bin, 'Chromium required for the split UI');
 const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
 const between = (a,b) => source.slice(source.indexOf(a), source.indexOf(b, source.indexOf(a) + a.length));
 const fn = name => between('    function ' + name + '(', '\n    function ');
@@ -21,25 +27,25 @@ ${between("    $('#split-modal').addEventListener('click'", '    // Custom tip p
 document.querySelector('#split-modal').classList.add('is-open');
 renderSplitSetup();window.testState = splitState;
 `;
-const browser = await chromium.launch({headless:true, executablePath:process.env.KIWI_CHROME_PATH});
+const browser = await puppeteer.launch({headless:true, executablePath:bin, args:['--no-sandbox']});
 try {
   for (const [width,height] of [[1440,900],[834,1112],[390,844]]) {
-    const page = await browser.newPage({viewport:{width,height}});
+    const page = await browser.newPage(); await page.setViewport({width,height});
     const errors=[]; page.on('pageerror', e => errors.push(String(e)));
     await page.setContent('<!doctype html><meta charset="utf-8"><style>'+css+'</style>'+html);
     await page.addScriptTag({content:js});
-    const launch = page.locator('#split-launch');
-    assert.equal(await launch.isDisabled(),true);
-    await page.locator('[data-pool-item="Water"]').click();
-    await page.locator('[data-conv-tab="2"]').click();
-    await page.locator('[data-pool-item="Water"]').click();
-    assert.equal(await launch.innerText(),'1 article à attribuer');
-    assert.equal(await launch.isDisabled(),true);
-    await page.locator('[data-pool-item="Pasta"]').click();
-    assert.equal(await launch.isDisabled(),false);
-    await launch.click();
+    const disabled = () => page.$eval('#split-launch', e => e.disabled);
+    assert.equal(await disabled(),true);
+    await page.click('[data-pool-item="Water"]');
+    await page.click('[data-conv-tab="2"]');
+    await page.click('[data-pool-item="Water"]');
+    assert.equal(await page.$eval('#split-launch', e => e.innerText),'1 article à attribuer');
+    assert.equal(await disabled(),true);
+    await page.click('[data-pool-item="Pasta"]');
+    assert.equal(await disabled(),false);
+    await page.click('#split-launch');
     assert.deepEqual(await page.evaluate(() => window.testState.flow.parts.map(p => p.amount)),[15,75]);
-    const bounds = await page.locator('.modal-split').boundingBox();
+    const bounds = await (await page.$('.modal-split')).boundingBox();
     assert.ok(bounds.width <= width && bounds.x >= 0, 'split modal fits viewport');
     assert.deepEqual(errors,[]);
     await page.close();

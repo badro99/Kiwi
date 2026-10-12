@@ -34,8 +34,16 @@ ok('un retrait OrderPro payé sort de held avec l’état paid',
 
 ok('une arrivée OrderPro pending ne déclenche aucune impression',
   !/status === ['"]pending['"][\s\S]{0,300}printKitchenTickets/.test(CAISSE));
-ok('seul un accepted réussi appelle le crochet de confirmation',
-  /if \(j && j\.ok\)[\s\S]{0,500}status === 'accepted'[\s\S]{0,300}confirmAccepted/.test(INBOX));
+/* Anchored on the blocks, not on a character distance: the success branch
+ * grew (station accept / ready) and pushed the accepted hook past 500. */
+{
+  const okAt = INBOX.indexOf('if (j && j.ok) {');
+  const accAt = INBOX.indexOf("if (status === 'accepted') {", okAt);
+  const hookAt = INBOX.indexOf('.confirmAccepted(current', accAt);
+  ok('seul un accepted réussi appelle le crochet de confirmation',
+    okAt >= 0 && accAt > okAt && hookAt > accAt && hookAt - accAt < 300
+      && (INBOX.match(/\.confirmAccepted\(/g) || []).length === 1);
+}
 ok('le crochet imprime localement avec l’identifiant OrderPro dédupliqué',
   /confirmAccepted\(order\)[\s\S]{0,500}localKitchenAction: true/.test(CAISSE) &&
   /sourceId: o\.id/.test(CAISSE));
@@ -44,15 +52,29 @@ ok('envoyer en cuisine et encaisser restent deux gestes distincts sur OrderPro',
   /data-vrap-send/.test(CAISSE));
 ok('le premier encaissement OrderPro possède une clé comptable stable',
   /orderProSaleId[\s\S]{0,500}journal\.find\(row => row && row\.id === orderProSaleId\)/.test(CAISSE));
-ok('le statut payé est persisté après la confirmation, même si le modal est fermé',
-  /function settleVrapPayment\(\)[\s\S]{0,1800}opPush\(o, remoteStatus, \{ paid: true \}\)[\s\S]{0,400}persistShift\(\)/.test(CAISSE));
+{
+  const settle = CAISSE.slice(CAISSE.indexOf('function settleVrapPayment()'), CAISSE.indexOf('function openVrapOrder(', CAISSE.indexOf('function settleVrapPayment()')));
+  const pushAt = settle.indexOf('opPush(o, remoteStatus, { paid: true })');
+  ok('le statut payé est persisté après la confirmation, même si le modal est fermé',
+    pushAt > 0 && settle.indexOf('persistShift()', pushAt) > pushAt);
+}
 ok('la vente cloud transporte l’identifiant OrderPro sans dépendre du libellé',
   LIVE.includes('if (entry.orderId) body.orderId ='));
 ok('le reçu imprime le même numéro que la caisse et la cuisine',
   /ref: vrapOrder \? ticketNo\(vrapOrder\)/.test(CAISSE));
-ok('une commande OrderPro non payée peut être annulée depuis son ticket',
-  /function cancelOrderProTakeaway\(o,\s*authorizedWho\s*=\s*null\)[\s\S]{0,900}opPush\(o,\s*'rejected'/.test(CAISSE)
-    && /data-vrap-cancel/.test(CAISSE)
-    && /mode === 'vrap'[\s\S]{0,1800}cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(CAISSE));
+/* The cancellation no longer pushes 'rejected' itself: it goes through the
+ * authorised postCaisseCancellation, behind an operator code. Its server
+ * side is held by orderpro-cancellation-lifecycle-test and
+ * takeaway-cancel-authorization-test. */
+{
+  const start = CAISSE.indexOf('function cancelOrderProTakeaway(o, authorizedWho = null)');
+  const cancel = CAISSE.slice(start, CAISSE.indexOf('\n    }\n', start));
+  ok('une commande OrderPro non payée peut être annulée depuis son ticket',
+    start > 0 && cancel.includes('if (!o || !o.opId || o.paid) return false;')
+      && /postCaisseCancellation\(\{[^}]*status: 'rejected'/.test(cancel)
+      && cancel.includes('requireTillOperator(')
+      && /data-vrap-cancel/.test(CAISSE)
+      && /cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(CAISSE));
+}
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');
