@@ -100,7 +100,12 @@ export function makeWeatherHandler(deps) {
     const today = days.find((d) => d.day === localParts(now).day);
     if (today && (now - saved.at >= LOG_EVERY_MS || !log[today.day] || saved.city !== place.name)) {
       log = mergeLog(log, today);
-      await writeLog(env, merchant, place.name, log, now);
+      /* Lire la météo reste ouvert à un magasin suspendu ou en attente, comme
+         toute lecture ; ÉCRIRE son carnet passe par la porte des écritures
+         (tenantFor strict), et seulement si elle désigne le MÊME magasin : un
+         slug inconnu ne doit pas ranger ce carnet chez le magasin du compte. */
+      const writer = deps.writer ? await deps.writer(request, env, url.searchParams.get('merchant') || '') : merchant;
+      if (writer && writer === merchant) await writeLog(env, merchant, place.name, log, now);
     }
     return json({
       ok: true, city: place.name,
@@ -112,6 +117,7 @@ export function makeWeatherHandler(deps) {
 
 export const onRequestGet = makeWeatherHandler({
   tenant: (request, env, asked) => tenantFor(request, env, asked),
+  writer: (request, env, asked) => tenantFor(request, env, asked, { strict: true }),
   fetch: (url, init) => fetch(url, init),
   cache: typeof caches !== 'undefined' && caches.default ? caches.default : null,
   now: () => Date.now(),

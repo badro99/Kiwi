@@ -99,6 +99,8 @@ function harness(opts = {}) {
   let failing = false;
   const handler = makeWeatherHandler({
     tenant: async (_req, _env, asked) => (asked === 'cafe-test' ? 'cafe-test' : ''),
+    /* La porte des écritures (tenantFor strict) : par défaut la même. */
+    writer: async (_req, _env, asked) => (opts.writer ? opts.writer(asked) : (asked === 'cafe-test' ? 'cafe-test' : '')),
     fetch: async (url, init) => {
       calls.push({ url, ua: init && init.headers && init.headers['User-Agent'] });
       if (failing) return new Response('down', { status: 503 });
@@ -160,6 +162,28 @@ function harness(opts = {}) {
   ok((await h.get('?merchant=cafe-test')).body.city === 'Marrakech', 'no sheet city: the operator-set merchant_config.city is used');
   const old = harness({ cityColumn: false });
   ok((await old.get('?merchant=cafe-test')).body.reason === 'no-city', 'a database without the city column answers no-city, never an error');
+}
+
+{
+  /* Un magasin suspendu ou en attente lit encore sa météo (une lecture),
+     mais n'écrit plus rien : tenantFor strict le refuse. */
+  const h = harness({ writer: () => '' });
+  h.setBusiness({ city: 'Casablanca' });
+  const read = (await h.get('?merchant=cafe-test')).body;
+  ok(read.ok && read.days.length === 2, 'a store the write gate refuses still reads its forecast');
+  ok(!h.logRow(), 'but nothing is written to its store_docs');
+  /* La porte des écritures désigne un AUTRE magasin (slug inconnu rabattu
+     sur celui du compte) : on n'écrit pas chez lui non plus. */
+  const other = harness({ writer: () => 'another-shop' });
+  other.setBusiness({ city: 'Casablanca' });
+  await other.get('?merchant=cafe-test');
+  ok(!other.logRow() && !other.db.prepare("SELECT 1 FROM store_docs WHERE merchant = 'another-shop'").get(),
+    'a write gate that names another store writes nowhere');
+}
+{
+  const src = fs.readFileSync(new URL('../functions/api/weather.js', import.meta.url), 'utf8');
+  ok(/writer: \(request, env, asked\) => tenantFor\(request, env, asked, \{ strict: true \}\)/.test(src),
+    'production wires the write gate to tenantFor strict');
 }
 
 console.log('\n■ Ce que la pluie fait aux ventes');
