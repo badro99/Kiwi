@@ -1216,6 +1216,8 @@ section('Whole-project regressions');
     'course-firing-browser-test.mjs',
     'kds-recall-test.mjs',
     'kds-recall-browser-test.mjs',
+    'pairs-api-test.mjs',
+    'pairs-caisse-browser-test.mjs',
     'print-relay-idempotency-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',

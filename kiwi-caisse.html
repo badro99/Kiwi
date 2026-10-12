@@ -1888,6 +1888,30 @@
     .rp-item-name { color: var(--ink); }
     .rp-item-price { font-weight: 600; color: var(--ink); font-feature-settings: "tnum" 1; }
 
+    /* « Souvent avec… » : la suggestion tirée des tickets du commerce
+       (assets/caisse-pairs.js). Dernière ligne de la commande, au-dessus du
+       fondu du bas de liste, discrète : on la lit, on ne la subit pas. */
+    .rp-pair {
+      display: grid; grid-template-columns: 1fr auto auto; column-gap: 6px; row-gap: 6px; align-items: center;
+      margin: 10px 0 30px; padding: 10px 8px 8px 12px;
+      border: 1px dashed var(--mint-edge); border-radius: 10px; background: var(--mint-tint);
+      font-size: 12.5px; color: var(--ink-2);
+    }
+    .rp-pair-txt { grid-column: 1 / -1; min-width: 0; line-height: 1.35; }
+    .rp-pair-txt b { color: var(--ink); font-weight: 600; }
+    .rp-pair-why { min-width: 0; font-size: 11px; line-height: 1.3; color: var(--ink-3); }
+    .rp-pair-add {
+      border: 0; border-radius: 8px; padding: 8px 10px; min-height: 36px;
+      background: var(--forest); color: var(--paper-soft); font: inherit; font-weight: 600; cursor: pointer;
+      font-feature-settings: "tnum" 1; white-space: nowrap;
+    }
+    .rp-pair-add:active { transform: scale(0.97); }
+    .rp-pair-x {
+      border: 0; background: transparent; color: var(--ink-3); cursor: pointer;
+      width: 36px; height: 36px; border-radius: 8px; font-size: 18px; line-height: 1;
+    }
+    .rp-pair-x:hover { background: var(--paper-mute); color: var(--ink); }
+
     /* Remise line · negative discount inside the addition */
     .rp-item--discount {
       grid-template-columns: 28px 1fr auto auto;
@@ -5734,6 +5758,7 @@
   <script src="assets/orderpro-inbox.js?v=31" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=7" defer></script>
+  <script src="assets/caisse-pairs.js?v=1" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=278" defer></script>
@@ -10316,6 +10341,37 @@
       if (typeof renderVrapBoard === 'function') renderVrapBoard();
     }
 
+    /* « Souvent avec… » : une ligne en bas de la commande qui propose l'article
+       que les tickets de ce commerce associent le plus souvent au dernier
+       ajouté (assets/caisse-pairs.js, calcul serveur sur 28 jours). Seulement
+       sur une vraie caisse, seulement un article vendable seul en ce moment, et
+       jamais un article déjà dans la commande. Le toucher passe par le chemin
+       d'ajout normal : options, formule et plat épuisé y sont traités. */
+    function pairSellable(id) {
+      const m = menuItems.find(x => String(x.id) === String(id));
+      if (!m || m.archived || m.formulaOnly || m.avail === false) return false;
+      return !(carteState.soldOut || []).some(x => String(x.id) === String(id));
+    }
+    function pairSuggestHtml(order, scope) {
+      if (IS_DEMO || !window.KiwiPairs || !KiwiPairs.suggest) return '';
+      const ids = [];
+      (order || []).forEach(l => { if (l && l.kind !== 'formula-part' && !l.sent && l.id != null) ids.push(String(l.id)); });
+      let s = null;
+      try { s = KiwiPairs.suggest(ids, pairSellable, scope); } catch (_) { s = null; }
+      if (!s) return '';
+      const m = menuItems.find(x => String(x.id) === s.id);
+      const lead = menuItems.find(x => String(x.id) === s.lead);
+      if (!m || !lead) return '';
+      const pct = Math.round((Number(s.share) || 0) * 100);
+      return `
+        <div class="rp-pair" data-pair-scope="${kdsEsc(scope)}">
+          <span class="rp-pair-txt">Souvent avec ${kdsEsc(lead.name)} · <b>${kdsEsc(m.name)}</b></span>
+          <span class="rp-pair-why">${pct} % des tickets avec ${kdsEsc(lead.name)} · 28 derniers jours</span>
+          <button type="button" class="rp-pair-add" data-pair-add="${kdsEsc(m.id)}" aria-label="Ajouter ${kdsEsc(m.name)}">+ ${fmtMAD(m.price)}</button>
+          <button type="button" class="rp-pair-x" data-pair-dismiss="${kdsEsc(m.id)}" aria-label="Ne plus proposer ${kdsEsc(m.name)} pour cette commande">×</button>
+        </div>`;
+    }
+
     function renderCart() {
       // The five-second shift snapshot is too late when iOS kills a backgrounded app.
       // Record every draft change before painting the receipt.
@@ -10324,6 +10380,7 @@
       const itemCount = cart.reduce((s, l) => s + l.qty, 0);
 
       if (cart.length === 0) {
+        try { window.KiwiPairs && KiwiPairs.reset('cart'); } catch (_) {}
         showEmpty();
         return;
       }
@@ -10379,6 +10436,7 @@
           </button>
         </div>`;
       }
+      itemsHTML += editing ? '' : pairSuggestHtml(cart, 'cart');
       $('#rp-items').innerHTML = itemsHTML;
 
       $('#rp-total').textContent = fmtMAD(net);
@@ -10468,6 +10526,22 @@
             inc ? addToCart(mid) : cartMinusMenu(mid);
           }
         }
+        return;
+      }
+
+      // « Souvent avec… » → même ajout qu'un toucher sur la carte du plat.
+      const pairAdd = e.target.closest('[data-pair-add]');
+      if (pairAdd) {
+        const id = pairAdd.dataset.pairAdd;
+        if (mode === 'order') { if (selectedId) addToTableOrder(selectedId, id); }
+        else addToCart(id);
+        return;
+      }
+      const pairNo = e.target.closest('[data-pair-dismiss]');
+      if (pairNo) {
+        const scope = pairNo.closest('[data-pair-scope]')?.dataset.pairScope || 'cart';
+        try { KiwiPairs.dismiss(scope, pairNo.dataset.pairDismiss); } catch (_) {}
+        if (mode === 'order') { if (selectedId) renderOrderPanel(selectedId); } else renderCart();
         return;
       }
 
@@ -12542,6 +12616,7 @@
           : `${itemCount} article${itemCount > 1 ? 's' : ''}${heldTxt} · ${fmtMAD(total)}`;
 
       if (order.length === 0) {
+        try { window.KiwiPairs && KiwiPairs.reset('table:' + tableId); } catch (_) {}
         $('#rp-items').innerHTML = `
           <div class="rp-order-empty">
             <i data-lucide="shopping-cart" style="width:34px;height:34px;color:var(--ink-3);display:block;margin:0 auto 10px;"></i>
@@ -12574,7 +12649,7 @@
               ${l.kind === 'formula-part' ? (lineHeld(l, order) ? '<span class="rp-hold-mark">À suivre</span>' : '') : `<button type="button" class="rp-hold${l.hold ? ' is-on' : ''}" data-hold-uid="${l.uid}"
                 aria-pressed="${l.hold ? 'true' : 'false'}" title="Garder ce plat pour la suite : il part en cuisine au prochain « Envoyer la suite »">À suivre</button>`}
             </div>
-          </div>`).join('');
+          </div>`).join('') + pairSuggestHtml(order, 'table:' + tableId);
       }
 
       $('#rp-total').textContent = fmtMAD(total);
