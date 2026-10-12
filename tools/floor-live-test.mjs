@@ -23,8 +23,25 @@ import { DatabaseSync } from 'node:sqlite';
 import vm from 'node:vm';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestGet, assemble, tableKey } from '../functions/api/floor/live.js';
+import { businessDayStart, DEFAULT_ZONE } from '../functions/api/_business-day.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/* Les visites de banc remontent jusqu'à 130 minutes avant « maintenant », et la
+ * route ne compte que la journée commerciale en cours (coupure 05:00, heure du
+ * commerçant). Dans les trois heures qui suivent la coupure, une partie tombait
+ * sur la veille et la suite échouait chaque matin. Le processus lit alors
+ * l'horloge trois heures après la coupure ; le reste du temps, elle est intacte. */
+{
+  const RealDate = Date;
+  const since = RealDate.now() - businessDayStart(RealDate.now(), 5, DEFAULT_ZONE);
+  const shift = since < 3 * 3600e3 ? 3 * 3600e3 - since : 0;
+  if (shift) {
+    globalThis.Date = class BenchDate extends RealDate {
+      constructor(...args) { if (args.length) super(...args); else super(RealDate.now() + shift); }
+      static now() { return RealDate.now() + shift; }
+    };
+  }
+}
 let pass = 0; const fails = [];
 const ok = (cond, label) => { if (cond) pass++; else fails.push(label); };
 
