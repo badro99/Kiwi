@@ -62,6 +62,26 @@ function refFor(screen, label) {
   assert.ok(line, `visible control ${label} not in screen:\n${screen}`);
   return line.match(/^q\d+/)[0];
 }
+function menuItemRef(screen, label) {
+  const line = screen.split('\n').find(x => /^q\d+ div\/menuitem /.test(x) && x.endsWith(' ' + label));
+  assert.ok(line, `menu item ${label} not in screen:\n${screen}`);
+  return line.match(/^q\d+/)[0];
+}
+function actionRef(screen, action) {
+  const line = screen.split('\n').find(x => /^q\d+ /.test(x) && x.includes(` [${action}] `));
+  assert.ok(line, `control [${action}] not in screen:\n${screen}`);
+  return line.match(/^q\d+/)[0];
+}
+/* A click's own snapshot can land before a drawer's or menu's entrance frame
+   on a busy machine: rescan, as an agent would, until the control shows. */
+async function screenWith(result, wanted) {
+  let screen = body(result);
+  for (let i = 0; i < 10 && !wanted(screen); i++) {
+    await new Promise(r => setTimeout(r, 200));
+    screen = body(await call('ui_snapshot'));
+  }
+  return screen;
+}
 function inputRef(screen, label, index = 0) {
   const lines = screen.split('\n').filter(x => /^q\d+ input/.test(x) && x.includes(' ' + label));
   assert.ok(lines[index], `visible input ${label} #${index + 1} missing`);
@@ -176,8 +196,39 @@ try {
   fs.writeFileSync(proofFile, JSON.stringify(stale));
   assert.throws(() => validateUiProof(proofFile, 999001), /24 hours/);
   count++; console.log('  ✓ stale UI proof rejected');
+
+  /* Popover menus (interactive.js menu()) render div[role=menuitem], not
+     buttons. Language QA goes through two of them: the profile menu's
+     Paramètres, then Settings → app language → English. */
+  const profile = await call('ui_click', { ref: actionRef(body(await call('ui_snapshot')), 'profile-menu') });
+  const profileScreen = await screenWith(profile, s => /^q\d+ div\/menuitem Paramètres$/m.test(s));
+  ok(!profile.isError && /^q\d+ div\/menuitem Paramètres$/m.test(profileScreen), 'profile popover items get q-refs as menu items');
+  const settings = await call('ui_click', { ref: menuItemRef(profileScreen, 'Paramètres') });
+  ok(!settings.isError, 'Paramètres menu item accepts a real click');
+  const settingsScreen = await screenWith(settings, s => s.includes(' [settings-lang] '));
+  const languages = await call('ui_click', { ref: actionRef(settingsScreen, 'settings-lang') });
+  const languageScreen = await screenWith(languages, s => /^q\d+ div\/menuitem English$/m.test(s));
+  ok(!languages.isError && ['Français', 'English', 'العربية'].every(l => new RegExp(`^q\\d+ div/menuitem ${l}$`, 'm').test(languageScreen)),
+    'language menu lists Français, English and العربية');
+  const english = await call('ui_click', { ref: menuItemRef(languageScreen, 'English') });
+  ok(!english.isError, 'English menu item accepts a real click');
+  const switched = await call('ui_assert', { selector: 'html[lang="en"] a[data-nav="accueil"]', condition: 'text_contains', expected: 'Home', timeoutMs: 5000,
+    description: 'Dashboard nav reads Home after English is picked in Settings' });
+  if (switched.isError) console.log('ENGLISH:', body(switched), '\nSCREEN:', body(await call('ui_snapshot')));
+  ok(!switched.isError, 'picking English from the menu switches the rendered dashboard');
+
   const closed = await call('close_session');
   ok(!closed.isError, 'fixture and Chromium close cleanly');
+  const unsupported = await call('start_hotel_fixture', { language: 'de' });
+  ok(unsupported.isError, 'unsupported fixture language is refused');
+  const arabic = await call('start_hotel_fixture', { language: 'ar' });
+  if (arabic.isError) console.log('ARABIC START:', body(arabic));
+  ok(!arabic.isError && body(arabic).includes('(language ar)'), 'hotel fixture boots with a seeded Arabic language');
+  const rtl = await call('ui_assert', { selector: 'html[dir="rtl"] a[data-nav="accueil"]', condition: 'text_contains', expected: 'الرئيسية', timeoutMs: 5000,
+    description: 'Seeded Arabic renders the dashboard right to left' });
+  ok(!rtl.isError, 'seeded Arabic renders right to left before any click');
+  const arabicClosed = await call('close_session');
+  ok(!arabicClosed.isError, 'Arabic fixture closes cleanly');
   const restaurant = await call('start_retail_fixture', { scenario: 'restaurant' });
   ok(!restaurant.isError && body(restaurant).includes('restaurant dashboard'), 'synthetic restaurant Z dashboard starts');
   const visibleZ = await call('ui_assert', { selector: '[data-hero-amount]', condition: 'text_contains', expected: '75,00',

@@ -18,10 +18,10 @@ let pending = 0;
 let stdinEnded = false;
 
 const TOOLS = [
-  { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Optional language (fr, en, ar) is stored before the dashboard boots, as for a returning user; Settings → app language still switches it through the UI. Never touches production.', inputSchema: { type: 'object', properties: { language: { type: 'string', enum: ['fr', 'en', 'ar'] } } } },
   { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'start_retail_fixture', description: 'Start a real Maison or Boutique caisse, client-directory, restaurant dashboard, employee clock, or navigation module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'boutique', 'maison-stock', 'boutique-stock', 'clients', 'restaurant', 'employee-clock', 'nav-stability'] } }, required: ['scenario'] } },
-  { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'ui_snapshot', description: 'Compact visible text and interactive controls (buttons, links, inputs, menu items, options, tabs) with temporary q-refs; an open popup menu is listed first. No screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
   { name: 'ui_select', description: 'Choose a visible native select option by its HTML value. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -70,7 +70,7 @@ async function handle(line) {
 
 async function call(name, args) {
   switch (name) {
-    case 'start_hotel_fixture': return text(await startHotelFixture());
+    case 'start_hotel_fixture': return text(await startHotelFixture(args));
     case 'start_tickets_fixture': return text(await startTicketsFixture());
     case 'start_retail_fixture': return text(await startRetailFixture(args));
     case 'ui_snapshot': return text(await snapshot());
@@ -298,7 +298,9 @@ async function startTicketsFixture() {
   }
 }
 
-async function startHotelFixture() {
+async function startHotelFixture(args = {}) {
+  const language = args.language === undefined ? '' : String(args.language);
+  if (language && !['fr', 'en', 'ar'].includes(language)) throw new Error('language must be fr, en or ar.');
   await closeSession();
   const bin = chromiumBinary();
   if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
@@ -320,6 +322,11 @@ async function startHotelFixture() {
       else req.abort().catch(() => {});
     });
     await page.setCookie({ name: 'kiwi_sess', value: fixture.sessionValue, url: fixture.base, httpOnly: true, sameSite: 'Lax' });
+    /* Seeded only while nothing is stored, so a language the agent then picks
+     * in Settings survives ui_reload exactly as it does for a merchant. */
+    if (language) await page.evaluateOnNewDocument(lang => {
+      try { if (!localStorage.getItem('kiwiLang')) localStorage.setItem('kiwiLang', lang); } catch (_) {}
+    }, language);
     stage = 'load dashboard';
     await page.goto(fixture.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     const venue = await page.evaluate(() => window.KiwiVenue?.getVenue?.() || 'hx-venue');
@@ -386,7 +393,7 @@ async function startHotelFixture() {
     }, { timeout: 15000 });
     await new Promise(r => setTimeout(r, 350));
     session = { ...fixture, browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
-    return `Synthetic hotel dashboard ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
+    return `Synthetic hotel dashboard ready at ${origin.origin}${language ? ` (language ${language})` : ''}; no live merchant access.\n${await snapshot()}`;
   } catch (e) {
     if (browser) await browser.close().catch(() => {});
     fixture.child.kill('SIGTERM');
@@ -406,26 +413,36 @@ async function snapshot() {
   const s = active();
   const found = await s.page.evaluate(() => {
     document.querySelectorAll('[data-kiwi-qa-ref]').forEach(el => el.removeAttribute('data-kiwi-qa-ref'));
+    // Popover menus (interactive.js menu()), listboxes and tab rows render
+    // divs carrying an ARIA role, not buttons. Without these roles a language
+    // or filter pick is visible to a user and unreachable by ui_click.
+    const ROLES = '[role="button"],[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"],[role="option"],[role="tab"]';
+    const CLICKABLE = `button,a[href],${ROLES},[data-cd-id]`;
+    const CONTROL = `button,a[href],input,select,textarea,${ROLES},[data-action],[data-cd-id]`;
     const visible = el => {
       const st = getComputedStyle(el), r = el.getBoundingClientRect();
       if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) <= 0 || r.width <= 0 || r.height <= 0 || el.closest('[hidden],[aria-hidden="true"]')) return false;
-      if (el.matches('button,a[href],input,select,textarea,[role="button"],[data-action],[data-cd-id]')) {
+      if (el.matches(CONTROL)) {
         const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
         return !!hit && (hit === el || el.contains(hit));
       }
       return true;
     };
     const out = [];
-    const selectors = 'h1,h2,h3,button,a[href],input,select,textarea,[role="button"],[data-action],[data-cd-id]';
-    for (const el of document.querySelectorAll(selectors)) {
+    // A popup is appended at the end of <body>, so on a busy page document
+    // order would put it past the 100-control cap. It is what the user just
+    // opened: list it first.
+    const all = [...document.querySelectorAll(`h1,h2,h3,${CONTROL}`)];
+    const inPopup = el => !!el.closest('[role="menu"],[role="listbox"]');
+    for (const el of [...all.filter(inPopup), ...all.filter(el => !inPopup(el))]) {
       if (!visible(el) || out.length >= 100) continue;
       const tag = el.tagName.toLowerCase();
-      if (el.closest('button,a[href],[role="button"],[data-cd-id]') && !el.matches('button,a[href],[role="button"],[data-cd-id]')) continue;
+      if (el.closest(CLICKABLE) && !el.matches(CLICKABLE)) continue;
       const ref = 'q' + (out.length + 1);
       el.setAttribute('data-kiwi-qa-ref', ref);
       const name = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 110);
       const value = /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) ? String(el.value || '').slice(0, 65) : '';
-      out.push({ ref, tag, name, value, type: el.getAttribute('type') || '', action: el.getAttribute('data-action') || '' });
+      out.push({ ref, tag, name, value, type: el.getAttribute('type') || el.getAttribute('role') || '', action: el.getAttribute('data-action') || '' });
     }
     return { title: document.title, path: location.pathname, text: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 450), controls: out };
   });
