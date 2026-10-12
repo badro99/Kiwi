@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule, weatherRule];
   var doc = { days: [] };
   /* The venue `doc` was loaded for. slug() follows the venue on screen the
    * moment it changes, while `doc` stayed whatever was last loaded: a compute()
@@ -29,7 +29,9 @@
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
       waitingLabel: 'Signaux bloqués', waiting: 'Aucun',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
-      handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer'
+      handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer',
+      wToday: 'Aujourd’hui', wTomorrow: 'Demain', wSource: 'Météo MET Norway',
+      wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
     },
     en: {
       eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
@@ -38,7 +40,9 @@
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
       waitingLabel: 'Blocked signals', waiting: 'None',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
-      handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose'
+      handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose',
+      wToday: 'Today', wTomorrow: 'Tomorrow', wSource: 'Weather by MET Norway',
+      wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
     },
     ar: {
       eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
@@ -47,7 +51,9 @@
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
       waitingLabel: 'إشارات محجوبة', waiting: 'لا شيء',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
-      handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح'
+      handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح',
+      wToday: 'اليوم', wTomorrow: 'غدا', wSource: 'الطقس من MET Norway',
+      wKinds: { clear: 'صحو', cloudy: 'غائم', rain: 'مطر', storm: 'عاصفة رعدية', snow: 'ثلج', fog: 'ضباب' }
     }
   };
 
@@ -544,6 +550,52 @@
     };
   }
 
+  /* ── LA PLUIE, MESURÉE SUR CE COMMERCE ─────────────────────────────────────
+   * Une ligne seulement quand deux choses sont vraies ensemble : la pluie est
+   * annoncée (aujourd'hui ou demain, MET Norway) ET le carnet du commerce a
+   * assez de jours de pluie et de jours secs pour dire ce qu'elle lui fait
+   * (KiwiWeather.rainEffect). Un écart de moins de 8 % ne mérite pas une ligne.
+   * Pas de conseil inventé : le chiffre, et sur combien de jours il repose. */
+  function weatherRule(input) {
+    input = input || {};
+    var W = window.KiwiWeather;
+    var data = input.weather !== undefined ? input.weather : (W && W.cached ? W.cached() : null);
+    if (!data || !data.ok || !Array.isArray(data.days) || !data.log) return null;
+    var today = input.today || businessDay(input.now);
+    var target = data.days.find(function (d) { return d && d.day >= today && W && W.isRain(d); });
+    if (!target) return null;
+    var effect = W.rainEffect(Array.isArray(input.rows) ? input.rows : salesRows(), data.log, { today: today });
+    if (!effect || Math.abs(effect.change) < 0.08) return null;
+    var pct = Math.round(Math.abs(effect.change) * 100), down = effect.change < 0;
+    var tomorrow = target.day > today, mm = String(target.precip).replace('.', ',');
+    var mmEn = String(target.precip);
+    return {
+      id: 'weather-rain:' + target.day, kind: 'weather', tone: down ? 'warn' : 'info', roles: ['owner', 'manager'],
+      copy: {
+        fr: 'Pluie annoncée ' + (tomorrow ? 'demain' : 'aujourd’hui') + ' à ' + data.city + ' (' + mm + ' mm). Les jours de pluie, votre chiffre a été ' + pct + ' % ' + (down ? 'plus bas' : 'plus haut') + ' que les jours secs.',
+        en: 'Rain forecast ' + (tomorrow ? 'tomorrow' : 'today') + ' in ' + data.city + ' (' + mmEn + ' mm). On rainy days your takings have been ' + pct + '% ' + (down ? 'lower' : 'higher') + ' than on dry days.',
+        ar: 'يُتوقع المطر ' + (tomorrow ? 'غدا' : 'اليوم') + ' في ' + data.city + ' (' + mm + ' مم). في الأيام الممطرة كان رقم معاملاتك ' + (down ? 'أقل' : 'أعلى') + ' بنسبة ' + pct + '٪ من الأيام الجافة.'
+      },
+      evidence: { count: effect.rainDays + effect.dryDays, window: effect.rainDays + ' j. de pluie · ' + effect.dryDays + ' j. secs', source: 'MET Norway · KiwiSales' }
+    };
+  }
+  /* La prévision, dans l'en-tête du point du matin : aujourd'hui et demain. */
+  var WEATHER_ICON = { clear: 'light_mode', cloudy: 'thermometer', fog: 'thermometer', rain: 'water_drop', storm: 'bolt', snow: 'ac_unit' };
+  function weatherChip(t) {
+    var W = window.KiwiWeather, data = W && W.cached ? W.cached() : null;
+    if (!data || !data.ok || !Array.isArray(data.days) || !data.days.length) return '';
+    var today = businessDay();
+    var show = data.days.filter(function (d) { return d && d.day >= today; }).slice(0, 2);
+    if (!show.length) return '';
+    var L = lang();
+    var part = function (d) {
+      var when = d.day === today ? t.wToday : t.wTomorrow;
+      var rain = (Number(d.precip) || 0) >= 1 ? ' <bdi>' + esc((L === 'en' ? String(d.precip) : String(d.precip).replace('.', ',')) + (L === 'ar' ? ' مم' : ' mm')) + '</bdi>' : '';
+      var temp = (d.tmin != null && d.tmax != null) ? ' · <bdi>' + d.tmin + '–' + d.tmax + ' °C</bdi>' : '';
+      return '<span class="briefing-wx-day"><i data-icon="' + (WEATHER_ICON[d.kind] || 'thermometer') + '" aria-hidden="true"></i>' + esc(when) + (L === 'fr' ? ' : ' : ': ') + esc((t.wKinds && t.wKinds[d.kind]) || '') + rain + temp + '</span>';
+    };
+    return '<span class="briefing-weather" title="' + esc(t.wSource + ' · ' + data.city) + '">' + show.map(part).join('') + '<small>' + esc(t.wSource) + '</small></span>';
+  }
   function lateOrdersRule(input) {
     input = input || {};
     var O = window.KiwiOrderCourse;
@@ -701,6 +753,12 @@
       /* Section « point du matin » dans la carte Kiwi Insights : filet, kicker mono, liste de signaux. */
       '.briefing-inline{display:flex;flex-direction:column;gap:10px;margin:4px 0 2px;padding-top:16px;border-top:1px solid var(--n-200)}',
       '.briefing-kicker{display:flex;align-items:center;gap:10px;font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--atlas)}',
+      /* La prévision : texte courant (pas le kicker mono), poussée à droite, repliée sous le titre sur étroit. */
+      '.briefing-kicker{flex-wrap:wrap;row-gap:6px}',
+      '.briefing-weather{margin-inline-start:auto;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 12px;font:500 12px/1.3 var(--sans);letter-spacing:0;text-transform:none;color:var(--n-700)}',
+      '.briefing-wx-day{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}',
+      '.briefing-wx-day svg,.briefing-wx-day i{width:15px;height:15px;color:var(--atlas);flex:0 0 15px}',
+      '.briefing-weather small{font:500 10px/1 var(--sans);color:var(--n-500)}',
       '.briefing-kicker small{font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:none;color:var(--n-500)}',
       /* Une ligne = un signal : marqueur, titre, preuve, actions. Grille 1fr/auto sur large, empilée sur étroit. */
       '.briefing-line{display:grid;grid-template-columns:1fr auto;gap:6px 18px;align-items:center;padding:12px 14px 12px 16px;border:1px solid var(--n-200);border-radius:14px;background:color-mix(in srgb,var(--atlas) 5%,transparent);position:relative;animation:briefing-in .32s cubic-bezier(.2,.7,.2,1) both}',
@@ -750,7 +808,8 @@
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
     var day = dayLabel();
-    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + '</div>' + body;
+    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body;
+    try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
     statusBadge(el, t, lines.length);
   }
   function mode(raw) {
@@ -788,6 +847,9 @@
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     window.addEventListener('kiwi:cash-sessions', function () { compute(); });
     window.addEventListener('kiwi:order-course', function () { compute(); });
+    window.addEventListener('kiwi:weather', function () { compute(); });
+    try { if (window.KiwiWeather) window.KiwiWeather.load(); } catch (_) {}
+    try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { if (window.KiwiWeather) window.KiwiWeather.load(); }); } catch (_) {}
     document.addEventListener('kiwi:live-backfill-complete', function (event) {
       if (!event.detail || event.detail.merchant === slug()) compute();
     });
@@ -804,7 +866,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

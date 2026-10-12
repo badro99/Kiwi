@@ -92,8 +92,8 @@
     "sha": "1249a7f44a8d1ffe"
   },
   "assets/briefing.js": {
-    "v": "21",
-    "sha": "cdeb2d97737683fc"
+    "v": "22",
+    "sha": "3acb98bc91dad1b9"
   },
   "assets/caisse-attendance-code.js": {
     "v": "3",
@@ -1086,6 +1086,10 @@
   "assets/view-link.js": {
     "v": "1",
     "sha": "d1b464561a457b9f"
+  },
+  "assets/weather.js": {
+    "v": "1",
+    "sha": "e586c803c9e3e1e2"
   },
   "assets/z-reconciliation.js": {
     "v": "25",
