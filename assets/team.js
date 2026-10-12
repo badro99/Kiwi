@@ -1160,8 +1160,11 @@
     const s = normShift(v);
     return !!(s && !s.off && hhmmToMin(s.end) <= hhmmToMin(s.start));
   }
+  /* « 7 h 30 » in French and English; Arabic writes its own units, « 7 س 30 د ».
+   * An hour cell shows the decimal while it is edited, so nothing parses this. */
   function fmtDur(mins) {
     const h = Math.floor(mins / 60), m = mins % 60;
+    if (trLang() === 'ar') return m ? `${h} س ${pad(m)} د` : `${h} س`;
     return m ? `${h} h ${pad(m)}` : `${h} h`;
   }
   /* Attendance is stored as decimal hours for exact payroll arithmetic, but a

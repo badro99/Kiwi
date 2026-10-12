@@ -19,6 +19,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
+/* Les ventes de banc sont datées de 05:00:01 à 05:05:01 de la journée
+ * commerciale en cours : dans les dix premières minutes après la coupure de
+ * 05:00 elles seraient encore dans le futur, et la suite échouait chaque
+ * matin à cette heure-là. Le bac à sable lit alors l'horloge dix minutes
+ * plus tard ; le reste du temps, elle est intacte. */
+const benchShift = (() => {
+  const d = new Date();
+  const since = ((d.getHours() + 19) % 24) * 3600e3 + d.getMinutes() * 60e3 + d.getSeconds() * 1e3 + d.getMilliseconds();
+  return since < 600e3 ? 600e3 - since : 0;
+})();
+class BenchDate extends Date {
+  constructor(...args) { if (args.length) super(...args); else super(Date.now() + benchShift); }
+  static now() { return Date.now() + benchShift; }
+}
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const { loadCost } = require('./kiwi-cost-harness.js');
@@ -66,7 +81,7 @@ const localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem
 win.localStorage = localStorage;
 win.navigator = nav;
 document.documentElement.lang = 'fr';
-const ctx = vm.createContext({ window: win, Kiwi: win.Kiwi, document, console, setTimeout, clearTimeout, localStorage, navigator: nav, Intl, requestAnimationFrame: (fn) => fn(), innerWidth: 1400, innerHeight: 900 });
+const ctx = vm.createContext({ Date: BenchDate, window: win, Kiwi: win.Kiwi, document, console, setTimeout, clearTimeout, localStorage, navigator: nav, Intl, requestAnimationFrame: (fn) => fn(), innerWidth: 1400, innerHeight: 900 });
 vm.runInContext(R('assets/day-report.js'), ctx, { filename: 'day-report.js' });
 const DR = win.KiwiDayReport;
 win.KiwiDateRange = { bounds: (p) => { const d = p === 'trenteJours' ? 30 : p === 'septJours' ? 7 : 1; return [DR.dayBounds(DR.shiftDay(DR.today(), -(d - 1))).from, Infinity]; } };

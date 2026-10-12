@@ -213,6 +213,23 @@ async function startRetailFixture(args) {
     browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=127.0.0.1;localhost'], defaultViewport: { width: 1440, height: 900 } });
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
+    /* The demo till seeds today's five sales 24 to 170 minutes before now and
+     * counts « today » on the 05:00 business day: between 05:00 and 07:50 some
+     * seeds land on yesterday and the baseline is no longer five. The retail
+     * pages read the clock as at least 08:00, so a proof does not depend on
+     * the hour it is run. Outside that window the clock is untouched. */
+    if (scenario.startsWith('maison') || scenario.startsWith('boutique')) await page.evaluateOnNewDocument(() => {
+      const RealDate = Date;
+      const at = new RealDate();
+      const mins = at.getHours() * 60 + at.getMinutes();
+      if (mins < 300 || mins >= 480) return;
+      const shift = (480 - mins) * 60000;
+      class FixtureDate extends RealDate {
+        constructor(...args) { if (args.length) super(...args); else super(RealDate.now() + shift); }
+        static now() { return RealDate.now() + shift; }
+      }
+      window.Date = FixtureDate;
+    });
     if (scenario === 'nav-stability') await page.evaluateOnNewDocument(() => {
       const venue = { id: 'v-nav-stability', name: 'Restaurant fixture', slug: 'nav-stability', type: 'restaurant', custom: true, status: 'En service', txCount: 0, staffCount: 0 };
       localStorage.setItem('kiwiCustomVenues', JSON.stringify([venue]));

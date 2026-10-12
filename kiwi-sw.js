@@ -101,7 +101,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=45',
+  '/assets/venues.js?v=46',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=6',
   '/assets/trade-workspaces.js?v=9',
@@ -139,7 +139,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=63',
+  '/assets/dateRange.js?v=64',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=12',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=302',
+  '/assets/team.js?v=303',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=110',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

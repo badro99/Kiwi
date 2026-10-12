@@ -62,6 +62,11 @@
   }
 
   const getLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
+  /* La devise se lit comme ailleurs dans le tableau de bord : « درهم » sous
+   * l'arabe (inventaire, fiche produit, insights, répartition des paiements),
+   * « MAD » sinon. L'accueil seul écrivait « 0 MAD » sous l'arabe, à côté
+   * d'un inventaire en « 4 500 درهم ». */
+  const curUnit = () => (getLang() === 'ar' ? 'درهم' : 'MAD');
   // Translate a captured-FR string through a { frString: {en,ar} } map.
   // FR locale or an unmapped string falls through to the original — the
   // same graceful pattern used by the [lang]?.[key] || .fr[key] lookups.
@@ -1666,10 +1671,10 @@
     const int = Math.floor(v);
     const cents = Math.round((v - int) * 100);
     const separator = getLang() === 'en' ? '.' : ',';
-    return `${frInt(int)}<span class="cents">${separator}${String(cents).padStart(2,'0')}</span><span class="currency">MAD</span>`;
+    return `${frInt(int)}<span class="cents">${separator}${String(cents).padStart(2,'0')}</span><span class="currency">${curUnit()}</span>`;
   }
-  const fmtNetAmount = v => `${frInt(v)} MAD`;
-  const fmtSettleAmount = v => `${frInt(v)} <span style="font-size:0.42em; opacity: 0.7;">MAD</span>`;
+  const fmtNetAmount = v => `${frInt(v)} ${curUnit()}`;
+  const fmtSettleAmount = v => `${frInt(v)} <span style="font-size:0.42em; opacity: 0.7;">${curUnit()}</span>`;
   const fmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
@@ -2616,7 +2621,7 @@
     if (labelEl) {
       labelEl.textContent = unset
         ? `${labelTxt} · ${GOAL_UNSET[lang] || GOAL_UNSET.fr}`
-        : `${labelTxt} · ${frInt(data.goal)} MAD`;
+        : `${labelTxt} · ${frInt(data.goal)} ${curUnit()}`;
       if (unset) labelEl.dataset.goalUnset = '1';
       else delete labelEl.dataset.goalUnset;
     }
@@ -2763,7 +2768,7 @@
 
   function fmtKpiVal(spec, v) {
     /* A "/ 5320" denominator is data too: group it like the value beside it. */
-    const unit = spec.unit ? `<span class="u">${String(spec.unit).replace(/\d{4,}/g, n => frInt(Number(n)))}</span>` : '';
+    const unit = spec.unit ? `<span class="u">${String(spec.unit === 'MAD' ? curUnit() : spec.unit).replace(/\d{4,}/g, n => frInt(Number(n)))}</span>` : '';
     if (spec.text) return spec.text + unit;
     if (spec.fmt === 'pct2') return (window.KiwiNumber?.number(v, 2) || v.toFixed(2).replace('.', ',')) + unit;
     if (spec.fmt === 'pct1') return (window.KiwiNumber?.number(v, 1) || v.toFixed(1).replace('.', ',')) + unit;
@@ -3843,7 +3848,7 @@
       const vEl = document.querySelector('[data-rev-hero-val]');
       const dEl = document.querySelector('[data-rev-hero-delta]');
       if (vEl) {
-        const fmtV = (v) => `${frInt(v)}<span class="rev-hero-cur">MAD</span>`;
+        const fmtV = (v) => `${frInt(v)}<span class="rev-hero-cur">${curUnit()}</span>`;
         if (animate) animateNumber(vEl, parseAmountFromEl(vEl), val, { duration: 720, format: fmtV });
         else vEl['inner' + 'HTML'] = fmtV(val);
       }
@@ -4030,7 +4035,7 @@
 
       // Content — time label + interpolated value
       tipLabel.textContent = timeLabel.toUpperCase();
-      tipValue.textContent = `${frInt(valueAtCursor)} MAD`;
+      tipValue.textContent = `${frInt(valueAtCursor)} ${curUnit()}`;
       if (showCmpNow && prevAtCursor != null) {
         const delta = fmtDeltaPct(valueAtCursor, prevAtCursor);
         // Green tooltip bg: positive delta = mint, negative = warm red. Label muted mint.
@@ -4634,7 +4639,7 @@
               </div>
             </div>
             <div class="ctx">${tableChip}<span class="who">${who}</span></div>
-            <div class="amt"${r.neg ? ' style="color: var(--danger);"' : ''}>${r.amt}<span class="cur">MAD</span></div>
+            <div class="amt"${r.neg ? ' style="color: var(--danger);"' : ''}>${r.amt}<span class="cur">${curUnit()}</span></div>
             <div class="more" aria-hidden="true"><i data-lucide="chevron-right" width="14" height="14"></i></div>
           </div>
         `;
@@ -5117,7 +5122,7 @@
               `</div>` +
               `<div style="text-align:right;font-family:var(--mono);color:${dead ? 'var(--danger)' : 'var(--ink)'};">` +
               `<div style="font-size:14px;font-weight:600;">${r.stock} ${escTxt(r.unit || '')}</div>` +
-              `${r.suggested ? `<div style="font-size:11px;color:var(--n-500);">+${r.suggested} ${escTxt(r.unit)}${r.cost ? ` · ${frInt(r.suggested * r.cost)} MAD` : ''}</div>` : ''}</div>` +
+              `${r.suggested ? `<div style="font-size:11px;color:var(--n-500);">+${r.suggested} ${escTxt(r.unit)}${r.cost ? ` · ${frInt(r.suggested * r.cost)} ${curUnit()}` : ''}</div>` : ''}</div>` +
               `</div>`;
           }).join('');
         el['inner' + 'HTML'] += `<a href="#" data-action="nav-stock" style="display:block;margin-top:12px;text-align:center;font-size:12.5px;color:var(--atlas);font-weight:600;">${lang === 'en' ? 'Open inventory & purchasing →' : lang === 'ar' ? 'فتح المخزون والمشتريات ←' : 'Ouvrir Stock & approvisionnement →'}</a>`;
@@ -5150,7 +5155,7 @@
      * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
      * propres ventes ; le tilde disparaît, ce total-là est exact. */
     if (ownData() && window.KiwiSales) {
-      totalEl.textContent = `${frInt(realSalesTotals(currentRange).revenue)} MAD`;
+      totalEl.textContent = `${frInt(realSalesTotals(currentRange).revenue)} ${curUnit()}`;
       return;
     }
     const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];

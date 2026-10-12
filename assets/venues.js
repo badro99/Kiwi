@@ -2101,6 +2101,10 @@
    * workspace. Keep the KDS implementation available to the caisse while
    * omitting its shortcut from every dashboard vertical/subtype sidebar. */
   const DASHBOARD_HIDDEN_NAV = new Set(['kds']);
+  /* A nav tag is written in the screen's language. « LIVE » is what French and
+   * English both say; Arabic says « مباشر », as dash.live already does. */
+  const NAV_TAG_TEXT = { LIVE: { ar: 'مباشر' } };
+  const navTag = (tag, lang) => (NAV_TAG_TEXT[tag] && NAV_TAG_TEXT[tag][lang]) || tag;
   function relabelOrdersNav() {
     const span = document.querySelector('[data-nav="transactions"] span[data-i18n="dash.sidebar.orders"]');
     if (!span) return;
@@ -2199,7 +2203,7 @@
               ? `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">${it.icon}</svg>`
               : `<i data-lucide="${it.icon}" aria-hidden="true"></i>`}
             <span${it.i18n ? ` data-i18n="${it.i18n}"` : ''}>${lbl}</span>
-            ${it.tag ? `<span class="tag">${it.tag}</span>` : ''}
+            ${it.tag ? `<span class="tag">${navTag(it.tag, lang)}</span>` : ''}
           </a>
         `;
       }).join('')}
@@ -2317,7 +2321,9 @@
     const termEl = document.querySelector('a[data-nav="terminaux"] .count');
     if (termEl) termEl.textContent = cv ? '0' : '4';
     const confEl = document.querySelector('a[data-nav="conformite"] .tag');
-    if (confEl) confEl.textContent = cv ? '·' : 'AAA';
+    /* A real store has no compliance grade to show: the pill used to hold a lone
+     * « · ». It steps aside instead of saying nothing. */
+    if (confEl) { confEl.textContent = cv ? '' : 'AAA'; confEl.style.display = cv ? 'none' : ''; }
     const staffCountEl = document.querySelector('a[data-nav="equipe"] .count');
     // Sidebar "Équipe" badge → number of staff currently clocked in (present),
     // scoped to the active venue (all 3 venues in fusion). See STAFF below.

@@ -1164,6 +1164,8 @@ section('Whole-project regressions');
     'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
+    'cashier-cancel-test.mjs',
+    'order-controls-test.mjs',
     /* Les écarts de SURFACE : jetons recopiés, gris froids inventés, palette
        étrangère collée, sélecteur d'élément nu qui fuit dans une page qui ne
        l'attendait pas. Cette famille-là ne casse rien — la page rend 200, la
@@ -1356,6 +1358,8 @@ section('Whole-project regressions');
     'kpi-same-slice-test.mjs',
     'date-range-calendar-truth-test.mjs',
     'date-range-selector-truth-test.mjs',
+    'dashboard-currency-ar-test.mjs',
+    'sidebar-language-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     'dashboard-truth-test.mjs',
     'team-truth-test.mjs',

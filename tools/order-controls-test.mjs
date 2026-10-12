@@ -21,8 +21,14 @@ assert(cancel.includes('entitledMerchant'), 'dashboard entitlement check is miss
 assert(cancel.includes('isTillFor'), 'cashier till binding is missing');
 assert(cancel.includes('manager-required'), 'manager role gate is missing');
 assert(cancel.includes('void_ts IS NULL'), 'cancellation must be race-safe');
-assert(!cancel.includes('env.DB.batch'), 'cancellation should not use an unsafe batch update');
-assert(cancel.includes("source === 'cashier' && Date.now()"), 'cashier-only age boundary is missing');
+/* A void is a money write plus an audit write. They go through one D1 batch
+ * (one transaction): the update is guarded by void_ts IS NULL and the audit
+ * row only lands when that update changed exactly one row. Without a batch
+ * the route refuses. Behaviour is proven in cashier-cancel-test.mjs. */
+assert(cancel.includes("error: 'atomic-cancel-unavailable'"), 'cancellation must refuse an adapter without transactions');
+assert((cancel.match(/WHERE changes\(\) = 1/g) || []).length >= 2, 'each audit insert must depend on the guarded void');
+assert(/env\.DB\.batch\(\[update, auditWithCents\]\)/.test(cancel), 'the void and its audit row must commit together');
+assert(cancel.includes("source === 'cashier' && !body.reopen && Date.now()"), 'cashier-only age boundary is missing');
 
 assert(reprint.includes("source: 'cashier'"), 'cashier cancellation source is missing');
 assert(reprint.includes('Code manager'), 'cashier manager PIN copy is missing');
