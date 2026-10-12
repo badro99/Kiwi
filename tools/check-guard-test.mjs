@@ -35,6 +35,11 @@ ok('a call with no timeout gets one and a hung child is killed', () => {
   assert.match(r.stderr, /hang-test\.mjs TIMED OUT after \d+s and was killed/);
 });
 ok('a normal child is untouched', () => {
+  /* Its own guard with a realistic cap: 400 ms is the hang test's budget, and
+     a node cold start under a release gate plus xcodebuild took longer than
+     that, failing build 37 on a child that was never hung. */
+  cp.spawnSync = realSpawnSync;
+  guard.install({ timeoutMs: 30000, log: () => {} });
   const r = cp.spawnSync(process.execPath, [quick], { encoding: 'utf8' });
   assert.equal(r.status, 0);
   assert.match(r.stdout, /fine/);

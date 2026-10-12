@@ -90,4 +90,13 @@ assert.equal(resolveArt('it_x', 'desserts', 'Panacotta'),
   resolveArt('it_x', 'desserts', 'Bonet'),
   'the published panacotta renders as a moulded dessert');
 
-console.log('caisse-product-art-test: 35 controls passed');
+// A dish named after its garnish is still a dish: « citron » once handed the
+// lemon chicken tajine the juice glass, on the till's busiest category.
+assert.equal(resolveArt('m-008', 'tajines', 'Tajine poulet citron'),
+  resolveArt('it_x', 'tajines', 'Tajine poulet'),
+  'a lemon chicken tajine renders as a tajine, not a juice glass');
+assert.notEqual(resolveArt('m-008', 'tajines', 'Tajine poulet citron'),
+  resolveArt('it_x', 'drinks', 'Jus citron'),
+  'the drink rule cannot claim a tajine through its garnish');
+
+console.log('caisse-product-art-test: 37 controls passed');

@@ -204,5 +204,24 @@ for (const fr of ['Annuler et rouvrir la note', 'Confirmer l’annulation', 'Ann
   check(EN[fr] && EN[fr] !== fr && AR[fr], `annulation depuis Réimprimer traduite : « ${fr} »`);
 }
 check(EN['En cours'] === 'In progress', '« En cours » se lit « In progress » (une table n\'est pas « Running »)');
+/* La carte « À emporter » (vrapOrderCard, kiwi-caisse.html) : une commande
+   payée affichait son détail en français sur un téléphone réglé en anglais,
+   et ses boutons de suivi aussi. */
+for (const fr of ['Commande payée', 'Remise au client.', 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.',
+  'Retirer du suivi', 'Remettre au client', 'Marquer prêt', 'Prévenir le client que la commande est prête', 'En attente de paiement',
+  'Reprendre le split', 'Partiel']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `carte à emporter traduite : « ${fr} »`);
+}
+L.set('en');
+check(L.tr('Commande payée · 12/10/2026 17:25:05') === 'Order paid · 12/10/2026 17:25:05', 'l\'en-tête de commande payée se traduit, la date reste');
+check(L.tr('Partiel · reste 120 MAD') === 'Partial · 120 MAD left', 'un paiement partiel se traduit sans toucher au reste dû');
+/* La caisse tablette (iPad) : rail, en-tête du constructeur et chiffres du
+   service restaient en français sur un appareil réglé en anglais. */
+for (const fr of ['· vente au comptoir', 'Commandes à emporter', 'Montant libre', 'Salle', 'Attente', 'catégories']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse tablette traduite : « ${fr} »`);
+}
+check(L.tr('Service depuis 15:35') === 'On shift since 15:35', 'le début de service se traduit, l\'heure reste');
+check(L.tr('Carte 47% · Cash 53%') === 'Card 47% · Cash 53%', 'la répartition carte / espèces se traduit, les pourcentages restent');
+check(L.tr('7 catégories') === '7 categories', 'le compte de catégories se traduit');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

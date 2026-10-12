@@ -198,4 +198,16 @@ await apiBaseAbort();
   check('l’onglet suit Kiwi.activePage, plus la dernière page visitée', /var CLIENT_PAGES = \{ crm:1, retention:1, clients:1 \}/.test(runtime) && !/lastPage/.test(runtime));
 }
 
+/* ── 10. iPad : ce que le tiroir du téléphone stylait seul ──────────────── */
+{
+  const wide = (runtimeCss.match(/@media \(min-width:601px\)\{([\s\S]*?)\n\}/) || [])[1] || '';
+  check('iPad : le titre de page n’est masqué que sur téléphone (plus de bloc vide au-dessus des périodes)',
+    /@media \(max-width:600px\)\{html\.kiwi-native \[data-dr-label\]\{display:none!important\}\}/.test(runtimeCss)
+    && !/^html\.kiwi-native \[data-dr-label\]\{display:none!important\}$/m.test(runtimeCss));
+  check('iPad : la rangée d’actions rapides du téléphone ne double pas les boutons du tableau de bord', /\.kiwi-native-owner-actions\{display:none!important\}/.test(wide));
+  check('iPad : le groupe compte a ses boutons, plus des liens bleus de WebKit', /\.kno-account button\{[^}]*color:inherit;[^}]*appearance:none/.test(wide) && /\.kno-account i\{[^}]*mask:var\(--kno-icon\)/.test(wide));
+  check('iPad : un seul « Se déconnecter », celui du groupe compte qui demande confirmation', /body\.kiwi-native-owner \.merchant-logout\{display:none!important\}/.test(wide));
+  check('iPad : aucun :hover dans le bloc large (il laissait l’écran de verrouillage vide dans WKWebView)', !/:hover/.test(wide.replace(/\/\*[\s\S]*?\*\//g, '')));
+}
+
 console.log(`native-audit-fixes-test: ${controls} controls passed`);

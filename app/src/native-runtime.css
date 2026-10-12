@@ -76,7 +76,27 @@ html.kiwi-native .kiwi-native-account-actions [data-submit]{background:#0B6E4F;c
 html.kiwi-native .kiwi-native-account-actions [data-submit]:disabled{opacity:.45}
 html.kiwi-native .topbar{top:var(--kiwi-safe-top)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 html.kiwi-native .sidebar,html.kiwi-native .drawer-body{overscroll-behavior:contain}
-html.kiwi-native [data-dr-label]{display:none!important}
+/* The phone header carries its own title; on an iPad the dashboard's page
+   title is the only heading the hero has, and hiding it left an empty block. */
+@media (max-width:600px){html.kiwi-native [data-dr-label]{display:none!important}}
+/* iPad and other wide layouts. The quick-action row is the phone's stand-in
+   for controls a wide dashboard already shows in place, and the account group
+   was only ever styled inside the phone drawer: wider than 600px both fell back
+   to bare WebKit buttons, blue links on the sidebar. */
+@media (min-width:601px){
+  html.kiwi-native .kiwi-native-owner-actions{display:none!important}
+  html.kiwi-native body.kiwi-native-owner .merchant-logout{display:none!important}
+  html.kiwi-native .kno-account{display:grid;gap:2px;margin:12px 0 8px;padding:8px 0 0;border-top:1px solid rgba(128,128,128,.22)}
+  html.kiwi-native .kno-account button{display:flex;align-items:center;gap:12px;width:100%;min-height:40px;padding:0 12px;border:0;border-radius:10px;background:none;color:inherit;font:500 14px/1.2 "Inter Tight",sans-serif;text-align:start;-webkit-appearance:none;appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  /* Pressed state only. Any :hover selector here (in :is() or a plain list)
+     left the iPad dashboard lock blank in WKWebView on cold launch; bisected
+     on the simulator 2026-10-12, Chrome does not reproduce it. */
+  html.kiwi-native .kno-account button:active{background:rgba(125,242,176,.08)}
+  html.kiwi-native .kno-account i{width:20px;height:20px;flex:0 0 auto;background:rgba(91,226,178,.74)!important;-webkit-mask:var(--kno-icon) center/contain no-repeat;mask:var(--kno-icon) center/contain no-repeat}
+  html.kiwi-native .kno-account .is-danger{color:#E5484D}
+  html.kiwi-native .kno-account .is-danger i{background:#E5484D!important}
+  html.kiwi-native[dir="rtl"] .kno-account button{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+}
 @media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
   html.kiwi-native{--kiwi-native-tabs:var(--kiwi-host-tab-height,calc(72px + var(--kiwi-safe-bottom)))}
   html.kiwi-native.kiwi-native-ios body.kiwi-native-hosted:not(.native-shell-page){padding-bottom:var(--kiwi-keyboard)!important}
