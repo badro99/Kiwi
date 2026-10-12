@@ -388,8 +388,8 @@
     "sha": "dd47fdc87e59c3f4"
   },
   "assets/i18n.js": {
-    "v": "24",
-    "sha": "098ada18031529cf"
+    "v": "25",
+    "sha": "6e6fc066faa9fb10"
   },
   "assets/identity.js": {
     "v": "9",
@@ -408,8 +408,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "53",
-    "sha": "6db5a990b09c03ce"
+    "v": "54",
+    "sha": "9e241e9ab4262287"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -1032,8 +1032,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "49",
-    "sha": "7363b9113facc925"
+    "v": "50",
+    "sha": "772648345df37fb7"
   },
   "assets/vertical-state.js": {
     "v": "3",

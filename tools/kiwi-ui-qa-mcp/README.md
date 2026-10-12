@@ -35,7 +35,10 @@ is missing or obscured, the ticket test fails—this is the point.
 1. Read a ticket as text with `kiwi-tickets.get_ticket`; view its screenshots
    only when necessary. State the visible starting point and expected result.
 2. Reproduce the problem in a fixture. For hotel UI tickets call
-   `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`;
+   `start_hotel_fixture` (pass `language: 'en'` or `'ar'` to open it in the
+   language a merchant chose earlier; popover rows such as the profile menu
+   and the language picker appear as `div/menuitem` controls in the snapshot);
+   for ticket-board work call `start_tickets_fixture`;
    for Maison caisse, client-directory, restaurant Z/dashboard, employee
    store-clock, or dashboard navigation work call `start_retail_fixture` with
    `maison`, `clients`, `restaurant`, `employee-clock`, or `nav-stability`.

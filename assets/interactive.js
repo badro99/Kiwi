@@ -1679,6 +1679,20 @@ ar: {
     foot.appendChild(shortcut);
   }
 
+  /* Display currencies. kiwiSet:currency keeps the French label it has always
+   * stored (« MAD · Dirham marocain »); only its three-letter code is read
+   * back, so the name follows the screen's language and old values still work. */
+  const CURRENCY_NAMES = {
+    MAD: { fr: 'Dirham marocain', en: 'Moroccan dirham', ar: 'الدرهم المغربي' },
+    EUR: { fr: 'Euro', en: 'Euro', ar: 'اليورو' },
+    USD: { fr: 'Dollar US', en: 'US dollar', ar: 'الدولار الأمريكي' },
+    GBP: { fr: 'Livre sterling', en: 'Pound sterling', ar: 'الجنيه الإسترليني' },
+  };
+  const currencyLabel = (stored) => {
+    const code = String(stored || 'MAD').slice(0, 3).toUpperCase();
+    return CURRENCY_NAMES[code] ? code + ' · ' + tr(CURRENCY_NAMES[code]) : String(stored);
+  };
+
   /* ═══════════════════════ HANDLERS ═══════════════════════ */
   const handlers = {
 
@@ -2180,7 +2194,7 @@ ar: {
                 ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
                 ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
                 ${settingsRow('percent', tr({ fr: 'Pourcentages de remise', en: 'Discount percentages', ar: 'نسب التخفيض' }), escape((window.KiwiDiscountPolicy?.percentages?.(vd?.id) || [5,10,15,20]).map(n => n + ' %').join(' · ')), { action: 'settings-discounts' })}
-                ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
+                ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(currencyLabel(getSet('currency', 'MAD'))), { action: 'settings-currency' })}
               </div>
             </div>
 
@@ -2671,12 +2685,9 @@ ar: {
         setTimeout(() => handlers.settings(), 110);
         toast(tr({ fr: 'Devise mise à jour', en: 'Currency updated', ar: 'تم تحديث العملة' }), { type: 'success', force: true });
       };
-      menu(el, [
-        { label: 'MAD · Dirham marocain', active: cur.startsWith('MAD'), onClick: () => pick('MAD · Dirham marocain') },
-        { label: 'EUR · Euro',            active: cur.startsWith('EUR'), onClick: () => pick('EUR · Euro') },
-        { label: 'USD · Dollar US',       active: cur.startsWith('USD'), onClick: () => pick('USD · Dollar US') },
-        { label: 'GBP · Livre sterling',  active: cur.startsWith('GBP'), onClick: () => pick('GBP · Livre sterling') },
-      ]);
+      menu(el, Object.keys(CURRENCY_NAMES).map((code) => ({
+        label: currencyLabel(code), active: cur.startsWith(code), onClick: () => pick(code + ' · ' + CURRENCY_NAMES[code].fr),
+      })));
     },
 
     /* Les horaires d'ouverture — l'écran structuré, et le seul.
@@ -4727,6 +4738,16 @@ ar: {
      * « Accueil / Réservations » stayed over the dashboard. */
     if (activePage === 'accueil') crumbHome();
   };
+  /* Paramètres is an app page whose copy is written by tr() when it renders,
+   * so nothing in it carries data-i18n. Picking a language from its own
+   * « Langue de l'application » row left the whole page in the old language
+   * until it was reopened. Redraw it in place, at the same scroll position. */
+  window.addEventListener('kiwi:langchange', () => {
+    if (activePage !== 'settings' || !document.body.classList.contains('page-genpage') || !handlers.settings) return;
+    const y = window.scrollY;
+    handlers.settings();
+    window.scrollTo({ top: y });
+  });
 
   /* ─── Expose a tiny API for inline usage if needed ─── */
   const fullpage = (opts) => drawer({ ...opts, fullpage: true });

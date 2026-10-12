@@ -83,7 +83,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=9',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=4',
-  '/assets/i18n.js?v=24',
+  '/assets/i18n.js?v=25',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -91,7 +91,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=53',
+  '/assets/interactive.js?v=54',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',
@@ -101,7 +101,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=49',
+  '/assets/venues.js?v=50',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=6',
   '/assets/trade-workspaces.js?v=9',

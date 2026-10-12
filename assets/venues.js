@@ -349,9 +349,9 @@
         { nav: 'chambres',   label: 'Plan des chambres',      i18n: 'sidebar.hotel.chambres',               icon: ICONS.chambres },
         { nav: 'sejours',    label: 'Réservations & séjours', i18n: 'sidebar.hotel.sejours',                icon: ICONS.sejours },
         { nav: 'menage',     label: 'Ménage',                 i18n: 'sidebar.hotel.menage',                 icon: ICONS.menage },
-        { nav: 'economat',    label: 'Économat',               i18n: '',                                     icon: ICONS.stock },
-        { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',               icon: ICONS.tarifs },
-        { nav: 'points-vente', label: 'Points de vente',     i18n: '',                                     icon: 'store' },
+        { nav: 'economat',   label: 'Économat',               i18n: 'sidebar.hotel.economat',               icon: ICONS.stock },
+        { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',                 icon: ICONS.tarifs },
+        { nav: 'points-vente', label: 'Points de vente',      i18n: 'sidebar.hotel.outlets',                icon: 'store' },
         { nav: 'folios',     label: 'Notes clients · folios', i18n: 'sidebar.hotel.folios',                 icon: ICONS.folios },
         { nav: 'canaux',     label: 'Canaux & OTA',           i18n: 'sidebar.hotel.canaux',                 icon: ICONS.canaux },
         { nav: 'hotelintel', label: 'Intelligence hôtel',     i18n: 'sidebar.hotel.intel',     tag: 'IA',   icon: ICONS.intel },
@@ -2101,8 +2101,9 @@
    * omitting its shortcut from every dashboard vertical/subtype sidebar. */
   const DASHBOARD_HIDDEN_NAV = new Set(['kds']);
   /* A nav tag is written in the screen's language. « LIVE » is what French and
-   * English both say; Arabic says « مباشر », as dash.live already does. */
-  const NAV_TAG_TEXT = { LIVE: { ar: 'مباشر' } };
+   * English both say; Arabic says « مباشر », as dash.live already does. « IA »
+   * is French only: English reads « AI », Arabic « ذكاء اصطناعي ». */
+  const NAV_TAG_TEXT = { LIVE: { ar: 'مباشر' }, IA: { en: 'AI', ar: 'ذكاء اصطناعي' } };
   const navTag = (tag, lang) => (NAV_TAG_TEXT[tag] && NAV_TAG_TEXT[tag][lang]) || tag;
   function relabelOrdersNav() {
     const span = document.querySelector('[data-nav="transactions"] span[data-i18n="dash.sidebar.orders"]');

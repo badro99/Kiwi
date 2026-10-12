@@ -216,6 +216,33 @@ try {
     description: 'Dashboard nav reads Home after English is picked in Settings' });
   if (switched.isError) console.log('ENGLISH:', body(switched), '\nSCREEN:', body(await call('ui_snapshot')));
   ok(!switched.isError, 'picking English from the menu switches the rendered dashboard');
+  /* Paramètres is written by tr() when it renders, so it has to redraw itself:
+     it used to stay French, under an English sidebar, until it was reopened. */
+  const settingsEn = await call('ui_assert', { selector: '.dash-genpage h1', condition: 'text_contains', expected: 'Settings',
+    description: 'Open Settings page redraws in English after picking English on it', timeoutMs: 5000 });
+  if (settingsEn.isError) console.log('SETTINGS EN:', body(settingsEn));
+  ok(!settingsEn.isError, 'open Settings page redraws in English without being reopened');
+  const langRow = await call('ui_assert', { selector: '[data-action="settings-lang"]', condition: 'text_contains', expected: 'App language English',
+    description: 'Settings language row is labelled in English and shows the new choice' });
+  ok(!langRow.isError, 'language row reads App language · English');
+  const currencyEn = await call('ui_assert', { selector: '[data-action="settings-currency"]', condition: 'text_contains', expected: 'MAD · Moroccan dirham',
+    description: 'Display currency names the dirham in English, not Dirham marocain' });
+  ok(!currencyEn.isError, 'display currency reads MAD · Moroccan dirham in English');
+  /* The hotel block under the shared sidebar stayed French: its keys were in
+     no dictionary, and Économat / Points de vente had none at all. */
+  const frontDesk = await call('ui_assert', { selector: 'a[data-nav="reception"]', condition: 'text_contains', expected: 'Front desk',
+    description: 'Hotel sidebar Réception reads Front desk after the live switch to English', timeoutMs: 5000 });
+  if (frontDesk.isError) console.log('FRONT DESK:', body(frontDesk));
+  ok(!frontDesk.isError, 'hotel sidebar Réception reads Front desk without a reload');
+  const storeroom = await call('ui_assert', { selector: 'a[data-nav="economat"]', condition: 'text_contains', expected: 'Storeroom',
+    description: 'Économat, which had no i18n key, reads Storeroom in English' });
+  ok(!storeroom.isError, 'Économat reads Storeroom in English');
+  const outlets = await call('ui_assert', { selector: 'a[data-nav="points-vente"]', condition: 'text_contains', expected: 'Outlets',
+    description: 'Points de vente, which had no i18n key, reads Outlets in English' });
+  ok(!outlets.isError, 'Points de vente reads Outlets in English');
+  const langProof = await call('finish_ui_proof', { ticketId: 999104,
+    expectedOutcome: 'Switching the app language to English in Settings translates Settings and the hotel sidebar section live' });
+  ok(!langProof.isError && /UI proof saved: \//.test(body(langProof)), 'language switch proof saved from the rendered hotel dashboard');
 
   const closed = await call('close_session');
   ok(!closed.isError, 'fixture and Chromium close cleanly');
@@ -227,6 +254,21 @@ try {
   const rtl = await call('ui_assert', { selector: 'html[dir="rtl"] a[data-nav="accueil"]', condition: 'text_contains', expected: 'الرئيسية', timeoutMs: 5000,
     description: 'Seeded Arabic renders the dashboard right to left' });
   ok(!rtl.isError, 'seeded Arabic renders right to left before any click');
+  const receptionAr = await call('ui_assert', { selector: 'a[data-nav="reception"]', condition: 'text_contains', expected: 'مكتب الاستقبال',
+    description: 'Hotel sidebar Réception reads مكتب الاستقبال when the merchant works in Arabic', timeoutMs: 5000 });
+  if (receptionAr.isError) console.log('RECEPTION AR:', body(receptionAr));
+  ok(!receptionAr.isError, 'hotel sidebar Réception reads مكتب الاستقبال in Arabic');
+  const storeroomAr = await call('ui_assert', { selector: 'a[data-nav="economat"]', condition: 'text_contains', expected: 'المخزن',
+    description: 'Économat reads المخزن in Arabic' });
+  ok(!storeroomAr.isError, 'Économat reads المخزن in Arabic');
+  const profileAr = await call('ui_click', { ref: actionRef(body(await call('ui_snapshot')), 'profile-menu') });
+  const profileArScreen = await screenWith(profileAr, s => /^q\d+ div\/menuitem الإعدادات$/m.test(s));
+  const settingsAr = await call('ui_click', { ref: menuItemRef(profileArScreen, 'الإعدادات') });
+  ok(!settingsAr.isError, 'الإعدادات opens from the Arabic profile menu');
+  const currencyAr = await call('ui_assert', { selector: '[data-action="settings-currency"]', condition: 'text_contains', expected: 'الدرهم المغربي',
+    description: 'Display currency names the dirham in Arabic', timeoutMs: 5000 });
+  if (currencyAr.isError) console.log('CURRENCY AR:', body(currencyAr));
+  ok(!currencyAr.isError, 'display currency reads الدرهم المغربي in Arabic');
   const arabicClosed = await call('close_session');
   ok(!arabicClosed.isError, 'Arabic fixture closes cleanly');
   const restaurant = await call('start_retail_fixture', { scenario: 'restaurant' });
