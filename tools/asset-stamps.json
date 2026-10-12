@@ -332,8 +332,8 @@
     "sha": "b30017496f9a5369"
   },
   "assets/escpos.js": {
-    "v": "12",
-    "sha": "5587b57910c99445"
+    "v": "13",
+    "sha": "a6937cc9542ccf6e"
   },
   "assets/features.js": {
     "v": "11",
@@ -928,8 +928,8 @@
     "sha": "66ae233c079d385a"
   },
   "assets/receipt.js": {
-    "v": "8",
-    "sha": "de4b2fd7b7df87d8"
+    "v": "9",
+    "sha": "dd12b1b75a9d5856"
   },
   "assets/report.js": {
     "v": "5",

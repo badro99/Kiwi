@@ -814,7 +814,7 @@
     var paper = doc.paper || '80';
     var rawCols = E.paperCols ? E.paperCols(paper) : 48;
     var cols = (paper === '80' || !paper) ? 44 : rawCols;
-    var b = E.builder().init();
+    var b = E.builder(paper).init();
     var T = doc.T || dict(doc.lang);
     var refund = doc.kind === 'refund';
     var rule = function () { b.line(' ' + new Array(cols - 1).join('-')); };

@@ -47,18 +47,140 @@
     return out;
   }
 
-  function Builder() { this._ = []; }
+  /* ── CE QUE LE CODE PAGE NE PORTE PAS ─────────────────────────────────────
+   * CP1252 n'a pas l'arabe. Un reçu réglé en arabe (print.lang = 'ar'), un plat
+   * nommé « طاجين » ou un client « سعاد » sortaient en « ????? » : l'aperçu à
+   * l'écran était juste, le papier illisible, et en cuisine un bon illisible
+   * envoie un autre plat. Une telle ligne est donc DESSINÉE : le navigateur
+   * met l'arabe en forme (liaisons, sens de lecture), et la ligne part en
+   * image ESC * 33 (bandes de 24 points), la commande que receipt.js a déjà
+   * retenue pour le logo parce que plusieurs imprimantes de comptoir ignorent
+   * GS v 0. La géométrie suit celle du texte : 12 points par colonne en
+   * Police A, × la largeur choisie par size() ; une ligne « libellé ⋯ montant »
+   * garde ses deux colonnes, inversées quand le libellé est en arabe (le
+   * libellé à droite, comme le reçu à l'écran). Une ligne trop large est
+   * resserrée, jamais coupée. Sans canvas (Node, tests), on retombe sur le
+   * texte d'avant : l'encodeur ne lève jamais. */
+  function needsRaster(str) {
+    str = String(str == null ? '' : str);
+    for (var i = 0; i < str.length; i++) {
+      var cc = str.charCodeAt(i);
+      if (cc > 0xFF && CP1252[str[i]] == null) return true;
+    }
+    return false;
+  }
+  /* Le sens d'une ligne : celui de sa première lettre « forte ». × et ÷
+     (U+00D7, U+00F7) sont dans la plage Latin-1 mais ne sont pas des lettres :
+     « 2× طاجين » est une ligne arabe. */
+  var RTL_FIRST = /^[^A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]*[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+  var ARABIC_FONT = '"IBM Plex Sans Arabic", "Noto Sans Arabic", "Geeza Pro", Tahoma, "Segoe UI", sans-serif';
+  function rasterLine(str, st) {
+    if (typeof document === 'undefined' || !document.createElement) return null;
+    var canvas = document.createElement('canvas');
+    var ctx = canvas && canvas.getContext && canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx || !ctx.measureText || !ctx.fillText || !ctx.getImageData) return null;
+    var cw = 12 * st.w, dots = st.dots, band = 24 * st.h;
+    var lead = (/^ */.exec(str) || [''])[0].length;
+    var body = str.replace(/\s+$/, '');
+    var extent = Math.min(dots, body.length * cw);
+    var m = /^ *(\S.*?\S|\S) {2,}(\S.*)$/.exec(body);
+    var segs = m ? [m[1], m[2]] : [body.slice(lead)];
+    var rtl = RTL_FIRST.test(segs[0]);
+    canvas.width = dots; canvas.height = band;
+    /* Une taille par hauteur de police, la même pour toutes les lignes : on la
+       règle sur un texte de référence fixe (pas sur les lettres de la ligne),
+       la plus grande dont ascendantes et points sous la ligne tiennent dans la
+       bande. Sinon « 240 MAD » et « 180 MAD » sortaient en deux tailles. */
+    var font = function (p) { return (st.bold ? '700 ' : '500 ') + p + 'px ' + ARABIC_FONT; };
+    var px = Math.round(26 * st.h), fa = 0, fd = 0;
+    for (; px > 8; px--) {
+      ctx.font = font(px);
+      /* Les extrêmes réels de l'écriture : la hampe et la hamza de « لأ »,
+         la boucle de « ج », la queue de « ق » et la tanwin au-dessus. */
+      var fm = ctx.measureText('لأإجقيٌ240');
+      fa = fm.actualBoundingBoxAscent || px * 0.9; fd = fm.actualBoundingBoxDescent || px * 0.4;
+      if (fa + fd <= band) break;
+    }
+    ctx.font = font(px);
+    var widths = segs.map(function (t) { return ctx.measureText(t).width * st.w; });
+    var room = Math.max(cw, extent - lead * cw);
+    var need = widths.reduce(function (a, b) { return a + b; }, 0) + (segs.length > 1 ? cw : 0);
+    var squeeze = need > room ? room / need : 1;
+    var baseline = Math.round((band - fa - fd) / 2 + fa);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, dots, band);
+    ctx.fillStyle = '#000'; ctx.textBaseline = 'alphabetic';
+    /* Dans une ligne arabe, « 20 MAD », « TEST-0001 » ou « 12/10/2026 »
+       gardent leur propre sens de lecture (isolats LRI … PDI), comme les
+       <bdi> du reçu à l'écran : sans eux « وفّرت 20 MAD » sortait
+       « MAD 20 ». */
+    var isolate = function (t) {
+      return RTL_FIRST.test(t) ? t.replace(/[0-9A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F][0-9A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F.,:\/ +%'-]*[0-9A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F%]|[0-9A-Za-z]/g, function (m) { return '\u2066' + m + '\u2069'; }) : t;
+    };
+    var draw = function (t, x, align) {
+      t = isolate(t);
+      var w = ctx.measureText(t).width * st.w * squeeze;
+      var left = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+      ctx.save();
+      ctx.direction = RTL_FIRST.test(t.replace(/\u2066[^\u2069]*\u2069/g, '')) ? 'rtl' : 'ltr';
+      ctx.textAlign = 'left';
+      ctx.translate(left, 0);
+      ctx.scale(st.w * squeeze, 1);
+      if (ctx.direction === 'rtl') { ctx.textAlign = 'right'; ctx.fillText(t, ctx.measureText(t).width, baseline); }
+      else ctx.fillText(t, 0, baseline);
+      ctx.restore();
+    };
+    var x0 = lead * cw, x1 = extent;
+    if (segs.length > 1) {
+      if (rtl) { draw(segs[0], x1, 'right'); draw(segs[1], x0, 'left'); }
+      else { draw(segs[0], x0, 'left'); draw(segs[1], x1, 'right'); }
+    } else if (st.align === 1) draw(segs[0], dots / 2, 'center');
+    else if (st.align === 2 || rtl) draw(segs[0], st.align === 2 ? dots : dots - x0, 'right');
+    else draw(segs[0], x0, 'left');
+    var px4 = ctx.getImageData(0, 0, dots, band).data;
+    var out = [ESC, 0x61, 0, ESC, 0x33, 24];
+    for (var y0 = 0; y0 < band; y0 += 24) {
+      out.push(ESC, 0x2A, 33, dots & 255, (dots >> 8) & 255);
+      for (var x = 0; x < dots; x++) {
+        for (var slice = 0; slice < 3; slice++) {
+          var bits = 0;
+          for (var bit = 0; bit < 8; bit++) {
+            var y = y0 + slice * 8 + bit;
+            if (y >= band) continue;
+            var i = (y * dots + x) * 4;
+            var lum = 0.299 * px4[i] + 0.587 * px4[i + 1] + 0.114 * px4[i + 2];
+            if (lum < 150) bits |= (0x80 >> bit);
+          }
+          out.push(bits);
+        }
+      }
+      out.push(0x0A);
+    }
+    /* L'interligne d'une ligne de texte (≈ 30 points) : 24 de bande + 6. */
+    out.push(ESC, 0x32, ESC, 0x4A, 6, ESC, 0x61, st.align);
+    return out;
+  }
+
+  function Builder(paper) { this._ = []; this._st = { align: 0, bold: false, w: 1, h: 1, dots: cols(paper) * 12 }; }
   Builder.prototype.raw = function (arr) { for (var i = 0; i < arr.length; i++) this._.push(arr[i] & 0xFF); return this; };
-  Builder.prototype.init = function () { return this.raw([ESC, 0x40]).raw([ESC, 0x74, 16]); }; // reset + CP1252
+  Builder.prototype.init = function () { this._st.align = 0; this._st.bold = false; this._st.w = 1; this._st.h = 1; return this.raw([ESC, 0x40]).raw([ESC, 0x74, 16]); }; // reset + CP1252
   Builder.prototype.text = function (s) { return this.raw(encodeCp1252(s)); };
-  Builder.prototype.line = function (s) { return this.text(s == null ? '' : s).raw([0x0A]); };
+  Builder.prototype.line = function (s) {
+    s = s == null ? '' : String(s);
+    if (needsRaster(s)) {
+      var img = null;
+      try { img = rasterLine(s, this._st); } catch (_) { img = null; }
+      if (img) return this.raw(img);
+    }
+    return this.text(s).raw([0x0A]);
+  };
   Builder.prototype.feed = function (n) { return this.raw([ESC, 0x64, Math.max(0, n | 0)]); };   // ESC d n
   Builder.prototype.feedDots = function (n) { return this.raw([ESC, 0x4A, Math.max(0, Math.min(255, n | 0))]); }; // ESC J n
-  Builder.prototype.align = function (a) { var m = a === 'center' ? 1 : a === 'right' ? 2 : 0; return this.raw([ESC, 0x61, m]); };
-  Builder.prototype.bold = function (on) { return this.raw([ESC, 0x45, on ? 1 : 0]); };
+  Builder.prototype.align = function (a) { var m = a === 'center' ? 1 : a === 'right' ? 2 : 0; this._st.align = m; return this.raw([ESC, 0x61, m]); };
+  Builder.prototype.bold = function (on) { this._st.bold = !!on; return this.raw([ESC, 0x45, on ? 1 : 0]); };
   // GS ! n — width multiplier in high nibble, height in low nibble (1–8 → 0–7).
   Builder.prototype.size = function (w, h) {
     var wm = Math.min(8, Math.max(1, w || 1)) - 1, hm = Math.min(8, Math.max(1, h || 1)) - 1;
+    this._st.w = wm + 1; this._st.h = hm + 1;
     return this.raw([GS, 0x21, (wm << 4) | hm]);
   };
   Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA]); };    // kick pin 2
@@ -171,7 +293,7 @@
   // ── high-level tickets ───────────────────────────────────────────────────
   function receipt(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder().init();
+    var b = new Builder(paper).init();
     b.align('center').bold(true).size(2, 2).line(fit(o.shop || 'Kiwi', paper, 2)).size(1, 1).bold(false);
     if (o.address) b.line(fit(o.address, paper));
     if (o.phone) b.line(fit(o.phone, paper));
@@ -194,7 +316,7 @@
 
   function kitchenTicket(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder().init();
+    var b = new Builder(paper).init();
     b.align('center').bold(true).size(2, 2).line(fit(o.title || 'CUISINE', paper, 2)).size(1, 1).bold(false);
     if (o.table || o.order) b.bold(true).size(2, 2).line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2)).size(1, 1).bold(false);
     if (o.time) b.line(fit(o.time, paper));
@@ -228,7 +350,7 @@
 
   function label(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder().init().align('center');
+    var b = new Builder(paper).init().align('center');
     var compact = o.label && Number(o.label.h) <= 24;
     // A 50 × 20 mm label has room for one dominant identifier and two compact
     // operational lines. Retail labels keep their barcode; pressing labels can
@@ -287,7 +409,7 @@
     var sourceFmt = o.fmt || function (n) { return String(Math.round(+n || 0)); };
     var f = function (n) { return String(sourceFmt(n)).replace(/[\s\u00A0\u202F]+/g, ' '); };
     var money = function (n) { return f(n) + ' MAD'; };
-    var b = new Builder().init();
+    var b = new Builder(paper).init();
 
     /* En-tête — l'identité du commerce et la journée décrite. */
     b.align('center').bold(true).size(2, 2).line(fit(o.shop || (r.store && r.store.name) || 'Kiwi', paper, 2)).size(1, 1);
@@ -474,7 +596,7 @@
 
   function testSlip(o) {
     o = o || {}; var paper = o.paper || '80';
-    var b = new Builder().init();
+    var b = new Builder(paper).init();
     b.align('center').bold(true).size(2, 2).line('Kiwi').size(1, 1).bold(false);
     b.line('Test d’impression').line(rule(paper));
     b.align('left');
@@ -490,7 +612,8 @@
   }
 
   window.KiwiEscPos = {
-    builder: function () { return new Builder(); },
+    builder: function (paper) { return new Builder(paper); },
+    needsRaster: needsRaster,
     encodeCp1252: encodeCp1252,
     toB64: toB64,
     receipt: receipt,
