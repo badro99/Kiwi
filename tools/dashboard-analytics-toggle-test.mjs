@@ -12,7 +12,7 @@ assert.match(badge, /background:\s*var\(--inverse-surface\)/, 'analytics badge u
 assert.match(badge, /color:\s*var\(--inverse-ink\)/, 'analytics badge uses theme-stable contrasting ink');
 assert.match(badge, /border:\s*1px solid var\(--inverse-line\)/, 'analytics badge keeps a visible boundary');
 assert.doesNotMatch(badge, /var\(--(?:atlas|riad|mint)\)/, 'badge contrast cannot collapse when Vexel remaps brand tokens');
-assert.match(glyph, /stroke:\s*currentColor/, 'line icon explicitly inherits the contrasting ink');
+assert.match(glyph, /fill:\s*currentColor/, 'the Material glyph explicitly inherits the contrasting ink');
 assert.match(glyph, /opacity:\s*1/, 'line icon cannot inherit a faded presentation');
 
 assert.match(tokens, /--inverse-surface:\s*#053B2C/, 'light theme supplies a deep inverse surface');

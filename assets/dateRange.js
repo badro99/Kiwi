@@ -3112,7 +3112,26 @@
     // The ratio is already projected from ledger tenders above.
     if (isLiveDemo()) {
       const sim = getSim();
-      if (sim) {
+      if (sim && !(sim.cumTx > 0) && effRange() === 'aujourdhui') {
+        /* Before the demo's first sale of the day (05:00 cut to about 07:00)
+         * there is no basket, no margin and no rate to show, and nothing to
+         * compare with a full yesterday. It said « Marge brute 71,4 % » and
+         * « Taux succès 99,34 % » on zero orders; it now says « · », exactly
+         * what a real merchant's band says when there is nothing to measure. */
+        const dash = { text: '·', unit: '', delta: null };
+        const quiet = (tile) => (tile ? { ...tile, ...dash } : tile);
+        data = {
+          ...data,
+          tx:         data.tx       ? { ...data.tx, value: 0, delta: null } : data.tx,
+          panier:     quiet(data.panier),
+          regulars:   quiet(data.regulars),
+          marge:      quiet(data.marge),
+          profit:     quiet(data.profit),
+          cogs:       quiet(data.cogs),
+          success:    quiet(data.success),
+          tauxRetour: quiet(data.tauxRetour),
+        };
+      } else if (sim) {
         data = {
           ...data,
           tx:         data.tx       ? { ...data.tx,       value: sim.cumTx } : data.tx,

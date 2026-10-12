@@ -1360,6 +1360,7 @@ section('Whole-project regressions');
     'date-range-selector-truth-test.mjs',
     'dashboard-currency-ar-test.mjs',
     'sidebar-language-test.mjs',
+    'demo-morning-band-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     'dashboard-truth-test.mjs',
     'team-truth-test.mjs',
