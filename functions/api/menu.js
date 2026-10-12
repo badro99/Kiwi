@@ -28,6 +28,10 @@
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
+/* The menu promotions rule (happy hour…), shared with the till and the waiter
+ * app: a classic script that registers globalThis.KiwiMenuPromos. */
+import '../../assets/menu-promos.js';
+const MenuPromos = () => globalThis.KiwiMenuPromos;
 import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
 import { merchantZone } from './_business-day.js';
@@ -304,6 +308,12 @@ export function sanitizeMenu(raw, now = Date.now()) {
     return formula ? { id: str(t && t.id, 40), name: str(t && t.name, 80), formula } : null;
   }).filter((t) => t && t.id && t.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
+  /* Les promotions de la carte (assets/menu-promos.js). Additif : une carte
+   * sans promotion garde exactement sa forme d'avant, et chaque écrivain de
+   * la table menus passe par ici, y compris la bascule de disponibilité, qui
+   * réécrit la carte entière et les aurait sinon effacées. */
+  const promos = MenuPromos().sanitize(raw.promos, out);
+  if (promos.length) out.promos = promos;
   return out;
 }
 

@@ -895,6 +895,12 @@
             }).filter(Boolean);
             if (opts.length) o.o = opts;
           }
+          /* La promotion de la carte qui a fixé le prix (assets/menu-promos.js) :
+           * id, nom, et le total au prix normal, pour le rapport. */
+          if (l.promo && l.promo.id) {
+            o.pm = { i: String(l.promo.id).slice(0, 40), n: String(l.promo.name || '').slice(0, 60),
+              f: Math.round(Math.max(0, +l.promo.full || 0) * 100) / 100 };
+          }
           return o;
         });
       }

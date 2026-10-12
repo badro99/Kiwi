@@ -700,6 +700,37 @@
     const m = MI();
     store.update((d) => { d.langs = m ? m.langs({ langs: next }) : ['fr', 'ar', 'en']; return d; });
   }
+  /* ───────────────── promotions (assets/menu-promos.js) ─────────────────
+   * Une promotion est une règle posée sur la carte (« −20 % sur les boissons »).
+   * Elle part avec la carte publiée ; le serveur la revalide
+   * (functions/api/menu.js) et l'applique lui-même à chaque commande
+   * (priceOrder). Ici on ne fait que la ranger, passée au même filtre. */
+  const promosOf = (d) => {
+    const P = window.KiwiMenuPromos;
+    return P ? P.sanitize(d && d.promos, d) : ((d && Array.isArray(d.promos)) ? d.promos : []);
+  };
+  function savePromo(p) {
+    let savedId = '';
+    store.update((d) => {
+      const list = Array.isArray(d.promos) ? d.promos.slice() : [];
+      const id = (p && p.id) || nid(d, 'promo');
+      const i = list.findIndex((x) => x && x.id === id);
+      const next = Object.assign({}, i >= 0 ? list[i] : { createdAt: Date.now() }, p, { id });
+      if (i >= 0) list[i] = next; else list.push(next);
+      d.promos = promosOf(Object.assign({}, d, { promos: list }));
+      if (d.promos.some((x) => x.id === id)) savedId = id;
+      if (!d.promos.length) delete d.promos;
+      return d;
+    });
+    return savedId;
+  }
+  function deletePromo(id) {
+    return store.update((d) => {
+      d.promos = (Array.isArray(d.promos) ? d.promos : []).filter((x) => x && x.id !== id);
+      if (!d.promos.length) delete d.promos;
+      return d;
+    });
+  }
   function deleteItem(id) {
     const next = store.update((d) => {
       d.items = (d.items || []).filter((i) => i.id !== id);
@@ -2276,12 +2307,21 @@
     [((mine && mine.items) || []), ((theirs && theirs.items) || [])].forEach((list) => {
       list.forEach((it) => { if (it && it.id && !seen[it.id]) { seen[it.id] = 1; out.items.push(it); } });
     });
+    /* Les promotions, union par id, cet appareil d'abord, comme les postes. */
+    const prSeen = Object.create(null), promos = [];
+    [((mine && mine.promos) || []), ((theirs && theirs.promos) || [])].forEach((list) => {
+      list.forEach((p) => { if (p && p.id && !prSeen[p.id]) { prSeen[p.id] = 1; promos.push(p); } });
+    });
+    if (promos.length) out.promos = promos;
     return healSeq(out);
   }
 
   const applyingServer = Object.create(null);
   function adoptServerMenu(raw, vid) {
     const data = healSeq({ seq: 0, langs: Array.isArray(raw.langs) ? raw.langs.slice() : ['fr', 'ar', 'en'], cats: raw.cats || [], items: raw.items || [], stations: raw.stations || [], kitchenId: raw.kitchenId || '', opts: raw.opts || [] });
+    /* Les promotions font partie de la carte publiée : la reprendre sans elles
+     * les effacerait du serveur à la publication suivante. */
+    if (Array.isArray(raw.promos) && raw.promos.length) data.promos = raw.promos.slice();
     applyingServer[vid || '·'] = true;
     try { store.set(data, vid); }
     finally { delete applyingServer[vid || '·']; }
@@ -2546,6 +2586,9 @@
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
     addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
+    /* Les promotions de la carte — voir le bloc « promotions » plus haut. */
+    promos: (vid) => promosOf(store.get(vid)),
+    savePromo, deletePromo,
     /* Traductions de la carte — voir le bloc « traductions » plus haut. */
     setI18n, setI18nEntry, clearI18n, setLanguages,
     languages: (vid) => { const m = MI(); return m ? m.langs(store.get(vid)) : ['fr', 'ar', 'en']; },

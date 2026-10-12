@@ -138,6 +138,7 @@ section('Right-panel and takeaway-board display paths');
     fmtMADcents: (n) => `${Number(n).toFixed(2)} MAD`,
     kdsEsc: (v) => String(v),
     lineName: (l) => l.name,
+    promoTag: () => '',
     vrapItemsLine: (o) => o.items.map((i) => `${i.q}× ${i.n}`).join(', '),
     vrapElapsed: () => 'à l’instant',
     ticketNo: (o) => `N°${o.num}`,

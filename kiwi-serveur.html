@@ -2135,6 +2135,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       line-height: 1.35;
     }
     .td-item-optline svg { width: 12px; height: 12px; flex: 0 0 12px; margin-top: 1px; }
+    /* Menu promotion on a line (assets/menu-promos.js): badge, name, and the
+       regular price struck through. */
+    .td-item-promoline { flex: 1 0 100%; font-size: 11.5px; line-height: 1.35; color: var(--forest-ink); font-weight: 500; }
+    .td-item-promoline s { color: var(--ink-4); font-weight: 400; margin-left: 4px; font-feature-settings: "tnum" 1; }
 
     /* Floating "view cart" bar — only when in Menu tab with active order */
     .menu-cart-bar {
@@ -4956,7 +4960,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/platform-kernel.js?v=6" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=14" defer></script>
-<script src="assets/live-link.js?v=60" defer></script>
+<script src="assets/live-link.js?v=61" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=278" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -4975,6 +4979,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
+  <script src="assets/menu-promos.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js?v=2" defer></script>
@@ -5899,6 +5904,23 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        qui reçoit un plat qu'il n'a affecté à rien. Vide tant que la carte n'est
        pas arrivée, et vide en démo (où le tri se fait par catégorie). */
     let svStations = [], svCats = [], svFormulaItems = [], activeSub = null;
+    /* Les promotions de la carte (assets/menu-promos.js). Même démo que la
+       caisse : les desserts, que les autres suites ne facturent jamais. */
+    let svPromos = SV_DEMO ? [{ id: 'demo-gouter', name: "L'heure du goûter", kind: 'percent', value: 15,
+      all: false, cats: ['desserts'], items: [], from: '', to: '', days: [], start: '', end: '', paused: false, createdAt: 1 }] : [];
+    /* Le prix est figé quand l'article entre dans la commande ; le serveur
+       refait le calcul à l'envoi (priceOrder) et c'est lui qui fait foi. */
+    function svPromoPrice(item, unit) {
+      const P = window.KiwiMenuPromos;
+      const hit = (P && svPromos.length) ? P.resolve(svPromos, { itemId: item.id, catId: item.cat }, unit, Date.now()) : null;
+      return hit ? { price: hit.price, promo: hit.promo } : { price: unit, promo: null };
+    }
+    function svPromoKey(stamp) { return (stamp && window.KiwiMenuPromos) ? window.KiwiMenuPromos.stackKey(stamp) : ''; }
+    function svPromoLine(l) {
+      const p = l && l.promo;
+      if (!p) return '';
+      return `<span class="td-item-promoline">${esc(p.badge || '')} · ${esc(p.name || '')}<s>${fmtMAD(p.before * l.qty)}</s></span>`;
+    }
     function svSlug() {
       try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
       /* The employee portal is not paired like a till. Its authenticated
@@ -5974,6 +5996,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       });
       itemOptions = attach;
       catLabels = labels; catOrder = order; menuItems = items;
+      try { svPromos = window.KiwiMenuPromos ? window.KiwiMenuPromos.sanitize(d.promos, d) : []; } catch (_) { svPromos = []; }
       /* L'index libellé → traductions : KiwiMenuI18n.t() retrouve une catégorie,
          une sous-catégorie ou une option par son libellé canonique. */
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
@@ -7252,6 +7275,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           orderId: order.id,
           id: line.id || '', name: line.name || 'Article',
           price: Math.max(0, Number(line.unitPrice) || 0),
+          ...(line.promo && line.promo.id ? { promo: line.promo } : {}),
           qty: Math.max(1, Number(line.qty) || 1),
           sentQty: Math.max(1, Number(line.qty) || 1),
           note: line.note || '',
@@ -8504,7 +8528,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 ${stepper}
                 <span class="td-item-name">${displayName}</span>
                 ${displayPrice}
-                ${optLine}
+                ${optLine}${svPromoLine(l)}
                 <input class="td-item-note${noteTxt ? ' has-note' : ''}" data-note-uid="${l.uid}"
                   placeholder="Note cuisine, ex. bien chaud, sans oignon" aria-label="Note cuisine, ${esc(l.name)}" />
               </div>
@@ -8516,7 +8540,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 <span class="td-item-name">${displayName}</span>
                 ${displayPrice}
                 ${!isPart && l.sentQty > 0 ? `<button type="button" class="td-qty-btn minus" data-qty="dec" aria-label="Annuler un ${esc(l.name)}" ${l.voidPending ? 'disabled title="En attente de la cuisine"' : ''}>−</button>` : ''}
-                ${optLine}
+                ${optLine}${svPromoLine(l)}
                 ${noteTxt ? `<span class="td-item-noteline">Note cuisine · ${esc(noteTxt)}</span>` : ''}
               </div>
             `;
@@ -8637,7 +8661,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
           <span class="td-item-name">${esc(svLineName(l))}</span>
           <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
-          ${optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : ''}
+          ${optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : ''}${svPromoLine(l)}
         </div>`;
       }).join('');
 
@@ -9689,9 +9713,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
          queue reconciliation replaces those rows, so the added quantity would
          disappear or be re-counted. New taps live in an explicit local draft
          until their own canonical ticket returns from /api/order/queue. */
-      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim());
+      const priced = svPromoPrice(item, item.price);
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim()
+        && svPromoKey(l.promo) === svPromoKey(priced.promo));
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, basePrice: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true });
+      else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: itemId, name: item.name, price: priced.price, basePrice: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true },
+        priced.promo ? { promo: priced.promo } : null));
       markDirty(tableId);
       const card = document.querySelector(`.menu-item[data-menu-id="${itemId}"]`);
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
@@ -9768,11 +9795,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Push a configured line (stacking identical configs that have no manual note). */
     function addConfiguredLine(tableId, item, opts) {
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
-      const price = item.price + optsExtra(opts);
+      const priced = svPromoPrice(item, item.price + optsExtra(opts));
+      const price = priced.price;
       const sig = optsSig(opts);
-      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === item.id && !(l.note || '').trim() && (l.optsSig || '') === sig);
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === item.id && !(l.note || '').trim() && (l.optsSig || '') === sig
+        && svPromoKey(l.promo) === svPromoKey(priced.promo));
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, sentQty: 0, note: '', opts, optsSig: sig, sourceLocal: true });
+      else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, sentQty: 0, note: '', opts, optsSig: sig, sourceLocal: true },
+        priced.promo ? { promo: priced.promo } : null));
       markDirty(tableId);
       const card = Array.from(document.querySelectorAll('.menu-item'))
         .find((node) => node.dataset.menuId === String(item.id));

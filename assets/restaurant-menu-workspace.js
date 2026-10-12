@@ -30,6 +30,7 @@
       tabAlerts: '86 Alerts',
       tabNfc: 'NFC Tags',
       tabCaisse: 'Till settings',
+      tabPromos: 'Promotions',
       caisseTitle: 'Till settings',
       caisseSub: 'Delivery, quote terms or cake sizes: what the menu does not say, read by your till.',
       scanMenu: 'Scan a menu',
@@ -553,6 +554,7 @@
       tabAlerts: 'تنبيهات 86',
       tabNfc: 'رموز NFC',
       tabCaisse: 'إعدادات الصندوق',
+      tabPromos: 'العروض',
       caisseTitle: 'إعدادات الصندوق',
       caisseSub: 'التوصيل أو شروط العرض أو أحجام الكعك: ما لا تقوله القائمة، يقرؤه صندوقك.',
       scanMenu: 'مسح القائمة',
@@ -1073,6 +1075,7 @@
       tabAlerts: 'Alertes 86',
       tabNfc: 'Tags NFC',
       tabCaisse: 'Réglages caisse',
+      tabPromos: 'Promotions',
       caisseTitle: 'Réglages caisse',
       caisseSub: 'Livraison, conditions de devis ou formats de gâteau : ce que la carte ne dit pas, lu par votre caisse.',
       scanMenu: 'Scanner un menu',
@@ -1604,7 +1607,7 @@
     return text;
   }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
-  const icons={caisse:'calculator',menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',leaf:'leaf',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
+  const icons={caisse:'calculator',menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',leaf:'leaf',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',promo:'badge-percent',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
   const catalogText=(key,fr)=>window.KiwiCatalogUI?.text(key,fr)||fr;
   const catalogLabel=(key,fr)=>window.KiwiCatalogUI?.label(key,fr)||esc(fr);
   const catalogIcon=(name)=>`<img class="catalog-icon" draggable="false" src="assets/icons/material/${name}.svg" alt="" aria-hidden="true"/>`;
@@ -1612,9 +1615,9 @@
   const pickerSearchIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
   const pickerChevronIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
-  const TAB_ICONS={menu:'restaurant',i18n:'translate',stations:'soup_kitchen',recipes:'menu_book',nutrition:'eco',performance:'bar_chart',hours:'schedule',alerts:'warning',nfc:'nfc',caisse:'point_of_sale'};
+  const TAB_ICONS={menu:'restaurant',i18n:'translate',stations:'soup_kitchen',recipes:'menu_book',nutrition:'eco',performance:'bar_chart',hours:'schedule',alerts:'warning',nfc:'nfc',caisse:'point_of_sale',promos:'sell'};
   function tabList(){
-    return [['menu',ui('tabMenu')],['i18n',ui('tabI18n')],['stations',ui('tabStations')],['recipes',ui('tabRecipes')],['nutrition',ui('tabNutrition')],['alerts',ui('tabAlerts')],['nfc',ui('tabNfc')]].concat(caisseOn()?[['caisse',ui('tabCaisse')]]:[]);
+    return [['menu',ui('tabMenu')],['i18n',ui('tabI18n')],['stations',ui('tabStations')],['recipes',ui('tabRecipes')],['nutrition',ui('tabNutrition')]].concat(promosOn()?[['promos',ui('tabPromos')]]:[]).concat([['alerts',ui('tabAlerts')],['nfc',ui('tabNfc')]]).concat(caisseOn()?[['caisse',ui('tabCaisse')]]:[]);
   }
   /* #0149 · Nine tabs do not fit a phone. A sideways strip hides most of them
      and moves under the thumb, so on a phone one button names the open tab
@@ -1638,9 +1641,10 @@
       ['stations', ui('tabStations'), 'station'],
       ['recipes', ui('tabRecipes'), 'book'],
       ['nutrition', ui('tabNutrition'), 'leaf'],
+    ].concat(promosOn()?[['promos', ui('tabPromos'), 'promo']]:[]).concat([
       ['alerts', ui('tabAlerts'), 'alert'],
       ['nfc', ui('tabNfc'), 'tag']
-    ].concat(caisseOn()?[['caisse', ui('tabCaisse'), 'caisse']]:[]).map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');
+    ]).concat(caisseOn()?[['caisse', ui('tabCaisse'), 'caisse']]:[]).map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');
   }
   let readyTimer=0,readyTries=0;
   function show(forceRestaurantRoute=false){
@@ -1683,8 +1687,9 @@
     });
     if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));
     if(tab==='caisse')window.KiwiFoodTradeSettings?.mount?.($('[data-rmw-caisse]',root));
+    if(tab==='promos')window.KiwiMenuPromosPanel?.mount?.($('[data-rmw-promos]',root));
   }
-  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,nutrition:nutritionPanel,alerts:alertsPanel,nfc:nfcPanel,caisse:caissePanel}[tab]||menuPanel)();}
+  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,nutrition:nutritionPanel,alerts:alertsPanel,nfc:nfcPanel,caisse:caissePanel,promos:promosPanel}[tab]||menuPanel)();}
   /* Performance et Heures de pointe vivent désormais dans « Analyse du menu »
      (finance.js) : Menu & modificateurs garde la configuration de la carte.
      Les panneaux restent ici, inchangés, et la page d'analyse les rend par
@@ -2279,6 +2284,10 @@
   /* Réglages de caisse des métiers de bouche (pizzeria, traiteur, boulangerie) :
      l'onglet n'existe que là, et seulement en vrai (assets/food-trade-settings.js). */
   const caisseOn=()=>!!window.KiwiFoodTradeSettings?.enabled?.();
+  /* Promotions de la carte (assets/menu-promos-dashboard.js) : la règle, son
+     éditeur et le prix appliqué par la caisse, l'appli Serveur et le serveur. */
+  const promosOn=()=>!!window.KiwiMenuPromosPanel?.enabled?.();
+  function promosPanel(){return `<div data-rmw-promos>${window.KiwiMenuPromosPanel?.html?.()||''}</div>`;}
   function caissePanel(){
     return `<section class="mi-section"><div class="mi-title">${esc(ui('caisseTitle'))}</div><div class="mi-sub">${esc(ui('caisseSub'))}</div><div data-rmw-caisse></div></section>`;
   }

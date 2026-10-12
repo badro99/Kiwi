@@ -3224,6 +3224,10 @@
        une précision sur la ligne, pas une deuxième ligne. */
     .rp-item-opts { display: block; font-style: normal; font-size: 11.5px; line-height: 1.35;
       color: var(--n-500); margin-top: 2px; }
+    /* Menu promotion on a line (assets/menu-promos.js): its badge and name in
+       the discount ink, and the regular price struck through beside them. */
+    .rp-item-promo { display: block; font-size: 11.5px; line-height: 1.35; color: var(--forest); font-weight: 500; }
+    .rp-item-promo s { color: var(--ink-3); font-weight: 400; margin-left: 4px; }
     .cloture-card {
       width: 520px; max-width: calc(100vw - 64px);
       max-height: calc(100vh - 64px); overflow-y: auto;
@@ -5614,7 +5618,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
   <script src="assets/caisse-pwa.js?v=564" defer></script>
-  <script src="assets/live-link.js?v=60" defer></script>
+  <script src="assets/live-link.js?v=61" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5648,6 +5652,7 @@
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
+  <script src="assets/menu-promos.js?v=1" defer></script>
   <script src="assets/vertical-state.js?v=3" defer></script>
   <script src="assets/image-proof.js?v=1" defer></script>
   <script src="assets/operational-print.js?v=4" defer></script>
@@ -7570,7 +7575,7 @@
           price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
           orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
           kind: l.kind, formulaUid: l.formulaUid,
-          formulaName: l.formulaName, slotLabel: l.slotLabel }));
+          formulaName: l.formulaName, slotLabel: l.slotLabel, promo: l.promo || null }));
       }
       // A legacy transfer can still leave an intact generated bill beside an
       // empty live cache; preserve it only in that exact demo-only case.
@@ -8835,7 +8840,7 @@
         <div class="rp-item">
           <span class="rp-item-qty">${l.qty}×${l.sent && l.kind !== 'formula-part' && l.uid
             ? `<button type="button" class="qty-btn" data-table-void="${kdsEsc(l.uid)}" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>` : ''}</span>
-          <span class="rp-item-name">${lineName(l)}</span>
+          <span class="rp-item-name">${lineName(l)}${promoTag(l)}</span>
           <span class="rp-item-price mono">${fmtMAD(l.total)}</span>
           ${l.note && l.note.trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
         </div>
@@ -9216,7 +9221,12 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], formulaItems: [], kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], formulaItems: [], kdsReady: false,
+      /* Les promotions de la carte (assets/menu-promos.js), posées au bureau.
+         La démo en montre une sur les desserts, que les autres suites ne
+         facturent jamais : leurs totaux de démo ne bougent pas. */
+      promos: IS_DEMO ? [{ id: 'demo-gouter', name: "L'heure du goûter", kind: 'percent', value: 15,
+        all: false, cats: ['desserts'], items: [], from: '', to: '', days: [], start: '', end: '', paused: false, createdAt: 1 }] : [] };
     /* Un article « réservé aux formules » n'est pas dans menuItems (la grille ne
        vend que l'individuel) mais une ligne de formule le porte quand même : son
        poste cuisine, sa catégorie et sa réouverture se cherchent dans la carte
@@ -9289,6 +9299,7 @@
          faire disparaître laissait le serveur chercher un plat qu'il croyait
          encore au menu, et le client en commander un qui n'existe plus. */
       carteState.soldOut = allItems.filter((it) => it.avail === false && !it.formulaOnly && !it.archived);
+      try { carteState.promos = window.KiwiMenuPromos ? window.KiwiMenuPromos.sanitize(d.promos, d) : []; } catch (_) { carteState.promos = []; }
       carteState.catI18n = catI18n;
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats: cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (loose) {
@@ -9860,6 +9871,26 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'success' } })); } catch (_) {}
     }
 
+    /* Promotions de la carte · le prix est FIGÉ quand l'article entre dans la
+       note, comme sur un ticket papier : un thé commandé à 18 h 55 garde son
+       prix d'happy hour même payé à 19 h 10. Le serveur refait le même calcul
+       à l'envoi en cuisine (priceOrder) ; c'est lui qui fait foi. */
+    function promoPrice(item, unit) {
+      const P = window.KiwiMenuPromos;
+      const hit = (P && carteState.promos && carteState.promos.length)
+        ? P.resolve(carteState.promos, { itemId: item.id, catId: item.cat }, unit, Date.now()) : null;
+      return hit ? { price: hit.price, promo: hit.promo } : { price: unit, promo: null };
+    }
+    /* Deux unités à deux prix différents ne s'empilent jamais sur une ligne. */
+    function promoKey(stamp) {
+      return (stamp && window.KiwiMenuPromos) ? window.KiwiMenuPromos.stackKey(stamp) : '';
+    }
+    function promoTag(l) {
+      const p = l && l.promo;
+      if (!p) return '';
+      return `<span class="rp-item-promo">${kdsEsc(p.badge || '')} · ${kdsEsc(p.name || '')}<s class="mono">${fmtMAD(p.before * l.qty)}</s></span>`;
+    }
+
     function pushCartLine(item, opts) {
       nativeHapticLight();
       try { window.KiwiHardware && window.KiwiHardware.warmPrinter && window.KiwiHardware.warmPrinter(); } catch (_) {}
@@ -9869,10 +9900,13 @@
          deux cafés, l'un au lait végétal et l'autre nature, sont deux lignes.
          Les empiler enverrait un seul café en cuisine, et le second client
          attendrait une boisson que personne n'a commencée. */
-      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && (c.optSig || '') === sig);
+      const priced = promoPrice(item, item.price + extra);
+      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && (c.optSig || '') === sig
+        && promoKey(c.promo) === promoKey(priced.promo));
       if (line) line.qty++;
-      else cart.push({ uid: newLineUid(), id: item.id, name: item.name, price: item.price + extra,
-                       qty: 1, note: '', opts: (opts || []).slice(), optSig: sig });
+      else cart.push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price: priced.price,
+                       qty: 1, note: '', opts: (opts || []).slice(), optSig: sig },
+                       priced.promo ? { promo: priced.promo } : null));
 
       // Brief pop animation on the card
       const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
@@ -10290,7 +10324,7 @@
             <span class="qty-num mono">${l.qty}</span>
             <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
           </div>`}
-          <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+          <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
           <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
           <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
             value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
@@ -10998,6 +11032,7 @@
           baseName: line.baseName || line.name, qty,
           total, cat: lineCat(line.id || line.itemId, line.name),
           kind: line.kind || '', formulaUid: line.formulaUid || '',
+          promo: line.promo || null,
         };
         if (line.kind === 'formula') {
           const parts = source.filter(part => part.kind === 'formula-part'
@@ -12328,11 +12363,13 @@
          préparé · la panne la plus coûteuse qu'un ajout puisse produire.
          Deux choix différents restent également deux lignes : salade + harissa
          ne doit jamais se confondre avec sans salade + sauce blanche. */
+      const priced = promoPrice(item, item.price + extra);
       const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
-        && !(l.note || '').trim() && (l.optSig || '') === sig);
+        && !(l.note || '').trim() && (l.optSig || '') === sig && promoKey(l.promo) === promoKey(priced.promo));
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name,
-        price: item.price + extra, qty: 1, note: '', opts: (opts || []).slice(), optSig: sig });
+      else tableOrders[tableId].push(Object.assign({ uid: newLineUid(), id: item.id, name: item.name,
+        price: priced.price, qty: 1, note: '', opts: (opts || []).slice(), optSig: sig },
+        priced.promo ? { promo: priced.promo } : null));
       startTableTimer(tableId);
       // Pop animation on card
       const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
@@ -12445,7 +12482,7 @@
               <button type="button" class="qty-btn" data-cart-action="dec" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>
               <span class="qty-num mono">${l.qty}</span>
             </div>`}
-            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <span class="rp-sent-mark">${KDS_SVG.check}${l.orderProPending ? 'OrderPro · à accepter' : 'En cuisine'}</span>
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
@@ -12456,7 +12493,7 @@
               <span class="qty-num mono">${l.qty}</span>
               <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
             </div>`}
-            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
               value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
@@ -13043,7 +13080,7 @@
       let lines, covers, sourceLabel;
       if (isVrap) {
         lines = cart.map(c => ({ name: lineLabel(c), baseName: c.baseName || c.name,
-          itemId: c.id || '', qty: c.qty, total: c.price * c.qty }));
+          itemId: c.id || '', qty: c.qty, total: c.price * c.qty, promo: c.promo || null }));
         covers = 2;
         sourceLabel = vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter';
       } else {
@@ -14463,7 +14500,12 @@
             },
             l.itemId ? { itemId: l.itemId } : null,
             l.kind ? { kind: l.kind } : null,
-            l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null);
+            l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null,
+            /* La promotion de la carte qui a fixé ce prix : son id, son nom et
+               ce que la ligne aurait coûté sans elle (le rapport compte la
+               différence). */
+            (l.promo && l.promo.id) ? { promo: { id: String(l.promo.id), name: String(l.promo.name || ''),
+              full: money((+l.promo.before || 0) * (+l.qty || 0)) } } : null);
           const frozenCost = frozenUnitCost(l);
           if (frozenCost != null) saved.unitCost = frozenCost;
           if (Array.isArray(l.formulaChoices)) {
@@ -21650,6 +21692,9 @@
           uid: newLineUid(), canonicalUid: l.uid || l.id || '', canonicalOrderId: orderId,
           id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
+          /* Le prix vient du serveur, déjà remisé ; son cachet de promotion
+             l'accompagne pour que la note dise pourquoi. */
+          ...(l.promo && l.promo.id ? { promo: l.promo } : {}),
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
           options: l.options || '', visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
           station: l.station || (menuHit && menuHit.station) || '',

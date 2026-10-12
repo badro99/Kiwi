@@ -170,7 +170,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=60',
+  '/assets/live-link.js?v=61',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -235,6 +235,7 @@ var SHELL = [
   '/assets/caisse-lang.js?v=26',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
+  '/assets/menu-promos.js?v=1',
   '/assets/retail-balances.js?v=4',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
@@ -254,7 +255,7 @@ var SHELL = [
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=20',
   '/assets/customer-retention.js?v=8',
-  '/assets/menu-catalog.js?v=28',
+  '/assets/menu-catalog.js?v=29',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
@@ -266,7 +267,8 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=305',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=111',
+  '/assets/restaurant-menu-workspace.js?v=112',
+  '/assets/menu-promos-dashboard.js?v=1',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

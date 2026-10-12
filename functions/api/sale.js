@@ -476,6 +476,16 @@ export async function onRequestPost({ request, env }) {
           }).filter(Boolean);
           if (options.length) o.o = options;
         }
+        /* The menu promotion that set this line's price (assets/menu-promos.js):
+         * its id, its name as shown that day, and what the line would have
+         * cost at the regular price. Reporting only; the amount stays the
+         * line total above. */
+        const rawPromo = l && (l.pm ?? l.promo);
+        if (rawPromo && typeof rawPromo === 'object') {
+          const pi = String(rawPromo.i ?? rawPromo.id ?? '').slice(0, 40);
+          const full = Math.round(Math.max(0, Math.min(100000000, Number(rawPromo.f ?? rawPromo.full) || 0)) * 100) / 100;
+          if (pi && full >= o.t) o.pm = { i: pi, n: String(rawPromo.n ?? rawPromo.name ?? '').slice(0, 60), f: full };
+        }
         return o;
       }).filter((l) => l.q > 0);
       if (clean.length) {

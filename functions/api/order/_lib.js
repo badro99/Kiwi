@@ -10,6 +10,11 @@
 // Le préfixe « _ » exclut ce fichier du routage Pages : ce n'est pas une URL,
 // c'est la bibliothèque des trois autres (même convention que functions/auth/_lib.js).
 
+/* Menu promotions (happy hour…): the same rule the till and the waiter app
+ * show, applied here with the server's clock. A device never sets a price. */
+import '../../../assets/menu-promos.js';
+const MenuPromos = () => globalThis.KiwiMenuPromos;
+
 /* ── Le jour d'ouverture ───────────────────────────────────────────────────
  * Les limites de file repartent à 1 chaque jour. Le Maroc est à UTC+1 toute
  * l'année, donc la frontière se calcule à +1h : une commande de 00h30
@@ -228,7 +233,10 @@ const price2 = (v) => {
   return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0;
 };
 
-export async function priceOrder(env, merchant, rawLines) {
+export async function priceOrder(env, merchant, rawLines, opts = {}) {
+  /* The moment the order is priced: a promotion is frozen on the line as of
+   * now, like a paper ticket. Tests pass their own clock. */
+  const now = Number.isFinite(opts && opts.now) ? opts.now : Date.now();
   let menuRow = null;
   try {
     menuRow = await env.DB.prepare(
@@ -239,6 +247,7 @@ export async function priceOrder(env, merchant, rawLines) {
   let index = null;
   let optionIndex = new Map();
   let menuRev = null;
+  let promos = [];
   if (menuRow && menuRow.data) {
     try {
       const parsed = JSON.parse(menuRow.data);
@@ -321,9 +330,13 @@ export async function priceOrder(env, merchant, rawLines) {
               })).filter((slot) => slot.id && slot.choices.size),
             } : null,
             station: categoryStations.get(String(it.catId || '')) || fallbackStation,
+            catId: String(it.catId || ''),
           });
         }
         menuRev = menuRow.updated_ts || null;
+        /* Re-sanitised on read: a row written before promotions existed has
+         * none, and a promotion naming a deleted category simply drops out. */
+        try { promos = MenuPromos().sanitize(parsed && parsed.promos, parsed); } catch (_) { promos = []; }
       } else {
         /* La forme BOUTIQUE. `priceMAD` au lieu de `price`, et la disponibilité
          * vient du stock : un article dont toutes les déclinaisons sont à zéro
@@ -536,9 +549,19 @@ export async function priceOrder(env, merchant, rawLines) {
       options = labels.join(' · ').slice(0, 200);
     }
     const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;
-    const unitPrice = kind === 'formula-part' ? 0 : price2(ref.price + optionExtra + formulaExtra);
+    let unitPrice = kind === 'formula-part' ? 0 : price2(ref.price + optionExtra + formulaExtra);
+    /* A running promotion lowers the unit price and leaves its stamp on the
+     * line ({ id, name, badge, before }): the receipt names it and the report
+     * can count what it cost. Composed menus and their parts are never
+     * discounted (assets/menu-promos.js). No promotion: nothing changes. */
+    let promo = null;
+    if (promos.length) {
+      const hit = MenuPromos().resolve(promos, { itemId: id, catId: ref.catId, kind }, unitPrice, now);
+      if (hit) { unitPrice = hit.price; promo = hit.promo; }
+    }
     const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
                    station: ref.station || '' };
+    if (promo) line.promo = promo;
     if (l && l.uid) line.uid = String(l.uid).slice(0, 60);
     if (kind) line.kind = kind;
     if (formulaUid) line.formulaUid = formulaUid;

@@ -570,7 +570,10 @@ ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOp
 ok(/function addToTableOrder\(tableId, itemId\)[\s\S]{0,260}itemOptGroups\(item\)[\s\S]{0,600}openOptSheet\(item, groups,[\s\S]{0,100}pushTableOrderLine/.test(caisseSrc),
   'la prise de commande à table ouvre la même feuille d\'options que la vente à emporter');
 ok(/const line = tableOrders\[tableId\]\.find\(l => l\.id === item\.id[\s\S]{0,180}\(l\.optSig \|\| ''\) === sig/.test(caisseSrc)
-  && /price: item\.price \+ extra, qty: 1, note: '', opts: \(opts \|\| \[\]\)\.slice\(\), optSig: sig/.test(caisseSrc),
+  /* Le prix de la ligne inclut ses suppléments, puis la promotion de la carte
+     s'il y en a une (assets/menu-promos.js) : promoPrice(item, prix + suppléments). */
+  && /const priced = promoPrice\(item, item\.price \+ extra\);/.test(caisseSrc)
+  && /price: priced\.price, qty: 1, note: '', opts: \(opts \|\| \[\]\)\.slice\(\), optSig: sig/.test(caisseSrc),
   'une table conserve chaque combinaison d\'options sur une ligne distincte et tarifée');
 ok(/name: lineLabel\(l\)/.test(caisseSrc),
   'les options de la table restent lisibles sur l\'addition et le reçu');

@@ -1437,6 +1437,12 @@ section('Whole-project regressions');
        l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
        captures comparées à leur référence. */
     'browser-trace-test.mjs',
+    /* Promotions de la carte : la règle (assets/menu-promos.js), le serveur
+       qui l'applique dans priceOrder, puis la caisse, Serveur et l'onglet
+       « Promotions » du tableau de bord, en vrais clics sur la démo. */
+    'menu-promos-test.mjs',
+    'menu-promos-server-test.mjs',
+    'menu-promos-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page
