@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
@@ -41,6 +41,7 @@
       --line:         #E5E5E5;
       --line-soft:    #EEEEEE;
 
+      --arabic: "IBM Plex Sans Arabic", "Inter Tight", -apple-system, system-ui, sans-serif;
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
@@ -212,6 +213,23 @@ em, i, cite, dfn, var { font-style: normal; }
       text-transform: uppercase;
       color: var(--ink-4);
     }
+
+
+    /* ---------- Language switch (FR / EN / AR) ---------- */
+    .lang-switch { display: inline-flex; gap: 6px; margin-top: 22px; }
+    .lang-switch button {
+      min-height: 44px; padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink-2);
+      font-size: 14px; font-weight: 600;
+    }
+    .lang-switch button[aria-pressed="true"] {
+      background: var(--ink); color: var(--paper-cream); border-color: var(--ink);
+    }
+    .lang-switch button:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+    [dir="rtl"].mission, [dir="rtl"].app-canvas { font-family: var(--arabic); }
 
     /* =========================================================
        iPhone 17 Pro frame
@@ -860,7 +878,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-weight: 500;
       color: var(--ink);
     }
-    .cart-pay {
+    .cart-send {
       margin-top: 14px;
       width: 100%;
       padding: 15px 18px;
@@ -876,11 +894,12 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 8px;
       transition: transform 200ms ease;
     }
-    .cart-pay:hover { transform: translateY(-1px); }
-    .cart-pay:disabled { opacity: 0.45; pointer-events: none; }
-    .cart-pay svg { width: 16px; height: 16px; }
-    .cart-pay.is-loading .label { opacity: 0; }
-    .cart-pay.is-loading::after {
+    .cart-note { margin: 0 0 10px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); text-align: center; }
+    .cart-send:hover { transform: translateY(-1px); }
+    .cart-send:disabled { opacity: 0.45; pointer-events: none; }
+    .cart-send svg { width: 16px; height: 16px; }
+    .cart-send.is-loading .label { opacity: 0; }
+    .cart-send.is-loading::after {
       content: "";
       position: absolute;
       width: 18px; height: 18px;
@@ -889,14 +908,14 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 50%;
       animation: cart-spin 0.7s linear infinite;
     }
-    .cart-pay {
+    .cart-send {
       position: relative;
       overflow: hidden;
     }
     @keyframes cart-spin { to { transform: rotate(360deg); } }
 
     /* Payment success overlay */
-    .pay-success {
+    .order-sent {
       position: absolute;
       inset: 0;
       z-index: 240;
@@ -911,8 +930,8 @@ em, i, cite, dfn, var { font-style: normal; }
       pointer-events: none;
       transition: opacity 380ms ease;
     }
-    .pay-success.is-visible { opacity: 1; pointer-events: auto; }
-    .pay-success .check {
+    .order-sent.is-visible { opacity: 1; pointer-events: auto; }
+    .order-sent .check {
       width: 72px; height: 72px;
       border-radius: 999px;
       background: rgba(255,255,255,0.18);
@@ -922,21 +941,21 @@ em, i, cite, dfn, var { font-style: normal; }
       transform: scale(0.6);
       transition: transform 460ms cubic-bezier(0.34, 1.45, 0.5, 1);
     }
-    .pay-success.is-visible .check { transform: scale(1); }
-    .pay-success .check svg { width: 36px; height: 36px; stroke-width: 3; }
-    .pay-success h2 {
+    .order-sent.is-visible .check { transform: scale(1); }
+    .order-sent .check svg { width: 36px; height: 36px; stroke-width: 3; }
+    .order-sent h2 {
       margin: 0;
       font-size: 26px;
       font-weight: 600;
       letter-spacing: -0.02em;
       text-align: center;
     }
-    .pay-success h2 em {
+    .order-sent h2 em {
       font-family: var(--serif);
       font-weight: 400;
       color: var(--mint);
     }
-    .pay-success .sub {
+    .order-sent .sub {
       font-family: var(--mono);
       font-size: 11px;
       letter-spacing: 0.16em;
@@ -952,23 +971,29 @@ em, i, cite, dfn, var { font-style: normal; }
     <!-- ============ Mission sidebar ============ -->
     <aside class="mission">
       <div class="mission-brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
-      <div class="mission-eyebrow">mission · self-order</div>
-      <h1>Self-order par <em>QR code.</em></h1>
-      <p>
-        Chaque table du Café Atlas a son QR. Le client scanne, parcourt le menu sur son téléphone,
-        commande et paie, sans appeler le serveur. C'est là que la Gen Z va déjà ; autant les y attendre.
+      <div class="mission-eyebrow" data-i18n="eyebrow">Commande à table</div>
+      <h1 data-i18n="h1_html">Commandez par <em>QR code.</em></h1>
+      <p data-i18n="lead">
+        Chaque table du Café Atlas a son QR. Le client scanne, parcourt la carte sur son téléphone
+        et envoie sa commande, sans application à télécharger. Il règle à sa table, ou à la caisse
+        pour une commande à emporter.
       </p>
       <ul>
-        <li><span><b>Chaque table = un QR.</b> Pas d'app à télécharger, pas de compte à créer.</span></li>
-        <li><span><b>Commande depuis le téléphone</b> du client, envoyée directement en cuisine.</span></li>
-        <li><span><b>Paiement intégré</b>, carte, Apple Pay, ou wallet Kiwi.</span></li>
-        <li><span><b>Moins de serveurs aux heures de pointe</b>, plus de rotation de tables.</span></li>
-        <li><span><b>Le serveur reste pour ce qui compte</b> : conseil, ambiance, bouteilles ouvertes à table.</span></li>
+        <li><span data-i18n="li1_html"><b>Un QR par table.</b> Pas d'application à télécharger, pas de compte à créer.</span></li>
+        <li><span data-i18n="li2_html"><b>La commande part du téléphone</b> du client et arrive à la caisse, où l'équipe la confirme.</span></li>
+        <li><span data-i18n="li3_html"><b>Le paiement se fait sur place</b> : à la table pour une commande servie, à la caisse pour une commande à emporter.</span></li>
+        <li><span data-i18n="li4_html"><b>Un serveur à portée de bouton</b> : le client peut l'appeler ou demander l'addition depuis la page.</span></li>
+        <li><span data-i18n="li5_html"><b>La carte est celle du commerçant</b> : prix, options et disponibilités viennent de la caisse.</span></li>
       </ul>
+      <div class="lang-switch" id="lang-switch" role="group" aria-label="Langue · Language · اللغة">
+        <button type="button" data-lang="fr" aria-pressed="true">Français</button>
+        <button type="button" data-lang="en" aria-pressed="false">English</button>
+        <button type="button" data-lang="ar" aria-pressed="false" dir="rtl">العربية</button>
+      </div>
       <div class="mission-foot">
         <button class="replay-btn" id="replay-btn" type="button">
           <i data-lucide="rotate-cw"></i>
-          <span>Rejouer l'animation</span>
+          <span data-i18n="replay">Rejouer l'animation</span>
         </button>
         <span class="replay-hint">Café Atlas · Table 7</span>
       </div>
@@ -1015,8 +1040,8 @@ em, i, cite, dfn, var { font-style: normal; }
                 <!-- Greeting flash (mirrors kiwi-serveur) -->
                 <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
                   <div class="kiwi-greet-inner">
-                    <h1><span id="greet-line1">Bonjour,</span><br><em id="greet-em">bienvenue au café Atlas.</em></h1>
-                    <div class="kiwi-greet-sub" id="greet-sub">Table 7 · <em>scannez, commandez, payez</em></div>
+                    <h1><span id="greet-line1" data-i18n="greet1">Bonjour,</span><br><em id="greet-em" data-i18n="greet2">bienvenue au café Atlas.</em></h1>
+                    <div class="kiwi-greet-sub" id="greet-sub"><span data-i18n="table7">Table 7</span> · <em data-i18n="greet_sub">scannez, commandez</em></div>
                   </div>
                 </div>
 
@@ -1026,25 +1051,25 @@ em, i, cite, dfn, var { font-style: normal; }
                   <div class="menu-header">
                     <div class="menu-cafe">
                       <div class="name">Café Atlas</div>
-                      <div class="ctx">Médina · Tanger</div>
+                      <div class="ctx" data-i18n="ctx">Médina · Tanger</div>
                     </div>
                     <span class="table-badge">
                       <i data-lucide="qr-code"></i>
-                      Table 7
+                      <span data-i18n="table7">Table 7</span>
                     </span>
                   </div>
 
                   <div class="qr-strip">
                     <span class="qr-mini" aria-hidden="true"></span>
-                    <span>QR scanné · <strong>commandez sans appeler le serveur</strong></span>
+                    <span data-i18n="strip_html">QR scanné · <strong>commandez depuis votre table</strong></span>
                   </div>
 
                   <div class="menu-tabs" role="tablist">
-                    <button class="menu-tab is-active" data-tab="all">Tout</button>
-                    <button class="menu-tab" data-tab="coffee">Café</button>
-                    <button class="menu-tab" data-tab="pastry">Pâtisserie</button>
-                    <button class="menu-tab" data-tab="savory">Salé</button>
-                    <button class="menu-tab" data-tab="drink">Boissons</button>
+                    <button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">Tout</button>
+                    <button class="menu-tab" data-tab="coffee" data-i18n="tab_coffee">Café</button>
+                    <button class="menu-tab" data-tab="pastry" data-i18n="tab_pastry">Pâtisserie</button>
+                    <button class="menu-tab" data-tab="savory" data-i18n="tab_savory">Salé</button>
+                    <button class="menu-tab" data-tab="drink" data-i18n="tab_drink">Boissons</button>
                   </div>
 
                   <div class="menu-list" id="menu-list">
@@ -1054,7 +1079,7 @@ em, i, cite, dfn, var { font-style: normal; }
                   <button class="cart-pill" id="cart-pill" type="button">
                     <span class="cart-left">
                       <span class="cart-count-chip" id="cart-count">0</span>
-                      <span>Voir le panier</span>
+                      <span data-i18n="view_cart">Voir le panier</span>
                     </span>
                     <span class="cart-total" id="cart-total">0 MAD</span>
                   </button>
@@ -1064,7 +1089,7 @@ em, i, cite, dfn, var { font-style: normal; }
                 <!-- Toast -->
                 <div class="toast" id="toast" aria-live="polite">
                   <i data-lucide="check"></i>
-                  <span id="toast-text">Ajouté au panier</span>
+                  <span id="toast-text" data-i18n="toast_default">Ajouté au panier</span>
                 </div>
 
                 <!-- Cart sheet -->
@@ -1072,31 +1097,32 @@ em, i, cite, dfn, var { font-style: normal; }
                   <div class="cart-sheet-backdrop" data-close-cart></div>
                   <div class="cart-sheet-panel">
                     <div class="cart-handle" data-close-cart></div>
-                    <h2 class="cart-title">Votre commande</h2>
-                    <div class="cart-subtitle">Table 7 · Café Atlas</div>
+                    <h2 class="cart-title" data-i18n="cart_title">Votre commande</h2>
+                    <div class="cart-subtitle"><span data-i18n="table7">Table 7</span> · Café Atlas</div>
                     <ul class="cart-items" id="cart-items">
-                      <li class="cart-empty">Panier vide, choisissez quelque chose au menu.</li>
+                      <li class="cart-empty" data-i18n="cart_empty">Panier vide, choisissez quelque chose au menu.</li>
                     </ul>
                     <div class="cart-totals">
-                      <span>Total</span>
+                      <span data-i18n="cart_total">Total</span>
                       <span class="grand" id="cart-grand">0 MAD</span>
                     </div>
-                    <button class="cart-pay" id="cart-pay" type="button" disabled>
-                      <i data-lucide="apple"></i>
-                      <span class="label">Payer · <span id="pay-total">0 MAD</span></span>
+                    <p class="cart-note" data-i18n="cart_note">Paiement à la table après votre dernière commande.</p>
+                    <button class="cart-send" id="cart-send" type="button" disabled>
+                      <i data-lucide="send"></i>
+                      <span class="label" data-i18n="send_btn">Envoyer en cuisine</span>
                     </button>
                   </div>
                 </div>
 
                 <!-- Payment success -->
-                <div class="pay-success" id="pay-success" aria-hidden="true">
+                <div class="order-sent" id="order-sent" aria-hidden="true">
                   <div class="check">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   </div>
-                  <h2>Commande envoyée<br/><em>en cuisine.</em></h2>
-                  <div class="sub">Paiement confirmé · 4–6 min</div>
+                  <h2><span data-i18n="sent_a">Commande envoyée</span><br/><em data-i18n="sent_em">au comptoir.</em></h2>
+                  <div class="sub" data-i18n="sent_sub">En attente de confirmation</div>
                 </div>
 
               </div>
@@ -1111,6 +1137,113 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
     const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+
+
+    /* ============ langues (FR / EN / AR) ============
+       Les textes de l'affiche et de la maquette. Les noms de plats restent
+       ceux de la carte du café (contenu du commerçant, pas de l'interface).
+       Même clé de langue que la page de commande : un client qui a choisi
+       l'arabe le retrouve ici. */
+    const P = {
+      fr: {
+        eyebrow: 'Commande à table',
+        h1_html: 'Commandez par <em>QR code.</em>',
+        lead: "Chaque table du Café Atlas a son QR. Le client scanne, parcourt la carte sur son téléphone et envoie sa commande, sans application à télécharger. Il règle à sa table, ou à la caisse pour une commande à emporter.",
+        li1_html: "<b>Un QR par table.</b> Pas d'application à télécharger, pas de compte à créer.",
+        li2_html: "<b>La commande part du téléphone</b> du client et arrive à la caisse, où l'équipe la confirme.",
+        li3_html: "<b>Le paiement se fait sur place</b> : à la table pour une commande servie, à la caisse pour une commande à emporter.",
+        li4_html: "<b>Un serveur à portée de bouton</b> : le client peut l'appeler ou demander l'addition depuis la page.",
+        li5_html: "<b>La carte est celle du commerçant</b> : prix, options et disponibilités viennent de la caisse.",
+        replay: "Rejouer l'animation",
+        greet1: 'Bonjour,', greet2: 'bienvenue au café Atlas.',
+        table7: 'Table 7', greet_sub: 'scannez, commandez',
+        ctx: 'Médina · Tanger',
+        strip_html: 'QR scanné · <strong>commandez depuis votre table</strong>',
+        tab_all: 'Tout', tab_coffee: 'Café', tab_pastry: 'Pâtisserie', tab_savory: 'Salé', tab_drink: 'Boissons',
+        view_cart: 'Voir le panier', toast_default: 'Ajouté au panier', toast_added: 'ajouté',
+        cart_title: 'Votre commande', cart_empty: 'Panier vide, choisissez quelque chose au menu.', cart_total: 'Total',
+        cart_note: 'Paiement à la table après votre dernière commande.',
+        send_btn: 'Envoyer en cuisine',
+        sent_a: 'Commande envoyée', sent_em: 'au comptoir.', sent_sub: 'En attente de confirmation',
+        aria_add: 'Ajouter', aria_remove: 'Retirer'
+      },
+      en: {
+        eyebrow: 'Order at the table',
+        h1_html: 'Order by <em>QR code.</em>',
+        lead: "Every table at Café Atlas has its own QR code. Guests scan it, browse the menu on their phone and send their order, with no app to download. They pay at their table, or at the counter for a takeout order.",
+        li1_html: "<b>One QR per table.</b> No app to download, no account to create.",
+        li2_html: "<b>The order leaves the guest's phone</b> and reaches the till, where the team confirms it.",
+        li3_html: "<b>Payment happens on site</b>: at the table for a served order, at the counter for takeout.",
+        li4_html: "<b>A waiter one tap away</b>: guests can call one or ask for the bill from the page.",
+        li5_html: "<b>The menu is the merchant's own</b>: prices, options and availability come from the till.",
+        replay: 'Replay the animation',
+        greet1: 'Hello,', greet2: 'welcome to café Atlas.',
+        table7: 'Table 7', greet_sub: 'scan, order',
+        ctx: 'Médina · Tangier',
+        strip_html: 'QR scanned · <strong>order from your table</strong>',
+        tab_all: 'All', tab_coffee: 'Coffee', tab_pastry: 'Pastries', tab_savory: 'Savory', tab_drink: 'Drinks',
+        view_cart: 'View cart', toast_default: 'Added to cart', toast_added: 'added',
+        cart_title: 'Your order', cart_empty: 'Your cart is empty, pick something from the menu.', cart_total: 'Total',
+        cart_note: 'Payment happens at the table after your last order.',
+        send_btn: 'Send to kitchen',
+        sent_a: 'Order sent', sent_em: 'to the counter.', sent_sub: 'Waiting for confirmation',
+        aria_add: 'Add', aria_remove: 'Remove'
+      },
+      ar: {
+        eyebrow: 'الطلب من الطاولة',
+        h1_html: 'اطلب عبر <em>رمز QR.</em>',
+        lead: "لكل طاولة فكافي أطلس رمز QR ديالها. الزبون كيسكانيه، كيشوف المنيو فتلفونو وكيصيفط الطلب، بلا ما يحمل تطبيق. كيخلص فطاولتو، ولا فالكيسة إلا كان الطلب للأخذ.",
+        li1_html: "<b>رمز QR لكل طاولة.</b> بلا تطبيق وبلا حساب.",
+        li2_html: "<b>الطلب كيخرج من تلفون الزبون</b> وكيوصل للكيسة، وهنا الفريق كيأكدو.",
+        li3_html: "<b>الخلاص كيتم فعين المكان</b>: فالطاولة للطلب اللي كيتقدم، وفالكيسة للطلب للأخذ.",
+        li4_html: "<b>النادل قريب منك بضغطة</b>: الزبون يقدر يعيط ليه ولا يطلب الحساب من الصفحة.",
+        li5_html: "<b>المنيو هو ديال صاحب المحل</b>: الأثمنة والخيارات والتوفر كيجيو من الكيسة.",
+        replay: 'أعد العرض',
+        greet1: 'مرحبا،', greet2: 'مرحبا بيك فكافي أطلس.',
+        table7: 'طاولة 7', greet_sub: 'سكاني، وطلب',
+        ctx: 'المدينة · طنجة',
+        strip_html: 'تسكانا الـQR · <strong>طلب من الطاولة ديالك</strong>',
+        tab_all: 'الكل', tab_coffee: 'قهوة', tab_pastry: 'حلويات', tab_savory: 'ساندويتش', tab_drink: 'مشروبات',
+        view_cart: 'شوف الطلب', toast_default: 'تزاد للطلب', toast_added: 'تزاد',
+        cart_title: 'الطلب ديالك', cart_empty: 'الطلب خاوي، اختار شي حاجة من المنيو.', cart_total: 'المجموع',
+        cart_note: 'الخلاص فالطاولة من بعد آخر طلب.',
+        send_btn: 'صيفط للمطبخ',
+        sent_a: 'الطلب تصيفط', sent_em: 'للكونطوار.', sent_sub: 'كيتسنى التأكيد',
+        aria_add: 'زيد', aria_remove: 'نقص'
+      }
+    };
+    const LANG_KEY = 'kiwiOrderLang';
+    let lang = 'fr';
+    function tt(key) { return (P[lang] && P[lang][key]) ?? P.fr[key] ?? key; }
+    function savedLang() {
+      try { const v = localStorage.getItem(LANG_KEY); if (P[v]) return v; } catch (_) {}
+      const nav = String((navigator.languages && navigator.languages[0]) || navigator.language || 'fr').slice(0, 2).toLowerCase();
+      return P[nav] ? nav : 'fr';
+    }
+    function setLang(next, remember) {
+      if (!P[next]) next = 'fr';
+      lang = next;
+      const rtl = next === 'ar';
+      document.documentElement.lang = next;
+      /* dir sur la colonne de texte et sur l'écran du téléphone seulement : la
+         scène (téléphone à droite du texte) garde sa disposition. */
+      ['.mission', '.app-canvas'].forEach((sel) => { const el = $(sel); if (el) el.setAttribute('dir', rtl ? 'rtl' : 'ltr'); });
+      $$('[data-i18n]').forEach((el) => {
+        const key = el.dataset.i18n;
+        if (/_html$/.test(key)) el.innerHTML = tt(key); else el.textContent = tt(key);
+      });
+      $$('#lang-switch button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === next ? 'true' : 'false'));
+      /* l'animation d'accueil mesure la largeur du texte une seule fois : on
+         défait l'enveloppe pour qu'elle le mesure à nouveau dans la nouvelle langue */
+      const clip = $('.kiwi-greet h1 .em-clip');
+      if (clip && clip.parentNode) {
+        const em = clip.querySelector('em');
+        if (em) { clip.parentNode.insertBefore(em, clip); clip.remove(); }
+      }
+      if (remember) try { localStorage.setItem(LANG_KEY, next); } catch (_) {}
+      if ($('#menu-list')) { renderMenu($('.menu-tab.is-active')?.dataset.tab || 'all'); refreshCartUI(); }
+      if (window.lucide) window.lucide.createIcons();
+    }
 
     /* ============ menu data ============ */
     const MENU = [
@@ -1151,7 +1284,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="item-desc">${m.desc}</div>
             <div class="item-price">${m.price} MAD</div>
           </div>
-          <button class="item-add" type="button" data-add="${m.id}" aria-label="Ajouter ${m.name}">+</button>
+          <button class="item-add" type="button" data-add="${m.id}" aria-label="${tt('aria_add')} ${m.name}">+</button>
         </article>
       `).join('');
       if (window.lucide) window.lucide.createIcons();
@@ -1175,23 +1308,22 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#cart-count').textContent = count;
       $('#cart-total').textContent = `${total} MAD`;
       $('#cart-grand').textContent = `${total} MAD`;
-      $('#pay-total').textContent  = `${total} MAD`;
       pill.classList.toggle('is-visible', count > 0);
-      const payBtn = $('#cart-pay');
+      const payBtn = $('#cart-send');
       payBtn.disabled = count === 0;
 
       const itemsEl = $('#cart-items');
       if (count === 0) {
-        itemsEl.innerHTML = `<li class="cart-empty">Panier vide, choisissez quelque chose au menu.</li>`;
+        itemsEl.innerHTML = `<li class="cart-empty">${tt('cart_empty')}</li>`;
         return;
       }
       itemsEl.innerHTML = [...cart.entries()].map(([id, qty]) => `
         <li class="cart-row">
           <span class="label">${nameOf(id)}</span>
           <span class="qty">
-            <button type="button" data-dec="${id}" aria-label="Retirer">−</button>
+            <button type="button" data-dec="${id}" aria-label="${tt('aria_remove')} ${nameOf(id)}">−</button>
             <span>${qty}</span>
-            <button type="button" data-inc="${id}" aria-label="Ajouter">+</button>
+            <button type="button" data-inc="${id}" aria-label="${tt('aria_add')} ${nameOf(id)}">+</button>
           </span>
           <span class="row-price">${qty * priceOf(id)} MAD</span>
         </li>
@@ -1200,7 +1332,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function addToCart(id) {
       cart.set(id, (cart.get(id) || 0) + 1);
       refreshCartUI();
-      showToast(`${nameOf(id)} · ajouté`);
+      showToast(`${nameOf(id)} · ${tt('toast_added')}`);
     }
     function decFromCart(id) {
       const q = (cart.get(id) || 0) - 1;
@@ -1228,14 +1360,14 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#cart-sheet').setAttribute('aria-hidden', 'true');
     }
 
-    /* ============ pay flow ============ */
-    function pay() {
-      const btn = $('#cart-pay');
+    /* ============ send flow (le parcours réel n'encaisse rien dans la page) ============ */
+    function sendOrder() {
+      const btn = $('#cart-send');
       btn.classList.add('is-loading');
       setTimeout(() => {
         btn.classList.remove('is-loading');
         closeCart();
-        const ok = $('#pay-success');
+        const ok = $('#order-sent');
         ok.classList.add('is-visible');
         setTimeout(() => {
           ok.classList.remove('is-visible');
@@ -1302,6 +1434,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ wire it up ============ */
     document.addEventListener('DOMContentLoaded', () => {
+      setLang(savedLang(), false);
       renderMenu('all');
       refreshCartUI();
       if (window.lucide) window.lucide.createIcons();
@@ -1310,6 +1443,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Delegated clicks
       document.addEventListener('click', e => {
+        const langBtn = e.target.closest('#lang-switch [data-lang]');
+        if (langBtn) { setLang(langBtn.dataset.lang, true); return; }
         const addBtn = e.target.closest('[data-add]');
         if (addBtn) {
           addToCart(addBtn.dataset.add);
@@ -1331,14 +1466,14 @@ em, i, cite, dfn, var { font-style: normal; }
         }
         if (e.target.closest('#cart-pill')) { openCart(); return; }
         if (e.target.closest('[data-close-cart]')) { closeCart(); return; }
-        if (e.target.closest('#cart-pay')) { pay(); return; }
+        if (e.target.closest('#cart-send')) { sendOrder(); return; }
         if (e.target.closest('#replay-btn')) {
           // Hide menu before replay so the zoom-in is visible
           $('#menu-screen').classList.add('is-pre-hidden');
           $('#menu-screen').classList.remove('is-entering');
           // Also close any open cart or success overlay
           closeCart();
-          $('#pay-success').classList.remove('is-visible');
+          $('#order-sent').classList.remove('is-visible');
           requestAnimationFrame(runGreetingFlash);
           return;
         }

@@ -1487,6 +1487,7 @@ section('Whole-project regressions');
     'pos-autre-custom-amount-test.mjs',
     'pos-truth-b-test.mjs',
     'order-truth-test.mjs',
+    'guest-options-test.mjs',
     'pos-truth-a-test.mjs',
     'employee-truth-test.mjs',
     'serveur-kitchen-truth-test.mjs',

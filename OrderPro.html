@@ -1938,6 +1938,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .custom-add-btn:active { transform: scale(0.97); }
     .custom-add-btn svg { width: 15px; height: 15px; }
+    /* Un groupe obligatoire est encore vide : le bouton est réellement inactif
+       (lecteur d'écran compris), son étiquette « obligatoire » dit pourquoi. */
+    .custom-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .custom-add-btn:disabled:active { transform: none; }
 
     /* =========================================================
        SERVICE BAR (call server / ask bill) — table mode only
@@ -4742,7 +4746,11 @@ em, i, cite, dfn, var { font-style: normal; }
         const sel = line.options?.[opt.key];
         if (sel == null) continue;
         if (opt.type === 'single') {
-          if (sel === opt.default) continue; // skip defaults
+          /* Tout choix fait est écrit, y compris celui que la carte appelait
+             « par défaut » : une ligne « Espresso » qui cache « Sucré » laisse
+             le client recevoir un sucre qu'il n'a jamais lu. Un groupe laissé
+             vide n'est pas un choix : rien à écrire. */
+          if (!sel) continue;
           parts.push(choiceLabel(opt.key, sel));
         } else if (opt.type === 'multi' && Array.isArray(sel) && sel.length) {
           const labels = sel.map(id => choiceLabel(opt.key, id)).filter(Boolean);
@@ -4892,6 +4900,25 @@ em, i, cite, dfn, var { font-style: normal; }
       return selections;
     }
 
+    /* Le groupe obligatoire encore vide, ou null. Même règle que le contrôle de
+       confirmCustomizer, pour que le bouton « Ajouter » et le refus ne
+       divergent jamais. */
+    function unansweredRequiredOption(item, selections) {
+      return (item && item.options || []).find((opt) => {
+        const selected = selections[opt.key];
+        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
+        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
+        return count < minimum;
+      }) || null;
+    }
+    function syncCustomizerGate() {
+      const btn = document.getElementById('custom-add-btn');
+      if (!btn) return;
+      const blocked = !!(customizerItem && unansweredRequiredOption(customizerItem, customizerSelections));
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    }
+
     function openCustomizer(item, qty, editingKey) {
       customizerItem = item;
       customizerEditingKey = editingKey || null;
@@ -4946,6 +4973,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-note-input').value = '';
 
       refreshCustomizerPrice();
+      syncCustomizerGate();
       const customScroll = $('.custom-scroll', $('#custom-sheet'));
       if (customScroll) customScroll.scrollTop = 0;
       $('#custom-sheet').classList.add('is-open');
@@ -4987,6 +5015,7 @@ em, i, cite, dfn, var { font-style: normal; }
         });
       }
       refreshCustomizerPrice();
+      syncCustomizerGate();
     }
     function customizerUnitPrice() {
       if (!customizerItem) return 0;

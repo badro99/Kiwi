@@ -1830,6 +1830,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .custom-add-btn:active { transform: scale(0.97); }
     .custom-add-btn svg { width: 15px; height: 15px; }
+    /* Un groupe obligatoire est encore vide : le bouton est réellement inactif
+       (lecteur d'écran compris), son étiquette « obligatoire » dit pourquoi. */
+    .custom-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .custom-add-btn:disabled:active { transform: none; }
 
     /* =========================================================
        SERVICE BAR (call server / ask bill) — table mode only
@@ -3804,10 +3808,13 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     }
 
-    /* ============ option presets — shared across items ============ */
+    /* ============ option presets — shared across items ============
+       Aucun `default` : rien n'est présélectionné pour le client (voir
+       initialCustomizerSelections). `required: true` n'est posé que là où un
+       plat est incomplet sans le choix (le pain d'un sandwich). */
     const OPT = {
       sucre: {
-        key: 'sucre', label: 'Sucre', type: 'single', default: 'normal',
+        key: 'sucre', label: 'Sucre', type: 'single',
         choices: [
           { id: 'normal', label: 'Sucré', delta: 0 },
           { id: 'leger',  label: 'Peu sucré', delta: 0 },
@@ -3816,7 +3823,7 @@ em, i, cite, dfn, var { font-style: normal; }
         ],
       },
       lait: {
-        key: 'lait', label: 'Type de lait', type: 'single', default: 'lait',
+        key: 'lait', label: 'Type de lait', type: 'single',
         choices: [
           { id: 'lait',   label: 'Lait classique', delta: 0 },
           { id: 'amande', label: "Lait d'amande", delta: 5 },
@@ -3825,14 +3832,14 @@ em, i, cite, dfn, var { font-style: normal; }
         ],
       },
       shot: {
-        key: 'shot', label: 'Intensité', type: 'single', default: 'simple',
+        key: 'shot', label: 'Intensité', type: 'single',
         choices: [
           { id: 'simple', label: 'Simple', delta: 0 },
           { id: 'double', label: 'Double', delta: 5 },
         ],
       },
       chauffer: {
-        key: 'chauffer', label: 'Préparation', type: 'single', default: 'froid',
+        key: 'chauffer', label: 'Préparation', type: 'single',
         choices: [
           { id: 'froid', label: 'Tel quel', delta: 0 },
           { id: 'chaud', label: 'Réchauffé', delta: 0 },
@@ -3847,7 +3854,7 @@ em, i, cite, dfn, var { font-style: normal; }
         ],
       },
       pain: {
-        key: 'pain', label: 'Pain', type: 'single', default: 'campagne',
+        key: 'pain', label: 'Pain', type: 'single', required: true,
         choices: [
           { id: 'campagne', label: 'Pain de campagne', delta: 0 },
           { id: 'complet',  label: 'Pain complet', delta: 0 },
@@ -3864,7 +3871,7 @@ em, i, cite, dfn, var { font-style: normal; }
         ],
       },
       sauce: {
-        key: 'sauce', label: 'Sauce', type: 'single', default: 'classique',
+        key: 'sauce', label: 'Sauce', type: 'single',
         choices: [
           { id: 'classique', label: 'Sauce classique', delta: 0 },
           { id: 'harissa',   label: 'Harissa épicée', delta: 0 },
@@ -3872,7 +3879,7 @@ em, i, cite, dfn, var { font-style: normal; }
         ],
       },
       glace: {
-        key: 'glace', label: 'Glaçons', type: 'single', default: 'avec',
+        key: 'glace', label: 'Glaçons', type: 'single',
         choices: [
           { id: 'avec', label: 'Avec glaçons', delta: 0 },
           { id: 'sans', label: 'Sans glaçons', delta: 0 },
@@ -4143,7 +4150,11 @@ em, i, cite, dfn, var { font-style: normal; }
         const sel = line.options?.[opt.key];
         if (sel == null) continue;
         if (opt.type === 'single') {
-          if (sel === opt.default) continue; // skip defaults
+          /* Tout choix fait est écrit, y compris celui que la carte appelait
+             « par défaut » : une ligne « Espresso » qui cache « Sucré » laisse
+             le client payer et recevoir un sucre qu'il n'a jamais lu. Un
+             groupe laissé vide n'est pas un choix : rien à écrire. */
+          if (!sel) continue;
           parts.push(choiceLabel(opt.key, sel));
         } else if (opt.type === 'multi' && Array.isArray(sel) && sel.length) {
           const labels = sel.map(id => choiceLabel(opt.key, id)).filter(Boolean);
@@ -4279,16 +4290,36 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ Customizer ============ */
+    /* Aucun groupe ne part présélectionné. Un défaut de la carte est un réglage
+       du patron, pas un accord du client : « Sucré » sur un espresso, ou le
+       premier supplément d'une liste, serait servi (et parfois facturé) sans
+       que personne l'ait demandé. La carte dit déjà ce qui est obligatoire
+       (`required`) : ces groupes bloquent « Ajouter » tant qu'ils sont vides ;
+       les autres restent vides tant que le client ne touche à rien, et
+       n'apparaissent alors ni au panier ni sur le ticket. */
+    function initialCustomizerSelections(options) {
+      const selections = {};
+      for (const opt of options || []) selections[opt.key] = opt.type === 'single' ? '' : [];
+      return selections;
+    }
+    function missingRequiredOption(item, selections) {
+      for (const opt of (item && item.options) || []) {
+        if (!opt.required) continue;
+        const sel = selections[opt.key];
+        if (opt.type === 'multi' ? !(Array.isArray(sel) && sel.length) : !sel) return opt;
+      }
+      return null;
+    }
+    function syncCustomizerGate() {
+      const btn = document.getElementById('custom-add-btn');
+      if (!btn) return;
+      const blocked = !!(customizerItem && missingRequiredOption(customizerItem, customizerSelections));
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    }
     function openCustomizer(item) {
       customizerItem = item;
-      // Initialize with defaults
-      customizerSelections = {};
-      for (const opt of item.options || []) {
-        /* Un groupe FACULTATIF de la carte ne présélectionne rien : le client
-           payait le premier supplément (« Grand +3 ») sans l'avoir choisi. */
-        if (opt.type === 'single') customizerSelections[opt.key] = opt.default || (opt._src && !opt.required ? '' : opt.choices[0].id);
-        else customizerSelections[opt.key] = [];
-      }
+      customizerSelections = initialCustomizerSelections(item.options);
       customizerNote = '';
 
       // Populate header
@@ -4334,12 +4365,12 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-note-input').value = '';
 
       refreshCustomizerPrice();
+      syncCustomizerGate();
       $('#custom-sheet').classList.add('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'false');
       if (window.lucide) window.lucide.createIcons();
     }
     function optTypeLabel(opt) {
-      if (!opt._src) return opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one');
       if (opt.type === 'multi') return opt.required ? `${t('opt_choose_many')} · ${t('opt_choose_many_required')}` : t('opt_choose_many');
       return opt.required ? `${t('opt_choose_one')} · ${t('opt_choose_one_required')}` : t('custom_note_optional');
     }
@@ -4352,7 +4383,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (type === 'single') {
         const og = (customizerItem && customizerItem.options || []).find((o) => o.key === optKey);
         /* un groupe facultatif se décoche en retouchant le choix actif */
-        customizerSelections[optKey] = (og && og._src && !og.required && customizerSelections[optKey] === choiceId) ? '' : choiceId;
+        customizerSelections[optKey] = (og && !og.required && customizerSelections[optKey] === choiceId) ? '' : choiceId;
       } else {
         const arr = customizerSelections[optKey] || [];
         const i = arr.indexOf(choiceId);
@@ -4372,6 +4403,7 @@ em, i, cite, dfn, var { font-style: normal; }
         });
       }
       refreshCustomizerPrice();
+      syncCustomizerGate();
     }
     function customizerUnitPrice() {
       if (!customizerItem) return 0;
@@ -4397,13 +4429,9 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!customizerItem) return;
       /* Un groupe obligatoire sans choix : la caisse refuserait la commande. On
          le dit ici, avant, plutôt que de laisser échouer l'envoi. */
-      for (const opt of customizerItem.options || []) {
-        if (!opt._src || !opt.required) continue;
-        const sel = customizerSelections[opt.key];
-        if (opt.type === 'multi' ? !(Array.isArray(sel) && sel.length) : !sel) {
-          showToast(t('opt_required_toast'), 3000);
-          return;
-        }
+      if (missingRequiredOption(customizerItem, customizerSelections)) {
+        showToast(t('opt_required_toast'), 3000);
+        return;
       }
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
