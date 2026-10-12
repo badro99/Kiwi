@@ -1635,6 +1635,16 @@
       swingH: 'bénéfice net /mois',
       seasV: (v, d) => `Chaque point d’activité vaut ${v} de bénéfice mensuel. En dessous de −${d} % vous passez sous votre seuil de rentabilité, c’est là qu’est la limite, pas au premier jour creux.`,
       seasNote: 'Charges fixes constantes : loyer, salaires et abonnements ne bougent pas avec la fréquentation. C’est pourquoi une baisse d’activité frappe le résultat bien plus fort qu’elle ne frappe le chiffre d’affaires.',
+      ramText: (hy, from, to) => `Votre dernier Ramadan sur Kiwi (${hy} H, du ${from} au ${to}), mesuré sur vos propres ventes et comparé aux quatre semaines d’avant.`,
+      ramDuring: 'Journée moyenne · Ramadan', ramBefore: 'Journée moyenne · 4 semaines avant',
+      ramDaysH: (o, n) => `${o} jours avec des ventes sur ${n}`,
+      ramChange: 'Écart', ramChangeH: 'Ramadan contre les 4 semaines d’avant',
+      ramEvening: 'Part du soir (dès 18 h)', ramEveningH: (b) => `contre ${b} avant Ramadan`,
+      ramEid: 'Jour de l’Aïd al-Fitr', ramEidClosed: 'aucune vente',
+      ramUp: (p) => `Pendant Ramadan, votre journée moyenne a été plus haute de ${p}.`,
+      ramDown: (p) => `Pendant Ramadan, votre journée moyenne a baissé de ${p}.`,
+      ramNote: 'Dates du calendrier Umm al-Qura : l’observation au Maroc peut décaler d’un jour. Journées commerciales (bascule à 5 h), comme le rapport Z.',
+      ramNext: (d) => ` Le prochain Ramadan commence vers le ${d}.`,
       /* ─ closing / opening days ─ */
       closeText: (d) => `Fermer <b>${d} jour${d > 1 ? 's' : ''}</b> ne vous fait perdre que la marge de ces journées, vos charges fixes, elles, continuent de courir.`,
       closeLost: 'Marge perdue', closeLostH: (d) => `${d} jour${d > 1 ? 's' : ''} sans vente`,
@@ -1753,6 +1763,16 @@
       swingH: 'net profit /mo',
       seasV: (v, d) => `Every point of activity is worth ${v} of monthly profit. Below −${d}% you drop under your break-even point · that is where the limit sits, not at the first quiet day.`,
       seasNote: 'Fixed costs held constant: rent, payroll and subscriptions do not move with footfall. That is why a drop in activity hits the result far harder than it hits revenue.',
+      ramText: (hy, from, to) => `Your last Ramadan on Kiwi (${hy} AH, ${from} to ${to}), measured on your own sales and compared with the four weeks before.`,
+      ramDuring: 'Average day · Ramadan', ramBefore: 'Average day · 4 weeks before',
+      ramDaysH: (o, n) => `${o} days with sales out of ${n}`,
+      ramChange: 'Difference', ramChangeH: 'Ramadan against the 4 weeks before',
+      ramEvening: 'Evening share (from 6 pm)', ramEveningH: (b) => `against ${b} before Ramadan`,
+      ramEid: 'Eid al-Fitr day', ramEidClosed: 'no sales',
+      ramUp: (p) => `During Ramadan your average day was ${p} higher.`,
+      ramDown: (p) => `During Ramadan your average day fell by ${p}.`,
+      ramNote: 'Dates from the Umm al-Qura calendar: the sighting in Morocco can shift them by a day. Business days (5 am cut-off), as in the Z report.',
+      ramNext: (d) => ` The next Ramadan starts around ${d}.`,
       closeText: (d) => `Closing for <b>${d} day${d > 1 ? 's' : ''}</b> only costs you the margin of those days · your fixed costs keep running.`,
       closeLost: 'Margin lost', closeLostH: (d) => `${d} day${d > 1 ? 's' : ''} with no sales`,
       closeFixed: 'Costs that run anyway', closeFixedH: 'rent, payroll, subscriptions',
@@ -1861,6 +1881,16 @@
       swingH: 'الربح الصافي/شهر',
       seasV: (v, d) => `كل نقطة نشاط تساوي ${v} من الربح الشهري. تحت −${d}% تنزل دون نقطة التعادل، وهناك يقع الحدّ، لا عند أول يوم هادئ.`,
       seasNote: 'التكاليف الثابتة ثابتة: الكراء والأجور والاشتراكات لا تتحرك مع عدد الزبناء. لهذا يضرب انخفاض النشاط النتيجة أقوى بكثير مما يضرب رقم المعاملات.',
+      ramText: (hy, from, to) => `آخر رمضان لك على Kiwi (${hy} هـ، من ${from} إلى ${to})، محسوب على مبيعاتك أنت ومقارن بالأسابيع الأربعة التي سبقته.`,
+      ramDuring: 'متوسط اليوم · رمضان', ramBefore: 'متوسط اليوم · 4 أسابيع قبله',
+      ramDaysH: (o, n) => `${o} يوماً بمبيعات من أصل ${n}`,
+      ramChange: 'الفرق', ramChangeH: 'رمضان مقابل الأسابيع الأربعة قبله',
+      ramEvening: 'حصة المساء (من 18:00)', ramEveningH: (b) => `مقابل ${b} قبل رمضان`,
+      ramEid: 'يوم عيد الفطر', ramEidClosed: 'لا مبيعات',
+      ramUp: (p) => `خلال رمضان ارتفع متوسط يومك بـ${p}.`,
+      ramDown: (p) => `خلال رمضان انخفض متوسط يومك بـ${p}.`,
+      ramNote: 'التواريخ من تقويم أم القرى: قد تختلف رؤية الهلال في المغرب بيوم. أيام تجارية (تبدأ الساعة 5 صباحاً) كما في تقرير Z.',
+      ramNext: (d) => ` يبدأ رمضان القادم في حدود ${d}.`,
       closeText: (d) => `الإغلاق <b>${d} ${d > 1 ? 'أيام' : 'يوم'}</b> يفقدك هامش تلك الأيام فقط، أما تكاليفك الثابتة فتستمر.`,
       closeLost: 'الهامش الضائع', closeLostH: (d) => `${d} ${d > 1 ? 'أيام' : 'يوم'} دون بيع`,
       closeFixed: 'تكاليف تستمر رغم ذلك', closeFixedH: 'الكراء، الأجور، الاشتراكات',
@@ -1990,7 +2020,43 @@
    * history, so it will not forecast Ramadan. What it CAN do is price a
    * closure to the dirham, and show the sensitivity of the result to a swing
    * in activity — which is the decision underneath the question anyway. */
+  /* Ramadan, quand les ventes du commerce le couvrent (assets/ramadan.js) :
+   * ses propres chiffres plutôt qu'un « je n'ai pas d'historique ». */
+  const fmtDay = (day) => { try { return new Date(day + 'T12:00:00Z').toLocaleDateString(DATE_LOC[L] || 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); } catch (_) { return day; } };
+  function ramadanNext() {
+    try {
+      const R = window.KiwiRamadan;
+      const today = new Date().toISOString().slice(0, 10);
+      const n = R && R.supported ? R.next(today) : null;
+      return n && n.start > today ? fmtDay(n.start) : '';
+    } catch (_) { return ''; }
+  }
+  function sRamadan() {
+    const R = window.KiwiRamadan;
+    if (!R || !R.supported) return null;
+    let e = null;
+    try { e = R.effect(ledger()); } catch (_) { e = null; }
+    if (!e) return null;
+    const t = xt();
+    const pct = (x) => `${fmt1(x * 100)} %`;
+    const stats = [
+      { l: t.ramDuring, v: fmtMad(e.during.avg), h: t.ramDaysH(e.during.openDays, e.during.days) },
+      { l: t.ramBefore, v: fmtMad(e.before.avg), h: t.ramDaysH(e.before.openDays, e.before.days) },
+      { l: t.ramChange, v: `${e.change >= 0 ? '+' : '−'}${pct(Math.abs(e.change))}`, h: t.ramChangeH },
+    ];
+    if (e.during.eveningShare != null && e.before.eveningShare != null) stats.push({ l: t.ramEvening, v: pct(e.during.eveningShare), h: t.ramEveningH(pct(e.before.eveningShare)) });
+    if (e.eid) stats.push({ l: t.ramEid, v: e.eid.open ? fmtMad(e.eid.revenue) : t.ramEidClosed, h: fmtDay(e.eid.day) });
+    const nxt = ramadanNext();
+    return {
+      text: t.ramText(e.hijriYear, fmtDay(e.start), fmtDay(e.end)),
+      stats,
+      verdict: { tone: e.change >= 0 ? 'good' : 'warn', text: e.change >= 0 ? t.ramUp(pct(e.change)) : t.ramDown(pct(-e.change)) },
+      note: t.ramNote + (nxt ? t.ramNext(nxt) : ''),
+      follow: [tr().chips.breakeven, tr().chips.forecast],
+    };
+  }
   function sSeason(q) {
+    if (/ramadan|ramdan|رمضان/.test(q) && !CLOSE_RX.test(q) && !EXTRA_DAY_RX.test(q)) { const r = sRamadan(); if (r) return r; }
     if (B.partial || B.contribRatio == null || B.netProfit == null) return partialReply();
     const t = xt();
     const d = parseDays(q);
@@ -2030,7 +2096,7 @@
       };
     }
     /* No duration stated — answer the sensitivity, which is the honest core. */
-    const lead = /ramadan|رمضان/.test(q) ? t.seasRamadan
+    const lead = /ramadan|رمضان/.test(q) ? t.seasRamadan + ((n) => n ? t.ramNext(n) : '')(ramadanNext())
       : /\bete\b|summer|صيف|chaleur|aout|juillet/.test(q) ? t.seasSummer
       : /touriste|tourist|saison|season|سياح|موسم/.test(q) ? t.seasTourist
       : t.seasGeneric;

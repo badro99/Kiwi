@@ -1178,6 +1178,7 @@ section('Whole-project regressions');
     'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
     'menu-pairs-test.js',
+    'ramadan-test.js',
     'restaurant-menu-ledger-reconciliation-test.js',
     'restaurant-menu-nutrition-tab-test.js',
     /* Le patron éditorial public : SEO, article sémantique, RTL, mobile et

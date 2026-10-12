@@ -60,8 +60,8 @@
     "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "32",
-    "sha": "2d12308d1aa8964b"
+    "v": "33",
+    "sha": "3cf0a51c2fc26ffc"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -918,6 +918,10 @@
   "assets/qrcode.js": {
     "v": "1",
     "sha": "29a61f8a61cba6b3"
+  },
+  "assets/ramadan.js": {
+    "v": "1",
+    "sha": "504c8576901c6e0d"
   },
   "assets/receipt-ui.js": {
     "v": "1",
