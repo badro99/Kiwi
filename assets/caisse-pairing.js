@@ -781,8 +781,13 @@
      * the short-lived local verifier used when this physical till loses Wi-Fi. */
     if (!merchant) { refuse('Caisse non appairée.'); return; }
     verifyCode(code).then(function (who) {
-      if (who) acceptStaff(who);
-      else refuse(navigator.onLine === false
+      if (who) { acceptStaff(who); return; }
+      if (lastVerify.status === 429) {
+        var mins = lastVerify.wait > 0 ? Math.max(1, Math.ceil(lastVerify.wait / 60)) : 0;
+        refuse(mins ? 'Trop d’essais. Réessayez dans ' + mins + ' min.' : 'Trop d’essais. Réessayez dans quelques minutes.');
+        return;
+      }
+      refuse(navigator.onLine === false
         ? 'Code non disponible hors ligne. Connectez-vous une fois avec ce code.'
         : 'Code incorrect ou impossible à vérifier.');
     });
@@ -882,6 +887,10 @@
   /* Le code frappé, soumis au serveur, contre l'identité qu'il prouve — ou null.
    * Un seul chemin pour toutes les portes de la caisse, et aucune comparaison
    * de code dans le navigateur. */
+  /* What the last verification ran into, for the pad's message: 429 is the
+     attempt limiter. The pad said « Code incorrect ou impossible à vérifier »
+     to someone typing the right code during a lockout. */
+  var lastVerify = { status: 0, wait: 0 };
   function verifyCode(code, action) {
     code = String(code || '');
     var venue = pinVenue || pairedVenue();
@@ -889,13 +898,23 @@
     if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 12000);
+    lastVerify = { status: 0, wait: 0 };
     return fetch('/api/pin/verify', {
       method: 'POST',
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
-      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (r && r.status === 429) {
+          lastVerify.status = 429;
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            lastVerify.wait = Math.max(0, Number(d && d.retry_after) || Number(r.headers.get('Retry-After')) || 0);
+            return null;
+          });
+        }
+        return r && r.ok ? r.json() : null;
+      })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});

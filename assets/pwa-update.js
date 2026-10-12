@@ -78,6 +78,49 @@
     return COPY[l] || COPY.fr;
   }
 
+  /* Material Symbols « refresh » (rounded, as the lucide shim draws it): the
+     pill used a Unicode arrow character, which each platform drew its own way. */
+  var REFRESH_ICON = '<svg viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false" style="flex:none"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-70q0-17 11.5-28.5T760-800q17 0 28.5 11.5T800-760v200q0 17-11.5 28.5T760-520H560q-17 0-28.5-11.5T520-560q0-17 11.5-28.5T560-600h128q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q68 0 124.5-34.5T692-367q8-14 22.5-19.5t29.5-.5q16 5 23 21t-1 30q-41 80-117 128t-169 48Z"/></svg>';
+
+  /* Is a modal, a sheet or the code screen showing? The pill sat at the very
+     top of the stack, bottom-centre, over the footer of every modal: over
+     « Ajouter le membre », and on the till over the buttons of its sheets.
+     It now waits behind them and comes back when they close. The till keeps
+     its dialogs in the page and toggles them, so presence is not enough:
+     only one that is laid out, visible and clickable counts. */
+  function dialogUp() {
+    var list = document.querySelectorAll('.kiwi-backdrop, [aria-modal="true"], dialog[open]');
+    for (var i = 0; i < list.length; i++) {
+      var el = list[i];
+      if (!el.getClientRects().length) continue;
+      var cs = window.getComputedStyle(el);
+      /* Not opacity: a backdrop is still fading in when it is first seen. */
+      if (cs.visibility === 'hidden' || cs.pointerEvents === 'none') continue;
+      return true;
+    }
+    return false;
+  }
+  function keepClear(button) {
+    var queued = false;
+    function sync() {
+      queued = false;
+      var hide = dialogUp();
+      button.style.opacity = hide ? '0' : '1';
+      button.style.visibility = hide ? 'hidden' : 'visible';
+      button.style.pointerEvents = hide ? 'none' : 'auto';
+      if (hide) button.setAttribute('aria-hidden', 'true'); else button.removeAttribute('aria-hidden');
+    }
+    function queue() { if (!queued) { queued = true; (window.requestAnimationFrame || setTimeout)(sync); } }
+    sync();
+    try {
+      new MutationObserver(queue).observe(document.body || document.documentElement, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'aria-modal']
+      });
+    } catch (_) {}
+    window.addEventListener('transitionend', queue, true);
+    window.addEventListener('animationend', queue, true);
+  }
+
   function show() {
     if (shown || document.getElementById('kiwi-update-ready')) return;
     if (justRefreshed()) return;
@@ -91,7 +134,7 @@
        phone the French copy used to wrap into a three-line pill. */
     var t = copy();
     button.setAttribute('aria-label', t.aria);
-    button.innerHTML = '<span aria-hidden="true">↻</span><span style="white-space:nowrap">' + t.ready + '</span><strong style="white-space:nowrap">' + t.go + '</strong>';
+    button.innerHTML = REFRESH_ICON + '<span style="white-space:nowrap">' + t.ready + '</span><strong style="white-space:nowrap">' + t.go + '</strong>';
     button.style.cssText = [
       'position:fixed', 'left:50%', 'bottom:max(18px,env(safe-area-inset-bottom))',
       'transform:translateX(-50%)', 'z-index:2147483000', 'display:flex',
@@ -99,12 +142,14 @@
       'padding:12px 16px', 'border:1px solid rgba(125,242,176,.45)',
       'border-radius:999px', 'background:#053B2C', 'color:#F7F5F0',
       'box-shadow:0 14px 36px rgba(5,59,44,.32)',
-      'font:600 14px/1.2 "Inter Tight",system-ui,sans-serif', 'cursor:pointer'
+      'font:600 14px/1.2 "Inter Tight",system-ui,sans-serif', 'cursor:pointer',
+      'transition:opacity 160ms ease,visibility 160ms'
     ].join(';');
     var strong = button.querySelector('strong');
     if (strong) strong.style.cssText = 'color:#7DF2B0;font-weight:700;white-space:nowrap';
     button.addEventListener('click', function () { refresh(button); });
     (document.body || document.documentElement).appendChild(button);
+    keepClear(button);
   }
 
   function watch(registration) {

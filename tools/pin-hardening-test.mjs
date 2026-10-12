@@ -521,7 +521,7 @@ console.log('\n4 · Dashboard Offline Gate & Invariants');
 {
   const dashSrc = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
   check('dashboard.html fails closed on offline when account is configured',
-    dashSrc.includes("if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin('offline'); return; }"));
+    dashSrc.includes("if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin(navigator.onLine === false ? 'offline' : 'unreachable'); return; }"));
   check('dashboard.html defines isConfiguredAccount helper',
     dashSrc.includes('function isConfiguredAccount()'));
   check('dashboard.html displays dedicated offline message in rejectPin',

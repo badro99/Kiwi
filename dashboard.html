@@ -6237,7 +6237,7 @@
 <script src="assets/demoClock.js?v=4" defer></script>
 <script src="assets/dateRange.js?v=61" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
-<script defer src="assets/pwa-update.js?v=360"></script>
+<script defer src="assets/pwa-update.js?v=361"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
 <script defer src="assets/dashboard-native.js?v=3"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
@@ -6271,7 +6271,7 @@
 <script defer src="assets/idle-lock.js?v=2"></script>
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js?v=1"></script>
-<script src="assets/liquid-lens.js?v=4" defer></script>
+<script src="assets/liquid-lens.js?v=5" defer></script>
 <script src="assets/onboarding.js?v=2087" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
@@ -6389,7 +6389,7 @@
 <!-- Réglages caisse des métiers de bouche (zones de livraison, extras de devis, formats de gâteau) :
      l’onglet « Réglages caisse » du Menu. Après vertical-state.js, dont il tient le réglage `foodtrade`. -->
 <script src="assets/food-trade-settings.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=109" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=110" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=14" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -6615,6 +6615,7 @@
    * (verifyAccountPin, dérivé de la session · un slug n'est jamais demandé).
    *   { name, access }  le code appartient à cette personne
    *   'no'              le serveur a dit non
+   *   { busy: s }       le serveur limite les essais : s secondes à attendre (0 = inconnu)
    *   null              on n'a pas pu savoir (hors ligne, backend absent) */
   function askServer(code) {
     return fetch('/api/pin/verify', {
@@ -6623,6 +6624,12 @@
       body: JSON.stringify({ pin: code }),
     }).then((r) => {
       if (r.status === 401 || r.status === 403) return 'no';
+      /* 429 is the attempt limiter answering, not a missing network. It used
+         to fall into null, and the lock told an operator with Wi-Fi that the
+         device was offline. */
+      if (r.status === 429) {
+        return r.json().catch(() => ({})).then((d) => ({ busy: Math.max(0, Number(d && d.retry_after) || Number(r.headers.get('Retry-After')) || 0) }));
+      }
       if (!r.ok) return null;
       return r.json().then((d) => {
         if (!(d && d.ok && d.staff)) return 'no';
@@ -6679,7 +6686,7 @@
       helpEl.innerHTML = helpHTML;
     }
   }
-  function rejectPin(reason) {
+  function rejectPin(reason, wait) {
     pinInput.value = '';
     cells.forEach((c) => { c.classList.remove('is-filled'); c.textContent = ''; });
     if (pinRow) { pinRow.classList.remove('is-wrong'); void pinRow.offsetWidth; pinRow.classList.add('is-wrong'); }
@@ -6694,6 +6701,26 @@
           ar: 'الاتصال مطلوب للتحقق من الرمز · الجهاز غير متصل بالإنترنت',
         };
         helpEl.textContent = msgOffline[lang] || msgOffline.fr;
+      } else if (reason === 'unreachable') {
+        /* Online, but Kiwi did not answer (server error, timeout). */
+        const msgDown = {
+          fr: "Kiwi ne répond pas, le code n'a pas pu être vérifié. Réessayez dans un instant.",
+          en: "Kiwi isn't answering, so the code couldn't be checked. Try again in a moment.",
+          ar: 'كيوي لا يستجيب، تعذّر التحقق من الرمز. أعد المحاولة بعد لحظة.',
+        };
+        helpEl.textContent = msgDown[lang] || msgDown.fr;
+      } else if (reason === 'busy') {
+        const mins = wait > 0 ? Math.max(1, Math.ceil(wait / 60)) : 0;
+        const msgBusy = mins ? {
+          fr: `Trop d'essais. Réessayez dans ${mins} min.`,
+          en: `Too many attempts. Try again in ${mins} min.`,
+          ar: `محاولات كثيرة. أعد المحاولة بعد ${mins} دقيقة.`,
+        } : {
+          fr: "Trop d'essais. Réessayez dans quelques minutes.",
+          en: 'Too many attempts. Try again in a few minutes.',
+          ar: 'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.',
+        };
+        helpEl.textContent = msgBusy[lang] || msgBusy.fr;
       } else {
         const msg = { fr: 'Code incorrect, réessayez.', en: 'Wrong code, try again.', ar: 'رمز غير صحيح، أعد المحاولة.' };
         helpEl.textContent = msg[lang] || msg.fr;
@@ -7023,14 +7050,23 @@
       const knownHere = allPins().length;
       const askable = !demosOn() || serverRosterSize() > 0;
       if (local || !askable) { finishUnlock(val, local, !!local); return; }
-      askServer(val).then((answer) => {
+      askServer(val).then((reply) => {
         if (val !== pinInput.value.replace(/\D/g, '').slice(0, 4)) return;   // la saisie a bougé
+        let answer = reply;
+        /* The limiter said wait. Checked before anything else: a { busy } reply
+           must never read as an identity. Where a null used to fail closed, it
+           now says why; where null used to fall through (unconfigured demo),
+           it still does. */
+        if (answer && answer.busy != null) {
+          if (!demosOn() || isConfiguredAccount()) { rejectPin('busy', answer.busy); return; }
+          answer = null;
+        }
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
         /* null = serveur injoignable. Le repli d'avant ne connaissait que les codes
            locaux, et il était sûr TANT QUE kiwiPins en détenait. Depuis qu'ils
            ne sont plus expédiés, il laissait passer n'importe quels quatre chiffres.
            Un compte configuré qu'on ne peut pas vérifier se ferme. */
-        if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin('offline'); return; }
+        if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin(navigator.onLine === false ? 'offline' : 'unreachable'); return; }
         const configured = knownHere || serverRosterSize();
         // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
         if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }

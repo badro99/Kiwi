@@ -195,6 +195,18 @@ ok('« Nouvelle version prête » speaks EN and AR and stays on one line', () =>
   assert.match(pwa, /ar: \{ ready: 'إصدار جديد جاهز', go: 'تحديث'/);
   assert.match(pwa, /white-space:nowrap/);
 });
+ok('the update pill waits behind an open modal, sheet or code screen instead of covering its buttons', () => {
+  assert.match(pwa, /document\.querySelectorAll\('\.kiwi-backdrop, \[aria-modal="true"\], dialog\[open\]'\)/);
+  // the till keeps its dialogs in the page: only a visible, clickable one counts
+  assert.match(pwa, /if \(!el\.getClientRects\(\)\.length\) continue;/);
+  assert.match(pwa, /if \(cs\.visibility === 'hidden' \|\| cs\.pointerEvents === 'none'\) continue;/);
+  assert.match(pwa, /new MutationObserver\(queue\)\.observe\(/);
+  assert.match(pwa, /appendChild\(button\);\n    keepClear\(button\);/);
+});
+ok('the pill draws a Material icon, not a « ↻ » text glyph', () => {
+  assert.ok(!/↻/.test(pwa));
+  assert.match(pwa, /var REFRESH_ICON = '<svg viewBox="0 -960 960 960"/);
+});
 
 console.log(`\nlock-greeting-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

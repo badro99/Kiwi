@@ -55,6 +55,9 @@
     /* Équipe · member editor, contract type */
     { sel: '.kt-ed-seg', item: '.kt-ed-segi', skin: 'surface',
       active: function (el) { return el.classList.contains('on'); } },
+    /* Menu · option group editor, kind and requirement */
+    { sel: '.rmw-og-seg', item: '.rmw-og-segi', skin: 'surface',
+      active: function (el) { return el.classList.contains('on'); } },
     /* brand page demo + any future opt-in markup */
     { sel: '[data-lens-demo]', item: '[data-lens-item]', skin: 'brand',
       active: function (el) { return el.classList.contains('on'); } },
@@ -79,7 +82,7 @@
     /* tab rows whose chips are rounded-rect, not full pills */
     '.resv-tabs .kw-lens,.kds-pills .kw-lens,.pds-modes .kw-lens,' +
       '.pds-zone-tabs .kw-lens,.sc-pills .kw-lens,.kw-menu-tabs .kw-lens,' +
-      '.kx-tabs .kw-lens,.kt-ed-seg .kw-lens{border-radius:9px;}' +
+      '.kx-tabs .kw-lens,.kt-ed-seg .kw-lens,.rmw-og-seg .kw-lens{border-radius:9px;}' +
     /* the lens carries the active fill — the item itself goes transparent */
     '.dr-pills[data-kw-lens] .dr-pill.on{background:transparent;box-shadow:none;}' +
     '.resv-tabs[data-kw-lens] .resv-tab.on{background:transparent;box-shadow:none;}' +
@@ -91,6 +94,7 @@
     '.kx-tabs[data-kw-lens] .kx-tab.on{background:transparent;box-shadow:none;}' +
     '.mi-pill-row[data-kw-lens] .mi-pill.on{background:transparent;box-shadow:none;}' +
     '.kt-ed-seg[data-kw-lens] .kt-ed-segi.on span{background:transparent;box-shadow:none;}' +
+    '.rmw-og-seg[data-kw-lens] .rmw-og-segi.on span{background:transparent;box-shadow:none;}' +
     /* the lens replaces the landing tabs\' old static ::after indicator */
     '.audience-tabs[data-kw-lens]::after{display:none !important;}' +
     '@media (prefers-reduced-motion:reduce){.kw-lens{transition:none;}}';

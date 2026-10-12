@@ -490,6 +490,24 @@
       choicesLabel: 'Choices',
       addChoicePlaceholder: 'e.g. Rare, Fries, Large',
       addChoiceBtnLabel: 'Add choice',
+      ogOptional: 'Optional',
+      ogRequired: 'Required',
+      ogRuleOneReq: 'When ordering, the customer picks exactly one option.',
+      ogRuleOneOpt: 'When ordering, the customer picks one option, or none.',
+      ogRuleManyReq: 'When ordering, the customer picks at least one option.',
+      ogRuleManyOpt: 'When ordering, the customer picks as many options as they like, or none.',
+      ogChoicesHelp: 'The supplement is added to the item price. Leave it empty when the choice is included.',
+      ogMark: 'Marker',
+      ogMarkPick: 'Pick a marker',
+      ogNoMark: 'No marker',
+      ogMarkHelp: 'The marker is an emoji shown on the kitchen screen. Optional.',
+      ogChoiceName: 'Choice',
+      ogSupplement: 'Supplement',
+      ogRemoveChoice: 'Remove this choice',
+      ogNameRequired: 'Give the group a name.',
+      ogChoicesRequired: 'Add at least one choice with a name.',
+      ogChoiceUnnamed: 'Name each choice, or remove it.',
+      confirmDeleteDefault: 'This permanently deletes this item.',
       extraPricePlaceholder: 'Extra (MAD)',
       newSubcategoryTitle: 'New subcategory',
       subNamePlaceholder: 'Name (e.g. Cookies, Cakes, Classics)',
@@ -992,6 +1010,24 @@
       choicesLabel: 'الخيارات',
       addChoicePlaceholder: 'مثال: مطهو جيداً، بطاطس، كبير',
       addChoiceBtnLabel: 'إضافة خيار',
+      ogOptional: 'اختياري',
+      ogRequired: 'إلزامي',
+      ogRuleOneReq: 'عند الطلب، يختار الزبون خياراً واحداً بالضبط.',
+      ogRuleOneOpt: 'عند الطلب، يختار الزبون خياراً واحداً، أو لا شيء.',
+      ogRuleManyReq: 'عند الطلب، يختار الزبون خياراً واحداً على الأقل.',
+      ogRuleManyOpt: 'عند الطلب، يختار الزبون ما يشاء من الخيارات، أو لا شيء.',
+      ogChoicesHelp: 'يُضاف المبلغ الإضافي إلى سعر الصنف. اتركه فارغاً إذا كان الخيار مشمولاً.',
+      ogMark: 'علامة',
+      ogMarkPick: 'اختر علامة',
+      ogNoMark: 'بدون علامة',
+      ogMarkHelp: 'العلامة رمز تعبيري يظهر على شاشة المطبخ. اختيارية.',
+      ogChoiceName: 'الخيار',
+      ogSupplement: 'مبلغ إضافي',
+      ogRemoveChoice: 'إزالة هذا الخيار',
+      ogNameRequired: 'أعطِ المجموعة اسماً.',
+      ogChoicesRequired: 'أضف خياراً واحداً على الأقل باسم.',
+      ogChoiceUnnamed: 'سمِّ كل خيار، أو أزله.',
+      confirmDeleteDefault: 'سيؤدي هذا إلى حذف هذا العنصر نهائياً.',
       extraPricePlaceholder: 'سعر إضافي (MAD)',
       newSubcategoryTitle: 'تصنيف فرعي جديد',
       subNamePlaceholder: 'الاسم (مثال: كوكيز، كيك، كلاسيكيات)',
@@ -1496,7 +1532,25 @@
       groupOptionalOpt: 'Optionnel (le client peut ignorer)',
       choicesLabel: 'Choix proposés',
       addChoicePlaceholder: 'ex. Saignant, Frites, Grand',
-      addChoiceBtnLabel: 'Ajouter le choix',
+      addChoiceBtnLabel: 'Ajouter un choix',
+      ogOptional: 'Facultatif',
+      ogRequired: 'Obligatoire',
+      ogRuleOneReq: 'À la commande, le client choisit exactement une option.',
+      ogRuleOneOpt: 'À la commande, le client choisit une option, ou aucune.',
+      ogRuleManyReq: 'À la commande, le client choisit au moins une option.',
+      ogRuleManyOpt: "À la commande, le client choisit autant d'options qu'il veut, ou aucune.",
+      ogChoicesHelp: "Le supplément s'ajoute au prix de l'article. Laissez vide quand le choix est inclus.",
+      ogMark: 'Repère',
+      ogMarkPick: 'Choisir un repère',
+      ogNoMark: 'Aucun repère',
+      ogMarkHelp: "Le repère est un emoji affiché sur l'écran cuisine. Facultatif.",
+      ogChoiceName: 'Choix',
+      ogSupplement: 'Supplément',
+      ogRemoveChoice: 'Retirer ce choix',
+      ogNameRequired: 'Donnez un nom au groupe.',
+      ogChoicesRequired: 'Ajoutez au moins un choix avec un nom.',
+      ogChoiceUnnamed: 'Nommez chaque choix, ou retirez-le.',
+      confirmDeleteDefault: 'Cette action supprimera définitivement cet élément.',
       extraPricePlaceholder: 'Supplément (MAD)',
       newSubcategoryTitle: 'Nouvelle sous-catégorie',
       subNamePlaceholder: 'Nom (ex. Cookies, Gâteaux, Classics)',
@@ -2351,11 +2405,117 @@
     };
     $('[data-save]',m.el).onclick=()=>saveItem();
   }
-  function emojiPicker(button){$$('.rmw-emoji-pop').forEach(x=>x.remove());const all=S().optionEmojis?.()||[],p=document.createElement('div'),r=button.getBoundingClientRect();p.className='rmw-emoji-pop';p.innerHTML=`<button data-emoji="" class="rmw-none">Aucun repère</button>${all.map(e=>`<button data-emoji="${esc(e)}">${e}</button>`).join('')}`;p.style.left=Math.min(r.left,innerWidth-390)+'px';p.style.top=Math.min(r.bottom+6,innerHeight-330)+'px';p.onclick=e=>{const b=e.target.closest('[data-emoji]');if(!b)return;button.dataset.value=b.dataset.emoji;button.textContent=b.dataset.emoji||'＋';p.remove();};document.body.appendChild(p);}
-  function choiceRow(c){return `<div class="mi-grp-opt-row" data-choice data-id="${c?.id||''}"><button type="button" class="rmw-emoji-btn" data-emoji-btn data-value="${esc(c?.emoji||'')}">${c?.emoji||'＋'}</button><input class="kf-input" data-choice-name placeholder="${esc(ui('addChoicePlaceholder'))}" value="${esc(c?.name||'')}"/><div class="eq-m-suffix"><input class="kf-input" type="number" min="0" step="0.01" inputmode="decimal" data-choice-price value="${+c?.price||0}"/><span class="sfx">MAD</span></div><button class="mi-ic-btn danger" type="button" data-choice-del>${ic('trash')}</button></div>`;}
-  function openGroup(g){
-    const m=modal({title:g?ui('editGroupTitle'):ui('newGroupTitle'),width:700,body:`<div class="kf-group"><label class="kf-label">${esc(ui('groupNameLabel'))}</label><input class="kf-input" data-name value="${esc(g?.name||'')}" placeholder="${esc(ui('groupNamePlaceholder'))}"/></div><div class="kf-row"><div class="kf-group"><label class="kf-label">${esc(ui('groupTypeLabel'))}</label><select class="kf-input" data-kind><option value="one"${g?.kind!=='many'?' selected':''}>${esc(ui('oneChoice'))}</option><option value="many"${g?.kind==='many'?' selected':''}>${esc(ui('manyChoices'))}</option></select></div><div class="kf-group"><label class="kf-label">${esc(ui('groupRequiredLabel'))}</label><select class="kf-input" data-required><option value="0"${!g?.required?' selected':''}>${esc(ui('groupOptionalOpt'))}</option><option value="1"${g?.required?' selected':''}>${esc(ui('groupRequiredOpt'))}</option></select></div></div><div class="kf-group"><label class="kf-label">${esc(ui('choicesLabel'))}</label><div class="kf-help">Le repère visuel accepte uniquement les emojis Kiwi et apparaît sur le KDS.</div><div data-choices>${(g?.choices||[]).map(choiceRow).join('')||choiceRow(null)}</div><button class="btn-slim" type="button" data-choice-add>${ic('plus')} ${esc(ui('addChoiceBtnLabel'))}</button></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});const wrap=$('[data-choices]',m.el);$('[data-choice-add]',m.el).onclick=()=>wrap.insertAdjacentHTML('beforeend',choiceRow(null));wrap.onclick=e=>{const del=e.target.closest('[data-choice-del]');if(del&&$$('[data-choice]',wrap).length>1)del.closest('[data-choice]').remove();const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const name=$('[data-name]',m.el).value.trim(),rows=$$('[data-choice]',wrap).map(r=>({id:r.dataset.id,name:$('[data-choice-name]',r).value.trim(),price:+$('[data-choice-price]',r).value||0,emoji:$('[data-emoji-btn]',r).dataset.value||''})).filter(x=>x.name);if(!name||!rows.length)return;let id=g?.id;if(g){S().updateOptGroup(id,{name,kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});(g.choices||[]).filter(c=>!rows.some(x=>x.id===c.id)).forEach(c=>S().deleteOptChoice(id,c.id));rows.forEach(x=>x.id?S().updateOptChoice(id,x.id,x):S().addOptChoice(id,x.name,x.price,x.emoji));}else{S().addOptGroup(name);id=D().opts.at(-1)?.id;S().updateOptGroup(id,{kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});rows.forEach(x=>S().addOptChoice(id,x.name,x.price,x.emoji));}m.close();render();};
+  /* Repère (KDS emoji) picker. It sat at « left: innerWidth − 390 », off the
+     left edge of a phone, said « Aucun repère » in French under EN and AR, and
+     stayed open until something was picked: no Escape, no click-away. */
+  function emojiPicker(button){
+    $$('.rmw-emoji-pop').forEach(x=>x.remove());
+    const all=S().optionEmojis?.()||[],p=document.createElement('div'),r=button.getBoundingClientRect();
+    p.className='rmw-emoji-pop';p.setAttribute('role','dialog');p.setAttribute('aria-label',ui('ogMarkPick'));
+    p.innerHTML=`<button type="button" data-emoji="" class="rmw-none">${esc(ui('ogNoMark'))}</button>${all.map(e=>`<button type="button" data-emoji="${esc(e)}">${esc(e)}</button>`).join('')}`;
+    document.body.appendChild(p);
+    const w=p.offsetWidth,h=p.offsetHeight;
+    p.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';
+    p.style.top=(r.bottom+6+h>innerHeight-8?Math.max(8,r.top-6-h):r.bottom+6)+'px';
+    const close=()=>{p.remove();document.removeEventListener('pointerdown',away,true);document.removeEventListener('keydown',key,true);};
+    const away=e=>{if(!p.contains(e.target)&&!button.contains(e.target))close();};
+    const key=e=>{if(e.key==='Escape'){e.stopPropagation();close();button.focus();}};
+    setTimeout(()=>{document.addEventListener('pointerdown',away,true);document.addEventListener('keydown',key,true);},0);
+    p.onclick=e=>{const b=e.target.closest('[data-emoji]');if(!b)return;const v=b.dataset.emoji||'';button.dataset.value=v;button.innerHTML=v?esc(v):itSvg('add');button.classList.toggle('has',!!v);close();button.focus();};
+    p.querySelector('button')?.focus();
   }
+  function choiceRow(c){const price=+c?.price||0;return `<div class="rmw-og-row" data-choice data-id="${esc(c?.id||'')}"><button type="button" class="rmw-og-mark${c?.emoji?' has':''}" data-emoji-btn data-value="${esc(c?.emoji||'')}" aria-label="${esc(ui('ogMarkPick'))}">${c?.emoji?esc(c.emoji):itSvg('add')}</button><input class="rmw-rx-in" data-choice-name placeholder="${esc(ui('addChoicePlaceholder'))}" value="${esc(c?.name||'')}" aria-label="${esc(ui('ogChoiceName'))}" autocomplete="off"/><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" min="0" step="0.01" inputmode="decimal" data-choice-price value="${price>0?price:''}" placeholder="0" aria-label="${esc(ui('ogSupplement'))}"/><i>MAD</i></span><button class="rmw-rx-del" type="button" data-choice-del aria-label="${esc(ui('ogRemoveChoice'))}">${itSvg('close')}</button></div>`;}
+  /* Option group editor (2026-10-12). Two selects, a French-only help line,
+     unlabelled price boxes pre-filled with « 0 », and a « Enregistrer » that
+     did nothing at all when the name or every choice was empty. Now: the two
+     rules are segmented controls on the liquid lens, a sentence says what the
+     order screens will enforce (caisse, serveur, QR and the order API all read
+     kind and required the same way), and errors sit under what they concern. */
+  function openGroup(g){
+    recipeStyle();itemStyle();groupStyle();
+    const kind=g?.kind==='many'?'many':'one',req=g?.required?'1':'0';
+    const seg=(name,val,opts)=>`<div class="rmw-og-seg" role="radiogroup" aria-labelledby="rmw-og-${name}-l" data-og-seg="${name}">${opts.map(([v,l])=>`<label class="rmw-og-segi${v===val?' on':''}"><input type="radio" name="rmw-og-${name}" value="${v}"${v===val?' checked':''}/><span>${esc(l)}</span></label>`).join('')}</div>`;
+    const m=modal({title:g?ui('editGroupTitle'):ui('newGroupTitle'),width:680,body:`<div class="rmw-og">
+      <section class="rmw-rx-sec">
+        <div class="rmw-og-grid">
+          <label class="rmw-it-f rmw-og-wide"><span>${esc(ui('groupNameLabel'))}</span><input class="rmw-rx-in" data-name value="${esc(g?.name||'')}" placeholder="${esc(ui('groupNamePlaceholder'))}" autocomplete="off"/><em class="rmw-it-err" data-og-err="name" hidden></em></label>
+          <div class="rmw-it-f"><span id="rmw-og-kind-l">${esc(ui('groupTypeLabel'))}</span>${seg('kind',kind,[['one',ui('oneChoice')],['many',ui('manyChoices')]])}</div>
+          <div class="rmw-it-f"><span id="rmw-og-req-l">${esc(ui('groupRequiredLabel'))}</span>${seg('req',req,[['0',ui('ogOptional')],['1',ui('ogRequired')]])}</div>
+        </div>
+        <p class="rmw-og-rule" data-og-rule aria-live="polite"></p>
+      </section>
+      <section class="rmw-rx-sec">
+        <div class="rmw-rx-sec-head"><div><h4>${esc(ui('choicesLabel'))}</h4><p>${esc(ui('ogChoicesHelp'))}</p></div></div>
+        <div class="rmw-og-cols" aria-hidden="true"><span>${esc(ui('ogMark'))}</span><span>${esc(ui('ogChoiceName'))}</span><span>${esc(ui('ogSupplement'))}</span><span></span></div>
+        <div data-choices>${(g?.choices||[]).map(choiceRow).join('')||choiceRow(null)}</div>
+        <em class="rmw-it-err rmw-og-choices-err" data-og-err="choices" hidden></em>
+        <button class="rmw-rx-add" type="button" data-choice-add>${itSvg('add')}<span>${esc(ui('addChoiceBtnLabel'))}</span></button>
+        <p class="rmw-og-hint">${esc(ui('ogMarkHelp'))}</p>
+      </section>
+    </div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});
+    m.el.classList.add('rmw-recipe-modal','rmw-og-modal');
+    const wrap=$('[data-choices]',m.el),nameEl=$('[data-name]',m.el);
+    const picked=(name)=>$(`input[name="rmw-og-${name}"]:checked`,m.el)?.value;
+    const rule=()=>{const many=picked('kind')==='many',must=picked('req')==='1';$('[data-og-rule]',m.el).textContent=ui(many?(must?'ogRuleManyReq':'ogRuleManyOpt'):(must?'ogRuleOneReq':'ogRuleOneOpt'));};
+    const setErr=(k,msg)=>{const e=$(`[data-og-err="${k}"]`,m.el);if(e){e.textContent=msg||'';e.hidden=!msg;}if(k==='name'){if(msg)nameEl.setAttribute('aria-invalid','true');else nameEl.removeAttribute('aria-invalid');}};
+    rule();
+    m.el.addEventListener('change',e=>{const s=e.target.closest('[data-og-seg]');if(!s)return;$$('.rmw-og-segi',s).forEach(l=>l.classList.toggle('on',!!$('input',l).checked));rule();});
+    m.el.addEventListener('input',e=>{if(e.target===nameEl&&nameEl.value.trim())setErr('name','');if(e.target.matches('[data-choice-name]')&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');if(!$$('[data-choice-name][aria-invalid="true"]',wrap).length)setErr('choices','');}});
+    $('[data-choice-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',choiceRow(null));$('[data-choice-name]',wrap.lastElementChild)?.focus();};
+    wrap.onclick=e=>{const del=e.target.closest('[data-choice-del]');if(del){const row=del.closest('[data-choice]');if($$('[data-choice]',wrap).length>1)row.remove();else{row.dataset.id='';$('[data-choice-name]',row).value='';$('[data-choice-price]',row).value='';const b=$('[data-emoji-btn]',row);b.dataset.value='';b.innerHTML=itSvg('add');b.classList.remove('has');$('[data-choice-name]',row).focus();}return;}const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};
+    $('[data-cancel]',m.el).onclick=m.close;
+    $('[data-save]',m.el).onclick=()=>{
+      const name=nameEl.value.trim();
+      const all=$$('[data-choice]',wrap).map(r=>({el:r,id:r.dataset.id,name:$('[data-choice-name]',r).value.trim(),price:Math.max(0,+$('[data-choice-price]',r).value||0),emoji:$('[data-emoji-btn]',r).dataset.value||''}));
+      const unnamed=all.filter(x=>!x.name&&(x.price>0||x.emoji)),rows=all.filter(x=>x.name);
+      all.forEach(x=>{const inp=$('[data-choice-name]',x.el);if(unnamed.includes(x))inp.setAttribute('aria-invalid','true');else inp.removeAttribute('aria-invalid');});
+      setErr('name',name?'':ui('ogNameRequired'));
+      setErr('choices',unnamed.length?ui('ogChoiceUnnamed'):rows.length?'':ui('ogChoicesRequired'));
+      if(!name){nameEl.focus();return;}
+      if(unnamed.length){$('[data-choice-name]',unnamed[0].el).focus();return;}
+      if(!rows.length){$('[data-choice-name]',wrap)?.focus();return;}
+      const kindV=picked('kind')==='many'?'many':'one',required=picked('req')==='1';
+      let id=g?.id;
+      if(g){S().updateOptGroup(id,{name,kind:kindV,required});(g.choices||[]).filter(c=>!rows.some(x=>x.id===c.id)).forEach(c=>S().deleteOptChoice(id,c.id));rows.forEach(x=>x.id?S().updateOptChoice(id,x.id,{name:x.name,price:x.price,emoji:x.emoji}):S().addOptChoice(id,x.name,x.price,x.emoji));}
+      else{S().addOptGroup(name);id=D().opts.at(-1)?.id;S().updateOptGroup(id,{kind:kindV,required});rows.forEach(x=>S().addOptChoice(id,x.name,x.price,x.emoji));}
+      m.close();render();
+    };
+    setTimeout(()=>{if(!g)nameEl.focus();},60);
+  }
+  function groupStyle(){if($('#rmw-og-css'))return;const s=document.createElement('style');s.id='rmw-og-css';s.textContent=`
+.rmw-og{display:grid;gap:14px;color:var(--ink)}
+.rmw-og-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 12px;align-items:start}
+.rmw-og-wide{grid-column:1/-1}
+.rmw-og .rmw-it-f{grid-template-columns:minmax(0,1fr)}
+.rmw-og-seg{position:relative;display:flex;gap:2px;width:100%;box-sizing:border-box;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--ink) 6%,var(--rx-field))}
+.rmw-og-segi{position:relative;flex:1 1 0;min-width:0;cursor:pointer}
+.rmw-og-segi input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.rmw-og-segi span{display:flex;align-items:center;justify-content:center;height:34px;padding:0 10px;border-radius:9px;font:500 13px var(--sans);color:var(--n-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color 160ms}
+.rmw-og-segi.on span{color:var(--ink);font-weight:600}
+.rmw-og-seg:not([data-kw-lens]) .rmw-og-segi.on span{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.rmw-og-segi input:focus-visible+span{box-shadow:0 0 0 2px var(--atlas)}
+.rmw-og-rule{display:flex;align-items:center;gap:9px;margin:14px 0 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--atlas) 7%,var(--rx-field));color:var(--n-700);font-size:12.5px;line-height:1.45}
+.rmw-og-rule::before{content:'';flex:none;width:6px;height:6px;border-radius:50%;background:var(--atlas)}
+.rmw-og-cols,.rmw-og-row{display:grid;grid-template-columns:44px minmax(0,1fr) 132px 32px;gap:8px;align-items:center}
+.rmw-og-cols{padding:0 2px 6px;border-bottom:1px solid var(--n-200);font-size:11px;font-weight:600;color:var(--n-500)}
+.rmw-og-row{padding:8px 0;border-bottom:1px solid var(--n-200)}
+.rmw-og-mark{width:44px;height:38px;display:grid;place-items:center;padding:0;border:1px dashed var(--n-300);border-radius:10px;background:var(--rx-field);color:var(--n-500);font-size:20px;line-height:1;cursor:pointer;transition:border-color 140ms,color 140ms}
+.rmw-og-mark.has{border-style:solid;border-color:var(--n-200)}
+.rmw-og-mark svg{width:16px;height:16px;fill:currentColor}
+.rmw-og-mark:hover,.rmw-og-mark:focus-visible{border-color:var(--atlas);color:var(--atlas);outline:0}
+.rmw-og-row .rmw-rx-suffix .rmw-rx-in{padding-inline-end:42px;text-align:end}
+.rmw-og-row .rmw-rx-del svg{width:16px;height:16px;fill:currentColor}
+.rmw-og-row .rmw-rx-del:hover{color:#cb5238;background:color-mix(in srgb,#cb5238 9%,transparent)}
+.rmw-og .rmw-rx-in[aria-invalid="true"]{border-color:#cb5238;box-shadow:0 0 0 3px color-mix(in srgb,#cb5238 14%,transparent)}
+.rmw-og .rmw-it-err[hidden]{display:none}
+.rmw-og-choices-err{display:block;margin-top:10px}
+.rmw-og-hint{margin:12px 0 0;font-size:11.5px;line-height:1.45;color:var(--n-500)}
+/* The picker lives on <body>, outside the sheet: it needs its own opaque surface (the skin's --surface is translucent). */
+.rmw-emoji-pop{max-width:calc(100vw - 16px);box-sizing:border-box;background:var(--paper)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html[data-theme="dark"] .rmw-emoji-pop{background:#151C18!important;border-color:rgba(255,255,255,.1)}
+.rmw-emoji-pop button:focus-visible{outline:2px solid var(--atlas);outline-offset:1px}
+@media(max-width:620px){.rmw-og-grid{grid-template-columns:1fr}.rmw-og-cols{display:none}.rmw-og-row{grid-template-columns:44px minmax(0,1fr) 32px;grid-template-areas:"mark name del" ". price .";row-gap:8px}.rmw-og-row>.rmw-og-mark{grid-area:mark}.rmw-og-row>[data-choice-name]{grid-area:name}.rmw-og-row>.rmw-rx-suffix{grid-area:price}.rmw-og-row>.rmw-rx-del{grid-area:del}.rmw-og .rmw-rx-in{font-size:16px}}
+`;document.head.appendChild(s);}
   /* Unités courtes dans la liste (« g », « kg », « Botte ») : le libellé long
      « Gramme (g) » était tronqué en « Gramme (... » dans une cellule étroite. */
   function recipeUnitOptions(value){const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value,'')||'';return `<option value="">${esc(ui('rxChoose'))}</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}" title="${esc(unit.label)}"${unit.id===selected?' selected':''}>${esc(unit.family==='mass'||unit.family==='volume'?unit.id:unit.label)}</option>`).join('')}`;}
@@ -2396,7 +2556,7 @@
   }
   function recipeDraft(root,x,api){const inv=api.inventory(venue()),units=window.KiwiRestaurantUnits;return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>{const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};}).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};}
   function openRecipe(x,seed,from){const api=window.KiwiRestaurantRecipes,had=!!api?.get(x.id,x.name,venue()),r=seed||api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];recipeStyle();const catName=cat(x.catId)?.name?t(cat(x.catId).name):'';const m=modal({title:ui('rxTitle',{name:t(x.name)}),desc:esc(ui('rxDesc',{cat:catName,price:cash(x.price)}).replace(/^ · /,'')),width:1080,body:`<div class="rmw-rx">${seed?`<div class="rmw-rx-draft" data-recipe-draft><b>${esc(ui('recipeDraftTitle'))}</b><span>${esc(ui('recipeDraftFrom',{name:from?.sheet||''}))}${had?' '+esc(ui('recipeDraftExisting')):''}</span></div>`:''}<datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist><div class="rmw-rx-main"><section class="rmw-rx-sec"><header class="rmw-rx-sec-head"><div><h4>${esc(ui('rxComposition'))}</h4><p>${esc(ui('rxCompositionSub'))}</p></div><div class="rmw-rx-meta"><label><span>${esc(ui('rxPortions'))}</span><input class="rmw-rx-in" type="number" inputmode="numeric" min="1" step="1" data-portions value="${r.portions||1}"/></label><label><span>${esc(ui('rxPrep'))}</span><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" inputmode="numeric" min="0" step="1" data-minutes value="${r.prepMinutes||0}"/><i>${esc(ui('rxMin'))}</i></span></label></div></header><div class="rmw-rx-cols" aria-hidden="true"><span>${esc(ui('rxIngredient'))}</span><span>${esc(ui('rxQty'))}</span><span>${esc(ui('rxLineCost'))}</span><span></span></div><div data-recipe-ingredients>${rows.map(recipeIngredientRow).join('')}</div><button class="rmw-rx-add" type="button" data-ing-add><svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg><span>${esc(ui('rxAdd'))}</span></button>${inv.length?'':`<p class="rmw-rx-hint">${esc(ui('rxNoStock'))}</p>`}</section><section class="rmw-rx-sec"><header class="rmw-rx-sec-head"><div><h4>${esc(ui('rxMethod'))}</h4></div></header><div class="rmw-rx-notes"><label><span>${esc(ui('rxSteps'))}</span><textarea class="rmw-rx-in" data-steps placeholder="${esc(ui('rxStepsPh'))}">${esc((r.steps||[]).join('\n'))}</textarea></label><label><span>${esc(ui('rxNotes'))}</span><textarea class="rmw-rx-in" data-note placeholder="${esc(ui('rxNotesPh'))}">${esc(r.note||'')}</textarea></label></div></section></div><aside class="rmw-rx-side" data-recipe-summary></aside></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});m.el.classList.add('rmw-recipe-modal');let hideDraft=!!x.hideNutrition;const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{const info=$$('[data-recipe-ing]',m.el).map(row=>{const li=recipeLineInfo(row,api,inv),meta=$('[data-ing-meta]',row),costEl=$('[data-ing-cost]',row);row.dataset.state=li.empty?'':li.state;if(meta)meta.textContent=li.empty?'':li.meta;if(costEl)costEl.textContent=li.cost!=null?cash(li.cost):'·';return li;});$('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api,hideDraft,info);};refresh();m.el.addEventListener('change',e=>{if(e.target.matches('[data-hide-nutrition]')){hideDraft=!!e.target.checked;return;}if(e.target.matches('[data-ing-unit]'))refresh();});m.el.addEventListener('input',e=>{if(e.target.matches('[data-hide-nutrition]'))return;const row=e.target.closest('[data-recipe-ing]');if(row&&e.target.matches('[data-ing-name]')){const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());row.dataset.stockId=hit?.id||'';if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';}refresh();});m.el.addEventListener('click',e=>{if(!e.target.closest('[data-nutrition-fix]'))return;m.close();window.Kiwi?.handlers?.['nav-stock']?.();});wrap.onclick=e=>{const del=e.target.closest('[data-ing-delete]');if(!del)return;del.closest('[data-recipe-ing]').remove();if(!wrap.children.length)wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},0));refresh();};$('[data-ing-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},wrap.children.length));$('[data-ing-name]',wrap.lastElementChild).focus();};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const draft=recipeDraft(m.el,x,api);if(!draft.ingredients.some(line=>line.qty>0)){toast(ui('rxToastQtyT'),ui('rxToastQty'),'warn');return;}if(draft.ingredients.some(line=>!line.unit)){toast(ui('rxToastUnitT'),ui('rxToastUnit'),'warn');return;}S().updateItem(x.id,{hideNutrition:hideDraft});api.save(x.id,draft,venue());m.close();render();toast(ui('rxSavedT'),ui('rxSaved'));};}
-  function confirm(title,run,detail='Cette action supprimera définitivement cet élément.'){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="kb danger" data-confirm>${esc(ui('delete'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
+  function confirm(title,run,detail=ui('confirmDeleteDefault')){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="kb danger" data-confirm>${esc(ui('delete'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
   let legacyMenuHandler=null;
   function restaurantMenuHandler(){
     /* The sidebar only exposes nav-menu for restaurant venues. Claim the route

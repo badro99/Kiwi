@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=61',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=4',
+  '/assets/liquid-lens.js?v=5',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
   '/assets/account.js?v=29',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
-  '/assets/pwa-update.js?v=360',
+  '/assets/pwa-update.js?v=361',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=1',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=298',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=109',
+  '/assets/restaurant-menu-workspace.js?v=110',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
@@ -330,7 +330,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=5',
   '/assets/pos-maison.css?v=58',
   '/assets/pos-maison.js?v=58',
-  '/assets/caisse-pairing.js?v=26',
+  '/assets/caisse-pairing.js?v=27',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

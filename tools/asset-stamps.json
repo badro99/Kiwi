@@ -128,8 +128,8 @@
     "sha": "216d8525555e8c8b"
   },
   "assets/caisse-pairing.js": {
-    "v": "26",
-    "sha": "d4c062fe1f895431"
+    "v": "27",
+    "sha": "ef8e0ef8297fd929"
   },
   "assets/caisse-pwa.js": {
     "v": "564",
@@ -500,8 +500,8 @@
     "sha": "e6199b1d6a79b435"
   },
   "assets/liquid-lens.js": {
-    "v": "4",
-    "sha": "b9541d85d3f164a5"
+    "v": "5",
+    "sha": "fb443dd24513990a"
   },
   "assets/live-link.js": {
     "v": "60",
@@ -884,8 +884,8 @@
     "sha": "b68358ca7f3d005f"
   },
   "assets/pwa-update.js": {
-    "v": "360",
-    "sha": "f66fd42932104b56"
+    "v": "361",
+    "sha": "c7952bd69a155802"
   },
   "assets/qrcode.js": {
     "v": "1",
@@ -912,8 +912,8 @@
     "sha": "564289e55caa6564"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "109",
-    "sha": "ff2d24b662529125"
+    "v": "110",
+    "sha": "51895c41aaf2bb8e"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",
