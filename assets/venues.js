@@ -254,8 +254,9 @@
 
   /* ═══════════════ VERTICAL → SIDEBAR SECTION ═══════════════ */
 
-  // Semantic names are rendered by the shared Google Material Symbols Rounded
-  // runtime. Keep navigation iconography consistent across every vertical.
+  // Semantic names are rendered by the shared Material Symbols Outlined
+  // runtime (assets/material-icons.js). Keep navigation iconography
+  // consistent across every vertical.
   const ICONS = {
     // restaurant
     tables: 'layout-grid',

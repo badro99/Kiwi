@@ -59,10 +59,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <!-- Lucide icon library -->
-  <!-- Lucide icons · self-hosted so missing/blocked CDN never strips the UI of icons.
-       Version pinned at download (v1.17.0). To upgrade, re-download from
-       https://unpkg.com/lucide@latest/dist/umd/lucide.min.js into assets/. -->
   <!-- Client error reporter & observability (fail-soft telemetry) -->
   <script src="assets/err-reporter.js?v=1"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
@@ -79,7 +75,10 @@
        the salle view, so it has to be resolved by then. -->
   <script src="assets/floorplan-core.js?v=2050"></script>
 
-  <script src="assets/lucide.min.js?v=5" defer></script>
+  <!-- Material Symbols Outlined, generated from assets/icons/material/ by
+       tools/build-material-icons.mjs. Renders data-icon (Material names) and the
+       legacy data-lucide (Lucide names, mapped). -->
+  <script src="assets/material-icons.js?v=1" defer></script>
 
   <!-- liquid-lens.js is the brand's segmented-control motion: its selectors
        match nothing in the restaurant markup, only the data-lens opt-ins of the
@@ -5613,7 +5612,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
-  <script src="assets/pwa-update.js?v=362" defer></script>
+  <script src="assets/pwa-update.js?v=363" defer></script>
   <script src="assets/caisse-pwa.js?v=564" defer></script>
   <script src="assets/live-link.js?v=60" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>

@@ -101,7 +101,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=46',
+  '/assets/venues.js?v=47',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=6',
   '/assets/trade-workspaces.js?v=9',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
-  '/assets/pwa-update.js?v=362',
+  '/assets/pwa-update.js?v=363',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
@@ -338,7 +338,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=8',
   '/assets/pressing-caisse.js?v=45',
   '/assets/pressing-caisse.css?v=45',
-  '/assets/lucide.min.js?v=5',
+  '/assets/material-icons.js?v=1',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
   '/assets/kiwi-newlogo.svg?v=2',

@@ -294,9 +294,9 @@ async function routeRequest(context) {
   if (isRead && isLandingPath) return next();
 
   /* Les fichiers statiques que ces pages CHARGENT. Allow-lister la page sans ses
-   * scripts, c'est servir un document qui demande ensuite `assets/lucide.min.js`
+   * scripts, c'est servir un document qui demande ensuite `assets/material-icons.js`
    * et reçoit l'écran de connexion à la place : le navigateur tente de lire du
-   * HTML comme du JavaScript, `window.lucide` reste undefined, et le client qui
+   * HTML comme du JavaScript, `window.KiwiIcon` reste undefined, et le client qui
    * scanne le QR voit vingt-deux carrés vides à la place des icônes. C'est ce
    * qui se passait en production — la page répondait 200, donc rien ne le
    * signalait.

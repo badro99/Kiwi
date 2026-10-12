@@ -511,10 +511,6 @@
     "v": "4",
     "sha": "7005b22532f22b14"
   },
-  "assets/lucide.min.js": {
-    "v": "5",
-    "sha": "919e1d2f1e4f2ae2"
-  },
   "assets/maison-stock-movements.js": {
     "v": "4",
     "sha": "596d047b5cd9f697"
@@ -522,6 +518,10 @@
   "assets/marketing-suite-tease.js": {
     "v": "1",
     "sha": "529acc4604d2e551"
+  },
+  "assets/material-icons.js": {
+    "v": "1",
+    "sha": "884625ceb2749e0b"
   },
   "assets/menu-catalog.js": {
     "v": "27",
@@ -884,8 +884,8 @@
     "sha": "b68358ca7f3d005f"
   },
   "assets/pwa-update.js": {
-    "v": "362",
-    "sha": "f0e6e21f888323bb"
+    "v": "363",
+    "sha": "e8515d9723a06fc3"
   },
   "assets/qrcode.js": {
     "v": "1",
@@ -1032,8 +1032,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "46",
-    "sha": "ebdcadea12f2407b"
+    "v": "47",
+    "sha": "0ab69bb7ec2ac0ce"
   },
   "assets/vertical-state.js": {
     "v": "3",

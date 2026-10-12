@@ -586,6 +586,19 @@ section('Réconciliation numéro commande (tools/order-number-reconciliation-tes
   else fail(`order-number-reconciliation-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+/* ── Icônes · Material Symbols Outlined, rien d'autre ─────────────────────
+ * Le runtime est généré depuis assets/icons/material/, chaque nom demandé
+ * dessine un vrai glyphe (pas le « ? » de repli), et aucun fichier ne gagne un
+ * data-lucide : le nouveau code écrit data-icon avec un nom Material. */
+section('Icônes Material (tools/material-icons-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'material-icons-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`material-icons-test.mjs green (${Math.max(0, (out.match(/✓/g) || []).length)} controls)`);
+  else fail(`material-icons-test.mjs exited ${r.status} — ${out.trim().split('\n').filter((l) => /AssertionError|✗/.test(l)).slice(0, 2).join(' | ') || out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4d-bis · règles de promotions ──────────────────────────────────────────
  * Une promotion se voit sur un PRIX, pas sur une capture d'écran : deux
  * affiches qui se cumulent, une promotion terminée qui s'applique encore, un

@@ -38,6 +38,24 @@ tracé. C'est le format natif de Material Symbols ; ne le convertissez pas.
 Le consommateur pose `fill="currentColor"` et laisse la CSS piloter `color`,
 exactement comme avant.
 
+### Dans une page : `assets/material-icons.js`
+
+Les pages (caisse, serveur, tableau de bord, commande QR) chargent
+`assets/material-icons.js`, **généré** depuis ce dossier par
+`node tools/build-material-icons.mjs` : il embarque chaque SVG d'ici et dessine
+
+```html
+<i data-icon="print"></i>              <!-- nom Material, pour tout nouveau code -->
+```
+
+ou, dans une chaîne de gabarit, `KiwiIcon.svg('print', 18)`. Les anciens
+`<i data-lucide="printer">` marchent encore à travers la table
+`tools/material-icon-aliases.json`, mais **on n'en ajoute plus** :
+`tools/material-icons-test.mjs` (dans `check.js`) refuse tout fichier qui en
+gagne un. Après avoir ajouté un fichier ici, relancez le générateur ; un nom
+inconnu dessine le « ? » et s'inscrit dans `KiwiIcon.missing`. Le plan de
+migration est dans `docs/audits/2026-10-12-icon-migration.md`.
+
 `assets/trades.js` est volontairement sans dépendance (il est chargé par des
 pages qui n'ont rien d'autre), alors il recopie les `d="…"` en dur et nomme le
 fichier source en commentaire. Partout ailleurs, préférez lire le SVG tel quel.
