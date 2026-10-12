@@ -1161,6 +1161,7 @@ section('Whole-project regressions');
     'takeout-kds-ready-test.mjs',
     'caisse-godmode-toggles-test.mjs',
     'kitchen-print-queue-test.mjs',
+    'kitchen-void-slip-test.mjs',
     'print-relay-idempotency-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',
