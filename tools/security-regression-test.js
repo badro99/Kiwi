@@ -66,7 +66,8 @@ for (const rel of csvProducers.filter((r) => !STATIC_ONLY.has(r))) {
   const label = target === rel
     ? `${rel} neutralises spreadsheet formulas`
     : `${rel} delegates CSV escaping to ${target}`;
-  ok(label, /\[=\+\\-@\]/.test(read(target)));
+  /* = + - @ au moins ; un module peut ajouter tab et retour chariot (OWASP). */
+  ok(label, /\[=\+\\-@[^\]]*\]/.test(read(target)));
 }
 
 if (failed.length) {

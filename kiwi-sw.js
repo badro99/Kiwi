@@ -95,8 +95,8 @@ var SHELL = [
   '/assets/interactive.js?v=61',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=12',
-  '/assets/invoicing.css?v=8',
-  '/assets/invoicing.js?v=10',
+  '/assets/invoicing.css?v=9',
+  '/assets/invoicing.js?v=11',
   '/assets/order-qr.js?v=3',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une

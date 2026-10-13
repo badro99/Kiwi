@@ -40,6 +40,60 @@ const eq = (got, want, msg) => { assert.deepEqual(got, want, `${msg}\n      reç
 const flat = (s) => String(s || '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
 const YEAR = new Date().getFullYear();
 
+/* ── le vrai serveur : mêmes appels, le handler de production ─────────────
+ * Même interface que fakeServer() (handle, st.docs, st.calls, st.offline) pour
+ * que les scénarios ne changent pas. st.docs relit la table invoice_docs. */
+async function realServer() {
+  const { DatabaseSync } = await import('node:sqlite');
+  const SECRET = 'invoicing-real-server-secret-0123456789';
+  const db = new DatabaseSync(':memory:');
+  db.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
+  const now = Date.now();
+  db.prepare("INSERT INTO accounts (id,email,business,salt,hash,created_ts,status) VALUES ('acc-inv','o@inv.test','Facturation Test','s','h',?,'active')").run(now);
+  const wrap = (q) => {
+    const st = db.prepare(q);
+    const bound = (p) => ({
+      async first() { const row = st.get(...p); return row === undefined ? null : row; },
+      async all() { return { results: st.all(...p) }; },
+      async run() { const r = st.run(...p); return { meta: { changes: r.changes }, success: true }; },
+      __run() { return st.run(...p); },
+    });
+    return Object.assign(bound([]), { bind: (...p) => bound(p) });
+  };
+  const env = { AUTH_SECRET: SECRET, DB: {
+    prepare: wrap,
+    async batch(stmts) {
+      db.exec('BEGIN');
+      try { const out = []; for (const s of stmts) out.push(await s.run()); db.exec('COMMIT'); return out; }
+      catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} throw e; }
+    },
+  } };
+  const lib = await import(path.join(root, 'functions/auth/_lib.js'));
+  const api = await import(path.join(root, 'functions/api/invoices.js'));
+  const cookie = lib.sessionCookie(await lib.makeSession('acc-inv', SECRET)).split(';')[0];
+  const known = new Set();
+  const own = (m) => {
+    if (!m || known.has(m)) return;
+    known.add(m);
+    db.prepare("INSERT OR IGNORE INTO merchant_config (merchant,features,type,account_id,name,status,till_epoch,updated_ts) VALUES (?,'{}','restaurant','acc-inv',?,'active',0,?)").run(m, m, now);
+  };
+  const st = { calls: [], offline: false, get docs() { return db.prepare('SELECT * FROM invoice_docs').all(); } };
+  return {
+    st,
+    async handle(method, u, body) {
+      if (st.offline) return null;
+      if (body) st.calls.push(body);
+      own(String((body && body.merchant) || u.searchParams.get('merchant') || '').trim());
+      const request = new Request('https://kiwi-os.com' + u.pathname + u.search, {
+        method, headers: { Cookie: cookie, 'Content-Type': 'application/json', 'CF-Connecting-IP': '10.9.9.9' },
+        body: body && method !== 'GET' ? JSON.stringify(body) : undefined,
+      });
+      const res = method === 'GET' ? await api.onRequestGet({ request, env }) : await api.onRequestPost({ request, env });
+      return { status: res.status, body: await res.json() };
+    },
+  };
+}
+
 /* ── le faux serveur : le contrat, en mémoire ─────────────────────────────── */
 function fakeServer() {
   const st = { docs: [], payments: [], seq: { F: 0, AV: 0, D: 0 }, calls: [], offline: false };
@@ -173,14 +227,14 @@ async function dashboard(tr, { lang = 'fr', real = false, fake = null, width = 1
   await page.setViewport({ width, height: 960 });
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);
-  page.on('request', (r) => {
+  page.on('request', async (r) => {
     const u = new URL(r.url());
     if (r.url().startsWith(base + '/api/')) {
       if (u.pathname === '/api/invoices') {
         hits.push(r.method() + ' ' + u.search);
         if (!real || !fake) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
         let body = null; try { body = r.postData() ? JSON.parse(r.postData()) : null; } catch (_) {}
-        let out; try { out = fake.handle(r.method(), u, body); } catch (e) { return r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'server', message: String(e) }) }); }
+        let out; try { out = await fake.handle(r.method(), u, body); } catch (e) { return r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'server', message: String(e) }) }); }
         if (!out) return r.abort('connectionfailed');
         return r.respond({ status: out.status, contentType: 'application/json', body: JSON.stringify(out.body) });
       }
@@ -229,7 +283,9 @@ try {
   check(!/—/.test(src), 'aucun tiret cadratin dans le module');
   check(!/font-style\s*:\s*italic/.test(src + fs.readFileSync(path.join(root, 'assets/invoicing.css'), 'utf8')), 'aucun italique');
 
-  const fake = fakeServer();
+  /* INV_SERVER=real : le vrai functions/api/invoices.js sur une base SQLite au
+   * schéma réel, derrière une vraie session propriétaire (realServer). */
+  const fake = process.env.INV_SERVER === 'real' ? await realServer() : fakeServer();
 
   /* 1 · Compte réel : import, brouillon, émission, paiement, avoir, devis ─── */
   await S.run('compte réel · du brouillon à l’avoir', async (tr) => {

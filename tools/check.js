@@ -1509,6 +1509,7 @@ section('Whole-project regressions');
     'print-paper-test.mjs',
     'invoicing-print-test.mjs',
     'invoicing-v2-browser-test.mjs',
+    'invoicing-v2-real-server-browser-test.mjs',
     'day-report-print-format-test.mjs',
     'retail-tender-methods-test.mjs',
     'sale-tip-d1-test.mjs',

@@ -1257,7 +1257,7 @@
       const key = 'kiwi:invoices:v1:' + venueId();
       const rest = legacyDocs().slice(500);
       if (rest.length) lsSet(key, JSON.stringify(rest)); else lsDel(key);
-      toast(tpl(t.legacyDone, {n: res.imported ?? res.count ?? docs.length}));
+      toast(tpl(t.legacyDone, {n: res.importedCount ?? (Array.isArray(res.imported) ? res.imported.length : res.imported) ?? docs.length}));
       await refreshAll(); paintNotices();
     } catch (err) { toast(errText(err)); if (btn) btn.disabled = false; }
   }
