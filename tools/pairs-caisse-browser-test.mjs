@@ -10,7 +10,9 @@
  *   · un café appelle le thé, pas le jus épuisé ;
  *   · « × » l'écarte pour cette commande ;
  *   · une commande vidée repart de zéro ; un msemen appelle le thé, « + »
- *     l'ajoute par le chemin normal, et la suggestion passe au plat suivant.
+ *     l'ajoute par le chemin normal, et la suggestion passe au plat suivant ;
+ *   · la caisse passée en anglais : la suggestion suit la langue de la
+ *     caisse, pas seulement celle de la carte.
  * Aucun code saisi. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -172,6 +174,25 @@ try {
   check(row && row.add === 'it_cafe' && /Souvent avec Thé à la menthe · Café noir/.test(row.text),
     'the suggestion moves on from the last dish entered (thé → café, 6 of its 18 tickets), never back to the msemen');
   check(/26/.test(await page.$eval('#rp-total', (n) => n.textContent)), 'the total follows (14 + 12 = 26 MAD)');
+
+  console.log('\n■ The till switched to English');
+  {
+    /* La caisse restaurant n'a pas de sélecteur à l'écran : sa langue est la
+       préférence enregistrée (le sélecteur de la boutique, la langue de
+       l'app native). On passe donc par KiwiCaisseLang.set, la fonction même
+       qu'appelle un sélecteur ; la caisse se repeint par son abonnement. */
+    await page.evaluate(() => KiwiCaisseLang.set('en'));
+    await page.waitForFunction(() => window.KiwiCaisseLang && KiwiCaisseLang.get() === 'en', { timeout: 5000 });
+    await sleep(300);
+    row = await pairRow();
+    /* Les noms sont ceux que la carte affiche dans cette langue (menuName) :
+       « Café noir » devient « Black Coffee » sur la tuile comme ici. */
+    const nameOf = (id) => page.evaluate((x) => menuName(menuItems.find((m) => m.id === x)), id);
+    const cafe = await nameOf('it_cafe'), the = await nameOf('it_the');
+    check(row && row.add === 'it_cafe' && row.text.startsWith(`Often with ${the} · ${cafe}`) && row.text.includes(`% of tickets with ${the} · last 28 days`),
+      `the suggestion follows the till language, names as the menu shows them (« ${row && row.text} »)`);
+    check(await page.$eval('#rp-items .rp-pair-add', (b) => b.getAttribute('aria-label')) === `Add ${cafe}`, 'its buttons are named in English too');
+  }
 
   check(errors.length === 0, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
   console.log(`\npairs-caisse-browser-test: ${checks} checks passed`);
