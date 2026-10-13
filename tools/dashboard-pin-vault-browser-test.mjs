@@ -59,7 +59,7 @@ const S = suite('dashboard-pin-vault', { browser });
 const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); };
 
 /* Comment le « serveur » répond au prochain /api/pin/verify. */
-let verifyMode = 'normal';       // normal | refuse-all | down
+let verifyMode = 'normal';       // normal | refuse-all | refuse-unconfigured | down
 let rosterMode = 'full';         // full | empty (le /api/config du compte ne rend personne)
 const asked = [];
 const json = (status, body) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -78,6 +78,7 @@ async function open(tr, ctx, { legacy = null, onboarded = true } = {}) {
       asked.push(Boolean(body.pin));
       if (verifyMode === 'down') return req.abort('failed');
       if (verifyMode === 'normal' && body.pin === CODE) return req.respond(json(200, { ok: true, staff: { id: 'st_owner', name: 'Amira', role: 'owner' }, merchant: 'vault-test' }));
+      if (verifyMode === 'refuse-unconfigured') return req.respond(json(401, { error: 'bad-pin', configured: false }));
       return req.respond(json(401, { error: 'bad-pin' }));
     }
     if (u.pathname === '/api/config') return req.respond(json(200, { pins: rosterMode === 'empty' ? [] : [{ name: 'Amira', role: 'owner' }] }));
@@ -106,13 +107,7 @@ async function open(tr, ctx, { legacy = null, onboarded = true } = {}) {
 
 const storageDump = (page) => page.evaluate(() => Object.keys(localStorage).map((k) => k + '=' + localStorage.getItem(k)).join('\n'));
 const vaultCount = (page) => page.evaluate(() => window.KiwiDashPinVault.count());
-/* Ouverte = une cellule en succès, ou la porte est partie / cachée / en sortie (un compte jamais installé
-   voit l'assistant d'installation prendre la place avant que les cellules ne s'allument). */
-const unlocked = (page) => page.evaluate(() => {
-  const lock = document.querySelector('[data-kiwi-lock]');
-  return !!document.querySelector('[data-kiwi-pin] .kiwi-pin-cell.is-success')
-    || !lock || lock.style.display === 'none' || lock.classList.contains('is-unlocking');
-});
+const unlocked = (page) => page.evaluate(() => !!document.querySelector('[data-kiwi-pin] .kiwi-pin-cell.is-success'));
 const wrong = (page) => page.evaluate(() => !!document.querySelector('[data-kiwi-pin].is-wrong'));
 const helpText = (page) => page.evaluate(() => (document.querySelector('.kiwi-lock-help') || {}).textContent || '');
 
@@ -243,25 +238,46 @@ try {
     verifyMode = 'normal';
   });
 
-  await S.run('liste du compte vide · un « non » du serveur ferme la porte d\'un compte installé, pas celle d\'un compte neuf', async (tr) => {
-    verifyMode = 'refuse-all';
+  await S.run('« non » du serveur · final, sauf quand LE SERVEUR dit que le compte n\'a aucun code', async (tr) => {
     rosterMode = 'empty';
-    {
+    const tryOnce = async (mode, onboarded) => {
+      verifyMode = mode;
       const ctx = await browser.createBrowserContext();
       tr.defer(() => ctx.close());
-      const page = await open(tr, ctx, { onboarded: true });
+      const page = await open(tr, ctx, { onboarded });
       await typeCode(page, OTHER);
-      check(await outcome(page) === 'refused', 'compte installé, liste vide, coffre vide : le « non » du serveur est final');
-    }
-    {
-      const ctx = await browser.createBrowserContext();
-      tr.defer(() => ctx.close());
-      const page = await open(tr, ctx, { onboarded: false });
-      await typeCode(page, OTHER);
-      check(await outcome(page) === 'unlocked', 'compte jamais installé : la porte laisse passer pour atteindre l\'installation (règle d\'avant, inchangée)');
-    }
+      return outcome(page);
+    };
+    check(await tryOnce('refuse-all', true) === 'refused', 'liste vide, coffre vide, serveur muet sur l\'état du compte : le « non » est final (un champ absent vaut « configuré »)');
+    check(await tryOnce('refuse-unconfigured', true) === 'unlocked', 'le serveur dit « ce compte n\'a aucun code » : la porte laisse rejoindre l\'installation, quel que soit l\'état du navigateur');
     rosterMode = 'full';
     verifyMode = 'normal';
+  });
+
+  await S.run('hors ligne · cinq refus de suite ferment le repli salé cinq minutes', async (tr) => {
+    verifyMode = 'normal';
+    const ctx = await browser.createBrowserContext();
+    tr.defer(() => ctx.close());
+    {
+      const first = await open(tr, ctx);
+      await typeCode(first, CODE);
+      assert.equal(await outcome(first), 'unlocked');
+      await first.waitForFunction(() => window.KiwiDashPinVault.count() === 1, { timeout: 5000 });
+      await first.close();
+    }
+    const page = await open(tr, ctx);
+    await page.setOfflineMode(true);
+    const wrongCodes = ['1001', '1002', '1003', '1004', '1005'];
+    for (const w of wrongCodes) {
+      await typeCode(page, w);
+      assert.equal(await outcome(page), 'refused');
+      await page.evaluate(() => { const i = document.querySelector('[data-kiwi-pin-input]'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+      await sleep(150);
+    }
+    check(await page.evaluate(() => window.KiwiDashPinVault.lockedFor()) > 0, 'cinq refus hors ligne : le coffre se verrouille');
+    await typeCode(page, CODE);
+    check(await outcome(page) === 'refused', 'pendant la pause, même le bon code est refusé');
+    check(/Too many attempts/i.test(await helpText(page)), `et la porte le dit comme le serveur le dirait (« ${(await helpText(page)).slice(0, 50)} »)`);
   });
 
   await S.run('sans ligne, hors ligne · le patron ne passe pas', async (tr) => {

@@ -326,6 +326,34 @@ const accountVerify = (body, headers = {}) => verifyPinPost({
   check('a malformed code is refused before any database read', res.status === 401);
 }
 
+/* « Ce compte a-t-il au moins un code ? » : c'est le SERVEUR qui le dit à la porte du
+   dashboard (un compte sans aucun code doit pouvoir rejoindre son installation).
+   Seul « aucun » est rapporté ; un compte configuré ne reçoit aucun champ. */
+{
+  const wrong = await accountVerify({ pin: '5555' }, { Cookie: sessionCookie(ownerSessToken) });
+  const wrongData = await wrong.json();
+  check('a configured account\u2019s refusal says nothing about configuration (door stays closed)',
+    wrong.status === 401 && wrongData.error === 'bad-pin' && !('configured' in wrongData));
+
+  const emptyCreds = await hashPassword('FreshPassword123');
+  sqlite.prepare("INSERT INTO accounts (id, email, business, salt, hash, created_ts, status, session_epoch) VALUES ('acc-empty', 'new@fresh.ma', 'Fresh', ?, ?, ?, 'active', 0)")
+    .run(emptyCreds.salt, emptyCreds.hash, Date.now());
+  const freshSess = await makeSession('acc-empty', AUTH_SECRET);
+  const fresh = await accountVerify({ pin: '5555' }, { Cookie: sessionCookie(freshSess) });
+  const freshData = await fresh.json();
+  check('an account with NO code at all is told so (configured:false) and still refused (401)',
+    fresh.status === 401 && freshData.configured === false && freshData.error === 'bad-pin');
+  check('…and the answer never carries a code or a roster', !JSON.stringify(freshData).match(/\d{4}/));
+
+  sqlite.prepare("INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES ('p-cashier-only', 'fresh', '2468', 'Sara', 'staff', ?)").run(Date.now());
+  const withCashier = await accountVerify({ pin: '5555' }, { Cookie: sessionCookie(freshSess) });
+  const withCashierData = await withCashier.json();
+  check('a shop whose only codes are cashiers is configured: no allowance, door closed',
+    withCashier.status === 401 && !('configured' in withCashierData));
+  sqlite.prepare("DELETE FROM staff_pins WHERE id = 'p-cashier-only'").run();
+  sqlite.prepare("DELETE FROM accounts WHERE id = 'acc-empty'").run();
+}
+
 console.log('\n2 · Attempt Rate-Limiting on Verification');
 
 {

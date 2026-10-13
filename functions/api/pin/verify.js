@@ -33,7 +33,10 @@ export async function onRequestPost(context) {
 
   if (!verified.ok) {
     if (verified.response) return verified.response;
-    return json({ error: verified.error }, verified.status);
+    /* `configured: false` : le compte n'a encore AUCUN code, la porte du dashboard
+       peut le laisser rejoindre son installation. Jamais rapporté dans l'autre
+       sens, ni pour la forme « boutique » (le comptoir n'en a que faire). */
+    return json({ error: verified.error, ...(verified.configured === false ? { configured: false } : {}) }, verified.status);
   }
 
   let approval = '';

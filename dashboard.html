@@ -5557,7 +5557,7 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
-<script defer src="assets/dashboard-pin-vault.js?v=2"></script>
+<script defer src="assets/dashboard-pin-vault.js?v=3"></script>
 <script defer src="assets/identity.js?v=10"></script>
 <script defer src="assets/live-link.js?v=62"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
@@ -5884,15 +5884,6 @@
   function provenCodeCount() {
     try { const v = vault(); return v ? v.count() : 0; } catch (_) { return 0; }
   }
-  /* L'assistant d'installation est allé au bout sur CE navigateur. C'était le
-     rôle de kiwiPins (écrit au même instant que kiwiOnboarded) dans la règle
-     « un compte déjà configuré ne laisse pas passer n'importe quel code, même
-     quand la liste du compte n'est pas arrivée ». Sans ce signal, un patron
-     installé dont la liste vient d'échouer et dont le coffre est vide verrait la
-     porte s'ouvrir sur un « non » du serveur. */
-  function onboardedHere() {
-    try { const v = localStorage.getItem('kiwiOnboarded'); return v === '1' || v === 'true'; } catch (_) { return false; }
-  }
 
   /* « Ce compte a-t-il configuré quelqu'un ? » · la question que la porte pose
    * avant de s'autoriser à refuser quoi que ce soit. Elle se répond en COMPTANT
@@ -5926,6 +5917,8 @@
    * (verifyAccountPin, dérivé de la session · un slug n'est jamais demandé).
    *   { name, access }  le code appartient à cette personne
    *   'no'              le serveur a dit non
+   *   'unconfigured'    le serveur a dit non ET ce compte n'a encore aucun code (rien à
+   *                     taper : la porte le laisse rejoindre son installation)
    *   { busy: s }       le serveur limite les essais : s secondes à attendre (0 = inconnu)
    *   null              on n'a pas pu savoir (hors ligne, backend absent, délai dépassé)
    * Appareil hors ligne : on ne tente pas le réseau, la réponse est null tout de
@@ -5943,7 +5936,11 @@
       signal: ctl ? ctl.signal : undefined,
     }).then((r) => {
       clearTimeout(timer);
-      if (r.status === 401 || r.status === 403) return 'no';
+      if (r.status === 401 || r.status === 403) {
+        /* Seul le serveur dit « ce compte n'a aucun code » ; un champ absent, ou
+           un corps illisible, vaut « configuré » : la porte reste fermée. */
+        return r.json().catch(() => null).then((d) => (d && d.configured === false ? 'unconfigured' : 'no'));
+      }
       /* 429 is the attempt limiter answering, not a missing network. It used
          to fall into null, and the lock told an operator with Wi-Fi that the
          device was offline. */
@@ -5979,13 +5976,16 @@
       return { id: String(staff.id || ''), name: String(staff.name || ''), role: String(staff.role || ''), access };
     }).catch(() => null);
   }
+  function offlineWait() {
+    try { const v = vault(); return v && v.lockedFor ? v.lockedFor() : 0; } catch (_) { return 0; }
+  }
   /* Le serveur a répondu : une identité prouvée s'inscrit (sauf sur une vue
    * portée), un NON efface toute ligne qui reconnaîtrait ce code. */
   function vaultNote(code, answer) {
     const v = vault();
     if (!v) return;
     try {
-      if (answer && answer !== 'no') v.remember(code, { id: answer.id, name: answer.name, role: answer.role });
+      if (answer && typeof answer === 'object') v.remember(code, { id: answer.id, name: answer.name, role: answer.role });
       else if (answer === 'no') v.forget(code);
     } catch (_) {}
   }
@@ -6389,14 +6389,15 @@
       if (!askable) { finishUnlock(val, null, false); return; }
       const current = () => val === pinInput.value.replace(/\D/g, '').slice(0, 4);   // la saisie a-t-elle bougé ?
       const settle = (answer) => {
-        const knownHere = provenCodeCount() > 0 || onboardedHere();
         /* null = serveur injoignable. Un compte configuré qu'on ne peut pas
            vérifier se ferme ; sans le repli salé ci-dessus, n'importe quels
            quatre chiffres passeraient. */
         if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin(navigator.onLine === false ? 'offline' : 'unreachable'); return; }
-        const configured = knownHere || serverRosterSize();
-        // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
-        if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
+        /* 'no' = le serveur a tranché, et rien d'ici ne le contredit : ni la liste
+           du compte, ni le coffre, ni un drapeau du navigateur. Une porte reste
+           ouverte pour un compte SANS AUCUN code, et c'est le serveur qui le dit
+           ('unconfigured'), pas l'état local. En démo, la règle d'avant demeure. */
+        if (answer === 'no' && !demosOn()) { rejectPin(); return; }
         finishUnlock(val, null, false);
       };
       askServer(val).then((reply) => {
@@ -6410,9 +6411,14 @@
           if (!demosOn() || isConfiguredAccount()) { rejectPin('busy', answer.busy); return; }
           answer = null;
         }
+        if (answer === 'unconfigured') { settle(answer); return; }   // pas une identité : rien à inscrire
         vaultNote(val, answer);
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
         if (answer === null) {
+          /* Hors ligne le pavé compte lui-même les essais (le coffre, 5 refus puis
+             5 minutes) : le serveur, lui, ne les voit pas. */
+          const wait = offlineWait();
+          if (wait > 0) { rejectPin('busy', wait); return; }
           localVerify(val).then((hit) => {
             if (!current()) return;
             if (hit) finishUnlock(val, hit, true);

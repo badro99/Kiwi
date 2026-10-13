@@ -42,6 +42,14 @@
   var TTL = 7 * 24 * 60 * 60 * 1000;
   var MAX_ROWS = 12;
   var CODE = /^\d{4}$/;
+  /* Hors ligne, rien ne compte les essais côté serveur : le pavé les compte ici.
+     Cinq refus de suite et la ligne salée ne répond plus pendant cinq minutes
+     (dix mille codes possibles ≈ une semaine d'essais au lieu de quelques
+     secondes). Ce n'est pas une barrière contre qui lit déjà le stockage, c'est
+     celle d'une personne devant l'écran. Même préfixe, donc même purge. */
+  var FAILS_KEY = 'kiwi:dashboard:offline-fails:v1:';
+  var MAX_MISSES = 5;
+  var LOCK_MS = 5 * 60 * 1000;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
@@ -62,6 +70,30 @@
           && Number(r.expiresAt || 0) > now && r.staff && typeof r.staff === 'object';
       }) : [];
     } catch (_) { return []; }
+  }
+  function readFails(sc) {
+    try {
+      var f = JSON.parse(ls(FAILS_KEY + encodeURIComponent(sc)) || 'null');
+      return f && typeof f === 'object' ? { n: Number(f.n) || 0, until: Number(f.until) || 0 } : { n: 0, until: 0 };
+    } catch (_) { return { n: 0, until: 0 }; }
+  }
+  function writeFails(sc, f) {
+    if (!f.n && !f.until) del(FAILS_KEY + encodeURIComponent(sc));
+    else put(FAILS_KEY + encodeURIComponent(sc), JSON.stringify(f));
+  }
+  /* Secondes restantes avant la prochaine tentative hors ligne ; 0 = libre. */
+  function lockedFor() {
+    var sc = scope();
+    if (!sc) return 0;
+    var left = readFails(sc).until - Date.now();
+    return left > 0 ? Math.ceil(left / 1000) : 0;
+  }
+  function noteMiss(sc) {
+    var f = readFails(sc);
+    if (f.until && f.until <= Date.now()) f = { n: 0, until: 0 };
+    f.n += 1;
+    if (f.n >= MAX_MISSES) f = { n: 0, until: Date.now() + LOCK_MS };
+    writeFails(sc, f);
   }
   function writeRows(sc, rows) {
     if (!rows.length) { del(rowsKey(sc)); return true; }
@@ -135,8 +167,10 @@
     if (!sc || !CODE.test(code)) return Promise.resolve(null);
     var rows = readRows(sc);
     if (!rows.length) return Promise.resolve(null);
+    if (lockedFor() > 0) return Promise.resolve(null);       // pause : on ne hache même pas
     return matching(sc, rows, code).then(function (same) {
-      for (var i = 0; i < rows.length; i++) if (same[i]) return rows[i].staff;
+      for (var i = 0; i < rows.length; i++) if (same[i]) { writeFails(sc, { n: 0, until: 0 }); return rows[i].staff; }
+      noteMiss(sc);
       return null;
     }).catch(function () { return null; });
   }
@@ -170,8 +204,8 @@
   dropLegacy();
 
   window.KiwiDashPinVault = {
-    remember: remember, verify: verify, forget: forget, count: count,
-    dropLegacy: dropLegacy, TTL: TTL, MAX_ROWS: MAX_ROWS,
+    remember: remember, verify: verify, forget: forget, count: count, lockedFor: lockedFor,
+    dropLegacy: dropLegacy, TTL: TTL, MAX_ROWS: MAX_ROWS, MAX_MISSES: MAX_MISSES, LOCK_MS: LOCK_MS,
     storageKey: function () { return rowsKey(scope()); },
   };
 })();

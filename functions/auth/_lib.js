@@ -1433,7 +1433,25 @@ export async function verifyAccountPin(request, env, pin) {
     if (!await limitFail(request, env, 'pin:account', identity)) {
       return { ok: false, response: rateLimitUnavailable() };
     }
-    return { ok: false, error: 'bad-pin', status: 401 };
+    /* « Ce compte a-t-il AU MOINS UN code, de n'importe quel rôle ? » La porte du
+     * dashboard laisse passer un compte qui n'en a aucun (il doit atteindre son
+     * installation) ; elle le décidait d'après l'état du navigateur, que
+     * n'importe quoi peut effacer ou remplir. C'est au serveur de le dire, et
+     * seul « aucun » est rapporté : inconnu, panne ou base pas migrée valent
+     * « configuré », donc une porte fermée. Aucun code ne sort d'ici. */
+    let configured = true;
+    try {
+      const any = await env.DB.prepare(
+        'SELECT 1 AS n FROM staff_pins p LEFT JOIN merchant_config c ON c.merchant = p.merchant WHERE c.account_id = ? OR p.merchant = ? LIMIT 1'
+      ).bind(sess.aid, accSlug).first();
+      configured = !!any;
+    } catch (_) {
+      try {
+        const any = await env.DB.prepare('SELECT 1 AS n FROM staff_pins WHERE merchant = ? LIMIT 1').bind(accSlug).first();
+        configured = !!any;
+      } catch (__) { configured = true; }
+    }
+    return { ok: false, error: 'bad-pin', status: 401, configured };
   }
 
   await limitClear(request, env, 'pin:account', identity);

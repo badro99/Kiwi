@@ -191,6 +191,24 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   ok(none.dropLegacy() === false, 'dropLegacy sans reliquat ne fait rien');
 }
 {
+  /* Hors ligne, le pavé compte les essais : cinq refus, cinq minutes. */
+  const v = load({ kiwiAccountKey: 'a@x.com' });
+  await v.remember(CODE, OWNER);
+  for (let i = 0; i < 4; i++) await v.verify('100' + i);
+  ok(v.lockedFor() === 0 && (await v.verify(CODE)) !== null, 'quatre refus de suite ne bloquent pas, et le bon code remet le compteur à zéro');
+  for (let i = 0; i < 5; i++) await v.verify('200' + i);
+  ok(v.lockedFor() > 0 && v.lockedFor() <= 300, 'le cinquième refus de suite ferme le repli salé pour cinq minutes');
+  ok(await v.verify(CODE) === null, 'pendant la pause, même le bon code ne passe pas');
+  now += 5 * 60 * 1000 - 1000;
+  ok(await v.verify(CODE) === null, 'une seconde avant la fin, la pause tient');
+  now += 2000;
+  ok(v.lockedFor() === 0 && (await v.verify(CODE)) !== null, 'la pause passée, le bon code ouvre et le compteur repart');
+  ok([...store.keys()].filter((k) => /offline-fails/.test(k)).every((k) => k.startsWith('kiwi:')), 'le compteur vit sous kiwi: (purge de locataire)');
+  const bare = load({ kiwiAccountKey: 'b@x.com' });
+  for (let i = 0; i < 8; i++) await bare.verify('300' + i);
+  ok(bare.lockedFor() === 0, 'sans aucune ligne il n\'y a rien à deviner : aucun compteur ne tourne');
+}
+{
   /* Pas de SubtleCrypto : on n'écrit rien plutôt que le code. */
   const sandbox = { localStorage: { getItem: (k) => (k === 'kiwiAccountKey' ? 'a@x.com' : null), setItem() { throw new Error('ne doit rien écrire'); }, removeItem() {} }, Date, Promise, JSON, Array, Object, String, Number, Uint8Array, crypto: {} };
   sandbox.window = sandbox;
@@ -204,15 +222,23 @@ console.log('3 · la porte');
 const settleAt = ctl.indexOf('askServer(val).then');
 const flow = ctl.slice(ctl.indexOf('const askable = '), ctl.indexOf('function finishUnlock'));
 ok(settleAt > 0 && flow.indexOf('askServer(val)') < flow.indexOf('localVerify(val)'), 'le serveur est interrogé AVANT la ligne salée');
-ok(/if \(answer === null\) \{\s*localVerify\(val\)/.test(flow), 'la ligne salée n\'est lue que sur une réponse null (serveur injoignable)');
+ok(/if \(answer === null\) \{[\s\S]*?localVerify\(val\)/.test(flow), 'la ligne salée n\'est lue que sur une réponse null (serveur injoignable)');
 ok(/vaultNote\(val, answer\);\s*\n\s*if \(answer && answer !== 'no'\)/.test(flow), 'le coffre est mis à jour sur la réponse du serveur, avant d\'ouvrir');
+ok(/const wait = offlineWait\(\);\s*\n\s*if \(wait > 0\) \{ rejectPin\('busy', wait\); return; \}/.test(flow) && flow.indexOf('offlineWait()') < flow.indexOf('localVerify(val)'), 'le repli salé est précédé de sa pause d\'essais'); 
 ok(/answer === 'no'\) v\.forget\(code\)/.test(ctl), 'un « non » du serveur efface la ligne de ce code');
-ok(/answer && answer !== 'no'\) v\.remember\(code, \{ id: answer\.id, name: answer\.name, role: answer\.role \}\)/.test(ctl), 'seule une identité prouvée par le serveur est écrite, sans le code');
+ok(/answer && typeof answer === 'object'\) v\.remember\(code, \{ id: answer\.id, name: answer\.name, role: answer\.role \}\)/.test(ctl), 'seule une identité prouvée par le serveur est écrite, sans le code');
 ok(/if \(navigator\.onLine === false\) return Promise\.resolve\(null\);/.test(ctl), 'hors ligne : réponse null tout de suite, sans attendre un délai');
 ok(/setTimeout\(\(\) => ctl\.abort\(\), ASK_TIMEOUT_MS\)/.test(ctl), 'un serveur muet ne suspend pas le pavé (délai)');
-ok(/const knownHere = provenCodeCount\(\) > 0 \|\| onboardedHere\(\);/.test(flow)
-  && /function onboardedHere\(\) \{[\s\S]*?kiwiOnboarded/.test(ctl),
-  'un compte installé sur ce navigateur ne laisse pas passer un « non » du serveur, liste du compte absente ou non (le rôle que tenait kiwiPins)');
+ok(/if \(answer === 'no' && !demosOn\(\)\) \{ rejectPin\(\); return; \}/.test(flow) && !/onboardedHere|knownHere/.test(ctl),
+  'un « non » du serveur est final hors démo : ni la liste du compte, ni le coffre, ni un drapeau du navigateur ne le contredisent');
+ok(/d && d\.configured === false \? 'unconfigured' : 'no'/.test(ctl) && /if \(answer === 'unconfigured'\) \{ settle\(answer\); return; \}/.test(flow),
+  'seul le serveur dit « ce compte n\'a aucun code » (champ absent = configuré = porte fermée)');
+const lib = read('functions/auth/_lib.js');
+const vapSrc = lib.slice(lib.indexOf('export async function verifyAccountPin'), lib.indexOf('export async function verifyAccountPin') + 6000);
+ok(/let configured = true;/.test(vapSrc) && /catch \(__\) \{ configured = true; \}/.test(vapSrc) && /error: 'bad-pin', status: 401, configured/.test(vapSrc),
+  'serveur : « configuré » par défaut, « aucun code » seulement sur une requête réussie qui ne rend rien');
+ok(!/SELECT[^;]*\bp\.pin\b[^;]*FROM staff_pins p LEFT JOIN merchant_config c ON c\.merchant = p\.merchant WHERE c\.account_id = \? OR p\.merchant = \? LIMIT 1/.test(vapSrc), 'la requête « configuré » ne ramène aucun code');
+ok(/configured === false \? \{ configured: false \} : \{\}/.test(read('functions/api/pin/verify.js')), 'verify.js ne rapporte que « configured: false »');
 ok(/function vault\(\) \{ return scopedView\(\) \? null/.test(ctl), 'jamais lu ni écrit sur une vue portée (?op= / ?merchant=)');
 ok(/if \(access === 'staff'\) return null;/.test(ctl), 'le repli salé ne rend jamais un palier équipe');
 
