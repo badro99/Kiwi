@@ -31,6 +31,34 @@ Un `404` veut dire que le nom n'existe pas dans le style Outlined — vérifiez
 l'orthographe sur le site avant de chercher un contournement. (`food_truck`,
 par exemple, n'existe pas : le food truck utilise `local_shipping`.)
 
+### Variantes (graisse, taille optique) et sprites : direction 2027, §8
+
+Les mêmes fichiers servent aussi la direction 2027. Une variante se range sous
+`<nom>.<style>.<taille>.svg` (`style` : `default` ou `wght500` ; `taille` : la
+taille optique `20`, `24` ou `40`), récupérée au même chemin gstatic que
+ci-dessus, avec ce style et cette taille à la place de `default/24px` :
+
+```bash
+n=error                                   # error.wght500.40.svg : le KDS à 32 px
+curl -sL -o "assets/icons/material/$n.wght500.40.svg" \
+  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/$n/wght500/40px.svg"
+```
+
+Un `404` s'applique à chaque variante : l'icône retombe alors sur `default` 24
+(l'état que `tools/icon-vendored-test.mjs` accepte). Le fichier `<nom>.svg` reste
+le nom de `default` en 24, et une variante n'existe jamais sans lui.
+
+`tools/build-icon-sprite.js` écrit `sprite.<surface>.svg`, un `<symbol>` par
+icône que la surface utilise (la liste est `tools/icon-sprites.json`, complétée
+par les `<k-icon name="…">` littéraux du dossier `assets/kit/`). Chaque symbole
+garde le `viewBox="0 -960 960 960"` de Material et le tracé du fichier, octet
+pour octet ; l'élément qui le référence est
+`<svg width="1em" height="1em" aria-hidden="true"><use href="…#nom" width="100%" height="100%"/></svg>`
+et **ne porte aucun `viewBox` à lui** (sinon le glyphe se peint hors du cadre et
+l'icône est une case vide : `tools/icon-render-test.mjs` le tient). Les sprites
+et les variantes ne sont **pas** des icônes pour `build-material-icons.mjs` : il
+ne lit que les `<nom>.svg` simples.
+
 ## L'utiliser dans le code
 
 Ces SVG ont un `viewBox="0 -960 960 960"` et une forme **pleine** — pas de

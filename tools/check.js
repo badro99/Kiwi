@@ -652,6 +652,35 @@ section('Icônes Material (tools/material-icons-test.mjs)');
   else fail(`material-icons-test.mjs exited ${r.status} — ${out.trim().split('\n').filter((l) => /AssertionError|✗/.test(l)).slice(0, 2).join(' | ') || out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+/* ── Direction 2027 · étape 1 · icônes et ajustements mesurés ─────────────
+ * Spec docs/specs/kiwi-design-2027.md §8 et §6.6.
+ *   · icon-vendored-test : une icône qu'un fichier du kit ou un sprite nomme
+ *     existe dans assets/icons/material/, le glyphe n'est jamais retouché, les
+ *     sprites sont ceux que tools/build-icon-sprite.js écrirait aujourd'hui ;
+ *   · icon-render-test : dans Chromium, le <use> de chaque icône recoupe son
+ *     <svg> (le bogue de la révision 5 : un viewBox en trop vide l'icône) ;
+ *   · font-metrics-test : tools/font-metrics.mjs lit les polices livrées et
+ *     retrouve ce que §6.1 affirme (tailles, points de code, tnum, repli) ;
+ *   · label-fit-test : chaque libellé d'une ligne tient dans son plus petit
+ *     conteneur, mesuré avec les polices livrées et tnum (§6.6). */
+for (const [label, file, browser] of [
+  ['icon-vendored-test', 'icon-vendored-test.mjs', false],
+  ['font-metrics-test', 'font-metrics-test.mjs', false],
+  ['icon-render-test', 'icon-render-test.mjs', true],
+  ['label-fit-test', 'label-fit-test.mjs', true],
+]) {
+  section(`Direction 2027 · ${label} (tools/${file})`);
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn(`${label} skipped (no Chromium — browser assertions not executed)`);
+  else if (r.status === 0) ok(`${label} green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${file} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4d-bis · règles de promotions ──────────────────────────────────────────
  * Une promotion se voit sur un PRIX, pas sur une capture d'écran : deux
  * affiches qui se cumulent, une promotion terminée qui s'applique encore, un

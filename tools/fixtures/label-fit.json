@@ -1,0 +1,1248 @@
+{
+  "note": "label-fit-test's table: the one-line labels of design 2027 §6.6, each at its narrowest container. `expect` is the figure the spec prints (CSS px at factor 1, Inter Tight / Plex Arabic, tnum); the test fails past 0.3 px of it and on any overflow of `budget`. Strings come from the strings bundles (the spec's §9.6 table until they exist); only the sample ARGUMENTS live here. A row never holds an interpolated store, person or dish name (§6.6, P10).",
+  "tolerance": 0.3,
+  "steps": {
+    "display": {
+      "px": 44,
+      "latin": -0.02,
+      "w": [
+        600,
+        600
+      ]
+    },
+    "title": {
+      "px": 28,
+      "latin": -0.01,
+      "w": [
+        600,
+        600
+      ]
+    },
+    "heading": {
+      "px": 20,
+      "latin": 0,
+      "w": [
+        600,
+        600
+      ]
+    },
+    "body": {
+      "px": 17,
+      "latin": 0.01,
+      "w": [
+        400,
+        600
+      ]
+    },
+    "callout": {
+      "px": 15,
+      "latin": 0.01,
+      "w": [
+        500,
+        600
+      ]
+    },
+    "footnote": {
+      "px": 13,
+      "latin": 0.015,
+      "w": [
+        500,
+        600
+      ]
+    }
+  },
+  "samples": {
+    "m230": {
+      "en": "230.00 MAD",
+      "fr": "230,00 MAD",
+      "ar": "230,00 درهم"
+    },
+    "m23": {
+      "en": "23.00 MAD",
+      "fr": "23,00 MAD",
+      "ar": "23,00 درهم"
+    },
+    "m150": {
+      "en": "150.00 MAD",
+      "fr": "150,00 MAD",
+      "ar": "150,00 درهم"
+    },
+    "m500": {
+      "en": "500.00 MAD",
+      "fr": "500,00 MAD",
+      "ar": "500,00 درهم"
+    },
+    "m84": {
+      "en": "84.00 MAD",
+      "fr": "84,00 MAD",
+      "ar": "84,00 درهم"
+    },
+    "g23500": {
+      "en": "23,500 MAD",
+      "fr": "23 500 MAD",
+      "ar": "23 500 درهم"
+    },
+    "p82": {
+      "en": "82%",
+      "fr": "82 %",
+      "ar": "82 %"
+    },
+    "a250": {
+      "en": "250.00",
+      "fr": "250,00",
+      "ar": "250,00"
+    },
+    "a300": {
+      "en": "300.00",
+      "fr": "300,00",
+      "ar": "300,00"
+    },
+    "a230": {
+      "en": "230.00",
+      "fr": "230,00",
+      "ar": "230,00"
+    },
+    "a23": {
+      "en": "23.00",
+      "fr": "23,00",
+      "ar": "23,00"
+    },
+    "d050": {
+      "en": "0.50 MAD",
+      "fr": "0,50 MAD",
+      "ar": "0,50 درهم"
+    },
+    "t6000": {
+      "en": "6,000.00",
+      "fr": "6 000,00",
+      "ar": "6 000,00"
+    },
+    "k253": {
+      "en": "253.00 MAD",
+      "fr": "253,00 MAD",
+      "ar": "253,00 درهم"
+    },
+    "p10_23": {
+      "en": "10% · 23.00 MAD",
+      "fr": "10 % · 23,00 MAD",
+      "ar": "10 % · 23,00 درهم"
+    },
+    "monday12": {
+      "en": "Monday 12 October",
+      "fr": "lundi 12 octobre",
+      "ar": "الاثنين 12 أكتوبر"
+    },
+    "t1739": {
+      "en": "17:39",
+      "fr": "17:39",
+      "ar": "17:39"
+    },
+    "n8": {
+      "en": "8",
+      "fr": "8",
+      "ar": "8"
+    },
+    "n1": {
+      "en": "1",
+      "fr": "1",
+      "ar": "1"
+    },
+    "n2": {
+      "en": "2",
+      "fr": "2",
+      "ar": "2"
+    },
+    "min15": {
+      "en": "15",
+      "fr": "15",
+      "ar": "15"
+    },
+    "n137": {
+      "en": "137",
+      "fr": "137",
+      "ar": "137"
+    }
+  },
+  "rows": [
+    {
+      "id": "bill.send",
+      "where": "L primary with icon, pane 320: 272 - 40 - 28",
+      "budget": 204,
+      "step": "body",
+      "weight": "strong",
+      "reference": true,
+      "parts": [
+        {
+          "key": "bill.send",
+          "args": {
+            "n": "$n2"
+          }
+        }
+      ],
+      "expect": {
+        "en": 136.1,
+        "fr": 168.8,
+        "ar": 136.4
+      }
+    },
+    {
+      "id": "bill.take_payment",
+      "where": "L primary, pane 320: 272 - 40",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "bill.take_payment",
+          "args": {
+            "amount": "$m230"
+          }
+        }
+      ],
+      "expect": {
+        "en": 162.4,
+        "fr": 181.3,
+        "ar": 146.3
+      }
+    },
+    {
+      "id": "pay.cash.confirm",
+      "where": "L primary, pane 320",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "pay.cash.confirm"
+        }
+      ],
+      "expect": {
+        "en": 176.9,
+        "fr": 147.1,
+        "ar": 100.7
+      }
+    },
+    {
+      "id": "pay.card.confirm",
+      "where": "L primary, pane 320",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "pay.card.confirm"
+        }
+      ],
+      "expect": {
+        "en": 174,
+        "fr": 193.2,
+        "ar": 129.8
+      }
+    },
+    {
+      "id": "discount.apply",
+      "where": "L primary, pane 320",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "discount.apply",
+          "args": {
+            "amount": "$m23"
+          }
+        }
+      ],
+      "expect": {
+        "en": 150.7,
+        "fr": 181.2,
+        "ar": 136.8
+      }
+    },
+    {
+      "id": "split.pay_share",
+      "where": "L primary, pane 320",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "split.pay_share",
+          "args": {
+            "n": "$n1"
+          }
+        }
+      ],
+      "expect": {
+        "en": 119.2,
+        "fr": 143.8,
+        "ar": 107.6
+      }
+    },
+    {
+      "id": "options.add",
+      "where": "L primary, options popover 360: 312 - 40",
+      "budget": 272,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "options.add",
+          "args": {
+            "amount": "$m150"
+          }
+        }
+      ],
+      "expect": {
+        "en": 191.1,
+        "fr": 171.3,
+        "ar": 236.2
+      }
+    },
+    {
+      "id": "action.done",
+      "where": "L primary, pane 320",
+      "budget": 232,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "action.done"
+        }
+      ],
+      "expect": {
+        "en": 41.2,
+        "fr": 63.6,
+        "ar": 17.8
+      }
+    },
+    {
+      "id": "bill.split",
+      "where": "M half row with icon, pane 432: (384 - 8) / 2 - 32 - 28",
+      "budget": 128,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "bill.split"
+        }
+      ],
+      "expect": {
+        "en": 34.6,
+        "fr": 53.8,
+        "ar": 36.9
+      }
+    },
+    {
+      "id": "bill.discount",
+      "where": "same, pane 320: 72 (320 still draws the toolbar form: 2.3 px is one copy edit from an overflow)",
+      "budget": 72,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "bill.discount"
+        }
+      ],
+      "expect": {
+        "en": 69.7,
+        "fr": 57.3,
+        "ar": 41.4
+      }
+    },
+    {
+      "id": "menu.enter_amount",
+      "where": "M secondary with icon, sized to content",
+      "budget": null,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "menu.enter_amount"
+        }
+      ],
+      "expect": {
+        "en": 105.1,
+        "fr": 136.2,
+        "ar": 78.1
+      }
+    },
+    {
+      "id": "receipt.print",
+      "where": "M secondary with icon, pane 320: 272 - 32 - 28",
+      "budget": 212,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "receipt.print"
+        }
+      ],
+      "expect": {
+        "en": 94.9,
+        "fr": 134.8,
+        "ar": 90.9
+      }
+    },
+    {
+      "id": "receipt.send",
+      "where": "M secondary with icon, pane 320",
+      "budget": 212,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "receipt.send"
+        }
+      ],
+      "expect": {
+        "en": 98.5,
+        "fr": 127.7,
+        "ar": 93.6
+      }
+    },
+    {
+      "id": "invoice.a4",
+      "where": "M secondary with icon, pane 320",
+      "budget": 212,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "invoice.a4"
+        }
+      ],
+      "expect": {
+        "en": 81.8,
+        "fr": 85.9,
+        "ar": 67.5
+      }
+    },
+    {
+      "id": "ai.calculator+attach",
+      "where": "two M secondaries with icons (16 + 20 + 8 + label + 16), 8 apart, Kiwi AI sheet 400",
+      "budget": 400,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "ai.calculator"
+        },
+        {
+          "px": 60
+        },
+        {
+          "px": 8
+        },
+        {
+          "key": "ai.attach"
+        },
+        {
+          "px": 60
+        }
+      ],
+      "expect": {
+        "en": 260.1,
+        "fr": 279.6,
+        "ar": 248.6
+      }
+    },
+    {
+      "id": "ai.placeholder",
+      "where": "Body: field 344 - 16 - 44 - 8 beside the mic",
+      "budget": 276,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "ai.placeholder"
+        }
+      ],
+      "expect": {
+        "en": 154.3,
+        "fr": 258,
+        "ar": 120.2
+      }
+    },
+    {
+      "id": "home.goal",
+      "where": "Footnote: the line + 8 + the 96 mark; SE content 343 (6.9: 400)",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "home.goal",
+          "args": {
+            "pct": "$p82",
+            "amount": "$g23500"
+          }
+        },
+        {
+          "px": 8
+        },
+        {
+          "px": 96
+        }
+      ],
+      "expect": {
+        "en": 276.2,
+        "fr": 303.2,
+        "ar": 264
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "budget": 400,
+          "expect": {
+            "en": 296.8,
+            "fr": 327.1,
+            "ar": 283.2
+          }
+        },
+        {
+          "f": 1.24,
+          "budget": 400,
+          "expect": {
+            "en": 317.5,
+            "fr": 351,
+            "ar": 302.4
+          }
+        },
+        {
+          "f": 1.35,
+          "budget": 400,
+          "expect": {
+            "en": 336.3,
+            "fr": 372.7,
+            "ar": 319.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "home.goal_set",
+      "where": "Footnote strong, centred in its own 44 row",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "home.goal_set"
+        }
+      ],
+      "expect": {
+        "en": 90.4,
+        "fr": 140.6,
+        "ar": 84.3
+      },
+      "factors": [
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 121.9,
+            "fr": 189.7,
+            "ar": 113.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "nav.ai",
+      "where": "capsule: auto_awesome 24 + 8 + ai.title (Callout strong) + 12 at each end; home nav bar",
+      "budget": 102.9,
+      "step": "callout",
+      "weight": "strong",
+      "parts": [
+        {
+          "px": 24
+        },
+        {
+          "px": 8
+        },
+        {
+          "key": "ai.title"
+        },
+        {
+          "px": 24
+        }
+      ],
+      "expect": {
+        "en": 102.9,
+        "fr": 102.9,
+        "ar": 101.8
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 108.5,
+            "fr": 108.5
+          }
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 114.1,
+            "fr": 114.1
+          }
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 119.3,
+            "fr": 119.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai.suggest.rows",
+      "where": "Kiwi AI group, 400 - 32, one line each at factor 1 (the longest of the twelve)",
+      "budget": 368,
+      "step": "body",
+      "weight": "regular",
+      "max": true,
+      "parts": [
+        {
+          "key": "ai.suggest.restaurant",
+          "split": " / "
+        },
+        {
+          "key": "ai.suggest.boutique",
+          "split": " / "
+        },
+        {
+          "key": "ai.suggest.spa",
+          "split": " / "
+        },
+        {
+          "key": "ai.suggest.hotel",
+          "split": " / "
+        }
+      ],
+      "expect": {
+        "en": 268.4,
+        "fr": 324.1,
+        "ar": 197.3
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "till.team.quick",
+      "where": "four chips, padding 16, gap 8, Callout strong; team message sheet iPad 672",
+      "budget": 672,
+      "step": "callout",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "till.team.quick",
+          "split": " / ",
+          "pad": 32,
+          "gap": 8
+        }
+      ],
+      "expect": {
+        "en": 447.1,
+        "fr": 430.2,
+        "ar": 458
+      }
+    },
+    {
+      "id": "count.close",
+      "where": "L primary, 720 sheet footer: 672 - 40",
+      "budget": 632,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "count.close"
+        }
+      ],
+      "expect": {
+        "en": 95.6,
+        "fr": 134.4,
+        "ar": 103
+      }
+    },
+    {
+      "id": "count.open",
+      "where": "L primary, 720 sheet footer",
+      "budget": 632,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "count.open"
+        }
+      ],
+      "expect": {
+        "en": 93.5,
+        "fr": 119.2,
+        "ar": 99.7
+      }
+    },
+    {
+      "id": "cancel.confirm",
+      "where": "L, phone SE sheet: 343 - 40",
+      "budget": 303,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "cancel.confirm",
+          "args": {
+            "amount": "$m230"
+          }
+        }
+      ],
+      "expect": {
+        "en": 203.8,
+        "fr": 240.2,
+        "ar": 180.9
+      }
+    },
+    {
+      "id": "cancel.keep",
+      "where": "L, phone SE sheet",
+      "budget": 303,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "cancel.keep"
+        }
+      ],
+      "expect": {
+        "en": 75.2,
+        "fr": 118.4,
+        "ar": 92.3
+      }
+    },
+    {
+      "id": "ob.create+finish+signin+clock",
+      "where": "L primary, SE (the longest of the five)",
+      "budget": 303,
+      "step": "body",
+      "weight": "strong",
+      "max": true,
+      "parts": [
+        {
+          "key": "ob.create"
+        },
+        {
+          "key": "ob.finish"
+        },
+        {
+          "key": "team.signin.next"
+        },
+        {
+          "key": "clock.in"
+        },
+        {
+          "key": "clock.out"
+        }
+      ],
+      "expect": {
+        "en": 143,
+        "fr": 174.2,
+        "ar": 127
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "ob.forgot+reset",
+      "where": "L primary, SE (the longest of the four)",
+      "budget": 303,
+      "step": "body",
+      "weight": "strong",
+      "max": true,
+      "parts": [
+        {
+          "key": "ob.forgot.send"
+        },
+        {
+          "key": "ob.forgot.support"
+        },
+        {
+          "key": "ob.reset.again"
+        },
+        {
+          "key": "ob.reset.save"
+        }
+      ],
+      "expect": {
+        "en": 184.8,
+        "fr": 211.7,
+        "ar": 181
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "attendance.replace",
+      "where": "L secondary, SE sheet 303 (FR wraps to 2 lines: the L button rule, §6.4)",
+      "budget": 303,
+      "step": "body",
+      "weight": "strong",
+      "wrapsIn": {
+        "fr": 2
+      },
+      "parts": [
+        {
+          "key": "attendance.replace"
+        }
+      ],
+      "expect": {
+        "en": 227.3,
+        "fr": 314.8,
+        "ar": 197.9
+      }
+    },
+    {
+      "id": "ob.reset.retry_in",
+      "where": "Body line, SE 303",
+      "budget": 303,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "ob.reset.retry_in",
+          "args": {
+            "n": "$min15"
+          }
+        }
+      ],
+      "expect": {
+        "en": 141.6,
+        "fr": 176.5,
+        "ar": 148.6
+      }
+    },
+    {
+      "id": "bill.view+amount",
+      "where": "bill bar, SE: 40 + 28 + label + 16 + amount <= 343 (one string, over in FR in revision 4)",
+      "budget": 343,
+      "step": "body",
+      "weight": "strong",
+      "parts": [
+        {
+          "px": 68
+        },
+        {
+          "key": "bill.view"
+        },
+        {
+          "px": 16
+        },
+        {
+          "sample": "m230"
+        }
+      ],
+      "expect": {
+        "en": 250.2,
+        "fr": 292.6,
+        "ar": 291.1
+      }
+    },
+    {
+      "id": "pay.exact",
+      "where": "three chips, padding 16, gap 8, pane 320",
+      "budget": 272,
+      "step": "callout",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "pay.exact",
+          "pad": 32
+        },
+        {
+          "px": 8
+        },
+        {
+          "sample": "a250",
+          "pad": 32
+        },
+        {
+          "px": 8
+        },
+        {
+          "sample": "a300",
+          "pad": 32
+        }
+      ],
+      "expect": {
+        "en": 251.1,
+        "fr": 251.1,
+        "ar": 257.5
+      }
+    },
+    {
+      "id": "count.same_as_last",
+      "where": "chip, padding 16, list column 360 - 32 - 32",
+      "budget": 296,
+      "step": "callout",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "count.same_as_last",
+          "args": {
+            "amount": "$m500"
+          }
+        }
+      ],
+      "expect": {
+        "en": 160.9,
+        "fr": 181.9,
+        "ar": 153.5
+      }
+    },
+    {
+      "id": "count.denom (longest)",
+      "where": "cash-count row (§18.9), the longest denomination",
+      "budget": 144,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "sample": "d050"
+        }
+      ],
+      "expect": {
+        "en": 76.4,
+        "fr": 76.4,
+        "ar": 75.3
+      }
+    },
+    {
+      "id": "count.denom (subtotal)",
+      "where": "cash-count row (§18.9), the subtotal",
+      "budget": 96,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "sample": "t6000"
+        }
+      ],
+      "expect": {
+        "en": 70.4,
+        "fr": 70.5,
+        "ar": 69.1
+      }
+    },
+    {
+      "id": "split.mode",
+      "where": "segmented, default track, pane 320: 272 - 8, label + 24 each",
+      "budget": 264,
+      "step": "callout",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "split.equally",
+          "pad": 24
+        },
+        {
+          "key": "split.by_item",
+          "pad": 24
+        }
+      ],
+      "expect": {
+        "en": 149.1,
+        "fr": 216.1,
+        "ar": 192.9
+      }
+    },
+    {
+      "id": "discount.mode",
+      "where": "segmented, default track, pane 320: 272 - 8, label + 24 each",
+      "budget": 264,
+      "step": "callout",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "discount.percent",
+          "pad": 24
+        },
+        {
+          "key": "discount.amount",
+          "pad": 24
+        }
+      ],
+      "expect": {
+        "en": 156.5,
+        "fr": 194.4,
+        "ar": 108.3
+      }
+    },
+    {
+      "id": "pay.tip.pct",
+      "where": "tip row trailing value, pane 320",
+      "budget": 272,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "sample": "p10_23"
+        }
+      ],
+      "expect": {
+        "en": 133.2,
+        "fr": 137.4,
+        "ar": 135
+      }
+    },
+    {
+      "id": "pay.tip_breakdown",
+      "where": "tip breakdown line, pane 320",
+      "budget": 272,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "pay.tip_breakdown",
+          "args": {
+            "bill": "$a230",
+            "tip": "$a23"
+          }
+        }
+      ],
+      "expect": {
+        "en": 131.9,
+        "fr": 202.6,
+        "ar": 189
+      }
+    },
+    {
+      "id": "key figure with a tip",
+      "where": "payment pane 272, Title",
+      "budget": 272,
+      "step": "title",
+      "weight": "regular",
+      "parts": [
+        {
+          "sample": "k253"
+        }
+      ],
+      "expect": {
+        "en": 161.6,
+        "fr": 161.6,
+        "ar": 166.1
+      }
+    },
+    {
+      "id": "date button",
+      "where": "SE: 343 - 44",
+      "budget": 299,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "range.today_date",
+          "args": {
+            "date": "$monday12"
+          }
+        }
+      ],
+      "expect": {
+        "en": 164.3,
+        "fr": 173.6,
+        "ar": 119.8
+      }
+    },
+    {
+      "id": "chart legend",
+      "where": "legend band, SE 343: two swatches 16 + 6 and a 12 gap",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "chart.legend_today"
+        },
+        {
+          "px": 56
+        },
+        {
+          "key": "chart.legend_yesterday_at",
+          "args": {
+            "time": "$t1739"
+          }
+        }
+      ],
+      "expect": {
+        "en": 204.7,
+        "fr": 196.8,
+        "ar": 178
+      }
+    },
+    {
+      "id": "home.returning_value",
+      "where": "SE tile 165.5 - 32",
+      "budget": 133.5,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "home.returning_value",
+          "args": {
+            "total": "$n8"
+          }
+        }
+      ],
+      "expect": {
+        "en": 88.9,
+        "fr": 71.5,
+        "ar": 82
+      }
+    },
+    {
+      "id": "home.latest",
+      "where": "SE section label 343",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "home.latest"
+        }
+      ],
+      "expect": {
+        "en": 79.8,
+        "fr": 135.8,
+        "ar": 62.9
+      }
+    },
+    {
+      "id": "home.see_all_orders",
+      "where": "SE row 343 - 60",
+      "budget": 283,
+      "step": "body",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "home.see_all_orders",
+          "args": {
+            "n": "$n137"
+          }
+        }
+      ],
+      "expect": {
+        "en": 135.9,
+        "fr": 185.4,
+        "ar": 167.4
+      }
+    },
+    {
+      "id": "sync.saved_here+not_sent",
+      "where": "pane 272 (the longer of the two)",
+      "budget": 272,
+      "step": "footnote",
+      "weight": "regular",
+      "max": true,
+      "parts": [
+        {
+          "key": "sync.saved_here"
+        },
+        {
+          "key": "bill.not_sent",
+          "args": {
+            "n": "$n2"
+          }
+        }
+      ],
+      "expect": {
+        "en": 145.3,
+        "fr": 158.4,
+        "ar": 154
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "online order actions",
+      "where": "Item buttons, Body strong; the longest of the seven (a card on an iPad menu pane, or a phone)",
+      "budget": null,
+      "step": "body",
+      "weight": "strong",
+      "max": true,
+      "parts": [
+        {
+          "key": "online.accept"
+        },
+        {
+          "key": "kds.mark_ready"
+        },
+        {
+          "key": "kds.mark_served"
+        },
+        {
+          "key": "online.hand_over"
+        },
+        {
+          "key": "takeaway.reject"
+        },
+        {
+          "key": "online.cancel"
+        },
+        {
+          "key": "bill.take_payment",
+          "args": {
+            "amount": "$m84"
+          }
+        }
+      ],
+      "expect": {
+        "en": 151.5,
+        "fr": 170.4,
+        "ar": 135.5
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "KDS K buttons",
+      "where": "ready lane 240 - 48, at root 24 (x 1.5)",
+      "budget": 192,
+      "step": "body",
+      "weight": "strong",
+      "max": true,
+      "scale": 1.5,
+      "parts": [
+        {
+          "key": "kds.mark_served"
+        },
+        {
+          "key": "kds.mark_ready"
+        },
+        {
+          "key": "kds.start"
+        }
+      ],
+      "expect": {
+        "en": 145.9,
+        "fr": 162.2,
+        "ar": 120.1
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "sync.screen_only",
+      "where": "Footnote strong; a sentence that may wrap, not a one-line label; pane 272, never more than 2 lines at factor 1",
+      "budget": null,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "sync.screen_only"
+        }
+      ],
+      "expect": {
+        "en": 287.5,
+        "fr": 374.9,
+        "ar": 283.1
+      },
+      "wrapAt": {
+        "width": 272,
+        "maxLines": 2
+      }
+    }
+  ]
+}

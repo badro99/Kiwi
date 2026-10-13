@@ -1,0 +1,20 @@
+{
+  "note": "Which icons each surface's sprite holds (design 2027 §8). Run node tools/build-icon-sprite.js after editing. An icon is `name` (Outlined 400, optical size 24) or `name.style.size` (style default|wght500, size 20|24|40); a variant not vendored yet draws the default 24 glyph, which icon-vendored-test accepts. `scan` lists folders read for literal <k-icon name=\"...\"> so the kit's own icons need no hand-kept list. No shell references a sprite yet (stage 1 adopts nothing); the first reference follows §21.3.",
+  "surfaces": {
+    "kit": {
+      "note": "Seed at stage 1: the icons the direction's preview frames draw (docs/specs/kiwi-design-2027-preview.html). Stage 2 adds the kit folder to `scan` and the sprite grows with it.",
+      "icons": [
+        "arrow_downward", "arrow_upward", "auto_awesome", "bar_chart", "battery_5_bar", "call_split", "chevron_right", "close",
+        "credit_card", "dashboard", "dialpad", "expand_more", "filter_list", "group", "mic", "more_horiz", "notifications",
+        "payments", "pending_actions", "percent", "person_add", "print", "receipt_long", "schedule", "search", "send",
+        "shopping_bag", "skillet", "star", "table_restaurant", "today", "tune", "undo", "upload"
+      ],
+      "scan": []
+    },
+    "kds": {
+      "note": "The kitchen draws icons at weight 500 and optical size 40 at 32 px (§8). `error` is the one the spec names; the rest follow with the kitchen's stage.",
+      "icons": ["error.wght500.40"],
+      "scan": []
+    }
+  }
+}
