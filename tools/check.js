@@ -630,6 +630,22 @@ section('Commandes · pas d\u2019onglets Réconciliation / Anti-fraude (tools/co
   else fail(`commandes-tabs-removed-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+/* Caisse en nuit · --ink y devient clair, un texte blanc fixe dessus disparaît.
+ * Le garde-fou ci-dessus ne lit pas kiwi-caisse.html ; cette suite mesure le
+ * contraste réel des boutons « encre » de la caisse, nuit et jour. */
+section('Caisse nuit · boutons « encre » lisibles (tools/caisse-ink-dark-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-ink-dark-browser-test.mjs')], { encoding: 'utf8', timeout: 240000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('caisse-ink-dark browser suite skipped (no Chromium, browser assertions not executed)');
+  else if (r.status === 0) ok(`caisse-ink-dark browser suite green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`caisse-ink-dark-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 section('Réconciliation numéro commande (tools/order-number-reconciliation-test.mjs)');
 {
   const { spawnSync } = require('child_process');

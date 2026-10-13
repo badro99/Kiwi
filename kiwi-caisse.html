@@ -2121,6 +2121,11 @@
     /* Nuit : --ink devient clair et le blanc fixe de .pay-icon y tombait à
        1,1:1, « Carte » disparaissait. Le bouton s'inverse : fond clair, texte sombre. */
     html[data-caisse-theme="dark"] #pay-card.pay-icon { color: var(--paper); }
+    /* Même inversion pour les deux autres boutons « encre » à texte blanc fixe :
+       « Payer par carte » d'une part de l'addition scindée, et « Message à toute
+       l'équipe ». Sans elle, le blanc tombait à 1,1:1 sur --ink devenu clair. */
+    html[data-caisse-theme="dark"] .split-part-btn.carte,
+    html[data-caisse-theme="dark"] .team-broadcast button { color: var(--paper); }
     .pay-split {
       background: var(--paper-mute);
       color: var(--ink-2);
