@@ -49,7 +49,11 @@ export function parseGlyph(name, svg) {
 
 export function readGlyphs(root = ROOT) {
   const glyphs = {};
-  for (const file of readdirSync(path.join(root, ICON_DIR)).filter((f) => f.endsWith('.svg')).sort()) {
+  /* Plain `name.svg` only. The folder also holds the weight / optical-size
+     variants (`error.wght500.40.svg`) and the generated `sprite.<surface>.svg`
+     (design 2027 §8, tools/build-icon-sprite.js); neither is a name the legacy
+     runtime draws, and a sprite holds many paths. */
+  for (const file of readdirSync(path.join(root, ICON_DIR)).filter((f) => /^[a-z0-9_]+\.svg$/.test(f)).sort()) {
     const name = file.slice(0, -4);
     glyphs[name] = parseGlyph(name, read(path.join(ICON_DIR, file), root));
   }
