@@ -150,6 +150,9 @@
     return !!q && (q.lastStatus === 401
       || (q.lastStatus === 403 && (q.lastError === 'forbidden-merchant' || /^HTTP 403$/i.test(q.lastError || ''))));
   }
+  function heldSales() {
+    try { return window.KiwiCaisseHeldSales ? Number(window.KiwiCaisseHeldSales.count()) || 0 : 0; } catch (_) { return 0; }
+  }
   function cashJournalStatus() {
     try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
     return { pendingCount: 0, pendingPairing: false, storageError: false };
@@ -194,8 +197,15 @@
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
     var cashJournal = cashJournalStatus();
+    var held = heldSales();
     var tone, label, detail;
-    if (q.storageError || cashJournal.storageError || q.blocked) {
+    if (held) {
+      /* Recorded on this till, refused by the queue (storage full). Not in q
+         at all, so it is said first, with the one instruction that matters. */
+      tone = '#9F3028';
+      label = held + (held > 1 ? ' ventes non envoyées' : ' vente non envoyée');
+      detail = (held > 1 ? 'Enregistrées sur cette caisse' : 'Enregistrée sur cette caisse') + ' · ne pas encaisser à nouveau';
+    } else if (q.storageError || cashJournal.storageError || q.blocked) {
       tone = '#9F3028';
       label = q.storageError || cashJournal.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
       detail = 'À vérifier avec le support · rien n’est supprimé';
@@ -277,6 +287,14 @@
     d.title = label + ' · ' + detail;
     d.onclick = function () {
       if (d.dataset.syncing === '1') return;
+      if (heldSales()) {
+        var sent = 0;
+        try { sent = window.KiwiCaisseHeldSales.retry(); } catch (_) {}
+        if (heldSales()) toast('Toujours enregistrée sur cette caisse · nouvel essai automatique', 'warn');
+        else if (sent) toast('Ventes transmises à la file d’envoi');
+        status();
+        return;
+      }
       var qNow = { pending: 0, blocked: 0, storageError: false };
       try { if (window.KiwiLive && window.KiwiLive.queueStatus) qNow = window.KiwiLive.queueStatus(); } catch (_) {}
       var journalNow = cashJournalStatus();
@@ -407,6 +425,7 @@
   window.addEventListener('online', status);
   window.addEventListener('offline', status);
   window.addEventListener('kiwi:sale-queue', status);
+  window.addEventListener('kiwi:held-sales', status);
   window.addEventListener('kiwi:outbox', status);
   window.addEventListener('kiwi:cash-sessions', status);
   window.addEventListener('kiwi:cash-sessions-ready', status);

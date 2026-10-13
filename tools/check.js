@@ -1200,6 +1200,8 @@ section('Whole-project regressions');
     'operator-snapshot-test.mjs',
     'caisse-support-entry-test.mjs',
     'caisse-payment-upload-test.mjs',
+    // A paid sale when storage is full: one entry, held, no success haptic, sent once (critique-6 B1).
+    'caisse-outbox-full-test.mjs',
     'caisse-auto-receipt-test.mjs',
     'dashboard-activity-test.mjs',
     'caisse-reconnect-test.mjs',

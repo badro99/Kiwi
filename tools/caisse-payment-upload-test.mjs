@@ -21,6 +21,14 @@ const extract = name => {
   assert.ok(start >= 0 && end > start, 'actual function exists: ' + name);
   return page.slice(start, end + 6);
 };
+/* The held-sales shelf (storage full) is a block of declarations, not one
+   function: take it whole, from its banner to recordSale. */
+const heldBlock = (() => {
+  const start = page.indexOf('    /* ── VENDUE ICI, PAS ENCORE DANS LA FILE');
+  const end = page.indexOf('    function recordSale(', start);
+  assert.ok(start >= 0 && end > start, 'held-sales block exists');
+  return page.slice(start, end);
+})();
 const drain = async () => { for (let i = 0; i < 40; i++) await new Promise(r => setImmediate(r)); };
 const merchant = 'receipt-upload-test';
 const shiftKey = 'kiwi-caisse-shift:' + merchant;
@@ -132,8 +140,8 @@ async function fixture(t, opts = {}) {
     vm.createContext(context);
     vm.runInContext(live, context, { filename: 'assets/live-link.js' });
     vm.runInContext(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
-      'activeSaleDiscount', 'recordSale', 'persistShift', 'restoreShift',
-      'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n'), context, { filename: 'kiwi-caisse-payment-functions.js' });
+      'activeSaleDiscount', 'recordSale', 'persistShift', 'reviveJournalEntry', 'restoreShift',
+      'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n') + '\n' + heldBlock, context, { filename: 'kiwi-caisse-payment-functions.js' });
     // The real caisse installs this listener on window; document would miss
     // KiwiLive's acknowledgement entirely.
     const ack = page.match(/window\.addEventListener\('kiwi:money-sync',[\s\S]*?\n    \}\);/);
@@ -216,7 +224,11 @@ test('queue quota failure stays visibly unsynced and provisional replay recovers
   assert.equal(f.count(), 0); assert.equal(f.queue().length, 0);
   assert.equal(entry.serverSaleId, undefined); assert.equal(f.saved().journal[0].serverSaleId, undefined);
   assert.equal(entry.saleSyncPending, true); assert.equal(entry.saleSyncError, 'queue-storage-full');
-  assert.ok(f.events.some(e => e.type === 'toast' && /synchronisation/.test(e.message)));
+  /* Recorded, not failed: a "sync failed" toast is what made a cashier
+     charge the customer a second time. */
+  assert.ok(f.events.some(e => e.type === 'toast' && /enregistrée sur cette caisse/.test(e.message)));
+  assert.ok(!f.events.some(e => e.type === 'toast' && /Échec/.test(e.message)));
+  assert.equal(f.ctx.window.KiwiCaisseHeldSales.count(), 1, 'held for replay');
   assert.equal(f.live.queueStatus().storageError, true);
   await f.reload();
   assert.equal(f.ctx.journal[0].saleSyncError, 'queue-storage-full');
@@ -285,15 +297,23 @@ test('delayed IndexedDB enqueue leaves synchronous write-ahead command until com
   assert.equal(f.count(), 1); assert.equal(f.queue().length, 0); assert.equal(f.rows.size, 0);
 });
 
-test('IndexedDB mode exposes write-ahead quota failure and journal recovery remains retryable', async t => {
+test('IndexedDB mode reports write-ahead quota failure, then IndexedDB still takes the sale once', async t => {
   const f = await fixture(t, { indexed: true, failQueue: true });
-  f.record(); await drain();
-  assert.equal(f.queue().length, 0); assert.equal(f.rows.size, 0); assert.equal(f.count(), 0);
-  assert.equal(f.saved().journal[0].serverSaleId, undefined);
-  assert.equal(f.saved().journal[0].saleSyncError, 'queue-storage-full');
-  assert.equal(f.live.queueStatus().engine, 'indexeddb');
+  const entry = f.record();
+  /* Synchronously nothing is durable, and the till is told so. */
+  assert.equal(entry.serverSaleId, undefined);
+  assert.equal(entry.saleSyncError, 'queue-storage-full');
+  assert.equal(entry.saleHeldLocal, true);
+  assert.equal(f.queue().length, 0);
   assert.equal(f.live.queueStatus().storageError, true);
-  assert.equal(f.live.queueStatus().total, 0);
+  /* localStorage is still full, but IndexedDB's own quota is not: the
+     command lands there, reaches the API once, and the held copy is released. */
+  await drain();
+  assert.equal(f.count(), 1);
+  assert.equal(f.ctx.journal.length, 1);
+  assert.ok(f.ctx.journal[0].serverSaleId);
+  assert.equal(f.ctx.journal[0].saleHeldLocal, undefined);
+  assert.equal(f.ctx.window.KiwiCaisseHeldSales.count(), 0);
   f.state.failQueue = false; f.ctx.saveProvisional(true); await drain(); assert.equal(f.count(), 1);
 });
 

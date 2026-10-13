@@ -2230,6 +2230,12 @@
       var lang = String(document.documentElement.lang || 'fr');
       var ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
       var n = q.blocked || q.pending;
+      /* Sales recorded on this till that the queue refused (storage full).
+         They are not in q at all, so they are counted first, and the words
+         say not to charge them again. */
+      var held = 0;
+      try { held = window.KiwiCaisseHeldSales ? Number(window.KiwiCaisseHeldSales.count()) || 0 : 0; } catch (_) {}
+      if (held) return { tone: '#9F3028', text: ar ? held + ' عملية بيع مسجّلة لم تُرسل بعد · لا تحصّلها مرة أخرى' : en ? held + (held > 1 ? ' sales' : ' sale') + ' recorded, not sent yet · do not charge again' : held + (held > 1 ? ' ventes enregistrées' : ' vente enregistrée') + ', pas encore envoyée' + (held > 1 ? 's' : '') + ' · ne pas encaisser à nouveau' };
       if (q.storageError) return { tone: '#9F3028', text: ar ? 'الحفظ المحلي يحتاج إلى تحقق' : en ? 'Local storage needs checking' : 'Protection locale à vérifier' };
       if (q.blocked) return { tone: '#9F3028', text: ar ? n + ' عملية محفوظة، تحتاج إلى مراجعة' : en ? n + (n > 1 ? ' operations held' : ' operation held') + ', nothing is lost' : n + (n > 1 ? ' opérations conservées' : ' opération conservée') + ', rien n’est perdu' };
       if (!q.pending) return null;
@@ -2245,7 +2251,7 @@
         lastRefresh = Date.now();
         try { Promise.resolve(live.refreshQueue()).then(function () { setTimeout(syncPaint, 0); }, function () {}); } catch (_) {}
       }
-      var words = q ? syncWords(q) : null;
+      var words = syncWords(q || {});
       var staffPad = document.getElementById('cp-pin-screen');
       var gate = !!document.querySelector('.screen-pin.is-active,.screen-clockin.is-active,#pair.on') || !!(staffPad && staffPad.style.display !== 'none');
       var menuOpen = !!(document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kiwi-native-menu-open')));
@@ -2263,6 +2269,7 @@
           syncPaint();
           var cur = {};
           try { cur = l.queueStatus() || {}; } catch (_) {}
+          try { if (window.KiwiCaisseHeldSales) window.KiwiCaisseHeldSales.retry(); } catch (_) {}
           var run = cur.blocked && typeof l.retryBlockedSales === 'function'
             ? Promise.resolve(l.retryBlockedSales()).then(function () { return l.flush && l.flush(true); })
             : Promise.resolve(l.flush && l.flush(true));
@@ -2277,7 +2284,10 @@
             var ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
             var say = window.KiwiCaisseToast;
             if (typeof say !== 'function') return;
-            if (!after.blocked && !after.pending) say(ar ? 'تم إرسال كل شيء' : en ? 'Everything is sent' : 'Tout est envoyé', 2400, 'success');
+            var heldAfter = 0;
+            try { heldAfter = window.KiwiCaisseHeldSales ? Number(window.KiwiCaisseHeldSales.count()) || 0 : 0; } catch (_) {}
+            if (heldAfter) say(ar ? 'ما زالت محفوظة على هذا الصندوق · ستُعاد المحاولة تلقائيًا' : en ? 'Still recorded on this till · it will retry on its own' : 'Toujours enregistrée sur cette caisse · nouvel essai automatique', 4200, 'warn');
+            else if (!after.blocked && !after.pending) say(ar ? 'تم إرسال كل شيء' : en ? 'Everything is sent' : 'Tout est envoyé', 2400, 'success');
             else if (navigator.onLine === false) say(ar ? 'لا يوجد اتصال · سيبدأ الإرسال عند عودة الشبكة' : en ? 'Offline · sending resumes when the network returns' : 'Hors ligne · l’envoi reprendra au retour du réseau', 3600, 'warn');
             else if (after.blocked) say(ar ? 'ما زالت محفوظة على هذا الصندوق · لم يُفقد شيء' : en ? 'Still held on this till · nothing is lost' : 'Toujours conservé sur cette caisse · rien n’est perdu', 4200, 'warn', ar ? 'إذا استمر ذلك، اتصل بدعم Kiwi.' : en ? 'If it stays held, contact Kiwi support.' : 'Si cela persiste, contactez le support Kiwi.');
           });
@@ -2292,7 +2302,7 @@
       syncPill.classList.toggle('is-visible', show);
       document.documentElement.classList.toggle('kiwi-sync-pill-on', show);
     };
-    ['online', 'offline', 'kiwi:outbox', 'kiwi:sale-queue'].forEach(function (kind) { window.addEventListener(kind, function () { setTimeout(syncPaint, 60); }); });
+    ['online', 'offline', 'kiwi:outbox', 'kiwi:sale-queue', 'kiwi:held-sales'].forEach(function (kind) { window.addEventListener(kind, function () { setTimeout(syncPaint, 60); }); });
     setInterval(syncPaint, 2000);
   }
 

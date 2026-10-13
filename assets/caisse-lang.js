@@ -758,6 +758,18 @@
       'la table reste ouverte': ['the table stays open', 'تبقى الطاولة مفتوحة'],
       'Échec de synchronisation de la vente': ['Sale failed to sync', 'فشلت مزامنة البيع'],
       'ne fermez pas cette caisse': ['do not close this till', 'لا تغلق هذا الصندوق'],
+      /* Une vente que la file a refusée (stockage plein) : elle est enregistrée
+         ici et repart toute seule. La seule consigne est de ne pas la refaire. */
+      'Vente enregistrée sur cette caisse': ['Sale recorded on this till', 'تم تسجيل البيع على هذا الصندوق'],
+      'envoi en attente, ne pas encaisser à nouveau': ['waiting to send, do not charge again', 'الإرسال قيد الانتظار، لا تحصّله مرة أخرى'],
+      '{n} vente non envoyée': ['{n} sale not sent', '{n} عملية بيع لم تُرسل'],
+      '{n} ventes non envoyées': ['{n} sales not sent', '{n} عمليات بيع لم تُرسل'],
+      'Enregistrée sur cette caisse': ['Recorded on this till', 'مسجّلة على هذا الصندوق'],
+      'Enregistrées sur cette caisse': ['Recorded on this till', 'مسجّلة على هذا الصندوق'],
+      'ne pas encaisser à nouveau': ['do not charge again', 'لا تحصّلها مرة أخرى'],
+      'Toujours enregistrée sur cette caisse': ['Still recorded on this till', 'ما زالت مسجّلة على هذا الصندوق'],
+      'nouvel essai automatique': ['it will retry on its own', 'ستُعاد المحاولة تلقائيًا'],
+      'Ventes transmises à la file d’envoi': ['Sales handed to the send queue', 'سُلّمت المبيعات إلى قائمة الإرسال'],
       'Enregistrement impossible': ['Could not save', 'تعذّر الحفظ'],
       'Aucun ticket à imprimer': ['No receipt to print', 'لا توجد تذكرة للطباعة'],
       'Ticket ajouté à la file d’impression': ['Receipt added to the print queue', 'أُضيفت التذكرة إلى قائمة الطباعة'],

@@ -181,7 +181,7 @@ assert.equal(savedShift.tableClosedAt['2'], now - 60000);
 assert.equal(savedShift.phoneMovedVisits.length, 1);
 const reloaded = context(); snapshotContext(reloaded);
 reloaded.tables = { '1': occupied(), '2': occupied() };
-vm.runInContext(fn('restoreShift'), reloaded);
+vm.runInContext(fn('reviveJournalEntry') + '\n' + fn('restoreShift'), reloaded);
 reloaded.restoreShift(savedShift);
 reloaded.selectedId = '2';
 reloaded.KiwiCaisseKitchen.ingest([row('ord-field-one', { table: '2' })], [row('ord-field-one', { table: '2' })],
@@ -193,7 +193,7 @@ evidence('actual persist/restore reload recovers moved 40 MAD visit and its clos
 
 const paidReload = context(); snapshotContext(paidReload);
 paidReload.tables = { '1': occupied() };
-vm.runInContext(fn('restoreShift'), paidReload);
+vm.runInContext(fn('reviveJournalEntry') + '\n' + fn('restoreShift'), paidReload);
 paidReload.restoreShift({ ...savedShift,
   journal: [{ id: 'visit-ses-paid-emp', table: '1', session: 'ses-paid',
     ref: 'Table 1 #17', label: 'Table 1 #17', amount: 40,

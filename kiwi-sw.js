@@ -163,15 +163,15 @@ var SHELL = [
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=564',
+  '/assets/caisse-pwa.js?v=565',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=9',
+  '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=61',
+  '/assets/live-link.js?v=62',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -234,7 +234,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=15',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=29',
+  '/assets/caisse-lang.js?v=30',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',

@@ -66,7 +66,7 @@
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
-  <script src="assets/offline-db.js?v=9" defer></script>
+  <script src="assets/offline-db.js?v=10" defer></script>
   <script src="assets/platform-kernel.js?v=6" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/phone.js?v=1" defer></script>
@@ -127,7 +127,7 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=29" defer></script>
+  <script src="assets/caisse-lang.js?v=30" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -5679,8 +5679,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
-  <script src="assets/caisse-pwa.js?v=564" defer></script>
-  <script src="assets/live-link.js?v=61" defer></script>
+  <script src="assets/caisse-pwa.js?v=565" defer></script>
+  <script src="assets/live-link.js?v=62" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -11480,21 +11480,24 @@
           : (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter'))
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
+      let recorded = null;
       if (!splitPayCallback) {
         const sale = recordSale(tenderBase, method, saleLabel, tenderTip, lines,
           mode !== 'vrap' ? selectedId : '', tenderOrder);
         if (!sale) throw new Error('sale-not-recorded');
+        recorded = sale;
       }
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
-        cb();
-        nativeHapticSuccess();
+        /* The share's receipt, or nothing if it was not recorded. Only a
+           receipt the queue has taken earns the success haptic. */
+        if (saleRecordConfirmed(cb())) nativeHapticSuccess();
         return 'split';
       }
       if (mode === 'vrap') settleVrapPayment();
       else if (selectedId) { markPaid(selectedId); closeRightPanel(); }
-      nativeHapticSuccess();
+      if (saleRecordConfirmed(recorded)) nativeHapticSuccess();
       /* The paid moment in the native app (native-runtime.js). The haptic
          above already played, so the app only draws. */
       try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: tenderBase + tenderTip, method: method, haptic: false } })); } catch (_) {}
@@ -13795,7 +13798,7 @@
         splitState.tableId || '', null, splitInfo);
       if (!entry) {
         toast('Encaissement non enregistré · la table reste ouverte');
-        return;
+        return null;
       }
       if (entry) {
         /* `flow-*` is only the local split modal's resume key. A takeaway has
@@ -13823,6 +13826,7 @@
         else if (splitState.tableId) markPaid(splitState.tableId);
         lucide.createIcons();
       }
+      return entry;
     }
 
     /* ---- events ---- */
@@ -14624,6 +14628,144 @@
         actorId: String(d.actorId || (currentCashier && currentCashier.id) || '').slice(0, 96)
       };
     }
+    /* ── VENDUE ICI, PAS ENCORE DANS LA FILE ─────────────────────────────────
+     * Quand le stockage local est plein, Live Link refuse la mise en file
+     * (`queue-storage-full`). La vente a pourtant eu lieu : l'argent est dans
+     * le tiroir, le ticket est imprimé. Elle reste donc au journal, UNE fois,
+     * marquée `saleHeldLocal`, et une copie part sur une étagère à part qui
+     * survit au rechargement comme à la clôture : localStorage si une petite
+     * écriture y passe encore, IndexedDB (quota bien plus large) dans tous les
+     * cas. Le battement de cinq secondes la rejoue jusqu'à ce que la file la
+     * prenne ; postSale() dérive le même identifiant à chaque essai, donc un
+     * rejeu ne réserve jamais deux fois. Rien à l'écran ne propose de
+     * réencaisser : la ligne d'état du rail compte ces ventes jusqu'à leur
+     * envoi (caisse-pwa.js, window.KiwiCaisseHeldSales). */
+    const HELD_SALES_PREFIX = 'kiwi-caisse-held-sales:';
+    let heldSalesCache = null;   // { key, rows: [{ entry, shift, at }] }
+    function heldSalesKey() {
+      let slug = currentMerchantSlug();
+      if (!slug) { try { slug = String(window.KiwiLive?.merchant?.() || ''); } catch (_) { slug = ''; } }
+      return slug ? HELD_SALES_PREFIX + slug : '';
+    }
+    function heldSaleRows() {
+      const key = heldSalesKey();
+      if (!key) return [];
+      if (heldSalesCache && heldSalesCache.key === key) return heldSalesCache.rows;
+      let rows = [];
+      try { const parsed = JSON.parse(localStorage.getItem(key) || '[]'); if (Array.isArray(parsed)) rows = parsed; } catch (_) {}
+      heldSalesCache = { key, rows: rows.filter(row => row && row.entry && row.entry.id) };
+      /* The IndexedDB copy is the one that survived when localStorage was
+         full. Fold it in once per merchant; ids make the union idempotent. */
+      try {
+        window.KiwiOffline?.getMeta?.(key).then((stored) => {
+          if (!Array.isArray(stored) || !heldSalesCache || heldSalesCache.key !== key) return;
+          let added = 0;
+          stored.forEach((row) => {
+            if (!row || !row.entry || !row.entry.id) return;
+            if (heldSalesCache.rows.some(r => r.entry.id === row.entry.id)) return;
+            heldSalesCache.rows.push(row); added++;
+          });
+          if (added) { adoptHeldSalesIntoJournal(); paintHeldSales(); retryHeldSales(); }
+        });
+      } catch (_) {}
+      return heldSalesCache.rows;
+    }
+    function saveHeldSales(rows) {
+      const key = heldSalesKey();
+      if (!key) return;
+      heldSalesCache = { key, rows };
+      try { if (rows.length) localStorage.setItem(key, JSON.stringify(rows)); else localStorage.removeItem(key); } catch (_) {}
+      try { window.KiwiOffline?.putMeta?.(key, rows); } catch (_) {}
+    }
+    function holdSaleLocally(entry, reason) {
+      entry.saleSyncPending = true;
+      entry.saleSyncError = String(reason || 'sale-enqueue-failed').slice(0, 96);
+      entry.saleHeldLocal = true;
+      const rows = heldSaleRows().filter(row => row.entry.id !== entry.id);
+      let copy = null;
+      try { copy = JSON.parse(JSON.stringify(entry)); } catch (_) {}
+      if (copy) rows.push({ entry: copy, shift: shiftOpenedAt ? shiftOpenedAt.toISOString() : '', at: Date.now() });
+      saveHeldSales(rows);
+      paintHeldSales();
+    }
+    function releaseHeldSale(id) {
+      const rows = heldSaleRows();
+      if (!rows.some(row => row.entry.id === id)) return;
+      saveHeldSales(rows.filter(row => row.entry.id !== id));
+      paintHeldSales();
+    }
+    /* The shift blob is the bigger write: when storage is full it fails too,
+       and a reload would come back without the sale. A held row stamped with
+       THIS shift is put back in the journal; one from a closed shift is only
+       replayed to the queue, never counted into another day's Z. */
+    function adoptHeldSalesIntoJournal() {
+      if (!shiftOpenedAt) return 0;
+      const shift = shiftOpenedAt.toISOString();
+      let adopted = 0;
+      heldSaleRows().forEach((row) => {
+        if (row.shift !== shift || journal.some(e => e && e.id === row.entry.id)) return;
+        try { journal.push(reviveJournalEntry(row.entry)); adopted++; } catch (_) {}
+      });
+      if (adopted) {
+        try { persistShift(); } catch (_) {}
+        try { renderShiftStats(); } catch (_) {}
+      }
+      return adopted;
+    }
+    function retryHeldSales() {
+      if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
+      const rows = heldSaleRows();
+      if (!rows.length) return 0;
+      let sent = 0, journalChanged = false;
+      const keep = rows.filter((row) => {
+        const live = journal.find(e => e && e.id === row.entry.id);
+        /* Voided on this till before it ever left: the void flow owns it. */
+        if (live && live.voided) { delete live.saleHeldLocal; journalChanged = true; return false; }
+        let posted = null;
+        try { posted = window.KiwiLive.postSale(live || reviveJournalEntry(row.entry)); } catch (_) {}
+        if (posted && posted.ok === true && posted.queued === true && posted.id) {
+          if (live) {
+            live.serverSaleId = posted.id;
+            live.saleSyncPending = true;
+            delete live.saleSyncError;
+            delete live.saleHeldLocal;
+            journalChanged = true;
+          }
+          sent++;
+          return false;
+        }
+        return true;
+      });
+      if (keep.length !== rows.length) saveHeldSales(keep);
+      if (journalChanged) { try { persistShift(); } catch (_) {} }
+      paintHeldSales();
+      return sent;
+    }
+    /* A second tap on a receipt already paid here is the moment to retry a
+       held one, never a reason to book it again (recordSale). */
+    function retryHeldSalesSafely() {
+      try { retryHeldSales(); } catch (_) {}
+    }
+    function paintHeldSales() {
+      try { window.dispatchEvent(new CustomEvent('kiwi:held-sales', { detail: { count: heldSaleRows().length } })); } catch (_) {}
+    }
+    window.KiwiCaisseHeldSales = Object.freeze({
+      count: () => heldSaleRows().length,
+      retry: retryHeldSales,
+    });
+    /* IndexedDB took a sale that localStorage refused: release it now rather
+       than at the next tick. */
+    window.addEventListener('kiwi:money-enqueued', () => { try { retryHeldSales(); } catch (_) {} });
+    /* A sale recorded and handed to the queue is confirmed; one that only
+       reached this till's journal is not. The success haptic waits for the
+       first. With Live Link off (demo) there is no queue to confirm. */
+    function saleRecordConfirmed(entry) {
+      return !!entry && !entry.saleHeldLocal;
+    }
+    function warnSaleHeld() {
+      toast('Vente enregistrée sur cette caisse · envoi en attente, ne pas encaisser à nouveau', 6000, 'warn');
+    }
+
     function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
       /* Le coût du plat GELÉ au moment de la vente (fiche technique complète,
          sinon coût saisi, via KiwiCost.of, le même moteur que le dashboard).
@@ -14646,7 +14788,7 @@
          on the same uncleared bill. Never book that money or stock twice. */
       if (settlementTable && !split) {
         const paid = paidReceiptForCurrentTable(settlementTable);
-        if (paid) { lastSaleId = paid.id; return paid; }
+        if (paid) { lastSaleId = paid.id; if (paid.saleHeldLocal) retryHeldSalesSafely(); return paid; }
       }
       const discount = activeSaleDiscount(amount, lines, settlementTable);
       const complimentary = amount === 0 && discount
@@ -14671,7 +14813,7 @@
         ? ('sale-' + String(vrapOrder.opId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 58)) : '';
       if (orderProSaleId) {
         const existingSale = journal.find(row => row && row.id === orderProSaleId);
-        if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
+        if (existingSale) { lastSaleId = existingSale.id; if (existingSale.saleHeldLocal) retryHeldSalesSafely(); return existingSale; }
       }
       const entry = {
         id: orderProSaleId || ('sale-' + (window.crypto && window.crypto.randomUUID
@@ -14828,18 +14970,23 @@
                autosave forgot the relationship and displayed the local row
                plus its cloud echo as two cash transactions. */
             try { persistShift(); } catch (_) {}
+          } else if (posted && posted.ok === false) {
+            /* Refused by the queue (storage full): the money is taken, so the
+               sale stays, once, and is held for replay. The cashier is told it
+               is recorded, never that it failed, or the customer pays twice. */
+            holdSaleLocally(entry, posted.reason || 'sale-enqueue-failed');
+            try { persistShift(); } catch (_) {}
+            warnSaleHeld();
           } else {
             entry.saleSyncPending = true;
             entry.saleSyncError = String((posted && posted.reason) || 'sale-sync-unavailable').slice(0, 96);
             try { persistShift(); } catch (_) {}
-            if (posted && posted.ok === false) toast('Échec de synchronisation de la vente · ne fermez pas cette caisse');
           }
         }
       } catch (_) {
-        entry.saleSyncPending = true;
-        entry.saleSyncError = 'sale-enqueue-failed';
+        holdSaleLocally(entry, 'sale-enqueue-failed');
         try { persistShift(); } catch (_) {}
-        toast('Échec de synchronisation de la vente · ne fermez pas cette caisse');
+        warnSaleHeld();
       }
       /* Once the receipt is journaled, optional UI/loyalty failures must not
          skip markPaid() and leave the same cash sale payable again. */
@@ -15812,6 +15959,7 @@
         if (saved && saved.merchant === currentMerchantSlug()) {
           shiftMerchant = currentMerchantSlug();
           restoreShift(saved);
+          try { adoptHeldSalesIntoJournal(); } catch (_) {}
           enterShellDirectly();
           startEmployeeSaleJournalSync();
           return;
@@ -16183,7 +16331,14 @@
             if (!entry.saleSyncPending) syncChanged = true;
             entry.saleSyncPending = true;
             delete entry.saleSyncError;
+            if (entry.saleHeldLocal) { delete entry.saleHeldLocal; releaseHeldSale(entry.id); syncChanged = true; }
             n++;
+          } else if (queued && queued.ok === false && !entry.saleHeldLocal && !entry.serverSaleId) {
+            /* Never queued: hold it. One that already has a server id was
+               taken by the queue earlier; a full write-ahead on this replay
+               says nothing about it, so it is not counted as held. */
+            holdSaleLocally(entry, queued.reason);
+            syncChanged = true;
           } else {
             const error = String((queued && queued.reason) || 'sale-sync-unavailable').slice(0, 96);
             if (!entry.saleSyncPending || entry.saleSyncError !== error) syncChanged = true;
@@ -16235,6 +16390,7 @@
             entry.serverSaleId = String(detail.serverId || detail.id);
             delete entry.saleSyncPending;
             delete entry.saleSyncError;
+            if (entry.saleHeldLocal) { delete entry.saleHeldLocal; releaseHeldSale(entry.id); }
           } else if (detail.state === 'blocked') {
             entry.saleSyncPending = true;
             entry.saleSyncError = 'sale-conflict';
@@ -22993,6 +23149,65 @@
         return d;
       } catch (e) { return null; }
     }
+    /* Un reçu relu depuis le stockage : le service sauvegardé (restoreShift)
+       ou l'étagère des ventes retenues (heldSales). Les deux passent par ici
+       pour qu'une vente ressorte de l'une ou de l'autre avec les MÊMES champs. */
+    function reviveJournalEntry(e) {
+      const entry = {
+        id: e.id, time: new Date(e.time), label: e.label,
+        amount: e.amount, method: e.method, ref: e.ref,
+      };
+      if (e.kind)            entry.kind     = e.kind;      // 'refund'
+      if (e.refundOf)        entry.refundOf = e.refundOf;
+      if (e.refundOfId)      entry.refundOfId = e.refundOfId;
+      if (e.refunded)        entry.refunded = true;
+      if (e.refundedAmount != null) entry.refundedAmount = money(e.refundedAmount);
+      if (e.reason)          entry.reason   = e.reason;
+      if (e.voided)          entry.voided   = true;
+      if (e.voidConfirmed)   entry.voidConfirmed = true;
+      if (e.voidAuthority)   entry.voidAuthority = String(e.voidAuthority).slice(0, 32);
+      if (e.voidTs != null)  entry.voidTs   = Number(e.voidTs);
+      if (e.voidAt != null)  entry.voidAt   = Number(e.voidAt);
+      if (e.tip)             entry.tip      = e.tip;       // pourboire
+      if (e.lines)           entry.lines    = e.lines;     // itemised receipt
+      if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
+      /* Journal-only recovery must replay the payment as it was captured.
+         Do not infer a visit, split or discount from today's mutable order;
+         legacy receipts keep absent metadata absent. The API validates it. */
+      if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
+      if (e.reopenSnapshot && typeof e.reopenSnapshot === 'object') entry.reopenSnapshot = e.reopenSnapshot;
+      if (e.visitClosed === true) entry.visitClosed = true;
+      ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
+        'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError', 'saleHeldLocal'].forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(e, key)) entry[key] = e[key];
+      });
+      if (e.refundActor && typeof e.refundActor === 'object') {
+        entry.refundActor = {
+          id: String(e.refundActor.id || '').slice(0, 96), name: String(e.refundActor.name || '').slice(0, 80),
+          role: String(e.refundActor.role || '').slice(0, 80), approval: String(e.refundActor.approval || '').slice(0, 1400),
+        };
+      }
+      if (e.refundSynced) entry.refundSynced = true;
+      if (e.refundSyncNeedsApproval) entry.refundSyncNeedsApproval = true;
+      if (e.refundSyncStatus) entry.refundSyncStatus = String(e.refundSyncStatus).slice(0, 24);
+      if (e.refundLedgerReversed) entry.refundLedgerReversed = true;
+      if (e.refundRejectedStatus != null) entry.refundRejectedStatus = Number(e.refundRejectedStatus) || 0;
+      if (e.refundRejectedAt) entry.refundRejectedAt = Number(e.refundRejectedAt) || 0;
+      if (e.refundReconciliation) entry.refundReconciliation = String(e.refundReconciliation).slice(0, 32);
+      if (e.cashHandedOut) entry.cashHandedOut = true;
+      if (e.cashHandedOutAt) entry.cashHandedOutAt = Number(e.cashHandedOutAt) || 0;
+      if (e.refundRecoveryRequestedAt) entry.refundRecoveryRequestedAt = Number(e.refundRecoveryRequestedAt) || 0;
+      if (e.channel)         entry.channel  = e.channel;   // dining / takeaway / OrderPro
+      if (e.origin)          entry.origin   = e.origin;    // caisse / employee / OrderPro
+      /* Le reçu figé au moment de la vente. Cette boucle recopie champ par
+         champ (elle ne fait pas Object.assign), donc tout ce qui n'est pas
+         nommé ici est PERDU au rechargement · et une caisse recharge tous les
+         jours. Sans cette ligne, réimprimer le ticket d'hier ne ressortait
+         plus l'enseigne et les mentions de l'époque : exactement ce que le
+         figeage est censé garantir. */
+      if (e.rc)              entry.rc       = e.rc;
+      return entry;
+    }
     function restoreShift(d) {
       shiftOpenedAt = new Date(d.openedAt);
       shiftOpenedBy = d.openedBy || '';
@@ -23005,62 +23220,7 @@
         Number.isFinite(Number(d.terminalCardTotal)) && Number(d.terminalCardTotal) >= 0)
         ? money(Number(d.terminalCardTotal)) : null;
       journal.length = 0;
-      (d.journal || []).forEach(e => {
-        const entry = {
-          id: e.id, time: new Date(e.time), label: e.label,
-          amount: e.amount, method: e.method, ref: e.ref,
-        };
-        if (e.kind)            entry.kind     = e.kind;      // 'refund'
-        if (e.refundOf)        entry.refundOf = e.refundOf;
-        if (e.refundOfId)      entry.refundOfId = e.refundOfId;
-        if (e.refunded)        entry.refunded = true;
-        if (e.refundedAmount != null) entry.refundedAmount = money(e.refundedAmount);
-        if (e.reason)          entry.reason   = e.reason;
-        if (e.voided)          entry.voided   = true;
-        if (e.voidConfirmed)   entry.voidConfirmed = true;
-        if (e.voidAuthority)   entry.voidAuthority = String(e.voidAuthority).slice(0, 32);
-        if (e.voidTs != null)  entry.voidTs   = Number(e.voidTs);
-        if (e.voidAt != null)  entry.voidAt   = Number(e.voidAt);
-        if (e.tip)             entry.tip      = e.tip;       // pourboire
-        if (e.lines)           entry.lines    = e.lines;     // itemised receipt
-        if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
-        /* Journal-only recovery must replay the payment as it was captured.
-           Do not infer a visit, split or discount from today's mutable order;
-           legacy receipts keep absent metadata absent. The API validates it. */
-        if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
-        if (e.reopenSnapshot && typeof e.reopenSnapshot === 'object') entry.reopenSnapshot = e.reopenSnapshot;
-        if (e.visitClosed === true) entry.visitClosed = true;
-        ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
-          'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError'].forEach((key) => {
-          if (Object.prototype.hasOwnProperty.call(e, key)) entry[key] = e[key];
-        });
-        if (e.refundActor && typeof e.refundActor === 'object') {
-          entry.refundActor = {
-            id: String(e.refundActor.id || '').slice(0, 96), name: String(e.refundActor.name || '').slice(0, 80),
-            role: String(e.refundActor.role || '').slice(0, 80), approval: String(e.refundActor.approval || '').slice(0, 1400),
-          };
-        }
-        if (e.refundSynced) entry.refundSynced = true;
-        if (e.refundSyncNeedsApproval) entry.refundSyncNeedsApproval = true;
-        if (e.refundSyncStatus) entry.refundSyncStatus = String(e.refundSyncStatus).slice(0, 24);
-        if (e.refundLedgerReversed) entry.refundLedgerReversed = true;
-        if (e.refundRejectedStatus != null) entry.refundRejectedStatus = Number(e.refundRejectedStatus) || 0;
-        if (e.refundRejectedAt) entry.refundRejectedAt = Number(e.refundRejectedAt) || 0;
-        if (e.refundReconciliation) entry.refundReconciliation = String(e.refundReconciliation).slice(0, 32);
-        if (e.cashHandedOut) entry.cashHandedOut = true;
-        if (e.cashHandedOutAt) entry.cashHandedOutAt = Number(e.cashHandedOutAt) || 0;
-        if (e.refundRecoveryRequestedAt) entry.refundRecoveryRequestedAt = Number(e.refundRecoveryRequestedAt) || 0;
-        if (e.channel)         entry.channel  = e.channel;   // dining / takeaway / OrderPro
-        if (e.origin)          entry.origin   = e.origin;    // caisse / employee / OrderPro
-        /* Le reçu figé au moment de la vente. Cette boucle recopie champ par
-           champ (elle ne fait pas Object.assign), donc tout ce qui n'est pas
-           nommé ici est PERDU au rechargement · et une caisse recharge tous les
-           jours. Sans cette ligne, réimprimer le ticket d'hier ne ressortait
-           plus l'enseigne et les mentions de l'époque : exactement ce que le
-           figeage est censé garantir. */
-        if (e.rc)              entry.rc       = e.rc;
-        journal.push(entry);
-      });
+      (d.journal || []).forEach(e => { journal.push(reviveJournalEntry(e)); });
       cashMovements.length = 0;
       (d.cashMovements || []).forEach(m => cashMovements.push({
         id: m.id, time: new Date(m.time), type: m.type, amount: m.amount, reason: m.reason,
@@ -23300,6 +23460,7 @@
       }
       try {
         restoreShift(saved);
+        try { adoptHeldSalesIntoJournal(); } catch (_) {}
         enterShellDirectly();
         setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);
       } catch (err) {
@@ -23326,7 +23487,10 @@
        (90 s, cf. saveProvisional) : il traverse le réseau, lui, et le pousser
        toutes les cinq secondes n'apprendrait rien de plus au tableau de bord. */
     window.addEventListener('beforeunload', persistShift);
-    setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} }, 5000);
+    /* Held sales replay on the same beat, shift open or not: a sale from a
+       closed shift still has to reach the queue. */
+    setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} try { retryHeldSales(); } catch (_) {} }, 5000);
+    setTimeout(() => { try { paintHeldSales(); retryHeldSales(); } catch (_) {} }, 1500);
     setInterval(publishServiceFloor, 4000);
     /* Employee actions are interactive caisse state, not background reporting.
        Four seconds left a paid/closed table visibly open long enough for the

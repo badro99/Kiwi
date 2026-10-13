@@ -747,6 +747,33 @@
   // Kept for old shells: a user clicking Retry is not new server evidence.
   function retryBlockedSales() { return Promise.resolve(0); }
 
+  /* localStorage full, IndexedDB still open. The write-ahead copy could not be
+     written, so nothing is durable SYNCHRONOUSLY and the caller hears the
+     truth: not queued. IndexedDB has its own, much larger quota, so the
+     command is still handed to it; once it owns the stable id, the next
+     postSale() for that id answers queued and the till releases its held
+     copy (kiwi:money-enqueued says when, so it need not wait for a tick). */
+  var idbOwned = Object.create(null), idbInFlight = Object.create(null);
+  function enqueueIndexedDbOnly(body, m, opts) {
+    if (!idbInFlight[body.id]) {
+      idbInFlight[body.id] = true;
+      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, {
+        id: body.id, createdAt: body.ts, replaceExisting: !!opts.replaceExisting,
+      }).then(function () {
+        idbOwned[body.id] = m;
+        return refreshOutboxStatus();
+      }).then(function () {
+        try { window.dispatchEvent(new CustomEvent('kiwi:money-enqueued', { detail: { id: body.id, merchant: m } })); } catch (_) {}
+        pingLocal();
+        flushQueue();
+      }).catch(function () {
+        outboxStatus.storageError = true;
+        queueSignal();
+      }).then(function () { delete idbInFlight[body.id]; });
+    }
+    return { ok: false, reason: 'queue-storage-full', id: body.id };
+  }
+
   function enqueueMoneyBody(body, m, opts) {
     opts = opts || {};
     var q = outboxUsing ? [] : qRead();
@@ -754,6 +781,9 @@
        paths. Stable IDs plus this local check prevent it entering the queue
        twice; the server-side primary key remains the second lock. */
     if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
+      if (idbOwned[body.id] === m && !opts.replaceExisting) {
+        return { ok: true, queued: true, duplicate: true, durable: 'indexeddb', id: body.id };
+      }
       /* WRITE-AHEAD COPY — enqueue() is asynchronous. Keep the exact command
          synchronously until IndexedDB owns it; this applies equally to a sale
          and its refund, whose financial ordering must survive a reload. */
@@ -761,10 +791,10 @@
       var writeAheadAt = writeAhead.findIndex(function (x) { return x && x.id === body.id; });
       if (writeAheadAt < 0) {
         writeAhead.push(body);
-        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+        if (!qWrite(writeAhead)) return enqueueIndexedDbOnly(body, m, opts);
       } else if (opts.replaceExisting && writeAhead[writeAheadAt].merchant === m) {
         writeAhead[writeAheadAt] = body;
-        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+        if (!qWrite(writeAhead)) return enqueueIndexedDbOnly(body, m, opts);
       }
       window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, {
         id: body.id, createdAt: body.ts, replaceExisting: !!opts.replaceExisting,

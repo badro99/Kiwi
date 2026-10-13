@@ -347,6 +347,27 @@
     });
   }
 
+  /* A small durable shelf beside the outbox, for state that must outlive a
+     full localStorage (whose quota is a few megabytes, IndexedDB's is far
+     larger). The till keeps its "recorded here, not yet queued" sales in it
+     (kiwi-caisse.html, held sales). Both calls resolve; neither throws. */
+  function getMeta(key) {
+    key = cleanPart(key, 160);
+    if (!key) return Promise.resolve(null);
+    return ready().then(function (ok) {
+      if (!ok) return null;
+      return db.meta.get(key).then(function (row) { return row ? clone(row.value) : null; });
+    }).catch(function () { return null; });
+  }
+  function putMeta(key, value) {
+    key = cleanPart(key, 160);
+    if (!key) return Promise.resolve(false);
+    return ready().then(function (ok) {
+      if (!ok) return false;
+      return db.meta.put({ key: key, value: clone(value), updatedAt: now() }).then(function () { return true; });
+    }).catch(function () { return false; });
+  }
+
   function subscribe(fn) {
     listeners.add(fn);
     return function () { listeners.delete(fn); };
@@ -365,6 +386,8 @@
     list: list,
     stats: stats,
     migrateLegacy: migrateLegacy,
+    getMeta: getMeta,
+    putMeta: putMeta,
     subscribe: subscribe,
   };
 })();
