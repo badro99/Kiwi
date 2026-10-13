@@ -346,6 +346,24 @@ const oldConfig = await postConfig({
 });
 check('owner config route rejects the old reset cookie even beside a till cookie', oldConfig.status === 401);
 
+/* A08b: a failed password write hands the token back, so the e-mailed link
+ * still works on the second try instead of dying with the outage. */
+console.log('\nA08b · reset survives a failed password write');
+const retryToken = makeResetToken();
+db.prepare("INSERT INTO reset_tokens (selector,account_id,verifier,created_ts,expires_ts,used_ts,actor,actor_id) VALUES (?,?,?,?,?,NULL,'client','')")
+  .run(retryToken.selector, 'acc-reset', await resetVerifierHash(SECRET, retryToken.verifier), Date.now(), Date.now() + 3600000);
+const brokenDB = Object.assign(Object.create(Object.getPrototypeOf(env.DB)), env.DB, {
+  prepare(sql) { if (/^UPDATE accounts SET salt/.test(sql)) throw new Error('D1 down'); return env.DB.prepare(sql); },
+});
+const failedReset = await postReset({ env: { ...env, DB: brokenDB }, request: request('/auth/reset', { method: 'POST', body: { token: retryToken.token, password: 'Another-Password-789' } }) });
+check('a failed password write answers update-failed', failedReset.status === 500);
+check('the token is handed back after a failed write',
+  db.prepare('SELECT used_ts FROM reset_tokens WHERE selector = ?').get(retryToken.selector).used_ts === null);
+const retriedReset = await postReset({ env, request: request('/auth/reset', { method: 'POST', body: { token: retryToken.token, password: 'Another-Password-789' } }) });
+check('the same link succeeds on the second try', retriedReset.status === 200);
+const replayReset = await postReset({ env, request: request('/auth/reset', { method: 'POST', body: { token: retryToken.token, password: 'Yet-Another-Pass-012' } }) });
+check('and is spent once the password changed', replayReset.status === 400);
+
 /* A09: operational writes are refused after store suspension, while no
  * document mutation is attempted. */
 console.log('\nA09 · suspended-store operational writes');

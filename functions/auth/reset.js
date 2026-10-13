@@ -130,6 +130,14 @@ export async function onRequestPost(context) {
     if (!r || !Number.isFinite(Number(r.session_epoch))) return json({ error: 'invalid' }, 400);
     row.session_epoch = Number(r.session_epoch);
   } catch (e) {
+    /* Le mot de passe n'a pas changé : on rend le jeton que CETTE requête a
+       pris (même horodatage), pour que le lien du mail marche au deuxième
+       essai. Sans ça, une panne passagère grillait le lien pour rien. */
+    try {
+      await env.DB.prepare(
+        'UPDATE reset_tokens SET used_ts = NULL WHERE selector = ? AND used_ts = ?'
+      ).bind(row.selector, now).run();
+    } catch (_) {}
     return json({ error: 'update-failed' }, 500);
   }
 
