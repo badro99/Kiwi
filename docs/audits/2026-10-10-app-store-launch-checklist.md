@@ -191,3 +191,15 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   on two timeouts at load average 50, both green alone
   (`landing-es-browser-test` 207, `native-qa-six-fixes-test` 47). Build number
   38, `com.kiwios.pro`, a 26.8 MB `.ipa`.
+- **Build 39 uploaded** (`e5639388`, the commit Cloudflare Pages had deployed):
+  "Upload succeeded", processing. Ships the design-audit fix-now list to the
+  app: account deletion gone from the cashier menu on a shared till, the
+  self-serve password-reset link in the native sign-in, no pre-selected
+  opening float or business type, "Cancel a sale" opening its own sheet.
+  Full `node tools/check.js` green on the second cut. The first, from
+  `a6a12c73`, stopped on `menu-promos-browser-test`: the test tapped the
+  opening-float chip before its deferred script bound it (fixed on main in
+  `0074f59f`). The first upload attempt failed in `-exportArchive` ("Couldn't
+  communicate with a helper application") with the disk full; after freeing
+  scratch space, re-running only the upload step on the same signed archive
+  succeeded. Build number 39, `com.kiwios.pro`.
