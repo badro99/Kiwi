@@ -70,8 +70,9 @@ handlers['nav-accueil'] = () => {
  * as new orders come in.
  *
  * Filters (Toutes / Cartes / Mobile / Espèces / Remboursements), the date
- * range selector (Aujourd'hui / Hier / 7 j / 30 j), the tabs (Toutes /
- * Réconciliation / Anti-fraude) and the row-click detail are all wired.
+ * range selector (Aujourd'hui / Hier / 7 j / 30 j) and the row-click detail
+ * are all wired. The Réconciliation and Anti-fraude tabs were removed on
+ * 2026-10-13 (processor-only content; see docs/roadmaps/KIWI_2.0_ROADMAP.md).
  * ─────────────────────────────────────────────────────────────────────────── */
 handlers['nav-transactions'] = () => {
   const TX_STR = {
@@ -88,8 +89,6 @@ handlers['nav-transactions'] = () => {
         mobile: 'Mobile',
         cash: 'Espèces',
         refunds: 'Remboursements',
-        reconciliation: 'Réconciliation',
-        fraud: 'Anti-fraude',
         filterActive: 'Filtre actif :',
         ordersDisplayed: 'commandes affichées',
         orderDisplayed: 'commande affichée',
@@ -99,22 +98,6 @@ handlers['nav-transactions'] = () => {
         olderOrdersHidden: 'commandes plus anciennes masquées',
         olderOrderHidden: 'commande plus ancienne masquée',
         showAll: 'Tout afficher',
-        settlementOf: 'Règlement du',
-        reconciled: 'Rapproché',
-        grossVolume: 'Volume brut',
-        visaMcInterchange: 'Interchange Visa/MC',
-        kiwiNetworkFees: 'Frais réseau Kiwi',
-        vatOnFees: 'TVA sur frais',
-        netPaidOut: 'Net versé',
-        savingsVsCmi: 'Économie vs CMI :',
-        today: 'ce jour',
-        vs: 'vs',
-        openAlerts: 'alertes ouvertes',
-        model: 'Modèle',
-        slidingWindow: 'fenêtre glissante',
-        examine: 'Examiner',
-        markLegitimate: 'Marquer légitime',
-        blockCard: 'Bloquer la carte',
         paid: 'Réglé',
         pending: 'Attente',
         refunded: 'Remboursé',
@@ -138,8 +121,6 @@ handlers['nav-transactions'] = () => {
         mobile: 'Mobile',
         cash: 'Cash',
         refunds: 'Refunds',
-        reconciliation: 'Reconciliation',
-        fraud: 'Anti-fraud',
         filterActive: 'Active filter:',
         ordersDisplayed: 'orders displayed',
         orderDisplayed: 'order displayed',
@@ -149,22 +130,6 @@ handlers['nav-transactions'] = () => {
         olderOrdersHidden: 'older orders hidden',
         olderOrderHidden: 'older order hidden',
         showAll: 'Show all',
-        settlementOf: 'Settlement of',
-        reconciled: 'Reconciled',
-        grossVolume: 'Gross volume',
-        visaMcInterchange: 'Visa/MC Interchange',
-        kiwiNetworkFees: 'Kiwi network fees',
-        vatOnFees: 'VAT on fees',
-        netPaidOut: 'Net paid out',
-        savingsVsCmi: 'Savings vs CMI:',
-        today: 'today',
-        vs: 'vs',
-        openAlerts: 'open alerts',
-        model: 'Model',
-        slidingWindow: 'sliding window',
-        examine: 'Examine',
-        markLegitimate: 'Mark legitimate',
-        blockCard: 'Block card',
         paid: 'Paid',
         pending: 'Pending',
         refunded: 'Refunded',
@@ -188,8 +153,6 @@ handlers['nav-transactions'] = () => {
         mobile: 'الجوال',
         cash: 'نقدًا',
         refunds: 'المبالغ المستردة',
-        reconciliation: 'التسوية',
-        fraud: 'مكافحة الاحتيال',
         filterActive: 'فلتر نشط:',
         ordersDisplayed: 'طلبات معروضة',
         orderDisplayed: 'طلب معروض',
@@ -199,22 +162,6 @@ handlers['nav-transactions'] = () => {
         olderOrdersHidden: 'طلبات أقدم مخفية',
         olderOrderHidden: 'طلب أقدم مخفي',
         showAll: 'عرض الكل',
-        settlementOf: 'تسوية',
-        reconciled: 'تمت التسوية',
-        grossVolume: 'الحجم الإجمالي',
-        visaMcInterchange: 'رسوم فيزا/ماستركارد',
-        kiwiNetworkFees: 'رسوم شبكة كيوي',
-        vatOnFees: 'الضريبة على الرسوم',
-        netPaidOut: 'صافي المبلغ المدفوع',
-        savingsVsCmi: 'التوفير مقابل CMI:',
-        today: 'اليوم',
-        vs: 'مقابل',
-        openAlerts: 'تنبيهات مفتوحة',
-        model: 'نموذج',
-        slidingWindow: 'نافذة منزلقة',
-        examine: 'فحص',
-        markLegitimate: 'وضع علامة كمشروع',
-        blockCard: 'حظر البطاقة',
         paid: 'مدفوع',
         pending: 'قيد الانتظار',
         refunded: 'مسترد',
@@ -244,7 +191,6 @@ handlers['nav-transactions'] = () => {
   /* Drawer state */
   let activeFilter = T.all;
   let activeRange  = 'aujourdhui';
-  let activeTab    = 'flux';
   let expanded     = false;
   let unsub        = null;
 
@@ -295,8 +241,6 @@ handlers['nav-transactions'] = () => {
     const display = sortedDesc.slice(0, limit);
     const hidden  = Math.max(0, total - display.length);
 
-    const tabs = [['flux',T.all], ['rec',T.reconciliation], ['fra',T.fraud]];
-
     host.innerHTML = `
       <div class="p-hero">
         <div class="l">${live ? T.heroLive : T.heroVolume + RANGE_LABEL[activeRange].toUpperCase()}</div>
@@ -319,15 +263,8 @@ handlers['nav-transactions'] = () => {
         </div>
       ` : ''}
 
-      <div class="kx-tabs tx-tabs" role="tablist" style="margin-bottom:14px;">
-        ${tabs.map(([k, l]) => {
-          const on = activeTab === k;
-          return `<button type="button" role="tab" aria-selected="${on}" class="kx-tab tx-tab ${on ? 'on' : ''}" data-tx-tab="${k}">${l}</button>`;
-        }).join('')}
-      </div>
-
       <span class="tx-update-status" data-tx-refresh role="status">${({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'}</span>
-      <div data-tx-pane="flux" style="display:${activeTab === 'flux' ? '' : 'none'};">
+      <div data-tx-pane="flux">
         ${display.length === 0 ? `
           <div style="padding:40px 16px; text-align:center; color:var(--n-500); font-size:13px;">${T.noOrders}</div>
         ` : `
@@ -354,56 +291,7 @@ handlers['nav-transactions'] = () => {
           ` : ''}
         `}
       </div>
-
-      <div data-tx-pane="rec" style="display:${activeTab === 'rec' ? '' : 'none'};">
-        <div class="p-card" style="background:var(--surface);">
-          <div class="head"><h4>${T.settlementOf} 28 avril</h4><span class="chip ok">${T.reconciled}</span></div>
-          <table class="p-table" style="margin-top:6px;">
-            <tbody>
-              <tr><td>${T.grossVolume} · 174 ${T.orders}</td><td class="mono right">+30 482,50 MAD</td></tr>
-              <tr><td style="color:var(--n-500);">${T.visaMcInterchange} (1,18 %)</td><td class="mono right" style="color:var(--danger);">−359,69 MAD</td></tr>
-              <tr><td style="color:var(--n-500);">${T.kiwiNetworkFees} (0,30 %)</td><td class="mono right" style="color:var(--danger);">−91,45 MAD</td></tr>
-              <tr><td style="color:var(--n-500);">${T.vatOnFees}</td><td class="mono right" style="color:var(--danger);">−90,23 MAD</td></tr>
-              <tr style="border-top:2px solid var(--ink);"><td><b>${T.netPaidOut} Bank of Africa ••3291</b></td><td class="mono right"><b style="color:var(--atlas); font-size:15px;">29 941,13 MAD</b></td></tr>
-            </tbody>
-          </table>
-          <div style="margin-top:14px; padding:10px 14px; background:var(--mint-soft, rgba(125,242,176,0.18)); border-radius:9px; font-size:12.5px; color:var(--riad);">
-            <b>${T.savingsVsCmi}</b> +247 MAD ${T.today} · 1,18 % ${T.vs} 2,0 % CMI
-          </div>
-        </div>
-      </div>
-
-      <div data-tx-pane="fra" style="display:${activeTab === 'fra' ? '' : 'none'};">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-          <span class="chip" style="background:var(--warn-soft); color:var(--warn-ink);">2 ${T.openAlerts}</span>
-          <span style="font-size:11.5px; color:var(--n-500);">${T.model}: Kiwi Sentinel · 30 j ${T.slidingWindow}</span>
-        </div>
-        ${[
-          { t: 'Visa •• 0043, 3ᵉ remboursement cette semaine', d: 'Pattern récurrent · 240 MAD à chaque fois · adresse IP changeante', risk: 'Élevé' },
-          { t: 'Kiwi Wallet QR, pic anormal 13:42', d: '7 commandes du même device en 4 minutes · panier moyen 38 MAD', risk: 'Moyen' },
-        ].map(a => `
-          <div class="p-card" style="background:var(--surface);">
-            <div class="head">
-              <div>
-                <h4 style="font-size:14.5px;">${a.t}</h4>
-                <div style="font-size:12px; color:var(--n-500); margin-top:4px;">${a.d}</div>
-              </div>
-              <span class="chip ${a.risk === 'Élevé' ? 'pend' : 'neutral'}">${a.risk}</span>
-            </div>
-            <div style="display:flex; gap:6px; margin-top:8px;">
-              <button class="kb ghost" data-action="fra-investigate" style="padding:6px 10px; font-size:12px;">${T.examine}</button>
-              <button class="kb ghost" data-action="fra-allow" style="padding:6px 10px; font-size:12px;">${T.markLegitimate}</button>
-              <button class="kb atlas" data-action="fra-block" style="padding:6px 10px; font-size:12px;">${T.blockCard}</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>
     `;
-
-    /* Wire tab buttons (rebound on every render since innerHTML wipes listeners). */
-    host.querySelectorAll('.tx-tab').forEach(btn => {
-      btn.onclick = () => { activeTab = btn.dataset.txTab; render(); };
-    });
 
     /* Live subtitle */
     const subEl = dr.el.querySelector('.genpage-head p, .kiwi-drawer-head p');
@@ -466,10 +354,6 @@ handlers['nav-transactions'] = () => {
       finally {button.disabled=false;}
     };
   };
-  if (!handlers['fra-investigate']) handlers['fra-investigate'] = () => toast(T.dossierOuvert, { type: 'info', duration: 1800 });
-  if (!handlers['fra-allow'])       handlers['fra-allow']       = () => toast(T.marqueLegitime, { type: 'success', duration: 1600 });
-  if (!handlers['fra-block'])       handlers['fra-block']       = () => toast(T.carteBloquee, { type: 'success', duration: 1800 });
-
   /* Live updates from the demo clock (only when viewing today). */
   if (window.KiwiDemoClock?.subscribe) {
     unsub = window.KiwiDemoClock.subscribe(() => {

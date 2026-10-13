@@ -35,13 +35,13 @@ When the payment-processing license lands and we move to **Kiwi 2.0**, walk thro
 
 ## 2. Commandes drawer — Réconciliation tab
 
-**Status in 1.0:** **Tab still visible but content is dormant.** *(Left in place because removing a tab mid-drawer would visually scar the layout — consider removing for Kiwi 2.0 launch polish.)*
+**Status:** **Removed from the drawer on 2026-10-13** (tab, pane and strings; the code is kept in git history). Status in 1.0 was: tab visible but content dormant.
 
 **What it does:** Per-day settlement breakdown showing volume brut, interchange (1.18 %), Kiwi network fees (0.30 %), TVA on fees, net amount paid to merchant's bank account.
 
 **Why dormant for 1.0:** All the percentages and the "net versé BMCE ••3291" amount imply we're the processor.
 
-**Where the code lives:** `assets/pages-pro.js` → inside `handlers['nav-transactions']`, the `data-tx-pane="rec"` block.
+**Where the code lived:** `assets/pages-pro.js` → `handlers['nav-transactions']`, the `data-tx-pane="rec"` block (see git history before 2026-10-13).
 
 **To re-enable for 2.0:** Just wire the percentages to real settlement data per merchant.
 
@@ -49,13 +49,13 @@ When the payment-processing license lands and we move to **Kiwi 2.0**, walk thro
 
 ## 3. Commandes drawer — Anti-fraude tab
 
-**Status in 1.0:** **Tab still visible but content is dormant.**
+**Status:** **Removed from the drawer on 2026-10-13** (tab, pane and strings; the code is kept in git history). Status in 1.0 was: tab visible but content dormant.
 
 **What it does:** Surfaces "Kiwi Sentinel" risk-model alerts (recurring refunds, anomalous QR spikes), with Examiner / Marquer légitime / Bloquer la carte actions.
 
 **Why dormant for 1.0:** Card-blocking is only meaningful if we hold the relationship with the card issuer through processing.
 
-**Where the code lives:** `assets/pages-pro.js` → inside `handlers['nav-transactions']`, the `data-tx-pane="fra"` block.
+**Where the code lived:** `assets/pages-pro.js` → `handlers['nav-transactions']`, the `data-tx-pane="fra"` block (see git history before 2026-10-13).
 
 **To re-enable for 2.0:** Wire alerts to a real Kiwi Sentinel risk-scoring service.
 
