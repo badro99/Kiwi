@@ -7236,7 +7236,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       try { renderNotifications(); } catch (_) {}
       updateNotificationBadge();
       toast(body ? `${title} · ${body}` : title, 4200);
-      try { if (navigator.vibrate) navigator.vibrate([45, 55, 45]); } catch (_) {}
       try {
         if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
           new Notification(title, { body: body || '', tag: 'kiwi-service-' + title + '-' + body });

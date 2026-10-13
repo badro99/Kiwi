@@ -3248,7 +3248,6 @@
         setTimeout(() => { try { ac.close(); } catch (_) {} }, 320);
       }
     } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(35); } catch (_) {}
   }
 
   let camBusy = false;
@@ -4180,6 +4179,8 @@
     }
     const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
+    /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
+    try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
     if (state.view === 'vente') renderTicket();
     renderBadges();

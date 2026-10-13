@@ -1539,6 +1539,14 @@ section('Whole-project regressions');
     'native-pass4-test.mjs',
     'native-pass5-test.mjs',
     'native-pass7-test.mjs',
+    /* Haptiques (design 2027, §15) : le module KiwiHaptics, le plugin
+       kiwi-haptics (mode stock = @capacitor/haptics), le plancher iOS 15.5,
+       le balayage statique (ni navigator.vibrate ni générateur UIKit hors du
+       plugin) et la copie des pages invité qui ne promet plus de vibration. */
+    'haptics-test.js',
+    'haptics-plugin-test.mjs',
+    'haptics-scan-test.mjs',
+    'guest-copy-test.js',
     'native-demo-ledger-test.mjs',
     'native-qa-six-fixes-test.mjs',
     'ticket151-browser-test.mjs',

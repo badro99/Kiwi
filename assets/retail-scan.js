@@ -194,7 +194,6 @@
   }
 
   function blip() {
-    try { if (navigator.vibrate) navigator.vibrate(32); } catch (_) {}
     try {
       var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       var ac = new AC(), o = ac.createOscillator(), g = ac.createGain();
@@ -222,6 +221,8 @@
     }
     state.pending = ''; state.lookup = hit;
     addHit(hit, true); renderResult();
+    /* An item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
+    try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('retail-scan')); } catch (_) {}
     setCameraStatus('<b>' + esc(hit.product.name) + '</b> · ' + esc(fmt(hit.price)) + ' · ' + esc(String(hit.stock)) + ' en stock');
     return true;
   }

@@ -432,7 +432,6 @@
   function announce(n) {
     var chip = document.getElementById('kop-chip');
     if (chip) { chip.classList.add('is-new'); setTimeout(function () { chip.classList.remove('is-new'); }, 6000); }
-    try { if (navigator.vibrate) navigator.vibrate([40, 60, 40]); } catch (_) {}
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (Ctx) {
@@ -493,7 +492,6 @@
             setTimeout(function () { el.remove(); }, 5300);
           }
         } catch (_) {}
-        try { if (navigator.vibrate) navigator.vibrate([60, 80, 60]); } catch (_) {}
       });
     } catch (_) {}
   }

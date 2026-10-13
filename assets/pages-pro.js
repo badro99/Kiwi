@@ -5192,7 +5192,8 @@ function pdsOpenPhoneAssign(state, v) {
     if (ids.includes(openSid)) pdsSetServerIds(t, ids.filter(id => id !== openSid));
     else if (ids.length >= PDS_MAX_TABLE_SERVERS) { Kiwi.toast(P.full, { type: 'info', duration: 1600 }); return; }
     else pdsSetServerIds(t, ids.concat(openSid));
-    try { navigator.vibrate && navigator.vibrate(8); } catch (_) {}
+    /* A chip toggle is a Choose, on the confirmed tap (design 2027, §20.3). */
+    try { if (window.KiwiHaptics) window.KiwiHaptics.play('Choose', window.KiwiHaptics.gid('table-servers'), { trigger: 'tap', eventTimeStamp: e.timeStamp }); } catch (_) {}
     try { pdsSave(state); } catch (_) {}
     const y = dr.el.querySelector('.kiwi-drawer-body')?.scrollTop || 0;
     paint();

@@ -2811,7 +2811,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </div>
 
       <div class="prep-bottom">
-        <p class="prep-note"><span data-i18n="prep_note_pre">Vous pouvez attendre</span> <em data-i18n="prep_note_em">où vous voulez</em><span data-i18n="prep_note_post">. Votre téléphone vibre et sonne dès que c'est prêt.</span></p>
+        <p class="prep-note"><span data-i18n="prep_note_pre">Vous pouvez attendre</span> <em data-i18n="prep_note_em">où vous voulez</em><span data-i18n="prep_note_post">. Elle sonne dès que c'est prêt, tant que cette page reste ouverte.</span></p>
       </div>
     </section>
 
@@ -3218,12 +3218,12 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_now: "maintenant",
         prep_perm_default: "Recevez une notification quand c'est prêt, gardez votre téléphone à côté.",
         prep_perm_granted_html: "<strong>Notifications activées.</strong> Elles partent tant que cette page reste ouverte.",
-        prep_perm_denied: "Notifications refusées, gardez la page ouverte, vibration et son utilisés.",
+        prep_perm_denied: "Notifications désactivées. Gardez cette page ouverte : elle sonnera quand votre commande sera prête.",
         prep_perm_unsupported: "Ce navigateur ne gère pas les notifications, gardez la page ouverte, on vous prévient ici.",
         prep_perm_btn: "Activer",
         prep_note_pre: "Gardez cette page",
         prep_note_em: "ouverte",
-        prep_note_post: ". Elle sonne, et fait vibrer le téléphone s'il le permet, dès que c'est prêt.",
+        prep_note_post: ". Elle sonne dès que c'est prêt, tant que cette page reste ouverte.",
         ready_title_a: "Votre commande est",
         ready_title_em: "prête.",
         ready_loc_post: " · Café Atlas",
@@ -3413,12 +3413,12 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_now: "now",
         prep_perm_default: "Get notified when it's ready, keep your phone nearby.",
         prep_perm_granted_html: "<strong>Notifications on.</strong> They fire as long as this page stays open.",
-        prep_perm_denied: "Notifications denied, keep the page open, vibration and sound will play.",
+        prep_perm_denied: "Notifications are off. Keep this page open and it will chime when your order is ready.",
         prep_perm_unsupported: "This browser doesn't support notifications, keep the page open, we'll notify you here.",
         prep_perm_btn: "Enable",
         prep_note_pre: "Keep this page",
         prep_note_em: "open",
-        prep_note_post: ". It chimes, and vibrates if your phone allows it, the moment it's ready.",
+        prep_note_post: ". It chimes the moment it's ready, as long as this page stays open.",
         ready_title_a: "Your order is",
         ready_title_em: "ready.",
         ready_loc_post: " · Café Atlas",
@@ -3608,12 +3608,12 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_now: "دابا",
         prep_perm_default: "خد إشعار ملي يكون واجد، خلي تلفونك معاك.",
         prep_perm_granted_html: "<strong>الإشعارات مفعلة.</strong> كتخدم حتى كتبقى هاد الصفحة محلولة.",
-        prep_perm_denied: "الإشعارات مرفوضة، خلي الصفحة محلولة، الاهتزاز والصوت غادي يخدمو.",
+        prep_perm_denied: "الإشعارات مسدودة. خلّي هاد الصفحة محلولة وغادي تصوّت ملي تكون الطلبية واجدة.",
         prep_perm_unsupported: "هاد المتصفح ما كيدعمش الإشعارات، خلي الصفحة محلولة، غادي نخبروك هنا.",
         prep_perm_btn: "فعّل",
         prep_note_pre: "خلي هاد الصفحة",
         prep_note_em: "محلولة",
-        prep_note_post: ". غادي تصوّت وتهز التلفون (إلا كان كيدعم) ملي يكون واجد.",
+        prep_note_post: ". غادي تصوّت ملي يكون واجد، إلا بقات هاد الصفحة محلولة.",
         ready_title_a: "الطلب ديالك",
         ready_title_em: "واجد.",
         ready_loc_post: " · كافي أطلس",
@@ -5224,20 +5224,17 @@ em, i, cite, dfn, var { font-style: normal; }
       }, totalMs + 100);
     }
 
-    /* ============ takeout: ready (vibrate + chime + system notif) ============ */
+    /* ============ takeout: ready (chime + system notif) ============ */
     /* The till refused the order. The customer used to stay on « En
        préparation » forever, waiting for food nobody was making. */
     function triggerRejected() {
       const title = $('#prep-title');
       if (title) title.textContent = t('prep_rejected');
       showToast(t('prep_rejected'), 5000);
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
 
     function triggerReady() {
       gotoScreen('screen-ready');
-      // Vibrate — Android only; iOS Safari ignores it silently.
-      if (navigator.vibrate) navigator.vibrate([400, 120, 400, 120, 800]);
       // Audio chime — works on every modern browser.
       playChime();
       // System notification — only fires if the user previously granted permission.

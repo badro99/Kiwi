@@ -1685,7 +1685,6 @@
   /* Un bon qui arrive ne doit pas pouvoir passer inaperçu : personne ne
      regarde l'écran en permanence, on regarde la plaque. */
   function announce(n) {
-    try { if (navigator.vibrate) navigator.vibrate([50, 70, 50]); } catch (_) {}
     if (S.muted) return;
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1707,7 +1706,6 @@
 
   /* Une alerte d'annulation doit sonner fort et distinctement pour que le cuisinier arrête immédiatement la cuisson */
   function announceVoid() {
-    try { if (navigator.vibrate) navigator.vibrate([150, 100, 150, 100, 150]); } catch (_) {}
     if (S.muted) return;
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1920,7 +1918,6 @@
     el.innerHTML = SVG.alert + '<span>' + esc(S.notices.join(' ')) + '</span>'
       + '<button type="button" data-notice-ok>' + esc(T('notice.ok')) + '</button>';
     el.hidden = false;
-    try { if (navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch (_) {}
   }
 
   function stationBar() {
