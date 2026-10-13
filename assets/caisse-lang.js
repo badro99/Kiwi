@@ -831,6 +831,16 @@
       'Le caissier entrant doit confirmer avec son code personnel': ['The incoming cashier must confirm with their personal code', 'يجب أن يؤكد أمين الصندوق القادم برمزه الشخصي'],
       'Les deux comptes doivent concorder': ['Both counts must match', 'يجب أن يتطابق العدّان'],
       'Passation enregistrée': ['Handover saved', 'تم حفظ التسليم'],
+      /* The approval pad: a handover is confirmed by the incoming cashier alone, and an
+         act that writes to the server says so instead of taking a code it cannot use. */
+      'Confirmer la passation': ['Confirm the handover', 'تأكيد التسليم'],
+      'code personnel de {x}': ['{x}’s personal code', 'الرمز الشخصي لـ {x}'],
+      'Le caissier entrant confirme avec son propre code': ['The incoming cashier confirms with their own code', 'يؤكد أمين الصندوق القادم برمزه الخاص'],
+      'Code différent de celui du caissier entrant': ['That is not the incoming cashier’s code', 'هذا ليس رمز أمين الصندوق القادم'],
+      'Connexion requise': ['Connection needed', 'الاتصال مطلوب'],
+      'Cette action a besoin d’une connexion. Rien n’a changé.': ['This action needs a connection. Nothing has changed.', 'يتطلب هذا الإجراء اتصالًا. لم يتغيّر شيء.'],
+      'Réessayer': ['Try again', 'أعد المحاولة'],
+      'Toujours sans connexion · rien n’a changé': ['Still offline · nothing has changed', 'لا يزال الاتصال مقطوعًا · لم يتغيّر شيء'],
       'Compte le tiroir': ['Count the drawer', 'عُدّ الدرج'],
       'Sélectionne une table': ['Select a table', 'اختر طاولة'],
       'Split déjà encaissé en partie': ['Split already partly paid', 'تم دفع جزء من التقسيم'],

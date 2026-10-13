@@ -240,7 +240,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=15',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=31',
+  '/assets/caisse-lang.js?v=32',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
@@ -285,7 +285,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=2',
-  '/assets/orderpro-inbox.js?v=31',
+  '/assets/orderpro-inbox.js?v=34',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
@@ -345,7 +345,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=8',
   '/assets/pos-maison.css?v=65',
   '/assets/pos-maison.js?v=65',
-  '/assets/caisse-pairing.js?v=29',
+  '/assets/caisse-pairing.js?v=31',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

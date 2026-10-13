@@ -132,7 +132,7 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=31" defer></script>
+  <script src="assets/caisse-lang.js?v=32" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -4202,6 +4202,19 @@
     }
     .mgr-key.is-action svg { width: 20px; height: 20px; }
     .mgr-key.is-action:hover { color: var(--ink-2); background: var(--paper-mute); }
+    /* A code that is right but belongs to the wrong person is refused here, on
+       the pad: dots in danger, keys still live, one line saying why. */
+    #manager-modal.is-error .mgr-dot { background: var(--danger); border-color: var(--danger); }
+    .mgr-note { margin: -4px 0 12px; text-align: center; font-size: 12.5px; color: var(--danger); }
+    .mgr-note[hidden], .mgr-needs[hidden] { display: none; }
+    /* The act needs the server and the till cannot reach it: no keys, no code. */
+    .mgr-needs { text-align: center; padding: 6px 0 4px; }
+    .mgr-needs-t { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ink); }
+    .mgr-needs-s { margin: 0 0 14px; font-size: 13px; color: var(--ink-3); }
+    .mgr-needs-btn { width: 100%; }
+    #manager-modal.is-needs-connection .mgr-dots,
+    #manager-modal.is-needs-connection .mgr-pad,
+    #manager-modal.is-needs-connection .mgr-hint { display: none; }
     .mgr-hint {
       text-align: center;
       margin-top: 14px;
@@ -5698,7 +5711,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=29" defer></script>
+  <script src="assets/caisse-pairing.js?v=31" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -5765,7 +5778,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=31" defer></script>
+  <script src="assets/orderpro-inbox.js?v=34" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=7" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
@@ -7047,6 +7060,12 @@
       <div class="mgr-dots" id="mgr-dots" aria-hidden="true">
         <span class="mgr-dot"></span><span class="mgr-dot"></span>
         <span class="mgr-dot"></span><span class="mgr-dot"></span>
+      </div>
+      <p class="mgr-note" id="mgr-note" role="status" aria-live="polite" hidden></p>
+      <div class="mgr-needs" id="mgr-needs" role="status" aria-live="polite" hidden>
+        <p class="mgr-needs-t">Connexion requise</p>
+        <p class="mgr-needs-s">Cette action a besoin d’une connexion. Rien n’a changé.</p>
+        <button class="ma-btn primary mgr-needs-btn" id="mgr-needs-retry" type="button">Réessayer</button>
       </div>
       <div class="mgr-pad" id="mgr-pad">
         <button class="mgr-key" data-mgr="1">1</button>
@@ -9950,6 +9969,11 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'success' } })); } catch (_) {}
     }
 
+    /* The failed haptic: a refusal the cashier must feel without looking. */
+    function nativeHapticDanger() {
+      try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'danger' } })); } catch (_) {}
+    }
+
     /* Promotions de la carte · le prix est FIGÉ quand l'article entre dans la
        note, comme sur un ticket papier : un thé commandé à 18 h 55 garde son
        prix d'happy hour même payé à 19 h 10. Le serveur refait le même calcul
@@ -11016,7 +11040,11 @@
                 clearCart();
                 const by = who && who.name ? ` · ${who.name}` : '';
                 toast(`Commande vidée${by}`);
-              }
+              },
+              /* Annuler une commande déjà partie est une écriture serveur sans
+                 file d'attente : sans connexion, pas de code. Vider un panier
+                 local, lui, n'a besoin de personne. */
+              liveOrder ? TILL_NEEDS_SERVER : undefined
             );
             return;
           }
@@ -11026,7 +11054,7 @@
               requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
                 try { await cancelSentTable(tid, who); }
                 catch (err) { toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`); }
-              });
+              }, tableCancelNeedsServer(tid) ? TILL_NEEDS_SERVER : undefined);
               return;
             }
             /* A guest can open a table from the NFC menu, browse, then leave
@@ -11056,7 +11084,7 @@
               } catch (err) {
                 toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`);
               }
-            });
+            }, tableCancelNeedsServer(tid) ? TILL_NEEDS_SERVER : undefined);
           }
         }
       });
@@ -13079,6 +13107,17 @@
       try { opTickets.forEach(add); } catch (_) {}
       try { kdsOrders.forEach(add); } catch (_) {}
       return Array.from(found.entries()).map(([id, order]) => ({ id, order }));
+    }
+
+    /* Annuler une table est une écriture serveur sans file d'attente dès qu'elle
+       a une visite côté serveur OU un seul ticket envoyé : c'est la condition
+       même où cancelSentTable publie l'annulation, ou refuse « visite en cours
+       de synchronisation ». Une table sans rien d'envoyé s'annule en local. */
+    function tableCancelNeedsServer(id) {
+      return !!(phoneSessionOf(id) || String(tables[id]?.timerSession || '')
+        || tableSentCount(id) > 0 || canonicalOrdersForTable(id).length
+        || kdsOrders.some(order => order && order.type === 'dineIn'
+          && String(order.table) === String(id) && !order.paid && order.status !== 'rejected'));
     }
 
     async function cancelSentTable(id, who) {
@@ -17582,6 +17621,9 @@
     let   mgrBusy    = false;    // true during the success beat
     let   mgrAccess  = 'manager';
     let   mgrAuthContext = null;
+    let   mgrNeedsServer = false;  // the act is a server write with no outbox
+    let   mgrValidate = null;      // (who) => refusal text | null, judged on the pad
+    let   mgrOnCancel = null;      // called when the pad closes without an approval
 
     function renderMgrDots() {
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
@@ -17590,29 +17632,80 @@
     }
 
     function closeManagerModal() {
+      const abandoned = mgrOnCancel;
+      mgrOnCancel = null;
       mgrModal.classList.remove('is-open');
       mgrBuffer = '';
       mgrOnApprove = null;
       mgrBusy = false;
       mgrAuthContext = null;
+      mgrNeedsServer = false;
+      mgrValidate = null;
+      mgrModal.classList.remove('is-error', 'is-needs-connection');
+      showMgrNote('');
+      $('#mgr-needs').hidden = true;
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
+      if (typeof abandoned === 'function') { try { abandoned(); } catch (_) {} }
+    }
+
+    function showMgrNote(text) {
+      const note = $('#mgr-note');
+      if (!note) return;
+      note.textContent = text || '';
+      note.hidden = !text;
     }
 
     function requireManager(actionLabel, onApprove, authContext) {
       openAuthorization(actionLabel, onApprove, 'manager', authContext);
     }
 
-    function requireTillOperator(actionLabel, onApprove) {
-      openAuthorization(actionLabel, onApprove, 'till');
+    /* opts (all optional):
+         needsServer · the act's effect is a server write with no outbox (it
+                       cannot be replayed later). Offline, no code is taken: the
+                       pad opens in its needs-a-connection state, and a code the
+                       server could not judge is never approved by the offline
+                       verifier. Nothing retries by itself.
+         validate    · (who) => refusal text | null. Judges WHO the code proved,
+                       on the pad, before it closes.
+         hint        · replaces the line under the keys.
+         onCancel    · called when the pad closes without an approval. */
+    function requireTillOperator(actionLabel, onApprove, opts) {
+      openAuthorization(actionLabel, onApprove, 'till', null, opts);
     }
     window.KiwiAuthorizeTillAction = requireTillOperator;
 
-    function openAuthorization(actionLabel, onApprove, access, authContext) {
+    const TILL_NEEDS_SERVER = Object.freeze({ needsServer: true });
+
+    /* « Définitivement hors ligne » seulement : navigator.onLine === true ne
+       prouve rien, c'est pourquoi le vérificateur refuse aussi, de son côté, de
+       laisser le repli hors ligne approuver un acte qui exige le serveur. */
+    function tillReachable() {
+      try { return navigator.onLine !== false; } catch (_) { return true; }
+    }
+
+    function showNeedsConnection() {
+      mgrBuffer = '';
+      mgrBusy = false;
+      mgrModal.classList.remove('is-error');
+      mgrModal.classList.add('is-needs-connection');
+      showMgrNote('');
+      $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
+      $('#mgr-needs').hidden = false;
+    }
+
+    function openAuthorization(actionLabel, onApprove, access, authContext, opts) {
+      if (typeof mgrOnCancel === 'function') { const abandoned = mgrOnCancel; mgrOnCancel = null; try { abandoned(); } catch (_) {} }
       mgrBuffer = '';
       mgrBusy = false;
       mgrAccess = access === 'till' ? 'till' : 'manager';
       mgrAuthContext = authContext || null;
       mgrOnApprove = typeof onApprove === 'function' ? onApprove : null;
+      mgrNeedsServer = !!(opts && opts.needsServer);
+      mgrValidate = opts && typeof opts.validate === 'function' ? opts.validate : null;
+      mgrOnCancel = opts && typeof opts.onCancel === 'function' ? opts.onCancel : null;
+      mgrModal.classList.remove('is-error', 'is-needs-connection');
+      showMgrNote('');
+      $('#mgr-needs').hidden = true;
       $('#manager-modal-title').textContent = mgrAccess === 'till' ? 'Autorisation caisse' : 'Autorisation manager';
       $('#manager-modal-sub').textContent = actionLabel || 'Action à autoriser';
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
@@ -17621,10 +17714,11 @@
       if (hint) {
         let demo = true;
         try { demo = !(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
-        hint.textContent = demo ? 'Démo locale · n’importe quel code' : (mgrAccess === 'till'
+        hint.textContent = (opts && opts.hint) || (demo ? 'Démo locale · n’importe quel code' : (mgrAccess === 'till'
           ? 'Code caissier, manager ou propriétaire requis'
-          : 'Code manager ou propriétaire requis');
+          : 'Code manager ou propriétaire requis'));
       }
+      if (mgrNeedsServer && !tillReachable()) showNeedsConnection();
       if (window.lucide) lucide.createIcons();
     }
 
@@ -17639,12 +17733,18 @@
       const P = window.KiwiCaissePairing;
       const ask = mgrAccess === 'till' ? P?.authorizeTill : P?.authorizeManager;
       if (typeof ask !== 'function') return Promise.resolve(false);
-      try { return Promise.resolve(ask.call(P, code, mgrAuthContext)).then((ok) => ok === true, () => false); }
+      /* authorizeTill takes `{ needsServer }` as its second argument,
+         authorizeManager takes the action context. */
+      const second = mgrAccess === 'till' ? { needsServer: mgrNeedsServer } : mgrAuthContext;
+      try { return Promise.resolve(ask.call(P, code, second)).then((ok) => ok === true, () => false); }
       catch (_) { return Promise.resolve(false); }
     }
 
     function mgrPushDigit(v) {
       if (mgrBusy || mgrBuffer.length >= 4) return;
+      /* No keys in the needs-a-connection state, on screen or on a keyboard. */
+      if (mgrModal.classList.contains('is-needs-connection')) return;
+      if (!mgrBuffer.length) showMgrNote('');
       mgrBuffer += v;
       renderMgrDots();
       if (mgrBuffer.length === 4) {
@@ -17656,6 +17756,27 @@
         const attempt = mgrBuffer;
         managerCodeValid(attempt).then((valid) => {
           if (attempt !== mgrBuffer) return;   // annulé / rouvert entre-temps
+          if (!valid && mgrNeedsServer && window.KiwiCaissePairing?.lastVerifyState?.().offline) {
+            /* Le serveur n'a pas pu juger le code et l'acte exige le serveur :
+               on n'approuve pas, on le dit. Aucun code n'est gardé. */
+            showNeedsConnection();
+            return;
+          }
+          if (valid && mgrValidate) {
+            const refusal = mgrValidate(mgrVerifiedIdentity());
+            if (refusal) {
+              /* Le serveur a répondu oui, mais pas pour la bonne personne : le
+                 refus se lit ICI, sur le pavé, avant qu'il se ferme. */
+              mgrModal.classList.add('is-error');
+              showMgrNote(refusal);
+              nativeHapticDanger();
+              setTimeout(() => {
+                mgrModal.classList.remove('is-error');
+                mgrBuffer = ''; mgrBusy = false; renderMgrDots();
+              }, 520);
+              return;
+            }
+          }
           if (!valid) {
             mgrModal.classList.add('is-error');
             toast((mgrAccess === 'till' ? 'Code caisse' : 'Code manager') + ' incorrect ou impossible à vérifier');
@@ -17670,20 +17791,26 @@
       }
     }
 
+    /* Qui le code vient de prouver (jamais le code). */
+    function mgrVerifiedIdentity() {
+      const P = window.KiwiCaissePairing;
+      return (mgrAccess === 'till' ? (P?.lastOperator?.() || P?.lastManager?.()) : P?.lastManager?.())
+        || (window.KiwiStaff ? { id: window.KiwiStaff.id || 'till', name: window.KiwiStaff.name || 'Caissier', role: window.KiwiStaff.role || 'Caissier' } : null)
+        || (currentCashier ? { id: currentCashier.id, name: currentCashier.name, role: currentCashier.role } : null)
+        || { id: 'till', name: 'Caissier', role: 'Caissier' };
+    }
+
     /* Le code est bon : la chorégraphie de succès puis l'action autorisée. */
     function mgrApprove() {
       mgrBusy = true;
       const action  = $('#manager-modal-sub').textContent;
       const approve = mgrOnApprove;
-      const P = window.KiwiCaissePairing;
-      const verified = (mgrAccess === 'till' ? (P?.lastOperator?.() || P?.lastManager?.()) : P?.lastManager?.())
-        || (window.KiwiStaff ? { id: window.KiwiStaff.id || 'till', name: window.KiwiStaff.name || 'Caissier', role: window.KiwiStaff.role || 'Caissier' } : null)
-        || (currentCashier ? { id: currentCashier.id, name: currentCashier.name, role: currentCashier.role } : null)
-        || { id: 'till', name: 'Caissier', role: 'Caissier' };
+      const verified = mgrVerifiedIdentity();
       // Success beat · dots pop left → right, mirroring the access PIN.
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
         setTimeout(() => d.classList.add('is-success'), i * 70);
       });
+      mgrOnCancel = null;   // approved: closing the pad is not an abandonment
       setTimeout(() => {
         if (mgrAccess === 'manager') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
         closeManagerModal();
@@ -17704,6 +17831,15 @@
       mgrPushDigit(v);
     });
     $('#manager-cancel').addEventListener('click', closeManagerModal);
+    /* « Réessayer » ne fait qu'une chose : revérifier la connexion, à la demande
+       de la personne. Il ne rejoue jamais un code et n'approuve rien ; si le
+       réseau est revenu, le pavé reparaît vide, il faut retaper le code. */
+    $('#mgr-needs-retry').addEventListener('click', () => {
+      if (!tillReachable()) { toast('Toujours sans connexion · rien n’a changé'); return; }
+      mgrModal.classList.remove('is-needs-connection');
+      $('#mgr-needs').hidden = true;
+      mgrBuffer = ''; mgrBusy = false; renderMgrDots();
+    });
     mgrModal.addEventListener('click', (e) => {
       if (e.target === mgrModal) closeManagerModal();
     });
@@ -19177,19 +19313,24 @@
         .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     }
 
+    /* Qui peut confirmer une passation : le caissier entrant, avec SON code. Le
+       pavé l'applique (requireTillOperator › validate) avant de se fermer ;
+       confirmHandover la rejoue pour tout appelant qui ne passe pas par le pavé. */
+    function handoverApprovalRefusal(who) {
+      if (!storeIsReal()) return null;
+      const inc = handoverState.incoming;
+      if (!who || !who.actorProof) return 'Le caissier entrant doit confirmer avec son code personnel';
+      if (!inc || !handoverIdentity(who.name) || handoverIdentity(who.name) !== handoverIdentity(inc.name)) {
+        return 'Code différent de celui du caissier entrant';
+      }
+      return null;
+    }
+
     function confirmHandover(who) {
       const inc = handoverState.incoming;
       if (!inc) { toast('Choisis le caissier entrant'); return; }
-      if (storeIsReal()) {
-        if (!who || !who.actorProof) {
-          toast('Le caissier entrant doit confirmer avec son code personnel');
-          return false;
-        }
-        if (!handoverIdentity(who.name) || handoverIdentity(who.name) !== handoverIdentity(inc.name)) {
-          toast(`Le code saisi doit être celui de ${inc.name}`);
-          return false;
-        }
-      }
+      const refusal = handoverApprovalRefusal(who);
+      if (refusal) { toast(refusal); return false; }
       if ($('#ho-verify').value === '' ||
           minor(handoverState.verifyCount) !== minor(handoverState.counted)) {
         toast('Les deux comptes doivent concorder'); return false;
@@ -19304,7 +19445,14 @@
       if (e.target.closest('#ho-verify-confirm')) {
         const inc = handoverState.incoming;
         if (!inc) { toast('Choisis le caissier entrant'); return; }
-        requireTillOperator(`Confirmer la passation · ${inc.name}`, confirmHandover);
+        /* Le caissier ENTRANT confirme, personne d'autre : le pavé le dit, et un
+           « oui » du serveur pour une autre personne est refusé sur le pavé.
+           Sur un vrai commerce la preuve de l'acteur ne vient que du serveur. */
+        requireTillOperator(`Confirmer la passation · code personnel de ${inc.name}`, confirmHandover, {
+          needsServer: storeIsReal(),
+          validate: handoverApprovalRefusal,
+          hint: 'Le caissier entrant confirme avec son propre code',
+        });
         return;
       }
 
@@ -21490,7 +21638,7 @@
         });
       };
       if (authorizedWho) { proceed(authorizedWho); return true; }
-      requireTillOperator(`Annuler la commande ${label}`, proceed);
+      requireTillOperator(`Annuler la commande ${label}`, proceed, TILL_NEEDS_SERVER);
       return true;
     }
 

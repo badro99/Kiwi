@@ -275,7 +275,7 @@ async function get(fn, qs, headers = {}) {
     cancelTakeawayFn.includes('requireTillOperator(') && !cancelTakeawayFn.includes('confirm('));
   ok('cancelOrderProTakeaway ne retire la carte qu’après confirmation serveur et code opérateur',
     cancelTakeawayFn.includes('const proceed = (who) =>')
-      && cancelTakeawayFn.includes('requireTillOperator(`Annuler la commande ${label}`, proceed)')
+      && cancelTakeawayFn.includes('requireTillOperator(`Annuler la commande ${label}`, proceed, TILL_NEEDS_SERVER)')
       && /postCaisseCancellation\(\{[\s\S]*?actorProof:[\s\S]*?\}\)\.then\(\(\) => \{[\s\S]*?dismissExpired\(o\.opId\)/.test(cancelTakeawayFn));
   ok('le clic data-vrap-cancel sur le tableau passe par cancelOrderProTakeaway',
     caissePage.includes('cancel.dataset.vrapCancel') && caissePage.includes('cancelOrderProTakeaway(kdsOrders.find('));

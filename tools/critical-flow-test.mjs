@@ -29,7 +29,7 @@ ok('PIN roster network errors fail closed', pairing.includes("showPinLoadError(v
 ok('pairing redemption is single-flight', pairing.includes('if (pairSubmitting) return;') && pairing.includes('pairSubmitting = true;'));
 ok('manager authorization uses a manager-level paired roster role', pairing.includes('authorizeManager: function (code, action)') && caisse.includes('managerCodeValid(attempt)'));
 ok('cashier PIN can close the register without widening manager-only actions',
-  pairing.includes('authorizeTill: function (code)')
+  pairing.includes('authorizeTill: function (code, opts)')
   && pairing.includes("roles.opensTill(who.role || '')")
   && caisse.includes("requireTillOperator('Fermeture de caisse', closeRegister)")
   && caisse.includes("requireManager('Remboursement'"));

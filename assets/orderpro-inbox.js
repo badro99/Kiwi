@@ -244,8 +244,14 @@
     if (needsTillActor && window.KiwiAuthorizeTillAction) {
       return new Promise(function (resolve) {
         var action = 'Annuler la commande';
+        /* Rejeter une commande en ligne est une écriture serveur sans file
+         * d'attente : hors connexion le pavé ne prend aucun code (il dit que
+         * rien n'a changé), et fermé sans approbation il rend la main au bouton. */
         window.KiwiAuthorizeTillAction(action, function (who) {
           resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
+        }, {
+          needsServer: true,
+          onCancel: function () { resolve({ ok: false, cancelled: true }); },
         });
       });
     }
@@ -801,6 +807,7 @@
               state.since = 0;
               return pull();
             }
+            if (result && result.cancelled) { paint(); return null; }
             var message = result && result.httpStatus === 403
               ? 'Annulation refusée · vérifiez l’appairage de cette caisse'
               : 'Annulation non enregistrée · réessayez';

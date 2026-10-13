@@ -1293,6 +1293,12 @@ section('Whole-project regressions');
     'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
+    /* Approuver puis se faire refuser : la passation refuse un manager SUR le
+       pavé (plus par un toast après sa fermeture), et les actes qui sont une
+       écriture serveur sans file d'attente (annuler ou rejeter une commande en
+       ligne, annuler une table avec visite ou ticket envoyé) ne prennent aucun
+       code hors ligne : « connexion requise · rien n'a changé », sans rejeu. */
+    'till-approval-server-writes-test.mjs',
     'cashier-cancel-test.mjs',
     'order-controls-test.mjs',
     /* Les écarts de SURFACE : jetons recopiés, gris froids inventés, palette

@@ -60,7 +60,7 @@ ok('the wait is said in minutes, in FR, EN and AR', () => {
 console.log('till PIN pad');
 ok('the pad remembers a 429 and its wait, and says so instead of « Code incorrect »', () => {
   assert.match(pad, /if \(r && r\.status === 429\) \{\n\s+lastVerify\.status = 429;/);
-  assert.match(pad, /lastVerify = \{ status: 0, wait: 0 \};\n\s+return fetch\('\/api\/pin\/verify'/);
+  assert.match(pad, /lastVerify = \{ status: 0, wait: 0, offline: false \};\n\s+return fetch\('\/api\/pin\/verify'/);
   const refuseAt = pad.indexOf('if (lastVerify.status === 429) {');
   const wrongAt = pad.indexOf("'Code incorrect ou impossible à vérifier.'");
   assert.ok(refuseAt > 0 && wrongAt > refuseAt, 'lockout message comes first');

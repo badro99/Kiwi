@@ -923,15 +923,20 @@
   /* What the last verification ran into, for the pad's message: 429 is the
      attempt limiter. The pad said « Code incorrect ou impossible à vérifier »
      to someone typing the right code during a lockout. */
-  var lastVerify = { status: 0, wait: 0 };
-  function verifyCode(code, action) {
+  var lastVerify = { status: 0, wait: 0, offline: false };
+  /* `opts.needsServer`: the act this code approves is a server write with no
+     outbox (cancel a live order, reject an online order, cancel a table with a
+     visit). The salted offline verifier must not approve it: the act would fail
+     right after the approval. The attempt then ends with `lastVerify.offline`
+     set and no identity, and the pad shows its needs-a-connection state. */
+  function verifyCode(code, action, opts) {
     code = String(code || '');
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
     if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 12000);
-    lastVerify = { status: 0, wait: 0 };
+    lastVerify = { status: 0, wait: 0, offline: false };
     return fetch('/api/pin/verify', {
       method: 'POST',
       signal: controller.signal,
@@ -953,7 +958,10 @@
         var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
         return rememberOfflinePin(merchant, code, staff);
       })
-      .catch(function () { return verifyOfflinePin(merchant, code); })
+      .catch(function () {
+        if (opts && opts.needsServer) { lastVerify.offline = true; return null; }
+        return verifyOfflinePin(merchant, code);
+      })
       .finally(function () { clearTimeout(timer); });
   }
 
@@ -971,10 +979,10 @@
      * une PROMESSE — l'appelant (kiwi-caisse.html › managerCodeValid) l'attend.
      * En cas de panne on répond false : une autorisation qu'on ne peut pas
      * prouver n'est pas une autorisation. */
-    authorizeTill: function (code) {
+    authorizeTill: function (code, opts) {
       var roles = window.KiwiRoles;
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
-      return verifyCode(code).then(function (who) {
+      return verifyCode(code, undefined, opts && opts.needsServer ? { needsServer: true } : undefined).then(function (who) {
         if (!who || !roles.opensTill(who.role || '')) return false;
         lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '' };
         return true;
@@ -997,6 +1005,9 @@
     // Le dernier responsable ayant validé un code, pour l'écrire dans un journal.
     lastManager: function () { return lastManager; },
     lastOperator: function () { return lastOperator; },
+    /* How the last code check ended: `offline` is true when it could not reach
+       the server and the act needed the server's own answer. */
+    lastVerifyState: function () { return { status: lastVerify.status, wait: lastVerify.wait, offline: !!lastVerify.offline }; },
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

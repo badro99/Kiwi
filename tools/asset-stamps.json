@@ -120,8 +120,8 @@
     "sha": "440fdb3d7a46937d"
   },
   "assets/caisse-lang.js": {
-    "v": "31",
-    "sha": "e12050e7ce42f2f4"
+    "v": "32",
+    "sha": "11279739e1e2b084"
   },
   "assets/caisse-link.js": {
     "v": "16",
@@ -136,8 +136,8 @@
     "sha": "a5c45fa2503e8895"
   },
   "assets/caisse-pairing.js": {
-    "v": "29",
-    "sha": "cbc39a380b886e39"
+    "v": "31",
+    "sha": "89403f8e1f33bf66"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -656,8 +656,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "31",
-    "sha": "112bf774e50f2c67"
+    "v": "34",
+    "sha": "55737480360cae9b"
   },
   "assets/orderpro-panel.js": {
     "v": "2",

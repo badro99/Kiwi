@@ -14,8 +14,8 @@ assert.match(source, /cancelOrderProTakeaway\(editingOrder,\s*who\)/,
   'the already-authorized cart path passes the operator identity directly');
 assert.match(fn, /if \(authorizedWho\) \{ proceed\(authorizedWho\); return true; \}/,
   'an explicit authorization executes without opening a second PIN prompt');
-assert.match(fn, /requireTillOperator\(`Annuler la commande \$\{label\}`, proceed\)/,
-  'an unauthenticated board click still opens the operator gate');
+assert.match(fn, /requireTillOperator\(`Annuler la commande \$\{label\}`, proceed, TILL_NEEDS_SERVER\)/,
+  'an unauthenticated board click still opens the operator gate, and offline it takes no code (server write, no outbox)');
 assert.ok(fn.indexOf('const proceed =') < fn.indexOf('postCaisseCancellation(')
   && fn.indexOf('postCaisseCancellation(') < fn.indexOf('}).then(() => {')
   && fn.indexOf('}).then(() => {') < fn.indexOf('dismissExpired(')
