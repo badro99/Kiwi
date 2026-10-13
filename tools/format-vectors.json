@@ -1,0 +1,725 @@
+{
+ "version": 1,
+ "note": "Test vectors for assets/format.js (KiwiFormat). Rows spec-* are the table of docs/specs/kiwi-design-2027.md section 6.3, character for character; the others pin units, signs, edges and the store zone. U+00A0 and U+2212 are written as escapes. A row with \"zone\" runs after KiwiFormat.configure({ zone }). A null argument stands for NaN.",
+ "vectors": [
+  {
+   "id": "spec-num-19174.5-2",
+   "call": "num",
+   "args": [
+    19174.5,
+    2
+   ],
+   "en": "19,174.50",
+   "fr": "19\u00a0174,50",
+   "ar": "19\u00a0174,50"
+  },
+  {
+   "id": "spec-num-19174-0",
+   "call": "num",
+   "args": [
+    19174,
+    0
+   ],
+   "en": "19,174",
+   "fr": "19\u00a0174",
+   "ar": "19\u00a0174"
+  },
+  {
+   "id": "spec-num-neg1127-0",
+   "call": "num",
+   "args": [
+    -1127,
+    0
+   ],
+   "en": "\u22121,127",
+   "fr": "\u22121\u00a0127",
+   "ar": "\u22121\u00a0127"
+  },
+  {
+   "id": "spec-pct-neg-0.05551",
+   "call": "pct",
+   "args": [
+    -0.05551
+   ],
+   "en": "\u22125.6%",
+   "fr": "\u22125,6\u00a0%",
+   "ar": "\u22125,6\u00a0%"
+  },
+  {
+   "id": "spec-pct-0.042",
+   "call": "pct",
+   "args": [
+    0.042
+   ],
+   "en": "+4.2%",
+   "fr": "+4,2\u00a0%",
+   "ar": "+4,2\u00a0%"
+  },
+  {
+   "id": "spec-compact-20000",
+   "call": "compact",
+   "args": [
+    20000
+   ],
+   "en": "20K",
+   "fr": "20\u00a0k",
+   "ar": "20\u00a0ألف"
+  },
+  {
+   "id": "spec-compact-30100",
+   "call": "compact",
+   "args": [
+    30100
+   ],
+   "en": "30.1K",
+   "fr": "30,1\u00a0k",
+   "ar": "30,1\u00a0ألف"
+  },
+  {
+   "id": "spec-date-2026-10-12",
+   "call": "date",
+   "args": [
+    "2026-10-12"
+   ],
+   "en": "Monday 12 October",
+   "fr": "lundi 12 octobre",
+   "ar": "الاثنين 12 أكتوبر"
+  },
+  {
+   "id": "spec-short-2026-10-03",
+   "call": "short",
+   "args": [
+    "2026-10-03"
+   ],
+   "en": "3 Oct",
+   "fr": "3 oct.",
+   "ar": "3 أكتوبر"
+  },
+  {
+   "id": "spec-time-17:39",
+   "call": "time",
+   "args": [
+    "17:39"
+   ],
+   "en": "17:39",
+   "fr": "17:39",
+   "ar": "17:39"
+  },
+  {
+   "id": "spec-num-neg0.004-2",
+   "call": "num",
+   "args": [
+    -0.004,
+    2
+   ],
+   "en": "0.00",
+   "fr": "0,00",
+   "ar": "0,00"
+  },
+  {
+   "id": "spec-signed-23-0",
+   "call": "signed",
+   "args": [
+    23,
+    0
+   ],
+   "en": "+23",
+   "fr": "+23",
+   "ar": "+23"
+  },
+  {
+   "id": "spec-signed-neg1127-0",
+   "call": "signed",
+   "args": [
+    -1127,
+    0
+   ],
+   "en": "\u22121,127",
+   "fr": "\u22121\u00a0127",
+   "ar": "\u22121\u00a0127"
+  },
+  {
+   "id": "spec-signed-neg0.004-2",
+   "call": "signed",
+   "args": [
+    -0.004,
+    2
+   ],
+   "en": "0.00",
+   "fr": "0,00",
+   "ar": "0,00"
+  },
+  {
+   "id": "spec-pct-0",
+   "call": "pct",
+   "args": [
+    0
+   ],
+   "en": "0.0%",
+   "fr": "0,0\u00a0%",
+   "ar": "0,0\u00a0%"
+  },
+  {
+   "id": "spec-share-0.8159",
+   "call": "share",
+   "args": [
+    0.8159
+   ],
+   "en": "82%",
+   "fr": "82\u00a0%",
+   "ar": "82\u00a0%"
+  },
+  {
+   "id": "spec-share-0.05",
+   "call": "share",
+   "args": [
+    0.05
+   ],
+   "en": "5%",
+   "fr": "5\u00a0%",
+   "ar": "5\u00a0%"
+  },
+  {
+   "id": "spec-share-1.234",
+   "call": "share",
+   "args": [
+    1.234
+   ],
+   "en": "123%",
+   "fr": "123\u00a0%",
+   "ar": "123\u00a0%"
+  },
+  {
+   "id": "spec-rel-0",
+   "call": "rel",
+   "args": [
+    0
+   ],
+   "en": "today",
+   "fr": "aujourd'hui",
+   "ar": "اليوم"
+  },
+  {
+   "id": "spec-rel-1",
+   "call": "rel",
+   "args": [
+    1
+   ],
+   "en": "yesterday",
+   "fr": "hier",
+   "ar": "أمس"
+  },
+  {
+   "id": "spec-rel-2",
+   "call": "rel",
+   "args": [
+    2
+   ],
+   "en": "2 days ago",
+   "fr": "il y a 2 jours",
+   "ar": "قبل يومين"
+  },
+  {
+   "id": "spec-rel-11",
+   "call": "rel",
+   "args": [
+    11
+   ],
+   "en": "11 days ago",
+   "fr": "il y a 11 jours",
+   "ar": "قبل 11 يومًا"
+  },
+  {
+   "id": "spec-weekday-2026-10-05",
+   "call": "weekday",
+   "args": [
+    "2026-10-05"
+   ],
+   "en": "Monday",
+   "fr": "lundi",
+   "ar": "الاثنين"
+  },
+  {
+   "id": "money-19174.5-2",
+   "call": "money",
+   "args": [
+    19174.5,
+    2
+   ],
+   "en": "19,174.50\u00a0MAD",
+   "fr": "19\u00a0174,50\u00a0MAD",
+   "ar": "19\u00a0174,50\u00a0درهم"
+  },
+  {
+   "id": "money-neg13-0",
+   "call": "money",
+   "args": [
+    -13,
+    0
+   ],
+   "en": "\u221213\u00a0MAD",
+   "fr": "\u221213\u00a0MAD",
+   "ar": "\u221213\u00a0درهم"
+  },
+  {
+   "id": "money-0-2",
+   "call": "money",
+   "args": [
+    0,
+    2
+   ],
+   "en": "0.00\u00a0MAD",
+   "fr": "0,00\u00a0MAD",
+   "ar": "0,00\u00a0درهم"
+  },
+  {
+   "id": "money-neg0.004-2",
+   "call": "money",
+   "args": [
+    -0.004,
+    2
+   ],
+   "en": "0.00\u00a0MAD",
+   "fr": "0,00\u00a0MAD",
+   "ar": "0,00\u00a0درهم"
+  },
+  {
+   "id": "signedMoney-4-0",
+   "call": "signedMoney",
+   "args": [
+    4,
+    0
+   ],
+   "en": "+4\u00a0MAD",
+   "fr": "+4\u00a0MAD",
+   "ar": "+4\u00a0درهم"
+  },
+  {
+   "id": "signedMoney-neg1127-0",
+   "call": "signedMoney",
+   "args": [
+    -1127,
+    0
+   ],
+   "en": "\u22121,127\u00a0MAD",
+   "fr": "\u22121\u00a0127\u00a0MAD",
+   "ar": "\u22121\u00a0127\u00a0درهم"
+  },
+  {
+   "id": "signedMoney-0-0",
+   "call": "signedMoney",
+   "args": [
+    0,
+    0
+   ],
+   "en": "0\u00a0MAD",
+   "fr": "0\u00a0MAD",
+   "ar": "0\u00a0درهم"
+  },
+  {
+   "id": "pts-1-0",
+   "call": "pts",
+   "args": [
+    1,
+    0
+   ],
+   "en": "+1\u00a0pt",
+   "fr": "+1\u00a0pt",
+   "ar": "+1\u00a0نقطة"
+  },
+  {
+   "id": "pts-neg1-0",
+   "call": "pts",
+   "args": [
+    -1,
+    0
+   ],
+   "en": "\u22121\u00a0pt",
+   "fr": "\u22121\u00a0pt",
+   "ar": "\u22121\u00a0نقطة"
+  },
+  {
+   "id": "pts-0-0",
+   "call": "pts",
+   "args": [
+    0,
+    0
+   ],
+   "en": "0\u00a0pt",
+   "fr": "0\u00a0pt",
+   "ar": "0\u00a0نقطة"
+  },
+  {
+   "id": "num-1234.5-0",
+   "call": "num",
+   "args": [
+    1234.5,
+    0
+   ],
+   "en": "1,235",
+   "fr": "1\u00a0235",
+   "ar": "1\u00a0235"
+  },
+  {
+   "id": "num-999-0",
+   "call": "num",
+   "args": [
+    999,
+    0
+   ],
+   "en": "999",
+   "fr": "999",
+   "ar": "999"
+  },
+  {
+   "id": "num-1234567.891-2",
+   "call": "num",
+   "args": [
+    1234567.891,
+    2
+   ],
+   "en": "1,234,567.89",
+   "fr": "1\u00a0234\u00a0567,89",
+   "ar": "1\u00a0234\u00a0567,89"
+  },
+  {
+   "id": "num-neg1234.5-1",
+   "call": "num",
+   "args": [
+    -1234.5,
+    1
+   ],
+   "en": "\u22121,234.5",
+   "fr": "\u22121\u00a0234,5",
+   "ar": "\u22121\u00a0234,5"
+  },
+  {
+   "id": "signed-0-0",
+   "call": "signed",
+   "args": [
+    0,
+    0
+   ],
+   "en": "0",
+   "fr": "0",
+   "ar": "0"
+  },
+  {
+   "id": "signed-1.5-1",
+   "call": "signed",
+   "args": [
+    1.5,
+    1
+   ],
+   "en": "+1.5",
+   "fr": "+1,5",
+   "ar": "+1,5"
+  },
+  {
+   "id": "pct-neg0.004",
+   "call": "pct",
+   "args": [
+    -0.004
+   ],
+   "en": "\u22120.4%",
+   "fr": "\u22120,4\u00a0%",
+   "ar": "\u22120,4\u00a0%"
+  },
+  {
+   "id": "pct-neg0.0004",
+   "call": "pct",
+   "args": [
+    -0.0004
+   ],
+   "en": "0.0%",
+   "fr": "0,0\u00a0%",
+   "ar": "0,0\u00a0%"
+  },
+  {
+   "id": "pct-0.0555",
+   "call": "pct",
+   "args": [
+    0.0555
+   ],
+   "en": "+5.6%",
+   "fr": "+5,6\u00a0%",
+   "ar": "+5,6\u00a0%"
+  },
+  {
+   "id": "pct-1.234-0",
+   "call": "pct",
+   "args": [
+    1.234,
+    0
+   ],
+   "en": "+123%",
+   "fr": "+123\u00a0%",
+   "ar": "+123\u00a0%"
+  },
+  {
+   "id": "share-0",
+   "call": "share",
+   "args": [
+    0
+   ],
+   "en": "0%",
+   "fr": "0\u00a0%",
+   "ar": "0\u00a0%"
+  },
+  {
+   "id": "share-neg0.05",
+   "call": "share",
+   "args": [
+    -0.05
+   ],
+   "en": "\u22125%",
+   "fr": "\u22125\u00a0%",
+   "ar": "\u22125\u00a0%"
+  },
+  {
+   "id": "share-1",
+   "call": "share",
+   "args": [
+    1
+   ],
+   "en": "100%",
+   "fr": "100\u00a0%",
+   "ar": "100\u00a0%"
+  },
+  {
+   "id": "compact-0",
+   "call": "compact",
+   "args": [
+    0
+   ],
+   "en": "0",
+   "fr": "0",
+   "ar": "0"
+  },
+  {
+   "id": "compact-999",
+   "call": "compact",
+   "args": [
+    999
+   ],
+   "en": "999",
+   "fr": "999",
+   "ar": "999"
+  },
+  {
+   "id": "compact-1000",
+   "call": "compact",
+   "args": [
+    1000
+   ],
+   "en": "1K",
+   "fr": "1\u00a0k",
+   "ar": "1\u00a0ألف"
+  },
+  {
+   "id": "compact-neg20000",
+   "call": "compact",
+   "args": [
+    -20000
+   ],
+   "en": "\u221220K",
+   "fr": "\u221220\u00a0k",
+   "ar": "\u221220\u00a0ألف"
+  },
+  {
+   "id": "compact-1200000",
+   "call": "compact",
+   "args": [
+    1200000
+   ],
+   "en": "1.2M",
+   "fr": "1,2\u00a0M",
+   "ar": "1,2\u00a0مليون"
+  },
+  {
+   "id": "compact-999950",
+   "call": "compact",
+   "args": [
+    999950
+   ],
+   "en": "1M",
+   "fr": "1\u00a0M",
+   "ar": "1\u00a0مليون"
+  },
+  {
+   "id": "compact-2500000000",
+   "call": "compact",
+   "args": [
+    2500000000
+   ],
+   "en": "2,500M",
+   "fr": "2\u00a0500\u00a0M",
+   "ar": "2\u00a0500\u00a0مليون"
+  },
+  {
+   "id": "elapsed-0",
+   "call": "elapsed",
+   "args": [
+    0
+   ],
+   "en": "Just now",
+   "fr": "À l'instant",
+   "ar": "الآن"
+  },
+  {
+   "id": "elapsed-45",
+   "call": "elapsed",
+   "args": [
+    45
+   ],
+   "en": "45\u00a0min",
+   "fr": "45\u00a0min",
+   "ar": "45\u00a0د"
+  },
+  {
+   "id": "elapsed-125",
+   "call": "elapsed",
+   "args": [
+    125
+   ],
+   "en": "2\u00a0h",
+   "fr": "2\u00a0h",
+   "ar": "2\u00a0س"
+  },
+  {
+   "id": "weekdayBaseline-2026-10-05",
+   "call": "weekdayBaseline",
+   "args": [
+    "2026-10-05"
+   ],
+   "en": "last Monday",
+   "fr": "lundi dernier",
+   "ar": "الاثنين الماضي"
+  },
+  {
+   "id": "date-2026-12-31",
+   "call": "date",
+   "args": [
+    "2026-12-31"
+   ],
+   "en": "Thursday 31 December",
+   "fr": "jeudi 31 décembre",
+   "ar": "الخميس 31 دجنبر"
+  },
+  {
+   "id": "date-2027-01-01",
+   "call": "date",
+   "args": [
+    "2027-01-01"
+   ],
+   "en": "Friday 1 January",
+   "fr": "vendredi 1 janvier",
+   "ar": "الجمعة 1 يناير"
+  },
+  {
+   "id": "short-2026-12-09",
+   "call": "short",
+   "args": [
+    "2026-12-09"
+   ],
+   "en": "9 Dec",
+   "fr": "9 déc.",
+   "ar": "9 دجنبر"
+  },
+  {
+   "id": "time-7:05",
+   "call": "time",
+   "args": [
+    "7:05"
+   ],
+   "en": "07:05",
+   "fr": "07:05",
+   "ar": "07:05"
+  },
+  {
+   "id": "time-instant-casablanca",
+   "call": "time",
+   "args": [
+    1760287140000
+   ],
+   "en": "17:39",
+   "fr": "17:39",
+   "ar": "17:39",
+   "zone": "Africa/Casablanca"
+  },
+  {
+   "id": "time-instant-paris",
+   "call": "time",
+   "args": [
+    1760287140000
+   ],
+   "en": "18:39",
+   "fr": "18:39",
+   "ar": "18:39",
+   "zone": "Europe/Paris"
+  },
+  {
+   "id": "time-instant-newyork",
+   "call": "time",
+   "args": [
+    1760287140000
+   ],
+   "en": "12:39",
+   "fr": "12:39",
+   "ar": "12:39",
+   "zone": "America/New_York"
+  },
+  {
+   "id": "date-instant-casablanca",
+   "call": "date",
+   "args": [
+    1760311800000
+   ],
+   "en": "Monday 13 October",
+   "fr": "lundi 13 octobre",
+   "ar": "الاثنين 13 أكتوبر",
+   "zone": "Africa/Casablanca"
+  },
+  {
+   "id": "date-instant-newyork",
+   "call": "date",
+   "args": [
+    1760311800000
+   ],
+   "en": "Sunday 12 October",
+   "fr": "dimanche 12 octobre",
+   "ar": "الأحد 12 أكتوبر",
+   "zone": "America/New_York"
+  },
+  {
+   "id": "num-nan",
+   "call": "num",
+   "args": [
+    null
+   ],
+   "en": "",
+   "fr": "",
+   "ar": ""
+  },
+  {
+   "id": "date-invalid-day",
+   "call": "date",
+   "args": [
+    "2026-02-30"
+   ],
+   "en": "",
+   "fr": "",
+   "ar": ""
+  },
+  {
+   "id": "time-invalid",
+   "call": "time",
+   "args": [
+    "25:00"
+   ],
+   "en": "",
+   "fr": "",
+   "ar": ""
+  }
+ ]
+}
