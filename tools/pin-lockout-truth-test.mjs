@@ -26,7 +26,8 @@ function ok(label, fn) {
 }
 const between = (s, a, b) => { const i = s.indexOf(a); return i < 0 ? '' : s.slice(i, s.indexOf(b, i + a.length)); };
 const ask = between(dash, '  function askServer(code) {', '\n  }\n');
-const caller = between(dash, '      askServer(val).then((reply) => {', '\n      });\n');
+/* Le chemin complet de la porte : la décision (settle) puis la réponse du serveur. */
+const caller = between(dash, '      const askable = ', '\n  }\n\n  /* La porte s\'ouvre');
 
 console.log('server · what a lockout looks like');
 ok('the limiter answers 429 with retry_after (the contract both locks read)', () => {

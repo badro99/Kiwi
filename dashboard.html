@@ -5557,6 +5557,7 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
+<script defer src="assets/dashboard-pin-vault.js?v=2"></script>
 <script defer src="assets/identity.js?v=10"></script>
 <script defer src="assets/live-link.js?v=62"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
@@ -5579,7 +5580,7 @@
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js?v=1"></script>
 <script src="assets/liquid-lens.js?v=7" defer></script>
-<script src="assets/onboarding.js?v=2089" defer></script>
+<script src="assets/onboarding.js?v=2090" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -5863,42 +5864,25 @@
     catch (_) { return false; }
   }
 
-  /* Every 4-digit code this BROWSER holds locally, tagged with its tier.
+  /* CE NAVIGATEUR NE GARDE AUCUN CODE.
    *
-   * Il n'y a plus que celui-là. `KiwiConfig.seenPins` et `KiwiConfig.pins`
-   * portaient jusqu'ici les codes du serveur, et cette porte les comparait
-   * elle-même : le code qui ouvre le tiroir-caisse était donc lisible dans la
-   * mémoire de la page du patron. Le serveur ne les envoie plus (functions/api/
-   * config.js), et « ce code est-il le bon ? » part maintenant à
-   * POST /api/pin/verify, qui répond par une identité · voir askServer().
-   * `kiwiPins` reste, lui : c'est ce que l'assistant d'installation a écrit dans
-   * CE navigateur, et c'est le seul chemin qui survit à une panne réseau.
+   * `kiwiPins` portait { role, code, name } en clair et la porte comparait le
+   * code frappé à ce code AVANT d'interroger le serveur : tout code de
+   * l'assistant d'installation restait lisible dans ce navigateur (une caisse
+   * comprise), et un code changé ou retiré ouvrait encore la porte, réseau ou
+   * pas. `KiwiDashPinVault` (assets/dashboard-pin-vault.js) le remplace par une
+   * ligne salée que le serveur a DÉJÀ prouvée, lue SEULEMENT quand il n'a pas
+   * pu répondre · voir paintCells() et localVerify(). Ici, la porte ne compare
+   * plus jamais un code à un code.
    *
-   * `kiwiPins` belongs to THIS BROWSER, so it must never be consulted on a
-   * scoped view. It was: an operator who had set up a shop of their own carried
-   * that shop's code into every client they opened, and it unlocked all of them
-   * · one browser's PIN was a passkey to the whole roster, while the client's
-   * real code (filed on the server, under their slug) was refused. */
-  function allPins() {
-    const out = [], seen = Object.create(null);
-    const add = (x) => {
-      const code = String((x && (x.code || x.pin)) || '').trim();
-      if (!/^\d{4}$/.test(code) || seen[code]) return;
-      seen[code] = 1;
-      out.push({ code, name: (x && x.name) || '', access: accessTier(x && x.role) });
-    };
-    if (!scopedView()) {
-      try {
-        const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
-        if (Array.isArray(p)) p.forEach((x) => {
-          /* Once the server roster is available, browser-local codes may only
-           * contribute the account owner. Managers are scoped by cfg.pins to
-           * the store currently selected. Keep the old full fallback offline. */
-          if (!window.KiwiConfig || !window.KiwiConfig.loaded || accessTier(x && x.role) === 'owner') add(x);
-        });
-      } catch (_) {}
-    }
-    return out;
+   * Ni lu ni écrit sur une vue portée (?op= / ?merchant=) : un opérateur qui
+   * s'était installé une boutique emportait son code dans chaque client qu'il
+   * ouvrait, et il les ouvrait tous. */
+  function vault() { return scopedView() ? null : (window.KiwiDashPinVault || null); }
+  /* Combien de codes ce navigateur a-t-il vu prouver ? Un compte, pas un code :
+     la porte s'en sert pour savoir si quelqu'un est configuré. */
+  function provenCodeCount() {
+    try { const v = vault(); return v ? v.count() : 0; } catch (_) { return 0; }
   }
 
   /* « Ce compte a-t-il configuré quelqu'un ? » · la question que la porte pose
@@ -5916,7 +5900,7 @@
   }
 
   function isConfiguredAccount() {
-    if (serverRosterSize() > 0 || allPins().length > 0) return true;
+    if (serverRosterSize() > 0 || provenCodeCount() > 0) return true;
     try {
       if (localStorage.getItem('kiwiOnboarded') === '1' || localStorage.getItem('kiwiOnboarded') === 'true') return true;
       if (localStorage.getItem('kiwiAccountKey')) return true;
@@ -5934,13 +5918,22 @@
    *   { name, access }  le code appartient à cette personne
    *   'no'              le serveur a dit non
    *   { busy: s }       le serveur limite les essais : s secondes à attendre (0 = inconnu)
-   *   null              on n'a pas pu savoir (hors ligne, backend absent) */
+   *   null              on n'a pas pu savoir (hors ligne, backend absent, délai dépassé)
+   * Appareil hors ligne : on ne tente pas le réseau, la réponse est null tout de
+   * suite. Sinon, 8 s au plus : sans cette borne, un Wi-Fi mort laissait le pavé
+   * suspendu, là où l'ancien code local ouvrait aussitôt. */
+  const ASK_TIMEOUT_MS = 8000;
   function askServer(code) {
+    if (navigator.onLine === false) return Promise.resolve(null);
+    let ctl = null, timer = 0;
+    try { if (typeof AbortController === 'function') { ctl = new AbortController(); timer = setTimeout(() => ctl.abort(), ASK_TIMEOUT_MS); } } catch (_) {}
     return fetch('/api/pin/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ pin: code }),
+      signal: ctl ? ctl.signal : undefined,
     }).then((r) => {
+      clearTimeout(timer);
       if (r.status === 401 || r.status === 403) return 'no';
       /* 429 is the attempt limiter answering, not a missing network. It used
          to fall into null, and the lock told an operator with Wi-Fi that the
@@ -5956,19 +5949,38 @@
          * habilités au dashboard, mais un déploiement décalé ne doit jamais
          * rouvrir la porte · le code d'une caissière ouvre la caisse, pas ici. */
         if (access === 'staff') return 'no';
-        return { name: String(d.staff.name || ''), access };
+        return { id: String(d.staff.id || ''), name: String(d.staff.name || ''), role: String(d.staff.role || ''), access };
       });
-    }).catch(() => null);
+    }).catch(() => { clearTimeout(timer); return null; });
   }
 
-  /* THE CODES THAT MAY OPEN THIS DASHBOARD.
-   *
-   * The dashboard is the owner's surface · the money, the margins, the payroll ·
-   * and it spans every shop on the account. A staff/cashier code is for the till,
-   * never for this dashboard. Only owner/manager-tier roles are returned. */
-  function configuredPins() {
-    return allPins().filter((p) => p && p.access !== 'staff');
+  /* Le serveur n'a pas pu répondre : ce code est-il l'un de ceux qu'il a prouvés
+   * sur ce navigateur ? Une ligne salée, jamais un code (KiwiDashPinVault).
+   * { id, name, role, access } ou null. Mêmes bornes que l'ancien repli :
+   * jamais un palier équipe, et une fois la liste du compte chargée, seul le
+   * propriétaire (les gérants sont portés par la boutique choisie). */
+  function localVerify(code) {
+    const v = vault();
+    if (!v) return Promise.resolve(null);
+    return v.verify(code).then((staff) => {
+      if (!staff) return null;
+      const access = accessTier(staff.role);
+      if (access === 'staff') return null;
+      if (window.KiwiConfig && window.KiwiConfig.loaded && access !== 'owner') return null;
+      return { id: String(staff.id || ''), name: String(staff.name || ''), role: String(staff.role || ''), access };
+    }).catch(() => null);
   }
+  /* Le serveur a répondu : une identité prouvée s'inscrit (sauf sur une vue
+   * portée), un NON efface toute ligne qui reconnaîtrait ce code. */
+  function vaultNote(code, answer) {
+    const v = vault();
+    if (!v) return;
+    try {
+      if (answer && answer !== 'no') v.remember(code, { id: answer.id, name: answer.name, role: answer.role });
+      else if (answer === 'no') v.forget(code);
+    } catch (_) {}
+  }
+
   /* Un code de démonstration n'est pas un code de commerçant.
    *
    * 0505 et 1111 ouvrent des aperçus · le tease « Marketing Suite », la bande
@@ -5994,7 +6006,6 @@
     if (!demosOn() || matched) return false;
     /* App Store 2.3.1: no hidden features behind secret codes in the native app. */
     if (document.documentElement.classList.contains('kiwi-native')) return false;
-    try { if (allPins().some((p) => p.code === code)) return false; } catch (_) {}
     return true;
   }
   function clearPinError() {
@@ -6055,7 +6066,7 @@
    * chemin : passer par Kiwi pour (re)configurer le code d'accès. */
   function hasDashboardCode() {
     try {
-      if (allPins().some((p) => p.access !== 'staff')) return true;
+      if (provenCodeCount() > 0) return true;
       const kc = window.KiwiConfig || {};
       return [].concat(kc.seenPins || [], kc.pins || []).some((p) => accessTier(p && p.role) !== 'staff');
     } catch (_) { return false; }
@@ -6358,18 +6369,29 @@
        * much configured, and testing the short list would have read as "nothing
        * set up yet" and let any four digits through.
        *
-       * Deux juges, dans cet ordre. Les codes de CE navigateur d'abord, parce
-       * qu'ils répondent sans réseau et que c'est ce qui laisse un patron entrer
-       * chez lui quand le backend est tombé. Puis le serveur, seul détenteur des
-       * codes depuis qu'ils ne sont plus expédiés au navigateur. Un serveur
-       * injoignable ne refuse rien de plus qu'avant : on retombe exactement sur
-       * l'ancienne règle, celle qui ne connaissait que les codes locaux. */
-      const local = configuredPins().find((p) => p && p.code === val) || null;
-      const knownHere = allPins().length;
+       * Le serveur d'abord, et lui seul tant qu'il répond : un « non » est
+       * définitif (le code a été changé ou retiré, la ligne locale qui le
+       * reconnaissait est effacée). Ce navigateur ne garde plus aucun code ;
+       * seulement, pour un patron dont le réseau est tombé, une ligne salée que
+       * le serveur a prouvée dans les sept derniers jours (KiwiDashPinVault).
+       * Elle n'est lue que si le serveur n'a PAS pu répondre (hors ligne, panne,
+       * délai) et jamais pour contredire une réponse. */
       const askable = !demosOn() || serverRosterSize() > 0;
-      if (local || !askable) { finishUnlock(val, local, !!local); return; }
+      if (!askable) { finishUnlock(val, null, false); return; }
+      const current = () => val === pinInput.value.replace(/\D/g, '').slice(0, 4);   // la saisie a-t-elle bougé ?
+      const settle = (answer) => {
+        const knownHere = provenCodeCount();
+        /* null = serveur injoignable. Un compte configuré qu'on ne peut pas
+           vérifier se ferme ; sans le repli salé ci-dessus, n'importe quels
+           quatre chiffres passeraient. */
+        if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin(navigator.onLine === false ? 'offline' : 'unreachable'); return; }
+        const configured = knownHere || serverRosterSize();
+        // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
+        if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
+        finishUnlock(val, null, false);
+      };
       askServer(val).then((reply) => {
-        if (val !== pinInput.value.replace(/\D/g, '').slice(0, 4)) return;   // la saisie a bougé
+        if (!current()) return;
         let answer = reply;
         /* The limiter said wait. Checked before anything else: a { busy } reply
            must never read as an identity. Where a null used to fail closed, it
@@ -6379,16 +6401,17 @@
           if (!demosOn() || isConfiguredAccount()) { rejectPin('busy', answer.busy); return; }
           answer = null;
         }
+        vaultNote(val, answer);
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
-        /* null = serveur injoignable. Le repli d'avant ne connaissait que les codes
-           locaux, et il était sûr TANT QUE kiwiPins en détenait. Depuis qu'ils
-           ne sont plus expédiés, il laissait passer n'importe quels quatre chiffres.
-           Un compte configuré qu'on ne peut pas vérifier se ferme. */
-        if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin(navigator.onLine === false ? 'offline' : 'unreachable'); return; }
-        const configured = knownHere || serverRosterSize();
-        // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
-        if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
-        finishUnlock(val, null, false);
+        if (answer === null) {
+          localVerify(val).then((hit) => {
+            if (!current()) return;
+            if (hit) finishUnlock(val, hit, true);
+            else settle(null);
+          });
+          return;
+        }
+        settle(answer);
       });
     }
   }

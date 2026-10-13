@@ -243,6 +243,10 @@
     "v": "3",
     "sha": "af0244365422a41f"
   },
+  "assets/dashboard-pin-vault.js": {
+    "v": "2",
+    "sha": "5f306b2e061d0bce"
+  },
   "assets/dashboard-pwa.js": {
     "v": "553",
     "sha": "ac757708e69788af"
@@ -616,8 +620,8 @@
     "sha": "61f5515f64d1d79a"
   },
   "assets/onboarding.js": {
-    "v": "2089",
-    "sha": "3a22c320601140d9"
+    "v": "2090",
+    "sha": "602b5cfd1e300a03"
   },
   "assets/operational-print.js": {
     "v": "4",

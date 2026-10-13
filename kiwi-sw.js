@@ -208,6 +208,9 @@ var SHELL = [
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
   '/assets/tenant-purge.js?v=2',
+  /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
+     jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
+  '/assets/dashboard-pin-vault.js?v=2',
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */

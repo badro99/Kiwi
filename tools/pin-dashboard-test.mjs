@@ -79,13 +79,17 @@ const accessTier = new Function(tierSrc + '; return accessTier;')();
 ok(accessTier('Propriétaire') === 'owner' && accessTier('manager') === 'manager', 'accessTier : propriétaire → owner, manager → manager (sans KiwiRoles chargé)');
 ok(accessTier('Caissier') === 'staff' && accessTier('Barista') === 'staff' && accessTier('') === 'staff', 'accessTier : tout rôle inconnu ou d\'équipe retombe sur staff');
 
-const cfgPinsSrc = extract(gate, /function configuredPins\(\) \{[\s\S]*?\n  \}/, 'configuredPins');
-const testConfiguredPins = new Function('allPins', cfgPinsSrc + '; return configuredPins;')(() => [
-  { code: '5678', name: 'Sara', access: 'staff' },
-]);
-const testResult = testConfiguredPins();
-ok(Array.isArray(testResult) && testResult.length === 0, 'configuredPins exclut STRICTEMENT le personnel : une liste contenant seulement un caissier renvoie []');
-ok(!cfgPinsSrc.includes(': all'), 'configuredPins ne possède aucun repli « : all » pouvant rouvrir la porte à un caissier');
+/* Plus de liste de codes dans le navigateur : le repli hors ligne est une ligne
+ * salée prouvée par le serveur (assets/dashboard-pin-vault.js), jamais un palier
+ * équipe, et — la liste du compte une fois chargée — jamais un gérant. */
+const lvSrc = extract(gate, /function localVerify\(code\) \{[\s\S]*?\n  \}/, 'localVerify');
+const runLocalVerify = (role, loaded) => new Function('vault', 'accessTier', 'window', lvSrc + '; return localVerify;')(
+  () => ({ verify: async () => ({ id: 'x1', name: 'Test', role }) }), accessTier, { KiwiConfig: { loaded } },
+)('1234');
+ok(await runLocalVerify('Caissier', false) === null, 'le repli hors ligne ne rend JAMAIS un palier équipe, même si une ligne existe');
+ok((await runLocalVerify('Propriétaire', true) || {}).access === 'owner' && (await runLocalVerify('manager', false) || {}).access === 'manager'
+  && await runLocalVerify('manager', true) === null, 'repli : propriétaire toujours ; gérant seulement tant que la liste du compte n\'est pas chargée');
+ok(!/\ballPins\b|\bconfiguredPins\b/.test(gate), 'la porte ne possède plus aucune liste de codes locale (allPins / configuredPins)');
 
 // ── 5. L'état vide — « connectez-vous avec Kiwi » ────────────────────────────
 ok(/function maybeShowNoOwnerHelp\(\)/.test(gate) && /kiwi-account-pins-ready', maybeShowNoOwnerHelp/.test(gate), 'la porte réévalue l\'état vide quand la liste des codes du compte arrive');
@@ -94,7 +98,7 @@ ok(gate.includes("Connectez-vous avec Kiwi pour configurer votre code d\\'acc"),
 ok(/if \(demosOn\(\) \|\| !helpEl \|\| pinInput\.value\) return;/.test(gate), 'jamais en démo, jamais par-dessus une saisie en cours');
 
 // ── 6. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 26;
+const EXPECTED_COUNT = 27;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

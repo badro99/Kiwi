@@ -1518,6 +1518,9 @@ section('Whole-project regressions');
        une mise à jour) ; une vraie nouvelle génération se recharge toujours en
        silence sur une page jeune, ou montre la pastille après un geste. */
     'pwa-first-install-browser-test.mjs',
+    /* Le vrai pavé du dashboard : migration du clair, preuve en ligne, ouverture
+       hors ligne par la ligne salée, « non » du serveur final. */
+    'dashboard-pin-vault-browser-test.mjs',
     /* Le banc des suites navigateur (tools/browser-trace.mjs) : trace.md à
        l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
        captures comparées à leur référence. */
@@ -1647,6 +1650,11 @@ section('Whole-project regressions');
        couverts, addition ouverte, demandes, tours du jour. Lecture seule. */
     'floor-live-test.mjs',
     'pin-dashboard-test.mjs',
+    /* La porte du dashboard ne garde aucun code en clair (kiwiPins retiré) et n'en
+       compare aucun : le serveur juge d'abord, une ligne salée prouvée en ligne
+       sert seulement quand il n'a pas pu répondre. Balayage + coffre + ordre des
+       juges ; le pavé réel, hors ligne, suit dans la suite navigateur. */
+    'dashboard-pin-vault-test.mjs',
     'idle-lock-test.mjs',
     /* 2026-10-12 · on disk, named nowhere, so guarding nothing. Five were red
      * for reasons in the test alone (Playwright never installed, pins the code

@@ -65,12 +65,17 @@ const surfaces = {
   'kiwi-caisse.html': read('kiwi-caisse.html'),
   'kiwi-serveur.html': read('kiwi-serveur.html'),
 };
-/* dashboard.html garde une lecture de `x.code || x.pin` : c'est `kiwiPins`,
- * l'écriture de l'assistant d'installation dans CE navigateur, pas la réponse
- * du serveur. On vérifie donc chez lui que la source est bien localStorage. */
+/* dashboard.html ne garde plus AUCUNE lecture de `x.code || x.pin` : c'était
+ * `kiwiPins`, l'écriture en clair de l'assistant d'installation dans CE
+ * navigateur, retirée (assets/dashboard-pin-vault.js ne garde que des lignes
+ * salées que le serveur a prouvées ; tools/dashboard-pin-vault-test.mjs). */
 const dash = read('dashboard.html');
 ok('dashboard.html ne tire plus de code de KiwiConfig',
   !/\(kc\.seenPins[^\n]*\)\.forEach\(add\)/.test(dash) && !/kc\.pins[^\n]*\)\.forEach\(add\)/.test(dash));
+ok('dashboard.html ne lit plus aucun code d\'une liste locale (x.code || x.pin)',
+  !/\(x && \(x\.code \|\| x\.pin\)\)/.test(dash) && !/\bkiwiPins\b[^\n]*getItem|getItem\([^)]*kiwiPins/.test(dash));
+ok('assets/dashboard-pin-vault.js ne lit jamais KiwiConfig ni une liste reçue',
+  !/KiwiConfig|seenPins|\.pins\b/.test(read('assets/dashboard-pin-vault.js').replace(/\/\*[\s\S]*?\*\//g, '')));
 ok('dashboard.html soumet le code frappé à /api/pin/verify',
   /fetch\('\/api\/pin\/verify'/.test(dash));
 

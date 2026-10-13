@@ -673,7 +673,11 @@
     LS.set('kiwiVenueCount', String(S.venueCount));
     if (S.teamGiven) LS.set('kiwiTeamSize', String(S.teamSize)); else LS.del('kiwiTeamSize');
     LS.set('kiwiGoals', JSON.stringify(S.goals));
-    LS.set('kiwiPins', JSON.stringify(validPins));
+    /* Les codes sont partis avec la création confirmée, vers le serveur : c'est
+       lui qui les compare. Ce navigateur n'en garde AUCUN (kiwiPins, en clair, a
+       été retiré) ; le premier déverrouillage en ligne écrit la ligne salée dont
+       la porte a besoin hors ligne (assets/dashboard-pin-vault.js). */
+    LS.del('kiwiPins');
     // PINs and type were sent with the confirmed creation to the NEW slug.
     LS.set('kiwiRole', 'owner');
     LS.set('kiwiOnboarded', '1');
@@ -682,7 +686,7 @@
     try { if (KiwiVenue.setVenue) KiwiVenue.setVenue(vid); } catch (_) {}
 
     /* Seed the entered staff into the REAL per-venue roster (team.js) so they
-     * persist and show on the Équipe page — not just the login-lock's kiwiPins. */
+     * persist and show on the Équipe page. */
     try {
       const teamPeople = S.pins.map((p) => ({
         role: p.role,

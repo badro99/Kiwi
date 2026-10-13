@@ -42,7 +42,9 @@ ok('owner dashboard PIN spans all stores while manager PIN stays store-scoped',
   && configApi.includes("rows.filter((row) => accountOwnerRole(row.role))")
   && merchantConfig.includes("document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready'))")
   && dashboard.includes("window.KiwiConfig.accountPinsReady === false")
-  && dashboard.includes("accessTier(x && x.role) === 'owner'"));
+  /* Le repli hors ligne (ligne salée prouvée) obéit à la même règle que l'ancien
+     kiwiPins : la liste du compte chargée, seul le propriétaire en profite. */
+  && dashboard.includes("if (window.KiwiConfig && window.KiwiConfig.loaded && access !== 'owner') return null;"));
 ok('specialist PINs wait for their dispatcher', caisse.includes('verticalDemoPins') && caisse.includes('tryVertical(30)'));
 ok('card and cash commit before the success modal closes', caisse.includes('finalizeTender(cardTenderMethod)') && caisse.includes("finalizeTender('cash')"));
 ok('KDS action buttons keep a theme-stable, high-contrast label',
