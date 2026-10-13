@@ -210,6 +210,9 @@ ok(/answer === 'no'\) v\.forget\(code\)/.test(ctl), 'un « non » du serveur eff
 ok(/answer && answer !== 'no'\) v\.remember\(code, \{ id: answer\.id, name: answer\.name, role: answer\.role \}\)/.test(ctl), 'seule une identité prouvée par le serveur est écrite, sans le code');
 ok(/if \(navigator\.onLine === false\) return Promise\.resolve\(null\);/.test(ctl), 'hors ligne : réponse null tout de suite, sans attendre un délai');
 ok(/setTimeout\(\(\) => ctl\.abort\(\), ASK_TIMEOUT_MS\)/.test(ctl), 'un serveur muet ne suspend pas le pavé (délai)');
+ok(/const knownHere = provenCodeCount\(\) > 0 \|\| onboardedHere\(\);/.test(flow)
+  && /function onboardedHere\(\) \{[\s\S]*?kiwiOnboarded/.test(ctl),
+  'un compte installé sur ce navigateur ne laisse pas passer un « non » du serveur, liste du compte absente ou non (le rôle que tenait kiwiPins)');
 ok(/function vault\(\) \{ return scopedView\(\) \? null/.test(ctl), 'jamais lu ni écrit sur une vue portée (?op= / ?merchant=)');
 ok(/if \(access === 'staff'\) return null;/.test(ctl), 'le repli salé ne rend jamais un palier équipe');
 

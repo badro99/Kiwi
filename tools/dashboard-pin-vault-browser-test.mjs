@@ -60,10 +60,11 @@ const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); 
 
 /* Comment le « serveur » répond au prochain /api/pin/verify. */
 let verifyMode = 'normal';       // normal | refuse-all | down
+let rosterMode = 'full';         // full | empty (le /api/config du compte ne rend personne)
 const asked = [];
 const json = (status, body) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-async function open(tr, ctx, { legacy = null } = {}) {
+async function open(tr, ctx, { legacy = null, onboarded = true } = {}) {
   const page = tr.watch(await ctx.newPage());
   await page.setViewport({ width: 1280, height: 900 });
   await page.setRequestInterception(true);
@@ -79,23 +80,23 @@ async function open(tr, ctx, { legacy = null } = {}) {
       if (verifyMode === 'normal' && body.pin === CODE) return req.respond(json(200, { ok: true, staff: { id: 'st_owner', name: 'Amira', role: 'owner' }, merchant: 'vault-test' }));
       return req.respond(json(401, { error: 'bad-pin' }));
     }
-    if (u.pathname === '/api/config') return req.respond(json(200, { pins: [{ name: 'Amira', role: 'owner' }] }));
+    if (u.pathname === '/api/config') return req.respond(json(200, { pins: rosterMode === 'empty' ? [] : [{ name: 'Amira', role: 'owner' }] }));
     if (u.pathname.startsWith('/api/') || u.pathname.startsWith('/auth/')) return req.respond(json(404, {}));
     return req.continue();
   });
   page.on('dialog', async (d) => { await d.dismiss(); });
-  await page.evaluateOnNewDocument((account, legacyRows) => {
+  await page.evaluateOnNewDocument((account, legacyRows, isOnboarded) => {
     try {
       localStorage.setItem('kiwiAccountKey', account);
       localStorage.setItem('kiwiDemos', '0');           // hosted behaviour: no demo, the lock judges for real
-      localStorage.setItem('kiwiOnboarded', '1');
+      if (isOnboarded) localStorage.setItem('kiwiOnboarded', '1');
       localStorage.setItem('kiwiLang', 'en');
       if (legacyRows && !sessionStorage.getItem('kiwiTestLegacyDone')) {
         localStorage.setItem('kiwiPins', legacyRows);
         sessionStorage.setItem('kiwiTestLegacyDone', '1');
       }
     } catch (_) {}
-  }, ACCOUNT, legacy);
+  }, ACCOUNT, legacy, onboarded);
   page.setDefaultNavigationTimeout(60000);
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-kiwi-pin-input]', { timeout: 30000 });
@@ -105,7 +106,13 @@ async function open(tr, ctx, { legacy = null } = {}) {
 
 const storageDump = (page) => page.evaluate(() => Object.keys(localStorage).map((k) => k + '=' + localStorage.getItem(k)).join('\n'));
 const vaultCount = (page) => page.evaluate(() => window.KiwiDashPinVault.count());
-const unlocked = (page) => page.evaluate(() => !!document.querySelector('[data-kiwi-pin] .kiwi-pin-cell.is-success'));
+/* Ouverte = une cellule en succès, ou la porte est partie / cachée / en sortie (un compte jamais installé
+   voit l'assistant d'installation prendre la place avant que les cellules ne s'allument). */
+const unlocked = (page) => page.evaluate(() => {
+  const lock = document.querySelector('[data-kiwi-lock]');
+  return !!document.querySelector('[data-kiwi-pin] .kiwi-pin-cell.is-success')
+    || !lock || lock.style.display === 'none' || lock.classList.contains('is-unlocking');
+});
 const wrong = (page) => page.evaluate(() => !!document.querySelector('[data-kiwi-pin].is-wrong'));
 const helpText = (page) => page.evaluate(() => (document.querySelector('.kiwi-lock-help') || {}).textContent || '');
 
@@ -233,6 +240,27 @@ try {
     check(await outcome(page) === 'refused', 'EN LIGNE, le serveur refuse : la porte reste fermée malgré la ligne salée');
     await page.waitForFunction(() => window.KiwiDashPinVault.count() === 0, { timeout: 5000 });
     check(await vaultCount(page) === 0, 'et la ligne qui reconnaissait ce code est effacée');
+    verifyMode = 'normal';
+  });
+
+  await S.run('liste du compte vide · un « non » du serveur ferme la porte d\'un compte installé, pas celle d\'un compte neuf', async (tr) => {
+    verifyMode = 'refuse-all';
+    rosterMode = 'empty';
+    {
+      const ctx = await browser.createBrowserContext();
+      tr.defer(() => ctx.close());
+      const page = await open(tr, ctx, { onboarded: true });
+      await typeCode(page, OTHER);
+      check(await outcome(page) === 'refused', 'compte installé, liste vide, coffre vide : le « non » du serveur est final');
+    }
+    {
+      const ctx = await browser.createBrowserContext();
+      tr.defer(() => ctx.close());
+      const page = await open(tr, ctx, { onboarded: false });
+      await typeCode(page, OTHER);
+      check(await outcome(page) === 'unlocked', 'compte jamais installé : la porte laisse passer pour atteindre l\'installation (règle d\'avant, inchangée)');
+    }
+    rosterMode = 'full';
     verifyMode = 'normal';
   });
 

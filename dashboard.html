@@ -5884,6 +5884,15 @@
   function provenCodeCount() {
     try { const v = vault(); return v ? v.count() : 0; } catch (_) { return 0; }
   }
+  /* L'assistant d'installation est allé au bout sur CE navigateur. C'était le
+     rôle de kiwiPins (écrit au même instant que kiwiOnboarded) dans la règle
+     « un compte déjà configuré ne laisse pas passer n'importe quel code, même
+     quand la liste du compte n'est pas arrivée ». Sans ce signal, un patron
+     installé dont la liste vient d'échouer et dont le coffre est vide verrait la
+     porte s'ouvrir sur un « non » du serveur. */
+  function onboardedHere() {
+    try { const v = localStorage.getItem('kiwiOnboarded'); return v === '1' || v === 'true'; } catch (_) { return false; }
+  }
 
   /* « Ce compte a-t-il configuré quelqu'un ? » · la question que la porte pose
    * avant de s'autoriser à refuser quoi que ce soit. Elle se répond en COMPTANT
@@ -6380,7 +6389,7 @@
       if (!askable) { finishUnlock(val, null, false); return; }
       const current = () => val === pinInput.value.replace(/\D/g, '').slice(0, 4);   // la saisie a-t-elle bougé ?
       const settle = (answer) => {
-        const knownHere = provenCodeCount();
+        const knownHere = provenCodeCount() > 0 || onboardedHere();
         /* null = serveur injoignable. Un compte configuré qu'on ne peut pas
            vérifier se ferme ; sans le repli salé ci-dessus, n'importe quels
            quatre chiffres passeraient. */
