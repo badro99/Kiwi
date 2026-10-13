@@ -1843,6 +1843,38 @@ section('Text contrast (tools/text-contrast-test.js)');
   }
 }
 
+/* ── 14b · Kiwi 2027, étape 1 : les jetons ──────────────────────────────────
+ * assets/kit/tokens-2027.css (docs/specs/kiwi-design-2027.md §5 à §7, §14, §20.7).
+ * Rien ne le charge encore : ces gardes sont les seules à le tenir.
+ *   token-contrast-test      palette §5.1/§5.2, contraste §5.3 recalculé, thème, cohabitation
+ *   type-steps-lint          six pas de type, jamais un de plus (§6.2)
+ *   kit-lint                 les règles du kit qui existent dès l'étape 1
+ *   tokens-2027-browser-test la cascade du thème, du contraste accru et des pas, dans Chromium */
+section('Kiwi 2027 · jetons (token-contrast-test, type-steps-lint, kit-lint, cascade)');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['token-contrast-test.js', 'token-contrast-test'],
+    ['type-steps-lint.js', 'type-steps-lint'],
+    ['kit-lint.js', 'kit-lint'],
+    ['tokens-2027-browser-test.mjs', 'cascade des jetons 2027'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 300000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').find((l) => l.startsWith('✓')) || out.split('\n').filter(Boolean).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /[✗·]/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*[✗·]\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {

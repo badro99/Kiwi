@@ -1,0 +1,175 @@
+#!/usr/bin/env node
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · kit-lint : les règles que le spec confie à `kit-lint`, celles qui
+ * existent dès l'étape 1 (fondations).
+ *
+ *   node tools/kit-lint.js
+ *
+ * Il lit tout assets/kit/ (css, js, mjs) et refuse :
+ *
+ *   K1  une couleur brute (hex, rgb(), rgba(), hsl(), hsla()) hors de
+ *       assets/kit/tokens-2027.css : la peinture vient des jetons (§2, principe 3).
+ *   K2  une taille de police en px, en rem, en em ou en % (§3 ligne 6, §6.2).
+ *       Les six pas se prennent par var(--k-fs-*) ; type-steps-lint juge le reste.
+ *   K3  un font-size sur :host, ou sur un html qui n'est pas la cuisine :
+ *       « un composant n'a jamais sa propre racine » (§6.2, ligne 817).
+ *   K4  une règle imbriquée (CSS nesting) : le kit ne l'emploie pas (§4.1).
+ *   K5  une @font-face hors de tokens-2027.css : le kit n'en a qu'une source (§6.1).
+ *   K6  un gabarit `…${x}.js|.css|.woff2|.svg` : aucune URL de ressource n'est
+ *       construite à l'exécution, le scanner d'estampilles ne la verrait jamais
+ *       (§21.3).
+ *   K7  une coupure de journée écrite en dur hors de business-day.js :
+ *       DEFAULT_CUTOFF, 'Africa/Casablanca', `cutoff = 5` (§3 ligne 1, §17.1).
+ *   K8  une affectation de window.KiwiLens hors de lens.js : un seul objet,
+ *       quatre méthodes, étendu par Object.assign (§20.5).
+ *
+ * Ce que le spec confie aussi à kit-lint et qui ne peut exister qu'avec des
+ * composants (étape 2) n'est PAS ici, et le dit : conteneurs de texte à
+ * hauteur fixe, placeholders `:not(:defined)` par taille, `data-action` sur un
+ * hôte, noms d'action sans `k.`, tablist hors kit dans une surface adoptée.
+ * Ils entreront avec le premier composant, dans CE fichier.
+ *
+ * Des contrôles négatifs finissent chaque passe : un lint qui ne sait pas
+ * échouer ne garde rien.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+const fs = require('fs');
+const path = require('path');
+const { parse, cssInJs, kitFiles, stripJsComments } = require('./kit-css');
+
+const ROOT = path.resolve(__dirname, '..');
+
+const RAW_COLOR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|\b(?:rgba?|hsla?)\(/;
+const stripUrls = (v) => v.replace(/url\([^)]*\)/gi, 'url()');
+
+/* Une feuille (fichier .css ou gabarit d'un .js). */
+function lintSheet(css, file, { tokensFile = false, line0 = 0 } = {}) {
+  const out = [];
+  const where = (l) => `${file}:${l + line0}`;
+  const sheet = parse(css);
+  if (!tokensFile) {
+    for (const r of sheet.rules) for (const d of r.decls) {
+      if (RAW_COLOR.test(stripUrls(d.value))) out.push(`K1 ${where(d.line)} · ${d.prop}: ${d.value} : couleur brute, utiliser un jeton var(--k-*)`);
+    }
+    for (const f of sheet.fontFaces) out.push(`K5 ${where(f.line)} · @font-face hors de tokens-2027.css`);
+  }
+  for (const r of sheet.rules) for (const d of r.decls) {
+    if (d.prop === 'font-size') {
+      const onHost = r.selectors.some((s) => /^:host/.test(s));
+      const onHtml = r.selectors.length > 0 && r.selectors.every((s) => /^(?:html|:root)(?![\w-])/.test(s));
+      const kdsRoot = tokensFile && onHtml && r.selectors.every((s) => s.startsWith('html[data-k-surface="kds"]')) && /^var\(\s*--k-kds-root\s*,\s*(?:20|24|28)px\s*\)$/.test(d.value);
+      if (kdsRoot) continue;
+      if (onHost) out.push(`K3 ${where(d.line)} · font-size sur ${r.selector} : un composant n'a jamais sa propre racine`);
+      else if (onHtml) out.push(`K3 ${where(d.line)} · font-size sur ${r.selector} : seule la cuisine pose une racine`);
+      else if (/^[\d.]+(?:px|pt)\b/.test(d.value) || /(?:^|\s)[\d.]+(?:px|pt)\b/.test(d.value)) out.push(`K2 ${where(d.line)} · font-size: ${d.value} : pas de px, utiliser var(--k-fs-*)`);
+      else if (!/^var\(\s*--k-fs-/.test(d.value) && !/^(?:inherit|initial|unset)$/.test(d.value) && !onHtml) out.push(`K2 ${where(d.line)} · font-size: ${d.value} : pas une taille du kit, utiliser var(--k-fs-*)`);
+    } else if (d.prop === 'font' && /(?:^|[\s/])[\d.]+(?:px|pt)\b/.test(d.value)) {
+      out.push(`K2 ${where(d.line)} · font: ${d.value} : pas de px, utiliser var(--k-fs-*)`);
+    }
+  }
+  for (const n of sheet.nested) out.push(`K4 ${where(n.line)} · règle imbriquée « ${n.selector} » : le kit n'emploie pas le CSS nesting`);
+  return out;
+}
+
+/* Un fichier JS. */
+function lintScript(js, file) {
+  const out = [];
+  const base = path.basename(file);
+  const src = stripJsComments(js);
+  const lineOf = (idx) => src.slice(0, idx).split('\n').length;
+
+  for (const t of cssInJs(src)) out.push(...lintSheet(t.css, file, { line0: t.line - 1 }));
+
+  /* K1 · couleurs en JS : dans un contexte de propriété, ou une fonction rgb/hsl. */
+  const re1 = /(?:color|background|border|fill|stroke|shadow|outline)[\w-]*\s*[:=]\s*['"`]?[^;'"`}\n]*#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])/g;
+  let m;
+  while ((m = re1.exec(src))) out.push(`K1 ${file}:${lineOf(m.index)} · couleur hexadécimale brute : « ${m[0].trim().slice(0, 60)} »`);
+  const re1b = /\b(?:rgba?|hsla?)\(/g;
+  while ((m = re1b.exec(src))) out.push(`K1 ${file}:${lineOf(m.index)} · ${m[0]}…) : couleur brute, utiliser un jeton`);
+
+  /* K6 · gabarits qui construisent une URL de ressource. */
+  const reT = /`((?:\\[\s\S]|[^`\\])*)`/g;
+  while ((m = reT.exec(src))) {
+    if (/\$\{/.test(m[1]) && /\.(?:js|css|woff2|svg)(?:\?[^`$]*)?$/.test(m[1])) out.push(`K6 ${file}:${lineOf(m.index)} · gabarit « ${m[1].slice(0, 60)} » : une URL de ressource ne se construit pas à l'exécution (§21.3)`);
+  }
+
+  /* K7 · coupure de journée en dur. */
+  if (base !== 'business-day.js') {
+    const re7 = /\bDEFAULT_CUTOFF\b|\bDEFAULT_ZONE\b|['"`]Africa\/Casablanca['"`]|\b(?:businessCutoff|business_cutoff|cutoff)\b\s*(?:\?\?|\|\||=(?!=))\s*\d/g;
+    while ((m = re7.exec(src))) out.push(`K7 ${file}:${lineOf(m.index)} · « ${m[0]} » : la coupure et le fuseau ne s'écrivent que dans business-day.js (§17.1)`);
+  }
+
+  /* K8 · window.KiwiLens. */
+  if (base !== 'lens.js') {
+    const re8 = /\bwindow\s*\.\s*KiwiLens\s*=(?!=)|Object\.assign\(\s*window\s*\.\s*KiwiLens\b|\bglobalThis\s*\.\s*KiwiLens\s*=(?!=)/g;
+    while ((m = re8.exec(src))) out.push(`K8 ${file}:${lineOf(m.index)} · affectation de window.KiwiLens hors de lens.js (§20.5)`);
+  }
+  return out;
+}
+
+function lintKit() {
+  const failures = [];
+  const files = kitFiles(ROOT, ['.css', '.js', '.mjs']);
+  for (const f of files) {
+    const rel = path.relative(ROOT, f);
+    const txt = fs.readFileSync(f, 'utf8');
+    if (f.endsWith('.css')) failures.push(...lintSheet(txt, rel, { tokensFile: path.basename(f) === 'tokens-2027.css' }));
+    else failures.push(...lintScript(txt, rel));
+  }
+  return { failures, files: files.length };
+}
+
+function selfTest() {
+  const bad = [];
+  const fail = (label, list, rule) => { if (!list.some((x) => x.startsWith(rule + ' '))) bad.push(`contrôle négatif non vu (${rule}) : ${label}`); };
+  const pass = (label, list) => { if (list.length) bad.push(`faux positif : ${label} → ${list[0]}`); };
+
+  /* Conforme */
+  pass('feuille conforme', lintSheet('.a{color:var(--k-ink-1);background:var(--k-surface-1);font-size:var(--k-fs-body);padding:var(--k-space-4)}', 'ok.css'));
+  pass('tokens-2027.css lui-même', lintSheet(':root{--k-bg:#F7F5F0;--k-scrim:rgba(0,0,0,.5)}@font-face{font-family:"x";src:url("a.woff2")}html[data-k-surface="kds"]{font-size:var(--k-kds-root, 24px)}', 'tokens-2027.css', { tokensFile: true }));
+  pass('url(data:…#fff) ne compte pas', lintSheet('.a{background:url("data:image/svg+xml,%3Csvg fill=\'%23fff\'%3E")}', 'ok.css'));
+  pass('transparent et currentColor', lintSheet('.a{background:transparent;color:currentColor}', 'ok.css'));
+  pass('script conforme', lintScript('const a = window.KiwiLens; a.rescan(); if (window.KiwiLens === a) a.refresh();\n// DEFAULT_CUTOFF = 5 dans un commentaire\nconst css = `.a { color: var(--k-ink-1); }`;', 'ok.js'));
+  pass('business-day.js porte les défauts', lintScript("const DEFAULT_CUTOFF = 5; const DEFAULT_ZONE = 'Africa/Casablanca'; let cutoff = config.businessCutoff ?? 5;", '/x/assets/kit/business-day.js'));
+  pass('lens.js étend KiwiLens', lintScript('Object.assign(window.KiwiLens || (window.KiwiLens = {}), { attach() {} });', '/x/assets/kit/lens.js'));
+
+  /* Refus */
+  fail('hex dans un composant', lintSheet('.a{color:#0B6E4F}', 'bad.css'), 'K1');
+  fail('hex court', lintSheet('.a{background:#fff}', 'bad.css'), 'K1');
+  fail('rgba()', lintSheet('.a{box-shadow:0 1px 2px rgba(0,0,0,.2)}', 'bad.css'), 'K1');
+  fail('hsl()', lintSheet('.a{color:hsl(120 50% 50%)}', 'bad.css'), 'K1');
+  fail('hex dans un gabarit JS', lintScript('const css = `.a { color: #0B6E4F; padding: 0; }`;', 'bad.js'), 'K1');
+  fail('hex dans un style en ligne JS', lintScript("el.style.background = '#fff';", 'bad.js'), 'K1');
+  fail('rgba() en JS', lintScript("el.style.boxShadow = 'rgba(0,0,0,.2)';", 'bad.js'), 'K1');
+  fail('font-size en px', lintSheet('.a{font-size:14px}', 'bad.css'), 'K2');
+  fail('font-size en rem', lintSheet('.a{font-size:1rem}', 'bad.css'), 'K2');
+  fail('font: avec un px', lintSheet('.a{font:600 15px/1.2 Arial}', 'bad.css'), 'K2');
+  fail('font-size sur :host', lintSheet(':host{font-size:var(--k-fs-body)}', 'bad.css'), 'K3');
+  fail('font-size sur html', lintSheet('html{font-size:18px}', 'bad.css'), 'K3');
+  fail('racine de cuisine hors du fichier de jetons', lintSheet('html[data-k-surface="kds"]{font-size:var(--k-kds-root, 24px)}', 'bad.css'), 'K3');
+  fail('règle imbriquée', lintSheet('.a{color:var(--k-ink-1);.b{color:var(--k-ink-2)}}', 'bad.css'), 'K4');
+  fail('@font-face dans un composant', lintSheet('@font-face{font-family:"x";src:url("a.woff2")}', 'bad.css'), 'K5');
+  fail('URL construite : .woff2', lintScript('const u = `assets/fonts/${name}.woff2?v=1`;', 'bad.js'), 'K6');
+  fail('URL construite : .js', lintScript('import(`./${n}.js`);', 'bad.js'), 'K6');
+  pass('un gabarit sans extension de ressource', lintScript('const t = `${a} et ${b}`;', 'ok.js'));
+  fail('DEFAULT_CUTOFF hors business-day.js', lintScript('const DEFAULT_CUTOFF = 5;', '/x/assets/kit/ledger.js'), 'K7');
+  fail('fuseau en dur', lintScript("const z = 'Africa/Casablanca';", '/x/assets/kit/format.js'), 'K7');
+  fail('cutoff = 5 ailleurs', lintScript('const cutoff = cfg.businessCutoff ?? 5;', '/x/assets/kit/ledger.js'), 'K7');
+  fail('window.KiwiLens = hors de lens.js', lintScript('window.KiwiLens = { rescan() {} };', '/x/assets/kit/segment.js'), 'K8');
+  fail('Object.assign(window.KiwiLens…) hors de lens.js', lintScript('Object.assign(window.KiwiLens, { a: 1 });', '/x/assets/kit/segment.js'), 'K8');
+  return bad;
+}
+
+if (require.main === module) {
+  const problems = selfTest();
+  const r = lintKit();
+  problems.push(...r.failures);
+  if (problems.length) {
+    console.error(`✗ kit-lint : ${problems.length} problème(s)`);
+    problems.slice(0, 60).forEach((p) => console.error('  · ' + p));
+    process.exit(1);
+  }
+  console.log(`✓ kit-lint · ${r.files} fichier(s) du kit, 8 règles de l'étape 1, contrôles négatifs vus`);
+}
+
+module.exports = { lintSheet, lintScript, lintKit, selfTest };
