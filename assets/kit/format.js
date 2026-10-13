@@ -88,7 +88,8 @@
   function defaultZone() {
     if (state.zone) return state.zone;
     var bd = root && root.KiwiBusinessDay;
-    return (bd && bd.DEFAULT_ZONE) || 'UTC';
+    /* The store default lives only in business-day.js (§17.1, kit-lint K7): ask it. */
+    return (bd && typeof bd.resolve === 'function' && bd.resolve({}).zone) || 'UTC';
   }
 
   /* ── Intl, mis en cache, avec repli de balise ───────────────────────── */

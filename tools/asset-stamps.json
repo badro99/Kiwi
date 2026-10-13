@@ -363,6 +363,10 @@
     "v": "4",
     "sha": "ed7da54880df1f7e"
   },
+  "assets/fonts/inter-tight-latin-ext.woff2": {
+    "v": "1",
+    "sha": "fd9beddaaec64494"
+  },
   "assets/fonts/inter-tight-latin.woff2": {
     "v": "1",
     "sha": "77fefe8ca19b9f69"
@@ -382,6 +386,10 @@
   "assets/fonts/plex-arabic-600.woff2": {
     "v": "1",
     "sha": "16734a5adb27b0f3"
+  },
+  "assets/fonts/plex-arabic-700.woff2": {
+    "v": "1",
+    "sha": "04c730b4292731cc"
   },
   "assets/food-production-print.js": {
     "v": "2",
