@@ -226,6 +226,7 @@ let saraCookie = '';
     'function teamSlug() { return ""; }',
     grab('function cleanLocks('), grab('function mergeLocks('), grab('function cleanRemoved('),
     grab('function mergeRemoved('), grab('function memberBelongsToStore('), grab('function scopeTeamDoc('),
+    grab('function isCode('), grab('function memberCode('), grab('function fillCodes('),
     grab('function mergeByDay('), grab('function mergeTeamDoc('),
     'this.merge = mergeTeamDoc; this.scope = scopeTeamDoc;',
   ].join('\n'), ctx);

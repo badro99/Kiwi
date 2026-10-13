@@ -938,6 +938,93 @@
   }
   function isCode(v) { return /^\d{4}$/.test(String(v || '').trim()); }
 
+  /* ═══════════════ LES CODES NE RESTENT PAS SUR LE DISQUE ═══════════════════
+   * Chaque salarié porte le code à quatre chiffres qui lui ouvre la caisse et
+   * l'app employé (`pinCode` / `password`). Il était écrit EN CLAIR dans
+   * localStorage (kiwiTeamV2:custom) : lisible dans n'importe quel navigateur où
+   * le patron a ouvert Équipe (CLAUDE.md §6). Le patron, lui, doit continuer de
+   * le LIRE ici — c'est voulu, voir functions/api/store.js › stripTeamCodes.
+   *
+   * La règle : le disque ne garde un code que tant que le serveur ne l'a pas.
+   *   · le code vit en mémoire (window.__kiwiTeamV2), comme avant ;
+   *   · persistTeams() l'ôte de la copie locale d'un salarié SEULEMENT si le
+   *     serveur a confirmé ce code (`serverCodes` : lu par hydrateCodes(), ou
+   *     accepté par une remontée réussie). Un code que le serveur n'a pas ne
+   *     quitte jamais le disque : jamais de perte ;
+   *   · un salarié dont le code a été ôté porte `hasCode: true` (jamais le code),
+   *     et le patron le retrouve au chargement depuis la copie serveur.
+   *
+   * ⚠ Le danger n'est pas la lecture, c'est le RENVOI. La remontée du roster
+   * (staff_pins, le document `team`, d'où l'app employé tire ses accès)
+   * REMPLACE ce que le serveur porte par ce que le navigateur envoie : un
+   * navigateur qui a oublié des codes les effacerait chez le serveur, et les
+   * caissières se retrouveraient devant un pavé qui n'ouvre plus. Donc, tant
+   * qu'un salarié a `hasCode` sans code en mémoire (« non résolu »), RIEN ne part :
+   * ni publishPins(), ni la remontée du document (canPush de cloud-doc.js). */
+  function memberCode(m) {
+    if (!m) return '';
+    if (isCode(m.pinCode)) return String(m.pinCode).trim();
+    return isCode(m.password) ? String(m.password).trim() : '';
+  }
+  function codeUnresolved(m) { return !!(m && m.hasCode && !memberCode(m)); }
+  function rosterHasUnresolved(members) { return (Array.isArray(members) ? members : []).some(codeUnresolved); }
+  /* La copie qui va sur le disque : sans le code des salariés que le serveur a. */
+  function diskMembers(members, serverCodes) {
+    const known = serverCodes || {};
+    return (Array.isArray(members) ? members : []).map((m) => {
+      const code = memberCode(m);
+      if (!m || !code || !m.id || known[m.id] !== code) return m;
+      const { pinCode, password, ...rest } = m;
+      return { ...rest, hasCode: true };
+    });
+  }
+  /* La copie qui part sur le réseau : `hasCode` est un fait local, il ne voyage pas. */
+  function outboundMembers(members) {
+    return (Array.isArray(members) ? members : []).map((m) => {
+      if (!m || !('hasCode' in m)) return m;
+      const { hasCode, ...rest } = m;
+      return rest;
+    });
+  }
+  /* La fusion garde « le nôtre d'abord » ; elle n'oublie pas pour autant un code
+     que seul l'autre côté porte. */
+  function fillCodes(members, theirs) {
+    const byId = Object.create(null);
+    (Array.isArray(theirs) ? theirs : []).forEach((t) => { if (t && t.id) byId[t.id] = t; });
+    return (Array.isArray(members) ? members : []).map((m) => {
+      if (!m || memberCode(m)) return m;
+      const code = memberCode(byId[m.id]);
+      return code ? { ...m, pinCode: code, password: code } : m;
+    });
+  }
+  /* Ce que dit la copie serveur du patron : note ce que le serveur détient
+     (`serverCodes`), rend les codes aux salariés qui l'attendent, et lâche le
+     drapeau de ceux dont la copie serveur est lue en clair et n'a PAS de code
+     (elle seule fait foi : sinon ils bloqueraient la remontée pour toujours).
+     Une copie sans AUCUN code lisible est une copie expurgée (compte non patron) :
+     on n'en conclut rien. Résultat : { members, serverCodes }. */
+  function applyServerCodes(members, serverMembers, serverCodes) {
+    const known = { ...(serverCodes || {}) };
+    const theirs = Array.isArray(serverMembers) ? serverMembers : [];
+    const readable = theirs.some((t) => memberCode(t));
+    const byId = Object.create(null);
+    theirs.forEach((t) => {
+      if (!t || !t.id) return;
+      byId[t.id] = t;
+      const c = memberCode(t);
+      if (c) known[t.id] = c;
+    });
+    const out = (Array.isArray(members) ? members : []).map((m) => {
+      if (!m || memberCode(m)) return m;
+      const c = m.id && known[m.id];
+      if (c) return { ...m, pinCode: c, password: c };
+      if (m.hasCode && readable) { const { hasCode, ...rest } = m; return rest; }
+      return m;
+    });
+    return { members: out, serverCodes: known };
+  }
+  const serverCodes = Object.create(null);   // id → code que le serveur détient (jamais écrit sur le disque)
+
   /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════
    * The till does not read this roster: it asks /api/config for the store's
    * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the
@@ -959,9 +1046,13 @@
       if (!window.KiwiConfig || !window.KiwiConfig.syncPins) return;
       const seen = Object.create(null);
       const pins = [];
-      getMembers(teamKey(venue)).forEach((m) => {
-        const code = isCode(m.pinCode) ? String(m.pinCode).trim()
-          : (isCode(m.password) ? String(m.password).trim() : '');
+      const roster = getMembers(teamKey(venue));
+      /* Un salarié dont le code n'est pas encore revenu du serveur : publier
+         maintenant REMPLACERAIT staff_pins sans lui, et sa caisse ne l'ouvrirait
+         plus. On attend que le roster soit complet (hydrateCodes). */
+      if (rosterHasUnresolved(roster)) return;
+      roster.forEach((m) => {
+        const code = memberCode(m);
         if (!code || seen[code]) return;                    // no code yet, or a duplicate
         seen[code] = 1;
         pins.push({
@@ -1272,7 +1363,7 @@
       const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
-          out.byVenue[k] = root.byVenue[k];
+          out.byVenue[k] = diskMembers(root.byVenue[k], serverCodes);
           out.hoursByVenue[k] = root.hoursByVenue[k] || {};
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
           out.planningByVenue[k] = root.planningByVenue[k] || {};
@@ -1411,7 +1502,7 @@
     ((mine && mine.members) || []).forEach(take);
     ((theirs && theirs.members) || []).forEach(take);
     return {
-      members,
+      members: fillCodes(members, theirs && theirs.members),
       removed,
       hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
       shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
@@ -1431,7 +1522,7 @@
         const root = window.__kiwiTeamV2;
         if (!k) return { members: [], removed: [], hours: {}, shifts: {}, planning: {}, locks: {} };
         return scopeTeamDoc({
-          members: root.byVenue[k] || [],
+          members: outboundMembers(root.byVenue[k] || []),
           removed: root.removedByVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
@@ -1455,6 +1546,22 @@
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
       merge: mergeTeamDoc,
+      /* Voir « LES CODES NE RESTENT PAS SUR LE DISQUE » : un roster qui a oublié des
+         codes ne remonte pas (il les effacerait chez le serveur). */
+      canPush: () => {
+        const k = teamVenueKey();
+        const ok = !k || !rosterHasUnresolved(window.__kiwiTeamV2.byVenue[k]);
+        if (!ok) heldPush = true;
+        return ok;
+      },
+      onPushed: (doc) => {
+        let changed = false;
+        ((doc && doc.members) || []).forEach((m) => {
+          const c = memberCode(m);
+          if (c && m.id && serverCodes[m.id] !== c) { serverCodes[m.id] = c; changed = true; }
+        });
+        if (changed) persistTeams();           // le serveur l'a : le disque peut le lâcher
+      },
       isEmpty: (d) => !d || !((d.members && d.members.length) || (d.removed && d.removed.length)),
       // Le roster vient d'arriver du serveur : la page ouverte doit le montrer,
       // sinon le commerçant regarde une équipe vide qui n'existe plus.
@@ -1462,9 +1569,36 @@
     });
     return teamCloud;
   }
+  let heldPush = false;   // une remontée a été retenue faute de codes : à relancer une fois le roster complet
+  /* Rend aux salariés leur code depuis la copie serveur du patron (le disque ne
+   * le garde plus), et note ce que le serveur détient. Lecture directe : un
+   * `pull` conclut « déjà à jour » dès que la révision est connue, donc il ne
+   * rendrait jamais un code que la copie locale n'a plus. Une panne ne change
+   * rien : les salariés restent « non résolus », et RIEN ne part (canPush /
+   * publishPins), donc le serveur ne perd rien. */
+  function hydrateCodes() {
+    const c = teamCloudInit();
+    const slug = teamSlug();
+    const k = teamVenueKey();
+    if (!c || !slug || !k || !c.enabled()) return Promise.resolve(false);
+    return fetch('/api/store?feature=team&merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
+      .then((r) => (r && r.ok ? r.json() : null))
+      .then((res) => {
+        if (!res || slug !== teamSlug() || k !== teamVenueKey()) return false;
+        const root = window.__kiwiTeamV2;
+        const applied = applyServerCodes(root.byVenue[k] || [], res.data && res.data.members, serverCodes);
+        Object.assign(serverCodes, applied.serverCodes);
+        root.byVenue[k] = applied.members;
+        persistTeams();                       // ce que le serveur a confirmé quitte le disque
+        if (!rosterHasUnresolved(applied.members) && heldPush) { heldPush = false; c.push(0, true); }
+        if (pageActive) { try { render(); } catch (_) {} }
+        return true;
+      })
+      .catch(() => false);
+  }
   function teamCloudBind() {
     const c = teamCloudInit();
-    if (c) Promise.resolve(c.bind()).then(() => publishPins()).catch(() => {});
+    if (c) Promise.resolve(c.bind()).then(() => hydrateCodes()).then(() => publishPins()).catch(() => {});
   }
   function teamCloudPush() {
     const c = teamCloudInit();
@@ -3207,8 +3341,12 @@
        * régénérait en douce le code du caissier, qui se retrouvait bloqué
        * devant la caisse sans savoir pourquoi. Seule une VRAIE création
        * (aucun code existant) en fabrique un. */
-      password: code || (prev && prev.password) || makeCode(),
+      password: code || (prev && prev.password) || (prev && prev.hasCode ? '' : makeCode()),
       pinCode: code || (prev && prev.pinCode) || '',   // en phase avec la caisse
+      /* Son code existe mais n'est pas revenu du serveur : on ne lui en invente
+         pas un (corriger un numéro de téléphone changerait son code), et son
+         drapeau reste, donc rien ne part tant qu'il n'est pas résolu. */
+      ...((!code && prev && prev.hasCode && !memberCode(prev)) ? { hasCode: true } : {}),
       function: data.function,
       department: data.department || '',
       contract: data.contract || '',
@@ -3300,7 +3438,8 @@
 
             <section class="kt-pv-sec kt-pv-code">
               <h4>${esc(T.edCodeT)}</h4>
-              ${code ? `<div class="kt-pv-code-row">
+              ${(!code && m.hasCode) ? `<div class="kt-pv-code-row"><b>••••</b></div>
+              <p class="kt-pv-hint">${esc(T.codeKeep)}</p>` : code ? `<div class="kt-pv-code-row">
                 <b data-kt-pv-code aria-live="polite">••••</b>
                 <button type="button" class="kt-ed-btn" data-kt-pv-reveal aria-pressed="false">${svgIcon('eye', 16)}<span>${esc(T.pvShow)}</span></button>
               </div>

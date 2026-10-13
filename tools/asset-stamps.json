@@ -212,8 +212,8 @@
     "sha": "b89c71e8c7855723"
   },
   "assets/cloud-doc.js": {
-    "v": "9",
-    "sha": "94db6f348ad01c03"
+    "v": "10",
+    "sha": "92e574fabbdc9c9c"
   },
   "assets/color-palette.js": {
     "v": "6",
@@ -1028,8 +1028,8 @@
     "sha": "6341af9080886677"
   },
   "assets/team.js": {
-    "v": "305",
-    "sha": "641fdd2dc834a093"
+    "v": "306",
+    "sha": "4a0a3b8d32248160"
   },
   "assets/tenant-purge.js": {
     "v": "2",

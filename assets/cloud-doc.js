@@ -438,6 +438,9 @@
    * opts.read()         le document local du magasin courant
    * opts.write(doc)     le remplacer + prévenir l'écran. NE DOIT PAS reprogrammer
    *                     de remontée : le miroir décide lui-même quand repousser.
+   * opts.canPush()      optionnel — faux = ce document ne doit pas partir pour
+   *                     l'instant (423 « held », marque « modifié » gardée)
+   * opts.onPushed(doc)   optionnel — appelé quand le serveur a accepté `doc`
    * opts.merge(a, b)    optionnel — a = le nôtre, b = celui du serveur
    * opts.isEmpty(doc)   optionnel
    * opts.onPulled(doc)  optionnel — appelé après une hydratation réussie
@@ -605,6 +608,18 @@
       o = o || {};
       var explicit = !!o.explicit;
       if (!on()) return Promise.resolve({ ok: false, status: 403, error: 'disabled', rev: st.rev });
+      /* Un document qui n'est pas en état de partir (opts.canPush) ne part pas :
+       * remonter une copie qui a oublié une partie de ce que le serveur porte
+       * l'EFFACERAIT là-bas. Ce n'est pas un échec : la marque « modifié » reste, et
+       * c'est la fonctionnalité qui relance (push) quand le document est complet. */
+      if (opts.canPush) {
+        var allowed = true;
+        try { allowed = !!opts.canPush(); } catch (_) { allowed = false; }
+        if (!allowed) {
+          if (!explicit && !dirtyToken(slugOf())) markDirty(slugOf());
+          return Promise.resolve({ ok: false, status: 423, error: 'held', rev: st.rev });
+        }
+      }
       var slug = slugOf();
       var sentDirty = explicit ? null : (dirtyToken(slug) || markDirty(slug));
       var hasExplicitData = Object.prototype.hasOwnProperty.call(o, 'data');
@@ -672,6 +687,9 @@
             st.rev = +res.j.rev || 0;
             writeRev(slug, st.rev);
             clearRefused(slug);
+            /* Le serveur a ACCEPTÉ ce document : une fonctionnalité qui ne garde
+               en local que ce que le serveur n'a pas sait désormais quoi lâcher. */
+            if (opts.onPushed) { try { opts.onPushed(payloadData); } catch (_) {} }
             if (!explicit || identical(requestedData, opts.read())) clearDirty(slug, sentDirty || dirtyToken(slug));
             if (explicit && identical(requestedData, opts.read())) {
               if (st.timer) clearTimeout(st.timer);

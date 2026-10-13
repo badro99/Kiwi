@@ -1582,6 +1582,7 @@ section('Whole-project regressions');
     'guest-options-test.mjs',
     'pos-truth-a-test.mjs',
     'employee-truth-test.mjs',
+    'team-codes-at-rest-test.mjs',
     'serveur-kitchen-truth-test.mjs',
     'kds-data-states-test.mjs',
     'serveur-data-states-test.mjs',
