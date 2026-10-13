@@ -1,0 +1,393 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · tokens-2027.css, les jetons de la direction 2027 (--k-*).
+ *
+ * Source : docs/specs/kiwi-design-2027.md §5 (couleur), §6 (type), §7 (espace,
+ * grille, rayons, élévation, matières), §14.1 et §14.2 (mouvement), §16
+ * (contraste accru), §20.7 (thème). Étape 1 : rien ne charge encore ce
+ * fichier, et rien ne change à l'écran drapeaux éteints.
+ *
+ * COHABITATION AVEC assets/tokens.css
+ *   Ce fichier ne déclare QUE des propriétés --k-* (plus ses @font-face). Le
+ *   préfixe ne rencontre aucun nom de tokens.css : un nom réutilisé échouerait
+ *   en silence (« inherit »), jamais en erreur. tools/token-contrast-test.js
+ *   refuse toute propriété hors --k-* et tout nom --k-* déjà pris par
+ *   tokens.css. Les --k-* sont déclarés sur :root sans condition (§20.7) :
+ *   le drapeau de peau choisit quelle surface tourne, jamais si les jetons
+ *   existent.
+ *
+ * THÈME (§20.7), quatre règles, dans cet ordre
+ *   1. :root                                  clair (défaut)
+ *   2. body[data-vexel-mode="light"]          redéclare le clair, pour qu'un
+ *                                             élément du kit corresponde à ce
+ *                                             que la page peint vraiment
+ *   3. :root[data-theme="dark"], body[data-vexel-mode="dark"]   sombre
+ *   4. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+ *                                             sombre, quand rien ne choisit
+ *   Les blocs 2, 3 et 4 portent exactement les mêmes jetons que 1 (ou que le
+ *   jeu sombre) : token-contrast-test le vérifie déclaration par déclaration.
+ *   body[data-vexel-mode] est plus proche des éléments que :root, donc il
+ *   l'emporte. C'est voulu : la page décide de ce qu'elle peint.
+ *
+ * Aucun hexadécimal ni rgba() ailleurs que dans ce fichier (kit-lint).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Polices (§6.1) : les seules @font-face du kit ──────────────────────────
+ * Latin étendu AVANT latin, comme fontsource. Les fichiers vivent dans
+ * assets/fonts/ ; l'URL est résolue depuis le dossier de CE fichier
+ * (assets/kit/), d'où « ../fonts/ ». */
+@font-face { font-family: "Inter Tight"; src: url("../fonts/inter-tight-latin-ext.woff2?v=1") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Inter Tight"; src: url("../fonts/inter-tight-latin.woff2?v=1") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Kiwi Arabic"; src: url("../fonts/plex-arabic-400.woff2?v=1") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: "Kiwi Arabic"; src: url("../fonts/plex-arabic-500.woff2?v=1") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: "Kiwi Arabic"; src: url("../fonts/plex-arabic-600.woff2?v=1") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: "Kiwi Arabic"; src: url("../fonts/plex-arabic-700.woff2?v=1") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: "Inter Tight Fallback"; src: local("Arial"); size-adjust: 97%; ascent-override: 99.9%; descent-override: 24.9%; line-gap-override: 0%;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD, U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+/* ═══ 1 · Ce qui ne dépend ni du thème ni de la langue ═══════════════════════ */
+:root {
+  /* Pile du kit (§6.1) : jamais le --sans de la page. Plex avant tout visage
+     qui pourrait réclamer l'arabe ; le visage de secours porte une plage. */
+  --k-font: "Inter Tight", "Kiwi Arabic", "Inter Tight Fallback", system-ui;
+
+  /* Espace (§7.1) : aucune autre valeur. */
+  --k-space-1: 4px;
+  --k-space-2: 8px;
+  --k-space-3: 12px;
+  --k-space-4: 16px;
+  --k-space-5: 20px;
+  --k-space-6: 24px;
+  --k-space-8: 32px;
+  --k-space-10: 40px;
+  --k-space-12: 48px;
+  --k-space-16: 64px;
+
+  /* Rayons (§7.3). Capsule = min-height / 2 ; cercle = 50 % : pas de jeton. */
+  --k-r-1: 8px;
+  --k-r-2: 12px;
+  --k-r-3: 20px;
+  --k-r-4: 28px;
+
+  /* Échelle de type (§6.2) : six pas, en rem. Sur iPad, KiwiDynamicType pose
+     --type-scale ; sur iPhone c'est -webkit-text-size-adjust, donc 1 ici. Un
+     appareil reçoit l'un ou l'autre, jamais les deux (§6.4). */
+  --k-fs-display: calc(2.75rem * var(--type-scale, 1));
+  --k-fs-title: calc(1.75rem * var(--type-scale, 1));
+  --k-fs-heading: calc(1.25rem * var(--type-scale, 1));
+  --k-fs-body: calc(1.0625rem * var(--type-scale, 1));
+  --k-fs-callout: calc(0.9375rem * var(--type-scale, 1));
+  --k-fs-footnote: calc(0.8125rem * var(--type-scale, 1));
+
+  /* Interlignes, latin (l'arabe les remplace plus bas). */
+  --k-lh-display: 1.05;
+  --k-lh-title: 1.15;
+  --k-lh-heading: 1.25;
+  --k-lh-body: 1.4;
+  --k-lh-callout: 1.35;
+  --k-lh-footnote: 1.35;
+
+  /* Approche (tracking), latin (§6.1, §6.2). Nulle en arabe, plus bas. */
+  --k-track-display: -0.02em;
+  --k-track-title: -0.01em;
+  --k-track-heading: 0;
+  --k-track-body: 0.01em;
+  --k-track-callout: 0.01em;
+  --k-track-footnote: 0.015em;
+
+  /* Graisses (§6.2) : 400, 500, 600. Seul Bold Text les monte d'un cran
+     (§16), et son pont natif n'existe pas encore : elles ne bougent pas. */
+  --k-fw-display: 600;
+  --k-fw-title: 600;
+  --k-fw-heading: 600;
+  --k-fw-body: 400;
+  --k-fw-body-strong: 600;
+  --k-fw-callout: 500;
+  --k-fw-callout-strong: 600;
+  --k-fw-footnote: 500;
+  --k-fw-footnote-strong: 600;
+
+  /* Grille (§7.2) : classe « compact », moins de 402 de large. */
+  --k-grid-margin: 16px;
+  --k-grid-cols: 4;
+  --k-grid-gap: 12px;
+  --k-grid-max: none;
+
+  /* Matières (§7.5) : la recette du verre, appliquée par le chrome seul. */
+  --k-chrome-filter: blur(24px) saturate(180%);
+
+  /* Anneau de focus et bord de sélection (§10.0, §16). */
+  --k-focus-w: 2px;
+  --k-select-edge-w: 1px;
+
+  /* Durées (§14.1) : aucune autre valeur. */
+  --k-dur-1: 90ms;
+  --k-dur-2: 160ms;
+  --k-dur-3: 240ms;
+  --k-lens-stretch: 115ms;
+  --k-dur-4: 310ms;
+  --k-dur-5: 350ms;
+  --k-dur-6: 400ms;
+  --k-dur-7: 600ms;
+  --k-dur-8: 1100ms;
+  --k-dur-9: 1200ms;
+  --k-dur-toast: 4000ms;
+  --k-dur-toast-action: 8000ms;
+
+  /* Courbes (§14.2). Le ressort : sélection et relâchement seulement. */
+  --k-spring: cubic-bezier(0.34, 1.45, 0.5, 1);
+  --k-glide: cubic-bezier(0.32, 0.72, 0, 1);
+  --k-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Arabe : interlignes plus hautes, approche toujours nulle (§6.2). Le
+   html.kiwi-native[lang="ar"] *{letter-spacing:0!important} du natif ne
+   traverse pas un shadow root, d'où des jetons (§20.2). */
+html[lang="ar"] {
+  --k-lh-display: 1.25;
+  --k-lh-title: 1.35;
+  --k-lh-heading: 1.4;
+  --k-lh-body: 1.6;
+  --k-lh-callout: 1.5;
+  --k-lh-footnote: 1.5;
+  --k-track-display: 0;
+  --k-track-title: 0;
+  --k-track-heading: 0;
+  --k-track-body: 0;
+  --k-track-callout: 0;
+  --k-track-footnote: 0;
+}
+
+/* Grille par classe de largeur (§7.2). Les mêmes seuils que layout.js. */
+@media (min-width: 402px) { :root { --k-grid-margin: 20px; } }
+@media (min-width: 600px) { :root { --k-grid-margin: 24px; --k-grid-cols: 8; --k-grid-gap: 16px; } }
+@media (min-width: 1024px) { :root { --k-grid-cols: 12; } }
+@media (min-width: 1440px) { :root { --k-grid-margin: 32px; --k-grid-gap: 24px; --k-grid-max: 1200px; } }
+
+/* Cuisine (§13.6, §7.2) : la même échelle sur une racine plus grande, 20, 24
+   ou 28 px (S, M, L) ; --k-kds-root reçoit le réglage. C'est la SEULE racine
+   que le kit pose, et la seule déclaration font-size que kit-lint admet hors
+   des pas. Un composant n'a jamais sa propre racine. */
+html[data-k-surface="kds"] {
+  font-size: var(--k-kds-root, 24px);
+  --k-grid-margin: 24px;
+  --k-grid-gap: 16px;
+  --k-grid-max: none;
+}
+
+/* ═══ 2 · Clair (§5.1) ═══════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  --k-bg: #F7F5F0;
+  --k-surface-1: #FFFDFA;
+  --k-surface-2: #EFECE5;
+  --k-surface-3: #E4E0D6;
+  --k-line: #E2DDD2;
+  --k-line-strong: #8C877C;
+  --k-ink-1: #0A0F0D;
+  --k-ink-2: #454B47;
+  --k-ink-3: #666B65;
+  --k-accent: #0B6E4F;
+  --k-accent-ink: #0B6E4F;
+  --k-accent-pressed: #08573E;
+  --k-on-accent: #FFFDFA;
+  --k-accent-tint: #E2EFE8;
+  --k-select: #FFFDFA;
+  --k-warning: #8A5300;
+  --k-warning-tint: #FBEBCB;
+  --k-warning-solid: #F0A93E;
+  --k-on-warning: #0A0F0D;
+  --k-danger: #B42318;
+  --k-danger-tint: #FBE7E4;
+  --k-danger-solid: #B42318;
+  --k-on-danger: #FFFDFA;
+  --k-info: #2558A8;
+  --k-info-tint: #E5EDF8;
+  --k-inverse: #1C2320;
+  --k-on-inverse: #F7F5F0;
+  --k-inverse-accent: #5FD9A3;
+  --k-inverse-danger: #FF8A7A;
+  --k-focus: #0B6E4F;
+  --k-scrim: rgba(10, 15, 13, .32);
+  --k-scrim-push: rgba(10, 15, 13, .08);
+  --k-chrome: rgba(247, 245, 240, .85);
+
+  /* Élévation (§7.4). Niveau 2 : popover, capsule d'onglets, barre de note,
+     toast. Niveau 3 : feuille et dialogue, tant qu'ils sont ouverts. Le
+     popover repose sur surface-1 en clair, sur surface-3 en sombre ; les
+     liserés du chrome et du toast n'existent qu'en sombre. */
+  --k-popover: var(--k-surface-1);
+  --k-shadow-1: 0 1px 2px rgba(10, 15, 13, .06), 0 2px 8px rgba(10, 15, 13, .04);
+  --k-shadow-2: 0 4px 12px rgba(10, 15, 13, .08), 0 12px 32px rgba(10, 15, 13, .10);
+  --k-shadow-3: 0 -4px 16px rgba(10, 15, 13, .06), 0 -16px 48px rgba(10, 15, 13, .12);
+  --k-chrome-edge: transparent;
+  --k-toast-edge: transparent;
+}
+
+/* La page peint clair alors que le html dit sombre (ou que rien ne le dit) :
+   le body redéclare le jeu clair, et le kit suit ce que la page peint (§20.7). */
+body[data-vexel-mode="light"] {
+  color-scheme: light;
+
+  --k-bg: #F7F5F0;
+  --k-surface-1: #FFFDFA;
+  --k-surface-2: #EFECE5;
+  --k-surface-3: #E4E0D6;
+  --k-line: #E2DDD2;
+  --k-line-strong: #8C877C;
+  --k-ink-1: #0A0F0D;
+  --k-ink-2: #454B47;
+  --k-ink-3: #666B65;
+  --k-accent: #0B6E4F;
+  --k-accent-ink: #0B6E4F;
+  --k-accent-pressed: #08573E;
+  --k-on-accent: #FFFDFA;
+  --k-accent-tint: #E2EFE8;
+  --k-select: #FFFDFA;
+  --k-warning: #8A5300;
+  --k-warning-tint: #FBEBCB;
+  --k-warning-solid: #F0A93E;
+  --k-on-warning: #0A0F0D;
+  --k-danger: #B42318;
+  --k-danger-tint: #FBE7E4;
+  --k-danger-solid: #B42318;
+  --k-on-danger: #FFFDFA;
+  --k-info: #2558A8;
+  --k-info-tint: #E5EDF8;
+  --k-inverse: #1C2320;
+  --k-on-inverse: #F7F5F0;
+  --k-inverse-accent: #5FD9A3;
+  --k-inverse-danger: #FF8A7A;
+  --k-focus: #0B6E4F;
+  --k-scrim: rgba(10, 15, 13, .32);
+  --k-scrim-push: rgba(10, 15, 13, .08);
+  --k-chrome: rgba(247, 245, 240, .85);
+  --k-popover: var(--k-surface-1);
+  --k-shadow-1: 0 1px 2px rgba(10, 15, 13, .06), 0 2px 8px rgba(10, 15, 13, .04);
+  --k-shadow-2: 0 4px 12px rgba(10, 15, 13, .08), 0 12px 32px rgba(10, 15, 13, .10);
+  --k-shadow-3: 0 -4px 16px rgba(10, 15, 13, .06), 0 -16px 48px rgba(10, 15, 13, .12);
+  --k-chrome-edge: transparent;
+  --k-toast-edge: transparent;
+}
+
+/* ═══ 3 · Sombre (§5.2) ══════════════════════════════════════════════════════
+ * Aucun jeton sombre ne vaut #0B6E4F. Au niveau 1 l'ombre disparaît : la
+ * séparation se fait par le pas de surface. */
+:root[data-theme="dark"],
+body[data-vexel-mode="dark"] {
+  color-scheme: dark;
+
+  --k-bg: #0A0D0C;
+  --k-surface-1: #141917;
+  --k-surface-2: #1C2220;
+  --k-surface-3: #262D2A;
+  --k-line: #29302D;
+  --k-line-strong: #6B746F;
+  --k-ink-1: #F2F0EA;
+  --k-ink-2: #B3B9B4;
+  --k-ink-3: #848B85;
+  --k-accent: #3CCB8F;
+  --k-accent-ink: #5FD9A3;
+  --k-accent-pressed: #2FB27C;
+  --k-on-accent: #04140D;
+  --k-accent-tint: #123528;
+  --k-select: #262D2A;
+  --k-warning: #F2B85B;
+  --k-warning-tint: #3A2C12;
+  --k-warning-solid: #F0A93E;
+  --k-on-warning: #0A0F0D;
+  --k-danger: #FF8A7A;
+  --k-danger-tint: #3D1A16;
+  --k-danger-solid: #C8372D;
+  --k-on-danger: #FFFDFA;
+  --k-info: #8AB4F8;
+  --k-info-tint: #172436;
+  --k-inverse: #323A36;
+  --k-on-inverse: #F2F0EA;
+  --k-inverse-accent: #5FD9A3;
+  --k-inverse-danger: #FF8A7A;
+  --k-focus: #7DF2B0;
+  --k-scrim: rgba(0, 0, 0, .56);
+  --k-scrim-push: rgba(0, 0, 0, .30);
+  --k-chrome: rgba(20, 25, 23, .85);
+  --k-popover: var(--k-surface-3);
+  --k-shadow-1: none;
+  --k-shadow-2: 0 8px 24px rgba(0, 0, 0, .5);
+  --k-shadow-3: 0 -16px 48px rgba(0, 0, 0, .6);
+  --k-chrome-edge: var(--k-line);
+  --k-toast-edge: var(--k-line-strong);
+}
+
+/* Rien ne choisit le thème : le système décide. Même jeu que ci-dessus. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --k-bg: #0A0D0C;
+    --k-surface-1: #141917;
+    --k-surface-2: #1C2220;
+    --k-surface-3: #262D2A;
+    --k-line: #29302D;
+    --k-line-strong: #6B746F;
+    --k-ink-1: #F2F0EA;
+    --k-ink-2: #B3B9B4;
+    --k-ink-3: #848B85;
+    --k-accent: #3CCB8F;
+    --k-accent-ink: #5FD9A3;
+    --k-accent-pressed: #2FB27C;
+    --k-on-accent: #04140D;
+    --k-accent-tint: #123528;
+    --k-select: #262D2A;
+    --k-warning: #F2B85B;
+    --k-warning-tint: #3A2C12;
+    --k-warning-solid: #F0A93E;
+    --k-on-warning: #0A0F0D;
+    --k-danger: #FF8A7A;
+    --k-danger-tint: #3D1A16;
+    --k-danger-solid: #C8372D;
+    --k-on-danger: #FFFDFA;
+    --k-info: #8AB4F8;
+    --k-info-tint: #172436;
+    --k-inverse: #323A36;
+    --k-on-inverse: #F2F0EA;
+    --k-inverse-accent: #5FD9A3;
+    --k-inverse-danger: #FF8A7A;
+    --k-focus: #7DF2B0;
+    --k-scrim: rgba(0, 0, 0, .56);
+    --k-scrim-push: rgba(0, 0, 0, .30);
+    --k-chrome: rgba(20, 25, 23, .85);
+    --k-popover: var(--k-surface-3);
+    --k-shadow-1: none;
+    --k-shadow-2: 0 8px 24px rgba(0, 0, 0, .5);
+    --k-shadow-3: 0 -16px 48px rgba(0, 0, 0, .6);
+    --k-chrome-edge: var(--k-line);
+    --k-toast-edge: var(--k-line-strong);
+  }
+}
+
+/* ═══ 4 · Contraste accru (§16) ══════════════════════════════════════════════
+ * --k-line devient --k-line-strong ; ink-3 devient ink-2 ; le bord de sélection
+ * fait 2 px, l'anneau de focus 3 px, le chrome devient plein. « Couleurs
+ * système plus sombres » se comporte pareil. Les sélecteurs sont renforcés
+ * (:root:root:root, [data-vexel-mode] doublé) pour passer devant TOUTES les
+ * règles de thème ci-dessus, sombre comprise : sans cela, l'hexadécimal du
+ * thème gagnerait et le réglage ne ferait rien, en silence.
+ * Reduce Transparency et Bold Text n'ont pas de pont natif (§16, §23.4) :
+ * matières et graisses ne bougent pas tant qu'il n'existe pas. */
+@media (prefers-contrast: more) {
+  :root:root:root,
+  body[data-vexel-mode][data-vexel-mode] {
+    --k-line: var(--k-line-strong);
+    --k-ink-3: var(--k-ink-2);
+    --k-chrome: var(--k-surface-1);
+    --k-chrome-filter: none;
+    --k-select-edge-w: 2px;
+    --k-focus-w: 3px;
+  }
+}
