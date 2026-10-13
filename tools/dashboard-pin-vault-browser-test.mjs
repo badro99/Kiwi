@@ -59,7 +59,7 @@ const S = suite('dashboard-pin-vault', { browser });
 const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); };
 
 /* Comment le « serveur » répond au prochain /api/pin/verify. */
-let verifyMode = 'normal';       // normal | refuse-all | refuse-unconfigured | down
+let verifyMode = 'normal';       // normal | refuse-all | refuse-unconfigured | down | expired-html | expired-json | forbidden
 let rosterMode = 'full';         // full | empty (le /api/config du compte ne rend personne)
 const asked = [];
 const json = (status, body) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -77,6 +77,14 @@ async function open(tr, ctx, { legacy = null, onboarded = true } = {}) {
       try { body = JSON.parse(req.postData() || '{}'); } catch (_) {}
       asked.push(Boolean(body.pin));
       if (verifyMode === 'down') return req.abort('failed');
+      /* La session ne vaut plus rien : le serveur n'a jugé AUCUN code. Les deux
+         formes réelles : le portier (functions/_middleware.js) répond la page de
+         connexion en HTML avant verify.js ; verifyAccountPin répond 'unauthorized'
+         quand seul un cookie d'équipe a passé le portier. Plus un 403 sans corps,
+         que rien ne qualifie. */
+      if (verifyMode === 'expired-html') return req.respond({ status: 401, contentType: 'text/html; charset=utf-8', body: '<!doctype html><title>Kiwi</title><form action="/auth/login"></form>' });
+      if (verifyMode === 'expired-json') return req.respond(json(401, { error: 'unauthorized' }));
+      if (verifyMode === 'forbidden') return req.respond({ status: 403, contentType: 'text/plain', body: 'Forbidden' });
       if (verifyMode === 'normal' && body.pin === CODE) return req.respond(json(200, { ok: true, staff: { id: 'st_owner', name: 'Amira', role: 'owner' }, merchant: 'vault-test' }));
       if (verifyMode === 'refuse-unconfigured') return req.respond(json(401, { error: 'bad-pin', configured: false }));
       return req.respond(json(401, { error: 'bad-pin' }));
@@ -235,6 +243,63 @@ try {
     check(await outcome(page) === 'refused', 'EN LIGNE, le serveur refuse : la porte reste fermée malgré la ligne salée');
     await page.waitForFunction(() => window.KiwiDashPinVault.count() === 0, { timeout: 5000 });
     check(await vaultCount(page) === 0, 'et la ligne qui reconnaissait ce code est effacée');
+    verifyMode = 'normal';
+  });
+
+  await S.run('session expirée · le bon code n\'est pas « incorrect » et sa ligne reste', async (tr) => {
+    verifyMode = 'normal';
+    const ctx = await browser.createBrowserContext();
+    tr.defer(() => ctx.close());
+    {
+      const first = await open(tr, ctx);
+      await typeCode(first, CODE);
+      assert.equal(await outcome(first), 'unlocked');
+      await first.waitForFunction(() => window.KiwiDashPinVault.count() === 1, { timeout: 5000 });
+      await first.close();
+    }
+    /* 'account-revoked' n'est pas rejoué ici : assets/auth-guard.js purge le
+       navigateur et renvoie vers la connexion dès qu'un /api/* la répond, ce qui
+       est voulu pour un compte supprimé. Le pavé la classe quand même « session
+       morte » (dashboard-pin-vault-test.mjs) au cas où le garde ne tire pas. */
+    for (const mode of ['expired-html', 'expired-json']) {
+      tr.step(`the session is dead (${mode}); the owner types the CORRECT code`);
+      verifyMode = mode;
+      const before = asked.length;
+      const page = await open(tr, ctx);
+      check(await vaultCount(page) === 1, `${mode} · la ligne est encore là avant la tentative`);
+      await typeCode(page, CODE);
+      check(await outcome(page) === 'refused', `${mode} · la porte reste fermée : le code n'a été jugé par personne`);
+      check(asked.length > before, `${mode} · le serveur a bien été interrogé (ce n'est pas un hors-ligne)`);
+      const help = await helpText(page);
+      check(/session has expired/i.test(help) && !/wrong code/i.test(help), `${mode} · elle dit « session expirée », pas « code incorrect » (« ${help.slice(0, 48)} »)`);
+      check(await page.evaluate(() => !!document.querySelector('.kiwi-lock-help a[href="/auth/logout"]')), `${mode} · et propose de se reconnecter`);
+      await sleep(400);
+      check(await vaultCount(page) === 1, `${mode} · la ligne salée n'est PAS effacée`);
+      await noPlaintext(page, `${mode} · toujours aucun code en clair`);
+      await page.close();
+    }
+    tr.step('a 403 nobody qualifies is "could not know", not a verdict: the salted row opens the code, a stranger stays out');
+    verifyMode = 'forbidden';
+    const open403 = await open(tr, ctx);
+    await typeCode(open403, CODE);
+    check(await outcome(open403) === 'unlocked', 'un 403 sans corps : ni « non » ni session morte, le repli salé ouvre le code prouvé');
+    const other403 = await open(tr, ctx);
+    await typeCode(other403, OTHER);
+    check(await outcome(other403) === 'refused', '…et un code que ce navigateur n\'a jamais vu prouver reste refusé');
+    check(await vaultCount(other403) === 1, '…sans rien effacer');
+    tr.step('the owner signs in again: the same row still opens the door');
+    verifyMode = 'normal';
+    const back = await open(tr, ctx);
+    check(await vaultCount(back) === 1, 'après reconnexion, la ligne est toujours là');
+    await typeCode(back, CODE);
+    check(await outcome(back) === 'unlocked', 'et le même code ouvre la porte');
+    tr.step('contrast: a real bad-pin from a live session still erases the row');
+    verifyMode = 'refuse-all';
+    const bad = await open(tr, ctx);
+    await typeCode(bad, CODE);
+    check(await outcome(bad) === 'refused', 'un vrai « bad-pin » refuse');
+    await bad.waitForFunction(() => window.KiwiDashPinVault.count() === 0, { timeout: 5000 });
+    check(await vaultCount(bad) === 0, '…et lui, efface la ligne');
     verifyMode = 'normal';
   });
 

@@ -231,8 +231,24 @@ ok(/if \(navigator\.onLine === false\) return Promise\.resolve\(null\);/.test(ct
 ok(/setTimeout\(\(\) => ctl\.abort\(\), ASK_TIMEOUT_MS\)/.test(ctl), 'un serveur muet ne suspend pas le pavé (délai)');
 ok(/if \(answer === 'no' && !demosOn\(\)\) \{ rejectPin\(\); return; \}/.test(flow) && !/onboardedHere|knownHere/.test(ctl),
   'un « non » du serveur est final hors démo : ni la liste du compte, ni le coffre, ni un drapeau du navigateur ne le contredisent');
-ok(/d && d\.configured === false \? 'unconfigured' : 'no'/.test(ctl) && /if \(answer === 'unconfigured'\) \{ settle\(answer\); return; \}/.test(flow),
+ok(/d\.configured === false \? 'unconfigured' : 'no'/.test(ctl) && /if \(answer === 'unconfigured'\) \{ settle\(answer\); return; \}/.test(flow),
   'seul le serveur dit « ce compte n\'a aucun code » (champ absent = configuré = porte fermée)');
+/* Un 401 n'est un « non » que si le corps le dit. Une session morte ne juge aucun code. */
+const askFn = ctl.slice(ctl.indexOf('function askServer(code)'), ctl.indexOf('function localVerify'));
+ok(/if \(why === 'bad-pin'\) return d\.configured === false \? 'unconfigured' : 'no';/.test(askFn),
+  'seule la réponse { error: \'bad-pin\' } est un « non » (c\'est ce qui efface une ligne salée)');
+ok(/why === 'unauthorized' \|\| why === 'account-revoked'\) return 'signed-out'/.test(askFn),
+  '{ error: \'unauthorized\' } et { error: \'account-revoked\' } sont « session morte », pas « non »');
+ok(/\(\) => \(r\.status === 401 \? 'signed-out' : null\)/.test(askFn),
+  'un 401 en HTML (la page de connexion du portier) est « session morte » ; un 403 illisible est « on n\'a pas pu savoir »');
+ok(!/r\.status === 401 \|\| r\.status === 403\) \{\s*[^}]*'no'\)\);/.test(askFn) && /return null;\s*\}, \(\) =>/.test(askFn),
+  'un 401 / 403 inconnu n\'est plus un « non » par défaut');
+ok(/if \(answer === 'signed-out'\) \{ settle\(answer\); return; \}/.test(flow)
+  && flow.indexOf("if (answer === 'signed-out')") < flow.indexOf('vaultNote(val, answer)'),
+  'session morte : la réponse sort AVANT le coffre, qui n\'oublie rien');
+ok(/answer === 'signed-out' && !demosOn\(\)\) \{ rejectPin\('signed-out'\); return; \}/.test(flow)
+  && /reason === 'signed-out'/.test(ctl) && /Sign in again/.test(ctl),
+  'hors démo la porte reste fermée et dit « session expirée » (FR, EN, AR), sans « code incorrect »');
 const lib = read('functions/auth/_lib.js');
 const vapSrc = lib.slice(lib.indexOf('export async function verifyAccountPin'), lib.indexOf('export async function verifyAccountPin') + 6000);
 ok(/let configured = true;/.test(vapSrc) && /catch \(__\) \{ configured = true; \}/.test(vapSrc) && /error: 'bad-pin', status: 401, configured/.test(vapSrc),

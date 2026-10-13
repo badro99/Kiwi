@@ -5919,6 +5919,9 @@
    *   'no'              le serveur a dit non
    *   'unconfigured'    le serveur a dit non ET ce compte n'a encore aucun code (rien à
    *                     taper : la porte le laisse rejoindre son installation)
+   *   'signed-out'      la SESSION n'est plus bonne (expirée, absente, compte révoqué) :
+   *                     le serveur n'a jugé aucun code. Ce n'est pas un « non » : il
+   *                     n'efface rien et ne dit pas « code incorrect »
    *   { busy: s }       le serveur limite les essais : s secondes à attendre (0 = inconnu)
    *   null              on n'a pas pu savoir (hors ligne, backend absent, délai dépassé)
    * Appareil hors ligne : on ne tente pas le réseau, la réponse est null tout de
@@ -5937,9 +5940,26 @@
     }).then((r) => {
       clearTimeout(timer);
       if (r.status === 401 || r.status === 403) {
-        /* Seul le serveur dit « ce compte n'a aucun code » ; un champ absent, ou
-           un corps illisible, vaut « configuré » : la porte reste fermée. */
-        return r.json().catch(() => null).then((d) => (d && d.configured === false ? 'unconfigured' : 'no'));
+        /* Un 401 ne veut pas toujours dire « mauvais code ». C'est le CORPS qui
+           le dit :
+             · { error: 'bad-pin' }       le serveur a jugé le code et dit non ;
+             · { error: 'unauthorized' }  verifyAccountPin n'a trouvé aucune session ;
+             · { error: 'account-revoked' } le compte de la session n'existe plus ;
+             · une page HTML (pas du JSON) : la session est expirée ou absente, c'est
+               le portier (functions/_middleware.js) qui répond avant même que
+               verify.js ne s'exécute, avec la page de connexion.
+           Seul « bad-pin » est un non, donc seul lui efface une ligne salée. Une
+           session morte ne dit rien du code : la ligne reste, et la porte invite à
+           se reconnecter. Un autre corps (403 d'un pare-feu, JSON inconnu) n'est
+           pas un jugement non plus : « on n'a pas pu savoir » (null).
+           Seul le serveur dit « ce compte n'a aucun code » ; un champ absent vaut
+           « configuré » : la porte reste fermée. */
+        return r.json().then((d) => {
+          const why = d && typeof d.error === 'string' ? d.error : '';
+          if (why === 'bad-pin') return d.configured === false ? 'unconfigured' : 'no';
+          if (why === 'unauthorized' || why === 'account-revoked') return 'signed-out';
+          return null;
+        }, () => (r.status === 401 ? 'signed-out' : null));
       }
       /* 429 is the attempt limiter answering, not a missing network. It used
          to fall into null, and the lock told an operator with Wi-Fi that the
@@ -6047,6 +6067,15 @@
           ar: 'كيوي لا يستجيب، تعذّر التحقق من الرمز. أعد المحاولة بعد لحظة.',
         };
         helpEl.textContent = msgDown[lang] || msgDown.fr;
+      } else if (reason === 'signed-out') {
+        /* The session ended: the server judged nothing, so the code is not
+           "wrong", and nothing stored for it is erased. */
+        const msgOut = {
+          fr: 'Session expirée. <a href="/auth/logout" style="color:inherit;text-decoration:underline">Reconnectez-vous</a> pour vérifier votre code.',
+          en: 'Your session has expired. <a href="/auth/logout" style="color:inherit;text-decoration:underline">Sign in again</a> to check your code.',
+          ar: 'انتهت الجلسة. <a href="/auth/logout" style="color:inherit;text-decoration:underline">سجّل الدخول من جديد</a> للتحقق من الرمز.',
+        };
+        helpEl.innerHTML = msgOut[lang] || msgOut.fr;
       } else if (reason === 'busy') {
         const mins = wait > 0 ? Math.max(1, Math.ceil(wait / 60)) : 0;
         const msgBusy = mins ? {
@@ -6398,6 +6427,10 @@
            ouverte pour un compte SANS AUCUN code, et c'est le serveur qui le dit
            ('unconfigured'), pas l'état local. En démo, la règle d'avant demeure. */
         if (answer === 'no' && !demosOn()) { rejectPin(); return; }
+        /* La session est morte : le code n'a pas été jugé, donc la porte ne
+           s'ouvre pas hors démo (ni la ligne salée, qui ne sert qu'à un serveur
+           qui ne répond pas), et ne dit pas « code incorrect ». */
+        if (answer === 'signed-out' && !demosOn()) { rejectPin('signed-out'); return; }
         finishUnlock(val, null, false);
       };
       askServer(val).then((reply) => {
@@ -6412,6 +6445,7 @@
           answer = null;
         }
         if (answer === 'unconfigured') { settle(answer); return; }   // pas une identité : rien à inscrire
+        if (answer === 'signed-out') { settle(answer); return; }     // session morte : ni identité, ni non : le coffre n'est pas touché
         vaultNote(val, answer);
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
         if (answer === null) {
