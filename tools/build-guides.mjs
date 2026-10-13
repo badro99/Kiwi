@@ -217,6 +217,19 @@ const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages'
  * laisserait diverger en silence, exactement le piège de §3. `_headers` sert
  * `/assets/*` en `max-age=3600, stale-while-revalidate`, donc une correction de
  * la lentille atteint les guides en une heure au plus, sans estampille. */
+/* La feuille de démo et la liste des métiers sont des assets ESTAMPILLÉS de la
+ * landing : leur URL doit changer quand leur contenu change, sinon le cache de
+ * Cloudflare (max-age 4 h, puis stale-while-revalidate 7 jours) continue de
+ * servir l'ancienne version aux guides, comme le 13 octobre 2026. On lit donc
+ * l'estampille dans tools/asset-stamps.json, que `bump-stamp` tient à jour.
+ * bump-stamp ne réécrit pas les pages de guides : après un bump, `--check`
+ * échoue bruyamment jusqu'à ce qu'on relance ce générateur. */
+const STAMPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'asset-stamps.json'), 'utf8'));
+function stamp(asset) {
+  const entry = STAMPS[asset];
+  if (!entry || !entry.v) throw new Error(`${asset}: aucune estampille dans tools/asset-stamps.json`);
+  return entry.v;
+}
 const landingRoutes = Object.freeze(Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`])));
 const hubRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])));
 
@@ -774,8 +787,8 @@ ${alternateLinks(cluster.routes)}
   ${pageBody(cluster, locale)}
   ${localizeFooterAnchors(footer, locale)}
   <script src="/assets/liquid-lens.js" defer></script>
-  <script src="/assets/trades.js" defer></script>
-  <script src="/assets/landing-demo-funnel.js" defer></script>
+  <script src="/assets/trades.js?v=${stamp('assets/trades.js')}" defer></script>
+  <script src="/assets/landing-demo-funnel.js?v=${stamp('assets/landing-demo-funnel.js')}" defer></script>
   <script src="/assets/articles/article.js?v=${ASSET_VERSIONS.js}" defer></script>${isArticle ? '' : `
   <script src="/assets/articles/guides-library.js?v=${ASSET_VERSIONS.library}" defer></script>`}
 </body>
@@ -847,7 +860,7 @@ writeOrCheck(path.join(ROOT, 'sitemap.xml'), renderSitemap(), drift);
 if (drift.length) {
   console.error('generated guide files are stale:');
   drift.forEach((file) => console.error(`  ${file}`));
-  console.error('run: node tools/build-guides.mjs');
+  console.error('run: node tools/build-guides.mjs (after a bump-stamp of trades.js or landing-demo-funnel.*, this is expected)');
   process.exit(1);
 }
 if (CHECK) console.log(`guide source is deterministic (${expectedOutputs.size} pages + sitemap.xml)`);
