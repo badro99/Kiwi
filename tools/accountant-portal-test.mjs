@@ -87,6 +87,8 @@ function database({ dropZ = false } = {}) {
   const opened = iso('2026-10-10T06:00:00Z');
   cash.run('e1', SHOP, 'sess-1', 'term_secret_device_01', 'open', 20000, null, null, null, null, null, 'staff-secret-id', null, opened, opened);
   cash.run('e2', SHOP, 'sess-1', 'term_secret_device_01', 'movement', null, null, null, 'out', 1500, 'achat de lait', 'staff-secret-id', null, opened, iso('2026-10-10T09:00:00Z'));
+  /* 03:30 à Casablanca le 11 : encore le jour d'activité du 10 (coupure 05:00). */
+  cash.run('e2b', SHOP, 'sess-1', 'term_secret_device_01', 'movement', null, null, null, 'in', 300, 'monnaie', 'staff-secret-id', null, opened, iso('2026-10-11T02:30:00Z'));
   cash.run('e3', SHOP, 'sess-1', 'term_secret_device_01', 'close', 52000, 51500, -500, null, null, null, 'staff-secret-id', null, opened, iso('2026-10-10T20:00:00Z'));
   cash.run('e4', OTHER, 'sess-9', 'term_other', 'open', 1, null, null, null, null, null, 'x', null, opened, opened);
 
@@ -238,6 +240,7 @@ let oct;
   ok('factures : numéro, client (nom, ICE) et totaux', oct.invoices.rows.length === 1 && oct.invoices.rows[0].number === 'F-2026-0001' && oct.invoices.rows[0].customer.name === 'SARL Atlas' && oct.invoices.rows[0].customer.ice === '001234567000012');
   const sess = oct.cash.sessions[0];
   ok('caisse : fond, sortie, comptage et écart', oct.cash.sessions.length === 1 && sess.openingCents === 20000 && sess.movements[0].amountCents === 1500 && sess.expectedCents === 52000 && sess.countedCents === 51500 && sess.gapCents === -500, JSON.stringify(sess));
+  ok('un mouvement à 03:30 est daté du jour d\'activité, pas du jour UTC', sess.movements.length === 2 && sess.movements[0].day === '2026-10-10' && sess.movements[1].day === '2026-10-10', JSON.stringify(sess.movements));
   ok('Z : lu pour la période, sans identifiant de caisse', oct.z.rows.length === 1 && oct.z.rows[0].day === '2026-10-10' && oct.z.rows[0].status === 'matched' && oct.z.rows[0].terminal === 1);
   const range = await call(books.onRequest, req('/api/comptable/books?from=2026-10-09&to=2026-10-10', { cookie: acct }), env);
   ok('une plage de dates fonctionne (9 au 10 : 1000 + 2000 + 5000 − 500)', range.status === 200 && range.json.sales.summary.netCents === 7500 && range.json.sales.days.length === 2, range.text.slice(0, 160));

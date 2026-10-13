@@ -258,7 +258,7 @@ async function readCash(db, merchant, fromTs, toTs, cutoff, zone) {
     const t = Number(e.occurred_ts);
     if (e.event_type === 'open') { s.openingCents = e.expected_cents == null ? null : Number(e.expected_cents); s.openedTs = Number(e.opened_ts) || t; }
     else if (e.event_type === 'movement') {
-      s.movements.push({ ts: t, kind: String(e.movement_kind || ''), amountCents: Number(e.movement_amount_cents) || 0, reason: String(e.movement_reason || '').slice(0, 120) });
+      s.movements.push({ ts: t, day: businessDate(t, cutoff, zone), kind: String(e.movement_kind || ''), amountCents: Number(e.movement_amount_cents) || 0, reason: String(e.movement_reason || '').slice(0, 120) });
     } else if (e.event_type === 'handover') s.handovers++;
     else if (e.event_type === 'close') {
       s.closedTs = t; s.expectedCents = e.expected_cents == null ? null : Number(e.expected_cents);

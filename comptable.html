@@ -637,11 +637,13 @@
   }
   function exportCash() {
     var cash = state.data.cash, z = state.data.z, rows = [];
+    /* Repli pour une réponse d'avant `day` : le serveur date chaque mouvement
+       au jour d'activité (coupure 05:00), comme les sessions et les Z. */
     var ymd = function (ts) { return dayFr(new Date(ts).toISOString().slice(0, 10)); };
     if (cash.status === 'ok') cash.sessions.forEach(function (c) {
       rows.push([t('session'), dayFr(c.day), c.terminal, N(c.openingCents), N(c.closedTs ? c.expectedCents : null), N(c.closedTs ? c.countedCents : null), N(c.closedTs ? c.gapCents : null), '', '', '', '', c.closedTs ? '' : t('open')]);
       c.movements.forEach(function (m) {
-        rows.push([t('moves'), ymd(m.ts), c.terminal, '', '', '', '', N(m.kind === 'out' ? -m.amountCents : m.amountCents), '', '', '', m.reason]);
+        rows.push([t('moves'), m.day ? dayFr(m.day) : ymd(m.ts), c.terminal, '', '', '', '', N(m.kind === 'out' ? -m.amountCents : m.amountCents), '', '', '', m.reason]);
       });
     });
     if (z.status === 'ok') z.rows.forEach(function (r) {
