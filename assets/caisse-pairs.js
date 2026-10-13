@@ -27,6 +27,11 @@
    * est global au navigateur (un patron qui a consulté un autre commerce le
    * laisse pointer ailleurs) ; il ne sert jamais ici. */
   function merchant() {
+    /* L'app du serveur en salle (kiwi-serveur.html) n'a pas d'appairage de
+     * caisse : elle déclare elle-même son commerce, et rien en démo. */
+    if (typeof window.KiwiPairsMerchant === 'function') {
+      try { return String(window.KiwiPairsMerchant() || '').slice(0, 64); } catch (_) { return ''; }
+    }
     try {
       var P = window.KiwiCaissePairing;
       if (!P || !P.isPaired || !P.isPaired()) return '';

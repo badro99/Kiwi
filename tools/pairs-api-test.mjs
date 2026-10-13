@@ -15,7 +15,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { tillToken, TILL_COOKIE, employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
 import * as pairsApi from '../functions/api/pairs.js';
 import { computePairs, MIN_BASKETS } from '../functions/api/_pairs.js';
 
@@ -98,6 +98,29 @@ const none = await pairsApi.onRequestGet({ request: new Request('https://kiwi-os
 check('no merchant asked: 400', none.status === 400);
 const otherOwn = await get(OTHER, await cookieFor(OTHER), { noCache: true });
 check('each store sees only its own tickets', otherOwn.status === 200 && Object.keys(otherOwn.body.pairs).every((k) => k.startsWith('x_')), JSON.stringify(otherOwn.body.pairs));
+
+console.log('\n■ The waiter app (a clocked-in service employee)');
+{
+  const doc = (merchant, feature, data) => sql.prepare('INSERT OR REPLACE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)')
+    .run(merchant, feature, JSON.stringify(data), Date.now());
+  doc(M, 'team', { members: [
+    { id: 'w-on', name: 'Salle', function: 'serveur' },
+    { id: 'w-off', name: 'Repos', function: 'serveur' },
+    { id: 'k-on', name: 'Cuisine', function: 'cuisinier' },
+  ] });
+  doc(M, 'attendance', { entries: [{ memberId: 'w-on', inTs: NOW - 3600e3 }, { memberId: 'k-on', inTs: NOW - 3600e3 }] });
+  doc(OTHER, 'team', { members: [{ id: 'w-x', name: 'Ailleurs', function: 'serveur' }] });
+  doc(OTHER, 'attendance', { entries: [{ memberId: 'w-x', inTs: NOW - 3600e3 }] });
+  const emp = async (merchant, staffId) => `${EMPLOYEE_COOKIE}=${await employeeToken(SECRET, { merchant, staffId, authVersion: 0 })}`;
+  const on = await get(M, await emp(M, 'w-on'), { noCache: true });
+  check('a waiter on shift reads the pairs of their store', on.status === 200 && on.body.merchant === M && !!on.body.pairs.it_msemen, JSON.stringify(on).slice(0, 160));
+  const off = await get(M, await emp(M, 'w-off'), { noCache: true });
+  check('a waiter who is not clocked in: 403', off.status === 403, JSON.stringify(off));
+  const kitchen = await get(M, await emp(M, 'k-on'), { noCache: true });
+  check('kitchen staff on shift: 403 (not a service role)', kitchen.status === 403, JSON.stringify(kitchen));
+  const elsewhere = await get(M, await emp(OTHER, 'w-x'), { noCache: true });
+  check('a waiter of another store: 403', elsewhere.status === 403, JSON.stringify(elsewhere));
+}
 
 const before = DB.reads;
 const later = () => NOW + 31 * 60 * 1000;                 // the earlier answer has expired
@@ -190,6 +213,31 @@ check('take-away and table orders both offer it', /pairSuggestHtml\(cart, 'cart'
 check('never on the demo till', /if \(IS_DEMO \|\| !window\.KiwiPairs/.test(CA));
 check('a tap adds through the normal path (options, formula, sold-out)', /data-pair-add[\s\S]{0,400}addToTableOrder\(selectedId, id\)[\s\S]{0,80}addToCart\(id\)/.test(CA));
 check('names are escaped', /Souvent avec \$\{kdsEsc\(lead\.name\)\}/.test(CA));
+
+{
+  const { calls } = sandbox({ paired: false });
+  const window2 = {};
+  const store2 = {};
+  const calls2 = [];
+  const ctx2 = vm.createContext({
+    window: Object.assign(window2, { KiwiPairsMerchant: () => 'waiter-store', addEventListener() {} }),
+    localStorage: { getItem: (k) => store2[k] ?? null, setItem: (k, v) => { store2[k] = v; } },
+    JSON, Math, Set, Object, Array, String, Number, Date, Promise, encodeURIComponent, setTimeout: () => 0, setInterval: () => 0,
+    fetch: (url) => { calls2.push(url); return Promise.resolve({ ok: true, json: () => Promise.resolve({ merchant: 'waiter-store', pairs: { a: [{ i: 'b', n: 'B', together: 6, share: 0.5 }] } }) }); },
+  });
+  vm.runInContext(MOD, ctx2);
+  await window2.KiwiPairs.refresh();
+  check('the waiter app declares its own store (KiwiPairsMerchant), no till pairing needed', calls2[0] === '/api/pairs?merchant=waiter-store' && window2.KiwiPairs.suggest(['a'], () => true, 'table:3').id === 'b');
+  check('and calls was untouched on the unpaired till', calls.length === 0);
+}
+const SV = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+check('the waiter app loads the module and declares its store only outside the demo',
+  /<script src="assets\/caisse-pairs\.js\?v=\d+" defer><\/script>/.test(SV) && /window\.KiwiPairsMerchant = function \(\) \{ return svReal\(\) \? svMerchant\(\) : ''; \};/.test(SV));
+check('it shows the chip above the order bar, never in the demo', /if \(order && order\.length && !SV_DEMO && window\.KiwiPairs/.test(SV));
+check('« + » goes through the same path as a tap on the dish (formula, options, add)',
+  /data-pair-add[\s\S]{0,200}itemHasFormula\(id\)\) openFormulaSheet\(id\);\s*else if \(itemHasOptions\(id\)\) openOptionsSheet\(id\);\s*else addToTableOrder\(menuContextId, id\)/.test(SV));
+check('leaving the menu or emptying the table hides it and resets what was dismissed',
+  /currentTab !== 'menu'\) \{\s*bar\.classList\.remove\('is-visible'\);\s*svRenderPair\(null\);/.test(SV) && /KiwiPairs\.reset\('table:' \+ menuContextId\)/.test(SV));
 
 console.log(failures ? `\n✗ ${failures} check(s) failed` : `\n✓ ${passed} pairs checks green`);
 process.exit(failures ? 1 : 0);

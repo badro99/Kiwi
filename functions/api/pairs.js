@@ -7,13 +7,14 @@
 // moment où un plat entre dans la commande (assets/caisse-pairs.js).
 //
 // Lecture seule. Ouverte à la caisse appairée et au propriétaire, comme le
-// reste des lectures (tenantFor non strict), mais pour le seul commerce
-// demandé : un repli sur un autre magasin n'est jamais une réponse.
+// reste des lectures (tenantFor non strict), et au serveur en salle pointé en
+// service (sa session d'employé), mais pour le seul commerce demandé : un
+// repli sur un autre magasin n'est jamais une réponse.
 // Le calcul est gardé trente minutes en mémoire d'isolat : une suggestion
 // n'a pas besoin de la vente de la minute, et la base n'a pas à relire quatre
 // semaines de tickets à chaque caisse qui démarre.
 
-import { json } from '../auth/_lib.js';
+import { json, activeServiceEmployee } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 import { computePairs } from './_pairs.js';
 
@@ -46,8 +47,15 @@ export async function onRequestGet({ request, env }, deps = {}) {
   const url = new URL(request.url);
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64).trim();
   if (!asked) return json({ error: 'merchant-required' }, 400);
-  const who = await tenantFor(request, env, asked);
-  if (!who || who !== asked) return json({ error: 'forbidden-merchant' }, 403);
+  let who = await tenantFor(request, env, asked);
+  if (who !== asked) {
+    /* Le serveur en salle (kiwi-serveur.html) n'a ni caisse ni compte : il a
+     * sa session d'employé, pointé en service, pour CE commerce. */
+    let employee = null;
+    try { employee = await activeServiceEmployee(request, env, asked); } catch (_) { employee = null; }
+    who = employee && employee.merchant === asked ? asked : '';
+  }
+  if (!who) return json({ error: 'forbidden-merchant' }, 403);
 
   const hit = cache.get(who);
   if (hit && hit.until > now && !deps.noCache) {
