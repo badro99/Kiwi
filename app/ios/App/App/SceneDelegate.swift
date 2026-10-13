@@ -10,7 +10,7 @@ final class KiwiBridgeViewController: CAPBridgeViewController {
     /// natively. Pages built for an older host simply never see the flag.
     override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
         let configuration = super.webViewConfiguration(for: instanceConfiguration)
-        let caps = WKUserScript(source: "window.__kiwiHostCaps=Object.freeze({sheet:1});", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        let caps = WKUserScript(source: "window.__kiwiHostCaps=Object.freeze({sheet:1,push:1});", injectionTime: .atDocumentStart, forMainFrameOnly: true)
         configuration.userContentController.addUserScript(caps)
         return configuration
     }
@@ -22,6 +22,10 @@ final class KiwiBridgeViewController: CAPBridgeViewController {
         webView?.isOpaque = false
         webView?.backgroundColor = launchGround
         webView?.scrollView.backgroundColor = launchGround
+        // WebKit bug 215479: a non-opaque WKWebView can still flash white between
+        // the splash and first paint. underPageBackgroundColor (iOS 15) fills the
+        // area behind the page, rubber-band and not-yet-painted regions included.
+        if #available(iOS 15.0, *) { webView?.underPageBackgroundColor = launchGround }
     }
 
     override func viewDidLayoutSubviews() {

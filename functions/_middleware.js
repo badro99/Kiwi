@@ -444,6 +444,11 @@ async function routeRequest(context) {
    * single random bearer secret and can reach only this exact POST route; the
    * handler verifies that secret again before touching the durable outbox. */
   if (method === 'POST' && path === '/api/shopify/cron') return next();
+  /* Le Worker planifié « Le point du matin » (workers/morning-push/) n'a ni
+   * session ni cookie. Chemin exact, POST seulement : le handler exige son
+   * propre secret partagé (MORNING_PUSH_SECRET, comparé en temps constant) et
+   * répond 503 tant qu'il n'est pas configuré. */
+  if (method === 'POST' && path === '/api/push/morning') return next();
   /* Les deux seules écritures publiques : déposer une commande, et s'asseoir.
    * Chemins EXACTS — surtout pas le préfixe /api/order/, qui ouvrirait
    * /api/order/queue, c'est-à-dire la file du personnel avec ses articles, ses

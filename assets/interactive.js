@@ -2217,6 +2217,7 @@ ar: {
                   ? settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
                   : settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
                 ${settingsRow('notifications', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
+                ${settingsRow('notifications', tr({ fr: 'Le point du matin', en: 'Morning briefing', ar: 'ملخص الصباح' }), tr({ fr: 'Le total d\'hier à l\'ouverture · cet appareil', en: 'Yesterday\'s total at opening · this device', ar: 'مجموع الأمس عند الافتتاح · هذا الجهاز' }), { toggle: true, on: morningPush.isOn(), action: 'settings-morning' })}
               </div>
             </div>
 
@@ -2395,6 +2396,17 @@ ar: {
       const on = !tg.classList.contains('on');
       tg.classList.toggle('on', on);
       if (arg) { try { localStorage.setItem('kiwiSet:' + arg, on ? '1' : '0'); } catch (_) {} }
+    },
+
+    /* « Le point du matin » : un push à l'ouverture avec le total d'hier. Par
+     * appareil, désactivé par défaut. La bascule ne change d'état qu'une fois le
+     * serveur d'accord (inscription ou désinscription du jeton). */
+    'settings-morning': (el) => {
+      const tg = el && el.querySelector('[data-kset-toggle]');
+      if (!tg) return;
+      morningPush.toggle(!tg.classList.contains('on')).then((state) => {
+        tg.classList.toggle('on', !!state);
+      });
     },
 
     'settings-soon': () => {},
@@ -3781,6 +3793,97 @@ ar: {
     const path = MATERIAL_SETTINGS_ICONS[name] || MATERIAL_SETTINGS_ICONS.storefront;
     return `<svg${className ? ` class="${className}"` : ''} viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
   }
+  /* Le point du matin, côté page. L'app Kiwi Pro (coque iOS) fournit le jeton
+   * APNs via window.webkit.messageHandlers.kiwiShell ({push:'enable'}) et le
+   * rend par window.KiwiNativePushResult. Dans un navigateur il n'y a rien à
+   * activer : la bascule l'explique au lieu de mentir. */
+  const morningPush = (function () {
+    const KEY = 'kiwiMorningPush';
+    let busy = false, waiter = null;
+    const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { return null; } };
+    const write = (v) => { try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); } catch (_) {} };
+    const merchant = () => { try { return String(window.KiwiLive?.merchant?.() || '').trim().toLowerCase(); } catch (_) { return ''; } };
+    const native = () => !!(window.__kiwiHostCaps && window.__kiwiHostCaps.push && window.webkit?.messageHandlers?.kiwiShell);
+    const say = (fr, en, ar, type) => toast(tr({ fr, en, ar }), { type: type || 'info' });
+    window.KiwiNativePushResult = function (result) {
+      if (result && result.kind === 'enable' && waiter) { const done = waiter; waiter = null; done(result); }
+    };
+    function askNative() {
+      return new Promise((resolve) => {
+        waiter = resolve;
+        // Le dialogue système peut rester ouvert longtemps ; au-delà, on abandonne.
+        setTimeout(() => { if (waiter === resolve) { waiter = null; resolve({ ok: false, reason: 'timeout' }); } }, 120000);
+        try { window.webkit.messageHandlers.kiwiShell.postMessage({ push: 'enable' }); }
+        catch (_) { waiter = null; resolve({ ok: false, reason: 'unavailable' }); }
+      });
+    }
+    function post(body) {
+      return fetch('/api/push/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', cache: 'no-store', body: JSON.stringify(body),
+      }).then((r) => r.ok).catch(() => false);
+    }
+    /* APNs peut changer le jeton d'un appareil : tant que la bascule est
+     * activée, on le redemande en silence (aucune invite, la permission est déjà
+     * donnée) et on remet le serveur à jour s'il a changé. */
+    async function refresh() {
+      const v = read();
+      if (busy || !native() || !v || !v.token || v.merchant !== merchant()) return;
+      busy = true;
+      try {
+        const res = await askNative();
+        if (res.ok && res.token && res.token !== v.token) {
+          if (await post({ merchant: v.merchant, token: res.token, platform: 'ios', role: 'dashboard', lang: kiwiLang() })) {
+            write({ merchant: v.merchant, token: res.token });
+            post({ merchant: v.merchant, token: v.token, action: 'unregister' });
+          }
+        }
+      } finally { busy = false; }
+    }
+    if (native() && read()) setTimeout(refresh, 6000);
+    return {
+      isOn() { const v = read(); return !!(v && v.token && v.merchant && v.merchant === merchant()); },
+      /* Résout vers l'état final de la bascule (true = activé). */
+      async toggle(want) {
+        const current = this.isOn();
+        if (busy) return current;
+        if (!native()) {
+          say('Le point du matin fonctionne dans l\'app Kiwi Pro.', 'The morning briefing works in the Kiwi Pro app.', 'ملخص الصباح يعمل في تطبيق Kiwi Pro.');
+          return current;
+        }
+        const m = merchant();
+        if (!m) {
+          say('Établissement introuvable. Réessayez dans un instant.', 'Business not found. Try again in a moment.', 'تعذّر العثور على المنشأة. أعد المحاولة بعد لحظة.', 'danger');
+          return current;
+        }
+        busy = true;
+        try {
+          if (want) {
+            const res = await askNative();
+            if (!res.ok || !res.token) {
+              if (res.reason === 'denied') say('Autorisez les notifications pour Kiwi Pro dans les Réglages de l\'iPhone.', 'Allow notifications for Kiwi Pro in iPhone Settings.', 'اسمح بالإشعارات لتطبيق Kiwi Pro من إعدادات الهاتف.');
+              else say('Activation impossible pour le moment.', 'Could not turn this on right now.', 'تعذّر التفعيل حالياً.', 'danger');
+              return false;
+            }
+            const lang = kiwiLang();
+            const saved = await post({ merchant: m, token: res.token, platform: 'ios', role: 'dashboard', lang: lang });
+            if (!saved) { say('Activation impossible pour le moment.', 'Could not turn this on right now.', 'تعذّر التفعيل حالياً.', 'danger'); return false; }
+            write({ merchant: m, token: res.token });
+            say('Le point du matin est activé.', 'Morning briefing is on.', 'تم تفعيل ملخص الصباح.', 'success');
+            return true;
+          }
+          const v = read();
+          if (v && v.token && v.merchant) {
+            const gone = await post({ merchant: v.merchant, token: v.token, action: 'unregister' });
+            if (!gone) { say('Désactivation impossible pour le moment.', 'Could not turn this off right now.', 'تعذّر الإيقاف حالياً.', 'danger'); return true; }
+          }
+          write(null);
+          say('Le point du matin est désactivé.', 'Morning briefing is off.', 'تم إيقاف ملخص الصباح.', 'success');
+          return false;
+        } finally { busy = false; }
+      },
+    };
+  })();
   function ksetIco(key) {
     return `<span class="kset-ico">${materialSymbol(key)}</span>`;
   }

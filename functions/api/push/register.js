@@ -16,6 +16,20 @@ const VALID_PLATFORMS = new Set(['ios', 'android', 'web']);
 const VALID_ROLES = new Set(['caisse', 'cuisine', 'equipe', 'dashboard', 'all']);
 const TOKEN_RE = /^[A-Za-z0-9_\-:./+=]{16,512}$/;
 
+async function saveLang(env, merchant, token, lang) {
+  const update = () => env.DB.prepare('UPDATE push_tokens SET lang = ? WHERE merchant = ? AND token = ?')
+    .bind(lang, merchant, token).run();
+  try {
+    await update();
+  } catch (err) {
+    if (!/no such column/i.test(String(err && err.message || ''))) return;
+    try {
+      await env.DB.prepare("ALTER TABLE push_tokens ADD COLUMN lang TEXT NOT NULL DEFAULT ''").run();
+      await update();
+    } catch (_) { /* la langue est un confort : le français reste le repli */ }
+  }
+}
+
 export async function onRequestGet() {
   return json({ error: 'method-not-allowed', message: 'La lecture des jetons push n\'est pas autorisée.' }, 405);
 }
@@ -111,6 +125,11 @@ export async function onRequestPost({ request, env }) {
         device_id = excluded.device_id,
         updated_at = excluded.updated_at
     `).bind(merchant, token, role, employeeId, platform, deviceId, now, now).run();
+
+    // Langue du point du matin : écriture à part, jamais bloquante (la colonne
+    // peut manquer sur une base de production en retard sur schema.sql).
+    const lang = typeof body.lang === 'string' ? body.lang.trim().toLowerCase().slice(0, 2) : '';
+    if (lang === 'fr' || lang === 'en' || lang === 'ar') await saveLang(env, merchant, token, lang);
 
     return json({ ok: true });
   } catch (err) {

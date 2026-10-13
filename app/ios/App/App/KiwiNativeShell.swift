@@ -2,6 +2,7 @@ import Capacitor
 import SafariServices
 import SwiftUI
 import UIKit
+import UserNotifications
 import WebKit
 
 private let kiwiLaunchGround = Color(red: 10 / 255, green: 22 / 255, blue: 18 / 255)
@@ -9,6 +10,11 @@ private let kiwiInk = Color(red: 10 / 255, green: 15 / 255, blue: 13 / 255)
 private let kiwiMint = Color(red: 125 / 255, green: 242 / 255, blue: 176 / 255)
 private let kiwiPaper = Color(red: 247 / 255, green: 245 / 255, blue: 240 / 255)
 private let kiwiAtlas = Color(red: 11 / 255, green: 110 / 255, blue: 79 / 255)
+
+extension Notification.Name {
+    /// Posted by AppDelegate with userInfo["token"] (hex) on success, or an empty userInfo on failure.
+    static let kiwiPushToken = Notification.Name("kiwi.push.token")
+}
 
 // JSON is already a JavaScript expression. Keep its UTF-8 intact: atob() yields
 // byte-valued characters, not Unicode, and used to corrupt non-ASCII passwords.
@@ -214,6 +220,8 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         self.tabHeightConstraint = tabHeightConstraint
         self.tabWidthConstraint = tabWidthConstraint
 
+        NotificationCenter.default.addObserver(self, selector: #selector(pushTokenArrived(_:)), name: .kiwiPushToken, object: nil)
+
         model.didChangeLayout = { [weak self] context in self?.apply(context) }
         apply(model.context)
         requestState()
@@ -283,11 +291,73 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             presentSafariSheet(raw)
             return
         }
+        if let body = message.body as? [String: Any], let push = body["push"] as? String {
+            handlePush(push)
+            return
+        }
         if let body = message.body as? [String: Any], let sheet = body["sheet"] {
             presentNativeSheet(sheet)
             return
         }
         model.accept(message.body)
+    }
+
+    // MARK: Le point du matin (notifications push)
+
+    /// True only between the owner turning the toggle on and the token (or the
+    /// failure) coming back, so a token is never pushed to the page unasked.
+    private var awaitingPushToken = false
+
+    /// `status` reports the system permission without prompting. `enable` asks
+    /// for permission (first time only), then registers with APNs. Nothing here
+    /// runs until the page asks, and the page asks only from the owner's toggle.
+    private func handlePush(_ action: String) {
+        let center = UNUserNotificationCenter.current()
+        switch action {
+        case "status":
+            center.getNotificationSettings { [weak self] settings in
+                let status: String
+                switch settings.authorizationStatus {
+                case .authorized, .provisional, .ephemeral: status = "authorized"
+                case .denied: status = "denied"
+                default: status = "notDetermined"
+                }
+                self?.pushResult(["kind": "status", "ok": true, "status": status])
+            }
+        case "enable":
+            center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if granted {
+                        self.awaitingPushToken = true
+                        UIApplication.shared.registerForRemoteNotifications()
+                    } else {
+                        self.pushResult(["kind": "enable", "ok": false, "reason": "denied"])
+                    }
+                }
+            }
+        default:
+            break
+        }
+    }
+
+    @objc private func pushTokenArrived(_ note: Notification) {
+        guard awaitingPushToken else { return }
+        awaitingPushToken = false
+        if let token = note.userInfo?["token"] as? String, !token.isEmpty {
+            pushResult(["kind": "enable", "ok": true, "token": token])
+        } else {
+            pushResult(["kind": "enable", "ok": false, "reason": "register-failed"])
+        }
+    }
+
+    private func pushResult(_ payload: [String: Any]) {
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.bridgeEvaluate("window.KiwiNativePushResult&&window.KiwiNativePushResult(\(json))")
+        }
     }
 
     private var sheetDelegate: KiwiSheetDelegate?

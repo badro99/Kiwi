@@ -1670,9 +1670,21 @@ CREATE TABLE IF NOT EXISTS push_tokens (
   device_id TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  lang TEXT NOT NULL DEFAULT '',  -- fr|en|ar|'' ; langue du point du matin. Posé par register.js (colonne ajoutée à la volée si la base est ancienne)
   PRIMARY KEY (merchant, token)
 );
 CREATE INDEX IF NOT EXISTS idx_push_tokens_target ON push_tokens (merchant, role);
+
+-- « Le point du matin » (POST /api/push/morning) : une ligne par magasin et par
+-- journée commerciale déjà notifiée. Elle est posée AVANT l'envoi, ce qui rend
+-- un second appel du même jour inoffensif. Créée aussi à la volée par la route
+-- (la base de production retarde sur ce fichier).
+CREATE TABLE IF NOT EXISTS push_morning_sent (
+  merchant TEXT NOT NULL,
+  day      TEXT NOT NULL,        -- journée commerciale notifiée, AAAA-MM-JJ
+  sent_ts  INTEGER NOT NULL,
+  PRIMARY KEY (merchant, day)
+);
 
 -- ── Guichet unique documentaire (slice 1 : factures fournisseur PDF) ───────
 -- Registre des dépôts : l'empreinte SHA-256 du fichier est l'identifiant, donc

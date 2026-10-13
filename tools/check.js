@@ -1440,6 +1440,7 @@ section('Whole-project regressions');
     'account-deletion-test.mjs',
     'account-deletion-ui-test.mjs',
     'push-registration-test.mjs',
+    'morning-push-test.mjs',
     'security-regression-test.js',
     'kiwi-agent-access-test.mjs',
     'agent-mcp-remote-test.mjs',

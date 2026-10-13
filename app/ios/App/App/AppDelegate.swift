@@ -33,6 +33,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
+    // Notifications push (Le point du matin). L'enregistrement n'est demandé que
+    // lorsque le propriétaire active la bascule ; le jeton est remis à la page
+    // par KiwiNativeShellCoordinator, jamais journalisé.
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        NotificationCenter.default.post(name: .kiwiPushToken, object: nil, userInfo: ["token": hex])
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .kiwiPushToken, object: nil, userInfo: [:])
+    }
+
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
