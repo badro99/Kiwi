@@ -802,6 +802,22 @@
     const t = +new Date(d);
     return !isNaN(t) && businessDayKey(t) === businessDayKey(Date.now());
   }
+  /* La même journée, écrite 'YYYY-MM-DD' pour un <input type="date"> : la page
+     des retours la compare aux ventes. Elle découpait à minuit, si bien qu'à
+     0 h 30 une vente de 23 h quittait « Aujourd'hui » pour « Hier » alors que
+     le reste de la caisse la comptait encore dans la journée. */
+  function businessDateKey(ts) {
+    const t = +new Date(ts);
+    const R = window.KiwiDayReport;
+    try { if (R && R.businessDay) { const k = R.businessDay(t); if (/^\d{4}-\d{2}-\d{2}$/.test(k)) return k; } } catch (_) {}
+    const x = new Date(t - 5 * 3600000);
+    return x.getFullYear() + '-' + pad2(x.getMonth() + 1) + '-' + pad2(x.getDate());
+  }
+  function shiftDateKey(key, days) {
+    const p = String(key).split('-').map(Number);
+    const x = new Date(Date.UTC(p[0], p[1] - 1, p[2] + days));
+    return x.getUTCFullYear() + '-' + pad2(x.getUTCMonth() + 1) + '-' + pad2(x.getUTCDate());
+  }
 
   /* ── « Retour sous 7 jours » — encore faut-il retrouver la vente ────────────
    * L'échange affiche « retour sous 7 jours », mais le journal ne gardait que la
@@ -1031,7 +1047,7 @@
     exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
-    retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+    retDate: businessDateKey(Date.now()),
     clQuery: '',
     registriesQuery: '',
     activeRegistry: null,
@@ -4254,11 +4270,9 @@
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
-    const dateKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const oldest = new Date(today); oldest.setDate(oldest.getDate() - (RETAIN_DAYS - 1));
-    const todayKey = dateKey(today), yesterdayKey = dateKey(yesterday), oldestKey = dateKey(oldest);
+    const dateKey = businessDateKey;
+    const todayKey = dateKey(Date.now());
+    const yesterdayKey = shiftDateKey(todayKey, -1), oldestKey = shiftDateKey(todayKey, -(RETAIN_DAYS - 1));
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
