@@ -1603,6 +1603,19 @@ section('Whole-project regressions');
        l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
        captures comparées à leur référence. */
     'browser-trace-test.mjs',
+    /* Design 2027, étape 1 · le livre unique, en mode ombre (assets/kit/ledger.js,
+       adopté par rien) : mêmes valeurs que la journée du serveur pour chaque clé,
+       sur les stores à cutoff 5, 3 et 0, sans ligne de cutoff, à cutoff changé,
+       à la minute-frontière et au changement d'heure du Ramadan ; huit surfaces,
+       un seul chiffre ; jamais sur un vrai commerçant. */
+    'ledger-agreement-test.mjs',
+    /* L'exemple travaillé (tools/fixtures/worked-example.json) : ses chiffres
+       sont ceux du §18.0, ses sources s'accordent entre elles, sa table de
+       mutations rougit, et l'aperçu embarque le même fichier à l'octet près. */
+    'fixture-agreement-test.mjs',
+    /* La démo est semée par magasin et journée d'activité, jamais par hasard :
+       ni Math.random, ni horloge, ni quatre derniers chiffres inventés. */
+    'no-random-demo-test.js',
     /* Promotions de la carte : la règle (assets/menu-promos.js), le serveur
        qui l'applique dans priceOrder, puis la caisse, Serveur et l'onglet
        « Promotions » du tableau de bord, en vrais clics sur la démo. */

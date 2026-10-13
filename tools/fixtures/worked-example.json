@@ -1,0 +1,1829 @@
+{
+ "date": "2026-10-12",
+ "now": "17:39",
+ "venue": "Café Atlas",
+ "goal": 23500,
+ "trade": "restaurant",
+ "costsSet": true,
+ "aiShop": {"venue": "Atelier Lina", "trade": "boutique", "costsSet": false, "salesToday": 0, "pendingActions": 0},
+ "onlineOrders": [{"ref": "W-14", "mode": "takeaway", "status": "pending", "placed": "17:37"}],
+ "cutoff": 5,
+ "zone": "Africa/Casablanca",
+ "plan": {
+  "dining": [
+   "T1",
+   "T2",
+   "T3",
+   "T4",
+   "T5",
+   "T6",
+   "T7",
+   "T8",
+   "T9",
+   "T10",
+   "T11",
+   "T12"
+  ],
+  "terrace": [
+   "T20",
+   "T21",
+   "T22",
+   "T23"
+  ]
+ },
+ "staff": {
+  "ON": {
+   "name": "Othmane Naciri",
+   "short": "Othmane",
+   "role": "cashier"
+  },
+  "KA": {
+   "name": "Karim Alami",
+   "short": "Karim",
+   "role": "waiter"
+  },
+  "NA": {
+   "name": "Nadia Amrani",
+   "short": "Nadia",
+   "role": "waiter"
+  }
+ },
+ "menu": [
+  {
+   "cat": "Starters",
+   "items": [
+    [
+     "Harira",
+     35,
+     "hot"
+    ],
+    [
+     "Salade marocaine",
+     45,
+     "cold"
+    ],
+    [
+     "Zaalouk",
+     38,
+     "cold"
+    ],
+    [
+     "Briouates aux crevettes",
+     52,
+     "hot",
+     "options"
+    ],
+    [
+     "Taktouka",
+     38,
+     "cold"
+    ],
+    [
+     "Soupe du jour",
+     30,
+     "hot"
+    ],
+    [
+     "Bissara",
+     28,
+     "hot"
+    ],
+    [
+     "Msemen au miel",
+     25,
+     "pastry",
+     "soldout"
+    ]
+   ]
+  },
+  {
+   "cat": "Tajines",
+   "items": [
+    [
+     "Tajine poulet citron",
+     150,
+     "hot",
+     "options"
+    ],
+    [
+     "Tajine kefta aux œufs",
+     95,
+     "hot",
+     "options"
+    ],
+    [
+     "Tajine agneau pruneaux",
+     165,
+     "hot"
+    ],
+    [
+     "Tajine de légumes",
+     85,
+     "hot"
+    ],
+    [
+     "Tajine de poisson",
+     140,
+     "hot",
+     "options"
+    ],
+    [
+     "Tanjia marrakchia",
+     170,
+     "hot"
+    ]
+   ]
+  },
+  {
+   "cat": "Couscous",
+   "items": [
+    [
+     "Couscous sept légumes",
+     110,
+     "hot"
+    ],
+    [
+     "Couscous tfaya",
+     135,
+     "hot",
+     "options"
+    ],
+    [
+     "Couscous royal",
+     160,
+     "hot"
+    ],
+    [
+     "Seffa medfouna",
+     120,
+     "hot"
+    ],
+    [
+     "Couscous au poisson",
+     145,
+     "hot"
+    ]
+   ]
+  },
+  {
+   "cat": "Pastillas",
+   "items": [
+    [
+     "Pastilla au poulet",
+     120,
+     "hot"
+    ]
+   ]
+  },
+  {
+   "cat": "Drinks",
+   "items": [
+    [
+     "Thé à la menthe",
+     19,
+     "drinks"
+    ],
+    [
+     "Jus d'orange",
+     25,
+     "drinks"
+    ],
+    [
+     "Café noir",
+     15,
+     "drinks"
+    ]
+   ]
+  },
+  {
+   "cat": "Desserts",
+   "items": [
+    [
+     "Cornes de gazelle",
+     30,
+     "pastry"
+    ],
+    [
+     "Baghrir",
+     22,
+     "pastry"
+    ]
+   ]
+  }
+ ],
+ "tallies": {
+  "card": {
+   "orders": 79,
+   "gross": 12700,
+   "refunds": 45
+  },
+  "cash": {
+   "orders": 58,
+   "gross": 6519,
+   "refunds": 0
+  }
+ },
+ "yesterday": {
+  "orders": 133,
+  "revenue": 20301,
+  "card": 13195,
+  "dayTotal": 30100
+ },
+ "till": {
+  "cashier": "ON",
+  "billTable": "T4"
+ },
+ "pending": [
+  {
+   "id": "G3412",
+   "source": "Glovo 3412",
+   "placed": "17:26",
+   "lines": [
+    [
+     "Pastilla au poulet",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "id": "A1",
+   "source": "Takeaway",
+   "placed": "17:33",
+   "staff": "ON",
+   "lines": [
+    [
+     "Baghrir",
+     1
+    ],
+    [
+     "Café noir",
+     1
+    ]
+   ]
+  },
+  {
+   "id": "G3415",
+   "source": "Glovo 3415",
+   "placed": "17:34",
+   "lines": [
+    [
+     "Tajine kefta aux œufs",
+     1
+    ]
+   ]
+  },
+  {
+   "id": "G3416",
+   "source": "Glovo 3416",
+   "placed": "17:36",
+   "lines": [
+    [
+     "Salade marocaine",
+     1
+    ],
+    [
+     "Harira",
+     1
+    ]
+   ]
+  },
+  {
+   "id": "A2",
+   "source": "Takeaway",
+   "placed": "17:38",
+   "staff": "ON",
+   "lines": [
+    [
+     "Tajine poulet citron",
+     1
+    ]
+   ]
+  }
+ ],
+ "notifications": [
+  {
+   "kind": "late",
+   "ticket": 42,
+   "unread": true
+  },
+  {
+   "kind": "bill",
+   "table": "T9",
+   "unread": true
+  },
+  {
+   "kind": "stock",
+   "item": "Harira base",
+   "unread": true
+  },
+  {
+   "kind": "close",
+   "z": "0146",
+   "unread": false
+  }
+ ],
+ "aiActions": [
+  {
+   "id": "a1",
+   "action": "stock-adjust",
+   "status": "pending"
+  },
+  {
+   "id": "a2",
+   "action": "order-status",
+   "status": "pending"
+  },
+  {
+   "id": "a3",
+   "action": "stock-adjust",
+   "status": "approved"
+  }
+ ],
+ "paidCases": [
+  {
+   "id": "online",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": "queued",
+   "tillSave": true
+  },
+  {
+   "id": "offline",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": false,
+   "outbox": "queued",
+   "tillSave": true
+  },
+  {
+   "id": "refused",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": "sale-enqueue-failed",
+   "tillSave": true
+  },
+  {
+   "id": "storage-full",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": "queue-storage-full",
+   "tillSave": false
+  },
+  {
+   "id": "live-off",
+   "path": "sale",
+   "live": false,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": "none",
+   "tillSave": true
+  },
+  {
+   "id": "no-tenant",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "",
+   "online": true,
+   "outbox": "none",
+   "tillSave": true
+  },
+  {
+   "id": "autosave-failed",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": "queued",
+   "tillSave": false
+  },
+  {
+   "id": "other-store",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "atlas-annex",
+   "liveMerchant": "atlas-annex",
+   "online": true,
+   "outbox": "none",
+   "tillSave": "other-store"
+  },
+  {
+   "id": "other-store-full",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "atlas-annex",
+   "liveMerchant": "atlas-annex",
+   "online": true,
+   "outbox": "none",
+   "tillSave": "other-store",
+   "storageError": true
+  },
+  {
+   "id": "receipt-return",
+   "path": "receipt",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "online": true,
+   "outbox": null,
+   "tillSave": true
+  },
+  {
+   "id": "unpaired",
+   "path": "sale",
+   "live": true,
+   "merchant": "cafe-atlas",
+   "paired": "",
+   "liveMerchant": "",
+   "online": true,
+   "outbox": "none",
+   "tillSave": "other-store"
+  }
+ ],
+ "replayCases": [
+  {
+   "id": "same-store",
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "live": true,
+   "pending": true
+  },
+  {
+   "id": "accepted",
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "cafe-atlas",
+   "live": true,
+   "pending": false
+  },
+  {
+   "id": "sold-before-re-pair",
+   "merchant": "cafe-atlas",
+   "paired": "atlas-annex",
+   "liveMerchant": "atlas-annex",
+   "live": true,
+   "pending": true
+  },
+  {
+   "id": "before-merchant-resolves",
+   "merchant": "cafe-atlas",
+   "paired": "cafe-atlas",
+   "liveMerchant": "",
+   "live": true,
+   "pending": true
+  }
+ ],
+ "tables": [
+  {
+   "id": "T2",
+   "zone": "dining",
+   "guests": 2,
+   "opened": "16:58",
+   "staff": "KA",
+   "lines": [
+    [
+     "Tajine de légumes",
+     1,
+     "17:10"
+    ],
+    [
+     "Briouates aux crevettes",
+     1,
+     "17:10"
+    ],
+    [
+     "Thé à la menthe",
+     1,
+     "17:10"
+    ]
+   ]
+  },
+  {
+   "id": "T4",
+   "zone": "dining",
+   "guests": 3,
+   "opened": "17:02",
+   "staff": "KA",
+   "lines": [
+    [
+     "Harira",
+     1,
+     "17:28"
+    ],
+    [
+     "Tajine poulet citron",
+     1,
+     null,
+     "No olives"
+    ],
+    [
+     "Salade marocaine",
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "id": "T9",
+   "zone": "dining",
+   "guests": 2,
+   "opened": "16:48",
+   "staff": "KA",
+   "billAsked": "17:30",
+   "lines": [
+    [
+     "Pastilla au poulet",
+     1,
+     "16:52"
+    ],
+    [
+     "Zaalouk",
+     1,
+     "16:52"
+    ],
+    [
+     "Cornes de gazelle",
+     1,
+     "16:52"
+    ]
+   ]
+  },
+  {
+   "id": "T12",
+   "zone": "dining",
+   "guests": 6,
+   "opened": "17:15",
+   "staff": "NA",
+   "lines": [
+    [
+     "Couscous royal",
+     2,
+     "17:33"
+    ],
+    [
+     "Jus d'orange",
+     2,
+     "17:33"
+    ],
+    [
+     "Cornes de gazelle",
+     1,
+     "17:38"
+    ],
+    [
+     "Thé à la menthe",
+     1,
+     "17:38"
+    ]
+   ]
+  },
+  {
+   "id": "T22",
+   "zone": "terrace",
+   "guests": 4,
+   "opened": "17:09",
+   "staff": "KA",
+   "lines": [
+    [
+     "Tajine agneau pruneaux",
+     1,
+     "17:21",
+     "Nut allergy: no almonds"
+    ],
+    [
+     "Zaalouk",
+     1,
+     "17:21"
+    ],
+    [
+     "Harira",
+     2,
+     "17:21"
+    ]
+   ]
+  }
+ ],
+ "orders": [
+  {
+   "n": 1208,
+   "table": "T2",
+   "method": "Card",
+   "time": "17:36",
+   "staff": "KA",
+   "lines": [
+    [
+     "Tajine de légumes",
+     1
+    ],
+    [
+     "Briouates aux crevettes",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1207,
+   "table": "Takeaway",
+   "method": "Cash",
+   "time": "17:31",
+   "staff": "ON",
+   "lines": [
+    [
+     "Harira",
+     1
+    ],
+    [
+     "Cornes de gazelle",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1206,
+   "table": "T10",
+   "method": "Card",
+   "time": "17:24",
+   "staff": "NA",
+   "lines": [
+    [
+     "Tajine agneau pruneaux",
+     1
+    ],
+    [
+     "Jus d'orange",
+     1
+    ],
+    [
+     "Baghrir",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1205,
+   "table": "Takeaway",
+   "method": "Cash",
+   "time": "17:20",
+   "staff": "ON",
+   "lines": [
+    [
+     "Soupe du jour",
+     1
+    ],
+    [
+     "Bissara",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1204,
+   "table": "T8",
+   "method": "Card",
+   "time": "17:16",
+   "staff": "KA",
+   "lines": [
+    [
+     "Couscous tfaya",
+     1
+    ],
+    [
+     "Baghrir",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1203,
+   "table": "Takeaway",
+   "method": "Cash",
+   "time": "17:14",
+   "staff": "ON",
+   "lines": [
+    [
+     "Café noir",
+     1
+    ],
+    [
+     "Baghrir",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1201,
+   "refund": true,
+   "table": "T7",
+   "method": "Card",
+   "time": "17:12",
+   "staff": "KA",
+   "lines": [
+    [
+     "Salade marocaine",
+     -1
+    ]
+   ]
+  },
+  {
+   "n": 1202,
+   "table": "T5",
+   "method": "Card",
+   "time": "17:10",
+   "staff": "NA",
+   "lines": [
+    [
+     "Couscous royal",
+     1
+    ],
+    [
+     "Briouates aux crevettes",
+     1
+    ],
+    [
+     "Harira",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1201,
+   "table": "T7",
+   "method": "Card",
+   "time": "17:08",
+   "staff": "KA",
+   "lines": [
+    [
+     "Salade marocaine",
+     1
+    ],
+    [
+     "Zaalouk",
+     1
+    ],
+    [
+     "Cornes de gazelle",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1200,
+   "table": "Takeaway",
+   "method": "Cash",
+   "time": "17:05",
+   "staff": "ON",
+   "lines": [
+    [
+     "Bissara",
+     1
+    ],
+    [
+     "Café noir",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1199,
+   "table": "T11",
+   "method": "Card",
+   "time": "16:52",
+   "staff": "KA",
+   "lines": [
+    [
+     "Tanjia marrakchia",
+     1
+    ],
+    [
+     "Couscous sept légumes",
+     1
+    ],
+    [
+     "Taktouka",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1198,
+   "table": "Takeaway",
+   "method": "Cash",
+   "time": "16:47",
+   "staff": "ON",
+   "lines": [
+    [
+     "Baghrir",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 1197,
+   "table": "T3",
+   "method": "Card",
+   "time": "16:40",
+   "staff": "KA",
+   "lines": [
+    [
+     "Tajine poulet citron",
+     1
+    ],
+    [
+     "Harira",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  }
+ ],
+ "kitchen": {
+  "warnMin": 8,
+  "lateMin": 15
+ },
+ "tickets": [
+  {
+   "n": 40,
+   "lane": "ready",
+   "table": "T2",
+   "sent": "17:10",
+   "lines": [
+    [
+     "Tajine de légumes",
+     1
+    ],
+    [
+     "Briouates aux crevettes",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 41,
+   "lane": "ready",
+   "order": 1207,
+   "sent": "17:24",
+   "lines": [
+    [
+     "Harira",
+     1
+    ],
+    [
+     "Cornes de gazelle",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 42,
+   "lane": "preparing",
+   "table": "T22",
+   "sent": "17:21",
+   "lines": [
+    [
+     "Tajine agneau pruneaux",
+     1
+    ],
+    [
+     "Zaalouk",
+     1
+    ],
+    [
+     "Harira",
+     2
+    ]
+   ]
+  },
+  {
+   "n": 43,
+   "lane": "preparing",
+   "source": "Glovo 3412",
+   "pending": "G3412",
+   "sent": "17:27",
+   "lines": [
+    [
+     "Pastilla au poulet",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 44,
+   "lane": "preparing",
+   "table": "T4",
+   "sent": "17:28",
+   "lines": [
+    [
+     "Harira",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 45,
+   "lane": "preparing",
+   "table": "T12",
+   "sent": "17:33",
+   "lines": [
+    [
+     "Couscous royal",
+     2
+    ],
+    [
+     "Jus d'orange",
+     2
+    ]
+   ]
+  },
+  {
+   "n": 46,
+   "lane": "preparing",
+   "source": "Takeaway",
+   "pending": "A1",
+   "sent": "17:34",
+   "lines": [
+    [
+     "Baghrir",
+     1
+    ],
+    [
+     "Café noir",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 47,
+   "lane": "preparing",
+   "source": "Glovo 3415",
+   "pending": "G3415",
+   "sent": "17:35",
+   "lines": [
+    [
+     "Tajine kefta aux œufs",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 48,
+   "lane": "new",
+   "source": "Glovo 3416",
+   "pending": "G3416",
+   "sent": "17:37",
+   "lines": [
+    [
+     "Salade marocaine",
+     1
+    ],
+    [
+     "Harira",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 49,
+   "lane": "new",
+   "table": "T12",
+   "sent": "17:38",
+   "lines": [
+    [
+     "Cornes de gazelle",
+     1
+    ],
+    [
+     "Thé à la menthe",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 50,
+   "lane": "new",
+   "source": "Takeaway",
+   "pending": "A2",
+   "sent": "17:39",
+   "lines": [
+    [
+     "Tajine poulet citron",
+     1
+    ]
+   ]
+  }
+ ],
+ "customers": [
+  {
+   "name": "Salma Bennani",
+   "ini": "SB",
+   "vip": true,
+   "city": "Casablanca",
+   "phone": true,
+   "visits": [
+    [
+     "2026-01-05",
+     305
+    ],
+    [
+     "2026-01-12",
+     265
+    ],
+    [
+     "2026-01-19",
+     340
+    ],
+    [
+     "2026-01-26",
+     230
+    ],
+    [
+     "2026-02-02",
+     295
+    ],
+    [
+     "2026-02-09",
+     275
+    ],
+    [
+     "2026-02-16",
+     315
+    ],
+    [
+     "2026-02-23",
+     255
+    ],
+    [
+     "2026-03-02",
+     325
+    ],
+    [
+     "2026-03-09",
+     245
+    ],
+    [
+     "2026-03-16",
+     325
+    ],
+    [
+     "2026-03-23",
+     245
+    ],
+    [
+     "2026-03-30",
+     310
+    ],
+    [
+     "2026-04-06",
+     260
+    ],
+    [
+     "2026-04-13",
+     295
+    ],
+    [
+     "2026-04-20",
+     275
+    ],
+    [
+     "2026-04-27",
+     310
+    ],
+    [
+     "2026-05-04",
+     260
+    ],
+    [
+     "2026-05-11",
+     335
+    ],
+    [
+     "2026-05-18",
+     235
+    ],
+    [
+     "2026-05-25",
+     340
+    ],
+    [
+     "2026-06-01",
+     230
+    ],
+    [
+     "2026-06-08",
+     325
+    ],
+    [
+     "2026-06-15",
+     245
+    ],
+    [
+     "2026-06-22",
+     295
+    ],
+    [
+     "2026-06-29",
+     275
+    ],
+    [
+     "2026-07-06",
+     335
+    ],
+    [
+     "2026-07-13",
+     235
+    ],
+    [
+     "2026-07-20",
+     330
+    ],
+    [
+     "2026-07-27",
+     240
+    ],
+    [
+     "2026-08-03",
+     325
+    ],
+    [
+     "2026-08-10",
+     245
+    ],
+    [
+     "2026-08-17",
+     300
+    ],
+    [
+     "2026-08-24",
+     270
+    ],
+    [
+     "2026-08-31",
+     285
+    ],
+    [
+     "2026-09-07",
+     285
+    ],
+    [
+     "2026-09-14",
+     325
+    ],
+    [
+     "2026-09-21",
+     245
+    ],
+    [
+     "2026-09-28",
+     295
+    ],
+    [
+     "2026-10-05",
+     275
+    ],
+    [
+     "2026-10-12",
+     380
+    ]
+   ]
+  },
+  {
+   "name": "Youssef Alaoui",
+   "ini": "YA",
+   "city": "Casablanca",
+   "phone": true,
+   "visits": [
+    [
+     "2026-04-05",
+     325
+    ],
+    [
+     "2026-04-14",
+     255
+    ],
+    [
+     "2026-04-23",
+     315
+    ],
+    [
+     "2026-05-02",
+     265
+    ],
+    [
+     "2026-05-11",
+     320
+    ],
+    [
+     "2026-05-20",
+     260
+    ],
+    [
+     "2026-05-29",
+     290
+    ],
+    [
+     "2026-06-07",
+     290
+    ],
+    [
+     "2026-06-16",
+     340
+    ],
+    [
+     "2026-06-25",
+     240
+    ],
+    [
+     "2026-07-04",
+     300
+    ],
+    [
+     "2026-07-14",
+     280
+    ],
+    [
+     "2026-07-23",
+     320
+    ],
+    [
+     "2026-08-01",
+     260
+    ],
+    [
+     "2026-08-10",
+     345
+    ],
+    [
+     "2026-08-19",
+     235
+    ],
+    [
+     "2026-08-28",
+     330
+    ],
+    [
+     "2026-09-06",
+     250
+    ],
+    [
+     "2026-09-15",
+     290
+    ],
+    [
+     "2026-09-24",
+     290
+    ],
+    [
+     "2026-10-03",
+     300
+    ],
+    [
+     "2026-10-12",
+     320
+    ]
+   ]
+  },
+  {
+   "name": "Leila Fassi",
+   "ini": "LF",
+   "city": "Mohammedia",
+   "phone": true,
+   "visits": [
+    [
+     "2026-10-03",
+     170
+    ],
+    [
+     "2026-10-12",
+     210
+    ]
+   ]
+  },
+  {
+   "name": "Omar Benjelloun",
+   "ini": "OB",
+   "city": "Casablanca",
+   "phone": true,
+   "visits": [
+    [
+     "2026-05-05",
+     305
+    ],
+    [
+     "2026-05-16",
+     245
+    ],
+    [
+     "2026-05-28",
+     290
+    ],
+    [
+     "2026-06-08",
+     260
+    ],
+    [
+     "2026-06-19",
+     275
+    ],
+    [
+     "2026-07-01",
+     275
+    ],
+    [
+     "2026-07-12",
+     280
+    ],
+    [
+     "2026-07-24",
+     270
+    ],
+    [
+     "2026-08-04",
+     280
+    ],
+    [
+     "2026-08-15",
+     270
+    ],
+    [
+     "2026-08-27",
+     275
+    ],
+    [
+     "2026-09-07",
+     275
+    ],
+    [
+     "2026-09-18",
+     305
+    ],
+    [
+     "2026-09-30",
+     245
+    ],
+    [
+     "2026-10-11",
+     300
+    ]
+   ]
+  },
+  {
+   "name": "Hind Berrada",
+   "ini": "HB",
+   "city": "Rabat",
+   "phone": true,
+   "visits": [
+    [
+     "2026-06-14",
+     515
+    ],
+    [
+     "2026-06-29",
+     365
+    ],
+    [
+     "2026-07-14",
+     490
+    ],
+    [
+     "2026-07-28",
+     390
+    ],
+    [
+     "2026-08-12",
+     465
+    ],
+    [
+     "2026-08-27",
+     415
+    ],
+    [
+     "2026-09-10",
+     525
+    ],
+    [
+     "2026-09-25",
+     355
+    ],
+    [
+     "2026-10-10",
+     440
+    ]
+   ]
+  },
+  {
+   "name": "Mehdi Chraibi",
+   "ini": "MC",
+   "city": "Casablanca",
+   "phone": true,
+   "visits": [
+    [
+     "2026-10-06",
+     210
+    ]
+   ]
+  },
+  {
+   "name": "Sanae Idrissi",
+   "ini": "SI",
+   "city": "Rabat",
+   "phone": true,
+   "visits": [
+    [
+     "2026-03-26",
+     220
+    ],
+    [
+     "2026-04-20",
+     190
+    ],
+    [
+     "2026-05-15",
+     245
+    ],
+    [
+     "2026-06-10",
+     165
+    ],
+    [
+     "2026-07-05",
+     215
+    ],
+    [
+     "2026-07-30",
+     205
+    ]
+   ]
+  },
+  {
+   "name": "Amine Lahlou",
+   "ini": "AL",
+   "city": "Casablanca",
+   "phone": false,
+   "visits": [
+    [
+     "2026-04-25",
+     245
+    ],
+    [
+     "2026-05-21",
+     185
+    ],
+    [
+     "2026-06-17",
+     250
+    ],
+    [
+     "2026-07-13",
+     180
+    ]
+   ]
+  }
+ ],
+ "drawnElsewhere": {
+  "kds": {
+   "all": 9,
+   "new": 3,
+   "preparing": 6,
+   "hot": 7,
+   "cold": 2,
+   "pastry": 2,
+   "drinks": 4,
+   "ages": {
+    "42": "18 min",
+    "43": "12 min",
+    "44": "11 min",
+    "45": "6 min",
+    "46": "5 min",
+    "47": "4 min",
+    "48": "2 min",
+    "49": "1 min",
+    "50": "Just now"
+   },
+   "states": {
+    "42": "late",
+    "43": "warning",
+    "44": "warning"
+   }
+  },
+  "paidLine": {
+   "online": "",
+   "offline": "Saved on this till",
+   "refused": "Saved on this till",
+   "storage-full": "Recorded on this screen only. Keep the till open.",
+   "live-off": "",
+   "no-tenant": "Saved on this till",
+   "autosave-failed": "Recorded on this screen only. Keep the till open.",
+   "other-store": "Recorded on this screen only. Keep the till open.",
+   "other-store-full": "Recorded on this screen only. Keep the till open.",
+   "receipt-return": "",
+   "unpaired": "Recorded on this screen only. Keep the till open."
+  },
+  "indicator": {
+   "online": [],
+   "offline": [
+    "waiting"
+   ],
+   "refused": [
+    "not_synced"
+   ],
+   "storage-full": [
+    "storage_error",
+    "not_saved",
+    "not_synced"
+   ],
+   "live-off": [
+    "off"
+   ],
+   "no-tenant": [
+    "waiting_store"
+   ],
+   "autosave-failed": [
+    "not_saved"
+   ],
+   "other-store": [],
+   "other-store-full": [
+    "storage_error"
+   ],
+   "receipt-return": [],
+   "unpaired": []
+  },
+  "banner": {
+   "online": "",
+   "offline": "",
+   "refused": "",
+   "storage-full": "storage_error",
+   "live-off": "",
+   "no-tenant": "",
+   "autosave-failed": "not_saved",
+   "other-store": "",
+   "other-store-full": "",
+   "receipt-return": "",
+   "unpaired": ""
+  },
+  "lock": {
+   "online": "",
+   "offline": "",
+   "refused": "",
+   "storage-full": "",
+   "live-off": "",
+   "no-tenant": "",
+   "autosave-failed": "",
+   "other-store": "lock",
+   "other-store-full": "lock",
+   "receipt-return": "",
+   "unpaired": "lock"
+  },
+  "heldShownBy": {
+   "sold-before-re-pair": "lock",
+   "before-merchant-resolves": "waiting_store"
+  },
+  "replayed": [
+   "same-store"
+  ],
+  "close": {
+   "z": "0147",
+   "at": "23:41",
+   "by": "ON",
+   "orders": 183,
+   "total": 25310,
+   "card": 17070,
+   "cash": 8240,
+   "cashRefunds": 120,
+   "tips": 200,
+   "expected": 8920,
+   "counted": 8902,
+   "difference": -18
+  },
+  "lockScreen": {
+   "open-repaired": "lock",
+   "open-unpaired": "lock",
+   "idle-repaired": "staff_pad",
+   "idle-unpaired": "pairing_pad",
+   "paired-back": "staff_pad",
+   "no-store-service": "staff_pad"
+  },
+  "lockAttempt": {
+   "own-code": "staff_pad",
+   "paired-store-code": "set_aside",
+   "third-store-code": "set_aside",
+   "own-code-offline": "offline",
+   "own-code-staff-list-unavailable": "till",
+   "own-code-no-staff-codes": "till"
+  }
+ },
+ "close": {
+  "tallies": {
+   "card": {
+    "orders": 104,
+    "gross": 17115,
+    "refunds": 45,
+    "tips": 140
+   },
+   "cash": {
+    "orders": 79,
+    "gross": 8360,
+    "refunds": 120,
+    "tips": 60
+   }
+  },
+  "float": 500,
+  "moves": [
+   [
+    "in",
+    400,
+    "Change from the bank"
+   ],
+   [
+    "in",
+    320,
+    "Float top-up"
+   ],
+   [
+    "out",
+    350,
+    "Vegetables supplier"
+   ],
+   [
+    "out",
+    250,
+    "Bread"
+   ]
+  ],
+  "denominations": [
+   [
+    200,
+    30
+   ],
+   [
+    100,
+    20
+   ],
+   [
+    50,
+    12
+   ],
+   [
+    20,
+    12
+   ],
+   [
+    10,
+    5
+   ],
+   [
+    5,
+    2
+   ],
+   [
+    2,
+    1
+   ]
+  ],
+  "tolerance": 20
+ },
+ "lockCases": [
+  {
+   "id": "open-repaired",
+   "open": true,
+   "service": "cafe-atlas",
+   "paired": "atlas-annex"
+  },
+  {
+   "id": "open-unpaired",
+   "open": true,
+   "service": "cafe-atlas",
+   "paired": ""
+  },
+  {
+   "id": "idle-repaired",
+   "open": false,
+   "service": "cafe-atlas",
+   "paired": "atlas-annex"
+  },
+  {
+   "id": "idle-unpaired",
+   "open": false,
+   "service": "cafe-atlas",
+   "paired": ""
+  },
+  {
+   "id": "paired-back",
+   "open": true,
+   "service": "cafe-atlas",
+   "paired": "cafe-atlas"
+  },
+  {
+   "id": "no-store-service",
+   "open": true,
+   "service": "",
+   "paired": "cafe-atlas"
+  }
+ ],
+ "lockAttempts": {
+  "heldStore": "cafe-atlas",
+  "attempts": [
+   {
+    "id": "own-code",
+    "codeStore": "cafe-atlas",
+    "online": true,
+    "roster": "loaded"
+   },
+   {
+    "id": "paired-store-code",
+    "codeStore": "atlas-annex",
+    "online": true,
+    "roster": "loaded"
+   },
+   {
+    "id": "third-store-code",
+    "codeStore": "atlas-oasis",
+    "online": true,
+    "roster": "loaded"
+   },
+   {
+    "id": "own-code-offline",
+    "codeStore": "cafe-atlas",
+    "online": false,
+    "roster": "loaded"
+   },
+   {
+    "id": "own-code-staff-list-unavailable",
+    "codeStore": "cafe-atlas",
+    "online": true,
+    "roster": "unavailable"
+   },
+   {
+    "id": "own-code-no-staff-codes",
+    "codeStore": "cafe-atlas",
+    "online": true,
+    "roster": "none-by-choice"
+   }
+  ]
+ }
+}
