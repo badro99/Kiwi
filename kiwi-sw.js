@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v613';
+var CACHE = 'kiwi-app-v614';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -44,13 +44,13 @@ var SHELL = [
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
-  '/assets/tokens.css',
-  '/assets/theme.css?v=1',
+  '/assets/tokens.css?v=2053',
+  '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
   '/assets/simple.css',
   '/assets/ux.css',
-  '/assets/pages-pro.css?v=3',
+  '/assets/pages-pro.css?v=4',
   '/assets/catalog-workspace.css?v=23',
   '/assets/catalog-workspace.js?v=5',
   '/assets/help-centre.css?v=5',
@@ -92,9 +92,9 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=60',
+  '/assets/interactive.js?v=61',
   '/assets/view-link.js?v=1',
-  '/assets/features.js?v=11',
+  '/assets/features.js?v=12',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',
   '/assets/order-qr.js?v=3',
@@ -157,13 +157,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=553',
+  '/assets/dashboard-pwa.js?v=554',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=566',
+  '/assets/caisse-pwa.js?v=567',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -267,7 +267,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=552',
+  '/assets/employee-live.js?v=553',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
