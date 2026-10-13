@@ -1409,6 +1409,8 @@ section('Whole-project regressions');
     /* « Consulter sans pointer » est en lecture seule, l'écran cuisine web suit la langue. */
     'team-browse-readonly-browser-test.mjs',
     'kds-language-fallback-browser-test.mjs',
+    /* La caisse restaurant change de langue au comptoir : FR / EN / ع dans le rail. */
+    'caisse-restaurant-lang-browser-test.mjs',
     'native-face-entry-test.mjs',
     'native-premium-feel-test.mjs',
     'native-pass3-gates-test.mjs',

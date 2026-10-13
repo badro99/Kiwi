@@ -1294,6 +1294,63 @@
     });
   })();
 
+  /* La caisse restaurant reçoit son sélecteur (rail de gauche, 2026-10-13).
+     Mesuré sur une vraie caisse appairée passée en anglais puis en arabe :
+     ce qui restait en français sur la vente, le plan de salle, la liste
+     d'attente, l'encaissement et le partage. Les phrases coupées par une
+     balise (« Dessinez vos tables … <b>Plan de salle</b>. Une fois … ») sont
+     données morceau par morceau, comme la signature du rail. */
+  (function () {
+    var R = {
+      'Aucun encaissement': ['No payments yet', 'لا مدفوعات بعد'],
+      'Client & fidélité': ['Customer & loyalty', 'الزبون والولاء'],
+      'Menu': ['Menu', 'القائمة'],
+      'Stock': ['Stock', 'المخزون'],
+      'Exact': ['Exact', 'المبلغ بالضبط'],
+      'Split Bill': ['Split bill', 'تقسيم الحساب'],
+      "Diviser l'addition ·": ['Split the bill ·', 'تقسيم الحساب ·'],
+      '· vue caissier': ['· cashier view', '· عرض أمين الصندوق'],
+      '· file des arrivées': ['· arrivals queue', '· طابور الوافدين'],
+      'Plan de salle pas encore conçu': ['Floor plan not designed yet', 'مخطط القاعة لم يُصمَّم بعد'],
+      'Dessinez vos tables depuis votre tableau de bord ·': ['Draw your tables from your dashboard ·', 'ارسم طاولاتك من لوحة القيادة ·'],
+      '. Une fois conçu, il apparaîtra ici automatiquement.': ['. Once designed, it will appear here automatically.', '. بعد تصميمه، سيظهر هنا تلقائيًا.'],
+      /* La pastille du journal de caisse (assets/caisse-pwa.js), coupée sur « · ». */
+      'Journal caisse': ['Till journal', 'سجل الصندوق'],
+      'synchronisation en attente': ['sync pending', 'المزامنة معلّقة'],
+      'preuve terminal refusée': ['terminal proof refused', 'رُفض إثبات الجهاز'],
+      'appairage requis': ['pairing required', 'الربط مطلوب'],
+      '{n} événement(s) conservé(s)': ['{n} event(s) kept', '{n} حدث محفوظ'],
+      'reprise automatique': ['resumes automatically', 'استئناف تلقائي'],
+      'toucher pour réparer': ['tap to repair', 'المس للإصلاح'],
+      '{n} vente(s) à synchroniser': ['{n} sale(s) to sync', '{n} بيع للمزامنة'],
+      'ventes synchronisées': ['sales synced', 'المبيعات متزامنة'],
+      /* Libellés d'accessibilité et infobulles du rail et de l'addition. */
+      'Caisse': ['Till', 'الصندوق'],
+      'Mode caisse': ['Till mode', 'وضع الصندوق'],
+      'Stats du shift': ['Shift stats', 'إحصاءات الخدمة'],
+      'Ouvrir le journal des ventes': ['Open the sales journal', 'فتح سجل المبيعات'],
+      'Hub non activé': ['Hub not enabled', 'المحور غير مفعّل'],
+      'Impression automatique prête': ['Automatic printing ready', 'الطباعة التلقائية جاهزة'],
+      '{n} ticket(s) en attente': ['{n} ticket(s) waiting', '{n} تذكرة في الانتظار'],
+      'Recharger la caisse': ['Reload the till', 'إعادة تحميل الصندوق'],
+      'dépannage uniquement, synchronisation automatique': ['troubleshooting only, sync is automatic', 'للإصلاح فقط، المزامنة تلقائية'],
+      'Recharger la page de la caisse': ['Reload the till page', 'إعادة تحميل صفحة الصندوق'],
+      'dépannage': ['troubleshooting', 'إصلاح'],
+      'Basculer le plein écran': ['Toggle fullscreen', 'تبديل ملء الشاشة'],
+      'Retirer un': ['Remove one', 'إزالة واحد'],
+      'Ajouter un': ['Add one', 'إضافة واحد'],
+      'Plus': ['More', 'أكثر'],
+      'Cliquer pour voir le détail complet de la commande': ['Click to see the full order details', 'انقر لعرض تفاصيل الطلب كاملة'],
+      'Vérifier la commande complète avec détails': ['Review the full order with details', 'مراجعة الطلب كاملًا مع التفاصيل'],
+      'Note cuisine, {x}': ['Kitchen note, {x}', 'ملاحظة للمطبخ، {x}'],
+      'Encaisser en espèces': ['Take cash', 'الدفع نقداً'],
+    };
+    Object.keys(R).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = R[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = R[k][1];
+    });
+  })();
+
   /* ───────────────────────── les dates ─────────────────────────
      Une date n'est pas une phrase, c'est un GABARIT À JETONS : « jeu. 30 juil. »
      n'apparaîtra jamais deux fois de suite, aucune clé fixe ne peut l'attraper,
@@ -1555,8 +1612,11 @@
       var a = ATTRS[i];
       if (!el.hasAttribute(a)) continue;
       var fr = (store && store[a] != null) ? store[a] : el.getAttribute(a);
-      var d = dict();
-      var out = (d && d[fr]) ? d[fr] : fr;
+      /* La même découpe que le texte : « Encaisser en espèces · F2 »,
+         « Note cuisine, Msemen miel ». Une correspondance exacte seule
+         laissait en français toute infobulle qui porte un raccourci ou un nom. */
+      var hit = fr ? translateCore(fr) : null;
+      var out = hit != null ? hit : fr;
       if (out !== fr) {
         if (!store) { store = {}; origAttr.set(el, store); }
         if (store[a] == null) store[a] = fr;

@@ -127,7 +127,7 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=27" defer></script>
+  <script src="assets/caisse-lang.js?v=29" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -535,6 +535,9 @@
     }
 
     .quick-actions { display: flex; flex-direction: column; gap: 5px; margin-top: auto; padding-top: 5px; }
+    /* Le sélecteur de langue (assets/caisse-lang.js) tient toute la largeur du pied de rail. */
+    .rail-lang { margin-bottom: 2px; }
+    .rail-lang:empty { display: none; }
     .qa-btn {
       display: flex; align-items: center; gap: 9px;
       padding: 8px 12px;
@@ -702,6 +705,8 @@
       .qa-btn { min-height: 40px; padding: 6px 10px; font-size: 11.5px; gap: 7px; border-radius: 10px; }
       .qa-btn svg { width: 14px; height: 14px; flex-basis: 14px; }
       .quick-actions > .qa-btn[data-action="fin-service"] { grid-column: 1 / -1; order: 1; }
+      .quick-actions > .rail-lang { grid-column: 1 / -1; margin-bottom: 0; }
+      .quick-actions > .rail-lang .kcl-it { min-height: 36px; }
       /* Le voyant réseau porte son style en ligne : on le resserre d'autorité. */
       .quick-actions > #kiwi-net { grid-column: 1 / -1; order: 2; padding: 6px 10px !important; }
     }
@@ -6148,6 +6153,10 @@
       </div>
 
       <div class="quick-actions" aria-label="Fin de service">
+        <!-- Langue du comptoir · le sélecteur FR / EN / ع d'assets/caisse-lang.js
+             se greffe ici, comme dans le rail de la boutique. Sans lui, une
+             caissière sur le web ne pouvait pas changer la langue de la caisse. -->
+        <div class="rail-lang" data-kcl-host></div>
         <!-- Mode nuit · même stage charbon que le dashboard 2026. Icône et
              libellé repeints par le script de thème dans <head>. -->
         <button id="theme-toggle" type="button" class="qa-btn ghost" title="Basculer le mode nuit" aria-label="Basculer le mode nuit" aria-pressed="false">
@@ -7364,7 +7373,10 @@
       const t = new Intl.DateTimeFormat('fr-FR', {
         timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
       }).format(now);
-      const nativeLang = document.documentElement.classList.contains('kiwi-native') ? document.documentElement.lang : 'fr';
+      /* The date follows the till language: the native app's locale, or the
+         picker in the rail on the web (assets/caisse-lang.js). */
+      const nativeLang = document.documentElement.classList.contains('kiwi-native') ? document.documentElement.lang
+        : ((window.KiwiCaisseLang && window.KiwiCaisseLang.get()) || 'fr');
       const dateLocale = nativeLang === 'ar' ? 'ar-MA' : nativeLang === 'en' ? 'en-GB' : 'fr-FR';
       const dateStr = new Intl.DateTimeFormat(dateLocale, {
         timeZone: zone, weekday: 'long', day: 'numeric', month: 'long'

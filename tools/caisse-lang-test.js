@@ -181,7 +181,9 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
    mots identiques dans les deux langues (Scan, Promotions, Total). */
 const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Correction',
   // Le dialogue d'imprimante et la clôture (2026-10-12) : l'arabe change, l'anglais non.
-  'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions']);
+  'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions',
+  // Le rail et l'encaissement de la caisse restaurant (2026-10-13).
+  'Menu', 'Stock', 'Exact']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 /* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne
