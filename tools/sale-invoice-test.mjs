@@ -388,7 +388,11 @@ ok(pagesProSource.includes('Facture disponible après synchronisation de la vent
 
 // ── 5. Invoicing module delegation (assets/invoicing.js) ─────────────────────
 const invoicingSource = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
-ok(invoicingSource.includes('window.KiwiInvoice.html(doc)'), 'invoicing.js delegates printable() layout to KiwiInvoice.html');
+/* Une facture saisie à la main garde son gabarit (prix HT, échéance, impayée
+ * possible) : le gabarit KiwiInvoice.html est celui d'une vente acquittée.
+ * tools/invoicing-print-test.mjs exécute le vrai printable(). */
+const printableSrc = invoicingSource.slice(invoicingSource.indexOf('function printable('), invoicingSource.indexOf('function printInvoice('));
+ok(printableSrc.length > 0 && !printableSrc.includes('KiwiInvoice.html('), 'invoicing.js printable() keeps its own template, not the paid-sale KiwiInvoice.html');
 ok(invoicingSource.includes('getSaleInvoices()'), 'invoicing.js contains getSaleInvoices helper');
 ok(invoicingSource.includes('data-inv-sale-open'), 'invoicing.js handles data-inv-sale-open');
 ok(invoicingSource.includes("['sales',t.sales]") || invoicingSource.includes("['sales', t.sales]"), 'invoicing.js contains sales filter tab');

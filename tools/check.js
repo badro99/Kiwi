@@ -1495,6 +1495,7 @@ section('Whole-project regressions');
     'error-redaction-test.mjs',
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
+    'invoicing-print-test.mjs',
     'day-report-print-format-test.mjs',
     'retail-tender-methods-test.mjs',
     'sale-tip-d1-test.mjs',

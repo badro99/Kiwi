@@ -386,31 +386,9 @@
   }
 
   function printable(inv) {
-    if (window.KiwiInvoice && typeof window.KiwiInvoice.html === 'function') {
-      const sums = invoiceTotal(inv);
-      const doc = {
-        number: String(inv.number || (inv.id ? ('#' + inv.id) : 'Facture')),
-        issuedTs: inv.issueDate ? new Date(inv.issueDate + 'T12:00:00').getTime() : Date.now(),
-        seller: (window.KiwiInvoice && typeof window.KiwiInvoice.getSellerBusiness === 'function')
-          ? window.KiwiInvoice.getSellerBusiness()
-          : { name: businessName(), city: 'Maroc' },
-        customer: { name: inv.customer || '', ice: inv.ice || '', if: inv.if || '' },
-        lines: (inv.items || []).map(x => ({
-          name: x.description || 'Article',
-          qty: num(x.qty) || 1,
-          unitTTC: num(x.price),
-          totalTTC: round2(num(x.qty) * num(x.price)),
-        })),
-        tvaRate: num(inv.taxRate),
-        totals: {
-          ht: round2(sums.subtotal),
-          tva: round2(sums.tax),
-          ttc: round2(sums.total),
-        },
-        method: inv.method || 'Virement / Espèces',
-      };
-      return window.KiwiInvoice.html(doc);
-    }
+    /* Pas KiwiInvoice.html : ce gabarit-là est celui d'une vente de comptoir
+     * acquittée (« Payée », prix TTC). Une facture saisie ici a des prix HT, une
+     * échéance et peut être impayée : elle garde son propre gabarit. */
     const t = T(), sums = invoiceTotal(inv), seller = getSeller(), biz = seller.name || businessName();
     const sellerLogoHtml = renderSellerLogo(seller, 32);
     const sellerAddress = [seller.address, seller.city].filter(Boolean).map(esc).join(', ');
