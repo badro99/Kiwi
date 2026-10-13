@@ -1219,6 +1219,7 @@ section('Whole-project regressions');
     'pairs-api-test.mjs',
     'pairs-caisse-browser-test.mjs',
     'pairs-serveur-browser-test.mjs',
+    'pairs-boutique-browser-test.mjs',
     'print-relay-idempotency-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',

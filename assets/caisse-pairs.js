@@ -115,7 +115,34 @@
   }
   function dismiss(scope, id) { dismissed.add(String(scope || 'cart') + '|' + String(id || '')); }
 
-  window.KiwiPairs = { suggest: suggest, dismiss: dismiss, reset: reset, refresh: refresh, _state: function () { return state; } };
+  /* Les mots de la suggestion, dans la langue de l'écran. Les trois surfaces
+   * (caisse restaurant, boutique, app des serveurs) les partagent : une seule
+   * traduction à tenir. Les noms reçus sont déjà échappés par l'appelant, qui
+   * les a aussi traduits s'il traduit sa carte. `where` dit ce qu'on écarte :
+   * la commande, la table ou le ticket. */
+  var WORDS = {
+    fr: {
+      lead: function (l, i) { return 'Souvent avec ' + l + ' · <b>' + i + '</b>'; },
+      why: function (p, l) { return p + ' % des tickets avec ' + l + ' · 28 derniers jours'; },
+      add: function (i) { return 'Ajouter ' + i; },
+      dismiss: function (i, where) { return 'Ne plus proposer ' + i + ({ table: ' pour cette table', ticket: ' pour ce ticket' }[where] || ' pour cette commande'); },
+    },
+    en: {
+      lead: function (l, i) { return 'Often with ' + l + ' · <b>' + i + '</b>'; },
+      why: function (p, l) { return p + '% of tickets with ' + l + ' · last 28 days'; },
+      add: function (i) { return 'Add ' + i; },
+      dismiss: function (i, where) { return 'Stop suggesting ' + i + ({ table: ' for this table', ticket: ' for this ticket' }[where] || ' for this order'); },
+    },
+    ar: {
+      lead: function (l, i) { return 'غالباً مع ' + l + ' · <b>' + i + '</b>'; },
+      why: function (p, l) { return p + '% من التذاكر مع ' + l + ' · آخر 28 يوماً'; },
+      add: function (i) { return 'أضف ' + i; },
+      dismiss: function (i, where) { return 'لا تقترح ' + i + ({ table: ' لهذه الطاولة', ticket: ' لهذه التذكرة' }[where] || ' لهذا الطلب'); },
+    },
+  };
+  function say(lang) { return WORDS[lang === 'ary' ? 'ar' : lang] || WORDS.fr; }
+
+  window.KiwiPairs = { suggest: suggest, dismiss: dismiss, reset: reset, refresh: refresh, say: say, _state: function () { return state; } };
 
   setTimeout(refresh, 4000);
   setInterval(refresh, REFRESH_MS);

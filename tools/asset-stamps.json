@@ -140,8 +140,8 @@
     "sha": "ef8e0ef8297fd929"
   },
   "assets/caisse-pairs.js": {
-    "v": "2",
-    "sha": "6df2174938de2ebe"
+    "v": "3",
+    "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
     "v": "564",
@@ -724,12 +724,12 @@
     "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
-    "v": "59",
+    "v": "60",
     "sha": "3966a6796d909226"
   },
   "assets/pos-boutique.js": {
-    "v": "59",
-    "sha": "8ee0459bf1659ed5"
+    "v": "60",
+    "sha": "e33e8965ba78ca12"
   },
   "assets/pos-coiffure.css": {
     "v": "7",
@@ -740,8 +740,8 @@
     "sha": "ddc90f0b6626ca51"
   },
   "assets/pos-dispatch.js": {
-    "v": "89",
-    "sha": "4975cd7050c962cd"
+    "v": "90",
+    "sha": "7b0f90e1c5581fd3"
   },
   "assets/pos-epicerie.css": {
     "v": "8",

@@ -5007,7 +5007,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/operator-access.js?v=1" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <script src="assets/menu-promos.js?v=1" defer></script>
-  <script src="assets/caisse-pairs.js?v=2" defer></script>
+  <script src="assets/caisse-pairs.js?v=3" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js?v=2" defer></script>
@@ -9790,16 +9790,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!src || src.archived || src.formulaOnly || src.avail === false) return false;
       return !!menuItems.find(m => String(m.id) === String(id));
     }
-    /* Dans la langue de l'employé ; les noms de plats passent par
-       KiwiMenuI18n comme les lignes de la commande (svLineName). */
-    const SV_PAIR_STR = {
-      fr: { lead: (l, i) => `Souvent avec ${l} · <b>${i}</b>`, why: (p, l) => `${p} % des tickets avec ${l} · 28 derniers jours`,
-            add: (i) => `Ajouter ${i}`, dismiss: (i) => `Ne plus proposer ${i} pour cette table` },
-      en: { lead: (l, i) => `Often with ${l} · <b>${i}</b>`, why: (p, l) => `${p}% of tickets with ${l} · last 28 days`,
-            add: (i) => `Add ${i}`, dismiss: (i) => `Stop suggesting ${i} for this table` },
-      ar: { lead: (l, i) => `غالباً مع ${l} · <b>${i}</b>`, why: (p, l) => `${p}% من التذاكر مع ${l} · آخر 28 يوماً`,
-            add: (i) => `أضف ${i}`, dismiss: (i) => `لا تقترح ${i} لهذه الطاولة` },
-    };
     function svRenderPair(order) {
       const chip = $('#menu-pair-chip');
       if (!chip) return;
@@ -9813,12 +9803,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!m || !lead) { chip.hidden = true; chip.innerHTML = ''; return; }
       const pct = Math.round((Number(s.share) || 0) * 100);
       const name = (x) => esc(svLineName(x));
-      const t = SV_PAIR_STR[employeeLanguage] || SV_PAIR_STR.fr;
+      /* Dans la langue de l'employé ; les noms de plats passent par
+         KiwiMenuI18n comme les lignes de la commande (svLineName). */
+      const t = KiwiPairs.say ? KiwiPairs.say(employeeLanguage) : null;
+      if (!t) { chip.hidden = true; chip.innerHTML = ''; return; }
       chip.innerHTML = `
         <span class="menu-pair-txt">${t.lead(name(lead), name(m))}</span>
         <span class="menu-pair-why">${t.why(pct, name(lead))}</span>
         <button type="button" class="menu-pair-add" data-pair-add="${esc(m.id)}" aria-label="${t.add(name(m))}">+ ${fmtMAD(m.price)}</button>
-        <button type="button" class="menu-pair-x" data-pair-dismiss="${esc(m.id)}" aria-label="${t.dismiss(name(m))}">×</button>`;
+        <button type="button" class="menu-pair-x" data-pair-dismiss="${esc(m.id)}" aria-label="${t.dismiss(name(m), 'table')}">×</button>`;
       chip.hidden = false;
     }
 

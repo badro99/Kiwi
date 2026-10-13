@@ -212,7 +212,8 @@ check('the till loads the module', /<script src="assets\/caisse-pairs\.js\?v=\d+
 check('take-away and table orders both offer it', /pairSuggestHtml\(cart, 'cart'\)/.test(CA) && /pairSuggestHtml\(order, 'table:' \+ tableId\)/.test(CA));
 check('never on the demo till', /if \(IS_DEMO \|\| !window\.KiwiPairs/.test(CA));
 check('a tap adds through the normal path (options, formula, sold-out)', /data-pair-add[\s\S]{0,400}addToTableOrder\(selectedId, id\)[\s\S]{0,80}addToCart\(id\)/.test(CA));
-check('names are escaped', /Souvent avec \$\{kdsEsc\(lead\.name\)\}/.test(CA));
+check('names are escaped, in the till language (menuName), words from KiwiPairs.say(carteLang())',
+  /const lName = kdsEsc\(menuName\(lead\)\), mName = kdsEsc\(menuName\(m\)\);/.test(CA) && /KiwiPairs\.say\(carteLang\(\)\)/.test(CA));
 
 {
   const { calls } = sandbox({ paired: false });
@@ -229,6 +230,13 @@ check('names are escaped', /Souvent avec \$\{kdsEsc\(lead\.name\)\}/.test(CA));
   await window2.KiwiPairs.refresh();
   check('the waiter app declares its own store (KiwiPairsMerchant), no till pairing needed', calls2[0] === '/api/pairs?merchant=waiter-store' && window2.KiwiPairs.suggest(['a'], () => true, 'table:3').id === 'b');
   check('and calls was untouched on the unpaired till', calls.length === 0);
+  const say = window2.KiwiPairs.say;
+  check('say(fr) is the French copy', say('fr').lead('A', 'B') === 'Souvent avec A · <b>B</b>' && say('fr').why(86, 'A') === '86 % des tickets avec A · 28 derniers jours');
+  check('say(en) and say(ar) speak their language', say('en').lead('A', 'B') === 'Often with A · <b>B</b>' && /^غالباً مع A/.test(say('ar').lead('A', 'B')) && say('ary') === say('ar'));
+  check('an unknown language falls back to French', say('xx') === say('fr') && say(undefined) === say('fr'));
+  check('« × » names what it sets aside: order, table, ticket',
+    / pour cette commande$/.test(say('fr').dismiss('B')) && / pour cette table$/.test(say('fr').dismiss('B', 'table')) && / for this ticket$/.test(say('en').dismiss('B', 'ticket')));
+  check('no em dash in any of the copy', !/\u2014/.test(JSON.stringify(['fr', 'en', 'ar'].map((l) => [say(l).lead('a', 'b'), say(l).why(1, 'a'), say(l).add('b'), say(l).dismiss('b'), say(l).dismiss('b', 'table'), say(l).dismiss('b', 'ticket')]))));
 }
 const SV = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 check('the waiter app loads the module and declares its store only outside the demo',
@@ -238,6 +246,17 @@ check('« + » goes through the same path as a tap on the dish (formula, options
   /data-pair-add[\s\S]{0,200}itemHasFormula\(id\)\) openFormulaSheet\(id\);\s*else if \(itemHasOptions\(id\)\) openOptionsSheet\(id\);\s*else addToTableOrder\(menuContextId, id\)/.test(SV));
 check('leaving the menu or emptying the table hides it and resets what was dismissed',
   /currentTab !== 'menu'\) \{\s*bar\.classList\.remove\('is-visible'\);\s*svRenderPair\(null\);/.test(SV) && /KiwiPairs\.reset\('table:' \+ menuContextId\)/.test(SV));
+
+const BQ = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+check('the boutique ticket offers it after its lines, never in the demo nor in an exchange',
+  /lineRow\(ln, i\)\)\.join\(''\) \+ pairRow\(t\)/.test(BQ) && /if \(isDemoStore\(\) \|\| state\.exchange \|\| !window\.KiwiPairs/.test(BQ));
+check('boutique « + » opens the article sheet (size, colour, stock), like a tap in the grid',
+  /data-bq-pair-add[\s\S]{0,120}openSheet\(pairAdd\.dataset\.bqPairAdd\)/.test(BQ));
+check('its own attributes, so the restaurant handler (data-pair-add) never fires on it',
+  !/data-pair-add=/.test(BQ.slice(BQ.indexOf('function pairRow'), BQ.indexOf('/* central add'))));
+check('an article with no piece left in any colour is never offered',
+  /function pairSellable\(id\)[\s\S]{0,260}firstFreeFor\(p, c\)/.test(BQ));
+check('an emptied ticket forgets what was set aside', /if \(!t\.lines\.length\) \{ try \{ window\.KiwiPairs && KiwiPairs\.reset\('ticket'\)/.test(BQ));
 
 console.log(failures ? `\n✗ ${failures} check(s) failed` : `\n✓ ${passed} pairs checks green`);
 process.exit(failures ? 1 : 0);

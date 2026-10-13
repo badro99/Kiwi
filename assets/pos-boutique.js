@@ -1777,7 +1777,7 @@
       </div>
       <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
       <div class="bq-tk-lines" id="bq-tk-lines">
-        ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
+        ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') + pairRow(t) : `
           <div class="bq-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
             <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
               <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
@@ -1830,7 +1830,14 @@
       renderTicket(); icons();
     };
     $('#bq-validate', el).onclick = checkout;
+    if (!t.lines.length) { try { window.KiwiPairs && KiwiPairs.reset('ticket'); } catch (_) {} }
     $('#bq-tk-lines', el).onclick = (e) => {
+      /* « Souvent avec… » : « + » ouvre la fiche de l'article, comme un toucher
+         dans la grille (taille, couleur, stock) ; « × » l'écarte de ce ticket. */
+      const pairAdd = e.target.closest('[data-bq-pair-add]');
+      if (pairAdd) { openSheet(pairAdd.dataset.bqPairAdd); return; }
+      const pairNo = e.target.closest('[data-bq-pair-dismiss]');
+      if (pairNo) { try { KiwiPairs.dismiss('ticket', pairNo.dataset.bqPairDismiss); } catch (_) {} renderTicket(); return; }
       const minus = e.target.closest('[data-bq-minus]');
       const plus = e.target.closest('[data-bq-plus]');
       const idx = minus ? +minus.dataset.bqMinus : plus ? +plus.dataset.bqPlus : -1;
@@ -1878,6 +1885,36 @@
           <button data-bq-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-bq-plus="${i}" aria-label="Ajouter">+</button>
         </span>
       </span>
+    </div>`;
+  }
+
+  /* « Souvent avec… » (assets/caisse-pairs.js) : l'article que les tickets de
+     CETTE boutique associent le plus souvent au dernier entré. Jamais en démo,
+     jamais en échange, jamais un article absent de la grille ou sans une
+     seule pièce disponible. Les noms sont ceux du commerçant, non traduits. */
+  function pairSellable(id) {
+    const p = P[id];
+    if (!p || !RAYONS.some((r) => r.items.some((it) => it.id === p.id))) return false;
+    return (p.colors || []).some((c) => !!firstFreeFor(p, c));
+  }
+  function pairRow(t) {
+    if (isDemoStore() || state.exchange || !window.KiwiPairs || !KiwiPairs.suggest || !KiwiPairs.say) return '';
+    const ids = [];
+    /* Les tickets envoient ln.pid tel quel (itemId) : c'est la clé des paires. */
+    t.lines.forEach((ln) => { const id = String(ln.pid); if (ids[ids.length - 1] !== id) ids.push(id); });
+    let s = null;
+    try { s = KiwiPairs.suggest(ids, pairSellable, 'ticket'); } catch (_) { s = null; }
+    const m = s && P[s.id], lead = s && P[s.lead];
+    if (!m || !lead) return '';
+    const w = KiwiPairs.say(window.KiwiCaisseLang ? KiwiCaisseLang.get() : 'fr');
+    const pct = Math.round((Number(s.share) || 0) * 100);
+    const pr = promoFor(m.id);
+    const ln = esc(lead.name), mn = esc(m.name);
+    return `<div class="rp-pair bq-pair">
+      <span class="rp-pair-txt">${w.lead(ln, mn)}</span>
+      <span class="rp-pair-why">${w.why(pct, ln)}</span>
+      <button type="button" class="rp-pair-add" data-bq-pair-add="${esc(m.id)}" aria-label="${w.add(mn)}">+ ${fmtMAD(pr ? pr.price : m.price)}</button>
+      <button type="button" class="rp-pair-x" data-bq-pair-dismiss="${esc(m.id)}" aria-label="${w.dismiss(mn, 'ticket')}">×</button>
     </div>`;
   }
 

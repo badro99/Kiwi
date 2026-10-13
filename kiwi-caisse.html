@@ -133,7 +133,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=89" defer></script>
+  <script src="assets/pos-dispatch.js?v=90" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -5758,7 +5758,7 @@
   <script src="assets/orderpro-inbox.js?v=31" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=7" defer></script>
-  <script src="assets/caisse-pairs.js?v=2" defer></script>
+  <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=278" defer></script>
@@ -10363,12 +10363,18 @@
       const lead = menuItems.find(x => String(x.id) === s.lead);
       if (!m || !lead) return '';
       const pct = Math.round((Number(s.share) || 0) * 100);
+      /* Dans la langue de la caisse, noms de plats compris (menuName), comme
+         les tuiles : le balayage de caisse-lang.js ne reconnaît pas une
+         phrase qui porte des noms. */
+      const t = KiwiPairs.say ? KiwiPairs.say(carteLang()) : null;
+      if (!t) return '';
+      const lName = kdsEsc(menuName(lead)), mName = kdsEsc(menuName(m));
       return `
         <div class="rp-pair" data-pair-scope="${kdsEsc(scope)}">
-          <span class="rp-pair-txt">Souvent avec ${kdsEsc(lead.name)} · <b>${kdsEsc(m.name)}</b></span>
-          <span class="rp-pair-why">${pct} % des tickets avec ${kdsEsc(lead.name)} · 28 derniers jours</span>
-          <button type="button" class="rp-pair-add" data-pair-add="${kdsEsc(m.id)}" aria-label="Ajouter ${kdsEsc(m.name)}">+ ${fmtMAD(m.price)}</button>
-          <button type="button" class="rp-pair-x" data-pair-dismiss="${kdsEsc(m.id)}" aria-label="Ne plus proposer ${kdsEsc(m.name)} pour cette commande">×</button>
+          <span class="rp-pair-txt">${t.lead(lName, mName)}</span>
+          <span class="rp-pair-why">${t.why(pct, lName)}</span>
+          <button type="button" class="rp-pair-add" data-pair-add="${kdsEsc(m.id)}" aria-label="${t.add(mName)}">+ ${fmtMAD(m.price)}</button>
+          <button type="button" class="rp-pair-x" data-pair-dismiss="${kdsEsc(m.id)}" aria-label="${t.dismiss(mName, scope.indexOf('table:') === 0 ? 'table' : 'order')}">×</button>
         </div>`;
     }
 
