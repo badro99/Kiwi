@@ -75,6 +75,10 @@ check(/requireTillOperator\(`Annuler la table \$\{tid\}`, \(who\) => \{\s*cancel
   && !/requireTillOperator\(`Annuler la table \$\{tid\}`[\s\S]{0,200}TILL_NEEDS_SERVER/.test(tableBranch),
   'annuler une table sans rien d\'envoyé reste local : aucun besoin du serveur');
 
+const archiveFn = between(caisse, 'function vrapArchivePaid(num) {', '\n    }\n', 'vrapArchivePaid');
+check(/requireTillOperator\(`Retirer \$\{label\} du suivi`, \(who\) => \{[\s\S]*?opPush\(o, 'archived'[\s\S]*?TILL_NEEDS_SERVER\);/.test(archiveFn),
+  'retirer une commande payée du suivi : le pavé exige le serveur (opPush « archived » est une écriture sans file)');
+
 check(/KiwiAuthorizeTillAction\(action, function \(who\) \{[\s\S]*?\}, \{\s*needsServer: true,\s*onCancel: function \(\) \{ resolve\(\{ ok: false, cancelled: true \}\); \},\s*\}\);/.test(inbox),
   'rejeter une commande en ligne : le pavé exige le serveur et rend la main au bouton s\'il se ferme');
 check(/if \(result && result\.cancelled\) \{ paint\(\); return null; \}/.test(inbox),

@@ -21843,7 +21843,9 @@
           renderVrapBoard();
           toast(`${label} retirée du suivi · vente conservée`);
         });
-      });
+      }, /* Retirer du suivi est une écriture serveur sans file d'attente : hors
+            connexion, pas de code (« connexion requise · rien n'a changé »). */
+      TILL_NEEDS_SERVER);
     }
 
     $('#vrap-board').addEventListener('click', (e) => {

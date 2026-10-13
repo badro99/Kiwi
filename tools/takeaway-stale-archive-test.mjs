@@ -160,11 +160,13 @@ assert.doesNotMatch(cardContext.vrapOrderCard({ ...counterCard, opId: '' }), /da
   'a sale without server identity cannot be silently hidden locally');
 
 let archiveReply = { ok: false, error: 'archive-not-eligible' };
+const archiveGate = { opts: null };
 const archiveCalls = [];
 const archiveContext = vm.createContext({
   kdsOrders: [counterCard], window: { confirm: () => true },
   ticketNo: o => String(o.opNum),
-  requireTillOperator: (_label, next) => next({ actorProof: 'test-actor' }),
+  TILL_NEEDS_SERVER: Object.freeze({ needsServer: true }),
+  requireTillOperator: (_label, next, opts) => { archiveGate.opts = opts; return next({ actorProof: 'test-actor' }); },
   opPush: (_order, status, extra) => {
     archiveCalls.push({ status, actorProof: extra.actorProof });
     return Promise.resolve(archiveReply);
@@ -178,6 +180,7 @@ vm.runInContext(extract('vrapArchivePaid'), archiveContext);
 archiveContext.vrapArchivePaid(134);
 await new Promise(setImmediate);
 assert.equal(archiveCalls[0].status, 'archived', 'counter sale uses the audited server archive endpoint');
+assert.equal(archiveGate.opts && archiveGate.opts.needsServer, true, 'the archive pad needs the server: offline it takes no code');
 assert.equal(archiveCalls[0].actorProof, 'test-actor', 'counter-sale archive carries named operator proof');
 assert.equal(archiveCalls.length, 1, 'server rejection cannot remove the local card');
 archiveReply = { ok: true };
