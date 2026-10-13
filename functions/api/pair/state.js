@@ -20,7 +20,7 @@
  * réponse ne contient ni jeton, ni code, ni identité de personne.
  */
 
-import { json, readCookie, TILL_COOKIE, tillVerification } from '../../auth/_lib.js';
+import { json, readCookie, TILL_COOKIE, tillVerification, isTerminalFor, tillEpoch, tillDeviceToken, tillCookie, recordTillDevice, DEVICE_ID } from '../../auth/_lib.js';
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -40,7 +40,27 @@ export async function onRequestGet({ request, env }) {
    * en « dépairée ». Réappairer ici effacerait un appairage parfaitement valide
    * à cause d'une panne de base. */
   if (till && till.unavailable) return json({ error: 'auth-verification-unavailable' }, 503);
-  if (till && till.ok) return json({ paired: true, merchant, reason: 'ok' }, 200);
+  if (till && till.ok) {
+    /* Renouvellement silencieux : un jeton d'avant l'identifiant d'appareil,
+     * présenté avec la preuve terminal de cette tablette, devient un jeton à
+     * son nom, que le propriétaire pourra retirer seul. L'appareil se signale
+     * au passage (dernière présence). */
+    const terminalId = String(url.searchParams.get('terminalId') || '').trim();
+    if (DEVICE_ID.test(terminalId) && (till.deviceId === terminalId || (till.legacy && await isTerminalFor(request, env, merchant, terminalId)))) {
+      await recordTillDevice(env, merchant, terminalId);
+      if (till.legacy) {
+        const epoch = await tillEpoch(env, merchant);
+        if (Number.isFinite(epoch)) {
+          return json({ paired: true, merchant, reason: 'ok', renewed: true }, 200,
+            { 'Set-Cookie': tillCookie(await tillDeviceToken(env.AUTH_SECRET, merchant, epoch, terminalId)) });
+        }
+      }
+    }
+    return json({ paired: true, merchant, reason: 'ok' }, 200);
+  }
+  /* Cet appareil précis a été retiré par le propriétaire : seul un nouveau code
+   * le rend à la caisse. */
+  if (till && till.revoked) return json({ paired: false, merchant, reason: 'device-revoked' }, 200);
 
   /* Un cookie qui ne vérifie pas pour CE magasin : soit le commerçant a dépairé
    * (millésime incrémenté), soit cette tablette appartient à un autre magasin.

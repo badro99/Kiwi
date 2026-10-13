@@ -130,7 +130,9 @@
     if (!m) return;
     pairingProbing = true;
     pairingProbeAt = Date.now() + 30000;
-    fetch('/api/pair/state?merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' } })
+    var tid = '';
+    try { tid = (window.KiwiCaissePairing && window.KiwiCaissePairing.terminalId && window.KiwiCaissePairing.terminalId()) || ''; } catch (_) {}
+    fetch('/api/pair/state?merchant=' + encodeURIComponent(m) + (tid ? '&terminalId=' + encodeURIComponent(tid) : ''), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (d) {
         /* Seule une réponse EXPLICITE dépaire l'affichage. Un 503 (lecture de

@@ -663,17 +663,28 @@ Closed on 2026-10-13 (each with a test wired into `tools/check.js`):
 - `txPerDay` and `revPerDay` divide by days open.
 - The restaurant till freezes cost on sale lines (`caisse-frozen-cost-test`).
 
-Still open, by decision rather than by defect:
+Decided on 2026-10-13 (owner):
 
-- **What a pending store may save.** The server refuses `store_docs` writes
-  from a pending store, so the wizard's roster and floor plan wait on the
-  device until activation. Product decision.
+- ~~**What a pending store may save.**~~ The owner session (or a named
+  operator) of a pending store now saves setup documents (team, floor plan,
+  services, rooms, KDS, menu settings, recipes, costs, promotions,
+  suppliers) through `PENDING_SETUP_FEATURES` in `functions/api/store.js`.
+  Operations (attendance, payroll, credit), paired tills and suspended stores
+  stay closed. `tools/store-pending-setup-test.mjs`.
+- ~~**Per-device unpair.**~~ The till token now names its device
+  (`<epoch>.<deviceId>.<hmac>`, `tillDeviceToken`). `till_devices` records
+  each paired till; `/api/pair/devices` lists them and revokes one without
+  moving the epoch, and the caisse link panel shows them. Older tokens are
+  renewed under their device name the next time the till proves its terminal
+  cookie. A production database without the table treats nothing as revoked.
+  `tools/till-device-revoke-test.mjs`.
+- **Equal splits** keep counting one transaction per part: each part is a
+  separate payment with its own tender and receipt. Kept.
+
+Still open, deliberately:
+
 - **Till ticket numbering after C4.** A contaminated shift keeps its
   `kdsOrderSeq` until the service is closed; those numbers may be printed.
-  Deliberate.
-- **Equal splits** count one transaction per part (defensible per payment).
-- **Per-device unpair.** The till token carries no device id; revoking one
-  device means re-pairing all. Needs a device id in the token.
 
 ## Inventory · next features
 

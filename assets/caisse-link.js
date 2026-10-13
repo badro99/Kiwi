@@ -230,6 +230,17 @@
       '.kcl-open:focus-visible{outline:3px solid var(--mint,#7DF2B0);outline-offset:3px;}' +
       '.kcl-hint{margin:14px 0 0;font-size:.8rem;line-height:1.5;color:var(--ink,#0A0F0D);opacity:.6;}' +
       '.kcl-under-operator .kiwi-drawer{top:var(--kcl-drawer-top,34px);}' +
+      '.kcl-devices{margin-top:22px;padding-top:16px;border-top:1px solid var(--n-200,#E8E6E0);}' +
+      '.kcl-devices h4{margin:0 0 4px;font-size:.86rem;font-weight:700;color:var(--ink,#0A0F0D);}' +
+      '.kcl-devices p{margin:0 0 10px;font-size:.76rem;line-height:1.45;color:var(--n-500,#6F6C65);}' +
+      '.kcl-dev{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--n-200,#E8E6E0);}' +
+      '.kcl-dev:last-child{border-bottom:0;}' +
+      '.kcl-dev b{display:block;font-size:.82rem;font-weight:650;color:var(--ink,#0A0F0D);}' +
+      '.kcl-dev small{display:block;margin-top:2px;font-size:.72rem;color:var(--n-500,#6F6C65);}' +
+      '.kcl-dev code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.72rem;}' +
+      '.kcl-dev.off b{color:var(--n-500,#6F6C65);}' +
+      '.kcl-dev button{background:var(--surface,#FFFDFA);border:1px solid var(--n-200,#E8E6E0);color:var(--ink,#0A0F0D);border-radius:10px;padding:7px 12px;font:inherit;font-size:.76rem;font-weight:650;cursor:pointer;}' +
+      '.kcl-dev button.kcl-confirm{border-color:var(--danger,#B3261E);color:var(--danger,#B3261E);}' +
       /* corner launcher */
       '#kcl-chip{position:fixed;left:20px;bottom:20px;z-index:900;display:inline-flex;align-items:center;gap:9px;' +
       'background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:1px solid rgba(0,0,0,.1);border-radius:999px;' +
@@ -280,7 +291,64 @@
         '<div class="kcl-state"><span class="kcl-d kcl-pulse"></span><span class="kcl-state-copy"><strong id="kcl-status-t">Connexion en attente</strong><small id="kcl-status-detail">Ouvrez Kiwi Caisse sur votre terminal</small></span><span class="kcl-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span></div>' +
       '</section>' +
       '<button class="kcl-open" type="button" id="kcl-open">Ouvrir la caisse sur cet appareil</button>' +
-      '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
+      '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>' +
+      '<section class="kcl-devices" id="kcl-devices" hidden></section>';
+  }
+
+  /* ── Caisses appairées : en retirer UNE ─────────────────────────────────────
+   * Le jeton de caisse nomme maintenant son appareil (functions/auth/_lib.js ›
+   * tillDeviceToken). Une tablette perdue, revendue ou partie avec un employé se
+   * retire seule ici ; les autres caisses continuent d'encaisser. Elle ne revient
+   * qu'avec un nouveau code. Le retrait demande un second appui. */
+  function devLang() { var l = ''; try { l = localStorage.getItem('kiwiLang') || document.documentElement.lang || 'fr'; } catch (_) { l = 'fr'; } return /^ar/.test(l) ? 'ar' : /^en/.test(l) ? 'en' : 'fr'; }
+  var DEV_T = {
+    title: ['Caisses appairées', 'Paired tills', 'الصناديق المقترنة'],
+    lead: ['Retirez un appareil perdu ou revendu : lui seul devra réappairer avec un nouveau code.', 'Remove a lost or sold device: only that one will need a new code to pair again.', 'أزل جهازًا مفقودًا أو مبيعًا: هو وحده سيحتاج إلى رمز جديد للاقتران.'],
+    till: ['Caisse', 'Till', 'صندوق'],
+    paired: ['appairée le', 'paired on', 'اقترن في'],
+    seen: ['vue le', 'last seen', 'آخر ظهور'],
+    removed: ['retirée le', 'removed on', 'أزيل في'],
+    remove: ['Retirer', 'Remove', 'إزالة'],
+    confirm: ['Confirmer le retrait', 'Confirm removal', 'تأكيد الإزالة'],
+    none: ['Aucune caisse appairée sous son nom pour l’instant. Une caisse déjà en service apparaît ici à sa prochaine ouverture.', 'No till paired under its own name yet. A till already in use appears here the next time it opens.', 'لا يوجد صندوق مقترن باسمه بعد. يظهر الصندوق المستخدم هنا عند فتحه في المرة القادمة.'],
+    failed: ['Retrait impossible pour l’instant. Réessayez.', 'Could not remove the device. Try again.', 'تعذرت الإزالة الآن. أعد المحاولة.'],
+  };
+  function dt(key) { var i = { fr: 0, en: 1, ar: 2 }[devLang()]; return DEV_T[key][i]; }
+  function devDate(ts) {
+    try { return new Intl.DateTimeFormat(devLang() === 'ar' ? 'ar-MA' : devLang() === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); }
+    catch (_) { return new Date(ts).toISOString().slice(0, 16).replace('T', ' '); }
+  }
+  function renderDevices(host, merchant, list) {
+    if (!host) return;
+    var rows = (list || []).map(function (d) {
+      var tail = String(d.id).slice(-4);
+      var when = d.revokedAt ? dt('removed') + ' ' + devDate(d.revokedAt)
+        : (d.lastSeenAt ? dt('seen') + ' ' + devDate(d.lastSeenAt) : (d.pairedAt ? dt('paired') + ' ' + devDate(d.pairedAt) : ''));
+      return '<div class="kcl-dev' + (d.revokedAt ? ' off' : '') + '"><span><b>' + esc(d.label || dt('till')) + ' <code>···' + esc(tail) + '</code></b><small>' + esc(when) + '</small></span>' +
+        (d.revokedAt ? '' : '<button type="button" data-kcl-revoke="' + esc(d.id) + '">' + esc(dt('remove')) + '</button>') + '</div>';
+    }).join('');
+    host.innerHTML = '<h4>' + esc(dt('title')) + '</h4><p>' + esc(rows ? dt('lead') : dt('none')) + '</p>' + rows;
+    host.hidden = false;
+  }
+  function loadDevices(host, merchant) {
+    if (!host || !merchant || typeof fetch !== 'function') return;
+    fetch('/api/pair/devices?merchant=' + encodeURIComponent(merchant), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.ok) renderDevices(host, merchant, j.devices); })
+      .catch(function () { /* hors ligne, ou hébergement statique : la section reste cachée */ });
+  }
+  function revokeDevice(host, merchant, button) {
+    var id = button.getAttribute('data-kcl-revoke');
+    if (!button.classList.contains('kcl-confirm')) { button.classList.add('kcl-confirm'); button.textContent = dt('confirm'); return; }
+    button.disabled = true;
+    fetch('/api/pair/devices', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ merchant: merchant, deviceId: id }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || 'revoke-failed'); }); })
+      .then(function () { loadDevices(host, merchant); })
+      .catch(function () {
+        button.disabled = false; button.classList.remove('kcl-confirm'); button.textContent = dt('remove');
+        try { window.Kiwi && Kiwi.toast && Kiwi.toast(dt('failed'), { type: 'warn' }); } catch (_) {}
+      });
   }
 
   /* Same-device hand-off. "Ouvrir la caisse sur cet appareil" opens the till in
@@ -374,7 +442,10 @@
     if (connected) markConnected(); else { refresh(); setRemote(remoteState); }
     tick = setInterval(refresh, 1000);
 
+    loadDevices($('#kcl-devices'), biz.merchant);
     el.addEventListener('click', function (e) {
+      var rv = e.target.closest('[data-kcl-revoke]');
+      if (rv) { revokeDevice($('#kcl-devices'), biz.merchant, rv); return; }
       if (e.target.closest('#kcl-copy')) {
         try { navigator.clipboard.writeText(cur); } catch (_) {}
         var b = $('#kcl-copy'); if (b) { var o = b.textContent; b.textContent = 'Copié'; setTimeout(function () { b.textContent = o; }, 1400); }

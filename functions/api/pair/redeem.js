@@ -18,7 +18,7 @@
 // No DB ⇒ 503 (a static host has no pairings table; the client's 404-style
 // fallback isn't reached here, but 503 still keeps it away from the 422 path).
 
-import { json, tillToken, tillCookie, terminalToken, terminalCookie, tillEpoch,
+import { json, tillToken, tillDeviceToken, recordTillDevice, tillCookie, terminalToken, terminalCookie, tillEpoch,
 } from '../../auth/_lib.js';
 
 /* ── Brute-force cap ────────────────────────────────────────────────────────
@@ -186,7 +186,13 @@ export async function onRequestPost(context) {
     }
     try {
       if (!Number.isFinite(currentEpoch)) return json({ error: 'auth-unavailable' }, 503);
-      res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, currentEpoch)));
+      /* Un appareil qui se nomme reçoit un jeton à SON nom : on pourra le
+         retirer seul (POST /api/pair/devices). Un nouveau code lève une
+         ancienne révocation de cet appareil. */
+      res.headers.append('Set-Cookie', tillCookie(terminalId
+        ? await tillDeviceToken(env.AUTH_SECRET, row.merchant, currentEpoch, terminalId)
+        : await tillToken(env.AUTH_SECRET, row.merchant, currentEpoch)));
+      if (terminalId) await recordTillDevice(env, row.merchant, terminalId, { paired: true });
     } catch (_) { return json({ error: 'auth-unavailable' }, 503); }
   }
   return res;

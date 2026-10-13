@@ -35,7 +35,7 @@
 
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant } from '../auth/_lib.js';
-import { employeeAuthVersion, tenantFor } from './_private.js';
+import { employeeAuthVersion, tenantFor, storeSubscriptionPending } from './_private.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
 import { poke } from './_live.js';
 import {
@@ -577,6 +577,20 @@ export function ownBriefingDays(doc, merchant) {
   if (!doc || typeof doc !== 'object' || !Array.isArray(doc.days)) return doc;
   return { ...doc, days: doc.days.filter((d) => d && typeof d === 'object' && d.venue === merchant) };
 }
+/* Ce qu'un magasin EN ATTENTE d'activation peut déjà enregistrer : sa
+ * configuration, rien de ce qui compte de l'argent ou des heures. L'assistant
+ * d'installation monte l'équipe, le plan de salle, les services, les chambres,
+ * les prix ; le serveur refusait toute écriture `store_docs` d'un magasin en
+ * attente, si bien que ces fiches restaient sur l'appareil de l'installation
+ * (marquées non synchronisées) et manquaient sur tous les autres jusqu'à
+ * l'activation. Décision du propriétaire (2026-10-13) : la configuration passe,
+ * et seulement depuis la session du compte propriétaire ou un opérateur nommé ;
+ * une caisse appairée n'écrit toujours rien avant l'activation. Ventes,
+ * pointage, paie, avoirs, retours, réservations restent bloqués. */
+const PENDING_SETUP_FEATURES = new Set([
+  'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
+  'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
+]);
 const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
@@ -794,7 +808,11 @@ export async function onRequestPost(context) {
   const feature = featureOf(body && body.feature);
   if (!feature) return json({ error: 'unknown-feature' }, 400);
 
-  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  let merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  if (!merchant && PENDING_SETUP_FEATURES.has(feature)) {
+    const setup = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
+    if (setup && await storeSubscriptionPending(env, setup) && await editsRoster(request, env, setup)) merchant = setup;
+  }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   /* Qui ne peut pas LIRE les codes ne peut pas RÉÉCRIRE le document qui les

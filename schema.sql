@@ -337,6 +337,22 @@ CREATE TABLE IF NOT EXISTS pair_attempts (
   blocked_until INTEGER
 );
 
+-- ── Paired till devices (per-device revocation) ──────────────────────────────
+-- A till token names its device (functions/auth/_lib.js › tillDeviceToken).
+-- Pairing records the device; the owner can revoke ONE device through
+-- /api/pair/devices without moving till_epoch for every till. Created on first
+-- use by ensureTillDevices(): prod D1 may not have it yet, and a missing table
+-- means no device was ever revoked.
+CREATE TABLE IF NOT EXISTS till_devices (
+  merchant     TEXT NOT NULL,
+  device_id    TEXT NOT NULL,
+  label        TEXT,
+  paired_ts    INTEGER,
+  last_seen_ts INTEGER,
+  revoked_ts   INTEGER,
+  PRIMARY KEY (merchant, device_id)
+);
+
 -- ── Published menu (customer QR self-order → kiwi-order.html) ────────────────
 -- One row per merchant: the carte a customer sees after scanning the table QR.
 -- The merchant's dashboard menu lives client-side (localStorage, per-venue, via

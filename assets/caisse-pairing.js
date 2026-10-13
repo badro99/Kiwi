@@ -286,7 +286,9 @@
     return response.json().catch(function () { return {}; });
   }
   function pairState(venue) {
-    return fetch('/api/pair/state?merchant=' + encodeURIComponent(venue.merchant), {
+    /* terminalId : le serveur renouvelle un ancien jeton en jeton à NOTRE nom,
+       que le propriétaire pourra retirer sans toucher aux autres caisses. */
+    return fetch('/api/pair/state?merchant=' + encodeURIComponent(venue.merchant) + '&terminalId=' + encodeURIComponent(terminalId()), {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then(function (r) {
       return jsonOrEmpty(r).then(function (j) {
@@ -967,7 +969,7 @@
 
   window.KiwiCaissePairing = {
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
-    repair: repair, recoverFromTerminal: recoverFromTerminal,
+    repair: repair, recoverFromTerminal: recoverFromTerminal, terminalId: terminalId,
     repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.

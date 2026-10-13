@@ -124,8 +124,8 @@
     "sha": "11279739e1e2b084"
   },
   "assets/caisse-link.js": {
-    "v": "16",
-    "sha": "b936610448f17eac"
+    "v": "17",
+    "sha": "d44fd22895580693"
   },
   "assets/caisse-menu-availability.js": {
     "v": "7",
@@ -136,16 +136,16 @@
     "sha": "a5c45fa2503e8895"
   },
   "assets/caisse-pairing.js": {
-    "v": "31",
-    "sha": "89403f8e1f33bf66"
+    "v": "32",
+    "sha": "bd86198a5b878395"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "565",
-    "sha": "cb82f79b725ccf74"
+    "v": "566",
+    "sha": "3a284f0094840c35"
   },
   "assets/caisse-refresh.js": {
     "v": "2",

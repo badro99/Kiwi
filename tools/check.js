@@ -1676,6 +1676,8 @@ section('Whole-project regressions');
     'caisse-theme-contrast-test.mjs',
     'cash-move-custom-reason-test.mjs',
     'clients-pending-write-test.mjs',
+    'store-pending-setup-test.mjs',
+    'till-device-revoke-test.mjs',
     'critical-flow-test.mjs',
     'dashboard-kds-nav-test.mjs',
     'dashboard-notification-isolation-test.js',

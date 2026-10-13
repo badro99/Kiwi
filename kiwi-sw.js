@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=565',
+  '/assets/caisse-pwa.js?v=566',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -219,7 +219,7 @@ var SHELL = [
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
   '/assets/identity.js?v=10',
-  '/assets/caisse-link.js?v=16',
+  '/assets/caisse-link.js?v=17',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -345,7 +345,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=8',
   '/assets/pos-maison.css?v=65',
   '/assets/pos-maison.js?v=65',
-  '/assets/caisse-pairing.js?v=31',
+  '/assets/caisse-pairing.js?v=32',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -280,6 +280,92 @@ export async function tillToken(authSecret, merchant, epoch = 0) {
   return n + '.' + sig;
 }
 
+/* ── UN APPAREIL, PAS TOUT LE MAGASIN ──────────────────────────────────────
+ * Le millésime coupe TOUTES les caisses d'un commerçant. Pour retirer une seule
+ * tablette (perdue, revendue, partie avec un employé), le jeton porte
+ * maintenant l'identifiant de l'appareil : `<millésime>.<appareil>.<hmac>`,
+ * l'appareil entrant dans la signature. L'identifiant est celui que la caisse
+ * présente déjà à l'appairage (`terminalId`, cookie kiwi_terminal). Retirer un
+ * appareil l'inscrit dans `till_devices.revoked_ts` ; son jeton et son cookie
+ * terminal cessent alors de valoir, et lui seul doit réappairer. Un jeton de
+ * l'ancienne forme (sans appareil) reste valable jusqu'à ce que la caisse le
+ * renouvelle (GET /api/pair/state le remplace dès qu'elle prouve son terminal). */
+export const DEVICE_ID = /^[A-Za-z0-9_-]{12,80}$/;
+export async function tillDeviceToken(authSecret, merchant, epoch, deviceId) {
+  const n = Math.max(0, Math.round(Number(epoch) || 0));
+  const d = String(deviceId || '');
+  if (!DEVICE_ID.test(d)) return tillToken(authSecret, merchant, n);
+  const sig = await hmacHex(authSecret, 'kiwi-till-v3:' + String(merchant || '') + ':' + n + ':' + d);
+  return n + '.' + d + '.' + sig;
+}
+const TILL_DEVICES_DDL = `CREATE TABLE IF NOT EXISTS till_devices (
+  merchant TEXT NOT NULL, device_id TEXT NOT NULL, label TEXT,
+  paired_ts INTEGER, last_seen_ts INTEGER, revoked_ts INTEGER,
+  PRIMARY KEY (merchant, device_id))`;
+export async function ensureTillDevices(env) {
+  if (!env || !env.DB) return false;
+  try { await env.DB.prepare(TILL_DEVICES_DDL).run(); return true; } catch (_) { return false; }
+}
+/* L'appairage (ou sa réparation) inscrit l'appareil et lève une ancienne
+ * révocation : le propriétaire a volontairement donné un nouveau code. */
+const tillDeviceSeenByDb = new WeakMap();
+export async function recordTillDevice(env, merchant, deviceId, opts) {
+  if (!env || !env.DB || !merchant || !DEVICE_ID.test(String(deviceId || ''))) return false;
+  const now = Date.now();
+  const paired = !!(opts && opts.paired);
+  /* « vue le » n'a pas besoin d'une écriture toutes les trente secondes : une
+   * caisse sondée en continu ne réécrit sa présence qu'une fois par dix minutes
+   * et par isolat. L'appairage, lui, écrit toujours. */
+  const seenKey = String(merchant) + '\u0000' + String(deviceId);
+  let tillDeviceSeen = tillDeviceSeenByDb.get(env.DB);
+  if (!tillDeviceSeen) { tillDeviceSeen = new Map(); tillDeviceSeenByDb.set(env.DB, tillDeviceSeen); }
+  if (!paired && (now - (tillDeviceSeen.get(seenKey) || 0)) < 10 * 60 * 1000) return true;
+  tillDeviceSeen.set(seenKey, now);
+  if (tillDeviceSeen.size > 5000) tillDeviceSeen.clear();
+  try {
+    await ensureTillDevices(env);
+    await env.DB.prepare(
+      `INSERT INTO till_devices (merchant, device_id, label, paired_ts, last_seen_ts, revoked_ts)
+       VALUES (?, ?, ?, ?, ?, NULL)
+       ON CONFLICT(merchant, device_id) DO UPDATE SET
+         last_seen_ts = excluded.last_seen_ts,
+         label = COALESCE(excluded.label, till_devices.label),
+         paired_ts = CASE WHEN ? THEN excluded.paired_ts ELSE COALESCE(till_devices.paired_ts, excluded.paired_ts) END,
+         revoked_ts = CASE WHEN ? THEN NULL ELSE till_devices.revoked_ts END`
+    ).bind(String(merchant), String(deviceId), (opts && opts.label) ? String(opts.label).slice(0, 80) : null, now, now, paired ? 1 : 0, paired ? 1 : 0).run();
+    forgetTillDevice(merchant, deviceId);
+    return true;
+  } catch (_) { return false; }
+}
+const tillDeviceCaches = new WeakMap();
+const tillDeviceCacheRefs = new Set();
+/* Même compromis que le millésime : une minute de mémoire d'isolat. Table
+ * absente = aucun retrait n'a jamais pu être écrit (seul le retrait la crée
+ * avec l'appairage), donc « non retiré » ; une vraie panne reste indisponible. */
+export async function tillDeviceRevoked(env, merchant, deviceId) {
+  const key = String(merchant || '') + '\u0000' + String(deviceId || '');
+  if (!env || !env.DB) return null;
+  let cache = tillDeviceCaches.get(env.DB);
+  if (!cache) { cache = new Map(); tillDeviceCaches.set(env.DB, cache); tillDeviceCacheRefs.add(cache); }
+  const hit = cache.get(key);
+  if (hit && hit.until > Date.now()) return hit.value;
+  try {
+    const row = await env.DB.prepare('SELECT revoked_ts FROM till_devices WHERE merchant = ? AND device_id = ?')
+      .bind(String(merchant), String(deviceId)).first();
+    const value = !!(row && Number(row.revoked_ts) > 0);
+    cache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
+    return value;
+  } catch (err) {
+    if (!missingSchema(err)) return null;
+    cache.set(key, { value: false, until: Date.now() + TILL_EPOCH_TTL_MS });
+    return false;
+  }
+}
+export function forgetTillDevice(merchant, deviceId) {
+  const key = String(merchant || '') + '\u0000' + String(deviceId || '');
+  for (const cache of tillDeviceCacheRefs) cache.delete(key);
+}
+
 /* La forme d'avant le millésime. Conservée pour la reconnaître, jamais pour en
  * émettre une nouvelle. */
 async function legacyTillToken(authSecret, merchant) {
@@ -392,9 +478,21 @@ export async function tillVerification(request, env, merchant) {
   if (!got) return { ok: false };
   const epoch = await tillEpoch(env, merchant);
   if (!Number.isFinite(epoch)) return { ok: false, unavailable: true };
-  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return { ok: true };
+  const parts = String(got).split('.');
+  if (parts.length === 3) {
+    const deviceId = parts[1];
+    if (!DEVICE_ID.test(deviceId)) return { ok: false };
+    if (!timingSafeEqualHex(got, await tillDeviceToken(secret, merchant, epoch, deviceId))) return { ok: false };
+    const revoked = await tillDeviceRevoked(env, merchant, deviceId);
+    if (revoked === null) return { ok: false, unavailable: true };
+    return revoked ? { ok: false, revoked: true, deviceId } : { ok: true, deviceId };
+  }
+  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return { ok: true, legacy: true };
   /* L'ancienne forme n'est reconnue que tant que personne n'a dépairé. */
-  if (epoch === 0) return { ok: timingSafeEqualHex(got, await legacyTillToken(secret, merchant)) };
+  if (epoch === 0) {
+    const ok = timingSafeEqualHex(got, await legacyTillToken(secret, merchant));
+    return ok ? { ok: true, legacy: true } : { ok: false };
+  }
   return { ok: false };
 }
 export async function isTerminalFor(request, env, merchant, terminalId) {
@@ -404,6 +502,8 @@ export async function isTerminalFor(request, env, merchant, terminalId) {
   if (!got) return false;
   const epoch = await tillEpoch(env, merchant);
   if (!Number.isFinite(epoch)) return false;
+  /* Un appareil retiré ne se répare pas tout seul depuis son cookie terminal. */
+  if (DEVICE_ID.test(String(terminalId)) && (await tillDeviceRevoked(env, merchant, terminalId)) !== false) return false;
   if (timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId, epoch))) return true;
   /* A pre-recovery terminal cookie is accepted only before the merchant's
    * first global unpair. Once the epoch moves, that old device proof cannot be

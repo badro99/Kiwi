@@ -13,7 +13,7 @@
  * HttpOnly terminal cookie verifies for the same merchant and exact id.
  */
 import {
-  isTerminalFor, json, tillCookie, tillEpoch, tillToken,
+  isTerminalFor, json, tillCookie, tillEpoch, tillDeviceToken, recordTillDevice,
 } from '../../auth/_lib.js';
 
 export async function onRequestPost({ request, env }) {
@@ -34,8 +34,10 @@ export async function onRequestPost({ request, env }) {
   const epoch = await tillEpoch(env, merchant);
   if (!Number.isFinite(epoch)) return json({ error: 'auth-verification-unavailable' }, 503);
 
+  /* isTerminalFor refuse déjà un appareil retiré : il ne se répare pas seul. */
+  await recordTillDevice(env, merchant, terminalId);
   return json({ ok: true, merchant }, 200, {
-    'Set-Cookie': tillCookie(await tillToken(env.AUTH_SECRET, merchant, epoch)),
+    'Set-Cookie': tillCookie(await tillDeviceToken(env.AUTH_SECRET, merchant, epoch, terminalId)),
   });
 }
 
