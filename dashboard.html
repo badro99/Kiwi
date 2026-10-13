@@ -5535,14 +5535,14 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=51" defer></script>
+<script src="assets/venues.js?v=52" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=9" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=8" defer></script>
 <script src="assets/pressing-dashboard.js?v=17" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=72" defer></script>
+<script src="assets/dateRange.js?v=73" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -5615,7 +5615,7 @@
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/printer-bridge.js?v=25" defer fetchpriority="low"></script>
-<script src="assets/boutique-catalog.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog.js?v=11" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->
@@ -5632,7 +5632,7 @@
 <script src="assets/venue-store.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/vertical-state.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/vertical-state.js?v=4" defer fetchpriority="low"></script>
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
@@ -5661,7 +5661,7 @@
      APRÈS venue-store.js (il s'y déclare) et receipt.js (il y lit la base TVA
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
      rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
-<script src="assets/cost.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/cost.js?v=7" defer fetchpriority="low"></script>
 <!-- Charges fixes, commissions et résultat net (assets/charges.js) : le calcul
      pur d'abord, puis le document `charges` et son éditeur. APRÈS cost.js, dont
      ils lisent le registre ; AVANT finance.js, qui affiche le résultat. -->
@@ -5755,7 +5755,7 @@
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
-<script src="assets/hotel.js?v=77" defer fetchpriority="low"></script>
+<script src="assets/hotel.js?v=78" defer fetchpriority="low"></script>
 <script src="assets/hotel-economat.js?v=3" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->

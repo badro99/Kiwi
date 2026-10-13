@@ -177,6 +177,8 @@
   const METHODS = { especes: 'espèces', carte: 'carte', virement: 'virement' };
 
   /* ───────────────────────── totals & échéancier ───────────────────────── */
+  /* un plat est au menu sous son id, ou sous une variante d'options « id~choix » */
+  function menuHas(id) { return draft.menu.some((m) => m === id || String(m).startsWith(id + '~')); }
   function perPerson(ev) { return ev.menu.reduce((s, id) => s + dishOf(ev, id).price, 0); }
   function evTotals(ev) {
     const pp = perPerson(ev);
@@ -363,7 +365,8 @@
     items.forEach((it) => {
       const cid = it.catId || '_';
       if (!seen[cid]) { seen[cid] = 1; cats.push({ id: cid, label: it.catName || 'Menu' }); }
-      DISH[it.id] = { id: it.id, course: cid, label: it.name, sub: it.desc || '', price: it.price, station: it.station || '', pack: genericPack };
+      DISH[it.id] = { id: it.id, course: cid, label: it.name, sub: it.desc || '', price: it.price, station: it.station || '', pack: genericPack,
+        groups: Array.isArray(it.groups) && it.groups.length ? it.groups : null };
     });
     COURSES.splice(0, COURSES.length, ...cats);
     DISHES.splice(0, DISHES.length, ...items.map((it) => DISH[it.id]));
@@ -435,7 +438,13 @@
      Pas de reprise de compteur : la référence journalisée est la référence
      BANCAIRE de la tranche, pas un numéro de ticket à incrémenter. */
   function eventSaleLines(ev, received) {
-    const rows = ev.menu.map((id) => ({ itemId: id, name: dishOf(ev, id).label, category: dishOf(ev, id).course, qty: ev.guests, unit: 'personne', kind: 'service', base: dishOf(ev, id).price * ev.guests }));
+    const rows = ev.menu.map((id) => {
+      const dsh = dishOf(ev, id);
+      const row = { itemId: dsh.base || id, name: dsh.label, category: dsh.course, qty: ev.guests, unit: 'personne', kind: 'service', base: dsh.price * ev.guests };
+      /* les options choisies, par personne, suivent la ligne (stock des options) */
+      if (Array.isArray(dsh.o) && dsh.o.length) row.options = dsh.o.map((x) => ({ id: x.id, qty: (+x.qty || 1) * ev.guests }));
+      return row;
+    });
     ev.extras.forEach((id) => {
       const c = extraOf(ev, id).calc(ev.guests);
       rows.push({ itemId: id, name: extraOf(ev, id).label, category: 'extras', qty: c.qty, unit: c.unit, kind: 'service', base: c.qty * c.each });
@@ -806,12 +815,12 @@
             <div class="tr-course-head">${esc(c.label)} <span class="pp">· prix par personne</span></div>
             <div class="tr-dishgrid">
               ${DISHES.filter((d) => d.course === c.id).map((d, i) => `
-                <button class="tr-dish ${draft.menu.includes(d.id) ? 'on' : ''}" data-tr-dish="${d.id}" style="--i:${i}">
+                <button class="tr-dish ${menuHas(d.id) ? 'on' : ''}" data-tr-dish="${d.id}" style="--i:${i}">
                   <span class="tr-dish-tick"><i data-lucide="check"></i></span>
                   <span class="tr-dish-art">${ART[d.id] || ''}</span>
                   <span class="tr-dish-name">${esc(d.label)}</span>
                   <span class="tr-dish-sub">${esc(d.sub)}</span>
-                  <span class="tr-dish-price">+${fmtMAD(d.price)} / pers</span>
+                  <span class="tr-dish-price">${d.groups ? 'dès ' : '+'}${fmtMAD(d.price)} / pers</span>
                   ${d.flag ? `<span class="tr-dish-flag">${esc(d.flag)}</span>` : ''}
                 </button>`).join('')}
             </div>`).join('')}
@@ -867,9 +876,35 @@
       const d = e.target.closest('[data-tr-dish]');
       if (d) {
         const id = d.dataset.trDish;
-        const i = draft.menu.indexOf(id);
-        if (i >= 0) draft.menu.splice(i, 1); else draft.menu.push(id);
-        d.classList.toggle('on', i < 0);
+        /* Un plat de la carte à options (accompagnement, cuisson, sauce payante) :
+           la feuille d'options de la carte s'ouvre, comme au fast-food, et le
+           choix se fige par personne dans le devis (`draft.snap`). Avant, le
+           traiteur vendait le prix de base et ignorait les groupes. Retoucher
+           un plat déjà choisi le retire, options comprises. */
+        const dish = DISH[id];
+        if (!menuHas(id) && dish && dish.groups && carteApi && carteApi.sheet) {
+          carteApi.sheet({ title: dish.label, sub: dish.sub || '', price: dish.price, groups: dish.groups, cta: 'Ajouter au menu',
+            onConfirm: (r) => {
+              const names = (r && r.names) || [];
+              const vid = names.length ? `${id}~${names.join('|').replace(/[^\w|À-ÿ-]+/g, '-').slice(0, 60)}` : id;
+              draft.snap = draft.snap || { dishes: {}, extras: {} };
+              draft.snap.dishes = draft.snap.dishes || {};
+              draft.snap.dishes[vid] = { id: vid, base: id, label: names.length ? `${dish.label} (${names.join(', ')})` : dish.label,
+                sub: dish.sub || '', course: dish.course, price: r && r.unit != null ? +r.unit : dish.price, station: dish.station || '',
+                o: r && r.stamp ? r.stamp(1) : [] };
+              if (!draft.menu.includes(vid)) draft.menu.push(vid);
+              d.classList.add('on');
+              renderQuote(); icons();
+            } });
+          return;
+        }
+        if (menuHas(id)) {
+          draft.menu = draft.menu.filter((m) => m !== id && !String(m).startsWith(id + '~'));
+          d.classList.remove('on');
+        } else {
+          draft.menu.push(id);
+          d.classList.add('on');
+        }
         renderQuote(); icons();
         return;
       }
@@ -1033,7 +1068,8 @@
     if (pvReal()) {
       /* Instantané : les plats et extras de CE devis, au prix de ce jour. */
       ev.snap = { dishes: {}, extras: {} };
-      ev.menu.forEach((id) => { const d = dishOf(draft, id); ev.snap.dishes[id] = { id, label: d.label, sub: d.sub || '', course: d.course, price: d.price, station: d.station || '' }; });
+      ev.menu.forEach((id) => { const d = dishOf(draft, id); ev.snap.dishes[id] = { id, label: d.label, sub: d.sub || '', course: d.course, price: d.price, station: d.station || '',
+        ...(d.base ? { base: d.base } : {}), ...(Array.isArray(d.o) && d.o.length ? { o: d.o } : {}) }; });
       ev.extras.forEach((id) => {
         const x = extraOf(draft, id);
         ev.snap.extras[id] = { id, label: x.label, sub: x.sub || '', mode: x.mode || 'forfait', each: x.each, per: x.per, unit: x.unit };

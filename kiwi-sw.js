@@ -103,7 +103,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=51',
+  '/assets/venues.js?v=52',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=9',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=72',
+  '/assets/dateRange.js?v=73',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=12',
@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog.js?v=10',
+  '/assets/boutique-catalog.js?v=11',
   '/assets/store-templates.js?v=3',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -240,7 +240,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=15',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=30',
+  '/assets/caisse-lang.js?v=31',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
@@ -256,7 +256,7 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=6',
+  '/assets/cost.js?v=7',
   '/assets/charges-engine.js?v=2',
   '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=10',
@@ -297,7 +297,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=91',
+  '/assets/pos-dispatch.js?v=93',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -310,8 +310,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=60',
-  '/assets/pos-boutique.js?v=60',
+  '/assets/pos-boutique.css?v=61',
+  '/assets/pos-boutique.js?v=61',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -323,26 +323,26 @@ var SHELL = [
   '/assets/pos-fastfood.js?v=11',
   '/assets/pos-boulangerie.css?v=9',
   '/assets/pos-boulangerie.js?v=9',
-  '/assets/pos-pizzeria.css?v=5',
-  '/assets/pos-pizzeria.js?v=5',
-  '/assets/pos-traiteur.css?v=7',
-  '/assets/pos-traiteur.js?v=7',
+  '/assets/pos-pizzeria.css?v=6',
+  '/assets/pos-pizzeria.js?v=6',
+  '/assets/pos-traiteur.css?v=8',
+  '/assets/pos-traiteur.js?v=8',
   '/assets/pos-foodtruck.css?v=7',
   '/assets/pos-foodtruck.js?v=7',
-  '/assets/pos-epicerie.css?v=8',
-  '/assets/pos-epicerie.js?v=8',
+  '/assets/pos-epicerie.css?v=9',
+  '/assets/pos-epicerie.js?v=9',
   '/assets/pos-pharmacie.css?v=7',
   '/assets/pos-pharmacie.js?v=7',
-  '/assets/pos-librairie.css?v=9',
-  '/assets/pos-librairie.js?v=9',
-  '/assets/pos-fleuriste.css?v=11',
-  '/assets/pos-fleuriste.js?v=11',
+  '/assets/pos-librairie.css?v=10',
+  '/assets/pos-librairie.js?v=10',
+  '/assets/pos-fleuriste.css?v=12',
+  '/assets/pos-fleuriste.js?v=12',
   '/assets/pos-coiffure.css?v=8',
   '/assets/pos-coiffure.js?v=8',
   '/assets/pos-gym.css?v=7',
   '/assets/pos-gym.js?v=7',
-  '/assets/pos-autre.css?v=7',
-  '/assets/pos-autre.js?v=7',
+  '/assets/pos-autre.css?v=8',
+  '/assets/pos-autre.js?v=8',
   '/assets/pos-maison.css?v=65',
   '/assets/pos-maison.js?v=65',
   '/assets/caisse-pairing.js?v=29',

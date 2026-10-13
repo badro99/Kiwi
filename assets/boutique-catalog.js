@@ -1049,7 +1049,19 @@
        approves, the next catalogue push carries `vente`, never an ambiguous hold. */
     let touched = false;
     (db.moves || []).forEach((m) => {
-      if (m && m.ref === ref && m.why === 'reserve') { m.why = 'vente'; touched = true; }
+      if (m && m.ref === ref && m.why === 'reserve') {
+        m.why = 'vente'; touched = true;
+        /* La réservation n'entre pas au registre (TRANSIENT dans
+           maison-stock-movements.js) et la renommer ne bouge aucun stock : la
+           vente confirmée n'y entrait donc jamais. C'est ici qu'elle devient une
+           sortie de marchandise, c'est ici qu'on la raconte. */
+        const v = varById(m.vid);
+        if (v) {
+          const d = +m.d || 0, after = Math.max(0, +v.stock || 0);
+          journal({ id: m.id, variant: v, at: +m.at || now(), delta: d, before: Math.max(0, after - d), after,
+            why: 'vente', actor: m.actor || '', ref: m.ref || '' });
+        }
+      }
     });
     if (touched) commit();
     return saleStockAction('confirm', ref);

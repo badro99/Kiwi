@@ -1427,8 +1427,8 @@
         <span class="fl-dcard-id">${d.id}</span>
         <span class="fl-dcard-occ">${esc(occ.deuil ? 'Condoléances' : occ.label)}</span>
       </span>
-      <span class="fl-dcard-to"><i data-lucide="user"></i>${esc(recipName(d))}</span>
-      <span class="fl-dcard-addr"><i data-lucide="map-pin"></i>${esc(recipAddr(d))}</span>
+      <span class="fl-dcard-to"><i data-icon="person"></i>${esc(recipName(d))}</span>
+      <span class="fl-dcard-addr"><i data-icon="location_on"></i>${esc(recipAddr(d))}</span>
       <span class="fl-dcard-buyer">Offert par ${esc(buyerLabel(d))} · ${esc(itemsLabel)}</span>
       <span class="fl-dcard-meta">
         ${statusPill(d)}
@@ -1506,14 +1506,14 @@
           <div class="fl-recip-err" id="fl-rc-err" role="alert" hidden></div>
           <div class="fl-recip-actions">
             <button class="fl-btn ghost" id="fl-rc-cancel">Annuler</button>
-            <button class="fl-btn primary" id="fl-rc-save"><i data-lucide="check"></i>Enregistrer</button>
+            <button class="fl-btn primary" id="fl-rc-save"><i data-icon="check"></i>Enregistrer</button>
           </div>
         </div>` : `<div class="fl-dt-recip${d.recipient.name && d.recipient.addr ? '' : ' unset'}">
           <b>${esc(recipName(d))}</b>
-          <div class="addr"><i data-lucide="map-pin"></i>${esc(recipAddr(d))}${pvCity('Tanger') ? `, ${esc(pvCity('Tanger'))}` : ''}</div>
+          <div class="addr"><i data-icon="location_on"></i>${esc(recipAddr(d))}${pvCity('Tanger') ? `, ${esc(pvCity('Tanger'))}` : ''}</div>
           ${d.recipient.phone ? `<div class="tel"><i data-lucide="phone"></i>${esc(d.recipient.phone)}</div>` : ''}
           ${d.note ? `<div class="note">${esc(d.note)}</div>` : ''}
-          ${d.status !== 'done' ? `<button class="fl-btn ghost fl-recip-edit" id="fl-rc-edit"><i data-lucide="pencil"></i>${d.recipient.name && d.recipient.addr ? 'Modifier' : 'Préciser le destinataire'}</button>` : ''}
+          ${d.status !== 'done' ? `<button class="fl-btn ghost fl-recip-edit" id="fl-rc-edit"><i data-icon="edit"></i>${d.recipient.name && d.recipient.addr ? 'Modifier' : 'Préciser le destinataire'}</button>` : ''}
         </div>`}
       </div>
 

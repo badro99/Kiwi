@@ -168,6 +168,26 @@ ok('les réceptions et retours fournisseurs ciblent une variante exacte',
 ok('les mouvements fournisseurs de la caisse passent par le code responsable',
   /function postMaisonProcurement[\s\S]{0,1600}MZ\.requestManual\(\{productId:line\.itemId,variantId:variant\.id,type:kind===\'return\'\?\'retour-fourn\':\'reception\'/.test(MAISON));
 
+/* ── VI · une pièce réservée puis vendue (échange boutique) entre au registre ─
+ * La réservation est transitoire (elle n'entre pas au registre) et la
+ * confirmer ne fait que la renommer « vente » : la pièce de remplacement d'un
+ * échange sortait du stock sans jamais laisser sa ligne. */
+const t3 = bootTill();
+t3.MZ.enable('boutique');
+const p3 = t3.cat.addProduct({ name: 'Caftan lin', priceMAD: 900, cost: 400, kind: 'taille' });
+const v3 = t3.cat.addVariant({ productId: p3.id, colorId: 'ecru', colorLabel: 'Écru', size: 'M', stock: 3 });
+t3.cat.adjustStock(v3.id, -1, 'reserve', { ref: 'EX-77' });
+ok('la réservation seule n\'écrit rien au registre', t3.MZ.list({ type: 'vente' }).length === 0);
+try { await t3.cat.confirmSale('EX-77'); } catch (_) {}
+const sold3 = t3.MZ.list({ type: 'vente' });
+ok('la confirmer écrit la sortie de vente, avec son ticket', sold3.length === 1 && sold3[0].qty === -1 && sold3[0].ref === 'EX-77', JSON.stringify(sold3[0] || null));
+ok('avant → après suit le stock réservé', sold3[0] && sold3[0].before === 3 && sold3[0].after === 2);
+try { await t3.cat.confirmSale('EX-77'); } catch (_) {}
+ok('confirmer deux fois n\'écrit pas deux sorties', t3.MZ.list({ type: 'vente' }).length === 1);
+const BQ = R('assets/pos-boutique.js');
+ok('l\'échange boutique allume le registre avant de réserver la pièce',
+  /if \(IS_DEMO \|\| state\.offline \|\| !cat \|\| !cat\.reserveSale\)[^\n]*\n[^\n]*\n\s*try \{ window\.KiwiMaisonStock\?\.enable\('boutique'\); \} catch \(_\) \{\}/.test(BQ));
+
 /* ── verdict ─────────────────────────────────────────────────────────────── */
 if (fails.length) {
   console.error(`✗ sorties de caisse maison — ${fails.length} échec(s) sur ${pass + fails.length}`);

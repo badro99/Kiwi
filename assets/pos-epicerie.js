@@ -43,6 +43,7 @@
     const r = Math.round(n * 100) / 100;
     return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: Number.isInteger(r) ? 0 : 2, maximumFractionDigits: 2 }).format(r) + ' MAD';
   };
+  const fmtQtyShort = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(n);
   const fmtKg = (kg) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(kg);
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -410,8 +411,31 @@
   /* ═══════════════════════ RÉEL : catalogue, EAN, produits au poids ═══════════════════════
      Catalogue = inventaire du tableau de bord (nom, prix, EAN en code-barres, stock, seuil de
      réassort). « Produits au poids » = fiches du tableau de bord : leur prix est le prix du kilo
-     (ou du litre). Le stock au poids n'est pas suivi : l'inventaire compte des unités entières. */
+     (ou du litre). Leur stock se compte en kilos (ou litres) entiers, comme le saisit le tableau
+     de bord ; la balance, elle, vend des fractions. Elles s'additionnent sur la caisse, produit
+     par produit, et chaque kilo complet sort du stock partagé avec le numéro du ticket. Le reste,
+     moins d'un kilo, attend ici et se déduit déjà de ce que la caisse affiche. */
   const WS = () => window.KiwiPosWorkspaces || null;
+  function weighKey() {
+    let slug = '';
+    try { const pv = pvPaired(); slug = String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || ''); } catch (_) {}
+    return 'kiwi:epWeighPending:' + (slug || 'local');
+  }
+  function weighPending() {
+    try { const o = JSON.parse(localStorage.getItem(weighKey()) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (_) { return {}; }
+  }
+  function drawWeighed(itemId, weight, ref) {
+    const pend = weighPending();
+    let acc = Math.round(((+pend[itemId] || 0) + (+weight || 0)) * 1000) / 1000;
+    const whole = Math.floor(acc + 1e-9);
+    if (whole > 0) {
+      try { WS().catalog.sell(itemId, whole, ref); } catch (_) {}
+      acc = Math.round((acc - whole) * 1000) / 1000;
+    }
+    if (acc > 0) pend[itemId] = acc; else delete pend[itemId];
+    try { localStorage.setItem(weighKey(), JSON.stringify(pend)); } catch (_) {}
+    return whole;
+  }
   const fold = (x) => String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const artFor = (cat, name) => {
     const k = fold(cat + ' ' + name);
@@ -427,6 +451,7 @@
     const comp = w.catalog.compat();
     if (!comp) return false;
     const weighed = {};
+    const pend = weighPending();
     w.values('weighed').forEach((r) => { if (r.status < 1 && r.values.product) weighed[r.values.product] = r.values.unit === 'l' ? 'l' : 'kg'; });
     CATALOG.splice(0, CATALOG.length);
     Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
@@ -437,8 +462,11 @@
         const wu = weighed[p.id];
         const it = { id: p.id, art: artFor(r.label, p.name), label: p.name, price: +p.price > 0 ? +p.price : 0, noPrice: !(+p.price > 0),
           ean: p.ean || '', cat: r.id, catLabel: r.label,
-          /* au poids : stock non suivi (l'inventaire compte des unités entières) */
-          stock: wu ? null : Object.keys(p.sizes || {}).reduce((n, k) => n + (+p.sizes[k] || 0), 0),
+          /* au poids : kilos entiers de l'inventaire, moins ce que cette caisse a déjà pesé */
+          stock: (() => {
+            const n = Object.keys(p.sizes || {}).reduce((t, k) => t + (+p.sizes[k] || 0), 0);
+            return wu ? Math.max(0, Math.round((n - (+pend[p.id] || 0)) * 1000) / 1000) : n;
+          })(),
           reorder: +prod.reorderLevel > 0 ? +prod.reorderLevel : 0 };
         if (wu) { it.unit = 'weigh'; it.weighUnit = wu; it.presets = [0.25, 0.5, 0.75, 1]; }
         ITEMS[p.id] = it;
@@ -643,7 +671,7 @@
                    : isUnit(it) ? "<span class=\"ep-card-flag unit\">à l'unité</span>"
                    : it.telco ? `<span class="ep-card-flag">${esc(it.telco)}</span>` : '';
         const stockChip = typeof it.stock === 'number'
-          ? `<span class="ep-card-stock ${out ? 'out' : low ? 'low' : ''}">${out ? '0' : it.stock}</span>` : '';
+          ? `<span class="ep-card-stock ${out ? 'out' : low ? 'low' : ''}">${out ? '0' : isWeigh(it) ? fmtQtyShort(it.stock) : it.stock}</span>` : '';
         return `<button class="ep-card ${out && !pvReal() ? 'is-out' : ''}" data-ep-item="${it.id}" style="--i:${i++}">
           ${stockChip}
           <span class="ep-card-art">${ART[it.art] || ''}</span>
@@ -1058,7 +1086,9 @@
       if (!it) return;
       /* Réel : le stock est celui de l'inventaire du tableau de bord, partagé ; le mouvement garde le ticket. */
       if (pvReal()) {
-        if (ln.weight == null && WS()) { try { WS().catalog.sell(ln.itemId, ln.qty, t.num); } catch (_) {} }
+        if (!WS()) return;
+        if (ln.weight != null) drawWeighed(ln.itemId, ln.weight, t.num);
+        else { try { WS().catalog.sell(ln.itemId, ln.qty, t.num); } catch (_) {} }
         return;
       }
       if (typeof it.stock !== 'number') return;

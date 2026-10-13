@@ -1333,9 +1333,9 @@
         ${c.status === 'commande' ? '<button class="lb-btn primary" data-lb-advance="arrivee"><i data-lucide="package-check"></i>Marquer arrivé</button>' : ''}
         ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'Ouvrir le brouillon WhatsApp'}</button>` : ''}
         ${c.status === 'arrivee' && c.draftOpenedAt && !c.notified ? '<button class="lb-btn primary" id="lb-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer le message envoyé</button>' : ''}
-        ${c.status === 'arrivee' && due > 0 ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree" data-lb-tender="especes"><i data-lucide="banknote"></i>Remettre · ${due} MAD en espèces</button>
-          <button class="lb-btn secondary" data-lb-advance="retiree" data-lb-tender="carte"><i data-lucide="credit-card"></i>Remettre · ${due} MAD par carte</button>` : ''}
-        ${c.status === 'arrivee' && !(due > 0) ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-lucide="check"></i>Remettre au client</button>` : ''}
+        ${c.status === 'arrivee' && due > 0 ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree" data-lb-tender="especes"><i data-icon="payments"></i>Remettre · ${due} MAD en espèces</button>
+          <button class="lb-btn secondary" data-lb-advance="retiree" data-lb-tender="carte"><i data-icon="credit_card"></i>Remettre · ${due} MAD par carte</button>` : ''}
+        ${c.status === 'arrivee' && !(due > 0) ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-icon="check"></i>Remettre au client</button>` : ''}
         ${c.status !== 'retiree' ? '<button class="lb-btn ghost" id="lb-dt-cancel">Annuler la commande</button>' : ''}
       </div>`;
     openVeil('#lb-detail-veil');

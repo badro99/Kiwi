@@ -362,7 +362,7 @@
     const out = {
       basis: b, from: from == null ? null : from, to: to == null ? null : to,
       grossN: 0, gross: 0, voidN: 0, dupN: 0, dupAmt: 0, refundN: 0, refunds: 0, net: 0,
-      unitemisedN: 0, unitemisedAmt: 0, listed: 0, collected: 0, discounts: 0, lines: [],
+      unitemisedN: 0, unitemisedAmt: 0, feeAmt: 0, listed: 0, collected: 0, discounts: 0, lines: [],
       /* Les ventes gardées, une par ticket : comment elles ont été payées et
        * par quel canal elles sont arrivées. Les commissions (assets/charges.js)
        * se calculent sur ces ventes-là et aucune autre, pour qu'un ticket
@@ -411,6 +411,11 @@
       else out.unitemisedAmt += amt - sum;       // frais, service : encaissé, pas dans une ligne
       rows.forEach(({ l, qty, listed }) => {
         const collected = listed * ratio;
+        /* Une ligne `fee` (frais de livraison d'une zone) est encaissée mais
+         * n'est pas une marchandise : elle n'a pas de coût d'achat à saisir.
+         * Elle rejoint les frais et services hors ligne au lieu d'apparaître
+         * « à chiffrer » dans les marges. */
+        if (String((l && (l.kind != null ? l.kind : l.kd)) || '') === 'fee') { out.unitemisedAmt += collected; out.feeAmt += collected; return; }
         const itemId = lineIdOf(l), name = lineNameOf(l);
         out.listed += listed; out.collected += collected;
         const row = { ts, saleId: id, line: l, itemId, name, kind: (l && l.kind) || '', qty, listed, collected,

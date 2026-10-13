@@ -480,6 +480,21 @@
     var activeVenue = venueKey();
     var baseline = copy(spec.snapshot());
     function signature(data) { try { return JSON.stringify(data); } catch (_) { return ''; } }
+    /* Le brouillon EN COURS sur cet écran (ticket, panier, devis) appartient à
+     * cet appareil. Une fiche arrivée d'une autre caisse remplaçait tout, y
+     * compris le ticket qu'on était en train de saisir : le serveur voyait ses
+     * pizzas disparaître sous ses doigts. Au rechargement (hydrate), le
+     * brouillon enregistré revient ; une mise à jour distante, elle, ne touche
+     * jamais ces clés-là. */
+    var LOCAL = Array.isArray(spec.local) ? spec.local : ['ticket', 'draft', 'cart'];
+    function keepLocal(data) {
+      var mine = null;
+      try { mine = spec.snapshot(); } catch (_) { mine = null; }
+      if (!mine || typeof mine !== 'object' || !data || typeof data !== 'object') return data;
+      var out = Object.assign({}, data);
+      LOCAL.forEach(function (k) { if (Object.prototype.hasOwnProperty.call(mine, k)) out[k] = copy(mine[k]); });
+      return out;
+    }
     function restore(data) {
       applying = true;
       try { spec.restore(copy(data)); } finally { applying = false; }
@@ -540,7 +555,7 @@
       if (saving || applying || String(vid || '') !== activeVenue) return;
       var row = store.get(activeVenue)?.verticals?.[name];
       if (!row?.data) return;
-      restore(row.data);
+      restore(keepLocal(row.data));
       last = signature(copy(spec.snapshot()));
       try { window.KiwiPosDispatch?.repaint?.(); } catch (_) {}
     });

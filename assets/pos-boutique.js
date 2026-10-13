@@ -623,6 +623,129 @@
     if (maxSeq >= avSeq) avSeq = maxSeq + 1;   // le prochain bon ne réutilise pas un code déjà restauré
   })();
 
+  /* ══════════ LE REGISTRE DES AVOIRS (/api/store-credits) ══════════════════
+   * Un avoir de VRAIE boutique ne vivait que dans le localStorage de la caisse
+   * qui l'avait émis : la cliente qui revenait à l'autre caisse, ou après un
+   * changement de tablette, présentait un bon que Kiwi ne connaissait plus, et
+   * le tableau de bord n'en voyait aucun. La caisse maison passe déjà par le
+   * registre serveur ; la boutique y passe aussi, avec les mêmes règles :
+   *   · l'avoir est ÉMIS au registre avant que le stock ou la vente bougent
+   *     (une connexion perdue laisse le retour intact, jamais une pièce en stock
+   *     sans dette inscrite) ;
+   *   · il est CONSOMMÉ par une seule écriture serveur, qui refuse un solde
+   *     qu'une autre caisse vient d'entamer ;
+   *   · un identifiant de requête stable rend une réponse perdue rejouable.
+   * La démo reste locale, inchangée. */
+  function creditFromServer(row) {
+    return {
+      id: row.id, code: row.code, amount: Number(row.amountCents || 0) / 100,
+      balance: Number(row.balanceCents || 0) / 100, holderId: row.customerId || null,
+      holderName: row.customerName || 'Porteur du bon', motif: row.reason || 'Retour',
+      at: new Date(Number(row.createdAt || Date.now())), until: new Date(Number(row.expiresAt || 0)),
+      from: row.originalRef || row.originalSaleId || null, status: row.status || 'active',
+      events: Array.isArray(row.events) ? row.events : [],
+    };
+  }
+  async function creditRequest(body, query) {
+    const merchant = merchantSlug();
+    if (!merchant) throw new Error('merchant-unavailable');
+    const url = '/api/store-credits?merchant=' + encodeURIComponent(merchant) + (query || '');
+    const response = await fetch(url, body ? {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, merchant }),
+    } : { headers: { Accept: 'application/json' } });
+    let data = null;
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok || !data || data.error) {
+      const error = new Error((data && data.error) || `http-${response.status}`);
+      error.code = (data && data.error) || `http-${response.status}`;
+      throw error;
+    }
+    return data;
+  }
+  async function refreshRemoteAvoirs() {
+    if (IS_DEMO || typeof fetch !== 'function') return AVOIRS;
+    try {
+      const data = await creditRequest(null, '');
+      AVOIRS.splice(0, AVOIRS.length, ...(data.credits || []).map(creditFromServer));
+      persistAvoirs();
+      renderBadges();
+    } catch (_) { /* les bons en cache restent visibles ; la consommation, elle, échoue fermée au serveur */ }
+    return AVOIRS;
+  }
+  function creditIntent(prefix) {
+    try { if (crypto && crypto.randomUUID) return `${prefix}:${crypto.randomUUID()}`; } catch (_) {}
+    return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 12)}`;
+  }
+  function stableCreditIssueId(sale, quantities, amountCents) {
+    const original = String((sale && (sale.serverId || sale.syncId || sale.id)) || 'sale')
+      .replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 48);
+    const revision = Array.from(quantities.entries()).sort((a, b) => Number(a[0]) - Number(b[0])).map(([idx, qty]) => {
+      const line = sale && sale.lines && sale.lines[idx];
+      return `${idx}-${lineReturnedQty(line) + Number(qty || 0)}`;
+    }).join('_');
+    return `credit-issue:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 96);
+  }
+  function creditErrorDetail(error) {
+    return error && error.code === 'sale-credit-exceeds-available'
+      ? 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.'
+      : 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
+  }
+  /* Le ticket d'origine, reconstruit depuis la vente figée de la caisse : le
+     registre refuse un avoir qui ne s'adosse pas à une vente qu'il connaît. */
+  function originalSalePayload(sale) {
+    if (!sale) return null;
+    const parts = Array.isArray(sale.parts) ? sale.parts : [];
+    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && (+part.amount || 0) > 0);
+    const methods = received.map((part) => part.m);
+    const method = sale.tenderVersion === 2 ? bqPaymentMethod(parts)
+      : (methods.includes('carte') ? 'card' : (methods.includes('espèces') ? 'cash' : 'wallet'));
+    const creditIn = parts.reduce((sum, part) => sum + (part && part.m === 'avoir' ? (+part.amount || 0) : 0), 0);
+    const delivery = parts.some((part) => part && part.m === 'livraison');
+    const total = Math.max(0, Number(sale.total) || (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
+    const cashIn = Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0));
+    const lines = (sale.lines || []).slice(0, 40).map((line) => ({
+      itemId: line.pid || '', variantId: [line.pid || '', line.size || '', line.color || ''].join(':'),
+      name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
+      qty: Math.max(1, Number(line.qty) || 1), total: Math.round((+line.unit || 0) * Math.max(1, Number(line.qty) || 1)),
+      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
+    }));
+    const payload = {
+      id: sale.serverId || sale.syncId || sale.id,
+      merchant: merchantSlug(), amount: cashIn, amountCents: Math.round(cashIn * 100),
+      ticketAmountCents: Math.round(total * 100), consignedAmountCents: 0,
+      method, channel: delivery ? 'delivery' : 'counter', label: (lines[0] && lines[0].name) || 'Vente',
+      ref: sale.id, ts: +new Date(sale.at || Date.now()), lines,
+    };
+    if (sale.tenderVersion === 2) payload.paymentParts = bqPaymentParts(parts);
+    if (cashIn <= 0 && creditIn > 0 && lines.length) {
+      payload.settlementKind = 'store-credit'; payload.creditAmountCents = Math.round(creditIn * 100);
+    } else if (cashIn <= 0 && delivery && lines.length) {
+      payload.settlementKind = 'receivable';
+    }
+    return payload;
+  }
+  async function ensureOriginalSale(sale) {
+    if (IS_DEMO) return sale && (sale.serverId || sale.syncId || sale.id);
+    const payload = originalSalePayload(sale);
+    if (!payload || !payload.id || !payload.merchant || !payload.lines.length) {
+      const error = new Error('sale-unavailable'); error.code = 'sale-unavailable'; throw error;
+    }
+    const response = await fetch('/api/sale', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let data = null; try { data = await response.json(); } catch (_) {}
+    if (!response.ok || !data || data.error) {
+      const error = new Error((data && data.error) || `http-${response.status}`);
+      error.code = (data && data.error) || `http-${response.status}`;
+      throw error;
+    }
+    sale.serverId = String(data.id || payload.id);
+    persistDay();
+    return sale.serverId;
+  }
+
   /* ───────────────────────── state ───────────────────────── */
   /* Le préfixe ne sert plus qu'à reconnaître les anciens journaux locaux lors
      de leur migration. Les nouveaux tickets réels n'affichent que des chiffres. */
@@ -3108,11 +3231,12 @@
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
   }
 
-  function doAvoir() {
+  async function doAvoir() {
     const ret = state.ret;
-    if (!ret) return;
+    if (!ret || state.retBusy) return;
     const sale = findSale(ret.saleId);
     if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
+    if (!sale) return;
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
     const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
@@ -3120,9 +3244,27 @@
     /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
        quel plutôt que d'inventer un motif que personne n'a donné. */
     const motif = ret.motif || 'Non précisé';
-    restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
     const c = saleClient(sale);
-    const av = issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.id);
+    state.retBusy = true;
+    let av;
+    try {
+      /* L'avoir est inscrit au registre AVANT que le stock ou la vente bougent. */
+      av = await issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.serverId || sale.syncId || sale.id, {
+        requestId: stableCreditIssueId(sale, quantities, amount * 100),
+        originalRef: sale.id, originalSale: sale, resellable: true,
+        lines: idxs.map((i) => ({
+          itemId: sale.lines[i].pid, variantId: [sale.lines[i].pid || '', sale.lines[i].size || '', sale.lines[i].color || ''].join(':'),
+          name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round((sale.lines[i].unit || 0) * 100),
+        })),
+      });
+    } catch (error) {
+      toast('Avoir non émis', creditErrorDetail(error));
+      return;
+    } finally {
+      state.retBusy = false;
+    }
+    restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
     // La fiche client liste les pièces rendues sous l'avoir (#105).
     av.lines = idxs.map((i) => {
       const ln = sale.lines[i];
@@ -3153,7 +3295,24 @@
     return unresolved === 0;
   }
 
-  function issueAvoir(amount, cliente, motif, fromSaleId) {
+  async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
+    if (!IS_DEMO) {
+      if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
+      const data = await creditRequest({
+        action: 'issue', id: (context && context.requestId) || creditIntent('credit-issue'), originalSaleId: fromSaleId,
+        originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
+        customerId: cliente && cliente.id, customerName: cliente && cliente.name,
+        reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
+        resellable: !context || context.resellable !== false,
+        lines: context && context.lines,
+      });
+      const av = creditFromServer(data.credit);
+      const old = AVOIRS.findIndex((item) => item.code === av.code);
+      if (old >= 0) AVOIRS.splice(old, 1, av); else AVOIRS.unshift(av);
+      persistAvoirs(); renderBadges();
+      toast(`${av.code} émis, ${fmtMAD(amount)}`);
+      return av;
+    }
     const av = {
       code: `AV-${avSeq++}`,
       amount, balance: amount,
@@ -3284,6 +3443,8 @@
         return Promise.resolve({ ok: false, issue: { pid: newPid, size: newSize, color: newColor, needed: 1, onHand: 0 } });
       }
       if (IS_DEMO || state.offline || !cat || !cat.reserveSale) return Promise.resolve({ ok: false, offline: true });
+      /* le registre des mouvements écoute avant que la pièce de remplacement sorte */
+      try { window.KiwiMaisonStock?.enable('boutique'); } catch (_) {}
       return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: newP.price }]);
     };
     const apply = (reserved) => {
@@ -3388,15 +3549,34 @@
         });
       } else if (diff < 0) {
         const go = $('#bq-exch-go', el); if (go) go.disabled = true;
-        reserveReplacement().then((reservation) => {
+        reserveReplacement().then(async (reservation) => {
           if (!reservation.ok && !reservation.offline) {
             if (go) go.disabled = false;
             if (reservation.issue) showStockIssue(reservation.issue);
             return;
           }
+          /* La dette d'abord : si le registre refuse, ni la pièce rendue ni la
+             pièce de remplacement n'ont bougé, et la réservation est rendue. */
+          let av;
+          try {
+            av = await issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.serverId || sale.syncId || sale.id, {
+              requestId: stableCreditIssueId(sale, new Map([[ex.idx, 1]]), -diff * 100),
+              originalRef: sale.id, originalSale: sale, resellable: true,
+              lines: [{ itemId: ln.pid, variantId: [ln.pid || '', ln.size || '', ln.color || ''].join(':'),
+                name: oldP.name || 'Article', size: ln.size || '', qty: 1, unitCents: Math.round((ln.unit || 0) * 100) }],
+            });
+          } catch (error) {
+            if (reservation.ok && cat && cat.releaseSale) cat.releaseSale(stockRef);
+            if (go) go.disabled = false;
+            toast('Avoir non émis', creditErrorDetail(error));
+            return;
+          }
           closeVeil('#bq-exch-veil');
-          if (!apply(!!reservation.ok)) return;
-          const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
+          if (!apply(!!reservation.ok)) {
+            toast('Avoir émis, échange à régulariser', `${av.code} existe mais le remplacement est devenu indisponible.`);
+            refreshOps(); openVoucher(av, { mode: 'fresh' });
+            return;
+          }
           refreshOps(); openVoucher(av, { mode: 'fresh' });
         });
       } else {
@@ -3855,6 +4035,7 @@
     const ownAvoirs = () => opts.customerId
       ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
+    const creditCommitId = creditIntent('credit-redeem');   /* une consommation, rejouable sans double débit */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
     let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
@@ -4054,9 +4235,23 @@
         <div class="bq-sheet-foot"><button class="bq-btn secondary" id="bq-av-back" style="flex:1;">Retour</button></div>`;
       icons(); closeBtns();
       $('#bq-av-back', el).onclick = stepMethods;
-      const applyCode = (rawCode) => {
+      const applyCode = async (rawCode) => {
         const code = String(rawCode || '').trim().toUpperCase();
-        const av = AVOIRS.find((a) => String(a.code).toUpperCase() === code);
+        if (!code) return;
+        let av = AVOIRS.find((a) => String(a.code).toUpperCase() === code);
+        /* un bon émis par l'autre caisse : on le demande au registre */
+        if (!av && !IS_DEMO) {
+          try {
+            const data = await creditRequest(null, '&code=' + encodeURIComponent(code));
+            const row = data.credits && data.credits[0];
+            if (row) {
+              av = creditFromServer(row);
+              const old = AVOIRS.findIndex((item) => item.code === av.code);
+              if (old >= 0) AVOIRS.splice(old, 1, av); else AVOIRS.unshift(av);
+              persistAvoirs();
+            }
+          } catch (_) {}
+        }
         if (!av || avoirExpired(av) || !activeAvoirs().includes(av)) {
           toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
           return;
@@ -4064,15 +4259,15 @@
         const applied = Math.min(av.balance, portion());
         avoirPart = { m: 'avoir', amount: applied, code: av.code };
         share = 1; custom = 0;
-        if (due() <= 0.009) commit();
+        if (due() <= 0.009) void commit();
         else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
       };
       $('#bq-av-code-form', el).onsubmit = (event) => {
         event.preventDefault();
-        applyCode($('#bq-av-code', el).value);
+        void applyCode($('#bq-av-code', el).value);
       };
       $$('[data-bq-av-use]', el).forEach((b) => {
-        b.onclick = () => applyCode(b.dataset.bqAvUse);
+        b.onclick = () => { void applyCode(b.dataset.bqAvUse); };
       });
     };
 
@@ -4178,7 +4373,7 @@
       $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
 
-    const commit = (partial) => {
+    const commit = async (partial) => {
       if (committed) return;
       if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
           || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
@@ -4190,10 +4385,35 @@
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
-        if (av) {                              // garde-fou : un code introuvable (bon d'une autre caisse) ne fait plus planter l'encaissement
-          av.balance -= avp.amount;
+        if (!av || avoirExpired(av) || !(av.balance >= avp.amount - 0.009)) {
+          committed = false;
+          toast(`Avoir ${avp.code} inutilisable`, !av ? 'Bon introuvable en caisse.' : avoirExpired(av) ? 'Bon expiré entre-temps.' : 'Solde insuffisant, montants recalculés.');
+          stepMethods();
+          return;
+        }
+        try {
+          let saved = null;
+          if (!IS_DEMO) {
+            /* Une seule écriture au registre : si une autre caisse vient
+               d'entamer ce bon, rien n'est consommé et rien n'est encaissé. */
+            const remote = await creditRequest({
+              action: 'redeem-batch', id: creditCommitId, saleId: opts.sale && opts.sale.id,
+              detail: opts.title || 'Vente boutique',
+              credits: [{ code: avp.code, amountCents: Math.round(avp.amount * 100) }],
+            });
+            const row = ((remote && remote.credits) || []).find((r) => r.code === avp.code);
+            saved = row ? creditFromServer(row) : null;
+          }
+          av.balance = saved ? saved.balance : Math.max(0, av.balance - avp.amount);
+          av.status = saved ? saved.status : (av.balance > 0 ? 'active' : 'consumed');
           persistAvoirs();                     // le solde entamé survit au rechargement
           toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
+        } catch (_) {
+          committed = false;
+          await refreshRemoteAvoirs();
+          toast('Avoir refusé par le registre', 'Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré.');
+          stepMethods();
+          return;
         }
       }
       const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};

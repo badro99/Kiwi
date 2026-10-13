@@ -185,5 +185,13 @@ ok('a day count other than 7 or 30 is translated, with the Arabic count agreeing
   assert.equal(A.trStr('31 DERNIERS JOURS', A.REV_BADGE), '31 DERNIERS JOURS', 'French is untouched');
 });
 
+ok('« Personnaliser » prévisualise les chiffres de la bande, pas le tableau de démo', () => {
+  const at = SRC.indexOf('function openKpiCustomizer()');
+  const body = SRC.slice(at, at + 1600);
+  assert.match(SRC, /lastBand = \{ range: currentRange, data \};/);
+  assert.match(body, /const data = \(lastBand && lastBand\.range === currentRange && lastBand\.data\)\s*\|\| \(ownData\(\) \? \{\} : vData\(kpiByVenue, currentRange\)\)/);
+  assert.doesNotMatch(body, /const data = vData\(kpiByVenue, currentRange\) \|\| \{\};/);
+});
+
 console.log(`\ndate-range-calendar-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

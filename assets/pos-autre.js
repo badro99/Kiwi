@@ -5,7 +5,26 @@
   const paired=()=>{try{return window.KiwiPlatform?.pairedVenue?.()||JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null')||{};}catch(_){return{};}};
   const merchant=()=>window.KiwiPlatform?.pairedMerchant?.()||paired().merchant||'demo-autre';
   const catalogKey=()=>`kiwi:posAutre:catalog:${merchant()}`;
-  function catalog(){try{const a=JSON.parse(localStorage.getItem(catalogKey())||'[]');return Array.isArray(a)?a:[];}catch(_){return[];}}
+  /* Le catalogue de CE commerçant, celui que l'inventaire du tableau de bord tient
+     (KiwiBoutiqueCatalog, sous la clé du commerce appairé), comme pour le fleuriste.
+     L'écran disait « Articles et prix se gèrent dans le tableau de bord » mais ne
+     relisait qu'une liste locale que plus rien n'écrivait : la caisse « autre »
+     n'avait jamais d'articles. Un article sans prix ne se vend pas d'ici (Kiwi ne
+     vend aucun tarif que personne n'a fixé) ; il est compté pour le dire. */
+  let unpriced=0;
+  function boardCatalog(){
+    const C=window.KiwiBoutiqueCatalog,m=window.KiwiPlatform?.pairedMerchant?.()||paired().merchant||'';
+    if(!C||!C.listProducts||!m)return null;
+    try{if(C.use)C.use(m);}catch(_){}
+    let list=[];try{list=C.listProducts()||[];}catch(_){return null;}
+    unpriced=0;
+    return list.map(pr=>{const name=String(pr&&pr.name||'').trim();const price=roundMoney(+(pr&&pr.priceMAD)||0);if(!name)return null;if(!(price>0)){unpriced++;return null;}return{id:'p-'+String(pr.id),productId:String(pr.id),name:name.slice(0,60),price};}).filter(Boolean);
+  }
+  function catalog(){
+    const board=boardCatalog();
+    if(board&&(board.length||unpriced))return board;
+    try{const a=JSON.parse(localStorage.getItem(catalogKey())||'[]');return Array.isArray(a)?a:[];}catch(_){return[];}
+  }
   function saveCatalog(a){try{localStorage.setItem(catalogKey(),JSON.stringify(a.slice(0,300)));}catch(_) {}}
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt=n=>{try{return(window.KiwiNumber?.format((+n||0), {maximumFractionDigits:2}) ?? (+n||0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:2}));}catch(_){return String(+n||0);}};
@@ -63,6 +82,7 @@
       render();
     };
     root.querySelector('.ot-lock').onclick=()=>window.KiwiPosDispatch?.lock?.();
+    watchCatalog();
     render();
   }
   function catalogDashboardOnly(){window.KiwiCaisseToast?.('Articles et prix se gèrent dans le tableau de bord.');}
@@ -73,7 +93,8 @@
     const customTile='<button class="ot-product ot-custom" data-ot-custom><strong>Montant libre</strong><span>Saisir un montant</span></button>';
     const productHtml=customTile+(items.length
       ? items.map(x=>`<button class="ot-product" data-ot-item="${esc(x.id)}"><strong>${esc(x.name)}</strong><span>${fmt(x.price)} MAD</span></button>`).join('')
-      : '<div class="ot-empty">Ajoutez vos articles dans le tableau de bord.</div>');
+      : '<div class="ot-empty">Ajoutez vos articles dans le tableau de bord.</div>')
+      +(unpriced?`<div class="ot-empty ot-unpriced"><span>Articles sans prix, pas encore en vente</span> · <b>${unpriced}</b></div>`:'');
     const lineHtml=cart.length
       ? cart.map((x,i)=>`<div class="ot-line"><span>${esc(x.name)}</span><strong>${fmt(x.price)} MAD</strong><button data-ot-remove="${i}" aria-label="Retirer">×</button></div>`).join('')
       : '<div class="ot-empty">Touchez un article.</div>';
@@ -92,9 +113,14 @@
     };
   }
   function total(){return roundMoney(cart.reduce((n,x)=>n+(+x.price||0),0));}
-  function checkout(method){const amount=total();if(!(amount>0))return;const ref=window.KiwiPosSale?.stamp?.('A-'+window.KiwiPosSale.nextSeq('autre',1))||('A-'+Date.now());window.KiwiPosSale?.record?.('autre',{total:amount,method,label:cart[0]?.name+(cart.length>1?` +${cart.length-1}`:''),ref,lines:cart.map(x=>({name:x.name,qty:1,total:x.price}))});cart=[];window.KiwiCaisseToast?.('Vente encaissée · '+fmt(amount)+' MAD');render();}
+  function checkout(method){const amount=total();if(!(amount>0))return;const ref=window.KiwiPosSale?.stamp?.('A-'+window.KiwiPosSale.nextSeq('autre',1))||('A-'+Date.now());window.KiwiPosSale?.record?.('autre',{total:amount,method,label:cart[0]?.name+(cart.length>1?` +${cart.length-1}`:''),ref,lines:cart.map(x=>({name:x.name,qty:1,total:x.price,itemId:x.productId||undefined}))});
+    /* le stock suit la vente, article par article, avec le numéro de ticket */
+    cart.forEach(x=>{if(x.productId){try{window.KiwiPosWorkspaces?.catalog?.sell?.(x.productId,1,ref);}catch(_){}}});
+    cart=[];window.KiwiCaisseToast?.('Vente encaissée · '+fmt(amount)+' MAD');render();}
   function addModal() { catalogDashboardOnly(); return; }
   function renderDay(host){const t=window.KiwiPosSale?.totals?.('autre')||{total:0,cash:0,card:0,count:0};host.innerHTML=`<header class="ot-head"><div><h1>Journée</h1><p>Uniquement les ventes réellement encaissées sur ce terminal.</p></div></header><section class="ot-day"><div class="ot-day-grid"><div class="ot-stat"><span>Ventes</span><strong>${t.count}</strong></div><div class="ot-stat"><span>Recette</span><strong>${fmt(t.total)} MAD</strong></div><div class="ot-stat"><span>Espèces / carte</span><strong>${fmt(t.cash)} / ${fmt(t.card)}</strong></div></div></section>`;}
   function onShow(){if(root)render();}
+  let watching=false;
+  function watchCatalog(){if(watching)return;const C=window.KiwiBoutiqueCatalog;if(C&&C.subscribe){watching=true;try{C.subscribe(()=>{if(root&&view==='sale')render();});}catch(_){}}}
   window.KiwiPosDispatch.register({id:'autre',greet:{line1:'Bonjour,',em:'bienvenue.',sub:'Caisse polyvalente'},mount,onShow});
 })();

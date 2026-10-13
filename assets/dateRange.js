@@ -3262,6 +3262,7 @@
     return tableTimeTileFrom(tableTimeEntry(from, to), tableTimeEntry(from - span, from));
   }
 
+  let lastBand = null;
   function renderKpiBand() {
     if (guardOperatorFigures('[data-kpi-band]')) {
       const wrap = document.querySelector('[data-kpi-band]');
@@ -3468,6 +3469,10 @@
       });
     }
 
+    /* « Personnaliser » prévisualise exactement ces chiffres-là : ceux de la
+     * bande, ventes réelles comprises, et non le tableau de démo. */
+    lastBand = { range: currentRange, data };
+
     // Resolve which 6 KPI keys to render — owner's saved layout, or the
     // vertical default. Derived KPIs are merged into `data` so the tile
     // builder and value loop below keep working unchanged.
@@ -3636,7 +3641,12 @@
     const lang = getLang();
     const kc = KC_STR[lang] || KC_STR.fr;
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
-    const data = vData(kpiByVenue, currentRange) || {};
+    /* Les tuiles du sélecteur montrent les chiffres de la bande : un vrai
+     * commerçant voyait ici « Café Atlas » (le tableau de démo) en choisissant
+     * ses indicateurs. */
+    if (!(lastBand && lastBand.range === currentRange)) { try { renderKpiBand(); } catch (_) {} }
+    const data = (lastBand && lastBand.range === currentRange && lastBand.data)
+      || (ownData() ? {} : vData(kpiByVenue, currentRange)) || {};
     const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? openDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
 
     // Only offer KPIs that actually resolve for this venue + range.
@@ -5317,11 +5327,15 @@
   /* Librairie, épicerie : « fin de journée » n'est pas un service du soir avec des tables à réserver.
      L'ancien bandeau disait « Réservations non configurées, ajoutez vos tables » à un libraire. La
      librairie y voit ses commandes spéciales (fiches du tableau de bord, que la caisse écrit) ;
-     l'épicerie, qui n'a aucune donnée à y mettre, un état vide honnête sans renvoi vers les tables. */
+     l'épicerie, qui n'a aucune donnée à y mettre, un état vide honnête sans renvoi vers les tables.
+     Même chose pour TOUT commerce de détail (boutique, maison, fleuriste, autre) : ils tombaient
+     dans la branche des réservations et lisaient « Réservations non configurées, ajoutez vos
+     tables ». Une boutique ne prend pas de réservation ; son état vide est celui de son métier. */
   function retailBand(lang, t) {
-    let trade = '';
+    let trade = '', base = '';
     try { const v = window.KiwiVenue?.getCurrentVenueData?.() || {}; trade = String(v.subtype || v.type || ''); } catch (_) {}
-    if (trade !== 'librairie' && trade !== 'epicerie') return null;
+    try { base = String(window.KiwiVenue?.getVenueType?.() || ''); } catch (_) {}
+    if (trade !== 'librairie' && trade !== 'epicerie' && base !== 'boutique') return null;
     const W = window.KiwiTradeWorkspaces;
     const T = {
       fr: { lbl: 'COMMANDES SPÉCIALES', arrived: (n) => `${n} ${n > 1 ? 'arrivées' : 'arrivée'} à retirer`, waiting: (n) => `${n} en attente de livraison`, open: 'Ouvrir Commandes de livres' },

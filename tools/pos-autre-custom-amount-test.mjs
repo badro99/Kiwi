@@ -120,6 +120,38 @@ try {
   await page.click('.ot-lang [data-kcl="fr"]');
   await sleep(100);
   ok('FR is restored', /Montant libre/.test(await text('[data-ot-custom]')));
+
+  /* ── the merchant's catalogue, read from the dashboard inventory ── */
+  const page2 = await browser.newPage();
+  await page2.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body><div id="root"></div></body></html>');
+  await page2.evaluate(() => {
+    window.__sales = []; window.__sold = []; window.__used = [];
+    window.KiwiCaisseToast = () => {};
+    window.KiwiPosSale = { record: (v, s) => { window.__sales.push([v, s]); return s; }, nextSeq: () => 3, stamp: (r) => r, today: () => [], totals: () => ({ total: 0, cash: 0, card: 0, count: 0 }) };
+    window.KiwiPosDispatch = { register: (d) => { window.__def = d; }, lock: () => {} };
+    window.KiwiPlatform = { pairedMerchant: () => 'test-autre-shop' };
+    window.KiwiBoutiqueCatalog = {
+      use: (k) => window.__used.push(k),
+      listProducts: () => [{ id: 'pr1', name: 'Atelier poterie', priceMAD: 150 }, { id: 'pr2', name: 'Bon cadeau', priceMAD: 0 }, { id: 'pr3', name: '', priceMAD: 20 }],
+      subscribe: () => () => {},
+    };
+    window.KiwiPosWorkspaces = { catalog: { sell: (id, qty, ref) => { window.__sold.push([id, qty, ref]); return qty; } } };
+  });
+  await page2.addScriptTag({ content: read('assets/pos-autre.js') });
+  await page2.evaluate(() => window.__def.mount(document.getElementById('root')));
+  const tiles = await page2.$$eval('[data-ot-item]', (b) => b.map((x) => x.textContent.trim()));
+  ok('the till reads the catalogue of the paired store', (await page2.evaluate(() => window.__used)).includes('test-autre-shop'));
+  ok('a priced item from the dashboard is a tile; an unnamed or unpriced one is not', tiles.length === 1 && /Atelier poterie/.test(tiles[0]) && /150/.test(tiles[0]));
+  ok('the unpriced item is counted, not sold at a guessed price', /Articles sans prix, pas encore en vente/.test(await page2.$eval('.ot-unpriced', (e) => e.textContent)) && /1/.test(await page2.$eval('.ot-unpriced b', (e) => e.textContent)));
+  await page2.click('[data-ot-item]');
+  await page2.click('[data-ot-pay="carte"]');
+  await sleep(50);
+  const s2 = await page2.evaluate(() => window.__sales[0] && window.__sales[0][1]);
+  ok('the sale keeps the product id on its line', s2 && s2.total === 150 && s2.lines[0].itemId === 'pr1');
+  const sold = await page2.evaluate(() => window.__sold);
+  ok('the stock is drawn for that product, with the ticket number', sold.length === 1 && sold[0][0] === 'pr1' && sold[0][1] === 1 && sold[0][2] === s2.ref);
+  const CL = read('assets/caisse-lang.js');
+  ok('the unpriced note reads EN and AR', /'Articles sans prix, pas encore en vente': \['Items without a price, not on sale yet', 'منتجات بلا سعر، ليست للبيع بعد'\]/.test(CL));
 } finally {
   await browser.close();
 }

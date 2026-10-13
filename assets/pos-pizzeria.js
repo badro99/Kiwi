@@ -499,7 +499,7 @@
         ? Math.max(0, received - allocated)
         : Math.round((received * row.base / Math.max(1, gross)) * 100) / 100;
       allocated += total;
-      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${zoneOf(o).label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'service', total };
+      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${zoneOf(o).label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'fee', total };
       const ln = row.ln;
       if (ln.kind === 'drink') {
         const dr = { itemId: ln.free ? '' : ln.did, name: drinkOf(ln).label, category: ln.free ? 'libre' : 'boissons', qty: ln.qty, unit: 'piece', kind: 'product', total };
@@ -1296,6 +1296,8 @@
   function commitOrder(o) {
     o.jobs.forEach((j) => { JOB[j.jid] = j; });
     ORDERS.unshift(o);
+    /* la fiche client compte ses vraies commandes (elle restait à 0 en réel) */
+    if (o.custId && CUST[o.custId]) CUST[o.custId].orders = (+CUST[o.custId].orders || 0) + 1;
     seq++;
     freshTicket();
     renderTicket();

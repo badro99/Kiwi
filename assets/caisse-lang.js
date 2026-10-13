@@ -707,6 +707,7 @@
       'Articles et prix se gèrent dans le tableau de bord': ['Items and prices are managed in the dashboard', 'تُدار المنتجات والأسعار من لوحة القيادة'],
       'Articles et prix se gèrent dans le tableau de bord.': ['Items and prices are managed in the dashboard.', 'تُدار المنتجات والأسعار من لوحة القيادة.'],
       'Ajoutez vos articles dans le tableau de bord.': ['Add your items in the dashboard.', 'أضف منتجاتك من لوحة القيادة.'],
+      'Articles sans prix, pas encore en vente': ['Items without a price, not on sale yet', 'منتجات بلا سعر، ليست للبيع بعد'],
       'Saisir un montant': ['Enter an amount', 'أدخل مبلغًا'],
       'Montant (MAD)': ['Amount (MAD)', 'المبلغ (MAD)'],
       'Description (facultatif)': ['Description (optional)', 'الوصف (اختياري)'],

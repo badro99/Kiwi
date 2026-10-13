@@ -1409,6 +1409,12 @@
     "Ajoutez un tarif à cette chambre ou définissez le tarif général dans Tarifs.": { en: "Add a rate to this room or set the general rate in Rates.", ar: "أضف سعرًا لهذه الغرفة أو حدّد السعر العام في الأسعار." },
     "Client sans nom": { en: "Unnamed guest", ar: "نزيل بلا اسم" },
     "Walk-in non enregistré": { en: "Walk-in not saved", ar: "لم يُسجَّل الزبون دون حجز" },
+    "Espèces · {amount}": { en: "Cash · {amount}", ar: "نقدًا · {amount}" },
+    "Carte · {amount}": { en: "Card · {amount}", ar: "بالبطاقة · {amount}" },
+    "Comment le client règle-t-il ?": { en: "How is the guest paying?", ar: "كيف يدفع النزيل؟" },
+    "Ch. {n} · {type} · 1 nuit": { en: "Rm {n} · {type} · 1 night", ar: "غ. {n} · {type} · ليلة واحدة" },
+    "Séjour non inscrit au registre": { en: "Stay not in the register", ar: "الإقامة غير مسجلة في السجل" },
+    "La vente est enregistrée. L’occupation de l’Accueil comptera cette chambre une fois la connexion revenue et le séjour saisi dans Séjours.": { en: "The sale is saved. Home occupancy will count this room once the connection is back and the stay is entered in Stays.", ar: "البيع مسجل. ستُحتسب هذه الغرفة في نسبة الإشغال بعد عودة الاتصال وإدخال الإقامة في الإقامات." },
     "La chambre reste libre. L’enregistrement du règlement est indisponible.": { en: "The room stays vacant. Payment recording is unavailable.", ar: "تبقى الغرفة شاغرة. تسجيل الأداء غير متاح." },
     "Walk-in · 1 nuit · réglé d'avance": { en: "Walk-in · 1 night · paid in advance", ar: "دون حجز · ليلة واحدة · مدفوعة مسبقًا" },
     "Nuit 1 · {type}": { en: "Night 1 · {type}", ar: "الليلة 1 · {type}" },
@@ -2354,13 +2360,18 @@
   /* A custom hotel's encaissements are REAL — feed the merchant sales store
    * so the hero, KPI band and feed recompute from them (same pipeline as
    * the POS «Nouvelle vente»). */
-  function recordSale(amount, identity, label) {
+  /* `method` est le moyen réellement encaissé, choisi à la réception :
+   * espèces ou carte. Avant, chaque départ et chaque walk-in partaient en
+   * « carte », et le Z déclarait en terminal de l'argent qui dormait dans le
+   * tiroir. */
+  function recordSale(amount, identity, label, method) {
     if (!isCustomHotel() || !(amount > 0)) return false;
+    if (method !== 'cash' && method !== 'card') return false;
     const live = window.KiwiLive;
     if (!live?.isOn?.() || !live?.postSale) return false;
     const key = String(identity || ('hotel-' + Date.now())).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 54);
     const result = live.postSale({
-      id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method: 'card',
+      id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method,
       label: String(label || 'Encaissement hôtel').slice(0, 80), ref: key,
       time: new Date(), channel: 'hotel'
     });
@@ -2435,7 +2446,10 @@
       ${commission}
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;">
         <button class="hx-btn ghost" data-action="hx-add-charge" data-arg="${room}">${tx('+ Ajouter une charge')}</button>
-        <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>
+        ${isCustomHotel() && total - paid > 0
+          ? `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|cash">${tx('Espèces · {amount}', { amount: MAD(total - paid) })}</button>
+             <button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}|card">${tx('Carte · {amount}', { amount: MAD(total - paid) })}</button>`
+          : `<button class="hx-btn atlas" data-action="hx-checkout-pay" data-arg="${room}">${tx('Encaisser au check-out · {amount}', { amount: MAD(total - paid) })}</button>`}
       </div>`;
   }
   function openFolio(room, highlightNew) {
@@ -3754,6 +3768,56 @@
   function cuStaysKnown() {
     const load = cuStayLoads.get(cuStayScope());
     return cuWarmState.at > 0 || !!(load && !load.loading && !load.error);
+  }
+  /* Un walk-in est un séjour comme un autre : il entre au registre
+   * (/api/hotel/stays), d'où la bande de l'Accueil, la Production et le plan
+   * tirent les nuitées. Avant, il ne vivait que dans le folio de la caisse et
+   * /api/hotel/performance ne le voyait jamais. La référence est stable : un
+   * envoi perdu se rejoue sans créer un second séjour. Échec ou délai : null,
+   * la vente se fait quand même (le plan compte la chambre occupée). */
+  async function cuRegisterWalkin(n, guest, clientRef) {
+    const slug = cuMerchantSlug();
+    const r = R()[n];
+    if (!slug || !r || !r.id || !r.typeId || typeof fetch !== 'function') return null;
+    const today = cuToday();
+    const next = new Date(today + 'T12:00:00Z'); next.setUTCDate(next.getUTCDate() + 1);
+    const body = { action: 'save', merchant: slug, clientRef: String(clientRef).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80),
+      roomTypeId: r.typeId, resourceId: r.id, checkIn: today, checkOut: next.toISOString().slice(0, 10),
+      partySize: 1, channel: 'walkin', status: 'checked_in', customer: { name: guest } };
+    try {
+      const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
+      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined });
+      if (timer) clearTimeout(timer);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.booking) return null;
+      try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {}
+      cuStaysChanged();
+      return data.booking;
+    } catch (_) { return null; }
+  }
+  async function cuStayStatus(id, status) {
+    const slug = cuMerchantSlug();
+    if (!slug || !id) return false;
+    try {
+      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status }) });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
+    } catch (_) {}
+    return false;
+  }
+  /* Le règlement du walk-in a échoué après son inscription : le séjour est
+     défait par le chemin tracé (en maison → confirmé → annulé), jamais effacé. */
+  async function cuStayCancel(id) {
+    const slug = cuMerchantSlug();
+    if (!slug || !id) return false;
+    await cuStayStatus(id, 'confirmed');
+    try {
+      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
+    } catch (_) {}
+    return false;
   }
   function cuTonight() {
     const today = cuToday();
@@ -9914,19 +9978,22 @@
       if (body) body.innerHTML = folioModalHtml(+room, true);
     };
     handlers['hx-checkout-pay'] = (el, arg) => {
-      const room = parseInt(arg, 10);
+      const [roomArg, method] = String(arg || '').split('|');
+      const room = parseInt(roomArg, 10);
       const f = F()[room];
       if (!f) return;
       const due = folioTotal(f) - folioPaid(f);
       if (isCustomHotel()) {
-        if (!Number.isFinite(due) || due < 0 || (due > 0 && !recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room))) {
+        if (!Number.isFinite(due) || due < 0 || (due > 0 && !recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room, method))) {
           toast(tx('Clôture non enregistrée'), { type: 'warn', desc: tx('Le folio et la chambre sont conservés. Vérifiez la connexion et l’enregistrement du règlement avant de réessayer.') });
           return;
         }
         const closedAt = Math.max(cuStamp(), (+f.updatedAt || 0) + 1);
         const st = cuState();
         st.closedFolios = (st.closedFolios || []).filter((x) => +x.room !== room);
-        st.closedFolios.push({ ...f, closedAt, updatedAt: closedAt, settlementAmount: due, settlementState: due > 0 ? 'queued' : 'previously-recorded' });
+        st.closedFolios.push({ ...f, closedAt, updatedAt: closedAt, settlementAmount: due, settlementMethod: due > 0 ? method : null, settlementState: due > 0 ? 'queued' : 'previously-recorded' });
+        /* le walk-in inscrit au registre y termine son séjour, comme une réservation */
+        if (f.stayId) cuStayStatus(f.stayId, 'completed');
         const r = R()[room];
         r.status = 'sale'; r.hk = 'dirty'; r.guest = null;
         r.meta = txk('Départ soldé · à remettre à blanc'); r.updatedAt = cuStamp();
@@ -9981,8 +10048,9 @@
       });
       openModal = { el: m.el, close: m.close };
     };
-    handlers['hx-walkin-room'] = (el, arg) => {
-      const n = parseInt(arg, 10);
+    handlers['hx-walkin-room'] = async (el, arg) => {
+      const [roomArg, method] = String(arg || '').split('|');
+      const n = parseInt(roomArg, 10);
       const r = R()[n];
       const cu = isCustomHotel();
       if (!r || r.status !== 'libre' || F()[n]) return;
@@ -9990,20 +10058,40 @@
         toast(tx('Tarif non configuré'), { type: 'info', desc: tx('Ajoutez un tarif à cette chambre ou définissez le tarif général dans Tarifs.') });
         return;
       }
+      /* Le règlement d'avance se fait en espèces ou en carte : on le demande. */
+      if (cu && method !== 'cash' && method !== 'card') {
+        const body = el && el.closest ? el.closest('.kiwi-modal')?.querySelector('.kiwi-modal-body') : null;
+        if (!body) return;
+        const amount = MAD(roomTypeOf(n).base);
+        body.innerHTML = `<div style="font-size:13px;color:var(--n-500);margin-bottom:10px;">${tx('Ch. {n} · {type} · 1 nuit', { n, type: esc(roomTypeOf(n).name) })}</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px;">${tx('Comment le client règle-t-il ?')}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}|cash">${tx('Espèces · {amount}', { amount })}</button>
+            <button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}|card">${tx('Carte · {amount}', { amount })}</button>
+          </div>`;
+        return;
+      }
+      if (cu && el && el.closest) { el.closest('.kiwi-modal-body')?.querySelectorAll('button').forEach((b) => { b.disabled = true; }); }
       const guest = cu ? tx('Client sans nom') : 'Walk-in · M. Idrissi';
       const rate = roomTypeOf(n).base;
       const stamp = cuStamp();
-      if (cu && !recordSale(rate, 'walkin-' + n + '-' + stamp, 'Walk-in · Ch. ' + n)) {
+      /* Le séjour entre au registre AVANT que la chambre passe occupée : le
+         serveur refuserait une chambre que le plan poussé dit déjà prise. */
+      const stay = cu ? await cuRegisterWalkin(n, guest, 'walkin-' + n + '-' + stamp) : null;
+      if (cu && (R()[n] !== r || r.status !== 'libre' || F()[n])) return;
+      if (cu && !recordSale(rate, 'walkin-' + n + '-' + stamp, 'Walk-in · Ch. ' + n, method)) {
+        if (stay) cuStayCancel(stay.id);
         toast(tx('Walk-in non enregistré'), { type: 'warn', desc: tx('La chambre reste libre. L’enregistrement du règlement est indisponible.') });
         return;
       }
       r.status = 'occ'; r.guest = guest; r.meta = txk('Walk-in · 1 nuit · réglé d\'avance');
-      F()[n] = { room: n, guest, src: 'walkin', pax: 1, nights: 1, lines: [
+      F()[n] = { room: n, guest, src: 'walkin', pax: 1, nights: 1, stayId: stay ? stay.id : null, lines: [
         { t: nowLabel(), label: tx('Nuit 1 · {type}', { type: roomTypeOf(n).name }), qty: '×1', amt: rate, src: 'room', paid: true },
         { t: 'auto', label: tx('Taxe de séjour · 1 pers × 1 nuit'), qty: '', amt: TAX_PP_NIGHT, src: 'taxe' },
       ], updatedAt: stamp };
       if (cu) { r.updatedAt = stamp; cuState().sold += 1; cuSave(); }
       openModal?.close?.();
+      if (cu && !stay) setTimeout(() => toast(tx('Séjour non inscrit au registre'), { type: 'warn', desc: tx('La vente est enregistrée. L’occupation de l’Accueil comptera cette chambre une fois la connexion revenue et le séjour saisi dans Séjours.') }), 1400);
       toast(tx('Ch. {n} vendue · {amount}', { n, amount: MAD(rate) }), { type: 'success', desc: tx('Walk-in enregistré · occupation ce soir {a} / {b}', { a: counts().occToNight, b: totalRooms() }) + (cu ? ' · ' + tx('vente réelle au compteur.') : '.') });
       rerender();
     };

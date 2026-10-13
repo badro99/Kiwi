@@ -110,6 +110,25 @@ local.api.setItem('kiwiPairedVenue', JSON.stringify({ merchant: 'pressing-amira'
 reload.pair({ merchant: 'pressing-amira', venueId: 'device-only-id' });
 assert.equal(reloadState.value.orders[0].id, 'P-1', 'switching back hydrates tenant A, not tenant B');
 
+/* Une fiche arrivée d'une autre caisse met à jour les commandes, jamais le
+ * ticket en cours de saisie sur cet écran (feature-truth · food trades). */
+{
+  const st = { value: { orders: [{ id: 'P-1' }], seq: 4, ticket: { lines: ['local-pizza'] } } };
+  const h = reload.context.window.KiwiVerticalState.register({
+    vertical: 'pizzeria', snapshot: () => st.value, restore: (saved) => { st.value = saved; },
+  });
+  h.hydrate();
+  h.store.update((d) => {
+    d.verticals ||= {};
+    d.verticals.pizzeria = { schema: 1, updatedAt: Date.now(), device: 'other-till',
+      data: { orders: [{ id: 'P-1' }, { id: 'R-9' }], seq: 9, ticket: { lines: ['remote-draft'] } } };
+    return d;
+  }, h.venue());
+  assert.equal(JSON.stringify(st.value.orders.map((o) => o.id)), '["P-1","R-9"]', 'a remote order reaches this till');
+  assert.equal(st.value.seq, 9);
+  assert.equal(JSON.stringify(st.value.ticket.lines), '["local-pizza"]', 'the ticket being typed here survives a remote restore');
+}
+
 function dispatchRuntime(initialMerchant) {
   const docEvents = events();
   const localDispatch = storage(initialMerchant
@@ -151,4 +170,4 @@ for (const file of verticalFiles) {
   assert.match(body, /\.save(?:\?\.)?\(/, `${file} persists operational changes`);
 }
 
-console.log(`✓ vertical state (${verticalFiles.length + 20} controls)`);
+console.log(`✓ vertical state (${verticalFiles.length + 23} controls)`);

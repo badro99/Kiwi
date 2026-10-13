@@ -256,7 +256,7 @@ ok('le catalogue partagé ne sort que ce qui existe en stock, et trace le ticket
 function bandCtx(extra) {
   const code = `const escTxt = (s) => String(s == null ? '' : s); ${DR.match(/  const BAND_NAV = .*;/)[0]} ${grab(DR, 'function dutyBand(')}; ${grab(DR, 'function retailBand(')};
     globalThis.dutyBand = dutyBand; globalThis.retailBand = retailBand;`;
-  const w = { KiwiTradeSchema: { wallNow: () => '2026-10-11T12:00' }, KiwiVenue: { getCurrentVenueData: () => ({ subtype: extra.trade }) }, KiwiTradeWorkspaces: extra.W };
+  const w = { KiwiTradeSchema: { wallNow: () => '2026-10-11T12:00' }, KiwiVenue: { getCurrentVenueData: () => ({ subtype: extra.trade }), getVenueType: () => extra.base || '' }, KiwiTradeWorkspaces: extra.W };
   return run(code, { window: w, Intl, Date, String, Number });
 }
 const empty = { lbl: 'FIN DE JOURNÉE', head: 'Rien de prévu', msg: 'Vide.' };
@@ -291,6 +291,18 @@ ok('Accueil librairie / épicerie : jamais « réservations » ni « ajoutez vos
   const lib = bandCtx({ trade: 'librairie', W: W([], 'bookorders') }).retailBand('fr', empty);
   const epi = bandCtx({ trade: 'epicerie', W: W([], 'bookorders') }).retailBand('fr', empty);
   [lib, epi].forEach((h) => { assert.match(h, /Rien de prévu/); assert.doesNotMatch(h, /nav-reservations|tables|Réservation/i); });
+});
+
+ok('Accueil boutique, maison, fleuriste : l\'état vide du métier, jamais « Réservations non configurées »', () => {
+  for (const trade of ['boutique', 'maison', 'fleuriste', 'autre']) {
+    const h = bandCtx({ trade, base: 'boutique', W: W([], 'bookorders') }).retailBand('fr', empty);
+    assert.ok(h, trade + ' : aucun bandeau');
+    assert.match(h, /Rien de prévu/);
+    assert.doesNotMatch(h, /nav-reservations|tables|Réservation|non configur/i, trade);
+  }
+  const V = readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
+  assert.doesNotMatch(V, /Les temps forts de votre journée s'afficheront ici/, 'promesse d\'un contenu qui n\'arrive jamais');
+  assert.doesNotMatch(V, /Vos commandes et livraisons du jour s'afficheront ici/, 'idem pour le fleuriste');
 });
 
 ok('Accueil : un autre métier ne reçoit pas ces bandeaux', () => {
@@ -335,6 +347,29 @@ ok('liste scolaire : pas de « Solde 0 MAD » tant qu’aucune fiche ne porte de
 
 ok('la fiche santé ne passe que par le document tenant-scopé, jamais dans un journal', () => {
   [PHARM, LIB, EPI, WSJS].forEach((s) => assert.doesNotMatch(s, /console\.(log|info)\([^)]*(patient|allerg|ordonnance)/i));
+});
+
+ok('épicerie : le stock au poids sort en kilos entiers, les fractions attendent sur la caisse', () => {
+  const store = {};
+  const sold = [];
+  const ctx = {
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },
+    pvPaired: () => ({ merchant: 'epicerie-test' }),
+    WS: () => ({ catalog: { sell: (id, q, ref) => { sold.push([id, q, ref]); return q; } } }),
+    JSON, Math,
+  };
+  run(grab(EPI, 'function weighKey') + grab(EPI, 'function weighPending') + grab(EPI, 'function drawWeighed'), ctx);
+  assert.equal(ctx.drawWeighed('tomates', 0.4, 'T1'), 0);            // 400 g : rien ne sort encore
+  assert.deepEqual(sold, []);
+  assert.equal(ctx.drawWeighed('tomates', 0.75, 'T2'), 1);           // 1,15 kg cumulés : un kilo sort
+  assert.equal(JSON.stringify(sold), JSON.stringify([['tomates', 1, 'T2']]));
+  assert.equal(JSON.parse(store['kiwi:epWeighPending:epicerie-test']).tomates, 0.15);
+  assert.equal(ctx.drawWeighed('tomates', 2.85, 'T3'), 3);           // 0,15 + 2,85 = 3 kg pile
+  assert.equal(JSON.parse(store['kiwi:epWeighPending:epicerie-test']).tomates, undefined);
+  // le reste en attente se déduit de l'affichage du stock réel
+  assert.match(EPI, /wu \? Math\.max\(0, Math\.round\(\(n - \(\+pend\[p\.id\] \|\| 0\)\) \* 1000\) \/ 1000\) : n/);
+  assert.match(EPI, /if \(ln\.weight != null\) drawWeighed\(ln\.itemId, ln\.weight, t\.num\)/);
+  assert.doesNotMatch(EPI, /stock au poids n'est pas suivi/i);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

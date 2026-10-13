@@ -619,69 +619,61 @@ Covered by `specialty-retail-truth-test.mjs` (29 checks); `pos-truth-a-test` and
 
 ## Open, logged for their own pass
 
-- **Dashboard period labels claim calendar periods the maths does not use.**
-  In `assets/dateRange.js`, `moisDernier` is labelled "Last month" but
-  `RANGE_DAYS` makes it the last 30 days to now; `trimestre` ("This quarter")
-  is the last 90 days and `annee` ("This year") the last 365. The Ventes tab
-  does not use these; the global date picker does.
+Closed on 2026-10-13 (each with a test wired into `tools/check.js`):
 
-- **Pharmacy health data on the counter device.** Prescriptions and
-  allergies sit in the `workspaces` store doc, which a paired till token can
-  read (like `costs`). It needs its own owner/pharmacist scope before real
-  patient data is entered.
-- **Bookshop deposit and balance are recorded as cash** whatever the tender.
-- **Weighed grocery stock is not tracked**; only unit products draw stock.
-- **School lists show "BALANCE 0 MAD"** in the generic summary strip, which
-  means nothing for a list.
-- **Boutique and maison Accueil still say "Bookings not configured".**
+- Period labels are calendar periods (`date-range-calendar-truth-test`).
+- Pharmacy prescriptions and claims are hidden from the till and the employee
+  app, and a till write cannot erase them (`store.js` `PARTIAL`,
+  `team-doc-redaction-test`). `costs` hides charges and targets; `recipes` is
+  owner-only. Items and ingredients stay readable: the till freezes line costs
+  from them.
+- Bookshop deposit and balance carry the tender chosen.
+- Weighed grocery stock is drawn in whole kilos from the shared ledger; the
+  fraction waits on the till and is already deducted from what it shows
+  (`specialty-retail-truth-test`).
+- School lists no longer show "BALANCE 0 MAD".
+- Boutique, maison, fleuriste and other retail Accueil bands give an honest
+  empty state instead of "Bookings not configured".
+- Hotel walk-ins enter the stay register (`/api/hotel/stays`, channel
+  `walkin`) before the room turns occupied, so `/api/hotel/performance`
+  counts them; check-out completes the stay. Walk-in and check-out ask for the
+  real tender (cash or card) instead of always recording a card sale
+  (`hotel-reception-journal-test`).
+- Retail tills: `pos-autre` sells the shared catalogue; the boutique issues,
+  looks up and redeems credit notes through `/api/store-credits`; the exchange
+  replacement reaches the stock journal; "Personnaliser" previews the band's
+  own figures, not the demo table (`store-credit-sale-test`,
+  `pos-autre-custom-amount-test`, `maison-till-stock-journal-test`).
+- Default tariffs and "Coach 1-3": real tills start empty and sell the
+  merchant's own prices and team (verified, fixed in `4c2055ed`, `1ca40494`).
+- Tips reach D1 (`sales.tip_cents`, self-healing column) and the dashboard
+  counts an open day's tips (`sale-tip-d1-test`, `tips-truth-test`).
+- QR orders are refused server-side outside published hours
+  (`order-hours-server-test`).
+- Removed employee clocked in: fixed (`team-removal-shift-test`).
+- Pharmacy stock and lots: "Stock & péremptions" and "Lots à surveiller" on
+  the dashboard; the till draws lots oldest expiry first (verified).
+- Coiffure appointments use the `appointments` board; fleuriste invents no
+  recipient or city.
+- Food trades: delivery fees are `kind: 'fee'` and leave the margin ledger
+  instead of reading "to cost"; pizzeria customers count their orders; the
+  traiteur opens the carte option sheet and freezes the choice per person; a
+  remote snapshot never replaces the ticket being typed (`ticket`, `draft`,
+  `cart` stay device-local) (`food-trades-truth-test`, `vertical-state-test`).
+- `txPerDay` and `revPerDay` divide by days open.
+- The restaurant till freezes cost on sale lines (`caisse-frozen-cost-test`).
 
+Still open, by decision rather than by defect:
 
-
-- **What a pending store may save.** `entitlements-v2.js` says configuring
-  (a dish, a room) is not held back during installation, but the server
-  refuses every `store_docs` write from a pending store. The wizard's own
-  team roster and floor plan are therefore kept on the device, marked
-  unsynced, and only reach the server after activation. Measured: they did,
-  on the same browser. On another device they are missing until then.
-  A product decision, not a bug to patch quietly.
-- **Hotel walk-ins** (`hx-walkin-room`, `hx-checkout-pay`) use a ledger the
-  band does not count; only `hotel_reservations` is measured.
-- **Room charges** are recorded by the hotel till as a card sale, not as
-  "charged to room".
-- **Retail tills other than boutique/maison** ship demo catalogues and do not
-  read the shared catalogue; the boutique till posts no credit note to
-  `/api/store-credits`, and its exchange replacement is missing from the
-  stock ledger. "Personnaliser" previews KPIs from demo data.
-
+- **What a pending store may save.** The server refuses `store_docs` writes
+  from a pending store, so the wizard's roster and floor plan wait on the
+  device until activation. Product decision.
 - **Till ticket numbering after C4.** A contaminated shift keeps its
-  `kdsOrderSeq` (53 and up) until the service is closed. Not rewritten, since
-  those numbers may already be printed.
-
-- **Default tariffs with no editor.** Librairie catalogue, pizzeria prices
-  and delivery fees, traiteur dishes, fast-food menu, gym plans, coiffure and
-  spa services, fleuriste stems: real tills still sell at these (the service
-  trades are in their own pass). Staff rosters are "Coach 1–3".
-- **Tips are not in D1.** The `sales` table has no tip column; the dashboard
-  learns tips only from the closing Z, so an open day shows none.
+  `kdsOrderSeq` until the service is closed; those numbers may be printed.
+  Deliberate.
 - **Equal splits** count one transaction per part (defensible per payment).
-- **Hours not enforced server-side** for QR orders: the page blocks, the API
-  accepts.
-- **Removed employee clocked in**: the open attendance entry stays.
-- **Per-device unpair** is impossible: the till token carries no device id.
-- **Pharmacie** has no UI to enter stock or lots.
-- **Coiffure appointment panel** is not linked to the `appointments` board;
-  fleuriste delivery default still names "Tanger".
-- **Food trades**: delivery fee lines appear as "to cost" in margins;
-  pizzeria customer order counts stay at 0; traiteur ignores carte option
-  groups (per-person price only); restoring a remote till snapshot can
-  replace an in-progress ticket (`KiwiVerticalState`, pre-existing).
-- **`txPerDay`** divides by the range length, not by days open.
-- **The restaurant till does not freeze a cost on its sale lines** (`k`).
-  Until it does, a purchase price change rewrites past margins; both
-  analysis tabs say so. Needs the till to read the recipe cost at sale time.
-- **A paired till can read `costs` and `recipes`.** Stock consumption on the
-  till needs the recipes, so the read cannot simply be removed; Simple Food
-  Cost gets its own owner-only storage instead of extending these documents.
+- **Per-device unpair.** The till token carries no device id; revoking one
+  device means re-pairing all. Needs a device id in the token.
 
 ## Inventory · next features
 

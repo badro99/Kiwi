@@ -499,7 +499,7 @@ for (const result of [{ ok: false }, undefined, false, {}, { ok: 'true' }]) {
     const f = folioFixture(), sales = [];
     f.window.KiwiLive = { isOn: () => true, postSale: (sale) => { sales.push(sale); return result; } };
     const before = clone(f.window.KiwiHotelRooms.current()), storage = Array.from(f.data);
-    f.handlers['hx-checkout-pay'](null, '1');
+    f.handlers['hx-checkout-pay'](null, '1|card');
     assert.equal(sales.length, 1);
     assert.equal(sales[0].amount, 25, 'only the unpaid balance is submitted');
     assert.deepEqual(clone(f.window.KiwiHotelRooms.current()), before);
@@ -540,26 +540,68 @@ test('zero-balance checkout persists a closure through hydration and both stale 
 test('accepted checkout queues only the outstanding balance and closes once', () => {
   const f = folioFixture(), sales = [];
   f.window.KiwiLive = { isOn: () => true, postSale: (sale) => { sales.push(sale); return { ok: true }; } };
-  f.handlers['hx-checkout-pay'](null, '1');
-  f.handlers['hx-checkout-pay'](null, '1');
+  f.handlers['hx-checkout-pay'](null, '1|cash');
+  f.handlers['hx-checkout-pay'](null, '1|cash');
   assert.equal(sales.length, 1);
   assert.equal(sales[0].amount, 25);
+  assert.equal(sales[0].method, 'cash', 'the tender chosen at the desk is the one recorded');
   const folio = f.window.KiwiHotelRooms.current().folios.find((x) => x.room === 1);
   assert.equal(folio.settlementAmount, 25);
   assert.equal(folio.settlementState, 'queued');
   assert.ok(folio.closedAt);
 });
 
-test('rejected walk-in leaves room availability, folios and sold count unchanged', () => {
+test('checkout without a chosen tender records nothing (no silent card sale)', () => {
+  const f = folioFixture(), sales = [];
+  f.window.KiwiLive = { isOn: () => true, postSale: (sale) => { sales.push(sale); return { ok: true }; } };
+  const before = clone(f.window.KiwiHotelRooms.current());
+  f.handlers['hx-checkout-pay'](null, '1');
+  assert.equal(sales.length, 0);
+  assert.deepEqual(clone(f.window.KiwiHotelRooms.current()), before);
+});
+
+test('rejected walk-in leaves room availability, folios and sold count unchanged', async () => {
   for (const result of [{ ok: false }, undefined]) {
     const f = boot();
     f.api.cuState().roomTypes['type:chambre'].rate = 600;
     f.window.KiwiLive = { isOn: () => true, postSale: () => result };
     const before = clone(f.window.KiwiHotelRooms.current()), storage = Array.from(f.data);
-    f.handlers['hx-walkin-room'](null, '1');
+    await f.handlers['hx-walkin-room'](null, '1');
+    assert.equal(f.requests.length, 0, 'no tender chosen yet: nothing is registered');
+    const walk = stay('walkin-reg', 'checked_in', TODAY);
+    f.reply({ ok: true, json: async () => ({ booking: walk }) },
+      { ok: true, json: async () => ({ booking: { ...walk, status: 'confirmed' } }) },
+      { ok: true, json: async () => ({ booking: { ...walk, status: 'cancelled' } }) });
+    await f.handlers['hx-walkin-room'](null, '1|cash');
+    await new Promise((r) => setImmediate(r));
     assert.deepEqual(clone(f.window.KiwiHotelRooms.current()), before);
     assert.deepEqual(Array.from(f.data), storage);
+    const actions = f.requests.map((x) => JSON.parse(x.options.body).action + ':' + (JSON.parse(x.options.body).status || ''));
+    assert.deepEqual(actions, ['save:checked_in', 'status:confirmed', 'cancel:'], 'a refused payment undoes the registered stay by the traced path');
+    f.assertNetwork();
   }
+});
+
+test('accepted walk-in enters the stay register, keeps its tender, and checks out as completed', async () => {
+  const f = boot(), sales = [];
+  f.api.cuState().roomTypes['type:chambre'].rate = 600;
+  f.window.KiwiLive = { isOn: () => true, postSale: (sale) => { sales.push(sale); return { ok: true }; } };
+  const walk = stay('walkin-ok', 'checked_in', TODAY);
+  f.reply({ ok: true, json: async () => ({ booking: walk }) });
+  await f.handlers['hx-walkin-room'](null, '1|card');
+  const body = JSON.parse(f.requests[0].options.body);
+  assert.equal(f.requests[0].url.pathname, '/api/hotel/stays');
+  assert.equal(body.action, 'save'); assert.equal(body.channel, 'walkin'); assert.equal(body.status, 'checked_in');
+  assert.equal(body.checkIn, TODAY); assert.equal(body.resourceId, f.api.cuState().rooms[1].id);
+  assert.match(body.clientRef, /^walkin-1-\d+$/);
+  assert.equal(sales.length, 1); assert.equal(sales[0].method, 'card'); assert.equal(sales[0].amount, 600);
+  assert.equal(f.api.cuState().folios[1].stayId, 'walkin-ok');
+  f.reply({ ok: true, json: async () => ({ booking: { ...walk, status: 'completed' } }) });
+  f.handlers['hx-checkout-pay'](null, '1|cash');
+  await new Promise((r) => setImmediate(r));
+  const done = JSON.parse(f.requests[1].options.body);
+  assert.equal(done.action, 'status'); assert.equal(done.status, 'completed'); assert.equal(done.id, 'walkin-ok');
+  f.assertNetwork();
 });
 
 test('real hotel charge labels use the Casablanca clock even when the demo clock exists', () => {

@@ -28,6 +28,7 @@ const ROOT = path.resolve(__dirname, '..');
 const LIVE = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 const SALE = fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
 const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+const BOUTIQUE = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 
 let passed = 0;
 const failures = [];
@@ -136,6 +137,70 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   const cash = mixed.reduce((s, x) => s + (x.m === 'avoir' ? 0 : x.amount), 0);
   ok(credited === 400 && cash === 800, 'un règlement mixte garde ses deux parts distinctes');
   ok(!(cash <= 0 && credited > 0), 'et n\'est donc PAS marqué comme réglé par avoir : il fait bien entrer 800');
+}
+
+/* ═══ 3 · la boutique passe aussi par le registre (feature-truth #13) ══════
+ * Une vraie boutique gardait ses avoirs dans le localStorage de LA caisse qui
+ * les avait émis : un bon présenté à l'autre caisse, ou après un changement de
+ * tablette, était inconnu, et le tableau de bord n'en voyait aucun. */
+{
+  const src = BOUTIQUE;
+  ok(/action: 'issue'/.test(src), 'boutique : l\'émission d\'un avoir passe par /api/store-credits');
+  ok(/action: 'redeem-batch'/.test(src), 'boutique : la consommation est une seule écriture serveur');
+  const doAv = src.slice(src.indexOf('async function doAvoir'), src.indexOf('async function issueAvoir'));
+  ok(doAv.indexOf('await issueAvoir') > 0 && doAv.indexOf('await issueAvoir') < doAv.indexOf('restoreLines('),
+    'boutique : l\'avoir est inscrit AVANT que le stock bouge (un refus ne remet rien en rayon)');
+  ok(/catch \(error\) \{\s*toast\('Avoir non émis'/.test(doAv), 'boutique : un refus du registre le dit, sans retour enregistré');
+  ok(/state\.retBusy/.test(doAv), 'boutique : un double appui n\'émet pas deux bons');
+  const issue = src.slice(src.indexOf('async function issueAvoir'), src.indexOf('async function issueAvoir') + 1500);
+  ok(/if \(!IS_DEMO\)/.test(issue) && /ensureOriginalSale/.test(issue), 'boutique : hors démo, le ticket d\'origine est adossé au registre');
+  const exch = src.slice(src.indexOf('} else if (diff < 0) {'), src.indexOf('} else if (diff < 0) {') + 2200);
+  ok(exch.indexOf('await issueAvoir') > 0 && exch.indexOf('await issueAvoir') < exch.indexOf('apply('),
+    'boutique : à l\'échange, la différence est due au registre avant que les pièces bougent');
+  ok(/releaseSale\(stockRef\)/.test(exch), 'boutique : un refus rend la pièce de remplacement réservée');
+  const pay = src.slice(src.indexOf("action: 'redeem-batch'") - 1500, src.indexOf("action: 'redeem-batch'") + 1400);
+  ok(/committed = false/.test(pay) && /refreshRemoteAvoirs\(\)/.test(pay),
+    'boutique : un refus annule l\'encaissement et relit les soldes réels');
+  ok(/id: creditCommitId/.test(pay), 'boutique : une réponse perdue se rejoue sans double débit');
+  ok(/creditRequest\(null, '&code='/.test(src), 'boutique : un code inconnu en caisse est demandé au registre');
+
+  /* les assistants, exécutés */
+  const from = src.indexOf('  function creditFromServer');
+  const to = src.indexOf('  /* ───────────────────────── state');
+  const calls = [];
+  const sandbox = {
+    IS_DEMO: false, AVOIRS: [], P: { p1: { name: 'Robe lin' } }, crypto: { randomUUID: () => 'u-1' },
+    merchantSlug: () => 'boutique-test', persistAvoirs() {}, renderBadges() {}, persistDay() {},
+    lineReturnedQty: (line) => Number(line && line.returnedQty) || 0, rayonOf: () => 'robes',
+    bqPaymentMethod: () => 'card', bqPaymentParts: (parts) => parts,
+    fetch: async (url, init) => {
+      calls.push({ url, init });
+      if (String(url).includes('&code=AV-OTHER')) return { ok: true, status: 200, json: async () => ({ credits: [{ code: 'AV-OTHER', amountCents: 5000, balanceCents: 2500, createdAt: 1, expiresAt: Date.now() + 9e9 }] }) };
+      if (init && init.body && JSON.parse(init.body).id === 'fail') return { ok: false, status: 409, json: async () => ({ error: 'sale-credit-exceeds-available' }) };
+      return { ok: true, status: 200, json: async () => ({ credits: [] }) };
+    },
+    Date, Math, Number, String, JSON, Array, Object, Map, Error,
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
+    '\n;this.api = { creditFromServer, creditRequest, stableCreditIssueId, originalSalePayload, creditErrorDetail };', sandbox);
+  const api = sandbox.api;
+  const lookup = await api.creditRequest(null, '&code=AV-OTHER');
+  ok(calls[0].url === '/api/store-credits?merchant=boutique-test&code=AV-OTHER', 'boutique : la recherche vise le registre du magasin appairé');
+  const av = api.creditFromServer(lookup.credits[0]);
+  ok(av.code === 'AV-OTHER' && av.balance === 25 && av.amount === 50, 'boutique : le solde vient du serveur, en dirhams');
+  let refused = null;
+  try { await api.creditRequest({ action: 'issue', id: 'fail' }); } catch (error) { refused = error; }
+  ok(refused && refused.code === 'sale-credit-exceeds-available', 'boutique : un refus garde son code serveur');
+  ok(/déjà été remboursé/.test(api.creditErrorDetail(refused)), 'boutique : et le message dit la vraie cause');
+  const sale = { id: 'T-0042', at: Date.now(), total: 300, parts: [{ m: 'carte', amount: 300 }],
+    lines: [{ pid: 'p1', size: 'M', color: 'Écru', unit: 150, qty: 2, returnedQty: 1 }] };
+  const a = api.stableCreditIssueId(sale, new Map([[0, 1]]), 15000);
+  const b = api.stableCreditIssueId(sale, new Map([[0, 1]]), 15000);
+  ok(a === b && /^credit-issue:T-0042:0-2:15000$/.test(a), 'boutique : le même retour rejoué porte le même identifiant');
+  const payload = api.originalSalePayload(sale);
+  ok(payload.method === 'card' && payload.amountCents === 30000 && payload.lines[0].variantId === 'p1:M:Écru',
+    'boutique : le ticket d\'origine part avec son règlement et ses variantes');
 }
 
 if (failures.length) {

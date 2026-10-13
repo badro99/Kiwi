@@ -55,21 +55,21 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '45', label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '60', label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '61', label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '7', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '17', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '11', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '9', label: 'Boulangerie · Bab Kasbah' },
-    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '5', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '7', label: 'Traiteur · Dar Zellij' },
+    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '6', label: 'Pizzeria · La Marsa' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '8', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '7', label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '8', label: 'Épicerie · Si Brahim' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '9', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '7', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '9', label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '11', label: 'Fleuriste · Fleurs du Détroit' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '10', label: 'Librairie · Al Boughaz' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '12', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '8', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '7', label: 'Salle de sport · Atlas Fitness' },
-    '0016': { id: 'autre',       file: 'pos-autre',       rev: '7', label: 'Autre activité · caisse polyvalente' },
+    '0016': { id: 'autre',       file: 'pos-autre',       rev: '8', label: 'Autre activité · caisse polyvalente' },
     '0017': { id: 'maison',      file: 'pos-maison',      rev: '65', label: 'Maison · Vogue Home' },
   };
 

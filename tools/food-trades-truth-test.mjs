@@ -455,5 +455,49 @@ ok('démo : réguliers / fidélité / nouveaux clients dérivent toujours du tot
   assert.match(grab(DR, 'newClients: {'), /d\.tx\.value - d\.regulars\.value/);
 });
 
+console.log('\nfeature-truth · frais de livraison, compteurs clients, options du traiteur');
+const COST = read('assets/cost.js');
+ok('marges : une ligne `fee` (livraison) rejoint les frais, jamais « à chiffrer »', () => {
+  assert.match(PZ, /category: 'livraison', qty: 1, unit: 'service', kind: 'fee', total \}/);
+  const at = COST.indexOf('rows.forEach(({ l, qty, listed }) => {'); assert.ok(at > 0); const body = COST.slice(at, at + 2400);
+  assert.match(body, /=== 'fee'\) \{ out\.unitemisedAmt \+= collected; out\.feeAmt \+= collected; return; \}/);
+  assert.ok(body.indexOf("=== 'fee'") < body.indexOf('out.lines.push(row)'), 'la ligne de frais sort avant d\'entrer au registre des marges');
+});
+ok('pizzeria : la fiche client compte chaque commande validée', () => {
+  const body = grab(PZ, 'function commitOrder(o)');
+  const ctx = run(`const CUST = { k1: { id: 'k1', orders: 0 } }; const JOB = {}; const ORDERS = []; let seq = 1;
+    const freshTicket = () => {}, renderTicket = () => {}, renderBadges = () => {}, renderStats = () => {}, queueIfOffline = () => {};
+    const window = {}; const toast = () => {}; const destLabel = () => ''; const pvReal = () => true;
+    ${body.replace(/try \{\s*if \(window\.KiwiFoodProductionPrint[\s\S]*?\} catch \(_\) \{\}/, '').replace(/const n = o\.jobs\.length;[\s\S]*$/, '}')}
+    commitOrder({ id: 'M-1', custId: 'k1', jobs: [], lines: [] });
+    commitOrder({ id: 'M-2', custId: 'k1', jobs: [], lines: [] });
+    commitOrder({ id: 'M-3', custId: null, jobs: [], lines: [] });
+    globalThis.N = CUST.k1.orders;`);
+  assert.equal(ctx.N, 2);
+});
+ok('traiteur : un plat à options ouvre la feuille de la carte et fige le choix par personne', () => {
+  assert.match(TR, /groups: Array\.isArray\(it\.groups\) && it\.groups\.length \? it\.groups : null/);
+  assert.match(TR, /carteApi\.sheet\(\{ title: dish\.label/);
+  assert.match(TR, /price: r && r\.unit != null \? \+r\.unit : dish\.price/);
+  assert.match(TR, /\.\.\.\(d\.base \? \{ base: d\.base \} : \{\}\), \.\.\.\(Array\.isArray\(d\.o\) && d\.o\.length \? \{ o: d\.o \} : \{\}\)/);
+  // la variante est vendue sous l'article de la carte, options × invités
+  const ev = { guests: 50, menu: ['tj~Frites'], extras: [], snap: { dishes: { 'tj~Frites': { id: 'tj~Frites', base: 'tj', label: 'Tajine (Frites)', course: 'plats', price: 95, o: [{ id: 'opt-frites', qty: 1 }] } }, extras: {} } };
+  const code = `const DISH = {}, EXTRA = {}; const fmtN = (n) => String(n);
+    ${line(TR, /  const plu = .*;/)}
+    ${line(TR, /  const genericPack = .*;/)}
+    ${grab(TR, 'function dishOf(x, id)')}
+    ${grab(TR, 'function extraCalc(def, g)')}
+    ${grab(TR, 'function extraOf(x, id)')}
+    ${grab(TR, 'function eventSaleLines(ev, received)')}
+    globalThis.L = JSON.stringify(eventSaleLines(${JSON.stringify(ev)}, 4750));`;
+  const out = JSON.parse(run(code).L);
+  assert.equal(out[0].itemId, 'tj'); assert.equal(out[0].name, 'Tajine (Frites)'); assert.equal(out[0].total, 4750);
+  assert.equal(JSON.stringify(out[0].options), JSON.stringify([{ id: 'opt-frites', qty: 50 }]));
+});
+ok('caisse : une fiche arrivée d\'une autre caisse ne remplace pas le ticket en cours', () => {
+  assert.match(VS, /var LOCAL = Array\.isArray\(spec\.local\) \? spec\.local : \['ticket', 'draft', 'cart'\];/);
+  assert.match(VS, /restore\(keepLocal\(row\.data\)\);/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
