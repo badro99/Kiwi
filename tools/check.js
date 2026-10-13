@@ -1578,6 +1578,7 @@ section('Whole-project regressions');
     /* Face ID sur le verrou natif : confirmation en ligne, refus qui retire
        l'enregistrement, repli hors ligne sur sept jours, révocation par le coffre. */
     'native-face-entry-test.mjs',
+    'team-codes-browser-test.mjs',
     /* Le banc des suites navigateur (tools/browser-trace.mjs) : trace.md à
        l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
        captures comparées à leur référence. */
