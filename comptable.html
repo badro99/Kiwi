@@ -358,6 +358,7 @@
     var sum = salesOk ? s.summary : null;
     var has = salesOk && (sum.count || sum.refundCount || sum.voidCount)
       || d.invoices.status === 'ok' && d.invoices.rows.length
+      || d.invoiceDocs && d.invoiceDocs.status === 'ok' && d.invoiceDocs.rows.length
       || d.cash.status === 'ok' && d.cash.sessions.length
       || d.z.status === 'ok' && d.z.rows.length;
     $('cp-empty').hidden = !!has;
@@ -416,11 +417,25 @@
     el.innerHTML = '<h2>' + esc(t('adjust')) + '</h2><p class="sub">' + esc(t('refundsList')) + '</p>' + refunds
       + '<p class="sub" style="margin-top:18px">' + esc(t('voidsList')) + '</p>' + voids;
   }
+  /* Factures de caisse (une ligne par facture) + factures et avoirs saisis au
+   * tableau de bord (une ligne par taux de TVA ; un avoir est retranché). */
+  function invoiceRows() {
+    var rows = state.data.invoices.rows.slice(), docs = state.data.invoiceDocs;
+    if (docs && docs.status === 'ok') docs.rows.forEach(function (d) {
+      var sign = d.type === 'credit_note' ? -1 : 1;
+      (d.byRate.length ? d.byRate : [{ rate: null, baseCents: d.htCents, vatCents: d.vatCents }]).forEach(function (g) {
+        rows.push({ number: d.number, day: d.day, customer: d.customer, tvaRate: g.rate,
+          htCents: sign * g.baseCents, tvaCents: sign * g.vatCents, ttcCents: sign * (g.baseCents + g.vatCents) });
+      });
+    });
+    return rows;
+  }
   function renderInvoices() {
     var inv = state.data.invoices, vat = state.data.vat, el = $('cp-sec-invoices');
     if (inv.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('invoices')) + '</h2>' + sectionNotice(inv); return; }
-    var body = inv.rows.length ? table([{ t: t('number') }, { t: t('date') }, { t: t('customer') }, { t: t('ice') }, { t: t('ht'), n: 1 }, { t: t('rate'), n: 1 }, { t: t('tva'), n: 1 }, { t: t('ttc'), n: 1 }],
-      inv.rows.map(function (r) {
+    var allRows = invoiceRows();
+    var body = allRows.length ? table([{ t: t('number') }, { t: t('date') }, { t: t('customer') }, { t: t('ice') }, { t: t('ht'), n: 1 }, { t: t('rate'), n: 1 }, { t: t('tva'), n: 1 }, { t: t('ttc'), n: 1 }],
+      allRows.map(function (r) {
         return tr([td('<span class="mono">' + esc(r.number) + '</span>'), td(dateCell(r.day)), td(esc(r.customer && r.customer.name || '')), td('<span class="mono">' + esc(r.customer && r.customer.ice || '') + '</span>'),
           td(money(r.htCents), 1), td('<span class="num">' + (r.tvaRate == null ? '' : esc(r.tvaRate) + ' %') + '</span>', 1), td(money(r.tvaCents), 1), td(money(r.ttcCents), 1)]);
       })) : '<p class="cp-note">' + esc(t('none')) + '</p>';
@@ -614,7 +629,7 @@
   function exportInvoices() {
     var inv = state.data.invoices; if (inv.status !== 'ok') return;
     download(fileName('factures'), csv([t('number'), t('date'), t('customer'), t('ice'), 'IF', t('rate') + ' (%)', t('ht') + ' (MAD)', t('tva') + ' (MAD)', t('ttc') + ' (MAD)'],
-      inv.rows.map(function (r) {
+      invoiceRows().map(function (r) {
         return [r.number, dayFr(r.day), r.customer && r.customer.name || '', X(r.customer && r.customer.ice || ''), X(r.customer && r.customer.if || ''),
           r.tvaRate == null ? '' : String(r.tvaRate).replace('.', ','), N(r.htCents), N(r.tvaCents), N(r.ttcCents)];
       })));

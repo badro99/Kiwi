@@ -171,6 +171,68 @@ async function readInvoices(db, merchant, fromTs, toTs, cutoff, zone) {
   return { invoices, vat, truncated };
 }
 
+/* Les factures et avoirs SAISIS (invoice_docs, functions/api/invoices.js) émis
+ * pendant la période, par date d'émission. Jamais un brouillon ni un devis : un
+ * devis n'est pas un document fiscal, un brouillon n'a pas de numéro. Chaque
+ * ligne porte la TVA par taux ; un avoir y est en montants POSITIFS, son type
+ * dit qu'il se soustrait. Ni note interne, ni e-mail, ni téléphone du client :
+ * nom, ICE et IF sont les mentions que la facture porte légalement. */
+async function readInvoiceDocs(db, merchant, from, to) {
+  const res = await db.prepare(
+    `SELECT d.id, d.type, d.number, d.seq, d.issue_date, d.customer, d.totals, d.ttc_cents, d.original_id, o.number AS original_number
+       FROM invoice_docs d LEFT JOIN invoice_docs o ON o.id = d.original_id AND o.merchant = d.merchant
+      WHERE d.merchant = ? AND d.type IN ('invoice', 'credit_note') AND d.number IS NOT NULL
+        AND d.issue_date >= ? AND d.issue_date <= ?
+      ORDER BY d.issue_date, d.seq LIMIT ${INVOICE_CAP + 1}`
+  ).bind(merchant, from, to).all();
+  let rows = (res && res.results) || [];
+  const truncated = rows.length > INVOICE_CAP;
+  if (truncated) rows = rows.slice(0, INVOICE_CAP);
+  const paid = new Map(), credited = new Map();
+  if (rows.some((r) => r.type === 'invoice')) {
+    const p = await db.prepare('SELECT doc_id, SUM(amount_cents) AS s FROM invoice_payments WHERE merchant = ? GROUP BY doc_id').bind(merchant).all();
+    for (const r of (p && p.results) || []) paid.set(r.doc_id, Number(r.s) || 0);
+    const c = await db.prepare(
+      "SELECT original_id, SUM(ttc_cents) AS s FROM invoice_docs WHERE merchant = ? AND type = 'credit_note' AND number IS NOT NULL AND original_id IS NOT NULL GROUP BY original_id"
+    ).bind(merchant).all();
+    for (const r of (c && c.results) || []) credited.set(r.original_id, Number(r.s) || 0);
+  }
+  const out = rows.map((r) => {
+    let cust = null, totals = null;
+    try { cust = JSON.parse(r.customer); } catch (_) {}
+    try { totals = JSON.parse(r.totals); } catch (_) {}
+    cust = cust && typeof cust === 'object' ? cust : {};
+    totals = totals && typeof totals === 'object' ? totals : {};
+    const byRate = (Array.isArray(totals.byRate) ? totals.byRate : []).map((g) => ({
+      rate: Number(g.rate) || 0, baseCents: Number(g.baseCents) || 0, vatCents: Number(g.vatCents) || 0,
+    }));
+    return {
+      type: r.type, number: String(r.number || ''), day: String(r.issue_date || ''),
+      customer: { name: String(cust.name || '').slice(0, 120), ice: String(cust.ice || '').slice(0, 20), if: String(cust.if || '').slice(0, 30) },
+      htCents: Number(totals.htCents) || 0, vatCents: Number(totals.vatCents) || 0, ttcCents: Number(r.ttc_cents) || 0, byRate,
+      balanceCents: r.type === 'invoice' ? (Number(r.ttc_cents) || 0) - (paid.get(r.id) || 0) - (credited.get(r.id) || 0) : null,
+      originalNumber: r.type === 'credit_note' ? String(r.original_number || '') : null,
+    };
+  });
+  return { rows: out, truncated };
+}
+
+/* La TVA du mois reprend aussi ces documents : une facture saisie s'ajoute, un
+ * avoir se retranche, taux par taux. */
+function addDocsToVat(vat, rows) {
+  for (const r of rows) {
+    const sign = r.type === 'credit_note' ? -1 : 1;
+    vat.invoiceCount++;
+    vat.htCents += sign * r.htCents; vat.tvaCents += sign * r.vatCents; vat.ttcCents += sign * r.ttcCents;
+    for (const g of r.byRate) {
+      const key = String(g.rate);
+      const bucket = vat.byRate[key] || (vat.byRate[key] = { htCents: 0, tvaCents: 0, ttcCents: 0, count: 0 });
+      bucket.count++;
+      bucket.htCents += sign * g.baseCents; bucket.tvaCents += sign * g.vatCents; bucket.ttcCents += sign * (g.baseCents + g.vatCents);
+    }
+  }
+}
+
 async function readCash(db, merchant, fromTs, toTs, cutoff, zone) {
   const res = await db.prepare(
     `SELECT session_id, terminal_id, event_type, expected_cents, counted_cents, gap_cents,
@@ -278,8 +340,20 @@ export async function onRequest({ request, env }) {
 
   const sales = await section(() => readSales(db, merchant, fromTs, toTs, cutoff, zone));
   const inv = await section(() => readInvoices(db, merchant, fromTs, toTs, cutoff, zone));
+  const docs = await section(() => readInvoiceDocs(db, merchant, from, to));
   const cash = await section(() => readCash(db, merchant, fromTs, toTs, cutoff, zone));
   const z = await section(async () => ({ rows: await readZ(db, merchant, from, to) }));
+
+  let vatSection;
+  if (inv.status !== 'ok' && docs.status !== 'ok') vatSection = { status: inv.status };
+  else {
+    const vat = inv.status === 'ok' ? inv.vat : { source: 'invoices', byRate: {}, htCents: 0, tvaCents: 0, ttcCents: 0, invoiceCount: 0 };
+    if (docs.status === 'ok') addDocsToVat(vat, docs.rows);
+    vatSection = {
+      status: 'ok', ...vat,
+      note: 'Calculée à partir des factures émises uniquement. Les tickets de caisse ne portent pas de taux.',
+    };
+  }
 
   const dayList = [];
   if (sales.status === 'ok') {
@@ -302,10 +376,8 @@ export async function onRequest({ request, env }) {
       summary: sales.summary, days: dayList, journal: sales.journal, refunds: sales.refunds, voids: sales.voids,
     },
     invoices: inv.status !== 'ok' ? { status: inv.status } : { status: 'ok', truncated: inv.truncated, rows: inv.invoices },
-    vat: inv.status !== 'ok' ? { status: inv.status } : {
-      status: 'ok', ...inv.vat,
-      note: 'Calculée à partir des factures émises uniquement. Les tickets de caisse ne portent pas de taux.',
-    },
+    invoiceDocs: docs.status !== 'ok' ? { status: docs.status } : { status: 'ok', truncated: docs.truncated, rows: docs.rows },
+    vat: vatSection,
     cash: cash.status !== 'ok' ? { status: cash.status } : { status: 'ok', truncated: cash.truncated, sessions: cash.sessions },
     z: z.status !== 'ok' ? { status: z.status } : { status: 'ok', rows: z.rows },
   });
