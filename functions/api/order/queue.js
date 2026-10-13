@@ -467,6 +467,28 @@ export async function onRequestGet(context) {
     } catch (_) { degraded = [...degraded, 'order_course']; }
   }
 
+  /* Les plats annoncés « à suivre » (voir cleanFollowing). Une base qui n'a
+   * pas encore la table rend des bons sans annonce, jamais une erreur. */
+  const followingById = new Map();
+  const tableIds = pageRows.filter((r) => r.mode === 'table').map((r) => r.id);
+  if (tableIds.length) {
+    try {
+      for (let offset = 0; offset < tableIds.length; offset += 99) {
+        const ids = tableIds.slice(offset, offset + 99);
+        const found = await env.DB.prepare(
+          `SELECT order_id, items FROM order_following
+            WHERE merchant = ? AND cleared_ts IS NULL AND order_id IN (${ids.map(() => '?').join(',')})`
+        ).bind(merchant, ...ids).all();
+        for (const f of (found.results || [])) {
+          try {
+            const items = JSON.parse(f.items);
+            if (Array.isArray(items) && items.length) followingById.set(f.order_id, items);
+          } catch (_) {}
+        }
+      }
+    } catch (_) { /* pas encore de table order_following */ }
+  }
+
   let orders = pageRows.map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
@@ -485,6 +507,7 @@ export async function onRequestGet(context) {
       paid: !!r.paid_ts,
       created_ts: r.created_ts, updated_ts: r.updated_ts,
       served_ts: r.status === 'served' ? (servedById.get(r.id) || null) : null,
+      ...(followingById.has(r.id) ? { following: followingById.get(r.id) } : {}),
     };
   });
   if (service) {
@@ -2495,9 +2518,39 @@ function cleanLines(raw) {
     if (l.lineId) line.lineId = String(l.lineId).slice(0, 60);
     if (l.uid) line.uid = String(l.uid).slice(0, 60);
     if (l.id) line.id = String(l.id).slice(0, 60);
+    if (l.course === 'suite') line.course = 'suite';
     out.push(line);
   }
   return out;
+}
+
+/* ── LA SUITE ANNONCÉE ─────────────────────────────────────────────────────
+ * La caisse retient des plats « à suivre » (les plats principaux pendant que
+ * l'entrée part) puis les envoie d'un geste, « Envoyer la suite ». Ni l'un ni
+ * l'autre n'atteignait l'écran cuisine distant : il voyait l'entrée seule, puis
+ * un bon de plats sans rien qui dise que c'était la suite d'une table déjà
+ * servie. Le cuisinier ne pouvait ni anticiper ni reconnaître.
+ *
+ * Le marqueur « suite » voyage sur les lignes (comme voidAlert) : il n'a besoin
+ * d'aucune colonne. L'annonce, elle, n'est pas une ligne · elle ne se paie pas,
+ * ne se compte pas dans les ventes et ne se marque pas prête · elle vit donc à
+ * côté, dans une table créée au premier usage. */
+const MAX_FOLLOWING = 40;
+function cleanFollowing(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const it of raw.slice(0, MAX_FOLLOWING)) {
+    const name = String((it && it.name) || '').trim().slice(0, 80);
+    if (!name) continue;
+    out.push({ name, qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(it.qty) || 1))) });
+  }
+  return out;
+}
+async function ensureFollowingTable(env) {
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS order_following (order_id TEXT PRIMARY KEY, merchant TEXT NOT NULL, ' +
+    'table_no TEXT, items TEXT NOT NULL, created_ts INTEGER NOT NULL, cleared_ts INTEGER)'
+  ).run();
 }
 
 async function createTicket(context, env, merchant, c, now) {
@@ -2519,6 +2572,8 @@ async function createTicket(context, env, merchant, c, now) {
   }
   const lines = cleanLines(c.lines);
   if (!lines.length) return json({ error: 'empty-order' }, 400);
+  const course = c.course === 'suite' ? 'suite' : '';
+  if (course) lines.forEach((l) => { l.course = 'suite'; });
 
   const mode = c.mode === 'takeout' ? 'takeout' : 'table';
   const table = mode === 'table' ? normTable(c.table) : '';
@@ -2576,6 +2631,20 @@ async function createTicket(context, env, merchant, c, now) {
     if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status,
       session: dup.session_id || undefined, replayed: true });
   } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
+
+  /* L'annonce s'écrit AVANT le bon : la cuisine sonde par `updated_ts`, et un
+   * bon lu avant son annonce ne serait jamais relu. Une annonce dont le bon
+   * échoue ensuite reste orpheline, sans effet : rien ne la lit sans son bon. */
+  const following = mode === 'table' && !course ? cleanFollowing(c.following) : [];
+  if (following.length) {
+    try {
+      await ensureFollowingTable(env);
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO order_following (order_id, merchant, table_no, items, created_ts)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(id, merchant, table, JSON.stringify(following), now).run();
+    } catch (_) { /* l'annonce ne bloque jamais un bon de cuisine */ }
+  }
 
   /* Même numérotation que le relais téléphone : un compteur durable par
    * commerçant et par semaine. Supprimer ou annuler un bon laisse un trou et ne
@@ -2641,6 +2710,15 @@ async function createTicket(context, env, merchant, c, now) {
   }
 
   if (!row) return json({ error: 'stale-table-visit', retry: true }, 409);
+  /* La suite est partie : les annonces de cette table n'ont plus rien à dire. */
+  if (course && table) {
+    try {
+      await env.DB.prepare(
+        `UPDATE order_following SET cleared_ts = ?
+          WHERE merchant = ? AND table_no = ? AND cleared_ts IS NULL AND order_id <> ?`
+      ).bind(now, merchant, table, id).run();
+    } catch (_) { /* table absente : aucune annonce à éteindre */ }
+  }
   deferCourse(context, recordOrderCourse(env, {
     merchant, orderId: id, orderNumber: (row && row.number) || 1,
     acceptedAt: now, sentAt: now,

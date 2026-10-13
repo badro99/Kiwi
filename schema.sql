@@ -1481,6 +1481,17 @@ CREATE TABLE IF NOT EXISTS order_course (
   updated_ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, order_id)
 );
+
+-- Plats annoncés « à suivre » sur un bon de caisse (functions/api/order/queue.js,
+-- cleanFollowing). Créée aussi au premier usage. cleared_ts : la suite est partie.
+CREATE TABLE IF NOT EXISTS order_following (
+  order_id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  table_no TEXT,
+  items TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  cleared_ts INTEGER
+);
 CREATE INDEX IF NOT EXISTS idx_order_course_merchant_sent
   ON order_course (merchant, sent_ts);
 

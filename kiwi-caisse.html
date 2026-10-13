@@ -5773,7 +5773,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=12" defer></script>
+  <script src="assets/kitchen-relay.js?v=13" defer></script>
   <script src="assets/kitchen-print-queue.js?v=16" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -12939,6 +12939,9 @@
           table: order.table || '',
           settledSessions: order.type === 'dineIn' ? settledVisitsFor(order.table) : undefined,
           server: order.server || '',
+          course: order.course === 'suite' ? 'suite' : undefined,
+          following: Array.isArray(order.following)
+            ? order.following.map(i => ({ name: i.n, qty: i.q })) : undefined,
           lines: (order.relayLines || (order.items || []).map(i => ({
             /* Le relais doit porter la phrase d'options, pas seulement les
                emojis. Une tablette KDS distante doit encore lire « Tomates ·

@@ -242,6 +242,10 @@
         /* Visites de cette table que la caisse a déjà encaissées : le serveur
          * les ferme avant d'y rattacher le bon (voir createTicket, queue.js). */
         settledSessions: Array.isArray(ticket.settledSessions) ? ticket.settledSessions.slice(0, 20) : undefined,
+        /* « Envoyer la suite » et les plats retenus « à suivre » : l'écran
+         * cuisine distant les affiche comme la caisse (voir cleanFollowing). */
+        course: ticket.course === 'suite' ? 'suite' : undefined,
+        following: Array.isArray(ticket.following) && ticket.following.length ? ticket.following.slice(0, 40) : undefined,
       },
     }, false);
   }

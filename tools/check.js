@@ -1260,6 +1260,7 @@ section('Whole-project regressions');
     'course-firing-browser-test.mjs',
     'kds-recall-test.mjs',
     'kds-recall-browser-test.mjs',
+    'kds-course-following-browser-test.mjs',
     'pairs-api-test.mjs',
     'pairs-caisse-browser-test.mjs',
     'pairs-serveur-browser-test.mjs',

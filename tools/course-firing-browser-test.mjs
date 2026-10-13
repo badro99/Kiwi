@@ -58,7 +58,13 @@ await page.evaluate(() => {
   window.__plans = [];
   const real = KiwiKitchenPrint.enqueue.bind(KiwiKitchenPrint);
   KiwiKitchenPrint.enqueue = (plan, opts) => { window.__plans.push(JSON.parse(JSON.stringify(plan))); return real(plan, opts); };
+  /* Et ce qui part vers l'écran cuisine distant (kiwi-cuisine.html), tel
+     quel : la démo n'a pas de commerce, on lui en prête un le temps du test. */
+  window.__relayed = [];
+  KiwiKitchenRelay.merchant = () => 'course-firing-test';
+  KiwiKitchenRelay.send = (t) => { window.__relayed.push(JSON.parse(JSON.stringify(t))); return Promise.resolve({ ok: false }); };
 });
+const lastRelay = () => page.evaluate(() => window.__relayed[window.__relayed.length - 1] || null);
 /* L'ouverture se termine sur le registre (vente rapide) après son animation.
    On l'attend, puis on passe en salle par le vrai bouton. */
 await page.waitForFunction(() => document.body.classList.contains('is-unlocked') && mode === 'vrap', { timeout: 20000 });
@@ -129,6 +135,10 @@ check(Buffer.from(paper1).toString('latin1').includes('À SUIVRE'), 'the printed
 await page.evaluate(() => kdsPaint());
 const kds1 = await page.$eval('#kit-new', (n) => n.textContent.replace(/\s+/g, ' '));
 check(kds1.includes(`À suivre · 2× ${main.name}`), 'the kitchen screen card shows « À suivre · 2× … »');
+const r1 = await lastRelay();
+check(r1 && !r1.course && Array.isArray(r1.following) && r1.following.length === 1
+  && r1.following[0].qty === 2 && r1.following[0].name === main.name,
+  'the remote kitchen screen is told what follows too (relay: following 2× the main, no course)');
 
 console.log('\n■ L’addition, puis une suite qui ne s’efface pas');
 await page.waitForFunction(() => mode === 'salle', { timeout: 5000 });
@@ -152,6 +162,9 @@ const plan2 = await lastPlan();
 check(plan2 !== plan1 && plan2[0].payload.items.length === 1 && plan2[0].payload.items[0].qty === 2 && plan2[0].payload.items[0].name === main.name, 'the second bon carries 2× the main');
 check(/^SUITE · /.test(plan2[0].payload.title), `titled SUITE (${plan2[0].payload.title})`);
 check(!plan2[0].payload.following, 'and announces nothing more');
+const r2 = await lastRelay();
+check(r2 && r2 !== r1 && r2.course === 'suite' && !(r2.following && r2.following.length),
+  'the remote kitchen screen gets it as the suite (relay: course suite, nothing following)');
 await page.evaluate(() => kdsPaint());
 const kds2 = await page.evaluate(() => document.querySelector('#kit-new').textContent.replace(/\s+/g, ' '));
 check(!kds2.includes('À suivre ·'), 'the earlier card no longer announces a suite that has left');
