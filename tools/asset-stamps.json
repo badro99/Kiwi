@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "567",
-    "sha": "0ea07b402de20130"
+    "v": "568",
+    "sha": "f7c34d83b4c02f1f"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "554",
-    "sha": "6f657f306c666ac3"
+    "v": "555",
+    "sha": "2d52ba44ac5e6604"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "553",
-    "sha": "6b3449e7fb103060"
+    "v": "554",
+    "sha": "e1edf13b91debd10"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -362,6 +362,26 @@
   "assets/floorplan-live.js": {
     "v": "4",
     "sha": "ed7da54880df1f7e"
+  },
+  "assets/fonts/inter-tight-latin.woff2": {
+    "v": "1",
+    "sha": "77fefe8ca19b9f69"
+  },
+  "assets/fonts/legacy-faces.css": {
+    "v": "1",
+    "sha": "31b46676cb291364"
+  },
+  "assets/fonts/plex-arabic-400.woff2": {
+    "v": "1",
+    "sha": "6010e7fd0dce5d52"
+  },
+  "assets/fonts/plex-arabic-500.woff2": {
+    "v": "1",
+    "sha": "90aef64fea9794f2"
+  },
+  "assets/fonts/plex-arabic-600.woff2": {
+    "v": "1",
+    "sha": "16734a5adb27b0f3"
   },
   "assets/food-production-print.js": {
     "v": "2",
