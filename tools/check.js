@@ -1451,6 +1451,9 @@ section('Whole-project regressions');
     /* La caisse restaurant change de langue au comptoir : FR / EN / ع dans le rail. */
     'caisse-restaurant-lang-browser-test.mjs',
     'native-face-entry-test.mjs',
+    /* Taille de texte système jusqu'à 200 % sur iPhone : le tableau de bord
+       se réorganise (Accueil, Commandes, Clients, Réglages), la caisse garde 135 %. */
+    'dynamic-type-200-browser-test.mjs',
     'native-premium-feel-test.mjs',
     'native-pass3-gates-test.mjs',
     'native-pass3-locale-test.mjs',

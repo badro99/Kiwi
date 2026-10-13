@@ -1209,3 +1209,54 @@ html.kiwi-native body.kiwi-native-till .cloture-card{max-height:100%;box-sizing:
   html.kiwi-native body.kiwi-native-till .cloture-veil.is-open .cloture-card{width:100%;max-width:none;max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-keyboard,0px));border-radius:20px 20px 0 0;padding:22px 20px calc(20px + var(--kiwi-safe-bottom));animation:kiwi-native-sheet-up .32s var(--glide,cubic-bezier(.32,.72,0,1))}
 }
 @media (prefers-reduced-motion:reduce){html.kiwi-native body.kiwi-native-till .cloture-veil.is-open .cloture-card{animation:none}}
+
+/* ── Dynamic Type above 135 %, iPhone owner screens ─────────────────────────
+   native-runtime.js adds .kiwi-large-type (scale over 1.35, iPhone, dashboard
+   page only) when the phone's text size reaches Apple's accessibility sizes,
+   and WebKit then scales every font in the page up to 200 %. Fixed rows that
+   fit at 100 % cannot take that, so here the screens reflow: columns stack,
+   rows wrap, long labels break instead of clipping. The header and the big
+   figures keep a ceiling of their own (text-size-adjust on the element), the
+   way system bars and large titles do. Nothing below applies at 135 % or
+   less, so the default layout is untouched. */
+@media (max-width:600px){
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(h1,h2,h3,p,span,div,li,td,th,a,button,label,small,strong){overflow-wrap:anywhere}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .topbar{-webkit-text-size-adjust:125%!important;text-size-adjust:125%!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .topbar .ai-btn::after{display:none}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .topbar .ai-btn{width:44px;padding:0!important;justify-content:center}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .hero-today .block-head{flex-wrap:wrap}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .hero-today .right-actions{position:static!important;margin-top:6px!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .hero-today .rev-hero-val{-webkit-text-size-adjust:140%!important;text-size-adjust:140%!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .kno-lbl{white-space:normal;overflow:visible;text-overflow:clip}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .kpi-band{grid-template-columns:minmax(0,1fr)!important}
+  /* A label that fits on one line at 100 % wraps here instead of clipping. The
+     period pills stay one line: they are a track that scrolls sideways. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) main :not(svg,svg *,.dr-pills,.dr-pills *){white-space:normal!important;text-overflow:clip!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(.vexel-goal-values,.vexel-client-body,.vexel-goal-foot,.vexel-goal-cmp){flex-wrap:wrap}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .vexel-rings{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important}
+  /* Segmented tracks and filter chips keep one line each and scroll sideways. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(.kx-tabs,.cd-segs,.dr-pills) :is(*,button),html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) button.chip{white-space:nowrap!important;overflow-wrap:normal!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) button.chip{min-height:44px}
+  /* List rows: one column of text beside the round icon, amount and time
+     under the name, instead of three cramped columns. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) table.p-table tr{grid-template-columns:40px minmax(0,1fr)!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) table.p-table tr>td{grid-column:2!important;grid-row:auto!important;justify-self:start!important;overflow:visible!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(table.cd-tbl,table.cr-tbl) tr{grid-template-columns:minmax(0,1fr)!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(table.cd-tbl,table.cr-tbl) tr>td{grid-column:1!important;grid-row:auto!important;justify-self:start!important;overflow:visible!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) :is(table.cd-tbl,table.cr-tbl) .cd-nm{overflow:visible}
+  /* Clients: figures two by two, the actions wrap, the avatar fits its initials. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .cd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .cd-actions{flex-wrap:wrap}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .cd-actions .cd-new{flex:1 1 100%}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-av{width:56px!important;height:56px!important;white-space:nowrap!important;overflow-wrap:normal!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-who{grid-template-columns:56px minmax(0,1fr)!important}
+  /* Settings: the card tag stays a pill, the summary values keep their line box. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .gp-set-card-head{flex-wrap:wrap;gap:8px}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .gp-set-tag{white-space:nowrap!important;overflow-wrap:normal!important}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .kx-kpi .v{line-height:1.2!important;overflow:visible!important;-webkit-text-size-adjust:150%!important;text-size-adjust:150%!important}
+  /* Live feed: method and amount, then client and time, one per line. */
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .feed>.feed-row{grid-template-columns:minmax(0,1fr)!important;row-gap:4px}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .feed-row>:is(.method,.amt,.ctx,.t){grid-column:1!important;grid-row:auto!important;text-align:start!important;overflow-wrap:break-word}
+  html.kiwi-native.kiwi-large-type body.kiwi-native-owner:not(#kno) .feed-row>.ctx{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+}

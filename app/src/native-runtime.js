@@ -397,13 +397,22 @@
        keeps scale 1 (both would double it). iPad has no text autosizing and
        keeps the chrome-only scale. */
     var iphone = /iPhone|iPod/.test(navigator.userAgent || '');
+    var ownerPage = location.pathname.split('/').pop() === 'dashboard.html';
     function applyScale(scale, result) {
       if (typeof scale !== 'number' || isNaN(scale)) return;
       /* Android reports hostTextZoom: the WebView already zooms every font size
          from the same setting, so a CSS scale on top would count it twice. */
       if (result && typeof result.hostTextZoom === 'number') scale = 1;
-      var capped = Math.min(1.35, Math.max(0.85, scale));
+      /* iPhone text-size-adjust scales every font in the page. The owner
+         dashboard follows Apple's accessibility sizes up to 200 % and reflows
+         through the .kiwi-large-type rules in native-runtime.css. The till,
+         waiter and kitchen screens are used at arm's length and keep their
+         135 % ceiling, and so does any host that only scales the chrome
+         through --type-scale (iPad: no reflow work there). */
+      var ceiling = iphone && ownerPage ? 2 : 1.35;
+      var capped = Math.min(ceiling, Math.max(0.85, scale));
       var neutral = Math.abs(capped - 1) < 0.005;
+      root.classList.toggle('kiwi-large-type', ceiling > 1.35 && capped > 1.35);
       if (iphone) {
         var percent = neutral ? '' : Math.round(capped * 100) + '%';
         [root, document.body].forEach(function (node) {

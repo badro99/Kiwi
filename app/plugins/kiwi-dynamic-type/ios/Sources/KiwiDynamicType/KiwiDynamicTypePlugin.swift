@@ -66,13 +66,17 @@ public class KiwiDynamicTypePlugin: CAPPlugin, CAPBridgedPlugin {
         case .large: return 1.00
         case .extraLarge: return 1.12
         case .extraExtraLarge: return 1.24
-        case .extraExtraExtraLarge,
-             .accessibilityMedium,
-             .accessibilityLarge,
-             .accessibilityExtraLarge,
+        case .extraExtraExtraLarge: return 1.35
+        /* Accessibility sizes: body text is 28, 33, 40, 47 and 53 pt against
+           17 pt at Large. The web side honours them up to 200 % on iPhone
+           (native-runtime.js), so the plugin reports the true ratio, capped
+           at 2.0 as Apple's guidance asks for. */
+        case .accessibilityMedium: return 1.65
+        case .accessibilityLarge: return 1.94
+        case .accessibilityExtraLarge,
              .accessibilityExtraExtraLarge,
              .accessibilityExtraExtraExtraLarge:
-            return 1.35
+            return 2.0
         default:
             return 1.00
         }
