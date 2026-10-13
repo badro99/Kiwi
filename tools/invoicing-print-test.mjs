@@ -1,12 +1,17 @@
 #!/usr/bin/env node
-/* Une facture saisie dans Facturation s'imprime, avec des prix HT.
+/* Un document de Facturation s'imprime sur son propre gabarit A4, en HT.
  *
  * « Imprimer / PDF » passait la facture au gabarit des ventes de comptoir
  * (KiwiInvoice.html) en appelant round2, qui n'existe pas dans ce module :
  * l'impression levait une ReferenceError. Et même corrigé, ce gabarit-là dit
  * « Payée », « Vente acquittée » et range les prix HT sous « Prix unit. TTC ».
- * Ce banc exécute le vrai printable() de assets/invoicing.js, avec un
- * KiwiInvoice.html présent, et lit le document produit. */
+ *
+ * Facturation v2 : le gabarit suit le contrat. Ce banc exécute le vrai
+ * printable() de assets/invoicing.js (extrait de la source, avec le vrai
+ * KiwiInvoice.html présent pour prouver qu'il n'est jamais appelé) et lit le
+ * document produit : FACTURE / AVOIR / DEVIS, colonnes HT, une ligne de TVA par
+ * taux, mentions du vendeur gelées à l'émission, renvoi de l'avoir à sa
+ * facture, filigrane BROUILLON sans numéro, arabe de droite à gauche. */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -21,57 +26,116 @@ function ok(label, cond, detail) {
   failed++; console.log(`  ✗ ${label}${detail ? `\n      ${detail}` : ''}`);
 }
 
-/* Une fonction de niveau module : de sa déclaration à la suivante. */
-function block(startMarker) {
-  const at = src.indexOf(startMarker);
-  if (at < 0) throw new Error('introuvable : ' + startMarker);
-  const next = src.indexOf('\n  function ', at + startMarker.length);
-  return src.slice(at, next < 0 ? src.length : next);
-}
-const helpers = src.slice(src.indexOf('  const COPY = {'), src.indexOf('  function venueId()'));
+/* Trois régions de la source : les utilitaires et les montants, l'identité du
+ * vendeur, puis le gabarit lui-même (entre ses deux repères). */
+const slice = (from, to) => {
+  const a = src.indexOf(from), b = src.indexOf(to, a + from.length);
+  if (a < 0 || b < 0) throw new Error('repère introuvable : ' + from + ' … ' + to);
+  return src.slice(a, b);
+};
 const code = [
-  helpers,
-  block('  function businessName()'),
-  block('  function invoiceTotal(inv)'),
-  block('  function getSeller()'),
-  block('  function renderSellerLogo(seller'),
-  block('  function printable(inv)'),
+  slice('  const VAT_RATES', '  /* ── erreurs d\'API'),
+  slice('  function getSeller()', '  /* ── libellés de documents'),
+  slice('  /* print:start */', '  /* print:end */'),
   'globalThis.__printable = printable;',
 ].join('\n');
 
+let lang = 'fr';
 let sharedTemplateCalls = 0;
 const window = {
-  KiwiI18n: { getLang: () => 'fr' },
+  KiwiI18n: { getLang: () => lang },
   KiwiMe: { business: 'Atelier Test' },
   KiwiInvoice: {
     html() { sharedTemplateCalls++; return '<html>Statut : Payée · Vente acquittée</html>'; },
-    getSellerBusiness: () => ({ name: 'Atelier Test', city: 'Casablanca', ice: '001234567000089', fiscal: '1234567', rc: '98765' }),
+    getSellerBusiness: () => ({ name: 'Atelier Test', city: 'Casablanca', ice: '001234567000089', fiscal: '1234567', rc: '98765', patente: '4455', address: '12 rue des Tests', phone: '0522000000' }),
   },
 };
 const ctx = vm.createContext({
   window, document: { documentElement: { lang: 'fr' }, baseURI: 'https://kiwi-os.com/dashboard' },
-  localStorage: { getItem: () => null }, Intl, Date, Math, Number, String, JSON, Set,
+  localStorage: { getItem: () => null }, Intl, Date, Math, Number, String, JSON, Set, Map, URLSearchParams, isFinite,
 });
 vm.runInContext(code, ctx);
 
-const inv = {
-  id: 1050, customer: 'Riad Test', contact: 'compta@riad.test', issueDate: '2026-10-13', dueDate: '2026-10-20',
-  terms: 7, taxRate: 20, status: 'sent', note: '',
-  items: [{ description: 'Privatisation', qty: 2, price: 1000 }],
+const flat = (s) => String(s).replace(/[  ]/g, ' ').replace(/\s+/g, ' ');
+const lines = [
+  { description: 'Privatisation', qty: 2, unitHT: 100000, discountPct: 0, vatRate: 20 },
+  { description: 'Pause café', qty: 10, unitHT: 5000, discountPct: 10, vatRate: 10 },
+  { description: 'Location de matériel', qty: 1, unitHT: 30000, discountPct: 0, vatRate: 0 },
+];
+const seller = { name: 'Atelier Test', legalName: 'Atelier Test SARL', ice: '001234567000089', if: '1234567', rc: '98765', patente: '4455', address: '12 rue des Tests', city: 'Casablanca', phone: '0522000000' };
+const invoice = {
+  type: 'invoice', status: 'issued', number: 'F-2026-0042', issueDate: '2026-10-13', dueDate: '2026-11-12', termsDays: 30, seller,
+  customer: { name: 'Riad Test', address: '5 derb Test', ice: '001561191000066', if: '7654321', email: 'compta@riad.test' },
+  lines, paymentMethod: 'transfer', note: 'Merci.', exemptionMention: 'Exonération de TVA, article 91 du CGI',
 };
 
-console.log('■ Facturation · impression d’une facture saisie');
+console.log('■ Facturation · gabarit A4 d’une facture émise');
 let html = '';
-try { html = ctx.__printable(inv); ok('l’impression ne lève plus d’erreur', typeof html === 'string' && html.length > 500); }
-catch (err) { ok('l’impression ne lève plus d’erreur', false, String(err)); }
+try { html = ctx.__printable(invoice, { paidCents: 100000, balanceCents: 300000 }); ok('l’impression ne lève pas d’erreur', typeof html === 'string' && html.length > 800); }
+catch (err) { ok('l’impression ne lève pas d’erreur', false, String(err)); }
+let f = flat(html);
 ok('elle n’emprunte pas le gabarit des ventes de comptoir', sharedTemplateCalls === 0);
 ok('elle ne se dit pas payée ni acquittée', !/Payée|acquittée/.test(html));
-ok('les prix unitaires sont annoncés HT', /Prix HT/.test(html) && !/Prix unit\. TTC/.test(html));
-const flat = html.replace(/ | /g, ' ');
-ok('les lignes et les totaux se tiennent : 2 000 HT, 400 TVA, 2 400 TTC',
-  /2[ .]000,00 MAD/.test(flat) && /[^\d.]400,00 MAD/.test(flat) && /2[ .]400,00 MAD/.test(flat), flat.match(/[\d .]+,\d\d MAD/g)?.join(' | '));
-ok('l’échéance figure sur la facture', /Échéance/.test(html));
-ok('les mentions légales du vendeur figurent', /ICE :<\/strong> 001234567000089/.test(html) && /IF :/.test(html) && /RC :/.test(html));
+ok('titre FACTURE et numéro', /<h1>FACTURE<\/h1>/.test(html) && />F-2026-0042</.test(html));
+ok('dates d’émission et d’échéance au format jj/mm/aaaa', /13\/10\/2026/.test(html) && /12\/11\/2026/.test(html));
+ok('colonnes : Désignation, Qté, P.U. HT, Remise, TVA %, Total HT', ['Désignation', 'Qté', 'P.U. HT', 'Remise', 'TVA %', 'Total HT'].every((h) => new RegExp('<th>' + h.replace('.', '\\.') + '</th>').test(html)));
+ok('plus aucune colonne TTC pour les prix unitaires', !/Prix unit\. TTC/.test(html));
+ok('totaux : Total HT 2 750,00 (2 000 + 450 + 300)', /Total HT<\/span><b>2 750,00 MAD/.test(f), f.match(/Total HT[^<]*<\/span><b>[^<]*/g)?.join(' | '));
+ok('une ligne de TVA par taux : 20 % sur 2 000,00, 10 % sur 450,00, 0 % sur 300,00',
+  /TVA 20 % sur 2 000,00/.test(f) && /TVA 10 % sur 450,00/.test(f) && /TVA 0 % sur 300,00/.test(f));
+ok('montants de TVA : 400,00 et 45,00', /<b>400,00 MAD/.test(f) && /<b>45,00 MAD/.test(f));
+ok('Total TTC 3 195,00', /Total TTC<\/span><span>3 195,00 MAD/.test(f));
+ok('montant déjà réglé et reste à payer', /Déjà réglé<\/span><b>1 000,00 MAD/.test(f) && /Reste à payer<\/span><b>3 000,00 MAD/.test(f));
+ok('mentions du vendeur figées : raison sociale, ICE, IF, RC, patente, téléphone',
+  /Atelier Test SARL/.test(html) && /<b>ICE :<\/b> 001234567000089/.test(html) && /<b>IF :<\/b> 1234567/.test(html) && /<b>RC :<\/b> 98765/.test(html) && /<b>Patente :<\/b> 4455/.test(html) && /0522000000/.test(html));
+ok('client : nom, adresse, ICE et IF', /Riad Test/.test(html) && /5 derb Test/.test(html) && /<b>ICE :<\/b> 001561191000066/.test(html) && /<b>IF :<\/b> 7654321/.test(html));
+ok('mention d’exonération', /Mention d’exonération : Exonération de TVA, article 91 du CGI/.test(html));
+ok('conditions et mode de paiement', /Conditions de paiement : Sous 30 jours/.test(html) && /Mode de paiement : Virement/.test(html));
+ok('ni filigrane ni italique', !/BROUILLON/.test(html) && !/font-style\s*:\s*italic/i.test(html));
+ok('la fenêtre se lance elle-même à l’impression', /print\(\)/.test(html));
+ok('sans paiement, ni « réglé » ni « reste »', !/Déjà réglé|Reste à payer/.test(ctx.__printable(invoice, { paidCents: 0, balanceCents: 319500 })));
+
+console.log('■ Avoir');
+const credit = { ...invoice, type: 'credit_note', number: 'AV-2026-0003', originalNumber: 'F-2026-0042', reason: 'Remise accordée', lines: [lines[0]], dueDate: '', termsDays: null };
+html = ctx.__printable(credit, { originalDate: '2026-10-12' }); f = flat(html);
+ok('titre AVOIR', /<h1>AVOIR<\/h1>/.test(html) && />AV-2026-0003</.test(html));
+ok('renvoi à la facture : « Avoir sur facture F-2026-0042 du 12/10/2026 »', /Avoir sur facture F-2026-0042 du 12\/10\/2026/.test(f));
+ok('motif de l’avoir', /Motif : Remise accordée/.test(f));
+ok('un avoir n’a pas d’échéance', !/Échéance/.test(html));
+
+console.log('■ Devis');
+const quote = { ...invoice, type: 'quote', status: 'sent', number: 'D-2026-0007', validUntil: '2026-11-12', dueDate: '' };
+html = ctx.__printable(quote); f = flat(html);
+ok('titre DEVIS, validité et pas d’échéance', /<h1>DEVIS<\/h1>/.test(html) && />D-2026-0007</.test(html) && /Valable jusqu’au : 12\/11\/2026/.test(f) && !/Échéance/.test(html));
+
+console.log('■ Brouillon');
+const draft = { ...invoice, status: 'draft', number: '', seller: null };
+html = ctx.__printable(draft); f = flat(html);
+ok('grand filigrane « BROUILLON · sans valeur fiscale »', /class="watermark">BROUILLON · sans valeur fiscale</.test(html));
+ok('aucun numéro de facture', !/F-\d{4}-\d{4}/.test(html) && !/class="num"/.test(html));
+ok('le vendeur vient de l’identité courante (rien n’est encore gelé)', /<b>ICE :<\/b> 001234567000089/.test(html));
+
+console.log('■ Anglais et arabe');
+lang = 'en';
+html = ctx.__printable(invoice); f = flat(html);
+ok('anglais : INVOICE, Total excl. VAT, VAT 20% on 2,000.00', /<h1>INVOICE<\/h1>/.test(html) && /Total excl\. VAT/.test(html) && /VAT 20% on 2,000\.00/.test(f) && /<html lang="en" dir="ltr">/.test(html));
+lang = 'ar';
+html = ctx.__printable(invoice); f = flat(html);
+ok('arabe : document de droite à gauche', /<html lang="ar" dir="rtl">/.test(html));
+ok('arabe : titre et colonnes en arabe', /<h1>فاتورة<\/h1>/.test(html) && /<th>البيان<\/th>/.test(html) && /المجموع مع الضريبة/.test(html));
+ok('arabe : les chiffres restent latins (2 000,00)', /2 000,00/.test(f));
+ok('arabe : le filigrane aussi', /مسودة · دون قيمة جبائية/.test(ctx.__printable(draft)));
+lang = 'fr';
+
+console.log('■ Textes');
+const keys = JSON.parse(vm.runInContext('JSON.stringify({fr:Object.keys(COPY.fr),en:Object.keys(COPY.en),ar:Object.keys(COPY.ar)})', ctx));
+const missing = (from, to) => from.filter((k) => !to.includes(k));
+ok('chaque texte existe en français, en anglais et en arabe',
+  !missing(keys.fr, keys.en).length && !missing(keys.fr, keys.ar).length && !missing(keys.en, keys.fr).length && !missing(keys.ar, keys.fr).length,
+  `manque en EN : ${missing(keys.fr, keys.en)} · manque en AR : ${missing(keys.fr, keys.ar)} · en trop : ${missing(keys.en, keys.fr)} ${missing(keys.ar, keys.fr)}`);
+const all = vm.runInContext('JSON.stringify(COPY)', ctx);
+ok('aucun tiret cadratin dans les textes visibles', !/\u2014/.test(all));
+ok('aucun texte vide', !Object.values(JSON.parse(all)).some((dict) => Object.values(dict).some((v) => !String(v).trim())));
 
 console.log(failed ? `\n✗ ${failed} échec(s) sur ${passed + failed}` : `\n✓ ${passed} contrôles`);
 process.exit(failed ? 1 : 0);
