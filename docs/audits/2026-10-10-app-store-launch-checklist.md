@@ -203,3 +203,12 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   communicate with a helper application") with the disk full; after freeing
   scratch space, re-running only the upload step on the same signed archive
   succeeded. Build number 39, `com.kiwios.pro`.
+- **Build 40 uploaded** (`d88636f0`): "Upload succeeded", processing. Ships
+  the held-sales pill to the native till: a sale the outbox refused because
+  storage was full is counted on the sync pill ("N ventes enregistrées, pas
+  encore envoyées · ne pas encaisser à nouveau", FR/EN/AR), and a tap retries
+  it. Also carries Live Link v62 (IndexedDB takes a sale when only the
+  localStorage copy fails) and the success haptic gated on a queued sale.
+  Built from a fresh worktree with its own `npm ci`, so the gate's browser
+  suites ran instead of skipping. Full `node tools/check.js` green on the
+  first cut. A 26.9 MB `.ipa`, build number 40, `com.kiwios.pro`.
