@@ -832,6 +832,21 @@
     return { ok: true, queued: true, id: body.id };
   }
 
+  /* Une caisse réappairée en plein service garde en mémoire le journal du
+     commerce d'origine (assets/till-tenant.js). merchant() lit le commerce
+     COURANT : sans ce garde, une vente de A partait chez B sous un nouvel
+     identifiant. Une ligne qui dit où elle a été encaissée n'est postée que
+     là. */
+  function tenantHold(m, entries) {
+    var locked = false;
+    try { locked = !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) {}
+    for (var i = 0; !locked && i < entries.length; i++) {
+      var e = entries[i];
+      if (e && e.merchant && String(e.merchant) !== m) locked = true;
+    }
+    return locked ? { ok: false, reason: 'tenant-mismatch' } : null;
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var rawAmt = entry.amountCents != null
@@ -871,6 +886,8 @@
     // this just skips a guaranteed 400 rather than changing behaviour.
     var m = merchant();
     if (!m) return;
+    var held = tenantHold(m, [entry]);
+    if (held) return held;
     /* The basket, compacted. {n,q,t} rather than {name,qty,total} because this
      * payload is replayed after an outage and also has to fit the emergency
      * localStorage fallback — a busy lunch service can hold a few hundred queued
@@ -1003,6 +1020,8 @@
     if (!on() || !entry || !original) return;
     var m = merchant();
     if (!m) return;
+    var held = tenantHold(m, [entry, original]);
+    if (held) return held;
     /* Queue/reconcile the original first. Both commands share one ordered
        outbox, so an offline refund can never outrun a sale that was skipped
        while the till identity was still resolving. */

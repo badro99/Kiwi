@@ -122,7 +122,14 @@
   function uid(event) {
     return ['cash', terminalId(), event.sessionId, event.eventType, event.occurredAt, Math.random().toString(36).slice(2, 8)].join('-').replace(/[^A-Za-z0-9._:-]/g, '');
   }
+  /* Une caisse réappairée en plein service (assets/till-tenant.js) : un
+     événement de caisse du service d'origine serait estampillé du NOUVEAU
+     commerce ci-dessous, et la file le livrerait chez lui. */
+  function tenantLocked() {
+    try { return !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) { return false; }
+  }
   function emit(event, onSaved) {
+    if (tenantLocked()) return false;
     var slug = merchant();
     /* Persistence and transport are separate. An operator/demo caisse may be
      * unable to prove a till write, but a real merchant event must still land
@@ -167,7 +174,7 @@
     } catch (_) {}
   }
   function flush() {
-    if (flushing || repairRequired) return;
+    if (flushing || repairRequired || tenantLocked()) return;
     if (!paired()) { announcePendingPairing(); return; }
     var activeRows = activeOutboxRows();
     if (!activeRows.length) return;

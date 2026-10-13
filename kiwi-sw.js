@@ -171,7 +171,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=62',
+  '/assets/live-link.js?v=63',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -215,6 +215,9 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
+  /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
+     hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
+  '/assets/till-tenant.js?v=3',
   '/assets/identity.js?v=10',
   '/assets/caisse-link.js?v=16',
   '/assets/operator-access.js?v=1',
@@ -224,7 +227,7 @@ var SHELL = [
   '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=14',
-  '/assets/printer-bridge.js?v=24',
+  '/assets/printer-bridge.js?v=25',
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
@@ -287,7 +290,7 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=11',
+  '/assets/kitchen-relay.js?v=12',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
@@ -342,7 +345,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=7',
   '/assets/pos-maison.css?v=65',
   '/assets/pos-maison.js?v=65',
-  '/assets/caisse-pairing.js?v=28',
+  '/assets/caisse-pairing.js?v=29',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

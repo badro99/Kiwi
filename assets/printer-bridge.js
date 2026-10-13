@@ -817,6 +817,11 @@
      nouveau bout de papier. La file donne l'identifiant stable du travail ;
      c'est exactement ce que cette clé doit être. */
   function relayEnqueue(bytes, target, kind, ref) {
+    /* Caisse réappairée en plein service (assets/till-tenant.js) : le relais
+       est celui du NOUVEAU commerce, son pont imprimerait le ticket de l'autre. */
+    try {
+      if (window.KiwiTillTenant && window.KiwiTillTenant.mismatch()) return Promise.resolve({ ok: false, reason: 'tenant-mismatch' });
+    } catch (_) {}
     var t = relayTargetOf(target);
     if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
     var qs = relayMerchantQS();

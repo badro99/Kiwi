@@ -63,6 +63,11 @@
   <script src="assets/err-reporter.js?v=1"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
   <script src="assets/kiwi-env.js?v=2"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <!-- À qui appartient le service en mémoire. Sans defer, avant le script en
+       ligne : une caisse dépairée ou réappairée en plein service se verrouille,
+       et aucun appel /api/* ne part ailleurs avec les données du service
+       d'origine (assets/till-tenant.js). -->
+  <script src="assets/till-tenant.js?v=3"></script>
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
@@ -90,7 +95,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=14" defer></script>
-  <script src="assets/printer-bridge.js?v=24" defer></script>
+  <script src="assets/printer-bridge.js?v=25" defer></script>
   <script src="assets/caisse-hardware.js?v=5" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -5680,7 +5685,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
   <script src="assets/caisse-pwa.js?v=565" defer></script>
-  <script src="assets/live-link.js?v=62" defer></script>
+  <script src="assets/live-link.js?v=63" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5693,9 +5698,9 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=28" defer></script>
+  <script src="assets/caisse-pairing.js?v=29" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
-  <script src="assets/cash-sessions.js?v=7" defer></script>
+  <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -5755,7 +5760,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=11" defer></script>
+  <script src="assets/kitchen-relay.js?v=12" defer></script>
   <script src="assets/kitchen-print-queue.js?v=16" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -8831,6 +8836,7 @@
     let caisseTableLocks = {};
 
     function setCaisseTableLock(tableId, action) {
+      if (window.KiwiTillTenant?.mismatch()) return;
       const merchant = currentMerchantSlug();
       if (!merchant || !storeIsReal() || !tableId) return;
       fetch('/api/service/events', {
@@ -9511,7 +9517,7 @@
         const m = (typeof opMerchant === 'function' ? opMerchant() : '') ||
                   (typeof currentMerchantSlug === 'function' ? currentMerchantSlug() : '') ||
                   (typeof slug !== 'undefined' ? slug : '') || '';
-        if (m) {
+        if (m && !window.KiwiTillTenant?.mismatch()) {
           fetch('/api/order/queue', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -11937,7 +11943,8 @@
          event is best-effort: seating never waits for the network. */
       try {
         const assigned = t && t.server && servers[t.server];
-        const merchant = currentMerchantSlug();
+        // Caisse réappairée en plein service : pas d'événement chez l'autre commerce.
+        const merchant = window.KiwiTillTenant?.mismatch() ? '' : currentMerchantSlug();
         if (t && merchant) {
           fetch('/api/service/events', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
@@ -12091,6 +12098,7 @@
 
     async function confirmCaisseTransfer() {
       if (!ctrfFromId || !ctrfSelectedToId) return;
+      if (window.KiwiTillTenant?.mismatch()) return;
       const from = ctrfFromId;
       const to = ctrfSelectedToId;
       const confirmBtn = $('#ctrf-confirm');
@@ -12226,6 +12234,7 @@
 
     async function confirmCaisseMerge() {
       if (!cmrgSourceId || !cmrgSelectedTargetId) return;
+      if (window.KiwiTillTenant?.mismatch()) return;
       const source = cmrgSourceId;
       const target = cmrgSelectedTargetId;
       const confirmBtn = $('#cmrg-confirm');
@@ -12371,6 +12380,7 @@
        out write may still have committed, so the line keeps one stable request
        id and the next tap verifies/replays that same operation. */
     async function postCaisseCancellation(body) {
+      if (window.KiwiTillTenant?.mismatch()) throw new Error('caisse appairée à un autre commerce · réappairez-la avant d\u2019annuler');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
       try {
@@ -14135,6 +14145,7 @@
       return String(value || 'till').replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 96) || 'till';
     }
     function emitCashSession(event) {
+      if (window.KiwiTillTenant?.mismatch()) return;
       if (window.KiwiCashSessions && window.KiwiCashSessions.emit) window.KiwiCashSessions.emit(event);
       else (window.__kiwiCashSessionPending || (window.__kiwiCashSessionPending = [])).push(event);
     }
@@ -14700,10 +14711,12 @@
        replayed to the queue, never counted into another day's Z. */
     function adoptHeldSalesIntoJournal() {
       if (!shiftOpenedAt) return 0;
+      if (window.KiwiTillTenant?.mismatch()) return 0;
       const shift = shiftOpenedAt.toISOString();
       let adopted = 0;
       heldSaleRows().forEach((row) => {
         if (row.shift !== shift || journal.some(e => e && e.id === row.entry.id)) return;
+        if (row.entry.merchant && shiftMerchant && row.entry.merchant !== shiftMerchant) return;
         try { journal.push(reviveJournalEntry(row.entry)); adopted++; } catch (_) {}
       });
       if (adopted) {
@@ -14714,6 +14727,9 @@
     }
     function retryHeldSales() {
       if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
+      /* Le service en mémoire est celui d'un autre commerce : postSale refuse
+         de toute façon une vente qui n'est pas d'ici, on ne le sollicite pas. */
+      if (window.KiwiTillTenant?.mismatch()) return 0;
       const rows = heldSaleRows();
       if (!rows.length) return 0;
       let sent = 0, journalChanged = false;
@@ -14928,6 +14944,7 @@
           if (l && l.shareDen > 1) { l.qty = Math.round((Number(l.qty) || 1) / l.shareDen * 1000) / 1000; delete l.shareDen; }
         });
       }
+      window.KiwiTillTenant?.stamp(entry);
       journal.push(entry);
       lastSaleId = entry.id;
       /* Do not leave a five-second loss window between taking money and the
@@ -15152,6 +15169,7 @@
         if (reconcileCloudSaleInJournal(sale, meta)) { changed = true; return; } // reconcileCloudSaleInJournal(sale)
         const entry = cloudSaleJournalEntry(sale);
         attachReceipt(entry);
+        window.KiwiTillTenant?.stamp(entry);
         journal.push(entry);
           /* Une addition réglée sur le téléphone d'un serveur est une vente du
              même commerce, sur le même stock. Ces lignes-là arrivent du serveur
@@ -16318,11 +16336,18 @@
        Cloud-imported rows are already in /api/feed and must not be mirrored. */
     function reconcileJournalSales(onlyMissing) {
       if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
+      /* Le journal en mémoire appartient à un autre commerce que celui de la
+         caisse : le rejouer, c'était poster les ventes de A chez B sous de
+         nouveaux identifiants (postSale lit le commerce COURANT). Elles
+         attendent le retour de la caisse chez A, intactes. */
+      if (window.KiwiTillTenant?.mismatch()) return 0;
+      const here = currentMerchantSlug();
       let n = 0;
       let syncChanged = false;
       journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind === 'refund'
           || (!(Number(entry.amount) > 0) && entry.kind !== 'complimentary')) return;
+        if (entry.merchant && entry.merchant !== here) return;   // vendue ailleurs
         if (onlyMissing && entry.serverSaleId && !entry.saleSyncPending) return;
         try {
           const queued = window.KiwiLive.postSale(entry);
@@ -16358,6 +16383,7 @@
          recovery block asks a manager again, never invents an approver. */
       if (window.KiwiLive.postRefund) journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind !== 'refund' || !(Number(entry.amount) < 0)) return;
+        if (entry.merchant && entry.merchant !== here) return;
         if (onlyMissing && entry.serverSaleId) return;
         const orig = refundOriginalFor(entry);
         if (!orig) return;
@@ -16440,6 +16466,9 @@
     let lastProvisional = 0;
     function saveProvisional(force) {
       if (!shiftOpenedAt || registerClosing) return;
+      /* Le rapport se construit avec le journal en mémoire et le slug courant :
+         chez un autre commerce, il porterait le chiffre du service d'origine. */
+      if (window.KiwiTillTenant?.mismatch()) return;
       /* A sale may be rung in the short boot window before the paired merchant
          identity resolves. postSale() correctly refuses to guess a tenant, but
          the old code retried only at register close. Heal only entries that do
@@ -18826,6 +18855,7 @@
            Il porte son propre numéro, la référence du ticket d'origine, et il
            se fige au même titre. */
         attachReceipt(entry);
+        window.KiwiTillTenant?.stamp(entry);
         journal.push(entry);
         orig.refundedAmount = money(refundedSoFar(orig) + amount);
         orig.refunded = refundableLeft(orig) <= 0;
@@ -22878,6 +22908,7 @@
     }
     function publishServiceFloor() {
       if (operatorCaisseRequested() && !shiftOpenedAt) return;
+      if (window.KiwiTillTenant?.mismatch()) return;
       if (serviceFloorPublishing || !storeIsReal()) return;
       const merchant = currentMerchantSlug();
       if (!merchant) return;
@@ -22915,6 +22946,9 @@
          the complete latest table-state map. */
       if (serviceFloorPolling) { serviceFloorPollQueued = true; return; }
       if (!storeIsReal()) return;
+      /* Lire la salle d'un autre commerce dans ce service mélangerait les
+         deux : la réponse rattacherait ses tables aux additions d'ici. */
+      if (window.KiwiTillTenant?.mismatch()) return;
       const merchant = currentMerchantSlug();
       if (!merchant) return;
       serviceFloorPolling = true;
@@ -23014,6 +23048,38 @@
       });
     }
     let shiftMerchant = currentMerchantSlug();
+    /* La caisse change de commerce par simple appairage, page ouverte
+       (dépairer, le pavé « réappairer », le passage ?pair=1). Le service en
+       mémoire reste celui de A pendant que le slug dit déjà autre chose.
+       assets/till-tenant.js tient la question et le verrou ; ce crochet lui dit
+       à qui appartient le service ouvert, chez qui la caisse est appairée, et
+       comment écrire le service avant de le mettre de côté. */
+    window.__kiwiTillTenantHook = {
+      owner: () => (shiftOpenedAt ? (shiftMerchant || '') : ''),
+      here: currentMerchantSlug,
+      persist: () => persistShift(),
+    };
+    /* Les appels passent par window.KiwiTillTenant (mismatch, stamp) plutôt
+       que par des fonctions d'ici : sans le module (un banc qui extrait
+       quelques fonctions de cette page), ils ne font simplement rien. */
+    document.addEventListener('kiwi-paired', () => {
+      const here = currentMerchantSlug();
+      if (!here) return;
+      if (shiftOpenedAt) {
+        /* Retour chez le commerce du service : l'autosave reprend, et la copie
+           mise de côté n'a plus de raison d'être. */
+        if (shiftMerchant === here) {
+          persistShift._warned = false;
+          try { persistShift(); } catch (_) {}
+          try { window.KiwiTillTenant?.drop(here); } catch (_) {}
+        }
+        return;
+      }
+      /* Rien d'ouvert en mémoire (la page a été rechargée chez l'autre
+         commerce entre-temps) : le service mis de côté pour CE commerce revient
+         par la reprise normale, au rechargement. */
+      try { if (window.KiwiTillTenant?.hasQuarantine(here)) location.reload(); } catch (_) {}
+    });
 
     function persistShift() {
       if (registerClosing || !shiftOpenedAt) return;
@@ -23141,7 +23207,14 @@
     function loadPersistedShift() {
       migrateLegacyShift();
       try {
-        const raw = localStorage.getItem(KC_STORE);
+        let raw = localStorage.getItem(KC_STORE);
+        /* Le service mis de côté au réappairage (assets/till-tenant.js) revient
+           quand la caisse retrouve son commerce. take() ne rend que la copie de
+           CE commerce, de moins de douze heures, et la retire. */
+        if (!raw) {
+          const kept = window.KiwiTillTenant && window.KiwiTillTenant.take(currentMerchantSlug());
+          if (kept) { localStorage.setItem(KC_STORE, kept); raw = kept; }
+        }
         if (!raw) return null;
         const d = JSON.parse(raw);
         if (!d || d.v !== 1 || !d.openedAt) return null;
@@ -23206,6 +23279,9 @@
          plus l'enseigne et les mentions de l'époque : exactement ce que le
          figeage est censé garantir. */
       if (e.rc)              entry.rc       = e.rc;
+      /* Le commerce où la vente a été encaissée : sans lui, postSale ne peut
+         pas refuser de la poster ailleurs après un rechargement. */
+      if (e.merchant)        entry.merchant = String(e.merchant).slice(0, 96);
       return entry;
     }
     function restoreShift(d) {
@@ -23220,7 +23296,12 @@
         Number.isFinite(Number(d.terminalCardTotal)) && Number(d.terminalCardTotal) >= 0)
         ? money(Number(d.terminalCardTotal)) : null;
       journal.length = 0;
-      (d.journal || []).forEach(e => { journal.push(reviveJournalEntry(e)); });
+      (d.journal || []).forEach(e => {
+        const entry = reviveJournalEntry(e);
+        // Une ligne d'avant ce champ prend le commerce du service entier.
+        if (!entry.merchant && d.merchant) entry.merchant = String(d.merchant).slice(0, 96);
+        journal.push(entry);
+      });
       cashMovements.length = 0;
       (d.cashMovements || []).forEach(m => cashMovements.push({
         id: m.id, time: new Date(m.time), type: m.type, amount: m.amount, reason: m.reason,
@@ -23382,7 +23463,9 @@
         const here = (function () {
           try { return (storePaired() || {}).merchant || ''; } catch (_) { return ''; }
         })();
-        if (here && String(saved.merchant || '') !== here) {
+        /* Non appairée, la caisse n'a pas de commerce : elle n'en reprend le
+           service d'aucun. Seul un blob sans commerce (démo, local) passe. */
+        if (String(saved.merchant || '') !== here) {
           return;
         }
       } catch (_) {}

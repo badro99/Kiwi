@@ -219,7 +219,14 @@
    * Rend une promesse, mais l'appelant n'a AUCUNE raison de l'attendre : la
    * caisse doit rendre la main au serveur immédiatement — c'est la file de
    * secours, pas l'utilisateur, qui porte le réseau. */
+  /* Une caisse réappairée en plein service (assets/till-tenant.js) : le bon
+     de A partirait dans la cuisine de B, et la file de secours le
+     rejouerait. Rien ne part, rien n'est mis en file. */
+  function tenantLocked() {
+    try { return !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch()); } catch (_) { return false; }
+  }
   function send(ticket) {
+    if (tenantLocked()) return Promise.resolve({ ok: false, skipped: true, reason: 'tenant-mismatch' });
     var m = merchant();
     if (!m || !ticket || !ticket.id) return Promise.resolve({ ok: false, skipped: true });
     var lines = (ticket.lines || []).filter(function (l) { return l && l.name; });
@@ -330,7 +337,7 @@
   /* Annuler une ligne en cuisine (pré-cuisson immédiat ou alerte cuisson) */
   function voidLine(payload) {
     var m = merchant();
-    if (!m || !payload) return Promise.resolve(null);
+    if (!m || !payload || tenantLocked()) return Promise.resolve(null);
     return fetch('/api/order/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,7 +358,7 @@
   /* Acquitter une demande d'annulation (chef valide l'arrêt ou dit "déjà prêt") */
   function ackVoid(orderId, action, isWaste) {
     var m = merchant();
-    if (!m || !orderId) return Promise.resolve(null);
+    if (!m || !orderId || tenantLocked()) return Promise.resolve(null);
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 12000);
     return fetch('/api/order/queue', {

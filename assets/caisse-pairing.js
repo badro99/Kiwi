@@ -218,6 +218,10 @@
       // not standing at this one, and their code belongs to the other store's
       // roster. Forget them so the staff pad asks again.
       onTenantSwitch: function () {
+        /* AVANT la purge : le service ouvert de l'ancien commerce est mis de
+           côté sous une clé qu'elle ne touche pas. Réappairer à ce commerce le
+           rend (assets/till-tenant.js), au lieu de le perdre avec le reste. */
+        quarantineService(previousVenue);
         if (previousVenue && previousVenue.merchant) del(offlinePinKey(previousVenue.merchant));
         resetPinState();
         setStaff(null);
@@ -368,11 +372,20 @@
     return repairPromise;
   }
 
+  function quarantineService(venue) {
+    try {
+      if (venue && venue.merchant && window.KiwiTillTenant) window.KiwiTillTenant.quarantine(venue.merchant, venue.name);
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:quarantine_failed');
+    }
+  }
+
   function unpair() {
     /* Unpairing used to delete only four binding keys. Pairing a different
        merchant afterwards then saw no `was` venue and skipped the cross-tenant
        purge, exposing the previous sales/menu/customers on the new till. */
     var oldVenue = pairedVenue();
+    quarantineService(oldVenue);
     purgeTenantData();
     if (oldVenue && oldVenue.merchant) del(offlinePinKey(oldVenue.merchant));
     window.__kiwiPairedBoutiqueVenue = null;
@@ -478,14 +491,18 @@
    * aurait purgé le locataire — service en cours, additions, journal — pour
    * réparer un cookie. Les ventes déjà encaissées ne vivent pas dans les clés
    * du locataire : elles restent en file et repartent seules. */
-  function repairWithCode() {
-    var pv = pairedVenue();
+  /* `opts` : l'écran de verrouillage (assets/till-tenant.js) ouvre ce pavé
+   * pour ramener la caisse à son commerce d'ORIGINE ; il nomme ce commerce,
+   * pas celui auquel la caisse est appairée par erreur. */
+  function repairWithCode(opts) {
+    opts = opts || {};
+    var pv = opts.venue || pairedVenue();
     renderPairPad({
       venue: pv,
-      prompt: 'R\u00c9APPAIRER · CODE \u00c0 6 CHIFFRES',
-      foot: pv && pv.name
+      prompt: opts.prompt || 'R\u00c9APPAIRER · CODE \u00c0 6 CHIFFRES',
+      foot: opts.foot || (pv && pv.name
         ? 'Cet appareil a perdu sa preuve d\u2019appairage. Les ventes en attente sont conserv\u00e9es et repartiront seules.'
-        : 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse',
+        : 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse'),
     });
   }
 
