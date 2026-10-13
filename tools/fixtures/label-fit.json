@@ -161,6 +161,31 @@
       "en": "137",
       "fr": "137",
       "ar": "137"
+    },
+    "wk": {
+      "en": "Monday",
+      "fr": "lundi",
+      "ar": "الاثنين"
+    },
+    "dcmp": {
+      "en": "−1,127 MAD (−5.6%)",
+      "fr": "−1 127 MAD (−5,6 %)",
+      "ar": "−1 127 درهم (−5,6 %)"
+    },
+    "n4": {
+      "en": "4",
+      "fr": "4",
+      "ar": "4"
+    },
+    "n7": {
+      "en": "7",
+      "fr": "7",
+      "ar": "7"
+    },
+    "n9": {
+      "en": "9",
+      "fr": "9",
+      "ar": "9"
     }
   },
   "rows": [
@@ -1243,6 +1268,935 @@
         "width": 272,
         "maxLines": 2
       }
+    },
+    {
+      "id": "Dashboard tab capsule (5)",
+      "where": "phone tab capsule: sum of max(44, label + 16), the selected label at 600, the others at 500; content 335 (SE), 353, 354, 392",
+      "budget": 335,
+      "mode": "capsule",
+      "step": "footnote",
+      "weights": [
+        500,
+        600
+      ],
+      "pad": 16,
+      "min": 44,
+      "parts": [
+        {
+          "key": "nav.home"
+        },
+        {
+          "key": "nav.orders"
+        },
+        {
+          "key": "nav.customers"
+        },
+        {
+          "key": "nav.report"
+        },
+        {
+          "key": "nav.more"
+        }
+      ],
+      "fitWidths": [
+        335,
+        353,
+        354,
+        392
+      ],
+      "expect": {
+        "en": 292.2,
+        "fr": 315.9,
+        "ar": 262.2
+      },
+      "minWidth": {
+        "en": 335,
+        "fr": 335,
+        "ar": 335
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 317.7,
+            "fr": 340.9,
+            "ar": 284
+          },
+          "minWidth": {
+            "en": 335,
+            "fr": 353,
+            "ar": 335
+          }
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 343.2,
+            "fr": 368.6,
+            "ar": 305.8
+          },
+          "minWidth": {
+            "en": 353,
+            "fr": 392,
+            "ar": 335
+          }
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 366.4,
+            "fr": 394.1,
+            "ar": 325.9
+          },
+          "minWidth": {
+            "en": 392,
+            "fr": null,
+            "ar": 335
+          }
+        }
+      ]
+    },
+    {
+      "id": "Till tab capsule (5)",
+      "where": "same, till items",
+      "budget": 335,
+      "mode": "capsule",
+      "step": "footnote",
+      "weights": [
+        500,
+        600
+      ],
+      "pad": 16,
+      "min": 44,
+      "parts": [
+        {
+          "key": "till.nav.floor"
+        },
+        {
+          "key": "till.nav.takeaway"
+        },
+        {
+          "key": "till.nav.waiting"
+        },
+        {
+          "key": "till.nav.kitchen"
+        },
+        {
+          "key": "till.nav.more"
+        }
+      ],
+      "fitWidths": [
+        335,
+        353,
+        354,
+        392
+      ],
+      "expect": {
+        "en": 290.5,
+        "fr": 308.4,
+        "ar": 274.5
+      },
+      "minWidth": {
+        "en": 335,
+        "fr": 335,
+        "ar": 335
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 315.7,
+            "fr": 332.4,
+            "ar": 297.8
+          },
+          "minWidth": {
+            "en": 335,
+            "fr": 335,
+            "ar": 335
+          }
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 341,
+            "fr": 359.3,
+            "ar": 321.2
+          },
+          "minWidth": {
+            "en": 353,
+            "fr": 392,
+            "ar": 335
+          }
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 364.1,
+            "fr": 384,
+            "ar": 342.6
+          },
+          "minWidth": {
+            "en": 392,
+            "fr": 392,
+            "ar": 353
+          }
+        }
+      ]
+    },
+    {
+      "id": "Team tab capsule (4)",
+      "where": "same, team items; the spec prints one bound for the three languages from 1.12",
+      "budget": 335,
+      "mode": "capsule",
+      "step": "footnote",
+      "weights": [
+        500,
+        600
+      ],
+      "pad": 16,
+      "min": 44,
+      "parts": [
+        {
+          "key": "team.nav.tables"
+        },
+        {
+          "key": "team.nav.menu"
+        },
+        {
+          "key": "team.nav.alerts"
+        },
+        {
+          "key": "team.nav.me"
+        }
+      ],
+      "fitWidths": [
+        335,
+        353,
+        354,
+        392
+      ],
+      "expect": {
+        "en": 200.3,
+        "fr": 207.7,
+        "ar": 223.9
+      },
+      "minWidth": {
+        "en": 335,
+        "fr": 335,
+        "ar": 335
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 239.7,
+            "fr": 239.7,
+            "ar": 239.7
+          },
+          "minWidth": {
+            "en": 335,
+            "fr": 335,
+            "ar": 335
+          },
+          "expectMode": "max"
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 255.5,
+            "fr": 255.5,
+            "ar": 255.5
+          },
+          "minWidth": {
+            "en": 335,
+            "fr": 335,
+            "ar": 335
+          },
+          "expectMode": "max"
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 270,
+            "fr": 270,
+            "ar": 270
+          },
+          "minWidth": {
+            "en": 335,
+            "fr": 335,
+            "ar": 335
+          },
+          "expectMode": "max"
+        }
+      ]
+    },
+    {
+      "id": "Range segmented (4)",
+      "where": "compact track, SE 335, label + 24 each",
+      "budget": 335,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "range.today",
+          "pad": 24
+        },
+        {
+          "key": "range.yesterday",
+          "pad": 24
+        },
+        {
+          "key": "range.d7",
+          "pad": 24
+        },
+        {
+          "key": "range.d30",
+          "pad": 24
+        }
+      ],
+      "expect": {
+        "en": 281.9,
+        "fr": 281.7,
+        "ar": 222.6
+      }
+    },
+    {
+      "id": "Orders filter (5)",
+      "where": "same; 392 at 440. FR is over the SE 335 and scrolls (§10.6)",
+      "budget": 392,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "orders.all",
+          "pad": 24
+        },
+        {
+          "key": "orders.card",
+          "pad": 24
+        },
+        {
+          "key": "orders.cash",
+          "pad": 24
+        },
+        {
+          "key": "orders.other",
+          "pad": 24
+        },
+        {
+          "key": "orders.refunds",
+          "pad": 24
+        }
+      ],
+      "expect": {
+        "en": 284.6,
+        "fr": 372.2,
+        "ar": 285
+      },
+      "fitWidths": [
+        335,
+        392
+      ],
+      "minWidth": {
+        "en": 335,
+        "fr": 392,
+        "ar": 335
+      },
+      "drift": {
+        "en": {
+          "measures": 280,
+          "reason": "the five current labels measure 280.0 (the four earlier ones, 221.4, plus 'Other' 58.5); 284.6 is what 221.4 plus the earlier 'Mobile' segment (63.5) gives, so the figure looks one rename behind"
+        }
+      }
+    },
+    {
+      "id": "Customers filter (5)",
+      "where": "same, with counts; 392 at 440. FR is over the SE 335 and scrolls (§10.6)",
+      "budget": 392,
+      "step": "footnote",
+      "weight": "regular",
+      "parts": [
+        {
+          "key": "customers.filter",
+          "args": {
+            "status": {
+              "key": "customers.all"
+            },
+            "n": "$n8"
+          },
+          "pad": 24
+        },
+        {
+          "key": "customers.filter",
+          "args": {
+            "status": {
+              "key": "customers.status.regular"
+            },
+            "n": "$n4"
+          },
+          "pad": 24
+        },
+        {
+          "key": "customers.filter",
+          "args": {
+            "status": {
+              "key": "customers.segment.vip"
+            },
+            "n": "$n1"
+          },
+          "pad": 24
+        },
+        {
+          "key": "customers.filter",
+          "args": {
+            "status": {
+              "key": "customers.status.new"
+            },
+            "n": "$n2"
+          },
+          "pad": 24
+        },
+        {
+          "key": "customers.filter",
+          "args": {
+            "status": {
+              "key": "customers.status.inactive"
+            },
+            "n": "$n2"
+          },
+          "pad": 24
+        }
+      ],
+      "expect": {
+        "en": 328.5,
+        "fr": 358.3,
+        "ar": 313.4
+      },
+      "fitWidths": [
+        335,
+        392
+      ],
+      "minWidth": {
+        "en": 335,
+        "fr": 392,
+        "ar": 335
+      },
+      "drift": {
+        "ar": {
+          "measures": 314.8,
+          "reason": "the current Arabic labels measure 314.8 at Footnote 500, 1.4 more than the 313.4 revision 24 printed; EN and FR reproduce"
+        }
+      }
+    },
+    {
+      "id": "Kitchen stations (5)",
+      "where": "KDS S root 20 (x 1.25), iPad 11 portrait track 586, label + 30",
+      "budget": 586,
+      "step": "callout",
+      "weight": "strong",
+      "scale": 1.25,
+      "parts": [
+        {
+          "key": "kds.station",
+          "args": {
+            "station": {
+              "key": "kds.all"
+            },
+            "n": "$n9"
+          },
+          "pad": 30
+        },
+        {
+          "key": "kds.station",
+          "args": {
+            "station": {
+              "key": "kds.station.hot"
+            },
+            "n": "$n7"
+          },
+          "pad": 30
+        },
+        {
+          "key": "kds.station",
+          "args": {
+            "station": {
+              "key": "kds.station.cold"
+            },
+            "n": "$n2"
+          },
+          "pad": 30
+        },
+        {
+          "key": "kds.station",
+          "args": {
+            "station": {
+              "key": "kds.station.pastry"
+            },
+            "n": "$n2"
+          },
+          "pad": 30
+        },
+        {
+          "key": "kds.station",
+          "args": {
+            "station": {
+              "key": "kds.station.drinks"
+            },
+            "n": "$n4"
+          },
+          "pad": 30
+        }
+      ],
+      "expect": {
+        "en": 434.3,
+        "fr": 532.6,
+        "ar": 471.1
+      }
+    },
+    {
+      "id": "Till rail labels",
+      "where": "rail 88 - 2 x 4",
+      "budget": 80,
+      "step": "footnote",
+      "weight": "strong",
+      "max": true,
+      "parts": [
+        {
+          "key": "till.nav.floor"
+        },
+        {
+          "key": "till.nav.takeaway"
+        },
+        {
+          "key": "till.nav.waiting"
+        },
+        {
+          "key": "till.nav.kitchen"
+        },
+        {
+          "key": "till.nav.more"
+        }
+      ],
+      "expect": {
+        "en": 60.7,
+        "fr": 68.3,
+        "ar": 59.4
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "Home tile labels",
+      "where": "SE tile 165.5 - 32",
+      "budget": 133.5,
+      "step": "footnote",
+      "weight": "regular",
+      "max": true,
+      "parts": [
+        {
+          "key": "home.avg_basket"
+        },
+        {
+          "key": "home.card_share"
+        },
+        {
+          "key": "home.orders"
+        },
+        {
+          "key": "home.returning"
+        }
+      ],
+      "expect": {
+        "en": 91.2,
+        "fr": 90.6,
+        "ar": 78.9
+      },
+      "expectMode": "max"
+    },
+    {
+      "id": "bill.discount toolbar item",
+      "where": "the 320 toolbar form: 116 per item (§10.23), Footnote strong",
+      "budget": 116,
+      "step": "footnote",
+      "weight": "strong",
+      "parts": [
+        {
+          "key": "bill.discount"
+        }
+      ],
+      "expect": {
+        "en": 53.8,
+        "fr": 44.2,
+        "ar": 31.6
+      }
+    },
+    {
+      "id": "ai.actions.button capsule",
+      "where": "header, between the title and close: 12 + glyph 24 + 8 + label (Callout strong) + 8 + badge 20 + 12 (24 badge at 1.35); the spec prints no container for it",
+      "budget": null,
+      "step": "callout",
+      "weight": "strong",
+      "parts": [
+        {
+          "px": 12
+        },
+        {
+          "px": 24
+        },
+        {
+          "px": 8
+        },
+        {
+          "key": "ai.actions.button"
+        },
+        {
+          "px": 8
+        },
+        {
+          "px": 20
+        },
+        {
+          "px": 12
+        }
+      ],
+      "expect": {
+        "en": 136.5,
+        "fr": 136.5,
+        "ar": 141.2
+      },
+      "factors": [
+        {
+          "f": 1.35,
+          "parts": [
+            {
+              "px": 12
+            },
+            {
+              "px": 24
+            },
+            {
+              "px": 8
+            },
+            {
+              "key": "ai.actions.button"
+            },
+            {
+              "px": 8
+            },
+            {
+              "px": 24
+            },
+            {
+              "px": 12
+            }
+          ],
+          "expect": {
+            "en": 158.9,
+            "fr": 158.9,
+            "ar": 165.2
+          }
+        }
+      ]
+    },
+    {
+      "id": "Compare control, yesterday",
+      "where": "one line = 16 + 4 + delta (Footnote strong) + 6 + baseline (Footnote) + 4 + 16; content 343 (SE), 361, 362, 400",
+      "budget": null,
+      "step": "footnote",
+      "weight": "regular",
+      "fitWidths": [
+        343,
+        361,
+        362,
+        400
+      ],
+      "parts": [
+        {
+          "px": 20
+        },
+        {
+          "sample": "dcmp",
+          "weight": "strong"
+        },
+        {
+          "px": 6
+        },
+        {
+          "key": "compare.delta",
+          "args": {
+            "delta": "-",
+            "pct": "-",
+            "baseline": {
+              "key": "compare.yesterday_at",
+              "args": {
+                "time": "$t1739"
+              }
+            }
+          },
+          "after": ")"
+        },
+        {
+          "px": 20
+        }
+      ],
+      "expect": {
+        "en": 304.5,
+        "fr": 329.5,
+        "ar": 310.2
+      },
+      "minWidth": {
+        "en": 343,
+        "fr": 343,
+        "ar": 343
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 335.5,
+            "fr": 363.5,
+            "ar": 341.9
+          },
+          "minWidth": {
+            "en": 343,
+            "fr": 400,
+            "ar": 343
+          }
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 366.6,
+            "fr": 397.5,
+            "ar": 373.6
+          },
+          "minWidth": {
+            "en": 400,
+            "fr": 400,
+            "ar": 400
+          }
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 394.9,
+            "fr": 428.6,
+            "ar": 402.6
+          },
+          "minWidth": {
+            "en": 400,
+            "fr": null,
+            "ar": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "Compare control, last Monday",
+      "where": "one line = 16 + 4 + delta (Footnote strong) + 6 + baseline (Footnote) + 4 + 16; content 343 (SE), 361, 362, 400",
+      "budget": null,
+      "step": "footnote",
+      "weight": "regular",
+      "fitWidths": [
+        343,
+        361,
+        362,
+        400
+      ],
+      "parts": [
+        {
+          "px": 20
+        },
+        {
+          "sample": "dcmp",
+          "weight": "strong"
+        },
+        {
+          "px": 6
+        },
+        {
+          "key": "compare.delta",
+          "args": {
+            "delta": "-",
+            "pct": "-",
+            "baseline": {
+              "key": "compare.weekday_at",
+              "args": {
+                "weekday": "$wk",
+                "time": "$t1739"
+              }
+            }
+          },
+          "after": ")"
+        },
+        {
+          "px": 20
+        }
+      ],
+      "expect": {
+        "en": 318.2,
+        "fr": 380.3,
+        "ar": 371.9
+      },
+      "minWidth": {
+        "en": 343,
+        "fr": 400,
+        "ar": 400
+      },
+      "factors": [
+        {
+          "f": 1.12,
+          "expect": {
+            "en": 350.9,
+            "fr": 420.4,
+            "ar": 411
+          },
+          "minWidth": {
+            "en": 361,
+            "fr": null,
+            "ar": null
+          },
+          "drift": {
+            "fr": {
+              "measures": 425,
+              "reason": "KiwiStrings.raw capitalises a leading {weekday} (assets/kit/strings.js:193), so the baseline nested in compare.delta reads 'Lundi dernier', one capital L (4 px) wider than the lowercase string §6.6 measured; the spec and the runtime disagree on the nested case",
+              "only": "bundles"
+            }
+          }
+        },
+        {
+          "f": 1.24,
+          "expect": {
+            "en": 383.6,
+            "fr": 460.5,
+            "ar": 450.1
+          },
+          "minWidth": {
+            "en": 400,
+            "fr": null,
+            "ar": null
+          },
+          "drift": {
+            "fr": {
+              "measures": 465.6,
+              "reason": "KiwiStrings.raw capitalises a leading {weekday} (assets/kit/strings.js:193), so the baseline nested in compare.delta reads 'Lundi dernier', one capital L (4 px) wider than the lowercase string §6.6 measured; the spec and the runtime disagree on the nested case",
+              "only": "bundles"
+            }
+          }
+        },
+        {
+          "f": 1.35,
+          "expect": {
+            "en": 413.4,
+            "fr": 497.2,
+            "ar": 485.9
+          },
+          "minWidth": {
+            "en": null,
+            "fr": null,
+            "ar": null
+          },
+          "drift": {
+            "fr": {
+              "measures": 502.6,
+              "reason": "KiwiStrings.raw capitalises a leading {weekday} (assets/kit/strings.js:193), so the baseline nested in compare.delta reads 'Lundi dernier', one capital L (4 px) wider than the lowercase string §6.6 measured; the spec and the runtime disagree on the nested case",
+              "only": "bundles"
+            }
+          }
+        }
+      ],
+      "drift": {
+        "fr": {
+          "measures": 384.4,
+          "reason": "KiwiStrings.raw capitalises a leading {weekday} (assets/kit/strings.js:193), so the baseline nested in compare.delta reads 'Lundi dernier', one capital L (4 px) wider than the lowercase string §6.6 measured; the spec and the runtime disagree on the nested case",
+          "only": "bundles"
+        }
+      }
+    },
+    {
+      "id": "Compare control, two rows, row 1 (FR weekday @1.35)",
+      "where": "the widest two-row case: arrow 16 + 4 + delta (Footnote strong); SE content 343",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "regular",
+      "scale": 1.35,
+      "langs": [
+        "fr"
+      ],
+      "parts": [
+        {
+          "px": 20
+        },
+        {
+          "sample": "dcmp",
+          "weight": "strong"
+        }
+      ],
+      "expect": {
+        "fr": 198.4
+      }
+    },
+    {
+      "id": "Compare control, two rows, row 2 (FR weekday @1.35)",
+      "where": "the baseline (Footnote) + 4 + expand_more 16; SE content 343",
+      "budget": 343,
+      "step": "footnote",
+      "weight": "regular",
+      "scale": 1.35,
+      "langs": [
+        "fr"
+      ],
+      "parts": [
+        {
+          "key": "compare.delta",
+          "args": {
+            "delta": "-",
+            "pct": "-",
+            "baseline": {
+              "key": "compare.weekday_at",
+              "args": {
+                "weekday": "$wk",
+                "time": "$t1739"
+              }
+            }
+          },
+          "after": ")"
+        },
+        {
+          "px": 20
+        }
+      ],
+      "expect": {
+        "fr": 292.8
+      },
+      "drift": {
+        "fr": {
+          "measures": 298.3,
+          "reason": "the same capital L as 'Compare control, last Monday' (4.1 px x 1.35 = 5.5)",
+          "only": "bundles"
+        }
+      }
+    }
+  ],
+  "notMeasured": [
+    {
+      "id": "nav.ai clearance from the store name",
+      "reason": "§6.6 prints 91, 34 and 93.8 from 'Café Atlas', a merchant's name (P10), in a nav bar whose layout the spec does not give as a formula; the capsule's own width is measured"
+    },
+    {
+      "id": "ai.actions.button free space after the title",
+      "reason": "the 98.6, 98.6 and 92.3 left free at 1.35 need the header width, which §6.6 does not print (the three figures are consistent with one 340 px width, but that is back-solved, not a budget)"
+    },
+    {
+      "id": "compare control button height",
+      "reason": "35.1 at factor 1 and 47.4 at 1.35 are line-box heights of two Footnote lines, not widths; the width rows are measured"
+    },
+    {
+      "id": "till.team.quick and online order actions, each label",
+      "reason": "the per-label widths in the notes (79.9, 122.0, 20.0, 73.2 and the like) are held only through the row total or maximum, not one by one"
+    },
+    {
+      "id": "the whole-corpus check",
+      "reason": "§6.6 says 4,203 measurements: every string of §9.6 at the 9 step and weight pairs of §6.2; label-fit-test measures the strings its rows name, not the corpus"
     }
   ]
 }
