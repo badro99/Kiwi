@@ -356,7 +356,9 @@ const brokenDB = Object.assign(Object.create(Object.getPrototypeOf(env.DB)), env
   prepare(sql) { if (/^UPDATE accounts SET salt/.test(sql)) throw new Error('D1 down'); return env.DB.prepare(sql); },
 });
 const failedReset = await postReset({ env: { ...env, DB: brokenDB }, request: request('/auth/reset', { method: 'POST', body: { token: retryToken.token, password: 'Another-Password-789' } }) });
-check('a failed password write answers update-failed', failedReset.status === 500);
+const failedBody = await failedReset.json();
+check('a failed password write answers update-failed', failedReset.status === 500 && failedBody.error === 'update-failed');
+check('and says the same link can be retried', failedBody.retry === true);
 check('the token is handed back after a failed write',
   db.prepare('SELECT used_ts FROM reset_tokens WHERE selector = ?').get(retryToken.selector).used_ts === null);
 const retriedReset = await postReset({ env, request: request('/auth/reset', { method: 'POST', body: { token: retryToken.token, password: 'Another-Password-789' } }) });

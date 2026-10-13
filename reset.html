@@ -323,6 +323,8 @@
           if (res.ok && res.j && res.j.ok) { done(); return; }
           var err = (res.j && res.j.error) || '';
           if (err === 'invalid'){ dead(); return; }
+          /* Mot de passe pas enregistré ET lien pas rendu : seul un nouveau mail aide. */
+          if (err === 'update-failed' && !(res.j && res.j.retry)){ dead(); return; }
           btn.disabled = false; btn.textContent = tr('save');
           msg.className = 'msg bad';
           var why = res.j && res.j.reason;

@@ -133,12 +133,16 @@ export async function onRequestPost(context) {
     /* Le mot de passe n'a pas changé : on rend le jeton que CETTE requête a
        pris (même horodatage), pour que le lien du mail marche au deuxième
        essai. Sans ça, une panne passagère grillait le lien pour rien. */
+    /* `retry` ne vaut true que si le jeton est vraiment revenu : la page peut
+       alors dire « réessayez » au lieu d'envoyer chercher un nouveau mail. */
+    let retry = false;
     try {
-      await env.DB.prepare(
+      const back = await env.DB.prepare(
         'UPDATE reset_tokens SET used_ts = NULL WHERE selector = ? AND used_ts = ?'
       ).bind(row.selector, now).run();
+      retry = ((back && back.meta && back.meta.changes) || 0) === 1;
     } catch (_) {}
-    return json({ error: 'update-failed' }, 500);
+    return json(retry ? { error: 'update-failed', retry: true } : { error: 'update-failed' }, 500);
   }
 
   /* Les autres clés du compte deviennent inertes. Trois demandes en trois jours
