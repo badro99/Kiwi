@@ -83,6 +83,7 @@
       newClients: 'Clients du carnet venus pour la première fois sur la période.',
       txPerDay:   'Nombre de ventes moyen par jour.',
       tauxRetour: 'Part des ventes de la période remboursée, en valeur.',
+      tempsTable: 'Durée moyenne d\'une table, de l\'installation au départ, sur les tables libérées de la période.',
     },
     en: {
       tx:         'Number of sales over the period.',
@@ -100,6 +101,7 @@
       newClients: 'Customers in your book whose first visit falls in the period.',
       txPerDay:   'Average number of sales per day.',
       tauxRetour: 'Share of the period\'s sales refunded, by value.',
+      tempsTable: 'Average time a table is taken, from seating to departure, over the tables freed in the period.',
     },
     ar: {
       tx:         'عدد المبيعات خلال الفترة.',
@@ -117,6 +119,7 @@
       newClients: 'زبائن الدفتر الذين جاؤوا لأول مرة خلال الفترة.',
       txPerDay:   'متوسط عدد المبيعات في اليوم.',
       tauxRetour: 'حصة مبيعات الفترة التي تم استردادها، بالقيمة.',
+      tempsTable: 'متوسط مدة شغل الطاولة، من الجلوس إلى المغادرة، للطاولات التي أُخليت خلال الفترة.',
     }
   };
 

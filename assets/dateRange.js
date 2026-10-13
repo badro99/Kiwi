@@ -3032,7 +3032,7 @@
     tauxRetour: { labels: { default: 'Taux retour' }, i18n: 'dash.kpi.returnRate',
                   desc: 'Part des ventes remboursée', derive: (d) => d.tauxRetour || null },
     tempsTable: { labels: { default: 'Temps moyen à table', spa: 'Temps moyen en cabine', 'en:spa': 'Average time in treatment room', 'ar:spa': 'متوسط المدة في غرفة العلاج' }, i18n: 'dash.kpi.tableTime',
-                  desc: 'Durée moyenne d\'occupation d\'une table par couvert', derive: (d) => d.tempsTable || null },
+                  desc: 'Durée moyenne d\'une table, de l\'installation au départ', derive: (d) => d.tempsTable || null },
   };
 
   function loadKpiLayouts() {
@@ -3178,6 +3178,55 @@
     try { hotelBandTiles(currentRange); } catch (_) {}
   }, HOTEL_PERF_TTL);
 
+  /* « Temps moyen à table » d'un vrai restaurant : la durée des visites de
+   * table fermées sur la période (/api/table-time, qui ne retient que les
+   * vrais départs : addition réglée, table libérée par un serveur). Même
+   * mécanique que l'hôtel : une entrée par fenêtre, relue toutes les cinq
+   * minutes au plus, la bande repeinte seulement quand la réponse change. */
+  const TABLE_TIME_TTL = 5 * 60 * 1000;
+  const tableTime = new Map();
+  function tableTimeEntry(from, to) {
+    const merchant = hotelMerchant();
+    const key = merchant + '|' + from + '|' + to;
+    let e = tableTime.get(key);
+    if (!e) { e = { data: null, error: '', ts: 0, loading: false }; tableTime.set(key, e); }
+    if (merchant && !e.loading && Date.now() - e.ts > TABLE_TIME_TTL) {
+      e.loading = true;
+      fetch('/api/table-time?' + new URLSearchParams({ merchant, from: String(from), to: String(to) }), { cache: 'no-store', credentials: 'same-origin' })
+        .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+        .then(({ ok, b }) => {
+          const next = ok && b && b.ok ? { visits: +b.visits || 0, avgMin: b.avgMin == null ? null : +b.avgMin } : null;
+          const before = JSON.stringify([e.data, e.error]);
+          e.data = next; e.error = next ? '' : String((b && b.error) || 'unavailable');
+          e.changed = before !== JSON.stringify([e.data, e.error]);
+        })
+        .catch(() => { if (!e.data) { e.error = 'unavailable'; e.changed = true; } })
+        .finally(() => {
+          e.loading = false; e.ts = Date.now();
+          if (e.changed) { e.changed = false; try { renderKpiBand(); } catch (_) {} }
+        });
+    }
+    return e;
+  }
+  /* Pure : la tuile à partir de la période et de la précédente. Pas encore
+   * de réponse : « … ». Pas de source, ou moins de cinq visites : « · ». */
+  function tableTimeTileFrom(cur, prev) {
+    if (!cur || (!cur.data && !cur.error)) return { text: '…', unit: '', delta: null };
+    const d = cur.data;
+    if (!d || d.avgMin == null) return { text: '·', unit: '', delta: null };
+    const p = prev && prev.data && prev.data.avgMin;
+    /* text: null efface le « · » posé plus haut sur le clone remis à zéro. */
+    return { text: null, value: d.avgMin, unit: 'min', fmt: 'int', delta: p > 0 ? Math.round(((d.avgMin - p) / p) * 1000) / 10 : null };
+  }
+  function tableTimeTile(range) {
+    const [from, open] = rangeBounds(range);
+    /* Une période encore ouverte (aujourd'hui, 7 derniers jours) s'arrête à
+     * la fin de la journée commerciale : une clé stable, pas Date.now(). */
+    const to = open === Infinity ? merchantDayBounds(merchantDayKey(Date.now(), activeMerchantSlug()), activeMerchantSlug()).to : open;
+    const span = Math.max(1, to - from);
+    return tableTimeTileFrom(tableTimeEntry(from, to), tableTimeEntry(from - span, from));
+  }
+
   function renderKpiBand() {
     if (guardOperatorFigures('[data-kpi-band]')) {
       const wrap = document.querySelector('[data-kpi-band]');
@@ -3306,10 +3355,11 @@
          * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
          * encaissement, deux lignes plus haut. */
         success:    data.success    ? { ...data.success,    text: '·', unit: '', delta: null } : data.success,
-        /* Même chose pour « Temps moyen à table / en cabine » : le tableau de
-         * bord ne reçoit ni l'heure d'installation ni l'heure de départ d'une
-         * table. Le clone remis à zéro affichait « 0 min », une table libérée
-         * à l'instant où elle est prise. */
+        /* « Temps moyen à table / en cabine » part de « · » : le clone remis à
+         * zéro affichait « 0 min », une table libérée à l'instant où elle est
+         * prise. La vraie mesure (visites de table fermées, /api/table-time)
+         * le remplace plus bas quand la tuile est sur la bande ; une cabine de
+         * spa n'a pas de visite de table et garde « · ». */
         tempsTable: data.tempsTable ? { ...data.tempsTable, text: '·', unit: '', delta: null } : data.tempsTable,
         /* Le taux de retour, lui, a une source : les remboursements passés à
          * la caisse (/api/sale/refund) arrivent dans le même journal que les
@@ -3359,6 +3409,13 @@
         data = { ...data, ...hotelBandTiles(rng) };
         try { window.KiwiHotelRooms?.warm?.(); } catch (_) {}
       }
+      /* Le temps à table n'est demandé au serveur que si la tuile est sur la
+       * bande de ce commerce : pas de requête pour une tuile que personne ne voit. */
+      if (data.tempsTable) {
+        const vt = window.KiwiVenue?.getVenueType?.() || 'restaurant';
+        const shown = getKpiLayout(vt) || defaultKpiKeys(vt);
+        if (Array.isArray(shown) && shown.includes('tempsTable')) data = { ...data, tempsTable: { ...data.tempsTable, ...tableTimeTile(rng) } };
+      }
 
       /* Tout le reste de la bande vient du clone démo remis à zéro : la valeur
        * affichée est bien neutre, mais son delta, lui, est resté le chiffre de
@@ -3367,7 +3424,7 @@
        * la comparaison partout où elle n'a PAS été recalculée depuis les ventes
        * réelles, plutôt que d'énumérer les tuiles une à une — une tuile ajoutée
        * demain est couverte sans y penser. */
-      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue', 'collected', 'receivable', 'regulars', 'tauxRetour', 'occupation', 'adr', 'revpar']);
+      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue', 'collected', 'receivable', 'regulars', 'tauxRetour', 'tempsTable', 'occupation', 'adr', 'revpar']);
       Object.keys(data).forEach((k) => {
         const tile = data[k];
         if (tile && typeof tile === 'object' && 'delta' in tile && !REAL_DELTAS.has(k)) {
