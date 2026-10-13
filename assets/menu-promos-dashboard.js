@@ -6,9 +6,11 @@
  * owner create, edit, pause and delete promotions; they are stored on the menu
  * (KiwiMenuStore.savePromo) and leave with it when the menu is published.
  *
- * Step 1 edits the name, the discount and the scope (whole menu or
- * categories). Days, hours and dates are already understood by the rule and
- * kept untouched here when a promotion carries them. */
+ * The form edits the name, the discount, the scope (whole menu or
+ * categories) and when it runs: weekdays, daily hours (overnight allowed) and
+ * optional first and last days. The rule in menu-promos.js reads the same
+ * fields on the till, in the waiter app and on the server, in Morocco time on
+ * the 05:00 business day. */
 (function () {
   'use strict';
 
@@ -43,8 +45,14 @@
       kind: 'Réduction', percent: 'Pourcentage', amount: 'Montant en moins', fixed: 'Prix fixe',
       value: 'Valeur', scope: 'S’applique à',
       formulaNote: 'Les formules gardent leur propre prix et ne sont jamais réduites.',
-      keepsWindow: 'Cette promotion a des jours ou des horaires : ils sont conservés.',
+      when: 'Quand', daysLbl: 'Jours', daysHint: 'aucun jour choisi = tous les jours',
+      hours: 'Heures', hoursHint: 'vides = toute la journée',
+      hoursNote: 'En heure du Maroc. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.',
+      startAria: 'Heure de début', endAria: 'Heure de fin',
+      dates: 'Dates', datesHint: 'facultatif', fromAria: 'Premier jour', toAria: 'Dernier jour',
+      preview: 'Active', clearWhen: 'Toujours active',
       cancel: 'Annuler', save: 'Enregistrer',
+      errHours: 'Indiquez l’heure de début et l’heure de fin, ou aucune.', errSame: 'L’heure de fin doit différer de l’heure de début.', errDates: 'Le dernier jour ne peut pas précéder le premier.',
       errName: 'Donnez un nom à la promotion.', errValue: 'Indiquez une réduction.', errScope: 'Choisissez au moins une catégorie, ou toute la carte.',
       saved: 'Promotion enregistrée', savedDesc: 'La caisse et l’appli Serveur l’appliquent dès la prochaine synchronisation.',
       deleted: 'Promotion supprimée',
@@ -67,8 +75,14 @@
       kind: 'Discount', percent: 'Percentage', amount: 'Amount off', fixed: 'Fixed price',
       value: 'Value', scope: 'Applies to',
       formulaNote: 'Set menus keep their own price and are never discounted.',
-      keepsWindow: 'This promotion has days or hours: they are kept.',
+      when: 'When', daysLbl: 'Days', daysHint: 'no day picked = every day',
+      hours: 'Hours', hoursHint: 'empty = all day',
+      hoursNote: 'Morocco time. An end before the start runs past midnight: 22:00 → 01:00 counts for the day it started.',
+      startAria: 'Start time', endAria: 'End time',
+      dates: 'Dates', datesHint: 'optional', fromAria: 'First day', toAria: 'Last day',
+      preview: 'Active', clearWhen: 'Always on',
       cancel: 'Cancel', save: 'Save',
+      errHours: 'Enter both a start and an end time, or neither.', errSame: 'The end time must differ from the start time.', errDates: 'The last day cannot come before the first.',
       errName: 'Give the promotion a name.', errValue: 'Enter a discount.', errScope: 'Pick at least one category, or the whole menu.',
       saved: 'Promotion saved', savedDesc: 'The till and the waiter app apply it from their next sync.',
       deleted: 'Promotion deleted',
@@ -91,8 +105,14 @@
       kind: 'التخفيض', percent: 'نسبة مئوية', amount: 'مبلغ مخصوم', fixed: 'سعر ثابت',
       value: 'القيمة', scope: 'يُطبّق على',
       formulaNote: 'الوجبات المركّبة تحتفظ بسعرها ولا تُخفَّض أبداً.',
-      keepsWindow: 'لهذا العرض أيام أو أوقات: سيتم الاحتفاظ بها.',
+      when: 'متى', daysLbl: 'الأيام', daysHint: 'بدون اختيار = كل يوم',
+      hours: 'الساعات', hoursHint: 'فارغة = طوال اليوم',
+      hoursNote: 'بتوقيت المغرب. نهاية قبل البداية تتجاوز منتصف الليل: 22:00 ← 01:00 تُحسب لليوم الذي بدأت فيه.',
+      startAria: 'ساعة البداية', endAria: 'ساعة النهاية',
+      dates: 'التواريخ', datesHint: 'اختياري', fromAria: 'اليوم الأول', toAria: 'اليوم الأخير',
+      preview: 'نشط', clearWhen: 'نشط دائماً',
       cancel: 'إلغاء', save: 'حفظ',
+      errHours: 'أدخل ساعة البداية وساعة النهاية، أو لا شيء.', errSame: 'يجب أن تختلف ساعة النهاية عن ساعة البداية.', errDates: 'لا يمكن أن يسبق اليوم الأخير اليوم الأول.',
       errName: 'أعطِ العرض اسماً.', errValue: 'أدخل قيمة التخفيض.', errScope: 'اختر فئة واحدة على الأقل، أو القائمة كلها.',
       saved: 'تم حفظ العرض', savedDesc: 'يطبّقه الصندوق وتطبيق النادل عند المزامنة التالية.',
       deleted: 'تم حذف العرض',
@@ -112,7 +132,7 @@
 
   function windowLabel(p) {
     const parts = [];
-    const days = (p.days || []).slice().sort();
+    const days = (p.days || []).slice().sort((a, b) => ((+a + 6) % 7) - ((+b + 6) % 7));
     parts.push(days.length ? days.map((d) => tr('days')[d]).join(', ') : tr('everyDay'));
     parts.push(p.start && p.end ? p.start + '–' + p.end : tr('allDay'));
     const fmt = (d) => { try { return new Intl.DateTimeFormat(lang() === 'en' ? 'en-GB' : (lang() === 'ar' ? 'ar-MA' : 'fr-FR'), { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(d + 'T00:00:00Z')); } catch (_) { return d; } };
@@ -159,7 +179,11 @@
     const d = data();
     const draft = Object.assign({ name: '', kind: 'percent', value: '', all: false, cats: [], items: [], days: [], start: '', end: '', from: '', to: '', paused: false }, existing || {});
     const cats = (d.cats || []).filter((c) => c && c.id);
-    const hasWindow = !!(existing && ((existing.days && existing.days.length) || existing.start || existing.from || existing.to));
+    draft.days = (draft.days || []).map(Number);
+    /* Lundi d'abord, comme un commerçant marocain lit sa semaine ; la règle
+       garde la convention JavaScript (0 = dimanche). */
+    const WEEK = [1, 2, 3, 4, 5, 6, 0];
+    const dayChips = () => WEEK.map((n) => { const on = draft.days.indexOf(n) >= 0; return `<button type="button" class="mi-subchip${on ? ' on' : ''}" data-mp-day="${n}" aria-pressed="${on ? 'true' : 'false'}">${esc(tr('days')[n])}</button>`; }).join('');
     const chip = (id, label, on) => `<button type="button" class="mi-subchip${on ? ' on' : ''}" data-mp-scope="${esc(id)}" aria-pressed="${on ? 'true' : 'false'}">${esc(label)}</button>`;
     const scopeChips = () => chip('__all', tr('allMenu'), draft.all) + cats.map((c) => chip(c.id, name(c.name), !draft.all && draft.cats.indexOf(c.id) >= 0)).join('');
     const body = `<div class="mp-form">
@@ -173,7 +197,24 @@
       </div>
       <div class="kf-label">${esc(tr('scope'))}</div>
       <div class="mi-subchips" data-mp-scopes>${scopeChips()}</div>
-      <p class="mp-note">${esc(tr('formulaNote'))}${hasWindow ? ' ' + esc(tr('keepsWindow')) : ''}</p>
+      <div class="mp-when">
+        <div class="kf-label mp-when-title">${esc(tr('when'))}</div>
+        <div class="kf-label">${esc(tr('daysLbl'))} <span class="mp-hint">· ${esc(tr('daysHint'))}</span></div>
+        <div class="mi-subchips" data-mp-days>${dayChips()}</div>
+        <div class="kf-label">${esc(tr('hours'))} <span class="mp-hint">· ${esc(tr('hoursHint'))}</span></div>
+        <div class="mp-row">
+          <input class="kf-input" type="time" step="900" data-mp-field="start" aria-label="${esc(tr('startAria'))}" value="${esc(draft.start || '')}"/>
+          <input class="kf-input" type="time" step="900" data-mp-field="end" aria-label="${esc(tr('endAria'))}" value="${esc(draft.end || '')}"/>
+        </div>
+        <p class="mp-note">${esc(tr('hoursNote'))}</p>
+        <div class="kf-label">${esc(tr('dates'))} <span class="mp-hint">· ${esc(tr('datesHint'))}</span></div>
+        <div class="mp-row">
+          <input class="kf-input" type="date" data-mp-field="from" aria-label="${esc(tr('fromAria'))}" value="${esc(draft.from || '')}"/>
+          <input class="kf-input" type="date" data-mp-field="to" aria-label="${esc(tr('toAria'))}" value="${esc(draft.to || '')}"/>
+        </div>
+        <p class="mp-preview" data-mp-preview></p>
+      </div>
+      <p class="mp-note">${esc(tr('formulaNote'))}</p>
       <p class="mp-err" data-mp-err hidden></p>
     </div>`;
     const m = K.modal({ title: existing ? tr('editTitle') : tr('newTitle'), width: 520, body, foot: `<button class="kb ghost" data-mp-cancel>${esc(tr('cancel'))}</button><button class="eq-cta-gradient" data-mp-save>${esc(tr('save'))}</button>` });
@@ -195,6 +236,26 @@
       }
       q('[data-mp-scopes]').innerHTML = scopeChips();
     });
+    const readWhen = () => {
+      draft.start = q('[data-mp-field="start"]').value || '';
+      draft.end = q('[data-mp-field="end"]').value || '';
+      draft.from = q('[data-mp-field="from"]').value || '';
+      draft.to = q('[data-mp-field="to"]').value || '';
+    };
+    const preview = () => {
+      readWhen();
+      const open = !draft.days.length && !draft.start && !draft.end && !draft.from && !draft.to;
+      q('[data-mp-preview]').textContent = open ? tr('clearWhen') : tr('preview') + ' : ' + windowLabel(draft);
+    };
+    q('[data-mp-days]').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mp-day]'); if (!b) return;
+      const n = +b.dataset.mpDay, i = draft.days.indexOf(n);
+      if (i >= 0) draft.days.splice(i, 1); else draft.days.push(n);
+      q('[data-mp-days]').innerHTML = dayChips();
+      preview();
+    });
+    ['start', 'end', 'from', 'to'].forEach((f) => q(`[data-mp-field="${f}"]`).addEventListener('input', preview));
+    preview();
     const fail = (k) => { const el = q('[data-mp-err]'); el.textContent = tr(k); el.hidden = false; };
     q('[data-mp-cancel]').onclick = m.close;
     q('[data-mp-save]').onclick = () => {
@@ -203,6 +264,11 @@
       if (!draft.name) return fail('errName');
       if (!(draft.value > 0)) return fail('errValue');
       if (!draft.all && !draft.cats.length && !(draft.items && draft.items.length)) return fail('errScope');
+      readWhen();
+      if (!!draft.start !== !!draft.end) return fail('errHours');
+      if (draft.start && draft.start === draft.end) return fail('errSame');
+      if (draft.from && draft.to && draft.to < draft.from) return fail('errDates');
+      draft.days = draft.days.length === 7 ? [] : draft.days.slice().sort((a, b) => a - b);
       const id = S().savePromo(draft);
       if (!id) return fail('errScope');
       m.close();
@@ -240,6 +306,10 @@
       .mp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .mp-note { font-size: 12px; color: var(--n-500); line-height: 1.45; margin: 4px 0 0; }
       .mp-err { font-size: 12.5px; color: var(--danger); margin: 4px 0 0; }
+      .mp-when { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line, rgba(127,127,127,.18)); }
+      .mp-when-title { font-weight: 600; margin-top: 0 !important; }
+      .mp-hint { font-weight: 400; color: var(--n-500); }
+      .mp-preview { font-size: 12.5px; color: var(--atlas); margin: 6px 0 0; font-variant-numeric: tabular-nums; }
       @media (max-width: 520px) { .mp-row { grid-template-columns: 1fr; } }
     `;
     document.head.appendChild(st);

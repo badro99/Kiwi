@@ -200,6 +200,41 @@ try {
     });
     check(priced && priced.price === 9.6, 'the saved rule prices a 12 MAD tea at 9,60');
 
+    tr.step('edit: days and a happy-hour window');
+    /* The create sheet fades for 280 ms before it leaves the page. */
+    await page.waitForFunction(() => !document.querySelector('[data-mp-save]'));
+    await page.click('.mp-card [data-mp-act="edit"]');
+    await page.waitForSelector('[data-mp-days] [data-mp-day="1"]', { visible: true });
+    check(/Toujours active/.test(await text(page, '[data-mp-preview]')), 'with no days or hours the editor says it is always on');
+    const setField = (f, v) => page.$eval(`[data-mp-field="${f}"]`, (el, val) => { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+    /* A one-hour window three hours from now, in Morocco time: the rule must be
+       "outside its hours" now and running three hours later. */
+    const hh = await page.evaluate(() => +new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Casablanca' }).format(new Date()));
+    const pad = (n) => String(n).padStart(2, '0');
+    const start = pad((hh + 3) % 24) + ':00', end = pad((hh + 4) % 24) + ':00';
+    await setField('start', start);
+    await page.click('[data-mp-save]');
+    check(/heure de début et l’heure de fin/.test(await text(page, '[data-mp-err]')), 'a start without an end is refused, in words');
+    await setField('end', start);
+    await page.click('[data-mp-save]');
+    check(/doit différer/.test(await text(page, '[data-mp-err]')), 'an end equal to the start is refused');
+    await setField('end', end);
+    for (const d of [1, 2, 3, 4, 5, 6, 0]) await page.click(`[data-mp-days] [data-mp-day="${d}"]`);
+    check(await page.$$eval('[data-mp-days] [aria-pressed="true"]', (b) => b.length) === 7, 'the seven day chips toggle on with real clicks');
+    check((await text(page, '[data-mp-preview]')).includes(start + '–' + end), 'the preview line reads the window as it is typed');
+    await page.click('[data-mp-save]');
+    await page.waitForFunction((st) => (document.querySelector('.mp-card')?.textContent || '').includes(st), {}, start);
+    const timed = await page.evaluate(() => window.KiwiMenuStore.data().promos[0]);
+    check(timed.start === start && timed.end === end && Array.isArray(timed.days) && timed.days.length === 0, `hours saved, and all seven days kept as "every day" (${JSON.stringify({ s: timed.start, e: timed.end, d: timed.days })})`);
+    check(/Hors horaires/.test(await text(page, '.mp-card')), 'the card says the promotion is outside its hours right now');
+    const windowed = await page.evaluate(() => {
+      const d = window.KiwiMenuStore.data();
+      const tea = d.items.find((i) => i.name === 'Thé à la menthe');
+      const at = (t) => window.KiwiMenuPromos.resolve(window.KiwiMenuStore.promos(), { itemId: tea.id, catId: tea.catId }, tea.price, t);
+      return { now: at(Date.now()), later: at(Date.now() + 3 * 3600 * 1000) };
+    });
+    check(!windowed.now && windowed.later && windowed.later.price === 9.6, 'the rule prices the tea only inside its hours');
+
     tr.step('pause, then delete');
     await page.click('.mp-card [data-mp-act="pause"]');
     await page.waitForFunction(() => /En pause/.test(document.querySelector('.mp-card')?.textContent || ''));
