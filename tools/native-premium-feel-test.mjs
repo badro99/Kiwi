@@ -78,7 +78,13 @@ async function phone(scheme, { hostSheet = false, url = '/dashboard.html', demo 
     const noop = () => Promise.resolve({});
     const plug = new Proxy({}, { get: (_, k) => (k === 'addListener' ? () => ({ remove() {} }) : noop) });
     const haptics = new Proxy({}, { get: (_, k) => (k === 'addListener' ? () => ({ remove() {} }) : (arg) => { window.__hap.push(k + (arg && arg.style ? ':' + arg.style : '')); return Promise.resolve({}); }) });
-    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', Plugins: new Proxy({}, { get: (_, k) => (k === 'Haptics' ? haptics : plug) }) };
+    /* Every haptic reaches the device through KiwiHaptics and the kiwi-haptics plugin
+       (design 2027 §15): this stands in for the plugin and records in the old names. */
+    const kiwiHaptics = {
+      play(o) { window.__hap.push(o.kind === 'selection' ? 'selection' + o.style[0].toUpperCase() + o.style.slice(1) : o.kind + (o.kind === 'impact' ? ':' + o.style : '')); return Promise.resolve({ t: 0 }); },
+      clock: () => Promise.resolve({ t: 0 }), prepare: () => Promise.resolve()
+    };
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', Plugins: new Proxy({}, { get: (_, k) => (k === 'Haptics' ? haptics : k === 'KiwiHaptics' ? kiwiHaptics : plug) }) };
     window.__sheets = [];
     if (hostSheet) window.__kiwiHostCaps = { sheet: 1 };
     window.webkit = { messageHandlers: { kiwiShell: { postMessage(v) { if (v && v.sheet) window.__sheets.push(v.sheet); else window.__host = v; } } } };

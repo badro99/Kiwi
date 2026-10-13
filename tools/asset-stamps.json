@@ -484,8 +484,8 @@
     "sha": "0c14350aaddb4036"
   },
   "assets/kit/haptics.js": {
-    "v": "2",
-    "sha": "d4fa79bcb78db113"
+    "v": "3",
+    "sha": "84a02dc7e1290c51"
   },
   "assets/kitchen-print-queue.js": {
     "v": "16",
@@ -652,8 +652,8 @@
     "sha": "61f5515f64d1d79a"
   },
   "assets/onboarding.js": {
-    "v": "2090",
-    "sha": "602b5cfd1e300a03"
+    "v": "2091",
+    "sha": "81c8dcbdfa098098"
   },
   "assets/operational-print.js": {
     "v": "4",
@@ -704,8 +704,8 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2158",
-    "sha": "dd388b2aed3607d1"
+    "v": "2159",
+    "sha": "bfb059243be2416a"
   },
   "assets/pages.js": {
     "v": "12",

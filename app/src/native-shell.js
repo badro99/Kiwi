@@ -262,7 +262,7 @@
     [email,password].forEach(function (field) {
       if (!field.value || (field === email && invalid)) { field.setAttribute('aria-invalid','true'); field.setAttribute('aria-describedby','login-err'); }
     });
-    window.dispatchEvent(new CustomEvent('kiwi:native-haptic', {detail:{kind:'danger'}}));
+    /* A local validation error fires no haptic (design 2027, §15.6, §20.3). */
     scheduleNativeSetupState(0);
     return false;
   }

@@ -130,7 +130,7 @@
   <link rel="stylesheet" href="assets/retail-balances.css?v=2" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
   <script src="assets/vendor/zxing-browser.min.js?v=1" defer></script>
-  <script src="assets/kit/haptics.js?v=2" defer></script>
+  <script src="assets/kit/haptics.js?v=3" defer></script>
   <script src="assets/retail-scan.js?v=9" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
@@ -9967,8 +9967,11 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'light' } })); } catch (_) {}
     }
 
+    /* Paid, on the local record: the caller reaches this only after the sale (or
+       the share) is journaled, so the runtime plays it as trigger 'local-record'
+       with its own gesture id (design 2027, §15.3, §20.3). */
     function nativeHapticSuccess() {
-      try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'success' } })); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'success', gestureId: 'paid:' + Date.now() + ':' + Math.random().toString(36).slice(2, 8), trigger: 'local-record' } })); } catch (_) {}
     }
 
     /* The failed haptic: a refusal the cashier must feel without looking. */

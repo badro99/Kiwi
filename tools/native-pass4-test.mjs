@@ -73,7 +73,7 @@ ok(/kiwi-native-order-sheet \.kiwi-modal\{transform:translateY\(100%\);transitio
 ok(/\.pin-dot\{transition:[^}]*310ms cubic-bezier\(0\.34,1\.45,0\.5,1\)/.test(runtimeCss), 'Team keypad dots fill with the spring');
 ok(/prefers-reduced-motion:reduce\)\{html\.kiwi-native \.pin-dot\{transition:none/.test(runtimeCss), 'Reduce Motion turns the dot spring off');
 ok(!/kiwi:toast/.test(runtime), 'a toast never buzzes (design 2027, §15.6): the kiwi:toast haptic hook is gone');
-ok(/pin-dots[\s\S]{0,200}shake[\s\S]{0,120}hapticNotice\('danger'\)/.test(runtime), 'a wrong Team code gives an error haptic');
+ok(/pin-dots[\s\S]{0,200}shake[\s\S]{0,120}hapticFailed\('pin-wrong:/.test(runtime), 'a wrong Team code gives a Failed haptic through KiwiHaptics');
 
 // Demo numbers are not flat day to day
 ok(/Math\.imul\(seed \^ \(seed >>> 16\), 0x45d9f3b\)/.test(demoClock), 'demo days vary, so "vs yesterday" is never a flat 0 %');

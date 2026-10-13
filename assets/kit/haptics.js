@@ -406,8 +406,12 @@
   }
 
   /* The shipped `kiwi:native-haptic` event, until stage 7 retires it (§20.3):
-     light → Adjust, success → Paid only when the dispatcher names a gestureId
-     and says trigger 'local-record', danger → nothing. */
+     light → Adjust; success → Paid only when the dispatcher names a gestureId
+     and says trigger 'local-record'; danger → Failed on the response, only when
+     the dispatcher says when the gesture happened (`gestureAt`), so the 600 ms
+     rule holds. §20.3 maps danger to nothing, but its replacement (the PIN pad
+     calling Failed itself, stage 3) does not exist yet, and a refused till code
+     must not go silent in the meantime. */
   var legacySeq = 0;
   function fromNativeEvent(detail) {
     detail = detail || {};
@@ -415,6 +419,9 @@
     if (kind === 'light') return play('Adjust', detail.gestureId || ('legacy:' + (++legacySeq)), { trigger: 'tap' });
     if (kind === 'success' && detail.gestureId && detail.trigger === 'local-record') {
       return play('Paid', detail.gestureId, { trigger: 'local-record' });
+    }
+    if (kind === 'danger' && typeof detail.gestureAt === 'number') {
+      return play('Failed', detail.gestureId || ('legacy:' + (++legacySeq)), { trigger: 'response', gestureAt: detail.gestureAt });
     }
     return reject('legacy-ignored', kind, detail.gestureId);
   }

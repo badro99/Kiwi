@@ -290,7 +290,10 @@ async function main() {
     w.tick(100);
     ok(w.H.fromNativeEvent({}).played, 'an event with no kind is a light');
     w.tick(100);
-    ok(w.H.fromNativeEvent({ kind: 'danger' }).reason === 'legacy-ignored', 'danger is nothing');
+    ok(w.H.fromNativeEvent({ kind: 'danger' }).reason === 'legacy-ignored', 'danger with no gesture time is nothing');
+    ok(w.H.fromNativeEvent({ kind: 'danger', gestureAt: w.clock - 650 }).reason === 'late', 'danger answered after 600 ms buzzes nothing');
+    ok(w.H.fromNativeEvent({ kind: 'danger', gestureAt: w.clock - 100 }).played, 'danger inside 600 ms is a Failed (until the PIN pad of stage 3 calls Failed itself)');
+    w.tick(100);
     ok(w.H.fromNativeEvent({ kind: 'success' }).reason === 'legacy-ignored', 'success with no gesture is nothing');
     ok(w.H.fromNativeEvent({ kind: 'success', gestureId: 's', trigger: 'tap' }).reason === 'legacy-ignored', 'success on a tap is nothing');
     ok(w.H.fromNativeEvent({ kind: 'success', gestureId: 's', trigger: 'local-record' }).played, 'success is Paid only with a gestureId and the local-record trigger');

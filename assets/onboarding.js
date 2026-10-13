@@ -630,7 +630,7 @@
     box.scrollIntoView({block:'nearest'});
     const field = root.querySelector(S.step === 1 ? '[data-f="ownerName"]' : S.step === 2 ? (S.bizName.trim() ? 'x-none' : '[data-f="bizName"]') : '[data-f="dailyGoal"]');
     if (field) { field.setAttribute('aria-invalid','true'); field.setAttribute('aria-describedby',box.id); }
-    window.dispatchEvent(new CustomEvent('kiwi:native-haptic', {detail:{kind:'danger'}}));
+    /* A local validation error fires no haptic (design 2027, §15.6, §20.3). */
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg, { type: 'warn', force: true }); } catch (_) {}
   }
 

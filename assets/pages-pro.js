@@ -349,7 +349,6 @@ handlers['nav-transactions'] = () => {
       try {
         const result=await window.KiwiPrinter?.printReceipt?.({shop:'Kiwi · '+L.demo,ref:sale.ref,date:row.t,lines:sale.lines.map(l=>({name:l.name,qty:l.qty,price:fmt2(l.total)+' MAD'})),total:fmt2(sale.amount)+' MAD',method:row.n,openDrawer:false});
         status.textContent=result?.ok?L.printed:L.printerMissing;
-        window.dispatchEvent(new CustomEvent('kiwi:native-haptic',{detail:{kind:result?.ok?'success':'danger'}}));
       } catch (_) {status.textContent=L.printerMissing;}
       finally {button.disabled=false;}
     };

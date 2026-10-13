@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../app/src/native-runtime.js', import.meta.url), 'utf8');
+const hapticsSource = fs.readFileSync(new URL('../assets/kit/haptics.js', import.meta.url), 'utf8');
 let controls = 0;
 const ok = (condition, label) => { assert.ok(condition, label); controls++; console.log('  ✓ ' + label); };
 
@@ -85,8 +86,11 @@ const window = {
   setTimeout, clearTimeout
 };
 window.window = window;
-const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, requestAnimationFrame: fn => setTimeout(fn, 0), setTimeout, clearTimeout,
+window.performance = { now: () => Date.now() };
+const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, performance: window.performance, requestAnimationFrame: fn => setTimeout(fn, 0), setTimeout, clearTimeout,
   MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: node.opacity || '1' }) });
+/* Every haptic goes through KiwiHaptics (design 2027 §15, §20.3): load it first, as the shells do. */
+new vm.Script(hapticsSource, { filename: 'assets/kit/haptics.js' }).runInContext(context);
 new vm.Script(source, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 // Workspace context is intentionally withheld until the two launch-paint frames.
 for (let i = 0; i < 40 && !hostContexts.length; i++) await new Promise(resolve => setTimeout(resolve, 5));
@@ -111,12 +115,25 @@ ok(exits === 1, 'confirmed terminal Back exits only after every dismissible laye
 const hapticsBeforeToast = hapticCalls.length;
 (windowListeners['kiwi:toast'] || []).forEach((handler) => handler({ detail: { type: 'danger' } }));
 ok(!(windowListeners['kiwi:toast'] || []).length && hapticCalls.length === hapticsBeforeToast, 'a toast never buzzes (design 2027, §15.6)');
-(windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'danger' } }));
-(windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'light' } }));
-(windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'success' } }));
-ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'a refused code (kiwi:native-haptic danger) still triggers native error feedback');
-ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'item and navigation taps trigger light impact feedback');
-ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS'), 'completed payments can trigger native success feedback');
+const nativeHaptic = (detail) => (windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail }));
+const gap = () => new Promise((resolve) => setTimeout(resolve, 80));
+(docListeners.pointerdown || []).forEach((handler) => handler({}));          // the final digit goes in
+nativeHaptic({ kind: 'danger' });
+ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'a refused code (kiwi:native-haptic danger) is a Failed: native error feedback, inside 600 ms of the press');
+await gap();
+nativeHaptic({ kind: 'light' });
+ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'item taps (kiwi:native-haptic light) are an Adjust: light impact');
+await gap();
+const beforeBareSuccess = hapticCalls.length;
+nativeHaptic({ kind: 'success' });
+ok(hapticCalls.length === beforeBareSuccess, 'a success with no gesture and no local record buzzes nothing');
+nativeHaptic({ kind: 'success', gestureId: 'paid:test', trigger: 'local-record' });
+ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS'), 'a payment recorded locally is a Paid: native success feedback');
+await gap();
+const beforeLate = hapticCalls.length;
+await new Promise((resolve) => setTimeout(resolve, 650));
+nativeHaptic({ kind: 'danger' });
+ok(hapticCalls.length === beforeLate, 'a refusal answered more than 600 ms after the last press buzzes nothing');
 location.pathname = '/dashboard.html';
 appearance.matches = true;
 appearanceListeners.forEach((handler) => handler({ matches: true }));

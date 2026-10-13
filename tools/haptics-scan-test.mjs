@@ -9,7 +9,9 @@
  *   - no UIImpactFeedbackGenerator, UINotificationFeedbackGenerator or
  *     UISelectionFeedbackGenerator, and no Android Vibrator / VibrationEffect,
  *     outside app/plugins/kiwi-haptics/;
- *   - no `Haptics.` call outside assets/kit/haptics.js.
+ *   - no stock `Haptics` call (`Haptics.impact(`), handle (`Plugins.Haptics`) or
+ *     `@capacitor/haptics` import in JS or HTML outside assets/kit/haptics.js
+ *     (the feel layer in app/src/native-runtime.js included).
  * Plus the toast hook is gone and no DOM event named kiwi:toast buzzes. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,28 +32,30 @@ ok(files.length > 100, `scanned ${files.length} tracked source files`);
 
 const KIT = 'assets/kit/haptics.js';
 const PLUGIN = 'app/plugins/kiwi-haptics/';
+const JS_LIKE = /\.(html|js|mjs|cjs|ts)$/;
+const NATIVE_METHODS = '(?:impact|notification|selectionStart|selectionChanged|selectionEnd|vibrate)';
+const STOCK_CALL = new RegExp('(?<![A-Za-z])haptics\\s*\\.\\s*' + NATIVE_METHODS + '\\s*\\(', 'i');   // Haptics.impact(, haptics.notification(
+const STOCK_HANDLE = /\bPlugins\b[^;\n]{0,16}\.\s*Haptics\b/i;                                                // Capacitor.Plugins.Haptics, plugins.Haptics
+const STOCK_IMPORT = /@capacitor\/haptics/;
 const hits = { vibrate: [], uikit: [], android: [], haptics: [] };
 for (const f of files) {
   const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
   if (/navigator\s*(?:\.\s*vibrate\b|\[\s*['"]vibrate['"]\s*\])/.test(src)) hits.vibrate.push(f);
   if (!f.startsWith(PLUGIN) && /\bUI(?:Impact|Notification|Selection)FeedbackGenerator\b/.test(src)) hits.uikit.push(f);
   if (!f.startsWith(PLUGIN) && /\b(?:VibrationEffect|VibratorManager|performHapticFeedback)\b|getSystemService\(\s*(?:Context\.)?VIBRATOR/.test(src)) hits.android.push(f);
-  /* `KiwiHaptics.play(` is the module's own name; a lookbehind keeps it out. */
-  if (f !== KIT && /(?<![A-Za-z])Haptics\s*\./.test(src)) hits.haptics.push(f);
+  /* The `Haptics.` rule is about JS call sites. Native sources and the plugin
+     under app/plugins/kiwi-haptics/ are the sanctioned home of native haptics, and
+     a doc comment naming Haptics.swift is not a call. `KiwiHaptics.play(` is the
+     module's own name; the lookbehind keeps it out. */
+  if (f !== KIT && JS_LIKE.test(f) && !f.startsWith(PLUGIN)) {
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    if (STOCK_CALL.test(code) || STOCK_HANDLE.test(code) || STOCK_IMPORT.test(code)) hits.haptics.push(f);
+  }
 }
 ok(!hits.vibrate.length, 'no navigator.vibrate anywhere' + (hits.vibrate.length ? ': ' + hits.vibrate.join(', ') : ''));
 ok(!hits.uikit.length, 'no UIKit feedback generator outside app/plugins/kiwi-haptics/' + (hits.uikit.length ? ': ' + hits.uikit.join(', ') : ''));
 ok(!hits.android.length, 'no Android vibrator outside app/plugins/kiwi-haptics/' + (hits.android.length ? ': ' + hits.android.join(', ') : ''));
-ok(!hits.haptics.length, 'no `Haptics.` call outside ' + KIT + (hits.haptics.length ? ': ' + hits.haptics.join(', ') : ''));
-
-/* The feel layer (app/src/native-runtime.js) still reads the stock plugin
-   handle, `plugins.Haptics`, and calls it through a local variable; §20.3
-   routes those sites through KiwiHaptics with the rest of the feel layer and
-   retires them at stage 7. The handle is the one allowed exception, so it is
-   pinned: no other file may take it. */
-const handle = files.filter((f) => /\.(js|html)$/.test(f) && /\bPlugins\)?\s*\.\s*Haptics\b/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
-const ALLOWED_HANDLE = ['app/src/native-runtime.js'];
-ok(handle.every((f) => ALLOWED_HANDLE.includes(f)), 'only the feel layer still reads the stock Haptics handle (until stage 7)' + (handle.filter((f) => !ALLOWED_HANDLE.includes(f)).length ? ': ' + handle.join(', ') : ''));
+ok(!hits.haptics.length, 'no stock `Haptics` call, handle or import in JS or HTML outside ' + KIT + (hits.haptics.length ? ': ' + hits.haptics.join(', ') : ''));
 
 const runtime = fs.readFileSync(path.join(ROOT, 'app/src/native-runtime.js'), 'utf8');
 ok(!/kiwi:toast/.test(runtime), 'the kiwi:toast haptic hook is removed from the native runtime (toasts never buzz, §15.6)');

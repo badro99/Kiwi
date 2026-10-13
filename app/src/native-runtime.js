@@ -5,7 +5,7 @@
   if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
   var root = document.documentElement, plugins = cap.Plugins || {};
   var socket = plugins.KiwiPrinterSocket, app = plugins.App, network = plugins.Network;
-  var haptics = plugins.Haptics, statusBar = plugins.StatusBar, keepAwake = plugins.KeepAwake, splashScreen = plugins.SplashScreen;
+  var statusBar = plugins.StatusBar, keepAwake = plugins.KeepAwake, splashScreen = plugins.SplashScreen;
   var appearance = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   var pairingKeys = ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'];
   var nativeIdentityKeys = pairingKeys.concat(['kiwiPairings']);
@@ -201,8 +201,22 @@
       } catch (_) { delete sheetWaiters[id]; resolve('dismiss'); }
     });
   }
-  function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
-  function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
+  /* Every haptic in this file goes through KiwiHaptics (assets/kit/haptics.js,
+     design 2027 §15 and §20.3), which owns the class map, one gesture one
+     haptic, the throttles, the 600 ms rule and the never-buzz list. Where the
+     module is not loaded (the kitchen screen, which never buzzes) nothing plays.
+     lastPressAt is the last finger-down: the moment a code's final digit went in,
+     so a verdict answered later than 600 ms buzzes nothing. */
+  var lastPressAt = 0;
+  document.addEventListener('pointerdown', function () { lastPressAt = performance.now(); }, { passive: true, capture: true });
+  function khPlay(cls, prefix, meta) {
+    try { var k = window.KiwiHaptics; if (k) k.play(cls, k.gid(prefix), meta || { trigger: 'tap' }); } catch (_) {}
+  }
+  function hapticLight() { khPlay('Adjust', 'native', { trigger: 'tap' }); }
+  /* A refused code is a Failed, on the response, inside 600 ms of the last press. */
+  function hapticFailed(id) {
+    try { var k = window.KiwiHaptics; if (k) k.play('Failed', id, { trigger: 'response', gestureAt: lastPressAt }); } catch (_) {}
+  }
   // Every full-screen entry gate has its own escape route. The host capsule
   // is intentionally hidden here, so it must never be the only way out.
   function initNativeGateExits() {
@@ -683,7 +697,6 @@
         if (commit) s.target.run();
         return;
       }
-      call(haptics, 'impact', { style: 'LIGHT' });
       if (reduce && reduce.matches) { reset(panel, false); s.target.run(); return; }
       panel.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)';
       panel.style.transform = 'translate3d(' + (width * s.sign) + 'px,0,0)';
@@ -800,7 +813,7 @@
     if (payload.action === 'change-role') { location.replace('index.html?choose=1'); return true; }
     if (payload.action === 'ai-privacy') { if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.show(); return true; }
     if (payload.action === 'delete-account') { nativeAccountDeletion(); return true; }
-    if (payload.action === 'open-tools') { if (document.body) document.body.classList.add('nav-open'); hapticLight(); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); return true; }
+    if (payload.action === 'open-tools') { if (document.body) document.body.classList.add('nav-open'); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); return true; }
     if (payload.action === 'sign-out') {
       if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.reset();
       fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
@@ -874,7 +887,6 @@
     box.addEventListener('click', function (event) {
       var button = event.target.closest('[data-kno-account]');
       if (!button) return;
-      hapticLight();
       closeNativeMenus();
       var action = button.getAttribute('data-kno-account');
       /* One stray tap used to sign the device out mid-service. With the native
@@ -902,7 +914,7 @@
     var label = function () { button.setAttribute('aria-label', nativeMenuCopy().open); };
     label();
     new MutationObserver(label).observe(root, { attributes:true, attributeFilter:['lang'] });
-    button.addEventListener('click', function (event) { event.stopPropagation(); hapticLight(); open(); });
+    button.addEventListener('click', function (event) { event.stopPropagation(); open(); });
     return button;
   }
   function nativeSideMenu(kind) {
@@ -1109,14 +1121,14 @@
       if (nativeBlockingLayer()) return false;
       if (mode === 'more') {
         document.body.classList.add('nav-open');
-        hapticLight();
+        khPlay('Choose', 'native-tab', { trigger: 'tap' });
         syncTabs();
         return true;
       }
       var source = document.querySelector('.mode-pill[data-mode="' + mode + '"]');
       if (source && !source.disabled && !source.hidden) source.click();
       document.body.classList.remove('nav-open');
-      hapticLight();
+      khPlay('Choose', 'native-tab', { trigger: 'tap' });
       syncTabs();
       return true;
     }
@@ -1307,8 +1319,7 @@
     var owner = role === 'dashboard' ? initNativeOwnerUx() : null;
     if (role === 'dashboard') { initNativeOwnerKeypad(); initNativeEntry(); }
     if (role === 'cuisine') {
-      var pairingPad = document.getElementById('pair-pad');
-      if (pairingPad) pairingPad.addEventListener('click', function (event) { if (event.target.closest('button')) hapticLight(); });
+      /* Nothing on the kitchen screen buzzes, its pairing pad included (§15.6). */
       var pairingGate = document.getElementById('pair');
       if (pairingGate && !pairingGate.querySelector('.kiwi-native-role-back')) {
         var roleBack = document.createElement('a');
@@ -1317,18 +1328,14 @@
         updateRoleBack(); pairingGate.appendChild(roleBack);
         new MutationObserver(updateRoleBack).observe(root, {attributes:true, attributeFilter:['lang']});
       }
-      if (pairingGate) new MutationObserver(function (records) {
-        if (pairingGate.classList.contains('err') && records.some(function (r) { return !(r.oldValue || '').split(' ').includes('err'); })) hapticNotice('danger');
-      }).observe(pairingGate, { attributes:true, attributeFilter:['class'], attributeOldValue:true });
     }
     if (role === 'equipe') {
-      /* Team code: an error notification on the shake, success when the dots pop. */
+      /* Team code: Failed on the shake. A successful code fires nothing (§15.1). */
       new MutationObserver(function (records) {
         records.forEach(function (r) {
           var el = r.target, was = (r.oldValue || '').split(' ');
           if (!el.classList) return;
-          if (el.classList.contains('pin-dots') && el.classList.contains('shake') && was.indexOf('shake') < 0) hapticNotice('danger');
-          else if (el.classList.contains('pin-dot') && el.classList.contains('is-success') && was.indexOf('is-success') < 0 && !el.previousElementSibling) hapticNotice('success');
+          if (el.classList.contains('pin-dots') && el.classList.contains('shake') && was.indexOf('shake') < 0) hapticFailed('pin-wrong:' + Math.round(lastPressAt));
         });
       }).observe(document.getElementById('pin-dots') || document.body, { subtree:true, attributes:true, attributeFilter:['class'], attributeOldValue:true });
     }
@@ -1435,7 +1442,8 @@
     announce();
     if (pinRow) new MutationObserver(function () {
       announce();
-      if (pinRow.classList.contains('is-wrong')) hapticNotice('danger');
+      /* Same gesture id as the Team shake: a wrong code buzzes once. */
+      if (pinRow.classList.contains('is-wrong')) hapticFailed('pin-wrong:' + Math.round(lastPressAt));
     }).observe(pinRow, { attributes:true, attributeFilter:['class'] });
     var original = { readOnly:input.readOnly, inputMode:input.inputMode, tab:input.getAttribute('tabindex'), aria:input.getAttribute('aria-hidden') };
     function apply() {
@@ -1455,8 +1463,15 @@
       else if (/^\d$/.test(key) && input.value.length < input.maxLength) input.value += key;
       else return;
       input.dispatchEvent(new Event('input', { bubbles:true }));
-      hapticLight();
     }
+    /* Choose at the press, as iOS keyboards do, for every key but the final
+       digit: that one buzzes only through its verdict (§15.1, §15.3). */
+    pad.addEventListener('pointerdown', function (event) {
+      var key = event.target.closest && event.target.closest('[data-key]');
+      if (!key || !media.matches || !lock.isConnected || input.disabled) return;
+      var final = /^\d$/.test(key.dataset.key) && input.value.length + 1 >= input.maxLength;
+      if (!final) khPlay('Choose', 'pad-key', { trigger: 'pointerdown', eventTimeStamp: event.timeStamp });
+    }, { passive: true });
     pad.addEventListener('click', function (event) {
       var button = event.target.closest('[data-key]');
       if (!button) return;
@@ -1667,7 +1682,6 @@
           if (!lockVisible()) return;
           var access = c.state === 'ok' ? c.access : record.access;
           if (c.state === 'ok') renewFace(record, access);
-          hapticNotice('success');
           if (window.__kiwiLock && typeof window.__kiwiLock.unlockAs === 'function') {
             window.__kiwiLock.unlockAs({ access: access, name: record.name || '' });
           }
@@ -1693,7 +1707,8 @@
       button.setAttribute('data-face-unlock', '');
       button.setAttribute('aria-label', entryCopy(biometry).key);
       button.innerHTML = FACE_ICON;
-      button.addEventListener('click', function (event) { event.stopPropagation(); hapticLight(); tryFace(); });
+      button.addEventListener('pointerdown', function (event) { khPlay('Choose', 'face-key', { trigger: 'pointerdown', eventTimeStamp: event.timeStamp }); }, { passive: true });
+      button.addEventListener('click', function (event) { event.stopPropagation(); tryFace(); });
       if (slot) slot.replaceWith(button); else pad.insertBefore(button, pad.firstChild);
     }
     checkBiometrics().then(function (info) {
@@ -1763,7 +1778,7 @@
           return secureSet(FACE_KEY, JSON.stringify({
             account: account, access: who.access, name: who.name || '', at: Date.now(), mark: who.faceMark,
           })).then(function () {
-            hapticNotice('success');
+            hapticLight();
             try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
             try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
             return true;
@@ -1865,7 +1880,6 @@
     function openMenu() {
       var burger = document.querySelector('.kw-hamburger');
       if (burger) burger.click();
-      hapticLight();
       setTimeout(notify, 60);
     }
     function go(id) {
@@ -1879,7 +1893,7 @@
         if (link) link.click();
         try { window.scrollTo({ top:0, behavior:'smooth' }); } catch (_) { window.scrollTo(0, 0); }
       }
-      hapticLight();
+      khPlay('Choose', 'native-tab', { trigger: 'tap' });
       setTimeout(notify, 60);
       setTimeout(notify, 400);
     }
@@ -1907,7 +1921,7 @@
         if (!button) return;
         var item = items.filter(function (entry) { return entry[0] === button.getAttribute('data-owner-action'); })[0];
         var target = item && document.querySelector(item[3]);
-        if (target) { hapticLight(); target.click(); }
+        if (target) target.click();
       });
       anchor.parentNode.insertBefore(row, anchor.nextSibling);
     }
@@ -2065,7 +2079,20 @@
     window.KiwiNative.deviceId = r.id;
     try { localStorage.setItem('kiwi:caisse:terminal-id:v1', r.id); } catch (_) {}
   });
-  window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); else hapticNotice(event.detail.kind); });
+  /* The shipped kiwi:native-haptic event, kept as an adapter until stage 7 (§20.3):
+     light is an Adjust, success is a Paid only when the dispatcher names its
+     gesture and says it is a local record, danger is a Failed on the response
+     (until the PIN pad of stage 3 calls Failed itself), within 600 ms of the
+     last finger-down. */
+  window.addEventListener('kiwi:native-haptic', function (event) {
+    try {
+      var k = window.KiwiHaptics;
+      if (!k) return;
+      var d = Object.assign({}, event.detail || {});
+      if (d.kind === 'danger' && typeof d.gestureAt !== 'number') d.gestureAt = lastPressAt;
+      k.fromNativeEvent(d);
+    } catch (_) {}
+  });
   /* A toast never buzzes (design 2027, §15.6): the listener that played Error or
      Success on every toast is gone. A haptic belongs to the gesture that earned
      it, through kiwi:native-haptic above or KiwiHaptics. */
@@ -2160,7 +2187,6 @@
       var speed = d.dy / Math.max(1, Date.now() - d.t);
       d.sheet.style.transition = 'transform .24s var(--glide,cubic-bezier(.32,.72,0,1))';
       if (d.dy > 96 || (d.dy > 32 && speed > 0.6)) {
-        hapticLight();
         d.sheet.style.transform = 'translateY(100%)';
         dismissNativeLayer(d.layer);
         // The till and Team hide a closed sheet rather than remove it: clear the
@@ -2212,26 +2238,16 @@
   'use strict';
   var cap = window.Capacitor;
   if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
-  var haptics = (cap.Plugins || {}).Haptics;
   var reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   var touchOnly = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
   var EASE = 'cubic-bezier(.2,.8,.2,1)';
 
-  function hcall(method, arg) {
-    try {
-      if (!haptics || typeof haptics[method] !== 'function') return;
-      var r = arg ? haptics[method](arg) : haptics[method]();
-      if (r && typeof r.catch === 'function') r.catch(function () {});
-    } catch (_) {}
+  /* Haptics go through KiwiHaptics (assets/kit/haptics.js, §15): a segment change
+     is a Choose bracket, a chart scrub one Choose per bucket inside one bracket,
+     a paid sale a Paid on the local record. The 40 ms tick throttle lives there. */
+  function khPlay(cls, prefix, a, b) {
+    try { var k = window.KiwiHaptics; if (k) k.play(cls, k.gid(prefix), a, b); } catch (_) {}
   }
-  var lastTick = 0;
-  function tick() {
-    var now = Date.now();
-    if (now - lastTick < 40) return;
-    lastTick = now;
-    hcall('selectionChanged');
-  }
-  function selectionTap() { hcall('selectionStart'); tick(); hcall('selectionEnd'); }
 
   /* 1 · Touch-down response. */
   var PRESSABLE = 'button,[role="button"],[role="tab"],[data-action],a[href],summary,label[for]';
@@ -2288,7 +2304,7 @@
     downSegment = null;
     if (!seg || downWasOn || seg.disabled) return;
     if (!event.target || !event.target.closest || event.target.closest(SEGMENT) !== seg) return;
-    selectionTap();
+    khPlay('Choose', 'segment', { trigger: 'tap', eventTimeStamp: event.timeStamp });
   }, true);
 
   /* 3 · One tick per data point while the finger reads the chart. The tooltip
@@ -2296,8 +2312,7 @@
   var scrub = null;
   document.addEventListener('pointerdown', function (event) {
     if (event.pointerType === 'mouse' || !event.target || !event.target.closest || !event.target.closest('.rev-hit')) return;
-    scrub = { svg: event.target.closest('svg'), bucket: null };
-    hcall('selectionStart');
+    scrub = { svg: event.target.closest('svg'), bucket: null, id: window.KiwiHaptics ? window.KiwiHaptics.gid('chart-scrub') : '' };
   }, { passive: true });
   document.addEventListener('pointermove', function (event) {
     if (!scrub || !scrub.svg || !scrub.svg.classList.contains('is-hover')) return;
@@ -2307,10 +2322,16 @@
     /* Day chart "14h35" ticks per hour; multi-day "Mar 23 · 14h" per day. */
     var hour = /^(\d{1,2})[:h]\d{2}/i.exec(text);
     var bucket = hour ? hour[1] : text.split(' · ')[0];
-    if (scrub.bucket !== null && bucket !== scrub.bucket) tick();
+    if (scrub.bucket !== null && bucket !== scrub.bucket && scrub.id) {
+      try { window.KiwiHaptics.play('Choose', scrub.id, bucket, { trigger: 'step' }); } catch (_) {}
+    }
     scrub.bucket = bucket;
   }, { passive: true });
-  function endScrub() { if (!scrub) return; scrub = null; hcall('selectionEnd'); }
+  function endScrub() {
+    if (!scrub) return;
+    var id = scrub.id; scrub = null;
+    try { if (id) window.KiwiHaptics.end(id); } catch (_) {}
+  }
   document.addEventListener('pointerup', endScrub, { passive: true });
   document.addEventListener('pointercancel', endScrub, { passive: true });
 
@@ -2328,7 +2349,7 @@
     var detail = event && event.detail || {};
     var total = Number(detail.total);
     if (!(total > 0) || !document.body) return;
-    if (detail.haptic !== false) hcall('notification', { type: 'SUCCESS' });
+    if (detail.haptic !== false) khPlay('Paid', 'sale-paid', { trigger: 'local-record' });
     var box = document.querySelector('.kiwi-paid');
     if (!box) {
       box = document.createElement('div');
