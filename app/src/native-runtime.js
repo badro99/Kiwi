@@ -2066,11 +2066,9 @@
     try { localStorage.setItem('kiwi:caisse:terminal-id:v1', r.id); } catch (_) {}
   });
   window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); else hapticNotice(event.detail.kind); });
-  window.addEventListener('kiwi:toast', function (event) {
-    var type = event.detail && event.detail.type;
-    if (type === 'danger' || type === 'error') hapticNotice('danger');
-    else if (type === 'success') hapticNotice('success');
-  });
+  /* A toast never buzzes (design 2027, §15.6): the listener that played Error or
+     Success on every toast is gone. A haptic belongs to the gesture that earned
+     it, through kiwi:native-haptic above or KiwiHaptics. */
   document.addEventListener('kiwi-paired', commitPairingFromSurface);
   window.addEventListener('kiwi:account-revoked', revokeIdentity);
   document.addEventListener('focusin', revealFocused, true);

@@ -147,8 +147,10 @@ private final class KiwiNativeShellModel: ObservableObject {
         payload["action"] = action
         if !id.isEmpty { payload["id"] = id }
         guard let script = kiwiNativeActionScript(payload) else { return }
+        // No haptic here: the page decides the class of what the action does
+        // (a tab change plays Choose once through KiwiHaptics, a sheet answer
+        // plays the class of the act it confirms, or nothing).
         bridge?.webView?.evaluateJavaScript(script, completionHandler: nil)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 }
 
@@ -400,9 +402,10 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             let delegate = KiwiSheetDelegate { [weak self] in self?.answerSheet(spec.id, "dismiss") }
             self.sheetDelegate = delegate
             controller.presentationController?.delegate = delegate
-            if spec.actions.contains(where: { $0.style == "destructive" }) {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            }
+            // No Warning here: presenting a sheet never buzzes. The page plays
+            // Caution through KiwiHaptics before it asks for a sheet that
+            // confirms a destructive act, so the class is the same whether the
+            // sheet is drawn by the web or by this host.
             presenter.present(controller, animated: true)
         }
     }
@@ -1003,7 +1006,6 @@ private final class KiwiDialogDelegate: NSObject, WKUIDelegate {
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: cancel, style: .cancel) { _ in completionHandler(false) })
         alert.addAction(UIAlertAction(title: ok, style: isDestructive(message) ? .destructive : .default) { _ in completionHandler(true) })
-        if isDestructive(message) { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
         present(alert, from: webView) { completionHandler(false) }
     }
 

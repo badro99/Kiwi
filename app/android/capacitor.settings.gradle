@@ -26,5 +26,8 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 include ':kiwi-dynamic-type'
 project(':kiwi-dynamic-type').projectDir = new File('../plugins/kiwi-dynamic-type/android')
 
+include ':kiwi-haptics'
+project(':kiwi-haptics').projectDir = new File('../plugins/kiwi-haptics/android')
+
 include ':kiwi-printer-socket'
 project(':kiwi-printer-socket').projectDir = new File('../plugins/kiwi-printer-socket/android')

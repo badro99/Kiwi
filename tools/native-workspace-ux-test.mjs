@@ -108,10 +108,13 @@ ok(exits === 0, 'Back requires confirmation before exiting the till');
 confirms = true; back({ canGoBack: false });
 ok(exits === 1, 'confirmed terminal Back exits only after every dismissible layer is exhausted');
 
+const hapticsBeforeToast = hapticCalls.length;
 (windowListeners['kiwi:toast'] || []).forEach((handler) => handler({ detail: { type: 'danger' } }));
+ok(!(windowListeners['kiwi:toast'] || []).length && hapticCalls.length === hapticsBeforeToast, 'a toast never buzzes (design 2027, §15.6)');
+(windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'danger' } }));
 (windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'light' } }));
 (windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'success' } }));
-ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'operational error toasts trigger native error feedback');
+ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'a refused code (kiwi:native-haptic danger) still triggers native error feedback');
 ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'item and navigation taps trigger light impact feedback');
 ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS'), 'completed payments can trigger native success feedback');
 location.pathname = '/dashboard.html';

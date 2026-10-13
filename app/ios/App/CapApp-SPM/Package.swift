@@ -20,6 +20,7 @@ let package = Package(
         .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
         .package(name: "KiwiDynamicType", path: "../../../plugins/kiwi-dynamic-type"),
+        .package(name: "KiwiHaptics", path: "../../../plugins/kiwi-haptics"),
         .package(name: "KiwiPrinterSocket", path: "../../../plugins/kiwi-printer-socket")
     ],
     targets: [
@@ -36,6 +37,7 @@ let package = Package(
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "KiwiDynamicType", package: "KiwiDynamicType"),
+                .product(name: "KiwiHaptics", package: "KiwiHaptics"),
                 .product(name: "KiwiPrinterSocket", package: "KiwiPrinterSocket")
             ]
         )

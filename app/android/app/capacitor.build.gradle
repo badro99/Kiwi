@@ -17,6 +17,7 @@ dependencies {
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
     implementation project(':kiwi-dynamic-type')
+    implementation project(':kiwi-haptics')
     implementation project(':kiwi-printer-socket')
 
 }

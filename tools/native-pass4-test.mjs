@@ -72,7 +72,7 @@ ok(/data-vexel-mode="light"\] \.topbar \.vexel-topbar-merchant \.avatar \{\s*col
 ok(/kiwi-native-order-sheet \.kiwi-modal\{transform:translateY\(100%\);transition:transform 310ms var\(--glide,cubic-bezier\(\.32,\.72,0,1\)\)/.test(runtimeCss), 'bottom sheets rise in 310 ms on a glide, never overshooting the edge');
 ok(/\.pin-dot\{transition:[^}]*310ms cubic-bezier\(0\.34,1\.45,0\.5,1\)/.test(runtimeCss), 'Team keypad dots fill with the spring');
 ok(/prefers-reduced-motion:reduce\)\{html\.kiwi-native \.pin-dot\{transition:none/.test(runtimeCss), 'Reduce Motion turns the dot spring off');
-ok(/type === 'success'\) hapticNotice\('success'\)/.test(runtime), 'success toasts give a success haptic');
+ok(!/kiwi:toast/.test(runtime), 'a toast never buzzes (design 2027, §15.6): the kiwi:toast haptic hook is gone');
 ok(/pin-dots[\s\S]{0,200}shake[\s\S]{0,120}hapticNotice\('danger'\)/.test(runtime), 'a wrong Team code gives an error haptic');
 
 // Demo numbers are not flat day to day
