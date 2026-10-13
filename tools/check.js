@@ -1934,6 +1934,24 @@ section('Politique typographique (tools/type-policy-test.js)');
   }
 }
 
+/* ── Design 2027 · stage 1 · keyed strings (§9) ───────────────────────────
+ * Bundles live at assets/kit/strings/<surface>.<lang>.js. completeness holds
+ * them to the §9.6 table and §9.2's plural categories; lint holds §9.6's rules;
+ * coverage holds §10 to §18's quoted strings; sw holds the stamp layout;
+ * bidi holds the isolation of every argument (its DOM half needs Chromium). */
+section('Chaînes à clé · design 2027 (strings-*-test, strings-lint)');
+for (const test of ['strings-completeness-test.mjs', 'strings-lint.mjs', 'strings-coverage-test.mjs', 'strings-sw-test.mjs', 'strings-bidi-test.mjs']) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn(`${test}: browser half skipped (no Chromium)`);
+  if (r.status === 0) ok(`${test} green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
 if (guard.tier() === 'fast') {
