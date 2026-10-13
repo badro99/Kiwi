@@ -51,7 +51,13 @@ if (first) {
   assert(first.manifest.files.some((f) => f.path === 'assets/api-base.js'), 'assets/api-base.js est dans le bundle');
   assert(first.manifest.files.some((f) => f.path === 'index.html'), 'la coquille native (index.html) est dans le bundle');
   assert(first.manifest.files.some((f) => f.path === 'native-runtime.js'), 'le runtime natif partagé est dans le bundle');
-  assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).length === 5, 'Inter Tight, IBM Plex Sans Arabic et JetBrains Mono sont embarquées localement');
+  /* Étape 1 du design 2027 (§6.5) : Inter Tight et IBM Plex Sans Arabic vivent dans
+     assets/fonts/ (copié avec assets/, un seul fichier, une seule URL) ; seule
+     JetBrains Mono garde native-fonts/ jusqu'à l'étape 7. */
+  assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).map((f) => f.path).join() === 'native-fonts/jetbrains-mono-latin.woff2', 'seule JetBrains Mono reste dans native-fonts/');
+  for (const face of ['inter-tight-latin', 'plex-arabic-400', 'plex-arabic-500', 'plex-arabic-600']) {
+    assert(first.manifest.files.some((f) => f.path === `assets/fonts/${face}.woff2`), `${face}.woff2 est embarquée depuis assets/fonts/`);
+  }
   assert(!first.manifest.files.some((f) => / \d+\.[a-z]+$/i.test(f.path)), 'aucune copie de conflit iCloud « fichier 2.js » dans le bundle');
   const hardware = first.manifest.files.filter((f) => f.path.startsWith('assets/media/'));
   assert(hardware.length === 6 && hardware.every((f) => f.path.startsWith('assets/media/hardware/')), 'seules les six photos de terminaux utilisées sont embarquées');

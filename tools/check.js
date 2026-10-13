@@ -1478,6 +1478,15 @@ section('Whole-project regressions');
        se construit, est déterministe, charge api-base.js en premier, et la
        porte accepte les origines de l'app sur /api et /auth seulement. */
     'app-bundle-test.mjs',
+    /* Les polices de la direction 2027 (étape 1, docs/specs/kiwi-design-2027.md §6.1,
+       §6.5, §21.3) : une fonte ne quitte pas le bundle pendant qu'une règle la nomme
+       (tools/app-bundle-manifest.json lu par les deux outils de build) ; chaque
+       caractère sort du fichier prévu, cmap des vraies fontes à l'appui ; et chaque
+       page qui écrit en IBM Plex Sans Arabic la déclare, vérifié sur le réseau, avec
+       tools/plex-census.mjs qui découvre les pages au lieu de les lister. */
+    'bundle-manifest-test.mjs',
+    'font-coverage-test.mjs',
+    'font-face-census-test.mjs',
     'app-release-test.mjs',
     /* Coquille Android (Compose, manifest, icône, plugins) : contrat statique,
        aucun JDK ne tourne ici. */

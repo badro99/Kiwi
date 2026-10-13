@@ -31,7 +31,7 @@ console.log('■ bump-stamp --sw · pre-commit hook (tools/bump-stamp-test.mjs)'
 function fixture(dir) {
   fs.mkdirSync(path.join(dir, 'assets'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'tools'), { recursive: true });
-  for (const f of ['stamps.js', 'bump-stamp.js', 'stamp-drift-test.js']) {
+  for (const f of ['stamps.js', 'bump-stamp.js', 'stamp-drift-test.js', 'app-bundle-manifest.json']) {
     fs.copyFileSync(path.join(ROOT, 'tools', f), path.join(dir, 'tools', f));
   }
   const w = (rel, s) => fs.writeFileSync(path.join(dir, rel), s);
@@ -178,6 +178,63 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   ok(/pos-dispatch\.js\?v=11/.test(rd(dir, 'kiwi-caisse.html')) && /pos-dispatch\.js\?v=11/.test(rd(dir, 'kiwi-sw.js')), 'cascade · le dispatcher réécrit reçoit sa propre estampille');
   const drift = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
   ok(drift.status === 0, 'cascade · stamp-drift vert après un seul --all');
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}
+
+/* D · fontes et feuilles de style (design 2027 §21.3, « CSS sites ») : un woff2 se
+   bumpe comme un script, ses url() se résolvent contre le dossier d'où la feuille
+   est SERVIE, et `../fonts/x.woff2` (assets/kit/), `x.woff2` (assets/fonts/) et
+   `assets/fonts/x.woff2` (les feuilles natives, servies à la racine du bundle) sont
+   UNE clé avec UNE estampille. Les pages hors coquilles (guides, landings Next) qui
+   lient assets/fonts/legacy-faces.css suivent aussi. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-bump-fonts-'));
+  fixture(dir);
+  const w = (rel, txt) => { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), txt); };
+  w('assets/fonts/x.woff2', 'wOF2 pas une vraie fonte, un contenu\n');
+  w('assets/fonts/legacy-faces.css', '@font-face{font-family:"IBM Plex Sans Arabic";src:url("x.woff2") format("woff2");font-weight:400}\n');
+  w('assets/kit/tokens-2027.css', '@font-face{font-family:"Kiwi Arabic";src:url("../fonts/x.woff2") format("woff2");font-weight:400}\n');
+  w('app/src/native-runtime.css', '@font-face{font-family:"IBM Plex Sans Arabic";src:url("assets/fonts/x.woff2") format("woff2");font-weight:400}\n@font-face{font-family:"JetBrains Mono";src:url("native-fonts/jb.woff2") format("woff2")}\n');
+  w('app/src/native-shell.css', '@font-face { font-family: "IBM Plex Sans Arabic"; src: url("assets/fonts/x.woff2") format("woff2"); font-weight: 400; }\n');
+  for (const f of ['native-runtime.js', 'native-privacy.js', 'native-locale.js', 'index.html', 'native-shell.js']) w(`app/src/${f}`, '//\n');
+  w('dashboard.html', rd(dir, 'dashboard.html') + '<link rel="stylesheet" href="assets/fonts/legacy-faces.css">\n');
+  w('fr/guides/a.html', '<link rel="stylesheet" href="/assets/fonts/legacy-faces.css" /><link rel="stylesheet" href="/assets/articles/article.css?v=12">\n');
+  w('node_modules/pkg/leave-me-alone.html', '<link rel="stylesheet" href="/assets/fonts/legacy-faces.css">\n');
+  w('fr/guides/b 2.html', '<link rel="stylesheet" href="/assets/fonts/legacy-faces.css">\n');
+  const r1 = run(dir, ['assets/fonts/x.woff2', 'assets/fonts/legacy-faces.css']);
+  ok(r1.status === 0, `fontes · bump-stamp d'un woff2 et de sa feuille sort en 0 (${(r1.stderr || '').trim().slice(0, 100)})`);
+  ok(/src:url\("x\.woff2\?v=1"\)/.test(rd(dir, 'assets/fonts/legacy-faces.css')), 'fontes · la feuille d\'assets/fonts/ reçoit ?v=1 sur sa url() relative');
+  ok(/url\("\.\.\/fonts\/x\.woff2\?v=1"\)/.test(rd(dir, 'assets/kit/tokens-2027.css')), 'fontes · la feuille du kit reçoit ?v=1 sur « ../fonts/x.woff2 » : la même clé');
+  ok(/url\("assets\/fonts\/x\.woff2\?v=1"\)/.test(rd(dir, 'app/src/native-runtime.css')) && /url\("assets\/fonts\/x\.woff2\?v=1"\)/.test(rd(dir, 'app/src/native-shell.css')), 'fontes · les deux feuilles natives reçoivent ?v=1, résolues contre la racine du bundle');
+  ok(/native-fonts\/jb\.woff2"\)/.test(rd(dir, 'app/src/native-runtime.css')), 'fontes · une fonte hors assets/ (JetBrains Mono, native-fonts/) n\'est pas estampillée');
+  ok(/legacy-faces\.css\?v=1/.test(rd(dir, 'dashboard.html')), 'fontes · la coquille liant legacy-faces.css reçoit ?v=1');
+  ok(/\/assets\/fonts\/legacy-faces\.css\?v=1/.test(rd(dir, 'fr/guides/a.html')), 'fontes · une page hors coquille (guide) qui lie legacy-faces.css reçoit ?v=1, chemin absolu compris');
+  ok(/article\.css\?v=12/.test(rd(dir, 'fr/guides/a.html')), 'fontes · les autres estampilles de cette page ne sont pas touchées (article.css reste à ?v=12)');
+  ok(!/\?v=/.test(rd(dir, 'node_modules/pkg/leave-me-alone.html')) && !/\?v=/.test(rd(dir, 'fr/guides/b 2.html')), 'fontes · node_modules/ et les copies de conflit « b 2.html » ne sont pas lues');
+  const m1 = JSON.parse(rd(dir, 'tools/asset-stamps.json'));
+  ok(m1['assets/fonts/x.woff2']?.v === '1' && m1['assets/fonts/legacy-faces.css']?.v === '1', 'fontes · le manifeste scelle le woff2 et la feuille à ?v=1');
+  const d1 = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+  ok(d1.status === 0, `fontes · stamp-drift est vert après le premier bump (${(d1.stdout + d1.stderr).trim().split('\n').pop().slice(0, 100)})`);
+
+  /* le fichier change : l'estampille suit PARTOUT, et la feuille qui le nomme change de contenu, donc la sienne aussi */
+  fs.appendFileSync(path.join(dir, 'assets/fonts/x.woff2'), 'octets en plus\n');
+  const r2 = run(dir, ['--all']);
+  ok(r2.status === 0, 'fontes · --all sort en 0');
+  ok(['assets/fonts/legacy-faces.css', 'assets/kit/tokens-2027.css', 'app/src/native-runtime.css', 'app/src/native-shell.css'].every((f) => /x\.woff2\?v=2/.test(rd(dir, f))), 'fontes · le woff2 modifié passe à ?v=2 dans les quatre feuilles qui le nomment');
+  ok(/legacy-faces\.css\?v=2/.test(rd(dir, 'dashboard.html')) && /legacy-faces\.css\?v=2/.test(rd(dir, 'fr/guides/a.html')), 'fontes · cascade : la feuille réécrite passe à ?v=2 dans la coquille et dans la page de guide');
+  const d2 = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+  ok(d2.status === 0, 'fontes · stamp-drift vert après un seul --all');
+
+  /* deux sites d'une même clé, deux estampilles : refusé */
+  w('app/src/native-shell.css', rd(dir, 'app/src/native-shell.css').replace('x.woff2?v=2', 'x.woff2?v=1'));
+  const d3 = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+  ok(d3.status !== 0 && /estampilles différentes/.test(d3.stdout + d3.stderr), 'fontes · deux estampilles pour une même clé (feuille native à ?v=1, le reste à ?v=2) : stamp-drift refuse');
+  w('app/src/native-shell.css', rd(dir, 'app/src/native-shell.css').replace('x.woff2?v=1', 'x.woff2?v=2'));
+
+  /* une url() qui sort de l'arbre servi ne passe pas pour une clé */
+  w('assets/fonts/legacy-faces.css', rd(dir, 'assets/fonts/legacy-faces.css') + '@font-face{src:url("../../../escape.woff2?v=1")}\n');
+  const r3 = run(dir, ['--sync']);
+  ok(r3.status !== 0 && /sort de l'arbre servi/.test(r3.stdout + r3.stderr), 'fontes · une url() qui sort du dossier servi fait échouer le scan, avec le fichier nommé');
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 

@@ -1,0 +1,6 @@
+{
+  "nativeRuntime": ["native-runtime.js", "native-runtime.css", "native-privacy.js", "native-locale.js"],
+  "shell": ["index.html", "native-shell.js", "native-shell.css"],
+  "servedAtRoot": "app/src/",
+  "bundledFolders": ["assets/fonts/"]
+}

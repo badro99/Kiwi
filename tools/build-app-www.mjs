@@ -40,17 +40,24 @@ export const DEFAULT_OUT = path.join(ROOT, 'app', 'www');
 /* Les quatre surfaces embarquées. dashboard.html n'est pas un objectif de la
  * v1.0 (plan §1.1) mais la porte existe ; elle coûte 0 octet de code natif. */
 export const PAGES = ['kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'dashboard.html'];
+/* Les listes de fichiers de app/src/ qui partent à la racine du bundle vivent
+ * dans UN fichier de données (tools/app-bundle-manifest.json), lu ici et par
+ * tools/stamps.js : ni l'un ni l'autre n'en garde une copie, donc un cinquième
+ * fichier de runtime ne peut pas être ajouté à un seul des deux outils. */
+const BUNDLE_MANIFEST = JSON.parse(fs.readFileSync(new URL('./app-bundle-manifest.json', import.meta.url), 'utf8'));
 /* La page d'accueil native et ses deux fichiers (app/src/ → racine du bundle). */
-export const SHELL = ['index.html', 'native-shell.js', 'native-shell.css'];
+export const SHELL = BUNDLE_MANIFEST.shell;
 export const API_BASE_TAG = '<script src="assets/api-base.js"></script>';
 export const NATIVE_RUNTIME_TAGS = '<link rel="stylesheet" href="native-runtime.css" />\n<script src="native-runtime.js" defer></script>';
 const NATIVE_LOCALE_TAG = '<script src="native-locale.js"></script>';
-const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css', 'native-privacy.js', 'native-locale.js'];
+const NATIVE_RUNTIME = BUNDLE_MANIFEST.nativeRuntime;
+/* Inter Tight et IBM Plex Sans Arabic ne sont plus ici : leurs fichiers vivent
+ * dans assets/fonts/ (dossier de BUNDLE_MANIFEST.bundledFolders, copié avec
+ * assets/), et les @font-face de native-runtime.css et native-shell.css y
+ * pointent (docs/specs/kiwi-design-2027.md §6.5, §21.1). Une fonte ne sort de
+ * cette liste que dans le commit qui repointe chaque règle qui la nomme.
+ * JetBrains Mono garde son entrée et sa règle jusqu'à l'étape 7. */
 const NATIVE_FONTS = {
-  'native-fonts/inter-tight-latin.woff2': 'node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2',
-  'native-fonts/ibm-plex-sans-arabic-400.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2',
-  'native-fonts/ibm-plex-sans-arabic-500.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2',
-  'native-fonts/ibm-plex-sans-arabic-600.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2',
   // Codes and tabular readouts (kitchen tickets, Team, dashboard). The web
   // loads it from Google Fonts, which the bundle strips (NETWORK_FONT_RE).
   'native-fonts/jetbrains-mono-latin.woff2': 'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',

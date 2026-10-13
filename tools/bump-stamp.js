@@ -51,7 +51,7 @@ function replaceIn(rel, asset, next) {
      liste SHELL du service worker devient ?v=1. On ne cree aucune nouvelle
      appartenance au precache ; on versionne seulement les references qui
      existent deja. */
-  after = after.replace(new RegExp(`((?:src|href)=["']${esc})(["'])`, 'g'), (_, ref, quote) => {
+  after = after.replace(new RegExp(`((?:src|href)=["'][./]*${esc})(["'])`, 'g'), (_, ref, quote) => {
     hits++;
     return `${ref}?v=${next}${quote}`;
   });
@@ -62,6 +62,31 @@ function replaceIn(rel, asset, next) {
   if (after === before) return 0;
   write(rel, after);
   touched.add(rel);
+  return hits;
+}
+
+/* Les url() d'une feuille de style (assets/fonts/*.css, assets/kit/*.css,
+   native-runtime.css, native-shell.css) : l'asset y est écrit tel que la feuille
+   le voit depuis le dossier d'où elle est servie (`plex-arabic-400.woff2` dans
+   assets/fonts/, `assets/fonts/plex-arabic-400.woff2` dans le runtime natif),
+   donc le remplacement de replaceIn() ne le trouve pas toujours. On lit la
+   forme écrite sur chaque site, estampillé ou non, et on y pose `next`. */
+function replaceCss(asset, next) {
+  let hits = 0;
+  const byFile = new Map();
+  for (const r of S.cssReferences(asset)) {
+    if (!byFile.has(r.file)) byFile.set(r.file, new Set());
+    byFile.get(r.file).add(r.written);
+  }
+  for (const [file, writtens] of byFile) {
+    const before = S.read(file);
+    let after = before;
+    for (const written of writtens) {
+      const esc = written.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      after = after.replace(new RegExp(`(url\\(\\s*["']?${esc})(?:\\?v=[0-9]+)?(["']?\\s*\\))`, 'g'), (_, a, b) => { hits++; return `${a}?v=${next}${b}`; });
+    }
+    if (after !== before) { write(file, after); touched.add(file); }
+  }
   return hits;
 }
 
@@ -83,18 +108,21 @@ function bump(asset, scanned) {
   const entry = scanned.get(asset);
   const referenced = S.referenceFiles(asset);
   if (!entry) {
-    if (!referenced.length) {
-      console.warn(`  · ${asset} — aucune reference trouvee (ni shell, ni SW, ni rev) ; rien a bumper`);
+    const cssSites = S.cssReferences(asset);
+    if (!referenced.length && !cssSites.length) {
+      console.warn(`  · ${asset} — aucune reference trouvee (ni shell, ni SW, ni rev, ni url() de feuille) ; rien a bumper`);
       return false;
     }
     const next = '1';
     let hits = 0;
     for (const file of referenced) hits += replaceIn(file, asset, next);
+    hits += replaceCss(asset, next);
     if (!hits) {
       console.warn(`  · ${asset} — references trouvees mais aucune URL de shell/SW modifiable ; rien a bumper`);
       return false;
     }
-    console.log(`  ✓ ${asset}  premiere estampille ?v=${next}   ${hits} occurrence(s) dans ${referenced.join(', ')}`);
+    console.log(`  ✓ ${asset}  premiere estampille ?v=${next}   ${hits} occurrence(s) dans ${referenced.concat(cssSites.map((r) => r.file)).join(', ')}`);
+    S.resetFontPages();
     return true;
   }
   const revSite = entry.sites.find((s) => s.kind === 'rev');
@@ -119,6 +147,7 @@ function bump(asset, scanned) {
 
   let hits = 0;
   for (const f of files) hits += replaceIn(f, asset, next);
+  hits += replaceCss(asset, next);
   for (const sib of siblings) {
     for (const s of sib.entry.sites) {
       if (s.kind !== 'rev') hits += replaceIn(s.file, sib.asset, next);
