@@ -26,19 +26,22 @@
  *                système, donc un décalage de mise en page.
  *
  * Les piles sont découvertes, pas listées : toute pile `--k-font` / `font-family`
- * de assets/kit/ et de tokens-2027.css, et les piles de l'app native. Tant que le
+ * des RÈGLES de style (jamais la ligne `font-family` d'un @font-face, qui nomme une
+ * face et non une pile : la couverture est une propriété de la pile entière) de
+ * assets/kit/ et de tokens-2027.css, et les piles de l'app native. Tant que le
  * kit n'est pas là (étape 1), le test rejoue le bloc de déclarations de §6.1 avec
  * les vrais fichiers d'assets/fonts/ : le jour où tokens-2027.css arrive, ce sont
  * ses règles qui sont lues, et le bloc de §6.1 reste le témoin des contrôles
  * négatifs.
  *
- * Le corpus : chaque valeur de strings/*.json en EN, FR et AR, chaque sortie de
+ * Le corpus : chaque valeur de assets/kit/strings/*.js en EN, FR et AR, chaque sortie de
  * KiwiFormat (par tools/format-vectors.json), le jeu de la fixture, et un corpus
  * de base (lettres, chiffres, ponctuation française, U+00A0, U+2212, l'arabe, les
  * unités MAD / درهم / نقطة). Les sources absentes de ce commit sont nommées.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { cmapOf, fontTables, gsubFeatures, fromRanges, readLocalFaces } from './font-cmap-dump.mjs';
 
@@ -205,10 +208,21 @@ const walkStrings = (v, fn) => { if (typeof v === 'string') fn(v); else if (v &&
     for (const f of files) walkStrings(JSON.parse(read(`${dir}/${f}`)), addText);
     if (files.length) sources.push(`${dir}/*.json (${files.length} fichiers)`);
   }
+  /* Les chaînes du kit : assets/kit/strings/*.js (ouvrages `__kiwiStrings['kit.en'] = {…}`),
+     exécutées dans un bac à sable vide : on lit les valeurs, on n'interprète rien d'autre. */
+  if (exists('assets/kit/strings')) {
+    const files = fs.readdirSync(path.join(ROOT, 'assets/kit/strings')).filter((f) => f.endsWith('.js'));
+    for (const f of files) {
+      const g = {};
+      vm.runInNewContext(read(`assets/kit/strings/${f}`), { self: g, globalThis: g }, { timeout: 2000 });
+      walkStrings(g.__kiwiStrings || {}, addText);
+    }
+    if (files.length) sources.push(`assets/kit/strings/*.js (${files.length} fichiers)`);
+  }
   for (const f of ['tools/format-vectors.json', 'tools/fixtures/worked-example.json']) {
     if (exists(f)) { walkStrings(JSON.parse(read(f)), addText); sources.push(f); }
   }
-  const missing = ['strings/*.json', 'tools/format-vectors.json', 'tools/fixtures/worked-example.json'].filter((s) => !sources.some((x) => x.startsWith(s.replace('/*.json', ''))));
+  const missing = ['assets/kit/strings/*.js', 'tools/format-vectors.json', 'tools/fixtures/worked-example.json'].filter((s) => !sources.some((x) => x.startsWith(s.replace(/\/\*\.(?:js|json)$/, ''))));
   note(`corpus : ${corpus.size} caractères distincts ; sources lues : ${sources.join(', ')}`);
   if (missing.length) note(`sources absentes de ce commit (elles s'ajoutent d'elles-mêmes à leur arrivée) : ${missing.join(', ')}`);
   const banned = [...corpus].filter((c) => c === 0x202f);
@@ -231,8 +245,14 @@ const stacks = [];                 // {name, stack, faces, arabicFamily, kind}
   for (const f of kitFiles) {
     const css = read(f);
     kitFaces = kitFaces.concat(parseFaces(css, path.posix.dirname(f)));
-    for (const m of css.matchAll(/--k-font\s*:\s*([^;}]+)/g)) kitStacks.add(m[1].trim());
-    for (const m of css.matchAll(/font-family\s*:\s*([^;}]+)/g)) if (!/var\(/.test(m[1]) && !/^\s*inherit/.test(m[1])) kitStacks.add(m[1].trim());
+    /* Une couverture est une propriété de la PILE : les `font-family` qui comptent sont
+       ceux des règles de style, jamais la ligne `font-family: "Kiwi Arabic"` d'un
+       @font-face, qui nomme une face et non une pile (juger chaque famille seule contre
+       tout le corpus mettait l'arabe en face d'Inter Tight et le latin en face de
+       Kiwi Arabic). On les retire donc avant de chercher les piles. */
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@font-face\s*\{[^}]*\}/gi, '');
+    for (const m of rules.matchAll(/--k-font\s*:\s*([^;}]+)/g)) kitStacks.add(m[1].trim());
+    for (const m of rules.matchAll(/font-family\s*:\s*([^;}]+)/g)) if (!/var\(/.test(m[1]) && !/^\s*inherit/.test(m[1])) kitStacks.add(m[1].trim());
   }
   const split = (s) => s.split(',').map((x) => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
   if (kitFiles.length && kitFaces.length) {
