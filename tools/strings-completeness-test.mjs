@@ -91,6 +91,40 @@ section('Table de §9.6 : clés, décomptes, cellules');
 const SPEC_EXTRA = new Set(['customers.known']);    // §9.2 la nomme, la table l'omet
 const specKeys = new Map();                          // clé → { row, index, n }
 rows.forEach((r) => r.keys.forEach((k, i) => { if (r.surface !== 'guest' && !specKeys.has(k)) specKeys.set(k, { row: r, index: i }); }));
+/* Un second lecteur de la colonne clé, écrit autrement que parseKeyCell (une
+ * regex par jeton, pas de parenthèses équilibrées), pour que le parseur ne
+ * soit pas son propre juge. Un suffixe « .cold » prend le parent du jeton qui
+ * le précède immédiatement : `kds.station.hot` / `.cold` donne
+ * `kds.station.cold`, pas `kds.cold`. */
+function independentKeys(keyCell) {
+  const out = [];
+  let rest = keyCell.trim();
+  let parent = null;
+  const TOKEN = /^`([^`]+)`(?: \((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*(?: \/ |$)/;
+  for (;;) {
+    const m = TOKEN.exec(rest);
+    if (!m) break;
+    const t = m[1];
+    const key = t.startsWith('.') ? parent + t : t;
+    out.push(key);
+    parent = key.slice(0, key.lastIndexOf('.'));
+    rest = rest.slice(m[0].length);
+    if (!rest.startsWith('`')) break;
+  }
+  return out;
+}
+{
+  /* Les deux lecteurs s'accordent, ligne par ligne ; puis les clés des paquets
+     sont EXACTEMENT les clés lues, dans les deux sens. */
+  const disagree = rows.filter((r) => r.surface !== 'guest' && independentKeys(r.keyCell).join() !== r.keys.join());
+  expect(!disagree.length, 'le parseur et le second lecteur de la colonne clé donnent les mêmes clés pour chaque ligne', `lignes où les deux lecteurs divergent : ${disagree.map((r) => `${r.line}: ${r.keys.join(' ')} ≠ ${independentKeys(r.keyCell).join(' ')}`).join(' ; ')}`);
+  const read = new Set(rows.filter((r) => r.surface !== 'guest').flatMap((r) => independentKeys(r.keyCell)));
+  const inBundles = new Set(entry.keys());
+  const onlySpec = [...read].filter((k) => !inBundles.has(k)).sort();
+  const onlyBundles = [...inBundles].filter((k) => !read.has(k) && !SPEC_EXTRA.has(k)).sort();
+  expect(!onlySpec.length && !onlyBundles.length, `l'ensemble des ${read.size} clés de la table (second lecteur) est exactement l'ensemble des clés des paquets, dans les deux sens`,
+    `clés de la table absentes des paquets : ${onlySpec.join(', ') || '–'} ; clés des paquets absentes de la table : ${onlyBundles.join(', ') || '–'}`);
+}
 {
   const c = counts(rows);
   const st = statedCounts(spec);

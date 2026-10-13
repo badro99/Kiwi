@@ -77,7 +77,10 @@ export function parseKeyCell(cell) {
     if (raw.startsWith('.')) {
       if (prefix == null) throw new Error(`suffixe sans clé : ${cell}`);
       raw = prefix + raw;
-    } else if (prefix == null) {
+    } else {
+      /* Un suffixe « .cold » hérite du parent de la clé qui le PRÉCÈDE
+         immédiatement (`kds.station.hot` → `kds.station`), jamais de la
+         première clé de la ligne (`kds.all` → `kds`, d'où kds.cold). */
       prefix = raw.includes('.') ? raw.slice(0, raw.lastIndexOf('.')) : raw;
     }
     tokens.push(raw);
