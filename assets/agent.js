@@ -4889,7 +4889,7 @@
     @keyframes fa-kp-in { from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
     .fa-keypad-card { background:var(--surface); border:1px solid var(--n-200); border-radius:22px; padding:14px;
       margin-bottom:14px; box-shadow:0 18px 44px -26px rgba(10,15,13,.35); }
-    .fa-kpdisplay { background:var(--ink); color:#fff; border-radius:14px; padding:16px 18px;
+    .fa-kpdisplay { background: var(--inverse-surface); color:#fff; border-radius:14px; padding:16px 18px;
       text-align:right; direction:ltr;
       font-family:var(--mono); font-size:25px; letter-spacing:.02em; overflow:hidden; white-space:nowrap; }
     .fa-kpgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:11px; direction:ltr; }

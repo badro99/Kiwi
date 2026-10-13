@@ -54,7 +54,8 @@
   const CSS = `
   /* Payment link */
   .pl-preview { background: var(--paper-soft); border-radius: 14px; padding: 20px; text-align: center; border: 1px solid var(--n-200); }
-  .pl-qr { width: 120px; height: 120px; background: var(--ink); padding: 8px; border-radius: 10px; margin: 0 auto; background-image: repeating-linear-gradient(0deg, var(--ink) 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px); }
+  /* QR stand-in: fixed colours, a code does not invert with the theme */
+  .pl-qr { width: 120px; height: 120px; background: #0A0F0D; padding: 8px; border-radius: 10px; margin: 0 auto; background-image: repeating-linear-gradient(0deg, #0A0F0D 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, #0A0F0D 0 6px, transparent 6px 12px); }
   .pl-link { font-family: var(--mono); font-size: 13px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; padding: 10px 14px; margin-top: 14px; display: flex; align-items: center; gap: 10px; }
   .pl-link .copy { margin-left: auto; color: var(--atlas); font-weight: 500; cursor: pointer; font-size: 12.5px; }
   .pl-share { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }

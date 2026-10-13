@@ -41,7 +41,8 @@
   /* Inverse components — a dark slab carrying light text, on any background.
      KDS column heads, the settled-today calendar cell, the Tables alert banner.
 
-     These existed for months as `background: var(--ink); color: var(--paper)`,
+     These existed for months as the ink token painted as a background with the
+     paper token as its text,
      which reads correctly ONLY while ink is dark and paper is light. The Vexel
      dark climate flips both — --ink becomes #fff and --paper becomes #000, which
      is right for their actual meaning (foreground / page) and catastrophic for
@@ -176,7 +177,7 @@ em, i, cite, dfn, var { font-style: normal; }
 /* Buttons */
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 500; font-size: 15px; letter-spacing: -0.01em; transition: transform 150ms cubic-bezier(0.32, 0.72, 0, 1), background 150ms cubic-bezier(0.32, 0.72, 0, 1), color 150ms cubic-bezier(0.32, 0.72, 0, 1); white-space: nowrap; }
 .btn:active { transform: translateY(0) scale(0.97); }
-.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary { background: var(--inverse-surface); color: var(--inverse-ink); }
 .btn-primary:hover { background: var(--atlas); transform: translateY(-1px); }
 .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--n-300); }
 .btn-ghost:hover { border-color: var(--ink); }
@@ -194,7 +195,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
 /* Card */
 .card { background: var(--paper-elev); border: 1px solid color-mix(in srgb, var(--ink) 7%, transparent); border-radius: var(--r-lg); box-shadow: var(--elev-1); }
-.card-dark { background: var(--ink); color: var(--paper); border-radius: var(--r-lg); }
+.card-dark { background: var(--inverse-surface); color: var(--inverse-ink); border-radius: var(--r-lg); }
 .card-atlas { background: var(--atlas); color: var(--paper); border-radius: var(--r-lg); }
 .card-riad { background: var(--riad); color: var(--paper); border-radius: var(--r-lg); }
 

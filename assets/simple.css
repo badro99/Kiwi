@@ -73,7 +73,7 @@ html[data-mode="simple"] body { background: var(--surface); }
   letter-spacing: -0.005em;
   cursor: pointer;
   border: 0;
-  background: var(--ink);
+  background: var(--inverse-surface);
   color: #fff;
   transition: transform 120ms, background 120ms;
   text-decoration: none;
@@ -214,7 +214,7 @@ html[data-mode="simple"] body { background: var(--surface); }
   transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms;
   min-height: 32px;
 }
-.mode-tg button.on { background: var(--ink); color: #fff; }
+.mode-tg button.on { background: var(--inverse-surface); color: #fff; }
 
 /* In Pro mode (current dashboard), keep the toggle in topbar */
 html[data-mode="pro"] .simple-root,
@@ -229,7 +229,7 @@ html[data-mode="simple"] .mode-tg { top: 14px; right: 14px; }
   right: 20px;
   max-width: 520px;
   margin: 0 auto;
-  background: var(--ink);
+  background: var(--inverse-surface);
   color: #fff;
   border-radius: 14px;
   padding: 16px 18px;
@@ -425,7 +425,7 @@ html[data-mode="simple"] .mode-tg { top: 14px; right: 14px; }
 
 /* ─── AI Chat card in 3awn ─── */
 .ai-chat-card {
-  background: var(--ink);
+  background: var(--inverse-surface);
   color: #fff;
   border-radius: 18px;
   padding: 22px;

@@ -667,7 +667,7 @@ ar: {
 
   /* Button base for modals */
   .kb { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-family: var(--sans); font-weight: 500; font-size: 14px; letter-spacing: -0.005em; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; border: 1px solid transparent; }
-  .kb.primary { background: var(--ink); color: var(--paper); }
+  .kb.primary { background: var(--inverse-surface); color: var(--inverse-ink); }
   .kb.primary:hover { background: var(--atlas); }
   .kb.ghost { background: var(--surface); color: var(--ink); border-color: var(--n-200); }
   .kb.ghost:hover { border-color: var(--ink); }
@@ -3425,7 +3425,7 @@ ar: {
             .kup-card.is-current { background:var(--paper-soft); }
             .kup-card.is-reco { background:linear-gradient(165deg,#0c4a35,#08311f); border-color:transparent; color:#fff; box-shadow:0 14px 34px -18px rgba(11,110,79,0.55); }
             .kup-badge { position:absolute; top:-9px; inset-inline-start:14px; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:3px 8px; border-radius:999px; white-space:nowrap; }
-            .kup-card.is-current .kup-badge { background:var(--ink); color:var(--paper); }
+            .kup-card.is-current .kup-badge { background: var(--inverse-surface); color: var(--inverse-ink); }
             .kup-card.is-reco .kup-badge { background:var(--mint); color:#06371f; }
             .kup-name { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; color:var(--n-500); margin-bottom:9px; }
             .kup-card.is-reco .kup-name { color:rgba(255,255,255,0.65); }
@@ -3544,8 +3544,8 @@ ar: {
         width: 440,
         body: `
           <div style="display:flex; gap:20px; align-items:center; margin:14px 0 18px;">
-            <div style="width:140px; height:140px; border-radius:14px; background:var(--ink); padding:10px; flex-shrink:0;">
-              <div style="background:var(--paper); width:100%; height:100%; border-radius:6px; background-image: repeating-linear-gradient(0deg, var(--ink) 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px);"></div>
+            <div style="width:140px; height:140px; border-radius:14px; background:#0A0F0D; padding:10px; flex-shrink:0;">
+              <div style="background:#F7F5F0; width:100%; height:100%; border-radius:6px; background-image: repeating-linear-gradient(0deg, #0A0F0D 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, #0A0F0D 0 6px, transparent 6px 12px);"></div>
             </div>
             <div style="flex:1;">
               <div style="font-weight:600; font-size:16px; letter-spacing:-0.015em;">Scannez avec votre iPhone ou Android.</div>

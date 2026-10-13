@@ -19,8 +19,8 @@
 
 /* ─────── 2. INTERACTIVE PRICING CALCULATOR ─────── */
 .calc {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--inverse-surface);
+  color: var(--inverse-ink);
   border-radius: 28px;
   padding: 56px 48px;
   position: relative;

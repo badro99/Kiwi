@@ -93,7 +93,9 @@ html[data-theme="dark"] .icon-btn { background: var(--paper-soft); border-color:
 html[data-theme="dark"] .icon-btn:hover { border-color: var(--n-400); color: var(--ink); }
 html[data-theme="dark"] .btn-slim { background: var(--paper-soft); border-color: var(--n-200); color: var(--ink); }
 html[data-theme="dark"] .btn-slim:hover { border-color: var(--n-400); }
-html[data-theme="dark"] .btn-slim.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* Deliberately light in dark (an inverted primary button, see dark-fixes.js SKIP):
+   fixed values, not the tokens, so the intent does not depend on --ink flipping. */
+html[data-theme="dark"] .btn-slim.primary { background: #F2F0EA; color: #0B1210; border-color: #F2F0EA; }
 
 /* .kb.ghost (interactive.js) hardcodes a #fff fill + var(--ink) text — in dark that's
  * light-on-white. Only fusion-mode was patched; cover standard dark mode here too. */

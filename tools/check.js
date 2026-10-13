@@ -179,17 +179,19 @@ section('Balanced <script> tags');
 /* ── 4 · forbidden patterns ─────────────────────────────────────────────── */
 section('Forbidden patterns');
 {
-  // background:var(--ink) inverts in dark mode — the bug that broke the
-  // sidebar once. Existing instances are covered at runtime (theme.css
-  // overrides + dark-fixes), so this is a debt WARNING with per-file counts;
-  // keep the number from growing. Scope: the token/dark-mode surfaces.
+  // background:var(--ink) inverts in dark mode (the bug that broke the sidebar
+  // once, and left light-on-light slabs behind). The debt was burned down on
+  // 2026-10-13: a dark slab asks for --inverse-surface / --inverse-ink
+  // (tokens.css), a QR or a deliberate fixed colour uses a literal. Any new
+  // instance in the token/dark-mode surfaces now fails the build.
+  // tools/ink-debt-browser-test.mjs checks what actually paints.
   const INK_SCOPE = [...CSS_FILES, ...JS_FILES, path.join(ROOT, 'dashboard.html')];
   const inkCounts = [];
   for (const f of INK_SCOPE) {
     const n = (read(f).match(/background(?:-color)?\s*:\s*var\(--ink\)/g) || []).length;
     if (n) inkCounts.push(`${path.relative(ROOT, f)}: ${n}`);
   }
-  if (inkCounts.length) warn(`background:var(--ink) debt (runtime-patched today, do not add more) — ${inkCounts.join(' · ')}`);
+  if (inkCounts.length) fail(`background:var(--ink) is back (use var(--inverse-surface) + var(--inverse-ink), or a fixed colour) — ${inkCounts.join(' · ')}`);
   else ok('no background:var(--ink) in dark-mode surfaces');
 
   // Secret-shaped strings and unredacted credentials. The repo is public-facing demo code —
@@ -586,6 +588,24 @@ section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
   if (r.status !== 0) {
     if (!out.includes('✗')) fail(`ticket-sequence-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
     else failures++;
+  }
+}
+
+/* ── dette --ink · ce qui se peint, dans les quatre climats ───────────────
+ * ink-debt-browser-test.mjs ouvre l'Accueil, la barre latérale, le tiroir
+ * Commandes et Paramètres en clair/sombre × skin Vexel/héritage : aucun texte
+ * clair sur fond clair en sombre, et les dalles sombres restent sombres en
+ * clair. Même règle de skip explicite sans navigateur. */
+section('Dette background:var(--ink) · rendu navigateur (tools/ink-debt-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'ink-debt-browser-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('ink-debt browser suite skipped (no Chromium — browser assertions not executed)');
+  else if (r.status === 0) ok(`ink-debt browser suite green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`ink-debt-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
 

@@ -1048,7 +1048,7 @@ handlers['terminal-catalog'] = () => {
           <div class="p-card" style="margin:0; padding:0; overflow:hidden; background:var(--surface); ${p.featured ? 'grid-column:1 / -1; display:grid; grid-template-columns:1.1fr 1fr;' : ''} border:1px solid ${p.featured ? 'rgba(11,110,79,0.22)' : 'var(--n-200)'}; ${p.featured ? 'box-shadow:0 1px 0 rgba(11,110,79,0.06), 0 14px 32px -18px rgba(11,110,79,0.22);' : ''}">
             <div style="position:relative; ${p.featured ? 'aspect-ratio:auto; min-height:260px;' : 'aspect-ratio:5/3;'} background:var(--paper-soft); display:flex; align-items:center; justify-content:center; padding:${p.featured ? '20' : '14'}px; ${p.featured ? 'border-right:1px solid var(--n-200);' : 'border-bottom:1px solid var(--n-200);'}">
               <img src="${p.img}" alt="${p.name}" style="max-width:100%; max-height:100%; object-fit:contain; display:block;" loading="lazy">
-              ${p.featured ? `<span class="chip" style="position:absolute; top:12px; left:12px; background:var(--ink); color:var(--mint); font-size:11px; padding:4px 10px; letter-spacing:0.08em;">${T.flagship}</span>` : ''}
+              ${p.featured ? `<span class="chip" style="position:absolute; top:12px; left:12px; background:var(--inverse-surface); color:var(--mint); font-size:11px; padding:4px 10px; letter-spacing:0.08em;">${T.flagship}</span>` : ''}
               <span style="position:absolute; top:${p.featured ? '12' : '10'}px; right:${p.featured ? '12' : '10'}px; background:var(--surface); border:1px solid var(--n-200); border-radius:999px; padding:4px 10px; font-family:var(--mono); font-size:12px; font-weight:600; color:var(--ink);">${p.price}</span>
             </div>
             <div style="padding:${p.featured ? '20px 22px' : '14px 16px 16px'}; display:flex; flex-direction:column;">
@@ -1320,7 +1320,7 @@ handlers['nav-reglements'] = () => {
           ['Attijariwafa', '••8104', 'Backup · 0 % flux configuré', 'neutral', 'En attente'],
         ].map(([b, m, d, st, lbl]) => `
           <div style="display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; padding:11px 0; border-top:1px solid var(--n-200); align-items:center;">
-            <div style="width:32px; height:32px; border-radius:8px; background:var(--ink); color:var(--mint); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; font-weight:600;">${b.slice(0,2).toUpperCase()}</div>
+            <div style="width:32px; height:32px; border-radius:8px; background:var(--inverse-surface); color:var(--mint); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; font-weight:600;">${b.slice(0,2).toUpperCase()}</div>
             <div>
               <div style="font-weight:500; font-size:13.5px;">${b} <span style="color:var(--n-500); font-family:var(--mono); font-size:12px;">${m}</span></div>
               <div style="font-size:11.5px; color:var(--n-500); margin-top:2px;">${d}</div>
@@ -17154,7 +17154,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (k === 'cure') {
         return CURES.map((c, i) => `
           <div class="s-pkg-card" data-action="svc-cure-edit" data-arg="${i}">
-            <div class="s-pkg-tag" style="background: var(--ink); color: var(--mint);">CURE MULTI-SÉANCES</div>
+            <div class="s-pkg-tag" style="background: var(--inverse-surface); color: var(--mint);">CURE MULTI-SÉANCES</div>
             <h5>${c.n}</h5>
             <div class="s-pkg-meta">${c.dur} · ${fmt(c.p)} MAD</div>
             <p class="s-pkg-desc">${c.desc}</p>
@@ -18480,7 +18480,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kiwi-st-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--mono); letter-spacing: 0.04em; padding: 3px 7px 3px 6px; border-radius: 7px; background: var(--paper-soft); border: 1px solid var(--n-200); color: var(--n-600); white-space: nowrap; line-height: 1.2; }
       html[data-theme="dark"] .kiwi-st-chip { background: var(--paper-muted); }
       .kiwi-st-chip i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-      .kiwi-st-chip.solid { background: var(--ink); color: var(--paper); border-color: transparent; }
+      .kiwi-st-chip.solid { background: var(--inverse-surface); color: var(--inverse-ink); border-color: transparent; }
       .kiwi-st-chips { display: inline-flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
       .menu-row .kiwi-st-chips { margin-top: 5px; }
 
@@ -19440,7 +19440,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-item-off { opacity: 0.32; }
       .kit-act { width: 100%; border: 0; margin: 0; padding: 15px; cursor: pointer; font-family: var(--sans); font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 130ms ease, filter 120ms ease; }
       .kit-act svg { width: 17px; height: 17px; }
-      .kit-act-accept { background: var(--ink); color: var(--paper); }
+      .kit-act-accept { background: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-act-accept:hover { background: #1c2723; }
       .kit-act-ready { background: var(--atlas); color: var(--paper); }
       .kit-act-ready:hover { background: var(--atlas-700); }
@@ -20406,7 +20406,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
       '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}' +
       '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--surface)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}html[data-theme="dark"] .rtx-summary strong{color:var(--mint)}html[data-theme="dark"] .rtx-summary .is-refund strong{color:#FCA597}' +
-      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-method{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
+      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-notice .rtx-method{background:#fffdfa;color:#81501a;border-color:#e6c99a}.rtx-method{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
       '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
     document.head.appendChild(s);
   }
