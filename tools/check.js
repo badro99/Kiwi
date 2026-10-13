@@ -1680,6 +1680,21 @@ section('Whole-project regressions');
     'lock-caisse-link-test.mjs',
     'lock-greeting-truth-test.mjs',
     'check-guard-test.mjs',
+    /* Direction 2027, étape 1 · mouvement, mise en page, segmentation.
+       motion.js (§14) : jetons, ressort de geste (1400 / 74,8 / 1/120 s et le
+       tableau des temps de pose), seuils de geste, puis dans un vrai Chromium
+       (transform et opacity seulement, départ depuis la valeur présentée,
+       reduced motion, ressort, reprise d'une animation). motion-lint : aucune
+       transition hors transform, opacité et les trois exceptions, sur assets/kit.
+       layout.js (§13) : la règle de largeur de la caisse et son bloc d'en-tête de
+       six lignes. segment.js : une seule segmentation client. target-audit :
+       l'audit de zone de toucher (§10.6), prouvé sur le segmenté du cahier. */
+    'motion-test.mjs',
+    'motion-browser-test.mjs',
+    'motion-lint-test.mjs',
+    'layout-test.mjs',
+    'segment-test.mjs',
+    'target-audit-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',
     'caisse-client-sale-test.mjs',
