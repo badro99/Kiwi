@@ -2203,8 +2203,12 @@
         .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     } catch (_) { return ''; }
   }
-  /* Les pourboires déclarés par les journées CLOSES de la fenêtre. Une journée
-   * encore ouverte n'a rien déclaré : on ne la compte pas, on ne l'estime pas.
+  /* Les pourboires déclarés par les journées CLOSES de la fenêtre, et, pour une
+   * journée encore ouverte, ceux que la caisse a saisis à l'encaissement
+   * (sales.tip_cents, porté par le flux). Une journée close garde son chiffre
+   * déclaré, jamais additionné aux saisies : c'est le Z qui fait foi. Une
+   * journée ouverte sans aucun pourboire saisi n'est pas comptée : rien à dire,
+   * plutôt qu'un 0 qu'une caisse plus ancienne n'aurait simplement pas envoyé.
    * null quand le classeur n'est pas chargé (rien à dire). */
   function realClosedTips(range) {
     const DR = window.KiwiDayReport;
@@ -2218,13 +2222,28 @@
     let sum = 0, days = 0;
     let reports = [];
     try { reports = DR.list(book) || []; } catch (_) { return null; }
+    const closed = new Set();
     reports.forEach((r) => {
       if (!r || !r.closed || !r.day || r.day < first || r.day > last) return;
       const t = Number(r.tips);
-      days++;
+      days++; closed.add(r.day);
       if (Number.isFinite(t) && t > 0) sum += t;
     });
-    return { sum: Math.round(sum * 100) / 100, days };
+    const live = new Set();
+    let sales = [];
+    try { sales = typeof realSalesList === 'function' ? realSalesList() : []; } catch (_) { sales = []; }
+    (sales || []).forEach((e) => {
+      const cents = Math.round(Number(e && e.tipCents));
+      if (!(cents > 0)) return;
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const day = merchantDayKey(ts, slug);
+      if (closed.has(day)) return;
+      live.add(day);
+      sum += cents / 100;
+    });
+    days += live.size;
+    return { sum: Math.round(sum * 100) / 100, days, liveDays: live.size };
   }
   /* Les clients du carnet (KiwiClients) venus sur [from, to) : ceux qu'on a
    * déjà vus avant `from` sont des réguliers, les autres des nouveaux. Seuls
@@ -2256,6 +2275,22 @@
     const slug = activeMerchantSlug();
     const a = merchantDayKey(from + 1, slug), b = merchantDayKey(to - 1, slug);
     return Math.max(1, Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5) + 1);
+  }
+  /* Les journées d'ouverture de la fenêtre : celles où la caisse a enregistré
+   * au moins une vente (journée de caisse, coupure à 5 h). « CA par jour » et
+   * « Ventes par jour » divisaient par la longueur de la période : un commerce
+   * fermé le dimanche voyait sa moyenne amputée d'un septième, une semaine de
+   * congés la divisait encore. Une période sans aucune vente vaut 1 (la
+   * moyenne est alors 0, pas une division par zéro). */
+  function openDays(range) {
+    const [from, to] = closedBounds(range);
+    const slug = activeMerchantSlug();
+    const days = new Set();
+    realSalesList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts >= from && ts < to) days.add(merchantDayKey(ts, slug));
+    });
+    return Math.max(1, days.size);
   }
   function realDeltaPct(range, pick, backDays, stats = realWindowStats) {
     const [from, to] = closedBounds(range);
@@ -2973,7 +3008,7 @@
     receivable: { labels: { default: 'Créances', en: 'Receivable', ar: 'المستحق' }, i18n: '',
                   desc: 'Ventes à crédit ou livraison non encore encaissées', derive: (d) => d.receivable ? { value: d.receivable.value, unit: 'MAD', fmt: 'int', delta: d.receivable.delta } : null },
     revPerDay:  { labels: { default: 'CA par jour' }, i18n: 'dash.kpi.revPerDay',
-                  desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+                  desc: 'Chiffre d’affaires moyen par jour d’ouverture', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
                   desc: 'Part du CA conservée après coût matière', derive: (d) => d.marge || null },
     profit:     { labels: { default: 'Bénéfice brut' }, i18n: 'dash.kpi.grossProfit',
@@ -2988,7 +3023,7 @@
        et la bande par défaut le remplace par un indicateur qui a une valeur.
        La démo garde son estimation : tout y est illustratif. */
     tips:       { labels: { default: 'Pourboires' }, i18n: 'dash.kpi.tips',
-                  desc: 'Pourboires déclarés à la clôture', derive: (d, ctx) => {
+                  desc: 'Pourboires déclarés à la clôture, ou saisis à l’encaissement pour une journée ouverte', derive: (d, ctx) => {
                     if (ownData()) {
                       const real = realClosedTips(ctx.range);
                       if (!real) return null;
@@ -3016,7 +3051,7 @@
                     if (d.clientMix) return { value: d.clientMix.newcomers, unit: '', fmt: 'int', delta: d.clientMix.deltaNew };
                     if (!d.tx || !d.regulars) return null; if (d.regulars.text === '·') return { text: '·', value: 0, unit: '', fmt: 'int', delta: null }; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
     txPerDay:   { labels: { default: 'Ventes par jour', spa: 'RDV par jour' }, i18n: 'dash.kpi.txPerDay',
-                  desc: 'Nombre de ventes moyen par jour', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
+                  desc: 'Nombre de ventes moyen par jour d’ouverture', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
     occupation: { labels: { default: "Taux d'occupation" }, i18n: 'dash.kpi.occupancy',
                   desc: 'Chambres occupées vs chambres disponibles', derive: (d) => d.occupation || null },
     adr:        { labels: { default: 'ADR · prix moyen / nuit' }, i18n: 'dash.kpi.adr',
@@ -3439,7 +3474,7 @@
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
     const savedLayout = getKpiLayout(venueType);
     let layout = savedLayout || defaultKpiKeys(venueType);
-    const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? windowDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
+    const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? openDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
     const deriveTile = (k) => {
       const c = KPI_CATALOG[k];
       return c ? c.derive(data, ctx) : (data[k] || null);
@@ -3602,7 +3637,7 @@
     const kc = KC_STR[lang] || KC_STR.fr;
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
     const data = vData(kpiByVenue, currentRange) || {};
-    const ctx = { venueType, range: effRange(), nbDays: RANGE_DAYS[effRange()] || 1 };
+    const ctx = { venueType, range: effRange(), nbDays: (ownData() && window.KiwiSales) ? openDays(effRange()) : (RANGE_DAYS[effRange()] || 1) };
 
     // Only offer KPIs that actually resolve for this venue + range.
     const available = Object.keys(KPI_CATALOG).filter((k) => {

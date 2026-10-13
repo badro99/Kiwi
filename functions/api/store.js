@@ -495,9 +495,78 @@ function stripAgentActions() { return { items: [], versions: [] }; }
 function stripBriefing() { return { days: [] }; }
 function stripRetention() { return { settings: null, offers: null, sends: [] }; }
 function stripCharges() { return { lines: [], social: { rate: null }, commissions: { methods: {}, channels: {} } }; }
+/* Les fiches techniques du tableau de bord (assets/restaurant-recipes.js) :
+ * grammages et rendements, le savoir-faire de la maison. Seul dashboard.html
+ * charge ce module ; la caisse chiffre ses ventes par `costs` (KiwiCost.of),
+ * jamais par ce document. Une caisse appairée n'a donc rien à y lire. */
+function stripRecipes() { return { items: {} }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
-const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing, retention: stripRetention, charges: stripCharges };
+const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing, retention: stripRetention, charges: stripCharges, recipes: stripRecipes };
+
+/* ── DES DOCUMENTS QUE LA CAISSE ÉCRIT, MAIS DONT ELLE NE LIT QU'UNE PARTIE ──
+ * REDACT ferme un document entier : qui ne lit pas ne réécrit pas. Deux
+ * documents ne peuvent pas être fermés ainsi, parce que la caisse appairée y
+ * écrit légitimement :
+ *
+ * - `workspaces` : la caisse de la pharmacie y lit les fiches médicament, les
+ *   lots et les organismes, et y DÉPOSE l'ordonnance délivrée et le dossier
+ *   de tiers payant d'une vente. Elle ne relit jamais ni l'un ni l'autre. Or
+ *   ces deux tableaux portent le nom du patient, son médecin, son organisme :
+ *   des données de santé, lisibles jusqu'ici par n'importe quel appareil de
+ *   comptoir appairé. Elles restent au pharmacien titulaire (la session du
+ *   compte) ; la caisse continue d'en ajouter.
+ * - `costs` : la caisse gèle le coût matière d'une ligne au moment de la
+ *   vente (KiwiCost.of), il lui faut donc les coûts, les ingrédients et les
+ *   fiches de ce document. Les charges fixes et les objectifs de marge, non :
+ *   c'est le compte d'exploitation.
+ *
+ * `hide` rend la vue de la caisse ; `keep` reconstruit, à l'écriture d'une
+ * surface qui n'a reçu que cette vue, ce qu'elle n'a pas pu renvoyer : sans lui,
+ * la caisse relirait la vue expurgée, la pousserait, et effacerait au serveur
+ * les ordonnances ou les charges (la règle de `team-doc-redaction-test`). */
+const HIDDEN_BOARDS = ['prescriptions', 'insurers'];
+function unionById(older, newer) {
+  const ids = new Map();
+  [...(Array.isArray(older) ? older : []), ...(Array.isArray(newer) ? newer : [])].forEach((r) => {
+    if (!r || typeof r !== 'object' || !r.id) return;
+    const id = String(r.id);
+    const prev = ids.get(id);
+    if (!prev || (+r.updatedAt || 0) >= (+prev.updatedAt || 0)) ids.set(id, r);
+  });
+  return [...ids.values()].sort((a, b) => (+b.updatedAt || 0) - (+a.updatedAt || 0)).slice(0, 500);
+}
+const PARTIAL = {
+  workspaces: {
+    hide(doc) {
+      if (!doc || typeof doc !== 'object' || !doc.records || typeof doc.records !== 'object') return doc;
+      const records = { ...doc.records };
+      HIDDEN_BOARDS.forEach((nav) => { if (nav in records) records[nav] = []; });
+      return { ...doc, records };
+    },
+    keep(prev, next) {
+      if (!next || typeof next !== 'object') return next;
+      const before = (prev && prev.records) || {};
+      const records = { ...((next.records && typeof next.records === 'object') ? next.records : {}) };
+      HIDDEN_BOARDS.forEach((nav) => {
+        const merged = unionById(before[nav], records[nav]);
+        if (merged.length || nav in records || nav in before) records[nav] = merged;
+      });
+      return { ...next, records };
+    },
+  },
+  costs: {
+    hide(doc) {
+      if (!doc || typeof doc !== 'object') return doc;
+      return { ...doc, charges: [], targets: {} };
+    },
+    keep(prev, next) {
+      if (!next || typeof next !== 'object') return next;
+      const p = prev && typeof prev === 'object' ? prev : {};
+      return { ...next, charges: Array.isArray(p.charges) ? p.charges : [], targets: (p.targets && typeof p.targets === 'object') ? p.targets : {} };
+    },
+  },
+};
 
 /* A store's briefing holds that store's days only. Each day names the venue it
  * was computed for, and that venue is the slug the browser syncs under; a day
@@ -683,7 +752,7 @@ export async function onRequestGet(context) {
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
     if (feature === 'briefing') data = ownBriefingDays(data, merchant);
-    const redact = REDACT[feature];
+    const redact = REDACT[feature] || (PARTIAL[feature] && PARTIAL[feature].hide);
     const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
   } catch (_) {
@@ -741,6 +810,10 @@ export async function onRequestPost(context) {
   if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant))) {
     return json({ error: 'forbidden-feature', feature }, 403);
   }
+  /* Voir PARTIAL : une surface qui ne lit qu'une vue du document ne reçoit que
+     cette vue, même dans une réponse de conflit, et ne peut pas effacer le reste. */
+  const partial = PARTIAL[feature] && !(await editsRoster(request, env, merchant)) ? PARTIAL[feature] : null;
+  const view = (doc) => (partial ? partial.hide(doc) : doc);
   if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
       && !(await isHotelMerchant(env, merchant))) {
     return json({ error: 'hotel-only' }, 403);
@@ -807,7 +880,15 @@ export async function onRequestPost(context) {
   // copie serveur pour que le client fusionne et repropose. Sans ça, deux
   // appareils ouverts en même temps se recouvrent l'un l'autre.
   if (serverRev && baseRev !== serverRev) {
-    return json({ error: 'stale', feature, rev: serverRev, data: mine }, 409);
+    return json({ error: 'stale', feature, rev: serverRev, data: view(mine) }, 409);
+  }
+
+  if (partial) {
+    clean.value = partial.keep(mine, clean.value);
+    text = JSON.stringify(clean.value);
+    if (text.length > FEATURES[feature].max) {
+      return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+    }
   }
 
   if (feature === 'pressing-orders') {
@@ -890,7 +971,7 @@ export async function onRequestPost(context) {
    * L'appareil reçoit foreign-document et abandonne sa copie (assets/cloud-doc.js). */
   const foreign = await quarantined(merchant, feature, text) || await foreignCopy(env, { table: 'store', merchant, feature, next: clean.value, current: mine, text });
   if (foreign) {
-    return json({ error: 'foreign-document', feature, rev: serverRev, data: mine }, 409);
+    return json({ error: 'foreign-document', feature, rev: serverRev, data: view(mine) }, 409);
   }
 
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est
@@ -901,7 +982,7 @@ export async function onRequestPost(context) {
   if (serverRev && isEmptyDoc(clean.value) && feature !== PRINT_HUB_FEATURE
       && !(feature === 'monthreport' && Object.prototype.hasOwnProperty.call(clean.value, 'accountantEmail'))) {
     if (!isEmptyDoc(mine)) {
-      return json({ error: 'refused-empty', feature, rev: serverRev, data: mine }, 409);
+      return json({ error: 'refused-empty', feature, rev: serverRev, data: view(mine) }, 409);
     }
   }
 

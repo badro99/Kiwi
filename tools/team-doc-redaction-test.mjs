@@ -191,6 +191,83 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
   }
 }
 
+/* ── 3c. Données de santé, fiches techniques, compte d'exploitation ─────────
+ *        `workspaces` et `costs` sont ÉCRITS par la caisse, donc REDACT ne peut
+ *        pas les fermer : la caisse en reçoit une vue (PARTIAL dans store.js),
+ *        et ce qu'elle n'a pas reçu survit à ce qu'elle renvoie. */
+{
+  const post = (cookie, feature, data, baseRev) => storePost({ request: new Request('https://k/api/store', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ feature, merchant: SHOP, data, baseRev }) }), env });
+  const rowOf = (feature) => JSON.parse(db.prepare(`SELECT data FROM store_docs WHERE merchant = ? AND feature = ?`).get(SHOP, feature).data);
+  const revOf = (feature) => db.prepare(`SELECT rev FROM store_docs WHERE merchant = ? AND feature = ?`).get(SHOP, feature).rev;
+  const rec = (id, values, at) => ({ id, title: id, status: 3, values, createdAt: at, updatedAt: at, deletedAt: 0 });
+
+  const WS = { trade: 'pharmacie', records: {
+    prescriptions: [rec('rx-1', { patient: 'Fatima Zahra K.', doctor: 'Dr Alaoui', note: 'allergie pénicilline' }, now - 5000)],
+    insurers: [rec('cl-1', { patient: 'Fatima Zahra K.', payer: 'CNOPS' }, now - 5000)],
+    drugs: [rec('dr-1', { dci: 'paracétamol' }, now - 5000)],
+  } };
+  db.prepare(`INSERT INTO store_docs VALUES (?,'workspaces',?,1,?)`).run(SHOP, JSON.stringify(WS), now);
+  const HEALTH = /Fatima|Alaoui|pénicilline|CNOPS/;
+  for (const [who, cookie] of [['une caisse appairée', till], ['un employé connecté', emp]]) {
+    const res = await get(storeGet, `https://k/api/store?feature=workspaces&merchant=${SHOP}`, cookie);
+    const body = await res.text();
+    ok(`${who} ne lit ni ordonnance ni dossier de tiers payant`, (res.status === 200 && !HEALTH.test(body)) || res.status === 401 || res.status === 403, `${res.status} ${body.slice(0, 200)}`);
+    if (res.status === 200) ok(`…mais garde les fiches médicament dont la vente a besoin (${who})`, /paracétamol/.test(body));
+  }
+  {
+    const res = await get(storeGet, `https://k/api/store?feature=workspaces&merchant=${SHOP}`, owner);
+    ok('le titulaire lit ordonnances et dossiers', res.status === 200 && HEALTH.test(await res.text()));
+  }
+  {
+    /* La caisse renvoie la vue qu'elle a reçue, plus l'ordonnance qu'elle vient de délivrer. */
+    const view = JSON.parse(await (await get(storeGet, `https://k/api/store?feature=workspaces&merchant=${SHOP}`, till)).text()).data;
+    view.records.prescriptions = [rec('rx-2', { patient: 'Youssef B.' }, now)];
+    const res = await post(till, 'workspaces', view, 1);
+    const body = await res.text();
+    const row = rowOf('workspaces');
+    const rx = row.records.prescriptions.map((r) => r.id).sort().join(',');
+    ok('la caisse dépose une ordonnance délivrée sans effacer les autres', res.status === 200 && rx === 'rx-1,rx-2' && row.records.insurers.length === 1, `${res.status} ${rx} ${body.slice(0, 120)}`);
+    ok('…et la réponse ne lui rend rien de ce qu’elle ne lit pas', !HEALTH.test(body));
+  }
+  {
+    const res = await post(till, 'workspaces', { trade: 'pharmacie', records: { drugs: [] } }, 1);
+    const body = await res.text();
+    ok('un conflit de révision rend à la caisse la vue, pas le document entier', res.status === 409 && !HEALTH.test(body) && !/Youssef/.test(body), `${res.status} ${body.slice(0, 160)}`);
+  }
+  {
+    const full = rowOf('workspaces');
+    full.records.prescriptions = full.records.prescriptions.filter((r) => r.id !== 'rx-1');
+    const res = await post(owner, 'workspaces', full, revOf('workspaces'));
+    ok('le titulaire, lui, peut retirer une ordonnance', res.status === 200 && rowOf('workspaces').records.prescriptions.map((r) => r.id).join(',') === 'rx-2');
+  }
+
+  const COSTS = { items: { 'm-1': { cost: 12.5, at: now } }, ingredients: [{ id: 'i-1', name: 'Farine', price: 9, at: now }], recipes: {},
+    charges: [{ id: 'c1', label: 'Loyer du local', amount: 9123 }], targets: { foodCostPct: 31 }, seq: 1 };
+  db.prepare(`INSERT INTO store_docs VALUES (?,'costs',?,1,?)`).run(SHOP, JSON.stringify(COSTS), now);
+  {
+    const res = await get(storeGet, `https://k/api/store?feature=costs&merchant=${SHOP}`, till);
+    const body = JSON.parse(await res.text());
+    ok('la caisse lit les coûts dont elle gèle la vente, pas les charges ni les objectifs',
+      res.status === 200 && body.data.items['m-1'].cost === 12.5 && body.data.ingredients.length === 1 && body.data.charges.length === 0 && !Object.keys(body.data.targets).length);
+    const back = await post(till, 'costs', { ...body.data, items: { 'm-1': { cost: 13, at: now + 1 } } }, 1);
+    const row = rowOf('costs');
+    ok('…et ce qu’elle renvoie n’efface pas les charges ni les objectifs', back.status === 200 && row.charges[0].amount === 9123 && row.targets.foodCostPct === 31 && row.items['m-1'].cost === 13);
+  }
+
+  db.prepare(`INSERT INTO store_docs VALUES (?,'recipes',?,1,?)`).run(SHOP, JSON.stringify({ items: { 'r-1': { name: 'Tajine', lines: [{ g: 180 }] } } }), now);
+  {
+    const res = await get(storeGet, `https://k/api/store?feature=recipes&merchant=${SHOP}`, till);
+    const body = await res.text();
+    ok('la caisse ne lit pas les fiches techniques du tableau de bord', res.status === 200 && !/Tajine/.test(body));
+    const w = await post(till, 'recipes', { items: {} }, 1);
+    ok('…et ne peut pas les réécrire (403)', w.status === 403 && /Tajine/.test(JSON.stringify(rowOf('recipes'))));
+    const o = await get(storeGet, `https://k/api/store?feature=recipes&merchant=${SHOP}`, owner);
+    ok('le patron les lit', /Tajine/.test(await o.text()));
+  }
+}
+
 /* ── 4. Le miroir dérivé, et les deux surfaces qui le lisent ─────────────── */
 {
   const res = await get(storeGet, `https://k/api/store?feature=employee-access&merchant=${SHOP}`, owner);

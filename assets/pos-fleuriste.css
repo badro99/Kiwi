@@ -531,6 +531,13 @@
 .fl-dt-recip .addr svg { width: 14px; height: 14px; color: var(--forest); flex-shrink: 0; margin-top: 2px; }
 .fl-dt-recip .tel { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-top: 5px; display: inline-flex; align-items: center; gap: 6px; }
 .fl-dt-recip .tel svg { width: 12px; height: 12px; }
+.fl-dt-recip.unset b, .fl-dt-recip.unset .addr { color: var(--ink-3); }
+.fl-recip-edit { margin-top: 10px; padding-left: 0; }
+.fl-recip-form { display: grid; gap: 8px; }
+.fl-recip-form .fl-in { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 15px; background: var(--paper, #F7F5F0); color: var(--ink, #0A0F0D); }
+.fl-recip-err { font-size: 12.5px; color: var(--danger-mute); }
+.fl-recip-err[hidden] { display: none; }
+.fl-recip-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
 .fl-dt-recip .note { font-size: 12px; color: var(--ink-3); margin-top: 7px; padding-left: 10px; border-left: 2px solid var(--mint-edge); }
 
 .fl-dt-flow { display: flex; gap: 6px; margin-bottom: 6px; }

@@ -197,8 +197,21 @@ ok('une ligne qui ne se résout pas vers le catalogue reste « sans prix », jam
 });
 
 ok('librairie : l’acompte et le solde d’une commande spéciale entrent dans la recette', () => {
-  assert.match(LIB, /postDay\(cmd\.acompte, 'especes', `Acompte \$\{cmd\.id\}`/);
-  assert.match(LIB, /Solde/);
+  assert.match(LIB, /postDay\(cmd\.acompte, cmd\.acompteTender, `Acompte \$\{cmd\.id\}`/);
+  assert.match(LIB, /postDay\(due, paidBy, `Solde \$\{c\.id\}`/);
+});
+
+ok('librairie : acompte et solde gardent leur vrai moyen de paiement, rien n’est présélectionné', () => {
+  // Ni l'acompte ni le solde ne s'inscrivent plus en espèces d'office.
+  assert.doesNotMatch(LIB, /postDay\(cmd\.acompte, 'especes'/);
+  assert.doesNotMatch(LIB, /postDay\(due, 'especes'/);
+  // Un acompte demande comment il est réglé, et l'état de départ est vide.
+  assert.match(LIB, /acTender: '',/);
+  assert.match(LIB, /draft\.acompte > 0 && !draft\.acTender\) \{ toast\(/);
+  // La remise propose les deux gestes ; l'étape « Retirée » seule ne choisit pas.
+  assert.match(LIB, /data-lb-tender="especes"/);
+  assert.match(LIB, /data-lb-tender="carte"/);
+  assert.match(LIB, /tender !== 'especes' && tender !== 'carte'\) \{/);
   assert.match(LIB, /soldeRecorded/);
 });
 
@@ -305,6 +318,19 @@ ok('copie : pas de tiret cadratin, pas d’italique, pas de couleur hors palette
   });
   /* Le schéma est du texte utilisateur pur : aucun U+2014. */
   assert.doesNotMatch(SCHEMA.replace(/\/\*[\s\S]*?\*\//g, ''), /—/, 'schéma');
+});
+
+ok('liste scolaire : pas de « Solde 0 MAD » tant qu’aucune fiche ne porte de montant', () => {
+  const sc = S.get('librairie', 'schoollists');
+  const bare = S.summary(sc, [{ id: 'l1', title: 'École Al Andalous', values: { level: 'CE2', items: '2 x Cahier' } }]);
+  assert.equal(bare.balanceTracked, false);
+  const priced = S.summary(sc, [{ id: 'l2', title: 'École Al Andalous', values: { level: 'CE2', items: '2 x Cahier', total: 120, paid: 40 } }]);
+  assert.equal(priced.balanceTracked, true);
+  assert.equal(priced.balance, 80);
+  // Une fiche sans solde du tout (check-list des retours fleuriste) ne le suit jamais.
+  assert.equal(S.summary(S.get('fleuriste', 'returns'), [{ id: 'r1', title: 'Roses', values: { qty: 3, amount: 50 } }]).balanceTracked, false);
+  // La bande de la caisse n'affiche la case que dans ce cas.
+  assert.match(WSJS, /\$\{sum\.balanceTracked\?`<span><b>\$\{esc\(pick\(UI\.balance\)\)\}<\/b>/);
 });
 
 ok('la fiche santé ne passe que par le document tenant-scopé, jamais dans un journal', () => {

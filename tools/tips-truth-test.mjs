@@ -40,7 +40,7 @@ const bounds = {
   hier: [Date.parse('2026-10-12T05:00:00Z'), Date.parse('2026-10-13T05:00:00Z')],
 };
 const asked = [];
-function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false, venue = { slug: 'cafe-test', name: 'Café Test' }, custom = true }) {
+function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noBook = false, venue = { slug: 'cafe-test', name: 'Café Test' }, custom = true, sales = [] }) {
   const window = {
     KiwiDayReport: noBook ? undefined : { list: (slug) => { asked.push(slug); return slug === 'cafe-test' ? book.slice() : [{ day: '2026-10-12', closed: true, tips: 5000 }]; } },
     KiwiVenue: { isCustom: () => custom, getCurrentVenueData: () => venue },
@@ -51,6 +51,7 @@ function run({ real, book, range, revenue = 10000, venueType = 'restaurant', noB
     rangeBounds: (r) => bounds[r], activeMerchantSlug: () => 'cafe-test', merchantDayKey: (t) => keyOf(t),
     TIP_RATE: { restaurant: 0.072, boutique: 0 }, revOf: (d) => (d.revenue ? d.revenue.value : null),
     revDelta: () => 3.2,
+    realSalesList: () => sales,
   });
   vm.runInContext(SRC.slice(fnFrom, fnTo) + '\nvar __tile = {' + SRC.slice(tipFrom, tipTo) + '}.tips;', ctx);
   return ctx.__tile.derive({ revenue: { value: revenue } }, { venueType, range });
@@ -70,7 +71,7 @@ check('no comparison is invented for it', week && week.delta === null);
 const yesterday = run({ real: true, book, range: 'hier' });
 check('yesterday: that day only', yesterday && yesterday.value === 120, JSON.stringify(yesterday));
 const today = run({ real: true, book, range: 'aujourdhui' });
-check('today, still open: « · », never an amount', today && today.text === '·' && today.value === 0, JSON.stringify(today));
+check('today, still open and no tip entered: « · », never an amount', today && today.text === '·' && today.value === 0, JSON.stringify(today));
 const none = run({ real: true, book: [], range: 'septJours' });
 check('no day closed in the window: « · »', none && none.text === '·', JSON.stringify(none));
 const zero = run({ real: true, book: [{ day: '2026-10-09', closed: true, tips: 0 }], range: 'septJours' });
@@ -88,13 +89,40 @@ check('a store on screen that cannot be identified: no tile, never another store
 const renamed = run({ real: true, book, range: 'septJours', venue: { name: 'Café Test' } });
 check('without an engraved slug, the name gives the same book (Café Test → cafe-test)', renamed && renamed.value === 200.4, JSON.stringify(renamed));
 
+/* Les pourboires saisis à l'encaissement (sales.tip_cents → flux → KiwiSales). */
+const SALES = [
+  { ts: ts(TODAY), amount: 300, tipCents: 2550 },        // aujourd'hui, journée ouverte
+  { ts: ts(TODAY), amount: 120, tipCents: 1000 },
+  { ts: ts(TODAY), amount: 90 },                          // sans pourboire
+  { ts: ts('2026-10-12'), amount: 500, tipCents: 9900 },  // hier, journée close : le Z fait foi
+  { ts: ts('2026-10-11'), amount: 200, tipCents: 700 },   // dimanche, jamais clôturé
+];
+const todayLive = run({ real: true, book, range: 'aujourdhui', sales: SALES });
+check('today, still open: the tips entered at payment (25,50 + 10)', todayLive && todayLive.value === 35.5 && todayLive.text == null, JSON.stringify(todayLive));
+const weekLive = run({ real: true, book, range: 'septJours', sales: SALES });
+check('7 days: closed days as declared, never added to what was entered (200,40 + 35,50 + 7)', weekLive && weekLive.value === 242.9, JSON.stringify(weekLive));
+const quiet = run({ real: true, book: [], range: 'aujourdhui', sales: [{ ts: ts(TODAY), amount: 90 }] });
+check('an open day with sales but no tip entered stays « · », not an invented 0', quiet && quiet.text === '·', JSON.stringify(quiet));
+
+const LL = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+const SALE = fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
+const FEED = fs.readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
+const VEN = fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
+check('the till sends the tip beside the amount, the server keeps it, the feed returns it, the store holds it',
+  /if \(\+entry\.tip > 0\) body\.tipCents = Math\.round\(\+entry\.tip \* 100\);/.test(LL)
+  && /UPDATE sales SET tip_cents = \? WHERE merchant = \? AND id = \? AND tip_cents IS NULL/.test(SALE)
+  && /SELECT id, tip_cents FROM sales/.test(FEED) && /tipCents: s\.tipCents/.test(LL)
+  && /if \(Number\.isSafeInteger\(tipCents\) && tipCents > 0\) entry\.tipCents = tipCents;/.test(VEN));
+check('a tip that cannot be written never undoes the sale', /catch \(_\) \{ \/\* la vente reste ; le Z déclarera le pourboire \*\/ \}/.test(SALE));
+
 const demo = run({ real: false, book, range: 'septJours', revenue: 10000 });
 check('the demo keeps its illustration (revenue × rate)', demo && demo.value === 720 && demo.delta === 3.2, JSON.stringify(demo));
 
 const IX = fs.readFileSync(path.join(ROOT, 'assets/interactive.js'), 'utf8');
 check('no tooltip still calls them estimated', !/Pourboires estimés|Estimated tips|الإكراميات المقدرة|Estimation des pourboires|calculée à partir de votre volume de ventes/.test(IX));
 check('the tooltips say where they come from, in three languages',
-  /déclarés à la clôture/.test(IX) && /declared when (it closed )?each day/.test(IX) && /عند إغلاق كل يوم/.test(IX));
+  /déclarés à la clôture/.test(IX) && /declared when (it closed )?each day/.test(IX) && /عند إغلاق كل يوم/.test(IX)
+  && /saisis à l\\'encaissement/.test(IX) && /entered at payment/.test(IX) && /المسجّلة عند الأداء/.test(IX));
 
 check('the band repaints when the day-report book changes (it arrives after the first render)',
   /KiwiDayReport\?\.subscribe\)\s*\{\s*window\.KiwiDayReport\.subscribe\(\(\) => \{ try \{ renderKpiBand\(\)/.test(SRC));

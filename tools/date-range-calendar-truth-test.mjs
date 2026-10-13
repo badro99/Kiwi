@@ -67,6 +67,7 @@ function load(nowIso, sales, opts = {}) {
     merchantParts: (ts) => ({ hour: String(new Date(ts).getUTCHours()).padStart(2, '0') }),
     dateToIso: (d) => d,
     realMoneyList: () => sales,
+    realSalesList: () => sales,
     realWindowStats: (a, b) => ({ revenue: sales.filter((s) => s.ts >= a && s.ts < b).reduce((n, s) => n + s.amount, 0) }),
   });
   vm.runInContext([
@@ -76,9 +77,9 @@ function load(nowIso, sales, opts = {}) {
     fn('trStr'), fn('trTemplate'), fn('arDays'), fn('trLegend'),
     block('const REV_BADGE = {'), block('const REV_SUB = {'), block('const LEGEND_PREFIX = {'),
     fn('calendarStartKey'), fn('calendarBounds'), fn('rangeBounds'), fn('closedBounds'),
-    fn('shiftedBusinessBounds'), fn('windowDays'), fn('realDeltaPct'), fn('niceCeil'),
+    fn('shiftedBusinessBounds'), fn('windowDays'), fn('openDays'), fn('realDeltaPct'), fn('niceCeil'),
     fn('hourlyCumul'), fn('dailyTotals'), fn('realRevSeries'),
-    'this.api = { rangeBounds, realDeltaPct, windowDays, realRevSeries, trStr, trLegend, REV_BADGE, REV_SUB, LEGEND_PREFIX };',
+    'this.api = { rangeBounds, realDeltaPct, windowDays, openDays, realRevSeries, trStr, trLegend, REV_BADGE, REV_SUB, LEGEND_PREFIX };',
   ].join('\n'), ctx);
   return { ...ctx.api, setLang: (l) => { ctx.lang = l; } };
 }
@@ -123,6 +124,14 @@ ok('« CA moyen par jour » : l\'année divise par 285 jours écoulés, septembr
   assert.equal(A.windowDays('annee'), 285);
   assert.equal(A.windowDays('moisDernier'), 30);
   assert.equal(A.windowDays('aujourdhui'), 1);
+});
+ok('« CA par jour » et « Ventes par jour » divisent par les journées d\'ouverture, pas par la longueur de la période', () => {
+  /* 2026 jusqu'au 12 oct. : ventes les 1er mars, 5 et 20 août, 10 sept., 5 oct. */
+  assert.equal(A.openDays('annee'), 5);
+  assert.equal(A.openDays('moisDernier'), 1, 'septembre : une seule journée de vente sur 30');
+  assert.equal(A.openDays('aujourdhui'), 1, 'aucune vente : 1, la moyenne vaut 0, pas une division par zéro');
+  const src = readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
+  assert.equal((src.match(/nbDays: \(ownData\(\) && window\.KiwiSales\) \? openDays\(effRange\(\)\) : \(RANGE_DAYS\[effRange\(\)\] \|\| 1\)/g) || []).length, 2, 'bandeau et personnalisation');
 });
 ok('une période personnalisée de trois jours compte trois jours, pas un', () => {
   const C = load('2026-10-12T14:00:00Z', SALES, { range: 'personnalise', customRange: { start: '2026-08-03', end: '2026-08-05' } });

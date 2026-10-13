@@ -996,6 +996,8 @@
       });
     }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
+    /* Le pourboire, hors du montant (recordSale le garde à part). */
+    if (+entry.tip > 0) body.tipCents = Math.round(+entry.tip * 100);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     var session = serverSession(entry);
     if (session) body.session = session.slice(0, 64);
@@ -1490,7 +1492,7 @@
         amount: amt, amountCents: amtCents, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
         server: s.server || '', channel: s.channel || '', lines: s.lines,
-        paymentParts: s.paymentParts || null,
+        paymentParts: s.paymentParts || null, tipCents: s.tipCents,
         saleId: s.id || s.saleId || '', grossAmountCents: s.grossAmountCents,
         discountAmountCents: s.discountAmountCents, discountReason: s.discountReason || '', actorId: s.actorId || '',
       }); have[cur] = 1; } catch (_) {}

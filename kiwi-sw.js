@@ -92,7 +92,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=59',
+  '/assets/interactive.js?v=60',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
@@ -103,9 +103,9 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=50',
+  '/assets/venues.js?v=51',
   '/assets/phone.js?v=1',
-  '/assets/trade-workspace-schema.js?v=6',
+  '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=9',
   '/assets/reservations.js?v=26',
   '/assets/pressing-ops.js?v=9',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=71',
+  '/assets/dateRange.js?v=72',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=12',
@@ -171,7 +171,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=63',
+  '/assets/live-link.js?v=64',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -297,7 +297,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=90',
+  '/assets/pos-dispatch.js?v=91',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -306,7 +306,7 @@ var SHELL = [
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=7',
   '/assets/pos-workspaces.css?v=4',
-  '/assets/pos-workspaces.js?v=7',
+  '/assets/pos-workspaces.js?v=8',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
@@ -333,12 +333,12 @@ var SHELL = [
   '/assets/pos-epicerie.js?v=8',
   '/assets/pos-pharmacie.css?v=7',
   '/assets/pos-pharmacie.js?v=7',
-  '/assets/pos-librairie.css?v=7',
-  '/assets/pos-librairie.js?v=7',
-  '/assets/pos-fleuriste.css?v=9',
-  '/assets/pos-fleuriste.js?v=9',
-  '/assets/pos-coiffure.css?v=7',
-  '/assets/pos-coiffure.js?v=7',
+  '/assets/pos-librairie.css?v=9',
+  '/assets/pos-librairie.js?v=9',
+  '/assets/pos-fleuriste.css?v=11',
+  '/assets/pos-fleuriste.js?v=11',
+  '/assets/pos-coiffure.css?v=8',
+  '/assets/pos-coiffure.js?v=8',
   '/assets/pos-gym.css?v=7',
   '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=7',

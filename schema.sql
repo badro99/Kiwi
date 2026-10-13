@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS sales (
   ts       INTEGER NOT NULL,   -- epoch ms of the sale
   session_id TEXT,              -- restaurant visit link, never a payment identity
   split_flow_id TEXT,           -- one bill split; distinct even when a stale visit is reused
+  tip_cents INTEGER,            -- tip entered at payment, in centimes, OUTSIDE amount; NULL = none recorded (sale.js heals the column on first use)
   -- What was actually in the basket: JSON [{n:name, q:qty, t:total}], capped at
   -- 40 lines. NULL for every row written before this column existed, and for
   -- any surface that genuinely has no line detail (a payment link, a hotel

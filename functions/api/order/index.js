@@ -42,7 +42,7 @@
 import { json } from '../../auth/_lib.js';
 import { storeSubscriptionPending } from '../_private.js';
 import {
-  startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
+  startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, hoursClosed, SESSION_ID,
 } from './_lib.js';
 
 const MAX_LINES = 60;              // one order, generously
@@ -67,6 +67,9 @@ export async function onRequestPost(context) {
    * connaît pas les sessions : c'est la seule protection qui couvre les deux
    * pages, et elle ne coûte rien au client attablé pendant le service. */
   if (!(await deskOpen(env, merchant))) return json({ error: 'service-closed' }, 409);
+  /* Et le commerce est-il ouvert d'après ses horaires publiés ? La page le
+     vérifie avant d'envoyer ; une requête qui n'est pas passée par elle aussi. */
+  if (await hoursClosed(env, merchant)) return json({ error: 'service-closed', reason: 'hours' }, 409);
 
   const mode = b.mode === 'takeout' ? 'takeout' : 'table';
   const table = mode === 'table' ? normTable(b.table) : '';

@@ -338,6 +338,10 @@
 
   function findDelivery(id) { return DELIVERIES.find((d) => d.id === id); }
   function recipFirst(d) { return (d.recipient.name || '').split(/\s+/)[0]; }
+  /* Un bon créé au comptoir ne connaît pas encore son destinataire : on le dit
+     au lieu d'inventer « Tanger » ou une adresse, et on le complète au bon. */
+  function recipName(d) { return d.recipient.name || 'Destinataire à préciser'; }
+  function recipAddr(d) { return [d.recipient.addr || 'Adresse à renseigner', d.recipient.district].filter(Boolean).join(' · '); }
   function buyerLabel(d) {
     if (d.buyerId && CUST[d.buyerId]) return CUST[d.buyerId].name;
     return d.buyerName || 'Client de passage';
@@ -1368,7 +1372,7 @@
       if (ctx.delivSlot) {
         const created = mkDelivery({
           id: `F-${deliverySeq}`, slot: ctx.delivSlot, occ: b.occ, status: 'prep',
-          recipient: { name: 'Destinataire à préciser', phone: '', addr: 'Adresse à renseigner', district: 'Tanger' },
+          recipient: { name: '', phone: '', addr: '', district: '' },
           buyerId: cId, buyerName: cId ? null : 'Client de passage',
           items: bouquetItemsSnapshot(b), total: total,
           pay: { mode, method, paid }, createdMin: 0,
@@ -1376,7 +1380,7 @@
         });
         DELIVERIES.unshift(created);
         deliverySeq++;
-        toast(`Livraison ${created.id} créée, créneau ${SLOT[ctx.delivSlot].short}. Pensez à préciser l'adresse.`);
+        toast(`Livraison ${created.id} créée, créneau ${SLOT[ctx.delivSlot].short}. Précisez le destinataire dans Livraisons.`);
         queueIfOffline(`Livraison ${created.id}`);
       } else {
         queueIfOffline(`Bon ${b.num}`);
@@ -1423,8 +1427,8 @@
         <span class="fl-dcard-id">${d.id}</span>
         <span class="fl-dcard-occ">${esc(occ.deuil ? 'Condoléances' : occ.label)}</span>
       </span>
-      <span class="fl-dcard-to"><i data-lucide="user"></i>${esc(d.recipient.name)}</span>
-      <span class="fl-dcard-addr"><i data-lucide="map-pin"></i>${esc(d.recipient.addr)} · ${esc(d.recipient.district)}</span>
+      <span class="fl-dcard-to"><i data-lucide="user"></i>${esc(recipName(d))}</span>
+      <span class="fl-dcard-addr"><i data-lucide="map-pin"></i>${esc(recipAddr(d))}</span>
       <span class="fl-dcard-buyer">Offert par ${esc(buyerLabel(d))} · ${esc(itemsLabel)}</span>
       <span class="fl-dcard-meta">
         ${statusPill(d)}
@@ -1470,8 +1474,9 @@
   }
 
   /* ── delivery detail: status flow, photo proof, settle, WhatsApp ── */
-  function openDelivDetail(id) {
+  function openDelivDetail(id, opts) {
     const d = findDelivery(id);
+    const editRecip = !!(opts && opts.editRecipient);
     if (!d) return;
     const el = $('#fl-dtm', root);
     const occ = OCC[d.occ];
@@ -1493,12 +1498,23 @@
 
       <div class="fl-dt-block">
         <div class="fl-dt-block-lbl">Destinataire ${d.buyerId || d.buyerName ? `· offert par ${esc(buyerLabel(d))}` : ''}</div>
-        <div class="fl-dt-recip">
-          <b>${esc(d.recipient.name)}</b>
-          <div class="addr"><i data-lucide="map-pin"></i>${esc(d.recipient.addr)} · ${esc(d.recipient.district)}, Tanger</div>
+        ${editRecip ? `<div class="fl-recip-form">
+          <input class="fl-in" id="fl-rc-name" maxlength="80" autocomplete="off" placeholder="Nom du destinataire" value="${esc(d.recipient.name)}" />
+          <input class="fl-in" id="fl-rc-tel" maxlength="24" inputmode="tel" autocomplete="off" placeholder="Téléphone · optionnel" value="${esc(d.recipient.phone)}" />
+          <input class="fl-in" id="fl-rc-addr" maxlength="160" autocomplete="off" placeholder="Adresse complète" value="${esc(d.recipient.addr)}" />
+          <input class="fl-in" id="fl-rc-zone" maxlength="60" autocomplete="off" placeholder="Quartier · optionnel" value="${esc(d.recipient.district)}" />
+          <div class="fl-recip-err" id="fl-rc-err" role="alert" hidden></div>
+          <div class="fl-recip-actions">
+            <button class="fl-btn ghost" id="fl-rc-cancel">Annuler</button>
+            <button class="fl-btn primary" id="fl-rc-save"><i data-lucide="check"></i>Enregistrer</button>
+          </div>
+        </div>` : `<div class="fl-dt-recip${d.recipient.name && d.recipient.addr ? '' : ' unset'}">
+          <b>${esc(recipName(d))}</b>
+          <div class="addr"><i data-lucide="map-pin"></i>${esc(recipAddr(d))}${pvCity('Tanger') ? `, ${esc(pvCity('Tanger'))}` : ''}</div>
           ${d.recipient.phone ? `<div class="tel"><i data-lucide="phone"></i>${esc(d.recipient.phone)}</div>` : ''}
           ${d.note ? `<div class="note">${esc(d.note)}</div>` : ''}
-        </div>
+          ${d.status !== 'done' ? `<button class="fl-btn ghost fl-recip-edit" id="fl-rc-edit"><i data-lucide="pencil"></i>${d.recipient.name && d.recipient.addr ? 'Modifier' : 'Préciser le destinataire'}</button>` : ''}
+        </div>`}
       </div>
 
       <div class="fl-dt-block">
@@ -1532,6 +1548,29 @@
     icons();
 
     $$('[data-fl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#fl-dt-veil'); });
+    const editB = $('#fl-rc-edit', el);
+    if (editB) editB.onclick = () => openDelivDetail(d.id, { editRecipient: true });
+    const cancelB = $('#fl-rc-cancel', el);
+    if (cancelB) cancelB.onclick = () => openDelivDetail(d.id);
+    const saveB = $('#fl-rc-save', el);
+    if (saveB) saveB.onclick = () => {
+      const val = (sel) => String(($(sel, el) || {}).value || '').trim();
+      const next = { name: val('#fl-rc-name'), phone: val('#fl-rc-tel'), addr: val('#fl-rc-addr'), district: val('#fl-rc-zone') };
+      const err = $('#fl-rc-err', el);
+      const missing = !next.name ? '#fl-rc-name' : !next.addr ? '#fl-rc-addr' : '';
+      if (missing) {
+        err.textContent = 'Le nom et l\u2019adresse sont nécessaires pour livrer.';
+        err.hidden = false;
+        $(missing, el).focus();
+        return;
+      }
+      d.recipient = next;
+      queueIfOffline(`Destinataire ${d.id}`);
+      toast(`${d.id}, destinataire enregistré`);
+      openDelivDetail(d.id);
+      refreshOps();
+    };
+    if (editRecip) { const first = $('#fl-rc-name', el); if (first) first.focus(); }
     $('#fl-dt-flow', el).onclick = (e) => {
       const b = e.target.closest('[data-fl-st]');
       if (!b) return;
@@ -1547,6 +1586,7 @@
     if (waB) waB.onclick = () => openWa(d);
     const goB = $('#fl-dt-go', el);
     if (goB) goB.onclick = () => {
+      if (!d.recipient.addr) { toast('Renseignez l\u2019adresse avant le départ'); openDelivDetail(d.id, { editRecipient: true }); return; }
       if (!d.photo) { toast('Prenez la photo du bouquet avant le départ'); openDelivPhoto(d); return; }
       setDelivStatus(d, 'route');
     };
@@ -1555,13 +1595,14 @@
   }
 
   function setDelivStatus(d, s) {
+    if (s === 'route' && !d.recipient.addr) { toast('Renseignez l\u2019adresse avant le départ'); openDelivDetail(d.id, { editRecipient: true }); return; }
     if (s === 'route' && !d.photo) { toast('Photo du bouquet requise avant « en route »'); openDelivPhoto(d); return; }
     d.status = s;
     if (s === 'done') d.doneAt = new Date();
     else if (d.doneAt) d.doneAt = null;
     queueIfOffline('Statut livraison');
     if (s === 'route') toast(`${d.id}, en route vers ${recipFirst(d)}`);
-    else if (s === 'done') toast(`${d.id} marqué livré à ${esc(d.recipient.name)}`);
+    else if (s === 'done') toast(`${d.id} marqué livré à ${recipName(d)}`);
     openDelivDetail(d.id);
     refreshOps();
   }
@@ -1624,7 +1665,7 @@
     el.innerHTML = `
       <button class="fl-modal-x" data-fl-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">WhatsApp, prévenir le destinataire</h3>
-      <p class="modal-subtle">${esc(d.recipient.name)} ${d.recipient.phone ? `· ${esc(d.recipient.phone)}` : '· numéro manquant'}</p>
+      <p class="modal-subtle">${esc(recipName(d))} ${d.recipient.phone ? `· ${esc(d.recipient.phone)}` : '· numéro manquant'}</p>
       <div class="fl-wa-bubblewrap">
         <div class="fl-wa-bubble">
           <textarea id="fl-wa-text">${esc(waMessage(d))}</textarea>
@@ -1655,12 +1696,12 @@
       const txt = $('#fl-wa-text', el);
       const body = txt ? txt.value : waMessage(d);
       const num = String(d.recipient.phone || '').replace(/\D/g, '');
-      if (!num) { toast(`Pas de numéro pour ${d.recipient.name}, ajoutez-le au bon`); return; }
+      if (!num) { toast(`Pas de numéro pour ${recipName(d)} : « Préciser le destinataire » sur le bon`); return; }
       closeVeil('#fl-wa-veil');
       queueIfOffline('Notification WhatsApp');
       try {
         window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
-        toast(`WhatsApp ouvert pour ${d.recipient.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+        toast(`WhatsApp ouvert pour ${recipName(d)}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
       } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
     };
   }

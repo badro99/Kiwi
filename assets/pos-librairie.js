@@ -1333,7 +1333,9 @@
         ${c.status === 'commande' ? '<button class="lb-btn primary" data-lb-advance="arrivee"><i data-lucide="package-check"></i>Marquer arrivé</button>' : ''}
         ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'Ouvrir le brouillon WhatsApp'}</button>` : ''}
         ${c.status === 'arrivee' && c.draftOpenedAt && !c.notified ? '<button class="lb-btn primary" id="lb-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer le message envoyé</button>' : ''}
-        ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-lucide="check"></i>Remettre au client${due > 0 ? ` · ${due} MAD` : ''}</button>` : ''}
+        ${c.status === 'arrivee' && due > 0 ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree" data-lb-tender="especes"><i data-lucide="banknote"></i>Remettre · ${due} MAD en espèces</button>
+          <button class="lb-btn secondary" data-lb-advance="retiree" data-lb-tender="carte"><i data-lucide="credit-card"></i>Remettre · ${due} MAD par carte</button>` : ''}
+        ${c.status === 'arrivee' && !(due > 0) ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-lucide="check"></i>Remettre au client</button>` : ''}
         ${c.status !== 'retiree' ? '<button class="lb-btn ghost" id="lb-dt-cancel">Annuler la commande</button>' : ''}
       </div>`;
     openVeil('#lb-detail-veil');
@@ -1347,7 +1349,7 @@
       };
     });
     $$('[data-lb-advance]', el).forEach((b) => {
-      b.onclick = () => setCmdStatus(c, b.dataset.lbAdvance);
+      b.onclick = () => setCmdStatus(c, b.dataset.lbAdvance, b.dataset.lbTender || '');
     });
     const wa = $('#lb-dt-wa', el);
     if (wa) wa.onclick = () => openWa(c);
@@ -1375,7 +1377,15 @@
     };
   }
 
-  function setCmdStatus(c, s) {
+  function setCmdStatus(c, s, tender) {
+    /* Le solde se règle à la remise, et c'est là qu'on sait comment. L'étape
+       « Retirée » du fil, qui ne le dit pas, renvoie aux deux boutons au lieu
+       d'inscrire des espèces au hasard. */
+    if (s === 'retiree' && pvReal() && cmdDue(c) > 0 && !c.soldeRecorded && tender !== 'especes' && tender !== 'carte') {
+      toast(`Solde de ${cmdDue(c)} MAD : choisissez espèces ou carte pour remettre la commande`, 3600);
+      openCmdDetail(c.id);
+      return;
+    }
     const wasArrived = c.status === 'arrivee';
     c.status = s;
     if (s === 'arrivee' && !c.arrivedAt) c.arrivedAt = new Date();
@@ -1384,9 +1394,10 @@
     queueIfOffline('Statut commande');
     if (s === 'retiree') {
       const due = cmdDue(c);
-      if (pvReal() && due > 0 && !c.soldeRecorded) { c.soldeRecorded = true; postDay(due, 'especes', `Solde ${c.id}`, `${c.id}-S`, []); }
+      const paidBy = tender === 'carte' ? 'carte' : 'especes';
+      if (pvReal() && due > 0 && !c.soldeRecorded) { c.soldeRecorded = true; c.soldeTender = paidBy; postDay(due, paidBy, `Solde ${c.id}`, `${c.id}-S`, []); }
       closeVeil('#lb-detail-veil');
-      toast(`${c.id} remis à ${cmdCust(c).name.split(' ')[0]}${due > 0 ? `, solde ${due} MAD encaissé` : ''}`);
+      toast(`${c.id} remis à ${cmdCust(c).name.split(' ')[0]}${due > 0 ? `, solde ${due} MAD encaissé ${paidBy === 'carte' ? 'par carte' : 'en espèces'}` : ''}`);
       renderCmd(); renderBadges(); icons();
       return;
     }
@@ -1408,6 +1419,10 @@
       qty: 1,
       client: null,
       acompte: 0,
+      /* Comment l'acompte est réglé. Rien de présélectionné : l'acompte
+         entrait en espèces quel que soit le moyen, et la caisse du soir
+         réclamait au tiroir un billet qui était passé par le terminal. */
+      acTender: '',
     };
     const render = () => {
       const priceN = +draft.price || 0;
@@ -1445,6 +1460,10 @@
             <button class="cash-preset" data-ac="100">100</button>
             <button class="cash-preset" data-ac="half"${max ? '' : ' disabled'}>50 %</button>
           </div>
+          <div class="lb-acompte-row lb-tender" id="lb-nc-tender" role="group" aria-label="Acompte réglé en"${draft.acompte > 0 ? '' : ' hidden'}>
+            <button class="cash-preset${draft.acTender === 'especes' ? ' is-on' : ''}" data-nc-tender="especes" aria-pressed="${draft.acTender === 'especes'}">Espèces</button>
+            <button class="cash-preset${draft.acTender === 'carte' ? ' is-on' : ''}" data-nc-tender="carte" aria-pressed="${draft.acTender === 'carte'}">Carte</button>
+          </div>
         </div>
         <div class="lb-foot">
           <button class="lb-btn secondary" data-lb-close>Annuler</button>
@@ -1464,13 +1483,29 @@
           const v = b.dataset.ac;
           const m = (+draft.price || 0) * draft.qty;
           draft.acompte = v === 'half' ? Math.round(m / 2 / 5) * 5 : Math.min(m || +v, +v);
+          if (!(draft.acompte > 0)) draft.acTender = '';
           $('#lb-nc-acval', el).textContent = fmtMAD(draft.acompte);
+          paintTender();
         };
+      });
+      const paintTender = () => {
+        const row = $('#lb-nc-tender', el);
+        if (!row) return;
+        row.hidden = !(draft.acompte > 0);
+        $$('[data-nc-tender]', row).forEach((t) => {
+          const on = t.dataset.ncTender === draft.acTender;
+          t.classList.toggle('is-on', on);
+          t.setAttribute('aria-pressed', String(on));
+        });
+      };
+      $$('[data-nc-tender]', el).forEach((t) => {
+        t.onclick = () => { draft.acTender = t.dataset.ncTender; paintTender(); };
       });
       $('#lb-nc-client', el).onclick = () => pickCmdClient((picked) => { draft.client = picked; render(); });
       $('#lb-nc-ok', el).onclick = () => {
         if (!draft.title.trim()) { toast('Le titre est requis'); return; }
         if (!(+draft.price > 0)) { toast('Indiquez un prix de vente'); return; }
+        if (draft.acompte > 0 && !draft.acTender) { toast('Indiquez comment l\u2019acompte est réglé : espèces ou carte'); return; }
         cmdSeq++;
         const cmd = {
           id: `C-${cmdSeq}`, n: cmdSeq,
@@ -1478,16 +1513,17 @@
           custId: draft.client && draft.client.id ? draft.client.id : null,
           guest: draft.client && !draft.client.id ? { name: draft.client.name, phone: draft.client.phone } : (draft.client ? null : { name: 'Client de passage', phone: '' }),
           qty: draft.qty, price: +draft.price, acompte: draft.acompte,
+          acompteTender: draft.acompte > 0 ? draft.acTender : '',
           status: 'commande', notified: false,
           orderedAt: new Date(), arrivedAt: null, pickedAt: null,
         };
         CMDS.unshift(cmd);
         /* Réel : l'acompte est de l'argent pris au comptoir, il entre dans la recette du jour (le
            solde, lui, y entrera à la remise : jamais le prix entier deux fois). */
-        if (pvReal() && cmd.acompte > 0) postDay(cmd.acompte, 'especes', `Acompte ${cmd.id}`, `${cmd.id}-A`, []);
+        if (pvReal() && cmd.acompte > 0) postDay(cmd.acompte, cmd.acompteTender, `Acompte ${cmd.id}`, `${cmd.id}-A`, []);
         closeVeil('#lb-newcmd-veil');
         queueIfOffline(`Commande ${cmd.id}`);
-        toast(`${cmd.id} passée, ${cmd.title}${cmd.acompte ? ` · acompte ${cmd.acompte} MAD encaissé` : ''}`);
+        toast(`${cmd.id} passée, ${cmd.title}${cmd.acompte ? ` · acompte ${cmd.acompte} MAD encaissé ${cmd.acompteTender === 'carte' ? 'par carte' : 'en espèces'}` : ''}`);
         if (state.view !== 'commandes') switchView('commandes'); else renderCmd();
         renderBadges(); icons();
       };

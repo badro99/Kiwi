@@ -200,6 +200,58 @@ ok('le catalogue du fleuriste vient de l\'inventaire du tableau de bord', () => 
   assert.match(FLE, /\.use\(/);
 });
 
+ok('une livraison créée à la caisse ne s\'invente ni destinataire ni ville', () => {
+  assert.match(FLE, /recipient: \{ name: '', phone: '', addr: '', district: '' \}/);
+  assert.doesNotMatch(FLE, /district: 'Tanger' \}\s*,?\s*\n[^\n]*(?:created|toast\(`Livraison)/);
+  assert.match(FLE, /Précisez le destinataire dans Livraisons/);
+  assert.match(FLE, /function recipName\(d\) \{ return d\.recipient\.name \|\| 'Destinataire à préciser'; \}/);
+});
+ok('le destinataire se renseigne sur le bon de livraison, nom et adresse exigés', () => {
+  for (const id of ['fl-rc-name', 'fl-rc-tel', 'fl-rc-addr', 'fl-rc-zone', 'fl-rc-save', 'fl-rc-cancel', 'fl-rc-edit']) assert.match(FLE, new RegExp('id="' + id + '"'), id);
+  assert.match(FLE, /const missing = !next\.name \? '#fl-rc-name' : !next\.addr \? '#fl-rc-addr' : ''/);
+});
+ok('une livraison sans adresse ne part pas en tournée', () => {
+  const refusals = FLE.match(/if \((?:s === 'route' && )?!d\.recipient\.addr\) \{ toast\('Renseignez l\\u2019adresse avant le départ'\); openDelivDetail\(d\.id, \{ editRecipient: true \}\); return; \}/g) || [];
+  assert.equal(refusals.length, 2, 'le bouton et le changement de statut refusent tous deux');
+});
+
+console.log('\n5b. coiffure : l\'agenda de la caisse est le tableau « Rendez-vous »');
+ok('les rendez-vous du jour viennent du tableau, rangés par coiffeur·euse, noms relus', () => {
+  const src = COI.match(/function realAppointments\(staffList\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(src, 'realAppointments introuvable');
+  const day = '2026-10-13';
+  const board = {
+    appointments: [
+      { id: 'a1', title: 'RDV-1', status: 1, v: { clientRef: 'c1', serviceRef: 's1', practitionerRef: 'p2', startAt: day + 'T14:30', endAt: day + 'T15:15', chair: 'Fauteuil 2' } },
+      { id: 'a2', title: 'RDV-2', status: 0, v: { clientRef: 'c9', serviceRef: 's1', practitionerRef: 'gone', startAt: day + 'T10:00', endAt: '' } },
+      { id: 'a3', title: 'RDV-3', status: 1, v: { clientRef: 'c1', serviceRef: 's1', practitionerRef: 'p1', startAt: '2026-10-14T10:00', endAt: '2026-10-14T11:00' } },
+      { id: 'a4', title: 'RDV-4', status: 2, v: { clientRef: 'c1', serviceRef: 's1', practitionerRef: 'p1', startAt: '2026-10-14T02:00', endAt: '2026-10-14T03:00' } },
+    ],
+    clients: [{ id: 'c1', title: 'Nadia B.', status: 1, v: {} }],
+    services: [{ id: 's1', title: 'Coupe femme', status: 1, v: {} }],
+  };
+  const ctx = { Date, Number, String, Math, Set, Object, MIN: 60000, bizDay: () => day,
+    window: { KiwiPosWorkspaces: { rows: (t, nav) => { assert.equal(t, 'coiffure'); return board[nav] || []; } } } };
+  vm.createContext(ctx);
+  vm.runInContext(src[0] + ';this.realAppointments = realAppointments;', ctx);
+  const out = ctx.realAppointments([{ id: 'p1' }, { id: 'p2' }]);
+  assert.equal(JSON.stringify(out.map((r) => r.id)), JSON.stringify(['a1', 'a2', 'a4']), 'le lendemain matin (après 5 h) n\'est pas du jour, la nuit avant 5 h l\'est');
+  const a1 = out[0];
+  assert.equal(a1.staffId, 'p2'); assert.equal(a1.cliName, 'Nadia B.'); assert.equal(a1.svc, 'Coupe femme');
+  assert.equal(a1.dur, 45); assert.equal(a1.chair, 'Fauteuil 2'); assert.equal(a1.state, 'attente');
+  assert.equal(out[1].staffId, 'p1', 'coiffeur inconnu : première colonne');
+  assert.equal(out[1].cliName, '', 'client absent du tableau : aucun nom inventé');
+  assert.equal(out[1].unconfirmed, true); assert.equal(out[1].dur, 30);
+  assert.equal(out[2].state, 'cours');
+});
+ok('un salon réel ne garde pas l\'agenda dans son instantané et « Ajouter » ouvre le tableau', () => {
+  assert.match(COI, /appointments: real \? \[\] : RDV,/);
+  assert.match(COI, /if \(!pvReal\(\) && Array\.isArray\(saved\.appointments\)\)/);
+  assert.match(COI, /if \(pvReal\(\)\) \{ openAgenda\(\); return; \}/);
+  assert.match(COI, /W\.open\(root, 'coiffure', 'appointments'\)/);
+  assert.match(COI, /if \(pvReal\(\)\) fillRealRdv\(realAppointments\(STAFF\)\);/);
+});
+
 console.log('\n6. cures du spa : aucune économie inventée');
 ok('une cure en réel s\'affiche « sans remise », au prix de l\'unité', () => {
   assert.match(SPA, /séance à l'unité : \$\{fmtMAD\(PRESTA\[f\.presta\]\.price\)\}\$\{pvReal\(\) \? ' · sans remise' : ''\}/);

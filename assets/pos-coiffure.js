@@ -199,12 +199,46 @@
       color: STAFF_COLORS[i % STAFF_COLORS.length], commission: m.commission,
     }));
   }
+  /* L'agenda d'un salon réel est le tableau « Rendez-vous » du tableau de bord
+     (Suivi opérationnel), le même document que la caisse relit pour la grille :
+     la colonne de chaque coiffeur·euse montre les rendez-vous de la journée
+     d'activité (5 h → 5 h). Il n'y avait ici qu'une liste vide, jamais remplie,
+     et « Ajouter un rendez-vous » n'ouvrait rien. Un rendez-vous dont le
+     coiffeur n'est pas (ou plus) dans l'équipe va dans la première colonne. */
+  function realAppointments(staffList) {
+    const W = window.KiwiPosWorkspaces;
+    if (!W || !W.rows) return [];
+    const dayStart = Date.parse(bizDay() + 'T05:00:00');
+    const dayEnd = dayStart + 24 * 3600 * 1000;
+    const tms = (v) => { const t = Date.parse(String(v || '')); return Number.isFinite(t) ? t : 0; };
+    const titles = (nav) => { const m = {}; W.rows('coiffure', nav).forEach((r) => { m[r.id] = r.title; }); return m; };
+    const cli = titles('clients'), svc = titles('services');
+    const ids = new Set(staffList.map((x) => x.id));
+    const out = [];
+    W.rows('coiffure', 'appointments').forEach((r) => {
+      const st = tms(r.v.startAt);
+      if (!st || st < dayStart || st >= dayEnd) return;
+      const en = tms(r.v.endAt) > st ? tms(r.v.endAt) : st + 30 * MIN;
+      const who = String(r.v.practitionerRef || '');
+      out.push({
+        id: r.id, board: true, staffId: ids.has(who) ? who : staffList[0].id, time: st, custId: null,
+        cliName: cli[r.v.clientRef] || '', svc: svc[r.v.serviceRef] || r.title || 'Rendez-vous',
+        dur: Math.max(5, Math.round((en - st) / MIN)), chair: String(r.v.chair || '').trim(),
+        state: r.status === 2 ? 'cours' : r.status === 3 ? 'fini' : 'attente', unconfirmed: r.status === 0,
+      });
+    });
+    return out;
+  }
+  function fillRealRdv(list) {
+    RDV.splice(0, RDV.length, ...list.map((r) => Object.assign({}, r, { time: new Date(r.time) })));
+  }
   let realSig = '';
-  /* Relit catalogue et équipe ; vrai quand quelque chose a changé. */
+  /* Relit catalogue, équipe et agenda ; vrai quand quelque chose a changé. */
   function refreshReal() {
     if (!pvReal()) return false;
-    const cat = realCatalog(), staffList = realStaffList();
-    const sig = JSON.stringify([cat, staffList]);
+    const cat = realCatalog(), staffList = realStaffList(), appts = realAppointments(staffList);
+    fillRealRdv(appts);
+    const sig = JSON.stringify([cat, staffList, appts]);
     if (sig === realSig) return false;
     realSig = sig;
     CATALOG.splice(0, CATALOG.length, ...cat.cats);
@@ -447,7 +481,7 @@
         freeSeq,
         customers: CUSTOMERS,
         passages: PASSAGES,
-        appointments: RDV,
+        appointments: real ? [] : RDV,
         doneToday: DONE_TODAY,
         tips: TIP_LEDGER,
         passSeq,
@@ -481,7 +515,7 @@
       CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
       if (Array.isArray(saved.passages)) PASSAGES.splice(0, PASSAGES.length, ...saved.passages);
       PASSAGES.forEach((passage) => { if (passage.arrivedAt) passage.arrivedAt = new Date(passage.arrivedAt); });
-      if (Array.isArray(saved.appointments)) RDV.splice(0, RDV.length, ...saved.appointments);
+      if (!pvReal() && Array.isArray(saved.appointments)) RDV.splice(0, RDV.length, ...saved.appointments);
       RDV.forEach((appointment) => { if (appointment.time) appointment.time = new Date(appointment.time); });
       if (Array.isArray(saved.doneToday)) DONE_TODAY.splice(0, DONE_TODAY.length, ...saved.doneToday);
       if (Array.isArray(saved.tips)) TIP_LEDGER.splice(0, TIP_LEDGER.length, ...saved.tips);
@@ -780,6 +814,7 @@
 
   function renderRdv() {
     const now = new Date();
+    if (pvReal()) fillRealRdv(realAppointments(STAFF));
     $('#cf-rdv', root).innerHTML = `
       <div class="cf-rdv-cols">
         ${STAFF.map((s) => {
@@ -796,16 +831,16 @@
             </div>
             <div class="cf-rdv-slots">
               ${slots.map((r) => {
-                const cli = r.custId ? CUST[r.custId].name : 'Client';
+                const cli = r.custId && CUST[r.custId] ? CUST[r.custId].name : (r.cliName || 'Client');
                 const active = r.state === 'cours' || r.state === 'bac';
                 const past = r.time < now && r.state === 'attente';
                 const cls = active ? 'now' : (r.state === 'fini' ? 'done' : '');
-                const stLabel = active ? (r.state === 'bac' ? 'au bac' : 'en cours') : (past ? 'à confirmer' : 'à venir');
-                return `<button class="cf-rdv-slot ${cls}" data-cf-rdv-cli="${r.custId || ''}">
+                const stLabel = active ? (r.state === 'bac' ? 'au bac' : 'en cours') : r.state === 'fini' ? 'terminé' : (past || r.unconfirmed ? 'à confirmer' : 'à venir');
+                return `<button class="cf-rdv-slot ${cls}" ${r.board ? 'data-cf-rdv-open="1"' : `data-cf-rdv-cli="${r.custId || ''}"`}>
                   <span class="cf-rdv-time">${fmtTime(r.time)}</span>
                   <span class="cf-rdv-mid">
                     <span class="cf-rdv-cli">${esc(cli)}</span>
-                    <span class="cf-rdv-det">${esc(r.svc)} · ${esc(stLabel)}</span>
+                    <span class="cf-rdv-det">${esc(r.svc)}${r.chair ? ` · ${esc(r.chair)}` : ''} · ${esc(stLabel)}</span>
                   </span>
                   <span class="cf-rdv-dur">${r.dur} min</span>
                 </button>`;
@@ -820,7 +855,11 @@
       </div>`;
     $('#cf-rdv', root).onclick = (e) => {
       const add = e.target.closest('[data-cf-rdv-add]');
-      if (add) { toast(`Créneau ouvert chez ${SF[add.dataset.cfRdvAdd].name}, proposez-le à la cliente`); return; }
+      if (add) {
+        if (pvReal()) { openAgenda(); return; }
+        toast(`Créneau ouvert chez ${SF[add.dataset.cfRdvAdd].name}, proposez-le à la cliente`); return;
+      }
+      if (e.target.closest('[data-cf-rdv-open]')) { openAgenda(); return; }
       const cli = e.target.closest('[data-cf-rdv-cli]');
       if (cli && cli.dataset.cfRdvCli) openFiche(cli.dataset.cfRdvCli);
     };
@@ -1060,6 +1099,14 @@
     const W = window.KiwiPosWorkspaces;
     if (W && W.open) W.open(root, 'coiffure', 'services');
     else toast('Ajoutez vos prestations sur le tableau de bord');
+  }
+
+  /* Prendre ou modifier un rendez-vous : le tableau « Rendez-vous » du tableau de
+     bord, ouvert depuis la caisse. L'agenda se repeint quand il change. */
+  function openAgenda() {
+    const W = window.KiwiPosWorkspaces;
+    if (W && W.open) W.open(root, 'coiffure', 'appointments');
+    else toast('Prenez vos rendez-vous sur le tableau de bord');
   }
 
   function sheetUnit() {

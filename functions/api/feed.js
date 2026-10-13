@@ -302,6 +302,17 @@ export async function onRequestGet({ request, env }) {
         } catch (_) { /* Corrupt attribution cannot hide a receipt. */ }
       });
     } catch (_) { /* Old schema without payment_parts keeps its legacy feed. */ }
+    /* Le pourboire saisi à l'encaissement (sale.js › tip_cents). Colonne absente
+       sur une base pas encore guérie : le flux reste, sans pourboire. */
+    try {
+      const ids = rows.map(row => String(row.id || '')).filter(Boolean);
+      const marks = ids.map(() => '?').join(',');
+      const tips = await env.DB.prepare(
+        `SELECT id, tip_cents FROM sales WHERE merchant IN (?, ?) AND id IN (${marks}) AND tip_cents > 0`
+      ).bind(merchant, legacy || merchant, ...ids).all();
+      const byId = new Map((tips.results || []).map(row => [String(row.id), Math.round(Number(row.tip_cents))]));
+      rows.forEach(row => { const t = byId.get(String(row.id)); if (Number.isSafeInteger(t) && t > 0) row.tipCents = t; });
+    } catch (_) { /* Old schema without tip_cents. */ }
   }
 
   /* Restaurant sales use the visit id as their durable payment identity. Join

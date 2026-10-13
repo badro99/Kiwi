@@ -352,6 +352,11 @@ export async function onRequestPost({ request, env }) {
   if (paymentParts === false || (paymentParts && method !== retailTenderMethod(paymentParts))) {
     return json({ error: 'bad-payment-parts' }, 400);
   }
+  /* Le pourboire, à côté de la vente et jamais dedans : `amount` reste le
+     chiffre d'affaires. Facultatif, borné, entier en centimes ; illisible ⇒
+     absent (inconnu), jamais 0. */
+  const tipRaw = Math.round(Number(b && b.tipCents));
+  const tipCents = Number.isSafeInteger(tipRaw) && tipRaw > 0 && tipRaw <= 10000000 ? tipRaw : 0;
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
   const channel = String((b && b.channel) || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
@@ -831,6 +836,22 @@ export async function onRequestPost({ request, env }) {
         String(discountActorId || ''), Math.round(amountCents / 100), amountCents, method, ref, ts,
         JSON.stringify(discountFlag), Date.now(), merchant, id).run();
     } catch (_) { /* the sale stands; the flag is best effort */ }
+  }
+
+  /* Le pourboire saisi à l'encaissement. Le tableau de bord ne l'apprenait
+     qu'à la clôture (le Z) : une journée ouverte n'en montrait aucun. Même
+     guérison de schéma que payment_parts, mais au mieux : un pourboire qui
+     ne s'écrit pas ne défait jamais une vente encaissée. */
+  if (tipCents) {
+    try {
+      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
+      if (!(columns.results || []).some(column => column.name === 'tip_cents')) {
+        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN tip_cents INTEGER').run(); }
+        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
+      }
+      await env.DB.prepare('UPDATE sales SET tip_cents = ? WHERE merchant = ? AND id = ? AND tip_cents IS NULL')
+        .bind(tipCents, merchant, id).run();
+    } catch (_) { /* la vente reste ; le Z déclarera le pourboire */ }
   }
 
   if (paymentParts) {

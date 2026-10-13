@@ -652,6 +652,8 @@
 .modal.lb-newcmd { width: 500px; padding: 24px 24px 20px; }
 .lb-acompte-row { display: flex; gap: 7px; margin-top: 7px; }
 .lb-acompte-row .cash-preset { flex: 1; text-align: center; }
+.lb-tender[hidden] { display: none; }
+.lb-tender .cash-preset.is-on { color: var(--forest); background: var(--mint-tint); box-shadow: inset 0 0 0 1px var(--mint-edge); }
 
 /* ═══════════════ WHATSAPP « il est arrivé » ═══════════════ */
 .modal.lb-wa { width: 480px; padding: 24px 24px 20px; }

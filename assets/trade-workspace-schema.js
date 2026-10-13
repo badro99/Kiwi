@@ -272,6 +272,11 @@
       records: rows, active: open.length, done: rows.length - open.length,
       alerts: rows.filter((r) => r.derived.alert).length,
       balance: rows.reduce((n, r) => n + Object.entries(r.derived).reduce((x, pair) => x + (/balance$/i.test(pair[0]) ? Number(pair[1]) || 0 : 0), 0), 0),
+      /* Un solde ne veut dire quelque chose que si une fiche porte un montant à
+         régler. Sans cela, « Solde 0 MAD » sur une liste scolaire ou une
+         check-list affirmait un chiffre que personne n'a saisi. */
+      balanceTracked: rows.some((r) => Object.entries((schema && schema.calc) || {})
+        .some(([id, pair]) => /balance$/i.test(id) && (Number(r.values && r.values[pair[0]]) || 0) > 0)),
     };
   }
   function relationOptions(schema, allRecords, field) {

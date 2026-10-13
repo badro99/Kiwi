@@ -256,8 +256,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "71",
-    "sha": "b767ae319ae1f668"
+    "v": "72",
+    "sha": "a07d19b5dc5cc938"
   },
   "assets/day-report-dash.js": {
     "v": "28",
@@ -432,8 +432,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "59",
-    "sha": "70e02290b7ead3cf"
+    "v": "60",
+    "sha": "d5fb4644dd4d1371"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -528,8 +528,8 @@
     "sha": "13b9074e6e51ef0f"
   },
   "assets/live-link.js": {
-    "v": "63",
-    "sha": "0464db97cb59eaa0"
+    "v": "64",
+    "sha": "f905331e5f247820"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -736,16 +736,16 @@
     "sha": "e33e8965ba78ca12"
   },
   "assets/pos-coiffure.css": {
-    "v": "7",
+    "v": "8",
     "sha": "8e3713916dc1f3ab"
   },
   "assets/pos-coiffure.js": {
-    "v": "7",
-    "sha": "ddc90f0b6626ca51"
+    "v": "8",
+    "sha": "9b54c1cf524d6a76"
   },
   "assets/pos-dispatch.js": {
-    "v": "90",
-    "sha": "7b0f90e1c5581fd3"
+    "v": "91",
+    "sha": "0a96e3120b18ed4c"
   },
   "assets/pos-epicerie.css": {
     "v": "8",
@@ -764,12 +764,12 @@
     "sha": "e91dbaa75f699c06"
   },
   "assets/pos-fleuriste.css": {
-    "v": "9",
-    "sha": "c2b364c5627b7afd"
+    "v": "11",
+    "sha": "7f15053a55932268"
   },
   "assets/pos-fleuriste.js": {
-    "v": "9",
-    "sha": "b0c7c5e428768434"
+    "v": "11",
+    "sha": "3bc176caf06271ce"
   },
   "assets/pos-foodtruck.css": {
     "v": "7",
@@ -800,12 +800,12 @@
     "sha": "cefa5398eda98703"
   },
   "assets/pos-librairie.css": {
-    "v": "7",
-    "sha": "9e38290620c45b6c"
+    "v": "9",
+    "sha": "2b0ce487db45c40a"
   },
   "assets/pos-librairie.js": {
-    "v": "7",
-    "sha": "ce6ca70c2dce30ef"
+    "v": "9",
+    "sha": "46f6787106130aa7"
   },
   "assets/pos-maison.css": {
     "v": "65",
@@ -868,8 +868,8 @@
     "sha": "c667db1491956d82"
   },
   "assets/pos-workspaces.js": {
-    "v": "7",
-    "sha": "e662cb6d95631f46"
+    "v": "8",
+    "sha": "17341b476ffb0fb3"
   },
   "assets/pressing-caisse.css": {
     "v": "45",
@@ -1056,8 +1056,8 @@
     "sha": "27e6fd8ef97f9f49"
   },
   "assets/trade-workspace-schema.js": {
-    "v": "6",
-    "sha": "2e30dd549a170543"
+    "v": "7",
+    "sha": "3bec330195a76114"
   },
   "assets/trade-workspaces.css": {
     "v": "6",
@@ -1088,8 +1088,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "50",
-    "sha": "772648345df37fb7"
+    "v": "51",
+    "sha": "8673e595df39f6b1"
   },
   "assets/vertical-state.js": {
     "v": "3",

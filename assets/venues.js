@@ -3995,6 +3995,9 @@
     if (server) entry.server = server;
     if (channel) entry.channel = channel;
     if (saleId) entry.saleId = saleId;
+    /* Le pourboire saisi à l'encaissement, en centimes, hors du montant. */
+    const tipCents = Math.round(Number(sale && sale.tipCents));
+    if (Number.isSafeInteger(tipCents) && tipCents > 0) entry.tipCents = tipCents;
     if (sale && Array.isArray(sale.paymentParts) && sale.paymentParts.length) {
       entry.paymentParts = sale.paymentParts.slice(0, 8).map(part => ({
         method: String((part && part.method) || '').slice(0, 16),
