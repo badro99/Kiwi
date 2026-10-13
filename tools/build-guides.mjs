@@ -12,6 +12,17 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://kiwi-os.com';
 const CHECK = process.argv.includes('--check');
+/* assets/fonts/legacy-faces.css (design 2027, stage 1): the guides declare the
+ * historical Arabic family from the self-hosted file, before article.css. Its
+ * stamp is the one tools/bump-stamp.js seals in tools/asset-stamps.json, so a
+ * bump there and a rebuild here always agree. */
+const LEGACY_FACES_V = (() => {
+  try {
+    const seal = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'))['assets/fonts/legacy-faces.css'];
+    if (seal && seal.v) return seal.v;
+  } catch (_) { /* reported below */ }
+  throw new Error('build-guides: no stamp for assets/fonts/legacy-faces.css in tools/asset-stamps.json');
+})();
 
 const UI = Object.freeze({
   fr: {
@@ -777,6 +788,7 @@ ${alternateLinks(cluster.routes)}
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/legacy-faces.css?v=${LEGACY_FACES_V}" />
   <link rel="stylesheet" href="/assets/articles/article.css?v=${ASSET_VERSIONS.css}">
   <script type="application/ld+json">${json(structuredData(cluster, locale))}</script>
 </head>
