@@ -1,0 +1,40 @@
+/* Kiwi · strings · kds · fr. Keyed strings with ICU plurals (design 2027, §9.3 and §9.6).
+ * Edit this file by hand; strings-completeness-test, strings-lint and strings-bidi-test hold it. */
+(function (g) {
+  (g.__kiwiStrings = g.__kiwiStrings || {})['kds.fr'] = {
+  "kds.new": "Nouveau",
+  "kds.preparing": "En préparation",
+  "kds.ready": "Prêt",
+  "kds.start": "Commencer",
+  "kds.mark_ready": "Marquer prêt",
+  "kds.mark_served": "Marquer servi",
+  "kds.late": "En retard",
+  "kds.live": "En direct",
+  "kds.no_new": "Aucune nouvelle commande",
+  "kds.newer": "+{n} plus récentes",
+  "kds.items": "{n, plural, one {{n} article} many {{n} articles} other {{n} articles}}",
+  "kds.voided": "Annulé",
+  "kds.not_saved": "Non enregistré. Touchez pour réessayer.",
+  "kds.announce": "Nouvelle commande {n}, {source}",
+  "kds.station": "{station} {n}",
+  "kds.all": "Tout",
+  "kds.station.hot": "Chaud",
+  "kds.cold": "Froid",
+  "kds.pastry": "Pâtisserie",
+  "kds.drinks": "Boissons",
+  "kds.menu.history": "Historique",
+  "kds.menu.stations": "Postes",
+  "kds.menu.display": "Affichage",
+  "kds.menu.text_size": "Taille du texte",
+  "kds.size.small": "Petite",
+  "kds.size.medium": "Moyenne",
+  "kds.size.large": "Grande",
+  "kds.menu.sound": "Son",
+  "kds.menu.input": "Saisie",
+  "kds.input.touch": "Tactile",
+  "kds.input.bump": "Clavier de rappel",
+  "kds.input.readonly": "Écran mural en lecture seule",
+  "kds.compressed": "{n, plural, one {{n} article} many {{n} articles} other {{n} articles}}",
+  "kds.newer_open": "Voir les commandes plus récentes"
+  };
+})(typeof self !== 'undefined' ? self : globalThis);

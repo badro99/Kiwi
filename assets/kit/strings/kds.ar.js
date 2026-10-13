@@ -1,0 +1,40 @@
+/* Kiwi · strings · kds · ar. Keyed strings with ICU plurals (design 2027, §9.3 and §9.6).
+ * Edit this file by hand; strings-completeness-test, strings-lint and strings-bidi-test hold it. */
+(function (g) {
+  (g.__kiwiStrings = g.__kiwiStrings || {})['kds.ar'] = {
+  "kds.new": "جديد",
+  "kds.preparing": "قيد التحضير",
+  "kds.ready": "جاهز",
+  "kds.start": "ابدأ",
+  "kds.mark_ready": "علّم كجاهز",
+  "kds.mark_served": "علّم كمُقدَّم",
+  "kds.late": "متأخر",
+  "kds.live": "مباشر",
+  "kds.no_new": "لا طلبات جديدة",
+  "kds.newer": "+{n} أحدث",
+  "kds.items": "{n, plural, zero {لا أصناف} one {صنف واحد} two {صنفان} few {{n} أصناف} many {{n} صنفًا} other {{n} صنف}}",
+  "kds.voided": "أُلغي",
+  "kds.not_saved": "لم يُحفظ. اضغط للمحاولة مجددًا.",
+  "kds.announce": "طلب جديد {n}، {source}",
+  "kds.station": "{station} {n}",
+  "kds.all": "الكل",
+  "kds.station.hot": "ساخن",
+  "kds.cold": "بارد",
+  "kds.pastry": "حلويات",
+  "kds.drinks": "مشروبات",
+  "kds.menu.history": "السجل",
+  "kds.menu.stations": "المحطات",
+  "kds.menu.display": "العرض",
+  "kds.menu.text_size": "حجم النص",
+  "kds.size.small": "صغير",
+  "kds.size.medium": "متوسط",
+  "kds.size.large": "كبير",
+  "kds.menu.sound": "الصوت",
+  "kds.menu.input": "الإدخال",
+  "kds.input.touch": "لمس",
+  "kds.input.bump": "لوحة التمرير",
+  "kds.input.readonly": "شاشة عرض فقط",
+  "kds.compressed": "{n, plural, zero {لا أصناف} one {صنف واحد} two {صنفان} few {{n} أصناف} many {{n} صنفًا} other {{n} صنف}}",
+  "kds.newer_open": "اعرض الطلبات الأحدث"
+  };
+})(typeof self !== 'undefined' ? self : globalThis);

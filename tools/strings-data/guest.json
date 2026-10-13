@@ -1,0 +1,17 @@
+{
+  "guest.prep_note_post.orderpro": {
+    "en": ". A notification tells you the moment it's ready, with a chime while this page is open.",
+    "fr": ". Une notification vous prévient dès que c'est prêt, avec un son tant que cette page est ouverte.",
+    "ar": ". غادي يوصلك إشعار ملي يكون واجد، مع صوت إلا كانت هاد الصفحة محلولة."
+  },
+  "guest.prep_note_post.kiwi_order": {
+    "en": ". It chimes the moment it's ready, as long as this page stays open.",
+    "fr": ". Elle sonne dès que c'est prêt, tant que cette page reste ouverte.",
+    "ar": ". غادي تصوّت ملي يكون واجد، إلا بقات هاد الصفحة محلولة."
+  },
+  "guest.prep_perm_denied.both": {
+    "en": "Notifications are off. Keep this page open and it will chime when your order is ready.",
+    "fr": "Notifications désactivées. Gardez cette page ouverte : elle sonnera quand votre commande sera prête.",
+    "ar": "الإشعارات مسدودة. خلّي هاد الصفحة محلولة وغادي تصوّت ملي تكون الطلبية واجدة."
+  }
+}

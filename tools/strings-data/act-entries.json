@@ -1,0 +1,17 @@
+{
+  "act.clear_order": ["bill.clear"],
+  "act.cancel_order": ["bill.cancel_order"],
+  "act.cancel_table": ["bill.cancel_table"],
+  "act.close_till": ["till.more.close", "count.close"],
+  "act.cash_in": ["till.more.cash_in_out"],
+  "act.cash_out": ["till.more.cash_in_out"],
+  "act.shift_change": ["till.more.shift_change"],
+  "act.untrack_order": ["takeaway.untrack"],
+  "act.reject_online": ["takeaway.reject", "online.cancel"],
+  "act.open_drawer": ["till.more.open_drawer"],
+  "act.discount.pct": ["bill.discount"],
+  "act.discount.amount": ["bill.discount"],
+  "act.refund": ["till.more.refund"],
+  "act.stock_adjust": ["till.more.stock"],
+  "act.cancel_sale": ["till.more.cancel_sale", "cancel.confirm"]
+}

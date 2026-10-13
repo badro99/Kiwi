@@ -1,0 +1,40 @@
+/* Kiwi · strings · kds · en. Keyed strings with ICU plurals (design 2027, §9.3 and §9.6).
+ * Edit this file by hand; strings-completeness-test, strings-lint and strings-bidi-test hold it. */
+(function (g) {
+  (g.__kiwiStrings = g.__kiwiStrings || {})['kds.en'] = {
+  "kds.new": "New",
+  "kds.preparing": "Preparing",
+  "kds.ready": "Ready",
+  "kds.start": "Start",
+  "kds.mark_ready": "Mark ready",
+  "kds.mark_served": "Mark served",
+  "kds.late": "Late",
+  "kds.live": "Live",
+  "kds.no_new": "No new orders",
+  "kds.newer": "+{n} newer",
+  "kds.items": "{n, plural, one {{n} item} other {{n} items}}",
+  "kds.voided": "Voided",
+  "kds.not_saved": "Not saved. Tap to try again.",
+  "kds.announce": "New order {n}, {source}",
+  "kds.station": "{station} {n}",
+  "kds.all": "All",
+  "kds.station.hot": "Hot",
+  "kds.cold": "Cold",
+  "kds.pastry": "Pastry",
+  "kds.drinks": "Drinks",
+  "kds.menu.history": "History",
+  "kds.menu.stations": "Stations",
+  "kds.menu.display": "Display",
+  "kds.menu.text_size": "Text size",
+  "kds.size.small": "Small",
+  "kds.size.medium": "Medium",
+  "kds.size.large": "Large",
+  "kds.menu.sound": "Sound",
+  "kds.menu.input": "Input",
+  "kds.input.touch": "Touch",
+  "kds.input.bump": "Bump bar",
+  "kds.input.readonly": "Read-only wall",
+  "kds.compressed": "{n, plural, one {{n} item} other {{n} items}}",
+  "kds.newer_open": "Show newer orders"
+  };
+})(typeof self !== 'undefined' ? self : globalThis);
