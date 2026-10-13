@@ -22,8 +22,8 @@
  * counts calendar days between two business dates, in UTC, so no zone and no
  * daylight-saving change can move a customer between statuses.
  *
- * A visit is a 'YYYY-MM-DD' string or an object with a `date` of that form
- * (plus an `amount`). Anything else carries no usable date and is ignored.
+ * A visit is a 'YYYY-MM-DD' string, an object with a `date` of that form
+ * (plus an `amount`), or a [date, amount] pair (the fixture's form). Anything else carries no usable date and is ignored.
  *
  * Customers, Retention and Kiwi AI call this and nothing else. Adopting it in
  * the shipped surfaces (clients-store.js `segment`) is a later stage.
@@ -56,9 +56,16 @@
     return t / DAY_MS;
   }
 
+  /* The three shapes a visit takes: 'YYYY-MM-DD', {date, amount}, and the
+   * [date, amount] pair the worked-example fixture stores. */
   function dateOf(visit) {
     if (typeof visit === 'string') return visit;
+    if (Array.isArray(visit)) return typeof visit[0] === 'string' ? visit[0] : null;
     return visit && typeof visit.date === 'string' ? visit.date : null;
+  }
+  function amountOf(visit) {
+    var a = Array.isArray(visit) ? visit[1] : visit && typeof visit === 'object' ? visit.amount : 0;
+    return isFinite(+a) && a !== null && a !== '' ? +a : 0;
   }
 
   /* The dated visits that carry a real date, oldest first. */
@@ -66,7 +73,7 @@
     var out = [];
     (Array.isArray(visits) ? visits : []).forEach(function (v) {
       var date = dateOf(v), day = dayNumber(date);
-      if (day === day) out.push({ date: date, day: day, amount: v && typeof v === 'object' && isFinite(+v.amount) ? +v.amount : 0 });
+      if (day === day) out.push({ date: date, day: day, amount: amountOf(v) });
     });
     out.sort(function (a, b) { return a.day - b.day; });
     return out;

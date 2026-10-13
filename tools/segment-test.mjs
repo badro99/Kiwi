@@ -126,6 +126,9 @@ check(true, 'eight customers: visits, lifetime spend and status as the §18.0 ta
   check(S.returningToday(undefined, TODAY) === false && S.daysSinceLastVisit([], TODAY) === null, 'returningToday and daysSinceLastVisit are false and null with no visit');
   const mixed = ['2026-10-12', { date: '2026-10-03', amount: '170' }, { date: '2026-09-01', amount: 'abc' }];
   check(S.visitStats(mixed).lifetime === 170 && S.visitStats(mixed).count === 3, 'strings and {date, amount} both count; an amount that is not a number is 0');
+  const pairs = [['2026-10-03', 170], ['2026-10-12', 210]];
+  check(S.visitStats(pairs).lifetime === 380 && S.visitStats(pairs).count === 2 && S.segmentCustomer(pairs, TODAY) === 'new' && S.returningToday(pairs, TODAY), '[date, amount] pairs (the fixture form) read the same as {date, amount}');
+  check(S.visitStats([['2026-10-03'], [null, 5], ['bad', 5]]).count === 1 && S.visitStats([['2026-10-03']]).lifetime === 0, 'a pair with no amount counts at 0; a pair with no readable date is ignored');
   const frozen = Object.freeze([Object.freeze({ date: '2026-10-12', amount: 1 }), Object.freeze({ date: '2026-01-01', amount: 2 })]);
   check(S.segmentCustomer(frozen, TODAY) === 'regular' && S.visitStats(frozen).first === '2026-01-01', 'unsorted frozen input works and is not mutated');
   check(S.returningToday([TODAY], TODAY) === false && S.returningToday([TODAY, '2026-10-11'], TODAY) === true && S.returningToday(['2026-10-10', '2026-10-11'], TODAY) === false, 'returning today = a visit today and at least two visits in all');
@@ -140,23 +143,38 @@ check(true, 'eight customers: visits, lifetime spend and status as the §18.0 ta
   check(globalThis.KiwiSegment === S, 'window.KiwiSegment is the module');
 }
 
-/* ── the fixture, when it exists ───────────────────────────────────────── */
+/* ── the fixture ───────────────────────────────────────────────────────── */
+/* A missing file is a skip (slice E owns it). A file that exists and cannot be
+ * read is a FAILURE: the one real cross-check must never skip silently. */
 {
   const file = path.join(root, 'tools/fixtures/worked-example.json');
   if (!fs.existsSync(file)) console.log('  ○ tools/fixtures/worked-example.json not present yet, fixture cross-check skipped');
   else {
-    let fx = null;
-    try { fx = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* checked below */ }
-    const list = fx && Array.isArray(fx.customers) ? fx.customers : null;
-    const hasVisits = list && list.length && list.every((c) => Array.isArray(c.visits) && c.visits.length && S.visitStats(c.visits).count === c.visits.length);
-    if (!hasVisits) console.log('  ○ the fixture\'s customers carry no recognisable dated visits, cross-check skipped');
-    else {
-      const c = S.countStatuses(list, TODAY);
-      assert.equal(c.regular + c.new + c.inactive, c.all, 'fixture partition');
-      assert.deepEqual([c.all, c.regular, c.new, c.inactive], [8, 4, 2, 2], 'fixture counts');
-      assert.equal(c.returningToday, 3, 'fixture returning today');
-      check(true, 'tools/fixtures/worked-example.json: 8 = Regular 4 + New 2 + Inactive 2, Returning 3');
+    const fx = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(fx.date), `the fixture's date is a business date (${fx.date})`);
+    const list = fx.customers;
+    assert.ok(Array.isArray(list) && list.length > 0, 'the fixture has a customers list');
+    list.forEach((c) => {
+      assert.ok(Array.isArray(c.visits) && c.visits.length > 0, `${c.name}: a list of dated visits`);
+      const st = S.visitStats(c.visits);
+      assert.equal(st.ignored, 0, `${c.name}: every visit has a readable date`);
+      assert.equal(st.count, c.visits.length, `${c.name}: visit count`);
+    });
+    const today = fx.date;
+    const c = S.countStatuses(list, today);
+    console.log(`    business date ${today}: all ${c.all}, regular ${c.regular}, new ${c.new}, inactive ${c.inactive}, vip ${c.vip}, returning today ${c.returningToday}`);
+    for (const cu of list) console.log(`    ${cu.name}: ${S.segmentCustomer(cu.visits, today)}${S.returningToday(cu.visits, today) ? ', returning today' : ''}`);
+    assert.equal(c.regular + c.new + c.inactive, c.all, 'fixture partition');
+    assert.deepEqual([c.all, c.regular, c.new, c.inactive], [8, 4, 2, 2], 'fixture counts');
+    assert.equal(c.returningToday, 3, 'fixture returning today');
+    assert.equal(c.vip, 1, 'fixture VIP');
+    const byName = Object.fromEntries(list.map((cu) => [cu.name, cu]));
+    const want = { 'Salma Bennani': 'regular', 'Youssef Alaoui': 'regular', 'Leila Fassi': 'new', 'Omar Benjelloun': 'regular', 'Hind Berrada': 'regular', 'Mehdi Chraibi': 'new', 'Sanae Idrissi': 'inactive', 'Amine Lahlou': 'inactive' };
+    for (const [name, status] of Object.entries(want)) {
+      assert.ok(byName[name], `${name} is in the fixture`);
+      assert.equal(S.segmentCustomer(byName[name].visits, today), status, `${name} should be ${status}`);
     }
+    check(true, 'tools/fixtures/worked-example.json: 8 = Regular 4 + New 2 + Inactive 2, VIP 1, Returning 3, every customer as the §18.0 table says');
   }
 }
 console.log('\n✓ segment-test');
