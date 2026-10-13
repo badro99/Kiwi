@@ -37,6 +37,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { startOfWeek } from '../order/_lib.js';
+import { merchantZone } from '../_business-day.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -215,7 +216,7 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, mode, total, JSON.stringify(lines), now, now,
       channel, ref, JSON.stringify(customer),
-      merchant, startOfWeek(now)
+      merchant, startOfWeek(now, await merchantZone(env, merchant))
     ).first();
   } catch (e) {
     /* The pre-read above is only an optimisation. Two provider retries can

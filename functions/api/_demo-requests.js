@@ -89,10 +89,14 @@ export function sanitizeDemoRequest(body) {
 }
 
 /* Une référence lisible au téléphone : D-2610-7K3Q (jour, mois, puis quatre
- * signes sans 0/O ni 1/I). Le jour est celui de Casablanca (UTC+1), pas
- * celui du serveur : une demande faite à 00 h 30 porte la date du visiteur. */
+ * signes sans 0/O ni 1/I). Le jour est celui de Casablanca, lu dans le fuseau
+ * (le Maroc est passé de UTC+1 à UTC+0 en 2026), pas celui du serveur : une
+ * demande faite à 00 h 30 porte la date du visiteur. */
 export function demoReference(now = Date.now()) {
-  const d = new Date(now + 3600000);
+  const civil = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Casablanca', day: '2-digit', month: '2-digit',
+  }).formatToParts(now).map((x) => [x.type, x.value]));
+  const d = { getUTCDate: () => Number(civil.day), getUTCMonth: () => Number(civil.month) - 1 };
   const p = (n) => String(n).padStart(2, '0');
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const bytes = crypto.getRandomValues(new Uint8Array(4));

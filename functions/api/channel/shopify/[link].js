@@ -38,6 +38,7 @@
 
 import { json } from '../../../auth/_lib.js';
 import { startOfWeek } from '../../order/_lib.js';
+import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
 
@@ -438,7 +439,7 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, t.mode, t.total, JSON.stringify(t.lines), now, now,
       CHANNEL, t.ref, JSON.stringify(t.customer),
-      merchant, startOfWeek(now)
+      merchant, startOfWeek(now, await merchantZone(env, merchant))
     ).first();
   } catch (e) {
     /* The SELECT before INSERT cannot serialize concurrent Shopify retries.

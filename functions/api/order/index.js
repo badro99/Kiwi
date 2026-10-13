@@ -40,6 +40,7 @@
 //    rejoue la même commande au lieu d'en fabriquer une seconde.
 
 import { json } from '../../auth/_lib.js';
+import { merchantZone } from '../_business-day.js';
 import { storeSubscriptionPending } from '../_private.js';
 import {
   startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, hoursClosed, SESSION_ID,
@@ -138,7 +139,7 @@ export async function onRequestPost(context) {
   if (total <= 0 || total > MAX_TOTAL) return json({ error: 'bad-total' }, 400);
 
   const now = Date.now();
-  const today = startOfDay(now);
+  const today = startOfDay(now, await merchantZone(env, merchant));
 
   /* Idempotence. Le téléphone tire une clé par commande ; un renvoi (double
    * tap, réseau qui repasse, onglet rechargé) doit retrouver SA commande, pas

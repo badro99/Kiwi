@@ -205,7 +205,7 @@
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0');
       const mm = String(now.getMinutes()).padStart(2, '0');
-      el.innerHTML = `<span class="dot"></span>LIVE · ${hh}:${mm} GMT+1`;
+      el.innerHTML = `<span class="dot"></span>LIVE · ${hh}:${mm}`;
     }
     setInterval(update, 30000);
     update();

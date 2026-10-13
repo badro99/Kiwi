@@ -829,6 +829,23 @@ section('Relais OrderPro (tools/orderpro-relay-test.js)');
   }
 }
 
+/* ── L'heure du magasin, jamais un décalage fixe ──────────────────────────────
+ * Le Maroc est passé de UTC+1 à UTC+0 en 2026. Les jours de file, la semaine
+ * restaurant et les références de démo se lisent dans le fuseau (Intl), et rien
+ * n'affiche « GMT+1 » à côté de l'horloge de l'appareil. */
+section('Heure du magasin (tools/store-clock-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'store-clock-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok((out.split('\n').reverse().find((l) => l.includes('✓')) || 'store-clock-test vert').replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`store-clock-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 7quater · la carte suit l'établissement ─────────────────────────────────
  * Un compte tient plusieurs magasins et on passe de l'un à l'autre sans
  * recharger la page. Trois pannes vivaient dans ce pli : la carte du second

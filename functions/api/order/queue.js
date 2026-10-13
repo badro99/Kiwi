@@ -45,6 +45,7 @@
 import { json, entitledMerchant, activeServiceEmployee, isTillFor, readTillActorProof } from '../../auth/_lib.js';
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, CURSOR_LAG_MS, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
+import { merchantZone } from '../_business-day.js';
 
 function deferCourse(context, promise) {
   const safe = Promise.resolve(promise).catch(() => false);
@@ -358,7 +359,7 @@ export async function onRequestGet(context) {
    * Date.now() in the same request burst. Include that small future margin,
    * while the completed client cursor still trails the ORIGINAL poll time. */
   const pageEnd = pageCursor ? pageCursor.end : now + CURSOR_LAG_MS;
-  const today = startOfDay(now);
+  const today = startOfDay(now, await merchantZone(env, merchant));
   const kitchenCutoff = now - KITCHEN_TTL_MS;
 
   /* ── LE SONDAGE DU SERVEUR EST UN BATTEMENT DE CŒUR ────────────────────────
@@ -1016,7 +1017,7 @@ export async function onRequestPost(context) {
     if (total <= 0 || total > MAX_TOTAL) return json({ error: 'bad-total' }, 400);
 
     const server = String((b && b.server) || '').trim().slice(0, 40);
-    const today = startOfDay(now);
+    const today = startOfDay(now, await merchantZone(env, merchant));
     /* Resolve a retry BEFORE opening a visit. A late Wi-Fi replay after the
        bill was paid must return its original ticket, not silently create a
        fresh open session for the now-empty physical table. */
