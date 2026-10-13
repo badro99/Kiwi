@@ -32,6 +32,13 @@
  *   Chromium, Playwright, Chrome), read from the file rather than guessed from
  *   its name, so a new browser suite is classed correctly without anyone
  *   registering it.
+ * Parallel (default, KIWI_CHECK_JOBS=1 to turn off): prefetch() reads the
+ * test files check.js names (every one of them lives in tools/), and
+ * tools/check-pool.js runs them side by side before check.js starts its
+ * sections; check.js then replays against those results. Same order, same
+ * output, same verdict: only a PASS is reused, and a test that failed in
+ * parallel runs again alone at its usual place. A call that does not match a
+ * prefetched run (other args, a cwd, an env) simply runs as before.
  * Zero dependencies, like check.js itself. */
 const cp = require('child_process');
 const fs = require('fs');
@@ -57,6 +64,11 @@ function isSlow(file) {
   return slowCache.get(file);
 }
 const tier = () => (process.env.KIWI_CHECK_TIER === 'fast' ? 'fast' : 'full');
+
+/* ── Replay (see prefetch) ─────────────────────────────────────────────── */
+let replay = null;                      // key → { status, signal, stdout, stderr }
+const keyOf = (cmd, args, o) => JSON.stringify([cmd, args, (o && o.cwd) || '']);
+let reused = 0;
 /* What the fast tier left out, for the summary, and the one-shot flag check.js
    reads so a skipped suite prints as skipped instead of "green (0 controls)". */
 const skipped = [];
@@ -81,6 +93,18 @@ function install(opts) {
       skipFlag = n;
       return { status: 0, signal: null, stdout: '', stderr: '', output: [], pid: 0, kiwiSkipped: true };
     }
+    if (cmd === process.execPath && Array.isArray(args) && !o.input && !o.env) {
+      const key = keyOf(cmd, args, o);
+      const hit = replay && replay[key];
+      if (hit && hit.status === 0) {
+        reused++;
+        const out = { status: 0, signal: null, stdout: hit.stdout, stderr: hit.stderr, pid: 0, kiwiReplayed: true };
+        if (o.encoding) { out.output = [null, out.stdout, out.stderr]; return out; }
+        out.stdout = Buffer.from(out.stdout); out.stderr = Buffer.from(out.stderr);
+        out.output = [null, out.stdout, out.stderr];
+        return out;
+      }
+    }
     if (!o.timeout) o.timeout = timeout;
     if (!o.killSignal) o.killSignal = 'SIGKILL';
     const t0 = Date.now();
@@ -100,9 +124,62 @@ function install(opts) {
     }
     return r;
   };
+  wrapped.kiwiReal = real;
   cp.spawnSync = wrapped;
   return wrapped;
 }
+
+/* The test files a check script names: every quoted `*.js` / `*.mjs` that
+ * exists next to it (or at that absolute path), minus the runner itself.
+ * Reading the source rather than dry-running it: a dry run hands each
+ * section a fake empty output, and the sections parse what they get. */
+function namedTests(script) {
+  const dir = path.dirname(script);
+  const own = new Set([script, path.join(__dirname, 'check-guard.js'), path.join(__dirname, 'check-pool.js')]);
+  const out = [];
+  const seen = new Set();
+  const re = /['"]([A-Za-z0-9_./-]+\.m?js)['"]/g;
+  const src = fs.readFileSync(script, 'utf8');
+  let m;
+  while ((m = re.exec(src))) {
+    const file = path.isAbsolute(m[1]) ? m[1] : path.join(dir, m[1]);
+    if (seen.has(file) || own.has(file)) continue;
+    seen.add(file);
+    try { if (fs.statSync(file).isFile()) out.push(file); } catch (_) {}
+  }
+  return out;
+}
+
+/* Run every child test check.js names, side by side, before check.js runs
+ * them one by one. Returns nothing; on any trouble it simply leaves `replay`
+ * empty and check.js runs serially, exactly as before. */
+function prefetch(opts) {
+  opts = opts || {};
+  const log = opts.log || ((m) => console.log(m));
+  const cpus = (os.availableParallelism ? os.availableParallelism() : os.cpus().length) || 2;
+  const jobs = Number(process.env.KIWI_CHECK_JOBS) || Math.max(2, Math.min(8, cpus - 1));
+  if (jobs <= 1) return;
+  const browserJobs = Number(process.env.KIWI_CHECK_BROWSER_JOBS) || Math.max(1, Math.min(3, Math.floor(jobs / 2)));
+  const real = cp.spawnSync.kiwiReal || cp.spawnSync;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-check-'));
+  const records = path.join(dir, 'records.jsonl'), results = path.join(dir, 'results.json');
+  try {
+    const script = path.resolve(opts.script || process.argv[1]);
+    const files = namedTests(script).filter((f) => !(tier() === 'fast' && isSlow(f)));
+    fs.writeFileSync(records, files.map((f) => JSON.stringify({ key: keyOf(process.execPath, [f], {}), args: [f], cwd: '' })).join('\n'));
+    const pool = real.call(cp, process.execPath, [path.join(__dirname, 'check-pool.js'), records, results, String(jobs), String(browserJobs)], {
+      stdio: ['ignore', 'inherit', 'inherit'], timeout: 60 * 60 * 1000,
+    });
+    if (pool.error) throw pool.error;
+    replay = JSON.parse(fs.readFileSync(results, 'utf8'));
+  } catch (e) {
+    replay = null;
+    log(`  ! parallel prefetch unavailable (${(e && e.message) || e}), running serially`);
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+  }
+}
+const reusedCount = () => reused;
 
 /* Take the machine-wide lock, waiting for a live holder. Returns release(). */
 function acquireLock(opts) {
@@ -138,4 +215,4 @@ function acquireLock(opts) {
   return release;
 }
 
-module.exports = { install, acquireLock, isSlow, tier, skipped, takeSkip, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+module.exports = { install, acquireLock, prefetch, reusedCount, isSlow, tier, skipped, takeSkip, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };

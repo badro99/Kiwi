@@ -30,6 +30,9 @@ if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
  * browsers; the fast tier launches none, so it never waits behind a full run. */
 if (process.env.KIWI_CHECK_TIER !== 'fast') require('./check-guard').acquireLock();
 require('./check-guard').install();
+/* …and the child tests run side by side first, then replay here in order
+ * (tools/check-pool.js). KIWI_CHECK_JOBS=1 runs everything serially. */
+require('./check-guard').prefetch();
 
 /* Les doubles de synchronisation. iCloud/Dropbox recopient un fichier modifié
  * des deux côtés sous « dashboard 2.html », « CLAUDE 2.md » — jamais suivis par
@@ -1782,6 +1785,7 @@ section('Whole-project regressions');
     'layout-test.mjs',
     'segment-test.mjs',
     'target-audit-test.mjs',
+    'check-parallel-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',
     'caisse-client-sale-test.mjs',

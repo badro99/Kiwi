@@ -210,6 +210,15 @@ that must be green before a push. A suite counts as slow by reading its source
 new browser suite lands in the right tier without being registered
 (`tools/check-guard.js`).
 
+**Both tiers run in parallel by default.** Before its sections start, check.js
+reads every test file it names and runs them side by side (`tools/check-pool.js`,
+up to 8 at a time, 3 browsers, longest first from the last run's timings), then
+replays its sections in order against those results: same output, same verdict.
+Only a pass is reused; a test that failed in parallel runs again alone at its
+usual place, so a red still means red. `KIWI_CHECK_JOBS=1` is the old serial
+run, `KIWI_CHECK_JOBS` / `KIWI_CHECK_BROWSER_JOBS` tune it. A new suite only has
+to be named in check.js to be prefetched, like before.
+
 **New browser suites use `tools/browser-trace.mjs`.** Run each scenario through
 `suite(name).run()` and `t.watch(page)`: a failure then writes
 `.kiwi/results/<suite>/<test>/trace.md` (steps, every page load and the script
