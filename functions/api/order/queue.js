@@ -2547,6 +2547,26 @@ function cleanFollowing(raw) {
   }
   return out;
 }
+/* La caisse mint l'identifiant d'un bon au geste (`ord-` + Date.now() en base
+ * 36, assets/kitchen-relay.js) : il porte l'ordre des gestes d'UNE caisse, sans
+ * dépendre de l'heure d'arrivée au serveur ni d'un écart d'horloge. Une forme
+ * d'identifiant inconnue n'est jamais comparée. */
+function idMintedAt(id) {
+  const m = /^ord-([0-9a-z]{8,9})-/.exec(String(id || ''));
+  const ms = m ? parseInt(m[1], 36) : 0;
+  return ms > 1.5e12 && ms < 4e12 ? ms : 0;
+}
+async function suiteAlreadySent(env, merchant, table, id, now) {
+  const mine = idMintedAt(id);
+  if (!mine || !table) return false;
+  try {
+    const found = await env.DB.prepare(
+      `SELECT id FROM orders WHERE merchant = ? AND mode = 'table' AND table_no = ?
+          AND created_ts >= ? AND lines LIKE '%"course":"suite"%' LIMIT 20`
+    ).bind(merchant, table, now - 24 * 3600 * 1000).all();
+    return (found.results || []).some((r) => idMintedAt(r.id) > mine);
+  } catch (_) { return false; }
+}
 async function ensureFollowingTable(env) {
   await env.DB.prepare(
     'CREATE TABLE IF NOT EXISTS order_following (order_id TEXT PRIMARY KEY, merchant TEXT NOT NULL, ' +
@@ -2636,7 +2656,10 @@ async function createTicket(context, env, merchant, c, now) {
   /* L'annonce s'écrit AVANT le bon : la cuisine sonde par `updated_ts`, et un
    * bon lu avant son annonce ne serait jamais relu. Une annonce dont le bon
    * échoue ensuite reste orpheline, sans effet : rien ne la lit sans son bon. */
-  const following = mode === 'table' && !course ? cleanFollowing(c.following) : [];
+  let following = mode === 'table' && !course ? cleanFollowing(c.following) : [];
+  /* Un bon d'entrée rejoué APRÈS sa suite (le relais de secours rejoue dans le
+   * désordre) ne doit pas écrire une annonce que plus rien n'éteindra. */
+  if (following.length && await suiteAlreadySent(env, merchant, table, id, now)) following = [];
   if (following.length) {
     try {
       await ensureFollowingTable(env);
