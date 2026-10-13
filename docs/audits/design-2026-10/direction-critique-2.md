@@ -24,7 +24,7 @@ Revision 2 is a much stronger document than revision 1. But it fails again, and 
 ## 3. Rebuttal rulings
 
 1. **B5, the before-and-after page: REJECT.** The brief (lines 193-205) makes the page part of Phase 3's single deliverable and calls it the approval gate: "plus a published HTML page … Nothing is built until the owner approves this page." Nothing in the brief says "after the text". The round's deliverable is incomplete.
-2. **B6, the `remaining` count: ACCEPT.** Verified. `_lib.js:1356-1359` returns `{error:'bad-pin', status:401}` with no count, and `:1193` returns 429 with only `retry_after`.
+2. **B6, the `remaining` count: ACCEPT.** Verified. `_lib.js:1356-1359` returns `{error:'bad-pin', status:401}` with no count, and `:L1193` returns 429 with only `retry_after`.
 3. **M3, a lens of at least 1.5:1: ACCEPT.** Verified: the edge measures 3.03 (light) and 3.35 (dark) against the track. The selected tab adds an icon-shape change and an accent-ink cue for the worst-case chrome (2.33).
 4. **M10, one feel per class with 7 classes: ACCEPT, with a correction.** The plugin also exposes `vibrate({duration})`, a CoreHaptics continuous event at fixed intensity 1.0 and sharpness 1.0 (`Haptics.swift`). So "exactly 7 primitives" is false. Since that event is a full-strength buzz, it is no use for UI meanings, and the class model stands.
 5. **M26, sizes above 1.35: ACCEPT.** Verified: `scaleForCategory` caps at 1.35, and `native-runtime.js:405` clamps with `Math.min(1.35, …)`.
@@ -149,7 +149,7 @@ Revision 2 is a much stronger document than revision 1. But it fails again, and 
 **M10 · §20.3 · the feel-layer inventory misses shipped haptic hooks (Feel, Feasibility)**
 - **Evidence:**
   - `native-runtime.js:1923` (`kiwi:native-haptic`) and `:1924-1928` (`kiwi:toast` → ERROR or SUCCESS) are not mentioned.
-  - About 25 direct `hapticLight` and `hapticNotice` calls are not mentioned either (for example the PIN observers at `:1300-1310` and `:1417`).
+  - About 25 direct `hapticLight` and `hapticNotice` calls are not mentioned either (for example the PIN observers at `:L1300-L1310` and `:L1417`).
   - Toasts keep buzzing, which §15 bans.
 - **What a 10 looks like:** an inventory of every call site with its class, and the toast hook removed at stage 1.
 

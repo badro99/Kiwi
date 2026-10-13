@@ -122,7 +122,7 @@
   - `queue.js:823-846` and `:2010`;
   - `pair/redeem.js:104-190`, `pair/state.js`, `config.js:165-215`;
   - the handover's confirm button is gated on matching counts before the pad opens (`:18823-18835`), so no approve-then-refuse comes from the count.
-- **Dashboard block against `0268c92f`:** `dashboard-pin-vault.js` in full, `dashboard.html:5880-5990` and `:6363-6420`, `tenant-purge.js:28` and `:44`, `onboarding.js:680`, and the two vault test files exist. Every line cited holds, apart from findings 4 and 8.
+- **Dashboard block against `0268c92f`:** `dashboard-pin-vault.js` in full, `dashboard.html:L5880-5990` and `:6363-6420`, `tenant-purge.js:28` and `:44`, `onboarding.js:680`, and the two vault test files exist. Every line cited holds, apart from findings 4 and 8.
 - **Numbers:**
   - Contrast: all §5.3 surface rows and edge pairs recomputed in python.
   - Spring: 308, 308, 300, 333 and 367 ms.

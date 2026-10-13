@@ -28,7 +28,7 @@
 
 ### Majors
 
-**M1 · major · §10.2 uses table (1634-1642), response table (1674-1698), §9.6 `pin.manager.sub` / `.not_manager`, §15.3 (2816) · the till's approval level and its role refusal are missing**
+**M1 · major · §10.2 uses table (1634-1642), response table (1674-1698), §9.6 `pin.manager.sub` / `.not_manager`, §15.3 (L2816) · the till's approval level and its role refusal are missing**
 
 - **The shipped till has two approval levels.** `openAuthorization` (`kiwi-caisse.html@31c94529:17319-17345`):
   - **Till level:** title "Autorisation caisse", hint "Code caissier, manager ou propriétaire requis", routed to `authorizeTill`.
@@ -50,7 +50,7 @@
   - The matching §15.3 row.
   - The offline row split by access level, and the full list of call sites.
 
-**M2 · major · §10.2 network row (1693), Rules (1730), `pin.offline` (1118), lint rationale (1064), Sources (20) · the dashboard lock compares codes in the browser**
+**M2 · major · §10.2 network row (1693), Rules (1730), `pin.offline` (L1118), lint rationale (L1064), Sources (20) · the dashboard lock compares codes in the browser**
 
 - **What the shipped dashboard does:**
   - `dashboard.html@31c94529:5870-5891`: `allPins()` reads plaintext `{role, code, name}` from `localStorage.kiwiPins`, with the comment "Keep the old full fallback offline".
@@ -104,8 +104,8 @@
 
 | # | Section | Finding | Evidence | What a 10 looks like |
 |---|---|---|---|---|
-| P1 | §9.6 `pin.offline_unknown` (1119) | "…and this one isn't among them" claims something the till cannot know. A code used in the last 7 days can be evicted by the 12-row cap. | `caisse-pairing.js:88` (`rows.slice(-12)`). Rows are written for any proven code, roles that don't open the till included, because `rememberOfflinePin` runs before `acceptStaff`. | "…and this one can't be checked offline on this till." |
-| P2 | `pin.offline` scope (1118) | "this screen can't unlock yet" is used on clock-in, team sign-in and the pairing pad, where nothing unlocks. | Use list in the key's own note and at line 1693. | A wording that fits each use, or a neutral "can't be checked yet". |
+| P1 | §9.6 `pin.offline_unknown` (L1119) | "…and this one isn't among them" claims something the till cannot know. A code used in the last 7 days can be evicted by the 12-row cap. | `caisse-pairing.js:88` (`rows.slice(-12)`). Rows are written for any proven code, roles that don't open the till included, because `rememberOfflinePin` runs before `acceptStaff`. | "…and this one can't be checked offline on this till." |
+| P2 | `pin.offline` scope (L1118) | "this screen can't unlock yet" is used on clock-in, team sign-in and the pairing pad, where nothing unlocks. | Use list in the key's own note and at line 1693. | A wording that fits each use, or a neutral "can't be checked yet". |
 | P3 | §15.3 (2803, 2815) vs §10.2 (1695) | "codes are online-only" survives. An offline refusal is "As bad-pin", yet §15.3 says "network: nothing", while every other refused code fires Failed (§15.1). | Lines 2784, 2803, 2815. | The sentence corrected, and the offline verdict given its haptic and trace trigger. |
 | P4 | §10.2 (1693) vs §10.26 (2298) | The pad retries "every 10 s" with no timeout outside the till (the 12 s is `verifyCode`'s) and no end-of-request rule. The roster step says "as in the pad's network row" but defines the rule differently. | Lines 1693, 2298. | One retry and timeout rule, stated once, used by both. |
 | P5 | §6.1 (557), §6.5 (736) vs stage 1 (551-554, 3976) | "can be served by two URLs that are not the same package's subsets" fails the 47 pages where stage 1 deliberately declares Plex Arabic at 400 to 600 from both Google and `legacy-faces.css`. | §6.1 class table and the stage 1 row. | "Is requested from two URLs" (observed on the network), or the stage 1 to 6 overlap allowed by name. |

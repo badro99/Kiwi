@@ -82,7 +82,7 @@ I edited, staged and committed nothing. My only writes were throwaway renders of
   - Today the PIN pad also approves managers: `pin/verify.js` issues refund and inventory approvals, and `sale/cancel.js:276` calls `verifyStaffPin`.
   - The spec calls for a manager code in §10.3, §10.31 and §11, but defines no server call, no response states and no copy for it.
   - Its haptic is contradictory: §15.3 says "final digit → Committed", and the same table says "Tier B confirm → never".
-  - It shares the store-wide `pin:<merchant>` bucket (`_lib.js:1302`). So a manager's typo inside a cancel sheet counts toward pausing every till for 15 minutes.
+  - It shares the store-wide `pin:<merchant>` bucket (`_lib.js:L1302`). So a manager's typo inside a cancel sheet counts toward pausing every till for 15 minutes.
 - **What a 10 looks like:** a sixth row with its route, its states, its haptic and its lockout copy.
 
 **M6 · §10.25, §18.9, §10.31 and §10.3 · the iPad keypad doesn't fit the containers it's placed in (UI)**
