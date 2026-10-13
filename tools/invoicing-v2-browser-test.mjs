@@ -424,8 +424,12 @@ try {
     await page.waitForFunction(() => /AV-\d{4}-\d{4}/.test(document.querySelector('[data-doc-number]')?.textContent || ''), { timeout: 6000 });
     eq((await text(page, '[data-doc-number]')).match(/AV-\d{4}-\d{4}/)[0], `AV-${YEAR}-0001`, 'l’avoir reçoit sa propre série (AV)');
     const ref = await text(page, '[data-credit-ref]');
-    const dd = new Date(); const dmy = `${String(dd.getDate()).padStart(2, '0')}/${String(dd.getMonth() + 1).padStart(2, '0')}/${dd.getFullYear()}`;
-    check(ref.includes(`Avoir sur facture ${number} du ${dmy}`) && /Remise accordée/.test(ref), 'le détail d’un avoir cite la facture et le motif : ' + ref);
+    /* La date d'émission est celle du magasin (le vrai serveur, fuseau de
+       Casablanca) ou celle du navigateur (le serveur simulé) : autour de
+       minuit elles diffèrent d'un jour, et les deux sont justes. */
+    const dmyIn = (tz) => new Intl.DateTimeFormat('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+    const dmys = [dmyIn(undefined), dmyIn('Africa/Casablanca')];
+    check(dmys.some((dmy) => ref.includes(`Avoir sur facture ${number} du ${dmy}`)) && /Remise accordée/.test(ref), 'le détail d’un avoir cite la facture et le motif : ' + ref);
     check(!(await page.$('[data-inv-act="edit"]')) && !(await page.$('[data-inv-act="pay"]')), 'un avoir émis n’offre ni modification ni paiement');
     await click(page, '[data-inv-act="open-original"]'); await waitDetail(page);
     await page.waitForFunction(() => document.querySelector('[data-balance]')?.textContent.replace(/[  \s]/g, '').startsWith('1050,00'), { timeout: 6000 });

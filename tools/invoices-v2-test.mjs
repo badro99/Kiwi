@@ -233,6 +233,17 @@ console.log('■ Règlements · bornés par le solde, états dérivés');
   ok('montant nul : refusé', r.status === 400);
   r = await c.post({ action: 'payment', id: inv.id, amountCents: 100, date: '2099-01-01' });
   ok('date de règlement future : refusée', r.status === 400 && r.json.error === 'invalid-date');
+  {
+    /* Un navigateur à l'est du magasin dit « demain » pendant quelques heures. */
+    const tomorrow = new Date(Date.parse(TODAY + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10);
+    const dayAfter = new Date(Date.parse(TODAY + 'T00:00:00Z') + 2 * 86400000).toISOString().slice(0, 10);
+    r = await c.post({ action: 'payment', id: inv.id, amountCents: 100, date: tomorrow, method: 'cash' });
+    const tz = r.status === 200 ? (r.json.payments || []).find((p) => p.amountCents === 100) : null;
+    ok('un jour d’avance (fuseau de l’appareil) : accepté et daté d’aujourd’hui', r.status === 200 && (!tz || tz.date === TODAY), r.text.slice(0, 200));
+    if (r.status === 200 && tz) await c.post({ action: 'delete-payment', id: inv.id, paymentId: tz.id });
+    r = await c.post({ action: 'payment', id: inv.id, amountCents: 100, date: dayAfter, method: 'cash' });
+    ok('deux jours d’avance : toujours refusé', r.status === 400 && r.json.error === 'invalid-date');
+  }
   r = await c.post({ action: 'payment', id: inv.id, amountCents: 100, method: 'bitcoin' });
   ok('mode de paiement inconnu : refusé', r.status === 400 && r.json.error === 'invalid-method');
   r = await c.post({ action: 'payment', id: inv.id, amountCents: 7000, method: 'transfer' });

@@ -750,7 +750,12 @@ async function payment(ctx, body) {
   const amount = Number(body.amountCents);
   if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_DOC_CENTS) throw fail(400, 'invalid-amountCents', 'Montant invalide.');
   const today = await todayFor(ctx);
-  const date = body.date == null || body.date === '' ? today : normDay(body.date, 'invalid-date');
+  let date = body.date == null || body.date === '' ? today : normDay(body.date, 'invalid-date');
+  /* « Aujourd'hui » est celui du magasin. Un appareil à l'est de lui (un
+   * patron en voyage, un navigateur à l'heure de Paris) dit déjà « demain »
+   * pendant quelques heures : un jour d'avance est l'horloge, pas l'intention,
+   * et devient aujourd'hui comme la date d'émission. Au-delà, c'est refusé. */
+  if (date > today && date <= addDays(today, 1)) date = today;
   if (date > today) throw fail(400, 'invalid-date', 'La date d’un règlement n’est pas dans le futur.');
   const method = body.method == null || body.method === '' ? 'other' : String(body.method);
   if (!PAYMENT_METHODS.includes(method)) throw fail(400, 'invalid-method', 'Mode de paiement invalide.');
