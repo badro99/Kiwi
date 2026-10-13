@@ -32,7 +32,7 @@ const DB = {
   async batch(statements) { raw.exec('BEGIN'); try { const results = statements.map(s => s.run()); raw.exec('COMMIT'); return results; } catch (e) { raw.exec('ROLLBACK'); throw e; } },
 };
 const cookie = `${TILL_COOKIE}=${await tillToken(SECRET, MERCHANT)}`;
-let failNext = false, delayNext = 0, requests = 0;
+let failNext = false, delayNext = 0, holdNext = null, requests = 0;
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/order/queue') {
     requests++;
@@ -42,7 +42,9 @@ const server = http.createServer(async (req, res) => {
       method: 'POST', headers: { cookie, 'Content-Type': 'application/json' }, body }), env: { DB, AUTH_SECRET: SECRET } });
     const result = await reply.text();
     const delay = delayNext; delayNext = 0;
+    const hold = holdNext; holdNext = null;
     if (delay) await new Promise(r => setTimeout(r, delay));
+    if (hold) await hold;
     res.writeHead(reply.status, { 'Content-Type': 'application/json' }); res.end(result); return;
   }
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -88,12 +90,17 @@ try {
     ok((await page.evaluate(() => window.bill()))[0].qty === 3, `${table ? 'table' : 'takeaway'}: failed write preserves the item`);
     ok(!(await page.$('#manager-modal')), 'one-tap item cancellation opens no PIN dialog');
 
-    delayNext = 400;
+    /* The reply is HELD until the test lets it go, not delayed by a fixed
+       400 ms: on a loaded machine a real click takes longer than that, the
+       first request had already come back, and the second tap rightly sent a
+       second cancellation. The second tap now always lands in flight. */
+    let release; holdNext = new Promise(r => { release = r; });
     const before = requests;
     await page.click('#open');
     await page.click('#open');
     // Simulate the canonical poll applying the same revision during the request.
     await page.evaluate(() => { window.bill()[0].qty = 2; });
+    release();
     await page.waitForFunction(() => window.lastToast?.includes('annulé en cuisine'));
     const bill = await page.evaluate(() => window.bill());
     ok(bill[0].qty === 2 && bill[1].qty === 1, 'server quantities apply once; the other variant stays untouched');

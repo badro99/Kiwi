@@ -74,7 +74,11 @@ const swept = await lib.sweepOrphanMedia(w.env, now);
 check('a file with no row, older than an hour, is swept', swept === 1 && !w.bucket.has('kiwi-tickets/9/orphan-old.png'));
 check('a file still being uploaded is left alone', w.bucket.has('kiwi-tickets/9/in-flight.png'));
 
-const later = now + lib.RETENTION_MS + 1000;
+/* « Tested » stamps expires_ts from the handler's own clock, which runs after
+   `now` was frozen above. Counting 20 days from `now` left a 1 s margin, and a
+   loaded machine spends longer than that between the two: the ticket had not
+   yet expired and the check failed for no product reason. Count from here. */
+const later = Date.now() + lib.RETENTION_MS + 1000;
 const purged = await lib.purgeExpired(w.env, later);
 check('20 days after "Tested" the ticket text itself is purged', purged === 1 && !w.tickets.has(1) && w.tickets.has(2));
 

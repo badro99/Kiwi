@@ -153,10 +153,15 @@ try {
   check(ticks >= 3 && ticks <= 7, 'one tick per data point across 7 days (' + ticks + ')');
   check(await page.$eval('.dr-pill[data-range="septJours"]', (e) => e.classList.contains('on')), 'letting go of a slow drag keeps the period');
   check(await page.evaluate(() => window.__hap.includes('selectionStart') && window.__hap.includes('selectionEnd')), 'the reading opens and closes one haptic session');
-  await page.touchscreen.touchStart(hit.x + 60, hit.y);
-  await page.touchscreen.touchMove(hit.x, hit.y);
-  await page.touchscreen.touchMove(hit.x - 60, hit.y);
-  await page.touchscreen.touchEnd(); await sleep(1300);
+  /* The app counts a swipe as a flick only if the whole gesture takes under
+     FLICK_MS (320 ms). Four awaited puppeteer touch calls are four round trips,
+     and on a loaded machine they alone could exceed that: the app rightly read a
+     slow drag. The four events go out queued on one CDP session instead (the
+     session keeps their order), so the speed is the gesture's, not the harness's. */
+  const cdp = await page.createCDPSession();
+  const touch = (type, x) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x == null ? [] : [{ x: Math.round(x), y: Math.round(hit.y), id: 1 }] });
+  await Promise.all([touch('touchStart', hit.x + 60), touch('touchMove', hit.x), touch('touchMove', hit.x - 60), touch('touchEnd')]);
+  await cdp.detach(); await sleep(1300);
   check(await page.$eval('.dr-pill[data-range="trenteJours"]', (e) => e.classList.contains('on')), 'a quick flick still steps to the next period');
 
   /* Dark: no surface paints white first. */
