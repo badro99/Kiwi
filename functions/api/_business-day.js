@@ -4,6 +4,9 @@
 // never reported one keep Morocco, Kiwi's historical default.
 const DAY = 86400000;
 export const DEFAULT_ZONE = 'Africa/Casablanca';
+// The historical 05:00 boundary. assets/kit/business-day.js holds the same pair for
+// the browser; tools/business-day-default-test.mjs fails if the two drift.
+export const DEFAULT_CUTOFF = 5;
 const clocks = new Map();
 
 export function validZone(zone) {
@@ -27,12 +30,12 @@ function parts(epoch, zone) {
 export function addBusinessDays(day, days) {
   return new Date(Date.parse(day + 'T00:00:00Z') + days * DAY).toISOString().slice(0, 10);
 }
-export function businessDate(epoch, cutoff = 5, zone = DEFAULT_ZONE) {
+export function businessDate(epoch, cutoff = DEFAULT_CUTOFF, zone = DEFAULT_ZONE) {
   const p = parts(epoch, zone);
   const day = `${p.year}-${p.month}-${p.day}`;
   return Number(p.hour) < cutoff ? addBusinessDays(day, -1) : day;
 }
-export function businessBoundary(day, cutoff = 5, zone = DEFAULT_ZONE) {
+export function businessBoundary(day, cutoff = DEFAULT_CUTOFF, zone = DEFAULT_ZONE) {
   const target = Date.parse(day + 'T00:00:00Z') + cutoff * 3600000;
   let guess = target;
   for (let i = 0; i < 4; i++) {
@@ -43,10 +46,10 @@ export function businessBoundary(day, cutoff = 5, zone = DEFAULT_ZONE) {
   }
   return guess;
 }
-export function businessDayStart(epoch, cutoff = 5, zone = DEFAULT_ZONE) {
+export function businessDayStart(epoch, cutoff = DEFAULT_CUTOFF, zone = DEFAULT_ZONE) {
   return businessBoundary(businessDate(epoch, cutoff, zone), cutoff, zone);
 }
-export function businessDayWindows(epoch, count = 30, cutoff = 5, zone = DEFAULT_ZONE) {
+export function businessDayWindows(epoch, count = 30, cutoff = DEFAULT_CUTOFF, zone = DEFAULT_ZONE) {
   const today = businessDate(epoch, cutoff, zone);
   return Array.from({ length: count }, (_, i) => {
     const d = addBusinessDays(today, i - count + 1);
@@ -67,10 +70,10 @@ export async function merchantZone(env, merchant) {
 // Paired till publishes the same 0–12 h cutoff used by KiwiDayReport. A
 // missing column (pre-upgrade stores) retains the historical 05:00 boundary.
 export async function merchantCutoff(env, merchant) {
-  if (!env?.DB || !merchant) return 5;
+  if (!env?.DB || !merchant) return DEFAULT_CUTOFF;
   try {
     const row = await env.DB.prepare('SELECT business_cutoff FROM merchant_config WHERE merchant = ?').bind(merchant).first();
     const value = row && row.business_cutoff;
-    return Number.isInteger(value) && value >= 0 && value <= 12 ? value : 5;
-  } catch (_) { return 5; }
+    return Number.isInteger(value) && value >= 0 && value <= 12 ? value : DEFAULT_CUTOFF;
+  } catch (_) { return DEFAULT_CUTOFF; }
 }

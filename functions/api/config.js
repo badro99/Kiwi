@@ -28,7 +28,7 @@
 // SELECTs below are deliberately narrow and tools/config-pin-projection-test.mjs
 // fails the build if a code finds its way back in.
 
-import { validZone } from './_business-day.js';
+import { validZone, DEFAULT_ZONE, DEFAULT_CUTOFF } from './_business-day.js';
 import {
   json, activeAccountSession, slugMerchant, isOperator, isTillFor,
   employeeRoleOpensTill,
@@ -333,7 +333,20 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
+  /* `timezone` and `businessCutoff` above stay what the store PUBLISHED: '' and
+   * null until its till reports. Current callers read that silence (the till
+   * reports its own clock when it differs from the stored one; a dashboard
+   * adopts only a cutoff the till actually published). `businessDay` is the day
+   * the ledger counts on, resolved by the same rule as merchantZone() and
+   * merchantCutoff() in _business-day.js: a store with no row gets 5 and
+   * Africa/Casablanca, flagged as defaults. Additive: no existing field moves. */
   return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended, timezone, businessCutoff,
+    businessDay: {
+      cutoff: businessCutoff === null ? DEFAULT_CUTOFF : businessCutoff,
+      zone: timezone || DEFAULT_ZONE,
+      cutoffIsDefault: businessCutoff === null,
+      zoneIsDefault: !timezone,
+    },
     subscription: { state: subscription, active: subscription === 'active' } });
 }
 

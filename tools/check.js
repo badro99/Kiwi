@@ -1351,6 +1351,17 @@ section('Whole-project regressions');
     'pairing-parity-test.mjs',
     'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
+    /* Direction 2027, étape 1 : le formateur unique (KiwiFormat, §6.3) et la
+       journée commerciale côté client (§17.1). format-vectors-test tient le
+       tableau de vecteurs en Node et dans Chromium ; la moitié WebKit passe
+       par le simulateur iOS et dit « not run » quand il n'y en a pas, jamais
+       « passed ». business-day-default-test compare le client au serveur, y
+       compris la règle que les caisses livrent aujourd'hui ; config-business-day-test
+       tient /api/config : `businessDay` s'ajoute, aucun champ existant ne bouge. */
+    'format-vectors-test.mjs',
+    'format-vectors-ios.mjs',
+    'business-day-default-test.mjs',
+    'config-business-day-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
     /* Approuver puis se faire refuser : la passation refuse un manager SUR le
        pavé (plus par un toast après sa fermeture), et les actes qui sont une
@@ -1810,7 +1821,12 @@ section('Whole-project regressions');
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
     const out = (r.stdout || '') + (r.stderr || '');
-    if (r.status === 0) ok(name + ' green');
+    /* « not run » n'est pas « passed » : une suite qui n'a rien pu exécuter (pas
+       de simulateur iOS, par exemple) le dit sur une ligne `○ ... not run: <raison>`,
+       et le gate l'affiche comme tel, sans la compter verte. */
+    const notRun = r.status === 0 && out.split('\n').find((l) => /^○ .* not run/.test(l));
+    if (notRun) warn(name + ' ' + notRun.replace(/^○\s*/, '').replace(/ \(not counted as passed\)$/, ''));
+    else if (r.status === 0) ok(name + ' green');
     else {
       const lines = out.split('\n').filter((l) => /[✗·]|AssertionError|TimeoutError|Error:|ERR_ASSERTION|actual:|expected:/.test(l)).slice(-8);
       if (lines.length) lines.forEach((l) => fail(name + ' — ' + l.trim()));
