@@ -70,7 +70,13 @@ try {
     /* No float is pre-selected: "Open till" stays off until the cashier
        says what is in the drawer, so choose one first. */
     await page.waitForSelector('.ci-float-chip', { visible: true });
-    await page.click('.ci-float-chip');
+    /* The chips also paint before their handler is bound (the opening screen
+       fades in): tap until « Ouvrir la caisse » unlocks, as a cashier would. */
+    for (let i = 0; i < 20; i++) {
+      await page.click('.ci-float-chip').catch(() => {});
+      const armed = await page.waitForFunction(() => { const b = document.getElementById('clockin-btn'); return !!b && !b.disabled; }, { timeout: 1000 }).then(() => true, () => false);
+      if (armed) break;
+    }
     /* The button paints before its deferred script binds it: tap until the
        opening screen actually goes, like a cashier would. */
     for (let i = 0; i < 20; i++) {
