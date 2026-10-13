@@ -11,6 +11,7 @@
 import { tenantFor } from './_private.js';
 import { json } from '../auth/_lib.js';
 import { iceCompact, iceProblem, ICE_DETAIL } from './_ice.js';
+import { allocateNumber } from './_invoice-series.js';
 
 export function validateCustomer(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -135,69 +136,61 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     }
   }
 
-  let attempts = 0;
-  while (attempts < 5) {
-    attempts++;
-    const maxRow = await env.DB.prepare(
-      'SELECT COALESCE(MAX(seq), 0) AS max_seq FROM sale_invoices WHERE merchant = ?'
-    ).bind(merchant).first();
-
-    const nextSeq = (Number(maxRow?.max_seq) || 0) + 1;
-    const number = formatInvoiceNumber(year, nextSeq);
-
-    snap.number = number;
-    snap.issuedTs = issuedTs;
-    if (customer) snap.customer = customer;
-
-    const snapStr = JSON.stringify(snap);
-    const custStr = customer ? JSON.stringify(customer) : null;
-
-    try {
-      await env.DB.prepare(
-        'INSERT INTO sale_invoices (merchant, seq, number, sale_id, customer, snapshot, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(merchant, nextSeq, number, saleId, custStr, snapStr, now).run();
-
-      return {
-        existing: false,
-        seq: nextSeq,
-        number: number,
-        saleId: saleId,
-        customer: customer,
-        snapshot: snap,
-        createdTs: now,
-      };
-    } catch (err) {
-      const msg = String(err?.message || err || '');
-      // En cas de collision concurrentielle sur (merchant, sale_id)
-      if (msg.includes('UNIQUE constraint failed: sale_invoices.merchant, sale_invoices.sale_id') ||
-          msg.includes('PRIMARY KEY')) {
-        const row = await env.DB.prepare(
-          'SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? AND sale_id = ?'
-        ).bind(merchant, saleId).first();
-        if (row) {
-          let s = null, c = null;
-          try { s = JSON.parse(row.snapshot); } catch (_) {}
-          try { c = row.customer ? JSON.parse(row.customer) : null; } catch (_) {}
-          return {
-            existing: true,
-            seq: Number(row.seq),
-            number: row.number,
-            saleId: row.sale_id,
-            customer: c,
-            snapshot: s,
-            createdTs: Number(row.created_ts),
-          };
-        }
-      }
-      // Si collision sur seq (deux appareils en même temps), la boucle while réessaye avec le nouveau MAX(seq)
-      if (!msg.includes('UNIQUE constraint failed: sale_invoices.merchant, sale_invoices.seq') &&
-          !msg.includes('sale_invoices.seq')) {
-        throw err;
+  /* Le numéro vient de l'allocateur commun (functions/api/_invoice-series.js) :
+   * la série F est PARTAGÉE avec les factures saisies au tableau de bord
+   * (invoices.js). La réservation dans `invoice_series` et l'INSERT de la
+   * facture partent dans le même `DB.batch`, donc dans la même transaction :
+   * les deux chemins ne peuvent jamais distribuer le même numéro, et une
+   * collision (deux appareils au même instant) annule le lot et recommence. */
+  const custStr = customer ? JSON.stringify(customer) : null;
+  let allocated;
+  try {
+    allocated = await allocateNumber(env, merchant, 'F', year, {
+      docRef: saleId,
+      extra: (seq, number) => {
+        snap.number = number;
+        snap.issuedTs = issuedTs;
+        if (customer) snap.customer = customer;
+        return [env.DB.prepare(
+          'INSERT INTO sale_invoices (merchant, seq, number, sale_id, customer, snapshot, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(merchant, seq, number, saleId, custStr, JSON.stringify(snap), now)];
+      },
+    });
+  } catch (err) {
+    const msg = String(err?.message || err || '');
+    // Collision sur (merchant, sale_id) : un autre appareil a facturé cette vente
+    // entre-temps. Le lot est annulé, la réservation avec lui ; on rend l'existante.
+    if (msg.includes('sale_invoices.sale_id') || msg.includes('PRIMARY KEY')) {
+      const row = await env.DB.prepare(
+        'SELECT merchant, seq, number, sale_id, customer, snapshot, created_ts FROM sale_invoices WHERE merchant = ? AND sale_id = ?'
+      ).bind(merchant, saleId).first();
+      if (row) {
+        let s = null, c = null;
+        try { s = JSON.parse(row.snapshot); } catch (_) {}
+        try { c = row.customer ? JSON.parse(row.customer) : null; } catch (_) {}
+        return {
+          existing: true,
+          seq: Number(row.seq),
+          number: row.number,
+          saleId: row.sale_id,
+          customer: c,
+          snapshot: s,
+          createdTs: Number(row.created_ts),
+        };
       }
     }
+    throw err;
   }
 
-  throw new Error('concurrency-retry-exhausted');
+  return {
+    existing: false,
+    seq: allocated.seq,
+    number: allocated.number,
+    saleId: saleId,
+    customer: customer,
+    snapshot: snap,
+    createdTs: now,
+  };
 }
 
 export async function onRequestPost({ request, env }) {

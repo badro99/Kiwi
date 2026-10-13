@@ -14,7 +14,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DatabaseSync } from 'node:sqlite';
 import * as ICE from '../functions/api/_ice.js';
+import * as SERIES from '../functions/api/_invoice-series.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -188,7 +190,9 @@ if (custValMatch && fmtNumMatch && schemaMatch && getOrCreateMatch) {
     return { validateCustomer, formatInvoiceNumber, getOrCreateSaleInvoice };
   `;
   /* validateCustomer lit la règle ICE partagée (functions/api/_ice.js). */
-  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL);
+  /* …et l'allocateur de numéros commun à la caisse et à la saisie
+   * (functions/api/_invoice-series.js). */
+  const helpers = new Function('iceCompact', 'iceProblem', 'ICE_DETAIL', 'allocateNumber', code)(ICE.iceCompact, ICE.iceProblem, ICE.ICE_DETAIL, SERIES.allocateNumber);
   validateCustomer = helpers.validateCustomer;
   formatInvoiceNumber = helpers.formatInvoiceNumber;
   getOrCreateSaleInvoice = helpers.getOrCreateSaleInvoice;
@@ -225,51 +229,33 @@ if (formatInvoiceNumber) {
   ok(formatInvoiceNumber(2026, 10000) === 'F-2026-10000', 'formats 5-digit invoice F-2026-10000');
 }
 
-// Test Idempotence serveur avec Mock D1 DB & vérification de la table sales
+// Test Idempotence serveur sur une vraie base SQLite au schéma réel (schema.sql),
+// avec la lecture de la table `sales` et l'allocateur de numéros commun.
 if (getOrCreateSaleInvoice) {
-  const knownSales = new Set(['shop-casa|sale-A', 'shop-casa|sale-B', 'shop-casa|sale-ref-x']);
-  const dbRows = new Map(); // key: merchant|sale_id
-  const seqMap = new Map(); // key: merchant -> max seq
-
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  const insSale = sqlite.prepare('INSERT INTO sales (id, merchant, amount, amount_cents, method, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  insSale.run('sale-A', 'shop-casa', 150, 15000, 'cash', 'R-A', 1771488000000);
+  insSale.run('sale-B', 'shop-casa', 200, 20000, 'cash', 'R-B', 1771488000000);
+  insSale.run('sale-ref-x', 'shop-casa', 50, 5000, 'cash', 'R-X', 1771488000000);
   const mockDb = {
-    prepare: (query) => {
-      return {
-        bind: (...args) => ({
-          first: async () => {
-            if (query.includes('FROM sales WHERE merchant = ? AND id = ?')) {
-              const [m, sid] = args;
-              return knownSales.has(`${m}|${sid}`) ? { 1: 1 } : null;
-            }
-            if (query.includes('FROM sale_invoices WHERE merchant = ? AND sale_id = ?')) {
-              const [m, sid] = args;
-              return dbRows.get(`${m}|${sid}`) || null;
-            }
-            if (query.includes('SELECT COALESCE(MAX(seq), 0) AS max_seq FROM sale_invoices WHERE merchant = ?')) {
-              const [m] = args;
-              const maxSeq = seqMap.get(m) || 0;
-              return { max_seq: maxSeq };
-            }
-            return null;
-          },
-          run: async () => {
-            if (query.includes('INSERT INTO sale_invoices')) {
-              const [m, seq, num, sid, cust, snap, created] = args;
-              const key = `${m}|${sid}`;
-              if (dbRows.has(key)) {
-                throw new Error('UNIQUE constraint failed: sale_invoices.merchant, sale_invoices.sale_id');
-              }
-              const row = { merchant: m, seq, number: num, sale_id: sid, customer: cust, snapshot: snap, created_ts: created };
-              dbRows.set(key, row);
-              seqMap.set(m, Math.max(seqMap.get(m) || 0, seq));
-              return { success: true };
-            }
-            return { success: true };
-          },
-        }),
-      };
+    prepare(q) {
+      const st = sqlite.prepare(q);
+      const bound = (p) => ({
+        async first() { const row = st.get(...p); return row === undefined ? null : row; },
+        async all() { return { results: st.all(...p) }; },
+        async run() { const r = st.run(...p); return { meta: { changes: r.changes }, success: true }; },
+      });
+      return Object.assign(bound([]), { bind: (...p) => bound(p) });
+    },
+    // D1 joue un lot en UNE transaction : tout ou rien.
+    async batch(stmts) {
+      sqlite.exec('BEGIN');
+      try { const out = []; for (const s of stmts) out.push(await s.run()); sqlite.exec('COMMIT'); return out; }
+      catch (e) { sqlite.exec('ROLLBACK'); throw e; }
     },
   };
-
+  const dbRows = { has: (key) => { const [m, sid] = key.split('|'); return !!sqlite.prepare('SELECT 1 FROM sale_invoices WHERE merchant = ? AND sale_id = ?').get(m, sid); } };
   const mockEnv = { DB: mockDb };
 
   // Premier appel pour sale-A => F-2026-0001
@@ -437,6 +423,58 @@ ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/$
   ok(frozen.includes('Mention obligatoire manquante'), 'a snapshot frozen with missingICE:false and a bad ICE still warns');
   store['kiwi:business:v1:cafe-local-test'] = JSON.stringify({ legal: { ice: '001 234 567 000 089' } });
   ok(Inv.getSellerBusiness().ice === '001234567000089', 'this store\'s own ICE is read, spaces normalised');
+}
+
+// 2026-10-13 · Facturation v2 : la série F est UNE pour la caisse (sale_invoices)
+// et pour la saisie (invoices.js), via le même allocateur. Jamais le même
+// numéro, et l'historique de sale_invoices est respecté quand invoice_series est
+// encore vide (un commerçant qui n'a jamais saisi de facture).
+{
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  const env = { DB: {
+    prepare(q) {
+      const st = sqlite.prepare(q);
+      const bound = (p) => ({
+        async first() { const row = st.get(...p); return row === undefined ? null : row; },
+        async all() { return { results: st.all(...p) }; },
+        async run() { const r = st.run(...p); return { meta: { changes: Number(r.changes) }, success: true }; },
+      });
+      return Object.assign(bound([]), { bind: (...p) => bound(p) });
+    },
+    async batch(stmts) {
+      sqlite.exec('BEGIN');
+      try { const out = []; for (const s of stmts) out.push(await s.run()); sqlite.exec('COMMIT'); return out; }
+      catch (e) { sqlite.exec('ROLLBACK'); throw e; }
+    },
+  } };
+  const M = 'shop-serie';
+  const oldInv = sqlite.prepare('INSERT INTO sale_invoices (merchant, seq, number, sale_id, customer, snapshot, created_ts) VALUES (?,?,?,?,?,?,?)');
+  for (let i = 1; i <= 3; i++) oldInv.run(M, i, `F-2026-000${i}`, `hist-${i}`, null, '{}', 1771488000000);
+  ok(sqlite.prepare('SELECT COUNT(*) n FROM invoice_series').get().n === 0, 'v2: invoice_series starts empty for a merchant with till history');
+
+  const manual = (docRef) => SERIES.allocateNumber(env, M, 'F', 2026, { docRef });
+  const sale = (id, cents) => {
+    sqlite.prepare('INSERT OR IGNORE INTO sales (id, merchant, amount, amount_cents, method, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, M, cents / 100, cents, 'cash', 'R-' + id, Date.now() - 1000);
+    return getOrCreateSaleInvoice(env, M, id, null, { issuedTs: Date.now(), totals: { ttc: cents / 100 } });
+  };
+  const m1 = await manual('doc-1');
+  ok(m1.seq === 4 && m1.number === 'F-2026-0004', 'v2: a manual invoice continues after the till history (F-2026-0004)');
+  const t1 = await sale('s-1', 5000);
+  ok(t1.seq === 5 && t1.number.endsWith('-0005'), 'v2: the next till invoice takes the following number');
+  const m2 = await manual('doc-2');
+  const t2 = await sale('s-2', 7000);
+  ok(m2.seq === 6 && t2.seq === 7, 'v2: interleaved till and manual invoices take consecutive numbers');
+  const till = new Set(sqlite.prepare('SELECT seq FROM sale_invoices').all().map((r) => r.seq));
+  const manualSeqs = sqlite.prepare("SELECT seq, doc_ref FROM invoice_series WHERE prefix = 'F' AND doc_ref LIKE 'doc-%'").all();
+  ok(manualSeqs.length === 2 && manualSeqs.every((r) => !till.has(r.seq)), 'v2: a till invoice and a manual invoice never share an F number');
+  ok(sqlite.prepare("SELECT COUNT(*) n FROM invoice_series WHERE doc_ref IN ('s-1', 's-2')").get().n === 2, 'v2: the till reserves its number in invoice_series in the same batch');
+  const again = await sale('s-1', 5000);
+  ok(again.existing === true && again.seq === 5 && sqlite.prepare("SELECT COUNT(*) n FROM invoice_series WHERE doc_ref = 's-1'").get().n === 1, 'v2: re-invoicing a sale keeps its number and reserves nothing more');
+  const av = await SERIES.allocateNumber(env, M, 'AV', 2026, { docRef: 'cn-1' });
+  const dv = await SERIES.allocateNumber(env, M, 'D', 2026, { docRef: 'q-1' });
+  ok(av.number === 'AV-2026-0001' && dv.number === 'D-2026-0001', 'v2: credit notes and quotes have their own series');
 }
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

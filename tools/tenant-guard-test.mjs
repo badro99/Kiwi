@@ -150,6 +150,8 @@ function invoiceEnv(sale) {
         };
         return stmt;
       },
+      /* Le numéro est réservé dans le même lot que la facture (allocateur commun). */
+      async batch(stmts) { const out = []; for (const s of stmts) out.push(await s.run()); return out; },
     },
   };
 }

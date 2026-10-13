@@ -1363,6 +1363,70 @@ CREATE TABLE IF NOT EXISTS sale_invoices (
   UNIQUE (merchant, seq)
 );
 CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq);
+
+-- FACTURATION v2 · documents saisis (factures, avoirs, devis) et leurs règlements.
+-- Le DDL jumeau vit dans functions/api/_invoice-series.js (la production a du
+-- retard sur ce fichier : les tables se créent au premier usage) ; le banc
+-- tools/invoices-v2-test.mjs vérifie que les deux disent la même chose.
+-- Les montants sont en centimes entiers, calculés par le serveur seul.
+-- invoice_series : UNE série par (établissement, préfixe F | AV | D), partagée
+-- avec sale_invoices pour F. Un numéro n'est jamais réutilisé ni supprimé.
+CREATE TABLE IF NOT EXISTS invoice_series (
+  merchant   TEXT NOT NULL,
+  prefix     TEXT NOT NULL,
+  seq        INTEGER NOT NULL,
+  number     TEXT NOT NULL,
+  doc_ref    TEXT,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, prefix, seq)
+);
+CREATE TABLE IF NOT EXISTS invoice_docs (
+  id                TEXT PRIMARY KEY,
+  merchant          TEXT NOT NULL,
+  type              TEXT NOT NULL,
+  status            TEXT NOT NULL,
+  number            TEXT,
+  seq               INTEGER,
+  issue_date        TEXT,
+  due_date          TEXT,
+  terms_days        INTEGER,
+  valid_until       TEXT,
+  customer          TEXT NOT NULL,
+  seller            TEXT,
+  lines             TEXT NOT NULL,
+  totals            TEXT NOT NULL,
+  ttc_cents         INTEGER NOT NULL DEFAULT 0,
+  payment_method    TEXT,
+  note              TEXT,
+  exemption_mention TEXT,
+  internal_note     TEXT,
+  original_id       TEXT,
+  source_quote_id   TEXT,
+  reason            TEXT,
+  created_ts        INTEGER NOT NULL,
+  updated_ts        INTEGER NOT NULL,
+  issued_ts         INTEGER,
+  sent_ts           INTEGER,
+  cancelled_ts      INTEGER,
+  created_by        TEXT,
+  legacy_ref        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_docs_merchant ON invoice_docs (merchant, type, issue_date);
+CREATE INDEX IF NOT EXISTS idx_invoice_docs_original ON invoice_docs (merchant, original_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_docs_number ON invoice_docs (merchant, number) WHERE number IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_docs_legacy ON invoice_docs (merchant, legacy_ref) WHERE legacy_ref IS NOT NULL;
+CREATE TABLE IF NOT EXISTS invoice_payments (
+  id           TEXT PRIMARY KEY,
+  merchant     TEXT NOT NULL,
+  doc_id       TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  date         TEXT,
+  method       TEXT,
+  reference    TEXT,
+  created_ts   INTEGER NOT NULL,
+  created_by   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_payments_doc ON invoice_payments (merchant, doc_id);
 -- Phase AI 1d-a: durable, append-only sale cancellation facts. The actor is an
 -- account/team id, never a PIN or operator code. `sales.void_*` remains the
 -- mutable reconciliation state consumed by /api/feed.
