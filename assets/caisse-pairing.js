@@ -219,6 +219,7 @@
       // roster. Forget them so the staff pad asks again.
       onTenantSwitch: function () {
         if (previousVenue && previousVenue.merchant) del(offlinePinKey(previousVenue.merchant));
+        resetPinState();
         setStaff(null);
         window.__kiwiPairedBoutiqueVenue = null;
         /* Le SERVICE de l'autre commerce, le JOURNAL DES VENTES, le catalogue,
@@ -375,6 +376,7 @@
     purgeTenantData();
     if (oldVenue && oldVenue.merchant) del(offlinePinKey(oldVenue.merchant));
     window.__kiwiPairedBoutiqueVenue = null;
+    resetPinState();
     setStaff(null);                     // this device is nobody's till any more
     try {
       if (window.KiwiPosDispatch && window.KiwiPosDispatch.lock) window.KiwiPosDispatch.lock();
@@ -583,6 +585,20 @@
   var pinBuf = '';
   var pinVenue = null;
   var pinList = null;   // [{name,role}] once fetched — the roster, never the codes
+  /* Which store a code is judged against. The PAIRING is the authority, not the
+   * pad: `pinVenue` is only what the staff pad last asked about, and nothing
+   * guarantees it is still where this till is bound (an idle re-pair while
+   * offline, a pair-back that skips the pad, an unpair). Trusting it let another
+   * store's manager approve a discount here, through the server. So the paired
+   * store always wins; `pinVenue` is used only when it IS that store, and an
+   * unpaired till has no store to judge against. Resetting the state on switch
+   * and unpair (resetPinState) is the second lock, not the first. */
+  function activeVenue() {
+    var paired = pairedVenue();
+    if (!paired || !paired.merchant) return null;
+    return pinVenue && pinVenue.merchant === paired.merchant ? pinVenue : paired;
+  }
+  function resetPinState() { pinVenue = null; pinList = null; pinBuf = ''; }
 
   /* ── who is at the till right now ─────────────────────────────────────────
    * A staff code is a PERSON, not just a door code: /api/pin/verify answers with
@@ -752,7 +768,7 @@
   }
   function submitPin() {
     var code = pinBuf;
-    var venue = pinVenue || pairedVenue();
+    var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
     var scr = document.getElementById('cp-pin-screen');
     function refuse(msg) {
@@ -795,7 +811,7 @@
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
   document.addEventListener('click', function (e) {
-    if (e.target && e.target.id === 'cp-pin-retry') { askStaff(pinVenue || pairedVenue(), null); return; }
+    if (e.target && e.target.id === 'cp-pin-retry') { askStaff(activeVenue(), null); return; }
     var k = e.target.closest && e.target.closest('#cp-pad [data-cp]');
     if (k) { feed(k.getAttribute('data-cp')); return; }
     var kp = e.target.closest && e.target.closest('#cp-pin-pad [data-cpp]');
@@ -893,7 +909,7 @@
   var lastVerify = { status: 0, wait: 0 };
   function verifyCode(code, action) {
     code = String(code || '');
-    var venue = pinVenue || pairedVenue();
+    var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
     if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
     var controller = new AbortController();
