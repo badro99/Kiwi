@@ -353,6 +353,26 @@ CREATE TABLE IF NOT EXISTS till_devices (
   PRIMARY KEY (merchant, device_id)
 );
 
+-- ── Espace comptable (accès en lecture seule d'un expert-comptable) ──────────
+-- Le propriétaire invite son comptable (functions/api/comptable/access.js) : un
+-- lien comptable.html#<jeton>, montré UNE fois. Seule l'empreinte SHA-256 du
+-- jeton est stockée. L'échange du lien (session.js) pose le cookie `kiwi_acct`
+-- que seul books.js honore. Créée au premier usage par ensureAccountantAccess() :
+-- la production a toujours du retard sur ce fichier.
+CREATE TABLE IF NOT EXISTS accountant_access (
+  id           TEXT PRIMARY KEY,
+  merchant     TEXT NOT NULL,
+  label        TEXT,
+  email        TEXT,
+  token_hash   TEXT NOT NULL UNIQUE,
+  created_ts   INTEGER NOT NULL,
+  created_by   TEXT NOT NULL,      -- accounts.id, ou 'op:<operators.id>'
+  last_seen_ts INTEGER,
+  revoked_ts   INTEGER,
+  expires_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_accountant_access_merchant ON accountant_access (merchant, created_ts);
+
 -- ── Published menu (customer QR self-order → kiwi-order.html) ────────────────
 -- One row per merchant: the carte a customer sees after scanning the table QR.
 -- The merchant's dashboard menu lives client-side (localStorage, per-venue, via

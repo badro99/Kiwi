@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<title>Kiwi · Espace comptable</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/tokens.css?v=2052" />
+<!-- Espace comptable : la page qu'ouvre l'expert-comptable d'un commerçant.
+     Lecture seule (GET /api/comptable/books), aucun compte Kiwi. Le jeton du
+     lien arrive dans le fragment (#), il est échangé une fois contre un cookie
+     HttpOnly (POST /api/comptable/session) puis effacé de l'adresse. Les exports
+     CSV sont fabriqués ici, dans le navigateur, à partir du JSON reçu. -->
+<style>
+  :root {
+    --cp-line: rgba(10, 15, 13, 0.12);
+    --cp-line-soft: rgba(10, 15, 13, 0.07);
+    --cp-muted: #5c5a54;
+    --cp-card: var(--surface, #FFFDFA);
+    --cp-radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink);
+    font: 400 15px/1.5 "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums; font-style: normal;
+  }
+  html[lang="ar"] body, html[lang="ar"] button, html[lang="ar"] input, html[lang="ar"] select {
+    font-family: "IBM Plex Sans Arabic", "Inter Tight", system-ui, sans-serif;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  i[data-icon], svg[data-material-symbol] { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -0.22em; flex: none; }
+  .cp-wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px 56px; }
+  .num { direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.92em; }
+
+  /* ── En-tête ── */
+  .cp-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 18px 0 14px; }
+  .cp-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .cp-brand img { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+  .cp-brand-name { font-weight: 600; letter-spacing: -0.01em; }
+  .cp-brand-sub { color: var(--cp-muted); font-size: 13px; }
+  .cp-spacer { flex: 1 1 auto; }
+  .cp-lang { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--paper-soft); border: 1px solid var(--cp-line-soft); }
+  .cp-lang button { border: 0; background: transparent; padding: 6px 12px; min-height: 32px; min-width: 40px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--cp-muted); }
+  .cp-lang button.on { color: var(--paper); }
+  .cp-lang button:focus-visible, .cp-btn:focus-visible, .cp-iconbtn:focus-visible, .cp-month input:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+
+  .cp-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 24px; padding: 10px 0 18px; }
+  .cp-head h1 { margin: 0; font-size: clamp(26px, 5vw, 38px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.08; overflow-wrap: anywhere; }
+  .cp-head .cp-kicker { color: var(--atlas); font-size: 13px; font-weight: 500; letter-spacing: 0.02em; margin-bottom: 4px; }
+  .cp-month { display: flex; align-items: center; gap: 6px; }
+  .cp-month input { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--cp-line); background: var(--cp-card); min-width: 150px; }
+  .cp-iconbtn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--cp-line); background: var(--cp-card); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .cp-iconbtn:hover { background: var(--paper-soft); }
+  html[dir="rtl"] .cp-iconbtn i[data-icon], html[dir="rtl"] .cp-iconbtn svg { transform: scaleX(-1); }
+
+  .cp-ro { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--paper-soft); border: 1px solid var(--cp-line-soft); color: var(--n-700, #2E2D29); font-size: 14px; }
+  .cp-ro i, .cp-ro svg { color: var(--atlas); margin-top: 2px; }
+  .cp-ro b { font-weight: 600; }
+
+  /* ── Cartes ── */
+  .cp-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 18px 0 8px; }
+  .cp-stat { background: var(--cp-card); border: 1px solid var(--cp-line-soft); border-radius: var(--cp-radius); padding: 16px; box-shadow: var(--elev-1); min-width: 0; }
+  .cp-stat .l { color: var(--cp-muted); font-size: 13px; }
+  .cp-stat .v { font-size: clamp(22px, 3.2vw, 30px); font-weight: 500; letter-spacing: -0.03em; margin-top: 4px; overflow-wrap: anywhere; }
+  .cp-stat .s { color: var(--cp-muted); font-size: 12.5px; margin-top: 2px; }
+  .cp-stat.main { background: var(--riad); border-color: transparent; color: var(--paper); }
+  .cp-stat.main .l, .cp-stat.main .s { color: rgba(247, 245, 240, 0.72); }
+  .cp-card { background: var(--cp-card); border: 1px solid var(--cp-line-soft); border-radius: var(--cp-radius); padding: 18px; margin-top: 14px; box-shadow: var(--elev-1); min-width: 0; }
+  .cp-card h2 { margin: 0 0 4px; font-size: 18px; font-weight: 500; letter-spacing: -0.02em; }
+  .cp-card .sub { color: var(--cp-muted); font-size: 13px; margin: 0 0 12px; }
+  .cp-methods { display: grid; gap: 10px; }
+  .cp-method { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 12px; align-items: center; }
+  .cp-bar { height: 8px; border-radius: 999px; background: var(--paper-muted); overflow: hidden; }
+  .cp-bar > span { display: block; height: 100%; background: var(--atlas); border-radius: inherit; }
+
+  /* ── Tableaux ── */
+  .cp-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 9px 10px; text-align: start; border-bottom: 1px solid var(--cp-line-soft); vertical-align: top; }
+  th { color: var(--cp-muted); font-weight: 500; font-size: 12.5px; white-space: nowrap; border-bottom-color: var(--cp-line); }
+  td.n, th.n { text-align: end; }
+  tfoot td { font-weight: 600; border-top: 1px solid var(--cp-line); border-bottom: 0; }
+  tr.zero td { color: var(--n-400, #A8A49A); }
+  .neg { color: var(--danger); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--paper-soft); font-size: 12px; color: var(--n-700, #2E2D29); }
+  .tag.ok { background: var(--mint-soft); color: var(--riad); }
+  .tag.bad { background: rgba(201, 74, 58, 0.12); color: var(--danger); }
+  .cp-note { color: var(--cp-muted); font-size: 13px; margin: 10px 0 0; }
+
+  /* ── Boutons ── */
+  .cp-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--cp-line); background: var(--cp-card); cursor: pointer; font-weight: 500; }
+  .cp-btn:hover { background: var(--paper-soft); }
+  .cp-btn.primary { background: var(--atlas); border-color: var(--atlas); color: var(--paper); }
+  .cp-btn.primary:hover { background: var(--atlas-700); }
+  .cp-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .cp-exports { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* ── États ── */
+  .cp-state { text-align: center; padding: 56px 16px; max-width: 520px; margin: 0 auto; }
+  .cp-state i, .cp-state svg { width: 38px; height: 38px; color: var(--atlas); margin-bottom: 10px; }
+  .cp-state.bad i, .cp-state.bad svg { color: var(--danger); }
+  .cp-state h2 { margin: 0 0 6px; font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+  .cp-state p { margin: 0 0 18px; color: var(--cp-muted); }
+  .cp-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(201, 74, 58, 0.1); color: #7a2a20; margin-top: 12px; font-size: 14px; }
+  .cp-banner .cp-btn { margin-inline-start: auto; min-height: 36px; padding: 0 12px; }
+  .cp-loading { padding: 56px 0; text-align: center; color: var(--cp-muted); }
+  .cp-foot { color: var(--cp-muted); font-size: 12.5px; margin-top: 28px; text-align: center; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 860px) { .cp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) {
+    .cp-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cp-method { grid-template-columns: 1fr auto; }
+    .cp-method .cp-bar { grid-column: 1 / -1; order: 3; }
+    .cp-month { width: 100%; }
+    .cp-month input { flex: 1; min-width: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media print { .cp-top, .cp-exports, .cp-month, .cp-banner { display: none !important; } body { background: #FFFDFA; } }
+</style>
+</head>
+<body>
+<div class="cp-wrap">
+  <header class="cp-top">
+    <div class="cp-brand">
+      <img src="assets/kiwi-favicon-new.svg" alt="" width="30" height="30" />
+      <div>
+        <div class="cp-brand-name">Kiwi</div>
+        <div class="cp-brand-sub" id="cp-title" data-t="title"></div>
+      </div>
+    </div>
+    <div class="cp-spacer"></div>
+    <div class="cp-lang" id="cp-lang" role="group" aria-label="Langue" data-lens-demo>
+      <button type="button" data-lens-item data-lang="fr" lang="fr">FR</button>
+      <button type="button" data-lens-item data-lang="en" lang="en">EN</button>
+      <button type="button" data-lens-item data-lang="ar" lang="ar">AR</button>
+    </div>
+  </header>
+
+  <main id="cp-main" aria-busy="true">
+    <div class="cp-loading" id="cp-loading"><span data-t="loading"></span></div>
+    <section id="cp-state" class="cp-state" hidden></section>
+
+    <div id="cp-ready" hidden>
+      <div class="cp-head">
+        <div>
+          <div class="cp-kicker" data-t="title"></div>
+          <h1 id="cp-store"></h1>
+        </div>
+        <div class="cp-spacer"></div>
+        <div class="cp-month">
+          <button type="button" class="cp-iconbtn" id="cp-prev" data-t-attr="aria-label:prevMonth"><i data-icon="chevron_left"></i></button>
+          <label class="sr" for="cp-month" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)" data-t="month"></label>
+          <input type="month" id="cp-month" pattern="[0-9]{4}-[0-9]{2}" placeholder="AAAA-MM" />
+          <button type="button" class="cp-iconbtn" id="cp-next" data-t-attr="aria-label:nextMonth"><i data-icon="chevron_right"></i></button>
+        </div>
+      </div>
+
+      <div class="cp-ro" role="note"><i data-icon="lock"></i><div><b data-t="readonly"></b> <span data-t="readonlyNote"></span></div></div>
+      <div class="cp-banner" id="cp-banner" hidden role="status"><i data-icon="wifi_off"></i><span id="cp-banner-text"></span><button type="button" class="cp-btn" id="cp-banner-retry"><span data-t="retry"></span></button></div>
+
+      <div id="cp-empty" class="cp-state" hidden>
+        <i data-icon="calendar_month"></i>
+        <h2 data-t="emptyTitle"></h2>
+        <p data-t="emptySub"></p>
+      </div>
+
+      <div id="cp-data">
+        <div class="cp-grid" id="cp-stats"></div>
+
+        <section class="cp-card" id="cp-sec-methods"></section>
+        <section class="cp-card" id="cp-sec-days"></section>
+        <section class="cp-card" id="cp-sec-adjust"></section>
+        <section class="cp-card" id="cp-sec-invoices"></section>
+        <section class="cp-card" id="cp-sec-cash"></section>
+        <section class="cp-card" id="cp-sec-detail"></section>
+
+        <section class="cp-card">
+          <h2 data-t="exports"></h2>
+          <p class="sub" data-t="exportHint"></p>
+          <div class="cp-exports">
+            <button type="button" class="cp-btn primary" id="cp-ex-journal"><i data-icon="download"></i><span data-t="exJournal"></span></button>
+            <button type="button" class="cp-btn" id="cp-ex-invoices"><i data-icon="download"></i><span data-t="exInvoices"></span></button>
+            <button type="button" class="cp-btn" id="cp-ex-cash"><i data-icon="download"></i><span data-t="exCash"></span></button>
+          </div>
+        </section>
+      </div>
+      <p class="cp-foot" id="cp-foot"></p>
+    </div>
+  </main>
+</div>
+
+<script src="assets/material-icons.js?v=2" defer></script>
+<script src="assets/liquid-lens.js?v=7" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ────────────── Langues ────────────── */
+  var T = {
+    fr: {
+      title: 'Espace comptable', loading: 'Chargement des livres…', month: 'Mois', prevMonth: 'Mois précédent', nextMonth: 'Mois suivant',
+      readonly: 'Lecture seule.', readonlyNote: 'Vous consultez les livres de ce magasin. Rien ne peut être modifié depuis cet espace.',
+      retry: 'Réessayer', offline: 'Vous êtes hors ligne. Les chiffres affichés ne sont peut-être plus à jour.', offlineTitle: 'Hors ligne',
+      offlineSub: 'Impossible de joindre Kiwi. Vérifiez votre connexion puis réessayez.',
+      unavailableTitle: 'Service momentanément indisponible', unavailableSub: 'Les livres ne peuvent pas être lus pour le moment. Réessayez dans un instant.',
+      limitedTitle: 'Trop d\'essais', limitedSub: 'Patientez quelques minutes avant de rouvrir le lien.',
+      revokedTitle: 'Ce lien a été désactivé', revokedSub: 'Le propriétaire du magasin a retiré cet accès. Demandez-lui de vous envoyer un nouveau lien.',
+      expiredTitle: 'Ce lien a expiré', expiredSub: 'Demandez au propriétaire du magasin de vous envoyer un nouveau lien.',
+      invalidTitle: 'Lien invalide', invalidSub: 'Ouvrez le lien complet que votre client vous a envoyé, ou demandez-lui un nouveau lien.',
+      emptyTitle: 'Aucune donnée ce mois-ci', emptySub: 'Aucune vente, facture ou session de caisse n\'est enregistrée sur cette période. Choisissez un autre mois.',
+      total: 'Total net encaissé', count: 'Ventes', countSub: 'tickets', refunds: 'Remboursements', voids: 'Ventes annulées', voidsSub: 'hors total', tips: 'Pourboires (hors total)',
+      byMethod: 'Par mode de paiement', byMethodSub: 'Net des remboursements. Un ticket réglé en plusieurs modes est réparti.',
+      daily: 'Journal par jour', dailySub: 'Jour d\'activité : de {h}:00 à {h}:00 le lendemain.', day: 'Jour', tickets: 'Tickets', gross: 'Brut', net: 'Net', total2: 'Total',
+      adjust: 'Remboursements et annulations', refundsList: 'Remboursements', voidsList: 'Ventes annulées (sorties des totaux)', date: 'Date', time: 'Heure', ref: 'Pièce', method: 'Mode', amount: 'Montant', reason: 'Motif', none: 'Aucun',
+      invoices: 'Factures émises', invoicesSub: 'Montants en dirhams, tels qu\'imprimés sur la facture.', number: 'N°', customer: 'Client', ice: 'ICE', ht: 'HT', tva: 'TVA', ttc: 'TTC', rate: 'Taux',
+      vat: 'TVA d\'après les factures émises', vatNote: 'Les tickets de caisse ne portent pas de taux de TVA : seule la TVA des factures est indiquée.',
+      session: 'Session de caisse', cash: 'Caisse et clôtures Z', cashSub: 'Sessions de caisse et rapprochement des clôtures avec les ventes du serveur.', register: 'Caisse', opening: 'Fond', moves: 'Mouvements', expected: 'Attendu', counted: 'Compté', gap: 'Écart', open: 'Ouverte',
+      zTitle: 'Clôtures Z', reported: 'Déclaré', server: 'Serveur', status: 'Statut', matched: 'Concordant', mismatch: 'À vérifier',
+      detail: 'Détail des ventes', detailMore: 'Les {n} premières lignes sur {t}. Le fichier CSV contient tout.', kind: 'Type', sale: 'Vente', refund: 'Remboursement', channel: 'Canal', tip: 'Pourboire',
+      exports: 'Exports CSV', exportHint: 'Séparateur point-virgule, virgule décimale, ouverture directe dans Excel.', exJournal: 'Journal des ventes', exInvoices: 'Factures', exCash: 'Caisse et Z',
+      notRecorded: 'Non enregistré pour ce magasin.', sectionDown: 'Section momentanément indisponible.', truncated: 'Résultat tronqué : choisissez une période plus courte.',
+      footer: 'Accès {who} · valable jusqu\'au {date}', accessDefault: 'comptable',
+      methods: { cash: 'Espèces', card: 'Carte', transfer: 'Virement', cheque: 'Chèque', tap: 'Sans contact', qr: 'QR', wallet: 'Portefeuille', credit: 'Avoir', delivery: 'Livraison', split: 'Mixte' },
+      reasons: { onboarding: 'Prise en main', imprimante: 'Imprimante', formation: 'Formation', doublon: 'Doublon', installation: 'Installation', autre: 'Autre' }
+    },
+    en: {
+      title: 'Accountant portal', loading: 'Loading the books…', month: 'Month', prevMonth: 'Previous month', nextMonth: 'Next month',
+      readonly: 'Read only.', readonlyNote: 'You are viewing this store\'s books. Nothing can be changed from this space.',
+      retry: 'Try again', offline: 'You are offline. The figures shown may be out of date.', offlineTitle: 'Offline',
+      offlineSub: 'Kiwi cannot be reached. Check your connection and try again.',
+      unavailableTitle: 'Service temporarily unavailable', unavailableSub: 'The books cannot be read right now. Try again in a moment.',
+      limitedTitle: 'Too many attempts', limitedSub: 'Wait a few minutes before opening the link again.',
+      revokedTitle: 'This link has been disabled', revokedSub: 'The store owner removed this access. Ask them to send you a new link.',
+      expiredTitle: 'This link has expired', expiredSub: 'Ask the store owner to send you a new link.',
+      invalidTitle: 'Invalid link', invalidSub: 'Open the full link your client sent you, or ask them for a new one.',
+      emptyTitle: 'No data this month', emptySub: 'No sale, invoice or cash session is recorded for this period. Pick another month.',
+      total: 'Net takings', count: 'Sales', countSub: 'tickets', refunds: 'Refunds', voids: 'Voided sales', voidsSub: 'not in totals', tips: 'Tips (not in total)',
+      byMethod: 'By payment method', byMethodSub: 'Net of refunds. A ticket paid with several methods is split.',
+      daily: 'Daily journal', dailySub: 'Business day: from {h}:00 to {h}:00 the next day.', day: 'Day', tickets: 'Tickets', gross: 'Gross', net: 'Net', total2: 'Total',
+      adjust: 'Refunds and voids', refundsList: 'Refunds', voidsList: 'Voided sales (excluded from totals)', date: 'Date', time: 'Time', ref: 'Receipt', method: 'Method', amount: 'Amount', reason: 'Reason', none: 'None',
+      invoices: 'Issued invoices', invoicesSub: 'Amounts in dirhams, as printed on the invoice.', number: 'No.', customer: 'Customer', ice: 'ICE', ht: 'Excl. VAT', tva: 'VAT', ttc: 'Incl. VAT', rate: 'Rate',
+      vat: 'VAT from issued invoices', vatNote: 'Till receipts carry no VAT rate: only the VAT on invoices is shown.',
+      session: 'Cash session', cash: 'Cash and Z closings', cashSub: 'Cash sessions and the reconciliation of closings against the server\'s sales.', register: 'Register', opening: 'Float', moves: 'Movements', expected: 'Expected', counted: 'Counted', gap: 'Gap', open: 'Open',
+      zTitle: 'Z closings', reported: 'Reported', server: 'Server', status: 'Status', matched: 'Matched', mismatch: 'To check',
+      detail: 'Sales detail', detailMore: 'First {n} lines of {t}. The CSV file holds everything.', kind: 'Type', sale: 'Sale', refund: 'Refund', channel: 'Channel', tip: 'Tip',
+      exports: 'CSV exports', exportHint: 'Semicolon separated, decimal comma, opens directly in Excel.', exJournal: 'Sales journal', exInvoices: 'Invoices', exCash: 'Cash and Z',
+      notRecorded: 'Not recorded for this store.', sectionDown: 'Section temporarily unavailable.', truncated: 'Result truncated: choose a shorter period.',
+      footer: 'Access {who} · valid until {date}', accessDefault: 'accountant',
+      methods: { cash: 'Cash', card: 'Card', transfer: 'Transfer', cheque: 'Cheque', tap: 'Contactless', qr: 'QR', wallet: 'Wallet', credit: 'Store credit', delivery: 'Delivery', split: 'Mixed' },
+      reasons: { onboarding: 'Onboarding', imprimante: 'Printer', formation: 'Training', doublon: 'Duplicate', installation: 'Installation', autre: 'Other' }
+    },
+    ar: {
+      title: 'فضاء المحاسب', loading: 'جارٍ تحميل الدفاتر…', month: 'الشهر', prevMonth: 'الشهر السابق', nextMonth: 'الشهر التالي',
+      readonly: 'للقراءة فقط.', readonlyNote: 'أنت تطّلع على دفاتر هذا المتجر. لا يمكن تعديل أي شيء من هذا الفضاء.',
+      retry: 'إعادة المحاولة', offline: 'أنت غير متصل. قد لا تكون الأرقام المعروضة محدّثة.', offlineTitle: 'غير متصل',
+      offlineSub: 'تعذّر الوصول إلى Kiwi. تحقّق من اتصالك ثم أعد المحاولة.',
+      unavailableTitle: 'الخدمة غير متاحة مؤقتاً', unavailableSub: 'لا يمكن قراءة الدفاتر الآن. أعد المحاولة بعد قليل.',
+      limitedTitle: 'محاولات كثيرة', limitedSub: 'انتظر بضع دقائق قبل فتح الرابط من جديد.',
+      revokedTitle: 'تم تعطيل هذا الرابط', revokedSub: 'سحب صاحب المتجر هذا الوصول. اطلب منه إرسال رابط جديد.',
+      expiredTitle: 'انتهت صلاحية هذا الرابط', expiredSub: 'اطلب من صاحب المتجر إرسال رابط جديد.',
+      invalidTitle: 'رابط غير صالح', invalidSub: 'افتح الرابط الكامل الذي أرسله لك زبونك، أو اطلب منه رابطاً جديداً.',
+      emptyTitle: 'لا توجد بيانات لهذا الشهر', emptySub: 'لا توجد مبيعات أو فواتير أو جلسات صندوق مسجّلة في هذه الفترة. اختر شهراً آخر.',
+      total: 'صافي المقبوضات', count: 'المبيعات', countSub: 'تذكرة', refunds: 'المبالغ المستردة', voids: 'مبيعات ملغاة', voidsSub: 'خارج المجموع', tips: 'الإكراميات (خارج المجموع)',
+      byMethod: 'حسب وسيلة الدفع', byMethodSub: 'بعد خصم المبالغ المستردة. التذكرة المدفوعة بعدة وسائل تُوزَّع عليها.',
+      daily: 'اليومية حسب اليوم', dailySub: 'يوم العمل: من الساعة {h}:00 إلى الساعة {h}:00 من اليوم التالي.', day: 'اليوم', tickets: 'التذاكر', gross: 'الإجمالي', net: 'الصافي', total2: 'المجموع',
+      adjust: 'المبالغ المستردة والمبيعات الملغاة', refundsList: 'المبالغ المستردة', voidsList: 'مبيعات ملغاة (مستبعدة من المجاميع)', date: 'التاريخ', time: 'الوقت', ref: 'المرجع', method: 'الوسيلة', amount: 'المبلغ', reason: 'السبب', none: 'لا شيء',
+      invoices: 'الفواتير الصادرة', invoicesSub: 'المبالغ بالدرهم كما هي مطبوعة على الفاتورة.', number: 'رقم', customer: 'الزبون', ice: 'ICE', ht: 'دون ضريبة', tva: 'الضريبة', ttc: 'بالضريبة', rate: 'النسبة',
+      vat: 'الضريبة حسب الفواتير الصادرة', vatNote: 'لا تحمل تذاكر الصندوق نسبة ضريبة: تُعرض فقط ضريبة الفواتير.',
+      session: 'جلسة صندوق', cash: 'الصندوق وإقفالات Z', cashSub: 'جلسات الصندوق ومطابقة الإقفالات مع مبيعات الخادم.', register: 'الصندوق', opening: 'الرصيد الافتتاحي', moves: 'الحركات', expected: 'المتوقع', counted: 'المعدود', gap: 'الفارق', open: 'مفتوحة',
+      zTitle: 'إقفالات Z', reported: 'المصرّح به', server: 'الخادم', status: 'الحالة', matched: 'مطابق', mismatch: 'للتحقق',
+      detail: 'تفاصيل المبيعات', detailMore: 'أول {n} سطراً من {t}. ملف CSV يحتوي كل شيء.', kind: 'النوع', sale: 'بيع', refund: 'استرداد', channel: 'القناة', tip: 'إكرامية',
+      exports: 'تصدير CSV', exportHint: 'الفاصل فاصلة منقوطة، والفاصلة العشرية، ويُفتح مباشرة في Excel.', exJournal: 'يومية المبيعات', exInvoices: 'الفواتير', exCash: 'الصندوق وZ',
+      notRecorded: 'غير مسجّل لهذا المتجر.', sectionDown: 'القسم غير متاح مؤقتاً.', truncated: 'النتيجة مقتطعة: اختر فترة أقصر.',
+      footer: 'الوصول {who} · صالح حتى {date}', accessDefault: 'محاسب',
+      methods: { cash: 'نقداً', card: 'بطاقة', transfer: 'تحويل', cheque: 'شيك', tap: 'دفع بدون تلامس', qr: 'QR', wallet: 'محفظة', credit: 'رصيد', delivery: 'توصيل', split: 'مختلط' },
+      reasons: { onboarding: 'التهيئة', imprimante: 'الطابعة', formation: 'تدريب', doublon: 'تكرار', installation: 'تركيب', autre: 'أخرى' }
+    }
+  };
+  var LOCALES = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA-u-nu-latn' };
+
+  var lang = 'fr';
+  try { lang = localStorage.getItem('kiwiComptableLang') || ''; } catch (_) {}
+  if (!T[lang]) {
+    var nav = String(navigator.language || 'fr').slice(0, 2).toLowerCase();
+    lang = T[nav] ? nav : 'fr';
+  }
+  function t(key, vars) {
+    var s = (T[lang] && T[lang][key]) || T.fr[key] || key;
+    if (vars) Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    return s;
+  }
+  function methodLabel(code) { var m = T[lang].methods; return m[code] || code || ''; }
+  function reasonLabel(code) { var r = T[lang].reasons; return r[code] || code || ''; }
+
+  /* ────────────── Utilitaires ────────────── */
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmtMoney(cents) {
+    if (cents == null || !isFinite(cents)) return '';
+    var n = new Intl.NumberFormat(LOCALES[lang], { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+    return n;
+  }
+  function money(cents, withUnit) {
+    if (cents == null) return '<span class="num">·</span>';
+    cents = cents || 0; // -0 s'écrirait « -0,00 »
+    return '<span class="num' + (cents < 0 ? ' neg' : '') + '">' + esc(fmtMoney(cents)) + (withUnit ? ' MAD' : '') + '</span>';
+  }
+  function fmtInt(n) { return new Intl.NumberFormat(LOCALES[lang]).format(n || 0); }
+  function dayFr(day) { var p = String(day).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(day); }
+  function dateCell(day) { return '<span class="num">' + esc(dayFr(day)) + '</span>'; }
+  function timeOf(ts) { return ts ? new Date(ts).toLocaleString(LOCALES[lang], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : ''; }
+  function table(head, rows, foot) {
+    return '<div class="cp-scroll"><table><thead><tr>' + head.map(function (h) { return '<th' + (h.n ? ' class="n"' : '') + '>' + esc(h.t) + '</th>'; }).join('') + '</tr></thead><tbody>'
+      + rows.join('') + '</tbody>' + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table></div>';
+  }
+  function tr(cells, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '>' + cells.join('') + '</tr>'; }
+  function td(html, n) { return '<td' + (n ? ' class="n"' : '') + '>' + html + '</td>'; }
+  function sectionNotice(book) {
+    if (book && book.status === 'not-recorded') return '<p class="cp-note">' + esc(t('notRecorded')) + '</p>';
+    if (book && book.status !== 'ok') return '<p class="cp-note">' + esc(t('sectionDown')) + '</p>';
+    return '';
+  }
+
+  /* ────────────── Rendu ────────────── */
+  var state = { data: null, month: '', token: '', busy: false };
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.title = 'Kiwi · ' + t('title');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { el.textContent = t(el.getAttribute('data-t')); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-t-attr]'), function (el) {
+      var p = el.getAttribute('data-t-attr').split(':'); el.setAttribute(p[0], t(p[1]));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#cp-lang button'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-lang') === lang);
+      b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false');
+    });
+    if (state.view === 'state') renderState(state.stateKind);
+    if (state.data) render();
+  }
+
+  function render() {
+    var d = state.data, s = d.sales;
+    $('cp-store').textContent = d.store && d.store.name || d.merchant;
+    $('cp-month').value = d.range.month || state.month;
+    state.month = d.range.month || state.month;
+    var salesOk = s && s.status === 'ok';
+    var sum = salesOk ? s.summary : null;
+    var has = salesOk && (sum.count || sum.refundCount || sum.voidCount)
+      || d.invoices.status === 'ok' && d.invoices.rows.length
+      || d.cash.status === 'ok' && d.cash.sessions.length
+      || d.z.status === 'ok' && d.z.rows.length;
+    $('cp-empty').hidden = !!has;
+    $('cp-data').hidden = !has;
+    if (!has) { renderFoot(); return; }
+
+    /* Cartes de synthèse */
+    if (salesOk) {
+      $('cp-stats').innerHTML =
+        '<div class="cp-stat main"><div class="l">' + esc(t('total')) + '</div><div class="v">' + money(sum.netCents, true) + '</div></div>'
+        + '<div class="cp-stat"><div class="l">' + esc(t('count')) + '</div><div class="v"><span class="num">' + fmtInt(sum.count) + '</span></div><div class="s">' + esc(t('countSub')) + '</div></div>'
+        + '<div class="cp-stat"><div class="l">' + esc(t('refunds')) + '</div><div class="v">' + money(-sum.refundsCents, true) + '</div><div class="s"><span class="num">' + fmtInt(sum.refundCount) + '</span></div></div>'
+        + '<div class="cp-stat"><div class="l">' + esc(t('voids')) + '</div><div class="v"><span class="num">' + fmtInt(sum.voidCount) + '</span></div><div class="s">' + esc(t('voidsSub')) + '</div></div>';
+    } else {
+      $('cp-stats').innerHTML = '';
+    }
+    renderMethods(); renderDays(); renderAdjust(); renderInvoices(); renderCash(); renderDetail(); renderFoot();
+  }
+
+  function methodKeys(sum) {
+    return Object.keys(sum.byMethod).sort(function (a, b) { return sum.byMethod[b] - sum.byMethod[a]; });
+  }
+  function renderMethods() {
+    var s = state.data.sales, el = $('cp-sec-methods');
+    if (s.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('byMethod')) + '</h2>' + sectionNotice(s); return; }
+    var keys = methodKeys(s.summary), max = Math.max.apply(null, keys.map(function (k) { return Math.abs(s.summary.byMethod[k]); }).concat([1]));
+    el.innerHTML = '<h2>' + esc(t('byMethod')) + '</h2><p class="sub">' + esc(t('byMethodSub')) + '</p><div class="cp-methods">'
+      + keys.map(function (k) {
+        var v = s.summary.byMethod[k];
+        return '<div class="cp-method"><div>' + esc(methodLabel(k)) + '</div><div class="cp-bar"><span style="width:' + Math.max(2, Math.round(Math.abs(v) / max * 100)) + '%"></span></div><div>' + money(v, true) + '</div></div>';
+      }).join('') + '</div>'
+      + (s.summary.tipsCents ? '<p class="cp-note">' + esc(t('tips')) + ' : ' + money(s.summary.tipsCents, true) + '</p>' : '')
+      + (s.truncated ? '<p class="cp-note">' + esc(t('truncated')) + '</p>' : '');
+  }
+  function renderDays() {
+    var s = state.data.sales, el = $('cp-sec-days');
+    if (s.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('daily')) + '</h2>' + sectionNotice(s); return; }
+    var keys = methodKeys(s.summary), h = state.data.range.cutoffHour;
+    var head = [{ t: t('day') }, { t: t('tickets'), n: 1 }, { t: t('gross'), n: 1 }, { t: t('refunds'), n: 1 }, { t: t('net'), n: 1 }].concat(keys.map(function (k) { return { t: methodLabel(k), n: 1 }; }));
+    var rows = s.days.map(function (d) {
+      var zero = !d.count && !d.refundsCents && !d.netCents;
+      return tr([td(dateCell(d.day)), td('<span class="num">' + fmtInt(d.count) + '</span>', 1), td(money(d.grossCents), 1), td(money(-d.refundsCents), 1), td(money(d.netCents), 1)]
+        .concat(keys.map(function (k) { return td(money(d.byMethod[k] || 0), 1); })), zero ? 'zero' : '');
+    });
+    var foot = tr([td(esc(t('total2'))), td('<span class="num">' + fmtInt(s.summary.count) + '</span>', 1), td(money(s.summary.grossCents), 1), td(money(-s.summary.refundsCents), 1), td(money(s.summary.netCents), 1)]
+      .concat(keys.map(function (k) { return td(money(s.summary.byMethod[k]), 1); })));
+    el.innerHTML = '<h2>' + esc(t('daily')) + '</h2><p class="sub">' + esc(t('dailySub', { h: String(h).padStart(2, '0') })) + '</p>' + table(head, rows, foot);
+  }
+  function renderAdjust() {
+    var s = state.data.sales, el = $('cp-sec-adjust');
+    if (s.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('adjust')) + '</h2>' + sectionNotice(s); return; }
+    var refunds = s.refunds.length ? table([{ t: t('date') }, { t: t('time') }, { t: t('ref') }, { t: t('method') }, { t: t('amount'), n: 1 }],
+      s.refunds.map(function (r) { return tr([td(dateCell(r.day)), td('<span class="num">' + esc(r.time) + '</span>'), td('<span class="mono">' + esc(r.ref) + '</span>'), td(esc(methodLabel(r.method))), td(money(r.amountCents), 1)]); })) : '<p class="cp-note">' + esc(t('none')) + '</p>';
+    var voids = s.voids.length ? table([{ t: t('date') }, { t: t('time') }, { t: t('ref') }, { t: t('reason') }, { t: t('amount'), n: 1 }],
+      s.voids.map(function (r) { return tr([td(dateCell(r.day)), td('<span class="num">' + esc(r.time) + '</span>'), td('<span class="mono">' + esc(r.ref) + '</span>'), td(esc(reasonLabel(r.reason))), td(money(r.amountCents), 1)]); })) : '<p class="cp-note">' + esc(t('none')) + '</p>';
+    el.innerHTML = '<h2>' + esc(t('adjust')) + '</h2><p class="sub">' + esc(t('refundsList')) + '</p>' + refunds
+      + '<p class="sub" style="margin-top:18px">' + esc(t('voidsList')) + '</p>' + voids;
+  }
+  function renderInvoices() {
+    var inv = state.data.invoices, vat = state.data.vat, el = $('cp-sec-invoices');
+    if (inv.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('invoices')) + '</h2>' + sectionNotice(inv); return; }
+    var body = inv.rows.length ? table([{ t: t('number') }, { t: t('date') }, { t: t('customer') }, { t: t('ice') }, { t: t('ht'), n: 1 }, { t: t('rate'), n: 1 }, { t: t('tva'), n: 1 }, { t: t('ttc'), n: 1 }],
+      inv.rows.map(function (r) {
+        return tr([td('<span class="mono">' + esc(r.number) + '</span>'), td(dateCell(r.day)), td(esc(r.customer && r.customer.name || '')), td('<span class="mono">' + esc(r.customer && r.customer.ice || '') + '</span>'),
+          td(money(r.htCents), 1), td('<span class="num">' + (r.tvaRate == null ? '' : esc(r.tvaRate) + ' %') + '</span>', 1), td(money(r.tvaCents), 1), td(money(r.ttcCents), 1)]);
+      })) : '<p class="cp-note">' + esc(t('none')) + '</p>';
+    var vatTable = '';
+    if (vat && vat.status === 'ok' && vat.invoiceCount) {
+      var rates = Object.keys(vat.byRate).sort();
+      vatTable = '<h2 style="margin-top:22px">' + esc(t('vat')) + '</h2>' + table([{ t: t('rate') }, { t: t('tickets'), n: 1 }, { t: t('ht'), n: 1 }, { t: t('tva'), n: 1 }, { t: t('ttc'), n: 1 }],
+        rates.map(function (k) { var b = vat.byRate[k]; return tr([td('<span class="num">' + (k === 'inconnu' ? '?' : esc(k) + ' %') + '</span>'), td('<span class="num">' + fmtInt(b.count) + '</span>', 1), td(money(b.htCents), 1), td(money(b.tvaCents), 1), td(money(b.ttcCents), 1)]); }),
+        tr([td(esc(t('total2'))), td('<span class="num">' + fmtInt(vat.invoiceCount) + '</span>', 1), td(money(vat.htCents), 1), td(money(vat.tvaCents), 1), td(money(vat.ttcCents), 1)]))
+        + '<p class="cp-note">' + esc(t('vatNote')) + '</p>';
+    }
+    el.innerHTML = '<h2>' + esc(t('invoices')) + '</h2><p class="sub">' + esc(t('invoicesSub')) + '</p>' + body + vatTable;
+  }
+  function renderCash() {
+    var cash = state.data.cash, z = state.data.z, el = $('cp-sec-cash');
+    var out = '<h2>' + esc(t('cash')) + '</h2><p class="sub">' + esc(t('cashSub')) + '</p>';
+    if (cash.status !== 'ok') out += sectionNotice(cash);
+    else if (!cash.sessions.length) out += '<p class="cp-note">' + esc(t('none')) + '</p>';
+    else {
+      out += table([{ t: t('date') }, { t: t('register') }, { t: t('opening'), n: 1 }, { t: t('moves'), n: 1 }, { t: t('expected'), n: 1 }, { t: t('counted'), n: 1 }, { t: t('gap'), n: 1 }],
+        cash.sessions.map(function (c) {
+          return tr([td(dateCell(c.day)), td('<span class="num">' + fmtInt(c.terminal) + '</span>'), td(money(c.openingCents), 1), td(money(movesNet(c)), 1),
+            td(c.closedTs ? money(c.expectedCents) : '<span class="tag">' + esc(t('open')) + '</span>', 1), td(money(c.countedCents), 1), td(money(c.gapCents), 1)]);
+        }));
+    }
+    out += '<h2 style="margin-top:22px">' + esc(t('zTitle')) + '</h2>';
+    if (z.status !== 'ok') out += sectionNotice(z);
+    else if (!z.rows.length) out += '<p class="cp-note">' + esc(t('none')) + '</p>';
+    else {
+      out += table([{ t: t('date') }, { t: t('register') }, { t: t('reported'), n: 1 }, { t: t('server'), n: 1 }, { t: t('status') }],
+        z.rows.map(function (r) {
+          var good = r.status === 'matched';
+          return tr([td(dateCell(r.day)), td('<span class="num">' + fmtInt(r.terminal) + '</span>'),
+            td('<span class="num">' + fmtInt(r.reportedCount) + '</span> · ' + money(r.reportedCents), 1), td('<span class="num">' + fmtInt(r.serverCount) + '</span> · ' + money(r.serverCents), 1),
+            td('<span class="tag ' + (good ? 'ok' : 'bad') + '">' + esc(good ? t('matched') : t('mismatch')) + '</span>')]);
+        }));
+    }
+    el.innerHTML = out + (cash.truncated ? '<p class="cp-note">' + esc(t('truncated')) + '</p>' : '');
+  }
+  function movesNet(c) { return c.movements.reduce(function (a, m) { return a + (m.kind === 'out' ? -m.amountCents : m.amountCents); }, 0); }
+  var DETAIL_MAX = 100;
+  function renderDetail() {
+    var s = state.data.sales, el = $('cp-sec-detail');
+    if (s.status !== 'ok') { el.innerHTML = '<h2>' + esc(t('detail')) + '</h2>' + sectionNotice(s); return; }
+    var rows = s.journal.slice(0, DETAIL_MAX).map(function (j) {
+      return tr([td(dateCell(j.day)), td('<span class="num">' + esc(j.time) + '</span>'), td('<span class="mono">' + esc(j.ref) + '</span>'),
+        td(esc(j.kind === 'refund' ? t('refund') : t('sale'))), td(esc(j.parts ? j.parts.map(function (p) { return methodLabel(p.method); }).join(' + ') : methodLabel(j.method))), td(money(j.amountCents), 1)]);
+    });
+    el.innerHTML = '<h2>' + esc(t('detail')) + '</h2>'
+      + table([{ t: t('date') }, { t: t('time') }, { t: t('ref') }, { t: t('kind') }, { t: t('method') }, { t: t('amount'), n: 1 }], rows)
+      + (s.journal.length > DETAIL_MAX ? '<p class="cp-note">' + esc(t('detailMore', { n: DETAIL_MAX, t: fmtInt(s.journal.length) })) + '</p>' : '');
+  }
+  function renderFoot() {
+    var d = state.data;
+    $('cp-foot').textContent = t('footer', { who: d.accessLabel || t('accessDefault'), date: dayFr(new Date(d.accessExpiresTs).toISOString().slice(0, 10)) });
+  }
+
+  /* ────────────── États ────────────── */
+  var STATES = {
+    revoked: { icon: 'lock', bad: 1, title: 'revokedTitle', sub: 'revokedSub' },
+    expired: { icon: 'schedule', bad: 1, title: 'expiredTitle', sub: 'expiredSub' },
+    invalid: { icon: 'error', bad: 1, title: 'invalidTitle', sub: 'invalidSub' },
+    limited: { icon: 'schedule', bad: 1, title: 'limitedTitle', sub: 'limitedSub' },
+    offline: { icon: 'wifi_off', retry: 1, title: 'offlineTitle', sub: 'offlineSub' },
+    unavailable: { icon: 'error', retry: 1, title: 'unavailableTitle', sub: 'unavailableSub' }
+  };
+  function renderState(kind) {
+    var c = STATES[kind] || STATES.unavailable, el = $('cp-state');
+    state.view = 'state'; state.stateKind = kind;
+    $('cp-loading').hidden = true; $('cp-ready').hidden = true; el.hidden = false;
+    el.className = 'cp-state' + (c.bad ? ' bad' : '');
+    el.innerHTML = '<i data-icon="' + c.icon + '"></i><h2>' + esc(t(c.title)) + '</h2><p>' + esc(t(c.sub)) + '</p>'
+      + (c.retry ? '<button type="button" class="cp-btn primary" id="cp-state-retry"><span>' + esc(t('retry')) + '</span></button>' : '');
+    var b = $('cp-state-retry'); if (b) b.addEventListener('click', boot);
+    $('cp-main').setAttribute('aria-busy', 'false');
+  }
+  function showReady() {
+    state.view = 'ready';
+    $('cp-loading').hidden = true; $('cp-state').hidden = true; $('cp-ready').hidden = false;
+    $('cp-main').setAttribute('aria-busy', 'false');
+  }
+  function banner(on) { $('cp-banner').hidden = !on; $('cp-banner-text').textContent = t('offline'); }
+
+  /* ────────────── Réseau ────────────── */
+  function api(url, init) {
+    var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, 20000);
+    init = init || {};
+    init.credentials = 'same-origin'; init.cache = 'no-store'; init.signal = ctl.signal;
+    init.headers = Object.assign({ Accept: 'application/json' }, init.headers || {});
+    return fetch(url, init).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) { return { status: res.status, body: body }; });
+    }).finally(function () { clearTimeout(timer); });
+  }
+  function failKind(res) {
+    var e = res.body && res.body.error;
+    if (res.status === 429) return 'limited';
+    if (res.status === 401) return e === 'revoked' ? 'revoked' : e === 'expired' ? 'expired' : 'invalid';
+    return 'unavailable';
+  }
+
+  /* Le jeton arrive dans le fragment : on l'échange une fois, puis on efface
+   * l'adresse. Sur une erreur réseau on le GARDE (le fragment reste) pour
+   * qu'un rechargement puisse réessayer. */
+  function exchange() {
+    var m = /^#([A-Za-z0-9_-]{43})$/.exec(location.hash || '');
+    if (!m) return Promise.resolve(null);
+    return api('/api/comptable/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: m[1] }) }).then(function (res) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+      return res;
+    });
+  }
+
+  function load(month) {
+    var q = month ? '?month=' + encodeURIComponent(month) : '';
+    return api('/api/comptable/books' + q).then(function (res) {
+      if (res.status !== 200 || !res.body || !res.body.ok) return Promise.reject({ res: res });
+      state.data = res.body; showReady(); banner(false); render();
+    });
+  }
+
+  function boot() {
+    $('cp-state').hidden = true; $('cp-loading').hidden = false; $('cp-ready').hidden = true;
+    state.busy = true;
+    exchange().then(function (ex) {
+      if (ex && ex.status !== 200) return Promise.reject({ res: ex });
+      return load(state.month);
+    }).catch(function (err) {
+      if (err && err.res) renderState(failKind(err.res));
+      else renderState('offline');
+    }).finally(function () { state.busy = false; });
+  }
+
+  function go(month) {
+    if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month) || state.busy) { $('cp-month').value = state.month; return; }
+    state.busy = true; $('cp-main').setAttribute('aria-busy', 'true');
+    load(month).catch(function (err) {
+      if (err && err.res && err.res.status !== undefined && err.res.status !== 0) {
+        var k = failKind(err.res);
+        if (k === 'revoked' || k === 'expired' || k === 'invalid') { renderState(k); return; }
+      }
+      $('cp-month').value = state.month; banner(true);
+      $('cp-banner-text').textContent = err && err.res ? t('unavailableSub') : t('offline');
+    }).finally(function () { state.busy = false; $('cp-main').setAttribute('aria-busy', 'false'); });
+  }
+  function shift(delta) {
+    var p = state.month.split('-').map(Number); if (p.length !== 2) return;
+    var d = new Date(Date.UTC(p[0], p[1] - 1 + delta, 1));
+    go(d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'));
+  }
+
+  /* ────────────── Exports CSV ────────────── */
+  /* Point-virgule, virgule décimale, BOM UTF-8, fin de ligne CRLF : s'ouvre
+   * tel quel dans Excel en français. Un texte qui commencerait par = + - @ est
+   * neutralisé (injection de formule) ; les nombres sont écrits par nous. */
+  function csvNum(cents) { return cents == null ? '' : (cents < 0 ? '-' : '') + (Math.abs(cents) / 100).toFixed(2).replace('.', ','); }
+  function csvText(v) {
+    var s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  /* Un identifiant de 15 chiffres (ICE) deviendrait 1,23E+14 dans Excel : on le
+   * force en texte avec ="…", seulement s'il est strictement alphanumérique. */
+  function csvCell(c) {
+    if (c && c.x !== undefined) return c.x && /^[0-9A-Za-z]+$/.test(c.x) ? '="' + c.x + '"' : csvText(c.x);
+    return c && c.n !== undefined ? (c.n == null ? '' : csvNum(c.n)) : csvText(c);
+  }
+  function csv(header, rows) {
+    return '\ufeff' + [header].concat(rows).map(function (r) { return r.map(csvCell).join(';'); }).join('\r\n') + '\r\n';
+  }
+  var N = function (cents) { return { n: cents }; };
+  var X = function (text) { return { x: text }; };
+  function download(name, text) {
+    var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 500);
+  }
+  function fileName(part) { return 'kiwi-' + state.data.merchant + '-' + (state.data.range.month || (state.data.range.from + '_' + state.data.range.to)) + '-' + part + '.csv'; }
+
+  function exportJournal() {
+    var s = state.data.sales; if (s.status !== 'ok') return;
+    var rows = [];
+    s.journal.forEach(function (j) {
+      var lines = j.parts ? j.parts.map(function (p) { return { method: p.method, cents: p.cents }; }) : [{ method: j.method, cents: j.amountCents }];
+      lines.forEach(function (l) {
+        rows.push([dayFr(j.day), j.time, j.ref, j.kind === 'refund' ? t('refund') : t('sale'), methodLabel(l.method), N(l.cents), j.channel || '']);
+      });
+    });
+    download(fileName('journal'), csv([t('date'), t('time'), t('ref'), t('kind'), t('method'), t('amount') + ' (MAD)', t('channel')], rows));
+  }
+  function exportInvoices() {
+    var inv = state.data.invoices; if (inv.status !== 'ok') return;
+    download(fileName('factures'), csv([t('number'), t('date'), t('customer'), t('ice'), 'IF', t('rate') + ' (%)', t('ht') + ' (MAD)', t('tva') + ' (MAD)', t('ttc') + ' (MAD)'],
+      inv.rows.map(function (r) {
+        return [r.number, dayFr(r.day), r.customer && r.customer.name || '', X(r.customer && r.customer.ice || ''), X(r.customer && r.customer.if || ''),
+          r.tvaRate == null ? '' : String(r.tvaRate).replace('.', ','), N(r.htCents), N(r.tvaCents), N(r.ttcCents)];
+      })));
+  }
+  function exportCash() {
+    var cash = state.data.cash, z = state.data.z, rows = [];
+    var ymd = function (ts) { return dayFr(new Date(ts).toISOString().slice(0, 10)); };
+    if (cash.status === 'ok') cash.sessions.forEach(function (c) {
+      rows.push([t('session'), dayFr(c.day), c.terminal, N(c.openingCents), N(c.closedTs ? c.expectedCents : null), N(c.closedTs ? c.countedCents : null), N(c.closedTs ? c.gapCents : null), '', '', '', '', c.closedTs ? '' : t('open')]);
+      c.movements.forEach(function (m) {
+        rows.push([t('moves'), ymd(m.ts), c.terminal, '', '', '', '', N(m.kind === 'out' ? -m.amountCents : m.amountCents), '', '', '', m.reason]);
+      });
+    });
+    if (z.status === 'ok') z.rows.forEach(function (r) {
+      rows.push(['Z', dayFr(r.day), r.terminal, '', '', '', '', '', r.reportedCount + ' / ' + r.serverCount, N(r.reportedCents), N(r.serverCents), r.status === 'matched' ? t('matched') : t('mismatch')]);
+    });
+    download(fileName('caisse-z'), csv([t('kind'), t('date'), t('register'), t('opening'), t('expected'), t('counted'), t('gap'), t('moves'), t('tickets') + ' (' + t('reported') + ' / ' + t('server') + ')', t('reported') + ' (MAD)', t('server') + ' (MAD)', t('status') + ' / ' + t('reason')], rows));
+  }
+
+  /* ────────────── Branchement ────────────── */
+  document.addEventListener('DOMContentLoaded', function () {
+    Array.prototype.forEach.call(document.querySelectorAll('#cp-lang button'), function (b) {
+      b.addEventListener('click', function () {
+        lang = b.getAttribute('data-lang');
+        try { localStorage.setItem('kiwiComptableLang', lang); } catch (_) {}
+        applyLang();
+      });
+    });
+    $('cp-prev').addEventListener('click', function () { shift(-1); });
+    $('cp-next').addEventListener('click', function () { shift(1); });
+    $('cp-month').addEventListener('change', function (e) { go(e.target.value); });
+    $('cp-banner-retry').addEventListener('click', function () { go(state.month); });
+    $('cp-ex-journal').addEventListener('click', exportJournal);
+    $('cp-ex-invoices').addEventListener('click', exportInvoices);
+    $('cp-ex-cash').addEventListener('click', exportCash);
+    window.addEventListener('offline', function () { if (state.view === 'ready') banner(true); });
+    window.addEventListener('online', function () { if (state.view === 'ready') go(state.month); });
+    applyLang();
+    boot();
+  });
+})();
+</script>
+</body>
+</html>

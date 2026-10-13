@@ -397,6 +397,19 @@ async function routeRequest(context) {
    * data. This is what stops a kiosk with one lost cookie from minting a new
    * pairing every minute forever. */
   if (method === 'POST' && path === '/api/pair/recover') return next();
+  /* Espace comptable : l'expert-comptable d'un commerçant n'a AUCUN compte Kiwi.
+   * Trois entrées, exactes, et rien d'autre sous /api/comptable/ :
+   *   - la page (comptable.html / comptable), statique, sans donnée ;
+   *   - POST /api/comptable/session, qui échange le jeton du lien (43 car.,
+   *     SHA-256 en base, limiteur d'essais) contre le cookie `kiwi_acct` ;
+   *   - GET /api/comptable/books, qui exige ce cookie, lié à UN accès non
+   *     révoqué, et ne lit que le magasin de cet accès.
+   * La création, la liste et la révocation des accès (/api/comptable/access)
+   * restent derrière la porte normale : session propriétaire ou opérateur. Le
+   * cookie `kiwi_acct` n'ouvre rien d'autre : ni ici, ni dans entitledMerchant. */
+  if (isRead && (path === '/comptable.html' || path === '/comptable')) return next();
+  if (method === 'POST' && path === '/api/comptable/session') return next();
+  if (isRead && path === '/api/comptable/books') return next();
   /* Les écritures financières de caisse (/api/sale, /api/sale/refund, /api/sale/cancel).
    * Les caisses appairées détiennent un cookie `kiwi_till` (Max-Age 365j) mais
    * n'ont pas forcément de session commerçant `kiwi_sess` active. Les trois

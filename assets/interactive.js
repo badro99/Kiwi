@@ -2232,6 +2232,7 @@ ar: {
               </div>
               <div>
                 ${settingsRow('key', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
+                ${(cv || window.KiwiEnv?.isReal?.()) ? settingsRow('receipt_long', tr({ fr: 'Espace comptable', en: 'Accountant access', ar: 'فضاء المحاسب' }), tr({ fr: 'Lecture seule pour votre expert-comptable', en: 'Read-only for your accountant', ar: 'وصول للقراءة فقط لمحاسبك' }), { action: 'settings-accountant' }) : ''}
                 ${document.documentElement.classList.contains('kiwi-native') ? '' : settingsRow('shield_lock', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
                 ${settingsRow('file_upload', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
                 ${settingsRow('person_remove', tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }), tr({ fr: 'Demande traitée sous 30 jours', en: 'Handled within 30 days', ar: 'تُعالج خلال 30 يوماً' }), { action: 'settings-delete-account' })}
@@ -2308,6 +2309,151 @@ ar: {
       button.addEventListener('click', submit);
       password.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } });
       m.el.querySelector('[data-close]').addEventListener('click', () => { password.value = ''; m.close(); });
+    },
+
+    /* Espace comptable : le propriétaire invite son expert-comptable, voit le
+     * lien UNE fois, liste les accès et en révoque un (deux appuis). Tout passe
+     * par /api/comptable/access, réservé à la session propriétaire : le lien et
+     * la liste ne sont jamais fabriqués ici. Le jeton n'est gardé nulle part. */
+    'settings-accountant': () => {
+      const merchant = String((window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()) || '');
+      const c = {
+        title: tr({ fr: 'Espace comptable', en: 'Accountant access', ar: 'فضاء المحاسب' }),
+        tag: tr({ fr: 'Lecture seule', en: 'Read only', ar: 'للقراءة فقط' }),
+        desc: tr({
+          fr: 'Votre expert-comptable consulte les ventes, factures, caisse et clôtures de cet établissement et télécharge les exports CSV. Il ne peut rien modifier.',
+          en: 'Your accountant reads this location\'s sales, invoices, cash and closings and downloads the CSV exports. They cannot change anything.',
+          ar: 'يطّلع محاسبك على مبيعات هذا المحل وفواتيره وصندوقه وإقفالاته ويحمّل ملفات CSV. لا يمكنه تعديل أي شيء.'
+        }),
+        name: tr({ fr: 'Nom (facultatif)', en: 'Name (optional)', ar: 'الاسم (اختياري)' }),
+        email: tr({ fr: 'E-mail (facultatif)', en: 'Email (optional)', ar: 'البريد الإلكتروني (اختياري)' }),
+        invite: tr({ fr: 'Créer un lien d\'accès', en: 'Create an access link', ar: 'إنشاء رابط وصول' }),
+        creating: tr({ fr: 'Création…', en: 'Creating…', ar: 'جارٍ الإنشاء…' }),
+        linkTitle: tr({ fr: 'Lien d\'accès, affiché une seule fois', en: 'Access link, shown only once', ar: 'رابط الوصول، يظهر مرة واحدة فقط' }),
+        warn: tr({
+          fr: 'Ce lien fonctionne comme une clé : toute personne qui l\'a peut lire les livres de ce magasin. Envoyez-le seulement à votre comptable. Il ne sera plus affiché ; en cas de doute, révoquez l\'accès.',
+          en: 'This link works like a key: anyone who has it can read this store\'s books. Send it only to your accountant. It will not be shown again; if in doubt, revoke the access.',
+          ar: 'يعمل هذا الرابط كمفتاح: كل من يملكه يستطيع قراءة دفاتر هذا المتجر. أرسله لمحاسبك فقط. لن يظهر مرة أخرى، وعند الشك ألغِ الوصول.'
+        }),
+        copy: tr({ fr: 'Copier le lien', en: 'Copy link', ar: 'نسخ الرابط' }),
+        copied: tr({ fr: 'Lien copié', en: 'Link copied', ar: 'تم نسخ الرابط' }),
+        accesses: tr({ fr: 'Accès existants', en: 'Existing access', ar: 'عمليات الوصول الحالية' }),
+        none: tr({ fr: 'Aucun accès pour le moment.', en: 'No access yet.', ar: 'لا يوجد وصول بعد.' }),
+        loading: tr({ fr: 'Chargement…', en: 'Loading…', ar: 'جارٍ التحميل…' }),
+        never: tr({ fr: 'Jamais ouvert', en: 'Never opened', ar: 'لم يُفتح بعد' }),
+        seen: tr({ fr: 'Dernière visite', en: 'Last visit', ar: 'آخر زيارة' }),
+        until: tr({ fr: 'Valable jusqu\'au', en: 'Valid until', ar: 'صالح حتى' }),
+        active: tr({ fr: 'Actif', en: 'Active', ar: 'نشط' }),
+        revoked: tr({ fr: 'Révoqué', en: 'Revoked', ar: 'ملغى' }),
+        expired: tr({ fr: 'Expiré', en: 'Expired', ar: 'منتهٍ' }),
+        revoke: tr({ fr: 'Révoquer', en: 'Revoke', ar: 'إلغاء الوصول' }),
+        confirm: tr({ fr: 'Confirmer la révocation', en: 'Confirm revoke', ar: 'تأكيد الإلغاء' }),
+        close: tr({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' }),
+        generic: tr({ fr: 'Action impossible pour le moment. Réessayez.', en: 'Not possible right now. Try again.', ar: 'تعذّر تنفيذ الإجراء الآن. أعد المحاولة.' }),
+        forbidden: tr({ fr: 'Réservé au propriétaire du compte.', en: 'Reserved for the account owner.', ar: 'مخصص لصاحب الحساب.' }),
+        badEmail: tr({ fr: 'Adresse e-mail invalide.', en: 'Invalid email address.', ar: 'عنوان البريد غير صالح.' }),
+        tooMany: tr({ fr: 'Trop d\'accès actifs : révoquez-en un d\'abord.', en: 'Too many active accesses: revoke one first.', ar: 'عدد الوصولات النشطة كبير: ألغِ واحداً أولاً.' }),
+        noStore: tr({ fr: 'Établissement introuvable. Rechargez la page.', en: 'Location not found. Reload the page.', ar: 'تعذّر العثور على المحل. أعد تحميل الصفحة.' })
+      };
+      const field = 'display:block;width:100%;min-height:44px;font-size:16px;margin-top:4px;padding:0 12px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);color:var(--ink);box-sizing:border-box;';
+      const m = modal({
+        title: c.title, tag: c.tag, desc: c.desc,
+        body: `<div data-acc-form>
+            <label style="display:block;font-size:13px;margin-bottom:10px;">${c.name}<input type="text" maxlength="80" autocomplete="off" data-acc-name style="${field}"></label>
+            <label style="display:block;font-size:13px;margin-bottom:12px;">${c.email}<input type="email" maxlength="254" autocomplete="off" dir="ltr" data-acc-email style="${field}"></label>
+            <button class="kb atlas" type="button" data-acc-create>${c.invite}</button>
+          </div>
+          <p data-acc-status role="status" style="font-size:13px;color:var(--danger);margin:10px 0 0;min-height:18px;"></p>
+          <div data-acc-link hidden style="margin-top:6px;padding:14px;border:1px solid var(--n-200);border-radius:12px;background:var(--paper);">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${c.linkTitle}</div>
+            <input type="text" readonly dir="ltr" data-acc-url style="${field}margin-top:0;font-family:var(--mono);font-size:13px;">
+            <p style="font-size:12.5px;color:var(--n-600);margin:10px 0;">${c.warn}</p>
+            <button class="kb ghost" type="button" data-acc-copy>${c.copy}</button>
+          </div>
+          <div style="margin-top:18px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">${c.accesses}</div>
+            <div data-acc-list style="font-size:13px;color:var(--n-600);">${c.loading}</div>
+          </div>`,
+        foot: `<button class="kb ghost" type="button" data-close>${c.close}</button>`,
+        width: 560
+      });
+      const el = m.el;
+      const status = el.querySelector('[data-acc-status]'), list = el.querySelector('[data-acc-list]');
+      const createBtn = el.querySelector('[data-acc-create]');
+      const api = async (path, options) => {
+        const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch(path, { credentials: 'include', cache: 'no-store', ...options, signal: controller.signal });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) { const e = new Error(body.error || 'unavailable'); e.status = response.status; throw e; }
+          return body;
+        } finally { clearTimeout(timeout); }
+      };
+      const say = (err) => {
+        status.textContent = !err ? '' : err.message === 'bad-email' ? c.badEmail : err.message === 'too-many-accesses' ? c.tooMany
+          : err.status === 403 ? c.forbidden : c.generic;
+      };
+      const day = (ts) => new Date(ts).toLocaleDateString(({ fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA-u-nu-latn' })[kiwiLang()] || 'fr-FR');
+      const draw = (rows) => {
+        list.textContent = '';
+        if (!rows.length) { list.textContent = c.none; return; }
+        rows.forEach((r) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--n-200);';
+          const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
+          const name = document.createElement('div'); name.style.cssText = 'color:var(--ink);font-weight:500;overflow-wrap:anywhere;';
+          name.textContent = r.label || r.email || tr({ fr: 'Comptable', en: 'Accountant', ar: 'محاسب' });
+          const meta = document.createElement('div'); meta.style.cssText = 'font-size:12px;color:var(--n-500);';
+          const state = r.status === 'active' ? c.active : r.status === 'revoked' ? c.revoked : c.expired;
+          meta.textContent = state + ' · ' + c.seen + ' : ' + (r.lastSeenTs ? day(r.lastSeenTs) : c.never) + ' · ' + c.until + ' ' + day(r.expiresTs);
+          info.appendChild(name); info.appendChild(meta); row.appendChild(info);
+          if (r.status === 'active') {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'kb ghost'; b.textContent = c.revoke;
+            let armed = false, timer = 0;
+            b.addEventListener('click', async () => {
+              if (!armed) {
+                armed = true; b.className = 'kb danger'; b.textContent = c.confirm;
+                timer = setTimeout(() => { armed = false; b.className = 'kb ghost'; b.textContent = c.revoke; }, 4000);
+                return;
+              }
+              clearTimeout(timer); b.disabled = true; say(null);
+              try { await api('/api/comptable/access?merchant=' + encodeURIComponent(merchant) + '&id=' + encodeURIComponent(r.id), { method: 'DELETE' }); await refresh(); }
+              catch (err) { b.disabled = false; armed = false; b.className = 'kb ghost'; b.textContent = c.revoke; say(err); }
+            });
+            row.appendChild(b);
+          }
+          list.appendChild(row);
+        });
+      };
+      const refresh = async () => {
+        if (!merchant) { list.textContent = ''; status.textContent = c.noStore; createBtn.disabled = true; return; }
+        try { draw((await api('/api/comptable/access?merchant=' + encodeURIComponent(merchant))).accesses || []); }
+        catch (err) { list.textContent = ''; say(err); if (err.status === 403) createBtn.disabled = true; }
+      };
+      createBtn.addEventListener('click', async () => {
+        if (!merchant) { status.textContent = c.noStore; return; }
+        createBtn.disabled = true; createBtn.textContent = c.creating; say(null);
+        const nameInput = el.querySelector('[data-acc-name]'), emailInput = el.querySelector('[data-acc-email]');
+        try {
+          const made = await api('/api/comptable/access', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant, label: nameInput.value.trim(), email: emailInput.value.trim() }) });
+          nameInput.value = ''; emailInput.value = '';
+          const box = el.querySelector('[data-acc-link]'), url = el.querySelector('[data-acc-url]');
+          url.value = made.url; box.hidden = false; url.focus(); url.select();
+          await refresh();
+        } catch (err) { say(err); }
+        finally { createBtn.disabled = false; createBtn.textContent = c.invite; }
+      });
+      el.querySelector('[data-acc-copy]').addEventListener('click', async () => {
+        const url = el.querySelector('[data-acc-url]');
+        try { await navigator.clipboard.writeText(url.value); toast(c.copied, { type: 'success', force: true }); }
+        catch (_) { url.focus(); url.select(); try { document.execCommand('copy'); toast(c.copied, { type: 'success', force: true }); } catch (__) {} }
+      });
+      el.querySelector('[data-close]').addEventListener('click', () => {
+        el.querySelector('[data-acc-url]').value = '';
+        m.close();
+      });
+      refresh();
     },
 
     'glass-level': (el) => {

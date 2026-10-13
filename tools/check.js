@@ -1709,6 +1709,9 @@ section('Whole-project regressions');
     'clients-pending-write-test.mjs',
     'store-pending-setup-test.mjs',
     'till-device-revoke-test.mjs',
+    /* Espace comptable : lecture seule d'UN magasin pour son expert-comptable ;
+       le cookie kiwi_acct n'ouvre rien d'autre, la porte du site n'ouvre que 3 entrées. */
+    'accountant-portal-test.mjs',
     'critical-flow-test.mjs',
     'dashboard-kds-nav-test.mjs',
     'dashboard-notification-isolation-test.js',
