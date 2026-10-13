@@ -25,7 +25,10 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 
 /* One run at a time, and no child test can hang the gate (tools/check-guard.js). */
-require('./check-guard').acquireLock();
+if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
+/* The machine-wide lock exists so two runs do not drown the machine in headless
+ * browsers; the fast tier launches none, so it never waits behind a full run. */
+if (process.env.KIWI_CHECK_TIER !== 'fast') require('./check-guard').acquireLock();
 require('./check-guard').install();
 
 /* Les doubles de synchronisation. iCloud/Dropbox recopient un fichier modifié
@@ -48,7 +51,13 @@ let failures = 0;
 let warnings = 0;
 const fail = (msg) => { failures++; console.log('  ✗ ' + msg); };
 const warn = (msg) => { warnings++; console.log('  ⚠ ' + msg); };
-const ok = (msg) => console.log('  ✓ ' + msg);
+/* A suite the fast tier did not run prints as skipped, once, never as green. */
+const guard = require('./check-guard');
+const ok = (msg) => {
+  const s = guard.takeSkip();
+  if (s) { console.log('  ⏭ ' + s + ' not run (fast tier)'); return; }
+  console.log('  ✓ ' + msg);
+};
 const section = (t) => console.log('\n■ ' + t);
 
 /* ── 1 · SYNTAX (compile only — nothing is executed) ────────────────────── */
@@ -1828,4 +1837,8 @@ section('Politique typographique (tools/type-policy-test.js)');
 
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
+if (guard.tier() === 'fast') {
+  console.log(`✓ fast tier passed (${warnings} warning(s)) · ${guard.skipped.length} browser suite(s) NOT run, so this is not the gate: run \`npm run check:full\` (or \`node tools/check.js\`) before pushing`);
+  process.exit(0);
+}
 console.log(`✓ all checks passed (${warnings} warning(s))`);

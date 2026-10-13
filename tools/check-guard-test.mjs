@@ -107,7 +107,61 @@ ok('a live holder makes the second run wait, then proceed after the cap', () => 
 holder.kill('SIGKILL');
 ok('check.js installs the guard before running anything', () => {
   const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
-  assert.match(src, /require\('\.\/check-guard'\)\.acquireLock\(\);\s*require\('\.\/check-guard'\)\.install\(\);/);
+  assert.match(src, /acquireLock\(\);\s*require\('\.\/check-guard'\)\.install\(\);/);
+});
+
+/* ── tiers : la couche rapide saute les suites qui pilotent un navigateur ── */
+const browserTest = path.join(dir, 'drive-browser-test.mjs');
+writeFileSync(browserTest, "import puppeteer from 'puppeteer-core';\nconsole.log('would launch');\n");
+const plainTest = path.join(dir, 'plain-test.mjs');
+writeFileSync(plainTest, 'console.log("plain ran");\n');
+const cpTier = require('node:child_process');
+ok('a test is slow when its source drives a browser, whatever it is called', () => {
+  assert.equal(guard.isSlow(browserTest), true);
+  assert.equal(guard.isSlow(plainTest), false);
+  assert.equal(guard.isSlow(path.join(dir, 'missing-test.mjs')), false, 'an unreadable file is run, never skipped');
+  assert.equal(guard.isSlow(path.join(ROOT, 'tools/native-premium-feel-test.mjs')), true, 'a browser suite without "browser" in its name');
+  assert.equal(guard.isSlow(path.join(ROOT, 'tools/team-codes-at-rest-test.mjs')), false);
+});
+ok('the full tier runs a browser suite; the fast tier skips it by name and never skips a plain one', () => {
+  const calls = [];
+  const spawn = (c, a) => { calls.push(a[a.length - 1]); return { status: 0, stdout: 'ran', stderr: '' }; };
+  const prev = process.env.KIWI_CHECK_TIER;
+  try {
+    delete process.env.KIWI_CHECK_TIER;
+    cpTier.spawnSync = realSpawnSync;
+    let w = guard.install({ log: () => {}, spawnSync: spawn });
+    assert.equal(guard.tier(), 'full');
+    assert.equal(w(process.execPath, [browserTest]).stdout, 'ran');
+    process.env.KIWI_CHECK_TIER = 'fast';
+    assert.equal(guard.tier(), 'fast');
+    const before = guard.skipped.length;
+    const skipped = w(process.execPath, [browserTest]);
+    assert.equal(skipped.kiwiSkipped, true);
+    assert.equal(skipped.status, 0);
+    assert.equal(guard.takeSkip(), 'drive-browser-test.mjs');
+    assert.equal(guard.takeSkip(), null, 'the flag is read once');
+    assert.equal(guard.skipped.length, before + 1);
+    assert.equal(w(process.execPath, [plainTest]).stdout, 'ran');
+    assert.equal(calls.length, 2, 'only the full-tier browser run and the plain run reached the real spawn');
+    assert.equal(guard.takeSkip(), null, 'a plain test clears the skip flag');
+  } finally {
+    if (prev === undefined) delete process.env.KIWI_CHECK_TIER; else process.env.KIWI_CHECK_TIER = prev;
+    cpTier.spawnSync = realSpawnSync;
+  }
+});
+ok('the fast tier is opt-in, never says "all checks passed", and never waits behind a full run', () => {
+  const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+  assert.match(src, /process\.argv\.includes\('--fast'\)\) process\.env\.KIWI_CHECK_TIER = 'fast'/);
+  assert.match(src, /if \(process\.env\.KIWI_CHECK_TIER !== 'fast'\) require\('\.\/check-guard'\)\.acquireLock\(\);/);
+  const tail = src.slice(src.lastIndexOf("if (failures)"));
+  assert.ok(tail.indexOf("guard.tier() === 'fast'") > 0 && tail.indexOf("guard.tier() === 'fast'") < tail.indexOf('all checks passed'), 'the fast verdict comes first');
+  assert.match(tail, /NOT run, so this is not the gate/);
+  const pkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts.test, 'node tools/check.js', 'npm test stays the full gate');
+  assert.equal(pkg.scripts.check, 'node tools/check.js');
+  assert.equal(pkg.scripts['check:fast'], 'node tools/check.js --fast');
+  assert.equal(pkg.scripts['check:full'], 'node tools/check.js');
 });
 
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);

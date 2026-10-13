@@ -6,6 +6,8 @@
   "scripts": {
     "test": "node tools/check.js",
     "check": "node tools/check.js",
+    "check:fast": "node tools/check.js --fast",
+    "check:full": "node tools/check.js",
     "stamp": "node tools/bump-stamp.js",
     "dev": "npx wrangler pages dev .",
     "stack": "node tools/kiwi-local-stack.mjs --seed",

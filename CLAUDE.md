@@ -199,6 +199,17 @@ nothing.** If you add a suite, wire it in. And a red run isn't automatically you
 prove a failure is pre-existing by running it in a detached worktree at the untouched
 base before you chase it.
 
+**Two tiers.** `npm run check:fast` (`node tools/check.js --fast`) skips every
+child test whose source drives a browser — about 77 of ~600 suites, most of the
+ten minutes — and lists each one it did not run; it also never waits behind
+another session's full run, since it launches no browser. Use it between edits.
+A green fast run is **not** the gate: it says so in its last line. `npm test`,
+`npm run check` and `npm run check:full` stay the full run, and that is the one
+that must be green before a push. A suite counts as slow by reading its source
+(puppeteer, browser-trace, Chromium, Playwright, Chrome), not its filename, so a
+new browser suite lands in the right tier without being registered
+(`tools/check-guard.js`).
+
 **New browser suites use `tools/browser-trace.mjs`.** Run each scenario through
 `suite(name).run()` and `t.watch(page)`: a failure then writes
 `.kiwi/results/<suite>/<test>/trace.md` (steps, every page load and the script

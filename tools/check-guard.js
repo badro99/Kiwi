@@ -21,6 +21,17 @@
  *     (tools/browser-trace.mjs: no Chromium, a launch or navigation timeout,
  *     a closed target). It runs once more before it counts as red, and the
  *     output says so. Exit 1 (an assertion) is never retried.
+ *
+ * Two tiers (KIWI_CHECK_TIER=fast, or `node tools/check.js --fast`):
+ *   full (default)  everything, exactly as before: the gate before a push.
+ *   fast            skips every child test that launches a browser (about 80 of
+ *                   ~600 suites, but most of the ten minutes), and says so by
+ *                   name; a green fast run is NOT a green gate. It exists for the
+ *                   loop between edits, the full tier stays the one that ships.
+ *   A test is "slow" when its source drives a browser (puppeteer, browser-trace,
+ *   Chromium, Playwright, Chrome), read from the file rather than guessed from
+ *   its name, so a new browser suite is classed correctly without anyone
+ *   registering it.
  * Zero dependencies, like check.js itself. */
 const cp = require('child_process');
 const fs = require('fs');
@@ -32,6 +43,26 @@ const SLOW_MS = 60000;
 const ENV_EXIT = 3;
 const LOCK = path.join(os.tmpdir(), 'kiwi-check.lock');
 
+const SLOW_SOURCE = /puppeteer|browser-trace|chromium|playwright|google chrome/i;
+const slowCache = new Map();
+/* True when the test file at `file` drives a real browser. Unreadable ⇒ false:
+   a file we cannot read is run, never skipped. */
+function isSlow(file) {
+  if (!file || !/\.(m?js)$/.test(file)) return false;
+  if (!slowCache.has(file)) {
+    let slow = false;
+    try { slow = SLOW_SOURCE.test(fs.readFileSync(file, 'utf8')); } catch (_) { slow = false; }
+    slowCache.set(file, slow);
+  }
+  return slowCache.get(file);
+}
+const tier = () => (process.env.KIWI_CHECK_TIER === 'fast' ? 'fast' : 'full');
+/* What the fast tier left out, for the summary, and the one-shot flag check.js
+   reads so a skipped suite prints as skipped instead of "green (0 controls)". */
+const skipped = [];
+let skipFlag = null;
+function takeSkip() { const s = skipFlag; skipFlag = null; return s; }
+
 function sleep(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 function alive(pid) { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } }
 
@@ -42,6 +73,14 @@ function install(opts) {
   const log = opts.log || ((m) => console.log(m));
   const wrapped = function kiwiGuardedSpawnSync(cmd, args, o) {
     o = Object.assign({}, o || {});
+    skipFlag = null;
+    const script = Array.isArray(args) && args.length ? String(args[args.length - 1]) : '';
+    if (tier() === 'fast' && cmd === process.execPath && isSlow(script)) {
+      const n = path.basename(script);
+      skipped.push(n);
+      skipFlag = n;
+      return { status: 0, signal: null, stdout: '', stderr: '', output: [], pid: 0, kiwiSkipped: true };
+    }
     if (!o.timeout) o.timeout = timeout;
     if (!o.killSignal) o.killSignal = 'SIGKILL';
     const t0 = Date.now();
@@ -99,4 +138,4 @@ function acquireLock(opts) {
   return release;
 }
 
-module.exports = { install, acquireLock, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+module.exports = { install, acquireLock, isSlow, tier, skipped, takeSkip, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
