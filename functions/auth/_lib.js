@@ -1178,7 +1178,7 @@ export async function activeEmployee(request, env, asked) {
   } catch (_) { return null; }
 }
 
-function normEmployeeRole(value) {
+export function normEmployeeRole(value) {
   let s = String(value || '').trim().toLowerCase();
   try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
   return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
@@ -1211,6 +1211,70 @@ export function employeeRoleOpensDashboard(value) {
     'proprietaire', 'owner', 'patron', 'direction',
     'manager', 'management', 'gerant', 'gerante', 'admin',
   ]).has(role);
+}
+
+/* Face ID « marque » : un condensé à clé serveur (HMAC avec AUTH_SECRET) du palier
+ * demandé (owner | manager) et des seuls codes qui ouvrent le dashboard sur ce
+ * compte (identifiant, rôle, boutique, code). Le navigateur ne reçoit jamais un
+ * code ; il reçoit ce condensé, que seul le serveur sait recalculer.
+ *   · le palier fait partie du condensé : la marque d'un gérant ne vaut jamais
+ *     celle du patron ;
+ *   · un code patron ou gérant changé, ajouté, retiré, ou un rôle qui gagne ou
+ *     perd le dashboard change la marque, et le Face ID enregistré ne passe plus ;
+ *   · le code d'une caissière n'y entre pas : le changer ne touche personne.
+ * La marque n'est DÉLIVRÉE que par POST /api/pin/verify, avec un code prouvé, au
+ * palier de ce code ; /api/pin/face ne fait que la confirmer. */
+const FACE_OWNER_ROLES = new Set(['proprietaire', 'owner', 'patron', 'direction']);
+const FACE_MANAGER_ROLES = new Set(['manager', 'management', 'gerant', 'gerante', 'admin']);
+export function faceAccessTier(role) {
+  if (!employeeRoleOpensDashboard(role)) return '';
+  const r = normEmployeeRole(role);
+  if (FACE_OWNER_ROLES.has(r)) return 'owner';
+  if (FACE_MANAGER_ROLES.has(r)) return 'manager';
+  return '';
+}
+
+/* { status: 'ok', mark } | { status: 'unauthorized' | 'unavailable' | 'no-such-access' } */
+export async function faceMarkState(request, env, access) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return { status: 'unavailable' };
+  if (access !== 'owner' && access !== 'manager') return { status: 'no-such-access' };
+  let sess = null;
+  try { sess = await activeAccountSession(request, env); } catch (_) {}
+  if (!sess || !sess.aid) return { status: 'unauthorized' };
+
+  let accSlug = '';
+  try {
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (acc && acc.business) accSlug = slugMerchant(acc.business);
+  } catch (_) {}
+
+  /* Même périmètre que verifyAccountPin, avec son repli pour une base d'avant le
+   * registre des boutiques. */
+  let rows = null;
+  try {
+    const r = await env.DB.prepare(
+      `SELECT p.id, p.role, p.pin, p.merchant
+         FROM staff_pins p
+         LEFT JOIN merchant_config c ON c.merchant = p.merchant
+        WHERE c.account_id = ? OR p.merchant = ?`
+    ).bind(sess.aid, accSlug).all();
+    rows = r.results || [];
+  } catch (_) {
+    try {
+      const r = await env.DB.prepare('SELECT id, role, pin, merchant FROM staff_pins WHERE merchant = ?').bind(accSlug).all();
+      rows = r.results || [];
+    } catch (__) { return { status: 'unavailable' }; }
+  }
+
+  const dash = rows.filter((r) => faceAccessTier(r.role));
+  if (!dash.some((r) => faceAccessTier(r.role) === access)) return { status: 'no-such-access' };
+  const list = dash.map((r) => [String(r.id || ''), normEmployeeRole(r.role), String(r.merchant || ''), String(r.pin || '')]);
+  list.sort((a, b) => {
+    const ka = a.join('\u0001'), kb = b.join('\u0001');
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  const mark = await hmacHex(env.AUTH_SECRET, 'kiwi-face-mark|' + String(sess.aid) + '|' + access + '|' + JSON.stringify(list));
+  return { status: 'ok', mark };
 }
 
 /* Only an employee who works service AND currently has an open attendance

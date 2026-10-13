@@ -1479,10 +1479,19 @@
      the best banking apps: a personal greeting, quiet passcode dots, a
      borderless keypad, and Face ID that asks by itself. Presentation and
      convenience only. A code is still verified by the dashboard and the
-     server; Face ID never sees, stores or replays it. What Face ID restores
-     is the access tier a real code granted on this device, for this account,
-     and nothing else. Signing out forgets it. */
+     server; Face ID never sees, stores or replays it. The device keeps the
+     access tier a real code granted, for this account, plus a server-issued
+     mark over the account's code list (never a code). Every unlock asks the
+     server again, and a change to the codes, a refusal, or an offline record
+     older than seven days drops it. Signing out forgets it. */
   var FACE_KEY = 'face-unlock-v1', FACE_DECLINED = 'kiwi:native:face-declined';
+  /* A Face ID record is only as good as the server's last word on it. Each unlock
+     asks POST /api/pin/face (session-bound, no code) with the record's `mark`, a
+     keyed digest of the account's whole code list. The server answers 403 when any
+     code changed, so the record is dropped. Offline, the record is honoured only
+     while its last online confirmation is younger than the dashboard vault's TTL
+     (assets/dashboard-pin-vault.js, same 7 days). */
+  var FACE_CONFIRM_PATH = '/api/pin/face', FACE_TTL = 7 * 24 * 60 * 60 * 1000, FACE_TIMEOUT_MS = 8000;
   var FACE_ICON = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q134 0 227 93t93 227q0 134-93 227t-227 93Zm0-80q100 0 170-70t70-170q0-17-2.5-33.5T710-546q-15 3-30 4.5t-30 1.5q-63 0-120-24t-102-70q-28 57-77 99t-111 61q3 98 72.5 166T480-240ZM256-566q44-23 67-53.5t45-72.5q-38 20-67 52.5T256-566Zm95.5 154.5Q340-423 340-440t11.5-28.5Q363-480 380-480t28.5 11.5Q420-457 420-440t-11.5 28.5Q397-400 380-400t-28.5-11.5ZM650-620h12q6 0 12-1-33-45-83.5-72T480-720h-12q-6 0-11 1 39 45 82.5 72T650-620Zm-98.5 208.5Q540-423 540-440t11.5-28.5Q563-480 580-480t28.5 11.5Q620-457 620-440t-11.5 28.5Q597-400 580-400t-28.5-11.5ZM40-720v-120q0-33 23.5-56.5T120-920h120v80H120v120H40ZM240-40H120q-33 0-56.5-23.5T40-120v-120h80v120h120v80Zm480 0v-80h120v-120h80v120q0 33-23.5 56.5T840-40H720Zm120-680v-120H720v-80h120q33 0 56.5 23.5T920-840v120h-80Zm-383 1Zm-89 27Z"/></svg>';
   function entryCopy(kind) {
     var lang = String(root.lang || 'fr'), ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
@@ -1513,11 +1522,76 @@
     return secureGet(FACE_KEY).then(function (raw) {
       try {
         var r = JSON.parse(raw || 'null');
-        return r && r.account === account && /^(owner|manager|staff)$/.test(r.access) ? r : null;
+        /* A record without a server mark predates the server check: it is inert,
+           never honoured, and the next code unlock offers Face ID again. */
+        return r && r.account === account && /^(owner|manager)$/.test(r.access)
+          && typeof r.mark === 'string' && r.mark ? r : null;
       } catch (_) { return null; }
     }, function () { return null; });
   }
   function forgetFaceUnlock() { return secureSet(FACE_KEY, null); }
+  /* POST /api/pin/face. Resolves 'no' when the server refuses (401/403, or an
+     answer without ok), the server's JSON when it confirms, null when it cannot be
+     reached (offline, timeout, 5xx, a build without the route). No code is sent. */
+  function askFace(body) {
+    if (navigator.onLine === false) return Promise.resolve(null);
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, FACE_TIMEOUT_MS) : 0;
+    return fetch(FACE_CONFIRM_PATH, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctl ? ctl.signal : undefined,
+    }).then(function (r) {
+      clearTimeout(timer);
+      if (r.status === 401 || r.status === 403) return 'no';
+      if (!r.ok) return null;
+      return r.json().then(function (d) {
+        if (!d || d.ok !== true || (d.access !== 'owner' && d.access !== 'manager')) return 'no';
+        return d;
+      }, function () { return null; });
+    }).catch(function () { clearTimeout(timer); return null; });
+  }
+  /* Resolves { state: 'ok', access } when the server confirms, { state: 'refused' }
+     when it says no, { state: 'offline' } when it cannot be reached and the record
+     is within the vault's TTL, { state: 'expired' } when it cannot be reached and
+     the record is older (or its clock is in the future). */
+  function confirmFace(record) {
+    if (!record.mark) return Promise.resolve({ state: 'refused' });
+    return askFace({ access: record.access, mark: record.mark }).then(function (d) {
+      if (d === 'no') return { state: 'refused' };
+      if (d) return { state: 'ok', access: d.access };
+      var age = Date.now() - Number(record.at);
+      return isFinite(age) && age >= 0 && age <= FACE_TTL ? { state: 'offline' } : { state: 'expired' };
+    });
+  }
+  /* The server just confirmed: the record's clock restarts, so the offline window
+     always counts from the last online proof. */
+  function renewFace(record, access) {
+    return secureSet(FACE_KEY, JSON.stringify({
+      account: record.account, access: access, name: record.name || '', at: Date.now(), mark: record.mark,
+    })).catch(function () {});
+  }
+  /* Dashboard idle relock: a biometric success proves the device holder, not the
+     account. The stored Face ID record must still stand (the server online, the
+     TTL offline) before the lock opens. A refusal clears the record and tells the
+     lock to drop its key. Resolves the confirmFace state; 'refused' when no record. */
+  function confirmStoredFace() {
+    return readFaceUnlock().then(function (record) {
+      if (!record) return { state: 'refused' };
+      return confirmFace(record).then(function (c) {
+        if (c.state === 'ok') return renewFace(record, c.access).then(function () { return c; });
+        if (c.state === 'refused' || c.state === 'expired') {
+          return forgetFaceUnlock().catch(function () {}).then(function () {
+            try { window.dispatchEvent(new Event('kiwi:face-unlock-dropped')); } catch (_) {}
+            return c;
+          });
+        }
+        return c;
+      });
+    });
+  }
   /* identity.js may load after this file; wait for its gate to exist and
      settle, never longer than four seconds. */
   function identitySettled() {
@@ -1583,11 +1657,31 @@
       try { if (sessionStorage.getItem('kiwi:native:biometric-pending') === '1') return; } catch (_) {}
       prompting = true;
       authenticateBiometric(entryCopy(biometry).reason).then(function (res) {
-        prompting = false;
-        if (!res || !res.authenticated || !lockVisible()) return;
-        hapticNotice('success');
-        if (window.__kiwiLock && typeof window.__kiwiLock.unlockAs === 'function') window.__kiwiLock.unlockAs(faceRecord);
-      }, function () { prompting = false; });
+        if (!res || !res.authenticated) { prompting = false; return; }
+        var record = faceRecord;
+        /* The face is a proof of the device holder, not of the account: the server
+           still decides whether this record stands before the tier is granted. */
+        return confirmFace(record).then(function (c) {
+          prompting = false;
+          if (c.state === 'refused' || c.state === 'expired') { dropFace(); return; }
+          if (!lockVisible()) return;
+          var access = c.state === 'ok' ? c.access : record.access;
+          if (c.state === 'ok') renewFace(record, access);
+          hapticNotice('success');
+          if (window.__kiwiLock && typeof window.__kiwiLock.unlockAs === 'function') {
+            window.__kiwiLock.unlockAs({ access: access, name: record.name || '' });
+          }
+        });
+      }).catch(function () { prompting = false; });
+    }
+    /* Face ID is gone for this device: the record, the key on the keypad, and the
+       greeting that was built from it. */
+    function dropFace() {
+      faceRecord = null;
+      var key = lock.querySelector('[data-face-unlock]');
+      if (key) key.remove();
+      forgetFaceUnlock();
+      personalise();
     }
     function mountFaceKey() {
       var pad = lock.querySelector('.kiwi-native-owner-keypad');
@@ -1621,18 +1715,35 @@
       if (event.target.closest('a[href="/auth/logout"]')) forgetFaceUnlock();
     }, true);
 
+    /* The dashboard's vault had proven a code that the server now refuses: that
+       code was changed or removed, so the Face ID record enrolled with it goes too. */
+    window.addEventListener('kiwi:dashboard-code-revoked', dropFace);
+    /* The idle relock refused the stored record (see confirmStoredFace). */
+    window.addEventListener('kiwi:face-unlock-dropped', dropFace);
+
     /* A real code just opened the dashboard: offer Face ID once, after the
        greeting, never in the demo and never twice for the same account. */
     window.addEventListener('kiwi:code-unlocked', function (event) {
       var who = event && event.detail;
       var env = window.KiwiEnv, account = entryAccount();
       if (!who || !account || !(env && env.isReal && env.isReal())) return;
+      /* Only a code the server proved online carries a Face ID mark, and only at
+         owner or manager tier: nothing else is offered Face ID. */
+      if (typeof who.faceMark !== 'string' || !who.faceMark || (who.access !== 'owner' && who.access !== 'manager')) return;
       try { if (localStorage.getItem(FACE_DECLINED) === account) return; } catch (_) {}
       checkBiometrics().then(function (info) {
         if (!info || !info.isAvailable) return;
         biometry = info.biometryType || 'faceId';
         return readFaceUnlock().then(function (record) {
-          if (record && record.access === who.access) return;
+          /* Already enrolled at this tier: the code just proven carries the
+             current mark, so the record follows it (after a code change the
+             owner keeps Face ID by typing the new code once). */
+          if (record && record.access === who.access) {
+            if (record.mark !== who.faceMark) {
+              secureSet(FACE_KEY, JSON.stringify({ account: account, access: who.access, name: record.name || who.name || '', at: Date.now(), mark: who.faceMark })).catch(function () {});
+            }
+            return;
+          }
           setTimeout(function () { offerFaceUnlock(who, account, biometry); }, 1900);
         });
       }).catch(function () {});
@@ -1645,11 +1756,18 @@
     function enable() {
       return authenticateBiometric(c.reason).then(function (res) {
         if (!res || !res.authenticated) return false;
-        return secureSet(FACE_KEY, JSON.stringify({ account: account, access: who.access, name: who.name || '', at: Date.now() })).then(function () {
-          hapticNotice('success');
-          try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
-          try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
-          return true;
+        /* The mark came with the code the server just proved (POST /api/pin/verify,
+           for that code's tier). Without one, nothing is enrolled. */
+        if (typeof who.faceMark !== 'string' || !who.faceMark) return false;
+        return Promise.resolve().then(function () {
+          return secureSet(FACE_KEY, JSON.stringify({
+            account: account, access: who.access, name: who.name || '', at: Date.now(), mark: who.faceMark,
+          })).then(function () {
+            hapticNotice('success');
+            try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
+            try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
+            return true;
+          });
         });
       }).catch(function () { return false; });
     }
@@ -1907,7 +2025,13 @@
         } catch (_) {}
         if (res && res.authenticated) {
           if (window.__kiwiLock && typeof window.__kiwiLock.reveal === 'function') {
-            window.__kiwiLock.reveal();
+            /* Dashboard: the lock opens only once the server has confirmed the
+               stored Face ID record (or it is inside the offline TTL). */
+            return confirmStoredFace().then(function (c) {
+              if (c.state !== 'ok' && c.state !== 'offline') return false;
+              window.__kiwiLock.reveal();
+              return true;
+            });
           } else if (typeof window.__kiwiUnlockApp === 'function') {
             window.__kiwiUnlockApp();
           } else {

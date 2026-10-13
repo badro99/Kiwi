@@ -225,7 +225,7 @@ ok(settleAt > 0 && flow.indexOf('askServer(val)') < flow.indexOf('localVerify(va
 ok(/if \(answer === null\) \{[\s\S]*?localVerify\(val\)/.test(flow), 'la ligne salée n\'est lue que sur une réponse null (serveur injoignable)');
 ok(/vaultNote\(val, answer\);\s*\n\s*if \(answer && answer !== 'no'\)/.test(flow), 'le coffre est mis à jour sur la réponse du serveur, avant d\'ouvrir');
 ok(/const wait = offlineWait\(\);\s*\n\s*if \(wait > 0\) \{ rejectPin\('busy', wait\); return; \}/.test(flow) && flow.indexOf('offlineWait()') < flow.indexOf('localVerify(val)'), 'le repli salé est précédé de sa pause d\'essais'); 
-ok(/answer === 'no'\) v\.forget\(code\)/.test(ctl), 'un « non » du serveur efface la ligne de ce code');
+ok(/answer === 'no'\)[\s\S]{0,120}v\.forget\(code\)/.test(ctl), 'un « non » du serveur efface la ligne de ce code');
 ok(/answer && typeof answer === 'object'\) v\.remember\(code, \{ id: answer\.id, name: answer\.name, role: answer\.role \}\)/.test(ctl), 'seule une identité prouvée par le serveur est écrite, sans le code');
 ok(/if \(navigator\.onLine === false\) return Promise\.resolve\(null\);/.test(ctl), 'hors ligne : réponse null tout de suite, sans attendre un délai');
 ok(/setTimeout\(\(\) => ctl\.abort\(\), ASK_TIMEOUT_MS\)/.test(ctl), 'un serveur muet ne suspend pas le pavé (délai)');

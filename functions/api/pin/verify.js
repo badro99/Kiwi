@@ -9,7 +9,8 @@
 // Both shapes are rate-limited and answer with an identity, never with a code.
 import {
   verifyStaffPin, verifyAccountPin, employeeRoleOpensDashboard,
-  managerRefundProof, managerStockProof, tillActorProof, employeeRoleOpensTill, json,
+  managerRefundProof, managerStockProof, tillActorProof, employeeRoleOpensTill,
+  faceAccessTier, faceMarkState, json,
 } from '../../auth/_lib.js';
 
 export async function onRequestPost(context) {
@@ -60,9 +61,21 @@ export async function onRequestPost(context) {
     });
   }
 
+  /* The dashboard lock (no merchant): a code just proven at owner or manager tier
+   * earns the Face ID mark for THAT tier, so the native app can enrol Face ID on
+   * this proof and nothing else. /api/pin/face only confirms it. No code in it. */
+  let faceMark = '';
+  if (!merchant) {
+    const tier = faceAccessTier(verified.staff.role);
+    if (tier) {
+      try { const st = await faceMarkState(request, env, tier); if (st.status === 'ok') faceMark = st.mark; } catch (_) {}
+    }
+  }
+
   return json({
     ok: true,
     staff: verified.staff,
+    ...(faceMark ? { faceMark } : {}),
     ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { actorProof: await tillActorProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),

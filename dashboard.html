@@ -5974,7 +5974,10 @@
          * habilités au dashboard, mais un déploiement décalé ne doit jamais
          * rouvrir la porte · le code d'une caissière ouvre la caisse, pas ici. */
         if (access === 'staff') return 'no';
-        return { id: String(d.staff.id || ''), name: String(d.staff.name || ''), role: String(d.staff.role || ''), access };
+        /* faceMark: the server's Face ID mark for this proven tier (never a code);
+           the native app enrols Face ID with it, and only with it. */
+        return { id: String(d.staff.id || ''), name: String(d.staff.name || ''), role: String(d.staff.role || ''), access,
+          faceMark: typeof d.faceMark === 'string' ? d.faceMark : '' };
       });
     }).catch(() => { clearTimeout(timer); return null; });
   }
@@ -6005,7 +6008,15 @@
     if (!v) return;
     try {
       if (answer && typeof answer === 'object') v.remember(code, { id: answer.id, name: answer.name, role: answer.role });
-      else if (answer === 'no') v.forget(code);
+      else if (answer === 'no') {
+        /* A code this device had seen proven is refused now: it was changed or
+           removed. The native app drops its Face ID record too (native-runtime.js),
+           since that record was enrolled on the same proof. A stranger's wrong code
+           forgets nothing here, so it cannot wipe anyone's Face ID. */
+        Promise.resolve(v.forget(code)).then((dropped) => {
+          if (dropped) window.dispatchEvent(new CustomEvent('kiwi:dashboard-code-revoked'));
+        }, () => {});
+      }
     } catch (_) {}
   }
 
@@ -6534,10 +6545,11 @@
     if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
     else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
     /* A real code just proved who is here: the native app may offer Face ID
-       for next time (app/src/native-runtime.js). Only the access tier and the
-       name travel, never the code. */
+       for next time (app/src/native-runtime.js). Only the access tier, the
+       name and the server's Face ID mark travel, never the code. An offline
+       unlock (from the vault) has no mark, so it never enrols Face ID. */
     if (!reserved && hit && matched && val) {
-      try { window.dispatchEvent(new CustomEvent('kiwi:code-unlocked', { detail: { access: role, name: hit.name || '' } })); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('kiwi:code-unlocked', { detail: { access: role, name: hit.name || '', faceMark: hit.faceMark || '' } })); } catch (_) {}
     }
     /* Slight delay so the user sees the 4th cell fill before the celebration. */
     setTimeout(unlock, 140);

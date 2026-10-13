@@ -546,6 +546,9 @@ for (const test of [
   'sale-line-v2-test.mjs',
   'sales-centime-precision-test.mjs',
   'pin-hardening-test.mjs',
+  /* Face ID : le serveur confirme la marque du compte (session, sans code), refuse
+     tout changement de codes, et le client (native-runtime.js) lit ce verdict. */
+  'face-unlock-test.mjs',
   'config-pin-projection-test.mjs',
   'team-doc-redaction-test.mjs',
   'team-added-toast-test.mjs',
@@ -1563,6 +1566,9 @@ section('Whole-project regressions');
     /* Le vrai pavé du dashboard : migration du clair, preuve en ligne, ouverture
        hors ligne par la ligne salée, « non » du serveur final. */
     'dashboard-pin-vault-browser-test.mjs',
+    /* Face ID sur le verrou natif : confirmation en ligne, refus qui retire
+       l'enregistrement, repli hors ligne sur sept jours, révocation par le coffre. */
+    'native-face-entry-test.mjs',
     /* Le banc des suites navigateur (tools/browser-trace.mjs) : trace.md à
        l'échec, exit 3 quand c'est la machine, secrets jamais imprimés,
        captures comparées à leur référence. */

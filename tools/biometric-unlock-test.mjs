@@ -59,6 +59,8 @@ function runtimeHarness({
   authentication = { authenticated: true },
   lock = true,
   unlockApp = false,
+  faceRecord = null,
+  faceServer = () => ({ status: 404, body: {} }),
 } = {}) {
   const clock = { now };
   const localStorage = memoryStorage(local);
@@ -77,9 +79,18 @@ function runtimeHarness({
   const socket = {
     checkBiometrics: async () => biometric,
     authenticateBiometric: async () => { counters.authenticate++; return authentication; },
-    secureGet: async () => ({ value: null }),
-    secureRemove: async () => ({}),
+    secureGet: async ({ key }) => ({ value: secure.has(key) ? secure.get(key) : null }),
+    secureSet: async ({ key, value }) => { secure.set(key, value); return {}; },
+    secureRemove: async ({ key }) => { secure.delete(key); return {}; },
     deviceIdentity: async () => ({ id: '' }),
+  };
+  /* The Face ID record lives in secure storage; the server answers /api/pin/face. */
+  const secure = new Map(faceRecord ? [['face-unlock-v1', JSON.stringify(faceRecord)]] : []);
+  const serverCalls = [];
+  const fetchStub = async (url, init) => {
+    serverCalls.push({ url, body: JSON.parse(init.body) });
+    const answer = faceServer(JSON.parse(init.body));
+    return { status: answer.status, ok: answer.status >= 200 && answer.status < 300, json: async () => answer.body };
   };
   const app = {
     getInfo: async () => ({ version: '1.0', build: '1' }),
@@ -133,6 +144,7 @@ function runtimeHarness({
     requestAnimationFrame: fn => setTimeout(fn, 0),
     setTimeout: window.setTimeout, clearTimeout: window.clearTimeout,
     getComputedStyle: () => ({ display: 'none', visibility: 'visible' }),
+    fetch: fetchStub, navigator: { onLine: true },
   });
   new vm.Script(nativeRuntime, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 
@@ -144,6 +156,8 @@ function runtimeHarness({
     counters,
     pin,
     body,
+    secure,
+    serverCalls,
   };
 }
 
@@ -217,11 +231,29 @@ async function run() {
     unavailable.sessionStorage.getItem('kiwi:native:biometric-pending') === null &&
     unavailable.pin.style.display !== 'none' && unavailable.counters.reveal === 0);
 
-  const idleOnly = runtimeHarness({ session: { kiwiIdleLockReason: 'idle' } });
-  const idleUnlocked = await idleOnly.api.maybePromptBiometricUnlock();
-  check('kiwiIdleLockReason alone is pending and successful biometrics reveals the lock',
-    idleUnlocked === true && idleOnly.counters.authenticate === 1 &&
-    idleOnly.counters.reveal === 1 && idleOnly.sessionStorage.getItem('kiwiIdleLockReason') === null);
+  /* Dashboard idle relock: a biometric success reveals the lock only when the
+     server confirms the stored Face ID record (online) or it is inside the
+     seven-day offline TTL; a server no clears the record and keeps the lock. */
+  const ACCOUNT = 'idle.fixture@kiwi.test';
+  const faceRecord = { account: ACCOUNT, access: 'owner', name: 'Idle Fixture', at: 1_000_000, mark: 'c'.repeat(64) };
+  const idleConfirmed = runtimeHarness({
+    session: { kiwiIdleLockReason: 'idle' }, local: { kiwiAccountKey: ACCOUNT }, faceRecord,
+    faceServer: (body) => ({ status: 200, body: { ok: true, access: body.access } }),
+  });
+  const idleYes = await idleConfirmed.api.maybePromptBiometricUnlock();
+  const idleRefused = runtimeHarness({
+    session: { kiwiIdleLockReason: 'idle' }, local: { kiwiAccountKey: ACCOUNT }, faceRecord,
+    faceServer: () => ({ status: 403, body: { ok: false, error: 'changed' } }),
+  });
+  const idleNo = await idleRefused.api.maybePromptBiometricUnlock();
+  const idleNoRecord = runtimeHarness({ session: { kiwiIdleLockReason: 'idle' }, local: { kiwiAccountKey: ACCOUNT } });
+  const idleNoRecordResult = await idleNoRecord.api.maybePromptBiometricUnlock();
+  check('idle relock: biometric reveals only after the server confirms the stored record; a server no clears it and keeps the lock; no record keeps the lock',
+    idleYes === true && idleConfirmed.counters.authenticate === 1 && idleConfirmed.counters.reveal === 1 &&
+    idleConfirmed.serverCalls.length === 1 && idleConfirmed.serverCalls[0].body.mark === faceRecord.mark &&
+    !('pin' in idleConfirmed.serverCalls[0].body) && idleConfirmed.sessionStorage.getItem('kiwiIdleLockReason') === null &&
+    idleNo === false && idleRefused.counters.reveal === 0 && !idleRefused.secure.has('face-unlock-v1') &&
+    idleNoRecordResult === false && idleNoRecord.counters.reveal === 0 && idleNoRecord.serverCalls.length === 0);
 
   const caisse = runtimeHarness({
     session: { 'kiwi:native:biometric-pending': '1' },
