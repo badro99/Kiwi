@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "572",
-    "sha": "ddcef01a63d8aa8e"
+    "v": "574",
+    "sha": "33653862b8ef7e74"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "559",
-    "sha": "c8480de8e6ee710e"
+    "v": "561",
+    "sha": "aeced6f77fed65ea"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "558",
-    "sha": "a9062d3b79643b7e"
+    "v": "560",
+    "sha": "0973445e3ff336f3"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -568,8 +568,12 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "9",
-    "sha": "fc9d2cf5f61cfbd7"
+    "v": "11",
+    "sha": "638313e11ced16e7"
+  },
+  "assets/kit/layout.js": {
+    "v": "1",
+    "sha": "ea670368dd8517aa"
   },
   "assets/kit/ledger.js": {
     "v": "2",
@@ -672,16 +676,16 @@
     "sha": "407e46a04316201c"
   },
   "assets/kit/till-frame.js": {
-    "v": "2",
-    "sha": "32377fe45891942c"
+    "v": "3",
+    "sha": "1ba4e734a75a6299"
   },
   "assets/kit/till-pin.js": {
     "v": "2",
     "sha": "373c1458c50f9977"
   },
   "assets/kit/till.js": {
-    "v": "3",
-    "sha": "9919b307abfdb278"
+    "v": "4",
+    "sha": "29d457acc73b9e6d"
   },
   "assets/kit/tokens-2027.css": {
     "v": "1",

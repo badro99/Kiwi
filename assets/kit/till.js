@@ -415,6 +415,10 @@
     },
     render: function () {
       var p = this.p(), st = this.str('state'), form = this.str('form', 'caps');
+      /* §18.3 height forms (layout.js paymentForm): regular is one stack in the
+         bill pane; compact puts the summary over the menu pane and the keys in
+         the bill pane; compact-short does the same on 56-tall keys. */
+      var lay = this.str('layout', 'regular'), cmp = lay === 'compact' || lay === 'compact-short';
       var tip = this.tip(), owed = this.owed();
       var tipVal = p.tipPct ? t('pay.tip.pct', { pct: pctText(p.tipPct), amount: money(tip) }) : t('pay.tip.none');
       var methods = ['cash', 'card', 'other'].map(function (m) {
@@ -426,7 +430,7 @@
       if (this.__tipEntry || p.method === 'cash') {
         var chips = this.__tipEntry ? '<div class="chips" aria-hidden="true"></div>' : C.chip.group({ label: t('pay.received', { amount: '' }), options: [{ value: String(owed), label: t('pay.exact'), ariaLabel: t('pay.exact_a11y', { amount: money(owed) }) }]
           .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv });
-        lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + C.keypad.render({ form: form, label: t('pay.cash') }) +
+        lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + C.keypad.render({ form: form, short: lay === 'compact-short', label: t('pay.cash') }) +
           '<p class="k-heading k-num chg" aria-live="polite"></p>' +
           (this.__tipEntry ? C.button.render({ variant: 'primary', size: 'L', full: true, id: 'td', attrs: ' data-w="tip-done"', label: t('action.done') }) : '<div class="pri"></div>') + '</div>';
       } else if (p.method) {
@@ -435,22 +439,36 @@
             error: st === 'not-recorded' ? t('pay.not_recorded') : '' }) +
           C.button.render({ label: t('action.back'), full: true, id: 'bk', attrs: ' data-w="back"' }) + '</div>';
       }
-      this.shadowRoot.innerHTML = '<div class="pay' + (st === 'paid' ? ' done' : '') + '">' +
+      var summary =
         '<div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"', disabled: st === 'paid' }) +
         '<h2 class="k-heading ti">' + th('pay.title', { bill: p.bill || '' }) + '</h2></div>' +
         '<div class="kf"><span class="k-foot k-ink2">' + th('pay.amount_due') + '</span>' +
         '<span class="k-title k-num" data-key-figure>' + numHtml(money(owed)) + '</span>' +
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
         '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' +
-        (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>') +
-        lower + (st === 'paid' ? '<p class="k-title paid" role="status">' + icon('task_alt', 32) + th('pay.paid') + '</p>' : '') + '</div>';
+        (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>');
+      var paid = st === 'paid' ? '<p class="k-title paid" role="status">' + icon('task_alt', 32) + th('pay.paid') + '</p>' : '';
+      /* Compact: the two columns are one group named by pay.title, read
+         summary first (§18.3). */
+      this.shadowRoot.innerHTML = cmp
+        ? '<div class="pay cmp' + (st === 'paid' ? ' done' : '') + '" role="group" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' +
+          '<div class="sum">' + summary + paid + '</div><div class="keys">' + lower + '</div></div>'
+        : '<div class="pay' + (st === 'paid' ? ' done' : '') + '">' + summary + lower + paid + '</div>';
       this.paint();
     }
   });
   K.define('k-pay', KPay, {
-    attrs: ['form', 'state'], props: ['pay'],
+    attrs: ['form', 'state', 'layout'], props: ['pay'],
     css: C.button.css + C.chip.css + C.keypad.css + ':host{display:block}' +
-      '.pay{display:flex;flex-direction:column;gap:12px}.ti{margin:0}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}' +
+      '.pay{display:flex;flex-direction:column;gap:12px;min-height:100%}.ti{margin:0}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}' +
+      /* the primary pinned to the column's foot, as the bill's is (§18.3) */
+      '.cash{flex:1}.pri{margin-block-start:auto}' +
+      '.cmp{display:grid;grid-template-columns:minmax(0,1fr) var(--k-pay-keys,432px);gap:0;height:100%;min-height:0}' +
+      '.cmp .sum{justify-self:end;align-self:start;box-sizing:content-box;width:384px;max-width:calc(100% - 96px);margin:24px;padding:12px 24px 24px;display:flex;flex-direction:column;gap:12px;' +
+      'background-color:var(--k-surface-1);border-radius:var(--k-r-3)}' +
+      '.cmp .sum .row,.cmp .sum .mt{background-color:var(--k-bg)}' +
+      '.cmp .keys{display:flex;flex-direction:column;min-height:0;padding:24px 24px 52px;background-color:var(--k-surface-1);border-inline-start:1px solid var(--k-line)}' +
+      '.cmp .card{flex:1}' +
       '.kf{display:flex;flex-direction:column}.brk{min-height:18px}' +
       '.row,.mt{display:flex;align-items:center;gap:12px;min-height:64px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start}' +
       '.row span:first-child{flex:1}.ms{display:flex;flex-direction:column;gap:8px}' +

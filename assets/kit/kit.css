@@ -155,7 +155,12 @@ html[data-k-till] #rp-active { display: none !important; }
 html[data-k-till] .view-vrap { background-color: var(--k-bg); }
 #kit-bill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #kit-bill > k-bill { flex: 1; min-height: 0; }
-@media (min-width: 1280px) {
+/* The bill pane by width band (layout.js tillLayout, §13.3): 432 from 1180, 360
+   from 1000; narrower windows keep the shipped panel. */
+@media (min-width: 1000px) {
+  html[data-k-till] .rightpanel { width: 360px; flex: 0 0 360px; }
+}
+@media (min-width: 1180px) {
   html[data-k-till] .rightpanel { width: 432px; flex: 0 0 432px; }
 }
 /* The payment pushes inside the bill pane (stage 4 (2), §18.3): the pane's
@@ -167,3 +172,10 @@ html[data-k-till] .view-vrap { background-color: var(--k-bg); }
   #kit-bill[data-paying] > k-pay { animation: k-till-push var(--k-dur-5) var(--k-glide) both; }
   [dir="rtl"] #kit-bill[data-paying] > k-pay { animation-name: k-till-push-rtl; }
 }
+/* The compact payment (stage 4 (2), §18.3 height forms): a layer over the
+   menu pane and the bill pane, from the menu pane's start; below 514 the page
+   keeps min-height 514 and the window scrolls as a whole, never a column. */
+#kit-pay-layer { position: fixed; inset-block: 0; inset-inline-end: 0; inset-inline-start: var(--k-pay-start, 0px); z-index: 40; background-color: var(--k-bg); }
+#kit-pay-layer > k-pay { display: block; height: 100%; }
+html[data-k-pay-scroll], html[data-k-pay-scroll] body { min-height: 514px; }
+html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto; height: 514px; }
