@@ -178,6 +178,7 @@
         js("assets/kit/nav.js?v=1") +
         js("assets/kit/till.js?v=7") +
         js("assets/kit/till-frame.js?v=4") +
+        js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -18425,6 +18426,16 @@
       }).finally(() => { button.disabled = false; });
     }
     function openAttendanceCode() {
+      /* kiwiSkin2027:till (étape 4, §10.34) : le code partagé du commerce, sur le
+         kit (assets/kit/till-attendance.js), qui ne le remplace plus à
+         l'ouverture. */
+      if (document.documentElement.hasAttribute('data-k-till') && window.KiwiTillAttendance && window.KiwiTillAttendance.open({
+        merchant: pairedTeamMerchant,
+        post: (body) => fetch('/api/team/live', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) }),
+        time: (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); },
+        venue: () => storeName(),
+      })) { pollLiveTeam(); return; }
       $('#attendance-code-modal').classList.add('is-open');
       generateAttendanceCode();
       pollLiveTeam();
