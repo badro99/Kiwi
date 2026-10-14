@@ -199,3 +199,7 @@ html[data-k-till] .sidebar { display: none !important; }
 .k-oc__tm, .k-oc__tt, .k-oc__ln, .k-oc__cu { margin: 0; }
 .k-oc__late { color: var(--k-danger); }
 .k-oc__ac { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+
+/* The opening float (stage 4 (13), §18.9): counted in the kit's sheet, which
+   Open the till opens; the shipped float chips are not drawn. */
+html[data-k-till] .clockin-float:not(.k-shown) { display: none !important; }
