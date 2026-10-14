@@ -4862,18 +4862,21 @@
           /* Table promoted to a circular badge so the row scans as
            * "seat → person → amount" instead of running text together. */
           const tableChip = (r.table != null)
-            ? `<span class="t-chip" aria-label="Table ${r.table}">T${r.table}</span>`
+            ? `<span class="t-chip" aria-label="Table ${escTxt(r.table)}">T${escTxt(r.table)}</span>`
             : '';
-          const who = r.customer ? r.customer : (r.ctx || '');
+          /* `ctx` is the till's sale label and `sub` a refund's ref: free text
+           * typed at any till, stored raw by POST /api/sale. It goes through
+           * innerHTML here, so every user-controlled field is escaped. */
+          const who = escTxt(r.customer ? r.customer : (r.ctx || ''));
 
           return `
           <div class="feed-row${r.isNew ? ' new' : ''}" style="--i:${idx};" tabindex="0" role="button" data-action="open-order" data-order-key="${key}">
-            <div class="t">${r.t}</div>
+            <div class="t">${escTxt(r.t)}</div>
             <div class="method">
-              <div class="ci ${r.method}">${chipInner}</div>
+              <div class="ci ${escTxt(r.method)}">${chipInner}</div>
               <div class="desc">
-                <div class="primary">${trPay(r.primary)}</div>
-                <div class="sub"><span class="flag ${r.flag}"></span>${trPay(r.sub)}</div>
+                <div class="primary">${escTxt(trPay(r.primary))}</div>
+                <div class="sub"><span class="flag ${escTxt(r.flag)}"></span>${escTxt(trPay(r.sub))}</div>
               </div>
             </div>
             <div class="ctx">${tableChip}<span class="who">${who}</span></div>

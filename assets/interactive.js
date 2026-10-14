@@ -2195,7 +2195,7 @@ ar: {
               </div>
               <div>
                 ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-                ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || methodsSaved() || tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' })), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
                 ${settingsRow('percent', tr({ fr: 'Pourcentages de remise', en: 'Discount percentages', ar: 'نسب التخفيض' }), escape((window.KiwiDiscountPolicy?.percentages?.(vd?.id) || [5,10,15,20]).map(n => n + ' %').join(' · ')), { action: 'settings-discounts' })}
                 ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(currencyLabel(getSet('currency', 'MAD'))), { action: 'settings-currency' })}
               </div>
@@ -2820,7 +2820,7 @@ ar: {
 
     /* Multi-select payment methods. */
     'settings-methods': () => {
-      const cur = (() => { try { return localStorage.getItem('kiwiSet:methods') || 'Visa · MC · Kiwi Tap · QR'; } catch (_) { return 'Visa · MC · Kiwi Tap · QR'; } })();
+      const cur = methodsSaved();
       const OPTS = ['Visa', 'Mastercard', 'Kiwi Tap', 'QR', 'Espèces', 'CMI'];
       const on = (o) => cur.includes(o) || (o === 'Mastercard' && /\bMC\b/.test(cur)) || (o === 'Espèces' && /cash|espèces/i.test(cur));
       const rowS = 'display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px solid var(--n-200);cursor:pointer;font-size:14px;color:var(--ink);';
@@ -2830,7 +2830,7 @@ ar: {
       m.el.addEventListener('click', (e) => {
         if (!e.target.closest('[data-save]')) return;
         const sel = [...m.el.querySelectorAll('[data-mth]:checked')].map((c) => c.getAttribute('data-mth'));
-        try { localStorage.setItem('kiwiSet:methods', sel.length ? sel.join(' · ') : tr({ fr: 'Aucune', en: 'None', ar: 'لا شيء' })); } catch (_) {}
+        try { localStorage.setItem(methodsKey(), sel.length ? sel.join(' · ') : tr({ fr: 'Aucune', en: 'None', ar: 'لا شيء' })); } catch (_) {}
         m.close();
         setTimeout(() => handlers.settings(), 90);
         toast(tr({ fr: 'Méthodes mises à jour', en: 'Methods updated', ar: 'تم تحديث طرق الدفع' }), { type: 'success', force: true });
@@ -3349,6 +3349,11 @@ ar: {
         ar: { tag: 'طلب', status: 'تمّ الدفع', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', cancel: 'إلغاء البيع', cancelConfirm: 'إلغاء هذا البيع؟ سيتم تسجيل العملية.', cancelled: 'تم إلغاء البيع', cancelFailed: 'تعذر إلغاء البيع. تحقق من الصلاحيات وحاول مرة أخرى.', close: 'إغلاق', receiptSent: 'تم فتح واتساب مع الإيصال', receiptSentDesc: 'اختر العميل في واتساب ثم أرسل.', refundPrompt: 'اختر مبلغ الاسترداد' },
       };
       const L = T[lang] || T.fr;
+      /* Sale label / refund ref / item names / server are free text from any
+       * till (stored raw by POST /api/sale). Escape everything user-controlled
+       * before it reaches innerHTML. */
+      const eh = (v) => String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
       /* Same brand assets the row uses — kept in sync so the drawer feels
        * like an enlarged version of the chip the merchant just tapped. */
@@ -3388,9 +3393,9 @@ ar: {
 
       const itemsHtml = (o.items || []).map(it => `
         <div class="ord-item">
-          <div class="qty">×${it.qty}</div>
+          <div class="qty">×${eh(it.qty)}</div>
           <div>
-            <div class="nm">${it.name}</div>
+            <div class="nm">${eh(it.name)}</div>
             <div class="unit">${fmtNum(it.price)} MAD ${L.cover === 'cover' ? 'each' : (lang === 'ar' ? 'للوحدة' : 'pièce')}</div>
           </div>
           <div class="ln">${fmtNum(it.qty * it.price)} MAD</div>
@@ -3405,8 +3410,8 @@ ar: {
         body: `
           <div class="ord-hero">
             <div class="row1">
-              <div class="ticket">${L.tag} · ${o.receiptNo || ''}</div>
-              <div class="when">${o.t}</div>
+              <div class="ticket">${L.tag} · ${eh(o.receiptNo || '')}</div>
+              <div class="when">${eh(o.t)}</div>
             </div>
             <div class="amt">${o.amt}<span class="cur">MAD</span></div>
             <div class="status">${L.status}</div>
@@ -3415,16 +3420,16 @@ ar: {
           <div class="ord-stats">
             <div class="ord-stat">
               <div class="lbl">${L.table}</div>
-              <div class="val">T${o.table != null ? o.table : '·'}</div>
+              <div class="val">T${o.table != null ? eh(o.table) : '·'}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.covers}</div>
-              <div class="val">${o.covers || 1}</div>
+              <div class="val">${eh(o.covers || 1)}</div>
               <div class="sub">${coversLbl}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.server}</div>
-              <div class="val" style="font-size:13px;">${o.server || '·'}</div>
+              <div class="val" style="font-size:13px;">${eh(o.server || '·')}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.duration}</div>
@@ -3443,21 +3448,21 @@ ar: {
 
           <div class="ord-section-lbl">${L.payment}</div>
           <div class="ord-pay">
-            <div class="ci ${o.method}">${chip}</div>
+            <div class="ci ${eh(o.method)}">${chip}</div>
             <div>
-              <div class="pay-prim">${o.primary}</div>
-              <div class="pay-sub"><span class="pay-flag ${o.flag || ''}"></span>${o.sub || ''}</div>
+              <div class="pay-prim">${eh(o.primary)}</div>
+              <div class="pay-sub"><span class="pay-flag ${eh(o.flag || '')}"></span>${eh(o.sub || '')}</div>
             </div>
             <div class="pay-amt">${o.amt} MAD</div>
           </div>
 
           <div class="ord-section-lbl">${L.timeline}</div>
           <div class="tx-timeline">
-            ${realSale && !knownDur ? `<div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>` : `
-            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '·'} · ${o.covers || 1} ${coversLbl} · ${o.server || '·'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '·'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '·'}</div></div>
-            <div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>`}
+            ${realSale && !knownDur ? `<div class="tx-timeline-item last"><div class="t">${eh(tPaid)}</div><div class="n">${L.paid}</div><div class="d">${eh(o.primary)} · ${eh(o.sub || '')}</div></div>` : `
+            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? eh(o.table) : '·'} · ${eh(o.covers || 1)} ${coversLbl} · ${eh(o.server || '·')}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${eh(i.qty)} ${eh(i.name)}`).join(' · ') || '·'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${eh(o.server || '·')}</div></div>
+            <div class="tx-timeline-item last"><div class="t">${eh(tPaid)}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${eh(o.primary)} · ${eh(o.sub || '')}</div></div>`}
           </div>
         `,
         foot: `
@@ -4051,6 +4056,29 @@ ar: {
   }
 
   function escape(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* Accepted payment methods belong to one account and one store. They lived in the
+   * global `kiwiSet:methods`: the next account to sign in on the device read the
+   * previous merchant's list, and a real merchant who had never chosen saw the
+   * demo's "Visa · Mastercard · Kiwi Tap · QR". The key now carries account and
+   * store (under `kiwi:`, so the tenant purge takes it); the demo default is shown
+   * to a demo only, and the legacy global value is read by a demo alone. */
+  const METHODS_DEMO_DEFAULT = 'Visa · Mastercard · Kiwi Tap · QR';
+  function methodsKey() {
+    let acct = '', v = '';
+    try { acct = String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) {}
+    try { v = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || ''); } catch (_) {}
+    return 'kiwi:methods:' + (acct || 'demo') + '|' + (v || 'default');
+  }
+  function methodsSaved() {
+    const real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+    try {
+      const own = localStorage.getItem(methodsKey());
+      if (own) return own;
+      if (real) return '';
+      return localStorage.getItem('kiwiSet:methods') || METHODS_DEMO_DEFAULT;
+    } catch (_) { return real ? '' : METHODS_DEMO_DEFAULT; }
+  }
 
   /* ─── Demo data ─── */
   const txData = {

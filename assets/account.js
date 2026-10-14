@@ -1011,15 +1011,42 @@
     const venuesCount = venuesList.length;
 
     const lsJson = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } };
-    /* Balaye les clés kiwi* dont le nom contient `frag` et rend le plus grand
-       magasin trouvé (tableau nu, .items/.list nommé, ou valeurs d'objet) —
-       robuste aux clés par tenant sans avoir à les recopier ici. */
+    /* Identifiants du commerce affiché : ce sont les seuls suffixes qu'une clé
+       par établissement peut porter (`:<id>` ou `@<slug>`). */
+    const scopeIds = (() => {
+      const ids = [];
+      const add = (x) => {
+        x = String(x == null ? '' : x).trim().toLowerCase();
+        if (x && x !== 'own' && x !== 'scoped' && x !== 'default' && ids.indexOf(x) < 0) ids.push(x);
+      };
+      try {
+        const V = window.KiwiVenue;
+        const cur = (V && V.getVenue && V.getVenue()) || '';
+        add(cur);
+        add(V && V.slugOf && V.slugOf());
+        add(V && V.tenantOf && V.tenantOf(cur));
+        const vd = (V && V.getCurrentVenueData && V.getCurrentVenueData()) || {};
+        add(vd.id); add(vd.slug);
+      } catch (_) {}
+      try { add(window.KiwiClients && window.KiwiClients.bookId && window.KiwiClients.bookId()); } catch (_) {}
+      return ids;
+    })();
+    const keyIsMine = (k) => {
+      const lk = k.toLowerCase();
+      return scopeIds.some((id) => lk.endsWith(':' + id) || lk.endsWith('@' + id));
+    };
+    /* Balaye les clés kiwi* dont le nom contient `frag` ET qui portent l'identifiant
+       du commerce affiché, et rend le plus grand magasin trouvé (tableau nu, .items/
+       .list nommé, ou valeurs d'objet). Avant, on prenait le plus grand sur TOUTES
+       les clés : un autre magasin du même appareil (ou le compte précédent) donnait
+       sa taille au tableau « fonctionnalités en usage ». Une clé sans identifiant de
+       commerce ne compte pas : mieux vaut un zéro qu'un chiffre d'ailleurs. */
     function scanCount(frag, path) {
       let best = 0;
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i) || '';
-          if (!/^kiwi/i.test(k) || k.toLowerCase().indexOf(frag) < 0) continue;
+          if (!/^kiwi/i.test(k) || k.toLowerCase().indexOf(frag) < 0 || !keyIsMine(k)) continue;
           const v = lsJson(k);
           let n = 0;
           if (Array.isArray(v)) n = v.length;
@@ -1050,10 +1077,12 @@
     const resaCount = scanCount('reserv', 'reservations') || scanCount('resa', 'list');
     const teamCount = (() => {
       try {
+        /* L'équipe du commerce affiché, pas la plus grande de toutes les équipes. */
         const by = window.__kiwiTeamV2 && window.__kiwiTeamV2.byVenue;
-        let n = 0;
-        if (by) Object.values(by).forEach((l) => { if (Array.isArray(l) && l.length > n) n = l.length; });
-        return n;
+        if (!by) return 0;
+        const vid = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '');
+        const l = by[vid];
+        return Array.isArray(l) ? l.length : 0;
       } catch (_) { return 0; }
     })();
     const aiCount = scanCount('agent', 'messages') || scanCount('copilot', 'messages');

@@ -1393,8 +1393,10 @@
     let _biz = '';
     try { const _lVd = window.KiwiVenue?.isCustom?.() && window.KiwiVenue.getCurrentVenueData?.(); if (_lVd) _biz = String(_lVd.name || '').trim(); } catch (_) {}
     if (!_biz) _biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
-    const _prog = _biz ? T.previewProgram.replace(/·.*$/, '· ' + _biz.toUpperCase())
+    const _progRaw = _biz ? T.previewProgram.replace(/·.*$/, '· ' + _biz.toUpperCase())
       : (usesOwnData() ? T.previewProgram.replace(/·.*$/, '').trim() : T.previewProgram);
+    /* The store name is merchant free text and lands in the modal body (innerHTML). */
+    const _prog = String(_progRaw).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     const C = T.cfg || {};
     const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     // Pre-fill from the store's live programme (clients-store.js) — a merchant who

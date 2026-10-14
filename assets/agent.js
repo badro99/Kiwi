@@ -4069,14 +4069,23 @@
    * aucun chiffre du commerçant ne passe par un modèle. Le consentement est
    * demandé UNE fois, et un « non » tient : mode privé, calculs seuls. */
   const LLM = { pending: [], cancelled: false, proposals: [] };
+  /* Le consentement à l'IA serveur est celui d'UN compte : la clé porte l'e-mail
+   * du compte (kiwiAccountKey). L'ancienne clé globale `kiwiAiCloud` ne vaut
+   * plus consentement pour personne : un « oui » donné par un commerçant sur cet
+   * appareil ne se lit pas comme le « oui » du suivant. Sans compte (démo), la
+   * clé reste celle d'avant. */
+  function aiAccount() {
+    try { return String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { return ''; }
+  }
+  function cloudKey() { const a = aiAccount(); return a ? 'kiwiAiCloud:' + a : 'kiwiAiCloud'; }
   function cloudAccepted() {
-    try { return localStorage.getItem('kiwiAiCloud') === 'on'; } catch (_) { return false; }
+    try { return localStorage.getItem(cloudKey()) === 'on'; } catch (_) { return false; }
   }
   function cloudDeclined() {
-    try { return localStorage.getItem('kiwiAiCloud') === 'off'; } catch (_) { return false; }
+    try { return localStorage.getItem(cloudKey()) === 'off'; } catch (_) { return false; }
   }
   function setCloud(on) {
-    try { localStorage.setItem('kiwiAiCloud', on ? 'on' : 'off'); } catch (_) {}
+    try { localStorage.setItem(cloudKey(), on ? 'on' : 'off'); } catch (_) {}
   }
 
   function stripThink(s) {
@@ -4151,8 +4160,21 @@
   /* Direct execution is an explicit owner-only, per-venue preference. The
    * default remains proposal + confirmation; managers and staff can never turn
    * this on, even by writing the localStorage key themselves. */
-  function autoActKey() { const v = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : 'default'; return 'kiwiAiAutoAct:' + String(v || 'default'); }
-  function autoActOn() { if (accessTier() !== 'owner') return false; try { return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; } }
+  /* La clé porte le COMPTE et l'ÉTABLISSEMENT. `KiwiVenue.getCurrentVenueId`
+   * n'a jamais existé : la clé était toujours `kiwiAiAutoAct:default`, commune à
+   * tous les magasins et à tous les comptes de l'appareil, et la purge locataire
+   * ne la retrouvait pas. L'ancienne clé `default` n'est plus lue, et elle est
+   * effacée au passage : l'exécution directe ne se transmet pas d'un compte à
+   * l'autre, il faut la réactiver. */
+  function autoActKey() {
+    let v = '';
+    try { v = String((window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || ''); } catch (_) {}
+    return 'kiwiAiAutoAct:' + (aiAccount() || 'demo') + '|' + (v || 'default');
+  }
+  function autoActOn() {
+    if (accessTier() !== 'owner') return false;
+    try { localStorage.removeItem('kiwiAiAutoAct:default'); return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; }
+  }
   function setAutoAct(on) { if (accessTier() !== 'owner' && on) return; try { localStorage.setItem(autoActKey(), on ? 'on' : 'off'); } catch (_) {} }
   const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft|create-po)$/;
   const TOOL_RESULT_MAX = 2000;

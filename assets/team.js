@@ -1310,9 +1310,27 @@
   const TRANSIENT_KEYS = new Set(['scoped', 'own']);
   const persistableTeamKey = (k) => !DEMO_TYPE_KEYS.has(k) && !TRANSIENT_KEYS.has(k);
   const LS_TEAM = 'kiwiTeamV2:custom';
+  /* Le roster en mémoire appartient à UN compte. loadCustomTeams() le lit à
+   * l'exécution du script, avant que /api/me ait répondu : si c'est un AUTRE
+   * compte qui se connecte, identity.js purge puis recharge, et c'est
+   * `pagehide → saveCustomTeams → persistTeams` qui réécrivait alors l'ancien
+   * roster (codes compris) dans le stockage du nouveau compte. Deux gardes :
+   *   · le drapeau `__kiwiTenantPurging` (posé par tenant-purge.js / identity.js
+   *     AVANT de toucher au stockage) rend toute écriture muette ;
+   *   · le disque est estampillé du compte (`account`) : un roster qui n'est pas
+   *     celui du compte courant n'est ni lu ni réécrit. */
+  function teamAccount() { try { return String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { return ''; } }
+  let ROSTER_ACCOUNT = teamAccount();
+  function rosterWriteBlocked() {
+    if (window.__kiwiTenantPurging === true) return true;
+    const a = teamAccount();
+    return !!(ROSTER_ACCOUNT && a && a !== ROSTER_ACCOUNT);
+  }
   function loadCustomTeams() {
     try {
+      ROSTER_ACCOUNT = teamAccount();
       const raw = JSON.parse(localStorage.getItem(LS_TEAM) || '{}');
+      if (raw && raw.account && ROSTER_ACCOUNT && String(raw.account).toLowerCase() !== ROSTER_ACCOUNT) return;
       const root = window.__kiwiTeamV2;
       Object.keys(raw.byVenue || {}).forEach((k) => {
         if (persistableTeamKey(k)) {
@@ -1358,9 +1376,10 @@
    * la copie serveur, en redescendant, doit pouvoir se poser sans redéclencher
    * une remontée : sinon deux appareils se renvoient la balle indéfiniment. */
   function persistTeams() {
+    if (rosterWriteBlocked()) return;
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
+      const out = { account: teamAccount() || ROSTER_ACCOUNT, byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {}, removedByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = diskMembers(root.byVenue[k], serverCodes);
@@ -1385,6 +1404,7 @@
     try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
   function saveCustomTeams() {
+    if (rosterWriteBlocked()) return;
     persistTeams();
     afterTeamChange();
     teamCloudPush();

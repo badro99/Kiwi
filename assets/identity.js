@@ -117,6 +117,9 @@
       else if (priorBiz && me.business) different = slugish(priorBiz) !== slugish(me.business);
       else different = false;                               // can't tell → keep (safe for existing clients)
     }
+    /* Le drapeau avant la nouvelle clé : entre les deux, un écrivain en mémoire
+       (team.js sur pagehide) aurait estampillé l'ancien roster au nom du nouveau. */
+    if (different) { try { window.__kiwiTenantPurging = true; } catch (_) {} }
     try { localStorage.setItem('kiwiAccountKey', email); } catch (_) {}  // BEFORE any reload → no loop
     if (!different) return false;
     purgeTenantState();

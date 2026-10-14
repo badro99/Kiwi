@@ -818,10 +818,19 @@ section('Server-model fallback, no in-browser download');
   /* aiMode(), executed from agent-truth.js: three states */
   const am = truthSrc.match(/function aiMode\(\) \{[\s\S]*?\n  \}/);
   t('aiMode() exists in agent-truth.js', !!am);
-  const mode = (store) => new Function('storage', am[0] + '\nreturn aiMode();')((k) => store[k] == null ? null : store[k]);
+  const ck = truthSrc.match(/function cloudKey\(\) \{[\s\S]*?\n  \}/);
+  t('cloudKey() exists in agent-truth.js', !!ck);
+  const mode = (store) => new Function('storage', ck[0] + '\n' + am[0] + '\nreturn aiMode();')((k) => store[k] == null ? null : store[k]);
   t('aiMode: kiwiAiCloud=on → cloud', mode({ kiwiAiCloud: 'on' }) === 'cloud');
   t('aiMode: kiwiAiCloud=off → deterministic (private)', mode({ kiwiAiCloud: 'off' }) === 'deterministic');
   t('aiMode: undecided → ask (never "local")', mode({}) === 'ask' && mode({ kiwiAiLocal: 'off' }) === 'ask');
+  /* the consent is per account: the legacy global value never counts for a signed-in account */
+  t('aiMode: legacy unscoped kiwiAiCloud=on is ignored for a signed-in account', mode({ kiwiAccountKey: 'a@example.test', kiwiAiCloud: 'on' }) === 'ask');
+  t('aiMode: consent given by account A is not account B\'s', mode({ kiwiAccountKey: 'b@example.test', 'kiwiAiCloud:a@example.test': 'on' }) === 'ask');
+  t('aiMode: a signed-in account reads its own scoped key', mode({ kiwiAccountKey: 'A@Example.test', 'kiwiAiCloud:a@example.test': 'on' }) === 'cloud' && mode({ kiwiAccountKey: 'a@example.test', 'kiwiAiCloud:a@example.test': 'off' }) === 'deterministic');
+  t('agent.js scopes cloudAccepted / cloudDeclined / setCloud on the account key', /function cloudKey\(\) \{ const a = aiAccount\(\); return a \? 'kiwiAiCloud:' \+ a : 'kiwiAiCloud'; \}/.test(code) && !/localStorage\.(get|set)Item\('kiwiAiCloud'/.test(code));
+  const tp2 = require('fs').readFileSync(require('path').join(__dirname, '..', 'assets', 'tenant-purge.js'), 'utf8');
+  t('tenant purge wipes the AI consent and direct-execution keys', /'kiwiAiCloud:'/.test(tp2) && /'kiwiAiAutoAct:'/.test(tp2) && /'kiwiAiCloud',/.test(tp2));
 
   /* the three trust sentences exist, and the undecided one promises the consent step */
   t('trust line: cloud / private / undecided sentences present',
@@ -868,7 +877,7 @@ section('Collaboration · draft + tools + corroboration');
   t('the prompt carries the tools rule: resolve ids first, never guess, announce executed vs awaiting', /const TOOLS_RULE = "OUTILS/.test(src) && /stock_level ou orders_open/.test(src) && /Ne devine jamais un id/.test(src) && /\{ role: 'system', content: TOOLS_RULE \}/.test(code));
   t('pending proposals render a Confirm + Cancel button per action, then are cleared', /data-fa-confirm="' \+ escAttr\(pr\.token\)/.test(code) && /data-fa-confirm-no="/.test(code) && /LLM\.proposals = \[\];\s*\}\s*\n/.test(code));
   t('the Confirm handler calls KiwiAgentActions.confirm(token) and disables the row first', /data-fa-confirm\]'\);\s*if \(confirmBtn\) \{[\s\S]*?row\.querySelectorAll\('button'\)\.forEach\(\(b\) => \{ b\.disabled = true; \}\);[\s\S]*?A\.confirm\(token\)/.test(code));
-  t('the direct-execution switch is owner-only and per venue', /if \(accessTier\(\) !== 'owner' \|\| !cloudAccepted\(\)\) return '';/.test(code) && /'kiwiAiAutoAct:' \+ String\(v \|\| 'default'\)/.test(code));
+  t('the direct-execution switch is owner-only and per venue', /if \(accessTier\(\) !== 'owner' \|\| !cloudAccepted\(\)\) return '';/.test(code) && /'kiwiAiAutoAct:' \+ \(aiAccount\(\) \|\| 'demo'\) \+ '\|' \+ \(v \|\| 'default'\)/.test(code));
 
   /* executed: the tools against a stubbed ledger, through the loaded window */
   const day = (d, h) => new Date(2026, 7, d, h, 0, 0).getTime();   // Aug 2026, local
@@ -913,7 +922,22 @@ section('Collaboration · draft + tools + corroboration');
   const p2 = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -3, reason: 'casse' }, summary: '− 3 Thé à la menthe' });
   t('propose_action (switch ON) → request then confirm immediately, executed:true, nothing pending', p2.executed === true && actLog.some((x) => x[0] === 'confirm') && T.pending().length === 0, JSON.stringify(p2));
   T.setAutoAct(false);
-  t('the switch is per venue in localStorage (kiwiAiAutoAct:<venue>)', w.localStorage.getItem('kiwiAiAutoAct:default') === 'off');
+  t('the switch is per account and venue in localStorage (kiwiAiAutoAct:<account>|<venue>)', w.localStorage.getItem('kiwiAiAutoAct:demo|default') === 'off');
+  /* The legacy global key (always `kiwiAiAutoAct:default`, because getCurrentVenueId never existed)
+     must not switch direct execution on, and another account never inherits it. */
+  T.resetPending();
+  w.localStorage.setItem('kiwiAiAutoAct:default', 'on');
+  const pLegacy = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -1, reason: 'casse' }, summary: '− 1 Thé' });
+  t('a legacy kiwiAiAutoAct:default = on is NOT honoured (proposal, not execution)', pLegacy.executed !== true && pLegacy.proposed === true, JSON.stringify(pLegacy));
+  t('the legacy default key is cleared on read', w.localStorage.getItem('kiwiAiAutoAct:default') === null);
+  w.localStorage.setItem('kiwiAccountKey', 'owner-a@example.test');
+  T.setAutoAct(true);
+  t('the key carries the account', w.localStorage.getItem('kiwiAiAutoAct:owner-a@example.test|default') === 'on');
+  w.localStorage.setItem('kiwiAccountKey', 'owner-b@example.test'); T.resetPending();
+  const pOther = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -1, reason: 'casse' }, summary: '− 1 Thé' });
+  t('another account does not inherit the direct-execution switch', pOther.executed !== true && pOther.proposed === true, JSON.stringify(pOther));
+  w.localStorage.setItem('kiwiAccountKey', 'owner-a@example.test'); T.setAutoAct(false);
+  w.localStorage.removeItem('kiwiAccountKey');
   t('stock_level says not found rather than guessing', T.run('stock_level', { query: 'caviar' }).found === false);
   t('stock_summary reads KiwiAgentTruth inventory', T.run('stock_summary', {}).data.positions === 12);
   t('tables_now reports unavailable when the floor plan is absent', T.run('tables_now', {}).available === false);

@@ -4614,7 +4614,13 @@ function pdsLoad() {
 function pdsSerialize(state) {
   return JSON.stringify(state, function (k, v) { return this === state && k.charAt(0) === '_' ? undefined : v; });
 }
-function pdsWriteLocal(state) {
+function pdsWriteLocal(state, noStamp) {
+  /* Horodatage par élément (merge dernier-écrivain-gagnant, floorplan-core.js).
+   * Pas sur une copie qui nous arrive du serveur ni sur une resynchronisation du
+   * personnel : ce ne sont pas des modifications faites ici. */
+  if (!noStamp && typeof pdsStampPlan === 'function') {
+    try { const k0 = pdsKey(); if (k0) pdsStampPlan(state, localStorage.getItem(k0)); } catch (e) {}
+  }
   const key = pdsKey();
   const json = pdsSerialize(state);
   if (key) {
@@ -4673,7 +4679,7 @@ function pdsRefreshLiveStaff() {
     tables: (pdsLive.tables || []).map(t => [t.id, pdsServerIds(t)]),
   });
   if (before === after) return;
-  pdsWriteLocal(pdsLive);
+  pdsWriteLocal(pdsLive, true);
   if (pdsLive._refresh) pdsLive._refresh();
 }
 window.addEventListener('kiwi-team-ready', pdsRefreshLiveStaff);
@@ -4759,7 +4765,7 @@ function pdsCloud() {
     read: pdsRawState,
     write: function (d) {
       d = pdsSyncStaff(d);
-      pdsWriteLocal(d);
+      pdsWriteLocal(d, true);
       /* La page est ouverte : on remplace le contenu de l'état VIVANT (les
        * gestionnaires de glisser-déposer tiennent cette référence) plutôt que
        * l'objet lui-même, puis on repeint par son propre `_refresh`. */

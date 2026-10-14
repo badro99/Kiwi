@@ -580,13 +580,25 @@
     } catch (_) {}
   }
 
+  /* A slow answer must not land on another store. The merchant can switch
+   * établissement while /api/config is in flight; the reply for the store they
+   * LEFT then arrived last and applied its type, modules and staff list to the
+   * store now on screen. Each call takes a ticket and remembers which store it
+   * asked for; the answer is dropped unless it is still the newest call AND the
+   * store on screen is still the one it was asked for. */
+  var fetchSeq = 0;
   function fetchConfig() {
-    lastSlug = storeSlug();
-    lastMerchant = merchant();
+    var ticket = ++fetchSeq;
+    var askedSlug = lastSlug = storeSlug();
+    var askedMerchant = lastMerchant = merchant();
     return fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
         if (!data) return false;               // no backend → keep defaults
+        if (ticket !== fetchSeq) return false;     // a newer request is in flight
+        /* An operator's scoped view is pinned to one merchant by the URL, and its slug only
+           settles once the server confirms the scope: comparing it would drop a good answer. */
+        if (!isScoped() && (storeSlug() !== askedSlug || merchant() !== askedMerchant)) return false;   // stale: another store is on screen
         cfg.features = data.features || {};
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);

@@ -28,6 +28,9 @@
     'kiwiPins', 'kiwiLiveMerchant', 'kiwiLive', 'kiwiPaired', 'kiwiPairedVenue', 'kiwiPairings',
     'kiwiBizExtra', 'kiwiTeamV2:custom', 'kiwiSet:ownerName', 'kiwiSet:ownerEmail',
     'kiwiOwnerEmail', 'kiwiRole',
+    /* Ancienne clé GLOBALE du consentement IA serveur : elle ne vaut consentement
+       pour aucun compte (les clés actuelles portent l'e-mail : voir ci-dessous). */
+    'kiwiAiCloud',
     /* Le service en cours du comptoir. Il porte le journal, les additions, les
        bons cuisine et les mouvements d'espèces — c'est-à-dire l'argent d'un
        commerce, qu'une caisse ré-appairée pousserait sous le nom de l'autre. */
@@ -42,7 +45,9 @@
   // Toute clé commençant par l'un de ces préfixes est de la donnée par
   // établissement → elle part au changement de commerçant.
   var TENANT_PREFIXES = ['kiwi:', 'kiwiSales:', 'kiwiBoutiqueCatalog:', 'kiwiLiveIngested:',
-    'kiwiBarcodeSeq:', 'kiwiSet:biz:', 'kiwi-caisse-shift:'];
+    'kiwiBarcodeSeq:', 'kiwiSet:biz:', 'kiwi-caisse-shift:',
+    /* IA : consentement serveur et exécution directe, par compte (et par magasin). */
+    'kiwiAiCloud:', 'kiwiAiAutoAct:'];
   // Chrome de l'appareil / préférences d'affichage : ce n'est PAS la donnée d'un
   // commerçant, et ça doit survivre au changement.
   var PRESERVE = {
@@ -58,6 +63,11 @@
   };
 
   function purge() {
+    /* Posé AVANT d'effacer quoi que ce soit : les écrivains qui ont gardé leur
+       état en mémoire (le roster d'équipe sur `pagehide`) doivent se taire,
+       sinon ils réécrivent l'ancien locataire dans le stockage du nouveau. La
+       page se recharge juste après : le drapeau n'a pas à être levé. */
+    try { window.__kiwiTenantPurging = true; } catch (_) {}
     try {
       TENANT_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
       var kill = [];

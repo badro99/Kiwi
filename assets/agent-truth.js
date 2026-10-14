@@ -38,8 +38,13 @@
    * qu'il n'a pas tranché — le copilote demande alors une fois. L'ancien
    * drapeau kiwiAiLocal (appareil inapte au modèle téléchargé) n'a plus de
    * sens depuis le retrait de WebLLM et n'est plus lu. */
+  function cloudKey() {
+    var a = '';
+    try { a = String(storage('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) {}
+    return a ? 'kiwiAiCloud:' + a : 'kiwiAiCloud';
+  }
   function aiMode() {
-    var c = storage('kiwiAiCloud');
+    var c = storage(cloudKey());
     if (c === 'on') return 'cloud';
     if (c === 'off') return 'deterministic';
     return 'ask';

@@ -36,7 +36,7 @@
   function slug() {
     try {
       return String((window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) ||
-        (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId && window.KiwiVenue.getCurrentVenueId()) || '');
+        (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '');
     } catch (_) { return ''; }
   }
   function localKey() { return PREFIX + slug(); }

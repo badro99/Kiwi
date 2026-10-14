@@ -1061,6 +1061,34 @@ function pdsMergePlans(mine, theirs, union) {
     Object.keys(win).forEach(k => { out[k] = win[k]; });
   } else {
     out = typeof union === 'function' ? union(mine, theirs) : mine;
+    /* Dernier écrivain gagnant, ÉLÉMENT PAR ÉLÉMENT. L'union par identifiant
+     * donne la priorité à cet appareil : un appareil resté sur une vieille copie
+     * annulait donc, à sa prochaine fusion, la table que l'autre venait de
+     * déplacer. Quand les deux copies portent le même identifiant, celle dont
+     * `updatedAt` est le plus récent l'emporte ; un `updatedAt` absent vaut 0
+     * (le plus ancien), et à égalité cet appareil garde la main, comme avant.
+     * Le statut de service et son horodatage (live, propres à l'appareil) ne
+     * suivent jamais la copie de l'autre. Les plans sans aucun horodatage se
+     * fusionnent donc exactement comme avant. */
+    ['tables', 'elements', 'zones'].forEach(key => {
+      if (!out || !Array.isArray(out[key]) || !Array.isArray(mine[key]) || !Array.isArray(theirs[key])) return;
+      const mineBy = {}, theirBy = {};
+      mine[key].forEach(x => { if (x && x.id != null) mineBy[String(x.id)] = x; });
+      theirs[key].forEach(x => { if (x && x.id != null) theirBy[String(x.id)] = x; });
+      out[key] = out[key].map(x => {
+        if (!x || x.id == null) return x;
+        const id = String(x.id), m = mineBy[id], t = theirBy[id];
+        if (!m || !t) return x;
+        if ((+t.updatedAt || 0) <= (+m.updatedAt || 0)) return m;
+        const w = Object.assign({}, t);
+        if (key === 'tables') {
+          ['status', 'since'].forEach(f => {
+            if (Object.prototype.hasOwnProperty.call(m, f)) w[f] = m[f]; else delete w[f];
+          });
+        }
+        return w;
+      });
+    });
     const gone = pdsGoneOf(mine, theirs);
     const keep = x => !(x && x.id != null && gone[String(x.id)]);
     if (Array.isArray(out.tables)) out.tables = out.tables.filter(keep);
@@ -1071,6 +1099,48 @@ function pdsMergePlans(mine, theirs, union) {
     if (mine && Object.prototype.hasOwnProperty.call(mine, k)) out[k] = mine[k];
   });
   return out;
+}
+
+/* ─── Horodatage des éléments (pour le dernier écrivain gagnant) ───────────
+ * pdsStampPlan(state, prevRaw) pose `updatedAt` sur ce qui vient de CHANGER
+ * dans `state` par rapport à la copie rangée juste avant (`prevRaw`, JSON). Ce
+ * qui n'a pas bougé garde son horodatage ; ce qui n'en a jamais eu reste sans
+ * (= le plus ancien) jusqu'à sa première modification. Le statut de service et
+ * `since` (live, par appareil) et tout champ `_x` d'éditeur ne comptent pas
+ * comme une modification : ouvrir la page sur un vieil appareil ne doit jamais
+ * le faire passer pour le dernier à avoir touché le plan. Un élément qui arrive
+ * déjà horodaté d'ailleurs (copie serveur) n'est pas rehorodaté. */
+const PDS_STAMP_SKIP = { status: 1, since: 1, updatedAt: 1 };
+function pdsCanon(v) {
+  if (Array.isArray(v)) return v.map(pdsCanon);
+  if (v && typeof v === 'object') {
+    const o = {};
+    Object.keys(v).sort().forEach(k => { if (!PDS_STAMP_SKIP[k] && k.charAt(0) !== '_') o[k] = pdsCanon(v[k]); });
+    return o;
+  }
+  return v;
+}
+function pdsStampPlan(state, prevRaw) {
+  if (!state || typeof state !== 'object') return state;
+  let prev = null;
+  try { prev = typeof prevRaw === 'string' ? JSON.parse(prevRaw) : prevRaw; } catch (e) { prev = null; }
+  const now = Date.now();
+  ['tables', 'elements', 'zones'].forEach(key => {
+    if (!Array.isArray(state[key])) return;
+    const before = {};
+    ((prev && Array.isArray(prev[key])) ? prev[key] : []).forEach(x => { if (x && x.id != null) before[String(x.id)] = x; });
+    state[key].forEach(x => {
+      if (!x || typeof x !== 'object' || x.id == null) return;
+      const p = before[String(x.id)];
+      if (!p) { if (!(+x.updatedAt > 0)) x.updatedAt = now; return; }
+      if (JSON.stringify(pdsCanon(p)) === JSON.stringify(pdsCanon(x))) {
+        if (!(+x.updatedAt > 0) && +p.updatedAt > 0) x.updatedAt = p.updatedAt;
+        return;
+      }
+      if ((+x.updatedAt || 0) === (+p.updatedAt || 0)) x.updatedAt = Math.max(now, (+p.updatedAt || 0) + 1);
+    });
+  });
+  return state;
 }
 
 /* ─── Exposure ────────────────────────────────────────────────────────────
@@ -1093,5 +1163,5 @@ window.KiwiFloorCore = {
   corners: pdsCorners, obbOverlap: pdsObbOverlap,
   conflict: pdsConflict, blockers: pdsBlockers,
   neighbours: pdsNeighbours, nearestFree: pdsNearestFree,
-  mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury,
+  mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury, stamp: pdsStampPlan,
 };

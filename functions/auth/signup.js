@@ -21,8 +21,9 @@ export async function onRequestPost(context) {
   if (blocked) return blocked;
 
   const email = normEmail(body.email);
-  const name = String(body.name || '').trim().slice(0, 120);
-  const business = String(body.business || '').trim().slice(0, 120);
+  /* Names are rendered in dashboards that build HTML from them: no angle brackets. */
+  const name = String(body.name || '').replace(/[<>]/g, '').trim().slice(0, 120);
+  const business = String(body.business || '').replace(/[<>]/g, '').trim().slice(0, 120);
   const password = String(body.password || '');
 
   if (email.length > 254 || !EMAIL_RE.test(email)) {
