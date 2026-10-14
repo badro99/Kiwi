@@ -143,3 +143,18 @@ k-figure .k-fig__sr {
    each column body is one lane at the till's root; the screen scrolls. */
 .kit-lane-box { display: block; min-width: 0; }
 .kit-lane-box > k-lane { width: 100%; }
+/* The till's menu and bill on the kit (kiwi-caisse.html, stage 4 (1)).
+   html[data-k-till] is set only once till-frame.js has mounted, so a kit that
+   failed to load leaves the shipped grid and panel in place. */
+html[data-k-till] #menu-grid,
+html[data-k-till] #rp-empty,
+html[data-k-till] #rp-active { display: none !important; }
+#kit-menu { display: block; min-width: 0; }
+/* The menu pane on the kit's ground, so its surface-1 tiles read as tiles (§18.3);
+   the takeaway view only: the floor plan keeps its shipped backdrop. */
+html[data-k-till] .view-vrap { background-color: var(--k-bg); }
+#kit-bill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#kit-bill > k-bill { flex: 1; min-height: 0; }
+@media (min-width: 1280px) {
+  html[data-k-till] .rightpanel { width: 432px; flex: 0 0 432px; }
+}
