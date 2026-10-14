@@ -2409,13 +2409,19 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
  *                                       la page de réinitialisation sur les jetons, en
  *                                       clair et en sombre : le contrôle de luminance du
  *                                       sombre sur chaque capture, 4,5:1 pour chaque
- *                                       texte ; le sombre reste le choix du commerçant */
+ *                                       texte ; le sombre reste le choix du commerçant
+ *   team-split-browser-test             l'app équipe en vue scindée dès 768 : pas de
+ *                                       téléphone dessiné, les onglets en rail de 88, la
+ *                                       table ouverte à côté de la liste (360), sa ligne
+ *                                       choisie, le verrou rendu en changeant de table,
+ *                                       miroir en arabe, la pile livrée sur téléphone */
 section('Kiwi 2027 · l\'accès et le reste sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
+    ['team-split-browser-test.mjs', 'team-split-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

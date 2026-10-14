@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "609",
-    "sha": "759e609de32b405a"
+    "v": "612",
+    "sha": "19838e2c03e0f511"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "596",
-    "sha": "ff85b6f0c80db7cc"
+    "v": "599",
+    "sha": "65f3bb52fe78b047"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "595",
-    "sha": "1c69b78b4baa9ef8"
+    "v": "598",
+    "sha": "340e56b732522bad"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -604,8 +604,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "27",
-    "sha": "5ddfa6879328f515"
+    "v": "28",
+    "sha": "6a7bd18158d2abeb"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -726,6 +726,10 @@
   "assets/kit/team-pin.js": {
     "v": "1",
     "sha": "407e46a04316201c"
+  },
+  "assets/kit/team-split.js": {
+    "v": "1",
+    "sha": "8df34267c0b69134"
   },
   "assets/kit/till-attendance.js": {
     "v": "1",
