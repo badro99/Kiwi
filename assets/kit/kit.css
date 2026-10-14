@@ -105,3 +105,8 @@ k-figure .k-fig__sr {
    the pad centred on it, never inside a drawn phone (§10.2). */
 .k-till-lock { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
   overflow-y: auto; padding: 24px; background-color: var(--k-surface-1); color: var(--k-ink-1); }
+/* The dashboard lock with the kit's pad (assets/kit/dash-pin.js): the pad
+   replaces the shipped cells, the hidden field and the help line; the brand,
+   the demo bypass and the two links stay. */
+.k-dash-lock [data-kiwi-pin], .k-dash-lock .kiwi-pin-input, .k-dash-lock .kiwi-lock-help,
+.k-dash-lock .kiwi-lock-title, .k-dash-lock .kiwi-lock-sub { display: none !important; }

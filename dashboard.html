@@ -4582,6 +4582,35 @@
 <link rel="stylesheet" href="assets/agent-skin.css?v=15" />
 <!-- Physical documents never inherit the dashboard's dark palette. -->
 <link rel="stylesheet" href="assets/print-paper.css?v=1" />
+<!-- Design 2027, stage 3a (spec §21.1): the dashboard lock on the kit's pad,
+     behind the dashboard's flag only (localStorage kiwiSkin2027:dashboard = '1',
+     or ?skin=2027 for one load). Off, nothing below loads and the lock keeps its
+     shipped cells. Written while the head is parsed, so these deferred scripts
+     run before DOMContentLoaded, when the lock controller adopts the pad. -->
+<script>
+  (function () {
+    var on = false;
+    try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:dashboard') === '1'; } catch (_) { on = false; }
+    if (!on) return;
+    document.documentElement.setAttribute('data-skin-2027', 'dashboard');
+    /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
+    var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
+    document.write(
+      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=1">' +
+      '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=3">' +
+      js("assets/kit/strings/kit.fr.js?v=2") +
+      js("assets/kit/strings/kit.en.js?v=2") +
+      js("assets/kit/strings/kit.ar.js?v=2") +
+      js("assets/kit/strings.js?v=2") +
+      js("assets/kit/format.js?v=1") +
+      js("assets/kit/core.js?v=1") +
+      js("assets/kit/pin.js?v=2") +
+      js("assets/kit/pin-flow.js?v=1") +
+      js("assets/kit/dash-pin.js?v=1")
+    );
+  })();
+</script>
 </head>
 <body class="design-vexel">
 <script>
@@ -6124,6 +6153,7 @@
     } catch (_) { return false; }
   }
   function maybeShowNoOwnerHelp() {
+    if (kitOn) { if (!demosOn() && serverRosterSize() > 0 && !hasDashboardCode()) window.KiwiDashPin.noOwner(); return; }
     if (demosOn() || !helpEl || pinInput.value) return;
     if (serverRosterSize() > 0 && !hasDashboardCode()) {
       if (!helpEl.classList.contains('is-error')) helpHTML = helpEl.innerHTML;
@@ -6341,7 +6371,7 @@
   gate(true);
   window.__kiwiLock = {
     hide() { resetToDashboard(); lock.style.display = 'none'; gate(false); announceDashboardReady(); },
-    show() { resetToDashboard(); lock.style.display = ''; gate(true); document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
+    show() { resetToDashboard(); lock.style.display = ''; gate(true); document.documentElement.style.overflow = 'hidden'; if (kitOn) { window.KiwiDashPin.focus(); return; } setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
     reveal() { skipToApp(); },
     /* Face ID on the native app: opens with the access tier a real code gave
        on this device, exactly as that code would. */
@@ -6362,13 +6392,14 @@
    * lets a repeat viewer collapse it without sitting through it again. */
   let unlocked = false; /* the PIN-success choreography has started */
   let done = false;     /* the intro is resolved · normal end or Skip */
+  let kitOn = false;    /* kiwiSkin2027:dashboard · the kit's pad owns the code (adoptKit) */
 
   /* Prevent the page from scrolling while the lock is up. */
   document.documentElement.style.overflow = 'hidden';
 
   /* Focus the hidden input + keep it focused if user clicks elsewhere
    * inside the lock. */
-  const refocus = () => pinInput.focus();
+  const refocus = () => { if (!kitOn) pinInput.focus(); };
   setTimeout(refocus, 180);
   lock.addEventListener('click', refocus);
   document.addEventListener('keydown', (e) => {
@@ -6383,6 +6414,8 @@
     if (lock.style.display === 'none') return;
     /* Escape collapses the intro from either the lock or the greeting. */
     if (e.key === 'Escape') { if (demosOn()) skipToApp(); return; }
+    /* The kit's pad takes its own keys (assets/kit/pin.js). */
+    if (kitOn) return;
     if (!lock.isConnected) return;
     /* Don't steal focus while the user Tabs to / rests on the Skip
      * button · otherwise it is unreachable from the keyboard. */
@@ -6726,6 +6759,26 @@
   pinInput.addEventListener('focus', markFocus);
   pinInput.addEventListener('blur', markFocus);
   markFocus();
+
+  /* Design 2027 (kiwiSkin2027:dashboard): the same door on the kit's pad
+   * (assets/kit/dash-pin.js), judged by KiwiPinFlow's dashboard rows. What the
+   * pad does not decide stays here and is lent to it: the demo surfaces, the
+   * account's list, the salted rows and the unlock above. Flag off, the kit
+   * never loads and nothing below runs. */
+  const kitApi = {
+    demosOn, accessTier, serverRosterSize, isConfiguredAccount,
+    accountPinsPending: () => !demosOn() && !!window.KiwiConfig && window.KiwiConfig.accountPinsReady === false,
+    localVerify, offlineWait, vaultNote, finishUnlock, place: greetPlace,
+  };
+  function adoptKit() {
+    if (kitOn || !window.KiwiDashPin || !lock.isConnected || unlocked || done) return;
+    kitOn = !!window.KiwiDashPin.mount(lock, kitApi);
+    if (!kitOn) return;
+    try { pinInput.value = ''; pinInput.blur(); } catch (_) {}
+    maybeShowNoOwnerHelp();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adoptKit);
+  else adoptKit();
 })();
 </script>
 

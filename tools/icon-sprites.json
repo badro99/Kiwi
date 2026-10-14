@@ -71,6 +71,13 @@
         "backspace",
         "close"
       ]
+    },
+    "dashboard": {
+      "note": "Stage 3a: the dashboard lock on the kit's pad behind kiwiSkin2027:dashboard. The pad's delete key and its Face ID key.",
+      "icons": [
+        "backspace",
+        "face"
+      ]
     }
   }
 }

@@ -2053,8 +2053,13 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
  *                                       les deux niveaux d'autorisation, le vérificateur
  *                                       hors ligne (verdict et provenAt au journal), l'état
  *                                       « connexion requise » ; drapeau éteint, aucun
- *                                       fichier du kit chargé */
-section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse)');
+ *                                       fichier du kit chargé
+ *   dash-pin-browser-test               le verrou du tableau de bord derrière
+ *                                       kiwiSkin2027:dashboard : le serveur d'abord, son
+ *                                       non est final, les lignes salées seulement sans
+ *                                       réponse, session morte, pause, aucun code patron,
+ *                                       démo ; drapeau éteint, aucun fichier du kit */
+section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse, tableau de bord)');
 {
   const { spawnSync } = require('child_process');
   const gates = [
@@ -2064,6 +2069,7 @@ section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appai
     ['clock-expiry-browser-test.mjs', 'clock-expiry-browser-test'],
     ['pair-redeem-timeout-browser-test.mjs', 'pair-redeem-timeout-browser-test'],
     ['till-pin-browser-test.mjs', 'till-pin-browser-test'],
+    ['dash-pin-browser-test.mjs', 'dash-pin-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

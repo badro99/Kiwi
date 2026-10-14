@@ -443,6 +443,10 @@
     "v": "25",
     "sha": "6e6fc066faa9fb10"
   },
+  "assets/icons/material/sprite.dashboard.svg": {
+    "v": "1",
+    "sha": "858a1b7e9174b16e"
+  },
   "assets/icons/material/sprite.kit.svg": {
     "v": "2",
     "sha": "732be65946680513"
@@ -523,6 +527,10 @@
     "v": "1",
     "sha": "d5445e0ebefdc97a"
   },
+  "assets/kit/dash-pin.js": {
+    "v": "1",
+    "sha": "b747e7886ce99de3"
+  },
   "assets/kit/dashboard.js": {
     "v": "1",
     "sha": "a1dc605788ec519f"
@@ -548,8 +556,8 @@
     "sha": "34220bbd4e56e6b6"
   },
   "assets/kit/kit.css": {
-    "v": "2",
-    "sha": "073ee2fb11d35bf5"
+    "v": "3",
+    "sha": "86cb2a52751b4726"
   },
   "assets/kit/ledger.js": {
     "v": "2",
