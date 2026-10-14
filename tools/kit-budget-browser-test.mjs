@@ -163,7 +163,12 @@ await s.run('200-tile menu render, Chromium 4× CPU proxy', async (t) => {
   console.log(`    median of ${warm.length}: style ${style.toFixed(1)} ms · layout ${layout.toFixed(1)} ms · total ${total.toFixed(1)} ms (first run ${runs[0].total.toFixed(1)} ms)`);
   check(style <= 16, `style recalculation ${style.toFixed(1)} ms ≤ 16 ms (Chromium proxy; the iOS 15.8 device run is the capture harness's)`);
   check(total <= 50, `render ${total.toFixed(1)} ms ≤ 50 ms in all, warm median (Chromium proxy)`);
-  check(runs[0].total <= 100, `cold first render, compile included, ${runs[0].total.toFixed(1)} ms ≤ 100 ms (Chromium proxy; over §19's 50 is reported, not hidden)`);
+  /* The 4× proxy was tuned on the owner's Mac. The Windows work PC (Ryzen 5 3600,
+   * about half its single-core speed) measures 180–239 ms cold for the same kit;
+   * the owner chose (2026-10-14) a Windows-only limit that still catches a real
+   * slowdown there. The Mac keeps 100; the warm checks above are the same everywhere. */
+  const coldLimit = process.platform === 'win32' ? 280 : 100;
+  check(runs[0].total <= coldLimit, `cold first render, compile included, ${runs[0].total.toFixed(1)} ms ≤ ${coldLimit} ms (Chromium proxy; over §19's 50 is reported, not hidden)`);
   check(page.__errors.length === 0, 'no page errors');
 });
 
