@@ -184,3 +184,18 @@ html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto
 html[data-k-till] .sidebar { display: none !important; }
 #kit-rail { flex: 0 0 88px; width: 88px; height: 100%; min-height: 0; }
 #kit-rail > k-rail { display: block; height: 100%; }
+
+/* Online orders in the Takeaway tab (stage 4 (12), §18.3): the inbox's home
+   under the flag; orderpro-inbox.js draws no chip and no overlay. */
+#kit-online { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 16px; }
+#kit-online[hidden] { display: none; }
+.k-on__hd { margin: 0; }
+.k-on__gp { display: flex; flex-direction: column; gap: 8px; }
+.k-on__gh { margin: 0; color: var(--k-ink-2); }
+.k-oc { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: var(--k-r-3, 16px); background: var(--k-surface-1); }
+.k-oc__hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.k-oc__pr { margin-inline-start: auto; }
+.k-oc__tb { min-height: 36px; padding-inline: 8px; border: 0; border-radius: var(--k-r-2, 12px); background: var(--k-surface-2); color: var(--k-ink-1); font: inherit; cursor: pointer; }
+.k-oc__tm, .k-oc__tt, .k-oc__ln, .k-oc__cu { margin: 0; }
+.k-oc__late { color: var(--k-danger); }
+.k-oc__ac { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }

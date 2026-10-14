@@ -214,6 +214,7 @@
     el.__navPlaced = true;
   }
   function navLabelFor(it) {
+    if (it.a11y) return it.a11y;
     return it.badge ? t('badge.new', { label: it.label, n: it.badge }) : it.label;
   }
   function navItem(it, cur, inner) {
