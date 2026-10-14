@@ -4661,6 +4661,21 @@ The gates are in `check.js` section 14h: `dash-home-browser-test` (15), `dash-or
 - **Not drawn:** the range picker sheet (Report keeps the shipped picker), Kiwi AI's header, Action Center capsule, mic and tools row on the kit (they stay shipped), the Today card's insight variant (`ai.insight.*`), and the chart on Home (`<k-chart>` exists and is held by `chart-legend-test`; Home still draws the shipped chart).
 - **Not measured here:** the phone layouts and the native builds need the Mac.
 
+**Stage 6, as landed (2026-10-15).** The rest of the surfaces, each behind its flag, on `kit-2027-etape-6` in five commits. A new flag, `kiwiSkin2027:access`, covers the pages a person sees before or without a session.
+- **Forgot and reset password** (`assets/kit/access-reset.js`, `reset.html`, §18.8 R1 to R7): one state per answer of `/auth/forgot` and `/auth/reset`, the remembered address with its one-tap new link, the 429 countdown, and the no-oracle rule kept.
+- **The sign-in gate** (`assets/kit/access.css`, loaded by `functions/_middleware.js`): the gate's own names and its Vexel layer's repainted with the tokens, the kit's steps, fields and primary. Dark stays the merchant's choice (`kiwiDashTheme`): the loader writes `data-theme="light"` until Vexel writes dark, so the system's dark never turns the gate dark.
+- **The print bridge page** (`assets/kit/printer.css`, `printer.html`): on the tokens in light and dark (it follows the system, as the reset page does, having no choice of its own), with the inverse wordmark and the start-up script's block on the inverse surface.
+- **The team app's split view** (`assets/kit/team-split.js`, behind `kiwiSkin2027:team`): from 768 wide, no drawn phone, the tabs as an 88 rail, an open table beside the tables list (360) and marked as its selected row. Tapping another table runs the shipped Back first, so the first table's lock is released.
+- **The onboarding after the account** (`assets/kit/dash-onboarding.js`, behind the dashboard's flag): steps 2 to 5 (type, goals and daily goal, the personal code twice on the PIN pad, this device), over `assets/onboarding.js`'s state, checks and `finish()`, lent as `KiwiOnboarding.kit`. A team or kitchen device signs the owner out first.
+
+The gates are in `check.js` section 14i: `reset-states-test` (48: each answer taken from the real handlers over SQLite, a malformed body posted once, then served to the page), `access-gate-browser-test` (43: the dark luminance check on every capture, the gate, the reset page and the print page in light and dark, 4.5:1 for every text), `team-split-browser-test` (14) and `dash-onboarding-browser-test` (23). No string was added. Open items, stated rather than assumed:
+- **Welcome, A1 and A2 are the gate's forms on the tokens**, not the kit's screens with §18.8's per-answer table; the reset flow has that table, sign-up and sign-in do not yet.
+- **Pairing on the same device without typing** (create, then redeem, §18.8 step 5) is not built: the till goes through the shipped pairing prompt and the kitchen screen pairs with a typed code. The Connect a printer row is not drawn.
+- **The Swift setup is not retired.** That is a native change and needs the Mac.
+- **Marketing consuming the token file** is a separate project.
+
+**Stage 7, its gate first (2026-10-15).** `kit-lint` gains K14: a kit file that reads a legacy token (`var(--ink)`, `var(--n-500)`, any name `assets/tokens.css` declares) fails, in a sheet, a template or an inline style, with negative checks; a sheet that repaints a page's names declares them and passes. The retirements themselves wait: a layer can leave a surface only once that surface's flag is on by default (§21.1: the critic round at 10, `check.js` green, an Amira Cafe run, then 14 days with the old path), and no flag is on by default yet. Turning one on is the owner's decision.
+
 ### 21.2 Ledger rollout
 The `kiwiLedger` flag takes three values:
 - `off`: legacy figures.
