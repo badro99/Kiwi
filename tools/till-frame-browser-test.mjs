@@ -17,7 +17,10 @@
  *     grid is not rebuilt under the finger);
  *   · the line's stepper takes it back to 1, then off the bill;
  *   · a tile with options opens the shipped options sheet;
- *   · Take payment opens the shipped cash window (until stage 4 (2));
+ *   · Take payment pushes <k-pay> inside the pane; a 10 % tip from the
+ *     popover; cash Exact, card and other are recorded by the shipped
+ *     tender (finalizeTender) as cash, card and wallet, with base and tip;
+ *     while paying the menu takes no tap; Back gives the bill back;
  *   · no page error anywhere. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -170,12 +173,94 @@ try {
       await sleep(200);
     }
 
-    await tapTile(page, plain.id);
-    await sleep(250);
-    await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('[data-w="pay"]').click());
-    await sleep(300);
-    check(await page.evaluate(() => document.querySelector('#cash-modal').classList.contains('is-open')), 'Take payment opens the shipped cash window');
     check(errors.length === 0, 'flag on: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
+  await S.run('flag on · payment inside the pane, recorded by the shipped tender', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const tap = (sel) => page.evaluate((s) => {
+      const el = document.querySelector('k-pay').shadowRoot.querySelector(s);
+      if (!el) return false;
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      el.click();
+      return true;
+    }, sel);
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    const charge = async () => {
+      await tapTile(page, plain.id);
+      await sleep(200);
+      await page.evaluate(() => document.querySelector('k-bill').shadowRoot.querySelector('[data-w="pay"]').click());
+      await sleep(450);
+    };
+
+    await charge();
+    check(await page.evaluate(() => { const p = document.querySelector('k-pay'), b = document.querySelector('k-bill'); return !p.hidden && b.hidden && !document.querySelector('#cash-modal').classList.contains('is-open'); }),
+      'Take payment pushes <k-pay> over the bill, and the shipped cash window stays shut');
+    const due = await page.evaluate(() => currentTotal());
+    check(await page.evaluate((d) => document.querySelector('k-pay').pay.due === d, due), `the pay pane's due is the shipped till's (${due})`);
+    await tapTile(page, plain.id);
+    await sleep(200);
+    check(await page.evaluate(() => cart.length === 1 && cart[0].qty === 1), 'while paying, the menu takes no tap');
+
+    /* Tip 10 % through the popover. */
+    await tap('[data-tip]');
+    await sleep(300);
+    const picked = await page.evaluate(() => {
+      const list = [...document.querySelectorAll('k-popover')].map((p) => p.querySelector('k-list')).find(Boolean);
+      const row = list && (list.shadowRoot.querySelector('[data-id="10"] [data-row]') || list.shadowRoot.querySelector('[data-id="10"][data-row]'));
+      if (!row) return false;
+      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      row.click();
+      return true;
+    });
+    await sleep(250);
+    const tip = Math.round(due * 10) / 100;
+    check(picked && await page.evaluate(() => payTipPct() === 10), 'the tip popover\'s 10 % reaches the shipped tip state');
+    check(await page.evaluate((v) => Math.abs(document.querySelector('k-pay').owed() - v) < 0.005, due + tip), `the key figure is base + tip (${due} + ${tip})`);
+
+    /* Cash, Exact, Confirm. */
+    await tap('[data-method="cash"]');
+    await sleep(200);
+    await tap('[data-chip]');
+    await sleep(200);
+    await tap('[data-w="confirm"]');
+    await sleep(600);
+    const s1 = await page.evaluate(() => { const e = lastSaleEntry(); return e && { amount: e.amount, method: e.method, tip: e.tip }; });
+    check(s1 && s1.method === 'cash' && Math.abs(s1.amount - due) < 0.005 && Math.abs(s1.tip - tip) < 0.005, `the cash sale is recorded: ${JSON.stringify(s1)}`);
+    check(await page.evaluate(() => cart.length === 0), 'the takeaway cart is settled');
+    check(await page.evaluate(() => document.querySelector('k-pay').getAttribute('state') === 'paid'), 'the pane shows the paid moment');
+    await sleep(1400);
+    check(await page.evaluate(() => document.querySelector('k-pay').hidden && !document.querySelector('k-bill').hidden), 'and goes back to the bill');
+
+    /* Card: record only. Other: the wallet method. */
+    for (const [kind, method] of [['card', 'card'], ['other', 'wallet']]) {
+      await charge();
+      const before = await page.evaluate(() => journal.length);
+      await tap(`[data-method="${kind}"]`);
+      await sleep(200);
+      await tap('[data-w="confirm"]');
+      await sleep(600);
+      const s = await page.evaluate(() => { const e = lastSaleEntry(); return e && { amount: e.amount, method: e.method, tip: e.tip }; });
+      const after = await page.evaluate(() => journal.length);
+      check(s && s.method === method && after === before + 1, `${kind} is recorded once as ${method} (${JSON.stringify(s)})`);
+      await sleep(1400);
+    }
+
+    /* Back gives the bill back untouched. */
+    await charge();
+    await tap('[data-method="card"]');
+    await sleep(200);
+    await tap('[data-w="back"]');
+    await sleep(300);
+    check(await page.evaluate(() => document.querySelector('k-pay').pay.method == null), 'Back from a method returns to the method list');
+    check(await page.evaluate(() => !document.querySelector('k-pay').hidden), 'and the pane stays out');
+    await tap('[data-w="leave"]');
+    await sleep(300);
+    check(await page.evaluate(() => document.querySelector('k-pay').hidden && !document.querySelector('k-bill').hidden), 'the header Back leaves the payment for the bill');
+    check(await page.evaluate(() => cart.length === 1), 'and the bill is still there to pay');
+    check(errors.length === 0, 'payment: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v618';
+var CACHE = 'kiwi-app-v619';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=558',
+  '/assets/dashboard-pwa.js?v=559',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=571',
+  '/assets/caisse-pwa.js?v=572',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=557',
+  '/assets/employee-live.js?v=558',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -307,9 +307,9 @@ var SHELL = [
   '/assets/kit/haptics.js?v=3',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
-  '/assets/icons/material/sprite.till.svg?v=2',
+  '/assets/icons/material/sprite.till.svg?v=3',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=8',
+  '/assets/kit/kit.css?v=9',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -345,8 +345,10 @@ var SHELL = [
   '/assets/kit/controls/chip.js?v=1',
   '/assets/kit/controls/keypad.js?v=1',
   '/assets/kit/controls/stepper.js?v=1',
-  '/assets/kit/till.js?v=2',
-  '/assets/kit/till-frame.js?v=1',
+  '/assets/kit/controls/switch.js?v=1',
+  '/assets/kit/elements.js?v=1',
+  '/assets/kit/till.js?v=3',
+  '/assets/kit/till-frame.js?v=2',
   '/assets/retail-scan.js?v=9',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',

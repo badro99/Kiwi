@@ -350,6 +350,9 @@
         if (w === 'confirm') {
           self.__gat = K.now(); self.__gid = g;
           self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? C.keypad.value(self.__recv) : null, gestureId: g });
+        } else if (w === 'leave') {                     /* the header's Back: out of the payment (§18.3) */
+          self.__tipEntry = false;
+          self.emit('leave', null, { gestureId: g });
         } else if (w === 'back') {
           if (self.__tipEntry) { self.__tipEntry = false; self.render(); return; }
           self.p().method = null; self.render(); self.emit('back', null, { gestureId: g });
@@ -433,7 +436,8 @@
           C.button.render({ label: t('action.back'), full: true, id: 'bk', attrs: ' data-w="back"' }) + '</div>';
       }
       this.shadowRoot.innerHTML = '<div class="pay' + (st === 'paid' ? ' done' : '') + '">' +
-        '<h2 class="k-heading ti">' + th('pay.title', { bill: p.bill || '' }) + '</h2>' +
+        '<div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"', disabled: st === 'paid' }) +
+        '<h2 class="k-heading ti">' + th('pay.title', { bill: p.bill || '' }) + '</h2></div>' +
         '<div class="kf"><span class="k-foot k-ink2">' + th('pay.amount_due') + '</span>' +
         '<span class="k-title k-num" data-key-figure>' + numHtml(money(owed)) + '</span>' +
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
@@ -446,7 +450,7 @@
   K.define('k-pay', KPay, {
     attrs: ['form', 'state'], props: ['pay'],
     css: C.button.css + C.chip.css + C.keypad.css + ':host{display:block}' +
-      '.pay{display:flex;flex-direction:column;gap:12px}.ti{margin:0}' +
+      '.pay{display:flex;flex-direction:column;gap:12px}.ti{margin:0}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}' +
       '.kf{display:flex;flex-direction:column}.brk{min-height:18px}' +
       '.row,.mt{display:flex;align-items:center;gap:12px;min-height:64px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start}' +
       '.row span:first-child{flex:1}.ms{display:flex;flex-direction:column;gap:8px}' +
