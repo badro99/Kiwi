@@ -517,12 +517,19 @@
   /* Le delta, avec sa référence NOMMÉE. Rendu vide quand la journée de
      référence n'a rien vendu : « +100 % contre zéro » n'est pas une
      information, c'est un artefact de division. */
+  /* Le même delta en chiffres, pour l'en-tête du rapport sur le kit (§12). */
+  function deltaModel(now, base, baseDay, hasBase) {
+    var note = T(L.vsPrev).replace('{d}', weekdayName(baseDay));
+    if (!hasBase || !base) return { value: null, note: note, none: T(L.noBase) };
+    var pct = Math.round(((now - base) / Math.abs(base)) * 100);
+    return { value: pct, text: (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct) + ' %', note: note };
+  }
   function delta(now, base, baseDay, hasBase) {
     var name = weekdayName(baseDay);
     if (!hasBase || !base) {
       return '<span class="kdr-d">' + esc(T(L.vsPrev).replace('{d}', name)) + ' · ' + esc(T(L.noBase)) + '</span>';
     }
-    var pct = Math.round(((now - base) / Math.abs(base)) * 100);
+    var pct = deltaModel(now, base, baseDay, hasBase).value;
     var cls = pct > 0 ? ' up' : pct < 0 ? ' down' : '';
     var sign = pct > 0 ? '+' : pct < 0 ? '−' : '';
     return '<span class="kdr-d' + cls + '"><bdi dir="ltr"><b>' + sign + Math.abs(pct) + '&nbsp;%</b></bdi> '
@@ -719,6 +726,10 @@
           + cta + '</div>',
       });
       bind(pageE, r);
+      kitPublish({
+        day: current, dayLabel: dayLabel(current), rel: rel, empty: T(L.empty), emptyHint: T(L.emptyHint),
+        goLast: lastGood ? { day: lastGood, label: T(L.goLast).replace('{d}', shortLabel(lastGood)) } : null
+      });
       return pageE;
     }
 
@@ -745,12 +756,15 @@
     var base = totalsFor(baseDay);
     var baseBasket = base.txns ? base.gross / base.txns : 0;
     var ec = r.cash && r.cash.ecart;
+    var ecKnown = !!(r.cash && r.cash.counted != null);
+    var ecLabel = (r.drawerSessions || []).length > 1 ? T({fr:'Écart du dernier service',en:'Latest service variance',ar:'فرق آخر وردية'}) : T(L.ecart);
+    var ecText = (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec));
     var kpis = '<div class="kdr-kpis">'
       + kpi(T(L.net), money(r.net), 'lead', 'MAD', delta(r.net, base.net, baseDay, base.has))
       + kpi(T(L.txns), String(r.txns), null, '', delta(r.txns, base.txns, baseDay, base.has))
       + kpi(T(L.basket), money(r.basket), null, 'MAD', delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
-      + (r.cash && r.cash.counted != null
-        ? kpi((r.drawerSessions || []).length > 1 ? T({fr:'Écart du dernier service',en:'Latest service variance',ar:'فرق آخر وردية'}) : T(L.ecart), (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec)), Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
+      + (ecKnown
+        ? kpi(ecLabel, ecText, Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
         : kpi(T(L.gross), money(r.gross), null, 'MAD'))
       + '</div>';
 
@@ -881,8 +895,35 @@
         + revBlock,
     });
     bind(page, r);
+    kitPublish({
+      day: current, dayLabel: dayLabel(current), rel: rel,
+      status: closed ? T(L.closed) : (isToday ? T(L.inProg) : T(L.notClosed)),
+      netLabel: T(L.net), netText: money(r.net), unit: 'MAD', netDelta: deltaModel(r.net, base.net, baseDay, base.has),
+      tiles: [
+        { key: 'txns', label: T(L.txns), value: String(r.txns), delta: deltaModel(r.txns, base.txns, baseDay, base.has) },
+        { key: 'basket', label: T(L.basket), value: money(r.basket), unit: 'MAD', delta: deltaModel(r.basket, baseBasket, baseDay, base.has && base.txns > 0) },
+        ecKnown ? { key: 'ecart', label: ecLabel, value: ecText, unit: 'MAD' } : { key: 'gross', label: T(L.gross), value: money(r.gross), unit: 'MAD' }
+      ]
+    });
     return page;
   }
+
+  /* Design 2027 (§12, Report) : ce que render() vient de dessiner, pour
+     l'en-tête du rapport sur le kit derrière le drapeau du tableau de bord
+     (assets/kit/dash-report.js). Rien n'y est recalculé. */
+  var kitModel = null;
+  function kitPublish(m) {
+    kitModel = m;
+    try { window.dispatchEvent(new CustomEvent('kiwi:report-model')); } catch (_) {}
+  }
+  /* Les trois exports du menu Exporter (§12) : le rapport imprimable et le
+     CSV des ventes de dashboard-extra.js, le CSV détaillé de cette page. */
+  window.KiwiReportPage = {
+    model: function () { return kitModel; },
+    exportPrintable: function () { var h = window.Kiwi && window.Kiwi.handlers; if (h && h['export']) h['export'](); },
+    exportSales: function () { if (window.KiwiReport && window.KiwiReport.downloadTransactions) window.KiwiReport.downloadTransactions(); },
+    exportDay: function () { var b = document.querySelector('.dash-genpage [data-kdr="csv"]'); if (b) b.click(); }
+  };
 
   function bind(page, report) {
     if (!page || !page.el) return;
