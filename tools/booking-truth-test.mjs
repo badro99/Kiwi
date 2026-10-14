@@ -138,6 +138,8 @@ vm.runInContext([
   grab(DASH, 'function venueWall('),
   grab(DASH, 'function venueEpoch('),
   grab(DASH, 'function dateLabel('),
+  'var FALLBACK_CUTOFF_H=5;',
+  grab(DASH, 'function businessDayBounds('),
   grab(DASH, 'function dayStart('),
   grab(DASH, 'function withinHours('),
   'this.withinHours=withinHours; this.dateLabel=dateLabel; this.venueEpoch=venueEpoch; this.dayStart=dayStart;',
