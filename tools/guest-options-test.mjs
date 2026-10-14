@@ -2,8 +2,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * COMMANDE PAR QR · LES OPTIONS NE SE CHOISISSENT PAS TOUTES SEULES
  *
- * kiwi-order.html (démo) et OrderPro.html (la page des vrais établissements)
- * sont deux forks de la même appli invité. Audit design 2026-10 :
+ * OrderPro.html est l'appli invité (depuis l'étape 3c, kiwi-order.html, l'ancien
+ * fork de démo, redirige vers elle et la démo vit dans assets/orderpro-demo.js).
+ * Audit design 2026-10 :
  *
  *  1. « Sucré » était présélectionné sur un espresso, puis describeOptions
  *     sautait tout choix égal au défaut (`if (sel === opt.default) continue`) :
@@ -47,7 +48,6 @@ function ok(label, fn) {
 }
 
 const FORKS = [
-  { file: 'kiwi-order.html', gate: 'missingRequiredOption' },
   { file: 'OrderPro.html', gate: 'unansweredRequiredOption' },
 ];
 
@@ -134,10 +134,10 @@ for (const { file, gate } of FORKS) {
 }
 
 ok('démo : aucune option de la carte locale ne porte de `default:` ; le pain du sandwich est obligatoire', () => {
-  const src = read('kiwi-order.html');
-  const block = grab(src, 'const OPT = {');
-  assert.ok(!/\bdefault\s*:/.test(block), 'OPT démo sans default');
-  assert.match(block, /key: 'pain'[^\n]*required: true/);
+  const src = read('assets/orderpro-demo.js');
+  const block = src.slice(src.indexOf('var opts = ['), src.indexOf('function item('));
+  assert.ok(block.length > 100 && !/\bdefault\s*:/.test(block), 'options démo sans default');
+  assert.match(block, /group\('pain', 'Pain', 'one', \[[^\n]*\], true\)/);
 });
 
 /* ── L'affiche ne promet que ce que le parcours fait ─────────────────────── */
@@ -159,7 +159,7 @@ ok('affiche : un sélecteur FR / EN / AR existe et l\'arabe passe en dir="rtl"',
   assert.match(POSTER, /setAttribute\('dir', rtl \? 'rtl' : 'ltr'\)/);
 });
 ok('affiche : la maquette reprend les phrases réelles de la page de commande', () => {
-  const order = read('kiwi-order.html');
+  const order = read('OrderPro.html');
   assert.match(order, /send_table: "Envoyer en cuisine"/);
   assert.match(POSTER, /send_btn: 'Envoyer en cuisine'/);
   assert.match(order, /cart_note_table: "Paiement à la table après votre dernière commande\."/);

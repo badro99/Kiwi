@@ -11,34 +11,36 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 let pass = 0;
 const fail = [];
 const ok = (cond, label) => { if (cond) pass++; else fail.push(label); };
-const html = read('kiwi-order.html');
+/* La page QR est OrderPro depuis l'étape 3c (kiwi-order.html y redirige) ;
+   sa logique de langues vit dans assets/orderpro-menu.js. */
+const html = read('OrderPro.html');
+const om = read('assets/orderpro-menu.js');
 
-ok(/assets\/menu-i18n\.js\?v=\d+/.test(html) && /assets\/order-ui-langs\.js\?v=\d+/.test(html), 'la page charge le résolveur et le dictionnaire statique');
-ok(/id="lang-picker"[^>]*data-lens-demo><\/div>/.test(html) && /configuredLangs\.map/.test(html), 'le sélecteur est construit depuis la liste publiée');
-ok(/payload\.menuLangs === true \? MENU_LANG\.langs\(menu\)/.test(html), 'les langues supplémentaires sont derrière le flag public');
-ok(/navigator\.languages/.test(html) && /MENU_LANG\.autoPick/.test(html) && /kiwiOrderLang/.test(html), 'choix navigateur au premier passage puis préférence mémorisée');
-ok(/const M = window\.KiwiMenuI18n;[\s\S]*?M\.name\(e, l\)[\s\S]*?M\.desc\(e, l\)/.test(html), 'noms et descriptions passent par KiwiMenuI18n');
-ok(!/fetch\([^\n]*menu-translate/.test(html) && !/\/api\/ai\/menu-translate/.test(html), 'aucun appel modèle sur la page client');
+ok(/data-lazy="menu-i18n" src="assets\/menu-i18n\.js\?v=\d+"/.test(html) && /data-lazy="ui-langs" src="assets\/order-ui-langs\.js\?v=\d+"/.test(html), 'la page charge à la demande le résolveur et le dictionnaire statique');
+ok(/id="lang-picker"/.test(html) && /OM\.picker\(currentLang\)/.test(html) && /function picker\(current\)[\s\S]*?var order = list\.slice\(\)/.test(om), 'le sélecteur est construit depuis la liste publiée');
+ok(/res\.menuLangs === true && menu && Array\.isArray\(menu\.langs\)/.test(om), 'les langues supplémentaires sont derrière le flag public');
+ok(/navigator\.languages/.test(om) && /m\.autoPick\(list, nav\)/.test(om) && /localStorage\.setItem\('orderProLang', lang\)/.test(html) && /localStorage\.getItem\('kiwiOrderLang'\)/.test(html), 'choix navigateur au premier passage puis préférence mémorisée (l’ancienne clé reste lue)');
+ok(/function tr\(e, l\) \{[\s\S]*?m\.name\(e, l\), desc: m\.desc\(e, l\)/.test(om), 'noms et descriptions passent par KiwiMenuI18n');
+ok(![html, om].some((src) => /fetch\([^\n]*menu-translate/.test(src) || /\/api\/ai\/menu-translate/.test(src)), 'aucun appel modèle sur la page client');
 
 const world = {}; world.window = world;
 vm.runInNewContext(read('assets/order-ui-langs.js'), world, { filename:'order-ui-langs.js' });
 const dict = world.KiwiOrderUiLangs || {};
 ok(Object.keys(dict).length === 20, 'dictionnaire statique présent pour les 20 langues supplémentaires');
 ok(Object.keys(dict.es || {}).length === 40 && dict['zh-Hans'].cart_title === '您的订单', '40 libellés fixes par langue, dont espagnol et chinois simplifié');
-ok(/I18N\[currentLang\]\[key\][\s\S]*I18N\.en\[key\]/.test(html), 'toute clé absente retombe sur l’anglais');
+ok(/\(I18N\[currentLang\] && I18N\[currentLang\]\[key\]\) \?\? \(extra \? I18N\.en\[key\] : undefined\)/.test(html) && /Object\.assign\(\{\}, I18N\.en, extra\[l\]\)/.test(om), 'toute clé absente retombe sur l’anglais');
 
-const coreI18n = html.slice(html.indexOf('const I18N ='), html.indexOf('/* ============ menu item translations'));
 for (const [lang, label] of [['fr', 'Valeurs nutritionnelles'], ['en', 'Nutrition facts'], ['ar', 'القيم الغذائية']]) {
-  ok(coreI18n.includes(`nutrition_title: "${label}"`), `titre nutrition présent en ${lang}`);
+  ok(om.includes(`nutrition_title: '${label}'`), `titre nutrition présent en ${lang}`);
 }
-ok(/function nutritionSummary\(item\)[\s\S]*if \(!n\) return ''/.test(html), 'aucune ligne nutrition n’est rendue sans données');
-ok(/function nutritionSummary\(item\)[\s\S]*?<bdi dir="ltr">[\s\S]*?function nutritionDetail/.test(html), 'les nombres de la carte sont isolés du RTL');
-ok(/function nutritionDetail\(item\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt[\s\S]*nutrition_indicative/.test(html), 'le détail porte les six valeurs et la mention hors options');
+ok(/function nutritionSummary\(item, t\) \{\s*var n = item && item\.nutrition;\s*if \(!n\) return '';/.test(om), 'aucune ligne nutrition n’est rendue sans données');
+ok(/function nutritionSummary\(item, t\)[\s\S]*?<bdi dir="ltr">[\s\S]*?function nutritionDetail/.test(om), 'les nombres de la carte sont isolés du RTL');
+ok(/function nutritionDetail\(item, t\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt[\s\S]*nutrition_indicative/.test(om), 'le détail porte les six valeurs et la mention hors options');
 ok(/it\.nutritionComplete === true && it\.nutrition/.test(html), 'seules les valeurs complètes entrent dans le modèle client');
-ok(/data-detail="\$\{escapeHtml\(m\.id\)\}"[\s\S]*openCustomizer\(selected\)/.test(html), 'un plat sans option ouvre aussi sa fiche détaillée');
+ok(/if \(item && \(\(item\.options && item\.options\.length > 0\) \|\| item\.nutrition\)\)\s*\{\s*openCustomizer\(item\);/.test(html), 'un plat sans option ouvre aussi sa fiche détaillée');
 
 const middleware = read('functions/_middleware.js');
-ok(/path === '\/kiwi-order\.html'/.test(middleware) && /path === '\/api\/menu'/.test(middleware), 'page QR et lecture de carte restent publiques');
+ok(/path === '\/OrderPro\.html' \|\| path === '\/OrderPro'/.test(middleware) && /path === '\/api\/menu'/.test(middleware), 'page QR et lecture de carte restent publiques');
 ok(!/path === '\/api\/ai\/menu-translate'/.test(middleware), 'la traduction AI ne devient pas une route publique');
 
 if (fail.length) {

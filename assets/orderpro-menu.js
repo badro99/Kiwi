@@ -15,6 +15,8 @@
  *                                   (/api/menu: menuLangs, menu), its hours
  *                                   and zone; a promise of the language list,
  *                                   once what the store needs has loaded
+ *   KiwiOrderMenu.need(name)        loads one helper from the template (hours,
+ *                                   menu-i18n, ui-langs, demo); a promise
  *   KiwiOrderMenu.langs(), pick(saved), asLang(l), rtl(l), picker(current)
  *   KiwiOrderMenu.tr(entity, lang)  { name, desc } in that language, the
  *                                   merchant's text when stale or missing
@@ -276,7 +278,7 @@
   }
 
   root.KiwiOrderMenu = {
-    strings: strings, configure: configure,
+    strings: strings, configure: configure, need: need,
     langs: function () { return list.slice(); }, pick: pick, asLang: asLang, rtl: rtl, picker: picker, tr: tr,
     closed: closed, hoursText: hoursText, renderClosed: renderClosed,
     setOrdering: setOrdering, ordering: function () { return ordering; },

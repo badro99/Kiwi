@@ -150,7 +150,6 @@ async function get(fn, qs, headers = {}) {
   const line = (id, qty = 1) => ({ id, qty });
 
   const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
-  const publicOrderPage = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
   const caissePage = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
   const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
   ok('OrderPro affiche OPD sur le retrait',
@@ -173,17 +172,18 @@ async function get(fn, qs, headers = {}) {
   ok('le paiement employé envoie la référence commande au journal de caisse',
     /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
       fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
+  /* Le QR public est OrderPro depuis l'étape 3c (kiwi-order.html redirige
+     vers lui) : ces garanties portent donc sur son code. */
   ok('le QR public ouvre une session de visite avant la commande',
-    /fetch\('\/api\/order\/session',\s*\{/.test(publicOrderPage)
-      && /ensureTableSession\(\)\.then/.test(publicOrderPage));
+    /openSession: \(mode, table\) => demo\(\) \? demo\(\)\.openSession\(mode, table\) : postJSON\('\/api\/order\/session',/.test(orderProPage)
+      && /const res = await NET\.openSession\(mode, table\);/.test(orderProPage));
   ok('le QR public joint la session à chaque commande à table',
-    /table:\s*tableNumber,\s*session:\s*session\s*\|\|\s*undefined/.test(publicOrderPage));
+    /table: orderMode === 'table' \? tableNumber : '',\s*session: SESSION\.id \|\| '',/.test(orderProPage));
   ok('le QR public sonde la révocation de sa session',
-    /setInterval\(check,\s*5000\)/.test(publicOrderPage)
-      && /d\.status\s*!==\s*'open'/.test(publicOrderPage));
+    /const s = await NET\.sessionStatus\(SESSION\.id\);[\s\S]{0,300}s && s\.ok && s\.status !== 'open'[\s\S]{0,200}SESSION\.markClosed\(s\.closedBy\)/.test(orderProPage));
   ok('le QR ne montre pas un faux succès après un refus serveur',
-    /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
-      && /order_send_failed/.test(publicOrderPage));
+    /let res = await NET\.placeOrder\(\{[\s\S]{0,1200}if \(!res \|\| !res\.ok\) \{/.test(orderProPage)
+      && /if \(err === 'service-closed'\) \{ showToast\(t\('order_closed'\)\); return; \}/.test(orderProPage));
 
   /* ═══ 3b. TÉLÉPHONE · ni déconnexion fantôme ni rescan empoisonné ════════
    * Un identifiant gardé d'une visite fermée faisait répondre « fermée » à
@@ -194,19 +194,16 @@ async function get(fn, qs, headers = {}) {
    * toutes les trente secondes, visite conservée même si l'OS jette l'onglet.
    * Côté OrderPro, les écrans « fermé / désactivé » réessaient aussi seuls. */
   ok('le QR jette l’identifiant mort au lieu de boucler sur « fermée »',
-    /existing\.status === 'closed'\) clearStoredTableSession\(\)/.test(publicOrderPage));
+    /#thanks-reorder-btn'\)\) \{\s*SESSION\._write\(null\);/.test(orderProPage));
   ok('…et la visite survit au jet d’onglet par l’OS',
-    /localStorage\.setItem\(tableSessionKey\(\)/.test(publicOrderPage)
-      && /localStorage\.getItem\(tableSessionKey\(\)/.test(publicOrderPage));
+    /_key\(\) \{ return 'kiwi-op-ses:' \+ NET\.slug; \}/.test(orderProPage)
+      && /localStorage\.getItem\(this\._key\(\)\)/.test(orderProPage)
+      && /localStorage\.setItem\(this\._key\(\), JSON\.stringify\(v\)\)/.test(orderProPage));
   ok('…avec un mot dédié quand la caisse dort, en trois langues',
-    /service_closed: "La caisse semble endormie/.test(publicOrderPage)
-      && /service_closed: "The till looks asleep/.test(publicOrderPage)
-      && /service_closed: "/.test(publicOrderPage)
-      && /tableSessionErrKey\(err\)/.test(publicOrderPage));
+    /err === 'service-closed' \|\| err === 'orderpro-off'[\s\S]{0,200}bootState\(err === 'service-closed' \? 'closed' : 'off'/.test(orderProPage)
+      && (orderProPage.match(/boot_closed_body: "/g) || []).length === 3);
   ok('…et un réveil silencieux toutes les trente secondes',
-    /scheduleServiceRetry\(\)/.test(publicOrderPage)
-      && /30000/.test(publicOrderPage)
-      && /tableSessionStatus !== 'error'/.test(publicOrderPage));
+    /function scheduleBootRetry\(kind\) \{[\s\S]{0,400}bootFromLink\(\);\s*\}, 30000\);/.test(orderProPage));
   ok('OrderPro réessaie seul sur « fermé / désactivé »',
     /scheduleBootRetry\(kind\)/.test(orderProPage)
       && /retry: true/.test(orderProPage)

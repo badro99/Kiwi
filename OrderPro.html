@@ -3723,8 +3723,9 @@ em, i, cite, dfn, var { font-style: normal; }
     <script data-lazy="hours" src="assets/hours.js?v=4"></script>
     <script data-lazy="menu-i18n" src="assets/menu-i18n.js?v=5"></script>
     <script data-lazy="ui-langs" src="assets/order-ui-langs.js?v=2"></script>
+    <script data-lazy="demo" src="assets/orderpro-demo.js?v=1"></script>
   </template>
-  <script src="assets/orderpro-menu.js?v=2"></script>
+  <script src="assets/orderpro-menu.js?v=3"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -3776,31 +3777,36 @@ em, i, cite, dfn, var { font-style: normal; }
         } catch (_) { return { ok: false, error: 'network' }; }
       }
 
+      /* ?s=demo is the pitch demo (assets/orderpro-demo.js): its menu and its
+         kitchen answer from the phone, and nothing reaches a server. */
+      const demo = () => (slug === 'demo' && globalThis.KiwiOrderDemo) || null;
+
       return {
         slug, table,
+        demo: slug === 'demo',
         mode: modeParam === 'takeout' || modeParam === 'emporter' ? 'takeout'
             : modeParam === 'table' || modeParam === 'sur-place' ? 'table' : '',
         /* The store's published catalogue — the SAME endpoint the QR self-order
            page reads (functions/api/menu.js), so a merchant publishes once and
            both surfaces see it. → { name, type, menu, shop, orderpro } */
-        catalog: () => getJSON('/api/menu?merchant=' + encodeURIComponent(slug)),
+        catalog: () => demo() ? demo().catalog() : getJSON('/api/menu?merchant=' + encodeURIComponent(slug)),
         /* Send one order to the caisse queue → { ok, id, number, total, lines } */
-        placeOrder: (payload) => postJSON('/api/order', Object.assign({}, payload, { merchant: slug })),
+        placeOrder: (payload) => demo() ? demo().placeOrder(payload) : postJSON('/api/order', Object.assign({}, payload, { merchant: slug })),
         /* Poll one order's live status → { ok, status, number } */
-        orderStatus: (id) => getJSON('/api/order?merchant=' + encodeURIComponent(slug) +
+        orderStatus: (id) => demo() ? demo().orderStatus(id) : getJSON('/api/order?merchant=' + encodeURIComponent(slug) +
                                      '&id=' + encodeURIComponent(id)),
         /* S'asseoir. La session lie CE téléphone à CETTE table, et la caisse
            peut la fermer : encaisser l'addition coupe le robinet, et le client
            qui aurait gardé le lien ne peut plus commander de chez lui.
            → { ok, session, mode, table, status } */
-        openSession: (mode, table) => postJSON('/api/order/session',
+        openSession: (mode, table) => demo() ? demo().openSession(mode, table) : postJSON('/api/order/session',
           { merchant: slug, mode: mode, table: table || '' }),
         /* Suis-je encore le bienvenu ? C'est aussi le battement de cœur qui
            allume la table sur le plan de salle du comptoir.
            → { ok, status, closedBy, table, mode } */
-        sessionStatus: (id) => getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
+        sessionStatus: (id) => demo() ? demo().sessionStatus(id) : getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
                                        '&session=' + encodeURIComponent(id)),
-        serviceRequest: (session, action) => postJSON('/api/order/session',
+        serviceRequest: (session, action) => demo() ? demo().serviceRequest(session, action) : postJSON('/api/order/session',
           { merchant: slug, session, action }),
       };
     })();
@@ -3869,7 +3875,7 @@ em, i, cite, dfn, var { font-style: normal; }
         success_title_em_kitchen: "en cuisine.",
         success_eta_pre: "Table",
         success_eta_mid: "·",
-        success_eta_em: "4–6 min",
+        success_eta_em: "En attente de la caisse",
         success_recap: "Votre commande",
         success_note: "Le paiement se fait à votre table. Vous pouvez ajouter d'autres articles si vous voulez.",
         success_cta: "Ajouter à ma commande",
@@ -4061,7 +4067,7 @@ em, i, cite, dfn, var { font-style: normal; }
         success_title_em_kitchen: "the kitchen.",
         success_eta_pre: "Table",
         success_eta_mid: "·",
-        success_eta_em: "4–6 min",
+        success_eta_em: "Waiting for the till",
         success_recap: "Your order",
         success_note: "You'll pay at your table. Feel free to add more items if you want.",
         success_cta: "Add to my order",
@@ -4250,7 +4256,7 @@ em, i, cite, dfn, var { font-style: normal; }
         success_title_em_kitchen: "للمطبخ.",
         success_eta_pre: "طاولة",
         success_eta_mid: "·",
-        success_eta_em: "4–6 دقايق",
+        success_eta_em: "كنتسناو الكيس",
         success_recap: "الطلب ديالك",
         success_note: "الخلاص فالطاولة. تقدر تزيد طلبات أخرى إلا بغيتي.",
         success_cta: "زيد لطلبي",
@@ -5139,9 +5145,9 @@ em, i, cite, dfn, var { font-style: normal; }
       opts.innerHTML = (item.options || []).map(opt => {
         const showChoiceImages = !!opt.formulaSlotId && opt.choices.some(choice => choice.photo);
         return `
-        <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${opt.key}">
+        <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${escapeHtml(opt.key)}">
           <div class="option-group-label">
-            <span>${groupLabel(opt.key)}</span>
+            <span>${escapeHtml(groupLabel(opt.key))}</span>
             <span class="opt-type">${(opt.required || (opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0))
               ? `${t('opt_required')} · ${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}`
               : (opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one'))}</span>
@@ -5149,11 +5155,11 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="option-chips">
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
-                      data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
+                      data-opt="${escapeHtml(opt.key)}" data-choice="${escapeHtml(c.id)}" data-type="${escapeHtml(opt.type)}">
                 ${showChoiceImages ? `<span class="option-choice-media">${c.photo
                   ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
                   : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id, c, opt).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
-                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id, c, opt)}</span>
+                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${escapeHtml(choiceLabel(opt.key, c.id, c, opt))}</span>
                 ${c.delta ? `<span class="delta">+${money(c.delta)}</span>` : ''}</span>
                 ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
               </button>
@@ -5200,7 +5206,7 @@ em, i, cite, dfn, var { font-style: normal; }
         customizerSelections[optKey] = arr;
       }
       // Update chip visuals
-      const group = document.querySelector(`.option-group[data-opt="${optKey}"]`);
+      const group = document.querySelector(`.option-group[data-opt="${CSS.escape(String(optKey))}"]`);
       if (!group) return;
       group.classList.remove('is-invalid');
       group.removeAttribute('aria-invalid');
@@ -5819,7 +5825,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* Table mode gets the same truth as takeout, just quieter: the ETA line
-       becomes the ticket's real state at the till, not a decorative "4–6 min".
+       becomes the ticket's real state at the till, not a decorative fixed delay.
        Stops as soon as the kitchen has it, or when the guest leaves the screen. */
     /* ═══════════════════════════════════════════════════════════════════════
        LA SESSION — ce téléphone, assis à cette table
@@ -6454,6 +6460,7 @@ em, i, cite, dfn, var { font-style: normal; }
     async function bootFromLink() {
       if (!STORE.slug) { bootState('nolink', { icon: 'nfc' }); return; }
       bootState('loading');
+      if (NET.demo && globalThis.KiwiOrderMenu) await KiwiOrderMenu.need('demo');
 
       const res = await NET.catalog();
       if (!res) { bootState('offline', { icon: 'wifi-off', retry: true }); return; }

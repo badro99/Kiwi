@@ -66,17 +66,19 @@ ok('kitchen: one poll at a time', () => {
   assert.match(cuisine, /if \(!window\.KiwiKitchenRelay \|\| S\.pulling\) return;/);
 });
 
-const order = read('kiwi-order.html');
+/* The guest order page is OrderPro since stage 3c (kiwi-order.html redirects to it). */
+const order = read('OrderPro.html');
 ok('order page: a double tap sends one order', () => {
-  assert.match(order, /if \(btn\.classList\.contains\('is-loading'\)\) return;/);
-  assert.match(order, /\.send-btn\.is-loading \{ pointer-events: none; \}/);
+  assert.match(order, /const btn = \$\('#send-btn'\);\s*if \(btn\.classList\.contains\('is-loading'\)\) return;/);
+  assert.match(order, /\.send-btn\.is-loading::after \{/);
 });
-ok('order page: a refused takeout order says so in three languages', () => {
-  assert.match(order, /triggerRejected\(\); \}/);
-  assert.equal((order.match(/prep_rejected: "/g) || []).length, 3);
+ok('order page: a refused order says so in three languages', () => {
+  assert.match(order, /if \(status === 'rejected'\) \{ showToast\(t\('order_refused'\)\); currentOrderId = ''; return; \}/);
+  assert.ok((order.match(/order_refused: "/g) || []).length >= 3);
 });
 ok('order page: no invented ticket number on a live order', () => {
-  assert.match(order, /orderNumber = sent && sent\.demo \?/);
+  assert.match(order, /orderNumber = 'OPD-' \+ String\(res\.number \|\| ''\);/);
+  assert.doesNotMatch(order, /orderNumber = [^;\n]*Math\.random/);
 });
 
 const serveur = read('kiwi-serveur.html');

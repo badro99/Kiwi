@@ -13,8 +13,8 @@
  *
  * Identity: merchant slug = KiwiCaisseLink.slugMerchant(business) (the SAME key
  * the order page + /api/menu use). On the LOCAL demo (KiwiEnv.isReal() false) the
- * QR points at the plain demo page (no ?merchant) so it shows the Café Atlas demo
- * — the pitch stays scannable end-to-end.
+ * QR opens OrderPro's demo (?s=demo, assets/orderpro-demo.js), Café Atlas, which
+ * answers from the phone, so the pitch stays scannable end-to-end.
  *
  * Requires: interactive.js (Kiwi.drawer/toast), assets/qrcode.js (KiwiQR).
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -87,7 +87,7 @@
   function orderUrl(table) {
     const origin = location.origin;
     // Local demo → plain page (byte-identical Café Atlas). Real → carry the slug.
-    if (!isReal()) return origin + '/kiwi-order.html' + (table ? ('?table=' + table) : '');
+    if (!isReal()) return origin + '/OrderPro.html?s=demo' + (table ? ('&t=' + table) : '');
     let u = origin + '/order?s=' + encodeURIComponent(biz().slug);
     if (table) u += '&t=' + encodeURIComponent(table);
     return u;

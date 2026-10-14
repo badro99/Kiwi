@@ -250,6 +250,30 @@ try {
     check(page.seen.includes('/assets/hours.js') && !page.seen.includes('/assets/menu-i18n.js'), 'the hours helper loads, the language ones do not');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
+
+  await S.run('the pitch demo · Café Atlas from the phone, nothing sent', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = await open(tr, ctx, 's=demo', { storage: { orderProLang: 'en' } });
+    await page.waitForSelector('#screen-mode.is-active', { timeout: 15000 });
+    check(page.seen.includes('/assets/orderpro-demo.js') && !page.seen.includes('/api/menu'), 'the demo menu comes from the phone, not /api/menu');
+    check((await page.evaluate(() => document.title)) === 'Café Atlas', 'the store is Café Atlas');
+    await page.tap('.mode-card[data-mode="takeout"]');
+    await page.waitForSelector('#screen-menu.is-active [data-add="sparkling"]', { timeout: 8000 });
+    check((await page.$$('#menu-list [data-card]')).length === 13, 'the thirteen dishes');
+    check(/Oulmès sparkling water/.test(await page.$eval('[data-card="sparkling"] .dish-name', (e) => e.textContent)), 'in English');
+    await sleep(700);
+    await page.tap('[data-add="sparkling"]');
+    await page.waitForFunction(() => document.getElementById('cart-count').textContent === '1', { timeout: 3000 });
+    await page.tap('#cart-pill');
+    await page.waitForSelector('#send-btn:not([disabled])', { timeout: 3000 });
+    await sleep(500);
+    await page.tap('#send-btn');
+    await page.waitForSelector('#screen-cashier.is-active', { timeout: 8000 });
+    const shown = await page.evaluate(() => ({ n: document.getElementById('ready-number').textContent, total: document.getElementById('cashier-total').textContent }));
+    check(/42/.test(shown.n) && /8/.test(shown.total), `the order is numbered and priced from the menu (${shown.n}, ${shown.total})`);
+    check(!page.seen.some((p) => p === '/api/order' || p === '/api/order/session'), 'no order and no visit reach a server');
+    check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
 } finally {
   await browser.close().catch(() => {});
   server.close();

@@ -2,7 +2,8 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * COMMANDE PAR QR / LIEN + RAPPORT MENSUEL · CE QUE LES PAGES AFFIRMENT
  *
- * kiwi-order.html est la page qu'un client ouvre en scannant le QR d'une table.
+ * OrderPro.html est la page qu'un client ouvre en scannant le QR d'une table
+ * (kiwi-order.html, l'ancienne, n'est plus qu'une redirection depuis l'étape 3c).
  * Chaque ligne ci-dessous est une phrase de cette page qui était fausse :
  *
  *  1. Le prix. 14,50 MAD affiché, 15 MAD facturé : le relais arrondissait la
@@ -31,7 +32,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8');
-const HTML = read('kiwi-order.html');
+const HTML = read('OrderPro.html');
+const OM = read('assets/orderpro-menu.js');
 const REPORT_JS = read('assets/kiwi-report.js');
 const REPORT_API = read('functions/api/admin/report.js');
 const INBOX = read('assets/orderpro-inbox.js');
@@ -86,16 +88,18 @@ await ok('un choix de groupe obligatoire sans identifiant est refusé, pas factu
 });
 
 /* ── 2. le téléphone envoie des identifiants ─────────────────────────────── */
-const ctx = vm.createContext({ Number, Math, Array, Intl, String, JSON });
+const ctx = vm.createContext({ Number, Math, String });
 vm.runInContext([
   'var currentLang = "fr";',
-  grab(HTML, 'function fmt(n)'),
-  'this.fmt = fmt; this.setLang = (l) => { currentLang = l; };',
+  'const toCents = v => Math.round((Number(v) || 0) * 100);',
+  grab(HTML, 'function fmtAmount(v)'),
+  'this.fmt = fmtAmount; this.setLang = (l) => { currentLang = l; };',
 ].join('\n'), ctx);
-await ok('fmt : 14,50 / 12 / 1 234,50 en français, 14.50 en anglais, jamais « 14.5 »', () => {
-  assert.equal(ctx.fmt(14.5).replace(/ | /g, ' '), '14,50');
+await ok('fmtAmount : 14,50 / 12 / 1234,50 en français, 14.50 en anglais, jamais « 14.5 »', () => {
+  assert.ok(/const toCents = v => Math\.round\(\(Number\(v\) \|\| 0\) \* 100\);/.test(HTML), 'les centimes viennent du même arrondi');
+  assert.equal(ctx.fmt(14.5), '14,50');
   assert.equal(ctx.fmt(12), '12');
-  assert.equal(ctx.fmt(1234.5).replace(/ | /g, ' '), '1 234,50');
+  assert.equal(ctx.fmt(1234.5), '1234,50');
   ctx.setLang('en');
   assert.equal(ctx.fmt(14.5), '14.50');
   assert.equal(ctx.fmt(17.499999999), '17.50');
@@ -123,6 +127,7 @@ await ok('describeOptionChoices envoie {group, choiceId, label} pour les choix e
 const ctx3 = vm.createContext({});
 vm.runInContext([
   'var currentLang = "fr"; var I18N = { fr: { opt_label_known: "Taille FR" }, en: {}, ar: {} }; var OPT = { og_4: { label: "Taille" } };',
+  'function t(k) { return k; }',
   grab(HTML, 'function groupLabel('),
   'this.g = groupLabel;',
 ].join('\n'), ctx3);
@@ -132,53 +137,45 @@ await ok('groupLabel retombe sur le nom du groupe publié, jamais sur « opt_lab
   assert.equal(ctx3.g('inconnu'), 'inconnu');
 });
 
-const ctx4 = vm.createContext({});
-vm.runInContext([
-  'var orderMode = "takeout";',
-  grab(HTML, 'function tableSessionErrKey('),
-  grab(HTML, 'function serviceErrKey('),
-  'this.t = tableSessionErrKey; this.s = serviceErrKey; this.setMode = (m) => { orderMode = m; };',
-].join('\n'), ctx4);
 await ok('les refus du serveur deviennent une phrase vraie, pas « réessayez » pour une panne définitive', () => {
-  assert.equal(ctx4.t({ code: 'orderpro-off' }), 'ordering_off_note');
-  assert.equal(ctx4.t({ code: 'subscription-required' }), 'ordering_off_note');
-  assert.equal(ctx4.t({ code: 'menu-changed' }), 'menu_changed');
-  assert.equal(ctx4.t({ code: 'menu-not-published' }), 'menu_unpublished');
-  assert.equal(ctx4.t({ code: 'service-closed' }), 'service_closed_takeout');
-  ctx4.setMode('table');
-  assert.equal(ctx4.t({ code: 'service-closed' }), 'service_closed');
-  assert.equal(ctx4.s({ code: 'floor-table-required' }), 'service_no_table');
-  assert.equal(ctx4.s({ code: 'boom' }), 'service_err');
+  const send = grab(HTML, 'async function sendOrder(');
+  assert.ok(/if \(err === 'session-closed'\) \{\s*SESSION\.markClosed\('settle'\);/.test(send), 'visite réglée : on le dit');
+  assert.ok(/if \(err === 'service-closed'\) \{ showToast\(t\('order_closed'\)\); return; \}/.test(send), 'service fermé : on le dit');
+  assert.ok(/if \(err === 'menu-changed'\) \{/.test(send), 'carte modifiée : traitée à part');
+  assert.ok(/err === 'queue-full' \|\| err === 'table-queue-full'/.test(send), 'file pleine : traitée à part');
+  const seat = grab(HTML, 'async open(mode, table)');
+  assert.ok(/err === 'service-closed' \|\| err === 'orderpro-off'/.test(seat) && /bootState\(err === 'service-closed' \? 'closed' : 'off'/.test(seat), 'à l’arrivée : un écran vrai, pas une carte qui refuse à la fin');
 });
 
 await ok('la page n\'envoie plus ni nom, ni prix, ni total : ils viennent de la carte publiée', () => {
-  const block = grab(HTML, 'function postOrderToTill(');
-  assert.ok(!/unitPrice\s*:/.test(block), 'unitPrice n\'est pas envoyé');
-  assert.ok(!/\btotal\s*:\s*totalNow/.test(block), 'total n\'est pas envoyé');
-  assert.ok(/optionChoices\s*:/.test(block) && /ref\s*:/.test(block), 'identifiants + clé d\'idempotence envoyés');
+  const lines = grab(HTML, 'const makeLinesPayload = ref => linesCopy.flatMap(');
+  assert.ok(!/unitPrice\s*:/.test(lines), 'unitPrice n\'est pas envoyé');
+  assert.ok(/optionChoices: describeOptionChoices\(l\)/.test(lines), 'les identifiants d’options sont envoyés');
+  const call = grab(HTML, 'let res = await NET.placeOrder(');
+  assert.ok(!/\btotal\s*:/.test(call), 'total n\'est pas envoyé');
+  assert.ok(/ref: pendingRef/.test(call), 'clé d\'idempotence envoyée');
 });
 
 /* ── 3. les boutons de service écrivent vraiment ─────────────────────────── */
 await ok('« Appeler un serveur » et « Addition » appellent /api/order/session (action), pas seulement un toast', () => {
-  assert.ok(/function sendServiceRequest\(action\)/.test(HTML));
-  assert.ok(/\/api\/order\/session/.test(grab(HTML, 'function sendServiceRequest(')));
-  assert.ok(/sendServiceRequest\('call-server'\)/.test(grab(HTML, 'function callServer(')));
-  assert.ok(/sendServiceRequest\('ask-bill'\)/.test(grab(HTML, 'function confirmBill(')));
-  assert.ok(!/pourcentage|toast_bill_tip_post/.test(grab(HTML, 'function confirmBill(')), 'plus de pourboire annoncé comme envoyé');
+  assert.ok(/async function sendServiceRequest\(action\)/.test(HTML));
+  assert.ok(/NET\.serviceRequest\(SESSION\.id, action\)/.test(grab(HTML, 'async function sendServiceRequest(')));
+  assert.ok(/serviceRequest: \(session, action\) => demo\(\) \? [^\n]*postJSON\('\/api\/order\/session',/.test(HTML));
+  assert.ok(/sendServiceRequest\('call-server'\)/.test(grab(HTML, 'async function callServer(')));
+  assert.ok(/sendServiceRequest\('ask-bill'\)/.test(HTML));
 });
 
 /* ── 4. aucun délai inventé ──────────────────────────────────────────────── */
 await ok('plus de « prêt dans 4–6 min » écrit en dur pour une vraie commande', () => {
-  assert.ok(!/data-i18n="success_eta_em"/.test(HTML), 'plus aucun élément ne porte l\'ancien délai');
-  assert.ok(/id="success-status"/.test(HTML));
-  const start = grab(HTML, 'function startPreparing(');
-  assert.ok(/pollUntilReady\(\)\)\s*return/.test(start), 'une vraie commande suit son état, pas un minuteur');
-  const poll = grab(HTML, 'function pollUntilReady(');
-  assert.ok(/'pending'/.test(poll) && /'accepted'/.test(poll) && /'ready'/.test(poll) && /'rejected'/.test(poll));
+  assert.ok(!/"[^"\n]*4–6 (min|دقايق)[^"\n]*"|>[^<]*4–6 (min|دقايق)/.test(HTML), 'aucun texte ne porte l\'ancien délai');
+  assert.ok(/em\.textContent = t\('prep_waiting'\)/.test(grab(HTML, 'function watchTableOrder(')), 'à table : l’état réel de la caisse');
+  const status = grab(HTML, 'function applyOrderStatus(');
+  assert.ok(/'pending'/.test(status) && /'ready'/.test(status) && /'served'/.test(status) && /'rejected'/.test(status));
 });
 await ok('le titre de la page n\'est pas celui d\'un autre commerçant', () => {
   assert.ok(!/<title>[^<]*Café Atlas/.test(HTML), 'titre statique neutre');
   assert.ok(!/apple-mobile-web-app-title" content="Café Atlas/.test(HTML));
+  assert.ok(/document\.title = STORE\.name;/.test(HTML), 'puis le nom du commerçant servi');
 });
 
 /* ── 5. horaires : l'heure du magasin, pas celle du téléphone ─────────────── */
@@ -206,9 +203,9 @@ for (const tz of ['Pacific/Kiritimati', 'America/Los_Angeles', 'Africa/Casablanc
 
 /* ── 6. Order Pro éteint ─────────────────────────────────────────────────── */
 await ok('Order Pro éteint : la page lit orderpro, masque « + » et la barre, affiche un bandeau', () => {
-  assert.ok(/payload\.orderpro === true/.test(HTML), 'le drapeau publié est lu');
-  assert.ok(/body\.ordering-off \.item-add/.test(HTML) && /body\.ordering-off #custom-add-btn/.test(HTML));
-  assert.ok(/id="oo-banner"/.test(HTML));
+  assert.ok(/const browseOnly = res\.orderpro !== true;/.test(HTML), 'le drapeau publié est lu');
+  assert.ok(/body\.ordering-off \.dish-add/.test(HTML) && /body\.ordering-off #custom-add-btn/.test(HTML) && /body\.ordering-off \.cart-pill/.test(HTML));
+  assert.ok(/id="oo-banner"/.test(HTML) && /function setOrdering\(on, t\)/.test(OM));
   const menuApi = read('functions/api/menu.js');
   assert.ok(/zone/.test(menuApi) && /merchantZone/.test(menuApi), '/api/menu publie le fuseau du magasin');
 });
@@ -243,9 +240,12 @@ await ok('carte « commande client » : 17,50 s\'affiche 17,50 (et non 18) ; 12 
 
 ok('les libellés d’options viennent de la carte du commerçant : échappés avant le HTML', () => {
   // groupLabel / choiceLabel return merchant-published text; a template sink must escape it.
-  const raw = HTML.match(/\$\{(?:groupLabel|choiceLabel)\([^)]*\)\}/g) || [];
+  // (makeLinesPayload's plain-text `options` string goes to the till as data, not HTML)
+  const raw = (HTML.match(/\$\{(?:groupLabel|choiceLabel)\([^)]*\)\}(?!: \$\{p\.label\})/g) || []);
   assert.deepEqual(raw, [], 'unescaped option label in a template: ' + raw.join(', '));
-  assert.match(HTML, /\$\{escapeHtml\(groupLabel\(opt\.key\)\)\}/);
+  assert.match(HTML, /<span>\$\{escapeHtml\(groupLabel\(opt\.key\)\)\}<\/span>/);
+  assert.match(HTML, /\$\{escapeHtml\(choiceLabel\(opt\.key, c\.id, c, opt\)\)\}<\/span>/);
+  assert.match(HTML, /data-opt="\$\{escapeHtml\(opt\.key\)\}" data-choice="\$\{escapeHtml\(c\.id\)\}"/);
 });
 
 ok('OrderPro bill: no tip preselected, the tip is said to be outside the bill, the button only asks', () => {

@@ -5,9 +5,10 @@
  * A table QR printed before stage 3c reads /kiwi-order.html?merchant=<slug>
  * &table=N. It must open OrderPro (/order, the NFC short link) with the same
  * store and table, through the server (functions/_middleware.js, a 302) and,
- * where no middleware runs, through the page itself. Without ?merchant the
- * page is the local pitch demo and stays. New QR codes (assets/order-qr.js)
- * print the /order link directly.
+ * where no middleware runs, through the page itself. Without ?merchant it
+ * was the pitch demo, which now lives in OrderPro (?s=demo,
+ * assets/orderpro-demo.js). New QR codes (assets/order-qr.js) print the
+ * /order link directly.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,9 +41,9 @@ ok(r.status === 302 && r.location === '/order?s=cafe-nord&t=12', `HEAD too, and 
 r = await run('GET', '/kiwi-order.html?merchant=' + encodeURIComponent('café & co'));
 ok(r.status === 302 && new URL(r.location, BASE).searchParams.get('s') === 'café & co', 'a slug with reserved characters arrives intact');
 r = await run('GET', '/kiwi-order.html');
-ok(r.status === 200 && r.nexted, 'without ?merchant the pitch demo is served, not redirected');
+ok(r.status === 302 && r.location === '/order?s=demo', `without ?merchant it opens OrderPro's demo (${r.location})`);
 r = await run('GET', '/kiwi-order.html?table=4');
-ok(r.status === 200 && r.nexted, 'the demo with a table stays too');
+ok(r.status === 302 && r.location === '/order?s=demo&t=4', `the demo keeps its table (${r.location})`);
 r = await run('POST', '/kiwi-order.html?merchant=cafe-nord');
 ok(r.status !== 302, 'only reads are redirected');
 r = await run('GET', '/order?s=cafe-nord&t=7');
@@ -58,12 +59,13 @@ function page(search) {
   return went;
 }
 ok(JSON.stringify(page('?merchant=cafe-nord&table=7')) === JSON.stringify(['OrderPro.html?s=cafe-nord&t=7']), 'a real store goes to OrderPro.html with its store and table');
-ok(page('?table=3').length === 0 && page('').length === 0, 'the demo stays');
+ok(JSON.stringify(page('?table=3')) === JSON.stringify(['OrderPro.html?s=demo&t=3']) && JSON.stringify(page('')) === JSON.stringify(['OrderPro.html?s=demo']), "without a store, OrderPro's demo");
+ok(!/<script[^>]+src=/.test(html) && /href="OrderPro\.html\?s=demo"/.test(html), 'the page loads nothing else and keeps a link for a browser without script');
 
 console.log('■ new QR codes');
 const qr = fs.readFileSync(path.join(ROOT, 'assets/order-qr.js'), 'utf8');
 ok(/let u = origin \+ '\/order\?s=' \+ encodeURIComponent\(biz\(\)\.slug\);\s*if \(table\) u \+= '&t=' \+ encodeURIComponent\(table\);/.test(qr), 'a real store prints /order?s=<slug>&t=N');
-ok(/if \(!isReal\(\)\) return origin \+ '\/kiwi-order\.html'/.test(qr), 'the local demo still prints the demo page');
+ok(/if \(!isReal\(\)\) return origin \+ '\/OrderPro\.html\?s=demo' \+ \(table \? \('&t=' \+ table\) : ''\);/.test(qr), "the local demo prints OrderPro's demo");
 
 console.log(fail ? `guest-redirect-test: ${fail} failed, ${pass} passed` : `✓ guest-redirect-test · ${pass} checks`);
 process.exit(fail ? 1 : 0);

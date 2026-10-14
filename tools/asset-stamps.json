@@ -872,12 +872,16 @@
     "sha": "7546265a6752ef8e"
   },
   "assets/order-qr.js": {
-    "v": "4",
-    "sha": "79005efb49d95b4e"
+    "v": "5",
+    "sha": "9e9433bde70f4ca6"
   },
   "assets/order-ui-langs.js": {
     "v": "2",
     "sha": "47b1d8a268c10551"
+  },
+  "assets/orderpro-demo.js": {
+    "v": "1",
+    "sha": "beddcced4eb5cec9"
   },
   "assets/orderpro-guest.js": {
     "v": "1",
@@ -892,8 +896,8 @@
     "sha": "dcc6329202ab2168"
   },
   "assets/orderpro-menu.js": {
-    "v": "2",
-    "sha": "7c6ef3c18a3be6de"
+    "v": "3",
+    "sha": "b4567ba7f21ae5a5"
   },
   "assets/orderpro-panel.js": {
     "v": "4",

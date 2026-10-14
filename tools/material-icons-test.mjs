@@ -102,7 +102,7 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
 ok(!existsSync(path.join(ROOT, 'assets/lucide.min.js')), 'assets/lucide.min.js (the Rounded shim) is gone');
 const stillLucide = files.filter((f) => /lucide\.min\.js/.test(read(f)) && !f.startsWith('functions/'));
 ok(!stillLucide.length, stillLucide.length ? `still loading lucide.min.js: ${stillLucide.join(', ')}` : 'no page or script asks for lucide.min.js');
-for (const page of ['kiwi-caisse.html', 'kiwi-serveur.html', 'dashboard.html', 'kiwi-order.html', 'OrderPro.html', 'cafe-atlas-qr.html']) {
+for (const page of ['kiwi-caisse.html', 'kiwi-serveur.html', 'dashboard.html', 'OrderPro.html', 'cafe-atlas-qr.html']) {
   ok(/<script src="assets\/material-icons\.js\?v=\d+" defer><\/script>/.test(read(page)), `${page} loads assets/material-icons.js`);
 }
 ok(/'\/assets\/material-icons\.js\?v=\d+'/.test(read('kiwi-sw.js')), 'the service worker precaches the runtime, so the till draws icons offline');

@@ -118,7 +118,7 @@ ok('/api/ai/menu-translate reste privé', !publiclyReadable('/api/ai/menu-transl
  * dashboard. Son nom, ses plats et ses libellés ne doivent jamais atteindre un
  * innerHTML sans encodage : un compte compromis deviendrait sinon un XSS stocké
  * contre les clients — ou contre un patron connecté qui ouvre sa propre page. */
-for (const page of ['kiwi-order.html', 'OrderPro.html']) {
+for (const page of ['OrderPro.html']) {
   const html = fs.readFileSync(path.join(ROOT, page), 'utf8');
   ok(`${page} échappe les noms dans le panier`,
     html.includes('${escapeHtml(nameOf(line.id))}') && !html.includes('<span class="label">${nameOf(line.id)}</span>'));
@@ -133,11 +133,16 @@ for (const page of ['kiwi-order.html', 'OrderPro.html']) {
     html.includes('<div class="dish-name">${escapeHtml(i.name)}</div>'));
 }
 {
-  const html = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
-  ok('kiwi-order échappe l’enseigne dans le sous-titre de l’addition',
-    html.includes('${escapeHtml(VENUE_NAME)}'));
-  ok('kiwi-order échappe le libellé horaire public',
-    html.includes('escapeHtml(shopStatusText())'));
+  /* kiwi-order.html n'est plus qu'une redirection (étape 3c). Dans OrderPro,
+     l'enseigne ne passe que par textContent, et l'horaire public par esc(). */
+  const html = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  const om = fs.readFileSync(path.join(ROOT, 'assets/orderpro-menu.js'), 'utf8');
+  ok('OrderPro n’écrit l’enseigne qu’en texte',
+    /cafeName\.textContent = STORE\.name/.test(html) && !/innerHTML[^;\n]*STORE\.name/.test(html));
+  ok('OrderPro échappe le libellé horaire public',
+    /\(text \? ' · ' \+ esc\(text\) : ''\)/.test(om));
+  const stub = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
+  ok('kiwi-order.html ne rend plus rien du commerçant', !/innerHTML|<script[^>]+src=/.test(stub));
 }
 
 /* ── et les fichiers ouverts ne portent pas de secret ────────────────────────

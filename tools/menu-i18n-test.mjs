@@ -10,7 +10,7 @@
  *    mot à mot (« Strawberry lait » est exactement le bug qu'on enterre) ;
  *  · needs()/apply() : seul ce qui manque part chez Kiwi AI, et une
  *    « traduction » vers l'arabe sans lettre arabe est refusée ;
- *  · la même empreinte dans kiwi-order.html et OrderPro.html que dans
+ *  · la même empreinte dans OrderPro.html que dans
  *    menu-i18n.js — sinon toute traduction y serait « périmée » ;
  *  · functions/api/menu.js laisse passer i18n (bornes, langues connues, m) ;
  *  · l'import (scan) ne traduit plus : il recopie la langue d'origine ;
@@ -93,8 +93,9 @@ assert(s.ar.total === 6 && s.ar.manual === 1 && s.ar.missing === 5, 'summary : c
 const loc = M.item({ id: 'x', name: 'A', desc: 'B', i18n: { en: { name: 'A-en', desc: 'B-en', h: M.hash('A', 'B') } } }, 'en');
 assert(loc.name === 'A-en' && loc.desc === 'B-en' && loc._src.name === 'A', 'item() : copie localisée, canonique dans _src');
 
-/* ── même empreinte sur la page QR et OrderPro ─────────────────────────── */
-for (const page of ['kiwi-order.html', 'OrderPro.html']) {
+/* ── même empreinte dans OrderPro, la seule app client (kiwi-order.html
+   redirige vers elle depuis l'étape 3c) ─────────────────────────────── */
+for (const page of ['OrderPro.html']) {
   const src = read(page);
   const m = src.match(/function menuHash\(name, desc\) \{[\s\S]*?\n    \}/);
   assert(!!m, `${page} : menuHash inlinée`);
@@ -106,10 +107,9 @@ for (const page of ['kiwi-order.html', 'OrderPro.html']) {
   }
   assert(/function menuTr\(e, l\)[\s\S]*?x\.h !== menuHash\(e\.name, e\.desc\)/.test(src), `${page} : menuTr vérifie la fraîcheur`);
 }
-assert(/const x = menuTr\(it, l\);\s*MENU_I18N\[l\]\[it\.id\] = x \?/.test(read('kiwi-order.html')), 'kiwi-order.html : MENU_I18N rempli depuis it.i18n (repli canonique)');
 assert(/langs\.forEach\(\(l\) => \{\s*const x = menuTr\(it, l\);\s*if \(x\) byLang\[l\]\[String\(it\.id\)\] =/.test(read('OrderPro.html'))
   && /langs\.forEach\(l => \{ MENU_I18N\[l\] = byLang\[l\]; \}\);/.test(read('OrderPro.html')), 'OrderPro.html : chaque langue publiée remplie depuis it.i18n');
-assert(/menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('kiwi-order.html')) && /menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('OrderPro.html')), 'onglets de catégories localisés sur les deux pages client');
+assert(/menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('OrderPro.html')), 'onglets de catégories localisés dans l’app client');
 
 /* ── serveur : la liste blanche laisse passer i18n ─────────────────────── */
 const mw = await import(new URL('../functions/api/menu.js', import.meta.url).href);
