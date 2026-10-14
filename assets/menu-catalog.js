@@ -99,6 +99,7 @@
     mediaBad:   { fr: 'Format non pris en charge.', en: 'Format not supported.', ar: 'الصيغة ماخدامة.' },
     mediaErr:   { fr: 'Envoi impossible, réessayez.', en: 'Upload failed, try again.', ar: 'التصويفط مامشاش، عاود جرّب.' },
     tags:       { fr: 'Tags NFC', en: 'NFC tags', ar: 'تاڭات NFC' },
+    guestPage:  { fr: 'Page client', en: 'Guest page', ar: 'صفحة الزبون' },
     /* Les options d'un produit — le lait d'un café, la cuisson d'une viande.
        Un groupe se définit UNE fois et s'attache aux produits qui le demandent :
        « Type de lait » vaut pour les douze cafés de la carte, pas pour chacun
@@ -1133,6 +1134,7 @@
           <button class="mx-menu-tab" type="button" data-action="mx-stations-manage">${BELL}<span>${esc(tr(T.stations))}</span></button>
           <button class="mx-menu-tab" type="button" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
           ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+          ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-guestpage"><span>${esc(tr(T.guestPage))}</span></button>` : ''}
         </div>
         <div class="mx-catalog">
           <div class="mx-catalog-tools">

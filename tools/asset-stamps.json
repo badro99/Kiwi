@@ -772,8 +772,8 @@
     "sha": "8fe8f7761f445319"
   },
   "assets/menu-catalog.js": {
-    "v": "29",
-    "sha": "b5a3725d81d3e79e"
+    "v": "30",
+    "sha": "303ad4a937d8074b"
   },
   "assets/menu-i18n.js": {
     "v": "5",
@@ -796,8 +796,8 @@
     "sha": "741c0a2e08bf8694"
   },
   "assets/merchant-config.js": {
-    "v": "278",
-    "sha": "4ac165fb33ea7fab"
+    "v": "279",
+    "sha": "f3796c2b61d95b37"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -879,13 +879,21 @@
     "v": "2",
     "sha": "47b1d8a268c10551"
   },
+  "assets/orderpro-guest.js": {
+    "v": "1",
+    "sha": "8993ea6a26a81e88"
+  },
+  "assets/orderpro-guestpage.js": {
+    "v": "1",
+    "sha": "e2ef7115b6745038"
+  },
   "assets/orderpro-inbox.js": {
     "v": "36",
     "sha": "dcc6329202ab2168"
   },
   "assets/orderpro-panel.js": {
-    "v": "3",
-    "sha": "d3d58dd2f5d40a5f"
+    "v": "4",
+    "sha": "69c945ba95973a64"
   },
   "assets/orderpro-publish.js": {
     "v": "6",
@@ -1220,8 +1228,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/service-requests.js": {
-    "v": "1",
-    "sha": "acfbe70ced4b8e86"
+    "v": "2",
+    "sha": "5837b2072494ce58"
   },
   "assets/simple-food-cost.js": {
     "v": "6",

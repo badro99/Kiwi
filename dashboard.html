@@ -5593,7 +5593,7 @@
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=278"></script>
+<script defer src="assets/merchant-config.js?v=279"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=7">
@@ -5706,7 +5706,7 @@
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 <script src="assets/clients-directory.js?v=20" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=8" defer fetchpriority="low"></script>
-<script src="assets/menu-catalog.js?v=29" defer fetchpriority="low"></script>
+<script src="assets/menu-catalog.js?v=30" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -5716,7 +5716,8 @@
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
 <script src="assets/orderpro-publish.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/orderpro-panel.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/orderpro-panel.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/orderpro-guestpage.js?v=1" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>

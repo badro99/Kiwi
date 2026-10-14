@@ -120,7 +120,7 @@
        fiche matériel de démonstration, que la porte doit couvrir aussi. */
     terminaux: ['terminal-catalog', 'add-terminal'],
     depenses: ['open-depenses'],
-    orderpro: ['orderpro-tags'],
+    orderpro: ['orderpro-tags', 'orderpro-guestpage'],
     crm: ['clients-directory', 'growth-crm'],
     loyalty: ['loyalty'],
     reservations: ['new-reservation'],

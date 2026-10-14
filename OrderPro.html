@@ -2030,6 +2030,13 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
       box-shadow: 0 -20px 40px rgba(0,0,0,0.18);
     }
+    /* A closed sheet rests just below the screen; its upward shadow used to
+       darken the bottom of every screen. Only an open sheet casts one. */
+    .custom-sheet:not(.is-open) .custom-sheet-panel,
+    .bill-sheet:not(.is-open) .bill-sheet-panel,
+    .split-sheet:not(.is-open) .split-sheet-panel,
+    .cart-sheet:not(.is-open) .cart-sheet-panel,
+    .gx-sheet:not(.is-open) .gx-sheet-panel { box-shadow: none; }
     .bill-sheet.is-open { pointer-events: auto; }
     .bill-sheet.is-open .bill-sheet-backdrop { background: rgba(10,10,10,0.55); }
     .bill-sheet.is-open .bill-sheet-panel { transform: translateY(0); }
@@ -4387,6 +4394,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (typeof refreshSplitUI === 'function' && document.querySelector('#split-sheet')?.classList.contains('is-open')) {
         refreshSplitUI();
       }
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.onLang();
     }
 
     /* ============ option presets — shared across items ============
@@ -4449,6 +4457,7 @@ em, i, cite, dfn, var { font-style: normal; }
         c += toCents(o.total);
       }
       sessionTotal = c / 100;
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.refreshStatus();
     }
     function saveSent() {
       if (!SESSION.id) return;
@@ -4704,7 +4713,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const list = $('#menu-list');
       list.classList.add('is-feed');
       const bits = String(filter).split('::'), catFilter = bits[0], subFilter = bits[1] || '';
-      const items = MENU.filter(m => catFilter === 'all' || (m.cat === catFilter && (!subFilter || m.subId === subFilter)));
+      const items = MENU.filter(m => catFilter === 'all' || (m.cat === catFilter && (!subFilter || m.subId === subFilter)))
+        .filter(m => !globalThis.KiwiGuest || globalThis.KiwiGuest.dietAllows(m));
       list.innerHTML = items.map(m => {
         const i = itemI18n(m.id);
         const out = m.avail === false;
@@ -4723,6 +4733,7 @@ em, i, cite, dfn, var { font-style: normal; }
       `;}).join('');
       if (window.lucide) window.lucide.createIcons();
       feedMedia.bind();
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.afterMenu();
     }
 
     function renderMenuSubtabs(categoryId) {
@@ -4955,6 +4966,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       refreshCartUI();
       showToast(`${nameOf(line.id)} · ${t('toast_added')}`);
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.onAdded(line);
     }
     function decFromCart(key) {
       if (!cart.has(key)) return;
@@ -5256,6 +5268,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span>`;
 
       $('#bill-subtotal-value').textContent = `${money(sessionTotal)}`;
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.decorateBill();
     }
     function closeBill() {
       $('#bill-sheet').classList.remove('is-open');
@@ -5311,6 +5324,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     async function confirmBill() {
       if (!await sendServiceRequest('ask-bill')) return;
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.billAsked();
       closeBill();
       // This requests the whole table's bill, not this phone's subtotal or an
       // unsaved tip. A successful write is not a promise that staff has arrived.
@@ -5586,6 +5600,7 @@ em, i, cite, dfn, var { font-style: normal; }
         session: SESSION.id || '',
         ref: pendingRef,
         lines: linesPayload,
+        ...(globalThis.KiwiGuest ? globalThis.KiwiGuest.orderExtras() : {}),
       });
 
       const currentVisit = !SESSION.closed && attempt.scope === SESSION.sendScope();
@@ -5608,6 +5623,14 @@ em, i, cite, dfn, var { font-style: normal; }
           return;
         }
         if (err === 'service-closed') { showToast(t('order_closed')); return; }
+        /* « Servir au ftour » arrivé trop tard : on décoche, on le dit, le
+           client renvoie la même commande pour tout de suite. */
+        if (err === 'ftour-unavailable') {
+          SESSION.clearPendingSend(attempt);
+          pendingRef = '';
+          if (globalThis.KiwiGuest) globalThis.KiwiGuest.ftourRefused();
+          return;
+        }
         /* La file est pleine : renvoyer échouerait pareil. On le dit, et on
            envoie le client vers l'équipe. */
         if (err === 'queue-full' || err === 'table-queue-full') {
@@ -5701,6 +5724,7 @@ em, i, cite, dfn, var { font-style: normal; }
         $('#success-items').textContent = summary || '·';
         gotoScreen('screen-success');
         watchTableOrder();
+        if (globalThis.KiwiGuest) globalThis.KiwiGuest.onSent(lines, res);
       }
       cart.clear();
       refreshCartUI();
@@ -5868,6 +5892,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (sub) {
         sub.textContent = SESSION.closedBy === 'expiry' ? t('thanks_expired') : t('thanks_sub');
       }
+      if (globalThis.KiwiGuest) globalThis.KiwiGuest.onClosed();
       gotoScreen('screen-thanks');
     }
 
@@ -6121,8 +6146,8 @@ em, i, cite, dfn, var { font-style: normal; }
     async function commitTable() {
       if (!tableNumber) return;
       if (!(await seatHere('table', tableNumber))) return;
-      gotoScreen('screen-menu');
       applyMenuMode();
+      if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land())) gotoScreen('screen-menu');
     }
 
     /* ============ takeout: cashier → preparing ============ */
@@ -6341,6 +6366,9 @@ em, i, cite, dfn, var { font-style: normal; }
 
       applyStoreIdentity(res.name);
       STORE.type = String(res.type || '').toLowerCase();
+      /* La page d'accueil du client (assets/orderpro-guest.js) se charge en
+         parallèle : Wi-Fi, avis, jeux, « avec ça ? », temps réel, ftour. */
+      const guestLoad = STORE.type !== 'boutique' && globalThis.KiwiGuest ? globalThis.KiwiGuest.load() : null;
 
       if (STORE.type === 'boutique') {
         if (!bootBoutique(res.shop || {})) { bootState('empty', { icon: 'package-open' }); return; }
@@ -6364,8 +6392,8 @@ em, i, cite, dfn, var { font-style: normal; }
            s'assoit avec lui tout de suite. C'est ce moment précis qui allume sa
            table sur le plan de salle du comptoir. */
         if (!(await seatHere('table', tableNumber))) return;
-        gotoScreen('screen-menu');
         applyMenuMode();
+        if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land(guestLoad))) gotoScreen('screen-menu');
       } else if (NET.mode === 'takeout') {
         chooseMode('takeout');
       } else if (NET.mode === 'table') {
@@ -6470,6 +6498,9 @@ em, i, cite, dfn, var { font-style: normal; }
           video: it.video || '',
           tag: it.tag || '',
           avail: it.avail !== false,
+          /* Publiés seulement quand la fiche est complète (functions/api/menu.js) :
+             null = « on ne sait pas », jamais « sans allergène ». */
+          allergens: Array.isArray(it.allergens) ? it.allergens.slice() : null,
           options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
           formula: formulaOptions.length > 0,
         });
@@ -6796,8 +6827,10 @@ em, i, cite, dfn, var { font-style: normal; }
           cart.clear();
           refreshCartUI();
           if (orderMode === 'table' && tableNumber) {
-            seatHere('table', tableNumber, true).then((ok) => {
-              if (ok) { gotoScreen('screen-menu'); applyMenuMode(); }
+            seatHere('table', tableNumber, true).then(async (ok) => {
+              if (!ok) return;
+              applyMenuMode();
+              if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land())) gotoScreen('screen-menu');
             });
           } else {
             restartMenu();
@@ -6894,5 +6927,6 @@ em, i, cite, dfn, var { font-style: normal; }
       requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
     });
   </script>
+  <script src="assets/orderpro-guest.js?v=1"></script>
 </body>
 </html>

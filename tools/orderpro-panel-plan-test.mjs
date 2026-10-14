@@ -48,7 +48,7 @@ async function render(plan, status = 200) {
   await new Promise((r) => setTimeout(r, 0));
   const links = [...(rows.innerHTML || first).matchAll(/data-opp-copy="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
   const titles = [...(rows.innerHTML || first).matchAll(/<b>([^<]+)<\/b>/g)].map((m) => m[1]);
-  return { first, links, titles, more, note: el.before };
+  return { first, links, titles, more, note: el.before, rowsHtml: rows.innerHTML || first };
 }
 
 /* 1. un plan : ses tables, nommées comme la caisse les nomme */
@@ -56,15 +56,19 @@ let r = await render({
   tables: [
     { id: 't-a', num: '12' }, { id: 't-b', num: '2' }, { id: 't-c', num: 'T7' },
     { id: 't-d', num: '9', name: 'Terrasse 2' }, { id: 't-e', num: '5' }, { id: 't-f' },
-    { id: 't-g', num: '2' },
+    { id: 't-g', num: '2' }, { id: 't-h', num: 'T12' },
   ],
   gone: { 't-e': 1 },
 });
 const tables = r.links.filter((u) => u.includes('&t='));
 ok(r.links[0] === 'https://kiwi.test/order?s=chez-nadia&m=takeout', 'le tag comptoir reste en tête');
-ok(tables.map((u) => decodeURIComponent(u.split('&t=')[1])).join() === '2,9,12,t-f,T7',
-  'les liens portent num (ou id), triés naturellement, sans doublon ni table effacée: ' + tables.join(' '));
-ok(r.titles.slice(1).join('|') === 'Table 2|Terrasse 2|Table 12|t-f|T7', 'chaque tag dit le nom du plan: ' + r.titles.join('|'));
+ok(tables.map((u) => decodeURIComponent(u.split('&t=')[1])).join() === '2,7,9,12',
+  'les liens portent les chiffres que le téléphone garde (T7 → 7), triés, sans doublon ni table effacée: ' + tables.join(' '));
+ok(r.titles.slice(1, 5).join('|') === 'Table 2|T7|Terrasse 2|Table 12', 'chaque tag dit le nom du plan: ' + r.titles.join('|'));
+const html = r.rowsHtml;
+ok(/<b>t-f<\/b><span>Pas de numéro/.test(html), 'une table sans numéro est listée sans tag, avec la raison');
+ok(/<b>T12<\/b><span>Même numéro que « Table 12 »/.test(html), 'une table dont le numéro est déjà pris est listée sans tag');
+ok(!/data-opp-copy="[^"]*&amp;t=(t-f|T12)"/.test(html), 'aucun lien pour les tables sans tag possible');
 ok(r.more.hidden === true, '« Afficher plus de tables » disparaît quand le plan fait la liste');
 ok(/plan de salle/.test(r.note), 'une note dit d’où vient la liste et comment ajouter une table');
 ok(!/[—]/.test(r.note + r.titles.join('')), 'pas de tiret cadratin');

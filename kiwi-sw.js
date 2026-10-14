@@ -202,7 +202,7 @@ var SHELL = [
   '/assets/receipt.js?v=9',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=15',
-  '/assets/merchant-config.js?v=278',
+  '/assets/merchant-config.js?v=279',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=4',
   '/assets/staff-roles.js?v=1',
@@ -265,7 +265,7 @@ var SHELL = [
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=20',
   '/assets/customer-retention.js?v=8',
-  '/assets/menu-catalog.js?v=29',
+  '/assets/menu-catalog.js?v=30',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
@@ -286,9 +286,10 @@ var SHELL = [
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
-  '/assets/orderpro-panel.js?v=3',
+  '/assets/orderpro-panel.js?v=4',
+  '/assets/orderpro-guestpage.js?v=1',
   '/assets/orderpro-inbox.js?v=36',
-  '/assets/service-requests.js?v=1',
+  '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

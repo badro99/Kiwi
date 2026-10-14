@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#053B2C" />
+  <meta name="robots" content="noindex" />
+  <!--
+    L'écran de la salle : le classement des quiz Order Pro, pour une télé ou
+    une tablette posée au comptoir. Public comme la carte (chemin exact dans
+    functions/_middleware.js) : il n'affiche que les pseudos que les joueurs
+    ont choisis, leurs points et, pendant une manche, leur numéro de table.
+    Jamais un nom de client, une commande ou un montant.
+
+      order-tv.html?s=<slug>&lang=fr|en|ar
+
+    Lit /api/order/guest (manche en cours, ftour), /api/order/game (les
+    tableaux) et /api/menu (le nom de l'établissement), toutes les 10 s.
+  -->
+  <title>Classement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="assets/material-icons.js?v=3" defer></script>
+  <style>
+    :root {
+      --riad: #053B2C;
+      --riad-2: #0A4A38;
+      --atlas: #0B6E4F;
+      --mint: #7DF2B0;
+      --paper: #F7F5F0;
+      --paper-2: rgba(247,245,240,.72);
+      --paper-3: rgba(247,245,240,.5);
+      --line: rgba(247,245,240,.12);
+      --sans: "Inter Tight", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    [dir="rtl"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    em, i, cite { font-style: normal; }
+    html, body { margin: 0; height: 100%; background: var(--riad); color: var(--paper); overflow: hidden; }
+    body {
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
+      padding: clamp(20px, 4vh, 56px) clamp(20px, 4vw, 72px);
+      gap: clamp(16px, 3vh, 40px);
+    }
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+    .store { font-size: clamp(28px, 4.4vw, 76px); font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+    .sub { margin-top: .5em; font-size: clamp(14px, 1.4vw, 24px); color: var(--paper-2); }
+    .ftour {
+      display: flex; align-items: center; gap: .55em;
+      padding: .6em 1em; border-radius: 999px; background: var(--riad-2); border: 1px solid var(--line);
+      font-size: clamp(14px, 1.5vw, 26px); font-weight: 500; white-space: nowrap;
+    }
+    .ftour svg { width: 1.2em; height: 1.2em; color: var(--mint); }
+    .ftour b { font-family: var(--mono); font-weight: 600; }
+    main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; gap: clamp(16px, 2.5vw, 48px); }
+    main.has-round { grid-template-columns: 1.15fr 1fr; }
+    .panel {
+      min-height: 0; display: flex; flex-direction: column;
+      border-radius: clamp(16px, 1.6vw, 32px); background: var(--riad-2); border: 1px solid var(--line);
+      padding: clamp(16px, 2.2vw, 40px);
+    }
+    .panel h2 { margin: 0; display: flex; align-items: center; gap: .5em; font-size: clamp(18px, 2vw, 36px); font-weight: 600; letter-spacing: -0.02em; }
+    .panel h2 svg { width: 1.1em; height: 1.1em; color: var(--mint); }
+    .panel .meta { margin-top: .35em; font-size: clamp(13px, 1.2vw, 20px); color: var(--paper-3); }
+    .live { display: inline-flex; align-items: center; gap: .45em; padding: .25em .7em; border-radius: 999px; background: var(--mint); color: var(--riad); font-size: .55em; font-weight: 650; letter-spacing: .02em; }
+    .live::before { content: ''; width: .55em; height: .55em; border-radius: 50%; background: var(--riad); animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .25; } }
+    @media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+    ol { list-style: none; margin: clamp(12px, 2vh, 28px) 0 0; padding: 0; display: flex; flex-direction: column; gap: clamp(6px, 1vh, 14px); overflow: hidden; }
+    li {
+      display: grid; grid-template-columns: 2.2em 1fr auto auto; align-items: center; gap: .8em;
+      padding: .55em .8em; border-radius: .6em; background: rgba(247,245,240,.04);
+      font-size: clamp(16px, 1.9vw, 34px);
+    }
+    li .rank { font-family: var(--mono); color: var(--paper-3); font-weight: 500; }
+    li .nick { font-weight: 600; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li .table { font-size: .62em; color: var(--paper-3); white-space: nowrap; }
+    li .score { font-family: var(--mono); font-weight: 600; }
+    li.is-first { background: rgba(125,242,176,.12); }
+    li.is-first .rank, li.is-first .score { color: var(--mint); }
+    .empty { margin-top: clamp(16px, 3vh, 40px); font-size: clamp(16px, 1.7vw, 30px); color: var(--paper-2); }
+    footer { display: flex; align-items: center; gap: .6em; font-size: clamp(13px, 1.3vw, 22px); color: var(--paper-2); }
+    footer svg { width: 1.3em; height: 1.3em; color: var(--mint); }
+    .boot { margin: auto; text-align: center; font-size: clamp(18px, 2vw, 32px); color: var(--paper-2); }
+    [hidden] { display: none !important; }
+    @media (max-width: 760px) {
+      html, body { overflow: auto; height: auto; }
+      main.has-round { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="boot" id="boot"></div>
+  <header id="head" hidden>
+    <div>
+      <div class="store" id="store"></div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="ftour" id="ftour" hidden></div>
+  </header>
+  <main id="main" hidden>
+    <section class="panel" id="round" hidden></section>
+    <section class="panel" id="month"></section>
+  </main>
+  <footer id="foot" hidden><i data-icon="nfc"></i><span id="foot-text"></span></footer>
+
+  <script>
+  (function () {
+    'use strict';
+    const POLL_MS = 10000;
+    const T = {
+      fr: {
+        title: 'Classement', sub: 'Les quiz de la salle', month: 'Classement du mois',
+        round: 'Manche en cours', live: 'En direct', ends: 'se termine dans {d}', ended: 'terminée',
+        table: 'table {n}', pts: '{p}', empty_month: 'Personne encore ce mois-ci. Le premier quiz donne la tête.',
+        empty_round: 'La manche vient de commencer. Posez votre téléphone sur le tag de votre table.',
+        foot: 'Posez votre téléphone sur le tag de votre table, puis « Jouer en attendant ».',
+        ftour: 'Ftour à {t} · dans {d}', ftour_now: 'C’est l’heure du ftour, saha ftourkoum',
+        min: '{m} min', hmin: '{h} h {m}',
+        loading: 'Chargement…', nolink: 'Lien incomplet : ajoutez ?s=votre-etablissement.',
+        off: 'Les jeux ne sont pas activés pour cet établissement.', offline: 'Connexion perdue, nouvel essai dans un instant.',
+      },
+      en: {
+        title: 'Leaderboard', sub: 'The room’s quizzes', month: 'This month’s leaderboard',
+        round: 'Round in progress', live: 'Live', ends: 'ends in {d}', ended: 'over',
+        table: 'table {n}', pts: '{p}', empty_month: 'Nobody yet this month. The first quiz takes the lead.',
+        empty_round: 'The round has just started. Tap your phone on your table’s tag.',
+        foot: 'Tap your phone on your table’s tag, then “Play while you wait”.',
+        ftour: 'Iftar at {t} · in {d}', ftour_now: 'It’s iftar time, enjoy your meal',
+        min: '{m} min', hmin: '{h} h {m}',
+        loading: 'Loading…', nolink: 'Incomplete link: add ?s=your-venue.',
+        off: 'Games are not switched on for this venue.', offline: 'Connection lost, retrying shortly.',
+      },
+      ar: {
+        title: 'الترتيب', sub: 'مسابقات القاعة', month: 'ترتيب هذا الشهر',
+        round: 'جولة جارية', live: 'مباشر', ends: 'تنتهي بعد {d}', ended: 'انتهت',
+        table: 'طاولة {n}', pts: '{p}', empty_month: 'لا أحد بعد هذا الشهر. أول مسابقة تأخذ الصدارة.',
+        empty_round: 'بدأت الجولة للتو. ضع هاتفك على بطاقة طاولتك.',
+        foot: 'ضع هاتفك على بطاقة طاولتك، ثم «العب أثناء الانتظار».',
+        ftour: 'الإفطار على {t} · بعد {d}', ftour_now: 'حان وقت الإفطار، صحة فطوركم',
+        min: '{m} د', hmin: '{h} س {m} د',
+        loading: 'جارٍ التحميل…', nolink: 'الرابط غير مكتمل: أضف ?s=اسم-المحل.',
+        off: 'الألعاب غير مفعّلة لهذا المحل.', offline: 'انقطع الاتصال، إعادة المحاولة بعد قليل.',
+      },
+    };
+    const qs = new URLSearchParams(location.search);
+    const slug = String(qs.get('s') || qs.get('merchant') || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 64);
+    const lang = T[qs.get('lang')] ? qs.get('lang') : 'fr';
+    document.documentElement.lang = lang;
+    if (lang === 'ar') document.documentElement.dir = 'rtl';
+    const t = (k, map) => String(T[lang][k] || T.fr[k] || k).replace(/\{(\w+)\}/g, (_, x) => (map && map[x] != null ? map[x] : ''));
+    const $ = (id) => document.getElementById(id);
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const icons = () => { try { if (window.lucide) window.lucide.createIcons(); } catch (_) {} };
+    const q = () => 'merchant=' + encodeURIComponent(slug);
+
+    let zone = 'Africa/Casablanca';
+    let state = { guest: null, ramadan: null, month: [], round: null, roundBoard: [], name: '' };
+
+    async function get(url) {
+      try {
+        const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+        const j = await r.json().catch(() => null);
+        return r.ok ? j : Object.assign({ ok: false, status: r.status }, j || {});
+      } catch (_) { return null; }
+    }
+    function duration(ms) {
+      const mins = Math.max(0, Math.round(ms / 60000));
+      const h = Math.floor(mins / 60), m = mins % 60;
+      return h ? t('hmin', { h, m: String(m).padStart(2, '0') }) : t('min', { m: Math.max(1, m) });
+    }
+    function clock(ts) {
+      try { return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'fr-FR', { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); }
+      catch (_) { return ''; }
+    }
+    function boot(text) {
+      $('boot').textContent = text;
+      $('boot').hidden = false;
+      ['head', 'main', 'foot'].forEach((id) => { $(id).hidden = true; });
+    }
+
+    function rows(list, withTable) {
+      return '<ol>' + list.map((r, i) => `<li class="${i === 0 ? 'is-first' : ''}"><span class="rank">${i + 1}</span><span class="nick">${esc(r.nick)}</span>`
+        + `<span class="table">${withTable && r.table ? esc(t('table', { n: r.table })) : ''}</span><span class="score">${esc(r.score)}</span></li>`).join('') + '</ol>';
+    }
+
+    function render() {
+      const now = Date.now();
+      $('boot').hidden = true;
+      ['head', 'main', 'foot'].forEach((id) => { $(id).hidden = false; });
+      $('store').textContent = state.name || t('title');
+      document.title = (state.name ? state.name + ' · ' : '') + t('title');
+      $('sub').textContent = t('sub');
+      $('foot-text').textContent = t('foot');
+
+      const ram = state.ramadan;
+      const target = ram ? (ram.today && ram.today > now - 30 * 60000 ? ram.today : ram.tomorrow) : null;
+      if (target) {
+        $('ftour').innerHTML = '<i data-icon="dark_mode"></i><span>' + esc(target <= now ? t('ftour_now') : t('ftour', { t: clock(target), d: duration(target - now) })) + '</span>';
+        $('ftour').hidden = false;
+      } else $('ftour').hidden = true;
+
+      const games = state.guest && state.guest.games;
+      const r = games && games.round;
+      const live = r && now <= r.endTs;
+      $('main').classList.toggle('has-round', !!live);
+      $('round').hidden = !live;
+      if (live) {
+        const quiz = (games.quizzes || []).find((x) => x.id === r.quizId);
+        $('round').innerHTML = `<h2><i data-icon="emoji_events"></i>${esc(t('round'))} <span class="live">${esc(t('live'))}</span></h2>`
+          + `<div class="meta">${esc(quiz ? quiz.title : '')}${quiz ? ' · ' : ''}${esc(t('ends', { d: duration(r.endTs - now) }))}</div>`
+          + (state.roundBoard.length ? rows(state.roundBoard, true) : `<div class="empty">${esc(t('empty_round'))}</div>`);
+      }
+      $('month').innerHTML = `<h2><i data-icon="emoji_events"></i>${esc(t('month'))}</h2>`
+        + (state.month.length ? rows(state.month, false) : `<div class="empty">${esc(t('empty_month'))}</div>`);
+      icons();
+    }
+
+    let nameDone = false;
+    async function poll() {
+      if (!slug) { boot(t('nolink')); return; }
+      const g = await get('/api/order/guest?' + q() + '&lang=' + lang);
+      if (!g) { if (!state.guest) boot(t('offline')); setTimeout(poll, POLL_MS); return; }
+      if (!g.ok) { boot(t('off')); setTimeout(poll, POLL_MS * 6); return; }
+      zone = g.zone || zone;
+      state.guest = g.guest;
+      state.ramadan = g.ramadan;
+      if (!g.guest || !g.guest.games) { boot(t('off')); setTimeout(poll, POLL_MS * 6); return; }
+      if (!nameDone) {
+        const m = await get('/api/menu?' + q());
+        if (m && m.name) { state.name = String(m.name).slice(0, 60); nameDone = true; }
+      }
+      const r = g.guest.games.round;
+      const [month, round] = await Promise.all([
+        get('/api/order/game?' + q() + '&board=month'),
+        r ? get('/api/order/game?' + q() + '&board=round&round=' + encodeURIComponent(r.id)) : Promise.resolve(null),
+      ]);
+      if (month && month.ok) state.month = month.board || [];
+      state.roundBoard = round && round.ok ? round.board || [] : [];
+      render();
+      setTimeout(poll, POLL_MS);
+    }
+    boot(t('loading'));
+    poll();
+    /* Le compte à rebours bouge entre deux lectures. */
+    setInterval(() => { if (state.guest && state.guest.games) render(); }, 30000);
+  })();
+  </script>
+</body>
+</html>

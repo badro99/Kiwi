@@ -109,18 +109,35 @@
    * table que le comptoir ne reconnaissait pas. null = pas de plan (ou pas
    * lisible) : on garde la liste numérotée. */
   var planTables = null;
+  /* Le téléphone ne garde que les chiffres du tag (quatre au plus, voir
+   * OrderPro.html › NET), et le serveur reconnaît « T7 » ou « Table 7 » comme
+   * la table 7 (functions/api/order/_lib.js › planTableKey). Une table sans
+   * numéro, ou dont le numéro est déjà pris par une autre, ne peut donc pas
+   * avoir de tag : le panneau le dit au lieu d'écrire un lien qui ouvrirait
+   * la mauvaise table. */
+  function tagOf(key) {
+    var k = String(key).toUpperCase().replace(/\s+/g, '').replace(/^TABLE(?=.)/, '').replace(/^T(?=\d+$)/, '');
+    return /^\d{1,4}$/.test(k) ? k : '';
+  }
   function readPlan(data) {
     var gone = (data && data.gone && typeof data.gone === 'object') ? data.gone : {};
-    var seen = {};
+    var seen = {}, tags = {};
     var out = ((data && Array.isArray(data.tables)) ? data.tables : []).map(function (t) {
       if (!t || gone[String(t.id)]) return null;
       var key = String(t.num || t.id || '').trim();
       if (!key || seen[key]) return null;
       seen[key] = true;
       var name = String(t.name || '').trim();
-      return { key: key, label: name || (/^\d+$/.test(key) ? 'Table ' + key : key) };
+      var label = name || (/^\d+$/.test(key) ? 'Table ' + key : key);
+      var tag = tagOf(key);
+      var clash = tag && tags[tag];
+      if (tag && !clash) tags[tag] = label;
+      return { key: key, label: label, tag: clash ? '' : tag, clash: clash || '' };
     }).filter(Boolean);
-    out.sort(function (a, b) { return a.key.localeCompare(b.key, 'fr', { numeric: true }); });
+    out.sort(function (a, b) {
+      if (!a.tag !== !b.tag) return a.tag ? -1 : 1;
+      return (a.tag || a.label).localeCompare(b.tag || b.label, 'fr', { numeric: true });
+    });
     return out.length ? out : null;
   }
   function loadPlan() {
@@ -133,7 +150,12 @@
   function tableRows() {
     var rows = [row('Tag comptoir · à emporter', 'Commande à emporter, paiement à la caisse.', takeoutLink())];
     if (planTables) {
-      planTables.forEach(function (t) { rows.push(row(t.label, TABLE_DESC, tableLink(t.key))); });
+      planTables.forEach(function (t) {
+        rows.push(t.tag ? row(t.label, TABLE_DESC, tableLink(t.tag))
+          : blockedRow(t.label, t.clash
+            ? 'Même numéro que « ' + t.clash + ' » : un tag ouvrirait l\'autre table. Changez son numéro dans le plan de salle.'
+            : 'Pas de numéro : un tag ne peut pas ouvrir cette table. Donnez-lui un numéro dans le plan de salle.'));
+      });
     } else {
       for (var i = 1; i <= tableCount; i++) rows.push(row('Table ' + i, TABLE_DESC, tableLink(i)));
     }
@@ -159,6 +181,13 @@
           '<button class="kb atlas" type="button" data-opp-publish>Publier maintenant</button>' +
         '</div>' +
       '</div>' +
+      (isBoutique ? '' :
+        '<div class="opp-pub">' +
+          '<div class="opp-pub-row">' +
+            '<div><b>Page client</b><span>Wi-Fi, avis, jeux et classement, Ramadan, écran de la salle.</span></div>' +
+            '<button class="kb ghost" type="button" data-action="orderpro-guestpage">Régler</button>' +
+          '</div>' +
+        '</div>') +
       '<div class="opp-intro">' +
         '<p>Un seul lien par tag. Le tag connaît votre établissement : un client chez vous ne peut pas commander ailleurs.</p>' +
         (nfcSupported
@@ -182,6 +211,10 @@
           '<button class="kb ghost" type="button" data-opp-copy="' + esc(url) + '">Copier le lien</button>' +
         '</div>' +
       '</div>';
+  }
+
+  function blockedRow(title, desc) {
+    return '<div class="opp-row is-blocked"><div class="opp-rmeta"><b>' + esc(title) + '</b><span>' + esc(desc) + '</span></div></div>';
   }
 
   function css() {
@@ -208,6 +241,7 @@
       '.opp-racts{display:flex;gap:7px;flex-wrap:wrap}',
       '.opp-racts .kb{padding:9px 13px;font-size:12.5px}',
       '.opp-more{margin-top:14px;text-align:center}',
+      '.opp-row.is-blocked{background:var(--paper-soft,#F7F5F0);border-style:dashed}',
       '.opp-plan{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--n-600,#4a544d)}',
     ].join('');
     document.head.appendChild(s);
