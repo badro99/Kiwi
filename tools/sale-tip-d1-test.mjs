@@ -59,10 +59,21 @@ ok('une vente avec pourboire : 200, la colonne est posée, le pourboire écrit �
 });
 await post('tip-one', 12000, 9999);
 ok('rejouer la même vente avec un autre pourboire ne réécrit pas le premier', () => assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-one').tip_cents, 1550));
-const bad = await post('tip-bad', 3000, -500);
-ok('un pourboire négatif ou illisible est ignoré, la vente passe', () => {
-  assert.equal(bad.status, 200);
-  assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-bad').tip_cents, null);
+/* §10.26 (étape 4) : un pourboire hors de 0 au montant de la vente est
+   refusé, la vente avec ; il n'est plus avalé en silence. */
+const neg = await post('tip-neg', 3000, -500);
+const over = await post('tip-over', 3000, 3001);
+const junk = await post('tip-junk', 3000, 'beaucoup');
+ok('un pourboire négatif, supérieur à la vente ou illisible est refusé (bad-tip), rien n\'est écrit', () => {
+  for (const r of [neg, over, junk]) { assert.equal(r.status, 400, JSON.stringify(r)); assert.equal(r.body.error, 'bad-tip'); }
+  for (const id of ['tip-neg', 'tip-over', 'tip-junk']) assert.equal(sqlite.prepare('SELECT id FROM sales WHERE id = ?').get(id), undefined);
+});
+const zero = await post('tip-zero', 3000, 0);
+const whole = await post('tip-whole', 3000, 3000);
+ok('0 est « pas de pourboire » ; un pourboire égal à la vente est accepté', () => {
+  assert.equal(zero.status, 200); assert.equal(whole.status, 200);
+  assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-zero').tip_cents, null);
+  assert.equal(sqlite.prepare('SELECT tip_cents FROM sales WHERE id = ?').get('tip-whole').tip_cents, 3000);
 });
 const feed = await onRequestGet({ request: new Request(`https://kiwi.test/api/feed?merchant=${merchant}`, { headers: { Cookie: cookie } }), env });
 const ledger = await feed.json();
@@ -71,6 +82,6 @@ ok('le flux du tableau de bord rend tipCents sur la vente qui en a un, et seulem
   const byId = Object.fromEntries(ledger.sales.map(s => [s.id, s]));
   assert.equal(byId['tip-one'].tipCents, 1550);
   assert.equal('tipCents' in byId['tip-none'], false);
-  assert.equal('tipCents' in byId['tip-bad'], false);
+  assert.equal('tipCents' in byId['tip-zero'], false);
 });
 console.log(`✓ ${n} sale tip checks green`);
