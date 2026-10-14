@@ -83,6 +83,39 @@
     button:focus-visible,.back:focus-visible{outline-color:var(--mint)}
   }
 </style>
+<!-- Design 2027, stage 6 (spec §18.8, R1 to R7): forgot and reset password on
+     the kit, behind the access flag only (localStorage kiwiSkin2027:access = '1',
+     or ?skin=2027 for one load). Off, nothing below loads and the shipped flow
+     draws as before. -->
+<script>
+  (function () {
+    var on = false;
+    try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:access') === '1'; } catch (_) { on = false; }
+    if (!on) return;
+    document.documentElement.setAttribute('data-skin-2027', 'access');
+    var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
+    document.write(
+      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.access.svg?v=1">' +
+      '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=27">' +
+      js("assets/kit/strings/kit.fr.js?v=2") +
+      js("assets/kit/strings/kit.en.js?v=2") +
+      js("assets/kit/strings/kit.ar.js?v=2") +
+      js("assets/kit/strings/onboarding.fr.js?v=1") +
+      js("assets/kit/strings/onboarding.en.js?v=1") +
+      js("assets/kit/strings/onboarding.ar.js?v=1") +
+      js("assets/kit/strings.js?v=2") +
+      js("assets/kit/format.js?v=1") +
+      js("assets/kit/core.js?v=1") +
+      js("assets/kit/controls/button.js?v=1") +
+      js("assets/kit/controls/chip.js?v=1") +
+      js("assets/kit/controls/stepper.js?v=1") +
+      js("assets/kit/controls/switch.js?v=1") +
+      js("assets/kit/elements.js?v=1") +
+      js("assets/kit/access-reset.js?v=1")
+    );
+  })();
+</script>
 </head>
 <body>
   <main class="card">
@@ -106,6 +139,9 @@
   } catch(_){}
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  /* Behind the access flag, assets/kit/access-reset.js draws the flow (§18.8);
+     the language above is the one it reads. */
+  if (document.documentElement.getAttribute('data-skin-2027') === 'access') return;
 
   var COPY = {
     fr: {

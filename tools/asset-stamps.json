@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "603",
-    "sha": "8388da1f81d35b6e"
+    "v": "606",
+    "sha": "ff09439cdc3a7290"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "590",
-    "sha": "0d22b553491eea7f"
+    "v": "593",
+    "sha": "ff91bf97d48f14c3"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "589",
-    "sha": "7e9cf8c6cf46759f"
+    "v": "592",
+    "sha": "ced8ca6d8f649de4"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -443,6 +443,10 @@
     "v": "25",
     "sha": "6e6fc066faa9fb10"
   },
+  "assets/icons/material/sprite.access.svg": {
+    "v": "1",
+    "sha": "9d905440a18ad956"
+  },
   "assets/icons/material/sprite.dashboard.svg": {
     "v": "6",
     "sha": "7db83d63fd8c9c25"
@@ -502,6 +506,10 @@
   "assets/invoicing.js": {
     "v": "13",
     "sha": "33277338bf128fe2"
+  },
+  "assets/kit/access-reset.js": {
+    "v": "1",
+    "sha": "52af274db2ec907a"
   },
   "assets/kit/actions.js": {
     "v": "1",
@@ -596,8 +604,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "26",
-    "sha": "41316821f0721e09"
+    "v": "27",
+    "sha": "5ddfa6879328f515"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -674,6 +682,18 @@
   "assets/kit/strings/kit.fr.js": {
     "v": "2",
     "sha": "41121e448e5886a7"
+  },
+  "assets/kit/strings/onboarding.ar.js": {
+    "v": "1",
+    "sha": "53d27a1f3e2be6fa"
+  },
+  "assets/kit/strings/onboarding.en.js": {
+    "v": "1",
+    "sha": "33578fed2da3d81a"
+  },
+  "assets/kit/strings/onboarding.fr.js": {
+    "v": "1",
+    "sha": "cdcb4e3ecf40f18f"
   },
   "assets/kit/strings/team.ar.js": {
     "v": "1",
