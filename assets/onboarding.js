@@ -636,18 +636,21 @@
 
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
   let finishing = false;
-  async function finish() {
-    if (finishing) return;
-    capture();
-    const finishErr = validate();
-    if (finishErr) { flashErr(finishErr); return; }
+  /* kit: the 2027 steps call this with { kit: true } (assets/kit/dash-onboarding.js):
+     no shipped card to read or write, the answer is returned instead. */
+  async function finish(opts) {
+    const kit = !!(opts && opts.kit);
+    if (finishing) return kit ? { error: '' } : undefined;
+    if (!kit) capture();
+    const finishErr = kit ? kitProblem() : validate();
+    if (finishErr) { if (kit) return { error: finishErr }; flashErr(finishErr); return; }
     const t = TYPES.find((x) => x.id === S.typeId) || TYPES[0];
     const validPins = S.pins.filter((p) => /^\d{4}$/.test(p.code)).map((p) => ({
       role: p.role, code: p.code,
       name: p.name || (p.role === 'owner' ? (S.ownerName || tr({ fr: 'Propriétaire', en: 'Owner', ar: 'المالك' })) : ''),
     }));
     finishing = true;
-    const finishButton = root.querySelector('[data-finish]');
+    const finishButton = root ? root.querySelector('[data-finish]') : null;
     if (finishButton) finishButton.disabled = true;
     let vid = null;
     try {
@@ -663,7 +666,9 @@
     if (!vid) {
       finishing = false;
       if (finishButton) finishButton.disabled = false;
-      flashErr(tr({ fr: "Impossible d'enregistrer l'établissement. Vérifiez la connexion et réessayez.", en: 'Could not create the business. Check your connection and try again.', ar: 'تعذر إنشاء المؤسسة. تحقق من الاتصال وأعد المحاولة.' }));
+      const failed = tr({ fr: "Impossible d'enregistrer l'établissement. Vérifiez la connexion et réessayez.", en: 'Could not create the business. Check your connection and try again.', ar: 'تعذر إنشاء المؤسسة. تحقق من الاتصال وأعد المحاولة.' });
+      if (kit) return { error: failed };
+      flashErr(failed);
       return;
     }
     LS.set('kiwiOwnerName', S.ownerName.trim());
@@ -704,6 +709,7 @@
     } catch (_) {}
 
     LS.del(DRAFT_KEY);
+    if (kit) return { vid: vid };
     celebrate(vid);
   }
 
@@ -884,6 +890,7 @@
     opts = opts || {};
     if (opened) return;
     opened = true;
+    if (window.KiwiDashOnboarding && window.KiwiDashOnboarding.open(KIT)) return;
     if (typeof opts.startStep === 'number') S.step = opts.startStep;
     if (!root) build();
     try { if (window.__kiwiLock && window.__kiwiLock.hide) window.__kiwiLock.hide(); } catch (_) {}
@@ -1048,8 +1055,35 @@
     } catch (_) {}
   }
 
+  /* Design 2027 (§18.8), behind the dashboard's flag: assets/kit/dash-onboarding.js
+     draws the steps after the account (type, goals, personal code, this device)
+     over this state, these checks and finish(). The steps §18.8 removes (name
+     and business, asked once at sign-up; places; team size) are not asked; the
+     team's codes come later in Team. */
+  function kitCodeProblem(code) {
+    if (!/^\d{4}$/.test(code)) return tr({ fr: 'Choisissez votre code à 4 chiffres (le vôtre est obligatoire).', en: 'Choose your 4-digit code (yours is required).', ar: 'اختر رمزك المكوّن من 4 أرقام.' });
+    if (RESERVED.includes(code)) return tr({ fr: 'Le code ' + code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + code + ' محجوز، اختر غيره.' });
+    return null;
+  }
+  function kitProblem() {
+    if (!TYPES.some((t) => t.id === S.typeId)) return tr(TYPE_HINT);
+    if (parsedDailyGoal() === null) return tr({ fr: 'Saisissez un objectif positif, avec au maximum deux décimales.', en: 'Enter a positive target with at most two decimal places.', ar: 'أدخل هدفاً موجباً بمنزلتين عشريتين كحد أقصى.' });
+    return kitCodeProblem(S.pins[0] && S.pins[0].code);
+  }
+  const KIT = {
+    state: S,
+    types: () => TYPES.map((t) => ({ id: t.id, primary: !!t.primary, label: tr(t.label), icon: t.icon })),
+    goals: () => GOALS.map((g) => ({ id: g.id, icon: g.icon })),
+    dailyGoal: () => parsedDailyGoal(),
+    codeProblem: kitCodeProblem,
+    save: saveDraft,
+    finish: () => finish({ kit: true }),
+    enter: () => enterApp(),
+    done: () => { opened = false; },
+  };
+
   window.KiwiOnboarding = {
-    open, close, isComplete, reset, shouldAutoLaunch,
+    open, close, isComplete, reset, shouldAutoLaunch, kit: KIT,
     get profile() { return { ownerName: LS.get('kiwiOwnerName'), bizName: LS.get('kiwiBizName'), type: LS.get('kiwiBizType') }; },
   };
 

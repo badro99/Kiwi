@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "612",
-    "sha": "19838e2c03e0f511"
+    "v": "615",
+    "sha": "d5b22690ef8f57e1"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "599",
-    "sha": "65f3bb52fe78b047"
+    "v": "602",
+    "sha": "ba5fec06c29105d6"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "598",
-    "sha": "340e56b732522bad"
+    "v": "601",
+    "sha": "b559543466ce9d85"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -448,8 +448,8 @@
     "sha": "9d905440a18ad956"
   },
   "assets/icons/material/sprite.dashboard.svg": {
-    "v": "6",
-    "sha": "7db83d63fd8c9c25"
+    "v": "7",
+    "sha": "85f280cd553df0fb"
   },
   "assets/icons/material/sprite.kds.svg": {
     "v": "2",
@@ -559,6 +559,10 @@
     "v": "1",
     "sha": "6f529452c69fdff8"
   },
+  "assets/kit/dash-onboarding.js": {
+    "v": "1",
+    "sha": "b84afb4733d366f2"
+  },
   "assets/kit/dash-orders.js": {
     "v": "1",
     "sha": "f5d742f380825bd9"
@@ -604,8 +608,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "28",
-    "sha": "6a7bd18158d2abeb"
+    "v": "29",
+    "sha": "835ab14e715243e7"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -928,8 +932,8 @@
     "sha": "61f5515f64d1d79a"
   },
   "assets/onboarding.js": {
-    "v": "2091",
-    "sha": "81c8dcbdfa098098"
+    "v": "2092",
+    "sha": "c4350bc195d0b436"
   },
   "assets/operational-print.js": {
     "v": "4",

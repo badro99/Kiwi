@@ -2378,7 +2378,11 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
  *                                       téléphone dessiné, les onglets en rail de 88, la
  *                                       table ouverte à côté de la liste (360), sa ligne
  *                                       choisie, le verrou rendu en changeant de table,
- *                                       miroir en arabe, la pile livrée sur téléphone */
+ *                                       miroir en arabe, la pile livrée sur téléphone
+ *   dash-onboarding-browser-test        l'accueil après le compte (§18.8, étapes 2 à 5) :
+ *                                       le type, les objectifs, le code deux fois sur le
+ *                                       pavé, cet appareil ; finish() livré crée le
+ *                                       commerce ; l'appareil d'équipe déconnecte */
 section('Kiwi 2027 · l\'accès et le reste sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2386,6 +2390,7 @@ section('Kiwi 2027 · l\'accès et le reste sur le kit');
     ['reset-states-test.mjs', 'reset-states-test'],
     ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
     ['team-split-browser-test.mjs', 'team-split-browser-test'],
+    ['dash-onboarding-browser-test.mjs', 'dash-onboarding-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
