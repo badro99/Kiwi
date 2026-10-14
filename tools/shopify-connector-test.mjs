@@ -243,7 +243,8 @@ ok('reauthorisation cannot turn a merely ready connection active', callback.incl
 ok('a legitimate shop replacement drops the old variant links', callback.includes("DELETE FROM shopify_variant_links WHERE merchant = ?"));
 
 const webhook = read('functions/api/channel/shopify/[link].js');
-ok('OAuth webhook verifies with app secret', webhook.includes('oauth ? env.SHOPIFY_CLIENT_SECRET'));
+ok('OAuth webhook verifies with app secret', webhook.includes('appSigned ? env.SHOPIFY_CLIENT_SECRET') && webhook.includes('cfg.oauth ||'));
+ok('client-credentials webhook verifies with the app secret too', webhook.includes("cfg.grant === 'client_credentials'"));
 ok('online order movement is deterministic', webhook.includes('const moveId = `so-'));
 ok('online order path does not call outbound enqueuer', !/applyShopifyOrderStock[\s\S]{0,5000}enqueueStockChanges/.test(webhook));
 ok('inventory webhook detects external drift', webhook.includes("drift ? 'drift' : 'active'"));

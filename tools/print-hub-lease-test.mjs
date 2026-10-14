@@ -106,12 +106,12 @@ const held = (deviceId, expiresAt, claimedAt) => ({ hub: { deviceId, name: 'Comp
   const casMembers = casArray ? vm.runInNewContext(casArray[1], { PRINT_HUB_FEATURE: 'printhub' }) : [];
   ok(casMembers.includes('reservations') && casMembers.includes('printhub'),
     'et rejoint les documents à écriture CONDITIONNELLE : c\'est la primitive qui arbitre');
-  const write = STORE.slice(STORE.indexOf('const writeDoc = CAS_FEATURES.has(feature)'), STORE.indexOf('if (feature === \'team\')'));
+  const write = STORE.slice(STORE.indexOf('const writeDoc = current'), STORE.indexOf('if (feature === \'team\')'));
   ok(/WHERE merchant=\? AND feature=\? AND rev=\?/.test(write),
     'deux caisses qui réclament depuis la même révision : une seule écriture passe');
   ok(/ON CONFLICT\(merchant,feature\) DO NOTHING/.test(write),
     'et la toute première prise ne peut pas écraser celle qui l\'a précédée d\'un cheveu');
-  ok(/CAS_FEATURES\.has\(feature\) && Number\(written\.meta\?\.changes\) !== 1/.test(STORE),
+  ok(/CAS_FEATURES\.has\(feature\)/.test(STORE.slice(STORE.indexOf('const notApplied'))) && /if \(notApplied\(written\)\) return lost\(\)/.test(STORE),
     'une écriture qui n\'a touché aucune ligne est un conflit, pas un succès');
 
   const block = STORE.slice(STORE.indexOf('if (feature === PRINT_HUB_FEATURE)'), STORE.indexOf('// Un premier envoi VIDE'));

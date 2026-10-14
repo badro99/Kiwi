@@ -458,7 +458,7 @@
     var slugOf = opts.slug || currentSlug;
     var localOf = typeof opts.localKey === 'function' ? opts.localKey : null;
 
-    var st = { rev: 0, read: Object.create(null), timer: null, busy: false,
+    var st = { revs: Object.create(null), read: Object.create(null), timer: null, busy: false,
                again: false, tries: 0, last: 0 };
 
     function on() { return !!(isReal() && feature && slugOf()); }
@@ -487,6 +487,14 @@
       var lk = localOf ? String(localOf() || '') : '';
       return REV_PREFIX + feature + ':' + slug + (lk && lk !== slug ? '@' + lk : '');
     }
+    /* La révision connue du serveur est PAR MAGASIN (et par copie locale, comme le
+     * signet ci-dessous), pas un nombre unique : le même miroir sert tour à tour
+     * plusieurs établissements d'un compte. Avec un seul `st.rev`, revenir sur un
+     * magasin déjà lu proposait la révision de l'AUTRE comme `baseRev` — au mieux
+     * un 409 pour rien, au pire une écriture acceptée parce que deux révisions se
+     * trouvaient égales. */
+    function revOf(slug) { return st.revs[revKey(slug)] || 0; }
+    function setRevOf(slug, r) { st.revs[revKey(slug)] = r || 0; }
     function readRev(slug) { var n = parseInt(ls(revKey(slug)) || '0', 10); return n > 0 ? n : 0; }
     /* Le signet date son dernier contact : c'est ce qui permet de jeter les
        plus anciens d'abord quand le quota se referme, plutôt qu'au hasard. */
@@ -556,11 +564,11 @@
 
           if (theirsEmpty) {
             // Rien en ligne : c'est ce navigateur qui fait référence.
-            st.rev = serverRev;
+            setRevOf(slug, serverRev);
             if (!mineEmpty) push(0);
             return false;
           }
-          st.rev = serverRev;
+          setRevOf(slug, serverRev);
           /* Déjà à jour : notre dernière remontée EST ce que le serveur porte.
              Sauf si une remontée a été refusée : le signet dit alors « à jour »
              pour une copie que le serveur n'a jamais acceptée. On repropose. */
@@ -607,7 +615,7 @@
     function pushNow(o) {
       o = o || {};
       var explicit = !!o.explicit;
-      if (!on()) return Promise.resolve({ ok: false, status: 403, error: 'disabled', rev: st.rev });
+      if (!on()) return Promise.resolve({ ok: false, status: 403, error: 'disabled', rev: revOf(slugOf()) });
       /* Un document qui n'est pas en état de partir (opts.canPush) ne part pas :
        * remonter une copie qui a oublié une partie de ce que le serveur porte
        * l'EFFACERAIT là-bas. Ce n'est pas un échec : la marque « modifié » reste, et
@@ -617,7 +625,7 @@
         try { allowed = !!opts.canPush(); } catch (_) { allowed = false; }
         if (!allowed) {
           if (!explicit && !dirtyToken(slugOf())) markDirty(slugOf());
-          return Promise.resolve({ ok: false, status: 423, error: 'held', rev: st.rev });
+          return Promise.resolve({ ok: false, status: 423, error: 'held', rev: revOf(slugOf()) });
         }
       }
       var slug = slugOf();
@@ -631,7 +639,7 @@
       // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
       if (!st.read[slug]) {
         if (!explicit) pull(true);
-        return Promise.resolve({ ok: false, status: 409, error: 'unread', rev: st.rev });
+        return Promise.resolve({ ok: false, status: 409, error: 'unread', rev: revOf(slug) });
       }
       /* Rien à dire au serveur : le document est vide ET il n'y a encore aucune
        * ligne en face. Sans ce garde, la simple ouverture d'une page suffisait à
@@ -642,13 +650,13 @@
       /* Explicit saves carry an intentional payload. A feature may define
        * isEmpty() around one primary collection (for example rooms), while a
        * section-only settings edit is still meaningful and must be posted. */
-      if (!explicit && !st.rev && empty(opts.read())) {
+      if (!explicit && !revOf(slug) && empty(opts.read())) {
         clearDirty(slug, sentDirty);
-        return Promise.resolve({ ok: true, status: 204, error: 'empty', rev: st.rev });
+        return Promise.resolve({ ok: true, status: 204, error: 'empty', rev: revOf(slug) });
       }
       if (st.busy) {
         if (!explicit) st.again = true;
-        return Promise.resolve({ ok: false, status: 409, error: 'busy', rev: st.rev });
+        return Promise.resolve({ ok: false, status: 409, error: 'busy', rev: revOf(slug) });
       }
       st.busy = true;
       var controller = typeof AbortController === 'function' ? new AbortController() : null;
@@ -657,7 +665,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          feature: feature, merchant: slug, baseRev: (o && o.baseRev != null) ? o.baseRev : st.rev, data: payloadData,
+          feature: feature, merchant: slug, baseRev: (o && o.baseRev != null) ? o.baseRev : revOf(slug), data: payloadData,
         }),
         // L'onglet peut se fermer juste après une saisie : keepalive laisse la
         // requête partir quand même.
@@ -678,14 +686,14 @@
       return Promise.race([request, timeoutResult])
         .then(function (res) {
           if (res && res.timeout) {
-            return { ok: false, status: 408, error: 'timeout', rev: st.rev };
+            return { ok: false, status: 408, error: 'timeout', rev: revOf(slug) };
           }
           if (slug !== slugOf()) {
-            return { ok: false, status: 409, error: 'tenant-switched', rev: st.rev };
+            return { ok: false, status: 409, error: 'tenant-switched', rev: revOf(slug) };
           }
           if (res.status === 200 && res.j && res.j.ok) {
-            st.rev = +res.j.rev || 0;
-            writeRev(slug, st.rev);
+            setRevOf(slug, +res.j.rev || 0);
+            writeRev(slug, revOf(slug));
             clearRefused(slug);
             /* Le serveur a ACCEPTÉ ce document : une fonctionnalité qui ne garde
                en local que ce que le serveur n'a pas sait désormais quoi lâcher. */
@@ -697,7 +705,7 @@
               st.again = false;
             }
             st.tries = 0;
-            return { ok: true, status: 200, rev: st.rev, data: (res.j && res.j.data != null) ? res.j.data : payloadData };
+            return { ok: true, status: 200, rev: revOf(slug), data: (res.j && res.j.data != null) ? res.j.data : payloadData };
           }
           /* 413 : le document dépasse une borne du serveur. La copie locale est
              intacte, mais elle ne quittera JAMAIS cet appareil tant que rien ne
@@ -710,7 +718,7 @@
             if (opts.onRefused) {
               try { opts.onRefused(tooLarge); } catch (_) {}
             }
-            return { ok: false, status: 413, error: tooLarge, rev: st.rev };
+            return { ok: false, status: 413, error: tooLarge, rev: revOf(slug) };
           }
           // 409 : le serveur a bougé (ou a refusé un envoi vide). Il rend sa
           // copie -- on fusionne et on repropose, quelques fois au plus pour ne
@@ -720,29 +728,29 @@
              locale au profit de celle du serveur, ou d'aucune. */
           if (res.status === 409 && res.j && res.j.error === 'foreign-document') {
             opts.write(res.j.data != null ? res.j.data : null);
-            st.rev = +res.j.rev || 0;
-            writeRev(slug, st.rev);
+            setRevOf(slug, +res.j.rev || 0);
+            writeRev(slug, revOf(slug));
             clearDirty(slug, sentDirty || dirtyToken(slug));
             clearRefused(slug);
-            return { ok: false, status: 409, error: 'foreign-document', rev: st.rev };
+            return { ok: false, status: 409, error: 'foreign-document', rev: revOf(slug) };
           }
           if (res.status === 409) {
             if (!explicit && (!o || !o.noAutoMerge) && (!res.j || res.j.error !== 'room-conflict') && res.j && res.j.data && st.tries < 3) {
               st.tries++;
               var next = merge(opts.read(), res.j.data);
               opts.write(next);
-              st.rev = +res.j.rev || 0;
-              writeRev(slug, st.rev);
+              setRevOf(slug, +res.j.rev || 0);
+              writeRev(slug, revOf(slug));
               if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
               st.again = true;
             }
             return { ok: false, status: 409, error: (res.j && res.j.error) || 'stale', rev: res.j && res.j.rev, data: res.j && res.j.data };
           }
-          return { ok: false, status: res.status, error: (res.j && res.j.error) || 'save-failed', rev: st.rev };
+          return { ok: false, status: res.status, error: (res.j && res.j.error) || 'save-failed', rev: revOf(slug) };
         })
         .catch(function (err) {
           /* hors ligne : la saisie reste, la remontée attendra */
-          return { ok: false, status: 0, offline: true, error: String(err), rev: st.rev };
+          return { ok: false, status: 0, offline: true, error: String(err), rev: revOf(slug) };
         })
         .then(function (result) {
           clearTimeout(timeout);
@@ -797,7 +805,7 @@
       pull: pull,
       push: push,
       pushNow: pushNow,
-      rev: function () { return st.rev; },
+      rev: function () { return revOf(slugOf()); },
       save: function (data) { return pushNow({ explicit: true, noAutoMerge: true, data: snapshot(data) }); },
       flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; return pushNow({ keepalive: true }); },
     };

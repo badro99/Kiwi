@@ -5,7 +5,12 @@
 //   GET  ?merchant=&board=round&round=<id>     → { ok, board: [{ nick, table, score }] } la manche
 //   GET  ?merchant=&board=table&session=&quiz= → { ok, board: [{ nick, score }] }        la tablée
 //   POST { merchant, session, quiz, answers:[pos…], nick, round? }
-//        → { ok, score, correct, total, right:[pos…] }
+//        → { ok, score, correct, total, right:[pos…], best:{ score, correct }, improved, round }
+//          `score`, `correct` et `right` décrivent CETTE partie (ce que le
+//          récapitulatif affiche). `best` est le meilleur score de ce pseudo
+//          pour ce quiz, tel qu'il est stocké et classé : un score plus bas que
+//          le précédent ne le fait pas baisser, et `improved` dit si cette
+//          partie l'a battu.
 //
 // PUBLIC (chemin exact dans functions/_middleware.js). Ce que la porte ouverte
 // ne permet pas :
@@ -156,6 +161,8 @@ export async function onRequestPost({ request, env }, deps = {}) {
   const key = nickKey(nick);
   const month = monthKey(now, await merchantZone(env, merchant));
   const id = [merchant, month, session, quiz.id, key, inRound ? roundId : ''].join('|');
+  let prior = null;
+  let stored = null;
   try {
     await ensureScoresTable(env);
     const known = await env.DB.prepare(
@@ -164,6 +171,7 @@ export async function onRequestPost({ request, env }, deps = {}) {
     if (known && !Number(known.mine) && Number(known.n) >= MAX_NICKS_PER_SESSION) {
       return json({ ok: false, error: 'too-many-players' }, 429);
     }
+    prior = await env.DB.prepare('SELECT score FROM game_scores WHERE id = ?').bind(id).first();
     await env.DB.prepare(
       `INSERT INTO game_scores (id, merchant, month, session_id, table_no, quiz_id, round_id, nickname, nick_key,
          score, correct, total, created_ts, updated_ts)
@@ -175,6 +183,19 @@ export async function onRequestPost({ request, env }, deps = {}) {
          updated_ts = CASE WHEN excluded.score > game_scores.score THEN excluded.updated_ts ELSE game_scores.updated_ts END`
     ).bind(id, merchant, month, session, String(live.table_no || ''), quiz.id, inRound ? roundId : '', nick, key,
       result.score, result.correct, result.total, now, now).run();
+    stored = await env.DB.prepare('SELECT score, correct FROM game_scores WHERE id = ?').bind(id).first();
   } catch (_) { return json({ ok: false, error: 'unavailable' }, 503); }
-  return json({ ok: true, score: result.score, correct: result.correct, total: result.total, right: result.right, round: inRound ? roundId : '' });
+  /* Le serveur ne garde que le MEILLEUR score (MAX à l'écriture), mais la
+   * réponse ne portait que la partie qu'on vient de jouer : le récapitulatif
+   * pouvait afficher 300 points pendant que le classement en montrait 700, sans
+   * rien dire. Les deux sont maintenant explicites. */
+  const bestScore = stored ? Number(stored.score) || 0 : result.score;
+  const bestCorrect = stored ? Number(stored.correct) || 0 : result.correct;
+  return json({
+    ok: true,
+    score: result.score, correct: result.correct, total: result.total, right: result.right,
+    best: { score: bestScore, correct: bestCorrect },
+    improved: !prior || result.score > (Number(prior.score) || 0),
+    round: inRound ? roundId : '',
+  });
 }

@@ -183,6 +183,17 @@ export function questionsFor(quiz, lang) {
   };
 }
 
+/* Une réponse donnée est une POSITION : un entier >= 0 (ou sa forme texte).
+ * Tout le reste (null, undefined, '', -1, un booléen, un tableau, un objet) veut
+ * dire « pas répondu » et ne vaut jamais un point. `Number(null)` et
+ * `Number('')` valent 0 : comparées à une bonne réponse affichée en position 0,
+ * une question laissée vide comptait juste, et JSON.stringify([,,]) envoie null. */
+export function givenPosition(v) {
+  if (typeof v === 'number') return Number.isInteger(v) && v >= 0 ? v : -1;
+  if (typeof v === 'string' && /^\d{1,3}$/.test(v)) return Number(v);
+  return -1;
+}
+
 /* La note, calculée ici et nulle part ailleurs. `answers[i]` = la position
  * touchée pour la question i (ou -1 / null pour « pas répondu »). Rend aussi
  * la bonne position de chaque question, pour le récapitulatif. */
@@ -193,7 +204,8 @@ export function scoreAnswers(quiz, answers) {
     const n = Array.isArray(q.choices) ? q.choices.length : pick(q.choices, 'fr').length;
     const order = permutation(n, seedOf(quiz.id + ':' + qi));
     const shown = order.indexOf(answerOf(quiz, qi));
-    if (Number(given[qi]) === shown) correct++;
+    const mine = givenPosition(given[qi]);
+    if (mine >= 0 && mine === shown) correct++;
     return shown;
   });
   return { correct, total: quiz.questions.length, score: correct * POINTS_PER_ANSWER, right };

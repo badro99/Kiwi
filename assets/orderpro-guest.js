@@ -62,7 +62,7 @@
       gx_back: 'Retour', gx_house: 'De la maison', gx_questions: '{n} questions',
       gx_nick: 'Votre pseudo', gx_nick_hint: '2 à 14 lettres ou chiffres. Il s’affiche au classement.',
       gx_solo: 'Jouer seul', gx_table: 'Défier ma table', gx_room: 'Rejoindre la partie de la salle',
-      gx_q_of: 'Question {i} sur {n}', gx_score: 'Bonnes réponses : {c} sur {n}', gx_points: '{p} points',
+      gx_q_of: 'Question {i} sur {n}', gx_score: 'Bonnes réponses : {c} sur {n}', gx_points: '{p} points', gx_best_quiz: 'Votre meilleur score : {p} points',
       gx_recap: 'Les bonnes réponses', gx_your_table: 'Votre table', gx_the_room: 'La salle', gx_again: 'Rejouer',
       gx_bad_nick: 'Ce pseudo n’est pas accepté', gx_closed: 'Les jeux reprennent à votre prochaine visite',
       gx_full: 'Huit joueurs au plus par table', gx_ends_in: 'se termine dans {d}', gx_failed: 'Partie non enregistrée, réessayez',
@@ -105,7 +105,7 @@
       gx_back: 'Back', gx_house: 'From the house', gx_questions: '{n} questions',
       gx_nick: 'Your nickname', gx_nick_hint: '2 to 14 letters or digits. It shows on the leaderboard.',
       gx_solo: 'Play alone', gx_table: 'Challenge my table', gx_room: 'Join the room game',
-      gx_q_of: 'Question {i} of {n}', gx_score: '{c} correct out of {n}', gx_points: '{p} points',
+      gx_q_of: 'Question {i} of {n}', gx_score: '{c} correct out of {n}', gx_points: '{p} points', gx_best_quiz: 'Your best score: {p} points',
       gx_recap: 'The right answers', gx_your_table: 'Your table', gx_the_room: 'The room', gx_again: 'Play again',
       gx_bad_nick: 'That nickname isn’t allowed', gx_closed: 'Games resume on your next visit',
       gx_full: 'Eight players per table at most', gx_ends_in: 'ends in {d}', gx_failed: 'Game not saved, try again',
@@ -148,7 +148,7 @@
       gx_back: 'رجوع', gx_house: 'من إعداد المطعم', gx_questions: '{n} أسئلة',
       gx_nick: 'اسمك المستعار', gx_nick_hint: 'من 2 إلى 14 حرفًا أو رقمًا. يظهر في الترتيب.',
       gx_solo: 'العب وحدك', gx_table: 'تحدَّ طاولتي', gx_room: 'انضم إلى لعبة القاعة',
-      gx_q_of: 'السؤال {i} من {n}', gx_score: '{c} إجابة صحيحة من {n}', gx_points: '{p} نقطة',
+      gx_q_of: 'السؤال {i} من {n}', gx_score: '{c} إجابة صحيحة من {n}', gx_points: '{p} نقطة', gx_best_quiz: 'أفضل نتيجة لك: {p} نقطة',
       gx_recap: 'الإجابات الصحيحة', gx_your_table: 'طاولتك', gx_the_room: 'القاعة', gx_again: 'العب مرة أخرى',
       gx_bad_nick: 'هذا الاسم غير مقبول', gx_closed: 'تعود الألعاب في زيارتك القادمة',
       gx_full: 'ثمانية لاعبين كحد أقصى لكل طاولة', gx_ends_in: 'تنتهي بعد {d}', gx_failed: 'لم تُحفظ اللعبة، حاول مجددًا',
@@ -857,6 +857,7 @@
       <div class="gx-title">${esc(Q.quiz.title)}</div>
       <div class="gx-big">${esc(fill(t('gx_points'), { p: res.score }))}</div>
       <p class="gx-lead">${esc(fill(t('gx_score'), { c: res.correct, n: res.total }))}</p>
+      ${res.best && res.best.score > res.score ? `<p class="gx-lead">${esc(fill(t('gx_best_quiz'), { p: res.best.score }))}</p>` : ''}
       <div class="gx-section">${esc(boardTitle)}</div><div id="gx-after">${boardHtml([])}</div>
       <button class="gx-btn" type="button" data-gx-quiz="${esc(Q.quiz.id)}"${Q.round ? ` data-gx-round="${esc(Q.round)}"` : ''}><i data-icon="refresh"></i>${esc(t('gx_again'))}</button>
       <div class="gx-section">${esc(t('gx_recap'))}</div><ul class="gx-recap">${recap}</ul>`);

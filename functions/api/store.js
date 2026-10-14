@@ -77,10 +77,11 @@ import { validateRoomsDocument } from './hotel/_rooms.js';
  * (CAS_FEATURES) et par validateHubClaim. Voir print/_hub-lease.js. */
 const PRINT_HUB_FEATURE = 'printhub';
 
-/* Les documents dont l'écriture est CONDITIONNELLE à la révision lue (UPDATE …
- * WHERE rev = ?) au lieu d'un upsert. Pour eux, « deux appareils à la fois »
- * n'est pas une gêne d'affichage mais une faute : une chambre vendue deux fois,
- * deux comptoirs qui impriment le même bon. */
+/* Les documents d'ARBITRAGE. Depuis que TOUTE écriture est conditionnelle à la
+ * révision lue (UPDATE … WHERE rev = ?), ils ne se distinguent plus que par la
+ * rigueur : un résultat sans `meta.changes` y vaut conflit. Pour eux, « deux
+ * appareils à la fois » n'est pas une gêne d'affichage mais une faute : une
+ * chambre vendue deux fois, deux comptoirs qui impriment le même bon. */
 const CAS_FEATURES = new Set(['reservations', PRINT_HUB_FEATURE, 'monthreport']);
 
 const FEATURES = {
@@ -1032,45 +1033,53 @@ export async function onRequestPost(context) {
       await poke(env, merchant, feature);
       return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, data: clean.value });
     }
-    const writeDoc = CAS_FEATURES.has(feature) ? (serverRev
-      ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
-      : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(
-      feature === 'pressing-orders'
-        ? (serverRev
-          ? 'UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?'
-          : 'INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
-        : `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-           VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT(merchant, feature) DO UPDATE SET
-             data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
-    ).bind(...(feature === 'pressing-orders' && serverRev
-      ? [text, rev, now, merchant, feature, serverRev]
-      : [merchant, feature, text, rev, now]));
+    /* COMPARE-AND-SWAP POUR TOUS LES DOCUMENTS. Le contrôle `baseRev !== serverRev`
+     * plus haut est fait sur une LECTURE : entre elle et l'écriture, un second
+     * appareil peut passer. Seuls quelques documents (CAS_FEATURES, le bail du
+     * hub, pressing-orders, rooms) écrivaient avec `WHERE rev = ?`; tous les
+     * autres finissaient en upsert aveugle, et la seconde des deux sauvegardes
+     * simultanées écrasait la première sans erreur ni conflit. L'écriture porte
+     * maintenant sa révision d'origine : zéro ligne touchée = quelqu'un nous a
+     * devancé, on rend 409 avec la copie serveur et le client fusionne. */
+    const writeDoc = current
+      ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?')
+        .bind(text, rev, now, merchant, feature, serverRev)
+      : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
+        .bind(merchant, feature, text, rev, now);
+    const lost = async () => {
+      let latest = null;
+      try { latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant, feature).first(); } catch (_) {}
+      let latestData = mine;
+      try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
+      return json({ error: 'stale', feature, rev: (latest && latest.rev) || serverRev, data: view(latestData) }, 409);
+    };
+    /* D1 rend toujours `meta.changes`. Une base de test qui ne le rend pas n'est un
+     * conflit que pour les documents d'arbitrage (CAS_FEATURES), qui l'étaient déjà. */
+    const notApplied = (r) => {
+      const c = r && r.meta && r.meta.changes;
+      return typeof c === 'number' ? c !== 1 : CAS_FEATURES.has(feature);
+    };
     if (feature === 'team') {
       const access = await employeeAccessFromTeam(env, clean.value, merchant);
       if (!access) return json({ error: 'employee-access-unavailable' }, 503);
       const accessText = JSON.stringify(access);
+      /* Le miroir d'accès n'est écrit QUE si le document team vient d'être écrit
+       * (révision, instant ET contenu sont les nôtres) : un lot D1 est atomique mais ne s'arrête pas
+       * sur une ligne à zéro changement, et un team périmé aurait sinon réécrit
+       * les codes de connexion des employés. */
       const writeAccess = env.DB.prepare(
         `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-         VALUES (?, 'employee-access', ?, 1, ?)
+         SELECT ?, 'employee-access', ?, 1, ?
+          WHERE EXISTS (SELECT 1 FROM store_docs WHERE merchant = ? AND feature = 'team' AND rev = ? AND updated_ts = ? AND data = ?)
          ON CONFLICT(merchant, feature) DO UPDATE SET
            data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
-      ).bind(merchant, accessText, now);
-      await env.DB.batch([writeDoc, writeAccess]);
+      ).bind(merchant, accessText, now, merchant, rev, now, text);
+      const results = await env.DB.batch([writeDoc, writeAccess]);
+      if (notApplied(results && results[0])) return lost();
       try { await closeRemovedShifts(env, merchant, clean.value.removed); } catch (_) {}
     } else {
       const written = await writeDoc.run();
-      if (CAS_FEATURES.has(feature) && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
-      if (feature === 'pressing-orders' && Number(written.meta?.changes) !== 1) {
-        let latest = null;
-        try {
-          latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?')
-            .bind(merchant, feature).first();
-        } catch (_) {}
-        let latestData = mine;
-        try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
-        return json({ error: 'stale', feature, rev: latest?.rev || serverRev, data: latestData }, 409);
-      }
+      if (notApplied(written)) return lost();
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 

@@ -150,9 +150,16 @@ ok('un pseudo qui n’est pas fait de lettres est refusé', r.status === 400 && 
 r = await post(gamePost, { merchant: SLUG, session: s1, quiz: 'kiwi-cuisine', answers: shownRight.map((x, i) => (i < 7 ? x : -1)), nick: 'Amine' });
 ok('le serveur note : 7 bonnes réponses = 700 points, et rend les bonnes positions',
   r.status === 200 && r.body.correct === 7 && r.body.score === 700 && r.body.right.join() === shownRight.join(), JSON.stringify(r.body));
+const firstTry = r.body;
+ok('la réponse dit que cette première partie est le meilleur score', firstTry.best && firstTry.best.score === 700 && firstTry.improved === true, JSON.stringify(firstTry));
 r = await post(gamePost, { merchant: SLUG, session: s1, quiz: 'kiwi-cuisine', answers: [0, 0, 0], nick: 'amine' });
 const best = DB._db.prepare('SELECT COUNT(*) AS n, MAX(score) AS s FROM game_scores WHERE session_id = ?').get(s1);
 ok('rejouer moins bien ne fait pas baisser le meilleur score, et ne crée pas de ligne', best.n === 1 && best.s === 700, JSON.stringify(best));
+ok('et la réponse le dit : cette partie (score, right) d\u2019un côté, le meilleur stocké (700) de l\u2019autre',
+  r.body.score < 700 && r.body.best.score === 700 && r.body.best.correct === 7 && r.body.improved === false
+  && Array.isArray(r.body.right) && r.body.right.length === r.body.total, JSON.stringify(r.body));
+r = await post(gamePost, { merchant: SLUG, session: s1, quiz: 'kiwi-cuisine', answers: [null, '', undefined, -1, true, [], {}], nick: 'amine' });
+ok('des réponses vides (null, \'\', trous) ne comptent jamais comme la position 0', r.status === 200 && r.body.correct === 0 && r.body.score === 0 && r.body.best.score === 700, JSON.stringify(r.body));
 await post(gamePost, { merchant: SLUG, session: s1, quiz: 'mkiwi-fake', answers: [], nick: 'amine' });
 await post(gamePost, { merchant: SLUG, session: s2, quiz: 'kiwi-cuisine', answers: shownRight, nick: 'Salma' });
 await post(gamePost, { merchant: SLUG, session: s2, quiz: 'kiwi-maroc', answers: [], nick: 'Vilain mot' });

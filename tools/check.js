@@ -592,6 +592,12 @@ for (const test of [
   'nonlatin-slug-test.mjs',
   /* /api/error ouvert aux caisses, plafond par compte sur /__unlock, compteur du verrou, employé retiré. */
   'auth-hardening-2-test.mjs',
+  /* Tout document /api/store s'écrit en compare-and-swap ; cloud-doc garde la révision par magasin. */
+  'store-cas-test.mjs',
+  /* Shopify « don d'identifiants » : les webhooks se vérifient avec le secret de l'app. */
+  'shopify-direct-webhook-test.mjs',
+  /* Quiz : une question sans réponse ne vaut jamais un point. */
+  'quiz-unanswered-test.mjs',
   'service-interconnectivity-test.mjs',
   /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
   'team-offshift-server-test.mjs',

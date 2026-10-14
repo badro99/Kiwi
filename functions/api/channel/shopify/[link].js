@@ -300,8 +300,17 @@ export async function onRequestPost(context) {
 
   let cfg = {};
   try { cfg = link.config ? JSON.parse(link.config) : {}; } catch (_) { cfg = {}; }
-  const oauth = !!(cfg && cfg.oauth);
-  const secret = str(oauth ? env.SHOPIFY_CLIENT_SECRET : cfg && cfg.shopifySecret, 200);
+  /* Deux façons de relier une boutique, et le MÊME secret de signature : celui de
+   * l'APP Kiwi (env.SHOPIFY_CLIENT_SECRET, jamais stocké en base). La ronde OAuth
+   * marque sa ligne `oauth: true`, le don d'identifiants (connect-direct.js)
+   * `grant: 'client_credentials'` : les webhooks qu'elles enregistrent sont
+   * signés par l'app, pas par un secret saisi par le commerçant. Ne lire que
+   * `oauth` rendait 401 « unconfigured » à CHAQUE webhook d'une boutique reliée
+   * par le don d'identifiants, qui n'a pas de `shopifySecret` — et n'en aura
+   * jamais : on ne recopie pas le secret de l'app dans une ligne de la base.
+   * Seule une ligne saisie à la main (channel/keys.js) porte son propre secret. */
+  const appSigned = !!(cfg && (cfg.oauth || cfg.grant === 'client_credentials'));
+  const secret = str(appSigned ? env.SHOPIFY_CLIENT_SECRET : cfg && cfg.shopifySecret, 200);
   if (!secret) {
     /* La configuration n'est pas finie. On refuse — et on l'écrit sur la ligne
      * du canal, parce que c'est le seul endroit où le commerçant peut le lire
