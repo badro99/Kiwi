@@ -379,7 +379,27 @@
   }
   function dateLabel(ts, withDate) { var o = withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }, l = lang() === 'ar' ? 'ar-MA' : lang(); try { return new Date(ts).toLocaleString(l, Object.assign({ timeZone: VENUE_TZ }, o)); } catch (_) { try { return new Date(ts).toLocaleString(l, o); } catch (__) { return ''; } } }
   function money(n) { try { return Number(n || 0).toLocaleString(lang() === 'ar' ? 'ar-MA' : 'fr-FR') + ' MAD'; } catch (_) { return n + ' MAD'; } }
-  function dayStart(ts) { var p = venueParts(ts || Date.now()); return venueEpoch(p.y, p.m, p.d, 0, 0); }
+  /* Le « jour » d'un agenda est la JOURNÉE COMMERCIALE (bascule à 5 h par
+     défaut), pas le jour civil : une table réservée à 23 h 30 ou à 00 h 30
+     appartient au service du soir, et à 00 h 15 elle ne doit pas disparaître de
+     « Aujourd'hui » parce que minuit est passé. On prend les bornes du rapport
+     du jour quand il est chargé ; sinon la même bascule par défaut. */
+  var FALLBACK_CUTOFF_H = 5;
+  function businessDayBounds(ts) {
+    ts = ts || Date.now();
+    try {
+      var R = window.KiwiDayReport;
+      if (R && typeof R.businessDay === 'function' && typeof R.dayBounds === 'function') {
+        var b = R.dayBounds(R.businessDay(ts));
+        if (b && isFinite(b.from) && isFinite(b.to) && b.to > b.from) return { from: b.from, to: b.to };
+      }
+    } catch (_) {}
+    var p = venueParts(ts - FALLBACK_CUTOFF_H * 3600000);
+    var from = venueEpoch(p.y, p.m, p.d, FALLBACK_CUTOFF_H, 0);
+    var q = venueParts(from + 36 * 3600000);
+    return { from: from, to: venueEpoch(q.y, q.m, q.d, FALLBACK_CUTOFF_H, 0) };
+  }
+  function dayStart(ts) { return businessDayBounds(ts).from; }
   function icon(name) { var safe = { calendar:'today', add:'today', link:'phonelink', settings:'schedule', person:'schedule', room:'room_service', table:'restaurant', service:'redeem' }[name] || 'today'; return '<img src="assets/icons/material/' + safe + '.svg" alt="" aria-hidden="true">'; }
   /* Une réservation prise en ligne n'arrivait jamais sur la page ouverte :
      le document ne se relisait qu'à l'ouverture ou au retour sur l'onglet.
@@ -404,7 +424,7 @@
     if (!window.Kiwi || !window.Kiwi.appPage) return;
     open = true;
     if (!pollTimer) schedulePull();
-    var doc = get(), now = Date.now(), today = dayStart(now), tomorrow = today + 86400000;
+    var doc = get(), now = Date.now(), bizDay = businessDayBounds(now), today = bizDay.from, tomorrow = bizDay.to;
     var active = doc.bookings.filter(function (b) { return !DONE[b.status] && b.endAt >= today; }).sort(function (a,b){ return a.startAt-b.startAt; });
     var todayRows = active.filter(function (b) { return b.startAt >= today && b.startAt < tomorrow; });
     var upcoming = active.filter(function (b) { return b.startAt >= tomorrow; });
@@ -527,6 +547,6 @@
   window.addEventListener('load',function(){setTimeout(function(){S();install();},420);window.KiwiVenue&&window.KiwiVenue.subscribe&&window.KiwiVenue.subscribe(function(){store=null;open=false;setTimeout(install,0);});window.addEventListener('kiwi:langchange',function(){var root=document.querySelector('[data-kr-root]');if(open&&root&&root.isConnected&&document.body.classList.contains('page-genpage'))render();});});
   /* La première lecture des séjours de l'hôtel remplace le « · » de l'occupation, uniquement si la page est à l'écran. */
   window.addEventListener('kiwi-hotel-stays-loaded',function(){try{var root=document.querySelector('[data-kr-root]');if(root&&root.isConnected&&root.offsetParent&&hotelMode())render();}catch(_){}});
-  window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,staffingAllows:staffingAllows,restaurantTemplates:restaurantTemplates,floorPlanTemplateFrom:floorPlanTemplateFrom,templateSeats:templateSeats,get:get,set:set,render:render};
+  window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,staffingAllows:staffingAllows,restaurantTemplates:restaurantTemplates,floorPlanTemplateFrom:floorPlanTemplateFrom,templateSeats:templateSeats,get:get,set:set,render:render,businessDayBounds:businessDayBounds};
   try { window.dispatchEvent(new CustomEvent('kiwi-reservations-ready')); } catch (_) {}
 }());

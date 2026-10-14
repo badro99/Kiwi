@@ -536,6 +536,7 @@ for (const test of [
   'planning-core-test.mjs',
   'planning-layout-test.mjs',
   'reservations-test.mjs',
+  'reservations-business-day-test.mjs',
   'serveur-menu-live-test.mjs',
   'menu-availability-test.mjs',
   /* « Épuisé jusqu'à 18 h » : la fin d'un 86 posée par la caisse, résolue par
