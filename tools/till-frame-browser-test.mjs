@@ -74,7 +74,12 @@ async function till(tr, { flag }) {
   await page.waitForFunction(() => typeof doOpenService === 'function', { timeout: 30000 });
   await page.evaluate(() => doOpenService());
   await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
-  await page.click('.mode-pill[data-mode="vrap"]');
+  /* Takeaway: on the kit's rail with the flag on (the shipped sidebar is
+     hidden then), on the shipped mode pill with it off. */
+  if (flag) {
+    await page.waitForFunction(() => { const r = document.querySelector('k-rail'); return r && r.shadowRoot.querySelector('[data-id="takeaway"]'); }, { timeout: 20000 });
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="takeaway"]').click());
+  } else await page.click('.mode-pill[data-mode="vrap"]');
   await sleep(200);
   await page.evaluate(() => { const b = document.querySelector('#vrap-new-order'); if (b) b.click(); });
   await page.waitForFunction(() => menuItems.length > 0 && !document.querySelector('#vrap-builder').hidden, { timeout: 20000 });
@@ -346,6 +351,41 @@ try {
     check(Math.abs(amount(v.total) - (gross - disc.amount)) < 0.005 && await page.evaluate(() => !!document.querySelector('k-bill').shadowRoot.querySelector('[data-k-part]')),
       `the bill shows the discount line and the net total (${v.total})`);
     check(errors.length === 0, 'split and discount: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
+  await S.run('flag on · the rail and More', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const railIds = await page.evaluate(() => [...document.querySelector('k-rail').shadowRoot.querySelectorAll('[data-id]')].map((b) => b.getAttribute('data-id')));
+    check(await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar')).display === 'none'), 'the shipped sidebar is hidden');
+    check(railIds.join() === 'floor,takeaway,waiting,kitchen,more', `the rail: ${railIds.join(', ')}`);
+    check(await page.evaluate(() => mode === 'vrap' && document.querySelector('k-rail').getAttribute('value') === 'takeaway'), 'Takeaway on the rail is the takeaway mode, and the rail says so');
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="floor"]').click());
+    await sleep(300);
+    check(await page.evaluate(() => mode === 'salle' && document.querySelector('k-rail').getAttribute('value') === 'floor'), 'Floor switches to the floor plan');
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(400);
+    const more = await page.evaluate(() => {
+      const sheet = [...document.querySelectorAll('k-sheet')].find((s) => s.hasAttribute('open') && s.querySelector('k-list'));
+      if (!sheet) return null;
+      return { lists: sheet.querySelectorAll('k-list').length,
+        rows: [...sheet.querySelectorAll('k-list')].flatMap((l) => (l.rows || []).map((r) => r.id)) };
+    });
+    check(more && more.lists === 3, `More opens in three sections (${more && more.lists})`);
+    check(more && ['open_drawer', 'cash_in_out', 'cancel_sale', 'refund', 'close', 'stock', 'reload'].every((id) => more.rows.includes(id)),
+      `and holds the old sidebar's acts (${more && more.rows.join(', ')})`);
+    const fired = await page.evaluate(() => new Promise((resolve) => {
+      const el = document.querySelector('[data-action="cash-move"]');
+      el.addEventListener('click', () => resolve(true), { once: true });
+      const sheet = [...document.querySelectorAll('k-sheet')].find((s) => s.hasAttribute('open') && s.querySelector('k-list'));
+      const list = [...sheet.querySelectorAll('k-list')].find((l) => (l.rows || []).some((r) => r.id === 'cash_in_out'));
+      const row = list.shadowRoot.querySelector('[data-id="cash_in_out"] [data-row]') || list.shadowRoot.querySelector('[data-id="cash_in_out"][data-row]');
+      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      row.click();
+      setTimeout(() => resolve(false), 1500);
+    }));
+    check(fired, 'a More row fires its shipped control (Cash in or out)');
+    check(errors.length === 0, 'rail: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

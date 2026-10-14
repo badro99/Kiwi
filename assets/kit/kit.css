@@ -179,3 +179,8 @@ html[data-k-till] .view-vrap { background-color: var(--k-bg); }
 #kit-pay-layer > k-pay { display: block; height: 100%; }
 html[data-k-pay-scroll], html[data-k-pay-scroll] body { min-height: 514px; }
 html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto; height: 514px; }
+/* The rail (stage 4 (10), §10.20): 88 wide at the till's start; the shipped
+   sidebar hides once the kit has mounted, its controls kept for More. */
+html[data-k-till] .sidebar { display: none !important; }
+#kit-rail { flex: 0 0 88px; width: 88px; height: 100%; min-height: 0; }
+#kit-rail > k-rail { display: block; height: 100%; }
