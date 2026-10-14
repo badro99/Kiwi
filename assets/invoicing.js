@@ -261,12 +261,23 @@
   const num = (v) => Math.max(0, Number(String(v ?? '').replace(/[\s  ]/g, '').replace(',', '.')) || 0);
   const toCents = (v) => Math.round(num(v) * 100);
   const centsInput = (c) => (Math.round(Number(c) || 0) / 100).toFixed(2).replace('.', ',');
-  const iso = (d) => {
-    const value = new Date(d);
-    return [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-');
+  /* « Aujourd'hui » est celui du magasin, pas celui de l'appareil : le serveur
+     juge une date « dans le futur » dans le fuseau du magasin
+     (functions/api/_business-day.js merchantZone : merchant_config.timezone,
+     sinon Casablanca). Un patron à l'heure de Paris voyait entre minuit et
+     2 h un règlement, une émission ou une échéance d'un jour d'avance. Même
+     règle ici : le fuseau publié dans /api/config, sinon Casablanca. */
+  const storeZone = () => {
+    for (const z of [window.KiwiConfig?.timezone, window.KiwiConfig?.timeZone]) {
+      const zone = String(z || '').trim();
+      if (!zone) continue;
+      try { new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(0); return zone; } catch (_) {}
+    }
+    return 'Africa/Casablanca';
   };
-  const shift = (days, from) => { const d = from ? new Date(from + 'T12:00:00') : new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + days); return iso(d); };
-  const today = () => iso(new Date());
+  const dayIn = (ts) => new Intl.DateTimeFormat('en-CA', {timeZone: storeZone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(Number(ts) || Date.parse(ts) || Date.now()));
+  const today = () => dayIn(Date.now());
+  const shift = (days, from) => { const d = new Date((from || today()) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
   const locale = () => (lang() === 'ar' ? 'ar-MA' : lang() + '-MA');
   const fmtDate = (value) => value ? new Intl.DateTimeFormat(locale(), {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(value + 'T12:00:00')) : '·';
   const dmy = (value) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
@@ -594,7 +605,7 @@
         const id = String(doc.number || (doc.seq ? ('F-' + doc.seq) : 'Facture'));
         const customer = (doc.customer && doc.customer.name) || 'Client de passage';
         const contact = (doc.customer && doc.customer.ice) ? ('ICE ' + doc.customer.ice) : 'Vente comptoir';
-        const issueDate = doc.issuedTs ? iso(doc.issuedTs) : today();
+        const issueDate = doc.issuedTs ? dayIn(doc.issuedTs) : today();
         const total = (doc.totals && Number(doc.totals.ttc)) || 0;
         return {id, customer, contact, issueDate, dueDate: issueDate, total, isSaleInvoice: true, rawDoc: doc};
       });
@@ -1155,7 +1166,7 @@
     const paymentsHtml = type === 'invoice' && issued ? `<section class="inv-detail-card" data-payments><h4 class="inv-section-title">${esc(t.paymentsTitle)}</h4>${d.payments.length ? `<ul class="inv-pay-list">${d.payments.map(p => `<li><div><strong>${money(pick(p, 'amountCents', 'amount_cents'))} MAD</strong><span>${esc(fmtDate(p.date))} · ${esc(t[p.method] || p.method || '')}${p.reference ? ' · ' + esc(p.reference) : ''}</span></div><button class="inv-line-remove" type="button" data-inv-act="delete-payment" data-pid="${esc(p.id)}" aria-label="${esc(t.deletePayment)}">${ICON.trash}</button></li>`).join('')}</ul>` : `<p class="inv-foot-note">${esc(t.noPayments)}</p>`}<div class="inv-summary-row"><span>${esc(t.balance)}</span><strong data-balance>${money(d.balanceCents)} MAD</strong></div></section>` : '';
     const creditsHtml = type === 'invoice' && d.creditNotes.length ? `<section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.creditNotesTitle)}</h4><ul class="inv-pay-list">${d.creditNotes.map(c => `<li><div><strong>${esc(c.number)}</strong><span>${esc(fmtDate(c.issueDate))} · ${money(pick(c, 'ttcCents', 'ttc_cents'))} MAD</span></div><button class="inv-btn small" type="button" data-inv-act="open-doc" data-id="${esc(c.id)}">${esc(t.view)}</button></li>`).join('')}</ul></section>` : '';
     const paidBlock = type === 'invoice' && issued ? `<div class="inv-summary-row"><span>${esc(t.paid)}</span><strong>${money(Math.max(0, (doc.totals?.ttcCents || 0) - d.balanceCents))} MAD</strong></div><div class="inv-summary-row"><span>${esc(t.balance)}</span><strong>${money(d.balanceCents)} MAD</strong></div>` : '';
-    const timeline = `${doc.createdTs ? `<div class="inv-time"><strong>${esc(t.createdOn)}</strong>${esc(fmtDate(iso(doc.createdTs)))}</div>` : ''}${doc.sentTs ? `<div class="inv-time"><strong>${esc(t.sentOn)}</strong>${esc(fmtDate(iso(doc.sentTs)))}</div>` : ''}${doc.legacyRef ? `<div class="inv-time"><strong>${esc(tpl(t.legacyRef, {ref: doc.legacyRef}))}</strong></div>` : ''}`;
+    const timeline = `${doc.createdTs ? `<div class="inv-time"><strong>${esc(t.createdOn)}</strong>${esc(fmtDate(dayIn(doc.createdTs)))}</div>` : ''}${doc.sentTs ? `<div class="inv-time"><strong>${esc(t.sentOn)}</strong>${esc(fmtDate(dayIn(doc.sentTs)))}</div>` : ''}${doc.legacyRef ? `<div class="inv-time"><strong>${esc(tpl(t.legacyRef, {ref: doc.legacyRef}))}</strong></div>` : ''}`;
     overlay.querySelector('[data-inv-detail]').innerHTML = `<div class="inv-composer-head"><button class="inv-btn small" type="button" data-inv-act="back">${ICON.back}${esc(t.back)}</button><div>${statusHtml(type, ds)}</div></div>
       <div class="inv-detail-grid"><article class="inv-preview${draft ? ' is-draft' : ''}" data-doc-type="${esc(type)}" data-doc-id="${esc(doc.id)}">${draft ? `<div class="inv-watermark" aria-hidden="true">${esc(t.draftNo.toUpperCase())}</div>` : ''}
         <div class="inv-preview-top"><div><div class="inv-preview-logo">${renderSellerLogo(seller, 40)}</div><div class="inv-preview-meta"><strong>${esc(biz)}</strong></div></div><div class="inv-preview-head"><h3 class="inv-preview-title" data-doc-number>${esc(docWord(type))} ${esc(draft ? t.draftNo : doc.number)}</h3><div class="inv-preview-meta">${dateMeta}</div></div></div>

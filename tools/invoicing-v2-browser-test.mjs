@@ -219,10 +219,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const S = suite('invoicing-v2', { browser });
 
 /* Une page de tableau de bord. real : compte réel (le faux serveur répond) ; sinon démo. */
-async function dashboard(tr, { lang = 'fr', real = false, fake = null, width = 1280 } = {}) {
+async function dashboard(tr, { lang = 'fr', real = false, fake = null, width = 1280, tz = null, at = null } = {}) {
   const ctx = await browser.createBrowserContext();
   tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
+  /* tz + at : l'appareil dans un autre fuseau, à une heure fixée (l'horloge
+     continue de tourner à partir de là). */
+  if (tz) await page.emulateTimezone(tz);
+  if (at != null) await page.evaluateOnNewDocument((target) => {
+    const R = Date, delta = target - R.now();
+    class Pinned extends R { constructor(...a) { if (a.length) super(...a); else super(R.now() + delta); } static now() { return R.now() + delta; } }
+    window.Date = Pinned;
+  }, at);
   const hits = [];
   await page.setViewport({ width, height: 960 });
   await page.setBypassServiceWorker(true);
@@ -588,6 +596,29 @@ try {
     await click(page, '[data-inv-act="print"]');
     const html = await page.evaluate(() => window.__printed[0] || '');
     check(/<html lang="ar" dir="rtl">/.test(html) && html.includes('فاتورة') && /text-align:left/.test(html), 'le gabarit imprimé est en RTL, titre en arabe');
+  });
+
+  /* 3b · Un appareil à l’est du magasin, la nuit ──────────────────────────
+     À 22 h 30 UTC, Paris (UTC+2) est déjà le lendemain, Casablanca (UTC+0 ou
+     UTC+1 selon la base de fuseaux) pas encore. Le serveur juge « futur » dans
+     le fuseau du magasin : chaque date proposée par défaut doit être la sienne. */
+  await S.run('fuseau · à Paris à 22 h 30 UTC, les dates par défaut sont celles du magasin', async (tr) => {
+    const day = new Date().toISOString().slice(0, 10);
+    const at = Date.parse(day + 'T22:30:00Z');
+    const next = new Date(at + 864e5).toISOString().slice(0, 10);
+    const { page } = await dashboard(tr, { tz: 'Europe/Paris', at });
+    eq(await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())), next, 'l’appareil, lui, est déjà au lendemain');
+    await openInvoicing(page);
+    await click(page, '[data-inv-act="new"]');
+    await page.waitForSelector('[data-f="issue"]', { visible: true });
+    eq(await page.$eval('[data-f="issue"]', (n) => n.value), day, 'la date d’émission proposée est celle du magasin');
+    await click(page, '[data-inv-act="back"]');
+    await page.waitForSelector('[data-inv-table]', { visible: true });
+    await page.evaluate(() => [...document.querySelectorAll('[data-inv-table] tbody tr')].find((r) => r.textContent.includes('Riad Zayna'))?.click());
+    await waitDetail(page);
+    await click(page, '[data-inv-act="pay"]'); await waitSheet(page);
+    eq(await page.$eval('[data-sf="date"]', (n) => n.value), day, 'la date d’un règlement proposée est celle du magasin, pas « demain »');
+    await click(page, '.inv-sheet [data-sheet-cancel]');
   });
 
   /* 4 · Téléphone : le composer tient dans l’écran ────────────────────────── */
