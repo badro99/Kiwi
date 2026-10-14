@@ -1,16 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · assets/orderpro-menu.js · what the QR page (kiwi-order.html) gave a
  * guest and OrderPro.html did not (spec §21.1, stage 3c: one guest-ordering
- * app). Loaded synchronously before OrderPro's own script, after
- * menu-i18n.js and order-ui-langs.js; hours.js may arrive later (defer), it
- * is only read when a status is asked for.
+ * app). Loaded synchronously before OrderPro's own script. What only some
+ * stores need is fetched by configure(), from the URLs in OrderPro's
+ * <template id="orderpro-lazy">: hours.js when the store publishes opening
+ * hours, menu-i18n.js and order-ui-langs.js when it publishes a language
+ * beyond FR, AR and EN. A store with neither loads none of the three
+ * (about 28 KB gzip, §19's guest budget).
  *
  *   KiwiOrderMenu.strings(I18N)     adds this file's keys to fr/en/ar (the
  *                                   page's own keys win) and one dictionary
  *                                   per order-ui-langs language, over EN
  *   KiwiOrderMenu.configure(res)    the languages this store publishes
  *                                   (/api/menu: menuLangs, menu), its hours
- *                                   and zone; returns the language list
+ *                                   and zone; a promise of the language list,
+ *                                   once what the store needs has loaded
  *   KiwiOrderMenu.langs(), pick(saved), asLang(l), rtl(l), picker(current)
  *   KiwiOrderMenu.tr(entity, lang)  { name, desc } in that language, the
  *                                   merchant's text when stale or missing
@@ -86,8 +90,15 @@
     });
   }
 
+  var I18N_REF = null;
   function strings(I18N) {
-    Object.keys(STR).forEach(function (l) { I18N[l] = Object.assign({}, STR[l], I18N[l] || {}); });
+    I18N_REF = I18N;
+    /* In place: other files (orderpro-guest.js) add their own lines to these
+       same dictionaries. The page's own keys win. */
+    Object.keys(STR).forEach(function (l) {
+      var d = I18N[l] || (I18N[l] = {});
+      Object.keys(STR[l]).forEach(function (k) { if (!(k in d)) d[k] = STR[l][k]; });
+    });
     var extra = root.KiwiOrderUiLangs || {};
     Object.keys(extra).forEach(function (l) {
       if (!I18N[l]) I18N[l] = Object.assign({}, I18N.en, extra[l]);
@@ -106,6 +117,14 @@
     var m = M();
     var nav = root.navigator ? (root.navigator.languages || [root.navigator.language]) : [];
     var a = m ? m.autoPick(list, nav) : '';
+    /* Without menu-i18n.js (a store with the three only): the browser's
+       first language the store has, by its primary subtag. */
+    if (!a) {
+      for (var i = 0; i < nav.length && !a; i++) {
+        var p = String(nav[i] || '').toLowerCase().split('-')[0];
+        if (list.indexOf(p) >= 0) a = p;
+      }
+    }
     return a && list.indexOf(a) >= 0 ? a : (list.indexOf('fr') >= 0 ? 'fr' : list[0]);
   }
   /* The floating picker keeps OrderPro's short labels; each button names its
@@ -143,15 +162,41 @@
      blocked: refusing a guest over a form nobody filled would cost the
      merchant a customer. */
   var hours = null, zone = '';
+  var pending = {};
+  function need(name) {
+    if (pending[name]) return pending[name];
+    var tpl = doc.getElementById('orderpro-lazy');
+    var tag = tpl && tpl.content && tpl.content.querySelector('script[data-lazy="' + name + '"]');
+    var src = tag ? tag.getAttribute('src') : '';
+    pending[name] = !src ? Promise.resolve(false) : new Promise(function (resolve) {
+      var s = doc.createElement('script');
+      s.src = src;
+      s.onload = function () { resolve(true); };
+      s.onerror = function () { resolve(false); };
+      (doc.head || doc.documentElement).appendChild(s);
+      /* A helper that never answers costs the guest a language or a banner,
+         never the menu. */
+      setTimeout(function () { resolve(false); }, 8000);
+    });
+    return pending[name];
+  }
   function configure(res) {
     var menu = res && res.menu;
     hours = (menu && menu.hours) || null;
     zone = res && typeof res.zone === 'string' ? res.zone : '';
-    var m = M();
-    if (m && menu) { try { m.index(menu); } catch (_) {} }
-    list = m ? (res && res.menuLangs === true && menu ? m.langs(menu) : m.LANGS.slice()) : CORE.slice();
-    if (!list.length) list = CORE.slice();
-    return list.slice();
+    var extraLangs = !!(res && res.menuLangs === true && menu && Array.isArray(menu.langs) &&
+      menu.langs.some(function (l) { return CORE.indexOf(String(l)) < 0; }));
+    var jobs = [];
+    if (hours) jobs.push(need('hours'));
+    if (extraLangs) jobs.push(need('menu-i18n'), need('ui-langs'));
+    return Promise.all(jobs).then(function () {
+      if (extraLangs && I18N_REF) strings(I18N_REF);
+      var m = M();
+      if (m && menu) { try { m.index(menu); } catch (_) {} }
+      list = m && extraLangs ? m.langs(menu) : CORE.slice();
+      if (!list.length) list = CORE.slice();
+      return list.slice();
+    });
   }
   function status() {
     var H = root.KiwiHours;

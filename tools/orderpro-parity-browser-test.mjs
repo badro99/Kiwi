@@ -189,6 +189,8 @@ try {
     check(/Valeurs nutritionnelles/.test(facts) && /Sel\s*2\.1 g/.test(facts) && /Gluten/.test(facts) && /Œufs/.test(facts), `tapping the dish opens its facts and allergens (${facts.slice(0, 160)})`);
     check(!(await visible(page, '#custom-add-btn')), 'the sheet has no add button');
     check(!page.seen.includes('/api/order/session'), 'no visit is opened');
+    const lazy = ['/assets/hours.js', '/assets/menu-i18n.js', '/assets/order-ui-langs.js'];
+    check(!lazy.some((p) => page.seen.includes(p)), 'a store without hours or extra languages loads none of their helpers');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
@@ -219,6 +221,7 @@ try {
     await page.tap('#lang-picker .lang-btn[data-lang="en"]');
     check(/Kefta tagine/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)) && await page.evaluate(() => document.documentElement.dir === 'ltr'), 'English: the translation, left to right');
     check(await page.evaluate(() => localStorage.getItem('orderProLang') === 'en'), 'the choice is saved');
+    check(page.seen.includes('/assets/menu-i18n.js') && page.seen.includes('/assets/order-ui-langs.js') && !page.seen.includes('/assets/hours.js'), 'the language helpers load, the hours do not');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 
@@ -244,6 +247,7 @@ try {
     await page.waitForFunction(() => document.getElementById('cart-count').textContent === '1', { timeout: 3000 });
     const btn = await page.$eval('#send-btn', (b) => ({ disabled: b.disabled, title: b.getAttribute('title') || '' }));
     check(btn.disabled && /heures d'ouverture/.test(btn.title), 'a dish in the cart, and the send button stays disabled, saying why');
+    check(page.seen.includes('/assets/hours.js') && !page.seen.includes('/assets/menu-i18n.js'), 'the hours helper loads, the language ones do not');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
   });
 } finally {
