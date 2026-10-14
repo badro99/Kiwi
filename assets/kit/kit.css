@@ -210,5 +210,5 @@ html[data-k-till] .clockin-float:not(.k-shown) { display: none !important; }
 .k-z__s { display: flex; flex-direction: column; gap: 4px; }
 .k-z__l { list-style: none; margin: 0; padding: 0; }
 .k-z__r { display: flex; justify-content: space-between; gap: 16px; min-height: 32px; align-items: center; }
-.k-z__t { font-weight: 600; border-top: 1px solid var(--k-sep, rgba(0,0,0,.08)); }
+.k-z__t { font-weight: 600; border-top: 1px solid var(--k-line); }
 .k-z__ft { display: flex; gap: 12px; justify-content: flex-end; }
