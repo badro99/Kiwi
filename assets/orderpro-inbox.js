@@ -272,6 +272,7 @@
     if (extra && extra.station) body.station = extra.station;
     function warnUnconfirmed(httpStatus) {
       if (status === 'rejected') return; // the refusal button shows its own detailed error
+      if (extra && extra.quiet) return;  // the 2027 till's card says it itself (till-online.js)
       try {
         var stack = document.getElementById('toast-stack');
         if (!stack) return;
@@ -432,6 +433,7 @@
 
   /* ── attention: a new order must not be missable on a busy counter ────── */
   function announce(n) {
+    var kit = kitOnline();
     var chip = document.getElementById('kop-chip');
     if (chip) { chip.classList.add('is-new'); setTimeout(function () { chip.classList.remove('is-new'); }, 6000); }
     try {
@@ -451,6 +453,9 @@
         setTimeout(function () { try { ctx.close(); } catch (_) {} }, 900);
       }
     } catch (_) {}
+    /* The 2027 till draws the arrival itself: its toast, the Takeaway badge's
+     * pop and ring (till-online.js). The tones above stay the same. */
+    if (kit) { try { window.KiwiTillOnline.arrived(n); } catch (_) {} return; }
     try {
       var stack = document.getElementById('toast-stack');
       if (stack) {
@@ -482,6 +487,7 @@
         if (!(age > EXPIRY_WARN_MS)) return;
         state.expiryWarned[id] = 1;
         var left = Math.max(1, Math.round((30 * 60 * 1000 - age) / 60000));
+        if (kitOnline()) { try { window.KiwiTillOnline.expiring(o, left); } catch (_) {} return; }
         var label = (o.number != null ? 'N°' + o.number : 'commande') +
           (o.mode === 'table' && o.table ? ' · Table ' + o.table : ' · À emporter');
         try {
@@ -737,7 +743,18 @@
    * apprendre quand ils sont prêts, même sans Order Pro. */
   function hasKitchen() { return !!window.KiwiCaisseKitchen; }
 
+  /* Under the 2027 till the online orders live in the Takeaway tab
+   * (assets/kit/till-online.js): no chip, and the section is drawn there. */
+  function kitOnline() {
+    try { return !!(window.KiwiTillOnline && window.KiwiTillOnline.active()); } catch (_) { return false; }
+  }
+
   function chip() {
+    if (kitOnline()) {
+      var old = document.getElementById('kop-chip'); if (old) old.remove();
+      try { window.KiwiTillOnline.paint(); } catch (_) {}
+      return;
+    }
     if (!merchant() || !orderProOn()) { var ex = document.getElementById('kop-chip'); if (ex) ex.remove(); return; }
     css();
     var b = document.getElementById('kop-chip');
@@ -899,5 +916,12 @@
     // À emporter ; c'est le même chemin réseau, pas un second à maintenir.
     setStatus: setStatus,
     merchant: merchant,
+    // The 2027 till's Takeaway tab draws the same three lists the overlay
+    // does, with the same order reference; nothing while Order Pro is off.
+    groups: function () {
+      if (!merchant() || !orderProOn()) return { pending: [], accepted: [], ready: [] };
+      return { pending: list('pending'), accepted: list('accepted'), ready: list('ready') };
+    },
+    ref: orderRef,
   };
 })();

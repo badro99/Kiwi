@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=13">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=14">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -175,10 +175,11 @@
         js("assets/kit/controls/switch.js?v=1") +
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
-        js("assets/kit/nav.js?v=1") +
+        js("assets/kit/nav.js?v=2") +
         js("assets/kit/till.js?v=8") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
+        js("assets/kit/till-online.js?v=1") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -5841,7 +5842,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=36" defer></script>
+  <script src="assets/orderpro-inbox.js?v=37" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
   <script src="assets/caisse-menu-availability.js?v=7" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
@@ -10621,6 +10622,19 @@
         say.setAttribute('aria-live', 'polite');
         say.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0';
         document.body.appendChild(say);
+        /* §18.3 (étape 4 (12)) : les commandes en ligne en tête de l'onglet
+           À emporter (assets/kit/till-online.js) ; plus de pastille ni de
+           panneau flottant. */
+        const vrapBoard = $('#vrap-board');
+        if (vrapBoard && window.KiwiTillOnline) {
+          const online = document.createElement('div');
+          online.id = 'kit-online';
+          online.hidden = true;
+          vrapBoard.insertBefore(online, vrapBoard.firstChild);
+          window.KiwiTillOnline.mount(online, { onPaint: () => { if (tillKit) window.KiwiTillFrame.paint({ rail: tillKitRail() }); } });
+          const oldChip = document.getElementById('kop-chip');
+          if (oldChip) oldChip.remove();
+        }
       }
       return tillKit;
     }
@@ -10902,12 +10916,18 @@
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
       const value = kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
       const newTickets = (typeof kdsOrders !== 'undefined' ? kdsOrders : []).filter((o) => o && o.status === 'new').length;
+      /* §18.3 : le badge À emporter compte les commandes en ligne à accepter. */
+      const toAccept = window.KiwiTillOnline ? window.KiwiTillOnline.pending() : 0;
       const items = [
         ['floor', 'table_restaurant', 'till.nav.floor', '.mode-pill[data-mode="salle"]'],
         ['takeaway', 'shopping_bag', 'till.nav.takeaway', '.mode-pill[data-mode="vrap"]'],
         ['waiting', 'schedule', 'till.nav.waiting', '.mode-pill[data-mode="waitlist"]'],
         ['kitchen', 'skillet', 'till.nav.kitchen', '#open-kds'],
-      ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => ({ id, icon, label: kkt(key), badge: id === 'kitchen' && newTickets ? newTickets : 0 }));
+      ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => {
+        const it = { id, icon, label: kkt(key), badge: id === 'kitchen' ? newTickets : id === 'takeaway' ? toAccept : 0 };
+        if (id === 'takeaway' && toAccept) it.a11y = kkt('till.nav.takeaway_a11y', { n: toAccept });
+        return it;
+      });
       items.push({ id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
       const who = (typeof currentCashier !== 'undefined' && currentCashier && currentCashier.name) || '';
       const footer = who ? { cashier: who } : {};

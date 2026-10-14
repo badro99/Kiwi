@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v629';
+var CACHE = 'kiwi-app-v630';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=569',
+  '/assets/dashboard-pwa.js?v=570',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=582',
+  '/assets/caisse-pwa.js?v=583',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=568',
+  '/assets/employee-live.js?v=569',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -288,7 +288,7 @@ var SHELL = [
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
   '/assets/orderpro-guestpage.js?v=1',
-  '/assets/orderpro-inbox.js?v=36',
+  '/assets/orderpro-inbox.js?v=37',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
@@ -309,7 +309,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=13',
+  '/assets/kit/kit.css?v=14',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -348,10 +348,11 @@ var SHELL = [
   '/assets/kit/controls/switch.js?v=1',
   '/assets/kit/elements.js?v=1',
   '/assets/kit/layout.js?v=1',
-  '/assets/kit/nav.js?v=1',
+  '/assets/kit/nav.js?v=2',
   '/assets/kit/till.js?v=8',
   '/assets/kit/till-frame.js?v=5',
   '/assets/kit/till-attendance.js?v=1',
+  '/assets/kit/till-online.js?v=1',
   '/assets/retail-scan.js?v=9',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',

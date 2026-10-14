@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "582",
-    "sha": "6bed480c4dab5cd7"
+    "v": "583",
+    "sha": "e9ab8a295047f129"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "569",
-    "sha": "32c125bfdca50432"
+    "v": "570",
+    "sha": "b5d0abcedfab58f5"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "568",
-    "sha": "249c7aff9afb952b"
+    "v": "569",
+    "sha": "950fc219f8f37032"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -568,8 +568,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "13",
-    "sha": "2ccce76a22677251"
+    "v": "14",
+    "sha": "7c30f6dbebc4b77c"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -588,8 +588,8 @@
     "sha": "950320329471314e"
   },
   "assets/kit/nav.js": {
-    "v": "1",
-    "sha": "ecf368f81b578c93"
+    "v": "2",
+    "sha": "89e1e9b0b9a43062"
   },
   "assets/kit/ordering.css": {
     "v": "2",
@@ -682,6 +682,10 @@
   "assets/kit/till-frame.js": {
     "v": "5",
     "sha": "93dd28be7add5b6a"
+  },
+  "assets/kit/till-online.js": {
+    "v": "1",
+    "sha": "81e71b903dab9ec3"
   },
   "assets/kit/till-pin.js": {
     "v": "2",
@@ -916,8 +920,8 @@
     "sha": "e2ef7115b6745038"
   },
   "assets/orderpro-inbox.js": {
-    "v": "36",
-    "sha": "dcc6329202ab2168"
+    "v": "37",
+    "sha": "00efce001350cb0d"
   },
   "assets/orderpro-menu.js": {
     "v": "6",
