@@ -212,3 +212,48 @@ html[data-k-till] .clockin-float:not(.k-shown) { display: none !important; }
 .k-z__r { display: flex; justify-content: space-between; gap: 16px; min-height: 32px; align-items: center; }
 .k-z__t { font-weight: 600; border-top: 1px solid var(--k-line); }
 .k-z__ft { display: flex; gap: 12px; justify-content: flex-end; }
+
+/* The dashboard's Home on the kit (stage 5 (1), §18.1): the kit draws the
+   range presets, the key figure, its comparisons, the goal line, the tiles and
+   the latest orders over the shipped figures; the shipped nodes stay in the
+   DOM (assets/dateRange.js keeps filling them) and are not drawn. The chart,
+   the payment mix and the insights stay the shipped ones. */
+html[data-k-home] .dash-date-range,
+html[data-k-home] .kpi-band-head,
+html[data-k-home] [data-kpi-band],
+html[data-k-home] .vexel-kpi-section,
+html[data-k-home] .hero-left-today,
+html[data-k-home] .hero-view-toggle,
+html[data-k-home] .vexel-day-goal,
+html[data-k-home] .block:has([data-feed]),
+html[data-k-home] body.design-vexel .vexel-compose > .dash-date-range,
+html[data-k-home] .vexel-revenue-rail { display: none !important; }
+#kit-home { display: flex; flex-direction: column; gap: 16px; padding: 8px 0 24px; color: var(--k-ink-1); }
+#kit-home > k-segmented { max-width: 480px; }
+.k-dh__fig { display: flex; flex-direction: column; gap: 4px; }
+.k-dh__lb, .k-dh__kf, .k-dh__goal, .k-dh__lh { margin: 0; }
+.k-dh__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
+.k-dh__goal { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.k-dh__mark { display: inline-block; width: 96px; height: 4px; border-radius: 2px; background: var(--k-line); overflow: hidden; }
+.k-dh__mark > i { display: block; height: 100%; background: var(--k-accent-ink); }
+.k-dh__cmp { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.k-dh__dl { display: inline-flex; align-items: center; gap: 2px; }
+.k-dh__dl[data-tone="good"] { color: var(--k-accent-ink); }
+.k-dh__dl[data-tone="bad"] { color: var(--k-danger); }
+.k-dh__dl[data-tone="neutral"] { color: var(--k-ink-2); }
+.k-dh__em { padding: 24px 16px; text-align: center; }
+.k-dh__em p { margin: 0; }
+
+/* The type steps for kit content drawn in the light DOM (the till's online
+   orders and Z sheet, the dashboard's Home), the same rules core.js gives
+   every shadow root (§6.2). */
+#kit-home, #kit-online, .k-z { font-family: var(--k-font); }
+.k-display { font-size: var(--k-fs-display); line-height: var(--k-lh-display); font-weight: var(--k-fw-display); letter-spacing: var(--k-track-display); }
+.k-title { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
+.k-heading { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
+.k-body { font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body); letter-spacing: var(--k-track-body); }
+.k-callout { font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout); letter-spacing: var(--k-track-callout); }
+.k-foot { font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote); }
+.k-foot-s { font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong); letter-spacing: var(--k-track-footnote); }
+.k-ink2 { color: var(--k-ink-2); }
+.k-num { font-variant-numeric: tabular-nums; }

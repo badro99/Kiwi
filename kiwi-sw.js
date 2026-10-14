@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v634';
+var CACHE = 'kiwi-app-v636';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=73',
+  '/assets/dateRange.js?v=74',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=574',
+  '/assets/dashboard-pwa.js?v=576',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=587',
+  '/assets/caisse-pwa.js?v=589',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=573',
+  '/assets/employee-live.js?v=575',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -309,7 +309,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=18',
+  '/assets/kit/kit.css?v=19',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -325,8 +325,13 @@ var SHELL = [
   '/assets/kit/pin-flow.js?v=1',
   '/assets/kit/till-pin.js?v=2',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
-  '/assets/icons/material/sprite.dashboard.svg?v=1',
+  '/assets/icons/material/sprite.dashboard.svg?v=2',
   '/assets/kit/dash-pin.js?v=1',
+  '/assets/kit/strings/dashboard.fr.js?v=2',
+  '/assets/kit/strings/dashboard.en.js?v=2',
+  '/assets/kit/strings/dashboard.ar.js?v=2',
+  '/assets/kit/dashboard.js?v=2',
+  '/assets/kit/dash-home.js?v=1',
   /* and the team app's sign-in and clock-in, behind kiwiSkin2027:team. */
   '/assets/icons/material/sprite.team.svg?v=1',
   '/assets/kit/strings/team.fr.js?v=1',

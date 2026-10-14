@@ -44,11 +44,15 @@
     if (polarity === 'up-bad') up = !up;
     return up ? 'good' : 'bad';
   }
-  function deltaHtml(delta, kind, polarity, digits) {
+  /* text: a delta already written by the host (the dashboard's shipped
+     percentages, stage 5), drawn as given; note: what it compares with. */
+  function deltaHtml(delta, kind, polarity, digits, text, note) {
     if (delta == null || !isFinite(delta)) return '';
     var tone = deltaTone(delta, polarity);
     var arrow = delta > 0 ? icon('arrow_upward', 16) : (delta < 0 ? icon('arrow_downward', 16) : '');
-    return '<span class="dl k-foot k-num" data-tone="' + tone + '" data-polarity="' + polarity + '">' + arrow + '<span>' + numHtml(signed(delta, kind, digits)) + '</span></span>';
+    return '<span class="dl k-foot k-num" data-tone="' + tone + '" data-polarity="' + polarity + '">' + arrow + '<span>' +
+      (text != null && text !== '' ? '<bdi dir="ltr">' + esc(text) + '</bdi>' : numHtml(signed(delta, kind, digits))) + '</span>' +
+      (note ? '<span class="k-ink2 nt"> ' + esc(note) + '</span>' : '') + '</span>';
   }
 
   /* ── <k-kpi-grid> .tiles ───────────────────────────────────────────────── */
@@ -84,7 +88,7 @@
             var unit = tl.unit ? '<span class="k-foot k-ink2 un"> ' + esc(tl.unit) + '</span>' : '';
             var foot = st === 'empty' ? '<span class="k-foot k-ink2">' + th('chart.empty') + '</span>'
               : st === 'stale' ? '<span class="k-foot k-ink2 st">' + icon('wifi_off', 16) + th('state.updated', { time: tl.updated || '' }) + '</span>'
-              : deltaHtml(tl.delta, tl.deltaKind, polarityOf(tl), tl.digits);
+              : deltaHtml(tl.delta, tl.deltaKind, polarityOf(tl), tl.digits, tl.deltaText, tl.deltaNote);
             body = label + '<span class="vl"><span class="k-title k-num">' + esc(v) + '</span>' + unit + '</span><span class="ft">' + foot + '</span>';
           }
         }

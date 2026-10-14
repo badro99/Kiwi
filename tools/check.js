@@ -2278,6 +2278,39 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
   }
 }
 
+/* ── 14h · Kiwi 2027, étape 5 : le tableau de bord ───────────────────────
+ * Derrière kiwiSkin2027:dashboard, l'accueil se dessine sur le kit
+ * (assets/kit/dash-home.js) avec les chiffres livrés : dateRange.js publie ce
+ * qu'il vient d'écrire (KiwiDateRange.home(), kiwi:home-model). Décision du
+ * propriétaire, 2026-10-15 : les chiffres livrés d'abord, le registre plus
+ * tard (§21.2) ; la démo garde ses générateurs.
+ *   dash-home-browser-test              drapeau éteint, rien n'est chargé ; allumé, le
+ *                                       chiffre clé, l'objectif, la comparaison, les
+ *                                       tuiles et les commandes sont ceux du rendu livré ;
+ *                                       Hier déplace la période livrée ; une tuile et une
+ *                                       commande ouvrent les livrées */
+section('Kiwi 2027 · le tableau de bord sur le kit');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['dash-home-browser-test.mjs', 'dash-home-browser-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {
