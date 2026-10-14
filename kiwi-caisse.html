@@ -5058,7 +5058,10 @@
     .kit-htg-ct { font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1; padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--ink-2); }
     .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: var(--inverse-ink); }
     .kit-cols { display: flex; gap: 14px; align-items: flex-start; }
-    .kit-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    /* padding: 0, comme les colonnes de kiwi-cuisine.html : les deux colonnes
+       sont des <section>, et la règle nue `section { padding: 96px 0 }` de
+       assets/tokens.css (pages vitrines) leur volait 96 px en haut et en bas. */
+    .kit-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 0; }
     .kit-col-new { width: 300px; flex-shrink: 0; }
     .kit-col-cooking { flex: 1; min-width: 0; }
     .kit-col-head { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding: 1px 3px; }
