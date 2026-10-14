@@ -41,7 +41,9 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 // Des noms relatifs, comme le vrai check.js : un chemin absolu Windows (C:\\…)
 // échappe à la recherche de check-guard, et rien ne tournerait en parallèle.
-const files = ${JSON.stringify([...slow.slice(0, 2), red, ...slow.slice(2)].map((f) => path.basename(f)))}.map((n) => path.join(__dirname, n));
+// Le dossier est celui que check-guard a relevé (argv), pas __dirname : sur
+// macOS /var/… est /private/var/…, et les deux clés ne se rencontreraient pas.
+const files = ${JSON.stringify([...slow.slice(0, 2), red, ...slow.slice(2)].map((f) => path.basename(f)))}.map((n) => path.join(path.dirname(path.resolve(process.argv[1])), n));
 let failures = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [f], { encoding: 'utf8' });
