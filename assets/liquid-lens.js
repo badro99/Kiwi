@@ -20,6 +20,15 @@
  * Brand spec (see brand.html · 07 MOTION):
  *   spring  cubic-bezier(0.34, 1.45, 0.5, 1) · 310 ms
  *   stretch phase ~115 ms, then settle
+ *
+ * Design 2027 (§20.5): this file is becoming an ADAPTER. On a page that loads
+ * assets/kit/lens.js first (the six shells: dashboard, caisse, admin,
+ * comptable, brand, tickets), the lens itself, its two-phase move on
+ * --k-spring over --k-dur-4 and its reduced-motion fade, is the kit's, and
+ * this file only says which rows are tracks (GROUPS) and how each is skinned.
+ * On a page that does not (the public guides, a test fixture), nothing
+ * changes: the original lens below runs exactly as before. Stage 7 deletes
+ * this file once every page loads the kit.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
@@ -113,8 +122,18 @@
     document.head.appendChild(st);
   }
 
+  /* The kit's lens, when the page loaded it before this file (deferred
+     scripts run in document order). */
+  var KIT = !!(window.KiwiLens && typeof window.KiwiLens.attach === 'function' && typeof window.KiwiLens.scanner === 'function');
+
   function attach(container, cfg) {
     if (container.__kwLens) return;
+    if (KIT) {
+      container.__kwLens = { place: function () {} };
+      container.setAttribute('data-kw-lens', cfg.skin);
+      window.KiwiLens.attach(container, { item: cfg.item, active: cfg.active, className: 'kw-lens kw-lens--' + cfg.skin });
+      return;
+    }
     var lens = document.createElement('span');
     lens.className = 'kw-lens kw-lens--' + cfg.skin;
     lens.setAttribute('aria-hidden', 'true');
@@ -190,7 +209,8 @@
 
   function init() {
     injectCss();
-    scan(document);
+    if (KIT) window.KiwiLens.scanner(scan);
+    else scan(document);
     /* Late-mounted groups (drawer tab rows, re-rendered sections). */
     var queued = false;
     new MutationObserver(function (muts) {
@@ -212,5 +232,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  window.KiwiLens = { rescan: function () { scan(document); }, refresh: function () { placeAll(true); } };
+  if (!KIT) window.KiwiLens = { rescan: function () { scan(document); }, refresh: function () { placeAll(true); } };
 })();

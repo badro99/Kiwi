@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v615';
+var CACHE = 'kiwi-app-v616';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -143,7 +143,9 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=73',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=7',
+  '/assets/kit/motion.js?v=1',
+  '/assets/kit/lens.js?v=1',
+  '/assets/liquid-lens.js?v=8',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
   '/assets/account.js?v=30',
@@ -157,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=555',
+  '/assets/dashboard-pwa.js?v=556',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=568',
+  '/assets/caisse-pwa.js?v=569',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -267,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=554',
+  '/assets/employee-live.js?v=555',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -355,7 +357,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=9',
   '/assets/pressing-caisse.js?v=45',
   '/assets/pressing-caisse.css?v=45',
-  '/assets/material-icons.js?v=2',
+  '/assets/material-icons.js?v=3',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
      woff2 qu'elle nomme ne sont pas listés ici : un fichier à ?v= du SHELL doit

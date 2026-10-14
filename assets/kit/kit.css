@@ -1,0 +1,102 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · assets/kit/kit.css · the light-DOM side of the kit (spec §20.2,
+ * §20.6, §10.1, §10.22).
+ *
+ * Loaded after tokens-2027.css by a page that adopts the kit (stage 2: the
+ * gallery, kit.html, only). Three things live here and nothing else:
+ *   1. component tokens: values a component reads that differ by theme but
+ *      are not design tokens (the item fill, the chart's now-dot);
+ *   2. the box every kit element keeps before it upgrades (:not(:defined)),
+ *      so a slow script never shifts the page when the element arrives;
+ *   3. the two light-DOM elements, <k-figure> and <k-icon>, which have no
+ *      root of their own.
+ * Every colour is a token; kit-lint holds this file like any other.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1 · component tokens, the four theme rules of tokens-2027.css (§20.7) */
+:root {
+  --k-item-fill: var(--k-surface-2);
+  --k-chart-dot: var(--k-accent);
+}
+body[data-vexel-mode="light"] {
+  --k-item-fill: var(--k-surface-2);
+  --k-chart-dot: var(--k-accent);
+}
+:root[data-theme="dark"],
+body[data-vexel-mode="dark"] {
+  --k-item-fill: var(--k-surface-3);
+  --k-chart-dot: var(--k-accent-ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --k-item-fill: var(--k-surface-3);
+    --k-chart-dot: var(--k-accent-ink);
+  }
+}
+
+/* 2 · before upgrade: the element holds its size and paints nothing */
+k-button:not(:defined) { display: inline-block; min-height: 44px; min-width: 88px; }
+k-switch:not(:defined) { display: block; min-height: 44px; }
+k-stepper:not(:defined) { display: inline-block; min-height: 44px; min-width: 136px; }
+k-chips:not(:defined) { display: block; min-height: 44px; }
+k-field:not(:defined) { display: block; min-height: 72px; }
+k-banner:not(:defined) { display: block; min-height: 52px; }
+k-badge:not(:defined) { display: inline-block; min-width: 20px; min-height: 20px; }
+k-avatar:not(:defined) { display: inline-block; width: 40px; height: 40px; }
+k-avatar[size="44"]:not(:defined) { width: 44px; height: 44px; }
+k-avatar[size="56"]:not(:defined) { width: 56px; height: 56px; }
+k-spinner:not(:defined) { display: inline-block; width: 20px; height: 20px; }
+k-skeleton:not(:defined),
+k-empty:not(:defined) { display: block; min-height: 120px; }
+k-list:not(:defined) { display: block; min-height: 52px; }
+k-page-header:not(:defined) { display: block; min-height: 56px; }
+k-segmented:not(:defined) { display: block; min-height: 44px; }
+k-segmented[size="compact"]:not(:defined) { min-height: 36px; }
+k-segmented[size="kitchen"]:not(:defined) { min-height: 56px; }
+k-tabbar:not(:defined) { display: block; min-height: 62px; }
+k-rail:not(:defined) { display: block; width: 88px; }
+k-sidebar:not(:defined) { display: block; width: 260px; }
+k-sidebar[collapsed]:not(:defined) { width: 72px; }
+k-date-button:not(:defined) { display: inline-block; min-height: 44px; min-width: 120px; }
+k-range-picker:not(:defined) { display: block; min-height: 400px; }
+k-kpi-grid:not(:defined) { display: block; min-height: 108px; }
+k-chart:not(:defined) { display: block; min-height: 120px; }
+k-compare:not(:defined) { display: block; min-height: 44px; }
+k-data-table:not(:defined) { display: block; min-height: 132px; }
+k-pin-pad:not(:defined) { display: block; min-height: 520px; }
+k-keypad:not(:defined) { display: block; min-height: 312px; }
+k-menu-grid:not(:defined) { display: block; min-height: 240px; }
+k-bill:not(:defined),
+k-pay:not(:defined),
+k-cash-count:not(:defined),
+k-split:not(:defined),
+k-discount:not(:defined),
+k-options:not(:defined) { display: block; min-height: 320px; }
+k-bill-bar:not(:defined) { display: block; min-height: 56px; }
+k-code-display:not(:defined) { display: block; min-height: 160px; }
+k-lane:not(:defined) { display: block; min-height: 300px; }
+k-sheet:not(:defined),
+k-popover:not(:defined),
+k-tooltip:not(:defined),
+k-toast:not(:defined) { display: none; }
+
+/* 3 · light-DOM elements */
+k-icon { display: inline-flex; width: 1em; height: 1em; line-height: 0; color: inherit; }
+k-icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+k-figure { display: inline-flex; align-items: baseline; font-variant-numeric: tabular-nums; white-space: nowrap; }
+k-figure .k-fig__n { display: inline-flex; overflow: hidden; }
+k-figure .k-fig__u { color: var(--k-ink-2); font-size: var(--k-fs-footnote); }
+k-figure .k-fig__d { display: inline-block; }
+k-figure .k-fig__d--from-below { animation: k-fig-up var(--k-dur-4) var(--k-spring); }
+k-figure .k-fig__d--from-above { animation: k-fig-down var(--k-dur-4) var(--k-spring); }
+k-figure .k-fig__sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+@keyframes k-fig-up { from { transform: translateY(0.6em); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes k-fig-down { from { transform: translateY(-0.6em); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  k-figure .k-fig__d--from-below,
+  k-figure .k-fig__d--from-above { animation: none; }
+}

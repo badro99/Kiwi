@@ -23,6 +23,8 @@
   "range.days_run": "Les journées vont de {start} à {end}.",
   "range.days_calendar": "Les journées suivent le calendrier.",
   "range.end_before_start": "La date de fin précède la date de début.",
+  "range.prev_month": "Mois précédent",
+  "range.next_month": "Mois suivant",
   "range.in_range": "dans la période",
   "ia.today": "Aujourd'hui",
   "ia.sell": "Vente",

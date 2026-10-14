@@ -23,6 +23,8 @@
   "range.days_run": "Days run {start} to {end}.",
   "range.days_calendar": "Days follow the calendar.",
   "range.end_before_start": "The end date is before the start date.",
+  "range.prev_month": "Previous month",
+  "range.next_month": "Next month",
   "range.in_range": "in range",
   "ia.today": "Today",
   "ia.sell": "Sell",

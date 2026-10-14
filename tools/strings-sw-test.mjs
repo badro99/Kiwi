@@ -35,6 +35,12 @@ const section = (t) => console.log('\n■ ' + t);
 const KIT = 'assets/kit/';
 const STRINGS_JS = 'assets/kit/strings.js';
 const BUNDLES = BUNDLE_SURFACES.flatMap((s) => LANGS.map((l) => `assets/kit/strings/${s}.${l}.js`));
+/* Pages that load the kit but are no shell of the PWA: the stage-2 gallery
+ * (noindex, adopted by no product surface). Nothing of theirs is precached
+ * and every URL they load carries its stamp, so the SW can never pair a new
+ * kit with old strings for them; precaching 21 bundles for every merchant to
+ * satisfy the rule would change shipped install behaviour (§21.1, stage 2). */
+export const NOT_SHELLS = new Set(['kit.html']);
 
 /* La règle, sur des données : sites = Map(asset → [{file, kind, stamp}]), exists = Set. */
 export function audit(sites, exists, manifest, shaOf) {
@@ -52,7 +58,7 @@ export function audit(sites, exists, manifest, shaOf) {
     for (const a of [...BUNDLES, STRINGS_JS]) if (!inSw.has(a)) out.push(`le SW précache des chaînes mais pas ${a} (les trois langues partent ensemble)`);
   }
   const shells = new Map();
-  for (const a of kitAssets) for (const s of sites.get(a)) if (s.kind === 'shell') {
+  for (const a of kitAssets) for (const s of sites.get(a)) if (s.kind === 'shell' && !NOT_SHELLS.has(s.file)) {
     if (!shells.has(s.file)) shells.set(s.file, new Set());
     shells.get(s.file).add(a);
   }
@@ -90,6 +96,7 @@ section('Estampilles : une génération, shell et SW d\'accord');
   const manifest = S.readManifest();
   const found = audit(sites, exists, manifest, S.sha);
   found.forEach(bad);
+  for (const f of NOT_SHELLS) if (fs.existsSync(path.join(ROOT, f))) note(`${f} charge le kit sans être un shell de la PWA : règles de présence SW non appliquées (galerie, rien n'y est précaché)`);
   const kitSeen = [...sites.keys()].filter((a) => a.startsWith(KIT));
   if (!found.length) ok(`${kitSeen.length} fichier(s) du kit référencé(s), aucun écart`);
   if (!kitSeen.length) note('stade 1 : aucun shell ni le SW n\'adopte encore le kit ni les paquets ; les règles de présence sont sans objet jusqu\'au stade 2');

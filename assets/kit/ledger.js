@@ -46,6 +46,15 @@
     revenue: 2, orders: 0, avg_ticket: 2, refunds: 2,
     card_revenue: 2, cash_revenue: 2, card_share: 0, tips: 2,
   };
+  /* §10.21 Polarity: which way is good. The tile's colour follows this, never
+     the sign; kpi-polarity-test holds the tiles to it. The figures the ledger
+     does not compute yet are named here too, so every tile has one answer. */
+  var POLARITY = {
+    revenue: 'up-good', orders: 'up-good', avg_ticket: 'up-good', tips: 'up-good',
+    returning: 'up-good', margin: 'up-good',
+    refunds: 'up-bad', cancelled: 'up-bad', voided: 'up-bad', discounts: 'up-bad', cash_difference: 'up-bad',
+    card_revenue: 'neutral', cash_revenue: 'neutral', card_share: 'neutral', cash_share: 'neutral',
+  };
 
   /* ── The business day, as the server computes it ───────────────────────── */
 
@@ -390,6 +399,7 @@
     var api = {
       configure: configure, get: get, compare: compare, reader: reader, shadow: shadow,
       keys: function () { return Object.keys(KEYS); },
+      polarity: function (key) { return POLARITY[key] || null; },
       surfaces: function () { return SURFACES.slice(); },
       create: create,
       /* The server's own arithmetic, exposed so the tests can hold the two together. */

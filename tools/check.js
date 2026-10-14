@@ -1987,6 +1987,51 @@ section('Kiwi 2027 · jetons (token-contrast-test, type-steps-lint, kit-lint, ca
   }
 }
 
+/* ── 14c · Kiwi 2027, étape 2 : le kit ────────────────────────────────────
+ * Les composants de §10 et les modules de contrôle de §20.6, la galerie
+ * kit.html, que rien d'autre n'adopte encore (§21.1). kit-lint (plus haut)
+ * porte aussi les règles K9 à K13 de l'étape 2.
+ *   kit-size-test             §19 : cœur JS ≤ 35 KB, sprite par surface ≤ 25 KB
+ *   kit-gallery-browser-test  la galerie : clair/sombre × EN/AR × 390/1280, sans
+ *                             erreur ni débordement, et ses captures de référence
+ *   kit-in-host-browser-test  un élément du kit se peint pareil dans une page
+ *                             hostile, dans les deux thèmes (§20.2, §20.7)
+ *   haptics-map-browser-test  la carte de §15, contrôle par contrôle
+ *   motion-park-browser-test  mouvement réduit : tout s'arrête sur une vraie image (§14.5)
+ *   kpi-polarity-browser-test la couleur d'un écart suit la polarité du KPI (§10.21)
+ *   kit-bidi-browser-test     en arabe, chaque chiffre se peint dans le bon sens (§6.3, §9.6)
+ *   kit-budget-browser-test   recensement des racines (§20.6), CSS des racines ≤ 18 KB,
+ *                             et le menu de 200 tuiles en proxy Chromium (l'iPhone 6s
+ *                             sous iOS 15.8 reste à mesurer par le banc de capture) */
+section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarité, bidi, budget)');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['kit-size-test.js', 'kit-size-test'],
+    ['kit-gallery-browser-test.mjs', 'kit-gallery-browser-test'],
+    ['kit-in-host-browser-test.mjs', 'kit-in-host-browser-test'],
+    ['haptics-map-browser-test.mjs', 'haptics-map-browser-test'],
+    ['motion-park-browser-test.mjs', 'motion-park-browser-test'],
+    ['kpi-polarity-browser-test.mjs', 'kpi-polarity-browser-test'],
+    ['kit-bidi-browser-test.mjs', 'kit-bidi-browser-test'],
+    ['kit-budget-browser-test.mjs', 'kit-budget-browser-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => l.startsWith('✓')).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {

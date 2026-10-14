@@ -11,6 +11,7 @@
   "options.optional": "Facultatif · jusqu'à {n}",
   "options.add": "Ajouter · {amount}",
   "options.missing": "Choisissez {group} pour continuer.",
+  "options.note": "Note pour la cuisine",
   "bill.send": "Envoyer en cuisine · {n}",
   "bill.take_payment": "Encaisser {amount}",
   "bill.not_sent": "Non envoyé · {n}",

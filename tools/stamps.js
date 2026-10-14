@@ -64,14 +64,15 @@ function dispatchRevs() {
 
 /* Les types d'asset estampillés : les scripts, les feuilles, et (étape 1 du
    design 2027, §21.3) les fontes, pour qu'un woff2 se bumpe comme un script.
-   §21.3 ajoute aussi `svg` (le sprite d'icônes). Il n'est PAS ajouté ici : le
-   scanner verrait alors assets/kiwi-favicon-new.svg, déjà estampillé à ?v=3 dans
-   la caisse et ?v=2 dans la salle, et le seul moyen de les accorder avec
-   bump-stamp réécrirait ~25 pages sans rapport (la première estampille se pose
-   sur chaque référence nue). À faire avec le sprite. */
+   §21.3 ajoute aussi `svg`, mais SEULEMENT les sprites d'icônes
+   (assets/icons/material/sprite.<surface>.svg, étape 2) : un `svg` générique
+   ferait voir au scanner assets/kiwi-favicon-new.svg, déjà estampillé à ?v=3
+   dans la caisse et ?v=2 dans la salle, et le seul moyen de les accorder avec
+   bump-stamp réécrirait ~25 pages sans rapport. */
 const ASSET_EXT = '(?:js|css|woff2)';
-const SHELL_RE = () => new RegExp(`(assets\\/[A-Za-z0-9._/-]+?\\.${ASSET_EXT})\\?v=([0-9]+)`, 'g');
-const SW_RE = () => new RegExp(`'\\/(assets\\/[A-Za-z0-9._/-]+?\\.${ASSET_EXT})\\?v=([0-9]+)'`, 'g');
+const ASSET_PATH = `assets\\/(?:[A-Za-z0-9._/-]+?\\.${ASSET_EXT}|icons\\/material\\/sprite\\.[a-z0-9]+\\.svg)`;
+const SHELL_RE = () => new RegExp(`(${ASSET_PATH})\\?v=([0-9]+)`, 'g');
+const SW_RE = () => new RegExp(`'\\/(${ASSET_PATH})\\?v=([0-9]+)'`, 'g');
 
 /* Les pages HTML qui ne sont pas des coquilles applicatives (guides, pages
    légales, landings Next, modèles, fixtures d'outils) mais qui chargent des

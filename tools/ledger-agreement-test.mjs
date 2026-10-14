@@ -380,12 +380,15 @@ section('assets/kit/ledger.js');
   check(!code.split('\n').some((l) => /cutoff/i.test(l) && (/cutoff\s*(=|:|\?\?|\|\|)\s*\d/i.test(l) || /(\?\?|\|\|)\s*\d+\s*[;,)]/.test(l))), 'no literal cutoff default (only assets/kit/business-day.js holds it, §17.1)');
   check(!/Africa\/Casablanca/.test(code), 'no default zone');
   check(!/Math\.random|Date\.now\(\)\s*[-+*]/.test(code), 'no randomness');
-  /* Adopted by nothing: no shell, no shipped script, no service worker mentions it. */
+  /* Adopted by no product surface: no shell, no shipped script, no service
+     worker mentions it. Stage 2's gallery (kit.html, noindex) is the one
+     page allowed to load it, to show the KPI tiles' polarity (§21.1: "Adopts
+     it: Gallery only"). */
   const hosts = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && !/ \d+\.html$/.test(f)).concat(['kiwi-sw.js'])
     .concat(fs.readdirSync(path.join(ROOT, 'assets')).filter((f) => f.endsWith('.js') && !/ \d+\.js$/.test(f)).map((f) => 'assets/' + f));
   const users = hosts.filter((f) => { try { return /kit\/ledger\.js|KiwiLedger/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')); } catch { return false; } });
-  eq(users, [], 'KiwiLedger is adopted by nothing in stage 1');
-  done('read-only, silent, no default of its own, adopted by nothing');
+  eq(users.filter((f) => f !== 'kit.html'), [], 'KiwiLedger is adopted by no product surface (the stage-2 gallery aside)');
+  done('read-only, silent, no default of its own, adopted by no product surface');
 }
 
 /* ── 10 · The comparison can go red ───────────────────────────────────────── */

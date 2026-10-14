@@ -23,6 +23,8 @@
   "range.days_run": "يمتد يوم العمل من {start} إلى {end}.",
   "range.days_calendar": "تتبع الأيام التقويم.",
   "range.end_before_start": "تاريخ النهاية يسبق تاريخ البداية.",
+  "range.prev_month": "الشهر السابق",
+  "range.next_month": "الشهر التالي",
   "range.in_range": "ضمن الفترة",
   "ia.today": "اليوم",
   "ia.sell": "البيع",

@@ -11,6 +11,7 @@
   "options.optional": "Optional · up to {n}",
   "options.add": "Add to bill · {amount}",
   "options.missing": "Choose {group} to continue.",
+  "options.note": "Note for the kitchen",
   "bill.send": "Send {n} to kitchen",
   "bill.take_payment": "Charge {amount}",
   "bill.not_sent": "Not sent · {n}",

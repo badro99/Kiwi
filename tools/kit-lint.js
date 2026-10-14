@@ -24,11 +24,23 @@
  *   K8  une affectation de window.KiwiLens hors de lens.js : un seul objet,
  *       quatre méthodes, étendu par Object.assign (§20.5).
  *
- * Ce que le spec confie aussi à kit-lint et qui ne peut exister qu'avec des
- * composants (étape 2) n'est PAS ici, et le dit : conteneurs de texte à
- * hauteur fixe, placeholders `:not(:defined)` par taille, `data-action` sur un
- * hôte, noms d'action sans `k.`, tablist hors kit dans une surface adoptée.
- * Ils entreront avec le premier composant, dans CE fichier.
+ * Étape 2 (composants) :
+ *   K9  `data-action` dans le kit : un hôte ne porte jamais l'attribut du
+ *       routeur historique, le kit parle par kiwi:action (§20.3).
+ *   K10 un nom d'action hors de k.<composant>.<verbe> : le verbe d'un
+ *       this.emit('…') en kebab minuscule, un nom écrit en entier commence
+ *       par « k. », et seul core.js fabrique l'événement kiwi:action.
+ *   K11 customElements.define hors de l'aide define() de core.js, sauf les
+ *       deux éléments sans racine (k-icon, k-figure, elements.js) : chaque
+ *       racine passe par le contrat d'hôte (§20.2).
+ *   K12 un élément défini sans placeholder `:not(:defined)` dans kit.css :
+ *       avant l'upgrade, la page réserve déjà sa place (§20.6, pas de saut).
+ *   K13 un conteneur de texte à hauteur fixe : une règle qui pose une
+ *       taille de texte et un `height` en longueur fixe coupe le texte dès
+ *       que Dynamic Type ou l'arabe l'allongent ; min-height, jamais height.
+ *
+ * Reste à l'étape 3, parce qu'aucune surface n'adopte encore le kit : un
+ * tablist hors kit dans une surface adoptée.
  *
  * Des contrôles négatifs finissent chaque passe : un lint qui ne sait pas
  * échouer ne garde rien.
@@ -67,6 +79,12 @@ function lintSheet(css, file, { tokensFile = false, line0 = 0 } = {}) {
       out.push(`K2 ${where(d.line)} · font: ${d.value} : pas de px, utiliser var(--k-fs-*)`);
     }
   }
+  /* K13 · texte dans une boîte à hauteur fixe. */
+  for (const r of sheet.rules) {
+    const h = r.decls.find((d) => d.prop === 'height' && /^[\d.]+(?:px|rem|em|pt)$/.test(d.value.trim()));
+    const txt = r.decls.some((d) => d.prop === 'font-size' || d.prop === 'font' || d.prop === '-webkit-line-clamp');
+    if (h && txt) out.push(`K13 ${where(h.line)} · ${r.selector} : height: ${h.value} sur une règle de texte, utiliser min-height`);
+  }
   for (const n of sheet.nested) out.push(`K4 ${where(n.line)} · règle imbriquée « ${n.selector} » : le kit n'emploie pas le CSS nesting`);
   return out;
 }
@@ -104,6 +122,40 @@ function lintScript(js, file) {
     const re8 = /\bwindow\s*\.\s*KiwiLens\s*=(?!=)|Object\.assign\(\s*window\s*\.\s*KiwiLens\b|\bglobalThis\s*\.\s*KiwiLens\s*=(?!=)/g;
     while ((m = re8.exec(src))) out.push(`K8 ${file}:${lineOf(m.index)} · affectation de window.KiwiLens hors de lens.js (§20.5)`);
   }
+
+  /* K9 · data-action, l'attribut du routeur historique. */
+  const re9 = /\bdata-action\b|dataset\s*\.\s*action\b/g;
+  while ((m = re9.exec(src))) out.push(`K9 ${file}:${lineOf(m.index)} · « ${m[0]} » : le kit ne porte pas data-action, il émet kiwi:action (§20.3)`);
+
+  /* K10 · noms d'action. */
+  const re10 = /\.emit\(\s*(['"])([^'"]*)\1/g;
+  while ((m = re10.exec(src))) if (!/^[a-z][a-z0-9-]*$/.test(m[2])) out.push(`K10 ${file}:${lineOf(m.index)} · verbe « ${m[2]} » : k.<composant>.<verbe>, le verbe en kebab minuscule`);
+  const re10b = /\bKiwiActions\s*\.\s*(?:on|off)\(\s*(['"])([^'"]*)\1|\bA\s*\.\s*(?:on|off)\(\s*(['"])([^'"]*)\3/g;
+  while ((m = re10b.exec(src))) { const n = m[2] || m[4]; if (!/^k\.[a-z0-9-]+\.[a-z0-9-]+$/.test(n)) out.push(`K10 ${file}:${lineOf(m.index)} · action « ${n} » hors de k.<composant>.<verbe>`); }
+  if (base !== 'core.js') {
+    const re10c = /new\s+CustomEvent\(\s*['"]kiwi:action['"]/g;
+    while ((m = re10c.exec(src))) out.push(`K10 ${file}:${lineOf(m.index)} · kiwi:action fabriqué hors de core.js : passer par emit()`);
+  }
+
+  /* K11 · customElements.define. */
+  const re11 = /customElements\s*\.\s*define\(\s*([^,)]*)/g;
+  while ((m = re11.exec(src))) {
+    const arg = m[1].trim();
+    const ok = (base === 'core.js' && arg === 'tag') || (base === 'elements.js' && /^['"]k-(?:icon|figure)['"]$/.test(arg));
+    if (!ok) out.push(`K11 ${file}:${lineOf(m.index)} · customElements.define(${arg}) hors de define() : chaque racine passe par le contrat d'hôte (§20.2)`);
+  }
+  return out;
+}
+
+/* K12 · chaque élément défini a son placeholder dans kit.css. */
+function lintPlaceholders(scripts, kitCss, cssFile) {
+  const out = [];
+  const have = new Set([...kitCss.matchAll(/(k-[a-z-]+)(?:\[[^\]]*\])?:not\(:defined\)/g)].map((x) => x[1]));
+  for (const [file, js] of scripts) {
+    for (const m of js.matchAll(/\bK\s*\.\s*define\(\s*['"](k-[a-z-]+)['"]/g)) {
+      if (!have.has(m[1])) out.push(`K12 ${file} · ${m[1]} n'a pas de placeholder ${m[1]}:not(:defined) dans ${cssFile}`);
+    }
+  }
   return out;
 }
 
@@ -115,6 +167,11 @@ function lintKit() {
     const txt = fs.readFileSync(f, 'utf8');
     if (f.endsWith('.css')) failures.push(...lintSheet(txt, rel, { tokensFile: path.basename(f) === 'tokens-2027.css' }));
     else failures.push(...lintScript(txt, rel));
+  }
+  const kitCss = path.join(ROOT, 'assets/kit/kit.css');
+  if (fs.existsSync(kitCss)) {
+    const scripts = files.filter((f) => /\.m?js$/.test(f)).map((f) => [path.relative(ROOT, f), stripJsComments(fs.readFileSync(f, 'utf8'))]);
+    failures.push(...lintPlaceholders(scripts, fs.readFileSync(kitCss, 'utf8'), 'assets/kit/kit.css'));
   }
   return { failures, files: files.length };
 }
@@ -157,6 +214,25 @@ function selfTest() {
   fail('cutoff = 5 ailleurs', lintScript('const cutoff = cfg.businessCutoff ?? 5;', '/x/assets/kit/ledger.js'), 'K7');
   fail('window.KiwiLens = hors de lens.js', lintScript('window.KiwiLens = { rescan() {} };', '/x/assets/kit/segment.js'), 'K8');
   fail('Object.assign(window.KiwiLens…) hors de lens.js', lintScript('Object.assign(window.KiwiLens, { a: 1 });', '/x/assets/kit/segment.js'), 'K8');
+
+  /* Étape 2 */
+  pass('emit et actions conformes', lintScript("this.emit('show-data', null); KiwiActions.on('k.chart.show-data', f); A.on('k.bill.pay', g);", '/x/assets/kit/dashboard.js'));
+  pass('core.js fabrique kiwi:action et définit', lintScript("host.dispatchEvent(new CustomEvent('kiwi:action', {})); root.customElements.define(tag, Klass);", '/x/assets/kit/core.js'));
+  pass('les deux éléments sans racine', lintScript("customElements.define('k-icon', KIcon); customElements.define('k-figure', KFigure);", '/x/assets/kit/elements.js'));
+  pass('min-height sur du texte', lintSheet('.a{font-size:var(--k-fs-body);min-height:44px}', 'ok.css'));
+  pass('height fixe sans texte', lintSheet('.dot{width:8px;height:8px}', 'ok.css'));
+  fail('data-action dans un gabarit', lintScript("const h = '<button data-action=\"pay\">';", '/x/assets/kit/till.js'), 'K9');
+  fail('dataset.action', lintScript('el.dataset.action = "pay";', '/x/assets/kit/till.js'), 'K9');
+  fail('verbe en camelCase', lintScript("this.emit('showData');", '/x/assets/kit/dashboard.js'), 'K10');
+  fail('verbe avec un point', lintScript("this.emit('k.chart.open');", '/x/assets/kit/dashboard.js'), 'K10');
+  fail('action sans k.', lintScript("KiwiActions.on('chart.open', f);", '/x/assets/kit/gallery.js'), 'K10');
+  fail('kiwi:action fabriqué ailleurs', lintScript("el.dispatchEvent(new CustomEvent('kiwi:action', {}));", '/x/assets/kit/till.js'), 'K10');
+  fail('define hors de core', lintScript("customElements.define('k-x', X);", '/x/assets/kit/till.js'), 'K11');
+  fail('define d\'un élément à racine dans elements.js', lintScript("customElements.define('k-button', X);", '/x/assets/kit/elements.js'), 'K11');
+  fail('élément sans placeholder', lintPlaceholders([['till.js', "K.define('k-new', X, {});"]], 'k-old:not(:defined){display:block}', 'kit.css'), 'K12');
+  pass('placeholder par attribut compte', lintPlaceholders([['x.js', "K.define('k-avatar', X, {});"]], 'k-avatar[size="44"]:not(:defined){width:44px}', 'kit.css'));
+  fail('texte à hauteur fixe', lintSheet('.t{font-size:var(--k-fs-body);height:44px}', 'bad.css'), 'K13');
+  fail('ligne bornée à hauteur fixe', lintSheet('.t{-webkit-line-clamp:2;height:2.5rem}', 'bad.css'), 'K13');
   return bad;
 }
 
@@ -169,7 +245,7 @@ if (require.main === module) {
     problems.slice(0, 60).forEach((p) => console.error('  · ' + p));
     process.exit(1);
   }
-  console.log(`✓ kit-lint · ${r.files} fichier(s) du kit, 8 règles de l'étape 1, contrôles négatifs vus`);
+  console.log(`✓ kit-lint · ${r.files} fichier(s) du kit, 13 règles (étapes 1 et 2), contrôles négatifs vus`);
 }
 
-module.exports = { lintSheet, lintScript, lintKit, selfTest };
+module.exports = { lintSheet, lintScript, lintPlaceholders, lintKit, selfTest };

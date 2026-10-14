@@ -11,6 +11,7 @@
   "options.optional": "اختياري · حتى {n}",
   "options.add": "أضف إلى الحساب · {amount}",
   "options.missing": "اختر {group} للمتابعة.",
+  "options.note": "ملاحظة للمطبخ",
   "bill.send": "أرسل إلى المطبخ · {n}",
   "bill.take_payment": "حصّل {amount}",
   "bill.not_sent": "لم يُرسَل · {n}",

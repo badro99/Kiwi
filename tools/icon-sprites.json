@@ -2,18 +2,67 @@
   "note": "Which icons each surface's sprite holds (design 2027 §8). Run node tools/build-icon-sprite.js after editing. An icon is `name` (Outlined 400, optical size 24) or `name.style.size` (style default|wght500, size 20|24|40); a variant not vendored yet draws the default 24 glyph, which icon-vendored-test accepts. `scan` lists folders read for literal <k-icon name=\"...\"> so the kit's own icons need no hand-kept list. No shell references a sprite yet (stage 1 adopts nothing); the first reference follows §21.3.",
   "surfaces": {
     "kit": {
-      "note": "Seed at stage 1: the icons the direction's preview frames draw (docs/specs/kiwi-design-2027-preview.html). Stage 2 adds the kit folder to `scan` and the sprite grows with it.",
+      "note": "Seed at stage 1 from the preview frames; stage 2 adds every icon the kit's components draw (assets/kit/*.js, through KiwiKit.icon) and scans assets/kit for literal <k-icon name> markup.",
       "icons": [
-        "arrow_downward", "arrow_upward", "auto_awesome", "bar_chart", "battery_5_bar", "call_split", "chevron_right", "close",
-        "credit_card", "dashboard", "dialpad", "expand_more", "filter_list", "group", "mic", "more_horiz", "notifications",
-        "payments", "pending_actions", "percent", "person_add", "print", "receipt_long", "schedule", "search", "send",
-        "shopping_bag", "skillet", "star", "table_restaurant", "today", "tune", "undo", "upload"
+        "account_balance_wallet",
+        "add",
+        "arrow_downward",
+        "arrow_upward",
+        "auto_awesome",
+        "backspace",
+        "bar_chart",
+        "battery_5_bar",
+        "call_split",
+        "chevron_left",
+        "chevron_right",
+        "close",
+        "credit_card",
+        "dashboard",
+        "dialpad",
+        "error",
+        "expand_more",
+        "face",
+        "filter_list",
+        "group",
+        "inbox",
+        "info",
+        "mic",
+        "more_horiz",
+        "notifications",
+        "payments",
+        "pending_actions",
+        "percent",
+        "person_add",
+        "print",
+        "progress_activity",
+        "receipt_long",
+        "remove",
+        "schedule",
+        "search",
+        "send",
+        "shopping_bag",
+        "skillet",
+        "star",
+        "table_restaurant",
+        "task_alt",
+        "timer",
+        "today",
+        "tune",
+        "two_wheeler",
+        "undo",
+        "upload",
+        "warning",
+        "wifi_off"
       ],
-      "scan": []
+      "scan": [
+        "assets/kit"
+      ]
     },
     "kds": {
       "note": "The kitchen draws icons at weight 500 and optical size 40 at 32 px (§8). `error` is the one the spec names; the rest follow with the kitchen's stage.",
-      "icons": ["error.wght500.40"],
+      "icons": [
+        "error.wght500.40"
+      ],
       "scan": []
     }
   }

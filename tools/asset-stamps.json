@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "568",
-    "sha": "f7c34d83b4c02f1f"
+    "v": "569",
+    "sha": "10f957737be6e68b"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "555",
-    "sha": "2d52ba44ac5e6604"
+    "v": "556",
+    "sha": "79cf05954d3ac374"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "554",
-    "sha": "e1edf13b91debd10"
+    "v": "555",
+    "sha": "085b0f5d3c311c56"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -443,6 +443,10 @@
     "v": "25",
     "sha": "6e6fc066faa9fb10"
   },
+  "assets/icons/material/sprite.kit.svg": {
+    "v": "2",
+    "sha": "732be65946680513"
+  },
   "assets/identity.js": {
     "v": "10",
     "sha": "ad3abda62f8819d8"
@@ -483,9 +487,149 @@
     "v": "11",
     "sha": "0c14350aaddb4036"
   },
+  "assets/kit/actions.js": {
+    "v": "1",
+    "sha": "4a87bdd1066f813d"
+  },
+  "assets/kit/business-day.js": {
+    "v": "1",
+    "sha": "d33d4add7d456e02"
+  },
+  "assets/kit/controls/button.js": {
+    "v": "1",
+    "sha": "dc5c11737ff858a7"
+  },
+  "assets/kit/controls/chip.js": {
+    "v": "1",
+    "sha": "fa40e74fbdd7dcf6"
+  },
+  "assets/kit/controls/keypad.js": {
+    "v": "1",
+    "sha": "9e6b9270a063b7ed"
+  },
+  "assets/kit/controls/stepper.js": {
+    "v": "1",
+    "sha": "6ae09dff8ef1c2c7"
+  },
+  "assets/kit/controls/switch.js": {
+    "v": "1",
+    "sha": "c871f522a8ee8d39"
+  },
+  "assets/kit/core.js": {
+    "v": "1",
+    "sha": "d5445e0ebefdc97a"
+  },
+  "assets/kit/dashboard.js": {
+    "v": "1",
+    "sha": "a1dc605788ec519f"
+  },
+  "assets/kit/elements.js": {
+    "v": "1",
+    "sha": "9474ffaeffa93f34"
+  },
+  "assets/kit/format.js": {
+    "v": "1",
+    "sha": "de60ea1f3aebe5fc"
+  },
+  "assets/kit/gallery.js": {
+    "v": "1",
+    "sha": "7e500d14bed72e6b"
+  },
   "assets/kit/haptics.js": {
     "v": "3",
     "sha": "84a02dc7e1290c51"
+  },
+  "assets/kit/kds.js": {
+    "v": "1",
+    "sha": "34220bbd4e56e6b6"
+  },
+  "assets/kit/kit.css": {
+    "v": "1",
+    "sha": "afbf9711fd3c59c6"
+  },
+  "assets/kit/ledger.js": {
+    "v": "2",
+    "sha": "a8b2a22854fcc9e4"
+  },
+  "assets/kit/lens.js": {
+    "v": "1",
+    "sha": "24d77e80c3345b7d"
+  },
+  "assets/kit/motion.js": {
+    "v": "1",
+    "sha": "950320329471314e"
+  },
+  "assets/kit/nav.js": {
+    "v": "1",
+    "sha": "ecf368f81b578c93"
+  },
+  "assets/kit/overlays.js": {
+    "v": "1",
+    "sha": "6a3b99f5b7121c09"
+  },
+  "assets/kit/pin.js": {
+    "v": "1",
+    "sha": "33dd57cae08612d0"
+  },
+  "assets/kit/strings.js": {
+    "v": "2",
+    "sha": "3d152ebec64732e2"
+  },
+  "assets/kit/strings/dashboard.ar.js": {
+    "v": "2",
+    "sha": "2c9d594020e2e8a1"
+  },
+  "assets/kit/strings/dashboard.en.js": {
+    "v": "2",
+    "sha": "47297e74a4aecfbb"
+  },
+  "assets/kit/strings/dashboard.fr.js": {
+    "v": "2",
+    "sha": "bcfc02f6e31d8989"
+  },
+  "assets/kit/strings/kds.ar.js": {
+    "v": "1",
+    "sha": "ddbbeae2ce903076"
+  },
+  "assets/kit/strings/kds.en.js": {
+    "v": "1",
+    "sha": "32a4391861cd6f26"
+  },
+  "assets/kit/strings/kds.fr.js": {
+    "v": "1",
+    "sha": "9d7cd033cdcc9587"
+  },
+  "assets/kit/strings/kit.ar.js": {
+    "v": "2",
+    "sha": "2e78973d22a50b6d"
+  },
+  "assets/kit/strings/kit.en.js": {
+    "v": "2",
+    "sha": "46a1c9025aecc2a7"
+  },
+  "assets/kit/strings/kit.fr.js": {
+    "v": "2",
+    "sha": "41121e448e5886a7"
+  },
+  "assets/kit/strings/till.ar.js": {
+    "v": "2",
+    "sha": "c6dd2fb39297ca83"
+  },
+  "assets/kit/strings/till.en.js": {
+    "v": "2",
+    "sha": "ef8dfdf0d06fadd5"
+  },
+  "assets/kit/strings/till.fr.js": {
+    "v": "2",
+    "sha": "28f1567ee55715dc"
+  },
+  "assets/kit/till.js": {
+    "v": "1",
+    "sha": "30208992206f8fb7"
+  },
+  "assets/kit/tokens-2027.css": {
+    "v": "1",
+    "sha": "7cba99a8774e1077"
   },
   "assets/kitchen-print-queue.js": {
     "v": "16",
@@ -556,8 +700,8 @@
     "sha": "e6199b1d6a79b435"
   },
   "assets/liquid-lens.js": {
-    "v": "7",
-    "sha": "13b9074e6e51ef0f"
+    "v": "8",
+    "sha": "fa03ea31cb8d0273"
   },
   "assets/live-link.js": {
     "v": "64",
@@ -576,8 +720,8 @@
     "sha": "529acc4604d2e551"
   },
   "assets/material-icons.js": {
-    "v": "2",
-    "sha": "212c1abfd3fd8e33"
+    "v": "3",
+    "sha": "8fe8f7761f445319"
   },
   "assets/menu-catalog.js": {
     "v": "29",

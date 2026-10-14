@@ -12,6 +12,13 @@
  *                                   propre <bdi> (dir="ltr" pour un nombre ou
  *                                   un montant, sinon la direction de son
  *                                   premier caractère fort)
+ *   KiwiStrings.html(key, args)    le même rendu que format(), en HTML échappé
+ *                                   pour un innerHTML : chaque argument dans
+ *                                   son <bdi>, le nombre d'un montant dans
+ *                                   <bdi dir="ltr"> et l'unité hors de lui
+ *   KiwiStrings.fig(text)          un chiffre seul de KiwiFormat, en HTML :
+ *                                   le nombre (signe compris) dans
+ *                                   <bdi dir="ltr">, l'unité dehors (§6.3)
  *   KiwiStrings.raw(key, args)     texte sans isolats (tests, journaux)
  *   KiwiStrings.ltr(text)          marque un argument comme nombre/montant
  *   KiwiStrings.setLocale('fr')    / locale() / has(key)
@@ -252,6 +259,34 @@
     return b.multi ? b.items.map(fragment) : fragment(b.items);
   }
 
+  /* §6.3 : en arabe, le nombre va dans <bdi dir="ltr"> et l'unité reste
+   * dehors. Sans cela, un paragraphe RTL pose le signe du mauvais côté
+   * (« 13− درهم » pour −13 درهم). Le nombre est ce que KiwiFormat écrit : un
+   * signe facultatif, des chiffres et leurs séparateurs (U+00A0, virgule,
+   * point, deux-points), un % collé ou après U+00A0 ; le reste est l'unité. */
+  var HESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  function hesc(x) { return String(x).replace(/[&<>"']/g, function (c) { return HESC[c]; }); }
+  var FIG = /^([\u2212+\-][\u00a0 ]?)?(\d[\d\u00a0.,:]*?)((?:[\u00a0 ]?%)?)((?:[\u00a0 ][^\d\s].*)?)$/;
+  function fig(text) {
+    if (text == null) return '';
+    var str = String(text);
+    var m = FIG.exec(str);
+    if (!m) return hesc(str);
+    return '<bdi dir="ltr">' + hesc((m[1] || '') + m[2] + (m[3] || '')) + '</bdi>' + hesc(m[4] || '');
+  }
+  function argHtml(a) {
+    if (a.node) return '<bdi>' + hesc(a.node.textContent || '') + '</bdi>';
+    if (a.dir === 'ltr' || FIG.test(a.text)) return '<bdi>' + fig(a.text) + '</bdi>';
+    return '<bdi' + (a.dir ? ' dir="' + a.dir + '"' : '') + '>' + hesc(a.text) + '</bdi>';
+  }
+  function htmlOf(list) {
+    return list.map(function (p) { return p.text != null ? hesc(p.text) : argHtml(p.arg); }).join('');
+  }
+  function html(key, args) {
+    var b = build(key, args);
+    return b.multi ? b.items.map(htmlOf) : htmlOf(b.items);
+  }
+
   /* Pour les tests : chaque phrase complète qu'un message peut produire, les
    * arguments restant écrits {nom} (# devient {nom} du sélecteur). */
   function expand(message) {
@@ -297,7 +332,7 @@
   }
 
   var api = {
-    t: t, format: format, raw: raw, ltr: ltr, has: has,
+    t: t, format: format, html: html, fig: fig, raw: raw, ltr: ltr, has: has,
     locale: locale, setLocale: setLocale,
     categories: function (lang) { return new Intl.PluralRules(lang).resolvedOptions().pluralCategories.slice(); },
     _pieces: function (key, args) { var b = build(key, args); return b.items; },
