@@ -2341,7 +2341,12 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       kiwi:customers-model) ; le résumé, les
  *                                       segments et les lignes sont ceux du livré ; le
  *                                       segment, la recherche, le menu, Ajouter et une
- *                                       ligne passent par les contrôles livrés */
+ *                                       ligne passent par les contrôles livrés
+ *   dash-retention-browser-test         la fidélisation : customer-retention.js publie
+ *                                       sa page (KiwiRetentionPage, kiwi:retention-model) ;
+ *                                       les onglets, les groupes et les lignes de
+ *                                       l'activité sont ceux du livré ; un autre onglet
+ *                                       ouvre le panneau livré */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2350,6 +2355,7 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-orders-browser-test.mjs', 'dash-orders-browser-test'],
     ['dash-report-browser-test.mjs', 'dash-report-browser-test'],
     ['dash-customers-browser-test.mjs', 'dash-customers-browser-test'],
+    ['dash-retention-browser-test.mjs', 'dash-retention-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
