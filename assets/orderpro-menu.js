@@ -39,6 +39,7 @@
     fr: {
       closed_now: 'Fermé en ce moment',
       closed_why: "Nous n'acceptons pas de commande en dehors des heures d'ouverture.",
+      lang_choose: 'Langue',
       ordering_off_note: "Carte à consulter : la commande depuis le téléphone n'est pas activée ici. Commandez au comptoir.",
       nutrition_title: 'Valeurs nutritionnelles',
       nutrition_indicative: 'Valeurs indicatives par portion, hors options',
@@ -55,6 +56,7 @@
     en: {
       closed_now: 'Closed right now',
       closed_why: "We don't take orders outside opening hours.",
+      lang_choose: 'Language',
       ordering_off_note: "Menu for browsing: ordering from your phone isn't enabled here. Please order at the counter.",
       nutrition_title: 'Nutrition facts',
       nutrition_indicative: 'Indicative values per portion, excluding options',
@@ -71,6 +73,7 @@
     ar: {
       closed_now: 'مغلق حاليًا',
       closed_why: 'لا نقبل الطلبات خارج ساعات العمل.',
+      lang_choose: 'اللغة',
       ordering_off_note: 'القائمة للاطلاع فقط: الطلب بالتلفون ماشي مفعل هنا. طلب من الكونطوار.',
       nutrition_title: 'القيم الغذائية',
       nutrition_indicative: 'قيم تقريبية لكل حصة، بدون الخيارات',
@@ -143,12 +146,21 @@
       var ia = ['ar', 'en', 'fr'].indexOf(a), ib = ['ar', 'en', 'fr'].indexOf(b);
       return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib);
     });
-    host.innerHTML = order.map(function (l) {
+    /* The 2027 skin (kiwiSkin2027:ordering) folds them under a globe (§13). */
+    var globe = doc.documentElement.getAttribute('data-skin-2027') === 'ordering';
+    host.innerHTML = (globe ? '<button class="lang-globe" type="button" aria-expanded="false" aria-label="' +
+      esc((STR[current] || STR.en).lang_choose) + '"><i data-icon="language"></i></button>' : '') + order.map(function (l) {
       var label = SHORT[l] || String(l).split('-')[0].toUpperCase();
       return '<button class="lang-btn' + (l === current ? ' is-active' : '') + '" type="button" data-lang="' + esc(l) +
         '" lang="' + esc(l) + '" aria-label="' + esc(names[l] || l) + '" aria-pressed="' + (l === current) + '">' + esc(label) + '</button>';
     }).join('');
-    host.classList.toggle('is-many', order.length > 3);
+    host.classList.toggle('is-many', order.length > 3 && !globe);
+    host.classList.toggle('is-globe', globe);
+    if (globe) host.onclick = function (e) {
+      var open = !!e.target.closest('.lang-globe') && !host.classList.contains('is-open');
+      host.classList.toggle('is-open', open);
+      host.firstChild.setAttribute('aria-expanded', String(open));
+    };
     /* The header keeps the picker's width free, so a long name or five
        languages never put the store's name under the keys. */
     try { doc.documentElement.style.setProperty('--lang-picker-w', host.offsetWidth + 'px'); } catch (_) {}

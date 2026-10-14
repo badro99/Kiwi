@@ -459,6 +459,9 @@ async function routeRequest(context) {
     || path === '/cookies.html' || path === '/cookies'
     || path === '/support.html' || path === '/support')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
+    /* La page de base (design 2027 §4.1) : la carte en liste, pour un
+     * navigateur sous le minimum client. functions/order/basic.js. */
+    || path === '/order/basic'
     || path === '/api/order' || path === '/api/order/session'
     /* La page d'accueil du client (Wi-Fi, avis, jeux, ftour) et ses quiz,
      * et l'écran de la salle qui affiche le classement. Rien de nominatif :

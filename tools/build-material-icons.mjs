@@ -42,7 +42,7 @@ export const DOC = 'docs/audits/2026-10-12-icon-migration.md';
 export const SUBSETS = {
   ordering: {
     out: 'assets/material-icons.ordering.js',
-    from: ['OrderPro.html', 'assets/orderpro-guest.js', 'assets/orderpro-menu.js', 'assets/orderpro-demo.js'],
+    from: ['OrderPro.html', 'assets/orderpro-guest.js', 'assets/orderpro-menu.js', 'assets/orderpro-demo.js', 'assets/orderpro-boutique.js'],
     /* A dish's icon comes from the merchant's menu: the ones the page gives a
        tile colour (ICON_CLASS), and the fallback glyph. */
     also: ['coffee', 'croissant', 'cookie', 'sandwich', 'glass-water', 'utensils', 'help'],

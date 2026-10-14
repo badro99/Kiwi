@@ -587,6 +587,10 @@
     "v": "1",
     "sha": "ecf368f81b578c93"
   },
+  "assets/kit/ordering.css": {
+    "v": "1",
+    "sha": "dd4e770631e8a698"
+  },
   "assets/kit/overlays.js": {
     "v": "2",
     "sha": "11e20910aad27197"
@@ -772,8 +776,8 @@
     "sha": "8fe8f7761f445319"
   },
   "assets/material-icons.ordering.js": {
-    "v": "1",
-    "sha": "b0fecea1ce141f85"
+    "v": "3",
+    "sha": "dbd83b528b6e44fa"
   },
   "assets/menu-catalog.js": {
     "v": "30",
@@ -883,6 +887,10 @@
     "v": "2",
     "sha": "47b1d8a268c10551"
   },
+  "assets/orderpro-boutique.js": {
+    "v": "1",
+    "sha": "0b2f07204a1fee24"
+  },
   "assets/orderpro-demo.js": {
     "v": "1",
     "sha": "beddcced4eb5cec9"
@@ -900,8 +908,8 @@
     "sha": "dcc6329202ab2168"
   },
   "assets/orderpro-menu.js": {
-    "v": "4",
-    "sha": "353c44f9d63e5325"
+    "v": "5",
+    "sha": "4005362745309e52"
   },
   "assets/orderpro-panel.js": {
     "v": "4",

@@ -26,6 +26,7 @@ import { suite } from './browser-trace.mjs';
 import * as menuApi from '../functions/api/menu.js';
 import * as sessionApi from '../functions/api/order/session.js';
 import * as guestApi from '../functions/api/order/guest.js';
+import * as basicPage from '../functions/order/basic.js';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -95,6 +96,13 @@ const allWeek = Object.fromEntries(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 's
 
 store('parity-browse', 'Café Sans Commande', { orderpro: false, data: menu() });
 store('parity-table', 'Table Simple', { orderpro: true, data: menu() });
+sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('parity-shop', JSON.stringify({ orderpro: true }), 'Boutique Test', Date.now());
+sql.prepare('INSERT INTO menus (merchant, name, type, data, updated_ts) VALUES (?, ?, ?, ?, ?)').run('parity-shop', 'Boutique Test', 'boutique', JSON.stringify({
+  categories: [{ id: 'c1', name: 'Chemises' }],
+  products: [{ id: 'p1', name: 'Chemise lin', categoryId: 'c1', priceMAD: 249 }, { id: 'p2', name: 'Pantalon toile', categoryId: 'c1', priceMAD: 320 }],
+  variants: [{ id: 'v1', productId: 'p1', size: 'M', stock: 3, barcodes: ['6111000000017'] }, { id: 'v2', productId: 'p2', size: 'L', stock: 0, barcodes: [] }],
+  colors: [],
+}), Date.now());
 store('parity-langs', 'Bistro Cinq Langues', { orderpro: true, data: menu({ langs: ['fr', 'ar', 'en', 'es', 'de'] }) });
 store('parity-closed', 'Brasserie Fermée', {
   orderpro: true,
@@ -123,6 +131,10 @@ async function route(r, seen) {
   const url = new URL(u);
   seen.push(url.pathname);
   if (url.pathname === '/kiwi-sw.js') return r.respond({ status: 404, contentType: 'text/javascript', body: '' });
+  if (url.pathname === '/order/basic') {
+    const res = await basicPage.onRequestGet({ request: new Request(url.toString(), { headers: { 'Accept-Language': 'fr' } }), env });
+    return r.respond({ status: res.status, contentType: 'text/html', body: await res.text() });
+  }
   if (!url.pathname.startsWith('/api/')) return r.continue();
   const mod = ROUTES[url.pathname];
   if (!mod) return r.respond({ status: 404, contentType: 'application/json', body: '{"error":"not-found"}' });
@@ -308,6 +320,96 @@ try {
     check(blocking <= 60 * 1024, `a seated table: ${kb(blocking)} before the guest page module, which loads after the first screen (${kb(all.total)} with it)`);
     check(all.sizes['orderpro-guest.js'] > 0 && !/<script src="assets\/orderpro-guest/.test(fs.readFileSync(path.join(root, 'OrderPro.html'), 'utf8')), 'the guest page module still arrives, from the lazy template');
     check(first.total <= all.total && table.errors.length === 0 && browse.errors.length === 0, 'no page error' + ([...table.errors, ...browse.errors].length ? ': ' + [...table.errors, ...browse.errors].join(' | ') : ''));
+  });
+  await S.run('a boutique · its own file, loaded for a boutique only', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = await open(tr, ctx, 's=parity-shop');
+    await page.waitForSelector('#screen-boutique.is-active [data-bq="p1"]', { timeout: 15000 });
+    check(page.seen.includes('/assets/orderpro-boutique.js') && !page.seen.includes('/assets/orderpro-guest.js'), 'the boutique file loads, the guest page module does not');
+    check(/Chemise lin/.test(await page.$eval('#screen-boutique', (e) => e.textContent)) && /249/.test(await page.$eval('#screen-boutique', (e) => e.textContent)), 'the products and their prices');
+    await page.type('#bq-search', 'pantalon');
+    await page.waitForFunction(() => !document.querySelector('[data-bq="p1"]') && !!document.querySelector('[data-bq="p2"]'), { timeout: 3000 });
+    check(true, 'the search filters the list');
+    await sleep(500);
+    await page.tap('[data-bq="p2"]');
+    await page.waitForSelector('#bq-detail.is-open', { timeout: 3000 });
+    check(/Pantalon toile/.test(await page.$eval('#bq-detail', (e) => e.textContent)), 'a product opens its sheet');
+    await page.tap('[data-close-bq]');
+    await page.waitForFunction(() => !document.querySelector('#bq-detail.is-open'), { timeout: 3000 });
+    await page.tap('#bq-scan-open');
+    await page.waitForSelector('#bq-scan.is-open', { timeout: 3000 });
+    await page.type('#bq-manual', '6111000000017');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /Chemise lin/.test((document.querySelector('#bq-detail.is-open') || {}).textContent || ''), { timeout: 3000 });
+    check(true, 'a barcode typed by hand finds its product');
+    const table = await open(tr, ctx, 's=parity-table&t=4');
+    await table.waitForSelector('#screen-menu.is-active', { timeout: 15000 });
+    await sleep(1200);
+    check(!table.seen.includes('/assets/orderpro-boutique.js'), 'a restaurant never loads it');
+    check(!page.errors.length && !table.errors.length, 'no page error' + ([...page.errors, ...table.errors].length ? ': ' + [...page.errors, ...table.errors].join(' | ') : ''));
+  });
+
+  await S.run('the 2027 skin · globe, iPad cart pane, desktop column, the basic page (§13, §4.1)', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const off = await open(tr, ctx, 's=parity-table&t=4');
+    await off.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    check(!off.seen.some((p) => /ordering\.css|tokens-2027\.css/.test(p)) && !(await off.$('.lang-globe'))
+      && (await off.evaluate(() => document.documentElement.getAttribute('data-skin-2027'))) === null, 'flag off: no skin, no kit sheet, the shipped picker');
+
+    const phone = await open(tr, ctx, 's=parity-table&t=4&skin=2027');
+    await phone.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    check(phone.seen.includes('/assets/kit/tokens-2027.css') && phone.seen.includes('/assets/kit/ordering.css'), 'flag on: the kit’s tokens and the skin’s sheet load');
+    check(await phone.evaluate(() => getComputedStyle(document.body).getPropertyValue('--forest').trim() === getComputedStyle(document.body).getPropertyValue('--k-accent').trim()), 'the page’s own colours are repainted with the 2027 tokens');
+    check(await visible(phone, '.lang-globe') && !(await visible(phone, '.lang-btn[data-lang="en"]')), 'phone: a globe in the header, the languages folded under it');
+    await shot(phone, 'skin-phone');
+    await phone.tap('.lang-globe');
+    await phone.waitForSelector('.lang-picker.is-open .lang-btn[data-lang="en"]', { visible: true, timeout: 3000 });
+    check((await phone.$eval('.lang-globe', (e) => e.getAttribute('aria-expanded'))) === 'true', 'the globe opens them, and says so');
+    await phone.tap('.lang-btn[data-lang="en"]');
+    await phone.waitForFunction(() => document.documentElement.lang === 'en' && !document.querySelector('.lang-picker.is-open'), { timeout: 3000 });
+    check(true, 'a language picked closes it, and the page is in English');
+    const js = scripts(phone);
+    console.log(`    skin on: inline ${kb(inline)} + ${Object.entries(js.sizes).map(([f, n]) => f + ' ' + kb(n)).join(' + ')} = ${kb(js.total)}`);
+    check(js.total - (js.sizes['orderpro-guest.js'] || 0) <= 60 * 1024, `the skin adds no script: ${kb(js.total - (js.sizes['orderpro-guest.js'] || 0))} before the guest page module`);
+
+    const ipad = await open(tr, ctx, 's=parity-table&t=4&skin=2027', { width: 834, height: 1194 });
+    await ipad.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    await sleep(800);
+    const pane = await ipad.evaluate(() => {
+      const r = document.querySelector('#cart-sheet .cart-sheet-panel').getBoundingClientRect();
+      const m = document.getElementById('screen-menu').getBoundingClientRect();
+      const cols = getComputedStyle(document.getElementById('menu-list')).gridTemplateColumns.split(' ').length;
+      return { w: Math.round(r.width), x: Math.round(r.left), menuW: Math.round(m.width), cols, pill: getComputedStyle(document.getElementById('cart-pill')).display };
+    });
+    check(pane.w === 340 && pane.x === 834 - 340 && pane.menuW === 834 - 340 && pane.cols === 2 && pane.pill === 'none',
+      `iPad: the menu in 2 columns, the cart a pane of 340 beside it (${JSON.stringify(pane)})`);
+    await sleep(700);
+    await ipad.tap('[data-card="the"] .dish-add, [data-add="the"]');
+    await ipad.waitForFunction(() => /Thé/.test(document.getElementById('cart-items').textContent), { timeout: 3000 });
+    check(true, 'a dish added shows in the pane at once');
+    await shot(ipad, 'skin-ipad');
+
+    const desk = await open(tr, ctx, 's=parity-table&t=4&skin=2027', { width: 1440, height: 900 });
+    await desk.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    await sleep(800);
+    const col = await desk.evaluate(() => {
+      const a = document.getElementById('app').getBoundingClientRect();
+      return { w: Math.round(a.width), x: Math.round(a.left), cols: getComputedStyle(document.getElementById('menu-list')).gridTemplateColumns.split(' ').length };
+    });
+    check(col.w === 1000 && col.x === 220 && col.cols === 3, `desktop: a centred column of 1000, the menu in 3 columns (${JSON.stringify(col)})`);
+    await shot(desk, 'skin-desktop');
+
+    const old = tr.watch(await ctx.newPage());
+    await old.setRequestInterception(true);
+    const oldSeen = [];
+    old.on('request', (r) => { route(r, oldSeen); });
+    await old.evaluateOnNewDocument(() => { CSS.supports = () => false; });
+    await old.goto(base + '/OrderPro.html?s=parity-table&t=4&skin=2027', { waitUntil: 'load' });
+    await old.waitForFunction(() => location.pathname === '/order/basic', { timeout: 8000 });
+    const said = await old.evaluate(() => ({ text: document.body.textContent, scripts: document.scripts.length }));
+    check(/Montrez ce menu au personnel pour commander/.test(said.text) && /Tajine kefta/.test(said.text) && /65/.test(said.text) && said.scripts === 0,
+      'below the guest minimum: the basic page, the menu with its prices and ordering.basic, no script');
+    check([off, phone, ipad, desk].every((p) => !p.errors.length), 'no page error' + ([off, phone, ipad, desk].flatMap((p) => p.errors).join(' | ') ? ': ' + [off, phone, ipad, desk].flatMap((p) => p.errors).join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

@@ -23,6 +23,23 @@
        caisse, dashboard) talk over the network only. Two verticals:
        restaurant (order → caisse → kitchen) and boutique (scan → price/stock,
        info-only). See ORDERPRO_SPEC.md. -->
+  <!-- Design 2027, stage 3c (spec §4.1, §13, §21.1): the guest app's 2027 skin,
+       behind its flag (localStorage kiwiSkin2027:ordering = '1', or ?skin=2027
+       for one load). Off, nothing below loads. On, a browser below the guest
+       minimum goes to the basic page (functions/order/basic.js); any other gets
+       the kit's tokens and assets/kit/ordering.css, and stays light, as shipped. -->
+  <script>
+    (function (d, q) {
+      var on = false;
+      try { on = /[?&]skin=2027(&|$)/.test(q) || localStorage.getItem('kiwiSkin2027:ordering') === '1'; } catch (_) {}
+      if (!on) return;
+      var C = window.CSS;
+      if (!(C && C.supports && C.supports('selector(:where(a))') && C.supports('gap', '1px'))) return location.replace('/order/basic' + q);
+      d.documentElement.setAttribute('data-skin-2027', 'ordering');
+      d.documentElement.setAttribute('data-theme', 'light');
+      d.write('<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1"><link rel="stylesheet" href="assets/kit/ordering.css?v=1">');
+    })(document, location.search);
+  </script>
   <title>OrderPro</title>
   <meta name="description" content="Commandez depuis votre table" />
 
@@ -35,7 +52,7 @@
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/material-icons.ordering.js?v=1" data-full="assets/material-icons.js?v=3" defer></script>
+  <script src="assets/material-icons.ordering.js?v=3" data-full="assets/material-icons.js?v=3" defer></script>
 
   <style>
     /* =========================================================
@@ -3725,8 +3742,9 @@ em, i, cite, dfn, var { font-style: normal; }
     <script data-lazy="ui-langs" src="assets/order-ui-langs.js?v=2"></script>
     <script data-lazy="demo" src="assets/orderpro-demo.js?v=1"></script>
     <script data-lazy="guest" src="assets/orderpro-guest.js?v=1"></script>
+    <script data-lazy="boutique" src="assets/orderpro-boutique.js?v=1"></script>
   </template>
-  <script src="assets/orderpro-menu.js?v=4"></script>
+  <script src="assets/orderpro-menu.js?v=5"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -6457,7 +6475,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const res = await NET.catalog();
         if (!res) return;
         if (STORE.type === 'boutique' && res.shop) {
-          bootBoutique(res.shop);
+          if (typeof bootBoutique === 'function') bootBoutique(res.shop);
         } else if (res.menu) {
           bootRestaurant(res.menu);
         }
@@ -6501,6 +6519,8 @@ em, i, cite, dfn, var { font-style: normal; }
         : null;
 
       if (STORE.type === 'boutique') {
+        try { await KiwiOrderMenu.need('boutique'); } catch (_) {}
+        if (typeof bootBoutique !== 'function') { bootState('offline', { icon: 'wifi-off', retry: true }); return; }
         if (!bootBoutique(res.shop || {})) { bootState('empty', { icon: 'package-open' }); return; }
         STORE.ready = true;
         gotoScreen('screen-boutique');
@@ -6672,220 +6692,9 @@ em, i, cite, dfn, var { font-style: normal; }
       return true;
     }
 
-    /* ═══════════════════════════════════════════════════════════════════════
-       BOUTIQUE — product list + barcode lookup. Consultation only.
-       Published shape (assets/boutique-catalog.js):
-         { categories:[{id,name}],
-           products:[{id,name,categoryId,priceMAD,photo,archived}],
-           variants:[{id,productId,colorId,size,stock,barcodes:[{code}|"code"]}],
-           colors:[{id,label,hex}] }
-       ═══════════════════════════════════════════════════════════════════════ */
-    const BQ = { products: [], byId: new Map(), byCode: new Map(), colors: new Map(), filter: '' };
-
-    function bootBoutique(data) {
-      const products = (Array.isArray(data.products) ? data.products : []).filter(p => p && !p.archived);
-      if (!products.length) return false;
-      const variants = Array.isArray(data.variants) ? data.variants : [];
-      const cats = new Map((Array.isArray(data.categories) ? data.categories : [])
-        .map(c => [String(c.id), String(c.name || '')]));
-
-      BQ.colors = new Map((Array.isArray(data.colors) ? data.colors : [])
-        .map(c => [String(c.id), { label: String(c.label || c.id), hex: String(c.hex || '#ccc') }]));
-
-      BQ.products = products.map(p => ({
-        id: String(p.id),
-        name: String(p.name || ''),
-        price: Math.max(0, toCents(p.priceMAD != null ? p.priceMAD : p.price) / 100),
-        photo: p.photo || '',
-        video: p.video || '',
-        category: cats.get(String(p.categoryId)) || '',
-        variants: [],
-      }));
-      BQ.byId = new Map(BQ.products.map(p => [p.id, p]));
-
-      BQ.byCode = new Map();
-      for (const v of variants) {
-        const p = BQ.byId.get(String(v.productId));
-        if (!p) continue;
-        const entry = {
-          size: String(v.size || ''),
-          colorId: String(v.colorId || ''),
-          stock: Math.max(0, Number(v.stock) || 0),
-        };
-        p.variants.push(entry);
-        // Barcodes are either plain strings or { code } records — accept both,
-        // so an old-POS alias resolves exactly like a generated in-store EAN.
-        for (const b of (Array.isArray(v.barcodes) ? v.barcodes : [])) {
-          const code = String((b && b.code) != null ? b.code : b || '').trim();
-          if (code) BQ.byCode.set(code, p.id);
-        }
-      }
-      renderBoutique();
-      return true;
-    }
-
-    function stockOf(p) { return p.variants.reduce((s, v) => s + v.stock, 0); }
-    function stockPill(n) {
-      if (n <= 0) return { cls: 'out', label: t('bq_outstock') };
-      if (n <= 3)  return { cls: 'low', label: t('bq_lowstock') };
-      return { cls: 'ok', label: t('bq_instock') };
-    }
-
-    function renderBoutique() {
-      const list = $('#bq-list');
-      if (!list) return;
-      const q = BQ.filter.trim().toLowerCase();
-      const rows = q
-        ? BQ.products.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
-        : BQ.products;
-      if (!rows.length) {
-        list.innerHTML = `<div class="bq-empty">${escapeHtml(q ? t('bq_noresult') : t('bq_empty'))}</div>`;
-        return;
-      }
-      list.innerHTML = rows.map(p => {
-        const n = stockOf(p);
-        const pill = stockPill(n);
-        // A clip autoplays muted in the thumbnail — a garment sells on movement.
-        const thumb = p.video
-          ? `<video src="${escapeHtml(p.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>`
-          : (p.photo
-            ? `<img src="${escapeHtml(p.photo)}" alt="" loading="lazy" />`
-            : `<i data-lucide="shirt"></i>`);
-        return `
-        <button class="bq-card" type="button" data-bq="${escapeHtml(p.id)}">
-          <span class="bq-thumb">${thumb}</span>
-          <span>
-            <span class="bq-name">${escapeHtml(p.name)}</span>
-            <span class="bq-meta">${escapeHtml(p.category)}</span>
-            <span class="bq-pill ${pill.cls}">${escapeHtml(pill.label)}</span>
-          </span>
-          <span class="bq-price">${escapeHtml(money(p.price))}</span>
-        </button>`;
-      }).join('');
-      if (window.lucide) window.lucide.createIcons();
-    }
-
-    function openBoutiqueItem(id) {
-      const p = BQ.byId.get(String(id));
-      if (!p) return;
-      $('#bq-d-name').textContent = p.name;
-      $('#bq-d-price').textContent = `${money(p.price)}`;
-
-      // The merchant's own photo or clip, full width above the stock detail.
-      const hero = $('#bq-d-hero');
-      if (hero) {
-        hero.innerHTML = p.video
-          ? `<video src="${escapeHtml(p.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>`
-          : (p.photo ? `<img src="${escapeHtml(p.photo)}" alt="" />` : '');
-        hero.hidden = !(p.video || p.photo);
-      }
-
-      // Sizes: summed across colours, because "is my size left?" is the question.
-      const bySize = new Map();
-      const byColor = new Map();
-      for (const v of p.variants) {
-        if (v.size) bySize.set(v.size, (bySize.get(v.size) || 0) + v.stock);
-        if (v.colorId) byColor.set(v.colorId, (byColor.get(v.colorId) || 0) + v.stock);
-      }
-      const sizeChips = [...bySize.entries()].map(([size, n]) => {
-        const cls = n <= 0 ? 'is-out' : (n <= 2 ? 'is-low' : '');
-        return `<span class="bq-chip ${cls}">${escapeHtml(size)} <b>${n}</b></span>`;
-      }).join('');
-      const colorChips = [...byColor.entries()].map(([cid, n]) => {
-        const c = BQ.colors.get(cid) || { label: cid, hex: '#ccc' };
-        const cls = n <= 0 ? 'is-out' : '';
-        const pat = cid === 'multi' ? 'multi' : cid === 'transparent' ? 'clear' : '';
-        return `<span class="bq-chip ${cls}"><i class="bq-swatch" ${pat ? `data-pat="${pat}"` : ''} style="background:${escapeHtml(c.hex)}"></i>${escapeHtml(c.label)} <b>${n}</b></span>`;
-      }).join('');
-
-      const total = stockOf(p);
-      const pill = stockPill(total);
-      $('#bq-d-body').innerHTML = `
-        <div class="bq-d-section">${escapeHtml(t('bq_stock'))}</div>
-        <div class="bq-chips"><span class="bq-pill ${pill.cls}">${escapeHtml(pill.label)} · ${total}</span></div>
-        ${sizeChips ? `<div class="bq-d-section">${escapeHtml(t('bq_sizes'))}</div><div class="bq-chips">${sizeChips}</div>` : ''}
-        ${colorChips ? `<div class="bq-d-section">${escapeHtml(t('bq_colors'))}</div><div class="bq-chips">${colorChips}</div>` : ''}`;
-      openSheet('#bq-detail');
-    }
-
-    function openSheet(sel) {
-      const el = $(sel);
-      if (!el) return;
-      el.classList.add('is-open');
-      el.setAttribute('aria-hidden', 'false');
-    }
-    function closeSheet(sel) {
-      const el = $(sel);
-      if (!el) return;
-      el.classList.remove('is-open');
-      el.setAttribute('aria-hidden', 'true');
-    }
-
-    /* ============ boutique: camera barcode scan (+ manual fallback) ============
-       BarcodeDetector is Chrome/Android; iOS Safari has no camera decoder, so
-       the manual field is always present rather than a dead end. */
-    let scanStream = null, scanTimer = null;
-
-    async function openScanner() {
-      $('#bq-manual').value = '';
-      openSheet('#bq-scan');
-      const msg = $('#bq-scan-msg');
-      const box = $('#bq-scan-box');
-      const video = $('#bq-video');
-      const supported = 'BarcodeDetector' in window && navigator.mediaDevices &&
-                        navigator.mediaDevices.getUserMedia;
-      if (!supported) {
-        box.hidden = true;
-        msg.textContent = t('bq_camera_none');
-        $('#bq-manual').focus();
-        return;
-      }
-      box.hidden = false;
-      msg.textContent = t('bq_scan_hint');
-      try {
-        scanStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }, audio: false,
-        });
-        video.srcObject = scanStream;
-        await video.play();
-      } catch (_) {
-        box.hidden = true;
-        msg.textContent = t('bq_camera_denied');
-        $('#bq-manual').focus();
-        return;
-      }
-      let detector;
-      try {
-        detector = new window.BarcodeDetector({
-          formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'code_39'],
-        });
-      } catch (_) { detector = new window.BarcodeDetector(); }
-
-      scanTimer = setInterval(async () => {
-        if (!scanStream || video.readyState < 2) return;
-        try {
-          const hits = await detector.detect(video);
-          if (hits && hits.length) resolveScan(String(hits[0].rawValue || '').trim());
-        } catch (_) { /* a frame failed to decode — keep going */ }
-      }, 350);
-    }
-
-    function closeScanner() {
-      if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
-      if (scanStream) { scanStream.getTracks().forEach(tr => tr.stop()); scanStream = null; }
-      const video = $('#bq-video');
-      if (video) video.srcObject = null;
-      closeSheet('#bq-scan');
-    }
-
-    function resolveScan(code) {
-      const clean = String(code || '').trim();
-      if (!clean) return;
-      const pid = BQ.byCode.get(clean);
-      if (!pid) { $('#bq-scan-msg').textContent = t('bq_not_found'); return; }
-      closeScanner();
-      openBoutiqueItem(pid);
-    }
+    /* The boutique vertical (product list, barcode lookup) lives in
+       assets/orderpro-boutique.js, loaded for a boutique only: a restaurant
+       never runs it, and its guests do not download it (§19, 60 KB). */
 
     /* ============ wire it up ============ */
     document.addEventListener('DOMContentLoaded', () => {
@@ -6912,18 +6721,6 @@ em, i, cite, dfn, var { font-style: normal; }
         if (appEl.scrollTop || appEl.scrollLeft) { appEl.scrollTop = 0; appEl.scrollLeft = 0; }
       }, { passive: true });
 
-      // Boutique: live search over the published catalogue
-      const bqSearch = $('#bq-search');
-      if (bqSearch) bqSearch.addEventListener('input', () => {
-        BQ.filter = bqSearch.value || '';
-        renderBoutique();
-      });
-      // Boutique: manual barcode entry (the always-available path — iOS has no
-      // camera decoder, and a scratched label beats every scanner).
-      const manual = $('#bq-manual');
-      if (manual) manual.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); resolveScan(manual.value); }
-      });
 
       // Delegated clicks
       document.addEventListener('click', e => {
@@ -6932,13 +6729,15 @@ em, i, cite, dfn, var { font-style: normal; }
         if (langBtn) { applyLang(langBtn.dataset.lang); return; }
         // Boot: retry the store lookup
         if (e.target.closest('#boot-retry')) { bootFromLink(); return; }
-        // Boutique
-        const bqCard = e.target.closest('[data-bq]');
-        if (bqCard) { openBoutiqueItem(bqCard.dataset.bq); return; }
-        if (e.target.closest('[data-close-bq]')) { closeSheet('#bq-detail'); return; }
-        if (e.target.closest('#bq-scan-open')) { openScanner(); return; }
-        if (e.target.closest('[data-close-scan]')) { closeScanner(); return; }
-        if (e.target.closest('#bq-manual-go')) { resolveScan($('#bq-manual').value); return; }
+        // Boutique (assets/orderpro-boutique.js, present for a boutique only)
+        if (typeof openBoutiqueItem === 'function') {
+          const bqCard = e.target.closest('[data-bq]');
+          if (bqCard) { openBoutiqueItem(bqCard.dataset.bq); return; }
+          if (e.target.closest('[data-close-bq]')) { closeSheet('#bq-detail'); return; }
+          if (e.target.closest('#bq-scan-open')) { openScanner(); return; }
+          if (e.target.closest('[data-close-scan]')) { closeScanner(); return; }
+          if (e.target.closest('#bq-manual-go')) { resolveScan($('#bq-manual').value); return; }
+        }
         // Mode choice (à table / à emporter)
         const modeCard = e.target.closest('[data-mode]');
         if (modeCard) { chooseMode(modeCard.dataset.mode); return; }

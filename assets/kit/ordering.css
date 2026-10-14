@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · assets/kit/ordering.css · the guest app (OrderPro.html) in the 2027
+ * skin, behind kiwiSkin2027:ordering (spec §13, §21.1 stage 3c).
+ *
+ * OrderPro paints with its own names (--forest, --paper-cream, --ink…). The
+ * skin repaints those names with the 2027 tokens, so every screen follows
+ * without a line of the page changing, then lays the app out per device
+ * class (§13, act table):
+ *
+ *   phone       Menu › Item › Cart › Order placed, the language globe in the
+ *               header (KiwiOrderMenu.picker draws it when the skin is on)
+ *   ≥ 768       the menu in 2 columns, the cart as a pane of 340 beside it,
+ *               always open while the menu is on screen
+ *   ≥ 1000      the same in a centred column of 1000, the menu in 3 columns
+ *
+ * No script here, and none added to the page: the guest app has under 1 KB
+ * of its 60 KB budget left (§19). The page stays light: the guest app shipped
+ * light only, and the skin pins it (data-theme="light", set with the flag).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-skin-2027="ordering"] {
+  --surface: var(--k-surface-1);
+  --forest: var(--k-accent);
+  --forest-deep: var(--k-accent-pressed);
+  --emerald: var(--k-accent);
+  --mint-tint: var(--k-accent-tint);
+  --mint-edge: var(--k-line);
+  --paper: var(--k-bg);
+  --paper-cream: var(--k-bg);
+  --paper-soft: var(--k-surface-2);
+  --paper-mute: var(--k-surface-2);
+  --ink: var(--k-ink-1);
+  --ink-2: var(--k-ink-2);
+  --ink-3: var(--k-ink-3);
+  --ink-4: var(--k-ink-3);
+  --line: var(--k-line);
+  --line-soft: var(--k-line);
+  --sans: "Inter Tight", "Kiwi Arabic", "Inter Tight Fallback", system-ui;
+  --serif: "Inter Tight", "Kiwi Arabic", "Inter Tight Fallback", system-ui;
+  --arabic: var(--k-font);
+  --shadow-card: var(--k-shadow-1);
+  --gradient: linear-gradient(135deg, var(--k-accent-pressed) 0%, var(--k-accent) 100%);
+}
+html[data-skin-2027="ordering"] body { background: var(--k-surface-2); }
+
+/* ── Cards and the cart, in the kit's radii and lines ─────────────────────── */
+html[data-skin-2027="ordering"] .dish-card { border-radius: var(--k-r-2); box-shadow: var(--k-shadow-1); }
+html[data-skin-2027="ordering"] .cart-pill { border-radius: var(--k-r-2); background: var(--k-accent); color: var(--k-on-accent); }
+html[data-skin-2027="ordering"] .cart-count-chip { background: var(--k-on-accent); color: var(--k-accent); }
+html[data-skin-2027="ordering"] .cart-sheet-panel,
+html[data-skin-2027="ordering"] .custom-sheet-panel { border-radius: var(--k-r-3) var(--k-r-3) 0 0; }
+/* The lines start at the top: one line is a line, not a block the height of the pane. */
+html[data-skin-2027="ordering"] .cart-items { align-content: start; }
+html[data-skin-2027="ordering"] .cart-row { border-radius: var(--k-r-2); }
+
+/* ── The language globe (§13 phone): one round button in the header; the
+   languages open under it. KiwiOrderMenu.picker() adds .is-globe and the
+   button, and toggles .is-open. ────────────────────────────────────────── */
+html[data-skin-2027="ordering"] .lang-picker.is-globe {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--k-space-1);
+  padding: 0;
+  border-radius: var(--k-r-4);
+  background: var(--k-surface-1);
+  border-color: var(--k-line);
+  box-shadow: var(--k-shadow-1);
+  max-width: none;
+  overflow: visible;
+}
+html[data-skin-2027="ordering"] .lang-globe {
+  width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  border-radius: var(--k-r-4);
+  color: var(--k-ink-1);
+}
+html[data-skin-2027="ordering"] .lang-globe svg { width: 22px; height: 22px; }
+html[data-skin-2027="ordering"] .lang-picker.is-globe .lang-btn { display: none; min-height: 44px; }
+html[data-skin-2027="ordering"] .lang-picker.is-globe.is-open .lang-btn { display: flex; }
+html[data-skin-2027="ordering"] .lang-btn.is-active { background: var(--k-accent); color: var(--k-on-accent); }
+html[data-skin-2027="ordering"] .lang-globe:focus-visible,
+html[data-skin-2027="ordering"] .lang-btn:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; }
+
+/* ── iPad (≥ 768): the menu in 2 columns and the cart as a pane of 340 ──── */
+@media (min-width: 768px) {
+  html[data-skin-2027="ordering"] #screen-menu.is-active { inset-inline-end: 340px; }
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet {
+    inset-inline-start: auto;
+    width: 340px;
+    pointer-events: auto;
+    z-index: 60;
+  }
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet .cart-sheet-backdrop { display: none; }
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet .cart-sheet-panel {
+    inset: 0;
+    max-height: none;
+    transform: none;
+    transition: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-inline-start: 1px solid var(--k-line);
+    padding-top: calc(var(--safe-top) + 56px);
+  }
+  html[data-skin-2027="ordering"] #screen-menu.is-active ~ .cart-sheet .cart-handle { display: none; }
+  html[data-skin-2027="ordering"] #screen-menu.is-active .cart-pill { display: none; }
+  /* The globe sits over the menu, not over the pane. */
+  html[data-skin-2027="ordering"] .lang-picker { right: calc(340px + 14px); }
+  html[data-skin-2027="ordering"][dir="rtl"] .lang-picker { right: auto; left: calc(340px + 14px); }
+  /* A dish's options open in the middle, never as a stretched phone sheet. */
+  html[data-skin-2027="ordering"] .custom-sheet-panel {
+    inset-inline: max(0px, calc(50% - 280px));
+    border-radius: var(--k-r-3) var(--k-r-3) 0 0;
+  }
+}
+
+/* ── Desktop (≥ 1000): a centred column of 1000, the menu in 3 columns ──── */
+@media (min-width: 1000px) {
+  html[data-skin-2027="ordering"] .app {
+    max-width: 1000px;
+    margin-inline: auto;
+    border-inline: 1px solid var(--k-line);
+  }
+  html[data-skin-2027="ordering"] .menu-list.is-feed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
