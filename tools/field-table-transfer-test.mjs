@@ -57,7 +57,7 @@ function context() {
     storeIsReal: () => true, menuLineFind: () => null, newLineUid: () => `uid-${++c.uid}`,
     uid: 0, lineLabel: l => l.name, discountAmountFor: () => 0, vrapDiscountAmount: () => 0,
     kdsStations: () => [], kdsStationForName: () => 'kitchen', kdsNowHM: () => '12:00',
-    kdsStationBar: () => '', kdsGroup: () => [], kdsEmpty: () => '',
+    kdsStationBar: () => '', kdsGroup: () => [], kdsEmpty: () => '', kdsKitOn: () => false,
     kdsOrderCard: () => '', kdsHistoryRow: () => '', opPush: () => Promise.resolve(null),
     archivedTakeawaySet: () => new Set(), rememberArchivedTakeaway: noop,
     clearCart: () => { c.cart = []; }, setVrapView: v => { c.vrapView = v; },
