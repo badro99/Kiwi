@@ -2329,13 +2329,20 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       rendu (KiwiOrdersPage, kiwi:orders-model) ; le
  *                                       chiffre clé, le résumé et les lignes par heure
  *                                       sont ceux du rendu livré ; le filtre et la période
- *                                       déplacent les livrés ; une ligne ouvre la fiche */
+ *                                       déplacent les livrés ; une ligne ouvre la fiche
+ *   dash-report-browser-test            l'en-tête du rapport (§12) : day-report-dash.js
+ *                                       publie son rendu (KiwiReportPage,
+ *                                       kiwi:report-model) ; le jour, le net et sa
+ *                                       référence, les tuiles sont ceux du rendu livré ;
+ *                                       Exporter est un menu des trois exports livrés ;
+ *                                       un autre jour de la frise déplace l'en-tête */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['dash-home-browser-test.mjs', 'dash-home-browser-test'],
     ['dash-orders-browser-test.mjs', 'dash-orders-browser-test'],
+    ['dash-report-browser-test.mjs', 'dash-report-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

@@ -260,10 +260,28 @@ html[data-k-home] .vexel-revenue-rail { display: none !important; }
 .k-do__em[hidden], .k-do__more[hidden] { display: none; }
 .k-do__em p, .k-do__more p { margin: 0; }
 
+/* The head of the dashboard's Report on the kit (stage 5 (3), §12): the day
+   and its status, the key figure, the tiles and Export. The shipped nav bar
+   keeps its day selector, the month report and Print; the strip and every
+   section below stay the shipped ones. */
+.dash-genpage:has(#kit-report) .kdr-kpis,
+.dash-genpage:has(#kit-report) .kdr-nav .kdr-day,
+.dash-genpage:has(#kit-report) .kdr-nav .kdr-chip,
+.dash-genpage:has(#kit-report) .kdr-nav [data-kdr="csv"],
+.dash-genpage:has(#kit-report) .kdr-empty { display: none !important; }
+#kit-report { display: flex; flex-direction: column; gap: 16px; padding: 8px 0 16px; color: var(--k-ink-1); }
+#kit-report [hidden] { display: none !important; }
+.k-dr__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.k-dr__fig { display: flex; flex-direction: column; gap: 4px; }
+.k-dr__day, .k-dr__lb, .k-dr__kf { margin: 0; }
+.k-dr__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
+.k-dr__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
+.k-dr__em p { margin: 0; }
+
 /* The type steps for kit content drawn in the light DOM (the till's online
-   orders and Z sheet, the dashboard's Home and Orders), the same rules core.js
-   gives every shadow root (§6.2). */
-#kit-home, #kit-orders, #kit-online, .k-z { font-family: var(--k-font); }
+   orders and Z sheet, the dashboard's Home, Orders and Report), the same rules
+   core.js gives every shadow root (§6.2). */
+#kit-home, #kit-orders, #kit-report, #kit-online, .k-z { font-family: var(--k-font); }
 .k-display { font-size: var(--k-fs-display); line-height: var(--k-lh-display); font-weight: var(--k-fw-display); letter-spacing: var(--k-track-display); }
 .k-title { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
 .k-heading { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }

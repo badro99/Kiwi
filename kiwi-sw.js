@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v638';
+var CACHE = 'kiwi-app-v639';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=578',
+  '/assets/dashboard-pwa.js?v=579',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=591',
+  '/assets/caisse-pwa.js?v=592',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -181,7 +181,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=22',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=28',
+  '/assets/day-report-dash.js?v=29',
   '/assets/day-report-export.js?v=11',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=577',
+  '/assets/employee-live.js?v=578',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -309,7 +309,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=20',
+  '/assets/kit/kit.css?v=21',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -325,7 +325,7 @@ var SHELL = [
   '/assets/kit/pin-flow.js?v=1',
   '/assets/kit/till-pin.js?v=2',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
-  '/assets/icons/material/sprite.dashboard.svg?v=3',
+  '/assets/icons/material/sprite.dashboard.svg?v=4',
   '/assets/kit/dash-pin.js?v=1',
   '/assets/kit/strings/dashboard.fr.js?v=2',
   '/assets/kit/strings/dashboard.en.js?v=2',
@@ -333,6 +333,7 @@ var SHELL = [
   '/assets/kit/dashboard.js?v=2',
   '/assets/kit/dash-home.js?v=1',
   '/assets/kit/dash-orders.js?v=1',
+  '/assets/kit/dash-report.js?v=1',
   /* and the team app's sign-in and clock-in, behind kiwiSkin2027:team. */
   '/assets/icons/material/sprite.team.svg?v=1',
   '/assets/kit/strings/team.fr.js?v=1',
