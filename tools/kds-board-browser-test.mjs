@@ -364,6 +364,7 @@ try {
     });
     await page.click('#open-kds');
     await page.waitForFunction((n) => { const l = document.querySelector('#kit-new k-lane'); return l && l.shadowRoot.querySelector('[data-t="' + n + '"]'); }, { timeout: 8000 }, String(num));
+    await sleep(600);   /* the screen opens; the lanes take their width once */
     check(await page.evaluate(() => !document.querySelector('#kit-new .kit-order') && !!document.querySelector('#kit-cook k-lane') && !!document.querySelector('#kit-history-inner k-lane')), 'the till board draws three lanes and no shipped card');
     check(await page.evaluate(() => !document.documentElement.hasAttribute('data-k-surface') && getComputedStyle(document.documentElement).fontSize === '16px'), 'it keeps the till root, 16 px (§6.2)');
     const t1 = await page.evaluate((n) => { const a = document.querySelector('#kit-new k-lane').shadowRoot.querySelector('[data-t="' + n + '"]'); return { text: a.textContent.replace(/\s+/g, ' '), recipe: !!a.querySelector('[data-w="recipe"]') }; }, String(num));
