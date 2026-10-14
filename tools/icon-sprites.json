@@ -74,17 +74,37 @@
       "scan": []
     },
     "till": {
-      "note": "Stage 3a: the till adopts the kit's code doors behind kiwiSkin2027:till (the approval sheet and the staff pad): the pad's delete key and the sheet's close. Stage 3b: the till's own kitchen board on the kit's lanes (the late word, the warning timer, the note, delivery, the ready time, the recipe). Stage 4 (till core) grows it.",
+      "note": "Stage 3a: the till adopts the kit's code doors behind kiwiSkin2027:till (the approval sheet and the staff pad): the pad's delete key and the sheet's close. Stage 3b: the till's own kitchen board on the kit's lanes (the late word, the warning timer, the note, delivery, the ready time, the recipe). Stage 4 (till core) grows it. Stage 4: the till frame on the kit (till.js, elements.js, overlays.js): every glyph its menu grid, bill, options, payment, tip popover, cash count, split and discount can draw.",
       "icons": [
+        "account_balance_wallet",
+        "add",
         "backspace",
         "check",
+        "chevron_left",
+        "chevron_right",
         "close",
+        "credit_card",
         "error",
+        "inbox",
+        "info",
         "menu_book",
+        "more_horiz",
+        "payments",
+        "percent",
+        "print",
+        "progress_activity",
+        "receipt_long",
+        "remove",
+        "search",
+        "send",
         "sync_alt",
+        "task_alt",
         "timer",
+        "today",
+        "tune",
         "two_wheeler",
-        "warning"
+        "warning",
+        "wifi_off"
       ]
     },
     "dashboard": {

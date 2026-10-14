@@ -148,9 +148,9 @@
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=2">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=3">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=8">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=9">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -172,8 +172,10 @@
         js("assets/kit/controls/chip.js?v=1") +
         js("assets/kit/controls/keypad.js?v=1") +
         js("assets/kit/controls/stepper.js?v=1") +
-        js("assets/kit/till.js?v=2") +
-        js("assets/kit/till-frame.js?v=1") +
+        js("assets/kit/controls/switch.js?v=1") +
+        js("assets/kit/elements.js?v=1") +
+        js("assets/kit/till.js?v=3") +
+        js("assets/kit/till-frame.js?v=2") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -5755,7 +5757,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
-  <script src="assets/caisse-pwa.js?v=571" defer></script>
+  <script src="assets/caisse-pwa.js?v=572" defer></script>
   <script src="assets/live-link.js?v=64" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
@@ -10647,7 +10649,53 @@
       }
       return empty;
     }
+    /* L'encaissement dans le volet (étape 4 (2)). <k-pay> dessine et rapporte ;
+       la vente passe par finalizeTender, la même frontière que les fenêtres
+       livrées espèces et carte, avec le pourboire posé dans leur état
+       (payTipMode). Carte : enregistrement seul, le terminal est ailleurs
+       (§10.25). Autre : la méthode `wallet` (§9.6, pay.other). */
+    const TILL_KIT_METHOD = { cash: 'cash', card: 'card', other: 'wallet' };
+    function tillKitOpenPay() {
+      if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
+      if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
+      resetPayTip();
+      window.KiwiTillFrame.openPay({ bill: $('#rp-table').textContent || '', due: currentTotal(), method: null, tipPct: 0 });
+    }
+    function tillKitTip(pct) {
+      const p = Math.max(0, Math.min(100, Number(pct) || 0));
+      if ([0, 5, 10, 15].includes(p)) payTipMode = String(p);
+      else { payTipMode = 'autre'; payTipCustom = p; }
+    }
+    async function tillKitConfirm(kind, value) {
+      const method = TILL_KIT_METHOD[kind];
+      const pay = window.KiwiTillFrame.pay();
+      if (!method || tenderInFlight) return;
+      const total = Math.round((currentTotal() + payTipAmount()) * 100) / 100;
+      const got = kind === 'cash' ? Math.round((+value.received || 0) * 100) / 100 : total;
+      if (got < total) return;
+      tenderInFlight = true;
+      let settled;
+      try { settled = await finalizeTender(method); }
+      catch (_) { tenderInFlight = false; pay.notRecorded(); toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      tenderInFlight = false;
+      const sale = settled === 'split' ? null : lastSaleEntry();
+      pay.paid();
+      if (kind === 'cash') {
+        openCashDrawer();
+        const change = Math.round((got - total) * 100) / 100;
+        if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+      }
+      if (sale) printSaleTicket(sale);
+      resetPayTip();
+      setTimeout(() => { window.KiwiTillFrame.closePay(); try { tillKitPaint(); } catch (_) {} }, 1200);
+    }
     function tillKitAct(verb, id, value) {
+      if (window.KiwiTillFrame.paying() && !/^pay\./.test(verb)) return;
+      switch (verb) {
+        case 'pay.tip': tillKitTip(value.pct); return;
+        case 'pay.confirm': tillKitConfirm(id, value); return;
+        case 'pay.leave': resetPayTip(); window.KiwiTillFrame.closePay(); tillKitPaint(); return;
+      }
       const list = mode === 'vrap' ? cart : (selectedId ? (tableOrders[selectedId] || []) : []);
       const line = id ? list.find(l => String(l.uid) === id) : null;
       if (line && line.kind === 'formula-part') return;
@@ -10675,7 +10723,7 @@
           if (mode === 'order' && selectedId) validateOrder(selectedId);
           return;
         case 'pay':
-          click(mode === 'order' ? '#pay-charge-order' : '#pay-charge');
+          tillKitOpenPay();
           return;
         case 'split': click('#pay-split'); return;
         case 'discount': click('#rp-pay-normal [data-action="discount"]'); return;
@@ -10684,6 +10732,9 @@
     }
     function tillKitPaint() {
       if (!tillKitOn()) return;
+      /* Le volet livré s'est fermé (autre table, autre mode) : l'encaissement
+         en cours n'a plus d'addition sous lui. */
+      if (window.KiwiTillFrame.paying() && $('#rp-active').hidden && !tenderInFlight) window.KiwiTillFrame.closePay();
       window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill() });
     }
     function tillKitAfter(fn) {
