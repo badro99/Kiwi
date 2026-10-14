@@ -157,21 +157,49 @@ export async function onRequestPost({ request, env }) {
   const action = String(body.action || '');
   const targetId = String(body.memberId || '').trim().slice(0, 96);
 
-  if (action === 'generate-attendance-code') {
+  /* A new six-digit code, never the one it replaces, alive 5 minutes. */
+  const drawCode = (previousCode) => {
     const digits = new Uint32Array(1);
-    const previous = await readDoc(env, merchant, ATTENDANCE_CODE, {});
     let code = '';
     do {
       crypto.getRandomValues(digits);
       code = String(digits[0] % 1000000).padStart(6, '0');
-    } while (code === String(previous.data && previous.data.code || ''));
+    } while (code === String(previousCode || ''));
     const createdTs = Date.now();
-    const expiresTs = createdTs + 5 * 60 * 1000;
+    return { code, createdTs, expiresTs: createdTs + 5 * 60 * 1000 };
+  };
+
+  if (action === 'generate-attendance-code') {
+    const previous = await readDoc(env, merchant, ATTENDANCE_CODE, {});
+    const { code, createdTs, expiresTs } = drawCode(previous.data && previous.data.code);
     const saved = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, () => ({
       code, createdTs, expiresTs,
     }));
     return saved
       ? json({ ok: true, code, createdTs, expiresTs }, 200, { 'Cache-Control': 'no-store' })
+      : json({ error: 'attendance-code-write-failed' }, 503);
+  }
+
+  /* §10.34 (stage 4): one shared code per merchant, shown the same on every
+     till. The stored code comes back unchanged while it has MORE than 60 s
+     of life left; only then is a new one drawn, through the same
+     compare-and-swap on rev, so two tills renewing at the same instant end
+     with one code (the loser re-reads the winner's and keeps it). `now` is
+     the server's clock: the till times its renewal on it, not its own. */
+  if (action === 'current-attendance-code') {
+    const live = (doc) => !!doc && /^\d{6}$/.test(String(doc.code || '')) && Number(doc.expiresTs) - Date.now() > 60 * 1000;
+    const first = await readDoc(env, merchant, ATTENDANCE_CODE, {});
+    let reused = live(first.data);
+    let current = reused ? first.data : null;
+    if (!current) {
+      current = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, (doc) => {
+        reused = live(doc);
+        return reused ? doc : drawCode(doc && doc.code);
+      });
+    }
+    return current
+      ? json({ ok: true, code: current.code, createdTs: current.createdTs, expiresTs: current.expiresTs, now: Date.now(), reused },
+        200, { 'Cache-Control': 'no-store' })
       : json({ error: 'attendance-code-write-failed' }, 503);
   }
 
