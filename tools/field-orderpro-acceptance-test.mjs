@@ -26,6 +26,9 @@ const phoneSessionSource = slice(caisseSource, '    function phoneSessionOf(id)'
 const attachSource = slice(caisseSource, '    function attachOrderProTable(o)', '    /* Une commande du serveur');
 const tableSaleLabelSource = slice(caisseSource, '    function tableSaleLabel(tableId, ref)', '    function settledOrderLabel(tableId)');
 const timerSource = slice(caisseSource, '    /* ---------- Live elapsed minutes', '    /* ---------- Khlass-fade');
+/* The per-order record of what this phone sent (bill, reload, refusals). */
+const sentSource = slice(phoneSource, '    const ORDER_DONE = new Set', '    /* Aucun pourboire présélectionné')
+  + (phoneSource.match(/    const toCents = [^\n]*\n/) || [''])[0];
 let passed = 0, failed = 0;
 async function check(name, run) {
   try { await run(); passed++; console.log('PASS ' + name); }
@@ -93,7 +96,7 @@ function phone(table, storage = new Map()) {
     return nodes.get(selector);
   }
   const context = vm.createContext({
-    console, Date, Math, Map, crypto: globalThis.crypto, TextEncoder, cart: new Map(), sentLines: [], sessionTotal: 0,
+    console, Date, Math, Map, Set, JSON, crypto: globalThis.crypto, TextEncoder, cart: new Map(), sentLines: [], sessionTotal: 0, sentOrders: [],
     currentOrderId: '', pendingRef: '', lastStatus: '', orderMode: 'table', tableNumber: table,
     localStorage: { getItem: k => storage.get(k) || null, setItem: (k,v) => storage.set(k,v), removeItem: k => storage.delete(k) },
     NET: {
@@ -116,7 +119,7 @@ function phone(table, storage = new Map()) {
     nameOf: id => menu.items.find(item => item.id === id)?.name || '',
     totals: () => ({ total: 50 }), describeOptionChoices: () => [], describeOptionVisuals: () => [], groupLabel: key => key,
   });
-  vm.runInContext(sessionSource + closedSource + sendSource + '\nglobalThis.production = { SESSION, sendOrder };', context);
+  vm.runInContext(sentSource + sessionSource + closedSource + sendSource + '\nglobalThis.production = { SESSION, sendOrder };', context);
   return { context, storage, screens, requests, toasts, ...context.production,
     loseResponse() { loseNextResponse = true; },
     add(id = 'dish', options = {}, qty = 1) { context.cart.set(id, { id, options, qty, note: '', unitPrice: 50 }); },

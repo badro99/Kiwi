@@ -2053,6 +2053,9 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 0; margin: 0 0 4px;
       overflow-y: auto;
       max-height: 24vh;
+      /* The panel is a column that scrolls as a whole; a list that may shrink
+         gave its rows away to the tip jar until only one, then none, showed. */
+      flex-shrink: 0;
     }
     .bill-row {
       display: flex;
@@ -2079,6 +2082,20 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink-2);
       white-space: nowrap;
     }
+    .bill-orders {
+      list-style: none;
+      padding: 0; margin: 0 0 6px;
+      flex-shrink: 0;
+    }
+    .bill-order {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: var(--ink-2);
+    }
+    .bill-order.is-refused { color: var(--ink-3); text-decoration: line-through; }
     .bill-empty {
       text-align: center;
       padding: 22px 0;
@@ -3225,8 +3242,8 @@ em, i, cite, dfn, var { font-style: normal; }
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
-        <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">à l’équipe.</em></h1>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">·</span> <em data-i18n="success_eta_em">En attente de la caisse</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
           <div id="success-items"></div>
@@ -3457,6 +3474,8 @@ em, i, cite, dfn, var { font-style: normal; }
         <h2 class="bill-title" data-i18n="bill_title">Mes commandes</h2>
         <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span></div>
         <p class="bill-subtitle" data-i18n="bill_scope">Commandes envoyées depuis ce téléphone. Demandez l’addition complète à l’équipe.</p>
+
+        <ul class="bill-orders" id="bill-orders" hidden></ul>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -3783,9 +3802,10 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "Envoyer en cuisine",
         send_takeout: "Passer commande",
         success_title_a: "Commande envoyée",
-        success_title_em: "en cuisine.",
+        success_title_em: "à l’équipe.",
+        success_title_em_kitchen: "en cuisine.",
         success_eta_pre: "Table",
-        success_eta_mid: "· prêt dans",
+        success_eta_mid: "·",
         success_eta_em: "4–6 min",
         success_recap: "Votre commande",
         success_note: "Le paiement se fait à votre table. Vous pouvez ajouter d'autres articles si vous voulez.",
@@ -3890,6 +3910,11 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_reorder: "Commander à nouveau",
         prep_waiting: "En attente de la caisse",
         prep_accepted: "Acceptée · en préparation",
+        prep_ready: "Prête · elle arrive",
+        order_refused_n: "Commande {n} refusée par le comptoir · retirée de votre addition",
+        order_busy: "Beaucoup de commandes en attente · appelez l’équipe",
+        bill_order_label: "Commande",
+        bill_order_refused: "Refusée · non comptée",
         // ── boutique vertical ──
         bq_title: "Nos produits",
         bq_scan: "Scanner un produit",
@@ -3969,9 +3994,10 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "Send to kitchen",
         send_takeout: "Place order",
         success_title_a: "Order sent to",
-        success_title_em: "the kitchen.",
+        success_title_em: "the team.",
+        success_title_em_kitchen: "the kitchen.",
         success_eta_pre: "Table",
-        success_eta_mid: "· ready in",
+        success_eta_mid: "·",
         success_eta_em: "4–6 min",
         success_recap: "Your order",
         success_note: "You'll pay at your table. Feel free to add more items if you want.",
@@ -4074,6 +4100,11 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_reorder: "Order again",
         prep_waiting: "Waiting for the till",
         prep_accepted: "Accepted · being prepared",
+        prep_ready: "Ready · on its way",
+        order_refused_n: "Order {n} refused by the counter · removed from your bill",
+        order_busy: "Lots of orders waiting · please call the team",
+        bill_order_label: "Order",
+        bill_order_refused: "Refused · not counted",
         bq_title: "Our products",
         bq_scan: "Scan a product",
         bq_scan_hint: "Point at the barcode on the tag",
@@ -4152,9 +4183,10 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "صيفط للمطبخ",
         send_takeout: "أكد الطلب",
         success_title_a: "الطلب تصيفط",
-        success_title_em: "للمطبخ.",
+        success_title_em: "للفريق.",
+        success_title_em_kitchen: "للمطبخ.",
         success_eta_pre: "طاولة",
-        success_eta_mid: "· غادي يكون واجد ف",
+        success_eta_mid: "·",
         success_eta_em: "4–6 دقايق",
         success_recap: "الطلب ديالك",
         success_note: "الخلاص فالطاولة. تقدر تزيد طلبات أخرى إلا بغيتي.",
@@ -4257,6 +4289,11 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_reorder: "طلب من جديد",
         prep_waiting: "كنتسناو الكيس",
         prep_accepted: "تقبل · كيتوجد",
+        prep_ready: "واجد · جاي ليك",
+        order_refused_n: "الطلب {n} ماتقبلش من الكونطوار · تحيّد من الحساب ديالك",
+        order_busy: "بزاف ديال الطلبات كتسنى · عيّط للفريق",
+        bill_order_label: "الطلب",
+        bill_order_refused: "ماتقبلش · ماتحسبش",
         bq_title: "المنتوجات ديالنا",
         bq_scan: "سكاني منتوج",
         bq_scan_hint: "وجّه على الكود-بار ديال الإتيكيت",
@@ -4388,9 +4425,61 @@ em, i, cite, dfn, var { font-style: normal; }
 
     // Cart: lineKey -> { id, options, note, unitPrice, qty }
     const cart = new Map();
-    // Already-sent orders (table mode session — used for bill)
-    const sentLines = []; // [{ id, options, note, unitPrice, qty }]
-    let sessionTotal = 0;
+    /* Les commandes envoyées depuis ce téléphone, une entrée par commande :
+       { id, number, status, total, lines:[{ id, options, note, unitPrice, qty }] }.
+       Une simple liste de lignes se trompait de trois façons : une commande
+       REFUSÉE par la caisse restait sur l'addition et dans le partage ;
+       recharger la page (iPhone qui ferme l'onglet, nouveau scan du tag)
+       vidait « Mes commandes » alors que la table était encore ouverte ; et
+       seule la DERNIÈRE commande était suivie, donc le refus d'une commande
+       précédente n'arrivait jamais. Les prix sont ceux que le SERVEUR a
+       calculés, pour que les lignes tombent juste sur son total. La liste est
+       gardée pour la session en cours (localStorage), jamais au-delà. */
+    let sentOrders = [];
+    const sentLines = [];   // dérivé : les lignes des commandes non refusées
+    let sessionTotal = 0;   // dérivé : leur total, tel que le serveur l'a calculé
+    const ORDER_DONE = new Set(['served', 'rejected', 'archived']);
+    const sentKey = id => 'kiwi-op-sent:' + NET.slug + ':' + id;
+    function rebuildSent() {
+      sentLines.length = 0;
+      let c = 0;
+      for (const o of sentOrders) {
+        if (o.status === 'rejected') continue;
+        for (const l of o.lines) sentLines.push(l);
+        c += toCents(o.total);
+      }
+      sessionTotal = c / 100;
+    }
+    function saveSent() {
+      if (!SESSION.id) return;
+      try {
+        if (sentOrders.length) localStorage.setItem(sentKey(SESSION.id), JSON.stringify(sentOrders));
+        else localStorage.removeItem(sentKey(SESSION.id));
+      } catch (_) {}
+    }
+    /* La session vient d'être ouverte ou reprise : on relit SES commandes, et
+       on jette celles d'une visite précédente. */
+    function loadSent(sessionId) {
+      sentOrders = [];
+      try {
+        const prefix = 'kiwi-op-sent:' + NET.slug + ':';
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(prefix) && k !== sentKey(sessionId)) localStorage.removeItem(k);
+        }
+        const saved = JSON.parse(localStorage.getItem(sentKey(sessionId)) || '[]');
+        if (Array.isArray(saved)) {
+          sentOrders = saved.filter(o => o && typeof o.id === 'string' && Array.isArray(o.lines));
+        }
+      } catch (_) {}
+      rebuildSent();
+    }
+    function clearSent() {
+      const id = SESSION.id;
+      sentOrders = [];
+      rebuildSent();
+      if (id) { try { localStorage.removeItem(sentKey(id)); } catch (_) {} }
+    }
     /* Aucun pourboire présélectionné : un 15 % coché d'office gonflait le « Total »
        d'un montant que le client n'avait pas choisi. */
     let tipPercent = 0;
@@ -4626,7 +4715,7 @@ em, i, cite, dfn, var { font-style: normal; }
             ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
             <div class="dish-name">${escapeHtml(i.name)}</div>
             <div class="dish-foot">
-              <span class="dish-price">${m.price} ${cur()}</span>
+              <span class="dish-price">${money(m.price)}</span>
               ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
             </div>
           </div>
@@ -4656,6 +4745,19 @@ em, i, cite, dfn, var { font-style: normal; }
     const descOf  = id => itemI18n(id).desc || itemOf(id)?.desc || '';
     const basePriceOf = id => itemOf(id)?.price || 0;
     const cur = () => t('currency');
+    /* Un prix est en dirhams ET centimes. La carte arrondissait au dirham
+       entier (un café à 14,50 s'affichait 15) puis ajoutait l'option telle
+       quelle : « Grand +3,50 » donnait 18,5 au lieu de 18, le panier disait
+       108,5 et le serveur en facturait 108. On garde les centimes, on compte
+       en centimes entiers (3 × 14,55 ne doit pas s'écrire 43,650000000000006)
+       et on écrit l'entier sans décimales, les centimes après une virgule. */
+    const toCents = v => Math.round((Number(v) || 0) * 100);
+    function fmtAmount(v) {
+      const c = toCents(v), a = Math.abs(c), frac = a % 100;
+      return (c < 0 ? '-' : '') + Math.floor(a / 100)
+        + (frac ? (currentLang === 'en' ? '.' : ',') + String(frac).padStart(2, '0') : '');
+    }
+    const money = v => fmtAmount(v) + ' ' + cur();
 
     function lineKey(id, options, note) {
       const parts = [id];
@@ -4808,8 +4910,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const { count, total } = totals();
       const pill = $('#cart-pill');
       $('#cart-count').textContent = count;
-      $('#cart-total').textContent = `${total} ${cur()}`;
-      $('#cart-grand').textContent = `${total} ${cur()}`;
+      $('#cart-total').textContent = `${money(total)}`;
+      $('#cart-grand').textContent = `${money(total)}`;
       pill.classList.toggle('is-visible', count > 0);
       $('#send-btn').disabled = count === 0;
 
@@ -4834,7 +4936,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <span>${line.qty}</span>
               <button type="button" data-inc="${safe}" aria-label="+">+</button>
             </span>
-            <span class="row-price">${line.qty * line.unitPrice} ${cur()}</span>
+            <span class="row-price">${money(line.qty * line.unitPrice)}</span>
           </li>
         `;
       }).join('');
@@ -4931,7 +5033,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const i = itemI18n(item.id);
       $('#custom-name').textContent = i.name;
       $('#custom-desc').textContent = i.desc;
-      $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
+      $('#custom-base').textContent = `${t('custom_from')} ${money(item.price)}`;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
       imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
@@ -4956,7 +5058,7 @@ em, i, cite, dfn, var { font-style: normal; }
                   ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
                   : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id, c, opt).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
                 <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id, c, opt)}</span>
-                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}</span>
+                ${c.delta ? `<span class="delta">+${money(c.delta)}</span>` : ''}</span>
                 ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
               </button>
             `).join('')}
@@ -5036,7 +5138,7 @@ em, i, cite, dfn, var { font-style: normal; }
       return p;
     }
     function refreshCustomizerPrice() {
-      $('#custom-price-value').textContent = `${customizerUnitPrice()} ${cur()}`;
+      $('#custom-price-value').textContent = `${money(customizerUnitPrice())}`;
     }
     function confirmCustomizer() {
       if (!customizerItem) return;
@@ -5101,12 +5203,31 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ Bill sheet + gamified tip ============ */
     function openBill() {
+      renderBill();
+      setTipPercent(0);
+
+      $('#bill-sheet').classList.add('is-open');
+      $('#bill-sheet').setAttribute('aria-hidden', 'false');
+    }
+    const ORDER_STATE_KEY = { pending: 'prep_waiting', accepted: 'prep_accepted', ready: 'prep_ready',
+                              served: 'order_served', rejected: 'bill_order_refused' };
+    function renderBill() {
       $('#bill-table').textContent = tableNumber;
+      const ordersEl = $('#bill-orders');
+      if (ordersEl) {
+        ordersEl.innerHTML = sentOrders.map(o => `
+          <li class="bill-order${o.status === 'rejected' ? ' is-refused' : ''}">
+            <span>${escapeHtml(t('bill_order_label'))} ${escapeHtml(o.number || '')}</span>
+            <span>${escapeHtml(t(ORDER_STATE_KEY[o.status] || 'prep_accepted'))}</span>
+          </li>`).join('');
+        ordersEl.hidden = !sentOrders.length;
+      }
 
       // Aggregate sent lines by lineKey
       const agg = new Map();
       for (const l of sentLines) {
-        const key = lineKey(l.id, l.options, l.note);
+        // Same dish at two prices (a promotion that ended) stays two rows.
+        const key = lineKey(l.id, l.options, l.note) + '|' + toCents(l.unitPrice);
         if (agg.has(key)) agg.get(key).qty += l.qty;
         else agg.set(key, { ...l });
       }
@@ -5124,7 +5245,7 @@ em, i, cite, dfn, var { font-style: normal; }
                 <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
                 ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
-              <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
+              <div class="bill-row-price">${money(l.qty * l.unitPrice)}</div>
             </li>
           `;
         }).join('');
@@ -5134,11 +5255,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const subtitleEl = $('#bill-subtitle');
       if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span>`;
 
-      $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
-      setTipPercent(0);
-
-      $('#bill-sheet').classList.add('is-open');
-      $('#bill-sheet').setAttribute('aria-hidden', 'false');
+      $('#bill-subtotal-value').textContent = `${money(sessionTotal)}`;
     }
     function closeBill() {
       $('#bill-sheet').classList.remove('is-open');
@@ -5160,7 +5277,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const total = sessionTotal + tipAmt;
 
       const tipAmtEl = $('#tip-amount');
-      tipAmtEl.textContent = pct === 0 ? `+0 ${cur()}` : `+${tipAmt} ${cur()}`;
+      tipAmtEl.textContent = `+${money(pct === 0 ? 0 : tipAmt)}`;
       tipAmtEl.classList.toggle('is-zero', pct === 0);
 
       // Jar fill — 20% tip fills jar to top, 25%+ overflows
@@ -5189,7 +5306,7 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       // Total
-      $('#bill-total-value').textContent = `${total} ${cur()}`;
+      $('#bill-total-value').textContent = `${money(total)}`;
     }
 
     async function confirmBill() {
@@ -5260,14 +5377,14 @@ em, i, cite, dfn, var { font-style: normal; }
       if (subtitleEl) {
         subtitleEl.textContent = t('split_subtitle_tpl')
           .replace('{n}', tableNumber || '—')
-          .replace('{total}', grand)
+          .replace('{total}', fmtAmount(grand))
           .replace('{cur}', cur());
       }
       if (splitState.mode === 'egal') {
-        $('#split-egal-subtotal').textContent = `${subtotal} ${cur()}`;
-        $('#split-egal-tip').textContent = `${tipAmt} ${cur()}`;
-        const per = Math.ceil(grand / splitState.egalCount);
-        $('#split-egal-per').textContent = `${per} ${cur()}`;
+        $('#split-egal-subtotal').textContent = `${money(subtotal)}`;
+        $('#split-egal-tip').textContent = `${money(tipAmt)}`;
+        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
+        $('#split-egal-per').textContent = `${money(per)}`;
       } else {
         renderSplitArticle();
       }
@@ -5295,7 +5412,7 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <button class="split-person-tab ${isActive ? 'is-active' : ''}" type="button" data-split-person="${i}">
             <span class="name">${t('split_person_pre')} ${i + 1}</span>
-            <span class="val">${total} ${cur()}</span>
+            <span class="val">${money(total)}</span>
           </button>
         `;
       }).join('');
@@ -5312,7 +5429,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <span class="qty">${line.qty}×</span>
               <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
-            <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
+            <span class="price">${money(line.qty * line.unitPrice)}</span>
           </div>
         `;
       }).join('');
@@ -5324,8 +5441,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const grand = subtotal + tipAmt;
       let msg;
       if (splitState.mode === 'egal') {
-        const per = Math.ceil(grand / splitState.egalCount);
-        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${per} ${cur()}`;
+        const per = Math.ceil(toCents(grand) / splitState.egalCount) / 100;
+        msg = `${t('toast_split_egal')} ${splitState.egalCount} × ${money(per)}`;
       } else {
         const totals = [];
         for (let i = 0; i < splitState.articleCount; i++) {
@@ -5334,7 +5451,7 @@ em, i, cite, dfn, var { font-style: normal; }
           const tipShare = subtotal > 0 ? Math.round(tipAmt * (sub / subtotal)) : 0;
           totals.push(sub + tipShare);
         }
-        msg = `${t('toast_split_egal')} ${totals.map(x => `${x}`).join(' · ')} ${cur()}`;
+        msg = `${t('toast_split_egal')} ${totals.map(x => fmtAmount(x)).join(' · ')} ${cur()}`;
       }
       closeSplit();
       closeBill();
@@ -5491,6 +5608,14 @@ em, i, cite, dfn, var { font-style: normal; }
           return;
         }
         if (err === 'service-closed') { showToast(t('order_closed')); return; }
+        /* La file est pleine : renvoyer échouerait pareil. On le dit, et on
+           envoie le client vers l'équipe. */
+        if (err === 'queue-full' || err === 'table-queue-full') {
+          SESSION.clearPendingSend(attempt);
+          pendingRef = '';
+          showToast(t('order_busy'));
+          return;
+        }
         /* La carte a bougé sous les doigts du client — un plat épuisé, un plat
            retiré. On le dit avec le nom, et on retire la ligne : réessayer à
            l'identique échouerait exactement pareil. */
@@ -5553,12 +5678,25 @@ em, i, cite, dfn, var { font-style: normal; }
         $('#prep-number').textContent = orderNumber;
         $('#ready-number').textContent = orderNumber;
         $('#cashier-items').textContent = summary || '·';
-        $('#cashier-total').textContent = `${shownTotal} ${cur()}`;
+        $('#cashier-total').textContent = `${money(shownTotal)}`;
         gotoScreen('screen-cashier');
       } else {
-        // Table mode — accumulate into the session for the bill
-        for (const l of linesCopy) sentLines.push(l);
-        sessionTotal += shownTotal;
+        // Table mode — one record per order, priced by the server
+        const serverLines = Array.isArray(res.lines)
+          ? res.lines.filter(l => l && l.kind !== 'formula-part') : [];
+        const sameShape = serverLines.length === linesCopy.length
+          && serverLines.every((l, i) => String(l.id) === String(linesCopy[i].id));
+        const lines = linesCopy.map((l, i) => ({
+          id: l.id, options: l.options, note: l.note || '', qty: l.qty,
+          unitPrice: sameShape && isFinite(Number(serverLines[i].unitPrice))
+            ? Number(serverLines[i].unitPrice) : l.unitPrice,
+        }));
+        if (!sentOrders.some(o => o.id === currentOrderId)) {   // a replayed send is the same order
+          sentOrders.push({ id: currentOrderId, number: String(res.number || ''), status: 'pending',
+                            total: shownTotal, lines });
+        }
+        rebuildSent();
+        saveSent();
         $('#success-table').textContent = tableNumber;
         $('#success-items').textContent = summary || '·';
         gotoScreen('screen-success');
@@ -5698,6 +5836,7 @@ em, i, cite, dfn, var { font-style: normal; }
         this.id = res.session; this.mode = res.mode; this.table = res.table || '';
         this.closed = false; this.closedBy = '';
         this._write({ id: this.id, mode: this.mode, table: this.table });
+        if (this.mode === 'table') loadSent(this.id);
         LIVE.start();
         return true;
       },
@@ -5706,6 +5845,7 @@ em, i, cite, dfn, var { font-style: normal; }
         this.clearPendingSend();
         this.closed = true; this.closedBy = why || '';
         this._write({ closedBy: this.closedBy, id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), hadOrder: !!currentOrderId || (Array.isArray(sentLines) && sentLines.length > 0) });
+        clearSent();
         onSessionClosed();
       },
     };
@@ -5749,7 +5889,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const SLOW = 15000;     // simplement assis, la carte ouverte
       let timer = null, running = false;
 
-      const busy = () => !!currentOrderId && lastStatus !== 'served' && lastStatus !== 'rejected' && lastStatus !== 'archived';
+      const busy = () => (!!currentOrderId && !ORDER_DONE.has(lastStatus))
+        || sentOrders.some(o => !ORDER_DONE.has(o.status));
 
       async function tick() {
         if (!running || document.hidden) return;
@@ -5766,9 +5907,13 @@ em, i, cite, dfn, var { font-style: normal; }
           }
         }
 
-        if (currentOrderId) {
-          const r = await NET.orderStatus(currentOrderId);
-          if (r && r.ok) applyOrderStatus(String(r.status || 'pending'));
+        /* Toutes les commandes encore en jeu, pas seulement la dernière : un
+           refus de la première doit arriver même après une deuxième commande. */
+        const watched = new Set(sentOrders.filter(o => !ORDER_DONE.has(o.status)).map(o => o.id));
+        if (currentOrderId) watched.add(currentOrderId);
+        for (const id of watched) {
+          const r = await NET.orderStatus(id);
+          if (r && r.ok) onOrderStatus(id, String(r.status || 'pending'));
         }
         schedule();
       }
@@ -5793,6 +5938,21 @@ em, i, cite, dfn, var { font-style: normal; }
        client. Une seule fonction pour les deux parcours : la table et le
        comptoir affichent la même vérité, avec des mots différents. */
     let lastStatus = '';
+    function onOrderStatus(id, status) {
+      const o = sentOrders.find(x => x.id === id);
+      if (o && o.status !== status) {
+        o.status = status;
+        rebuildSent();
+        saveSent();
+        if ($('#bill-sheet').classList.contains('is-open')) { renderBill(); setTipPercent(tipPercent); }
+        /* La commande à l'écran a son propre message (applyOrderStatus) ; une
+           commande précédente refusée doit être dite, avec son numéro. */
+        if (status === 'rejected' && id !== currentOrderId) {
+          showToast(t('order_refused_n').replace('{n}', o.number || '?'));
+        }
+      }
+      if (id === currentOrderId) applyOrderStatus(status);
+    }
     function applyOrderStatus(status) {
       if (status === lastStatus) return;
       lastStatus = status;
@@ -5802,9 +5962,18 @@ em, i, cite, dfn, var { font-style: normal; }
       if (em) {
         em.removeAttribute('data-i18n');
         em.textContent = status === 'pending' ? t('prep_waiting')
-                       : status === 'ready' ? t('prep_now')
+                       : status === 'ready' ? t('prep_ready')
                        : status === 'served' ? t('order_served')
+                       : status === 'rejected' ? t('order_refused')
                        : t('prep_accepted');
+      }
+      /* « Envoyée en cuisine » n'est vrai qu'une fois la caisse d'accord :
+         avant, la commande attend au comptoir. */
+      const titleEm = $('.success-title em');
+      if (titleEm) {
+        titleEm.removeAttribute('data-i18n');
+        titleEm.textContent = status === 'pending' || status === 'rejected'
+          ? t('success_title_em') : t('success_title_em_kitchen');
       }
 
       // Comptoir — la barre de préparation
@@ -5852,6 +6021,8 @@ em, i, cite, dfn, var { font-style: normal; }
     function watchTableOrder() {
       const em = $('.success-eta em');
       if (em) { em.removeAttribute('data-i18n'); em.textContent = t('prep_waiting'); }
+      const titleEm = $('.success-title em');
+      if (titleEm) { titleEm.removeAttribute('data-i18n'); titleEm.textContent = t('success_title_em'); }
       lastStatus = '';
       LIVE.start();
       LIVE.kick();
@@ -6293,7 +6464,7 @@ em, i, cite, dfn, var { font-style: normal; }
           subId: String(it.subId || ''),
           name: String(it.name || ''),
           desc: String(it.desc || ''),
-          price: Math.max(0, Math.round(Number(it.price) || 0)),
+          price: Math.max(0, toCents(it.price) / 100),
           icon: it.icon || 'utensils',
           photo: it.photo || '',
           video: it.video || '',
@@ -6354,7 +6525,7 @@ em, i, cite, dfn, var { font-style: normal; }
       BQ.products = products.map(p => ({
         id: String(p.id),
         name: String(p.name || ''),
-        price: Math.max(0, Math.round(Number(p.priceMAD != null ? p.priceMAD : p.price) || 0)),
+        price: Math.max(0, toCents(p.priceMAD != null ? p.priceMAD : p.price) / 100),
         photo: p.photo || '',
         video: p.video || '',
         category: cats.get(String(p.categoryId)) || '',
@@ -6418,7 +6589,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <span class="bq-meta">${escapeHtml(p.category)}</span>
             <span class="bq-pill ${pill.cls}">${escapeHtml(pill.label)}</span>
           </span>
-          <span class="bq-price">${p.price} ${escapeHtml(cur())}</span>
+          <span class="bq-price">${escapeHtml(money(p.price))}</span>
         </button>`;
       }).join('');
       if (window.lucide) window.lucide.createIcons();
@@ -6428,7 +6599,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const p = BQ.byId.get(String(id));
       if (!p) return;
       $('#bq-d-name').textContent = p.name;
-      $('#bq-d-price').textContent = `${p.price} ${cur()}`;
+      $('#bq-d-price').textContent = `${money(p.price)}`;
 
       // The merchant's own photo or clip, full width above the stock detail.
       const hero = $('#bq-d-hero');
@@ -6618,11 +6789,10 @@ em, i, cite, dfn, var { font-style: normal; }
         // Thanks screen: reorder button clears dead session and immediately reopens menu
         if (e.target.closest('#thanks-reorder-btn')) {
           SESSION._write(null);
+          clearSent();
           SESSION.closed = false;
           SESSION.closedBy = '';
           SESSION.id = '';
-          sentLines.length = 0;
-          sessionTotal = 0;
           cart.clear();
           refreshCartUI();
           if (orderMode === 'table' && tableNumber) {

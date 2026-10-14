@@ -137,6 +137,12 @@ const sessionSource = ORDERPRO_SRC.match(/    const SESSION = \{[\s\S]*?\n    \}
 if (!sessionSource) throw new Error('FAIL: could not extract production SESSION object');
 const onClosedSource = ORDERPRO_SRC.match(/    function onSessionClosed\(\) \{[\s\S]*?\n    \}\n\n    \/\* ═══════════════════════════════════════════════════════════════════════\n       LE DIRECT/);
 if (!onClosedSource) throw new Error('FAIL: could not extract production onSessionClosed');
+/* The per-order record of what this phone sent (bill, reload, refusals). */
+const sentStart = ORDERPRO_SRC.indexOf('    const ORDER_DONE = new Set');
+const sentEnd = ORDERPRO_SRC.indexOf('    /* Aucun pourboire présélectionné', sentStart);
+if (sentStart < 0 || sentEnd < 0) throw new Error('FAIL: could not extract production sent-order block');
+const sentSource = ORDERPRO_SRC.slice(sentStart, sentEnd)
+  + (ORDERPRO_SRC.match(/    const toCents = [^\n]*\n/) || [''])[0];
 const liveSource = ORDERPRO_SRC.match(/    const LIVE = \(\(\) => \{[\s\S]*?\n    \}\)\(\);/);
 if (!liveSource) throw new Error('FAIL: could not extract production LIVE');
 const sendOrderSource = ORDERPRO_SRC.match(/    async function sendOrder\(\) \{[\s\S]*?\n    \}\n\n    \/\* Table mode gets/);
@@ -180,9 +186,12 @@ function makeProductionContext(net, cart) {
     t: (key) => key,
     gotoScreen: (screen) => screenEvents.push(screen),
     applyOrderStatus() {},
+    onOrderStatus() {},
   });
   const source = [
     'let lastStatus = "";',
+    'let sentOrders = [];',
+    sentSource,
     sessionSource[0].replace(/\n\n    \/\* Le service est fini[\s\S]*$/, ''),
     onClosedSource[0].replace(/\n\n    \/\* ═══════════════════════════════════════════════════════════════════════\n       LE DIRECT[\s\S]*$/, ''),
     liveSource[0],
