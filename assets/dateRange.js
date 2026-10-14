@@ -225,6 +225,29 @@
     return demoLedgerProjection(table, eff, shape);
 
   }
+  const ledgerSum = rows => rows.reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
+  /* The same-length window before the selected one: yesterday up to the same
+     point of its business day for Today, the day before for Yesterday, the
+     previous 7 or 30 days otherwise. */
+  function priorLedgerRows(range, selected, days, day) {
+    const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
+    if (days === 1) {
+      const before = dr.shiftDay(selected,-1), b = dr.dayBounds(selected), o = dr.dayBounds(before);
+      const cut = range === 'aujourdhui' ? o.from + (Date.now() - b.from) : o.to;
+      return clock.getDaySales(before).filter(r=>r.ts<=cut);
+    }
+    let prior = [];
+    for (let i = days; i < days * 2; i++) prior = prior.concat(clock.getDaySales(dr.shiftDay(day,-i)));
+    return prior;
+  }
+  /* Today against yesterday at the same time, from the same ledger, for Kiwi
+     AI's Today card on the kit (§18.6); null where that ledger is not running. */
+  function todayPace() {
+    const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
+    if (!dr || !clock?.getSimState?.()) return null;
+    const day = dr.today(), rows = clock.getDaySales(day) || [];
+    return { total:ledgerSum(rows), count:rows.length, priorTotal:ledgerSum(priorLedgerRows('aujourdhui', day, 1, day)), at:Date.now() };
+  }
   function demoLedgerProjection(table, range, shape) {
     const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
     if (!shape || !dr || !['aujourdhui','hier','septJours','trenteJours'].includes(range)
@@ -232,7 +255,7 @@
     const day = dr.today(), days = range === 'septJours' ? 7 : range === 'trenteJours' ? 30 : 1;
     const selected = range === 'hier' ? dr.shiftDay(day,-1) : day;
     const rows = days === 1 ? clock.getDaySales(selected) : clock.getSales(days);
-    const sum = rows => rows.reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
+    const sum = ledgerSum;
     const total = sum(rows), count = rows.length;
     if (table === heroDataByVenue) return {...shape,amount:total,netAfterKiwi:total,deltaHier:null,deltaSemaine:null,deltaMois:null};
     if (table === goalByVenue) return {...shape,current:total};
@@ -253,18 +276,9 @@
           color:m.color, label:m[lang] || m.fr, pct:by[m.key] / collectedCents * 100}))};
     }
     if (table === kpiByVenue) {
-      // Same-length previous window: yesterday up to the same point of its
-      // business day for Today, the day before for Yesterday, the previous
-      // 7 or 30 days otherwise. Deltas come from the ledger, never a constant.
-      let prior;
-      if (days === 1) {
-        const before = dr.shiftDay(selected,-1), b = dr.dayBounds(selected), o = dr.dayBounds(before);
-        const cut = range === 'aujourdhui' ? o.from + (Date.now() - b.from) : o.to;
-        prior = clock.getDaySales(before).filter(r=>r.ts<=cut);
-      } else {
-        prior = [];
-        for (let i = days; i < days * 2; i++) prior = prior.concat(clock.getDaySales(dr.shiftDay(day,-i)));
-      }
+      // Same-length previous window (priorLedgerRows). Deltas come from the
+      // ledger, never a constant.
+      const prior = priorLedgerRows(range, selected, days, day);
       const pct = (now, then) => then ? Math.round((now - then) / then * 1000) / 10 : 0;
       const priorTotal = sum(prior), priorCount = prior.length;
       const cardShare = tender => {
@@ -6480,6 +6494,7 @@
     bounds: (range) => rangeBounds(range == null ? currentRange : range),
     /* L'accueil du kit (étape 5) : ce que les rendus viennent de dessiner. */
     home: () => Object.assign({ range: currentRange }, homeStore()),
+    todayPace,
     insights: { summary: realInsightSummary, hero: buildRealHeroRec, heatmap: buildRealHeatmapRec },
     _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec },
   };
