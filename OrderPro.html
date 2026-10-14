@@ -35,7 +35,7 @@
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/material-icons.js?v=3" defer></script>
+  <script src="assets/material-icons.ordering.js?v=1" data-full="assets/material-icons.js?v=3" defer></script>
 
   <style>
     /* =========================================================
@@ -3724,8 +3724,9 @@ em, i, cite, dfn, var { font-style: normal; }
     <script data-lazy="menu-i18n" src="assets/menu-i18n.js?v=5"></script>
     <script data-lazy="ui-langs" src="assets/order-ui-langs.js?v=2"></script>
     <script data-lazy="demo" src="assets/orderpro-demo.js?v=1"></script>
+    <script data-lazy="guest" src="assets/orderpro-guest.js?v=1"></script>
   </template>
-  <script src="assets/orderpro-menu.js?v=3"></script>
+  <script src="assets/orderpro-menu.js?v=4"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -6236,12 +6237,22 @@ em, i, cite, dfn, var { font-style: normal; }
       if (window.lucide) window.lucide.createIcons();
     }
 
+    /* The guest page lands after a table is seated; its module may still be on
+       its way (it loads after the first screen), so wait for it as land()
+       waits for its data, never longer than 2.5 s. */
+    let guestReady = null;
+    async function guestLand(pending) {
+      const wait = pending || guestReady;
+      if (wait) { try { await Promise.race([wait, new Promise(r => setTimeout(r, 2500))]); } catch (_) {} }
+      return !!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land(pending));
+    }
+
     /* ============ continue from table-entry to menu ============ */
     async function commitTable() {
       if (!tableNumber) return;
       if (!(await seatHere('table', tableNumber))) return;
       applyMenuMode();
-      if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land())) gotoScreen('screen-menu');
+      if (!(await guestLand())) gotoScreen('screen-menu');
     }
 
     /* ============ takeout: cashier → preparing ============ */
@@ -6483,8 +6494,11 @@ em, i, cite, dfn, var { font-style: normal; }
       applyStoreIdentity(res.name);
       /* La page d'accueil du client (assets/orderpro-guest.js) se charge en
          parallèle : Wi-Fi, avis, jeux, « avec ça ? », temps réel, ftour. Une
-         carte à consulter sans Order Pro n'y mène pas. */
-      const guestLoad = !browseOnly && STORE.type !== 'boutique' && globalThis.KiwiGuest ? globalThis.KiwiGuest.load() : null;
+         carte à consulter sans Order Pro n'y mène pas, ni une boutique : le
+         module n'arrive qu'ici, après le premier écran (§19, 60 KB). */
+      const guestLoad = !browseOnly && STORE.type !== 'boutique' && globalThis.KiwiOrderMenu
+        ? (guestReady = KiwiOrderMenu.need('guest').then(() => globalThis.KiwiGuest ? globalThis.KiwiGuest.load() : null, () => null))
+        : null;
 
       if (STORE.type === 'boutique') {
         if (!bootBoutique(res.shop || {})) { bootState('empty', { icon: 'package-open' }); return; }
@@ -6511,7 +6525,7 @@ em, i, cite, dfn, var { font-style: normal; }
            table sur le plan de salle du comptoir. */
         if (!(await seatHere('table', tableNumber))) return;
         applyMenuMode();
-        if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land(guestLoad))) gotoScreen('screen-menu');
+        if (!(await guestLand(guestLoad))) gotoScreen('screen-menu');
       } else if (NET.mode === 'takeout') {
         chooseMode('takeout');
       } else if (NET.mode === 'table') {
@@ -6955,7 +6969,7 @@ em, i, cite, dfn, var { font-style: normal; }
             seatHere('table', tableNumber, true).then(async (ok) => {
               if (!ok) return;
               applyMenuMode();
-              if (!(globalThis.KiwiGuest && await globalThis.KiwiGuest.land())) gotoScreen('screen-menu');
+              if (!(await guestLand())) gotoScreen('screen-menu');
             });
           } else {
             restartMenu();
@@ -7052,6 +7066,5 @@ em, i, cite, dfn, var { font-style: normal; }
       requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
     });
   </script>
-  <script src="assets/orderpro-guest.js?v=1"></script>
 </body>
 </html>

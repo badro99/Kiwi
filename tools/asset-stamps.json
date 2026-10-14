@@ -771,6 +771,10 @@
     "v": "3",
     "sha": "8fe8f7761f445319"
   },
+  "assets/material-icons.ordering.js": {
+    "v": "1",
+    "sha": "b0fecea1ce141f85"
+  },
   "assets/menu-catalog.js": {
     "v": "30",
     "sha": "303ad4a937d8074b"
@@ -896,8 +900,8 @@
     "sha": "dcc6329202ab2168"
   },
   "assets/orderpro-menu.js": {
-    "v": "3",
-    "sha": "b4567ba7f21ae5a5"
+    "v": "4",
+    "sha": "353c44f9d63e5325"
   },
   "assets/orderpro-panel.js": {
     "v": "4",

@@ -10,7 +10,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   ROOT, ICON_DIR, RUNTIME, DOC, BASELINE_FILE, readGlyphs, readAliases, resolve,
-  renderRuntime, renderDocTable, spliceDoc, sourceFiles, countDataLucide, iconNamesIn
+  renderRuntime, renderDocTable, spliceDoc, sourceFiles, countDataLucide, iconNamesIn,
+  SUBSETS, subsetOf
 } from './build-material-icons.mjs';
 
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
@@ -30,6 +31,12 @@ ok(!orphans.length, orphans.length ? `alias targets not vendored: ${orphans.join
 // 3 · nothing generated was edited by hand
 ok(read(RUNTIME) === renderRuntime(glyphs, aliases), `${RUNTIME} is exactly what the generator writes (node tools/build-material-icons.mjs)`);
 ok(read(DOC) === spliceDoc(read(DOC), renderDocTable(aliases)), 'the mapping table in the audit doc matches tools/material-icon-aliases.json');
+for (const [name, spec] of Object.entries(SUBSETS)) {
+  const x = subsetOf(spec, glyphs, aliases);
+  ok(existsSync(path.join(ROOT, spec.out)) && read(spec.out) === renderRuntime(x.glyphs, x.aliases, name), `${spec.out} is exactly what the generator writes (${Object.keys(x.glyphs).length} glyphs)`);
+  const lacking = spec.from.flatMap((f) => iconNamesIn(read(f)).filter((n) => glyphs[resolve(n.name, aliases)] && !x.glyphs[resolve(n.name, aliases)]).map((n) => `${f}:${n.line} ${n.name}`));
+  ok(!lacking.length, lacking.length ? `the ${name} subset lacks names its pages ask for: ${lacking.join(', ')}` : `the ${name} subset holds every name ${spec.from.length} files ask for`);
+}
 
 // 4 · every name a call site asks for draws a real glyph
 const files = sourceFiles();
@@ -98,13 +105,63 @@ ok(!wrongTag.length, wrongTag.length ? `data-icon outside an <i> placeholder (th
   ok(ctx.KiwiIcon.missing.includes('a"><img src=x onerror=alert(1)>') && warnings.length > 0, 'and reports it as a missing icon instead');
 }
 
+// 4d · the subset: a glyph it has is drawn; one it lacks loads the full
+// runtime once, and the placeholder waits for it instead of drawing "?".
+{
+  const vm = await import('node:vm');
+  const el = (tag, attrs) => {
+    const a = { ...attrs };
+    return {
+      tagName: tag.toUpperCase(), replaced: null,
+      get attributes() { return Object.entries(a).map(([name, value]) => ({ name, value })); },
+      hasAttribute: (n) => Object.prototype.hasOwnProperty.call(a, n),
+      getAttribute: (n) => (Object.prototype.hasOwnProperty.call(a, n) ? a[n] : null),
+      setAttribute: (n, v) => { a[n] = String(v); },
+      appendChild() {},
+      replaceWith(x) { this.replaced = x; },
+    };
+  };
+  const spec = SUBSETS.ordering;
+  const x = subsetOf(spec, glyphs, aliases);
+  const absent = Object.keys(glyphs).find((g) => !x.glyphs[g]);
+  const have = el('i', { 'data-icon': 'check' });
+  const lack = el('i', { 'data-icon': absent });
+  const injected = [];
+  const self = el('script', { 'data-full': 'assets/material-icons.js?v=9' });
+  const ctx = {
+    console: { warn() {} },
+    queueMicrotask: () => {},
+    MutationObserver: class { observe() {} },
+    document: {
+      readyState: 'complete', documentElement: {}, currentScript: self,
+      head: { appendChild: (n) => injected.push(n) },
+      createElement: (tag) => el(tag, {}),
+      createElementNS: (_ns, tag) => el(tag, {}),
+      querySelectorAll: () => [have, lack],
+      addEventListener() {},
+    },
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(read(spec.out), ctx);
+  ctx.KiwiIcon.render(ctx.document);
+  ok(have.replaced && have.replaced.getAttribute('data-material-symbol') === 'check', 'the subset draws a glyph it carries');
+  ok(lack.replaced === null && injected.length === 1 && injected[0].src === 'assets/material-icons.js?v=9', `a glyph it lacks ("${absent}") loads the full runtime from data-full and keeps its placeholder`);
+  ctx.KiwiIcon.render(ctx.document);
+  ok(injected.length === 1, 'the full runtime is asked for once');
+  ok(/^<i data-icon="/.test(ctx.KiwiIcon.svg(absent, 20)), 'KiwiIcon.svg() hands back a placeholder for it, not a "?"');
+  injected[0].onerror();
+  ok(lack.replaced && lack.replaced.getAttribute('data-material-symbol') === absent && ctx.KiwiIcon.missing.includes(absent), 'offline, it falls back to the ? glyph and says so');
+}
+
 // 5 · the pages load the Outlined runtime, nobody loads the Rounded shim
 ok(!existsSync(path.join(ROOT, 'assets/lucide.min.js')), 'assets/lucide.min.js (the Rounded shim) is gone');
 const stillLucide = files.filter((f) => /lucide\.min\.js/.test(read(f)) && !f.startsWith('functions/'));
 ok(!stillLucide.length, stillLucide.length ? `still loading lucide.min.js: ${stillLucide.join(', ')}` : 'no page or script asks for lucide.min.js');
-for (const page of ['kiwi-caisse.html', 'kiwi-serveur.html', 'dashboard.html', 'OrderPro.html', 'cafe-atlas-qr.html']) {
+for (const page of ['kiwi-caisse.html', 'kiwi-serveur.html', 'dashboard.html', 'cafe-atlas-qr.html']) {
   ok(/<script src="assets\/material-icons\.js\?v=\d+" defer><\/script>/.test(read(page)), `${page} loads assets/material-icons.js`);
 }
+ok(/<script src="assets\/material-icons\.ordering\.js\?v=\d+" data-full="assets\/material-icons\.js\?v=\d+" defer><\/script>/.test(read('OrderPro.html')),
+  'OrderPro.html loads the ordering subset, and names the full runtime for a glyph it lacks');
 ok(/'\/assets\/material-icons\.js\?v=\d+'/.test(read('kiwi-sw.js')), 'the service worker precaches the runtime, so the till draws icons offline');
 const pagesWithIcons = files.filter((f) => f.endsWith('.html') && !f.includes('/') && /data-(lucide|icon)\s*=/.test(read(f)));
 const blind = pagesWithIcons.filter((f) => !/assets\/material-icons\.js/.test(read(f)));

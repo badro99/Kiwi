@@ -171,7 +171,12 @@ ok('OrderPro.html n’appelle le module que par des crochets gardés, qui existe
   });
   assert.ok(calls.size >= 12, 'hooks found: ' + [...calls].join(', '));
   for (const n of calls) assert.equal(typeof api[n], 'function', 'KiwiGuest.' + n + ' exists');
-  assert.match(page, /<script src="assets\/orderpro-guest\.js\?v=\d+"><\/script>\s*<\/body>/, 'loaded after the page script');
+  /* Loaded after the first screen (design 2027 §19): from the lazy template,
+     once a store that can seat a guest is known, and waited for before landing. */
+  assert.match(page, /<script data-lazy="guest" src="assets\/orderpro-guest\.js\?v=\d+"><\/script>/, 'listed in the lazy template');
+  assert.ok(!/<script src="assets\/orderpro-guest\.js/.test(page), 'not a blocking script tag');
+  assert.match(page, /KiwiOrderMenu\.need\('guest'\)\.then\(\(\) => globalThis\.KiwiGuest \? globalThis\.KiwiGuest\.load\(\) : null/, 'loaded, then read, at boot');
+  assert.match(page, /async function guestLand\(pending\) \{[\s\S]{0,200}Promise\.race\(\[wait, new Promise\(r => setTimeout\(r, 2500\)\)\]\)/, 'landing waits for it, 2.5 s at most');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -17,6 +17,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import zlib from 'node:zlib';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -93,6 +94,7 @@ const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', 
 const allWeek = Object.fromEntries(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => [d, { open: true, periods: [{ from: '08:00', to: '23:00' }] }]));
 
 store('parity-browse', 'Café Sans Commande', { orderpro: false, data: menu() });
+store('parity-table', 'Table Simple', { orderpro: true, data: menu() });
 store('parity-langs', 'Bistro Cinq Langues', { orderpro: true, data: menu({ langs: ['fr', 'ar', 'en', 'es', 'de'] }) });
 store('parity-closed', 'Brasserie Fermée', {
   orderpro: true,
@@ -273,6 +275,39 @@ try {
     check(/42/.test(shown.n) && /8/.test(shown.total), `the order is numbered and priced from the menu (${shown.n}, ${shown.total})`);
     check(!page.seen.some((p) => p === '/api/order' || p === '/api/order/session'), 'no order and no visit reach a server');
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
+  /* §19: a guest on a cold load gets at most 60 KB gzip of script before the
+     first screen. Measured on what the page actually fetched: the inline
+     script plus every /assets/*.js it asked for, each gzipped. */
+  const gz = (text) => zlib.gzipSync(text, { level: 9 }).length;
+  const inline = gz([...fs.readFileSync(path.join(root, 'OrderPro.html'), 'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n'));
+  const kb = (n) => (n / 1024).toFixed(1) + ' KB';
+  function scripts(page) {
+    const files = [...new Set(page.seen.filter((p) => /^\/assets\/[^/]+\.js$/.test(p)))];
+    const sizes = Object.fromEntries(files.map((p) => [p.slice(8), gz(fs.readFileSync(path.join(root, p), 'utf8'))]));
+    return { sizes, total: inline + Object.values(sizes).reduce((a, b) => a + b, 0) };
+  }
+  await S.run('the script budget · 60 KB gzip before the first screen (§19)', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const browse = await open(tr, ctx, 's=parity-browse&t=4');
+    await browse.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    await sleep(1500);
+    const b = scripts(browse);
+    console.log(`    browse-only: inline ${kb(inline)} + ${Object.entries(b.sizes).map(([f, n]) => f + ' ' + kb(n)).join(' + ')} = ${kb(b.total)}`);
+    check(b.total <= 60 * 1024, `a menu to browse loads ${kb(b.total)} of script in all`);
+    check(browse.seen.includes('/assets/material-icons.ordering.js') && !browse.seen.includes('/assets/material-icons.js'), 'the icon subset, not the full set, when every glyph is in it');
+    check(!browse.seen.includes('/assets/orderpro-guest.js'), 'no guest page module without Order Pro');
+
+    const table = await open(tr, ctx, 's=parity-table&t=4');
+    await table.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 15000 });
+    const first = scripts(table);
+    await sleep(1500);
+    const all = scripts(table);
+    const blocking = all.total - (all.sizes['orderpro-guest.js'] || 0);
+    console.log(`    seated table: inline ${kb(inline)} + ${Object.entries(all.sizes).map(([f, n]) => f + ' ' + kb(n)).join(' + ')} = ${kb(all.total)}`);
+    check(blocking <= 60 * 1024, `a seated table: ${kb(blocking)} before the guest page module, which loads after the first screen (${kb(all.total)} with it)`);
+    check(all.sizes['orderpro-guest.js'] > 0 && !/<script src="assets\/orderpro-guest/.test(fs.readFileSync(path.join(root, 'OrderPro.html'), 'utf8')), 'the guest page module still arrives, from the lazy template');
+    check(first.total <= all.total && table.errors.length === 0 && browse.errors.length === 0, 'no page error' + ([...table.errors, ...browse.errors].length ? ': ' + [...table.errors, ...browse.errors].join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

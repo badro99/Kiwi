@@ -16,7 +16,7 @@
  *                                   and zone; a promise of the language list,
  *                                   once what the store needs has loaded
  *   KiwiOrderMenu.need(name)        loads one helper from the template (hours,
- *                                   menu-i18n, ui-langs, demo); a promise
+ *                                   menu-i18n, ui-langs, demo, guest); a promise
  *   KiwiOrderMenu.langs(), pick(saved), asLang(l), rtl(l), picker(current)
  *   KiwiOrderMenu.tr(entity, lang)  { name, desc } in that language, the
  *                                   merchant's text when stale or missing
