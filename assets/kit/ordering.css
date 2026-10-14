@@ -56,6 +56,10 @@ html[data-skin-2027="ordering"] .cart-row { border-radius: var(--k-r-2); }
 /* ── The language globe (§13 phone): one round button in the header; the
    languages open under it. KiwiOrderMenu.picker() adds .is-globe and the
    button, and toggles .is-open. ────────────────────────────────────────── */
+/* The page's own picker (د · EN · FR) stays unseen until picker() folds it:
+   painted and then folded, it moved under the reader (0.0047 of the first
+   load's layout shift on the Android emulator, spec §6.1). */
+html[data-skin-2027="ordering"] .lang-picker:not(.is-globe) { visibility: hidden; }
 html[data-skin-2027="ordering"] .lang-picker.is-globe {
   flex-direction: column;
   align-items: stretch;

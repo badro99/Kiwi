@@ -364,6 +364,19 @@ try {
     check(phone.seen.includes('/assets/kit/tokens-2027.css') && phone.seen.includes('/assets/kit/ordering.css'), 'flag on: the kit’s tokens and the skin’s sheet load');
     check(await phone.evaluate(() => getComputedStyle(document.body).getPropertyValue('--forest').trim() === getComputedStyle(document.body).getPropertyValue('--k-accent').trim()), 'the page’s own colours are repainted with the 2027 tokens');
     check(await visible(phone, '.lang-globe') && !(await visible(phone, '.lang-btn[data-lang="en"]')), 'phone: a globe in the header, the languages folded under it');
+    /* Spec §6.1: the page's own picker, painted and then folded into the
+       globe, was 0.0047 of the first load's shift on the Android emulator. */
+    const pickerShift = await phone.evaluate(() => new Promise((done) => {
+      let sum = 0;
+      const o = new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) {
+          if ((e.sources || []).some((s) => { const n = s.node && (s.node.nodeType === 1 ? s.node : s.node.parentElement); return !!(n && n.closest('#lang-picker')); })) sum += e.value;
+        }
+      });
+      o.observe({ type: 'layout-shift', buffered: true });
+      setTimeout(() => { o.disconnect(); done(sum); }, 300);
+    }));
+    check(pickerShift === 0, `the globe takes the picker's place without moving it (layout shift ${pickerShift.toFixed(4)})`);
     await shot(phone, 'skin-phone');
     await phone.tap('.lang-globe');
     await phone.waitForSelector('.lang-picker.is-open .lang-btn[data-lang="en"]', { visible: true, timeout: 3000 });
