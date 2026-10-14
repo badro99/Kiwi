@@ -148,9 +148,9 @@
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=3">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=4">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=12">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=13">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -177,7 +177,7 @@
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=1") +
         js("assets/kit/till.js?v=7") +
-        js("assets/kit/till-frame.js?v=4") +
+        js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
@@ -5760,7 +5760,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
-  <script src="assets/caisse-pwa.js?v=579" defer></script>
+  <script src="assets/caisse-pwa.js?v=580" defer></script>
   <script src="assets/live-link.js?v=64" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
@@ -10595,7 +10595,14 @@
       const billBox = document.createElement('div');
       billBox.id = 'kit-bill';
       panel.appendChild(billBox);
-      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, menuPane: $('.main'), act: tillKitAct });
+      /* Le rail du kit (§10.20, étape 4 (10)) avant la barre latérale livrée,
+         qui se cache une fois le kit monté ; ses boutons restent dans la page
+         et Plus les déclenche. */
+      const railBox = document.createElement('div');
+      railBox.id = 'kit-rail';
+      const shell = $('.shell'), side = $('.sidebar');
+      if (shell && side) shell.insertBefore(railBox, side);
+      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, menuPane: $('.main'), act: tillKitAct });
       if (tillKit) document.documentElement.setAttribute('data-k-till', '');
       return tillKit;
     }
@@ -10833,7 +10840,84 @@
       tillKitPaint();
     }
 
+    /* Le rail et Plus (étape 4 (10), §18.3). Un élément du rail, une ligne de
+       Plus n'existe que si son contrôle livré existe et n'est pas éteint
+       (merchant-config pose [hidden] sur une fonction désactivée) : la
+       ligne déclenche ce contrôle, rien n'est refait. Plus porte TOUS les
+       gestes de l'ancienne barre latérale, rangés comme §18.3 les range
+       (le poste, la gestion, cet appareil), en attendant leurs places
+       définitives (§12). */
+    const TILL_KIT_MORE = [
+      ['till.more.shift', [
+        ['open_drawer', 'till.more.open_drawer', '[data-action="open-drawer"]'],
+        ['cash_in_out', 'till.more.cash_in_out', '[data-action="cash-move"]'],
+        ['shift_change', 'till.more.shift_change', '[data-action="passation"]'],
+        ['cancel_sale', 'till.more.cancel_sale', '[data-action="cancel-sale"]'],
+        ['refund', 'till.more.refund', '[data-action="remboursement"]'],
+        ['sales', 'till.more.sales', '#stat-txns-card'],
+        ['team', 'till.more.team', '#open-team'],
+        ['attendance', 'attendance.show', '#open-attendance-code'],
+        ['close', 'till.more.close', '[data-action="fin-service"]'],
+      ]],
+      ['till.more.manage', [
+        ['menu', 'till.more.menu', '#open-menu-availability'],
+        ['stock', 'till.more.stock', '#open-stock'],
+        ['loyalty', 'till.more.loyalty', '.rail-links [data-kcb-navitem]'],
+        ['printer', 'till.more.printer', '#open-kitchen-print'],
+      ]],
+      ['till.more.device', [
+        ['fullscreen', 'till.more.fullscreen', '#fs-toggle'],
+        ['reload', 'till.more.reload', null],
+        ['device_id', 'till.more.device_id', '#caisse-terminal-id'],
+      ]],
+    ];
+    const tillKitLive = (sel) => { const el = sel && document.querySelector(sel); return el && !el.hasAttribute('hidden') ? el : null; };
+    function tillKitRail() {
+      const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
+      const value = kdsOpen ? 'kitchen' : mode === 'vrap' ? 'takeaway' : mode === 'waitlist' ? 'waiting' : 'floor';
+      const newTickets = (typeof kdsOrders !== 'undefined' ? kdsOrders : []).filter((o) => o && o.status === 'new').length;
+      const items = [
+        ['floor', 'table_restaurant', 'till.nav.floor', '.mode-pill[data-mode="salle"]'],
+        ['takeaway', 'shopping_bag', 'till.nav.takeaway', '.mode-pill[data-mode="vrap"]'],
+        ['waiting', 'schedule', 'till.nav.waiting', '.mode-pill[data-mode="waitlist"]'],
+        ['kitchen', 'skillet', 'till.nav.kitchen', '#open-kds'],
+      ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => ({ id, icon, label: kkt(key), badge: id === 'kitchen' && newTickets ? newTickets : 0 }));
+      items.push({ id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
+      const who = (typeof currentCashier !== 'undefined' && currentCashier && currentCashier.name) || '';
+      return { value, items, footer: who ? { cashier: who } : {}, label: kkt('till.nav.more') };
+    }
+    function tillKitOpenMore() {
+      const sections = TILL_KIT_MORE.map(([title, rows]) => ({
+        title: kkt(title),
+        rows: rows.filter((r) => !r[2] || tillKitLive(r[2])).map(([id, key]) => ({
+          id, title: id === 'fullscreen' && document.fullscreenElement ? kkt('till.more.exit_fullscreen') : kkt(key),
+        })),
+      }));
+      window.KiwiTillFrame.openMore(sections, kkt('till.nav.more'));
+    }
+    function tillKitMore(id) {
+      if (id === 'reload') { location.reload(); return; }
+      for (const [, rows] of TILL_KIT_MORE) {
+        const row = rows.find((r) => r[0] === id);
+        if (row) { const el = tillKitLive(row[2]); if (el) el.click(); return; }
+      }
+    }
+    function tillKitRailSelect(id) {
+      if (id === 'more') { tillKitOpenMore(); return; }
+      const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
+      if (id === 'kitchen') { if (!kdsOpen) openKds(); tillKitPaint(); return; }
+      if (kdsOpen) closeKds();
+      const pill = { floor: 'salle', takeaway: 'vrap', waiting: 'waitlist' }[id];
+      const el = pill && tillKitLive('.mode-pill[data-mode="' + pill + '"]');
+      if (el) el.click();
+      tillKitPaint();
+    }
     function tillKitAct(verb, id, value) {
+      switch (verb) {
+        case 'rail.select': tillKitRailSelect(id); return;
+        case 'rail.cashier': tillKitOpenMore(); return;
+        case 'more.select': tillKitMore(id); return;
+      }
       if (window.KiwiTillFrame.busy() && !/^(pay|split|discount)\./.test(verb)) return;
       switch (verb) {
         case 'pay.tip': tillKitTip(value.pct); return;
@@ -10896,7 +10980,7 @@
         window.KiwiTillFrame.closePane('discount');
         if (!tillKitSplitStarted()) window.KiwiTillFrame.closePane('split');
       }
-      window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill() });
+      window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill(), rail: tillKitRail() });
     }
     function tillKitAfter(fn) {
       return function () {
@@ -10911,6 +10995,9 @@
       renderOrderPanel = tillKitAfter(renderOrderPanel);
       renderRightPanel = tillKitAfter(renderRightPanel);
       showEmpty = tillKitAfter(showEmpty);
+      setMode = tillKitAfter(setMode);
+      openKds = tillKitAfter(openKds);
+      closeKds = tillKitAfter(closeKds);
       /* Le kit arrive en scripts différés, après ce script : on peint une
          première fois quand il est là. */
       document.addEventListener('DOMContentLoaded', () => { try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); } });

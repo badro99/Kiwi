@@ -27,6 +27,11 @@
  *                               §10.31); their gestures reach api.act as
  *                               split.<verb> | discount.<verb>
  *   KiwiTillFrame.busy()        true while any pane is out
+ *   api.rail (mount) + view.rail (paint) {value, items, footer, label}: the
+ *                               <k-rail>; its taps reach api.act as
+ *                               rail.select | rail.cashier | rail.sync
+ *   KiwiTillFrame.openMore(sections, heading)   the More sheet; a row reaches
+ *                               api.act as more.select with its id
  *
  * The host keeps every decision: the cart, the table orders, the kitchen
  * send, the payment and its record. This file only draws what the host
@@ -40,14 +45,15 @@
   if (!K || !CE || !CE.get('k-menu-grid') || !CE.get('k-bill') || !CE.get('k-pay')) return;
   var doc = root.document;
 
-  var api = null, grid = null, bill = null, pay = null;
+  var api = null, grid = null, bill = null, pay = null, rail = null, more = null;
+  var railSig = '';
   /* The panes that push over the bill (§18.3, §10.30, §10.31): one at a time. */
   var panes = {};
   var menuSig = '', billSig = '', qtys = {};
 
   function onAction(e) {
     var d = e.detail || {};
-    var m = /^k\.(menu-grid|bill|pay|split|discount)\.(.+)$/.exec(d.action || '');
+    var m = /^k\.(menu-grid|bill|pay|split|discount|rail)\.(.+)$/.exec(d.action || '');
     if (!m || !api || typeof api.act !== 'function') return;
     var pre = (m[1] === 'menu-grid' || m[1] === 'bill') ? '' : m[1] + '.';
     api.act(pre + m[2], d.id == null ? null : String(d.id), d.value || {});
@@ -65,6 +71,9 @@
       el.addEventListener('kiwi:action', onAction);
     });
     pay = panes.pay;
+    /* The rail (§10.20, §18.3), when the host gives it a box. */
+    if (api.rail && !rail && CE.get('k-rail')) { rail = doc.createElement('k-rail'); rail.addEventListener('kiwi:action', onAction); }
+    if (rail) api.rail.appendChild(rail);
     api.menu.appendChild(grid);
     api.bill.appendChild(bill);
     Object.keys(panes).forEach(function (k) { api.bill.appendChild(panes[k]); });
@@ -119,6 +128,16 @@
 
   function paint(view) {
     if (!grid || !bill || !view) return;
+    if (view.rail && rail) {
+      var rs = JSON.stringify(view.rail);
+      if (rs !== railSig) {
+        railSig = rs;
+        if (view.rail.label) rail.setAttribute('label', view.rail.label);
+        rail.items = view.rail.items.map(function (it) { return Object.assign({}, it); });
+        rail.footer = Object.assign({}, view.rail.footer || {});
+        rail.setAttribute('value', view.rail.value || '');
+      }
+    }
     if (Array.isArray(view.sections)) paintMenu(view.sections);
     if (view.bill) {
       var sig = JSON.stringify(view.bill);
@@ -178,7 +197,43 @@
   }
   root.addEventListener('resize', function () { if (pay && !pay.hidden) place(); });
 
+  /* More (§18.3): a sheet of sections, each a <k-list> of rows the host
+     chose; a row reaches api.act as more.select with its id. */
+  function openMore(sections, heading) {
+    if (!CE.get('k-sheet') || !CE.get('k-list')) return false;
+    if (!more) {
+      more = doc.createElement('k-sheet');
+      more.setAttribute('detent', 'large');
+      more.addEventListener('kiwi:action', function (e) {
+        var d = e.detail || {};
+        if (d.action === 'k.sheet.close') { more.removeAttribute('open'); return; }
+        if (d.action !== 'k.list.select') return;
+        e.stopPropagation();
+        more.removeAttribute('open');
+        if (api && typeof api.act === 'function') api.act('more.select', d.id == null ? null : String(d.id), {});
+      });
+      doc.body.appendChild(more);
+    }
+    more.setAttribute('heading', heading || '');
+    more.textContent = '';
+    (sections || []).forEach(function (sec) {
+      if (!sec.rows || !sec.rows.length) return;
+      var h = doc.createElement('p');
+      h.className = 'k-foot k-ink2';
+      h.style.cssText = 'margin:16px 0 4px;font-weight:var(--k-fw-footnote-strong)';
+      h.textContent = sec.title || '';
+      var list = doc.createElement('k-list');
+      list.rows = sec.rows.map(function (r) { return { id: r.id, title: r.title, trailing: 'chevron' }; });
+      more.appendChild(h);
+      more.appendChild(list);
+    });
+    more.setAttribute('open', '');
+    return true;
+  }
+
   root.KiwiTillFrame = {
+    openMore: openMore,
+    rail: function () { return rail; },
     mount: mount, paint: paint, openPay: openPay, closePay: closePay, openPane: openPane, closePane: closePane,
     paying: function () { return !!(pay && !pay.hidden); },
     /* any pane out over the bill: the menu and the bill take no gesture */
