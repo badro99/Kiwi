@@ -262,6 +262,91 @@ try {
     check(await page.evaluate(() => cart.length === 1), 'and the bill is still there to pay');
     check(errors.length === 0, 'payment: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
+
+  await S.run('flag on · split and discount inside the pane, through the shipped flows', async (tr) => {
+    const { page, errors } = await till(tr, { flag: true });
+    const tapIn = (host, sel) => page.evaluate((h, s) => {
+      const el = document.querySelector(h).shadowRoot.querySelector(s);
+      if (!el) return false;
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      el.click();
+      return true;
+    }, host, sel);
+    const shown = (tag) => page.evaluate((t) => { const el = document.querySelector(t); return !!el && !el.hidden; }, tag);
+    const plain = (await tiles(page)).find((t) => !t.opts && !t.out);
+    await tapTile(page, plain.id); await sleep(150);
+    await tapTile(page, plain.id); await sleep(150);
+    await tapTile(page, plain.id); await sleep(250);
+    const total = await page.evaluate(() => currentTotal());
+
+    /* Split equally in two: 3 × the dish does not divide evenly in cents
+       only when it is odd; whatever it is, the shares sum to the total. */
+    await tapIn('k-bill', '[data-w="split"]');
+    await sleep(400);
+    check(await shown('k-split') && !(await shown('k-bill')) && !(await page.evaluate(() => document.querySelector('#split-modal').classList.contains('is-open'))),
+      'Split pushes <k-split> over the bill; the shipped split window stays shut');
+    const shares = await page.evaluate(() => document.querySelector('k-split').shares());
+    check(shares.length === 2 && shares.reduce((a, b) => a + b, 0) === Math.round(total * 100) && Math.abs(shares[0] - shares[1]) <= 1,
+      `two equal shares sum to the total to the cent (${shares.join(' + ')} = ${Math.round(total * 100)})`);
+    const before = await page.evaluate(() => journal.length);
+
+    await tapIn('k-split', '[data-w="pay"]');
+    await sleep(450);
+    check(await shown('k-pay') && !(await shown('k-split')), 'Charge share 1 opens the payment pane');
+    check(await page.evaluate((s) => Math.abs(document.querySelector('k-pay').pay.due - s / 100) < 0.005, shares[0]), 'for share 1\'s amount');
+    await tapIn('k-pay', '[data-method="cash"]'); await sleep(150);
+    await tapIn('k-pay', '[data-chip]'); await sleep(150);
+    await tapIn('k-pay', '[data-w="confirm"]'); await sleep(1700);
+    check(await shown('k-split') && await page.evaluate(() => JSON.stringify(document.querySelector('k-split').paidShares) === '[1]'),
+      'share 1 paid, the split comes back with share 1 marked');
+
+    await tapIn('k-split', '[data-w="pay"]');
+    await sleep(450);
+    check(await page.evaluate((s) => Math.abs(document.querySelector('k-pay').pay.due - s / 100) < 0.005, shares[1]), 'the next share is share 2, for its amount');
+    await tapIn('k-pay', '[data-method="card"]'); await sleep(150);
+    await tapIn('k-pay', '[data-w="confirm"]'); await sleep(1700);
+    const recs = await page.evaluate((b) => journal.slice(0).filter((e, i, a) => true).length - b, before);
+    const sales = await page.evaluate(() => journal.slice(-2).map((e) => ({ amount: e.amount, method: e.method })));
+    check(recs >= 2 && sales.map((s) => s.method).sort().join() === 'card,cash' &&
+      Math.round((sales[0].amount + sales[1].amount) * 100) === Math.round(total * 100),
+      `two sales, cash and card, summing to the total (${JSON.stringify(sales)})`);
+    check(!(await shown('k-split')) && await shown('k-bill') && await page.evaluate(() => cart.length === 0), 'every share paid: the bill is settled and back');
+
+    /* Discount 10 %, commercial, approved on the kit's manager pad. */
+    await tapTile(page, plain.id); await sleep(150);
+    await tapTile(page, plain.id); await sleep(250);
+    const gross = await page.evaluate(() => currentTotal());
+    await tapIn('k-bill', '[data-w="discount"]');
+    await sleep(400);
+    check(await shown('k-discount') && !(await shown('k-bill')), 'Discount pushes <k-discount> over the bill');
+    await tapIn('k-discount', '[data-chip="10"]'); await sleep(150);
+    check(await page.evaluate(() => document.querySelector('k-discount').shadowRoot.querySelector('[data-w="apply"]').disabled === true ||
+      document.querySelector('k-discount').shadowRoot.querySelector('[data-w="apply"]').getAttribute('aria-disabled') === 'true'), 'Apply waits for a reason');
+    await tapIn('k-discount', '[data-reasons] [data-chip="commercial"]'); await sleep(150);
+    await tapIn('k-discount', '[data-w="apply"]'); await sleep(500);
+    const padOpen = await page.evaluate(() => !!document.querySelector('k-pin-pad'));
+    check(padOpen, 'Apply asks for the manager\'s code on the kit pad');
+    for (const k of ['1', '2', '3', '4']) {
+      await page.evaluate((key) => {
+        const pad = [...document.querySelectorAll('k-pin-pad')].pop();
+        const b = pad && pad.shadowRoot.querySelector(`[data-key="${key}"]`);
+        if (!b) return;
+        b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+        b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+        b.click();
+      }, k);
+      await sleep(120);
+    }
+    await sleep(1200);
+    const disc = await page.evaluate(() => vrapDiscount && { kind: vrapDiscount.kind, value: vrapDiscount.value, amount: vrapDiscount.amount, reason: vrapDiscount.reason });
+    check(disc && disc.kind === 'pct' && disc.value === 10 && Math.abs(disc.amount - Math.round(gross * 10) / 100) < 0.005 && disc.reason === 'Geste commercial',
+      `the approved discount is the shipped one: ${JSON.stringify(disc)}`);
+    const v = await billView(page);
+    check(Math.abs(amount(v.total) - (gross - disc.amount)) < 0.005 && await page.evaluate(() => !!document.querySelector('k-bill').shadowRoot.querySelector('[data-k-part]')),
+      `the bill shows the discount line and the net total (${v.total})`);
+    check(errors.length === 0, 'split and discount: no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
 } finally {
   await browser.close().catch(() => {});
   server.closeAllConnections();

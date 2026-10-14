@@ -608,11 +608,15 @@
       });
       K.tap(R, '[data-share]', function (el, e, g) { var i = Number(el.getAttribute('data-share')); if (i !== self.__pick) { K.haptic('Choose', g, { trigger: 'tap' }); self.__pick = i; self.render(); } });
       C.button.bind(R, function (el, g) {
+        if (el.getAttribute('data-w') === 'leave') { self.emit('leave', null, { gestureId: g }); return; }   /* the header's Back (§10.30) */
         if (el.getAttribute('data-w') !== 'pay') return;
         var sh = self.shares();
         self.emit('pay-share', String(self.__pick + 1), { n: self.__pick + 1, amount: fromCents(sh[self.__pick] || 0), mode: self.__mode, gestureId: g });
       }, '[data-w]');
     },
+    /* What the host needs to build the shares the same way: the mode, the
+       count and, by item, which share each line went to. */
+    plan: function () { return { mode: this.__mode, n: this.__n, assign: Object.assign({}, this.__assign) }; },
     shares: function () {
       var b = this.bill || {}, total = cents(b.total);
       if (this.__mode === 'equal') return shareMoney(total, this.__n);
@@ -642,7 +646,7 @@
             C.chip.group({ options: opts, value: self.__assign[l.id] ? String(self.__assign[l.id]) : null, label: l.name }) + '</li>';
         }).join('') + '</ul>' + (unassigned ? '<p class="k-foot k-ink2">' + th('split.unassigned', { n: unassigned }) + '</p>' : '');
       var blocked = this.__mode === 'item' && unassigned > 0;
-      this.shadowRoot.innerHTML = '<div class="sp"><h2 class="k-heading ti">' + th('split.title', { amount: money(b.total || 0) }) + '</h2>' +
+      this.shadowRoot.innerHTML = '<div class="sp"><div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"' }) + '<h2 class="k-heading ti">' + th('split.title', { amount: money(b.total || 0) }) + '</h2></div>' +
         '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('split.title', { amount: '' })) + '"></k-segmented>' + mid + shares +
         (paid.length ? '<p class="k-foot k-ink2">' + th('split.progress', { paid: paid.length, total: sh.length }) + '</p>' : '') +
         C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ps', attrs: ' data-w="pay"', label: t('split.pay_share', { n: this.__pick + 1 }), disabled: blocked }) + '</div>';
@@ -652,7 +656,7 @@
   });
   K.define('k-split', KSplit, {
     props: ['bill', 'paidShares'],
-    css: C.button.css + C.chip.css + C.stepper.css + ':host{display:block}.sp{display:flex;flex-direction:column;gap:16px}.ti{margin:0}' +
+    css: C.button.css + C.chip.css + C.stepper.css + ':host{display:block}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.sp{display:flex;flex-direction:column;gap:16px}.ti{margin:0}' +
       '.sh,.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}' +
       '.srow{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);text-align:start}' +
       '.srow[aria-checked="true"]{background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-accent)}.srow[aria-disabled="true"]{color:var(--k-ink-3)}' +
@@ -681,6 +685,7 @@
         self.__text = res.text; self.render();
       });
       C.button.bind(R, function (el, g) {
+        if (el.getAttribute('data-w') === 'leave') { self.emit('leave', null, { gestureId: g }); return; }   /* the header's Back (§10.31) */
         if (el.getAttribute('data-w') !== 'apply') return;
         /* The Apply tap fires nothing; the approval's answer does (§10.31). */
         self.emit('apply', null, { mode: self.__mode, value: C.keypad.value(self.__text), reason: self.__reason, amount: self.amount(), gestureId: g });
@@ -699,7 +704,7 @@
       var ready = v > 0 && this.__reason && !err;
       var pctChips = this.__mode === 'percent' ? C.chip.group({ options: this.pols().map(function (x) { return { value: String(x), label: pctText(x) }; }), value: this.__text, label: t('discount.percent') }) : '';
       var newTotal = fromCents(cents(b.total) - cents(amt));
-      this.shadowRoot.innerHTML = '<div class="dc"><h2 class="k-heading ti">' + th('discount.title') + '</h2>' +
+      this.shadowRoot.innerHTML = '<div class="dc"><div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"' }) + '<h2 class="k-heading ti">' + th('discount.title') + '</h2></div>' +
         '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('discount.title')) + '"></k-segmented>' + pctChips +
         '<p class="k-heading k-num disp">' + numHtml(this.__mode === 'percent' ? (this.__text || '0') + ' %' : money(v)) + '</p>' +
         C.keypad.render({ label: t('discount.title') }) +
@@ -713,7 +718,7 @@
   });
   K.define('k-discount', KDiscount, {
     props: ['bill', 'policy'],
-    css: C.button.css + C.chip.css + C.keypad.css + ':host{display:block}.dc{display:flex;flex-direction:column;gap:12px}.ti,.disp,.pv{margin:0}.er{margin:0;color:var(--k-danger)}'
+    css: C.button.css + C.chip.css + C.keypad.css + ':host{display:block}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.dc{display:flex;flex-direction:column;gap:12px}.ti,.disp,.pv{margin:0}.er{margin:0;color:var(--k-danger)}'
   });
 
   /* ── <k-bill-bar count total disabled> ─────────────────────────────────── */

@@ -22,6 +22,11 @@
  *                               the bill (§18.3); pay is its .pay shape
  *   KiwiTillFrame.closePay()    back to the bill, as it was
  *   KiwiTillFrame.paying()      true while the pay pane is out
+ *   KiwiTillFrame.openPane(kind, props) / closePane(kind)   <k-split> or
+ *                               <k-discount> pushed over the bill (§10.30,
+ *                               §10.31); their gestures reach api.act as
+ *                               split.<verb> | discount.<verb>
+ *   KiwiTillFrame.busy()        true while any pane is out
  *
  * The host keeps every decision: the cart, the table orders, the kitchen
  * send, the payment and its record. This file only draws what the host
@@ -36,13 +41,16 @@
   var doc = root.document;
 
   var api = null, grid = null, bill = null, pay = null;
+  /* The panes that push over the bill (§18.3, §10.30, §10.31): one at a time. */
+  var panes = {};
   var menuSig = '', billSig = '', qtys = {};
 
   function onAction(e) {
     var d = e.detail || {};
-    var m = /^k\.(menu-grid|bill|pay)\.(.+)$/.exec(d.action || '');
+    var m = /^k\.(menu-grid|bill|pay|split|discount)\.(.+)$/.exec(d.action || '');
     if (!m || !api || typeof api.act !== 'function') return;
-    api.act((m[1] === 'pay' ? 'pay.' : '') + m[2], d.id == null ? null : String(d.id), d.value || {});
+    var pre = (m[1] === 'menu-grid' || m[1] === 'bill') ? '' : m[1] + '.';
+    api.act(pre + m[2], d.id == null ? null : String(d.id), d.value || {});
   }
 
   function mount(a) {
@@ -50,11 +58,40 @@
     if (!api.menu || !api.bill) return false;
     if (!grid) { grid = doc.createElement('k-menu-grid'); grid.addEventListener('kiwi:action', onAction); }
     if (!bill) { bill = doc.createElement('k-bill'); bill.addEventListener('kiwi:action', onAction); }
-    if (!pay) { pay = doc.createElement('k-pay'); pay.hidden = true; pay.addEventListener('kiwi:action', onAction); }
+    ['pay', 'split', 'discount'].forEach(function (k) {
+      if (panes[k] || !CE.get('k-' + k)) return;
+      var el = panes[k] = doc.createElement('k-' + k);
+      el.hidden = true;
+      el.addEventListener('kiwi:action', onAction);
+    });
+    pay = panes.pay;
     api.menu.appendChild(grid);
     api.bill.appendChild(bill);
-    api.bill.appendChild(pay);
+    Object.keys(panes).forEach(function (k) { api.bill.appendChild(panes[k]); });
     return true;
+  }
+
+  /* Split and Discount push inside the pane as the payment does; the bill
+     waits under them. props are the component's own (bill, paidShares,
+     policy). */
+  function openPane(kind, props) {
+    var el = panes[kind];
+    if (!el) return null;
+    Object.keys(panes).forEach(function (k) { if (k !== kind && k !== 'pay') panes[k].hidden = true; });
+    Object.keys(props || {}).forEach(function (p) { el[p] = props[p]; });
+    el.hidden = false;
+    bill.hidden = true;
+    api.bill.setAttribute('data-paying', '');
+    return el;
+  }
+  function closePane(kind) {
+    var el = panes[kind];
+    if (!el || el.hidden) return;
+    el.hidden = true;
+    if (Object.keys(panes).every(function (k) { return panes[k].hidden; })) {
+      bill.hidden = false;
+      api.bill.removeAttribute('data-paying');
+    }
   }
 
   /* The grid is rebuilt only when its tiles change; a quantity alone moves
@@ -93,6 +130,7 @@
      under it and comes back as it was. */
   function openPay(p) {
     if (!pay) return;
+    Object.keys(panes).forEach(function (k) { if (k !== 'pay') panes[k].hidden = true; });
     pay.removeAttribute('state');
     pay.pay = Object.assign({}, p);
     pay.hidden = false;
@@ -141,8 +179,11 @@
   root.addEventListener('resize', function () { if (pay && !pay.hidden) place(); });
 
   root.KiwiTillFrame = {
-    mount: mount, paint: paint, openPay: openPay, closePay: closePay,
+    mount: mount, paint: paint, openPay: openPay, closePay: closePay, openPane: openPane, closePane: closePane,
     paying: function () { return !!(pay && !pay.hidden); },
+    /* any pane out over the bill: the menu and the bill take no gesture */
+    busy: function () { return Object.keys(panes).some(function (k) { return !panes[k].hidden; }); },
+    pane: function (k) { return panes[k] || null; },
     grid: function () { return grid; },
     bill: function () { return bill; },
     pay: function () { return pay; }
