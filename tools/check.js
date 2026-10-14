@@ -1355,6 +1355,7 @@ section('Whole-project regressions');
     'till-repair-lock-browser-test.mjs',
     'table-time-test.mjs',
     'print-relay-idempotency-test.mjs',
+    'print-slow-bridge-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',
     'service-draft-durability-test.mjs',

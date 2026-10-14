@@ -708,13 +708,21 @@
        the ticket even existed. */
     return relayEnqueue(bytes, target, relayKind(bytes), ref);
   }
+  /* Un pont LENT n'est pas un pont ABSENT. Quand le délai de 9 s tombe après
+     l'envoi du ticket, le pont l'a peut-être reçu et l'imprime encore : le
+     compter « injoignable » envoyait le même ticket au relais, puis la file
+     cuisine le réessayait, et la cliente repartait avec deux reçus. Après
+     l'envoi, un délai dépassé est donc INCERTAIN (`uncertain: true`) : ni relais,
+     ni repli sur une autre imprimante, ni nouvelle tentative automatique. */
   function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
     var to = withTimeout(null, 9000);
     var t = bridgeTarget(target);
+    var sent = false;
     if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
     return saveBridgeTarget(t).then(function (saved) {
       if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+      sent = true;
       return fetch(bridgeBase() + '/kiwi/print', {
         method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
         body: JSON.stringify(t.osPrinter
@@ -729,7 +737,11 @@
         return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes, timing: j.timing } : { ok: false, reason: (j && j.error) || 'print-failed' };
       },
         function () { return { ok: false, reason: 'bad-response' }; });
-      }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
+      }).catch(function (e) {
+        to.done();
+        if (sent && e && e.name === 'AbortError') return { ok: false, reason: 'bridge-timeout', uncertain: true };
+        return { ok: false, reason: 'bridge-unreachable' };
+      });
   }
 
   // ── transport D: le relais cloud (l'iPad, la tablette, tout appareil sans pont) ──
@@ -992,7 +1004,7 @@
     var bytes = window.KiwiEscPos.receipt(Object.assign({}, o, { paper: paper }));
     if (target) {
       return printBytesToTarget(bytes, target).then(function (res) {
-        if (res && res.ok) return res;
+        if (res && (res.ok || res.uncertain)) return res;
         return printBytes(bytes);
       }, function () {
         return printBytes(bytes);
@@ -1036,7 +1048,7 @@
     var ref = (options && options.clientRef) || '';
     if (target) {
       return printBytesToTarget(bytes, target, ref).then(function (res) {
-        if (res && res.ok) return res;
+        if (res && (res.ok || res.uncertain)) return res;
         // Fail-soft fallback: attempt printing to caisse target or default printer
         var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
         var stName = (o && o.title) || stationId || 'cuisine';

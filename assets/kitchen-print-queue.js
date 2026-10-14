@@ -498,6 +498,10 @@
       running = false;
       if (result && result.ok && result.queued && result.id) parkAwaitingRelay(job, result.id);
       else if (result && result.ok) complete(job, result);
+      /* Délai dépassé APRÈS l'envoi : le pont a peut-être imprimé. On ne
+         réessaie pas seul (deux bons en cuisine) ; la file le garde « incertain »
+         et c'est l'humain devant l'imprimante qui tranche (retryNow). */
+      else if (result && result.uncertain) markUncertain(job, result.reason || 'bridge-timeout');
       else retry(job, result && result.reason || 'print-failed');
       if (readQueue().length) setTimeout(flush, 120);
       return result || { ok: false };
