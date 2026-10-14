@@ -2,7 +2,7 @@
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
-import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
+import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists, findStayByKey } from './hotel/_stay-events.js';
 import { pruneReservationsDoc } from './hotel/stays.js';
 import { commercialSnapshot } from './hotel/_commercial.js';
 import { stayOptions } from './hotel/_stay-options.js';
@@ -309,7 +309,10 @@ export async function onRequestGet({ request, env }) {
   const manage = str(u.searchParams.get('manage'), 80).toLowerCase();
   if (manage) {
     if (!TOKEN.test(manage)) return json({ error:'not-found' },404);
-    const rec = doc.bookings.find((x) => x.manageToken && x.manageToken === manage);
+    let rec = doc.bookings.find((x) => x.manageToken && x.manageToken === manage);
+    /* Au-delà de la fenêtre chaude le séjour n'est plus dans le document, il
+       reste dans hotel_reservations : le lien reçu par e-mail doit le retrouver. */
+    if (!rec) { try { rec = await findStayByKey(env, merchant, 'manageToken', manage); } catch (_) { return json({ error:'unavailable' },503); } }
     if (!rec) return json({ error:'not-found' },404);
     return json({
       ok:true, kind:'manage', merchant, name:str(rows.merchant?.name,100), trade:str(rows.merchant?.type,60),
@@ -367,8 +370,9 @@ export async function onRequestDelete({ request, env }) {
     let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' },503); }
     const doc = safeDoc(rows.reservation?.data), rev = +rows.reservation?.rev || 0;
     const index = doc.bookings.findIndex((x) => x.manageToken && x.manageToken === token);
-    if (index < 0) { await limitFail(request,env,'booking'); return json({ error:'not-found' },404); }
-    const rec = doc.bookings[index];
+    let rec = index >= 0 ? doc.bookings[index] : null;
+    if (!rec) { try { rec = await findStayByKey(env, merchant, 'manageToken', token); } catch (_) { return json({ error:'unavailable' },503); } }
+    if (!rec) { await limitFail(request,env,'booking'); return json({ error:'not-found' },404); }
     await limitClear(request,env,'booking');
     /* Déjà annulée : on répond ok. Une cliente qui reclique sur son lien après
        une coupure ne doit pas lire un message d'erreur pour un geste qui a
@@ -419,7 +423,12 @@ export async function onRequestPost({ request, env }) {
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;
     if(!rows.merchant||!doc.settings.published)return json({error:'booking-closed'},409);
-    const prior=doc.bookings.find((x)=>x.publicRef===ref);if(prior){
+    let prior=doc.bookings.find((x)=>x.publicRef===ref);
+    /* Une réservation d'hôtel prise à plus de 14 jours a quitté le document :
+       sans cette seconde recherche, le nouvel essai d'une cliente (réseau
+       coupé, double clic) ne retrouvait pas la première et réservait deux fois. */
+    if(!prior&&hotelTrade(rows.merchant)){try{prior=await findStayByKey(env,merchant,'publicRef',ref);}catch(_){return json({error:'unavailable'},503);}}
+    if(prior){
       /* A publicRef is client-chosen and is only an idempotency key, never
          proof of ownership. Do not disclose the booking or its management
          bearer token to a caller replaying somebody else's reference. The

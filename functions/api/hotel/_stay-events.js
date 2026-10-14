@@ -177,6 +177,26 @@ export function hydrateReservation(row) {
   };
 }
 
+/* Retrouver un séjour par une clé qui n'est PAS une colonne (`manageToken`,
+ * `publicRef`) : elles vivent dans raw_json. Le document `reservations` ne garde
+ * que la fenêtre chaude [-3j, +14j] ; au-delà, le séjour n'existe plus que dans
+ * hotel_reservations, et une recherche faite seulement dans le document rendait
+ * 404 le lien de gestion d'une cliente et laissait un nouvel essai réserver une
+ * seconde fois la même chambre. */
+export async function findStayByKey(env, merchant, key, value) {
+  if (key !== 'manageToken' && key !== 'publicRef') return null;
+  const wanted = text(value, 80);
+  if (!wanted) return null;
+  if (!(await hotelReservationsTableExists(env))) return null;
+  const stmt = env.DB.prepare(
+    "SELECT * FROM hotel_reservations WHERE merchant = ? " +
+    "AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, ?) END = ? LIMIT 1"
+  ).bind(merchant, '$.' + key, wanted);
+  if (typeof stmt.all !== 'function') return null;
+  const res = await stmt.all();
+  return hydrateReservation(res?.results?.[0] || null);
+}
+
 function reservationUpsertStatement(env, merchant, stay, now, next, docText) {
   const h = stay?.hotel || {};
   const cust = stay?.customer || {};
