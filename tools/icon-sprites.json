@@ -139,6 +139,16 @@
         "description"
       ]
     },
+    "access": {
+      "note": "Stage 6: forgot and reset password (reset.html) behind kiwiSkin2027:access. The banners' and the field's icons.",
+      "icons": [
+        "error",
+        "warning",
+        "info",
+        "close",
+        "task_alt"
+      ]
+    },
     "team": {
       "note": "Stage 3a: the team sign-in and the clock-in pad behind kiwiSkin2027:team. The pad's delete key.",
       "icons": [

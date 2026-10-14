@@ -2361,6 +2361,36 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
   }
 }
 
+/* ── 14i · Kiwi 2027, étape 6 : l'accès, l'équipe, l'accueil des nouveaux ──
+ * Derrière kiwiSkin2027:access (et les drapeaux de chaque surface), le reste :
+ * le mot de passe oublié et sa réinitialisation (§18.8, R1 à R7) sur le kit.
+ *   reset-states-test                   chaque réponse de /auth/forgot et de
+ *                                       /auth/reset, prise aux vrais gestionnaires sur
+ *                                       SQLite (dont un corps malformé, posté une fois),
+ *                                       arrive sur son état de §18.8 dans Chromium ;
+ *                                       l'adresse mémorisée ; drapeau éteint, le livré */
+section('Kiwi 2027 · l\'accès et le reste sur le kit');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['reset-states-test.mjs', 'reset-states-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {
