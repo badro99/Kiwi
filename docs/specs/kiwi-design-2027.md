@@ -4644,6 +4644,23 @@ The gates are in `check.js` section 14g: `till-frame-browser-test` (55 checks), 
 - **Not built:** a cash refunds sub-line under Cash sales; the rail wordmark; Lock and Switch cashier from the avatar (the avatar opens More, and on `autre` it locks); a shared split tip row; a line's quantity split across shares by item; the discount reason sent by code to the server; removing a discount from the kit; the blocked-sales sheet; the phone forms.
 - **Not measured here:** the iPhone 6s performance run and the native iOS builds need the Mac.
 
+**Stage 5, as landed (2026-10-15).** The dashboard (`dashboard.html`) draws its pages on the kit behind `kiwiSkin2027:dashboard` (or `?skin=2027` for one load). With the flag off, it fetches no kit file. The figures are the shipped ones (owner, 2026-10-15: shipped numbers first, the ledger later per §21.2; the demo keeps its generators). Each shipped page publishes what it just drew, as a model and an event, and recomputes nothing; a kit file draws the model and hands every tap back to the shipped control. It landed in nine commits on `kit-2027-etape-5`:
+- Home (`dash-home.js`, from `dateRange.js`: `KiwiDateRange.home()`): the range presets, the key figure, the goal line, the comparisons, the tiles by polarity and the latest orders. The chart, the payment mix and the insights stay shipped, below;
+- Orders (`dash-orders.js`, from `pages-pro.js`: `KiwiOrdersPage`): the key figure, `orders.summary`, the five filters (Other is the shipped Mobile filter) and the rows by hour with a method icon. A row opens the shipped order sheet;
+- Report's head (`dash-report.js`, from `day-report-dash.js`: `KiwiReportPage`): the day and its status, the net with its named baseline, the tiles, and Export as one menu of the three exports. The day selector, the strip and the sections stay shipped;
+- Customers (`dash-customers.js`, from `clients-directory.js`: `KiwiClientsPage`): the summary, the overflow menu and Add, the search, the segments with counts and the rows. The four count cards are not drawn;
+- Retention (`dash-retention.js`, from `customer-retention.js`: `KiwiRetentionPage`): the tabs and the Activity tab. The offers form, the suggestions and the results stay the shipped panels;
+- Compliance (`dash-compliance.js`, from `conformite.js`): each shipped tab is a row with a status read from its data, in a split view beside the shipped screen;
+- Kiwi AI's start (`dash-ai.js`, from `agent.js`: `KiwiAgentHome`, and `KiwiDateRange.todayPace()`): `ai.intro`, the Today card, `ai.try` and the rows, the trade's three questions then the hero's. The thread, the composer and the tools stay shipped;
+- the frame: every page head is Heading and Footnote ink-2, so the key figure stays the largest text, and every drawer takes the kit's type and a 44 close button.
+
+The gates are in `check.js` section 14h: `dash-home-browser-test` (15), `dash-orders-browser-test` (15), `dash-report-browser-test` (11), `dash-customers-browser-test` (14), `dash-retention-browser-test` (10), `dash-compliance-browser-test` (9), `dash-ai-browser-test` (9), `dash-figures-agreement-test` (12: today's revenue, orders and basket agree across Home, Orders, Report and Kiwi AI), `chart-legend-test` (13) and `dash-frame-browser-test` (9). No string was added. Open items, stated rather than assumed:
+- **The figures are the shipped ones, not the ledger's.** `ledger-agreement-test` holds `KiwiLedger`; the pages read it at §21.2's switch, not before.
+- **Retention and Customers classify differently.** Retention's groups (`groupOf`) and the book's segments (`KiwiClients.segment`) give 5 regulars and 3 Habitués on the demo, so "the same words for the same people" (§18.5) waits for the ledger. The book also sorts by spend and keeps VIP as a segment, as shipped.
+- **The drawers' contents are shipped.** The frame is on the kit; each drawer's content is reskinned one at a time, like the trade tills. The sheets keep the shipped solid ground and scrim (`design-2026.css`, owner 2026-10-11).
+- **Not drawn:** the range picker sheet (Report keeps the shipped picker), Kiwi AI's header, Action Center capsule, mic and tools row on the kit (they stay shipped), the Today card's insight variant (`ai.insight.*`), and the chart on Home (`<k-chart>` exists and is held by `chart-legend-test`; Home still draws the shipped chart).
+- **Not measured here:** the phone layouts and the native builds need the Mac.
+
 ### 21.2 Ledger rollout
 The `kiwiLedger` flag takes three values:
 - `off`: legacy figures.
