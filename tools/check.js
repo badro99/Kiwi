@@ -550,6 +550,11 @@ for (const test of [
   'restaurant-reopen-browser-test.mjs',
   'restaurant-reopen-resume-test.mjs',
   'table-split-lifecycle-test.mjs',
+  /* Un ticket n°1 de demain n'a pas l'identifiant du ticket n°1 d'hier, et
+     « Encaisser » / la fusion / un split à emporter / un scan maison ne
+     rouvrent ni ne perdent une addition déjà payée en partie. */
+  'sale-id-collision-test.mjs',
+  'caisse-payment-guards-test.mjs',
   'refund-split-identity-test.mjs',
   'restaurant-visit-close-reload-test.mjs',
   'restaurant-sync-release-test.mjs',
@@ -1642,6 +1647,7 @@ section('Whole-project regressions');
     'kitchen-blind-outage-test.mjs',
     'relay-print-verdict-test.mjs',
     'station-printer-routing-test.mjs',
+    'printer-station-unicode-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur
        /api/print/jobs et le pont du comptoir vient le chercher. */
@@ -1752,6 +1758,8 @@ section('Whole-project regressions');
     'module-gate-test.mjs',
     'terminaux-truth-test.mjs',
     'till-truth-test.mjs',
+    /* « Carte » sans lecteur : le caissier confirme, aucun minuteur n'écrit la vente. */
+    'card-confirm-test.mjs',
     /* Aucun fond d'ouverture présélectionné, démo comprise : le bouton reste éteint jusqu'au choix. */
     'clockin-float-test.mjs',
     /* La caisse « autre activité » vend dès le premier jour : montant libre, paiement, langues. */

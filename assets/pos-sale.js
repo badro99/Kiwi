@@ -293,6 +293,13 @@
     try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: total, method: method || '' } })); } catch (_) {}
   }
 
+  /* businessDayKey(date) → AAAAMMJJ du jour d'activité, la journée de la caisse
+     coupant à 5 h et non à minuit : un ticket de 02:00 appartient à la veille. */
+  function businessDayKey(d) {
+    var t = new Date((d instanceof Date ? d.getTime() : Date.now()) - 5 * 3600000);
+    return String(t.getFullYear() * 10000 + (t.getMonth() + 1) * 100 + t.getDate());
+  }
+
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
      Ne jette jamais : un encaissement réussi ne doit pas échouer parce que le
      stockage est plein ou que le miroir tombe. */
@@ -337,6 +344,12 @@
       }).filter(function (p) { return p.amount > 0; });
     }
 
+    /* The business day this ticket was rung in (5 h boundary, see
+       businessDayKey). It joins the server id seed (live-link stableId) so the
+       numbering restart of a new day never reuses an earlier day's id, yet the
+       same sale keeps one id across every retry: it is fixed here, once. */
+    entry.idDay = businessDayKey(at);
+
     var rows = read(vertical);
     rows.push(entry);
     write(vertical, rows);
@@ -347,7 +360,7 @@
       if (window.KiwiLive && window.KiwiLive.isOn && window.KiwiLive.isOn()) {
         var queued = window.KiwiLive.postSale({
           amount: total, method: entry.method, label: entry.label,
-          ref: entry.ref, time: at, channel: entry.channel || '',
+          ref: entry.ref, time: at, channel: entry.channel || '', idDay: entry.idDay,
           /* Le détail du panier suit la vente. Il était construit juste
              au-dessus et restait sur ce terminal : le serveur ne recevait que
              {montant, moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
@@ -689,7 +702,7 @@
   }
 
   window.KiwiPosSale = {
-    record: record, today: today, totals: totals, nextSeq: nextSeq,
+    record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
     attachClient: attachClient, attachedClient: attachedClient,

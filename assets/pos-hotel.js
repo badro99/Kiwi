@@ -1029,7 +1029,7 @@
          journalise que le SOLDE, donc sans cette ligne cet argent n'arrivait
          jamais au tableau de bord. La caution, elle, n'est pas une recette :
          elle est rendue au départ, on ne la journalise pas. */
-      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`, [
+      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}-${Date.now().toString(36).slice(-5)}`, [
         { itemId: `chambre-${ROOMS[a.room]?.type || 'inconnue'}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
       ]);
       queueIfOffline(`Check-in Ch. ${a.room}`);

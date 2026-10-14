@@ -135,7 +135,7 @@ async function fixture(t, opts = {}) {
       tables: { '5': { zone: 'salle', orderNo: '41', covers: 2 } }, tableOrders: {}, orders: {}, tableSplits: new Map(),
       splitState: { flow: null, sourceLines: [] }, generateOrder: () => [],
       tableClosedAt: Object.create(null), phoneMovedVisits: new Map(),
-      vrapSplit: null, cart: [], vrapDiscount: null, selectedId: null, splitPayCallback: null,
+      vrapSplits: new Map(), cart: [], vrapDiscount: null, selectedId: null, splitPayCallback: null,
       shiftOpenedAt: new Date('2026-10-13T08:00:00.000Z'), shiftOpenedBy: 'Fixture cashier', openingFloat: 0,
       cashMovements: [], shift: { discounts: 0, refunds: 0, tablesPaid: 0 },
       posteOpenedAt: null, posteOpeningFloat: 0, handovers: [],

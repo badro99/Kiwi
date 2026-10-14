@@ -247,17 +247,28 @@
     ];
   }
 
+  /* The comparison key of a station or profile name: lower-case letters and
+     digits of ANY script. Stripping to [a-z0-9] turned an Arabic name into the
+     empty string, and an empty key is "contained" in every other key, so one
+     Arabic-named printer profile caught every station of the till. A name with
+     no letter or digit at all keeps its trimmed text as its key. */
+  function stationKey(name) {
+    var norm = String(name == null ? '' : name).toLowerCase().trim();
+    var clean;
+    try { clean = norm.replace(/[^\p{L}\p{N}]/gu, ''); } catch (_) { clean = norm.replace(/[^a-z0-9\u0600-\u06ff]/g, ''); }
+    return { norm: norm, clean: clean || norm };
+  }
   function resolveStationTarget(stationId, merchant) {
     var sc = getStationConfig(merchant);
     var profId = (sc.bindings && sc.bindings[stationId]) || '';
     if (!profId && stationId) {
-      var norm = String(stationId).toLowerCase().trim();
-      var normClean = norm.replace(/[^a-z0-9]/g, '');
+      var want = stationKey(stationId);
+      var norm = want.norm, normClean = want.clean;
       var bKeys = Object.keys(sc.bindings || {});
       for (var i = 0; i < bKeys.length; i++) {
         var k = bKeys[i];
-        var kNorm = k.toLowerCase().trim();
-        if (kNorm === norm || kNorm.replace(/[^a-z0-9]/g, '') === normClean) {
+        var kKey = stationKey(k);
+        if (kKey.norm === norm || kKey.clean === normClean) {
           profId = sc.bindings[k];
           break;
         }
@@ -265,9 +276,10 @@
       if (!profId && Array.isArray(sc.profiles)) {
         var pMatch = sc.profiles.find(function (p) {
           if (!p || !p.name) return false;
-          var pNorm = p.name.toLowerCase().trim();
-          var pClean = pNorm.replace(/[^a-z0-9]/g, '');
-          return pNorm === norm || pClean === normClean || normClean.indexOf(pClean) >= 0 || pClean.indexOf(normClean) >= 0;
+          var pKey = stationKey(p.name);
+          var pClean = pKey.clean;
+          return pKey.norm === norm || pClean === normClean
+            || (!!pClean && !!normClean && (normClean.indexOf(pClean) >= 0 || pClean.indexOf(normClean) >= 0));
         });
         if (pMatch) return pMatch;
       }

@@ -11507,7 +11507,7 @@
       if (!hw || !hw.authorizeCard) return;
       const attempt = cardAttemptSeq;
       reader.confirm.disabled = true;
-      Promise.resolve(hw.authorizeCard(currentTotal() + payTipAmount(), reader.disc, reader.status))
+      Promise.resolve(hw.authorizeCard(currentTotal() + payTipAmount(), reader.disc, reader.status, { cashierConfirmed: true }))
         .then((result) => {
           reader.confirm.disabled = false;
           if (attempt !== cardAttemptSeq || !cardModal.classList.contains('is-open')) return;
@@ -11656,6 +11656,7 @@
     });
     $('#pay-charge-order').addEventListener('click', () => {
       if (!selectedId) return;
+      if (tableHasOpenSplit(selectedId)) { toast('Un split est en cours sur cette table : reprenez-le depuis l\'addition'); return; }
       if (orderInProgressCount() > 0) validateOrder(selectedId);
       if (currentTotal() > 0) openCashModal();
       else toast('Addition vide');
@@ -12331,6 +12332,15 @@
       const sourceT = tables[source];
       const targetT = tables[target];
       if (!sourceT || !targetT) return;
+      /* A split that already took a part lives only in tableSplits, and the
+         merge below clears both entries: the merged bill would then ask for the
+         whole amount again, parts already paid included. Refuse until the split
+         is settled rather than lose the record of what was paid. */
+      if ([source, target].some((id) => { const sp = liveTableSplit(id); return sp && splitPaidCount(sp) > 0; })) {
+        if (confirmBtn) confirmBtn.disabled = false;
+        toast('Un split déjà encaissé est en cours : terminez-le avant de fusionner');
+        return;
+      }
 
       let mergeData = null;
       let mergeIntent = null;
@@ -12774,6 +12784,17 @@
       $('#rp-total').textContent = fmtMAD(total);
       window.CaisseFx && window.CaisseFx.countTotal();
       showPayButtons(true);
+      /* Same guard as renderRightPanel: once a split has taken a part, the only
+         valid route is to resume it. The « Encaisser » of the order panel opens
+         the cash flow for the WHOLE bill, so it charged the full amount again
+         after a part was already paid. */
+      if (tableHasOpenSplit(tableId)) {
+        const chargeOrder = $('#pay-charge-order');
+        if (chargeOrder) { chargeOrder.hidden = true; chargeOrder.style.display = 'none'; }
+      } else {
+        const chargeOrder = $('#pay-charge-order');
+        if (chargeOrder) { chargeOrder.hidden = false; chargeOrder.style.display = ''; }
+      }
       lucide.createIcons();
     }
 
@@ -13411,8 +13432,9 @@
     };
 
     function effectiveTipPct() {
-      if (splitState.tipMode === 'autre') return splitState.customTipPct;
-      return parseFloat(splitState.tipMode) || 0;
+      /* A tip is never negative: a typed -50 % would shave the bill itself. */
+      if (splitState.tipMode === 'autre') return Math.min(100, Math.max(0, Number(splitState.customTipPct) || 0));
+      return Math.max(0, parseFloat(splitState.tipMode) || 0);
     }
 
     /* ---- open ---- */
@@ -14039,7 +14061,7 @@
     // Custom tip percentage input
     document.addEventListener('input', (e) => {
       if (e.target.id === 'split-tip-input') {
-        splitState.customTipPct = parseFloat(e.target.value) || 0;
+        splitState.customTipPct = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
         updateSplitSummary();
       }
     });
@@ -18309,7 +18331,13 @@
        SPLIT BILL · persistence (background / resume / cancel)
        =========================================================== */
     const tableSplits = new Map(); // tableId → { mode, total, parts, paidCount }
-    let vrapSplit = null;          // same shape for the single working counter cart
+    /* One split per takeaway order (key 'new' = the cart not sent yet, 'n<num>'
+       = a numbered order). A single global slot let a second takeaway order's
+       split overwrite the first one's paid parts, and resumed the first order's
+       split onto whichever cart was open. */
+    const vrapSplits = new Map();
+    function vrapSplitKey(num) { return num == null ? 'new' : 'n' + Number(num); }
+    function currentVrapSplit() { return vrapSplits.get(vrapSplitKey(vrapEditingNum)) || null; }
 
     function splitPaidCount(saved) {
       if (!saved || !Array.isArray(saved.parts)) return 0;
@@ -18334,16 +18362,27 @@
       return saved;
     }
 
+    /* True when the table carries a split with a part still due (the same test
+       renderRightPanel uses to hide the ordinary pay button): the whole-bill
+       « Encaisser » must stay out of reach. */
+    function tableHasOpenSplit(id) {
+      const saved = liveTableSplit(id);
+      return !!(saved && splitPaidCount(saved) < saved.parts.length);
+    }
+
     function splitRemainingTotal(saved) {
       if (!saved || !Array.isArray(saved.parts)) return 0;
       return money(saved.parts.reduce((sum, part) => sum + (part && !part.paid ? Number(part.amount) || 0 : 0), 0));
     }
 
     function savedTakeawaySplitFor(order) {
-      if (!vrapSplit || !order) return null;
-      const orderNum = Number(vrapSplit.orderNum);
-      if (Number.isFinite(orderNum) && orderNum === Number(order.num)) return vrapSplit;
-      return String(vrapSplit.sourceLabel || '') === `À emporter #${order.num}` ? vrapSplit : null;
+      if (!order) return null;
+      const byNum = vrapSplits.get(order.num == null ? 'new' : 'n' + Number(order.num));
+      if (byNum) return byNum;
+      for (const saved of vrapSplits.values()) {
+        if (String(saved.sourceLabel || '') === `À emporter #${order.num}`) return saved;
+      }
+      return null;
     }
 
     function saveSplitFlow() {
@@ -18363,14 +18402,14 @@
         sourceLabel: splitState.sourceLabel || '',
         orderNum: splitState.isVrap && vrapEditingNum != null ? Number(vrapEditingNum) : null,
       };
-      if (splitState.isVrap) vrapSplit = saved;
+      if (splitState.isVrap) vrapSplits.set(vrapSplitKey(saved.orderNum), saved);
       else if (splitState.tableId) tableSplits.set(splitState.tableId, saved);
       try { persistShift(); } catch (_) {}
     }
 
     function loadSplitFlow(tableId) {
       const isVrap = mode === 'vrap';
-      const saved = isVrap ? vrapSplit : liveTableSplit(tableId);
+      const saved = isVrap ? currentVrapSplit() : liveTableSplit(tableId);
       if (!saved) return false;
       const t = isVrap ? null : tables[tableId];
       const currentLines = isVrap
@@ -18438,7 +18477,7 @@
     markSplitPartPaid = function(partIdx, method) {
       _origMarkPaid(partIdx, method);
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
-        if (splitState.isVrap) vrapSplit = null;
+        if (splitState.isVrap) vrapSplits.delete(vrapSplitKey(vrapEditingNum));
         else tableSplits.delete(splitState.tableId);
         /* The payment journal was persisted before the final part changed the
            flow. Persist the deletion too, otherwise F5 restores a completed
@@ -18453,7 +18492,7 @@
     // Patch openSplitModal · if a saved split exists, jump directly to flow screen
     const _origOpenSplit = openSplitModal;
     openSplitModal = function(tableId) {
-      if ((mode === 'vrap' && vrapSplit) || (mode !== 'vrap' && tableSplits.has(tableId))) {
+      if ((mode === 'vrap' && currentVrapSplit()) || (mode !== 'vrap' && tableSplits.has(tableId))) {
         loadSplitFlow(tableId);
         $('#split-table-label').textContent = splitState.sourceLabel || tableId;
         $('#split-setup').hidden = true;
@@ -23488,7 +23527,8 @@
              seulement dans une Map en mémoire : F5 l'oubliait et remettait la
              note entière à encaisser. */
           tableSplits: Array.from(tableSplits.entries()),
-          vrapSplit: vrapSplit,
+          vrapSplits: Array.from(vrapSplits.entries()),
+          vrapSplit: vrapSplits.get('new') || null,
           cart: cart,
           vrapDiscount: vrapDiscount,
           vrapEditingNum: vrapEditingNum,
@@ -23712,7 +23752,16 @@
           tableSplits.set(String(pair[0]), pair[1]);
         });
       }
-      vrapSplit = d.vrapSplit && Array.isArray(d.vrapSplit.parts) ? d.vrapSplit : null;
+      vrapSplits.clear();
+      if (Array.isArray(d.vrapSplits)) {
+        d.vrapSplits.forEach((pair) => {
+          if (!Array.isArray(pair) || pair.length !== 2 || !pair[0] || !pair[1] || !Array.isArray(pair[1].parts)) return;
+          vrapSplits.set(String(pair[0]), pair[1]);
+        });
+      } else if (d.vrapSplit && Array.isArray(d.vrapSplit.parts)) {
+        /* Shift saved before per-order splits: one slot, keyed by its order. */
+        vrapSplits.set(vrapSplitKey(d.vrapSplit.orderNum), d.vrapSplit);
+      }
       if (Array.isArray(d.cart)) cart = d.cart;
       vrapDiscount = d.vrapDiscount || null;
       vrapEditingNum = d.vrapEditingNum != null ? d.vrapEditingNum : null;

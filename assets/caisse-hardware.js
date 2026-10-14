@@ -42,11 +42,64 @@
     return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
   }
 
+  /* A record-only card result is a DECLARATION, not an answer from a reader.
+     Nothing on a standalone TPE tells Kiwi that the customer actually paid, so
+     a timer (the trade tills wait ~2 s) must never write the sale: the cashier
+     confirms it. A confirm button is added under the status line; if the till
+     has no such anchor (or the modal is closed under it) the answer is "no".
+     Resolves true only on an explicit tap. Fail closed. */
+  function mmk(amount) {
+    var n = Math.round((Number(amount) || 0) * 100) / 100;
+    return n.toFixed(2).replace('.', ',') + ' MAD';
+  }
+  function cashierConfirms(amount, disc, status) {
+    if (disc && disc.classList) disc.classList.remove('is-pulsing');
+    var label = 'Le client a payé ' + mmk(amount) + ' sur le terminal';
+    if (status) status.textContent = 'Faites payer sur votre terminal, puis confirmez';
+    var canMount = !!(status && status.parentNode && typeof status.parentNode.insertBefore === 'function'
+      && typeof document !== 'undefined' && document.createElement);
+    if (!canMount) {
+      try { if (typeof window.confirm === 'function') return Promise.resolve(window.confirm(label + ' ?') === true); } catch (_) {}
+      return Promise.resolve(false);
+    }
+    return new Promise(function (resolve) {
+      var settled = false, timer = null;
+      var btn = el('button', 'margin-top:14px;padding:11px 18px;border:0;border-radius:10px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1.2 inherit;cursor:pointer', label);
+      btn.type = 'button';
+      btn.setAttribute('data-card-confirm', '1');
+      function end(yes) {
+        if (settled) return;
+        settled = true;
+        if (timer) clearInterval(timer);
+        try { if (btn.parentNode) btn.parentNode.removeChild(btn); } catch (_) {}
+        resolve(yes);
+      }
+      btn.addEventListener('click', function () { btn.disabled = true; end(true); });
+      status.parentNode.insertBefore(btn, status.nextSibling || null);
+      /* The cashier closed the payment window: the button leaves the page with
+         it, and the answer is no. */
+      timer = setInterval(function () {
+        var live = false;
+        try { live = !!(document.body && document.body.contains(btn)); } catch (_) {}
+        if (!live) end(false);
+      }, 400);
+    });
+  }
+
   /* One visual adapter for every POS vertical. It distinguishes a confirmed
      reader response from the cashier's external-terminal tender declaration;
-     the caller still owns the actual sale commit. */
+     the caller still owns the actual sale commit. `options.cashierConfirmed`
+     says the caller already collected that confirmation itself (the restaurant
+     till has its own button), so it is not asked twice. */
   function authorizeCard(amount, disc, status, options) {
     return readCard(amount, options).then(function (result) {
+      if (result && result.approved && result.recordOnly && !(options && options.cashierConfirmed === true)) {
+        return cashierConfirms(amount, disc, status).then(function (yes) {
+          return yes ? result : { approved: false, ok: false, amount: amount, reason: 'cashier-not-confirmed' };
+        });
+      }
+      return result;
+    }).then(function (result) {
       if (disc && disc.classList) disc.classList.remove('is-pulsing');
       if (disc && disc.replaceChildren && document.createElement) {
         var icon = document.createElement('i');
@@ -63,7 +116,12 @@
         }
       } else {
         if (disc && disc.classList) disc.classList.remove('is-success');
-        if (status) { status.textContent = 'Paiement non confirmé · lecteur indisponible'; status.classList && status.classList.remove('is-success'); }
+        if (status) {
+          status.textContent = result && result.reason === 'cashier-not-confirmed'
+            ? 'Paiement non confirmé · rien n\'a été enregistré'
+            : 'Paiement non confirmé · lecteur indisponible';
+          status.classList && status.classList.remove('is-success');
+        }
       }
       return result;
     }, function () {

@@ -43,7 +43,7 @@ function context() {
     phoneSeats: new Map(), phoneMovedVisits: new Map(), phonePending: new Map(), tableClosedAt: {}, tableSplits: new Map(), journal: [],
     opTickets: new Map(), opUnmatchedTables: new Set(), kdsOrders: [], kdsOrderSeq: 0,
     expiredOrders: [], dismissedExpiredIds: new Set(), vrapEditingNum: null, vrapDiscount: null,
-    vrapSplit: null, splitState: {}, renderSplitSetup: noop, renderSplitFlow: noop,
+    vrapSplits: new Map(), splitState: {}, renderSplitSetup: noop, renderSplitFlow: noop,
     mode: 'salle', selectedId: null, cart: [], cashAmountOverride: null, vrapView: 'board',
     ctrfFromId: '1', ctrfSelectedToId: '2', cmrgSourceId: '1', cmrgSelectedTargetId: '2',
     document: { body: node('body'), dispatchEvent: e => events.push(e), getElementById: node },
@@ -74,7 +74,7 @@ function context() {
     'currentTotal', 'tableSentCount', 'cancelOpenTable', 'attachOrderProTable', 'opRepairFormulaParents',
     'opIngest', 'canRecoverCaisseTable', 'retireRejectedKitchenTicket', 'sameMap', 'serverNameFor',
     'staleQueuedServerTicket', 'kdsPaint', 'openVrapOrder', 'vrapFinancialItems',
-    'savedTakeawaySplitFor', 'splitPaidCount', 'splitRemainingTotal', 'loadSplitFlow', 'openSplitModal',
+    'savedTakeawaySplitFor', 'vrapSplitKey', 'currentVrapSplit', 'liveTableSplit', 'splitPaidCount', 'splitRemainingTotal', 'loadSplitFlow', 'openSplitModal',
     'vrapHandoverTimestamp', 'vrapHandoverTime', 'ticketNo', 'orderServerInitials'];
   vm.runInContext(names.map(n => fn(n)).join('\n') + '\n' + bridgeSource, c);
   const moneySource = source.match(/^    const money = .*;$/m);
@@ -168,7 +168,7 @@ function snapshotContext(ctx) {
     shiftMerchant: merchant, KC_STORE: 'kiwi-caisse-shift:field-fixture',
     SERVICE_BILL_SYNC_VERSION: 4, ORDER_BRIDGE_SYNC_VERSION: 2,
     openingFloat: 0, journal: [], cashMovements: [], shift: {}, currentCashier: null,
-    posteOpenedAt: null, posteOpeningFloat: 0, handovers: [], vrapSplit: null,
+    posteOpenedAt: null, posteOpeningFloat: 0, handovers: [], vrapSplits: new Map(),
   });
 }
 snapshotContext(c);
@@ -287,12 +287,12 @@ const savedSplit = {
     { label: 'Part 2', amount: 20, paid: false, lines: [] },
   ],
 };
-lost.vrapSplit = savedSplit;
+lost.vrapSplits.set('n' + known.num, savedSplit);
 const savedBefore = JSON.stringify(savedSplit);
 assert.equal(lost.savedTakeawaySplitFor({ num: known.num + 1 }), null);
 assert.equal(lost.KiwiCaisseKitchen.checkoutOrder(takeaway.id), true);
-assert.equal(lost.vrapSplit, savedSplit);
-assert.equal(JSON.stringify(lost.vrapSplit), savedBefore);
+assert.equal(lost.vrapSplits.get('n' + known.num), savedSplit);
+assert.equal(JSON.stringify(lost.vrapSplits.get('n' + known.num)), savedBefore);
 assert.equal(lost.splitState.flow.paidCount, 1);
 assert.equal(lost.splitState.flow.parts[0].paid, true);
 assert.equal(lost.splitState.flow.parts[0].saleId, 'sale-already-paid');

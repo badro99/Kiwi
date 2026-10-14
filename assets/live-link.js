@@ -382,7 +382,15 @@
     if (source.startsWith('visit-')) return source.slice(0, 64);
     /* FNV-1a: deterministic across reloads, short enough for the 64-char DB
        key, and includes the tenant so two shops may both own ticket #42. */
-    var s = String(merchantId || '') + '|' + source, h = 2166136261;
+    /* A till whose ticket counter restarts every business day (nextSeq reads
+       only today's journal) would hand tomorrow's ticket 1 the very id of
+       today's ticket 1, and /api/sale would then replay (sale lost) or 409
+       (sale refused) it. A ref-only entry therefore carries `idDay`, the
+       business day stamped ONCE at ring-up (pos-sale.js), and it joins the
+       seed. Entries without it (everything already stored or queued) keep the
+       old formula, so their ids, and every retry of them, are unchanged. */
+    var day = !entry.id && entry.idDay ? String(entry.idDay).replace(/[^0-9]/g, '').slice(0, 8) : '';
+    var s = String(merchantId || '') + '|' + source + (day ? '|d' + day : ''), h = 2166136261;
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return 'sale-ref-' + (h >>> 0).toString(16) + '-' + source.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
   }

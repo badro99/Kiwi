@@ -1095,7 +1095,7 @@
         c.paid += due;
         state.day[method === 'carte' ? 'carte' : 'especes'] += due;
         state.day.gateaux += due;
-        postDay(due, method, `Solde gâteau · ${c.name}`, c.id,
+        postDay(due, method, `Solde gâteau · ${c.name}`, `${c.id}-S`,
           [{ itemId: 'gateau-commande', name: 'Gâteau sur commande', kind: 'service', unit: 'order', qty: 1, total: due }]);
         closeVeil('#bl-pay-veil');
         queueIfOffline(`Solde ${c.id}`);
@@ -1398,7 +1398,7 @@
       cake.paid += acompte;
       state.day[method === 'carte' ? 'carte' : 'especes'] += acompte;
       state.day.gateaux += acompte;
-      postDay(acompte, method, `Acompte gâteau · ${cake.name}`, cake.id,
+      postDay(acompte, method, `Acompte gâteau · ${cake.name}`, `${cake.id}-A`,
         [{ itemId: 'gateau-commande', name: 'Gâteau sur commande', kind: 'service', unit: 'order', qty: 1, total: acompte }]);
       closeVeil('#bl-pay-veil');
       queueIfOffline(`Acompte ${cake.id}`);

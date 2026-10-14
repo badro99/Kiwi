@@ -83,7 +83,7 @@ if (source.includes('    function liveTableSplit(id) {')) {
 }
 
 check(source.includes('const savedSplit = liveTableSplit(id);')
-  && source.includes('const saved = isVrap ? vrapSplit : liveTableSplit(tableId);')
+  && source.includes('const saved = isVrap ? currentVrapSplit() : liveTableSplit(tableId);')
   && source.includes('const saved = liveTableSplit(id);'),
   'bill display, split card and resume all share the visit-bound validation');
 

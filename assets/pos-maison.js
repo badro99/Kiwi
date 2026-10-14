@@ -4176,6 +4176,13 @@
      supermarket lane. Resolves EAN-13 or any old/alphanumeric code registered on
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
+    /* A douchette keeps firing while the payment (or any other) window is open.
+       The item would land on a ticket that is already being charged and leave
+       with the customer uncharged: refuse, exactly as pos-boutique does. */
+    if (root && $$('.modal-veil.is-open', root).length) {
+      toast('Terminez la fenêtre ouverte avant de scanner');
+      return;
+    }
     const code = normScan(raw);
     if (!code) return;
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;

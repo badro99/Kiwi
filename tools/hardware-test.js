@@ -17,6 +17,8 @@ function runtime(real, printer) {
     localStorage: { getItem() { return null; } },
     document: { createElement(tag) { return { tag, setAttribute() {} }; } },
     KiwiEnv: { isReal() { return real; } },
+    /* The cashier's explicit "the customer paid" answer (see cashierConfirms). */
+    confirm() { return true; },
   };
   ctx.window = ctx;
   if (printer) ctx.KiwiPrinter = printer;

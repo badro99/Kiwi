@@ -31,7 +31,7 @@ const state = { tableId: '1', isVrap: false, splitMode: 'egal', total: 10,
     { amount: 5, paid: true, lines: [{ name: 'Article libre · 1/2', qty: 1, total: 5 }] },
     { amount: 5, paid: false, lines: [{ name: 'Article libre · 1/2', qty: 1, total: 5 }] },
   ] } };
-const context = vm.createContext({ splitState: state, tableSplits: splits, vrapSplit: null,
+const context = vm.createContext({ splitState: state, tableSplits: splits, vrapSplits: new Map(),
   vrapEditingNum: null, mode: 'salle', tables: { '1': { covers: 2 } }, cart: [],
   splitPaidCount: saved => saved.parts.filter(part => part.paid).length,
   persistShift() {}, liveTableSplit: id => splits.get(id),

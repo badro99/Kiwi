@@ -98,7 +98,7 @@ section('Partial split display and duplicate-payment path');
     markPaid() {},
     lucide: { createIcons() {} },
     lastSaleEntry() { return null; },
-    vrapSplit: null,
+    vrapSplits: new Map(),
     selectedId: 'T1',
   });
   vm.runInContext(`${splitHelpers}\n${splitCard}\n${splitPayment}`, context);
@@ -126,7 +126,7 @@ section('Right-panel and takeaway-board display paths');
   const saved = { total: 60, parts: [{ amount: 35, paid: true }, { amount: 25, paid: false }], paidCount: 1, sourceLabel: 'À emporter #7', orderNum: 7 };
   const context = vm.createContext({
     tableSplits: new Map([['T1', saved]]),
-    vrapSplit: saved,
+    vrapSplits: new Map([['n7', saved]]),
     tables: { T1: { covers: 2, status: 'bgha-ykhlass', elapsed: 4, server: null } },
     phoneSessionOf: () => '',
     tableOrders: { T1: [{ name: 'Plat', price: 60, qty: 1 }] },
@@ -216,7 +216,7 @@ section('Takeaway finalization and history path');
   const context = vm.createContext({
     vrapResumedExpiredId: null,
     vrapEditingNum: 7,
-    vrapSplit: { total: 60, parts: [{ amount: 35, paid: true }, { amount: 25, paid: true }] },
+    vrapSplits: new Map([['n7', { total: 60, parts: [{ amount: 35, paid: true }, { amount: 25, paid: true }] }]]),
     splitState: { total: 60, flow: { parts: [{ amount: 35, paid: true }, { amount: 25, paid: true }] } },
     kdsOrders: [order],
     cart: [{ name: 'Plat', price: 60, qty: 1 }],
