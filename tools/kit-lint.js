@@ -39,6 +39,13 @@
  *       taille de texte et un `height` en longueur fixe coupe le texte dès
  *       que Dynamic Type ou l'arabe l'allongent ; min-height, jamais height.
  *
+ * Étape 7 (le retrait), dès maintenant pour ne pas reculer :
+ *   K14 un jeton historique lu dans le kit : un var(--nom) dont le nom est
+ *       déclaré par assets/tokens.css (--ink, --n-500, --atlas…). Le kit
+ *       peint avec --k-* ; une feuille qui REPEINT les noms d'une page
+ *       (ordering.css, access.css, printer.css) les déclare, elle ne les lit
+ *       pas, et passe (§21.1, « no legacy token names in adopted files »).
+ *
  * Reste à l'étape 3, parce qu'aucune surface n'adopte encore le kit : un
  * tablist hors kit dans une surface adoptée.
  *
@@ -51,6 +58,19 @@ const { parse, cssInJs, kitFiles, stripJsComments } = require('./kit-css');
 
 const ROOT = path.resolve(__dirname, '..');
 
+/* K14 · the names assets/tokens.css declares (the legacy tokens). */
+const LEGACY = (() => {
+  try {
+    const css = fs.readFileSync(path.join(ROOT, 'assets/tokens.css'), 'utf8');
+    return new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]).filter((n) => !n.startsWith('--k-')));
+  } catch (_) { return new Set(); }
+})();
+function legacyUses(text) {
+  const out = [];
+  for (const m of text.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) if (LEGACY.has(m[1])) out.push(m[1]);
+  return out;
+}
+
 const RAW_COLOR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|\b(?:rgba?|hsla?)\(/;
 const stripUrls = (v) => v.replace(/url\([^)]*\)/gi, 'url()');
 
@@ -62,6 +82,7 @@ function lintSheet(css, file, { tokensFile = false, line0 = 0 } = {}) {
   if (!tokensFile) {
     for (const r of sheet.rules) for (const d of r.decls) {
       if (RAW_COLOR.test(stripUrls(d.value))) out.push(`K1 ${where(d.line)} · ${d.prop}: ${d.value} : couleur brute, utiliser un jeton var(--k-*)`);
+      for (const n of legacyUses(d.value)) out.push(`K14 ${where(d.line)} · ${d.prop}: var(${n}) : un jeton historique, utiliser var(--k-*)`);
     }
     for (const f of sheet.fontFaces) out.push(`K5 ${where(f.line)} · @font-face hors de tokens-2027.css`);
   }
@@ -106,6 +127,11 @@ function lintScript(js, file) {
   while ((m = re1.exec(src))) out.push(`K1 ${file}:${lineOf(m.index)} · couleur hexadécimale brute : « ${m[0].trim().slice(0, 60)} »`);
   const re1b = /\b(?:rgba?|hsla?)\(/g;
   while ((m = re1b.exec(src))) out.push(`K1 ${file}:${lineOf(m.index)} · ${m[0]}…) : couleur brute, utiliser un jeton`);
+
+  /* K14 · un jeton historique dans une chaîne (un style en ligne) : les
+     gabarits CSS sont déjà lus par lintSheet ci-dessus. */
+  const plain = src.replace(/`(?:\\[\s\S]|[^`\\])*`/g, '``');
+  for (const n of legacyUses(plain)) out.push(`K14 ${file} · var(${n}) dans une chaîne : un jeton historique, utiliser var(--k-*)`);
 
   /* K6 · gabarits qui construisent une URL de ressource. */
   const reT = /`((?:\\[\s\S]|[^`\\])*)`/g;
@@ -236,6 +262,15 @@ function selfTest() {
   pass('placeholder par attribut compte', lintPlaceholders([['x.js', "K.define('k-avatar', X, {});"]], 'k-avatar[size="44"]:not(:defined){width:44px}', 'kit.css'));
   fail('texte à hauteur fixe', lintSheet('.t{font-size:var(--k-fs-body);height:44px}', 'bad.css'), 'K13');
   fail('ligne bornée à hauteur fixe', lintSheet('.t{-webkit-line-clamp:2;height:2.5rem}', 'bad.css'), 'K13');
+
+  /* Étape 7 */
+  if (!LEGACY.has('--ink')) bad.push('K14 : assets/tokens.css ne déclare plus --ink, la liste des jetons historiques est vide ou fausse');
+  fail('jeton historique lu', lintSheet('.a{color:var(--ink)}', 'bad.css'), 'K14');
+  fail('jeton historique en repli', lintSheet('.a{background:var(--k-surface-1, var(--paper))}', 'bad.css'), 'K14');
+  fail('jeton historique dans un gabarit JS', lintScript('const css = `.a { color: var(--n-500); }`;', 'bad.js'), 'K14');
+  fail('jeton historique dans un style en ligne', lintScript("el.innerHTML = '<span style=\"color:var(--atlas)\">';", 'bad.js'), 'K14');
+  pass('une feuille qui repeint les noms d\'une page', lintSheet('html[data-skin-2027="access"]{--ink:var(--k-ink-1);--atlas:var(--k-accent-ink)}', 'ok.css'));
+  pass('un nom de page qui n\'est pas un jeton', lintSheet('.a{height:var(--app-height)}', 'ok.css'));
   return bad;
 }
 
@@ -248,7 +283,7 @@ if (require.main === module) {
     problems.slice(0, 60).forEach((p) => console.error('  · ' + p));
     process.exit(1);
   }
-  console.log(`✓ kit-lint · ${r.files} fichier(s) du kit, 13 règles (étapes 1 et 2), contrôles négatifs vus`);
+  console.log(`✓ kit-lint · ${r.files} fichier(s) du kit, 14 règles (étapes 1, 2 et 7), contrôles négatifs vus`);
 }
 
 module.exports = { lintSheet, lintScript, lintPlaceholders, lintKit, selfTest };
