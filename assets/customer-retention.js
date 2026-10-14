@@ -636,9 +636,32 @@
       document.querySelectorAll('.sidebar nav a[data-action="customer-retention"]').forEach(function (a) { a.classList.add('active'); });
     } catch (_) {}
     var root = page.el.querySelector('[data-cr-root]');
+    /* Design 2027 (§12, Customers › Retention): what the page shows, for the
+       kit's Retention page behind the dashboard's flag
+       (assets/kit/dash-retention.js). The Activity tab is drawn by the kit;
+       the offers form, the suggestions and the results stay the shipped ones. */
+    var kitModel = null;
+    function kitPublish() {
+      var counts = { new: 0, regular: 0, less: 0, inactive: 0 };
+      rows.forEach(function (r) { if (r.group) counts[r.group]++; });
+      var tabCounts = { suggest: candidates().length, results: doc.sends.length };
+      kitModel = {
+        enabled: !!doc.settings.enabled, tab: state.tab, label: T.title,
+        tabs: ['activity', 'groups', 'suggest', 'results'].map(function (id) { return { id: id, label: T.tabs[id], count: tabCounts[id] || 0 }; }),
+        groups: (counts.new ? ['new'].concat(GROUPS) : GROUPS).map(function (g) { return { key: g, label: T.group[g], value: fmt(counts[g]) }; }),
+        rows: rows.filter(function (r) { return r.group; }).sort(function (a, b) { return (b.since || 0) - (a.since || 0); }).map(function (r) {
+          return { id: r.id, name: r.name || r.phone || T.none, group: T.groupOne[r.group],
+            since: r.since == null ? '' : T.days(r.since), rhythm: r.rhythm ? T.every(r.rhythm) : '', spend: fmt(r.spend || 0) + ' MAD' };
+        }),
+        empty: { title: T.emptyBook, text: T.emptyBookText }
+      };
+      try { window.dispatchEvent(new CustomEvent('kiwi:retention-model')); } catch (_) {}
+    }
+    window.KiwiRetentionPage = { model: function () { return kitModel; }, page: function () { return page.el; } };
     function rerender() {
       root.innerHTML = bodyHtml();
       try { window.KiwiLens && KiwiLens.rescan && KiwiLens.rescan(); } catch (_) {}
+      kitPublish();
     }
     function toast(msg, type) { try { Kiwi.toast && Kiwi.toast(msg, { type: type || 'success' }); } catch (_) {} }
     async function persist(next, okMsg) {
@@ -745,6 +768,7 @@
         persist(next, T.sent);
       }
     });
+    kitPublish();
   };
 
   /* Exported for tools/customer-retention-test.mjs · pure functions only. */

@@ -4598,7 +4598,7 @@
     document.write(
       '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=5">' +
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-      '<link rel="stylesheet" href="assets/kit/kit.css?v=22">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=23">' +
       js("assets/kit/strings/kit.fr.js?v=2") +
       js("assets/kit/strings/kit.en.js?v=2") +
       js("assets/kit/strings/kit.ar.js?v=2") +
@@ -4627,7 +4627,8 @@
       js("assets/kit/overlays.js?v=2") +
       js("assets/kit/dash-report.js?v=1") +
       /* Stage 5 (§18.5): Customers on the kit, over the shipped book. */
-      js("assets/kit/dash-customers.js?v=1")
+      js("assets/kit/dash-customers.js?v=1") +
+      js("assets/kit/dash-retention.js?v=1")
     );
   })();
 </script>
@@ -5594,7 +5595,7 @@
 <script src="assets/dateRange.js?v=74" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
-<script defer src="assets/dashboard-pwa.js?v=580"></script>
+<script defer src="assets/dashboard-pwa.js?v=581"></script>
 <script defer src="assets/dashboard-native.js?v=3"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -5725,7 +5726,7 @@
 <script src="assets/clients-store.js?v=10" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 <script src="assets/clients-directory.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/customer-retention.js?v=8" defer fetchpriority="low"></script>
+<script src="assets/customer-retention.js?v=9" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=30" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
