@@ -64,7 +64,20 @@ em, i, cite, dfn, var { font-style: normal; }
   body.is-ios .ios-only{display:block}
   body.is-ios .not-ios{display:none}
   .foot{text-align:center;color:var(--muted);font-size:.82rem;margin:22px auto 0;max-width:460px;line-height:1.5}
+  code.code-block{display:block;white-space:pre;margin-top:6px;padding:8px;background:var(--ink);color:var(--mint);border-radius:6px;overflow-x:auto}
 </style>
+<!-- Design 2027, stage 6: the print bridge page on the kit's tokens, light and
+     dark, behind the access flag only (localStorage kiwiSkin2027:access = '1',
+     or ?skin=2027 for one load). Off, nothing below loads. -->
+<script>
+  (function () {
+    var on = false;
+    try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:access') === '1'; } catch (_) { on = false; }
+    if (!on) return;
+    document.documentElement.setAttribute('data-skin-2027', 'access');
+    document.write('<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1"><link rel="stylesheet" href="assets/kit/printer.css?v=1">');
+  })();
+</script>
 </head>
 <body>
   <main class="wrap">
@@ -118,7 +131,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <li><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
             <span class="mono">Win + R</span> → <code>shell:startup</code> → dans le dossier qui s'ouvre, créez un fichier
             <code>kiwi-printer.cmd</code> contenant :
-            <br><code style="display:block;white-space:pre;margin-top:6px;padding:8px;background:var(--ink);color:var(--mint);border-radius:6px;overflow-x:auto">@echo off
+            <br><code class="code-block">@echo off
 set KIWI_BRIDGE_PORT=9110
 start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             Adaptez le chemin si vous avez déplacé le <code>.exe</code>. Le pont démarrera seul, en fenêtre réduite.</li>

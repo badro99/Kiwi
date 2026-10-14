@@ -94,6 +94,7 @@ const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.9
 const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 const GATE = { texts: '.vx-auth-card h1, .vx-auth-card .sub, .vx-auth-card label, .vx-auth-card .tab, .vx-auth-card .forgot', primary: '#form-login .go', card: '.vx-auth-card', h1: '.vx-auth-card h1', input: '#li-email' };
 const RESET = { texts: '#view h1, #view p, #view a', primary: '#view k-button', card: 'main.card', h1: '#view h1', input: null };
+const PRINTER = { texts: 'h1, .lede, .step, h2, .card p, .card li, .others, .foot, .os-tab, code', primary: '#dl-primary', card: '.card', h1: 'h1', input: null };
 /* The luminance check, named for each capture. */
 function luminanceCheck(name, v, dark) {
   const g = lum(v.ground);
@@ -136,6 +137,21 @@ try {
     const inner = await page.evaluate(() => { const b = document.querySelector('#view k-button').shadowRoot.querySelector('button'); const cs = getComputedStyle(b); return { fg: cs.color, bg: cs.backgroundColor }; });
     const p = (c) => { const m = String(c).match(/[\d.]+/g); return { r: +m[0], g: +m[1], b: +m[2] }; };
     check(ratio(p(inner.fg), p(inner.bg)) >= 4.5, `${name}: the primary's label holds 4.5:1 on its fill (${ratio(p(inner.fg), p(inner.bg)).toFixed(2)})`);
+    check(errors.length === 0, `${name}: no page error` + (errors.length ? ' · ' + errors.join(' | ') : ''));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, fetched } = await open('/printer.html', { flag: false });
+    check(!fetched.some((p) => p.startsWith('/assets/kit/')), 'printer page, flag off: no kit file');
+    await ctx.close();
+  }
+  for (const [name, system, dark] of [['printer page, light', 'light', false], ['printer page, dark', 'dark', true]]) {
+    const { ctx, page, errors } = await open('/printer.html', { system });
+    const v = await capture(page, PRINTER);
+    luminanceCheck(name, v, dark);
+    check(ratio(v.primary.fg, v.primary.bg) >= 4.5 && v.primary.h >= 56 && v.primary.radius === '999px', `${name}: the download is a 56 capsule whose label holds 4.5:1 (${ratio(v.primary.fg, v.primary.bg).toFixed(2)})`);
+    const logo = await page.evaluate(() => getComputedStyle(document.querySelector('.brand img')).content);
+    check(dark ? /kiwi-newlogo-inverse\.svg/.test(logo) : !/inverse/.test(logo), `${name}: the ${dark ? 'inverse' : 'usual'} wordmark`);
     check(errors.length === 0, `${name}: no page error` + (errors.length ? ' · ' + errors.join(' | ') : ''));
     await ctx.close();
   }
