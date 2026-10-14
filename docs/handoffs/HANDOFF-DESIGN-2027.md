@@ -104,8 +104,9 @@ check.js does not name guards nothing.
 - **Push:** fetch both mirrors, rebase if `main` moved, re-gate if it did, then
   push `"$(git rev-parse HEAD):refs/heads/main"` by URL to
   `https://github.com/zaka33333-hash/Kiwi.git` and
-  `https://github.com/badro99/Kiwi.git`. A push has sometimes failed once and
-  gone through on retry. Never force-push. Fast-forward the shared checkout
+  `https://github.com/badro99/Kiwi.git`. In zsh, never write `"$H:refs/…"`:
+  `$H:r` is a modifier and mangles the refspec; write `"${H}:refs/heads/main"`.
+  Never force-push. Fast-forward the shared checkout
   only if it is clean.
 - **Spec as you land:** each stage ends with a "Stage N, as landed" paragraph in
   §21.1: what shipped, its gates with check counts, and its open items "stated
