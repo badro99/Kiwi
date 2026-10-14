@@ -5,7 +5,8 @@
   let chip, dialog, list, notice;
   const seen = new Set();
   const esc = value => String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const label = r => r.action === 'ask-bill' ? 'Addition demandée' : 'Appel client';
+  const LABELS = { 'ask-bill': 'Addition demandée', water: 'Demande de l’eau', bread: 'Demande du pain', napkins: 'Demande des serviettes', 'clear-table': 'Demande de débarrasser' };
+  const label = r => LABELS[r.action] || 'Appel client';
   function mount() {
     if (chip) return;
     const style = document.createElement('style');

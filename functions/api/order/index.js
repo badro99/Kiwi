@@ -39,6 +39,8 @@
 //    deux numéros. Le téléphone joint maintenant une clé (`ref`) et un renvoi
 //    rejoue la même commande au lieu d'en fabriquer une seconde.
 
+import { readGuestDoc } from './guest.js';
+import { iftarAt } from './_guest.js';
 import { json } from '../../auth/_lib.js';
 import { merchantZone } from '../_business-day.js';
 import { storeSubscriptionPending } from '../_private.js';
@@ -51,7 +53,9 @@ const MAX_LINES = 60;              // one order, generously
 const MAX_TOTAL = 200000;          // 200 000 MAD — a sanity ceiling, not a rule
 const MAX_PENDING = 60;            // per merchant: a queue no staff could ever work through
 const MAX_PENDING_PER_TABLE = 8;   // per table/session: three times a normal service
-const MAX_PENDING_OFF_PLAN = 8;    // all tables the floor plan does not know, together
+const MAX_PENDING_OFF_PLAN = 8;
+const FTOUR_MIN_LEAD_MS = 2 * 60 * 1000;    // à deux minutes du ftour, on sert tout de suite
+const FTOUR_MAX_LEAD_MS = 8 * 3600 * 1000;  // pas une commande du matin pour le soir    // all tables the floor plan does not know, together
 const MIN_SERVED_TABLES = 5;       // without a plan, the tables served before the budget applies
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 
@@ -151,7 +155,27 @@ export async function onRequestPost(context) {
   if (total <= 0 || total > MAX_TOTAL) return json({ error: 'bad-total' }, 400);
 
   const now = Date.now();
-  const today = startOfDay(now, await merchantZone(env, merchant));
+  const zone = await merchantZone(env, merchant);
+  const today = startOfDay(now, zone);
+
+  /* Ramadan : « servir au ftour ». Le client commande avant l'heure, la
+   * cuisine doit le savoir sans qu'un écran de plus ait à l'apprendre :
+   * l'heure part dans la note de chaque ligne, que la caisse, la cuisine, le
+   * bon papier et l'app serveur affichent déjà. Seulement quand le mode est
+   * allumé, et seulement si le ftour est encore à venir aujourd'hui. */
+  let ftour = null;
+  if (b && b.ftour === true) {
+    const guest = await readGuestDoc(env, merchant);
+    const iftar = guest.ramadan.on ? iftarAt(guest.ramadan, now, zone).today : null;
+    if (!iftar || iftar - now < FTOUR_MIN_LEAD_MS || iftar - now > FTOUR_MAX_LEAD_MS) {
+      return json({ error: 'ftour-unavailable' }, 409);
+    }
+    ftour = iftar;
+    const hhmm = new Intl.DateTimeFormat('fr-FR', { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(new Date(iftar));
+    priced.lines.forEach((l) => {
+      l.note = ('Pour le ftour · ' + hhmm + (l.note ? ' · ' + l.note : '')).slice(0, 200);
+    });
+  }
 
   /* Idempotence. Le téléphone tire une clé par commande ; un renvoi (double
    * tap, réseau qui repasse, onglet rechargé) doit retrouver SA commande, pas
@@ -323,6 +347,7 @@ export async function onRequestPost(context) {
   return json({
     ok: true, id, number: row.number,
     total, lines: priced.lines,
+    ...(ftour ? { ftour } : {}),
   });
 }
 

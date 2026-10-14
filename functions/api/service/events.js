@@ -232,13 +232,17 @@ async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
 /* A guest may only ask for service through an already-open table session (the
  * session handler verifies that boundary before calling here). This keeps the
  * public route from becoming a merchant-wide notification writer. */
+export const GUEST_ACTIONS = new Set(['call-server', 'ask-bill', 'water', 'bread', 'napkins', 'clear-table']);
+
 export async function publishGuestServiceRequest(env, merchant, rawTable, action, sessionId) {
   const table = tableKey(rawTable);
   const targets = await floorTargets(env, merchant);
   const target = targets[table];
   if (!table || !target) return { ok: false, error: 'floor-table-required' };
   if (!sessionId) return { ok: false, error: 'session-required' };
-  if (action !== 'call-server' && action !== 'ask-bill') return { ok: false, error: 'bad-service-action' };
+  /* Au-delà d'« appeler » et « l'addition », le client dit CE qu'il veut :
+   * le serveur arrive avec la carafe ou le pain, en un seul passage. */
+  if (!GUEST_ACTIONS.has(action)) return { ok: false, error: 'bad-service-action' };
   const ts = Date.now();
   const event = {
     id: 'evt-' + crypto.randomUUID(), type: action === 'ask-bill' ? 'table-state' : 'guest-call', ts, table,

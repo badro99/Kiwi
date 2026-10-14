@@ -447,6 +447,11 @@ async function routeRequest(context) {
     || path === '/support.html' || path === '/support')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path === '/api/order/session'
+    /* La page d'accueil du client (Wi-Fi, avis, jeux, ftour) et ses quiz,
+     * et l'écran de la salle qui affiche le classement. Rien de nominatif :
+     * voir functions/api/order/guest.js et game.js. */
+    || path === '/api/order/guest' || path === '/api/order/game'
+    || path === '/order-tv.html' || path === '/order-tv'
     || path.startsWith('/api/media/'))) return next();
   /* Shopify revient ici après son écran d'autorisation. Le navigateur a bien
    * une session Kiwi, mais le callback ne doit pas dépendre du cookie : son
@@ -472,6 +477,10 @@ async function routeRequest(context) {
    * C'est ce deuxième verrou qui empêche de commander de chez soi la nuit — il
    * se ferme tout seul quand la caisse s'éteint. */
   if (method === 'POST' && (path === '/api/order' || path === '/api/order/session')) return next();
+  /* Rendre une partie de quiz : le handler exige une session de table
+   * OUVERTE (celle du tag), note lui-même les réponses, et refuse quand les
+   * jeux sont coupés. Chemin exact. */
+  if (method === 'POST' && path === '/api/order/game') return next();
   /* Le dépôt d'une commande par un canal extérieur (Glovo, Shopify, un relais
    * Make). Ces appelants n'ont ni session ni cookie et n'en auront jamais : ils
    * présentent une clé porteuse dans l'en-tête Authorization, que le handler

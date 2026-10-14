@@ -23,7 +23,7 @@ const MAX_ROWS = 4000;
 const TTL_MS = 30 * 60 * 1000;
 const cache = new Map();
 
-async function recentBaskets(env, merchant, since) {
+export async function recentBaskets(env, merchant, since) {
   const run = (sql) => env.DB.prepare(sql).bind(merchant, since).all();
   let rs;
   try {

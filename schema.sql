@@ -2052,3 +2052,25 @@ CREATE TABLE IF NOT EXISTS foodcost_snapshots (
   actor_kind TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, sheet_id, version)
 );
+
+-- Order Pro · les quiz de la salle (functions/api/order/game.js). Une ligne
+-- par pseudo, par quiz, par visite (et par manche) : on y garde le MEILLEUR
+-- score, pas une ligne par partie. Créée aussi au premier usage
+-- (ensureScoresTable), la base de production pouvant être en retard.
+CREATE TABLE IF NOT EXISTS game_scores (
+  id         TEXT PRIMARY KEY,   -- merchant|mois|session|quiz|pseudo|manche
+  merchant   TEXT NOT NULL,
+  month      TEXT NOT NULL,      -- 'YYYY-MM' dans le fuseau du magasin
+  session_id TEXT NOT NULL,      -- table_sessions.id de la visite
+  table_no   TEXT,
+  quiz_id    TEXT NOT NULL,
+  round_id   TEXT NOT NULL DEFAULT '',
+  nickname   TEXT NOT NULL,
+  nick_key   TEXT NOT NULL,
+  score      INTEGER NOT NULL,
+  correct    INTEGER NOT NULL,
+  total      INTEGER NOT NULL,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_game_scores_month ON game_scores (merchant, month);

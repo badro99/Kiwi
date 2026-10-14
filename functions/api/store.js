@@ -33,6 +33,7 @@
 // erreur base — 200 neutre en lecture, 503 en écriture. Le client garde sa copie
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
+import { cleanGuestDoc } from './order/_guest.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant } from '../auth/_lib.js';
 import { employeeAuthVersion, tenantFor, storeSubscriptionPending } from './_private.js';
@@ -107,6 +108,12 @@ const FEATURES = {
    * se pose au bureau. */
   foodtrade:    { keys: ['pizzeria', 'traiteur', 'boulangerie'],   max: 60000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
+  /* La page d'accueil du client Order Pro : Wi-Fi des clients, lien d'avis,
+   * réseaux, jeux (quiz du restaurant, pseudos masqués, manche en cours) et
+   * mode Ramadan. Le propriétaire écrit (OWNER_EDIT_FEATURES) ; chaque
+   * enregistrement passe par cleanGuestDoc, la forme que lit la route
+   * publique functions/api/order/guest.js. */
+  guestpage:    { keys: ['wifi', 'review', 'socials', 'games', 'ramadan'], max: 200000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
   /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
    * ingredients, recipes and fixed charges out of the public menu document.
@@ -591,7 +598,7 @@ const PENDING_SETUP_FEATURES = new Set([
   'team', 'floorplan', 'services', 'rooms', HOTEL_UNITS_FEATURE, 'kds',
   'foodtrade', 'discountpolicy', 'fidelity', 'recipes', 'costs', 'promotions', 'suppliers',
 ]);
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade']);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport', 'foodtrade', 'guestpage']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -850,7 +857,7 @@ export async function onRequestPost(context) {
       || new Set(p).size !== p.length) return json({ error: 'bad-discount-policy' }, 400);
   }
 
-  const clean = bounded(raw, FEATURES[feature].maxStr);
+  const clean = bounded(feature === 'guestpage' ? cleanGuestDoc(raw) : raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);
