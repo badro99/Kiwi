@@ -2221,7 +2221,11 @@ section('Kiwi 2027 · une seule app de commande client');
  *   attendance-code-current-test        un seul code de pointage par commerce (§10.34) :
  *                                       repris tant qu'il lui reste plus de 60 s, tiré
  *                                       à neuf sinon, un seul code pour deux caisses au
- *                                       même instant, generate le remplace toujours */
+ *                                       même instant, generate le remplace toujours
+ *   attendance-browser-test             la feuille du code sur le kit : current à
+ *                                       l'ouverture, jamais generate ; renouvelé à
+ *                                       expiresTs − 60 s du serveur ; toutes les 10 s ;
+ *                                       Remplacer derrière une confirmation */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2232,6 +2236,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['discount-reasons-test.mjs', 'discount-reasons-test'],
     ['cash-count-browser-test.mjs', 'cash-count-browser-test'],
     ['attendance-code-current-test.mjs', 'attendance-code-current-test'],
+    ['attendance-browser-test.mjs', 'attendance-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
