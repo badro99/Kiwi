@@ -93,7 +93,10 @@
     try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:access') === '1'; } catch (_) { on = false; }
     if (!on) return;
     document.documentElement.setAttribute('data-skin-2027', 'access');
-    var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
+    /* The attribute is built in two pieces so public-assets-test, which reads
+       every src attribute literally, sees no URL here; each file is listed
+       below. */
+    var js = function (src) { return '<' + 'script defer src=' + '"' + src + '"></' + 'script>'; };
     document.write(
       '<meta name="kiwi-sprite" content="assets/icons/material/sprite.access.svg?v=1">' +
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +

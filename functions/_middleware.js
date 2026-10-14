@@ -1217,6 +1217,23 @@ function authPage(opts) {
 </style>
 <link rel="stylesheet" href="/assets/design-vexel.css" />
 <script src="/assets/design-vexel.js"></script>
+<!-- Design 2027, stage 6: the gate on the kit's tokens, behind the access flag
+     only (localStorage kiwiSkin2027:access = '1', or ?skin=2027 for one load).
+     Off, nothing below loads. After design-vexel.css, so the repaint wins. -->
+<script>
+  (function () {
+    var on = false;
+    try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:access') === '1'; } catch (_) { on = false; }
+    if (!on) return;
+    var html = document.documentElement;
+    html.setAttribute('data-skin-2027', 'access');
+    /* Dark is the merchant's choice here, not the system's: design-vexel.js
+       writes data-theme="dark" when it is chosen and nothing otherwise, and
+       the tokens would then follow the system. Light until it says dark. */
+    if (!html.hasAttribute('data-theme')) html.setAttribute('data-theme', 'light');
+    document.write('<link rel="stylesheet" href="/assets/kit/tokens-2027.css?v=1"><link rel="stylesheet" href="/assets/kit/access.css?v=1">');
+  })();
+</script>
 </head>
 <body class="vx-auth-page">
   <script>
