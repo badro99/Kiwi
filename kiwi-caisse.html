@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=3">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=9">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=11">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -174,8 +174,9 @@
         js("assets/kit/controls/stepper.js?v=1") +
         js("assets/kit/controls/switch.js?v=1") +
         js("assets/kit/elements.js?v=1") +
-        js("assets/kit/till.js?v=3") +
-        js("assets/kit/till-frame.js?v=2") +
+        js("assets/kit/layout.js?v=1") +
+        js("assets/kit/till.js?v=4") +
+        js("assets/kit/till-frame.js?v=3") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -5757,7 +5758,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
-  <script src="assets/caisse-pwa.js?v=572" defer></script>
+  <script src="assets/caisse-pwa.js?v=574" defer></script>
   <script src="assets/live-link.js?v=64" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
@@ -10592,7 +10593,7 @@
       const billBox = document.createElement('div');
       billBox.id = 'kit-bill';
       panel.appendChild(billBox);
-      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, act: tillKitAct });
+      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, menuPane: $('.main'), act: tillKitAct });
       if (tillKit) document.documentElement.setAttribute('data-k-till', '');
       return tillKit;
     }

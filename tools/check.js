@@ -2197,13 +2197,20 @@ section('Kiwi 2027 · une seule app de commande client');
  *                                       une tuile par plat, l'addition vide, un plat
  *                                       ajouté au panier livré, le total de la caisse,
  *                                       le badge 2 sur la même tuile, le pas − jusqu'à
- *                                       l'addition vide, Encaisser ouvre la fenêtre
- *                                       livrée */
+ *                                       l'addition vide ; l'encaissement dans le volet
+ *                                       (pourboire 10 %, espèces, carte, autre = wallet,
+ *                                       Retour), par finalizeTender
+ *   pay-height-test                     les formes de hauteur (§18.3) : régulière à
+ *                                       1032, compacte à 834, 820, 744, compacte courte
+ *                                       à 560 (touches 56) ; clavier et bouton dans
+ *                                       l'écran sans défiler ; à 500 la page défile
+ *                                       d'un bloc, jamais une colonne */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['till-frame-browser-test.mjs', 'till-frame-browser-test'],
+    ['pay-height-test.mjs', 'pay-height-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

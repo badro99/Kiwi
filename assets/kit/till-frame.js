@@ -7,12 +7,15 @@
  *   KiwiTillFrame.mount(api)    puts a <k-menu-grid>, a <k-bill> and a hidden
  *                               <k-pay> in place
  *     api.menu, api.bill        the host boxes that receive them
+ *     api.menuPane              the menu pane, whose start the compact
+ *                               payment begins at (§18.3)
  *     api.act(verb, id, value)  every gesture, by the component's verb:
  *                               add | options (menu), step | remove | void |
  *                               send | pay | split | discount | print |
  *                               overflow | edit-options | line-select (bill),
  *                               pay.method | pay.quick | pay.tip |
- *                               pay.tip-open | pay.confirm | pay.back (pay)
+ *                               pay.tip-open | pay.confirm | pay.back |
+ *                               pay.leave (pay)
  *   KiwiTillFrame.paint(view)   { sections, bill }: <k-menu-grid>'s and
  *                               <k-bill>'s shapes, either may be left out
  *   KiwiTillFrame.openPay(pay)  pushes the <k-pay> inside the bill pane over
@@ -95,13 +98,47 @@
     pay.hidden = false;
     bill.hidden = true;
     api.bill.setAttribute('data-paying', '');
+    place();
   }
   function closePay() {
     if (!pay || pay.hidden) return;
     pay.hidden = true;
     bill.hidden = false;
     api.bill.removeAttribute('data-paying');
+    place();
   }
+
+  /* §18.3 height forms, from the viewport height alone (layout.js), never by
+     scrolling. Regular: <k-pay> stays in the bill pane. Compact and
+     compact-short: it moves to a layer over the menu pane and the bill pane
+     (the menu cannot be used while a bill is paid), summary over the menu,
+     keys in the bill pane's width. Below 514 the page keeps min-height 514
+     and the window scrolls as a whole, the keypad column never. */
+  var layer = null, html = doc.documentElement;
+  function place() {
+    var L = root.KiwiLayout;
+    var f = (pay && !pay.hidden && L && L.paymentForm) ? L.paymentForm(root.innerHeight) : { form: 'regular' };
+    if (f.form === 'regular') {
+      if (pay && pay.parentNode !== api.bill) api.bill.appendChild(pay);
+      if (pay) pay.removeAttribute('layout');
+      if (layer) layer.hidden = true;
+      html.removeAttribute('data-k-pay');
+      html.removeAttribute('data-k-pay-scroll');
+      return;
+    }
+    if (!layer) { layer = doc.createElement('div'); layer.id = 'kit-pay-layer'; doc.body.appendChild(layer); }
+    var pane = api.menuPane ? api.menuPane.getBoundingClientRect() : null;
+    var rtl = root.getComputedStyle(html).direction === 'rtl';
+    var start = pane ? (rtl ? root.innerWidth - pane.right : pane.left) : 0;
+    layer.style.setProperty('--k-pay-start', Math.max(0, Math.round(start)) + 'px');
+    layer.style.setProperty('--k-pay-keys', Math.round(api.bill.getBoundingClientRect().width || 432) + 'px');
+    if (pay.parentNode !== layer) layer.appendChild(pay);
+    pay.setAttribute('layout', f.form);
+    layer.hidden = false;
+    html.setAttribute('data-k-pay', f.form);
+    if (f.scrollsPage) html.setAttribute('data-k-pay-scroll', ''); else html.removeAttribute('data-k-pay-scroll');
+  }
+  root.addEventListener('resize', function () { if (pay && !pay.hidden) place(); });
 
   root.KiwiTillFrame = {
     mount: mount, paint: paint, openPay: openPay, closePay: closePay,
