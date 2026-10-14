@@ -1675,6 +1675,20 @@
   }
   const fmtNetAmount = v => `${frInt(v)} ${curUnit()}`;
   const fmtSettleAmount = v => `${frInt(v)} <span style="font-size:0.42em; opacity: 0.7;">${curUnit()}</span>`;
+  /* Design 2027, étape 5 (kiwiSkin2027:dashboard) : l'accueil du kit dessine
+   * les chiffres que CES rendus calculent, et aucun autre. Chaque rendu dépose
+   * ici ce qu'il vient d'écrire dans le DOM livré ; un évènement par image
+   * (kiwi:home-model) prévient le kit. Drapeau éteint : personne n'écoute. */
+  function homeStore() { return homeStore.m || (homeStore.m = {}); }
+  function homeSet(key, value) {
+    homeStore()[key] = value;
+    if (homeSet.q) return;
+    homeSet.q = true;
+    Promise.resolve().then(() => {
+      homeSet.q = false;
+      try { window.dispatchEvent(new CustomEvent('kiwi:home-model')); } catch (_) {}
+    });
+  }
   const fmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
@@ -2493,6 +2507,7 @@
       if (label) label.textContent = operatorUnavailableText();
       const greet = document.querySelector('.hero-left-today .greet');
       if (greet) greet.style.display = 'none';
+      homeSet('hero', { unavailable: operatorUnavailableText() });
       return;
     }
     const lang = getLang();
@@ -2591,6 +2606,13 @@
           format: v => `${fmtPct(v)} <span class="d${v < 0 ? ' dn' : ''}">${arrowSvg(v >= 0)}</span>`,
         });
       });
+    }
+    {
+      const dl = DELTA_LABELS[lang]?.[currentRange] || DELTA_LABELS.fr[currentRange] || {};
+      const deltas = [['hier', data.deltaHier], ['semaine', data.deltaSemaine], ['mois', data.deltaMois]]
+        .filter(([k, v]) => v != null && dl[k]).map(([k, v]) => ({ key: k, value: v, text: fmtPct(v), label: dl[k] }));
+      const amount = Number(data.amount) || 0;
+      homeSet('hero', { label: labelEl ? labelEl.textContent : '', amount, amountText: fmtHeroAmount(amount).replace(/<[^>]*>/g, '').replace(curUnit(), '').trim(), unit: curUnit(), deltas, reference: !!reference });
     }
   }
 
@@ -2691,6 +2713,7 @@
     if (guardOperatorFigures('[data-goal-label], [data-goal-pct]')) {
       const fill = document.querySelector('[data-goal-fill]');
       if (fill) fill.style.width = '0%';
+      homeSet('goal', null);
       return;
     }
     const lang = getLang();
@@ -2755,6 +2778,7 @@
     }
     const fillEl = document.querySelector('[data-goal-fill]');
     if (fillEl) fillEl.style.width = `${widthPct.toFixed(1)}%`;
+    homeSet('goal', { range: currentRange, unset, label: labelEl ? labelEl.textContent : '', goal: unset ? 0 : data.goal, current: data.current, pct: unset ? null : pctRound, ratio });
   }
 
   /* ═══════════════ RENDER: HOURLY HEATMAP ═══════════════ */
@@ -3278,6 +3302,7 @@
     if (guardOperatorFigures('[data-kpi-band]')) {
       const wrap = document.querySelector('[data-kpi-band]');
       if (wrap) wrap.textContent = operatorUnavailableText();
+      homeSet('tiles', null);
       return;
     }
     const lang = getLang();
@@ -3643,6 +3668,16 @@
         }
       }
     });
+    {
+      const T = window.KiwiI18n?.T?.[lang] || {};
+      homeSet('tiles', { suffix, items: spec.filter((sp) => data[sp.key]).map((sp) => {
+        const tl = data[sp.key];
+        const unit = tl.unit ? String(tl.unit === 'MAD' ? curUnit() : tl.unit).replace(/d{4,}/g, n => frInt(Number(n))) : '';
+        const value = fmtKpiVal({ ...tl, unit: '' }, tl.text != null ? 0 : tl.value);
+        return { key: sp.key, label: T[sp.i18n] || sp.label, value: String(value).replace(/<[^>]*>/g, ''), unit, dash: tl.text != null && String(tl.text).replace(/s/g, '') === '·',
+          delta: tl.delta == null ? null : tl.delta, deltaText: tl.delta == null ? '' : fmtPct(tl.delta) };
+      }) });
+    }
   }
 
   /* ═══════════════ KPI BAND · personnalisation drawer ═══════════════ */
@@ -4935,6 +4970,14 @@
         subEl.textContent = FEED_SUB[lang]?.[currentRange] || FEED_SUB.fr[currentRange];
       }
     }
+    const strip = (x) => String(x == null ? '' : x).replace(/<[^>]*>/g, '');
+    const feedEmpty = tradeStr('feedEmpty', FEED_EMPTY[lang] || FEED_EMPTY.fr);
+    homeSet('feed', {
+      title: titleEl ? titleEl.textContent : '', sub: subEl ? subEl.textContent : '', unit: curUnit(),
+      empty: { title: feedEmpty.title, sub: feedEmpty.sub },
+      rows: (rows || []).map((r, idx) => ({ key: `o${idx}`, time: strip(r.t), primary: strip(trPay(r.primary)), sub: strip(trPay(r.sub)),
+        table: r.table == null ? null : r.table, who: strip(r.customer ? r.customer : (r.ctx || '')), amount: strip(r.amt), neg: !!r.neg })),
+    });
   }
 
   /* ═══════════════ RENDER: SETTLEMENT ═══════════════ */
@@ -6449,6 +6492,8 @@
     },
     getShowComparison, setShowComparison,
     bounds: (range) => rangeBounds(range == null ? currentRange : range),
+    /* L'accueil du kit (étape 5) : ce que les rendus viennent de dessiner. */
+    home: () => Object.assign({ range: currentRange }, homeStore()),
     insights: { summary: realInsightSummary, hero: buildRealHeroRec, heatmap: buildRealHeatmapRec },
     _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec },
   };

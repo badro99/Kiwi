@@ -114,10 +114,16 @@
       ]
     },
     "dashboard": {
-      "note": "Stage 3a: the dashboard lock on the kit's pad behind kiwiSkin2027:dashboard. The pad's delete key and its Face ID key.",
+      "note": "Stage 3a: the dashboard lock on the kit's pad behind kiwiSkin2027:dashboard. The pad's delete key and its Face ID key. Stage 5 (1): Home on the kit (the deltas, the order rows, the tile states).",
       "icons": [
         "backspace",
-        "face"
+        "face",
+        "arrow_upward",
+        "arrow_downward",
+        "chevron_right",
+        "wifi_off",
+        "error",
+        "progress_activity"
       ]
     },
     "team": {
