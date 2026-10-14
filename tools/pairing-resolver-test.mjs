@@ -806,7 +806,7 @@ function auditPairingKeyUsage() {
     for (const ent of entries) {
       if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'tools') continue;
       if (ent.name.includes(' 2.')) continue; // exclude iCloud conflict copies
-      const rel = relPrefix ? path.join(relPrefix, ent.name) : ent.name;
+      const rel = relPrefix ? path.posix.join(relPrefix, ent.name) : ent.name;
       const full = path.join(dir, ent.name);
       if (ent.isDirectory()) {
         if (!relPrefix && (ent.name === 'assets' || ent.name === 'functions')) {

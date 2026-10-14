@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = fs.readFileSync(path.join(root, 'assets/procurement.js'), 'utf8');
 let pass = 0;
 function ok(name, value) { if (!value) { console.error('  ✗ ' + name); process.exitCode = 1; } else pass++; }

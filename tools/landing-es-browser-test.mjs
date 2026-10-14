@@ -210,7 +210,9 @@ try {
   await page.click('header button[aria-controls="kw-mobile-menu"]');
   results.interactions.push('mobile menu opens/closes');
   await page.close();
-} catch (error) { failures.push(error.message); results.exception=error.stack; } finally {await browser.close();await new Promise(r=>server.close(r));}
+} catch (error) { failures.push(error.message); results.exception=error.stack; } finally {await browser.close();
+  // On Windows Chrome's keep-alive sockets outlive it, and close() would wait on them forever.
+  server.closeAllConnections();await new Promise(r=>server.close(r));}
 results.checks=checks;results.failures=failures;
 if(evidence)fs.writeFileSync(path.join(out,'browser-results.json'),JSON.stringify(results,null,2)+'\n');
 console.log(`Spanish browser QA: ${checks-failures.length}/${checks} checks passed`);

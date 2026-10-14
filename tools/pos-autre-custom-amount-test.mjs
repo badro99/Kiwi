@@ -9,12 +9,13 @@
  * switch language.
  *   node tools/pos-autre-custom-amount-test.mjs
  */
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
-const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const require = createRequire(path.join(ROOT, 'app/package.json'));
 const puppeteer = require('puppeteer-core');

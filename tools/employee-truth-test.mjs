@@ -30,12 +30,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestGet: storeGet, onRequestPost: storePost } = await import(path.join(ROOT, 'functions/api/store.js'));
-const { onRequestGet: employeeGet, onRequestPost: employeePost } = await import(path.join(ROOT, 'functions/api/employee.js'));
-const { makeSession, sessionCookie } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestGet: storeGet, onRequestPost: storePost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { onRequestGet: employeeGet, onRequestPost: employeePost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/employee.js')).href);
+const { makeSession, sessionCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let fails = 0;
 function ok(label, cond, detail) {

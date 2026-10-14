@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -28,7 +28,7 @@ if (!bin) { console.log('○ skip: Chromium unavailable'); process.exit(process.
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
 /* /dashboard sert l'écran de connexion du vrai gate (functions/_middleware.js),
  * pour vérifier qu'un lien reçu avant connexion survit à la connexion. */
-const gate = await import(path.join(root, 'functions/_middleware.js'));
+const gate = await import(pathToFileURL(path.join(root, 'functions/_middleware.js')).href);
 const server = http.createServer(async (req, res) => {
   if (new URL(req.url, 'http://local').pathname === '/dashboard') {
     const r = await gate.onRequest({ request: new Request('http://127.0.0.1' + req.url), env: { AUTH_SECRET: 'test-secret-not-real' }, next: () => new Response('next'), waitUntil() {} });

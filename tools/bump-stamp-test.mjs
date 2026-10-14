@@ -89,6 +89,9 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   fs.copyFileSync(path.join(ROOT, 'tools/install-hooks.sh'), path.join(dir, 'tools/install-hooks.sh'));
   const git = (...a) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...a], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   git('init', '-q');
+  // Comme le .gitattributes du dépôt (* -text) : sans lui, core.autocrlf=true (Git pour
+  // Windows) exporte l'index en CRLF et les estampilles ne collent plus aux octets.
+  git('config', 'core.autocrlf', 'false');
   run(dir, ['--sync']);
   git('add', '-A'); git('commit', '-q', '-m', 'base');
   const inst = spawnSync('sh', ['tools/install-hooks.sh'], { cwd: dir, encoding: 'utf8' });

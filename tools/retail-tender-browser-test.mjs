@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Real rendered Boutique and Maison payment sheets on loopback-only fixtures.
 // Click the product's checkout and confirmation; never invoke a handler/API.
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 
-const child = spawn(process.execPath, [new URL('./kiwi-ui-qa-mcp/server.js', import.meta.url).pathname],
+const child = spawn(process.execPath, [fileURLToPath(new URL('./kiwi-ui-qa-mcp/server.js', import.meta.url))],
   { stdio: ['pipe', 'pipe', 'pipe'] });
 let input = '', nextId = 1;
 const pending = new Map();

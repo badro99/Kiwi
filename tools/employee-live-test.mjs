@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,13 +29,13 @@ const DB = {
   async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
 };
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
-const API = await import(path.join(ROOT, 'functions/api/employee.js'));
-const TEAM_LIVE = await import(path.join(ROOT, 'functions/api/team/live.js'));
-const STORE = await import(path.join(ROOT, 'functions/api/store.js'));
-const SALE = await import(path.join(ROOT, 'functions/api/sale.js'));
-const FEED = await import(path.join(ROOT, 'functions/api/feed.js'));
-const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
-const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const API = await import(pathToFileURL(path.join(ROOT, 'functions/api/employee.js')).href);
+const TEAM_LIVE = await import(pathToFileURL(path.join(ROOT, 'functions/api/team/live.js')).href);
+const STORE = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const SALE = await import(pathToFileURL(path.join(ROOT, 'functions/api/sale.js')).href);
+const FEED = await import(pathToFileURL(path.join(ROOT, 'functions/api/feed.js')).href);
+const GATE = await import(pathToFileURL(path.join(ROOT, 'functions/_middleware.js')).href);
+const AUTH = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 function put(sql, ...args) { sqlite.prepare(sql).run(...args); }
 const now = Date.now();

@@ -18,17 +18,17 @@
  *   - le DDL de repli dit la même chose que schema.sql. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
-const invoices = await import(path.join(ROOT, 'functions/api/invoices.js'));
-const series = await import(path.join(ROOT, 'functions/api/_invoice-series.js'));
-const tillInvoice = await import(path.join(ROOT, 'functions/api/invoice.js'));
-const books = await import(path.join(ROOT, 'functions/api/comptable/books.js'));
-const acctLib = await import(path.join(ROOT, 'functions/api/comptable/_lib.js'));
-const middleware = await import(path.join(ROOT, 'functions/_middleware.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const invoices = await import(pathToFileURL(path.join(ROOT, 'functions/api/invoices.js')).href);
+const series = await import(pathToFileURL(path.join(ROOT, 'functions/api/_invoice-series.js')).href);
+const tillInvoice = await import(pathToFileURL(path.join(ROOT, 'functions/api/invoice.js')).href);
+const books = await import(pathToFileURL(path.join(ROOT, 'functions/api/comptable/books.js')).href);
+const acctLib = await import(pathToFileURL(path.join(ROOT, 'functions/api/comptable/_lib.js')).href);
+const middleware = await import(pathToFileURL(path.join(ROOT, 'functions/_middleware.js')).href);
 
 let passed = 0, failed = 0;
 function ok(label, cond, detail) {

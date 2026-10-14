@@ -15,12 +15,13 @@
  * d'autres modules lisent encore, exécute le vrai routeur du menu, et refuse
  * toute règle CSS .eq-*, .mi-* ou .pay-* que plus rien n'affiche.
  */
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const root = process.env.KIWI_ROOT || path.resolve(new URL('..', import.meta.url).pathname);
+const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };

@@ -25,15 +25,15 @@
  */
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { onRequestGet: storeGet, onRequestPost: storePost } =
-  await import(path.join(ROOT, 'functions/api/store.js'));
-const { onRequestGet: teamLiveGet } = await import(path.join(ROOT, 'functions/api/team/live.js'));
-const { onRequestGet: employeeGet } = await import(path.join(ROOT, 'functions/api/employee.js'));
+  await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { onRequestGet: teamLiveGet } = await import(pathToFileURL(path.join(ROOT, 'functions/api/team/live.js')).href);
+const { onRequestGet: employeeGet } = await import(pathToFileURL(path.join(ROOT, 'functions/api/employee.js')).href);
 const { tillToken, makeSession, sessionCookie, employeeToken, employeeCookie, DEMO_MERCHANTS } =
-  await import(path.join(ROOT, 'functions/auth/_lib.js'));
+  await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let fails = 0;
 function ok(label, cond, detail) {

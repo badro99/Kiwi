@@ -9,6 +9,7 @@
 //
 // Les vraies fonctions tournent : onRequestPost de /api/support/tickets et de
 // /api/support/attachments, sur un SQLite en mémoire, avec une vraie caisse appairée.
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -362,9 +363,9 @@ try {
     ok(['fr', 'en', 'darija', 'ar'].every((l) => DATASET.some((t) => t.lang === l)), 'jeu d\'évaluation : français, anglais, darija, arabe');
     ok(DATASET.some((t) => t.text === 'imprimante ma kat5demch') && DATASET.some((t) => /prix d'un plat/.test(t.text)), 'jeu d\'évaluation : les cas du cahier des charges');
     const clean = { ...process.env }; delete clean.CLOUDFLARE_ACCOUNT_ID; delete clean.CLOUDFLARE_API_TOKEN;
-    const dry = execFileSync(process.execPath, [new URL('./support-triage-eval.mjs', import.meta.url).pathname, '--dry'], { env: clean, encoding: 'utf8' });
+    const dry = execFileSync(process.execPath, [fileURLToPath(new URL('./support-triage-eval.mjs', import.meta.url)), '--dry'], { env: clean, encoding: 'utf8' });
     ok(/MODE SEC/.test(dry) && /Catégorie\s+: 100\.0 %/.test(dry) && /"model": "clef-flash"/.test(dry), 'mode sec : requête affichée, calcul exercé, aucun réseau');
-    const unset = spawnSync(process.execPath, [new URL('./support-triage-eval.mjs', import.meta.url).pathname], { env: clean, encoding: 'utf8' });
+    const unset = spawnSync(process.execPath, [fileURLToPath(new URL('./support-triage-eval.mjs', import.meta.url))], { env: clean, encoding: 'utf8' });
     ok(unset.status === 2 && /CLOUDFLARE_ACCOUNT_ID/.test(unset.stderr) && /CLOUDFLARE_API_TOKEN/.test(unset.stderr), 'sans variables : message clair et code 2');
     const evalSrc = fs.readFileSync(new URL('./support-triage-eval.mjs', import.meta.url), 'utf8');
     ok(!/console\.\w+\([^)]*\btoken\b/.test(evalSrc.replace(/'Bearer ' \+ token/, '')), 'le jeton n\'est jamais écrit dans la sortie');

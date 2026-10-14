@@ -10,12 +10,12 @@
  * tout ce qui reste fermé (opérations, caisse appairée, magasin suspendu). */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestPost: storePost } = await import(path.join(ROOT, 'functions/api/store.js'));
-const { tillToken, makeSession, sessionCookie } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestPost: storePost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { tillToken, makeSession, sessionCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let fails = 0, passed = 0;
 function ok(label, cond, detail) {

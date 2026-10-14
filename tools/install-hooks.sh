@@ -6,7 +6,8 @@
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOOKS="$(git -C "$ROOT" rev-parse --git-path hooks)"
-case "$HOOKS" in /*) ;; *) HOOKS="$ROOT/$HOOKS" ;; esac
+# Git pour Windows rend un chemin absolu « C:/… » dans un worktree : absolu lui aussi.
+case "$HOOKS" in /*|[A-Za-z]:/*) ;; *) HOOKS="$ROOT/$HOOKS" ;; esac
 mkdir -p "$HOOKS"
 for src in "$ROOT"/tools/hooks/*; do
   name="$(basename "$src")"

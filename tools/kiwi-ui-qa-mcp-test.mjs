@@ -162,7 +162,7 @@ try {
   if (persisted.isError) console.log('PERSISTENCE:', body(persisted), '\nSCREEN:', body(await call('ui_snapshot')));
   ok(!persisted.isError, 'booking persists and renders after reload');
   const proof = await call('finish_ui_proof', { ticketId: 999001, expectedOutcome: 'A normal guest can reach the reservation confirmation from reception' });
-  const match = body(proof).match(/UI proof saved: (\/[^\n]+proof\.json)/);
+  const match = body(proof).match(/UI proof saved: ((?:\/|[A-Za-z]:[\\/])[^\n]+proof\.json)/);
   ok(!proof.isError && match && fs.existsSync(match[1]), 'screenshot and manifest saved without changing a ticket');
   const manifest = JSON.parse(fs.readFileSync(match[1], 'utf8'));
   ok(manifest.ticketId === 999001 && manifest.actions.some(x => x.kind === 'click') && manifest.assertions.length >= 3, 'manifest has successful UI assertions and actual actions');
@@ -242,7 +242,7 @@ try {
   ok(!outlets.isError, 'Points de vente reads Outlets in English');
   const langProof = await call('finish_ui_proof', { ticketId: 999104,
     expectedOutcome: 'Switching the app language to English in Settings translates Settings and the hotel sidebar section live' });
-  ok(!langProof.isError && /UI proof saved: \//.test(body(langProof)), 'language switch proof saved from the rendered hotel dashboard');
+  ok(!langProof.isError && /UI proof saved: (?:\/|[A-Za-z]:[\\/])/.test(body(langProof)), 'language switch proof saved from the rendered hotel dashboard');
 
   const closed = await call('close_session');
   ok(!closed.isError, 'fixture and Chromium close cleanly');
@@ -287,7 +287,7 @@ try {
   ok(!gap.isError, 'restaurant Z gap is visible in rendered notification');
   const restaurantProof = await call('finish_ui_proof', { ticketId: 999096,
     expectedOutcome: 'Restaurant dashboard discloses the Z versus ledger gap after clicking Notifications' });
-  const restaurantPath = body(restaurantProof).match(/UI proof saved: (\/[^\n]+proof\.json)/)?.[1];
+  const restaurantPath = body(restaurantProof).match(/UI proof saved: ((?:\/|[A-Za-z]:[\\/])[^\n]+proof\.json)/)?.[1];
   ok(!restaurantProof.isError && restaurantPath && JSON.parse(fs.readFileSync(restaurantPath, 'utf8')).merchant === 'restaurant-fixture',
     'restaurant proof names only the isolated synthetic merchant');
   const restaurantClosed = await call('close_session');
@@ -306,7 +306,7 @@ try {
   ok(!afterRollover.isError, 'employee schedule rolls forward without reload');
   const clockProof = await call('finish_ui_proof', { ticketId: 999092,
     expectedOutcome: 'Employee planning refreshes at merchant midnight while the page stays open' });
-  const clockPath = body(clockProof).match(/UI proof saved: (\/[^\n]+proof\.json)/)?.[1];
+  const clockPath = body(clockProof).match(/UI proof saved: ((?:\/|[A-Za-z]:[\\/])[^\n]+proof\.json)/)?.[1];
   ok(!clockProof.isError && clockPath && JSON.parse(fs.readFileSync(clockPath, 'utf8')).environment === 'synthetic-employee-clock',
     'clock proof records the isolated fixture and rendered action');
   const clockClosed = await call('close_session');
@@ -331,7 +331,7 @@ try {
   ok(!retained.isError, 'new order still appears after normal navigation');
   const navProof = await call('finish_ui_proof', { ticketId: 999098,
     expectedOutcome: 'Incoming order leaves Accueil selected and remains visible in Commandes' });
-  const navPath = body(navProof).match(/UI proof saved: (\/[^\n]+proof\.json)/)?.[1];
+  const navPath = body(navProof).match(/UI proof saved: ((?:\/|[A-Za-z]:[\\/])[^\n]+proof\.json)/)?.[1];
   ok(!navProof.isError && navPath && JSON.parse(fs.readFileSync(navPath, 'utf8')).environment === 'synthetic-dashboard-navigation',
     'navigation proof records actual clicks against cleanly isolated dashboard');
   const navClosed = await call('close_session');

@@ -14,12 +14,12 @@
  *   6. Aucune écriture dans le stock ni dans `costs`. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestGet, onRequestPost, cleanSheet } = await import(path.join(ROOT, 'functions/api/foodcost.js'));
-const auth = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestGet, onRequestPost, cleanSheet } = await import(pathToFileURL(path.join(ROOT, 'functions/api/foodcost.js')).href);
+const auth = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let pass = 0, fail = 0;
 const ok = (label, cond, extra) => {

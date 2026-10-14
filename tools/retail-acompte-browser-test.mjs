@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // #94b: click the rendered Boutique and Maison controls, never call a handler.
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 
-const child = spawn(process.execPath, [new URL('./kiwi-ui-qa-mcp/server.js', import.meta.url).pathname],
+const child = spawn(process.execPath, [fileURLToPath(new URL('./kiwi-ui-qa-mcp/server.js', import.meta.url))],
   { stdio: ['pipe', 'pipe', 'pipe'] });
 let buffer = '', nextId = 0;
 const pending = new Map();

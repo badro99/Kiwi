@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { spawnSync } from 'node:child_process';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 let passed = 0, failed = 0;
 function check(value, label) { if (value) { passed++; console.log('  ✓ ' + label); } else { failed++; console.error('  ✗ ' + label); } }
@@ -36,7 +38,11 @@ check(service.includes('resumePrinterWarm') && service.includes('saveWarmTarget'
 check(relay.includes('"wake"') && relay.includes('timing'), 'RelayClient supports explicit wake jobs and reports print timing in ack');
 check(build.includes('requireReleaseSigning') && build.includes('KIWI_BRIDGE_KEYSTORE'), 'release build refuses to ship without external signing credentials');
 check(page.includes('/downloads/kiwi-print-bridge.apk') && !page.includes('Télécharger Termux sur F-Droid'), 'Kiwi download page offers the native Android APK');
-check((fs.statSync(path.join(root, 'app/android/gradlew')).mode & 0o111) !== 0, 'Gradle wrapper in app/android/gradlew is executable');
+// Windows has no execute bit on disk: there, read the mode Git records (what ships).
+const gradlewExecutable = process.platform === 'win32'
+  ? /^100755 /.test(spawnSync('git', ['ls-files', '-s', 'app/android/gradlew'], { cwd: root, encoding: 'utf8' }).stdout)
+  : (fs.statSync(path.join(root, 'app/android/gradlew')).mode & 0o111) !== 0;
+check(gradlewExecutable, 'Gradle wrapper in app/android/gradlew is executable');
 
 // No JDK ships with this repo and none is installed on the build machines, so
 // `check.js` can never compile the bridge. A dropped brace therefore reaches

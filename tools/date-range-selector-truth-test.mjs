@@ -12,13 +12,14 @@
  *    sous l'arabe, jusqu'au premier rendu complet ;
  *  · le calendrier s'ouvrait sur un point « · » à la place de la période.
  */
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import {createRequire} from 'node:module';
 
-const root = process.env.KIWI_ROOT || path.resolve(new URL('..', import.meta.url).pathname);
+const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');

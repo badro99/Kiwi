@@ -263,6 +263,8 @@ if (DatabaseSync) {
     printed.push(entry);
     printerSockets.push(sock);
     sock.on('data', (d) => entry.chunks.push(d));
+    // Windows réinitialise (ECONNRESET) le canal quand le pont s'arrête ; macOS le ferme.
+    sock.on('error', () => {});
   });
   const printedBytes = (i) => Buffer.concat((printed[i] || { chunks: [] }).chunks);
   await new Promise((r) => printer.listen(0, '127.0.0.1', r));

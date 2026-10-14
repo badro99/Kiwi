@@ -18,13 +18,14 @@
  * Quitter la consultation (Pointer mon arrivée) rend tout, sans changement pour
  * un employé pointé.
  */
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN

@@ -119,7 +119,7 @@ function audit(root) {
   const kitFiles = walk(path.join(root, 'assets/kit'), /\.(js|mjs|html|css|svg)$/);
   for (const abs of kitFiles) {
     stats.kitFiles++;
-    const rel = path.relative(root, abs);
+    const rel = path.relative(root, abs).split(path.sep).join('/');
     const text = fs.readFileSync(abs, 'utf8');
     for (const m of text.matchAll(/<k-icon\b[^>]*\bname="([^"$]+)"/g)) checkName(root, m[1], rel, problems);
     for (const m of text.matchAll(/href="([^"]*sprite\.([a-z0-9-]+)\.svg)(?:\?[^"#]*)?#([^"]+)"/g)) {

@@ -30,7 +30,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -191,7 +191,7 @@ ok('un mouvement rejoué n\'écrit qu\'une ligne',
 }
 
 /* ── IX · la capacité signée d'un mouvement de comptoir ──────────────────── */
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 const SECRET = 'test-secret-1234567890';
 const proof = await lib.managerStockProof(SECRET, {
   merchant: 'maison-test', staffId: 'emp-7', staffName: 'Salma Idrissi', staffRole: 'Gérante',

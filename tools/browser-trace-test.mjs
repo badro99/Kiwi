@@ -18,7 +18,7 @@ import path from 'node:path';
 import http from 'node:http';
 import util from 'node:util';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -31,7 +31,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-trace-'));
 process.env.KIWI_RESULTS_DIR = path.join(tmp, 'results');
 process.env.KIWI_SCREENSHOT_DIR = path.join(tmp, 'shots');
 delete process.env.KIWI_UPDATE_SNAPSHOTS;
-const T = await import(path.join(root, 'tools/browser-trace.mjs'));
+const T = await import(pathToFileURL(path.join(root, 'tools/browser-trace.mjs')).href);
 
 const PAGES = {
   '/app': `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Banc</title></head><body style="margin:0;background:#F7F5F0">

@@ -13,7 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const storeSrc = fs.readFileSync(path.join(ROOT, 'assets/venue-store.js'), 'utf8');
@@ -85,7 +85,7 @@ ok(/const shown = \(KV && KV\.getCurrentVenueData && KV\.getCurrentVenueData\(\)
 ok(/if \(!slug \|\| !venueId \|\| venueId === 'scoped'\) return null;/.test(cloudSrc), 'God Mode never adopts orphaned local records');
 
 // The leaked Amira documents stay out of Pasta Corner even if a device re-sends them.
-const { quarantined } = await import(path.join(ROOT, 'functions/api/store.js'));
+const { quarantined } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
 const leaked = JSON.stringify({ bookings: [{ id: 'b1', name: 'fixture' }] });
 ok(await quarantined('pasta-corner', 'reservations', leaked) === false, 'an ordinary Pasta Corner reservations document is accepted');
 ok(await quarantined('amira-cafe', 'reservations', leaked) === false, 'quarantine is scoped to the affected merchant');

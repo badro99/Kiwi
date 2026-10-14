@@ -23,12 +23,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
-const { computeHealth } = await import(path.join(root, 'functions/api/_merchant-health.js'));
+const { computeHealth } = await import(pathToFileURL(path.join(root, 'functions/api/_merchant-health.js')).href);
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required');
 const shots = process.env.KIWI_SHOTS || '';

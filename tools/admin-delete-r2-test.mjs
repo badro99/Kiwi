@@ -16,7 +16,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const EXPECTED = 22;
@@ -29,8 +29,8 @@ async function check(name, fn) {
 }
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const auth = await import(path.join(root, 'functions/auth/_lib.js'));
-const route = await import(path.join(root, 'functions/api/admin/clients.js'));
+const auth = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);
+const route = await import(pathToFileURL(path.join(root, 'functions/api/admin/clients.js')).href);
 
 const SECRET = 'admin-delete-test-secret-32bytes!';
 const M = 'cafe-atlas';

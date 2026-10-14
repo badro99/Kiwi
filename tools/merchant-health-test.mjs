@@ -15,12 +15,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestGet, resetHealthCache } = await import(path.join(ROOT, 'functions/api/merchant-health.js'));
-const { computeHealth, baseOf } = await import(path.join(ROOT, 'functions/api/_merchant-health.js'));
-const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestGet, resetHealthCache } = await import(pathToFileURL(path.join(ROOT, 'functions/api/merchant-health.js')).href);
+const { computeHealth, baseOf } = await import(pathToFileURL(path.join(ROOT, 'functions/api/_merchant-health.js')).href);
+const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 const SECRET = 'kiwi-health-bench-secret-0123456';
 const SHOP = 'resto-sante-banc';

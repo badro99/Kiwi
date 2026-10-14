@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // New commercial/production components only. Synthetic records, production
 // JS/CSS, real Chromium; not a merchant session or full dashboard acceptance.
+import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -10,7 +11,7 @@ import { createRequire } from 'node:module';
 import { draftSource,buildDraft } from '../functions/api/hotel/_billing-draft.js';
 const root = path.resolve(import.meta.dirname, '..');
 const require = createRequire(path.join(root, 'app/package.json'));
-const { default: puppeteer } = await import(require.resolve('puppeteer-core'));
+const { default: puppeteer } = await import(pathToFileURL(require.resolve('puppeteer-core')).href);
 const bin = [process.env.KIWI_CHROMIUM_BIN, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
 assert.ok(bin, 'Chromium is required for hotel commercial layout verification');
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-commercial-layout-'));

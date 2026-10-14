@@ -10,10 +10,10 @@
  * magasin), et rien de bloqué tant qu'aucun horaire n'est publié.
  */
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { hoursOpenAt, hoursClosed } = await import(path.join(ROOT, 'functions/api/order/_lib.js'));
+const { hoursOpenAt, hoursClosed } = await import(pathToFileURL(path.join(ROOT, 'functions/api/order/_lib.js')).href);
 const { readFileSync } = await import('node:fs');
 
 let passed = 0, failed = 0;

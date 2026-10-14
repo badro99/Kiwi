@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { suite } from './browser-trace.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -68,8 +68,8 @@ async function realServer() {
       catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} throw e; }
     },
   } };
-  const lib = await import(path.join(root, 'functions/auth/_lib.js'));
-  const api = await import(path.join(root, 'functions/api/invoices.js'));
+  const lib = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);
+  const api = await import(pathToFileURL(path.join(root, 'functions/api/invoices.js')).href);
   const cookie = lib.sessionCookie(await lib.makeSession('acc-inv', SECRET)).split(';')[0];
   const known = new Set();
   const own = (m) => {

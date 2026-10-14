@@ -31,7 +31,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,51 +111,51 @@ const env = { DB: db, AUTH_SECRET };
 const outbox = [];
 env.MAIL_WEBHOOK = `http://localhost:${PORT}/__mail`;
 
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 const ROUTES = {
-  '/api/config': await import(path.join(ROOT, 'functions/api/config.js')),
-  '/api/feed': await import(path.join(ROOT, 'functions/api/feed.js')),
+  '/api/config': await import(pathToFileURL(path.join(ROOT, 'functions/api/config.js')).href),
+  '/api/feed': await import(pathToFileURL(path.join(ROOT, 'functions/api/feed.js')).href),
   // Qui est connecté, et quels établissements il tient. Sans cette route le banc
   // renvoyait {} : identity.js repartait sur « pas de compte », donc ni God mode,
   // ni liste de magasins — les deux choses qu'on vient vérifier ici.
-  '/api/me': await import(path.join(ROOT, 'functions/api/me.js')),
+  '/api/me': await import(pathToFileURL(path.join(ROOT, 'functions/api/me.js')).href),
   /* Et le RESTE des routes du client, pour la même raison poussée un cran plus
      loin : tout ce qui traverse deux appareils — un reçu réglé au bureau qui
      doit sortir au comptoir, un stock que la caisse tient et que le bureau lit —
      n'avait aucun banc du tout. Ce sont pourtant exactement les pannes qu'on ne
      voit pas en lisant le code : chaque bout a l'air juste isolément. */
-  '/api/store': await import(path.join(ROOT, 'functions/api/store.js')),
-  '/api/catalog': await import(path.join(ROOT, 'functions/api/catalog.js')),
-  '/api/clients': await import(path.join(ROOT, 'functions/api/clients.js')),
-  '/api/menu': await import(path.join(ROOT, 'functions/api/menu.js')),
-  '/api/sale': await import(path.join(ROOT, 'functions/api/sale.js')),
+  '/api/store': await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href),
+  '/api/catalog': await import(pathToFileURL(path.join(ROOT, 'functions/api/catalog.js')).href),
+  '/api/clients': await import(pathToFileURL(path.join(ROOT, 'functions/api/clients.js')).href),
+  '/api/menu': await import(pathToFileURL(path.join(ROOT, 'functions/api/menu.js')).href),
+  '/api/sale': await import(pathToFileURL(path.join(ROOT, 'functions/api/sale.js')).href),
   /* Le relais OrderPro au complet — les trois portes ensemble, parce que c'est
      leur RELATION qui casse, jamais l'une d'elles isolément : le prix recalculé
      contre la carte publiée, la présence du comptoir qui autorise une session,
      la session qu'encaisser referme. Aucune de ces règles ne se vérifie en
      lisant un seul fichier, et aucune ne se vérifiait sans déployer. */
-  '/api/order': await import(path.join(ROOT, 'functions/api/order/index.js')),
-  '/api/order/session': await import(path.join(ROOT, 'functions/api/order/session.js')),
-  '/api/order/queue': await import(path.join(ROOT, 'functions/api/order/queue.js')),
-  '/api/pair/create': await import(path.join(ROOT, 'functions/api/pair/create.js')),
-  '/api/pair/redeem': await import(path.join(ROOT, 'functions/api/pair/redeem.js')),
-  '/api/admin/config': await import(path.join(ROOT, 'functions/api/admin/config.js')),
-  '/api/admin/audit': await import(path.join(ROOT, 'functions/api/admin/audit.js')),
-  '/api/admin/pins': await import(path.join(ROOT, 'functions/api/admin/pins.js')),
-  '/api/admin/clients': await import(path.join(ROOT, 'functions/api/admin/clients.js')),
-  '/api/admin/operators': await import(path.join(ROOT, 'functions/api/admin/operators.js')),
-  '/api/admin/sales': await import(path.join(ROOT, 'functions/api/admin/sales.js')),
-  '/api/admin/account': await import(path.join(ROOT, 'functions/api/admin/account.js')),
-  '/api/admin/reset': await import(path.join(ROOT, 'functions/api/admin/reset.js')),
+  '/api/order': await import(pathToFileURL(path.join(ROOT, 'functions/api/order/index.js')).href),
+  '/api/order/session': await import(pathToFileURL(path.join(ROOT, 'functions/api/order/session.js')).href),
+  '/api/order/queue': await import(pathToFileURL(path.join(ROOT, 'functions/api/order/queue.js')).href),
+  '/api/pair/create': await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/create.js')).href),
+  '/api/pair/redeem': await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/redeem.js')).href),
+  '/api/admin/config': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/config.js')).href),
+  '/api/admin/audit': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/audit.js')).href),
+  '/api/admin/pins': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/pins.js')).href),
+  '/api/admin/clients': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/clients.js')).href),
+  '/api/admin/operators': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/operators.js')).href),
+  '/api/admin/sales': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/sales.js')).href),
+  '/api/admin/account': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/account.js')).href),
+  '/api/admin/reset': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/reset.js')).href),
   // Le diagnostic d'établissement. Absent du banc jusqu'ici, donc la seule chose
   // qu'on pouvait y voir de ces cartes était « Diagnostic indisponible. » — et
   // pas leur mise en page, ce qui a laissé passer des cartes claires en mode
   // sombre jusque sur le site en ligne.
-  '/api/admin/health': await import(path.join(ROOT, 'functions/api/admin/health.js')),
-  '/auth/reset': await import(path.join(ROOT, 'functions/auth/reset.js')),
+  '/api/admin/health': await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/health.js')).href),
+  '/auth/reset': await import(pathToFileURL(path.join(ROOT, 'functions/auth/reset.js')).href),
 };
-const CHANNEL_ORDER = await import(path.join(ROOT, 'functions/api/channel/order.js'));
-const CHANNEL_SHOPIFY = await import(path.join(ROOT, 'functions/api/channel/shopify/[link].js'));
+const CHANNEL_ORDER = await import(pathToFileURL(path.join(ROOT, 'functions/api/channel/order.js')).href);
+const CHANNEL_SHOPIFY = await import(pathToFileURL(path.join(ROOT, 'functions/api/channel/shopify/[link].js')).href);
 
 /* ── amorce : un client d'avant, un client d'après ────────────────────────── */
 // NEW_ACCOUNT_FROM dans functions/api/config.js. Lu ici pour que le banc suive

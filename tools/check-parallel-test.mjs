@@ -38,11 +38,14 @@ process.env.KIWI_CHECK_NO_LOCK = '1';
 require(${JSON.stringify(GUARD)}).install({ log: () => {} });
 require(${JSON.stringify(GUARD)}).prefetch({ log: (m) => console.log(m) });
 const { spawnSync } = require('child_process');
-const files = ${JSON.stringify([...slow.slice(0, 2), red, ...slow.slice(2)])};
+const path = require('path');
+// Des noms relatifs, comme le vrai check.js : un chemin absolu Windows (C:\\…)
+// échappe à la recherche de check-guard, et rien ne tournerait en parallèle.
+const files = ${JSON.stringify([...slow.slice(0, 2), red, ...slow.slice(2)].map((f) => path.basename(f)))}.map((n) => path.join(__dirname, n));
 let failures = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [f], { encoding: 'utf8' });
-  console.log('RESULT ' + f.replace(/^.*\\//, '') + ' ' + r.status + ' ' + (r.stdout || '').trim());
+  console.log('RESULT ' + path.basename(f) + ' ' + r.status + ' ' + (r.stdout || '').trim());
   if (r.status !== 0) failures++;
 }
 console.log('FAILURES ' + failures);

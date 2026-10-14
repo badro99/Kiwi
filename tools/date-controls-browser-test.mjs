@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // #143/#144: shipped calendar, skins and lens, real wheel/touch input. No merchant APIs.
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import os from 'node:os';
 import {createRequire} from 'node:module';
-const root=path.resolve(new URL('..',import.meta.url).pathname), read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const root=path.resolve(fileURLToPath(new URL('..', import.meta.url))), read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const require=createRequire(path.join(root,'app/package.json')), puppeteer=require('puppeteer-core');
 const bin=process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/chromium','/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin,'Chromium required for date controls');

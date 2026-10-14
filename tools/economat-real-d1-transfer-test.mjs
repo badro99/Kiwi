@@ -61,8 +61,15 @@ async function check(name, fn) {
   process.stdout.write(`  ok ${checks} - ${name}\n`);
 }
 
+/* Windows : `npx` y est un .cmd, que Node ne lance plus sans shell. On appelle
+ * son script avec ce même node, ce qui évite aussi de citer les arguments. */
+const WIN = process.platform === 'win32';
+const NPX = WIN
+  ? [process.execPath, [path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npx-cli.js')]]
+  : ['npx', []];
+
 function command(args, options = {}) {
-  const result = spawnSync('npx', ['--yes', 'wrangler@4.127.1', ...args], {
+  const result = spawnSync(NPX[0], [...NPX[1], '--yes', 'wrangler@4.127.1', ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     ...options,
@@ -109,9 +116,15 @@ async function waitForWorker(baseUrl, child, logs) {
  *
  * On lance donc le processus DÉTACHÉ, ce qui en fait le chef d'un groupe, et on
  * signale le GROUPE (`-pid`) : wrangler et workerd le reçoivent aussi. Le repli
- * sur `child.kill` couvre le cas où le groupe a déjà disparu. */
+ * sur `child.kill` couvre le cas où le groupe a déjà disparu. Windows n'a ni
+ * groupe ni SIGTERM : `taskkill /T /F` y abat l'arbre entier d'un coup (sans /F,
+ * seul npx tombait et wrangler, workerd gardaient le dossier quelques secondes). */
 function signalGroup(child, signal) {
   if (!child || child.pid == null) return;
+  if (WIN) {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
   try {
     process.kill(-child.pid, signal);
   } catch (_) {
@@ -233,10 +246,10 @@ async function main() {
 
   let stdout = '';
   let stderr = '';
-  const child = spawn('npx', [
-    '--yes', 'wrangler@4.127.1', 'dev', '--local', '--config', config,
+  const child = spawn(NPX[0], [
+    ...NPX[1], '--yes', 'wrangler@4.127.1', 'dev', '--local', '--config', config,
     '--persist-to', persist, '--ip', '127.0.0.1', '--port', String(port),
-  ], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+  ], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: !WIN, windowsHide: true });
   child.stdout.on('data', (chunk) => { stdout += String(chunk); });
   child.stderr.on('data', (chunk) => { stderr += String(chunk); });
 
@@ -397,7 +410,14 @@ async function main() {
     process.stdout.write(`ok ${checks} checks\n`);
   } finally {
     await stop(child);
-    fs.rmSync(temp, { recursive: true, force: true });
+    // Windows rend les fichiers de workerd un instant après sa mort : on réessaie
+    // (l'option maxRetries de rmSync ne réessaie pas cet EPERM-là).
+    for (let attempt = 0; ; attempt++) {
+      try { fs.rmSync(temp, { recursive: true, force: true }); break; } catch (error) {
+        if (!WIN || attempt >= 25) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
   }
 }
 

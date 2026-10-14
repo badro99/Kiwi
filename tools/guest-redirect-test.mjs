@@ -13,10 +13,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const middleware = await import(path.join(ROOT, 'functions/_middleware.js'));
+const middleware = await import(pathToFileURL(path.join(ROOT, 'functions/_middleware.js')).href);
 let pass = 0, fail = 0;
 const ok = (yes, msg) => { if (yes) { pass++; console.log('  ✓ ' + msg); } else { fail++; console.log('  ✗ ' + msg); } };
 

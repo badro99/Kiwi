@@ -14,7 +14,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const EXPECTED = 8;
 let checks = 0;
@@ -26,8 +26,8 @@ async function check(name, fn) {
 }
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const auth = await import(path.join(root, 'functions/auth/_lib.js'));
-const media = await import(path.join(root, 'functions/api/media/index.js'));
+const auth = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);
+const media = await import(pathToFileURL(path.join(root, 'functions/api/media/index.js')).href);
 
 const SECRET = 'media-owner-test-secret-32bytes!';
 const A = 'cafe-atlas';

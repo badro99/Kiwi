@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const EXPECTED = 17;
 let checks = 0;
@@ -36,9 +36,9 @@ const routeSrc = fs.readFileSync(path.join(root, 'functions/api/ai/intake-archiv
 const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
 
 /* ── Vrai code auth + vraies routes, sosies D1/R2 ────────────────────────── */
-const auth = await import(path.join(root, 'functions/auth/_lib.js'));
-const priv = await import(path.join(root, 'functions/api/_private.js'));
-const archive = await import(path.join(root, 'functions/api/ai/intake-archive.js'));
+const auth = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')).href);
+const priv = await import(pathToFileURL(path.join(root, 'functions/api/_private.js')).href);
+const archive = await import(pathToFileURL(path.join(root, 'functions/api/ai/intake-archive.js')).href);
 
 const SECRET = 'archive-owner-test-secret-32bytes!';
 const A = 'cafe-atlas';

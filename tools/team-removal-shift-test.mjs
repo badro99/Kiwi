@@ -14,12 +14,12 @@ import { DatabaseSync } from 'node:sqlite';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestPost: storePost } = await import(path.join(ROOT, 'functions/api/store.js'));
-const { onRequestGet: teamLiveGet } = await import(path.join(ROOT, 'functions/api/team/live.js'));
-const { makeSession, sessionCookie, DEMO_MERCHANTS } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestPost: storePost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { onRequestGet: teamLiveGet } = await import(pathToFileURL(path.join(ROOT, 'functions/api/team/live.js')).href);
+const { makeSession, sessionCookie, DEMO_MERCHANTS } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };

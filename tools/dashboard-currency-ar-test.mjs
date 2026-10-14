@@ -7,12 +7,13 @@
  * du graphique, flux, total des ventes). Exécute la vraie curUnit() de
  * assets/dateRange.js, puis contrôle chaque point d'affichage.
  */
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const root = process.env.KIWI_ROOT || path.resolve(new URL('..', import.meta.url).pathname);
+const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const src = fs.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };

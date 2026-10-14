@@ -34,7 +34,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { makeSession } from '../functions/auth/_lib.js';
 import { onRequestPost as saveStay, onRequestGet as getStays } from '../functions/api/hotel/stays.js';
@@ -75,7 +75,7 @@ async function loadPuppeteer() {
   for (const b of bases) {
     try {
       const req = createRequire(b);
-      const mod = await import(req.resolve('puppeteer-core'));
+      const mod = await import(pathToFileURL(req.resolve('puppeteer-core')).href);
       return mod.default || mod;
     } catch (_) {}
   }

@@ -8,14 +8,14 @@
  * (tillVerification, isTerminalFor), sur une base SQLite au schéma réel. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
-const devices = await import(path.join(ROOT, 'functions/api/pair/devices.js'));
-const state = await import(path.join(ROOT, 'functions/api/pair/state.js'));
-const recover = await import(path.join(ROOT, 'functions/api/pair/recover.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const devices = await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/devices.js')).href);
+const state = await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/state.js')).href);
+const recover = await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/recover.js')).href);
 
 let passed = 0, failed = 0;
 function ok(label, cond, detail) {

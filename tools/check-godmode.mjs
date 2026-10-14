@@ -21,7 +21,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -73,26 +73,26 @@ globalThis.fetch = async (url, opts) => {
 
 const env = { DB: db, AUTH_SECRET, SITE_PASSWORD, MAIL_WEBHOOK: 'http://localhost/__mail' };
 
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 const R = {
-  sales:   await import(path.join(ROOT, 'functions/api/admin/sales.js')),
-  account: await import(path.join(ROOT, 'functions/api/admin/account.js')),
-  reset:   await import(path.join(ROOT, 'functions/api/admin/reset.js')),
-  audit:   await import(path.join(ROOT, 'functions/api/admin/audit.js')),
-  authReset: await import(path.join(ROOT, 'functions/auth/reset.js')),
-  feed:    await import(path.join(ROOT, 'functions/api/feed.js')),
-  login:   await import(path.join(ROOT, 'functions/auth/login.js')),
-  clients: await import(path.join(ROOT, 'functions/api/admin/clients.js')),
-  config:  await import(path.join(ROOT, 'functions/api/admin/config.js')),
-  pins:    await import(path.join(ROOT, 'functions/api/admin/pins.js')),
-  operators: await import(path.join(ROOT, 'functions/api/admin/operators.js')),
-  health: await import(path.join(ROOT, 'functions/api/admin/health.js')),
-  overview: await import(path.join(ROOT, 'functions/api/admin/overview.js')),
+  sales:   await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/sales.js')).href),
+  account: await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/account.js')).href),
+  reset:   await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/reset.js')).href),
+  audit:   await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/audit.js')).href),
+  authReset: await import(pathToFileURL(path.join(ROOT, 'functions/auth/reset.js')).href),
+  feed:    await import(pathToFileURL(path.join(ROOT, 'functions/api/feed.js')).href),
+  login:   await import(pathToFileURL(path.join(ROOT, 'functions/auth/login.js')).href),
+  clients: await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/clients.js')).href),
+  config:  await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/config.js')).href),
+  pins:    await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/pins.js')).href),
+  operators: await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/operators.js')).href),
+  health: await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/health.js')).href),
+  overview: await import(pathToFileURL(path.join(ROOT, 'functions/api/admin/overview.js')).href),
   /* Pas la console : le point d'entrée ORDINAIRE du produit, celui qui sert les
      drapeaux de modules et les PIN de caisse à un tableau de bord ou à une
      caisse appairée. C'est par là que la fuite inter-locataires est sortie. */
-  appConfig: await import(path.join(ROOT, 'functions/api/config.js')),
-  menu: await import(path.join(ROOT, 'functions/api/menu.js')),
+  appConfig: await import(pathToFileURL(path.join(ROOT, 'functions/api/config.js')).href),
+  menu: await import(pathToFileURL(path.join(ROOT, 'functions/api/menu.js')).href),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -852,7 +852,7 @@ G('11 · Le retrait atteint tous les appareils');
     'caisse : elle reçoit la référence de ticket, la seule clé qu’elle connaît', JSON.stringify(till));
 
   /* Une caisse qui rejoue sa file hors-ligne ne doit pas ressusciter la vente. */
-  const saleMod = await import(path.join(ROOT, 'functions/api/sale.js'));
+  const saleMod = await import(pathToFileURL(path.join(ROOT, 'functions/api/sale.js')).href);
   await saleMod.onRequestPost({ env, request: new Request('https://kiwi.test/api/sale',
     { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: AS.merchant },
       body: JSON.stringify({ id: 's-plain', merchant: 'amira-boutique', amount: 410, method: 'tap', ref: 'T-044-A7' }) }) });

@@ -13,13 +13,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestPost: storePost, onRequestGet: storeGet } = await import(path.join(ROOT, 'functions/api/store.js'));
-const { onRequestPost: menuPost } = await import(path.join(ROOT, 'functions/api/menu.js'));
-const G = await import(path.join(ROOT, 'functions/api/_tenant-guard.js'));
-const { makeSession, sessionCookie, DEMO_MERCHANTS } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestPost: storePost, onRequestGet: storeGet } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { onRequestPost: menuPost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/menu.js')).href);
+const G = await import(pathToFileURL(path.join(ROOT, 'functions/api/_tenant-guard.js')).href);
+const { makeSession, sessionCookie, DEMO_MERCHANTS } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 let fails = 0, passed = 0;
 function ok(label, cond, detail) {

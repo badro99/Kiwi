@@ -34,7 +34,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from './build-app-www.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -62,7 +62,7 @@ function findChromium() {
 async function loadPuppeteer() {
   try {
     const req = createRequire(path.join(ROOT, 'app', 'package.json'));
-    const mod = await import(req.resolve('puppeteer-core'));
+    const mod = await import(pathToFileURL(req.resolve('puppeteer-core')).href);
     return mod.default || mod;
   } catch (_) { return null; }
 }

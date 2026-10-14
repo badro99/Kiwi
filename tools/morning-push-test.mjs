@@ -6,15 +6,15 @@
  * vraie clé. La clé APNs est une clé P-256 jetable générée ici. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const morning = await import(path.join(ROOT, 'functions/api/push/morning.js'));
-const dispatch = await import(path.join(ROOT, 'functions/api/push/_dispatch.js'));
-const register = await import(path.join(ROOT, 'functions/api/push/register.js'));
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
-const worker = await import(path.join(ROOT, 'workers/morning-push/index.js'));
+const morning = await import(pathToFileURL(path.join(ROOT, 'functions/api/push/morning.js')).href);
+const dispatch = await import(pathToFileURL(path.join(ROOT, 'functions/api/push/_dispatch.js')).href);
+const register = await import(pathToFileURL(path.join(ROOT, 'functions/api/push/register.js')).href);
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const worker = await import(pathToFileURL(path.join(ROOT, 'workers/morning-push/index.js')).href);
 
 let passed = 0, failed = 0;
 function ok(label, cond, detail) {

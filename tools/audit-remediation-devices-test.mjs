@@ -30,7 +30,8 @@ function response(status, body) {
 }
 
 async function bridgeBoundaryTest() {
-  const sink = net.createServer((socket) => socket.on('data', () => {}));
+  // The error handler: Windows resets (ECONNRESET) a socket the bridge drops; macOS closes it.
+  const sink = net.createServer((socket) => socket.on('data', () => {}).on('error', () => {}));
   const sinkSockets = new Set();
   sink.on('connection', (socket) => { sinkSockets.add(socket); socket.on('close', () => sinkSockets.delete(socket)); });
   await new Promise((resolve) => sink.listen(0, '127.0.0.1', resolve));

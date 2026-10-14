@@ -15,11 +15,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestPost } = await import(path.join(ROOT, 'functions/api/sale/cancel.js'));
-const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestPost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/sale/cancel.js')).href);
+const { makeSession, SESS_COOKIE, TILL_COOKIE, tillToken } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 
 const SECRET = 'cashier-cancel-bench-secret-0123';
 const SHOP = 'cafe-annulation-banc';

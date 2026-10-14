@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8');
@@ -58,7 +58,7 @@ function ok(label, fn) {
 }
 
 /* ── 1. le prix, au centime ───────────────────────────────────────────────── */
-const { priceOrder } = await import(path.join(ROOT, 'functions/api/order/_lib.js'));
+const { priceOrder } = await import(pathToFileURL(path.join(ROOT, 'functions/api/order/_lib.js')).href);
 const menu = {
   items: [
     { id: 'it_2', name: 'Café crème', price: 14.5, avail: true, opts: ['og_4'] },

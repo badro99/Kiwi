@@ -18,7 +18,7 @@
  * temporaire. `node tools/d1-schema-test.mjs`
  */
 
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -122,7 +122,11 @@ async function main() {
      * dernière colonne se retrouve alors orphelin et rend l'ordre illisible
      * (« incomplete input »). C'est une limite de la mise en scène, pas de
      * l'outil — la vraie base de production, elle, n'a jamais eu ces colonnes. */
-    await execFile('sqlite3', [aged, stripComments(schemaText)]);
+    /* Par un fichier, comme la base neuve : en argument, le schéma dépasse la
+     * longueur de ligne de commande de Windows (ENAMETOOLONG). */
+    const strippedPath = join(dir, 'schema-stripped.sql');
+    await writeFile(strippedPath, stripComments(schemaText));
+    await execFile('sqlite3', [aged, `.read '${strippedPath.replace(/'/g, "''")}'`]);
     for (const name of SIMULATED_GAP.indexes) await sqlite(aged, `DROP INDEX IF EXISTS ${name};`);
     for (const name of SIMULATED_GAP.tables) await sqlite(aged, `DROP TABLE IF EXISTS ${name};`);
     for (const [table, column] of SIMULATED_GAP.columns) {

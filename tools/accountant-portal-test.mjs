@@ -19,21 +19,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
-const access = await import(path.join(ROOT, 'functions/api/comptable/access.js'));
-const session = await import(path.join(ROOT, 'functions/api/comptable/session.js'));
-const books = await import(path.join(ROOT, 'functions/api/comptable/books.js'));
-const store = await import(path.join(ROOT, 'functions/api/store.js'));
-const sale = await import(path.join(ROOT, 'functions/api/sale.js'));
-const pushRegister = await import(path.join(ROOT, 'functions/api/push/register.js'));
-const devices = await import(path.join(ROOT, 'functions/api/pair/devices.js'));
-const monthReport = await import(path.join(ROOT, 'functions/api/month-report.js'));
-const priv = await import(path.join(ROOT, 'functions/api/_private.js'));
-const middleware = await import(path.join(ROOT, 'functions/_middleware.js'));
+const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
+const access = await import(pathToFileURL(path.join(ROOT, 'functions/api/comptable/access.js')).href);
+const session = await import(pathToFileURL(path.join(ROOT, 'functions/api/comptable/session.js')).href);
+const books = await import(pathToFileURL(path.join(ROOT, 'functions/api/comptable/books.js')).href);
+const store = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const sale = await import(pathToFileURL(path.join(ROOT, 'functions/api/sale.js')).href);
+const pushRegister = await import(pathToFileURL(path.join(ROOT, 'functions/api/push/register.js')).href);
+const devices = await import(pathToFileURL(path.join(ROOT, 'functions/api/pair/devices.js')).href);
+const monthReport = await import(pathToFileURL(path.join(ROOT, 'functions/api/month-report.js')).href);
+const priv = await import(pathToFileURL(path.join(ROOT, 'functions/api/_private.js')).href);
+const middleware = await import(pathToFileURL(path.join(ROOT, 'functions/_middleware.js')).href);
 
 let passed = 0, failed = 0;
 function ok(label, cond, detail) {

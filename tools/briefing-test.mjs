@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -63,8 +63,8 @@ assert.ok(sw.includes(`/assets/briefing.js?v=${stamp}`), 'service worker precach
 assert.ok(/briefing:\s*\{ keys: \['days'\]/.test(storeSource), 'briefing document is allow-listed');
 assert.ok(/REDACT[^\n]*briefing:\s*stripBriefing/.test(storeSource), 'briefing money cache is redacted');
 
-const { onRequestGet, onRequestPost } = await import(path.join(ROOT, 'functions/api/store.js'));
-const { tillToken, makeSession, sessionCookie } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
+const { onRequestGet, onRequestPost } = await import(pathToFileURL(path.join(ROOT, 'functions/api/store.js')).href);
+const { tillToken, makeSession, sessionCookie } = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
 const AUTH_SECRET = 'briefing-test-secret-0123456789';
 const SHOP = 'briefing-fixture-shop';
 const now = Date.now();

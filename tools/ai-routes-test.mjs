@@ -6,7 +6,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -96,7 +96,7 @@ ok(schemaSrc.includes('CREATE TABLE IF NOT EXISTS ai_usage_kind'), 'schema.sql d
 ok(schemaSrc.includes('PRIMARY KEY (merchant, day, kind)'), 'schema.sql sets PRIMARY KEY (merchant, day, kind)');
 
 // ── 4. Unit tests: functions/api/ai/_quota.js ────────────────────────────────
-const { quotaOk, ensureAiUsageSchema, DAILY_CAPS } = await import(path.join(ROOT, 'functions/api/ai/_quota.js'));
+const { quotaOk, ensureAiUsageSchema, DAILY_CAPS } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/_quota.js')).href);
 
 ok(DAILY_CAPS.ask === 200, 'DAILY_CAPS.ask is 200');
 ok(DAILY_CAPS.invoice === 200, 'DAILY_CAPS.invoice is 200');
@@ -173,7 +173,7 @@ ok(exhaustedMenuImport === false && isolatedMenuOperations === true,
   'menu-operations quota remains available when menu-import is exhausted');
 
 // ── 5. Runtime tests: ask.js gateway & fallback logic ────────────────────────
-const { runAiWithGateway, onRequestPost: askPost, MODEL, FALLBACK_MODEL } = await import(path.join(ROOT, 'functions/api/ai/ask.js'));
+const { runAiWithGateway, onRequestPost: askPost, MODEL, FALLBACK_MODEL } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/ask.js')).href);
 
 // Test runAiWithGateway:
 let aiCalls = [];
@@ -244,7 +244,7 @@ ok(fallbackModelCalls === 1, 'Fallback attempted once through gateway');
 
 
 // ── 7. Function calling on /api/ai/ask (pure functions + route shape) ─────────
-const { cleanTools, cleanToolCalls, allowedToolCalls, cleanMessages: cleanMsgs } = await import(path.join(ROOT, 'functions/api/ai/ask.js'));
+const { cleanTools, cleanToolCalls, allowedToolCalls, cleanMessages: cleanMsgs } = await import(pathToFileURL(path.join(ROOT, 'functions/api/ai/ask.js')).href);
 const goodTool = { type: 'function', function: { name: 'sales_between', description: 'x', parameters: { type: 'object', properties: { from: { type: 'string' } } } } };
 const ct = cleanTools([goodTool, { function: { name: 'Bad Name!' } }, { function: { name: 'ok_tool', parameters: { type: 'object', properties: { big: { description: 'x'.repeat(3000) } } } } }]);
 ok(ct && ct.length === 2 && ct[0].function.name === 'sales_between', 'cleanTools keeps valid names, drops invalid ones');
@@ -268,7 +268,7 @@ ok(/const MAX_TOOL_CALLS = 4;/.test(askSrc) && /const MAX_TOOL_RESULT = 2000;/.t
  * the prompt's example invites the model to echo one from the logs. */
 const wdSrc = fs.readFileSync(path.join(aiDir, 'loss-watchdog.js'), 'utf8');
 ok(!/"pin"\s*:/.test(wdSrc) && !/\bs\.pin\b/.test(wdSrc), 'loss-watchdog prompt and validator carry no pin field');
-const { validateWatchdogData } = await import(path.join(aiDir, 'loss-watchdog.js'));
+const { validateWatchdogData } = await import(pathToFileURL(path.join(aiDir, 'loss-watchdog.js')).href);
 const wd = validateWatchdogData({ riskLevel: 'eleve', flaggedStaff: [{ name: 'Yassine', pin: '4821', code: '4821', reason: '4 annulations', amountMad: 340 }] });
 ok(wd && wd.flaggedStaff.length === 1 && !JSON.stringify(wd).includes('4821'), 'validateWatchdogData drops a code the model echoes back');
 
@@ -277,7 +277,7 @@ ok(wd && wd.flaggedStaff.length === 1 && !JSON.stringify(wd).includes('4821'), '
  * JSON.stringify(result), whose outer {} parsed as an empty report: the loss
  * watchdog told the manager « faible, personne » while the model said « eleve,
  * Yassine » (measured 2026-09-26). An empty reply must stay empty. */
-const { aiText } = await import(path.join(aiDir, '_run.js'));
+const { aiText } = await import(pathToFileURL(path.join(aiDir, '_run.js')).href);
 const glmReply = { choices: [{ finish_reason: 'stop', message: { content: '```json\n{"riskLevel":"eleve","flaggedStaff":[{"name":"Yassine","reason":"5 annulations après addition","amountMad":477}]}\n```' } }], usage: {} };
 const wdGlm = validateWatchdogData(JSON.parse(aiText(glmReply).match(/\{[\s\S]*\}/)[0]));
 ok(wdGlm.riskLevel === 'eleve' && wdGlm.flaggedStaff[0].name === 'Yassine', 'aiText reads a GLM reply: the watchdog report keeps « eleve, Yassine »');
@@ -292,7 +292,7 @@ ok(glmNoEffort.length === 0, "every GLM route payload carries reasoning_effort: 
 // ── 8. Live execution test of all AI route handlers ──────────────────────────
 const routeFiles = fs.readdirSync(aiDir).filter(f => f.endsWith('.js') && !f.startsWith('_'));
 for (const file of routeFiles) {
-  const mod = await import(path.join(aiDir, file));
+  const mod = await import(pathToFileURL(path.join(aiDir, file)).href);
   if (typeof mod.onRequestPost === 'function') {
     const fakeReq = new Request('https://kiwi-pos.com/api/ai/' + file.replace('.js', ''), {
       method: 'POST',
