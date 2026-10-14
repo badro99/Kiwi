@@ -1,0 +1,125 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · assets/kit/access.css · the account gate (sign-in and sign-up,
+ * functions/_middleware.js) on the 2027 tokens, behind kiwiSkin2027:access
+ * (spec §21.1 stage 6: sign-in pages with tokens and dark mode).
+ *
+ * The gate paints with its own names and its Vexel layer's (--ink, --n-500,
+ * --vx-accent…). The skin repaints those names with the --k-* tokens, so the
+ * forms, the tabs and the errors follow without a line of the gate changing,
+ * then sets the kit's type steps, fields and primary. Dark is the merchant's
+ * choice, as shipped: the tokens follow <html data-theme>, which
+ * design-vexel.js writes before the first frame (light by default); they never
+ * follow the system on this page.
+ *
+ * The selectors start from html[data-skin-2027="access"] body.vx-auth-page,
+ * which outranks Vexel's body.design-vexel[data-vexel-mode] palettes; this
+ * sheet loads after design-vexel.css. No script.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-skin-2027="access"] body.vx-auth-page {
+  --bg: var(--k-bg);
+  --paper-muted: var(--k-surface-2);
+  --paper-soft: var(--k-surface-1);
+  --surface: var(--k-surface-1);
+  --ink: var(--k-ink-1);
+  --line: var(--k-line);
+  --muted: var(--k-ink-2);
+  --field: var(--k-surface-2);
+  --field-focus: var(--k-surface-1);
+  --danger: var(--k-danger);
+  --warn-soft: var(--k-danger-tint);
+  --n-200: var(--k-line);
+  --n-300: var(--k-line-strong);
+  --n-500: var(--k-ink-2);
+  --n-600: var(--k-ink-2);
+  --vx-accent: var(--k-accent-ink);
+  --vx-primary-ink: var(--k-on-accent);
+  --vx-primary-shadow: none;
+  --vx-accent-18: var(--k-accent-tint);
+  --vx-control-border-hover: var(--k-line-strong);
+  /* Vexel paints the page with these, !important: the kit's ground, no domes. */
+  --vx-page: var(--k-bg);
+  --vx-dome-main: transparent;
+  --vx-dome-side: transparent;
+  --vx-dome-top: transparent;
+  --vx-active-bg: transparent;
+  --sans: var(--k-font);
+  --serif: var(--k-font);
+  background: var(--k-bg);
+  color: var(--k-ink-1);
+  font-family: var(--k-font);
+}
+
+/* The card: surface-1 on the ground, no glass (§5: one step of surface). */
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card {
+  background: var(--k-surface-1);
+  border: 0;
+  border-radius: var(--k-r-3);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  font-family: var(--k-font);
+}
+
+/* Type: Title for the welcome (§18.8), Body for the line under it, Footnote
+   strong for the labels, Body in the fields and the primary (§6.2). */
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card h1 {
+  font-family: var(--k-font);
+  font-size: var(--k-fs-title);
+  line-height: var(--k-lh-title);
+  font-weight: var(--k-fw-title);
+  letter-spacing: var(--k-track-title);
+  color: var(--k-ink-1);
+}
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .sub {
+  font-size: var(--k-fs-body);
+  line-height: var(--k-lh-body);
+  color: var(--k-ink-2);
+}
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card label {
+  font-size: var(--k-fs-footnote);
+  line-height: var(--k-lh-footnote);
+  font-weight: var(--k-fw-footnote-strong);
+  color: var(--k-ink-2);
+}
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card input {
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--k-r-2);
+  background: var(--k-surface-2);
+  color: var(--k-ink-1);
+  font-family: var(--k-font);
+  font-size: var(--k-fs-body);
+  box-shadow: none;
+}
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card input::placeholder { color: var(--k-ink-3); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card input:focus {
+  background: var(--k-surface-2);
+  box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus);
+}
+
+/* The primary: L, a capsule in the accent (§10.1). */
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card :is(.go, .staff button) {
+  min-height: 56px;
+  border-radius: 999px;
+  background: var(--k-accent);
+  color: var(--k-on-accent);
+  box-shadow: none;
+  font-family: var(--k-font);
+  font-size: var(--k-fs-body);
+  font-weight: var(--k-fw-body-strong);
+}
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card :is(.go, .staff button):active { background: var(--k-accent-pressed); }
+
+/* The tabs as the kit's segmented control (§10.6). */
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .tabs { background: var(--k-surface-2); border-color: transparent; border-radius: 999px; }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .pill { background: var(--k-surface-1); border: 0; border-radius: 999px; box-shadow: var(--k-shadow-1); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .tab { color: var(--k-ink-2); font-family: var(--k-font); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .tab[aria-selected="true"] { color: var(--k-ink-1); }
+
+/* Plain links (Forgot, the staff link) in the accent ink; errors in danger. */
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card :is(.forgot, .staff-link) { color: var(--k-accent-ink); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card :is(.err, .staff-err) { color: var(--k-danger); font-size: var(--k-fs-footnote); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .revoked { background: var(--k-danger-tint); border-color: transparent; color: var(--k-ink-1); border-radius: var(--k-r-2); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card .foot { border-color: var(--k-line); color: var(--k-ink-2); }
+html[data-skin-2027="access"] body.vx-auth-page .vx-auth-card :focus-visible { outline: none; box-shadow: 0 0 0 var(--k-focus-w) var(--k-focus); }

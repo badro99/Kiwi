@@ -2404,12 +2404,18 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
  *                                       /auth/reset, prise aux vrais gestionnaires sur
  *                                       SQLite (dont un corps malformé, posté une fois),
  *                                       arrive sur son état de §18.8 dans Chromium ;
- *                                       l'adresse mémorisée ; drapeau éteint, le livré */
+ *                                       l'adresse mémorisée ; drapeau éteint, le livré
+ *   access-gate-browser-test            la porte de connexion (le vrai middleware) et
+ *                                       la page de réinitialisation sur les jetons, en
+ *                                       clair et en sombre : le contrôle de luminance du
+ *                                       sombre sur chaque capture, 4,5:1 pour chaque
+ *                                       texte ; le sombre reste le choix du commerçant */
 section('Kiwi 2027 · l\'accès et le reste sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['reset-states-test.mjs', 'reset-states-test'],
+    ['access-gate-browser-test.mjs', 'access-gate-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
