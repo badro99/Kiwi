@@ -891,6 +891,10 @@
     "v": "36",
     "sha": "dcc6329202ab2168"
   },
+  "assets/orderpro-menu.js": {
+    "v": "1",
+    "sha": "229c81ce8a9a5f00"
+  },
   "assets/orderpro-panel.js": {
     "v": "4",
     "sha": "69c945ba95973a64"

@@ -107,7 +107,8 @@ for (const page of ['kiwi-order.html', 'OrderPro.html']) {
   assert(/function menuTr\(e, l\)[\s\S]*?x\.h !== menuHash\(e\.name, e\.desc\)/.test(src), `${page} : menuTr vérifie la fraîcheur`);
 }
 assert(/const x = menuTr\(it, l\);\s*MENU_I18N\[l\]\[it\.id\] = x \?/.test(read('kiwi-order.html')), 'kiwi-order.html : MENU_I18N rempli depuis it.i18n (repli canonique)');
-assert(/MENU_I18N\.fr = names; MENU_I18N\.en = namesEn; MENU_I18N\.ar = namesAr;/.test(read('OrderPro.html')), 'OrderPro.html : en/ar remplis depuis it.i18n');
+assert(/langs\.forEach\(\(l\) => \{\s*const x = menuTr\(it, l\);\s*if \(x\) byLang\[l\]\[String\(it\.id\)\] =/.test(read('OrderPro.html'))
+  && /langs\.forEach\(l => \{ MENU_I18N\[l\] = byLang\[l\]; \}\);/.test(read('OrderPro.html')), 'OrderPro.html : chaque langue publiée remplie depuis it.i18n');
 assert(/menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('kiwi-order.html')) && /menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('OrderPro.html')), 'onglets de catégories localisés sur les deux pages client');
 
 /* ── serveur : la liste blanche laisse passer i18n ─────────────────────── */

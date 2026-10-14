@@ -36,6 +36,7 @@
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
   <script src="assets/material-icons.js?v=3" defer></script>
+  <script src="assets/hours.js?v=4" defer></script>
 
   <style>
     /* =========================================================
@@ -2595,6 +2596,50 @@ em, i, cite, dfn, var { font-style: normal; }
     /* =========================================================
        LANGUAGE SWITCHER (floating top-right segmented pill)
        ========================================================= */
+    /* Stage 3c: what the QR page showed a guest (assets/orderpro-menu.js). */
+    .kh-closed {
+      position: sticky; top: 0; z-index: 60;
+      display: flex; align-items: center; gap: 9px;
+      min-height: 58px; padding: 11px 16px; box-sizing: border-box;
+      background: #FDECEC; color: #8A1C1C; border-bottom: 1px solid #F3C9C9;
+      font-family: var(--sans); font-size: 13px; line-height: 1.45;
+    }
+    .kh-dot { width: 8px; height: 8px; border-radius: 50%; background: #C0392B; flex-shrink: 0; }
+    .oo-banner {
+      margin: 0 16px 10px; padding: 10px 12px; border-radius: 12px;
+      background: var(--paper-mute); color: var(--ink-2); font-size: 12.5px; line-height: 1.45;
+    }
+    .oo-banner[hidden] { display: none; }
+    body.ordering-off .dish-add, body.ordering-off .cart-pill, body.ordering-off .service-bar,
+    body.ordering-off #custom-add-btn, body.ordering-off .custom-note-section,
+    body.ordering-off .custom-price { display: none !important; }
+    .dish-nutrition {
+      display: flex; flex-wrap: wrap; gap: 2px 5px; margin-top: 4px;
+      color: var(--ink-4); font-family: var(--mono); font-size: 9.5px; line-height: 1.35;
+    }
+    .dish-nutrition bdi { unicode-bidi: isolate; white-space: nowrap; }
+    .custom-nutrition { margin: 4px 0 14px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--paper-mute); }
+    .custom-nutrition[hidden] { display: none; }
+    .custom-nutrition-title { margin-bottom: 10px; color: var(--ink); font-size: 13px; font-weight: 600; }
+    .custom-nutrition-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .custom-nutrition-cell { min-width: 0; padding: 9px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface); }
+    .custom-nutrition-cell span { display: block; color: var(--ink-4); font-size: 9.5px; }
+    .custom-nutrition-cell bdi { display: block; margin-top: 3px; color: var(--ink); font: 600 11px var(--mono); unicode-bidi: isolate; }
+    .custom-allergens { margin-top: 12px; }
+    .custom-allergens-label { margin-bottom: 7px; color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+    .custom-allergen-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .custom-allergen-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 10px; }
+    .custom-allergen-icon { width: 13px; height: 13px; flex: 0 0 auto; background: currentColor; -webkit-mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; }
+    .custom-nutrition-note { margin: 10px 0 0; color: var(--ink-4); font-size: 10px; line-height: 1.4; }
+    @media (max-width: 360px) { .custom-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    /* A store with more than the three languages: narrower keys, and the
+       picker scrolls inside the screen rather than past it. */
+    .lang-picker.is-many { max-width: calc(100vw - 28px); overflow-x: auto; scrollbar-width: none; }
+    .lang-picker.is-many::-webkit-scrollbar { display: none; }
+    .lang-picker.is-many .lang-btn { min-width: 44px; flex: 0 0 auto; }
+    .menu-top { padding-inline-end: calc(var(--lang-picker-w, 0px) + 22px); }
+    .menu-cafe { min-width: 0; }
+    .menu-cafe .name { overflow-wrap: anywhere; }
     .lang-picker {
       position: absolute;
       top: calc(var(--safe-top) + 8px);
@@ -3225,6 +3270,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
       <!-- Onglets de catégories. Rebâtis depuis la carte publiée par le patron
            (bootRestaurant) ; data-tab doit valoir le `cat` de l'item. -->
+      <div class="oo-banner" id="oo-banner" role="status" hidden></div>
+
       <div class="menu-tabs" role="tablist">
         <button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">Tout</button>
       </div>
@@ -3447,6 +3494,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
 
         <div class="custom-scroll">
+          <div class="custom-nutrition-slot" id="custom-nutrition" hidden></div>
           <div id="custom-options"></div>
 
           <div class="custom-note-section">
@@ -3669,6 +3717,9 @@ em, i, cite, dfn, var { font-style: normal; }
 
   </div>
 
+  <script src="assets/menu-i18n.js?v=5"></script>
+  <script src="assets/order-ui-langs.js?v=2"></script>
+  <script src="assets/orderpro-menu.js?v=1"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -4323,6 +4374,10 @@ em, i, cite, dfn, var { font-style: normal; }
       },
     };
 
+    /* Stage 3c: the QR page's strings (hours, nutrition, browse-only) and one
+       dictionary per language a store may publish, over EN. */
+    if (globalThis.KiwiOrderMenu) KiwiOrderMenu.strings(I18N);
+
     /* ============ menu item translations ============
        Per-item name/desc translations, keyed by the item id used in MENU.
        Empty in the white-label template — add one entry per menu item, e.g.:
@@ -4338,6 +4393,8 @@ em, i, cite, dfn, var { font-style: normal; }
       return (h >>> 0).toString(36);
     }
     function menuTr(e, l) {
+      const tr = globalThis.KiwiOrderMenu && KiwiOrderMenu.tr(e, l);
+      if (tr) return tr;
       const x = e && e.i18n && e.i18n[l];
       if (!x || !x.name) return null;
       if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
@@ -4350,9 +4407,12 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     /* ============ i18n state + helpers ============ */
-    let currentLang = (() => {
-      try { return localStorage.getItem('orderProLang') || 'fr'; } catch (_) { return 'fr'; }
+    /* The QR page saved its choice as kiwiOrderLang; a guest it sent here
+       keeps it. */
+    const savedOrderLang = (() => {
+      try { return localStorage.getItem('orderProLang') || localStorage.getItem('kiwiOrderLang') || ''; } catch (_) { return ''; }
     })();
+    let currentLang = savedOrderLang || 'fr';
     function t(key) {
       return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.fr[key] ?? key;
     }
@@ -4371,13 +4431,19 @@ em, i, cite, dfn, var { font-style: normal; }
       });
     }
     function applyLang(lang) {
+      const OM = globalThis.KiwiOrderMenu;
+      if (OM) lang = OM.asLang(lang) || lang;
+      if (!I18N[lang] || (OM && !OM.langs().includes(lang))) lang = OM ? OM.pick('') : 'fr';
       if (!I18N[lang]) lang = 'fr';
       currentLang = lang;
       try { localStorage.setItem('orderProLang', lang); } catch (_) {}
       document.documentElement.lang = lang;
-      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('dir', (OM ? OM.rtl(lang) : lang === 'ar') ? 'rtl' : 'ltr');
       // Picker visual
-      $$('.lang-btn').forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
+      $$('.lang-btn').forEach(b => {
+        b.classList.toggle('is-active', b.dataset.lang === lang);
+        b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+      });
       // Static
       applyStaticI18n();
       // Dynamic
@@ -4395,6 +4461,7 @@ em, i, cite, dfn, var { font-style: normal; }
         refreshSplitUI();
       }
       if (globalThis.KiwiGuest) globalThis.KiwiGuest.onLang();
+      if (typeof refreshHoursGate === 'function') refreshHoursGate();
     }
 
     /* ============ option presets — shared across items ============
@@ -4724,6 +4791,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="dish-meta">
             ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
             <div class="dish-name">${escapeHtml(i.name)}</div>
+            ${globalThis.KiwiOrderMenu ? KiwiOrderMenu.nutritionSummary(m, t) : ''}
             <div class="dish-foot">
               <span class="dish-price">${money(m.price)}</span>
               ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
@@ -4924,7 +4992,10 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#cart-total').textContent = `${money(total)}`;
       $('#cart-grand').textContent = `${money(total)}`;
       pill.classList.toggle('is-visible', count > 0);
-      $('#send-btn').disabled = count === 0;
+      /* Closed hours or no Order Pro: the button says so before the server would. */
+      const gate = !!(globalThis.KiwiOrderMenu && KiwiOrderMenu.blocked());
+      $('#send-btn').disabled = count === 0 || gate;
+      if (gate) $('#send-btn').setAttribute('title', t('closed_why')); else $('#send-btn').removeAttribute('title');
 
       const itemsEl = $('#cart-items');
       if (count === 0) {
@@ -4957,6 +5028,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function addLineToCart(line) {
+      if (globalThis.KiwiOrderMenu && !KiwiOrderMenu.ordering()) return;
       const key = lineKey(line.id, line.options, line.note);
       const addQty = Math.max(1, Number(line && line.qty) || 1);
       if (cart.has(key)) {
@@ -5046,6 +5118,10 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-name').textContent = i.name;
       $('#custom-desc').textContent = i.desc;
       $('#custom-base').textContent = `${t('custom_from')} ${money(item.price)}`;
+      const nutritionEl = $('#custom-nutrition');
+      const nutritionHtml = globalThis.KiwiOrderMenu ? KiwiOrderMenu.nutritionDetail(item, t) : '';
+      nutritionEl.innerHTML = nutritionHtml;
+      nutritionEl.hidden = !nutritionHtml;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
       imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
@@ -5509,6 +5585,10 @@ em, i, cite, dfn, var { font-style: normal; }
     let pendingRef = '';
     async function sendOrder() {
       if (!cart.size) return;
+      if (globalThis.KiwiOrderMenu && KiwiOrderMenu.blocked()) {
+        showToast(t(KiwiOrderMenu.ordering() ? 'closed_why' : 'ordering_off_note'));
+        return;
+      }
       const btn = $('#send-btn');
       if (btn.classList.contains('is-loading')) return;
       if (SESSION.closed) { gotoScreen('screen-thanks'); return; }
@@ -6286,8 +6366,18 @@ em, i, cite, dfn, var { font-style: normal; }
       if (foot) { foot.textContent = STORE.name + ' · ' + t('mode_foot_service'); foot.removeAttribute('data-i18n'); }
       document.title = STORE.name;
       // The "ready" notification must carry the merchant's own name.
-      ['fr', 'en', 'ar'].forEach(l => { if (I18N[l]) I18N[l].notif_ready_title = STORE.name; });
+      Object.keys(I18N).forEach(l => { I18N[l].notif_ready_title = STORE.name; });
     }
+
+    /* The opening hours the merchant set, read every minute: a guest who has
+       had the page open for twenty minutes sees the kitchen close without a
+       reload. */
+    function refreshHoursGate() {
+      if (!globalThis.KiwiOrderMenu || !STORE.ready || STORE.type === 'boutique') return;
+      KiwiOrderMenu.renderClosed(t, currentLang);
+      refreshCartUI();
+    }
+    setInterval(refreshHoursGate, 60000);
 
     /* ============ boot screen states ============ */
     /* La caisse dort, pas le restaurant : « fermé » est transitoire et doit se
@@ -6360,15 +6450,26 @@ em, i, cite, dfn, var { font-style: normal; }
       const res = await NET.catalog();
       if (!res) { bootState('offline', { icon: 'wifi-off', retry: true }); return; }
       // Order Pro is a paid add-on: the server says whether this store has it.
-      // Absent/false means the merchant never bought it — we stop here rather
-      // than showing a menu they can't order from.
-      if (res.orderpro !== true) { bootState('off', { icon: 'power-off' }); return; }
+      // Without it, the server refuses every order. A restaurant's menu is
+      // still shown to browse: a printed table QR (order-qr.js) opens this
+      // page, and the merchant who never bought Order Pro still has a menu.
+      const OM = globalThis.KiwiOrderMenu;
+      STORE.type = String(res.type || '').toLowerCase();
+      const browseOnly = res.orderpro !== true;
+      const hasMenu = !!(res.menu && Array.isArray(res.menu.items) && res.menu.items.length);
+      if (browseOnly && !(OM && STORE.type !== 'boutique' && hasMenu)) { bootState('off', { icon: 'power-off' }); return; }
+      if (OM) {
+        OM.configure(res);
+        OM.picker(currentLang);
+        applyLang(OM.pick(savedOrderLang || currentLang));
+        OM.setOrdering(!browseOnly, t);
+      }
 
       applyStoreIdentity(res.name);
-      STORE.type = String(res.type || '').toLowerCase();
       /* La page d'accueil du client (assets/orderpro-guest.js) se charge en
-         parallèle : Wi-Fi, avis, jeux, « avec ça ? », temps réel, ftour. */
-      const guestLoad = STORE.type !== 'boutique' && globalThis.KiwiGuest ? globalThis.KiwiGuest.load() : null;
+         parallèle : Wi-Fi, avis, jeux, « avec ça ? », temps réel, ftour. Une
+         carte à consulter sans Order Pro n'y mène pas. */
+      const guestLoad = !browseOnly && STORE.type !== 'boutique' && globalThis.KiwiGuest ? globalThis.KiwiGuest.load() : null;
 
       if (STORE.type === 'boutique') {
         if (!bootBoutique(res.shop || {})) { bootState('empty', { icon: 'package-open' }); return; }
@@ -6380,6 +6481,8 @@ em, i, cite, dfn, var { font-style: normal; }
       // Restaurant family (default).
       if (!bootRestaurant(res.menu || {})) { bootState('empty', { icon: 'utensils-crossed' }); return; }
       STORE.ready = true;
+      refreshHoursGate();
+      if (browseOnly) { gotoScreen('screen-menu'); return; }
 
       // The NFC tag decides where we land: a table tag skips the numpad
       // entirely, a counter tag goes straight to takeout, a bare link asks.
@@ -6461,14 +6564,17 @@ em, i, cite, dfn, var { font-style: normal; }
         groups.set(key, mapped);
       });
 
-      const names = {}, namesEn = {}, namesAr = {};
+      /* Every language this store publishes, not only the three. */
+      const langs = globalThis.KiwiOrderMenu ? KiwiOrderMenu.langs() : ['fr', 'en', 'ar'];
+      const names = {}, byLang = {};
+      langs.forEach(l => { byLang[l] = {}; });
       const allToTranslate = (Array.isArray(allItems) && allItems.length) ? allItems : items;
       for (const it of allToTranslate) {
         if (!it || !it.id) continue;
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
-        [['fr', names], ['en', namesEn], ['ar', namesAr]].forEach(([l, map]) => {
+        langs.forEach((l) => {
           const x = menuTr(it, l);
-          if (x) map[String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
+          if (x) byLang[l][String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
         });
       }
 
@@ -6503,12 +6609,16 @@ em, i, cite, dfn, var { font-style: normal; }
           allergens: Array.isArray(it.allergens) ? it.allergens.slice() : null,
           options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
           formula: formulaOptions.length > 0,
+          nutrition: it.nutritionComplete === true && it.nutrition ? { ...it.nutrition } : null,
+          allergens: it.nutritionComplete === true && Array.isArray(it.allergens) ? it.allergens.slice() : [],
         });
       }
       // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →
       // Traductions) voyagent avec elle. Une langue non traduite retombe sur
       // son texte (itemI18n → MENU_I18N.fr).
-      MENU_I18N.fr = names; MENU_I18N.en = namesEn; MENU_I18N.ar = namesAr;
+      Object.keys(MENU_I18N).forEach(l => { delete MENU_I18N[l]; });
+      langs.forEach(l => { MENU_I18N[l] = byLang[l]; });
+      MENU_I18N.fr = Object.assign({}, names, byLang.fr || {});
 
       /* Les onglets sont ceux du patron, et rien d'autre. L'onglet « Top »
          a été retiré : il ne montrait que les plats filmés, ce qui coupait la
@@ -6851,7 +6961,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const cardEl = e.target.closest('[data-card]');
         if (cardEl) {
           const item = standaloneMenuItem(cardEl.dataset.card);
-          if (item && item.options && item.options.length > 0) {
+          if (item && ((item.options && item.options.length > 0) || item.nutrition)) {
             openCustomizer(item);
           }
           return;
