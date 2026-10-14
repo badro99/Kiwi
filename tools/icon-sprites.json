@@ -59,9 +59,17 @@
       ]
     },
     "kds": {
-      "note": "The kitchen draws icons at weight 500 and optical size 40 at 32 px (§8). `error` is the one the spec names; the rest follow with the kitchen's stage.",
+      "note": "The kitchen draws icons at weight 500 and optical size 40 at 32 px (§8). `error` is the one the spec names. Stage 3b: the lanes' own glyphs (the late word, the warning timer, the note, delivery, the ready time, recall, the unsynced line) and the newer sheet's close.",
       "icons": [
-        "error.wght500.40"
+        "check",
+        "close",
+        "error",
+        "error.wght500.40",
+        "sync_alt",
+        "timer",
+        "two_wheeler",
+        "undo",
+        "warning"
       ],
       "scan": []
     },

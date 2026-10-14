@@ -308,7 +308,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=1',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=4',
+  '/assets/kit/kit.css?v=5',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -332,6 +332,14 @@ var SHELL = [
   '/assets/kit/strings/team.en.js?v=1',
   '/assets/kit/strings/team.ar.js?v=1',
   '/assets/kit/team-pin.js?v=1',
+  /* and the kitchen board's lanes, behind kiwiSkin2027:kds. */
+  '/assets/icons/material/sprite.kds.svg?v=2',
+  '/assets/kit/strings/kds.fr.js?v=2',
+  '/assets/kit/strings/kds.en.js?v=2',
+  '/assets/kit/strings/kds.ar.js?v=2',
+  '/assets/kit/controls/button.js?v=1',
+  '/assets/kit/kds.js?v=3',
+  '/assets/kit/kds-board.js?v=1',
   '/assets/retail-scan.js?v=9',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',

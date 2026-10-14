@@ -447,6 +447,10 @@
     "v": "1",
     "sha": "858a1b7e9174b16e"
   },
+  "assets/icons/material/sprite.kds.svg": {
+    "v": "2",
+    "sha": "34c777e2aa5a3716"
+  },
   "assets/icons/material/sprite.kit.svg": {
     "v": "2",
     "sha": "732be65946680513"
@@ -555,13 +559,17 @@
     "v": "3",
     "sha": "84a02dc7e1290c51"
   },
-  "assets/kit/kds.js": {
+  "assets/kit/kds-board.js": {
     "v": "1",
-    "sha": "34220bbd4e56e6b6"
+    "sha": "bed2004bf83b4f18"
+  },
+  "assets/kit/kds.js": {
+    "v": "3",
+    "sha": "4ddaae319375b252"
   },
   "assets/kit/kit.css": {
-    "v": "4",
-    "sha": "d624807b36217eef"
+    "v": "5",
+    "sha": "6b6c290d1e2a2607"
   },
   "assets/kit/ledger.js": {
     "v": "2",
@@ -608,16 +616,16 @@
     "sha": "bcfc02f6e31d8989"
   },
   "assets/kit/strings/kds.ar.js": {
-    "v": "1",
-    "sha": "ddbbeae2ce903076"
+    "v": "2",
+    "sha": "bea252e57480c157"
   },
   "assets/kit/strings/kds.en.js": {
-    "v": "1",
-    "sha": "32a4391861cd6f26"
+    "v": "2",
+    "sha": "1bf9e4fa344c3d3d"
   },
   "assets/kit/strings/kds.fr.js": {
-    "v": "1",
-    "sha": "9d7cd033cdcc9587"
+    "v": "2",
+    "sha": "d7614970056c0fcc"
   },
   "assets/kit/strings/kit.ar.js": {
     "v": "2",

@@ -36,7 +36,7 @@ const bad = (m) => { failures++; console.log('  ✗ ' + m); };
  * jusqu'à ce qu'on le classe. */
 const NUMBERS = new Set(['n', 'total', 'minutes', 'min', 'paid']);
 const FORMATTED = new Set(['amount', 'pct', 'delta', 'time', 'date', 'price', 'tip', 'hour', 'start', 'end', 'from', 'to', 'value', 'subtotal']);
-const NAMES = new Set(['label', 'venue', 'business', 'name', 'act', 'order', 'table', 'item', 'group', 'staff', 'reason', 'bill', 'store', 'denomination', 'baseline', 'weekday', 'known', 'contactable', 'relative', 'status', 'source', 'station']);
+const NAMES = new Set(['label', 'venue', 'business', 'name', 'act', 'order', 'table', 'item', 'group', 'staff', 'reason', 'bill', 'store', 'denomination', 'baseline', 'weekday', 'known', 'contactable', 'relative', 'status', 'source', 'station', 'items', 'line']);
 const kindOf = (a) => (NUMBERS.has(a) ? 'num' : FORMATTED.has(a) ? 'fmt' : NAMES.has(a) ? 'name' : null);
 const LATIN = 'Café Atlas 2';
 const ARABIC = 'مقهى الأطلس';

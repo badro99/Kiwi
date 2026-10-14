@@ -129,3 +129,13 @@ k-figure .k-fig__sr {
 .k-team-next:active { background-color: var(--k-accent-pressed); }
 .k-team-next.is-off { background-color: var(--k-surface-3); color: var(--k-ink-3); }
 .k-team-next:focus-visible { outline: var(--k-focus-w, 2px) solid var(--k-focus); outline-offset: 2px; }
+/* The kitchen board on the kit's lanes (assets/kit/kds-board.js, §18.7):
+   each column body holds one <k-lane> that never scrolls (§13.6); the
+   newer card opens the rest. Wide, the columns take the spec's tracks:
+   New 384, Preparing the rest, Ready 272. Narrow, the shipped tabs still
+   show one column at a time. */
+.cols .stack.k-kds-stack { display: block; overflow: hidden; padding: 0 16px 16px; }
+@media (min-width: 901px) {
+  html[data-skin-2027="kds"] .cols { grid-template-columns: minmax(0, 384px) minmax(0, 1fr) minmax(0, 272px); }
+  html[data-skin-2027="kds"] .col--pass .stack.k-kds-stack { padding-inline: 12px; }
+}
