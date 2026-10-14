@@ -52,7 +52,7 @@
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/material-icons.ordering.js?v=3" data-full="assets/material-icons.js?v=3" defer></script>
+  <script src="assets/material-icons.ordering.js?v=4" data-full="assets/material-icons.js?v=3" defer></script>
 
   <style>
     /* =========================================================
@@ -2629,11 +2629,13 @@ em, i, cite, dfn, var { font-style: normal; }
     body.ordering-off .dish-add, body.ordering-off .cart-pill, body.ordering-off .service-bar,
     body.ordering-off #custom-add-btn, body.ordering-off .custom-note-section,
     body.ordering-off .custom-price { display: none !important; }
-    .dish-nutrition {
-      display: flex; flex-wrap: wrap; gap: 2px 5px; margin-top: 4px;
-      color: var(--ink-4); font-family: var(--mono); font-size: 9.5px; line-height: 1.35;
+    .dish-info {
+      width: 28px; height: 28px; margin-inline-start: auto; flex: 0 0 auto;
+      border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+      display: flex; align-items: center; justify-content: center;
     }
-    .dish-nutrition bdi { unicode-bidi: isolate; white-space: nowrap; }
+    .dish-info svg { width: 17px; height: 17px; }
+    .dish-info:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
     .custom-nutrition { margin: 4px 0 14px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--paper-mute); }
     .custom-nutrition[hidden] { display: none; }
     .custom-nutrition-title { margin-bottom: 10px; color: var(--ink); font-size: 13px; font-weight: 600; }
@@ -3744,7 +3746,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <script data-lazy="guest" src="assets/orderpro-guest.js?v=1"></script>
     <script data-lazy="boutique" src="assets/orderpro-boutique.js?v=1"></script>
   </template>
-  <script src="assets/orderpro-menu.js?v=5"></script>
+  <script src="assets/orderpro-menu.js?v=6"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -4824,9 +4826,9 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="dish-meta">
             ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
             <div class="dish-name">${escapeHtml(i.name)}</div>
-            ${globalThis.KiwiOrderMenu ? KiwiOrderMenu.nutritionSummary(m, t) : ''}
             <div class="dish-foot">
               <span class="dish-price">${money(m.price)}</span>
+              ${globalThis.KiwiOrderMenu ? KiwiOrderMenu.infoButton(m, i.name, t) : ''}
               ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
             </div>
           </div>
@@ -6784,12 +6786,23 @@ em, i, cite, dfn, var { font-style: normal; }
           addBtn.classList.add('is-popped');
           return;
         }
+        // The tile's "i": the dish's sheet, opened at its nutrition facts.
+        const infoBtn = e.target.closest('[data-info]');
+        if (infoBtn) {
+          const item = standaloneMenuItem(infoBtn.dataset.info);
+          if (item) {
+            openCustomizer(item);
+            const facts = $('#custom-nutrition');
+            if (facts && !facts.hidden) requestAnimationFrame(() => facts.scrollIntoView({ block: 'start' }));
+          }
+          return;
+        }
         // Dish card tap: ONLY opens customizer if item has customizable options!
         // Never silently add items with no options (e.g. water, drinks) on touch/scroll.
         const cardEl = e.target.closest('[data-card]');
         if (cardEl) {
           const item = standaloneMenuItem(cardEl.dataset.card);
-          if (item && ((item.options && item.options.length > 0) || item.nutrition)) {
+          if (item && item.options && item.options.length > 0) {
             openCustomizer(item);
           }
           return;

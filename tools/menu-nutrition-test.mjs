@@ -225,9 +225,10 @@ assert.match(adminSource, /key:'menuNutrition'/, 'God Mode expose le flag restau
    dans assets/orderpro-menu.js (kiwi-order.html n'est plus qu'une redirection). */
 const orderSource = fs.readFileSync(new URL('../assets/orderpro-menu.js', import.meta.url), 'utf8');
 const proSource = fs.readFileSync(new URL('../OrderPro.html', import.meta.url), 'utf8');
-assert.match(orderSource, /function nutritionSummary\(item, t\) \{\s*var n = item && item\.nutrition;\s*if \(!n\) return '';/, 'la carte client ne rend aucun substitut quand la donnée manque');
+assert.match(orderSource, /function infoButton\(item, name, t\) \{\s*if \(!\(item && item\.nutrition\)\) return '';/, 'sans valeurs publiées, la tuile n’a pas de bouton « i »');
+assert.doesNotMatch(orderSource, /kcal<\/bdi><span aria-hidden/, 'la tuile ne porte plus de chiffres : ils sont derrière le « i »');
 assert.match(orderSource, /function nutritionDetail\(item, t\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt/, 'la fiche client rend les six valeurs');
-assert.match(orderSource, /<bdi dir="ltr">' \+ esc\(n\.kcal\) \+ ' kcal<\/bdi>/, 'les nombres sont isolés dans le rendu RTL');
+assert.match(orderSource, /<bdi dir="ltr">' \+ esc\(n\[c\[1\]\]\) \+ ' ' \+ c\[2\] \+ '<\/bdi>/, 'les nombres sont isolés dans le rendu RTL');
 assert.match(proSource, /nutrition: it\.nutritionComplete === true && it\.nutrition \?/, 'seules les valeurs complètes entrent dans la carte client');
 assert.match(orderSource, /Valeurs indicatives par portion, hors options/);
 assert.match(orderSource, /Indicative values per portion, excluding options/);

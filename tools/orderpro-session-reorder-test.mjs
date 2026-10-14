@@ -71,10 +71,10 @@ ok('dish-card article uses data-card and does NOT place data-add on the article 
 ok('dish-add + button retains data-add',
   /<button type="button" class="dish-add" data-add=/.test(ORDERPRO_SRC));
 
-// A tap opens the sheet (options to choose, or nutrition facts to read,
-// stage 3c) and never adds a dish by itself.
-ok('cardEl tap listener only opens customizer if item has options or nutrition',
-  /const cardEl = e\.target\.closest\('\[data-card\]'\);[\s\S]{0,200}if \(item && \(\(item\.options && item\.options\.length > 0\) \|\| item\.nutrition\)\)\s*\{\s*openCustomizer\(item\);\s*\}\s*return;/.test(ORDERPRO_SRC));
+// A tap opens the sheet only for options to choose, and never adds a dish by
+// itself; the nutrition facts open from the tile's "i" (owner, 2026-10-14).
+ok('cardEl tap listener only opens customizer if item has options',
+  /const cardEl = e\.target\.closest\('\[data-card\]'\);[\s\S]{0,200}if \(item && item\.options && item\.options\.length > 0\)\s*\{\s*openCustomizer\(item\);\s*\}\s*return;/.test(ORDERPRO_SRC));
 
 console.log('■ Session Resumption & Zombie Session Isolation');
 

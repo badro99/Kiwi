@@ -24,7 +24,8 @@
  *                                   the opening-hours banner (#kh-closed)
  *   KiwiOrderMenu.setOrdering(on, t), ordering(), blocked()
  *                                   a menu to browse when Order Pro is off
- *   KiwiOrderMenu.nutritionSummary(item, t), nutritionDetail(item, t)
+ *   KiwiOrderMenu.infoButton(item, name, t), nutritionDetail(item, t)
+ *                                   the tile's "i" (none without facts), the sheet's facts
  *
  * Nothing here decides an order: the server refuses one outside the hours
  * (functions/api/order) and without Order Pro (403 orderpro-off). These
@@ -47,7 +48,6 @@
       nutrition_none: 'Aucun allergène déclaré',
       nutrient_energy: 'Énergie', nutrient_protein: 'Protéines', nutrient_carbs: 'Glucides',
       nutrient_fat: 'Lipides', nutrient_sugars: 'Sucres', nutrient_salt: 'Sel',
-      nutrient_short_protein: 'P', nutrient_short_carbs: 'G', nutrient_short_fat: 'L',
       allergen_gluten: 'Gluten', allergen_crustaces: 'Crustacés', allergen_oeufs: 'Œufs', allergen_poissons: 'Poissons',
       allergen_arachides: 'Arachides', allergen_soja: 'Soja', allergen_lait: 'Lait', allergen_fruits_a_coque: 'Fruits à coque',
       allergen_celeri: 'Céleri', allergen_moutarde: 'Moutarde', allergen_sesame: 'Sésame', allergen_sulfites: 'Sulfites',
@@ -64,7 +64,6 @@
       nutrition_none: 'No declared allergens',
       nutrient_energy: 'Energy', nutrient_protein: 'Protein', nutrient_carbs: 'Carbohydrate',
       nutrient_fat: 'Fat', nutrient_sugars: 'Sugars', nutrient_salt: 'Salt',
-      nutrient_short_protein: 'P', nutrient_short_carbs: 'C', nutrient_short_fat: 'F',
       allergen_gluten: 'Gluten', allergen_crustaces: 'Crustaceans', allergen_oeufs: 'Eggs', allergen_poissons: 'Fish',
       allergen_arachides: 'Peanuts', allergen_soja: 'Soy', allergen_lait: 'Milk', allergen_fruits_a_coque: 'Nuts',
       allergen_celeri: 'Celery', allergen_moutarde: 'Mustard', allergen_sesame: 'Sesame', allergen_sulfites: 'Sulphites',
@@ -81,7 +80,6 @@
       nutrition_none: 'لا توجد مسببات حساسية مصرح بها',
       nutrient_energy: 'الطاقة', nutrient_protein: 'البروتين', nutrient_carbs: 'الكربوهيدرات',
       nutrient_fat: 'الدهون', nutrient_sugars: 'السكريات', nutrient_salt: 'الملح',
-      nutrient_short_protein: 'ب', nutrient_short_carbs: 'ك', nutrient_short_fat: 'د',
       allergen_gluten: 'الغلوتين', allergen_crustaces: 'القشريات', allergen_oeufs: 'البيض', allergen_poissons: 'السمك',
       allergen_arachides: 'الفول السوداني', allergen_soja: 'الصويا', allergen_lait: 'الحليب', allergen_fruits_a_coque: 'المكسرات',
       allergen_celeri: 'الكرفس', allergen_moutarde: 'الخردل', allergen_sesame: 'السمسم', allergen_sulfites: 'الكبريتيت',
@@ -262,13 +260,12 @@
   }
 
   /* ── nutrition (only what the merchant marked complete) ──────────────── */
-  function nutritionSummary(item, t) {
-    var n = item && item.nutrition;
-    if (!n) return '';
-    var g = function (k, v) { return '<span>' + esc(t(k)) + ' <bdi dir="ltr">' + esc(v) + ' g</bdi></span>'; };
-    return '<div class="dish-nutrition"><bdi dir="ltr">' + esc(n.kcal) + ' kcal</bdi><span aria-hidden="true">·</span>' +
-      g('nutrient_short_protein', n.protein) + '<span aria-hidden="true">·</span>' +
-      g('nutrient_short_carbs', n.carbs) + '<span aria-hidden="true">·</span>' + g('nutrient_short_fat', n.fat) + '</div>';
+  /* The tile says nothing about nutrition: an "i" beside the price, only
+     when the merchant published the facts, opens them in the dish's sheet. */
+  function infoButton(item, name, t) {
+    if (!(item && item.nutrition)) return '';
+    return '<button type="button" class="dish-info" data-info="' + esc(item.id) + '" aria-label="' +
+      esc(t('nutrition_title') + ' · ' + name) + '"><i data-icon="info"></i></button>';
   }
   function nutritionDetail(item, t) {
     var n = item && item.nutrition;
@@ -295,6 +292,6 @@
     closed: closed, hoursText: hoursText, renderClosed: renderClosed,
     setOrdering: setOrdering, ordering: function () { return ordering; },
     blocked: function () { return !ordering || closed(); },
-    nutritionSummary: nutritionSummary, nutritionDetail: nutritionDetail
+    infoButton: infoButton, nutritionDetail: nutritionDetail
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -33,11 +33,11 @@ ok(/\(I18N\[currentLang\] && I18N\[currentLang\]\[key\]\) \?\? \(extra \? I18N\.
 for (const [lang, label] of [['fr', 'Valeurs nutritionnelles'], ['en', 'Nutrition facts'], ['ar', 'القيم الغذائية']]) {
   ok(om.includes(`nutrition_title: '${label}'`), `titre nutrition présent en ${lang}`);
 }
-ok(/function nutritionSummary\(item, t\) \{\s*var n = item && item\.nutrition;\s*if \(!n\) return '';/.test(om), 'aucune ligne nutrition n’est rendue sans données');
-ok(/function nutritionSummary\(item, t\)[\s\S]*?<bdi dir="ltr">[\s\S]*?function nutritionDetail/.test(om), 'les nombres de la carte sont isolés du RTL');
+ok(/function infoButton\(item, name, t\) \{\s*if \(!\(item && item\.nutrition\)\) return '';/.test(om), 'aucun « i » sans valeurs publiées');
+ok(/function nutritionDetail\(item, t\)[\s\S]*?<bdi dir="ltr">/.test(om), 'les nombres de la fiche sont isolés du RTL');
 ok(/function nutritionDetail\(item, t\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt[\s\S]*nutrition_indicative/.test(om), 'le détail porte les six valeurs et la mention hors options');
 ok(/it\.nutritionComplete === true && it\.nutrition/.test(html), 'seules les valeurs complètes entrent dans le modèle client');
-ok(/if \(item && \(\(item\.options && item\.options\.length > 0\) \|\| item\.nutrition\)\)\s*\{\s*openCustomizer\(item\);/.test(html), 'un plat sans option ouvre aussi sa fiche détaillée');
+ok(/const infoBtn = e\.target\.closest\('\[data-info\]'\);[\s\S]{0,200}openCustomizer\(item\);/.test(html), 'le « i » ouvre la fiche détaillée, même d’un plat sans option');
 
 const middleware = read('functions/_middleware.js');
 ok(/path === '\/OrderPro\.html' \|\| path === '\/OrderPro'/.test(middleware) && /path === '\/api\/menu'/.test(middleware), 'page QR et lecture de carte restent publiques');

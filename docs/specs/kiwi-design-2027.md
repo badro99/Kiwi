@@ -4605,7 +4605,7 @@ Timers and tones move in place every second (`retime`), so a cook's finger never
 
 **Stage 3c, first part, as landed (2026-10-14): one app, before its skin.** `OrderPro.html` is the one guest-ordering app. It already carried the stronger plumbing (boot retries, saved orders, the availability poll, live status, the bill and split, the boutique). `assets/orderpro-menu.js` (`KiwiOrderMenu`), hooked into it by one-line calls, adds what the QR page (`kiwi-order.html`) gave a guest and it did not:
 - the published opening hours: a banner that says the store is closed and when it reopens, and a send button that stays disabled and says why, read again every minute;
-- complete nutrition facts: a summary on the tile, the facts and allergens in the dish's sheet (a tap opens it and adds nothing);
+- complete nutrition facts: no figures on the tile (owner, 2026-10-14), only an "i" beside the price when the merchant published them; it opens the dish's sheet at the facts and allergens. A dish without published facts shows no "i";
 - every language the store publishes, not only FR, AR and EN, with the choice made on the QR page kept; a line a language lacks reads in English, and Arabic keeps French, as shipped;
 - without Order Pro, the menu opens to browse (a note, no add button, no cart, no visit) instead of a dead screen, so a table QR printed at a store without Order Pro keeps its menu.
 
