@@ -57,6 +57,7 @@
   "kds.void.reason.kitchen_waste": "Perte cuisine",
   "kds.void.reason.quality_return": "Retour qualité",
   "kds.void.reason.other": "Annulation",
-  "kds.void.not_confirmed": "Le serveur n’a pas confirmé l’annulation. Vérifiez la connexion et réessayez."
+  "kds.void.not_confirmed": "Le serveur n’a pas confirmé l’annulation. Vérifiez la connexion et réessayez.",
+  "kds.recipe": "Recette de {item}"
   };
 })(typeof self !== 'undefined' ? self : globalThis);

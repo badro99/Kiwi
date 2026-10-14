@@ -10,8 +10,9 @@
  * column by column in the order given; the last one that does not fit full is
  * tried compressed (kds.compressed), and the rest become the newer card
  * (kds.newer). `columns="auto"` takes as many 384-wide columns as the lane
- * holds; `fit="none"` draws every ticket full and lets the lane grow (the
- * newer sheet). `empty` replaces the lane's empty line (loading, offline).
+ * holds (16 rem each); `fit="none"` draws every ticket full, each in the
+ * shortest column, and lets the lane grow (the newer sheet, the till's
+ * scrolling board). `empty` replaces the lane's empty line (loading, offline).
  * The kitchen never buzzes (§15.6): no haptic is played here.
  *
  * ticket: { id, number, minutes, doneAt, source: {kind: 'table'|'takeaway'|
@@ -24,8 +25,10 @@
  *   doneAt      the ready lane's time, in place of the timer
  *   stationOnly the ready lane: this station is done, the order is not
  *   recall      the ready lane offers kds.recall
+ *   serve       false: the ready lane draws no Mark served (the till's board)
+ *   items[].recipe  the line's name opens its recipe (action recipe, item i)
  * Events: k.lane.action (id, {action: start|ready|served|recall|void-accept|
- *         void-reject}), k.lane.retry, k.lane.newer.
+ *         void-reject|recipe, item}), k.lane.retry, k.lane.newer.
  * Method: retime([{id, minutes}]) moves the timers and tones in place, without
  *         a rebuild, so a cook's finger never loses its button.
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -38,7 +41,14 @@
   function elapsed(m) { var f = root.KiwiFormat; return f ? f.elapsed(m) : (m < 1 ? '0' : m + ' min'); }
   var ACTION = { 'new': ['start', 'kds.start'], preparing: ['ready', 'kds.mark_ready'], ready: ['served', 'kds.mark_served'] };
   var EMPTY = { 'new': 'kds.no_new', preparing: 'kds.no_preparing', ready: 'kds.no_ready' };
-  var COL_W = 384, GAP = 16;
+  var GAP = 16;
+  /* A ticket column is 16 rem: 384 at the kitchen's 24 px root (§18.7), 256
+     at the till's 16 px root when the till embeds the board (§6.2). */
+  function colW() {
+    var px = 16;
+    try { px = parseFloat(root.getComputedStyle(root.document.documentElement).fontSize) || 16; } catch (_) {}
+    return 16 * px;
+  }
 
   var KLane = K.make({
     setup: function () {
@@ -47,7 +57,7 @@
         var tk = el.closest('[data-t]');
         var w = el.getAttribute('data-w');
         if (w === 'newer') { self.emit('newer', null, { shown: self.int('data-shown', 0) }); return; }
-        self.emit(w === 'retry' ? 'retry' : 'action', tk && tk.getAttribute('data-t'), { action: w, gestureId: g });
+        self.emit(w === 'retry' ? 'retry' : 'action', tk && tk.getAttribute('data-t'), { action: w, gestureId: g, item: el.hasAttribute('data-i') ? Number(el.getAttribute('data-i')) : null });
       }, '[data-w]');
       if (root.ResizeObserver) {
         try {
@@ -79,12 +89,16 @@
       var chips = (tk.chips || []).map(function (c) { return '<span class="src k-callout">' + esc(c) + '</span>'; }).join('');
       var items = tk.items || [];
       var body = '';
+      var nameOf = function (it, i) {
+        var n = '<span class="k-body n">' + esc(it.name) + '</span>';
+        return it.recipe ? '<button type="button" class="rcp" data-w="recipe" data-i="' + i + '" aria-label="' + esc(t('kds.recipe', { item: it.name })) + '">' + n + icon('menu_book', 24) + '</button>' : n;
+      };
       if (lane !== 'ready' && compressed) body = '<p class="k-body cmp">' + th('kds.compressed', { n: items.length }) + '</p>';
       else if (lane !== 'ready') {
-        body = '<ul class="its">' + items.map(function (it) {
+        body = '<ul class="its">' + items.map(function (it, i) {
           return '<li class="it' + (it.voided ? ' vd' : '') + (it.off ? ' off' : '') + '"><span class="q k-heading k-num">' + esc(it.qty) + '</span><span class="nm">' +
             (it.tag ? '<span class="k-foot k-ink2 tg">' + esc(it.tag) + '</span>' : '') +
-            '<span class="k-body n">' + esc(it.name) + '</span>' +
+            nameOf(it, i) +
             (it.tr ? '<span class="k-callout k-ink2">' + esc(it.tr) + '</span>' : '') +
             (it.mods || []).map(function (m) { return '<span class="k-callout k-ink2">' + esc(m) + '</span>'; }).join('') +
             (it.note ? '<span class="k-callout ln">' + esc(it.note) + '</span>' : '') +
@@ -98,7 +112,8 @@
         C.button.render({ variant: 'secondary', size: 'K', full: true, label: t('kds.void.reject'), id: 'vr-' + tk.id, attrs: ' data-w="void-reject"', loading: !!va.busy }) +
         '</div></div>' : '';
       var sync = tk.unsynced ? '<p class="k-foot us" role="status">' + icon('sync_alt', 20) + th('kds.sync_pending') + '</p>' : '';
-      var main = tk.stationOnly
+      var main = tk.serve === false ? ''
+        : tk.stationOnly
         ? C.button.render({ variant: 'item', size: 'K', full: true, label: t('kds.station_done'), id: 'a-' + tk.id, disabled: true })
         : C.button.render({ variant: 'item', size: 'K', full: true, label: t(act[1]), id: 'a-' + tk.id, attrs: ' data-w="' + act[0] + '"', loading: !!tk.saving, spinning: !!tk.saving });
       var foot = tk.error
@@ -122,7 +137,7 @@
     },
     columnCount: function () {
       var c = this.str('columns', '1');
-      if (c === 'auto') return Math.max(1, Math.floor((this.clientWidth + GAP) / (COL_W + GAP)));
+      if (c === 'auto') return Math.max(1, Math.floor((this.clientWidth + GAP) / (colW() + GAP)));
       return Math.max(1, parseInt(c, 10) || 1);
     },
     /* §13.6: fill the columns; compress the one that does not fit; the rest
@@ -131,12 +146,23 @@
       var box = this.$('.cols'), list = this.tickets || [];
       if (!box) return;
       var free = this.str('fit') === 'none';
-      var n = free ? 1 : this.columnCount(), H = free ? Infinity : (this.clientHeight || Infinity), self = this;
+      var n = this.columnCount(), H = free ? Infinity : (this.clientHeight || Infinity), self = this;
       var cols = [];
       for (var i = 0; i < n; i++) cols.push('');
       box.style.gridTemplateColumns = 'repeat(' + n + ',minmax(0,1fr))';
       box.innerHTML = cols.map(function () { return '<div class="col"></div>'; }).join('');
       var colEls = this.$$('.col'), c = 0, used = 0, shown = 0;
+      /* Free (a scrolling host): every ticket full, each in the shortest
+         column, oldest first. */
+      if (free) {
+        for (var f = 0; f < list.length; f++) {
+          var best = colEls[0];
+          for (var q = 1; q < colEls.length; q++) if (colEls[q].offsetHeight < best.offsetHeight) best = colEls[q];
+          best.insertAdjacentHTML('beforeend', this.ticket(list[f], false));
+        }
+        self.setAttribute('data-shown', String(list.length));
+        return;
+      }
       for (var k = 0; k < list.length; k++) {
         var col = colEls[c];
         var tmp = root.document.createElement('div');
@@ -208,6 +234,7 @@
       '.va{margin:0 12px 8px;padding:0 0 8px;border-radius:var(--k-r-2);box-shadow:inset 0 0 0 2px var(--k-danger-solid)}.va .vt{margin:0 0 8px;background-color:var(--k-danger-tint)}.vb{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 8px}' +
       '.us{display:flex;align-items:center;gap:6px;margin:8px 12px 0;color:var(--k-ink-2)}' +
       '.cmp{margin:0;padding:4px 12px}.tf{display:flex;flex-direction:column;gap:4px;padding:12px}.tf>.k-btnw:not(.k-btnw--full){align-self:center}.er{margin:0 0 8px;color:var(--k-danger)}' +
-      '.rd .th{box-shadow:none}.em{margin:0;padding:24px;text-align:center}'
+      '.rd .th{box-shadow:none}.em{margin:0;padding:24px;text-align:center}' +
+      '.rcp{display:inline-flex;align-items:flex-start;gap:6px;min-height:44px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}.rcp .k-ic{flex:none;margin-block-start:4px;color:var(--k-ink-2)}'
   });
 })(typeof window !== 'undefined' ? window : globalThis);

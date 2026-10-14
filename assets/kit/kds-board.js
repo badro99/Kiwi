@@ -6,8 +6,12 @@
  *
  *   KiwiKdsBoard.mount(api)     puts a <k-lane> in each of the three columns
  *     api.stacks                { new, cook, pass }: the shipped column bodies
- *     api.act(action, id)       start | ready | served | recall |
- *                               void-accept | void-reject
+ *     api.act(action, id, value) start | ready | served | recall |
+ *                               void-accept | void-reject | recipe (value.item)
+ *     api.columns, api.fit      per lane ({ new, cook, pass }): 'auto' and
+ *                               none by default; fit 'none' on a host that
+ *                               scrolls (the till)
+ *     api.surface               false: keep the host's root (the till)
  *   KiwiKdsBoard.paint(view)    { new, cook, pass }: tickets in <k-lane>'s
  *                               shape, oldest first; view.empty, when set, is
  *                               the line every empty lane shows (loading,
@@ -35,7 +39,7 @@
     if (d.action === 'k.lane.newer') { openNewer(e.currentTarget); return; }
     if (d.action !== 'k.lane.action' || !d.id || !d.value) return;
     if (sheet && e.currentTarget === sheetLane) closeNewer();
-    if (api && typeof api.act === 'function') api.act(d.value.action, d.id);
+    if (api && typeof api.act === 'function') api.act(d.value.action, d.id, d.value);
   }
 
   function mount(a) {
@@ -48,14 +52,16 @@
       if (!lane) {
         lane = lanes[k] = doc.createElement('k-lane');
         lane.setAttribute('lane', LANES[k]);
-        lane.setAttribute('columns', 'auto');
+        lane.setAttribute('columns', (api.columns && api.columns[k]) || 'auto');
+        if (api.fit && api.fit[k]) lane.setAttribute('fit', api.fit[k]);
         lane.addEventListener('kiwi:action', onAction);
       }
       box.textContent = '';
       box.classList.add('k-kds-stack');
       box.appendChild(lane);
     });
-    doc.documentElement.setAttribute('data-k-surface', 'kds');
+    /* The kitchen's own root (§13.6), never inside the till (§6.2). */
+    if (api.surface !== false) doc.documentElement.setAttribute('data-k-surface', 'kds');
     return !!(lanes['new'] && lanes.cook && lanes.pass);
   }
 

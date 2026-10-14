@@ -24,6 +24,9 @@
  *   · the wall never scrolls: more tickets than fit end in the newer card,
  *     whose sheet holds the rest, and a Start there works;
  *   · Arabic: the page is RTL and the lanes speak Arabic;
+ *   · the till's own board (kiwiSkin2027:till, demo till): three lanes at the
+ *     till's 16 px root, the recipe button, Start, Mark ready into the ready
+ *     history with recall and no served, and recall back;
  *   · no page error anywhere. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -327,6 +330,68 @@ try {
     check(await page.evaluate(() => document.documentElement.dir === 'rtl'), 'the page is right to left');
     check(t.src[0] === 'طاولة 5' && /ابدأ/.test(t.text), `the lane speaks Arabic (${t.src[0]})`);
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ': ' + page.errors.join(' | ') : ''));
+  });
+
+  await S.run('till · its own board on the lanes (demo till, kiwiSkin2027:till)', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = tr.watch(await ctx.newPage());
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1366, height: 900 });
+    await page.setBypassServiceWorker(true);
+    await page.setRequestInterception(true);
+    page.on('request', (r) => {
+      const u = r.url();
+      if (u.startsWith(base + '/api/')) return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+      return u.startsWith(base) || u.startsWith('data:') ? r.continue() : r.abort();
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('kiwiSkin2027:till', '1');
+      try { Object.defineProperty(navigator.serviceWorker, 'register', { value: () => new Promise(() => {}), configurable: true }); } catch (_) {}
+    });
+    await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof doOpenService === 'function' && !!window.KiwiKdsBoard, { timeout: 30000 });
+    await page.evaluate(() => doOpenService());
+    await page.waitForFunction(() => document.body.classList.contains('is-unlocked'), { timeout: 20000 });
+    await sleep(400);
+    /* A local ticket (the demo till has no server queue), with a dish the
+       demo's recipes know. */
+    const num = await page.evaluate(() => {
+      const t = { num: 901, type: 'dineIn', table: '6', status: 'new', sentAt: new Date(Date.now() - 2 * 60000),
+        items: [{ q: 1, n: 'Couscous royal', note: 'sans raisins', stations: ['cuisine'] }, { q: 2, n: 'Thé', stations: ['bar'] }] };
+      kdsOrders.push(t);
+      return t.num;
+    });
+    await page.click('#open-kds');
+    await page.waitForFunction((n) => { const l = document.querySelector('#kit-new k-lane'); return l && l.shadowRoot.querySelector('[data-t="' + n + '"]'); }, { timeout: 8000 }, String(num));
+    check(await page.evaluate(() => !document.querySelector('#kit-new .kit-order') && !!document.querySelector('#kit-cook k-lane') && !!document.querySelector('#kit-history-inner k-lane')), 'the till board draws three lanes and no shipped card');
+    check(await page.evaluate(() => !document.documentElement.hasAttribute('data-k-surface') && getComputedStyle(document.documentElement).fontSize === '16px'), 'it keeps the till root, 16 px (§6.2)');
+    const t1 = await page.evaluate((n) => { const a = document.querySelector('#kit-new k-lane').shadowRoot.querySelector('[data-t="' + n + '"]'); return { text: a.textContent.replace(/\s+/g, ' '), recipe: !!a.querySelector('[data-w="recipe"]') }; }, String(num));
+    check(/Table 6/.test(t1.text) && /sans raisins/.test(t1.text) && t1.recipe, 'the ticket names its table, its note, and links the recipe');
+
+    const click = async (sel, n, w) => {
+      const h = await page.evaluateHandle((sel, n, w) => document.querySelector(sel + ' k-lane').shadowRoot.querySelector('[data-t="' + n + '"] [data-w="' + w + '"]'), sel, String(n), w);
+      assert.ok(h.asElement(), `${w} on ${n}`);
+      await h.asElement().click();
+    };
+    await click('#kit-new', num, 'recipe');
+    await page.waitForSelector('.kit-recipe-backdrop', { timeout: 3000 });
+    check(true, 'the recipe button opens the recipe');
+    await page.evaluate(() => document.querySelectorAll('.kit-recipe-backdrop').forEach((b) => b.remove()));
+
+    await click('#kit-new', num, 'start');
+    await page.waitForFunction((n) => { const l = document.querySelector('#kit-cook k-lane'); return l.shadowRoot.querySelector('[data-t="' + n + '"]'); }, { timeout: 3000 }, String(num));
+    check(await page.evaluate((n) => kdsOrders.find((o) => o.num === n).items.every((i) => i.stationAccepted), num), 'Start: Preparing, every line accepted');
+    await click('#kit-cook', num, 'ready');
+    await page.waitForFunction((n) => kdsOrders.find((o) => o.num === n).status === 'ready', { timeout: 3000 }, num);
+    const r = await page.evaluate((n) => { const a = document.querySelector('#kit-history-inner k-lane').shadowRoot.querySelector('[data-t="' + n + '"]'); return a ? Array.from(a.querySelectorAll('[data-w]')).map((b) => b.getAttribute('data-w')) : null; }, String(num));
+    check(r && r.includes('recall') && !r.includes('served'), `Mark ready: the ticket is in the ready history, with recall and no served (${r})`);
+    await page.click('#kit-history-toggle');
+    await sleep(500);
+    await click('#kit-history-inner', num, 'recall');
+    await page.waitForFunction((n) => { const l = document.querySelector('#kit-cook k-lane'); return l.shadowRoot.querySelector('[data-t="' + n + '"]'); }, { timeout: 3000 }, String(num));
+    check(await page.evaluate((n) => kdsOrders.find((o) => o.num === n).status === 'cooking', num), 'recall puts it back in preparation');
+    check(errors.length === 0, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

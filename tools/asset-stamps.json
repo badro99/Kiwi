@@ -460,8 +460,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "1",
-    "sha": "842b9a0062102061"
+    "v": "2",
+    "sha": "db3dd9461edf482d"
   },
   "assets/identity.js": {
     "v": "10",
@@ -560,16 +560,16 @@
     "sha": "84a02dc7e1290c51"
   },
   "assets/kit/kds-board.js": {
-    "v": "1",
-    "sha": "bed2004bf83b4f18"
+    "v": "2",
+    "sha": "ea6043cb8cb287db"
   },
   "assets/kit/kds.js": {
-    "v": "3",
-    "sha": "4ddaae319375b252"
+    "v": "4",
+    "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "5",
-    "sha": "6b6c290d1e2a2607"
+    "v": "6",
+    "sha": "486232b81c01039f"
   },
   "assets/kit/ledger.js": {
     "v": "2",
@@ -616,16 +616,16 @@
     "sha": "bcfc02f6e31d8989"
   },
   "assets/kit/strings/kds.ar.js": {
-    "v": "2",
-    "sha": "bea252e57480c157"
+    "v": "3",
+    "sha": "9d584ea1599dcc38"
   },
   "assets/kit/strings/kds.en.js": {
-    "v": "2",
-    "sha": "1bf9e4fa344c3d3d"
+    "v": "3",
+    "sha": "2da20c07d478fad0"
   },
   "assets/kit/strings/kds.fr.js": {
-    "v": "2",
-    "sha": "d7614970056c0fcc"
+    "v": "3",
+    "sha": "f47ca86091b8a876"
   },
   "assets/kit/strings/kit.ar.js": {
     "v": "2",

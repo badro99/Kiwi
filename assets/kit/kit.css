@@ -139,3 +139,7 @@ k-figure .k-fig__sr {
   html[data-skin-2027="kds"] .cols { grid-template-columns: minmax(0, 384px) minmax(0, 1fr) minmax(0, 272px); }
   html[data-skin-2027="kds"] .col--pass .stack.k-kds-stack { padding-inline: 12px; }
 }
+/* The till's own board on the kit's lanes (kiwi-caisse.html, stage 3b):
+   each column body is one lane at the till's root; the screen scrolls. */
+.kit-lane-box { display: block; min-width: 0; }
+.kit-lane-box > k-lane { width: 100%; }

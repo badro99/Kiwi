@@ -148,15 +148,18 @@
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=1">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=2">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=5">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=6">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
         js("assets/kit/strings/till.fr.js?v=2") +
         js("assets/kit/strings/till.en.js?v=2") +
         js("assets/kit/strings/till.ar.js?v=2") +
+        js("assets/kit/strings/kds.fr.js?v=3") +
+        js("assets/kit/strings/kds.en.js?v=3") +
+        js("assets/kit/strings/kds.ar.js?v=3") +
         js("assets/kit/strings.js?v=2") +
         js("assets/kit/format.js?v=1") +
         js("assets/kit/business-day.js?v=1") +
@@ -164,7 +167,10 @@
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
         js("assets/kit/pin-flow.js?v=1") +
-        js("assets/kit/till-pin.js?v=2")
+        js("assets/kit/till-pin.js?v=2") +
+        js("assets/kit/controls/button.js?v=1") +
+        js("assets/kit/kds.js?v=4") +
+        js("assets/kit/kds-board.js?v=2")
       );
     })();
   </script>
@@ -20162,6 +20168,7 @@
       $('#kit-history-toggle').innerHTML =
         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 2.5-6.2"/><path d="M3 4v4h4"/><path d="M12 8v4.5l3 1.8"/></svg><span>Historique</span><span class="kit-htg-ct">${kdsGroup('ready').length}</span>`;
       const newList = kdsGroup('new'), cookList = kdsGroup('cooking'), readyList = kdsGroup('ready');
+      if (kdsKitOn()) { kdsKitPaint(newList, cookList, readyList); updateKdsCount(); return; }
       $('#kit-new').innerHTML =
         `<div class="kit-col-head"><span>Nouvelles</span><span class="kit-col-ct">${newList.length}</span></div>`
         + `<div class="kit-col-stack">${newList.length ? newList.map(kdsOrderCard).join('') : kdsEmpty('Aucune nouvelle commande')}</div>`;
@@ -20175,6 +20182,79 @@
         `<div class="kit-col-head"><span>Prêtes aujourd'hui</span><span class="kit-col-ct">${readyList.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
         + `<div class="kit-history-rows">${readyList.length ? readyList.map(kdsHistoryRow).join('') : kdsEmpty('Aucune commande prête pour l\'instant')}</div>`;
       updateKdsCount();
+    }
+
+    /* ── kiwiSkin2027:till · le board de la caisse sur les couloirs du kit ──
+       (assets/kit/kds-board.js, étape 3b). Drapeau éteint, le kit n'est pas
+       chargé et rien de ceci ne tourne. Allumé : Nouvelles et En préparation
+       sont deux couloirs, l'historique des bons prêts un troisième, dans son
+       volet qui défile. Le board reste à la racine de la caisse (16 px) et
+       défile comme avant (fit none) ; chaque geste revient ici par son nom
+       (kdsAccept, kdsReady, kdsRecall, kdsOpenRecipe). Pas de « servi » ici :
+       la remise se constate ailleurs, et un bon remis ne se rappelle pas. */
+    let kdsKit = false;
+    function kkt(k, a) { return String(window.KiwiKit.t(k, a)).replace(/[\u2066-\u2069]/g, ''); }
+    function kdsKitOn() {
+      if (kdsKit) return true;
+      if (!window.KiwiKdsBoard || !window.KiwiKit) return false;
+      const shell = (title, extra) => `<div class="kit-col-head"><span>${kdsEsc(title)}</span><span class="kit-col-ct" data-kit-ct>0</span>${extra || ''}</div><div class="kit-lane-box"></div>`;
+      $('#kit-new').innerHTML = shell(kkt('kds.new'));
+      $('#kit-cook').innerHTML = shell(kkt('kds.preparing'));
+      $('#kit-history-inner').innerHTML = shell(kkt('kds.ready'), `<button class="kit-history-x" data-kit-history-toggle aria-label="${kdsEsc(kkt('action.close'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`);
+      kdsKit = !!window.KiwiKdsBoard.mount({
+        stacks: { new: $('#kit-new .kit-lane-box'), cook: $('#kit-cook .kit-lane-box'), pass: $('#kit-history-inner .kit-lane-box') },
+        columns: { new: '1', cook: 'auto', pass: '1' },
+        fit: { new: 'none', cook: 'none', pass: 'none' },
+        surface: false,
+        act: kdsKitAct,
+      });
+      return kdsKit;
+    }
+    function kdsKitTicket(o, lane) {
+      const items = kdsEnsureFormulaParents(o).map(i => ({
+        qty: String(i.q || 1),
+        name: i.n,
+        tag: i.kind === 'formula-part' ? (i.formulaName || '') : '',
+        mods: (Array.isArray(i.visuals) ? i.visuals : []).filter(v => v && (v.name || v.label || v.cn)).map(v => String(v.name || v.label || v.cn)),
+        note: String(i.note || '').trim(),
+        off: kdsActiveStation !== 'all' && !i.stations.includes(kdsActiveStation),
+        recipe: kdsHasRecipe(i.n),
+      }));
+      const chips = [];
+      let source;
+      if (o.type === 'glovo' || o.type === 'yassir') source = { kind: 'delivery', label: (o.type === 'glovo' ? 'Glovo' : 'Yassir') + (o.code ? ' ' + o.code : '') };
+      else if (o.type === 'takeaway') source = { kind: 'takeaway', label: kkt('kds.source.takeaway') };
+      else {
+        source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };
+        if (o.course === 'suite') chips.push(kkt('kds.suite'));
+        if (o.server) chips.push(String(o.server));
+      }
+      const tk = { id: String(o.num), number: ticketNo(o), minutes: Math.floor(kdsElapsed(o) / 60), source, chips, items };
+      if (lane === 'pass') { tk.doneAt = o.readyAt || ''; tk.serve = false; tk.recall = !o.pickedUp; }
+      else if (Array.isArray(o.following) && o.following.length) {
+        tk.following = kkt('kds.following', { items: o.following.map(i => `${i.q}× ${i.n}`).join(', ') });
+      }
+      return tk;
+    }
+    function kdsKitPaint(newList, cookList, readyList) {
+      const ct = (sel, n) => { const el = $(sel + ' [data-kit-ct]'); if (el) el.textContent = String(n); };
+      ct('#kit-new', newList.length); ct('#kit-cook', cookList.length); ct('#kit-history-inner', readyList.length);
+      window.KiwiKdsBoard.paint({
+        new: newList.map(o => kdsKitTicket(o, 'new')),
+        cook: cookList.map(o => kdsKitTicket(o, 'cook')),
+        pass: readyList.map(o => kdsKitTicket(o, 'pass')),
+      });
+    }
+    function kdsKitAct(action, id, value) {
+      const num = Number(id);
+      if (action === 'start') kdsAccept(num);
+      else if (action === 'ready') kdsReady(num);
+      else if (action === 'recall') kdsRecall(num);
+      else if (action === 'recipe') {
+        const o = kdsOrders.find(x => x.num === num);
+        const item = o && value && value.item != null ? kdsEnsureFormulaParents(o)[value.item] : null;
+        if (item) kdsOpenRecipe(item.n);
+      }
     }
 
     function kdsAccept(num) {
@@ -20345,6 +20425,10 @@
 
     function kdsTick() {
       if (!kdsEl.classList.contains('is-open')) return;
+      if (kdsKit) {
+        window.KiwiKdsBoard.retime(id => { const o = kdsOrders.find(x => x.num === Number(id)); return o ? Math.floor(kdsElapsed(o) / 60) : 0; });
+        return;
+      }
       document.querySelectorAll('.kit-order, .kit-zoom').forEach(card => {
         const o = kdsOrders.find(x => x.num === Number(card.dataset.kitNum));
         if (!o || o.status === 'ready') return;

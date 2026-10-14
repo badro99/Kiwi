@@ -57,6 +57,7 @@
   "kds.void.reason.kitchen_waste": "Kitchen waste",
   "kds.void.reason.quality_return": "Quality return",
   "kds.void.reason.other": "Cancelled",
-  "kds.void.not_confirmed": "The server did not confirm the cancellation. Check the connection and try again."
+  "kds.void.not_confirmed": "The server did not confirm the cancellation. Check the connection and try again.",
+  "kds.recipe": "Recipe for {item}"
   };
 })(typeof self !== 'undefined' ? self : globalThis);

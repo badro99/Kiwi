@@ -57,6 +57,7 @@
   "kds.void.reason.kitchen_waste": "هدر في المطبخ",
   "kds.void.reason.quality_return": "إرجاع لعيب",
   "kds.void.reason.other": "إلغاء",
-  "kds.void.not_confirmed": "لم يؤكد الخادم الإلغاء. تحقق من الاتصال وأعد المحاولة."
+  "kds.void.not_confirmed": "لم يؤكد الخادم الإلغاء. تحقق من الاتصال وأعد المحاولة.",
+  "kds.recipe": "وصفة {item}"
   };
 })(typeof self !== 'undefined' ? self : globalThis);
