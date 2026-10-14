@@ -4414,7 +4414,10 @@ em, i, cite, dfn, var { font-style: normal; }
     })();
     let currentLang = savedOrderLang || 'fr';
     function t(key) {
-      return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.fr[key] ?? key;
+      /* A language beyond the three reads English where it has no line of its
+         own (the QR page did the same); Arabic keeps French, as shipped. */
+      const extra = currentLang !== 'fr' && currentLang !== 'ar' && currentLang !== 'en';
+      return (I18N[currentLang] && I18N[currentLang][key]) ?? (extra ? I18N.en[key] : undefined) ?? I18N.fr[key] ?? key;
     }
     function itemI18n(id) {
       return (MENU_I18N[currentLang] && MENU_I18N[currentLang][id]) || MENU_I18N.fr[id] || { name: id, desc: '' };

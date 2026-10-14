@@ -24,6 +24,7 @@ import { suite } from './browser-trace.mjs';
 
 import * as menuApi from '../functions/api/menu.js';
 import * as sessionApi from '../functions/api/order/session.js';
+import * as guestApi from '../functions/api/order/guest.js';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -113,7 +114,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
-const ROUTES = { '/api/menu': menuApi, '/api/order/session': sessionApi };
+const ROUTES = { '/api/menu': menuApi, '/api/order/session': sessionApi, '/api/order/guest': guestApi };
 async function route(r, seen) {
   const u = r.url();
   if (!u.startsWith(base)) return u.startsWith('data:') ? r.continue() : r.abort();
@@ -211,6 +212,7 @@ try {
     check(nameClear, 'five language keys leave the store\'s name uncovered');
     check(/Tayín de kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)), 'the dish reads in Spanish');
     check((await page.$eval('.menu-tab[data-tab="all"]', (e) => e.textContent.trim())) === 'Todo', 'the UI reads in Spanish');
+    check(await page.evaluate(() => t('gx_home') === I18N.en.gx_home && t('tab_all') === 'Todo'), 'a line Spanish lacks (the guest home) reads in English, not French');
     await page.tap('#lang-picker .lang-btn[data-lang="ar"]');
     check(await page.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'ar'), 'Arabic turns the page right to left');
     check(/Tajine kefta/.test(await page.$eval('[data-card="tajine"] .dish-name', (e) => e.textContent)), 'an untranslated language falls back to the merchant\'s own text');
