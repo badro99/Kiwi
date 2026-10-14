@@ -110,6 +110,37 @@ export function tableKey(v) {
   return normTable(v).toUpperCase().replace(/\s+/g, '');
 }
 
+/* ── Les tables du plan de salle ───────────────────────────────────────────
+ * Le slug est imprimé sur chaque tag et chaque QR : n'importe qui peut ouvrir
+ * une session pour une table INVENTÉE (« Z0 », « Z1 »…), y poser huit
+ * commandes, passer à la suivante, et remplir les soixante places de la file
+ * du jour. Les vrais convives recevaient alors « queue-full ». Le plan de salle
+ * dit quelles tables existent ; une table qu'il ne connaît pas n'est pas
+ * refusée (un tag « 2 » pour une table nommée « Terrasse 2 » doit continuer à
+ * marcher), mais toutes ces tables-là partagent un seul petit budget.
+ * « T7 », « Table 7 » et « 7 » désignent la même table. Aucun plan (ou un plan
+ * sans table) : null, et rien ne change. */
+export function planTableKey(v) {
+  return tableKey(v).replace(/^TABLE(?=.)/, '').replace(/^T(?=\d+$)/, '');
+}
+export async function floorPlanTables(env, merchant) {
+  try {
+    const row = await env.DB.prepare(
+      "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'"
+    ).bind(merchant).first();
+    const plan = JSON.parse((row && row.data) || '{}') || {};
+    const keys = new Set();
+    for (const t of (Array.isArray(plan.tables) ? plan.tables : [])) {
+      if (!t) continue;
+      for (const v of [t.num, t.id, t.name]) {
+        const k = planTableKey(v);
+        if (k) keys.add(k);
+      }
+    }
+    return keys.size ? keys : null;
+  } catch (_) { return null; }
+}
+
 /* ── LE CURSEUR REGARDE LÉGÈREMENT EN ARRIÈRE ──────────────────────────────
  * Les sondages avancent avec `since` : le client renvoie le `now` de la réponse
  * précédente, et le serveur ne rend que ce qui a changé DEPUIS. Le piège est
@@ -629,6 +660,15 @@ export async function priceOrder(env, merchant, rawLines, opts = {}) {
       }
       if (!valid) { invalidOptions.push(ref.name || id || '?'); continue; }
       options = labels.join(' · ').slice(0, 200);
+    } else if (opts && opts.publicCaller) {
+      /* Aucun choix vérifié : le texte d'options et les vignettes venaient
+       * tels quels de l'appelant. Sur la porte publique, un « Extras : Fromage,
+       * Caviar x10 » tapé à la main sortait sur le bon cuisine au prix du plat
+       * nu. Le téléphone envoie toujours ses choix structurés ; sans eux, la
+       * ligne part sans options. (La caisse et l'app serveur, authentifiées,
+       * gardent leur contrat.) */
+      options = '';
+      canonicalVisuals = [];
     }
     const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;
     let unitPrice = kind === 'formula-part' ? 0 : price2(ref.price + optionExtra + formulaExtra);

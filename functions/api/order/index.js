@@ -44,12 +44,14 @@ import { merchantZone } from '../_business-day.js';
 import { storeSubscriptionPending } from '../_private.js';
 import {
   startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, hoursClosed, SESSION_ID,
+  floorPlanTables, planTableKey,
 } from './_lib.js';
 
 const MAX_LINES = 60;              // one order, generously
 const MAX_TOTAL = 200000;          // 200 000 MAD — a sanity ceiling, not a rule
 const MAX_PENDING = 60;            // per merchant: a queue no staff could ever work through
 const MAX_PENDING_PER_TABLE = 8;   // per table/session: three times a normal service
+const MAX_PENDING_OFF_PLAN = 8;    // all tables the floor plan does not know, together
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 
 export async function onRequestPost(context) {
@@ -114,7 +116,16 @@ export async function onRequestPost(context) {
    * un plat marqué épuisé fait échouer la commande AVEC la raison : le
    * téléphone peut alors retirer la ligne et redemander, plutôt que de laisser
    * partir en cuisine un plat qui n'existe plus. */
-  const priced = await priceOrder(env, merchant, rawLines);
+  /* Une quantité est un entier de 1 à 99. Zéro ou négatif devenait 1 en
+   * silence, 2,5 devenait 3 et un milliard 99 : une commande qui ne disait
+   * pas ce que le client avait demandé. Le téléphone n'envoie jamais ça ; on
+   * refuse au lieu de deviner. */
+  if (rawLines.some((l) => {
+    const q = Number(l && l.qty);
+    return !Number.isInteger(q) || q < 1 || q > 99;
+  })) return json({ error: 'bad-qty' }, 400);
+
+  const priced = await priceOrder(env, merchant, rawLines, { publicCaller: true });
   /* Order Pro allumé, mais aucun catalogue lisible en face (rien de publié, ou
    * une lecture qui a échoué). On refuse, et on le dit : le commerçant publie
    * sa carte et tout repart. L'ancien comportement — accepter en reprenant les
@@ -202,6 +213,25 @@ export async function onRequestPost(context) {
           ).bind(merchant, table, today).first();
       if (here && here.n >= MAX_PENDING_PER_TABLE) return json({ error: 'table-queue-full' }, 429);
     } catch (_) { /* colonne session_id pas migrée → seul le plafond global joue */ }
+  }
+
+  /* …et les tables que le plan de salle ne connaît pas partagent UN budget.
+   * Sans ça, le plafond par table se contournait en inventant des tables :
+   * huit commandes à « Z0 », huit à « Z1 »… et la file du jour était pleine
+   * pour toute la salle (voir floorPlanTables dans _lib.js). */
+  if (mode === 'table') {
+    const plan = await floorPlanTables(env, merchant);
+    if (plan && !plan.has(planTableKey(table))) {
+      try {
+        const rows = await env.DB.prepare(
+          "SELECT table_no, COUNT(*) AS n FROM orders WHERE merchant = ? AND mode = 'table' AND status = 'pending' AND created_ts >= ? GROUP BY table_no"
+        ).bind(merchant, today).all();
+        const offPlan = ((rows && rows.results) || [])
+          .filter((r) => !plan.has(planTableKey(r.table_no)))
+          .reduce((n, r) => n + Number(r.n || 0), 0);
+        if (offPlan >= MAX_PENDING_OFF_PLAN) return json({ error: 'table-queue-full', reason: 'off-plan' }, 429);
+      } catch (_) { /* lecture impossible → les plafonds ci-dessus jouent seuls */ }
+    }
   }
 
   const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);

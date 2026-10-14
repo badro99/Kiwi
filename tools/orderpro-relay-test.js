@@ -308,11 +308,14 @@ async function get(fn, qs, headers = {}) {
   ok('le nom aussi', r.body.lines[0].name === 'Tajine poulet', r.body.lines[0].name);
   ok('le poste de la catégorie voyage avec la ligne tarifée',
     r.body.lines[0].station === 'cuisson', JSON.stringify(r.body.lines[0]));
-  ok('le repère visuel de l’option arrive avec la ligne',
-    r.body.lines[0].visuals[0].emoji === '🍅' && r.body.lines[0].visuals[0].name === 'Tomate',
+  /* Le texte d'options et les vignettes sans choix vérifié contre la carte
+     ne passent plus la porte publique : « Extras : Fromage, Caviar x10 »
+     sortait sur le bon cuisine au prix du plat nu (audit 2026-10-14). */
+  ok('un libellé d’option sans choix vérifié ne sort pas sur le bon',
+    r.body.lines[0].options === '', JSON.stringify(r.body.lines[0]));
+  ok('une vignette sans choix vérifié non plus',
+    Array.isArray(r.body.lines[0].visuals) && r.body.lines[0].visuals.length === 0,
     JSON.stringify(r.body.lines[0].visuals));
-  ok('le libellé de l’option OrderPro arrive lui aussi avec la ligne',
-    r.body.lines[0].options === 'Tomate', JSON.stringify(r.body.lines[0]));
   ok('OrderPro ouvre les options avec le même ajout en salle et à emporter',
     /function handleAddClick\(itemId\)[\s\S]{0,220}item\.options && item\.options\.length > 0[\s\S]{0,80}openCustomizer\(item\)/.test(orderProPage)
       && !/function handleAddClick\(itemId\)[\s\S]{0,220}orderMode\s*===/.test(orderProPage));
@@ -772,6 +775,11 @@ async function get(fn, qs, headers = {}) {
      boucle — sans brider la salle entière, qui partage une seule adresse IP
      derrière le wifi du café. */
   const FLOOD = 'table-inondee';
+  /* Deux vraies tables du plan : le plafond par table se mesure sur des
+     tables qui existent (les tables inventées ont leur propre budget, 13 bis). */
+  DB._db.prepare("UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = 'floorplan'")
+    .run(JSON.stringify({ tables: [{ id: 'T7', num: 'T7' }, { id: 't-flood', num: FLOOD },
+      { id: 't-voisine', num: 'voisine' }, { id: 't-12', num: 'Table 12' }] }), SLUG);
   const floodSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: FLOOD })).body.session;
   for (let i = 0; i < 8; i++) {
     r = await post(placeOrder, {
@@ -806,6 +814,44 @@ async function get(fn, qs, headers = {}) {
   });
   ok('dès que le comptoir accepte, la table peut à nouveau commander', r.status === 200,
     JSON.stringify(r.body));
+
+  /* ═══ 13 bis. LES TABLES INVENTÉES PARTAGENT UN SEUL BUDGET ════════════
+     Le plafond par table se contournait en inventant des tables : huit
+     commandes à « Z0 », huit à « Z1 »… et les soixante places du jour étaient
+     prises (audit 2026-10-14 : 47 fausses commandes, puis « queue-full » pour
+     un vrai client de la table 12). Une table que le plan ne connaît pas reste
+     commandable — un tag « 2 » pour « Terrasse 2 » doit marcher — mais toutes
+     ces tables-là ensemble ne dépassent pas huit commandes en attente. */
+  DB._db.prepare("UPDATE orders SET status = 'rejected' WHERE merchant = ? AND status = 'pending'").run(SLUG);
+  let invented = 0, lastInvented = null;
+  for (let t = 0; t < 4; t++) {
+    const sid = (await post(openSession, { merchant: SLUG, mode: 'table', table: 'Z' + t })).body.session;
+    for (let i = 0; i < 4; i++) {
+      lastInvented = await post(placeOrder, {
+        merchant: SLUG, mode: 'table', table: 'Z' + t, session: sid,
+        ref: `invent-${t}-${i}`, lines: [line('i2')],
+      });
+      if (lastInvented.status === 200) invented++;
+    }
+  }
+  ok('les tables inventées s’arrêtent à huit commandes en attente, ensemble', invented === 8,
+    'passées=' + invented);
+  ok('…avec la raison', lastInvented.status === 429 && lastInvented.body.reason === 'off-plan',
+    JSON.stringify(lastInvented.body));
+  const realSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: '12' })).body.session;
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: '12', session: realSession,
+    ref: 'vraie-12', lines: [line('i2')],
+  });
+  ok('une vraie table du plan (« 12 » pour « Table 12 ») commande toujours', r.status === 200,
+    JSON.stringify(r.body));
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: '12', session: realSession,
+    ref: 'vraie-12-qty0', lines: [{ id: 'i2', qty: 0 }],
+  });
+  ok('une quantité nulle est refusée, pas changée en 1', r.status === 400 && r.body.error === 'bad-qty',
+    JSON.stringify(r.body));
+  DB._db.prepare("UPDATE orders SET status = 'rejected' WHERE merchant = ? AND status = 'pending'").run(SLUG);
 
   /* ═══ 8. LA SALLE ═══════════════════════════════════════════════════════
    * « Lancer la commande » dans kiwi-serveur.html n'était qu'un toast : il
