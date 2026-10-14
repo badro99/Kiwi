@@ -138,7 +138,7 @@
       }
       this.paintDots();
       if (this.__code.length === n) { this.send('final', g); return; }
-      K.say(this.$('#prog'), this.__code.length ? t('pin.progress', { count: this.__code.length, total: n }) : '');
+      K.say(this.$('#prog'), this.__code.length ? t('pin.progress', { n: this.__code.length, total: n }) : '');
     },
     /* The loading state: keys aria-disabled, the dots pulse together, the
        progress region says pin.checking once. Focus stays where it is. */

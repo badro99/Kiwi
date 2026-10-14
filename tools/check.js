@@ -2034,6 +2034,47 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
   }
 }
 
+/* ── 14d · Kiwi 2027, étape 3a : le pavé de code et ce qui suit un code ─────
+ * assets/kit/pin-flow.js décide, pour les huit usages de §10.2, ce que le
+ * pavé montre après un code : la requête (8 s), la table des réponses, la
+ * règle des nouvelles tentatives, les pauses, l'expiration d'un code de
+ * pointage. Les portes, sur la vraie <k-pin-pad> :
+ *   pin-flow-test                       la table des réponses et la règle des
+ *                                       nouvelles tentatives, en Node, horloge factice
+ *   pin-announce-browser-test           chaque refus de chaque usage écrit une fois
+ *                                       dans sa région, répété sur une nouvelle frappe
+ *   pin-focus-browser-test              le focus reste sur la touche (chargement,
+ *                                       pause, connexion requise)
+ *   clock-expiry-browser-test           pointage hors ligne : silence, puis
+ *                                       clock.code_expired une fois à 5 minutes
+ *   pair-redeem-timeout-browser-test    un code d'appairage sans réponse à 8 s n'est
+ *                                       jamais renvoyé ; retapé, il « a peut-être servi » */
+section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage)');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['pin-flow-test.mjs', 'pin-flow-test'],
+    ['pin-announce-browser-test.mjs', 'pin-announce-browser-test'],
+    ['pin-focus-browser-test.mjs', 'pin-focus-browser-test'],
+    ['clock-expiry-browser-test.mjs', 'clock-expiry-browser-test'],
+    ['pair-redeem-timeout-browser-test.mjs', 'pair-redeem-timeout-browser-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^(✓|pin-flow-test ·)/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {
