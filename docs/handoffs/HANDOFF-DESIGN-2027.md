@@ -61,10 +61,19 @@ left open. §23 is the owner's decisions; every one is decided (revision 25:
 | 3a · PIN pad | Landed (`a1dd05b1` … `5f309be0`, spec `32ced467`) | "Stage 3a, as landed" |
 | 3b · KDS lanes | Landed (`13150c5a`, `8e0f5cf8`, `43b2bb32`) | "Stage 3b, as landed" |
 | 3c · One guest app | Landed (`03486247` … `2cda43f2`, then the "i" nutrition button, the Android shift fix and the per-store switch) | "Stage 3c, first part, as landed" and its struck-through open items |
-| **4 · Till core** | **Next. Not started.** | §21.1 table, row 4 (long: read all of it) |
-| 5 · Dashboard | Not started | row 5 |
-| 6 · The rest | Not started | row 6 |
-| 7 · Retire | Not started; only after 4 to 6 | row 7, and §22 (What is deleted) |
+| 4 · Till core | Landed on branch `kit-2027-etape-4` (ends `8ef6df6f`), not merged | "Stage 4, as landed" |
+| 5 · Dashboard | Landed on branch `kit-2027-etape-5` (ends `2d6ef5d0`, built on 4), not merged | "Stage 5, as landed" |
+| 6 · The rest | Landed on branch `kit-2027-etape-6` (ends `16c7bd15`, built on 5), not merged | "Stage 6, as landed" |
+| 7 · Retire | Its gate only (`kit-lint` K14, on `kit-2027-etape-6`); the removals wait for a default-on flag | "Stage 7, its gate first" |
+
+**Updated 2026-10-15 (Windows session).** Stages 4 to 6 were built on Windows in
+three stacked worktree branches, each pushed to both mirrors (`origin` and
+`badro99`); none is merged into `main` (main deploys production; merging needs
+the owner's yes). Merge `kit-2027-etape-6` alone and you get 4, 5 and 6. The Mac
+runs `tools/check.js` on what it pulls; this session ran only each slice's own
+tests (all green on Windows with Chrome) and the lints. New `check.js` sections:
+14g (stage 4), 14h (stage 5), 14i (stage 6). New flag: `kiwiSkin2027:access`
+(the reset page, the sign-in gate, the print bridge page).
 
 **Flags.** Every surface has one: `localStorage['kiwiSkin2027:<surface>'] = '1'`,
 or `?skin=2027` for one load. Existing: `till`, `dashboard`, `team`, `kds`,
@@ -80,7 +89,32 @@ design 2027" option in `kiwi-admin.html`). The middleware then marks the page
 the owner's test venue, as the start of its end-to-end run. Turn it off from
 kiwi-admin if it ever misbehaves.
 
-## 2. Stage 4, where to start
+## 2. Where to start next (2026-10-15)
+
+1. **Let the Mac gate the three branches** (`kit-2027-etape-4`, `-5`, `-6`) and
+   fix what fails there only (a Windows-only pass is not a Mac pass).
+2. **The owner decides** whether to merge into `main`, and which surface's flag
+   goes default-on first (the dashboard is the most complete). Stage 7's
+   removals start only after that, per §21.1's four conditions.
+3. **Open items, each stated in its "as landed" paragraph:** the other
+   business-type tills onto the frame (three per release, `autre` done); the
+   dashboard drawers' contents one at a time (their frame is on the kit); the
+   ledger switch (§21.2: the dashboard draws shipped figures today, and
+   Retention and Customers classify customers differently); sign-up and sign-in
+   with §18.8's per-answer states; same-device pairing for the till and kitchen
+   in onboarding; the native work (Swift setup retirement, iOS builds, the
+   iPhone 6s run) on the Mac.
+
+**Windows notes from this session:** the worktrees share one `app/node_modules`
+through a junction (`New-Item -ItemType Junction`, PowerShell; `mklink` failed
+from Git Bash); set `KIWI_CHROMIUM_BIN` to Chrome's path for the browser tests;
+write commit messages to a file and use `git commit -F <file>` (piping them in
+lost the text); after any change to a stamped file run `tools/bump-stamp.js`
+on it, then `--sync` and `--sw`, or the pre-commit hook refuses the commit.
+`etape-4` holds untracked `*-win32.png` gallery baselines from a local run;
+they are platform files and were left out on purpose.
+
+## 2a. Stage 4, as it was planned (kept for the record)
 
 Row 4 of §21.1 is the whole scope. In order:
 
