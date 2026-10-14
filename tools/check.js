@@ -2353,7 +2353,15 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *   dash-ai-browser-test                le début d'une conversation Kiwi AI (§18.6) :
  *                                       l'intro, la carte du jour lue dans le registre
  *                                       (todayPace), les questions du métier puis celles
- *                                       du héros ; une ligne pose sa question */
+ *                                       du héros ; une ligne pose sa question
+ *   dash-figures-agreement-test         un jour, un jeu de chiffres : le chiffre
+ *                                       d'affaires, les commandes et le panier moyen de
+ *                                       l'accueil, des commandes, du rapport et de Kiwi
+ *                                       AI sont ceux du registre de démo du jour
+ *   chart-legend-test                   la légende du graphique (§10.22) : la bande
+ *                                       réservée, aucun point dedans, la grille du haut
+ *                                       nommée par son maximum, le bord de début, 1,35,
+ *                                       la droite en RTL */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2365,6 +2373,8 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-retention-browser-test.mjs', 'dash-retention-browser-test'],
     ['dash-compliance-browser-test.mjs', 'dash-compliance-browser-test'],
     ['dash-ai-browser-test.mjs', 'dash-ai-browser-test'],
+    ['dash-figures-agreement-test.mjs', 'dash-figures-agreement-test'],
+    ['chart-legend-test.mjs', 'chart-legend-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

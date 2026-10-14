@@ -112,9 +112,14 @@ try {
   check(v.inside && v.shipped, 'flag on: #kit-ai sits inside the shipped hero, whose own content is not drawn');
   check(v.business && norm(v.intro).indexOf(norm(v.business)) >= 0, `ai.intro names the business (${norm(v.intro)})`);
   check(v.pace && v.pace.count === v.ledger.n && Math.abs(v.pace.total - v.ledger.total) < 0.005, `the Today card reads today's ledger (${v.ledger.n} orders, ${v.ledger.total})`);
-  const dir = v.pace.total > v.pace.priorTotal ? /de plus/ : v.pace.total < v.pace.priorTotal ? /de moins/ : /comme hier/;
-  check(norm(v.card).indexOf(norm(v.fmtTotal)) >= 0 && norm(v.card).indexOf(' ' + v.fmtN + ' commande') >= 0 && dir.test(v.card) && /Ventes · aujourd'hui/.test(v.card),
-    `with its amount, its orders, its direction against yesterday and its source (${norm(v.card)})`);
+  if (!v.ledger.n) {
+    /* Just after the cutoff the demo day may hold no sale yet: no card (§18.6). */
+    check(!v.card, 'no sale yet today: no Today card');
+  } else {
+    const dir = v.pace.total > v.pace.priorTotal ? /de plus/ : v.pace.total < v.pace.priorTotal ? /de moins/ : /comme hier/;
+    check(norm(v.card).indexOf(norm(v.fmtTotal)) >= 0 && norm(v.card).indexOf(' ' + v.fmtN + ' commande') >= 0 && dir.test(v.card) && /Ventes · aujourd'hui/.test(v.card),
+      `with its amount, its orders, its direction against yesterday and its source (${norm(v.card)})`);
+  }
   check(v.rows.length === 3 + v.follows.length && norm(v.rows[0]) === 'Quel plat retirer de ma carte ?' && v.follows.every((q, i) => v.rows[3 + i] === q),
     `the rows: the trade's three questions, then the hero's (${v.rows.join(' | ')})`);
 
