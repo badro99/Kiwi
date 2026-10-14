@@ -36,11 +36,27 @@
   // Mirror of functions/auth/_lib.js:slugMerchant — one key across
   // dashboard / caisse / OrderPro / D1, with no stored mapping anywhere.
   function slugMerchant(s) {
-    return String(s || '')
+    var latin = String(s || '')
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .toLowerCase().trim()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'client';
+      .replace(/^-+|-+$/g, '');
+    if (latin) return latin;
+    /* Nom sans lettre latine : slug « shop-<hash> » stable, identique octet pour
+     * octet à functions/auth/_lib.js › nonLatinSlug. Plus de 'client' partagé. */
+    var raw = String(s || '').trim();
+    if (!raw) return 'client';
+    var basis = raw.normalize('NFKC').toLowerCase()
+      .replace(/[ً-ٰٟـ]/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ').trim() || raw;
+    var h1 = 0x811c9dc5, h2 = 0x9747b28c;
+    for (var i = 0; i < basis.length; i++) {
+      var c = basis.charCodeAt(i);
+      h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+      h2 = Math.imul(h2 ^ c, 0x85ebca6b) >>> 0;
+    }
+    function pad(n) { n = n.toString(36); return '0000000'.slice(n.length) + n; }
+    return 'shop-' + pad(h1) + pad(h2);
   }
 
   function venueData() {

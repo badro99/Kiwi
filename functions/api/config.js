@@ -30,7 +30,7 @@
 
 import { validZone, DEFAULT_ZONE, DEFAULT_CUTOFF } from './_business-day.js';
 import {
-  json, activeAccountSession, slugMerchant, isOperator, isTillFor,
+  json, activeAccountSession, slugMerchant, accountSlug, teamRemovedIds, isOperator, isTillFor,
   employeeRoleOpensTill,
 } from '../auth/_lib.js';
 import { employeeAuthVersion } from './_private.js';
@@ -201,7 +201,7 @@ export async function onRequestGet(context) {
       const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-        if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
+        if (acc && acc.business) { sessionMerchant = await accountSlug(env, acc.business, sess.aid); sessionAid = sess.aid; }
       }
     } catch (_) { /* fall through to neutral */ }
   }
@@ -389,7 +389,7 @@ export async function onRequestPost(context) {
 
   const acc = await env.DB.prepare('SELECT business, created_ts FROM accounts WHERE id = ?').bind(sess.aid).first();
   if (!acc) return json({ error: 'unauthorized' }, 401);
-  const accSlug = slugMerchant(acc.business);
+  const accSlug = await accountSlug(env, acc.business, sess.aid);
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -628,9 +628,20 @@ export async function onRequestPost(context) {
     const previousById = new Map(previousAccess.members.map((member) => [
       String(member && member.id || ''), member,
     ]));
+    /* Les pierres tombales du document team font foi : une publication de codes
+     * venue d'un appareil resté sur l'ancien roster ne remet pas au miroir
+     * d'accès une personne que le propriétaire a retirée. */
+    let removedIds = new Set();
+    try {
+      const teamRow = await env.DB.prepare(
+        "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'"
+      ).bind(merchant).first();
+      if (teamRow && teamRow.data) removedIds = teamRemovedIds(JSON.parse(teamRow.data));
+    } catch (_) { /* pas de document team lisible : rien à retrancher */ }
     const accessMembers = [];
     for (const p of clean.filter((item) => item.email)) {
       const id = p.memberId || `employee-${p.code}`;
+      if (removedIds.has(String(id))) continue;
       const previous = previousById.get(id);
       const previousPin = String(previous && (previous.pinCode || previous.password) || '');
       const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));

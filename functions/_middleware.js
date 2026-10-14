@@ -25,7 +25,7 @@ import {
   makeSession, sessionCookie, sessionNeedsRefresh,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
-  limitCheck, limitFail, limitClear, rateLimitUnavailable,
+  limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 
@@ -468,6 +468,13 @@ async function routeRequest(context) {
   // The till reports its device time zone; the handler accepts only a till
   // proven for that merchant (isTillFor) and writes nothing else.
   if (method === 'POST' && path === '/api/timezone') return next();
+  /* Crash reports. A paired till (kiwi_till only) and an employee session carry
+   * no account session, so the gate swallowed their reports and the owner lost
+   * every crash of the device that actually serves the customers. Exact path,
+   * POST only: functions/api/error.js decides the filing bucket itself (a store
+   * the caller does not hold goes to the anonymous bucket), rate-limits per
+   * store+IP, sanitises every field and caps the body. */
+  if (method === 'POST' && path === '/api/error') return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
@@ -640,9 +647,18 @@ async function routeRequest(context) {
     const form = await request.formData();
     const email = (form.get('email') || '').toString();
     const pin = (form.get('pin') || '').toString().replace(/\D/g, '').slice(0, 4);
+    /* Le plafond ne tenait qu'à l'adresse IP : changer d'adresse remettait le
+     * compteur à zéro sur un même compte, et un code à quatre chiffres se
+     * devine. La CIBLE (l'e-mail, empreinte tronquée) garde son propre compteur,
+     * le même scope et la même clé que POST /api/employee : l'attaquant ne gagne
+     * rien à passer d'une porte à l'autre. */
+    const target = await targetKey(authSecret, 'employee', email);
+    const tooManyTarget = target ? await limitCheck(request, env, 'employee', target) : null;
+    if (tooManyTarget) return tooManyTarget;
     const employee = await findEmployeeCredential(env, email, pin);
     if (employee && !employee.ambiguous && String(employee.status || 'active') !== 'suspended') {
-      await limitClear(request, env, 'employee');
+      // Seul le compteur de la cible s'efface ; celui de la source garde sa mémoire.
+      if (target) await limitClear(request, env, 'employee', target);
       const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id, authVersion: employee.authVersion });
       return new Response(null, {
         status: 303,
@@ -652,7 +668,9 @@ async function routeRequest(context) {
         },
       });
     }
-    if (!await limitFail(request, env, 'employee')) return rateLimitUnavailable();
+    const sourceOk = await limitFail(request, env, 'employee');
+    const targetOk = !target || await limitFail(request, env, 'employee', target);
+    if (!sourceOk || !targetOk) return rateLimitUnavailable();
     return htmlResponse(authPage({ staffError: true, allowStaff: true, lang: requestedLanguage(request) }));
   }
 

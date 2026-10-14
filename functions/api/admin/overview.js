@@ -22,7 +22,7 @@
 //     annoncées dans `columns` pour que la vue dise « colonne absente » plutôt
 //     que d'afficher un zéro qui ressemble à un fait.
 
-import { isOperator, slugMerchant, json } from '../../auth/_lib.js';
+import { isOperator, slugMerchant, accountSlug, json } from '../../auth/_lib.js';
 import { businessDayStart, businessDayWindows } from '../_business-day.js';
 import policy from '../../../assets/admin-policy.js';
 
@@ -102,7 +102,7 @@ export async function onRequestGet(context) {
     const accounts = new Map();
     for (const a of (accts.results || [])) {
       accounts.set(a.id, a);
-      const s = store(slugMerchant(a.business || a.email));
+      const s = store(await accountSlug(env, a.business || a.email, a.id));
       if (!s.accountId) s.accountId = a.id;
     }
 

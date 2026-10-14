@@ -26,6 +26,7 @@ export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
+const MAX_BODY_BYTES = 32 * 1024;
 const REGEX_PHONE = /(?:\+?212|0)\s*[5-7](?:[\s.-]*\d){8}/g;
 const REGEX_PIN = /\b\d{4,6}\b/g;
 const REGEX_AUTH = /(?:Bearer|Basic)\s+[A-Za-z0-9._~+/-]+=*/gi;
@@ -45,9 +46,17 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB) return json({ ok: false, error: 'no-db' }, 200);
 
+  /* La route est ouverte à toute caisse et à tout employé, sans session de
+   * compte : un corps démesuré n'a rien à faire ici (un rapport tient en
+   * quelques Ko, chaque champ est de toute façon tronqué ensuite). */
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > MAX_BODY_BYTES) return json({ ok: false, error: 'too-large' }, 200);
+
   let body;
   try {
-    body = await request.json();
+    const text = await request.text();
+    if (text.length > MAX_BODY_BYTES) return json({ ok: false, error: 'too-large' }, 200);
+    body = JSON.parse(text);
   } catch (_) {
     return json({ ok: false, error: 'bad-json' }, 200);
   }

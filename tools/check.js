@@ -588,6 +588,10 @@ for (const test of [
   'team-removal-shift-test.mjs',
   'team-job-names-test.mjs',
   'tenant-guard-test.mjs',
+  /* Un commerce sans lettre latine n'est plus « client » : slug propre, pair/create vérifié. */
+  'nonlatin-slug-test.mjs',
+  /* /api/error ouvert aux caisses, plafond par compte sur /__unlock, compteur du verrou, employé retiré. */
+  'auth-hardening-2-test.mjs',
   'service-interconnectivity-test.mjs',
   /* Un employé non pointé ne peut écrire ni commande ni paiement : refus serveur. */
   'team-offshift-server-test.mjs',

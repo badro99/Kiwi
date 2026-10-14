@@ -8,7 +8,7 @@
 
 import {
   json, sendMail, readSession, readCookie, SESS_COOKIE, isOperator,
-  activeEmployee, isTillFor, storeOwner, slugMerchant,
+  activeEmployee, isTillFor, storeOwner, slugMerchant, accountSlug,
 } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 
@@ -265,7 +265,7 @@ async function sessionOwnsMerchant(env, aid, merchant) {
     const owner = await storeOwner(env, merchant);
     if (typeof owner === 'string' && owner !== '') return owner === aid;
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
-    return !!(acc && acc.business && slugMerchant(acc.business) === merchant);
+    return !!(acc && acc.business && (await accountSlug(env, acc.business, aid)) === merchant);
   } catch (_) { return false; }
 }
 

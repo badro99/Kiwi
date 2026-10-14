@@ -48,7 +48,7 @@ async function route(file, now) {
   class FixedDate extends Date { static now() { return now; } }
   const ctx = vm.createContext({
     ...calendar, policy, Date: FixedDate, console, isOperator: async () => true,
-    isSeniorOperator: async () => true, slugMerchant: value => value,
+    isSeniorOperator: async () => true, slugMerchant: value => value, accountSlug: async (_env, value) => value,
     json: (data, status = 200) => ({ status, data }),
   });
   vm.runInContext(src, ctx);

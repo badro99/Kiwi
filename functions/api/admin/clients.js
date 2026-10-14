@@ -19,7 +19,7 @@
 // slug match on accounts.business kept for the primary store so nothing that
 // worked before the registry stops working now.
 
-import { isOperator, isSeniorOperator, slugMerchant, json, operatorActor } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, slugMerchant, accountSlug, json, operatorActor } from '../../auth/_lib.js';
 import { businessDayStart } from '../_business-day.js';
 
 export async function onRequestGet(context) {
@@ -137,7 +137,7 @@ export async function onRequestGet(context) {
       // The store the account signed up with. Matched by slug rather than through
       // the registry, so an account that has never synced still lands on its own
       // row — this is the pre-registry behaviour, kept.
-      const m = slugMerchant(a.business || a.email);
+      const m = await accountSlug(env, a.business || a.email, a.id);
       const r = row(m);
       r.business = a.business || r.business;
       r.primary = true;
@@ -350,7 +350,10 @@ export async function onRequestDelete(context) {
       ).bind(cfg.account_id).first();
     } else {
       const rs = await env.DB.prepare('SELECT id, business, email FROM accounts').all();
-      owner = (rs.results || []).find((a) => slugMerchant(a.business || a.email) === merchant) || null;
+      owner = null;
+      for (const a of (rs.results || [])) {
+        if ((await accountSlug(env, a.business || a.email, a.id)) === merchant) { owner = a; break; }
+      }
     }
     if (owner) {
       nextStore = await env.DB.prepare(

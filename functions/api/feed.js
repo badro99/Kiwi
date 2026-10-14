@@ -27,7 +27,7 @@
 // both read and write — a cross-tenant channel by construction.
 
 import {
-  json, readSession, readCookie, SESS_COOKIE, slugMerchant, entitledMerchant,
+  json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, entitledMerchant,
 } from '../auth/_lib.js';
 import { reserveTicketRange } from './ticket-sequence.js';
 
@@ -118,7 +118,7 @@ export async function onRequestGet({ request, env }) {
     if (sess && sess.aid) {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
       if (acc && acc.business) {
-        legacy = await preSplitBucket(env, sess.aid, merchant, slugMerchant(acc.business));
+        legacy = await preSplitBucket(env, sess.aid, merchant, await accountSlug(env, acc.business, sess.aid));
       }
     }
   } catch (_) { /* no session (operator / demo) → own bucket only */ }

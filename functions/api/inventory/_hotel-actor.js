@@ -1,4 +1,4 @@
-import { entitledMerchant, readEmployee } from '../../auth/_lib.js';
+import { entitledMerchant, readEmployee, teamRemovedIds } from '../../auth/_lib.js';
 
 function plain(value) {
   return String(value == null ? '' : value).trim().toLocaleLowerCase('fr')
@@ -41,6 +41,8 @@ async function employeeMember(env, session) {
   const team = parse(teamRow && teamRow.data, { members: [] });
   const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
     .find((member) => member && String(member.id || '') === String(session.staffId || '')) || null;
+  /* Retiré (pierre tombale du document team) : plus d'acteur, quoi que dise le miroir. */
+  if (teamRemovedIds(team).has(String(session.staffId || ''))) return null;
   const accessMember = find(access);
   const teamMember = find(team);
   const teamIsNewer = !accessRow || Number(teamRow && teamRow.updated_ts || 0) > Number(accessRow.updated_ts || 0);

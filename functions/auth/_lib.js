@@ -644,8 +644,7 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     /* Pierres tombales (assets/team.js › removed) : un salarié que le
      * propriétaire a retiré ne se reconnecte pas, même si une copie périmée du
      * roster ou du miroir d'accès le porte encore. */
-    const gone = new Set((Array.isArray(teamDoc && teamDoc.removed) ? teamDoc.removed : [])
-      .map((r) => String((r && r.id) || '')));
+    const gone = teamRemovedIds(teamDoc);
     for (const member of members) {
       if (gone.has(String((member && member.id) || ''))) continue;
       const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
@@ -964,12 +963,70 @@ export function normEmail(e) {
 // which is also the Live Link default merchant key, so the roster lines an account
 // up with its sales without a stored mapping. Strips accents, lowercases, and
 // collapses non-alphanumerics to single hyphens.
-export function slugMerchant(s) {
+//
+// A name with NO latin letter or digit (Arabic, Chinese, emoji…) used to fall to
+// the shared literal 'client': every such shop landed in one tenant, signups
+// skipped the taken-check for it, and a till could pair into a stranger's shop.
+// It now gets a stable, name-derived slug "shop-<hash>" (same name → same slug,
+// so the taken-check still catches a duplicate). The hash is plain FNV-style over
+// the normalised name so the browser twins (caisse-link.js, orderpro-publish.js)
+// can mirror it byte for byte without crypto.
+export const LEGACY_SLUG = 'client';
+/* Accounts created before this instant and whose name has no latin letter were
+ * all filed under 'client'. They keep it (see accountSlug) rather than being
+ * silently re-homed onto an empty tenant; nothing created after it ever gets it.
+ * It must sit at or before the deploy of this fix: a later date would leave the
+ * accounts created in between on the shared slug. */
+export const LEGACY_CLIENT_BEFORE_TS = Date.UTC(2026, 9, 15);
+
+export function latinSlug(s) {
   return String(s || '')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')  // drop accents
     .toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'client';
+    .replace(/^-+|-+$/g, '');
+}
+
+export function nonLatinSlug(s) {
+  const raw = String(s || '').trim();
+  if (!raw) return '';
+  const norm = raw.normalize('NFKC').toLowerCase()
+    .replace(/[ً-ٰٟـ]/g, '')   // arabic marks + tatweel
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const basis = norm || raw;
+  let h1 = 0x811c9dc5, h2 = 0x9747b28c;
+  for (let i = 0; i < basis.length; i++) {
+    const c = basis.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x85ebca6b) >>> 0;
+  }
+  return 'shop-' + h1.toString(36).padStart(7, '0') + h2.toString(36).padStart(7, '0');
+}
+
+export function slugMerchant(s) {
+  return latinSlug(s) || nonLatinSlug(s) || LEGACY_SLUG;
+}
+
+/* True when a business name has letters, none of them latin: the case that used
+ * to collapse onto 'client'. */
+export function isNonLatinName(s) {
+  return !latinSlug(s) && !!String(s || '').trim();
+}
+
+/* The slug of an ACCOUNT, as opposed to a bare name. Same as slugMerchant except
+ * for grandfathered accounts: an Arabic-only business created before the fix is
+ * already filed (sales, config, registry row) under 'client', and re-deriving it
+ * would strand that data on an empty tenant. Only that narrow case pays a query;
+ * every latin name answers with no I/O. */
+export async function accountSlug(env, business, aid) {
+  const slug = slugMerchant(business);
+  if (!isNonLatinName(business) || !aid || !env || !env.DB) return slug;
+  try {
+    const row = await env.DB.prepare('SELECT created_ts FROM accounts WHERE id = ?').bind(aid).first();
+    const ts = row && Number(row.created_ts);
+    if (ts && ts < LEGACY_CLIENT_BEFORE_TS) return LEGACY_SLUG;
+  } catch (_) { /* unreadable → the new, unique slug */ }
+  return slug;
 }
 
 // Fire-and-forget lead mirror to a Google Apps Script webhook (set as
@@ -1121,7 +1178,7 @@ export async function entitledMerchant(request, env, asked, opts) {
     if (sess && sess.aid && env.DB) {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
       if (!(acc && acc.business)) return '';
-      const accSlug = slugMerchant(acc.business);
+      const accSlug = await accountSlug(env, acc.business, sess.aid);
       /* One login holds SEVERAL établissements, and money is the one thing that
        * must never cross between them. Collapsing every store onto accounts
        * .business is exactly what put the boutique's takings in the restaurant's
@@ -1143,6 +1200,13 @@ export async function entitledMerchant(request, env, asked, opts) {
   return DEMO_MERCHANTS[asked] ? asked : '';
 }
 
+/* Ids retirés du document `team` (pierres tombales `removed: [{ id, ts }]`,
+ * voir assets/team.js et keepTeamTombstones dans functions/api/store.js). */
+export function teamRemovedIds(teamDoc) {
+  const list = teamDoc && Array.isArray(teamDoc.removed) ? teamDoc.removed : [];
+  return new Set(list.map((r) => String((r && r.id) || '')).filter(Boolean));
+}
+
 /* A signed employee cookie is not enough on its own: the member must still be
  * present in this store's Team document. This helper is intentionally exported
  * so the edge gate and staff-only endpoints enforce the same revocation rule. */
@@ -1162,6 +1226,14 @@ export async function activeEmployee(request, env, asked) {
     const teamDoc = JSON.parse((team && team.data) || '{}');
     const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId));
+    /* Pierre tombale : retiré par le propriétaire, il ne sert plus, quoi que dise
+     * le miroir d'accès. Ce miroir est réécrit par DEUX chemins (le document team
+     * et la publication des codes de caisse, config.js) ; une publication
+     * d'un appareil resté sur l'ancien roster pouvait y remettre la personne
+     * retirée, et sa session signée repartait pour trente jours. /api/employee
+     * (liveEmployee) et findEmployeeCredential tenaient déjà ce compte ; cette
+     * porte-ci, celle de la barrière et des files de service, l'ignorait. */
+    if (teamRemovedIds(teamDoc).has(String(session.staffId))) return null;
     const accessMember = find(accessDoc);
     const teamMember = find(teamDoc);
     const teamIsNewer = !access || Number((team && team.updated_ts) || 0) > Number(access.updated_ts || 0);
@@ -1245,7 +1317,7 @@ export async function faceMarkState(request, env, access) {
   let accSlug = '';
   try {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-    if (acc && acc.business) accSlug = slugMerchant(acc.business);
+    if (acc && acc.business) accSlug = await accountSlug(env, acc.business, sess.aid);
   } catch (_) {}
 
   /* Même périmètre que verifyAccountPin, avec son repli pour une base d'avant le
@@ -1558,7 +1630,7 @@ export async function verifyAccountPin(request, env, pin) {
   let accSlug = '';
   try {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-    if (acc && acc.business) accSlug = slugMerchant(acc.business);
+    if (acc && acc.business) accSlug = await accountSlug(env, acc.business, sess.aid);
   } catch (_) {}
 
   const identity = `sess:${sess.aid}`;
@@ -1618,7 +1690,14 @@ export async function verifyAccountPin(request, env, pin) {
     return { ok: false, error: 'bad-pin', status: 401, configured };
   }
 
-  await limitClear(request, env, 'pin:account', identity);
+  /* Le compteur n'est remis à zéro que par le code du PROPRIÉTAIRE. Un code de
+   * gérant (ou tout autre rôle habilité au dashboard) est connu de quelqu'un qui
+   * n'est pas le patron : s'il effaçait l'ardoise, ce quelqu'un alternerait son
+   * code valide et sept essais sur celui du patron, et le plafond ne serait
+   * jamais atteint — c'est exactement la faille que verifyStaffPin a déjà
+   * fermée en ne remettant plus rien à zéro. Le propriétaire qui réussit n'a, lui,
+   * plus rien à deviner. */
+  if (faceAccessTier(staff.role) === 'owner') await limitClear(request, env, 'pin:account', identity);
   return {
     ok: true,
     merchant: String(staff.merchant || ''),

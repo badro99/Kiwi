@@ -22,7 +22,7 @@
 
 import {
   activeAccountSession,
-  slugMerchant, isTillFor, isOperator, slugClaimedByOther,
+  slugMerchant, accountSlug, isTillFor, isOperator, slugClaimedByOther,
 } from '../auth/_lib.js';
 
 /* À qui appartient ce magasin ? NULL = ligne d'avant le registre (ou magasin
@@ -120,8 +120,9 @@ export async function ownedStores(request, env, from) {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
     /* Ce repli portait le même défaut que les deux résolveurs : il ajoutait le
      * slug dérivé du nom sans vérifier qu'il n'est pas celui d'un autre. */
-    if (acc && acc.business && !(await slugClaimedByOther(env, slugMerchant(acc.business), aid))) {
-      push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+    if (acc && acc.business) {
+      const own = await accountSlug(env, acc.business, aid);
+      if (!(await slugClaimedByOther(env, own, aid))) push({ merchant: own, name: acc.business, type: '' });
     }
   } catch (_) {}
 
@@ -258,7 +259,7 @@ async function resolveTenant(request, env, asked, strict) {
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?')
           .bind(sess.aid).first();
-        if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
+        if (acc && acc.business) { sessionMerchant = await accountSlug(env, acc.business, sess.aid); sessionAid = sess.aid; }
       }
     } catch (_) { /* pas de session → opérateur, sinon rien */ }
   }
@@ -323,7 +324,7 @@ export async function ownerMerchant(request, env, asked, opts) {
   if (!owned) {
     try {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
-      if (acc && acc.business && slugMerchant(acc.business) === asked
+      if (acc && acc.business && (await accountSlug(env, acc.business, aid)) === asked
           && !(await slugClaimedByOther(env, asked, aid))) owned = true;
     } catch (_) { /* base non migrée → refus sauf registre */ }
   }

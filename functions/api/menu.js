@@ -26,7 +26,7 @@
 //     /api/config POST). No session / no DB ⇒ neutral no-op (503) so static hosts
 //     (GitHub Pages, local) are unaffected.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, isOperator } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 /* The menu promotions rule (happy hour…), shared with the till and the waiter
  * app: a classic script that registers globalThis.KiwiMenuPromos. */
@@ -504,7 +504,7 @@ export async function onRequestGet(context) {
       if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
       if (!acc) return json({ error: 'unauthorized' }, 401);
-      merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+      merchant = await resolveMerchant(env, sess.aid, await accountSlug(env, acc.business, sess.aid), merchant);
     }
 
     let row = null;
@@ -597,7 +597,7 @@ export async function onRequestPost(context) {
     if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
     acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
     if (!acc) return json({ error: 'unauthorized' }, 401);
-    const accSlug = slugMerchant(acc.business);
+    const accSlug = await accountSlug(env, acc.business, sess.aid);
     // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
     // si la base ne confirme pas la propriété.
     merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);

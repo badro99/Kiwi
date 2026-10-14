@@ -24,7 +24,7 @@
 // For a signed-in merchant the answer also carries `onboarded` + `stores` — the
 // question the setup wizard has to ask and could not (see establishments below).
 
-import { json, activeAccountSession, isOperator, slugMerchant } from '../auth/_lib.js';
+import { json, activeAccountSession, isOperator, slugMerchant, accountSlug } from '../auth/_lib.js';
 
 /* One store row, on a database that may not have run the registry ALTERs.
  * `name` and `account_id` were added to merchant_config later (see schema.sql);
@@ -202,7 +202,7 @@ export async function onRequestGet(context) {
     if (acc) {
       // Which établissements this account owns, and whether it has ever set one
       // up. Server-authoritative, so the wizard stops guessing from localStorage.
-      const slug = slugMerchant(acc.business || acc.email);
+      const slug = await accountSlug(env, acc.business || acc.email, sess.aid);
       const est = await establishments(env, sess.aid, slug);
       // The business subtype (boutique|restaurant|…) the operator/onboarding stored
       // for THIS merchant, keyed by its own slug — same convention the config/roster

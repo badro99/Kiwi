@@ -57,7 +57,17 @@ export async function onRequestPost(context) {
    * On ne consulte que des comptes, jamais un secret, et on ne dit pas à qui
    * appartient le nom — seulement qu'il est pris. */
   const wantedSlug = slugMerchant(business);
-  if (business && wantedSlug && wantedSlug !== 'client') {
+  /* Plus d'exemption pour 'client' : un nom sans lettre latine recevait ce slug
+   * partagé et sautait la vérification, si bien que deux boutiques arabes se
+   * retrouvaient dans le même tenant (ou s'excluaient l'une l'autre). Un tel nom
+   * a désormais un slug propre « shop-… » et passe par le même contrôle. Le
+   * littéral 'client' reste interdit aux NOUVEAUX comptes : il n'appartient qu'aux
+   * anciens (accountSlug). */
+  if (business && wantedSlug === 'client') {
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'business-taken' }, 409);
+  }
+  if (business && wantedSlug) {
     let taken = false;
     try {
       const claimed = await env.DB.prepare(
