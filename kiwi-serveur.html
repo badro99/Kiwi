@@ -86,6 +86,37 @@
   <script src="assets/kiwi-env.js?v=2"></script>
   <script src="assets/material-icons.js?v=3" defer></script>
   <script src="assets/kit/haptics.js?v=3" defer></script>
+  <!-- Design 2027, stage 3a (spec §21.1, §18.10): the team sign-in and the
+       attendance code on the kit's pad, behind the team app's flag only
+       (localStorage kiwiSkin2027:team = '1', or ?skin=2027 for one load). Off,
+       nothing below loads and the app keeps its shipped form and code field. -->
+  <script>
+    (function () {
+      var on = false;
+      try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:team') === '1'; } catch (_) { on = false; }
+      if (!on) return;
+      document.documentElement.setAttribute('data-skin-2027', 'team');
+      /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
+      var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
+      document.write(
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.team.svg?v=1">' +
+        '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=4">' +
+        js("assets/kit/strings/kit.fr.js?v=2") +
+        js("assets/kit/strings/kit.en.js?v=2") +
+        js("assets/kit/strings/kit.ar.js?v=2") +
+        js("assets/kit/strings/team.fr.js?v=1") +
+        js("assets/kit/strings/team.en.js?v=1") +
+        js("assets/kit/strings/team.ar.js?v=1") +
+        js("assets/kit/strings.js?v=2") +
+        js("assets/kit/format.js?v=1") +
+        js("assets/kit/core.js?v=1") +
+        js("assets/kit/pin.js?v=3") +
+        js("assets/kit/pin-flow.js?v=1") +
+        js("assets/kit/team-pin.js?v=1")
+      );
+    })();
+  </script>
 
   <style>
     /* =========================================================
@@ -7791,6 +7822,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         ? 'Saisissez le code de la caisse pour terminer le service'
         : 'Saisissez le code de la caisse pour ouvrir le service';
       showScreen('screen-clockin');
+      if (teamKit()) { mountTeamClock(); return; }
       setTimeout(() => { const input = $('#attendance-code'); if (input) input.focus(); }, 80);
     }
     function resetNfc() {
@@ -7856,7 +7888,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           return;
         }
       }
+      enterServiceAfterClockIn(btn, cloudStart);
+    });
 
+    /* The shift is open: the same entry whether the code came from the field
+       above or from the kit's pad (kiwiSkin2027:team). */
+    function enterServiceAfterClockIn(btn, cloudStart) {
       /* New flow — mirrors the dashboard intro sequence:
        *   0       button morphs into a check
        *   640     clockin screen leaves (zoom + blur, 380ms)
@@ -7892,7 +7929,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           runGreetingFlash(main);
         }, 380);
       }, 640);
-    });
+    }
 
     /* ===========================================================
        BROWSE MODE — consult schedule from home without clocking in
@@ -8066,6 +8103,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       renderPinDots();
       pinGreetLastEmployee();
       showScreen('screen-pin');
+      if (teamKit()) window.KiwiTeamPin.reset();
       if (message) toast(message);
     }
     /* The lock names nobody until someone has signed in on this phone: on a
@@ -8104,11 +8142,53 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     async function finishClockOut() {
       if (!SV_DEMO && window.KiwiEmployeeLive) {
         await window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null, attendanceCode);
+      }
+      await afterClockOut();
+    }
+    async function afterClockOut() {
+      if (!SV_DEMO && window.KiwiEmployeeLive) {
         consumeAttendanceCode();
         await window.KiwiEmployeeLive.logout();
       }
       resetToEmployeePortal(employeeLanguage === 'en' ? 'Shift closed' : employeeLanguage === 'ar' ? 'تم إنهاء الوردية' : 'Fin de service enregistrée');
     }
+
+    /* ---------- Design 2027 (kiwiSkin2027:team) ----------
+       The sign-in and the attendance code on the kit's pad
+       (assets/kit/team-pin.js), judged by KiwiPinFlow's team and clock rows.
+       Live sessions only: the demo keeps its own keypad. What the pad does not
+       decide stays here: loading the session, and what follows a recorded
+       clock-in or clock-out. Flag off, KiwiTeamPin never exists. */
+    function teamKit() { return !SV_DEMO && !!window.KiwiTeamPin; }
+    function mountTeamSignIn() {
+      if (!teamKit()) return;
+      window.KiwiTeamPin.signIn($('#screen-pin'), {
+        signedIn: () => window.KiwiEmployeeLive.refresh().then(openEmployeeSession),
+      });
+    }
+    function mountTeamClock() {
+      window.KiwiTeamPin.clock($('#screen-clockin'), {
+        action: attendanceAction,
+        body: attendanceAction === 'clock-out'
+          ? (code) => ({ action: 'clock-out', progress: window.__kiwiShiftProgress || null, attendanceCode: code })
+          : undefined,
+        done: (saved) => {
+          /* The answer is the session as the server now holds it. */
+          window.KiwiEmployeeLive.refresh().catch(() => {});
+          if (attendanceAction === 'clock-out') {
+            afterClockOut().catch(() => resetToEmployeePortal());
+            return;
+          }
+          const start = saved && saved.entry && saved.entry.inTs ? new Date(saved.entry.inTs) : new Date();
+          if (liveEmployeeState && liveEmployeeState.attendance) liveEmployeeState.attendance.open = (saved && saved.entry) || null;
+          consumeAttendanceCode();
+          enterServiceAfterClockIn($('#ci-button'), start);
+        },
+        signIn: endRevokedSession,
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountTeamSignIn);
+    else mountTeamSignIn();
 
     function clockOut() {
       if (!SV_DEMO && attendanceCode.length !== 6) {

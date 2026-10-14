@@ -84,8 +84,8 @@ check(/KiwiAuthorizeTillAction\(action, function \(who\) \{[\s\S]*?\}, \{\s*need
 check(/if \(result && result\.cancelled\) \{ paint\(\); return null; \}/.test(inbox),
   '…et un pavé fermé ne laisse pas le bouton figé sur « Annulation… » ni ne montre un faux échec');
 
-check(/requireTillOperator\(`Confirmer la passation · code personnel de \$\{inc\.name\}`, confirmHandover, \{\s*needsServer: storeIsReal\(\),\s*validate: handoverApprovalRefusal,\s*hint: 'Le caissier entrant confirme avec son propre code',\s*\}\);/.test(caisse),
-  'la passation : sous-titre et ligne d\'aide nomment le caissier entrant, le pavé juge QUI, le serveur est exigé sur un vrai commerce');
+check(/requireTillOperator\(`Confirmer la passation · code personnel de \$\{inc\.name\}`, confirmHandover, \{\s*needsServer: storeIsReal\(\),\s*incoming: \{ name: inc\.name \},\s*validate: handoverApprovalRefusal,\s*hint: 'Le caissier entrant confirme avec son propre code',\s*\}\);/.test(caisse),
+  'la passation : sous-titre et ligne d\'aide nomment le caissier entrant (le pavé 2027 le reçoit par incoming), le pavé juge QUI, le serveur est exigé sur un vrai commerce');
 
 /* Le vérificateur : l'option est transmise et le repli hors ligne ne l'approuve pas. */
 check(/authorizeTill: function \(code, opts\)/.test(pairing)

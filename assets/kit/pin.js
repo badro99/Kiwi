@@ -78,7 +78,9 @@
       });
     },
     render: function () {
-      if (this.$('.pad')) { this.paintHead(); return; }
+      /* An attribute changed after the first render: the head, and the dots,
+         whose count is the length (a clock-in pad is set to 6 once mounted). */
+      if (this.$('.pad')) { this.paintHead(); this.paintDots(this.$('.dots').getAttribute('data-tone')); return; }
       var face = this.flag('face-id');
       var keys = KEYS.map(function (k) {
         if (k === 'face') {

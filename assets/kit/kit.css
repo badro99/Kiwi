@@ -110,3 +110,22 @@ k-figure .k-fig__sr {
    the demo bypass and the two links stay. */
 .k-dash-lock [data-kiwi-pin], .k-dash-lock .kiwi-pin-input, .k-dash-lock .kiwi-lock-help,
 .k-dash-lock .kiwi-lock-title, .k-dash-lock .kiwi-lock-sub { display: none !important; }
+/* The team app with the kit's pad (assets/kit/team-pin.js, §18.10): the pad
+   and the e-mail step replace the shipped form and keypad; the clock-in pad
+   replaces the code field and its button. The brand and the browse link stay. */
+.k-team-screen .employee-login, .k-team-screen .pin-keypad, .k-team-screen .pin-mid,
+.k-team-screen .nfc-zone, .k-team-screen #ci-button, .k-team-screen .ci-mid { display: none !important; }
+.k-team-signin, .k-team-clock { width: 100%; max-width: 420px; margin-inline: auto; padding-inline: 16px; box-sizing: border-box; }
+.k-team-step { display: flex; flex-direction: column; gap: 8px; }
+.k-team-step[hidden] { display: none; }
+.k-team-title { margin: 0 0 16px; color: var(--k-ink-1); text-wrap: balance;
+  font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
+.k-team-email { min-height: 44px; padding-inline: 12px; border-radius: var(--k-r-2); border: 1px solid var(--k-line-strong);
+  background-color: var(--k-surface-1); color: var(--k-ink-1); font: inherit; }
+.k-team-email:focus-visible { outline: var(--k-focus-w, 2px) solid var(--k-focus); outline-offset: 2px; }
+.k-team-reason { margin: 0; }
+.k-team-next { margin-top: 16px; min-height: 56px; padding-inline: 20px; border: 0; border-radius: 999px;
+  background-color: var(--k-accent); color: var(--k-on-accent); font: inherit; font-weight: var(--k-fw-callout-strong); }
+.k-team-next:active { background-color: var(--k-accent-pressed); }
+.k-team-next.is-off { background-color: var(--k-surface-3); color: var(--k-ink-3); }
+.k-team-next:focus-visible { outline: var(--k-focus-w, 2px) solid var(--k-focus); outline-offset: 2px; }

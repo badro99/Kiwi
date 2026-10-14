@@ -451,6 +451,10 @@
     "v": "2",
     "sha": "732be65946680513"
   },
+  "assets/icons/material/sprite.team.svg": {
+    "v": "1",
+    "sha": "f4c4fc4f275af9c7"
+  },
   "assets/icons/material/sprite.till.svg": {
     "v": "1",
     "sha": "842b9a0062102061"
@@ -556,8 +560,8 @@
     "sha": "34220bbd4e56e6b6"
   },
   "assets/kit/kit.css": {
-    "v": "3",
-    "sha": "86cb2a52751b4726"
+    "v": "4",
+    "sha": "d624807b36217eef"
   },
   "assets/kit/ledger.js": {
     "v": "2",
@@ -584,8 +588,8 @@
     "sha": "8a996513758720d0"
   },
   "assets/kit/pin.js": {
-    "v": "2",
-    "sha": "897e6516bc5feccf"
+    "v": "3",
+    "sha": "e3d6b97a0c8d4614"
   },
   "assets/kit/strings.js": {
     "v": "2",
@@ -627,6 +631,18 @@
     "v": "2",
     "sha": "41121e448e5886a7"
   },
+  "assets/kit/strings/team.ar.js": {
+    "v": "1",
+    "sha": "ea30ba3e15b9fb10"
+  },
+  "assets/kit/strings/team.en.js": {
+    "v": "1",
+    "sha": "9a371de26dcef6b9"
+  },
+  "assets/kit/strings/team.fr.js": {
+    "v": "1",
+    "sha": "ead331c2ad217c31"
+  },
   "assets/kit/strings/till.ar.js": {
     "v": "2",
     "sha": "c6dd2fb39297ca83"
@@ -638,6 +654,10 @@
   "assets/kit/strings/till.fr.js": {
     "v": "2",
     "sha": "28f1567ee55715dc"
+  },
+  "assets/kit/team-pin.js": {
+    "v": "1",
+    "sha": "407e46a04316201c"
   },
   "assets/kit/till-pin.js": {
     "v": "1",

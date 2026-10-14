@@ -308,7 +308,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=1',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=3',
+  '/assets/kit/kit.css?v=4',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -320,12 +320,18 @@ var SHELL = [
   '/assets/kit/business-day.js?v=1',
   '/assets/kit/core.js?v=1',
   '/assets/kit/overlays.js?v=2',
-  '/assets/kit/pin.js?v=2',
+  '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=1',
   '/assets/kit/till-pin.js?v=1',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=1',
   '/assets/kit/dash-pin.js?v=1',
+  /* and the team app's sign-in and clock-in, behind kiwiSkin2027:team. */
+  '/assets/icons/material/sprite.team.svg?v=1',
+  '/assets/kit/strings/team.fr.js?v=1',
+  '/assets/kit/strings/team.en.js?v=1',
+  '/assets/kit/strings/team.ar.js?v=1',
+  '/assets/kit/team-pin.js?v=1',
   '/assets/retail-scan.js?v=9',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',

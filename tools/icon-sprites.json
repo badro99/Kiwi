@@ -78,6 +78,12 @@
         "backspace",
         "face"
       ]
+    },
+    "team": {
+      "note": "Stage 3a: the team sign-in and the clock-in pad behind kiwiSkin2027:team. The pad's delete key.",
+      "icons": [
+        "backspace"
+      ]
     }
   }
 }
