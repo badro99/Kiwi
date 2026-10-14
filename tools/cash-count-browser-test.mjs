@@ -105,6 +105,9 @@ try {
     window.__cash = [];
     if (window.KiwiCashSessions) window.KiwiCashSessions.emit = (ev) => { window.__cash.push(ev); return true; };
     window.__paid = [];
+    window.__z = { print: 0, done: 0 };
+    window.doPrintDayReport = () => { window.__z.print++; return Promise.resolve({ ok: true }); };
+    window.finishClose = () => { window.__z.done++; };
     window.KiwiHaptics = window.KiwiHaptics || {};
     window.KiwiHaptics.play = (cls, gid, _p, meta) => { if (cls === 'Paid') window.__paid.push(meta && meta.trigger); return null; };
     openCloture();
@@ -140,6 +143,41 @@ try {
   check(await page.evaluate(() => document.querySelector('#clo-card-z').value === '0'), 'the terminal\'s card total reached the shipped card field');
   const paid = await page.evaluate(() => window.__paid.slice());
   check(paid.length === 1, `one Paid, on the frame the close is committed (${JSON.stringify(paid)})`);
+
+  /* The Z report sheet that follows (stage 4 (14)). */
+  await sleep(400);
+  const z = await page.evaluate(() => {
+    const s = [...document.querySelectorAll('k-sheet')].find((x) => x.querySelector('.k-z'));
+    if (!s) return null;
+    const secs = [...s.querySelectorAll('.k-z__s')].map((x) => ({ h: x.querySelector('.k-z__h').textContent, rows: [...x.querySelectorAll('.k-z__r')].map((r) => r.lastElementChild.textContent) }));
+    return {
+      open: s.hasAttribute('open'), noClose: s.hasAttribute('no-close'), heading: s.getAttribute('heading'),
+      shipped: document.querySelector('#zsheet-modal').classList.contains('is-open'),
+      day: s.querySelector('.k-z__day').textContent, secs,
+      net: closedReport.net, expected: closedReport.cash.expected,
+      buttons: [...s.querySelectorAll('[slot="footer"] k-button')].map((b) => b.getAttribute('label')),
+    };
+  });
+  const tz = (k, a) => page.evaluate((key, args) => KiwiKit.t(key, args).replace(/[⁦-⁩]/g, ''), k, a || {});
+  const parse = (txt) => Number(String(txt).replace(/\s| |MAD|درهم/g, '').replace(/[^\d,.−-]/g, '').replace('−', '-').replace(',', '.'));
+  check(!!z && z.open && z.noClose && !z.shipped, 'the close is followed by the kit\'s Z sheet, not the shipped one, and it cannot be dismissed');
+  check(z.heading === await tz('z.title', { n: '0001' }), `titled z.title with the Z number (${z.heading})`);
+  check(z.day.length > 0 && z.day.indexOf('05:00') >= 0, `z.day names the business day from the cutoff (${z.day})`);
+  const methods = z.secs[0];
+  const sum = methods.rows.slice(0, -1).reduce((a, v) => a + parse(v), 0);
+  check(methods.h === await tz('z.by_method') && Math.abs(sum - parse(methods.rows[methods.rows.length - 1])) < 0.005,
+    `sales by method sum to their total (${methods.rows.join(' · ')})`);
+  const cashTitle = await tz('z.cash');
+  const cash = z.secs.find((x) => x.h === cashTitle);
+  check(!!cash && cash.rows.some((v) => Math.abs(parse(v) - z.expected) < 0.005), `the cash section carries the report's Expected (${z.expected})`);
+  check(JSON.stringify(z.buttons) === JSON.stringify([await tz('z.print'), await tz('action.done')]), 'z.print, then Done as the primary');
+  await page.evaluate(() => { const s = [...document.querySelectorAll('k-sheet')].find((x) => x.querySelector('.k-z')); s.querySelector('k-button[data-z="print"]').shadowRoot.querySelector('button').click(); });
+  await sleep(200);
+  await page.evaluate(() => { const s = [...document.querySelectorAll('k-sheet')].find((x) => x.querySelector('.k-z')); s.querySelector('k-button[data-z="done"]').shadowRoot.querySelector('button').click(); });
+  await sleep(200);
+  const zr = await page.evaluate(() => window.__z);
+  check(zr.print === 1 && zr.done === 1, 'Print runs the shipped print; Done ends the close as the shipped Continue does');
+
   check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
 } finally {
   await browser.close().catch(() => {});
