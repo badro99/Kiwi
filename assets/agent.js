@@ -1485,6 +1485,17 @@
     return { title, privacy, modeToggle };
   }
 
+  /* Design 2027 (§18.6): the start of a conversation, for the kit's Kiwi AI
+     behind the dashboard's flag (assets/kit/dash-ai.js), drawn over the hero:
+     the business, the trade's three questions (null: the restaurant's), the
+     questions the hero's cards ask, and today against yesterday at the same
+     time from the ledger. A row asks through the conversation's ask(). */
+  let kitHome = null, kitAsk = null;
+  window.KiwiAgentHome = {
+    model: () => kitHome,
+    ask: (q) => { if (kitAsk) kitAsk(q); },
+  };
+
   function renderHero() {
     const h = HL();
     const safety = (B.revenue - B.breakEvenRev) / B.revenue * 100;
@@ -1502,6 +1513,12 @@
     const firstQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Which Kiwi features do I have?' : L === 'ar' ? 'ما هي وظائف Kiwi المتاحة؟' : 'Quelles fonctions Kiwi ai-je ?') : tr().chips.hire;
     const secondQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Help me configure my business' : L === 'ar' ? 'ساعدني في إعداد مؤسستي' : 'Aide-moi à configurer mon établissement') : tr().chips.price5;
     const op = operationalHero();
+    const trade3 = window.KiwiVenue?.getVocab?.('aiChips');
+    kitHome = {
+      business: B.name, trade: Array.isArray(trade3) ? trade3.slice(0, 3) : null,
+      cards: [firstQuery, secondQuery].concat(B.partial ? [op[2]] : []),
+      pace: window.KiwiDateRange?.todayPace?.() || null,
+    };
     return `<div class="fa-hero" data-fa-hero>
       <div class="fa-hero-mark">${ICON.avatar}</div>
       <div class="fa-hero-h">${heroH}</div>
@@ -5697,6 +5714,8 @@
 
     // first screen — the empty-state hero, replaced by the conversation on first ask
     thread.insertAdjacentHTML('beforeend', renderHero());
+    kitAsk = ask;
+    try { window.dispatchEvent(new CustomEvent('kiwi:ai-home-model')); } catch (_) {}
 
     if (typeof prefill === 'string' && prefill.trim()) {
       setTimeout(() => ask(prefill.trim()), 360);

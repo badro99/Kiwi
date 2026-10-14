@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "595",
-    "sha": "985b2bd1d0967148"
+    "v": "598",
+    "sha": "23bef37e7c2c5fd2"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "582",
-    "sha": "aff786782f053e9d"
+    "v": "585",
+    "sha": "d5a7ec910fb0fc52"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "581",
-    "sha": "a4c7bf483493b0de"
+    "v": "584",
+    "sha": "9d919fdcb7cb0cf6"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -535,6 +535,10 @@
     "v": "1",
     "sha": "d5445e0ebefdc97a"
   },
+  "assets/kit/dash-ai.js": {
+    "v": "1",
+    "sha": "96e4034c747ddc6b"
+  },
   "assets/kit/dash-compliance.js": {
     "v": "1",
     "sha": "3ab3268b18c5c0be"
@@ -592,8 +596,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "24",
-    "sha": "1128a5a929ee05b3"
+    "v": "25",
+    "sha": "cfa216066fbdfad1"
   },
   "assets/kit/layout.js": {
     "v": "1",
