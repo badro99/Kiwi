@@ -152,7 +152,9 @@ ok('une table à 11:00 dans des horaires 09:00–19:00 est acceptée au tableau 
 ok('l’agenda affiche l’heure de l’établissement, pas celle de l’appareil', () => {
   assert.equal(dashCtx.dateLabel(ELEVEN_CASA, false), '11:00');
   assert.equal(dashCtx.venueEpoch(2026, 10, 12, 11, 0), ELEVEN_CASA, 'typed 11:00 is 11:00 in Casablanca');
-  assert.equal(dashCtx.dayStart(ELEVEN_CASA), Date.UTC(2026, 9, 11, 23, 0), 'venue midnight');
+  /* « Aujourd'hui » est la journée commerciale (bascule 5 h), pas minuit :
+     05:00 Casablanca = 04:00 UTC (voir reservations-business-day-test.mjs). */
+  assert.equal(dashCtx.dayStart(ELEVEN_CASA), Date.UTC(2026, 9, 12, 4, 0), 'venue business-day start (5 h)');
 });
 ok('le formulaire lit et écrit l’heure saisie à l’heure de l’établissement', () => {
   assert.ok(!/getTimezoneOffset\(\)\*60000/.test(DASH), 'no device-offset datetime-local');
