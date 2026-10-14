@@ -1432,6 +1432,7 @@ section('Whole-project regressions');
     'format-vectors-test.mjs',
     'format-vectors-ios.mjs',
     'business-day-default-test.mjs',
+    'merchant-hour-test.mjs',
     'config-business-day-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
     /* Approuver puis se faire refuser : la passation refuse un manager SUR le

@@ -2032,6 +2032,17 @@
   /* One read model for every headline and insight sentence. Nothing falls back
    * to older rows when the selected period is empty: zero today means zero
    * today, even when the venue sold yesterday. */
+  /* L'heure d'une vente dans le fuseau du COMMERCE (day-report.js), pas celui de
+     l'appareil : un patron qui ouvre le tableau de bord depuis l'étranger voyait
+     une « heure de pointe » décalée. Repli sur l'appareil si le module du rapport
+     du jour n'est pas chargé. */
+  function saleHour(ts) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R && typeof R.hourOf === 'function') { const h = R.hourOf(ts); if (isFinite(h) && h >= 0 && h < 24) return h; }
+    } catch (_) {}
+    return new Date(ts).getHours();
+  }
   function realInsightSummary(range) {
     const [from, to] = rangeBounds(range == null ? currentRange : range);
     const rows = realSalesList().filter((e) => {
@@ -2044,7 +2055,7 @@
       const amount = Math.max(0, +e.amount || 0);
       revenue += amount; gross += amount;
       if (amount) {
-        const hour = new Date(+e.ts || 0).getHours();
+        const hour = saleHour(+e.ts || 0);
         byHour[hour] = (byHour[hour] || 0) + amount;
       }
       const tender = tenderBucket(e && e.method);
@@ -2062,7 +2073,7 @@
       if (ts < from || ts >= to) return;
       const amount = Math.abs(+e.amount || 0);
       revenue -= Math.abs(+e.amount || 0); refunds += amount;
-      const hour = new Date(ts).getHours();
+      const hour = saleHour(ts);
       byHour[hour] = (byHour[hour] || 0) - amount;
       const tender = tenderBucket(e && e.method);
       if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
@@ -2787,7 +2798,7 @@
       realSalesList().forEach((e) => {
         const ts = +e.ts || 0;
         if (ts < from || ts >= to) return;
-        const h = new Date(ts).getHours();
+        const h = saleHour(ts);
         byHour[h] += Math.max(0, +e.amount || 0);
         covByHour[h] += 1;
       });

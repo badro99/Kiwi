@@ -177,7 +177,10 @@
   function reservationsRead() {
     var t = tablesRead(); if (!t.available) return { available: false, source: 'floorplan-reservations' };
     var rows = (t.rows || []).filter(function (x) { return !!(x.reservationName || /reserv/.test(norm(x.status))); });
-    var today = new Date().toISOString().slice(0, 10);
+    /* « Aujourd'hui » = la journée commerciale du commerce (5 h, Africa/Casablanca),
+       pas la date UTC : entre minuit et 1 h la date UTC est encore celle de la veille. */
+    var today = ''; try { today = window.KiwiDayReport && window.KiwiDayReport.today ? window.KiwiDayReport.today() : ''; } catch (_) {}
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) today = new Date().toISOString().slice(0, 10);
     var upcoming = rows.filter(function (x) { return !x.reservationDate || x.reservationDate >= today; });
     return { available: true, source: 'floorplan-reservations', limited: true, coverage: 'floorplan-only', data: {
       reservations: rows.length, upcoming: upcoming.length,

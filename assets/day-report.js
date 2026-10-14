@@ -287,6 +287,13 @@
     return { from: zonedBoundary(day, h, zone), to: zonedBoundary(addCivilDays(day, 1), h, zone) };
   }
   function today(slug) { return businessDay(Date.now(), slug); }
+  /* L'heure (0-23) à laquelle une vente a eu lieu, lue dans le fuseau du
+     commerce et non dans celui de l'appareil : « heure de pointe » et plage
+     d'ouverture se calculent avec ça, pas avec Date#getHours(). */
+  function hourOf(ts, slug) {
+    var t = (ts instanceof Date) ? ts.getTime() : num(ts);
+    return +civilParts(t, merchantTimezone(slug)).hour;
+  }
   /* La dernière journée TERMINÉE — celle que le patron regarde le matin. */
   function lastClosedDay(slug) {
     var b = dayBounds(today(slug), slug);
@@ -1281,7 +1288,7 @@
 
   window.KiwiDayReport = {
     /* journée commerciale */
-    businessDay: businessDay, dayBounds: dayBounds, today: today,
+    businessDay: businessDay, dayBounds: dayBounds, today: today, hourOf: hourOf,
     lastClosedDay: lastClosedDay, shiftDay: shiftDay,
     cutoff: cutoff, setCutoff: setCutoff,
     timezone: merchantTimezone,
