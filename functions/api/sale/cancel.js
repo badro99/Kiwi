@@ -8,6 +8,26 @@
 import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
 import { businessDate, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
+import { creditsIssuedCents, refundsIssuedCents } from '../_store-credit-ledger.js';
+
+/* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
+ * remboursement est une ligne négative qui reste dans le journal, l'annulation
+ * retire la vente entière. Les deux ensemble soustraient la même somme deux
+ * fois (revenu, tiroir, TVA, KPI). On refuse donc, avec les montants, et le
+ * gérant garde la voie propre : rembourser le reste, ou laisser la vente. */
+async function alreadyReturned(env, merchant, saleId) {
+  const [refunded, credited] = await Promise.all([
+    refundsIssuedCents(env, merchant, saleId), creditsIssuedCents(env, merchant, saleId),
+  ]);
+  return { refundedCents: refunded, creditedCents: credited, totalCents: refunded + credited };
+}
+function refundedResponse(returned) {
+  return json({
+    error: 'sale-has-refunds',
+    message: 'Cette vente a déjà été remboursée ou transformée en avoir. L\u2019annuler retirerait cet argent une seconde fois.',
+    refundedCents: returned.refundedCents, creditedCents: returned.creditedCents,
+  }, 409);
+}
 
 const MANAGER_ROLES = new Set([
   'manager', 'owner', 'proprietaire', 'proprietary', 'admin', 'administrateur',
@@ -140,10 +160,11 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
        WHERE id = ? AND merchant = ? AND void_ts IS NULL AND EXISTS
          (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks})
-           AND id <> ? AND mode = 'table' AND status = 'open')`
+           AND id <> ? AND mode = 'table' AND status = 'open')
+         AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')`
   ).bind(ts, reason, actor, actorId, id, merchant, newVisitId, merchant,
     sameOpenVisit ? String(visit.table_no) : target,
-    merchant, ...aliases, newVisitId);
+    merchant, ...aliases, newVisitId, merchant, id);
   function audit(withCents, action, condition) {
     const cols = `merchant,sale_id,action,reason,note,actor,actor_id,amount,${withCents ? 'amount_cents,' : ''}method,ref,sale_ts,impact,ts`;
     const values = withCents ? '?,?,?,?,?,?,?,?,?,?,?,?,?,?' : '?,?,?,?,?,?,?,?,?,?,?,?,?';
@@ -312,6 +333,13 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'sale-too-old' }, 409);
   }
 
+  /* Remboursements et avoirs déjà émis : voir alreadyReturned(). Le rejeu d'une
+     réouverture déjà faite (sale.void_ts posé) n'est pas concerné. */
+  if (!sale.void_ts) {
+    const returned = await alreadyReturned(env, merchant, id);
+    if (returned.totalCents > 0) return refundedResponse(returned);
+  }
+
   reason = boundedReason(body && body.reason, reason);
   const saleAmountCents = sale.amount_cents != null
     ? Number(sale.amount_cents)
@@ -341,8 +369,9 @@ export async function onRequestPost({ request, env }) {
        clock. */
     const update = env.DB.prepare(
       `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
-        WHERE id = ? AND merchant = ? AND void_ts IS NULL`
-    ).bind(ts, reason, actor, actorId, id, merchant);
+        WHERE id = ? AND merchant = ? AND void_ts IS NULL
+          AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')`
+    ).bind(ts, reason, actor, actorId, id, merchant, merchant, id);
     const auditWithCents = env.DB.prepare(
       `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
                                amount, amount_cents, method, ref, sale_ts, impact, ts)
@@ -362,7 +391,13 @@ export async function onRequestPost({ request, env }) {
     try { result = await env.DB.batch([update, auditWithCents]); }
     catch (_) { result = await env.DB.batch([update, auditLegacy]); }
     const changes = Number(result?.[0]?.meta?.changes ?? result?.[0]?.changes ?? 0);
-    if (!changes) return json({ error: 'already-cancelled' }, 409);
+    if (!changes) {
+      /* Perdu contre une annulation concurrente, ou contre un remboursement
+         posé entre la lecture et l'écriture : la garde de l'UPDATE a refusé. */
+      const returned = await alreadyReturned(env, merchant, id).catch(() => null);
+      if (returned && returned.totalCents > 0) return refundedResponse(returned);
+      return json({ error: 'already-cancelled' }, 409);
+    }
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
   }

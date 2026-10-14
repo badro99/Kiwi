@@ -17743,8 +17743,10 @@
       note.hidden = !text;
     }
 
-    function requireManager(actionLabel, onApprove, authContext) {
-      openAuthorization(actionLabel, onApprove, 'manager', authContext);
+    /* opts : voir requireTillOperator (onCancel surtout : une promesse qui attend
+       l'approbation doit pouvoir se défaire si le pavé se ferme sans elle). */
+    function requireManager(actionLabel, onApprove, authContext, opts) {
+      openAuthorization(actionLabel, onApprove, 'manager', authContext, opts);
     }
 
     /* Design 2027 (§10.2): the act an approval is for, by its act.* key, set

@@ -597,17 +597,26 @@
      avSeq repart au-delà du dernier code restauré pour ne pas réémettre un code
      déjà en circulation. La démo reste en mémoire, inchangée. */
   const AVOIR_KEY = 'kiwi:bqAvoirs';
+  /* Le cache des avoirs est RANGÉ PAR COMMERCE (`kiwi:bqAvoirs@<slug>`). Une
+     seule clé pour tous valait tant qu'un appareil n'avait qu'un commerçant,
+     mais une tablette qui change de boutique SANS ré-appairage complet (compte
+     multi-établissements, vue opérateur) montrait les bons de la précédente, et
+     la caisse proposait de les consommer. On range, on n'efface pas : chaque
+     commerce retrouve les siens, personne ne lit ceux d'un autre. L'ancienne
+     clé, sans propriétaire connu, n'est plus lue (le registre serveur refait le
+     cache au chargement). */
+  function avoirKey() { return AVOIR_KEY + '@' + (merchantSlug() || 'local'); }
   function persistAvoirs() {
     if (IS_DEMO) return;
     try {
       const keep = AVOIRS.filter((a) => a && (a.balance > 0 || (a.until && new Date(a.until) > new Date())));
-      localStorage.setItem(AVOIR_KEY, JSON.stringify(keep));
+      localStorage.setItem(avoirKey(), JSON.stringify(keep));
     } catch (_) {}
   }
   (function restoreAvoirs() {
     if (IS_DEMO) return;
     let saved = null;
-    try { saved = JSON.parse(localStorage.getItem(AVOIR_KEY) || '[]'); } catch (_) { return; }
+    try { saved = JSON.parse(localStorage.getItem(avoirKey()) || '[]'); } catch (_) { return; }
     if (!Array.isArray(saved) || !saved.length) return;
     let maxSeq = avSeq - 1;
     saved.forEach((a) => {
@@ -673,6 +682,23 @@
     } catch (_) { /* les bons en cache restent visibles ; la consommation, elle, échoue fermée au serveur */ }
     return AVOIRS;
   }
+  /* Émettre un avoir CRÉE UNE DETTE : c'est un remboursement dont la somme reste
+     chez nous. Il demande donc le même accord qu'un remboursement. Le responsable
+     frappe son code, le serveur le vérifie (/api/pin/verify) et rend une capacité
+     liée à CETTE émission (ticket, montant, identifiant, moyen « avoir ») ;
+     /api/store-credits la relit et refuse sans elle. Le code, lui, ne voyage pas. */
+  function avoirApproval(amount, requestId, originalSaleId) {
+    return new Promise((resolve, reject) => {
+      const refuse = (code) => { const error = new Error(code); error.code = code; reject(error); };
+      if (typeof window.requireManager !== 'function') { refuse('manager-required'); return; }
+      try { if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } }); } catch (_) {}
+      window.requireManager(`Avoir ${fmtMAD(amount)} · ticket ${originalSaleId}`,
+        (manager) => resolve((manager && manager.approval) || ''),
+        { kind: 'refund', refundId: requestId, originalSaleId, amountCents: Math.round(amount * 100), refundMethod: 'avoir' },
+        { onCancel: () => refuse('manager-cancelled') });
+    });
+  }
+
   function creditIntent(prefix) {
     try { if (crypto && crypto.randomUUID) return `${prefix}:${crypto.randomUUID()}`; } catch (_) {}
     return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 12)}`;
@@ -687,9 +713,13 @@
     return `credit-issue:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 96);
   }
   function creditErrorDetail(error) {
-    return error && error.code === 'sale-credit-exceeds-available'
-      ? 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.'
-      : 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
+    const code = error && error.code;
+    if (code === 'sale-credit-exceeds-available') {
+      return 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.';
+    }
+    if (code === 'manager-cancelled') return 'Autorisation du responsable annulée. Rien n’a été remis en stock.';
+    if (code === 'manager-required') return 'L’accord d’un responsable est nécessaire pour émettre un avoir. Rien n’a été remis en stock.';
+    return 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
   }
   /* Le ticket d'origine, reconstruit depuis la vente figée de la caisse : le
      registre refuse un avoir qui ne s'adosse pas à une vente qu'il connaît. */
@@ -3123,10 +3153,31 @@
     ln.note = note;
   }
 
+  /* ── Ce qui se REND, c'est ce que la cliente a PAYÉ ──
+     La récompense fidélité baisse le TICKET (rewardDiscount), pas les lignes :
+     `unit` reste le prix de la ligne avant cette baisse. Rembourser `unit`
+     rendait donc plus que ce que la cliente avait déboursé, d'autant plus que le
+     retour est partiel. Le prix rendu est `unit` ramené au ratio payé / somme des
+     lignes, arrondi vers le bas au centime : la somme des retours d'un ticket ne
+     dépasse jamais ce qu'il a encaissé, au dirham près que le serveur plafonne.
+     Un ticket sans récompense garde ratio 1, donc `unit` à l'identique. */
+  function returnRatio(sale) {
+    if (!sale || !sale.reward) return 1;
+    const gross = (sale.lines || []).reduce((sum, l) => sum + (+l.unit || 0) * (+l.qty || 0), 0);
+    const paid = sale.balanceTotal != null ? +sale.balanceTotal : +sale.total;
+    if (!(gross > 0) || !Number.isFinite(paid) || paid < 0 || paid >= gross) return 1;
+    return paid / gross;
+  }
+  function paidUnit(sale, ln) {
+    const unit = +(ln && ln.unit) || 0;
+    const ratio = returnRatio(sale);
+    return ratio >= 1 ? unit : Math.floor(unit * ratio * 100) / 100;
+  }
+
   function saleCard(s, ret) {
     const c = saleClient(s);
     const sel = ret && ret.saleId === s.id ? ret.picks : new Set();
-    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? l.unit * pickedQty(ret, i, l) : 0), 0);
+    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? paidUnit(s, l) * pickedQty(ret, i, l) : 0), 0);
     const hasRet = s.lines.some((l) => lineReturnedQty(l) > 0);
     return `<div class="bq-sale">
       <div class="bq-sale-top">
@@ -3169,14 +3220,14 @@
                 ${colorDot(l.color)}
                 <span class="sz">${esc(l.size)}</span> ${availableQty > 1 ? `× ${availableQty} disponibles` : ''} ${returnedQty ? `· ${returnedQty} déjà retournée${returnedQty > 1 ? 's' : ''}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
-            <span class="amt">${fmtMAD(l.unit * availableQty)}</span>
+            <span class="amt">${fmtMAD(paidUnit(s, l) * availableQty)}</span>
           </button>${sel.has(i) && availableQty > 1 ? `
             <div class="bq-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
               <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
               <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="Retirer une pièce">−</button>
               <b>${chosenQty}</b>
               <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="Ajouter une pièce">+</button>
-              <strong>${fmtMAD(l.unit * chosenQty)}</strong>
+              <strong>${fmtMAD(paidUnit(s, l) * chosenQty)}</strong>
             </div>` : ''}`;
         }).join('')}
       </div>
@@ -3241,7 +3292,7 @@
     if (!sale) return;
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
-    const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
+    const amount = idxs.reduce((t, i) => t + paidUnit(sale, sale.lines[i]) * quantities.get(i), 0);
     if (!amount) return;
     /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
        quel plutôt que d'inventer un motif que personne n'a donné. */
@@ -3257,7 +3308,7 @@
         lines: idxs.map((i) => ({
           itemId: sale.lines[i].pid, variantId: [sale.lines[i].pid || '', sale.lines[i].size || '', sale.lines[i].color || ''].join(':'),
           name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
-          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round((sale.lines[i].unit || 0) * 100),
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round(paidUnit(sale, sale.lines[i]) * 100),
         })),
       });
     } catch (error) {
@@ -3300,8 +3351,10 @@
   async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
     if (!IS_DEMO) {
       if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
+      const requestId = (context && context.requestId) || creditIntent('credit-issue');
+      const approval = await avoirApproval(amount, requestId, fromSaleId);
       const data = await creditRequest({
-        action: 'issue', id: (context && context.requestId) || creditIntent('credit-issue'), originalSaleId: fromSaleId,
+        action: 'issue', id: requestId, originalSaleId: fromSaleId, approval,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
         customerId: cliente && cliente.id, customerName: cliente && cliente.name,
         reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
@@ -3404,7 +3457,7 @@
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast('Article de remplacement introuvable'); return; }
-    const diff = newP.price - ln.unit;
+    const diff = Math.round((newP.price - paidUnit(sale, ln)) * 100) / 100;
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
     el.innerHTML = `
@@ -3414,7 +3467,7 @@
       <div class="bq-exch-row is-ret">
         <span class="bq-line-art">${artOf(oldP.art)}</span>
         <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
-        <span class="amt">−${fmtMAD(ln.unit)}</span>
+        <span class="amt">−${fmtMAD(paidUnit(sale, ln))}</span>
       </div>
       <div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(newP.art)}</span>
@@ -3462,7 +3515,7 @@
       const oldRestored = persistStock(ln.pid, ln.size, ln.color, 1, `ret-${stockRef}`, 'retour');
       stockAdd(ln.pid, ln.size, 1);
       markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
-      recordReturn(sale, [ex.idx], ln.unit, ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
+      recordReturn(sale, [ex.idx], paidUnit(sale, ln), ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -3565,7 +3618,7 @@
               requestId: stableCreditIssueId(sale, new Map([[ex.idx, 1]]), -diff * 100),
               originalRef: sale.id, originalSale: sale, resellable: true,
               lines: [{ itemId: ln.pid, variantId: [ln.pid || '', ln.size || '', ln.color || ''].join(':'),
-                name: oldP.name || 'Article', size: ln.size || '', qty: 1, unitCents: Math.round((ln.unit || 0) * 100) }],
+                name: oldP.name || 'Article', size: ln.size || '', qty: 1, unitCents: Math.round(paidUnit(sale, ln) * 100) }],
             });
           } catch (error) {
             if (reservation.ok && cat && cat.releaseSale) cat.releaseSale(stockRef);

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestPost as postSale } from '../functions/api/sale.js';
 import { onRequestGet as getCredits, onRequestPost as postCredit } from '../functions/api/store-credits.js';
-import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { managerRefundProof, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 
 const merchant = 'amira-return-ledger';
 const secret = 'amira-return-secret';
@@ -49,9 +49,12 @@ ok(Number(receipt.gross_ticket_cents) === 120000 && Number(receipt.consigned_cen
   'the customer-facing gross receipt remains available for returns');
 
 async function issue(id, cents) {
+  /* Un avoir est une dette : le responsable l'autorise, le serveur relit la capacité. */
+  const approval = await managerRefundProof(secret, { merchant, staffId: 'staff-mgr', staffName: 'Sara', staffRole: 'Manager',
+    refundId: id, originalSaleId: 'sale-consigned-2001', amountCents: cents, refundMethod: 'avoir' });
   const response = await postCredit({ env, request: new Request('https://kiwi.test/api/store-credits', {
     method: 'POST', headers: { cookie, 'content-type': 'application/json' },
-    body: JSON.stringify({ merchant, action: 'issue', id, originalSaleId: 'sale-consigned-2001', originalRef: '2001',
+    body: JSON.stringify({ merchant, action: 'issue', id, approval, originalSaleId: 'sale-consigned-2001', originalRef: '2001',
       amountCents: cents, customerId: 'amira-client', customerName: 'Amira Test', reason: 'Retour',
       lines: [{ name: 'Vase', qty: 1, unitCents: 120000 }], resellable: true }),
   }) });

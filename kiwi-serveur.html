@@ -11461,7 +11461,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         fetch('/api/employee-clients', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
+          /* La fidélité se tire de LA vente que le serveur vient d'enregistrer
+             (son montant vient de la base) : `saleId` lie les points à
+             l'encaissement, et deux envois pour la même vente créditent une fois. */
           body: JSON.stringify({ merchant, clientId: paidClient.id, amount: paidAmount,
+            saleId: String((saved && saved.id) || paymentId),
             ref: 'employee-payment:' + id + ':' + Date.now() }),
         }).then((r) => r.ok ? r.json() : null).then((data) => {
           if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);

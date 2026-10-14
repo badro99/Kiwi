@@ -63,7 +63,7 @@ try {
     client.history = [{ ref: '11502', ts: Date.now() - 3600e3, amount: 280, method: 'espèces',
       items: [{ name: 'Normal Shirt', qty: 1, total: 90 }, { name: 'Black jean', qty: 1, total: 190 }] }];
     localStorage.setItem(key, JSON.stringify(book));
-    localStorage.setItem('kiwi:bqAvoirs', JSON.stringify([{ code: 'AV-2032', amount: 90, balance: 90, holderId: 'd2', holderName: client.name,
+    localStorage.setItem('kiwi:bqAvoirs@local', JSON.stringify([{ code: 'AV-2032', amount: 90, balance: 90, holderId: 'd2', holderName: client.name,
       motif: 'Changement d’avis, retour 11502', at: new Date().toISOString(), until: new Date(Date.now() + 90 * 864e5).toISOString(), from: '11502',
       lines: [{ name: 'Normal Shirt', qty: 1 }] }]));
     localStorage.setItem('kiwi:bqReturns', JSON.stringify({ list: [{ id: 'RET-1', ts: Date.now(), saleRef: '11502', kind: 'avoir',

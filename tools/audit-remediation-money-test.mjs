@@ -142,6 +142,11 @@ sqlite.prepare(`INSERT INTO sales
   VALUES ('audit-concurrent-sale', ?, 50, 5000, 'cash', 'Concurrent sale', 'AUD-CONCURRENT', ?,
           '[{"n":"Plat","q":1,"t":50}]', 'caisse')`).run(merchant, now - 1000);
 
+sqlite.prepare(`INSERT INTO sales
+  (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel)
+  VALUES ('audit-void-sale', ?, 100, 10000, 'cash', 'Audit void sale', 'AUD-VOID', ?,
+          '[{"n":"Plat","q":1,"t":100}]', 'caisse')`).run(merchant, now - 1000);
+
 let faultAuditInsert = false;
 let concurrentSaleReads = 0;
 let releaseConcurrentSaleReads;
@@ -216,16 +221,30 @@ audit('rejected refund creates no durable negative sale or audit row',
   sqlite.prepare('SELECT COUNT(*) AS n FROM sales WHERE channel=\'refund\' AND id=?').get(rejectedRefundId).n === 0
   && sqlite.prepare('SELECT COUNT(*) AS n FROM sale_audit WHERE action=\'refund\' AND note=?').get(rejectedRefundId).n === 0);
 
+/* Une vente déjà remboursée (audit-sale, 80 sur 100) ne s'annule plus : le
+ * remboursement et l'annulation retireraient la même somme deux fois. Les
+ * contrôles d'atomicité qui suivent portent donc sur une vente jamais rendue. */
+const refundedVoid = await cancelPost({
+  env,
+  request: new Request('https://kiwi.test/api/sale/cancel', {
+    method: 'POST', headers: cookieHeaders,
+    body: JSON.stringify({ merchant, id: 'audit-sale', pin: '2819', source: 'cashier', reason: 'after-refund' }),
+  }),
+});
+audit('a refunded sale cannot also be voided',
+  refundedVoid.status === 409 && (await refundedVoid.json()).error === 'sale-has-refunds'
+  && sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-sale'").get().void_ts == null);
+
 const noBatchResponse = await cancelPost({
   env: { ...env, DB: { prepare: DB.prepare } },
   request: new Request('https://kiwi.test/api/sale/cancel', {
     method: 'POST', headers: cookieHeaders,
-    body: JSON.stringify({ merchant, id: 'audit-sale', pin: '2819', source: 'cashier', reason: 'no-batch' }),
+    body: JSON.stringify({ merchant, id: 'audit-void-sale', pin: '2819', source: 'cashier', reason: 'no-batch' }),
   }),
 });
 audit('cancel refuses adapters without an atomic batch primitive',
   noBatchResponse.status === 503
-  && sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-sale'").get().void_ts == null);
+  && sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-void-sale'").get().void_ts == null);
 
 const originalNow = Date.now;
 const frozenVoidTs = now;
@@ -261,35 +280,35 @@ const voidResponse = await cancelPost({
   env,
   request: new Request('https://kiwi.test/api/sale/cancel', {
     method: 'POST', headers: cookieHeaders,
-    body: JSON.stringify({ merchant, id: 'audit-sale', pin: '2819', source: 'cashier', reason: 'mistake' }),
+    body: JSON.stringify({ merchant, id: 'audit-void-sale', pin: '2819', source: 'cashier', reason: 'mistake' }),
   }),
 });
 audit('audit failure returns an error without committing the void', voidResponse.status === 500);
 audit('money state and audit state remain coupled after audit failure',
-  sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-sale'").get().void_ts == null
-  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-sale' AND action='void'").get().n === 0);
+  sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-void-sale'").get().void_ts == null
+  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-void-sale' AND action='void'").get().n === 0);
 faultAuditInsert = false;
 const successfulVoid = await cancelPost({
   env,
   request: new Request('https://kiwi.test/api/sale/cancel', {
     method: 'POST', headers: cookieHeaders,
-    body: JSON.stringify({ merchant, id: 'audit-sale', pin: '2819', source: 'cashier', reason: 'mistake' }),
+    body: JSON.stringify({ merchant, id: 'audit-void-sale', pin: '2819', source: 'cashier', reason: 'mistake' }),
   }),
 });
 audit('successful void commits its required audit row atomically',
   successfulVoid.status === 200
-  && sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-sale'").get().void_ts != null
-  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-sale' AND action='void'").get().n === 1);
+  && sqlite.prepare("SELECT void_ts FROM sales WHERE id='audit-void-sale'").get().void_ts != null
+  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-void-sale' AND action='void'").get().n === 1);
 const duplicateVoid = await cancelPost({
   env,
   request: new Request('https://kiwi.test/api/sale/cancel', {
     method: 'POST', headers: cookieHeaders,
-    body: JSON.stringify({ merchant, id: 'audit-sale', pin: '2819', source: 'cashier', reason: 'second-click' }),
+    body: JSON.stringify({ merchant, id: 'audit-void-sale', pin: '2819', source: 'cashier', reason: 'second-click' }),
   }),
 });
 audit('a duplicate void is rejected without a second audit event',
   duplicateVoid.status === 409
-  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-sale' AND action='void'").get().n === 1);
+  && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-void-sale' AND action='void'").get().n === 1);
 
 /* ── F04 · actual caisse picker / state rules ────────────────────────────── */
 const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');

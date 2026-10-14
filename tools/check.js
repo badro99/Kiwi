@@ -530,6 +530,9 @@ for (const test of [
   'cloud-doc-quota-test.mjs',
   'reservation-overlap-test.mjs',
   'store-credit-sale-test.mjs',
+  /* Une vente ne se rend qu'une fois : remboursement + avoir + annulation, et l'accord d'un responsable pour un avoir. */
+  'sale-return-ledger-test.mjs',
+  'return-client-guards-test.mjs',
   'd1-schema-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',
@@ -1632,6 +1635,8 @@ section('Whole-project regressions');
     'kitchen-modifiers-and-seating-test.mjs',
     'amira-integration-test.mjs',
     'security-and-channel-hardening-test.mjs',
+    'employee-loyalty-bound-test.mjs',
+    'waiter-queue-privacy-test.mjs',
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
     'error-reporter-test.mjs',
@@ -1859,6 +1864,7 @@ section('Whole-project regressions');
     'receipt-logo-print-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
+    'sale-invoice-cache-key-test.mjs',
     /* Facturation v2 : le serveur (numéros, totaux, verrou, avoirs, accès). */
     'invoices-v2-test.mjs',
     /* L'ICE se vérifie (15 chiffres, multiple de 97) au champ du formulaire

@@ -618,16 +618,23 @@
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && Array.isArray(data.invoices)) {
-          const cached = window.KiwiInvoice?.getCachedInvoices?.() || {};
-          data.invoices.forEach(inv => {
-            if (inv && inv.saleId && inv.snapshot) {
-              cached[inv.saleId] = inv.snapshot;
-              cached[inv.saleId].number = inv.number;
-              cached[inv.saleId].seq = inv.seq;
-              if (inv.customer) cached[inv.saleId].customer = inv.customer;
-            }
-          });
-          lsSet('kiwi:sale_invoices:v1', JSON.stringify(cached));
+          if (merchantSlug() !== m) return;   // le commerce a changé pendant la réponse
+          /* Le cache des factures est rangé sous la clé de CE commerce
+             (`kiwi:sale_invoices:v1:<slug>`, voir cacheKey() dans invoice.js),
+             celle que getCachedInvoices() relit. L'écrire sous la clé nue
+             `kiwi:sale_invoices:v1` ne servait personne : les factures du
+             serveur n'apparaissaient jamais dans le registre, et le cache de
+             ce commerce partait, tel quel, dans une clé que personne ne lit. */
+          const store = window.KiwiInvoice && window.KiwiInvoice.setCachedInvoice;
+          if (typeof store === 'function') {
+            data.invoices.forEach(inv => {
+              if (inv && inv.saleId && inv.snapshot) {
+                const doc = Object.assign({}, inv.snapshot, { number: inv.number, seq: inv.seq });
+                if (inv.customer) doc.customer = inv.customer;
+                store(inv.saleId, doc);
+              }
+            });
+          }
           if (overlay && tab === 'sales' && currentView === 'list') paintRegister();
         }
       })

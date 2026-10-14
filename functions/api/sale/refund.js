@@ -7,6 +7,7 @@ import {
 } from '../../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { poke } from '../_live.js';
+import { ensureCreditEvents } from '../_store-credit-ledger.js';
 
 const MAX_AMOUNT_CENTS = 20000000;
 function cleanId(value, max = 80) {
@@ -103,9 +104,17 @@ export async function onRequestPost({ request, env }) {
     originalAmountCents: originalCents, lines: cleanLines(original.lines),
   });
 
+  /* Le plafond compte aussi les avoirs déjà émis sur ce ticket : un
+     remboursement espèces PLUS un avoir ne peuvent pas, ensemble, dépasser le
+     ticket. La table des avoirs peut manquer sur une base en retard. */
+  await ensureCreditEvents(env);
+
   try {
     /* One D1 batch is the concurrency boundary. The negative sale is inserted
-       only while the cumulative append-only refund audit leaves enough value.
+       only while the cumulative append-only refund audit AND the store credits
+       already issued on this ticket leave enough value, and while the original
+       sale has not been voided in the meantime (a void plus a refund would take
+       the same money out twice).
        The audit then keys idempotency on note=refundId. A lost response can
        replay the batch: INSERT OR IGNORE plus NOT EXISTS creates neither a
        second refund nor a second audit row. */
@@ -119,9 +128,15 @@ export async function onRequestPost({ request, env }) {
           ) AND ? <= ? - COALESCE((
             SELECT SUM(COALESCE(amount_cents, amount * 100)) FROM sale_audit
              WHERE merchant = ? AND sale_id = ? AND action = 'refund'
-          ), 0)`
+          ), 0) - COALESCE((
+            SELECT SUM(amount_cents) FROM store_credit_events
+             WHERE merchant = ? AND ref_id = ? AND action = 'issue'
+          ), 0) AND EXISTS (
+            SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL
+          )`
       ).bind(refundId, merchant, storedAmount, -amountCents, refundMethod,
-             label, refundRef, ts, merchant, refundId, amountCents, originalCents, merchant, originalSaleId),
+             label, refundRef, ts, merchant, refundId, amountCents, originalCents, merchant, originalSaleId,
+             merchant, originalSaleId, merchant, originalSaleId),
       env.DB.prepare(
         `INSERT INTO sale_audit
            (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents,

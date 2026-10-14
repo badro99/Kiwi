@@ -3495,9 +3495,12 @@ ar: {
             document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click();
             const targetRef = String(o.ref || o.receiptNo || o.saleId || '').trim();
             document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [targetRef], merchant } }));
-          }).catch(() => {
+          }).catch((err) => {
             cancelButton.disabled = false;
-            toast(L.cancelFailed, { type: 'error' });
+            /* Une vente déjà remboursée ou transformée en avoir ne s'annule pas :
+               l'annuler retirerait la même somme deux fois des chiffres. */
+            toast(L.cancelFailed, { type: 'error', ...(err && err.message === 'sale-has-refunds'
+              ? { desc: 'Cette vente a déjà été remboursée ou transformée en avoir.' } : {}) });
           }).finally(() => document.body.removeEventListener('click', once));
           return;
         }

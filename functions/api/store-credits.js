@@ -5,8 +5,8 @@
 // request id is the idempotency key: retries cannot issue or spend twice.
 
 import {
-  activeEmployee, entitledMerchant, isOperator, json, readCookie, readSession,
-  SESS_COOKIE, storeOwner,
+  activeEmployee, employeeRoleOpensDashboard, entitledMerchant, isOperator, json, readCookie,
+  readManagerRefundProof, readSession, SESS_COOKIE, storeOwner,
 } from '../auth/_lib.js';
 import { storeSubscriptionPending, storeSuspended } from './_private.js';
 import { poke } from './_live.js';
@@ -81,6 +81,23 @@ async function mayCancelCredit(request, env, merchant) {
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     return /proprietaire|owner|gerant|manager|responsable|admin/.test(role);
   } catch (_) { return false; }
+}
+
+/* Émettre un avoir, c'est créer une dette : même autorité qu'un remboursement.
+ * Soit la session propriétaire / opérateur / un employé responsable
+ * (mayCancelCredit), soit la capacité signée que /api/pin/verify délivre après
+ * avoir vérifié CÔTÉ SERVEUR le code d'un responsable (verifyStaffPin), liée à
+ * cette émission exacte : marchand, identifiant de requête, ticket, montant et
+ * moyen « avoir ». Le code n'entre jamais ici, et ce fichier ne compare rien. */
+async function mayIssueCredit(request, env, merchant, { approval, requestId, originalSaleId, cents }) {
+  if (await mayCancelCredit(request, env, merchant)) return true;
+  const proof = await readManagerRefundProof(String(approval || '').slice(0, 1400), env && env.AUTH_SECRET);
+  return !!(proof && proof.merchant === merchant
+    && proof.refundId === requestId.slice(0, 64)
+    && proof.originalSaleId === originalSaleId.slice(0, 64)
+    && Number(proof.amountCents) === cents
+    && proof.refundMethod === 'avoir'
+    && proof.staffId && proof.staffName && employeeRoleOpensDashboard(proof.staffRole));
 }
 
 function view(row, events = []) {
@@ -186,6 +203,10 @@ export async function onRequestPost({ request, env }) {
   if (action === 'issue') {
     const originalSaleId = cleanId(body && body.originalSaleId, 96);
     if (!originalSaleId) return json({ error: 'sale-required' }, 400);
+    if (!await mayIssueCredit(request, env, merchant, {
+      approval: body && body.approval, requestId, originalSaleId, cents })) {
+      return json({ error: 'manager-required' }, 403);
+    }
     const customerId = cleanId(body && body.customerId, 96);
     const customerName = clean(body && body.customerName, 120) || 'Porteur du bon';
     const reason = clean(body && body.reason, 160) || 'Retour';
@@ -209,6 +230,9 @@ export async function onRequestPost({ request, env }) {
               ), COALESCE(s.amount_cents, s.amount * 100)) - COALESCE((
                 SELECT SUM(e.amount_cents) FROM store_credit_events e
                  WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'issue'
+              ), 0) - COALESCE((
+                SELECT SUM(COALESCE(a.amount_cents, a.amount * 100)) FROM sale_audit a
+                 WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund'
               ), 0)`
         ).bind(requestId, merchant, code, customerId, customerName, originalSaleId, originalRef,
           cents, cents, expiresAt, reason, actor, eventId, at, at,

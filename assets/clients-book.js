@@ -300,8 +300,10 @@
      cloud). La fiche client ne lisait que le registre serveur : un avoir émis
      au comptoir n'y apparaissait pas, et l'achat retourné restait affiché
      comme s'il ne l'avait jamais été. On lit donc aussi ces deux journaux. */
+  /* Le cache est rangé par commerce (`kiwi:bqAvoirs@<slug>`, voir avoirKey dans
+     pos-boutique.js / pos-maison.js) : on ne lit que celui du commerce regardé. */
   function localAvoirs() {
-    try { var a = JSON.parse(localStorage.getItem('kiwi:bqAvoirs') || '[]'); return Array.isArray(a) ? a.filter(Boolean) : []; }
+    try { var a = JSON.parse(localStorage.getItem('kiwi:bqAvoirs@' + (creditMerchant() || 'local')) || '[]'); return Array.isArray(a) ? a.filter(Boolean) : []; }
     catch (_) { return []; }
   }
   function localReturns() {

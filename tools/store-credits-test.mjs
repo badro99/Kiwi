@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet, onRequestPost } from '../functions/api/store-credits.js';
-import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, managerRefundProof, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 
 const MERCHANT = 'maison-credit-test';
 const SECRET = 'store-credit-test-secret';
@@ -47,17 +47,41 @@ async function post(body, customCookie = cookie) {
   return { status: response.status, body: await response.json() };
 }
 
+/* Émettre un avoir demande un responsable : la capacité que /api/pin/verify
+   délivre après vérification serveur du code, liée à CETTE émission. */
+const approve = (id, saleId, cents, claims = {}) => managerRefundProof(SECRET, {
+  merchant: MERCHANT, staffId: 'staff-manager', staffName: 'Sara', staffRole: 'Manager',
+  refundId: id, originalSaleId: saleId, amountCents: cents, refundMethod: 'avoir', ...claims,
+});
+
 console.log('■ Maison store-credit ledger');
 let reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', originalRef: '0042', amountCents: 6000,
   customerId: 'client-1', customerName: 'Cliente Test', reason: 'Retour', expiresAt: Date.now() + 86400000 });
-ok(reply.status === 200 && /^AV-[A-Z0-9]+$/.test(reply.body.credit.code), 'a return issues one server-generated credit');
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'a paired till alone cannot issue a store credit');
+reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', amountCents: 6000,
+  approval: await approve('issue:return:0001', 'sale-origin-1', 5000) });
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'an approval for another amount does not authorise the issue');
+reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', amountCents: 6000,
+  approval: await approve('issue:return:0001', 'sale-origin-1', 6000, { refundMethod: 'cash' }) });
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'a cash-refund approval cannot be replayed as a store-credit issue');
+reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', amountCents: 6000,
+  approval: await approve('issue:return:0001', 'sale-origin-1', 6000, { staffRole: 'Caissier' }) });
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'a cashier-tier approval is not enough');
+reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', amountCents: 6000,
+  approval: await approve('issue:return:0001', 'sale-origin-1', 6000, { merchant: 'autre-boutique' }) });
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'an approval minted for another merchant is refused');
+reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', originalRef: '0042', amountCents: 6000,
+  customerId: 'client-1', customerName: 'Cliente Test', reason: 'Retour', expiresAt: Date.now() + 86400000,
+  approval: await approve('issue:return:0001', 'sale-origin-1', 6000) });
+ok(reply.status === 200 && /^AV-[A-Z0-9]+$/.test(reply.body.credit.code), 'a return issues one server-generated credit once a manager approved it');
 const codeA = reply.body.credit.code;
 reply = await post({ action: 'issue', id: 'issue:return:0001', originalSaleId: 'sale-origin-1', amountCents: 6000 });
 ok(reply.status === 200 && reply.body.replay && reply.body.credit.code === codeA, 'issuance retry is idempotent');
-reply = await post({ action: 'issue', id: 'issue:return:over', originalSaleId: 'sale-origin-1', amountCents: 5000 });
+reply = await post({ action: 'issue', id: 'issue:return:over', originalSaleId: 'sale-origin-1', amountCents: 5000,
+  approval: await approve('issue:return:over', 'sale-origin-1', 5000) });
 ok(reply.status === 409 && reply.body.error === 'sale-credit-exceeds-available', 'credits cannot exceed the original sale');
-reply = await post({ action: 'issue', id: 'issue:return:0002', originalSaleId: 'sale-origin-1', amountCents: 4000 });
-ok(reply.status === 200, 'remaining sale value can be credited once');
+reply = await post({ action: 'issue', id: 'issue:return:0002', originalSaleId: 'sale-origin-1', amountCents: 4000 }, ownerCookie);
+ok(reply.status === 200, 'the owner session needs no extra approval, and the remaining sale value can be credited once');
 const codeB = reply.body.credit.code;
 
 reply = await post({ action: 'redeem-batch', id: 'redeem:ticket:0001', saleId: 'sale-new-1', credits: [

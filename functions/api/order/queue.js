@@ -325,8 +325,17 @@ export async function onRequestGet(context) {
    * "reached this endpoint" never meant "owns this store". Reading the slug from
    * the query let any caller pull another restaurant's live queue — items,
    * notes, totals, table numbers. Server decides now. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
+  /* Un serveur en service entre par la même porte que le comptoir, mais il n'a
+   * pas les mêmes droits de lecture. Sans `?role=service` il recevait la file
+   * ENTIÈRE du commerce : les commandes de livraison avec le téléphone et
+   * l'adresse du client, et les tables des autres. Dès que l'appelant n'est ni
+   * la caisse appairée, ni le propriétaire, ni un opérateur, la lecture est
+   * donc forcée au périmètre « service » (tables de la salle seulement) et les
+   * coordonnées du client sont retirées de ce qui lui revient. */
+  const privileged = await entitledMerchant(request, env, asked, { allowTill: true });
+  const merchant = privileged || await entitledMerchant(request, env, asked, { allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  const staffOnly = !privileged;
 
   // Le pointage du comptoir. Volontairement AVANT toute lecture qui peut
   // échouer : une base sans la table `orders` doit quand même compter comme
@@ -339,7 +348,7 @@ export async function onRequestGet(context) {
   // gardé la commande à distance ouverte toute la nuit, commerce fermé : la
   // protection « caisse éteinte ⇒ plus personne ne commande » se serait éteinte
   // avec elle, sans que personne ne s'en aperçoive.
-  const role = (url.searchParams.get('role') || '').trim().toLowerCase();
+  const role = staffOnly ? 'service' : (url.searchParams.get('role') || '').trim().toLowerCase();
   const service = role === 'service' ? await serviceScope(request, env, merchant) : null;
   if (role === 'service' && !service) return json({ error: 'on-shift-service-required' }, 403);
   if (role !== 'kitchen' && role !== 'service') await deskTouch(env, merchant);
@@ -495,6 +504,11 @@ export async function onRequestGet(context) {
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
     let customer = null;
     try { customer = r.customer ? JSON.parse(r.customer) : null; } catch (_) { customer = null; }
+    /* Téléphone et adresse d'un client : réservés au comptoir et au
+     * propriétaire. Un serveur garde de quoi appeler la table par son nom. */
+    if (service && customer && typeof customer === 'object') {
+      customer = customer.name ? { name: String(customer.name).slice(0, 80) } : null;
+    }
     return {
       id: r.id, number: r.number, mode: r.mode, table: r.table_no || '',
       total: r.total, lines, status: r.status,

@@ -817,6 +817,7 @@
     generate,
     makeSaleInvoice,
     getCachedInvoices,
+    setCachedInvoice,
     promptCustomer,
     getSellerBusiness,
   };
