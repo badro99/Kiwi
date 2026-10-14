@@ -2765,6 +2765,7 @@
      distribution nommée — elle n'a pas de portier à interroger. */
   function openApprove(pct, onOk) {
     if (pvReal() && typeof window.requireManager === 'function') {
+      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'discount', key: 'act.discount.pct', args: { pct: `${pct}\u202f%` } });
       window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num}`, () => {
         let mgr = null;
         try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
@@ -4478,6 +4479,7 @@
       toast('Autorisation responsable indisponible', 5200, 'danger');
       return;
     }
+    if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } });
     window.requireManager(`Remboursement ${fmtMAD(amount)} · ${payout} · ticket ${sale.id}`, async (manager) => {
       state.retBusy = true; renderEchanges(); icons();
       try {

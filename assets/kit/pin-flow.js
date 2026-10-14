@@ -80,7 +80,8 @@
     var name = firstName(who && who.name);
     if (use === 'approval' && ctx && ctx.incoming) {
       /* The shift change: the identity before the role (revision 20, P5). */
-      if (String(who.id || '') !== String(ctx.incoming.id || '')) return refused('pin.till.not_incoming', { name: ctx.incoming.name || '' }, { shake: false });
+      var same = typeof ctx.incoming.match === 'function' ? !!ctx.incoming.match(who) : String(who.id || '') === String(ctx.incoming.id || '');
+      if (!same) return refused('pin.till.not_incoming', { name: ctx.incoming.name || '' }, { shake: false });
     }
     if (!opensTill(who.role, ctx)) {
       if (use === 'till') return refused(name ? 'pin.not_till' : 'pin.not_till.unnamed', { name: name }, { shake: false });
@@ -216,8 +217,10 @@
    *   body(code)     the request body (default per use)
    *   request(code)  replaces send() entirely (the cancel-sale route carries
    *                  the code in its own request); resolves to a reply
-   *   act            { kind, key, args, needsConnection } (approvals)
-   *   incoming       { id, name } (the shift change)
+   *   act            { kind, key, args, label?, needsConnection } (approvals;
+ *                  label, when given, is the act already written out)
+   *   incoming       { id, name, match(who)? } (the shift change: the host
+ *                  may judge the identity itself, the till matches by name)
    *   venue, pinUnlock, roles, tier
    *   offline        { verify(code) → Promise<row|null>, paused() → seconds,
    *                    forget(code) } (the host's salted rows)
@@ -239,7 +242,7 @@
     /* The act is an argument of the sub and of the needs-connection line, and
        t() isolates every argument: its own isolates come off first, or the
        nested pair reaches the live region and it is written twice. */
-    var actLabel = opts.act && opts.act.key ? String(t(opts.act.key, opts.act.args)).replace(/[\u2066-\u2069]/g, '') : '';
+    var actLabel = opts.act ? String(opts.act.label || (opts.act.key ? t(opts.act.key, opts.act.args) : '')).replace(/[\u2066-\u2069]/g, '') : '';
     pad.setAttribute('length', String(spec.length));
 
     function body(code) {

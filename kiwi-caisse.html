@@ -133,6 +133,41 @@
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
   <script src="assets/vendor/zxing-browser.min.js?v=1" defer></script>
   <script src="assets/kit/haptics.js?v=3" defer></script>
+  <!-- Design 2027, stage 3a (spec §21.1): the till's code doors on the kit's pad,
+       behind the till's flag only (localStorage kiwiSkin2027:till = '1', or
+       ?skin=2027 for one load). Off, nothing below loads and the till keeps its
+       shipped pads. The tags are written while the head is parsed, so these
+       deferred scripts run, in order, before caisse-pairing.js boots. Literal
+       stamped URLs: bump-stamp and the SW precache see them as in any tag. -->
+  <script>
+    (function () {
+      var on = false;
+      try { on = /[?&]skin=2027(?:&|$)/.test(location.search) || localStorage.getItem('kiwiSkin2027:till') === '1'; } catch (_) { on = false; }
+      if (!on) return;
+      document.documentElement.setAttribute('data-skin-2027', 'till');
+      /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
+      var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
+      document.write(
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=1">' +
+        '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=2">' +
+        js("assets/kit/strings/kit.fr.js?v=2") +
+        js("assets/kit/strings/kit.en.js?v=2") +
+        js("assets/kit/strings/kit.ar.js?v=2") +
+        js("assets/kit/strings/till.fr.js?v=2") +
+        js("assets/kit/strings/till.en.js?v=2") +
+        js("assets/kit/strings/till.ar.js?v=2") +
+        js("assets/kit/strings.js?v=2") +
+        js("assets/kit/format.js?v=1") +
+        js("assets/kit/business-day.js?v=1") +
+        js("assets/kit/core.js?v=1") +
+        js("assets/kit/overlays.js?v=2") +
+        js("assets/kit/pin.js?v=2") +
+        js("assets/kit/pin-flow.js?v=1") +
+        js("assets/kit/till-pin.js?v=1")
+      );
+    })();
+  </script>
   <script src="assets/retail-scan.js?v=9" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
@@ -142,7 +177,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=95" defer></script>
+  <script src="assets/pos-dispatch.js?v=96" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -5706,7 +5741,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
-  <script src="assets/caisse-pwa.js?v=569" defer></script>
+  <script src="assets/caisse-pwa.js?v=570" defer></script>
   <script src="assets/live-link.js?v=64" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
@@ -5720,7 +5755,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=32" defer></script>
+  <script src="assets/caisse-pairing.js?v=33" defer></script>
   <script src="assets/kiwi-select.js?v=4" defer></script>
   <script src="assets/cash-sessions.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -5746,7 +5781,7 @@
   <script src="assets/image-proof.js?v=1" defer></script>
   <script src="assets/operational-print.js?v=4" defer></script>
   <script src="assets/inventory-ledger.js?v=12" defer></script>
-  <script src="assets/maison-stock-movements.js?v=4" defer></script>
+  <script src="assets/maison-stock-movements.js?v=5" defer></script>
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
@@ -5787,7 +5822,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=35" defer></script>
+  <script src="assets/orderpro-inbox.js?v=36" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=7" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
@@ -11042,6 +11077,7 @@
               ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
             const liveOrder = !!(editingOrder && editingOrder.opId && !editingOrder.paid);
             if (!liveOrder && !cart.length) { clearCart(); return; }
+            window.KiwiAuthAct?.(liveOrder ? { kind: 'cancel_order', key: 'act.cancel_order', args: { order: ticketNo(editingOrder) } } : { kind: 'clear_order', key: 'act.clear_order' });
             requireTillOperator(
               liveOrder ? `Annuler la commande ${ticketNo(editingOrder)}` : 'Vider la commande',
               (who) => {
@@ -11063,6 +11099,7 @@
           if (selectedId) {
             if (storeIsReal()) {
               const tid = selectedId;
+              window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: tid } });
               requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
                 try { await cancelSentTable(tid, who); }
                 catch (err) { toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`); }
@@ -11082,6 +11119,7 @@
                 return;
               }
               const tid = selectedId;
+              window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: tid } });
               requireTillOperator(`Annuler la table ${tid}`, (who) => {
                 cancelOpenTable(tid, who);
                 const by = who && who.name ? ` · ${who.name}` : '';
@@ -11090,6 +11128,7 @@
               return;
             }
             const tid = selectedId;
+            window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: tid } });
             requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
               try {
                 await cancelSentTable(tid, who);
@@ -13187,7 +13226,7 @@
        session that must be closed. */
     function cancelOpenTable(id, who = null) {
       if (!id || tableSentCount(id) > 0) return false;
-      if (!who) { requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
+      if (!who) { window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: id } }); requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
       delete tableOrders[id];
       tableSplits.delete(id);
       const t = tables[id];
@@ -13232,6 +13271,7 @@
       if (selectedId) {
         if (!who || !who.name) {
           const target = selectedId;
+          window.KiwiAuthAct?.({ kind: 'cancel_table', key: 'act.cancel_table', args: { table: target } });
           requireTillOperator(`Annuler la table ${target}`, actor => { if (selectedId === target) cancelNewOrder(actor); });
           return;
         }
@@ -16801,7 +16841,7 @@
       if (!r) { toast('Rapport indisponible'); return; }
       doPrintDayReport(r, 'AVANT CLÔTURE');
     });
-    $('#clo-close').addEventListener('click', () => requireTillOperator('Fermeture de caisse', closeRegister));
+    $('#clo-close').addEventListener('click', () => { window.KiwiAuthAct?.({ kind: 'close_till', key: 'act.close_till' }); requireTillOperator('Fermeture de caisse', closeRegister); });
     $('#clo-continue').addEventListener('click', () => $('#cloture-modal').classList.remove('is-open'));
 
     /* ---- L'écran d'après-clôture : imprimer · réimprimer · continuer ---- */
@@ -17328,6 +17368,7 @@
       }
       const finalReason = (cmReason === 'Autre') ? customVal : (cmReason || 'Autre');
 
+      window.KiwiAuthAct?.(cmType === 'in' ? { kind: 'cash_in', key: 'act.cash_in', args: { amount: fmtMAD(amount) } } : { kind: 'cash_out', key: 'act.cash_out', args: { amount: fmtMAD(amount) } });
       requireTillOperator(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`, (actor) => {
         const actorId = String((actor && actor.id) || cashActorId()).slice(0, 96);
         const actorName = String((actor && actor.name) || (currentCashier && currentCashier.name) || 'Caissier').slice(0, 80);
@@ -17359,6 +17400,7 @@
         toast('Ouverture manuelle du tiroir désactivée pour cet établissement');
         return;
       }
+      window.KiwiAuthAct?.({ kind: 'open_drawer', key: 'act.open_drawer' });
       requireManager('Ouvrir le tiroir sans vente', () => {
         cashMovements.push({
           id: 'cm-' + Date.now(), time: new Date(),
@@ -17674,6 +17716,14 @@
       openAuthorization(actionLabel, onApprove, 'manager', authContext);
     }
 
+    /* Design 2027 (§10.2): the act an approval is for, by its act.* key, set
+       by the caller on the line before requireManager / requireTillOperator.
+       The 2027 pad writes its sub from it; the shipped modal ignores it.
+       Consumed by the next opening in the same tick, never later. */
+    let nextAuthAct = null;
+    function authAct(act) { nextAuthAct = act ? { act, at: Date.now() } : null; }
+    window.KiwiAuthAct = authAct;
+
     /* opts (all optional):
          needsServer · the act's effect is a server write with no outbox (it
                        cannot be replayed later). Offline, no code is taken: the
@@ -17709,6 +17759,21 @@
     }
 
     function openAuthorization(actionLabel, onApprove, access, authContext, opts) {
+      const act = nextAuthAct && Date.now() - nextAuthAct.at < 1000 ? nextAuthAct.act : null;
+      nextAuthAct = null;
+      /* kiwiSkin2027:till · the approval on the kit's pad (assets/kit/till-pin.js).
+         Every approval, at both levels, joins the authorization log with the
+         identity, the verdict and, for a verdict read from a row, provenAt. */
+      if (window.KiwiTillPin && typeof window.KiwiTillPin.approve === 'function') {
+        window.KiwiTillPin.approve({
+          level: access === 'till' ? 'till' : 'manager', act, label: actionLabel,
+          onApprove, onCancel: opts && opts.onCancel, needsServer: !!(opts && opts.needsServer),
+          authContext: authContext || null, incoming: opts && opts.incoming, validate: opts && opts.validate,
+          log: (e) => authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: e.label, level: e.level,
+            who: { id: e.id, name: e.name, role: e.role }, verdict: e.verdict, provenAt: e.provenAt }),
+        });
+        return;
+      }
       if (typeof mgrOnCancel === 'function') { const abandoned = mgrOnCancel; mgrOnCancel = null; try { abandoned(); } catch (_) {} }
       mgrBuffer = '';
       mgrBusy = false;
@@ -18596,6 +18661,7 @@
       const cut = remiseCutPreview();
       if (cut <= 0) { toast('Choisis une remise'); return; }
 
+      window.KiwiAuthAct?.(targetKind === 'pct' ? { kind: 'discount', key: 'act.discount.pct', args: { pct: `${targetValue}\u202f%` } } : { kind: 'discount', key: 'act.discount.amount', args: { amount: fmtMAD(cut) } });
       requireManager("Remise sur l'addition", () => {
         if (target === 'vrap') {
           const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
@@ -18812,6 +18878,7 @@
       if (!amountCents || !originalSaleId || !refundServerId) {
         toast('Synchronisation impossible · aucune écriture envoyée'); return;
       }
+      window.KiwiAuthAct?.({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amountCents / 100) } });
       requireManager('Synchroniser le remboursement · ' + fmtMAD(amountCents / 100), () => {
         const manager = window.KiwiCaissePairing?.lastManager?.() || {};
         if (!manager.approval) { toast('Autorisation manager non reçue'); return; }
@@ -18973,6 +19040,7 @@
       const refundLocalId = 'refund-' + Date.now() + '-' + journal.length;
       const originalSaleId = String(orig.serverSaleId || window.KiwiLive?.moneyId?.(orig) || '');
       const refundServerId = String(window.KiwiLive?.moneyId?.({ id: refundLocalId }) || '');
+      window.KiwiAuthAct?.({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } });
       requireManager('Remboursement', () => {
         if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
         const manager = window.KiwiCaissePairing?.lastManager?.() || {};
@@ -19463,8 +19531,10 @@
         /* Le caissier ENTRANT confirme, personne d'autre : le pavé le dit, et un
            « oui » du serveur pour une autre personne est refusé sur le pavé.
            Sur un vrai commerce la preuve de l'acteur ne vient que du serveur. */
+        window.KiwiAuthAct?.({ kind: 'shift_change', key: 'act.shift_change', args: { name: inc.name } });
         requireTillOperator(`Confirmer la passation · code personnel de ${inc.name}`, confirmHandover, {
           needsServer: storeIsReal(),
+          incoming: { name: inc.name },
           validate: handoverApprovalRefusal,
           hint: 'Le caissier entrant confirme avec son propre code',
         });
@@ -21653,6 +21723,7 @@
         });
       };
       if (authorizedWho) { proceed(authorizedWho); return true; }
+      window.KiwiAuthAct?.({ kind: 'cancel_order', key: 'act.cancel_order', args: { order: label } });
       requireTillOperator(`Annuler la commande ${label}`, proceed, TILL_NEEDS_SERVER);
       return true;
     }
@@ -21845,6 +21916,7 @@
       if (!o || !o.opId || !o.paid || o.pickedUp) return;
       const label = ticketNo(o);
       if (!window.confirm(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`)) return;
+      window.KiwiAuthAct?.({ kind: 'untrack_order', key: 'act.untrack_order', args: { order: label } });
       requireTillOperator(`Retirer ${label} du suivi`, (who) => {
         Promise.resolve(opPush(o, 'archived', { actorProof: who && who.actorProof || '' })).then((result) => {
           if (!result || !result.ok) { toast(`Impossible de retirer ${label} · réessayez`); return; }

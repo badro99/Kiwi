@@ -94,7 +94,15 @@
         '<div class="grab" aria-hidden="true"><span></span></div>' +
         '<header class="hd"><h2 class="k-heading ti" id="t">' + esc(this.str('heading')) + '</h2>' +
         (this.flag('no-close') ? '' : '<button type="button" class="x" data-x aria-label="' + esc(t('action.close')) + '">' + icon('close', 24) + '</button>') + '</header>' +
-        '<div class="bd"><slot></slot></div><div class="ft"><slot name="footer"></slot></div></div>';
+        '<div class="bd"><slot></slot></div><div class="ft" hidden><slot name="footer"></slot></div></div>';
+      /* The footer bar shows only when something is slotted into it. The CSS
+         test `.ft:not(:has(*))` never matched: the <slot> is itself a child. */
+      var ft = this.$('.ft'), fs = ft.querySelector('slot');
+      var syncFoot = function () {
+        ft.hidden = !fs.assignedNodes({ flatten: true }).some(function (n) { return n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim()); });
+      };
+      fs.addEventListener('slotchange', syncFoot);
+      syncFoot();
       if (this.flag('open')) this.present();
     },
     present: function () {
@@ -235,7 +243,7 @@
       '.x{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--k-ink-1)}.x:active{background-color:var(--k-surface-2)}' +
       '.bd{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-inline:20px;padding-block-end:16px;-webkit-overflow-scrolling:touch}' +
       '.ft{padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--k-line)}' +
-      '.ft:not(:has(*)){display:none}' +
+      '.ft[hidden]{display:none}' +
       '@media (min-width:700px){.panel{inset:auto;top:50%;left:50%;width:540px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 48px);' +
       'border-radius:var(--k-r-4);margin-left:-270px;transform:none;translate:0 -50%}.grab{display:none}' +
       '.panel.count{width:720px;margin-left:-360px}}' +

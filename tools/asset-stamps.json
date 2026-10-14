@@ -136,16 +136,16 @@
     "sha": "a5c45fa2503e8895"
   },
   "assets/caisse-pairing.js": {
-    "v": "32",
-    "sha": "bd86198a5b878395"
+    "v": "33",
+    "sha": "433e1b12aa3cf6ff"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "569",
-    "sha": "10f957737be6e68b"
+    "v": "570",
+    "sha": "8aafb5fad2470b66"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "556",
-    "sha": "79cf05954d3ac374"
+    "v": "557",
+    "sha": "4ff5a7ba86f31501"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "555",
-    "sha": "085b0f5d3c311c56"
+    "v": "556",
+    "sha": "c63eadb402a48085"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -447,6 +447,10 @@
     "v": "2",
     "sha": "732be65946680513"
   },
+  "assets/icons/material/sprite.till.svg": {
+    "v": "1",
+    "sha": "842b9a0062102061"
+  },
   "assets/identity.js": {
     "v": "10",
     "sha": "ad3abda62f8819d8"
@@ -544,8 +548,8 @@
     "sha": "34220bbd4e56e6b6"
   },
   "assets/kit/kit.css": {
-    "v": "1",
-    "sha": "afbf9711fd3c59c6"
+    "v": "2",
+    "sha": "073ee2fb11d35bf5"
   },
   "assets/kit/ledger.js": {
     "v": "2",
@@ -564,8 +568,12 @@
     "sha": "ecf368f81b578c93"
   },
   "assets/kit/overlays.js": {
+    "v": "2",
+    "sha": "11e20910aad27197"
+  },
+  "assets/kit/pin-flow.js": {
     "v": "1",
-    "sha": "6a3b99f5b7121c09"
+    "sha": "8a996513758720d0"
   },
   "assets/kit/pin.js": {
     "v": "2",
@@ -622,6 +630,10 @@
   "assets/kit/strings/till.fr.js": {
     "v": "2",
     "sha": "28f1567ee55715dc"
+  },
+  "assets/kit/till-pin.js": {
+    "v": "1",
+    "sha": "a3a98a1b18d1f369"
   },
   "assets/kit/till.js": {
     "v": "1",
@@ -712,8 +724,8 @@
     "sha": "7005b22532f22b14"
   },
   "assets/maison-stock-movements.js": {
-    "v": "4",
-    "sha": "596d047b5cd9f697"
+    "v": "5",
+    "sha": "2756cc8d6a54760b"
   },
   "assets/marketing-suite-tease.js": {
     "v": "1",
@@ -832,8 +844,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "35",
-    "sha": "3d570b3b3717d040"
+    "v": "36",
+    "sha": "dcc6329202ab2168"
   },
   "assets/orderpro-panel.js": {
     "v": "3",
@@ -904,12 +916,12 @@
     "sha": "b30dffefc44a30ec"
   },
   "assets/pos-boutique.css": {
-    "v": "62",
+    "v": "63",
     "sha": "3966a6796d909226"
   },
   "assets/pos-boutique.js": {
-    "v": "62",
-    "sha": "57cf7e8ddf2a8249"
+    "v": "63",
+    "sha": "c76087391043c8e8"
   },
   "assets/pos-coiffure.css": {
     "v": "8",
@@ -920,8 +932,8 @@
     "sha": "9b54c1cf524d6a76"
   },
   "assets/pos-dispatch.js": {
-    "v": "95",
-    "sha": "dc8c7e2ad1f4c845"
+    "v": "96",
+    "sha": "2f2f1b622bd13a57"
   },
   "assets/pos-epicerie.css": {
     "v": "9",
@@ -984,12 +996,12 @@
     "sha": "97ce59090b57ba84"
   },
   "assets/pos-maison.css": {
-    "v": "67",
+    "v": "68",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "67",
-    "sha": "8608e0310a30dfc0"
+    "v": "68",
+    "sha": "da5b1f79ba48c461"
   },
   "assets/pos-mobile.css": {
     "v": "9",

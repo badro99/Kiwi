@@ -247,6 +247,8 @@
         /* Rejeter une commande en ligne est une écriture serveur sans file
          * d'attente : hors connexion le pavé ne prend aucun code (il dit que
          * rien n'a changé), et fermé sans approbation il rend la main au bouton. */
+        var o = state.orders[id];
+        if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'reject_online', key: 'act.reject_online', args: { order: o && o.number != null ? 'N°' + o.number : String(id) } });
         window.KiwiAuthorizeTillAction(action, function (who) {
           resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
         }, {

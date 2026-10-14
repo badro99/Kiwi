@@ -429,6 +429,7 @@
     var t = typeById(opts.type);
     return new Promise(function (resolve) {
       var settled = false;
+      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'stock_adjust', key: 'act.stock_adjust', args: { item: (res.row && (res.row.name || res.row.label)) || t.label } });
       ask(t.label + ' · ' + Math.abs(res.after - res.before) + ' pièce(s)', function () {
         settled = true;
         var mgr = null;

@@ -2048,8 +2048,13 @@ section('Kiwi 2027 · kit (taille, galerie, hôte, haptique, mouvement, polarit�
  *   clock-expiry-browser-test           pointage hors ligne : silence, puis
  *                                       clock.code_expired une fois à 5 minutes
  *   pair-redeem-timeout-browser-test    un code d'appairage sans réponse à 8 s n'est
- *                                       jamais renvoyé ; retapé, il « a peut-être servi » */
-section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage)');
+ *                                       jamais renvoyé ; retapé, il « a peut-être servi »
+ *   till-pin-browser-test               la caisse derrière kiwiSkin2027:till : le verrou,
+ *                                       les deux niveaux d'autorisation, le vérificateur
+ *                                       hors ligne (verdict et provenAt au journal), l'état
+ *                                       « connexion requise » ; drapeau éteint, aucun
+ *                                       fichier du kit chargé */
+section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appairage, caisse)');
 {
   const { spawnSync } = require('child_process');
   const gates = [
@@ -2058,6 +2063,7 @@ section('Kiwi 2027 · pavé de code (réponses, annonces, focus, pointage, appai
     ['pin-focus-browser-test.mjs', 'pin-focus-browser-test'],
     ['clock-expiry-browser-test.mjs', 'clock-expiry-browser-test'],
     ['pair-redeem-timeout-browser-test.mjs', 'pair-redeem-timeout-browser-test'],
+    ['till-pin-browser-test.mjs', 'till-pin-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

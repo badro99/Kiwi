@@ -54,8 +54,16 @@ export function audit(sites, exists, manifest, shaOf) {
   }
   const inSw = new Set(kitAssets.filter((a) => sites.get(a).some((s) => s.kind === 'sw')));
   const swBundles = [...inSw].filter((a) => BUNDLES.includes(a) || a === STRINGS_JS);
+  /* Stage 3a: the rule is per surface. A surface whose bundle the SW
+     precaches has all three languages precached, with strings.js and the
+     shared kit bundle; a surface no shell loads yet (team, ordering,
+     onboarding at stage 3a) is not precached, since pwa-shell-test refuses a
+     SW entry that no shell references. Stage 2's rule (every bundle as soon
+     as one) could not hold both. */
   if (swBundles.length) {
-    for (const a of [...BUNDLES, STRINGS_JS]) if (!inSw.has(a)) out.push(`le SW précache des chaînes mais pas ${a} (les trois langues partent ensemble)`);
+    const surfaces = new Set(['kit', ...[...inSw].filter((a) => BUNDLES.includes(a)).map((a) => path.basename(a).split('.')[0])]);
+    const need = [STRINGS_JS, ...[...surfaces].flatMap((sf) => LANGS.map((l) => `assets/kit/strings/${sf}.${l}.js`))];
+    for (const a of need) if (!inSw.has(a)) out.push(`le SW précache des chaînes mais pas ${a} (les trois langues partent ensemble)`);
   }
   const shells = new Map();
   for (const a of kitAssets) for (const s of sites.get(a)) if (s.kind === 'shell' && !NOT_SHELLS.has(s.file)) {
@@ -110,6 +118,8 @@ section('Estampilles : une génération, shell et SW d\'accord');
     ['une langue absente du SW', (() => { const m = full(); m.get('assets/kit/strings/till.ar.js').splice(1, 1); return m; })()],
     ['un shell sans la langue arabe', (() => { const m = full(); m.get('assets/kit/strings/till.ar.js').splice(0, 1); return m; })()],
     ['un paquet qui n\'existe pas', full({ 'assets/kit/strings/ghost.fr.js': [site('x.html', 'shell', '1')] })],
+    ['strings.js absent du SW', (() => { const m = full(); m.get(STRINGS_JS).splice(1, 1); return m; })()],
+    ['le paquet kit absent du SW', (() => { const m = full(); for (const l of LANGS) m.get(`assets/kit/strings/kit.${l}.js`).splice(1, 1); return m; })()],
   ];
   for (const [name, m] of cases) {
     const r = audit(m, present, null, null);

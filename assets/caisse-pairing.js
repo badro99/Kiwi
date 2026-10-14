@@ -93,7 +93,10 @@
     var rows = offlinePinRows(merchant);
     return Promise.all(rows.map(function (row) {
       return pinDigest(merchant, row.salt, code).then(function (digest) {
-        return digest && digest === row.digest ? row.staff : null;
+        /* provenAt: when the server last proved this code here (§10.2,
+           Staleness row). Callers that read only id, name and role are
+           unaffected. */
+        return digest && digest === row.digest ? Object.assign({}, row.staff, { provenAt: Number(row.expiresAt || 0) - OFFLINE_PIN_TTL }) : null;
       });
     })).then(function (matches) { return matches.find(Boolean) || null; });
   }
@@ -742,6 +745,22 @@
   function renderPinDots() { var d = document.getElementById('cp-pin-dots'); if (d) d.innerHTML = pinDotsHtml(); }
   function showPinPad(venue) {
     injectCss(); hidePad(); hideNativePin();
+    /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
+       assets/kit/till-pin.js. Loaded only with the flag; otherwise absent. */
+    if (window.KiwiTillPin && typeof window.KiwiTillPin.lock === 'function') {
+      window.KiwiTillPin.lock(venue, {
+        verify: function (code) { return verifyReply(code); },
+        row: function (code) { var v = activeVenue(); return v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null); },
+        accept: function (who) {
+          setStaff(who);
+          var scr2 = document.getElementById('cp-pin-screen');
+          if (scr2) scr2.style.display = 'none';
+          bootVertical(activeVenue() || venue);
+        },
+        pair: function () { showPad(true); }
+      });
+      return;
+    }
     var scr = document.getElementById('cp-pin-screen');
     if (!scr) {
       scr = document.createElement('div');
@@ -839,6 +858,8 @@
   });
   document.addEventListener('keydown', function (e) {
     var pinScr = document.getElementById('cp-pin-screen');
+    /* The 2027 lock's pad takes its own keys (assets/kit/till-pin.js). */
+    if (pinScr && pinScr.classList.contains('k-till-lock')) return;
     if (pinScr && pinScr.style.display !== 'none') {
       if (/^[0-9]$/.test(e.key)) { feedPin(e.key); e.preventDefault(); }
       else if (e.key === 'Backspace') { feedPin('back'); e.preventDefault(); }
@@ -967,7 +988,44 @@
       .finally(function () { clearTimeout(timer); });
   }
 
+  /* The 2027 pad's request (assets/kit/pin-flow.js): the server's answer as
+     it came, status and body, so every row of §10.2's response table can be
+     told apart. A proven code refreshes its salted row, as verifyCode does.
+     `lastFailed` remembers that the till's last request threw, which is
+     how the needs-connection state is known when a pad opens. */
+  var lastFailed = false;
+  function verifyReply(code, action) {
+    var venue = activeVenue();
+    var merchant = (venue && venue.merchant) || '';
+    var F = window.KiwiPinFlow;
+    if (!merchant) return Promise.resolve({ kind: 'answer', status: 403, json: true, body: { error: 'forbidden-till' } });
+    if (!F || typeof F.send !== 'function') return Promise.resolve({ kind: 'network' });
+    var body = { merchant: merchant, pin: String(code || '') };
+    if (action) body.action = action;
+    return F.send('/api/pin/verify', body).then(function (reply) {
+      lastFailed = reply.kind !== 'answer';
+      var d = reply.body;
+      if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
+        return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
+      }
+      return reply;
+    });
+  }
+  function noteApproval(who, level) {
+    if (!who) return;
+    var id = String(who.id || '').slice(0, 80), role = String(who.role || '').trim();
+    lastOperator = { id: id, name: String(who.name || '').trim() || 'Caissier', role: role, actorProof: who.actorProof || '', verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+    if (level === 'manager') {
+      lastManager = { id: id, name: String(who.name || '').trim() || 'Responsable', role: role, approval: String(who.approval || ''), verdict: who.verdict || 'online', provenAt: who.provenAt || null };
+      lastOperator = lastManager;
+    }
+  }
+
   window.KiwiCaissePairing = {
+    verifyReply: verifyReply, noteApproval: noteApproval,
+    offlineRow: function (code) { var v = activeVenue(); return v && v.merchant ? verifyOfflinePin(v.merchant, code) : Promise.resolve(null); },
+    lastRequestFailed: function () { return lastFailed; },
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
     repair: repair, recoverFromTerminal: recoverFromTerminal, terminalId: terminalId,
     repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
