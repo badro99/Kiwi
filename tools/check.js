@@ -2213,7 +2213,11 @@ section('Kiwi 2027 · une seule app de commande client');
  *   discount-reasons-test               les quatre motifs de remise : les puces et
  *                                       DISCOUNT_REASONS sont le même ensemble, chaque
  *                                       puce revient à son code, une vente par motif
- *                                       acceptée par le vrai /api/sale */
+ *                                       acceptée par le vrai /api/sale
+ *   cash-count-browser-test             la clôture sur le kit (§18.9) : l'attendu est
+ *                                       drawerExpected(), un motif hors tolérance, le
+ *                                       total carte du terminal, puis closeRegister()
+ *                                       livré avec gapReason dans l'événement */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2222,6 +2226,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['pay-height-test.mjs', 'pay-height-test'],
     ['components-sum-test.mjs', 'components-sum-test'],
     ['discount-reasons-test.mjs', 'discount-reasons-test'],
+    ['cash-count-browser-test.mjs', 'cash-count-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

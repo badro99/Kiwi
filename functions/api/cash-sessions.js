@@ -5,6 +5,9 @@ import {
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
 const MOVEMENT_KINDS = new Set(['in', 'out', 'no-sale']);
+/* Why a closing count differs from the expected cash (étape 4, the count
+   sheet's reason chips, outside tolerance): a close only, one of four codes. */
+const GAP_REASONS = new Set(['counting', 'change', 'unrecorded', 'other']);
 const MAX_CENTS = 1_000_000_000;
 
 function ident(value, max = 96) {
@@ -114,6 +117,7 @@ export async function onRequestPost({ request, env }) {
   const movementKind = body.movementKind == null ? '' : String(body.movementKind);
   const movementAmount = cents(body.movementAmountCents, false);
   const movementReason = body.movementReason == null ? '' : textValue(body.movementReason, 80);
+  const gapReason = body.gapReason == null ? '' : String(body.gapReason);
   const actorId = actor(body.actorId);
   const counterpartyActorId = body.counterpartyActorId == null ? '' : actor(body.counterpartyActorId);
   const openedAt = Number(body.openedAt);
@@ -124,7 +128,8 @@ export async function onRequestPost({ request, env }) {
   const badMovement = eventType === 'movement'
     ? (!MOVEMENT_KINDS.has(movementKind) || movementAmount == null || !movementReason)
     : !!(movementKind || movementAmount != null || movementReason);
-  if (!id || !EVENT_TYPES.has(eventType) || !actorId || badMoney || badGap || badMovement
+  const badGapReason = !!gapReason && (eventType !== 'close' || !GAP_REASONS.has(gapReason));
+  if (!id || !EVENT_TYPES.has(eventType) || !actorId || badMoney || badGap || badMovement || badGapReason
       || (eventType === 'handover' && !counterpartyActorId)
       || (eventType === 'close' && (expected == null || counted == null || gap == null))
       || !Number.isInteger(openedAt) || !Number.isInteger(occurredAt)
@@ -180,6 +185,19 @@ export async function onRequestPost({ request, env }) {
       .bind(id, merchant, sessionId, terminalId, eventType, expectedFinal, counted, gapFinal,
         movementKind || null, movementAmount, movementReason || null, actorId,
         counterpartyActorId || null, openedAt, occurredAt).run();
+    /* The gap's reason beside the close, never inside it: a base that lags
+       schema.sql gets the column on first use (as sale.js does tip_cents), and
+       a reason that cannot be written never undoes the close. */
+    if (gapReason) {
+      try {
+        const columns = await env.DB.prepare('PRAGMA table_info(cash_session_events)').all();
+        if (!(columns.results || []).some((column) => column.name === 'gap_reason')) {
+          try { await env.DB.prepare('ALTER TABLE cash_session_events ADD COLUMN gap_reason TEXT').run(); } catch (_) {}
+        }
+        await env.DB.prepare('UPDATE cash_session_events SET gap_reason = ? WHERE merchant = ? AND id = ? AND gap_reason IS NULL')
+          .bind(gapReason, merchant, id).run();
+      } catch (_) { /* the close stands; the Z keeps the reason */ }
+    }
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {
       const epoch = await tillEpoch(env, merchant);

@@ -478,12 +478,16 @@
   });
 
   /* ── <k-cash-count mode tolerance> .count {opening, cashSales, refundsCash,
-     cashTips, cashIn, cashOut, lastFloat} ────────────────────────────────── */
+     cashTips, cashIn, cashOut, lastFloat} .cardKiwi ──────────────────────────
+     cardKiwi, when the host sets it on a close: after the cash, a second step
+     asks the card total printed on the terminal's Z, beside Kiwi's own (owner,
+     2026-10-14). Outside tolerance a reason is required (GAP_REASONS). */
+  var GAP_REASONS = [['counting', 'count.reason.counting'], ['change', 'count.reason.change'], ['unrecorded', 'count.reason.unrecorded'], ['other', 'reason.other']];
   var NOTES = [200, 100, 50, 20], COINS = [10, 5, 2, 1, 0.5, 0.2, 0.1];
   var KCashCount = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot;
-      this.__n = {}; this.__sel = null; this.__any = false;
+      this.__n = {}; this.__sel = null; this.__any = false; this.__reason = null; this.__stage = 'cash'; this.__card = '';
       K.tap(R, '[data-denom]', function (el) {
         self.__sel = el.getAttribute('data-denom');
         self.__typed = false;
@@ -491,6 +495,11 @@
         var b = self.$('[data-denom="' + self.__sel + '"]'); if (b) b.focus();
       });
       C.keypad.bind(R, function (id, key) {
+        if (self.__stage === 'card') {
+          var rc = C.keypad.input(self.__card, key, { decimals: 2, maxInt: 7 });
+          if (!rc.ok && key !== 'del') return;
+          self.__card = rc.text; self.render(); return;
+        }
         var all = NOTES.concat(COINS).map(String);
         if (self.__sel == null) self.__sel = all[0];
         if (key === 'next') { var i = all.indexOf(self.__sel); self.__sel = all[Math.min(all.length - 1, i + 1)]; self.__typed = false; self.render(); return; }
@@ -502,13 +511,18 @@
         self.__any = true;
         self.render();
       });
-      C.chip.bind(R, function (v, g) {
+      C.chip.bind(R, function (v, g, mode, el) {
+        if (el && el.closest && el.closest('[data-reasons]')) { self.__reason = v; self.render(); return; }
         if (v === 'same') { self.__total = self.c().lastFloat; self.__any = true; self.render(); }
       });
       C.button.bind(R, function (el, g) {
         if (el.getAttribute('data-w') === 'commit') {
+          var closing = self.str('mode', 'close') !== 'open';
+          if (closing && self.__stage === 'cash' && self.cardKiwi != null) { self.__stage = 'card'; self.render(); return; }
           self.__gid = g;
-          self.emit(self.str('mode', 'close') === 'open' ? 'open' : 'close', null, { counts: self.__n, counted: self.counted(), difference: self.diff(), gestureId: g });
+          self.emit(closing ? 'close' : 'open', null, { counts: self.__n, counted: self.counted(), difference: self.diff(),
+            reason: self.outside() ? self.__reason : null, cardTotal: self.__stage === 'card' ? C.keypad.value(self.__card) : null, gestureId: g });
+        } else if (el.getAttribute('data-w') === 'card-back') { self.__stage = 'cash'; self.render();
         } else if (el.getAttribute('data-w') === 'enter-total') self.emit('enter-total', null, { gestureId: g });
       }, '[data-w]');
     },
@@ -524,6 +538,9 @@
       return fromCents(cents(s.opening) + cents(s.cashSales) + cents(s.cashTips) + cents(s.cashIn) - cents(s.cashOut));
     },
     diff: function () { return fromCents(cents(this.counted()) - cents(this.expected())); },
+    tol: function () { return Number(this.str('tolerance', '20')) || 20; },
+    /* A close whose difference is beyond the tolerance needs its reason. */
+    outside: function () { return this.str('mode', 'close') !== 'open' && this.__any && Math.abs(this.diff()) > this.tol(); },
     /* One Paid on the frame the close is committed; Commit for the opening
        float's local write (§15.3). */
     committed: function () {
@@ -532,7 +549,8 @@
     },
     render: function () {
       var self = this, s = this.c(), open = this.str('mode', 'close') === 'open', f = F();
-      var tol = Number(this.str('tolerance', '20')) || 20;
+      var tol = this.tol();
+      if (this.__stage === 'card') { this.renderCard(); return; }
       var row = function (d) {
         var n = self.__n[d] || 0, sub = fromCents(Math.round(d * 100) * n), lab = money(d);
         var on = String(d) === self.__sel;
@@ -558,26 +576,46 @@
         '<div class="sl ex"' + (this.__any ? '' : ' style="visibility:hidden"') + '><span class="k-body">' + th('count.expected') + '</span><span class="k-heading k-num" data-k-total>' + numHtml(money(this.expected())) + '</span></div>' +
         /* Counted is read against Expected, never added into it: no data-k-part. */
         (this.__any ? '<div class="sl"><span class="k-body k-ink2">' + th('count.counted') + '</span><span class="k-body k-num">' + numHtml(money(this.counted())) + '</span></div>' : '');
-      var canCommit = open ? this.__any : this.__any;
+      var outside = this.outside(), needReason = outside && !this.__reason;
+      var canCommit = this.__any && !needReason;
+      var why = !this.__any && !open ? t('count.close_hint') : (needReason ? t('count.reason_hint') : '');
+      var reasons = outside ? '<div class="rs" data-reasons><p class="k-callout rq">' + th('count.reason') + '</p>' +
+        C.chip.group({ options: GAP_REASONS.map(function (r) { return { value: r[0], label: t(r[1]) }; }), value: this.__reason, label: t('count.reason') }) + '</div>' : '';
       this.shadowRoot.innerHTML = '<div class="cc"><div class="col">' +
         '<h2 class="k-heading ti">' + th('count.title') + '</h2>' +
-        '<div class="fig" data-tone="' + tone + '"><span class="k-foot k-ink2">' + esc(figLabel) + '</span><span class="k-display k-num" data-key-figure>' + numHtml(fig) + '</span></div>' +
+        '<div class="fig" data-tone="' + tone + '"><span class="k-foot k-ink2">' + esc(figLabel) + '</span><span class="k-display k-num" data-key-figure>' + numHtml(fig) + '</span></div>' + reasons +
         (open && s.lastFloat ? C.chip.group({ options: [{ value: 'same', label: t('count.same_as_last', { amount: money(s.lastFloat) }), ariaLabel: t('count.same_as_last_a11y', { amount: money(s.lastFloat) }) }], mode: 'multi' }) : '') +
         '<div data-k-group><p class="k-foot k-ink2 sh">' + th('count.notes') + '</p><ul class="dl">' + NOTES.map(row).join('') + '</ul>' +
         '<p class="k-foot k-ink2 sh">' + th('count.coins') + '</p><ul class="dl">' + COINS.map(row).join('') + '</ul></div>' +
         C.button.render({ variant: 'plain', label: t('count.enter_total'), id: 'et', attrs: ' data-w="enter-total"' }) +
         '<div class="sum">' + summary + '</div></div>' +
         '<div class="kp">' + C.keypad.render({ next: true, label: t('count.title') }) +
-        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cm', attrs: ' data-w="commit"', label: t(open ? 'count.open' : 'count.close'), disabled: !canCommit, reason: !canCommit && !open ? t('count.close_hint') : '' }) +
+        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cm', attrs: ' data-w="commit"', label: t(open ? 'count.open' : 'count.close'), disabled: !canCommit, reason: !canCommit ? why : '' }) +
+        '</div></div>';
+    },
+    /* The card step: the terminal's Z total typed beside Kiwi's own. */
+    renderCard: function () {
+      var f = F(), typed = C.keypad.value(this.__card), kiwi = Number(this.cardKiwi) || 0, has = this.__card !== '';
+      var cd = fromCents(cents(typed) - cents(kiwi));
+      this.shadowRoot.innerHTML = '<div class="cc"><div class="col">' +
+        '<div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'cb', attrs: ' data-w="card-back"' }) +
+        '<h2 class="k-heading ti">' + th('count.card_title') + '</h2></div>' +
+        '<div class="fig"><span class="k-foot k-ink2">' + th('count.card_title') + '</span><span class="k-display k-num" data-key-figure>' + numHtml(money(typed)) + '</span></div>' +
+        '<p class="k-body">' + th('count.card_kiwi', { amount: money(kiwi) }) + '</p>' +
+        (has ? '<p class="k-body"><span class="k-ink2">' + th('count.difference') + '</span> <span class="k-num">' + numHtml(f ? f.signedMoney(cd, 2) : String(cd)) + '</span></p>' : '') +
+        '<p class="k-foot k-ink2">' + th('count.card_hint') + '</p></div>' +
+        '<div class="kp">' + C.keypad.render({ label: t('count.card_title') }) +
+        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cm', attrs: ' data-w="commit"', label: t('count.close'), disabled: !has, reason: !has ? t('count.card_hint') : '' }) +
         '</div></div>';
     }
   });
   K.define('k-cash-count', KCashCount, {
-    attrs: ['mode', 'tolerance'], props: ['count'],
+    attrs: ['mode', 'tolerance'], props: ['count', 'cardKiwi'],
     css: C.button.css + C.chip.css + C.keypad.css + ':host{display:block}' +
       '.cc{display:grid;grid-template-columns:minmax(0,360px) 288px;gap:24px}' +
       '@media (max-width:719px){.cc{grid-template-columns:minmax(0,1fr)}}' +
       '.ti{margin:0 0 8px}.fig{display:flex;flex-direction:column;margin-block-end:12px}' +
+      '.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.hd .ti{margin:0}.rs{margin-block-end:12px}.rq{margin:0 0 8px}' +
       '.fig[data-tone="warning"] .k-display{color:var(--k-warning)}.fig[data-tone="danger"] .k-display{color:var(--k-danger)}' +
       '.sh{margin:12px 0 4px;font-weight:var(--k-fw-footnote-strong)}.dl{list-style:none;margin:0;padding:0}' +
       '.dr{display:flex;align-items:center;gap:8px;min-height:56px;padding-inline:16px;box-shadow:inset 0 -1px 0 var(--k-line)}' +

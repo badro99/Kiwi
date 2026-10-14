@@ -321,4 +321,39 @@ const beforeCloseMutation = caisseSource.slice(closeStart, caisseSource.indexOf(
 assert.match(beforeCloseMutation, /countedRaw === ''[\s\S]*return;/,
   'the cashier cannot dismiss the close sheet or clear the shift without a count');
 
-console.log('✓ cash-sessions auth: operator queue held, paired route accepted, PIN actor preserved');
+/* Étape 4 (7): a close beyond tolerance carries its reason (gapReason), one
+   of four codes, a close only; a base that lags schema.sql heals the column. */
+const reasonClose = await postCashSession({
+  env,
+  request: request(validEvent({
+    id: 'cash-route-close-reason', eventType: 'close', expectedCents: 50000, countedCents: 47500, gapCents: -2500, gapReason: 'counting',
+  }), `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(reasonClose.status, 201, 'a close with a known gap reason is taken');
+assert.equal(db.prepare("SELECT gap_reason FROM cash_session_events WHERE id = 'cash-route-close-reason'").get().gap_reason, 'counting',
+  'the gap reason is stored beside the close');
+const badReason = await postCashSession({
+  env,
+  request: request(validEvent({
+    id: 'cash-route-close-bad-reason', eventType: 'close', expectedCents: 50000, countedCents: 47500, gapCents: -2500, gapReason: 'theft',
+  }), `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(badReason.status, 422, 'a gap reason outside the four codes is refused');
+const reasonOnOpen = await postCashSession({
+  env,
+  request: request(validEvent({ id: 'cash-route-open-reason', sessionId: 'session-route-2', gapReason: 'counting' }),
+    `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(reasonOnOpen.status, 422, 'a gap reason belongs to a close only');
+db.exec('ALTER TABLE cash_session_events DROP COLUMN gap_reason');
+const healed = await postCashSession({
+  env,
+  request: request(validEvent({
+    id: 'cash-route-close-heal', eventType: 'close', expectedCents: 50000, countedCents: 52000, gapCents: 2000, gapReason: 'change',
+  }), `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(healed.status, 201, 'a base without the column still takes the close');
+assert.equal(db.prepare("SELECT gap_reason FROM cash_session_events WHERE id = 'cash-route-close-heal'").get().gap_reason, 'change',
+  'and gets the column on first use, with the reason');
+
+console.log('✓ cash-sessions auth: operator queue held, paired route accepted, PIN actor preserved, gap reasons kept');
