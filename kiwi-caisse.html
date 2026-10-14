@@ -150,13 +150,13 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=15">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=16">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=3") +
-        js("assets/kit/strings/till.en.js?v=3") +
-        js("assets/kit/strings/till.ar.js?v=3") +
+        js("assets/kit/strings/till.fr.js?v=4") +
+        js("assets/kit/strings/till.en.js?v=4") +
+        js("assets/kit/strings/till.ar.js?v=4") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -180,6 +180,7 @@
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=1") +
+        js("assets/kit/till-z.js?v=1") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -17396,8 +17397,21 @@
        La caisse ne se recharge qu'ensuite : recharger d'abord, c'était fermer la
        porte avant d'avoir posé la question. */
     let closedReport = null;
+    /* kiwiSkin2027:till · le rapport Z sur le kit (étape 4 (14), §18.9). Son
+       numéro : les clôtures du classeur de ce commerce (closedCount, partagé
+       par KiwiCloudDoc), celle-ci comprise ; 1 sur la démo. */
+    function tillKitZNumber() {
+      let n = 0;
+      try { (window.KiwiDayReport.list() || []).forEach((d) => { n += Number(d && d.closedCount) || 0; }); } catch (_) {}
+      return Math.max(1, n);
+    }
     function showPostClose(report) {
       closedReport = report;
+      if (tillKitOn() && window.KiwiTillZ && window.KiwiTillZ.open({
+        report, n: tillKitZNumber(),
+        onPrint: () => doPrintDayReport(report, ''),
+        onDone: finishClose,
+      })) return;
       const veil = $('#zsheet-modal');
       if (!veil) { finishClose(); return; }
       /* Le vocabulaire du métier dans la langue de la caisse : « 34 dishes » et non
