@@ -85,13 +85,13 @@ console.log('■ OrderPro sends an old browser there, and only with the skin on'
 const page = read('OrderPro.html');
 const head = page.match(/<script>\s*\(function \(d, q\) \{[\s\S]*?<\/script>/);
 ok(!!head && page.indexOf(head[0]) < page.indexOf('<title>'), 'the check is in the head');
-function boot({ search = '', stored = null, supports = true } = {}) {
+function boot({ search = '', stored = null, supports = true, mark = null } = {}) {
   const went = [], wrote = [], attrs = {};
   const ctx = {
     location: { search, replace: (u) => went.push(u) },
     localStorage: { getItem: (k) => (k === 'kiwiSkin2027:ordering' ? stored : null) },
     CSS: { supports: () => supports },
-    document: { documentElement: { setAttribute: (k, v) => { attrs[k] = v; } }, write: (h) => wrote.push(h) },
+    document: { documentElement: { getAttribute: (k) => (k === 'data-store-skin' ? mark : null), setAttribute: (k, v) => { attrs[k] = v; } }, write: (h) => wrote.push(h) },
   };
   ctx.window = ctx;
   vm.runInNewContext(head[0].replace(/^<script>|<\/script>$/g, ''), ctx);
@@ -107,6 +107,52 @@ b = boot({ search: '?s=x', stored: '1' });
 ok(b.attrs['data-skin-2027'] === 'ordering' && b.attrs['data-theme'] === 'light'
   && /assets\/kit\/tokens-2027\.css\?v=\d+/.test(b.wrote) && /assets\/kit\/ordering\.css\?v=\d+/.test(b.wrote) && !/<script/.test(b.wrote),
   'flag on: the kit’s tokens and the skin’s sheet, no script');
+b = boot({ search: '?s=x&t=2', mark: '2027' });
+ok(b.attrs['data-skin-2027'] === 'ordering' && /assets\/kit\/ordering\.css\?v=\d+/.test(b.wrote), 'a store the operator switched on: the skin, with no flag in the browser');
+b = boot({ search: '?s=x&t=2', mark: '2027', supports: false });
+ok(b.went.join() === '/order/basic?s=x&t=2', 'that store, below the guest minimum: the basic page');
+
+console.log('■ the server marks the page for a store switched on (features.skin2027)');
+sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('skin-cafe', JSON.stringify({ orderpro: true, skin2027: true }), 'Skin', Date.now());
+sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('plain-cafe', JSON.stringify({ orderpro: true, skin2027: false }), 'Plain', Date.now());
+const PAGE = '<!doctype html>\n<html lang="fr">\n<head></head><body>OrderPro</body></html>';
+async function serve(url, { method = 'GET', headers = {} } = {}) {
+  const asked = [];
+  const res = await middleware.onRequest({
+    request: new Request(url, { method, headers: { 'CF-Connecting-IP': '10.5.5.6', ...headers } }),
+    env: { DB, AUTH_SECRET: 'order-basic-secret' },
+    next: async (req) => {
+      asked.push(req || null);
+      return new Response(method === 'HEAD' ? null : PAGE, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', ETag: '"page-1"', 'Cache-Control': 'public, max-age=0' } });
+    },
+  });
+  return { res, html: method === 'HEAD' ? '' : await res.text(), asked };
+}
+let s1 = await serve('https://kiwi-os.com/order?s=skin-cafe&t=4', { headers: { 'If-None-Match': '"page-1"' } });
+ok(s1.html.includes('<html data-store-skin="2027" lang="fr">') && s1.html.split('data-store-skin').length === 2, '/order for that store: <html data-store-skin="2027">, once');
+ok(s1.asked[0] && new URL(s1.asked[0].url).pathname === '/OrderPro' && new URL(s1.asked[0].url).search === '?s=skin-cafe&t=4', 'still the rewrite to /OrderPro, query untouched');
+ok(s1.asked[0] && !s1.asked[0].headers.get('If-None-Match') && !s1.res.headers.get('ETag'), 'a copy cached before the switch cannot come back as a 304 without the mark');
+s1 = await serve('https://kiwi-os.com/OrderPro?s=skin-cafe');
+ok(s1.html.includes('data-store-skin="2027"'), '/OrderPro for that store: marked too');
+for (const [url, why] of [
+  ['https://kiwi-os.com/order?s=plain-cafe&t=4', 'a store with skin2027 false'],
+  ['https://kiwi-os.com/order?s=nobody', 'a store with no row'],
+  ['https://kiwi-os.com/order?s=demo', 'the demo'],
+  ['https://kiwi-os.com/order', 'no store'],
+]) {
+  const r2 = await serve(url, { headers: { 'If-None-Match': '"page-1"' } });
+  ok(r2.html === PAGE && r2.asked[0] && r2.asked[0].headers.get('If-None-Match') === '"page-1"', why + ': the page untouched, its cache too');
+}
+const headReq = await serve('https://kiwi-os.com/order?s=skin-cafe', { method: 'HEAD' });
+ok(headReq.res.status === 200 && headReq.res.headers.get('ETag') === '"page-1"', 'a HEAD request is passed through');
+const broken = await middleware.onRequest({
+  request: new Request('https://kiwi-os.com/order?s=skin-cafe', { headers: { 'CF-Connecting-IP': '10.5.5.7' } }),
+  env: { DB: { prepare() { throw new Error('d1 down'); } }, AUTH_SECRET: 'order-basic-secret' },
+  next: async () => new Response(PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } }),
+});
+ok((await broken.text()) === PAGE, 'the database down: the shipped page, never an error');
+const admin = read('kiwi-admin.html');
+ok(/\{ key:'skin2027', label:'Commande client · design 2027', off:true,/.test(admin), 'kiwi-admin: the operator switch, off unless set (an option, like Coût simple)');
 
 console.log(fail ? `order-basic-test: ${fail} failed, ${pass} passed` : `✓ order-basic-test · ${pass} checks`);
 process.exit(fail ? 1 : 0);

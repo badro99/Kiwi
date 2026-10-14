@@ -168,6 +168,39 @@ async function accountActive(env, aid, sessionVersion = 0) {
   }
 }
 
+/* The guest app in the 2027 skin, per store (design 2027 §21.1, stage 3c).
+ * An operator switches it on in kiwi-admin (features.skin2027, off unless
+ * explicitly true, like orderpro). The page has to know before its first
+ * paint, so the server marks <html data-store-skin="2027"> as it serves
+ * OrderPro for that store, and the page's head check does the rest (the kit's
+ * sheets, or the basic page for a browser below the guest minimum). Any other
+ * store, the demo, a HEAD request or a database error gets the page untouched.
+ * The conditional headers go: a copy cached before the switch must not come
+ * back as a 304 without the mark. */
+async function guestApp(request, env, next) {
+  const url = new URL(request.url);
+  const slug = (url.searchParams.get('s') || url.searchParams.get('store') || '').trim().slice(0, 64);
+  let on = false;
+  if (request.method === 'GET' && slug && slug !== 'demo' && env.DB) {
+    try {
+      const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(slug).first();
+      on = !!(row && row.features) && (JSON.parse(row.features) || {}).skin2027 === true;
+    } catch (_) { on = false; }
+  }
+  if (!on) return next(request);
+  const ask = new Headers(request.headers);
+  ask.delete('If-None-Match');
+  ask.delete('If-Modified-Since');
+  const res = await next(new Request(request, { headers: ask }));
+  if (!res || !res.ok || !/text\/html/i.test(res.headers.get('Content-Type') || '')) return res;
+  const html = (await res.text()).replace(/<html\b/i, '<html data-store-skin="2027"');
+  const headers = new Headers(res.headers);
+  headers.delete('Content-Length');
+  headers.delete('ETag');
+  headers.set('Cache-Control', 'no-cache');
+  return new Response(html, { status: res.status, headers });
+}
+
 async function routeRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
@@ -458,10 +491,10 @@ async function routeRequest(context) {
     || path === '/mentions-legales.html' || path === '/mentions-legales'
     || path === '/cookies.html' || path === '/cookies'
     || path === '/support.html' || path === '/support')) return next();
-  if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
+  if (isRead && (
     /* La page de base (design 2027 §4.1) : la carte en liste, pour un
      * navigateur sous le minimum client. functions/order/basic.js. */
-    || path === '/order/basic'
+    path === '/order/basic'
     || path === '/api/order' || path === '/api/order/session'
     /* La page d'accueil du client (Wi-Fi, avis, jeux, ftour) et ses quiz,
      * et l'écran de la salle qui affiche le classement. Rien de nominatif :
@@ -537,8 +570,10 @@ async function routeRequest(context) {
   if (isRead && path === '/order') {
     const rewritten = new URL(request.url);
     rewritten.pathname = '/OrderPro';
-    return next(new Request(rewritten, request));
+    return guestApp(new Request(rewritten, request), env, next);
   }
+  // The guest app itself is public, for a signed-in owner too: same mark.
+  if (isRead && (path === '/OrderPro.html' || path === '/OrderPro')) return guestApp(request, env, next);
 
   // Nothing configured → open site (local dev / preview without secrets).
   if (!authSecret && !sitePassword) return next();

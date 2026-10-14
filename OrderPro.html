@@ -24,14 +24,17 @@
        restaurant (order → caisse → kitchen) and boutique (scan → price/stock,
        info-only). See ORDERPRO_SPEC.md. -->
   <!-- Design 2027, stage 3c (spec §4.1, §13, §21.1): the guest app's 2027 skin,
-       behind its flag (localStorage kiwiSkin2027:ordering = '1', or ?skin=2027
-       for one load). Off, nothing below loads. On, a browser below the guest
+       behind its flag (localStorage kiwiSkin2027:ordering = '1', ?skin=2027
+       for one load, or a store an operator switched on: the server then serves
+       data-store-skin="2027" on the root element, functions/_middleware.js ›
+       guestApp).
+       Off, nothing below loads. On, a browser below the guest
        minimum goes to the basic page (functions/order/basic.js); any other gets
        the kit's tokens and assets/kit/ordering.css, and stays light, as shipped. -->
   <script>
     (function (d, q) {
       var on = false;
-      try { on = /[?&]skin=2027(&|$)/.test(q) || localStorage.getItem('kiwiSkin2027:ordering') === '1'; } catch (_) {}
+      try { on = d.documentElement.getAttribute('data-store-skin') === '2027' || /[?&]skin=2027(&|$)/.test(q) || localStorage.getItem('kiwiSkin2027:ordering') === '1'; } catch (_) {}
       if (!on) return;
       var C = window.CSS;
       if (!(C && C.supports && C.supports('selector(:where(a))') && C.supports('gap', '1px'))) return location.replace('/order/basic' + q);
