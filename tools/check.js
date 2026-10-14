@@ -2288,12 +2288,18 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       chiffre clé, l'objectif, la comparaison, les
  *                                       tuiles et les commandes sont ceux du rendu livré ;
  *                                       Hier déplace la période livrée ; une tuile et une
- *                                       commande ouvrent les livrées */
+ *                                       commande ouvrent les livrées
+ *   dash-orders-browser-test            les commandes (§18.2) : pages-pro.js publie son
+ *                                       rendu (KiwiOrdersPage, kiwi:orders-model) ; le
+ *                                       chiffre clé, le résumé et les lignes par heure
+ *                                       sont ceux du rendu livré ; le filtre et la période
+ *                                       déplacent les livrés ; une ligne ouvre la fiche */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['dash-home-browser-test.mjs', 'dash-home-browser-test'],
+    ['dash-orders-browser-test.mjs', 'dash-orders-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

@@ -211,6 +211,44 @@ handlers['nav-transactions'] = () => {
   const RANGE_LABEL = RANGE_LABEL_STR[lang] || RANGE_LABEL_STR.fr;
   const FILTERS     = [T.all, T.cards, T.mobile, T.cash, T.refunds];
 
+  /* Design 2027 (§18.2): what render() drew, for the kit's Orders page behind
+     the dashboard's flag (assets/kit/dash-orders.js). The kit's filter Other
+     is the shipped Mobile filter, the same wallet orders. */
+  const KIT_FILTER = { all: T.all, card: T.cards, cash: T.cash, other: T.mobile, refunds: T.refunds };
+  const KIT_RANGE  = { today: 'aujourdhui', yesterday: 'hier', d7: 'sept', d30: 'trente' };
+  let kitModel = null;
+  function kitPublish(m) {
+    const oneDay = activeRange === 'aujourdhui' || activeRange === 'hier';
+    const tz = window.KiwiDayReport?.timezone?.();
+    const locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-MA' : 'fr-FR';
+    kitModel = {
+      range: Object.keys(KIT_RANGE).find(k => KIT_RANGE[k] === activeRange),
+      filter: Object.keys(KIT_FILTER).find(k => KIT_FILTER[k] === activeFilter),
+      live: m.live, label: m.live ? T.heroLive : T.heroVolume + RANGE_LABEL[activeRange].toUpperCase(),
+      sumText: fmt0(Math.abs(m.heroSum)), unit: 'MAD', count: m.heroTotal, avgText: m.heroAvg + ' MAD',
+      filtered: activeFilter === T.all ? null : { label: activeFilter, count: m.total, sumText: fmt0(Math.abs(m.sumAmt)) + ' MAD' },
+      noOrders: T.noOrders, showAll: T.showAll,
+      hiddenText: m.hidden > 0 ? `${m.hidden} ${m.hidden > 1 ? T.olderOrdersHidden : T.olderOrderHidden}` : '',
+      rows: m.display.map(r => {
+        const hour = r.t.slice(0, 2) + ':00';
+        return {
+          id: r.id, time: r.t, method: r.n, staff: r.sale?.staff || '', ref: r.sale?.ref || '', table: r.sale?.table ?? null,
+          kind: r.amt < 0 ? 'refund' : r.sale?.method === 'wallet' ? 'other' : r.cat === T.cash ? 'cash' : 'card',
+          group: oneDay ? hour : new Date(r.sale?.ts ?? r.simIdx).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', timeZone: tz }) + ' · ' + hour,
+          amountText: (r.amt < 0 ? '−' : '') + fmt2(r.amt) + ' MAD'
+        };
+      })
+    };
+    try { window.dispatchEvent(new CustomEvent('kiwi:orders-model')); } catch (_) {}
+  }
+  window.KiwiOrdersPage = {
+    model: () => kitModel,
+    page: () => dr.el,
+    setRange: k => { const r = KIT_RANGE[k]; if (!r || r === activeRange) return; activeRange = r; activeFilter = T.all; expanded = false; render(); },
+    setFilter: k => { if (KIT_FILTER[k]) handlers['tx-filter'](null, KIT_FILTER[k]); },
+    showAll: () => handlers['tx-show-all']()
+  };
+
   let renderedSignature = "";
   const signature = rows => rows.map(r=>r.id+":"+r.amt).join("|");
   let host;
@@ -296,6 +334,7 @@ handlers['nav-transactions'] = () => {
     /* Live subtitle */
     const subEl = dr.el.querySelector('.genpage-head p, .kiwi-drawer-head p');
     if (subEl) subEl.textContent = `${heroTotal} ${heroTotal > 1 ? T.orders : T.order} · ${fmt0(Math.abs(heroSum))} MAD · ${RANGE_LABEL[activeRange]}`;
+    kitPublish({ live, heroSum, heroTotal, heroAvg, total, sumAmt, display, hidden });
   }
 
   render();

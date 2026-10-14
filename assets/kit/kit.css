@@ -244,10 +244,26 @@ html[data-k-home] .vexel-revenue-rail { display: none !important; }
 .k-dh__em { padding: 24px 16px; text-align: center; }
 .k-dh__em p { margin: 0; }
 
+/* The dashboard's Orders page on the kit (stage 5 (2), §18.2): the kit draws
+   the range, the key figure, the filter and the rows by hour over the shipped
+   render, which stays in the DOM and is not drawn, except its "show updated
+   orders" control. */
+.dash-genpage:has(#kit-orders) [data-tx-host] > :not([data-tx-refresh]) { display: none !important; }
+#kit-orders { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; color: var(--k-ink-1); }
+#kit-orders > k-segmented { max-width: 560px; }
+.k-do__fig, .k-do__rows { display: flex; flex-direction: column; gap: 4px; }
+.k-do__rows { gap: 8px; }
+.k-do__kf, .k-do__sum, .k-do__h { margin: 0; }
+.k-do__kf { display: flex; align-items: baseline; flex-wrap: wrap; }
+.k-do__h { padding-top: 8px; }
+.k-do__em, .k-do__more { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; text-align: center; }
+.k-do__em[hidden], .k-do__more[hidden] { display: none; }
+.k-do__em p, .k-do__more p { margin: 0; }
+
 /* The type steps for kit content drawn in the light DOM (the till's online
-   orders and Z sheet, the dashboard's Home), the same rules core.js gives
-   every shadow root (§6.2). */
-#kit-home, #kit-online, .k-z { font-family: var(--k-font); }
+   orders and Z sheet, the dashboard's Home and Orders), the same rules core.js
+   gives every shadow root (§6.2). */
+#kit-home, #kit-orders, #kit-online, .k-z { font-family: var(--k-font); }
 .k-display { font-size: var(--k-fs-display); line-height: var(--k-lh-display); font-weight: var(--k-fw-display); letter-spacing: var(--k-track-display); }
 .k-title { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
 .k-heading { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }

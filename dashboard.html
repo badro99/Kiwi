@@ -4596,9 +4596,9 @@
     /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
     var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
     document.write(
-      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=2">' +
+      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=3">' +
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-      '<link rel="stylesheet" href="assets/kit/kit.css?v=19">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=20">' +
       js("assets/kit/strings/kit.fr.js?v=2") +
       js("assets/kit/strings/kit.en.js?v=2") +
       js("assets/kit/strings/kit.ar.js?v=2") +
@@ -4620,7 +4620,9 @@
       js("assets/kit/layout.js?v=1") +
       js("assets/kit/nav.js?v=2") +
       js("assets/kit/dashboard.js?v=2") +
-      js("assets/kit/dash-home.js?v=1")
+      js("assets/kit/dash-home.js?v=1") +
+      /* Stage 5 (§18.2): Orders on the kit, over the shipped rows. */
+      js("assets/kit/dash-orders.js?v=1")
     );
   })();
 </script>
@@ -5587,7 +5589,7 @@
 <script src="assets/dateRange.js?v=74" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
-<script defer src="assets/dashboard-pwa.js?v=576"></script>
+<script defer src="assets/dashboard-pwa.js?v=578"></script>
 <script defer src="assets/dashboard-native.js?v=3"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -5737,7 +5739,7 @@
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2159" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2160" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
