@@ -1,0 +1,5 @@
+# Never convert line endings, on any machine. Asset stamps hash the raw bytes
+# (tools/stamps.js), so a checkout that turned LF into CRLF (Git for Windows'
+# default) would make every stamped asset look changed, and bump-stamp would
+# then re-stamp the whole site. Files keep the bytes they were committed with.
+* -text

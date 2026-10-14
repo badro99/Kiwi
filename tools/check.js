@@ -24,6 +24,20 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 
+/* Windows. The browser suites look for Chrome at its macOS and Linux paths and,
+ * finding none, print "○ skip" and exit 0, so a Windows run would pass with no
+ * browser assertion executed. Find Chrome where Windows installs it and hand it
+ * to every suite through the two variables they read. An explicit value wins. */
+if (process.platform === 'win32' && !process.env.KIWI_CHROMIUM_BIN) {
+  const winChrome = [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA]
+    .filter(Boolean)
+    .flatMap((dir) => [path.join(dir, 'Google', 'Chrome', 'Application', 'chrome.exe'), path.join(dir, 'Chromium', 'Application', 'chrome.exe')])
+    .find((f) => fs.existsSync(f));
+  if (winChrome) process.env.KIWI_CHROMIUM_BIN = winChrome;
+  else console.log('⚠ Windows: no Chrome found; set KIWI_CHROMIUM_BIN, or every browser suite will skip');
+}
+if (process.env.KIWI_CHROMIUM_BIN && !process.env.CHROME_BIN) process.env.CHROME_BIN = process.env.KIWI_CHROMIUM_BIN;
+
 /* One run at a time, and no child test can hang the gate (tools/check-guard.js). */
 if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
 /* The machine-wide lock exists so two runs do not drown the machine in headless

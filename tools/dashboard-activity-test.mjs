@@ -189,7 +189,7 @@ console.log(`Dashboard activity: ${checks} behavioral checks passed.`);
 if (process.env.KIWI_ACTIVITY_VISUAL === '1') {
   const { createRequire } = await import('node:module');
   const require = createRequire(new URL('../app/package.json', import.meta.url));
-  const browser = await require('puppeteer-core').launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  const browser = await require('puppeteer-core').launch({ executablePath: process.env.KIWI_CHROMIUM_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
   try {
     const page = await browser.newPage();
     await page.setRequestInterception(true); page.on('request', r => r.abort());

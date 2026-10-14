@@ -5,6 +5,47 @@ another machine. Read `CLAUDE.md` first (the operating rules), then this file,
 then the spec sections it points to. Everything below was true at `main` when it
 was written; check `git log` for anything newer before you trust it.
 
+## 0. You are on Windows: set up first
+
+This work was done on the owner's Mac. You have GitHub and Cloudflare, not the
+Mac. Before the first commit:
+
+1. **Clone fresh** (`git clone https://github.com/zaka33333-hash/Kiwi.git`), at
+   or after the commit that added `.gitattributes`. It sets `* -text`: Git never
+   converts line endings. That matters because asset stamps hash raw bytes
+   (`tools/stamps.js`); a CRLF checkout (Git for Windows' default) makes every
+   stamped asset look changed, and `bump-stamp` would then re-stamp the whole
+   site. Check it: `git ls-files --eol | findstr "w/crlf"` lists only
+   `app/android/gradlew.bat` and one licence text, both committed that way.
+2. **Node 24** (the tests use `node:sqlite`, which needs 22.5 or later). Then
+   `npm ci` inside `app/` of every worktree (puppeteer-core and the bundle
+   tests live there). There is no other install: the root has no dependencies.
+3. **Google Chrome** at its normal place. `tools/check.js` finds it on Windows
+   and hands it to the browser suites (`KIWI_CHROMIUM_BIN`). If it prints
+   "no Chrome found", set `$env:KIWI_CHROMIUM_BIN` to `chrome.exe`'s path.
+   Without Chrome every browser suite prints "skip" and the gate still passes,
+   with warnings: read the warnings, a skipped suite is not a green one.
+4. **Git Bash** (comes with Git for Windows) for the few `sh` scripts:
+   `sh tools/install-hooks.sh` once per clone (the stamp pre-commit hook).
+5. **Prove the base first.** Run `node tools/check.js` once on an untouched
+   `main` before your first change. The suites were written on macOS; a suite
+   that fails there on Windows only is a portability bug to fix in the test
+   (paths, shell tools), not a product failure, and not yours to hide.
+6. **What this PC cannot do:** iOS builds and the iOS simulator runs (no Xcode;
+   check.js prints those as "not run", never as passed). Stages 4 to 7 say
+   "Native build? Yes": land the web side, write any Swift a stage needs, and
+   say in the "as landed" paragraph that the native build waits for a session
+   on the Mac. The owner cuts TestFlight builds there (next build number: 42).
+7. **Cloudflare:** a deploy is a push to the zaka mirror (Cloudflare Pages
+   builds `main`; its check-run on the commit says when it is live). Production
+   D1 is `kiwi-sales` (`78c72b8d-8a91-4085-bfac-e41cadb065af`). It lags
+   `schema.sql`: query the live schema before assuming a column. A migration
+   (stage 4's `tip_cents`) goes through `npx wrangler d1 execute kiwi-sales
+   --remote --command "…"` after `npx wrangler login`, additive and idempotent,
+   and gets written into the "as landed" paragraph. Store options go through
+   `kiwi-admin` (`/api/admin/config`), never by hand, except as the console's
+   own audited write.
+
 ## 1. Where things stand
 
 The direction is `docs/specs/kiwi-design-2027.md` (revision 25, about 5 200
@@ -83,17 +124,20 @@ check.js does not name guards nothing.
 
 ## 3. How this work has been done (keep doing it)
 
-- **Work in a git worktree off `main`**, never in the shared checkout
-  (`git worktree add -b <branch> /private/tmp/kiwi-<name> origin/main`).
-  Other sessions edit the shared one. In a new worktree, run `npm ci` inside
+- **Work in a git worktree off `main`**, not in your main clone
+  (`git worktree add -b <branch> ..\kiwi-wt\<name> origin/main`), so a
+  half-done slice never sits where a gate or another session reads it. In a new worktree, run `npm ci` inside
   `app/` before the gate (the bundle tests and puppeteer need it). **Never
   symlink `app/node_modules`**: `npm ci` follows the link and empties the real
   one.
 - **One commit per coherent slice**, message `kit 2027 · étape 4 (n) : …` (the
   history is in French; keep it), the footer for the model running.
 - **Gates:** `node tools/check.js --fast` between edits; the **full**
-  `node tools/check.js` (about 13 minutes) must be green on the exact commit
-  before a push. **Do not edit the worktree while its full gate runs**: its
+  `node tools/check.js` (about 13 minutes on the Mac) must be green on the exact
+  commit before a push. A commit that only touches Markdown no browser suite
+  reads may go out on the fast tier (it holds every Markdown check); say so in
+  the commit. `KIWI_CHECK_JOBS` and `KIWI_CHECK_BROWSER_JOBS` tune the
+  parallelism for the PC. **Do not edit the worktree while its full gate runs**: its
   verdict then matches no commit. A suite that fails in parallel reruns alone;
   only a solo failure is red. A timing suite (`kit-budget-browser-test`) can
   fail when other sessions' gates load the machine: prove it alone, never
@@ -132,7 +176,7 @@ check.js does not name guards nothing.
 - **Downloads need the owner's yes**, with file, source and size stated.
 - **Ask before** sending anything for the owner, or turning on a flag by default.
 
-## 5. Things that live only on the old Mac
+## 5. Things that live only on the owner's Mac
 
 - **iOS builds:** `KIWI_DEVELOPMENT_TEAM=H74H42538F KIWI_BUILD_NUMBER=<N> sh tools/app-archive.sh --upload`
   from a worktree at a commit Cloudflare has deployed (check-runs on the zaka

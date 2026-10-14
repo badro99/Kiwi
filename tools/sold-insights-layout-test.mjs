@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(ROOT, 'app', 'package.json'));
 const puppeteer = require('puppeteer-core');
-const chrome = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium']
-  .find((candidate) => fs.existsSync(candidate));
+const chrome = [process.env.KIWI_CHROMIUM_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium']
+  .find((candidate) => candidate && fs.existsSync(candidate));
 if (!chrome) throw new Error('Chromium/Chrome executable not found');
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>

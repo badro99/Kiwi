@@ -14,6 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(ROOT, 'app', 'package.json'));
 const puppeteer = require('puppeteer-core');
 function findChrome() {
+  if (process.env.KIWI_CHROMIUM_BIN) return process.env.KIWI_CHROMIUM_BIN;
   if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
   const candidates = [
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
