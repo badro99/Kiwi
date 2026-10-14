@@ -153,8 +153,8 @@ html[data-k-till] #rp-active { display: none !important; }
 /* The menu pane on the kit's ground, so its surface-1 tiles read as tiles (§18.3);
    the takeaway view only: the floor plan keeps its shipped backdrop. */
 html[data-k-till] .view-vrap { background-color: var(--k-bg); }
-#kit-bill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-#kit-bill > k-bill { flex: 1; min-height: 0; }
+#kit-bill, .k-till-bill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#kit-bill > k-bill, .k-till-bill > k-bill { flex: 1; min-height: 0; }
 /* The bill pane by width band (layout.js tillLayout, §13.3): 432 from 1180, 360
    from 1000; narrower windows keep the shipped panel. */
 @media (min-width: 1000px) {
@@ -165,12 +165,12 @@ html[data-k-till] .view-vrap { background-color: var(--k-bg); }
 }
 /* The payment pushes inside the bill pane (stage 4 (2), §18.3): the pane's
    ground under the method rows, the bill's 24 in, the push on --k-dur-5. */
-#kit-bill > k-pay, #kit-bill > k-split, #kit-bill > k-discount { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); background-color: var(--k-bg); }
+#kit-bill > k-pay, #kit-bill > k-split, #kit-bill > k-discount, .k-till-bill > k-pay { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); background-color: var(--k-bg); }
 @keyframes k-till-push { from { opacity: 0; transform: translateX(24px); } }
 @keyframes k-till-push-rtl { from { opacity: 0; transform: translateX(-24px); } }
 @media (prefers-reduced-motion: no-preference) {
-  #kit-bill[data-paying] > k-pay, #kit-bill[data-paying] > k-split, #kit-bill[data-paying] > k-discount { animation: k-till-push var(--k-dur-5) var(--k-glide) both; }
-  [dir="rtl"] #kit-bill[data-paying] > k-pay, [dir="rtl"] #kit-bill[data-paying] > k-split, [dir="rtl"] #kit-bill[data-paying] > k-discount { animation-name: k-till-push-rtl; }
+  #kit-bill[data-paying] > k-pay, #kit-bill[data-paying] > k-split, #kit-bill[data-paying] > k-discount, .k-till-bill[data-paying] > k-pay { animation: k-till-push var(--k-dur-5) var(--k-glide) both; }
+  [dir="rtl"] #kit-bill[data-paying] > k-pay, [dir="rtl"] #kit-bill[data-paying] > k-split, [dir="rtl"] #kit-bill[data-paying] > k-discount, [dir="rtl"] .k-till-bill[data-paying] > k-pay { animation-name: k-till-push-rtl; }
 }
 /* The compact payment (stage 4 (2), §18.3 height forms): a layer over the
    menu pane and the bill pane, from the menu pane's start; below 514 the page

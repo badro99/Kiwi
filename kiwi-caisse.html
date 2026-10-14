@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=16">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=17">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -176,7 +176,7 @@
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=2") +
-        js("assets/kit/till.js?v=9") +
+        js("assets/kit/till.js?v=10") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=1") +
@@ -10587,6 +10587,9 @@
        4 (3). Une part de formule se change par sa formule, comme au livré. */
     let tillKit = false;
     function tillKitOn() {
+      /* Un métier de pos-dispatch est à l'écran (body.is-pos) : le cadre
+         partagé est le sien (étape 4 (15)), la caisse restaurant n'y peint pas. */
+      if (document.body.classList.contains('is-pos')) return false;
       if (tillKit) return true;
       if (!window.KiwiTillFrame || !window.KiwiKit) return false;
       const grid = $('#menu-grid'), panel = $('.rightpanel');
@@ -10637,7 +10640,7 @@
           online.id = 'kit-online';
           online.hidden = true;
           vrapBoard.insertBefore(online, vrapBoard.firstChild);
-          window.KiwiTillOnline.mount(online, { onPaint: () => { if (tillKit) window.KiwiTillFrame.paint({ rail: tillKitRail() }); } });
+          window.KiwiTillOnline.mount(online, { onPaint: () => { if (tillKitOn()) window.KiwiTillFrame.paint({ rail: tillKitRail() }); } });
           const oldChip = document.getElementById('kop-chip');
           if (oldChip) oldChip.remove();
         }
@@ -11023,7 +11026,7 @@
       else say.textContent = text;
     }
     function tillKitSync() {
-      if (!tillKit) return;
+      if (!tillKitOn()) return;
       const rows = tillKitSyncRows();
       if (tillKitLocked()) return;            // R7 : calculé, ni dessiné ni annoncé
       const has = (n) => rows.find((r) => r.n === n);
