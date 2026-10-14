@@ -6711,7 +6711,7 @@
 
     const m = window.Kiwi.modal({
       title: t('addBackupSupTitle'),
-      desc: `${it.name} · ${catLabel(it.category)}`,
+      desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,
       width: 520,
       body: `
         <div class="st-mb-field" style="margin-bottom:12px;">
@@ -6848,7 +6848,7 @@
     const it = getInv().find(x => x.id === itemId); if (!it) return;
     const m = window.Kiwi.modal({
       title: `Mouvement · ${it.name}`,
-      desc: `Stock actuel : ${fmtUnit(currentStockFor(it), it.unit)}`,
+      desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,
       width: 560,
       body: `
         <div class="st-mb-row two">
@@ -6915,7 +6915,7 @@
 
     const m = window.Kiwi.modal({
       title: it.name,
-      desc: `${catLabel(it.category)} · ${st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut')}`,
+      desc: `${esc(catLabel(it.category))} · ${st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut')}`,
       width: 720,
       body: `
         <div class="st-md-2col">

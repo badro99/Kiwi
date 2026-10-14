@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · Les noms saisis par le commerçant n'entrent pas en HTML brut
+ *
+ * Kiwi.modal() insère `desc` tel quel dans un <p> (assets/interactive.js : des
+ * appelants y passent volontairement du balisage, on ne change donc pas la
+ * fenêtre). La barrière est chez l'APPELANT : un nom de zone, de catégorie, de
+ * produit ou de client contenant <img onerror=…> s'exécutait à l'ouverture de
+ * la fenêtre de confirmation. Même défaut dans le rendu des résultats du scan
+ * de documents (agent-vision.js), où le texte vient d'une facture photographiée.
+ * ─────────────────────────────────────────────────────────────────────────── */
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+let controls = 0;
+const has = (src, needle, label) => { assert.ok(src.includes(needle), label); controls++; };
+const hasNot = (src, needle, label) => { assert.ok(!src.includes(needle), label); controls++; };
+
+const interactive = read('assets/interactive.js');
+has(interactive, '${desc ? `<p>${desc}</p>` : \'\'}', 'Kiwi.modal garde `desc` comme balisage (des appelants en dépendent) : la barrière est chez l\'appelant');
+
+const pages = read('assets/pages-pro.js');
+has(pages, 'desc: T.removeDesc(esc(`${t.model} · ${locName(t.loc)}`)),', 'terminal retiré : modèle et lieu échappés');
+has(pages, 'desc: T.deleteZoneDesc(pdsEsc(z.name), count),', 'plan de salle : nom de zone échappé');
+has(pages, 'desc: `« ${_esc(c.name)} » contient', 'boutique : nom de catégorie échappé');
+hasNot(pages, 'desc: T.deleteZoneDesc(z.name, count)', 'plus de nom de zone brut');
+hasNot(pages, 'desc: `« ${c.name} » contient', 'plus de nom de catégorie brut');
+
+const stock = read('assets/stock.js');
+has(stock, 'desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,', 'stock : article et catégorie échappés (fournisseur de secours)');
+has(stock, 'desc: `Stock actuel : ${esc(fmtUnit(currentStockFor(it), it.unit))}`,', 'stock : unité échappée');
+has(stock, 'desc: `${esc(catLabel(it.category))} · ${st ===', 'stock : catégorie échappée (fiche article)');
+hasNot(stock, 'desc: `${it.name} · ${catLabel(it.category)}`', 'plus d\'article brut dans la description');
+
+const hotel = read('assets/hotel.js');
+has(hotel, "desc: esc(booking.customer.name) + ' · ' + esc(cuDay(", 'hôtel : nom du client échappé dans « Libérer cette chambre »');
+has(hotel, 'dernier : ${esc(g.last)}', 'hôtel : fiche client échappée');
+
+/* Le scan de documents : tout ce qui vient du modèle ou du fichier passe par esc(). */
+const vision = read('assets/agent-vision.js');
+const escSrc = vision.slice(vision.indexOf('function esc(v)'), vision.indexOf('function toast(msg)'));
+const sandbox = {};
+vm.createContext(sandbox);
+vm.runInContext(escSrc + '\nglobalThis.esc = esc;', sandbox);
+const evil = '<img src=x onerror=alert(1)>"\'&';
+const out = sandbox.esc(evil);
+assert.ok(!/[<>"']/.test(out) && out.includes('&lt;img') && out.endsWith('&amp;'), 'esc() neutralise < > " \' &');
+controls++;
+for (const raw of [
+  /\+ ent\.supplier \+/, /\+ ent\.date \+/, /\+ ent\.invoiceNumber \+/, /\+ it\.name \+/,
+  /\+ \(data\.title \|\|/, /\+ \(data\.summary \|\|/, /\+ \(data\.categoryLabel \|\|/,
+  /\+ filename \+/, /\+ \(err\.message \|\|/, /src="' \+ dataUrl/, /\n\s+act\.label \+/,
+]) { assert.ok(!raw.test(vision), 'agent-vision : plus de concaténation brute ' + raw); controls++; }
+for (const safe of [
+  'esc(ent.supplier)', 'esc(ent.date)', 'esc(ent.invoiceNumber)', 'esc(it.name)', 'esc(data.title ||', 'esc(data.summary ||',
+  'esc(data.categoryLabel ||', 'esc(filename)', 'esc(err.message ||', 'esc(dataUrl)', 'esc(act.label)', 'esc(act.type)',
+]) has(vision, safe, 'agent-vision : ' + safe);
+
+console.log('modal-desc-escape-test: ' + controls + ' controls passed');

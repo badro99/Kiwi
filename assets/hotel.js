@@ -2866,7 +2866,7 @@
     const m = K().modal({
       tag: 'CLIENT · ' + g.country.toUpperCase(),
       title: g.name,
-      desc: `${g.stays} séjour${g.stays > 1 ? 's' : ''} · dernier : ${g.last}`,
+      desc: `${g.stays} séjour${g.stays > 1 ? 's' : ''} · dernier : ${esc(g.last)}`,
       width: 520,
       body: `
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
@@ -9172,7 +9172,7 @@
     if (!booking) return;
 
       openModal?.close?.();
-      const m = K().modal({ tag: tx('ANNULATION'), title: tx('Libérer cette chambre ?'), desc: booking.customer.name + ' · ' + cuDay(booking.hotel.checkIn) + hxTo() + cuDay(booking.hotel.checkOut), width: 460,
+      const m = K().modal({ tag: tx('ANNULATION'), title: tx('Libérer cette chambre ?'), desc: esc(booking.customer.name) + ' · ' + esc(cuDay(booking.hotel.checkIn) + hxTo() + cuDay(booking.hotel.checkOut)), width: 460,
         body: `<p style="font-size:13px;line-height:1.6;color:var(--n-600);">${tx('Le séjour restera dans l’historique avec le statut annulé. La chambre redeviendra immédiatement réservable en direct et sur la saisie OTA.')}</p><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-stay-cancel-close">${tx('Garder le séjour')}</button><button class="hx-btn warn" data-action="hx-stay-cancel-confirm" data-arg="${esc(booking.id)}">${tx('Annuler et libérer')}</button></div>` });
       openModal = { el: m.el, close: m.close };
     };

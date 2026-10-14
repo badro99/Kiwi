@@ -821,7 +821,7 @@ handlers['nav-terminaux'] = () => {
     const m = modal({
       title: T.removeTitle,
       width: 420,
-      desc: T.removeDesc(`${t.model} · ${locName(t.loc)}`),
+      desc: T.removeDesc(esc(`${t.model} · ${locName(t.loc)}`)),
       body: `
         <div style="display:flex; gap:12px; align-items:center; padding:12px; background:var(--paper-soft); border-radius:10px; border:1px solid var(--n-200);">
           <div style="width:56px; height:44px; border-radius:8px; background:var(--surface); border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; padding:5px; flex-shrink:0;">
@@ -8958,7 +8958,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       const m = modal({
         tag: T.tagPdS,
         title: T.deleteZoneTitle,
-        desc: T.deleteZoneDesc(z.name, count),
+        desc: T.deleteZoneDesc(pdsEsc(z.name), count),
         width: 480,
         body: '',
         foot: `
@@ -15571,7 +15571,7 @@ handlers['bqx-cat-del'] = (_el, arg) => {
   const others = cat.listCategories().filter((x) => x.id !== arg);
   _bqxModal = modal({
     title: 'Supprimer cette catégorie ?', width: 480,
-    desc: `« ${c.name} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
+    desc: `« ${_esc(c.name)} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
     body: `<div class="kf-group"><label class="kf-label">Déplacer les produits vers</label>
       <select class="kf-input" data-bqx-reassign><option value="">Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
       <div class="kx-warn-box danger"><div class="hd">Suppression</div><ul><li>La catégorie disparaît de la caisse et du dashboard.</li><li>Les produits sont conservés et déplacés, jamais supprimés.</li></ul></div>`,

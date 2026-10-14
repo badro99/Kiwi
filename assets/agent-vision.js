@@ -22,6 +22,15 @@
   var MAX_DIM = 1600;
   var JPEG_QUALITY = 0.85;
 
+  /* Tout ce que le modèle lit sur un document (fournisseur, lignes, titre, résumé)
+     et tout nom de fichier est une donnée NON FIABLE : une facture peut contenir
+     du HTML. Rien de cela n'entre dans innerHTML sans passer par esc(). */
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   function toast(msg) {
     try {
       if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
@@ -137,8 +146,8 @@
     var isImg = type === 'image';
     state.previewEl.innerHTML =
       '<div class="kv-attach-chip">' +
-        (isImg ? '<img class="kv-attach-thumb" src="' + dataUrl + '" alt="Aperçu">' : '<span class="kv-attach-badge">PDF</span>') +
-        '<span class="kv-attach-name">' + (name || 'Fichier joint') + '</span>' +
+        (isImg ? '<img class="kv-attach-thumb" src="' + esc(dataUrl) + '" alt="Aperçu">' : '<span class="kv-attach-badge">PDF</span>') +
+        '<span class="kv-attach-name">' + esc(name || 'Fichier joint') + '</span>' +
         '<button type="button" class="kv-attach-del" title="Supprimer" aria-label="Supprimer">✕</button>' +
       '</div>';
 
@@ -168,9 +177,9 @@
       userMsg.innerHTML =
         '<div class="fa-bubble">' +
           '<div class="kv-msg-attachment">' +
-            '<img src="' + dataUrl + '" class="kv-bubble-thumb" alt="' + filename + '">' +
-            '<div><div class="kv-bubble-fname">' + filename + '</div>' +
-            '<div class="kv-bubble-prompt">' + (promptText || T().defaultPrompt) + '</div></div>' +
+            '<img src="' + esc(dataUrl) + '" class="kv-bubble-thumb" alt="' + esc(filename) + '">' +
+            '<div><div class="kv-bubble-fname">' + esc(filename) + '</div>' +
+            '<div class="kv-bubble-prompt">' + esc(promptText || T().defaultPrompt) + '</div></div>' +
           '</div>' +
         '</div>';
       thread.appendChild(userMsg);
@@ -221,7 +230,7 @@
       if (thread) {
         var errMsg = document.createElement('div');
         errMsg.className = 'fa-msg agent';
-        errMsg.innerHTML = '<div class="fa-bubble" style="color:var(--err,#e5484d);">' + T().error + ' (' + (err.message || 'Échec réseau') + ')</div>';
+        errMsg.innerHTML = '<div class="fa-bubble" style="color:var(--err,#e5484d);">' + T().error + ' (' + esc(err.message || 'Échec réseau') + ')</div>';
         thread.appendChild(errMsg);
         scrollDown();
       }
@@ -233,16 +242,16 @@
   function renderVisionResult(data, thread, scrollDown) {
     if (!thread) return;
 
-    var badgeClass = 'kv-tag-' + (data.docType || 'doc');
+    var badgeClass = 'kv-tag-' + String(data.docType || 'doc').replace(/[^A-Za-z0-9_-]/g, '');
     var ent = data.entities || {};
 
     var detailsHtml = '';
-    if (ent.supplier) detailsHtml += '<div class="kv-card-kv"><span>Fournisseur</span><b>' + ent.supplier + '</b></div>';
-    if (ent.date) detailsHtml += '<div class="kv-card-kv"><span>Date</span><b>' + ent.date + '</b></div>';
-    if (ent.invoiceNumber) detailsHtml += '<div class="kv-card-kv"><span>N° Pièce</span><b>' + ent.invoiceNumber + '</b></div>';
+    if (ent.supplier) detailsHtml += '<div class="kv-card-kv"><span>Fournisseur</span><b>' + esc(ent.supplier) + '</b></div>';
+    if (ent.date) detailsHtml += '<div class="kv-card-kv"><span>Date</span><b>' + esc(ent.date) + '</b></div>';
+    if (ent.invoiceNumber) detailsHtml += '<div class="kv-card-kv"><span>N° Pièce</span><b>' + esc(ent.invoiceNumber) + '</b></div>';
     if (ent.totalMad > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Montant Total</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.totalMad, {}) ?? ent.totalMad.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD</b></div>';
-    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Total TPE</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.tpeTotal, {}) ?? ent.tpeTotal.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD (' + ent.tpeCount + ' tx)</b></div>';
-    if (ent.tablesCount > 0) detailsHtml += '<div class="kv-card-kv"><span>Tables détectées</span><b>' + ent.tablesCount + ' tables</b></div>';
+    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Total TPE</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.tpeTotal, {}) ?? ent.tpeTotal.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD (' + esc(ent.tpeCount) + ' tx)</b></div>';
+    if (ent.tablesCount > 0) detailsHtml += '<div class="kv-card-kv"><span>Tables détectées</span><b>' + esc(ent.tablesCount) + ' tables</b></div>';
 
     var itemsHtml = '';
     if (ent.items && ent.items.length) {
@@ -251,9 +260,9 @@
         '<div class="kv-items-table">' +
           ent.items.slice(0, 10).map(function (it) {
             return '<div class="kv-item-row">' +
-              '<span class="name">' + it.name + '</span>' +
-              '<span class="qty">×' + it.qty + '</span>' +
-              '<span class="tot">' + (it.total ? it.total + ' MAD' : '') + '</span>' +
+              '<span class="name">' + esc(it.name) + '</span>' +
+              '<span class="qty">×' + esc(it.qty) + '</span>' +
+              '<span class="tot">' + (it.total ? esc(it.total) + ' MAD' : '') + '</span>' +
             '</div>';
           }).join('') +
           (ent.items.length > 10 ? '<div class="kv-item-more">+' + (ent.items.length - 10) + ' autres lignes…</div>' : '') +
@@ -273,8 +282,8 @@
     if (actions.length) {
       actionsHtml = '<div class="kv-card-actions">' +
         actions.map(function (act) {
-          return '<button type="button" class="kv-act-btn' + (act.primary ? ' primary' : '') + '" data-kv-action="' + act.type + '" data-kv-payload="' + encodeURIComponent(JSON.stringify(ent)) + '">' +
-            act.label +
+          return '<button type="button" class="kv-act-btn' + (act.primary ? ' primary' : '') + '" data-kv-action="' + esc(act.type) + '" data-kv-payload="' + encodeURIComponent(JSON.stringify(ent)) + '">' +
+            esc(act.label) +
           '</button>';
         }).join('') +
       '</div>';
@@ -285,11 +294,11 @@
     msg.innerHTML =
       '<div class="fa-bubble">' +
         '<div class="kv-res-header">' +
-          '<span class="kv-res-tag ' + badgeClass + '">' + (data.categoryLabel || 'Document') + '</span>' +
+          '<span class="kv-res-tag ' + badgeClass + '">' + esc(data.categoryLabel || 'Document') + '</span>' +
           '<span class="kv-res-conf">Fiabilité ' + Math.round((data.confidence || 0.9) * 100) + ' %</span>' +
         '</div>' +
-        '<div class="kv-res-title">' + (data.title || 'Analyse terminée') + '</div>' +
-        '<div class="kv-res-summary">' + (data.summary || '') + '</div>' +
+        '<div class="kv-res-title">' + esc(data.title || 'Analyse terminée') + '</div>' +
+        '<div class="kv-res-summary">' + esc(data.summary || '') + '</div>' +
         (detailsHtml ? '<div class="kv-res-grid">' + detailsHtml + '</div>' : '') +
         itemsHtml +
         actionsHtml +
