@@ -2,8 +2,11 @@
  * Kiwi · ORDER QR — the real, printable QR generator for the self-order page.
  * ---------------------------------------------------------------------------
  * Emits SCANNABLE QR codes (via window.KiwiQR) that point a diner's phone at
- *   <origin>/kiwi-order.html?merchant=<slug>[&table=N]
- * — the multi-merchant customer page. Two products:
+ *   <origin>/order?s=<slug>[&t=N]
+ * — OrderPro, the one guest-ordering app (stage 3c), through the same short
+ * link as the NFC tags. QR codes printed before it read
+ * /kiwi-order.html?merchant=<slug>&table=N, which the server sends to the same
+ * place (functions/_middleware.js). Two products:
  *   · one venue QR ("menu général") — the customer picks their table on the page.
  *   · one QR per table (&table=N) — the page opens straight on that table.
  * Copy the link, download a PNG, or print a clean A4 sheet of table tents.
@@ -85,8 +88,8 @@
     const origin = location.origin;
     // Local demo → plain page (byte-identical Café Atlas). Real → carry the slug.
     if (!isReal()) return origin + '/kiwi-order.html' + (table ? ('?table=' + table) : '');
-    let u = origin + '/kiwi-order.html?merchant=' + encodeURIComponent(biz().slug);
-    if (table) u += '&table=' + encodeURIComponent(table);
+    let u = origin + '/order?s=' + encodeURIComponent(biz().slug);
+    if (table) u += '&t=' + encodeURIComponent(table);
     return u;
   }
 

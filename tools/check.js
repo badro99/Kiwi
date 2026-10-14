@@ -2137,12 +2137,17 @@ section('Kiwi 2027 · cuisine sur les couloirs du kit');
  *                                       consulter et ses valeurs nutritionnelles ; cinq
  *                                       langues publiées, l'espagnol choisi sur la page
  *                                       QR gardé, l'arabe de droite à gauche ; fermé
- *                                       aujourd'hui, le bandeau et l'envoi éteint */
+ *                                       aujourd'hui, le bandeau et l'envoi éteint
+ *   guest-redirect-test                 un QR imprimé (kiwi-order.html?merchant=) mène
+ *                                       à /order avec sa table, par le serveur (302) et
+ *                                       par la page ; la démo reste ; les nouveaux QR
+ *                                       impriment /order?s=&t= */
 section('Kiwi 2027 · une seule app de commande client');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['orderpro-parity-browser-test.mjs', 'orderpro-parity-browser-test'],
+    ['guest-redirect-test.mjs', 'guest-redirect-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

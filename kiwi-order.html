@@ -2,6 +2,20 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
+  <script>
+    /* One guest-ordering app (spec §21.1, stage 3c): a real store's QR opens
+       OrderPro. The server answers this URL with a 302 first
+       (functions/_middleware.js); this covers a host without it. Without
+       ?merchant it is the local pitch demo, which stays here. */
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search), m = (q.get('merchant') || '').trim();
+        if (!m) return;
+        var t = (q.get('table') || '').replace(/\D/g, '').slice(0, 4);
+        location.replace('OrderPro.html?s=' + encodeURIComponent(m.slice(0, 64)) + (t ? '&t=' + t : ''));
+      } catch (_) {}
+    })();
+  </script>
 
   <!-- Make it look like an app on phones -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />

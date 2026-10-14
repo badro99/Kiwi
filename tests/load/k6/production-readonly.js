@@ -100,7 +100,7 @@ export default function () {
 
   if ((__ITER + __VU) % 2 === 0) {
     checkedGet(
-      `/kiwi-order?merchant=${encodeURIComponent(MERCHANT)}`,
+      `/order?s=${encodeURIComponent(MERCHANT)}`,
       orderPageDuration,
       {
         'order page returns 200': (r) => r.status === 200,

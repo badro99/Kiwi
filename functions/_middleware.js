@@ -369,6 +369,21 @@ async function routeRequest(context) {
    * page de connexion (401) au gestionnaire de téléchargements Android. Chemin
    * exact + lecture seule : aucun dossier ni autre artefact n'est ouvert. */
   if (isRead && path === '/downloads/kiwi-print-bridge.apk') return next();
+  /* One guest-ordering app (spec §21.1, stage 3c). A table QR printed before
+   * it reads /kiwi-order.html?merchant=<slug>&table=N; it now opens OrderPro
+   * through /order, the NFC short link, with the same store and table. Without
+   * ?merchant it is the local pitch demo, which stays on that page. 302, not
+   * 301: no browser keeps it, so the move can be undone. */
+  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order')) {
+    const store = (url.searchParams.get('merchant') || '').trim().slice(0, 64);
+    if (store) {
+      const table = (url.searchParams.get('table') || '').replace(/\D/g, '').slice(0, 4);
+      const to = new URL('/order', url);
+      to.searchParams.set('s', store);
+      if (table) to.searchParams.set('t', table);
+      return new Response(null, { status: 302, headers: { Location: to.pathname + to.search, 'Cache-Control': 'no-store' } });
+    }
+  }
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu'
     || path === '/booking.html' || path === '/booking' || path === '/api/booking')) return next();
   // A guest may create one booking against the merchant's published services.
