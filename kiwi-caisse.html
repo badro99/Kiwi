@@ -154,9 +154,9 @@
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=2") +
-        js("assets/kit/strings/till.en.js?v=2") +
-        js("assets/kit/strings/till.ar.js?v=2") +
+        js("assets/kit/strings/till.fr.js?v=3") +
+        js("assets/kit/strings/till.en.js?v=3") +
+        js("assets/kit/strings/till.ar.js?v=3") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -176,7 +176,7 @@
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=1") +
-        js("assets/kit/till.js?v=6") +
+        js("assets/kit/till.js?v=7") +
         js("assets/kit/till-frame.js?v=4") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
@@ -10915,6 +10915,48 @@
       document.addEventListener('DOMContentLoaded', () => { try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); } });
     }
 
+    /* La clôture sur le kit (étape 4 (7), §18.9). Drapeau allumé, Clôturer
+       ouvre <k-cash-count> dans une feuille de comptage (k-sheet size count) au
+       lieu de la fenêtre livrée. renderCloture() tourne d'abord, fenêtre gardée
+       fermée : il calcule l'attendu et le total carte de Kiwi comme avant. Le
+       comptage rend le compté, le motif de l'écart hors tolérance et le total
+       carte du terminal ; la caisse les pose dans les champs livrés
+       (#clo-count, #clo-card-z) et appelle closeRegister() : rapport, Z,
+       événement de caisse et fin de poste restent les livrés. Le motif part
+       avec l'événement de clôture (gapReason, cash_session_events.gap_reason).
+       « Saisir le total » rouvre la fenêtre livrée, déjà remplie. */
+    let closeGapReason = null;
+    let tillKitCount = null;
+    function tillKitOpenCount() {
+      if (!tillKitOn() || !customElements.get('k-cash-count') || !customElements.get('k-sheet')) return false;
+      renderCloture(false);
+      const tot = journalTotals();
+      if (tillKitCount) tillKitCount.sheet.remove();
+      const sheet = document.createElement('k-sheet');
+      sheet.setAttribute('size', 'count');
+      const cc = document.createElement('k-cash-count');
+      cc.setAttribute('mode', 'close');
+      sheet.appendChild(cc);
+      document.body.appendChild(sheet);
+      tillKitCount = { sheet, cc };
+      sheet.addEventListener('kiwi:action', (e) => {
+        const d = e.detail || {};
+        if (d.action === 'k.sheet.close') { sheet.removeAttribute('open'); return; }
+        if (d.action === 'k.cash-count.enter-total') { sheet.removeAttribute('open'); $('#cloture-modal').classList.add('is-open'); return; }
+        if (d.action !== 'k.cash-count.close') return;
+        const v = d.value || {};
+        $('#clo-count').value = String(v.counted);
+        $('#clo-card-z').value = String(v.cardTotal == null ? clotureCardExpected : v.cardTotal);
+        closeGapReason = v.reason || null;
+        sheet.removeAttribute('open');
+        closeRegister();
+      });
+      cc.cardKiwi = clotureCardExpected;
+      cc.count = { opening: openingFloat, cashSales: tot.cash, cashTips: tot.cashTips, cashIn: tot.movesIn, cashOut: tot.movesOut, refundsCash: 0 };
+      sheet.setAttribute('open', '');
+      return true;
+    }
+
     /* Event delegation: tables, menu items, cart qty, cat pills */
     document.addEventListener('click', (e) => {
       /* La pastille « commande en attente » ouvre la file, pas la table : ce
@@ -16638,6 +16680,7 @@
     function openCloture() {
       /* #0164 · a recorded close never reopens its own count sheet. */
       if (registerClosed) { finishClose(); return; }
+      if (tillKitOpenCount()) return;   // kiwiSkin2027:till, étape 4 (7)
       renderCloture(false);
       /* Dans la langue de la caisse AVANT de s'afficher : le balayage différé
          laissait passer une image en français. */
@@ -17200,6 +17243,7 @@
         expectedCents: expectedCents,
         countedCents: countedCents,
         gapCents: gapCents,
+        ...(closeGapReason ? { gapReason: closeGapReason } : {}),
         actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: closedAt
       });
 

@@ -1457,6 +1457,7 @@ CREATE TABLE IF NOT EXISTS cash_session_events (
   movement_kind TEXT,
   movement_amount_cents INTEGER,
   movement_reason TEXT,
+  gap_reason TEXT,              -- why a close differs from expected (counting|change|unrecorded|other), outside tolerance; NULL = none given
   actor_id TEXT NOT NULL,
   counterparty_actor_id TEXT,
   opened_ts INTEGER NOT NULL,
