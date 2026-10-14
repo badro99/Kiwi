@@ -2310,7 +2310,10 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       sa page (KiwiRetentionPage, kiwi:retention-model) ;
  *                                       les onglets, les groupes et les lignes de
  *                                       l'activité sont ceux du livré ; un autre onglet
- *                                       ouvre le panneau livré */
+ *                                       ouvre le panneau livré
+ *   dash-compliance-browser-test        la conformité (§12) : chaque onglet livré est une
+ *                                       ligne d'une liste à 360 à côté de son écran livré,
+ *                                       avec un statut lu dans les données de l'onglet */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2320,6 +2323,7 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-report-browser-test.mjs', 'dash-report-browser-test'],
     ['dash-customers-browser-test.mjs', 'dash-customers-browser-test'],
     ['dash-retention-browser-test.mjs', 'dash-retention-browser-test'],
+    ['dash-compliance-browser-test.mjs', 'dash-compliance-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
