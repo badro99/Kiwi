@@ -1856,6 +1856,7 @@ section('Whole-project regressions');
     'inventory-count-test.mjs',
     'inventory-count-review-test.mjs',
     'menu-scan-test.mjs',
+    'menu-import-preserve-test.mjs',
     'intake-slice1-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',

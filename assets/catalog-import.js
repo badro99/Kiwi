@@ -489,8 +489,18 @@
       const subName = cell(row, idx.sous_categorie);
       const rawPrice = cell(row, idx.prix_mad);
       const price = num(rawPrice);
-      if (rawPrice && !isFinite(price)) {
-        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · compté 0' });
+      const priceUnreadable = !!rawPrice && !isFinite(price);
+      /* Un prix illisible n'est pas un prix de 0 : « 12 dh ?? » ne doit ni
+         offrir un plat ni écraser le prix qu'il a déjà. Un article existant
+         garde son prix ; un article nouveau n'est pas créé (même règle que la
+         boutique : jamais un produit gratuit par accident). */
+      const existingForPrice = itemIndex.get(itemKey(name, catName)) || null;
+      if (priceUnreadable && !existingForPrice) {
+        issues.push({ line, level: 'skip', msg: 'prix illisible (« ' + rawPrice + ' ») · article non créé' });
+        return;
+      }
+      if (priceUnreadable) {
+        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · prix actuel conservé' });
       }
       if (catName && !catByName.has(keyName(catName)) && !newCategories.some((n) => keyName(n) === keyName(catName))) {
         newCategories.push(catName);
@@ -505,10 +515,15 @@
       const existing = itemIndex.get(itemKey(name, catName)) || null;
       rows.push({
         line, name, catName, subName,
-        price: isFinite(price) ? Math.max(0, price) : 0,
-        priceGiven: !!rawPrice,
+        price: isFinite(price) ? Math.max(0, price) : (existing && isFinite(+existing.price) ? +existing.price : 0),
+        priceGiven: !!rawPrice && isFinite(price),
         desc: cell(row, idx.description),
-        avail: bool(cell(row, idx.disponible), true),
+        /* Un article existant ne change de disponibilité que si le fichier le
+           met EXPLICITEMENT en rupture : un réimport ne rallume jamais ce que
+           le commerçant a éteint à la main. */
+        avail: existing
+          ? (bool(cell(row, idx.disponible), null) === false ? false : existing.avail !== false)
+          : bool(cell(row, idx.disponible), true),
         existing,
       });
     });
@@ -555,7 +570,7 @@
           const patch = {};
           if (r.priceGiven && +r.existing.price !== r.price) patch.price = r.price;
           if (r.desc && r.existing.desc !== r.desc) patch.desc = r.desc;
-          if (r.existing.avail !== r.avail) patch.avail = r.avail;
+          if (r.avail === false && r.existing.avail !== false) patch.avail = false;
           if (sub && r.existing.subId !== sub.id) patch.subId = sub.id;
           if (Object.keys(patch).length) { MS.updateItem(r.existing.id, patch); res.updated++; }
         } else {
