@@ -1,0 +1,58 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · assets/kit/printer.css · the print bridge page (printer.html) on the
+ * 2027 tokens, light and dark, behind kiwiSkin2027:access (spec §21.1 stage 6:
+ * printer pages with tokens and dark mode).
+ *
+ * The page paints with its own names (--atlas, --paper, --ink, --mint…). The
+ * skin repaints them with the --k-* tokens, then sets the kit's steps on the
+ * page's few parts. The page shipped light only; on the tokens it follows the
+ * system, as the reset page does, since it has no theme choice of its own.
+ * The start-up script's block (code.code-block) sits on the kit's inverse
+ * surface, dark in both themes, in its accent.
+ * No script.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-skin-2027="access"] {
+  --atlas: var(--k-accent-ink);
+  --riad: var(--k-accent-pressed);
+  --mint: var(--k-accent-ink);
+  --paper: var(--k-bg);
+  --ink: var(--k-ink-1);
+  --line: var(--k-line);
+  --muted: var(--k-ink-2);
+  --surface: var(--k-surface-1);
+}
+html[data-skin-2027="access"] body { background: var(--k-bg); color: var(--k-ink-1); font-family: var(--k-font); }
+
+/* Dark: the inverse wordmark. */
+@media (prefers-color-scheme: dark) {
+  html[data-skin-2027="access"]:not([data-theme="light"]) .brand img { content: url("../kiwi-newlogo-inverse.svg"); }
+}
+
+html[data-skin-2027="access"] body h1 { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
+html[data-skin-2027="access"] body h2 { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
+html[data-skin-2027="access"] body .lede { font-size: var(--k-fs-body); color: var(--k-ink-2); }
+html[data-skin-2027="access"] body .step { font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong); letter-spacing: 0; text-transform: none; color: var(--k-accent-ink); }
+html[data-skin-2027="access"] body :is(.foot, .others) { font-size: var(--k-fs-footnote); color: var(--k-ink-2); }
+
+/* The cards: surface-1 on the ground, no border, no shadow (§5). */
+html[data-skin-2027="access"] body .card { background: var(--k-surface-1); border: 0; border-radius: var(--k-r-3); box-shadow: none; }
+
+/* The bridge's status: a neutral row, or the accent tint once it answers. */
+html[data-skin-2027="access"] body .status.idle { background: var(--k-surface-2); border: 0; color: var(--k-ink-1); }
+html[data-skin-2027="access"] body .status.idle .dot { background: var(--k-ink-3); box-shadow: none; }
+html[data-skin-2027="access"] body .status.on { background: var(--k-accent-tint); border: 0; color: var(--k-ink-1); }
+html[data-skin-2027="access"] body .status.on .dot { background: var(--k-accent); box-shadow: none; }
+
+/* The download: the primary, a 56 capsule in the accent (§10.1). */
+html[data-skin-2027="access"] body .dl { min-height: 56px; border-radius: 999px; background: var(--k-accent); color: var(--k-on-accent); font-size: var(--k-fs-body); font-weight: var(--k-fw-body-strong); }
+
+/* The system tabs as a segmented control (§10.6). */
+html[data-skin-2027="access"] body .os-tab { border: 0; border-radius: 999px; background: var(--k-surface-2); color: var(--k-ink-2); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong); min-height: 44px; }
+html[data-skin-2027="access"] body .os-tab.on { background: var(--k-surface-1); color: var(--k-ink-1); box-shadow: inset 0 0 0 2px var(--k-accent-ink); }
+
+/* Code and the advanced sections on surface-2. */
+html[data-skin-2027="access"] body code { background: var(--k-surface-2); border: 0; color: var(--k-ink-1); }
+html[data-skin-2027="access"] body code.code-block { background: var(--k-inverse); color: var(--k-inverse-accent); }
+html[data-skin-2027="access"] body details.adv { background: var(--k-surface-2); border: 0; border-radius: var(--k-r-2); }
+html[data-skin-2027="access"] body .others a, html[data-skin-2027="access"] body .adv-note a { color: var(--k-accent-ink); }
