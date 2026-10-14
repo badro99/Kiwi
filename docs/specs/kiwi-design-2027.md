@@ -4603,6 +4603,18 @@ Timers and tones move in place every second (`retime`), so a cook's finger never
 - **The header is still the shipped one.** The station segmented control, the live dot and the clock in Title (§18.7), Settings › Display (S, M and L roots) and the bump-bar and read-only modes (§13.6) are not built. The page uses the M root, 24 px. On a 1280 × 800 tablet, the New lane then shows one ticket with two lines before the newer card.
 - **No screenshot baseline yet.** The suite asserts structure and the base, not pixels.
 
+**Stage 3c, first part, as landed (2026-10-14): one app, before its skin.** `OrderPro.html` is the one guest-ordering app. It already carried the stronger plumbing (boot retries, saved orders, the availability poll, live status, the bill and split, the boutique). `assets/orderpro-menu.js` (`KiwiOrderMenu`), hooked into it by one-line calls, adds what the QR page (`kiwi-order.html`) gave a guest and it did not:
+- the published opening hours: a banner that says the store is closed and when it reopens, and a send button that stays disabled and says why, read again every minute;
+- complete nutrition facts: a summary on the tile, the facts and allergens in the dish's sheet (a tap opens it and adds nothing);
+- every language the store publishes, not only FR, AR and EN, with the choice made on the QR page kept; a line a language lacks reads in English, and Arabic keeps French, as shipped;
+- without Order Pro, the menu opens to browse (a note, no add button, no cart, no visit) instead of a dead screen, so a table QR printed at a store without Order Pro keeps its menu.
+
+QR codes now print `/order?s=<slug>&t=N`, the NFC short link. A QR printed before reads `/kiwi-order.html?merchant=<slug>&table=N`; the server answers it with a 302 to the same store and table, and the page makes the same move where no middleware runs. The gates are `orderpro-parity-browser-test` (32 checks, against the real `functions/api/menu.js`, `order/session.js` and `order/guest.js`) and `guest-redirect-test` (13, on the real middleware), in `check.js` section 14f. Open items, stated rather than assumed:
+- **The 2027 skin is not built.** §13's phone path (Menu, Item, Cart, Order placed, the globe), the iPad cart pane (340) and the desktop column (1000), the `ordering` strings bundle and `ordering.basic` come next, behind `kiwiSkin2027:ordering`.
+- **The JS budget is not met.** On a first load the app sends 103 KB gzip of JavaScript: the page's own script (45), `material-icons.js` (32), `orderpro-guest.js` (20) and `orderpro-menu.js` (5). §19 allows 60. The hours and language helpers (about 28 KB) load only for a store that needs them; the QR page sent 97.
+- **The pitch demo stays on `kiwi-order.html`.** Without `?merchant` it is the local Café Atlas demo, which fakes its sends, and a demo dashboard's QR still prints it. Its code for a real store is now unreachable and goes with the demo's own move.
+- **The Android layout shift (§6.1) is not measured yet.** It needs the emulator run that §6.1 describes.
+
 ### 21.2 Ledger rollout
 The `kiwiLedger` flag takes three values:
 - `off`: legacy figures.
