@@ -511,6 +511,7 @@
         var res = C.keypad.input(cur, key, { decimals: 0, maxInt: 4 });
         if (!res.ok && key !== 'del') return;
         self.__typed = true;
+        self.__total = null;                 /* a row typed after "Last float" counts the rows */
         self.__n[self.__sel] = res.text ? parseInt(res.text, 10) : 0;
         self.__any = true;
         self.render();

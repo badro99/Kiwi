@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=14">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=15">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -176,7 +176,7 @@
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=2") +
-        js("assets/kit/till.js?v=8") +
+        js("assets/kit/till.js?v=9") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=1") +
@@ -10606,6 +10606,11 @@
       tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, menuPane: $('.main'), act: tillKitAct });
       if (tillKit) {
         document.documentElement.setAttribute('data-k-till', '');
+        /* §18.9 : « Ouvrir la caisse » ouvre le comptage du fond sur le kit. */
+        const ci = document.getElementById('clockin-btn');
+        if (ci && !ci.classList.contains('is-confirmed')) ci.disabled = false;
+        const ciErr = document.getElementById('ci-float-err');
+        if (ciErr) ciErr.hidden = true;
         /* §10.12, §10.26 : la bannière vivante et la région polie sont dans le
            DOM dès le montage, vides ; les écrire annonce une fois. */
         const main = $('.main');
@@ -11224,6 +11229,51 @@
       });
       cc.cardKiwi = clotureCardExpected;
       cc.count = { opening: openingFloat, cashSales: tot.cash, cashTips: tot.cashTips, cashIn: tot.movesIn, cashOut: tot.movesOut, refundsCash: 0 };
+      sheet.setAttribute('open', '');
+      return true;
+    }
+
+    /* kiwiSkin2027:till · le fond d'ouverture sur le kit (étape 4 (13), §18.9).
+       « Ouvrir la caisse » ouvre <k-cash-count mode="open"> : le fond est ce
+       que le caissier COMPTE, rien n'est prérempli ; le dernier fond n'est
+       qu'une puce à toucher (count.same_as_last, la même mémoire que les
+       puces livrées). Ouvrir pose openingFloat puis reprend openService() :
+       contrôle horaire, doOpenService(), l'évènement d'ouverture. Commit
+       part sur l'écriture locale, dans doOpenService(). */
+    let tillKitFloat = null;
+    function tillKitOpenFloat() {
+      if (!tillKitOn() || !customElements.get('k-cash-count') || !customElements.get('k-sheet')) return false;
+      if (tillKitFloat) tillKitFloat.sheet.remove();
+      const sheet = document.createElement('k-sheet');
+      sheet.setAttribute('size', 'count');
+      const cc = document.createElement('k-cash-count');
+      cc.setAttribute('mode', 'open');
+      sheet.appendChild(cc);
+      document.body.appendChild(sheet);
+      const done = () => { try { cc.committed(); } catch (_) {} sheet.removeAttribute('open'); setTimeout(() => sheet.remove(), 400); tillKitFloat = null; };
+      tillKitFloat = { sheet, cc, done };
+      sheet.addEventListener('kiwi:action', (e) => {
+        const d = e.detail || {};
+        if (d.action === 'k.sheet.close') { sheet.removeAttribute('open'); return; }
+        /* « Saisir le total » : les puces livrées et leur montant libre. */
+        if (d.action === 'k.cash-count.enter-total') {
+          sheet.removeAttribute('open');
+          const box = $('.clockin-float');
+          if (box) box.classList.add('k-shown');
+          const other = $('#ci-float-chips [data-float="custom"]');
+          if (other) other.click();
+          return;
+        }
+        if (d.action !== 'k.cash-count.open') return;
+        const v = d.value || {};
+        openingFloat = Math.max(0, Number(v.counted) || 0);
+        floatChosen = true;
+        rememberFloat(openingFloat);
+        openService();
+      });
+      let last = NaN;
+      try { last = parseFloat(localStorage.getItem(floatMemKey())); } catch (_) {}
+      cc.count = { lastFloat: Number.isFinite(last) && last > 0 ? last : null };
       sheet.setAttribute('open', '');
       return true;
     }
@@ -16780,6 +16830,7 @@
          une valeur présélectionnée, démo comprise. Rien n'est écrit tant que ce
          n'est pas fait (le bouton reste d'ailleurs désactivé jusque-là). */
       if (!floatChosen) {
+        if (tillKitOpenFloat()) return;   // kiwiSkin2027:till, étape 4 (13)
         const err = document.getElementById('ci-float-err');
         if (err) err.hidden = false;
         return;
@@ -16817,6 +16868,7 @@
         countedCents: null, gapCents: null, actorId: cashActorId(),
         openedAt: shiftOpenedAt.getTime(), occurredAt: shiftOpenedAt.getTime()
       });
+      if (tillKitFloat) tillKitFloat.done();
       if (!_realStore) seedJournal();
       renderShiftStats();
       try { saveProvisional(true); } catch (_) {}
@@ -17521,6 +17573,8 @@
       /* From here the close is recorded. Whatever happens next, the only way
          out is finishClose(): no path may leave this service on screen. */
       registerClosed = true;
+      /* §15.3 : un seul Paid, sur l'image où la clôture est actée. */
+      if (tillKitCount) { try { tillKitCount.cc.committed(); } catch (_) {} }
       clearPersistedShift();
       $('#cloture-modal').classList.remove('is-open');
       setCloseBusy(false);
@@ -18197,8 +18251,10 @@
     function syncFloatGate() {
       const resume = typeof operatorCaisseRequested === 'function' && operatorCaisseRequested();
       const btn = document.getElementById('clockin-btn');
-      if (btn && !btn.classList.contains('is-confirmed')) btn.disabled = !floatChosen && !resume;
-      if (floatErr) floatErr.hidden = floatChosen || resume;
+      /* Sous le kit, le fond se compte dans la feuille du kit : le bouton l'ouvre. */
+      const kit = document.documentElement.hasAttribute('data-k-till');
+      if (btn && !btn.classList.contains('is-confirmed')) btn.disabled = !floatChosen && !resume && !kit;
+      if (floatErr) floatErr.hidden = floatChosen || resume || kit;
     }
     function readFloatInput() {
       const v = parseFloat(floatInput && floatInput.value);

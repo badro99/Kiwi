@@ -2273,7 +2273,11 @@ section('Kiwi 2027 · une seule app de commande client');
  *   online-inbox-test                   les commandes en ligne dans À emporter (§18.3) :
  *                                       ni pastille ni panneau, le badge du rail, Commit
  *                                       sur un ok en 600 ms, l'échec ne change rien,
- *                                       Refuser derrière l'approbation de la caisse */
+ *                                       Refuser derrière l'approbation de la caisse
+ *   opening-float-test                  le fond d'ouverture sur le kit (§18.9) : compté,
+ *                                       rien de prérempli, le dernier fond à toucher,
+ *                                       l'ouverture livrée, un Commit ; Paid à la
+ *                                       clôture est dans cash-count-browser-test */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2288,6 +2292,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['sale-unsynced-test.mjs', 'sale-unsynced-test'],
     ['banner-announce-test.mjs', 'banner-announce-test'],
     ['online-inbox-test.mjs', 'online-inbox-test'],
+    ['opening-float-test.mjs', 'opening-float-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

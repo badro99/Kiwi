@@ -104,6 +104,9 @@ try {
   await page.evaluate(() => {
     window.__cash = [];
     if (window.KiwiCashSessions) window.KiwiCashSessions.emit = (ev) => { window.__cash.push(ev); return true; };
+    window.__paid = [];
+    window.KiwiHaptics = window.KiwiHaptics || {};
+    window.KiwiHaptics.play = (cls, gid, _p, meta) => { if (cls === 'Paid') window.__paid.push(meta && meta.trigger); return null; };
     openCloture();
   });
   await sleep(500);
@@ -135,6 +138,8 @@ try {
   check(!!ev && ev.countedCents === 20000 && ev.gapReason === 'counting' && ev.gapCents === ev.countedCents - ev.expectedCents,
     `the shipped close ran; its event carries the count and the reason (${JSON.stringify(ev && { countedCents: ev.countedCents, gapCents: ev.gapCents, gapReason: ev.gapReason })})`);
   check(await page.evaluate(() => document.querySelector('#clo-card-z').value === '0'), 'the terminal\'s card total reached the shipped card field');
+  const paid = await page.evaluate(() => window.__paid.slice());
+  check(paid.length === 1, `one Paid, on the frame the close is committed (${JSON.stringify(paid)})`);
   check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
 } finally {
   await browser.close().catch(() => {});
