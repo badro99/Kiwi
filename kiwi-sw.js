@@ -286,7 +286,7 @@ var SHELL = [
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
-  '/assets/orderpro-panel.js?v=2',
+  '/assets/orderpro-panel.js?v=3',
   '/assets/orderpro-inbox.js?v=35',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.

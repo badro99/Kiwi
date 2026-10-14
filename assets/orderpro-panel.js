@@ -100,6 +100,45 @@
 
   /* ── the panel ───────────────────────────────────────────────────────────── */
   var tableCount = 12;
+  var TABLE_DESC = 'Le numéro de table est déjà dans le lien · le client ne le saisit pas.';
+  var PLAN_NOTE = '<p class="opp-plan" data-opp-plan>Les tables de votre plan de salle. Une table manque ? Ajoutez-la au plan, son tag apparaît ici.</p>';
+
+  /* Les tables du plan de salle, telles que la caisse les nomme
+   * (`num || id`, voir kiwi-caisse.html). Un tag « Table 1..12 » pour une
+   * salle dont les tables s'appellent « T1 » ou « Terrasse 2 » ouvrait une
+   * table que le comptoir ne reconnaissait pas. null = pas de plan (ou pas
+   * lisible) : on garde la liste numérotée. */
+  var planTables = null;
+  function readPlan(data) {
+    var gone = (data && data.gone && typeof data.gone === 'object') ? data.gone : {};
+    var seen = {};
+    var out = ((data && Array.isArray(data.tables)) ? data.tables : []).map(function (t) {
+      if (!t || gone[String(t.id)]) return null;
+      var key = String(t.num || t.id || '').trim();
+      if (!key || seen[key]) return null;
+      seen[key] = true;
+      var name = String(t.name || '').trim();
+      return { key: key, label: name || (/^\d+$/.test(key) ? 'Table ' + key : key) };
+    }).filter(Boolean);
+    out.sort(function (a, b) { return a.key.localeCompare(b.key, 'fr', { numeric: true }); });
+    return out.length ? out : null;
+  }
+  function loadPlan() {
+    return fetch('/api/store?feature=floorplan&merchant=' + encodeURIComponent(merchant()), { cache: 'no-store', credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { planTables = readPlan(j && j.data); return planTables; })
+      .catch(function () { return planTables; });
+  }
+
+  function tableRows() {
+    var rows = [row('Tag comptoir · à emporter', 'Commande à emporter, paiement à la caisse.', takeoutLink())];
+    if (planTables) {
+      planTables.forEach(function (t) { rows.push(row(t.label, TABLE_DESC, tableLink(t.key))); });
+    } else {
+      for (var i = 1; i <= tableCount; i++) rows.push(row('Table ' + i, TABLE_DESC, tableLink(i)));
+    }
+    return rows.join('');
+  }
 
   function bodyHtml() {
     var isBoutique = vertical() === 'boutique';
@@ -107,10 +146,7 @@
     if (isBoutique) {
       rows.push(row('Tag boutique', 'Le client (ou un vendeur) scanne un produit et voit prix, tailles et stock.', browseLink()));
     } else {
-      rows.push(row('Tag comptoir · à emporter', 'Commande à emporter, paiement à la caisse.', takeoutLink()));
-      for (var i = 1; i <= tableCount; i++) {
-        rows.push(row('Table ' + i, 'Le numéro de table est déjà dans le lien · le client ne le saisit pas.', tableLink(i)));
-      }
+      rows.push(tableRows());
     }
     return '' +
       // Publishing is what puts the carte / le stock on the customer's phone. It
@@ -130,8 +166,9 @@
           : '<p class="opp-note">Pour écrire un tag : ouvrez ce panneau depuis un téléphone Android/Chrome, ou copiez le lien et écrivez-le avec l\'application gratuite <b>NFC Tools</b> (iPhone comme Android).</p>') +
       '</div>' +
       '<div class="opp-msg" data-opp-msg>Verrouillez le tag après écriture pour qu\'il ne soit pas réécrit.</div>' +
+      (isBoutique || !planTables ? '' : PLAN_NOTE) +
       '<div class="opp-rows">' + rows.join('') + '</div>' +
-      (isBoutique ? '' :
+      (isBoutique || planTables ? '' :
         '<div class="opp-more"><button class="kb ghost" type="button" data-opp-more>Afficher plus de tables</button></div>');
   }
 
@@ -171,6 +208,7 @@
       '.opp-racts{display:flex;gap:7px;flex-wrap:wrap}',
       '.opp-racts .kb{padding:9px 13px;font-size:12.5px}',
       '.opp-more{margin-top:14px;text-align:center}',
+      '.opp-plan{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--n-600,#4a544d)}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -197,6 +235,22 @@
     }
     refreshPublished();
 
+    /* Le plan arrive après l'ouverture : on ne repeint que la liste des tags
+     * (et la note), jamais l'état de publication déjà lu. */
+    if (vertical() !== 'boutique') {
+      loadPlan().then(function () {
+        if (!el.isConnected) return;
+        var list = el.querySelector('.opp-rows');
+        if (!list) return;
+        list.innerHTML = tableRows();
+        var more = el.querySelector('.opp-more');
+        if (more) more.hidden = !!planTables;
+        var note = el.querySelector('[data-opp-plan]');
+        if (planTables && !note) list.insertAdjacentHTML('beforebegin', PLAN_NOTE);
+        if (!planTables && note) note.remove();
+      });
+    }
+
     el.addEventListener('click', function (e) {
       if (e.target.closest('[data-opp-publish]')) {
         if (pubState) pubState.textContent = 'Publication…';
@@ -218,9 +272,7 @@
         var rows = el.querySelector('.opp-rows');
         if (rows) {
           var add = '';
-          for (var i = tableCount - 11; i <= tableCount; i++) {
-            add += row('Table ' + i, 'Le numéro de table est déjà dans le lien · le client ne le saisit pas.', tableLink(i));
-          }
+          for (var i = tableCount - 11; i <= tableCount; i++) add += row('Table ' + i, TABLE_DESC, tableLink(i));
           rows.insertAdjacentHTML('beforeend', add);
         }
         return;

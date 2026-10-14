@@ -853,6 +853,54 @@ async function get(fn, qs, headers = {}) {
     JSON.stringify(r.body));
   DB._db.prepare("UPDATE orders SET status = 'rejected' WHERE merchant = ? AND status = 'pending'").run(SLUG);
 
+  /* ═══ 13 ter. SANS PLAN DE SALLE, LES TABLES SERVIES FONT LE PLAN ═══════
+     Un établissement sans plan n'avait aucune défense : toute table était
+     « inconnue ». La preuve qu'une table existe, c'est une commande que le
+     comptoir y a acceptée. Tant que la salle n'est pas apprise (cinq tables
+     servies), rien ne change : au premier service, les vraies tables sont
+     toutes nouvelles. Ensuite, les tables jamais servies partagent huit
+     commandes en attente, et une table déjà servie commande toujours. */
+  const BARE = 'chez-sans-plan';
+  {
+    const t0 = Date.now();
+    DB._db.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,updated_ts) VALUES (?,?,?,?,?)')
+      .run(BARE, '{"orderpro":true}', 'restaurant', 'acc-bare', t0);
+    DB._db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
+      .run(BARE, 'Sans plan', 'restaurant', JSON.stringify(CARTE), t0);
+    DB._db.prepare('INSERT INTO order_desk (merchant,seen_ts) VALUES (?,?) ON CONFLICT(merchant) DO UPDATE SET seen_ts=excluded.seen_ts')
+      .run(BARE, t0);
+  }
+  const bareRound = async (prefix, tables, perTable) => {
+    let passed = 0, last = null;
+    for (const t of tables) {
+      const sid = (await post(openSession, { merchant: BARE, mode: 'table', table: t })).body.session;
+      for (let i = 0; i < perTable; i++) {
+        last = await post(placeOrder, { merchant: BARE, mode: 'table', table: t, session: sid,
+          ref: `${prefix}-${t}-${i}`, lines: [line('i2')] });
+        if (last.status === 200) passed++;
+      }
+    }
+    return { passed, last };
+  };
+  let bare = await bareRound('neuf', ['1', '2', '3', '4', '5', '6'], 2);
+  ok('sans plan ni table servie, un premier service de douze commandes passe en entier', bare.passed === 12,
+    'passées=' + bare.passed + ' ' + JSON.stringify(bare.last && bare.last.body));
+  DB._db.prepare("UPDATE orders SET status = 'accepted' WHERE merchant = ? AND status = 'pending'").run(BARE);
+  bare = await bareRound('faux', ['Y0', 'Y1', 'Y2'], 4);
+  ok('salle apprise : les tables jamais servies s’arrêtent à huit commandes ensemble', bare.passed === 8,
+    'passées=' + bare.passed);
+  ok('…avec la raison', bare.last.status === 429 && bare.last.body.reason === 'off-plan',
+    JSON.stringify(bare.last.body));
+  bare = await bareRound('vraie', ['T3'], 1);
+  ok('une table déjà servie (« T3 » pour « 3 ») commande toujours', bare.passed === 1,
+    JSON.stringify(bare.last.body));
+  DB._db.prepare("UPDATE orders SET status = 'rejected' WHERE merchant = ? AND table_no = ?").run(BARE, 'Y0');
+  /* Y1 garde quatre commandes en attente : il reste quatre places, pas plus,
+     si le refus n'a rien appris. */
+  bare = await bareRound('refus', ['Y0'], 5);
+  ok('une commande refusée n’apprend pas la table', bare.passed === 4 && bare.last.body.reason === 'off-plan',
+    'passées=' + bare.passed + ' ' + JSON.stringify(bare.last.body));
+
   /* ═══ 8. LA SALLE ═══════════════════════════════════════════════════════
    * « Lancer la commande » dans kiwi-serveur.html n'était qu'un toast : il
    * effaçait le drapeau « non envoyé » et affichait « commande envoyée ». Rien

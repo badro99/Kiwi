@@ -352,8 +352,8 @@
     "sha": "2acd55eefa6418b4"
   },
   "assets/finance.js": {
-    "v": "11",
-    "sha": "f0e5aee5bd0f8292"
+    "v": "12",
+    "sha": "8edde44b1db6d315"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -836,8 +836,8 @@
     "sha": "3d570b3b3717d040"
   },
   "assets/orderpro-panel.js": {
-    "v": "2",
-    "sha": "25a2303b6d5a8ccd"
+    "v": "3",
+    "sha": "d3d58dd2f5d40a5f"
   },
   "assets/orderpro-publish.js": {
     "v": "6",

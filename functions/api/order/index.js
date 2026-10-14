@@ -44,7 +44,7 @@ import { merchantZone } from '../_business-day.js';
 import { storeSubscriptionPending } from '../_private.js';
 import {
   startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, hoursClosed, SESSION_ID,
-  floorPlanTables, planTableKey,
+  floorPlanTables, servedTables, planTableKey,
 } from './_lib.js';
 
 const MAX_LINES = 60;              // one order, generously
@@ -52,6 +52,7 @@ const MAX_TOTAL = 200000;          // 200 000 MAD — a sanity ceiling, not a ru
 const MAX_PENDING = 60;            // per merchant: a queue no staff could ever work through
 const MAX_PENDING_PER_TABLE = 8;   // per table/session: three times a normal service
 const MAX_PENDING_OFF_PLAN = 8;    // all tables the floor plan does not know, together
+const MIN_SERVED_TABLES = 5;       // without a plan, the tables served before the budget applies
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 
 export async function onRequestPost(context) {
@@ -218,16 +219,24 @@ export async function onRequestPost(context) {
   /* …et les tables que le plan de salle ne connaît pas partagent UN budget.
    * Sans ça, le plafond par table se contournait en inventant des tables :
    * huit commandes à « Z0 », huit à « Z1 »… et la file du jour était pleine
-   * pour toute la salle (voir floorPlanTables dans _lib.js). */
+   * pour toute la salle (voir floorPlanTables dans _lib.js).
+   * Une table que le comptoir a déjà servie est connue elle aussi : c'est la
+   * seule défense d'un établissement sans plan, et elle couvre la table que
+   * le plan nomme autrement que son tag (servedTables). Sans plan, le budget
+   * n'entre en jeu qu'une fois la salle apprise (MIN_SERVED_TABLES) : au
+   * premier service d'un restaurant neuf, toutes ses vraies tables sont
+   * encore inconnues et se partageraient huit commandes. */
   if (mode === 'table') {
     const plan = await floorPlanTables(env, merchant);
-    if (plan && !plan.has(planTableKey(table))) {
+    const served = await servedTables(env, merchant, now);
+    const known = new Set([...(plan || []), ...served]);
+    if ((plan || served.size >= MIN_SERVED_TABLES) && !known.has(planTableKey(table))) {
       try {
         const rows = await env.DB.prepare(
           "SELECT table_no, COUNT(*) AS n FROM orders WHERE merchant = ? AND mode = 'table' AND status = 'pending' AND created_ts >= ? GROUP BY table_no"
         ).bind(merchant, today).all();
         const offPlan = ((rows && rows.results) || [])
-          .filter((r) => !plan.has(planTableKey(r.table_no)))
+          .filter((r) => !known.has(planTableKey(r.table_no)))
           .reduce((n, r) => n + Number(r.n || 0), 0);
         if (offPlan >= MAX_PENDING_OFF_PLAN) return json({ error: 'table-queue-full', reason: 'off-plan' }, 429);
       } catch (_) { /* lecture impossible → les plafonds ci-dessus jouent seuls */ }

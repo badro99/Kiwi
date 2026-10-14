@@ -141,6 +141,27 @@ export async function floorPlanTables(env, merchant) {
   } catch (_) { return null; }
 }
 
+/* Les tables que le comptoir a déjà servies. Un établissement sans plan de
+ * salle n'avait aucune défense contre les tables inventées : la seule preuve
+ * qu'une table existe, c'est qu'une commande y a été acceptée par l'équipe.
+ * Une commande refusée n'apprend rien. 60 jours suffisent à couvrir toute la
+ * salle d'un restaurant ouvert ; la lecture suit l'index (merchant, updated_ts). */
+export const KNOWN_TABLES_DAYS = 60;
+export async function servedTables(env, merchant, now = Date.now()) {
+  const keys = new Set();
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT DISTINCT table_no FROM orders WHERE merchant = ? AND updated_ts >= ? AND mode = 'table' " +
+      "AND status IN ('accepted','ready','served','archived') LIMIT 500"
+    ).bind(merchant, now - KNOWN_TABLES_DAYS * 864e5).all();
+    for (const r of ((rows && rows.results) || [])) {
+      const k = planTableKey(r.table_no);
+      if (k) keys.add(k);
+    }
+  } catch (_) { /* lecture impossible → aucune table apprise */ }
+  return keys;
+}
+
 /* ── LE CURSEUR REGARDE LÉGÈREMENT EN ARRIÈRE ──────────────────────────────
  * Les sondages avancent avec `since` : le client renvoie le `now` de la réponse
  * précédente, et le serveur ne rend que ce qui a changé DEPUIS. Le piège est

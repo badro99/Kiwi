@@ -81,6 +81,12 @@ async function open({ lang = 'fr', width = 1366 } = {}) {
       sales.push({ id: 'bench-' + i, ts: now - (i * 2.6 + 1) * 3600e3, amount: price * q, method: i % 4 === 0 ? 'cash' : 'card', channel: i % 10 === 0 ? 'glovo' : '',
         lines: [{ itemId: items[k].id, name: items[k].name, qty: q, unitPrice: price, total: price * q, unitCost: [30, 4, i % 2 ? 0 : 45][k] }] });
     }
+    /* Une vente juste avant la journée de caisse qui ouvre « 7 jours » : la
+     * page doit la laisser dehors à toute heure, pas seulement l'après-midi
+     * (la fenêtre glissante de 7 × 24 h la comptait). */
+    const open = window.KiwiDateRange.bounds('septJours')[0];
+    sales.push({ id: 'bench-edge', ts: open - 30 * 60e3, amount: 120, method: 'card', channel: '',
+      lines: [{ itemId: 'm3', name: 'Pastilla', qty: 1, unitPrice: 120, total: 120, unitCost: 45 }] });
     window.__bench = sales;
     window.KiwiSales.list = () => sales;
     const W = window.KiwiRestaurantMenuWorkspace; if (W) W.isRestaurant = () => false;

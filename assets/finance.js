@@ -789,7 +789,11 @@
   function finBounds(p) {
     try {
       const b = window.KiwiDateRange && window.KiwiDateRange.bounds && window.KiwiDateRange.bounds(p);
-      if (Array.isArray(b) && b.length === 2 && isFinite(b[0]) && isFinite(b[1])) return b;
+      /* Une période en cours est ouverte à Infinity : ce n'est pas une
+         panne, c'est « jusqu'à maintenant ». La refuser repliait Marges sur
+         7 × 24 h glissantes et lui faisait compter des ventes d'avant la
+         journée de caisse. */
+      if (Array.isArray(b) && b.length === 2 && isFinite(b[0]) && (isFinite(b[1]) || b[1] === Infinity)) return [b[0], b[1] === Infinity ? Date.now() + 1 : b[1]];
     } catch (_) {}
     const to = Date.now();
     return [to - (p === 'trenteJours' ? 30 : p === 'septJours' ? 7 : 1) * 864e5, to];

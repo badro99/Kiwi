@@ -1513,6 +1513,7 @@ section('Whole-project regressions');
     'orderpro-inbox-confirmation-test.mjs',
     'orderpro-floorplan-race-test.mjs',
     'orderpro-guest-bill-test.mjs',
+    'orderpro-panel-plan-test.mjs',
     'field-whole-item-split-test.mjs',
     'field-orderpro-acceptance-test.mjs',
     'field-table-transfer-test.mjs',
