@@ -459,6 +459,23 @@
    * geste qu'il puisse faire sur place : taper un code à six chiffres. */
   function renderPairPad(opts) {
     opts = opts || {};
+    /* Design 2027 (kiwiSkin2027:till): the same door on the kit's pad, through
+       KiwiPinFlow's pair and store rows (assets/kit/till-pin.js). A code that
+       got no answer is never sent again by itself; the store lock's pad has a
+       Back that returns to the lock's screen (§10.26). */
+    if (window.KiwiTillPin && window.KiwiTillPin.pair) {
+      window.KiwiTillPin.pair({
+        use: opts.store ? 'store' : 'pair',
+        venue: opts.venue || null,
+        prompt: opts.store ? opts.prompt : '',
+        foot: opts.store ? opts.foot : '',
+        request: redeemReply,
+        commit: commitRedeem,
+        done: pairDone,
+        back: hidePad,
+      });
+      return;
+    }
     injectCss();
     var scr = document.getElementById('cp-screen');
     if (!scr) {
@@ -503,6 +520,8 @@
     opts = opts || {};
     var pv = opts.venue || pairedVenue();
     renderPairPad({
+      /* The store lock names the store it pairs back to (till-tenant.js). */
+      store: !!opts.venue,
       venue: pv,
       prompt: opts.prompt || 'R\u00c9APPAIRER · CODE \u00c0 6 CHIFFRES',
       foot: opts.foot || (pv && pv.name
@@ -548,18 +567,51 @@
     renderDots();
     if (buf.length === 6) submit();
   }
+  /* The till is paired (either pad). */
+  function pairDone(res) {
+    hidePad();
+    /* Le jeton est reposé : les ventes retenues par un 403 n'ont plus de
+       raison d'attendre le prochain battement. `true` lève le recul
+       d'authentification de soixante secondes. */
+    try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
+    bootWithPin(res.venue);
+  }
+  /* The kit's pad (kiwiSkin2027:till) asks through KiwiPinFlow: one request,
+     8 s, a reply it reads from its table. The shipped fail-soft stays: no
+     backend (404, 405) reads the same-browser map; no answer reads it too, and
+     only a match there counts, else the pad says no answer. */
+  var lastPairCode = '';
+  function localReply(code) {
+    var e = readMap()[code];
+    if (!e || (e.exp && e.exp < Date.now())) return { kind: 'answer', status: 422, json: true, body: { error: 'invalid_or_expired' } };
+    return { kind: 'answer', status: 200, json: true, body: Object.assign({}, e, { ok: true, local: true }) };
+  }
+  function redeemReply(code) {
+    code = lastPairCode = String(code || '').replace(/\D/g, '').slice(0, 6);
+    return window.KiwiPinFlow.send('/api/pair/redeem', { code: code, terminalId: terminalId() }).then(function (reply) {
+      if (reply.kind === 'answer' && (reply.status === 404 || reply.status === 405)) return localReply(code);
+      if (reply.kind !== 'answer') { var l = localReply(code); return l.status === 200 ? l : reply; }
+      return reply;
+    });
+  }
+  function commitRedeem(body) {
+    var code = lastPairCode;
+    if (body && body.local) {
+      var d = Object.assign({}, body); delete d.ok; delete d.local;
+      return applyPairing(code, d);
+    }
+    var committed = applyPairing(code, body);
+    if (!committed || !committed.ok) return committed;
+    return confirmTillProof(committed.venue || body, committed);
+  }
   function submit() {
     if (pairSubmitting) return;
     pairSubmitting = true;
     var code = buf;
     redeem(code).then(function (res) {
       if (res && res.ok) {
-        pairSubmitting = false; hidePad();
-        /* Le jeton est reposé : les ventes retenues par un 403 n'ont plus de
-           raison d'attendre le prochain battement. `true` lève le recul
-           d'authentification de soixante secondes. */
-        try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
-        bootWithPin(res.venue); return;
+        pairSubmitting = false;
+        pairDone(res); return;
       }
       var scr = document.getElementById('cp-screen');
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
@@ -867,6 +919,7 @@
     }
     var scr = document.getElementById('cp-screen');
     if (!scr || scr.style.display === 'none') return;
+    if (scr.classList.contains('k-till-lock')) return;
     if (/^[0-9]$/.test(e.key)) { feed(e.key); e.preventDefault(); }
     else if (e.key === 'Backspace') { feed('back'); e.preventDefault(); }
   });

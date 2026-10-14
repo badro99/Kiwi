@@ -16,7 +16,12 @@
  *   · the needs-connection state: offline when the pad opens for a live
  *     order's cancellation, no digit is taken, and `online` gives the keys
  *     back;
- *   · manager level: a cashier is refused for a discount, a manager approves.
+ *   · manager level: a cashier is refused for a discount, a manager approves;
+ *   · the pairing pad (six digits): a refused code says pair.invalid; a code
+ *     held past 8 s says pair.no_answer and is never sent again by itself,
+ *     and typed again after a 422 says pair.maybe_used; the right code pairs
+ *     and hands over to the staff lock; the store lock's pad names the store,
+ *     carries its prompt and Back, and Back closes it.
  *
  *   node tools/till-pin-browser-test.mjs */
 import assert from 'node:assert/strict';
@@ -36,12 +41,13 @@ const STAFF = {
   '3333': { id: 'm1', name: 'Nadia Berrada', role: 'manager' },
 };
 const VENUE = { merchant: 'kiwi-test-till', name: 'Café Banc', slug: 'kiwi-test-till' };
+const PAIR = '482913';   /* a test pairing code for the test store */
 
 async function till(tr, { flag = true, lang = 'fr' } = {}) {
   const ctx = await kb.browser.createBrowserContext();
   tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
-  const net = { offline: false, verify: [], held: null };
+  const net = { offline: false, verify: [], held: null, redeem: [], pairHold: false };
   await page.setViewport({ width: 1180, height: 820 });
   await page.setRequestInterception(true);
   page.on('request', (r) => {
@@ -58,6 +64,14 @@ async function till(tr, { flag = true, lang = 'fr' } = {}) {
       if (b.action && b.action.kind === 'refund') return json(200, { ok: true, staff: who, ...(who.role === 'manager' ? { approval: 'proof-' + b.action.refundId } : {}) });
       return json(200, { ok: true, staff: who, actorProof: 'actor-' + who.id });
     }
+    if (u.pathname === '/api/pair/redeem') {
+      const b = JSON.parse(r.postData() || '{}');
+      net.redeem.push(b.code);
+      if (net.pairHold) return;                       /* held: never answered */
+      if (b.code === PAIR) return json(200, { ok: true, merchant: VENUE.merchant, name: VENUE.name });
+      return json(422, { error: 'invalid_or_expired' });
+    }
+    if (u.pathname === '/api/pair/recover') return json(200, { ok: true, merchant: VENUE.merchant });
     return json(503, { error: 'offline' });
   });
   await page.evaluateOnNewDocument((flag, venue, lang) => {
@@ -207,6 +221,43 @@ await S.run('manager level: a discount needs a manager', async (tr) => {
   await press(page, SHEET, '3333'); await settle(page, 700);
   const who = await page.evaluate(() => window.__disc);
   check(who && who.name === 'Nadia Berrada' && await page.evaluate(() => window.KiwiCaissePairing.lastManager().name === 'Nadia Berrada'), 'a manager approves, and the till knows who (lastManager)');
+});
+
+await S.run('the pairing pad and the store lock on the kit pad', async (tr) => {
+  const { page, net } = await till(tr);
+  const PAD = '#cp-screen k-pin-pad';
+  await page.evaluate(() => window.KiwiCaissePairing.repairWithCode());
+  await page.waitForSelector(PAD); await settle(page, 300);
+  const st = await page.evaluate((s) => { const p = document.querySelector(s); return { len: p.getAttribute('length'), h: p.getAttribute('heading'), sub: p.getAttribute('sub'), legacy: !!document.querySelector('#cp-pad') }; }, PAD);
+  check(st.len === '6' && st.h === await tt(page, 'pair.title') && st.sub === await tt(page, 'pin.sub.pairing') && !st.legacy, 'six digits, pair.title, pin.sub.pairing, no shipped pad');
+  await press(page, PAD, '000000'); await settle(page, 900);
+  let m = await msg(page, PAD);
+  check(m.pol === await tt(page, 'pair.invalid'), 'a refused code: pair.invalid, politely');
+
+  net.pairHold = true;
+  await press(page, PAD, '555555');
+  await page.waitForFunction((s, w) => document.querySelector(s).shadowRoot.querySelector('.pol').textContent === w, { timeout: 12000 }, PAD, await tt(page, 'pair.no_answer'));
+  check(true, 'held past 8 s: pair.no_answer');
+  await settle(page, 1500);
+  check(net.redeem.filter((c) => c === '555555').length === 1, 'and it was sent once, never again by itself');
+  net.pairHold = false;
+  await press(page, PAD, '555555'); await settle(page, 900);
+  m = await msg(page, PAD);
+  check(m.pol === await tt(page, 'pair.maybe_used'), 'typed again, a 422: pair.maybe_used');
+
+  await press(page, PAD, PAIR);
+  await page.waitForFunction(() => { const s = document.getElementById('cp-screen'); return !s || s.style.display === 'none'; }, { timeout: 8000 });
+  check(true, 'the right code pairs and the pad closes');
+  await page.waitForFunction(() => { const s = document.getElementById('cp-pin-screen'); return s && s.style.display !== 'none' && s.querySelector('k-pin-pad'); }, { timeout: 8000 });
+  check(true, 'and hands over to the staff lock');
+
+  await page.evaluate(() => window.KiwiCaissePairing.repairWithCode({ venue: { merchant: 'kiwi-test-other', name: 'Autre Banc' }, prompt: 'Réappairer à Autre Banc', foot: 'Code depuis son tableau de bord' }));
+  await page.waitForFunction((s) => { const p = document.querySelector(s); return p && p.getAttribute('identity') === 'Autre Banc'; }, { timeout: 5000 }, PAD);
+  const sl = await page.evaluate((s) => { const p = document.querySelector(s); const x = p.shadowRoot.querySelector('[data-extra]'); return { h: p.getAttribute('heading'), sub: p.getAttribute('sub'), back: x && x.textContent }; }, PAD);
+  check(sl.h === 'Réappairer à Autre Banc' && sl.sub === 'Code depuis son tableau de bord' && sl.back === await tt(page, 'action.back'), 'the store lock\'s pad: the store, its prompt, its foot, and Back');
+  await page.evaluate((s) => document.querySelector(s).shadowRoot.querySelector('[data-extra]').click(), PAD);
+  await page.waitForFunction(() => document.getElementById('cp-screen').style.display === 'none', { timeout: 3000 });
+  check(true, 'Back closes the pad');
 });
 
 await kb.close();

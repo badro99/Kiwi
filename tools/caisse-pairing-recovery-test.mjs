@@ -254,8 +254,11 @@ console.log('\n5 · la tablette peut se réappairer sans se vider');
    * locataire — service en cours, additions, journal — pour réparer un cookie. */
   check('repairing never purges the tenant the way unpair() does',
     !/purgeTenantData|unpair\(/.test(repairBody));
+  /* Both pads (the shipped one's submit() and the 2027 kit's, kiwiSkin2027:till)
+     end in pairDone(), which releases them. */
   check('a successful pair releases the sales the 403 was holding',
-    /KiwiLive\.flush\(true\)/.test(src.slice(src.indexOf('function submit()'), src.indexOf('function submit()') + 900)));
+    /KiwiLive\.flush\(true\)/.test(src.slice(src.indexOf('function pairDone('), src.indexOf('function pairDone(') + 600))
+    && /pairDone\(res\)/.test(src.slice(src.indexOf('function submit()'), src.indexOf('function submit()') + 400)));
 }
 
 /* ── 6 · La ligne d'état cesse d'être un cul-de-sac ────────────────────────── */

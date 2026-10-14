@@ -14,6 +14,9 @@
  *   KiwiTillPin.lock(venue, api)  the staff pad in #cp-pin-screen:
  *     api.verify(code) → reply, api.row(code) → row | null,
  *     api.accept(who), api.pair()
+ *   KiwiTillPin.pair(o)  the pairing pad, or the store lock's (o.use 'store',
+ *     with Back), in #cp-screen: o.request(code) → reply, o.commit(body) →
+ *     result, o.done(result), o.back()
  *
  * The server judges every code (caisse-pairing.js › verifyReply); offline,
  * the till's salted rows decide only what §10.2 lets them decide. Every
@@ -158,6 +161,52 @@
     return true;
   }
 
+  /* ── the pairing pad and the store lock's pad (6 digits) ─────────────── */
+  var pairFlow = null;
+  function pair(o) {
+    var scr = doc.getElementById('cp-screen');
+    if (!scr) {
+      scr = doc.createElement('div');
+      scr.id = 'cp-screen';
+      scr.setAttribute('role', 'dialog');
+      scr.setAttribute('aria-modal', 'true');
+      doc.body.appendChild(scr);
+    }
+    scr.className = 'k-till-lock';
+    scr.setAttribute('aria-label', t('pair.title'));
+    scr.style.display = '';
+    if (pairFlow) { try { pairFlow.destroy(); } catch (_) {} pairFlow = null; }
+    scr.textContent = '';
+    var pad = doc.createElement('k-pin-pad');
+    pad.setAttribute('size', 'ipad');
+    pad.setAttribute('identity', (o.venue && o.venue.name) || '');
+    pad.setAttribute('heading', o.prompt || t('pair.title'));
+    pad.setAttribute('sub', o.foot || t('pin.sub.pairing'));
+    if (o.use === 'store') pad.setAttribute('extra', t('action.back'));
+    scr.appendChild(pad);
+    var unusable = function () { pad.answer({ message: t('pin.unavailable'), keys: 'enabled', dots: null, clear: true, action: null }); };
+    pairFlow = F.attach(pad, {
+      use: o.use === 'store' ? 'store' : 'pair',
+      request: o.request,
+      onSuccess: function (body) {
+        Promise.resolve().then(function () { return o.commit(body); }).then(function (res) {
+          if (!res || !res.ok) { unusable(); return; }
+          var f = pairFlow; pairFlow = null;
+          try { f && f.destroy(); } catch (_) {}
+          o.done(res);
+        }, unusable);
+      }
+    });
+    pad.addEventListener('kiwi:action', function (e) {
+      if (e.detail && e.detail.action === 'k.pin-pad.extra' && typeof o.back === 'function') {
+        if (pairFlow) { try { pairFlow.destroy(); } catch (_) {} pairFlow = null; }
+        o.back();
+      }
+    });
+    setTimeout(function () { var k = pad.shadowRoot && pad.shadowRoot.querySelector('[data-key="1"]'); if (k) k.focus({ preventScroll: true }); }, 0);
+    return true;
+  }
+
   try { authLog = JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]') || []; } catch (_) { authLog = []; }
 
   /* The till paints its own theme (html[data-caisse-theme]); the kit follows
@@ -173,7 +222,7 @@
   doc.addEventListener('kiwi:caisse-theme', syncTheme);
 
   root.KiwiTillPin = {
-    approve: approve, lock: lock,
+    approve: approve, lock: lock, pair: pair,
     isOpen: function () { return !!current; },
     close: function () { closeCurrent('close'); },
     log: function () { return authLog.slice(); }

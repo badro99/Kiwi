@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=1',
-  '/assets/kit/till-pin.js?v=1',
+  '/assets/kit/till-pin.js?v=2',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=1',
   '/assets/kit/dash-pin.js?v=1',
@@ -376,7 +376,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=8',
   '/assets/pos-maison.css?v=68',
   '/assets/pos-maison.js?v=68',
-  '/assets/caisse-pairing.js?v=33',
+  '/assets/caisse-pairing.js?v=34',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

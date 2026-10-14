@@ -136,8 +136,8 @@
     "sha": "a5c45fa2503e8895"
   },
   "assets/caisse-pairing.js": {
-    "v": "33",
-    "sha": "433e1b12aa3cf6ff"
+    "v": "34",
+    "sha": "3f3578734a88fe88"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -660,8 +660,8 @@
     "sha": "407e46a04316201c"
   },
   "assets/kit/till-pin.js": {
-    "v": "1",
-    "sha": "a3a98a1b18d1f369"
+    "v": "2",
+    "sha": "373c1458c50f9977"
   },
   "assets/kit/till.js": {
     "v": "1",
