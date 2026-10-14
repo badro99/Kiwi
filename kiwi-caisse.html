@@ -148,7 +148,7 @@
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=4">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
         '<link rel="stylesheet" href="assets/kit/kit.css?v=13">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
@@ -176,7 +176,7 @@
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=1") +
-        js("assets/kit/till.js?v=7") +
+        js("assets/kit/till.js?v=8") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/kds.js?v=4") +
@@ -10603,7 +10603,25 @@
       const shell = $('.shell'), side = $('.sidebar');
       if (shell && side) shell.insertBefore(railBox, side);
       tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, menuPane: $('.main'), act: tillKitAct });
-      if (tillKit) document.documentElement.setAttribute('data-k-till', '');
+      if (tillKit) {
+        document.documentElement.setAttribute('data-k-till', '');
+        /* §10.12, §10.26 : la bannière vivante et la région polie sont dans le
+           DOM dès le montage, vides ; les écrire annonce une fois. */
+        const main = $('.main');
+        if (main && customElements.get('k-banner')) {
+          const banner = document.createElement('k-banner');
+          banner.id = 'kit-sync-banner';
+          banner.setAttribute('live', '');
+          banner.setAttribute('tone', 'danger');
+          main.insertBefore(banner, main.firstChild);
+        }
+        const say = document.createElement('div');
+        say.id = 'kit-sync-say';
+        say.setAttribute('role', 'status');
+        say.setAttribute('aria-live', 'polite');
+        say.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0';
+        document.body.appendChild(say);
+      }
       return tillKit;
     }
     function tillKitSections() {
@@ -10701,6 +10719,14 @@
       tenderInFlight = false;
       if (share && !share.paid) { pay.notRecorded(); return; }   // markSplitPartPaid a dit pourquoi
       const sale = settled === 'split' ? null : lastSaleEntry();
+      /* §10.26 : la ligne du moment payé lit la sauvegarde du service telle
+         qu'elle est au retour de recordSale. */
+      const last = sale || lastSaleEntry();
+      const held = !!(last && (last.saleSyncError || last.saleHeldLocal));
+      const p = pay.p();
+      if (tillKitSave !== true) { p.note = kkt('sync.screen_only'); p.noteTone = 'warning'; }
+      else if (navigator.onLine === false || held) { p.note = kkt('sync.saved_here'); p.noteTone = ''; }
+      else { p.note = ''; p.noteTone = ''; }
       pay.paid();
       if (kind === 'cash') {
         /* markSplitPartPaid ouvre déjà le tiroir d'une part payée en espèces. */
@@ -10884,7 +10910,10 @@
       ].filter((r) => tillKitLive(r[3])).map(([id, icon, key]) => ({ id, icon, label: kkt(key), badge: id === 'kitchen' && newTickets ? newTickets : 0 }));
       items.push({ id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
       const who = (typeof currentCashier !== 'undefined' && currentCashier && currentCashier.name) || '';
-      return { value, items, footer: who ? { cashier: who } : {}, label: kkt('till.nav.more') };
+      const footer = who ? { cashier: who } : {};
+      const sync = tillKitLocked() ? null : tillKitSyncFooter(tillKitSyncRows());
+      if (sync) footer.sync = sync;
+      return { value, items, footer, label: kkt('till.nav.more') };
     }
     function tillKitOpenMore() {
       const sections = TILL_KIT_MORE.map(([title, rows]) => ({
@@ -10912,8 +10941,124 @@
       if (el) el.click();
       tillKitPaint();
     }
+    /* La synchronisation (étape 4 (11), §10.26). tillKitSyncRows() tire de
+       l'état livré (KiwiLive, le journal, la dernière sauvegarde du service)
+       les lignes 1 à 9, triées, aucune n'en cache une autre. Le rail montre
+       l'icône de la première et un seul badge, le compte de la première des
+       lignes 3 et 4 ; une seule bannière, la première des lignes 1 et 2 ;
+       les lignes 3 et 4 s'annoncent poliment une fois, quand elles
+       s'appliquent, jamais sur un changement de compte ; sync.saved_again
+       quand la dernière des lignes 1 et 2 tombe. Sous le verrou de magasin,
+       tout est calculé, rien n'est dessiné ni annoncé (R7). */
+    let tillKitSave = null;            // le dernier oui / non de persistShift()
+    let tillKitAllSentUntil = 0, tillKitHadQueue = false, tillKitPrev = {}, tillKitSending = false;
+    function tillKitSyncRows() {
+      const L = window.KiwiLive;
+      const on = !!(L && L.isOn && L.isOn());
+      let q = {};
+      try { q = (L && L.queueStatus && L.queueStatus()) || {}; } catch (_) { q = {}; }
+      const slug = on && L.merchant ? (L.merchant() || '') : '';
+      const sales = (Array.isArray(journal) ? journal : []).filter((e) => e && e.kind !== 'refund' && !e.origin);
+      const online = navigator.onLine !== false;
+      const rows = [];
+      const add = (n, key, icon, tone, count) => rows.push({ n, key, icon, tone, count: count || 0,
+        text: count != null ? kkt(key, { n: count }) : kkt(key) });
+      if (q.storageError || sales.some((e) => e.saleSyncError === 'queue-storage-full')) add(1, 'sync.storage_error', 'error', 'danger');
+      if (tillKitSave === false) add(2, 'sync.not_saved', 'error', 'danger');
+      if ((q.blocked || 0) > 0) add(3, 'sync.blocked', 'error', 'danger', q.blocked);
+      if (on) {
+        const refused = sales.filter((e) => e.saleSyncError && (!e.merchant || !slug || e.merchant === slug)).length;
+        if (refused) add(4, 'sync.not_synced', 'warning', 'warning', refused);
+        const unlinked = slug ? 0 : sales.filter((e) => e.saleSyncPending && !e.serverSaleId).length;
+        if (unlinked) add(5, 'sync.waiting_store', 'storefront', 'ink2', unlinked);
+      }
+      if (!online && (q.pending || 0) > 0) add(6, 'sync.waiting', 'wifi_off', 'ink2', q.pending);
+      if (online && (q.sending || 0) > 0) add(7, 'sync.sending', 'upload', 'ink2', q.sending);
+      if (!on) add(8, 'sync.off', 'info', 'ink2');
+      const queued = (q.total || 0) > 0;
+      if (tillKitHadQueue && !queued) tillKitAllSentUntil = Date.now() + 4000;
+      tillKitHadQueue = queued;
+      if (Date.now() < tillKitAllSentUntil && !rows.some((r) => r.n <= 7)) add(9, 'sync.all_sent', 'task_alt', 'ink2');
+      return rows;
+    }
+    function tillKitSyncFooter(rows) {
+      const shown = rows.filter((r) => r.n <= 7 || r.n === 9);
+      if (!shown.length) return null;
+      const first = shown[0];
+      const counted = shown.find((r) => r.n === 3 || r.n === 4);
+      return { icon: first.icon, tone: first.tone === 'ink2' ? '' : first.tone, label: shown.map((r) => r.text).join(' · '),
+        badge: counted ? counted.count : 0, badgeTone: counted ? (counted.n === 3 ? 'danger' : 'warning') : '' };
+    }
+    function tillKitLocked() { try { return !!(window.KiwiTillTenant && window.KiwiTillTenant.mismatch && window.KiwiTillTenant.mismatch()); } catch (_) { return false; } }
+    function tillKitSay(text) {
+      const say = document.getElementById('kit-sync-say');
+      if (!say) return;
+      if (say.textContent === text) { say.textContent = ''; setTimeout(() => { say.textContent = text; }, 60); }
+      else say.textContent = text;
+    }
+    function tillKitSync() {
+      if (!tillKit) return;
+      const rows = tillKitSyncRows();
+      if (tillKitLocked()) return;            // R7 : calculé, ni dessiné ni annoncé
+      const has = (n) => rows.find((r) => r.n === n);
+      const banner = document.getElementById('kit-sync-banner');
+      const top = has(1) || has(2);
+      if (banner) { if (top) banner.setAttribute('message', top.text); else banner.removeAttribute('message'); }
+      const was12 = tillKitPrev[1] || tillKitPrev[2];
+      [3, 4].forEach((n) => { const r = has(n); if (r && !tillKitPrev[n]) tillKitSay(r.text); });
+      if (was12 && !top) tillKitSay(kkt('sync.saved_again'));
+      tillKitPrev = { 1: !!has(1), 2: !!has(2), 3: !!has(3), 4: !!has(4) };
+      window.KiwiTillFrame.paint({ rail: tillKitRail() });
+    }
+    /* The indicator's popover: every applicable row, and Send now when sales
+       wait on this till only (row 4). Send now replays the journal by the
+       same stable ids (reconcileJournalSales), then flushes; nothing goes
+       back to recordSale. */
+    let tillKitSyncPop = null;
+    function tillKitOpenSync(anchor) {
+      if (!customElements.get('k-popover')) return;
+      if (!tillKitSyncPop) {
+        tillKitSyncPop = document.createElement('k-popover');
+        tillKitSyncPop.addEventListener('kiwi:action', (e) => {
+          const d = e.detail || {};
+          if (d.action !== 'k.button.press') return;
+          e.stopPropagation();
+          tillKitSendNow();
+        });
+        document.body.appendChild(tillKitSyncPop);
+      }
+      const rows = tillKitSyncRows().filter((r) => r.n <= 7 || r.n === 9);
+      tillKitSyncPop.setAttribute('heading', kkt('till.nav.more'));
+      tillKitSyncPop.textContent = '';
+      rows.forEach((r) => { const p = document.createElement('p'); p.className = 'k-body'; p.style.margin = '0 0 8px'; p.textContent = r.text; tillKitSyncPop.appendChild(p); });
+      if (rows.some((r) => r.n === 4)) {
+        const b = document.createElement('k-button');
+        b.setAttribute('icon', 'upload');
+        b.setAttribute('label', kkt('sync.send_now'));
+        if (tillKitSending) b.setAttribute('disabled', '');
+        b.setAttribute('data-send-now', '');
+        tillKitSyncPop.appendChild(b);
+      }
+      tillKitSyncPop.anchor = anchor || null;
+      tillKitSyncPop.setAttribute('open', '');
+    }
+    function tillKitSendNow() {
+      if (tillKitSending) return;
+      tillKitSending = true;
+      const btn = tillKitSyncPop && tillKitSyncPop.querySelector('[data-send-now]');
+      if (btn) btn.setAttribute('disabled', '');
+      try { reconcileJournalSales(true); } catch (_) {}
+      try { window.KiwiLive && window.KiwiLive.flush && window.KiwiLive.flush(true); } catch (_) {}
+      setTimeout(() => {
+        tillKitSending = false;
+        if (btn) btn.removeAttribute('disabled');
+        tillKitSync();
+        if (tillKitSyncPop && tillKitSyncPop.hasAttribute('open')) tillKitOpenSync(tillKitSyncPop.anchor);
+      }, 600);
+    }
     function tillKitAct(verb, id, value) {
       switch (verb) {
+        case 'rail.sync': tillKitOpenSync(value && value.anchor); return;
         case 'rail.select': tillKitRailSelect(id); return;
         case 'rail.cashier': tillKitOpenMore(); return;
         case 'more.select': tillKitMore(id); return;
@@ -10982,10 +11127,20 @@
       }
       window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill(), rail: tillKitRail() });
     }
+    /* Peint tout de suite, puis une fois encore à l'image suivante : le
+       volet livré se montre souvent JUSTE APRÈS sa fonction de rendu (une
+       table ouverte au plan : renderRightPanel, puis #rp-active visible), et
+       l'addition du kit lirait un volet encore fermé. Les signatures de
+       till-frame.js rendent la seconde peinture gratuite quand rien n'a bougé. */
+    let tillKitFramePending = false;
     function tillKitAfter(fn) {
       return function () {
         const r = fn.apply(this, arguments);
         try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); }
+        if (!tillKitFramePending) {
+          tillKitFramePending = true;
+          requestAnimationFrame(() => { tillKitFramePending = false; try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); } });
+        }
         return r;
       };
     }
@@ -10998,6 +11153,14 @@
       setMode = tillKitAfter(setMode);
       openKds = tillKitAfter(openKds);
       closeKds = tillKitAfter(closeKds);
+      const persistShiftShipped = persistShift;
+      persistShift = function () {
+        const r = persistShiftShipped.apply(this, arguments);
+        if (r === true || r === false) tillKitSave = r;
+        try { tillKitSync(); } catch (_) {}
+        return r;
+      };
+      ['kiwi:sale-queue', 'kiwi:money-sync', 'online', 'offline'].forEach((ev) => window.addEventListener(ev, () => { try { tillKitSync(); } catch (_) {} }));
       /* Le kit arrive en scripts différés, après ce script : on peint une
          première fois quand il est là. */
       document.addEventListener('DOMContentLoaded', () => { try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); } });
@@ -24043,7 +24206,10 @@
           })) : undefined,
           kdsOrderSeq: storeIsReal() ? kdsOrderSeq : undefined,
         }));
-      } catch (e) {}
+        /* Le service est écrit : la caisse 2027 lit ce oui (sync.saved_here) ;
+           un stockage plein rend non (sync.not_saved, sync.screen_only). */
+        return true;
+      } catch (e) { return false; }
     }
     function migrateLegacyShift() {
       try {

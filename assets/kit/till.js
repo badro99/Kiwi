@@ -447,7 +447,10 @@
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
         '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' +
         (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>');
-      var paid = st === 'paid' ? '<p class="k-title paid" role="status">' + icon('task_alt', 32) + th('pay.paid') + '</p>' : '';
+      /* The paid moment's line (§10.26): .pay.note, set by the host from the
+         till's own save — sync.saved_here, or sync.screen_only in warning ink. */
+      var paid = st === 'paid' ? '<p class="k-title paid" role="status">' + icon('task_alt', 32) + th('pay.paid') + '</p>' +
+        (p.note ? '<p class="k-foot nt' + (p.noteTone === 'warning' ? ' wn' : ' k-ink2') + '">' + (p.noteTone === 'warning' ? icon('warning', 16) : '') + esc(p.note) + '</p>' : '') : '';
       /* Compact: the two columns are one group named by pay.title, read
          summary first (§18.3). */
       this.shadowRoot.innerHTML = cmp
@@ -474,7 +477,8 @@
       '.row span:first-child{flex:1}.ms{display:flex;flex-direction:column;gap:8px}' +
       '.mt[aria-checked="true"]{background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-accent)}' +
       '.cash,.card{display:flex;flex-direction:column;gap:12px}.disp{display:flex;flex-direction:column;min-height:32px}.chips{min-height:44px}.chg{margin:0;min-height:26px}' +
-      '.done .ms,.done .cash,.done .card{visibility:hidden}.paid{display:flex;align-items:center;gap:8px;color:var(--k-accent-ink);margin:0}'
+      '.done .ms,.done .cash,.done .card{visibility:hidden}.paid{display:flex;align-items:center;gap:8px;color:var(--k-accent-ink);margin:0}' +
+      '.nt{display:flex;align-items:center;gap:6px;margin:0;max-width:272px}.nt.wn{color:var(--k-warning);font-weight:var(--k-fw-footnote-strong)}'
   });
 
   /* ── <k-cash-count mode tolerance> .count {opening, cashSales, refundsCash,

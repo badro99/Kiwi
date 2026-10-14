@@ -2261,7 +2261,15 @@ section('Kiwi 2027 · une seule app de commande client');
  *   attendance-browser-test             la feuille du code sur le kit : current à
  *                                       l'ouverture, jamais generate ; renouvelé à
  *                                       expiresTs − 60 s du serveur ; toutes les 10 s ;
- *                                       Remplacer derrière une confirmation */
+ *                                       Remplacer derrière une confirmation
+ *   sale-unsynced-test                  une vente non envoyée (§10.26) : stockage plein,
+ *                                       sync.not_synced et Envoyer maintenant par le même
+ *                                       identifiant ; une table ; localStorage plein =
+ *                                       sync.screen_only ; Live Link éteint, rien ; pas
+ *                                       de commerce, sync.waiting_store
+ *   banner-announce-test                ce qui s'annonce, et combien de fois : régions
+ *                                       présentes avant le texte, une écriture par
+ *                                       ligne, saved_again, rien sous le verrou (R7) */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2273,6 +2281,8 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['cash-count-browser-test.mjs', 'cash-count-browser-test'],
     ['attendance-code-current-test.mjs', 'attendance-code-current-test'],
     ['attendance-browser-test.mjs', 'attendance-browser-test'],
+    ['sale-unsynced-test.mjs', 'sale-unsynced-test'],
+    ['banner-announce-test.mjs', 'banner-announce-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

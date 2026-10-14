@@ -144,8 +144,8 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "580",
-    "sha": "c18b0b7712208521"
+    "v": "582",
+    "sha": "6bed480c4dab5cd7"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "4322360317391fab"
   },
   "assets/dashboard-pwa.js": {
-    "v": "567",
-    "sha": "d976eb22624b53bf"
+    "v": "569",
+    "sha": "32c125bfdca50432"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "566",
-    "sha": "c643bd737498d6f0"
+    "v": "568",
+    "sha": "249c7aff9afb952b"
   },
   "assets/employee-planning.js": {
     "v": "14",
@@ -460,8 +460,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "4",
-    "sha": "2e1bc02c35dfa623"
+    "v": "5",
+    "sha": "0c4cb444508fc7f7"
   },
   "assets/identity.js": {
     "v": "11",
@@ -688,8 +688,8 @@
     "sha": "373c1458c50f9977"
   },
   "assets/kit/till.js": {
-    "v": "7",
-    "sha": "9688a9aa3f0316a2"
+    "v": "8",
+    "sha": "f4b7ef2381076a92"
   },
   "assets/kit/tokens-2027.css": {
     "v": "1",
