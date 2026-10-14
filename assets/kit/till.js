@@ -143,7 +143,8 @@
       '.tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-height:112px;padding:16px;border-radius:var(--k-r-3);' +
       'background-color:var(--k-surface-1);color:var(--k-ink-1);text-align:start;transition:transform var(--k-dur-4) var(--k-spring)}' +
       '.tile:active:not([aria-disabled="true"]){transform:scale(.97);transition-duration:var(--k-dur-1);transition-timing-function:var(--k-glide)}' +
-      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong)}' +
+      /* clear of the 28 px qty badge (8 px in from the corner, the tile pads 16) */
+      '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong);padding-inline-end:20px}' +
       '.pr{color:var(--k-ink-2)}.op{position:absolute;inset-inline-end:16px;bottom:16px;color:var(--k-ink-2)}' +
       '.q{position:absolute;inset-inline-end:8px;top:8px;min-width:28px;height:28px;padding-inline:6px;border-radius:14px;display:flex;align-items:center;justify-content:center;' +
       'background-color:var(--k-accent);color:var(--k-on-accent)}' +

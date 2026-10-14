@@ -2223,6 +2223,40 @@ section('Kiwi 2027 · une seule app de commande client');
   }
 }
 
+/* ── 14g · Kiwi 2027, étape 4 : le cœur de la caisse ──────────────────────
+ * assets/kit/till-frame.js met <k-menu-grid> et <k-bill> à la place de la
+ * grille et du volet de l'addition de kiwi-caisse.html, derrière
+ * kiwiSkin2027:till ; la caisse garde le panier, les commandes des tables,
+ * l'envoi en cuisine et l'encaissement. La porte :
+ *   till-frame-browser-test             caisse démo : drapeau éteint, aucun fichier
+ *                                       du menu kit et la grille livrée ; allumé,
+ *                                       une tuile par plat, l'addition vide, un plat
+ *                                       ajouté au panier livré, le total de la caisse,
+ *                                       le badge 2 sur la même tuile, le pas − jusqu'à
+ *                                       l'addition vide, Encaisser ouvre la fenêtre
+ *                                       livrée */
+section('Kiwi 2027 · le cœur de la caisse sur le kit');
+{
+  const { spawnSync } = require('child_process');
+  const gates = [
+    ['till-frame-browser-test.mjs', 'till-frame-browser-test'],
+  ];
+  for (const [file, label] of gates) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0 && out.includes('○ skip')) warn(`${label} sauté (pas de Chromium : les assertions du navigateur n'ont pas tourné)`);
+    else if (r.status === 0) {
+      const line = (out.split('\n').filter((l) => /^✓/.test(l)).pop() || 'vert').replace(/^✓\s*/, '').trim();
+      ok(line.startsWith(label) ? line : label + ' · ' + line);
+    }
+    else {
+      const lines = out.split('\n').filter((l) => /✗/.test(l)).slice(0, 12);
+      if (lines.length) lines.forEach((l) => fail(label + ' · ' + l.replace(/^\s*✗\s*/, '').trim()));
+      else fail(`${file} exited ${r.status} · ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 section('Politique typographique (tools/type-policy-test.js)');
 {

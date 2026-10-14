@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=2">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=6">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=8">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -169,6 +169,11 @@
         js("assets/kit/pin-flow.js?v=1") +
         js("assets/kit/till-pin.js?v=2") +
         js("assets/kit/controls/button.js?v=1") +
+        js("assets/kit/controls/chip.js?v=1") +
+        js("assets/kit/controls/keypad.js?v=1") +
+        js("assets/kit/controls/stepper.js?v=1") +
+        js("assets/kit/till.js?v=2") +
+        js("assets/kit/till-frame.js?v=1") +
         js("assets/kit/kds.js?v=4") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -10560,6 +10565,143 @@
       const editingOrder = editing ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
       $('#rp-send-kitchen').hidden = editing && !(editingOrder && editingOrder.status === 'held');
       if (discAmt > 0 && window.lucide) lucide.createIcons();
+    }
+
+    /* ── kiwiSkin2027:till · le menu et l'addition sur le kit ──────────────────
+       (assets/kit/till-frame.js, étape 4 (1)). Drapeau éteint, le kit n'est pas
+       chargé et rien de ceci ne tourne. Allumé : <k-menu-grid> prend la place de
+       la grille et <k-bill> celle du volet de l'addition, dessinés depuis le
+       MÊME état que les livrés (menuItems, cart, tableOrders, generateOrder) :
+       chaque fonction qui repeint la grille ou le volet repeint aussi le kit.
+       Chaque geste revient ici par son nom et part dans les fonctions livrées
+       (addToCart, changeCartLineQty, changeTableOrderLineQty,
+       cancelCaisseLineImmediately, validateOrder). Encaisser, diviser et la
+       remise ouvrent encore les fenêtres livrées, jusqu'aux étapes 4 (2) et
+       4 (3). Une part de formule se change par sa formule, comme au livré. */
+    let tillKit = false;
+    function tillKitOn() {
+      if (tillKit) return true;
+      if (!window.KiwiTillFrame || !window.KiwiKit) return false;
+      const grid = $('#menu-grid'), panel = $('.rightpanel');
+      if (!grid || !panel) return false;
+      const menuBox = document.createElement('div');
+      menuBox.id = 'kit-menu';
+      grid.parentNode.insertBefore(menuBox, grid);
+      const billBox = document.createElement('div');
+      billBox.id = 'kit-bill';
+      panel.appendChild(billBox);
+      tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, act: tillKitAct });
+      if (tillKit) document.documentElement.setAttribute('data-k-till', '');
+      return tillKit;
+    }
+    function tillKitSections() {
+      const inView = (m) => activeCat === 'all' || (m.cat === activeCat && (!activeSub || m.subId === activeSub));
+      const source = (mode !== 'vrap' && selectedId) ? (tableOrders[selectedId] || []) : cart;
+      const soldOut = Array.isArray(carteState.soldOut) ? carteState.soldOut : [];
+      const secs = [], byCat = {};
+      const put = (m, out) => {
+        const cat = String(m.cat || '');
+        if (!byCat[cat]) { byCat[cat] = { id: cat || 'menu', title: catLabelL(m.cat) || '', items: [] }; secs.push(byCat[cat]); }
+        byCat[cat].items.push({
+          id: String(m.id), name: menuName(m), price: m.price, soldOut: out,
+          options: !out && !!((m.formula && Array.isArray(m.formula.slots) && m.formula.slots.length) || itemOptGroups(m).length),
+          qty: out ? 0 : source.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0),
+        });
+      };
+      menuItems.filter(inView).forEach(m => put(m, false));
+      soldOut.filter(inView).forEach(m => put(m, true));
+      return secs;
+    }
+    function tillKitLine(l, i) {
+      const mods = [];
+      if (l.opts && l.opts.length) mods.push(optText(l.opts));
+      if ((l.note || '').trim()) mods.push(l.note.trim());
+      const sent = !!l.sent;
+      return { id: String(l.uid || 'l' + i), qty: l.qty, name: lineName(l), mods,
+        price: l.total != null ? l.total : l.price * l.qty, sent, sentAt: '', sentQty: sent ? l.qty : 0 };
+    }
+    const tillKitDiscount = (d, amt) => amt > 0
+      ? { label: d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
+    /* Ce que montre le volet livré, et rien d'autre : un volet fermé est une
+       addition vide. */
+    function tillKitBill() {
+      const empty = { title: '', meta: '', lines: [], total: 0 };
+      if ($('#rp-active').hidden) return empty;
+      const title = $('#rp-table').textContent || '', meta = $('#rp-substatus').textContent || '';
+      if (mode === 'vrap') {
+        const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
+        const disc = vrapDiscountAmount(gross);
+        return { title, meta, lines: cart.map(tillKitLine), discount: tillKitDiscount(vrapDiscount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true };
+      }
+      if (mode === 'order' && selectedId) {
+        const order = tableOrders[selectedId] || [];
+        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0) };
+      }
+      if (selectedId && tables[selectedId]) {
+        const lines = generateOrder(selectedId, tables[selectedId]);
+        const gross = lines.reduce((s, l) => s + l.total, 0);
+        const disc = discountAmountFor(selectedId, gross);
+        return { title, meta, lines: lines.map(tillKitLine), discount: tillKitDiscount(tables[selectedId].discount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true };
+      }
+      return empty;
+    }
+    function tillKitAct(verb, id, value) {
+      const list = mode === 'vrap' ? cart : (selectedId ? (tableOrders[selectedId] || []) : []);
+      const line = id ? list.find(l => String(l.uid) === id) : null;
+      if (line && line.kind === 'formula-part') return;
+      const click = (sel) => { const el = $(sel); if (el) el.click(); };
+      switch (verb) {
+        case 'add':
+        case 'options':
+          addToCart(id);
+          return;
+        case 'step':
+        case 'remove': {
+          if (!line) return;
+          const delta = verb === 'remove' ? (value.anchor ? -line.qty : -1) : (value.dir > 0 ? 1 : -1);
+          if (mode === 'vrap') changeCartLineQty(line.uid, delta);
+          else if (mode === 'order' && selectedId) changeTableOrderLineQty(selectedId, line.uid, delta);
+          return;
+        }
+        case 'void':
+          if (!line) return;
+          if (mode === 'vrap') changeCartLineQty(line.uid, -1);
+          else if (mode === 'order' && selectedId) changeTableOrderLineQty(selectedId, line.uid, -1);
+          else if (selectedId && line.sent) cancelCaisseLineImmediately(selectedId, line);
+          return;
+        case 'send':
+          if (mode === 'order' && selectedId) validateOrder(selectedId);
+          return;
+        case 'pay':
+          click(mode === 'order' ? '#pay-charge-order' : '#pay-charge');
+          return;
+        case 'split': click('#pay-split'); return;
+        case 'discount': click('#rp-pay-normal [data-action="discount"]'); return;
+        case 'print': click('[data-action="print-bill"]'); return;
+      }
+    }
+    function tillKitPaint() {
+      if (!tillKitOn()) return;
+      window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill() });
+    }
+    function tillKitAfter(fn) {
+      return function () {
+        const r = fn.apply(this, arguments);
+        try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); }
+        return r;
+      };
+    }
+    if (document.documentElement.getAttribute('data-skin-2027') === 'till') {
+      renderMenu = tillKitAfter(renderMenu);
+      renderCart = tillKitAfter(renderCart);
+      renderOrderPanel = tillKitAfter(renderOrderPanel);
+      renderRightPanel = tillKitAfter(renderRightPanel);
+      showEmpty = tillKitAfter(showEmpty);
+      /* Le kit arrive en scripts différés, après ce script : on peint une
+         première fois quand il est là. */
+      document.addEventListener('DOMContentLoaded', () => { try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); } });
     }
 
     /* Event delegation: tables, menu items, cart qty, cat pills */
