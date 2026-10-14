@@ -94,7 +94,8 @@ for (const [label, setup] of [
 ]) {
   await s.run(label, async (t) => {
     const page = t.watch(await kb.open('/__kit-host.html', { theme: setup.theme, scheme: setup.scheme }));
-    if (setup.vexel) { await page.evaluate((v) => document.body.setAttribute('data-vexel-mode', v), setup.vexel); await settle(page, 100); }
+    // settle's default wait: the button's background-color transition (--k-dur-2, 160 ms) outlasts 100 ms.
+    if (setup.vexel) { await page.evaluate((v) => document.body.setAttribute('data-vexel-mode', v), setup.vexel); await settle(page); }
     const p = await probe(page);
     check(p.fonts.every((f) => /Inter Tight/.test(f) && !/Comic/.test(f)), `${label}: every root sets in Inter Tight, never the host's face`);
     check(p.styles.every((v) => v === 'normal'), `${label}: roman, the host's italics stop at the host`);
