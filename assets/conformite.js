@@ -937,6 +937,32 @@
         ${tabRow ? `<div class="cf-tabs">${tabRow}</div>` : ''}
         <div class="cf-body">${tabBody}</div>
       </div>`;
+    kitPublish(real ? null : tabs.map((tb) => ({ key: tb.k, label: tb.label, status: tabStatus(tb.k, v) })));
+  }
+
+  /* Design 2027 (§12, Compliance): each shipped tab is a row of the kit's
+     list (assets/kit/dash-compliance.js, behind the dashboard's flag), with a
+     status line read from the same data the tab draws. A real account has no
+     tabs, so no list. */
+  const plain = (s) => String(s).replace(/<[^>]+>/g, '');
+  function tabStatus(k, v) {
+    if (k === 'z') { const z = zHistoryData(v)[0]; return z ? `Z #${z.zNum} · ${z.date}` : ''; }
+    if (k === 'hyg') {
+      hygSeed();
+      const daily = HYG_TASKS.filter((x) => x.cadence === 'daily');
+      return `${t('hygCadence').daily} · ${daily.filter((x) => hygChecked[x.id]).length}/${daily.length}`;
+    }
+    if (k === 'eq') {
+      const late = (EQUIPMENT[v] || EQUIPMENT.cafeAtlas).filter((it) => eqStatus(it) === 'late').length;
+      return late ? plain(t('eqOverdueAlert', late)) : t('eqStatOk');
+    }
+    const soon = (DOCUMENTS[v] || []).filter((d) => docExpStatus(d.expires) === 'soon').length;
+    return soon ? plain(t('docExpiringAlert', soon)) : t('docExpStatus').ok;
+  }
+  let kitModel = null;
+  function kitPublish(rows) {
+    kitModel = rows ? { tab: currentTab, rows } : null;
+    try { window.dispatchEvent(new CustomEvent('kiwi:compliance-model')); } catch (_) {}
   }
 
   /* ─────────── Show / hide ─────────── */
@@ -1030,6 +1056,7 @@
    * inputs don't pass through Kiwi's click delegator). */
   window.KiwiConformite = {
     showPage, showDashboard, render,
+    model: () => kitModel,
     docSearchHook: (el) => { docSearchQ = el.value || ''; rerender(); /* refocus the input */ requestAnimationFrame(() => { const i = document.querySelector('.cf-doc-search input'); if (i) { i.focus(); i.setSelectionRange(docSearchQ.length, docSearchQ.length); } }); },
     /* The denomination grid uses inline oninput too (counts feed back). */
     zCountHook: (el) => {
