@@ -2204,13 +2204,24 @@ section('Kiwi 2027 · une seule app de commande client');
  *                                       1032, compacte à 834, 820, 744, compacte courte
  *                                       à 560 (touches 56) ; clavier et bouton dans
  *                                       l'écran sans défiler ; à 500 la page défile
- *                                       d'un bloc, jamais une colonne */
+ *                                       d'un bloc, jamais une colonne
+ *   components-sum-test                 chaque total montre ses parts (§2) : l'addition,
+ *                                       la clé de paiement = base + pourboire, les parts
+ *                                       d'une division au centime, l'attendu de caisse
+ *                                       (pourboires espèces dedans, remboursements en
+ *                                       sous-ligne), le pourboire hors du chiffre
+ *   discount-reasons-test               les quatre motifs de remise : les puces et
+ *                                       DISCOUNT_REASONS sont le même ensemble, chaque
+ *                                       puce revient à son code, une vente par motif
+ *                                       acceptée par le vrai /api/sale */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
   const gates = [
     ['till-frame-browser-test.mjs', 'till-frame-browser-test'],
     ['pay-height-test.mjs', 'pay-height-test'],
+    ['components-sum-test.mjs', 'components-sum-test'],
+    ['discount-reasons-test.mjs', 'discount-reasons-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

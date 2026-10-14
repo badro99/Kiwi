@@ -210,7 +210,7 @@
             '<div class="r"><span class="qt k-callout k-num">' + esc(l.qty) + '×</span>' +
             '<span class="nm"><span class="k-body">' + esc(l.name) + '</span>' +
             (l.mods || []).map(function (m) { return '<span class="k-foot k-ink2 md">' + esc(m) + '</span>'; }).join('') + '</span>' +
-            '<span class="k-body k-num pr">' + numHtml(money(l.price)) + '</span></div>' + ex + '</li>';
+            '<span class="k-body k-num pr" data-k-part>' + numHtml(money(l.price)) + '</span></div>' + ex + '</li>';
         };
         body = (unsent.length ? '<p class="k-foot gh ns">' + th('bill.not_sent', { n: unsent.length }) + '</p><ul class="ls">' + unsent.map(row).join('') + '</ul>' : '') +
           (sent.length ? '<p class="k-foot k-ink2 gh">' + th('bill.sent_at', { time: (sent[0] && sent[0].sentAt) || '' }) + '</p><ul class="ls">' + sent.map(row).join('') + '</ul>' : '');
@@ -555,8 +555,9 @@
       var summary = open ? '' : part('count.opening_float', s.opening) + part('count.cash_sales', s.cashSales, '+ ') +
         (s.refundsCash ? '<p class="k-foot k-ink2 sub">' + th('count.cash_refunds_sub', { amount: money(s.refundsCash) }) + '</p>' : '') +
         part('count.cash_tips', s.cashTips, '+ ') + part('count.cash_in', s.cashIn, '+ ') + part('count.cash_out', s.cashOut, '− ') +
-        '<div class="sl ex"' + (this.__any ? '' : ' style="visibility:hidden"') + '><span class="k-body">' + th('count.expected') + '</span><span class="k-heading k-num">' + numHtml(money(this.expected())) + '</span></div>' +
-        (this.__any ? part('count.counted', this.counted()) : '');
+        '<div class="sl ex"' + (this.__any ? '' : ' style="visibility:hidden"') + '><span class="k-body">' + th('count.expected') + '</span><span class="k-heading k-num" data-k-total>' + numHtml(money(this.expected())) + '</span></div>' +
+        /* Counted is read against Expected, never added into it: no data-k-part. */
+        (this.__any ? '<div class="sl"><span class="k-body k-ink2">' + th('count.counted') + '</span><span class="k-body k-num">' + numHtml(money(this.counted())) + '</span></div>' : '');
       var canCommit = open ? this.__any : this.__any;
       this.shadowRoot.innerHTML = '<div class="cc"><div class="col">' +
         '<h2 class="k-heading ti">' + th('count.title') + '</h2>' +
