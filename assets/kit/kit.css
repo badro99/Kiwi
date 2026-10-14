@@ -311,6 +311,26 @@ html[data-k-home] .vexel-revenue-rail { display: none !important; }
 #kit-compliance { position: sticky; top: 16px; font-family: var(--k-font); }
 @media (max-width: 899px) { .cf-page:has(> #kit-compliance) { grid-template-columns: minmax(0, 1fr); } #kit-compliance { position: static; } }
 
+/* The dashboard's frame on the kit (stage 5 (9), §10.3, §10.18): every full
+   page's head (Kiwi.appPage) and every drawer (Kiwi.drawer) take the kit's
+   type steps, surfaces, line and close button. The page title is Heading, so
+   a page's key figure stays its largest text (Principle 1). What each page and
+   drawer holds stays the shipped content, reskinned one at a time (§12).
+   `body` outranks the skins' body.design-* rules, which load after kit.css. */
+html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head h1 { font-family: var(--k-font); font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); color: var(--k-ink-1); }
+html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p { font-family: var(--k-font); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); letter-spacing: var(--k-track-footnote); color: var(--k-ink-2); margin-top: 4px; }
+html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p .seg:first-child { color: var(--k-ink-2); }
+html[data-skin-2027="dashboard"] body .dash-genpage .genpage-head p .dot { background: var(--k-ink-3); }
+/* The sheet keeps the shipped solid ground (design-2026.css, owner 2026-10-11),
+   the kit's --k-bg. */
+html[data-skin-2027="dashboard"] body .kiwi-drawer { color: var(--k-ink-1); font-family: var(--k-font); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head { border-bottom-color: var(--k-line); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head h3 { font-family: var(--k-font); font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); color: var(--k-ink-1); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-head p { font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); color: var(--k-ink-2); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-foot { border-top-color: var(--k-line); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-close { flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--k-surface-2); color: var(--k-ink-1); }
+html[data-skin-2027="dashboard"] body .kiwi-drawer .kiwi-drawer-close:active { background: var(--k-surface-3); }
+
 /* The start of a Kiwi AI conversation on the kit (stage 5 (7), §18.6): drawn
    inside the shipped hero, whose own content is not drawn. */
 [data-fa-hero]:has(> #kit-ai) > :not(#kit-ai) { display: none !important; }

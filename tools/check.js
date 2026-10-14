@@ -2361,7 +2361,11 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *   chart-legend-test                   la légende du graphique (§10.22) : la bande
  *                                       réservée, aucun point dedans, la grille du haut
  *                                       nommée par son maximum, le bord de début, 1,35,
- *                                       la droite en RTL */
+ *                                       la droite en RTL
+ *   dash-frame-browser-test             le cadre : la tête de chaque page (Heading,
+ *                                       Footnote ink-2, le chiffre clé reste le plus
+ *                                       grand) et de chaque tiroir (Heading, fermer 44
+ *                                       rond sur surface-2) */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2375,6 +2379,7 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-ai-browser-test.mjs', 'dash-ai-browser-test'],
     ['dash-figures-agreement-test.mjs', 'dash-figures-agreement-test'],
     ['chart-legend-test.mjs', 'chart-legend-test'],
+    ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

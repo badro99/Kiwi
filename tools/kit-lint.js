@@ -68,7 +68,9 @@ function lintSheet(css, file, { tokensFile = false, line0 = 0 } = {}) {
   for (const r of sheet.rules) for (const d of r.decls) {
     if (d.prop === 'font-size') {
       const onHost = r.selectors.some((s) => /^:host/.test(s));
-      const onHtml = r.selectors.length > 0 && r.selectors.every((s) => /^(?:html|:root)(?![\w-])/.test(s));
+      /* The root itself (html or :root, with attributes or pseudo-classes),
+         not a descendant rule that merely starts from it. */
+      const onHtml = r.selectors.length > 0 && r.selectors.every((s) => /^(?:html|:root)(?![\w-])[^\s>+~]*$/.test(s));
       const kdsRoot = tokensFile && onHtml && r.selectors.every((s) => s.startsWith('html[data-k-surface="kds"]')) && /^var\(\s*--k-kds-root\s*,\s*(?:20|24|28)px\s*\)$/.test(d.value);
       if (kdsRoot) continue;
       if (onHost) out.push(`K3 ${where(d.line)} · font-size sur ${r.selector} : un composant n'a jamais sa propre racine`);
@@ -203,6 +205,7 @@ function selfTest() {
   fail('font: avec un px', lintSheet('.a{font:600 15px/1.2 Arial}', 'bad.css'), 'K2');
   fail('font-size sur :host', lintSheet(':host{font-size:var(--k-fs-body)}', 'bad.css'), 'K3');
   fail('font-size sur html', lintSheet('html{font-size:18px}', 'bad.css'), 'K3');
+  fail('font-size sur html avec attribut', lintSheet('html[data-skin-2027="dashboard"]{font-size:var(--k-fs-body)}', 'bad.css'), 'K3');
   fail('racine de cuisine hors du fichier de jetons', lintSheet('html[data-k-surface="kds"]{font-size:var(--k-kds-root, 24px)}', 'bad.css'), 'K3');
   fail('règle imbriquée', lintSheet('.a{color:var(--k-ink-1);.b{color:var(--k-ink-2)}}', 'bad.css'), 'K4');
   fail('@font-face dans un composant', lintSheet('@font-face{font-family:"x";src:url("a.woff2")}', 'bad.css'), 'K5');
