@@ -64,7 +64,72 @@
     window.KiwiCaisseLang?.apply?.(m);
     setTimeout(()=>{try{amt.focus();}catch(_){}},0);
   }
+  /* kiwiSkin2027:till (étape 4 (15), §18.3 « Business-type tills ») : le même
+     cadre que la caisse restaurant, KiwiTillFrame (le rail, la grille, l'addition,
+     l'encaissement), monté dans la racine du métier. Ce qui est propre à
+     « autre » reste dans le volet du menu : le montant libre (la fenêtre livrée),
+     la journée. Le panier, record() et le stock restent les livrés. Drapeau
+     éteint : rien ne change. */
+  let kit=false,kitView='sale';
+  const kitAvailable=()=>{try{return document.documentElement.getAttribute('data-skin-2027')==='till'&&!!window.KiwiTillFrame&&!!window.KiwiKit&&!!customElements.get('k-rail')&&!!customElements.get('k-menu-grid');}catch(_){return false;}};
+  const KIT_METHOD={cash:'especes',card:'carte',other:'wallet'};
+  function mountKit(el){
+    root=el;kit=true;
+    root.innerHTML='<div class="ot-k"><div class="ot-k-rail"></div><main class="ot-k-main"><div class="ot-k-menu"></div><div class="ot-k-day" hidden></div></main><aside class="ot-k-bill k-till-bill"></aside></div>';
+    window.KiwiTillFrame.mount({menu:root.querySelector('.ot-k-menu'),bill:root.querySelector('.ot-k-bill'),rail:root.querySelector('.ot-k-rail'),menuPane:root.querySelector('.ot-k-main'),act:kitAct});
+    watchCatalog();
+    render();
+  }
+  function kitPaint(){
+    const F=window.KiwiTillFrame,items=catalog(),p=paired();
+    const qty=id=>cart.filter(x=>x.id===id).length;
+    const sections=[{id:'articles',title:'Articles',items:[{id:'__libre',name:'Montant libre',price:null,options:true,qty:0}]
+      .concat(items.map(x=>({id:String(x.id),name:x.name,price:x.price,qty:qty(x.id)})))}];
+    const lines=cart.map((x,i)=>({id:String(i),qty:1,name:x.name,mods:[],price:x.price,sent:false,sentAt:'',sentQty:0}));
+    const day=root.querySelector('.ot-k-day'),menu=root.querySelector('.ot-k-menu');
+    if(day)day.hidden=kitView!=='day';
+    if(menu)menu.hidden=kitView==='day';
+    if(kitView==='day'&&day)renderDay(day);
+    F.paint({sections,bill:{title:'Ticket',meta:p.name||'',lines,total:total(),plain:true},rail:{value:kitView,label:'Caisse',items:[
+      {id:'sale',icon:'shopping_bag',label:'Encaisser'},{id:'work',icon:'receipt_long',label:'Suivi d’activité'},{id:'day',icon:'today',label:'Journée'}],footer:{cashier:p.name||'Kiwi'}}});
+  }
+  function kitPay(){
+    const amount=total();
+    if(!(amount>0))return;
+    window.KiwiTillFrame.openPay({bill:'Ticket',due:amount,method:null,tipPct:0,noTip:true});
+  }
+  function kitConfirm(kind,value){
+    const F=window.KiwiTillFrame,pay=F.pay(),method=KIT_METHOD[kind],amount=total();
+    if(!method||!(amount>0))return;
+    if(kind==='cash'&&roundMoney(+(value&&value.received)||0)<amount)return;
+    const change=kind==='cash'?roundMoney((+value.received||0)-amount):0;
+    checkout(method);
+    pay.paid();
+    if(change>0)window.KiwiCaisseToast?.('Monnaie à rendre · '+fmt(change)+' MAD');
+    setTimeout(()=>{F.closePay();render();},1200);
+  }
+  function kitAct(verb,id,value){
+    const F=window.KiwiTillFrame;
+    if(verb==='rail.select'){
+      if(id==='work'){window.KiwiPosWorkspaces?.open?.(root,'autre');return;}
+      kitView=id==='day'?'day':'sale';render();return;
+    }
+    if(verb==='rail.cashier'){window.KiwiPosDispatch?.lock?.();return;}
+    if(verb==='pay.confirm'){kitConfirm(id,value||{});return;}
+    if(verb==='pay.leave'){F.closePay();render();return;}
+    if(F.busy())return;
+    if(verb==='add'||verb==='options'){
+      if(id==='__libre'){openCustom();return;}
+      const x=catalog().find(y=>String(y.id)===id);
+      if(x){cart.push(x);render();}
+      return;
+    }
+    if(verb==='step'){const i=+id;if(!(i>=0&&i<cart.length))return;if(value&&value.dir>0)cart.push(cart[i]);else cart.splice(i,1);render();return;}
+    if(verb==='remove'){const i=+id;if(i>=0&&i<cart.length){cart.splice(i,1);render();}return;}
+    if(verb==='pay'){kitPay();return;}
+  }
   function mount(el){
+    if(kitAvailable())return mountKit(el);
     root=el;
     const p=paired();
     root.innerHTML=`<div class="ot-app"><aside class="ot-rail"><div class="ot-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div><div class="ot-venue"><strong>${esc(p.name||'Mon activité')}</strong><span>${esc(p.location||'Caisse polyvalente')}</span></div><nav class="ot-nav"><button class="on" data-ot-view="sale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M5 6l1 15h12l1-15M9 10v7M15 10v7"/></svg>Encaisser</button><button data-ot-view="work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6l1 3h3v15H5V6h3zM8 12h8M8 16h5"/></svg>Suivi d’activité</button><button data-ot-view="day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg>Journée</button></nav><div class="ot-foot"><div class="ot-lang" data-kcl-host></div><button class="ot-lock">Verrouiller</button></div></aside><main class="ot-main" data-ot-main></main></div>`;
@@ -87,6 +152,7 @@
   }
   function catalogDashboardOnly(){window.KiwiCaisseToast?.('Articles et prix se gèrent dans le tableau de bord.');}
   function render(){
+    if(kit)return kitPaint();
     const host=root.querySelector('[data-ot-main]');
     if(view==='day')return renderDay(host);
     const items=catalog();
@@ -119,7 +185,8 @@
     cart=[];window.KiwiCaisseToast?.('Vente encaissée · '+fmt(amount)+' MAD');render();}
   function addModal() { catalogDashboardOnly(); return; }
   function renderDay(host){const t=window.KiwiPosSale?.totals?.('autre')||{total:0,cash:0,card:0,count:0};host.innerHTML=`<header class="ot-head"><div><h1>Journée</h1><p>Uniquement les ventes réellement encaissées sur ce terminal.</p></div></header><section class="ot-day"><div class="ot-day-grid"><div class="ot-stat"><span>Ventes</span><strong>${t.count}</strong></div><div class="ot-stat"><span>Recette</span><strong>${fmt(t.total)} MAD</strong></div><div class="ot-stat"><span>Espèces / carte</span><strong>${fmt(t.cash)} / ${fmt(t.card)}</strong></div></div></section>`;}
-  function onShow(){if(root)render();}
+  /* Le cadre est partagé : au retour sur ce métier, il revient dans sa racine. */
+  function onShow(){if(!root)return;if(kit){const r=root;mountKit(r);return;}render();}
   let watching=false;
   function watchCatalog(){if(watching)return;const C=window.KiwiBoutiqueCatalog;if(C&&C.subscribe){watching=true;try{C.subscribe(()=>{if(root&&view==='sale')render();});}catch(_){}}}
   window.KiwiPosDispatch.register({id:'autre',greet:{line1:'Bonjour,',em:'bienvenue.',sub:'Caisse polyvalente'},mount,onShow});

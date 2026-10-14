@@ -155,7 +155,9 @@
   /* ── <k-bill state> .bill ──────────────────────────────────────────────────
      bill: { title, meta, lines:[{id, qty, name, mods:[], price, sent, sentAt,
              sentQty}], discount:{label, amount}, service:{label, amount},
-             total, sendOnPay, paying } */
+             total, sendOnPay, paying, plain }
+     plain: a counter sale with no kitchen (the business-type tills, §18.3):
+     one list without sent groups, no split, discount, print or overflow. */
   var KBill = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot;
@@ -190,8 +192,8 @@
       var paying = !!b.paying;
       var head = '<header class="hd"><div class="ht"><h2 class="k-title ti">' + esc(b.title || '') + '</h2>' +
         (b.meta ? '<p class="k-foot k-ink2 mt">' + esc(b.meta) + '</p>' : '') + '</div>' +
-        C.button.render({ variant: 'icon', icon: 'print', label: t('bill.print'), id: 'pr', attrs: ' data-w="print"' }) +
-        C.button.render({ variant: 'icon', icon: 'more_horiz', label: t('action.more'), id: 'mo', attrs: ' data-w="overflow"' }) + '</header>';
+        (b.plain ? '' : C.button.render({ variant: 'icon', icon: 'print', label: t('bill.print'), id: 'pr', attrs: ' data-w="print"' }) +
+        C.button.render({ variant: 'icon', icon: 'more_horiz', label: t('action.more'), id: 'mo', attrs: ' data-w="overflow"' })) + '</header>';
       var body;
       if (st === 'loading') body = '<div class="sk"><span class="k-skel"></span><span class="k-skel"></span><span class="k-skel"></span></div>';
       else if (!lines.length) body = '<div class="em"><p class="k-heading">' + th('bill.empty.title') + '</p><p class="k-foot k-ink2">' + th('bill.empty.body') + '</p></div>';
@@ -202,7 +204,7 @@
           if (open) {
             ex = '<div class="ex">' + C.stepper.render({ id: l.id, value: l.qty, min: 0, label: l.name }) +
               '<div class="acts">' +
-              C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' }) +
+              (b.plain ? '' : C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' })) +
               C.button.render({ label: t(l.sent ? 'bill.void' : 'bill.remove'), variant: 'tonal-danger', size: 'S', id: 'rm-' + l.id, attrs: ' data-w="' + (l.sent ? 'void' : 'remove') + '"' }) +
               '</div></div>';
           }
@@ -212,18 +214,18 @@
             (l.mods || []).map(function (m) { return '<span class="k-foot k-ink2 md">' + esc(m) + '</span>'; }).join('') + '</span>' +
             '<span class="k-body k-num pr" data-k-part>' + numHtml(money(l.price)) + '</span></div>' + ex + '</li>';
         };
-        body = (unsent.length ? '<p class="k-foot gh ns">' + th('bill.not_sent', { n: unsent.length }) + '</p><ul class="ls">' + unsent.map(row).join('') + '</ul>' : '') +
+        body = b.plain ? '<ul class="ls">' + lines.map(row).join('') + '</ul>' : (unsent.length ? '<p class="k-foot gh ns">' + th('bill.not_sent', { n: unsent.length }) + '</p><ul class="ls">' + unsent.map(row).join('') + '</ul>' : '') +
           (sent.length ? '<p class="k-foot k-ink2 gh">' + th('bill.sent_at', { time: (sent[0] && sent[0].sentAt) || '' }) + '</p><ul class="ls">' + sent.map(row).join('') + '</ul>' : '');
       }
       var part = function (p) { return p && cents(p.amount) ? '<div class="pt k-body" data-k-part><span class="k-ink2">' + esc(p.label) + '</span><span class="k-num">' + numHtml(K.fmt() ? K.fmt().signedMoney(p.amount, 2) : p.amount) + '</span></div>' : ''; };
-      var sendFirst = unsent.length && !b.sendOnPay;
+      var sendFirst = unsent.length && !b.sendOnPay && !b.plain;
       var primary = sendFirst
         ? C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.send', { n: unsent.length }), id: 'pri', attrs: ' data-w="send"', disabled: paying })
         : C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.take_payment', { amount: money(b.total || 0) }), id: 'pri', attrs: ' data-w="pay"', disabled: !lines.length || paying });
       var foot = '<footer class="ft">' + part(b.discount) + part(b.service) +
         '<div class="tot"><span class="k-body k-ink2">' + th('bill.total') + '</span><span class="k-title k-num" data-k-total>' + numHtml(money(b.total || 0)) + '</span></div>' +
-        '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
-        C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) + '</div>' +
+        (b.plain ? '' : '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
+        C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) + '</div>') +
         primary + '</footer>';
       var warn = st === 'error' ? '<p class="wn k-foot" role="status">' + icon('warning', 16) + th('bill.unsaved') + '</p>' : '';
       var prevLabel = this.__primary;
@@ -320,7 +322,8 @@
       '.nt{display:flex;flex-direction:column;gap:4px}textarea{border:0;border-radius:var(--k-r-1);background-color:var(--k-surface-2);color:var(--k-ink-1);padding:10px 12px;resize:vertical}'
   });
 
-  /* ── <k-pay form state> .pay {bill, due, method, tipPct, received} ─────────
+  /* ── <k-pay form state> .pay {bill, due, method, tipPct, received, noTip} ──
+     noTip: no tip row, for a till whose sale record carries no tip.
      form: 'caps' (iPad pane) | 'flush' (phone sheet). */
   var TIPS = [0, 5, 10, 15];
   var KPay = K.make({
@@ -363,7 +366,7 @@
       }, '[data-w]');
     },
     p: function () { return this.__pay || (this.__pay = {}); },
-    tip: function () { var p = this.p(); return fromCents(Math.round(cents(p.due) * (p.tipPct || 0) / 100)); },
+    tip: function () { var p = this.p(); if (p.noTip) return 0; return fromCents(Math.round(cents(p.due) * (p.tipPct || 0) / 100)); },
     owed: function () { return fromCents(cents(this.p().due) + cents(this.tip())); },
     openTip: function (row, g) {
       var self = this, p = this.p();
@@ -445,7 +448,7 @@
         '<div class="kf"><span class="k-foot k-ink2">' + th('pay.amount_due') + '</span>' +
         '<span class="k-title k-num" data-key-figure>' + numHtml(money(owed)) + '</span>' +
         '<span class="k-foot k-ink2 brk">' + (tip ? '<span data-k-part>' + th('pay.tip_breakdown', { bill: money(p.due), tip: money(tip) }) + '</span>' : '') + '</span></div>' +
-        '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>' +
+        (p.noTip ? '' : '<button type="button" class="row k-body" data-tip aria-haspopup="dialog"><span>' + th('pay.tip') + '</span><span class="k-ink2 tv">' + esc(tipVal) + '</span>' + icon('chevron_right', 20, 'k-mir k-ink2') + '</button>') +
         (this.__tipEntry ? '' : '<div class="ms" role="radiogroup" aria-label="' + esc(t('pay.title', { bill: p.bill || '' })) + '">' + methods + '</div>');
       /* The paid moment's line (§10.26): .pay.note, set by the host from the
          till's own save — sync.saved_here, or sync.screen_only in warning ink. */

@@ -2241,7 +2241,10 @@ section('Kiwi 2027 · une seule app de commande client');
  *   opening-float-test                  le fond d'ouverture sur le kit (§18.9) : compté,
  *                                       rien de prérempli, le dernier fond à toucher,
  *                                       l'ouverture livrée, un Commit ; Paid à la
- *                                       clôture est dans cash-count-browser-test */
+ *                                       clôture est dans cash-count-browser-test
+ *   till-autre-frame-test               le métier « autre » sur le cadre partagé (§18.3) :
+ *                                       rail, grille, addition simple, encaissement
+ *                                       sans pourboire par KiwiPosSale.record */
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2257,6 +2260,7 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
     ['banner-announce-test.mjs', 'banner-announce-test'],
     ['online-inbox-test.mjs', 'online-inbox-test'],
     ['opening-float-test.mjs', 'opening-float-test'],
+    ['till-autre-frame-test.mjs', 'till-autre-frame-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
