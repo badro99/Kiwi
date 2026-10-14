@@ -386,7 +386,30 @@
     } catch (_) {}
     if (window.KiwiKit) KiwiKit.reveal(d.el.querySelector('.gk-reveal-root'));
     var root = d.el;
-    function rerenderTable() { root.querySelector('#cd-table').innerHTML = tableHtml(); }
+    /* Design 2027 (§18.5): what the page draws, for the kit's Customers page
+       behind the dashboard's flag (assets/kit/dash-customers.js). */
+    var kitModel = null;
+    function kitPublish() {
+      var rows = filtered();
+      kitModel = {
+        seg: state.seg, q: state.q, known: all.length, contactable: contactable(),
+        counts: SEGS.reduce(function (o, id) { o[id] = segCount(id); return o; }, {}),
+        rows: rows.map(function (c) {
+          return { id: c.id, name: c.name || c.phone || T.none, city: c.city || '', last: T.ago(c.last),
+            spend: fmt(c.spend) + ' ' + T.currency, seg: c.seg, status: SEG_LBL(T, c.seg) };
+        }),
+        empty: rows.length ? null : (all.length ? { title: T.noMatch, text: T.noMatchText, clear: T.clear } : { title: T.emptyTitle, text: T.emptyText, add: T.newShort }),
+        /* The overflow holds what the shipped bar shows (a module that is off
+           hides its button). */
+        more: ['exp', 'loyalty', 'retention', 'campaign'].filter(function (k) {
+          var b = root.querySelector('#cd-' + k);
+          return b && getComputedStyle(b).display !== 'none' && !b.hidden;
+        })
+      };
+      try { window.dispatchEvent(new CustomEvent('kiwi:customers-model')); } catch (_) {}
+    }
+    window.KiwiClientsPage = { model: function () { return kitModel; }, page: function () { return root; } };
+    function rerenderTable() { root.querySelector('#cd-table').innerHTML = tableHtml(); kitPublish(); }
     function rerenderSegs() {
       root.querySelectorAll('[data-cd-seg]').forEach(function (b) {
         var id = b.getAttribute('data-cd-seg'), on = state.seg === id;
@@ -485,6 +508,7 @@
       if (KiwiClients.pull) KiwiClients.pull(function (ch) { if (ch) refreshData(); });
       if (KiwiClients.subscribe) offSub = KiwiClients.subscribe(function () { refreshData(); });
     }
+    kitPublish();
   };
 
   function openDetail(c, T) {

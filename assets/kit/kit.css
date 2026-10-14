@@ -278,10 +278,23 @@ html[data-k-home] .vexel-revenue-rail { display: none !important; }
 .k-dr__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
 .k-dr__em p { margin: 0; }
 
+/* The dashboard's Customers page on the kit (stage 5 (4), §18.5): the kit
+   draws the summary, the overflow and Add, the search, the segments and the
+   rows; the shipped page stays in the DOM and is not drawn. */
+.dash-genpage:has(#kit-customers) .cd { display: none !important; }
+#kit-customers { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; color: var(--k-ink-1); }
+#kit-customers [hidden] { display: none !important; }
+#kit-customers > k-field, #kit-customers > k-segmented { max-width: 560px; }
+.k-dc__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.k-dc__sum { margin: 0; }
+.k-dc__acts { display: inline-flex; gap: 8px; }
+.k-dc__em { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; }
+.k-dc__em p { margin: 0; }
+
 /* The type steps for kit content drawn in the light DOM (the till's online
-   orders and Z sheet, the dashboard's Home, Orders and Report), the same rules
-   core.js gives every shadow root (§6.2). */
-#kit-home, #kit-orders, #kit-report, #kit-online, .k-z { font-family: var(--k-font); }
+   orders and Z sheet, the dashboard's Home, Orders, Report and Customers), the
+   same rules core.js gives every shadow root (§6.2). */
+#kit-home, #kit-orders, #kit-report, #kit-customers, #kit-online, .k-z { font-family: var(--k-font); }
 .k-display { font-size: var(--k-fs-display); line-height: var(--k-lh-display); font-weight: var(--k-fw-display); letter-spacing: var(--k-track-display); }
 .k-title { font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title); }
 .k-heading { font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
