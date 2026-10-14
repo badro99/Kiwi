@@ -73,17 +73,17 @@ var SHELL = [
   '/assets/agent-skin.css?v=15',
   '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
-  '/assets/cloud-doc.js?v=10',
-  '/assets/agent-action-center.js?v=3',
+  '/assets/cloud-doc.js?v=11',
+  '/assets/agent-action-center.js?v=4',
   '/assets/cancellation-history.js?v=2',
   '/assets/weather.js?v=1',
   '/assets/briefing.js?v=22',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=6',
   '/assets/agent-features.js?v=5',
-  '/assets/agent-truth.js?v=9',
+  '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
-  '/assets/agent-vision.js?v=4',
+  '/assets/agent-vision.js?v=5',
   '/assets/i18n.js?v=25',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -92,11 +92,11 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=61',
+  '/assets/interactive.js?v=62',
   '/assets/view-link.js?v=1',
-  '/assets/features.js?v=12',
+  '/assets/features.js?v=13',
   '/assets/invoicing.css?v=9',
-  '/assets/invoicing.js?v=12',
+  '/assets/invoicing.js?v=13',
   '/assets/order-qr.js?v=5',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -107,7 +107,7 @@ var SHELL = [
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=9',
-  '/assets/reservations.js?v=26',
+  '/assets/reservations.js?v=27',
   '/assets/pressing-ops.js?v=9',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=8',
@@ -141,19 +141,19 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=73',
+  '/assets/dateRange.js?v=74',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
   '/assets/liquid-lens.js?v=8',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
-  '/assets/account.js?v=30',
+  '/assets/account.js?v=31',
   '/assets/production-action-guard.js?v=3',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js?v=2050',
+  '/assets/floorplan-core.js?v=2051',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=6',
@@ -173,13 +173,13 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=64',
+  '/assets/live-link.js?v=65',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=21',
+  '/assets/day-report.js?v=22',
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=28',
   '/assets/day-report-export.js?v=11',
@@ -201,15 +201,15 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=9',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=15',
-  '/assets/merchant-config.js?v=279',
+  '/assets/invoice.js?v=16',
+  '/assets/merchant-config.js?v=280',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=4',
   '/assets/staff-roles.js?v=1',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=2',
+  '/assets/tenant-purge.js?v=3',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=3',
@@ -220,16 +220,16 @@ var SHELL = [
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
-  '/assets/identity.js?v=10',
-  '/assets/caisse-link.js?v=17',
+  '/assets/identity.js?v=11',
+  '/assets/caisse-link.js?v=18',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
-  '/assets/caisse-hardware.js?v=5',
+  '/assets/caisse-hardware.js?v=6',
   '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=14',
-  '/assets/printer-bridge.js?v=25',
+  '/assets/printer-bridge.js?v=26',
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=5',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=76',
+  '/assets/stock.js?v=77',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -262,7 +262,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=2',
   '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=10',
-  '/assets/clients-book.js?v=24',
+  '/assets/clients-book.js?v=25',
   '/assets/clients-directory.js?v=20',
   '/assets/customer-retention.js?v=8',
   '/assets/menu-catalog.js?v=30',
@@ -275,17 +275,17 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=306',
+  '/assets/team.js?v=307',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=113',
   '/assets/menu-promos-dashboard.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=8',
+  '/assets/catalog-import.js?v=9',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=6',
+  '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
   '/assets/orderpro-guestpage.js?v=1',
   '/assets/orderpro-inbox.js?v=36',
@@ -297,10 +297,10 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=16',
+  '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=12',
-  '/assets/pos-dispatch.js?v=96',
+  '/assets/pos-sale.js?v=13',
+  '/assets/pos-dispatch.js?v=97',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -350,19 +350,19 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=63',
-  '/assets/pos-boutique.js?v=63',
+  '/assets/pos-boutique.css?v=64',
+  '/assets/pos-boutique.js?v=64',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=7',
   '/assets/pos-spa.js?v=7',
-  '/assets/pos-hotel.css?v=17',
-  '/assets/pos-hotel.js?v=17',
+  '/assets/pos-hotel.css?v=18',
+  '/assets/pos-hotel.js?v=18',
   '/assets/pos-fastfood.css?v=11',
   '/assets/pos-fastfood.js?v=11',
-  '/assets/pos-boulangerie.css?v=9',
-  '/assets/pos-boulangerie.js?v=9',
+  '/assets/pos-boulangerie.css?v=10',
+  '/assets/pos-boulangerie.js?v=10',
   '/assets/pos-pizzeria.css?v=6',
   '/assets/pos-pizzeria.js?v=6',
   '/assets/pos-traiteur.css?v=8',
@@ -383,15 +383,15 @@ var SHELL = [
   '/assets/pos-gym.js?v=7',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=68',
-  '/assets/pos-maison.js?v=68',
+  '/assets/pos-maison.css?v=69',
+  '/assets/pos-maison.js?v=69',
   '/assets/caisse-pairing.js?v=34',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=9',
+  '/assets/pos-reprint.js?v=10',
   '/assets/pressing-caisse.js?v=45',
   '/assets/pressing-caisse.css?v=45',
   '/assets/material-icons.js?v=3',

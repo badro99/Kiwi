@@ -79,7 +79,7 @@
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
-  <script src="assets/floorplan-core.js?v=2050"></script>
+  <script src="assets/floorplan-core.js?v=2051"></script>
 
   <!-- Material Symbols Outlined, generated from assets/icons/material/ by
        tools/build-material-icons.mjs. Renders data-icon (Material names) and the
@@ -98,8 +98,8 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=14" defer></script>
-  <script src="assets/printer-bridge.js?v=25" defer></script>
-  <script src="assets/caisse-hardware.js?v=5" defer></script>
+  <script src="assets/printer-bridge.js?v=26" defer></script>
+  <script src="assets/caisse-hardware.js?v=6" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
@@ -107,7 +107,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=12" defer></script>
+  <script src="assets/pos-sale.js?v=13" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=9" defer></script>
@@ -183,7 +183,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=96" defer></script>
+  <script src="assets/pos-dispatch.js?v=97" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -5751,7 +5751,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=364" defer></script>
   <script src="assets/caisse-pwa.js?v=570" defer></script>
-  <script src="assets/live-link.js?v=64" defer></script>
+  <script src="assets/live-link.js?v=65" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5759,7 +5759,7 @@
   <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
        AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
        serrure chargée après la porte ne ferme rien. -->
-  <script src="assets/tenant-purge.js?v=2" defer></script>
+  <script src="assets/tenant-purge.js?v=3" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
@@ -5770,7 +5770,7 @@
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
-  <script src="assets/cloud-doc.js?v=10" defer></script>
+  <script src="assets/cloud-doc.js?v=11" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
   <script src="assets/trade-workspace-schema.js?v=7" defer></script>
@@ -5779,7 +5779,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=21" defer></script>
+  <script src="assets/day-report.js?v=22" defer></script>
   <script src="assets/z-reconciliation.js?v=25" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
@@ -5819,7 +5819,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=14" defer></script>
   <script src="assets/clients-store.js?v=10" defer></script>
-  <script src="assets/clients-book.js?v=24" defer></script>
+  <script src="assets/clients-book.js?v=25" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -5827,7 +5827,7 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=13" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=16" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=17" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -5837,7 +5837,7 @@
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=279" defer></script>
+  <script src="assets/merchant-config.js?v=280" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -5848,8 +5848,8 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=15" defer></script>
-  <script src="assets/pos-reprint.js?v=9" defer></script>
+  <script src="assets/invoice.js?v=16" defer></script>
+  <script src="assets/pos-reprint.js?v=10" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals

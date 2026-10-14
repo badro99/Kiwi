@@ -977,7 +977,7 @@ export const LEGACY_SLUG = 'client';
  * silently re-homed onto an empty tenant; nothing created after it ever gets it.
  * It must sit at or before the deploy of this fix: a later date would leave the
  * accounts created in between on the shared slug. */
-export const LEGACY_CLIENT_BEFORE_TS = Date.UTC(2026, 9, 15);
+export const LEGACY_CLIENT_BEFORE_TS = 1792017007028; // instant du correctif : les comptes à nom sans lettre latine créés avant gardent « client »
 
 export function latinSlug(s) {
   return String(s || '')
