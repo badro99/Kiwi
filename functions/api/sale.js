@@ -353,10 +353,15 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'bad-payment-parts' }, 400);
   }
   /* Le pourboire, à côté de la vente et jamais dedans : `amount` reste le
-     chiffre d'affaires. Facultatif, borné, entier en centimes ; illisible ⇒
-     absent (inconnu), jamais 0. */
-  const tipRaw = Math.round(Number(b && b.tipCents));
-  const tipCents = Number.isSafeInteger(tipRaw) && tipRaw > 0 && tipRaw <= 10000000 ? tipRaw : 0;
+     chiffre d'affaires. Facultatif ; quand il est là, un entier de centimes de
+     0 au montant de la vente, sinon la vente est refusée (§10.26) : un
+     pourboire illisible n'est plus avalé en silence. 0 ⇒ aucun pourboire. */
+  let tipCents = 0;
+  if (b && b.tipCents != null) {
+    const tipRaw = Number(b.tipCents);
+    if (!Number.isSafeInteger(tipRaw) || tipRaw < 0 || tipRaw > amountCents) return json({ error: 'bad-tip' }, 400);
+    tipCents = tipRaw;
+  }
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
   const channel = String((b && b.channel) || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
