@@ -4596,9 +4596,9 @@
     /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
     var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
     document.write(
-      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=6">' +
+      '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=7">' +
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-      '<link rel="stylesheet" href="assets/kit/kit.css?v=28">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=29">' +
       js("assets/kit/strings/kit.fr.js?v=2") +
       js("assets/kit/strings/kit.en.js?v=2") +
       js("assets/kit/strings/kit.ar.js?v=2") +
@@ -4632,7 +4632,12 @@
       /* Stage 5 (§12): Compliance as a list of obligations beside its screen. */
       js("assets/kit/dash-compliance.js?v=1") +
       /* Stage 5 (§18.6): the start of a Kiwi AI conversation on the kit. */
-      js("assets/kit/dash-ai.js?v=1")
+      js("assets/kit/dash-ai.js?v=1") +
+      /* Stage 6 (§18.8): the onboarding after the account, on the kit. */
+      js("assets/kit/strings/onboarding.fr.js?v=1") +
+      js("assets/kit/strings/onboarding.en.js?v=1") +
+      js("assets/kit/strings/onboarding.ar.js?v=1") +
+      js("assets/kit/dash-onboarding.js?v=1")
     );
   })();
 </script>
@@ -5599,7 +5604,7 @@
 <script src="assets/dateRange.js?v=75" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
-<script defer src="assets/dashboard-pwa.js?v=599"></script>
+<script defer src="assets/dashboard-pwa.js?v=602"></script>
 <script defer src="assets/dashboard-native.js?v=3"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -5637,7 +5642,7 @@
 <script src="assets/kit/motion.js?v=1" defer></script>
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=8" defer></script>
-<script src="assets/onboarding.js?v=2091" defer></script>
+<script src="assets/onboarding.js?v=2092" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->

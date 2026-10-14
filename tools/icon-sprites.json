@@ -114,7 +114,7 @@
       ]
     },
     "dashboard": {
-      "note": "Stage 3a: the dashboard lock on the kit's pad behind kiwiSkin2027:dashboard. The pad's delete key and its Face ID key. Stage 5 (1): Home on the kit (the deltas, the order rows, the tile states). Stage 5 (2): Orders on the kit (the method icons, §18.2). Stage 5 (3): the Report's Export button. Stage 5 (4): Customers on the kit (the overflow, Add, the search field and its clear button). Stage 5 (6): Compliance's obligation icons.",
+      "note": "Stage 3a: the dashboard lock on the kit's pad behind kiwiSkin2027:dashboard. The pad's delete key and its Face ID key. Stage 5 (1): Home on the kit (the deltas, the order rows, the tile states). Stage 5 (2): Orders on the kit (the method icons, §18.2). Stage 5 (3): the Report's Export button. Stage 5 (4): Customers on the kit (the overflow, Add, the search field and its clear button). Stage 5 (6): Compliance's obligation icons. Stage 6: the onboarding's Back.",
       "icons": [
         "backspace",
         "face",
@@ -136,7 +136,8 @@
         "receipt_long",
         "checklist",
         "settings",
-        "description"
+        "description",
+        "chevron_left"
       ]
     },
     "access": {
