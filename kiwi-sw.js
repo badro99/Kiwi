@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v656';
+var CACHE = 'kiwi-app-v659';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=596',
+  '/assets/dashboard-pwa.js?v=599',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=609',
+  '/assets/caisse-pwa.js?v=612',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=595',
+  '/assets/employee-live.js?v=598',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -309,7 +309,7 @@ var SHELL = [
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
-  '/assets/kit/kit.css?v=27',
+  '/assets/kit/kit.css?v=28',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -350,6 +350,7 @@ var SHELL = [
   '/assets/kit/strings/team.en.js?v=1',
   '/assets/kit/strings/team.ar.js?v=1',
   '/assets/kit/team-pin.js?v=1',
+  '/assets/kit/team-split.js?v=1',
   /* and the kitchen board's lanes, behind kiwiSkin2027:kds. */
   '/assets/icons/material/sprite.kds.svg?v=2',
   '/assets/kit/strings/kds.fr.js?v=3',
