@@ -43,8 +43,10 @@ shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
 /* booking.html entre dans cette liste avec sa pré-mise en cache (#0055) : dès
    qu'un document est servi par le service worker, ses estampilles doivent
    s'accorder avec la coquille, sinon la page publique repart sur un vieux
-   script au premier chargement après un déploiement. */
-const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html']
+   script au premier chargement après un déploiement.
+   reset.html (mot de passe oublié, derrière kiwiSkin2027:access) est le
+   document qui demande sprite.access.svg et access-reset.js : même règle. */
+const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html', 'reset.html']
   .map(read).join('\n');
 const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 ['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'].forEach((file) => {

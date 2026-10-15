@@ -44,7 +44,7 @@ html[data-skin-2027="access"] body.vx-auth-page {
   --vx-dome-top: transparent;
   --vx-active-bg: transparent;
   --sans: var(--k-font);
-  --serif: var(--k-font);
+  --serif: var(--k-font, "Inter Tight");
   background: var(--k-bg);
   color: var(--k-ink-1);
   font-family: var(--k-font);

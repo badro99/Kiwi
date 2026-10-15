@@ -76,7 +76,9 @@ function lintCss(css, file, { tokensFile = false, line0 = 0 } = {}) {
     for (const d of r.decls) {
       if (d.prop === 'font-size') {
         const onHost = r.selectors.some((s) => /^:host/.test(s));
-        const onHtml = r.selectors.length > 0 && r.selectors.every((s) => /^(?:html|:root)(?![\w-])/.test(s));
+        /* La racine, c'est le SUJET du sélecteur : `html[data-k-surface="kds"]` pose une racine,
+           `html[data-skin-2027="access"] body h1` pose la taille d'un titre sous le skin. */
+        const onHtml = r.selectors.length > 0 && r.selectors.every((s) => /^(?:html|:root)(?:\[[^\]]*\]|[.#:][\w-]+(?:\([^)]*\))?)*$/.test(s.trim()));
         if (onHost) { failures.push(`${where(d.line)} · font-size sur ${r.selector} : un composant n'a jamais sa propre taille de racine (§6.2)`); continue; }
         if (onHtml) {
           const kds = r.selectors.every((s) => s.startsWith('html[data-k-surface="kds"]'));
@@ -177,6 +179,9 @@ function selfTest() {
   expectFail('font-size: 12px sur .b (Caption)', lintCss('.b{font-size:12px}', 'bad.css'));
   expectFail('font-size sur :host', lintCss(':host{font-size:var(--k-fs-body)}', 'bad.css'));
   expectFail('font-size sur html hors cuisine', lintCss('html{font-size:20px}', 'bad.css'));
+  expectPass('un titre sous un skin html[data-skin-2027] n\'est pas une racine', lintCss('html[data-skin-2027="access"] body h1{font-size:var(--k-fs-title)}', 'skin.css'));
+  expectFail('un titre sous un skin en px reste refusé', lintCss('html[data-skin-2027="access"] body h1{font-size:28px}', 'skin.css'));
+  expectFail('une racine de skin html[data-skin-2027] refusée', lintCss('html[data-skin-2027="access"]{font-size:var(--k-fs-title)}', 'skin.css'));
   expectFail('une racine de cuisine hors tokens-2027.css', lintCss('html[data-k-surface="kds"]{font-size:var(--k-kds-root, 24px)}', 'bad.css'));
   expectPass('la racine de cuisine dans tokens-2027.css', lintCss('html[data-k-surface="kds"]{font-size:var(--k-kds-root, 24px)}', 'tokens-2027.css', { tokensFile: true }));
   expectFail('une racine de cuisine à 22 px', lintCss('html[data-k-surface="kds"]{font-size:var(--k-kds-root, 22px)}', 'tokens-2027.css', { tokensFile: true }));
