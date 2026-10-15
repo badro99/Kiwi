@@ -448,8 +448,8 @@
     "sha": "9d905440a18ad956"
   },
   "assets/icons/material/sprite.dashboard.svg": {
-    "v": "8",
-    "sha": "0b62f37cd186f998"
+    "v": "9",
+    "sha": "a7a25b352a311987"
   },
   "assets/icons/material/sprite.kds.svg": {
     "v": "2",
@@ -544,7 +544,7 @@
     "sha": "d5445e0ebefdc97a"
   },
   "assets/kit/dash-ai.js": {
-    "v": "2",
+    "v": "3",
     "sha": "4f3fbfad7a3a7b28"
   },
   "assets/kit/dash-compliance.js": {
@@ -620,7 +620,7 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "30",
+    "v": "31",
     "sha": "da004d96f9c96aa6"
   },
   "assets/kit/layout.js": {
