@@ -59,6 +59,9 @@
   var KKpiGrid = K.make({
     setup: function () {
       var self = this;
+      if (root.ResizeObserver) { try { new ResizeObserver(function () { self.fit(); }).observe(this); } catch (_) {} }
+      var fonts = root.document && root.document.fonts;
+      if (fonts && fonts.ready) fonts.ready.then(function () { self.fit(); });
       K.tap(this.shadowRoot, '[data-tile]', function (el, e, g) {
         if (e.target.closest && e.target.closest('[data-do]')) return;
         self.emit('open', el.getAttribute('data-tile'), { gestureId: g });
@@ -95,6 +98,21 @@
         var busy = st === 'loading' ? ' aria-busy="true"' : '';
         return '<div class="tile" role="listitem" data-tile="' + esc(tl.key) + '"' + busy + ' tabindex="0">' + body + '</div>';
       }).join('') + '</div>';
+      this.fit();
+    },
+    /* A figure too wide for its tile steps down, 2 px at a time and never
+       below the Heading size, rather than being cut; one that fits keeps the
+       Title size. Measured, so a short figure in a narrow tile is untouched. */
+    fit: function () {
+      [].forEach.call(this.shadowRoot.querySelectorAll('.vl'), function (vl) {
+        var n = vl.querySelector('.k-num');
+        if (!n) return;
+        n.style.fontSize = '';
+        if (!vl.clientWidth) return;
+        var size = parseFloat(root.getComputedStyle(n).fontSize) || 0;
+        var floor = 20; /* --k-fs-heading at type scale 1 */
+        while (vl.scrollWidth > vl.clientWidth + 1 && size - 2 >= floor) { size -= 2; n.style.fontSize = size + 'px'; }
+      });
     }
   });
   K.define('k-kpi-grid', KKpiGrid, {
@@ -109,9 +127,7 @@
       '.tile:focus-visible{box-shadow:0 0 0 2px var(--k-bg),0 0 0 calc(2px + var(--k-focus-w)) var(--k-focus)}' +
       '.vl{display:flex;align-items:baseline;min-width:0;white-space:nowrap;overflow:hidden}' +
       /* Three tiles take three columns (unless the layout names a count),
-         never four with a hole; a figure in a narrow tile steps down rather
-         than being cut. */
-      '.tile{container-type:inline-size}.vl>.k-title.k-num{font-size:min(var(--k-fs-title),12cqi)}' +
+         never four with a hole. */
       '.dl{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;font-weight:var(--k-fw-footnote-strong)}' +
       /* The signed figure never breaks; a long note goes under it, whole. */
       '.dl>span:not(.nt){white-space:nowrap}.dl>.nt{min-width:0}' +
