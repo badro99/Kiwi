@@ -18252,7 +18252,8 @@
       const resume = typeof operatorCaisseRequested === 'function' && operatorCaisseRequested();
       const btn = document.getElementById('clockin-btn');
       /* Sous le kit, le fond se compte dans la feuille du kit : le bouton l'ouvre. */
-      const kit = document.documentElement.hasAttribute('data-k-till');
+      const root = document.documentElement;
+      const kit = !!(root && root.hasAttribute && root.hasAttribute('data-k-till'));
       if (btn && !btn.classList.contains('is-confirmed')) btn.disabled = !floatChosen && !resume && !kit;
       if (floatErr) floatErr.hidden = floatChosen || resume || kit;
     }
