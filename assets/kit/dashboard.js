@@ -170,6 +170,10 @@
     return h >= 800 ? 160 : 120;
   }
   var AXIS = 24;
+  /* A figure inside an svg <text>: numHtml's <bdi> is HTML, which svg text
+     does not draw (the digits vanished and "K" stayed); a tspan keeps the
+     figure left to right in an RTL axis. */
+  function svgNum(v) { return '<tspan direction="ltr" unicode-bidi="isolate">' + esc(v) + '</tspan>'; }
 
   var KChart = K.make({
     setup: function () {
@@ -260,18 +264,21 @@
          steps below it; a step within 18 of the band edge is left out. */
       if (!empty) {
         g += '<line class="grid" x1="0" x2="' + W + '" y1="' + band + '" y2="' + band + '"/>' +
-          '<text class="gl" x="' + (rtl ? 0 : W) + '" y="' + (band - 4) + '" text-anchor="' + (rtl ? 'start' : 'end') + '">' + numHtml(f ? f.compact(max) : max) + '</text>';
+          '<text class="gl" x="' + (rtl ? 0 : W) + '" y="' + (band - 4) + '" text-anchor="' + (rtl ? 'start' : 'end') + '">' + svgNum(f ? f.compact(max) : max) + '</text>';
         var step = niceStep(max);
         for (var v = step; v < max; v += step) {
           var y = Y(v);
           if (y - band < 18) continue;
           g += '<line class="grid" x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '"/>' +
-            '<text class="gl" x="' + (rtl ? 0 : W) + '" y="' + (y - 4) + '" text-anchor="' + (rtl ? 'start' : 'end') + '">' + numHtml(f ? f.compact(v) : v) + '</text>';
+            '<text class="gl" x="' + (rtl ? 0 : W) + '" y="' + (y - 4) + '" text-anchor="' + (rtl ? 'start' : 'end') + '">' + svgNum(f ? f.compact(v) : v) + '</text>';
         }
       }
       g += '<line class="grid base" x1="0" x2="' + W + '" y1="' + bottom + '" y2="' + bottom + '"/>';
+      /* The svg's text inherits the page's direction, so in RTL "start" is
+         the label's right edge: the first hour ends at the plot's edge in
+         both directions instead of running past it. */
       [0, 6, 12, 18].forEach(function (h) {
-        g += '<text class="xl" x="' + X(h) + '" y="' + (H - 6) + '" text-anchor="' + (h === 0 ? (rtl ? 'end' : 'start') : 'middle') + '">' + hourLabel(cutOf(s), h) + '</text>';
+        g += '<text class="xl" x="' + X(h) + '" y="' + (H - 6) + '" text-anchor="' + (h === 0 ? 'start' : 'middle') + '">' + hourLabel(cutOf(s), h) + '</text>';
       });
       var path = function (pts) { return pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p.h).toFixed(1) + ' ' + Y(p.v).toFixed(1); }).join(''); };
       if (base && !empty) g += '<path class="bl" d="' + path(base) + '"/>';
@@ -362,7 +369,7 @@
       '.area{fill:var(--k-accent-ink);fill-opacity:.08;stroke:none}' +
       '.bl{fill:none;stroke:var(--k-ink-3);stroke-width:1.5;stroke-dasharray:4 4}' +
       '.now{fill:var(--k-chart-dot,var(--k-accent));stroke:var(--k-surface-1);stroke-width:3}' +
-      '.cur{stroke:var(--k-ink-3);stroke-width:1}' +
+      '.cur{stroke:var(--k-ink-3);stroke-width:1}.cur[x1="-10"]{visibility:hidden}' +
       '.tip{position:absolute;top:0;padding-block:6px;padding-inline:10px;border-radius:var(--k-r-1);background-color:var(--k-inverse);color:var(--k-on-inverse);white-space:nowrap;pointer-events:none}' +
       '.em{position:absolute;inset-inline:0;top:40%;margin:0;text-align:center}' +
       '.sk{display:block;width:100%;border-radius:var(--k-r-2)}'

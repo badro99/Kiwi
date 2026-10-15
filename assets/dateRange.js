@@ -4038,6 +4038,13 @@
         restingPrev = null;
       }
     }
+    /* Design 2027 (kiwiSkin2027:dashboard) : la même série, pour la courbe du
+     * kit sur téléphone ; le point vivant garde sa fraction d'heure. */
+    typeof homeSet === 'function' && homeSet('chart', {
+      range: effective, hourly: isHourly, labels: (data.xLabels || []).slice(), rev: data.rev.slice(),
+      prev: data.revPrev ? data.revPrev.slice() : null, tip: liveTipIdx, within: data._simWithin || 0,
+      value: restingVal, prevValue: restingPrev,
+    });
     const linePath = smoothPath(data.rev);
     const cmpPath  = smoothPath(data.revPrev);
     // Area's right edge follows the line's actual tip — sim x in live mode.

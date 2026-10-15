@@ -84,6 +84,11 @@
       '<k-list ground="s1" label="' + esc(t('ai.try')) + '"></k-list>';
     box.addEventListener('kiwi:action', onAction);
     hero.insertBefore(box, hero.firstChild);
+    /* On a phone the sheet is titled ai.title, as §18.6 draws it; the
+       shipped trade line under it is not drawn there (kit.css). */
+    var h3 = doc.documentElement.hasAttribute('data-k-phone') && hero.closest('.kiwi-drawer');
+    h3 = h3 && h3.querySelector('.kiwi-drawer-head h3');
+    if (h3) h3.textContent = t('ai.title');
     sig = '';
     return true;
   }

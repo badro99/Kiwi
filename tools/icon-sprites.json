@@ -160,7 +160,11 @@
         "bed",
         "hotel",
         "medication",
-        "local_laundry_service"
+        "local_laundry_service",
+        "bar_chart",
+        "notifications",
+        "auto_awesome",
+        "expand_more"
       ]
     },
     "access": {

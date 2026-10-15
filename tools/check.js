@@ -2373,7 +2373,13 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       courbe dans une carte, tuiles à côté, commandes
  *                                       à côté de l'objectif), aucun chevauchement ;
  *                                       1024, 1920, sombre mesuré, arabe à droite, rien
- *                                       sous 1024 */
+ *                                       sous 1024
+ *   dash-phone-browser-test             le téléphone (390 × 844) : la barre de nav et la
+ *                                       capsule d'onglets du kit à la place du bandeau
+ *                                       sombre, l'accueil dans l'ordre du §18.1 (courbe,
+ *                                       quatre tuiles, trois commandes et « Voir »), le
+ *                                       titre d'une page dans la barre, Kiwi AI, l'arabe,
+ *                                       et rien de tout cela drapeau éteint ou en large */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2389,6 +2395,7 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['chart-legend-test.mjs', 'chart-legend-test'],
     ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
     ['dash-desktop-browser-test.mjs', 'dash-desktop-browser-test'],
+    ['dash-phone-browser-test.mjs', 'dash-phone-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

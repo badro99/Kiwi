@@ -4598,7 +4598,7 @@
     document.write(
       '<meta name="kiwi-sprite" content="assets/icons/material/sprite.dashboard.svg?v=8">' +
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-      '<link rel="stylesheet" href="assets/kit/kit.css?v=29">' +
+      '<link rel="stylesheet" href="assets/kit/kit.css?v=30">' +
       /* The desktop layout (1024 and wider): sidebar, top bar, Home's grid. */
       '<link rel="stylesheet" href="assets/kit/dash-desktop.css?v=2">' +
       js("assets/kit/strings/kit.fr.js?v=2") +
@@ -4621,8 +4621,9 @@
       js("assets/kit/elements.js?v=1") +
       js("assets/kit/layout.js?v=1") +
       js("assets/kit/nav.js?v=2") +
-      js("assets/kit/dashboard.js?v=2") +
-      js("assets/kit/dash-home.js?v=1") +
+      js("assets/kit/business-day.js?v=1") +
+      js("assets/kit/dashboard.js?v=3") +
+      js("assets/kit/dash-home.js?v=2") +
       /* Stage 5 (§18.2): Orders on the kit, over the shipped rows. */
       js("assets/kit/dash-orders.js?v=1") +
       /* Stage 5 (§12): the Report's head on the kit, and its Export menu. */
@@ -4634,7 +4635,10 @@
       /* Stage 5 (§12): Compliance as a list of obligations beside its screen. */
       js("assets/kit/dash-compliance.js?v=1") +
       /* Stage 5 (§18.6): the start of a Kiwi AI conversation on the kit. */
-      js("assets/kit/dash-ai.js?v=1") +
+      js("assets/kit/dash-ai.js?v=2") +
+      /* Stage 5, the phone (§18.1, §10.18, §10.20): the nav bar and the tab
+         capsule below 768 px. */
+      js("assets/kit/dash-phone.js?v=1") +
       /* Stage 6 (§18.8): the onboarding after the account, on the kit. */
       js("assets/kit/strings/onboarding.fr.js?v=1") +
       js("assets/kit/strings/onboarding.en.js?v=1") +
@@ -5605,7 +5609,7 @@
 <script src="assets/pressing-catalog.js?v=8" defer></script>
 <script src="assets/pressing-dashboard.js?v=17" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=77" defer></script>
+<script src="assets/dateRange.js?v=78" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=364"></script>
 <script defer src="assets/dashboard-pwa.js?v=603"></script>
