@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v662';
+var CACHE = 'kiwi-app-v663';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -159,13 +159,13 @@ var SHELL = [
   '/assets/oppo-cards.js?v=6',
   '/assets/merchant-health.js?v=5',
   '/assets/merchant-health.css?v=3',
-  '/assets/dashboard-pwa.js?v=602',
+  '/assets/dashboard-pwa.js?v=603',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=364',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=4',
-  '/assets/caisse-pwa.js?v=616',
+  '/assets/caisse-pwa.js?v=617',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
   '/assets/platform-kernel.js?v=6',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=601',
+  '/assets/employee-live.js?v=602',
   '/assets/employee-planning.js?v=14',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=4',
@@ -310,6 +310,7 @@ var SHELL = [
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
   '/assets/kit/kit.css?v=29',
+  '/assets/kit/dash-desktop.css?v=2',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -325,7 +326,7 @@ var SHELL = [
   '/assets/kit/pin-flow.js?v=1',
   '/assets/kit/till-pin.js?v=2',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
-  '/assets/icons/material/sprite.dashboard.svg?v=7',
+  '/assets/icons/material/sprite.dashboard.svg?v=8',
   '/assets/kit/dash-pin.js?v=1',
   '/assets/kit/strings/dashboard.fr.js?v=2',
   '/assets/kit/strings/dashboard.en.js?v=2',
@@ -337,6 +338,7 @@ var SHELL = [
   '/assets/kit/dash-customers.js?v=1',
   '/assets/kit/dash-retention.js?v=1',
   '/assets/kit/dash-compliance.js?v=1',
+  '/assets/kit/dash-desktop.js?v=2',
   '/assets/kit/dash-ai.js?v=1',
   '/assets/kit/dash-onboarding.js?v=1',
   /* and forgot and reset password, behind kiwiSkin2027:access. */

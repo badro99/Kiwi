@@ -2365,7 +2365,15 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *   dash-frame-browser-test             le cadre : la tête de chaque page (Heading,
  *                                       Footnote ink-2, le chiffre clé reste le plus
  *                                       grand) et de chaque tiroir (Heading, fermer 44
- *                                       rond sur surface-2) */
+ *                                       rond sur surface-2)
+ *   dash-desktop-browser-test           le bureau (1024 et plus) : drapeau éteint, rien
+ *                                       n'est chargé ; la barre latérale du kit liste
+ *                                       les liens livrés dans leur ordre, un clic ouvre
+ *                                       la page livrée ; l'accueil en grille (chiffre et
+ *                                       courbe dans une carte, tuiles à côté, commandes
+ *                                       à côté de l'objectif), aucun chevauchement ;
+ *                                       1024, 1920, sombre mesuré, arabe à droite, rien
+ *                                       sous 1024 */
 section('Kiwi 2027 · le tableau de bord sur le kit');
 {
   const { spawnSync } = require('child_process');
@@ -2380,6 +2388,7 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-figures-agreement-test.mjs', 'dash-figures-agreement-test'],
     ['chart-legend-test.mjs', 'chart-legend-test'],
     ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
+    ['dash-desktop-browser-test.mjs', 'dash-desktop-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

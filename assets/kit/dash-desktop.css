@@ -1,0 +1,607 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · assets/kit/dash-desktop.css · the dashboard on a desktop window, on
+ * the kit (spec §10.20, §12, §13.5). Loaded after kit.css behind the
+ * dashboard's flag; every rule sits under (min-width: 1024px) and
+ * html[data-skin-2027="dashboard"], so the phone and the tablet layouts and
+ * the dashboard with its flag off are untouched.
+ *
+ * The language is the till's (§18.3): one flat ground (--k-bg), soft
+ * surface-1 cards at radius 20 with no border, no shadow and no glow, the
+ * kit's six type steps, one green action. Navigation is the kit's sidebar
+ * (dash-desktop.js) at 248 on surface-2; the shipped top bar keeps its
+ * controls (search, Kiwi AI, theme, notifications, account) on the kit's
+ * ground. Home is a grid (§13.5): the key figure and its chart across two
+ * thirds, the tiles in the last third, then the latest orders beside the
+ * goal, the regulars ring and the payment mix; the shipped sections below
+ * take the same card. `body` in each selector outranks the shipped skins'
+ * body.design-* rules, which load before this sheet; !important answers only
+ * the shipped rules that carry their own.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 0 · Below 1024 the desktop's own nodes are not drawn ─────────────────
+   dash-desktop.js mounts them at every width; the phone and the tablet keep
+   the layout they have. */
+html[data-skin-2027="dashboard"] #kit-side,
+html[data-skin-2027="dashboard"] #kit-dd-goal,
+html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
+
+@media (min-width: 1024px) {
+
+  /* ── 1 · The frame: the ground, the sidebar column ──────────────────────── */
+  html[data-skin-2027="dashboard"] body,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .app,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .main,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .container {
+    background: var(--k-bg) !important;
+    color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .app,
+  html[data-skin-2027="dashboard"][data-k-side] body[class*="page-"]:not(#k-dd) .app {
+    grid-template-columns: 248px minmax(0, 1fr) !important;
+  }
+
+  /* ── 2 · The sidebar (§10.20 desktop): surface-2, the kit's rows ───────── */
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar {
+    width: 248px;
+    padding: 16px 0 12px;
+    gap: 0;
+    background: var(--k-surface-2) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    color: var(--k-ink-1);
+    font-family: var(--k-font);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar::before,
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar::after { content: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar > nav,
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar > .merchant { display: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar > #kit-side { display: block; flex: none; }
+
+  /* The wordmark: the light one on the light ground, the inverse in dark. */
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .brand { padding: 4px 24px 0; margin: 0 0 16px; min-height: 28px; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .brand .brand-logo { height: 22px; width: auto; filter: none !important; opacity: 1 !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .brand .brand-logo-light { display: block !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .brand .brand-logo-dark { display: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side][data-theme="dark"] body:not(#k-dd) .sidebar .brand .brand-logo-light,
+  html[data-skin-2027="dashboard"][data-k-side] body[data-vexel-mode="dark"]:not(#k-dd) .sidebar .brand .brand-logo-light { display: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side][data-theme="dark"] body:not(#k-dd) .sidebar .brand .brand-logo-dark,
+  html[data-skin-2027="dashboard"][data-k-side] body[data-vexel-mode="dark"]:not(#k-dd) .sidebar .brand .brand-logo-dark { display: block !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body[data-vexel-mode="light"]:not(#k-dd) .sidebar .brand .brand-logo-light { display: block !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body[data-vexel-mode="light"]:not(#k-dd) .sidebar .brand .brand-logo-dark { display: none !important; }
+
+  /* The venue switcher: a surface-1 card, the venue in Body strong. */
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch-wrap { margin: 0 12px 4px; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch {
+    padding: 12px 16px;
+    border: 0 !important;
+    border-radius: var(--k-r-2);
+    background: var(--k-surface-1) !important;
+    box-shadow: none !important;
+    color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch::before,
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch::after { content: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch .badge {
+    color: var(--k-accent-ink); background: none; padding: 0;
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+    letter-spacing: var(--k-track-footnote); text-transform: none;
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch .badge i { background: var(--k-accent-ink); box-shadow: none; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch .top svg { color: var(--k-ink-2); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch .name {
+    color: var(--k-ink-1); font-family: var(--k-font);
+    font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body-strong); letter-spacing: var(--k-track-body);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .loc-switch .meta {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown {
+    background: var(--k-popover) !important; border: 0 !important; border-radius: var(--k-r-2);
+    box-shadow: var(--k-shadow-2) !important; color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown :is(.venue-row-name, .va-title) { color: var(--k-ink-1); font-family: var(--k-font); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown :is(.venue-row-type, .va-sub) { color: var(--k-ink-2); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-row { color: var(--k-ink-1); background: none; border-radius: var(--k-r-1); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-row.active { background: var(--k-surface-2); }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown :is(.venue-row-icon, .va-icon) { color: var(--k-ink-2); background: var(--k-surface-2); border: 0; box-shadow: none; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .venue-dropdown .venue-action { background: var(--k-surface-2) !important; border: 0 !important; box-shadow: none !important; color: var(--k-ink-1); }
+
+  /* The app card: a quiet surface-1 card at the foot; its button the
+     secondary fill, so the page keeps one green action. */
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell {
+    margin: 16px 12px 0;
+    padding: 16px;
+    border: 0 !important;
+    border-radius: var(--k-r-3);
+    background: var(--k-surface-1) !important;
+    box-shadow: none !important;
+    color: var(--k-ink-1);
+    font-family: var(--k-font);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell::before,
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell::after { content: none !important; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell .t {
+    color: var(--k-ink-2); text-transform: none; letter-spacing: var(--k-track-footnote);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell h4 {
+    color: var(--k-ink-1); font-family: var(--k-font);
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); letter-spacing: var(--k-track-callout);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell p,
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell .kiwi-install-benefits {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell .kiwi-install-benefits i { background: var(--k-accent-ink); box-shadow: none; }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .upsell button {
+    min-height: 44px; border: 0 !important; border-radius: 999px;
+    background: var(--k-surface-2) !important; box-shadow: none !important; color: var(--k-ink-1) !important;
+    font-family: var(--k-font); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"][data-k-side] body:not(#k-dd) .sidebar .merchant-logout {
+    display: flex; align-items: center; min-height: 44px; margin: 8px 12px 0; padding-inline: 12px;
+    border: 0; border-radius: var(--k-r-2); background: none; color: var(--k-ink-2); text-align: start;
+    font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout);
+  }
+
+  /* ── 3 · The top bar: the kit's ground, a hairline, the kit's controls ─── */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar {
+    background: var(--k-bg) !important;
+    border: 0 !important;
+    box-shadow: inset 0 -1px 0 var(--k-line) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    color: var(--k-ink-1);
+    font-family: var(--k-font);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar::after { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .topbar-inner { min-height: 72px; gap: 12px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .breadcrumb {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout); letter-spacing: var(--k-track-callout);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .breadcrumb b { color: var(--k-ink-1); font-weight: var(--k-fw-callout-strong); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .breadcrumb .sep { color: var(--k-ink-3); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big {
+    min-height: 44px; padding-inline: 16px; gap: 8px;
+    border: 0 !important; border-radius: 22px;
+    background: var(--k-surface-2) !important; box-shadow: none !important;
+    color: var(--k-ink-2);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .ph {
+    color: var(--k-ink-2); font-family: var(--k-font);
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout); letter-spacing: var(--k-track-callout);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .search-big .k {
+    border: 0; border-radius: 6px; background: var(--k-surface-1); color: var(--k-ink-2); box-shadow: none;
+    font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote);
+  }
+  /* Kiwi AI: the labelled capsule of §18.1, surface-2, no border, no glow. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn {
+    min-height: 44px; padding-inline: 12px 16px; gap: 8px;
+    border: 0 !important; border-radius: 22px;
+    background: var(--k-surface-2) !important; box-shadow: none !important; animation: none !important;
+    color: var(--k-ink-1) !important;
+    font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn::after { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn svg { color: var(--k-accent-ink); filter: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .ai-btn span { color: var(--k-ink-1); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .icon-btn {
+    width: 44px; height: 44px; border: 0 !important; border-radius: 50%;
+    background: none !important; box-shadow: none !important; color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .icon-btn:hover { background: var(--k-surface-2) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .icon-btn svg { width: 20px; height: 20px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .icon-btn .badge {
+    min-width: 20px; height: auto; min-height: 20px; padding-inline: 5px; border: 0; border-radius: 999px;
+    background: var(--k-danger-solid) !important; color: var(--k-on-danger) !important; box-shadow: none !important;
+    font-family: var(--k-font); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant {
+    padding: 4px 8px 4px 4px; border: 0 !important; border-radius: 26px;
+    background: none !important; box-shadow: none !important; color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant:hover { background: var(--k-surface-2) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant .avatar {
+    width: 40px; height: auto; min-height: 40px; border: 0 !important; border-radius: 50%;
+    background: var(--k-surface-3) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+    font-family: var(--k-font); font-size: var(--k-fs-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant .n {
+    color: var(--k-ink-1); font-family: var(--k-font);
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); letter-spacing: var(--k-track-callout);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant .r {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .topbar .merchant .m-caret { color: var(--k-ink-2); }
+
+  /* The status line at the foot of the page. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .status-bar {
+    background: var(--k-bg) !important; border: 0 !important; box-shadow: inset 0 1px 0 var(--k-line) !important;
+    color: var(--k-ink-2); font-family: var(--k-font);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .status-bar a { color: var(--k-accent-ink); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .status-bar .pip { background: var(--k-accent-ink); box-shadow: none; }
+
+  /* ── 4 · Home: the grid (§13.5) ─────────────────────────────────────────
+     The kit's nodes and the shipped sections become one grid: #kit-home and
+     the shipped wrappers lend their children (display: contents), each child
+     takes its area. Two thirds and one third from 1280; one column for the
+     figures from 1024, the lower sections paired. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--k-space-6);
+    row-gap: var(--k-space-6);
+    align-items: start;
+    max-width: var(--k-grid-max);
+    margin-inline: auto;
+    padding-top: 0;
+    grid-template-areas:
+      "seg   seg"
+      "fig   fig"
+      "chart chart"
+      "tiles tiles"
+      "list  list"
+      "goal  regs"
+      "mix   mix"
+      "chan  chan"
+      "ins   ins"
+      "oppo  oppo"
+      "cols  cols"
+      "more  more"
+      "clip  clip";
+  }
+  html[data-skin-2027="dashboard"][data-k-home][data-k-goal="0"] body:not(#k-dd) .dash-standard {
+    grid-template-areas:
+      "seg   seg"
+      "fig   fig"
+      "chart chart"
+      "tiles tiles"
+      "list  list"
+      "regs  mix"
+      "chan  chan"
+      "ins   ins"
+      "oppo  oppo"
+      "cols  cols"
+      "more  more"
+      "clip  clip";
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .vexel-compose,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-revenue-row,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-revenue-rail,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row { display: contents !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > * { grid-column: 1 / -1; min-width: 0; margin: 0 !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-utilities:empty,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-revenue-legend { display: none !important; }
+
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-segmented { grid-area: seg; justify-self: start; width: 100%; max-width: 480px; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig { grid-area: fig; position: relative; padding: 24px 24px 0; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__fig .k-dh__goal { display: none; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { grid-area: tiles; align-self: stretch; --k-kpi-cols: 3; --k-kpi-gap: var(--k-space-4); }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__lh { grid-area: list; align-self: start; position: relative; padding: 20px 24px 0; color: var(--k-ink-1);
+    font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading); letter-spacing: var(--k-track-heading); }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-list,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > .k-dh__em { grid-area: list; position: relative; padding: 0 8px 8px;
+    /* Below the card's title, which shares the area: its padding, its line, 8. */
+    margin-top: calc(28px + var(--k-fs-heading) * 1.25) !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today { grid-area: chart; position: relative; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard #kit-dd-goal { grid-area: goal; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-clients { grid-area: regs; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row > .vexel-goals-card { grid-area: chan; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row > .block { grid-area: mix; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-insights-row { grid-area: ins; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .oppo-band { grid-area: oppo; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols { grid-area: cols; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-more-wrap { grid-area: more; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-more-clip { grid-area: clip; }
+
+  /* The two card grounds: behind the key figure and its chart, and behind
+     the latest orders' title and rows. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .k-dd-ground {
+    display: block; position: relative; z-index: 0 !important; align-self: stretch;
+    border-radius: var(--k-r-3); background: var(--k-surface-1); opacity: 1 !important; animation: none !important; transform: none !important;
+  }
+  /* What sits on a ground is drawn above it. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) :is(#kit-home > .k-dh__fig, #kit-home > .k-dh__lh, #kit-home > k-list, #kit-home > .k-dh__em, .dash-standard .hero-today) { position: relative; z-index: 1; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .k-dd-ground--hero { grid-column: fig; grid-row: fig-start / chart-end; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .k-dd-ground--feed { grid-area: list; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard > .k-dd-ground { display: none; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .k-dd-ground { display: block; }
+
+  /* The key figure's chart: the shipped plot without its own head (the
+     figure and its delta are the kit's, above it); its line and its
+     Compare button stay. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today {
+    padding: 0 24px 16px !important;
+    border: 0 !important; border-radius: 0 0 var(--k-r-3) var(--k-r-3) !important;
+    background: none !important; box-shadow: none !important; overflow: visible;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today::before,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today::after { content: none !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head { min-height: 0; padding: 0; margin: 0 0 8px; align-items: center; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head :is(.t, .rev-hero-val, .rev-hero-delta) { display: none !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today .block-head .s {
+    margin: 0; color: var(--k-ink-2); font-family: var(--k-font);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+
+  /* ── 5 · Every shipped card on Home: the kit's card ─────────────────────── */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-clients, .vexel-goals-card, .vexel-bottom-row > .block, .vexel-insights-row, .oppo-card, .dash-cols .block, .dash-cols .settle, .dash-more-clip [data-integ-card]),
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal {
+    padding: 24px !important;
+    border: 0 !important;
+    border-radius: var(--k-r-3) !important;
+    background: var(--k-surface-1) !important;
+    box-shadow: none !important;
+    color: var(--k-ink-1);
+    font-family: var(--k-font);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-clients, .vexel-goals-card, .vexel-bottom-row > .block, .vexel-insights-row, .oppo-card, .dash-cols .block, .dash-cols .settle, .dash-more-clip [data-integ-card])::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-clients, .vexel-goals-card, .vexel-bottom-row > .block, .vexel-insights-row, .oppo-card, .dash-cols .block, .dash-cols .settle, .dash-more-clip [data-integ-card])::after { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.dash-col, .vexel-insights-row .hero-right, .oppo-grid, .dash-cols) { background: none !important; box-shadow: none !important; border: 0 !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(div, span, b, strong, small, p, h2, h3, h4, button, a, input) { font-family: var(--k-font); }
+
+  /* Card titles: Body strong; their context line Footnote ink-2; the
+     eyebrows lose their capitals (§9.4: sentence case). */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.block-head .t, .vexel-goals-card > h2, .hai-title, .oppo-t) {
+    color: var(--k-ink-1);
+    font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body-strong); letter-spacing: var(--k-track-body);
+    text-transform: none;
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.block-head .s, .vexel-goals-card > p, .oppo-d, .settle .sub, .hh-legend, .hai-rec-obs) {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.hai-eyebrow, .oppo-eyebrow, .settle .lbl, .vexel-client-label) {
+    color: var(--k-ink-2); text-transform: none;
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .block-head > div > .t::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .vexel-goals-card > h2::before { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .oppo-eyebrow { padding-inline: 0; margin-bottom: 12px; }
+
+  /* Figures inside the cards: the kit's Title, tabular. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-client-foot strong, .settle .big) {
+    color: var(--k-ink-1); font-variant-numeric: tabular-nums;
+    font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .settle .big span { color: var(--k-ink-2); font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-ring-item strong, .kiwi-ring-amount) {
+    color: var(--k-ink-1); font-variant-numeric: tabular-nums;
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.vexel-client-foot span, .vexel-client-foot small, .vexel-ring-item span, .vexel-ring-item small, .kiwi-ring-meta .slash, .donut-legend, .donut-legend .v) {
+    color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote); letter-spacing: var(--k-track-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .donut-legend .n { color: var(--k-ink-1); font-size: var(--k-fs-footnote); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .vexel-client-foot b,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .rev-hero-delta {
+    border: 0; border-radius: 999px; padding: 2px 8px; box-shadow: none;
+    background: var(--k-accent-tint) !important; color: var(--k-accent-ink) !important;
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .vexel-bottom-row > .block > div:last-child {
+    border-top: 1px solid var(--k-line); color: var(--k-ink-2);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+  }
+
+  /* Chips, the composer and the buttons of the shipped cards: the kit's. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.hai-chip, .cmp-btn, .chip:not(.pend)) {
+    min-height: 36px; padding-inline: 14px; border: 0 !important; border-radius: 999px;
+    background: var(--k-surface-2) !important; box-shadow: none !important; color: var(--k-ink-1) !important;
+    font-family: var(--k-font); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .chip.pend { border: 0; border-radius: 999px; background: var(--k-warning-tint) !important; color: var(--k-warning) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-input {
+    min-height: 52px; border: 0 !important; border-radius: 26px;
+    background: var(--k-surface-2) !important; box-shadow: none !important;
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-input input {
+    color: var(--k-ink-1);
+    font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-input input::placeholder { color: var(--k-ink-2); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-input :is(.kv-mic, .kv-attach) { color: var(--k-ink-2); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-send { background: var(--k-surface-1) !important; color: var(--k-accent-ink) !important; box-shadow: none !important; border: 0 !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-rec {
+    border: 0 !important; border-radius: var(--k-r-2); background: var(--k-surface-2) !important; box-shadow: none !important; padding: 12px 16px !important;
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-rec::before { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hai-rec-title { color: var(--k-ink-1); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.hai-rec-act, .oppo-cta, .settle .instant .cost, .dash-cols a) {
+    color: var(--k-accent-ink) !important;
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .oppo-x { color: var(--k-ink-2); background: none; border-radius: 50%; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .settle .instant {
+    min-height: 44px; border: 0 !important; border-radius: var(--k-r-2);
+    background: var(--k-surface-2) !important; box-shadow: none !important; color: var(--k-ink-1);
+    font-size: var(--k-fs-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard :is(.hh-ai) {
+    border: 0 !important; border-radius: var(--k-r-2); background: var(--k-surface-2) !important; box-shadow: none !important;
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .hh-ai-icon { background: var(--k-surface-1) !important; color: var(--k-accent-ink); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .stock-reorder-cta {
+    min-height: 52px; border: 0 !important; border-radius: 999px;
+    background: var(--k-accent) !important; color: var(--k-on-accent) !important; box-shadow: none !important;
+    font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .dash-more-toggle {
+    min-height: 44px; border: 0 !important; border-radius: 999px;
+    background: var(--k-surface-2) !important; box-shadow: none !important; color: var(--k-ink-1) !important;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .dash-more-toggle .dmt-ico { border: 0 !important; background: var(--k-surface-1) !important; color: var(--k-ink-1) !important; box-shadow: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-standard .dash-more-toggle .dmt-count { background: var(--k-surface-1) !important; color: var(--k-ink-2) !important; }
+
+  /* ── 6 · The goal card (dash-desktop.js) ───────────────────────────────── */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal { display: flex; flex-direction: column; gap: 8px; opacity: 1 !important; animation: none !important; transform: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal[hidden] { display: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal p { margin: 0; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal__v { display: flex; align-items: baseline; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal__bar { display: block; height: 8px; margin-top: 4px; border-radius: 4px; background: var(--k-surface-2); overflow: hidden; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .k-dd-goal__bar > i { display: block; height: 100%; border-radius: 4px; background: var(--k-accent-ink); }
+
+  /* ── 7 · Orders, Customers, Retention, Report: the page on the grid ────── */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage { max-width: var(--k-grid-max); margin-inline: auto; padding-top: var(--k-space-6); font-family: var(--k-font); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .genpage-head { border: 0 !important; box-shadow: none !important; padding-bottom: 0; margin-bottom: 8px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .genpage-head::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .genpage-head::after { content: none !important; }
+
+  /* Orders: the key figure at the start, the range at the end, the filter
+     under them, the rows in one card per hour. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; row-gap: 16px; align-items: end;
+    grid-template-areas: "fig range" "filter filter" "rows rows" "em em" "more more";
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > [data-do="range"] { grid-area: range; width: 440px; max-width: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > .k-do__fig { grid-area: fig; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > [data-do="filter"] { grid-area: filter; justify-self: start; width: 100%; max-width: 640px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > .k-do__rows { grid-area: rows; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > .k-do__em { grid-area: em; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders > .k-do__more { grid-area: more; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-orders .k-do__h { padding: 8px 0 0; }
+
+  /* Customers: the summary and its actions on one line, the search and the
+     segments on the next, the rows in their card. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers {
+    display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); column-gap: 24px; row-gap: 16px; align-items: center;
+    grid-template-areas: "top top" "search seg" "rows rows" "em em";
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > .k-dc__top { grid-area: top; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > k-field { grid-area: search; max-width: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > k-segmented { grid-area: seg; justify-self: end; width: 100%; max-width: 560px; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > .k-dc__rows { grid-area: rows; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > .k-dc__em { grid-area: em; }
+
+  /* The shipped page and drawer pieces (pages-pro.js, Kiwi.drawer): the
+     kit's card, its labels in sentence case, its three button weights. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane, .p-table) {
+    border: 0 !important; border-radius: var(--k-r-3) !important;
+    background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::after { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .l, .p-kpi .l, .p-card .l) {
+    color: var(--k-ink-2) !important; text-transform: none; letter-spacing: var(--k-track-footnote);
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .big, .p-kpi .v, .p-kpi .big) {
+    color: var(--k-ink-1); font-family: var(--k-font); font-variant-numeric: tabular-nums;
+    font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .sub, .p-kpi .s) {
+    color: var(--k-ink-2); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, b, strong, p, h2, h3, h4, button, a, input, select, textarea, td, th) { font-family: var(--k-font); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb {
+    min-height: 44px; padding-inline: 16px; border: 0 !important; border-radius: 999px;
+    background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+    font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.xs { min-height: 36px; padding-inline: 12px; font-size: var(--k-fs-footnote); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary) { background: var(--k-accent) !important; color: var(--k-on-accent) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary):active { background: var(--k-accent-pressed) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.danger { background: var(--k-danger-tint) !important; color: var(--k-danger) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-search input, input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="number"], select, textarea) {
+    min-height: 44px; border: 1px solid var(--k-line) !important; border-radius: var(--k-r-2) !important;
+    background: var(--k-surface-1) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+  }
+
+  /* An order's drawer (pages-pro.js): its blocks on the kit's card, the
+     figures' cells on the card itself. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-hero, .ord-stats, .ord-items, .ord-totals, .ord-pay) {
+    border: 0 !important; border-radius: var(--k-r-3) !important;
+    background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
+  }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::before,
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::after { content: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-stat, .ord-item, .ord-pay .ci) { background: none !important; box-shadow: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-stat + .ord-stat { border-inline-start: 1px solid var(--k-line); }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero .status { background: var(--k-accent-tint) !important; color: var(--k-accent-ink) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-item .qty { background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-section-lbl, .ord-stat .lbl, .ord-hero .ticket) {
+    color: var(--k-ink-2) !important;
+    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+  }
+  /* §9.4: sentence case. The shipped eyebrows set capitals and wide
+     tracking; inside a page or a drawer the kit sets neither. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, p, b, strong, small, label, h2, h3, h4, h5, th, button) { text-transform: none !important; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.l, .lbl, .ord-section-lbl, .ticket, .eyebrow, th) { letter-spacing: var(--k-track-footnote) !important; }
+
+  /* Retention: the tabs, the tiles four across, the list. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-retention > k-kpi-grid { --k-kpi-cols: 4; }
+
+  /* The shipped page bodies under the kit's heads: the kit's ground and
+     cards, so a page drawn by the shipped code still reads as one surface. */
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.cr-panel, .cd-card, .kdr-card, .genpage-card) {
+    border: 0 !important; border-radius: var(--k-r-3) !important; background: var(--k-surface-1) !important; box-shadow: none !important;
+  }
+}
+
+/* ── 8 · 1024 to 1279: the lower sections one above the other ─────────── */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols { grid-template-columns: minmax(0, 1fr) !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols > .dash-col:last-child {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--k-space-6); align-items: start;
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .oppo-band .oppo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .oppo-band .oppo-art { display: none; }
+}
+
+/* ── 9 · Wide: the figures across two thirds, the tiles in the last ──────── */
+@media (min-width: 1280px) {
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto auto 1fr;
+    grid-template-areas:
+      "seg   seg"
+      "fig   tiles"
+      "chart tiles"
+      "list  goal"
+      "list  regs"
+      "list  mix"
+      "list  ."
+      "chan  chan"
+      "ins   ins"
+      "oppo  oppo"
+      "cols  cols"
+      "more  more"
+      "clip  clip";
+  }
+  html[data-skin-2027="dashboard"][data-k-home][data-k-goal="0"] body:not(#k-dd) .dash-standard {
+    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-areas:
+      "seg   seg"
+      "fig   tiles"
+      "chart tiles"
+      "list  regs"
+      "list  mix"
+      "list  ."
+      "chan  chan"
+      "ins   ins"
+      "oppo  oppo"
+      "cols  cols"
+      "more  more"
+      "clip  clip";
+  }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { --k-kpi-cols: 2; }
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-clients,
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row > .block { align-self: start; }
+}
