@@ -362,7 +362,11 @@ try {
       kdsOrders.push(t);
       return t.num;
     });
-    await page.click('#open-kds');
+    /* Under the till skin the shipped rail (#open-kds) is hidden: the kit rail's
+       Cuisine item is the door a cashier really taps (§18.3). */
+    const kitchenItem = await page.evaluateHandle(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="kitchen"]'));
+    assert.ok(kitchenItem.asElement(), 'the kit rail has a Cuisine item');
+    await kitchenItem.asElement().click();
     await page.waitForFunction((n) => { const l = document.querySelector('#kit-new k-lane'); return l && l.shadowRoot.querySelector('[data-t="' + n + '"]'); }, { timeout: 8000 }, String(num));
     await sleep(600);   /* the screen opens; the lanes take their width once */
     check(await page.evaluate(() => !document.querySelector('#kit-new .kit-order') && !!document.querySelector('#kit-cook k-lane') && !!document.querySelector('#kit-history-inner k-lane')), 'the till board draws three lanes and no shipped card');
