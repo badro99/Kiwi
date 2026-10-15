@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · assets/kit/dash-desktop.css · the dashboard on a desktop window, on
  * the kit (spec §10.20, §12, §13.5). Loaded after kit.css behind the
- * dashboard's flag; every rule sits under (min-width: 1024px) and
- * html[data-skin-2027="dashboard"], so the phone and the tablet layouts and
- * the dashboard with its flag off are untouched.
+ * dashboard's flag; every rule sits under html[data-skin-2027="dashboard"],
+ * so the dashboard with its flag off is untouched. Sections 1 to 9 sit under
+ * (min-width: 1024px) and leave the phone and tablet layouts alone; section
+ * 10 dresses the shipped page pieces at every width.
  *
  * The language is the till's (§18.3): one flat ground (--k-bg), soft
  * surface-1 cards at radius 20 with no border, no shadow and no glow, the
@@ -490,69 +491,9 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > .k-dc__rows { grid-area: rows; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-customers > .k-dc__em { grid-area: em; }
 
-  /* The shipped page and drawer pieces (pages-pro.js, Kiwi.drawer): the
-     kit's card, its labels in sentence case, its three button weights. */
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane, .p-table) {
-    border: 0 !important; border-radius: var(--k-r-3) !important;
-    background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::before,
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::after { content: none !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .l, .p-kpi .l, .p-card .l) {
-    color: var(--k-ink-2) !important; text-transform: none; letter-spacing: var(--k-track-footnote);
-    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .big, .p-kpi .v, .p-kpi .big) {
-    color: var(--k-ink-1); font-family: var(--k-font); font-variant-numeric: tabular-nums;
-    font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .sub, .p-kpi .s) {
-    color: var(--k-ink-2); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, b, strong, p, h2, h3, h4, button, a, input, select, textarea, td, th) { font-family: var(--k-font); }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb {
-    min-height: 44px; padding-inline: 16px; border: 0 !important; border-radius: 999px;
-    background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
-    font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.xs { min-height: 36px; padding-inline: 12px; font-size: var(--k-fs-footnote); }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary) { background: var(--k-accent) !important; color: var(--k-on-accent) !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary):active { background: var(--k-accent-pressed) !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.danger { background: var(--k-danger-tint) !important; color: var(--k-danger) !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-search input, input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="number"], select, textarea) {
-    min-height: 44px; border: 1px solid var(--k-line) !important; border-radius: var(--k-r-2) !important;
-    background: var(--k-surface-1) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
-  }
-
-  /* An order's drawer (pages-pro.js): its blocks on the kit's card, the
-     figures' cells on the card itself. */
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-hero, .ord-stats, .ord-items, .ord-totals, .ord-pay) {
-    border: 0 !important; border-radius: var(--k-r-3) !important;
-    background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
-  }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::before,
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::after { content: none !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-stat, .ord-item, .ord-pay .ci) { background: none !important; box-shadow: none !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-stat + .ord-stat { border-inline-start: 1px solid var(--k-line); }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero .status { background: var(--k-accent-tint) !important; color: var(--k-accent-ink) !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-item .qty { background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-section-lbl, .ord-stat .lbl, .ord-hero .ticket) {
-    color: var(--k-ink-2) !important;
-    font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
-  }
-  /* §9.4: sentence case. The shipped eyebrows set capitals and wide
-     tracking; inside a page or a drawer the kit sets neither. */
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, p, b, strong, small, label, h2, h3, h4, h5, th, button) { text-transform: none !important; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.l, .lbl, .ord-section-lbl, .ticket, .eyebrow, th) { letter-spacing: var(--k-track-footnote) !important; }
-
   /* Retention: the tabs, the tiles four across, the list. */
   html[data-skin-2027="dashboard"] body:not(#k-dd) #kit-retention > k-kpi-grid { --k-kpi-cols: 4; }
 
-  /* The shipped page bodies under the kit's heads: the kit's ground and
-     cards, so a page drawn by the shipped code still reads as one surface. */
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.cr-panel, .cd-card, .kdr-card, .genpage-card) {
-    border: 0 !important; border-radius: var(--k-r-3) !important; background: var(--k-surface-1) !important; box-shadow: none !important;
-  }
 }
 
 /* ── 8 · 1024 to 1279: the lower sections one above the other ─────────── */
@@ -605,3 +546,161 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-clients,
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row > .block { align-self: start; }
 }
+
+/* ── 10 · Every width: the shipped pieces inside a page or a drawer ──────
+   What follows is not a layout: it gives the shipped page bodies and drawers
+   the kit's card, buttons, type and sentence case on a phone and a tablet as
+   on a desktop, so a page opened from the phone's tabs or menu reads like
+   the rest of the 2027 dashboard. */
+/* The shipped page and drawer pieces (pages-pro.js, Kiwi.drawer): the
+   kit's card, its labels in sentence case, its three button weights. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane, .p-table) {
+  border: 0 !important; border-radius: var(--k-r-3) !important;
+  background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::before,
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero, .p-card, .p-kpi, .p-pane)::after { content: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .l, .p-kpi .l, .p-card .l) {
+  color: var(--k-ink-2) !important; text-transform: none; letter-spacing: var(--k-track-footnote);
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .big, .p-kpi .v, .p-kpi .big) {
+  color: var(--k-ink-1); font-family: var(--k-font); font-variant-numeric: tabular-nums;
+  font-size: var(--k-fs-title); line-height: var(--k-lh-title); font-weight: var(--k-fw-title); letter-spacing: var(--k-track-title);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-hero .sub, .p-kpi .s) {
+  color: var(--k-ink-2); font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, b, strong, p, h2, h3, h4, button, a, input, select, textarea, td, th) { font-family: var(--k-font); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb {
+  min-height: 44px; padding-inline: 16px; border: 0 !important; border-radius: 999px;
+  background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+  font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.xs { min-height: 36px; padding-inline: 12px; font-size: var(--k-fs-footnote); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary) { background: var(--k-accent) !important; color: var(--k-on-accent) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.kb.atlas, .kb.primary):active { background: var(--k-accent-pressed) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) .kb.danger { background: var(--k-danger-tint) !important; color: var(--k-danger) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.p-search input, input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="number"], select, textarea) {
+  min-height: 44px; border: 1px solid var(--k-line) !important; border-radius: var(--k-r-2) !important;
+  background: var(--k-surface-1) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+}
+
+/* An order's drawer (pages-pro.js): its blocks on the kit's card, the
+   figures' cells on the card itself. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-hero, .ord-stats, .ord-items, .ord-totals, .ord-pay) {
+  border: 0 !important; border-radius: var(--k-r-3) !important;
+  background: var(--k-surface-1) !important; box-shadow: none !important; color: var(--k-ink-1);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::before,
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero::after { content: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-stat, .ord-item, .ord-pay .ci) { background: none !important; box-shadow: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-stat + .ord-stat { border-inline-start: 1px solid var(--k-line); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-hero .status { background: var(--k-accent-tint) !important; color: var(--k-accent-ink) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer .ord-item .qty { background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .kiwi-drawer :is(.ord-section-lbl, .ord-stat .lbl, .ord-hero .ticket) {
+  color: var(--k-ink-2) !important;
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+/* §9.4: sentence case. The shipped eyebrows set capitals and wide
+   tracking; inside a page or a drawer the kit sets neither. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(div, span, p, b, strong, small, label, h2, h3, h4, h5, th, button) { text-transform: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) :is(.dash-genpage, .kiwi-drawer) :is(.l, .lbl, .ord-section-lbl, .ticket, .eyebrow, th) { letter-spacing: var(--k-track-footnote) !important; }
+
+
+/* The shipped page bodies under the kit's heads: the kit's ground and
+   cards, so a page drawn by the shipped code still reads as one surface. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.cr-panel, .cd-card, .kdr-card, .genpage-card) {
+  border: 0 !important; border-radius: var(--k-r-3) !important; background: var(--k-surface-1) !important; box-shadow: none !important;
+}
+
+/* The Report's shipped body (assets/day-report-dash.js) under its kit head:
+   the day selector on the kit's segmented track, the buttons the kit's
+   secondary weight, the strip and the cards on surface-1, their labels
+   Footnote in sentence case, the bars in the accent. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--k-space-3); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .dr-pills {
+  background: var(--k-surface-2) !important; border: 0 !important; box-shadow: none !important;
+  border-radius: 999px !important; padding: 4px !important; backdrop-filter: none !important;
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .dr-pill {
+  min-height: 36px; border: 0 !important; background: transparent !important; box-shadow: none !important;
+  color: var(--k-ink-2) !important; font-family: var(--k-font);
+  font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .dr-pill.on { color: var(--k-ink-1) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kw-lens {
+  background: var(--k-surface-1) !important; border: 1px solid var(--k-line-strong) !important; box-shadow: none !important;
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding-inline: 16px; border: 0 !important; border-radius: 999px !important;
+  background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; box-shadow: none !important;
+  font-family: var(--k-font); font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip, .kdr-id, .kdr-top-c, .kdr-cat, .kdr-kpi:not(.is-lead)) {
+  border: 0 !important; border-radius: var(--k-r-3) !important; background: var(--k-surface-1) !important;
+  box-shadow: none !important; backdrop-filter: none !important;
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip, .kdr-id, .kdr-top-c, .kdr-cat, .kdr-kpi)::before,
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip, .kdr-id, .kdr-top-c, .kdr-cat, .kdr-kpi)::after { content: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip-h, .kdr-h, .kdr-id-cell, .kdr-cat-h, .kdr-kpi-l, .kdr-r-l) :is(span, small, b, strong):not(.kdr-r-v),
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip-h, .kdr-h, .kdr-kpi-l, .kdr-r-l) {
+  text-transform: none !important; letter-spacing: var(--k-track-footnote) !important; font-family: var(--k-font);
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip-h, .kdr-h, .kdr-id-cell) > span { color: var(--k-ink-2) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-id-cell > b {
+  color: var(--k-ink-1); font-family: var(--k-font); font-variant-numeric: tabular-nums;
+  font-size: var(--k-fs-heading); line-height: var(--k-lh-heading); font-weight: var(--k-fw-heading);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-strip-h, .kdr-h) em {
+  font-style: normal; color: var(--k-ink-1) !important; font-variant-numeric: tabular-nums; letter-spacing: 0 !important;
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-sd-b, .kdr-hr-b) { background: var(--k-accent-tint) !important; box-shadow: none !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-sd.is-sel .kdr-sd-b, .kdr-hr.is-peak .kdr-hr-b) { background: var(--k-accent) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage :is(.kdr-sd-n, .kdr-hrx span) { color: var(--k-ink-2) !important; font-family: var(--k-font); font-variant-numeric: tabular-nums; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-sd.is-sel .kdr-sd-n { color: var(--k-ink-1) !important; font-weight: var(--k-fw-footnote-strong); }
+
+/* Orders: the key figure already says the count and the total, so the page
+   head's line that repeats them is not drawn; nor is the shipped list's
+   "orders up to date" note, which read as the figure's label. When there is
+   news its button ("show the new orders") still comes up. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage:has(#kit-orders) .genpage-head > p,
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage:has(#kit-orders) span.tx-update-status { display: none !important; }
+
+/* On a phone the day selector takes its own row and the two buttons share
+   the next, rather than each taking a line. */
+@media (max-width: 767px) {
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav > :first-child { flex: 1 1 100%; min-width: 0; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kdr-spacer { display: none; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kdr-btn { flex: 1 1 0; width: auto !important; min-width: 0; justify-content: center; }
+}
+
+/* The shipped period picker (dateRange.js, a popover on a desktop, a sheet
+   on a phone): the kit's opaque surface, sentence case, the kit's buttons.
+   It is the same dialog Home's date line and the Report open. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover {
+  background: var(--k-surface-1) !important; color: var(--k-ink-1); backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  border: 0 !important; box-shadow: var(--k-shadow-3) !important; font-family: var(--k-font);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover.dr-sheet { border-radius: var(--k-r-4) var(--k-r-4) 0 0 !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover :is(div, span, b, button, th, td, abbr) { text-transform: none !important; font-family: var(--k-font); }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover :is(.drp-eyebrow, .drp-presets-lbl) {
+  letter-spacing: var(--k-track-footnote) !important; color: var(--k-ink-2) !important;
+  font-size: var(--k-fs-footnote); line-height: var(--k-lh-footnote); font-weight: var(--k-fw-footnote-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover :is(.drp-presets, .drp-foot) { background: var(--k-surface-1) !important; border-color: var(--k-line) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover .drp-preset {
+  min-height: 36px; border: 0 !important; border-radius: 999px !important; background: var(--k-surface-2) !important; color: var(--k-ink-1) !important;
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover .drp-btn {
+  min-height: 44px; border: 0 !important; border-radius: 999px !important; box-shadow: none !important;
+  font-size: var(--k-fs-callout); font-weight: var(--k-fw-callout-strong);
+}
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover .drp-btn-ghost { background: var(--k-surface-2) !important; color: var(--k-ink-1) !important; }
+html[data-skin-2027="dashboard"] body:not(#k-dd) .dr-popover .drp-btn-go { background: var(--k-accent) !important; color: var(--k-on-accent) !important; }
+
+/* Home's shipped AI card eyebrow ("Kiwi Insights"): the kit sets no capitals. */
+html[data-skin-2027="dashboard"] body:not(#k-dd) .hh-ai-eyebrow { text-transform: none !important; letter-spacing: var(--k-track-footnote) !important; }

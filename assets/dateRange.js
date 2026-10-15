@@ -364,6 +364,25 @@
     ar: { aujourdhui: 'المقبوض اليوم', hier: 'المقبوض أمس', septJours: 'المقبوض في 7 أيام', trenteJours: 'المقبوض في 30 يومًا', moisDernier: 'المقبوض، الشهر الماضي', trimestre: 'المقبوض، الربع', annee: 'المقبوض، السنة', personnalise: 'المقبوض، الفترة' },
   };
 
+  /* §9.4: with the 2027 dashboard on, the shipped capitals below read in
+     sentence case; with it off they stay as shipped. Currency codes and the
+     Z of a Z report keep their capitals. A comparison ("vs hier") follows a
+     figure, so it starts in lower case. */
+  function kitCase(s, lead) {
+    s = String(s == null ? '' : s);
+    const de = typeof document !== 'undefined' && document.documentElement;
+    if (!de || !de.getAttribute || de.getAttribute('data-skin-2027') !== 'dashboard' || s !== s.toUpperCase()) return s;
+    const low = s.toLowerCase().replace(/\b(mad|eur|usd|aed|gbp|z|tva|ice)\b/g, (m) => m.toUpperCase());
+    return lead === false ? low : low.charAt(0).toUpperCase() + low.slice(1);
+  }
+  function deltaLabels(lang, range) {
+    const src = DELTA_LABELS[lang]?.[range] || DELTA_LABELS.fr[range];
+    if (!src) return src;
+    const out = {};
+    for (const k in src) out[k] = kitCase(src[k], false);
+    return out;
+  }
+
   const DELTA_LABELS = {
     fr: {
       aujourdhui:   { hier: 'VS HIER', semaine: 'VS SEMAINE', mois: 'VS MOIS DERNIER' },
@@ -2567,7 +2586,7 @@
         deltaHier: null, deltaSemaine: null, deltaMois: null };
     }
     const labelEl = document.querySelector('[data-hero-label]');
-    if (labelEl) labelEl.textContent = reference ? (reference.source === 'closed-z' ? 'RAPPORT Z DE LA CAISSE · ' : 'VENTES ENREGISTRÉES · ') + reference.day : (HERO_LABEL[lang]?.[currentRange] || HERO_LABEL.fr[currentRange]);
+    if (labelEl) labelEl.textContent = reference ? kitCase(reference.source === 'closed-z' ? 'RAPPORT Z DE LA CAISSE · ' : 'VENTES ENREGISTRÉES · ') + reference.day : kitCase(HERO_LABEL[lang]?.[currentRange] || HERO_LABEL.fr[currentRange]);
 
     // The live-session row ("LIVE · HH:MM · 24 heures · session continue
     // depuis 08h12") is a today-only concept — a ticking LIVE clock over a
@@ -2588,7 +2607,7 @@
 
     const breakdown = document.querySelector('.hero-breakdown');
     if (breakdown) {
-      const labels = DELTA_LABELS[lang]?.[currentRange] || DELTA_LABELS.fr[currentRange];
+      const labels = deltaLabels(lang, currentRange);
 
       const existing = {};
       breakdown.querySelectorAll('[data-hero-delta]').forEach(el => {
@@ -2622,7 +2641,7 @@
       });
     }
     if (typeof homeSet === 'function') {
-      const dl = DELTA_LABELS[lang]?.[currentRange] || DELTA_LABELS.fr[currentRange] || {};
+      const dl = deltaLabels(lang, currentRange) || {};
       const deltas = [['hier', data.deltaHier], ['semaine', data.deltaSemaine], ['mois', data.deltaMois]]
         .filter(([k, v]) => v != null && dl[k]).map(([k, v]) => ({ key: k, value: v, text: fmtPct(v), label: dl[k] }));
       const amount = Number(data.amount) || 0;
@@ -2767,7 +2786,7 @@
      * objectif — et on ne calcule pas un pourcentage qui n'existe pas. Le
      * drapeau sur le libellé sert à la carte Vexel, qui recopie ce DOM. */
     const unset = !(data.goal > 0);
-    const labelTxt = GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange];
+    const labelTxt = kitCase(GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange]);
     const labelEl = document.querySelector('[data-goal-label]');
     if (labelEl) {
       labelEl.textContent = unset

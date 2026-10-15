@@ -72,7 +72,8 @@
         return {
           id: r.id, icon: ICON[r.kind] || ICON.card,
           title: [r.ref ? '#' + r.ref : '', r.table != null && r.table !== '' ? 'T' + r.table : ''].filter(Boolean).join(' · '),
-          subtitle: [r.method, r.time, r.staff].filter(Boolean).join(' · '),
+          /* Each part kept whole, so a narrow row breaks between parts. */
+          subtitle: [r.method, r.time, r.staff].filter(Boolean).map(function (x) { return String(x).replace(/ /g, '\u00a0'); }).join(' · '),
           value: r.amountText, trailing: 'chevron'
         };
       });

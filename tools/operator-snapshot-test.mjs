@@ -114,6 +114,7 @@ function renderers(h) {
     return dateSource.slice(start, end);
   };
   vm.runInContext([
+    select('  function kitCase(', '  const DELTA_LABELS = {'),
     select('  function operatorLedgerPending()', '  function renderHero()'),
     select('  function renderHero()', '  function renderHeroAi()'),
     select('  function renderGoal()', '  function intensityClass('),

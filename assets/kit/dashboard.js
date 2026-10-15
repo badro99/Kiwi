@@ -101,13 +101,16 @@
     props: ['tiles'],
     css: ':host{display:block}' +
       '.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--k-grid-gap,12px)}' +
+      '@media (max-width:699px){.tile:last-child:nth-child(odd){grid-column:1/-1}}' +
       '@media (min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
       '.tile{display:flex;flex-direction:column;gap:4px;min-height:108px;padding:16px;border-radius:var(--k-r-3);background-color:var(--k-surface-1);' +
       'transition:transform var(--k-dur-4) var(--k-spring);cursor:pointer;min-width:0}' +
       '.tile:active{transform:scale(.97);transition-duration:var(--k-dur-1);transition-timing-function:var(--k-glide)}' +
       '.tile:focus-visible{box-shadow:0 0 0 2px var(--k-bg),0 0 0 calc(2px + var(--k-focus-w)) var(--k-focus)}' +
       '.vl{display:flex;align-items:baseline;min-width:0;white-space:nowrap;overflow:hidden}' +
-      '.dl{display:inline-flex;align-items:center;gap:2px;font-weight:var(--k-fw-footnote-strong)}' +
+      '.dl{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;font-weight:var(--k-fw-footnote-strong)}' +
+      /* The signed figure never breaks; a long note goes under it, whole. */
+      '.dl>span:not(.nt){white-space:nowrap}.dl>.nt{min-width:0}' +
       '.dl[data-tone="good"]{color:var(--k-accent-ink)}.dl[data-tone="bad"]{color:var(--k-danger)}.dl[data-tone="neutral"]{color:var(--k-ink-2)}' +
       '.st{display:inline-flex;align-items:center;gap:4px}' +
       '.plain{align-self:flex-start;min-height:44px;margin-block:-12px;color:var(--k-accent-ink)}' +

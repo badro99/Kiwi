@@ -178,7 +178,9 @@
           goalHtml = '<p class="k-foot k-ink2 k-dh__goal"><span>' + esc(goal.label) + ' · <bdi dir="ltr" class="k-num">' + esc(goal.pct + ' %') + '</bdi></span>' + mark + '</p>';
         }
       }
-      head.innerHTML = '<p class="k-foot k-ink2 k-dh__date">' + K.icon('today', 16) + '<span>' + esc(sentence(date, unit, true)) + '</span></p>' +
+      /* The date opens the shipped custom-period picker: on a phone the four
+         presets are the segmented control, any other period is chosen here. */
+      head.innerHTML = '<p class="k-foot k-ink2 k-dh__date"><button type="button" class="k-dh__pick" data-k="pick" aria-haspopup="dialog">' + K.icon('today', 16) + '<span>' + esc(sentence(date, unit, true)) + '</span>' + K.icon('expand_more', 16) + '</button></p>' +
         '<p class="k-foot k-ink2 k-dh__lb">' + esc(hero.label || '') + '</p>' +
         '<p class="k-dh__kf" data-key-figure' + (ph && hero.label ? ' aria-label="' + esc(sentence(hero.label, unit, true) + ' ' + (hero.amountText || '') + ' ' + unit) + '"' : '') + '><bdi dir="ltr" class="k-display k-num">' + esc(hero.amountText || '') + '</bdi> <span class="k-heading k-ink2">' + esc(unit) + '</span></p>' +
         goalHtml + (deltas ? '<ul class="k-dh__cmp">' + deltas + '</ul>' : '');
@@ -223,6 +225,14 @@
     if (el) el.click();
   }
 
+  /* The shipped picker's trigger lives in the range control the phone does
+     not draw; its click opens the same dialog. */
+  function onPick(e) {
+    var b = e.target.closest && e.target.closest('[data-k="pick"]');
+    if (!b) return;
+    clickShipped('.dr-control:not(.dr-day-control) .dr-pill-custom:not([data-dr-day-custom])');
+  }
+
   function onAction(e) {
     var d = e.detail || {};
     var a = d.action || '';
@@ -252,6 +262,7 @@
     list = box.querySelector('k-list');
     chart = root.customElements.get('k-chart') ? box.querySelector('k-chart') : null;
     box.addEventListener('kiwi:action', onAction);
+    box.addEventListener('click', onPick);
     root.addEventListener('kiwi:home-model', paint);
     /* dash-phone.js sets or clears html[data-k-phone] as the width crosses
        768 px: Home redraws in that form. */

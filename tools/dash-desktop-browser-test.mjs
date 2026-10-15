@@ -23,6 +23,8 @@
  *   · dark (both systems: html[data-theme] and body[data-vexel-mode]) paints
  *     the sidebar and the ground dark, measured, not read from a flag;
  *   · Arabic: the sidebar sits at the right edge;
+ *   · 1280: Home's labels, Orders and the Report in sentence case; Orders
+ *     says its total once; the Report's buttons and strip are the kit's;
  *   · 800: none of the desktop's nodes is drawn;
  *   · no page error. */
 import assert from 'node:assert/strict';
@@ -170,6 +172,50 @@ try {
       return { cur: it && it.getAttribute('data-id'), shipped: a && a.dataset.nav };
     });
     check(after.cur === 'transactions' && after.shipped === 'transactions', 'a click on Orders opens the shipped Orders page and moves the current item');
+    check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
+  });
+
+  await S.run('flag on · 1280, sentence case, Orders and Report', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const errors = [];
+    const { page } = await open(tr, ctx, { width: 1280, height: 900 });
+    page.on('pageerror', (e) => errors.push(e.message));
+    /* A label in capitals: a visible text with a word of three capitals or
+       more, written so or set so, currency codes aside. */
+    const caps = (sel) => page.evaluate((sel) => [...document.querySelectorAll(sel)].flatMap((root) => [...root.querySelectorAll('*')].concat(root))
+      .filter((e) => e.children.length === 0 && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden')
+      .map((e) => ({ t: e.textContent.replace(/\b(MAD|EUR|USD|AED|ICE|TVA|QR|ID|KPI|CSV|PDF|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
+      .filter((x) => /[A-Za-zÀ-ÿ]{3}/.test(x.t) && (x.up || /[A-ZÀ-Þ]{3,}/.test(x.t) && x.t === x.t.toUpperCase())).map((x) => x.t.slice(0, 40)), sel);
+    const home = await caps('#kit-home .k-dh__lb, #kit-home .k-dh__cmp, [data-goal-label], .sidebar .loc-switch .badge, #kit-dd-goal');
+    check(home.length === 0, 'Home: the cashed label, the goal and the venue status are in sentence case' + (home.length ? ' · ' + home.join(' | ') : ''));
+
+    tr.step('open Orders from the sidebar');
+    const go = async (id, sel) => {
+      const it = await page.evaluateHandle((id) => document.getElementById('kit-side').shadowRoot.querySelector(`.it[data-id="${id}"]`), id);
+      await it.asElement().click();
+      await page.waitForFunction((sel) => !!document.querySelector(sel), { timeout: 15000 }, sel);
+      await sleep(700);
+    };
+    await go('transactions', '#kit-orders');
+    const o = await page.evaluate(() => {
+      const gp = document.querySelector('#kw-main .dash-genpage');
+      const shown = (e) => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+      return { headLine: shown(gp.querySelector('.genpage-head > p')), upToDate: shown(gp.querySelector('span.tx-update-status')), fig: shown(gp.querySelector('#kit-orders [data-key-figure]')) };
+    });
+    check(o.fig && !o.headLine && !o.upToDate, 'Orders: the total is said once, by the key figure (no head line, no "up to date" note)');
+
+    tr.step('open the Report from the sidebar');
+    await go('rapport', '#kit-report, .dash-genpage .kdr-nav');
+    const r = await page.evaluate(() => {
+      const s2 = getComputedStyle(document.documentElement).getPropertyValue('--k-surface-2').trim();
+      const probe = document.createElement('i'); probe.style.color = s2; document.body.appendChild(probe);
+      const s2rgb = getComputedStyle(probe).color; probe.remove();
+      const btn = document.querySelector('.dash-genpage .kdr-btn'), strip = document.querySelector('.dash-genpage .kdr-strip');
+      return { btn: btn && getComputedStyle(btn).backgroundColor, s2: s2rgb, strip: strip && getComputedStyle(strip).borderTopWidth };
+    });
+    check(r.btn === r.s2 && r.strip === '0px', `Report: its buttons on surface-2, its strip a kit card with no border (${r.btn}, ${r.strip})`);
+    const rep = await caps('#kw-main .dash-genpage');
+    check(rep.length === 0, 'Report: no label is set in capitals' + (rep.length ? ' · ' + rep.join(' | ') : ''));
     check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 

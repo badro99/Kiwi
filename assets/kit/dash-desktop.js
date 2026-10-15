@@ -211,7 +211,31 @@
     });
   }
 
+  /* §9.4: a few shipped labels are written in capitals (the venue card's
+     "EN SERVICE", in dashboard.html and i18n.js). With the flag on they read
+     in sentence case, at every width; each is rewritten again if i18n puts
+     the capitals back. Only an all-caps text is touched, so this never loops. */
+  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]'];
+  function sentence(el) {
+    var s = el.textContent;
+    if (!/[A-ZÀ-Ý]{2}/.test(s) || s !== s.toUpperCase()) return;
+    var low = s.toLowerCase();
+    el.textContent = low.charAt(0).toUpperCase() + low.slice(1);
+  }
+  var capsSeen = [];
+  function caps() {
+    CAPS.forEach(function (sel) {
+      doc.querySelectorAll(sel).forEach(function (el) {
+        sentence(el);
+        if (capsSeen.indexOf(el) >= 0) return;
+        capsSeen.push(el);
+        try { new MutationObserver(function () { sentence(el); }).observe(el, { childList: true, characterData: true, subtree: true }); } catch (_) {}
+      });
+    });
+  }
+
   function boot() {
+    caps();
     mountSide();
     mountHome();
     adoptTiles();

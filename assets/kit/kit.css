@@ -467,6 +467,8 @@ k-tabbar.k-ptabs { display: none; }
   html[data-k-phone] #kit-home > .k-dh__lh { margin-top: 8px; }
   html[data-k-phone] .k-dh__date { display: flex; align-items: center; gap: 4px; min-height: 44px; margin: 0; }
   html[data-k-phone] .k-dh__date .k-ic, html[data-k-phone] .k-dh__dl .k-ic { width: 16px; height: 16px; fill: currentColor; }
+  html[data-k-phone] .k-dh__pick { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  html[data-k-phone] .k-dh__pick:focus-visible { outline: var(--k-focus-w) solid var(--k-focus); outline-offset: 2px; border-radius: var(--k-r-1); }
   html[data-k-phone] body #kw-main > .container { padding-top: 8px !important; }
   html[data-k-phone] .k-dh__lb { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

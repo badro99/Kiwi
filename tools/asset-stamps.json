@@ -256,8 +256,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "78",
-    "sha": "4353650d53413a48"
+    "v": "79",
+    "sha": "a12ceb821e3220fc"
   },
   "assets/day-report-dash.js": {
     "v": "30",
@@ -556,24 +556,24 @@
     "sha": "9e0574e4df6e1a34"
   },
   "assets/kit/dash-desktop.css": {
-    "v": "2",
-    "sha": "ffb81953c93a558d"
+    "v": "3",
+    "sha": "a7f92b9e5f33e7d7"
   },
   "assets/kit/dash-desktop.js": {
-    "v": "2",
-    "sha": "0ac799ff7c59a06d"
+    "v": "3",
+    "sha": "1768176a56879c92"
   },
   "assets/kit/dash-home.js": {
-    "v": "2",
-    "sha": "71e04cb82b037ef1"
+    "v": "3",
+    "sha": "83aaa1b13cebab0f"
   },
   "assets/kit/dash-onboarding.js": {
     "v": "1",
     "sha": "b84afb4733d366f2"
   },
   "assets/kit/dash-orders.js": {
-    "v": "1",
-    "sha": "f5d742f380825bd9"
+    "v": "2",
+    "sha": "7a6b8ccfb88d1ca7"
   },
   "assets/kit/dash-phone.js": {
     "v": "1",
@@ -592,8 +592,8 @@
     "sha": "72abac03095a3245"
   },
   "assets/kit/dashboard.js": {
-    "v": "3",
-    "sha": "72b7deb49a18b87c"
+    "v": "4",
+    "sha": "081aa276c11f9014"
   },
   "assets/kit/elements.js": {
     "v": "1",
@@ -620,8 +620,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "31",
-    "sha": "da004d96f9c96aa6"
+    "v": "32",
+    "sha": "a0a81bbcbff40757"
   },
   "assets/kit/layout.js": {
     "v": "1",

@@ -23,6 +23,9 @@
  *     title in the nav bar (no large title, no Back on a tab), the lens moves;
  *   · the Kiwi AI capsule opens the assistant titled "Kiwi AI", its start
  *     right under the head and its tools row above the composer;
+ *   · Home's date line opens the period picker on an opaque sheet; the
+ *     Report: Print and the month report on one row, no tile figure broken
+ *     or cut off, no label in capitals;
  *   · flag off on a phone, and flag on at 1280 wide: none of the above;
  *   · no page error. */
 import assert from 'node:assert/strict';
@@ -222,6 +225,44 @@ try {
     check(ai.title === want, `the assistant is titled ${want}`);
     check(ai.gap >= 0 && ai.gap <= 40, `its start sits right under the head (${Math.round(ai.gap)})`);
     check(ai.tools <= ai.input, 'its tools row is above the composer');
+    check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
+  });
+
+  await S.run('flag on · phone · the period picker and the Report', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = await open(tr, ctx);
+    tr.step("tap Home's date line");
+    await tap(page, '#kit-home .k-dh__pick');
+    await page.waitForFunction(() => !!document.querySelector('.dr-popover.open'), { timeout: 10000 });
+    await sleep(400);
+    const pk = await page.evaluate(() => {
+      const d = document.querySelector('.dr-popover.open');
+      const a = (getComputedStyle(d).backgroundColor.match(/[\d.]+/g) || []).map(Number);
+      return { alpha: a.length === 4 ? a[3] : 1, eyebrow: getComputedStyle(d.querySelector('.drp-eyebrow')).textTransform };
+    });
+    check(pk.alpha === 1 && pk.eyebrow === 'none', `the date line opens the period picker, on an opaque sheet in sentence case (alpha ${pk.alpha})`);
+    await page.keyboard.press('Escape');
+    await sleep(400);
+
+    tr.step('tap Report in the capsule');
+    await tapIn(page, 'k-tabbar.k-ptabs', '.it[data-id="report"]');
+    await page.waitForFunction(() => !!document.querySelector('.dash-genpage .kdr-nav .kdr-btn'), { timeout: 20000 });
+    await sleep(800);
+    const r = await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('.dash-genpage .kdr-nav .kdr-btn')].filter((b) => b.getClientRects().length).map((b) => { const q = b.getBoundingClientRect(); return Math.round((q.top + q.bottom) / 2); });
+      const grid = document.querySelector('.dash-genpage k-kpi-grid');
+      const lh = (e) => parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.3;
+      const broken = grid && grid.shadowRoot ? [...grid.shadowRoot.querySelectorAll('.dl > span:not(.nt)')].filter((e) => e.getBoundingClientRect().height > lh(e) * 1.5).map((e) => e.textContent) : ['no grid'];
+      const clipped = grid && grid.shadowRoot ? [...grid.shadowRoot.querySelectorAll('.vl')].filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent) : [];
+      const caps = [...document.querySelectorAll('#kw-main .dash-genpage *')].filter((e) => e.children.length === 0 && e.getClientRects().length)
+        .map((e) => ({ t: e.textContent.replace(/\b(MAD|Z)\b/g, '').trim(), up: getComputedStyle(e).textTransform === 'uppercase' }))
+        .filter((x) => /[A-Za-zÀ-ÿ]{3}/.test(x.t) && (x.up || /[A-ZÀ-Þ]{3,}/.test(x.t) && x.t === x.t.toUpperCase())).map((x) => x.t);
+      return { btns, broken, clipped, caps };
+    });
+    check(r.btns.length === 2 && Math.abs(r.btns[0] - r.btns[1]) <= 2, `Print and the month report share one row (centres ${r.btns.join(', ')})`);
+    check(r.broken.length === 0, "no tile's signed figure breaks over two lines" + (r.broken.length ? ' · ' + r.broken.join(' | ') : ''));
+    check(r.clipped.length === 0, "no tile's figure is cut off" + (r.clipped.length ? ' · ' + r.clipped.join(' | ') : ''));
+    check(r.caps.length === 0, 'no Report label is set in capitals' + (r.caps.length ? ' · ' + r.caps.join(' | ') : ''));
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
   });
 
