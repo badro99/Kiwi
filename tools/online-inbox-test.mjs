@@ -134,7 +134,10 @@ try {
     window.KiwiHaptics.play = (cls, gid, _p, meta) => { if (cls === 'Commit') window.__haptics.push([cls, meta && meta.trigger]); return null; };
     window.__french = [];
     const stack = document.getElementById('toast-stack');
-    if (stack) new MutationObserver(() => { stack.querySelectorAll('.toast').forEach((el) => window.__french.push(el.textContent)); }).observe(stack, { childList: true });
+    /* Only the toasts ADDED from now on: the till's own "Service restauré" toast
+     * (kiwi-caisse.html, 500 ms after the shift reopens) is not the inbox's, and
+     * rereading the whole stack on each mutation made it count as one. */
+    if (stack) new MutationObserver((muts) => { muts.forEach((m) => m.addedNodes.forEach((el) => { if (el.classList && el.classList.contains('toast') && !/^Service restauré/.test(el.textContent)) window.__french.push(el.textContent); })); }).observe(stack, { childList: true });
   });
 
   /* Empty: the section exists and is hidden; no chip. */
