@@ -1,6 +1,6 @@
 /* ═════════════════════════════════════════════════════════════════
  * Kiwi · assets/kit/dash-desktop.js · the dashboard on a desktop window
- * (1024 and wider) on the kit (spec §10.20, §12, §13.5). Loaded only when
+ * (900 and wider) on the kit (spec §10.20, §12, §13.5). Loaded only when
  * the dashboard's flag is on (kiwiSkin2027:dashboard, or ?skin=2027 for one
  * load); off, nothing here runs and the shipped dashboard is untouched.
  *
@@ -16,7 +16,7 @@
  *     orders;
  *   · the KPI tiles' column count, read from --k-kpi-cols, which the layout
  *     sets per width (two beside the chart, three under it).
- * Every rule is scoped to (min-width: 1024px) in the stylesheet, so below
+ * Every rule is scoped to (min-width: 900px) in the stylesheet, so below
  * that width these nodes are not drawn and the phone layout is unchanged.
  * ═════════════════════════════════════════════════════════════════ */
 (function (root) {
@@ -212,18 +212,28 @@
   }
 
   /* §9.4: a few shipped labels are written in capitals (the venue card's
-     "EN SERVICE", in dashboard.html and i18n.js). With the flag on they read
-     in sentence case, at every width; each is rewritten again if i18n puts
-     the capitals back. Only an all-caps text is touched, so this never loops. */
-  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]'];
+     "EN SERVICE", in dashboard.html and i18n.js; the app card's "APPLICATION
+     KIWI", in dashboard-pwa.js). With the flag on they read in sentence case,
+     at every width, the brand keeping its capital; each is rewritten again if
+     i18n puts the capitals back, and the app card, which redraws whole, is
+     watched as a card. Only an all-caps text is touched, so this never loops. */
+  var CAPS = ['.sidebar .loc-switch .badge > span[data-i18n]', '[data-upsell] .kiwi-install-head > .t'];
+  var CAPS_HOSTS = ['[data-upsell]'];
   function sentence(el) {
     var s = el.textContent;
     if (!/[A-ZÀ-Ý]{2}/.test(s) || s !== s.toUpperCase()) return;
     var low = s.toLowerCase();
-    el.textContent = low.charAt(0).toUpperCase() + low.slice(1);
+    el.textContent = (low.charAt(0).toUpperCase() + low.slice(1)).replace(/\bkiwi\b/g, 'Kiwi');
   }
   var capsSeen = [];
   function caps() {
+    CAPS_HOSTS.forEach(function (sel) {
+      doc.querySelectorAll(sel).forEach(function (host) {
+        if (capsSeen.indexOf(host) >= 0) return;
+        capsSeen.push(host);
+        try { new MutationObserver(caps).observe(host, { childList: true }); } catch (_) {}
+      });
+    });
     CAPS.forEach(function (sel) {
       doc.querySelectorAll(sel).forEach(function (el) {
         sentence(el);

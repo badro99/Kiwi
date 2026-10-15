@@ -64,11 +64,14 @@
       return;
     }
     em.textContent = '';
+    /* The shipped report writes "MAD"; the kit names the currency in the
+       page's language, as Home does (درهم in Arabic). */
+    var cur = function (u) { var f = u === 'MAD' && K.fmt && K.fmt(); return (f && f.unit('0').slice(2)) || u; };
     fig.innerHTML = '<p class="k-foot k-ink2 k-dr__lb">' + esc(m.netLabel) + '</p>' +
-      '<p class="k-dr__kf" data-key-figure><bdi dir="ltr" class="k-display k-num">' + esc(m.netText) + '</bdi> <span class="k-heading k-ink2">' + esc(m.unit) + '</span></p>' +
+      '<p class="k-dr__kf" data-key-figure><bdi dir="ltr" class="k-display k-num">' + esc(m.netText) + '</bdi> <span class="k-heading k-ink2">' + esc(cur(m.unit)) + '</span></p>' +
       '<ul class="k-dh__cmp">' + deltaSpan(m.netDelta) + '</ul>';
     grid.tiles = (m.tiles || []).map(function (it) {
-      var tl = { key: it.key, label: it.label, value: it.value, unit: it.unit, polarity: POLARITY[it.key] || 'neutral' };
+      var tl = { key: it.key, label: it.label, value: it.value, unit: cur(it.unit), polarity: POLARITY[it.key] || 'neutral' };
       if (it.delta && it.delta.value != null) { tl.delta = it.delta.value; tl.deltaText = it.delta.text; tl.deltaNote = it.delta.note; }
       return tl;
     });

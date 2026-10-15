@@ -2366,14 +2366,14 @@ section('Kiwi 2027 · le cœur de la caisse sur le kit');
  *                                       Footnote ink-2, le chiffre clé reste le plus
  *                                       grand) et de chaque tiroir (Heading, fermer 44
  *                                       rond sur surface-2)
- *   dash-desktop-browser-test           le bureau (1024 et plus) : drapeau éteint, rien
+ *   dash-desktop-browser-test           le bureau (900 et plus) : drapeau éteint, rien
  *                                       n'est chargé ; la barre latérale du kit liste
  *                                       les liens livrés dans leur ordre, un clic ouvre
  *                                       la page livrée ; l'accueil en grille (chiffre et
  *                                       courbe dans une carte, tuiles à côté, commandes
  *                                       à côté de l'objectif), aucun chevauchement ;
- *                                       1024, 1920, sombre mesuré, arabe à droite, rien
- *                                       sous 1024
+ *                                       900, 1024, 1920, sombre mesuré, arabe à droite,
+ *                                       rien sous 900
  *   dash-phone-browser-test             le téléphone (390 × 844) : la barre de nav et la
  *                                       capsule d'onglets du kit à la place du bandeau
  *                                       sombre, l'accueil dans l'ordre du §18.1 (courbe,

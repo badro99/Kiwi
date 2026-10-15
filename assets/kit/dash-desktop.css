@@ -3,7 +3,8 @@
  * the kit (spec §10.20, §12, §13.5). Loaded after kit.css behind the
  * dashboard's flag; every rule sits under html[data-skin-2027="dashboard"],
  * so the dashboard with its flag off is untouched. Sections 1 to 9 sit under
- * (min-width: 1024px) and leave the phone and tablet layouts alone; section
+ * (min-width: 900px), where the shipped sidebar becomes a column, and leave
+ * the phone layout (below 900, an iPad in portrait included) alone; section
  * 10 dresses the shipped page pieces at every width.
  *
  * The language is the till's (§18.3): one flat ground (--k-bg), soft
@@ -26,7 +27,7 @@ html[data-skin-2027="dashboard"] #kit-side,
 html[data-skin-2027="dashboard"] #kit-dd-goal,
 html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
 
-@media (min-width: 1024px) {
+@media (min-width: 900px) {
 
   /* ── 1 · The frame: the ground, the sidebar column ──────────────────────── */
   html[data-skin-2027="dashboard"] body,
@@ -496,8 +497,8 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
 
 }
 
-/* ── 8 · 1024 to 1279: the lower sections one above the other ─────────── */
-@media (min-width: 1024px) and (max-width: 1279px) {
+/* ── 8 · 900 to 1279: the lower sections one above the other ──────────── */
+@media (min-width: 900px) and (max-width: 1279px) {
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols { grid-template-columns: minmax(0, 1fr) !important; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard > .dash-cols > .dash-col:last-child {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--k-space-6); align-items: start;
@@ -671,10 +672,10 @@ html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage:has(#kit-orders) 
 
 /* On a phone the day selector takes its own row and the two buttons share
    the next, rather than each taking a line. */
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav > :first-child { flex: 1 1 100%; min-width: 0; }
   html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kdr-spacer { display: none; }
-  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kdr-btn { flex: 1 1 0; width: auto !important; min-width: 0; justify-content: center; }
+  html[data-skin-2027="dashboard"] body:not(#k-dd) .dash-genpage .kdr-nav .kdr-btn { flex: 1 1 auto; width: auto !important; min-width: 0; justify-content: center; white-space: nowrap; }
 }
 
 /* The shipped period picker (dateRange.js, a popover on a desktop, a sheet

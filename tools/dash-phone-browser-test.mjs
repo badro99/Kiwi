@@ -26,6 +26,8 @@
  *   · Home's date line opens the period picker on an opaque sheet; the
  *     Report: Print and the month report on one row, no tile figure broken
  *     or cut off, no label in capitals;
+ *   · in Arabic the Report names the currency as Home does;
+ *   · an iPad in portrait (820) gets the same phone layout, whole;
  *   · flag off on a phone, and flag on at 1280 wide: none of the above;
  *   · no page error. */
 import assert from 'node:assert/strict';
@@ -63,7 +65,7 @@ async function open(tr, ctx, { flag = true, width = 390, height = 844, lang = 'f
   const page = tr.watch(await ctx.newPage());
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
-  const phone = width < 768;
+  const phone = width < 900;
   await page.setViewport({ width, height, deviceScaleFactor: 2, isMobile: phone, hasTouch: phone });
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);
@@ -260,6 +262,8 @@ try {
       return { btns, broken, clipped, caps };
     });
     check(r.btns.length === 2 && Math.abs(r.btns[0] - r.btns[1]) <= 2, `Print and the month report share one row (centres ${r.btns.join(', ')})`);
+    const tall = await page.evaluate(() => [...document.querySelectorAll('.dash-genpage .kdr-nav .kdr-btn')].filter((b) => b.getClientRects().length && b.getBoundingClientRect().height > 48).map((b) => b.textContent.trim()));
+    check(tall.length === 0, 'each button keeps its label on one line' + (tall.length ? ' · ' + tall.join(' | ') : ''));
     check(r.broken.length === 0, "no tile's signed figure breaks over two lines" + (r.broken.length ? ' · ' + r.broken.join(' | ') : ''));
     check(r.clipped.length === 0, "no tile's figure is cut off" + (r.clipped.length ? ' · ' + r.clipped.join(' | ') : ''));
     check(r.caps.length === 0, 'no Report label is set in capitals' + (r.caps.length ? ' · ' + r.caps.join(' | ') : ''));
@@ -274,6 +278,29 @@ try {
     check(h.chart.gl.every((s) => /\d/.test(s)), 'and its gridline labels keep their digits');
     const c = await chrome(page);
     check(c.ai && c.bell && c.bell.r <= c.ai.x, 'the nav bar is mirrored: the bell at the left, the capsule after it');
+    tr.step('tap Report in the capsule');
+    await tapIn(page, 'k-tabbar.k-ptabs', '.it[data-id="report"]');
+    await page.waitForFunction(() => { const g = document.querySelector('#kit-report k-kpi-grid'); return g && g.shadowRoot && g.shadowRoot.querySelector('.tile .un'); }, { timeout: 20000 });
+    const u = await page.evaluate(() => {
+      const kf = document.querySelector('#kit-report [data-key-figure] .k-heading');
+      const g = document.querySelector('#kit-report k-kpi-grid').shadowRoot;
+      return [(kf || {}).textContent || ''].concat([...g.querySelectorAll('.un')].map((e) => e.textContent.trim()));
+    });
+    check(u.length > 1 && u.every((x) => x.trim() === 'درهم'), `the Arabic Report names the currency as Home does (${u.join(', ')})`);
+    check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
+  });
+
+  /* An iPad in portrait: the shipped page is in its phone form below 900,
+     so the kit's phone layout takes it whole, never half-and-half. */
+  await S.run('flag on · tablet 820 portrait', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const page = await open(tr, ctx, { width: 820, height: 1180 });
+    const c = await chrome(page);
+    check(c.phone && !c.shippedTabs && !c.burger && c.tabs, 'the kit phone chrome, without the shipped header and tab bar');
+    const h = await home(page);
+    check(h.chart.shown && h.chart.points > 0, `Home draws its chart (${h.chart.points} points)`);
+    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    check(sw <= c.vw, `nothing scrolls sideways (${sw} ≤ ${c.vw})`);
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
   });
 

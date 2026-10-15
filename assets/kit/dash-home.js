@@ -16,7 +16,7 @@
  * range preset calls setDateRange, a tile or an order row clicks the shipped
  * node, so the shipped drawers open exactly as before.
  *
- * On a phone (html[data-k-phone], set by dash-phone.js below 768 px) Home is
+ * On a phone (html[data-k-phone], set by dash-phone.js below 900 px) Home is
  * §18.1's whole screen: the date, the key figure with its goal line and its
  * comparison, then the presets, the revenue chart (<k-chart>, over the series
  * the shipped chart draws, today only), four tiles (the margin and success
@@ -265,7 +265,7 @@
     box.addEventListener('click', onPick);
     root.addEventListener('kiwi:home-model', paint);
     /* dash-phone.js sets or clears html[data-k-phone] as the width crosses
-       768 px: Home redraws in that form. */
+       900 px: Home redraws in that form. */
     var was = '';
     if (root.MutationObserver) new root.MutationObserver(function () {
       var now = phone() + '|' + doc.documentElement.lang;

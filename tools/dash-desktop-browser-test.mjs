@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* dash-desktop-browser-test · the dashboard on a desktop window (1024 and
+/* dash-desktop-browser-test · the dashboard on a desktop window (900 and
  * wider) on the kit (§10.20, §12, §13.5), behind kiwiSkin2027:dashboard, in a
  * real Chromium, on the demo store.
  *
@@ -25,7 +25,10 @@
  *   · Arabic: the sidebar sits at the right edge;
  *   · 1280: Home's labels, Orders and the Report in sentence case; Orders
  *     says its total once; the Report's buttons and strip are the kit's;
- *   · 800: none of the desktop's nodes is drawn;
+ *   · 900: the desktop starts where the shipped sidebar becomes a column;
+ *     the app card's label in sentence case; the Report's three tiles in
+ *     three columns, none cut off;
+ *   · 800: none of the desktop's nodes is drawn, the phone layout is;
  *   · no page error. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -251,7 +254,38 @@ try {
     const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
     const { page } = await open(tr, ctx, { width: 800, height: 1000 });
     const v = await page.evaluate(() => ['#kit-side', '#kit-dd-goal', '.k-dd-ground'].map((s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).display : 'none'; }));
-    check(v.every((d) => d === 'none'), 'below 1024 the kit sidebar, the goal card and the grounds are not drawn');
+    check(v.every((d) => d === 'none'), 'below 900 the kit sidebar, the goal card and the grounds are not drawn');
+    check(await page.evaluate(() => document.documentElement.hasAttribute('data-k-phone')), 'and the phone layout takes the page, as the shipped page is in its phone form there');
+  });
+
+  /* 900 is where the shipped sidebar becomes a column: the desktop starts
+     there, so a tablet never shows the shipped header beside kit pages. */
+  await S.run('flag on · 900, the desktop from the shipped sidebar column', async (tr) => {
+    const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
+    const errors = [];
+    const { page } = await open(tr, ctx, { width: 900, height: 1000 });
+    page.on('pageerror', (e) => errors.push(e.message));
+    const v = await page.evaluate(() => ({
+      side: getComputedStyle(document.getElementById('kit-side')).display, phone: document.documentElement.hasAttribute('data-k-phone'),
+      sw: document.documentElement.scrollWidth, w: innerWidth,
+      card: ((document.querySelector('[data-upsell] .kiwi-install-head > .t') || {}).textContent || '').trim(),
+    }));
+    check(v.side !== 'none' && !v.phone, `900: the kit sidebar is drawn and the phone layout is not (${v.side})`);
+    check(v.sw <= v.w, `900: nothing scrolls sideways (${v.sw} ≤ ${v.w})`);
+    check(!v.card || (v.card !== v.card.toUpperCase() && /Kiwi/.test(v.card)), `the app card's label in sentence case, the brand kept (${v.card})`);
+    tr.step('open the Report from the sidebar');
+    const it = await page.evaluateHandle(() => document.getElementById('kit-side').shadowRoot.querySelector('.it[data-id="rapport"]'));
+    await it.asElement().click();
+    await page.waitForFunction(() => { const g = document.querySelector('#kit-report k-kpi-grid'); return g && g.shadowRoot && g.shadowRoot.querySelector('.tile .vl'); }, { timeout: 15000 });
+    await sleep(700);
+    const r = await page.evaluate(() => {
+      const g = document.querySelector('#kit-report k-kpi-grid').shadowRoot;
+      const grid = g.querySelector('.grid');
+      return { n: grid.children.length, cols: getComputedStyle(grid).gridTemplateColumns.split(' ').length, clipped: [...g.querySelectorAll('.vl')].filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent) };
+    });
+    check(r.n !== 3 || r.cols === 3, `Report: three tiles take three columns, not four with a hole (${r.n} tiles, ${r.cols} columns)`);
+    check(r.clipped.length === 0, "Report: no tile's figure is cut off" + (r.clipped.length ? ' · ' + r.clipped.join(' | ') : ''));
+    check(errors.length === 0, 'no page error' + (errors.length ? ' · ' + errors.join(' | ') : ''));
   });
 } finally {
   await browser.close().catch(() => {});

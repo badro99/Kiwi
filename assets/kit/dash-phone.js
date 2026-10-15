@@ -2,7 +2,9 @@
  * Kiwi · assets/kit/dash-phone.js · the dashboard's phone chrome on the kit
  * (spec §18.1, §10.18, §10.20; stage 5). Loaded only when the dashboard's
  * flag is on (kiwiSkin2027:dashboard, or ?skin=2027 for one load), and drawn
- * only below 768 px: an iPad or a desktop keeps its sidebar.
+ * only below 900 px, where the shipped page itself is in its phone form (its
+ * sidebar becomes a column at 900): a phone, and an iPad in portrait, get
+ * this layout whole rather than the shipped header beside kit pages.
  *
  *   · the nav bar: on Home, the wordmark, the venue switcher, the Kiwi AI
  *     capsule and the bell (§18.1); on any other page, Back and the page's
@@ -14,7 +16,7 @@
  * Every tap goes to the shipped control (assets/mobile-nav.js's tabs, the
  * sidebar's links and its venue switcher, the shipped bell), so the pages and
  * drawers open exactly as before; this file only draws. html[data-k-phone]
- * then lets kit.css hide the shipped phone header and tab bar. Above 767 px,
+ * then lets kit.css hide the shipped phone header and tab bar. Above 899 px,
  * or with the flag off, nothing here runs.
  * ═════════════════════════════════════════════════════════════════ */
 (function (root) {
@@ -25,7 +27,7 @@
   if (doc.documentElement.getAttribute('data-skin-2027') !== 'dashboard') return;
   var t = function (k, a) { return String(K.t(k, a)).replace(/[⁦-⁩]/g, ''); };
   var esc = K.esc, icon = K.icon;
-  var mq = root.matchMedia ? root.matchMedia('(max-width: 767px)') : { matches: false, addEventListener: function () {} };
+  var mq = root.matchMedia ? root.matchMedia('(max-width: 899px)') : { matches: false, addEventListener: function () {} };
 
   var bar = null, tabs = null, page = '', sig = '';
 

@@ -418,14 +418,14 @@ html[data-skin-2027="access"] body .card { background: var(--k-surface-1); borde
 .k-body-s { font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-fw-body-strong); letter-spacing: var(--k-track-body); }
 .k-callout-s { font-size: var(--k-fs-callout); line-height: var(--k-lh-callout); font-weight: var(--k-fw-callout-strong); letter-spacing: var(--k-track-callout); }
 
-/* The dashboard on a phone (stage 5, §18.1, §10.18, §10.20): below 768 px,
+/* The dashboard on a phone (stage 5, §18.1, §10.18, §10.20): below 900 px,
    html[data-k-phone] (dash-phone.js) swaps the shipped phone chrome for the
    kit's, on the kit's ground: the nav bar inside the shipped header, the tab
    capsule, the menu as a sheet of rows, a page's title in the nav bar, and
    Home as §18.1 draws it. Nothing here applies wider or with the flag off. */
 k-tabbar.k-ptabs { display: none; }
 .k-dh__date, .k-dh__chart { display: none; }
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   html[data-k-phone] body, html[data-k-phone] body .app, html[data-k-phone] body #kw-main, html[data-k-phone] body #kw-main .container { background: var(--k-bg) !important; background-image: none !important; }
   html[data-k-phone] body #kw-main > .topbar { background: var(--k-bg) !important; background-image: none !important; box-shadow: none !important; border: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: env(safe-area-inset-top, 0px) 16px 0 !important; }
   html[data-k-phone] body #kw-main > .topbar > .topbar-inner { min-height: 52px; }
