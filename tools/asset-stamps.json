@@ -64,8 +64,8 @@
     "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "35",
-    "sha": "85e2408c34c24eb3"
+    "v": "36",
+    "sha": "1820086db1920cea"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -144,7 +144,7 @@
     "sha": "146e4fbca0dcad56"
   },
   "assets/caisse-pwa.js": {
-    "v": "615",
+    "v": "616",
     "sha": "d5b22690ef8f57e1"
   },
   "assets/caisse-refresh.js": {
@@ -204,7 +204,7 @@
     "sha": "fcd3de04fc5cf854"
   },
   "assets/clients-directory.js": {
-    "v": "21",
+    "v": "22",
     "sha": "3af0b916f8771679"
   },
   "assets/clients-store.js": {
@@ -228,7 +228,7 @@
     "sha": "5a65f0b28432ba19"
   },
   "assets/customer-retention.js": {
-    "v": "9",
+    "v": "10",
     "sha": "46cb4dd578d3f866"
   },
   "assets/dark-fixes.js": {
@@ -256,11 +256,11 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "74",
-    "sha": "ac1b2448cbc5301e"
+    "v": "77",
+    "sha": "f8b9f6904b33e7a0"
   },
   "assets/day-report-dash.js": {
-    "v": "29",
+    "v": "30",
     "sha": "de8f1110eb5cdd9d"
   },
   "assets/day-report-export.js": {
@@ -1004,8 +1004,8 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2160",
-    "sha": "2c1ad4428f205b13"
+    "v": "2161",
+    "sha": "8cef2ae1c5019cb0"
   },
   "assets/pages.js": {
     "v": "12",
@@ -1044,11 +1044,11 @@
     "sha": "f81f4a2dfc5fd866"
   },
   "assets/pos-autre.css": {
-    "v": "10",
+    "v": "8",
     "sha": "3ab0b5b88de5778b"
   },
   "assets/pos-autre.js": {
-    "v": "10",
+    "v": "8",
     "sha": "90cb319d7dfc2b5d"
   },
   "assets/pos-boulangerie.css": {
