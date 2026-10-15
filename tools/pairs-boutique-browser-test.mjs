@@ -10,7 +10,9 @@
  *   · « + » ouvre la fiche de la broche, comme un toucher dans la grille, et
  *     « Ajouter au ticket » la pose ; la suggestion passe à la suivante ;
  *   · « × » l'écarte de ce ticket ; vider le ticket repart de zéro ;
- *   · en anglais, la même suggestion dans la langue de la caisse.
+ *   · en anglais, la même suggestion dans la langue de la caisse ;
+ *   · avec le drapeau 2027 de la caisse, la boutique montre ses puces de fond
+ *     d'ouverture et s'ouvre.
  * Aucun code saisi. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -115,7 +117,7 @@ async function route(r) {
   } catch (e) { r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: String(e && e.message) }) }); }
 }
 
-async function openTill(lang) {
+async function openTill(lang, skin2027 = false) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   const errors = [];
@@ -124,12 +126,13 @@ async function openTill(lang) {
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);
   page.on('request', (r) => { route(r); });
-  await page.evaluateOnNewDocument((m, l) => {
+  await page.evaluateOnNewDocument((m, l, k) => {
+    if (k) localStorage.setItem('kiwiSkin2027:till', '1');
     localStorage.setItem('kiwiPaired', '1');
     localStorage.setItem('kiwiLiveMerchant', m);
     localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: m, type: 'boutique', name: 'Pairs Boutique', location: 'Casablanca' }));
     localStorage.setItem('kiwiCaisseLang', l);
-  }, MERCHANT, lang);
+  }, MERCHANT, lang, skin2027);
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.__kiwiCaisseBootedAsDemo === false, { timeout: 20000 });
   // La boutique a son propre écran d'ouverture (pos-boutique.js, #bq-clockin).
@@ -214,6 +217,17 @@ try {
     check(c && txt.test(c.txt) && why.test(c.why) && c.addLabel === add,
       `in the till's language, names as the merchant wrote them (${c && c.txt} / ${c && c.why})`);
     if (process.env.KIWI_PAIRS_SHOT) await page.screenshot({ path: process.env.KIWI_PAIRS_SHOT.replace(/\.png$/, '-' + lang + '.png') });
+    check(errors.length === 0, 'no script error' + (errors.length ? ': ' + errors.join(' | ') : ''));
+    await ctx.close();
+  }
+  /* Le drapeau 2027 de la caisse : le fond d'ouverture du kit est celui de
+     la caisse restaurant ; la boutique garde ses propres puces, que la règle
+     du kit ne doit pas cacher (sinon « Ouvrir la caisse » reste éteint). */
+  {
+    console.log('■ The boutique opens with the 2027 till flag on');
+    const { ctx, page, errors } = await openTill('fr', true);
+    check(await page.evaluate(() => document.documentElement.getAttribute('data-skin-2027') === 'till'), 'the 2027 till flag is on');
+    check(await page.evaluate(() => !!document.querySelector('[data-bq-item]')), "its float chips show, a chip turns Open the till on, and the till opens on the boutique's grid");
     check(errors.length === 0, 'no script error' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await ctx.close();
   }

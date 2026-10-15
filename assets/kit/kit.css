@@ -202,7 +202,7 @@ html[data-k-till] .sidebar { display: none !important; }
 
 /* The opening float (stage 4 (13), §18.9): counted in the kit's sheet, which
    Open the till opens; the shipped float chips are not drawn. */
-html[data-k-till] .clockin-float:not(.k-shown) { display: none !important; }
+html[data-k-till] #clockin-screen .clockin-float:not(.k-shown) { display: none !important; }
 
 /* The Z report (stage 4 (14), §18.9): the sheet after the close. */
 .k-z { display: flex; flex-direction: column; gap: 16px; padding-bottom: 8px; }
