@@ -2521,7 +2521,7 @@
       if (label) label.textContent = operatorUnavailableText();
       const greet = document.querySelector('.hero-left-today .greet');
       if (greet) greet.style.display = 'none';
-      homeSet('hero', { unavailable: operatorUnavailableText() });
+      typeof homeSet === 'function' && homeSet('hero', { unavailable: operatorUnavailableText() });
       return;
     }
     const lang = getLang();
@@ -2621,12 +2621,12 @@
         });
       });
     }
-    {
+    if (typeof homeSet === 'function') {
       const dl = DELTA_LABELS[lang]?.[currentRange] || DELTA_LABELS.fr[currentRange] || {};
       const deltas = [['hier', data.deltaHier], ['semaine', data.deltaSemaine], ['mois', data.deltaMois]]
         .filter(([k, v]) => v != null && dl[k]).map(([k, v]) => ({ key: k, value: v, text: fmtPct(v), label: dl[k] }));
       const amount = Number(data.amount) || 0;
-      homeSet('hero', { label: labelEl ? labelEl.textContent : '', amount, amountText: fmtHeroAmount(amount).replace(/<[^>]*>/g, '').replace(curUnit(), '').trim(), unit: curUnit(), deltas, reference: !!reference });
+      typeof homeSet === 'function' && homeSet('hero', { label: labelEl ? labelEl.textContent : '', amount, amountText: fmtHeroAmount(amount).replace(/<[^>]*>/g, '').replace(curUnit(), '').trim(), unit: curUnit(), deltas, reference: !!reference });
     }
   }
 
@@ -2727,7 +2727,7 @@
     if (guardOperatorFigures('[data-goal-label], [data-goal-pct]')) {
       const fill = document.querySelector('[data-goal-fill]');
       if (fill) fill.style.width = '0%';
-      homeSet('goal', null);
+      typeof homeSet === 'function' && homeSet('goal', null);
       return;
     }
     const lang = getLang();
@@ -2792,7 +2792,7 @@
     }
     const fillEl = document.querySelector('[data-goal-fill]');
     if (fillEl) fillEl.style.width = `${widthPct.toFixed(1)}%`;
-    homeSet('goal', { range: currentRange, unset, label: labelEl ? labelEl.textContent : '', goal: unset ? 0 : data.goal, current: data.current, pct: unset ? null : pctRound, ratio });
+    typeof homeSet === 'function' && homeSet('goal', { range: currentRange, unset, label: labelEl ? labelEl.textContent : '', goal: unset ? 0 : data.goal, current: data.current, pct: unset ? null : pctRound, ratio });
   }
 
   /* ═══════════════ RENDER: HOURLY HEATMAP ═══════════════ */
@@ -3316,7 +3316,7 @@
     if (guardOperatorFigures('[data-kpi-band]')) {
       const wrap = document.querySelector('[data-kpi-band]');
       if (wrap) wrap.textContent = operatorUnavailableText();
-      homeSet('tiles', null);
+      typeof homeSet === 'function' && homeSet('tiles', null);
       return;
     }
     const lang = getLang();
@@ -3682,9 +3682,9 @@
         }
       }
     });
-    {
+    if (typeof homeSet === 'function') {
       const T = window.KiwiI18n?.T?.[lang] || {};
-      homeSet('tiles', { suffix, items: spec.filter((sp) => data[sp.key]).map((sp) => {
+      typeof homeSet === 'function' && homeSet('tiles', { suffix, items: spec.filter((sp) => data[sp.key]).map((sp) => {
         const tl = data[sp.key];
         const unit = tl.unit ? String(tl.unit === 'MAD' ? curUnit() : tl.unit).replace(/d{4,}/g, n => frInt(Number(n))) : '';
         const value = fmtKpiVal({ ...tl, unit: '' }, tl.text != null ? 0 : tl.value);
@@ -4986,7 +4986,7 @@
     }
     const strip = (x) => String(x == null ? '' : x).replace(/<[^>]*>/g, '');
     const feedEmpty = tradeStr('feedEmpty', FEED_EMPTY[lang] || FEED_EMPTY.fr);
-    homeSet('feed', {
+    typeof homeSet === 'function' && homeSet('feed', {
       title: titleEl ? titleEl.textContent : '', sub: subEl ? subEl.textContent : '', unit: curUnit(),
       empty: { title: feedEmpty.title, sub: feedEmpty.sub },
       rows: (rows || []).map((r, idx) => ({ key: `o${idx}`, time: strip(r.t), primary: strip(trPay(r.primary)), sub: strip(trPay(r.sub)),
