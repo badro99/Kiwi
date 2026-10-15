@@ -135,7 +135,7 @@
     var pill = item.querySelector('.pill');
     if (pill) {
       pill.style.boxShadow = '0 0 0 3px var(--k-accent)';
-      pill.style.transition = 'box-shadow var(--k-dur-7, 700ms) var(--k-glide)';
+      pill.style.transition = 'box-shadow var(--k-dur-7) var(--k-glide)';
       requestAnimationFrame(function () { requestAnimationFrame(function () { pill.style.boxShadow = '0 0 0 3px transparent'; }); });
       setTimeout(function () { pill.style.boxShadow = ''; pill.style.transition = ''; item.removeAttribute('data-ring'); }, 1200);
     }
