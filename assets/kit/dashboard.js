@@ -100,18 +100,15 @@
       }).join('') + '</div>';
       this.fit();
     },
-    /* A figure too wide for its tile steps down, 2 px at a time and never
-       below the Heading size, rather than being cut; one that fits keeps the
-       Title size. Measured, so a short figure in a narrow tile is untouched. */
+    /* A figure too wide for its tile steps down from the Title size to the
+       Heading size rather than being cut; one that fits keeps Title.
+       Measured, so a short figure in a narrow tile is untouched. */
     fit: function () {
       [].forEach.call(this.shadowRoot.querySelectorAll('.vl'), function (vl) {
         var n = vl.querySelector('.k-num');
         if (!n) return;
-        n.style.fontSize = '';
-        if (!vl.clientWidth) return;
-        var size = parseFloat(root.getComputedStyle(n).fontSize) || 0;
-        var floor = 20; /* --k-fs-heading at type scale 1 */
-        while (vl.scrollWidth > vl.clientWidth + 1 && size - 2 >= floor) { size -= 2; n.style.fontSize = size + 'px'; }
+        n.classList.add('k-title'); n.classList.remove('k-heading');
+        if (vl.clientWidth && vl.scrollWidth > vl.clientWidth + 1) { n.classList.remove('k-title'); n.classList.add('k-heading'); }
       });
     }
   });
