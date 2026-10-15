@@ -68,6 +68,12 @@ async function openCompliance(flag, width) {
   await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d/.test(x.textContent)); if (b) b.click(); });
   await sleep(1200);
   await page.keyboard.press('Escape');
+  /* With the 2027 skin the PIN pad (k-dash-lock) stays up after Escape, and the
+     app behind it keeps the lock's dive-in state (.kw-app-hidden: scale .95,
+     opacity 0), so every rect below is measured 5 % small. Use the demo door
+     the lock offers, then wait for the dive-in to settle at scale 1. */
+  await page.evaluate(() => { const s = document.querySelector('[data-kiwi-skip]'); if (s) s.click(); });
+  await page.waitForFunction(() => { const a = document.querySelector('.app'); return a && !a.classList.contains('kw-app-hidden') && getComputedStyle(a).transform === 'none'; }, { timeout: 20000 });
   await page.waitForFunction(() => !!window.KiwiConformite, { timeout: 20000 });
   await page.evaluate(() => document.querySelector('.sidebar nav a[data-nav="conformite"]').click());
   await page.waitForFunction(() => !!document.querySelector('[data-conformite-root] .cf-body'), { timeout: 20000 });
