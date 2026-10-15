@@ -287,6 +287,9 @@ try {
       return [(kf || {}).textContent || ''].concat([...g.querySelectorAll('.un')].map((e) => e.textContent.trim()));
     });
     check(u.length > 1 && u.every((x) => x.trim() === 'درهم'), `the Arabic Report names the currency as Home does (${u.join(', ')})`);
+    await page.waitForFunction(() => !!document.querySelector('.dash-genpage .kdr-strip'), { timeout: 15000 });
+    const mad = await page.evaluate(() => (document.querySelector('#kw-main .dash-genpage').innerText.match(/MAD/g) || []).length);
+    check(mad === 0, `and so does the rest of the Arabic Report, its 14 days and its rows (${mad} "MAD" left)`);
     check(page.errors.length === 0, 'no page error' + (page.errors.length ? ' · ' + page.errors.join(' | ') : ''));
   });
 

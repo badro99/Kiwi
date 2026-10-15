@@ -260,8 +260,8 @@
     "sha": "a12ceb821e3220fc"
   },
   "assets/day-report-dash.js": {
-    "v": "30",
-    "sha": "de8f1110eb5cdd9d"
+    "v": "31",
+    "sha": "e5a1796cec4e7f73"
   },
   "assets/day-report-export.js": {
     "v": "11",
@@ -556,12 +556,12 @@
     "sha": "9e0574e4df6e1a34"
   },
   "assets/kit/dash-desktop.css": {
-    "v": "4",
-    "sha": "8cf4e70002681999"
+    "v": "5",
+    "sha": "884229ce5f26b6d4"
   },
   "assets/kit/dash-desktop.js": {
-    "v": "4",
-    "sha": "16f2ebd61e79d171"
+    "v": "5",
+    "sha": "6560ee7c2fe79c11"
   },
   "assets/kit/dash-home.js": {
     "v": "4",

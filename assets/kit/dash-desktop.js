@@ -178,7 +178,10 @@
       s.replaceSync(':host{height:100%}' +
         '.grid{height:100%;grid-template-columns:repeat(var(--k-kpi-cols,2),minmax(0,1fr));grid-auto-rows:minmax(108px,1fr);gap:var(--k-kpi-gap,var(--k-grid-gap,12px))}' +
         '@media (min-width:700px){.grid{grid-template-columns:repeat(var(--k-kpi-cols,4),minmax(0,1fr))}}' +
-        '.tile{justify-content:space-between}');
+        /* A tile taller than its content (the row follows the chart's
+           card) keeps its label and figure together at the top and sets its
+           comparison on the bottom edge, rather than floating the figure. */
+        '.tile{justify-content:flex-start}.tile>.ft{margin-top:auto}');
       tileSheet = s;
     } catch (_) {}
     return tileSheet;

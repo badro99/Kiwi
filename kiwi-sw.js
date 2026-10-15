@@ -181,7 +181,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=22',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=30',
+  '/assets/day-report-dash.js?v=31',
   '/assets/day-report-export.js?v=11',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
@@ -310,7 +310,7 @@ var SHELL = [
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=1',
   '/assets/kit/kit.css?v=33',
-  '/assets/kit/dash-desktop.css?v=4',
+  '/assets/kit/dash-desktop.css?v=5',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -338,7 +338,7 @@ var SHELL = [
   '/assets/kit/dash-customers.js?v=1',
   '/assets/kit/dash-retention.js?v=1',
   '/assets/kit/dash-compliance.js?v=1',
-  '/assets/kit/dash-desktop.js?v=4',
+  '/assets/kit/dash-desktop.js?v=5',
   '/assets/kit/dash-ai.js?v=3',
   '/assets/kit/dash-onboarding.js?v=1',
   /* and forgot and reset password, behind kiwiSkin2027:access. */

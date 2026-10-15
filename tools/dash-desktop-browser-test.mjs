@@ -23,7 +23,8 @@
  *   · dark (both systems: html[data-theme] and body[data-vexel-mode]) paints
  *     the sidebar and the ground dark, measured, not read from a flag;
  *   · Arabic: the sidebar sits at the right edge;
- *   · 1280: Home's labels, Orders and the Report in sentence case; Orders
+ *   · 1280: the tiles beside the chart near their own height; Home's
+ *     labels, Orders and the Report in sentence case; Orders
  *     says its total once; the Report's buttons and strip are the kit's;
  *   · 900: the desktop starts where the shipped sidebar becomes a column;
  *     the app card's label in sentence case; the Report's three tiles in
@@ -191,6 +192,11 @@ try {
       .filter((x) => /[A-Za-zÀ-ÿ]{3}/.test(x.t) && (x.up || /[A-ZÀ-Þ]{3,}/.test(x.t) && x.t === x.t.toUpperCase())).map((x) => x.t.slice(0, 40)), sel);
     const home = await caps('#kit-home .k-dh__lb, #kit-home .k-dh__cmp, [data-goal-label], .sidebar .loc-switch .badge, #kit-dd-goal');
     check(home.length === 0, 'Home: the cashed label, the goal and the venue status are in sentence case' + (home.length ? ' · ' + home.join(' | ') : ''));
+    const slack = await page.evaluate(() => [...document.querySelector('#kit-home > k-kpi-grid').shadowRoot.querySelectorAll('.tile')].map((t) => {
+      const own = [...t.children].reduce((a, c) => a + c.getBoundingClientRect().height, 0) + 32 + 4 * (t.children.length - 1);
+      return Math.round(t.getBoundingClientRect().height - own);
+    }));
+    check(slack.length && slack.every((x) => x <= 40), `Home: beside the chart the tiles keep near their own height (${slack.join(', ')} px to spare)`);
 
     tr.step('open Orders from the sidebar');
     const go = async (id, sel) => {

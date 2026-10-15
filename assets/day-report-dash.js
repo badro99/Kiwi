@@ -58,6 +58,13 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   };
+  /* The currency word on screen. The shipped report writes MAD in every
+     language; with the 2027 dashboard on, Arabic reads درهم, as the kit's Home
+     does. The CSV export keeps MAD, which a spreadsheet expects. */
+  function CUR() {
+    var de = typeof document !== 'undefined' && document.documentElement;
+    return LANG() === 'ar' && de && de.getAttribute('data-skin-2027') === 'dashboard' ? 'درهم' : 'MAD';
+  }
   function money(n) {
     var v = Math.round((+n || 0) * 100) / 100;
     try { return window.KiwiNumber?.format(v, { maximumFractionDigits: 2 }) ?? v.toLocaleString(LANG() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 }); }
@@ -559,7 +566,7 @@
       var pct = max > 0 ? Math.max(4, Math.round(r.t.net / max * 100)) : 0;
       var cls = 'kdr-sd' + (r.day === sel ? ' is-sel' : '') + (r.t.has ? '' : ' is-void');
       var tip = shortLabel(r.day) + ' · ' + (r.t.has
-        ? money(r.t.net) + ' MAD · ' + r.t.txns + ' ' + T(L.tx)
+        ? money(r.t.net) + ' ' + CUR() + ' · ' + r.t.txns + ' ' + T(L.tx)
         : T(L.noSale));
       return '<button type="button" class="' + cls + '" data-kdr="day" data-day="' + esc(r.day) + '"'
         + ' title="' + esc(tip) + '" aria-label="' + esc(tip) + '"'
@@ -570,7 +577,7 @@
 
     return '<div class="kdr-strip"><div class="kdr-strip-h">'
       + '<span>' + esc(T(L.history).replace('{n}', STRIP_DAYS)) + '</span>'
-      + '<em>' + esc(money(sum)) + ' MAD</em></div>'
+      + '<em>' + esc(money(sum)) + ' ' + CUR() + '</em></div>'
       + '<div class="kdr-bars">' + bars + '</div></div>';
   }
 
@@ -622,7 +629,7 @@
       var pct = isVoid ? 0 : (max > 0 ? Math.max(4, Math.round(h.net / max * 100)) : 4);
       var tip = isVoid
         ? hourLabel(h.h) + ' · ' + T(L.noSale)
-        : hourLabel(h.h) + ' · ' + money(h.net) + ' MAD · ' + h.txns + ' ' + T(L.tx);
+        : hourLabel(h.h) + ' · ' + money(h.net) + ' ' + CUR() + ' · ' + h.txns + ' ' + T(L.tx);
       var cls = 'kdr-hr' + (isPeak ? ' is-peak' : '') + (isVoid ? ' is-void' : '');
       return '<div class="' + cls + '" title="' + esc(tip) + '">'
         + '<span class="kdr-hr-b" style="height:' + (isVoid ? '2px' : (pct + '%')) + '"></span></div>';
@@ -634,7 +641,7 @@
     }).join('');
 
     var head = peak
-      ? '<em>' + esc(T(L.peak).replace('{h}', hourLabel(peak.h))) + ' · ' + esc(money(peak.net)) + ' MAD</em>'
+      ? '<em>' + esc(T(L.peak).replace('{h}', hourLabel(peak.h))) + ' · ' + esc(money(peak.net)) + ' ' + CUR() + '</em>'
       : '';
     return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.hourly)) + '</span>' + head + '</div>'
       + '<div class="kdr-hrs">' + cols + '</div><div class="kdr-hrx">' + labels + '</div></div>';
@@ -653,7 +660,7 @@
     var cards = all.slice(0, 3).map(function (p, i) {
       return '<div class="kdr-top-c"><span class="kdr-top-r">' + (i + 1) + '</span>'
         + '<span class="kdr-top-m"><span class="kdr-top-n">' + esc(p.n) + '</span>'
-        + '<span class="kdr-top-s">' + esc(qty(p.q)) + ' ' + esc(LANG() !== 'ar' && Math.abs(+p.q || 0) === 1 ? (V.item || V.items) : V.items) + ' · ' + esc(money(p.t)) + ' MAD</span>'
+        + '<span class="kdr-top-s">' + esc(qty(p.q)) + ' ' + esc(LANG() !== 'ar' && Math.abs(+p.q || 0) === 1 ? (V.item || V.items) : V.items) + ' · ' + esc(money(p.t)) + ' ' + CUR() + '</span>'
         + '</span></div>';
     }).join('');
     return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.top)) + '</span></div>'
@@ -760,28 +767,28 @@
     var ecLabel = (r.drawerSessions || []).length > 1 ? T({fr:'Écart du dernier service',en:'Latest service variance',ar:'فرق آخر وردية'}) : T(L.ecart);
     var ecText = (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec));
     var kpis = '<div class="kdr-kpis">'
-      + kpi(T(L.net), money(r.net), 'lead', 'MAD', delta(r.net, base.net, baseDay, base.has))
+      + kpi(T(L.net), money(r.net), 'lead', CUR(), delta(r.net, base.net, baseDay, base.has))
       + kpi(T(L.txns), String(r.txns), null, '', delta(r.txns, base.txns, baseDay, base.has))
-      + kpi(T(L.basket), money(r.basket), null, 'MAD', delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
+      + kpi(T(L.basket), money(r.basket), null, CUR(), delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
       + (ecKnown
-        ? kpi(ecLabel, ecText, Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
-        : kpi(T(L.gross), money(r.gross), null, 'MAD'))
+        ? kpi(ecLabel, ecText, Math.abs(ec) <= 5 ? 'ok' : 'off', CUR())
+        : kpi(T(L.gross), money(r.gross), null, CUR()))
       + '</div>';
 
     /* ── moyens de paiement ── */
     var mRows = Object.keys(r.methods || {})
       .filter(function (k) { return r.methods[k]; })
       .sort(function (a, b) { return r.methods[b] - r.methods[a]; })
-      .map(function (k) { return row(methodLabel(k), money(r.methods[k]) + ' MAD'); }).join('');
+      .map(function (k) { return row(methodLabel(k), money(r.methods[k]) + ' ' + CUR()); }).join('');
     /* L'en-tête est la somme des lignes qu'il chapeaute. Les lignes sont nettes
        des remboursements (day-report.js les déduit par moyen) : y poser le brut
        affichait 500 au-dessus de lignes qui font 450 dès qu'on remboursait. */
     var mSum = Object.keys(r.methods || {}).reduce(function (s, k) { return s + (+r.methods[k] || 0); }, 0);
-    var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' MAD</em></div>' + mRows + '</div>' : '';
+    var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' ' + CUR() + '</em></div>' + mRows + '</div>' : '';
     var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
-        + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' MAD')
-        + row(T({fr:'Soldes restant à régler',en:'Outstanding balances',ar:'الأرصدة المتبقية'}), money(r.acomptes.outstanding) + ' MAD') + '</div>' : '';
+        + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' ' + CUR())
+        + row(T({fr:'Soldes restant à régler',en:'Outstanding balances',ar:'الأرصدة المتبقية'}), money(r.acomptes.outstanding) + ' ' + CUR()) + '</div>' : '';
 
     /* ── le tiroir ── */
     var cashBlock = '';
@@ -794,16 +801,16 @@
       if (!drawers.length) drawers = [{ cash: cash, openedAt: r.openedAt, closedAt: r.closedAt }];
       cashBlock = drawers.map(function (drawer) {
       var cash = drawer.cash || {};
-      var cr = row(T(L.opening), money(cash.opening) + ' MAD');
-      cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' MAD');
-      if (cash.tips) cr += row(T(L.cashTips), '+ ' + money(cash.tips) + ' MAD');
+      var cr = row(T(L.opening), money(cash.opening) + ' ' + CUR());
+      cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' ' + CUR());
+      if (cash.tips) cr += row(T(L.cashTips), '+ ' + money(cash.tips) + ' ' + CUR());
       (cash.movements || []).forEach(function (m) {
-        cr += row(m.reason || (m.type === 'in' ? '↑' : '↓'), (m.type === 'in' ? '+ ' : '− ') + money(m.amount) + ' MAD', 'sub');
+        cr += row(m.reason || (m.type === 'in' ? '↑' : '↓'), (m.type === 'in' ? '+ ' : '− ') + money(m.amount) + ' ' + CUR(), 'sub');
       });
-      cr += row(T(L.expected), money(cash.expected) + ' MAD', 'total');
+      cr += row(T(L.expected), money(cash.expected) + ' ' + CUR(), 'total');
       cr += cash.counted != null
-        ? row(T(L.counted), money(cash.counted) + ' MAD')
-          + row(T(L.ecart), ((cash.ecart > 0 ? '+ ' : cash.ecart < 0 ? '− ' : '') + money(Math.abs(cash.ecart)) + ' MAD'))
+        ? row(T(L.counted), money(cash.counted) + ' ' + CUR())
+          + row(T(L.ecart), ((cash.ecart > 0 ? '+ ' : cash.ecart < 0 ? '− ' : '') + money(Math.abs(cash.ecart)) + ' ' + CUR()))
         : row(T(L.counted), T(L.notCount));
       /* Les mouvements hors ventes se disent même quand il n'y en a pas : « rien
          n'est sorti du tiroir » est une information, une section absente non. */
@@ -830,14 +837,14 @@
         var prods = (c.products || []).map(function (p) {
           return '<div class="kdr-p"><span class="kdr-p-q">' + esc(qty(p.qty)) + '×</span>'
             + '<span class="kdr-p-n">' + esc(p.name) + '</span>'
-            + '<span class="kdr-p-t">' + esc(money(p.total)) + ' MAD</span></div>';
+            + '<span class="kdr-p-t">' + esc(money(p.total)) + ' ' + CUR() + '</span></div>';
         }).join('');
         return '<div class="kdr-cat">'
           + '<div class="kdr-cat-h"><span class="kdr-cat-n">' + esc(name) + '</span>'
-          + '<span class="kdr-cat-v">' + esc(money(c.total)) + ' MAD</span></div>'
+          + '<span class="kdr-cat-v">' + esc(money(c.total)) + ' ' + CUR() + '</span></div>'
           + '<div class="kdr-cat-b">' + prods + '</div>'
           + '<div class="kdr-cat-f"><span>' + esc(T(L.total)) + ' ' + esc(name) + '</span>'
-          + '<span><b>' + esc(qty(c.qty)) + '</b> ' + esc(unit(c.qty)) + ' · <b>' + esc(money(c.total)) + '</b> MAD</span></div>'
+          + '<span><b>' + esc(qty(c.qty)) + '</b> ' + esc(unit(c.qty)) + ' · <b>' + esc(money(c.total)) + '</b> ' + CUR() + '</span></div>'
           + '</div>';
       }).join('');
       var cover = (r.coverage != null && r.coverage < 100)
@@ -851,19 +858,19 @@
 
     /* ── ajustements : ce qui a réduit la recette ── */
     var adj = '';
-    if (r.refunds && r.refunds.count) adj += row(T(L.refunds) + ' (' + r.refunds.count + ')', '− ' + money(r.refunds.amount) + ' MAD');
-    if (r.discounts && r.discounts.amount) adj += row(T(L.discounts) + (r.discounts.count ? ' (' + r.discounts.count + ')' : ''), '− ' + money(r.discounts.amount) + ' MAD');
+    if (r.refunds && r.refunds.count) adj += row(T(L.refunds) + ' (' + r.refunds.count + ')', '− ' + money(r.refunds.amount) + ' ' + CUR());
+    if (r.discounts && r.discounts.amount) adj += row(T(L.discounts) + (r.discounts.count ? ' (' + r.discounts.count + ')' : ''), '− ' + money(r.discounts.amount) + ' ' + CUR());
     if (r.cancels) adj += row(T(L.cancels), String(r.cancels));
-    if (r.tips) adj += row(LANG() === 'en' ? 'Tips' : (LANG() === 'ar' ? 'الإكراميات' : 'Pourboires'), money(r.tips) + ' MAD');
+    if (r.tips) adj += row(LANG() === 'en' ? 'Tips' : (LANG() === 'ar' ? 'الإكراميات' : 'Pourboires'), money(r.tips) + ' ' + CUR());
     if (adj) adj = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.adjust)) + '</span></div>' + adj
-      + row(T(L.gross), money(r.gross) + ' MAD', 'sub')
-      + row(T(L.net), money(r.net) + ' MAD', 'total') + '</div>';
+      + row(T(L.gross), money(r.gross) + ' ' + CUR(), 'sub')
+      + row(T(L.net), money(r.net) + ' ' + CUR(), 'total') + '</div>';
 
     /* ── qui a encaissé — seulement s'ils sont plusieurs ── */
     var cshBlock = '';
     if ((r.cashiers || []).length > 1) {
       var crows = r.cashiers.map(function (c) {
-        return row(c.name, money(c.net) + ' MAD · ' + c.txns + ' ' + T(L.tx));
+        return row(c.name, money(c.net) + ' ' + CUR() + ' · ' + c.txns + ' ' + T(L.tx));
       }).join('');
       cshBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.cashiers)) + '</span><em>'
         + esc(String(r.cashiers.length)) + '</em></div>' + crows + '</div>';
@@ -874,7 +881,7 @@
     var closures = d.closureRevisions ? d.closureRevisions(r) : (r.revisions || []).filter(function (v) { return v.note !== 'en cours'; });
     if ((r.closedCount || 0) > 1 && closures.length) {
       var revs = closures.slice().reverse().map(function (v) {
-        return row(hm(v.at) + (v.by ? ' · ' + v.by : ''), money(v.gross) + ' MAD · ' + v.txns + ' tx', 'sub');
+        return row(hm(v.at) + (v.by ? ' · ' + v.by : ''), money(v.gross) + ' ' + CUR() + ' · ' + v.txns + ' tx', 'sub');
       }).join('');
       revBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.revision)) + '</span><em>'
         + esc(T(L.reopened).replace('{n}', r.closedCount)) + '</em></div>' + revs + '</div>';

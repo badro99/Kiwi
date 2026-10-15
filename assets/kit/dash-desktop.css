@@ -544,6 +544,10 @@ html[data-skin-2027="dashboard"] .k-dd-ground { display: none; }
       "clip  clip";
   }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) #kit-home > k-kpi-grid { --k-kpi-cols: 2; }
+  /* The tiles span the figure and its chart: the chart is set so the two
+     columns meet near the tiles' own height (three rows of about 111), not
+     the shipped 430, which stretched each tile by some 70 px of nothing. */
+  html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .hero-today { height: 288px !important; min-height: 0 !important; }
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-clients,
   html[data-skin-2027="dashboard"][data-k-home] body:not(#k-dd) .dash-standard .vexel-bottom-row > .block { align-self: start; }
 }
