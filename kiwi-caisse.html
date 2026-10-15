@@ -11205,8 +11205,8 @@
        événement de caisse et fin de poste restent les livrés. Le motif part
        avec l'événement de clôture (gapReason, cash_session_events.gap_reason).
        « Saisir le total » rouvre la fenêtre livrée, déjà remplie. */
-    let closeGapReason = null;
-    let tillKitCount = null;
+    /* closeGapReason et tillKitCount sont déclarés avec registerClosed, plus bas,
+       là où closeRegisterSteps() les lit. */
     function tillKitOpenCount() {
       if (!tillKitOn() || !customElements.get('k-cash-count') || !customElements.get('k-sheet')) return false;
       renderCloture(false);
@@ -17436,6 +17436,11 @@
        once durably recorded, always end in finishClose(), even if the paper
        sheet fails to render. */
     let registerClosed = false;
+    /* La clôture sur le kit (§18.9) : le motif d'écart et la feuille de comptage
+       ouverte. Déclarés ici, dans le même bloc que closeRegisterSteps() qui les
+       lit, pour que la clôture reste exécutable seule. */
+    let closeGapReason = null;
+    let tillKitCount = null;
     const CLOSE_STEP_TIMEOUT_MS = 15000;
     function closeStepWithin(promise, fallback) {
       let timer = null;
