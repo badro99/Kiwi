@@ -177,26 +177,38 @@ export async function onRequestPost({ request, env }) {
         }
       } catch (_) { /* base muette : on garde la valeur annoncée */ }
     }
-    await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
-      (id, merchant, session_id, terminal_id, event_type, expected_cents,
-       counted_cents, gap_cents, movement_kind, movement_amount_cents,
-       movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(id, merchant, sessionId, terminalId, eventType, expectedFinal, counted, gapFinal,
-        movementKind || null, movementAmount, movementReason || null, actorId,
-        counterpartyActorId || null, openedAt, occurredAt).run();
-    /* The gap's reason beside the close, never inside it: a base that lags
-       schema.sql gets the column on first use (as sale.js does tip_cents), and
-       a reason that cannot be written never undoes the close. */
+    /* The gap's reason is written WITH the close, in the same append: this
+       ledger is insert-only (no UPDATE, no DELETE), so a reason is never added
+       afterwards. A base that lags schema.sql gets the column on first use (as
+       sale.js does tip_cents); if it cannot be added, the close is appended
+       without the reason and never refused. */
+    let reasonColumn = false;
     if (gapReason) {
       try {
         const columns = await env.DB.prepare('PRAGMA table_info(cash_session_events)').all();
-        if (!(columns.results || []).some((column) => column.name === 'gap_reason')) {
-          try { await env.DB.prepare('ALTER TABLE cash_session_events ADD COLUMN gap_reason TEXT').run(); } catch (_) {}
+        reasonColumn = (columns.results || []).some((column) => column.name === 'gap_reason');
+        if (!reasonColumn) {
+          try { await env.DB.prepare('ALTER TABLE cash_session_events ADD COLUMN gap_reason TEXT').run(); reasonColumn = true; } catch (_) {}
         }
-        await env.DB.prepare('UPDATE cash_session_events SET gap_reason = ? WHERE merchant = ? AND id = ? AND gap_reason IS NULL')
-          .bind(gapReason, merchant, id).run();
       } catch (_) { /* the close stands; the Z keeps the reason */ }
+    }
+    const eventBinds = [id, merchant, sessionId, terminalId, eventType, expectedFinal, counted, gapFinal,
+      movementKind || null, movementAmount, movementReason || null, actorId,
+      counterpartyActorId || null, openedAt, occurredAt];
+    if (reasonColumn) {
+      await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
+        (id, merchant, session_id, terminal_id, event_type, expected_cents,
+         counted_cents, gap_cents, movement_kind, movement_amount_cents,
+         movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts, gap_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(...eventBinds, gapReason).run();
+    } else {
+      await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
+        (id, merchant, session_id, terminal_id, event_type, expected_cents,
+         counted_cents, gap_cents, movement_kind, movement_amount_cents,
+         movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(...eventBinds).run();
     }
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {
