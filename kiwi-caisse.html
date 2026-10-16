@@ -150,13 +150,13 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=34">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=36">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=5") +
-        js("assets/kit/strings/till.en.js?v=5") +
-        js("assets/kit/strings/till.ar.js?v=5") +
+        js("assets/kit/strings/till.fr.js?v=6") +
+        js("assets/kit/strings/till.en.js?v=6") +
+        js("assets/kit/strings/till.ar.js?v=6") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -10610,6 +10610,7 @@
       tillKit = !!window.KiwiTillFrame.mount({ menu: menuBox, bill: billBox, rail: railBox, menuPane: $('.main'), act: tillKitAct });
       if (tillKit) {
         document.documentElement.setAttribute('data-k-till', '');
+        tillKitMoreScrim();
         /* §18.9 : « Ouvrir la caisse » ouvre le comptage du fond sur le kit. */
         const ci = document.getElementById('clockin-btn');
         if (ci && !ci.classList.contains('is-confirmed')) ci.disabled = false;
@@ -10937,12 +10938,52 @@
         if (id === 'takeaway' && toAccept) it.a11y = kkt('till.nav.takeaway_a11y', { n: toAccept });
         return it;
       });
-      items.push({ id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
+      items.push(tillKitMoreOpen
+        ? { id: 'more', icon: 'close', label: kkt('till.nav.less') }
+        : { id: 'more', icon: 'more_horiz', label: kkt('till.nav.more') });
       const who = (typeof currentCashier !== 'undefined' && currentCashier && currentCashier.name) || '';
       const footer = who ? { cashier: who } : {};
       const sync = tillKitLocked() ? null : tillKitSyncFooter(tillKitSyncRows());
       if (sync) footer.sync = sync;
+      /* Plus n'est pas une destination : la lentille reste sur le mode, et
+         <k-rail> ne laisse pas toucher l'élément qui porte déjà sa valeur,
+         ce qui empêcherait Moins de refermer. */
       return { value, items, footer, label: kkt('till.nav.more') };
+    }
+    /* Plus déplie la barre latérale livrée (propriétaire, 2026-10-16) : la
+       feuille rangeait les mêmes gestes sans icônes et sans ordre connu. Le
+       panneau noir est celui de la caisse d'aujourd'hui, à sa place, chaque
+       contrôle vivant ; le rail reste et son Plus devient Moins. On en sort
+       par Moins, par un toucher ailleurs (le voile le prend, aucun geste ne
+       tombe sur une tuile) ou par Échap. La feuille reste la route du
+       téléphone, qui n'a pas la place d'un panneau de 260 (§18.3). */
+    let tillKitMoreOpen = false;
+    function tillKitSetMore(on) {
+      on = !!on;
+      if (on === tillKitMoreOpen) return;
+      tillKitMoreOpen = on;
+      const root = document.documentElement;
+      if (on) root.setAttribute('data-k-till-more', ''); else root.removeAttribute('data-k-till-more');
+      window.KiwiTillFrame.paint({ rail: tillKitRail() });
+    }
+    /* Le panneau tient à partir de la bande qui donne déjà 360 au ticket
+       (§13.3) : 88 de rail, 260 de panneau, le menu derrière. Plus bas, Plus
+       garde la feuille, la route du téléphone (§18.3). */
+    const tillKitPanelFits = () => window.innerWidth >= 1000;
+    function tillKitToggleMore() {
+      if (!tillKitPanelFits()) { tillKitOpenMore(); return; }
+      tillKitSetMore(!tillKitMoreOpen);
+    }
+    function tillKitMoreScrim() {
+      let el = document.getElementById('kit-more-scrim');
+      if (el) return el;
+      el = document.createElement('div');
+      el.id = 'kit-more-scrim';
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); tillKitSetMore(false); });
+      document.body.appendChild(el);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tillKitMoreOpen) tillKitSetMore(false); });
+      window.addEventListener('resize', () => { if (tillKitMoreOpen && !tillKitPanelFits()) tillKitSetMore(false); });
+      return el;
     }
     function tillKitOpenMore() {
       const sections = TILL_KIT_MORE.map(([title, rows]) => ({
@@ -10961,7 +11002,8 @@
       }
     }
     function tillKitRailSelect(id) {
-      if (id === 'more') { tillKitOpenMore(); return; }
+      if (id === 'more') { tillKitToggleMore(); return; }
+      tillKitSetMore(false);
       const kdsOpen = !!(typeof kdsEl !== 'undefined' && kdsEl && kdsEl.classList.contains('is-open'));
       if (id === 'kitchen') { if (!kdsOpen) openKds(); tillKitPaint(); return; }
       if (kdsOpen) closeKds();
@@ -11089,7 +11131,7 @@
       switch (verb) {
         case 'rail.sync': tillKitOpenSync(value && value.anchor); return;
         case 'rail.select': tillKitRailSelect(id); return;
-        case 'rail.cashier': tillKitOpenMore(); return;
+        case 'rail.cashier': tillKitToggleMore(); return;
         case 'more.select': tillKitMore(id); return;
       }
       if (window.KiwiTillFrame.busy() && !/^(pay|split|discount)\./.test(verb)) return;

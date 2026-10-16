@@ -128,6 +128,7 @@
   "till.nav.waiting": "قيد الانتظار",
   "till.nav.kitchen": "المطبخ",
   "till.nav.more": "المزيد",
+  "till.nav.less": "أقل",
   "till.more.shift": "الوردية",
   "till.more.manage": "الإدارة",
   "till.more.device": "هذا الجهاز",

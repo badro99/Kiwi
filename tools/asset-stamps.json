@@ -620,8 +620,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "34",
-    "sha": "1ac4ce24a34bbcab"
+    "v": "36",
+    "sha": "86ad6f7a0ca342b1"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -728,16 +728,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "5",
-    "sha": "4b75e60d75108fdd"
+    "v": "6",
+    "sha": "30d8a2d41a231096"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "5",
-    "sha": "dbc6d056e3f904ec"
+    "v": "6",
+    "sha": "080389f6c3686c9d"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "5",
-    "sha": "1e4451fa46e8bb37"
+    "v": "6",
+    "sha": "a3f8656827c0c25a"
   },
   "assets/kit/team-pin.js": {
     "v": "1",

@@ -362,6 +362,52 @@ try {
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="floor"]').click());
     await sleep(300);
     check(await page.evaluate(() => mode === 'salle' && document.querySelector('k-rail').getAttribute('value') === 'floor'), 'Floor switches to the floor plan');
+    /* Plus déplie la barre latérale livrée (propriétaire, 2026-10-16) : à
+       partir de 1000 de large, Plus ne tire plus de feuille, il sort le
+       panneau noir à côté du rail et devient Moins ; on le referme par Moins
+       ou par un toucher ailleurs, que le voile prend. */
+    const railMore = () => page.evaluate(() => {
+      const it = document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]');
+      return { label: it.textContent.trim(), open: document.documentElement.hasAttribute('data-k-till-more') };
+    });
+    const panel = () => page.evaluate(() => {
+      const sb = document.querySelector('.sidebar'), cs = getComputedStyle(sb), b = sb.getBoundingClientRect();
+      const rail = document.getElementById('kit-rail').getBoundingClientRect();
+      const scrim = document.getElementById('kit-more-scrim');
+      return { display: cs.display, x: Math.round(b.x), width: Math.round(b.width), height: Math.round(b.height),
+        railWidth: Math.round(rail.width), scrim: scrim ? getComputedStyle(scrim).pointerEvents : null };
+    });
+    check((await railMore()).label === 'Plus' && (await panel()).display === 'none', 'before Plus, the rail says Plus and the shipped sidebar is away');
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(700);
+    const out = await panel();
+    check(out.display === 'flex' && out.width === 260 && out.x === out.railWidth && out.height === 1024,
+      `Plus puts the shipped sidebar out beside the rail (${JSON.stringify(out)})`);
+    check(out.scrim === 'auto', 'and the scrim takes the taps meant for elsewhere');
+    const moinsOut = await railMore();
+    check(moinsOut.label === 'Moins' && moinsOut.open, 'and the same rail item now reads Moins');
+    check(await page.evaluate(() => document.querySelector('k-rail').getAttribute('value') === 'floor'),
+      'the lens stays on the destination, so Moins can be tapped again (Plus is not one)');
+    /* Le panneau EST la barre livrée : ses contrôles sont ceux de la page. */
+    check(await page.evaluate(() => {
+      const el = document.querySelector('.sidebar [data-action="cash-move"]');
+      if (!el) return false;
+      const b = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+      return b.width > 0 && b.height > 0 && !!hit && el.contains(hit);
+    }), 'a shipped control inside it (Cash in or out) is on screen and takes the tap');
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(700);
+    check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'Moins puts it away again');
+    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    await sleep(700);
+    await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await sleep(700);
+    check((await panel()).display === 'none' && !(await railMore()).open, 'a tap anywhere else puts it away too');
+    /* Sous 1000, pas la place d'un panneau de 260 à côté du rail : Plus garde
+       la feuille, la route du téléphone (§18.3). */
+    await page.setViewport({ width: 834, height: 1024 });
+    await sleep(400);
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(400);
     const more = await page.evaluate(() => {

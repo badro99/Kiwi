@@ -128,6 +128,7 @@
   "till.nav.waiting": "En attente",
   "till.nav.kitchen": "Cuisine",
   "till.nav.more": "Plus",
+  "till.nav.less": "Moins",
   "till.more.shift": "Service",
   "till.more.manage": "Gestion",
   "till.more.device": "Cet appareil",

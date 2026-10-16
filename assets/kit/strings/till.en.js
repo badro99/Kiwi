@@ -128,6 +128,7 @@
   "till.nav.waiting": "Waiting",
   "till.nav.kitchen": "Kitchen",
   "till.nav.more": "More",
+  "till.nav.less": "Less",
   "till.more.shift": "Shift",
   "till.more.manage": "Manage",
   "till.more.device": "This device",

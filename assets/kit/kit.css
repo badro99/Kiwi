@@ -184,6 +184,39 @@ html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto
 html[data-k-till] .sidebar { display: none !important; }
 #kit-rail { flex: 0 0 88px; width: 88px; height: 100%; min-height: 0; }
 #kit-rail > k-rail { display: block; height: 100%; }
+/* Plus expands the shipped sidebar instead of opening a sheet (owner,
+   2026-10-16): the black bar comes back beside the rail, every control in it
+   live and where the cashier already knows it. The rail keeps its place and
+   its Plus reads Moins; the scrim takes the tap that puts it away, so a tap
+   meant for the panel never lands on a menu tile underneath. */
+html[data-k-till][data-k-till-more] .sidebar {
+  display: flex !important;
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 88px;
+  inset-inline-end: auto;
+  width: 260px;
+  max-width: calc(100vw - 88px);
+  z-index: 42;
+  transform: none;
+  box-shadow: var(--k-shadow-2);
+}
+#kit-more-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  background-color: var(--k-scrim);
+  opacity: 0;
+  pointer-events: none;
+}
+html[data-k-till-more] #kit-more-scrim { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  #kit-more-scrim { transition: opacity var(--k-dur-4) var(--k-glide); }
+  html[data-k-till][data-k-till-more] .sidebar { animation: k-side-out var(--k-dur-4) var(--k-glide) both; }
+  html[dir="rtl"][data-k-till][data-k-till-more] .sidebar { animation-name: k-side-out-rtl; }
+}
+@keyframes k-side-out { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes k-side-out-rtl { from { opacity: 0; transform: translateX(24px); } }
 
 /* Online orders in the Takeaway tab (stage 4 (12), §18.3): the inbox's home
    under the flag; orderpro-inbox.js draws no chip and no overlay. */
