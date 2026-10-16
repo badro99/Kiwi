@@ -9,8 +9,9 @@
  *   · 1194 × 834, 1180 × 820, 1133 × 744 compact: the summary over the menu
  *     pane, the keys in the bill pane's width;
  *   · 1280 × 560 compact-short: the same on 56-tall keys;
- *   · the keypad and the primary are inside the viewport, the window has not
- *     scrolled, and the keys column does not scroll;
+ *   · the pane opens on the notes and coins (owner, 2026-10-16) and the keypad
+ *     is one tap away, so both pads are measured: drawn, inside the viewport,
+ *     the window has not scrolled, and neither column scrolls;
  *   · 1280 × 500: no form fits, so the page (min-height 514) scrolls as a
  *     whole and the keys column still does not; scrolled down, the keypad and
  *     the primary are whole on screen. */
@@ -85,6 +86,25 @@ try {
       await sleep(500);
       await page.evaluate(() => document.querySelector('k-pay').shadowRoot.querySelector('[data-method="cash"]').click());
       await sleep(400);
+
+      /* Cash opens on the notes and coins; that pad has to fit too, and it is
+         what the cashier meets first, so measure it before tapping through to
+         the keypad the rest of this case is about. */
+      const dn = await page.evaluate(() => {
+        const pay = document.querySelector('k-pay'), R = pay.shadowRoot;
+        const dnEl = R.querySelector('.dn'), pri = R.querySelector('.pri .k-btn, .pri button');
+        const r = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; };
+        return { dn: dnEl && r(dnEl), pri: pri && r(pri), vh: window.innerHeight, scrollY: window.scrollY,
+          hostScroll: pay.scrollHeight > pay.clientHeight + 1 };
+      });
+      check(dn.dn && dn.pri, `${w} × ${h}: the notes and coins and the primary are drawn`);
+      check(!dn.hostScroll, `${w} × ${h}: the notes and coins do not scroll`);
+      if (h >= 514) {
+        check(dn.scrollY === 0 && dn.dn.top >= 0 && dn.dn.bottom <= dn.vh && dn.pri.bottom <= dn.vh,
+          `${w} × ${h}: notes and coins (${Math.round(dn.dn.top)}–${Math.round(dn.dn.bottom)}) and primary inside ${dn.vh}`);
+      }
+      await page.evaluate(() => document.querySelector('k-pay').shadowRoot.querySelector('[data-w="pad"]').click());
+      await sleep(250);
 
       const m = await page.evaluate(() => {
         const pay = document.querySelector('k-pay'), R = pay.shadowRoot;
