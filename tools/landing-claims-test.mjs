@@ -6,12 +6,11 @@
 // 1. No page may claim end-to-end encryption, in any shipped language. Kiwi
 //    encrypts in transit and at rest; Kiwi IQ reads figures on the server,
 //    which end-to-end encryption would rule out.
-// 2. Pricing shows the owner's four tiers (CLAUDE.md §7): Basic 199 MAD, or
-//    149 annually; Pro 399, or 349; Ultra 1 499 with no annual plan; Ultimate
-//    on quote.
+// 2. Four priced plans: Basic, Plus, Pro, Ultra, with Ultimate on quote below.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { pricingCopy, prices, formatPrice } from './landing-pricing.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -66,56 +65,62 @@ for (const [page, locale] of Object.entries(pages)) if (accurate[locale]) ok(rea
 const runtime = read('assets/landing-runtime-translations.js');
 for (const phrase of ['Verschlüsselung während der Übertragung und im Ruhezustand', 'Crittografia in transito e a riposo', 'Versleuteling tijdens transport en in rust']) ok(runtime.includes(phrase), `runtime translations say "${phrase}"`);
 
-// 2. Four tiers, in the Flight props of every FR, EN and AR payload.
-const tierNames = ['Basic', 'Pro', 'Ultra', 'Ultimate'];
-const flightTiers = text => [...text.matchAll(/"tiers":(\[.*?\])\}\}\]/g)].map(m => JSON.parse(m[1]));
+// 2. Four priced plans and the preserved Ultimate contact offer.
+const tierNames = ['Basic', 'Plus', 'Pro', 'Ultra'];
+const flightProps = text => text.split('\n').filter(line => line.includes('"tiers":')).map(line => JSON.parse(line.slice(line.indexOf(':') + 1))[3].t);
 for (const file of flightFiles) {
-  for (const tiers of flightTiers(read(file))) {
-    ok(JSON.stringify(tiers.map(t => t.name)) === JSON.stringify(tierNames), `${file} Flight tiers are ${tierNames.join(', ')}: ${tiers.map(t => t.name)}`);
-    ok(tiers[2]?.features.length === 4 && tiers[3]?.features.length === 3, `${file} Ultra and Ultimate carry their own features`);
+  for (const props of flightProps(read(file))) {
+    ok(JSON.stringify(props.tiers.map(t => t.name)) === JSON.stringify(tierNames), `${file} Flight plan order`);
+    ok(JSON.stringify(props.tiers.map(t => t.features.length)) === '[7,8,13,6]', `${file} approved feature counts`);
+    ok(props.ultimate?.name === 'Ultimate' && props.ultimate.features.length === 3, `${file} retains Ultimate separately`);
   }
 }
-for (const page of Object.keys(pages)) {
+for (const [page, locale] of Object.entries(pages)) {
   const html = read(page);
   const inline = [...html.matchAll(/self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g)].map(m => JSON.parse(m[1])).join('');
-  const tiers = flightTiers(inline);
-  ok(tiers.length === 1, `${page} inline Flight has one pricing record`);
-  ok(JSON.stringify(tiers[0]?.map(t => t.name)) === JSON.stringify(tierNames), `${page} inline Flight tiers are ${tierNames.join(', ')}`);
+  const props = flightProps(inline);
+  ok(props.length === 1, `${page} inline Flight has one pricing record`);
+  ok(JSON.stringify(props[0]) === JSON.stringify(pricingCopy[locale]), `${page} inline pricing matches localized source`);
 }
 for (const file of [...Object.keys(pages), ...flightFiles]) ok(!/"name\\?":\\?"(?:Custom|Sur mesure|حسب الطلب|A medida)\\?"/.test(read(file)), `${file} has no "Custom" tier left`);
 
-// The pricing chunk: four price rows, Ultra excluded from the annual discount,
-// and a content-addressed name, since /_next/static is served immutable.
 const pricingChunks = [...chunkRefs].filter(chunk => chunk.includes('2c2tj5hx4r2-w'));
-ok(pricingChunks.length === 2, 'one pricing chunk for every locale, one Spanish copy: ' + pricingChunks);
+ok(pricingChunks.length === 2, 'one shared pricing chunk and one Spanish copy: ' + pricingChunks);
 for (const chunk of pricingChunks) {
   const code = read(chunk);
-  ok(code.includes('let x=[{monthly:199},{monthly:399,glow:!0},{monthly:1499,fixed:!0},{monthly:null,wide:!0}];'), `${chunk} prices Basic 199, Pro 399, Ultra 1 499, Ultimate on quote`);
-  ok(code.includes('g=m&&!p.fixed,h=null===p.monthly?null:p.monthly-50*!!g'), `${chunk} gives Ultra no annual price`);
-  ok(code.includes('g?l.billedYearly.replace("{total}"'), `${chunk} bills Ultra monthly in the annual view`);
+  const rows = code.match(/let x=(\[.*?\]);/)?.[1];
+  ok(JSON.stringify(JSON.parse(rows || 'null')) === JSON.stringify(prices), `${chunk} explicit monthly, annual equivalent and annual total rows`);
+  ok(code.includes('annual=m&&!price?.fixed'), `${chunk} gives Ultra no annual price`);
+  ok(code.includes('l.billedYearly.replace("{total}",f(price.total))'), `${chunk} uses exact annual payments, preserving Pro 4,200`);
+  ok(code.includes('tier.name==="Plus"?"?text=plus":""'), `${chunk} Plus uses the existing contact flow with its plan identifier`);
   const name = path.basename(chunk, '.js');
   const sha = crypto.createHash('sha256').update(code).digest('hex');
   const hashed = chunk.startsWith('es/') ? name.split('-').pop() === sha.slice(0, 16) : name.split('-').pop() === sha.slice(0, 8);
   ok(hashed, `${chunk} name matches its content hash`);
 }
-
-// Server-rendered pricing in every built page: four cards, Ultimate below the
-// three priced tiers, the right figures, and no discounted Ultra.
-const ultraPrice = { fr: '1 499', en: '1,499', ar: '1,499', de: '1,499', it: '1,499', nl: '1,499', es: '1 499' };
+ok(JSON.stringify(prices.map(p => p.monthly)) === '[150,300,399,1499]', 'approved monthly prices');
+ok(JSON.stringify(prices.slice(0,3).map(p => p.annual)) === '[99,249,349]', 'approved monthly equivalents');
+ok(JSON.stringify(prices.slice(0,3).map(p => p.total)) === '[1188,2988,4200]', 'exact annual payments, Pro unchanged');
+ok(prices[3].fixed && !prices[3].annual, 'Ultra remains monthly only');
 for (const [page, locale] of Object.entries(pages)) {
   const html = read(page);
   const start = html.indexOf('<section id="pricing"');
   const section = html.slice(start, html.indexOf('</section>', start));
-  const cards = section.split('<div class="flex w-full overflow-hidden rounded-xl bg-[rgba(0,0,0,0.3)] backdrop-blur-[10px]"').slice(1);
-  ok(cards.length === 4, `${page} renders four pricing cards (${cards.length})`);
+  const cards = section.split(/<div class="[^"]*kw-plan-card"[^>]*>/).slice(1);
+  ok(cards.length === 4, `${page} renders exactly four priced cards`);
   const names = cards.map(card => card.match(/<h3[^>]*>([^<]*)<\/h3>/)?.[1]);
-  ok(JSON.stringify(names) === JSON.stringify(tierNames), `${page} card names are ${tierNames.join(', ')}: ${names}`);
+  ok(JSON.stringify(names) === JSON.stringify(tierNames), `${page} card names are ${tierNames.join(', ')}`);
   const price = card => card.match(/kw-price-in[^>]*>([^<]*)/)?.[1];
-  ok(price(cards[0]) === '199' && price(cards[1]) === '399', `${page} shows Basic 199 and Pro 399`);
-  ok(price(cards[2]) === ultraPrice[locale], `${page} shows Ultra at ${ultraPrice[locale]} MAD: ${price(cards[2])}`);
-  ok(/kw-price-in[^>]*><span class="text-4xl/.test(cards[3] || ''), `${page} shows Ultimate on quote`);
-  ok((cards[3] || '').startsWith(' style="grid-column:1 / -1">'), `${page} sets Ultimate as a full-width card below the three priced tiers`);
-  ok(!/1[,.  ]?449/.test(section), `${page} shows no discounted Ultra price`);
+  for (let index = 0; index < 4; index++) {
+    ok(price(cards[index]) === formatPrice(prices[index].monthly, locale), `${page} ${tierNames[index]} monthly price`);
+    const bullets = [...cards[index].split('kw-contact-strip')[0].matchAll(/<li[^>]*>[\s\S]*?<span[^>]*>([^<]*)<\/span><\/li>/g)].map(m => m[1].replace(/&amp;/g, '&').replace(/&#x27;/g, "'"));
+    // Ultra's card segment ends before the strip's opening div.
+    ok(JSON.stringify(bullets) === JSON.stringify(pricingCopy[locale].tiers[index].features), `${page} ${tierNames[index]} complete localized bullet list`);
+    if (index < 2) ok(!/OrderPro|employee|employé|Mitarbeiter|emplead|dipendent|Medewerker|الموظف/i.test(bullets.join(' ')), `${page} ${tierNames[index]} excludes restaurant and employee features`);
+  }
+  ok(section.includes('kw-contact-strip') && section.indexOf('kw-contact-strip') > section.lastIndexOf('kw-plan-card'), `${page} Ultimate is a separate full-width strip after the grid`);
+  ok(!section.includes('OrderPro Boutique') && !section.includes('—'), `${page} no forbidden product or em dash`);
+  ok(!/1[,.  ]?449/.test(section), `${page} no discounted Ultra price`);
 }
 
 // 3. The runtime translation table (DE, IT, NL, ES) keeps names and codes.
@@ -123,7 +128,7 @@ for (const [page, locale] of Object.entries(pages)) {
 // MAD into "mad", the dish name "Thé" into an article and Pro into "Profi".
 const dictionaries = JSON.parse(runtime.match(/const dictionaries = (\{.*?\});\n/s)[1]);
 const articles = new Set(['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'il', 'lo', 'la', 'le', 'gli', 'i', 'un', 'una', 'uno', 'de', 'het', 'een', 'el', 'los', 'las', 'the', 'a', 'an', 'er', 'sie', 'es', 'esso', 'lui', 'lei', 'hij', 'zij', 'ze', 'het', 'ik', 'du', 'tu', 'io', 'wir', 'noi', 'wij']);
-const productNames = ['Basic', 'Pro', 'Ultra', 'Ultimate', 'Kiwi', 'Kiwi IQ'];
+const productNames = ['Basic', 'Plus', 'Pro', 'Ultra', 'Ultimate', 'Kiwi', 'Loyalty+', 'OrderPro Restaurant', 'Kiwi IQ'];
 const damaged = ['VERRÜCKT', 'PAZZ', 'Beschädigen', 'Kunnen', 'Kiwi bis', 'Kiwi fino', 'Kiwi tot', 'una fino', 'één tot', 'Aktie', 'Erfolgreich', 'Anwalt', 'Avvocato', 'Advocaat', 'Kekse', 'Biscotti', 'Koekjes', 'Profi', 'Di base', 'Vivere', 'leef', 'Tabelle 4', 'Tabella 4', 'Tabel 4'];
 for (const locale of ['de', 'it', 'nl', 'es']) {
   const dictionary = dictionaries[locale] || {};
@@ -146,5 +151,11 @@ for (const [locale, expected] of Object.entries(annual)) {
   ok(rendered === expected, `${locale}: the annual total line is translated: ${rendered}`);
 }
 
+for (const locale of ['de', 'it', 'nl', 'es']) {
+  const expected = pricingCopy[locale].billedYearly.replace('{total}', formatPrice(1188, locale));
+  const source = pricingCopy.en.billedYearly.replace('{total}', '1,188');
+  const rendered = templates[locale].map(([pattern, value, group]) => { const m = source.match(new RegExp(pattern)); return m && value.replace('{total}', m[1].replace(/,/g, group)); }).find(Boolean);
+  ok(rendered === expected, `${locale}: new annual payment template is translated`);
+}
 console.log(`Landing claims: ${checks - failures.length}/${checks} checks passed.`);
 if (failures.length) { console.error('\nFailures:\n  - ' + failures.join('\n  - ')); process.exit(1); }

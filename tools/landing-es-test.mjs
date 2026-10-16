@@ -129,9 +129,10 @@ const keySpanishPhrases = [
   'Diseñado en Colonia, creado para Marruecos',
   'En palabras de un responsable.',
   'Una suscripción. Sin comisiones.',
-  'El software, en su propio equipo.',
-  'Soporte prioritario y Kiwi IQ avanzado. El plan más elegido.',
-  'Varios establecimientos, en varios países.',
+  'TPV con escaneo de códigos de barras',
+  'Catálogo por tallas y colores',
+  'Soporte prioritario por WhatsApp',
+  'Gestión en varios países',
   'Un alcance a medida, para una necesidad que ningún plan cubre.',
   'Alcance definido con usted',
   'Número de dispositivos y cajeros acordado juntos',
@@ -143,13 +144,13 @@ for (const phrase of keySpanishPhrases) {
   ok(esHtml.includes(phrase), `es/index.html contains: "${phrase}"`);
 }
 
-// 9b. Four pricing tiers (CLAUDE.md §7), rendered in order, Ultra at 1 499.
+// 9b. Four priced plans and the separate Ultimate contact offer.
 {
   const pricing = esHtml.slice(esHtml.indexOf('<section id="pricing"'), esHtml.indexOf('</section>', esHtml.indexOf('<section id="pricing"')));
   const names = [...pricing.matchAll(/<h3[^>]*>([^<]*)<\/h3>/g)].map(m => m[1]);
-  ok(JSON.stringify(names) === JSON.stringify(['Basic', 'Pro', 'Ultra', 'Ultimate']), 'es pricing shows Basic, Pro, Ultra and Ultimate: ' + names);
+  ok(JSON.stringify(names) === JSON.stringify(['Basic', 'Plus', 'Pro', 'Ultra', 'Ultimate']), 'es pricing shows Basic, Plus, Pro, Ultra and Ultimate: ' + names);
   const prices = [...pricing.matchAll(/kw-price-in[^>]*>([^<]*)/g)].map(m => m[1]);
-  ok(JSON.stringify(prices) === JSON.stringify(['199', '399', '1 499', '']), 'es pricing shows 199, 399, 1 499 MAD and a quote: ' + JSON.stringify(prices));
+  ok(JSON.stringify(prices) === JSON.stringify(['150', '300', '399', '1 499', '']), 'es pricing shows 150, 300, 399, 1 499 MAD and a quote: ' + JSON.stringify(prices));
   ok(!/extremo a extremo/i.test(esHtml), 'es landing does not claim end-to-end encryption');
 }
 
@@ -322,7 +323,11 @@ export const UNCHANGED_COPY = new Set([
   "21",
   "Gluten",
   "Basic",
-  "199",
+  "150",
+  "300",
+  "Plus",
+  "Loyalty+",
+  "OrderPro Restaurant",
   "Pro",
   "399",
   "Ultra",

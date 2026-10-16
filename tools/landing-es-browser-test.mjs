@@ -160,25 +160,24 @@ try {
     }
     results.interactions.push(`18 trade tabs clicked and text measured at ${width}`);
   }
-  // Four tiers (CLAUDE.md §7): Basic, Pro, Ultra at 1 499 MAD with no annual
-  // plan, and Ultimate on quote as a full-width card below the three.
+  // Four priced plans, Ultra monthly only, Ultimate in a contact strip.
   const tierPrices=()=>page.$$eval('#pricing .kw-price-in',nodes=>nodes.map(e=>e.innerText.replace(/\s+/g,' ').trim()));
   const tierNames=await page.$$eval('#pricing h3',nodes=>nodes.map(e=>e.innerText.trim()));
-  ok(JSON.stringify(tierNames)===JSON.stringify(['Basic','Pro','Ultra','Ultimate']),'four tiers in order: '+tierNames);
-  ok(JSON.stringify(await tierPrices())===JSON.stringify(['199 MAD/mes','399 MAD/mes','1 499 MAD/mes','Presupuesto personalizado']),'monthly tiers: 199, 399, 1 499 MAD and a quote: '+JSON.stringify(await tierPrices()));
+  ok(JSON.stringify(tierNames)===JSON.stringify(['Basic','Plus','Pro','Ultra','Ultimate']),'four tiers in order: '+tierNames);
+  ok(JSON.stringify(await tierPrices())===JSON.stringify(['150 MAD/mes','300 MAD/mes','399 MAD/mes','1 499 MAD/mes','Presupuesto personalizado']),'monthly tiers: 150, 300, 399, 1 499 MAD and a quote: '+JSON.stringify(await tierPrices()));
   await page.setViewport({width:1440,height:900});await delay(150);
   const cardWidths=await page.$$eval('#pricing h3',nodes=>nodes.map(e=>e.closest('.rounded-xl').getBoundingClientRect().width));
-  ok(cardWidths[3]>cardWidths[2]*2.5,'Ultimate spans the row below the three priced tiers '+JSON.stringify(cardWidths));
+  ok(cardWidths[4]>cardWidths[3]*3.5,'Ultimate spans the row below the four priced tiers '+JSON.stringify(cardWidths));
   await page.click('#pricing [role="radio"]:nth-of-type(2)');await delay(450);
   ok(await page.$eval('#pricing [role="radio"]:nth-of-type(2)',e=>e.getAttribute('aria-checked')==='true'),'yearly tab selects');
   const yearly=await page.$eval('#pricing',e=>e.innerText);
-  ok(yearly.includes('149')&&yearly.includes('1 800 MAD')&&!yearly.includes('billed'),'yearly price and total stay Spanish');
-  ok(JSON.stringify(await tierPrices())===JSON.stringify(['149 MAD/mes','349 MAD/mes','1 499 MAD/mes','Presupuesto personalizado']),'yearly tiers: 149, 349, Ultra unchanged at 1 499 MAD: '+JSON.stringify(await tierPrices()));
+  ok(yearly.includes('99')&&yearly.includes('1 188 MAD')&&yearly.includes('2 988 MAD')&&!yearly.includes('billed'),'yearly price and total stay Spanish');
+  ok(JSON.stringify(await tierPrices())===JSON.stringify(['99 MAD/mes','249 MAD/mes','349 MAD/mes','1 499 MAD/mes','Presupuesto personalizado']),'yearly tiers: 99, 249, 349, Ultra unchanged at 1 499 MAD: '+JSON.stringify(await tierPrices()));
   ok(yearly.includes('4 200 MAD')&&!/1[ ,.]?449|17 ?988/.test(yearly),'yearly shows the Pro total and no annual Ultra price');
   const lens=await page.$eval('#pricing .kw-lens',e=>({width:e.getBoundingClientRect().width,opacity:getComputedStyle(e).opacity}));
   ok(lens.width>20&&+lens.opacity>0,'liquid-lens highlight follows pricing tab');
   await page.click('#pricing [role="radio"]:nth-of-type(1)');await delay(150);
-  ok((await page.$eval('#pricing',e=>e.innerText)).includes('199'),'monthly tab restores price');
+  ok((await page.$eval('#pricing',e=>e.innerText)).includes('150'),'monthly tab restores price');
   results.interactions.push('monthly/yearly price, annual total and liquid lens');
   await page.evaluate(()=>document.querySelector('#stats').scrollIntoView());await delay(600);
   await page.waitForSelector('.kw-more-btn',{timeout:5000});

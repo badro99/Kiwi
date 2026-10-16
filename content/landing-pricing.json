@@ -1,0 +1,660 @@
+{
+  "fr": {
+    "title": "Un abonnement. Pas une commission.",
+    "body": "Kiwi facture son logiciel et ne prend jamais une part de vos ventes. 15 jours d’essai gratuit, sans engagement.",
+    "billingLabel": "Périodicité de facturation",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Mensuel"
+      },
+      {
+        "value": "annuel",
+        "label": "Annuel"
+      }
+    ],
+    "monthlySuffix": "/mois",
+    "currency": "MAD",
+    "quote": "Sur devis",
+    "quoteDetail": "Tarif défini ensemble.",
+    "billedMonthly": "15 jours gratuits, puis facturé chaque mois.",
+    "billedYearly": "15 jours offerts, puis {total} MAD par an, en un seul paiement.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Obtenir mon Kiwi",
+        "features": [
+          "Caisse avec scan de codes-barres",
+          "Suivi du stock",
+          "Tickets de caisse",
+          "Carnet de crédit client",
+          "Rapport journalier",
+          "Caisse utilisable hors ligne",
+          "Un établissement"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Obtenir mon Kiwi",
+        "features": [
+          "Tout Basic",
+          "Catalogue par tailles et couleurs",
+          "Retours, échanges et avoirs",
+          "Promotions et offres",
+          "Loyalty+",
+          "Fiches clients",
+          "Suivi des ventes et des marges",
+          "Un établissement"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Obtenir mon Kiwi",
+        "features": [
+          "Tout Plus",
+          "Plan de salle interactif",
+          "Prise de commande par les serveurs",
+          "Écran cuisine",
+          "OrderPro Restaurant",
+          "Carte multilingue",
+          "Lien de réservation",
+          "Recettes, ingrédients et coût matière",
+          "Accès employés avec permissions",
+          "Planning, pointage et paie",
+          "Kiwi IQ avancé",
+          "Support prioritaire sur WhatsApp",
+          "Un établissement"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Contactez-nous",
+        "features": [
+          "Tout Pro",
+          "Établissements illimités",
+          "Pilotage multi-établissements",
+          "Gestion multi-pays",
+          "API entreprise",
+          "Account manager dédié"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "Un périmètre sur mesure, pour un besoin qu’aucun palier ne couvre.",
+      "cta": "Contactez-nous",
+      "features": [
+        "Périmètre défini avec vous",
+        "Nombre d’appareils et de caissiers convenu ensemble",
+        "Fonctionnalités développées pour vous"
+      ]
+    },
+    "numberLocale": "fr-FR",
+    "metadataDescription": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, ou 99 par mois en annuel. 15 jours d’essai gratuit, sans engagement.",
+    "hero": "Caisse, salle, cuisine, stock, équipe et pilotage réunis dans un seul logiciel, en français et en arabe. À partir de 150 MAD par mois, 15 jours d’essai gratuit, sans engagement."
+  },
+  "en": {
+    "title": "A subscription. Not a commission.",
+    "body": "Kiwi charges for its software and never takes a share of your sales. 15 days free, no commitment.",
+    "billingLabel": "Billing period",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Monthly"
+      },
+      {
+        "value": "annuel",
+        "label": "Yearly"
+      }
+    ],
+    "monthlySuffix": "/month",
+    "currency": "MAD",
+    "quote": "Custom quote",
+    "quoteDetail": "We set the price together.",
+    "billedMonthly": "15 days free, then billed monthly.",
+    "billedYearly": "15 days free, then {total} MAD per year, paid once annually.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Get Kiwi",
+        "features": [
+          "Till with barcode scanning",
+          "Stock tracking",
+          "Sales receipts",
+          "Customer credit book",
+          "Daily report",
+          "Offline till",
+          "One location"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Get Kiwi",
+        "features": [
+          "Everything in Basic",
+          "Catalogue by size and colour",
+          "Returns, exchanges and credit notes",
+          "Promotions and offers",
+          "Loyalty+",
+          "Customer records",
+          "Sales and margin tracking",
+          "One location"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Get Kiwi",
+        "features": [
+          "Everything in Plus",
+          "Interactive floor plan",
+          "Waiter order taking",
+          "Kitchen display",
+          "OrderPro Restaurant",
+          "Multilingual menu",
+          "Booking link",
+          "Recipes, ingredients and food cost",
+          "Employee access with permissions",
+          "Scheduling, time tracking and payroll",
+          "Advanced Kiwi IQ",
+          "Priority support on WhatsApp",
+          "One location"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Contact us",
+        "features": [
+          "Everything in Pro",
+          "Unlimited locations",
+          "Multi-location management",
+          "Multi-country management",
+          "Enterprise API",
+          "Dedicated account manager"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "A bespoke scope, for a need no plan covers.",
+      "cta": "Contact us",
+      "features": [
+        "Scope defined with you",
+        "Number of devices and cashiers agreed together",
+        "Features developed for you"
+      ]
+    },
+    "numberLocale": "en-US",
+    "metadataDescription": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 150 MAD a month, or 99 MAD a month on an annual plan. 15 days free, no commitment.",
+    "hero": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 150 MAD a month, 15 days free, no commitment."
+  },
+  "ar": {
+    "title": "اشتراك واحد. لا عمولة.",
+    "body": "يتقاضى Kiwi ثمن البرنامج ولا يأخذ أبدا حصة من مبيعاتك. 15 يوما تجربة مجانية، من دون التزام.",
+    "billingLabel": "دورية الفوترة",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "شهريا"
+      },
+      {
+        "value": "annuel",
+        "label": "سنويا"
+      }
+    ],
+    "monthlySuffix": "/شهر",
+    "currency": "درهم",
+    "quote": "بحسب الطلب",
+    "quoteDetail": "نحدد السعر معا.",
+    "billedMonthly": "15 يوما مجانا، ثم تُدفع الفاتورة كل شهر.",
+    "billedYearly": "15 يوماً مجاناً، ثم {total} درهم سنوياً، في دفعة واحدة.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "احصل على Kiwi",
+        "features": [
+          "نظام كاشير مع مسح الباركود",
+          "تتبع المخزون",
+          "إيصالات البيع",
+          "دفتر ديون العملاء",
+          "تقرير يومي",
+          "كاشير يعمل دون اتصال بالإنترنت",
+          "منشأة واحدة"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "احصل على Kiwi",
+        "features": [
+          "كل مزايا Basic",
+          "كتالوج حسب المقاسات والألوان",
+          "المرتجعات والاستبدال والإشعارات الدائنة",
+          "العروض والتخفيضات",
+          "Loyalty+\u200e",
+          "ملفات العملاء",
+          "تتبع المبيعات وهوامش الربح",
+          "منشأة واحدة"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "احصل على Kiwi",
+        "features": [
+          "كل مزايا Plus",
+          "مخطط تفاعلي للصالة",
+          "تسجيل الطلبات بواسطة النُّدُل",
+          "شاشة المطبخ",
+          "OrderPro Restaurant",
+          "قائمة طعام متعددة اللغات",
+          "رابط الحجز",
+          "الوصفات والمكونات وتكلفة المواد",
+          "دخول الموظفين بصلاحيات محددة",
+          "الجداول وتسجيل الحضور والرواتب",
+          "Kiwi IQ المتقدم",
+          "دعم ذو أولوية عبر WhatsApp",
+          "منشأة واحدة"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "تواصل معنا",
+        "features": [
+          "كل مزايا Pro",
+          "عدد غير محدود من المنشآت",
+          "إدارة منشآت متعددة",
+          "إدارة في بلدان متعددة",
+          "واجهة API للمؤسسات",
+          "مدير حساب مخصص"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "نطاق مصمم حسب الطلب، لحاجة لا تغطيها أي باقة.",
+      "cta": "تواصل معنا",
+      "features": [
+        "نطاق نحدده معك",
+        "عدد الأجهزة والصرافين نتفق عليه معا",
+        "خصائص نطورها لك"
+      ]
+    },
+    "numberLocale": "ar-MA",
+    "metadataDescription": "اجمع الصندوق والصالة والمطبخ والمخزون والفريق والتقارير في برنامج واحد، بالفرنسية والعربية. ابتداء من 150 درهم شهريا، أو 99 درهم شهريا مع الاشتراك السنوي. 15 يوما تجربة مجانية، ومن دون التزام.",
+    "hero": "اجمع الصندوق والصالة والمطبخ والمخزون والفريق والتقارير في برنامج واحد، بالفرنسية والعربية. ابتداء من 150 درهم شهريا، 15 يوما تجربة مجانية، ومن دون التزام."
+  },
+  "de": {
+    "title": "Ein Abonnement. Keine Provision.",
+    "body": "Kiwi berechnet für seine Software Gebühren und beteiligt sich niemals an Ihren Verkäufen. 15 Tage kostenlos, unverbindlich.",
+    "billingLabel": "Billing period",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Monatlich"
+      },
+      {
+        "value": "annuel",
+        "label": "Jährlich"
+      }
+    ],
+    "monthlySuffix": "/Monat",
+    "currency": "MAD",
+    "quote": "Individuelles Angebot",
+    "quoteDetail": "Den Preis legen wir gemeinsam fest.",
+    "billedMonthly": "15 Tage kostenlos, dann monatliche Abrechnung.",
+    "billedYearly": "15 Tage kostenlos, danach {total} MAD pro Jahr, als jährliche Einmalzahlung.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Kiwi starten",
+        "features": [
+          "Kasse mit Barcode-Scan",
+          "Bestandsverfolgung",
+          "Kassenbons",
+          "Kundenkreditbuch",
+          "Tagesbericht",
+          "Offline nutzbare Kasse",
+          "Ein Standort"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Kiwi starten",
+        "features": [
+          "Alles aus Basic",
+          "Katalog nach Größen und Farben",
+          "Rückgaben, Umtausch und Gutschriften",
+          "Aktionen und Angebote",
+          "Loyalty+",
+          "Kundenprofile",
+          "Umsatz- und Margenverfolgung",
+          "Ein Standort"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Kiwi starten",
+        "features": [
+          "Alles aus Plus",
+          "Interaktiver Tischplan",
+          "Bestellaufnahme durch Servicekräfte",
+          "Küchendisplay",
+          "OrderPro Restaurant",
+          "Mehrsprachige Speisekarte",
+          "Reservierungslink",
+          "Rezepte, Zutaten und Wareneinsatz",
+          "Mitarbeiterzugänge mit Berechtigungen",
+          "Dienstplanung, Zeiterfassung und Lohnabrechnung",
+          "Erweitertes Kiwi IQ",
+          "Bevorzugter Support über WhatsApp",
+          "Ein Standort"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Kontaktieren Sie uns",
+        "features": [
+          "Alles aus Pro",
+          "Unbegrenzte Standorte",
+          "Standortübergreifende Steuerung",
+          "Länderübergreifende Verwaltung",
+          "Unternehmens-API",
+          "Persönlicher Account Manager"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "Ein maßgeschneiderter Umfang, für einen Bedarf, den kein Plan abdeckt.",
+      "cta": "Kontaktieren Sie uns",
+      "features": [
+        "Umfang gemeinsam mit Ihnen festgelegt",
+        "Anzahl der Geräte und Kassierer gemeinsam vereinbart",
+        "Für Sie entwickelte Funktionen"
+      ]
+    },
+    "numberLocale": "de-DE",
+    "hero": "Kasse, Gastraum, Küche, Lager, Team und Auswertungen in einem System, auf Französisch und Arabisch. Ab 150 MAD im Monat, 15 Tage kostenlos, ohne Bindung.",
+    "metadataDescription": "Kasse, Gastraum, Küche, Lager, Team und Auswertungen in einem System, auf Französisch und Arabisch. Ab 150 MAD im Monat oder 99 MAD pro Monat bei jährlicher Zahlung. 15 Tage kostenlos, ohne Bindung."
+  },
+  "es": {
+    "title": "Una suscripción. Sin comisiones.",
+    "body": "Kiwi factura su software y nunca se queda con un porcentaje de sus ventas. 15 días gratis, sin compromiso.",
+    "billingLabel": "Periodicidad de facturación",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Mensual"
+      },
+      {
+        "value": "annuel",
+        "label": "Anual"
+      }
+    ],
+    "monthlySuffix": "/mes",
+    "currency": "MAD",
+    "quote": "Presupuesto personalizado",
+    "quoteDetail": "Definimos la tarifa juntos.",
+    "billedMonthly": "15 días gratis, después facturación mensual.",
+    "billedYearly": "15 días gratis; después, {total} MAD al año, en un único pago anual.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Obtener Kiwi",
+        "features": [
+          "TPV con escaneo de códigos de barras",
+          "Seguimiento del inventario",
+          "Tickets de venta",
+          "Libreta de crédito de clientes",
+          "Informe diario",
+          "TPV sin conexión",
+          "Un establecimiento"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Obtener Kiwi",
+        "features": [
+          "Todo lo incluido en Basic",
+          "Catálogo por tallas y colores",
+          "Devoluciones, cambios y notas de crédito",
+          "Promociones y ofertas",
+          "Loyalty+",
+          "Fichas de clientes",
+          "Seguimiento de ventas y márgenes",
+          "Un establecimiento"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Obtener Kiwi",
+        "features": [
+          "Todo lo incluido en Plus",
+          "Plano de sala interactivo",
+          "Toma de pedidos por los camareros",
+          "Pantalla de cocina",
+          "OrderPro Restaurant",
+          "Carta multilingüe",
+          "Enlace de reservas",
+          "Recetas, ingredientes y costo de los platos",
+          "Acceso de empleados con permisos",
+          "Planificación, fichaje y nóminas",
+          "Kiwi IQ avanzado",
+          "Soporte prioritario por WhatsApp",
+          "Un establecimiento"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Contactar",
+        "features": [
+          "Todo lo incluido en Pro",
+          "Establecimientos ilimitados",
+          "Gestión de varios establecimientos",
+          "Gestión en varios países",
+          "API empresarial",
+          "Gestor de cuenta exclusivo"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "Un alcance a medida, para una necesidad que ningún plan cubre.",
+      "cta": "Contactar",
+      "features": [
+        "Alcance definido con usted",
+        "Número de dispositivos y cajeros acordado juntos",
+        "Desarrollo de funciones a medida"
+      ]
+    },
+    "numberLocale": "es-ES",
+    "metadataDescription": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 150 MAD al mes, o 99 MAD al mes con un plan anual. 15 días gratis, sin compromiso.",
+    "hero": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 150 MAD al mes, 15 días gratis, sin compromiso."
+  },
+  "it": {
+    "title": "Un abbonamento. Non una commissione.",
+    "body": "Kiwi addebita il costo del suo software e non prende mai una quota delle tue vendite. 15 giorni gratuiti, senza impegno.",
+    "billingLabel": "Billing period",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Mensile"
+      },
+      {
+        "value": "annuel",
+        "label": "Annuale"
+      }
+    ],
+    "monthlySuffix": "/mese",
+    "currency": "MAD",
+    "quote": "Preventivo personalizzato",
+    "quoteDetail": "Stabiliamo insieme il prezzo.",
+    "billedMonthly": "15 giorni gratuiti, poi fatturati mensilmente.",
+    "billedYearly": "15 giorni gratuiti, poi {total} MAD all’anno, in un unico pagamento annuale.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Inizia con Kiwi",
+        "features": [
+          "Cassa con scansione dei codici a barre",
+          "Monitoraggio delle scorte",
+          "Scontrini",
+          "Registro dei crediti clienti",
+          "Rapporto giornaliero",
+          "Cassa utilizzabile offline",
+          "Una sede"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Inizia con Kiwi",
+        "features": [
+          "Tutto di Basic",
+          "Catalogo per taglie e colori",
+          "Resi, cambi e note di credito",
+          "Promozioni e offerte",
+          "Loyalty+",
+          "Schede clienti",
+          "Monitoraggio delle vendite e dei margini",
+          "Una sede"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Inizia con Kiwi",
+        "features": [
+          "Tutto di Plus",
+          "Pianta della sala interattiva",
+          "Presa degli ordini da parte dei camerieri",
+          "Schermo cucina",
+          "OrderPro Restaurant",
+          "Menu multilingue",
+          "Link per le prenotazioni",
+          "Ricette, ingredienti e costo delle materie prime",
+          "Accessi dipendenti con permessi",
+          "Turni, rilevazione presenze e paghe",
+          "Kiwi IQ avanzato",
+          "Assistenza prioritaria su WhatsApp",
+          "Una sede"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Contattaci",
+        "features": [
+          "Tutto di Pro",
+          "Sedi illimitate",
+          "Gestione di più sedi",
+          "Gestione in più paesi",
+          "API aziendale",
+          "Account manager dedicato"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "Un perimetro su misura, per un'esigenza che nessun piano copre.",
+      "cta": "Contattaci",
+      "features": [
+        "Perimetro definito con te",
+        "Numero di dispositivi e cassieri concordato insieme",
+        "Funzionalità sviluppate per te"
+      ]
+    },
+    "numberLocale": "it-IT",
+    "hero": "Cassa, sala, cucina, magazzino, squadra e report in un unico sistema, in francese e arabo. Da 150 MAD al mese, 15 giorni gratuiti, senza impegno.",
+    "metadataDescription": "Cassa, sala, cucina, magazzino, squadra e report in un unico sistema, in francese e arabo. Da 150 MAD al mese, oppure 99 MAD al mese con il piano annuale. 15 giorni gratuiti, senza impegno."
+  },
+  "nl": {
+    "title": "Een abonnement. Geen commissie.",
+    "body": "Kiwi brengt kosten in rekening voor zijn software en neemt nooit een deel van uw omzet af. 15 dagen gratis, zonder verplichtingen.",
+    "billingLabel": "Billing period",
+    "periods": [
+      {
+        "value": "mensuel",
+        "label": "Maandelijks"
+      },
+      {
+        "value": "annuel",
+        "label": "Jaarlijks"
+      }
+    ],
+    "monthlySuffix": "/maand",
+    "currency": "MAD",
+    "quote": "Offerte op maat",
+    "quoteDetail": "We bepalen de prijs samen.",
+    "billedMonthly": "15 dagen gratis, daarna maandelijks gefactureerd.",
+    "billedYearly": "15 dagen gratis, daarna {total} MAD per jaar, in één jaarlijkse betaling.",
+    "tiers": [
+      {
+        "name": "Basic",
+        "cta": "Start met Kiwi",
+        "features": [
+          "Kassa met barcodescanner",
+          "Voorraad bijhouden",
+          "Kassabonnen",
+          "Kredietboek voor klanten",
+          "Dagrapport",
+          "Kassa die offline werkt",
+          "Eén vestiging"
+        ]
+      },
+      {
+        "name": "Plus",
+        "cta": "Start met Kiwi",
+        "features": [
+          "Alles van Basic",
+          "Catalogus op maat en kleur",
+          "Retouren, ruilen en creditnota’s",
+          "Promoties en aanbiedingen",
+          "Loyalty+",
+          "Klantprofielen",
+          "Verkoop en marges bijhouden",
+          "Eén vestiging"
+        ]
+      },
+      {
+        "name": "Pro",
+        "cta": "Start met Kiwi",
+        "features": [
+          "Alles van Plus",
+          "Interactieve tafelplattegrond",
+          "Bestellingen opnemen door bediening",
+          "Keukenscherm",
+          "OrderPro Restaurant",
+          "Meertalige menukaart",
+          "Reserveringslink",
+          "Recepten, ingrediënten en kostprijs",
+          "Medewerkerstoegang met rechten",
+          "Roosters, urenregistratie en loonadministratie",
+          "Geavanceerde Kiwi IQ",
+          "Voorrang bij ondersteuning via WhatsApp",
+          "Eén vestiging"
+        ]
+      },
+      {
+        "name": "Ultra",
+        "cta": "Neem contact met ons op",
+        "features": [
+          "Alles van Pro",
+          "Onbeperkt aantal vestigingen",
+          "Beheer van meerdere vestigingen",
+          "Beheer in meerdere landen",
+          "Bedrijfs-API",
+          "Vaste accountmanager"
+        ]
+      }
+    ],
+    "ultimate": {
+      "name": "Ultimate",
+      "description": "Maatwerk, voor een behoefte die geen abonnement dekt.",
+      "cta": "Neem contact met ons op",
+      "features": [
+        "Omvang samen met u bepaald",
+        "Aantal apparaten en kassamedewerkers samen afgesproken",
+        "Functies die voor u zijn ontwikkeld"
+      ]
+    },
+    "numberLocale": "nl-NL",
+    "hero": "Kassa, zaal, keuken, voorraad, team en rapportage in één systeem, in het Frans en Arabisch. Vanaf 150 MAD per maand, 15 dagen gratis, zonder verplichtingen.",
+    "metadataDescription": "Kassa, zaal, keuken, voorraad, team en rapportage in één systeem, in het Frans en Arabisch. Vanaf 150 MAD per maand, of 99 MAD per maand bij jaarlijkse betaling. 15 dagen gratis, zonder verplichtingen."
+  }
+}

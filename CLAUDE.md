@@ -394,19 +394,32 @@ assume the designation extends to Amira's Boutique, Maison, or other venues.
 
 ## 7. Phase 1 focus
 
-The pitch deck and dashboard story revolve around **Kiwi POS SaaS** — a four-tier
-model:
-- **Kiwi Basic · 199 MAD/month, 149 on the annual plan** (billed 1 800 MAD a
-  year; owner, 2026-10-12) — software only, on the merchant's own hardware,
-  unlimited devices, one établissement, integrated into the existing till, on-site
-  training + guides included.
+The pitch deck and dashboard story revolve around **Kiwi POS SaaS** — a five-offer
+model. The landing page shows four plan cards (Basic, Plus, Pro, Ultra) and a
+quote-only Ultimate strip under them (owner, 2026-10-16):
+- **Kiwi Basic · 150 MAD/month, 99 on the annual plan** (99 is a monthly
+  equivalent, one payment of 1 188 MAD a year) — a simple caisse for small shops
+  and épiceries: barcode scanning, stock tracking, receipts, customer credit
+  book, daily report, offline till, one établissement.
+- **Kiwi Plus · 300 MAD/month, 249 on the annual plan** (one payment of
+  2 988 MAD a year) — everything in Basic + boutique management: size and colour
+  catalogue, returns/exchanges/credit notes, promotions, Loyalty+, customer
+  records, sales and margin tracking. OrderPro and employee management are NOT
+  in Plus. **Landing only for now:** the backend has no `plus` plan, so signup
+  ignores it and config treats an unknown plan as `basic`.
 - **Kiwi Pro · 399 MAD/month, 349 on the annual plan** (billed 4 200 MAD a
-  year) — everything in Basic + priority support with
-  faster response, advanced Kiwi IQ.
-- **Kiwi Ultra · 1 499 MAD/month** — unlimited établissements, multi-pays, API
-  enterprise, dedicated 24/7 account manager.
+  year) — everything in Plus + restaurant operations: interactive floor plan,
+  waiter ordering, kitchen display, OrderPro Restaurant, multilingual menu,
+  booking link, recipes and food cost, employee access with permissions,
+  scheduling/time clock/payroll, advanced Kiwi IQ, priority WhatsApp support.
+- **Kiwi Ultra · 1 499 MAD/month** (no annual plan) — everything in Pro +
+  unlimited établissements, multi-establishment control, multi-country, API
+  enterprise, dedicated account manager.
 - **Kiwi Ultimate · sur devis** — bespoke scope, device/cashier count and price
   agreed with the client.
+
+The landing's copy lives in `content/landing-pricing.json` (all seven locales);
+`tools/rebuild-landing-locales.mjs` regenerates the pages from it.
 
 Kiwi Pay / Banking / Investing are Phase 2-3 optionality.
 

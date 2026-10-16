@@ -1,5 +1,16 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { applyPricing, pricingCopy, pricingFlight } from './landing-pricing.mjs';
+
+for (const locale of ['en', 'fr', 'ar']) {
+  const page = `${locale}/index.html`;
+  fs.writeFileSync(page, applyPricing(fs.readFileSync(page, 'utf8'), locale));
+  for (const name of fs.readdirSync(locale).filter(name => name.endsWith('.txt'))) {
+    const path = `${locale}/${name}`;
+    fs.writeFileSync(path, pricingFlight(fs.readFileSync(path, 'utf8'), locale));
+  }
+}
+fs.writeFileSync('index.html', fs.readFileSync('fr/index.html'));
 
 const stampManifest = JSON.parse(fs.readFileSync('tools/asset-stamps.json', 'utf8'));
 const assetUrl = file => '/' + file + (stampManifest[file] ? '?v=' + stampManifest[file].v : '');
@@ -11,6 +22,7 @@ const ogHead = (html, locale) => html.replace(/<meta property="og:locale:alterna
 
 function visibleText(html) {
   const withoutRuntime = html
+    .replace(/<section id="pricing"[\s\S]*?<\/section>/, '')
     .replace(/<script\b[\s\S]*?<\/script>/gi, '')
     .replace(/<style\b[\s\S]*?<\/style>/gi, '')
     .replace(/<svg\b[\s\S]*?<\/svg>/gi, '');
@@ -30,20 +42,11 @@ const encryptionClaim = {
   it: ['Crittografia end-to-end, nessuna rivendita', 'Crittografia in transito e a riposo, nessuna rivendita'],
   nl: ['End-to-end-codering, geen doorverkoop', 'Versleuteling tijdens transport en in rust, geen doorverkoop'],
 };
-// Pricing has four tiers (CLAUDE.md §7): Basic, Pro, Ultra at 1 499 MAD a
-// month with no annual plan, and Ultimate on quote. The snapshot has three
-// cards; its third is replaced by the source's last two, translated here, so
-// the text nodes still line up one for one.
-const pricingCopy = {
-  de: { 'Ultra': 'Ultra', 'Several locations, in several countries.': 'Mehrere Standorte, in mehreren Ländern.', '1,499': '1.499', 'MAD': 'MAD', '/month': '/Monat', '15 days free, then billed monthly.': '15 Tage kostenlos, dann monatliche Abrechnung.', 'Everything in Kiwi Pro': 'Alles in Kiwi Pro', 'Unlimited locations across countries': 'Unbegrenzte Standorte in allen Ländern', 'Unlimited enterprise API': 'Unbegrenzte Unternehmens-API', 'Dedicated account manager, 24/7': 'Dedizierter Account Manager, rund um die Uhr', 'Contact us': 'Kontaktieren Sie uns', 'Ultimate': 'Ultimate', 'A bespoke scope, for a need no plan covers.': 'Ein maßgeschneiderter Umfang, für einen Bedarf, den kein Plan abdeckt.', 'Custom quote': 'Individuelles Angebot', 'We set the price together.': 'Den Preis legen wir gemeinsam fest.', 'Scope defined with you': 'Umfang gemeinsam mit Ihnen festgelegt', 'Number of devices and cashiers agreed together': 'Anzahl der Geräte und Kassierer gemeinsam vereinbart', 'Features developed for you': 'Für Sie entwickelte Funktionen' },
-  it: { 'Ultra': 'Ultra', 'Several locations, in several countries.': 'Più sedi, in più paesi.', '1,499': '1.499', 'MAD': 'MAD', '/month': '/mese', '15 days free, then billed monthly.': '15 giorni gratuiti, poi fatturati mensilmente.', 'Everything in Kiwi Pro': 'Tutto in Kiwi Pro', 'Unlimited locations across countries': 'Sedi illimitate in più paesi', 'Unlimited enterprise API': 'API aziendali illimitate', 'Dedicated account manager, 24/7': 'Account manager dedicato, 24 ore su 24, 7 giorni su 7', 'Contact us': 'Contattaci', 'Ultimate': 'Ultimate', 'A bespoke scope, for a need no plan covers.': "Un perimetro su misura, per un'esigenza che nessun piano copre.", 'Custom quote': 'Preventivo personalizzato', 'We set the price together.': 'Stabiliamo insieme il prezzo.', 'Scope defined with you': 'Perimetro definito con te', 'Number of devices and cashiers agreed together': 'Numero di dispositivi e cassieri concordato insieme', 'Features developed for you': 'Funzionalità sviluppate per te' },
-  nl: { 'Ultra': 'Ultra', 'Several locations, in several countries.': 'Meerdere locaties, in meerdere landen.', '1,499': '1.499', 'MAD': 'MAD', '/month': '/maand', '15 days free, then billed monthly.': '15 dagen gratis, daarna maandelijks gefactureerd.', 'Everything in Kiwi Pro': 'Alles in Kiwi Pro', 'Unlimited locations across countries': 'Onbeperkte locaties in verschillende landen', 'Unlimited enterprise API': 'Onbeperkte bedrijfs-API', 'Dedicated account manager, 24/7': 'Toegewijde accountmanager, 24/7', 'Contact us': 'Neem contact met ons op', 'Ultimate': 'Ultimate', 'A bespoke scope, for a need no plan covers.': 'Maatwerk, voor een behoefte die geen abonnement dekt.', 'Custom quote': 'Offerte op maat', 'We set the price together.': 'We bepalen de prijs samen.', 'Scope defined with you': 'Omvang samen met u bepaald', 'Number of devices and cashiers agreed together': 'Aantal apparaten en kassamedewerkers samen afgesproken', 'Features developed for you': 'Functies die voor u zijn ontwikkeld' },
-};
 // Product names (Kiwi Basic, Pro, Ultra, Ultimate), the currency code and the
 // French dish names of the QR menu demo stay as written; "Thé à la menthe" is
 // the French sample beside its translations, so it stays French everywhere.
 // Keys holding {total} are templates: the runtime matches the rendered number.
-const keep = { 'Basic': null, 'Pro': null, 'Ultra': null, 'Ultimate': null, 'Thé': null, 'menthe': null };
+const keep = { 'Basic': null, 'Plus': null, 'Pro': null, 'Ultra': null, 'Ultimate': null, 'Thé': null, 'menthe': null };
 const corrections = {
   de: { ...keep,
     '68 MAD': '68 MAD',
@@ -55,7 +58,6 @@ const corrections = {
     'Stock': 'Lager', 'Stock that tells the truth': 'Ein Lager, das die Wahrheit sagt',
     'Your numbers stay yours.': 'Ihre Zahlen bleiben Ihre.',
     'Sucre': 'Zucker', 'Café': 'Kaffee', 'Poulet': 'Hähnchen', 'Riz': 'Reis', 'Avocat': 'Avocado',
-    'Till, floor, kitchen, stock, and team': 'Kasse, Gastraum, Küche, Lager und Team',
     'Proof': 'Belege', 'Cookies': 'Cookies',
     '15 days free, then {total} MAD, billed once a year.': '15 Tage kostenlos, danach {total} MAD, einmal jährlich abgerechnet.',
   },
@@ -69,7 +71,6 @@ const corrections = {
     'Stock': 'Magazzino', 'Stock that tells the truth': 'Un magazzino che dice la verità',
     'Live': 'Dal vivo', 'Clock-in': 'Timbratura',
     'Sucre': 'Zucchero', 'Café': 'Caffè', 'Poulet': 'Pollo', 'Riz': 'Riso', 'Avocat': 'Avocado',
-    'Till, floor, kitchen, stock, and team': 'Cassa, sala, cucina, magazzino e squadra',
     'Cookies': 'Cookie',
     '15 days free, then {total} MAD, billed once a year.': "15 giorni gratuiti, poi {total} MAD, fatturati una volta all'anno.",
   },
@@ -82,42 +83,21 @@ const corrections = {
     'Your numbers stay yours.': 'Uw cijfers blijven van u.',
     'The till, live': 'De kassa, live',
     'Sucre': 'Suiker', 'Café': 'Koffie', 'Poulet': 'Kip', 'Riz': 'Rijst', 'Avocat': 'Avocado',
-    'Till, floor, kitchen, stock, and team': 'Kassa, zaal, keuken, voorraad en team',
     'Cookies': 'Cookies',
     '15 days free, then {total} MAD, billed once a year.': '15 dagen gratis, daarna {total} MAD, eenmaal per jaar gefactureerd.',
   },
 };
-const pricingCard ='<div class="flex w-full overflow-hidden rounded-xl bg-[rgba(0,0,0,0.3)] backdrop-blur-[10px]"';
-const thirdCard = html => {
-  const section = html.indexOf('<section id="pricing"');
-  let start = section;
-  for (let n = 0; n < 3; n++) start = html.indexOf(pricingCard, start + 1);
-  const end = html.indexOf('</section>', section);
-  if (section < 0 || start < 0 || start > end) throw new Error('pricing grid not found');
-  return [start, end];
-};
-const [sourceCards, sourceEnd] = thirdCard(source);
-const sourceTiers = source.slice(sourceCards, sourceEnd);
-
 for (const localePath of localePaths) {
   const locale = localePath.split('/')[0];
   // The first localization commit contains the original locale copy. Read
   // that immutable snapshot so repeated rebuilds never translate translations.
-  // Kiwi Basic moved to 199 MAD a month, 149 annually (2026-10-12): the
-  // snapshot still says 249 / 199, so it is read at today's price.
+  // The old snapshot's entry price is normalized before aligning hero copy;
+  // pricing itself comes entirely from content/landing-pricing.json.
   let translated = execFileSync('git', ['show', `bf309397:${localePath}`], { encoding: 'utf8' })
-    .replace(/\b249(\s*(?:MAD|درهم)[^0-9<>]{0,40}?)\b199\b/g, '199$1149')
-    .replace(/\b249((?:<!-- --> <!-- -->|\s*)(?:MAD|درهم))/g, '199$1');
+    .replace(/\b249((?:<!-- --> <!-- -->|\s*)(?:MAD|درهم))/g, '150$1');
   const [claimWas, claimIs] = encryptionClaim[locale];
   if (!translated.includes(claimWas)) throw new Error(`${localePath}: encryption claim not found in snapshot`);
-  translated = translated.replace(claimWas, claimIs);
-  const [cards, end] = thirdCard(translated);
-  translated = translated.slice(0, cards) + sourceTiers.replace(/>([^<>]+)</g, (match, text) => {
-    const english = text.trim();
-    if (!english) return match;
-    if (!(english in pricingCopy[locale])) throw new Error(`${localePath}: no pricing copy for "${english}"`);
-    return '>' + text.replace(english, pricingCopy[locale][english]) + '<';
-  }) + translated.slice(end);
+  translated = translated.replace(claimWas, claimIs).replace(/\b199(?=\s*MAD)/g, '150');
   const translatedText = visibleText(translated);
   if (translatedText.length !== sourceText.length) {
     throw new Error(`${localePath}: expected ${sourceText.length} text nodes, found ${translatedText.length}`);
@@ -134,7 +114,7 @@ for (const localePath of localePaths) {
   // "stock" as a share, "Mar" and "May" as a verb. Corrections win over the
   // alignment; null keeps the source text as it is written.
   for (const [english, localized] of Object.entries(corrections[locale])) {
-    if (!english.includes('{total}') && !sourceText.includes(english)) throw new Error(`${localePath}: correction for missing text "${english}"`);
+    if (!english.includes('{total}') && !(english in keep) && !sourceText.includes(english)) throw new Error(`${localePath}: correction for missing text "${english}"`);
     if (localized === null) replacements.delete(english);
     else replacements.set(english, localized);
   }
@@ -146,12 +126,17 @@ for (const localePath of localePaths) {
     .replace(`hrefLang="en" href="https://kiwi-os.com/${locale}/"`, 'hrefLang="en" href="https://kiwi-os.com/en/"')
     .replace(`\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/${locale}/\\"`, `\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/en/\\"`)
     .replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
-  fs.writeFileSync(localePath, ogHead(output, locale));
+  fs.writeFileSync(localePath, applyPricing(ogHead(output, locale), locale));
 }
 
 // Spanish copy is agent-edited; native-speaker review is pending.
 const esDictionary = JSON.parse(fs.readFileSync('content/landing-es.json', 'utf8'));
 dictionaries.es = esDictionary;
+function pricingStrings(source, translated, dictionary) {
+  if (typeof source === 'string') { dictionary[source] = translated; return; }
+  if (source && typeof source === 'object') for (const key of Object.keys(source)) pricingStrings(source[key], translated[key], dictionary);
+}
+for (const locale of Object.keys(dictionaries)) pricingStrings(pricingCopy.en, pricingCopy[locale], dictionaries[locale]);
 const decode = value => value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&nbsp;/g, '\u00a0').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
 const lookup = value => esDictionary[decode(value).replace(/\u00a0/g, ' ').trim()];
 const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -159,7 +144,7 @@ const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').rep
 // Clone only the landing's client components. Translate their exact string
 // literals too: static HTML alone disagrees with React on its first render.
 // Content-addressed URLs keep these locale-specific exports cache-safe.
-const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-b8d47217.js'];
+const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-6c65cbb3.js'];
 const scriptPaths = new Map();
 fs.mkdirSync('es/chunks', { recursive: true });
 for (const clientPath of clientPaths) {
@@ -170,7 +155,6 @@ for (const clientPath of clientPaths) {
     const translated = lookup(value);
     return translated ? JSON.stringify(value.replace(value.trim(), translated)) : literal;
   });
-  if (clientPath.includes('2c2tj5hx4r2-w')) localized = localized.replace('\"group\"===t.type?\"fr\"===e?\" \":\",\":t.value', '\"group\"===t.type?\" \":t.value');
   if (clientPath.includes('2c2tj5hx4r2-w')) localized = localized.replace(/\{k:"([PGL])",v:(\d+),cls:/g, (_, key, amount) => `{k:${JSON.stringify(esDictionary['nutrition.' + key])},v:${amount},cls:`);
   const { createHash } = await import('node:crypto');
   const hash = createHash('sha256').update(localized).digest('hex').slice(0,16);
@@ -252,7 +236,7 @@ esOutput = esOutput.replace(/(https:\/\/kiwi-os\.com\/es\/opengraph-image)\?[^"\
 for (const [original, localized] of scriptPaths) esOutput = esOutput.replaceAll(original, localized);
 esOutput = esOutput.replace('</body>', `<script src="${assetUrl('assets/landing-runtime-translations.js')}" defer></script></body>`);
 esOutput = esOutput.replace('</head>', `<link rel="stylesheet" href="${assetUrl('assets/landing-es.css')}"/></head>`);
-fs.writeFileSync('es/index.html', ogHead(esOutput, 'es'));
+fs.writeFileSync('es/index.html', applyPricing(ogHead(esOutput, 'es'), 'es'));
 
 // Text rendered from a template ("15 days free, then 1,800 MAD, billed once a
 // year.") never equals a dictionary key; match it by pattern and regroup the
