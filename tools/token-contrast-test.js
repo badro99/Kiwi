@@ -174,6 +174,7 @@ const blocks = {
   lightBody: declMap(pick(null, 'body[data-vexel-mode="light"]')),
   dark: declMap(pick(null, ':root[data-theme="dark"]', 'body[data-vexel-mode="dark"]')),
   darkSystem: declMap(pick('@media (prefers-color-scheme: dark)', ':root:not([data-theme="light"])')),
+  invIsland: declMap(pick(null, '[data-k-ground="inverse"]')),
   contrast: declMap(pick('@media (prefers-contrast: more)', ':root:root:root', 'body[data-vexel-mode][data-vexel-mode]')),
 };
 const themedKeys = [...blocks.dark.keys()];
@@ -297,8 +298,13 @@ runAll();
     `${blocks.lightBody.size} déclarations contre ${themedLight.size}`);
   ok('thème · @media (prefers-color-scheme: dark) porte exactement le jeu sombre', eq(blocks.darkSystem, blocks.dark),
     `${blocks.darkSystem.size} déclarations contre ${blocks.dark.size}`);
+  /* L'îlot (§20.7, règle 5) répète le jeu sombre sur un sous-arbre : il doit
+     le répéter en entier, sinon un composant posé dedans lit un mélange. */
+  ok('thème · [data-k-ground="inverse"] porte exactement le jeu sombre', eq(blocks.invIsland, blocks.dark),
+    `${blocks.invIsland.size} déclarations contre ${blocks.dark.size}`);
   ok('thème · color-scheme suit le jeu (clair / sombre)', blocks.root.get('color-scheme') === 'light' && blocks.lightBody.get('color-scheme') === 'light'
-    && blocks.dark.get('color-scheme') === 'dark' && blocks.darkSystem.get('color-scheme') === 'dark');
+    && blocks.dark.get('color-scheme') === 'dark' && blocks.darkSystem.get('color-scheme') === 'dark'
+    && blocks.invIsland.get('color-scheme') === 'dark');
   const invariants = [...blocks.root.keys()].filter((k) => !themedKeys.includes(k));
   ok('thème · le jeu sombre ne touche à aucun jeton invariant (espace, type, mouvement…)', invariants.every((k) => !blocks.dark.has(k)));
   /* Le jeu thématisé : couleur, élévation, liserés. Tout le reste est invariant. */

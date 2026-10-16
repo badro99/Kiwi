@@ -308,7 +308,7 @@ var SHELL = [
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
-  '/assets/kit/tokens-2027.css?v=1',
+  '/assets/kit/tokens-2027.css?v=2',
   '/assets/kit/kit.css?v=38',
   '/assets/kit/dash-desktop.css?v=5',
   '/assets/kit/strings/kit.fr.js?v=2',

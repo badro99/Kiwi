@@ -23,8 +23,12 @@
  *   3. :root[data-theme="dark"], body[data-vexel-mode="dark"]   sombre
  *   4. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
  *                                             sombre, quand rien ne choisit
- *   Les blocs 2, 3 et 4 portent exactement les mêmes jetons que 1 (ou que le
- *   jeu sombre) : token-contrast-test le vérifie déclaration par déclaration.
+ *   5. [data-k-ground="inverse"]              un îlot sombre dans une page
+ *                                             claire, pour un composant posé
+ *                                             dans un chrome déjà sombre
+ *   Les blocs 2, 3, 4 et 5 portent exactement les mêmes jetons que 1 (ou que
+ *   le jeu sombre) : token-contrast-test le vérifie déclaration par
+ *   déclaration.
  *   body[data-vexel-mode] est plus proche des éléments que :root, donc il
  *   l'emporte. C'est voulu : la page décide de ce qu'elle peint.
  *
@@ -281,6 +285,57 @@ body[data-vexel-mode="light"] {
  * séparation se fait par le pas de surface. */
 :root[data-theme="dark"],
 body[data-vexel-mode="dark"] {
+  color-scheme: dark;
+
+  --k-bg: #0A0D0C;
+  --k-surface-1: #141917;
+  --k-surface-2: #1C2220;
+  --k-surface-3: #262D2A;
+  --k-line: #29302D;
+  --k-line-strong: #6B746F;
+  --k-ink-1: #F2F0EA;
+  --k-ink-2: #B3B9B4;
+  --k-ink-3: #848B85;
+  --k-accent: #3CCB8F;
+  --k-accent-ink: #5FD9A3;
+  --k-accent-pressed: #2FB27C;
+  --k-on-accent: #04140D;
+  --k-accent-tint: #123528;
+  --k-select: #262D2A;
+  --k-warning: #F2B85B;
+  --k-warning-tint: #3A2C12;
+  --k-warning-solid: #F0A93E;
+  --k-on-warning: #0A0F0D;
+  --k-danger: #FF8A7A;
+  --k-danger-tint: #3D1A16;
+  --k-danger-solid: #C8372D;
+  --k-on-danger: #FFFDFA;
+  --k-info: #8AB4F8;
+  --k-info-tint: #172436;
+  --k-inverse: #323A36;
+  --k-on-inverse: #F2F0EA;
+  --k-inverse-accent: #5FD9A3;
+  --k-inverse-danger: #FF8A7A;
+  --k-focus: #7DF2B0;
+  --k-scrim: rgba(0, 0, 0, .56);
+  --k-scrim-push: rgba(0, 0, 0, .30);
+  --k-chrome: rgba(20, 25, 23, .85);
+  --k-popover: var(--k-surface-3);
+  --k-shadow-1: none;
+  --k-shadow-2: 0 8px 24px rgba(0, 0, 0, .5);
+  --k-shadow-3: 0 -16px 48px rgba(0, 0, 0, .6);
+  --k-chrome-edge: var(--k-line);
+  --k-toast-edge: var(--k-line-strong);
+}
+
+/* Un îlot sombre dans une page claire (§20.7, règle 5) : le sous-arbre qui
+   porte l'attribut lit le jeu sombre, la page garde le sien. C'est par là
+   qu'un composant du kit se pose dans un chrome sombre déjà livré, la caisse
+   2027 mettant un <k-sidebar> en tête de la barre noire (§18.3, propriétaire
+   2026-10-16), sans qu'un hôte redéclare un --k-* : la cohabitation le lui
+   interdit. Le jeu est celui du bloc sombre ci-dessus, à l'identique ;
+   token-contrast-test scelle les deux ensemble. */
+[data-k-ground="inverse"] {
   color-scheme: dark;
 
   --k-bg: #0A0D0C;

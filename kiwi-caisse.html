@@ -149,7 +149,7 @@
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
-        '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
+        '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
         '<link rel="stylesheet" href="assets/kit/kit.css?v=38">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
@@ -545,21 +545,6 @@
       border-color: transparent;
       color: #fff;
       box-shadow: var(--shadow-1);
-    }
-
-    /* Plus déplié (2027, §18.3) : la barre noire prend la place du rail et
-       porte en tête le <k-sidebar> du kit, peint des mêmes cinq destinations.
-       Le kit ignore cette palette ; c'est la barre qui l'habille, ici, à côté
-       des pastilles qu'elle remplace. */
-    html[data-k-till-more] .sidebar > k-sidebar {
-      --k-surface-2: transparent;
-      --k-ink-1: #d7dbd8;
-      --k-ink-2: #8f9591;
-      --k-select: var(--atlas);
-      --k-select-edge-w: 0px;
-      --k-line-strong: transparent;
-      --k-shadow-1: none;
-      --k-accent-ink: #EAFFF4;
     }
 
     /* Action pills · caisse operations in a clean 2x2 grid */
@@ -10983,6 +10968,10 @@
       if (!side) return null;
       const nav = document.createElement('k-sidebar');
       nav.setAttribute('flush', '');
+    /* La barre est déjà sombre : le nav lit le jeu sombre du kit par l'îlot
+       (§20.7, règle 5). Un hôte ne redéclare jamais un --k-* lui-même, la
+       cohabitation de token-contrast-test le lui interdit. */
+    nav.setAttribute('data-k-ground', 'inverse');
       nav.setAttribute('label', kkt('till.nav.more'));
       nav.addEventListener('kiwi:action', (e) => {
         const d = e.detail || {};
