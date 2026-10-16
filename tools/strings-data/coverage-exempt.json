@@ -220,5 +220,7 @@
   "What I know": "shipped",
   "when the outbox is empty": "tech",
   "with no Face ID record, nothing is asked and nothing opens; with one, a success sends the record's proof first": "doc",
-  "درهم": "fixture"
+  "درهم": "fixture",
+  "7/10": "shipped",
+  "240 pts": "shipped"
 }

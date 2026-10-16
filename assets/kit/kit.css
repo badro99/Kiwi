@@ -208,11 +208,38 @@ html[data-k-till][data-k-till-more] .sidebar {
 html[data-k-till-more] #kit-rail > k-rail,
 html[data-k-till-more] .sidebar > .mode-selector { visibility: hidden; }
 html[data-k-till-more] .sidebar > .mode-selector { position: absolute; pointer-events: none; }
-/* The nav at the panel's head is the kit's; the shipped bar dresses it in its
-   own dark palette, in kiwi-caisse.html beside the pills it replaces, because
-   that palette is the host's and not the kit's to know. */
+/* The nav at the panel's head is the kit's, and it reads the kit's dark set
+   through the inverse ground (§20.7, rule 5): the host puts the element on
+   that ground and declares no token of its own, which cohabitation forbids. */
 html[data-k-till-more] .sidebar > k-sidebar { display: block; margin-block-end: 4px; }
 html:not([data-k-till-more]) .sidebar > k-sidebar { display: none; }
+/* The cashier card goes with it (owner, 2026-10-16): a name, a terminal id and
+   a date boxed under the nav were read by nobody mid-service, and they pushed
+   the rest of the panel down. The hour is the one thing on it that is read at
+   a glance, so it moves up beside the wordmark; kiwi-caisse.html moves the node
+   itself and it keeps its id, so the shell's tick still writes it. */
+html[data-k-till-more] .sidebar > .cashier-card { display: none; }
+html[data-k-till-more] .sidebar > .brand-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+}
+html[data-k-till-more] .sidebar > .brand-row > .duty-row { grid-column: 1 / -1; }
+html[data-k-till-more] .sidebar > .brand-row > .clock-time {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  font-size: var(--k-fs-heading);
+  font-weight: 600;
+  margin: 0;
+}
+/* The loyalty book's floating chip has no place here (owner, 2026-10-16): it
+   is fixed to the window's bottom corner, where the bill pane's pay button
+   lives, so it sat on top of « Encaisser ». Clients is not lost — it is a named
+   row of the shipped bar, which More now puts on screen whole, and a row of the
+   sheet on the phone. One door, where the till's own chrome keeps it. */
+html[data-k-till] #kcb-chip { display: none; }
 #kit-more-scrim {
   position: fixed;
   inset: 0;

@@ -182,6 +182,13 @@
         var id = el.closest('[data-line]') ? el.closest('[data-line]').getAttribute('data-line') : null;
         self.emit(w, id, { gestureId: g, anchor: el });
       });
+      /* The bill's customer (owner, 2026-10-16): the kit shows who the note is
+         for and reports the two gestures; the till owns the book and the
+         picker, as it already does for the shipped pane. */
+      K.tap(R, '[data-bill-client]', function (el, e, g) {
+        if (el.getAttribute('aria-disabled') === 'true') return;
+        self.emit(el.getAttribute('data-bill-client') === 'clear' ? 'client-clear' : 'client', null, { gestureId: g, anchor: el });
+      });
     },
     line: function (id) { var b = this.bill || {}; return (b.lines || []).filter(function (l) { return l.id === id; })[0] || null; },
     render: function () {
@@ -222,7 +229,17 @@
       var primary = sendFirst
         ? C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.send', { n: unsent.length }), id: 'pri', attrs: ' data-w="send"', disabled: paying })
         : C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.take_payment', { amount: money(b.total || 0) }), id: 'pri', attrs: ' data-w="pay"', disabled: !lines.length || paying });
-      var foot = '<footer class="ft">' + part(b.discount) + part(b.service) +
+      /* bill.clients says the book is on for this shop; bill.client is who is
+         attached, with the loyalty progress the cashier reads out loud. */
+      var client = !b.clients ? '' : '<div class="cl' + (b.client ? ' on' : '') + '">' +
+        '<button type="button" class="clb k-body" data-bill-client="pick"' + (paying ? ' aria-disabled="true"' : '') + '>' +
+        icon(b.client ? 'person' : 'person_add', 24, 'k-ink2') +
+        '<span class="cnm">' + esc(b.client ? b.client.name : t('bill.client')) + '</span>' +
+        (b.client && b.client.progress ? '<span class="k-foot k-ink2">' + esc(b.client.progress) + '</span>' : icon('chevron_right', 20, 'k-mir k-ink2')) +
+        '</button>' +
+        (b.client ? '<button type="button" class="clx" data-bill-client="clear"' + (paying ? ' aria-disabled="true"' : '') + ' aria-label="' + esc(t('bill.client_clear')) + '">' + icon('close', 20) + '</button>' : '') +
+        '</div>';
+      var foot = '<footer class="ft">' + client + part(b.discount) + part(b.service) +
         '<div class="tot"><span class="k-body k-ink2">' + th('bill.total') + '</span><span class="k-title k-num" data-k-total>' + numHtml(money(b.total || 0)) + '</span></div>' +
         (b.plain ? '' : '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
         C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) + '</div>') +
@@ -248,6 +265,12 @@
       '.r{display:flex;align-items:flex-start;gap:8px}.qt{width:32px;flex:none;font-weight:var(--k-fw-callout-strong)}' +
       '.nm{flex:1;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}.pr{flex:none}' +
       '.ex{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0 4px 40px}.acts{display:flex;gap:8px;flex-wrap:wrap}' +
+      '.cl{display:flex;align-items:center;gap:4px;margin-block-end:8px}' +
+      '.clb{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:56px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-2);color:var(--k-ink-1);text-align:start}' +
+      '.cl.on .clb{background-color:var(--k-accent-tint)}.clb:active{background-color:var(--k-surface-3)}' +
+      '.cnm{flex:1;min-width:0;overflow-wrap:anywhere}' +
+      '.clx{flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:var(--k-r-2);color:var(--k-ink-2)}' +
+      '.clb:focus-visible,.clx:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
       '.paying .ln{color:var(--k-ink-3)}' +
       '.em{padding-block:48px;text-align:center}.em p{margin:4px 0}' +
       '.sk{display:flex;flex-direction:column;gap:12px;padding-block:16px}.sk span{height:40px;border-radius:var(--k-r-1)}' +
@@ -326,10 +349,19 @@
      noTip: no tip row, for a till whose sale record carries no tip.
      form: 'caps' (iPad pane) | 'flush' (phone sheet). */
   var TIPS = [0, 5, 10, 15];
+  /* What a Moroccan till is handed (owner, 2026-10-16): four notes and three
+     coins. Tapping one adds it to Received, so 122 is 100 · 20 · 1 · 1 and
+     nobody types. A note is drawn as a note (a wide double-framed card) and a
+     coin as a coin (a disc), in the kit's own inks: the palette is locked
+     (§5.1), so the shape carries the money, never a borrowed banknote colour.
+     The keypad is one tap away for a sum these cannot build (a centime). */
+  var PAY_NOTES = [200, 100, 50, 20], PAY_COINS = [10, 5, 1];
   var KPay = K.make({
     setup: function () {
       var self = this, R = this.shadowRoot;
       this.__recv = ''; this.__tipText = ''; this.__tipEntry = false;
+      /* The taps, in order, so one wrong note is undone rather than the lot. */
+      this.__hist = []; this.__pad = 'denoms';
       K.tap(R, '[data-method]', function (el, e, g) {
         var m = el.getAttribute('data-method');
         if (self.p().method === m) return;               /* the row already chosen fires nothing */
@@ -339,26 +371,50 @@
         self.emit('method', m, { gestureId: g });
       });
       K.tap(R, '[data-tip]', function (el, e, g) { self.openTip(el, g); });
-      C.chip.bind(R, function (v, g) { self.__recv = String(v); self.render(); self.emit('quick', v, { gestureId: g }); });
+      C.chip.bind(R, function (v, g) { self.__recv = String(v); self.__hist = []; self.render(); self.emit('quick', v, { gestureId: g }); });
+      K.tap(R, '[data-denom]', function (el, e, g) {
+        var add = Number(el.getAttribute('data-denom'));
+        K.haptic('Adjust', g, { trigger: 'tap' });
+        var v = Math.round((C.keypad.value(self.__recv) + add) * 100) / 100;
+        if (v > 9999999) return;
+        self.__hist.push(add);
+        self.__recv = String(v);
+        self.render();
+      });
+      K.tap(R, '[data-denom-undo]', function (el, e, g) {
+        K.haptic('Adjust', g, { trigger: 'tap' });
+        var back = self.__hist.pop();
+        var v = back == null ? 0 : Math.round((C.keypad.value(self.__recv) - back) * 100) / 100;
+        /* Nothing left to take back is nothing received, not a zero: the entry
+           is optional, and an empty Received is what lets Confirm through. */
+        self.__recv = self.__hist.length && v > 0 ? String(v) : '';
+        self.render();
+      });
       C.keypad.bind(R, function (id, key, g) {
         var tip = self.__tipEntry;
         var res = C.keypad.input(tip ? self.__tipText : self.__recv, key, { decimals: tip ? 1 : 2, maxInt: tip ? 3 : 7 });
         if (tip && res.ok && C.keypad.value(res.text) > 100) res.ok = false;
         if (!res.ok) { var d = self.$('.disp'); if (d && key !== 'del') { d.classList.remove('k-shake'); void d.offsetWidth; d.classList.add('k-shake'); } return; }
-        if (tip) self.__tipText = res.text; else self.__recv = res.text;
+        if (tip) self.__tipText = res.text; else { self.__recv = res.text; self.__hist = []; }
         self.paint();
       });
       C.button.bind(R, function (el, g) {
         var w = el.getAttribute('data-w');
         if (w === 'confirm') {
           self.__gat = K.now(); self.__gid = g;
-          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: self.p().method === 'cash' ? C.keypad.value(self.__recv) : null, gestureId: g });
+          /* Received is optional (owner, 2026-10-16): left empty it is null, « the
+             cashier did the change in their head », not a zero the host would
+             read as a short payment. */
+          var got = self.p().method === 'cash' && self.__recv !== '' ? C.keypad.value(self.__recv) : null;
+          self.emit('confirm', self.p().method, { amount: self.p().due, tip: self.tip(), received: got, gestureId: g });
         } else if (w === 'leave') {                     /* the header's Back: out of the payment (§18.3) */
           self.__tipEntry = false;
           self.emit('leave', null, { gestureId: g });
         } else if (w === 'back') {
           if (self.__tipEntry) { self.__tipEntry = false; self.render(); return; }
           self.p().method = null; self.render(); self.emit('back', null, { gestureId: g });
+        } else if (w === 'pad') {
+          self.__pad = self.__pad === 'keys' ? 'denoms' : 'keys'; self.render();
         } else if (w === 'tip-done') {
           self.__tipEntry = false; self.p().tipPct = Math.min(100, C.keypad.value(self.__tipText)); self.render();
           self.emit('tip', null, { pct: self.p().tipPct, gestureId: g });
@@ -410,11 +466,30 @@
         if (d) d.innerHTML = '<span class="k-foot k-ink2">' + th('pay.tip.other_title') + '</span><span class="k-heading k-num">' + esc(this.__tipText || '0') + ' %</span>';
         return;
       }
-      var recv = C.keypad.value(this.__recv), owed = this.owed();
-      if (d) d.innerHTML = '<span class="k-heading k-num">' + th('pay.received', { amount: money(recv) }) + '</span>';
-      if (ch) ch.textContent = recv >= owed ? t('pay.change', { amount: money(fromCents(cents(recv) - cents(owed))) }) : '';
+      /* Counting what the guest handed over is optional (owner, 2026-10-16):
+         a cashier who makes the change in their head confirms straight away,
+         and only a count that is actually SHORT holds the button. */
+      var none = this.__recv === '', recv = C.keypad.value(this.__recv), owed = this.owed();
+      var short = !none && recv < owed;
+      if (d) d.innerHTML = '<span class="k-heading' + (none ? ' k-ink2' : ' k-num') + '">' + (none ? th('pay.received_optional') : th('pay.received', { amount: money(recv) })) + '</span>';
+      if (ch) ch.textContent = !none && recv >= owed ? t('pay.change', { amount: money(fromCents(cents(recv) - cents(owed))) }) : '';
       if (ft) ft.innerHTML = C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t('pay.cash.confirm'),
-        disabled: recv < owed, reason: recv < owed ? t('pay.cash.short', { amount: money(owed) }) : '', error: this.str('state') === 'not-recorded' ? t('pay.not_recorded') : '' });
+        disabled: short, reason: short ? t('pay.cash.short', { amount: money(owed) }) : '', error: this.str('state') === 'not-recorded' ? t('pay.not_recorded') : '' });
+    },
+    /* A note is a card, a coin is a disc; both are plain kit surfaces with a
+       double hairline frame, which reads as money without inventing a colour
+       the palette does not hold (§5.1). The group is a pad like the keypad:
+       never a drag region, never scrolled (§10.3, §15). */
+    denoms: function (lay) {
+      var cell = function (d, cls) {
+        return '<button type="button" class="dk ' + cls + ' k-heading k-num" data-denom="' + d + '" aria-label="' +
+          esc(t('pay.denom_a11y', { amount: money(d) })) + '">' + numHtml(String(d)) + '</button>';
+      };
+      return '<div class="dn' + (lay === 'compact-short' ? ' dns' : '') + '" data-k-group data-k-pad role="group" aria-label="' + esc(t('pay.denoms')) + '">' +
+        '<div class="dr dn4">' + PAY_NOTES.map(function (d) { return cell(d, 'db'); }).join('') + '</div>' +
+        '<div class="dr dc4">' + PAY_COINS.map(function (d) { return cell(d, 'dc'); }).join('') +
+        '<button type="button" class="dk du" data-denom-undo aria-label="' + esc(t('pay.denom_undo')) + '">' + icon('backspace', 24, 'k-mir') + '</button>' +
+        '</div></div>';
     },
     render: function () {
       var p = this.p(), st = this.str('state'), form = this.str('form', 'caps');
@@ -433,7 +508,11 @@
       if (this.__tipEntry || p.method === 'cash') {
         var chips = this.__tipEntry ? '<div class="chips" aria-hidden="true"></div>' : C.chip.group({ label: t('pay.received', { amount: '' }), options: [{ value: String(owed), label: t('pay.exact'), ariaLabel: t('pay.exact_a11y', { amount: money(owed) }) }]
           .concat(roundUps(owed).map(function (v) { return { value: String(v), label: money(v) }; })), value: this.__recv });
-        lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + C.keypad.render({ form: form, short: lay === 'compact-short', label: t('pay.cash') }) +
+        var keys = this.__tipEntry || this.__pad === 'keys';
+        var pad = keys ? C.keypad.render({ form: form, short: lay === 'compact-short', label: t('pay.cash') }) : this.denoms(lay);
+        if (!this.__tipEntry) chips = '<div class="cr">' + chips +
+          C.button.render({ variant: 'icon', icon: keys ? 'payments' : 'dialpad', label: t(keys ? 'pay.pad.denoms' : 'pay.pad.keys'), id: 'pd', attrs: ' data-w="pad"' }) + '</div>';
+        lower = '<div class="cash"><div class="disp" aria-live="polite"></div>' + chips + pad +
           '<p class="k-heading k-num chg" aria-live="polite"></p>' +
           (this.__tipEntry ? C.button.render({ variant: 'primary', size: 'L', full: true, id: 'td', attrs: ' data-w="tip-done"', label: t('action.done') }) : '<div class="pri"></div>') + '</div>';
       } else if (p.method) {
@@ -480,6 +559,16 @@
       '.row span:first-child{flex:1}.ms{display:flex;flex-direction:column;gap:8px}' +
       '.mt[aria-checked="true"]{background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-accent)}' +
       '.cash,.card{display:flex;flex-direction:column;gap:12px}.disp{display:flex;flex-direction:column;min-height:32px}.chips{min-height:44px}.chg{margin:0;min-height:26px}' +
+      '.cr{display:flex;align-items:center;gap:8px;min-height:44px}.cr .k-chips{flex:1;min-width:0}' +
+      '.dn{display:flex;flex-direction:column;gap:8px;direction:ltr;touch-action:manipulation;-webkit-user-select:none;user-select:none}' +
+      '.dr{display:grid;gap:8px}.dn4{grid-template-columns:repeat(2,minmax(0,1fr))}.dc4{grid-template-columns:repeat(4,minmax(0,1fr))}' +
+      '.dk{display:flex;align-items:center;justify-content:center;height:64px;color:var(--k-ink-1);background-color:var(--k-surface-2);border-radius:var(--k-r-2)}' +
+      '.dk:active{background-color:var(--k-surface-3)}.dk:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
+      /* the two frames of a banknote, and a coin's rim: shape, not colour */
+      '.db{box-shadow:inset 0 0 0 1px var(--k-line-strong),inset 0 0 0 6px var(--k-surface-2),inset 0 0 0 7px var(--k-line)}' +
+      '.dc{width:64px;justify-self:center;border-radius:999px;box-shadow:inset 0 0 0 1px var(--k-line-strong),inset 0 0 0 4px var(--k-surface-2),inset 0 0 0 5px var(--k-line)}' +
+      '.du{background-color:transparent;color:var(--k-ink-2)}' +
+      '.dns .dk{height:56px}.dns .dc{width:56px}' +
       '.done .ms,.done .cash,.done .card{visibility:hidden}.paid{display:flex;align-items:center;gap:8px;color:var(--k-accent-ink);margin:0}' +
       '.nt{display:flex;align-items:center;gap:6px;margin:0;max-width:272px}.nt.wn{color:var(--k-warning);font-weight:var(--k-fw-footnote-strong)}'
   });

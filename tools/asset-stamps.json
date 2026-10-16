@@ -464,8 +464,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "5",
-    "sha": "0c4cb444508fc7f7"
+    "v": "7",
+    "sha": "24adf1e788c020f7"
   },
   "assets/identity.js": {
     "v": "11",
@@ -620,8 +620,8 @@
     "sha": "3efcd974fdefc529"
   },
   "assets/kit/kit.css": {
-    "v": "38",
-    "sha": "d24fb3eb18878e43"
+    "v": "40",
+    "sha": "7330d81b23d16f83"
   },
   "assets/kit/layout.js": {
     "v": "1",
@@ -728,16 +728,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "6",
-    "sha": "30d8a2d41a231096"
+    "v": "8",
+    "sha": "9742267e2678cb0c"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "6",
-    "sha": "080389f6c3686c9d"
+    "v": "8",
+    "sha": "fa6e29d04c99e7e7"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "6",
-    "sha": "a3f8656827c0c25a"
+    "v": "8",
+    "sha": "4ecdef1a71833557"
   },
   "assets/kit/team-pin.js": {
     "v": "1",
@@ -768,8 +768,8 @@
     "sha": "ffa99a7649222aa6"
   },
   "assets/kit/till.js": {
-    "v": "11",
-    "sha": "0308f2dc7edd3a1f"
+    "v": "13",
+    "sha": "ce7b4d226fac7e63"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

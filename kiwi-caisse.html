@@ -148,15 +148,15 @@
       /* A tag per file; '<' + 'script' keeps the shell's tag count honest. */
       var js = function (src) { return '<' + 'script defer src="' + src + '"></' + 'script>'; };
       document.write(
-        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
+        '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=7">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=38">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=40">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=6") +
-        js("assets/kit/strings/till.en.js?v=6") +
-        js("assets/kit/strings/till.ar.js?v=6") +
+        js("assets/kit/strings/till.fr.js?v=8") +
+        js("assets/kit/strings/till.en.js?v=8") +
+        js("assets/kit/strings/till.ar.js?v=8") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -176,7 +176,7 @@
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=3") +
-        js("assets/kit/till.js?v=11") +
+        js("assets/kit/till.js?v=13") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=2") +
@@ -10676,6 +10676,23 @@
     }
     const tillKitDiscount = (d, amt) => amt > 0
       ? { label: d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
+    /* Le client de la note (propriétaire, 2026-10-16) : le volet livré portait
+       « Client & fidélité » et le kit ne le reprenait pas, si bien qu'une vente
+       faite dans la peau 2027 n'inscrivait personne. Le kit montre la ligne,
+       la caisse garde le carnet, le choix et le comptage du passage : c'est la
+       même attache, pas une seconde. */
+    function tillKitClient(b) {
+      try {
+        if (!clientsOn()) return b;
+        b.clients = true;
+        if (saleClient) {
+          let rec = null;
+          try { rec = window.KiwiClients.get(saleClient.id); } catch (_) {}
+          b.client = { name: saleClient.name, progress: rec ? clientProgressLabel(rec) : '' };
+        }
+      } catch (_) {}
+      return b;
+    }
     /* Ce que montre le volet livré, et rien d'autre : un volet fermé est une
        addition vide. */
     function tillKitBill() {
@@ -10685,19 +10702,19 @@
       if (mode === 'vrap') {
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);
-        return { title, meta, lines: cart.map(tillKitLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true };
+        return tillKitClient({ title, meta, lines: cart.map(tillKitLine), discount: tillKitDiscount(vrapDiscount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true });
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
-        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0) };
+        return tillKitClient({ title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0) });
       }
       if (selectedId && tables[selectedId]) {
         const lines = generateOrder(selectedId, tables[selectedId]);
         const gross = lines.reduce((s, l) => s + l.total, 0);
         const disc = discountAmountFor(selectedId, gross);
-        return { title, meta, lines: lines.map(tillKitLine), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true };
+        return tillKitClient({ title, meta, lines: lines.map(tillKitLine), discount: tillKitDiscount(tables[selectedId].discount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true });
       }
       return empty;
     }
@@ -10727,7 +10744,11 @@
       const share = tillKitShare && splitState.flow ? splitState.flow.parts[tillKitShare.idx] : null;
       const tipNow = share ? money(pay.tip()) : payTipAmount();
       const total = share ? money(share.base + tipNow) : Math.round((currentTotal() + payTipAmount()) * 100) / 100;
-      const got = kind === 'cash' ? Math.round((+value.received || 0) * 100) / 100 : total;
+      /* Le compte des espèces reçues est facultatif (propriétaire,
+         2026-10-16) : le kit envoie null quand la caissière n'a rien compté,
+         et c'est alors le compte juste, pas un paiement insuffisant. */
+      const counted = kind === 'cash' && value.received != null;
+      const got = counted ? Math.round((+value.received || 0) * 100) / 100 : total;
       if (got < total) return;
       if (share) {
         share.tip = tipNow;
@@ -10966,6 +10987,14 @@
       if (tillKitMoreNav || !customElements.get('k-sidebar')) return tillKitMoreNav;
       const side = $('.sidebar'), brand = side && side.querySelector('.brand-row');
       if (!side) return null;
+      /* L'heure monte à côté du logo, la carte du caissier s'en va (le kit la
+         cache, propriétaire 2026-10-16) : un nom, un identifiant et une date
+         dans un cadre ne se lisent pas en service, et ils poussaient tout le
+         panneau vers le bas. Le nœud garde son id, la pendule du shell
+         continue donc de l'écrire. */
+      const mark = brand && brand.querySelector('.brand-mark');
+      const clock = side.querySelector('#clock-time');
+      if (mark && clock) brand.insertBefore(clock, mark.nextSibling);
       const nav = document.createElement('k-sidebar');
       nav.setAttribute('flush', '');
     /* La barre est déjà sombre : le nav lit le jeu sombre du kit par l'îlot
@@ -11207,6 +11236,8 @@
         case 'pay':
           tillKitOpenPay();
           return;
+        case 'client': openClientModal(); return;
+        case 'client-clear': saleClient = null; renderSaleClient(); return;
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
@@ -16230,6 +16261,10 @@
       const btn = $('#rp-client');
       if (!btn) return;
       if (saleClient && saleClient.ctx && saleClient.ctx !== saleContextKey()) saleClient = null;
+      /* La peau 2027 montre la même attache dans son addition : un seul endroit
+         repeint, quel que soit le chemin (attacher, détacher, compter le
+         passage, l'abonnement au carnet). */
+      try { tillKitPaint(); } catch (_) {}
       btn.hidden = !clientsOn();
       const lab = $('#rp-client-label');
       const x = $('#rp-client-clear');
