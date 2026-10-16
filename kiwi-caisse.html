@@ -150,7 +150,7 @@
       document.write(
         '<meta name="kiwi-sprite" content="assets/icons/material/sprite.till.svg?v=5">' +
         '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=1">' +
-        '<link rel="stylesheet" href="assets/kit/kit.css?v=36">' +
+        '<link rel="stylesheet" href="assets/kit/kit.css?v=38">' +
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
@@ -175,7 +175,7 @@
         js("assets/kit/controls/switch.js?v=1") +
         js("assets/kit/elements.js?v=1") +
         js("assets/kit/layout.js?v=1") +
-        js("assets/kit/nav.js?v=2") +
+        js("assets/kit/nav.js?v=3") +
         js("assets/kit/till.js?v=11") +
         js("assets/kit/till-frame.js?v=5") +
         js("assets/kit/till-attendance.js?v=1") +
@@ -545,6 +545,21 @@
       border-color: transparent;
       color: #fff;
       box-shadow: var(--shadow-1);
+    }
+
+    /* Plus déplié (2027, §18.3) : la barre noire prend la place du rail et
+       porte en tête le <k-sidebar> du kit, peint des mêmes cinq destinations.
+       Le kit ignore cette palette ; c'est la barre qui l'habille, ici, à côté
+       des pastilles qu'elle remplace. */
+    html[data-k-till-more] .sidebar > k-sidebar {
+      --k-surface-2: transparent;
+      --k-ink-1: #d7dbd8;
+      --k-ink-2: #8f9591;
+      --k-select: var(--atlas);
+      --k-select-edge-w: 0px;
+      --k-line-strong: transparent;
+      --k-shadow-1: none;
+      --k-accent-ink: #EAFFF4;
     }
 
     /* Action pills · caisse operations in a clean 2x2 grid */
@@ -10945,19 +10960,40 @@
       const footer = who ? { cashier: who } : {};
       const sync = tillKitLocked() ? null : tillKitSyncFooter(tillKitSyncRows());
       if (sync) footer.sync = sync;
+      /* La tête du panneau porte exactement les mêmes éléments que le rail. */
+      const nav = tillKitMoreNavEl();
+      if (nav) { nav.sections = [{ items: items.map((it) => Object.assign({}, it)) }]; nav.setAttribute('value', value || ''); }
       /* Plus n'est pas une destination : la lentille reste sur le mode, et
-         <k-rail> ne laisse pas toucher l'élément qui porte déjà sa valeur,
-         ce qui empêcherait Moins de refermer. */
+         <k-rail> comme <k-sidebar> ne laissent pas toucher l'élément qui
+         porte déjà leur valeur, ce qui empêcherait Moins de refermer. */
       return { value, items, footer, label: kkt('till.nav.more') };
     }
-    /* Plus déplie la barre latérale livrée (propriétaire, 2026-10-16) : la
-       feuille rangeait les mêmes gestes sans icônes et sans ordre connu. Le
-       panneau noir est celui de la caisse d'aujourd'hui, à sa place, chaque
-       contrôle vivant ; le rail reste et son Plus devient Moins. On en sort
-       par Moins, par un toucher ailleurs (le voile le prend, aucun geste ne
-       tombe sur une tuile) ou par Échap. La feuille reste la route du
-       téléphone, qui n'a pas la place d'un panneau de 260 (§18.3). */
-    let tillKitMoreOpen = false;
+    /* Plus REMPLACE le rail par la barre latérale livrée (propriétaire,
+       2026-10-16) : la feuille rangeait les mêmes gestes sans icônes et sans
+       ordre connu, et un second panneau à côté du rail ne faisait que serrer
+       l'écran. La barre noire prend la place du rail et porte à sa tête, sous
+       le même logo, les mêmes cinq destinations — un <k-sidebar> peint des
+       mêmes éléments que le rail, Moins compris. On en sort par Moins, par un
+       toucher ailleurs (le voile le prend, aucun geste ne tombe sur une
+       tuile) ou par Échap. La feuille reste la route du téléphone (§18.3). */
+    let tillKitMoreOpen = false, tillKitMoreNav = null;
+    function tillKitMoreNavEl() {
+      if (tillKitMoreNav || !customElements.get('k-sidebar')) return tillKitMoreNav;
+      const side = $('.sidebar'), brand = side && side.querySelector('.brand-row');
+      if (!side) return null;
+      const nav = document.createElement('k-sidebar');
+      nav.setAttribute('flush', '');
+      nav.setAttribute('label', kkt('till.nav.more'));
+      nav.addEventListener('kiwi:action', (e) => {
+        const d = e.detail || {};
+        if (d.action !== 'k.sidebar.select') return;
+        e.stopPropagation();
+        tillKitRailSelect(d.id == null ? null : String(d.id));
+      });
+      side.insertBefore(nav, brand ? brand.nextSibling : side.firstChild);
+      tillKitMoreNav = nav;
+      return nav;
+    }
     function tillKitSetMore(on) {
       on = !!on;
       if (on === tillKitMoreOpen) return;

@@ -303,14 +303,17 @@
       '.cn{max-width:80px;text-align:center;overflow-wrap:anywhere}'
   });
 
-  /* ── <k-sidebar value collapsed> + .sections (§10.20) ─────────────────── */
+  /* ── <k-sidebar value collapsed flush> + .sections (§10.20) ───────────────
+     flush: no ground, no padding, the width of whatever holds it. It is how
+     the till's expanded Plus puts this nav at the head of the shipped dark
+     sidebar (§18.3, owner 2026-10-16), which paints its own ground. */
   var KSidebar = K.make({
     setup: function () { navBind(this); },
     get value() { return this.str('value'); },
     attr: function () { this.render(); },
     render: function () {
       var v = this.value, col = this.flag('collapsed');
-      this.shadowRoot.innerHTML = '<nav class="sb' + (col ? ' col' : '') + '"' + (this.str('label') ? ' aria-label="' + esc(this.str('label')) + '"' : '') + '><div class="trk">' +
+      this.shadowRoot.innerHTML = '<nav class="sb' + (col ? ' col' : '') + (this.flag('flush') ? ' flush' : '') + '"' + (this.str('label') ? ' aria-label="' + esc(this.str('label')) + '"' : '') + '><div class="trk">' +
         '<span class="lens" aria-hidden="true"></span>' +
         (this.sections || []).map(function (s) {
           return (s.label && !col ? '<h2 class="k-foot-s k-ink2 sec">' + esc(s.label) + '</h2>' : '') +
@@ -322,10 +325,11 @@
     }
   });
   K.define('k-sidebar', KSidebar, {
-    attrs: ['value', 'collapsed', 'label'], props: ['sections'],
+    attrs: ['value', 'collapsed', 'flush', 'label'], props: ['sections'],
     css: BADGE_CSS +
       '.sb{width:280px;min-height:100%;background-color:var(--k-surface-2);padding:12px}' +
       '@media (pointer:fine){.sb{width:248px}}.sb.col{width:72px;padding-inline:14px}' +
+      '.sb.flush{width:100%;min-height:0;padding:0;background-color:transparent}' +
       '.trk{position:relative;display:flex;flex-direction:column;gap:2px}' +
       '.lens{border-radius:var(--k-r-2);' + LENS_PAINT + ';opacity:0}' +
       '.sec{margin:16px 12px 4px}' +

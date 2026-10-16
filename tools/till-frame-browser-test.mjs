@@ -374,16 +374,27 @@ try {
       const sb = document.querySelector('.sidebar'), cs = getComputedStyle(sb), b = sb.getBoundingClientRect();
       const rail = document.getElementById('kit-rail').getBoundingClientRect();
       const scrim = document.getElementById('kit-more-scrim');
+      const nav = document.querySelector('.sidebar > k-sidebar');
+      const pills = document.querySelector('.sidebar > .mode-selector');
       return { display: cs.display, x: Math.round(b.x), width: Math.round(b.width), height: Math.round(b.height),
-        railWidth: Math.round(rail.width), scrim: scrim ? getComputedStyle(scrim).pointerEvents : null };
+        railWidth: Math.round(rail.width), railShown: getComputedStyle(document.querySelector('#kit-rail > k-rail')).visibility,
+        scrim: scrim ? getComputedStyle(scrim).pointerEvents : null,
+        navIds: nav && getComputedStyle(nav).display !== 'none'
+          ? [...nav.shadowRoot.querySelectorAll('[data-id]')].map((b2) => b2.getAttribute('data-id')) : null,
+        navValue: nav ? nav.getAttribute('value') : null,
+        pillsShown: pills ? getComputedStyle(pills).visibility : null };
     });
     check((await railMore()).label === 'Plus' && (await panel()).display === 'none', 'before Plus, the rail says Plus and the shipped sidebar is away');
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
     const out = await panel();
-    check(out.display === 'flex' && out.width === 260 && out.x === out.railWidth && out.height === 1024,
-      `Plus puts the shipped sidebar out beside the rail (${JSON.stringify(out)})`);
-    check(out.scrim === 'auto', 'and the scrim takes the taps meant for elsewhere');
+    check(out.display === 'flex' && out.width === 260 && out.x === 0 && out.height === 1024 && out.railWidth === 88,
+      `Plus puts the shipped sidebar in the rail's own place, 260 wide (${JSON.stringify(out)})`);
+    check(out.railShown === 'hidden', 'the rail steps back under it, its 88 still in the layout so nothing reflows');
+    check(out.navIds && out.navIds.join() === 'floor,takeaway,waiting,kitchen,more' && out.navValue === 'floor',
+      `the panel's head carries the same five destinations (${out.navIds && out.navIds.join(', ')})`);
+    check(out.pillsShown === 'hidden', "and the shipped mode pills, which repeat three of them, are not drawn twice");
+    check(out.scrim === 'auto', 'the scrim takes the taps meant for elsewhere');
     const moinsOut = await railMore();
     check(moinsOut.label === 'Moins' && moinsOut.open, 'and the same rail item now reads Moins');
     check(await page.evaluate(() => document.querySelector('k-rail').getAttribute('value') === 'floor'),
@@ -396,9 +407,13 @@ try {
       const hit = document.elementFromPoint(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
       return b.width > 0 && b.height > 0 && !!hit && el.contains(hit);
     }), 'a shipped control inside it (Cash in or out) is on screen and takes the tap');
-    await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
+    check(await page.evaluate(() => {
+      const nav = document.querySelector('.sidebar > k-sidebar');
+      return nav.shadowRoot.querySelector('[data-id="more"]').textContent.trim() === 'Moins';
+    }), 'the last of them reads Moins');
+    await page.evaluate(() => document.querySelector('.sidebar > k-sidebar').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
-    check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'Moins puts it away again');
+    check((await panel()).display === 'none' && (await railMore()).label === 'Plus', 'Moins puts it away again and the rail comes back');
     await page.evaluate(() => document.querySelector('k-rail').shadowRoot.querySelector('[data-id="more"]').click());
     await sleep(700);
     await page.evaluate(() => document.getElementById('kit-more-scrim').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));

@@ -184,23 +184,35 @@ html[data-k-pay-scroll] #kit-pay-layer { position: absolute; inset-block: 0 auto
 html[data-k-till] .sidebar { display: none !important; }
 #kit-rail { flex: 0 0 88px; width: 88px; height: 100%; min-height: 0; }
 #kit-rail > k-rail { display: block; height: 100%; }
-/* Plus expands the shipped sidebar instead of opening a sheet (owner,
-   2026-10-16): the black bar comes back beside the rail, every control in it
-   live and where the cashier already knows it. The rail keeps its place and
-   its Plus reads Moins; the scrim takes the tap that puts it away, so a tap
-   meant for the panel never lands on a menu tile underneath. */
+/* Plus REPLACES the rail with the shipped sidebar (owner, 2026-10-16): not a
+   second bar beside it, which only made the screen tighter. The black bar
+   takes the rail's own place and carries the same five destinations at its
+   head, under the same wordmark; the rail waits underneath, its 88 still in
+   the layout so the menu never reflows. The scrim takes the tap that puts the
+   panel away, so a tap meant for it never lands on a menu tile. */
 html[data-k-till][data-k-till-more] .sidebar {
   display: flex !important;
   position: fixed;
   inset-block: 0;
-  inset-inline-start: 88px;
+  inset-inline-start: 0;
   inset-inline-end: auto;
   width: 260px;
-  max-width: calc(100vw - 88px);
+  max-width: 100vw;
   z-index: 42;
   transform: none;
   box-shadow: var(--k-shadow-2);
 }
+/* The rail's own items are the panel's head while it is out, so the rail
+   itself steps back and the shipped mode pills, which repeat three of them,
+   are not drawn twice. Both keep their boxes: nothing moves underneath. */
+html[data-k-till-more] #kit-rail > k-rail,
+html[data-k-till-more] .sidebar > .mode-selector { visibility: hidden; }
+html[data-k-till-more] .sidebar > .mode-selector { position: absolute; pointer-events: none; }
+/* The nav at the panel's head is the kit's; the shipped bar dresses it in its
+   own dark palette, in kiwi-caisse.html beside the pills it replaces, because
+   that palette is the host's and not the kit's to know. */
+html[data-k-till-more] .sidebar > k-sidebar { display: block; margin-block-end: 4px; }
+html:not([data-k-till-more]) .sidebar > k-sidebar { display: none; }
 #kit-more-scrim {
   position: fixed;
   inset: 0;
