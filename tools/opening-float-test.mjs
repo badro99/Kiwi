@@ -10,7 +10,10 @@
  *   · flag on: the shipped chips are not drawn and Open the till opens
  *     <k-cash-count mode="open">: the key figure is the counted float,
  *     labelled count.opening_float, 0.00 before any entry; no Expected, no
- *     Difference; count.open waits for a count;
+ *     Difference; count.open waits for an amount;
+ *   · the opening is TYPED (owner, 2026-10-16): no denomination rows, the
+ *     keypad carries a decimal key, and count.by_denomination is the second
+ *     way in; count.back_to_total brings what was counted back as the figure;
  *   · the last float is a chip to tap (count.same_as_last), never
  *     preselected; a row typed after it counts the rows;
  *   · count.open runs the shipped opening: openingFloat, the cash-session
@@ -42,6 +45,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox', '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'] });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0;
+const NOTES_AND_COINS = 11;   /* 4 notes + 7 coins, as till.js lists them */
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 
 async function openTill(flag) {
@@ -119,7 +123,10 @@ try {
     return {
       open: s.hasAttribute('open'), mode: c.getAttribute('mode'),
       label: R.querySelector('.fig .k-foot').textContent, fig: R.querySelector('[data-key-figure]').textContent,
-      parts: R.querySelectorAll('.sum [data-k-part]').length, sumText: R.querySelector('.sum').textContent.trim(),
+      parts: R.querySelectorAll('.sum [data-k-part]').length, sumText: (R.querySelector('.sum') || { textContent: '' }).textContent.trim(),
+      rows: R.querySelectorAll('[data-denom]').length,
+      dec: !!R.querySelector('[data-kp-key="dec"]'), next: !!R.querySelector('[data-kp-key="next"]'),
+      alt: (R.querySelector('[data-w="by-denom"]') || { textContent: '' }).textContent.trim(),
       commit: R.querySelector('[data-w="commit"]').textContent.trim(), disabled: R.querySelector('[data-w="commit"]').disabled,
       chip: R.querySelector('[data-chip="same"]') && R.querySelector('[data-chip="same"]').textContent.trim(),
       chipOn: R.querySelector('[data-chip="same"]') && R.querySelector('[data-chip="same"]').getAttribute('aria-checked'),
@@ -129,20 +136,48 @@ try {
   check(!!sheet && sheet.open && sheet.mode === 'open', 'Open the till opens the kit\'s count sheet in mode open');
   check(sheet.label === await t('count.opening_float') && /^0[.,]00/.test(sheet.fig.replace(/\s/g, '')), `the key figure is the float being counted, ${sheet.fig.trim()}, labelled count.opening_float`);
   check(sheet.parts === 0 && !sheet.sumText, 'no Expected and no Difference at open');
-  check(sheet.commit.indexOf(await t('count.open')) >= 0 && sheet.disabled, 'count.open waits for a count');
+  check(sheet.rows === 0 && sheet.dec && !sheet.next, 'the opening is typed: no denomination rows, a decimal key and no Next');
+  check(sheet.alt === await t('count.by_denomination'), 'counting note by note is the second way in, one tap away');
+  check(sheet.commit.indexOf(await t('count.open')) >= 0 && sheet.disabled, 'count.open waits for an amount');
   check(sheet.chip === await t('count.same_as_last', { amount: await page.evaluate(() => KiwiKit.money(500, 2)) }) && sheet.chipOn !== 'true', 'the last float is a chip to tap, not preselected');
   check(!sheet.shift, 'nothing is opened while the sheet counts');
 
+  const state = () => page.evaluate(() => {
+    const c = document.querySelector('k-sheet k-cash-count');
+    return { counted: c.counted(), disabled: c.shadowRoot.querySelector('[data-w="commit"]').disabled, rows: c.shadowRoot.querySelectorAll('[data-denom]').length };
+  });
+  for (const k of ['2', '0', '0']) { await tap(`[data-kp-key="${k}"]`); await sleep(80); }
+  let st = await state();
+  check(st.counted === 200 && !st.disabled, `typed on the keypad: ${st.counted}.00 counted, count.open ready`);
+
   await tap('[data-chip="same"]');
   await sleep(150);
-  let st = await page.evaluate(() => { const c = document.querySelector('k-sheet k-cash-count'); return { counted: c.counted(), disabled: c.shadowRoot.querySelector('[data-w="commit"]').disabled }; });
+  st = await state();
   check(st.counted === 500 && !st.disabled, 'the chip tapped: 500.00 counted, count.open ready');
+
+  await tap('[data-w="by-denom"]');
+  await sleep(150);
+  st = await state();
+  check(st.rows === NOTES_AND_COINS && st.counted === 500, `count.by_denomination opens the ${st.rows} rows, carrying the 500.00 over`);
   await tap('[data-denom="200"]');
   await sleep(100);
   await tap('[data-kp-key="1"]');
   await sleep(150);
-  st = await page.evaluate(() => { const c = document.querySelector('k-sheet k-cash-count'); return { counted: c.counted() }; });
+  st = await state();
   check(st.counted === 200, `a row typed after the chip counts the rows (${st.counted})`);
+
+  await tap('[data-w="enter-total"]');
+  await sleep(150);
+  st = await state();
+  check(st.rows === 0 && st.counted === 200, 'count.back_to_total returns to the figure, carrying what was counted');
+  await tap('[data-kp-key="del"]');
+  await sleep(150);
+  st = await state();
+  check(st.counted === 20, `the carried figure is editable: one delete leaves ${st.counted}.00`);
+  await tap('[data-kp-key="0"]');
+  await sleep(150);
+  st = await state();
+  check(st.counted === 200, 'typed back to 200.00');
 
   await tap('[data-w="commit"]');
   await page.waitForFunction(() => !!shiftOpenedAt, { timeout: 20000 });

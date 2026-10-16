@@ -495,6 +495,9 @@
     setup: function () {
       var self = this, R = this.shadowRoot;
       this.__n = {}; this.__sel = null; this.__any = false; this.__reason = null; this.__stage = 'cash'; this.__card = '';
+      /* An opening types its total on the keypad (owner, 2026-10-16): counting
+         the drawer note by note is the second way in, not the first. */
+      this.__amt = ''; this.__detail = false;
       K.tap(R, '[data-denom]', function (el) {
         self.__sel = el.getAttribute('data-denom');
         self.__typed = false;
@@ -506,6 +509,14 @@
           var rc = C.keypad.input(self.__card, key, { decimals: 2, maxInt: 7 });
           if (!rc.ok && key !== 'del') return;
           self.__card = rc.text; self.render(); return;
+        }
+        if (self.totalMode()) {
+          var ra = C.keypad.input(self.__amt, key, { decimals: 2, maxInt: 7 });
+          if (!ra.ok && key !== 'del') return;
+          self.__amt = ra.text;
+          self.__total = ra.text === '' ? null : C.keypad.value(ra.text);
+          self.__any = ra.text !== '';
+          self.render(); return;
         }
         var all = NOTES.concat(COINS).map(String);
         if (self.__sel == null) self.__sel = all[0];
@@ -521,7 +532,7 @@
       });
       C.chip.bind(R, function (v, g, mode, el) {
         if (el && el.closest && el.closest('[data-reasons]')) { self.__reason = v; self.render(); return; }
-        if (v === 'same') { self.__total = self.c().lastFloat; self.__any = true; self.render(); }
+        if (v === 'same') { self.__total = self.c().lastFloat; self.__amt = String(self.__total); self.__any = true; self.render(); }
       });
       C.button.bind(R, function (el, g) {
         if (el.getAttribute('data-w') === 'commit') {
@@ -531,10 +542,23 @@
           self.emit(closing ? 'close' : 'open', null, { counts: self.__n, counted: self.counted(), difference: self.diff(),
             reason: self.outside() ? self.__reason : null, cardTotal: self.__stage === 'card' ? C.keypad.value(self.__card) : null, gestureId: g });
         } else if (el.getAttribute('data-w') === 'card-back') { self.__stage = 'cash'; self.render();
-        } else if (el.getAttribute('data-w') === 'enter-total') self.emit('enter-total', null, { gestureId: g });
+        } else if (el.getAttribute('data-w') === 'enter-total') {
+          /* On an opening the kit holds both ways itself; on a close the host
+             still opens its shipped total box. */
+          if (self.str('mode', 'close') === 'open') {
+            /* What was counted comes back as the typed figure, editable. */
+            var c = self.counted();
+            self.__amt = self.__any && c ? String(c) : '';
+            self.__total = self.__amt === '' ? null : c;
+            self.__detail = false; self.render(); return;
+          }
+          self.emit('enter-total', null, { gestureId: g });
+        } else if (el.getAttribute('data-w') === 'by-denom') { self.__detail = true; self.render(); }
       }, '[data-w]');
     },
     c: function () { return this.__count || (this.__count = {}); },
+    /* The opening's first screen: one amount on the keypad, no rows. */
+    totalMode: function () { return this.str('mode', 'close') === 'open' && !this.__detail; },
     counted: function () {
       if (this.__total != null) return this.__total;
       var n = this.__n, c = 0;
@@ -559,6 +583,7 @@
       var self = this, s = this.c(), open = this.str('mode', 'close') === 'open', f = F();
       var tol = this.tol();
       if (this.__stage === 'card') { this.renderCard(); return; }
+      if (this.totalMode()) { this.renderTotal(); return; }
       var row = function (d) {
         var n = self.__n[d] || 0, sub = fromCents(Math.round(d * 100) * n), lab = money(d);
         var on = String(d) === self.__sel;
@@ -595,10 +620,27 @@
         (open && s.lastFloat ? C.chip.group({ options: [{ value: 'same', label: t('count.same_as_last', { amount: money(s.lastFloat) }), ariaLabel: t('count.same_as_last_a11y', { amount: money(s.lastFloat) }) }], mode: 'multi' }) : '') +
         '<div data-k-group><p class="k-foot k-ink2 sh">' + th('count.notes') + '</p><ul class="dl">' + NOTES.map(row).join('') + '</ul>' +
         '<p class="k-foot k-ink2 sh">' + th('count.coins') + '</p><ul class="dl">' + COINS.map(row).join('') + '</ul></div>' +
-        C.button.render({ variant: 'plain', label: t('count.enter_total'), id: 'et', attrs: ' data-w="enter-total"' }) +
+        '<div class="alt">' + C.button.render({ variant: 'plain', label: t(open ? 'count.back_to_total' : 'count.enter_total'), id: 'et', attrs: ' data-w="enter-total"' }) + '</div>' +
         '<div class="sum">' + summary + '</div></div>' +
         '<div class="kp">' + C.keypad.render({ next: true, label: t('count.title') }) +
         C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cm', attrs: ' data-w="commit"', label: t(open ? 'count.open' : 'count.close'), disabled: !canCommit, reason: !canCommit ? why : '' }) +
+        '</div></div>';
+    },
+    /* The opening float, typed (owner, 2026-10-16). The drawer's amount is one
+       figure on the keypad; the last float is a chip; counting note by note is
+       the second way in, one tap away and unchanged. */
+    renderTotal: function () {
+      var s = this.c(), canOpen = this.__any;
+      this.shadowRoot.innerHTML = '<div class="cc cc--t"><div class="col">' +
+        '<h2 class="k-heading ti">' + th('count.open_title') + '</h2>' +
+        '<div class="fig"><span class="k-foot k-ink2">' + th('count.opening_float') + '</span>' +
+        '<span class="k-display k-num" data-key-figure>' + numHtml(money(this.counted())) + '</span></div>' +
+        '<p class="k-body k-ink2 hint">' + th('count.float_hint') + '</p>' +
+        (s.lastFloat ? C.chip.group({ options: [{ value: 'same', label: t('count.same_as_last', { amount: money(s.lastFloat) }), ariaLabel: t('count.same_as_last_a11y', { amount: money(s.lastFloat) }) }], mode: 'multi' }) : '') +
+        '<div class="alt">' + C.button.render({ variant: 'plain', label: t('count.by_denomination'), id: 'bd', attrs: ' data-w="by-denom"' }) + '</div>' +
+        '</div><div class="kp">' + C.keypad.render({ label: t('count.opening_float') }) +
+        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cm', attrs: ' data-w="commit"',
+          label: t('count.open'), disabled: !canOpen, reason: !canOpen ? t('count.open_hint') : '' }) +
         '</div></div>';
     },
     /* The card step: the terminal's Z total typed beside Kiwi's own. */
@@ -632,7 +674,13 @@
       '.sb{width:96px;text-align:end}' +
       '.sum{position:sticky;bottom:0;padding-block:12px;background-color:var(--k-surface-1);box-shadow:inset 0 1px 0 var(--k-line)}' +
       '.sl{display:flex;justify-content:space-between;gap:12px;min-height:28px;align-items:baseline}.sub{margin:0 0 4px}' +
-      '.kp{display:flex;flex-direction:column;gap:16px;align-self:start;position:sticky;top:0}'
+      '.kp{display:flex;flex-direction:column;gap:16px;align-self:start;position:sticky;top:0}' +
+      /* The typed opening: no rows, so the column breathes and the keypad leads. */
+      '.cc--t{align-items:start}.cc--t .fig{margin-block-end:8px}.hint{margin:0 0 16px;max-width:30ch}' +
+      '.alt{margin-block-start:16px;margin-inline-start:-4px}.cc--t .alt{margin-block-start:24px}' +
+      /* The wrapper is a column flex box: without this the plain button
+         stretches and its label reads as centred. */
+      '.alt .k-btnw{align-items:flex-start}'
   });
 
   /* ── <k-split> .bill {total, lines:[{id, name, amount}]} .paidShares ────── */
