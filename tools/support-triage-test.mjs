@@ -49,7 +49,7 @@ const SECRET = 'support-triage-test-secret-0123456789abcdef';
 const MERCHANT = 'cafe-triage-test';
 
 /* Réponse de Clef conforme à schema-output.json. */
-function clef({ urgency = [0.05, 0.15, 0.8], category = 'caisse', categoryP, blocked = 0.9, keyedBy = 'index', model = 'clef-flash' } = {}) {
+function clef({ urgency = [0.05, 0.15, 0.8], category = 'caisse', categoryP, blocked = 0.9, keyedBy = 'index', model = 'clef' } = {}) {
   const ids = ['caisse', 'impression', 'paiement', 'compte', 'menu_stock', 'autre'];
   const probs = categoryP || Object.fromEntries(ids.map((id) => [id, id === category ? 0.82 : 0.036]));
   const labels = TRIAGE_QUESTIONS.urgence.criteria;
@@ -117,7 +117,7 @@ try {
   /* ── 1. La requête respecte la documentation de Clef ─────────────────────── */
   const request = buildTriageRequest({ summary: 'la caisse ne s\'ouvre plus', storeType: 'restaurant' });
   eq(Object.keys(request).sort(), ['model', 'questions', 'state'], 'texte seul : model, state, questions, rien d\'autre');
-  ok(request.model === 'clef-flash' && /^\s*(clef|clef-flash)\s*$/.test(request.model), 'model suit le motif du schéma');
+  ok(request.model === 'clef' && /^\s*(clef|clef-flash)\s*$/.test(request.model), 'model suit le motif du schéma');
   ok(typeof request.state === 'string' && request.state.includes('la caisse ne s\'ouvre plus'), 'le message du commerçant est dans state');
   ok(request.state.indexOf('la caisse') < request.state.indexOf('restaurant'), 'le message passe avant le contexte (Clef lit environ 2 000 jetons)');
   const qids = Object.keys(request.questions);
@@ -137,7 +137,7 @@ try {
 
   /* ── 2. Lecture de la réponse ───────────────────────────────────────────── */
   const read = readTriageAnswers(clef({ urgency: [0.02, 0.08, 0.9], category: 'impression', blocked: 0.74 }), 1234);
-  ok(read && read.v === 1 && read.model === TRIAGE_MODEL && read.served === 'clef-flash' && read.ts === 1234, 'modèle et date stockés');
+  ok(read && read.v === 1 && read.model === TRIAGE_MODEL && read.served === 'clef' && read.ts === 1234, 'modèle et date stockés');
   eq(read.urgency.p, [0.02, 0.08, 0.9], 'probabilités par niveau conservées');
   ok(read.urgency.level === 'now' && read.urgency.now === 0.9 && read.urgency.top === 0.9, 'niveau d\'urgence en tête');
   ok(read.category.id === 'impression' && read.category.top === 0.82 && Object.keys(read.category.p).length === 6, 'catégorie avec sa probabilité et la distribution');
@@ -166,14 +166,14 @@ try {
     ok(res.status === 200 && body.ok === true, 'la demande est créée');
     ok(env.__calls.length === 1, 'un seul appel Clef par demande');
     const [model, payload, opts] = env.__calls[0];
-    ok(model === '@cf/cloudflare/clef-flash', 'modèle @cf/cloudflare/clef-flash');
-    ok(payload.model === 'clef-flash' && typeof payload.state === 'string' && payload.state.includes('La caisse ne s\'ouvre plus'), 'state = le message');
+    ok(model === '@cf/cloudflare/clef', 'modèle @cf/cloudflare/clef');
+    ok(payload.model === 'clef' && typeof payload.state === 'string' && payload.state.includes('La caisse ne s\'ouvre plus'), 'state = le message');
     ok(!('images' in payload), 'pas d\'image à la création');
     eq(opts, GATEWAY_OPTS, 'passe par la passerelle AI Gateway kiwi (aucun appel direct)');
     ok(!payload.state.includes('+212600000000') && !JSON.stringify(payload).includes('contact'), 'le contact du commerçant n\'est jamais envoyé au modèle');
     const r = row(env, body.ticket.id);
     const t = JSON.parse(r.triage);
-    ok(t.model === '@cf/cloudflare/clef-flash' && t.verdict === 'urgent' && t.blocked === 0.88 && t.urgency.now === 0.9 && t.category.id === 'caisse', 'tri stocké avec modèle, probabilités et verdict');
+    ok(t.model === '@cf/cloudflare/clef' && t.verdict === 'urgent' && t.blocked === 0.88 && t.urgency.now === 0.9 && t.category.id === 'caisse', 'tri stocké avec modèle, probabilités et verdict');
     ok(!JSON.stringify(body).match(/triage|clef|0\.88/), 'la réponse au commerçant ne contient aucune étiquette');
     ok(Object.keys(body.ticket).sort().join() === 'category,channel,id,priority,reference', 'forme de la réponse inchangée');
     const mine = await (await listTickets({ request: new Request(`https://kiwi.test/api/support/tickets?merchant=${MERCHANT}`, { headers: { Cookie: await cookie() } }), env })).json();
@@ -364,7 +364,7 @@ try {
     ok(DATASET.some((t) => t.text === 'imprimante ma kat5demch') && DATASET.some((t) => /prix d'un plat/.test(t.text)), 'jeu d\'évaluation : les cas du cahier des charges');
     const clean = { ...process.env }; delete clean.CLOUDFLARE_ACCOUNT_ID; delete clean.CLOUDFLARE_API_TOKEN;
     const dry = execFileSync(process.execPath, [fileURLToPath(new URL('./support-triage-eval.mjs', import.meta.url)), '--dry'], { env: clean, encoding: 'utf8' });
-    ok(/MODE SEC/.test(dry) && /Catégorie\s+: 100\.0 %/.test(dry) && /"model": "clef-flash"/.test(dry), 'mode sec : requête affichée, calcul exercé, aucun réseau');
+    ok(/MODE SEC/.test(dry) && /Catégorie\s+: 100\.0 %/.test(dry) && /"model": "clef"/.test(dry), 'mode sec : requête affichée, calcul exercé, aucun réseau');
     const unset = spawnSync(process.execPath, [fileURLToPath(new URL('./support-triage-eval.mjs', import.meta.url))], { env: clean, encoding: 'utf8' });
     ok(unset.status === 2 && /CLOUDFLARE_ACCOUNT_ID/.test(unset.stderr) && /CLOUDFLARE_API_TOKEN/.test(unset.stderr), 'sans variables : message clair et code 2');
     const evalSrc = fs.readFileSync(new URL('./support-triage-eval.mjs', import.meta.url), 'utf8');

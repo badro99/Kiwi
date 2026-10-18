@@ -1,6 +1,6 @@
 // functions/api/_support-triage.js
 //
-// Tri automatique des demandes de support avec Clef (@cf/cloudflare/clef-flash),
+// Tri automatique des demandes de support avec Clef (@cf/cloudflare/clef),
 // le modèle de décision de Cloudflare : on lui donne un texte (« state ») et des
 // questions typées, il rend une probabilité calibrée par option, en un seul
 // passage et sans générer de texte.
@@ -26,7 +26,12 @@ import { runAiWithGateway } from './ai/_run.js';
 import { quotaOk, DAILY_CAPS } from './ai/_quota.js';
 import { cleanText, parseJson } from './_support.js';
 
-export const TRIAGE_MODEL = '@cf/cloudflare/clef-flash';
+/* Clef complet (27B), pas Clef-flash (9B) : sur les 31 demandes synthétiques de
+ * tools/support-triage-eval.mjs (2026-10-18), catégorie 96,8 % contre 93,5 %,
+ * urgence 87,1 % contre 77,4 %, rappel d'alerte 11/11 contre 10/11. Il coûte
+ * 0,24 $ le million de jetons d'entrée contre 0,038 $, soit environ 13 neurones
+ * par demande : négligeable devant les 10 000 neurones gratuits par jour. */
+export const TRIAGE_MODEL = '@cf/cloudflare/clef';
 export const TRIAGE_VERSION = 1;
 
 /* Seuils. Clef rend des probabilités calibrées, donc 0,5 est le point où
@@ -92,14 +97,14 @@ function prob(n) { return typeof n === 'number' && Number.isFinite(n) && n >= 0 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
 /* Corps de la requête Clef. Forme tirée de la documentation Workers AI
- * (clef-flash, schema-input.json) : { model:'clef-flash', state, questions,
+ * (clef et clef-flash, schema-input.json) : { model:'clef', state, questions,
  * images? } ; images = { content_type, base64 } (PNG, JPEG ou WebP, 4 max, pas
  * d'URL distante). */
 export function buildTriageRequest({ summary, storeType, images } = {}) {
   const text = cleanText(summary, MAX_SUMMARY_CHARS);
   const type = cleanText(storeType, 40);
   const payload = {
-    model: 'clef-flash',
+    model: TRIAGE_MODEL.split('/').pop(),
     state: 'Message d\'un commerçant au support Kiwi (français, arabe, darija ou anglais) :\n' + text
       + (type ? '\n\nType d\'établissement : ' + type : ''),
     questions: TRIAGE_QUESTIONS,

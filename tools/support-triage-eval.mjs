@@ -15,7 +15,7 @@
 // coûte environ 0,038 $ par million de jetons d'entrée : les ~30 demandes
 // ci-dessous pèsent quelques centimes.
 //
-// Options : --dry  --lang fr|ar|darija|en  --limit N  --concurrency N  --show-errors
+// Options : --dry  --model clef|clef-flash|clef-omni  --lang fr|ar|darija|en  --limit N  --concurrency N  --show-errors
 // Code de sortie 0 si le rappel d'alerte >= 0,9 et les fausses alertes <= 0,2
 // (les seuils de la production, ALERT_AT = 0,5), sinon 1 ; 2 si les variables manquent.
 import { pathToFileURL } from 'node:url';
@@ -27,6 +27,8 @@ import {
 const args = process.argv.slice(2);
 const flag = (name) => args.includes('--' + name);
 const opt = (name, fallback) => { const i = args.indexOf('--' + name); return i >= 0 && args[i + 1] ? args[i + 1] : fallback; };
+/* --model clef | clef-flash | clef-omni : le modèle mesuré (par défaut, celui de la production). */
+const MODEL = opt('model', TRIAGE_MODEL.split('/').pop());
 
 /* expect.urgency : 0 peut attendre, 1 aujourd'hui, 2 maintenant (caisse ou ventes
  * bloquées, ou argent en jeu : double débit, par exemple).
@@ -105,7 +107,7 @@ function perfectAnswer(t) {
 }
 
 async function callClef(account, token, payload) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${TRIAGE_MODEL}`;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/@cf/cloudflare/${MODEL}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -191,7 +193,7 @@ async function main() {
   if (limit > 0) data = data.slice(0, limit);
   const dry = flag('dry');
 
-  console.log(`Évaluation de ${TRIAGE_MODEL} · ${data.length} demandes synthétiques (${[...new Set(data.map((t) => t.lang))].join(', ')})` + (dry ? ' · MODE SEC : aucun appel réseau, modèle parfait simulé' : ''));
+  console.log(`Évaluation de @cf/cloudflare/${MODEL} · ${data.length} demandes synthétiques (${[...new Set(data.map((t) => t.lang))].join(', ')})` + (dry ? ' · MODE SEC : aucun appel réseau, modèle parfait simulé' : ''));
 
   const account = process.env.CLOUDFLARE_ACCOUNT_ID || '';
   const token = process.env.CLOUDFLARE_API_TOKEN || '';
@@ -209,6 +211,7 @@ async function main() {
   const results = await mapLimit(data, Math.max(1, Number(opt('concurrency', 3))), async (t) => {
     try {
       const payload = buildTriageRequest({ summary: t.text, storeType: 'restaurant' });
+      payload.model = MODEL;
       const response = dry ? perfectAnswer(t) : await callClef(account, token, payload);
       const triage = readTriageAnswers(response);
       if (!triage) return { t, triage: null, error: 'réponse hors schéma' };
