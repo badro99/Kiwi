@@ -261,7 +261,9 @@
   ];
   const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
   function balanceOf(c) {
-    return c.hist.reduce((s, h) => s + (h.type === 'debt' ? h.amt : -h.amt), 0);
+    /* Au centime : 12,10 + 3,20 donnait 15,2999…, et un règlement complet
+       laissait −0,0000001 sur l'ardoise. */
+    return r2(c.hist.reduce((s, h) => s + (h.type === 'debt' ? h.amt : -h.amt), 0));
   }
   function oldestDebt(c) {
     /* date de la plus ancienne dette tant que le solde reste > 0 (FIFO) */
@@ -1210,8 +1212,11 @@
     const total = ticketTotal(t);
     if (total <= 0) return;
     const label = t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} articles)`;
-    c.hist.push(histEntry('debt', label, Math.round(total)));
-    day.creditAdded += Math.round(total);
+    /* Le montant exact du panier, au centime. Math.round notait 12,50 MAD
+       comme 13 sur l'ardoise du voisin : au-dessus du prix affiché, ce que la
+       caisse ne fait jamais (propriétaire, 19 octobre). */
+    c.hist.push(histEntry('debt', label, r2(total)));
+    day.creditAdded = r2(day.creditAdded + total);
     decrementStock(t);
     day.tickets++;
     closeVeil('#ep-carnetpick-veil');
@@ -1270,8 +1275,8 @@
       if (e.target.closest('#ep-attach-cancel')) return;
       if (state.attachFrom) {
         const c = CRED[b.dataset.epArd];
-        c.hist.push(histEntry('debt', state.attachFrom.label, Math.round(state.attachFrom.total)));
-        day.creditAdded += Math.round(state.attachFrom.total);
+        c.hist.push(histEntry('debt', state.attachFrom.label, r2(state.attachFrom.total)));
+        day.creditAdded = r2(day.creditAdded + state.attachFrom.total);
         if (epicerieOps) epicerieOps.save('Ardoise');
         toast(`${fmtMAD2(state.attachFrom.total)} sur l'ardoise de ${c.name}`);
         state.attachFrom = null;
@@ -1393,8 +1398,8 @@
     $('#ep-qd-in', pv).oninput = (e) => { amt = Math.max(0, +e.target.value || 0); $('#ep-qd-val', pv).textContent = fmtMAD(amt); };
     $('#ep-qd-ok', pv).onclick = () => {
       if (amt <= 0) { toast('Montant invalide'); return; }
-      c.hist.push(histEntry('debt', 'Achat à crédit', Math.round(amt)));
-      day.creditAdded += Math.round(amt);
+      c.hist.push(histEntry('debt', 'Achat à crédit', r2(amt)));
+      day.creditAdded = r2(day.creditAdded + amt);
       closeVeil('#ep-pay-veil');
       queueIfOffline('Ardoise');
       toast(`+${fmtMAD(amt)} sur l'ardoise de ${c.name}, solde ${fmtMAD(balanceOf(c))}`);
@@ -1481,7 +1486,7 @@
       $$('[data-sp]', el).forEach((b) => {
         b.onclick = () => {
           const v = b.dataset.sp;
-          pay = v === 'half' ? Math.round(bal / 2 / 5) * 5 : v === 'all' ? bal : Math.min(bal, +v);
+          pay = v === 'half' ? Math.min(bal, Math.round(bal / 2 / 5) * 5) : v === 'all' ? bal : Math.min(bal, +v);
           if (amtInput) amtInput.value = pay;
           if (received < pay) { received = Math.ceil(pay); $('#ep-settle-in', el).value = received; }
           refresh();
@@ -1494,7 +1499,9 @@
       refresh();
       $('#ep-settle-ok', el).onclick = () => {
         const rendu = Math.max(0, received - pay);
-        c.hist.push(histEntry('pay', pay >= bal ? 'Règlement (soldé)' : 'Règlement partiel', Math.round(pay)));
+        /* Le règlement au centime, comme la dette : arrondi, « tout régler »
+           sur 12,50 notait 13 payés, et l'ardoise passait à −0,50. */
+        c.hist.push(histEntry('pay', pay >= bal - 0.004 ? 'Règlement (soldé)' : 'Règlement partiel', r2(pay)));
         /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir.
            Le toast l'annonçait déjà, mais ni la recette du jour ni le tableau
            de bord n'en voyaient la couleur : la journée était sous-comptée de

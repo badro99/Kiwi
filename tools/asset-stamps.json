@@ -1092,16 +1092,16 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "111",
-    "sha": "6ddde8767f20484c"
+    "v": "112",
+    "sha": "3c348571cc5b598a"
   },
   "assets/pos-epicerie.css": {
-    "v": "13",
+    "v": "14",
     "sha": "028c69129c393d18"
   },
   "assets/pos-epicerie.js": {
-    "v": "13",
-    "sha": "cb707eb2a1e5dc8f"
+    "v": "14",
+    "sha": "088ee1478e61b06b"
   },
   "assets/pos-fastfood.css": {
     "v": "12",

@@ -241,5 +241,32 @@ ok('trois langues pour chaque libellé ajouté', () => {
   }
 });
 
+/* ── 5. au centime : l'ardoise ne note jamais plus que le panier ──
+   Math.round inscrivait un panier de 12,50 MAD comme 13 sur le carnet du
+   voisin, et « tout régler » sur 12,50 notait 13 payés. */
+function balanceRuntime() {
+  const line = EP.match(/const r2 = \(n\) => Math\.round\(n \* 100\) \/ 100;/);
+  assert.ok(line, 'r2 found');
+  const c = vm.createContext({});
+  vm.runInContext(line[0] + '\n' + grab(EP, 'function balanceOf(') + '\nthis.bal = balanceOf; this.r2 = r2;', c);
+  return c;
+}
+ok('aucune ligne d\'ardoise n\'est arrondie au dirham', () => {
+  assert.ok(!/histEntry\([^;]*Math\.round/.test(EP), 'histEntry fed a Math.round amount');
+  assert.ok(!/creditAdded \+= Math\.round/.test(EP), 'day total rounded to the dirham');
+  assert.equal((EP.match(/histEntry\('debt', [^;]*r2\(/g) || []).length, 3, 'three debt paths keep the centimes');
+  assert.ok(/histEntry\('pay', [^;]*r2\(pay\)\)/.test(EP), 'repayment keeps the centimes');
+});
+ok('un panier de 12,50 reste 12,50 sur l\'ardoise, et un règlement complet la solde à 0', () => {
+  const c = balanceRuntime();
+  assert.equal(c.bal({ hist: [{ type: 'debt', amt: 12.5 }] }), 12.5);
+  assert.equal(c.bal({ hist: [{ type: 'debt', amt: 12.1 }, { type: 'debt', amt: 3.2 }] }), 15.3);
+  const after = c.bal({ hist: [{ type: 'debt', amt: 12.1 }, { type: 'debt', amt: 3.2 }, { type: 'pay', amt: c.r2(15.3) }] });
+  assert.ok(Object.is(after, 0) || after === 0, 'settled to exactly 0, got ' + after);
+});
+ok('« la moitié » ne dépasse jamais ce qui est dû', () => {
+  assert.ok(/pay = v === 'half' \? Math\.min\(bal, Math\.round\(bal \/ 2 \/ 5\) \* 5\)/.test(EP));
+});
+
 console.log(`\ncredit-book-test · ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
