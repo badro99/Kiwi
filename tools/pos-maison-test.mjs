@@ -455,7 +455,9 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     const sizesOf = (p) => Object.keys(p.sizes || {});
     const looseOf = () => 0;
     // eslint-disable-next-line no-new-func
-    return new Function('P', 'window', 'stockOf', 'sizesOf', 'looseOf', block + '\n; return { promoForLine, lineDeal, lineBase: (ln) => lineDeal(ln).price };')(P, fakeWindow || {}, stockOf, sizesOf, looseOf);
+    /* le même arrondi que la caisse : au dirham inférieur (décision 2026-10-19) */
+    const shelfSrc = (jsSrc.match(/  const shelf = [^\n]+\n/) || [''])[0];
+    return new Function('P', 'window', 'stockOf', 'sizesOf', 'looseOf', shelfSrc + block + '\n; return { promoForLine, lineDeal, lineBase: (ln) => lineDeal(ln).price };')(P, fakeWindow || {}, stockOf, sizesOf, looseOf);
   };
   const pct = mkApi({ kind: 'percent', value: 10 });
   ok(pct.lineBase({ pid: 'svc1' }) === 1080, 'set 1200 + promo -10% → 1080');
@@ -471,6 +473,8 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(none.lineBase({ pid: 'svc1' }) === 1200, 'sans moteur promo, prix catalogue');
   ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 120, 'sans moteur, prix pièce catalogue');
   ok(pct.lineDeal({ pid: 'svc1', promo: { price: 100 } }).price === 100, 'estampille plus basse conservée');
+  ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 84.9 }) === 84, 'pièce à 84,90 → 84, jamais 85');
+  ok(pct.lineBase({ pid: 'svc1', isPiece: true, customPrice: 125 }) === 112, 'pièce 125 − 10 % = 112,50 → 112, jamais 113');
 }
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
