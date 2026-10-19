@@ -436,7 +436,12 @@ try {
        Casablanca) ou celle du navigateur (le serveur simulé) : autour de
        minuit elles diffèrent d'un jour, et les deux sont justes. */
     const dmyIn = (tz) => new Intl.DateTimeFormat('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
-    const dmys = [dmyIn(undefined), dmyIn('Africa/Casablanca')];
+    /* Et la date que le navigateur lui-même voit à Casablanca : le Maroc est
+       passé de UTC+1 à UTC+0 le 20 septembre 2026, ce que savent la base de
+       fuseaux de macOS et Chrome, pas celle de Node (2026b). Entre minuit et
+       une heure, Node croit déjà au lendemain. */
+    const pageDmy = await page.evaluate(() => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date()));
+    const dmys = [dmyIn(undefined), dmyIn('Africa/Casablanca'), pageDmy];
     check(dmys.some((dmy) => ref.includes(`Avoir sur facture ${number} du ${dmy}`)) && /Remise accordée/.test(ref), 'le détail d’un avoir cite la facture et le motif : ' + ref);
     check(!(await page.$('[data-inv-act="edit"]')) && !(await page.$('[data-inv-act="pay"]')), 'un avoir émis n’offre ni modification ni paiement');
     await click(page, '[data-inv-act="open-original"]'); await waitDetail(page);
