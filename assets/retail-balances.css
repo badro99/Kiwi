@@ -39,3 +39,32 @@
   .krb-card { grid-template-columns: 1fr; }
   .krb-amount { grid-column: 1; grid-row: auto; margin-top: 5px; }
 }
+
+/* Livraisons à encaisser (delivery-collect.js), au-dessus des acomptes. */
+.kdc { margin: 24px 0 6px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-1); }
+.kdc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.kdc-head h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.kdc-sum { color: var(--forest); font-size: 15px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kdc-sub { margin: 6px 0 14px; color: var(--ink-3); font-size: 13px; line-height: 1.45; }
+.kdc-list { display: grid; gap: 10px; }
+.kdc-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-elev, var(--surface)); }
+.kdc-main { min-width: 0; display: grid; gap: 3px; }
+.kdc-main strong { font-size: 15px; overflow-wrap: anywhere; }
+.kdc-meta { color: var(--ink-3); font-size: 12.5px; }
+.kdc-due { color: var(--ink); font-size: 16px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kdc-go, .kdc-ok { min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--forest); color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; white-space: nowrap; }
+.kdc-ok:disabled { opacity: .5; cursor: default; }
+.kdc-cancel { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; touch-action: manipulation; }
+.kdc-form { grid-column: 1 / -1; display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.kdc-form label { display: grid; gap: 6px; max-width: 320px; }
+.kdc-form label span { color: var(--ink-2); font-size: 12px; font-weight: 700; }
+.kdc-form input { box-sizing: border-box; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 18px; font-variant-numeric: tabular-nums; }
+.kdc-form input:focus { outline: 2px solid var(--forest); outline-offset: 2px; }
+.kdc-err { margin: 0; color: var(--danger, #C94A3A); font-size: 13px; }
+.kdc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .kdc { padding: 16px; }
+  .kdc-card { grid-template-columns: minmax(0, 1fr) auto; }
+  .kdc-go { grid-column: 1 / -1; }
+  .kdc-actions > * { flex: 1 1 0; }
+}

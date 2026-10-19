@@ -1950,6 +1950,9 @@ section('Whole-project regressions');
     /* 2026-10-19 · chaque caisse sur un iPad tactile : − / + du ticket à
        32 px dans les treize métiers, champ code-barres de l'épicerie lisible. */
     'ipad-touch-browser-test.mjs',
+    /* 2026-10-19 · livraisons à encaisser : le livreur rapporte l'argent au
+       comptoir, encaissé une fois, compté le jour où il est reçu. */
+    'delivery-collect-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',

@@ -271,6 +271,10 @@
     "v": "22",
     "sha": "cea922015e83836c"
   },
+  "assets/delivery-collect.js": {
+    "v": "1",
+    "sha": "c4a233aab01c8647"
+  },
   "assets/demoClock.js": {
     "v": "4",
     "sha": "4e5b58e19ee8e03a"
@@ -1072,12 +1076,12 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "78",
+    "v": "79",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "78",
-    "sha": "b518f3cbd753e8e2"
+    "v": "79",
+    "sha": "fda3949472b2e345"
   },
   "assets/pos-coiffure.css": {
     "v": "9",
@@ -1088,8 +1092,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "110",
-    "sha": "1afa426f4eea2798"
+    "v": "111",
+    "sha": "6ddde8767f20484c"
   },
   "assets/pos-epicerie.css": {
     "v": "13",
@@ -1312,8 +1316,8 @@
     "sha": "d1333d22f26e3570"
   },
   "assets/retail-balances.css": {
-    "v": "2",
-    "sha": "edab0ca8744c4ad9"
+    "v": "3",
+    "sha": "d6484d48ef1884bf"
   },
   "assets/retail-balances.js": {
     "v": "4",

@@ -4084,7 +4084,56 @@
       customerName: id => (clById(id) || {}).name || id,
       customerIdForName: query => (clientList().find(c => c.name.toLowerCase().includes(query.toLowerCase())) || {}).id,
       onSelect: payExistingBalance,
+    }).then(() => mountDeliveries(panel));
+  }
+  /* Livraisons à encaisser (delivery-collect.js) : la créance d'une vente
+     partie en livraison, que le livreur rapporte en espèces au comptoir.
+     L'argent entre dans la recette du jour où il est reçu ; le panier, lui,
+     reste sur la vente d'origine (déjà dans Vendus), d'où lines: []. */
+  const demoDelivery = {};                /* démo : saleId → centimes reçus, en mémoire */
+  function mountDeliveries(panel) {
+    const D = window.KiwiDeliveryCollect;
+    const wrap = panel && panel.querySelector('.kiwi-retail-balances');
+    if (!D || !wrap) return;
+    let host = wrap.querySelector('[data-bq-deliveries]');
+    if (!host) {
+      host = document.createElement('div'); host.setAttribute('data-bq-deliveries', '');
+      const head = wrap.querySelector('.krb-head');
+      if (head) head.after(host); else wrap.prepend(host);
+    }
+    void D.render(host, {
+      merchant: merchantSlug(), toast,
+      staff: () => {
+        const op = window.KiwiCaissePairing && window.KiwiCaissePairing.lastOperator && window.KiwiCaissePairing.lastOperator();
+        return { id: (op && op.id) || '', name: (op && op.name) || STAFF.caissiere.name };
+      },
+      onCollected: recordDeliveryCash,
+      demo: IS_DEMO ? {
+        list: () => SALES.filter((x) => x && !x.voided && (x.parts || []).some((p) => p && p.m === 'livraison')).map((x) => {
+          const owed = Math.round((x.parts || []).reduce((n, p) => n + (p && p.m === 'livraison' ? (+p.amount || 0) : 0), 0) * 100);
+          return { saleId: x.id, ref: x.id, label: ((x.lines || [])[0] && ((x.lines[0].name) || (P[x.lines[0].pid] || {}).name)) || 'Vente', ts: +new Date(x.at),
+            owedCents: owed, dueCents: Math.max(0, owed - (demoDelivery[x.id] || 0)), collections: demoDelivery[x.id] ? [{}] : [] };
+        }),
+        collect: (d, cents, id) => {
+          demoDelivery[d.saleId] = (demoDelivery[d.saleId] || 0) + cents;
+          return { ok: true, sale: { id, amountCents: cents, ts: Date.now() }, dueCents: Math.max(0, d.dueCents - cents) };
+        },
+      } : null,
     });
+  }
+  function recordDeliveryCash(paid, d) {
+    if (SALES.some((x) => x && x.serverId === paid.id)) return;      /* un essai rejoué ne compte qu'une fois */
+    const amount = paid.amountCents / 100;
+    const at = new Date(paid.ts || Date.now());
+    SALES.unshift({
+      /* La référence vient du serveur : un id de vente s'affiche partout, on n'y
+         laisse que des caractères de référence. */
+      id: (String(d.ref || d.saleId || 'LIV').replace(/[^\w.-]/g, '').slice(0, 40) || 'LIV') + '-L' + at.getTime(),
+      syncId: paid.id, serverId: paid.id, tenderVersion: 2, at,
+      by: STAFF.caissiere.name, kind: 'livraison-reglement', deliveryOf: d.saleId,
+      methods: 'espèces', parts: [{ m: 'espèces', amount }], lines: [], total: amount,
+    });
+    persistDay(); bqSaveProvisional(true); renderAll();
   }
   function payExistingBalance(row) {
     const R = window.KiwiRetailBalances;
