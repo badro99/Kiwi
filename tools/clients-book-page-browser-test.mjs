@@ -129,6 +129,33 @@ try {
   await page.waitForSelector('[data-bq-cl="c2"] .av', { visible: true });
   const chip = await page.$eval('[data-bq-cl="c2"] .av', (el) => ({ text: el.textContent, px: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor }));
   ok(/Avoir/.test(chip.text) && chip.px >= 12 && chip.bg !== 'rgba(0, 0, 0, 0)', '#105 the checkout picker shows the credit as a readable chip');
+
+  /* A real name at the till's own widths: at 1024 px (iPad landscape) the
+     name column was 80 px and « Fatima-Zahra Benkirane » read « Fatima-Z… ». */
+  await page.evaluate(() => {
+    const key = 'kiwi:clients:v1:' + KiwiClients.bookId();
+    const book = JSON.parse(localStorage.getItem(key));
+    book.list.find((c) => c.id === 'd2').name = 'Mohammed Amine El Idrissi Alaoui';
+    localStorage.setItem(key, JSON.stringify(book));
+  });
+  for (const width of [1024, 390]) {
+    await page.setViewport({ width, height: 860 });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => document.querySelector('[data-bq-view="clientes"][data-kcb-redirect]'));
+    await page.evaluate(() => document.querySelector('[data-bq-view="clientes"]').click());
+    await page.waitForSelector('.kcb-row[data-id="d2"] .kcb-nm', { visible: true });
+    const nm = await page.$eval('.kcb-row[data-id="d2"] .kcb-nm', (el) => {
+      const lh = parseFloat(getComputedStyle(el).lineHeight);
+      const cols = document.querySelector('#kcb-root .kcb-cols');
+      const shown = (box) => [...box.children].filter((n) => n.offsetWidth).map((n) => Math.round(n.getBoundingClientRect().left));
+      return { full: el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1, lines: Math.round(el.clientHeight / lh), title: el.title,
+        chip: !!el.querySelector('.kcb-credit') && el.querySelector('.kcb-credit').getBoundingClientRect().bottom <= el.getBoundingClientRect().bottom + 1,
+        aligned: !cols.offsetWidth || JSON.stringify(shown(cols)) === JSON.stringify(shown(el.closest('.kcb-row'))) };
+    });
+    ok(nm.full && nm.lines <= (width < 900 ? 3 : 2), `${width} px: a long name and its avoir chip are shown whole (${nm.lines} lines)`);
+    ok(nm.chip && /Idrissi Alaoui/.test(nm.title), `${width} px: the avoir chip stays visible and the full name is in the title`);
+    ok(nm.aligned, `${width} px: the column headings sit over their cells`);
+  }
   ok(!errors.length, 'no page errors: ' + errors.join(' | '));
 } finally {
   await browser.close();

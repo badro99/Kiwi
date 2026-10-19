@@ -144,7 +144,9 @@
       '.kcb-who{display:flex;align-items:center;gap:12px;min-width:0;}',
       '.kcb-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:1rem;color:#fff;background:var(--atlas,#0B6E4F);}',
       '.kcb-row .kcb-av{width:36px;height:36px;font-size:.8rem;color:var(--riad,#053B2C);background:color-mix(in srgb,var(--atlas,#0B6E4F) 13%,var(--surface,#fff));}',
-      '.kcb-row .kcb-nm{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      /* Two lines, never cut at seven letters: at 1024 px the one-line ellipsis
+         showed « Fatima-Z… » and hid the avoir chip that rides on the name. */
+      '.kcb-row .kcb-nm{font-weight:600;font-size:.95rem;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;}',
       '.kcb-row .kcb-ph{font-size:.8rem;color:var(--n-500,#6f6c65);margin-top:2px;font-variant-numeric:tabular-nums;}',
       '.kcb-num{font-size:.9rem;font-weight:600;font-variant-numeric:tabular-nums;}',
       '.kcb-num small{font-weight:500;color:var(--n-500,#6f6c65);font-size:.72rem;margin-left:3px;}',
@@ -159,8 +161,11 @@
       '.kcb-seg{display:inline-block;font-size:.68rem;font-weight:600;padding:2px 9px;border-radius:999px;}',
       '.kcb-seg.reg{background:#E6FbEF;color:#075238;}.kcb-seg.vip{background:#FBF0D6;color:#8A6210;}',
       '.kcb-seg.new{background:#E4ECF8;color:#3E78C9;}.kcb-seg.win{background:#FBE3DD;color:#C0492F;}',
+      /* iPad landscape and small laptops: the four fixed columns left the name
+         80 px. Profil goes (the segment tabs above carry it); the counts take what they need. */
+      '@media (min-width:901px) and (max-width:1180px){#kcb-root .kcb-cols,.kcb-row{grid-template-columns:minmax(0,1fr) 70px 100px 120px 132px;}#kcb-root .kcb-c-seg{display:none;}#kcb-root .kcb-ready{white-space:nowrap;}}',
       '@media (max-width:900px){#kcb-root .kcb-page{padding:16px;}#kcb-root .kcb-top{align-items:flex-start;}#kcb-root .kcb-strip{grid-template-columns:repeat(2,minmax(0,1fr));}',
-        '#kcb-root .kcb-cols{display:none;}.kcb-row{grid-template-columns:minmax(0,1fr) auto;padding:10px 14px;}.kcb-row .kcb-c-seg,.kcb-row .kcb-c-visits,.kcb-row .kcb-c-last,.kcb-row .kcb-c-spend{display:none;}}',
+        '#kcb-root .kcb-cols{display:none;}.kcb-row{grid-template-columns:minmax(0,1fr) auto;padding:10px 14px;}.kcb-row .kcb-c-seg,.kcb-row .kcb-c-visits,.kcb-row .kcb-c-last,.kcb-row .kcb-c-spend{display:none;}.kcb-row .kcb-nm{-webkit-line-clamp:3;}}',
       /* Phone : the carnet is a full page with its own way out. The desk page
          leaves by touching the next rail entry; a phone's rail is a drawer the
          carnet sits on top of, so it carries a close control (hidden on desk). */
@@ -597,14 +602,14 @@
     }
     var credits = localCreditsByHolder();
     var target = cfg.model === 'product' ? cfg.product.target : cfg.visit.target;
-    host.innerHTML = '<div class="kcb-cols"><span>Client</span><span>Profil</span><span class="r">Visites</span><span class="r">Dernière visite</span><span class="r">Dépensé</span><span class="r">Fidélité</span></div>' +
+    host.innerHTML = '<div class="kcb-cols"><span>Client</span><span class="kcb-c-seg">Profil</span><span class="r">Visites</span><span class="r">Dernière visite</span><span class="r">Dépensé</span><span class="r">Fidélité</span></div>' +
       rows.map(function (c) {
         var s = KC.segment(c);
         var prog = KC.progress(c, cfg);
         var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + '<small>pts</small>') : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
         return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
           '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-            '<div style="min-width:0"><div class="kcb-nm">' + esc(c.name || 'Sans nom') +
+            '<div style="min-width:0"><div class="kcb-nm" title="' + esc(c.name || '') + '">' + esc(c.name || 'Sans nom') +
               (credits[c.id] ? '<span class="kcb-credit">avoir ' + fmt(credits[c.id]) + ' MAD</span>' : '') + '</div>' +
             '<div class="kcb-ph">' + esc(c.phone || '·') + '</div></div></div>' +
           '<div class="kcb-c-seg"><span class="kcb-seg ' + s + '">' + SEG_LBL[s] + '</span></div>' +
