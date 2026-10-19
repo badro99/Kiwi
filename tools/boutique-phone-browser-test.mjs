@@ -197,5 +197,31 @@ await S.run('sur la caisse de bureau, un long nom ne touche pas son prix barré'
   assert(g.gap >= 6, `the name stops before the struck price (${Math.round(g.gap)}px apart)`);
 });
 
+/* L'iPad en paysage est la caisse la plus courante : − et + y mesuraient
+   21 px sous le doigt (2026-10-19). */
+await S.run('sur l’iPad, les − et + du ticket se touchent au doigt', async (t) => {
+  const page = await till(t, { width: 1024, height: 768, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+  t.step('measure the seeded ticket lines');
+  await page.waitForSelector('[data-bq-plus]', { visible: true, timeout: 5000 });
+  const m = await page.evaluate(() => [...document.querySelectorAll('[data-bq-minus],[data-bq-plus]')].filter((b) => b.offsetWidth).map((b) => {
+    const r = b.getBoundingClientRect(), a = getComputedStyle(b, '::after');
+    const pad = a.content !== 'none' ? -parseFloat(a.top) || 0 : 0;
+    return { w: r.width, h: r.height, hit: Math.min(r.width, r.height) + 2 * pad };
+  }));
+  assert(m.length >= 2 && m.every((b) => b.w >= 32 && b.h >= 32), `the steppers are at least 32 px (${m.map((b) => Math.round(b.w) + '×' + Math.round(b.h)).join(', ')})`);
+  assert(m.every((b) => b.hit >= 40), `each one answers a finger over 40 px (${m.map((b) => Math.round(b.hit)).join(', ')})`);
+  const names = await page.$$eval('.bq-tk-lines .bq-line-name, .bq-line .bq-line-name', (els) => els.filter((e) => e.offsetWidth).map((e) => ({ t: e.textContent, whole: e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1 })));
+  assert(names.length && names.every((n) => n.whole), `the line names stay whole beside them (${names.map((n) => n.t + (n.whole ? '' : ' CUT')).join(' · ')})`);
+  t.step('a finger just outside the drawn + still reaches it');
+  const before = await page.$eval('[data-bq-plus="0"]', (b) => b.previousElementSibling.textContent);
+  const box = await (await page.$('[data-bq-plus="0"]')).boundingBox();
+  await page.touchscreen.tap(box.x + box.width + 3, box.y + box.height / 2);
+  await sleep(500);
+  const r = await page.evaluate(() => ({ qty: document.querySelector('[data-bq-plus="0"]').previousElementSibling.textContent,
+    toast: [...document.querySelectorAll('#toast-stack *, [role="status"]')].map((n) => n.textContent).join(' ') }));
+  /* The demo's first line is its last piece: the till answers « plus de stock ». */
+  assert(+r.qty === +before + 1 || /plus de stock/.test(r.toast), `the tap lands on + (${before} → ${r.qty}${/plus de stock/.test(r.toast) ? ', last piece already on the ticket' : ''})`);
+});
+
 await S.finish();
 server.close();

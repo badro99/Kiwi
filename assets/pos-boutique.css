@@ -360,7 +360,9 @@
 .bq-line-art { width: 34px; height: 34px; border-radius: 9px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .bq-line-art svg { width: 26px; height: 26px; }
 .bq-line-mid { flex: 1; min-width: 0; }
-.bq-line-name { display: block; font-size: 13px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Two lines before an ellipsis: « Caftan Signature Mansour » read
+   « Caftan Signature … » beside the touch-size steppers. */
+.bq-line-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; overflow: hidden; overflow-wrap: anywhere; }
 .bq-line-sub { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
 .bq-line-sub .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0; }
 .bq-line-sub .sz { font-family: var(--mono); font-weight: 600; color: var(--forest); }
@@ -382,6 +384,15 @@
 }
 .bq-line-qty button:hover { background: var(--paper-mute); border-color: var(--ink-4); }
 .bq-line-qty b { font-family: var(--mono); font-size: 12px; min-width: 14px; text-align: center; }
+/* A finger on the iPad till met a 21 px − / + (measured 2026-10-19). Touch
+   screens get a 32 px button and a 42 px hit area; a mouse keeps the compact row. */
+@media (pointer: coarse) {
+  .bq-line-qty { gap: 8px; }
+  .bq-line-qty button { position: relative; width: 32px; height: 32px; border-radius: 9px; font-size: 16px; touch-action: manipulation; }
+  .bq-line-qty button::after { content: ""; position: absolute; inset: -5px; }
+  .bq-line-qty b { font-size: 13px; min-width: 18px; }
+  .bq-tk-reset { min-height: 36px; padding-inline: 10px; touch-action: manipulation; }
+}
 
 .bq-tk-foot { border-top: 1px solid var(--line); padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--paper-elev); }
 .bq-tk-tot { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
