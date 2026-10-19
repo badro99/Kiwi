@@ -140,4 +140,26 @@ ok(/kiwi:bqAvoirs@' \+ \(creditMerchant\(\)/.test(book) && !/getItem\('kiwi:bqAv
 const serveur = read('kiwi-serveur.html');
 ok(/saleId: String\(\(saved && saved\.id\) \|\| paymentId\)/.test(serveur), 'l\'app serveur lie la fidélité à la vente qu\'elle vient d\'enregistrer');
 
+/* 5. Mesuré le 2026-10-19 : une robe rendue contre avoir puis réglée avec cet
+      avoir affichait « 2 ventes · 500 MAD » pour 250 MAD encaissés ; le
+      responsable lisait « ticket sale-ref-9c08… » au lieu de « ticket 1000 » ;
+      le registre ne savait pas quel ticket avait consommé le bon ; et l'avoir
+      de la cliente sur le ticket ne vivait que dans un toast. */
+const boutique = read('assets/pos-boutique.js');
+const caCtx = vm.createContext({ salesToday: () => [
+  { total: 250, parts: [{ m: 'espèces', amount: 250 }] },
+  { total: 250, parts: [{ m: 'avoir', amount: 250 }] },
+  { total: 400, parts: [{ m: 'avoir', amount: 100 }, { m: 'carte', amount: 300 }] },
+  { total: 90 },
+] });
+vm.runInContext(slice(boutique, 'const creditPaidOf =', 'function queueIfOffline') + ';globalThis.out = caToday();', caCtx);
+ok(caCtx.out === 640, 'boutique : la recette du jour compte l\'argent encaissé, pas la part réglée en avoir');
+ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| originalSaleId\}`/.test(boutique)
+  && /avoirApproval\(amount, requestId, fromSaleId, context && context\.originalRef\)/.test(boutique),
+  'boutique : l\'accord du responsable nomme le numéro du ticket');
+ok(/saleId: \(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutique),
+  'boutique : la consommation d\'un avoir porte le numéro du ticket qui la fait');
+ok(/const av = clAvoirOf\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.balance\)\}/.test(slice(boutique, 'function clientRow(', 'function renderTicket')),
+  'boutique : l\'avoir de la cliente reste affiché sur le ticket');
+
 console.log(`\n✓ ${controls} contrôles : retours, avoirs et cache côté caisse.`);

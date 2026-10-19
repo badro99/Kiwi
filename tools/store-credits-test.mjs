@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { onRequestGet, onRequestPost } from '../functions/api/store-credits.js';
+import { foldedCode, onRequestGet, onRequestPost } from '../functions/api/store-credits.js';
 import { makeSession, managerRefundProof, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 
 const MERCHANT = 'maison-credit-test';
@@ -131,6 +131,39 @@ const cancelEvent = cancelledCredit && cancelledCredit.events.find((event) => ev
 ok(getAll.status === 200 && cancelEvent && cancelEvent.note === 'Correction gérant', 'credit register returns documented cancellation reasons');
 reply = await post({ action: 'redeem', id: 'redeem:cross:0001', code: codeA, amountCents: 100 }, '');
 ok(reply.status === 401, 'an unpaired browser cannot spend a store credit');
+
+/* Mesuré le 2026-10-19 sur une vraie caisse boutique : le bon portait
+   « AV-07OUG9E0R065X6 », la caissière le tapait avec un zéro à la place du O
+   (ou en minuscules) et le registre ne retrouvait rien ; l'émetteur inscrit
+   était « Caisse » alors qu'une responsable avait donné son code ; et la
+   consommation ne disait pas quel ticket l'avait faite. */
+const redeemEvent = sqlite.prepare("SELECT ref_id FROM store_credit_events WHERE merchant=? AND id=?")
+  .get(MERCHANT, 'redeem:ticket:0001:redeem:0');
+ok(redeemEvent && redeemEvent.ref_id === 'sale-new-1', 'a redemption records the ticket that consumed the credit');
+sqlite.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, void_ts, lines)
+  VALUES ('sale-origin-2', ?, 250, 25000, 'cash', 'Robe', '1000', ?, NULL, '[]')`).run(MERCHANT, Date.now());
+reply = await post({ action: 'issue', id: 'issue:return:robe', originalSaleId: 'sale-origin-2', originalRef: '1000', amountCents: 25000,
+  customerId: 'client-2', customerName: 'Cliente Robe', reason: 'Taille', approval: await approve('issue:return:robe', 'sale-origin-2', 25000) });
+ok(reply.status === 200 && /^AV-[0-9A-HJKMNP-TV-Z]{14}$/.test(reply.body.credit.code), 'new credit codes use only characters with no look-alike (no I, L, O, U)');
+ok(reply.body.credit.issuedBy === 'Sara', 'the credit names the manager who approved it, not the till');
+const issueRow = sqlite.prepare("SELECT actor FROM store_credit_events WHERE merchant=? AND id='issue:return:robe:issue'").get(MERCHANT);
+ok(issueRow && issueRow.actor === 'Sara', 'the issue event in the ledger names the approving manager too');
+sqlite.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, void_ts, lines)
+  VALUES ('sale-origin-3', ?, 100, 10000, 'cash', 'Robe', '1006', ?, NULL, '[]')`).run(MERCHANT, Date.now());
+reply = await post({ action: 'issue', id: 'issue:return:owner-tablet', originalSaleId: 'sale-origin-3', originalRef: '1006', amountCents: 10000,
+  approval: await approve('issue:return:owner-tablet', 'sale-origin-3', 10000) }, `${cookie}; ${ownerCookie}`);
+ok(reply.status === 200 && reply.body.credit.issuedBy === 'Sara', 'on a tablet where the owner is also signed in, the approving manager is still the one named');
+const legacy = 'AV-07OUG9E0R065X6';
+sqlite.prepare(`INSERT INTO store_credits (id, merchant, code, customer_id, customer_name, original_sale_id, original_ref,
+  amount_cents, balance_cents, status, expires_ts, reason, issued_by, last_event_id, created_ts, updated_ts)
+  VALUES ('legacy-credit', ?, ?, '', 'Porteur', 'sale-origin-1', '0042', 100, 100, 'active', ?, 'Retour', 'Caisse', 'legacy', ?, ?)`)
+  .run(MERCHANT, legacy, Date.now() + 86400000, Date.now(), Date.now());
+for (const typed of ['av-07oug9e0r065x6', 'AV-070UG9E0R065X6', ' av 07OUG9EOR065X6 ']) {
+  const found = await onRequestGet({ request: new Request(`https://kiwi.test/api/store-credits?merchant=${MERCHANT}&code=${encodeURIComponent(typed)}`, { headers: { cookie } }), env });
+  const body = await found.json();
+  ok(found.status === 200 && body.credits.length === 1 && body.credits[0].code === legacy, `a printed code typed as « ${typed.trim()} » still finds the credit`);
+}
+ok(foldedCode('av-1lI0o') === 'AV-11100', 'folding maps I and L to 1 and O to 0, case-insensitively');
 
 sqlite.close();
 console.log(`\n✓ ${controls} store-credit controls passed.`);

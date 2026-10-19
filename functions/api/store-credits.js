@@ -89,15 +89,22 @@ async function mayCancelCredit(request, env, merchant) {
  * avoir vérifié CÔTÉ SERVEUR le code d'un responsable (verifyStaffPin), liée à
  * cette émission exacte : marchand, identifiant de requête, ticket, montant et
  * moyen « avoir ». Le code n'entre jamais ici, et ce fichier ne compare rien. */
-async function mayIssueCredit(request, env, merchant, { approval, requestId, originalSaleId, cents }) {
-  if (await mayCancelCredit(request, env, merchant)) return true;
+/* Rend aussi le nom du responsable qui a donné son accord (vide quand la
+   session elle-même en a le droit) : le registre l'inscrit comme émetteur, au
+   lieu d'un « Caisse » qui ne dit pas qui a créé la dette. */
+async function issueAuthority(request, env, merchant, { approval, requestId, originalSaleId, cents }) {
+  /* L'accord signé passe en premier : sur une tablette où le propriétaire est
+     aussi connecté au tableau de bord, la session suffisait et le nom du
+     responsable qui venait de frapper son code se perdait. */
   const proof = await readManagerRefundProof(String(approval || '').slice(0, 1400), env && env.AUTH_SECRET);
-  return !!(proof && proof.merchant === merchant
+  const signed = !!(proof && proof.merchant === merchant
     && proof.refundId === requestId.slice(0, 64)
     && proof.originalSaleId === originalSaleId.slice(0, 64)
     && Number(proof.amountCents) === cents
     && proof.refundMethod === 'avoir'
     && proof.staffId && proof.staffName && employeeRoleOpensDashboard(proof.staffRole));
+  if (signed) return { ok: true, approver: clean(proof.staffName, 100) };
+  return { ok: await mayCancelCredit(request, env, merchant), approver: '' };
 }
 
 function view(row, events = []) {
@@ -127,11 +134,22 @@ function eventView(row) {
   };
 }
 
+/* Un bon se recopie à la main depuis le papier. L'ancien alphabet (base 36)
+   mêlait O et 0, I, L et 1 : « AV-07OUG9E0R… » tapé avec un zéro de trop ne
+   retrouvait plus rien. Les nouveaux codes n'ont que des signes sans sosie
+   (Crockford : ni I, ni L, ni O, ni U), et la recherche plie les sosies des
+   anciens, si bien qu'un bon déjà imprimé se retrouve aussi. */
+const CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 function generatedCode() {
-  const bytes = new Uint32Array(2);
+  const bytes = new Uint8Array(14);
   crypto.getRandomValues(bytes);
-  return `AV-${bytes[0].toString(36).toUpperCase().padStart(7, '0')}${bytes[1].toString(36).toUpperCase().padStart(7, '0')}`;
+  return `AV-${Array.from(bytes, (b) => CODE_ALPHABET[b & 31]).join('')}`;
 }
+export function foldedCode(raw) {
+  return String(raw || '').toUpperCase().replace(/[\s‐-―−_]+/g, '-').replace(/[^A-Z0-9-]/g, '')
+    .replace(/O/g, '0').replace(/[IL]/g, '1').slice(0, 40);
+}
+const FOLDED_CODE_SQL = "REPLACE(REPLACE(REPLACE(code, 'O', '0'), 'I', '1'), 'L', '1')";
 
 async function merchantFor(request, env, asked) {
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
@@ -149,7 +167,7 @@ export async function onRequestGet({ request, env }) {
   const customerId = cleanId(url.searchParams.get('customerId'), 96);
   const active = url.searchParams.get('active') === '1';
   const clauses = ['merchant = ?']; const binds = [merchant];
-  if (code) { clauses.push('code = ?'); binds.push(code); }
+  if (code) { clauses.push(`${FOLDED_CODE_SQL} = ?`); binds.push(foldedCode(code)); }
   if (customerId) { clauses.push('customer_id = ?'); binds.push(customerId); }
   if (active) { clauses.push("status = 'active' AND balance_cents > 0 AND expires_ts >= ?"); binds.push(now()); }
   const rows = await env.DB.prepare(
@@ -203,10 +221,10 @@ export async function onRequestPost({ request, env }) {
   if (action === 'issue') {
     const originalSaleId = cleanId(body && body.originalSaleId, 96);
     if (!originalSaleId) return json({ error: 'sale-required' }, 400);
-    if (!await mayIssueCredit(request, env, merchant, {
-      approval: body && body.approval, requestId, originalSaleId, cents })) {
-      return json({ error: 'manager-required' }, 403);
-    }
+    const authority = await issueAuthority(request, env, merchant, {
+      approval: body && body.approval, requestId, originalSaleId, cents });
+    if (!authority.ok) return json({ error: 'manager-required' }, 403);
+    const issuer = authority.approver || actor;
     const customerId = cleanId(body && body.customerId, 96);
     const customerName = clean(body && body.customerName, 120) || 'Porteur du bon';
     const reason = clean(body && body.reason, 160) || 'Retour';
@@ -235,14 +253,14 @@ export async function onRequestPost({ request, env }) {
                  WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund'
               ), 0)`
         ).bind(requestId, merchant, code, customerId, customerName, originalSaleId, originalRef,
-          cents, cents, expiresAt, reason, actor, eventId, at, at,
+          cents, cents, expiresAt, reason, issuer, eventId, at, at,
           merchant, originalSaleId, cents, merchant, originalSaleId),
         env.DB.prepare(
           `INSERT OR IGNORE INTO store_credit_events
              (id, merchant, credit_id, code, action, amount_cents, balance_after_cents, ref_id, actor, detail, ts)
            SELECT ?, ?, id, code, 'issue', ?, balance_cents, original_sale_id, ?, ?, ?
              FROM store_credits WHERE merchant = ? AND id = ? AND last_event_id = ?`
-        ).bind(eventId, merchant, cents, actor, detail, at, merchant, requestId, eventId),
+        ).bind(eventId, merchant, cents, issuer, detail, at, merchant, requestId, eventId),
       ]);
       const credit = await env.DB.prepare('SELECT * FROM store_credits WHERE merchant = ? AND id = ?').bind(merchant, requestId).first();
       if (credit) {

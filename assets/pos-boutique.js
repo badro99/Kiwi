@@ -687,12 +687,14 @@
      frappe son code, le serveur le vérifie (/api/pin/verify) et rend une capacité
      liée à CETTE émission (ticket, montant, identifiant, moyen « avoir ») ;
      /api/store-credits la relit et refuse sans elle. Le code, lui, ne voyage pas. */
-  function avoirApproval(amount, requestId, originalSaleId) {
+  function avoirApproval(amount, requestId, originalSaleId, ticketRef) {
     return new Promise((resolve, reject) => {
       const refuse = (code) => { const error = new Error(code); error.code = code; reject(error); };
       if (typeof window.requireManager !== 'function') { refuse('manager-required'); return; }
       try { if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } }); } catch (_) {}
-      window.requireManager(`Avoir ${fmtMAD(amount)} · ticket ${originalSaleId}`,
+      /* Le responsable lit le numéro imprimé sur le ticket (1000), pas
+         l'identifiant interne de la vente (sale-ref-9c08…) qui lie l'accord. */
+      window.requireManager(`Avoir ${fmtMAD(amount)} · ticket ${ticketRef || originalSaleId}`,
         (manager) => resolve((manager && manager.approval) || ''),
         { kind: 'refund', refundId: requestId, originalSaleId, amountCents: Math.round(amount * 100), refundMethod: 'avoir' },
         { onCancel: () => refuse('manager-cancelled') });
@@ -1381,8 +1383,13 @@
   const ticketCount = (t) => t.lines.reduce((s, ln) => s + ln.qty, 0);
   /* Sur salesToday(), jamais sur SALES : le journal garde une semaine pour les
      retours (voir RETAIN_DAYS), et sommer tout afficherait la recette de sept
-     jours sous le mot « aujourd'hui ». */
-  const caToday = () => salesToday().reduce((s, x) => s + x.total, 0);
+     jours sous le mot « aujourd'hui ».
+     Et l'argent QUI RENTRE, comme le serveur et le tableau de bord : la part
+     réglée en avoir consomme une dette née d'une vente déjà comptée. Une robe
+     rendue puis réglée avec son avoir affichait 500 MAD pour 250 encaissés. */
+  const creditPaidOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
+    .reduce((s, p) => s + (p && p.m === 'avoir' ? (+p.amount || 0) : 0), 0);
+  const caToday = () => salesToday().reduce((s, x) => s + Math.max(0, (+x.total || 0) - creditPaidOf(x)), 0);
   function queueIfOffline(label) {
     if (!state.offline) return false;
     try {
@@ -1890,8 +1897,11 @@
         <span class="l"><b>Attacher une cliente</b><span>Téléphone d'abord, points et taille suivent</span></span>
         <span class="edit">Chercher</span></button>`;
     const sub = [esc(c.phone) || '·', c.points + ' pts', c.taille ? 'taille ' + esc(c.taille) : ''].filter(Boolean).join(' · ');
+    /* #105 · l'avoir de la cliente reste sous les yeux tant qu'elle est sur le
+       ticket, pas seulement dans un toast qui s'efface au bout de deux secondes. */
+    const av = clAvoirOf(c);
     return `<button class="bq-tk-row is-set" id="bq-tk-client"><i data-lucide="user-check"></i>
-      <span class="l"><b>${esc(c.name)}</b><span>${sub}</span></span>
+      <span class="l"><b>${esc(c.name)}</b><span>${sub}</span>${av ? `<span class="bq-tk-av" data-bq-tk-av>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
       ${c.vip ? '<span class="bq-vip-chip">VIP</span>' : ''}
       <span class="edit">Changer</span></button>`;
   }
@@ -1943,7 +1953,7 @@
         <div class="bq-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
           ${promo ? `<span class="rem promo">Promotions · −${fmtMAD(promo)}</span>` : ''}
-          ${remise ? `<span class="rem">Remise · −${fmtMAD(remise)}</span>` : ''}
+          ${remise >= 0.5 ? `<span class="rem">Remise · −${fmtMAD(remise)}</span>` : ''}
           ${reward ? `<span class="rem rew">Récompense · −${fmtMAD(reward)}</span>` : ''}
         </div>
         <div class="bq-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
@@ -2377,7 +2387,7 @@
                 </span>
                 <span class="bq-cl-right"><b>${c.points} pts</b>${c.achats} achat${c.achats > 1 ? 's' : ''}${av ? `<span class="av"><i data-lucide="ticket"></i>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
               </button>`;
-            }).join('') || `<div class="bq-empty">Aucune fiche pour « ${esc(q)} »</div>`}
+            }).join('') || `<div class="bq-empty">${q.trim() ? `Aucune fiche pour « ${esc(q)} »` : 'Tapez un nom ou un numéro de téléphone'}</div>`}
           </div>
           <button class="bq-cl-new" id="bq-cl-new"><i data-lucide="user-plus"></i>Nouvelle cliente${q && !hits.length ? ` · « ${esc(q)} »` : ''}</button>
           <div class="bq-sheet-foot" style="margin-top:10px;">
@@ -2473,7 +2483,7 @@
                   ${av ? `<span class="bq-mini warn"><i data-lucide="ticket"></i>avoir ${fmtMAD(av.balance)}</span>` : ''}
                 </span>
               </button>`;
-            }).join('') || `<div class="bq-empty" style="grid-column:1/-1;">Aucune fiche pour « ${esc(q)} »</div>`}
+            }).join('') || `<div class="bq-empty" style="grid-column:1/-1;">${q.trim() ? `Aucune fiche pour « ${esc(q)} »` : 'Aucune fiche pour l’instant'}</div>`}
           </div>
         </div>
       </div>`;
@@ -3352,7 +3362,7 @@
     if (!IS_DEMO) {
       if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
       const requestId = (context && context.requestId) || creditIntent('credit-issue');
-      const approval = await avoirApproval(amount, requestId, fromSaleId);
+      const approval = await avoirApproval(amount, requestId, fromSaleId, context && context.originalRef);
       const data = await creditRequest({
         action: 'issue', id: requestId, originalSaleId: fromSaleId, approval,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
@@ -4164,7 +4174,7 @@
           </button>
           <button class="bq-pay-opt" data-bq-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Terminal de la banque, montant à saisir dessus</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="virement">
@@ -4374,7 +4384,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="bq-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Terminal de la banque, montant à saisir dessus</div>
         </div>
         <div class="bq-card-confirm" id="bq-card-confirm" hidden>
           <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>
@@ -4452,7 +4462,11 @@
             /* Une seule écriture au registre : si une autre caisse vient
                d'entamer ce bon, rien n'est consommé et rien n'est encaissé. */
             const remote = await creditRequest({
-              action: 'redeem-batch', id: creditCommitId, saleId: opts.sale && opts.sale.id,
+              /* La vente n'existe qu'après cette écriture : sans le numéro du
+                 ticket à venir, le registre ne savait plus quel ticket avait
+                 consommé le bon. */
+              action: 'redeem-batch', id: creditCommitId,
+              saleId: (opts.sale && opts.sale.id) || opts.ref || '',
               detail: opts.title || 'Vente boutique',
               credits: [{ code: avp.code, amountCents: Math.round(avp.amount * 100) }],
             });

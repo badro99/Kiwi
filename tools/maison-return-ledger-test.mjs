@@ -71,7 +71,7 @@ const listedResponse = await getCredits({ env, request: new Request(`https://kiw
 const listed = await listedResponse.json();
 const credit = listed.credits[0];
 ok(credit.events.length === 1 && credit.events[0].lines[0].name === 'Vase'
-  && credit.events[0].actor === 'Caisse' && credit.originalRef === '2001',
+  && credit.events[0].actor === 'Sara' && credit.originalRef === '2001', // la responsable qui a donné son accord, plus « Caisse »
   'customer history returns the original sale, products, employee, date and balance event');
 
 sqlite.close();
