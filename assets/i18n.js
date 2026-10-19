@@ -1433,10 +1433,21 @@
   const number = (value, digits = 0) => formatNumber(value, {
     minimumFractionDigits: digits, maximumFractionDigits: digits,
   });
+  /* A merchant's money, as the till prints it: whole dirhams stay whole
+   * (1 250), anything with centimes shows both digits (404,10, never 404 or
+   * 404,1). The Home band rounded every amount to the dirham while the till,
+   * the day report and the transactions list printed centimes, so the same
+   * day read 404 MAD on one screen and 404,10 on the next. */
+  const amount = (value) => {
+    const c = Math.round(Number(value) * 100);
+    if (!Number.isFinite(c)) return '·';
+    return number(c / 100, c % 100 === 0 ? 0 : 2);
+  };
   window.KiwiNumber = {
     locale: numberLocale,
     format: formatNumber,
     number,
+    amount,
     money: (value, digits = 0) => `${number(value, digits)} MAD`,
     percent: (value, digits = 1) => `${number(value, digits)} %`,
   };

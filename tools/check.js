@@ -1955,6 +1955,11 @@ section('Whole-project regressions');
     /* 2026-10-19 · livraisons à encaisser : le livreur rapporte l'argent au
        comptoir, encaissé une fois, compté le jour où il est reçu. */
     'delivery-collect-browser-test.mjs',
+    /* 2026-10-19 · le grand livre de la synchro : ventes réelles sur une caisse
+       restaurant et une caisse boutique (espèces, carte, partage, remboursement,
+       annulation, hors ligne, la bascule de 05:00), et le tableau de bord qui
+       doit dire les mêmes centimes, sans rien d'un autre commerçant. */
+    'sync-ledger-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',

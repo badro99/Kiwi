@@ -195,7 +195,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=112" defer></script>
+  <script src="assets/pos-dispatch.js?v=113" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=6" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -17221,13 +17221,18 @@
         cardReconciliationSource: 'manual-z',
       };
     }
-    /* La journée commerciale d'un service : celle de son OUVERTURE. Un service
-       ouvert à 22h et fermé à 2h du matin est une seule journée, celle de la
-       veille · c'est ce que le patron appelle « hier soir ». */
+    /* La journée commerciale que la caisse rapporte : celle de MAINTENANT. Un
+       service ouvert à 22h et fermé à 2h du matin est une seule journée, celle
+       de la veille (le seuil de 5 h la garde), et c'est ce que le patron
+       appelle « hier soir ». Mais un service ouvert à 4 h 56 et encore ouvert à
+       5 h 02 a changé de journée : le tableau de bord range la vente de 5 h 02
+       dans aujourd'hui, et la caisse, restée sur la journée de l'ouverture, ne
+       la voyait dans aucun rapport. Le rapport de la caisse suit la même
+       frontière que le tableau de bord, à la minute. */
     function currentBusinessDay() {
       const DR = window.KiwiDayReport;
       if (!DR) return '';
-      return DR.businessDay(shiftOpenedAt ? shiftOpenedAt.getTime() : Date.now());
+      return DR.businessDay(Date.now());
     }
     function buildDayReport(counted, closedAt) {
       const DR = window.KiwiDayReport;

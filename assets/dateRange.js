@@ -1699,6 +1699,13 @@
   }
 
   const frInt = n => window.KiwiNumber?.number(Math.round(n)) || Math.round(n).toLocaleString('fr-FR');
+  /* Money as the till prints it (KiwiNumber.amount): 404,10 stays 404,10. The
+   * band, the hero and the payment ring used frInt and showed 404 for a day
+   * the till, the day report and Commandes all closed at 404,10. Counts and
+   * percentages keep frInt. */
+  const frMoney = n => window.KiwiNumber?.amount?.(n) || (Math.round((+n || 0) * 100) % 100
+    ? (Math.round((+n || 0) * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : frInt(n));
 
   function fmtHeroAmount(v) {
     const int = Math.floor(v);
@@ -2954,7 +2961,7 @@
     if (spec.text) return spec.text + unit;
     if (spec.fmt === 'pct2') return (window.KiwiNumber?.number(v, 2) || v.toFixed(2).replace('.', ',')) + unit;
     if (spec.fmt === 'pct1') return (window.KiwiNumber?.number(v, 1) || v.toFixed(1).replace('.', ',')) + unit;
-    return frInt(v) + unit;
+    return (spec.unit === 'MAD' ? frMoney(v) : frInt(v)) + unit;
   }
 
   // Per-key icon glyphs (single SVG path per key, restyled per render).
@@ -3431,7 +3438,9 @@
         ...data,
         tx:     { ...(data.tx || {}),     value: txNow ? txNow.count : t.count,
                   delta: txNow ? realDeltaPct(rng, (s) => s.count, undefined, pressingStats) : realDeltaPct(rng, (s) => s.count) },
-        panier: { ...(data.panier || {}), value: Math.round(txNow ? txNow.basket : t.basket),
+        /* Au centime, comme le rouleau de la caisse : 424,50 / 5 tickets se lit
+                  84,90, pas 85 (la tuile l'écrit par KiwiNumber.amount). */
+        panier: { ...(data.panier || {}), value: Math.round((txNow ? txNow.basket : t.basket) * 100) / 100,
                   delta: txNow ? realDeltaPct(rng, (s) => s.basket, undefined, pressingStats) : realDeltaPct(rng, (s) => s.basket) },
         /* Le CA EXACT, additionné vente par vente. Il n'était pas transmis, si
          * bien que revOf() le reconstituait à partir du panier arrondi
@@ -4196,7 +4205,7 @@
       const vEl = document.querySelector('[data-rev-hero-val]');
       const dEl = document.querySelector('[data-rev-hero-delta]');
       if (vEl) {
-        const fmtV = (v) => `${frInt(v)}<span class="rev-hero-cur">${curUnit()}</span>`;
+        const fmtV = (v) => `${frMoney(v)}<span class="rev-hero-cur">${curUnit()}</span>`;
         if (animate) animateNumber(vEl, parseAmountFromEl(vEl), val, { duration: 720, format: fmtV });
         else vEl['inner' + 'HTML'] = fmtV(val);
       }
@@ -4499,11 +4508,29 @@
       });
       total += amt;
     });
-    if (!total) return { rows: [], total: 0, cardTotal: 0 };
+    /* The ring says « MAD encaissé »: money kept, after refunds, the way the
+     * till's « Moyens de paiement · net » and the day report count it. It used
+     * to add sales only, so a day with a 20,40 card refund read 425 here and
+     * 404,10 everywhere else, on the same screen as the 404,10 band. A refund
+     * goes back on the tender it was paid with (realWindowStats does the same
+     * for the card/cash tile). */
+    realRefundList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.abs(+e.amount || 0);
+      const k = tenderBucket(e && e.method);
+      if (!amt || !k) return;
+      by[k] = (by[k] || 0) - amt;
+      total -= amt;
+    });
+    total = Math.round(total * 100) / 100;
+    const kept = REAL_MIX.filter((m) => by[m.key] > 0.004);
+    const keptSum = kept.reduce((s, m) => s + by[m.key], 0);
+    if (!(total > 0) || !keptSum) return { rows: [], total: 0, cardTotal: 0 };
     return {
       total,
-      rows: REAL_MIX.filter((m) => by[m.key] > 0).map((m) => ({
-        color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / total) * 100,
+      rows: kept.map((m) => ({
+        color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / keptSum) * 100,
       })),
     };
   }
@@ -4603,7 +4630,7 @@
     }
 
     const center = document.querySelector('[data-mix-center-amt]');
-    if (center) animateNumber(center, parseAmountFromEl(center), centerMad, { duration: 700, format: v => frInt(v) });
+    if (center) animateNumber(center, parseAmountFromEl(center), centerMad, { duration: 700, format: v => frMoney(v) });
 
     /* On retire data-i18n côté venue réelle, sinon i18n.js réimposerait la
      * légende démo au prochain changement de langue ; on le remet pour la démo

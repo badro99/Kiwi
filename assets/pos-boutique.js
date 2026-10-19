@@ -4198,6 +4198,11 @@
     const portion = () => {
       if (custom > 0) return Math.min(custom, due());
       if (share >= 1) return due();
+      /* Une part se compte en dirhams entiers, comme tout le reste ici : 50 %
+         de 339 donnait 169,50 + 169,50, que l'écran, le ticket et la clôture
+         affichaient « 170 » et « 170 » (340 pour 339 encaissés). La part prend
+         le dirham inférieur, le reste porte l'autre : 169 + 170. */
+      if (due() >= 1) return Math.min(due(), Math.max(1, shelf(due() * share)));
       return Math.min(due(), Math.max(0.01, r2(due() * share)));
     };
     const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => {

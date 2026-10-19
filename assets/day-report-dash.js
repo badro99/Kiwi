@@ -67,7 +67,11 @@
   }
   function money(n) {
     var v = Math.round((+n || 0) * 100) / 100;
-    try { return window.KiwiNumber?.format(v, { maximumFractionDigits: 2 }) ?? v.toLocaleString(LANG() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 }); }
+    /* La même règle que KiwiNumber.amount : « 64 » pour un compte rond,
+       « 20,40 » sinon. maximumFractionDigits seul écrivait « 20,4 », quand la
+       caisse imprime 20,40 pour le même remboursement. */
+    var o = { minimumFractionDigits: Math.round(v * 100) % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 };
+    try { return window.KiwiNumber?.format(v, o) ?? v.toLocaleString(LANG() === 'en' ? 'en-GB' : 'fr-FR', o); }
     catch (_) { return String(v); }
   }
   /* Le format machine, pour le CSV : point décimal, pas d'espace insécable.

@@ -84,7 +84,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=5',
-  '/assets/i18n.js?v=25',
+  '/assets/i18n.js?v=27',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -142,7 +142,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=80',
+  '/assets/dateRange.js?v=82',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -182,7 +182,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=22',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=31',
+  '/assets/day-report-dash.js?v=34',
   '/assets/day-report-export.js?v=11',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
@@ -302,7 +302,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=13',
-  '/assets/pos-dispatch.js?v=112',
+  '/assets/pos-dispatch.js?v=113',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -386,8 +386,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=79',
-  '/assets/pos-boutique.js?v=79',
+  '/assets/pos-boutique.css?v=81',
+  '/assets/pos-boutique.js?v=81',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
