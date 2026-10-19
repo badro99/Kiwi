@@ -84,7 +84,7 @@ function tillContext(globals) {
     grabStatement(/const lineTotal = [^\n]+\n/),
     grabFn('function originalSalePayload('),
     /* le correctif « argent qui rentre » peut avoir ajouté une aide à caToday */
-    (SRC.match(/const creditPaidOf = [\s\S]*?;\n/) || [''])[0],
+    (SRC.match(/const notCashedOf = [\s\S]*?;\n/) || [''])[0],
     grabStatement(/const caToday = [^\n]+\n/),
     'this.api = { lineBase, lineUnit, lineTotal, originalSalePayload, caToday };',
   ].join('\n'), ctx);
@@ -155,7 +155,7 @@ console.log('■ Moteur de promotions');
 
 /* ── la recette du jour de la caisse = l'argent que le serveur enregistre ── */
 console.log('■ Recette du jour, caisse contre serveur');
-const tender = fc.constantFrom('espèces', 'carte', 'avoir');
+const tender = fc.constantFrom('espèces', 'carte', 'avoir', 'livraison');
 const saleArb = fc.record({
   total: fc.integer({ min: 1, max: 5000 }),
   split: fc.array(fc.tuple(tender, fc.integer({ min: 1, max: 100 })), { minLength: 1, maxLength: 3 }),
@@ -170,7 +170,8 @@ const saleArb = fc.record({
   }).filter((part) => part.amount > 0);
   return { id: '1000', total, parts, at: new Date(), lines: [{ pid: 'p1', qty: 1, unit: total, name: 'Article' }] };
 });
-/* Stricte depuis 51f92fe1 : caToday() retire la part réglée en avoir. */
+/* Stricte depuis 51f92fe1 : caToday() retire la part réglée en avoir ; depuis
+   le 2026-10-19 aussi la part partie en livraison (créance, 0 côté serveur). */
 await strict('l’en-tête « N ventes · X MAD aujourd’hui » égale l’argent encaissé que le serveur enregistre',
   fc.property(fc.array(saleArb, { minLength: 1, maxLength: 6 }), (sales) => {
     const api = tillContext({

@@ -1401,10 +1401,12 @@
      jours sous le mot « aujourd'hui ».
      Et l'argent QUI RENTRE, comme le serveur et le tableau de bord : la part
      réglée en avoir consomme une dette née d'une vente déjà comptée. Une robe
-     rendue puis réglée avec son avoir affichait 500 MAD pour 250 encaissés. */
-  const creditPaidOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
-    .reduce((s, p) => s + (p && p.m === 'avoir' ? (+p.amount || 0) : 0), 0);
-  const caToday = () => salesToday().reduce((s, x) => s + Math.max(0, (+x.total || 0) - creditPaidOf(x)), 0);
+     rendue puis réglée avec son avoir affichait 500 MAD pour 250 encaissés.
+     Une livraison n'est pas encaissée non plus : le serveur l'enregistre à 0
+     (créance) et le Z la range sous « Livraisons · à recevoir ». */
+  const notCashedOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
+    .reduce((s, p) => s + (p && (p.m === 'avoir' || p.m === 'livraison') ? (+p.amount || 0) : 0), 0);
+  const caToday = () => salesToday().reduce((s, x) => s + Math.max(0, (+x.total || 0) - notCashedOf(x)), 0);
   function queueIfOffline(label) {
     if (!state.offline) return false;
     try {

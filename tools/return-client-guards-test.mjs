@@ -152,7 +152,7 @@ const caCtx = vm.createContext({ salesToday: () => [
   { total: 400, parts: [{ m: 'avoir', amount: 100 }, { m: 'carte', amount: 300 }] },
   { total: 90 },
 ] });
-vm.runInContext(slice(boutique, 'const creditPaidOf =', 'function queueIfOffline') + ';globalThis.out = caToday();', caCtx);
+vm.runInContext(slice(boutique, 'const notCashedOf =', 'function queueIfOffline') + ';globalThis.out = caToday();', caCtx);
 ok(caCtx.out === 640, 'boutique : la recette du jour compte l\'argent encaissé, pas la part réglée en avoir');
 ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| originalSaleId\}`/.test(boutique)
   && /avoirApproval\(amount, requestId, fromSaleId, context && context\.originalRef\)/.test(boutique),
