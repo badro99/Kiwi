@@ -1958,6 +1958,43 @@ section('Whole-project regressions');
   });
 }
 
+/* ── 13a · l'argent et l'accessibilité, sur des milliers de cas ──────────
+ * money-properties-test.mjs tire au hasard prix, remises, paiements et avoirs
+ * (fast-check) contre le vrai code de la caisse boutique et le vrai registre
+ * des avoirs ; ses défauts connus s'affichent sans bloquer, et la suite dit
+ * quand l'un d'eux tient. a11y-browser-test.mjs passe axe-core sur l'accueil,
+ * le tableau de bord, l'assistant et la caisse, et refuse toute violation
+ * sérieuse au-delà de tools/a11y-baseline.json. Sans les dépendances de
+ * développement de app/ (npm --prefix app ci), chacune se déclare SKIPPÉE. */
+section('Money properties (tools/money-properties-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'money-properties-test.mjs')], { encoding: 'utf8', timeout: 300000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('money properties skipped (fast-check missing, npm --prefix app ci)');
+  else if (r.status === 0) {
+    ok(`money properties green (${(out.match(/✓/g) || []).length} properties)`);
+    out.split('\n').filter((line) => /^\s*[◦!] known/.test(line)).forEach((line) => warn(line.trim()));
+  } else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`money-properties-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+section('Accessibility, axe-core (tools/a11y-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'a11y-browser-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('a11y suite skipped (no Chromium or axe-core, browser assertions not executed)');
+  else if (r.status === 0) {
+    ok(`a11y green (${(out.match(/✓/g) || []).length} surfaces, no new serious violation)`);
+    out.split('\n').filter((line) => /^\s*! /.test(line)).forEach((line) => warn(line.trim()));
+  } else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`a11y-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 13b · coquille native, pilotée pour de vrai ──────────────────────────
  * app-bundle-test.mjs prouve le paquet ; celui-ci conduit la coquille dans un
  * vrai Chromium : boot borné, parcours guidé, appairage, imprimante, locales,

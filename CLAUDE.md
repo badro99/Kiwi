@@ -230,6 +230,20 @@ compares against `tools/__screenshots__/`; `KIWI_UPDATE_SNAPSHOTS=1` rewrites a
 baseline you meant to change. The AI bug-bash pilot in `tools/agent-e2e/` is
 **parked: the owner will not pay for its model tokens. Do not run it.**
 
+**Property and accessibility suites.** `tools/money-properties-test.mjs` runs
+fast-check against the real boutique pricing and revenue code and the real
+store-credit ledger; `tools/a11y-browser-test.mjs` runs axe-core on the landing,
+the demo dashboard, the onboarding wizard and the demo till. Both packages are
+dev dependencies of `app/` (next to puppeteer-core), so the root `package.json`
+stays dependency-free: `npm --prefix app ci` once per clone, or both suites
+skip green. The money suite keeps a short list of **known** properties, defects
+already logged and awaiting a decision or fix: they print their counterexample
+without failing, and say `! known … tient maintenant` once they hold. When you
+see that, move the property to `strict()`, or the guarantee is lost. The a11y
+suite fails on any serious violation above `tools/a11y-baseline.json`; lower the
+baseline (`KIWI_UPDATE_A11Y_BASELINE=1`) when a fix brings a count down, never
+raise it to make a red go away.
+
 **Prod D1 lags `schema.sql`.** Every time. Never assume the live database has a table
 just because the schema file does — query the live DB. `migrations/` exists but is
 barely used; formalising `wrangler d1 migrations` is on the roadmap.
