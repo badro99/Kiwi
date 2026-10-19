@@ -134,7 +134,7 @@ try {
       await click('[data-action="stock-subview"][data-subview="counts"]');await sleep(200);
       check(await page.evaluate(()=>document.querySelector('[data-subview="counts"]').getAttribute('aria-selected')==='true'),lang+': history tab scrolls into view');
       await go('menu');
-      const grid=await page.evaluate(()=>({body:document.body.className,width:innerWidth,grid:[...document.querySelectorAll('.mi-grid')].map(e=>({columns:getComputedStyle(e).gridTemplateColumns,width:e.getBoundingClientRect().width,visible:!!e.getClientRects().length}))}));if(!grid.grid.some(g=>g.width>0&&g.columns.split(' ').length===2)){await page.screenshot({path:path.join(evidence,'grid-fail.png')});console.log('grid failure',grid);}check(grid.grid.some(g=>g.width>0&&g.columns.split(' ').length===2),lang+': exactly two visible phone menu columns');
+      const dish=await page.evaluate(()=>({width:innerWidth,rows:[...document.querySelectorAll('.rmw-rows .rmw-row')].filter(e=>e.getClientRects().length).map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,fits:e.scrollWidth<=e.clientWidth+1};})}));if(!dish.rows.length||!dish.rows.every(r=>r.fits&&r.left>=0&&r.right<=dish.width)){await page.screenshot({path:path.join(evidence,'rows-fail.png')});console.log('rows failure',dish);}check(dish.rows.length&&dish.rows.every(r=>r.fits&&r.left>=0&&r.right<=dish.width),lang+': phone menu dishes are full-width rows that fit the screen');
       await click('[data-action="rmw-section-actions"]');await sleep(200);
       await click('[data-catalog-action="reorder"]');await sleep(450);
       const before=await page.evaluate(()=>KiwiMenuStore.categories().map(c=>c.id));
@@ -144,17 +144,17 @@ try {
       check(await page.$eval('.catalog-reorder-row:nth-child(2) select',e=>{const r=e.getBoundingClientRect();return r.width>=76&&r.height>=44;}),'native position selector 76 by 44');await click('.catalog-reorder-row:nth-child(2) select');await page.keyboard.press('Home');await page.keyboard.press('Enter');await sleep(200);
       check(await page.evaluate(before=>KiwiMenuStore.categories()[0].id===before[0],before),lang+': keyboard-compatible position selector reorders');
       await click('[data-catalog-done]');await sleep(450);
-      await click('.catalog-item-edit');await sleep(200);
+      await click('.rmw-row .rmw-row-main');await sleep(200);
       check(await page.$('.kiwi-modal [data-name]'),lang+': real card tap opens item editor');await close();
-      await click('.catalog-item-footer .catalog-more');await sleep(200);
+      await click('.rmw-row .rmw-row-more');await sleep(200);
       const availBefore=await page.evaluate(()=>KiwiMenuStore.items()[0].avail);
       await click('[data-catalog-action="availability"]');await sleep(450);
       check(await page.evaluate(old=>KiwiMenuStore.items()[0].avail!==old,availBefore),lang+': overflow availability saves to model');
       await click('[data-action="rmw-cat-filter"][data-cat="all"]');await sleep(200);
-      await page.evaluate(()=>{window.__catalogFirst=document.querySelector('.catalog-item-edit');KiwiRestaurantMenuWorkspace.render();});
-      check(await page.evaluate(()=>window.__catalogFirst===document.querySelector('.catalog-item-edit')),lang+': unchanged poll render retains touched DOM');
+      await page.evaluate(()=>{window.__catalogFirst=document.querySelector('.rmw-row-main');KiwiRestaurantMenuWorkspace.render();});
+      check(await page.evaluate(()=>window.__catalogFirst===document.querySelector('.rmw-row-main')),lang+': unchanged poll render retains touched DOM');
       await click('[data-action="rmw-cat-filter"]:last-child');await sleep(200);
-      check(await page.evaluate(()=>!document.querySelector('.mi-grid .mi-card')),lang+': empty section is deliberate');
+      check(await page.evaluate(()=>!document.querySelector('.rmw-rows .rmw-row')),lang+': empty section is deliberate');
       await page.screenshot({path:path.join(evidence,`${width}-${lang}-${theme}-menu-empty.png`)});
       await click('[data-action="rmw-item-add"]');await sleep(200);
       check(await page.$('.kiwi-modal [data-name]'),lang+': primary new item remains usable in empty section');await close();
@@ -164,9 +164,9 @@ try {
           await click('[data-action="rmw-section-actions"]');await click('[data-catalog-action="'+action+'"]');
           await page.waitForFunction(()=>document.querySelectorAll('.kiwi-backdrop').length===1,{timeout:3000});check((await page.$$('.kiwi-backdrop')).length===1,'section '+action+': one sheet, no overlapping layers');await close();
         }
-        await click('.catalog-item-footer .catalog-more');await click('[data-catalog-action="archive"]');
+        await click('.rmw-row .rmw-row-more');await click('[data-catalog-action="archive"]');
         check(await page.evaluate(()=>KiwiMenuStore.items()[0].archived===true),'archive action is reachable');
-        await click('.catalog-item-footer .catalog-more');await click('[data-catalog-action="archive"]');
+        await click('.rmw-row .rmw-row-more');await click('[data-catalog-action="archive"]');
         check(await page.evaluate(()=>!KiwiMenuStore.items()[0].archived),'restore action is reachable');
         await go('stock');
         for(const tool of ['stock-scan-invoice','stock-count-sheet','stock-physical-count']){
@@ -183,7 +183,7 @@ try {
         for(const wide of [768,1440]){
           const wideGo=async nav=>{await page.setViewport({width:402,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});await page.evaluate(()=>document.documentElement.classList.add('kiwi-native'));await go(nav);await page.setViewport({width:wide,height:960,deviceScaleFactor:1,isMobile:true,hasTouch:true});await page.evaluate(()=>document.documentElement.classList.remove('kiwi-native'));await sleep(300);};
           await wideGo('menu');await click('[data-action="rmw-cat-filter"][data-cat="all"]');await sleep(200);await snap('wide-'+wide+'-menu');
-          check(await page.evaluate(()=>getComputedStyle(document.querySelector('.mi-grid')).gridTemplateColumns.split(' ').length>=3),'wide '+wide+': at least three menu columns');
+          check(await page.evaluate(()=>{const a=document.querySelector('.rmw-rail').getBoundingClientRect(),b=document.querySelector('.rmw-main').getBoundingClientRect(),col=getComputedStyle(document.querySelector('.rmw-cats')).flexDirection==='column';return innerWidth>=900?col&&a.right<=b.left+1:!col&&a.bottom<=b.top+1;}),'wide '+wide+': sections rail beside the dish rows from 900 px, a pill row above them below');
           await wideGo('stock');await click('[data-action="stock-tab"][data-tab="items"]');await sleep(200);
           await click('[data-action="stock-subview"][data-subview="catalog"]');await click('[data-action="stock-view"][data-view="list"]');await sleep(200);await snap('wide-'+wide+'-items');
           check(await page.evaluate(()=>getComputedStyle(document.querySelector('.st-desktop-items')).display!=='none'),'wide '+wide+': sortable stock table retained');

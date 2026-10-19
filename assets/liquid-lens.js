@@ -136,7 +136,11 @@
     if (KIT) {
       container.__kwLens = { place: function () {} };
       container.setAttribute('data-kw-lens', cfg.skin);
-      window.KiwiLens.attach(container, { item: cfg.item, active: cfg.active, className: 'kw-lens kw-lens--' + cfg.skin });
+      /* A column track (the Menu page's section rail on a wide screen)
+       stretches along its own axis. */
+      var axis = 'x';
+      try { if (/^column/.test(getComputedStyle(container).flexDirection)) axis = 'y'; } catch (_) {}
+      window.KiwiLens.attach(container, { item: cfg.item, active: cfg.active, axis: axis, className: 'kw-lens kw-lens--' + cfg.skin });
       return;
     }
     var lens = document.createElement('span');
@@ -217,15 +221,21 @@
     if (KIT) window.KiwiLens.scanner(scan);
     else scan(document);
     /* Late-mounted groups (drawer tab rows, re-rendered sections). */
-    var queued = false;
+    /* Every batch that lands before the frame is kept. Dropping the batches
+     * that arrived while a frame was already queued lost whole re-renders:
+     * the Menu page's section and tab rows, painted by an innerHTML swap
+     * among other mutations, were never lensed. */
+    var queued = false, added = [];
     new MutationObserver(function (muts) {
-      if (queued) return;
+      muts.forEach(function (m) {
+        m.addedNodes.forEach(function (n) { if (n.nodeType === 1) added.push(n); });
+      });
+      if (queued || !added.length) return;
       queued = true;
       requestAnimationFrame(function () {
         queued = false;
-        muts.forEach(function (m) {
-          m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); });
-        });
+        var batch = added; added = [];
+        batch.forEach(function (n) { if (n.isConnected) scan(n); });
       });
     }).observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', function () { placeAll(true); });

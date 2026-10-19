@@ -102,7 +102,7 @@ ok('« 1 ticket », « 0 remboursement », « 2 tickets »; en anglais « 0 tick
   assert.equal(fr('plain', { n: 1 }), '1 x', 'no singular key: unchanged');
 });
 ok('« Tous · 1 article », « 1 article vendu », compteur de recherche au singulier', () => {
-  assert.ok(RMW.includes("${esc(countLabel(list.length))}</span>"));
+  assert.ok(RMW.includes("${esc(countLabel(list.length))}</small>"), 'the list head counts through countLabel');
   assert.ok(RMW.includes("catalogLabel(searching?'result':'item',searching?'résultat':'article')"));
   assert.ok(RMW.includes("?'itemSold':'itemsSold'"));
   assert.ok(/itemSold: 'article vendu'/.test(RMW));

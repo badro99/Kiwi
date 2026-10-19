@@ -1627,6 +1627,10 @@ section('Whole-project regressions');
     'native-demo-ledger-test.mjs',
     'native-qa-six-fixes-test.mjs',
     'ticket151-browser-test.mjs',
+    /* Menu page shell : sections en rail (pilules sous 900 px), plats en lignes
+       prix · disponibilité · options, barre recherche + ajout collante, onglet
+       et section qui tiennent après une modification et un tick. 390 et 1280. */
+    'menu-shell-browser-test.mjs',
     'catalog-workspace-test.mjs',
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
