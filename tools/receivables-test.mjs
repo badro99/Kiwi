@@ -126,6 +126,16 @@ ok(replay.status === 200 && replay.body.already === true && JSON.stringify(repla
 ok((await post({ saleId: 'dlv-t', method: 'cash', amount: 150, id: 'till1-col-0002' }, till)).body.error === 'exceeds-due', 'more than what is still owed is refused');
 ok((await post({ saleId: 'dlv-a', method: 'cash', amount: 1, id: 'till1-col-0001' }, till)).body.error === 'id-conflict', 'one id never names two deliveries');
 ok((await post({ saleId: 'dlv-t', method: 'cash', amount: 0, id: 'till1-col-0003' }, till)).body.error === 'bad-amount', 'a zero amount is refused');
+/* sales.id est unique pour tous les commerces : un identifiant déjà pris par la vente d'un autre
+ * magasin ne doit ni perdre la vente en silence ni baisser le dû. */
+sale('dlv-x', 0, 'delivery', [{ method: 'delivery', amountCents: 30000 }], now - 700e3); receipt('dlv-x', 30000);
+sale('taken-by-other-0001', 500, 'cash', null, now - 600e3, { merchant: OTHER });
+r = await post({ saleId: 'dlv-x', method: 'cash', amount: 100, id: 'taken-by-other-0001' }, till);
+ok(r.status === 409 && r.body.error === 'id-taken', 'an id already held by another store\'s sale is refused (409 id-taken)');
+ok(sqlite.prepare("SELECT COUNT(*) AS n FROM delivery_collections WHERE collection_sale_id = 'taken-by-other-0001'").get().n === 0, 'no collection row is left behind: the whole write is rolled back');
+ok(sqlite.prepare("SELECT merchant FROM sales WHERE id = 'taken-by-other-0001'").get().merchant === OTHER, 'the other store\'s sale is untouched');
+r = await post({ saleId: 'dlv-x', method: 'cash', amount: 100, id: 'till1-col-x001' }, till);
+ok(r.status === 200 && r.body.dueCents === 20000, 'with a fresh id the same delivery is collected normally (200 MAD still due)');
 r = await post({ saleId: 'dlv-t', method: 'cash', id: 'till1-col-0004' }, till);
 ok(r.status === 200 && r.body.sale.amountCents === 10000 && r.body.dueCents === 0, 'without an amount, the till collects the rest (100 MAD)');
 ok(sqlite.prepare("SELECT lines FROM sales WHERE id = 'till1-col-0004'").get().lines === null, 'only the first collection carries the basket');

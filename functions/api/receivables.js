@@ -208,13 +208,19 @@ export async function onRequestPost({ request, env }) {
           WHERE merchant = ? AND sale_id = ?), 0)
         ON CONFLICT DO NOTHING`)
         .bind(merchant, collectionId, saleId, method, amount, now, byId || null, byName || null, amount, owed, merchant, saleId),
-      env.DB.prepare(`INSERT OR IGNORE INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel)
+      /* INSERT simple, jamais OR IGNORE : sales.id est unique pour TOUS les
+       * commerces. Si un autre encaissement (ou une autre vente, d'un autre
+       * magasin) porte déjà cet identifiant, l'écriture échoue et tout le lot
+       * est annulé. Avec OR IGNORE la ligne d'encaissement resterait, le dû
+       * baisserait, et aucune vente ne serait écrite. */
+      env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel)
         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 'delivery' WHERE EXISTS (SELECT 1 FROM delivery_collections
           WHERE merchant = ? AND collection_sale_id = ? AND ts = ?)`)
         .bind(collectionId, merchant, Math.round(amount / 100), amount, method, label, row.ref || null, now, lines,
           merchant, collectionId, now),
     ]);
   } catch (error) {
+    if (/UNIQUE|constraint/i.test(String(error && error.message || error))) return json({ error: 'id-taken' }, 409);
     return json({ error: 'collection-write-failed', detail: String(error && error.message || error) }, 503);
   }
   const written = await env.DB.prepare(`SELECT collection_sale_id, sale_id, method, amount_cents, ts FROM delivery_collections

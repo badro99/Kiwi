@@ -256,8 +256,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "79",
-    "sha": "a12ceb821e3220fc"
+    "v": "80",
+    "sha": "870f93bd2d87ed12"
   },
   "assets/day-report-dash.js": {
     "v": "31",
@@ -274,6 +274,10 @@
   "assets/delivery-collect.js": {
     "v": "2",
     "sha": "f02b5758c0369360"
+  },
+  "assets/delivery-receivables.js": {
+    "v": "2",
+    "sha": "db5d8d9c547adb73"
   },
   "assets/demoClock.js": {
     "v": "4",
