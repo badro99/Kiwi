@@ -172,6 +172,10 @@ ok(/const av = clAvoirOf\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.b
   ok(!/Math\.round\(receivedNow \/ 10\)/.test(boutique), 'boutique : plus de « +1 pt pour 10 MAD » codé en dur');
   ok(/pts = Math\.max\(0, \(Number\(res\.client\.points\) \|\| 0\) - ptsBefore\)/.test(boutique),
     'boutique : les points du toast sont ceux que le carnet a crédités');
+  /* La caisse Maison fait le même geste sur son propre retour contre avoir. */
+  const maisonRet = slice(read('assets/pos-maison.js'), "recordReturn(sale, idxs, amount, motif, resellable ? 'avoir' : 'avoir-damaged', av.code, quantities);", 'openVoucher(av');
+  ok(/KiwiClients\.recordRefund\(c\.id, \{ amount, saleRef: sale\.id, eventRef: av\.code/.test(maisonRet),
+    'maison : un avoir émis reprend la dépense de la cliente, une fois par code d\'avoir');
 }
 
 console.log(`\n✓ ${controls} contrôles : retours, avoirs et cache côté caisse.`);

@@ -4687,6 +4687,18 @@
       if (resellable) restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
       else markDamagedLines(sale, idxs, quantities, `retour abîmé (${motif.toLowerCase()})`);
       recordReturn(sale, idxs, amount, motif, resellable ? 'avoir' : 'avoir-damaged', av.code, quantities);
+      /* L'argent rendu en avoir sort de la dépense et des points de la cliente ;
+         l'avoir dépensé plus tard y rentrera, une seule fois. Clé = le code de
+         l'avoir : un double clic ne reprend pas deux fois (même geste que la
+         caisse boutique). */
+      if (c && useKiwiCl() && window.KiwiClients && window.KiwiClients.recordRefund) {
+        try {
+          window.KiwiClients.recordRefund(c.id, { amount, saleRef: sale.id, eventRef: av.code,
+            items: idxs.map((i) => ({ name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article', qty: Number(quantities.get(i)) || 1 })) });
+        } catch (_) {}
+      } else if (c && !useKiwiCl()) {
+        c.spent = Math.max(0, (Number(c.spent) || 0) - amount);
+      }
       state.ret = null;
       refreshOps();
       openVoucher(av, { mode: 'fresh' });
