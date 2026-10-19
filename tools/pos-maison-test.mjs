@@ -279,8 +279,9 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     'la vente écrit la part des déposants et la recette propre, limitée au reçu pour un acompte');
 
   // b) la recette du jour exclut le dépôt-vente, avec repli pour l'historique
-  ok(/caToday = \(\) => salesToday\(\)\.reduce\(\(s, x\) => s \+ \(x\.own != null \? x\.own : x\.total\)/.test(jsSrc),
-    'la recette du jour lit `own`, et retombe sur `total` pour les ventes d’avant');
+  ok(/const caToday = \(\) => salesToday\(\)\.reduce\(\(s, x\) => s \+ cashedOf\(x\), 0\)/.test(jsSrc)
+    && /const cashedOf = [\s\S]{0,200}\(x\.own != null \? \+x\.own : \(\+x\.total \|\| 0\)\) - notCashedOf\(x\)/.test(jsSrc),
+    'la recette du jour lit `own`, retombe sur `total` pour les ventes d’avant, et retire avoir et livraison');
   ok(/cashIn = Math\.max\(0, cashIn - Math\.round\(tot\.consigned\)\)/.test(jsSrc),
     'ce qui remonte au tableau de bord exclut la part des déposants');
 
