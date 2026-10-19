@@ -156,6 +156,13 @@
 }
 .ep-scan-btn svg { width: 17px; height: 17px; }
 .ep-scan-btn:hover { background: var(--forest-deep); }
+/* At 1024 px the two buttons left the barcode field a 16 px input: a code
+   typed by hand could not be read back. Below 1100 px the field takes its own row. */
+@media (max-width: 1100px) {
+  .ep-scanbar { flex-wrap: wrap; }
+  .ep-scan-field { flex: 1 1 100%; }
+  .ep-scan-btn { flex: 1 1 0; justify-content: center; }
+}
 .ep-scan-btn:active { transform: scale(0.97); }
 
 .ep-cats {

@@ -389,3 +389,16 @@
   .vx-screen.kiwi-dna .kiwi-dna-service i { animation: none; }
   .vx-screen.kiwi-dna .kiwi-dna-nav-item { transition: none; }
 }
+
+/* Touch tills (iPad landscape is the usual counter): every métier drew its
+ * ticket − / + at 21 px (2026-10-19). min-* outranks each vertical's fixed
+ * width whatever its specificity; the ::after widens the hit area to 42 px.
+ * A mouse keeps the compact row. */
+@media (pointer: coarse) {
+  .vx-screen.kiwi-dna [class*="-line-qty"] { gap: 8px; }
+  .vx-screen.kiwi-dna [class*="-line-qty"] > button {
+    position: relative; min-width: 32px; min-height: 32px;
+    border-radius: 9px; font-size: 16px; touch-action: manipulation;
+  }
+  .vx-screen.kiwi-dna [class*="-line-qty"] > button::after { content: ""; position: absolute; inset: -5px; }
+}

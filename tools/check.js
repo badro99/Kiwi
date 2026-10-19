@@ -1942,6 +1942,9 @@ section('Whole-project regressions');
     /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
        Vendus après une vente encaissée au toucher. */
     'boutique-phone-browser-test.mjs',
+    /* 2026-10-19 · chaque caisse sur un iPad tactile : − / + du ticket à
+       32 px dans les treize métiers, champ code-barres de l'épicerie lisible. */
+    'ipad-touch-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',
