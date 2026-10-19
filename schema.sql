@@ -1,7 +1,10 @@
 -- Kiwi Live Link — Cloudflare D1 schema.
--- Apply once after creating the D1 database (see docs/ops/LIVE_LINK.md):
---   wrangler d1 execute kiwi-sales --file=schema.sql --remote
--- or paste it into the D1 console in the Cloudflare dashboard.
+-- The whole database as it should be. It reaches a database through the
+-- numbered files in migrations/ (wrangler d1 migrations, docs/ops/MIGRATIONS.md):
+--   npx wrangler d1 migrations apply kiwi-sales --remote -c wrangler.d1.toml
+-- Change this file AND add a migration: tools/d1-migrations-test.mjs fails the
+-- gate when migrations/ applied to an empty database is not exactly this file.
+-- `node tools/d1-migrations.mjs --draft` writes the migration's first draft.
 
 CREATE TABLE IF NOT EXISTS sales (
   id       TEXT PRIMARY KEY,   -- client-supplied unique id
@@ -61,7 +64,14 @@ CREATE TABLE IF NOT EXISTS sales (
   void_reason TEXT,             -- onboarding|imprimante|formation|doublon|installation|autre
   void_note   TEXT,             -- l'explication écrite, obligatoire quand reason='autre'
   void_actor  TEXT,             -- libellé du code opérateur, ou 'equipe'
-  void_actor_id TEXT            -- operators.id quand il est connu
+  void_actor_id TEXT,           -- operators.id quand il est connu
+
+  -- Présentes en production (constaté le 2026-10-19), lues par AUCUN code
+  -- aujourd'hui, et absentes de tout l'historique git de functions/. Déclarées ici
+  -- pour que schema.sql décrive la base réelle ; les retirer serait effacer des
+  -- données, donc c'est une décision du propriétaire, pas d'une migration.
+  seller_id   TEXT,
+  seller_name TEXT
 );
 
 -- Customer-facing receipt value is distinct from attributed merchant revenue.
@@ -98,7 +108,7 @@ CREATE TABLE IF NOT EXISTS delivery_collections (
 CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (merchant, sale_id);
 
 -- Retail down-payments: the bill remains open independently of daily receipts.
--- Existing D1 databases must run migrations/2026-09-27-retail-balances.sql.
+-- Existing D1 databases must run migrations/legacy/2026-09-27-retail-balances.sql.
 CREATE TABLE IF NOT EXISTS retail_balances (
   merchant TEXT NOT NULL, id TEXT NOT NULL, customer_id TEXT NOT NULL,
   ticket_ref TEXT NOT NULL, total_cents INTEGER NOT NULL CHECK(total_cents > 0),
@@ -129,6 +139,7 @@ CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
 -- appends rowid to every index, so this covers the (merchant, rowid) order.
 -- (You cannot name rowid in CREATE INDEX — SQLite rejects it.)
 CREATE INDEX IF NOT EXISTS idx_sales_merchant ON sales (merchant);
+CREATE INDEX IF NOT EXISTS idx_sales_merchant_seller_ts ON sales (merchant, seller_id, ts);
 
 -- Numeric receipt references are allocated independently from the money ledger.
 -- `next_value` is the first number that has never been reserved. A till advances
@@ -310,7 +321,11 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   trial_start        TEXT,          -- YYYY-MM-DD
   trial_end          TEXT,          -- YYYY-MM-DD
   trial_days         INTEGER,       -- durée convenue, en jours
-  updated_ts INTEGER NOT NULL
+  updated_ts INTEGER NOT NULL,
+  -- Fuseau et heure de bascule de la journée commerciale (functions/api/timezone.js,
+  -- _business-day.js). Posées à l'exécution par timezone.js en production.
+  timezone        TEXT,             -- IANA, ex. Africa/Casablanca ; NULL = défaut
+  business_cutoff INTEGER           -- heure de bascule 0–12 ; NULL = 05:00 historique
 );
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- Tant que city/mrr manquent, la console reste utilisable : /api/admin/overview
@@ -1206,13 +1221,16 @@ CREATE INDEX IF NOT EXISTS idx_table_transfers_live ON table_transfers (merchant
 CREATE TABLE IF NOT EXISTS kitchen_voids (
   id           TEXT PRIMARY KEY,  -- "voi-<uuid>"
   merchant     TEXT NOT NULL,
-  order_id     TEXT,
-  table_no     TEXT,
+  -- Contraintes alignées sur la production (posée depuis
+  -- migrations/legacy/2026-08-17-kitchen-voids.sql) : queue.js écrit toujours
+  -- '' plutôt que NULL, donc ces NOT NULL ne refusent rien.
+  order_id     TEXT NOT NULL,
+  table_no     TEXT NOT NULL,
   item_id      TEXT,
-  item_name    TEXT,
-  qty          INTEGER NOT NULL,
-  price        INTEGER,
-  reason       TEXT NOT NULL,    -- 'client_change' | 'order_error' | 'kitchen_waste' | 'quality_return'
+  item_name    TEXT NOT NULL,
+  qty          INTEGER NOT NULL DEFAULT 1,
+  price        NUMERIC(10,2) NOT NULL DEFAULT 0,
+  reason       TEXT NOT NULL DEFAULT 'client_change', -- 'client_change' | 'order_error' | 'kitchen_waste' | 'quality_return'
   is_waste     INTEGER NOT NULL DEFAULT 0,  -- 1 si perte matière réelle
   actor        TEXT,             -- serveur ou caissier
   status       TEXT NOT NULL DEFAULT 'approved', -- 'pending' | 'approved' | 'rejected'
@@ -1342,10 +1360,58 @@ CREATE TABLE IF NOT EXISTS operational_events (
   event       TEXT NOT NULL,
   status      TEXT NOT NULL,
   detail      TEXT,
-  created_ts  INTEGER NOT NULL
+  created_ts  INTEGER NOT NULL,
+  -- Chaîne d'empreintes append-only (functions/api/operations.js) : chaque
+  -- événement scelle le précédent, un trou dans `seq` se voit.
+  prev_hash   TEXT NOT NULL DEFAULT '',
+  hash        TEXT NOT NULL DEFAULT '',
+  seq         INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_ops_events_command
   ON operational_events (merchant, command_id, created_ts);
+
+-- Plafond de débit des commandes, par établissement et par fenêtre.
+CREATE TABLE IF NOT EXISTS operational_rate (
+  merchant  TEXT NOT NULL,
+  bucket    TEXT NOT NULL,
+  window_ts INTEGER NOT NULL,
+  hits      INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, bucket, window_ts)
+);
+
+-- Santé des appareils (caisses, imprimantes) et alertes ouvertes : Terminaux.
+CREATE TABLE IF NOT EXISTS device_health (
+  merchant           TEXT NOT NULL,
+  device_id          TEXT NOT NULL,
+  app                TEXT NOT NULL DEFAULT '',
+  label              TEXT NOT NULL DEFAULT '',
+  online             INTEGER NOT NULL DEFAULT 1,
+  standalone         INTEGER NOT NULL DEFAULT 0,
+  printer_configured INTEGER NOT NULL DEFAULT 0,
+  printer_connected  INTEGER NOT NULL DEFAULT 0,
+  alert              TEXT NOT NULL DEFAULT '',
+  alert_since_ts     INTEGER NOT NULL DEFAULT 0,
+  acked_ts           INTEGER NOT NULL DEFAULT 0,
+  acked_by           TEXT NOT NULL DEFAULT '',
+  beats              INTEGER NOT NULL DEFAULT 0,
+  first_seen_ts      INTEGER NOT NULL,
+  last_seen_ts       INTEGER NOT NULL,
+  custom_label       TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, device_id)
+);
+CREATE INDEX IF NOT EXISTS idx_device_seen ON device_health (merchant, last_seen_ts);
+
+CREATE TABLE IF NOT EXISTS device_alerts (
+  id        TEXT PRIMARY KEY,
+  merchant  TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  code      TEXT NOT NULL,
+  opened_ts INTEGER NOT NULL,
+  closed_ts INTEGER NOT NULL DEFAULT 0,
+  acked_ts  INTEGER NOT NULL DEFAULT 0,
+  acked_by  TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_device_alert_open ON device_alerts (merchant, device_id, closed_ts);
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- OBSERVABILITÉ · Rapporteur d'erreurs client & télémétrie fail-soft
@@ -1516,7 +1582,7 @@ CREATE TABLE IF NOT EXISTS order_following (
 CREATE INDEX IF NOT EXISTS idx_order_course_merchant_sent
   ON order_course (merchant, sent_ts);
 
--- ── Relais d'impression (migrations/2026-08-21-print-relay.sql) ─────────────
+-- ── Relais d'impression (migrations/legacy/2026-08-21-print-relay.sql) ─────────────
 
 CREATE TABLE IF NOT EXISTS print_bridges (
   id           TEXT PRIMARY KEY,
@@ -1557,7 +1623,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_print_jobs_queue ON print_jobs (merchant, status, created_ts);
 
--- ── Inventaire physique universel & validation propriétaire (migrations/2026-08-22-inventory-counts.sql)
+-- ── Inventaire physique universel & validation propriétaire (migrations/legacy/2026-08-22-inventory-counts.sql)
 
 CREATE TABLE IF NOT EXISTS inventory_counts (
   id TEXT PRIMARY KEY,

@@ -394,7 +394,7 @@ console.log('--- Test 7: Prod D1 Lag · Le bornage ne doit PAS s’appliquer san
   assert.ok(saved.bookings.length > 0, 'le document n’est pas vide');
   console.log('  ✓ Sans la table, le sejour a +30j est conserve (aucune destruction silencieuse)');
 
-  sql.exec(fs.readFileSync(new URL('../migrations/2026-09-07-hotel-reservations.sql', import.meta.url), 'utf8'));
+  sql.exec(fs.readFileSync(new URL('../migrations/legacy/2026-09-07-hotel-reservations.sql', import.meta.url), 'utf8'));
   resetTableStateCacheForTests();
 }
 

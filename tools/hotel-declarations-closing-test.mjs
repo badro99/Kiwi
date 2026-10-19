@@ -32,8 +32,8 @@ import { onRequestGet, onRequestPost, canonicalJson, sha256Hex, aggregateMonth }
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sql = new DatabaseSync(':memory:');
 sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
-const DECL_MIGRATION = fs.readFileSync(path.join(root, 'migrations/2026-09-03-hotel-declarations.sql'), 'utf8');
-const EVENTS_MIGRATION = fs.readFileSync(path.join(root, 'migrations/2026-09-02-hotel-stay-events.sql'), 'utf8');
+const DECL_MIGRATION = fs.readFileSync(path.join(root, 'migrations/legacy/2026-09-03-hotel-declarations.sql'), 'utf8');
+const EVENTS_MIGRATION = fs.readFileSync(path.join(root, 'migrations/legacy/2026-09-02-hotel-stay-events.sql'), 'utf8');
 sql.exec(DECL_MIGRATION);
 sql.exec(EVENTS_MIGRATION);
 

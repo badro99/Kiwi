@@ -34,7 +34,7 @@ function makeDB() {
   const db = new DatabaseSync(':memory:');
   const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
   db.exec(schema);
-  const migration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+  const migration = fs.readFileSync(path.join(ROOT, 'migrations/legacy/2026-09-08-auth-session-revocation.sql'), 'utf8');
   for (const statement of migration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
     if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
         && /\bsession_epoch\b/i.test(schema)) continue;

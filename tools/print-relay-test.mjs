@@ -55,7 +55,7 @@ function fakeD1(db) {
   };
 }
 function applyMigration(db) {
-  db.exec(read('migrations/2026-08-21-print-relay.sql'));
+  db.exec(read('migrations/legacy/2026-08-21-print-relay.sql'));
   db.exec(`CREATE TABLE IF NOT EXISTS pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER NOT NULL, first_ts INTEGER NOT NULL, blocked_until INTEGER);`);
   // The till cookie is now epoch-bound. This relay fixture is intentionally
   // schema-light, so provide the one auth table needed to represent an

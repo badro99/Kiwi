@@ -3,7 +3,7 @@
 -- is deleted or rewritten here.
 
 -- The additive payload_hash ALTER is deliberately separate:
--- migrations/2026-09-08-inventory-movement-payload-hash.sql
+-- migrations/legacy/2026-09-08-inventory-movement-payload-hash.sql
 -- applies it to legacy installations whose inventory table predates schema.sql.
 
 CREATE TABLE IF NOT EXISTS inventory_request_reservations (

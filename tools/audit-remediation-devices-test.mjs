@@ -211,7 +211,7 @@ async function relayRaceTest() {
   const relay = await import(pathToFileURL(path.join(ROOT, 'functions/api/print/_relay.js')).href);
   const jobs = await import(pathToFileURL(path.join(ROOT, 'functions/api/print/jobs.js')).href);
   const db = new DatabaseSync(':memory:');
-  db.exec(read('migrations/2026-08-21-print-relay.sql'));
+  db.exec(read('migrations/legacy/2026-08-21-print-relay.sql'));
   db.exec('CREATE TABLE IF NOT EXISTS pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER NOT NULL, first_ts INTEGER NOT NULL, blocked_until INTEGER)');
   db.exec('CREATE TABLE IF NOT EXISTS merchant_config (merchant TEXT PRIMARY KEY, till_epoch INTEGER DEFAULT 0, status TEXT DEFAULT \'active\')');
   db.prepare('INSERT INTO merchant_config(merchant,till_epoch,status) VALUES(?,?,?)').run('audit-shop', 0, 'active');

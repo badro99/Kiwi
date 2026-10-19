@@ -1,0 +1,19 @@
+# wrangler.d1.toml — config des MIGRATIONS D1, et de rien d'autre.
+#
+# Pas nommé wrangler.toml exprès : Cloudflare Pages lit wrangler.toml pour
+# configurer le déploiement de kiwi-os.com. Ce fichier-ci ne sert qu'à
+# `wrangler d1 migrations …` (voir docs/ops/MIGRATIONS.md) :
+#
+#   npx wrangler d1 migrations list  kiwi-sales --remote -c wrangler.d1.toml
+#   npx wrangler d1 migrations apply kiwi-sales --remote -c wrangler.d1.toml
+#
+# database_id n'est pas un secret : il ne sert à rien sans jeton Cloudflare.
+
+name = "kiwi-d1-migrations"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kiwi-sales"
+database_id = "78c72b8d-8a91-4085-bfac-e41cadb065af"
+migrations_dir = "migrations"

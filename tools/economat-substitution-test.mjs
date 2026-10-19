@@ -90,7 +90,7 @@ await check('the route posts substitute stock and persists the trusted snapshot'
 });
 await check('the additive migration preserves existing request lines', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const sql = fs.readFileSync(path.join(root, 'migrations/2026-09-01-hotel-request-substitutions.sql'), 'utf8');
+  const sql = fs.readFileSync(path.join(root, 'migrations/legacy/2026-09-01-hotel-request-substitutions.sql'), 'utf8');
   assert.equal((sql.match(/ALTER TABLE hotel_internal_request_lines/g) || []).length, 3);
   assert.doesNotMatch(sql, /DROP TABLE|DELETE FROM/);
 });

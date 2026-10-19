@@ -49,7 +49,7 @@ Apply the additive production migration:
 
 ```sh
 npx wrangler d1 execute kiwi-sales --remote \
-  --file=migrations/2026-08-27-shopify-inventory-sync.sql
+  --file=migrations/legacy/2026-08-27-shopify-inventory-sync.sql
 ```
 
 ## Retry Worker

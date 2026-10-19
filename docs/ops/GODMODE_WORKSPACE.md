@@ -35,7 +35,7 @@ Automatic refresh runs every 30 seconds while visible, outside merchant dossiers
 
 ## Migration and verification
 
-Apply only `migrations/2026-09-07-operator-workspace.sql` to the verified production database before serving the new routes. It adds three operator tables and their indexes and is repeatable; it does not rewrite existing merchant records. Do not apply the entire fresh-install schema as a substitute.
+Apply only `migrations/legacy/2026-09-07-operator-workspace.sql` to the verified production database before serving the new routes. It adds three operator tables and their indexes and is repeatable; it does not rewrite existing merchant records. Do not apply the entire fresh-install schema as a substitute.
 
 Validation:
 

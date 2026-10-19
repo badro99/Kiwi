@@ -5,7 +5,7 @@ Tout ce qui n'est pas `README.md`, `AGENTS.md` ou `CLAUDE.md` vit ici.
 | Dossier | Contenu |
 | --- | --- |
 | `handoffs/` | `HANDOFF.md` — **à lire en premier** quand une session reprend le travail (Partie 1 : état courant · Partie 2 : contexte complet). `HANDOFF-DESIGN-VEXEL.md` — la peau Design 2026. `HANDOFF-DESIGN-2027.md` : Design 2027, étapes 4 à 7, où reprendre. |
-| `ops/` | Runbooks : `DEPLOY.md`, `AUTH.md`, `ADMIN.md` (console opérateur), `LIVE_LINK.md` (caisse → dashboard), `KIOSK.md`, `APP.md` (app native Capacitor : build, bundle, CORS, release). |
+| `ops/` | Runbooks : `DEPLOY.md`, `AUTH.md`, `ADMIN.md` (console opérateur), `LIVE_LINK.md` (caisse → dashboard), `KIOSK.md`, `APP.md` (app native Capacitor : build, bundle, CORS, release), `MIGRATIONS.md` (D1 : migrations wrangler, schema.sql). |
 | `specs/` | Spécifications produit : OrderPro, modèle de synchronisation, plan de salle, staging Supabase, conformité fiscale 2026, l'économat hôtelier (`HOTEL_ECONOMAT.md` — exigences · `HOTEL_ECONOMAT_PLAN.md` — plan de construction en 12 phases) `kiwi-character.md` (mascotte officielle et usages approuvés) et la direction de design 2027 (`kiwi-design-2027.md`, avec son aperçu avant/après `kiwi-design-2027-preview.html` ; les 24 critiques des tours sont dans `audits/design-2026-10/direction-critique-*.md`). |
 | `audits/` | Audits datés (IA, UI/UX, dashboard, lancement, interconnectivité boutique) et `LAUNCH_FIXES.md`. |
 | `roadmaps/` | Feuilles de route 2.0 / 10X / IA, priorités du pitch, et `KIWI_APP_PLAN.md` (app native iOS/Android — plan complet App Store / Play). |

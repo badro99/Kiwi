@@ -76,8 +76,10 @@ remembered on that device for 30 days.
 
 `schema.sql` describes a FRESH database. A live database never receives it —
 `CREATE TABLE IF NOT EXISTS` does not add columns to tables that already
-exist — so after any release that touches `schema.sql`, attest the deployed
-base with the read-only command (needs `CLOUDFLARE_ACCOUNT_ID`,
+exist. Schema changes reach production as numbered migrations
+(`npx wrangler d1 migrations apply kiwi-sales --remote -c wrangler.d1.toml`,
+see `MIGRATIONS.md`). After any release that touches `schema.sql`, apply them,
+then attest the deployed base with the read-only command (needs `CLOUDFLARE_ACCOUNT_ID`,
 `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN` in the environment):
 
 ```bash
@@ -92,7 +94,8 @@ node tools/d1-schema.mjs
 
 `--apply --yes` (`node tools/d1-schema.mjs --apply --yes`) is a SEPARATE
 migration authorization, not part of attestation: it WRITES additive orders
-to the live base. Read the plan it prints, confirm each statement, and only
+to the live base, outside wrangler's `d1_migrations` record, so prefer
+`wrangler d1 migrations apply`. Read the plan it prints, confirm each statement, and only
 then authorize it explicitly. Attestation itself never writes.
 
 ## Notes

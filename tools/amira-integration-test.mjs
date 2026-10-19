@@ -259,10 +259,10 @@ check('schema.sql defines idx_table_transfers_live index', parsed.indexes.has('i
 check('schema.sql defines kitchen_voids', parsed.tables.has('kitchen_voids'));
 check('schema.sql defines idx_kitchen_voids_live index', parsed.indexes.has('idx_kitchen_voids_live'));
 
-const migrationTransfers = fs.existsSync(path.join(ROOT, 'migrations', '2026-08-17-table-transfers.sql'));
-const migrationVoids = fs.existsSync(path.join(ROOT, 'migrations', '2026-08-17-kitchen-voids.sql'));
-check('Migration file for table_transfers exists in migrations/', migrationTransfers);
-check('Migration file for kitchen_voids exists in migrations/', migrationVoids);
+const migrationTransfers = fs.existsSync(path.join(ROOT, 'migrations', 'legacy', '2026-08-17-table-transfers.sql'));
+const migrationVoids = fs.existsSync(path.join(ROOT, 'migrations', 'legacy', '2026-08-17-kitchen-voids.sql'));
+check('Migration file for table_transfers exists in migrations/legacy/', migrationTransfers);
+check('Migration file for kitchen_voids exists in migrations/legacy/', migrationVoids);
 
 /* ── 4. AMIRA PAYMENT LEDGER, INCLUDING A LOST TABLE LINK ────────────────── */
 console.log('\n■ 4. Amira paid receipts survive a missing table session');

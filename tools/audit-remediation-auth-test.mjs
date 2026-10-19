@@ -44,7 +44,7 @@ for (const statement of schema.replace(/--[^\n]*/g, '').split(';').map((s) => s.
  * session_epoch. Keep this focused fixture able to exercise both a fresh
  * schema and the standalone existing-database migration without masking any
  * other migration statement. */
-const authMigration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+const authMigration = fs.readFileSync(path.join(ROOT, 'migrations/legacy/2026-09-08-auth-session-revocation.sql'), 'utf8');
 for (const statement of authMigration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
   if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
       && /\bsession_epoch\b/i.test(schema)) continue;
@@ -155,7 +155,7 @@ const { isTillFor } = await import('../functions/auth/_lib.js');
 check('a database that cannot record a revocation admits the existing pairing',
   await isTillFor(preservedTill, legacyEnv, 'migration-shop'));
 forgetTillEpoch('migration-shop', legacyEnv.DB);
-legacyDb.exec(fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-till-epoch-prerequisite.sql'), 'utf8'));
+legacyDb.exec(fs.readFileSync(path.join(ROOT, 'migrations/legacy/2026-09-08-till-epoch-prerequisite.sql'), 'utf8'));
 check('additive till prerequisite preserves the existing pairing', await isTillFor(preservedTill, legacyEnv, 'migration-shop'));
 const preservedConfig = legacyDb.prepare('SELECT * FROM merchant_config').get();
 check('till prerequisite preserves config data and timestamps', preservedConfig.features === '{"menu":true}' && preservedConfig.updated_ts === 123 && preservedConfig.till_epoch === 0);

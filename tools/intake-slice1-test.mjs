@@ -434,7 +434,7 @@ await check('confirm path ordered: guard and single-owner core before any stock 
   assert.match(intakeSrc, /error: 'hash-mismatch'/, 'upload binds bytes to docId');
   const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
   assert.match(schema, /CREATE TABLE IF NOT EXISTS intake_docs/, 'canonical schema carries intake_docs');
-  assert.ok(fs.existsSync(path.join(root, 'migrations', '2026-09-03-intake-docs.sql')), 'migration ships with the route');
+  assert.ok(fs.existsSync(path.join(root, 'migrations', 'legacy', '2026-09-03-intake-docs.sql')), 'migration ships with the route');
 });
 
 await check('server repeats only the supplied text: no sample, no refusal', async () => {

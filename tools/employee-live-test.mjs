@@ -9,8 +9,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
 const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
 sqlite.exec(schema);
-sqlite.exec('ALTER TABLE merchant_config ADD COLUMN timezone TEXT');
-const authMigration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+/* schema.sql déclare maintenant `timezone` ; l'ALTER ne sert que sur un schéma qui ne l'aurait pas. */
+if (!sqlite.prepare("SELECT 1 FROM pragma_table_info('merchant_config') WHERE name = 'timezone'").get()) {
+  sqlite.exec('ALTER TABLE merchant_config ADD COLUMN timezone TEXT');
+}
+const authMigration = fs.readFileSync(path.join(ROOT, 'migrations/legacy/2026-09-08-auth-session-revocation.sql'), 'utf8');
 for (const statement of authMigration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
   if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
       && /\bsession_epoch\b/i.test(schema)) continue;

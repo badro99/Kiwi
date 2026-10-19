@@ -240,8 +240,8 @@ async function main() {
     '--config', config, '--file', file,
   ]);
   execute(support);
-  execute(path.join(ROOT, 'migrations/2026-09-01-hotel-internal-requests.sql'));
-  execute(path.join(ROOT, 'migrations/2026-09-01-hotel-request-substitutions.sql'));
+  execute(path.join(ROOT, 'migrations/legacy/2026-09-01-hotel-internal-requests.sql'));
+  execute(path.join(ROOT, 'migrations/legacy/2026-09-01-hotel-request-substitutions.sql'));
   execute(requests);
 
   let stdout = '';

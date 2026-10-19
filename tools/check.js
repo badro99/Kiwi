@@ -542,6 +542,8 @@ for (const test of [
   'sale-return-ledger-test.mjs',
   'return-client-guards-test.mjs',
   'd1-schema-test.mjs',
+  /* migrations/ (wrangler d1 migrations) appliquées en mémoire = schema.sql, à la colonne près. */
+  'd1-migrations-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',
   'planning-core-test.mjs',

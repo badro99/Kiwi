@@ -2,7 +2,7 @@
 -- Kiwi · rattrapage de la base de PRODUCTION — OrderPro, session de table
 --
 --   npx wrangler d1 execute kiwi-sales --remote \
---     --file=migrations/2026-07-28-orderpro-session.sql
+--     --file=migrations/legacy/2026-07-28-orderpro-session.sql
 --
 -- Constaté sur la base vivante (kiwi-sales, 78c72b8d-…) le 28 juillet 2026 :
 -- `orders` s'arrête à `customer`, et NI `table_sessions` NI `order_desk`

@@ -234,7 +234,7 @@ A safety review of the slice found seven truthfulness gaps; all fixed:
    mismatches (`400 hash-mismatch`) before touching R2.
 5. **Concurrent commits converge**: `INSERT OR IGNORE` + canonical read —
    loser gets `200 duplicate`, never 503.
-6. **`intake_docs` in `schema.sql` + `migrations/2026-09-03-intake-docs.sql`** —
+6. **`intake_docs` in `schema.sql` + `migrations/legacy/2026-09-03-intake-docs.sql`** —
    no runtime-DDL-only drift.
 7. **Suite at 22 checks**, including live route execution on in-memory D1/R2
    doubles (happy path, hash mismatch, concurrent commit, R2-down, sealed

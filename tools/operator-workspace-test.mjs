@@ -15,7 +15,7 @@ import * as support from '../functions/api/admin/support.js';
 // Real routes, real authorization and transactionally faithful D1 adapter.
 const db=new DatabaseSync(':memory:');
 db.exec(fs.readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
-const migration=fs.readFileSync(new URL('../migrations/2026-09-07-operator-workspace.sql',import.meta.url),'utf8');
+const migration=fs.readFileSync(new URL('../migrations/legacy/2026-09-07-operator-workspace.sql',import.meta.url),'utf8');
 db.exec(migration);db.exec(migration);
 const DB={prepare(sql){let args=[];const st={bind(...values){assert.ok(values.length<=100);args=values;return st;},first(){return db.prepare(sql).get(...args)||null;},all(){return {results:db.prepare(sql).all(...args)};},run(){return {meta:{changes:db.prepare(sql).run(...args).changes}};}};return st;},batch(statements){db.exec('BEGIN IMMEDIATE');try{const r=statements.map(s=>s.run());db.exec('COMMIT');return r;}catch(e){db.exec('ROLLBACK');throw e;}}};
 const env={DB,AUTH_SECRET:crypto.randomUUID(),SITE_PASSWORD:crypto.randomUUID()};

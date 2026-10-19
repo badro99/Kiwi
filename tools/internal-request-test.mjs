@@ -278,7 +278,7 @@ await check('mixed-unit lines are evaluated individually and never summed into o
   assert.equal(deriveRequestLabel({ state: 'open', reviewRevision: 3, acceptedRevision: 3 }, mixed), 'partially-received');
 });
 await check('schema and migration name the same three transactional tables', () => {
-  const migration = fs.readFileSync(path.join(root, 'migrations/2026-09-01-hotel-internal-requests.sql'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'migrations/legacy/2026-09-01-hotel-internal-requests.sql'), 'utf8');
   for (const table of ['hotel_internal_requests', 'hotel_internal_request_lines', 'hotel_internal_request_events']) {
     assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }

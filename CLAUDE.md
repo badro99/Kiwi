@@ -244,9 +244,16 @@ suite fails on any serious violation above `tools/a11y-baseline.json`; lower the
 baseline (`KIWI_UPDATE_A11Y_BASELINE=1`) when a fix brings a count down, never
 raise it to make a red go away.
 
-**Prod D1 lags `schema.sql`.** Every time. Never assume the live database has a table
-just because the schema file does — query the live DB. `migrations/` exists but is
-barely used; formalising `wrangler d1 migrations` is on the roadmap.
+**Prod D1 changes through `wrangler d1 migrations`** (since 2026-10-19,
+`docs/ops/MIGRATIONS.md`). Changing `schema.sql` means adding the next
+`migrations/NNNN_name.sql` in the same commit — `node tools/d1-migrations.mjs
+--draft` writes it, and `tools/d1-migrations-test.mjs` (fast tier) fails the gate
+when migrations applied to an empty DB differ from `schema.sql`. Old dated files
+live in `migrations/legacy/`; never put a dated file back at the top level,
+wrangler would apply it. The test cannot see prod: until someone runs
+`npx wrangler d1 migrations apply kiwi-sales --remote -c wrangler.d1.toml`, prod
+still lags, so query the live DB (`node tools/d1-schema.mjs`) before assuming a
+table exists. Agents never apply to prod; the owner does.
 
 **Verifying locally?** Unregister the service worker *and* `caches.delete()` every
 key first, or you'll test a stale shell. Confirm what actually loaded with
