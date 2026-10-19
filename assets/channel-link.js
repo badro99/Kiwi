@@ -144,7 +144,7 @@
       linkedVariants: 'variantes liées', lastSync: 'dernière synchro', neverSynced: 'aucune synchro terminée',
       missingIdentifier: 'Ajoutez un SKU ou un code-barres dans Shopify', duplicateIdentifier: 'SKU ou code-barres dupliqué', identifierUsed: 'Identifiant déjà utilisé dans Kiwi',
       activateWarn: 'Shopify prendra les quantités Kiwi pour les variantes liées. Les lignes sans correspondance ne seront pas modifiées.',
-      active: 'Synchronisation active', pending: 'en attente', failed: 'en erreur', drift: 'écarts détectés',
+      active: 'Synchronisation active', pending: 'en attente', failed: 'en erreur', drift: 'écarts détectés', missing: 'introuvables sur Shopify',
       reconcile: 'Réconcilier maintenant', retry: 'Réessayer', refresh: 'Actualiser les correspondances',
       working: 'Connexion en cours…', error: 'Connexion Shopify impossible', invalid: 'Vérifiez le domaine et réessayez.',
       oauthFail: 'Shopify n’a pas terminé l’autorisation. Réessayez depuis Kiwi.', done: 'Shopify est connecté. Choisissez maintenant l’emplacement à synchroniser.',
@@ -174,7 +174,7 @@
       linkedVariants: 'linked variants', lastSync: 'last sync', neverSynced: 'no completed sync yet',
       missingIdentifier: 'Add a SKU or barcode in Shopify', duplicateIdentifier: 'Duplicate SKU or barcode', identifierUsed: 'Identifier already used in Kiwi',
       activateWarn: 'Shopify will use Kiwi quantities for linked variants. Unmatched rows will not be changed.',
-      active: 'Sync active', pending: 'pending', failed: 'failed', drift: 'drift detected',
+      active: 'Sync active', pending: 'pending', failed: 'failed', drift: 'drift detected', missing: 'no longer on Shopify',
       reconcile: 'Reconcile now', retry: 'Retry', refresh: 'Refresh matches',
       working: 'Connecting…', error: 'Could not connect Shopify', invalid: 'Check the store domain and try again.',
       oauthFail: 'Shopify did not complete authorization. Try again from Kiwi.', done: 'Shopify is connected. Now choose the location to synchronize.',
@@ -204,7 +204,7 @@
       linkedVariants: 'متغيرات مرتبطة', lastSync: 'آخر مزامنة', neverSynced: 'لا توجد مزامنة مكتملة بعد',
       missingIdentifier: 'أضف SKU أو باركود في Shopify', duplicateIdentifier: 'SKU أو باركود مكرر', identifierUsed: 'المعرّف مستخدم بالفعل في Kiwi',
       activateWarn: 'ستستخدم Shopify كميات Kiwi للمتغيرات المرتبطة. لن تتغير الأسطر غير المتطابقة.',
-      active: 'المزامنة نشطة', pending: 'قيد الانتظار', failed: 'أخطاء', drift: 'اختلافات مكتشفة',
+      active: 'المزامنة نشطة', pending: 'قيد الانتظار', failed: 'أخطاء', drift: 'اختلافات مكتشفة', missing: 'غير موجودة على Shopify',
       reconcile: 'مطابقة الآن', retry: 'إعادة المحاولة', refresh: 'تحديث المطابقات',
       working: 'جارٍ الربط…', error: 'تعذر ربط Shopify', invalid: 'تحقق من عنوان المتجر وحاول مجددًا.',
       oauthFail: 'لم تكتمل موافقة Shopify. حاول مجددًا من Kiwi.', done: 'تم ربط Shopify. اختر الآن الموقع المراد مزامنته.',
@@ -492,7 +492,7 @@
       var liveTitle = document.createElement('strong'); liveTitle.textContent = linkedCount ? s.active : s.connectedNoLinks; live.appendChild(liveTitle);
       var liveStats = document.createElement('span');
       var syncWhen = connection.lastSyncTs ? new Date(connection.lastSyncTs).toLocaleString(document.documentElement.lang || undefined) : s.neverSynced;
-      liveStats.textContent = linkedCount + ' ' + s.linkedVariants + ' · ' + (status.queue.pending || 0) + ' ' + s.pending + ' · ' + (status.queue.failed || 0) + ' ' + s.failed + ' · ' + (status.mapping.drift || 0) + ' ' + s.drift + ' · ' + s.lastSync + ' ' + syncWhen;
+      liveStats.textContent = linkedCount + ' ' + s.linkedVariants + ' · ' + (status.queue.pending || 0) + ' ' + s.pending + ' · ' + (status.queue.failed || 0) + ' ' + s.failed + ' · ' + (status.mapping.drift || 0) + ' ' + s.drift + (status.mapping.missing ? ' · ' + status.mapping.missing + ' ' + s.missing : '') + ' · ' + s.lastSync + ' ' + syncWhen;
       live.appendChild(liveStats); root.appendChild(live);
       var actions = document.createElement('div'); actions.className = 'shp-actions';
       if (linkedCount) actions.appendChild(shopButton(s.reconcile, function () { if (!window.confirm(s.reconcileConfirm)) return; return shopApi('reconcile').then(reload); }));

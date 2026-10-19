@@ -442,6 +442,18 @@ export async function enqueueStockChanges(env, merchant, before, after, sourceRe
   return statements.length;
 }
 
+/* inventorySetQuantities userErrors : STALE = la quantité a bougé côté Shopify ;
+   un article, un emplacement ou un stockage introuvable ne reviendra pas en
+   réessayant (vu en production : 1 901 essais sur un article supprimé). */
+const GONE_CODES = /^(INVALID_INVENTORY_ITEM|INVALID_LOCATION|ITEM_NOT_STOCKED_AT_LOCATION|NON_MUTABLE_INVENTORY_ITEM)$/;
+export function userErrorKind(errors) {
+  const list = Array.isArray(errors) ? errors : [];
+  if (list.some((e) => /STALE/.test(String(e && e.code || '')))) return 'stale';
+  if (list.some((e) => GONE_CODES.test(String(e && e.code || ''))
+    || /could not be found|not stocked at/i.test(String(e && e.message || '')))) return 'gone';
+  return 'retry';
+}
+
 function retryDelay(attempts) {
   return Math.min(3600000, Math.max(15000, (2 ** Math.min(8, attempts)) * 5000));
 }
@@ -493,16 +505,25 @@ export async function flushShopifyOutbox(env, merchant, limit = 10) {
       const payload = out.data.inventorySetQuantities || {};
       const errors = payload.userErrors || [];
       if (errors.length) {
-        const stale = errors.some((e) => /STALE/.test(String(e && e.code || '')));
+        const kind = userErrorKind(errors);
         const message = small(errors.map((e) => e && e.message).filter(Boolean).join(' · ') || 'inventory-rejected', 300);
-        await env.DB.batch([
-          env.DB.prepare(`UPDATE shopify_sync_outbox SET id = ?, status = 'failed', attempts = attempts + 1, next_attempt_ts = ?, last_error = ?, updated_ts = ? WHERE id = ?`)
-            .bind(crypto.randomUUID(), stale ? Date.now() + 86400000 : Date.now() + retryDelay(Number(row.attempts) + 1), message, Date.now(), row.id),
+        /* Un écart (Shopify modifié de son côté) ou un article que Shopify n'a
+           plus ne se règle pas en réessayant : la ligne sort de la file (drift,
+           cancelled), le lien dit pourquoi (drift, missing), et « Réconcilier »
+           les reprend. Seule une erreur passagère reste « failed » et revient. */
+        const outStatus = kind === 'stale' ? 'drift' : kind === 'gone' ? 'cancelled' : 'failed';
+        const linkStatus = kind === 'stale' ? 'drift' : kind === 'gone' ? 'missing' : 'active';
+        const writes = [
+          env.DB.prepare(`UPDATE shopify_sync_outbox SET id = ?, status = ?, attempts = attempts + 1, next_attempt_ts = ?, last_error = ?, updated_ts = ? WHERE id = ?`)
+            .bind(crypto.randomUUID(), outStatus, Date.now() + retryDelay(Number(row.attempts) + 1), message, Date.now(), row.id),
           env.DB.prepare(`UPDATE shopify_variant_links SET status = ?, updated_ts = ? WHERE merchant = ? AND kiwi_variant_id = ?`)
-            .bind(stale ? 'drift' : 'active', Date.now(), row.merchant, row.kiwi_variant_id),
-          env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
-            .bind(message, Date.now(), row.merchant),
-        ]);
+            .bind(linkStatus, Date.now(), row.merchant, row.kiwi_variant_id),
+        ];
+        /* Un souci d'une seule variante se lit dans les compteurs : il ne
+           recouvre pas l'erreur de la connexion. */
+        if (outStatus === 'failed') writes.push(env.DB.prepare(`UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`)
+          .bind(message, Date.now(), row.merchant));
+        await env.DB.batch(writes);
         failed++; continue;
       }
       await env.DB.batch([

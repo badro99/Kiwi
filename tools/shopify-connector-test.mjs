@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildExactVariantMapping, decryptToken, encryptToken, normalizeShopDomain,
-  enqueueStockChanges, exchangeClientCredentials, flushShopifyOutbox,
+  enqueueStockChanges, exchangeClientCredentials, flushShopifyOutbox, userErrorKind,
   isClientCredentials, sha256Hex, stockSnapshot,
   SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
@@ -172,8 +172,17 @@ function syncDB(connection) {
             state.connection.last_sync_ts = a[0]; state.connection.last_error = ''; return { meta: { changes: 1 } };
           }
           if (q.startsWith("UPDATE shopify_sync_outbox SET status = 'failed'")) return { meta: { changes: 1 } };
+          if (q.startsWith('UPDATE shopify_sync_outbox SET id = ?, status = ?')) {
+            const row = state.outbox.find((x) => x.id === a[5]);
+            if (row) Object.assign(row, { id: a[0], status: a[1], attempts: row.attempts + 1, next_attempt_ts: a[2], last_error: a[3], updated_ts: a[4] });
+            return { meta: { changes: row ? 1 : 0 } };
+          }
           if (q.startsWith('UPDATE shopify_connections SET last_error')) { state.connection.last_error = a[0]; return { meta: { changes: 1 } }; }
-          if (q.startsWith('UPDATE shopify_variant_links SET status')) return { meta: { changes: 1 } };
+          if (q.startsWith('UPDATE shopify_variant_links SET status')) {
+            const row = state.links.find((x) => x.merchant === a[2] && x.kiwi_variant_id === a[3]);
+            if (row) row.status = a[0];
+            return { meta: { changes: row ? 1 : 0 } };
+          }
           throw new Error(`unexpected run: ${q}`);
         },
       };
@@ -212,6 +221,48 @@ ok('successful Shopify write removes the durable target', DB.state.outbox.length
 ok('successful Shopify write advances known remote quantity', DB.state.links[0].last_shopify_quantity === 2);
 ok('GraphQL carries the durable row UUID as idempotency key', sentMutation && sentMutation.variables.key === firstOutboxId ? false : /^[0-9a-f-]{36}$/.test(sentMutation && sentMutation.variables.key || ''));
 ok('GraphQL CAS starts from last observed Shopify quantity', sentMutation && sentMutation.variables.input.quantities[0].changeFromQuantity === 9);
+
+// Production, 19 October: four rows pointed at items deleted in Shopify and
+// were retried hourly, up to 1 901 times, each time overwriting the panel's
+// error. A userError that cannot heal leaves the queue; a stale one becomes
+// drift for "Réconcilier"; only a passing failure stays failed and comes back.
+ok('a deleted inventory item cannot heal', userErrorKind([{ code: 'INVALID_INVENTORY_ITEM', message: 'The specified inventory item could not be found.' }]) === 'gone');
+ok('the production message alone is enough', userErrorKind([{ message: 'The specified inventory item could not be found.' }]) === 'gone');
+ok('an item not stocked at the location cannot heal', userErrorKind([{ code: 'ITEM_NOT_STOCKED_AT_LOCATION', message: 'x' }]) === 'gone');
+ok('a moved Shopify quantity is drift', userErrorKind([{ code: 'CHANGE_FROM_QUANTITY_STALE', message: 'The changeFromQuantity argument no longer matches the persisted quantity.' }]) === 'stale');
+ok('anything else is retried', userErrorKind([{ code: 'INVALID_QUANTITY_TOO_HIGH', message: 'x' }]) === 'retry' && userErrorKind([]) === 'retry');
+async function flushWith(userErrors) {
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify({ data: { inventorySetQuantities: { inventoryAdjustmentGroup: null, userErrors } } }), { status: 200, headers: { 'Content-Type': 'application/json' } }); };
+  try { const out = await flushShopifyOutbox(syncEnv, 'atlas', 5); return { out, calls }; } finally { globalThis.fetch = realFetch; }
+}
+const link = DB.state.links[0];
+let rev = 20;
+const stockStep = async (from, to) => enqueueStockChanges(syncEnv, 'atlas', { variants: [{ id: 'k-bar', stock: from }] }, { variants: [{ id: 'k-bar', stock: to }] }, rev++, false);
+
+DB.state.connection.last_error = '';
+await stockStep(2, 1);
+const gone = await flushWith([{ code: 'INVALID_INVENTORY_ITEM', message: 'The specified inventory item could not be found.' }]);
+ok('a deleted Shopify item counts as one failure', gone.out.failed === 1 && gone.calls === 1);
+ok('its row leaves the queue as cancelled', DB.state.outbox.length === 1 && DB.state.outbox[0].status === 'cancelled', JSON.stringify(DB.state.outbox[0]));
+ok('its link says the item is missing', link.status === 'missing', link.status);
+ok('a per-item problem does not overwrite the connection error', DB.state.connection.last_error === '', DB.state.connection.last_error);
+DB.state.outbox[0].next_attempt_ts = 0;
+const again = await flushWith([]);
+ok('the next minute does not call Shopify for it again', again.calls === 0 && again.out.processed === 0);
+
+DB.state.outbox = []; link.status = 'active';
+await stockStep(1, 3);
+await flushWith([{ code: 'CHANGE_FROM_QUANTITY_STALE', message: 'The changeFromQuantity argument no longer matches the persisted quantity.' }]);
+ok('a stale quantity turns the row and the link into drift', DB.state.outbox[0].status === 'drift' && link.status === 'drift', DB.state.outbox[0].status + '/' + link.status);
+ok('drift is not counted as failed', !DB.state.outbox.some((x) => x.status === 'failed'));
+
+DB.state.outbox = []; link.status = 'active';
+await stockStep(3, 4);
+await flushWith([{ code: 'INVALID_QUANTITY_TOO_HIGH', message: 'Quantity too high' }]);
+ok('a passing failure stays failed, link active, for the retry', DB.state.outbox[0].status === 'failed' && link.status === 'active' && DB.state.outbox[0].next_attempt_ts > Date.now());
+ok('and it does reach the connection error', DB.state.connection.last_error === 'Quantity too high');
+DB.state.outbox = []; DB.state.connection.last_error = '';
 
 const schema = read('schema.sql');
 for (const table of ['shopify_connections', 'shopify_oauth_states', 'shopify_variant_links', 'shopify_sync_outbox', 'shopify_webhook_events']) {
