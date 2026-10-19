@@ -22,6 +22,13 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* La caisse boutique compte en dirhams entiers, et n'encaisse JAMAIS plus que
+     le prix affiché (décision propriétaire, 2026-10-19). Un prix de catalogue à
+     249,90, une promotion ou une remise qui tombe sur 220,50 s'arrondissent
+     donc vers le bas, partout : grille, fiche, ticket, échange et reçu disent le
+     même chiffre. Arrondir au plus proche encaissait 250 pour 249,90. Le petit
+     epsilon absorbe 0,1 + 0,2 et ses cousins, jamais un vrai centime. */
+  const shelf = (n) => Math.max(0, Math.floor((+n || 0) + 1e-6));
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -552,7 +559,7 @@
   const mkLine = (pid, size, color, qty, remise) => {
     const p = P[pid];
     const rem = remise || 0;
-    return { pid, size, color, qty, remise: rem, unit: Math.round(p.price * (100 - rem) / 100), returned: false, note: '' };
+    return { pid, size, color, qty, remise: rem, unit: shelf(p.price * (100 - rem) / 100), returned: false, note: '' };
   };
   const SALES = IS_DEMO ? [
     { id: '1207', at: new Date(NOW - 24 * MIN),  clientId: 'c4', by: 'Rania', kind: 'vente', methods: 'espèces',
@@ -1314,7 +1321,10 @@
   function promoFor(pid) {
     const p = P[pid];
     if (!p || !window.KiwiPromos) return null;
-    try { return window.KiwiPromos.priceFor(p, { stock: stockOf(p) }); } catch (_) { return null; }
+    try {
+      const pr = window.KiwiPromos.priceFor(p, { stock: stockOf(p) });
+      return pr ? { ...pr, price: shelf(pr.price), was: shelf(pr.was) } : null;
+    } catch (_) { return null; }
   }
   /* ── LE PRIX D'UNE LIGNE : LE MEILLEUR DES DEUX ───────────────────────────
    * Le prix promo est estampillé sur la ligne quand elle entre sur le ticket
@@ -1335,9 +1345,9 @@
    * celui affiché maintenant. » C'est aussi ce qui rend un retour juste trois
    * jours plus tard : la ligne de vente porte le prix réellement payé. */
   function lineDeal(ln) {
-    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? ln.promo : null;
+    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? { ...ln.promo, price: shelf(ln.promo.price) } : null;
     const live = promoFor(ln.pid);
-    const full = P[ln.pid].price;
+    const full = shelf(P[ln.pid].price);
     let best = { price: full, promo: null };
     if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
     if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
@@ -1345,7 +1355,7 @@
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  const lineUnit  = (ln) => Math.round(lineBase(ln) * (100 - ln.remise) / 100);
+  const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
   const lineTotal = (ln) => lineUnit(ln) * ln.qty;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
@@ -1362,7 +1372,7 @@
      la récompense un dû de la cliente. Les confondre au total, c'est rendre le
      rapport de clôture incapable de dire ce que les promotions ont coûté. */
   function ticketTotals(t) {
-    const sub = t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0);
+    const sub = t.lines.reduce((s, ln) => s + shelf(P[ln.pid].price) * ln.qty, 0);
     const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
     const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
     const reward = rewardDiscount(t, afterLines);
@@ -1848,7 +1858,7 @@
         <button class="bq-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-bq-item="${p.id}" style="--i:${i++}">
           <span class="bq-card-art">${productVisual(p)}</span>
           <span class="bq-card-name">${esc(p.name)}</span>
-          <span class="bq-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : p.price)}</span>
+          <span class="bq-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : shelf(p.price))}</span>
           ${cardFlag(p)}
           ${pr ? `<span class="bq-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
         </button>`; }).join('')}
@@ -2043,7 +2053,7 @@
         </span>
       </span>
       <span class="bq-line-right">
-        <span class="bq-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(p.price * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
+        <span class="bq-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(shelf(p.price) * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
         <span class="bq-line-qty">
           <button data-bq-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-bq-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -2136,8 +2146,8 @@
        sien à partir du prix catalogue : en promotion elle annonçait donc un
        prix, et le ticket en affichait un autre deux secondes plus tard. */
     const shPromo = promoFor(sheet.pid);
-    const shBase = shPromo ? shPromo.price : p.price;
-    const unit = Math.round(shBase * (100 - sheet.remise) / 100);
+    const shBase = shPromo ? shPromo.price : shelf(p.price);
+    const unit = shelf(shBase * (100 - sheet.remise) / 100);
     const available = availableStock(p.id, sheet.size, sheet.color);
     const canAdd = available >= sheet.qty;
     const el = $('#bq-sheetm', root);
@@ -2202,7 +2212,7 @@
       </div>`;
 
     const refreshPrice = () => {
-      const u = Math.round(shBase * (100 - sheet.remise) / 100);
+      const u = shelf(shBase * (100 - sheet.remise) / 100);
       $('#bq-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
       $('#bq-sheet-per', el).classList.toggle('rem', !!sheet.remise);
@@ -2616,7 +2626,7 @@
                demande « il coûte combien ? » : citer le prix catalogue pendant
                une promotion, c'est annoncer un prix qu'on n'encaissera pas. */
             const pr = promoFor(lk.pid);
-            return pr ? `<s>${fmtMAD(pr.was)}</s> ${fmtMAD(pr.price)}` : fmtMAD(p.price);
+            return pr ? `<s>${fmtMAD(pr.was)}</s> ${fmtMAD(pr.price)}` : fmtMAD(shelf(p.price));
           })()}</span>
         </div>
         <div class="bq-look-avail">
@@ -2981,7 +2991,7 @@
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
     try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}
-    toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
+    toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(shelf(p.price))})`);
     if (state.view === 'vente') renderTicket();
     renderBadges();
   }
@@ -3467,7 +3477,7 @@
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast('Article de remplacement introuvable'); return; }
-    const diff = Math.round((newP.price - paidUnit(sale, ln)) * 100) / 100;
+    const diff = Math.round((shelf(newP.price) - paidUnit(sale, ln)) * 100) / 100;
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
     el.innerHTML = `
@@ -3482,7 +3492,7 @@
       <div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(newP.art)}</span>
         <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
-        <span class="amt">+${fmtMAD(newP.price)}</span>
+        <span class="amt">+${fmtMAD(shelf(newP.price))}</span>
       </div>
       <div class="bq-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
         <span>${diff > 0 ? 'Différence à encaisser' : diff < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct'}</span>
@@ -3510,7 +3520,7 @@
       if (IS_DEMO || state.offline || !cat || !cat.reserveSale) return Promise.resolve({ ok: false, offline: true });
       /* le registre des mouvements écoute avant que la pièce de remplacement sorte */
       try { window.KiwiMaisonStock?.enable('boutique'); } catch (_) {}
-      return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: newP.price }]);
+      return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: shelf(newP.price) }]);
     };
     const apply = (reserved) => {
       if (applied) return true;
@@ -3817,7 +3827,7 @@
         return {
           pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise,
           promo: linePromo(ln), unit: lineUnit(ln), name: p.name || 'Article',
-          price: +p.price || 0, barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '',
+          price: shelf(p.price), barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '',
         };
       }),
     };
@@ -5648,7 +5658,7 @@
               ${prev.sample.map((x) => `
                 <div class="bq-prc-srow ${x.under ? 'is-under' : ''}">
                   <span class="nm">${esc(x.name)}</span>
-                  <span class="pz"><s>${fmtMAD(x.was)}</s><b>${fmtMAD(x.price)}</b></span>
+                  <span class="pz"><s>${fmtMAD(shelf(x.was))}</s><b>${fmtMAD(shelf(x.price))}</b></span>
                 </div>`).join('')}
               ${prev.count > prev.sample.length ? `<div class="bq-prc-more">et ${prev.count - prev.sample.length} autre${prev.count - prev.sample.length > 1 ? 's' : ''}…</div>` : ''}
             </div>` : `
@@ -5753,7 +5763,7 @@
         const found = byCode ? [P[byCode]].filter(Boolean)
           : promoItems().filter((it) => it.name.toLowerCase().indexOf(term) >= 0).slice(0, 8);
         hits.innerHTML = found.map((it) => `<button class="bq-prc-hit" data-prpick="${esc(it.id)}">
-            <span>${esc(it.name)}</span><b>${fmtMAD(it.price)}</b></button>`).join('')
+            <span>${esc(it.name)}</span><b>${fmtMAD(shelf(it.price))}</b></button>`).join('')
           || '<div class="bq-prc-hint">Aucun article ne porte ce nom.</div>';
         $$('[data-prpick]', hits).forEach((b) => b.onclick = () => {
           const ids = d.scope.ids || (d.scope.ids = []);

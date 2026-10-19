@@ -309,13 +309,19 @@
     return false;
   }
 
+  /* Vers le bas, jamais au plus proche : un article affiché 249,90 se compte
+     249, et −10 % sur 245 fait 220, pas 221. Arrondir au plus proche
+     encaissait parfois plus que le prix affiché (décision propriétaire,
+     2026-10-19 : jamais au-dessus du prix en rayon). L'epsilon absorbe les
+     erreurs de virgule flottante, jamais un vrai centime. */
+  function down(n) { return Math.max(0, Math.floor(n + 1e-6)); }
   function applyTo(p, price) {
-    var base = Math.max(0, Math.round(num(price, 0)));
+    var base = down(num(price, 0));
     var out = base;
-    if (p.kind === 'percent') out = Math.round(base * (100 - p.value) / 100);
+    if (p.kind === 'percent') out = base * (100 - p.value) / 100;
     else if (p.kind === 'amount') out = base - p.value;
     else out = p.value;                       /* prix fixe */
-    return Math.max(0, Math.min(base, Math.round(out)));   /* jamais négatif, jamais plus cher */
+    return Math.min(base, down(out));         /* jamais négatif, jamais plus cher */
   }
 
   /* Le prix effectif d'un article, et la promotion qui l'explique.
@@ -326,7 +332,7 @@
     if (!item) return null;
     var now = opts.now || Date.now();
     var stock = opts.stock;
-    var was = Math.max(0, Math.round(num(item.price, 0)));
+    var was = down(num(item.price, 0));
     var best = null;
     list().forEach(function (p) {
       if (!isRunning(p, now)) return;
@@ -352,7 +358,7 @@
     var out = { count: 0, under: 0, from: 0, to: 0, sample: [] };
     (items || []).forEach(function (item) {
       if (!matches(norm, item, opts.stockOf ? opts.stockOf(item) : null)) return;
-      var was = Math.max(0, Math.round(num(item.price, 0)));
+      var was = down(num(item.price, 0));
       var price = applyTo(norm, was);
       if (price >= was) return;
       out.count++;

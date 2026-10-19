@@ -76,6 +76,7 @@ function grabStatement(re) {
 function tillContext(globals) {
   const ctx = vm.createContext({ Math, Number, Array, Date, String, Object, JSON, ...globals });
   vm.runInContext([
+    grabStatement(/const shelf = [^\n]+\n/),
     grabFn('function lineDeal('),
     grabStatement(/const linePromo = [^\n]+\n/),
     grabStatement(/const lineBase {0,2}= [^\n]+\n/),
@@ -114,17 +115,43 @@ await strict('une remise plus forte ne fait jamais payer plus',
     const totals = [0, 5, 10, 15, 20].map((r) => { const { api, ln } = lineFor(s, p, r, q); return api.lineTotal(ln); });
     return totals.every((t, i) => i === 0 || t <= totals[i - 1]);
   }));
-await strict('l’arrondi au dirham ne déplace jamais le prix de plus d’un demi-dirham',
+/* Décision propriétaire (2026-10-19) : arrondir vers le bas, jamais encaisser
+   au-dessus du prix en rayon. Avant, 249,90 s'encaissait 250, et 1,00 à −20 % 1. */
+await strict('l’arrondi au dirham descend toujours, de moins d’un dirham',
   fc.property(shelfCents, promoCents, remise, qty, (s, p, r, q) => {
     const { api, ln } = lineFor(s, p, r, q);
-    return Math.abs(api.lineUnit(ln) - api.lineBase(ln) * (100 - r) / 100) <= 0.5 + 1e-9;
+    const exact = api.lineBase(ln) * (100 - r) / 100;
+    return api.lineUnit(ln) <= exact + 1e-9 && exact - api.lineUnit(ln) < 1;
   }));
-await knownIssue('shelf-rounding',
-  'une ligne n’est jamais encaissée plus cher que son prix affiché (249,90 → 250 aujourd’hui, décision propriétaire en attente)',
+await strict('une ligne n’est jamais encaissée plus cher que son prix affiché, promotion et remise comprises',
   fc.property(shelfCents, promoCents, remise, qty, (s, p, r, q) => {
     const { api, ln } = lineFor(s, p, r, q);
-    return api.lineTotal(ln) <= api.lineBase(ln) * (100 - r) / 100 * q + 1e-9;
+    const shown = Math.min(s, p == null ? Infinity : p) / 100;
+    return api.lineTotal(ln) <= shown * (100 - r) / 100 * q + 1e-9;
   }));
+
+/* ── le vrai moteur de promotions (assets/promos.js) ────────────────────── */
+console.log('■ Moteur de promotions');
+{
+  const store = new Map();
+  const localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  const window = { localStorage };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'),
+    { window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl }, { filename: 'promos.js' });
+  const PR = window.KiwiPromos;
+  const promo = fc.oneof(
+    fc.record({ kind: fc.constant('percent'), value: fc.integer({ min: 1, max: 90 }) }),
+    fc.record({ kind: fc.constant('amount'), value: fc.integer({ min: 1, max: 2000 }) }),
+    fc.record({ kind: fc.constant('fixed'), value: fc.integer({ min: 0, max: 5000 }) }),
+  );
+  await strict('une promotion ne fait jamais payer plus que sa règle, ni plus que le prix affiché, ni moins que zéro',
+    fc.property(shelfCents, promo, (cents, p) => {
+      const shown = cents / 100;
+      const out = PR.applyTo(p, shown);
+      const rule = p.kind === 'percent' ? shown * (100 - p.value) / 100 : p.kind === 'amount' ? shown - p.value : p.value;
+      return out >= 0 && out <= shown + 1e-9 && out <= Math.max(0, rule) + 1e-9 && Number.isInteger(out);
+    }));
+}
 
 /* ── la recette du jour de la caisse = l'argent que le serveur enregistre ── */
 console.log('■ Recette du jour, caisse contre serveur');
