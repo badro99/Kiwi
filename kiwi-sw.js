@@ -417,8 +417,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=70',
-  '/assets/pos-maison.js?v=70',
+  '/assets/pos-maison.css?v=71',
+  '/assets/pos-maison.js?v=71',
   '/assets/caisse-pairing.js?v=34',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

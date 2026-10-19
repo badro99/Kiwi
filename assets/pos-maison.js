@@ -1650,8 +1650,19 @@
   /* La recette du jour EXCLUT le dépôt-vente : ces montants sont dans le
      tiroir mais ils appartiennent aux déposants. Les ventes d'avant cette
      fonctionnalité n'ont pas de champ `own` — elles retombent sur `total`,
-     ce qui est correct : à l'époque tout le rayon lui appartenait. */
-  const caToday = () => salesToday().reduce((s, x) => s + (x.own != null ? x.own : x.total), 0);
+     ce qui est correct : à l'époque tout le rayon lui appartenait.
+     Et l'argent QUI RENTRE, comme le serveur et le tableau de bord
+     (originalSalePayload().amount) : la part réglée en avoir consomme une
+     dette née d'une vente déjà comptée, et une livraison est une créance que
+     le serveur enregistre à 0 (« Livraisons · à recevoir » au Z). Les compter
+     ici gonflait l'en-tête « X MAD aujourd'hui ». Une vente relue du serveur
+     porte déjà ce qu'il a encaissé. */
+  const notCashedOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
+    .reduce((s, p) => s + (p && (p.m === 'avoir' || p.m === 'livraison') ? (+p.amount || 0) : 0), 0);
+  const cashedOf = (x) => (x.remote && x.receivedAmount != null)
+    ? Math.max(0, Number(x.receivedAmount) || 0)
+    : Math.max(0, (x.own != null ? +x.own : (+x.total || 0)) - notCashedOf(x));
+  const caToday = () => salesToday().reduce((s, x) => s + cashedOf(x), 0);
   function queueIfOffline(label) {
     if (!state.offline) return false;
     try {

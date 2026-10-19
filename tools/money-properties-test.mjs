@@ -376,6 +376,46 @@ console.log('■ Prix d’une ligne de caisse Maison');
       const t = api.lineTotal(ln);
       return Number.isInteger(t) && t >= 0 && t <= unitPrice * (100 - r) / 100 * q + 1e-9;
     }));
+  /* L'en-tête « N ventes · X MAD aujourd'hui » de la Maison = ce que le serveur
+     enregistre (originalSalePayload().amount) : avoir et livraison n'y entrent
+     pas, le dépôt-vente non plus, et une vente relue du serveur garde son montant. */
+  const maisonTender = fc.constantFrom('espèces', 'carte', 'virement', 'avoir', 'livraison');
+  const maisonSale = fc.record({
+    total: fc.integer({ min: 1, max: 5000 }),
+    split: fc.array(fc.tuple(maisonTender, fc.integer({ min: 1, max: 100 })), { minLength: 1, maxLength: 3 }),
+    consignedPct: fc.constantFrom(0, 0, 30, 100),
+    remote: fc.option(fc.integer({ min: 0, max: 5000 }), { nil: null, freq: 4 }),
+  }).map(({ total, split, consignedPct, remote }) => {
+    const weight = split.reduce((s, [, w]) => s + w, 0);
+    let left = total;
+    const parts = split.map(([m, w], i) => {
+      const amount = i === split.length - 1 ? left : Math.min(left, Math.floor(total * w / weight));
+      left -= amount;
+      return { m, amount };
+    }).filter((part) => part.amount > 0);
+    const lines = [{ pid: 'p1', qty: 1, unit: total, name: 'Article' }];
+    if (remote != null) return { id: 'r1', remote: true, receivedAmount: remote, total, lines, at: new Date(), kind: 'vente' };
+    const consigned = Math.round(total * consignedPct / 100);
+    return { id: '1000', tenderVersion: 2, parts, total, consigned, own: total - consigned, lines, at: new Date(), kind: 'vente' };
+  });
+  const MAISON_DAY = [
+    mFn('function originalSalePayload('),
+    mStatement(/const notCashedOf = [\s\S]*?;\n/),
+    mStatement(/const cashedOf = [\s\S]*?;\n/),
+    mStatement(/const caToday = [^\n]+\n/),
+    'this.api = { originalSalePayload, caToday };',
+  ].join('\n');
+  await strict('Maison · l’en-tête « X MAD aujourd’hui » égale l’argent que le serveur enregistre (avoir, livraison et dépôt-vente exclus)',
+    fc.property(fc.array(maisonSale, { minLength: 1, maxLength: 6 }), (sales) => {
+      const ctx = vm.createContext({
+        Math, Number, Array, Date, String, Object, JSON, P: { p1: { name: 'Article', price: 1 } },
+        merchantSlug: () => 'm', rayonOf: () => '', salesToday: () => sales,
+        bqPaymentMethod: () => 'cash', bqPaymentParts: (parts) => parts,
+      });
+      vm.runInContext(MAISON_DAY, ctx);
+      const server = sales.reduce((s, sale) => s + ctx.api.originalSalePayload(sale).amount, 0);
+      return Math.abs(ctx.api.caToday() - server) < 0.005;
+    }));
   await strict('Maison · la remise fidélité en % ne fait jamais payer plus que sa règle',
     fc.property(fc.integer({ min: 0, max: 50000 }), fc.integer({ min: 1, max: 50 }), (base, v) => {
       const api = maisonTill({ price: 1 }, null);
