@@ -1064,7 +1064,7 @@
           </button>
           <button class="ff-pay-opt" data-ff-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
           ${fresh ? `
           <button class="ff-pay-opt" data-ff-m="later">
@@ -1124,7 +1124,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ff-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="ff-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
       icons();
       closeBtns();
@@ -1443,7 +1443,7 @@
             <div class="ff-till-tile">
               <span class="lbl"><i data-lucide="credit-card"></i>Carte</span>
               <div class="val">${fmtMAD(tally.carte)}</div>
-              <div class="sub">lecteur partenaire, V1 sans encaissement Kiwi</div>
+              <div class="sub">lecteur partenaire, paiement sur votre terminal</div>
             </div>
             <div class="ff-till-tile dark">
               <span class="lbl"><i data-lucide="bike"></i>Glovo</span>

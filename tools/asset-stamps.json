@@ -1064,12 +1064,12 @@
     "sha": "90cb319d7dfc2b5d"
   },
   "assets/pos-boulangerie.css": {
-    "v": "11",
+    "v": "12",
     "sha": "22851f6616c8cc46"
   },
   "assets/pos-boulangerie.js": {
-    "v": "11",
-    "sha": "beb933b08adde990"
+    "v": "12",
+    "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
     "v": "76",
@@ -1080,84 +1080,84 @@
     "sha": "5a3045430d7c89c8"
   },
   "assets/pos-coiffure.css": {
-    "v": "8",
+    "v": "9",
     "sha": "8e3713916dc1f3ab"
   },
   "assets/pos-coiffure.js": {
-    "v": "8",
-    "sha": "9b54c1cf524d6a76"
+    "v": "9",
+    "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "105",
-    "sha": "ff981414beba341f"
+    "v": "106",
+    "sha": "4c76830b910bea88"
   },
   "assets/pos-epicerie.css": {
-    "v": "11",
+    "v": "12",
     "sha": "67b1a88ae435aff2"
   },
   "assets/pos-epicerie.js": {
-    "v": "11",
-    "sha": "61880b47295a0be8"
+    "v": "12",
+    "sha": "cb707eb2a1e5dc8f"
   },
   "assets/pos-fastfood.css": {
-    "v": "11",
+    "v": "12",
     "sha": "339dff04cdb82825"
   },
   "assets/pos-fastfood.js": {
-    "v": "11",
-    "sha": "e91dbaa75f699c06"
+    "v": "12",
+    "sha": "871a7c4a83682607"
   },
   "assets/pos-fleuriste.css": {
-    "v": "12",
+    "v": "13",
     "sha": "7f15053a55932268"
   },
   "assets/pos-fleuriste.js": {
-    "v": "12",
-    "sha": "8afb6d9ce8e52c58"
+    "v": "13",
+    "sha": "2cfee571e3aaf902"
   },
   "assets/pos-foodtruck.css": {
-    "v": "7",
+    "v": "8",
     "sha": "30250c7a8e40a516"
   },
   "assets/pos-foodtruck.js": {
-    "v": "7",
-    "sha": "597c54c0b6528fe5"
+    "v": "8",
+    "sha": "9a35b2c229d91b66"
   },
   "assets/pos-gym.css": {
-    "v": "7",
+    "v": "8",
     "sha": "afcedd82cdc715c3"
   },
   "assets/pos-gym.js": {
-    "v": "7",
-    "sha": "c259fdd2afc1db2d"
+    "v": "8",
+    "sha": "63c0963cdd3ea26d"
   },
   "assets/pos-hotel.css": {
-    "v": "18",
+    "v": "19",
     "sha": "ecf294d2c2574bd9"
   },
   "assets/pos-hotel.js": {
-    "v": "18",
-    "sha": "4620413beda146d3"
+    "v": "19",
+    "sha": "74bdce735355d52e"
   },
   "assets/pos-inventory-count.js": {
     "v": "9",
     "sha": "cefa5398eda98703"
   },
   "assets/pos-librairie.css": {
-    "v": "10",
+    "v": "11",
     "sha": "2b0ce487db45c40a"
   },
   "assets/pos-librairie.js": {
-    "v": "10",
-    "sha": "97ce59090b57ba84"
+    "v": "11",
+    "sha": "375505880f5dbad3"
   },
   "assets/pos-maison.css": {
-    "v": "69",
+    "v": "70",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "69",
-    "sha": "a82de6297b39a388"
+    "v": "70",
+    "sha": "45052bb40afa8087"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -1168,20 +1168,20 @@
     "sha": "de898c74559fc037"
   },
   "assets/pos-pharmacie.css": {
-    "v": "7",
+    "v": "8",
     "sha": "48f9f2f85cf97f7d"
   },
   "assets/pos-pharmacie.js": {
-    "v": "7",
-    "sha": "f3d8d82d1572d160"
+    "v": "8",
+    "sha": "0dff9dacbf88c394"
   },
   "assets/pos-pizzeria.css": {
-    "v": "6",
+    "v": "7",
     "sha": "1a1795ad2525dc1c"
   },
   "assets/pos-pizzeria.js": {
-    "v": "6",
-    "sha": "deda274b886615a8"
+    "v": "7",
+    "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
     "v": "10",
@@ -1192,20 +1192,20 @@
     "sha": "d3e53817af635983"
   },
   "assets/pos-spa.css": {
-    "v": "7",
+    "v": "8",
     "sha": "9d7374ff923841b1"
   },
   "assets/pos-spa.js": {
-    "v": "7",
-    "sha": "7a0e3f88e251c0fe"
+    "v": "8",
+    "sha": "635ad8bf4612b639"
   },
   "assets/pos-traiteur.css": {
-    "v": "8",
+    "v": "9",
     "sha": "45d7b1720fd65004"
   },
   "assets/pos-traiteur.js": {
-    "v": "8",
-    "sha": "2f286662f3c7fb84"
+    "v": "9",
+    "sha": "4954734f1d52200c"
   },
   "assets/pos-workspaces.css": {
     "v": "4",
@@ -1216,12 +1216,12 @@
     "sha": "17341b476ffb0fb3"
   },
   "assets/pressing-caisse.css": {
-    "v": "45",
+    "v": "46",
     "sha": "8ce1d04a07359a11"
   },
   "assets/pressing-caisse.js": {
-    "v": "45",
-    "sha": "3f13a18cbe0dd0ad"
+    "v": "46",
+    "sha": "1783993439895673"
   },
   "assets/pressing-catalog.css": {
     "v": "4",

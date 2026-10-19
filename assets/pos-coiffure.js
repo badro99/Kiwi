@@ -1607,7 +1607,7 @@
           </button>
           <button class="cf-pay-opt" data-cf-method="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt" id="cf-opt-card">${fmtMAD(total)}</span>
           </button>
         </div>`;
@@ -1688,7 +1688,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="cf-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="cf-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-cf-close]', el).forEach((b) => { b.onclick = () => closeVeil('#cf-pay-veil'); });

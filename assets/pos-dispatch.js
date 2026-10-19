@@ -54,23 +54,23 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '45', label: 'Pressing · Pressing Marshan' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '46', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '76', label: 'Boutique · Maison Mansour' },
-    '0003': { id: 'spa',         file: 'pos-spa',         rev: '7', label: 'Spa · Spa Bahia' },
-    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '18', label: 'Hôtel / Riad' },
-    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '11', label: 'Fast-food · Snack Chamal' },
-    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '11', label: 'Boulangerie · Bab Kasbah' },
-    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '6', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '8', label: 'Traiteur · Dar Zellij' },
-    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '7', label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '11', label: 'Épicerie · Si Brahim' },
-    '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '7', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '10', label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '12', label: 'Fleuriste · Fleurs du Détroit' },
-    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '8', label: 'Coiffure · Salon Yasmine' },
-    '0015': { id: 'gym',         file: 'pos-gym',         rev: '7', label: 'Salle de sport · Atlas Fitness' },
+    '0003': { id: 'spa',         file: 'pos-spa',         rev: '8', label: 'Spa · Spa Bahia' },
+    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '19', label: 'Hôtel / Riad' },
+    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '12', label: 'Fast-food · Snack Chamal' },
+    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '12', label: 'Boulangerie · Bab Kasbah' },
+    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '7', label: 'Pizzeria · La Marsa' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '9', label: 'Traiteur · Dar Zellij' },
+    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '8', label: 'Food truck · Karavan' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '12', label: 'Épicerie · Si Brahim' },
+    '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '8', label: 'Pharmacie · Ibn Batouta' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '11', label: 'Librairie · Al Boughaz' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '13', label: 'Fleuriste · Fleurs du Détroit' },
+    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '9', label: 'Coiffure · Salon Yasmine' },
+    '0015': { id: 'gym',         file: 'pos-gym',         rev: '8', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '8', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '69', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '70', label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */

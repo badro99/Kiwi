@@ -5559,7 +5559,7 @@
           </button>
           <button class="mz-pay-opt" data-mz-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="mz-pay-opt" data-mz-m="virement">
@@ -5762,7 +5762,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="mz-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="mz-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
         </div>
         <div class="mz-card-confirm" id="mz-card-confirm" hidden>
           <button class="cash-confirm" id="mz-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>

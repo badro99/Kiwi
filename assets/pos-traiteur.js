@@ -1554,7 +1554,7 @@
 
   /* ═══════════════════════ ENCAISSEMENT — tranche d'échéancier ═══════════════════════
      Réutilise le kit caisse : .cash-grid pour les espèces, .reader-stage
-     pour la carte (lecteur partenaire — V1 sans encaissement Kiwi). */
+     pour la carte (lecteur partenaire, paiement sur le terminal du commerce). */
   function openPay(ev, t, ctx) {
     if (!t) { toast(`${ev.name} est déjà soldé`); return; }
     const el = $('#tr-paym', root);
@@ -1574,7 +1574,7 @@
           </button>
           <button class="tr-pay-opt" data-tr-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
           <button class="tr-pay-opt is-usual" data-tr-m="virement">
             <span class="ic"><i data-lucide="wallet"></i></span>
@@ -1635,7 +1635,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="tr-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="tr-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-tr-close]', el).forEach((b) => { b.onclick = () => closeVeil('#tr-veil-pay'); });

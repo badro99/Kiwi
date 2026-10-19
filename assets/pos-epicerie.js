@@ -1050,7 +1050,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ep-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="ep-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-pay-veil'); });

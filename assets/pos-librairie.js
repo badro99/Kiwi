@@ -1123,7 +1123,7 @@
           </button>
           <button class="lb-pay-opt" data-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
         </div>`;
@@ -1176,7 +1176,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="lb-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="lb-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur CMI partenaire · V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-pay-veil'); });

@@ -1702,7 +1702,7 @@
           </button>
           <button class="gy-pay-opt" data-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
-            <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
         </div>`;
       icons(); bindX();
@@ -1762,7 +1762,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="gy-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="gy-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">lecteur partenaire, V1 sans encaissement Kiwi</div>
+          <div class="reader-method">lecteur partenaire, paiement sur votre terminal</div>
         </div>`;
       icons(); bindX();
       setTimeout(() => {

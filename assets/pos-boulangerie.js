@@ -646,7 +646,7 @@
       if (!state.ticket.length) return;
       payCard({
         title: `Carte · ${fmtMAD(tkTotal())}`,
-        sub: `${tNum()} · lecteur partenaire, V1 sans encaissement Kiwi`,
+        sub: `${tNum()} · lecteur partenaire, paiement sur votre terminal`,
         amount: tkTotal(),
         onPaid: () => finalizeSale('carte', 0),
       });
@@ -775,7 +775,7 @@
       <div class="reader-stage">
         <div class="reader-disc is-pulsing" id="bl-reader-disc"><i data-lucide="credit-card"></i></div>
         <div class="reader-status" id="bl-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-        <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+        <div class="reader-method">Lecteur partenaire, paiement sur votre terminal</div>
       </div>`;
     icons();
     $$('[data-bl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bl-pay-veil'); });

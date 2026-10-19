@@ -220,6 +220,14 @@ section('Forbidden patterns');
   if (inkCounts.length) fail(`background:var(--ink) is back (use var(--inverse-surface) + var(--inverse-ink), or a fixed colour) — ${inkCounts.join(' · ')}`);
   else ok('no background:var(--ink) in dark-mode surfaces');
 
+  // « V1 sans encaissement Kiwi » was roadmap jargon printed on fifteen tills'
+  // card step (2026-10-19). A cashier reads « paiement sur votre terminal ».
+  // Comments may keep the history; visible copy may not.
+  const v1 = JS_FILES.filter((f) => read(f).split('\n').some((l) => /V1 sans encaissement/.test(l) && !/^\s*(\*|\/\/|\/\*)/.test(l)))
+    .map((f) => path.relative(ROOT, f));
+  if (v1.length) fail(`roadmap jargon « V1 sans encaissement » shown to cashiers — ${v1.join(' · ')}`);
+  else ok('no « V1 sans encaissement » in till copy');
+
   // Secret-shaped strings and unredacted credentials. The repo is public-facing demo code —
   // nothing resembling a live credential may be committed.
   // Scans all tracked files via git ls-files (excluding vendor bundles, media/binaries, and tools/ test harness).

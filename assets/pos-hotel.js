@@ -979,7 +979,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ht-caution-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="ht-caution-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur CMI partenaire · V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkin-veil'); });
@@ -1347,7 +1347,7 @@
           <div class="ht-pay-opts">
             <button class="ht-pay-opt" data-ht-pm="carte">
               <span class="ic"><i data-lucide="credit-card"></i></span>
-              <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+              <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
               <span class="amt">${fmtMAD(t.due)}</span>
             </button>
             <button class="ht-pay-opt" data-ht-pm="especes">
@@ -1427,7 +1427,7 @@
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ht-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="ht-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
-          <div class="reader-method">Lecteur CMI partenaire · V1 sans encaissement Kiwi</div>
+          <div class="reader-method">Lecteur CMI partenaire · paiement sur votre terminal</div>
         </div>`;
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkout-veil'); });
