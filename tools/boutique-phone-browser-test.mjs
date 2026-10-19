@@ -155,6 +155,25 @@ await S.run('Vendus compte les ventes que la caisse vient de faire', async (t) =
   assert(v.grid === 1, 'products and baskets stack in one column on a phone');
 });
 
+await S.run('un code d’avoir refusé reste expliqué sous le champ', async (t) => {
+  const page = await till(t);
+  t.step('open checkout with the seeded ticket, choose Avoir');
+  await tap(page, '.vx-peek');
+  await sleep(800);
+  await tap(page, '.bq-validate');
+  await sleep(800);
+  await tap(page, '[data-bq-m="avoir"]');
+  await page.waitForSelector('#bq-av-code', { visible: true, timeout: 5000 });
+  t.step('type a code that does not exist');
+  await tap(page, '#bq-av-code');
+  await page.keyboard.type('AV-0000ZZ');
+  await page.keyboard.press('Enter');
+  await sleep(2600); // le toast est parti ; la raison doit rester
+  const e = await page.evaluate(() => { const x = document.querySelector('#bq-av-err'); return x ? { shown: !x.hidden && x.getBoundingClientRect().height > 0, text: x.textContent, value: document.querySelector('#bq-av-code').value } : null; });
+  assert(e && e.shown && /Aucun avoir avec ce code/.test(e.text), `the reason stays written under the field (« ${e && e.text} »)`);
+  assert(e.value === 'AV-0000ZZ', 'and the typed code is kept for correction');
+});
+
 await S.run('sur la caisse de bureau, un long nom ne touche pas son prix barré', async (t) => {
   const page = await till(t, { width: 1440, height: 1000 });
   t.step('start a −30 % promotion on the whole shop');

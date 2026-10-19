@@ -849,7 +849,7 @@
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +
         // « 3 j » et non « 3j » : l'abréviation doit être un mot à part pour se
         // traduire — collée au nombre elle se relisait « j3 » en arabe.
-        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '·' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
+        '<div class="kcb-kpi"><div class="v">' + esc(lastSeenTxt(c)) + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
       historyBlock +
       '<div id="kcb-credit-history"><div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Chargement du registre…</div></div>' +

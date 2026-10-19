@@ -227,6 +227,57 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
     `loyalty off (${label}): the visit and spend count, no points or stamps accrue`);
 }
 
+// 2026-10-19 — a return for store credit takes back that ticket's spend and points.
+// Before this, 250 MAD paid, returned for a 250 MAD credit, then spent, read as 500
+// MAD of spend and twice the points.
+{
+  const { raw, DB } = fullDb();
+  const now = Date.now();
+  raw.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
+    .run('audit-owner', 'audit@example.test', 'Audit Owner', 'Audit', 's', 'h', now);
+  raw.prepare('INSERT INTO merchant_config (merchant,features,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?)')
+    .run(MERCHANT, '{}', 'boutique', 'active', 'Audit', 'audit-owner', now);
+  raw.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(MERCHANT, 'fidelity', JSON.stringify({ model: 'amount', amount: { perMad: 2, threshold: 1000 } }), 1, now);
+  raw.prepare('INSERT INTO clients (merchant,id,name,points,stamps,visits,spend,updated_ts,srv_ts) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(MERCHANT, 'client-1', 'Client', 0, 0, 0, 0, now, now);
+  const env = { DB, AUTH_SECRET: SECRET };
+  const post = (body) => clientsPost({ env, request: new Request('https://kiwi.test/api/clients', {
+    method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' },
+    body: JSON.stringify({ merchant: MERCHANT, ...body }),
+  }) });
+  const totals = () => raw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
+  await post({ purchase: { clientId: 'client-1', ref: 'purchase:client-1:sale-a', amount: 250, saleRef: '1042' } });
+  await post({ purchase: { clientId: 'client-1', ref: 'purchase:client-1:sale-b', amount: 100, saleRef: '1043' } });
+  let t = totals();
+  check(Number(t.spend) === 350 && Number(t.points) === 700, 'refund setup: two purchases, 350 MAD and 700 points');
+  const refund = (ref, amount, saleRef = '1042') => post({ refund: { clientId: 'client-1', ref, amount, saleRef } });
+  let r = await refund('refund:client-1:ret-1', 100);
+  t = totals();
+  check(r.status === 200 && Number(t.spend) === 250 && Number(t.points) === 500 && Number(t.visits) === 2,
+    'a partial return takes back its spend and the points it earned, and keeps the visit');
+  r = await refund('refund:client-1:ret-1', 100);
+  t = totals();
+  check(r.status === 200 && Number(t.spend) === 250 && Number(t.points) === 500, 'a replayed return applies once');
+  r = await refund('refund:client-1:ret-2', 400);
+  t = totals();
+  check(r.status === 200 && Number(t.spend) === 100 && Number(t.points) === 200,
+    'a return never takes back more than what is left of that ticket (150 of 250, not 400)');
+  r = await refund('refund:client-1:ret-3', 50);
+  t = totals();
+  check(r.status === 200 && Number(t.spend) === 100 && Number(t.points) === 200, 'a fully returned ticket gives nothing more back');
+  r = await refund('refund:client-1:ret-4', 80, 'unknown-ticket');
+  t = totals();
+  check(r.status === 200 && Number(t.spend) === 100, 'a ticket the ledger never counted is acknowledged without effect');
+  check((await refund('purchase:client-1:sneaky', 10)).status === 400, 'a refund must carry a refund: key');
+  const pulled = await clientsGet({ env, request: new Request(`https://kiwi.test/api/clients?merchant=${MERCHANT}&since=0`, { headers: { cookie: owner } }) });
+  const row = (await pulled.json()).clients.find((c) => c.id === 'client-1');
+  check(row.purchase_history.every((h) => h.amount > 0) && row.purchase_history.length === 2,
+    'returns stay out of the purchase history');
+  check(['refund:client-1:ret-1', 'refund:client-1:ret-2'].every((ref) => row.purchase_refs.includes(ref)),
+    'returns are acknowledged to the till like purchases');
+}
+
 // I05 — additive purchase events preserve both offline tills, unlike snapshot replacement.
 {
   const { raw, DB } = fullDb();
@@ -527,6 +578,83 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   check(failedPage.status === 503 && failedBody.error === 'sync-unavailable'
     && failedBody.cursor === 0 && !Array.isArray(failedBody.clients),
   'I05 reference-read failure returns retryable unavailable without a partial page or cursor advance');
+}
+
+// 2026-10-19 client surface — recordRefund rides the purchase queue, waits for its
+// ticket's purchase to land, and the real API ends with the same totals as the book.
+{
+  const { raw: rRaw, DB: rDB } = fullDb();
+  const rNow = Date.now();
+  rRaw.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
+    .run('audit-owner', 'audit@example.test', 'Audit Owner', 'Audit', 's', 'h', rNow);
+  rRaw.prepare('INSERT INTO merchant_config (merchant,features,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?)')
+    .run(MERCHANT, '{}', 'boutique', 'active', 'Audit', 'audit-owner', rNow);
+  rRaw.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(MERCHANT, 'fidelity', JSON.stringify({ model: 'amount', amount: { perMad: 1, threshold: 1000 } }), 1, rNow);
+  const rEnv = { DB: rDB, AUTH_SECRET: SECRET };
+  const storage = new Map([['kiwiLive', '1'], ['kiwiLiveMerchant', MERCHANT]]);
+  const stores = {};
+  function define(name, options) {
+    const store = stores[name] || { data: {}, listeners: [] };
+    store.get = (key) => store.data[key] || (options.blank ? options.blank() : null);
+    store.set = (value, key) => { store.data[key] = value; store.listeners.forEach((fn) => fn(key)); };
+    store.subscribe = (fn) => { store.listeners.push(fn); return () => {}; };
+    stores[name] = store;
+    return store;
+  }
+  const localStorage = { getItem: (key) => storage.has(key) ? storage.get(key) : null,
+    setItem: (key, value) => storage.set(key, String(value)), removeItem: (key) => storage.delete(key) };
+  const window = { localStorage, KiwiStore: { define, currentVenue: () => MERCHANT },
+    KiwiEnv: { isReal: () => true }, addEventListener: () => {} };
+  let online = false;
+  const sent = [];
+  const inflight = [];
+  const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
+    console, Math, Date, JSON, setInterval: () => 1, clearInterval: () => {},
+    fetch: (url, options = {}) => {
+      const method = String(options.method || 'GET').toUpperCase();
+      if (method === 'POST') sent.push(JSON.parse(options.body || '{}'));
+      if (!online) return Promise.reject(new Error('offline'));
+      const p = (method === 'POST'
+        ? clientsPost({ env: rEnv, request: new Request('https://kiwi.test' + url, { method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' }, body: options.body }) })
+        : clientsGet({ env: rEnv, request: new Request('https://kiwi.test' + url, { headers: { cookie: owner } }) }));
+      inflight.push(p);
+      return p;
+    } };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'), context, { filename: 'assets/clients-store.js' });
+  const KC = context.window.KiwiClients;
+  KC.setConfig({ model: 'amount', amount: { perMad: 1, threshold: 1000 } }, MERCHANT);
+  const settle = async () => { for (let i = 0; i < 6; i++) { const all = inflight.splice(0); if (!all.length) break; await Promise.all(all); await new Promise((r) => setTimeout(r, 0)); } };
+  online = true;
+  const c = KC.upsert({ name: 'Cliente', phone: '0612345679' }, MERCHANT);
+  await settle();
+  online = false;
+  KC.recordPurchase(c.id, { amount: 250, saleRef: '1042', eventRef: 'sale-uuid-1042' }, MERCHANT);
+  const r = KC.recordRefund(c.id, { amount: 250, saleRef: '1042', eventRef: 'RET-1042-1' }, MERCHANT);
+  const local = KC.get(c.id, MERCHANT);
+  check(r && Number(local.spend) === 0 && Number(local.points) === 0, 'a full return for credit brings the book back to 0 MAD and 0 points');
+  const replay = KC.recordRefund(c.id, { amount: 250, saleRef: '1042', eventRef: 'RET-1042-1' }, MERCHANT);
+  check(replay && replay.replayed && Number(KC.get(c.id, MERCHANT).spend) === 0, 'the same return recorded twice applies once');
+  const queued = JSON.parse(storage.get(`kiwi:clients-purchases:v1:${MERCHANT}`) || '[]');
+  check(queued.some((e) => e.kind === 'refund' && e.amount === -250 && e.spend === -250), 'an offline return waits in the queue with the purchases');
+  sent.length = 0;
+  online = true;
+  /* Le retour seul, poussé alors que l'achat est encore en file : il doit attendre. */
+  KC.recordRefund(c.id, { amount: 1, saleRef: '1042', eventRef: 'RET-1042-early' }, MERCHANT);
+  check(!sent.some((b) => b.refund && b.refund.ref.endsWith('RET-1042-early')), 'a return is not sent while its ticket’s purchase is still unsent');
+  KC.sync(); // la boucle de synchronisation : file d'abord, puis tirage
+  await settle();
+  const purchaseIdx = sent.findIndex((b) => b.purchase && b.purchase.saleRef === '1042');
+  const refundIdx = sent.findIndex((b) => b.refund && b.refund.ref.endsWith('RET-1042-1'));
+  check(purchaseIdx >= 0 && refundIdx > purchaseIdx, 'once online, the purchase lands first and its return follows');
+  const row = rRaw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, c.id);
+  check(row && Number(row.spend) === 0 && Number(row.points) === 0 && Number(row.visits) === 1,
+    `D1 ends where the book does: 0 MAD, 0 points, 1 visit (${row && row.spend} MAD, ${row && row.points} pts)`);
+  const left = JSON.parse(storage.get(`kiwi:clients-purchases:v1:${MERCHANT}`) || '[]');
+  KC.sync(); await settle();
+  const after = KC.get(c.id, MERCHANT);
+  check(left.length === 0 && Number(after.spend) === 0 && Number(after.points) === 0,
+    'every event is acknowledged and the pulled book still reads 0 MAD, 0 points');
 }
 
 console.log(`audit-remediation-inventory-loyalty-test: ${checks} checks passed`);

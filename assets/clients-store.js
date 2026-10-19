@@ -442,6 +442,46 @@
     return { client: rec, rewardReady: rewardReady };
   }
 
+  /* Un retour contre avoir reprend la dépense et les points de CE ticket : sans
+   * cela, l'achat comptait, puis l'avoir dépensé comptait une seconde fois. Même
+   * registre que les achats (clé « refund: »), même file hors ligne : le serveur
+   * plafonne à ce que le ticket a réellement rapporté ; ici on n'en fait qu'une
+   * estimation locale, remplacée au prochain tirage. */
+  function recordRefund(id, opts, book) {
+    book = book || bookId();
+    opts = opts || {};
+    var d = readBook(book);
+    var rec = d.list.filter(function (c) { return c.id === id; })[0];
+    if (!rec) return null;
+    var amount = money(opts.amount);
+    var saleRef = String(opts.saleRef || '').slice(0, 80);
+    var key = String(opts.eventRef || '').replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 96);
+    if (!(amount > 0) || !saleRef || !key) return null;
+    var ref = 'refund:' + id + ':' + key;
+    if (purchaseRead(book).some(function (event) { return event.ref === ref; })) return { client: rec, replayed: true };
+    var take = Math.min(amount, money(rec.spend || 0));
+    var cfg = config(book), claw = 0;
+    if (loyaltyOn(book) && cfg.model === 'amount') {
+      claw = Math.min(Number(rec.points || 0), Math.round(take * ((cfg.amount && cfg.amount.perMad) || 1)));
+    }
+    rec.spend = Math.max(0, money((rec.spend || 0) - take));
+    rec.points = Math.max(0, Number(rec.points || 0) - claw);
+    rec.updated = now();
+    writeBook(d, book);
+    /* `amount` est ce que la caisse demande (le serveur plafonne) ; `spend` et
+       `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
+       pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
+       jamais acquitté. */
+    var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: 0, visits: 0,
+      spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
+      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+        return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
+      }) };
+    purchaseAdd(book, event);
+    purchasePush(book, event);
+    return { client: rec, spend: -take, points: -claw };
+  }
+
   // burn a filled stamp card (staff hands over the reward).
   function redeem(id, book) {
     book = book || bookId();
@@ -585,15 +625,30 @@
   }
   function purchasePush(book, event, afterClientCreate) {
     if (!syncable(book) || !event || !event.ref) return;
+    var isRefund = event.kind === 'refund';
+    /* Le retour attend que l'achat de son ticket soit au serveur : arrivé avant
+       lui, le serveur ne trouverait rien à reprendre et l'acquitterait sans effet. */
+    if (isRefund && purchaseRead(book).some(function (e) {
+      return e.kind !== 'refund' && e.clientId === event.clientId && e.saleRef && e.saleRef === event.saleRef;
+    })) return;
     try {
       fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
-        body: JSON.stringify({ merchant: book, purchase: {
+        body: JSON.stringify(isRefund ? { merchant: book, refund: {
+          clientId: event.clientId, ref: event.ref, amount: -Number(event.amount || 0),
+          items: event.items || [], saleRef: event.saleRef || '',
+        } } : { merchant: book, purchase: {
           clientId: event.clientId, ref: event.ref, amount: event.amount,
           method: event.method || '', items: event.items || [], saleRef: event.saleRef || '',
         } }),
       }).then(function (r) {
-        if (r && r.ok) { purchaseDrop(book, event.ref); return; }
+        if (r && r.ok) {
+          purchaseDrop(book, event.ref);
+          if (!isRefund) purchaseRead(book).forEach(function (e) {
+            if (e.kind === 'refund' && e.clientId === event.clientId && e.saleRef === event.saleRef) purchasePush(book, e);
+          });
+          return;
+        }
         /* A client created at checkout and its purchase used to be sent as two
          * unrelated requests.  If the purchase won the race, D1 returned
          * client-not-found and the history appeared only after a later poll.
@@ -716,7 +771,7 @@
     purchaseRead(book).forEach(function (event) {
       if (event.clientId !== id) return;
       out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
-      out.visits += Number(event.visits || 0); out.spend += Number(event.spend || event.amount || 0);
+      out.visits += Number(event.visits || 0); out.spend += Number(event.spend != null ? event.spend : (event.amount || 0));
     });
     return out;
   }
@@ -832,7 +887,7 @@
     // reads
     list: list, get: get, findByPhone: findByPhone, count: count,
     // writes
-    upsert: upsert, recordPurchase: recordPurchase, redeem: redeem, remove: remove,
+    upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, remove: remove,
     // fidelity config
     config: config, setConfig: setConfig, defaultModel: defaultModel, loyaltyOn: loyaltyOn,
     // analytics

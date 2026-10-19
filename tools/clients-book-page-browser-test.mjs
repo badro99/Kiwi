@@ -60,6 +60,7 @@ try {
     const key = 'kiwi:clients:v1:' + KiwiClients.bookId();
     const book = JSON.parse(localStorage.getItem(key));
     const client = book.list.find((c) => c.id === 'd2');
+    client.lastSeen = Date.now() - 3600e3; // venue aujourd'hui
     client.history = [{ ref: '11502', ts: Date.now() - 3600e3, amount: 280, method: 'espèces',
       items: [{ name: 'Normal Shirt', qty: 1, total: 90 }, { name: 'Black jean', qty: 1, total: 190 }] }];
     localStorage.setItem(key, JSON.stringify(book));
@@ -112,7 +113,9 @@ try {
     credits: document.querySelector('#kcb-credit-history').innerText,
     history: document.querySelector('#kcb-sheet').innerText,
     struck: [...document.querySelectorAll('#kcb-sheet .kcb-struck')].map((n) => n.textContent),
+    lastVisit: [...document.querySelectorAll('#kcb-sheet .kcb-kpi')].find((k) => /Dernière visite/.test(k.textContent))?.querySelector('.v')?.textContent || '',
   }));
+  ok(profile.lastVisit && !/^\s*0 j\s*$/.test(profile.lastVisit), `the last visit reads as a word, never « 0 j » (« ${profile.lastVisit} »)`);
   ok(/solde 90 MAD/i.test(profile.credits) && !/Aucun avoir/.test(profile.credits), '#105 the profile lists the credit issued at this till');
   ok(/1× Normal Shirt/.test(profile.credits), '#105 the credit names the returned piece');
   ok(/Retourné · 1× Normal Shirt · avoir AV-2032 · 90 MAD/.test(profile.history), '#105 the purchase history shows the return');

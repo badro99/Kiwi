@@ -162,4 +162,16 @@ ok(/saleId: \(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutiq
 ok(/const av = clAvoirOf\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.balance\)\}/.test(slice(boutique, 'function clientRow(', 'function renderTicket')),
   'boutique : l\'avoir de la cliente reste affiché sur le ticket');
 
+/* 2026-10-19 · un retour contre avoir sort de la dépense et des points de la
+   cliente (KiwiClients.recordRefund, clé = code de l'avoir) ; et le toast de
+   vente annonce les points réellement crédités, plus « un point pour 10 MAD ». */
+{
+  const ret = slice(boutique, "recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);", 'openVoucher(av');
+  ok(/KiwiClients\.recordRefund\(holder\.id, \{ amount, saleRef: sale\.id, eventRef: av\.code/.test(ret),
+    'boutique : un avoir émis reprend la dépense de la cliente, une fois par code d\'avoir');
+  ok(!/Math\.round\(receivedNow \/ 10\)/.test(boutique), 'boutique : plus de « +1 pt pour 10 MAD » codé en dur');
+  ok(/pts = Math\.max\(0, \(Number\(res\.client\.points\) \|\| 0\) - ptsBefore\)/.test(boutique),
+    'boutique : les points du toast sont ceux que le carnet a crédités');
+}
+
 console.log(`\n✓ ${controls} contrôles : retours, avoirs et cache côté caisse.`);

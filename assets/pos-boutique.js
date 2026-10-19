@@ -3350,6 +3350,16 @@
     }).filter(Boolean);
     persistAvoirs();
     recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);
+    /* L'argent rendu en avoir sort de la dépense et des points de la cliente ;
+       l'avoir dépensé plus tard y rentrera, une seule fois. Clé = le code de
+       l'avoir : un double clic ne reprend pas deux fois. */
+    const holder = saleClient(sale);
+    if (holder && useKiwiCl() && window.KiwiClients && window.KiwiClients.recordRefund) {
+      try { window.KiwiClients.recordRefund(holder.id, { amount, saleRef: sale.id, eventRef: av.code,
+        items: av.lines.map((l) => ({ name: l.name, qty: l.qty })) }); } catch (_) {}
+    } else if (holder && !useKiwiCl()) {
+      holder.spent = Math.max(0, (Number(holder.spent) || 0) - amount);
+    }
     state.ret = null;
     refreshOps();
     openVoucher(av, { mode: 'fresh' });
@@ -4002,11 +4012,16 @@
           // so the owner's dashboard client directory + loyalty reflect it — a real
           // store's sale must attach to the real client, not a throwaway in-memory
           // object. Real store only; the local demo keeps its in-memory client. F5.
+          /* Les points annoncés sont ceux que le carnet a réellement crédités :
+             le toast disait « +25 pts » (un point pour 10 MAD, codé en dur) quand
+             la boutique donnait un point par dirham, ou aucun sans programme. */
+          let pts = 0;
+          const ptsBefore = Number(c.points) || 0;
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
-            try { window.KiwiClients.recordPurchase(c.id, {
+            try { const res = window.KiwiClients.recordPurchase(c.id, {
               amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
-            }); } catch (_) {}
+            }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.
@@ -4014,10 +4029,13 @@
               try { window.KiwiClients.redeem(c.id); } catch (_) {}
             }
           }
-          const pts = Math.round(receivedNow / 10);
-          c.points += pts;
+          if (!useKiwiCl()) {
+            const cfg = window.KiwiClients && window.KiwiClients.config ? window.KiwiClients.config() : null;
+            pts = cfg && cfg.model === 'amount' ? Math.round(receivedNow * ((cfg.amount && cfg.amount.perMad) || 1)) : 0;
+          }
+          c.points = ptsBefore + pts;
           c.achats += 1;
-          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
+          ptsLine = (pts ? ` · +${pts} pts pour ${firstName(c.name)}` : '') + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
         }
         queueIfOffline(`Vente ${sale.id}`);
         freshTicket();
@@ -4304,6 +4322,7 @@
           <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="Code de l’avoir" style="flex:1;min-width:0;" />
           <button class="bq-btn secondary" type="submit">Utiliser</button>
         </form>
+        <p class="bq-av-err" id="bq-av-err" role="alert" hidden></p>
         <div class="bq-pay-opts">
           ${avs.map((a) => `
             <button class="bq-pay-opt" data-bq-av-use="${a.code}">
@@ -4318,7 +4337,12 @@
       const applyCode = async (rawCode) => {
         const code = String(rawCode || '').trim().toUpperCase();
         if (!code) return;
-        let av = AVOIRS.find((a) => String(a.code).toUpperCase() === code);
+        const errEl = $('#bq-av-err', el);
+        if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+        /* Même pliage que le registre (O→0, I/L→1) : un code recopié à la main
+           depuis le bon imprimé se retrouve aussi dans le cache local. */
+        const fold = (x) => String(x || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1');
+        let av = AVOIRS.find((a) => fold(a.code) === fold(code));
         /* un bon émis par l'autre caisse : on le demande au registre */
         if (!av && !IS_DEMO) {
           try {
@@ -4333,7 +4357,14 @@
           } catch (_) {}
         }
         if (!av || avoirExpired(av) || !activeAvoirs().includes(av)) {
-          toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
+          /* Le toast passait en deux secondes et la caissière ne savait pas
+             pourquoi : la raison reste écrite sous le champ, et la saisie aussi. */
+          const why = !av ? 'Aucun avoir avec ce code, vérifiez-le sur le bon.'
+            : avoirExpired(av) ? (av.until ? `Cet avoir a expiré le ${new Date(av.until).toLocaleDateString('fr-FR')}.` : 'Cet avoir a expiré.')
+            : 'Cet avoir est déjà entièrement utilisé.';
+          toast('Bon indisponible', why);
+          if (errEl) { errEl.textContent = why; errEl.hidden = false; }
+          const input = $('#bq-av-code', el); if (input) { input.focus(); input.select(); }
           return;
         }
         const applied = Math.min(av.balance, portion());

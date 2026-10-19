@@ -276,6 +276,7 @@ export async function onRequestGet(context) {
                 FROM client_purchase_events AS event
                 JOIN page ON page.client_id = event.client_id
                WHERE event.merchant = ?
+                 AND event.ref NOT LIKE 'refund:%'
             )
        SELECT client_id, ref, amount, method, items, sale_ref, created_ts
          FROM ranked WHERE rn <= 50 ORDER BY created_ts DESC`
@@ -387,6 +388,73 @@ async function applyPurchase(env, merchant, raw) {
   return json({ ok: true, points, stamps, visits: 1, spend: amount });
 }
 
+/* Un retour contre avoir rend l'argent à la cliente sous une autre forme : sans
+ * contre-écriture, sa dépense et ses points comptaient l'achat, puis une seconde
+ * fois l'avoir dépensé (250 MAD payés, 500 au carnet). Le retour est un événement
+ * du même registre, avec sa propre clé : rejoué, il ne s'applique qu'une fois.
+ * Il ne reprend jamais plus que l'achat de CE ticket pour CETTE cliente, moins
+ * les retours déjà passés, et ses points au prorata de ceux réellement gagnés
+ * (le programme a pu changer depuis). Un ticket que le registre ne connaît pas
+ * est acquitté sans effet : rien n'avait été compté, rien n'est repris. */
+async function applyRefund(env, merchant, raw) {
+  const refund = raw && typeof raw === 'object' ? raw : {};
+  const clientId = str(refund.clientId || refund.client_id, 64);
+  const ref = str(refund.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
+  const amount = money(refund.amount, 1e9);
+  const saleRef = str(refund.saleRef || refund.sale_ref, 80);
+  const items = JSON.stringify((Array.isArray(refund.items) ? refund.items : []).slice(0, 100).map((item) => ({
+    name: str(item && item.name, 120), qty: int(item && item.qty, 100000), total: money(item && item.total, 1e9),
+  })));
+  if (!clientId || !ref.startsWith('refund:') || !saleRef || !(amount > 0)) return json({ error: 'refund-fields-required' }, 400);
+  await ensurePurchaseEvents(env);
+  const previous = await env.DB.prepare(
+    'SELECT client_id, amount, points FROM client_purchase_events WHERE merchant = ? AND ref = ?'
+  ).bind(merchant, ref).first();
+  if (previous) {
+    if (previous.client_id !== clientId) return json({ error: 'ref-conflict' }, 409);
+    return json({ ok: true, replayed: true, spend: Number(previous.amount || 0), points: Number(previous.points || 0) });
+  }
+  const client = await env.DB.prepare(
+    'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
+  ).bind(merchant, clientId).first();
+  if (!client) return json({ error: 'client-not-found' }, 404);
+  const sale = await env.DB.prepare(
+    `SELECT COALESCE(SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN amount ELSE 0 END), 0) AS paid,
+            COALESCE(SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN points ELSE 0 END), 0) AS earned,
+            COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -amount ELSE 0 END), 0) AS refunded,
+            COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -points ELSE 0 END), 0) AS clawed
+       FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND sale_ref = ?`
+  ).bind(merchant, clientId, saleRef).first();
+  const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
+  const take = Math.max(0, Math.min(amount, Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100));
+  const claw = paid > 0 && earned > 0
+    ? Math.max(0, Math.min(Math.round(earned * take / paid), earned - Number(sale && sale.clawed || 0))) : 0;
+  const now = Date.now();
+  if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
+  try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
+  const cursor = clientCursorSql();
+  const results = await env.DB.batch([
+    ...clientCursorStatements(env, merchant, now),
+    env.DB.prepare(`UPDATE clients SET points = MAX(0, points - ?), spend = MAX(0, spend - ?),
+      updated_ts = ?, srv_ts = ${cursor}
+      WHERE merchant = ? AND id = ? AND deleted = 0
+        AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
+      .bind(claw, take, now, merchant, merchant, clientId, merchant, ref),
+    env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
+      (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
+      SELECT ?, ?, ?, ?, ?, 0, 0, ?, ${cursor}, 'retour', ?, ? WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, -take, -claw, now, merchant, items, saleRef),
+  ]);
+  if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
+    const replay = await env.DB.prepare('SELECT client_id FROM client_purchase_events WHERE merchant = ? AND ref = ?')
+      .bind(merchant, ref).first();
+    if (replay && replay.client_id === clientId) return json({ ok: true, replayed: true });
+    return json({ error: 'refund-write-failed' }, 503);
+  }
+  if (!Number(results[3] && results[3].meta && results[3].meta.changes)) return json({ error: 'refund-write-failed' }, 503);
+  return json({ ok: true, spend: -take, points: -claw });
+}
+
 async function applyRedemption(env, merchant, raw) {
   const redemption = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(redemption.clientId || redemption.client_id, 64);
@@ -468,6 +536,11 @@ export async function onRequestPost(context) {
     if (!operational) return json({ error: 'unauthorized' }, 401);
     try { return await applyRedemption(env, merchant, body.redemption); }
     catch (_) { return json({ error: 'reward-write-failed' }, 503); }
+  }
+  if (body && body.refund) {
+    if (!operational) return json({ error: 'unauthorized' }, 401);
+    try { return await applyRefund(env, merchant, body.refund); }
+    catch (_) { return json({ error: 'refund-write-failed' }, 503); }
   }
   if (body && body.purchase) {
     if (!operational) return json({ error: 'unauthorized' }, 401);
