@@ -298,6 +298,11 @@ ok('dernière heure : remise réglable, appliquée au prix, au centime', () => {
   bk.setSettings({ lastHourPct: 40 }); bk.applySettings();
   assert.equal(bk.lh(), 40);
   assert.equal(bk.effPrice(bk.PROD.cr), 2.1);
+  bk.PROD.cr.price = 1.25; bk.setSettings({ lastHourPct: 50 }); bk.applySettings();
+  assert.equal(bk.effPrice(bk.PROD.cr), 0.62, 'demi-centime : arrondi en dessous, jamais 0,63');
+  bk.PROD.cr.price = 1.2; bk.setSettings({ lastHourPct: 30 }); bk.applySettings();
+  assert.equal(bk.effPrice(bk.PROD.cr), 0.84, '1,2 × 70 = 83,999… reste 0,84');
+  bk.PROD.cr.price = 3.5;
   bk.setSettings({ lastHourPct: 120 }); bk.applySettings();
   assert.equal(bk.lh(), 50, 'hors 1..90 : valeur par défaut');
   bk.state.lastHour = false;

@@ -257,7 +257,9 @@
   });
   const tNum = () => `T-${pad2(state.seq).padStart(3, '0')}`;
   let LH_PCT = 50;                          /* remise « dernière heure » (réel : Menu › Caisse) */
-  const effPrice = (p) => state.lastHour ? Math.round(p.price * (100 - LH_PCT)) / 100 : p.price;
+  /* Au centime inférieur, jamais au-dessus de la remise exacte : Math.round
+     facturait 0,63 pour 1,25 à −50 %. Le 1e-6 absorbe 1,2 × 70 = 83,999…  */
+  const effPrice = (p) => state.lastHour ? Math.floor(p.price * (100 - LH_PCT) + 1e-6) / 100 : p.price;
   const tkCount  = () => state.ticket.reduce((s, l) => s + l.qty, 0);
   const tkTotal  = () => state.ticket.reduce((s, l) => s + effPrice(PROD[l.prodId]) * l.qty, 0);
   const inTicket = (prodId) => { const l = state.ticket.find((x) => x.prodId === prodId); return l ? l.qty : 0; };

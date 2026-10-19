@@ -1064,12 +1064,12 @@
     "sha": "90cb319d7dfc2b5d"
   },
   "assets/pos-boulangerie.css": {
-    "v": "10",
+    "v": "11",
     "sha": "22851f6616c8cc46"
   },
   "assets/pos-boulangerie.js": {
-    "v": "10",
-    "sha": "2df8748860aba435"
+    "v": "11",
+    "sha": "beb933b08adde990"
   },
   "assets/pos-boutique.css": {
     "v": "76",
@@ -1088,8 +1088,8 @@
     "sha": "9b54c1cf524d6a76"
   },
   "assets/pos-dispatch.js": {
-    "v": "104",
-    "sha": "1f4607935b00f3b3"
+    "v": "105",
+    "sha": "ff981414beba341f"
   },
   "assets/pos-epicerie.css": {
     "v": "11",
