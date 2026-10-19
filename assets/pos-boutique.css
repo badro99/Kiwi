@@ -360,7 +360,7 @@
 .bq-line-art { width: 34px; height: 34px; border-radius: 9px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .bq-line-art svg { width: 26px; height: 26px; }
 .bq-line-mid { flex: 1; min-width: 0; }
-.bq-line-name { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bq-line-name { display: block; font-size: 13px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bq-line-sub { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
 .bq-line-sub .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0; }
 .bq-line-sub .sz { font-family: var(--mono); font-weight: 600; color: var(--forest); }
@@ -498,6 +498,16 @@
 .bq-stepper b { font-family: var(--mono); font-size: 19px; font-weight: 700; }
 
 .bq-sheet-foot { display: flex; gap: 9px; margin-top: 16px; }
+.bq-sheet-add-l { min-width: 0; }
+.bq-sheet-add-l .nb { white-space: nowrap; }
+@media (max-width: 480px) {
+  /* Le prix passait à côté du nom et l'écrasait mot par mot : il descend sous
+     l'en-tête, et le bouton garde « 2 400 MAD » d'un seul tenant. */
+  .bq-sheet-head { flex-wrap: wrap; row-gap: 10px; }
+  .bq-sheet-price { flex: 1 0 100%; display: flex; align-items: baseline; gap: 8px; text-align: left; }
+  .bq-sheet-foot .bq-btn.secondary { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+  .bq-sheet-foot .bq-btn.primary { flex: 1 1 auto; min-width: 0; text-align: center; }
+}
 .bq-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 13px 16px;

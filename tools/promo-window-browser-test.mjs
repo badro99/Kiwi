@@ -145,6 +145,27 @@ try {
   });
   check(price !== 'Jour calme', 'and it discounts nothing today');
 
+  /* Sur téléphone, le composeur tenait plus large que sa fenêtre (91vw dans
+     un corps plus étroit) et « Lancer la promotion » n'apparaissait qu'après
+     1 400 px de défilement. */
+  console.log('\n■ Sur téléphone');
+  await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await sleep(400);
+  await open();
+  const phone = await page.evaluate(async () => {
+    const shell = document.querySelector('[data-bpd-shell]');
+    const wide = [...shell.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > innerWidth + 1; }).map((e) => String(e.className || e.tagName).slice(0, 30));
+    const body = document.querySelector('.kiwi-modal-body');
+    body.scrollTop = 700;
+    await new Promise((r) => setTimeout(r, 200));
+    const save = document.querySelector('#bpd-save').getBoundingClientRect();
+    const hit = document.elementFromPoint(save.left + save.width / 2, save.top + save.height / 2);
+    return { wide: wide.slice(0, 5), saveInView: save.top >= 0 && save.bottom <= innerHeight, onTop: !!(hit && hit.closest('#bpd-save')) };
+  });
+  check(phone.wide.length === 0, 'nothing in the composer runs past the phone screen' + (phone.wide.length ? ' (' + phone.wide.join(', ') + ')' : ''));
+  check(phone.saveInView && phone.onTop, '« Lancer la promotion » stays on screen and clickable while the form scrolls');
+  await page.click('[data-bpd-cancel]');
+
   check(errors.length === 0, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
   console.log(`\npromo-window-browser-test: ${checks} checks passed`);
 } finally {

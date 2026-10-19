@@ -908,6 +908,11 @@
       return String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
     } catch (_) { return ''; }
   }
+  /* La démo ne tient pas de journal (rien n'est écrit) : Vendus lisait donc
+     zéro à côté de « 6 ventes ». On lui prête les ventes de la séance, en
+     mémoire seulement ; une vraie caisse continue de lire son journal. */
+  if (IS_DEMO) window.KiwiBoutiqueDemoDay = () => SALES.filter((s) => s && !s.voided)
+    .map((s) => ({ ...s, lines: (s.lines || []).map((l) => (l.name || !P[l.pid] ? l : { ...l, name: P[l.pid].name })) }));
   function persistDay() {
     if (IS_DEMO) return;
     try {
@@ -2044,7 +2049,7 @@
     return `<div class="bq-line">
       <span class="bq-line-art">${artOf(p.art)}</span>
       <span class="bq-line-mid">
-        <span class="bq-line-name">${esc(p.name)}</span>
+        <span class="bq-line-name" title="${esc(p.name)}">${esc(p.name)}</span>
         <span class="bq-line-sub">
           ${colorDot(ln.color)}
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
@@ -2158,7 +2163,7 @@
         <span class="bq-sheet-title"><h3>${esc(p.name)}</h3><span class="sub">${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}${p.flag ? ` · ${esc(p.flag)}` : ''}${p.ean ? ` · ${esc(p.ean)}` : ''}</span></span>
         <span class="bq-sheet-price">
           <span class="val" id="bq-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
-          <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
+          <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${fmtMAD(unit)} × ${sheet.qty}`}</span>
         </span>
       </div>
       ${shPromo ? `
@@ -2207,14 +2212,14 @@
       <div class="bq-sheet-foot">
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
-          ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(shBase)}</button>`
-          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i>Ajouter au ticket · <span id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
+          ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i><span class="bq-sheet-add-l">Choisir cet article · <span class="nb">${fmtMAD(shBase)}</span></span></button>`
+          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l">Ajouter au ticket · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
       </div>`;
 
     const refreshPrice = () => {
       const u = shelf(shBase * (100 - sheet.remise) / 100);
       $('#bq-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
-      $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
+      $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${fmtMAD(u)} × ${sheet.qty}`;
       $('#bq-sheet-per', el).classList.toggle('rem', !!sheet.remise);
       const cta = $('#bq-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
@@ -4885,6 +4890,16 @@
       @media (max-width: 620px) {
         .bqx-choice { grid-template-columns: 1fr; }
         .bqx-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+        /* Sur téléphone, le nom et sa ligne de détails gardent toute la largeur ;
+           stock, prix et étiquettes passent dessous au lieu de les écraser. */
+        .bqi-list { padding: 4px 14px; }
+        .bqi-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 8px; align-items: center; padding: 12px; }
+        .bqi-art { grid-row: 1 / 3; align-self: start; }
+        .bqi-info { grid-column: 2 / 5; }
+        .bqi-stock { grid-column: 2; min-width: 0; text-align: left; }
+        .bqi-stock::after { content: ' en stock'; font-family: var(--sans); font-size: 12px; font-weight: 400; color: #77807b; }
+        .bqi-price { grid-column: 3; min-width: 0; }
+        .bqi-mini { grid-column: 4; }
       }
     `;
     document.head.appendChild(st);

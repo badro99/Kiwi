@@ -88,6 +88,18 @@ try {
   ok(layout.title === 'Clients' && layout.kpis === 4 && layout.cols, '#102 page has a title, four KPIs and a column header');
   ok(layout.tabs === 5 && layout.on === 'all', '#102 segment tabs start on « Tous »');
   ok(layout.kpiLabelPx <= 11, '#102 KPI labels use the 10px uppercase scale of Vendus');
+  /* Sans programme choisi, une vente ne crédite aucun point : l'en-tête disait
+     quand même « 1 pt / MAD · palier 100 » (2026-10-19, 0 pt après 250 MAD). */
+  const prog = () => page.$eval('#kcb-root .kcb-prog', (el) => el.textContent);
+  ok(/pt \/ MAD/.test(await prog()), 'the demo header states its points rule');
+  await page.evaluate(() => {
+    window.__loyaltyOn = KiwiClients.loyaltyOn;
+    KiwiClients.loyaltyOn = () => false;
+    window.dispatchEvent(new StorageEvent('storage', { key: 'kiwi:fidelity:test' }));
+  });
+  await page.waitForFunction(() => /Fidélité non activée/.test(document.querySelector('#kcb-root .kcb-prog').textContent), { timeout: 3000 }).catch(() => {});
+  ok(/Fidélité non activée/.test(await prog()), 'with no loyalty programme the header says so instead of promising points');
+  await page.evaluate(() => { KiwiClients.loyaltyOn = window.__loyaltyOn; window.dispatchEvent(new StorageEvent('storage', { key: 'kiwi:fidelity:test' })); });
   ok(/avoir 90/.test(layout.credit), '#105 the list flags a customer holding a boutique credit');
   await page.click('#kcb-segs .kx-tab[data-seg="win"]');
   const dormant = await page.$$eval('#kcb-root .kcb-row', (rows) => rows.length);

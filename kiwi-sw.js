@@ -63,7 +63,7 @@ var SHELL = [
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=11',
-  '/assets/sold-insights.js?v=10',
+  '/assets/sold-insights.js?v=11',
   '/assets/design-2026.css?v=3',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -239,10 +239,10 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=5',
-  '/assets/boutique-promos-dashboard.js?v=15',
+  '/assets/boutique-promos-dashboard.js?v=16',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=32',
+  '/assets/caisse-lang.js?v=33',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
@@ -262,7 +262,7 @@ var SHELL = [
   '/assets/charges-engine.js?v=2',
   '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=10',
-  '/assets/clients-book.js?v=25',
+  '/assets/clients-book.js?v=26',
   '/assets/clients-directory.js?v=22',
   '/assets/customer-retention.js?v=10',
   '/assets/menu-catalog.js?v=30',
@@ -300,7 +300,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=13',
-  '/assets/pos-dispatch.js?v=101',
+  '/assets/pos-dispatch.js?v=102',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -384,8 +384,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=69',
-  '/assets/pos-boutique.js?v=69',
+  '/assets/pos-boutique.css?v=73',
+  '/assets/pos-boutique.js?v=73',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

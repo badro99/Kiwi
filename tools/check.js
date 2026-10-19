@@ -1931,6 +1931,9 @@ section('Whole-project regressions');
     'procurement-test.mjs',
     'promotions-dashboard-test.mjs',
     'promo-window-browser-test.mjs',
+    /* 2026-10-19 · la caisse boutique démo au téléphone : fiche, inventaire,
+       Vendus après une vente encaissée au toucher. */
+    'boutique-phone-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',

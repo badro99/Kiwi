@@ -168,6 +168,7 @@
       'Il en reste {n} ou moins': '{n} left or fewer',
       /* Le bandeau du carnet clients : « 1 pt / MAD · palier 100 ». */
       '{n} pt / MAD': '{n} pt per MAD', 'palier {n}': 'tier {n}',
+      'Fidélité non activée': 'Loyalty not switched on',
       /* Les segments d'une fiche cliente. « Nouveau » est un mot courant : il ne
          se traduit que seul, dans son propre nœud — jamais au milieu d'un nom. */
       'Régulier': 'Regular', 'Nouveau': 'New', 'Dormant': 'Dormant',
@@ -455,6 +456,7 @@
       'Se termine demain': 'ينتهي غداً', 'Démarre demain': 'يبدأ غداً',
       'Il en reste {n} ou moins': 'يبقى منه {n} أو أقل',
       '{n} pt / MAD': '{n} نقطة لكل MAD', 'palier {n}': 'عتبة {n}',
+      'Fidélité non activée': 'برنامج الولاء غير مفعّل',
       'Régulier': 'منتظم', 'Nouveau': 'جديد', 'Dormant': 'خامل',
       'Récompense prête': 'المكافأة جاهزة', 'récompense {x}': 'مكافأة {x}',
       'Visites': 'الزيارات', 'Dépensé (MAD)': 'المصروف (MAD)', 'Dernière visite': 'آخر زيارة',

@@ -277,6 +277,10 @@
 
   /* ── program label for the header ──────────────────────────────────────── */
   function progLabel() {
+    /* Sans programme choisi, aucun point ne s'accumule (KC.recordPurchase) :
+       afficher la règle par défaut « 1 pt / MAD » promettait des points qu'une
+       cliente ne recevait jamais (0 pt après 250 MAD). */
+    if (KC.loyaltyOn && !KC.loyaltyOn()) return 'Fidélité non activée';
     var c = KC.config();
     if (c.model === 'amount') return (c.amount.perMad || 1) + ' pt / MAD · palier ' + (c.amount.threshold || 100);
     if (c.model === 'product') return (c.product.target || 10) + ' ' + (c.product.item || 'achats') + ' = ' + (c.product.reward || '1 offert');
