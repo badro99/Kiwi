@@ -260,5 +260,129 @@ await strict('un avoir ne passe jamais sous zéro, et émis = solde + consommé'
     }), { numRuns: Math.min(RUNS, 120) });
 sqlite.close();
 
+/* ── la caisse Maison (assets/pos-maison.js), fork de la boutique ───────── */
+/* Même décision propriétaire (2026-10-19) : des dirhams entiers, arrondis vers
+   le bas, jamais au-dessus du prix affiché. La Maison ajoute ce que la boutique
+   n'a pas : les services vendus à la pièce (servicePieces / piecePriceMAD), dont
+   le prix et la promotion se recalculent à l'unité. */
+console.log('■ Prix d’une ligne de caisse Maison');
+{
+  const MSRC = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+  const mFn = (start) => {
+    const i = MSRC.indexOf(start);
+    if (i < 0) throw new Error(start + ' not found in assets/pos-maison.js');
+    let d = 0;
+    for (let k = MSRC.indexOf('{', i); k < MSRC.length; k++) {
+      if (MSRC[k] === '{') d++; else if (MSRC[k] === '}' && --d === 0) return MSRC.slice(i, k + 1);
+    }
+    throw new Error('unbalanced ' + start);
+  };
+  const mStatement = (re) => {
+    const m = MSRC.match(re);
+    if (!m) throw new Error(re + ' not found in assets/pos-maison.js');
+    return m[0];
+  };
+  const MAISON = [
+    mStatement(/const shelf = [^\n]+\n/),
+    mFn('function promoFor('),
+    mFn('function pieceUnitPrice('),
+    mFn('function promoForLine('),
+    mFn('function lineDeal('),
+    mStatement(/const linePromo = [^\n]+\n/),
+    mStatement(/const lineBase {0,2}= [^\n]+\n/),
+    mStatement(/const lineUnit {0,2}= [^\n]+\n/),
+    mStatement(/const lineTotal = [^\n]+\n/),
+    mFn('function rewardDiscount('),
+    'this.api = { pieceUnitPrice, promoForLine, lineBase, lineUnit, lineTotal, rewardDiscount };',
+  ].join('\n');
+
+  /* La règle telle qu'un commerçant la pose, et le prix BRUT qu'elle donne :
+     la caisse doit faire elle-même l'arrondi, quelle que soit la façon dont le
+     moteur arrondit en amont. */
+  const ruleArb = fc.option(fc.oneof(
+    fc.record({ kind: fc.constant('percent'), value: fc.integer({ min: 1, max: 90 }) }),
+    fc.record({ kind: fc.constant('amount'), value: fc.integer({ min: 1, max: 2000 }) }),
+    fc.record({ kind: fc.constant('fixed'), value: fc.integer({ min: 0, max: 5000 }) }),
+  ), { nil: null });
+  const ruleRaw = (rule, was) => {
+    const out = rule.kind === 'percent' ? was * (100 - rule.value) / 100 : rule.kind === 'amount' ? was - rule.value : rule.value;
+    return Math.max(0, Math.min(was, out));
+  };
+  function maisonTill(product, rule) {
+    const P = { p1: { name: 'Article', ...product } };
+    const KiwiPromos = {
+      priceFor: (p) => {
+        if (!rule) return null;
+        const was = +p.price;
+        const price = ruleRaw(rule, was);
+        return price < was ? { price, was, off: was - price, badge: 'Promo', promo: { ...rule, name: 'Promo', id: 'pr1' } } : null;
+      },
+    };
+    const ctx = vm.createContext({ Math, Number, Array, Date, String, Object, JSON, P, window: { KiwiPromos }, promoStockOf: () => 1 });
+    vm.runInContext(MAISON, ctx);
+    return ctx.api;
+  }
+  /* ce que la grille, la fiche et l'étiquette annoncent, avant tout arrondi */
+  const shownWhole = (s, rule) => (rule ? ruleRaw(rule, s / 100) : s / 100);
+
+  await strict('Maison · une ligne n’est jamais encaissée plus cher que son prix affiché, promotion et remise comprises',
+    fc.property(shelfCents, ruleArb, remise, qty, (s, rule, r, q) => {
+      const api = maisonTill({ price: s / 100 }, rule);
+      const ln = { pid: 'p1', qty: q, remise: r, promo: null };
+      const t = api.lineTotal(ln);
+      return Number.isInteger(t) && t <= shownWhole(s, rule) * (100 - r) / 100 * q + 1e-9;
+    }));
+  await strict('Maison · une remise plus forte ne fait jamais payer plus',
+    fc.property(shelfCents, ruleArb, qty, fc.boolean(), (s, rule, q, piece) => {
+      const api = maisonTill({ price: s / 100, format: 'service', servicePieces: 6, piecePriceMAD: null }, rule);
+      const totals = [0, 5, 10, 15, 20].map((r) => api.lineTotal({ pid: 'p1', qty: q, remise: r, promo: null, isPiece: piece,
+        customPrice: piece ? api.pieceUnitPrice({ price: s / 100, servicePieces: 6, piecePriceMAD: null }) : undefined }));
+      return totals.every((t, i) => i === 0 || t <= totals[i - 1]);
+    }));
+  await strict('Maison · l’arrondi au dirham descend toujours, de moins d’un dirham',
+    fc.property(shelfCents, ruleArb, remise, qty, (s, rule, r, q) => {
+      const api = maisonTill({ price: s / 100 }, rule);
+      const ln = { pid: 'p1', qty: q, remise: r, promo: null };
+      const base = api.lineBase(ln);
+      const exact = base * (100 - r) / 100;
+      const unit = api.lineUnit(ln);
+      return base <= shownWhole(s, rule) + 1e-9 && shownWhole(s, rule) - base < 1
+        && unit <= exact + 1e-9 && exact - unit < 1;
+    }));
+  await strict('Maison · un prix estampillé au scan (249,90) s’encaisse aussi vers le bas',
+    fc.property(shelfCents, fc.integer({ min: 1, max: 500000 }), remise, (s, stampCents, r) => {
+      const api = maisonTill({ price: s / 100 }, null);
+      const ln = { pid: 'p1', qty: 1, remise: r, promo: { price: stampCents / 100, badge: 'Promo', name: 'Promo', id: 'pr1' } };
+      const shown = Math.min(s, stampCents) / 100;
+      return api.lineUnit(ln) <= shown * (100 - r) / 100 + 1e-9;
+    }));
+  const pieceArb = fc.record({
+    priceCents: shelfCents,
+    pieces: fc.integer({ min: 1, max: 24 }),
+    /* null : le catalogue l'enregistre ainsi quand le champ « prix à la pièce » est vide */
+    pieceCents: fc.option(fc.integer({ min: 1, max: 50000 }), { nil: null }),
+  });
+  await strict('Maison · à la pièce, le prix encaissé ne dépasse jamais le prix affiché par pièce, promotion et remise comprises',
+    fc.property(pieceArb, ruleArb, remise, qty, ({ priceCents, pieces, pieceCents }, rule, r, q) => {
+      const product = { price: priceCents / 100, format: 'service', servicePieces: pieces, piecePriceMAD: pieceCents == null ? null : pieceCents / 100 };
+      const api = maisonTill(product, rule);
+      /* ce que la fiche affiche pour « À la pièce (1 unité) », avant arrondi */
+      const pieceShown = pieceCents != null ? pieceCents / 100 : priceCents / 100 / pieces;
+      const unitPrice = api.pieceUnitPrice(product);
+      if (!Number.isInteger(unitPrice) || unitPrice > pieceShown + 1e-9 || pieceShown - unitPrice >= 1) return false;
+      const ln = { pid: 'p1', qty: q, remise: r, promo: null, isPiece: true, customPrice: unitPrice, servicePieces: pieces };
+      const pr = api.promoForLine(ln);
+      if (pr && (!Number.isInteger(pr.price) || pr.price < 0 || pr.price > unitPrice)) return false;
+      const t = api.lineTotal(ln);
+      return Number.isInteger(t) && t >= 0 && t <= unitPrice * (100 - r) / 100 * q + 1e-9;
+    }));
+  await strict('Maison · la remise fidélité en % ne fait jamais payer plus que sa règle',
+    fc.property(fc.integer({ min: 0, max: 50000 }), fc.integer({ min: 1, max: 50 }), (base, v) => {
+      const api = maisonTill({ price: 1 }, null);
+      const off = api.rewardDiscount({ reward: { kind: 'percent', value: v, clientId: 'c1' }, client: 'c1', lines: [] }, base);
+      return off >= 0 && off <= base && base - off <= base * (100 - v) / 100 + 1e-9;
+    }));
+}
+
 console.log(`\nmoney-properties: ${passed} passed, ${failed} failed, ${known} known issue${known > 1 ? 's' : ''} (${RUNS} runs each)`);
 process.exit(failed ? 1 : 0);

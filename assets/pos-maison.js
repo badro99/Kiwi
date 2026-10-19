@@ -22,6 +22,14 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
+  /* La caisse Maison compte en dirhams entiers, et n'encaisse JAMAIS plus que
+     le prix affiché (décision propriétaire, 2026-10-19, la même que la caisse
+     boutique). Un prix de catalogue à 249,90, une pièce de service à 83,33,
+     une promotion ou une remise qui tombe sur 220,50 s'arrondissent donc vers
+     le bas, partout : grille, fiche, ticket, échange et reçu disent le même
+     chiffre. Arrondir au plus proche encaissait 250 pour 249,90. Le petit
+     epsilon absorbe 0,1 + 0,2 et ses cousins, jamais un vrai centime. */
+  const shelf = (n) => Math.max(0, Math.floor((+n || 0) + 1e-6));
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const lens   = () => { if (window.KiwiLens) try { window.KiwiLens.rescan(); } catch (e) {} };
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -555,7 +563,7 @@
   const mkLine = (pid, size, color, qty, remise) => {
     const p = P[pid];
     const rem = remise || 0;
-    return { pid, size, color, qty, remise: rem, unit: Math.round(p.price * (100 - rem) / 100), returned: false, note: '' };
+    return { pid, size, color, qty, remise: rem, unit: shelf(p.price * (100 - rem) / 100), returned: false, note: '' };
   };
   const SALES = IS_DEMO ? [
     { id: '1207', at: new Date(NOW - 24 * MIN),  clientId: 'c4', by: 'Rania', kind: 'vente', methods: 'espèces',
@@ -1483,31 +1491,38 @@
   function promoFor(pid) {
     const p = P[pid];
     if (!p || !window.KiwiPromos) return null;
-    try { return window.KiwiPromos.priceFor(p, { stock: promoStockOf(p) }); } catch (_) { return null; }
+    try {
+      const pr = window.KiwiPromos.priceFor(p, { stock: promoStockOf(p) });
+      return pr ? { ...pr, price: shelf(pr.price), was: shelf(pr.was) } : null;
+    } catch (_) { return null; }
   }
 
   /* Promotions are authored against the catalogue unit. A service sold as one
      loose piece has a different unit price, so convert the promotion using its
-     own kind instead of comparing a full-service price with a piece price. */
+     own kind instead of comparing a full-service price with a piece price.
+     One door for the piece price: the sheet, the ticket and the exchange all
+     read it here. `+null` is 0, so a catalogue piece price left empty (null)
+     used to read as a free piece on the sheet while the ticket charged the
+     set price divided by its pieces. */
   function pieceUnitPrice(p) {
     if (!p) return 0;
-    return Number.isFinite(+p.piecePriceMAD)
-      ? +p.piecePriceMAD
-      : Math.round((+p.price || 0) / Math.max(1, +p.servicePieces || 12));
+    return +p.piecePriceMAD > 0
+      ? shelf(p.piecePriceMAD)
+      : shelf((+p.price || 0) / Math.max(1, +p.servicePieces || 12));
   }
   function promoForLine(ln) {
     const live = promoFor(ln && ln.pid);
     if (!live || !ln || !ln.isPiece) return live;
     const p = P[ln.pid];
-    const base = Number.isFinite(+ln.customPrice) ? +ln.customPrice : pieceUnitPrice(p);
+    const base = (ln.customPrice != null && Number.isFinite(+ln.customPrice)) ? shelf(ln.customPrice) : pieceUnitPrice(p);
     const per = Math.max(1, +(ln.servicePieces || (p && p.servicePieces)) || 12);
     const rule = live.promo || {};
     let price;
-    if (rule.kind === 'percent') price = Math.round(base * (100 - (+rule.value || 0)) / 100);
+    if (rule.kind === 'percent') price = base * (100 - (+rule.value || 0)) / 100;
     else if (rule.kind === 'amount') price = base - (+rule.value || 0) / per;
     else if (rule.kind === 'fixed') price = live.price / per;
     else price = base * (live.price / Math.max(1, live.was));
-    price = Math.max(0, Math.min(base, Math.round(price)));
+    price = Math.min(base, shelf(price));
     return { ...live, was: base, price, off: base - price };
   }
   function promoStockOf(p) {
@@ -1533,12 +1548,12 @@
    * celui affiché maintenant. » C'est aussi ce qui rend un retour juste trois
    * jours plus tard : la ligne de vente porte le prix réellement payé. */
   function lineDeal(ln) {
-    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? ln.promo : null;
+    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? { ...ln.promo, price: shelf(ln.promo.price) } : null;
     const live = promoForLine(ln);
     const p = P[ln.pid];
-    const full = (ln.customPrice != null && Number.isFinite(+ln.customPrice))
+    const full = shelf((ln.customPrice != null && Number.isFinite(+ln.customPrice))
       ? +ln.customPrice
-      : (p ? p.price : (ln.unit || 0));
+      : (p ? p.price : (ln.unit || 0)));
     let best = { price: full, promo: null };
     if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
     if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
@@ -1546,7 +1561,7 @@
   }
   const linePromo = (ln) => lineDeal(ln).promo;
   const lineBase  = (ln) => lineDeal(ln).price;
-  const lineUnit  = (ln) => Math.round(lineBase(ln) * (100 - ln.remise) / 100);
+  const lineUnit  = (ln) => shelf(lineBase(ln) * (100 - ln.remise) / 100);
   const lineTotal = (ln) => lineUnit(ln) * ln.qty;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
@@ -1554,7 +1569,9 @@
   function rewardDiscount(t, base) {
     const r = t.reward;
     if (!r || r.clientId !== t.client) return 0;
-    if (r.kind === 'percent') return Math.round(base * (r.value || 0) / 100);
+    /* la remise est ce qui reste quand le total est arrondi vers le bas :
+       arrondir la remise au plus proche refaisait payer jusqu'à 0,50 de trop */
+    if (r.kind === 'percent') return base - shelf(base * (100 - (r.value || 0)) / 100);
     if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
     return 0;
   }
@@ -1602,7 +1619,7 @@
   function ticketTotals(t) {
     const sub = t.lines.reduce((s, ln) => {
       const p = P[ln.pid];
-      const orig = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
+      const orig = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
       return s + orig * ln.qty;
     }, 0);
     const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
@@ -2201,7 +2218,7 @@
             ${p.format === 'service' ? `<span class="mz-card-fmt">Service ${p.servicePieces ? p.servicePieces + ' pcs' : ''}</span>` : ''}
             ${p.fragile ? `<span class="mz-card-fragile"><i data-lucide="shield-alert"></i>Fragile</span>` : ''}
           </div>
-          <span class="mz-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : p.price)}</span>
+          <span class="mz-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : shelf(p.price))}</span>
           ${cardFlag(p)}
           ${pr ? `<span class="mz-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
         </button>`; }).join('')}
@@ -2384,7 +2401,7 @@
     const p = P[ln.pid];
     const u = lineUnit(ln);
     const pr = linePromo(ln);
-    const origPrice = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
+    const origPrice = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
     return `<div class="mz-line">
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
@@ -2535,7 +2552,7 @@
     const qty = cfg.qty || 1;
     const isPiece = !!cfg.isPiece;
     const format = cfg.format || p.format || 'piece';
-    const customPrice = cfg.customPrice != null ? cfg.customPrice : (isPiece ? (p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12))) : null);
+    const customPrice = cfg.customPrice != null ? shelf(cfg.customPrice) : (isPiece ? pieceUnitPrice(p) : null);
 
     const heldUnits = holdStock(pid, size, qty, isPiece);
     if (heldUnits === false) {
@@ -2597,9 +2614,9 @@
     const pieceBase = sheetPiece ? pieceUnitPrice(p) : null;
     const shPromo = promoForLine({ pid: sheet.pid, isPiece: sheetPiece, customPrice: pieceBase, servicePieces: p.servicePieces });
     const servicePromo = promoForLine({ pid: sheet.pid, isPiece: false });
-    let shBase = shPromo ? shPromo.price : p.price;
+    let shBase = shPromo ? shPromo.price : shelf(p.price);
     if (sheetPiece && !shPromo) shBase = pieceBase;
-    const unit = Math.round(shBase * (100 - sheet.remise) / 100);
+    const unit = shelf(shBase * (100 - sheet.remise) / 100);
     const canAdd = canHoldStock(sheet.pid, sheet.size, 1, sheetPiece);
     const el = $('#mz-sheetm', root);
     el.innerHTML = `
@@ -2634,7 +2651,7 @@
         <div class="mz-seg" id="mz-format-seg">
           <button class="mz-seg-it ${sheet.format !== 'piece' ? 'on' : ''}" data-mz-format="service">
             Service complet (${p.servicePieces || 18} pcs)
-            <small>${fmtMAD(servicePromo ? servicePromo.price : p.price)}</small>
+            <small>${fmtMAD(servicePromo ? servicePromo.price : shelf(p.price))}</small>
           </button>
           <button class="mz-seg-it ${sheet.format === 'piece' ? 'on' : ''}" data-mz-format="piece">
             À la pièce (1 unité)
@@ -2699,8 +2716,8 @@
       const piece = p.format === 'service' && sheet.format === 'piece';
       const base = piece ? pieceUnitPrice(p) : null;
       const activePromo = promoForLine({ pid: sheet.pid, isPiece: piece, customPrice: base, servicePieces: p.servicePieces });
-      const bPrice = activePromo ? activePromo.price : (piece ? base : p.price);
-      const u = Math.round(bPrice * (100 - sheet.remise) / 100);
+      const bPrice = activePromo ? activePromo.price : (piece ? base : shelf(p.price));
+      const u = shelf(bPrice * (100 - sheet.remise) / 100);
       $('#mz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
       $('#mz-sheet-per', el).classList.toggle('rem', !!sheet.remise);
@@ -2765,7 +2782,7 @@
         return;
       }
       const isPiece = (sheet.format === 'piece' && p.format === 'service');
-      const piecePrice = isPiece ? (p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12))) : null;
+      const piecePrice = isPiece ? pieceUnitPrice(p) : null;
       if (addToTicket(sheet.pid, {
         size: sheet.size,
         color: sheet.color,
@@ -3161,7 +3178,7 @@
                demande « il coûte combien ? » : citer le prix catalogue pendant
                une promotion, c'est annoncer un prix qu'on n'encaissera pas. */
             const pr = promoFor(lk.pid);
-            return pr ? `<s>${fmtMAD(pr.was)}</s> ${fmtMAD(pr.price)}` : fmtMAD(p.price);
+            return pr ? `<s>${fmtMAD(pr.was)}</s> ${fmtMAD(pr.price)}` : fmtMAD(shelf(p.price));
           })()}</span>
         </div>
         <div class="mz-look-avail">
@@ -3569,7 +3586,7 @@
                   <div class="mz-reg-item">
                     <div class="item-info">
                       <b>${esc(it.name)}</b>
-                      <span>${it.marque ? esc(it.marque) + ' · ' : ''}${fmtMAD(it.price)} · ${it.qtyPurchased}/${it.qtyRequested} offert(s)</span>
+                      <span>${it.marque ? esc(it.marque) + ' · ' : ''}${fmtMAD(shelf(it.price))} · ${it.qtyPurchased}/${it.qtyRequested} offert(s)</span>
                     </div>
                     <div class="item-cta">
                       ${isDone ? '<span class="mz-mini ok">Complet</span>' : `
@@ -3674,7 +3691,7 @@
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mzi-modh"><div><h3>Ajouter un article</h3><span>${esc(reg.title)}</span></div></div>
       <div class="mzi-form">
-        <div class="mzi-fg"><label>Article du catalogue</label><select id="mz-ri-product">${products.map((p) => `<option value="${p.id}">${esc(p.name)} · ${fmtMAD(p.priceMAD)}</option>`).join('')}</select></div>
+        <div class="mzi-fg"><label>Article du catalogue</label><select id="mz-ri-product">${products.map((p) => `<option value="${p.id}">${esc(p.name)} · ${fmtMAD(shelf(p.priceMAD))}</option>`).join('')}</select></div>
         <div class="mzi-fg"><label>Quantité souhaitée</label><input id="mz-ri-qty" type="number" min="1" step="1" value="1" /></div>
       </div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-ri-save" ${products.length ? '' : 'disabled'}>Ajouter</button></div>`;
@@ -4241,7 +4258,7 @@
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     /* A scanned item added to the bill is an Adjust, on the frame the line is added (design 2027, §20.3). */
     try { if (window.KiwiHaptics) window.KiwiHaptics.play('Adjust', window.KiwiHaptics.gid('scan-add')); } catch (_) {}
-    toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
+    toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(shelf(p.price))})`);
     if (state.view === 'vente') renderTicket();
     renderBadges();
   }
@@ -5224,7 +5241,7 @@
       })),
       subtotal: t.lines.reduce((s, ln) => {
         const p = P[ln.pid];
-        const orig = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
+        const orig = shelf((ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0));
         return s + orig * ln.qty;
       }, 0),
       promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
@@ -7012,7 +7029,7 @@
               ${prev.sample.map((x) => `
                 <div class="mz-prc-srow ${x.under ? 'is-under' : ''}">
                   <span class="nm">${esc(x.name)}</span>
-                  <span class="pz"><s>${fmtMAD(x.was)}</s><b>${fmtMAD(x.price)}</b></span>
+                  <span class="pz"><s>${fmtMAD(shelf(x.was))}</s><b>${fmtMAD(shelf(x.price))}</b></span>
                 </div>`).join('')}
               ${prev.count > prev.sample.length ? `<div class="mz-prc-more">et ${prev.count - prev.sample.length} autre${prev.count - prev.sample.length > 1 ? 's' : ''}…</div>` : ''}
             </div>` : `
@@ -7117,7 +7134,7 @@
         const found = byCode ? [P[byCode]].filter(Boolean)
           : promoItems().filter((it) => it.name.toLowerCase().indexOf(term) >= 0).slice(0, 8);
         hits.innerHTML = found.map((it) => `<button class="mz-prc-hit" data-prpick="${esc(it.id)}">
-            <span>${esc(it.name)}</span><b>${fmtMAD(it.price)}</b></button>`).join('')
+            <span>${esc(it.name)}</span><b>${fmtMAD(shelf(it.price))}</b></button>`).join('')
           || '<div class="mz-prc-hint">Aucun article ne porte ce nom.</div>';
         $$('[data-prpick]', hits).forEach((b) => b.onclick = () => {
           const ids = d.scope.ids || (d.scope.ids = []);
@@ -7396,7 +7413,7 @@
       <span class="mzi-art">${artOf(p.art)}</span>
       <span class="mzi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
       <span class="mzi-stock ${cls}">${d.stock}</span>
-      <span class="mzi-price">${fmtMAD(p.priceMAD)}</span>
+      <span class="mzi-price">${fmtMAD(shelf(p.priceMAD))}</span>
       <button class="mzi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
     </div>`;
   }
@@ -7433,7 +7450,7 @@
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mzi-modh">
         <span class="mzi-art">${artOf(p.art)}</span>
-        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
+        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(shelf(p.priceMAD))} · ${d.stock} en stock</span></div>
         ${catalogueAdminEnabled() ? `<button class="mz-btn secondary sm" data-inv-edit="${p.id}"><i data-lucide="pencil"></i>Modifier</button>` : '<span class="mzi-dashboard-only">Gestion complète désactivée</span>'}
       </div>
       <div class="mzi-vtable-wrap"><table class="mzi-vtable">
@@ -8232,7 +8249,7 @@
       </div>
       <div class="bqx-common">
         <span>Repris du produit</span>
-        <b>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
+        <b>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(shelf(d.product.priceMAD))}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
       </div>
       <div class="mzi-form bqx-form">
         <div class="mzi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
@@ -8306,7 +8323,7 @@
         <div class="bqx-linkprod">
           <div class="bqx-linkhead">
             <span class="mzi-art">${artOf(h.product.art)}</span>
-            <div><b>${esc(h.product.name)}</b><span>${fmtMAD(h.product.priceMAD)}${h.product.cost ? ' · coût ' + fmtMAD(h.product.cost) : ''} · ${h.variants.length}/${h.total} sans code</span></div>
+            <div><b>${esc(h.product.name)}</b><span>${fmtMAD(shelf(h.product.priceMAD))}${h.product.cost ? ' · coût ' + fmtMAD(h.product.cost) : ''} · ${h.variants.length}/${h.total} sans code</span></div>
           </div>
           <div class="bqx-chips">${h.variants.map((v) => `
             <button type="button" class="bqx-chip is-pick" data-link-v="${v.id}" data-link-p="${h.product.id}">
@@ -8389,7 +8406,7 @@
         <span class="mzi-art">${artOf(d.product.art)}</span>
         <div>
           <b>${esc(d.product.name)}</b>
-          <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock au total</span>
+          <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(shelf(d.product.priceMAD))} · ${d.stock} en stock au total</span>
           <span class="bqx-thisvar"><i style="background:${v.colorHex}"></i>Ce code désigne <b>${esc(v.colorLabel)} · ${esc(v.size)}</b> · ${v.stock} en stock</span>
         </div>
       </div>
@@ -8655,7 +8672,7 @@
     const pr = promoFor(pid);
     return {
       title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`,
-      price: fmtNum(pr ? pr.price : p.priceMAD),
+      price: fmtNum(pr ? pr.price : shelf(p.priceMAD)),
       was: pr ? fmtNum(pr.was) : null,
       code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128',
     };

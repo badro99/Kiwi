@@ -1491,6 +1491,7 @@ section('Whole-project regressions');
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
     'maison-caisse-browser-test.mjs',
+    'maison-shelf-price-browser-test.mjs',
     'maison-returns-business-day-test.mjs',
     'maison-dashboard-browser-test.mjs',
     'maison-movement-kpis-browser-test.mjs',
