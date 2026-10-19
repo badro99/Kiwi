@@ -26,8 +26,6 @@
   .dash-genpage .kt-hbar,.dash-genpage .kt-hbar-right{width:100%;min-width:0}
   .dash-genpage .kt-period-nav{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;width:100%;box-sizing:border-box}.dash-genpage .kt-period-nav strong{min-width:0}.dash-genpage .kt-period-current{grid-column:1/-1;width:100%}
   .dash-genpage .kt-hbar-right .btn-slim{flex:1;justify-content:center}
-  .dash-genpage .kt-plan-wrap{max-width:100%;overflow-x:auto!important;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
-  .dash-genpage .kt-plan-table{width:760px!important;min-width:760px;table-layout:fixed}
   .kt-plan-intelligence{grid-template-columns:1fr 1fr}
   .kt-plan-form-grid{grid-template-columns:1fr}.kt-plan-form-grid .wide{grid-column:auto}
   .kt-planning-health{align-items:flex-start;flex-direction:column}

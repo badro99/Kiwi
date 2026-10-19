@@ -2592,12 +2592,6 @@
 
   const currentVenueKey = () => teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
   const planHost = () => document.querySelector('.dash-genpage .dash-equipe');
-  function findCell(mid, day) {
-    const host = planHost();
-    if (!host) return null;
-    const want = `${mid}|${day}`;
-    return Array.prototype.find.call(host.querySelectorAll('[data-kt-cell]'), (td) => td.getAttribute('data-kt-cell') === want) || null;
-  }
   function visibleDays() {
     const chunks = weekChunks(buildPeriod(window.__kiwiTeamV2.periodKind || 'week').days);
     return chunks[Math.min(Math.max(planWeekIdx, 0), chunks.length - 1)] || [];
@@ -2612,20 +2606,87 @@
    * plusieurs secondes par choix, et remplir la semaine de trois personnes
    * devenait une minute d'attente. On repeint la case et les totaux sur place,
    * comme la grille des heures. */
+  /* La case du tableau ET la ligne du jour (téléphone) portent la même clé
+   * data-kt-cell : les deux se repeignent ensemble, quel que soit l'écran. */
   function paintShiftCell(mid, day) {
-    const td = findCell(mid, day);
-    if (!td) return;
+    const host = planHost();
+    if (!host) return;
+    const want = `${mid}|${day}`;
     const T = t();
-    const cur = (getShifts(currentVenueKey())[mid] || {})[day];
+    const shifts = getShifts(currentVenueKey());
+    const cur = (shifts[mid] || {})[day];
     const s = normShift(cur);
-    td.classList.toggle('on', !!(s && !s.off));
-    td.classList.toggle('off', !!(s && s.off));
-    const btn = td.querySelector('.kt-sh');
-    if (!btn) return;
-    btn.innerHTML = shiftCellInner(T, cur, false);
-    const title = shiftCellTitle(T, cur, day);
-    if (title) btn.setAttribute('title', title); else btn.removeAttribute('title');
+    host.querySelectorAll('[data-kt-cell]').forEach((el) => {
+      if (el.getAttribute('data-kt-cell') !== want) return;
+      if (el.tagName !== 'TD') {
+        const row = el.querySelector('.kt-pd-row');
+        if (!row) return;
+        row.classList.toggle('on', !!(s && !s.off));
+        row.classList.toggle('off', !!(s && s.off));
+        const when = row.querySelector('.kt-pd-when');
+        if (when) when.innerHTML = planDayRowInner(T, cur);
+        return;
+      }
+      el.classList.toggle('on', !!(s && !s.off));
+      el.classList.toggle('off', !!(s && s.off));
+      const btn = el.querySelector('.kt-sh');
+      if (!btn) return;
+      btn.innerHTML = shiftCellInner(T, cur, false);
+      const title = shiftCellTitle(T, cur, day);
+      if (title) btn.setAttribute('title', title); else btn.removeAttribute('title');
+    });
+    const sum = Array.prototype.find.call(host.querySelectorAll('[data-kt-dsum]'), (el) => el.getAttribute('data-kt-dsum') === day);
+    if (sum) {
+      const mids = Array.prototype.map.call(sum.closest('.kt-pd-panel').querySelectorAll('[data-kt-cell]'), (el) => el.getAttribute('data-kt-cell').split('|')[0]);
+      sum.textContent = planDaySummary(mids.map((id) => (shifts[id] || {})[day]));
+    }
   }
+  /* Changer de jour ne reconstruit rien : on bascule les pastilles et les
+   * panneaux déjà rendus, la lentille suit la classe .on. */
+  function selectPlanDay(iso) {
+    const host = planHost();
+    if (!host) return false;
+    const pills = host.querySelectorAll('.kt-pd-pill');
+    if (!Array.prototype.some.call(pills, (b) => b.getAttribute('data-arg') === iso)) return false;
+    planDayISO = iso;
+    pills.forEach((b) => {
+      const on = b.getAttribute('data-arg') === iso;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    host.querySelectorAll('[data-kt-dpanel]').forEach((p) => { p.hidden = p.getAttribute('data-kt-dpanel') !== iso; });
+    return true;
+  }
+  handlers['kt-plan-day'] = (_el, iso) => {
+    if (!pageActive) return;
+    closeShiftPop();
+    selectPlanDay(iso);
+  };
+  /* Un glissement horizontal sur la liste passe au jour voisin (inversé en
+   * arabe, où la semaine se lit de droite à gauche). Rien n'est empêché : le
+   * défilement vertical de la page reste celui du navigateur. */
+  let planDayTouch = null;
+  document.addEventListener('touchstart', (e) => {
+    const zone = e.target && e.target.closest && e.target.closest('.dash-equipe .kt-pd-panels');
+    planDayTouch = zone && e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!planDayTouch || !pageActive) { planDayTouch = null; return; }
+    const start = planDayTouch;
+    planDayTouch = null;
+    const p = e.changedTouches && e.changedTouches[0];
+    if (!p) return;
+    const dx = p.clientX - start.x, dy = p.clientY - start.y;
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const host = planHost();
+    if (!host) return;
+    const days = Array.prototype.map.call(host.querySelectorAll('.kt-pd-pill'), (b) => b.getAttribute('data-arg'));
+    const rtl = (document.documentElement.getAttribute('dir') || '').toLowerCase() === 'rtl';
+    const next = days[days.indexOf(planDayISO) + ((dx < 0) !== rtl ? 1 : -1)];
+    if (!next) return;
+    closeShiftPop();
+    selectPlanDay(next);
+  }, { passive: true });
   /* La légende du +1 n'a de sens que s'il y a un service de nuit à l'écran. */
   function refreshNextDayLegend() {
     const host = planHost();
@@ -3977,6 +4038,80 @@
     </td>`;
   }
 
+  /* Téléphone (≤ 900 px) : sept colonnes ne tiennent pas dans 390 px, on y
+   * défilait de côté à travers des cases de 40 px. Sous 900 px la même semaine
+   * se lit un jour à la fois : une pastille par jour (la lentille liquide la
+   * suit, un glissement du doigt passe au jour voisin), puis une ligne pleine
+   * largeur par personne, nom, fonction et horaires, qui ouvre le même éditeur
+   * que la case du tableau. Le tableau reste dans le DOM, caché : ses totaux
+   * sont ceux que l'éditeur repeint déjà. Au-dessus de 900 px rien ne change. */
+  let planDayISO = '';
+  const ADD_ICON = '<svg viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
+  function planDayCopy() {
+    const lang = trLang();
+    if (lang === 'en') return { days: 'Days of the week', add: 'Add', none: 'Nobody on shift', on: (n, h) => `${n} on shift · ${h}` };
+    if (lang === 'ar') return { days: 'أيام الأسبوع', add: 'إضافة', none: 'لا أحد في الخدمة', on: (n, h) => `${n} في الخدمة · ${h}` };
+    return { days: 'Jours de la semaine', add: 'Ajouter', none: 'Personne en service', on: (n, h) => `${n} en service · ${h}` };
+  }
+  function planDayRowInner(T, cur) {
+    const s = normShift(cur);
+    if (!s) return `<span class="kt-pd-add">${ADD_ICON}${esc(planDayCopy().add)}</span>`;
+    if (s.off) return `<span class="kt-pd-rest">${esc(T.plRest)}</span>`;
+    return `<span class="kt-pd-t">${esc(s.start)} – ${esc(s.end)}${shiftIsNextDay(s) ? '<i class="kt-sh-next">+1</i>' : ''}</span>` +
+      `<span class="kt-pd-dur">${esc(fmtDur(shiftMinutes(s)))}</span>`;
+  }
+  function planDaySummary(cells) {
+    const c = planDayCopy();
+    let n = 0, h = 0;
+    cells.forEach((cur) => { const s = normShift(cur); if (s && !s.off) { n += 1; h += shiftHours(s); } });
+    return n ? c.on(n, fmtHours(h)) : c.none;
+  }
+  function planDaysHtml(T, members, shifts, view, locked, calendarMeta) {
+    if (!view.includes(planDayISO)) {
+      const today = toISO(new Date());
+      planDayISO = view.includes(today) ? today : view[0];
+    }
+    const c = planDayCopy();
+    const today = toISO(new Date());
+    const pills = view.map((d) => {
+      const dt = fromISO(d);
+      const on = d === planDayISO;
+      const meta = calendarMeta[d] || {};
+      return `<button class="kt-pd-pill${on ? ' on' : ''}${d === today ? ' today' : ''}${meta.closed ? ' is-closed' : ''}" type="button" role="tab"
+        id="kt-pd-tab-${esc(d)}" aria-controls="kt-pd-${esc(d)}" aria-selected="${on ? 'true' : 'false'}"
+        aria-label="${esc(dt.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))}"
+        data-action="kt-plan-day" data-arg="${esc(d)}"><span class="w">${esc(dt.toLocaleDateString(dateLocale(), { weekday: 'short' }))}</span><span class="d">${dt.getDate()}</span></button>`;
+    }).join('');
+    const panels = view.map((d) => {
+      const dt = fromISO(d);
+      const meta = calendarMeta[d] || {};
+      const hours = !meta.configured ? '' : meta.closed ? ({ fr: 'Fermé', en: 'Closed', ar: 'مغلق' }[trLang()] || 'Fermé') : compactPeriods(meta.periods);
+      const special = meta.exception?.label || meta.holiday?.label || '';
+      const rows = members.map((m) => {
+        const cur = (shifts[m.id] || {})[d];
+        const s = normShift(cur);
+        return `<li data-kt-cell="${esc(m.id)}|${esc(d)}">
+          <button class="kt-pd-row${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''}>
+            <span class="eq-av sm" style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
+            <span class="kt-pd-who"><b>${esc(memberFullName(m))}</b><small>${esc(jobName(m.function))}</small></span>
+            <span class="kt-pd-when">${planDayRowInner(T, cur)}</span>
+          </button>
+        </li>`;
+      }).join('');
+      return `<section class="kt-pd-panel" id="kt-pd-${esc(d)}" role="tabpanel" aria-labelledby="kt-pd-tab-${esc(d)}" data-kt-dpanel="${esc(d)}"${d === planDayISO ? '' : ' hidden'}>
+        <div class="kt-pd-head">
+          <div><strong>${esc(dt.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))}</strong>${[special, hours].filter(Boolean).length ? `<span>${esc([special, hours].filter(Boolean).join(' · '))}</span>` : ''}</div>
+          <span class="kt-pd-sum" data-kt-dsum="${esc(d)}">${esc(planDaySummary(members.map((m) => (shifts[m.id] || {})[d])))}</span>
+        </div>
+        <ul class="kt-pd-list">${rows}</ul>
+      </section>`;
+    }).join('');
+    return `<div class="kt-pd">
+      <div class="kt-pd-days" role="tablist" aria-label="${esc(c.days)}">${pills}</div>
+      <div class="kt-pd-panels">${panels}</div>
+    </div>`;
+  }
+
   /* Le planning ne glisse plus sous la souris : la grille tient dans la carte.
    * Colonnes en largeur fixe (table-layout: fixed) et UNE semaine à l'écran —
    * sur une quinzaine ou un mois, 14 ou 31 colonnes ne rentrent nulle part, on
@@ -4180,6 +4315,7 @@
         <p class="kt-plan-hint">${esc(T.plHint)}</p>
         ${planningCommand}
         ${stepper}
+        ${planDaysHtml(T, members, shifts, view, locked, calendarMeta)}
         <div class="kt-plan-wrap">
           <table class="kt-h-table kt-plan-table">
             ${cols}
@@ -4280,6 +4416,9 @@
       subtitle: `${venue.name || 'Votre établissement'} · ${access === 'planning' ? managerCopy.sub : T.paySub}`,
       body: renderPayrollBody(T, venue, venueType, members, access),
     });
+    /* La lentille ne rattrape que les nœuds ajoutés d'un seul lot : la page vient
+       d'être posée d'un coup, on lui demande de relire la rangée des jours. */
+    try { window.KiwiLens && window.KiwiLens.rescan && window.KiwiLens.rescan(); } catch (_) {}
     // The venue subscription lives on showPage(); mirror it so switching store
     // while on Paie repaints instead of showing the old roster.
     bindLangChange();
@@ -4509,6 +4648,74 @@
     @media (max-width: 900px) {
       .dash-equipe .kt-h-table .kt-day-head .kt-day-hours { font-size: 11px; }
       .dash-equipe .kt-h-table .kt-day-head .kt-day-special { font-size: 11px; }
+    }
+
+    /* Planning · un jour à la fois sous 900 px (planDaysHtml). Au-dessus, la
+       vue du jour n'existe pas et le tableau de la semaine reste tel quel. */
+    .dash-equipe .kt-pd { display: none; }
+    @media (max-width: 900px) {
+      .dash-equipe .kt-pd { display: block; }
+      .dash-equipe .kt-plan-wrap { display: none; }
+      .dash-equipe .kt-pd-days {
+        display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px;
+        /* La rangée déborde un peu sur la marge de la carte : à 390 px, sept
+           pastilles y gardent chacune leurs 44 px au pouce. */
+        padding: 3px; margin: 0 -6px 14px; border: 1px solid var(--n-200);
+        border-radius: 14px; background: var(--paper-soft);
+      }
+      .dash-equipe .kt-pd-pill {
+        min-width: 0; min-height: 52px; padding: 4px 0; border: 0; border-radius: 10px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+        background: transparent; color: var(--n-600); font-family: var(--sans); cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .dash-equipe .kt-pd-pill .w { font-size: 11px; line-height: 1.2; }
+      .dash-equipe .kt-pd-pill .d { font-size: 17px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+      .dash-equipe .kt-pd-pill.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(10,15,13,0.08); }
+      .dash-equipe .kt-pd-days[data-kw-lens] .kt-pd-pill.on { background: transparent; box-shadow: none; }
+      .dash-equipe .kt-pd-pill.today .d { color: var(--atlas); }
+      .dash-equipe .kt-pd-pill.is-closed .d { color: var(--n-500); font-weight: 500; }
+      .dash-equipe .kt-pd-pill:focus-visible { outline: 2px solid var(--atlas); outline-offset: 1px; }
+      /* Une règle globale donne 96 px de marge haute et basse à tout <section>. */
+      .dash-equipe .kt-pd-panel { padding: 0; margin: 0; }
+      .dash-equipe .kt-pd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 2px 10px; }
+      .dash-equipe .kt-pd-head > div { min-width: 0; }
+      .dash-equipe .kt-pd-head strong { display: block; font-size: 15px; font-weight: 600; color: var(--ink); }
+      .dash-equipe .kt-pd-head strong::first-letter { text-transform: uppercase; }
+      .dash-equipe .kt-pd-head span { display: block; margin-top: 2px; font-size: 12px; color: var(--n-500); overflow-wrap: anywhere; }
+      .dash-equipe .kt-pd-head .kt-pd-sum { flex: none; margin-top: 2px; font-size: 12px; color: var(--n-600); text-align: end; }
+      .dash-equipe .kt-pd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+      .dash-equipe .kt-pd-row {
+        width: 100%; min-height: 58px; padding: 9px 12px; box-sizing: border-box;
+        display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+        border: 1px solid var(--n-200); border-radius: 12px; background: var(--surface);
+        color: var(--ink); font-family: var(--sans); text-align: start; cursor: pointer;
+        transition: border-color 140ms, background 140ms; -webkit-tap-highlight-color: transparent;
+      }
+      .dash-equipe .kt-pd-row:hover:not(:disabled) { border-color: var(--atlas); }
+      .dash-equipe .kt-pd-row:focus-visible { outline: none; border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.12); }
+      .dash-equipe .kt-pd-row:disabled { opacity: 0.55; cursor: default; }
+      .dash-equipe .kt-pd-row.on { border-color: rgba(11,110,79,0.35); background: rgba(11,110,79,0.055); }
+      .dash-equipe .kt-pd-row.off { background: var(--paper-soft); }
+      .dash-equipe .kt-pd-row .eq-av { width: 32px; height: 32px; }
+      .dash-equipe .kt-pd-who { min-width: 0; }
+      .dash-equipe .kt-pd-who b, .dash-equipe .kt-pd-who small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dash-equipe .kt-pd-who b { font-size: 14px; font-weight: 600; }
+      .dash-equipe .kt-pd-who small { margin-top: 1px; font-size: 12px; color: var(--n-500); }
+      .dash-equipe .kt-pd-when { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+      .dash-equipe .kt-pd-t { font-family: var(--mono); font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+      .dash-equipe .kt-pd-t .kt-sh-next { margin-inline-start: 4px; }
+      .dash-equipe .kt-pd-dur, .dash-equipe .kt-pd-rest { font-size: 12px; color: var(--n-500); }
+      .dash-equipe .kt-pd-add { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; color: var(--atlas); }
+      /* L'éditeur ouvert depuis une ligne : champs et boutons au pouce, et des
+         champs à 16 px pour qu'iOS ne zoome pas en y entrant. */
+      .kt-shpop { width: min(320px, calc(100vw - 20px)); box-sizing: border-box; }
+      .kt-shpop-times input { min-height: 44px; font-size: 16px; }
+      .kt-shpop-week { min-height: 44px; margin: 4px 0 8px; font-size: 13px; }
+      .kt-shpop-week input { width: 20px; height: 20px; }
+      .kt-shpop-b { min-height: 44px; font-size: 13px; }
+      body.fusion-mode .dash-equipe .kt-pd-row { background: #0F0F0F; color: var(--paper); border-color: rgba(125,242,176,0.18); }
+      body.fusion-mode .dash-equipe .kt-pd-row.on { background: rgba(125,242,176,0.07); }
     }
   `;
 

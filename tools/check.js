@@ -546,6 +546,10 @@ for (const test of [
   'order-queue-pagination-test.mjs',
   'planning-core-test.mjs',
   'planning-layout-test.mjs',
+  /* Le planning sur un téléphone (390 × 844) : un jour à la fois, une ligne
+     par personne, rien ne défile de côté, ajout et modification au vrai
+     toucher ; et à 1280 le tableau de la semaine tel qu'il était. */
+  'planning-phone-browser-test.mjs',
   'reservations-test.mjs',
   'reservations-business-day-test.mjs',
   'serveur-menu-live-test.mjs',
