@@ -247,7 +247,7 @@ var SHELL = [
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
   '/assets/retail-balances.js?v=4',
-  '/assets/delivery-collect.js?v=1',
+  '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=12',

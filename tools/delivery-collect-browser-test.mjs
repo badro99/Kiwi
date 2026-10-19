@@ -141,6 +141,7 @@ await S.run('contre /api/receivables : un encaissement rejoué ne compte qu’un
   await page.setViewport(IPAD);
   const posts = [];
   let mode = 'list';
+  let taken = '';
   await page.setRequestInterception(true);
   page.on('request', (r) => {
     const u = r.url();
@@ -152,6 +153,7 @@ await S.run('contre /api/receivables : un encaissement rejoué ne compte qu’un
       const b = JSON.parse(r.postData() || '{}');
       posts.push(b);
       if (posts.length === 1) { b.ok = true; return r.abort('connectionreset'); }   /* written, answer lost */
+      if (mode === 'taken' && !taken) { taken = b.id; return r.respond({ status: 409, contentType: 'application/json', body: '{"error":"id-taken"}' }); }   /* key already another sale's: nothing written */
       if (b.amountCents > 70000 && posts.filter((p) => p.ok).length && b.id !== posts[0].id) return r.respond({ status: 409, contentType: 'application/json', body: '{"error":"exceeds-due","dueCents":70000}' });
       return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, already: b.id === posts[0].id,
         sale: { id: b.id, saleId: 'srv-1', method: 'cash', amountCents: b.amountCents, ts: Date.now() }, dueCents: 70000 }) });
@@ -191,6 +193,18 @@ await S.run('contre /api/receivables : un encaissement rejoué ne compte qu’un
   await page.click('.kdc-ok');
   const err = await page.$eval('.kdc-err', (e) => e.textContent);
   assert(/Il ne reste que 700 MAD/.test(err.replace(/[  ]/g, ' ')), `the till stops it before the server (« ${err} »)`);
+  t.step('the key already belongs to another sale: the retry draws a new one');
+  mode = 'taken';
+  await page.$eval('.kdc-form input', (e) => { e.value = '200'; e.dispatchEvent(new Event('input')); });
+  await page.click('.kdc-ok');
+  await page.waitForFunction(() => !document.querySelector('.kdc-err').hidden, { timeout: 4000 });
+  const clash = await page.$eval('.kdc-err', (e) => e.textContent);
+  assert(/réessayez/.test(clash) && !/Pas de réponse/.test(clash), `a taken key says to retry, not that the server is gone (« ${clash} »)`);
+  const n = await page.evaluate(() => window.__got.length);
+  await page.click('.kdc-ok');
+  await page.waitForFunction((k) => window.__got.length === k + 1, { timeout: 4000 }, n);
+  const last = posts[posts.length - 1];
+  assert(taken && last.id !== taken && /^dlvc-/.test(last.id) && last.amountCents === 20000, 'the second try carries a fresh key, so it is not refused again');
   t.step('the route is absent (older server): the list stays quiet');
   mode = 'absent';
   await page.evaluate(() => window.KiwiDeliveryCollect.render(document.getElementById('h'), window.__opts));

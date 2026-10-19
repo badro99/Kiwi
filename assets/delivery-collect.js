@@ -12,6 +12,7 @@
  * { ok, already, sale: { id, amountCents, ts }, dueCents }. `id` est la clé
  * d'un paiement : la même à chaque nouvel essai du même paiement (un essai
  * rejoué ne compte pas deux fois), une nouvelle pour le paiement suivant.
+ * 409 id-taken : la clé est déjà celle d'une autre vente, rien n'est écrit.
  *
  * Sans le serveur (route absente, hors ligne), la liste se tait au lieu
  * d'afficher une créance qu'elle ne peut pas solder. La démo passe par
@@ -46,6 +47,7 @@
     'bad-amount': 'Montant invalide.',
     'not-a-delivery': 'Cette vente n’est plus une livraison à recevoir.',
     'id-conflict': 'Conflit d’encaissement, réessayez.',
+    'id-taken': 'Conflit d’encaissement, réessayez.',
     'forbidden-merchant': 'Cette caisse n’est pas appairée à ce commerce.',
     'cash-at-till-only': 'Les espèces s’encaissent depuis une caisse appairée : appairez cette caisse, puis réessayez.',
     'bad-id': 'Encaissement refusé (référence invalide), réessayez.',
@@ -104,7 +106,7 @@
 
   function openForm(host, opts, d, card) {
     if (!d || !card || card.querySelector('.kdc-form')) return;
-    const id = payId();                      /* un paiement = une clé, gardée pour ses nouveaux essais */
+    let id = payId();                        /* un paiement = une clé, gardée pour ses nouveaux essais */
     const form = document.createElement('form');
     form.className = 'kdc-form';
     form.innerHTML = `<label><span>Montant reçu en espèces</span>
@@ -135,6 +137,9 @@
       const res = opts.demo ? opts.demo.collect(d, cents, id) : await postCash(opts.merchant, d, cents, id, opts.staff && opts.staff());
       busy = false; ok.disabled = false;
       if (res.error) {
+        /* La clé appartient déjà à une autre vente : rien n'a été écrit, le
+           prochain essai part avec une clé neuve. */
+        if (res.error === 'id-taken') id = payId();
         if (res.error === 'offline' || /^http-5/.test(res.error)) say('Pas de réponse du serveur. Réessayez : un même encaissement ne compte qu’une fois.');
         else say(REASON[res.error] ? REASON[res.error] + (res.dueCents != null && res.error === 'exceeds-due' ? ` Reste ${mad(res.dueCents)}.` : '') : 'Encaissement refusé.');
         return;
