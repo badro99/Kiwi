@@ -277,6 +277,11 @@
     return debts.length ? debts[debts.length - 1].at : null;
   }
   function totalCredit() { return CARNET.reduce((s, c) => s + balanceOf(c), 0); }
+  /* Une ligne d'ardoise porte son propre identifiant : la synchronisation
+     additionne alors les lignes de deux caisses au lieu de garder le carnet de
+     la dernière (KiwiVerticalState.mergeLedger, assets/vertical-state.js). */
+  const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function histEntry(type, label, amt) { return { id: uid('h'), type, label, amt, at: new Date() }; }
 
   /* ───────────────────────── journée (recette du jour, seed mid-shift) ─────
      Il est ~17h : la recette tourne déjà. On garde un agrégat réaliste + on y
@@ -548,8 +553,8 @@
       <div class="modal-veil" id="ep-search-veil"><div class="modal ep-search ep-rel" id="ep-searchm"></div></div>
       <div class="modal-veil" id="ep-scan-veil"><div class="modal ep-scan ep-rel" id="ep-scanm"></div></div>
       <div class="modal-veil" id="ep-weigh-veil"><div class="modal ep-weigh ep-rel" id="ep-weighm"></div></div>
-      <div class="modal-veil" id="ep-pay-veil"><div class="modal ep-pay ep-rel" id="ep-paym"></div></div>
-      <div class="modal-veil" id="ep-carnetpick-veil"><div class="modal ep-pay ep-rel" id="ep-carnetpickm"></div></div>
+      <div class="modal-veil" id="ep-pay-veil"><div class="modal ep-paysheet ep-rel" id="ep-paym"></div></div>
+      <div class="modal-veil" id="ep-carnetpick-veil"><div class="modal ep-paysheet ep-rel" id="ep-carnetpickm"></div></div>
       <div class="modal-veil" id="ep-ard-veil"><div class="modal ep-ard-detail ep-rel" id="ep-ardm"></div></div>
       <div class="modal-veil" id="ep-wa-veil"><div class="modal ep-wa ep-rel" id="ep-wam"></div></div>`;
 
@@ -1190,7 +1195,7 @@
         const name = $('#ep-cp-name', el).value.trim();
         const tel = $('#ep-cp-tel', el).value.trim();
         if (!name) { toast('Le nom est requis pour ouvrir une ardoise'); return; }
-        const c = { id: 'kx' + Date.now().toString(36), name, phone: tel, note: 'nouvelle ardoise', hist: [] };
+        const c = { id: uid('kx'), name, phone: tel, note: 'nouvelle ardoise', hist: [] };
         CARNET.push(c); CRED[c.id] = c;
         attachBasket(c);
       };
@@ -1205,7 +1210,7 @@
     const total = ticketTotal(t);
     if (total <= 0) return;
     const label = t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} articles)`;
-    c.hist.push({ type: 'debt', label, amt: Math.round(total), at: new Date() });
+    c.hist.push(histEntry('debt', label, Math.round(total)));
     day.creditAdded += Math.round(total);
     decrementStock(t);
     day.tickets++;
@@ -1265,8 +1270,9 @@
       if (e.target.closest('#ep-attach-cancel')) return;
       if (state.attachFrom) {
         const c = CRED[b.dataset.epArd];
-        c.hist.push({ type: 'debt', label: state.attachFrom.label, amt: Math.round(state.attachFrom.total), at: new Date() });
+        c.hist.push(histEntry('debt', state.attachFrom.label, Math.round(state.attachFrom.total)));
         day.creditAdded += Math.round(state.attachFrom.total);
+        if (epicerieOps) epicerieOps.save('Ardoise');
         toast(`${fmtMAD2(state.attachFrom.total)} sur l'ardoise de ${c.name}`);
         state.attachFrom = null;
         renderCarnet(); renderBadges(); icons();
@@ -1387,7 +1393,7 @@
     $('#ep-qd-in', pv).oninput = (e) => { amt = Math.max(0, +e.target.value || 0); $('#ep-qd-val', pv).textContent = fmtMAD(amt); };
     $('#ep-qd-ok', pv).onclick = () => {
       if (amt <= 0) { toast('Montant invalide'); return; }
-      c.hist.push({ type: 'debt', label: 'Achat à crédit', amt: Math.round(amt), at: new Date() });
+      c.hist.push(histEntry('debt', 'Achat à crédit', Math.round(amt)));
       day.creditAdded += Math.round(amt);
       closeVeil('#ep-pay-veil');
       queueIfOffline('Ardoise');
@@ -1488,7 +1494,7 @@
       refresh();
       $('#ep-settle-ok', el).onclick = () => {
         const rendu = Math.max(0, received - pay);
-        c.hist.push({ type: 'pay', label: pay >= bal ? 'Règlement (soldé)' : 'Règlement partiel', amt: Math.round(pay), at: new Date() });
+        c.hist.push(histEntry('pay', pay >= bal ? 'Règlement (soldé)' : 'Règlement partiel', Math.round(pay)));
         /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir.
            Le toast l'annonçait déjà, mais ni la recette du jour ni le tableau
            de bord n'en voyaient la couleur : la journée était sous-comptée de

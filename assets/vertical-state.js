@@ -396,6 +396,56 @@
   }
   function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
 
+  /* ── Les carnets qui s'additionnent ──────────────────────────────────────
+   * La fiche d'un métier se fusionnait en bloc : la plus récente gagnait. Pour
+   * un carnet de crédit, c'est perdre de l'argent. Le comptoir note 30 MAD sur
+   * l'ardoise de Mme Rkia, le téléphone du patron note un règlement de 20 MAD
+   * deux secondes plus tard ; le serveur gardait le carnet du téléphone et la
+   * dette du comptoir disparaissait. Un carnet est un journal : on garde chaque
+   * client une fois (nom, téléphone, note du côté le plus récent) et chaque
+   * ligne une fois, d'où qu'elle vienne. On ne supprime jamais une ligne
+   * d'ardoise, on enregistre un règlement : l'union est donc juste.
+   * La fusion vit ici et non dans le module du métier : la caisse peut tirer
+   * le document du serveur avant d'avoir chargé ce module. */
+  function ledgerKey(h) {
+    if (!h || typeof h !== 'object') return '';
+    if (h.id) return 'id:' + h.id;
+    return [h.type, +new Date(h.at) || 0, +h.amt || 0, h.label || ''].join('|');
+  }
+  function mergeLedger(newer, older, histKey) {
+    histKey = histKey || 'hist';
+    var out = [], byId = new Map();
+    (Array.isArray(newer) ? newer : []).concat(Array.isArray(older) ? older : []).forEach(function (c) {
+      if (!c || typeof c !== 'object' || !c.id) return;
+      var have = byId.get(c.id);
+      if (!have) {
+        var x = Object.assign({}, c); x[histKey] = Array.isArray(c[histKey]) ? c[histKey].slice() : [];
+        byId.set(c.id, x); out.push(x); return;
+      }
+      var seen = new Set(have[histKey].map(ledgerKey));
+      (Array.isArray(c[histKey]) ? c[histKey] : []).forEach(function (h) {
+        var k = ledgerKey(h); if (k && !seen.has(k)) { seen.add(k); have[histKey].push(h); }
+      });
+    });
+    out.forEach(function (c) { c[histKey].sort(function (a, b) { return (+new Date(a && a.at) || 0) - (+new Date(b && b.at) || 0); }); });
+    return out;
+  }
+  var MERGERS = {
+    epicerie: function (newer, older) {
+      return Object.assign({}, newer, { carnet: mergeLedger(newer && newer.carnet, older && older.carnet) });
+    },
+  };
+  /* x = ce poste, y = le serveur. Sans fusion propre au métier, la plus récente
+   * gagne, comme avant (à égalité, ce poste). */
+  function mergeRows(name, x, y) {
+    if (!y) return x; if (!x) return y;
+    var xNew = +(x.updatedAt || 0) >= +(y.updatedAt || 0);
+    var newer = xNew ? x : y, older = xNew ? y : x;
+    var fn = MERGERS[name];
+    if (!fn || !newer.data || !older.data) return newer;
+    try { return Object.assign({}, newer, { data: fn(newer.data, older.data) }); } catch (_) { return newer; }
+  }
+
   var store = window.KiwiStore.define('verticalops', {
     cloud: 'verticalops',
     blank: function () { return { verticals: {}, commands: [], seq: 0 }; },
@@ -404,7 +454,7 @@
       var out = { verticals: {}, commands: [], seq: Math.max(+(mine?.seq || 0), +(theirs?.seq || 0)) };
       var a = mine?.verticals || {}, b = theirs?.verticals || {};
       new Set(Object.keys(a).concat(Object.keys(b))).forEach(function (k) {
-        var x = a[k], y = b[k]; out.verticals[k] = !y || +(x?.updatedAt || 0) >= +(y?.updatedAt || 0) ? x : y;
+        out.verticals[k] = mergeRows(k, a[k], b[k]);
       });
       var seen = new Set();
       (theirs?.commands || []).concat(mine?.commands || []).sort(function (x, y) { return +(x.at || 0) - +(y.at || 0); }).forEach(function (c) {
@@ -555,8 +605,14 @@
       if (saving || applying || String(vid || '') !== activeVenue) return;
       var row = store.get(activeVenue)?.verticals?.[name];
       if (!row?.data) return;
-      restore(keepLocal(row.data));
-      last = signature(copy(spec.snapshot()));
+      /* Ce qui est sur cet écran et pas encore dans la copie reçue (une ligne
+       * d'ardoise notée entre deux sauvegardes) reste, et repart au prochain
+       * enregistrement : `last` ne le marque comme déjà envoyé que si la copie
+       * reçue le contenait. */
+      var incoming = row.data, mine = MERGERS[name] ? copy(spec.snapshot()) : null;
+      var merged = mine ? MERGERS[name](incoming, mine) : incoming;
+      restore(keepLocal(merged));
+      last = signature(merged) === signature(incoming) ? signature(copy(spec.snapshot())) : '';
       try { window.KiwiPosDispatch?.repaint?.(); } catch (_) {}
     });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
@@ -571,6 +627,7 @@
     register: function (spec) { return open(spec?.vertical, spec); },
     store: store,
     isReal: real,
+    mergeLedger: mergeLedger,
   };
   document.addEventListener('kiwi-paired', function (event) {
     handles.forEach(function (handle) { try { handle.rebind(event && event.detail); } catch (_) {} });

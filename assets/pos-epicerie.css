@@ -492,8 +492,8 @@
   font-size: 14px; font-weight: 700; flex-shrink: 0;
 }
 .ep-ard-who { flex: 1; min-width: 0; }
-.ep-ard-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ep-ard-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--mono); }
+.ep-ard-name { display: block; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ep-ard-meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ep-ard-bal { text-align: right; flex-shrink: 0; }
 .ep-ard-bal .amt { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--danger-mute); letter-spacing: -0.01em; }
 .ep-ard-bal.zero .amt { color: var(--forest); }
@@ -741,7 +741,10 @@
 .ep-jr-creditor .amt { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--danger-mute); flex-shrink: 0; }
 
 /* ═══════════════ PAYMENT extras (carnet add chooser) ═══════════════ */
-.modal.ep-pay { width: 520px; padding: 24px 24px 20px; }
+/* Les feuilles d'encaissement portaient la classe du bouton « Encaisser »
+   (.ep-pay) : fond vert, texte encre, rangée flex étirée sur toute la largeur.
+   Elles ont leur propre classe. */
+.modal.ep-paysheet { width: 520px; padding: 24px 24px 20px; }
 .ep-pay-opts { display: flex; flex-direction: column; gap: 8px; }
 .ep-pay-opt {
   display: flex; align-items: center; gap: 13px;

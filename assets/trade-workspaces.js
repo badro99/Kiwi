@@ -234,6 +234,8 @@
     batchPlanned:L('Prévue','Planned','مبرمجة'), batchOven:L('Au four','In the oven','في الفرن'), batchOut:L('Sortie','Out','خرجت'), time:L('Heure','Time','الساعة'),
     pizzas:L('Pizzas','Pizzas','البيتزا'), queued:L('En file','Queued','في الانتظار'), baking:L('Au four','Baking','في الفرن'), orders:L('Commande','Order','الطلب'),
     donation:L('Don du soir','Evening donation','تبرع المساء'), pieces:L('Pièces','Pieces','القطع'), beneficiary:L('Bénéficiaire','Recipient','المستفيد'),
+    owed:L('À régler','To settle','للتسديد'), since:L('Plus ancienne dette','Oldest debt','أقدم دين'), lastPay:L('Dernier règlement','Last payment','آخر تسديد'),
+    phone:L('Téléphone','Phone','الهاتف'), stale:L('Plus de 30 jours','Over 30 days','أكثر من 30 يوماً'), owedTotal:L('dû au total','owed in total','مستحق إجمالاً'),
   };
   function tillDoc(vertical) {
     try {
@@ -250,6 +252,17 @@
     try { return d.toLocaleString(lang()==='ar'?'ar-MA':lang(), withTime ? { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { day:'numeric', month:'short' }); } catch (_) { return ''; }
   }
   const mad = (n) => money(n) + ' ' + pick(UI.currency);
+  /* L'ardoise de l'épicerie : un journal de dettes et de règlements par client
+     (assets/pos-epicerie.js, CARNET). Le solde est la différence ; la plus
+     ancienne dette encore ouverte se lit en appliquant les règlements aux dettes
+     dans l'ordre (premier noté, premier réglé), comme sur la caisse. */
+  const owedOf = (c) => (c.hist || []).reduce((n, h) => n + (h && h.type === 'debt' ? (+h.amt || 0) : h && h.type === 'pay' ? -(+h.amt || 0) : 0), 0);
+  function oldestOpenDebt(c) {
+    let cover = (c.hist || []).filter((h) => h && h.type === 'pay').reduce((n, h) => n + (+h.amt || 0), 0);
+    const debts = (c.hist || []).filter((h) => h && h.type === 'debt').slice().sort((a, b) => new Date(a.at) - new Date(b.at));
+    for (const h of debts) { if (cover >= (+h.amt || 0)) { cover -= (+h.amt || 0); continue; } return h.at; }
+    return null;
+  }
   const evTotal = (ev) => (ev.tranches || []).reduce((n, t) => n + (+t.amount || 0), 0);
   const evPaid = (ev) => (ev.tranches || []).reduce((n, t) => n + (t.paid ? (+t.amount || 0) : 0), 0);
   function tillCards(cfg) {
@@ -285,6 +298,16 @@
           out.push({ title:o.id, status:pick(f ? TILL.baking : TILL.queued), meta:[[TILL.pizzas, (o.jobs || []).length],[TILL.queued, q],[TILL.baking, f],[TILL.date, when(o.createdAt, true)]] });
         });
       }
+    } else if (cfg.trade === 'epicerie' && cfg.nav === 'credit') {
+      const book = (tillDoc('epicerie')?.carnet || []).filter((c) => c && c.id && Array.isArray(c.hist));
+      book.map((c) => ({ c, owed: Math.round(owedOf(c) * 100) / 100 })).filter((x) => x.owed > 0.004).sort((a, b) => b.owed - a.owed).forEach(({ c, owed }) => {
+        const since = oldestOpenDebt(c);
+        const pays = c.hist.filter((h) => h && h.type === 'pay').sort((a, b) => new Date(a.at) - new Date(b.at));
+        const lp = pays[pays.length - 1];
+        const stale = !!(since && new Date(since).getTime() < Date.now() - 30 * 864e5);
+        out.push({ title:c.name || c.id, status:pick(TILL.owed), alert:stale ? pick(TILL.stale) : '', owed,
+          meta:[[TILL.balance, mad(owed)],[TILL.since, when(since)],[TILL.lastPay, lp ? when(lp.at) + ' · ' + mad(lp.amt) : ''],[TILL.phone, c.phone]] });
+      });
     } else if (cfg.trade === 'bakery') {
       const d = tillDoc('boulangerie');
       if (cfg.nav === 'tables') {
@@ -299,10 +322,12 @@
     }
     return out;
   }
-  function tillSection(cfg) {
-    const cards = tillCards(cfg);
+  function tillSection(cfg, cards) {
+    cards = cards || tillCards(cfg);
     if (!cards.length) return '';
-    return `<section class="tw-till" aria-label="${esc(pick(TILL.title))}"><div class="tw-till-h"><strong>${esc(pick(TILL.title))}</strong><span>${esc(pick(TILL.hint))}</span></div><div class="tw-grid">${cards.map((c) => `<article class="tw-card tw-card-till${c.alert ? ' has-alert' : ''}"><div class="tw-card-head"><h3>${esc(c.title)}</h3><span class="tw-pill">${esc(c.status)}</span></div>${c.alert ? `<div class="tw-alert">${esc(c.alert)}</div>` : ''}<div class="tw-meta">${c.meta.filter((m) => m[1] !== '' && m[1] != null).map((m) => `<span><b>${esc(pick(m[0]))}</b>${esc(m[1])}</span>`).join('')}</div></article>`).join('')}</div></section>`;
+    const owed = cards.reduce((n, c) => n + (+c.owed || 0), 0);
+    const hint = owed ? cards.length + ' · ' + mad(owed) + ' ' + pick(TILL.owedTotal) + ' · ' + pick(TILL.hint) : pick(TILL.hint);
+    return `<section class="tw-till" aria-label="${esc(pick(TILL.title))}"><div class="tw-till-h"><strong>${esc(pick(TILL.title))}</strong><span>${esc(hint)}</span></div><div class="tw-grid">${cards.map((c) => `<article class="tw-card tw-card-till${c.alert ? ' has-alert' : ''}"><div class="tw-card-head"><h3>${esc(c.title)}</h3><span class="tw-pill">${esc(c.status)}</span></div>${c.alert ? `<div class="tw-alert">${esc(c.alert)}</div>` : ''}<div class="tw-meta">${c.meta.filter((m) => m[1] !== '' && m[1] != null).map((m) => `<span><b>${esc(pick(m[0]))}</b>${esc(m[1])}</span>`).join('')}</div></article>`).join('')}</div></section>`;
   }
   function render(nav) {
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
@@ -313,7 +338,11 @@
     const win=businessWindow();
     const sales=currentSales().filter((s)=>{ const ts=+s.ts||0; return ts>=win.from && ts<win.to && String(s.kind||'')!=='refund'; });
     const revenue=sales.reduce((n,s)=>n+(+s.amount||0),0);
-    const till=tillSection(cfg);
+    /* Les ardoises de la caisse comptent dans le résumé : « Solde 0 » au-dessus
+       de quatre clients qui doivent 545 MAD, c'était le résumé qui mentait. */
+    const tc=tillCards(cfg),owedCards=tc.filter((c)=>+c.owed>0);
+    if(owedCards.length){sum.active+=owedCards.length;sum.alerts+=owedCards.filter((c)=>c.alert).length;sum.balance=(+sum.balance||0)+owedCards.reduce((n,c)=>n+c.owed,0);}
+    const till=tillSection(cfg,tc);
     const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : till ? '' : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
     const body=`<section class="tw-shell" data-tw-page="${esc(nav)}">
       <div class="tw-summary"><div class="tw-stat"><span>${esc(pick(UI.active))}</span><strong>${sum.active}</strong></div><div class="tw-stat"><span>${esc(pick(UI.alerts))}</span><strong>${sum.alerts}</strong></div><div class="tw-stat"><span>${sum.balance?esc(pick(UI.balance)):esc(pick(UI.sales))}</span><strong>${sum.balance?money(sum.balance)+' '+esc(pick(UI.currency)):sales.length+' · '+money(revenue)+' '+esc(pick(UI.currency))}</strong></div></div>

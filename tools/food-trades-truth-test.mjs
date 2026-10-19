@@ -496,7 +496,8 @@ ok('traiteur : un plat à options ouvre la feuille de la carte et fige le choix 
 });
 ok('caisse : une fiche arrivée d\'une autre caisse ne remplace pas le ticket en cours', () => {
   assert.match(VS, /var LOCAL = Array\.isArray\(spec\.local\) \? spec\.local : \['ticket', 'draft', 'cart'\];/);
-  assert.match(VS, /restore\(keepLocal\(row\.data\)\);/);
+  assert.match(VS, /var incoming = row\.data, /);
+  assert.match(VS, /restore\(keepLocal\(merged\)\);/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

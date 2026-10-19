@@ -1088,16 +1088,16 @@
     "sha": "9b54c1cf524d6a76"
   },
   "assets/pos-dispatch.js": {
-    "v": "100",
-    "sha": "46ffa59acaeb7b52"
+    "v": "101",
+    "sha": "90889bcf5d3df5b5"
   },
   "assets/pos-epicerie.css": {
-    "v": "9",
-    "sha": "2ef8ca4ef7968710"
+    "v": "11",
+    "sha": "67b1a88ae435aff2"
   },
   "assets/pos-epicerie.js": {
-    "v": "9",
-    "sha": "2edf8ceef839bd24"
+    "v": "11",
+    "sha": "61880b47295a0be8"
   },
   "assets/pos-fastfood.css": {
     "v": "11",
@@ -1408,8 +1408,8 @@
     "sha": "6ed04cbae9dd23e3"
   },
   "assets/trade-workspaces.js": {
-    "v": "9",
-    "sha": "d22067283f9c9471"
+    "v": "10",
+    "sha": "a3fdf6d32080f648"
   },
   "assets/trades.js": {
     "v": "6",
@@ -1436,8 +1436,8 @@
     "sha": "706109cdd0affe98"
   },
   "assets/vertical-state.js": {
-    "v": "4",
-    "sha": "a72a6d8153b2c5ea"
+    "v": "5",
+    "sha": "1d56c98f3f2cc4c4"
   },
   "assets/vexel-neon.js": {
     "v": "2049",

@@ -1939,6 +1939,7 @@ section('Whole-project regressions');
     'takeout-confirmation-test.js',
     'trade-workspaces-test.js',
     'vertical-state-test.mjs',
+    'credit-book-test.mjs',
     'vexel-insights-card-dna-test.mjs',
   ];
   suites.forEach((name) => {
