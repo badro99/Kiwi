@@ -41,9 +41,16 @@ function ok(label, fn) {
   catch (e) { failed++; console.log(`  ✗ ${label}\n      ${String(e.message).split('\n')[0]}`); }
 }
 
-function fit(teamSize, pins) {
-  const ctx = vm.createContext({ S: { teamSize, pins } });
+function fit(teamSize, pins, extra) {
+  const ctx = vm.createContext({ S: { teamSize, teamGiven: true, pins, ...extra } });
   vm.runInContext(grab(OB, 'function fitPinsToTeam(') + '\nfitPinsToTeam();', ctx);
+  return Array.from(ctx.S.pins, (p) => String(p.role));
+}
+/* Runs fitPinsToTeam the way the wizard does: on the step, then again on the
+   re-render that follows a click on « Retirer ». */
+function fitRemoveRefit(teamSize, teamGiven) {
+  const ctx = vm.createContext({ S: { teamSize, teamGiven, pins: [owner()] } });
+  vm.runInContext(grab(OB, 'function fitPinsToTeam(') + '\nfitPinsToTeam(); S.pins.splice(S.pins.length - 1, 1); fitPinsToTeam();', ctx);
   return Array.from(ctx.S.pins, (p) => String(p.role));
 }
 const owner = () => ({ role: 'owner', name: 'Testeur', code: '' });
@@ -60,6 +67,15 @@ ok('jamais plus de quatre lignes proposées, le reste s’ajoute à la main', ()
 ok('une ligne déjà remplie n’est jamais effacée', () => {
   const kept = [owner(), { role: 'staff', name: 'Salma', code: '' }];
   assert.deepEqual(fit(1, kept), ['owner', 'staff']);
+});
+ok('« Retirer » sur une ligne vide la retire pour de bon', () => {
+  assert.deepEqual(fitRemoveRefit(3, true), ['owner', 'manager']);
+});
+ok('une équipe passée ne propose que la ligne du propriétaire', () => {
+  assert.deepEqual(fit(3, [owner(), blank('manager'), blank('staff')], { teamGiven: false }), ['owner']);
+});
+ok('changer le nombre annoncé réajuste les lignes vides', () => {
+  assert.deepEqual(fit(2, [owner(), blank('manager'), blank('staff')], { pinsFitFor: 3 }), ['owner', 'staff']);
 });
 ok('l’étape des codes s’ajuste à chaque passage', () => {
   assert.match(grab(OB, 'function stepAccess('), /^function stepAccess\(\) \{\s*fitPinsToTeam\(\);/);

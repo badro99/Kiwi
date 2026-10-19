@@ -487,10 +487,17 @@
      caissiers, quel que soit le nombre donné une étape plus tôt. Tant que
      personne n'a rien saisi dans les lignes de l'équipe, on les ajuste au
      nombre annoncé (quatre lignes au plus, « + Ajouter » fait le reste). */
+  /* Ajustées UNE fois par réponse à l'étape équipe : stepAccess() repasse ici à
+     chaque rendu, et « Retirer » sur une ligne vide la voyait aussitôt revenir.
+     Une équipe passée n'annonce personne : seul le propriétaire, pas un 3 que
+     personne n'a donné. */
   function fitPinsToTeam() {
+    const want = S.teamGiven ? (+S.teamSize || 1) : 1;
+    if (S.pinsFitFor === want) return;
     const rest = S.pins.slice(1);
     if (rest.some((p) => (p.name || '').trim() || (p.code || '').trim())) return;
-    const others = Math.max(0, Math.min(3, (+S.teamSize || 1) - 1));
+    S.pinsFitFor = want;
+    const others = Math.max(0, Math.min(3, want - 1));
     const roles = others >= 2 ? ['manager'].concat(Array(others - 1).fill('staff')) : Array(others).fill('staff');
     S.pins = [S.pins[0] || { role: 'owner', name: '', code: '' }].concat(roles.map((role) => ({ role, name: '', code: '' })));
   }
