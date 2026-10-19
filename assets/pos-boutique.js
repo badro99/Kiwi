@@ -4684,6 +4684,8 @@
       .bq-scan-diag { display: inline-flex; align-items: center; gap: 8px; margin: 12px auto 0; padding: 9px 15px; background: transparent; border: 1px solid var(--n-200, #e7e3da); border-radius: 11px; font: inherit; font-size: 13px; color: var(--n-600, #5d6b63); cursor: pointer; }
       .bq-scan-diag:hover { border-color: var(--atlas); color: var(--atlas); }
       .bq-scan-diag svg { width: 15px; height: 15px; }
+      /* Sur la caisse sombre, --n-600 donnait 2,2:1 : le bouton se lisait à peine. */
+      html[data-caisse-theme="dark"] .bq-scan-diag { color: #c9d6cf; border-color: rgba(234,255,243,.16); }
       .bqsd { padding: 4px 24px 0; }
       .bqsd-wait { display: flex; align-items: center; gap: 10px; padding: 26px 18px; color: var(--n-500, #7c8a80); background: var(--paper); border-radius: 14px; }
       .bqsd-wait svg { width: 20px; height: 20px; }
