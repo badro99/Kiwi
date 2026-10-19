@@ -49,8 +49,11 @@ const add = (merchant, extra = {}) => {
   if ('cutoff' in extra) sql.prepare('UPDATE merchant_config SET business_cutoff = ? WHERE merchant = ?').run(extra.cutoff, merchant);
 };
 add('bd-plain');                                              // a row with nothing published
-/* schema.sql does not carry the two columns: the first till report adds them
- * (functions/api/timezone.js), so a real database starts without them. */
+/* A store from before the first till report has neither column: timezone.js adds
+ * them at run time. schema.sql now declares both (prod has them), so model the
+ * pre-upgrade database by taking them off first. */
+sql.exec('ALTER TABLE merchant_config DROP COLUMN timezone');
+sql.exec('ALTER TABLE merchant_config DROP COLUMN business_cutoff');
 const beforeColumns = await (await config.onRequestGet({ env: { DB }, request: new Request('https://k.invalid/api/config?merchant=bd-plain') })).json();
 sql.exec('ALTER TABLE merchant_config ADD COLUMN timezone TEXT');
 sql.exec('ALTER TABLE merchant_config ADD COLUMN business_cutoff INTEGER');

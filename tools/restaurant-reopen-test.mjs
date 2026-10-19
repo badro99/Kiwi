@@ -221,7 +221,9 @@ const zonedSaleTime = fixedNow - 17 * 3600000;
 assert.notEqual(businessDate(zonedSaleTime), businessDate(fixedNow));
 assert.equal(businessDate(zonedSaleTime, 5, 'Pacific/Kiritimati'),
   businessDate(fixedNow, 5, 'Pacific/Kiritimati'));
-sql.exec('ALTER TABLE merchant_config ADD COLUMN timezone TEXT');
+if (!sql.prepare("SELECT 1 FROM pragma_table_info('merchant_config') WHERE name = 'timezone'").get()) {
+  sql.exec('ALTER TABLE merchant_config ADD COLUMN timezone TEXT');
+}
 sql.prepare("UPDATE merchant_config SET timezone='Pacific/Kiritimati' WHERE merchant=?").run(merchant);
 sql.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='floorplan'")
   .run(JSON.stringify({ tables: [1, 2, 3, 4, 5].map(num => ({ num: String(num) })) }), merchant);

@@ -80,7 +80,9 @@ result = await post(report);
 assert.equal(result.body.status, 'matched');
 // The merchant closes at 07:00, not the historical fallback 05:00. A 06:00
 // receipt must stay on yesterday's Z even when the server is in another zone.
-db.exec('ALTER TABLE merchant_config ADD COLUMN business_cutoff INTEGER');
+if (!db.prepare("SELECT 1 FROM pragma_table_info('merchant_config') WHERE name = 'business_cutoff'").get()) {
+  db.exec('ALTER TABLE merchant_config ADD COLUMN business_cutoff INTEGER');
+}
 db.prepare('UPDATE merchant_config SET business_cutoff=7 WHERE merchant=?').run(merchant);
 const longDay = '2026-02-16';
 const beforeSeven = businessBoundary('2026-02-17', 5) + 3600000;
