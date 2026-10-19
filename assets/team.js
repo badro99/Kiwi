@@ -135,7 +135,7 @@
       payStatHours: 'Heures de la période',
       payStatHoursSub: 'total saisi sur le planning',
       payStatVar: 'Coût des heures',
-      payStatVarSub: 'heures × taux horaire',
+      payStatVarSub: 'heures × taux, au-delà du contrat pour un salarié',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
       payStatBaseMonthly: (k, n) => `par mois · ${k} sur ${n} renseigné${k > 1 ? 's' : ''}`,
@@ -151,7 +151,9 @@
       edHourly: 'Taux horaire',
       edPerMonth: 'MAD / mois',
       edPerHour: 'MAD / heure',
-      edCompHint: "Laissez vide ce qui ne s'applique pas : la masse salariale n'additionne que ce qui est renseigné.",
+      edContractHours: 'Heures du contrat',
+      edPerWeek: 'h / semaine',
+      edCompHint: "Laissez vide ce qui ne s'applique pas. Avec un salaire, le taux horaire ne paie que les heures au-delà du contrat (44 h par semaine si rien n'est saisi).",
       edCodeT: 'Code personnel',
       edCodeHint: "Ouvre la caisse et l'app employé. Quatre chiffres, propres à cette personne.",
       edErrRequired: 'À renseigner',
@@ -327,7 +329,7 @@
       payStatHours: 'Hours this period',
       payStatHoursSub: 'total entered on the schedule',
       payStatVar: 'Cost of hours',
-      payStatVarSub: 'hours × hourly rate',
+      payStatVarSub: 'hours × rate, beyond contract hours for salaried staff',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
       payStatBaseMonthly: (k, n) => `per month · ${k} of ${n} entered`,
@@ -343,7 +345,9 @@
       edHourly: 'Hourly rate',
       edPerMonth: 'MAD / month',
       edPerHour: 'MAD / hour',
-      edCompHint: 'Leave blank what does not apply: payroll only adds up what is filled in.',
+      edContractHours: 'Contract hours',
+      edPerWeek: 'h / week',
+      edCompHint: 'Leave blank what does not apply. With a salary, the hourly rate only pays hours beyond the contract (44 h a week if nothing is entered).',
       edCodeT: 'Personal code',
       edCodeHint: 'Opens the till and the employee app. Four digits, unique to this person.',
       edErrRequired: 'Required',
@@ -518,7 +522,7 @@
       payStatHours: 'ساعات الفترة',
       payStatHoursSub: 'المجموع المُدخل في التخطيط',
       payStatVar: 'تكلفة الساعات',
-      payStatVarSub: 'الساعات × الأجر بالساعة',
+      payStatVarSub: 'الساعات × الأجر، ما يتجاوز العقد للأجراء',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
       payStatBaseMonthly: (k, n) => `شهرياً · ${k} من ${n} مسجلة`,
@@ -534,7 +538,9 @@
       edHourly: 'الأجر بالساعة',
       edPerMonth: 'درهم / شهر',
       edPerHour: 'درهم / ساعة',
-      edCompHint: 'اترك الحقل فارغًا إن لم ينطبق: كتلة الأجور لا تجمع إلا ما تم إدخاله.',
+      edContractHours: 'ساعات العقد',
+      edPerWeek: 'ساعة / أسبوع',
+      edCompHint: 'اترك الحقل فارغًا إن لم ينطبق. مع راتب شهري، لا يُحتسب الأجر بالساعة إلا للساعات التي تتجاوز العقد (44 ساعة في الأسبوع إن لم يُدخَل شيء).',
       edCodeT: 'الرمز الشخصي',
       edCodeHint: 'يفتح الصندوق وتطبيق الموظف. أربعة أرقام خاصة بهذا الشخص.',
       edErrRequired: 'حقل مطلوب',
@@ -2218,7 +2224,7 @@
       /* Sans taux horaire, Kiwi ne calcule rien : « 0 MAD » pour une semaine
          travaillée se lisait comme un salaire nul. */
       const rated = (+m.hourlyRate || 0) > 0;
-      const pay = rated ? total * (+m.hourlyRate) : 0;
+      const pay = rated ? hourlyPayFor(m, total, period.days) : 0;
       grandHours += total;
       grandPay += pay;
       if (rated) anyRated = true;
@@ -2838,7 +2844,7 @@
       const row = shifts[m.id] || {};
       let h = 0;
       period.days.forEach((d) => { h += shiftHours(row[d]); });
-      const cost = h * (+m.hourlyRate || 0);
+      const cost = hourlyPayFor(m, h, period.days);
       grandH += h; grandC += cost;
       const tr = rows[idx];
       if (!tr) return;
@@ -2912,7 +2918,7 @@
     members.forEach((m, idx) => {
       const row = hours[m.id] || {};
       const tot = period.days.reduce((a, d) => a + (+row[d] || 0), 0);
-      const pay = tot * (+m.hourlyRate || 0);
+      const pay = hourlyPayFor(m, tot, period.days);
       grandH += tot; grandP += pay;
       const tr = root.querySelectorAll('table.kt-h-table tbody tr')[idx];
       if (tr) {
@@ -3214,6 +3220,7 @@
               <div class="kt-ed-grid">
                 ${edField(T, 'baseSalary', T.edSalary, `<span class="kt-ed-suffix">${edInput('number', 'baseSalary', m.baseSalary, '', 'min="0" step="50" inputmode="decimal"')}<i>${esc(T.edPerMonth)}</i></span>`)}
                 ${edField(T, 'hourlyRate', T.edHourly, `<span class="kt-ed-suffix">${edInput('number', 'hourlyRate', m.hourlyRate, '', 'min="0" step="0.5" inputmode="decimal"')}<i>${esc(T.edPerHour)}</i></span>`)}
+                ${edField(T, 'contractHours', T.edContractHours, `<span class="kt-ed-suffix">${edInput('number', 'contractHours', (+m.contractHours || 0) > 0 ? m.contractHours : '', '44', 'min="0" max="80" step="0.5" inputmode="decimal"')}<i>${esc(T.edPerWeek)}</i></span>`)}
               </div>
             </section>
 
@@ -3435,6 +3442,7 @@
       endDate: (data.contract === 'CDD' || data.contract === 'Stage') ? (data.endDate || '') : '',
       baseSalary: parseFloat(data.baseSalary) || 0,
       hourlyRate: parseFloat(data.hourlyRate) || 0,
+      contractHours: Math.min(80, Math.max(0, parseFloat(data.contractHours) || 0)),
       languages: st.languages.slice(),
       address: (data.address || '').trim(),
       cin: (data.cin || '').trim(),
@@ -3541,6 +3549,7 @@
               <dl>
                 ${row(T.edSalary, pay(m.baseSalary, T.edPerMonth))}
                 ${row(T.edHourly, pay(m.hourlyRate, T.edPerHour))}
+                ${(+m.baseSalary || 0) > 0 && (+m.hourlyRate || 0) > 0 ? row(T.edContractHours, `<span class="kt-pv-num">${esc(String(contractWeekHours(m)))} <i>${esc(T.edPerWeek)}</i></span>`) : ''}
               </dl>
             </section>
 
@@ -3750,15 +3759,29 @@
     ]];
     let totalHours = 0;
     members.forEach((member) => {
+      /* Un salarié avec un taux : ses heures du contrat sont dans le salaire,
+         une heure isolée n'a donc pas de coût propre. La ligne « Total
+         période » porte ce que le taux paie vraiment, au-delà du contrat. */
+      const split = (+member.baseSalary || 0) > 0 && (+member.hourlyRate || 0) > 0;
+      let own = 0;
       period.days.forEach((day) => {
         const value = Math.max(0, +(hours[member.id] || {})[day] || 0);
         totalHours += value;
+        own += value;
         rows.push([
           period.start, period.end, member.id, memberFullName(member), member.function || '', day,
           value.toFixed(2), (+member.hourlyRate || 0).toFixed(2),
-          (value * (+member.hourlyRate || 0)).toFixed(2), (+member.baseSalary || 0).toFixed(2),
+          split ? '' : (value * (+member.hourlyRate || 0)).toFixed(2), (+member.baseSalary || 0).toFixed(2),
         ]);
       });
+      if (split) {
+        rows.push([
+          period.start, period.end, member.id, memberFullName(member), member.function || '',
+          `Total période (contrat ${contractWeekHours(member)} h / semaine)`,
+          own.toFixed(2), (+member.hourlyRate || 0).toFixed(2),
+          hourlyPayFor(member, own, period.days).toFixed(2), (+member.baseSalary || 0).toFixed(2),
+        ]);
+      }
     });
     const content = '\uFEFF' + rows.map((row) => row.map(csv).join(';')).join('\r\n');
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
@@ -3967,6 +3990,24 @@
       return acc + 1 / new Date(+m[1], +m[2], 0).getDate();
     }, 0);
   }
+  /* Un membre qui a un salaire ET un taux horaire : le salaire paie les heures
+   * de son contrat, le taux ne paie que ce qui dépasse (décision du
+   * propriétaire, 20 octobre). « À payer » additionnait les deux, donc
+   * chaque heure contractuelle était payée deux fois. Sans heures de contrat
+   * saisies, la semaine légale marocaine de 44 h (Code du travail, art. 184).
+   * Sans salaire, toutes les heures restent au taux, comme avant. */
+  function contractWeekHours(m) {
+    const LEGAL_WEEK = 44;
+    const w = +(m && m.contractHours) || 0;
+    return w > 0 ? w : LEGAL_WEEK;
+  }
+  function hourlyPayFor(m, h, days) {
+    const rate = +(m && m.hourlyRate) || 0;
+    if (!(rate > 0) || !(h > 0)) return 0;
+    if (!((+m.baseSalary || 0) > 0)) return h * rate;
+    const covered = contractWeekHours(m) * (days ? days.length : 7) / 7;
+    return Math.max(0, h - covered) * rate;
+  }
   function payrollFigures(members, venueType, period) {
     const hours = getHours(venueType);
     let totalHours = 0, variablePay = 0, baseMass = 0, onDuty = 0, salaried = 0, rated = 0;
@@ -3976,7 +4017,7 @@
       period.days.forEach((d) => { h += (+row[d] || 0); });
       if (h > 0) onDuty++;
       totalHours += h;
-      if ((+m.hourlyRate || 0) > 0) { rated++; variablePay += h * (+m.hourlyRate); }
+      if ((+m.hourlyRate || 0) > 0) { rated++; variablePay += hourlyPayFor(m, h, period.days); }
       if ((+m.baseSalary || 0) > 0) { salaried++; baseMass += (+m.baseSalary); }
     });
     const share = Math.min(1, periodMonthShare(period.days));
@@ -4234,7 +4275,7 @@
         if (shiftIsNextDay(row[d])) anyNextDay = true;
         return planCellHtml(T, m, d, row[d], locked, calendarMeta[d]);
       }).join('');
-      const cost = h * (+m.hourlyRate || 0);
+      const cost = hourlyPayFor(m, h, period.days);
       grandH += h; grandCost += cost;
       const tone = m.avatarTone || 'a';
       return `

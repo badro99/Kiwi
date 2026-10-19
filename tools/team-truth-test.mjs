@@ -13,6 +13,8 @@
  * 3. Paie & planning : un salaire MENSUEL se ramène aux jours de la période,
  *    la saisie ne totalise que la période, une semaine vide n'est pas un
  *    « conflit ».
+ * 4. Salaire et taux horaire : le taux ne paie que les heures au-delà du
+ *    contrat (44 h par semaine si rien n'est saisi).
  *
  *   node tools/team-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -114,7 +116,9 @@ ok('« Salaire calculé » sans taux horaire : « · », pas « 0 MAD »', () =>
 
 function payCtx(hours) {
   const c = vm.createContext({ getHours: () => hours });
-  vm.runInContext(grabBlock('function periodMonthShare(') + '\n' + grabBlock('function payrollFigures(') + '\nthis.f = payrollFigures; this.share = periodMonthShare;', c);
+  vm.runInContext([grabBlock('function periodMonthShare('), grabBlock('function contractWeekHours('),
+    grabBlock('function hourlyPayFor('), grabBlock('function payrollFigures(')].join('\n')
+    + '\nthis.f = payrollFigures; this.share = periodMonthShare; this.pay = hourlyPayFor;', c);
   return c;
 }
 const WEEK = ['2026-10-05','2026-10-06','2026-10-07','2026-10-08','2026-10-09','2026-10-10','2026-10-11'];
@@ -139,6 +143,45 @@ ok('heures × taux : seuls les membres avec un taux comptent', () => {
   assert.equal(f.variablePay, 160);
   assert.equal(f.rated, 1);
   assert.equal(f.totalHours, 13);
+});
+/* 4. Salaire ET taux horaire : le taux ne paie que les heures au-delà du
+ *    contrat (propriétaire, 20 octobre). Avant, « À payer » ajoutait toutes
+ *    les heures × taux au salaire, et payait deux fois les heures du contrat. */
+ok('salarié avec taux : 50 h sur une semaine de 44 h, seules 6 h passent au taux', () => {
+  const c = payCtx({ a: { '2026-10-05': 10, '2026-10-06': 10, '2026-10-07': 10, '2026-10-08': 10, '2026-10-09': 10 } });
+  const f = c.f([{ id: 'a', baseSalary: 3100, hourlyRate: 20 }], 'x', { days: WEEK });
+  assert.equal(f.variablePay, 120);
+  assert.equal(Math.round(f.baseDue), 700);
+  assert.equal(f.totalHours, 50);
+});
+ok('salarié avec taux sous son contrat : rien au taux, le salaire seul', () => {
+  const c = payCtx({ a: { '2026-10-06': 8, '2026-10-07': 8 } });
+  const f = c.f([{ id: 'a', baseSalary: 3100, hourlyRate: 20 }], 'x', { days: WEEK });
+  assert.equal(f.variablePay, 0);
+  assert.equal(f.rated, 1);
+});
+ok('heures du contrat saisies : un 24 h qui en fait 30 touche 6 h au taux', () => {
+  const c = payCtx({});
+  assert.equal(c.pay({ baseSalary: 2000, hourlyRate: 25, contractHours: 24 }, 30, WEEK), 150);
+});
+ok('sur un mois, le contrat compte en semaines : 44 h × 31/7', () => {
+  const c = payCtx({});
+  const oct = Array.from({ length: 31 }, (_, i) => '2026-10-' + String(i + 1).padStart(2, '0'));
+  const pay = c.pay({ baseSalary: 4000, hourlyRate: 30 }, 200, oct);
+  assert.equal(Math.round(pay * 100) / 100, Math.round((200 - 44 * 31 / 7) * 30 * 100) / 100);
+});
+ok('sans salaire, toutes les heures restent au taux', () => {
+  const c = payCtx({});
+  assert.equal(c.pay({ hourlyRate: 20 }, 50, WEEK), 1000);
+  assert.equal(c.pay({ baseSalary: 3000 }, 50, WEEK), 0);
+});
+ok('les quatre écrans qui chiffrent des heures passent par hourlyPayFor', () => {
+  assert.ok(!/\* \(\+m\.hourlyRate( \|\| 0)?\)/.test(SRC), 'no raw hours × rate left');
+  assert.ok(/const pay = rated \? hourlyPayFor\(m, total, period\.days\) : 0;/.test(SRC), 'hours grid');
+  assert.ok(/const pay = hourlyPayFor\(m, tot, period\.days\);/.test(SRC), 'live hours entry');
+  assert.equal((SRC.match(/const cost = hourlyPayFor\(m, h, period\.days\);/g) || []).length, 2, 'planning cost, render and live');
+  assert.ok(/split \? '' : \(value \* \(\+member\.hourlyRate \|\| 0\)\)\.toFixed\(2\)/.test(SRC), 'CSV leaves a salaried day without its own cost');
+  assert.ok(/contractHours: Math\.min\(80, Math\.max\(0, parseFloat\(data\.contractHours\) \|\| 0\)\)/.test(SRC), 'editor saves the contract hours');
 });
 ok('la saisie en direct ne totalise que les jours de la période affichée', () => {
   assert.ok(!/Object\.values\(row\)\.reduce\(\(a, b\) => a \+ \(\+b \|\| 0\), 0\)/.test(SRC), 'all-time sum gone');
