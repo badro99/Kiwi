@@ -77,6 +77,26 @@ CREATE TABLE IF NOT EXISTS sale_receipts (
   PRIMARY KEY (merchant, sale_id)
 );
 
+-- A delivery sold on cash-on-delivery is a 0 MAD sale (settlementKind
+-- 'receivable'). Each time the courier pays, all or part, /api/receivables
+-- writes ONE ordinary sale for the amount received and links it here. The sum
+-- never exceeds what was owed. Cash only from a paired till (it is in that
+-- till's drawer); transfer and cheque from the owner too. collected_by_* is the
+-- staff identity verifyStaffPin returned, never a code.
+-- functions/api/receivables.js heals this table on first use.
+CREATE TABLE IF NOT EXISTS delivery_collections (
+  merchant TEXT NOT NULL,
+  collection_sale_id TEXT NOT NULL,  -- the sale that brought the money in
+  sale_id TEXT NOT NULL,             -- the delivery sale
+  method TEXT NOT NULL,              -- cash | transfer | cheque
+  amount_cents INTEGER NOT NULL,
+  ts INTEGER NOT NULL,
+  collected_by_id TEXT,
+  collected_by_name TEXT,
+  PRIMARY KEY (merchant, collection_sale_id)
+);
+CREATE INDEX IF NOT EXISTS delivery_collections_sale ON delivery_collections (merchant, sale_id);
+
 -- Retail down-payments: the bill remains open independently of daily receipts.
 -- Existing D1 databases must run migrations/2026-09-27-retail-balances.sql.
 CREATE TABLE IF NOT EXISTS retail_balances (

@@ -1995,6 +1995,14 @@
     const days = RANGE_DAYS[range] || 1;
     return [merchantDayBounds(addMerchantDays(todayDay, -(days - 1)), slug).from, Infinity];
   }
+  /* Les livraisons pas encore payées par le transporteur. Une vente partie en
+   * livraison est enregistrée à 0 MAD, et le magasin des ventes ne garde que
+   * l'argent : elle n'était donc dans aucune créance. Le montant dû vient de
+   * /api/receivables (assets/delivery-receivables.js), daté du jour de la
+   * vente ; une livraison reçue en sort et entre comme une vente ordinaire. */
+  const deliveryDue = (from, to) => {
+    try { return Math.max(0, +(window.KiwiDeliveries && window.KiwiDeliveries.dueIn(from, to)) || 0); } catch (_) { return 0; }
+  };
   // Windowed revenue / count / basket from the merchant's real sales.
   function realSalesTotals(range) {
     const [from, to] = rangeBounds(range == null ? currentRange : range);
@@ -2015,6 +2023,7 @@
       if (tenderBucket(e.method)) collected -= amt;
       else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
     });
+    receivable += deliveryDue(from, to);
     return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0 };
   }
   /* Keep tender attribution deliberately conservative. A value the ledger does
@@ -2073,6 +2082,7 @@
       if (tender === 'cash') cash -= amt;
       if (tender === 'card' || tender === 'tap') card -= amt;
     });
+    receivable += deliveryDue(from, to);
     return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0, card, cash };
   }
 
@@ -2126,6 +2136,7 @@
       if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
       else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
     });
+    receivable += deliveryDue(from, to);
     const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
       best == null || obj[key] > obj[best] ? key : best, null);
     const peakHour = topKey(byHour);
@@ -3602,6 +3613,19 @@
         .map((k) => (isDeadTile(k) && ready.length ? ready.shift() : k))
         .filter((k) => !isDeadTile(k));
       if (shrunk.length) layout = shrunk;
+    }
+    /* De l'argent dehors s'affiche. Une livraison que le transporteur n'a pas
+     * encore payée n'est dans aucune tuile par défaut : le commerçant ne la
+     * voyait nulle part. Tant qu'il reste quelque chose à recevoir sur la
+     * période, « Créances » prend place dans la bande par défaut (en plus si
+     * la bande est courte, sinon à la dernière place), et un clic dessus ouvre
+     * la liste des livraisons. Une bande choisie par le commerçant ne bouge pas. */
+    if (ownData() && !savedLayout && !layout.includes('receivable')) {
+      const owed = deriveTile('receivable');
+      if (owed && +owed.value > 0) {
+        data.receivable = owed;
+        layout = layout.length < KPI_MAX ? layout.concat('receivable') : layout.slice(0, KPI_MAX - 1).concat('receivable');
+      }
     }
     /* La grille est figée à six colonnes (dashboard.html) : une bande plus
      * courte laisserait des pistes vides à droite. On lui passe le compte
@@ -6422,6 +6446,8 @@
           renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
           renderProducts();
         });
+        /* Une livraison listée ou reçue change les créances, sans vente nouvelle. */
+        window.addEventListener('kiwi:deliveries', () => { renderKpiBand(); renderHero(); });
         return;
       }
       setTimeout(subSales, 30);

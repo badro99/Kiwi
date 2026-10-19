@@ -176,11 +176,15 @@ ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro
   const sales = [{ ts: 100, amount: 200, method: 'cash' }, { ts: 150, amount: 300, method: 'card' }, { ts: 900, amount: 999, method: 'cash' }];
   const refunds = [{ ts: 160, amount: -50, method: 'card' }, { ts: 50, amount: -70, method: 'cash' }];
   const ctx = vm.createContext({ Math, String, realSalesList: () => sales, realRefundList: () => refunds,
-    tenderBucket: (m) => (m === 'cash' || m === 'card' ? m : ''), tenderAmounts: (e) => [{ key: e.method, amount: +e.amount }] });
+    tenderBucket: (m) => (m === 'cash' || m === 'card' ? m : ''), tenderAmounts: (e) => [{ key: e.method, amount: +e.amount }],
+    /* Livraisons dues (assets/delivery-receivables.js) : 450 MAD vendus à 0 MAD dans la fenêtre. */
+    deliveryDue: (f, t) => (f <= 120 && 120 < t ? 450 : 0) });
   vm.runInContext(SRC.slice(wFrom, wTo), ctx);
   const w = ctx.realWindowStats(100, 500);
   ok('la fenêtre compte les remboursements faits dans la période, et seulement eux',
     w.gross === 500 && w.refunds === 50 && Math.round((w.refunds / w.gross) * 1000) / 10 === 10, JSON.stringify(w));
+  ok('une livraison pas encore payée est une créance de la fenêtre, pas un chiffre d\'affaires',
+    w.receivable === 450 && w.gross === 500 && ctx.realWindowStats(600, 900).receivable === 0, JSON.stringify(w));
 }
 
 /* ── 8. LA CARTE DES HEURES DE POINTE SUIT LE COMMERCE ─────────────────────
