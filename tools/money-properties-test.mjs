@@ -143,8 +143,8 @@ const saleArb = fc.record({
   }).filter((part) => part.amount > 0);
   return { id: '1000', total, parts, at: new Date(), lines: [{ pid: 'p1', qty: 1, unit: total, name: 'Article' }] };
 });
-await knownIssue('credit-double-count',
-  'l’en-tête « N ventes · X MAD aujourd’hui » égale l’argent encaissé que le serveur enregistre',
+/* Stricte depuis 51f92fe1 : caToday() retire la part réglée en avoir. */
+await strict('l’en-tête « N ventes · X MAD aujourd’hui » égale l’argent encaissé que le serveur enregistre',
   fc.property(fc.array(saleArb, { minLength: 1, maxLength: 6 }), (sales) => {
     const api = tillContext({
       P: { p1: { price: 1, name: 'Article' } }, promoFor: () => null, merchantSlug: () => 'm', rayonOf: () => '',
