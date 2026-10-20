@@ -2483,6 +2483,10 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-frame-browser-test.mjs', 'dash-frame-browser-test'],
     ['dash-desktop-browser-test.mjs', 'dash-desktop-browser-test'],
     ['dash-phone-browser-test.mjs', 'dash-phone-browser-test'],
+    /* Chaque page du tableau de bord et ses sous-onglets, à 390 de large : rien ne dépasse l'écran (FR, AR, kit 2027 AR). */
+    ['dash-phone-pages-browser-test.mjs', 'dash-phone-pages-browser-test'],
+    ['dash-phone-pages-ar-browser-test.mjs', 'dash-phone-pages-ar-browser-test'],
+    ['dash-phone-pages-kit-browser-test.mjs', 'dash-phone-pages-kit-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
