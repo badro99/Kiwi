@@ -63,8 +63,16 @@ const sqlite = new DatabaseSync(DB_FILE);
 
 /* ── D1 over node:sqlite ──────────────────────────────────────────────── */
 const toSql = (v) => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v);
+/* D1 refuses more than 100 bound parameters in one statement (« too many SQL
+   variables », measured on production 2026-10-21); node:sqlite accepts 32 766.
+   Without the same ceiling here, a route that binds one `?` per item passed
+   every suite and failed for real at item 101 (the stock queue, 30 September). */
+const D1_MAX_VARS = 100;
 function statement(sql, args = []) {
-  const prep = () => sqlite.prepare(sql);
+  const prep = () => {
+    if (args.length > D1_MAX_VARS) throw new Error(`too many SQL variables (${args.length} > ${D1_MAX_VARS}, D1's limit): SQLITE_ERROR`);
+    return sqlite.prepare(sql);
+  };
   return {
     bind: (...a) => statement(sql, a.map(toSql)),
     async first(col) {

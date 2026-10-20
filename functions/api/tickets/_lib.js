@@ -26,11 +26,14 @@ export function ticketNumber(id) {
   return '#' + String(id).padStart(4, '0');
 }
 
+/* 90 a pass, not 250: each id is one bound parameter and D1 refuses a
+   statement with more than 100 (« too many SQL variables »). The daily
+   sweep catches up on the next run. */
 export async function purgeExpired(env, now = Date.now()) {
   const rows = await env.DB.prepare(
     `SELECT id FROM kiwi_tickets
      WHERE status = 'done' AND expires_ts IS NOT NULL AND expires_ts <= ?
-     ORDER BY id LIMIT 250`
+     ORDER BY id LIMIT 90`
   ).bind(now).all();
   const ids = (rows.results || []).map((row) => Number(row.id)).filter(Number.isInteger);
   if (!ids.length) return 0;

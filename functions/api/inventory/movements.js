@@ -293,6 +293,20 @@ export async function onRequestGet({ request, env }) {
   } catch (_) { return json({ error: 'db' }, 503); }
 }
 
+/* D1 refuses a statement with more than 100 bound parameters (« too many
+ * SQL variables », measured on production 2026-10-21; local SQLite accepts
+ * 32 766, so no test saw it). The till sends up to 200 movements per batch:
+ * every list below is cut so that no statement binds more than 100. Pasta
+ * Corner's queue passed 39 movements on 30 September and every batch since
+ * answered 503, for 1 156 movements and counting. */
+const ID_CHUNK = 90;                       // merchant + 90 ids
+const GUARD_CHUNK = 39;                    // 21 insert values + 2 per guarded movement
+function chunks(list, size) {
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env || !env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   let body; try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -359,10 +373,13 @@ export async function onRequestPost({ request, env }) {
    * l'ignorerait silencieusement puis l'acquittement le déclarerait écrit —
    * une écriture fantôme. On refuse le lot entier AVANT toute écriture. */
   try {
-    const found = await env.DB.prepare(
-      `SELECT id FROM inventory_movements WHERE id IN (${movements.map(() => '?').join(',')}) AND merchant != ?`
-    ).bind(...movements.map((m) => m.id), merchant).all();
-    const taken = ((found && found.results) || []).map((r) => r.id);
+    const taken = [];
+    for (const part of chunks(movements, ID_CHUNK)) {
+      const found = await env.DB.prepare(
+        `SELECT id FROM inventory_movements WHERE id IN (${part.map(() => '?').join(',')}) AND merchant != ?`
+      ).bind(...part.map((m) => m.id), merchant).all();
+      ((found && found.results) || []).forEach((r) => taken.push(r.id));
+    }
     if (taken.length) return json({ error: 'id-conflict', ids: taken.slice(0, 20) }, 409);
   } catch (_) { return json({ error: 'db' }, 503); }
 
@@ -373,27 +390,32 @@ export async function onRequestPost({ request, env }) {
   try {
     let rows = [];
     try {
-      const existing = await env.DB.prepare(
-        `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
-                unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id,
-                note, actor, occurred_ts, reversal_of, meta, payload_hash
-           FROM inventory_movements
-          WHERE merchant = ? AND id IN (${movements.map(() => '?').join(',')})`
-      ).bind(merchant, ...movements.map((m) => m.id)).all();
-      rows = (existing && existing.results) || [];
+      for (const part of chunks(movements, ID_CHUNK)) {
+        const existing = await env.DB.prepare(
+          `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
+                  unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id,
+                  note, actor, occurred_ts, reversal_of, meta, payload_hash
+             FROM inventory_movements
+            WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`
+        ).bind(merchant, ...part.map((m) => m.id)).all();
+        rows = rows.concat((existing && existing.results) || []);
+      }
     } catch (_) {
+      rows = [];
       /* A rolling deployment may still expose the pre-hash schema. Real D1 is
        * upgraded by ensureSchema; this fallback keeps old read-only fixtures
        * able to accept a new id while retaining the cross-tenant guard above. */
       try {
-        const legacy = await env.DB.prepare(
-          `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
-                  unit_cost_cents, currency, ref_type, ref_id, note, actor,
-                  occurred_ts, reversal_of, meta
-             FROM inventory_movements
-            WHERE merchant = ? AND id IN (${movements.map(() => '?').join(',')})`
-        ).bind(merchant, ...movements.map((m) => m.id)).all();
-        rows = (legacy && legacy.results) || [];
+        for (const part of chunks(movements, ID_CHUNK)) {
+          const legacy = await env.DB.prepare(
+            `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
+                    unit_cost_cents, currency, ref_type, ref_id, note, actor,
+                    occurred_ts, reversal_of, meta
+               FROM inventory_movements
+              WHERE merchant = ? AND id IN (${part.map(() => '?').join(',')})`
+          ).bind(merchant, ...part.map((m) => m.id)).all();
+          rows = rows.concat((legacy && legacy.results) || []);
+        }
       } catch (_) { rows = []; }
     }
     for (const row of rows) {
@@ -408,14 +430,24 @@ export async function onRequestPost({ request, env }) {
     }
   } catch (_) { return json({ error: 'db' }, 503); }
 
-  const conflictGuard = movements
-    .map(() => "(id = ? AND payload_hash <> ? AND payload_hash <> '')")
-    .join(' OR ');
-  const conflictArgs = movements.flatMap((movement) => [movement.id, movement.payloadHash]);
+  /* Each insert is held back if a movement of its group already exists with
+   * another payload (a concurrent device that won the race). The group is the
+   * chunk of GUARD_CHUNK movements it belongs to, so the statement stays under
+   * D1's 100 variables; a conflict found later in the batch answers 409 with
+   * its id, the till sets that id aside and replays the rest, idempotently. */
+  const guardOf = new Map();
+  for (const group of chunks(movements, GUARD_CHUNK)) {
+    const guard = {
+      sql: group.map(() => "(id = ? AND payload_hash <> ? AND payload_hash <> '')").join(' OR '),
+      args: group.flatMap((movement) => [movement.id, movement.payloadHash]),
+    };
+    group.forEach((movement) => guardOf.set(movement, guard));
+  }
 
   const accepted = [];
   try {
     for (const m of movements) {
+      const { sql: conflictGuard, args: conflictArgs } = guardOf.get(m);
       const cursor = await nextCursor(env, merchant);
       await env.DB.prepare(
         `INSERT OR IGNORE INTO inventory_movements
