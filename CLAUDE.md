@@ -244,6 +244,13 @@ suite fails on any serious violation above `tools/a11y-baseline.json`; lower the
 baseline (`KIWI_UPDATE_A11Y_BASELINE=1`) when a fix brings a count down, never
 raise it to make a red go away.
 
+**The very large files stop growing** (2026-10-21). `tools/file-size-ratchet-test.mjs`
+pins every file over 5 000 lines (pages-pro.js, kiwi-caisse.html, kiwi-serveur.html,
+hotel.js, …) at its size in `tools/file-size-baseline.json`, plus 200 lines of slack,
+and the three shells' `<script src>` counts plus 3. A bug fix fits; a new feature goes
+in its own file. A pin only goes down: after a split, `KIWI_UPDATE_SIZE_BASELINE=1`
+lowers it. Never raise one to make a red go away.
+
 **Prod D1 changes through `wrangler d1 migrations`** (since 2026-10-19,
 `docs/ops/MIGRATIONS.md`). Changing `schema.sql` means adding the next
 `migrations/NNNN_name.sql` in the same commit — `node tools/d1-migrations.mjs

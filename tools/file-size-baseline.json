@@ -1,0 +1,24 @@
+{
+  "note": "Pins for tools/file-size-ratchet-test.mjs. A pin only goes down (KIWI_UPDATE_SIZE_BASELINE=1 after a split). Never raise one to make a red run go away.",
+  "lines": {
+    "OrderPro.html": 6885,
+    "assets/agent.js": 5943,
+    "assets/dateRange.js": 6724,
+    "assets/hotel.js": 10284,
+    "assets/interactive.js": 5253,
+    "assets/pages-pro.js": 20938,
+    "assets/pos-boutique.js": 7882,
+    "assets/pos-maison.js": 9456,
+    "assets/stock.js": 8188,
+    "assets/team.js": 5035,
+    "assets/venues.js": 5075,
+    "dashboard.html": 6855,
+    "kiwi-caisse.html": 24915,
+    "kiwi-serveur.html": 12713
+  },
+  "scripts": {
+    "dashboard.html": 159,
+    "kiwi-caisse.html": 86,
+    "kiwi-serveur.html": 24
+  }
+}

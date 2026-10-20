@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+/* file-size-ratchet-test · the very large files stop growing.
+ *
+ *   node tools/file-size-ratchet-test.mjs
+ *   KIWI_UPDATE_SIZE_BASELINE=1 node tools/file-size-ratchet-test.mjs   (lower the pins after a split)
+ *
+ * assets/pages-pro.js was 13 768 lines when CLAUDE.md first warned about it
+ * and 20 938 on 2026-10-21; kiwi-caisse.html is 24 915, and the dashboard
+ * loads 141 scripts (89 when that warning was written). Every feature added
+ * to one of these files makes the next change slower and lets an edit break
+ * an unrelated screen. Splitting them is a staged migration; this suite is
+ * the stage before it: they stop getting bigger.
+ *
+ *   · a file pinned in tools/file-size-baseline.json may grow by at most
+ *     SLACK lines over its pin: a bug fix fits, a new feature belongs in a
+ *     new file;
+ *   · any other assets/*.js, functions/**.js or root *.html file stays
+ *     under CAP lines;
+ *   · the three shells may load at most SCRIPT_SLACK more <script src> than
+ *     pinned.
+ *
+ * A pin only ever goes down. When a split makes a file smaller, run with
+ * KIWI_UPDATE_SIZE_BASELINE=1 to lower it; never raise a pin to make a red
+ * run go away. */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const BASE = path.join(ROOT, 'tools', 'file-size-baseline.json');
+const CAP = 5000, SLACK = 200, SCRIPT_SLACK = 3;
+const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
+const update = process.env.KIWI_UPDATE_SIZE_BASELINE === '1';
+
+const lines = (rel) => { const s = fs.readFileSync(path.join(ROOT, rel), 'utf8'); return s.length ? s.split('\n').length - (s.endsWith('\n') ? 1 : 0) : 0; };
+const scripts = (rel) => (fs.readFileSync(path.join(ROOT, rel), 'utf8').match(/<script\b[^>]*\bsrc=/gi) || []).length;
+const walk = (dir, keep) => {
+  const out = [];
+  for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+    const rel = path.posix.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'vendor' && e.name !== 'node_modules') out.push(...walk(rel, keep)); }
+    else if (keep(rel)) out.push(rel);
+  }
+  return out;
+};
+/* Our own code only: vendored and minified bundles are not ours to split. */
+const ours = (rel) => /\.js$/.test(rel) && !/\.min\.js$/.test(rel) && !/ 2\./.test(rel);
+const files = [
+  ...walk('assets', ours),
+  ...walk('functions', ours),
+  ...fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && !/ 2\./.test(f)),
+].sort();
+
+const base = JSON.parse(fs.readFileSync(BASE, 'utf8'));
+const fail = [], lowered = [];
+let checks = 0;
+for (const rel of files) {
+  const n = lines(rel);
+  const pin = base.lines[rel];
+  checks++;
+  if (pin == null) {
+    if (n > CAP) fail.push(`${rel}: ${n} lines, over the ${CAP} cap for a file that is not pinned. Put the new code in its own file.`);
+  } else if (n > pin + SLACK) {
+    fail.push(`${rel}: ${n} lines, ${n - pin} over its pin of ${pin} (slack ${SLACK}). Put the new code in its own file.`);
+  } else if (n < pin && update) {
+    base.lines[rel] = n; lowered.push(`${rel} ${pin} → ${n}`);
+  }
+}
+for (const rel of Object.keys(base.lines)) if (!files.includes(rel)) { if (update) { delete base.lines[rel]; lowered.push(`${rel} removed`); } }
+for (const rel of SHELLS) {
+  const n = scripts(rel), pin = base.scripts[rel];
+  checks++;
+  if (pin == null) fail.push(`${rel}: no script pin in tools/file-size-baseline.json`);
+  else if (n > pin + SCRIPT_SLACK) fail.push(`${rel}: loads ${n} <script src>, ${n - pin} over its pin of ${pin} (slack ${SCRIPT_SLACK}). Load the new code lazily, or bundle it with a neighbour.`);
+  else if (n < pin && update) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
+}
+if (update && lowered.length) { fs.writeFileSync(BASE, JSON.stringify(base, null, 2) + '\n'); console.log('  lowered: ' + lowered.join(' · ')); }
+if (fail.length) {
+  console.error('✗ file-size-ratchet-test\n  ' + fail.join('\n  '));
+  process.exit(1);
+}
+const pinned = Object.keys(base.lines).length;
+console.log(`✓ file-size-ratchet-test · ${checks} files checked, ${pinned} pinned, none grew past its pin`);
