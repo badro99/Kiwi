@@ -47,7 +47,7 @@ file is applied, and wrangler stops before the next one.
 
 ### The first time: 0001 and 0002
 
-Production has no `d1_migrations` table yet, so the first `apply` runs both files.
+Production has no `d1_migrations` table yet, so the first `apply` runs every file.
 
 - **`0001_baseline.sql`** is production's own DDL, read from `sqlite_master` on
   2026-10-19, with `IF NOT EXISTS` on every statement. On production it does
@@ -55,6 +55,9 @@ Production has no `d1_migrations` table yet, so the first `apply` runs both file
   production as it was that day.
 - **`0002_close_prod_gap.sql`** adds what `schema.sql` declared and production
   did not have: 14 tables, 6 columns and their indexes. All of it is additive.
+- **`0003_delivery_collections.sql`** adds the table that records money
+  collected against delivery sales. Its route also creates it on first use, so
+  on production it may already exist; every statement is `IF NOT EXISTS`.
 
 **A known trap in 0002.** SQLite has no `ADD COLUMN IF NOT EXISTS`, and one of
 the six columns can be created by running code before you apply:
