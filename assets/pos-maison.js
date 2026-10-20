@@ -8938,9 +8938,12 @@
       countedCash: counted,
     };
   }
-  /* La journée commerciale d'un service est celle de son OUVERTURE (même règle
-     que la caisse restaurant) : une boutique de souk ouverte jusqu'après minuit
-     clôture UNE journée, pas deux. */
+  /* La journée commerciale EN COURS, comme closeRegister() côté restaurant.
+     Une boutique de souk ouverte jusqu'après minuit reste sur UNE journée grâce
+     à la coupure de 05:00 (businessDay), pas grâce à la date d'ouverture. Un
+     poste resté ouvert depuis la veille classait les ventes du jour (salesToday)
+     sous la date d'ouverture, où le calcul n'en gardait aucune : la veille était
+     réécrite à 0 et le jour qui vendait n'avait pas de rapport. */
   function bqBuildReport(counted, closedAt) {
     const DR = window.KiwiDayReport;
     if (!DR) return null;
@@ -8948,7 +8951,7 @@
     if (closedAt) sess.closedAt = closedAt;
     const pv = pvPaired() || {};
     return DR.build({
-      day: DR.businessDay(bqShift ? bqShift.openedAt : Date.now()),
+      day: DR.businessDay(Date.now()),
       sales: bqReportSales(),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },

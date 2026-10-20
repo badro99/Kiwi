@@ -302,7 +302,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=13',
-  '/assets/pos-dispatch.js?v=115',
+  '/assets/pos-dispatch.js?v=116',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -386,8 +386,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=82',
-  '/assets/pos-boutique.js?v=82',
+  '/assets/pos-boutique.css?v=83',
+  '/assets/pos-boutique.js?v=83',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -419,8 +419,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=74',
-  '/assets/pos-maison.js?v=74',
+  '/assets/pos-maison.css?v=75',
+  '/assets/pos-maison.js?v=75',
   '/assets/caisse-pairing.js?v=36',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

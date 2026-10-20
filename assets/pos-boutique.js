@@ -7385,8 +7385,14 @@
     const sess = bqReportSession(counted);
     if (closedAt) sess.closedAt = closedAt;
     const pv = pvPaired() || {};
+    /* La journée commerciale EN COURS, comme closeRegister() côté restaurant :
+       les ventes du rapport sont celles d'aujourd'hui (salesToday). Un poste
+       ouvert la veille et jamais clôturé classait les ventes du jour sous la
+       date d'ouverture, où le calcul n'en retenait aucune : la veille était
+       réécrite à 0 et le jour qui vendait n'avait pas de rapport (Santos Store,
+       ouvert le 17 octobre, 318 ventes en 30 jours pour 2 rapports). */
     return DR.build({
-      day: DR.businessDay(bqShift ? bqShift.openedAt : Date.now()),
+      day: DR.businessDay(Date.now()),
       sales: bqReportSales(),
       session: sess,
       store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },

@@ -935,6 +935,57 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   compare('boutique dashboard day report after a return for credit', { net: rep.net, card: rep.card, cash: rep.cash }, want);
 });
 
+/* Santos Store opened its till on 17 October and never pressed « Clôture ».
+ * The boutique shift lives in the till's storage until it is closed, and
+ * every save in service filed the report under the day the shift OPENED,
+ * filled with TODAY's sales: the report builder kept the ones of the opening
+ * day, found none, and wrote 0 over the 17th, while the days that sold had no
+ * report at all. Production, 20 October: 318 sales in 30 days, 2 reports. */
+async function serverDays(slug) {
+  const row = stack.db.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'dayreports'").get(slug);
+  try { return (JSON.parse(row && row.data || '{}').days) || {}; } catch (_) { return {}; }
+}
+await scenario('boutique · a shift left open overnight files today under today', async (t) => {
+  if (!bq) throw new Error('no boutique till from the previous scenarios');
+  const day = await bq.evaluate(() => window.KiwiDayReport.businessDay(Date.now()));
+  const yesterday = await bq.evaluate((d) => window.KiwiDayReport.shiftDay(d, -1), day);
+  const before = await serverDays(BOUT.slug);
+  const hadYesterday = Object.prototype.hasOwnProperty.call(before, yesterday);
+
+  t.step('boutique: the shift was opened yesterday and never closed');
+  await bq.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('kiwi:bqShift') || 'null') || { openedBy: '', float: 300 };
+    s.openedAt = Date.now() - 30 * 3600000;
+    localStorage.setItem('kiwi:bqShift', JSON.stringify(s));
+  });
+  await bq.reload({ waitUntil: 'load' });
+  /* The shift is still open, so the till skips its opening float: only the
+     staff code stands between the reload and the sale screen. */
+  t.step('boutique: staff code after the reload');
+  const gate = await until(bq, () => ({ ok: !!document.querySelector('[data-cpp="1"]')?.offsetWidth || !!document.querySelector('#bq-today')?.offsetWidth,
+    keypad: !!document.querySelector('[data-cpp="1"]')?.offsetWidth }), null, 45000);
+  if (gate.keypad) { await sleep(1500); await typeDigits(bq, '[data-cpp="%"]', BOUT._pin); }
+  await bq.waitForSelector('#bq-today', { visible: true, timeout: 30000 });
+  await until(bq, () => ({ ok: document.querySelectorAll('[data-bq-item]').length >= 3 }), null, 30000);
+  await sleep(1500);
+
+  await bqSale(t, bq, ['TEST Ceinture'], 'cash');
+  bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Ceinture'] });
+  const head = await bqHead(bq);
+  await bq.evaluate(() => { try { window.KiwiDayReport.flush(); } catch (_) {} });
+  let days = {};
+  for (let i = 0; i < 30; i++) {
+    days = await serverDays(BOUT.slug);
+    if (days[day] && Number(days[day].txns) === head.tx) break;
+    await sleep(1000);
+  }
+  check(!!days[day] && Number(days[day].txns) === head.tx, `server · today's report (${day}) counts the ${head.tx} sales the till shows`,
+    days[day] ? `it says ${days[day].txns}` : 'there is no report for today');
+  eqCents(Math.round(Number(days[day] && days[day].net) * 100), head.net, `server · today's report net`);
+  check(hadYesterday || !days[yesterday], `server · no empty report written for ${yesterday}, the day the shift opened`,
+    days[yesterday] ? `${days[yesterday].txns} transaction(s), ${days[yesterday].net} MAD` : '');
+});
+
 /* A guest orders from the table's QR page (OrderPro), the till accepts the
  * order and cashes it. Pastilla 85 + Café noir 12,25: a dish with centimes,
  * because a 14,50 café was once charged 15 (Q1). The guest page, the till, the
