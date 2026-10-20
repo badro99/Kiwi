@@ -494,7 +494,11 @@ function stripTeamCodes(doc) {
   if (!members) return doc;
   return { ...doc, members: members.map((m) => {
     if (!m || typeof m !== 'object') return m;
-    const { pinCode, password, ...rest } = m;
+    /* La paie et la fiche personnelle suivent les codes : une caisse appairée
+     * s'ouvre maintenant SANS la session du patron (functions/_middleware.js ›
+     * TILL_PATHS), et aucune surface autre que le tableau de bord ne lit ces
+     * champs. Qui ne les lit pas ne réécrit pas le document (REDACT). */
+    const { pinCode, password, baseSalary, hourlyRate, cin, iban, address, emergencyName, emergencyPhone, ...rest } = m;
     return rest;
   }) };
 }

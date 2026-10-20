@@ -26,6 +26,7 @@ import {
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
+  TILL_COOKIE, TILL_STORE_COOKIE, TILL_STORE, tillVerification,
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 
@@ -35,6 +36,44 @@ const OPERATOR_PATH = '/__operator';
 const LANGUAGE_COOKIE = 'kiwi_lang';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const CANONICAL_HOST = 'kiwi-os.com';
+
+/* ── UNE CAISSE APPAIRÉE N'A PAS BESOIN DU MOT DE PASSE DU PATRON ────────────
+ * Jusqu'au 2026-08-05, une tablette appairée passait cette porte avec le code
+ * équipe partagé (kiwi_gate). Ce code a été remplacé par l'accès employé
+ * personnel, et rien n'a pris sa place pour les caisses : depuis, la page de la
+ * caisse ne s'ouvrait QU'AVEC la session du propriétaire. Un « Sortir », un
+ * mot de passe changé, trente jours sans rechargement, une base qui tousse au
+ * lancement : la tablette retombait sur l'écran de connexion du patron, et
+ * personne au comptoir ne pouvait la rouvrir sans ses identifiants.
+ *
+ * La preuve de caisse (`kiwi_till`, 365 jours, coupable par magasin et par
+ * appareil) ouvre maintenant la PAGE de la caisse et les seules API qu'elle
+ * appelle, et rien d'autre : ni le tableau de bord, ni /api/me, ni une route
+ * qui ne sait pas reconnaître une caisse. Chaque handler de TILL_PATHS
+ * revérifie lui-même la caisse contre le magasin demandé (tenantFor,
+ * entitledMerchant allowTill, isTillFor, verifyStaffPin requireTill) ; passer
+ * la porte ne lui donne aucun droit de plus. tools/till-gate-test.mjs tient la
+ * liste : une route ajoutée ici dont le handler ignore les caisses fait échouer
+ * le contrôle. */
+const TILL_PAGES = new Set(['/kiwi-caisse', '/kiwi-caisse.html']);
+export const TILL_PATHS = new Set([
+  '/api/config', '/api/store', '/api/menu/availability', '/api/catalog', '/api/clients',
+  '/api/operations', '/api/order/queue', '/api/feed', '/api/service/events', '/api/team/live',
+  '/api/live/socket', '/api/inventory/movements', '/api/inventory/counts',
+  '/api/cash-sessions', '/api/z-reconciliation', '/api/ticket-sequence',
+  '/api/store-credits', '/api/receivables', '/api/retail-balances', '/api/invoice',
+  '/api/pin/verify', '/api/pair/state', '/api/pairs', '/api/print/bridges',
+  '/api/hotel/room-charges',
+]);
+function tillStoreOf(request, url) {
+  const saved = readCookie(request, TILL_STORE_COOKIE) || '';
+  if (TILL_STORE.test(saved)) return saved;
+  /* Une caisse appairée avant ce cookie ne l'a pas encore : ses appels d'API
+   * nomment leur magasin. La page, elle, attend le cookie (GET /api/pair/state
+   * le pose au premier appel). */
+  const asked = (url.searchParams.get('merchant') || '').trim();
+  return TILL_STORE.test(asked) ? asked : '';
+}
 
 /* One public origin, one landing URL. The previous static export served a full
  * second copy at `/`, while `www` could serve every page again under another
@@ -443,6 +482,16 @@ async function routeRequest(context) {
    * data. This is what stops a kiosk with one lost cookie from minting a new
    * pairing every minute forever. */
   if (method === 'POST' && path === '/api/pair/recover') return next();
+  /* Appairer une tablette ne demande plus d'ouvrir la session du patron dessus.
+   * Le code à six chiffres EST l'autorisation : émis par le tableau de bord du
+   * propriétaire, valable quinze minutes, utilisable une seule fois, et la route
+   * plafonne elle-même les essais par adresse. La page qui le fait taper est la
+   * coquille de la caisse en mode appairage : statique, publique sur les miroirs
+   * GitHub, et sur l'app hébergée elle n'affiche que le pavé d'appairage tant
+   * que l'appareil n'est la caisse de personne. Aucune donnée n'y est servie ;
+   * tout passe par les API ci-dessus, qui exigent la preuve de caisse. */
+  if (method === 'POST' && path === '/api/pair/redeem') return next();
+  if (isRead && TILL_PAGES.has(path) && url.searchParams.get('pair') === '1') return next();
   /* Espace comptable : l'expert-comptable d'un commerçant n'a AUCUN compte Kiwi.
    * Trois entrées, exactes, et rien d'autre sous /api/comptable/ :
    *   - la page (comptable.html / comptable), statique, sans donnée ;
@@ -634,6 +683,30 @@ async function routeRequest(context) {
   // Removing an operator therefore cuts off their open browsers immediately.
   if (authSecret && await namedOperatorId(request, env)) return next();
 
+  // 4. Paired till? See TILL_PATHS above: the caisse page and its own APIs only.
+  let tillUnavailable = false;
+  let liveTill = false;
+  const tillPath = TILL_PAGES.has(path) || TILL_PATHS.has(path);
+  if (authSecret && readCookie(request, TILL_COOKIE) && (tillPath || sessionRevoked)) {
+    const store = tillStoreOf(request, url);
+    if (store) {
+      const till = await tillVerification(request, env, store);
+      if (till.ok && tillPath) {
+        if (!sessionRevoked) return next();
+        /* Le cookie du patron est mort : on l'efface au passage, sinon chaque
+         * requête de la caisse le refait vérifier en base. Jamais sur une
+         * réponse 101 : la reconstruire tue la bascule WebSocket. */
+        const res = await next();
+        if (!res || res.status === 101 || res.webSocket) return res;
+        const out = new Response(res.body, res);
+        out.headers.append('Set-Cookie', clearSessionCookie());
+        return out;
+      }
+      liveTill = !!till.ok;
+      tillUnavailable = !!till.unavailable;
+    }
+  }
+
   // Not authorized. The /auth/* endpoints must still run so the screen works.
   if (path.startsWith('/auth/')) return next();
 
@@ -715,25 +788,33 @@ async function routeRequest(context) {
   // stops replaying it, and answer API callers with JSON instead of a login page.
   const lockHeaders = { 'Cache-Control': 'no-store' };
   if (sessionRevoked) lockHeaders['Set-Cookie'] = clearSessionCookie();
-  if (sessionRevoked && isApi) {
+  /* Une caisse appairée dont la session propriétaire a été coupée reste une
+   * caisse. Le signal « account-revoked » ferait effacer son appairage par
+   * assets/auth-guard.js et l'enverrait sur la page d'accueil : on garde
+   * l'effacement du cookie mort, sans le signal. */
+  if (sessionRevoked && isApi && !liveTill) {
     return new Response(JSON.stringify({ error: 'account-revoked' }), {
       status: 401,
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
     });
   }
-  if (sessionVerificationUnavailable && isApi) {
+  if ((sessionVerificationUnavailable || tillUnavailable) && isApi) {
     return new Response(JSON.stringify({ error: 'auth-verification-unavailable' }), {
       status: 503,
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
     });
   }
-  if (sessionVerificationUnavailable) {
-    return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: false, lang: requestedLanguage(request) }), {
+  /* La base n'a pas pu répondre : on ne sait pas si ce visiteur est entré.
+   * L'écran de connexion qu'on servait ici ressemblait à une déconnexion, et au
+   * comptoir on allait chercher le patron. Cet écran-ci dit la vérité et
+   * réessaie tout seul. */
+  if (sessionVerificationUnavailable || tillUnavailable) {
+    return new Response(retryPage(requestedLanguage(request)), {
       status: 503,
-      headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+      headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '5' },
     });
   }
-  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked, lang: requestedLanguage(request) }), {
+  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked && !liveTill, lang: requestedLanguage(request) }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });
@@ -779,6 +860,24 @@ export async function onRequest(context) {
   });
 }
 
+function retryPage(lang) {
+  const copy = {
+    fr: { t: 'Connexion au serveur…', p: 'Kiwi n’a pas pu vérifier cet appareil. Nouvel essai dans quelques secondes, rien à faire.', b: 'Réessayer maintenant' },
+    en: { t: 'Reaching the server…', p: 'Kiwi could not check this device. It tries again in a few seconds, nothing to do.', b: 'Try again now' },
+    ar: { t: 'جارٍ الاتصال بالخادم…', p: 'تعذّر على Kiwi التحقق من هذا الجهاز. ستتم إعادة المحاولة بعد ثوانٍ، لا داعي لأي إجراء.', b: 'إعادة المحاولة الآن' },
+  };
+  const c = copy[lang] || copy.fr;
+  const l = copy[lang] ? lang : 'fr';
+  return `<!doctype html><html lang="${l}" dir="${l === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8">`
+    + '<meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="5">'
+    + `<title>${c.t}</title><style>:root{color-scheme:light dark}body{margin:0;min-height:100vh;display:grid;place-items:center;`
+    + 'background:#F7F5F0;color:#0A0F0D;font:400 16px/1.6 "Inter Tight",system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}'
+    + '@media(prefers-color-scheme:dark){body{background:#0A0F0D;color:#F7F5F0}}main{max-width:30rem;text-align:center}'
+    + 'h1{font-size:1.4rem;font-weight:600;letter-spacing:-.02em;margin:0 0 .5rem}p{margin:0 0 1.5rem;opacity:.72}'
+    + 'button{min-height:48px;padding:0 22px;border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 15px system-ui,sans-serif;cursor:pointer}</style></head>'
+    + `<body><main><h1>${c.t}</h1><p>${c.p}</p><button type="button" onclick="location.reload()">${c.b}</button></main></body></html>`;
+}
+
 function htmlResponse(body) {
   return new Response(body, {
     status: 401,
@@ -808,7 +907,7 @@ function authPage(opts) {
       email: 'E-mail', password: 'Mot de passe', forgot: 'Mot de passe oublié ?', name: 'Nom', business: 'Établissement',
       language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
       namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.',
-      create: 'Créer mon compte', staff: 'Accès équipe', revoked: 'Votre session a été fermée. Reconnectez-vous.',
+      create: 'Créer mon compte', staff: 'Accès équipe', till: 'Caisse · appairer cette tablette avec un code', revoked: 'Votre session a été fermée. Reconnectez-vous.',
       encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
       operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
       strength: { label: 'Force', weak: 'faible', medium: 'moyen', strong: 'fort' },
@@ -820,7 +919,7 @@ function authPage(opts) {
       email: 'Email', password: 'Password', forgot: 'Forgot your password?', name: 'Name', business: 'Business',
       language: 'Language', emailPlaceholder: 'you@example.com',
       namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.',
-      create: 'Create my account', staff: 'Team access', revoked: 'Your session has ended. Please sign in again.',
+      create: 'Create my account', staff: 'Team access', till: 'Till · pair this tablet with a code', revoked: 'Your session has ended. Please sign in again.',
       encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
       operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
       strength: { label: 'Strength', weak: 'weak', medium: 'medium', strong: 'strong' },
@@ -832,7 +931,7 @@ function authPage(opts) {
       email: 'البريد الإلكتروني', password: 'كلمة المرور', forgot: 'نسيت كلمة المرور؟', name: 'الاسم', business: 'اسم النشاط',
       language: 'اللغة', emailPlaceholder: 'name@example.com',
       namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.',
-      create: 'إنشاء حسابي', staff: 'دخول فريق العمل', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
+      create: 'إنشاء حسابي', staff: 'دخول فريق العمل', till: 'الصندوق · ربط هذا الجهاز برمز', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
       encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
       operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
       strength: { label: 'القوة', weak: 'ضعيفة', medium: 'متوسطة', strong: 'قوية' },
@@ -850,8 +949,11 @@ function authPage(opts) {
         <button type="submit">${t.enter}</button>
       </div>
     </form>`;
+  /* Une tablette de comptoir qui tombe ici n'a besoin ni du mot de passe du
+   * patron ni d'un compte employé : un code d'appairage suffit. */
   const staffBlock = allowStaff ? `
-    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">${t.staff}</a>` : '';
+    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">${t.staff}</a>
+    <a class="staff-link" id="till-pair" href="/kiwi-caisse?pair=1">${t.till}</a>` : '';
 
   return `<!doctype html>
 <html lang="${lang}" dir="${dir}">
@@ -1128,6 +1230,7 @@ function authPage(opts) {
     transition: color .15s, text-decoration-color .15s;
   }
   .staff-link:hover { color: var(--riad); text-decoration-color: rgba(5,59,44,.6); }
+  #till-pair { margin-top: 8px; }
   .op { margin-top: 14px; }
   .staff { margin: 14px 0 0; }
   .staff-row { display: flex; flex-wrap: wrap; gap: 8px; }

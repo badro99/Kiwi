@@ -20,7 +20,7 @@
  * réponse ne contient ni jeton, ni code, ni identité de personne.
  */
 
-import { json, readCookie, TILL_COOKIE, tillVerification, isTerminalFor, tillEpoch, tillDeviceToken, tillCookie, recordTillDevice, DEVICE_ID } from '../../auth/_lib.js';
+import { json, readCookie, TILL_COOKIE, tillVerification, isTerminalFor, tillEpoch, tillDeviceToken, tillCookie, recordTillDevice, DEVICE_ID, tillStoreCookie } from '../../auth/_lib.js';
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -56,7 +56,11 @@ export async function onRequestGet({ request, env }) {
         }
       }
     }
-    return json({ paired: true, merchant, reason: 'ok' }, 200);
+    /* Une caisse appairée avant le cookie de magasin le reçoit ici, seul dans
+     * sa réponse (le renouvellement ci-dessus garde la preuve de caisse seule) :
+     * la porte du site pourra ensuite lui ouvrir la page sans session. */
+    const store = tillStoreCookie(merchant);
+    return json({ paired: true, merchant, reason: 'ok' }, 200, store ? { 'Set-Cookie': store } : undefined);
   }
   /* Cet appareil précis a été retiré par le propriétaire : seul un nouveau code
    * le rend à la caisse. */

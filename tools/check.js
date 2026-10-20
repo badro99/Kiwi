@@ -589,6 +589,9 @@ for (const test of [
   'z-reconciliation-browser-test.mjs',
   'caisse-winter-clock-test.mjs',
   'device-timezone-test.mjs',
+  /* Une caisse appairée s'ouvre sur sa propre preuve, sans le mot de passe du
+     patron : page et API de la caisse seulement, jamais le tableau de bord. */
+  'till-gate-test.mjs',
   'employee-timezone-test.mjs',
   'employee-timezone-browser-test.mjs',
   'table-visit-reuse-test.mjs',

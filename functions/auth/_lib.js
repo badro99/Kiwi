@@ -466,6 +466,21 @@ export function tillCookie(value) {
 export function terminalCookie(value) {
   return `${TERMINAL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
 }
+/* ── QUEL MAGASIN CETTE CAISSE PRÉTEND ÊTRE ─────────────────────────────────
+ * Le jeton `kiwi_till` ne nomme pas son magasin : le slug entre dans la
+ * signature, il n'est pas écrit dedans. Les handlers le lisent dans `?merchant=`,
+ * mais la porte du site (functions/_middleware.js) doit aussi ouvrir la PAGE de
+ * la caisse, qui n'a pas de paramètre. Ce cookie lui dit quel magasin
+ * vérifier. Il ne prouve rien : c'est `kiwi_till` qui prouve, contre ce slug,
+ * avec le millésime et la révocation de l'appareil. Un slug falsifié ici ne fait
+ * que rater la vérification. Même durée que le jeton qu'il accompagne. */
+export const TILL_STORE_COOKIE = 'kiwi_till_store';
+export const TILL_STORE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+export function tillStoreCookie(merchant) {
+  const slug = String(merchant || '');
+  if (!TILL_STORE.test(slug)) return '';
+  return `${TILL_STORE_COOKIE}=${slug}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
+}
 // True when the request proves it is the till of `merchant`.
 export async function isTillFor(request, env, merchant) {
   const result = await tillVerification(request, env, merchant);

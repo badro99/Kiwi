@@ -19,8 +19,16 @@ import { clearSessionCookie, GATE_COOKIE, OP_COOKIE, OPID_COOKIE } from './_lib.
 
 const CLEAR = 'Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 
-export async function onRequest() {
-  const headers = new Headers({ Location: '/' });
+/* « Sortir » sur la caisse ferme la session du patron, pas la caisse. Une
+ * tablette appairée doit revenir à son écran de code, pas sur la page d'accueil
+ * publique : elle rouvre la caisse avec sa propre preuve (functions/_middleware.js
+ * › TILL_PATHS). Destination fixe, jamais une URL reçue telle quelle. */
+const NEXT = { '/kiwi-caisse': '/kiwi-caisse' };
+
+export async function onRequest(context) {
+  let to = '/';
+  try { to = NEXT[new URL(context.request.url).searchParams.get('next') || ''] || '/'; } catch (_) {}
+  const headers = new Headers({ Location: to });
   headers.append('Set-Cookie', clearSessionCookie());
   headers.append('Set-Cookie', `${GATE_COOKIE}=; ${CLEAR}`);
   headers.append('Set-Cookie', `${OP_COOKIE}=; ${CLEAR}`);

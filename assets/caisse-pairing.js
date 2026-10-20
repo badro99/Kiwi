@@ -924,6 +924,40 @@
     else if (e.key === 'Backspace') { feed('back'); e.preventDefault(); }
   });
 
+  /* ── LA PREUVE DE CAISSE, VÉRIFIÉE À CHAQUE LANCEMENT ──────────────────────
+   * Une tablette appairée dans son localStorage peut très bien n'avoir jamais
+   * reçu, ou avoir perdu, son cookie `kiwi_till`. Tant que la session du patron
+   * est ouverte sur l'appareil, rien ne le montre : tout passe par la session.
+   * Le jour où elle se ferme (un « Sortir », un mot de passe changé), la page de
+   * la caisse ne s'ouvre plus et le comptoir tombe sur l'écran de connexion du
+   * patron. On demande donc au serveur, une fois par lancement, si l'appareil
+   * est bien la caisse de ce magasin ; s'il dit non, on répare en silence
+   * (preuve terminal, sinon la session encore ouverte). Sans réseau, sans
+   * session ni preuve terminal, rien ne s'affiche : la caisse sert comme avant.
+   * Un jeton renouvelé revient seul dans sa réponse ; le second appel apporte
+   * le cookie du magasin (functions/api/pair/state.js). */
+  var tillProofChecked = false;
+  function ensureTillProof(venue) {
+    if (tillProofChecked || !hosted() || !venue || !venue.merchant) return;
+    tillProofChecked = true;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    pairState(venue).then(function (state) {
+      if (state && state.paired === true) {
+        if (state.renewed) return pairState(venue).catch(function () {});
+        return null;
+      }
+      if (state && state.paired === false) return repair({ interactive: false });
+      return null;
+    }, function (err) {
+      /* Sans preuve de caisse ni session, la porte du site refuse même cette
+         question (401/403). C'est justement le cas à réparer : la preuve
+         terminal peut avoir survécu. 503 et réseau ne prouvent rien. */
+      var s = err && err.status;
+      if (s === 401 || s === 403) return repair({ interactive: false });
+      return null;
+    }).catch(function () { /* réparation impossible sans réseau ni preuve */ });
+  }
+
   /* ── boot ───────────────────────────────────────────────────────────────
    * Local (demos allowed): no-op — native demo pad as before.
    * Hosted + paired: boot straight into the bound store.
@@ -976,7 +1010,7 @@
       }
     }
 
-    if (isPaired()) { bootWithPin(pairedVenue()); return; }
+    if (isPaired()) { bootWithPin(pairedVenue()); ensureTillProof(pairedVenue()); return; }
 
     var h2 = takeHandoff();
     if (h2) {

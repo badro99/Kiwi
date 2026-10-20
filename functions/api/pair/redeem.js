@@ -18,7 +18,7 @@
 // No DB ⇒ 503 (a static host has no pairings table; the client's 404-style
 // fallback isn't reached here, but 503 still keeps it away from the 422 path).
 
-import { json, tillToken, tillDeviceToken, recordTillDevice, tillCookie, terminalToken, terminalCookie, tillEpoch,
+import { json, tillToken, tillDeviceToken, recordTillDevice, tillCookie, terminalToken, terminalCookie, tillEpoch, tillStoreCookie,
 } from '../../auth/_lib.js';
 
 /* ── Brute-force cap ────────────────────────────────────────────────────────
@@ -184,6 +184,11 @@ export async function onRequestPost(context) {
     if (terminalId) {
       try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId, currentEpoch))); } catch (_) {}
     }
+    /* Le magasin que la porte du site devra vérifier pour ouvrir la PAGE de la
+     * caisse sans session propriétaire. Avant la preuve de caisse : celle-ci
+     * reste la dernière, pour les navigateurs qui ne gardent que la dernière. */
+    const store = tillStoreCookie(row.merchant);
+    if (store) res.headers.append('Set-Cookie', store);
     try {
       if (!Number.isFinite(currentEpoch)) return json({ error: 'auth-unavailable' }, 503);
       /* Un appareil qui se nomme reçoit un jeton à SON nom : on pourra le
