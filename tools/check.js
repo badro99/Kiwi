@@ -1972,6 +1972,9 @@ section('Whole-project regressions');
        annulation, hors ligne, la bascule de 05:00), et le tableau de bord qui
        doit dire les mêmes centimes, sans rien d'un autre commerçant. */
     'sync-ledger-browser-test.mjs',
+    /* 2026-10-20 · sa moitié boutique, séparée pour tenir sous les cinq
+       minutes par suite. */
+    'sync-ledger-boutique-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',

@@ -79,7 +79,11 @@ const browser = await puppeteer.launch({
   executablePath: bin, headless: true,
   args: ['--no-sandbox', '--lang=fr-FR', '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost'],
 });
-const S = suite('sync-ledger', { browser });
+/* Two halves, so each stays well inside check.js's five minutes per suite:
+ * the restaurant + OrderPro scenarios here, the boutique ones in
+ * sync-ledger-boutique-browser-test.mjs (which sets KIWI_SYNC_PART). */
+const PART = process.env.KIWI_SYNC_PART === 'boutique' ? 'boutique' : 'resto';
+const S = suite(PART === 'boutique' ? 'sync-ledger-boutique' : 'sync-ledger', { browser });
 process.on('exit', () => { try { stack.stop(); } catch (_) {} });
 
 /* ── one merchant: account, store, codes ──────────────────────────────── */
@@ -273,6 +277,7 @@ const findings = [];
 /* Each scenario reports every mismatch it sees, then fails once with all of
  * them: one wrong figure must not hide the next. */
 async function scenario(name, body) {
+  if ((PART === 'boutique') !== name.startsWith('boutique ·')) return;
   await S.run(name, async (t) => {
     const before = findings.length;
     await body(t);
@@ -557,18 +562,20 @@ const PRICE = { i1: 7250, i2: 8500, i3: 1225, n1: 7250, n2: 8500, n3: 1225 };
 const sum = (ids) => ids.reduce((s, id) => s + PRICE[id], 0);
 const owners = {};
 
-await S.run('setup · three merchants through signup and the wizard', async (t) => {
-  for (const m of [RESTO, NIGHT, BOUT]) {
+const MINE = PART === 'boutique' ? [BOUT] : [RESTO, NIGHT];
+await S.run(`setup · ${MINE.length === 1 ? 'one merchant' : 'two merchants'} through signup and the wizard`, async (t) => {
+  for (const m of MINE) {
     const ctx = await browser.createBrowserContext();
     owners[m.label] = { ctx, page: await createMerchant(t, ctx, m) };
   }
   for (const [m, menu] of [[RESTO, MENU], [NIGHT, MENU_N]]) {
+    if (!MINE.includes(m)) continue;
     const pub = await api(owners[m.label].page, 'POST', '/api/menu', { merchant: m.slug, type: 'restaurant', data: menu });
     if (pub.status !== 200) throw new Error(`menu publish ${m.label}: ${pub.status} ${JSON.stringify(pub.body)}`);
   }
-  console.log(`  ✓ three stores created and activated (${RESTO.slug}, ${NIGHT.slug}, ${BOUT.slug})`);
+  console.log(`  ✓ ${MINE.length} store(s) created and activated (${MINE.map((m) => m.slug).join(', ')})`);
 });
-if (!RESTO.slug || !NIGHT.slug || !BOUT.slug) { await S.finish(); }
+if (MINE.some((m) => !m.slug)) { await S.finish(); }
 
 const tabletCtx = await browser.createBrowserContext();
 let tablet;
@@ -935,7 +942,7 @@ await scenario('boutique · a return for store credit, then the credit spent', a
 /* A guest scans the QR code of a table, orders a Pastilla and a black coffee,
  * and the till accepts the order from its inbox and cashes it in cash. Returns
  * the stored order row and the guest context (closed by the caller). */
-async function qrOrderCashedAtTill(t, tableNo, want) {
+async function qrOrderCashedAtTill(t, tableNo, want, opts = {}) {
   const tx0 = await txCount(tablet);
   t.step(`guest: table ${tableNo}, Pastilla + Café noir, send`);
   const guestCtx = await browser.createBrowserContext();
@@ -981,6 +988,19 @@ async function qrOrderCashedAtTill(t, tableNo, want) {
   }
   const acc = await tablet.$('[data-kop-acc]');
   if (acc) { await clickSel(tablet, '[data-kop-acc]'); await sleep(1500); }
+  if (opts.markReady && order) {
+    t.step('till: mark the order ready, the guest phone must say so');
+    await tablet.waitForSelector(`[data-kop-ready="${order.id}"]`, { visible: true, timeout: 20000 });
+    await clickSel(tablet, `[data-kop-ready="${order.id}"]`);
+    let st = '';
+    for (let i = 0; i < 20 && st !== 'ready'; i++) {
+      st = stack.db.prepare('SELECT status FROM orders WHERE id = ?').get(order.id)?.status || '';
+      if (st !== 'ready') await sleep(500);
+    }
+    check(st === 'ready', 'server · the order is ready', st);
+    const told = await guest.waitForFunction(() => /Prête|prête/.test(document.body.innerText || ''), { timeout: 30000 }).then(() => true).catch(() => false);
+    check(told, 'guest page · the phone shows the order is ready', (await guest.evaluate(() => document.body.innerText.slice(0, 160)).catch(() => '')).replace(/\s+/g, ' '));
+  }
   await tablet.waitForSelector('[data-kop-pay]', { visible: true, timeout: 20000 });
   await clickSel(tablet, '[data-kop-pay]');
   await sleep(1500);
@@ -1016,7 +1036,7 @@ await scenario('restaurant · a QR order from the table, accepted and cashed at 
   await tablet.waitForFunction(() => !!document.querySelector('[data-table="4"]'), { timeout: 15000 })
     .catch(() => { throw new Error('the till never drew table 4 from the server floor plan'); });
 
-  const { order, guestCtx } = await qrOrderCashedAtTill(t, tableNo, want);
+  const { order, guestCtx } = await qrOrderCashedAtTill(t, tableNo, want, { markReady: true });
 
   const sales1 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
   check(Number(sales1.n) === Number(sales0.n) + 1, 'server · the QR order became exactly one sale', `${sales0.n} → ${sales1.n}`);
@@ -1217,6 +1237,106 @@ await scenario('restaurant · an A4 invoice from the till journal', async (t) =>
   check(num2 === num1, 'till invoice · a second tap reopens the same number', `${num1} then ${num2}`);
   check(count() === n0 + 1, 'server · still one invoice row after the second tap', `${n0} → ${count()}`);
   await tablet.keyboard.press('Escape').catch(() => {});
+});
+
+/* The other half of QR ordering: no table. The guest orders « à emporter »,
+ * gets a number, pays at the counter; the kitchen gets it only once paid, the
+ * phone rings when it is ready, the counter hands it over. Every screen must
+ * then count it once. */
+await scenario('restaurant · a QR takeaway order, paid at the counter, ready, handed over', async (t) => {
+  if (!tablet) throw new Error('no tablet from the previous scenarios');
+  const want = PRICE.n2 + PRICE.n3;
+  const sales0 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  const t0 = Date.now() - 1000;
+
+  t.step('guest: takeaway, Pastilla + Café noir, send');
+  const guestCtx = await browser.createBrowserContext();
+  const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&mode=emporter`, { waitUntil: 'load' });
+  await guest.waitForSelector('[data-add="n2"]', { visible: true, timeout: 20000 });
+  await clickSel(guest, '[data-add="n2"]');
+  await sleep(500);
+  await clickSel(guest, '[data-add="n3"]');
+  await sleep(500);
+  await clickSel(guest, '#cart-pill');
+  await sleep(700);
+  await clickSel(guest, '#send-btn');
+  await guest.waitForSelector('#cashier-number-digits', { visible: true, timeout: 20000 });
+  const shownNo = (await guest.$eval('#cashier-number-digits', (e) => e.textContent).catch(() => '')).trim();
+  let order = null;
+  for (let i = 0; i < 30 && !order; i++) {
+    order = stack.db.prepare("SELECT * FROM orders WHERE merchant = ? AND mode = 'takeout' AND created_ts >= ? ORDER BY created_ts DESC LIMIT 1").get(NIGHT.slug, t0);
+    if (!order) await sleep(500);
+  }
+  check(!!order, 'server · the takeaway order is stored', 'no row');
+  if (!order) return;
+  check(shownNo === 'OPD-' + order.number, 'guest page · the number to announce at the counter', `${shownNo} for ${order.number}`);
+  check(order.status === 'pending', 'server · nothing goes to the kitchen before payment', order.status);
+
+  const statusOf = () => stack.db.prepare('SELECT status, paid_ts FROM orders WHERE id = ?').get(order.id) || {};
+  async function inboxTap(attr) {
+    const sel = `[${attr}="${order.id}"]`;
+    const shown = await tablet.$eval(sel, (e) => !!(e.offsetParent && e.getBoundingClientRect().width)).catch(() => false);
+    if (!shown) await clickSel(tablet, '#kop-chip');
+    await tablet.waitForSelector(sel, { visible: true, timeout: 20000 });
+    await clickSel(tablet, sel);
+  }
+
+  t.step('till: cash the order from the inbox');
+  const tx = await txCount(tablet);
+  await inboxTap('data-kop-pay');
+  await sleep(1500);
+  await clickSel(tablet, '#pay-charge');
+  await clickSel(tablet, '[data-set="exact"]');
+  await clickSel(tablet, '#cash-confirm');
+  await tablet.waitForFunction((n) => {
+    const m = /(\d+)/.exec((document.getElementById('stat-txns-card') || {}).innerText || '');
+    return m && +m[1] >= n;
+  }, { timeout: 15000 }, tx + 1);
+  let st = {};
+  for (let i = 0; i < 20 && !(st = statusOf()).paid_ts; i++) await sleep(500);
+  check(!!st.paid_ts, 'server · the takeaway order is paid', JSON.stringify(st));
+  check(st.status === 'accepted', 'server · paid, it goes to the kitchen', st.status);
+  await clickSel(tablet, '.modal-veil.is-open [data-close], #pay-success-close').catch(() => {});
+  await tablet.keyboard.press('Escape').catch(() => {});
+  await sleep(800);
+
+  t.step('till: mark it ready, the phone must ring');
+  await inboxTap('data-kop-ready');
+  for (let i = 0; i < 20 && (st = statusOf()).status !== 'ready'; i++) await sleep(500);
+  check(st.status === 'ready', 'server · the takeaway order is ready', st.status);
+  const ready = await guest.waitForSelector('#ready-number', { visible: true, timeout: 30000 }).then(() => true).catch(() => false);
+  check(ready, 'guest page · the ready screen shows', (await guest.evaluate(() => document.body.innerText.slice(0, 160)).catch(() => '')).replace(/\s+/g, ' '));
+
+  t.step('till: hand it over');
+  await inboxTap('data-kop-served');
+  for (let i = 0; i < 20 && !['served', 'archived'].includes((st = statusOf()).status); i++) await sleep(500);
+  check(['served', 'archived'].includes(st.status), 'server · handed over', st.status);
+  const warned = await tablet.evaluate(() => [...document.querySelectorAll('#toast-stack .toast')].map((e) => e.textContent).filter((x) => /non confirmée|refusée/.test(x)));
+  check(!warned.length, 'till · the handover is not reported as failed', warned.join(' | '));
+  const open = await tablet.$eval('#kop-close', (e) => !!e.offsetParent).catch(() => false);
+  if (open) { await clickSel(tablet, '#kop-close'); await sleep(500); }
+  await sleep(4000);
+
+  const sales1 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  check(Number(sales1.n) === Number(sales0.n) + 1, 'server · the takeaway order became exactly one sale', `${sales0.n} → ${sales1.n}`);
+  eqCents(Number(sales1.c) - Number(sales0.c), want, 'server · the takeaway sale is 97,25');
+
+  const rows = [
+    { kind: 'sale', method: 'card', cents: PRICE.n3 },
+    { kind: 'sale', method: 'cash', cents: want }, { kind: 'sale', method: 'cash', cents: want },
+    { kind: 'sale', method: 'cash', cents: PRICE.n3 }, { kind: 'sale', method: 'cash', cents: PRICE.n2 },
+    { kind: 'sale', method: 'cash', cents: want },
+  ];
+  const till = await restoReport(tablet);
+  compare('till report after the takeaway order', till, ledger(rows));
+  const dash = owners.nuit.page;
+  await openDashboard(t, dash, NIGHT);
+  const home = await dashHome(dash, rows.length);
+  compare('dashboard home after the takeaway order', { tx: home.tx, net: home.net }, ledger(rows));
+  const rep = await dashReport(dash, 0);
+  compare('dashboard day report after the takeaway order', { tx: rep.tx, net: rep.net, card: rep.card, cash: rep.cash }, ledger(rows));
+  await guestCtx.close();
 });
 
 await S.finish();

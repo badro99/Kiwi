@@ -83,8 +83,16 @@ function statement(sql, args = []) {
        public booking page, for one) saw an empty database and said
        "booking-closed" for a store that had just opened it. */
     __run() {
-      if (/^\s*(SELECT|WITH|PRAGMA)\b/i.test(sql) || /\bRETURNING\b/i.test(sql)) {
+      if (/^\s*(SELECT|WITH|PRAGMA)\b/i.test(sql)) {
         return { results: prep().all(...args), success: true, meta: {} };
+      }
+      /* A write with RETURNING hands back its rows AND, like D1, the number of
+         rows it changed. Answering only the rows made every route that reads
+         meta.changes after a batched UPDATE … RETURNING (the takeaway handover)
+         believe nothing moved, and say 409 for an update that had landed. */
+      if (/\bRETURNING\b/i.test(sql)) {
+        const rows = prep().all(...args);
+        return { results: rows, success: true, meta: { changes: rows.length } };
       }
       const r = prep().run(...args);
       return { success: true, meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } };

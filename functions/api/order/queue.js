@@ -2389,7 +2389,11 @@ export async function onRequestPost(context) {
          * 503, c'est-à-dire en panne visible au comptoir). */
         now, pinActor?.id || '', pinActor?.name || '', takeoutHandover.session_id, merchant, id, merchant, now);
       const batch = await atomicStatements(env, [orderUpdate, handoverUpdate]);
-      const changes = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
+      /* The order update carries RETURNING: its returned row is the proof it
+         moved, whatever a driver puts in meta.changes. */
+      const first = batch && batch[0];
+      const changes = Number(first && first.meta && first.meta.changes)
+        || (Array.isArray(first && first.results) ? first.results.length : 0);
       if (changes) row = await env.DB.prepare(
         'SELECT id, status, number, mode, session_id FROM orders WHERE id = ? AND merchant = ?'
       ).bind(id, merchant).first();
