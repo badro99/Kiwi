@@ -1422,6 +1422,76 @@
     });
   })();
 
+  /* La caisse boutique, page par page (french-leak-browser-test, 2026-10-20) :
+     Vendus (assets/sold-insights.js), Scan, Inventaire, Échanges et Acomptes
+     (assets/retail-balances.js) restaient en français sous l'anglais et
+     l'arabe. Les noms d'articles, de rayons et de clientes ne passent pas ici. */
+  (function () {
+    var B = {
+      /* Vendus */
+      'Vendus': ['Sold', 'المبيعات'],
+      'Stock vendu, catégories et détail des tickets': ['Stock sold, categories and receipt details', 'المخزون المباع والفئات وتفاصيل التذاكر'],
+      'synchronisation…': ['syncing…', 'جارٍ المزامنة…'],
+      'Pièces vendues': ['Pieces sold', 'القطع المباعة'],
+      'Produits actifs': ['Active products', 'المنتجات النشطة'],
+      'Tickets analysés': ['Receipts analysed', 'التذاكر المحللة'],
+      'Chiffre produits': ['Product revenue', 'رقم معاملات المنتجات'],
+      'Produits': ['Products', 'المنتجات'],
+      'Quantité, chiffre et dernière vente': ['Quantity, revenue and last sale', 'الكمية ورقم المعاملات وآخر بيع'],
+      'dernière vente {x}': ['last sold {x}', 'آخر بيع {x}'],
+      'pce': ['pc', 'قطعة'], 'pces': ['pcs', 'قطع'],
+      'pièce': ['piece', 'قطعة'], 'pièces': ['pieces', 'قطع'],
+      'Produits vendus ensemble': ['Products sold together', 'منتجات تُباع معًا'],
+      'Associations constatées sur les tickets': ['Pairings seen on receipts', 'اقترانات لوحظت في التذاكر'],
+      'Même ticket': ['Same receipt', 'نفس التذكرة'],
+      'Aucune association répétée pour l’instant.': ['No repeated pairing yet.', 'لا يوجد اقتران متكرر حتى الآن.'],
+      'Catégories': ['Categories', 'الفئات'],
+      'Contribution par rayon': ['Contribution by department', 'المساهمة حسب القسم'],
+      'Historique détaillé': ['Detailed history', 'السجل المفصل'],
+      'Quand et dans quel panier chaque produit a été vendu': ['When and in which basket each product was sold', 'متى وفي أي سلة بيع كل منتج'],
+      'Aucune vente détaillée aujourd’hui': ['No detailed sale today', 'لا توجد مبيعات مفصلة اليوم'],
+      'Aucune vente détaillée sur les {n} derniers jours': ['No detailed sale in the last {n} days', 'لا توجد مبيعات مفصلة خلال آخر {n} يومًا'],
+      'Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.':
+        ['As soon as a receipt with its products is paid at the till, it shows here: quantities, categories, baskets bought together and recommendations.',
+         'بمجرد أداء تذكرة في الصندوق مع منتجاتها، تظهر هنا: الكميات والفئات والسلال المرتبطة والتوصيات.'],
+      'Jour exact': ['Exact day', 'اليوم بالضبط'],
+      'Choisissez la date.': ['Choose the date.', 'اختر التاريخ.'],
+      'La fin doit venir après le début.': ['The end must come after the start.', 'يجب أن تأتي النهاية بعد البداية.'],
+      'La période ne peut pas finir dans le futur.': ['The period cannot end in the future.', 'لا يمكن أن تنتهي الفترة في المستقبل.'],
+      /* Scan */
+      'Scan produit': ['Product scan', 'فحص المنتج'],
+      "Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.":
+        ['Scan an item to see its price, sizes and stock. Nothing is added to the ticket.', 'امسح منتجًا لرؤية سعره ومقاساته ومخزونه. لا يُضاف أي شيء إلى التذكرة.'],
+      "Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.":
+        ['No item checked yet. The USB scanner types here on its own.', 'لم يتم فحص أي منتج بعد، قارئ الباركود USB يكتب هنا تلقائيًا.'],
+      'Scanner un article (douchette démo)': ['Scan an item (demo scanner)', 'امسح منتجًا (قارئ تجريبي)'],
+      /* Inventaire */
+      'Douchette + imprimante étiquettes': ['Scanner + label printer', 'قارئ الباركود + طابعة الملصقات'],
+      '{n} variantes, base partagée avec le dashboard': ['{n} variants, shared with the dashboard', '{n} متغيرات، قاعدة مشتركة مع لوحة التحكم'],
+      '{n} variante, base partagée avec le dashboard': ['{n} variant, shared with the dashboard', '{n} متغير، قاعدة مشتركة مع لوحة التحكم'],
+      'Pièces en stock': ['Pieces in stock', 'القطع في المخزون'],
+      /* Échanges & avoirs */
+      'Voir': ['View', 'عرض'],
+      'remise −{n} %': ['−{n} % off', 'خصم −{n} %'],
+      '· remise −{n} %': ['· −{n} % off', '· خصم −{n} %'],
+      /* Acomptes */
+      'PAIEMENTS ÉCHELONNÉS': ['INSTALMENT PAYMENTS', 'الأداء بالتقسيط'],
+      'Acomptes': ['Deposits', 'التسبيقات'],
+      'Retrouvez une note ouverte et encaissez son solde. Chaque paiement compte le jour où il est reçu.':
+        ['Find an open tab and collect its balance. Each payment counts on the day it is received.', 'ابحث عن حساب مفتوح واستخلص رصيده. يُحتسب كل أداء في يوم استلامه.'],
+      'Cliente ou numéro de ticket': ['Customer or receipt number', 'الزبونة أو رقم التذكرة'],
+      'Chercher une cliente ou un ticket…': ['Search a customer or a receipt…', 'ابحث عن زبونة أو تذكرة…'],
+      'Chercher une cliente ou un ticket': ['Search a customer or a receipt', 'ابحث عن زبونة أو تذكرة'],
+      'Aucune note ouverte pour cette recherche.': ['No open tab for this search.', 'لا يوجد حساب مفتوح لهذا البحث.'],
+      'Reste {n} MAD': ['{n} MAD left to pay', 'الباقي {n} MAD'],
+      'Synchronisation en attente': ['Sync pending', 'المزامنة قيد الانتظار'],
+    };
+    Object.keys(B).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = B[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = B[k][1];
+    });
+  })();
+
   /* ───────────────────────── les dates ─────────────────────────
      Une date n'est pas une phrase, c'est un GABARIT À JETONS : « jeu. 30 juil. »
      n'apparaîtra jamais deux fois de suite, aucune clé fixe ne peut l'attraper,
@@ -1655,7 +1725,11 @@
     for (var i = 0; i < list.length; i++) {
       var t = list[i];
       if (seg.length > t.pre.length + t.suf.length && seg.startsWith(t.pre) && seg.endsWith(t.suf)) {
-        return d[t.key].replace('{x}', seg.slice(t.pre.length, seg.length - t.suf.length));
+        /* Le trou garde la donnée telle quelle, sauf si c'est une date entière
+           (« dernière vente 20 oct. ») : ses jetons de jour et de mois suivent. */
+        var x = seg.slice(t.pre.length, seg.length - t.suf.length);
+        var xd = translateDate(x);
+        return d[t.key].replace('{x}', xd != null ? xd : x);
       }
     }
     return null;

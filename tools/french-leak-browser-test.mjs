@@ -20,7 +20,9 @@
  * (KIWI_UPDATE_FRENCH_BASELINE=1); never raise it to make a red go away. What is
  * left at the baseline (2026-10-20): the demo floor plan's room names and its
  * « CUISINE » block (merchant data, the floor plan stays as shipped) and the
- * « Menu du jour » dish.
+ * « Menu du jour » dish. The demo boutique till joined the sweep the same day:
+ * Vente, Scan, Inventaire, Échanges, Vendus, Clientes and Acomptes, each by a
+ * click on its rail.
  */
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
@@ -141,6 +143,39 @@ try {
     }
     report[lang]['caisse:floor'] = split(await till.evaluate(collect));
     await tctx.close();
+
+    /* The demo boutique till (three quarters of the money on Kiwi): the same
+       caisse-lang.js, its own screens. Each rail destination by a real click. */
+    const bctx = await browser.createBrowserContext();
+    const bq = await bctx.newPage();
+    await bq.setViewport({ width: 1180, height: 820 });
+    await bq.setRequestInterception(true);
+    bq.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
+    await bq.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
+    await bq.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
+    const booted = await bq.waitForFunction(() => window.KiwiPosDispatch && window.KiwiBoutiqueCatalog, { timeout: 20000 }).then(() => true).catch(() => false);
+    if (booted) {
+      await bq.evaluate(() => window.KiwiPosDispatch.unlockById('boutique'));
+      await bq.waitForFunction(() => document.querySelector('.bq-card'), { timeout: 20000 }).catch(() => {});
+      await sleep(1500);
+      const views = await bq.$$eval('.bq-rail [data-bq-view]', (bs) => bs.map((b) => b.dataset.bqView));
+      /* « Clientes » opens the shared client book over the current page
+         (assets/clients-book.js), so the page under it is read again: each
+         string counts once across the boutique till. */
+      const seen = { ui: new Set(), names: new Set(), data: new Set() };
+      for (const v of views) {
+        const b = await bq.$(`.bq-rail [data-bq-view="${v}"]`);
+        if (b) { try { await b.click(); } catch (_) {} }
+        await sleep(1200);
+        const got = split(await bq.evaluate(collect));
+        for (const k of Object.keys(seen)) { got[k] = got[k].filter((x) => !seen[k].has(x)); got[k].forEach((x) => seen[k].add(x)); }
+        report[lang]['boutique:' + v] = got;
+        await bq.keyboard.press('Escape').catch(() => {});
+      }
+    } else {
+      report[lang]['boutique:boot'] = { ui: ['(the demo boutique till did not boot)'], names: [], data: [] };
+    }
+    await bctx.close();
   }
 } finally {
   await browser.close();
