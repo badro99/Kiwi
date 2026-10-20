@@ -61,7 +61,7 @@
       statusOut: 'RUPTURE TOTALE',
       statusLow: 'STOCK FAIBLE',
       lastDeliv: 'Dernière livraison',
-      supplier: 'Fournisseur',
+      supplier: 'Fournisseur', lotRecorded: 'Lot enregistré',
       impactBlocks: (n, names) => `${n > 1 ? `${n} plats en dépendent` : 'Un plat en dépend'} : ${names}`,
       impactUsage: (q) => `Consommation habituelle : ${q} par jour`,
       impactNone: 'Aucune fiche technique n’utilise cet article.',
@@ -73,6 +73,7 @@
       btnReorder: 'Réapprovisionner',
       btnIgnore: 'Ignorer 24h',
       // Tab 1 AI insights
+      aiSectionKitchen: 'Kiwi AI · analyses cuisine', aiSectionPortfolio: 'Kiwi AI · analyses portfolio',
       aiVarianceT: 'Écart de consommation détecté · Tomates fraîches',
       aiVarianceB: "Vos tomates fraîches ont été consommées à 32,4 kg cette semaine vs 31,0 kg théoriques (basé sur les ventes du POS). Variance de +4,5 %. Sur les 4 dernières semaines, la variance cumulée atteint +18 %, l'équivalent de 12 kg sur-utilisés, soit ~96 MAD de coût non facturé aux ventes.",
       aiVarianceA: '→ Vérifier le portionnement en cuisine ou identifier si des tomates servent à d\'autres plats non comptabilisés dans les recettes.',
@@ -410,12 +411,13 @@
       alertsEmpty: 'No alerts · all stock levels healthy.',
       alertsNone: 'No item tracked yet · add your ingredients to receive alerts.',
       statusOut: 'OUT OF STOCK', statusLow: 'LOW STOCK',
-      lastDeliv: 'Last delivery', supplier: 'Supplier',
+      lastDeliv: 'Last delivery', supplier: 'Supplier', lotRecorded: 'Recorded batch',
       impactBlocks: (n, names) => `${n > 1 ? `${n} dishes depend on it` : 'One dish depends on it'}: ${names}`, impactUsage: (q) => `Usual use: ${q} per day`, impactNone: 'No recipe uses this item.',
       daysLeft: (d) => `${d} ${d === 1 ? 'day left' : 'days left'}`,
       level: 'Level', par: 'Par',
       btnUrgentOrder: 'Urgent order', btnMark86: 'Mark 86 on menu',
       btnReorder: 'Restock', btnIgnore: 'Ignore 24h',
+      aiSectionKitchen: 'Kiwi AI · kitchen insights', aiSectionPortfolio: 'Kiwi AI · portfolio insights',
       aiVarianceT: 'Consumption variance detected · Fresh tomatoes',
       aiVarianceB: 'Fresh tomatoes used at 32.4 kg this week vs 31.0 kg theoretical (based on POS sales). Variance of +4.5%. Over the last 4 weeks, cumulative variance hits +18%, equivalent to 12 kg over-used, or ~96 MAD of cost not billed to sales.',
       aiVarianceA: '→ Check kitchen portioning or identify if tomatoes are used in other dishes not in the recipes.',
@@ -725,12 +727,13 @@
       alertsEmpty: 'لا توجد تنبيهات · جميع مستويات المخزون صحية.',
       alertsNone: 'لا يوجد منتج متابع بعد · أضف موادك الأولية لتلقي التنبيهات.',
       statusOut: 'نفد المخزون', statusLow: 'مخزون منخفض',
-      lastDeliv: 'آخر تسليم', supplier: 'المورد',
+      lastDeliv: 'آخر تسليم', supplier: 'المورد', lotRecorded: 'دفعة مسجلة',
       impactBlocks: (n, names) => `${n > 1 ? `${n} أطباق تعتمد عليه` : 'طبق واحد يعتمد عليه'}: ${names}`, impactUsage: (q) => `الاستهلاك المعتاد: ${q} في اليوم`, impactNone: 'لا توجد بطاقة تقنية تستعمل هذا الصنف.',
       daysLeft: (d) => `${d} ${d === 1 ? 'يوم متبقي' : 'أيام متبقية'}`,
       level: 'المستوى', par: 'الحد',
       btnUrgentOrder: 'طلب عاجل', btnMark86: 'وضع علامة 86',
       btnReorder: 'إعادة التموين', btnIgnore: 'تجاهل 24س',
+      aiSectionKitchen: 'Kiwi AI · تحليلات المطبخ', aiSectionPortfolio: 'Kiwi AI · تحليلات المحفظة',
       aiVarianceT: 'فرق في الاستهلاك · طماطم طازجة',
       aiVarianceB: 'تم استهلاك الطماطم الطازجة بـ 32,4 كغ هذا الأسبوع مقابل 31,0 كغ نظريًا (بناءً على مبيعات الكاشير). فرق +4,5%. على الأسابيع الأربعة الأخيرة، الفرق التراكمي يبلغ +18%، أي 12 كغ زائدة، حوالي 96 درهم تكلفة غير محسوبة.',
       aiVarianceA: '→ تحقق من التحصيص في المطبخ أو حدد ما إذا كانت الطماطم تُستخدم في أطباق أخرى غير مذكورة في الوصفات.',
@@ -2188,7 +2191,7 @@
 
       ${stShowReal() ? '' : `<div class="st-section">
         <div class="st-section-head">
-          <h3>Kiwi AI · ${isFusion() ? 'analyses portfolio' : 'analyses cuisine'}</h3>
+          <h3>${t(isFusion() ? 'aiSectionPortfolio' : 'aiSectionKitchen')}</h3>
         </div>
         ${renderAiCard(t('aiVarianceT'), t('aiVarianceB'), t('aiVarianceA'))}
         ${renderAiCard(t('aiPriceT'), t('aiPriceB'), t('aiPriceA'))}
@@ -2389,7 +2392,7 @@
     const parPct = it.parLevel > 0 ? (cur / it.parLevel) * 100 : 0;
     const state = stockAlertState(it, cur);
     const supplierMeta = state.supplierEvidence
-      ? `${esc(t('supplier'))} : ${esc(state.supplierEvidence.name || 'Lot enregistré')}`
+      ? `${esc(t('supplier'))}${lang() === 'fr' ? ' : ' : ': '}${esc(state.supplierEvidence.name || t('lotRecorded'))}`
       : '';
     const deliveryDate = actualLastDelivery(it);
     const deliveryMeta = deliveryDate ? `${esc(t('lastDeliv'))} : ${esc(fmtDateShort(deliveryDate))}` : '';

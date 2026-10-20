@@ -1323,6 +1323,46 @@
     });
   })();
 
+  /* Le bandeau de synchronisation (caisse-pwa.js) et la portée du service
+     (« Aucun service ouvert », « 3 serveurs en service ») restaient en français
+     sous l'anglais et l'arabe : mesuré le 2026-10-20 par
+     tools/french-leak-browser-test.mjs sur la caisse démo. Chaque morceau
+     entre deux « · » est traduit seul. */
+  (function () {
+    var Q = {
+      'Aucun service ouvert': ['No shift open', 'لا توجد وردية مفتوحة'],
+      '{n} serveurs en service': ['{n} waiters on shift', '{n} نوادل في الخدمة'],
+      '{n} serveur en service': ['{n} waiter on shift', '{n} نادل في الخدمة'],
+      '{n} tables en cours': ['{n} tables in progress', '{n} طاولات جارية'],
+      '{n} table en cours': ['{n} table in progress', '{n} طاولة جارية'],
+      'Synchronisé': ['Synced', 'تمت المزامنة'],
+      'Opérations protégées hors ligne': ['Operations kept safe offline', 'العمليات محفوظة دون اتصال'],
+      '{n} opération à synchroniser': ['{n} operation to sync', '{n} عملية للمزامنة'],
+      '{n} opérations à synchroniser': ['{n} operations to sync', '{n} عمليات للمزامنة'],
+      'Envoi sécurisé en cours': ['Sending securely', 'جارٍ الإرسال الآمن'],
+      'Serveur non joignable': ['Server unreachable', 'تعذر الوصول إلى الخادم'],
+      'Serveur trop lent': ['Server too slow', 'الخادم بطيء جدا'],
+      'dernier essai {n}:{n}': ['last try {n}:{n}', 'آخر محاولة {n}:{n}'],
+      'nouvel essai automatique': ['retrying automatically', 'إعادة المحاولة تلقائيا'],
+      'En attente': ['Waiting', 'قيد الانتظار'],
+      'toucher pour réessayer': ['tap to retry', 'المس لإعادة المحاولة'],
+      'Journal caisse': ['Till journal', 'سجل الصندوق'],
+      'synchronisation en attente': ['sync pending', 'المزامنة معلقة'],
+      '{n} événement(s) conservé(s)': ['{n} event(s) kept', '{n} حدث محفوظ'],
+      'reprise automatique': ['resumes automatically', 'استئناف تلقائي'],
+      'Employé en pause': ['Employee on break', 'الموظف في استراحة'],
+      '{n} en attente': ['{n} waiting', '{n} قيد الانتظار'],
+      'Reprenez le service pour transmettre': ['Resume the shift to send', 'استأنف الوردية للإرسال'],
+      'opérations conservées': ['operations kept', 'العمليات محفوظة'],
+      'Service requis': ['Shift required', 'الوردية مطلوبة'],
+      'Ouvrez la caisse avec un employé en service': ['Open the till with an employee on shift', 'افتح الصندوق بموظف في الخدمة'],
+    };
+    Object.keys(Q).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = Q[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = Q[k][1];
+    });
+  })();
+
   /* La caisse restaurant reçoit son sélecteur (rail de gauche, 2026-10-13).
      Mesuré sur une vraie caisse appairée passée en anglais puis en arabe :
      ce qui restait en français sur la vente, le plan de salle, la liste

@@ -1714,6 +1714,9 @@ section('Whole-project regressions');
     'date-range-selector-truth-test.mjs',
     'dashboard-currency-ar-test.mjs',
     'sidebar-language-test.mjs',
+    /* Le français resté à l'écran sous l'anglais et l'arabe : chaque page de la
+       démo ouverte d'un vrai clic, compté contre tools/french-leak-baseline.json. */
+    'french-leak-browser-test.mjs',
     /* Le fil d'Ariane des pages Kiwi.appPage() : « Home » / « الرئيسية », et
        un changement de langue page ouverte garde le titre de la page. */
     'genpage-breadcrumb-language-test.mjs',

@@ -1571,6 +1571,33 @@
     },
   };
 
+  /* The demo rosters below are written in French. Each line is « role · status »;
+   * under English and Arabic both halves are translated here, from a closed
+   * list, so a demo never shows « Serveur · pause depuis 14:12 » in English. */
+  const DEMO_ROLE = {
+    'Serveuse senior': { en: 'Senior waitress', ar: 'نادلة أولى' }, 'Serveur': { en: 'Waiter', ar: 'نادل' },
+    'Barista': { en: 'Barista', ar: 'باريستا' }, 'Cuisine': { en: 'Kitchen', ar: 'المطبخ' },
+    'Vendeuse principale': { en: 'Head sales associate', ar: 'بائعة رئيسية' }, 'Vendeuse': { en: 'Sales associate', ar: 'بائعة' },
+    'Praticienne senior': { en: 'Senior therapist', ar: 'معالجة أولى' }, 'Praticienne': { en: 'Therapist', ar: 'معالجة' },
+    'service en salle': { en: 'dining room', ar: 'القاعة' }, 'terrasse': { en: 'terrace', ar: 'التراس' },
+    'comptoir': { en: 'counter', ar: 'الكونطوار' }, 'service de hier': { en: "yesterday's shift", ar: 'وردية الأمس' },
+    'service du soir': { en: 'evening shift', ar: 'الوردية المسائية' }, 'service en cours': { en: 'on shift', ar: 'في الخدمة' },
+    'vitrine': { en: 'window display', ar: 'الواجهة' }, 'journée complète': { en: 'full day', ar: 'يوم كامل' },
+    'soins du visage': { en: 'facials', ar: 'العناية بالوجه' }, 'hammam & gommage': { en: 'hammam & scrub', ar: 'حمام وتقشير' },
+    'hammam': { en: 'hammam', ar: 'حمام' }, 'massages': { en: 'massages', ar: 'تدليك' },
+  };
+  function demoRole(text, lang) {
+    if (!text || lang === 'fr' || (lang !== 'en' && lang !== 'ar')) return text;
+    return String(text).split(' · ').map((part) => {
+      const hit = DEMO_ROLE[part]; if (hit) return hit[lang];
+      let m;
+      if ((m = /^(\d+) jours?( de service)?$/.exec(part))) return lang === 'en' ? `${m[1]} days` : `${m[1]} أيام`;
+      if ((m = /^pause depuis (\d\d:\d\d)$/.exec(part))) return lang === 'en' ? `on break since ${m[1]}` : `في استراحة منذ ${m[1]}`;
+      if ((m = /^fini(?: son service)? (\d\d:\d\d)$/.exec(part))) return lang === 'en' ? `shift ended ${m[1]}` : `انتهت ورديته ${m[1]}`;
+      return part;
+    }).join(' · ');
+  }
+
   const staffByVenue = {
     cafeAtlas: {
       aujourdhui: [
@@ -4696,8 +4723,12 @@
     if (!custom) {
       label.setAttribute('data-i18n', 'dash.mix.subscription');
       status.setAttribute('data-i18n', 'dash.mix.subscription.price');
-      label.textContent = 'Abonnement Kiwi Pro';
-      status.textContent = '399 MAD/mois · tout inclus';
+      /* The keys stay on the nodes for the next language switch, but this
+         render runs after i18n has applied them: writing the French original
+         here left « 399 MAD/mois · tout inclus » under English and Arabic. */
+      const T = (window.KiwiI18n && window.KiwiI18n.T && window.KiwiI18n.T[lang]) || {};
+      label.textContent = T['dash.mix.subscription'] || 'Abonnement Kiwi Pro';
+      status.textContent = T['dash.mix.subscription.price'] || '399 MAD/mois · tout inclus';
       return;
     }
     label.removeAttribute('data-i18n');
@@ -5830,7 +5861,7 @@
           <div class="av ${s.cls}"${s.cls === 'offline' ? ' style="background: var(--n-400);"' : ''}>${s.av}</div>
           <div class="info">
             <div class="n">${s.name}</div>
-            <div class="role">${s.role}</div>
+            <div class="role">${demoRole(s.role, getLang())}</div>
           </div>
           <div class="shift"${s.shift === '·' ? ' style="color: var(--n-500);"' : ''}>${s.shift}</div>
           <div class="tx-n"${s.amt === '·' ? ' style="color: var(--n-500);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 11px;">${s.tx}</span>` : ''}</div>
