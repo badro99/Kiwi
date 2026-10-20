@@ -22745,7 +22745,23 @@
           /* Une table hors plan payée au comptoir : sa visite se ferme comme
              celle d'une table du plan (markPaid › releasePhoneTable), sans quoi
              le téléphone du client resterait un terminal de commande. */
+          /* Mais SEULEMENT si plus rien n'est dû sur cette visite : la fermer
+             avec « settle » estampille payée chaque commande de la session, et
+             une deuxième commande de la même table, pas encore encaissée,
+             partirait gratuite. Elle se fermera avec la dernière. */
+          let visitOwes = false;
           if (o.offPlan && o.session) {
+            try {
+              const inbox = (window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders()) || {};
+              visitOwes = Object.keys(inbox).some((id) => {
+                const other = inbox[id];
+                return other && id !== String(o.opId) && other.mode === 'table'
+                  && String(other.session || '') === String(o.session)
+                  && !other.paid && other.status !== 'rejected';
+              });
+            } catch (_) { visitOwes = true; }
+          }
+          if (o.offPlan && o.session && !visitOwes) {
             try {
               document.dispatchEvent(new CustomEvent('kiwi-table-released', {
                 detail: { table: String(o.table || ''), session: String(o.session), why: 'settle', actorProof: '' },

@@ -1080,4 +1080,143 @@ await scenario('restaurant · a QR order from a table the floor plan does not ha
   await guestCtx.close();
 });
 
+/* One guest, one visit, two orders, at a table the plan does not have. Cashing
+ * the first at the counter must not close the visit: closing it as « settle »
+ * stamps every order of the session paid, and the second plate would leave
+ * free. The visit closes with the last payment. */
+await scenario('restaurant · two QR orders on one off-plan visit, cashed one at a time', async (t) => {
+  if (!tablet) throw new Error('no tablet from the previous scenarios');
+  const sales0 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  const t0 = Date.now() - 1000;
+
+  t.step('guest: table 11, a black coffee, send, then add a Pastilla and send again');
+  const guestCtx = await browser.createBrowserContext();
+  const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&t=11`, { waitUntil: 'load' });
+  async function send(dish) {
+    await guest.waitForSelector(`[data-add="${dish}"]`, { visible: true, timeout: 20000 });
+    await clickSel(guest, `[data-add="${dish}"]`);
+    await sleep(500);
+    await clickSel(guest, '#cart-pill');
+    await sleep(700);
+    await clickSel(guest, '#send-btn');
+    await guest.waitForSelector('#restart-btn', { visible: true, timeout: 20000 });
+  }
+  await send('n3');
+  await clickSel(guest, '#restart-btn');
+  await sleep(700);
+  await send('n2');
+  let rows = [];
+  for (let i = 0; i < 30 && rows.length < 2; i++) {
+    rows = stack.db.prepare("SELECT id, session_id, paid_ts FROM orders WHERE merchant = ? AND mode = 'table' AND table_no = '11' AND created_ts >= ? ORDER BY created_ts, number").all(NIGHT.slug, t0);
+    if (rows.length < 2) await sleep(500);
+  }
+  check(rows.length === 2, 'server · two orders stored for table 11', String(rows.length));
+  if (rows.length !== 2) return;
+  check(!!rows[0].session_id && rows[0].session_id === rows[1].session_id, 'server · both orders belong to one visit', JSON.stringify(rows));
+  const visit = rows[0].session_id;
+
+  async function cash(id) {
+    await tablet.waitForSelector('#kop-chip', { visible: true, timeout: 30000 });
+    const shown = await tablet.$eval(`[data-kop-pay="${id}"]`, (e) => !!(e.offsetParent && e.getBoundingClientRect().width)).catch(() => false);
+    if (!shown) await clickSel(tablet, '#kop-chip');
+    await tablet.waitForSelector(`[data-kop-pay="${id}"]`, { visible: true, timeout: 20000 }).catch(async () => {
+      const seen = await tablet.evaluate((oid) => {
+        const o = (window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders()) || {};
+        const mine = o[oid];
+        return { chip: document.getElementById('kop-chip')?.textContent, open: !!document.querySelector('#kop-root.is-open, #kop-root[open]'),
+          body: (document.getElementById('kop-body')?.innerText || '').slice(0, 300),
+          order: mine ? { status: mine.status, paid: mine.paid, session: mine.session } : null };
+      }, id);
+      throw new Error(`the till inbox offers no Encaisser for ${id} · ${JSON.stringify(seen)}`);
+    });
+    if (await tablet.$(`[data-kop-acc="${id}"]`)) { await clickSel(tablet, `[data-kop-acc="${id}"]`); await sleep(1500); }
+    const tx = await txCount(tablet);
+    await tablet.waitForSelector(`[data-kop-pay="${id}"]`, { visible: true, timeout: 20000 });
+    await clickSel(tablet, `[data-kop-pay="${id}"]`);
+    await sleep(1500);
+    await clickSel(tablet, '#pay-charge');
+    await clickSel(tablet, '[data-set="exact"]');
+    await clickSel(tablet, '#cash-confirm');
+    await tablet.waitForFunction((n) => {
+      const m = /(\d+)/.exec((document.getElementById('stat-txns-card') || {}).innerText || '');
+      return m && +m[1] >= n;
+    }, { timeout: 15000 }, tx + 1);
+    await sleep(5000);
+  }
+  const paidOf = (id) => stack.db.prepare('SELECT paid_ts FROM orders WHERE id = ?').get(id)?.paid_ts || null;
+  const visitStatus = () => stack.db.prepare('SELECT status FROM table_sessions WHERE id = ?').get(visit)?.status || '';
+
+  t.step('till: cash the first order only');
+  await cash(rows[0].id);
+  check(!!paidOf(rows[0].id), 'server · the first order is paid', '');
+  check(!paidOf(rows[1].id), 'server · the second order is NOT stamped paid by the first payment', String(paidOf(rows[1].id)));
+  check(visitStatus() === 'open', 'server · the visit stays open while something is owed', visitStatus());
+
+  t.step('till: cash the second order');
+  await cash(rows[1].id);
+  check(!!paidOf(rows[1].id), 'server · the second order is paid', '');
+  let st = '';
+  for (let i = 0; i < 20 && (st = visitStatus()) === 'open'; i++) await sleep(500);
+  check(st && st !== 'open', 'server · the visit closes with the last payment', st);
+
+  const sales1 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  check(Number(sales1.n) === Number(sales0.n) + 2, 'server · two sales for two orders', `${sales0.n} → ${sales1.n}`);
+  eqCents(Number(sales1.c) - Number(sales0.c), PRICE.n2 + PRICE.n3, 'server · the two sales add up to 97,25');
+  await guestCtx.close();
+});
+
+/* #141: « the invoice in the cashier app never renders ». The till journal has
+ * an A4 invoice icon on every sale. Tap it on the off-plan QR sale, skip the
+ * customer form, and the invoice must be numbered by the server, open as a
+ * document carrying the sale's total, and come back with the SAME number when
+ * tapped again: an invoice number is a legal sequence, not a counter of taps. */
+await scenario('restaurant · an A4 invoice from the till journal', async (t) => {
+  if (!tablet) throw new Error('no tablet from the previous scenarios');
+  const want = PRICE.n2 + PRICE.n3;
+  const count = () => Number(stack.db.prepare('SELECT COUNT(*) AS n FROM sale_invoices WHERE merchant = ?').get(NIGHT.slug).n);
+  const n0 = count();
+
+  t.step('till: open the journal and tap the invoice icon of the 97,25 sale');
+  await clickSel(tablet, '#stat-txns-card');
+  await tablet.waitForSelector('[data-jr-invoice]', { visible: true, timeout: 15000 });
+  const saleId = await tablet.evaluate(() => {
+    const row = [...document.querySelectorAll('.jr-entry')].find((r) => /97[,.]25/.test(r.querySelector('.jr-entry-amount')?.textContent || ''));
+    return row ? row.getAttribute('data-jr-id') : '';
+  });
+  if (!saleId) throw new Error('the journal shows no 97,25 sale');
+
+  async function tapInvoice() {
+    const popup = new Promise((resolve) => tablet.once('popup', resolve));
+    await clickSel(tablet, `[data-jr-invoice="${saleId}"]`);
+    const skip = await tablet.waitForSelector('[data-inv-cust-skip]', { visible: true, timeout: 4000 }).catch(() => null);
+    if (skip) await clickSel(tablet, '[data-inv-cust-skip]');
+    const win = await Promise.race([popup, sleep(8000).then(() => null)]);
+    let html = '';
+    for (let i = 0; i < 20 && !/F-\d{4}-/.test(html); i++) {
+      if (win) html = await win.content().catch(() => '');
+      if (!/F-\d{4}-/.test(html)) {
+        html = await tablet.evaluate(() => document.querySelector('.kiwi-invoice-preview iframe')?.srcdoc || '').catch(() => '') || html;
+      }
+      if (!/F-\d{4}-/.test(html)) await sleep(500);
+    }
+    if (win) await win.close().catch(() => {});
+    await tablet.evaluate(() => document.querySelector('.kiwi-invoice-preview button:last-of-type')?.click()).catch(() => {});
+    return html;
+  }
+
+  const first = await tapInvoice();
+  const num1 = (/F-\d{4}-\d+/.exec(first) || [])[0] || '';
+  check(!!num1, 'till invoice · the document opens with a server number', first ? first.replace(/\s+/g, ' ').slice(0, 200) : 'nothing opened');
+  check(/97[,.]25/.test(first), 'till invoice · the document carries the 97,25 total', num1);
+  check(count() === n0 + 1, 'server · one invoice row for the sale', `${n0} → ${count()}`);
+
+  t.step('till: tap the same invoice again');
+  const again = await tapInvoice();
+  const num2 = (/F-\d{4}-\d+/.exec(again) || [])[0] || '';
+  check(num2 === num1, 'till invoice · a second tap reopens the same number', `${num1} then ${num2}`);
+  check(count() === n0 + 1, 'server · still one invoice row after the second tap', `${n0} → ${count()}`);
+  await tablet.keyboard.press('Escape').catch(() => {});
+});
+
 await S.finish();
