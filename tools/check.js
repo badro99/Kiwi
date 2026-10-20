@@ -1436,6 +1436,7 @@ section('Whole-project regressions');
     'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
     'inventory-ledger-test.mjs',
+    'inventory-queue-unblock-test.mjs',
     'maison-stock-movements-test.mjs',
     'maison-till-stock-journal-test.mjs',
     'maison-ticket-offline-test.mjs',

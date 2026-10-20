@@ -15,7 +15,8 @@
    * visible dans la colonne, pas disparaître derrière un tiret. */
   var MOTIF = {
     opening: 'Solde initial', receipt: 'Réception', sale: 'Vente',
-    'sale-reversal': 'Annulation de vente', waste: 'Casse / perte',
+    'sale-reversal': 'Annulation de vente', waste: 'Casse / perte', loss: 'Casse / perte',
+    expiry: 'Périmé',
     manual: 'Saisie manuelle',
   };
   var REF_TYPE = {

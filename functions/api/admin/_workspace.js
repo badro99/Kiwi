@@ -97,7 +97,16 @@ export async function workspace(env, merchant = '') {
             id: String(r.id || '').slice(0,64), amountCents: Math.max(0,Math.min(20000000,Math.round(Number(r.amountCents)||0))),
             method: String(r.method || '').slice(0,16), ts: time(r.ts), reason: String(r.reason || 'unknown').slice(0,96) })),
           oldestPendingAt: time(s.oldestPendingAt), lastAcknowledgedAt: time(s.lastAcknowledgedAt),
-          lastStatus: count(s.lastStatus), lastError: clean(s.lastError, 96), storageError: !!s.storageError } : null };
+          lastStatus: count(s.lastStatus), lastError: clean(s.lastError, 96), storageError: !!s.storageError } : null,
+        /* The stock queue posts to its own route and can stall while sales flow. */
+        stock: beat.stock && typeof beat.stock === 'object' ? {
+          pending: count(beat.stock.pending), refused: count(beat.stock.refused),
+          oldestPendingAt: time(beat.stock.oldestPendingAt), lastAcknowledgedAt: time(beat.stock.lastAcknowledgedAt),
+          lastAttemptAt: time(beat.stock.lastAttemptAt), lastStatus: count(beat.stock.lastStatus),
+          lastError: clean(beat.stock.lastError, 96), storageError: !!beat.stock.storageError,
+          refusedEntries: (Array.isArray(beat.stock.refusedEntries) ? beat.stock.refusedEntries : []).filter(r => r && typeof r === 'object').slice(0, 10).map(r => ({
+            id: clean(r.id, 80), itemId: clean(r.itemId, 80), reason: clean(r.reason, 32), why: clean(r.why, 40), ts: time(r.ts) })),
+        } : null };
     });
   }
   return {now,merchant,sources,coverage:'cloud-relay',physical_print_verified:false};

@@ -128,7 +128,7 @@
      chargement et garderait l'ancien état de l'imprimante. */
   function beat(force) {
     var printer = printerState();
-    var sync = null;
+    var sync = null, stock = null;
     if (appName() === 'caisse') {
       try {
         var q = window.KiwiLive && KiwiLive.queueStatus && KiwiLive.queueStatus();
@@ -139,12 +139,25 @@
           lastAcknowledgedAt: Number(q.lastAcknowledgedAt) || 0,
           storageError: !!q.storageError };
       } catch (_) {}
+      /* La file de stock a sa propre route (/api/inventory/movements) et peut
+         bloquer sans que la file des ventes ne bouge : on la rapporte aussi. */
+      try {
+        var inv = window.KiwiInventory && KiwiInventory.status && KiwiInventory.isReal && KiwiInventory.isReal() && KiwiInventory.status();
+        if (inv) stock = { pending: Number(inv.pending) || 0, refused: Number(inv.refused) || 0,
+          oldestPendingAt: Number(inv.oldestPendingAt) || 0,
+          refusedEntries: (inv.refusedEntries || []).slice(-10).map(function (r) {
+            return { id: clean(r.id, 80), itemId: clean(r.itemId, 80), qty: Number(r.qty) || 0, reason: clean(r.reason, 32), why: clean(r.why, 40), ts: Number(r.ts) || 0 };
+          }),
+          lastStatus: Number(inv.lastStatus) || 0, lastError: clean(inv.lastError, 96),
+          lastAttemptAt: Number(inv.lastAttemptAt) || 0, lastAcknowledgedAt: Number(inv.lastAcknowledgedAt) || 0,
+          storageError: !!inv.storageError };
+      } catch (_) {}
     }
     return create('device', 'heartbeat', {
       deviceId: deviceId(), app: appName(), label: deviceLabel(), at: Date.now(),
       online: navigator.onLine !== false, standalone: !!navigator.standalone,
       printerConfigured: printer.configured, printerConnected: printer.connected,
-      sync: sync,
+      sync: sync, stock: stock,
     }, { idempotencyKey: 'heartbeat:' + (force === true ? 'now-' + Date.now() : Math.floor(Date.now() / 300000)) + ':' + deviceId() });
   }
   function needed(domain, action) {

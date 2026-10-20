@@ -15,6 +15,7 @@
   var cachedDoc = null;
   var cachedSnapshotDoc = null;
   var cachedSnapshot = null;
+  var health = { lastStatus: 0, lastError: '', lastAttemptAt: 0, lastAcknowledgedAt: 0, storageError: false };
 
   function real() {
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!paired(); }
@@ -99,25 +100,40 @@
   function balanceKey(r, d) {
     return [r.itemId || '', r.variantId || '', effectiveLocation(d, r.locationId)].join('|');
   }
-  function compact(d) {
-    if (d.rows.length <= 6000) return d;
-    var keep = d.rows.slice(-4000);
-    var kept = new Set(keep.map(function (r) { return r.id; }));
+  /* Au-delà de `max` lignes, les plus anciennes lignes ACQUITTÉES se fondent
+   * dans le solde de base. Une ligne que le serveur n'a pas encore reçue (curseur
+   * nul : en file, ou mise de côté) n'est jamais fondue ni jetée : c'était le cas
+   * avant, et un registre de plus de 6 000 lignes perdait en silence des sorties
+   * que D1 n'avait jamais vues. */
+  function compact(d, max, keep) {
+    max = max || 6000; keep = keep || 4000;
+    if (d.rows.length <= max) return d;
+    var tail = new Set(d.rows.slice(-keep).map(function (r) { return r.id; }));
+    var out = [];
     d.rows.forEach(function (r) {
-      if (kept.has(r.id) || !(+r.cursor > 0)) return;
+      if (tail.has(r.id) || !(+r.cursor > 0)) { out.push(r); return; }
       var k = balanceKey(r, d);
       d.base[k] = Math.round(((+d.base[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
     });
-    d.rows = keep;
+    d.rows = out;
     return d;
   }
+  /* UN STOCKAGE PLEIN NE DOIT PAS AVALER LES MOUVEMENTS EN SILENCE.
+   * Si l'écriture échoue (quota du navigateur), on refond l'historique acquitté
+   * à 1 000 lignes — la file, elle, reste entière — et on réessaie. Si cela
+   * échoue encore, l'état le dit (`status().storageError`) et le battement de la
+   * caisse le remonte à la console : avant, la vente ne laissait aucune trace. */
   function write(d) {
+    var k = key(); var next = d; var raw;
     try {
-      var k = key(); var next = compact(d); var raw = JSON.stringify(next);
-      localStorage.setItem(k, raw);
+      next = compact(d); raw = JSON.stringify(next);
+      try { localStorage.setItem(k, raw); }
+      catch (_) { next = compact(next, 1000, 1000); raw = JSON.stringify(next); localStorage.setItem(k, raw); }
       cachedKey = k; cachedRaw = raw; cachedDoc = next;
       cachedSnapshotDoc = null; cachedSnapshot = null;
+      health.storageError = false;
     } catch (_) {
+      health.storageError = true;
       cachedKey = ''; cachedRaw = null; cachedDoc = null;
       cachedSnapshotDoc = null; cachedSnapshot = null;
     }
@@ -154,6 +170,7 @@
       meta: raw.meta && typeof raw.meta === 'object' ? raw.meta : null,
       cursor: Math.max(0, +raw.cursor || 0),
       blocked: raw.blocked ? 1 : 0,
+      refused: raw.refused ? String(raw.refused).slice(0, 40) : '',
     };
   }
   function add(raw) {
@@ -246,16 +263,47 @@
       return (+r.occurredTs || 0) >= from && (+r.occurredTs || 0) < to;
     }).sort(function (a, b) { return a.occurredTs - b.occurredTs; });
   }
-  async function push(d, m) {
+  /* Le serveur ne connaît que ses motifs (REASONS, movements.js). « waste »,
+   * écrit par l'ancienne déclaration de perte, n'en est pas un : chaque lot qui
+   * le portait était refusé (400) et la file de l'appareil restait bloquée
+   * derrière lui. On l'envoie sous son nom serveur. */
+  var WIRE_REASON = { waste: 'loss', casse: 'loss', perte: 'loss', perime: 'expiry' };
+  function post(m, movements) {
+    return fetch('/api/inventory/movements', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
+    });
+  }
+  async function refusal(res) {
+    try { var b = await res.json(); return b && typeof b === 'object' ? b : {}; } catch (_) { return {}; }
+  }
+  function settle(d, body) {
+    retainScope(d, body.scope);
+    var cursors = new Map((body.accepted || []).map(function (x) { return [x.id, +x.cursor || 0]; }));
+    d.rows.forEach(function (r) { if (cursors.has(r.id)) r.cursor = cursors.get(r.id); });
+    d.queued = d.queued.filter(function (id) { return !cursors.has(id); });
+    if (cursors.size) health.lastAcknowledgedAt = Date.now();
+  }
+  /* Une ligne mise de côté reste au stock local et à l'historique ; elle sort
+   * seulement de la file, avec la raison du refus. */
+  function setAside(d, ids, why) {
+    var out = new Set(ids);
+    d.rows.forEach(function (r) { if (out.has(r.id)) { r.blocked = 1; r.refused = String(why || 'refused').slice(0, 40); } });
+    d.queued = d.queued.filter(function (id) { return !out.has(id); });
+  }
+  /* 400 (ligne invalide), 409 (même id, autre contenu) et 422 désignent une
+   * LIGNE, pas une panne : renvoyer le même lot ne passera jamais. */
+  var ROW_REFUSAL = { 400: 1, 409: 1, 422: 1 };
+  async function push(d, m, round) {
+    round = round || 0;
     var ids = d.queued.slice(0, 200);
     if (!ids.length) return d;
     var set = new Set(ids);
     var movements = d.rows.filter(function (r) { return set.has(r.id); });
     if (!movements.length) { d.queued = d.queued.filter(function (id) { return !set.has(id); }); return d; }
-    var res = await fetch('/api/inventory/movements', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
-    });
+    movements.forEach(function (r) { if (WIRE_REASON[r.reason]) r.reason = WIRE_REASON[r.reason]; });
+    var res = await post(m, movements);
+    health.lastStatus = res.status;
     /* UN REFUS N'EST PAS UNE PANNE RÉSEAU.
      * Le serveur refuse un motif discrétionnaire écrit depuis une caisse
      * (movements.js : seul le propriétaire, un opérateur nommé ou un code
@@ -268,25 +316,47 @@
      * discrétionnaire. On ne sort donc que celles-là : une vente ou un retour
      * du même lot n'a rien à se faire autoriser, et la bloquer avec elles la
      * gardait pour toujours sur la tablette — la sortie n'arrivait jamais au
-     * tableau de bord. Elle repart au prochain passage, sans la ligne refusée. */
+     * tableau de bord. Elle repart aussitôt, sans la ligne refusée. */
     if (res.status === 403) {
-      var refused = null;
-      try { refused = await res.json(); } catch (_) { refused = null; }
-      if (refused && refused.error === 'reason-forbidden') {
+      var refused = await refusal(res);
+      if (refused.error === 'reason-forbidden') {
         var held = movements.filter(function (r) { return !AUTOMATIC[r.reason]; });
-        var out = new Set((held.length ? held : movements).map(function (r) { return r.id; }));
-        d.rows.forEach(function (r) { if (out.has(r.id)) r.blocked = 1; });
-        d.queued = d.queued.filter(function (id) { return !out.has(id); });
-        return d;
+        setAside(d, (held.length ? held : movements).map(function (r) { return r.id; }), 'reason-forbidden');
+        return round < 4 ? push(d, m, round + 1) : d;
       }
+      health.lastError = String(refused.error || 'http-403').slice(0, 96);
       throw new Error('inventory-push-403');
     }
-    if (!res.ok) throw new Error('inventory-push-' + res.status);
-    var body = await res.json();
-    retainScope(d, body.scope);
-    var cursors = new Map((body.accepted || []).map(function (x) { return [x.id, +x.cursor || 0]; }));
-    d.rows.forEach(function (r) { if (cursors.has(r.id)) r.cursor = cursors.get(r.id); });
-    d.queued = d.queued.filter(function (id) { return !cursors.has(id); });
+    /* UNE LIGNE REFUSÉE NE BLOQUE PLUS LA FILE.
+     * Avant, un lot refusé pour une seule ligne (un motif inconnu, un id déjà
+     * écrit par un autre appareil avec un autre contenu) repartait tel quel
+     * toutes les vingt secondes, pour toujours, et chaque vente derrière lui
+     * restait sur la tablette sans qu'aucune erreur ne s'affiche. Un 409 qui
+     * nomme ses ids les met de côté ; sinon on renvoie le lot ligne par ligne,
+     * et seule la ligne refusée seule est mise de côté. */
+    if (ROW_REFUSAL[res.status]) {
+      var why = await refusal(res);
+      health.lastError = String(why.error || ('http-' + res.status)).slice(0, 96);
+      var named = res.status === 409 && Array.isArray(why.ids)
+        ? why.ids.filter(function (id) { return set.has(id); }) : [];
+      if (named.length) { setAside(d, named, why.error || 'id-conflict'); return round < 4 ? push(d, m, round + 1) : d; }
+      if (movements.length === 1) { setAside(d, [movements[0].id], why.error || ('http-' + res.status)); return d; }
+      for (var i = 0; i < movements.length; i++) {
+        var one = await post(m, [movements[i]]);
+        if (one.ok) { settle(d, await one.json()); continue; }
+        var alone = await refusal(one);
+        if (ROW_REFUSAL[one.status] || (one.status === 403 && alone.error === 'reason-forbidden')) {
+          setAside(d, [movements[i].id], alone.error || ('http-' + one.status));
+          continue;
+        }
+        health.lastStatus = one.status;
+        throw new Error('inventory-push-' + one.status);
+      }
+      return d;
+    }
+    if (!res.ok) { health.lastError = 'http-' + res.status; throw new Error('inventory-push-' + res.status); }
+    settle(d, await res.json());
+    health.lastError = '';
     return d;
   }
   async function pull(d, m) {
@@ -308,9 +378,12 @@
   async function sync() {
     var online = typeof navigator === 'undefined' || navigator.onLine !== false;
     var m = merchant(); if (syncing || !real() || !m || !online) return false;
-    syncing = true;
+    syncing = true; health.lastAttemptAt = Date.now();
     try { var d = read(); d = await push(d, m); d = await pull(d, m); write(d); return true; }
-    catch (_) { return false; }
+    catch (e) {
+      if (!health.lastError) health.lastError = String((e && e.message) || 'sync-failed').slice(0, 96);
+      return false;
+    }
     finally { syncing = false; }
   }
   function reverse(movement, reason, note, opts) {
@@ -325,6 +398,24 @@
     });
   }
 
+  /* Ce que la caisse dit d'elle-même au battement : combien de mouvements
+   * attendent, combien le serveur a refusés, et le dernier refus. Sans cela, une
+   * file bloquée ne se voyait nulle part (Pasta Corner, octobre 2026 : trois
+   * semaines de ventes sans une sortie de stock, et aucune erreur). */
+  function status() {
+    var d = read(); var q = new Set(d.queued); var oldest = 0;
+    var refused = d.rows.filter(function (r) { return r.blocked; });
+    d.rows.forEach(function (r) { if (q.has(r.id) && (!oldest || +r.occurredTs < oldest)) oldest = +r.occurredTs || 0; });
+    return {
+      pending: d.queued.length, refused: refused.length, oldestPendingAt: oldest,
+      refusedEntries: refused.slice(-20).map(function (r) {
+        return { id: r.id, itemId: r.itemId, qty: r.qty, reason: r.reason, why: r.refused || 'reason-forbidden', ts: r.occurredTs };
+      }),
+      lastStatus: health.lastStatus, lastError: health.lastError,
+      lastAttemptAt: health.lastAttemptAt, lastAcknowledgedAt: health.lastAcknowledgedAt,
+      storageError: health.storageError,
+    };
+  }
   function startBackgroundSync() {
     window.addEventListener('online', sync);
     window.addEventListener('focus', sync);
@@ -339,7 +430,7 @@
     isReal: real, merchant: merchant, terminalId: terminalId, unitId: unitId, locationId: locationId,
     add: add, acknowledge: acknowledge, reverse: reverse,
     ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
-    sync: sync, pending: function () { return read().queued.length; },
+    sync: sync, pending: function () { return read().queued.length; }, status: status,
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
   };
 }());

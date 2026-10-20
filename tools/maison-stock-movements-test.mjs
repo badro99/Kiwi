@@ -222,7 +222,7 @@ ok('l\'auteur écrit par le client est remplacé par celui que le code a prouvé
   /discretionary\.forEach\(\(m\) => \{ m\.actor = who; \}\)/.test(SRV));
 const LEDGER_SRC = R('assets/inventory-ledger.js');
 ok('un refus sort la ligne de la file au lieu de la rejouer sans fin',
-  /res\.status === 403[\s\S]{0,400}reason-forbidden[\s\S]{0,300}blocked = 1/.test(LEDGER_SRC));
+  /res\.status === 403[\s\S]{0,400}reason-forbidden[\s\S]{0,400}setAside\(/.test(LEDGER_SRC) && /function setAside[\s\S]{0,200}r\.blocked = 1/.test(LEDGER_SRC));
 
 /* ── XI · les autres métiers gardent leur caisse ─────────────────────────── */
 const MAISON_SRC = R('assets/pos-maison.js');

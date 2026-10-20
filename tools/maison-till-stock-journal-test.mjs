@@ -116,16 +116,17 @@ const queuedAuto = t.L.history().filter(AUTO).length;
 ok('le lot en attente mêle ventes et lignes discrétionnaires (stock initial, casse sans code)',
   queuedAuto === 3 && t.L.pending() === 5, 'file: ' + t.L.pending());
 await t.L.sync();
-ok('le serveur a bien refusé le lot mixte', t.posted.length === 1);
+ok('le serveur a bien refusé le lot mixte', t.posted.length === 2 && t.posted[0].movements.length === 5);
 const rows = t.L.history();
 ok('les lignes discrétionnaires sont mises de côté, marquées',
   rows.filter((r) => !AUTO(r)).every((r) => r.blocked === 1 && !(r.cursor > 0)));
-ok('les ventes et le retour restent dans la file', t.L.pending() === 3, 'file: ' + t.L.pending());
 ok('aucune vente n\'est marquée refusée', rows.filter(AUTO).every((r) => !r.blocked));
-await t.L.sync();
-ok('au passage suivant elles partent sans les lignes refusées',
-  t.posted.length === 2 && t.posted[1].movements.length === 3 && t.posted[1].movements.every(AUTO));
+/* Elles n'attendent plus le passage suivant : le lot repart aussitôt sans elles. */
+ok('dans le même passage, les ventes et le retour partent sans les lignes refusées',
+  t.posted[1].movements.length === 3 && t.posted[1].movements.every(AUTO));
 ok('et le serveur les accepte', t.L.pending() === 0 && t.L.history().filter(AUTO).every((r) => r.cursor > 0));
+await t.L.sync();
+ok('les lignes refusées ne repartent jamais', t.posted.length === 2);
 
 const LEDGER = R('assets/inventory-ledger.js');
 const client = (() => {

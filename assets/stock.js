@@ -3083,7 +3083,9 @@
             locationId: stockLocationId(),
             itemId,
             qty: -qty,
-            reason: 'waste',
+            /* « loss » : le motif que le serveur connaît. « waste » était refusé
+               et bloquait la file de stock de l'appareil. */
+            reason: 'loss',
             refType: 'waste',
             refId: 'waste-' + Date.now().toString(36),
             unitCost,
@@ -6195,7 +6197,7 @@
     if (counted === 0 && expected > 0) return 'reasonZero';
     if (diff > 0 && expected > 0 && counted >= expected * 20) return 'reasonUnit';
     if (diff < 0) {
-      if (moves.some((m) => m && m.reason === 'waste')) return 'reasonWaste';
+      if (moves.some((m) => m && (m.reason === 'loss' || m.reason === 'waste'))) return 'reasonWaste';
       if (theoUsage > 0 && Math.abs(diff) <= theoUsage * 1.25) return 'reasonRecipes';
       if (['viandes', 'poissons', 'legumes', 'laitiers'].indexOf(String(ctx.cat)) !== -1) return 'reasonPerish';
       return 'reasonLoss';

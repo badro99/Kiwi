@@ -172,7 +172,7 @@ var SHELL = [
   '/assets/platform-kernel.js?v=6',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
-  '/assets/operations.js?v=14',
+  '/assets/operations.js?v=15',
   '/assets/operations-ui.js?v=23',
   '/assets/live-link.js?v=65',
   '/assets/channel-sales.js?v=4',
@@ -183,7 +183,7 @@ var SHELL = [
   '/assets/day-report.js?v=22',
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=34',
-  '/assets/day-report-export.js?v=11',
+  '/assets/day-report-export.js?v=12',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
   '/assets/month-report-csv.js?v=4',
@@ -251,11 +251,11 @@ var SHELL = [
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=12',
+  '/assets/inventory-ledger.js?v=13',
   '/assets/maison-stock-movements.js?v=5',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=77',
+  '/assets/stock.js?v=78',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -302,7 +302,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=13',
-  '/assets/pos-dispatch.js?v=114',
+  '/assets/pos-dispatch.js?v=115',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -419,8 +419,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=73',
-  '/assets/pos-maison.js?v=73',
+  '/assets/pos-maison.css?v=74',
+  '/assets/pos-maison.js?v=74',
   '/assets/caisse-pairing.js?v=34',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

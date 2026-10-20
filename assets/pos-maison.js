@@ -3807,7 +3807,7 @@
   /* ═══════════════════════ CASSE & GESTION DES PERTES ═══════════════════ */
   /* La casse en boutique d'art de la table & décoration (céramique, verrerie, cristal, bougies)
    * est un fait d'exploitation régulier. Tracée via `KiwiBoutiqueCatalog.adjustStock`
-   * et le grand livre `KiwiInventory` (reason: 'waste') avec le coût d'achat réel. */
+   * et le grand livre `KiwiInventory` (reason: 'loss') avec le coût d'achat réel. */
   const CASSE_KEY = 'kiwi:mzCasseLog';
   let CASSE_LOG = null;
   function loadCasseLog() {
@@ -3874,7 +3874,7 @@
     try {
       if (window.KiwiInventory && window.KiwiInventory.add) {
         window.KiwiInventory.add({
-          itemId: pid, qty: -qty, reason: 'waste', refType: 'breakage',
+          itemId: pid, qty: -qty, reason: 'loss', refType: 'breakage',
           refId: `casse-${Date.now().toString(36)}`, note: `Casse Vogue Home: ${reason}`,
           unitCost: unitCost
         });

@@ -152,7 +152,7 @@ ok(jsSrc.includes('function openMovementPicker()') && jsSrc.includes('openStockM
 ok(jsSrc.includes('renderCasse'), 'renderCasse function defined');
 ok(jsSrc.includes('recordCasse'), 'recordCasse function defined');
 ok(jsSrc.includes('loadCasseLog'), 'loadCasseLog function defined');
-ok(jsSrc.includes("reason: 'waste'"), 'Waste reason forwarded to KiwiInventory');
+ok(jsSrc.includes("reason: 'loss'"), 'Breakage reaches KiwiInventory under the server reason « loss »');
 
 // 8. Check CSS styling tokens
 ok(cssSrc.includes('.mz-reg-card'), 'Registry card CSS styles present');
