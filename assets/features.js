@@ -1327,6 +1327,7 @@
         reward: 'Récompense', visitTarget: 'Nombre de visites',
         perMad: 'Points par MAD', threshold: 'Palier (points)',
         item: 'Produit concerné', productTarget: 'Quantité',
+        itemHelp: 'Chaque article dont le nom contient ce mot donne un tampon par unité. « Café » compte « Café noir » et « Café crème ».',
         save: 'Enregistrer le programme', saved: 'Programme mis à jour',
         savedDesc: 'La caisse et le carnet clients l’appliquent aussitôt.',
       }
@@ -1353,6 +1354,7 @@
         reward: 'Reward', visitTarget: 'Number of visits',
         perMad: 'Points per MAD', threshold: 'Threshold (points)',
         item: 'Qualifying product', productTarget: 'Quantity',
+        itemHelp: 'Each item whose name contains this word earns one stamp per unit. “Café” counts “Café noir” and “Café crème”.',
         save: 'Save program', saved: 'Program updated',
         savedDesc: 'The till and the client book apply it right away.',
       }
@@ -1379,6 +1381,7 @@
         reward: 'المكافأة', visitTarget: 'عدد الزيارات',
         perMad: 'نقاط لكل درهم', threshold: 'العتبة (نقاط)',
         item: 'المنتج المؤهل', productTarget: 'الكمية',
+        itemHelp: 'كل منتج يحتوي اسمه على هذه الكلمة يمنح طابعًا عن كل وحدة. « Café » يشمل « Café noir » و« Café crème ».',
         save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
         savedDesc: 'يطبّقه الصندوق ودفتر العملاء فورًا.',
       }
@@ -1451,6 +1454,7 @@
             <div class="kf-group"><label class="kf-label">${C.item}</label><input aria-label="${C.item}" class="kf-input" data-loy="product.item" value="${escAttr(cfg.product.item)}" placeholder="Café"></div>
             <div class="kf-group"><label class="kf-label">${C.productTarget}</label><input aria-label="${C.productTarget}" class="kf-input" data-loy="product.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.product.target)}"></div>
           </div>
+          <div class="kf-help">${C.itemHelp}</div>
           <div class="kf-group"><label class="kf-label">${C.reward}</label><input aria-label="${C.reward}" class="kf-input" data-loy="product.reward" value="${escAttr(cfg.product.reward)}" placeholder="1 offert"></div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">

@@ -1368,7 +1368,9 @@
   function rewardDiscount(t, base) {
     const r = t.reward;
     if (!r || r.clientId !== t.client) return 0;
-    if (r.kind === 'percent') return Math.round(base * (r.value || 0) / 100);
+    /* la remise est ce qui reste quand le total est arrondi vers le bas :
+       arrondir la remise au plus proche refaisait payer jusqu'à 0,50 de trop */
+    if (r.kind === 'percent') return base - shelf(base * (100 - (r.value || 0)) / 100);
     if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
     return 0;
   }
@@ -4033,7 +4035,7 @@
           }
           if (!useKiwiCl()) {
             const cfg = window.KiwiClients && window.KiwiClients.config ? window.KiwiClients.config() : null;
-            pts = cfg && cfg.model === 'amount' ? Math.round(receivedNow * ((cfg.amount && cfg.amount.perMad) || 1)) : 0;
+            pts = cfg && cfg.model === 'amount' ? Math.floor(receivedNow * ((cfg.amount && cfg.amount.perMad) || 1) + 1e-6) : 0;
           }
           c.points = ptsBefore + pts;
           c.achats += 1;

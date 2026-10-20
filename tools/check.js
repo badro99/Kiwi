@@ -1306,6 +1306,7 @@ section('Whole-project regressions');
     'caisse-repair-pin-venue-test.mjs',
     'audit-remediation-money-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
+    'loyalty-truth-test.mjs',
     'audit-remediation-dashboard-test.mjs',
     'audit-remediation-devices-test.mjs',
     'dashboard-analytics-toggle-test.mjs',

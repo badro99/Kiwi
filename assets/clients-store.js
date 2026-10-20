@@ -371,6 +371,30 @@
     return rec;
   }
 
+  /* Same rules as functions/api/clients.js (pointsFor, qualifyingQty,
+     stampsFor): the till's estimate must be what the server will write. */
+  function pointsFor(amount, cfg) {
+    return Math.max(0, Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+  }
+  function foldName(v) {
+    return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function qualifyingQty(cfg, items) {
+    var want = foldName(cfg && cfg.product && cfg.product.item);
+    if (!want) return 0;
+    return (Array.isArray(items) ? items : []).reduce(function (n, item) {
+      var name = ' ' + foldName(item && item.name) + ' ';
+      return name.indexOf(' ' + want + ' ') >= 0 ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+    }, 0);
+  }
+  function stampsFor(cfg, items) {
+    if (!(cfg && cfg.model && !cfg.auto)) return 0;
+    if (cfg.model === 'visit') return 1;
+    if (cfg.model !== 'product') return 0;
+    return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+  }
+
   // record a purchase / visit against a client and accrue fidelity.
   //   opts.amount  → MAD spent (amount model)
   //   opts.visit   → count a visit toward a stamp card (visit / product model)
@@ -415,15 +439,14 @@
     if (!loyaltyOn(book)) {
       // Pas de programme choisi : le passage compte, la fidélité non.
     } else if (cfg.model === 'amount') {
-      var per = (cfg.amount && cfg.amount.perMad) || 1;
-      delta.points = Math.round(amount * per);
+      delta.points = pointsFor(amount, cfg);
       rec.points = (rec.points || 0) + delta.points;
       var thr = (cfg.amount && cfg.amount.threshold) || 100;
       rewardReady = thr > 0 && rec.points >= thr;
     } else {
-      // visit / product → one stamp per record.
+      // visit → one stamp per visit; product → one per qualifying item bought.
       var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
-      delta.stamps = 1;
+      delta.stamps = stampsFor(cfg, opts.items);
       rec.stamps = (rec.stamps || 0) + delta.stamps;
       rewardReady = rec.stamps >= target;
     }
@@ -460,26 +483,31 @@
     var ref = 'refund:' + id + ':' + key;
     if (purchaseRead(book).some(function (event) { return event.ref === ref; })) return { client: rec, replayed: true };
     var take = Math.min(amount, money(rec.spend || 0));
-    var cfg = config(book), claw = 0;
+    var cfg = config(book), claw = 0, unstamp = 0;
     if (loyaltyOn(book) && cfg.model === 'amount') {
-      claw = Math.min(Number(rec.points || 0), Math.round(take * ((cfg.amount && cfg.amount.perMad) || 1)));
+      claw = Math.min(Number(rec.points || 0), pointsFor(take, cfg));
+    }
+    /* Estimate only: the server caps it at the stamps that ticket earned. */
+    if (loyaltyOn(book) && cfg.model === 'product' && Array.isArray(opts.items) && opts.items.length) {
+      unstamp = Math.min(Number(rec.stamps || 0), qualifyingQty(cfg, opts.items));
     }
     rec.spend = Math.max(0, money((rec.spend || 0) - take));
     rec.points = Math.max(0, Number(rec.points || 0) - claw);
+    rec.stamps = Math.max(0, Number(rec.stamps || 0) - unstamp);
     rec.updated = now();
     writeBook(d, book);
     /* `amount` est ce que la caisse demande (le serveur plafonne) ; `spend` et
        `points` ne sont que l'estimation locale, rejouée tant que le serveur n'a
        pas répondu. Un retour estimé à 0 ici part quand même, sinon il ne serait
        jamais acquitté. */
-    var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: 0, visits: 0,
+    var event = { kind: 'refund', ref: ref, clientId: id, amount: -amount, points: -claw, stamps: -unstamp, visits: 0,
       spend: -take, created: rec.updated, method: 'retour', saleRef: saleRef,
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
         return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
       }) };
     purchaseAdd(book, event);
     purchasePush(book, event);
-    return { client: rec, spend: -take, points: -claw };
+    return { client: rec, spend: -take, points: -claw, stamps: -unstamp };
   }
 
   // burn a filled stamp card (staff hands over the reward).

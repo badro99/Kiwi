@@ -300,7 +300,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   check((await purchase('offline-till-a', 10.25)).status === 200, 'I05 purchase retry is idempotent');
   check((await purchase('offline-till-a', 11)).status === 409, 'I05 same purchase ref with a changed amount is rejected');
   const totals = raw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
-  check(Number(totals.points) === 61 && Number(totals.visits) === 2 && Number(totals.spend) === 30.25,
+  check(Number(totals.points) === 60 && Number(totals.visits) === 2 && Number(totals.spend) === 30.25,
     'I05 two purchases accumulate points, visits and spend without last-writer loss');
   check(Number(raw.prepare('SELECT COUNT(*) AS n FROM client_purchase_events').get().n) === 2,
     'I05 durable purchase event ledger contains exactly two unique events');
@@ -333,7 +333,7 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   }) });
   check(delayedSnapshot.status === 200, 'I05 delayed legacy full snapshot remains accepted as a profile write');
   const afterSnapshot = raw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
-  check(Number(afterSnapshot.points) === 61 && Number(afterSnapshot.visits) === 2 && Number(afterSnapshot.spend) === 30.25,
+  check(Number(afterSnapshot.points) === 60 && Number(afterSnapshot.visits) === 2 && Number(afterSnapshot.spend) === 30.25,
     'I05 delayed snapshot cannot overwrite ledger-derived purchase totals');
   const redeem = (ref) => clientsPost({ env, request: new Request('https://kiwi.test/api/clients', {
     method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' },
@@ -341,11 +341,11 @@ for (const [label, doc] of [['no programme saved', null], ['auto default only', 
   }) });
   check((await redeem('reward-1')).status === 200, 'I05 reward redemption is an atomic event write');
   const afterRedeem = raw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
-  check(Number(afterRedeem.points) === 21 && Number(afterRedeem.visits) === 2 && Number(afterRedeem.spend) === 30.25,
+  check(Number(afterRedeem.points) === 20 && Number(afterRedeem.visits) === 2 && Number(afterRedeem.spend) === 30.25,
     'I05 explicit redemption decrements points without changing purchase totals');
   check((await redeem('reward-1')).status === 200, 'I05 reward retry is idempotent');
   const afterRedeemRetry = raw.prepare('SELECT points, visits, spend FROM clients WHERE merchant=? AND id=?').get(MERCHANT, 'client-1');
-  check(Number(afterRedeemRetry.points) === 21 && Number(raw.prepare('SELECT COUNT(*) AS n FROM client_reward_events').get().n) === 1,
+  check(Number(afterRedeemRetry.points) === 20 && Number(raw.prepare('SELECT COUNT(*) AS n FROM client_reward_events').get().n) === 1,
     'I05 delayed/retried redemption cannot double-decrement the balance');
   const pulled = await clientsGet({ env, request: new Request(`https://kiwi.test/api/clients?merchant=${MERCHANT}&since=0`, {
     headers: { cookie: owner },

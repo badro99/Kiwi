@@ -5416,11 +5416,15 @@
           // so the owner's dashboard client directory + loyalty reflect it — a real
           // store's sale must attach to the real client, not a throwaway in-memory
           // object. Real store only; the local demo keeps its in-memory client. F5.
+          /* Le toast dit les points réellement crédités, comme la boutique : il
+             annonçait un point pour 10 MAD, codé en dur, quel que soit le programme. */
+          let pts = 0;
+          const ptsBefore = Number(c.points) || 0;
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
-            try { window.KiwiClients.recordPurchase(c.id, {
+            try { const res = window.KiwiClients.recordPurchase(c.id, {
               amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
-            }); } catch (_) {}
+            }); if (res && res.client && !res.replayed) pts = Math.max(0, (Number(res.client.points) || 0) - ptsBefore); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.
@@ -5428,10 +5432,13 @@
               try { window.KiwiClients.redeem(c.id); } catch (_) {}
             }
           }
-          const pts = Math.round(receivedNow / 10);
-          c.points += pts;
+          if (!useKiwiCl()) {
+            const cfg = window.KiwiClients && window.KiwiClients.config ? window.KiwiClients.config() : null;
+            pts = cfg && cfg.model === 'amount' ? Math.floor(receivedNow * ((cfg.amount && cfg.amount.perMad) || 1) + 1e-6) : 0;
+          }
+          c.points = ptsBefore + pts;
           c.achats += 1;
-          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${t.reward.label}` : '');
+          ptsLine = (pts ? ` · +${pts} pts pour ${firstName(c.name)}` : '') + (rewardUsed ? ` · récompense ${t.reward.label}` : '');
         }
         queueIfOffline(`Vente ${sale.id}`);
         freshTicket();

@@ -317,6 +317,39 @@ export async function onRequestGet(context) {
   }
 }
 
+/* Le programme est-il ouvert ? Un modèle choisi par le commerçant, pas le
+ * défaut que la caisse déduit du métier (`auto`). */
+const loyaltyOn = (cfg) => !!(cfg && cfg.model && !cfg.auto);
+
+/* Les points ne s'arrondissent jamais vers le haut : 99,50 MAD à un point par
+ * dirham donnent 99 points, pas les 100 d'un seuil de récompense. */
+const pointsFor = (amount, cfg) => Math.max(0,
+  Math.floor(amount * Math.max(0, Number(cfg && cfg.amount && cfg.amount.perMad) || 1) + 1e-6));
+
+/* « 10 cafés = 1 offert » : le tampon se gagne sur l'article nommé, pas sur
+ * chaque passage. Le nom est saisi en clair par le commerçant (« Café ») ; il
+ * vaut pour toute ligne qui le contient comme mot, accents et casse ignorés
+ * (« Café noir », « CAFE CREME » oui ; « Décaféiné » non). */
+const foldName = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ').trim();
+export function qualifyingQty(cfg, items) {
+  const want = foldName(cfg && cfg.product && cfg.product.item);
+  if (!want) return 0;
+  return (Array.isArray(items) ? items : []).reduce((n, item) => {
+    const name = ' ' + foldName(item && item.name) + ' ';
+    return name.includes(' ' + want + ' ') ? n + Math.max(0, Math.round(Number(item && item.qty) || 0)) : n;
+  }, 0);
+}
+/* Tampons d'un achat. Sans lignes (passage saisi à la main au tableau de bord,
+ * ancienne caisse), un passage reste un tampon ; avec des lignes, la carte
+ * produit ne compte que l'article choisi. */
+export function stampsFor(cfg, items) {
+  if (!loyaltyOn(cfg)) return 0;
+  if (cfg.model === 'visit') return 1;
+  if (cfg.model !== 'product') return 0;
+  return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
+}
+
 async function applyPurchase(env, merchant, raw) {
   const purchase = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(purchase.clientId || purchase.client_id, 64);
@@ -352,10 +385,9 @@ async function applyPurchase(env, merchant, raw) {
    * annoncer une récompense que personne n'avait promise. Le passage et la
    * dépense comptent toujours ; les points et tampons, seulement si le
    * commerçant a choisi un programme (un défaut déduit, `auto`, n'en est pas un). */
-  const on = !!(cfg && cfg.model && !cfg.auto);
-  const points = on && cfg.model === 'amount'
-    ? Math.round(amount * Math.max(0, Number(cfg.amount && cfg.amount.perMad) || 1)) : 0;
-  const stamps = on && (cfg.model === 'visit' || cfg.model === 'product') ? 1 : 0;
+  const on = loyaltyOn(cfg);
+  const points = on && cfg.model === 'amount' ? pointsFor(amount, cfg) : 0;
+  const stamps = stampsFor(cfg, purchase.items);
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
@@ -421,6 +453,8 @@ async function applyRefund(env, merchant, raw) {
   const sale = await env.DB.prepare(
     `SELECT COALESCE(SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN amount ELSE 0 END), 0) AS paid,
             COALESCE(SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN points ELSE 0 END), 0) AS earned,
+            COALESCE(SUM(CASE WHEN ref NOT LIKE 'refund:%' THEN stamps ELSE 0 END), 0) AS stamped,
+            COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -stamps ELSE 0 END), 0) AS unstamped,
             COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -amount ELSE 0 END), 0) AS refunded,
             COALESCE(SUM(CASE WHEN ref LIKE 'refund:%' THEN -points ELSE 0 END), 0) AS clawed
        FROM client_purchase_events WHERE merchant = ? AND client_id = ? AND sale_ref = ?`
@@ -429,21 +463,36 @@ async function applyRefund(env, merchant, raw) {
   const take = Math.max(0, Math.min(amount, Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100));
   const claw = paid > 0 && earned > 0
     ? Math.max(0, Math.min(Math.round(earned * take / paid), earned - Number(sale && sale.clawed || 0))) : 0;
+  /* Les tampons de CE ticket suivent le retour : sur une carte produit, autant
+   * que d'articles choisis rendus ; sinon (carte passages, retour sans lignes),
+   * seulement quand le ticket est rendu en entier. Jamais plus que gagné. */
+  const stampsLeft = Math.max(0, Number(sale && sale.stamped || 0) - Number(sale && sale.unstamped || 0));
+  let unstamp = 0;
+  if (stampsLeft > 0) {
+    const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
+      .bind(merchant).first();
+    const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
+    const lines = Array.isArray(refund.items) ? refund.items : [];
+    const whole = paid > 0 && take >= Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100 - 0.004;
+    unstamp = cfg.model === 'product' && lines.length
+      ? Math.min(stampsLeft, qualifyingQty(cfg, lines))
+      : (whole ? stampsLeft : 0);
+  }
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
   const cursor = clientCursorSql();
   const results = await env.DB.batch([
     ...clientCursorStatements(env, merchant, now),
-    env.DB.prepare(`UPDATE clients SET points = MAX(0, points - ?), spend = MAX(0, spend - ?),
-      updated_ts = ?, srv_ts = ${cursor}
+    env.DB.prepare(`UPDATE clients SET points = MAX(0, points - ?), stamps = MAX(0, stamps - ?),
+      spend = MAX(0, spend - ?), updated_ts = ?, srv_ts = ${cursor}
       WHERE merchant = ? AND id = ? AND deleted = 0
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-      .bind(claw, take, now, merchant, merchant, clientId, merchant, ref),
+      .bind(claw, unstamp, take, now, merchant, merchant, clientId, merchant, ref),
     env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
-      SELECT ?, ?, ?, ?, ?, 0, 0, ?, ${cursor}, 'retour', ?, ? WHERE changes() > 0`)
-      .bind(merchant, ref, clientId, -take, -claw, now, merchant, items, saleRef),
+      SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', ?, ? WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, -take, -claw, -unstamp, now, merchant, items, saleRef),
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
     const replay = await env.DB.prepare('SELECT client_id FROM client_purchase_events WHERE merchant = ? AND ref = ?')
@@ -452,7 +501,7 @@ async function applyRefund(env, merchant, raw) {
     return json({ error: 'refund-write-failed' }, 503);
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) return json({ error: 'refund-write-failed' }, 503);
-  return json({ ok: true, spend: -take, points: -claw });
+  return json({ ok: true, spend: -take, points: -claw, stamps: -unstamp });
 }
 
 async function applyRedemption(env, merchant, raw) {
@@ -475,9 +524,12 @@ async function applyRedemption(env, merchant, raw) {
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
+  /* Sans programme ouvert, il n'y a rien à remettre : la caisse le refusait
+   * déjà, l'API acceptait encore 100 points comme si un seuil existait. */
+  if (!loyaltyOn(cfg)) return json({ error: 'loyalty-off' }, 409);
   let pointsDelta = 0;
   let stampsDelta = 0;
-  if (cfg.model === 'amount' || !cfg.model) {
+  if (cfg.model === 'amount') {
     pointsDelta = Math.max(1, Math.round(Number(cfg.amount && cfg.amount.threshold) || 100));
   } else {
     stampsDelta = Math.max(1, Math.round(Number(
