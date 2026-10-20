@@ -248,7 +248,9 @@ raise it to make a red go away.
 pins every file over 5 000 lines (pages-pro.js, kiwi-caisse.html, kiwi-serveur.html,
 hotel.js, …) at its size in `tools/file-size-baseline.json`, plus 200 lines of slack,
 and the three shells' `<script src>` counts plus 3. A bug fix fits; a new feature goes
-in its own file. A pin only goes down: after a split, `KIWI_UPDATE_SIZE_BASELINE=1`
+in its own file. The same suite pins each stylesheet's `!important` count (+10, a new
+stylesheet 25): they went from 573 to 1 182 in two months, every skin winning by force
+over the one below, so new rules win by cascade instead. A pin only goes down: after a split, `KIWI_UPDATE_SIZE_BASELINE=1`
 lowers it. Never raise one to make a red go away.
 
 **Prod D1 changes through `wrangler d1 migrations`** (since 2026-10-19,

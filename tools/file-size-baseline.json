@@ -20,5 +20,14 @@
     "dashboard.html": 159,
     "kiwi-caisse.html": 86,
     "kiwi-serveur.html": 24
+  },
+  "important": {
+    "assets/catalog-workspace.css": 129,
+    "assets/design-2026.css": 43,
+    "assets/design-vexel.css": 257,
+    "assets/kit/dash-desktop.css": 242,
+    "assets/kit/kit.css": 86,
+    "assets/landing-mobile.css": 88,
+    "assets/mobile.css": 71
   }
 }

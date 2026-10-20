@@ -17,7 +17,13 @@
  *   · any other assets/*.js, functions/**.js or root *.html file stays
  *     under CAP lines;
  *   · the three shells may load at most SCRIPT_SLACK more <script src> than
- *     pinned.
+ *     pinned;
+ *   · each assets/**.css file may carry at most IMPORTANT_SLACK more
+ *     `!important` than pinned, a new one at most IMPORTANT_CAP. There were
+ *     573 on 2026-08-20, 705 a month later and 1 182 on 2026-10-21: every
+ *     skin layer wins by force over the one below, which is why a correct CSS
+ *     fix so often does nothing. New rules win by cascade (a more specific
+ *     selector, a later layer), not by force.
  *
  * A pin only ever goes down. When a split makes a file smaller, run with
  * KIWI_UPDATE_SIZE_BASELINE=1 to lower it; never raise a pin to make a red
@@ -28,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools', 'file-size-baseline.json');
-const CAP = 5000, SLACK = 200, SCRIPT_SLACK = 3;
+const CAP = 5000, SLACK = 200, SCRIPT_SLACK = 3, IMPORTANT_SLACK = 10, IMPORTANT_CAP = 25;
 const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
 const update = process.env.KIWI_UPDATE_SIZE_BASELINE === '1';
 
@@ -74,10 +80,21 @@ for (const rel of SHELLS) {
   else if (n > pin + SCRIPT_SLACK) fail.push(`${rel}: loads ${n} <script src>, ${n - pin} over its pin of ${pin} (slack ${SCRIPT_SLACK}). Load the new code lazily, or bundle it with a neighbour.`);
   else if (n < pin && update) { base.scripts[rel] = n; lowered.push(`${rel} scripts ${pin} → ${n}`); }
 }
+const css = walk('assets', (rel) => rel.endsWith('.css') && !/ 2\./.test(rel)).sort();
+base.important = base.important || {};
+for (const rel of css) {
+  const n = (fs.readFileSync(path.join(ROOT, rel), 'utf8').match(/!important/g) || []).length;
+  const pin = base.important[rel];
+  checks++;
+  if (pin == null) { if (n > IMPORTANT_CAP) fail.push(`${rel}: ${n} !important, over the ${IMPORTANT_CAP} cap for a stylesheet that is not pinned. Win by cascade, not by force.`); }
+  else if (n > pin + IMPORTANT_SLACK) fail.push(`${rel}: ${n} !important, ${n - pin} over its pin of ${pin} (slack ${IMPORTANT_SLACK}). Win by cascade, not by force.`);
+  else if (n < pin && update) { base.important[rel] = n; lowered.push(`${rel} !important ${pin} → ${n}`); }
+}
+for (const rel of Object.keys(base.important)) if (!css.includes(rel) && update) { delete base.important[rel]; lowered.push(`${rel} removed`); }
 if (update && lowered.length) { fs.writeFileSync(BASE, JSON.stringify(base, null, 2) + '\n'); console.log('  lowered: ' + lowered.join(' · ')); }
 if (fail.length) {
   console.error('✗ file-size-ratchet-test\n  ' + fail.join('\n  '));
   process.exit(1);
 }
 const pinned = Object.keys(base.lines).length;
-console.log(`✓ file-size-ratchet-test · ${checks} files checked, ${pinned} pinned, none grew past its pin`);
+console.log(`✓ file-size-ratchet-test · ${checks} checks, ${pinned} files and ${Object.keys(base.important).length} stylesheets pinned, none grew past its pin`);
