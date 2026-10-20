@@ -928,4 +928,156 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   compare('boutique dashboard day report after a return for credit', { net: rep.net, card: rep.card, cash: rep.cash }, want);
 });
 
+/* A guest orders from the table's QR page (OrderPro), the till accepts the
+ * order and cashes it. Pastilla 85 + Café noir 12,25: a dish with centimes,
+ * because a 14,50 café was once charged 15 (Q1). The guest page, the till, the
+ * server and the dashboard must all say 97,25. */
+/* A guest scans the QR code of a table, orders a Pastilla and a black coffee,
+ * and the till accepts the order from its inbox and cashes it in cash. Returns
+ * the stored order row and the guest context (closed by the caller). */
+async function qrOrderCashedAtTill(t, tableNo, want) {
+  const tx0 = await txCount(tablet);
+  t.step(`guest: table ${tableNo}, Pastilla + Café noir, send`);
+  const guestCtx = await browser.createBrowserContext();
+  const guest = await preparePage(t, await guestCtx.newPage(), { width: 390, height: 844 });
+  await guest.goto(base + `/OrderPro.html?s=${encodeURIComponent(NIGHT.slug)}&t=${tableNo}`, { waitUntil: 'load' });
+  await guest.waitForSelector('[data-add="n2"]', { visible: true, timeout: 20000 });
+  await clickSel(guest, '[data-add="n2"]');
+  await sleep(500);
+  await clickSel(guest, '[data-add="n3"]');
+  await sleep(500);
+  const cartTotal = await guest.$eval('#cart-total', (e) => e.textContent).catch(() => '');
+  eqCents(cents(cartTotal), want, 'guest page · the cart says 97,25');
+  await clickSel(guest, '#cart-pill');
+  await sleep(700);
+  const grand = await guest.$eval('#cart-grand', (e) => e.textContent).catch(() => '');
+  eqCents(cents(grand), want, 'guest page · the order total before sending');
+  await clickSel(guest, '#send-btn');
+  let order = null;
+  for (let i = 0; i < 30 && !order; i++) {
+    order = stack.db.prepare("SELECT * FROM orders WHERE merchant = ? AND mode = 'table' ORDER BY created_ts DESC LIMIT 1").get(NIGHT.slug);
+    if (!order) await sleep(500);
+  }
+  check(!!order, 'server · the QR order is stored', 'no row in orders');
+  if (order) {
+    const cols = Object.keys(order);
+    const stored = order.total_cents != null ? Number(order.total_cents) : Math.round(Number(order.total) * 100);
+    eqCents(stored, want, `server · the stored order total (${cols.includes('total_cents') ? 'total_cents' : 'total'})`);
+  }
+
+  t.step('till: the inbox shows the order, accept it, cash it');
+  await tablet.waitForSelector('#kop-chip', { visible: true, timeout: 30000 });
+  await until(tablet, () => ({ ok: /\d/.test(document.getElementById('kop-chip')?.textContent || '') }), null, 30000);
+  await clickSel(tablet, '#kop-chip');
+  const card = await tablet.waitForSelector('.kop-card', { visible: true, timeout: 20000 }).catch(() => null);
+  if (!card) {
+    const body = await tablet.evaluate(() => {
+      const c = document.getElementById('kop-chip'); const r = c && c.getBoundingClientRect();
+      const top = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { chip: c?.textContent, rect: r && [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
+        top: top && (top.id || top.className || top.tagName), root: !!document.getElementById('kop-root'), body: document.getElementById('kop-body')?.innerText };
+    });
+    throw new Error('the till inbox shows no order card · ' + JSON.stringify(body).slice(0, 400));
+  }
+  const acc = await tablet.$('[data-kop-acc]');
+  if (acc) { await clickSel(tablet, '[data-kop-acc]'); await sleep(1500); }
+  await tablet.waitForSelector('[data-kop-pay]', { visible: true, timeout: 20000 });
+  await clickSel(tablet, '[data-kop-pay]');
+  await sleep(1500);
+  await clickSel(tablet, '#pay-charge');
+  await clickSel(tablet, '[data-set="exact"]');
+  await clickSel(tablet, '#cash-confirm');
+  await tablet.waitForFunction((n) => {
+    const m = /(\d+)/.exec((document.getElementById('stat-txns-card') || {}).innerText || '');
+    return m && +m[1] >= n;
+  }, { timeout: 15000 }, tx0 + 1);
+  await sleep(5000);
+
+  return { order, guestCtx };
+}
+
+await scenario('restaurant · a QR order from the table, accepted and cashed at the till', async (t) => {
+  if (!tablet) throw new Error('no tablet from the previous scenarios');
+  stack.db.prepare("UPDATE merchant_config SET features = json_set(COALESCE(features, '{}'), '$.orderpro', json('true')) WHERE merchant = ?").run(NIGHT.slug);
+  const on = stack.db.prepare('SELECT features FROM merchant_config WHERE merchant = ?').get(NIGHT.slug);
+  if (!on || !/"orderpro":true/.test(on.features || '')) throw new Error('OrderPro could not be switched on for ' + NIGHT.slug);
+  const want = PRICE.n2 + PRICE.n3;
+  const sales0 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+
+  /* The owner has drawn one table, number 4, and printed its QR code. */
+  const plan = { zones: [{ id: 'z1', name: 'Salle' }], tables: [{ id: 'tb4', num: '4', zone: 'z1', shape: 'round', covers: 2, x: 20, y: 20, w: 10, h: 10 }], staff: [] };
+  stack.db.prepare("INSERT OR REPLACE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'floorplan', ?, 1, ?)").run(NIGHT.slug, JSON.stringify(plan), Date.now());
+
+  t.step('till: reload so the order inbox and the floor plan load');
+  await tablet.reload({ waitUntil: 'load' });
+  await unlockTill(t, tablet, NIGHT);      // a reload locks the till behind the staff code
+  await restoGreetGone(tablet);
+  const tableNo = '4';
+  await tablet.waitForFunction(() => !!document.querySelector('[data-table="4"]'), { timeout: 15000 })
+    .catch(() => { throw new Error('the till never drew table 4 from the server floor plan'); });
+
+  const { order, guestCtx } = await qrOrderCashedAtTill(t, tableNo, want);
+
+  const sales1 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  check(Number(sales1.n) === Number(sales0.n) + 1, 'server · the QR order became exactly one sale', `${sales0.n} → ${sales1.n}`);
+  eqCents(Number(sales1.c) - Number(sales0.c), want, 'server · the sale is 97,25');
+  const paid = stack.db.prepare('SELECT status, paid_ts FROM orders WHERE id = ?').get(order && order.id);
+  check(!!(paid && paid.paid_ts), 'server · the order is marked paid', JSON.stringify(paid));
+
+  const afterTurn = { kind: 'sale', method: 'card', cents: PRICE.n3 };
+  const qr = { kind: 'sale', method: 'cash', cents: want };
+  const till = await restoReport(tablet);
+  compare('till report after the QR order', till, ledger([afterTurn, qr]));
+  const dash = owners.nuit.page;
+  await openDashboard(t, dash, NIGHT);
+  const home = await dashHome(dash, 2);
+  compare('dashboard home after the QR order', { tx: home.tx, net: home.net }, ledger([afterTurn, qr]));
+  const rep = await dashReport(dash, 0);
+  compare('dashboard day report after the QR order', { tx: rep.tx, net: rep.net, card: rep.card, cash: rep.cash }, ledger([afterTurn, qr]));
+  await guestCtx.close();
+});
+
+/* The QR code on table 9 still says 9, but the owner's plan only has table 4:
+ * a table renumbered after the codes were printed, or a restaurant that never
+ * drew its plan. The server takes the order (by design), the kitchen gets it,
+ * and the till has to be able to take the money. It used to answer « Table
+ * introuvable sur le plan » and the only way out was to cancel a meal already
+ * eaten. */
+await scenario('restaurant · a QR order from a table the floor plan does not have is still cashed', async (t) => {
+  if (!tablet) throw new Error('no tablet from the previous scenarios');
+  const want = PRICE.n2 + PRICE.n3;
+  const sales0 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  const onPlan = await tablet.evaluate(() => !!document.querySelector('[data-table="9"]'));
+  check(!onPlan, 'till · table 9 is not on the floor plan', 'the plan drew a table 9');
+
+  const { order, guestCtx } = await qrOrderCashedAtTill(t, '9', want);
+
+  const sales1 = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(NIGHT.slug);
+  check(Number(sales1.n) === Number(sales0.n) + 1, 'server · the off-plan order became exactly one sale', `${sales0.n} → ${sales1.n}`);
+  eqCents(Number(sales1.c) - Number(sales0.c), want, 'server · the off-plan sale is 97,25');
+  const paid = stack.db.prepare('SELECT status, paid_ts, session_id FROM orders WHERE id = ?').get(order && order.id);
+  check(!!(paid && paid.paid_ts), 'server · the off-plan order is marked paid', JSON.stringify(paid));
+  if (paid && paid.session_id) {
+    let visit = null;
+    for (let i = 0; i < 20; i++) {
+      visit = stack.db.prepare('SELECT status FROM table_sessions WHERE id = ?').get(paid.session_id);
+      if (visit && visit.status !== 'open') break;
+      await sleep(500);
+    }
+    check(!!visit && visit.status !== 'open', 'server · the table 9 visit is closed once paid', JSON.stringify(visit));
+  }
+
+  const afterTurn = { kind: 'sale', method: 'card', cents: PRICE.n3 };
+  const qr = { kind: 'sale', method: 'cash', cents: want };
+  const till = await restoReport(tablet);
+  compare('till report after the off-plan order', till, ledger([afterTurn, qr, qr]));
+  const dash = owners.nuit.page;
+  await openDashboard(t, dash, NIGHT);
+  const home = await dashHome(dash, 3);
+  compare('dashboard home after the off-plan order', { tx: home.tx, net: home.net }, ledger([afterTurn, qr, qr]));
+  const rep = await dashReport(dash, 0);
+  compare('dashboard day report after the off-plan order', { tx: rep.tx, net: rep.net, card: rep.card, cash: rep.cash }, ledger([afterTurn, qr, qr]));
+  await guestCtx.close();
+});
+
 await S.finish();

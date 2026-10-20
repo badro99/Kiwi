@@ -1331,6 +1331,8 @@
   (function () {
     var Q = {
       'Aucun service ouvert': ['No shift open', 'لا توجد وردية مفتوحة'],
+      'Table absente du plan': ['Table not on the floor plan', 'الطاولة غير موجودة في المخطط'],
+      "envoyez d'abord la commande en cuisine": ['send the order to the kitchen first', 'أرسل الطلب إلى المطبخ أولاً'],
       '{n} serveurs en service': ['{n} waiters on shift', '{n} نوادل في الخدمة'],
       '{n} serveur en service': ['{n} waiter on shift', '{n} نادل في الخدمة'],
       '{n} tables en cours': ['{n} tables in progress', '{n} طاولات جارية'],

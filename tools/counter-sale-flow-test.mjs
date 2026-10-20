@@ -85,7 +85,7 @@ await check('a counter sale offers neither "Marquer prêt" nor "Remettre au clie
 });
 
 await check('paying a counter sale hands it over, so no session is left open', () => {
-  assert.match(caisse, /if \(vrapIsCounterSale\(o\)\) \{\s*\n\s*o\.pickedUp = true;/);
+  assert.match(caisse, /if \(vrapIsCounterSale\(o\)(?: \|\| o\.offPlan)?\) \{\s*\n\s*o\.pickedUp = true;/);
   /* `served` part alors par le chemin habituel — celui-là même qu'empruntait
    * « Remettre » — donc la session takeout se ferme comme avant. */
   assert.match(caisse, /const remoteStatus = o\.pickedUp \? 'served' : /);
