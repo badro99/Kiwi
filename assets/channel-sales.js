@@ -67,11 +67,17 @@
     return '';
   }
 
-  function breakdown(rows, channelIds, from, to, tradeRegistry, tradeId) {
+  /* A refund comes off the channel of the sale it reverses, on the day it is
+   * paid back, the way « MAD encaissé » and the day report count money kept.
+   * Without it a day with a 20,40 card refund showed Salle on 425 while every
+   * other figure on the screen said 404,10. A refund whose sale cannot be found
+   * leaves the total and stays unclassified. No channel goes below zero. */
+  function breakdown(rows, channelIds, from, to, tradeRegistry, tradeId, refunds) {
     var amounts = Object.create(null);
     var total = 0;
     var classified = 0;
-    (Array.isArray(rows) ? rows : []).forEach(function (sale) {
+    var list = Array.isArray(rows) ? rows : [];
+    list.forEach(function (sale) {
       var ts = +(sale && sale.ts) || 0;
       if (ts < from || ts >= to) return;
       var amount = Math.max(0, +(sale && sale.amount) || 0);
@@ -82,7 +88,30 @@
       amounts[channel] = (amounts[channel] || 0) + amount;
       classified += amount;
     });
-    return { amounts: amounts, total: total, classified: classified, unknown: Math.max(0, total - classified) };
+    var byId = null;
+    (Array.isArray(refunds) ? refunds : []).forEach(function (refund) {
+      var ts = +(refund && refund.ts) || 0;
+      if (ts < from || ts >= to) return;
+      var amount = Math.abs(+(refund && refund.amount) || 0);
+      if (!(amount > 0)) return;
+      if (!byId) {
+        byId = Object.create(null);
+        list.forEach(function (sale) {
+          var id = sale && (sale.saleId || sale.id);
+          if (id && (+sale.amount || 0) > 0) byId[String(id)] = sale;
+        });
+      }
+      var sale = byId[String(refund.saleId || '')];
+      var channel = sale ? key(sale, channelIds, tradeRegistry, tradeId) : key(refund, channelIds, tradeRegistry, tradeId);
+      total -= amount;
+      if (!channel || !(amounts[channel] > 0)) return;
+      var take = Math.min(amount, amounts[channel]);
+      amounts[channel] = Math.round((amounts[channel] - take) * 100) / 100;
+      classified -= take;
+    });
+    total = Math.max(0, Math.round(total * 100) / 100);
+    classified = Math.max(0, Math.round(classified * 100) / 100);
+    return { amounts: amounts, total: total, classified: classified, unknown: Math.max(0, Math.round((total - classified) * 100) / 100) };
   }
 
   root.KiwiChannelSales = { key: key, breakdown: breakdown };

@@ -547,7 +547,9 @@
     var from = bounds ? bounds[0] : -Infinity;
     var to = bounds && bounds[1] !== Infinity ? bounds[1] : Date.now() + 1;
     var ids = channels.map(function (c) { return c.id; });
-    return window.KiwiChannelSales.breakdown(rows, ids, from, to, window.KiwiTrades, activeTrade());
+    var refunds = [];
+    try { refunds = (window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list(venue)) || []; } catch (_) { refunds = []; }
+    return window.KiwiChannelSales.breakdown(rows, ids, from, to, window.KiwiTrades, activeTrade(), refunds);
   }
 
   /* Poids de démonstration, un par canal du registre métier. Ils ne sont pas

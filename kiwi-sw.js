@@ -175,7 +175,7 @@ var SHELL = [
   '/assets/operations.js?v=14',
   '/assets/operations-ui.js?v=23',
   '/assets/live-link.js?v=65',
-  '/assets/channel-sales.js?v=3',
+  '/assets/channel-sales.js?v=4',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit

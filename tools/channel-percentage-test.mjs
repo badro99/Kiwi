@@ -78,7 +78,31 @@ const partial = truth.breakdown([
 assert.equal(partial.amounts.dining / partial.total, 0.1, 'unknown money stays in the denominator');
 assert.equal(partial.unknown, 90);
 
+/* Refunds come off the channel of the sale they reverse (sync ledger, 20 Oct):
+ * 404,10 kept after a 20,40 card refund must not read 425 on the rings. */
+const refunded = truth.breakdown([
+  { ts: 110, amount: 300, saleId: 's-1', channel: 'dining' },
+  { ts: 120, amount: 124.5, saleId: 's-2', label: 'À emporter #4' },
+], ids, 100, 200, restaurant, 'restaurant', [
+  { ts: 150, amount: 20.4, saleId: 's-1', method: 'card' },
+]);
+assert.equal(refunded.total, 404.1, 'a refund comes off the total: 424,50 sold, 20,40 refunded, 404,10 kept');
+assert.equal(refunded.amounts.dining, 279.6, 'the refund comes off the channel of the sale it reverses');
+assert.equal(refunded.amounts.takeaway, 124.5, 'other channels keep their takings');
+assert.equal(refunded.unknown, 0);
+const outside = truth.breakdown([{ ts: 110, amount: 100, saleId: 's-3', channel: 'dining' }], ids, 100, 200, restaurant, 'restaurant',
+  [{ ts: 250, amount: 100, saleId: 's-3' }, { ts: 150, amount: 40, saleId: 'gone' }]);
+assert.equal(outside.total, 60, 'a refund paid after the window stays out; one whose sale is unknown still leaves the total');
+assert.equal(outside.amounts.dining, 100, 'an unmatched refund is never charged to a channel it cannot prove');
+assert.equal(outside.unknown, 0, 'unknown never goes below zero');
+const over = truth.breakdown([{ ts: 110, amount: 30, saleId: 's-4', channel: 'dining' }], ids, 100, 200, restaurant, 'restaurant',
+  [{ ts: 150, amount: 80, saleId: 's-4' }]);
+assert.equal(over.amounts.dining, 0, 'a channel never goes below zero');
+assert.equal(over.total, 0, 'the total never goes below zero');
+assert.match(layout, /KiwiChannelSales\.breakdown\(rows, ids, from, to, window\.KiwiTrades, activeTrade\(\), refunds\)/,
+  'the dashboard passes the refund ledger to the channel rings');
+
 assert.match(layout, /distribution = channels\.map/);
 assert.match(layout, /split\.unknown \/ split\.total/);
 
-console.log('channel-percentage-test: 32 controls passed');
+console.log('channel-percentage-test: 42 controls passed');
