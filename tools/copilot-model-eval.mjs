@@ -37,10 +37,13 @@ const PRICING = { // dollars par million de jetons (entrée, sortie), pages mod�
   '@cf/openai/gpt-oss-120b': [0.35, 0.75],
   '@cf/zai-org/glm-5.3-flash': [0.15, 0.5],
   '@cf/qwen/qwen3-30b-a3b-fp8': [0.051, 0.335],
+  '@cf/deepseek-ai/deepseek-v4.1-flash-1017': [0.3, 1.2], // page tarifs Workers AI, 2026-10-20 · accès payant
 };
 const MODELS = opt('models', '@cf/openai/gpt-oss-120b,@cf/zai-org/glm-5.3-flash').split(',').filter(Boolean);
 const PASSES = Math.max(1, Number(opt('passes', 2)));
 const TODAY = '2026-10-18';
+const EFFORT = opt('effort', 'low');            // ask.js envoie 'low' ; 'high' mesure le raisonnement complet
+const MAX_TOKENS = Number(opt('max-tokens', 700)); // ask.js : 700
 
 /* ── Les vrais textes de l'assistant, lus dans assets/agent.js ───────────── */
 const src = fs.readFileSync(path.join(ROOT, 'assets/agent.js'), 'utf8');
@@ -113,7 +116,17 @@ const hasMarkdown = (t) => /\*\*|^#{1,6}\s|^\s*[-*]\s|`/m.test(t);
 
 /* ── Appels ───────────────────────────────────────────────────────────────── */
 const account = process.env.CLOUDFLARE_ACCOUNT_ID || '', token = process.env.CLOUDFLARE_API_TOKEN || '';
-async function run(model, payload) {
+const JOBS = Math.max(1, Number(opt('jobs', 3)));
+let RETRIES_429 = 0;
+async function run(model, payload, attempt = 0) {
+  try { return await runOnce(model, payload); } catch (e) {
+    if (!/HTTP 429/.test(String(e.message)) || attempt >= 5) throw e;
+    RETRIES_429++;
+    await new Promise((r) => setTimeout(r, 15000 * (attempt + 1)));
+    return run(model, payload, attempt + 1);
+  }
+}
+async function runOnce(model, payload) {
   const t0 = Date.now();
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(90000),
@@ -127,7 +140,7 @@ async function run(model, payload) {
   const result = body && body.result ? body.result : body;
   return { result, ms };
 }
-const base = (messages, extra) => ({ messages, max_tokens: 700, temperature: 0.7, top_p: 0.8, reasoning_effort: 'low', ...extra });
+const base = (messages, extra) => ({ messages, max_tokens: MAX_TOKENS, temperature: 0.7, top_p: 0.8, reasoning_effort: EFFORT, ...extra });
 const textOf = (r) => (typeof r === 'string' ? r : (r && (r.response ?? r.choices?.[0]?.message?.content)) || '');
 const callsOf = (r) => { const m = r && r.choices && r.choices[0] ? r.choices[0].message : null; return (m && m.tool_calls) || (r && r.tool_calls) || []; };
 const costOf = (model, r) => { const u = r && r.usage; const p = PRICING[model]; return u && p ? ((u.prompt_tokens || 0) * p[0] + (u.completion_tokens || 0) * p[1]) / 1e6 : 0; };
@@ -164,6 +177,7 @@ async function scenario(model, sc) {
   out.ms.push(r2.ms); out.cost += costOf(model, r2.result);
   const text = textOf(r2.result).trim();
   out.answerOk = text.length > 0;
+  if (opt('show', '').split(',').includes(sc.id)) console.log(`    [${model.split('/').pop()} · ${sc.id}] ${text.replace(/\n/g, ' ')}`);
   if (!text) return out;
   out.md = !hasMarkdown(text);
   out.lang = sc.noLang ? null : langOk(text, sc.lang);
@@ -205,13 +219,14 @@ async function main() {
     return;
   }
   if (!account || !token) { console.error('Définissez CLOUDFLARE_ACCOUNT_ID et CLOUDFLARE_API_TOKEN, ou lancez avec --dry.'); process.exit(2); }
-  console.log(`Copilote · ${SCENARIOS.length} scénarios × ${PASSES} passage(s) · ${MODELS.join(' | ')}`);
+  console.log(`Copilote · ${SCENARIOS.length} scénarios × ${PASSES} passage(s) · effort ${EFFORT} · max_tokens ${MAX_TOKENS} · ${MODELS.join(' | ')}`);
   for (const model of MODELS) {
     const rows = [], errors = [];
     const jobs = [];
     for (let p = 0; p < PASSES; p++) for (const sc of SCENARIOS) jobs.push(sc);
     let next = 0;
-    await Promise.all(Array.from({ length: 3 }, async () => {
+    RETRIES_429 = 0;
+    await Promise.all(Array.from({ length: JOBS }, async () => {
       while (next < jobs.length) {
         const sc = jobs[next++];
         try { rows.push(await scenario(model, sc)); } catch (e) { errors.push(sc.id + ' · ' + String(e.message || e).replace(token, '***')); }
@@ -219,6 +234,7 @@ async function main() {
     }));
     rows.sort((a, b) => a.id.localeCompare(b.id));
     summarize(model, rows, errors);
+    if (RETRIES_429) console.log('  limite de débit (429) : ' + RETRIES_429 + ' nouvelle(s) tentative(s)');
   }
 }
 main();
