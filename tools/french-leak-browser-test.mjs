@@ -63,7 +63,7 @@ function collect() {
     'synchronisé', 'synchroniser', 'hors ligne', 'opérations', 'protégées', 'conservé', 'conservées', 'en cours', 'essai', 'joignable'];
   const word = new RegExp('(^|[^\\p{L}])(' + FR_WORDS.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?=$|[^\\p{L}])', 'iu');
   const accent = /[éèêëàâçùûôîïœ]/i;
-  const DATA = 'table, tbody, [data-product], [data-item], .kpi-feed, .feed, .receipt, .tx-row, .menu-item, .dish, .client-row, .bq-item, input, textarea, select, option';
+  const DATA = 'table, tbody, [data-product], [data-item], .kpi-feed, .feed, .receipt, .tx-row, .menu-item, .dish, .client-row, .bq-item, .ep-dt-who, .ep-ard-who, input, textarea, select, option';
   const out = [];
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   let n;
@@ -176,6 +176,43 @@ try {
       report[lang]['boutique:boot'] = { ui: ['(the demo boutique till did not boot)'], names: [], data: [] };
     }
     await bctx.close();
+
+    /* The demo épicerie till (Kiwi Basic, the entry plan): the same
+       caisse-lang.js. Each rail view by a real click, then the sheets a
+       grocer opens all day: payment, the tab picker, a neighbour's tab and
+       its repayment. Products, aisles and neighbours are demo data. */
+    const ectx = await browser.createBrowserContext();
+    const ep = await ectx.newPage();
+    await ep.setViewport({ width: 1180, height: 820 });
+    await ep.setRequestInterception(true);
+    ep.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
+    await ep.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiLang', l); localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, lang);
+    await ep.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
+    const epBooted = await ep.waitForFunction(() => window.KiwiPosDispatch, { timeout: 20000 }).then(() => true).catch(() => false);
+    if (epBooted) {
+      await ep.evaluate(() => window.KiwiPosDispatch.unlockById('epicerie'));
+      await ep.waitForFunction(() => document.querySelector('.ep-card'), { timeout: 20000 }).catch(() => {});
+      await sleep(1200);
+      const seenE = { ui: new Set(), names: new Set(), data: new Set() };
+      const look = async (label) => {
+        const got = split(await ep.evaluate(collect));
+        for (const k of Object.keys(seenE)) { got[k] = got[k].filter((x) => !seenE[k].has(x)); got[k].forEach((x) => seenE[k].add(x)); }
+        report[lang]['epicerie:' + label] = got;
+      };
+      const tap = async (sel) => { const el = await ep.$(sel); if (el) { try { await el.click(); } catch (_) {} } await sleep(700); return !!el; };
+      const close = async () => { await ep.evaluate(() => { const x = [...document.querySelectorAll('[data-ep-close]')].filter((b) => b.offsetWidth).pop(); if (x) x.click(); }); await sleep(450); };
+      await look('caisse');
+      await tap('.ep-card:not(.is-out)');
+      if (await tap('#ep-pay')) { await look('pay'); await tap('[data-ep-m="ardoise"]'); await look('pay-tab'); await close(); await close(); }
+      for (const v of await ep.$$eval('.ep-rail [data-ep-view]', (bs) => bs.map((b) => b.dataset.epView))) {
+        await tap(`.ep-rail [data-ep-view="${v}"]`);
+        await look(v);
+        if (v === 'carnet' && await tap('[data-ep-ard]')) { await look('tab'); if (await tap('#ep-ard-settle')) { await look('settle'); await close(); } await close(); }
+      }
+    } else {
+      report[lang]['epicerie:boot'] = { ui: ['(the demo épicerie till did not boot)'], names: [], data: [] };
+    }
+    await ectx.close();
   }
 } finally {
   await browser.close();

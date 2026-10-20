@@ -108,8 +108,8 @@
     "sha": "d3ab26277dddf5fa"
   },
   "assets/caisse-dna.js": {
-    "v": "2",
-    "sha": "907c1ea564c48012"
+    "v": "3",
+    "sha": "86ee913757e17c16"
   },
   "assets/caisse-doctor.js": {
     "v": "1",
@@ -120,8 +120,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "37",
-    "sha": "641ab13aed7cf3f2"
+    "v": "38",
+    "sha": "7af497b1c9e7e363"
   },
   "assets/caisse-link.js": {
     "v": "18",
@@ -1096,16 +1096,16 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "116",
-    "sha": "871377e8d8429385"
+    "v": "117",
+    "sha": "3c06c760f34c412b"
   },
   "assets/pos-epicerie.css": {
-    "v": "14",
+    "v": "15",
     "sha": "028c69129c393d18"
   },
   "assets/pos-epicerie.js": {
-    "v": "14",
-    "sha": "088ee1478e61b06b"
+    "v": "15",
+    "sha": "8d421fedff637d33"
   },
   "assets/pos-fastfood.css": {
     "v": "12",

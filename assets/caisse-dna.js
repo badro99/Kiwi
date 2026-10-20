@@ -34,7 +34,12 @@
     time.textContent = new Intl.DateTimeFormat('fr-FR', {
       hour: '2-digit', minute: '2-digit', hour12: false
     }).format(now);
-    date.textContent = new Intl.DateTimeFormat('fr-FR', {
+    /* The date follows the till language, as the shift clock does
+       (kiwi-caisse.html tickClock): the native app's locale, or the picker. */
+    const lang = document.documentElement.classList.contains('kiwi-native') ? document.documentElement.lang
+      : ((window.KiwiCaisseLang && window.KiwiCaisseLang.get()) || 'fr');
+    const locale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR';
+    date.textContent = new Intl.DateTimeFormat(locale, {
       weekday: 'long', day: 'numeric', month: 'long'
     }).format(now);
   }
@@ -83,6 +88,7 @@
       venue.appendChild(clock);
       paintClock(root);
       clocks.set(root, window.setInterval(() => paintClock(root), 30000));
+      if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(() => paintClock(root));
     }
 
     if (nav) {

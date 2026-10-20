@@ -393,12 +393,12 @@
     if (epicerieOps) epicerieOps.save(label);
     if (!state.offline) return false;
     if (pvReal()) {
-      toast(`${label}, enregistré sur la caisse, envoi au retour du réseau`);
+      toast(`Enregistré sur la caisse · ${label} · envoi au retour du réseau`);
       return true;
     }
     state.queued++;
     renderNet();
-    toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
+    toast(`Enregistré hors-ligne · ${label} · ${state.queued} en attente`);
     return true;
   }
   function initials(name) {
@@ -699,10 +699,10 @@
     const it = ITEMS[itemId];
     if (!it) return;
     /* Un produit sans prix n'est pas un produit à 0 MAD : on ne vend pas un prix que l'épicier n'a pas posé. */
-    if (it.noPrice) { toast(`${it.label}, prix non renseigné. Fixez-le dans le tableau de bord (Stock).`, 3200); return; }
+    if (it.noPrice) { toast(`Prix non renseigné · ${it.label} · fixez-le dans le tableau de bord (Stock).`, 3200); return; }
     /* Réel : un stock à 0 se vend quand même (l'article est dans la main ; le 0 peut être un stock jamais saisi). */
     if (!pvReal() && typeof it.stock === 'number' && it.stock <= 0) {
-      toast(`${it.label}, rupture. Ajoutez-le au réassort dans Stock rapide.`);
+      toast(`Rupture · ${it.label} · ajoutez-le au réassort dans Stock rapide.`);
       return;
     }
     if (isWeigh(it) && !(opts && opts.weight != null)) { openWeigh(it); return; }
@@ -827,7 +827,7 @@
     if (!it && pvReal() && WS()) { const hit = WS().catalog.resolve(code); if (hit && ITEMS[hit.pid]) it = ITEMS[hit.pid]; }
     if (it) {
       addItem(it.id);
-      toast(`${it.label}, ajouté`);
+      toast(`Ajouté · ${it.label}`);
     } else {
       toast(`Code « ${esc(code)} » inconnu, cherchez le produit`);
       openSearch(code);
@@ -1079,7 +1079,7 @@
       freshTicket();
       renderTicket(); renderGrid(); renderBadges(); icons();
       queueIfOffline('Vente');
-      toast(`Encaissé, ${fmtMAD2(total)} en ${label}${rendu > 0.0001 ? ` · rendu ${fmtMAD2(rendu)}` : ''}`);
+      toast(`Encaissé · ${fmtMAD2(total)} · ${label}${rendu > 0.0001 ? ` · rendu ${fmtMAD2(rendu)}` : ''}`);
       focusScan();
     };
 
@@ -1156,7 +1156,7 @@
       el.innerHTML = mode === 'pick' ? `
         <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Mettre à l'ardoise</h3>
-        <p class="modal-subtle">${fmtMAD2(total)} · ${esc(basketLabel())}, sur le carnet de quel voisin ?</p>
+        <p class="modal-subtle">${fmtMAD2(total)} · ${esc(basketLabel())} · sur le carnet de quel voisin ?</p>
         <div class="ep-carnet-pick">
           ${CARNET.map((c) => {
             const bal = balanceOf(c);
@@ -1224,7 +1224,7 @@
     freshTicket();
     renderTicket(); renderGrid(); renderBadges(); icons();
     queueIfOffline('Ardoise');
-    toast(`${fmtMAD2(total)} sur l'ardoise de ${c.name}, solde ${fmtMAD(balanceOf(c))}`);
+    toast(`Sur l'ardoise de ${c.name} · +${fmtMAD2(total)} · solde ${fmtMAD(balanceOf(c))}`);
     focusScan();
   }
 
@@ -1278,7 +1278,7 @@
         c.hist.push(histEntry('debt', state.attachFrom.label, r2(state.attachFrom.total)));
         day.creditAdded = r2(day.creditAdded + state.attachFrom.total);
         if (epicerieOps) epicerieOps.save('Ardoise');
-        toast(`${fmtMAD2(state.attachFrom.total)} sur l'ardoise de ${c.name}`);
+        toast(`Sur l'ardoise de ${c.name} · +${fmtMAD2(state.attachFrom.total)}`);
         state.attachFrom = null;
         renderCarnet(); renderBadges(); icons();
         return;
@@ -1402,7 +1402,7 @@
       day.creditAdded = r2(day.creditAdded + amt);
       closeVeil('#ep-pay-veil');
       queueIfOffline('Ardoise');
-      toast(`+${fmtMAD(amt)} sur l'ardoise de ${c.name}, solde ${fmtMAD(balanceOf(c))}`);
+      toast(`Sur l'ardoise de ${c.name} · +${fmtMAD(amt)} · solde ${fmtMAD(balanceOf(c))}`);
       renderBadges();
       openArdoise(c.id);
     };
@@ -1513,8 +1513,8 @@
         queueIfOffline('Règlement');
         const newBal = balanceOf(c);
         toast(newBal > 0
-          ? `${fmtMAD(pay)} encaissé, reste ${fmtMAD(newBal)} sur l'ardoise${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`
-          : `Ardoise soldée, ${esc(c.name)}, l'lah ikhellik${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+          ? `Encaissé · ${fmtMAD(pay)} · reste ${fmtMAD(newBal)} sur l'ardoise${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`
+          : `Ardoise soldée · ${esc(c.name)} · l'lah ikhellik${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         renderBadges();
         openArdoise(c.id);
       };
@@ -1538,7 +1538,7 @@
     el.innerHTML = `
       <button class="ep-modal-x" data-ep-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Rappel WhatsApp</h3>
-      <p class="modal-subtle">${esc(c.name)} · ${esc(c.phone)}, solde ${fmtMAD(bal)}</p>
+      <p class="modal-subtle">${esc(c.name)} · ${esc(c.phone)} · solde ${fmtMAD(bal)}</p>
       <div class="ep-wa-tone"><i data-lucide="heart"></i>Ton volontairement très poli, c'est un voisin, pas un débiteur.</div>
       <div class="ep-wa-bubblewrap">
         <div class="ep-wa-bubble">
@@ -1657,7 +1657,7 @@
       navigator.clipboard?.writeText?.(message).catch(() => {});
       queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste de réassort');
       toast(order && !order.error
-        ? `${order.number} créé en brouillon, texte copié · ${n} ${plu(n, 'référence')}`
+        ? `Brouillon créé · ${order.number} · texte copié · ${n} ${plu(n, 'référence')}`
         : `Liste de réassort copiée · ${n} ${plu(n, 'référence')}`);
       renderStock(); icons();
     };
@@ -1702,8 +1702,8 @@
   }
 
   function toggleReassort(id) {
-    if ((state.reassort[id] || 0) > 0) { delete state.reassort[id]; toast(`${ITEMS[id].label} retiré du réassort`); }
-    else { state.reassort[id] = ITEMS[id].reorder ? Math.max(1, ITEMS[id].reorder) : 6;   /* quantité de départ, modifiable avec − et + */ toast(`${ITEMS[id].label} ajouté au réassort`); }
+    if ((state.reassort[id] || 0) > 0) { delete state.reassort[id]; toast(`Retiré du réassort · ${ITEMS[id].label}`); }
+    else { state.reassort[id] = ITEMS[id].reorder ? Math.max(1, ITEMS[id].reorder) : 6;   /* quantité de départ, modifiable avec − et + */ toast(`Ajouté au réassort · ${ITEMS[id].label}`); }
     renderStock(); icons();
   }
 
