@@ -181,7 +181,7 @@
       });
     }
     saveSession(); renderCart();
-    if (!quiet) toast(hit.product.name + ' ajouté · ' + fmt(hit.price));
+    if (!quiet) toast('Ajouté · ' + hit.product.name + ' · ' + fmt(hit.price));
     return true;
   }
   function setQty(idx, qty) {
@@ -189,7 +189,7 @@
     qty = Math.floor(+qty || 0);
     if (qty <= 0) state.cart.splice(idx, 1);
     else if (qty <= (+l.maxStock || 0)) l.qty = qty;
-    else { toast('Stock limité à ' + l.maxStock + ' pour ' + l.name); return; }
+    else { toast('Stock limité à ' + l.maxStock + ' · ' + l.name); return; }
     saveSession(); renderCart();
   }
 
@@ -388,7 +388,7 @@
     if (state.lookup) addHit(state.lookup, true);
     renderResult(); renderCart();
     setCameraStatus('<b>' + esc(name) + '</b> créé et ajouté · lecture continue active');
-    toast(name + ' créé dans le catalogue partagé');
+    toast('Créé dans le catalogue partagé · ' + name);
   }
 
   function renderCart() {

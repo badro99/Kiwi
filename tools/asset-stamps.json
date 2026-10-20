@@ -120,8 +120,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "38",
-    "sha": "7af497b1c9e7e363"
+    "v": "39",
+    "sha": "f1a8e0c2fe791964"
   },
   "assets/caisse-link.js": {
     "v": "18",
@@ -1096,15 +1096,15 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "117",
-    "sha": "3c06c760f34c412b"
+    "v": "118",
+    "sha": "5976b6ed905d4707"
   },
   "assets/pos-epicerie.css": {
-    "v": "15",
-    "sha": "028c69129c393d18"
+    "v": "16",
+    "sha": "9e5d46709ec53871"
   },
   "assets/pos-epicerie.js": {
-    "v": "15",
+    "v": "16",
     "sha": "8d421fedff637d33"
   },
   "assets/pos-fastfood.css": {
@@ -1332,8 +1332,8 @@
     "sha": "37c5c4f2be50120f"
   },
   "assets/retail-scan.js": {
-    "v": "9",
-    "sha": "e990fda8194be650"
+    "v": "10",
+    "sha": "790cdffda7a6a78c"
   },
   "assets/rtl-numbers.js": {
     "v": "1",

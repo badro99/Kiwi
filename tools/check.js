@@ -2487,6 +2487,8 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-phone-pages-browser-test.mjs', 'dash-phone-pages-browser-test'],
     ['dash-phone-pages-ar-browser-test.mjs', 'dash-phone-pages-ar-browser-test'],
     ['dash-phone-pages-kit-browser-test.mjs', 'dash-phone-pages-kit-browser-test'],
+    /* L'épicerie (Kiwi Basic) à 390 de large, FR et AR : vues et feuilles dans l'écran, l'ardoise d'un voisin lisible. */
+    ['epicerie-phone-browser-test.mjs', 'epicerie-phone-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });
