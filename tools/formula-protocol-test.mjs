@@ -952,10 +952,10 @@ ok(recordResult.skipped === 1, 'record() increments skipped counter for kind: fo
 // ── 8. Backoffice & Restaurant Menu Workspace Formule Builder ───────────────
 const rmwSource = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
 
-// A. Test restaurant-menu-workspace.js card() formula badge
-const rmwCardMatch = rmwSource.match(/function card\(x\)\{[\s\S]*?\n  \}/);
+// A. Test restaurant-menu-workspace.js row() formula badge (the Menu page lists dishes as rows)
+const rmwCardMatch = rmwSource.match(/function row\(x\)\{[\s\S]*?\n  \}/);
 if (!rmwCardMatch) {
-  ok(false, 'card function missing in restaurant-menu-workspace.js');
+  ok(false, 'row function missing in restaurant-menu-workspace.js');
 } else {
   const rmwCardCode = `
     const cat = () => ({ name: 'Formules' });
@@ -971,9 +971,10 @@ if (!rmwCardMatch) {
     const catalogText = (_key, fallback) => fallback;
     const ui = (k,p) => k==='formula'?'FORMULE':k==='stepCount'? (p?.n||0)+' étape(s)':k==='optGroupCount'? (p?.n||0)+' groupe(s) d’options':k;
     const nutritionCardPill = () => '';
+    const msvg = () => '';
     let openItemMenu = '';
     ${rmwCardMatch[0]}
-    return card;
+    return row;
   `;
   const rmwCardFn = new Function(rmwCardCode)();
 
@@ -1000,10 +1001,10 @@ if (!rmwCardMatch) {
   const formulaCardHtml = rmwCardFn(formulaItem);
   const standardCardHtml = rmwCardFn(standardItem);
 
-  ok(formulaCardHtml.includes('FORMULE'), 'rmw card() displays FORMULE badge on formula item');
-  ok(formulaCardHtml.includes('2 étape(s)'), 'rmw card() displays slot count on formula item');
-  ok(!standardCardHtml.includes('FORMULE'), 'rmw card() does not display FORMULE badge on regular item');
-  ok(standardCardHtml.includes('1 groupe(s) d’options'), 'rmw card() displays modifier group count on regular item');
+  ok(formulaCardHtml.includes('FORMULE'), 'rmw row() displays FORMULE badge on formula item');
+  ok(formulaCardHtml.includes('2 étape(s)'), 'rmw row() displays slot count on formula item');
+  ok(!standardCardHtml.includes('FORMULE'), 'rmw row() does not display FORMULE badge on regular item');
+  ok(standardCardHtml.includes('1 groupe(s) d’options'), 'rmw row() displays modifier group count on regular item');
 }
 
 // B. Test menu-catalog.js addItem, updateItem, and ghost item cascade deletion

@@ -68,7 +68,7 @@
 <link rel="stylesheet" href="assets/simple.css" />
 <link rel="stylesheet" href="assets/ux.css" />
 <link rel="stylesheet" href="assets/pages-pro.css?v=4" />
-<link rel="stylesheet" href="assets/catalog-workspace.css?v=23" />
+<link rel="stylesheet" href="assets/catalog-workspace.css?v=24" />
 <link rel="stylesheet" href="assets/polish-dashboard.css" />
 <link rel="stylesheet" href="assets/hotel.css?v=42" />
 <!-- Shared design language for the thirteen Kiwi.appPage() destinations.
@@ -3569,12 +3569,6 @@
   .mi-section-head h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; margin: 0; color: var(--ink); }
   .mi-section-sub { font-size: 12px; color: var(--n-500); margin: 5px 0 16px; }
 
-  /* ── Tab 1 · toolbar ──────────────────────────────────────────────────── */
-  .mi-toolbar { display: flex; gap: 9px; align-items: center; margin-bottom: 11px; flex-wrap: wrap; }
-
-  .mi-cat-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 14px; }
-  .mi-cat-bar .mi-cat-pills { margin-bottom: 0; }
-  .mi-cat-bar-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
   /* ── Tab 1 · sous-catégories dans la sous-section ouverte ─────────────── */
   .mi-subchips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 13px; }
@@ -3588,8 +3582,7 @@
   .mi-classify-row.done { opacity: 0.45; border-color: var(--atlas); }
   .mi-classify-name { font-size: 13px; font-weight: 550; color: var(--ink); }
 
-  /* ── Tab 1 · item cards (grid) ────────────────────────────────────────── */
-  .mi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 12px; }
+  /* ── Tab 1 · item cards (still drawn by other surfaces) ─────────────── */
   .mi-card { background: var(--surface); border: 1px solid var(--n-200); border-radius: 12px; padding: 14px 15px; cursor: pointer; transition: border-color 140ms, transform 140ms, box-shadow 140ms, opacity 280ms; display: flex; flex-direction: column; }
   .mi-card:hover { border-color: var(--n-400); transform: translateY(-2px); box-shadow: 0 12px 26px -18px rgba(10,15,13,0.28); }
   .mi-card.removing { opacity: 0; transform: scale(0.93); }
@@ -3604,8 +3597,6 @@
   /* Dark mode: --riad/--paper text on these chips stays dark and goes invisible · relight it. */
   html[data-theme="dark"] .mi-tag.signature { color: var(--mint); }
   html[data-theme="dark"] .mi-tag.premium   { color: #EAF3EE; }
-  .mi-card-name { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin-top: 10px; }
-  .mi-card-price { font-size: 23px; font-weight: 700; letter-spacing: -0.025em; color: var(--atlas); font-feature-settings: "tnum" 1; line-height: 1; }
   .mi-card-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--n-200); }
   .mi-card-acts { display: flex; gap: 3px; margin-left: auto; }
 
@@ -4537,7 +4528,7 @@
   body.fusion-mode .st-locked-t { color: var(--paper); }
   body.fusion-mode .st-locked-b { color: rgba(247,245,240,0.7); }
 </style>
-<link rel="stylesheet" href="assets/mobile.css?v=11" />
+<link rel="stylesheet" href="assets/mobile.css?v=12" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
 <!-- Design 2026 · Liquid Glass preview · inert unless body.design-2026 (1111-gated, reversible) -->
