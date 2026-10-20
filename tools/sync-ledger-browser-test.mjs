@@ -794,4 +794,138 @@ await scenario('boutique · cash, card, split and an offline sale', async (t) =>
   }
 });
 
+/* A return in the boutique is never cash: it is an exchange or a store credit
+ * (avoir). Sale A (90 cash) to a named client, returned for a 90 credit with a
+ * manager code, then sale B (249) paid 90 by that credit and 159 in cash. The
+ * money kept is 90 + 159 = 249, the goods kept are the 249 shirt: every surface
+ * must say so, and the credit-paid part must not count as new takings. */
+async function bqAttachClient(t, page, client, create) {
+  t.step(`boutique: client ${client.name}${create ? ' (new card)' : ''}`);
+  await clickSel(page, '#bq-tk-client');
+  await page.waitForFunction(() => {
+    const v = document.querySelector('#bq-client-veil');
+    return v && v.classList.contains('is-open') && v.getAnimations().every((a) => a.playState === 'finished');
+  }, { timeout: 8000 }).catch(() => {});
+  if (create) {
+    await clickSel(page, '#bq-cl-new');
+    const name = await page.waitForSelector('#bq-cl-name', { visible: true });
+    await name.click({ clickCount: 3 }); await name.type(client.name);
+    const tel = await page.waitForSelector('#bq-cl-tel', { visible: true });
+    await tel.click({ clickCount: 3 }); await tel.type(client.phone);
+    await clickSel(page, '#bq-cl-create');
+  } else {
+    const q = await page.waitForSelector('#bq-cl-q', { visible: true });
+    await q.type(client.phone);
+    await sleep(500);
+    await clickText(page, '[data-bq-cl]', new RegExp(reEsc(client.name)));
+  }
+  await sleep(700);
+}
+async function bqCart(page, names) {
+  for (const name of names) {
+    await clickText(page, '[data-bq-item]', new RegExp(reEsc(name)));
+    await sleep(500);
+    await clickSel(page, '#bq-sheet-add');
+    await sleep(500);
+  }
+}
+async function bqWaitCount(page, n) {
+  const head = await until(page, (want) => {
+    const m = /(\d+)\s+ventes?/.exec(document.querySelector('#bq-today')?.textContent || '');
+    return { ok: !!m && Number(m[1]) === want, n: m && Number(m[1]) };
+  }, n);
+  if (!head.ok) throw new Error(`boutique till did not count the sale (${head.n} instead of ${n})`);
+}
+async function bqFinishReceipt(page) {
+  const done = await page.waitForSelector('#bq-pay-done', { visible: true, timeout: 4000 }).catch(() => null);
+  if (done) { try { await done.click(); } catch (_) {} }
+  await sleep(600);
+}
+
+await scenario('boutique · a return for store credit, then the credit spent', async (t) => {
+  const client = { name: 'TEST Cliente Avoir', phone: '0611223344' };
+  const n0 = (await bqHead(bq)).tx;
+
+  t.step('boutique: sale A, TEST Foulard, cash, to a named client');
+  await bqCart(bq, ['TEST Foulard']);
+  await bqAttachClient(t, bq, client, true);
+  await clickSel(bq, '#bq-validate');
+  await sleep(900);
+  await clickSel(bq, '[data-bq-m="especes"]');
+  await sleep(600);
+  await clickSel(bq, '#bq-cash-ok');
+  await sleep(1000);
+  await bqFinishReceipt(bq);
+  await bqWaitCount(bq, n0 + 1);
+  bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Foulard'] });
+  await sleep(5000); // the sale reaches the server before a credit can be issued against it
+
+  t.step('boutique: return TEST Foulard for a store credit');
+  await clickSel(bq, '[data-bq-view="echanges"]');
+  await sleep(900);
+  const rq = await bq.waitForSelector('#bq-ret-q', { visible: true });
+  await rq.type(client.phone);
+  await sleep(900);
+  await clickText(bq, '[data-bq-pick]', /TEST Foulard/);
+  await sleep(500);
+  await clickSel(bq, '[data-bq-motif="Taille"]');
+  await sleep(400);
+  await clickSel(bq, '[data-bq-do-avoir]');
+  await managerCode(bq, BOUT);
+  const issued = await until(bq, () => {
+    const m = /AV-[A-Z0-9-]+/.exec(document.querySelector('[data-bq-panel="echanges"]')?.innerText || '');
+    return { ok: !!m, code: m && m[0] };
+  }, null, 20000);
+  check(!!issued.ok, 'boutique till · the return issues a store credit', 'no AV- code on the Échanges page');
+  const head1 = await bqHead(bq);
+  const want1 = { ...ledger(bqRows), tx: n0 + 1 };
+  compare('boutique till header after the return', { tx: head1.tx, net: head1.net }, want1);
+
+  t.step('boutique: sale B, TEST Chemise lin, the credit then cash');
+  /* The credit voucher stays on screen until the cashier closes it. */
+  await clickSel(bq, '#bq-avoir-veil [data-bq-close]');
+  await sleep(600);
+  await clickSel(bq, '[data-bq-view="vente"]');
+  await sleep(800);
+  await bqCart(bq, ['TEST Chemise lin']);
+  await bqAttachClient(t, bq, client, false);
+  await clickSel(bq, '#bq-validate');
+  await sleep(900);
+  await clickSel(bq, '[data-bq-m="avoir"]');
+  await sleep(700);
+  if (issued.code) await clickSel(bq, `[data-bq-av-use="${issued.code}"]`);
+  else await clickSel(bq, '[data-bq-av-use]');
+  await sleep(1200);
+  await clickSel(bq, '[data-bq-m="especes"]');
+  await sleep(600);
+  const due = await bq.$eval('#bq-cash-in', (e) => e.value).catch(() => '');
+  eqCents(cents(due), BQ['TEST Chemise lin'] - BQ['TEST Foulard'], 'boutique till · cash due after the credit');
+  await clickSel(bq, '#bq-cash-ok');
+  await sleep(1000);
+  await bqFinishReceipt(bq);
+  await bqWaitCount(bq, n0 + 2);
+  bqRows.push({ kind: 'sale', method: 'cash', cents: BQ['TEST Chemise lin'] - BQ['TEST Foulard'] });
+  await sleep(6000);
+
+  const want = { ...ledger(bqRows), tx: n0 + 2 };
+  want.basket = Math.round(want.gross / want.tx);
+  const head = await bqHead(bq);
+  compare('boutique till header after the credit is spent', { tx: head.tx, net: head.net }, want);
+  const clo = await bqCloture(bq);
+  compare('boutique till clôture after a return for credit', { tx: clo.tx, net: clo.net, card: clo.card, cash: clo.cash }, want);
+  const server = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(BOUT.slug);
+  check(Number(server.c) === want.net, `server ledger · ${mad(want.net)} MAD kept after a return for credit`, `D1 sums ${mad(Number(server.c))} MAD over ${server.n} rows`);
+
+  const dash = owners.boutique.page;
+  await openDashboard(t, dash, BOUT);
+  const home = await dashHome(dash, null);
+  eqCents(home.net, want.net, 'boutique dashboard home · revenue after a return for credit');
+  eqCents(home.hero, want.net, 'boutique dashboard home · revenue hero after a return for credit');
+  eqCents(home.mix, want.net, 'boutique dashboard home · payment ring after a return for credit');
+  const tx = await dashTransactions(dash);
+  eqCents(tx.net, want.net, 'boutique dashboard transactions · net after a return for credit');
+  const rep = await dashReport(dash, 0);
+  compare('boutique dashboard day report after a return for credit', { net: rep.net, card: rep.card, cash: rep.cash }, want);
+});
+
 await S.finish();
