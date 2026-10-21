@@ -8756,7 +8756,10 @@
     if (IS_DEMO) return;
     try {
       const s = JSON.parse(localStorage.getItem(BQ_SHIFT_KEY) || 'null');
-      if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0 };
+      /* Maison annonce ses postes depuis l'ouverture : un poste plus ancien
+         que le drapeau openSent l'a déjà été. */
+      if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0,
+        sid: String(s.sid || ''), openSent: s.openSent !== false };
     } catch (_) {}
   })();
   /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
@@ -8768,12 +8771,24 @@
    * durable que les autres verticales (KiwiCashSessions, boîte d'envoi hors
    * ligne comprise). Aucun chiffre n'est recalculé ici : ils viennent du
    * rapport Z, le document qui fait foi. */
+  /* L'identifiant est posé à l'ouverture et ne bouge plus : l'ouverture et la
+     clôture d'un même poste doivent toujours se retrouver au registre. */
   function bqSessionId() {
-    return 'bq-' + (bqShift && bqShift.openedAt ? bqShift.openedAt : 0);
+    return bqShift && bqShift.sid ? bqShift.sid : 'bq-' + (bqShift && bqShift.openedAt ? bqShift.openedAt : 0);
+  }
+  /* L'ouverture, annoncée une fois. Sans elle le serveur refuse la clôture
+     (session-not-open) et la caisse finit par la mettre de côté. */
+  function bqAnnounceOpen() {
+    if (!bqShift || bqShift.openSent) return false;
+    if (!bqCashEvent('open', { countedCents: bqCents(bqShift.float) })) return false;
+    bqShift.openSent = true;
+    bqShiftPersist();
+    return true;
   }
   function bqActorId() {
     const s = (STAFF && STAFF.caissiere) || {};
-    return String(s.id || s.code || s.name || 'caisse');
+    /* Jamais un code : un code de caisse est un secret, pas une identité. */
+    return String(s.id || s.name || 'caisse');
   }
   function bqCashEvent(eventType, extra) {
     if (IS_DEMO) return false;
@@ -9016,6 +9031,7 @@
   }
   function bqSaveProvisional(force) {
     if (IS_DEMO || !window.KiwiDayReport || !bqShift) return;
+    bqAnnounceOpen();
     bqZQueue(false);
     if (!force && Date.now() - bqLastProv < 90000) return;
     bqLastProv = Date.now();
@@ -9204,10 +9220,11 @@
       if (!chosen) { gate(); return; }
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
       icons();
-      bqShift = { openedAt: Date.now(), openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat };
+      const openedAt = Date.now();
+      bqShift = { openedAt, openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat, sid: 'bq-' + openedAt, openSent: false };
       bqShiftPersist();
       /* Le fond d'ouverture est le premier chiffre du rapprochement. */
-      bqCashEvent('open', { countedCents: bqCents(bqFloat) });
+      bqAnnounceOpen();
       bqSaveProvisional(true);
       setTimeout(() => el.classList.add('is-leaving'), 420);
       setTimeout(() => { clearInterval(timer); el.remove(); }, 940);

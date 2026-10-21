@@ -170,6 +170,58 @@ ${slice('bqCashEvent')}
   ok(close && close.gapCents === -500, 'un manque de 5 MAD est annoncé comme −500 centimes');
 }
 
+/* ═══ La boutique ouvre et clôture son poste au registre, comme Maison ═══ */
+{
+  /* Santos Store, 21 octobre : 211 ventes en deux semaines, aucune ligne dans
+     cash_session_events. La caisse boutique n'émettait rien. */
+  const fn = (src, name) => {
+    const head = src.indexOf(`\n  function ${name}(`);
+    return head < 0 ? '' : src.slice(head, src.indexOf('\n  }\n', head) + 4);
+  };
+  for (const name of ['bqSessionId', 'bqActorId', 'bqCashEvent', 'bqAnnounceOpen'])
+    ok(fn(BOUTIQUE, name) && fn(BOUTIQUE, name) === fn(MAISON, name), `boutique : ${name} est le même code que Maison`);
+  for (const [till, src] of [['maison', MAISON], ['boutique', BOUTIQUE]]) {
+    ok(/sid: 'bq-' \+ openedAt, openSent: false \};\s*bqShiftPersist\(\);[\s\S]{0,120}bqAnnounceOpen\(\);/.test(src),
+      `${till} : un poste neuf reçoit un identifiant fixe et annonce son ouverture`);
+    ok(/function bqSaveProvisional\(force\) \{[\s\S]{0,120}bqAnnounceOpen\(\);/.test(src),
+      `${till} : un poste repris sans ouverture annoncée s'annonce au premier passage`);
+  }
+  ok(/openSent: !!s\.openSent/.test(BOUTIQUE), 'boutique : un poste d\'avant cette version n\'a jamais été annoncé');
+  ok(/openSent: s\.openSent !== false/.test(MAISON), 'maison : un poste d\'avant le drapeau a déjà été annoncé, pas de seconde ouverture');
+  const closeB = BOUTIQUE.slice(BOUTIQUE.indexOf('function bqCloseRegister()'), BOUTIQUE.indexOf('function bqFinishClose()'));
+  ok(closeB.indexOf("bqCashEvent('close'") >= 0 && closeB.indexOf("bqCashEvent('close'") < closeB.indexOf('bqShift = null'),
+    'boutique : la clôture est émise avant l\'effacement du poste');
+  ok(/gapCents: bqCents\(countedCash\) - bqCents\(bqCloExpected\)/.test(closeB), 'boutique : écart = compté − attendu');
+  for (const [till, src] of [['maison', MAISON], ['boutique', BOUTIQUE]])
+    ok(!/s\.code/.test(fn(src, 'bqActorId')), `${till} : l'acteur n'est jamais un code de caisse`);
+  /* bqAnnounceOpen exécuté : une fois, pas deux ; réessayé si l'envoi échoue. */
+  const box = { JSON, Object, String, Number, Math, Date, emitted: [], fail: true, persisted: 0 };
+  box.window = { KiwiCashSessions: { emit: (e) => { if (box.fail) return false; box.emitted.push(e); return true; } } };
+  vm.createContext(box);
+  vm.runInContext(`(function(){
+    const IS_DEMO = false;
+    const STAFF = { caissiere: { name: 'Salma' } };
+    let bqShift = { openedAt: 1700000000000, openedBy: 'Salma', float: 500, sid: 'bq-1700000000000', openSent: false };
+    function bqShiftPersist() { persisted++; }
+    const bqCents = (v) => Math.round((+v || 0) * 100);
+${fn(BOUTIQUE, 'bqSessionId')}
+${fn(BOUTIQUE, 'bqActorId')}
+${fn(BOUTIQUE, 'bqCashEvent')}
+${fn(BOUTIQUE, 'bqAnnounceOpen')}
+    globalThis.first = bqAnnounceOpen();
+    fail = false;
+    globalThis.second = bqAnnounceOpen();
+    globalThis.third = bqAnnounceOpen();
+    bqShift.openedAt = 1700000000000 - 30 * 3600000;
+    globalThis.sidAfterMove = bqSessionId();
+  })()`, box);
+  ok(box.first === false && box.second === true && box.third === false && box.emitted.length === 1,
+    'boutique : l\'ouverture part une seule fois, et repart si le premier envoi a échoué');
+  ok(box.emitted[0] && box.emitted[0].countedCents === 50000 && box.emitted[0].sessionId === 'bq-1700000000000' && box.emitted[0].actorId === 'Salma',
+    'boutique : l\'ouverture porte le fond en centimes, la session fixe et la vendeuse');
+  ok(box.sidAfterMove === 'bq-1700000000000', 'boutique : la session ne change pas si l\'heure d\'ouverture est relue autrement');
+}
+
 /* ═══ #0027 · une impression ratée se dit ratée ═══════════════════════════ */
 {
   ok(/thermalFailed/.test(RECEIPT), 'receipt.js distingue un repli d\'une vraie impression');

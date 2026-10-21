@@ -1009,6 +1009,42 @@ await scenario('boutique · a shift left open overnight files today under today'
     days[yesterday] ? `${days[yesterday].txns} transaction(s), ${days[yesterday].net} MAD` : '');
 });
 
+/* The boutique till announced nothing to cash_session_events: Santos Store had
+ * no opening and no close on record in two weeks of trading. Close the till
+ * for real, counting the drawer, and read what the server kept: the opening,
+ * the close with counted, expected and gap, and the closing Z comparison. */
+await scenario('boutique · the close reaches the cash register ledger', async (t) => {
+  if (!bq) throw new Error('no boutique till from the previous scenarios');
+  t.step('boutique: open the close, count 100 MAD, close the till');
+  await clickSel(bq, '#bq-close-day');
+  await bq.waitForSelector('#bqclo-count', { visible: true, timeout: 15000 });
+  await bq.type('#bqclo-count', '100');
+  await sleep(400);
+  await clickSel(bq, '#bqclo-close');
+  await sleep(2500);
+  let rows = [];
+  for (let i = 0; i < 40; i++) {
+    rows = stack.db.prepare('SELECT session_id, event_type, expected_cents, counted_cents, gap_cents FROM cash_session_events WHERE merchant = ? ORDER BY occurred_ts').all(BOUT.slug);
+    if (rows.some((r) => r.event_type === 'close')) break;
+    await bq.evaluate(() => { try { window.dispatchEvent(new Event('online')); } catch (_) {} });
+    await sleep(1000);
+  }
+  const close = rows.filter((r) => r.event_type === 'close').pop();
+  const open = close && rows.find((r) => r.event_type === 'open' && r.session_id === close.session_id);
+  check(!!open, 'cash register ledger · the boutique shift\'s opening is on record', `events: ${rows.map((r) => r.event_type + ':' + r.session_id).join(', ') || 'none'}`);
+  check(!!close && Number(close.counted_cents) === 10000, 'cash register ledger · the close carries the 100 MAD counted', close ? `counted ${close.counted_cents}` : 'no close event');
+  check(!!close && Number(close.gap_cents) === Number(close.counted_cents) - Number(close.expected_cents),
+    'cash register ledger · gap = counted − expected', close ? `expected ${close.expected_cents}, gap ${close.gap_cents}` : 'no close event');
+  let z = null;
+  for (let i = 0; i < 30; i++) {
+    try { z = stack.db.prepare('SELECT status, result_json FROM z_reconciliations WHERE merchant = ? ORDER BY updated_ts DESC LIMIT 1').get(BOUT.slug); } catch (_) { z = null; }
+    if (z && JSON.parse(z.result_json || '{}').closed === true && z.status === 'matched') break;
+    await sleep(1000);
+  }
+  check(!!z && z.status === 'matched' && JSON.parse(z.result_json || '{}').closed === true,
+    'boutique till · the closing Z comparison is on record, matched', z ? `status ${z.status}, closed ${JSON.parse(z.result_json || '{}').closed}` : 'no row');
+});
+
 /* A guest orders from the table's QR page (OrderPro), the till accepts the
  * order and cashes it. Pastilla 85 + Café noir 12,25: a dish with centimes,
  * because a 14,50 café was once charged 15 (Q1). The guest page, the till, the

@@ -7230,9 +7230,57 @@
     if (IS_DEMO) return;
     try {
       const s = JSON.parse(localStorage.getItem(BQ_SHIFT_KEY) || 'null');
-      if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0 };
+      /* Un poste ouvert avant que la boutique n'annonce ses postes n'a jamais
+         été vu du registre : il s'annonce au premier passage (bqAnnounceOpen). */
+      if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0,
+        sid: String(s.sid || ''), openSent: !!s.openSent };
     } catch (_) {}
   })();
+  /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
+   * La caisse boutique tenait son poste entièrement pour elle : aucun
+   * événement de session n'était émis (Santos Store, 211 ventes en deux
+   * semaines, aucune ouverture ni clôture au registre), donc `cash_session_events` restait vide pour ce
+   * commerce et le rapprochement de caisse regardait un terminal qui, pour lui,
+   * n'avait jamais ouvert ni fermé. On émet donc les deux bornes du poste —
+   * ouverture (fond) et clôture (attendu / compté / écart) — par le MÊME canal
+   * durable que les autres verticales (KiwiCashSessions, boîte d'envoi hors
+   * ligne comprise). Aucun chiffre n'est recalculé ici : ils viennent du
+   * rapport Z, le document qui fait foi. */
+  /* L'identifiant est posé à l'ouverture et ne bouge plus : l'ouverture et la
+     clôture d'un même poste doivent toujours se retrouver au registre. */
+  function bqSessionId() {
+    return bqShift && bqShift.sid ? bqShift.sid : 'bq-' + (bqShift && bqShift.openedAt ? bqShift.openedAt : 0);
+  }
+  /* L'ouverture, annoncée une fois. Sans elle le serveur refuse la clôture
+     (session-not-open) et la caisse finit par la mettre de côté. */
+  function bqAnnounceOpen() {
+    if (!bqShift || bqShift.openSent) return false;
+    if (!bqCashEvent('open', { countedCents: bqCents(bqShift.float) })) return false;
+    bqShift.openSent = true;
+    bqShiftPersist();
+    return true;
+  }
+  function bqActorId() {
+    const s = (STAFF && STAFF.caissiere) || {};
+    /* Jamais un code : un code de caisse est un secret, pas une identité. */
+    return String(s.id || s.name || 'caisse');
+  }
+  function bqCashEvent(eventType, extra) {
+    if (IS_DEMO) return false;
+    const CS = window.KiwiCashSessions;
+    if (!CS || typeof CS.emit !== 'function' || !bqShift || !bqShift.openedAt) return false;
+    try {
+      return CS.emit(Object.assign({
+        sessionId: bqSessionId(),
+        eventType,
+        actorId: bqActorId(),
+        openedAt: bqShift.openedAt,
+        occurredAt: Date.now(),
+      }, extra || {}));
+    } catch (_) { return false; }
+  }
+  const bqCents = (v) => Math.round((+v || 0) * 100);
+
   function bqShiftPersist() {
     try {
       if (bqShift) localStorage.setItem(BQ_SHIFT_KEY, JSON.stringify(bqShift));
@@ -7461,6 +7509,7 @@
   }
   function bqSaveProvisional(force) {
     if (IS_DEMO || !window.KiwiDayReport || !bqShift) return;
+    bqAnnounceOpen();
     bqZQueue(false);
     if (!force && Date.now() - bqLastProv < 90000) return;
     bqLastProv = Date.now();
@@ -7649,8 +7698,11 @@
       if (!chosen) { gate(); return; }
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
       icons();
-      bqShift = { openedAt: Date.now(), openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat };
+      const openedAt = Date.now();
+      bqShift = { openedAt, openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat, sid: 'bq-' + openedAt, openSent: false };
       bqShiftPersist();
+      /* Le fond d'ouverture est le premier chiffre du rapprochement. */
+      bqAnnounceOpen();
       bqSaveProvisional(true);
       setTimeout(() => el.classList.add('is-leaving'), 420);
       setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
@@ -7825,6 +7877,14 @@
       toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
       return;
     }
+    /* Émis AVANT d'effacer le poste : l'événement porte openedAt et sessionId.
+       Un comptage laissé vide annonce l'attendu comme compté, écart nul. */
+    const countedCash = counted == null ? bqCloExpected : counted;
+    bqCashEvent('close', {
+      expectedCents: bqCents(bqCloExpected),
+      countedCents: bqCents(countedCash),
+      gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
+    });
     bqZQueue(true);
     bqShift = null;
     bqShiftPersist();
