@@ -4,6 +4,14 @@
 (function () {
   'use strict';
 
+  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  function L(fr, en, ar) { var l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
+  /* English / Arabic counted nouns (French stays inline where it was). */
+  function enItems(n) { return n + (n === 1 ? ' item' : ' items'); }
+  function arItems(n, nom) { return n === 1 ? 'قطعة واحدة' : n === 2 ? (nom ? 'قطعتان' : 'قطعتين') : n + (n >= 3 && n <= 10 ? ' قطع' : ' قطعة'); }
+  function enDays(n) { return n + (n === 1 ? ' day' : ' days'); }
+  function arDays(n) { return n === 1 ? 'يوم واحد' : n === 2 ? 'يومين' : n + (n >= 3 && n <= 10 ? ' أيام' : ' يومًا'); }
+
   var DAY = 86400000;
   var tillSales = [];
   var tillMerchant = '';
@@ -64,7 +72,7 @@
     var cats = {}, products = [];
     if (!api) return { cats: cats, products: products };
     var byId = {};
-    try { (api.listCategories() || []).forEach(function (c) { cats[String(c.id)] = String(c.name || 'Sans catégorie'); }); } catch (_) {}
+    try { (api.listCategories() || []).forEach(function (c) { cats[String(c.id)] = String(c.name || L('Sans catégorie', 'Uncategorised', 'بدون فئة')); }); } catch (_) {}
     try { products = api.listProducts({}) || []; } catch (_) { try { products = api.listProducts() || []; } catch (__) {} }
     products.forEach(function (p) {
       try { p._soldStock = (api.listVariants(p.id) || []).reduce(function(n,v){return n + Math.max(0,Number(v.stock)||0);},0); }
@@ -99,7 +107,7 @@
       var total = Number(l && l.total);
       if (!Number.isFinite(total)) total = (Number(l && (l.unit || l.unitPrice)) || 0) * qty;
       var cid = String((l && (l.cat || l.category || l.categoryId)) || (p && p.categoryId) || '');
-      return { name: String((p && p.name) || (l && l.name) || 'Article'), qty: qty, total: Math.max(0, total || 0), cat: cat.cats[cid] || String((l && (l.cat || l.category)) || 'Sans catégorie'), stock: p && p._soldStock };
+      return { name: String((p && p.name) || (l && l.name) || L('Article', 'Item', 'صنف')), qty: qty, total: Math.max(0, total || 0), cat: cat.cats[cid] || String((l && (l.cat || l.category)) || L('Sans catégorie', 'Uncategorised', 'بدون فئة')), stock: p && p._soldStock };
     }).filter(function (l) { return l.name; }) : [];
     return { ts: ts, amount: Math.max(0, Number(raw && (raw.amount || raw.total)) || 0), ref: String(raw && (raw.ref || raw.id) || ''), lines: lines };
   }
@@ -160,7 +168,7 @@
     document.head.appendChild(s);
   }
   function rangeLabel(range) {
-    if (!range) return 'Dates';
+    if (!range) return L('Dates', 'Dates', 'التواريخ');
     var from = parseDateKey(range.from), to = parseDateKey(range.to);
     var options = { day:'numeric', month:'short' };
     if (range.from === range.to) return from.toLocaleDateString('fr-FR', options);
@@ -168,7 +176,7 @@
   }
   function dayControls(days, till, custom) {
     var quick = [1,7,30,90].filter(function(d){ return !till || d <= 30; }).map(function (d) {
-      var label = d === 1 ? "Aujourd'hui" : d + ' jours';
+      var label = d === 1 ? L("Aujourd'hui", 'Today', 'اليوم') : L(d + ' jours', enDays(d), arDays(d));
       return '<button type="button" class="' + (!custom && days === d ? 'on' : '') + '" data-ksold-days="' + d + '">' + label + '</button>';
     }).join('');
     return quick + '<button type="button" class="' + (custom ? 'on' : '') + '" data-ksold-custom="1">' + esc(rangeLabel(custom)) + '</button>';
@@ -178,19 +186,40 @@
     if (!p.open) return '';
     var max = dateKey(new Date());
     var fields = p.mode === 'day'
-      ? '<div class="ksold-date-fields one"><label>Jour exact<input type="date" max="'+max+'" value="'+esc(p.day)+'" data-ksold-day></label></div>'
-      : '<div class="ksold-date-fields"><label>Du<input type="date" max="'+max+'" value="'+esc(p.from)+'" data-ksold-from></label><label>Au<input type="date" max="'+max+'" value="'+esc(p.to)+'" data-ksold-to></label></div>';
-    return '<div class="ksold-picker"><div class="ksold-picker-box"><div class="ksold-modes"><button type="button" class="'+(p.mode==='day'?'on':'')+'" data-ksold-mode="day">Jour exact</button><button type="button" class="'+(p.mode==='range'?'on':'')+'" data-ksold-mode="range">Période</button></div>'+fields+'<div class="ksold-picker-actions"><span class="ksold-date-error">'+esc(p.error||'')+'</span><button type="button" data-ksold-cancel>Annuler</button><button type="button" data-ksold-apply>Appliquer</button></div></div></div>';
+      ? '<div class="ksold-date-fields one"><label>'+L('Jour exact','Exact day','يوم محدد')+'<input type="date" max="'+max+'" value="'+esc(p.day)+'" data-ksold-day></label></div>'
+      : '<div class="ksold-date-fields"><label>'+L('Du','From','من')+'<input type="date" max="'+max+'" value="'+esc(p.from)+'" data-ksold-from></label><label>'+L('Au','To','إلى')+'<input type="date" max="'+max+'" value="'+esc(p.to)+'" data-ksold-to></label></div>';
+    return '<div class="ksold-picker"><div class="ksold-picker-box"><div class="ksold-modes"><button type="button" class="'+(p.mode==='day'?'on':'')+'" data-ksold-mode="day">'+L('Jour exact','Exact day','يوم محدد')+'</button><button type="button" class="'+(p.mode==='range'?'on':'')+'" data-ksold-mode="range">'+L('Période','Period','الفترة')+'</button></div>'+fields+'<div class="ksold-picker-actions"><span class="ksold-date-error">'+esc(p.error||'')+'</span><button type="button" data-ksold-cancel>'+L('Annuler','Cancel','إلغاء')+'</button><button type="button" data-ksold-apply>'+L('Appliquer','Apply','تطبيق')+'</button></div></div></div>';
   }
   function recommendations(a) {
     var out = [];
-    if (a.pairs[0] && a.pairs[0].count >= 2) out.push({ title: 'Bundle suggéré', text: a.pairs[0].a + ' + ' + a.pairs[0].b + ' ont été achetés ensemble ' + a.pairs[0].count + ' fois. Testez une offre groupée sans remiser avant d’avoir mesuré son effet.' });
-    if (a.products[0]) out.push({ title: 'Produit moteur', text: a.products[0].name + ' mène la période avec ' + a.products[0].qty + ' pièce' + (a.products[0].qty>1?'s':'') + '. Placez les compléments les plus associés à proximité.' });
+    if (a.pairs[0] && a.pairs[0].count >= 2) {
+      var pr = a.pairs[0];
+      out.push({ title: L('Bundle suggéré', 'Suggested bundle', 'حزمة مقترحة'), text: L(
+        pr.a + ' + ' + pr.b + ' ont été achetés ensemble ' + pr.count + ' fois. Testez une offre groupée sans remiser avant d’avoir mesuré son effet.',
+        pr.a + ' + ' + pr.b + ' were bought together ' + pr.count + ' times. Test a bundle offer without discounting before you have measured its effect.',
+        'تم شراء ' + pr.a + ' + ' + pr.b + ' معًا ' + pr.count + ' مرات. جرّب عرضًا مجمّعًا دون تخفيض قبل قياس أثره.') });
+    }
+    if (a.products[0]) {
+      var top = a.products[0];
+      out.push({ title: L('Produit moteur', 'Top seller', 'المنتج الأبرز'), text: L(
+        top.name + ' mène la période avec ' + top.qty + ' pièce' + (top.qty>1?'s':'') + '. Placez les compléments les plus associés à proximité.',
+        top.name + ' leads the period with ' + enItems(top.qty) + '. Place the products most often bought with it nearby.',
+        top.name + ' يتصدّر الفترة بـ ' + arItems(top.qty) + '. ضع المنتجات المكمّلة الأكثر ارتباطًا به بالقرب منه.') });
+    }
     var restock = a.products.filter(function(p){return Number.isFinite(p.stock) && p.stock <= Math.max(2,p.qty);})[0];
-    if (restock) out.push({ title: 'Réassort à anticiper', text: restock.name + ' a vendu ' + restock.qty + ' pièce(s) sur la période et il en reste ' + restock.stock + '. Vérifiez le prochain arrivage avant une rupture.' });
+    if (restock) out.push({ title: L('Réassort à anticiper', 'Restock soon', 'تجديد المخزون قريبًا'), text: L(
+      restock.name + ' a vendu ' + restock.qty + ' pièce(s) sur la période et il en reste ' + restock.stock + '. Vérifiez le prochain arrivage avant une rupture.',
+      restock.name + ' sold ' + enItems(restock.qty) + ' in the period and ' + restock.stock + ' left. Check the next delivery before you run out.',
+      'تم بيع ' + arItems(restock.qty) + ' من ' + restock.name + ' خلال الفترة ويتبقى منه ' + restock.stock + '. تحقّق من موعد التوريد القادم قبل نفاد المخزون.') });
     var down = a.products.filter(function(p){return p.previousQty >= 2 && p.qty < p.previousQty;}).sort(function(x,y){return (x.qty-x.previousQty)-(y.qty-y.previousQty);})[0];
-    if (down) out.push({ title: 'Sous-performance à regarder', text: down.name + ' passe de ' + down.previousQty + ' à ' + down.qty + ' pièce(s) par rapport aux ' + a.days + ' jours précédents. Vérifiez exposition, taille disponible et prix avant toute promotion.' });
-    if (!out.length) out.push({ title: 'Analyse en apprentissage', text: 'Il faut au moins deux paniers avec plusieurs produits pour recommander un bundle fiable. Les ventes déjà enregistrées restent visibles ci-dessous.' });
+    if (down) out.push({ title: L('Sous-performance à regarder', 'Underperformer to watch', 'منتج متراجع يستحق المتابعة'), text: L(
+      down.name + ' passe de ' + down.previousQty + ' à ' + down.qty + ' pièce(s) par rapport aux ' + a.days + ' jours précédents. Vérifiez exposition, taille disponible et prix avant toute promotion.',
+      down.name + ' fell from ' + down.previousQty + ' to ' + enItems(down.qty) + ' compared with the previous ' + enDays(a.days) + '. Check display, available sizes and price before any promotion.',
+      'انخفضت مبيعات ' + down.name + ' من ' + down.previousQty + ' إلى ' + arItems(down.qty) + ' مقارنة بالفترة السابقة (' + arDays(a.days) + '). تحقّق من العرض والمقاس المتوفر والسعر قبل أي عرض ترويجي.') });
+    if (!out.length) out.push({ title: L('Analyse en apprentissage', 'Analysis still learning', 'التحليل قيد التعلّم'), text: L(
+      'Il faut au moins deux paniers avec plusieurs produits pour recommander un bundle fiable. Les ventes déjà enregistrées restent visibles ci-dessous.',
+      'At least two baskets with several products are needed to recommend a reliable bundle. Sales already recorded remain visible below.',
+      'يلزم سلتان على الأقل تحتويان على عدة منتجات للتوصية بحزمة موثوقة. تبقى المبيعات المسجّلة ظاهرة أدناه.') });
     return out;
   }
   /* An empty period is the most-seen state on this page — a new boutique lands
@@ -199,25 +228,27 @@
    * Icon is Material Symbols (Outlined 400, viewBox="0 -960 960 960"), per the
    * icon rule in CLAUDE.md §4 — currentColor fill, no hand-drawn paths. */
   function emptyState(a) {
-    var per = a.custom ? 'du ' + rangeLabel(a.custom) : (a.days === 1 ? "aujourd’hui" : 'sur les ' + a.days + ' derniers jours');
+    var per = a.custom
+      ? L('du ' + rangeLabel(a.custom), 'for ' + rangeLabel(a.custom), 'للفترة ' + rangeLabel(a.custom))
+      : (a.days === 1 ? L("aujourd’hui", 'today', 'اليوم') : L('sur les ' + a.days + ' derniers jours', 'in the last ' + enDays(a.days), 'خلال آخر ' + arDays(a.days)));
     return '<div class="kx-empty">'
       + '<div class="ico"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-80q-33 0-56.5-23.5T200-160v-480q0-33 23.5-56.5T280-720h80q0-83 58.5-141.5T560-920q83 0 141.5 58.5T760-720h80q33 0 56.5 23.5T920-640v480q0 33-23.5 56.5T840-80H280Zm0-80h560v-480h-80v80q0 17-11.5 28.5T720-520q-17 0-28.5-11.5T680-560v-80H440v80q0 17-11.5 28.5T400-520q-17 0-28.5-11.5T360-560v-80h-80v480Zm160-560h240q0-50-35-85t-85-35q-50 0-85 35t-35 85ZM280-160v-480 480Z"/></svg></div>'
-      + '<h3>Aucune vente détaillée ' + esc(per) + '</h3>'
-      + '<p>Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.</p>'
+      + '<h3>' + L('Aucune vente détaillée ', 'No detailed sales ', 'لا توجد مبيعات مفصّلة ') + esc(per) + '</h3>'
+      + '<p>' + L('Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.', 'As soon as a receipt is rung up at the till with its products, it appears here: quantities, categories, related baskets and recommendations.', 'بمجرد تحصيل إيصال في الصندوق مع منتجاته، يظهر هنا: الكميات والفئات والسلال المرتبطة والتوصيات.') + '</p>'
       + '</div>';
   }
   function body(a, owner) {
     if (!a.sales.length) return '<div class="ksold-full">' + emptyState(a) + '</div>';
     var max = a.products[0] ? a.products[0].qty : 1;
-    var productRows = a.products.slice(0, owner ? 20 : 12).map(function (p) { return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.name)+'</div><div class="ksold-meta">'+esc(p.category)+' · dernière vente '+new Date(p.last).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+(Number.isFinite(p.stock)?' · '+p.stock+' en stock':'')+'</div><div class="ksold-bar"><i style="width:'+Math.max(4,Math.round(p.qty/max*100))+'%"></i></div></div><div class="ksold-val">'+p.qty+' pce'+(p.qty>1?'s':'')+'<div class="ksold-meta">'+fmt(p.revenue)+' MAD</div></div></div>'; }).join('');
-    var catRows = a.categories.map(function(c){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(c.name)+'</div><div class="ksold-meta">'+c.qty+' pièce'+(c.qty>1?'s':'')+'</div></div><div class="ksold-val">'+fmt(c.revenue)+' MAD</div></div>';}).join('');
-    var pairRows = a.pairs.slice(0,8).map(function(p){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.a)+' + '+esc(p.b)+'</div><div class="ksold-meta">Même ticket</div></div><div class="ksold-val">'+p.count+'×</div></div>';}).join('') || '<div class="ksold-note">Aucune association répétée pour l’instant.</div>';
-    var timeline = a.sales.slice(0,20).map(function(s){return '<div class="ksold-row"><div><div class="ksold-name">'+s.lines.map(function(l){return l.qty+'× '+esc(l.name);}).join(' · ')+'</div><div class="ksold-meta">'+esc(s.ref || 'Ticket')+'</div></div><div><div class="ksold-val">'+fmt(s.amount || s.lines.reduce(function(n,l){return n+l.total;},0))+' MAD</div><div class="ksold-time">'+new Date(s.ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div></div></div>';}).join('');
-    var ai = owner ? '<section class="ksold-card ksold-ai"><div class="ksold-ai-tag">✦ Kiwi AI · basé sur vos ventes</div>'+recommendations(a).map(function(r){return '<div class="ksold-rec"><b>'+esc(r.title)+'</b><p>'+esc(r.text)+'</p></div>';}).join('')+'</section>' : '<section class="ksold-card"><h2>Produits vendus ensemble</h2><div class="ksold-note">Associations constatées sur les tickets</div>'+pairRows+'</section>';
-    return '<section class="ksold-card"><h2>Produits</h2><div class="ksold-note">Quantité, chiffre et dernière vente</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>Catégories</h2><div class="ksold-note">Contribution par rayon</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>Produits vendus ensemble</h2><div class="ksold-note">Paniers réellement observés</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>Historique détaillé</h2><div class="ksold-note">Quand et dans quel panier chaque produit a été vendu</div>'+timeline+'</section>';
+    var productRows = a.products.slice(0, owner ? 20 : 12).map(function (p) { return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.name)+'</div><div class="ksold-meta">'+esc(p.category)+' · '+L('dernière vente','last sale','آخر بيع')+' '+new Date(p.last).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+(Number.isFinite(p.stock)?' · '+L(p.stock+' en stock',p.stock+' in stock','في المخزون: '+p.stock):'')+'</div><div class="ksold-bar"><i style="width:'+Math.max(4,Math.round(p.qty/max*100))+'%"></i></div></div><div class="ksold-val">'+L(p.qty+' pce'+(p.qty>1?'s':''),enItems(p.qty),arItems(p.qty,true))+'<div class="ksold-meta">'+fmt(p.revenue)+' MAD</div></div></div>'; }).join('');
+    var catRows = a.categories.map(function(c){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(c.name)+'</div><div class="ksold-meta">'+L(c.qty+' pièce'+(c.qty>1?'s':''),enItems(c.qty),arItems(c.qty,true))+'</div></div><div class="ksold-val">'+fmt(c.revenue)+' MAD</div></div>';}).join('');
+    var pairRows = a.pairs.slice(0,8).map(function(p){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.a)+' + '+esc(p.b)+'</div><div class="ksold-meta">'+L('Même ticket','Same receipt','نفس الإيصال')+'</div></div><div class="ksold-val">'+p.count+'×</div></div>';}).join('') || '<div class="ksold-note">'+L('Aucune association répétée pour l’instant.','No repeated pairings yet.','لا توجد ارتباطات متكررة حتى الآن.')+'</div>';
+    var timeline = a.sales.slice(0,20).map(function(s){return '<div class="ksold-row"><div><div class="ksold-name">'+s.lines.map(function(l){return l.qty+'× '+esc(l.name);}).join(' · ')+'</div><div class="ksold-meta">'+esc(s.ref || L('Ticket','Receipt','إيصال'))+'</div></div><div><div class="ksold-val">'+fmt(s.amount || s.lines.reduce(function(n,l){return n+l.total;},0))+' MAD</div><div class="ksold-time">'+new Date(s.ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div></div></div>';}).join('');
+    var ai = owner ? '<section class="ksold-card ksold-ai"><div class="ksold-ai-tag">✦ '+L('Kiwi AI · basé sur vos ventes','Kiwi AI · based on your sales','Kiwi AI · مبني على مبيعاتك')+'</div>'+recommendations(a).map(function(r){return '<div class="ksold-rec"><b>'+esc(r.title)+'</b><p>'+esc(r.text)+'</p></div>';}).join('')+'</section>' : '<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Associations constatées sur les tickets','Pairings seen on receipts','ارتباطات لوحظت في الإيصالات')+'</div>'+pairRows+'</section>';
+    return '<section class="ksold-card"><h2>'+L('Produits','Products','المنتجات')+'</h2><div class="ksold-note">'+L('Quantité, chiffre et dernière vente','Quantity, revenue and last sale','الكمية والإيراد وآخر بيع')+'</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>'+L('Catégories','Categories','الفئات')+'</h2><div class="ksold-note">'+L('Contribution par rayon','Contribution by department','المساهمة حسب القسم')+'</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>'+L('Produits vendus ensemble','Products sold together','منتجات بيعت معًا')+'</h2><div class="ksold-note">'+L('Paniers réellement observés','Baskets actually observed','السلال المرصودة فعليًا')+'</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>'+L('Historique détaillé','Detailed history','السجل التفصيلي')+'</h2><div class="ksold-note">'+L('Quand et dans quel panier chaque produit a été vendu','When and in which basket each product was sold','متى وفي أي سلة بيع كل منتج')+'</div>'+timeline+'</section>';
   }
   function shell(a, owner, loading) {
-    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>Vendus</h1>')+'<div class="ksold-sub">'+(owner?'Période analysée':'Stock vendu, catégories et détail des tickets')+(loading?' · synchronisation…':'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner,a.custom)+'</div></div>'+pickerMarkup(!owner)+'<div class="kx-kpi-strip"><div class="kx-kpi"><div class="l">Pièces vendues</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">Produits actifs</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">Tickets analysés</div><div class="v">'+a.tickets+'</div></div><div class="kx-kpi"><div class="l">Chiffre produits</div><div class="v">'+fmt(a.revenue)+'<span class="u">MAD</span></div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
+    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>'+L('Vendus','Sold','المباع')+'</h1>')+'<div class="ksold-sub">'+(owner?L('Période analysée','Period analysed','الفترة المحلَّلة'):L('Stock vendu, catégories et détail des tickets','Stock sold, categories and receipt details','المخزون المباع والفئات وتفاصيل الإيصالات'))+(loading?L(' · synchronisation…',' · syncing…',' · جارٍ المزامنة…'):'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner,a.custom)+'</div></div>'+pickerMarkup(!owner)+'<div class="kx-kpi-strip"><div class="kx-kpi"><div class="l">'+L('Pièces vendues','Items sold','القطع المباعة')+'</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">'+L('Produits actifs','Active products','المنتجات النشطة')+'</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">'+L('Tickets analysés','Receipts analysed','الإيصالات المحلَّلة')+'</div><div class="v">'+a.tickets+'</div></div><div class="kx-kpi"><div class="l">'+L('Chiffre produits','Product revenue','إيراد المنتجات')+'</div><div class="v">'+fmt(a.revenue)+'<span class="u">MAD</span></div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
   }
   function localTill() {
     try {
@@ -227,8 +258,9 @@
       return Array.isArray(b) ? b : (b && Array.isArray(b.s) ? b.s : []);
     } catch (_) { return []; }
   }
+  var tillPanel = null;
   function renderTill(panel) {
-    if (!panel) return; ensureStyle();
+    if (!panel) return; ensureStyle(); tillPanel = panel;
     var source = localTill().concat(tillSales);
     panel.innerHTML = shell(analyze(source,tillRange || tillDays),false,tillLoading);
     wire(panel, true);
@@ -250,7 +282,7 @@
   function renderDashboard() {
     ensureStyle(); var a = analyze(dashboardSales(),dashboardRange || dashboardDays);
     if (!window.Kiwi || !Kiwi.appPage) return;
-    Kiwi.appPage('sold',{title:'Vendus',subtitle:'Analyse de vos produits vendus · ventes brutes, les retours ne sont pas déduits',body:shell(a,true,false)});
+    Kiwi.appPage('sold',{title:L('Vendus','Sold','المباع'),subtitle:L('Analyse de vos produits vendus · ventes brutes, les retours ne sont pas déduits','Analysis of your products sold · gross sales, returns are not deducted','تحليل منتجاتك المباعة · مبيعات إجمالية، لا تُخصم المرتجعات'),body:shell(a,true,false)});
     wire(document, false);
   }
   function wire(root, till) {
@@ -265,9 +297,9 @@
       if(picker.mode==='day') { var one=root.querySelector('[data-ksold-day]');from=to=one&&one.value;picker.day=from||picker.day; }
       else { var first=root.querySelector('[data-ksold-from]'),last=root.querySelector('[data-ksold-to]');from=first&&first.value;to=last&&last.value;picker.from=from||picker.from;picker.to=to||picker.to; }
       var a=parseDateKey(from),z=parseDateKey(to),today=parseDateKey(dateKey(new Date()));
-      if(!a||!z){picker.error='Choisissez la date.';rerender(false);return;}
-      if(a>z){picker.error='La fin doit venir après le début.';rerender(false);return;}
-      if(z>today){picker.error='La période ne peut pas finir dans le futur.';rerender(false);return;}
+      if(!a||!z){picker.error=L('Choisissez la date.','Choose a date.','اختر التاريخ.');rerender(false);return;}
+      if(a>z){picker.error=L('La fin doit venir après le début.','The end must come after the start.','يجب أن تأتي النهاية بعد البداية.');rerender(false);return;}
+      if(z>today){picker.error=L('La période ne peut pas finir dans le futur.','The period cannot end in the future.','لا يمكن أن تنتهي الفترة في المستقبل.');rerender(false);return;}
       var selected={from:dateKey(a),to:dateKey(z)};picker.open=false;picker.error='';if(till)tillRange=selected;else dashboardRange=selected;rerender(true);
     };
   }
@@ -275,6 +307,12 @@
     var H = window.Kiwi && Kiwi.handlers; if (!H) { setTimeout(installDashboard,50); return; }
     H['nav-sold'] = renderDashboard;
   }
+  if (document.addEventListener) document.addEventListener('kiwi:langchange', function () {
+    try {
+      if (tillPanel && document.contains(tillPanel) && tillPanel.querySelector('.ksold')) renderTillNoFetch(tillPanel);
+      else if (document.querySelector('.ksold') && !document.querySelector('[data-bq-panel="vendus"].is-on')) renderDashboard();
+    } catch (_) {}
+  });
   window.KiwiSoldInsights = { analyze: analyze, renderTill: renderTill, renderDashboard: renderDashboard };
   window.addEventListener('load',function(){ installDashboard(); if(window.KiwiVenue&&KiwiVenue.subscribe)KiwiVenue.subscribe(installDashboard); if(window.KiwiSales&&KiwiSales.subscribe)KiwiSales.subscribe(function(){if(document.querySelector('.ksold')&&!document.querySelector('[data-bq-panel="vendus"].is-on'))renderDashboard();}); });
 })();

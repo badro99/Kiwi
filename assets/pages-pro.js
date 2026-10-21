@@ -15505,24 +15505,27 @@ handlers['bqx-prod-del-ok'] = (_el, arg) => {
 /* ═══════════════════════════════════════════════════════════════════════════
  * 2. CATÉGORIES — real create / rename / recolour / delete (with reassign)
  * ─────────────────────────────────────────────────────────────────────────── */
+const _catL = (fr, en, ar) => { const l = _bqxPfLang(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
+const _catTone = (t) => { const m = { mint: ['Mint', 'نعناعي'], warn: ['Saffron', 'زعفراني'], danger: ['Crimson', 'قرمزي'], info: ['Indigo', 'نيلي'] }[t.id]; return m ? _catL(t.name, m[0], m[1]) : t.name; };
+const _catPr = (n) => _catL(`${n} produit${n > 1 ? 's' : ''}`, `${n} product${n === 1 ? '' : 's'}`, n === 1 ? 'منتج واحد' : n === 2 ? 'منتجان' : `${n} ${n > 10 ? 'منتجًا' : 'منتجات'}`);
 function _renderCategories() {
   const cat = CAT();
   cat.use(_bqxVenue());
   const cats = cat.listCategories();
   const st = cat.stats();
   window.Kiwi.appPage('categories', {
-    title: 'Catégories',
-    subtitle: `${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products < 2 ? '' : 's'}${_bqxShared()}`,
+    title: _catL('Catégories', 'Categories', 'الفئات'),
+    subtitle: _catL(`${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products < 2 ? '' : 's'}`, `${cats.length} categor${cats.length === 1 ? 'y' : 'ies'} · ${st.products} product${st.products === 1 ? '' : 's'} listed`, `${cats.length} ${cats.length === 1 ? 'فئة' : 'فئات'} · ${st.products} ${st.products === 1 ? 'منتج مدرج' : 'منتجات مدرجة'}`) + _bqxShared(),
     body: `
       <div class="kx-kpi-strip cols-3">
-        <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${cats.length}</div><div class="d">Créez / supprimez librement</div></div>
-        <div class="kx-kpi"><div class="l">PRODUITS RÉFÉRENCÉS</div><div class="v">${st.products}</div><div class="d">${cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length} sans catégorie</div></div>
-        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">Toutes catégories${_bqxStockKPI(st).note}</div></div>
+        <div class="kx-kpi"><div class="l">${_catL('CATÉGORIES', 'CATEGORIES', 'الفئات')}</div><div class="v">${cats.length}</div><div class="d">${_catL('Créez / supprimez librement', 'Create or delete freely', 'أنشئ أو احذف بحرية')}</div></div>
+        <div class="kx-kpi"><div class="l">${_catL('PRODUITS RÉFÉRENCÉS', 'PRODUCTS LISTED', 'المنتجات المدرجة')}</div><div class="v">${st.products}</div><div class="d">${cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length} ${_catL('sans catégorie', 'uncategorised', 'بدون فئة')}</div></div>
+        <div class="kx-kpi"><div class="l">${_catL('VALEUR DE STOCK', 'STOCK VALUE', 'قيمة المخزون')}</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">${_catL('Toutes catégories', 'All categories', 'جميع الفئات')}${_bqxStockKPI(st).note}</div></div>
       </div>
 
       <div class="p-toolbar" style="margin-top:4px;">
-        <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span><span style="margin-left:6px;color:var(--n-500,#77807b);">Organisez vos rayons, couleur, renommage, suppression</span></div>
-        <button class="kb primary" data-action="bqx-cat-new">${_ICN.plus}Ajouter une catégorie</button>
+        <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span><span style="margin-left:6px;color:var(--n-500,#77807b);">${_catL('Organisez vos rayons, couleur, renommage, suppression', 'Organise your sections: colour, rename, delete', 'نظّم أقسامك: اللون وإعادة التسمية والحذف')}</span></div>
+        <button class="kb primary" data-action="bqx-cat-new">${_ICN.plus}${_catL('Ajouter une catégorie', 'Add a category', 'إضافة فئة')}</button>
       </div>
 
       <div style="margin-top:12px;">
@@ -15531,37 +15534,37 @@ function _renderCategories() {
           const hex = _TAGHEX[c.color] || '#0B6E4F';
           return `<div class="bqx-cat-row">
             <div class="bqx-cat-bar" style="background:${hex};"></div>
-            <div class="bqx-cat-info"><div class="n">${_esc(c.name)}</div><div class="m">${count} produit${count > 1 ? 's' : ''}</div></div>
-            <div class="bqx-cat-sw">${_TAGS.map((t) => `<button class="${t.id === c.color ? 'on' : ''}" style="background:${t.hex};" title="${t.name}" data-action="bqx-cat-color" data-arg="${c.id}::${t.id}"></button>`).join('')}</div>
+            <div class="bqx-cat-info"><div class="n">${_esc(c.name)}</div><div class="m">${_catPr(count)}</div></div>
+            <div class="bqx-cat-sw">${_TAGS.map((t) => `<button class="${t.id === c.color ? 'on' : ''}" style="background:${t.hex};" title="${_catTone(t)}" data-action="bqx-cat-color" data-arg="${c.id}::${t.id}"></button>`).join('')}</div>
             <div class="kx-tree-actions">
-              <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}" aria-label="Renommer ${_esc(c.name)}" title="Renommer">${_ICN.edit}</button>
-              <button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="Supprimer ${_esc(c.name)}" title="Supprimer">${_ICN.trash}</button>
+              <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}" aria-label="${_catL('Renommer', 'Rename', 'إعادة تسمية')} ${_esc(c.name)}" title="${_catL('Renommer', 'Rename', 'إعادة تسمية')}">${_ICN.edit}</button>
+              <button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="${_catL('Supprimer', 'Delete', 'حذف')} ${_esc(c.name)}" title="${_catL('Supprimer', 'Delete', 'حذف')}">${_ICN.trash}</button>
             </div>
           </div>`;
-        }).join('') : '<div class="kx-foot-hint"><div class="lh">Aucune catégorie</div><div class="rh">Ajoutez votre premier rayon.</div></div>'}
+        }).join('') : `<div class="kx-foot-hint"><div class="lh">${_catL('Aucune catégorie', 'No categories', 'لا توجد فئات')}</div><div class="rh">${_catL('Ajoutez votre premier rayon.', 'Add your first section.', 'أضف أول قسم لك.')}</div></div>`}
       </div>
 
       <div class="kx-foot-hint">
-        <div class="lh">Conseil</div>
-        <div class="rh">${_bqxTillReads() ? 'Vos catégories deviennent les rayons de la caisse' + _bqxTillHint() + '. ' : ''}Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
+        <div class="lh">${_catL('Conseil', 'Tip', 'نصيحة')}</div>
+        <div class="rh">${_bqxTillReads() ? _catL('Vos catégories deviennent les rayons de la caisse', 'Your categories become the sections on the till', 'تصبح فئاتك أقسام الصندوق') + _bqxTillHint() + '. ' : ''}${_catL('Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.', 'Deleting a category moves its products to "Uncategorised" or to a category of your choice.', 'حذف فئة ينقل منتجاتها إلى «بدون فئة» أو إلى فئة تختارها.')}</div>
       </div>
     `,
   });
 }
 
 handlers['nav-categories'] = () => {
-  if (!_bqxReady()) { toast('Module catégories indisponible', { type: 'warn' }); return; }
+  if (!_bqxReady()) { toast(_catL('Module catégories indisponible', 'Categories module unavailable', 'وحدة الفئات غير متاحة'), { type: 'warn' }); return; }
   _bqxCss(); _bqxSubscribe(); _renderCategories();
 };
 
 handlers['bqx-cat-new'] = () => {
   _bqxModal = modal({
-    title: 'Ajouter une catégorie', tag: 'RAYON', width: 480,
+    title: _catL('Ajouter une catégorie', 'Add a category', 'إضافة فئة'), tag: _catL('RAYON', 'SECTION', 'القسم'), width: 480,
     body: `
-      <div class="kf-group"><label class="kf-label">Nom de la catégorie</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
-      <div class="kf-group"><label class="kf-label">Couleur</label>
-        <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${t.name}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-cat-new-save">Créer la catégorie</button>`,
+      <div class="kf-group"><label class="kf-label">${_catL('Nom de la catégorie', 'Category name', 'اسم الفئة')}</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
+      <div class="kf-group"><label class="kf-label">${_catL('Couleur', 'Colour', 'اللون')}</label>
+        <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${_catTone(t)}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="bqx-cat-new-save">${_catL('Créer la catégorie', 'Create category', 'إنشاء الفئة')}</button>`,
   });
   setTimeout(() => {
     const sw = document.querySelector('.kiwi-backdrop [data-bqx-cnewsw]');
@@ -15573,14 +15576,14 @@ handlers['bqx-cat-new-save'] = () => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
   const name = b.querySelector('[data-bqx-cname]').value.trim();
-  if (!name) { toast('Nom requis', { type: 'warn' }); return; }
+  if (!name) { toast(_catL('Nom requis', 'Name required', 'الاسم مطلوب'), { type: 'warn' }); return; }
   const tone = b.querySelector('[data-bqx-cnewsw] button.on')?.getAttribute('data-tone') || 'atlas';
   CAT().addCategory(name, tone);
   if (_bqxModal) _bqxModal.close();
   /* Only the boutique and maison tills read this catalogue; the épicerie till
      keeps its own (pos-epicerie.js). Say « en caisse » only where it is true. */
   const catTill = _bqxTillReads();
-  toast('Catégorie créée', { desc: catTill ? `« ${name} » est disponible en caisse et au dashboard.` : `« ${name} » est disponible au dashboard.`, type: 'success' });
+  toast(_catL('Catégorie créée', 'Category created', 'تم إنشاء الفئة'), { desc: catTill ? _catL(`« ${name} » est disponible en caisse et au dashboard.`, `"${name}" is available on the till and the dashboard.`, `«${name}» متاحة في الصندوق ولوحة التحكم.`) : _catL(`« ${name} » est disponible au dashboard.`, `"${name}" is available on the dashboard.`, `«${name}» متاحة في لوحة التحكم.`), type: 'success' });
 };
 handlers['bqx-cat-color'] = (_el, arg) => {
   const [cid, tone] = String(arg || '').split('::');
@@ -15590,17 +15593,17 @@ handlers['bqx-cat-rename'] = (_el, arg) => {
   const c = CAT().listCategories().find((x) => x.id === arg);
   if (!c) return;
   _bqxModal = modal({
-    title: 'Renommer la catégorie', width: 440,
-    body: `<div class="kf-group"><label class="kf-label">Nom</label><input class="kf-input" value="${_esc(c.name)}" data-bqx-crename /></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-cat-rename-save" data-arg="${arg}">Enregistrer</button>`,
+    title: _catL('Renommer la catégorie', 'Rename category', 'إعادة تسمية الفئة'), width: 440,
+    body: `<div class="kf-group"><label class="kf-label">${_catL('Nom', 'Name', 'الاسم')}</label><input class="kf-input" value="${_esc(c.name)}" data-bqx-crename /></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="bqx-cat-rename-save" data-arg="${arg}">${_catL('Enregistrer', 'Save', 'حفظ')}</button>`,
   });
 };
 handlers['bqx-cat-rename-save'] = (_el, arg) => {
   const v = document.querySelector('.kiwi-backdrop [data-bqx-crename]')?.value.trim();
-  if (!v) { toast('Nom requis', { type: 'warn' }); return; }
+  if (!v) { toast(_catL('Nom requis', 'Name required', 'الاسم مطلوب'), { type: 'warn' }); return; }
   CAT().renameCategory(arg, v);
   if (_bqxModal) _bqxModal.close();
-  toast('Catégorie renommée', { type: 'success', duration: 1800 });
+  toast(_catL('Catégorie renommée', 'Category renamed', 'تمت إعادة تسمية الفئة'), { type: 'success', duration: 1800 });
 };
 handlers['bqx-cat-del'] = (_el, arg) => {
   const cat = CAT();
@@ -15609,19 +15612,19 @@ handlers['bqx-cat-del'] = (_el, arg) => {
   const count = cat.categoryCount(arg);
   const others = cat.listCategories().filter((x) => x.id !== arg);
   _bqxModal = modal({
-    title: 'Supprimer cette catégorie ?', width: 480,
-    desc: `« ${_esc(c.name)} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
-    body: `<div class="kf-group"><label class="kf-label">Déplacer les produits vers</label>
-      <select class="kf-input" data-bqx-reassign><option value="">Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
-      <div class="kx-warn-box danger"><div class="hd">Suppression</div><ul><li>La catégorie disparaît de la caisse et du dashboard.</li><li>Les produits sont conservés et déplacés, jamais supprimés.</li></ul></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer</button>`,
+    title: _catL('Supprimer cette catégorie ?', 'Delete this category?', 'حذف هذه الفئة؟'), width: 480,
+    desc: _catL(`« ${_esc(c.name)} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`, `"${_esc(c.name)}" contains ${_catPr(count)}. Choose where to move them.`, `«${_esc(c.name)}» تحتوي على ${_catPr(count)}. اختر وجهة نقلها.`),
+    body: `<div class="kf-group"><label class="kf-label">${_catL('Déplacer les produits vers', 'Move the products to', 'نقل المنتجات إلى')}</label>
+      <select class="kf-input" data-bqx-reassign><option value="">${_catL('Sans catégorie', 'Uncategorised', 'بدون فئة')}</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
+      <div class="kx-warn-box danger"><div class="hd">${_catL('Suppression', 'Deletion', 'الحذف')}</div><ul><li>${_catL('La catégorie disparaît de la caisse et du dashboard.', 'The category disappears from the till and the dashboard.', 'تختفي الفئة من الصندوق ولوحة التحكم.')}</li><li>${_catL('Les produits sont conservés et déplacés, jamais supprimés.', 'Products are kept and moved, never deleted.', 'تُحفظ المنتجات وتُنقل ولا تُحذف أبدًا.')}</li></ul></div>`,
+    foot: `<button class="kb ghost" data-dismiss>${_catL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}${_catL('Supprimer', 'Delete', 'حذف')}</button>`,
   });
 };
 handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const reassignTo = document.querySelector('.kiwi-backdrop [data-bqx-reassign]')?.value || null;
   CAT().deleteCategory(arg, { reassignTo });
   if (_bqxModal) _bqxModal.close();
-  toast('Catégorie supprimée', { desc: 'Les produits ont été déplacés.', type: 'warn', duration: 2200 });
+  toast(_catL('Catégorie supprimée', 'Category deleted', 'تم حذف الفئة'), { desc: _catL('Les produits ont été déplacés.', 'The products have been moved.', 'تم نقل المنتجات.'), type: 'warn', duration: 2200 });
 };
 })();
 
@@ -15658,6 +15661,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   if (!window.Kiwi) return;
   const { toast, modal, drawer, handlers } = window.Kiwi;
   const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  /* fr / en / ar pick for the returns page (the language helper of the inventory IIFE is not in reach here). */
+  const _rL = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
 
   /* ═══════════════════ Inline SVG icon set ═══════════════════ */
   /* Material Symbols (Outlined, 400) recopiées depuis assets/icons/material/.
@@ -16191,10 +16196,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   handlers['credit-adjust'] = (el) => {
     const code = el.dataset.code || '';
     const m = modal({
-      tag: 'AUTORISATION PROPRIÉTAIRE', title: `Corriger ${code}`,
-      desc: 'La correction est ajoutée au journal permanent avec votre motif.', width: 500,
-      body: `<div class="kf-group"><label class="kf-label">Variation du solde (MAD)</label><input class="kf-input" type="number" step="0.01" data-credit-delta placeholder="Ex. -50 ou 50" /></div><div class="kf-group"><label class="kf-label">Motif obligatoire</label><input class="kf-input" maxlength="500" data-credit-reason placeholder="Pourquoi ce solde doit être corrigé" /></div>`,
-      foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb atlas" data-action="credit-adjust-confirm" data-code="${esc(code)}">Confirmer la correction</button>`,
+      tag: _rL('AUTORISATION PROPRIÉTAIRE', 'OWNER AUTHORISATION', 'تفويض المالك'), title: _rL(`Corriger ${code}`, `Correct ${code}`, `تصحيح ${code}`),
+      desc: _rL('La correction est ajoutée au journal permanent avec votre motif.', 'The correction is added to the permanent log with your reason.', 'يُضاف التصحيح إلى السجل الدائم مع سببك.'), width: 500,
+      body: `<div class="kf-group"><label class="kf-label">${_rL('Variation du solde (MAD)', 'Balance change (MAD)', 'تغيّر الرصيد (MAD)')}</label><input class="kf-input" type="number" step="0.01" data-credit-delta placeholder="${_rL('Ex. -50 ou 50', 'E.g. -50 or 50', 'مثال: -50 أو 50')}" /></div><div class="kf-group"><label class="kf-label">${_rL('Motif obligatoire', 'Reason (required)', 'السبب (إلزامي)')}</label><input class="kf-input" maxlength="500" data-credit-reason placeholder="${_rL('Pourquoi ce solde doit être corrigé', 'Why this balance needs correcting', 'سبب تصحيح هذا الرصيد')}" /></div>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb atlas" data-action="credit-adjust-confirm" data-code="${esc(code)}">${_rL('Confirmer la correction', 'Confirm correction', 'تأكيد التصحيح')}</button>`,
     });
     m.el.querySelector('[data-cancel]')?.addEventListener('click', () => m.el.querySelector('.kiwi-modal-close')?.click());
   };
@@ -16202,21 +16207,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const root = el.closest('.kiwi-backdrop') || document;
     const delta = Number(root.querySelector('[data-credit-delta]')?.value || 0);
     const reason = String(root.querySelector('[data-credit-reason]')?.value || '').trim();
-    if (!delta || !reason) { toast('Montant et motif obligatoires', { type: 'warning' }); return; }
+    if (!delta || !reason) { toast(_rL('Montant et motif obligatoires', 'Amount and reason are required', 'المبلغ والسبب إلزاميان'), { type: 'warning' }); return; }
     el.disabled = true;
     try {
       await mutateLiveCredit({ action: 'adjust', id: `credit-adjust-${Date.now().toString(36)}`, code: el.dataset.code, deltaCents: Math.round(delta * 100), reason });
-      root.querySelector('.kiwi-modal-close')?.click(); toast('Solde corrigé et journalisé', { type: 'success' });
-    } catch (error) { el.disabled = false; toast('Correction refusée', { type: 'error', desc: error.message === 'manager-required' ? 'Compte propriétaire ou responsable requis.' : 'Vérifiez le solde et réessayez.' }); }
+      root.querySelector('.kiwi-modal-close')?.click(); toast(_rL('Solde corrigé et journalisé', 'Balance corrected and logged', 'تم تصحيح الرصيد وتسجيله'), { type: 'success' });
+    } catch (error) { el.disabled = false; toast(_rL('Correction refusée', 'Correction refused', 'تم رفض التصحيح'), { type: 'error', desc: error.message === 'manager-required' ? _rL('Compte propriétaire ou responsable requis.', 'Owner or manager account required.', 'يلزم حساب المالك أو المسؤول.') : _rL('Vérifiez le solde et réessayez.', 'Check the balance and try again.', 'تحقق من الرصيد وأعد المحاولة.') }); }
   };
   handlers['credit-cancel'] = async (el) => {
     const code = el.dataset.code || '';
-    if (!window.confirm(`Annuler définitivement l’avoir ${code} ? Cette action sera journalisée.`)) return;
+    if (!window.confirm(_rL(`Annuler définitivement l’avoir ${code} ? Cette action sera journalisée.`, `Cancel store credit ${code} permanently? This action will be logged.`, `إلغاء رصيد المتجر ${code} نهائيًا؟ سيتم تسجيل هذا الإجراء.`))) return;
     el.disabled = true;
     try {
       await mutateLiveCredit({ action: 'cancel', id: `credit-cancel-${Date.now().toString(36)}`, code, reason: 'Annulation depuis le registre propriétaire' });
-      toast('Avoir annulé', { type: 'success' });
-    } catch (error) { el.disabled = false; toast('Annulation refusée', { type: 'error', desc: error.message === 'manager-required' ? 'Compte propriétaire ou responsable requis.' : 'Cet avoir ne peut plus être annulé.' }); }
+      toast(_rL('Avoir annulé', 'Store credit cancelled', 'تم إلغاء رصيد المتجر'), { type: 'success' });
+    } catch (error) { el.disabled = false; toast(_rL('Annulation refusée', 'Cancellation refused', 'تم رفض الإلغاء'), { type: 'error', desc: error.message === 'manager-required' ? _rL('Compte propriétaire ou responsable requis.', 'Owner or manager account required.', 'يلزم حساب المالك أو المسؤول.') : _rL('Cet avoir ne peut plus être annulé.', 'This store credit can no longer be cancelled.', 'لم يعد بالإمكان إلغاء رصيد المتجر هذا.') }); }
   };
   handlers['nav-returns'] = () => {
     const real = realReturnsStore();
@@ -16235,20 +16240,20 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return items.map((item, i) => ({
         id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
         d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-        name: `${Number(item.qty) || 1} × ${item.name || 'Article'}${item.size ? ' · ' + item.size : ''}`,
+        name: `${Number(item.qty) || 1} × ${item.name || _rL('Article', 'Item', 'منتج')}${item.size ? ' · ' + item.size : ''}`,
         amt: Number(item.amount) || Number(ret.amount) || 0,
-        reason: ret.reason || (ret.kind === 'echange' ? 'Échange' : 'Avoir'),
+        reason: ret.reason || (ret.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Avoir', 'Store credit', 'رصيد المتجر')),
         /* Le type de retour est une donnée, pas une chaîne d'affichage. La
            pastille se lisait sur le motif : un échange dont le motif n'était pas
            littéralement « Echange » s'affichait « Retourné ». On garde le kind. */
         kind: ret.kind || 'avoir',
-        client: ret.client || 'Cliente de passage', status: 'ok', emoji: '', actor: ret.actor || 'Caisse',
+        client: ret.client || _rL('Cliente de passage', 'Walk-in customer', 'زبون عابر'), status: 'ok', emoji: '', actor: ret.actor || _rL('Caisse', 'Till', 'الصندوق'),
       }));
     }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
 
     const flagged = real ? [] : [
-      { name: 'Diana K. (US)',  reason: '4 retours en 28 j · 2 sur articles soldés', amt: '4 280 MAD', risk: 'Élevé' },
-      { name: 'Sofia A. (FR)',  reason: '3 retours en 30 j · pattern post-Instagram', amt: '2 940 MAD', risk: 'Modéré' },
+      { name: 'Diana K. (US)',  reason: _rL('4 retours en 28 j · 2 sur articles soldés', '4 returns in 28 days · 2 on sale items', '4 مرتجعات في 28 يومًا · 2 منها على أصناف مخفّضة'), amt: '4 280 MAD', risk: _rL('Élevé', 'High', 'مرتفعة') },
+      { name: 'Sofia A. (FR)',  reason: _rL('3 retours en 30 j · pattern post-Instagram', '3 returns in 30 days · after Instagram posts', '3 مرتجعات في 30 يومًا · بعد منشورات إنستغرام'), amt: '2 940 MAD', risk: _rL('Modéré', 'Moderate', 'متوسطة') },
     ];
     const creditRows = real ? liveCredits : [];
 
@@ -16259,11 +16264,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const activeCredits = creditRows.filter((c) => c.status === 'active');
     const creditBalance = activeCredits.reduce((t, c) => t + (Number(c.balanceCents) || 0), 0) / 100;
     const nPend = pending.filter((r) => r.status === 'pend').length;
-    const plural = (n, one, many) => `${n} ${n > 1 ? (many || one + 's') : one}`;
+    const _nn = { retour: ['retour', 'return', 'مرتجع', 'مرتجعات'], echange: ['échange', 'exchange', 'استبدال', 'عمليات استبدال'], bon: ['bon', 'voucher', 'قسيمة', 'قسائم'], demande: ['demande', 'request', 'طلب', 'طلبات'] };
+    const plural = (n, k) => { const w = _nn[k]; const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? `${n} ${w[1]}${n === 1 ? '' : 's'}` : l === 'ar' ? `${n} ${n === 1 ? w[2] : w[3]}` : `${n} ${n > 1 ? w[0] + 's' : w[0]}`; };
     const statusChip = (r) => {
+      if (real && _rL('fr', 'en', 'ar') !== 'fr') return r.kind === 'echange' ? `<span class="rx-tag exch">${_rL('', 'Exchanged', 'تم الاستبدال')}</span>` : `<span class="rx-tag">${_rL('', 'Returned', 'تم الإرجاع')}</span>`;
       if (real) return r.kind === 'echange' ? '<span class="rx-tag exch">Échangé</span>' : '<span class="rx-tag">Retourné</span>';
-      return r.status === 'pend' ? '<span class="rx-tag pend">En attente</span>' : r.status === 'ok' ? '<span class="rx-tag">Approuvé</span>'
-        : r.status === 'ref' ? '<span class="rx-tag out">Refusé</span>' : '<span class="rx-tag exch">Échangé</span>';
+      return r.status === 'pend' ? `<span class="rx-tag pend">${_rL('En attente', 'Pending', 'قيد الانتظار')}</span>` : r.status === 'ok' ? `<span class="rx-tag">${_rL('Approuvé', 'Approved', 'تمت الموافقة')}</span>`
+        : r.status === 'ref' ? `<span class="rx-tag out">${_rL('Refusé', 'Refused', 'مرفوض')}</span>` : `<span class="rx-tag exch">${_rL('Échangé', 'Exchanged', 'تم الاستبدال')}</span>`;
     };
     /* Un retour de 14,50 MAD s'affichait « 15 » (0 décimale) : entiers sans
        décimales, sinon deux. */
@@ -16275,67 +16282,67 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <span class="rx-who">${esc(r.client)}${real ? `<small>${esc(r.actor)}</small>` : ''}</span>
         <span class="rx-amt">${fmtAmt(r.amt)} MAD</span>
         <span class="rx-state">${statusChip(r)}${r.status === 'pend' ? `
-          <button class="rx-mini" data-action="ret-approve" data-arg="${esc(r.id)}" data-bubble="stop" title="Approuver" aria-label="Approuver">${SVG.check}</button>
-          <button class="rx-mini danger" data-action="ret-refuse" data-arg="${esc(r.id)}" data-bubble="stop" title="Refuser" aria-label="Refuser">${SVG.x}</button>
-          <button class="rx-mini" data-action="ret-exchange" data-arg="${esc(r.id)}" data-bubble="stop" title="Échanger" aria-label="Échanger">${SVG.swap}</button>` : ''}</span>
+          <button class="rx-mini" data-action="ret-approve" data-arg="${esc(r.id)}" data-bubble="stop" title="${_rL('Approuver', 'Approve', 'موافقة')}" aria-label="${_rL('Approuver', 'Approve', 'موافقة')}">${SVG.check}</button>
+          <button class="rx-mini danger" data-action="ret-refuse" data-arg="${esc(r.id)}" data-bubble="stop" title="${_rL('Refuser', 'Refuse', 'رفض')}" aria-label="${_rL('Refuser', 'Refuse', 'رفض')}">${SVG.x}</button>
+          <button class="rx-mini" data-action="ret-exchange" data-arg="${esc(r.id)}" data-bubble="stop" title="${_rL('Échanger', 'Exchange', 'استبدال')}" aria-label="${_rL('Échanger', 'Exchange', 'استبدال')}">${SVG.swap}</button>` : ''}</span>
       </div>`;
     const creditRow = (credit) => {
       const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
       const products = Array.isArray(issued.lines) && issued.lines.length
-        ? issued.lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' · ') : (credit.reason || 'Retour');
+        ? issued.lines.map((line) => `${line.qty || 1}× ${line.name || _rL('Article', 'Item', 'منتج')}`).join(' · ') : (credit.reason || _rL('Retour', 'Return', 'مرتجع'));
       const search = [credit.code, credit.customerName, credit.originalRef, credit.originalSaleId, products].join(' ').toLowerCase();
-      const tag = credit.status === 'active' ? '<span class="rx-tag">Actif</span>' : credit.status === 'consumed' ? '<span class="rx-tag muted">Utilisé</span>'
-        : credit.status === 'cancelled' ? '<span class="rx-tag out">Annulé</span>' : `<span class="rx-tag muted">${esc(credit.status)}</span>`;
+      const tag = credit.status === 'active' ? `<span class="rx-tag">${_rL('Actif', 'Active', 'نشط')}</span>` : credit.status === 'consumed' ? `<span class="rx-tag muted">${_rL('Utilisé', 'Used', 'مستخدم')}</span>`
+        : credit.status === 'cancelled' ? `<span class="rx-tag out">${_rL('Annulé', 'Cancelled', 'ملغى')}</span>` : `<span class="rx-tag muted">${esc(credit.status)}</span>`;
       return `<div class="rx-row rx-credit" data-credit-row data-credit-search="${esc(search)}">
         <span class="rx-when"><b>${esc(credit.code)}</b><small>${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
-        <span class="rx-what"><b>${esc(credit.customerName || 'Porteur du bon')}</b><small>Vente ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</small></span>
-        <span class="rx-who">${esc(issued.actor || credit.issuedBy || 'Caisse')}<small>expire le ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
-        <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>sur ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
+        <span class="rx-what"><b>${esc(credit.customerName || _rL('Porteur du bon', 'Voucher holder', 'حامل القسيمة'))}</b><small>${_rL('Vente', 'Sale', 'عملية البيع')} ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</small></span>
+        <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>${_rL('sur', 'of', 'من')} ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
         <span class="rx-state">${tag}
-          ${credit.status !== 'cancelled' ? `<button class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">Corriger</button>` : ''}
-          ${credit.status === 'active' ? `<button class="rx-mini txt danger" data-action="credit-cancel" data-code="${esc(credit.code)}">Annuler</button>` : ''}</span>
+          ${credit.status !== 'cancelled' ? `<button class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">${_rL('Corriger', 'Correct', 'تصحيح')}</button>` : ''}
+          ${credit.status === 'active' ? `<button class="rx-mini txt danger" data-action="credit-cancel" data-code="${esc(credit.code)}">${_rL('Annuler', 'Cancel', 'إلغاء')}</button>` : ''}</span>
       </div>`;
     };
 
     window.Kiwi.appPage('returns', {
-      title: 'Retours & échanges',
-      subtitle: real ? `${(window.KiwiVenue?.getCurrentVenueData?.() || {}).fullDisplay || 'Boutique'} · enregistrés depuis la caisse` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
+      title: _rL('Retours & échanges', 'Returns & exchanges', 'المرتجعات والاستبدال'),
+      subtitle: real ? `${(window.KiwiVenue?.getCurrentVenueData?.() || {}).fullDisplay || _rL('Boutique', 'Shop', 'المتجر')} · ${_rL('enregistrés depuis la caisse', 'recorded from the till', 'مسجّلة من الصندوق')}` : _rL('Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés', 'Maison Mansour · Gueliz · 5 requests pending · 2 flagged customers', 'Maison Mansour · غيليز · 5 طلبات قيد الانتظار · زبونان مُبلَّغ عنهما'),
       body: `<div class="rx-page" data-live-returns>
         <div class="kx-kpi-strip rx-kpis">
           ${real ? `
-          <div class="kx-kpi"><div class="l">Articles retournés</div><div class="v">${pending.length}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'échange')}</div></div>
-          <div class="kx-kpi"><div class="l">Montant retourné</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">Valeur des articles rendus</div></div>
-          <div class="kx-kpi"><div class="l">Avoirs actifs</div><div class="v">${activeCredits.length}</div><div class="d">${plural(creditRows.length, 'bon')} émis au total</div></div>
-          <div class="kx-kpi"><div class="l">Solde des avoirs</div><div class="v">${fmtAmt(creditBalance)}<span class="u">MAD</span></div><div class="d">Encore utilisable en caisse</div></div>` : `
-          <div class="kx-kpi warn"><div class="l">En attente</div><div class="v">${nPend}</div><div class="d">Fenêtre de retour 14 jours</div></div>
-          <div class="kx-kpi"><div class="l">Montant concerné</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">${plural(pending.length, 'demande')}</div></div>
-          <div class="kx-kpi"><div class="l">Taux de retour 30 j</div><div class="v">4,8 %</div><div class="d">Taux d'échange 12,1 %</div></div>
-          <div class="kx-kpi"><div class="l">Clients signalés</div><div class="v">${flagged.length}</div><div class="d">3 retours ou plus en 30 jours</div></div>`}
+          <div class="kx-kpi"><div class="l">${_rL('Articles retournés', 'Items returned', 'المنتجات المرتجعة')}</div><div class="v">${pending.length}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'echange')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Montant retourné', 'Amount returned', 'المبلغ المرتجع')}</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">${_rL('Valeur des articles rendus', 'Value of items handed back', 'قيمة المنتجات المُعادة')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Avoirs actifs', 'Active store credits', 'أرصدة المتجر النشطة')}</div><div class="v">${activeCredits.length}</div><div class="d">${plural(creditRows.length, 'bon')} ${_rL('émis au total', 'issued in total', 'صادرة في المجموع')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Solde des avoirs', 'Store credit balance', 'رصيد المتجر')}</div><div class="v">${fmtAmt(creditBalance)}<span class="u">MAD</span></div><div class="d">${_rL('Encore utilisable en caisse', 'Still usable at the till', 'لا يزال قابلًا للاستخدام في الصندوق')}</div></div>` : `
+          <div class="kx-kpi warn"><div class="l">${_rL('En attente', 'Pending', 'قيد الانتظار')}</div><div class="v">${nPend}</div><div class="d">${_rL('Fenêtre de retour 14 jours', '14-day return window', 'مهلة الإرجاع 14 يومًا')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Montant concerné', 'Amount concerned', 'المبلغ المعني')}</div><div class="v">${fmtAmt(sumAmt)}<span class="u">MAD</span></div><div class="d">${plural(pending.length, 'demande')}</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Taux de retour 30 j', '30-day return rate', 'معدل الإرجاع خلال 30 يومًا')}</div><div class="v">4,8 %</div><div class="d">${_rL('Taux d\'échange', 'Exchange rate', 'معدل الاستبدال')} 12,1 %</div></div>
+          <div class="kx-kpi"><div class="l">${_rL('Clients signalés', 'Flagged customers', 'زبائن مُبلَّغ عنهم')}</div><div class="v">${flagged.length}</div><div class="d">${_rL('3 retours ou plus en 30 jours', '3 or more returns in 30 days', '3 مرتجعات أو أكثر خلال 30 يومًا')}</div></div>`}
         </div>
 
         <div class="rx-panel">
           <header class="rx-head">
-            <div><h3>${real ? 'Articles retournés' : 'Demandes de retour'}</h3><p>${real ? 'Article, motif, client et employé, tels qu’enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Touchez une ligne pour l’historique client.'}</p></div>
+            <div><h3>${real ? _rL('Articles retournés', 'Items returned', 'المنتجات المرتجعة') : _rL('Demandes de retour', 'Return requests', 'طلبات الإرجاع')}</h3><p>${real ? _rL('Article, motif, client et employé, tels qu’enregistrés à la caisse.', 'Item, reason, customer and employee, as recorded at the till.', 'المنتج والسبب والزبون والموظف كما سُجّلت في الصندوق.') : _rL('Approuvez, refusez ou échangez. Touchez une ligne pour l’historique client.', 'Approve, refuse or exchange. Tap a row for the customer history.', 'وافق أو ارفض أو استبدل. المس سطرًا لعرض سجل الزبون.')}</p></div>
             <div class="rx-tools">
-              ${pending.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-search" placeholder="Article, client, motif…" aria-label="Rechercher un retour" /></label>' : ''}
-              ${pending.length ? `<button class="kb ghost" data-action="ret-export">${SVG.download || ''}Exporter</button>` : ''}
-              ${real ? '' : `<button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} Politique</button>`}
+              ${pending.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-search" placeholder="' + _rL('Article, client, motif…', 'Item, customer, reason…', 'المنتج أو الزبون أو السبب…') + '" aria-label="' + _rL('Rechercher un retour', 'Search returns', 'البحث في المرتجعات') + '" /></label>' : ''}
+              ${pending.length ? `<button class="kb ghost" data-action="ret-export">${SVG.download || ''}${_rL('Exporter', 'Export', 'تصدير')}</button>` : ''}
+              ${real ? '' : `<button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} ${_rL('Politique', 'Policy', 'السياسة')}</button>`}
             </div>
           </header>
           ${pending.length ? `<div class="rx-table">
-            <div class="rx-row rx-th" aria-hidden="true"><span>Date</span><span>Article</span><span>Client</span><span class="r">Montant</span><span class="r">Statut</span></div>
+            <div class="rx-row rx-th" aria-hidden="true"><span>${_rL('Date', 'Date', 'التاريخ')}</span><span>${_rL('Article', 'Item', 'المنتج')}</span><span>${_rL('Client', 'Customer', 'الزبون')}</span><span class="r">${_rL('Montant', 'Amount', 'المبلغ')}</span><span class="r">${_rL('Statut', 'Status', 'الحالة')}</span></div>
             ${pending.map(retRow).join('')}
-          </div>` : '<div class="rx-empty">Aucun retour enregistré pour cette boutique. Les retours faits à la caisse apparaissent ici.</div>'}
+          </div>` : `<div class="rx-empty">${_rL('Aucun retour enregistré pour cette boutique. Les retours faits à la caisse apparaissent ici.', 'No returns recorded for this shop. Returns made at the till appear here.', 'لا توجد مرتجعات مسجّلة لهذا المتجر. تظهر هنا المرتجعات التي تتم في الصندوق.')}</div>`}
         </div>
 
         ${real ? `<div class="rx-panel" data-credit-register>
           <header class="rx-head">
-            <div><h3>Registre des avoirs</h3><p>Émission, utilisation, solde, échéance et employé, conservés dans le registre serveur.</p></div>
-            <div class="rx-tools">${creditRows.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-credit-search" placeholder="Code, cliente ou vente d’origine…" aria-label="Rechercher un avoir" /></label>' : ''}</div>
+            <div><h3>${_rL('Registre des avoirs', 'Store credit register', 'سجل أرصدة المتجر')}</h3><p>${_rL('Émission, utilisation, solde, échéance et employé, conservés dans le registre serveur.', 'Issue, use, balance, expiry and employee, kept in the server register.', 'الإصدار والاستخدام والرصيد وتاريخ الانتهاء والموظف، محفوظة في سجل الخادم.')}</p></div>
+            <div class="rx-tools">${creditRows.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-credit-search" placeholder="' + _rL('Code, cliente ou vente d’origine…', 'Code, customer or original sale…', 'الرمز أو الزبون أو عملية البيع الأصلية…') + '" aria-label="' + _rL('Rechercher un avoir', 'Search store credits', 'البحث في أرصدة المتجر') + '" /></label>' : ''}</div>
           </header>
           <div id="ret-credit-rows">
-            ${creditRows.length ? `<div class="rx-table"><div class="rx-row rx-th" aria-hidden="true"><span>Bon</span><span>Client</span><span>Émis par</span><span class="r">Solde</span><span class="r">Statut</span></div>${creditRows.map(creditRow).join('')}</div>`
-              : `<div class="rx-empty">${liveCreditsLoading ? 'Chargement du registre…' : 'Aucun avoir émis pour cette boutique.'}</div>`}
+            ${creditRows.length ? `<div class="rx-table"><div class="rx-row rx-th" aria-hidden="true"><span>${_rL('Bon', 'Voucher', 'القسيمة')}</span><span>${_rL('Client', 'Customer', 'الزبون')}</span><span>${_rL('Émis par', 'Issued by', 'صادرة عن')}</span><span class="r">${_rL('Solde', 'Balance', 'الرصيد')}</span><span class="r">${_rL('Statut', 'Status', 'الحالة')}</span></div>${creditRows.map(creditRow).join('')}</div>`
+              : `<div class="rx-empty">${liveCreditsLoading ? _rL('Chargement du registre…', 'Loading the register…', 'جارٍ تحميل السجل…') : _rL('Aucun avoir émis pour cette boutique.', 'No store credit issued for this shop.', 'لم يُصدر أي رصيد متجر لهذا المتجر.')}</div>`}
           </div>
         </div>` : ''}
 
@@ -16343,48 +16350,48 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <div class="p-grid-2" style="margin-top: 18px;">
           <div class="p-card" style="margin-bottom: 0;">
             <div class="head">
-              <h4>Politique de retour</h4>
-              <span class="meta">MODIFIABLE</span>
+              <h4>${_rL('Politique de retour', 'Return policy', 'سياسة الإرجاع')}</h4>
+              <span class="meta">${_rL('MODIFIABLE', 'EDITABLE', 'قابلة للتعديل')}</span>
             </div>
-            <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">Affichée sur le ticket et la fiche produit. Toute modification s'applique aux nouvelles ventes uniquement.</div>
+            <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">${_rL('Affichée sur le ticket et la fiche produit. Toute modification s\'applique aux nouvelles ventes uniquement.', 'Shown on the receipt and the product page. Any change applies to new sales only.', 'تظهر على الإيصال وصفحة المنتج. يسري أي تعديل على المبيعات الجديدة فقط.')}</div>
             <div class="b-ret-policy" id="retPolicy">
               <div class="field">
-                <div class="lbl">FENÊTRE DE RETOUR</div>
+                <div class="lbl">${_rL('FENÊTRE DE RETOUR', 'RETURN WINDOW', 'مهلة الإرجاع')}</div>
                 <input type="number" value="${real ? 7 : 14}" min="0" max="90" step="1"/>
-                <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">jours après l'achat</div>
+                <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">${_rL('jours après l\'achat', 'days after purchase', 'أيام بعد الشراء')}</div>
               </div>
               <div class="field">
-                <div class="lbl">FRAIS DE RESTOCKING</div>
+                <div class="lbl">${_rL('FRAIS DE RESTOCKING', 'RESTOCKING FEE', 'رسوم إعادة التخزين')}</div>
                 <input type="number" value="0" min="0" max="50" step="1"/>
-                <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">pourcentage retenu</div>
+                <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">${_rL('pourcentage retenu', 'percentage withheld', 'النسبة المقتطعة')}</div>
               </div>
             </div>
-            <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">RÈGLES DE CONDITION</div>
+            <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">${_rL('RÈGLES DE CONDITION', 'CONDITION RULES', 'قواعد الحالة')}</div>
             <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--n-700); line-height: 1.7;">
               ${[
-                'Article non porté, non lavé, étiquette d\'origine présente',
-                'Emballage et coffret-cadeau intacts',
-                'Articles soldés > 30 % : crédit boutique uniquement',
-                'Articles personnalisés (broderie, gravure) : non-retournables',
-                'Bijoux : sceau anti-fraude non rompu',
+                _rL('Article non porté, non lavé, étiquette d\'origine présente', 'Item unworn, unwashed, original tag attached', 'منتج غير مرتدى وغير مغسول والبطاقة الأصلية موجودة'),
+                _rL('Emballage et coffret-cadeau intacts', 'Packaging and gift box intact', 'التغليف وعلبة الهدية سليمان'),
+                _rL('Articles soldés > 30 % : crédit boutique uniquement', 'Items on sale over 30% off: store credit only', 'منتجات مخفّضة بأكثر من 30 %: رصيد المتجر فقط'),
+                _rL('Articles personnalisés (broderie, gravure) : non-retournables', 'Personalised items (embroidery, engraving): non-returnable', 'منتجات مخصّصة (تطريز أو نقش): غير قابلة للإرجاع'),
+                _rL('Bijoux : sceau anti-fraude non rompu', 'Jewellery: anti-tamper seal unbroken', 'المجوهرات: ختم مكافحة التلاعب سليم'),
               ].map(rule => `<li style="display: flex; align-items: flex-start; gap: 9px; padding: 4px 0;"><span style="color: var(--atlas); flex-shrink: 0; margin-top: 4px;">${SVG.check}</span><span>${rule}</span></li>`).join('')}
             </ul>
-            <button class="kb atlas" style="width: 100%; justify-content: center; margin-top: 12px;" data-action="ret-policy-save">Enregistrer la politique</button>
+            <button class="kb atlas" style="width: 100%; justify-content: center; margin-top: 12px;" data-action="ret-policy-save">${_rL('Enregistrer la politique', 'Save policy', 'حفظ السياسة')}</button>
           </div>
 
           <div class="p-card" style="margin-bottom: 0;">
             <div class="head">
-              <h4>Veille fraude</h4>
-              <span class="meta" style="color: var(--danger);">${flagged.length} CLIENTS FLAGGÉS</span>
+              <h4>${_rL('Veille fraude', 'Fraud watch', 'مراقبة الاحتيال')}</h4>
+              <span class="meta" style="color: var(--danger);">${flagged.length} ${_rL('CLIENTS FLAGGÉS', 'FLAGGED CUSTOMERS', 'زبائن مُبلَّغ عنهم')}</span>
             </div>
-            <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">3 retours ou plus sur 30 jours glissants. Vous pouvez bloquer leurs futures demandes de retour.</div>
+            <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">${_rL('3 retours ou plus sur 30 jours glissants. Vous pouvez bloquer leurs futures demandes de retour.', '3 or more returns over a rolling 30 days. You can block their future return requests.', '3 مرتجعات أو أكثر خلال 30 يومًا متتالية. يمكنك حظر طلبات الإرجاع القادمة منهم.')}</div>
             ${flagged.map((f, i) => `
               <div style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-top: 1px solid var(--n-200);">
                 <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(201,74,58,0.12); color: var(--danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${SVG.flag}</div>
                 <div style="flex: 1; min-width: 0;">
                   <div style="font-weight: 600; font-size: 13.5px;">${f.name}</div>
                   <div style="font-size: 12px; color: var(--n-500); margin-top: 2px; line-height: 1.4;">${f.reason}</div>
-                  <div style="font-size: 11.5px; color: var(--n-500); margin-top: 6px; font-family: var(--mono);">Volume retours : ${f.amt} · Risque ${f.risk}</div>
+                  <div style="font-size: 11.5px; color: var(--n-500); margin-top: 6px; font-family: var(--mono);">${_rL('Volume retours', 'Return volume', 'حجم المرتجعات')} : ${f.amt} · ${_rL('Risque', 'Risk', 'الخطورة')} ${f.risk}</div>
                 </div>
                 <label class="kx-toggle">
                   <input type="checkbox" data-action="ret-block" data-arg="${f.name}"/>
@@ -16393,37 +16400,37 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               </div>
             `).join('')}
             <div style="margin-top: 12px; padding: 10px 12px; background: rgba(217,154,43,0.08); border: 1px solid rgba(217,154,43,0.22); border-radius: 10px; font-size: 11.5px; color: var(--warn-ink); line-height: 1.5;">
-              <b>Astuce.</b> Bloquer un client n'empêche pas l'achat, uniquement les retours. Notification email envoyée automatiquement.
+              <b>${_rL('Astuce.', 'Tip.', 'نصيحة.')}</b> ${_rL('Bloquer un client n\'empêche pas l\'achat, uniquement les retours. Notification email envoyée automatiquement.', 'Blocking a customer does not stop purchases, only returns. An email notification is sent automatically.', 'حظر الزبون لا يمنعه من الشراء، بل من الإرجاع فقط. يُرسل إشعار بالبريد الإلكتروني تلقائيًا.')}
             </div>
           </div>
         </div>
 
         <div class="p-card" style="margin-top: 18px;">
           <div class="head">
-            <h4>Émission rapide d'un remboursement</h4>
-            <span class="meta">3 OPTIONS</span>
+            <h4>${_rL('Émission rapide d\'un remboursement', 'Quick refund', 'استرداد سريع للمبلغ')}</h4>
+            <span class="meta">${_rL('3 OPTIONS', '3 OPTIONS', '3 خيارات')}</span>
           </div>
-          <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">Choisissez le canal, la commande d'origine sera automatiquement liée pour la conformité.</div>
+          <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">${_rL('Choisissez le canal, la commande d\'origine sera automatiquement liée pour la conformité.', 'Choose the channel. The original order is linked automatically for compliance.', 'اختر القناة، وسيُربط الطلب الأصلي تلقائيًا لأغراض الامتثال.')}</div>
           <div class="p-grid-3">
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-original">
               ${SVG.card}
               <div style="text-align: center;">
-                <div style="font-weight: 600; font-size: 13px;">Carte d'origine</div>
-                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Visa / Mastercard · 1-3 jours</div>
+                <div style="font-weight: 600; font-size: 13px;">${_rL('Carte d\'origine', 'Original card', 'البطاقة الأصلية')}</div>
+                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Visa / Mastercard · ${_rL('1-3 jours', '1-3 days', '1-3 أيام')}</div>
               </div>
             </button>
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-credit">
               ${SVG.voucher}
               <div style="text-align: center;">
-                <div style="font-weight: 600; font-size: 13px;">Crédit boutique</div>
-                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Bon valable 12 mois</div>
+                <div style="font-weight: 600; font-size: 13px;">${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</div>
+                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">${_rL('Bon valable 12 mois', 'Voucher valid for 12 months', 'قسيمة صالحة 12 شهرًا')}</div>
               </div>
             </button>
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-whatsapp">
               ${SVG.wa}
               <div style="text-align: center;">
-                <div style="font-weight: 600; font-size: 13px;">Notifier WhatsApp</div>
-                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Lien de remboursement</div>
+                <div style="font-weight: 600; font-size: 13px;">${_rL('Notifier WhatsApp', 'Notify on WhatsApp', 'إشعار عبر واتساب')}</div>
+                <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">${_rL('Lien de remboursement', 'Refund link', 'رابط الاسترداد')}</div>
               </div>
             </button>
           </div>
@@ -16453,35 +16460,35 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   handlers['ret-detail'] = (id) => {
     const samplePhotos = ['mint-soft', 'rgba(217,154,43,0.16)', 'var(--paper-soft)', 'rgba(11,110,79,0.10)'];
     modal({
-      tag: 'DEMANDE DE RETOUR · ' + (id || '·'),
+      tag: _rL('DEMANDE DE RETOUR', 'RETURN REQUEST', 'طلب إرجاع') + ' · ' + (id || '·'),
       title: 'Caftan brodé taille S',
-      desc: 'Anna M. (DE) · achat le 17/04/2026 · ticket #T-21847',
+      desc: _rL('Anna M. (DE) · achat le 17/04/2026 · ticket #T-21847', 'Anna M. (DE) · purchased 17/04/2026 · receipt #T-21847', 'Anna M. (DE) · اشترت في 17/04/2026 · إيصال #T-21847'),
       width: 640,
       body: `
         <div class="kx-stat-3">
-          <div class="stat"><div class="l">MONTANT</div><div class="v">2 450</div><div class="sub">MAD payés</div></div>
-          <div class="stat"><div class="l">JOURS</div><div class="v">7 / 14</div><div class="sub">restants</div></div>
-          <div class="stat"><div class="l">CLIENT</div><div class="v">3</div><div class="sub">achats antérieurs</div></div>
+          <div class="stat"><div class="l">${_rL('MONTANT', 'AMOUNT', 'المبلغ')}</div><div class="v">2 450</div><div class="sub">${_rL('MAD payés', 'MAD paid', 'MAD مدفوعة')}</div></div>
+          <div class="stat"><div class="l">${_rL('JOURS', 'DAYS', 'الأيام')}</div><div class="v">7 / 14</div><div class="sub">${_rL('restants', 'left', 'متبقية')}</div></div>
+          <div class="stat"><div class="l">${_rL('CLIENT', 'CUSTOMER', 'الزبون')}</div><div class="v">3</div><div class="sub">${_rL('achats antérieurs', 'previous purchases', 'مشتريات سابقة')}</div></div>
         </div>
 
-        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">MOTIF DÉTAILLÉ</div>
+        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">${_rL('MOTIF DÉTAILLÉ', 'DETAILED REASON', 'السبب بالتفصيل')}</div>
         <div style="font-size: 13px; color: var(--n-700); line-height: 1.55; padding: 12px; background: var(--paper-soft); border-radius: 10px;">
           « La taille S est trop serrée à l'épaule pour ma morphologie. Je souhaite échanger contre une taille M ou être remboursée. L'article n'a pas été porté, l'étiquette est encore présente. »
         </div>
 
-        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 16px 0 8px;">PHOTOS FOURNIES</div>
+        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 16px 0 8px;">${_rL('PHOTOS FOURNIES', 'PHOTOS PROVIDED', 'الصور المرفقة')}</div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
           ${samplePhotos.map((c, i) => `
-            <div style="aspect-ratio: 1; background: ${c}; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--n-500); font-size: 11px; font-family: var(--mono); border: 1px solid var(--n-200);">PHOTO ${i+1}</div>
+            <div style="aspect-ratio: 1; background: ${c}; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--n-500); font-size: 11px; font-family: var(--mono); border: 1px solid var(--n-200);">${_rL('PHOTO', 'PHOTO', 'صورة')} ${i+1}</div>
           `).join('')}
         </div>
 
-        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 16px 0 8px;">HISTORIQUE CLIENTE · 3 ACHATS</div>
+        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 16px 0 8px;">${_rL('HISTORIQUE CLIENTE · 3 ACHATS', 'CUSTOMER HISTORY · 3 PURCHASES', 'سجل الزبونة · 3 مشتريات')}</div>
         <div style="display: flex; flex-direction: column; gap: 6px;">
           ${[
-            ['17/04/2026', 'Caftan brodé taille S',     '2 450 MAD', 'achat actuel'],
-            ['08/02/2026', 'Foulard soie écru',         '720 MAD',   'aucun retour'],
-            ['12/12/2025', 'Coffret huile argan',       '380 MAD',   'aucun retour'],
+            ['17/04/2026', 'Caftan brodé taille S',     '2 450 MAD', _rL('achat actuel', 'current purchase', 'الشراء الحالي')],
+            ['08/02/2026', 'Foulard soie écru',         '720 MAD',   _rL('aucun retour', 'no returns', 'لا مرتجعات')],
+            ['12/12/2025', 'Coffret huile argan',       '380 MAD',   _rL('aucun retour', 'no returns', 'لا مرتجعات')],
           ].map(([d, item, amt, st]) => `
             <div style="display: grid; grid-template-columns: 90px 1fr 110px auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--n-200); font-size: 12.5px; align-items: center;">
               <div class="mono" style="color: var(--n-500);">${d}</div>
@@ -16493,43 +16500,43 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         </div>
       `,
       foot: `
-        <button class="kb ghost" data-action="ret-refuse" data-arg="${id || ''}" data-bubble="stop" style="color: var(--danger);">${SVG.x} Refuser</button>
-        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} Crédit boutique</button>
-        <button class="kb ghost" data-action="ret-exchange" data-arg="${id || ''}" data-bubble="stop">${SVG.swap} Échanger</button>
-        <button class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} Approuver remboursement</button>
+        <button class="kb ghost" data-action="ret-refuse" data-arg="${id || ''}" data-bubble="stop" style="color: var(--danger);">${SVG.x} ${_rL('Refuser', 'Refuse', 'رفض')}</button>
+        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} ${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</button>
+        <button class="kb ghost" data-action="ret-exchange" data-arg="${id || ''}" data-bubble="stop">${SVG.swap} ${_rL('Échanger', 'Exchange', 'استبدال')}</button>
+        <button class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} ${_rL('Approuver remboursement', 'Approve refund', 'الموافقة على استرداد المبلغ')}</button>
       `,
     });
   };
 
   handlers['ret-approve'] = (id) => {
     modal({
-      tag: 'CHOISIR LE CANAL',
-      title: 'Comment rembourser ?',
-      desc: `Demande ${id || '·'} · 2 450 MAD · Anna M. (DE)`,
+      tag: _rL('CHOISIR LE CANAL', 'CHOOSE THE CHANNEL', 'اختر القناة'),
+      title: _rL('Comment rembourser ?', 'How to refund?', 'كيف يتم استرداد المبلغ؟'),
+      desc: `${_rL('Demande', 'Request', 'الطلب')} ${id || '·'} · 2 450 MAD · Anna M. (DE)`,
       width: 540,
       body: `
         <div style="display: grid; gap: 10px;">
           <div class="wiz-choice" data-channel="card">
             <div class="wc-ic">${SVG.card}</div>
-            <div><div class="wc-t">Carte d'origine · Visa ••4291</div><div class="wc-d">Crédité en 1 à 3 jours ouvrés. Aucun frais.</div></div>
+            <div><div class="wc-t">${_rL("Carte d'origine", 'Original card', 'البطاقة الأصلية')} · Visa ••4291</div><div class="wc-d">${_rL('Crédité en 1 à 3 jours ouvrés. Aucun frais.', 'Credited within 1 to 3 working days. No fees.', 'يُضاف المبلغ خلال 1 إلى 3 أيام عمل. دون أي رسوم.')}</div></div>
           </div>
           <div class="wiz-choice" data-channel="credit">
             <div class="wc-ic">${SVG.voucher}</div>
-            <div><div class="wc-t">Crédit boutique</div><div class="wc-d">Bon valable 12 mois sur tous les articles. +10 % offerts en bonus.</div></div>
+            <div><div class="wc-t">${_rL('Crédit boutique', 'Store credit', 'رصيد المتجر')}</div><div class="wc-d">${_rL('Bon valable 12 mois sur tous les articles. +10 % offerts en bonus.', 'Voucher valid for 12 months on all items. +10% bonus included.', 'قسيمة صالحة 12 شهرًا على جميع المنتجات، مع مكافأة إضافية 10 %.')}</div></div>
           </div>
           <div class="wiz-choice" data-channel="cash">
             <div class="wc-ic">${SVG.cash}</div>
-            <div><div class="wc-t">Espèces / virement</div><div class="wc-d">Disponible immédiatement à la caisse ou sous 48 h par virement.</div></div>
+            <div><div class="wc-t">${_rL('Espèces / virement', 'Cash / bank transfer', 'نقدًا / تحويل بنكي')}</div><div class="wc-d">${_rL('Disponible immédiatement à la caisse ou sous 48 h par virement.', 'Available immediately at the till or within 48 h by transfer.', 'متاح فورًا في الصندوق أو خلال 48 ساعة بالتحويل.')}</div></div>
           </div>
         </div>
       `,
-      foot: `<button class="kb ghost" data-cancel>Annuler</button>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button>`,
     }).el.addEventListener('click', (e) => {
       const ch = e.target.closest('[data-channel]');
       if (ch) {
         e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
-        const labels = { card: 'sur la carte d\'origine', credit: 'en crédit boutique +10 %', cash: 'en espèces à la caisse' };
-        toast('Remboursement approuvé', { type: 'success', desc: `${id || 'Demande'} remboursée ${labels[ch.dataset.channel]}.`, duration: 3500 });
+        const labels = { card: _rL('sur la carte d\'origine', 'to the original card', 'على البطاقة الأصلية'), credit: _rL('en crédit boutique +10 %', 'as store credit +10%', 'كرصيد متجر +10 %'), cash: _rL('en espèces à la caisse', 'in cash at the till', 'نقدًا في الصندوق') };
+        toast(_rL('Remboursement approuvé', 'Refund approved', 'تمت الموافقة على استرداد المبلغ'), { type: 'success', desc: _rL(`${id || 'Demande'} remboursée ${labels[ch.dataset.channel]}.`, `${id || 'Request'} refunded ${labels[ch.dataset.channel]}.`, `تم استرداد مبلغ ${id || 'الطلب'} ${labels[ch.dataset.channel]}.`), duration: 3500 });
       }
       if (e.target.closest('[data-cancel]')) e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
     });
@@ -16537,28 +16544,28 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
   handlers['ret-refuse'] = (id) => {
     modal({
-      tag: 'CONFIRMATION',
-      title: 'Refuser la demande de retour ?',
-      desc: `Le client recevra une notification expliquant le motif. Cette action est définitive pour ${id || 'cette demande'}.`,
+      tag: _rL('CONFIRMATION', 'CONFIRMATION', 'تأكيد'),
+      title: _rL('Refuser la demande de retour ?', 'Refuse the return request?', 'رفض طلب الإرجاع؟'),
+      desc: _rL(`Le client recevra une notification expliquant le motif. Cette action est définitive pour ${id || 'cette demande'}.`, `The customer will be notified of the reason. This is final for ${id || 'this request'}.`, `سيتلقى الزبون إشعارًا بالسبب. هذا الإجراء نهائي بالنسبة إلى ${id || 'هذا الطلب'}.`),
       width: 480,
       body: `
         <div class="kf-group">
-          <label class="kf-label">Motif du refus (visible par le client)</label>
+          <label class="kf-label">${_rL('Motif du refus (visible par le client)', 'Reason for refusal (visible to the customer)', 'سبب الرفض (يظهر للزبون)')}</label>
           <select class="kf-input">
-            <option>Article hors fenêtre de retour</option>
-            <option>Étiquette d'origine manquante</option>
-            <option>Article porté ou lavé</option>
-            <option>Article personnalisé non retournable</option>
-            <option>Sceau anti-fraude rompu</option>
+            <option>${_rL('Article hors fenêtre de retour', 'Item outside the return window', 'المنتج خارج مهلة الإرجاع')}</option>
+            <option>${_rL('Étiquette d\'origine manquante', 'Original tag missing', 'البطاقة الأصلية مفقودة')}</option>
+            <option>${_rL('Article porté ou lavé', 'Item worn or washed', 'المنتج مرتدى أو مغسول')}</option>
+            <option>${_rL('Article personnalisé non retournable', 'Personalised item, non-returnable', 'منتج مخصّص غير قابل للإرجاع')}</option>
+            <option>${_rL('Sceau anti-fraude rompu', 'Anti-tamper seal broken', 'ختم مكافحة التلاعب مكسور')}</option>
           </select>
         </div>
       `,
-      foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb danger" data-confirm>${SVG.x} Refuser définitivement</button>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb danger" data-confirm>${SVG.x} ${_rL('Refuser définitivement', 'Refuse permanently', 'رفض نهائي')}</button>`,
     }).el.addEventListener('click', (e) => {
       if (e.target.closest('[data-cancel]')) e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
       if (e.target.closest('[data-confirm]')) {
         e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
-        toast('Demande refusée', { type: 'danger', desc: 'Notification SMS envoyée au client.', duration: 3200 });
+        toast(_rL('Demande refusée', 'Request refused', 'تم رفض الطلب'), { type: 'danger', desc: _rL('Notification SMS envoyée au client.', 'SMS notification sent to the customer.', 'تم إرسال إشعار نصي إلى الزبون.'), duration: 3200 });
       }
     });
   };
@@ -16572,16 +16579,16 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ['Caftan brodé Riad · M',     '3 200 MAD', '+ 750 MAD'],
     ];
     modal({
-      tag: 'ÉCHANGE · ' + (id || '·'),
-      title: 'Choisir un article de remplacement',
-      desc: 'Article retourné : Caftan brodé taille S · 2 450 MAD',
+      tag: _rL('ÉCHANGE', 'EXCHANGE', 'استبدال') + ' · ' + (id || '·'),
+      title: _rL('Choisir un article de remplacement', 'Choose a replacement item', 'اختر منتجًا بديلًا'),
+      desc: _rL('Article retourné : Caftan brodé taille S · 2 450 MAD', 'Item returned: Caftan brodé taille S · 2 450 MAD', 'المنتج المرتجع: Caftan brodé taille S · 2 450 MAD'),
       width: 580,
       body: `
         <div class="kf-group">
-          <label class="kf-label">Rechercher dans le catalogue</label>
+          <label class="kf-label">${_rL('Rechercher dans le catalogue', 'Search the catalogue', 'البحث في الكتالوج')}</label>
           <input class="kf-input" placeholder="Caftan brodé, babouches…" value="caftan brodé"/>
         </div>
-        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">5 RÉSULTATS</div>
+        <div style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin: 14px 0 8px;">${_rL('5 RÉSULTATS', '5 RESULTS', '5 نتائج')}</div>
         <div style="display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto;">
           ${items.map(([n, p, st], idx) => `
             <div class="wiz-choice" data-pick="${idx}" style="padding: 12px 14px;">
@@ -16595,13 +16602,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           `).join('')}
         </div>
       `,
-      foot: `<button class="kb ghost" data-cancel>Annuler</button>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button>`,
     }).el.addEventListener('click', (e) => {
       const pick = e.target.closest('[data-pick]');
       if (pick) {
         const idx = +pick.dataset.pick;
         e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
-        toast('Échange enregistré', { type: 'success', desc: `Nouveau ticket : ${items[idx][0]}. Étiquette d'expédition envoyée par WhatsApp.`, duration: 3600 });
+        toast(_rL('Échange enregistré', 'Exchange recorded', 'تم تسجيل الاستبدال'), { type: 'success', desc: _rL(`Nouveau ticket : ${items[idx][0]}. Étiquette d'expédition envoyée par WhatsApp.`, `New receipt: ${items[idx][0]}. Shipping label sent on WhatsApp.`, `إيصال جديد: ${items[idx][0]}. تم إرسال ملصق الشحن عبر واتساب.`), duration: 3600 });
       }
       if (e.target.closest('[data-cancel]')) e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
     });
@@ -16611,16 +16618,16 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const cb = document.querySelector(`input[type="checkbox"][data-action="ret-block"][data-arg="${name}"]`);
     if (!cb) return;
     if (!cb.checked) {
-      toast(`${name} déblocké`, { type: 'info', duration: 2200 });
+      toast(_rL(`${name} déblocké`, `${name} unblocked`, `تم رفع الحظر عن ${name}`), { type: 'info', duration: 2200 });
       return;
     }
     cb.checked = false;
     modal({
-      tag: 'CONFIRMATION',
-      title: `Bloquer ${name} des retours ?`,
-      desc: 'Les futures demandes seront automatiquement refusées. Le client peut continuer d\'acheter normalement.',
+      tag: _rL('CONFIRMATION', 'CONFIRMATION', 'تأكيد'),
+      title: _rL(`Bloquer ${name} des retours ?`, `Block ${name} from returns?`, `حظر ${name} من الإرجاع؟`),
+      desc: _rL('Les futures demandes seront automatiquement refusées. Le client peut continuer d\'acheter normalement.', 'Future requests will be refused automatically. The customer can keep buying as usual.', 'سيتم رفض الطلبات القادمة تلقائيًا. يمكن للزبون متابعة الشراء بشكل طبيعي.'),
       width: 460,
-      foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb danger" data-confirm>${SVG.block} Bloquer</button>`,
+      foot: `<button class="kb ghost" data-cancel>${_rL('Annuler', 'Cancel', 'إلغاء')}</button><button class="kb danger" data-confirm>${SVG.block} ${_rL('Bloquer', 'Block', 'حظر')}</button>`,
     }).el.addEventListener('click', (e) => {
       if (e.target.closest('[data-cancel]')) {
         e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
@@ -16628,7 +16635,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (e.target.closest('[data-confirm]')) {
         e.target.closest('.kiwi-backdrop').querySelector('.kiwi-modal-close').click();
         cb.checked = true;
-        toast(`${name} bloqué·e des retours`, { type: 'warn', desc: 'Email automatique envoyé.', duration: 3200 });
+        toast(_rL(`${name} bloqué·e des retours`, `${name} blocked from returns`, `تم حظر ${name} من الإرجاع`), { type: 'warn', desc: _rL('Email automatique envoyé.', 'Automatic email sent.', 'تم إرسال بريد إلكتروني تلقائي.'), duration: 3200 });
       }
     });
   };
@@ -16638,22 +16645,22 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const inputs = root ? root.querySelectorAll('input[type="number"]') : [];
     const win = inputs[0]?.value || '14';
     const fee = inputs[1]?.value || '0';
-    toast('Politique de retour enregistrée', { type: 'success', desc: `Fenêtre ${win} j · restocking ${fee} %. Appliquée aux nouvelles ventes.`, duration: 3200 });
+    toast(_rL('Politique de retour enregistrée', 'Return policy saved', 'تم حفظ سياسة الإرجاع'), { type: 'success', desc: _rL(`Fenêtre ${win} j · restocking ${fee} %. Appliquée aux nouvelles ventes.`, `Window ${win} d · restocking ${fee}%. Applied to new sales.`, `المهلة ${win} يومًا · رسوم إعادة التخزين ${fee} %. تُطبَّق على المبيعات الجديدة.`), duration: 3200 });
   };
 
   handlers['ret-policy-jump'] = () => {
     const el = document.getElementById('retPolicy');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    toast('Politique de retour', { type: 'info', desc: 'Modifiez la fenêtre ou les frais de restocking ci-dessous.', duration: 2400 });
+    toast(_rL('Politique de retour', 'Return policy', 'سياسة الإرجاع'), { type: 'info', desc: _rL('Modifiez la fenêtre ou les frais de restocking ci-dessous.', 'Edit the window or the restocking fee below.', 'عدّل المهلة أو رسوم إعادة التخزين أدناه.'), duration: 2400 });
   };
 
   handlers['ret-export'] = () => {
-    if (!realReturnsStore()) { toast('Export retours · CSV en cours', { type: 'info', desc: '6 demandes · ouvert dans Excel ou Numbers.', duration: 2600 }); return; }
+    if (!realReturnsStore()) { toast(_rL('Export retours · CSV en cours', 'Returns export · CSV in progress', 'تصدير المرتجعات · ملف CSV قيد الإعداد'), { type: 'info', desc: _rL('6 demandes · ouvert dans Excel ou Numbers.', '6 requests · opens in Excel or Numbers.', '6 طلبات · يُفتح في Excel أو Numbers.'), duration: 2600 }); return; }
     const rows = _rxRows || [];
-    if (!rows.length) { toast('Aucun retour à exporter', { type: 'info' }); return; }
+    if (!rows.length) { toast(_rL('Aucun retour à exporter', 'No returns to export', 'لا توجد مرتجعات للتصدير'), { type: 'info' }); return; }
     const cell = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const csv = [['Date', 'Référence', 'Article', 'Motif', 'Type', 'Client', 'Employé', 'Montant MAD'].map(cell).join(';')]
-      .concat(rows.map((r) => [r.d, r.id, r.name, r.reason, r.kind === 'echange' ? 'Échange' : 'Retour', r.client, r.actor, String(Number(r.amt) || 0).replace('.', ',')].map(cell).join(';')))
+    const csv = [[_rL('Date', 'Date', 'التاريخ'), _rL('Référence', 'Reference', 'المرجع'), _rL('Article', 'Item', 'المنتج'), _rL('Motif', 'Reason', 'السبب'), _rL('Type', 'Type', 'النوع'), _rL('Client', 'Customer', 'الزبون'), _rL('Employé', 'Employee', 'الموظف'), _rL('Montant MAD', 'Amount MAD', 'المبلغ MAD')].map(cell).join(';')]
+      .concat(rows.map((r) => [r.d, r.id, r.name, r.reason, r.kind === 'echange' ? _rL('Échange', 'Exchange', 'استبدال') : _rL('Retour', 'Return', 'مرتجع'), r.client, r.actor, String(Number(r.amt) || 0).replace('.', ',')].map(cell).join(';')))
       .join('\r\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -16661,12 +16668,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     a.download = 'retours-' + new Date().toISOString().slice(0, 10) + '.csv';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    toast('Retours exportés', { type: 'success', desc: rows.length + ' ligne' + (rows.length > 1 ? 's' : '') + ' · séparateur point-virgule, ouvrable dans Excel.', duration: 2600 });
+    toast(_rL('Retours exportés', 'Returns exported', 'تم تصدير المرتجعات'), { type: 'success', desc: _rL(rows.length + ' ligne' + (rows.length > 1 ? 's' : '') + ' · séparateur point-virgule, ouvrable dans Excel.', rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' · semicolon-separated, opens in Excel.', rows.length + ' ' + (rows.length === 1 ? 'سطر' : 'أسطر') + ' · مفصولة بفاصلة منقوطة، تُفتح في Excel.'), duration: 2600 });
   };
 
-  handlers['ret-refund-original'] = () => toast('Remboursement carte d\'origine', { type: 'success', desc: 'Crédité en 1-3 jours ouvrés. Confirmation par SMS au client.', duration: 3000 });
-  handlers['ret-refund-credit'] = () => toast('Crédit boutique émis', { type: 'success', desc: 'Bon valable 12 mois · +10 % offerts en bonus de fidélité.', duration: 3000 });
-  handlers['ret-refund-whatsapp'] = () => toast('Lien WhatsApp envoyé', { type: 'success', desc: 'Le client recevra un lien sécurisé pour confirmer son IBAN.', duration: 3000 });
+  handlers['ret-refund-original'] = () => toast(_rL('Remboursement carte d\'origine', 'Refund to original card', 'استرداد المبلغ إلى البطاقة الأصلية'), { type: 'success', desc: _rL('Crédité en 1-3 jours ouvrés. Confirmation par SMS au client.', 'Credited within 1-3 working days. Confirmation sent to the customer by SMS.', 'يُضاف المبلغ خلال 1-3 أيام عمل. يتلقى الزبون تأكيدًا برسالة نصية.'), duration: 3000 });
+  handlers['ret-refund-credit'] = () => toast(_rL('Crédit boutique émis', 'Store credit issued', 'تم إصدار رصيد المتجر'), { type: 'success', desc: _rL('Bon valable 12 mois · +10 % offerts en bonus de fidélité.', 'Voucher valid for 12 months · +10% loyalty bonus.', 'قسيمة صالحة 12 شهرًا · مكافأة ولاء 10 %.'), duration: 3000 });
+  handlers['ret-refund-whatsapp'] = () => toast(_rL('Lien WhatsApp envoyé', 'WhatsApp link sent', 'تم إرسال رابط واتساب'), { type: 'success', desc: _rL('Le client recevra un lien sécurisé pour confirmer son IBAN.', 'The customer will get a secure link to confirm their IBAN.', 'سيتلقى الزبون رابطًا آمنًا لتأكيد رقم الحساب البنكي (IBAN).'), duration: 3000 });
 
 })();
 

@@ -1,4 +1,4 @@
-/* Kiwi · Boutique promotions manager — owner dashboard only.
+/* Kiwi · Boutique promotions manager · owner dashboard only.
  * The price engine stays in assets/promos.js and is read by the caisse. This
  * file owns the create/edit/pause/delete UI that used to live in the till. */
 (function () {
@@ -13,10 +13,23 @@
   var promoModal = null;
   var composer = { draft: null, editing: null };
 
+  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  function L(fr, en, ar) { var l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
+  /* Arabic number agreement: 1 and 2 have their own forms, 3-10 take the plural,
+     11+ the singular accusative. a = [one, dual, few, many]; fullOne replaces the
+     bare word when the count is 1 (« صنف واحد »). */
+  function arW(n, a) { n = Math.abs(n); return n === 1 ? a[0] : n === 2 ? a[1] : (n === 0 || (n % 100 >= 3 && n % 100 <= 10)) ? a[2] : a[3]; }
+  function arN(n, a, fullOne) { var w = arW(n, a); return n === 1 ? (fullOne || w) : n === 2 ? w : n + ' ' + w; }
+  var ITEM = ['صنف', 'صنفان', 'أصناف', 'صنفًا'];
+  var DAYW = ['يوم', 'يومان', 'أيام', 'يومًا'];
+  var nItems = function (n) { return L(n + ' article' + (n > 1 ? 's' : ''), n + ' item' + (n === 1 ? '' : 's'), arN(n, ITEM, 'صنف واحد')); };
+  var pct = function (v) { return L('−' + v + ' %', '−' + v + '%', '−' + v + '%'); };
+  var loc = function () { return L('fr-FR', 'en-GB', 'ar-u-nu-latn'); };
+
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
-  var money = function (n) { return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(+n || 0)) + ' MAD'; };
+  var money = function (n) { return new Intl.NumberFormat(loc(), { maximumFractionDigits: 0 }).format(Math.round(+n || 0)) + ' MAD'; };
   var pad2 = function (n) { return String(n).padStart(2, '0'); };
-  var fmtDay = function (d) { return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d); };
+  var fmtDay = function (d) { return new Intl.DateTimeFormat(loc(), { day: 'numeric', month: 'short', year: 'numeric' }).format(d); };
   var fmtHM = function (d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
   var startOfDay = function (d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
   var endOfDay = function (d) { var x = new Date(d); x.setHours(23, 59, 59, 999); return x.getTime(); };
@@ -153,39 +166,41 @@
 
   function scopeText(ctx, p) {
     var sc = p.scope || {};
-    if (sc.type === 'tout') return 'Tout le magasin';
+    if (sc.type === 'tout') return L('Tout le magasin', 'Whole shop', 'كل المتجر');
     if (sc.type === 'rayon') {
       var names = (sc.ids || []).map(function (id) { var r = ctx.rayons.find(function (x) { return x.id === id; }); return r && r.label; }).filter(Boolean);
-      if (!names.length) return 'Aucun rayon choisi';
-      return names.length <= 2 ? names.join(' et ') : names[0] + ' et ' + (names.length - 1) + ' autres rayons';
+      if (!names.length) return L('Aucun rayon choisi', 'No department chosen', 'لم يتم اختيار أي قسم');
+      if (names.length <= 2) return names.join(L(' et ', ' and ', ' و'));
+      var k = names.length - 1;
+      return L(names[0] + ' et ' + k + ' autres rayons', names[0] + ' and ' + k + ' other departments', names[0] + ' و' + arN(k, ['قسم آخر', 'قسمان آخران', 'أقسام أخرى', 'قسمًا آخر']));
     }
     if (sc.type === 'produits') {
       var n = (sc.ids || []).length;
-      if (!n) return 'Aucun article choisi';
-      if (n === 1) return ctx.products[sc.ids[0]] ? ctx.products[sc.ids[0]].name : '1 article';
-      return n + ' articles choisis';
+      if (!n) return L('Aucun article choisi', 'No item chosen', 'لم يتم اختيار أي صنف');
+      if (n === 1) return ctx.products[sc.ids[0]] ? ctx.products[sc.ids[0]].name : L('1 article', '1 item', 'صنف واحد');
+      return L(n + ' articles choisis', n + ' items selected', 'الأصناف المختارة: ' + n);
     }
-    if (sc.type === 'avant') return sc.before ? 'Entré en stock avant le ' + fmtDay(new Date(sc.before)) : 'Aucune date choisie';
-    if (sc.type === 'stock') return 'Il en reste ' + (sc.max || 0) + ' ou moins';
+    if (sc.type === 'avant') return sc.before ? L('Entré en stock avant le ' + fmtDay(new Date(sc.before)), 'Received before ' + fmtDay(new Date(sc.before)), 'دخل المخزون قبل ' + fmtDay(new Date(sc.before))) : L('Aucune date choisie', 'No date chosen', 'لم يتم اختيار تاريخ');
+    if (sc.type === 'stock') return L('Il en reste ' + (sc.max || 0) + ' ou moins', (sc.max || 0) + ' or fewer left', 'المتبقي ' + (sc.max || 0) + ' أو أقل');
     return '·';
   }
 
   /* « Mar, Jeu · 12:00–14:00 » : le créneau tel qu'on l'afficherait en
      vitrine. Vide quand la promotion court toute la journée, tous les jours. */
-  var DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-  var DAY_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  var dayShort = function (i) { return L(['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'])[i]; };
+  var dayLong = function (i) { return L(['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], ['يوم الأحد', 'يوم الإثنين', 'يوم الثلاثاء', 'يوم الأربعاء', 'يوم الخميس', 'يوم الجمعة', 'يوم السبت'])[i]; };
   var WEEK = [1, 2, 3, 4, 5, 6, 0];
   function windowText(p) {
     var parts = [];
-    if (p.days && p.days.length) parts.push(WEEK.filter(function (d) { return p.days.indexOf(d) >= 0; }).map(function (d) { return DAY_SHORT[d]; }).join(', '));
+    if (p.days && p.days.length) parts.push(WEEK.filter(function (d) { return p.days.indexOf(d) >= 0; }).map(function (d) { return dayShort(d); }).join(L(', ', ', ', '، ')));
     if (p.start && p.end) parts.push(p.start + '–' + p.end);
     return parts.join(' · ');
   }
   function resumeText(p, now) {
     var next = PRM().nextWindow ? PRM().nextWindow(p, now) : null;
-    if (!next) return 'Hors créneau';
-    var day = next.day === 0 ? 'aujourd’hui' : next.day === 1 ? 'demain' : DAY_LONG[next.weekday];
-    return 'Reprend ' + day + (next.at ? ' à ' + next.at : '');
+    if (!next) return L('Hors créneau', 'Outside hours', 'خارج الأوقات');
+    var day = next.day === 0 ? L('aujourd’hui', 'today', 'اليوم') : next.day === 1 ? L('demain', 'tomorrow', 'غدًا') : dayLong(next.weekday);
+    return L('Reprend ' + day + (next.at ? ' à ' + next.at : ''), 'Resumes ' + day + (next.at ? ' at ' + next.at : ''), 'يستأنف ' + day + (next.at ? ' في الساعة ' + next.at : ''));
   }
   function whenText(p, now) {
     var st = PRM().status(p, now || Date.now());
@@ -194,23 +209,34 @@
     return slot && st !== 'ended' ? slot + ' · ' + (st === 'waiting' ? resumeText(p, now) + ' · ' : '') + base : base;
   }
   function whenBase(p, st) {
-    if (st === 'paused') return 'En pause, aucun prix n’est modifié';
-    if (st === 'scheduled') { var j = Math.ceil((p.from - Date.now()) / DAY); return 'Démarre ' + (j <= 1 ? 'demain' : 'dans ' + j + ' jours') + ' · ' + fmtDay(new Date(p.from)); }
-    if (st === 'ended') return 'Terminée le ' + fmtDay(new Date(p.to));
-    if (!p.to) return 'Sans date de fin, jusqu’à ce que vous l’arrêtiez';
+    if (st === 'paused') return L('En pause, aucun prix n’est modifié', 'Paused, no price is changed', 'متوقف مؤقتًا، لا يتغير أي سعر');
+    if (st === 'scheduled') {
+      var j = Math.ceil((p.from - Date.now()) / DAY);
+      return L('Démarre ' + (j <= 1 ? 'demain' : 'dans ' + j + ' jours') + ' · ' + fmtDay(new Date(p.from)),
+        'Starts ' + (j <= 1 ? 'tomorrow' : 'in ' + j + ' days') + ' · ' + fmtDay(new Date(p.from)),
+        'يبدأ ' + (j <= 1 ? 'غدًا' : 'بعد ' + arN(j, DAYW, 'يوم واحد')) + ' · ' + fmtDay(new Date(p.from)));
+    }
+    if (st === 'ended') return L('Terminée le ' + fmtDay(new Date(p.to)), 'Ended on ' + fmtDay(new Date(p.to)), 'انتهى في ' + fmtDay(new Date(p.to)));
+    if (!p.to) return L('Sans date de fin, jusqu’à ce que vous l’arrêtiez', 'No end date, until you stop it', 'بلا تاريخ انتهاء، حتى توقفه');
     var left = p.to - Date.now();
-    if (left < 2 * 3600000) return 'Se termine à ' + fmtHM(new Date(p.to));
+    if (left < 2 * 3600000) return L('Se termine à ' + fmtHM(new Date(p.to)), 'Ends at ' + fmtHM(new Date(p.to)), 'ينتهي في ' + fmtHM(new Date(p.to)));
     var days = Math.ceil(left / DAY);
-    return days <= 1 ? 'Se termine aujourd’hui à ' + fmtHM(new Date(p.to)) : 'Se termine dans ' + days + ' jours · ' + fmtDay(new Date(p.to));
+    return days <= 1
+      ? L('Se termine aujourd’hui à ' + fmtHM(new Date(p.to)), 'Ends today at ' + fmtHM(new Date(p.to)), 'ينتهي اليوم في ' + fmtHM(new Date(p.to)))
+      : L('Se termine dans ' + days + ' jours · ' + fmtDay(new Date(p.to)), 'Ends in ' + days + ' days · ' + fmtDay(new Date(p.to)), 'ينتهي بعد ' + arN(days, DAYW) + ' · ' + fmtDay(new Date(p.to)));
   }
 
-  var STARTERS = {
-    destock: { name: 'Déstockage', kind: 'percent', value: 30, scope: { type: 'avant' }, months: 6, icon: 'archive-restore', kicker: 'Stock dormant', title: 'Déstocker l’ancienne saison', desc: 'Articles entrés il y a plus de 6 mois', badge: '−30 %' },
-    finserie: { name: 'Fins de série', kind: 'percent', value: 20, scope: { type: 'stock', max: 5 }, icon: 'package-minus', kicker: 'Faible stock', title: 'Écouler les fins de série', desc: 'Articles avec 5 pièces ou moins', badge: '−20 %' },
-    weekend: { name: 'Week-end', kind: 'percent', value: 10, scope: { type: 'tout' }, days: 2, icon: 'calendar-days', kicker: 'Temps fort', title: 'Animer le week-end', desc: 'Tout le magasin jusqu’à dimanche soir', badge: '−10 %' }
-  };
+  /* Les modèles sont construits à l'appel : la langue peut changer entre deux
+     ouvertures de la page. */
+  function starters() {
+    return {
+      destock: { name: L('Déstockage', 'Clearance', 'تصفية المخزون'), kind: 'percent', value: 30, scope: { type: 'avant' }, months: 6, icon: 'archive-restore', kicker: L('Stock dormant', 'Dormant stock', 'مخزون راكد'), title: L('Déstocker l’ancienne saison', 'Clear last season’s stock', 'تصفية مخزون الموسم الماضي'), desc: L('Articles entrés il y a plus de 6 mois', 'Items received more than 6 months ago', 'أصناف دخلت المخزون منذ أكثر من 6 أشهر') },
+      finserie: { name: L('Fins de série', 'End of line', 'نهاية السلسلة'), kind: 'percent', value: 20, scope: { type: 'stock', max: 5 }, icon: 'package-minus', kicker: L('Faible stock', 'Low stock', 'مخزون منخفض'), title: L('Écouler les fins de série', 'Sell off end-of-line items', 'تصريف أصناف نهاية السلسلة'), desc: L('Articles avec 5 pièces ou moins', 'Items with 5 pieces or fewer', 'أصناف متبقٍ منها 5 قطع أو أقل') },
+      weekend: { name: L('Week-end', 'Weekend', 'نهاية الأسبوع'), kind: 'percent', value: 10, scope: { type: 'tout' }, days: 2, icon: 'calendar-days', kicker: L('Temps fort', 'Key moment', 'مناسبة مميزة'), title: L('Animer le week-end', 'Liven up the weekend', 'تنشيط نهاية الأسبوع'), desc: L('Tout le magasin jusqu’à dimanche soir', 'Whole shop until Sunday evening', 'كل المتجر حتى مساء الأحد') }
+    };
+  }
   function starter(key) {
-    var s = STARTERS[key]; if (!s) return null;
+    var s = starters()[key]; if (!s) return null;
     var p = { name: s.name, kind: s.kind, value: s.value, scope: JSON.parse(JSON.stringify(s.scope)) };
     if (s.months) p.scope.before = startOfDay(new Date(Date.now() - s.months * 30 * DAY));
     if (s.days) p.to = endOfDay(new Date(Date.now() + s.days * DAY));
@@ -223,37 +249,44 @@
     var status = PRM().status(p, now);
     var n = preview(ctx, p).count;
     var tone = status === 'active' ? 'active' : status === 'ended' ? 'ended' : 'soon';
-    var label = status === 'active' ? 'En cours' : status === 'waiting' ? 'Hors créneau' : status === 'scheduled' ? 'Programmée' : status === 'paused' ? 'En pause' : 'Terminée';
+    var label = status === 'active' ? L('En cours', 'Active', 'جارٍ') : status === 'waiting' ? L('Hors créneau', 'Outside hours', 'خارج الأوقات') : status === 'scheduled' ? L('Programmée', 'Scheduled', 'مجدول') : status === 'paused' ? L('En pause', 'Paused', 'متوقف مؤقتًا') : L('Terminée', 'Ended', 'منتهٍ');
+    var tPrint = L('Imprimer les étiquettes', 'Print labels', 'طباعة الملصقات');
+    var tToggle = p.paused ? L('Reprendre', 'Resume', 'استئناف') : L('Mettre en pause', 'Pause', 'إيقاف مؤقت');
+    var tEdit = L('Modifier', 'Edit', 'تعديل');
+    var tDel = L('Supprimer', 'Delete', 'حذف');
     return '<div class="bpd-row ' + tone + '"><span><span class="bpd-off">' + esc(PRM().badgeOf(p)) + '</span></span>' +
       '<span class="bpd-rname"><b>' + esc(p.name) + '</b><span class="bpd-state ' + tone + '">' + label + '</span></span>' +
       '<span class="bpd-rtxt">' + esc(scopeText(ctx, p)) + '</span><span class="bpd-rtxt">' + esc(whenText(p, now)) + '</span>' +
-      '<span class="bpd-rnum">' + n + ' article' + (n > 1 ? 's' : '') + '</span><span class="bpd-actions">' +
-      (n ? '<button class="bpd-icon" data-action="bpd-print" data-arg="' + esc(p.id) + '" title="Imprimer les étiquettes" aria-label="Imprimer les étiquettes"><i data-lucide="printer"></i></button>' : '') +
-      (status !== 'ended' ? '<button class="bpd-icon" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + (p.paused ? 'Reprendre' : 'Mettre en pause') + '" aria-label="' + (p.paused ? 'Reprendre' : 'Mettre en pause') + '"><i data-lucide="' + (p.paused ? 'play' : 'pause') + '"></i></button>' : '') +
-      '<button class="bpd-icon" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="Modifier" aria-label="Modifier"><i data-lucide="pencil"></i></button>' +
-      '<button class="bpd-icon danger" data-action="bpd-delete" data-arg="' + esc(p.id) + '" title="Supprimer" aria-label="Supprimer"><i data-lucide="trash-2"></i></button></span></div>';
+      '<span class="bpd-rnum">' + nItems(n) + '</span><span class="bpd-actions">' +
+      (n ? '<button class="bpd-icon" data-action="bpd-print" data-arg="' + esc(p.id) + '" title="' + tPrint + '" aria-label="' + tPrint + '"><i data-lucide="printer"></i></button>' : '') +
+      (status !== 'ended' ? '<button class="bpd-icon" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + tToggle + '" aria-label="' + tToggle + '"><i data-lucide="' + (p.paused ? 'play' : 'pause') + '"></i></button>' : '') +
+      '<button class="bpd-icon" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="' + tEdit + '" aria-label="' + tEdit + '"><i data-lucide="pencil"></i></button>' +
+      '<button class="bpd-icon danger" data-action="bpd-delete" data-arg="' + esc(p.id) + '" title="' + tDel + '" aria-label="' + tDel + '"><i data-lucide="trash-2"></i></button></span></div>';
   }
 
   function startersHtml(title) {
     var ok = allowedPercents();
-    var badge = function (s) { if (!ok || s.kind !== 'percent') return s.badge; var v = fitPolicy({ kind: 'percent', value: s.value }).value; return '−' + v + ' %'; };
-    return '<section class="bpd-template-block"><div class="bpd-section-head"><div><h3>' + title + '</h3></div><p>Chaque modèle ouvre un brouillon : rien ne change avant votre validation.</p></div>' +
-      '<div class="bpd-starters">' + Object.keys(STARTERS).map(function (key) { var s = STARTERS[key]; return '<button class="bpd-starter" data-action="bpd-starter" data-arg="' + key + '"><span class="bpd-starter-icon"><i data-lucide="' + s.icon + '"></i></span><span class="bpd-starter-copy"><small>' + esc(s.kicker) + '</small><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></span><strong>' + esc(badge(s)) + '</strong><i class="bpd-starter-arrow" data-lucide="arrow-up-right"></i></button>'; }).join('') + '</div></section>';
+    var all = starters();
+    var badge = function (s) { var v = s.value; if (ok && s.kind === 'percent') v = fitPolicy({ kind: 'percent', value: s.value }).value; return pct(v); };
+    return '<section class="bpd-template-block"><div class="bpd-section-head"><div><h3>' + title + '</h3></div><p>' + L('Chaque modèle ouvre un brouillon : rien ne change avant votre validation.', 'Each template opens a draft: nothing changes until you confirm.', 'يفتح كل نموذج مسودة: لا يتغير شيء قبل تأكيدك.') + '</p></div>' +
+      '<div class="bpd-starters">' + Object.keys(all).map(function (key) { var s = all[key]; return '<button class="bpd-starter" data-action="bpd-starter" data-arg="' + key + '"><span class="bpd-starter-icon"><i data-lucide="' + s.icon + '"></i></span><span class="bpd-starter-copy"><small>' + esc(s.kicker) + '</small><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></span><strong>' + esc(badge(s)) + '</strong><i class="bpd-starter-arrow" data-lucide="arrow-up-right"></i></button>'; }).join('') + '</div></section>';
   }
 
   function emptyHtml() {
-    return '<section class="bpd-intro"><div class="bpd-intro-copy"><h2>Aucune promotion pour l’instant</h2>' +
-      '<p>Choisissez la remise, les articles et la durée. ' + (tillApplies() ? 'La caisse applique le bon prix automatiquement, sans manipulation au comptoir.' : 'Votre caisse n’applique pas encore ces promotions toute seule : la remise se saisit au comptoir.') + '</p>' +
-      '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>' +
-      '<ul class="bpd-intro-sync" aria-label="Ce que Kiwi synchronise"><li><i data-lucide="scan-barcode"></i><span><b>Prix caisse</b><small>Mis à jour instantanément</small></span></li>' +
-      '<li><i data-lucide="receipt-text"></i><span><b>Tickets & reçus</b><small>Remise clairement affichée</small></span></li>' +
-      '<li><i data-lucide="printer"></i><span><b>Étiquettes</b><small>Prêtes à imprimer</small></span></li></ul></section>' +
-      startersHtml('Partir d’un modèle');
+    return '<section class="bpd-intro"><div class="bpd-intro-copy"><h2>' + L('Aucune promotion pour l’instant', 'No promotions yet', 'لا توجد عروض بعد') + '</h2>' +
+      '<p>' + L('Choisissez la remise, les articles et la durée. ', 'Choose the discount, the items and the duration. ', 'اختر الخصم والأصناف والمدة. ') + (tillApplies()
+        ? L('La caisse applique le bon prix automatiquement, sans manipulation au comptoir.', 'The till applies the right price automatically, with nothing to do at the counter.', 'يطبّق الصندوق السعر الصحيح تلقائيًا دون أي تدخل عند المنضدة.')
+        : L('Votre caisse n’applique pas encore ces promotions toute seule : la remise se saisit au comptoir.', 'Your till does not apply these promotions on its own yet: enter the discount at the counter.', 'لا يطبّق صندوقك هذه العروض تلقائيًا بعد: يُدخل الخصم يدويًا عند المنضدة.')) + '</p>' +
+      '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>' + L('Créer une promotion', 'Create a promotion', 'إنشاء عرض') + '</button></div>' +
+      '<ul class="bpd-intro-sync" aria-label="' + L('Ce que Kiwi synchronise', 'What Kiwi syncs', 'ما تزامنه Kiwi') + '"><li><i data-lucide="scan-barcode"></i><span><b>' + L('Prix caisse', 'Till prices', 'أسعار الصندوق') + '</b><small>' + L('Mis à jour instantanément', 'Updated instantly', 'تحديث فوري') + '</small></span></li>' +
+      '<li><i data-lucide="receipt-text"></i><span><b>' + L('Tickets & reçus', 'Receipts', 'الإيصالات') + '</b><small>' + L('Remise clairement affichée', 'Discount clearly shown', 'الخصم ظاهر بوضوح') + '</small></span></li>' +
+      '<li><i data-lucide="printer"></i><span><b>' + L('Étiquettes', 'Labels', 'الملصقات') + '</b><small>' + L('Prêtes à imprimer', 'Ready to print', 'جاهزة للطباعة') + '</small></span></li></ul></section>' +
+      startersHtml(L('Partir d’un modèle', 'Start from a template', 'ابدأ من نموذج'));
   }
 
   function renderPage() {
     injectCss();
-    if (!ready()) { K.toast('Promotions indisponibles', { type: 'warn', desc: 'Rechargez le dashboard pour charger le module.' }); return; }
+    if (!ready()) { K.toast(L('Promotions indisponibles', 'Promotions unavailable', 'العروض غير متاحة'), { type: 'warn', desc: L('Rechargez le dashboard pour charger le module.', 'Reload the dashboard to load the module.', 'أعد تحميل لوحة التحكم لتحميل الوحدة.') }); return; }
     var ctx = context();
     var now = Date.now();
     var all = PRM().list();
@@ -269,19 +302,28 @@
     /* Un article n'est « remisé » que par une promotion qui s'applique À CET
        INSTANT ; celles qui attendent leur créneau restent sous « En cours ». */
     groups.active.forEach(function (p) { if (PRM().status(p, now) !== 'active') return; items(ctx).forEach(function (it) { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); }); });
-    var sub = groups.active.length + ' promotion' + (groups.active.length > 1 ? 's' : '') + ' en cours' + (seen.size ? ' · ' + seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') : '');
+    var na = groups.active.length, ns = seen.size;
+    var sub = L(na + ' promotion' + (na > 1 ? 's' : '') + ' en cours' + (ns ? ' · ' + ns + ' article' + (ns > 1 ? 's' : '') + ' remisé' + (ns > 1 ? 's' : '') : ''),
+      na + ' active promotion' + (na === 1 ? '' : 's') + (ns ? ' · ' + ns + ' discounted item' + (ns === 1 ? '' : 's') : ''),
+      arN(na, ['عرض', 'عرضان', 'عروض', 'عرضًا'], 'عرض واحد') + ' قيد التنفيذ' + (ns ? ' · الأصناف المخفضة: ' + ns : ''));
+    var seenDesc = ns
+      ? L(ns + ' article' + (ns > 1 ? 's' : '') + ' remisé' + (ns > 1 ? 's' : '') + ' en caisse', ns + ' discounted item' + (ns === 1 ? '' : 's') + ' at the till', 'الأصناف المخفضة في الصندوق: ' + ns)
+      : L('Aucun article remisé', 'No discounted items', 'لا توجد أصناف مخفضة');
+    var lActive = L('En cours', 'Active', 'الجارية');
+    var lSoon = L('À venir et en pause', 'Upcoming and paused', 'القادمة والمتوقفة');
+    var lEnded = L('Terminées', 'Ended', 'المنتهية');
     var tab = function (key, lbl) { return '<button class="kx-tab' + (filter === key ? ' on' : '') + '" aria-pressed="' + (filter === key) + '" data-action="bpd-filter" data-arg="' + key + '">' + lbl + '<small>' + groups[key].length + '</small></button>'; };
     var listHtml = shown.length
-      ? '<div class="bpd-rows"><div class="bpd-row th" aria-hidden="true"><span>Remise</span><span>Promotion</span><span>Articles visés</span><span>Période</span><span class="r">Concernés</span><span></span></div>' + shown.map(function (p) { return row(ctx, p, now); }).join('') + '</div>'
-      : '<div class="bpd-empty bpd-section-empty"><span class="bpd-empty-icon"><i data-lucide="inbox"></i></span><h2>Aucune promotion ici</h2><p>Changez de section ou créez une nouvelle offre.</p><button class="bpd-btn" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>';
-    K.appPage('promos', { title: 'Promotions', subtitle: sub, body:
+      ? '<div class="bpd-rows"><div class="bpd-row th" aria-hidden="true"><span>' + L('Remise', 'Discount', 'الخصم') + '</span><span>' + L('Promotion', 'Promotion', 'العرض') + '</span><span>' + L('Articles visés', 'Target items', 'الأصناف المستهدفة') + '</span><span>' + L('Période', 'Period', 'الفترة') + '</span><span class="r">' + L('Concernés', 'Affected', 'المعنية') + '</span><span></span></div>' + shown.map(function (p) { return row(ctx, p, now); }).join('') + '</div>'
+      : '<div class="bpd-empty bpd-section-empty"><span class="bpd-empty-icon"><i data-lucide="inbox"></i></span><h2>' + L('Aucune promotion ici', 'No promotions here', 'لا توجد عروض هنا') + '</h2><p>' + L('Changez de section ou créez une nouvelle offre.', 'Switch section or create a new offer.', 'غيّر القسم أو أنشئ عرضًا جديدًا.') + '</p><button class="bpd-btn" data-action="bpd-new"><i data-lucide="plus"></i>' + L('Créer une promotion', 'Create a promotion', 'إنشاء عرض') + '</button></div>';
+    K.appPage('promos', { title: L('Promotions', 'Promotions', 'العروض'), subtitle: sub, body:
       '<div class="bpd-page">' + (all.length
-        ? '<div class="kx-kpi-strip cols-3 bpd-kpis"><div class="kx-kpi' + (groups.active.length ? ' good' : '') + '"><div class="l">En cours</div><div class="v">' + groups.active.length + '</div><div class="d">' + (seen.size ? seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') + ' en caisse' : 'Aucun article remisé') + '</div></div>' +
-          '<div class="kx-kpi"><div class="l">À venir et en pause</div><div class="v">' + groups.soon.length + '</div><div class="d">Ne modifient aucun prix</div></div>' +
-          '<div class="kx-kpi"><div class="l">Terminées</div><div class="v">' + groups.ended.length + '</div><div class="d">Gardées pour l’historique</div></div></div>' +
-          '<div class="bpd-bar"><div class="kx-tabs" role="group" aria-label="État des promotions">' + tab('active', 'En cours') + tab('soon', 'À venir et en pause') + tab('ended', 'Terminées') + '</div>' +
-          '<div class="bpd-bar-r">' + (tillApplies() ? '<span class="bpd-sync-note"><i data-lucide="refresh-cw"></i>Synchronisé avec la caisse</span>' : '<span class="bpd-sync-note">Remise à saisir au comptoir</span>') + '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div></div>' +
-          listHtml + startersHtml('Partir d’un modèle')
+        ? '<div class="kx-kpi-strip cols-3 bpd-kpis"><div class="kx-kpi' + (groups.active.length ? ' good' : '') + '"><div class="l">' + lActive + '</div><div class="v">' + groups.active.length + '</div><div class="d">' + seenDesc + '</div></div>' +
+          '<div class="kx-kpi"><div class="l">' + lSoon + '</div><div class="v">' + groups.soon.length + '</div><div class="d">' + L('Ne modifient aucun prix', 'Change no prices', 'لا تغيّر أي سعر') + '</div></div>' +
+          '<div class="kx-kpi"><div class="l">' + lEnded + '</div><div class="v">' + groups.ended.length + '</div><div class="d">' + L('Gardées pour l’historique', 'Kept for the record', 'محفوظة للسجل') + '</div></div></div>' +
+          '<div class="bpd-bar"><div class="kx-tabs" role="group" aria-label="' + L('État des promotions', 'Promotion status', 'حالة العروض') + '">' + tab('active', lActive) + tab('soon', lSoon) + tab('ended', lEnded) + '</div>' +
+          '<div class="bpd-bar-r">' + (tillApplies() ? '<span class="bpd-sync-note"><i data-lucide="refresh-cw"></i>' + L('Synchronisé avec la caisse', 'Synced with the till', 'متزامن مع الصندوق') + '</span>' : '<span class="bpd-sync-note">' + L('Remise à saisir au comptoir', 'Discount entered at the counter', 'يُدخل الخصم عند المنضدة') + '</span>') + '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>' + L('Nouvelle promotion', 'New promotion', 'عرض جديد') + '</button></div></div>' +
+          listHtml + startersHtml(L('Partir d’un modèle', 'Start from a template', 'ابدأ من نموذج'))
         : emptyHtml()) + '</div>' });
     icons();
     if (!subscribed) {
@@ -290,43 +332,50 @@
     }
   }
 
-  var SCOPES = [
-    { id: 'tout', label: 'Tout le magasin', icon: 'store' }, { id: 'rayon', label: 'Un rayon', icon: 'layout-grid' },
-    { id: 'produits', label: 'Des articles', icon: 'shirt' }, { id: 'avant', label: 'Ancien stock', icon: 'calendar-clock' },
-    { id: 'stock', label: 'Fin de série', icon: 'package-minus' }
-  ];
+  var scopes = function () {
+    return [
+      { id: 'tout', label: L('Tout le magasin', 'Whole shop', 'كل المتجر'), icon: 'store' }, { id: 'rayon', label: L('Un rayon', 'One department', 'قسم'), icon: 'layout-grid' },
+      { id: 'produits', label: L('Des articles', 'Items', 'أصناف'), icon: 'shirt' }, { id: 'avant', label: L('Ancien stock', 'Old stock', 'مخزون قديم'), icon: 'calendar-clock' },
+      { id: 'stock', label: L('Fin de série', 'End of line', 'نهاية السلسلة'), icon: 'package-minus' }
+    ];
+  };
   function valid(d) {
-    if (!d.value) return 'Choisissez de combien vous baissez le prix';
+    if (!d.value) return L('Choisissez de combien vous baissez le prix', 'Choose how much to lower the price', 'اختر قيمة تخفيض السعر');
     if (d.kind === 'percent' && window.KiwiDiscountPolicy?.configured(venueKey())
-        && !window.KiwiDiscountPolicy.allowed(d.value, venueKey())) return 'Vos réglages autorisent seulement ' + (allowedPercents() || []).map(function (v) { return '−' + v + ' %'; }).join(', ') + '. Choisissez une de ces remises ou changez les réglages.';
+        && !window.KiwiDiscountPolicy.allowed(d.value, venueKey())) {
+      var list = (allowedPercents() || []).map(function (v) { return pct(v); }).join(L(', ', ', ', '، '));
+      return L('Vos réglages autorisent seulement ' + list + '. Choisissez une de ces remises ou changez les réglages.',
+        'Your settings only allow ' + list + '. Choose one of these discounts or change the settings.',
+        'تسمح إعداداتك فقط بـ ' + list + '. اختر أحد هذه الخصومات أو غيّر الإعدادات.');
+    }
     var sc = d.scope || {};
-    if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return 'Choisissez au moins un élément à viser';
-    if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
-    if (sc.type === 'stock' && !sc.max) return 'Indiquez le seuil de stock';
-    if (d.to && d.from && d.to <= d.from) return 'La date de fin doit venir après le début';
-    if (!!d.start !== !!d.end) return 'Indiquez l’heure de début et l’heure de fin, ou aucune';
-    if (d.start && d.start === d.end) return 'L’heure de fin doit différer de l’heure de début';
+    if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return L('Choisissez au moins un élément à viser', 'Choose at least one target', 'اختر هدفًا واحدًا على الأقل');
+    if (sc.type === 'avant' && !sc.before) return L('Choisissez la date avant laquelle les articles sont visés', 'Choose the date before which items are targeted', 'اختر التاريخ الذي تُستهدف الأصناف قبله');
+    if (sc.type === 'stock' && !sc.max) return L('Indiquez le seuil de stock', 'Enter the stock threshold', 'أدخل حد المخزون');
+    if (d.to && d.from && d.to <= d.from) return L('La date de fin doit venir après le début', 'The end date must be after the start', 'يجب أن يأتي تاريخ الانتهاء بعد البداية');
+    if (!!d.start !== !!d.end) return L('Indiquez l’heure de début et l’heure de fin, ou aucune', 'Enter both a start time and an end time, or neither', 'أدخل وقت البداية ووقت النهاية معًا، أو اتركهما فارغين');
+    if (d.start && d.start === d.end) return L('L’heure de fin doit différer de l’heure de début', 'The end time must differ from the start time', 'يجب أن يختلف وقت النهاية عن وقت البداية');
     return '';
   }
   function autoName(ctx, d) {
-    if (d.scope.type === 'avant') return 'Déstockage';
-    if (d.scope.type === 'stock') return 'Fins de série';
+    if (d.scope.type === 'avant') return L('Déstockage', 'Clearance', 'تصفية المخزون');
+    if (d.scope.type === 'stock') return L('Fins de série', 'End of line', 'نهاية السلسلة');
     if (d.scope.type === 'rayon') return scopeText(ctx, d);
-    if (d.scope.type === 'produits') return 'Sélection';
-    return d.kind === 'percent' ? 'Tout le magasin −' + d.value + ' %' : 'Promotion';
+    if (d.scope.type === 'produits') return L('Sélection', 'Selection', 'مجموعة مختارة');
+    return d.kind === 'percent' ? L('Tout le magasin −' + d.value + ' %', 'Whole shop −' + d.value + '%', 'كل المتجر −' + d.value + '%') : L('Promotion', 'Promotion', 'عرض');
   }
 
   function scopeControl(ctx, d) {
     var sc = d.scope || {};
-    if (sc.type === 'tout') return '<div class="bpd-hint">Chaque article du magasin, sans exception.</div>';
+    if (sc.type === 'tout') return '<div class="bpd-hint">' + L('Chaque article du magasin, sans exception.', 'Every item in the shop, without exception.', 'كل صنف في المتجر دون استثناء.') + '</div>';
     if (sc.type === 'rayon') return '<div class="bpd-chips">' + ctx.rayons.map(function (r) { return '<button class="bpd-chip ' + ((sc.ids || []).indexOf(r.id) >= 0 ? 'on' : '') + '" data-prr="' + esc(r.id) + '">' + esc(r.label) + ' <small>' + r.items.length + '</small></button>'; }).join('') + '</div>';
     if (sc.type === 'produits') {
       var ids = sc.ids || [];
-      return '<div class="bpd-search"><i data-lucide="search"></i><input id="bpd-q" placeholder="Chercher un article ou scanner son code-barres…" autocomplete="off"></div>' +
-        '<div class="bpd-chips">' + (ids.length ? ids.map(function (id) { return '<button class="bpd-chip on" data-prp="' + esc(id) + '">' + esc(ctx.products[id] ? ctx.products[id].name : id) + ' <i data-lucide="x"></i></button>'; }).join('') : '<span class="bpd-hint">Aucun article choisi.</span>') + '</div><div class="bpd-hits" id="bpd-hits"></div>';
+      return '<div class="bpd-search"><i data-lucide="search"></i><input id="bpd-q" placeholder="' + L('Chercher un article ou scanner son code-barres…', 'Search for an item or scan its barcode…', 'ابحث عن صنف أو امسح رمزه الشريطي…') + '" autocomplete="off"></div>' +
+        '<div class="bpd-chips">' + (ids.length ? ids.map(function (id) { return '<button class="bpd-chip on" data-prp="' + esc(id) + '">' + esc(ctx.products[id] ? ctx.products[id].name : id) + ' <i data-lucide="x"></i></button>'; }).join('') : '<span class="bpd-hint">' + L('Aucun article choisi.', 'No item chosen.', 'لم يتم اختيار أي صنف.') + '</span>') + '</div><div class="bpd-hits" id="bpd-hits"></div>';
     }
-    if (sc.type === 'avant') return '<div class="bpd-chips">' + [{m:3,l:'Plus de 3 mois'},{m:6,l:'Plus de 6 mois'},{m:12,l:'Plus d’un an'}].map(function (o) { return '<button class="bpd-chip" data-pra="' + o.m + '">' + o.l + '</button>'; }).join('') + '</div><input class="bpd-input" id="bpd-before" type="date" value="' + toInput(sc.before) + '"><div class="bpd-hint">Vise les articles entrés avant cette date.</div>';
-    if (sc.type === 'stock') return '<div class="bpd-chips">' + [2,3,5,10].map(function (n) { return '<button class="bpd-chip ' + (sc.max === n ? 'on' : '') + '" data-prm="' + n + '">' + n + ' ou moins</button>'; }).join('') + '</div><input class="bpd-input" id="bpd-max" type="number" min="1" value="' + (sc.max || '') + '" placeholder="ou un seuil à vous"><div class="bpd-hint">La cible suit automatiquement le stock disponible.</div>';
+    if (sc.type === 'avant') return '<div class="bpd-chips">' + [{m:3,l:L('Plus de 3 mois', 'Over 3 months', 'أكثر من 3 أشهر')},{m:6,l:L('Plus de 6 mois', 'Over 6 months', 'أكثر من 6 أشهر')},{m:12,l:L('Plus d’un an', 'Over a year', 'أكثر من سنة')}].map(function (o) { return '<button class="bpd-chip" data-pra="' + o.m + '">' + o.l + '</button>'; }).join('') + '</div><input class="bpd-input" id="bpd-before" type="date" value="' + toInput(sc.before) + '"><div class="bpd-hint">' + L('Vise les articles entrés avant cette date.', 'Targets items received before this date.', 'يستهدف الأصناف التي دخلت المخزون قبل هذا التاريخ.') + '</div>';
+    if (sc.type === 'stock') return '<div class="bpd-chips">' + [2,3,5,10].map(function (n) { return '<button class="bpd-chip ' + (sc.max === n ? 'on' : '') + '" data-prm="' + n + '">' + L(n + ' ou moins', n + ' or fewer', n + ' أو أقل') + '</button>'; }).join('') + '</div><input class="bpd-input" id="bpd-max" type="number" min="1" value="' + (sc.max || '') + '" placeholder="' + L('ou un seuil à vous', 'or your own threshold', 'أو حدًا تختاره') + '"><div class="bpd-hint">' + L('La cible suit automatiquement le stock disponible.', 'The target follows available stock automatically.', 'يتبع الهدف المخزون المتاح تلقائيًا.') + '</div>';
     return '';
   }
 
@@ -336,18 +385,20 @@
     var problem = valid(d);
     var sc = d.scope || {};
     var quick = d.kind === 'percent' ? (window.KiwiDiscountPolicy?.percentages(venueKey(), [10,20,30,50]) || [10,20,30,50]) : d.kind === 'amount' ? [20,50,100,200] : [49,99,149,199];
+    var kinds = [['percent', L('Pourcentage', 'Percentage', 'نسبة مئوية'), pct(20)], ['amount', L('Montant', 'Amount', 'مبلغ'), '−50 MAD'], ['fixed', L('Prix final', 'Final price', 'السعر النهائي'), '99 MAD']];
+    var presets = [['today', L('Aujourd’hui', 'Today', 'اليوم')], ['we', L('Ce week-end', 'This weekend', 'نهاية هذا الأسبوع')], ['7', L('7 jours', '7 days', '7 أيام')], ['30', L('30 jours', '30 days', '30 يومًا')], ['none', L('Sans fin', 'No end', 'بلا نهاية')]];
     return '<div class="bpd-modal" data-bpd-host><div class="bpd-compose"><div class="bpd-form">' +
-      '<section class="bpd-step"><header><span>1</span><div><b>Définir l’offre</b><small>Le nom et la baisse de prix</small></div></header><div class="bpd-step-body">' +
-      '<div class="bpd-field"><label>Nom <span>· visible sur le reçu</span></label><input class="bpd-input" id="bpd-name" maxlength="80" placeholder="Soldes d’été, Déstockage…" value="' + esc(d.name) + '"></div>' +
-      '<div class="bpd-field"><label>Type de remise</label><div class="bpd-kinds">' + [['percent','Pourcentage','−20 %'],['amount','Montant','−50 MAD'],['fixed','Prix final','99 MAD']].map(function (x) { return '<button class="bpd-choice ' + (d.kind === x[0] ? 'on' : '') + '" aria-pressed="' + (d.kind === x[0]) + '" data-prk="' + x[0] + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><div class="bpd-value"><span class="bpd-value-box"><input class="bpd-input" id="bpd-value" type="number" min="0" value="' + d.value + '"><span class="bpd-unit">' + (d.kind === 'percent' ? '%' : 'MAD') + '</span></span><div class="bpd-chips">' + quick.map(function (n) { return '<button class="bpd-chip ' + (d.value === n ? 'on' : '') + '" data-prv="' + n + '">' + (d.kind === 'percent' ? '−' + n + ' %' : d.kind === 'amount' ? '−' + n : n) + '</button>'; }).join('') + '</div></div></div></div></section>' +
-      '<section class="bpd-step"><header><span>2</span><div><b>Choisir les articles</b><small>Kiwi garde cette sélection à jour</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-scopes">' + SCOPES.map(function (x) { return '<button class="bpd-choice ' + (sc.type === x.id ? 'on' : '') + '" aria-pressed="' + (sc.type === x.id) + '" data-prs="' + x.id + '"><i data-lucide="' + x.icon + '"></i><b>' + x.label + '</b></button>'; }).join('') + '</div><div class="bpd-scopebody">' + scopeControl(ctx, d) + '</div></div></div></section>' +
-      '<section class="bpd-step"><header><span>3</span><div><b>Programmer la durée</b><small>Démarrez maintenant ou planifiez</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-chips">' + [['today','Aujourd’hui'],['we','Ce week-end'],['7','7 jours'],['30','30 jours'],['none','Sans fin']].map(function (x) { return '<button class="bpd-chip" data-prw="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div class="bpd-dates"><div><label>Début <span>· vide = maintenant</span></label><input class="bpd-input" id="bpd-from" type="date" value="' + toInput(d.from) + '"></div><div><label>Fin <span>· vide = sans fin</span></label><input class="bpd-input" id="bpd-to" type="date" value="' + toInput(d.to) + '"></div></div></div>' +
-        '<div class="bpd-field"><label>Jours <span>· aucun = tous les jours</span></label><div class="bpd-chips bpd-days" role="group" aria-label="Jours de la promotion">' + WEEK.map(function (wd) { var on = (d.days || []).indexOf(wd) >= 0; return '<button class="bpd-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-prd="' + wd + '">' + DAY_SHORT[wd] + '</button>'; }).join('') + '</div></div>' +
-        '<div class="bpd-field"><label>Heures <span>· vides = toute la journée</span></label><div class="bpd-dates"><div><input class="bpd-input" id="bpd-start" type="time" step="900" aria-label="Heure de début" value="' + esc(d.start || '') + '"></div><div><input class="bpd-input" id="bpd-end" type="time" step="900" aria-label="Heure de fin" value="' + esc(d.end || '') + '"></div></div><div class="bpd-hint">En heure du Maroc. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.</div></div>' +
+      '<section class="bpd-step"><header><span>1</span><div><b>' + L('Définir l’offre', 'Define the offer', 'تحديد العرض') + '</b><small>' + L('Le nom et la baisse de prix', 'The name and the price drop', 'الاسم وقيمة تخفيض السعر') + '</small></div></header><div class="bpd-step-body">' +
+      '<div class="bpd-field"><label>' + L('Nom', 'Name', 'الاسم') + ' <span>' + L('· visible sur le reçu', '· shown on the receipt', '· يظهر على الإيصال') + '</span></label><input class="bpd-input" id="bpd-name" maxlength="80" placeholder="' + L('Soldes d’été, Déstockage…', 'Summer sale, Clearance…', 'تخفيضات الصيف، تصفية المخزون…') + '" value="' + esc(d.name) + '"></div>' +
+      '<div class="bpd-field"><label>' + L('Type de remise', 'Discount type', 'نوع الخصم') + '</label><div class="bpd-kinds">' + kinds.map(function (x) { return '<button class="bpd-choice ' + (d.kind === x[0] ? 'on' : '') + '" aria-pressed="' + (d.kind === x[0]) + '" data-prk="' + x[0] + '"><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div><div class="bpd-value"><span class="bpd-value-box"><input class="bpd-input" id="bpd-value" type="number" min="0" value="' + d.value + '"><span class="bpd-unit">' + (d.kind === 'percent' ? '%' : 'MAD') + '</span></span><div class="bpd-chips">' + quick.map(function (n) { return '<button class="bpd-chip ' + (d.value === n ? 'on' : '') + '" data-prv="' + n + '">' + (d.kind === 'percent' ? pct(n) : d.kind === 'amount' ? '−' + n : n) + '</button>'; }).join('') + '</div></div></div></div></section>' +
+      '<section class="bpd-step"><header><span>2</span><div><b>' + L('Choisir les articles', 'Choose the items', 'اختيار الأصناف') + '</b><small>' + L('Kiwi garde cette sélection à jour', 'Kiwi keeps this selection up to date', 'تُبقي Kiwi هذا الاختيار محدّثًا') + '</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-scopes">' + scopes().map(function (x) { return '<button class="bpd-choice ' + (sc.type === x.id ? 'on' : '') + '" aria-pressed="' + (sc.type === x.id) + '" data-prs="' + x.id + '"><i data-lucide="' + x.icon + '"></i><b>' + x.label + '</b></button>'; }).join('') + '</div><div class="bpd-scopebody">' + scopeControl(ctx, d) + '</div></div></div></section>' +
+      '<section class="bpd-step"><header><span>3</span><div><b>' + L('Programmer la durée', 'Set the duration', 'تحديد المدة') + '</b><small>' + L('Démarrez maintenant ou planifiez', 'Start now or schedule', 'ابدأ الآن أو جدول') + '</small></div></header><div class="bpd-step-body"><div class="bpd-field"><div class="bpd-chips">' + presets.map(function (x) { return '<button class="bpd-chip" data-prw="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div class="bpd-dates"><div><label>' + L('Début', 'Start', 'البداية') + ' <span>' + L('· vide = maintenant', '· empty = now', '· فارغ = الآن') + '</span></label><input class="bpd-input" id="bpd-from" type="date" value="' + toInput(d.from) + '"></div><div><label>' + L('Fin', 'End', 'النهاية') + ' <span>' + L('· vide = sans fin', '· empty = no end', '· فارغ = بلا نهاية') + '</span></label><input class="bpd-input" id="bpd-to" type="date" value="' + toInput(d.to) + '"></div></div></div>' +
+        '<div class="bpd-field"><label>' + L('Jours', 'Days', 'الأيام') + ' <span>' + L('· aucun = tous les jours', '· none = every day', '· بلا اختيار = كل يوم') + '</span></label><div class="bpd-chips bpd-days" role="group" aria-label="' + L('Jours de la promotion', 'Promotion days', 'أيام العرض') + '">' + WEEK.map(function (wd) { var on = (d.days || []).indexOf(wd) >= 0; return '<button class="bpd-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-prd="' + wd + '">' + dayShort(wd) + '</button>'; }).join('') + '</div></div>' +
+        '<div class="bpd-field"><label>' + L('Heures', 'Hours', 'الساعات') + ' <span>' + L('· vides = toute la journée', '· empty = all day', '· فارغة = طوال اليوم') + '</span></label><div class="bpd-dates"><div><input class="bpd-input" id="bpd-start" type="time" step="900" aria-label="' + L('Heure de début', 'Start time', 'وقت البداية') + '" value="' + esc(d.start || '') + '"></div><div><input class="bpd-input" id="bpd-end" type="time" step="900" aria-label="' + L('Heure de fin', 'End time', 'وقت النهاية') + '" value="' + esc(d.end || '') + '"></div></div><div class="bpd-hint">' + L('En heure du Maroc. Une fin avant le début passe minuit : 22:00 → 01:00 compte pour le jour où elle a commencé.', 'Morocco time. An end before the start runs past midnight: 22:00 → 01:00 counts for the day it started.', 'بتوقيت المغرب. إذا كانت النهاية قبل البداية فالعرض يمتد بعد منتصف الليل: 22:00 ← 01:00 يُحتسب لليوم الذي بدأ فيه.') + '</div></div>' +
         '</div></section>' +
-      '</div><aside class="bpd-preview" data-surface="inverse"><span class="bpd-preview-live"><i></i>Aperçu en direct</span><div class="bpd-preview-head"><span>Articles concernés</span><b>' + prev.count + '</b><em>article' + (prev.count > 1 ? 's' : '') + '</em></div>' +
-      (prev.count ? '<div class="bpd-swap"><div><span>Prix plein</span><b>' + money(prev.from) + '</b></div><i data-lucide="arrow-right"></i><div class="next"><span>Prix promo</span><b>' + money(prev.to) + '</b></div></div><div class="bpd-give">Vous offrez <b>' + money(prev.from - prev.to) + '</b> si tout part.</div>' + (prev.under ? '<div class="bpd-warn"><i data-lucide="alert-triangle"></i><span><b>' + prev.under + ' article' + (prev.under > 1 ? 's passent' : ' passe') + ' sous le prix d’achat.</b></span></div>' : '') + '<div class="bpd-sample">' + prev.sample.map(function (x) { return '<div class="bpd-srow"><span class="name">' + esc(x.name) + '</span><span class="prices"><s>' + money(x.was) + '</s><b>' + money(x.price) + '</b></span></div>'; }).join('') + '</div>' : '<div class="bpd-none">' + esc(problem || 'Aucun article ne correspond à cette cible.') + '</div>') + '</aside></div>' +
-      '<div class="bpd-compose-foot"><span class="bpd-problem">' + (problem ? '<i data-lucide="info"></i>' + esc(problem) : '<i data-lucide="check-circle-2"></i>Prête à être ' + (composer.editing ? 'enregistrée' : 'lancée')) + '</span><span class="bpd-compose-actions"><button class="bpd-btn" data-bpd-cancel>Annuler</button><button class="bpd-btn primary" id="bpd-save" ' + (problem || !prev.count ? 'disabled' : '') + '><i data-lucide="check"></i>' + (composer.editing ? 'Enregistrer' : 'Lancer la promotion') + '</button></span></div></div>';
+      '</div><aside class="bpd-preview" data-surface="inverse"><span class="bpd-preview-live"><i></i>' + L('Aperçu en direct', 'Live preview', 'معاينة مباشرة') + '</span><div class="bpd-preview-head"><span>' + L('Articles concernés', 'Items affected', 'الأصناف المعنية') + '</span><b>' + prev.count + '</b><em>' + L('article' + (prev.count > 1 ? 's' : ''), 'item' + (prev.count === 1 ? '' : 's'), arW(prev.count, ITEM)) + '</em></div>' +
+      (prev.count ? '<div class="bpd-swap"><div><span>' + L('Prix plein', 'Full price', 'السعر الكامل') + '</span><b>' + money(prev.from) + '</b></div><i data-lucide="arrow-right"></i><div class="next"><span>' + L('Prix promo', 'Promo price', 'سعر العرض') + '</span><b>' + money(prev.to) + '</b></div></div><div class="bpd-give">' + L('Vous offrez <b>' + money(prev.from - prev.to) + '</b> si tout part.', 'You give away <b>' + money(prev.from - prev.to) + '</b> if everything sells.', 'تتنازل عن <b>' + money(prev.from - prev.to) + '</b> إذا بيع كل شيء.') + '</div>' + (prev.under ? '<div class="bpd-warn"><i data-lucide="alert-triangle"></i><span><b>' + L(prev.under + ' article' + (prev.under > 1 ? 's passent' : ' passe') + ' sous le prix d’achat.', prev.under + ' item' + (prev.under === 1 ? ' falls' : 's fall') + ' below cost price.', arN(prev.under, ITEM, 'صنف واحد') + ' بسعر أقل من سعر الشراء.') + '</b></span></div>' : '') + '<div class="bpd-sample">' + prev.sample.map(function (x) { return '<div class="bpd-srow"><span class="name">' + esc(x.name) + '</span><span class="prices"><s>' + money(x.was) + '</s><b>' + money(x.price) + '</b></span></div>'; }).join('') + '</div>' : '<div class="bpd-none">' + esc(problem || L('Aucun article ne correspond à cette cible.', 'No item matches this target.', 'لا يوجد صنف يطابق هذا الهدف.')) + '</div>') + '</aside></div>' +
+      '<div class="bpd-compose-foot"><span class="bpd-problem">' + (problem ? '<i data-lucide="info"></i>' + esc(problem) : '<i data-lucide="check-circle-2"></i>' + (composer.editing ? L('Prête à être enregistrée', 'Ready to be saved', 'جاهز للحفظ') : L('Prête à être lancée', 'Ready to be launched', 'جاهز للإطلاق'))) + '</span><span class="bpd-compose-actions"><button class="bpd-btn" data-bpd-cancel>' + L('Annuler', 'Cancel', 'إلغاء') + '</button><button class="bpd-btn primary" id="bpd-save" ' + (problem || !prev.count ? 'disabled' : '') + '><i data-lucide="check"></i>' + (composer.editing ? L('Enregistrer', 'Save', 'حفظ') : L('Lancer la promotion', 'Launch the promotion', 'إطلاق العرض')) + '</button></span></div></div>';
   }
 
   /* Les pourcentages que le propriétaire autorise (Réglages), ou null quand
@@ -374,7 +425,7 @@
     composer.draft = PRM().normalize(seed || { name:'', kind:'percent', value:20, scope:{type:'tout'} });
     if (!composer.editing) fitPolicy(composer.draft);
     if (!seed) composer.draft.name = '';
-    promoModal = K.modal({ title: composer.editing ? 'Modifier la promotion' : 'Créer une promotion', desc: 'Trois choix, puis Kiwi applique les bons prix partout.', width: 1080, body: '<div data-bpd-shell></div>', foot: '' });
+    promoModal = K.modal({ title: composer.editing ? L('Modifier la promotion', 'Edit the promotion', 'تعديل العرض') : L('Créer une promotion', 'Create a promotion', 'إنشاء عرض'), desc: L('Trois choix, puis Kiwi applique les bons prix partout.', 'Three choices, then Kiwi applies the right prices everywhere.', 'ثلاثة اختيارات، ثم تطبّق Kiwi الأسعار الصحيحة في كل مكان.'), width: 1080, body: '<div data-bpd-shell></div>', foot: '' });
     function draw() {
       var shell = promoModal.el.querySelector('[data-bpd-shell]');
       shell.innerHTML = composerHtml(ctx);
@@ -397,7 +448,7 @@
     var q = el.querySelector('#bpd-q');
     if (q) {
       var hits = el.querySelector('#bpd-hits');
-      var paint = function () { var term=q.value.trim().toLowerCase(); if(!term){hits.innerHTML='';return;} var by=ctx.byEan[q.value.trim()]; var found=by?[ctx.products[by]].filter(Boolean):items(ctx).filter(function(it){return it.name.toLowerCase().indexOf(term)>=0;}).slice(0,8); hits.innerHTML=found.map(function(it){return '<button class="bpd-hit" data-pick="'+esc(it.id)+'"><span>'+esc(it.name)+'</span><b>'+money(it.price)+'</b></button>';}).join('')||'<div class="bpd-hint">Aucun article trouvé.</div>'; hits.querySelectorAll('[data-pick]').forEach(function(b){b.onclick=function(){var ids=d.scope.ids||(d.scope.ids=[]);if(ids.indexOf(b.dataset.pick)<0)ids.push(b.dataset.pick);redraw();};}); };
+      var paint = function () { var term=q.value.trim().toLowerCase(); if(!term){hits.innerHTML='';return;} var by=ctx.byEan[q.value.trim()]; var found=by?[ctx.products[by]].filter(Boolean):items(ctx).filter(function(it){return it.name.toLowerCase().indexOf(term)>=0;}).slice(0,8); hits.innerHTML=found.map(function(it){return '<button class="bpd-hit" data-pick="'+esc(it.id)+'"><span>'+esc(it.name)+'</span><b>'+money(it.price)+'</b></button>';}).join('')||'<div class="bpd-hint">'+L('Aucun article trouvé.','No item found.','لم يُعثر على أي صنف.')+'</div>'; hits.querySelectorAll('[data-pick]').forEach(function(b){b.onclick=function(){var ids=d.scope.ids||(d.scope.ids=[]);if(ids.indexOf(b.dataset.pick)<0)ids.push(b.dataset.pick);redraw();};}); };
       q.oninput = paint; q.onkeydown = function(e){if(e.key==='Enter'){e.preventDefault();paint();}};
     }
     el.querySelectorAll('[data-pra]').forEach(function(b){b.onclick=function(){d.scope.before=startOfDay(new Date(Date.now()-(+b.dataset.pra)*30*DAY));redraw();};});
@@ -411,7 +462,7 @@
     var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';redraw();};
     var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';redraw();};
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
-    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?d.name+' enregistrée':d.name+(tillApplies()?' lancée, la caisse est à jour':' enregistrée · la remise se saisit au comptoir'),{type:'success'});renderPage();};
+    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name):(tillApplies()?L(d.name+' lancée, la caisse est à jour',d.name+' launched, the till is up to date','تم إطلاق '+d.name+'، الصندوق محدّث'):L(d.name+' enregistrée · la remise se saisit au comptoir',d.name+' saved · enter the discount at the counter','تم حفظ '+d.name+' · يُدخل الخصم عند المنضدة')),{type:'success'});renderPage();};
   }
 
   function labelFor(ctx, pid, variant) {
@@ -427,12 +478,13 @@
     return {promo:p,labels:labels,products:products};
   }
 
+  document.addEventListener('kiwi:langchange', function () { if (document.querySelector('[data-nav="promos"].active')) renderPage(); });
   H['nav-promos'] = renderPage;
   H['bpd-filter'] = function (_el,arg) { filter=arg||'active';renderPage(); };
   H['bpd-new'] = function () { openComposer(null); };
   H['bpd-starter'] = function (_el,arg) { openComposer(starter(arg)); };
   H['bpd-edit'] = function (_el,arg) { var p=PRM().get(arg);if(p)openComposer(p); };
-  H['bpd-toggle'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;PRM().setPaused(arg,!p.paused);K.toast(p.paused?p.name+' reprend':p.name+' mise en pause',{type:p.paused?'success':'warn'});renderPage(); };
-  H['bpd-delete'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;var m=K.modal({title:'Supprimer « '+p.name+' » ?',desc:'Les articles repassent immédiatement au prix plein. Les ventes encaissées ne changent pas.',width:470,foot:'<button class="kb ghost" data-cancel>Garder</button><button class="kb danger" data-delete>Supprimer</button>'});m.el.querySelector('[data-cancel]').onclick=m.close;m.el.querySelector('[data-delete]').onclick=function(){PRM().remove(arg);m.close();K.toast(p.name+' supprimée',{type:'warn'});renderPage();}; };
-  H['bpd-print'] = function (_el,arg) { var plan=labelPlan(arg);if(!plan.promo)return;var n=plan.labels.length;var m=K.modal({title:'Étiquettes · '+plan.promo.name,desc:n?'Chaque étiquette portera le prix réellement appliqué en caisse.':'Aucun article en stock avec un code-barres.',width:520,body:n?'<div class="bpd-print-summary"><b>'+n+'</b><span>étiquette'+(n>1?'s':'')+' · '+plan.products+' article'+(plan.products>1?'s':'')+' concerné'+(plan.products>1?'s':'')+'</span></div>':'',foot:'<button class="kb ghost" data-cancel>'+ (n?'Annuler':'Fermer') +'</button>'+(n?'<button class="kb atlas" data-print><i data-lucide="printer"></i>Imprimer '+n+'</button>':'')});m.el.querySelector('[data-cancel]').onclick=m.close;var b=m.el.querySelector('[data-print]');if(b)b.onclick=function(){m.close();window.KiwiBarcode.printLabels(plan.labels,{copies:1});};icons(); };
+  H['bpd-toggle'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;PRM().setPaused(arg,!p.paused);K.toast(p.paused?L(p.name+' reprend',p.name+' resumes','تم استئناف '+p.name):L(p.name+' mise en pause',p.name+' paused','تم إيقاف '+p.name+' مؤقتًا'),{type:p.paused?'success':'warn'});renderPage(); };
+  H['bpd-delete'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;var m=K.modal({title:L('Supprimer « '+p.name+' » ?','Delete "'+p.name+'"?','حذف « '+p.name+' »؟'),desc:L('Les articles repassent immédiatement au prix plein. Les ventes encaissées ne changent pas.','Items go back to full price immediately. Completed sales do not change.','تعود الأصناف فورًا إلى السعر الكامل. لا تتغير المبيعات المحصّلة.'),width:470,foot:'<button class="kb ghost" data-cancel>'+L('Garder','Keep','إبقاء')+'</button><button class="kb danger" data-delete>'+L('Supprimer','Delete','حذف')+'</button>'});m.el.querySelector('[data-cancel]').onclick=m.close;m.el.querySelector('[data-delete]').onclick=function(){PRM().remove(arg);m.close();K.toast(L(p.name+' supprimée',p.name+' deleted','تم حذف '+p.name),{type:'warn'});renderPage();}; };
+  H['bpd-print'] = function (_el,arg) { var plan=labelPlan(arg);if(!plan.promo)return;var n=plan.labels.length;var m=K.modal({title:L('Étiquettes · ','Labels · ','الملصقات · ')+plan.promo.name,desc:n?L('Chaque étiquette portera le prix réellement appliqué en caisse.','Each label will carry the price actually applied at the till.','سيحمل كل ملصق السعر المطبّق فعليًا في الصندوق.'):L('Aucun article en stock avec un code-barres.','No item in stock with a barcode.','لا يوجد صنف في المخزون له رمز شريطي.'),width:520,body:n?'<div class="bpd-print-summary"><b>'+n+'</b><span>'+L('étiquette'+(n>1?'s':'')+' · '+plan.products+' article'+(plan.products>1?'s':'')+' concerné'+(plan.products>1?'s':''),'label'+(n===1?'':'s')+' · '+plan.products+' item'+(plan.products===1?'':'s')+' affected',arN(n,['ملصق','ملصقان','ملصقات','ملصقًا'],'ملصق واحد')+' · الأصناف المعنية: '+plan.products)+'</span></div>':'',foot:'<button class="kb ghost" data-cancel>'+ (n?L('Annuler','Cancel','إلغاء'):L('Fermer','Close','إغلاق')) +'</button>'+(n?'<button class="kb atlas" data-print><i data-lucide="printer"></i>'+L('Imprimer ','Print ','طباعة ')+n+'</button>':'')});m.el.querySelector('[data-cancel]').onclick=m.close;var b=m.el.querySelector('[data-print]');if(b)b.onclick=function(){m.close();window.KiwiBarcode.printLabels(plan.labels,{copies:1});};icons(); };
 })();

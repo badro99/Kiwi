@@ -24,9 +24,13 @@ has(interactive, '${desc ? `<p>${desc}</p>` : \'\'}', 'Kiwi.modal garde `desc` c
 const pages = read('assets/pages-pro.js');
 has(pages, 'desc: T.removeDesc(esc(`${t.model} · ${locName(t.loc)}`)),', 'terminal retiré : modèle et lieu échappés');
 has(pages, 'desc: T.deleteZoneDesc(pdsEsc(z.name), count),', 'plan de salle : nom de zone échappé');
-has(pages, 'desc: `« ${_esc(c.name)} » contient', 'boutique : nom de catégorie échappé');
+has(pages, 'desc: _catL(`« ${_esc(c.name)} » contient', 'boutique : nom de catégorie échappé');
+has(pages, '`"${_esc(c.name)}" contains', 'boutique : nom de catégorie échappé (anglais)');
+has(pages, '`«${_esc(c.name)}» تحتوي', 'boutique : nom de catégorie échappé (arabe)');
 hasNot(pages, 'desc: T.deleteZoneDesc(z.name, count)', 'plus de nom de zone brut');
 hasNot(pages, 'desc: `« ${c.name} » contient', 'plus de nom de catégorie brut');
+hasNot(pages, '`« ${c.name} » contient', 'plus de nom de catégorie brut (traduit)');
+hasNot(pages, '`"${c.name}" contains', 'plus de nom de catégorie brut (anglais)');
 
 const stock = read('assets/stock.js');
 has(stock, 'desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,', 'stock : article et catégorie échappés (fournisseur de secours)');

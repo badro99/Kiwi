@@ -57,7 +57,7 @@ ok('cashier backfills authenticated store feed', /api\/feed\?merchant=/.test(src
 ok('cashier rejects a differently stamped local journal', /b\.m\s*&&\s*slug\(\)\s*&&\s*b\.m\s*!==\s*slug\(\)/.test(src));
 ok('dashboard nav sits after returns', /nav:\s*'returns'[\s\S]{0,300}nav:\s*'sold'/.test(venues));
 ok('cashier has Vendus panel', /data-bq-view="vendus"/.test(caisse) && /data-bq-panel="vendus"/.test(caisse));
-ok('dashboard keeps only its page-level Vendus title', /\(owner\?'':'<h1>Vendus<\/h1>'\)/.test(src));
+ok('dashboard keeps only its page-level Vendus title', /\(owner\?'':'<h1>'\+L\('Vendus','Sold','المباع'\)\+'<\/h1>'\)/.test(src));
 ok('recommendations are evidence gated', /pairs\[0\][\s\S]{0,80}count\s*>=\s*2/.test(src));
 ok('cashier component owns KPI and empty-state layout', /\.ksold \.kx-kpi-strip\{display:grid/.test(src) && /\.ksold \.kx-empty \.ico svg\{display:block;width:22px;height:22px/.test(src));
 ok('Vendus exposes exact-day and period calendar modes', /data-ksold-mode="day"/.test(src) && /data-ksold-mode="range"/.test(src) && /type="date"/.test(src));

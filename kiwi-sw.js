@@ -63,7 +63,7 @@ var SHELL = [
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
-  '/assets/sold-insights.js?v=11',
+  '/assets/sold-insights.js?v=12',
   '/assets/design-2026.css?v=3',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -242,7 +242,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=5',
-  '/assets/boutique-promos-dashboard.js?v=16',
+  '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=44',
@@ -254,7 +254,7 @@ var SHELL = [
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=13',
-  '/assets/maison-stock-movements.js?v=5',
+  '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
   '/assets/stock.js?v=79',
@@ -284,7 +284,7 @@ var SHELL = [
   '/assets/restaurant-menu-workspace.js?v=114',
   '/assets/menu-promos-dashboard.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=9',
+  '/assets/catalog-import.js?v=10',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',

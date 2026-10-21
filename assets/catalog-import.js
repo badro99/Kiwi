@@ -33,6 +33,12 @@
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ));
   }
+  /* Display language: FR is the captured original, EN/AR are looked up here.
+     Named tx (not L): open() already holds a local `L` for its LABELS. */
+  const lang = () => { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  function tx(fr, en, ar) { const l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
+  /* Singular / plural pair: each argument is [one, many]. */
+  function plr(n, fr, en, ar) { const i = n === 1 ? 0 : 1; return tx(fr[i], en[i], ar[i]); }
   function toast(msg, opts) {
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg, opts); } catch (_) {}
   }
@@ -236,7 +242,7 @@
     parsed.rows.forEach((row, i) => {
       const line = i + 2;         // 1-based, header is line 1
       const name = cell(row, idx.produit);
-      if (!name) { issues.push({ line, level: 'skip', msg: 'ligne sans nom d\'article' }); return; }
+      if (!name) { issues.push({ line, level: 'skip', msg: tx('ligne sans nom d\'article', 'row with no item name', 'سطر بلا اسم صنف') }); return; }
 
       const gk = keyName(name);
       let g = groups.get(gk);
@@ -263,13 +269,13 @@
       if (rawPrice && !isFinite(g.priceMAD)) {
         const p = num(rawPrice);
         if (isFinite(p)) g.priceMAD = p;
-        else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · ignoré' });
+        else issues.push({ line, level: 'warn', code: 'prix', msg: tx('prix illisible (« ' + rawPrice + ' ») · ignoré', 'unreadable price ("' + rawPrice + '") · ignored', 'سعر غير مقروء ("' + rawPrice + '") · تم تجاهله') });
       }
       const rawCost = cell(row, idx.cout);
       if (rawCost && !isFinite(g.cost)) {
         const c = num(rawCost);
         if (isFinite(c)) g.cost = c;
-        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») · ignoré' });
+        else issues.push({ line, level: 'warn', msg: tx('coût d\'achat illisible (« ' + rawCost + ' ») · ignoré', 'unreadable cost price ("' + rawCost + '") · ignored', 'سعر الشراء غير مقروء ("' + rawCost + '") · تم تجاهله') });
       }
 
       /* Variant: couleur × taille. A shop with no colours or no sizes still
@@ -309,7 +315,7 @@
       const stockGiven = rawStock !== '';
       const stock = stockGiven ? intOr(rawStock, 0) : null;
       if (stockGiven && !isFinite(num(rawStock))) {
-        issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») · compté 0' });
+        issues.push({ line, level: 'warn', msg: tx('stock illisible (« ' + rawStock + ' ») · compté 0', 'unreadable stock ("' + rawStock + '") · counted as 0', 'مخزون غير مقروء ("' + rawStock + '") · احتُسب 0') });
       }
 
       const vk = colorId + '\u0000' + keyName(size);
@@ -333,7 +339,7 @@
         const vkFull = gk + '|' + vk;
         const dupInFile = seenCodes.get(code);
         if (dupInFile && dupInFile.vk !== vkFull) {
-          issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' · ignoré ici' });
+          issues.push({ line, level: 'warn', msg: tx('code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' · ignoré ici', 'barcode ' + code + ' already used on row ' + dupInFile.line + ' · ignored here', 'الرمز الشريطي ' + code + ' مستخدم مسبقاً في السطر ' + dupInFile.line + ' · تم تجاهله هنا') });
         } else if (!dupInFile) {
           seenCodes.set(code, { line, vk: vkFull });
           const owner = CAT.findByBarcode(code);
@@ -341,7 +347,7 @@
             const sameArticle = keyName(owner.product && owner.product.name) === gk
               && owner.variant.colorId === colorId && keyName(owner.variant.size) === keyName(size);
             if (sameArticle) v.barcodes.push({ code, type: cell(row, idx.type), already: true });
-            else issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » · ignoré' });
+            else issues.push({ line, level: 'warn', msg: tx('code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » · ignoré', 'barcode ' + code + ' already belongs to "' + ((owner.product && owner.product.name) || '?') + '" · ignored', 'الرمز الشريطي ' + code + ' يخص مسبقاً الصنف "' + ((owner.product && owner.product.name) || '?') + '" · تم تجاهله') });
           } else {
             v.barcodes.push({ code, type: cell(row, idx.type), already: false });
           }
@@ -353,7 +359,7 @@
        confirmation screen are the numbers that will actually happen. */
     const products = [...groups.values()];
     let newVariants = 0, updatedVariants = 0, newCodes = 0, missingCodes = 0;
-    const priceIssueLines = new Set(issues.filter((x) => /prix (illisible|manquant)/i.test(x.msg)).map((x) => x.line));
+    const priceIssueLines = new Set(issues.filter((x) => x.code === 'prix').map((x) => x.line));
     products.forEach((g) => {
       const have = g.existing ? CAT.listVariants(g.existing.id) : [];
       g.variants.forEach((v) => {
@@ -370,7 +376,7 @@
       g.kind = sizes.every((s) => /^\d{2}$/.test(s) && +s >= 35 && +s <= 48) ? 'pointure'
         : (sizes.every((s) => s === 'TU') ? 'tu' : 'taille');
       if (!g.existing && !isFinite(g.priceMAD) && !g.lines.some((line) => priceIssueLines.has(line))) {
-        issues.push({ line: g.lines[0], level: 'warn', msg: 'prix manquant · produit refusé à l’import' });
+        issues.push({ line: g.lines[0], level: 'warn', msg: tx('prix manquant · produit refusé à l’import', 'missing price · item rejected on import', 'السعر مفقود · رُفض الصنف عند الاستيراد') });
       }
     });
 
@@ -400,7 +406,7 @@
     const catId = new Map(CAT.listCategories().map((c) => [keyName(c.name), c.id]));
     plan.newCategories.forEach((name) => {
       try { const c = CAT.addCategory(name); if (c) catId.set(keyName(name), c.id); }
-      catch (_) { res.failed.push('catégorie ' + name); }
+      catch (_) { res.failed.push(tx('catégorie ', 'category ', 'الفئة ') + name); }
     });
 
     plan.products.forEach((g) => {
@@ -418,7 +424,7 @@
           if (Object.keys(patch).length) CAT.updateProduct(prod.id, patch);
         } else {
           /* A missing price is not a free product. Explicit 0 remains valid. */
-          if (!isFinite(g.priceMAD)) { res.failed.push(g.name + ' · prix manquant ou illisible, produit non créé'); return; }
+          if (!isFinite(g.priceMAD)) { res.failed.push(g.name + tx(' · prix manquant ou illisible, produit non créé', ' · missing or unreadable price, item not created', ' · السعر مفقود أو غير مقروء، لم يُنشأ الصنف')); return; }
           prod = CAT.addProduct({
             name: g.name,
             categoryId: wantCat || null,
@@ -483,7 +489,7 @@
     parsed.rows.forEach((row, i) => {
       const line = i + 2;
       const name = cell(row, idx.article);
-      if (!name) { issues.push({ line, level: 'skip', msg: 'ligne sans nom d\'article' }); return; }
+      if (!name) { issues.push({ line, level: 'skip', msg: tx('ligne sans nom d\'article', 'row with no item name', 'سطر بلا اسم صنف') }); return; }
 
       const catName = cell(row, idx.categorie);
       const subName = cell(row, idx.sous_categorie);
@@ -496,11 +502,11 @@
          boutique : jamais un produit gratuit par accident). */
       const existingForPrice = itemIndex.get(itemKey(name, catName)) || null;
       if (priceUnreadable && !existingForPrice) {
-        issues.push({ line, level: 'skip', msg: 'prix illisible (« ' + rawPrice + ' ») · article non créé' });
+        issues.push({ line, level: 'skip', msg: tx('prix illisible (« ' + rawPrice + ' ») · article non créé', 'unreadable price ("' + rawPrice + '") · item not created', 'سعر غير مقروء ("' + rawPrice + '") · لم يُنشأ الصنف') });
         return;
       }
       if (priceUnreadable) {
-        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · prix actuel conservé' });
+        issues.push({ line, level: 'warn', msg: tx('prix illisible (« ' + rawPrice + ' ») · prix actuel conservé', 'unreadable price ("' + rawPrice + '") · current price kept', 'سعر غير مقروء ("' + rawPrice + '") · أُبقي السعر الحالي') });
       }
       if (catName && !catByName.has(keyName(catName)) && !newCategories.some((n) => keyName(n) === keyName(catName))) {
         newCategories.push(catName);
@@ -550,7 +556,7 @@
     /* addCategory / addSubcategory return the whole store document rather than
        the row they created, so the id is read back by name afterwards. */
     plan.newCategories.forEach((name) => {
-      try { MS.addCategory(name); res.cats++; } catch (_) { res.failed.push('catégorie ' + name); }
+      try { MS.addCategory(name); res.cats++; } catch (_) { res.failed.push(tx('catégorie ', 'category ', 'الفئة ') + name); }
     });
     const catId = () => new Map((MS.categories() || []).map((c) => [keyName(c.name), c]));
 
@@ -558,7 +564,7 @@
       try {
         const c = catId().get(keyName(s.catName));
         if (c) { MS.addSubcategory(c.id, s.subName); res.subs++; }
-      } catch (_) { res.failed.push('sous-catégorie ' + s.subName); }
+      } catch (_) { res.failed.push(tx('sous-catégorie ', 'subcategory ', 'الفئة الفرعية ') + s.subName); }
     });
 
     const cmap = catId();
@@ -650,12 +656,14 @@
   /* ───────────────── the modal ───────────────── */
   const LABELS = {
     boutique: {
-      tag: 'INVENTAIRE', title: 'Importer un inventaire',
+      get tag() { return tx('INVENTAIRE', 'INVENTORY', 'المخزون'); },
+      get title() { return tx('Importer un inventaire', 'Import inventory', 'استيراد المخزون'); },
       cols: 'produit, categorie, couleur, taille, prix_mad, stock, code_barres',
       required: 'produit',
     },
     menu: {
-      tag: 'CARTE', title: 'Importer une carte',
+      get tag() { return tx('CARTE', 'MENU', 'القائمة'); },
+      get title() { return tx('Importer une carte', 'Import a menu', 'استيراد قائمة'); },
       cols: 'article, categorie, sous_categorie, prix_mad, description, disponible',
       required: 'article',
     },
@@ -664,7 +672,7 @@
   function venueLine() {
     try {
       const v = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
-      if (v && v.name) return 'Destination : <b>' + esc(v.name) + '</b>';
+      if (v && v.name) return tx('Destination : ', 'Destination: ', 'الوجهة: ') + '<b>' + esc(v.name) + '</b>';
     } catch (_) {}
     return '';
   }
@@ -676,14 +684,14 @@
     ensureCss();
 
     if (!window.Kiwi || !Kiwi.modal) {
-      toast('Import indisponible', { type: 'warn', desc: 'Rechargez la page.' });
+      toast(tx('Import indisponible', 'Import unavailable', 'الاستيراد غير متاح'), { type: 'warn', desc: tx('Rechargez la page.', 'Reload the page.', 'أعد تحميل الصفحة.') });
       return;
     }
 
     const m = Kiwi.modal({
       tag: L.tag, title: L.title, width: 620,
       body: '<div data-kci-body></div>',
-      foot: '<button class="kb atlas" data-kci-go type="button" disabled style="width:100%;justify-content:center;padding:12px;font-size:15px;opacity:.5;">Choisir un fichier</button>',
+      foot: '<button class="kb atlas" data-kci-go type="button" disabled style="width:100%;justify-content:center;padding:12px;font-size:15px;opacity:.5;">' + tx('Choisir un fichier', 'Choose a file', 'اختيار ملف') + '</button>',
     });
     const body = m.el.querySelector('[data-kci-body]');
     const go = m.el.querySelector('[data-kci-go]');
@@ -695,17 +703,21 @@
       body.innerHTML = [
         where ? '<p class="kci-where">' + where + '</p>' : '',
         '<div class="kci-drop" data-kci-drop tabindex="0" role="button">',
-        '  <h4>Déposez votre fichier CSV</h4>',
-        '  <p>ou cliquez pour le choisir · colonnes reconnues :<br><code>' + esc(L.cols) + '</code></p>',
+        '  <h4>' + tx('Déposez votre fichier CSV', 'Drop your CSV file', 'أفلت ملف CSV هنا') + '</h4>',
+        '  <p>' + tx('ou cliquez pour le choisir · colonnes reconnues :', 'or click to choose one · recognised columns:', 'أو انقر لاختياره · الأعمدة المعروفة:') + '<br><code>' + esc(L.cols) + '</code></p>',
         '</div>',
         '<input type="file" accept=".csv,.txt,text/csv,text/plain" hidden data-kci-file />',
         err ? '<div class="kci-iss"><b>' + esc(err) + '</b></div>' : '',
-        '<p class="kci-hint">Seule la colonne <code>' + esc(L.required) + '</code> est obligatoire. ',
-        'Les noms de colonnes sont reconnus en français comme en anglais (<code>prix</code>, <code>price</code>, <code>qte</code>…), ',
-        'le séparateur virgule ou point-virgule, et les accents dans les deux encodages qu\'Excel produit.<br>',
-        '<button class="kci-link" data-kci-tpl type="button">Télécharger un modèle CSV</button></p>',
+        '<p class="kci-hint">' + tx('Seule la colonne <code>' + esc(L.required) + '</code> est obligatoire. ', 'Only the <code>' + esc(L.required) + '</code> column is required. ', 'العمود <code>' + esc(L.required) + '</code> وحده إلزامي. '),
+        tx('Les noms de colonnes sont reconnus en français comme en anglais (<code>prix</code>, <code>price</code>, <code>qte</code>…), ',
+          'Column names are recognised in French or English (<code>prix</code>, <code>price</code>, <code>qte</code>…), ',
+          'تُعرف أسماء الأعمدة بالفرنسية أو الإنجليزية (<code>prix</code>, <code>price</code>, <code>qte</code>…)، '),
+        tx('le séparateur virgule ou point-virgule, et les accents dans les deux encodages qu\'Excel produit.<br>',
+          'with a comma or semicolon separator, and accents in both encodings Excel produces.<br>',
+          'مع الفاصلة أو الفاصلة المنقوطة كفاصل، والأحرف المعلّمة في كلا الترميزين اللذين ينتجهما Excel.<br>'),
+        '<button class="kci-link" data-kci-tpl type="button">' + tx('Télécharger un modèle CSV', 'Download a CSV template', 'تنزيل نموذج CSV') + '</button></p>',
       ].join('');
-      go.disabled = true; go.style.opacity = '.5'; go.textContent = 'Choisir un fichier';
+      go.disabled = true; go.style.opacity = '.5'; go.textContent = tx('Choisir un fichier', 'Choose a file', 'اختيار ملف');
     }
 
     /* ── step 2 · the plan, before anything is written ── */
@@ -715,33 +727,33 @@
        * count excludes them (they get their own explicit KPI below). */
       const createdCount = c.newProducts - (c.refusedProducts || 0);
       const kpis = kind === 'boutique' ? [
-        ['new', createdCount, createdCount === 1 ? 'article créé' : 'articles créés'],
-        ['warn', c.refusedProducts || 0, (c.refusedProducts || 0) === 1 ? 'article refusé' : 'articles refusés'],
-        ['', c.updatedProducts, c.updatedProducts === 1 ? 'article mis à jour' : 'articles mis à jour'],
-        ['new', c.newVariants, c.newVariants === 1 ? 'variante' : 'variantes'],
-        ['', c.newCodes, c.newCodes === 1 ? 'code-barres' : 'codes-barres'],
-        ['', c.newCategories, c.newCategories === 1 ? 'catégorie' : 'catégories'],
+        ['new', createdCount, plr(createdCount, ['article créé', 'articles créés'], ['item created', 'items created'], ['صنف مُنشأ', 'أصناف مُنشأة'])],
+        ['warn', c.refusedProducts || 0, plr(c.refusedProducts || 0, ['article refusé', 'articles refusés'], ['item rejected', 'items rejected'], ['صنف مرفوض', 'أصناف مرفوضة'])],
+        ['', c.updatedProducts, plr(c.updatedProducts, ['article mis à jour', 'articles mis à jour'], ['item updated', 'items updated'], ['صنف مُحدَّث', 'أصناف مُحدَّثة'])],
+        ['new', c.newVariants, plr(c.newVariants, ['variante', 'variantes'], ['variant', 'variants'], ['متغيّر', 'متغيّرات'])],
+        ['', c.newCodes, plr(c.newCodes, ['code-barres', 'codes-barres'], ['barcode', 'barcodes'], ['رمز شريطي', 'رموز شريطية'])],
+        ['', c.newCategories, plr(c.newCategories, ['catégorie', 'catégories'], ['category', 'categories'], ['فئة', 'فئات'])],
       ] : [
-        ['new', c.newItems, c.newItems === 1 ? 'article créé' : 'articles créés'],
-        ['', c.updatedItems, c.updatedItems === 1 ? 'article mis à jour' : 'articles mis à jour'],
-        ['', c.newCategories, c.newCategories === 1 ? 'catégorie' : 'catégories'],
-        ['', c.newSubs, c.newSubs === 1 ? 'sous-catégorie' : 'sous-catégories'],
+        ['new', c.newItems, plr(c.newItems, ['article créé', 'articles créés'], ['item created', 'items created'], ['صنف مُنشأ', 'أصناف مُنشأة'])],
+        ['', c.updatedItems, plr(c.updatedItems, ['article mis à jour', 'articles mis à jour'], ['item updated', 'items updated'], ['صنف مُحدَّث', 'أصناف مُحدَّثة'])],
+        ['', c.newCategories, plr(c.newCategories, ['catégorie', 'catégories'], ['category', 'categories'], ['فئة', 'فئات'])],
+        ['', c.newSubs, plr(c.newSubs, ['sous-catégorie', 'sous-catégories'], ['subcategory', 'subcategories'], ['فئة فرعية', 'فئات فرعية'])],
       ];
 
       const rowsHtml = kind === 'boutique'
         ? p.products.slice(0, 60).map((g) => '<tr><td>' + esc(g.name)
-            + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>')
-            + (!g.existing && !isFinite(g.priceMAD) ? ' <span class="kci-tag warn">prix manquant — refusé</span>' : '') + '</td><td>'
+            + (g.existing ? '' : ' <span class="kci-tag new">' + tx('nouveau', 'new', 'جديد') + '</span>')
+            + (!g.existing && !isFinite(g.priceMAD) ? ' <span class="kci-tag warn">' + tx('prix manquant · refusé', 'missing price · rejected', 'السعر مفقود · مرفوض') + '</span>' : '') + '</td><td>'
             + esc(g.categoryName || '·') + '</td><td>' + esc(mad(g.priceMAD))
             + '</td><td>' + g.variants.length + '</td></tr>').join('')
         : p.rows.slice(0, 60).map((r) => '<tr><td>' + esc(r.name)
-            + (r.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
+            + (r.existing ? '' : ' <span class="kci-tag new">' + tx('nouveau', 'new', 'جديد') + '</span>') + '</td><td>'
             + esc(r.catName || '·') + (r.subName ? ' · ' + esc(r.subName) : '') + '</td><td>'
-            + esc(mad(r.price)) + '</td><td>' + (r.avail ? 'oui' : 'non') + '</td></tr>').join('');
+            + esc(mad(r.price)) + '</td><td>' + (r.avail ? tx('oui', 'yes', 'نعم') : tx('non', 'no', 'لا')) + '</td></tr>').join('');
 
       const head = kind === 'boutique'
-        ? '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Var.</th></tr>'
-        : '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Dispo</th></tr>';
+        ? '<tr><th>' + tx('Article', 'Item', 'الصنف') + '</th><th>' + tx('Catégorie', 'Category', 'الفئة') + '</th><th>' + tx('Prix', 'Price', 'السعر') + '</th><th>' + tx('Var.', 'Var.', 'المتغيّرات') + '</th></tr>'
+        : '<tr><th>' + tx('Article', 'Item', 'الصنف') + '</th><th>' + tx('Catégorie', 'Category', 'الفئة') + '</th><th>' + tx('Prix', 'Price', 'السعر') + '</th><th>' + tx('Dispo', 'Avail.', 'متاح') + '</th></tr>';
       const total = kind === 'boutique' ? c.newProducts + c.updatedProducts - (c.refusedProducts || 0) : p.rows.length;
 
       const issues = p.issues.slice(0, 12);
@@ -751,45 +763,47 @@
         kpis.map(([k, n, lbl]) => '<div class="kci-kpi ' + k + '"><b>' + n + '</b><span>' + esc(lbl) + '</span></div>').join(''),
         '</div>',
         '<div class="kci-scroll"><table class="kci-tbl"><thead>' + head + '</thead><tbody>' + rowsHtml + '</tbody></table></div>',
-        total > 60 ? '<p class="kci-hint">' + (total - 60) + ' autres articles non affichés ici, tous seront importés.</p>' : '',
-        issues.length ? '<div class="kci-iss"><b>' + p.issues.length + (p.issues.length === 1 ? ' ligne à signaler' : ' lignes à signaler')
-          + '</b><ul>' + issues.map((x) => '<li>Ligne ' + x.line + ' · ' + esc(x.msg) + '</li>').join('')
-          + '</ul>' + (p.issues.length > issues.length ? '<p style="margin:6px 0 0;">et ' + (p.issues.length - issues.length) + ' autres.</p>' : '') + '</div>' : '',
+        total > 60 ? '<p class="kci-hint">' + (total - 60) + ' ' + tx('autres articles non affichés ici, tous seront importés.', 'more items not shown here, all will be imported.', 'أصناف أخرى غير معروضة هنا، وسيتم استيرادها جميعاً.') + '</p>' : '',
+        issues.length ? '<div class="kci-iss"><b>' + p.issues.length + (p.issues.length === 1 ? tx(' ligne à signaler', ' row to review', ' سطر للمراجعة') : tx(' lignes à signaler', ' rows to review', ' أسطر للمراجعة'))
+          + '</b><ul>' + issues.map((x) => '<li>' + tx('Ligne ', 'Row ', 'السطر ') + x.line + ' · ' + esc(x.msg) + '</li>').join('')
+          + '</ul>' + (p.issues.length > issues.length ? '<p style="margin:6px 0 0;">' + tx('et ' + (p.issues.length - issues.length) + ' autres.', 'and ' + (p.issues.length - issues.length) + ' more.', 'و' + (p.issues.length - issues.length) + ' أخرى.') + '</p>' : '') + '</div>' : '',
         kind === 'boutique' && c.missingCodes
-          ? '<label class="kci-check"><input type="checkbox" data-kci-gen /><span>Générer un code-barres Kiwi pour les '
-            + c.missingCodes + ' variantes qui n\'en ont pas, pour pouvoir imprimer leurs étiquettes tout de suite.</span></label>'
+          ? '<label class="kci-check"><input type="checkbox" data-kci-gen /><span>' + tx('Générer un code-barres Kiwi pour les ' + c.missingCodes + ' variantes qui n\'en ont pas, pour pouvoir imprimer leurs étiquettes tout de suite.',
+              'Generate a Kiwi barcode for the ' + c.missingCodes + ' variants that have none, so you can print their labels straight away.',
+              'إنشاء رمز شريطي من Kiwi للمتغيّرات التي لا تملك رمزاً وعددها ' + c.missingCodes + '، لتتمكن من طباعة ملصقاتها فوراً.') + '</span></label>'
           : '',
-        '<p class="kci-hint">Rien n\'est encore enregistré. Les articles déjà présents sont mis à jour, jamais dupliqués.</p>',
+        '<p class="kci-hint">' + tx('Rien n\'est encore enregistré. Les articles déjà présents sont mis à jour, jamais dupliqués.', 'Nothing is saved yet. Items already in Kiwi are updated, never duplicated.', 'لم يُحفظ أي شيء بعد. تُحدَّث الأصناف الموجودة ولا تُكرَّر أبداً.') + '</p>',
       ].join('');
 
       go.disabled = total === 0; go.style.opacity = total ? '1' : '.5';
-      go.textContent = total ? 'Importer ' + total + (total === 1 ? ' article' : ' articles') : 'Aucun article importable';
+      go.textContent = total ? tx('Importer ', 'Import ', 'استيراد ') + total + plr(total, [' article', ' articles'], [' item', ' items'], [' صنف', ' أصناف']) : tx('Aucun article importable', 'No importable items', 'لا توجد أصناف قابلة للاستيراد');
     }
 
     const ERRORS = {
-      'vide': 'Ce fichier est vide.',
-      'une-seule-ligne': 'Ce fichier ne contient qu\'une ligne d\'en-tête, aucun article.',
-      'colonne-produit': 'Aucune colonne « produit » (ou article, nom, désignation) n\'a été trouvée.',
-      'colonne-article': 'Aucune colonne « article » (ou produit, nom, plat) n\'a été trouvée.',
-      'catalogue-absent': 'Le module inventaire n\'est pas chargé.',
-      'carte-absente': 'Le module carte n\'est pas chargé.',
+      'vide': tx('Ce fichier est vide.', 'This file is empty.', 'هذا الملف فارغ.'),
+      'une-seule-ligne': tx('Ce fichier ne contient qu\'une ligne d\'en-tête, aucun article.', 'This file only has a header row, no items.', 'يحتوي هذا الملف على سطر العناوين فقط، بلا أصناف.'),
+      'colonne-produit': tx('Aucune colonne « produit » (ou article, nom, désignation) n\'a été trouvée.', 'No "produit" column (or article, nom, désignation) was found.', 'لم يُعثر على عمود "produit" (أو article أو nom أو désignation).'),
+      'colonne-article': tx('Aucune colonne « article » (ou produit, nom, plat) n\'a été trouvée.', 'No "article" column (or produit, nom, plat) was found.', 'لم يُعثر على عمود "article" (أو produit أو nom أو plat).'),
+      'catalogue-absent': tx('Le module inventaire n\'est pas chargé.', 'The inventory module is not loaded.', 'وحدة المخزون غير محمّلة.'),
+      'carte-absente': tx('Le module carte n\'est pas chargé.', 'The menu module is not loaded.', 'وحدة القائمة غير محمّلة.'),
     };
+    const unreadable = () => tx('Fichier illisible.', 'Unreadable file.', 'الملف غير مقروء.');
 
     /* CSV (fichier ou texte déjà en mémoire) → analyse → plan à l'écran.
      * Partagé entre le dépôt de fichier et l'entrée directe openMenuWithCsv
      * (scan AI d'un menu) : même analyse, même revue, même chemin d'écriture. */
     function usePlan(csvText) {
       const parsed = parse(csvText);
-      if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || 'Fichier illisible.'); return; }
+      if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || unreadable()); return; }
       const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
       if (!p.ok) {
         plan = null;
-        renderPick((ERRORS[p.error] || 'Fichier illisible.')
-          + (p.headerRaw ? ' Colonnes lues : ' + p.headerRaw.join(' · ') : ''));
+        renderPick((ERRORS[p.error] || unreadable())
+          + (p.headerRaw ? tx(' Colonnes lues : ', ' Columns read: ', ' الأعمدة المقروءة: ') + p.headerRaw.join(' · ') : ''));
         return;
       }
       if (!(kind === 'boutique' ? p.products.length : p.rows.length)) {
-        plan = null; renderPick('Aucun article exploitable dans ce fichier.'); return;
+        plan = null; renderPick(tx('Aucun article exploitable dans ce fichier.', 'No usable items in this file.', 'لا توجد أصناف صالحة في هذا الملف.')); return;
       }
       plan = p;
       renderPlan(p);
@@ -798,11 +812,13 @@
     function handleFile(file) {
       if (!file) return;
       if (/\.(xlsx|xls|numbers|ods)$/i.test(file.name)) {
-        renderPick('Kiwi lit le CSV, pas le .xlsx directement. Dans Excel : Fichier → Enregistrer sous → CSV UTF-8, puis redéposez le fichier.');
+        renderPick(tx('Kiwi lit le CSV, pas le .xlsx directement. Dans Excel : Fichier → Enregistrer sous → CSV UTF-8, puis redéposez le fichier.',
+          'Kiwi reads CSV, not .xlsx directly. In Excel: File → Save As → CSV UTF-8, then drop the file again.',
+          'يقرأ Kiwi ملفات CSV وليس .xlsx مباشرة. في Excel: ملف ← حفظ باسم ← CSV UTF-8، ثم أعد إفلات الملف.'));
         return;
       }
       const fr = new FileReader();
-      fr.onerror = () => renderPick('Ce fichier n\'a pas pu être lu.');
+      fr.onerror = () => renderPick(tx('Ce fichier n\'a pas pu être lu.', 'This file could not be read.', 'تعذّرت قراءة هذا الملف.'));
       fr.onload = () => usePlan(decodeBytes(fr.result));
       fr.readAsArrayBuffer(file);
     }
@@ -819,13 +835,13 @@
           : applyMenu(plan);
         m.close();
         const desc = kind === 'boutique'
-          ? [r.products + ' articles créés', r.variants + ' variantes', r.codes + ' codes-barres',
-             r.generated ? r.generated + ' codes générés' : ''].filter(Boolean).join(' · ')
-          : [r.items + ' articles créés', r.updated + ' mis à jour',
-             r.cats ? r.cats + ' catégories' : ''].filter(Boolean).join(' · ');
-        toast('Import terminé', { type: 'success', desc });
+          ? [r.products + tx(' articles créés', ' items created', ' أصناف مُنشأة'), r.variants + tx(' variantes', ' variants', ' متغيّرات'), r.codes + tx(' codes-barres', ' barcodes', ' رموز شريطية'),
+             r.generated ? r.generated + tx(' codes générés', ' codes generated', ' رموز مُنشأة') : ''].filter(Boolean).join(' · ')
+          : [r.items + tx(' articles créés', ' items created', ' أصناف مُنشأة'), r.updated + tx(' mis à jour', ' updated', ' مُحدَّثة'),
+             r.cats ? r.cats + tx(' catégories', ' categories', ' فئات') : ''].filter(Boolean).join(' · ');
+        toast(tx('Import terminé', 'Import complete', 'اكتمل الاستيراد'), { type: 'success', desc });
         if (r.failed.length) {
-          setTimeout(() => toast(r.failed.length + ' articles non importés', {
+          setTimeout(() => toast(r.failed.length + tx(' articles non importés', ' items not imported', ' أصناف لم تُستورد'), {
             type: 'warn', desc: r.failed.slice(0, 3).join(' · '),
           }), 400);
         }

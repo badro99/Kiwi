@@ -5700,7 +5700,7 @@
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
 <script src="assets/inventory-ledger.js?v=13" defer fetchpriority="low"></script>
-<script src="assets/maison-stock-movements.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/maison-stock-movements.js?v=6" defer fetchpriority="low"></script>
 <!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
      l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
@@ -5741,7 +5741,7 @@
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
-<script src="assets/catalog-import.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/catalog-import.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/menu-scan.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/salle-scan.js?v=2" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
@@ -5756,7 +5756,7 @@
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/starter-copy.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2162" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2163" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -5773,8 +5773,8 @@
 <script src="assets/menu-promos.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/menu-promos-dashboard.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/restaurant-menu-workspace.js?v=114" defer fetchpriority="low"></script>
-<script src="assets/sold-insights.js?v=11" defer fetchpriority="low"></script>
-<script src="assets/boutique-promos-dashboard.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/sold-insights.js?v=12" defer fetchpriority="low"></script>
+<script src="assets/boutique-promos-dashboard.js?v=17" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=23" defer fetchpriority="low"></script>

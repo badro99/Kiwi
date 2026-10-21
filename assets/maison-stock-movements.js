@@ -64,6 +64,38 @@
     { id: 'correction-out', dir: -1, reason: 'manual',          why: 'corr-',     label: 'Correction · sortie',   manual: true },
     { id: 'comptage-out',   dir: -1, reason: 'count',           why: 'comptage',  label: 'Comptage · écart négatif' },
   ];
+  /* Display language: the French `label` above is the captured original; EN and
+   * AR come from this table. `label` becomes a live getter so every reader
+   * (list rows, search haystack, the manager prompt) follows the current language. */
+  var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  function tx(fr, en, ar) { var l = lang(); return l === 'en' ? en : l === 'ar' ? ar : fr; }
+  var LABELS_I18N = {
+    'initial':        ['Opening stock', 'المخزون الافتتاحي'],
+    'reception':      ['Supplier delivery', 'استلام من المورد'],
+    'reassort':       ['Restock', 'إعادة التزويد'],
+    'retour-client':  ['Customer return', 'إرجاع من الزبون'],
+    'remboursement':  ['Refund', 'استرداد'],
+    'transfert-in':   ['Transfer received', 'تحويل مستلم'],
+    'correction-in':  ['Correction · in', 'تصحيح · إدخال'],
+    'comptage-in':    ['Stocktake · surplus', 'الجرد · فائض'],
+    'vente':          ['Sale', 'بيع'],
+    'casse':          ['Damaged item', 'صنف تالف'],
+    'perte':          ['Loss', 'فقدان'],
+    'echantillon':    ['Sample', 'عيّنة'],
+    'usage-interne':  ['Internal use', 'استخدام داخلي'],
+    'retour-fourn':   ['Return to supplier', 'إرجاع إلى المورد'],
+    'transfert-out':  ['Transfer sent', 'تحويل مرسل'],
+    'correction-out': ['Correction · out', 'تصحيح · إخراج'],
+    'comptage-out':   ['Stocktake · shortfall', 'الجرد · عجز'],
+  };
+  TYPES.forEach(function (t) {
+    var fr = t.label, tr = LABELS_I18N[t.id];
+    if (!tr) return;
+    Object.defineProperty(t, 'label', {
+      enumerable: true, configurable: true,
+      get: function () { return tx(fr, tr[0], tr[1]); },
+    });
+  });
   var BY_ID = Object.create(null);
   var BY_WHY = Object.create(null);
   TYPES.forEach(function (t) {
@@ -430,7 +462,7 @@
     return new Promise(function (resolve) {
       var settled = false;
       if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'stock_adjust', key: 'act.stock_adjust', args: { item: (res.row && (res.row.name || res.row.label)) || t.label } });
-      ask(t.label + ' · ' + Math.abs(res.after - res.before) + ' pièce(s)', function () {
+      ask(t.label + ' · ' + Math.abs(res.after - res.before) + tx(' pièce(s)', ' piece(s)', ' قطعة'), function () {
         settled = true;
         var mgr = null;
         try { mgr = window.KiwiCaissePairing && window.KiwiCaissePairing.lastManager(); } catch (_) {}
