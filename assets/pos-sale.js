@@ -449,8 +449,11 @@
   }
   function heldCount() { return heldRead().length; }
   try {
-    setTimeout(function () { try { replayHeld(); } catch (_) {} }, 4000);
-    setInterval(function () { try { if (heldRead().length) replayHeld(); } catch (_) {} }, 60000);
+    /* unref : sous Node (tests en vm) ces minuteries ne retiennent pas le processus. */
+    var t0 = setTimeout(function () { try { replayHeld(); } catch (_) {} }, 4000);
+    var t1 = setInterval(function () { try { if (heldRead().length) replayHeld(); } catch (_) {} }, 60000);
+    if (t0 && t0.unref) t0.unref();
+    if (t1 && t1.unref) t1.unref();
     window.addEventListener('online', function () { try { replayHeld(); } catch (_) {} });
   } catch (_) {}
 
