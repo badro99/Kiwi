@@ -158,7 +158,17 @@
       online: navigator.onLine !== false, standalone: !!navigator.standalone,
       printerConfigured: printer.configured, printerConnected: printer.connected,
       sync: sync, stock: stock,
+      /* Depuis quand cette page tourne, et depuis quand une mise à jour attend
+         qu'on appuie sur l'avis : la console repère la caisse restée sur une
+         ancienne version (Santos Store, 21 octobre). */
+      loadedAt: pageLoadedAt(), updateReadyAt: updateReadyAt(),
     }, { idempotencyKey: 'heartbeat:' + (force === true ? 'now-' + Date.now() : Math.floor(Date.now() / 300000)) + ':' + deviceId() });
+  }
+  function pageLoadedAt() {
+    try { var t = Math.round(performance.timeOrigin || 0); return t > 0 ? t : 0; } catch (_) { return 0; }
+  }
+  function updateReadyAt() {
+    try { var U = window.KiwiPWAUpdate; return (U && U.readySince && Number(U.readySince())) || 0; } catch (_) { return 0; }
   }
   function needed(domain, action) {
     if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];

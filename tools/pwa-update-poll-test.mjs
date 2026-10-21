@@ -22,8 +22,8 @@ function load({ rejectUpdate = false } = {}) {
   let clock = 1_800_000_000_000;
   const FakeDate = class extends Date { static now() { return clock; } };
   const doc = { visibilityState: 'visible', addEventListener: on(listeners.document),
-    getElementById: () => null, documentElement: { lang: 'fr' }, body: { appendChild() {} },
-    createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {}, querySelector: () => null }) };
+    getElementById: () => null, querySelectorAll: () => [], querySelector: () => null, documentElement: { lang: 'fr' }, body: { appendChild() {} },
+    createElement: () => ({ style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null }) };
   const sw = { controller: {}, addEventListener: on(listeners.sw) };
   const win = { addEventListener: on(listeners.window) };
   const unhandled = [];
@@ -61,6 +61,11 @@ function load({ rejectUpdate = false } = {}) {
   ok(t.updates() === 3, 'the network coming back asks once');
   t.api.watch(t.reg);
   ok(t.intervals.filter(i => i.ms === 30 * 60000).length === 1, 'a second watch() does not double the checks');
+  ok(t.api.readySince() === 0, 'no update announced yet: readySince is 0');
+  t.api.show();
+  ok(t.api.readySince() > 0, 'once announced, readySince gives the time (sent in the heartbeat)');
+  const before = t.updates(); t.fire(t.listeners.window, 'online');
+  ok(t.updates() === before, 'an announced update stops further checks');
 }
 {
   const t = load({ rejectUpdate: true });

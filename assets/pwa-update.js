@@ -15,6 +15,7 @@
   'use strict';
 
   var shown = false;
+  var shownAt = 0;   /* quand l'avis est apparu : la caisse le rapporte (heartbeat) */
   var reg = null;
   var interacted = false;
   var born = Date.now();
@@ -160,6 +161,7 @@
     if (justRefreshed()) return;
     if (silentReload()) return;
     shown = true;
+    shownAt = Date.now();
     var button = document.createElement('button');
     button.id = 'kiwi-update-ready';
     button.type = 'button';
@@ -233,5 +235,6 @@
     } catch (_) {}
   }
 
-  window.KiwiPWAUpdate = { watch: watch, show: show, check: check, POLL_MS: POLL_MS };
+  window.KiwiPWAUpdate = { watch: watch, show: show, check: check, POLL_MS: POLL_MS,
+    readySince: function () { return shown ? shownAt : 0; } };
 })();

@@ -153,7 +153,8 @@ export async function workspace(env, merchant = '') {
           lastError: clean(beat.stock.lastError, 96), storageError: !!beat.stock.storageError,
           refusedEntries: (Array.isArray(beat.stock.refusedEntries) ? beat.stock.refusedEntries : []).filter(r => r && typeof r === 'object').slice(0, 10).map(r => ({
             id: clean(r.id, 80), itemId: clean(r.itemId, 80), reason: clean(r.reason, 32), why: clean(r.why, 40), ts: time(r.ts) })),
-        } : null };
+        } : null,
+        loadedAt: time(beat.loadedAt), updateReadyAt: time(beat.updateReadyAt) };
     });
   }
   return {now,merchant,sources,coverage:'cloud-relay',physical_print_verified:false};

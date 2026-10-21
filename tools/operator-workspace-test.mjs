@@ -142,7 +142,14 @@ for (const [id,m,closedBy,age,paid,sale,cancelled] of [
     VALUES(?,?,?,'table','2',?,'[]','accepted',?,?,?,?,?)`).run(id+'-o'+n,m,n,total,now-age*86400000,now-age*86400000,id,paid,cancelled);
   if (sale) db.prepare(`INSERT INTO sales(id,merchant,amount,amount_cents,method,ts,session_id) VALUES(?,?,131,13100,'cash',?,?)`).run('sale-'+id,m,now-age*86400000,id);
 }
+// A till that found an update and never took it (Santos Store, 21 October).
+for (const [id,device,ready,seen] of [['hb-stale','till-stale',now-8*3600000,now-60000],['hb-fresh','till-fresh',now-3600000,now-60000],['hb-gone','till-gone',now-30*3600000,now-5*3600000]])
+  db.prepare("INSERT INTO operational_commands(id,merchant,domain,action,status,idempotency_key,payload,created_ts,updated_ts) VALUES(?,?,'device','heartbeat','completed',?,?,?,?)")
+    .run(id,'shop-a',id,JSON.stringify({deviceId:device,app:'caisse',sync:{total:0,blocked:0},loadedAt:now-4*86400000,updateReadyAt:ready,secret:'SECRET-BEAT'}),seen,seen);
 const moneyWorkspace=await call(workspace,'GET',{},'?merchant=shop-a');
+{const st=moneyWorkspace.sources.caisseSync.rows.find(r=>r.deviceId==='till-stale');
+check('heartbeat projection keeps page age and update-waiting time',st&&st.loadedAt===now-4*86400000&&st.updateReadyAt===now-8*3600000);
+check('heartbeat projection drops unknown fields',!JSON.stringify(moneyWorkspace.sources.caisseSync).includes('SECRET-BEAT'));}
 {const t=moneyWorkspace.sources.unpaidTables;
 check('only the table closed with unpaid orders, no sale, last 14 days',t?.available&&t.rows.length===1&&t.rows[0].id==='tsx-unpaid');
 check('its unpaid total and order count',t.rows[0].unpaid_mad===131&&t.rows[0].orders===2);
@@ -165,6 +172,8 @@ check('Shopify alerts render both escaped errors',rendered.includes('Shopify sig
 check('delivery alert renders centimes, ticket, age and action',rendered.includes((400.49).toLocaleString('fr-MA',{maximumFractionDigits:2})+' MAD')&&rendered.includes('T-due-old')&&rendered.includes('10 jours')&&rendered.includes('Acomptes ou Créances'));
 check('unpaid table alert: table, amount, count, who closed it (escaped)',rendered.includes('Table fermée sans encaissement')&&rendered.includes('Table 2 · 131 MAD')&&rendered.includes('(2)')&&rendered.includes('Yassine &lt;s&gt;')&&!rendered.includes('Yassine <s>'));
 check('unpaid table alert has priority two',win.testWorkspace.signals().some(s=>s.title==='Table fermée sans encaissement'&&s.priority===2));
+check('stale till alert after six hours of a waiting update, with the button to press',win.testWorkspace.signals().some(s=>s.title==='Caisse sur une ancienne version'&&s.detail.includes('till-stale')&&s.detail.includes('depuis 8 h')&&s.detail.includes('« Rafraîchir »')&&s.priority===2));
+check('no stale alert for an update one hour old, nor for a till silent for hours',!win.testWorkspace.signals().some(s=>s.title==='Caisse sur une ancienne version'&&/till-(fresh|gone)/.test(s.detail)));
 check('delivery alert has priority two',win.testWorkspace.signals().some(s=>s.title==='Livraison non encaissée'&&s.priority===2));
 check('Shopify alerts carry priority and recovery action',win.testWorkspace.signals().filter(s=>s.title==='Shopify signale une erreur').every(s=>s.priority===1&&s.detail.includes('depuis le 21 octobre')));
 db.exec('DROP TABLE delivery_collections');

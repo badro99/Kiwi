@@ -28,8 +28,8 @@
     "sha": "e41204f684cf668c"
   },
   "assets/admin-workspace.js": {
-    "v": "17",
-    "sha": "c27bf5b705ca1b2f"
+    "v": "18",
+    "sha": "b1beff78f2248a99"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -968,8 +968,8 @@
     "sha": "6792ee4233351158"
   },
   "assets/operations.js": {
-    "v": "15",
-    "sha": "d41889af4b5dd364"
+    "v": "16",
+    "sha": "e10d9bd75d91cd14"
   },
   "assets/operator-access.js": {
     "v": "1",
@@ -1284,8 +1284,8 @@
     "sha": "47afcbc772d2b79b"
   },
   "assets/pwa-update.js": {
-    "v": "365",
-    "sha": "e565f9daa480f1d9"
+    "v": "366",
+    "sha": "e75b96f2da2130f3"
   },
   "assets/qrcode.js": {
     "v": "1",
