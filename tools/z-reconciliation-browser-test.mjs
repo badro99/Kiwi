@@ -37,7 +37,7 @@ const server=http.createServer((req,res)=>{
   res.end(`<html><body>${ids.map(id=>'<div id="'+id+'"></div>').join('')}
    <script>window.KiwiOperator={snapshot:()=>({clients:[{merchant:'amira-fixture',business:'Amira fixture'}],live:true,now:Date.now()}),close:()=>{},open:()=>{},refresh:()=>{},api:async path=>path==='/operators'?{operators:[]}:{now:Date.now(),merchant:'',sources:{caisseSync:{available:true,rows:[{merchant:'amira-fixture',app:'caisse',deviceId:'synthetic-till',updated_ts:Date.now(),sync:{total:1,blocked:1,blockedEntries:[${JSON.stringify(blocked)}]}}]}}}};</script>
    <script src="/assets/admin-policy.js"></script><script src="/assets/admin-workspace.js"></script></body></html>`);
- }else if(['/assets/z-reconciliation.js','/assets/dateRange.js','/assets/caisse-pwa.js','/assets/admin-policy.js','/assets/admin-workspace.js'].includes(url.pathname)){
+ }else if(['/assets/z-reconciliation.js','/assets/sales-history.js','/assets/dateRange.js','/assets/caisse-pwa.js','/assets/admin-policy.js','/assets/admin-workspace.js'].includes(url.pathname)){
   res.setHeader('Content-Type','text/javascript');res.end(fs.readFileSync(path.join(ROOT,url.pathname)));
  }else{
   res.setHeader('Content-Type','text/html; charset=utf-8');
@@ -49,7 +49,7 @@ const server=http.createServer((req,res)=>{
   window.KiwiLive={merchant:()=>"amira-fixture"};
   window.KiwiVenue={isCustom:()=>true,getVenue:()=>"amira-fixture",getCurrentVenueData:()=>({id:'amira-fixture',type:new URLSearchParams(location.search).get('type')||'cafe'}),subscribe:()=>{}};
   window.KiwiSales={list:()=>[],subscribe:()=>{}};
-  </script><script src="/assets/dateRange.js"></script><script src="/assets/z-reconciliation.js"></script></body></html>`);
+  </script><script src="/assets/sales-history.js"></script><script src="/assets/dateRange.js"></script><script src="/assets/z-reconciliation.js"></script></body></html>`);
  }
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
