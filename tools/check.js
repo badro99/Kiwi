@@ -1381,6 +1381,7 @@ section('Whole-project regressions');
     'dashboard-unoffered-actions-test.mjs',
     'support-system-test.mjs',
     'operator-snapshot-test.mjs',
+    'ledger-cache-test.mjs',
     'caisse-support-entry-test.mjs',
     'caisse-payment-upload-test.mjs',
     // A paid sale when storage is full: one entry, held, no success haptic, sent once (critique-6 B1).
