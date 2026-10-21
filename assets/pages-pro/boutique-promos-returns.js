@@ -30,6 +30,10 @@
   'use strict';
   if (!window.Kiwi) return;
   const { toast, modal, drawer, handlers } = window.Kiwi;
+  /* Le routeur appelle handler(élément, data-arg) ; un appel direct passe la
+     valeur seule. Ces actions lisaient l'élément comme identifiant : la fiche
+     affichait « [object HTMLDivElement] » et les segments ne réagissaient pas. */
+  const argOf = (el, arg) => (typeof el === 'string' ? el : arg);
   const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   /* fr / en / ar pick for the returns page (the language helper of the inventory IIFE is not in reach here). */
   const _rL = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
@@ -375,7 +379,8 @@
 
   handlers['promo-edit'] = (_el, id) => toast('Édition · ' + (id || 'campagne'), { type: 'info', desc: 'Les modifications s\'appliquent immédiatement aux prochains paniers.', duration: 2600 });
 
-  handlers['promo-segment'] = (id) => {
+  handlers['promo-segment'] = (el, arg) => {
+    const id = argOf(el, arg);
     const btn = document.querySelector(`[data-action="promo-segment"][data-arg="${id}"]`);
     if (!btn) return;
     btn.classList.toggle('on');
@@ -384,7 +389,8 @@
     toast(`Segment "${name}" ${isOn ? 'activé' : 'désactivé'}`, { type: isOn ? 'success' : 'info', duration: 1800 });
   };
 
-  handlers['promo-archive-detail'] = (name) => {
+  handlers['promo-archive-detail'] = (el, arg) => {
+    const name = argOf(el, arg);
     modal({
       tag: 'ARCHIVE',
       title: name,
@@ -827,7 +833,8 @@
 
   /* ═══════════════════ AUX · returns handlers ═══════════════════════════════ */
 
-  handlers['ret-detail'] = (id) => {
+  handlers['ret-detail'] = (el, arg) => {
+    const id = argOf(el, arg);
     const samplePhotos = ['mint-soft', 'rgba(217,154,43,0.16)', 'var(--paper-soft)', 'rgba(11,110,79,0.10)'];
     modal({
       tag: _rL('DEMANDE DE RETOUR', 'RETURN REQUEST', 'طلب إرجاع') + ' · ' + (id || '·'),
@@ -878,7 +885,8 @@
     });
   };
 
-  handlers['ret-approve'] = (id) => {
+  handlers['ret-approve'] = (el, arg) => {
+    const id = argOf(el, arg);
     modal({
       tag: _rL('CHOISIR LE CANAL', 'CHOOSE THE CHANNEL', 'اختر القناة'),
       title: _rL('Comment rembourser ?', 'How to refund?', 'كيف يتم استرداد المبلغ؟'),
@@ -912,7 +920,8 @@
     });
   };
 
-  handlers['ret-refuse'] = (id) => {
+  handlers['ret-refuse'] = (el, arg) => {
+    const id = argOf(el, arg);
     modal({
       tag: _rL('CONFIRMATION', 'CONFIRMATION', 'تأكيد'),
       title: _rL('Refuser la demande de retour ?', 'Refuse the return request?', 'رفض طلب الإرجاع؟'),
@@ -940,7 +949,8 @@
     });
   };
 
-  handlers['ret-exchange'] = (id) => {
+  handlers['ret-exchange'] = (el, arg) => {
+    const id = argOf(el, arg);
     const items = [
       ['Caftan brodé taille M',     '2 450 MAD', 'En stock · 4'],
       ['Caftan brodé taille L',     '2 450 MAD', 'En stock · 2'],
@@ -984,7 +994,8 @@
     });
   };
 
-  handlers['ret-block'] = (name) => {
+  handlers['ret-block'] = (el, arg) => {
+    const name = argOf(el, arg);
     const cb = document.querySelector(`input[type="checkbox"][data-action="ret-block"][data-arg="${name}"]`);
     if (!cb) return;
     if (!cb.checked) {

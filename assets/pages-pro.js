@@ -15635,7 +15635,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const LAZY_SECTIONS = [
     { url: 'assets/pages-pro/spa-appointments.js?v=1', handlers: ["nav-appointments", "appt-filter", "appt-export", "appt-wait-add", "appt-auto-toggle", "appt-wait-detail", "appt-cancel-confirm", "appt-new", "nav-services", "svc-export", "svc-season", "svc-season-edit", "svc-ai-action", "pkg-edit-go"] },
     { url: 'assets/pages-pro/spa-practitioners.js?v=1', handlers: ["nav-practitioners", "practitioner-add", "practitioner-commission", "practitioner-edit", "practitioner-tracker"] },
-    { url: 'assets/pages-pro/boutique-promos-returns.js?v=1', handlers: ["nav-promos", "nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "promo-archive-detail", "promo-edit", "promo-end", "promo-pause", "promo-schedule", "promo-segment", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },
+    { url: 'assets/pages-pro/boutique-promos-returns.js?v=2', handlers: ["nav-promos", "nav-returns", "credit-adjust", "credit-adjust-confirm", "credit-cancel", "promo-archive-detail", "promo-edit", "promo-end", "promo-pause", "promo-schedule", "promo-segment", "ret-approve", "ret-block", "ret-detail", "ret-exchange", "ret-export", "ret-policy-jump", "ret-policy-save", "ret-refund-credit", "ret-refund-original", "ret-refund-whatsapp", "ret-refuse"] },
   ];
   LAZY_SECTIONS.forEach(entry => {
     let loading;

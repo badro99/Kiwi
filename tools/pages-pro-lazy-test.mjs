@@ -172,6 +172,9 @@ try {
     /* The page's own button reaches a handler of the loaded chunk… */
     await page.click('.dash-genpage [data-action="ret-detail"]');
     await page.waitForFunction(() => document.body.textContent.includes('DEMANDE DE RETOUR'), {timeout:5000});
+    /* The router passes (element, data-arg): the modal names the request, not the element. */
+    const tag = await page.evaluate(() => document.body.textContent.match(/DEMANDE DE RETOUR · \S+/)?.[0] || '');
+    assert.equal(tag, 'DEMANDE DE RETOUR · R-7821', 'return detail names its request');
     /* …and another registered entry point reuses it. A toast right after a
        click that opened a modal is swallowed on purpose: close it first. */
     await page.keyboard.press('Escape');
