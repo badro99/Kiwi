@@ -78,8 +78,8 @@ try {
   for (const value of ['!', 'eyJ4IjoxfQ', page.next.slice(0, -3)]) await get('&window=1&from=100&to=999&after=' + encodeURIComponent(value), 400);
   await get('&window=1&from=101&to=999&after=' + encodeURIComponent(page.next), 400);
   // Altering the opaque tenant field does not grant entitlement or leak foreign rows.
-  const token = JSON.parse(atob(page.next.replace(/-/g, '+').replace(/_/g, '/'))); token[1] = 'foreign-tenant';
-  await get('&window=1&from=100&to=999&after=' + encodeURIComponent(btoa(JSON.stringify(token))), 400);
+  const token = JSON.parse(atob(page.next.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))); token[2] = 'foreign-tenant';
+  await get('&window=1&from=100&to=999&after=' + encodeURIComponent(btoa(JSON.stringify(token)).replace(/=+$/, '') + '.' + page.next.split('.')[1]), 400);
   for (const query of ['from=2&to=1', 'from=1&to=1', 'from=0&to=2', 'from=x&to=2', 'from=1.5&to=2', 'from=1&to=Infinity', 'from=1&to=' + (400 * 86400000 + 7200002)]) await get('&window=1&' + query, 400);
   await get('&window=1&from=1&to=' + (400 * 86400000 + 7200001));
   for (const [asked, size] of [[1, 50], [999, 500], ['bad', 50]]) {
@@ -95,5 +95,31 @@ try {
   await get('&window=1&from=100&to=999', 500);
   unavailable = false;
   assert.equal(await (await get('&from=2000')).text(), legacy, 'window reads leave byDay unchanged');
+  // Fence is scoped, includes voids and timestamps outside the requested window.
+  add('fence-void', 3000, merchant, 1235);
+  add('foreign-high-water', 4000, 'foreign-tenant');
+  const frozen = await (await get('&window=1&from=100&to=999&limit=50')).json();
+  const wantedFence = sqlite.prepare("SELECT rowid AS c FROM sales WHERE id='fence-void'").get().c;
+  assert.equal(frozen.fence, wantedFence);
+  add('late-earlier', 101); add('late-later', 700);
+  let checkpoint = frozen.next, fencedRows = frozen.sales.slice();
+  while (checkpoint) {
+    const data = await (await get('&window=1&from=100&to=999&limit=500&fence=' + frozen.fence + '&after=' + encodeURIComponent(checkpoint))).json();
+    assert.equal(data.fence, frozen.fence); fencedRows.push(...data.sales); checkpoint = data.next;
+  }
+  assert.equal(fencedRows.length, 1203);
+  assert.ok(fencedRows.every(r => r.cursor <= frozen.fence && !r.id.startsWith('late-')));
+  const resumed = await (await get('&window=1&from=100&to=999&limit=50&fence=' + frozen.fence)).json();
+  assert.deepEqual(resumed.sales, frozen.sales); assert.equal(resumed.fence, frozen.fence);
+  assert.ok((await (await get('&window=1&from=100&to=999&limit=500')).json()).sales.some(r => r.id === 'late-earlier'));
+  for (const fence of ['', '-1', '1.5', 'bad', '9007199254740992', String(wantedFence + 9999)]) await get('&window=1&from=100&to=999&fence=' + fence, 400);
+  await get('&window=1&from=100&to=999&fence=' + (frozen.fence - 1) + '&after=' + encodeURIComponent(frozen.next), 400);
+  const forged = JSON.parse(atob(frozen.next.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')));
+  forged[6]++;
+  await get('&window=1&from=100&to=999&after=' + encodeURIComponent(btoa(JSON.stringify(forged)).replace(/=+$/, '') + '.' + frozen.next.split('.')[1]), 400);
+  const v1 = btoa(JSON.stringify([1, merchant, 100, 999, 200, 1])).replace(/=+$/, '');
+  await get('&window=1&from=100&to=999&after=' + encodeURIComponent(v1), 400);
+  const zero = await (await get('&window=1&from=100&to=999&fence=0')).json();
+  assert.equal(zero.fence, 0); assert.equal(zero.complete, true); assert.deepEqual(zero.sales, []);
   console.log(`PASS feed window: 1203 rows, ${pages} pages, equal timestamps, exclusive bounds, voids, tenant isolation, cursor/range guards, details, schema fallbacks, byte-for-byte byDay`);
 } finally { Date.now = oldNow; sqlite.close(); }

@@ -3,46 +3,60 @@
 Status: prerequisite only. This change does not trim data or alter reconciliation.
 References below identify the current functions; proposed behavior is not shipped.
 
-## Read contract delivered here
+## Server contracts delivered through B1
 
-`GET /api/feed?window=1&merchant=M&from=F&to=T&limit=500&after=A`
-requires both bounds, positive integer milliseconds, `F < T`, and at most 400 days
-plus two hours. Rows are ordered by `(ts, rowid)`, with exclusive `to` and an
-opaque, versioned continuation bound to merchant and both bounds. `complete:true`
-and `next:null` prove traversal ended; a full page alone proves nothing.
-Entitlement is rechecked on every page, including paired till authorization.
-Void exclusion is mandatory; unavailable schemas fail instead of declaring zero.
-Legacy `from`-only and rowid modes retain their existing protocol.
+`GET /api/feed?window=1&merchant=M&from=C&to=T&limit=500&after=A&fence=F`
+requires both positive integer millisecond bounds, C < T, and a span at most
+400 days plus two hours. Pages sort by `(ts,rowid)`, with exclusive T.
+Without `after` or `fence`, capture F = scoped MAX(rowid), including voided rows
+and rows outside the time window (empty scope gives 0). Return numeric `fence`
+on every page; select only `rowid <= F`. Inserts after capture cannot enter that
+bootstrap, including uploads whose timestamps precede an already-read key.
+Window v2 continuations are HMAC-SHA256 signed with AUTH_SECRET and bind protocol,
+merchant, resolved legacy bucket, C, T, F, and the last `(ts,rowid)` pair.
+Old unsigned v1, altered/scope-mismatched tokens, invalid fences, or an explicit
+fence disagreeing with `after` return 400. Secret rotation invalidates tokens.
+Without `after`, an explicit integer F in [0,current scoped MAX(rowid)] restarts
+that bounded traversal; larger/negative/fractional/malformed values return 400.
+A numeric fence is a filter, not proof that it was previously issued. Signatures
+protect continuation tokens; entitlement is independently checked on every page.
+`complete:true,next:null` proves EOF; a full page alone does not.
+Legacy byDay and rowid modes retain their existing protocol and response bytes.
 
-`KiwiSalesWindow.fetchRaw(F,T)` returns all pages or null, never a prefix.
-It stops at 20 pages, validates scope/order/completion, and caches only in memory
-(four windows, 60 seconds). Failures are retryable. Raw readers must show loading
-or unavailable when null, rerender after resolution, and never persist these rows.
-This is a traversal of changing data, not an immutable point-in-time snapshot.
-Backdated inserts before an already-read key and intervening voids can change it.
+`GET /api/feed?voids=1&merchant=M&afterVoid=&limit=500` opts into the void stream;
+parameter presence, including empty initial value, selects it. Missing afterVoid
+retains the old latest-500 response. Stream pages contain `{merchant,voided,next,
+complete,checkpoint}`; each void is `{c,i,r,ts,vts}` and sorts by `(void_ts,rowid)`.
+`afterVoid` is a signed v1 token bound to protocol, merchant, resolved legacy
+bucket and the last pair. Continue with `next`; persist `checkpoint` even at EOF
+so later polls can resume. Empty pages preserve that position. Both new modes
+clamp limits to 50..500 and use one-row lookahead. Both call `legacyBucketFor`;
+no owner session may union its pre-split bucket into a foreign paired till.
+Invalid tokens return 400; missing DB/columns fail rather than claim completion.
 
-## Required replay contract before deletion
+These APIs are not immutable snapshots: voids can change after F is captured.
+The stream reads current void_ts values, not an append-only audit:
+restorations clearing void_ts and retimestamping behind a checkpoint are absent.
+Do not treat F or the stream alone as a full revision/change-log guarantee.
+`idx_sales_merchant_ts` covers window reads; MAX(rowid) uses merchant indexing.
+Migration 0005 adds `(merchant,void_ts) WHERE void_ts >= 0` for stream scans.
+The explicit stream predicate keeps the old latest-500 plan/tie behavior intact.
+Negative legacy markers are included via an unindexed prefix. Without the optional
+index reads are slower but correct; the owner applies migration.
 
-A timestamp boundary is not a rowid cursor. Never derive `since` from the last
-window row, the first retained row, or the largest cursor encountered in a page.
-Slice B needs a server replay fence `F`: the scoped maximum sales rowid, including
-voided rows, captured before bootstrap. Extend window pages to carry this fence
-and restrict all pages to `rowid <= F`; bind the fence into continuation tokens.
-Bootstrap `[coverage, fixedUpper)`; use 400-day chunks if necessary and a server
-upper time bound covering all accepted timestamps at the fence. Reject incomplete
-or oversized reads rather than accepting the client helper's 20-page prefix.
-After bootstrap, poll rowid mode from `since=F`, catching every subsequent insert,
-including late uploads timestamped before coverage. Such rows invalidate that day's
-summary/raw cache; apply their sync acknowledgement but do not re-add archived rows.
-Voids need a revision or paginated change stream: today's latest-500 void list
-cannot establish historical freshness after an arbitrarily long offline interval.
-A reconnect must revalidate affected history or mark it unavailable until repaired.
+`KiwiSalesWindow.fetchRaw` remains unchanged: all pages or null, 20-page cap,
+validated ordering/scope/completion, four memory-only cached windows for 60 seconds.
+No trimming or client reconciliation changes ship in B1.
+For slice B, bootstrap `[coverage,fixedUpper)` at F, then poll rowid mode from F;
+never derive since from the last time-ordered row. Before deletion, define a
+server upper bound covering accepted timestamps and close the void/restoration
+revision gap above. Scope, fence and proof must remain stable throughout bootstrap.
 
 ## Reconciliation changes for slice B
 
 | Function and current location | Assumption today | Required change |
 | --- | --- | --- |
-| `watchFeed`, `assets/live-link.js:1132` | Each tenant starts `since=0` and replays all history. | Without coverage keep this path. With coverage use fenced window bootstrap above, then rowid polling from F. Reset scope, fence, continuation and proof on merchant/coverage change. Snapshot mode stays read-only and never flushes an operator outbox. |
+| `watchFeed`, `assets/live-link.js:1132` | Each tenant starts `since=0` and replays all history. | Without coverage keep this path. With coverage use fenced window bootstrap described above, then rowid polling from F. Reset scope, fence, continuation and proof on merchant/coverage change. Snapshot mode stays read-only and never flushes an operator outbox. |
 | `drainBackfill`, `assets/live-link.js:1213` (state at :1136) | `sales.length === pageSize` means another rowid page. | In window bootstrap follow `next` until explicit `complete`; enforce progress and page caps. Set `feedComplete` only for the validated coverage interval; publish interval and fence alongside it. Keep length-based logic only in legacy mode. |
 | `validateSnapshotPage`, `assets/live-link.js:1105` | Cursor strictly increases and response cursor equals last row. | Separate protocol branches. Window branch validates merchant, exact bounds/fence, `(ts,rowid)` order, unique rowids and continuation/completion agreement. Rowids may decrease across increasing timestamps. Keep legacy validation unchanged. |
 | `verifySnapshotLedger`, `assets/live-link.js:1554` | Entire local sales/refund arrays exactly equal the accumulated feed. | Compare only server-backed rows in the proved `[coverage,fixedUpper)` and fence, by cursor, timestamp and signed cents. Exclude pending local rows from equality, preserve them, and report pending explicitly. Never call missing archives corruption. |
@@ -76,9 +90,10 @@ scope resolver at the same time. Never wipe other namespaces or trim demo ledger
 
 1. After initial rendering, schedule idle work with a timeout fallback. Attempt
    at most once per business day per scope; retry transient failures the next day.
-2. Hold a per-scope lock shared by every ledger writer and feed bridge; reread
-   identity, marker, sales, refunds and upload debt under that lock. Without a
-   supported cross-tab exclusion mechanism, skip trimming rather than race writers.
+2. Use navigator.locks.request with ifAvailable or a short acquisition timeout;
+   every ledger writer/feed bridge must share the scope lock. Reread identity,
+   coverage, rows and upload debt while holding it. Missing Web Locks or a busy
+   lock means no trim. Never substitute an unsafe localStorage spin lock.
 3. Compute C with `KiwiDayReport.shiftDay(today,-119)` and `dayBounds(...).from`:
    today plus 119 preceding business dates remain. Use store cutoff/zone, never
    subtract 120 fixed 24-hour durations. Keep empty boundary days too.
@@ -95,11 +110,10 @@ scope resolver at the same time. Never wipe other namespaces or trim demo ledger
    show partial state, and do not silently hide it behind server-only summaries.
    A late confirmed server row stays archived and invalidates historical caches.
 
-## Open questions
+## Approved decisions and remaining questions
 
-- Approve the fenced bootstrap and a revision/change-stream contract for historical
-  voids before enabling deletion? The new raw-window mode alone is not that contract.
-- Approve conservative whole-scope deferral when any old sale/refund is unconfirmed,
-  and skipping browsers without cooperative cross-tab locking?
-- Should pending backdated manual entries rewind coverage and reload the missing
-  interval, or remain visibly partial until server confirmation? No silent omission.
+Approved: fenced bootstrap and paginated voids before deletion; any unconfirmed
+old sale/refund defers the entire scope; no Web Locks means no trim. Backdated
+pending entries remain visibly partial until confirmation; never rewind coverage.
+Remaining: which server upper-time bound should slice B use, and how should
+restorations/revisions be recorded so offline clients can detect every change?

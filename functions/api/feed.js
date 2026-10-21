@@ -62,31 +62,94 @@ async function reconcileLinkedTestRefunds(env, merchant, legacy) {
   ).bind(ts, merchant, legacy || merchant).run();
 }
 
-/* Window cursors are opaque routing state, never authorization. Bind them to
- * the served tenant and exact window; every page rechecks entitlement. */
-function windowCursor(merchant, from, to, row) {
-  return btoa(JSON.stringify([1, merchant, from, to, row.ts, row.cursor]))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+/* Signed, scoped routing state. Entitlement is still checked on every page. */
+const encode64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const decode64 = raw => Uint8Array.from(atob(raw.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+async function cursorKey(env) {
+  if (!env.AUTH_SECRET) throw new Error('cursor-config');
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(env.AUTH_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
-function readWindowCursor(raw, merchant, from, to) {
-  if (!raw) return [from, 0];
-  if (raw.length > 1024 || !/^[A-Za-z0-9_-]+$/.test(raw)) throw new Error('after');
-  const a = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/')));
-  if (!Array.isArray(a) || a.length !== 6 || a[0] !== 1 || a[1] !== merchant || a[2] !== from || a[3] !== to ||
-      !Number.isFinite(a[4]) || a[4] < from || a[4] >= to || !Number.isSafeInteger(a[5]) || a[5] <= 0) throw new Error('after');
-  return a.slice(4);
+async function signCursor(env, data) {
+  const body = encode64(new TextEncoder().encode(JSON.stringify(data)));
+  const signature = await crypto.subtle.sign('HMAC', await cursorKey(env), new TextEncoder().encode('kiwi-feed:' + body));
+  return body + '.' + encode64(new Uint8Array(signature));
 }
-async function windowRows(env, merchant, legacy, from, to, after, limit) {
+async function readCursor(env, raw) {
+  const key = await cursorKey(env);
+  try {
+    if (raw.length > 2048 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(raw)) throw new Error('format');
+    const [body, signature] = raw.split('.');
+    if (!await crypto.subtle.verify('HMAC', key, decode64(signature), new TextEncoder().encode('kiwi-feed:' + body))) throw new Error('signature');
+    return JSON.parse(new TextDecoder().decode(decode64(body)));
+  } catch (_) { throw new RangeError('cursor'); }
+}
+function fenceParam(raw) {
+  if (!/^(0|[1-9][0-9]*)$/.test(raw || '') || !Number.isSafeInteger(Number(raw))) throw new RangeError('fence');
+  return Number(raw);
+}
+async function windowState(env, params, merchant, legacy, from, to) {
+  const raw = params.get('after');
+  const supplied = params.has('fence') ? fenceParam(params.get('fence')) : null;
+  if (raw) {
+    const a = await readCursor(env, raw);
+    if (!Array.isArray(a) || a.length !== 9 || a[0] !== 2 || a[1] !== 'window' || a[2] !== merchant || a[3] !== legacy || a[4] !== from || a[5] !== to ||
+        !Number.isSafeInteger(a[6]) || a[6] < 0 || (supplied !== null && supplied !== a[6]) ||
+        !Number.isFinite(a[7]) || a[7] < from || a[7] >= to || !Number.isSafeInteger(a[8]) || a[8] <= 0 || a[8] > a[6]) throw new RangeError('after');
+    return { fence: a[6], after: a.slice(7) };
+  }
+  // Include voided rows and both entitled buckets, even outside this time window.
+  const row = await env.DB.prepare('SELECT COALESCE(MAX(rowid), 0) AS fence FROM sales WHERE merchant IN (?, ?)')
+    .bind(merchant, legacy || merchant).first();
+  const maximum = Number(row?.fence);
+  if (!Number.isSafeInteger(maximum) || maximum < 0) throw new Error('fence-db');
+  if (supplied !== null && supplied > maximum) throw new RangeError('fence');
+  return { fence: supplied ?? maximum, after: [from, 0] };
+}
+async function voidPage(env, params, merchant, legacy, limit) {
+  const raw = params.get('afterVoid');
+  let after = [null, 0];
+  if (raw) {
+    const a = await readCursor(env, raw);
+    if (!Array.isArray(a) || a.length !== 6 || a[0] !== 1 || a[1] !== 'void' || a[2] !== merchant || a[3] !== legacy ||
+        (a[4] !== null && !Number.isFinite(a[4])) || !Number.isSafeInteger(a[5]) || a[5] < 0 || (a[4] === null && a[5] !== 0)) throw new RangeError('afterVoid');
+    after = a.slice(4);
+  }
+  const columns = 'SELECT rowid AS c, id AS i, ref AS r, ts, void_ts AS vts FROM sales WHERE merchant IN (?, ?)';
+  let all = [];
+  if (after[0] === null || after[0] < 0) {
+    // Include old/corrupt negative markers too; the optional index covers the
+    // normal nonnegative stream without changing the legacy latest-500 plan.
+    const predicate = after[0] === null ? '' : ' AND (void_ts > ? OR (void_ts = ? AND rowid > ?))';
+    const args = after[0] === null ? [] : [after[0], after[0], after[1]];
+    const rs = await env.DB.prepare(columns + ' AND void_ts < 0' + predicate + ` ORDER BY void_ts ASC, rowid ASC LIMIT ${limit + 1}`)
+      .bind(merchant, legacy || merchant, ...args).all();
+    all = rs.results || [];
+  }
+  if (all.length <= limit) {
+    const start = after[0] === null || after[0] < 0 ? [0, 0] : after;
+    const rs = await env.DB.prepare(columns + ' AND void_ts IS NOT NULL AND void_ts >= 0' +
+      ' AND (void_ts > ? OR (void_ts = ? AND rowid > ?))' + ` ORDER BY void_ts ASC, rowid ASC LIMIT ${limit + 1 - all.length}`)
+      .bind(merchant, legacy || merchant, start[0], start[0], start[1]).all();
+    all = all.concat(rs.results || []);
+  }
+  const more = all.length > limit;
+  const voided = all.slice(0, limit).map(r => ({ c: r.c, i: r.i || '', r: r.r || '', ts: r.ts, vts: r.vts }));
+  // Retain a signed checkpoint at EOF so a later poll can resume after the tail.
+  const last = voided[voided.length - 1];
+  const checkpoint = await signCursor(env, [1, 'void', merchant, legacy, last ? last.vts : after[0], last ? last.c : after[1]]);
+  return { merchant, voided, next: more ? checkpoint : null, complete: !more, checkpoint };
+}
+async function windowRows(env, merchant, legacy, from, to, after, fence, limit) {
   const optional = ['amount_cents', 'gross_amount_cents', 'discount_amount_cents', 'discount_reason', 'discount_actor_id', 'lines', 'channel'];
   for (let attempt = 0; attempt <= 7; attempt++) {
     const cols = optional.join(', ');
     try {
       const rs = await env.DB.prepare(
         'SELECT rowid AS cursor, id, amount, method, label, ref, ts' + (cols ? ', ' + cols : '') +
-        ' FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL' +
+        ' FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL AND rowid <= ?' +
         ' AND (ts > ? OR (ts = ? AND rowid > ?))' +
         ` ORDER BY ts ASC, rowid ASC LIMIT ${limit + 1}`
-      ).bind(merchant, legacy || merchant, from, to, after[0], after[0], after[1]).all();
+      ).bind(merchant, legacy || merchant, from, to, fence, after[0], after[0], after[1]).all();
       return rs.results || [];
     } catch (e) {
       // Unlike legacy modes, never claim completeness without void exclusion.
@@ -101,11 +164,12 @@ async function windowRows(env, merchant, legacy, from, to, after, limit) {
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  const windowRead = url.searchParams.get('window') === '1' && url.searchParams.has('from') && url.searchParams.has('to');
+  const voidRead = url.searchParams.get('voids') === '1' && url.searchParams.has('afterVoid');
+  const windowRead = !voidRead && url.searchParams.get('window') === '1' && url.searchParams.has('from') && url.searchParams.has('to');
   const windowFrom = Number(url.searchParams.get('from')), windowTo = Number(url.searchParams.get('to'));
   if (windowRead && (!Number.isSafeInteger(windowFrom) || !Number.isSafeInteger(windowTo) || windowFrom <= 0 ||
       windowTo <= windowFrom || windowTo - windowFrom > 400 * 86400000 + 2 * 3600000)) return json({ error: 'range' }, 400);
-  if (!env || !env.DB) return windowRead ? json({ error: 'db' }, 503) : json({ sales: [], cursor: 0 });
+  if (!env || !env.DB) return windowRead || voidRead ? json({ error: 'db' }, 503) : json({ sales: [], cursor: 0 });
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
@@ -123,12 +187,7 @@ export async function onRequestGet({ request, env }) {
    * l'écriture. Une caisse ne peut toujours lire que la boutique où elle est
    * posée. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
-  if (!merchant) return windowRead ? json({ error: 'unauthorized' }, 403) : json({ sales: [], cursor: since, merchant: '' });
-  let after;
-  if (windowRead) {
-    try { after = readWindowCursor(url.searchParams.get('after'), merchant, windowFrom, windowTo); }
-    catch (_) { return json({ error: 'after' }, 400); }
-  }
+  if (!merchant) return windowRead || voidRead ? json({ error: 'unauthorized' }, 403) : json({ sales: [], cursor: since, merchant: '' });
 
   /* Which buckets this store reads: its own, plus the account's pre-split one
    * when that is unambiguous. Binding `merchant` twice when there is no second
@@ -187,6 +246,13 @@ export async function onRequestGet({ request, env }) {
   const DAY_LIMIT = 2000;
   const requestedLimit = Number(url.searchParams.get('limit'));
   const limit = Number.isInteger(requestedLimit) ? Math.max(50, Math.min(500, requestedLimit)) : 50;
+  let replay;
+  if (windowRead || voidRead) {
+    try {
+      if (voidRead) return json(await voidPage(env, url.searchParams, merchant, legacy, limit));
+      replay = await windowState(env, url.searchParams, merchant, legacy, windowFrom, windowTo);
+    } catch (error) { return json({ error: error instanceof RangeError ? 'cursor' : 'db' }, error instanceof RangeError ? 400 : 500); }
+  }
 
   /* Compatibility for tills that still have the previous service-worker bundle
    * open during deployment. That client asks for a maximum then uses `seq + 1`;
@@ -211,10 +277,11 @@ export async function onRequestGet({ request, env }) {
    * silence est le pire des messages d'erreur. */
   try {
     if (windowRead) {
-      rows = await windowRows(env, merchant, legacy, windowFrom, windowTo, after, limit);
+      rows = await windowRows(env, merchant, legacy, windowFrom, windowTo, replay.after, replay.fence, limit);
       if (rows.length > limit) {
         rows = rows.slice(0, limit);
-        next = windowCursor(merchant, windowFrom, windowTo, rows[rows.length - 1]);
+        const last = rows[rows.length - 1];
+        next = await signCursor(env, [2, 'window', merchant, legacy, windowFrom, windowTo, replay.fence, last.ts, last.cursor]);
       }
     } else if (!voidsOnly) {
       const rs = byDay
@@ -418,7 +485,7 @@ export async function onRequestGet({ request, env }) {
   /* Une lecture par journée ne fait pas avancer le curseur : elle est triée à
      l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
      comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
-  if (windowRead) return json({ merchant, from: windowFrom, to: windowTo, sales: rows, next, complete: next === null });
+  if (windowRead) return json({ merchant, from: windowFrom, to: windowTo, sales: rows, next, complete: next === null, fence: replay.fence });
   const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
   /* The till's heartbeat (order_desk, stamped by its authenticated queue poll
      every few seconds; kitchen and service screens excluded). The dashboard

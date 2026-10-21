@@ -1,0 +1,1 @@
+{"sales":[],"cursor":0,"merchant":"void-fixture","voided":[{"c":3,"i":"seed-c","r":"R-seed-c","vts":201,"ts":100},{"c":2,"i":"seed-a","r":"R-seed-a","vts":200,"ts":200},{"c":1,"i":"seed-b","r":"R-seed-b","vts":200,"ts":300}],"tillSeen":0,"now":1800000000000,"limit":50}

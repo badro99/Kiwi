@@ -142,6 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_sales_merchant ON sales (merchant);
 CREATE INDEX IF NOT EXISTS idx_sales_merchant_seller_ts ON sales (merchant, seller_id, ts);
 -- /api/sales-summary and /api/feed?from= read one store over a date window.
 CREATE INDEX IF NOT EXISTS idx_sales_merchant_ts ON sales (merchant, ts);
+-- Explicit stream predicate avoids changing the legacy latest-500 query plan.
+CREATE INDEX IF NOT EXISTS idx_sales_merchant_void_ts ON sales (merchant, void_ts) WHERE void_ts >= 0;
 
 -- Numeric receipt references are allocated independently from the money ledger.
 -- `next_value` is the first number that has never been reserved. A till advances
