@@ -123,12 +123,17 @@
    * à 1 000 lignes — la file, elle, reste entière — et on réessaie. Si cela
    * échoue encore, l'état le dit (`status().storageError`) et le battement de la
    * caisse le remonte à la console : avant, la vente ne laissait aucune trace. */
-  function write(d) {
+  function write(d, batch) {
     var k = key(); var next = d; var raw;
     try {
       next = compact(d); raw = JSON.stringify(next);
       try { localStorage.setItem(k, raw); }
-      catch (_) { next = compact(next, 1000, 1000); raw = JSON.stringify(next); localStorage.setItem(k, raw); }
+      catch (error) {
+        // Consumption retries through add() after a batch failure, so quota
+        // compaction and subsequent costs follow the original per-row path.
+        if (batch) throw error;
+        next = compact(next, 1000, 1000); raw = JSON.stringify(next); localStorage.setItem(k, raw);
+      }
       cachedKey = k; cachedRaw = raw; cachedDoc = next;
       cachedSnapshotDoc = null; cachedSnapshot = null;
       health.storageError = false;
@@ -137,7 +142,7 @@
       cachedKey = ''; cachedRaw = null; cachedDoc = null;
       cachedSnapshotDoc = null; cachedSnapshot = null;
     }
-    subs.forEach(function (fn) { try { fn(); } catch (_) {} });
+    if (!batch || !health.storageError) subs.forEach(function (fn) { try { fn(); } catch (_) {} });
   }
   function hash(s) {
     var h = 2166136261;
@@ -184,6 +189,41 @@
     d.rows.push(m); d.queued.push(m.id); write(d);
     setTimeout(sync, 0);
     return m;
+  }
+  // Preserve append order (including compaction boundaries), but publish once.
+  // null signals a failed write so consumption can retry through legacy add().
+  function addMany(rows) {
+    if (!real() || !merchant() || (!Array.isArray(rows) && typeof rows !== 'function')) return null;
+    var d = read();
+    var ids = new Set(d.rows.map(function (r) { return r.id; }));
+    var results = []; var changed = false;
+    function append(raw) {
+      raw = Object.assign({}, raw || {});
+      if (!raw.locationId) raw.locationId = d.locationId || d.economatLocationId || 'principal';
+      var m = clean(raw);
+      if (!m.itemId || !m.qty) { results.push(null); return null; }
+      results.push(m);
+      if (ids.has(m.id)) return m;
+      ids.add(m.id); d.rows.push(m); d.queued.push(m.id); changed = true;
+      // Match the old per-add folding and base rounding exactly.
+      var before = d.rows;
+      compact(d);
+      if (before !== d.rows) append.compactionVersion++;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+      return m;
+    }
+    append.has = function (id) { return ids.has(id); };
+    append.compactionVersion = 0;
+    // A producer can allocate costs against the staged ledger, including the
+    // exact legacy compaction boundary, without publishing intermediate stock.
+    if (typeof rows === 'function') rows(append);
+    else rows.forEach(append);
+    if (changed) {
+      write(d, true);
+      setTimeout(sync, 0);
+      if (health.storageError) return null;
+    }
+    return results;
   }
   /* A transfer pair is authored atomically by the server. This hook mirrors
    * only acknowledged rows into the local ledger and never queues them for a
@@ -428,7 +468,7 @@
 
   window.KiwiInventory = {
     isReal: real, merchant: merchant, terminalId: terminalId, unitId: unitId, locationId: locationId,
-    add: add, acknowledge: acknowledge, reverse: reverse,
+    add: add, addMany: addMany, acknowledge: acknowledge, reverse: reverse,
     ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
     sync: sync, pending: function () { return read().queued.length; }, status: status,
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },

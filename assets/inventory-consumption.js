@@ -89,9 +89,9 @@
     opts = opts || {};
     var I = window.KiwiInventory;
     if (!I || (!I.history && !I.listMovements)) return [];
-    var raw = I.history
+    var raw = opts.rows || (I.history
       ? (I.history(itemId, opts.locationId ? { locationId: opts.locationId } : undefined) || [])
-      : (I.listMovements ? I.listMovements(itemId) : []);
+      : (I.listMovements ? I.listMovements(itemId) : []));
     var rows = raw.slice().sort(function (a, b) {
       var ta = +a.occurredTs || +a.createdTs || 0;
       var tb = +b.occurredTs || +b.createdTs || 0;
@@ -223,7 +223,7 @@
   function allocateCost(itemId, reqQty, defaultUnitCost, opts) {
     reqQty = Math.max(0, +reqQty || 0);
     if (!(reqQty > 0)) return defaultUnitCost;
-    var lots = deriveLots(itemId, opts || {});
+    var lots = opts && opts.lots || deriveLots(itemId, opts || {});
     var remainingReq = reqQty;
     var totalCost = 0;
     var coveredQty = 0;
@@ -279,12 +279,27 @@
     } catch (_) { return true; }
   }
 
-  function record(sale) {
+  function record(sale, single, batch) {
     var I = window.KiwiInventory;
     if (!I || !I.isReal?.() || !sale || !Array.isArray(sale.lines)) return { written: 0, skipped: 0 };
+    if (!single && !batch && typeof I.addMany === 'function' && typeof I.history === 'function') {
+      var result;
+      var committed = I.addMany(function (append) { result = record(sale, false, append); });
+      // Retry from persisted truth using the original fail-soft path.
+      return committed === null ? record(sale, true) : result;
+    }
     var d = doc(); var written = 0, skipped = 0;
     var ref = String(sale.ref || sale.id || ('sale-' + n(sale.ts || sale.time))).slice(0, 100);
     var locationId = String(sale.locationId || I.locationId?.() || 'principal').slice(0, 80);
+    var batched = !!batch;
+    var compactionVersion = batch ? batch.compactionVersion : 0;
+    var history = batched ? I.history(null, { locationId: locationId }) : [];
+    var byItem = new Map(); var states = new Map(); var latest = new Map();
+    history.forEach(function (r) {
+      if (!byItem.has(r.itemId)) byItem.set(r.itemId, []);
+      byItem.get(r.itemId).push(r);
+      latest.set(r.itemId, Math.max(latest.get(r.itemId) || 0, r.occurredTs));
+    });
     sale.lines.forEach(function (line, idx) {
       if (!line) return;
       var kind = String(line.kind || '').toLowerCase();
@@ -308,8 +323,26 @@
         var baseCost = x.direct
           ? (line.unitCost != null ? n(line.unitCost) : null)
           : (x.unitCost != null ? n(x.unitCost) : null);
-        var realizedCost = allocateCost(x.itemId, x.qty, baseCost, { locationId: locationId });
-        var m = I.add({
+        if (batched && compactionVersion !== batch.compactionVersion) {
+          // Folding acknowledged receipts changes the history the legacy
+          // allocator would see. Rebuild only at this exceptional boundary.
+          byItem.clear(); states.clear(); latest.clear();
+          I.history(null, { locationId: locationId }).forEach(function (r) {
+            if (!byItem.has(r.itemId)) byItem.set(r.itemId, []);
+            byItem.get(r.itemId).push(r);
+            latest.set(r.itemId, Math.max(latest.get(r.itemId) || 0, r.occurredTs));
+          });
+          compactionVersion = batch.compactionVersion;
+        }
+        var rows = byItem.get(x.itemId) || [];
+        if (batched && !states.has(x.itemId)) states.set(x.itemId, deriveLots(x.itemId, { rows: rows }));
+        var lots = batched ? states.get(x.itemId) : null;
+        // Cost allocation uses the unrounded recipe quantity; ledger depletion
+        // uses clean()'s millesimal quantity. Keep those two operations distinct.
+        var realizedCost = allocateCost(x.itemId, x.qty, baseCost, batched
+          ? { lots: lots.map(function (l) { return Object.assign({}, l); }) }
+          : { locationId: locationId });
+        var raw = {
           id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
           variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -x.qty,
           reason: 'sale', refType: 'sale', refId: ref,
@@ -317,8 +350,25 @@
           occurredTs: n(sale.ts || sale.time) || Date.now(),
           note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
           meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: part, lineQty: n(line.qty || line.quantity || 1) },
-        });
-        if (m) written++;
+        };
+        if (batched) {
+          var duplicate = batch.has(raw.id);
+          var appended = batch(raw);
+          var roundedQty = appended ? appended.qty : 0;
+          if (roundedQty && !duplicate && appended.itemId === x.itemId) {
+            // Backdated sales must be inserted into history before replaying:
+            // later receipts/restitutions can change the next allocation.
+            if ((latest.get(x.itemId) || 0) > appended.occurredTs) {
+              rows.push(appended); byItem.set(x.itemId, rows);
+              states.set(x.itemId, deriveLots(x.itemId, { rows: rows }));
+            } else {
+              allocateCost(x.itemId, Math.abs(roundedQty), baseCost, { lots: lots });
+              rows.push(appended); byItem.set(x.itemId, rows);
+            }
+            latest.set(x.itemId, Math.max(latest.get(x.itemId) || 0, appended.occurredTs));
+          }
+          if (roundedQty) written++;
+        } else if (I.add(raw)) written++;
       });
     });
     return { written: written, skipped: skipped };
