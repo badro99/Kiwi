@@ -561,6 +561,10 @@
     if (/^\d{4}-\d{2}-\d{2}$/.test(String(birthday || ''))) {
       try { birthday = new Date(birthday + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch (_) {}
     }
+    var refused = window.KiwiClients && KiwiClients.refusedRedemptions &&
+      KiwiClients.refusedRedemptions().some(function (e) { return e.clientId === c.id; });
+    var refusalText = (window.KiwiI18n && KiwiI18n.T[lang()] || {})['clients.rewardRefused'] ||
+      'Récompense refusée par le serveur, peut-être déjà utilisée sur une autre caisse';
     var body = '<div style="margin-top:4px">' +
       (actions ? '<div class="cd-contact">' + actions + '</div>' : '') +
       phoneRow + row(T.th.email, c.email) + row(T.th.city, c.city) + row(T.address, c.address) +
@@ -568,6 +572,7 @@
       hospitalityRows +
       '<div class="cd-drow"><span class="k">' + T.th.visits + ' · ' + T.th.spend + '</span><span class="v">' + (c.visits || 0) + ' · ' + fmt(c.spend) + ' MAD</span></div>' +
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +
+      (refused ? '<div class="cd-drow" data-i18n="clients.rewardRefused">' + esc(refusalText) + '</div>' : '') +
       row(T.notes, c.notes) +
       '<div class="cd-drow"><span class="k">' + T.consent + '</span><span class="v">' + esc(consent) + '</span></div>' +
       '<div class="cd-history"><div class="cd-history-title">' + esc(T.history) + '</div><div class="cd-history-list">' + historyBody + '</div></div>' +

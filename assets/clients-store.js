@@ -716,13 +716,62 @@
   function redemptionDrop(book, ref) {
     redemptionWrite(book, redemptionRead(book).filter(function (e) { return e.ref !== ref; }));
   }
-  function redemptionPush(book, event) {
+  function refusedRedemptions(book) {
+    try {
+      var a = JSON.parse(ls('kiwi:clients-refused-redemptions:v1:' + (book || bookId())) || '[]');
+      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId && e.error; }).slice(-50) : [];
+    } catch (_) { return []; }
+  }
+  function redemptionRefuse(book, event, error) {
+    var refused = refusedRedemptions(book);
+    if (!refused.some(function (e) { return e.ref === event.ref; })) {
+      refused.push({ ref: event.ref, clientId: event.clientId, error: error, at: now() });
+    }
+    // Keep the pending event if the refusal could not be persisted.
+    try {
+      localStorage.setItem('kiwi:clients-refused-redemptions:v1:' + book, JSON.stringify(refused.slice(-50)));
+    } catch (_) { return; }
+    redemptionDrop(book, event.ref);
+    /* Le refus arrive sur la caisse qui a donné la remise : c'est là qu'il faut
+       le dire. La fiche du tableau de bord ne le lit que sur cet appareil. */
+    try {
+      if (typeof window.KiwiCaisseToast === 'function') {
+        window.KiwiCaisseToast('Récompense refusée par le serveur', 6000, 'warn',
+          'Peut-être déjà utilisée sur une autre caisse. Vérifiez la fiche du client.');
+      }
+    } catch (_) {}
+  }
+  function redemptionPush(book, event, afterClientCreate) {
     if (!syncable(book) || !event || !event.ref) return;
     try {
       fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify({ merchant: book, redemption: { clientId: event.clientId, ref: event.ref } }),
-      }).then(function (r) { if (r && r.ok) redemptionDrop(book, event.ref); }).catch(function () {});
+      }).then(function (r) {
+        if (r && r.ok) { redemptionDrop(book, event.ref); return; }
+        if (!r || !(r.status >= 400 && r.status < 500) || [401, 403, 408, 429].indexOf(r.status) !== -1) return;
+        return r.json().then(function (data) {
+          var code = data && data.error;
+          /* Un client créé à la caisse peut arriver au serveur après sa
+             récompense : on le crée, puis on retente une fois, comme un achat. */
+          if (code === 'client-not-found' && !afterClientCreate) {
+            var created = pushClient(get(event.clientId, book), book);
+            if (created && typeof created.then === 'function') {
+              created.then(function (ok) { if (ok) redemptionPush(book, event, true); });
+            }
+            return;
+          }
+          /* Les points qui rendaient la récompense prête peuvent être dans un
+             achat encore en file : le refus n'est définitif qu'une fois les
+             achats de ce client arrivés. */
+          if (code === 'reward-not-ready' && purchaseRead(book).some(function (e) {
+            return e && e.kind !== 'refund' && e.clientId === event.clientId;
+          })) return;
+          if (['reward-not-ready', 'loyalty-off', 'client-not-found', 'ref-conflict', 'client-and-ref-required'].indexOf(code) !== -1) {
+            redemptionRefuse(book, event, code);
+          }
+        });
+      }).catch(function () {});
     } catch (_) {}
   }
   function flushRedemptions(book) {
@@ -913,7 +962,7 @@
     bookId: bookId,
     hasBook: function () { return !!bookId(); },
     // reads
-    list: list, get: get, findByPhone: findByPhone, count: count,
+    list: list, get: get, refusedRedemptions: refusedRedemptions, findByPhone: findByPhone, count: count,
     // writes
     upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, remove: remove,
     // fidelity config

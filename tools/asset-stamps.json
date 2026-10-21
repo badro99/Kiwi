@@ -120,8 +120,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "45",
-    "sha": "391c74432155b2ec"
+    "v": "46",
+    "sha": "45b64e2883de7529"
   },
   "assets/caisse-link.js": {
     "v": "19",
@@ -204,12 +204,12 @@
     "sha": "581174743d356914"
   },
   "assets/clients-directory.js": {
-    "v": "22",
-    "sha": "3af0b916f8771679"
+    "v": "23",
+    "sha": "3c484d3af3ee3cad"
   },
   "assets/clients-store.js": {
-    "v": "12",
-    "sha": "7ff3d6c87abf3b94"
+    "v": "14",
+    "sha": "40a9cfa39c86b62c"
   },
   "assets/cloud-doc.js": {
     "v": "11",
@@ -448,8 +448,8 @@
     "sha": "dd47fdc87e59c3f4"
   },
   "assets/i18n.js": {
-    "v": "28",
-    "sha": "073f1a8a955362b6"
+    "v": "29",
+    "sha": "cac08ccf529cf159"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",

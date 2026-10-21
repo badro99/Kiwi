@@ -14,6 +14,7 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     en: {
+      'clients.rewardRefused': 'Reward refused by the server, possibly already used at another till',
       'catalog.more': "More",
       'catalog.itemActions': "Item actions",
       'catalog.sectionActions': "Section actions",
@@ -674,6 +675,7 @@
     },
 
     ar: {
+      'clients.rewardRefused': 'رفض الخادم المكافأة، ربما استُخدمت بالفعل في صندوق آخر',
       'catalog.more': "المزيد",
       'catalog.itemActions': "إجراءات الصنف",
       'catalog.sectionActions': "إجراءات الأقسام",

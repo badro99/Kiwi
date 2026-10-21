@@ -695,6 +695,8 @@
       'table remise à zéro': ['table reset', 'تمت إعادة ضبط الطاولة'],
       'Aucune table en cours': ['No open table', 'لا توجد طاولة مفتوحة'],
       'Table déjà encaissée': ['Table already paid', 'تم دفع الطاولة بالفعل'],
+      'Récompense refusée par le serveur': ['Reward refused by the server', 'رفض الخادم المكافأة'],
+      'Peut-être déjà utilisée sur une autre caisse. Vérifiez la fiche du client.': ['Possibly already used at another till. Check the customer record.', 'ربما استُخدمت بالفعل في صندوق آخر. تحقق من بطاقة العميل.'],
       /* ── modules coupés pour l'établissement (plus de « God Mode » devant le caissier) ── */
       'Mouvements de caisse désactivés pour cet établissement': ['Cash movements are turned off for this venue', 'حركات الصندوق متوقفة لهذه المنشأة'],
       'Ouverture manuelle du tiroir désactivée pour cet établissement': ['Opening the drawer by hand is turned off for this venue', 'فتح الدرج يدويًا متوقف لهذه المنشأة'],
