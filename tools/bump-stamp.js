@@ -142,6 +142,8 @@ function bump(asset, scanned) {
   const allStamps = [...entry.stamps].concat(...siblings.map((s) => [...s.entry.stamps]));
   const current = Math.max(...allStamps.map(Number));
   const next = String(current + 1);
+  /* Literal pages-pro lazy URLs are ordinary replaceIn sites. Rewriting the
+     registry also enters touched, so the parent asset cascades below. */
   const files = new Set(entry.sites.filter((s) => s.kind !== 'rev').map((s) => s.file));
   for (const file of referenced) files.add(file);
 

@@ -79,6 +79,25 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
+/* Lazy pages-pro URLs participate in drift checks and cascade to their parent. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-lazy-stamp-'));
+  fixture(dir);
+  fs.mkdirSync(path.join(dir, 'assets/pages-pro'));
+  fs.writeFileSync(path.join(dir, 'assets/pages-pro/spa-appointments.js'), '// spa\n');
+  fs.writeFileSync(path.join(dir, 'assets/pages-pro.js'), "const LAZY_SECTIONS = [{ url: 'assets/pages-pro/spa-appointments.js?v=1', handlers: [] }];\n");
+  fs.appendFileSync(path.join(dir, 'dashboard.html'), '<script src="assets/pages-pro.js?v=1"></script>');
+  run(dir, ['--sync']);
+  fs.appendFileSync(path.join(dir, 'assets/pages-pro/spa-appointments.js'), '// changed\n');
+  const drift = () => spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+  ok(drift().status === 1, 'lazy chunk content drift is rejected');
+  ok(run(dir, ['assets/pages-pro/spa-appointments.js']).status === 0, 'lazy chunk bump succeeds');
+  ok(rd(dir, 'assets/pages-pro.js').includes('spa-appointments.js?v=2'), 'lazy registry URL moves');
+  ok(rd(dir, 'dashboard.html').includes('assets/pages-pro.js?v=2'), 'lazy registry parent stamp cascades');
+  ok(drift().status === 0, 'lazy chunk and parent are sealed after bump');
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 /* B · le hook juge l'index, jamais l'arbre de travail */
 {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-hook-'));

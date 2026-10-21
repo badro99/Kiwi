@@ -198,6 +198,13 @@ function scan() {
     if (r.stamp) note(r.key, r.stamp, { file: r.file, kind: 'css', stamp: r.stamp, written: r.written });
   }
 
+  // Literal first-use URLs in pages-pro's lazy registry (also cascade-bumped).
+  if (exists('assets/pages-pro.js')) {
+    for (const m of read('assets/pages-pro.js').matchAll(/url:\s*'(assets\/pages-pro\/[^']+\.js)\?v=([0-9]+)'/g)) {
+      note(m[1], m[2], { file: 'assets/pages-pro.js', kind: 'lazy', stamp: m[2] });
+    }
+  }
+
   const revs = dispatchRevs();
   for (const [base, rev] of Object.entries(revs)) {
     for (const ext of ['js', 'css']) {
@@ -222,6 +229,7 @@ function referenceFiles(asset) {
       if (read(doc).includes(asset)) files.push(doc);
     }
   }
+  if (exists('assets/pages-pro.js') && read('assets/pages-pro.js').includes(asset + '?v=')) files.push('assets/pages-pro.js');
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;
 }

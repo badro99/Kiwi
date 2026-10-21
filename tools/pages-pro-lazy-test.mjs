@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import http from 'node:http';
+import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
+import { suite } from './browser-trace.mjs';
+const root = path.resolve(import.meta.dirname, '..');
+const puppeteer = createRequire(path.join(root, 'app/package.json'))('puppeteer-core');
+const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/chromium','/usr/bin/google-chrome'].find(fs.existsSync);
+assert.ok(bin, 'Chromium required');
+const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.json':'application/json' };
+const server = http.createServer((req,res) => {
+  const p = path.resolve(root, '.' + new URL(req.url, 'http://local').pathname);
+  if (!p.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
+  fs.readFile(p, (err,data) => { res.writeHead(err ? 404 : 200, {'Content-Type':mime[path.extname(p)] || 'application/octet-stream'}); res.end(err ? '' : data); });
+});
+await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
+let browser;
+try {
+  browser = await puppeteer.launch({executablePath:bin,headless:true,args:['--no-sandbox']});
+  const S = suite('pages-pro-lazy', {browser});
+  await S.run('demo appointments first use', async t => {
+    const page = t.watch(await browser.newPage());
+    const base = `http://127.0.0.1:${server.address().port}`;
+    await page.setViewport({width:1366,height:1000});
+    await page.setBypassServiceWorker(true);
+    await page.setRequestInterception(true);
+    page.on('request', r => {
+      // The newer workspace intercepts Spa clicks before Kiwi.handlers. Isolate
+      // the legacy route here, retaining every other dashboard wrapper/consumer.
+      if (new URL(r.url()).pathname === '/assets/trade-workspaces.js') return r.respond({status:200,contentType:'text/javascript',body:'/* legacy Spa A pilot harness */'});
+      if (r.url().startsWith(base + '/api/')) return r.respond({status:503,contentType:'application/json',body:'{"error":"offline"}'});
+      return r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort();
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('kiwiLang','fr');
+      try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
+    });
+    await page.goto(base + '/dashboard.html',{waitUntil:'load'});
+    const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/spa-appointments.js?')).length);
+    assert.equal(await count(),0,'chunk absent at boot');
+    await page.waitForSelector('[data-explore]', {visible:true});
+    await page.click('[data-explore]');
+    const skip = await page.$('[data-kiwi-skip]');
+    if (skip && await skip.evaluate(e => !!e.offsetParent)) await skip.click();
+    await page.keyboard.press('Escape');
+    // Use the venue picker, then its sidebar destination.
+    await page.click('[data-action="venue-toggle"]');
+    await page.waitForSelector('[data-action="venue-pick"][data-venue="spaBahia"]',{visible:true});
+    await page.click('[data-action="venue-pick"][data-venue="spaBahia"]');
+    await page.waitForSelector('.sidebar [data-nav="appointments"]',{visible:true});
+    await page.evaluate(() => {
+      const prev = Kiwi.handlers['nav-appointments'];
+      Kiwi.handlers['nav-appointments'] = function () { window.__spaWrapper = true; return prev.apply(this,arguments); };
+      const appPage = Kiwi.appPage;
+      Kiwi.appPage = function(name,opts) { if(name==='appointments') window.__spaOptions=JSON.stringify(opts); return appPage.apply(this,arguments); };
+    });
+    await page.click('.sidebar [data-nav="appointments"]');
+    await page.waitForSelector('.s-cal-block',{visible:true});
+    assert.equal(await count(),1);
+    assert.equal(await page.evaluate(()=>window.__spaWrapper),true,'captured apply wrapper works');
+    const rendered = await page.evaluate(()=>window.__spaOptions);
+    const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-spa-reference.json'),'utf8'));
+    assert.equal(crypto.createHash('sha256').update(rendered).digest('hex'),reference.sha,'same appPage DOM input as unsplit file');
+    await page.click('[data-action="appt-filter"]');
+    assert.equal(await count(),1,'second spa handler reuses chunk');
+    assert.ok(await page.evaluate(()=>document.body.textContent.includes('Praticienne, service, statut')));
+    // venues.js captures nav-accueil and calls origAccueil.apply(this, arguments).
+    await page.click('.sidebar [data-nav="accueil"]');
+    await page.waitForFunction(() => !document.body.classList.contains('page-appointments'));
+    assert.equal(await count(),1);
+  });
+  process.exitCode = await S.finish({exit:false});
+} finally {
+  await browser?.close(); server.closeAllConnections(); await new Promise(r=>server.close(r));
+}
+if (!process.exitCode) console.log('✓ pages-pro lazy browser');
