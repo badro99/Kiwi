@@ -4346,8 +4346,11 @@
   .st-nutrition-meta { display: flex; justify-content: space-between; gap: 12px; margin: 11px 0 13px; color: var(--n-500); font-size: 11px; }
   .st-nutrition-meta b { color: var(--atlas); font-weight: 600; }
   .st-nutrition-kicker { margin: 13px 0 7px; }
-  .st-nutrient-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-  .st-nutrient-grid label { display: flex; flex-direction: column; gap: 5px; color: var(--n-600); font-size: 11px; }
+  /* minmax(0,1fr) : un champ nombre a une largeur minimale qui poussait la
+     troisième colonne hors d'un téléphone (Protéines à 416 px sur 390). */
+  .st-nutrient-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .st-nutrient-grid label { display: flex; flex-direction: column; gap: 5px; color: var(--n-600); font-size: 11px; min-width: 0; }
+  .st-nutrient-grid input { min-width: 0; width: 100%; box-sizing: border-box; }
   .st-grams-field { margin-top: 11px; }
   .st-grams-field small { color: var(--n-500); font-size: 11px; }
   .st-allergen-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -4360,7 +4363,7 @@
   .st-portion-prefill[hidden] { display: none; }
   .st-portion-prefill button { border: 1px solid var(--atlas); border-radius: 999px; padding: 5px 9px; background: transparent; color: var(--atlas); font: 600 11px var(--sans); cursor: pointer; }
   @media (max-width: 600px) {
-    .st-nutrient-grid { grid-template-columns: repeat(2, 1fr); }
+    .st-nutrient-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   /* Dropzone */
@@ -5756,7 +5759,7 @@
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/starter-copy.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2163" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2164" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>

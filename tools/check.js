@@ -589,6 +589,7 @@ for (const test of [
   'z-alert-copy-test.mjs',
   'z-reconciliation-client-test.mjs',
   'retail-z-reconciliation-test.mjs',
+  'retail-basket-cents-test.mjs',
   'z-reconciliation-browser-test.mjs',
   'caisse-winter-clock-test.mjs',
   'device-timezone-test.mjs',
@@ -2493,6 +2494,9 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['dash-phone-pages-browser-test.mjs', 'dash-phone-pages-browser-test'],
     ['dash-phone-pages-ar-browser-test.mjs', 'dash-phone-pages-ar-browser-test'],
     ['dash-phone-pages-kit-browser-test.mjs', 'dash-phone-pages-kit-browser-test'],
+    /* Et chaque feuille, tiroir ou sélecteur que ces pages ouvrent, à 390 de large (FR, AR). */
+    ['dash-phone-sheets-browser-test.mjs', 'dash-phone-sheets-browser-test'],
+    ['dash-phone-sheets-ar-browser-test.mjs', 'dash-phone-sheets-ar-browser-test'],
     /* L'épicerie (Kiwi Basic) à 390 de large, FR et AR : vues et feuilles dans l'écran, l'ardoise d'un voisin lisible. */
     ['epicerie-phone-browser-test.mjs', 'epicerie-phone-browser-test'],
     /* Librairie, traiteur, fleuriste, gym à 390 de large : leur ticket (panier, devis, bouquet, panier) devient la feuille du bas. */

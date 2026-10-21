@@ -755,10 +755,11 @@
     const cashIn = sale.remote && sale.receivedAmount != null
       ? Math.max(0, Number(sale.receivedAmount) || 0)
       : Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0) - consigned);
-    const lines = (sale.lines || []).slice(0, 40).map((line) => ({
+    const lineTotals = bqLineTotals((sale.lines || []).map((line) => (+line.unit || 0) * Math.max(1, Number(line.qty) || 1)), Number(sale.balanceTotal) || total);
+    const lines = (sale.lines || []).slice(0, 40).map((line, i) => ({
       itemId: line.pid || '', variantId: line.variantId || [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
-      qty: Math.max(1, Number(line.qty) || 1), total: Math.round((+line.unit || 0) * Math.max(1, Number(line.qty) || 1)),
+      qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
       cat: line.category || rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
     }));
     const payload = {
@@ -5365,12 +5366,13 @@
                ligne — c'est lui qui fait tenir le « Catégorie : Jeans » du
                rapport de fin de journée même si le rayon est renommé plus tard.
                Bornes identiques à celles de /api/sale : 40 lignes, 60 signes. */
-            const basket = t.lines.slice(0, 40).map((ln) => ({
+            const lineTotals = bqLineTotals(t.lines.map((ln) => lineUnit(ln) * ln.qty), tot.total);
+            const basket = t.lines.slice(0, 40).map((ln, i) => ({
               itemId: ln.pid,
               variantId: [ln.pid, ln.size || '', ln.color || ''].join(':'),
               name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
               qty: ln.qty,
-              total: Math.round(lineUnit(ln) * ln.qty),
+              total: lineTotals[i],
               cat: rayonOf(ln.pid) || '',
               unit: 'piece',
               kind: 'product',
@@ -8906,7 +8908,7 @@
       const lines = (s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
         qty: lineAvailableQty(ln),
-        total: Math.round((+ln.unit || 0) * lineAvailableQty(ln)),
+        total: Math.round((+ln.unit || 0) * lineAvailableQty(ln) * 100) / 100,
         cat: rayonOf(ln.pid) || '',
       }));
       const taken = bqMoneyParts(s);
@@ -8979,13 +8981,38 @@
   let bqLastProv = 0;
   /* Le rapprochement des ventes avec le serveur (z-reconciliation.js), que la
      caisse restaurant fait depuis longtemps et que la boutique ne faisait pas :
-     Maison 121 a encaissé 13 ventes (66 000 MAD) en deux semaines sans
-     qu'aucune ne soit jamais comparée au registre. Chaque vente envoyée est décrite comme le
+     les boutiques Santos Store et Maison 121 ont encaissé 224 ventes en deux
+     semaines sans qu'aucune ne soit jamais comparée au registre ; la caisse
+     maison partage ce code et ce manque. Chaque vente envoyée est décrite comme le
      serveur la range : l'identifiant que postSale() lui donne, l'argent
      réellement reçu (ni l'avoir, ni la livraison encore à encaisser) et le
      moyen de paiement. Une vente réglée sans argent (avoir, livraison en
      compte) n'apporte rien à comparer et reste dehors ; une vente annulée
      part comme marque, pour retirer son identifiant d'un envoi précédent. */
+  /* LE PANIER AU CENTIME, ET À LA VALEUR DU TICKET. Deux écarts entre ce que
+     la caisse encaissait et ce que ses lignes disaient au serveur. Un : chaque
+     ligne était arrondie au dirham (Math.round), donc un caftan à 249,90 partait
+     à 250, et le classement des articles comme le rapport par rayon portaient
+     des centimes qui n'avaient jamais existé. Deux : la récompense fidélité
+     baisse le TICKET, pas une ligne, et les lignes partaient à leur prix d'avant
+     la récompense ; vu en production, un ticket encaissé 171,00 portait 190,00
+     de lignes, et chaque article semblait avoir rapporté 10 % de plus.
+     Ici, chaque ligne part au centime ; quand le ticket vaut moins que ses
+     lignes, la baisse se répartit au prorata, le reste en centimes sur les plus
+     grosses lignes, si bien que la somme des lignes est exactement le ticket.
+     Un ticket inconnu (0, absent) ne touche à rien : mieux vaut des lignes
+     pleines que des lignes à zéro. */
+  function bqLineTotals(amounts, ticket) {
+    const c = (amounts || []).map((x) => Math.max(0, Math.round((+x || 0) * 100)));
+    const sum = c.reduce((a, b) => a + b, 0);
+    const want = Math.round((+ticket || 0) * 100);
+    if (!(want > 0) || want >= sum) return c.map((x) => x / 100);
+    const out = c.map((x) => Math.floor(x * want / sum));
+    let rest = want - out.reduce((a, b) => a + b, 0);
+    const order = c.map((_, i) => i).sort((a, b) => c[b] - c[a] || a - b);
+    for (let k = 0; rest > 0; k = (k + 1) % order.length) { out[order[k]]++; rest--; }
+    return out.map((x) => x / 100);
+  }
   function bqZJournal(slug) {
     const Live = window.KiwiLive;
     if (!Live || !Live.saleIdFor) return null;
@@ -9496,7 +9523,7 @@
         const lines = (s.lines || []).map((ln) => ({
           name: lineName(ln),
           qty: ln.qty,
-          total: Math.round((+ln.unit || 0) * ln.qty),
+          total: Math.round((+ln.unit || 0) * ln.qty * 100) / 100,
         }));
         const pieces = lines.reduce((n, l) => n + l.qty, 0);
         const head = lines[0];

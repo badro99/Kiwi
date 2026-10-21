@@ -182,7 +182,9 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
     Date, Math, Number, String, JSON, Array, Object, Map, Error,
   };
   vm.createContext(sandbox);
-  vm.runInContext(src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
+  /* originalSalePayload envoie ses lignes par bqLineTotals (le panier au centime), défini plus bas dans le fichier. */
+  const lineTotalsSrc = src.slice(src.indexOf('  function bqLineTotals('), src.indexOf('  function bqZJournal('));
+  vm.runInContext(lineTotalsSrc + src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
     '\n;this.api = { creditFromServer, creditRequest, stableCreditIssueId, originalSalePayload, creditErrorDetail };', sandbox);
   const api = sandbox.api;
   const lookup = await api.creditRequest(null, '&code=AV-OTHER');
@@ -199,7 +201,7 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   const b = api.stableCreditIssueId(sale, new Map([[0, 1]]), 15000);
   ok(a === b && /^credit-issue:T-0042:0-2:15000$/.test(a), 'boutique : le même retour rejoué porte le même identifiant');
   const payload = api.originalSalePayload(sale);
-  ok(payload.method === 'card' && payload.amountCents === 30000 && payload.lines[0].variantId === 'p1:M:Écru',
+  ok(payload.method === 'card' && payload.amountCents === 30000 && payload.lines[0].variantId === 'p1:M:Écru' && payload.lines[0].total === 300,
     'boutique : le ticket d\'origine part avec son règlement et ses variantes');
 }
 

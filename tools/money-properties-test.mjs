@@ -82,6 +82,7 @@ function tillContext(globals) {
     grabStatement(/const lineBase {0,2}= [^\n]+\n/),
     grabStatement(/const lineUnit {0,2}= [^\n]+\n/),
     grabStatement(/const lineTotal = [^\n]+\n/),
+    grabFn('function bqLineTotals('),
     grabFn('function originalSalePayload('),
     /* le correctif « argent qui rentre » peut avoir ajouté une aide à caToday */
     (SRC.match(/const notCashedOf = [\s\S]*?;\n/) || [''])[0],
@@ -180,6 +181,25 @@ await strict('l’en-tête « N ventes · X MAD aujourd’hui » égale l’arge
     });
     const server = sales.reduce((s, sale) => s + api.originalSalePayload(sale).amount, 0);
     return Math.abs(api.caToday() - server) < 0.005;
+  }));
+
+/* Depuis le 2026-10-21 : les lignes d'un ticket partent au centime et à la
+   valeur du ticket. En production, un ticket encaissé 171,00 portait 190,00 de
+   lignes (la récompense fidélité baisse le ticket, pas une ligne), et chaque
+   ligne était arrondie au dirham (249,90 partait à 250). */
+await strict('boutique · les lignes envoyées au serveur font exactement le ticket, au centime',
+  fc.property(fc.array(fc.tuple(shelfCents, qty), { minLength: 1, maxLength: 8 }), fc.integer({ min: 0, max: 60 }), (raw, rewardPct) => {
+    const lines = raw.map(([c, q], i) => ({ pid: 'p1', qty: q, unit: c / 100, name: 'Article ' + i }));
+    const gross = lines.reduce((s, ln) => s + Math.round(ln.unit * ln.qty * 100), 0);
+    const ticketCents = Math.max(1, Math.round(gross * (100 - rewardPct) / 100));
+    const sale = { id: '1000', total: ticketCents / 100, parts: [{ m: 'carte', amount: ticketCents / 100 }], at: new Date(), lines };
+    const api = tillContext({
+      P: { p1: { price: 1, name: 'Article' } }, promoFor: () => null, merchantSlug: () => 'm', rayonOf: () => '',
+      SALES: [sale], salesToday: () => [sale], bqPaymentMethod: () => 'card', bqPaymentParts: (parts) => parts,
+    });
+    const sent = api.originalSalePayload(sale).lines;
+    const sum = sent.reduce((s, ln) => s + Math.round(ln.total * 100), 0);
+    return sum === ticketCents && sent.every((ln) => ln.total >= 0 && Math.abs(Math.round(ln.total * 100) - ln.total * 100) < 1e-6);
   }));
 
 /* ── le registre des avoirs, sur une vraie base ─────────────────────────── */
@@ -399,6 +419,7 @@ console.log('■ Prix d’une ligne de caisse Maison');
     return { id: '1000', tenderVersion: 2, parts, total, consigned, own: total - consigned, lines, at: new Date(), kind: 'vente' };
   });
   const MAISON_DAY = [
+    mFn('function bqLineTotals('),
     mFn('function originalSalePayload('),
     mStatement(/const notCashedOf = [\s\S]*?;\n/),
     mStatement(/const cashedOf = [\s\S]*?;\n/),

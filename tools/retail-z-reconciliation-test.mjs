@@ -22,7 +22,7 @@ import vm from 'node:vm';
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const zSource = read('assets/z-reconciliation.js');
 let passed = 0;
-const ok = (cond, msg) => { assert.ok(cond, msg); passed++; };
+const ok = (cond, msg) => { assert.ok(cond, msg); passed++; console.log('  ✓ ' + msg); };
 
 /* A function's whole text, from its `function name(` to the matching brace. */
 function grab(src, name) {
@@ -123,7 +123,7 @@ for (const [till, src] of Object.entries(files)) {
     ['sale-ref-shop-fixture-u-split', 42050, 'split'],
     ['sale-ref-shop-fixture-u-credit', 10000, 'split'],
     ['srv-77', 69000, 'cash'],
-  ], `${till} · receipts as the server files them`); passed++;
+  ], `${till} · receipts as the server files them`); passed++; console.log(`  ✓ ${till} · receipts as the server files them`);
   ok(p.entries.every((e) => e.local === null), `${till} · no local payload, so a missing receipt is reported, never replayed blind`);
 
   /* The close: same receipts, closed flag set. */
@@ -157,7 +157,7 @@ for (const [till, src] of Object.entries(files)) {
   ok(res.ok && res.unqueuedCount === 0, 'maison · consignment snapshot queued with nothing unaccounted');
   assert.deepEqual(JSON.parse(JSON.stringify(queued[0].payload.entries.map((e) => [e.id, e.amountCents, e.method]))),
     [['sale-ref-shop-fixture-u-consigned', 90000, 'card']], 'maison · 1 200 card less 300 consigned is 900; all-consigned is 0 and stays out');
-  passed++;
+  passed++; console.log('  ✓ maison · 1 200 card less 300 consigned is 900; all-consigned is 0 and stays out');
 }
 
 console.log(`retail-z-reconciliation: ${passed} controls passed (boutique and Maison receipts compared with the server as postSale files them)`);

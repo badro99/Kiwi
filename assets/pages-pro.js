@@ -1078,7 +1078,7 @@ handlers['terminal-catalog'] = () => {
       <div class="p-hero">
         <div class="l">${T.heroTitle}</div>
         <div class="big" style="font-size:26px;">${T.heroModels} <span style="font-size:16px; opacity:0.75;">· ${T.heroKds}</span></div>
-        <div class="sub">${T.heroSubtitle()}</div>
+        <div class="sub">${T.heroSubtitle}</div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
