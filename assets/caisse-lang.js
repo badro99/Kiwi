@@ -1284,6 +1284,12 @@
       'Clôture en cours': ['Closing in progress', 'الإغلاق جارٍ'],
       'patientez quelques secondes': ['wait a few seconds', 'انتظر بضع ثوانٍ'],
       'Continuer le service': ['Continue service', 'متابعة الخدمة'],
+      'Additions encore ouvertes': ['Bills still open', 'فواتير لا تزال مفتوحة'],
+      'Fermer la caisse efface ces additions. Encaissez ou annulez ces tables avant de fermer.': ['Closing the till erases these bills. Settle or cancel these tables before you close.', 'إغلاق الصندوق يمحو هذه الفواتير. حصّل أو ألغِ هذه الطاولات قبل الإغلاق.'],
+      'Fermer quand même · ces additions ne seront pas encaissées': ['Close anyway · these bills will not be collected', 'أغلق على أي حال · لن تُحصّل هذه الفواتير'],
+      'Non encaissé': ['Not collected', 'غير محصّل'],
+      'Table {n} encore ouverte · encaissez-la, annulez-la ou cochez « Fermer quand même »': ['Table {n} is still open · settle it, cancel it or tick “Close anyway”', 'الطاولة {n} لا تزال مفتوحة · حصّلها أو ألغِها أو حدّد «أغلق على أي حال»'],
+      '{n} tables encore ouvertes · encaissez-les, annulez-les ou cochez « Fermer quand même »': ['{n} tables are still open · settle them, cancel them or tick “Close anyway”', '{n} طاولات لا تزال مفتوحة · حصّلها أو ألغِها أو حدّد «أغلق على أي حال»'],
       'Fermeture de caisse': ['Closing the till', 'إغلاق الصندوق'],
       /* Le bandeau d'objectif, en démonstration seulement (un vrai commerce n'a
          pas d'objectif fixé sur la caisse). Le montant est dans un <em> : la

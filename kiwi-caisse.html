@@ -189,7 +189,7 @@
   <script src="assets/retail-scan.js?v=10" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=44" defer></script>
+  <script src="assets/caisse-lang.js?v=45" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -3405,6 +3405,14 @@
     .clo-highlight-icon svg { width: 16px; height: 16px; }
     .clo-highlight-text { font-size: 13.5px; color: #fff; line-height: 1.4; }
     .clo-highlight-text em { font-family: var(--serif); }
+    /* Les additions encore ouvertes au moment de fermer : la clôture efface le
+       poste, donc ce qu'elles contiennent. Même boîte que le tiroir, bord
+       --warning, jamais une nouvelle couleur. */
+    .clo-open-box { border-color: var(--warning); }
+    .clo-open-box[hidden] { display: none; }
+    .clo-open-help { margin: 4px 0 6px; font-size: 12px; line-height: 1.4; color: rgba(247,245,240,0.7); }
+    .clo-open-ack { display: flex; gap: 9px; align-items: flex-start; margin-top: 8px; font-size: 12.5px; line-height: 1.35; color: #fff; cursor: pointer; }
+    .clo-open-ack input { width: 18px; height: 18px; margin: 0; flex: 0 0 18px; accent-color: var(--warning); }
     .clo-actions { margin-top: 16px; display: flex; gap: 9px; }
     .clo-btn {
       flex: 1; height: 46px; border-radius: 14px;
@@ -6945,6 +6953,12 @@
       <div class="clo-title" id="clo-title">Clôture de caisse</div>
       <div class="clo-meta" id="clo-meta">Café Atlas · Othmane N.</div>
       <div class="clo-rows" id="clo-rows"><!-- stat rows injected --></div>
+      <div class="clo-drawer-box clo-open-box" id="clo-open-box" hidden>
+        <div class="clo-drawer-title">Additions encore ouvertes</div>
+        <p class="clo-open-help">Fermer la caisse efface ces additions. Encaissez ou annulez ces tables avant de fermer.</p>
+        <div id="clo-open-lines"><!-- open tables injected --></div>
+        <label class="clo-open-ack"><input type="checkbox" id="clo-open-ack" /><span>Fermer quand même · ces additions ne seront pas encaissées</span></label>
+      </div>
       <div class="clo-drawer-box" id="clo-drawer-box">
         <div class="clo-drawer-title">Tiroir-caisse</div>
         <div id="clo-drawer-lines"><!-- breakdown injected --></div>
@@ -17083,7 +17097,49 @@
       $('#cloture-modal').classList.add('is-open');
       if (window.lucide) lucide.createIcons();
     }
+    /* ── UNE ADDITION OUVERTE NE TRAVERSE PAS LA CLÔTURE EN SILENCE ──────────
+       Vu en production le 14 octobre : quatre commandes envoyées en cuisine
+       pour la table 2 (131 MAD), jamais encaissées, et la caisse fermée le
+       soir même. La clôture efface le poste (clearPersistedShift) avec les
+       additions qu'il contient, et le serveur ne renvoie plus une commande
+       acceptée au-delà de six heures (KITCHEN_TTL_MS) : le lendemain, la
+       table 2 paraissait occupée mais vide, le caissier l'a remise à zéro, et
+       131 MAD de repas servis sont sortis des livres sans encaissement ni
+       annulation. La clôture nomme maintenant chaque table qui porte encore
+       une addition (lignes envoyées ou validées) et refuse de fermer tant
+       qu'elle n'est ni encaissée ni annulée, sauf si le caissier coche qu'il
+       ferme quand même. */
+    function openTableBills() {
+      const out = [];
+      /* typeof : la feuille de clôture est aussi rendue sans plan de salle
+         (boutique) et dans des bacs à sable de test. */
+      const bills = (typeof tableOrders !== 'undefined' && tableOrders) || {};
+      Object.keys(bills).forEach((id) => {
+        const lines = (bills[id] || []).filter((l) => l && (l.sent || l.committed) && (+l.qty || 0) > 0);
+        if (!lines.length) return;
+        const total = lines.reduce((sum, l) => sum + (+l.price || 0) * (+l.qty || 0), 0);
+        out.push({ id: String(id), total: Math.round(total * 100) / 100 });
+      });
+      return out.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0) || a.id.localeCompare(b.id));
+    }
+    function renderOpenTableBills() {
+      const box = $('#clo-open-box');
+      if (!box) return [];
+      const open = openTableBills();
+      const cloOpenEsc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      box.hidden = !open.length;
+      const ack = $('#clo-open-ack');
+      if (ack) ack.checked = false;
+      const linesEl = $('#clo-open-lines');
+      if (!linesEl) return open;
+      linesEl.innerHTML = open.map((t) =>
+        `<div class="clo-drawer-line"><span>Table ${cloOpenEsc(t.id)}</span><span class="mono">${fmtMAD(t.total)}</span></div>`).join('')
+        + (open.length > 1 ? `<div class="clo-drawer-line is-total"><span>Non encaissé</span><span class="mono">${fmtMAD(open.reduce((s, t) => s + t.total, 0))}</span></div>` : '');
+      return open;
+    }
     function renderCloture(preserveCount = false) {
+      renderOpenTableBills();
       const now      = new Date();
       const openedAt = shiftOpenedAt || now;
       const durMin   = Math.max(0, Math.floor((now - openedAt) / 60000));
@@ -17572,6 +17628,15 @@
           Math.abs(cardZ * 100 - Math.round(cardZ * 100)) > 0.000001) {
         toast('Saisissez le total carte du Z terminal (0 si aucune carte)');
         cardInput?.focus();
+        return;
+      }
+      const openBills = openTableBills();
+      if (openBills.length && !$('#clo-open-ack')?.checked) {
+        renderOpenTableBills();
+        try { $('#clo-open-box').scrollIntoView({ block: 'center' }); } catch (_) {}
+        toast(openBills.length === 1
+          ? `Table ${openBills[0].id} encore ouverte · encaissez-la, annulez-la ou cochez « Fermer quand même »`
+          : `${openBills.length} tables encore ouvertes · encaissez-les, annulez-les ou cochez « Fermer quand même »`);
         return;
       }
       terminalCardTotal = money(cardZ);

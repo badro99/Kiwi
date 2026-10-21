@@ -1381,6 +1381,7 @@ section('Whole-project regressions');
     'kitchen-print-queue-test.mjs',
     'kitchen-void-slip-test.mjs',
     'course-firing-browser-test.mjs',
+    'close-open-tables-browser-test.mjs',
     'kds-recall-test.mjs',
     'kds-recall-browser-test.mjs',
     'kds-course-following-browser-test.mjs',
