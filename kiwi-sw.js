@@ -22,7 +22,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=1',
   '/kiwi-caisse.html',
   '/assets/caisse-app.js?v=1',
-  '/assets/caisse-refresh.js?v=3',
+  '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est

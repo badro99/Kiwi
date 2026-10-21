@@ -28,7 +28,10 @@
  * décision sur une information fausse — c'est précisément ce qu'un bouton de
  * synchronisation doit rendre impossible.
  * ═══════════════════════════════════════════════════════════════════════════ */
-(function () {
+/* Two files merged into one on 21 October. Each part stays isolated: an error
+   thrown while the first loads is reported, as a separate file would report it,
+   and the second part still runs. */
+try { (function () {
   'use strict';
 
   var ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
@@ -230,7 +233,7 @@
   document.addEventListener('kiwi-paired', autoRefresh);
   document.addEventListener('kiwi:caisse-service-ready', autoRefresh);
   window.setInterval(autoRefresh, 30000);
-})();
+})(); } catch (e) { setTimeout(function () { throw e; }); }
 /* Kiwi · shared attendance-code generator for every specialist caisse. */
 (function () {
   'use strict';

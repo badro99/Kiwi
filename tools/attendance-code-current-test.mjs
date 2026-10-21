@@ -104,3 +104,24 @@ ok('the shipped generate-attendance-code still replaces it; the next current cal
   assert.equal(shown.body.reused, true);
 });
 console.log(`✓ attendance-code-current-test · ${n} checks`);
+
+/* caisse-refresh.js carries the refresh button and, since 21 October, the
+   attendance-code module merged from its own file. A load-time error in the
+   first part must not take the second down with it, as it would not have when
+   they were two files. */
+{
+  const vm = await import('node:vm');
+  const thrown = [];
+  const win = {};
+  const ctx = vm.createContext({
+    window: win,
+    document: { addEventListener() { throw new Error('boom in refresh'); }, querySelector() { return null; }, readyState: 'complete' },
+    setTimeout: (fn) => { try { fn(); } catch (e) { thrown.push(e.message); } },
+    console,
+  });
+  win.addEventListener = () => {}; win.setInterval = () => 0;
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/caisse-refresh.js'), 'utf8'), ctx);
+  assert.equal(typeof win.KiwiCaisseAttendanceCode?.mount, 'function', 'the attendance part still loads when the refresh part throws');
+  assert.deepEqual(thrown, ['boom in refresh'], 'and the refresh error is still reported');
+  console.log('  ✓ merged caisse-refresh.js: an error in one part leaves the other running, and is still reported');
+}
