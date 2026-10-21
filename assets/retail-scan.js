@@ -246,6 +246,24 @@
   function cameraAvailable() { try { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); } catch (_) { return false; } }
   function nativeDecoderAvailable() { try { return typeof window.BarcodeDetector === 'function'; } catch (_) { return false; } }
   function fallbackDecoderAvailable() { return !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader); }
+  /* The fallback decoder (431 KB) is only needed by a browser without
+     BarcodeDetector, the moment its camera opens. Loaded with the page, every
+     till paid for parsing it at boot, restaurants included. The service
+     worker precaches it, so it still loads offline. */
+  var DECODER_SRC = 'assets/vendor/zxing-browser.min.js?v=1';
+  var decoderLoading = null;
+  function loadFallbackDecoder() {
+    if (fallbackDecoderAvailable()) return Promise.resolve(true);
+    if (decoderLoading) return decoderLoading;
+    decoderLoading = new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = DECODER_SRC; s.async = true;
+      s.onload = function () { resolve(fallbackDecoderAvailable()); };
+      s.onerror = function () { decoderLoading = null; resolve(false); };
+      (document.head || document.documentElement).appendChild(s);
+    });
+    return decoderLoading;
+  }
   function cameraErrorCopy(err) {
     var name = err && err.name;
     if (name === 'NotAllowedError' || name === 'SecurityError') return '<b>Caméra bloquée</b> · Safari : menu de la page → Réglages du site → Caméra → Autoriser';
@@ -286,7 +304,12 @@
         };
         raf = requestAnimationFrame(tick);
       } else {
-        if (!fallbackDecoderAvailable()) { var noDecoder = new Error('decoder unavailable'); noDecoder.name = 'DecoderUnavailable'; throw noDecoder; }
+        if (!fallbackDecoderAvailable()) {
+          setCameraStatus('<b>Préparation du lecteur…</b>');
+          var loaded = await loadFallbackDecoder();
+          if (stopped || generation !== cameraGeneration) return false;
+          if (!loaded) { var noDecoder = new Error('decoder unavailable'); noDecoder.name = 'DecoderUnavailable'; throw noDecoder; }
+        }
         decoderReader = new window.ZXingBrowser.BrowserMultiFormatReader(undefined, {
           delayBetweenScanAttempts: 180, delayBetweenScanSuccess: 900, tryPlayVideoTimeout: 7000,
         });
@@ -592,6 +615,6 @@
 
   window.KiwiRetailScan = {
     eligible: function (id) { return !!ELIGIBLE[id]; }, mount: mount, open: open, close: close, scan: scan,
-    _test: { money: money, normalizeCode: normalizeCode, mergeCredits: mergeCredits, cameraAvailable: cameraAvailable, nativeDecoderAvailable: nativeDecoderAvailable, fallbackDecoderAvailable: fallbackDecoderAvailable, cameraErrorCopy: cameraErrorCopy, due: function (total, parts) { return money(total - (parts || []).reduce(function (s, p) { return s + (+p.amount || 0); }, 0)); } },
+    _test: { money: money, normalizeCode: normalizeCode, mergeCredits: mergeCredits, cameraAvailable: cameraAvailable, nativeDecoderAvailable: nativeDecoderAvailable, fallbackDecoderAvailable: fallbackDecoderAvailable, loadFallbackDecoder: loadFallbackDecoder, decoderSrc: DECODER_SRC, cameraErrorCopy: cameraErrorCopy, due: function (total, parts) { return money(total - (parts || []).reduce(function (s, p) { return s + (+p.amount || 0); }, 0)); } },
   };
 }());

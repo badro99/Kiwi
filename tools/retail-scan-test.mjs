@@ -61,7 +61,17 @@ ok(!api._test.cameraAvailable(), 'camera reports absent only when media capture 
 context.navigator.mediaDevices = { getUserMedia() {} };
 ok(api._test.cameraAvailable(), 'iPhone camera is accepted without native BarcodeDetector');
 ok(!api._test.nativeDecoderAvailable(), 'native decoder capability is independent');
+/* The decoder is fetched on demand, once, at the URL the service worker precaches. */
+const appended = [];
+context.document.createElement = (tag) => ({ tag });
+context.document.head = { appendChild(el) { appended.push(el); } };
+ok(!api._test.fallbackDecoderAvailable(), 'the decoder is not on the page until a camera needs it');
+const pending = api._test.loadFallbackDecoder();
+ok(api._test.loadFallbackDecoder() === pending && appended.length === 1, 'two camera opens fetch the decoder once');
+ok(appended[0].src === api._test.decoderSrc && appended[0].async === true, 'the decoder loads asynchronously');
 window.ZXingBrowser = { BrowserMultiFormatReader() {} };
+appended[0].onload();
+ok(await pending === true, 'the camera waits for the decoder, then uses it');
 ok(api._test.fallbackDecoderAvailable(), 'bundled decoder is detected for Safari');
 ok(api._test.cameraErrorCopy({ name: 'NotAllowedError' }).includes('Safari'), 'permission refusal gives actionable iPhone guidance');
 
@@ -90,7 +100,9 @@ ok(browserFixture.includes("Object.defineProperty(window, 'BarcodeDetector'") &&
 const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json', import.meta.url), 'utf8'));
 const cssVer = stamps['assets/retail-scan.css']?.v || '7';
 const jsVer = stamps['assets/retail-scan.js']?.v || '6';
-ok(html.includes(`assets/retail-scan.css?v=${cssVer}`) && html.includes('assets/vendor/zxing-browser.min.js?v=1') && html.includes(`assets/retail-scan.js?v=${jsVer}`), 'caisse loads decoder before retail scan assets');
+ok(html.includes(`assets/retail-scan.css?v=${cssVer}`) && html.includes(`assets/retail-scan.js?v=${jsVer}`), 'caisse loads the retail scan assets');
+ok(!html.includes('zxing-browser.min.js'), 'the 431 KB decoder is not parsed at every till boot');
+ok(sw.includes(`'/${api._test.decoderSrc}'`), 'the on-demand decoder URL is the one the service worker precaches (offline)');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
 ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw) && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes(`'/assets/retail-scan.js?v=${jsVer}'`) && sw.includes(`'/assets/retail-scan.css?v=${cssVer}'`), 'offline shell caches the iPhone scanner');
 ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoint authorizes the credit document shape');

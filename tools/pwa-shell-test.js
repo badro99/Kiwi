@@ -48,6 +48,9 @@ shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
    document qui demande sprite.access.svg et access-reset.js : même règle. */
 const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html', 'reset.html']
   .map(read).join('\n');
+/* Files a shell script loads only when needed (the iPhone barcode decoder,
+   fetched by retail-scan.js when the camera opens) keep their stamp there. */
+const onDemand = ['assets/retail-scan.js'].map(read).join('\n');
 const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 ['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'].forEach((file) => {
   ok(`${file} registers the current worker version`, !!workerVersion && read(file).includes(`/kiwi-sw.js?v=${workerVersion}`));
@@ -56,7 +59,7 @@ const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
   const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
   const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
-  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic);
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || onDemand.includes(`'assets/${url.slice(8)}'`));
 });
 
 if (failed.length) {
