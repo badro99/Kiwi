@@ -26,7 +26,7 @@ const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required for the date row');
 
-const source = read('dashboard.html');
+const source = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
 const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>|<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g)]
   .map((m) => m[1] || (m[2].startsWith('assets/') ? read(m[2].split('?')[0]) : '')).join('\n');
 const start = source.indexOf('<!-- ═══ DATE RANGE SELECTOR ═══ -->');

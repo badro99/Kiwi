@@ -13,7 +13,7 @@ const ok = (value, label) => { assert.ok(value, label); checks++; console.log(' 
 const runtime = read('app/src/native-runtime.js');
 const css = read('app/src/native-runtime.css');
 const dateRange = read('assets/dateRange.js');
-const dashboard = read('dashboard.html');
+const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
 const pages = read('assets/pages.js');
 const pagesPro = read('assets/pages-pro.js');
 const menu = read('assets/restaurant-menu-workspace.js');

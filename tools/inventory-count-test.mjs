@@ -25,7 +25,7 @@ function ok(cond, msg) {
 console.log("■ Guide d'inventaire test (tools/inventory-count-test.mjs)");
 
 const src = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
-const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/dashboard-shell.css'), 'utf8') + '</style>');
 
 /* Module-level functions in stock.js close with `\n  }` at indent 2 — nested
  * blocks and template literals are all indented deeper. */

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const js = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
-const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/dashboard-shell.css'), 'utf8') + '</style>');
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; };
 

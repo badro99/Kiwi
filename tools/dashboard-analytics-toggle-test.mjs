@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
 const tokens = fs.readFileSync(new URL('../assets/tokens.css', import.meta.url), 'utf8');
 const vexel = fs.readFileSync(new URL('../assets/design-vexel.css', import.meta.url), 'utf8');
 

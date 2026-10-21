@@ -12,7 +12,7 @@
     "assets/stock.js": 8188,
     "assets/team.js": 5035,
     "assets/venues.js": 5075,
-    "dashboard.html": 6855,
+    "dashboard.html": 2406,
     "kiwi-caisse.html": 19486,
     "kiwi-serveur.html": 8246
   },
@@ -23,6 +23,7 @@
   },
   "important": {
     "assets/catalog-workspace.css": 129,
+    "assets/dashboard-shell.css": 329,
     "assets/design-2026.css": 43,
     "assets/design-vexel.css": 257,
     "assets/kit/dash-desktop.css": 242,

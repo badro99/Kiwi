@@ -261,7 +261,8 @@ section('Forbidden patterns');
     /^tools\//, // path-scoped exemption for local test suite and mock fixtures
   ];
 
-  const SCAN_FILES = trackedFiles
+  // Include new stylesheets before they are staged, too.
+  const SCAN_FILES = [...new Set([...trackedFiles, ...CSS_FILES.map((f) => path.relative(ROOT, f))])]
     .filter((rel) => !EXCLUDED_PATTERNS.some((rx) => rx.test(rel)))
     .map((rel) => path.join(ROOT, rel));
 

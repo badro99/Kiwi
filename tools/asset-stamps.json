@@ -255,6 +255,10 @@
     "v": "603",
     "sha": "efb670b3b79f79fd"
   },
+  "assets/dashboard-shell.css": {
+    "v": "1",
+    "sha": "90fecbfa2c3af213"
+  },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"

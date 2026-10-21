@@ -19,6 +19,7 @@
 var CACHE = 'kiwi-app-v663';
 var SHELL = [
   '/dashboard.html',
+  '/assets/dashboard-shell.css?v=1',
   '/kiwi-caisse.html',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS

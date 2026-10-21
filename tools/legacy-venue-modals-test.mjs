@@ -42,7 +42,7 @@ check(left.length === 0, `venues.js no longer defines or calls the legacy pages 
 check(!/\bH\[\s*'(?:eq|mi|pay)-[a-z0-9-]+'\s*\]\s*=/.test(venues), 'venues.js registers no eq-*, mi-* or pay-* handler');
 check(!/data-action="(?:eq|mi|pay)-/.test(venues), 'venues.js draws no control carrying an eq-*, mi-* or pay-* action');
 check(!/'Nouveau membre'|'Fiche membre'|Nouveau groupe d.options|comme 86/.test(venues), 'the French-only modal titles went with them');
-const html = read('dashboard.html');
+const html = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
 check(!/data-payroll-root/.test(html), 'the empty section only the legacy payroll page painted is gone from dashboard.html');
 check(/<section class="dash-equipe" data-equipe-root hidden><\/section>/.test(html) && /<section class="dash-menu" data-menu-root hidden><\/section>/.test(html),
   'the Équipe and Menu hosts stay, team.js and the restaurant workspace render into them');

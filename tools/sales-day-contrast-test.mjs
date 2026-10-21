@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const pages = fs.readFileSync(new URL('../assets/pages-pro.js', import.meta.url), 'utf8');
-const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 
 const darkPill = dashboard.match(/\.dr-pill\.on\s*\{([^}]+)\}/)?.[1] || '';
