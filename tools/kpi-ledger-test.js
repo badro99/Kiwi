@@ -175,7 +175,7 @@ ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro
   const vm = require('vm');
   const sales = [{ ts: 100, amount: 200, method: 'cash' }, { ts: 150, amount: 300, method: 'card' }, { ts: 900, amount: 999, method: 'cash' }];
   const refunds = [{ ts: 160, amount: -50, method: 'card' }, { ts: 50, amount: -70, method: 'cash' }];
-  const ctx = vm.createContext({ window: {}, Math, String, realSalesList: () => sales, realRefundList: () => refunds,
+  const ctx = vm.createContext({ window: {}, Math, String, activeMerchantSlug: () => 'test-store', realSalesList: () => sales, realRefundList: () => refunds,
     /* Livraisons dues (assets/delivery-receivables.js) : 450 MAD vendus à 0 MAD dans la fenêtre. */
     deliveryDue: (f, t) => (f <= 120 && 120 < t ? 450 : 0) });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/sales-history.js'), 'utf8'), ctx);

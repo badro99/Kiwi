@@ -2081,7 +2081,9 @@
     return totals;
   }
   function realWindowStats(from, to) {
-    const totals = window.KiwiSalesMath.statsFromSales(realSalesList(), realRefundList(), from, to);
+    const summary = window.KiwiSalesSummary;
+    const totals = summary ? summary.stats(realSalesList(), realRefundList(), from, to, activeMerchantSlug())
+      : window.KiwiSalesMath.statsFromSales(realSalesList(), realRefundList(), from, to);
     totals.receivable += deliveryDue(from, to);
     return totals;
   }
@@ -6473,6 +6475,9 @@
       setTimeout(subSales, 30);
     };
     subSales();
+    window.KiwiSalesSummary?.subscribe(() => {
+      subscribers.forEach(fn => { try { fn(currentRange); } catch (_) {} });
+    });
     /* « Pourboires » lit les journées closes du classeur, qui arrive du
      * serveur après le premier rendu (et à chaque clôture d'une autre caisse) :
      * la bande se repeint quand il change. day-report.js est chargé en différé. */

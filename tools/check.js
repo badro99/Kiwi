@@ -1368,6 +1368,7 @@ section('Whole-project regressions');
     'feed-limit-test.mjs',
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs',
+    'sales-summary-store-test.mjs',
     'sales-scope-test.mjs',
     'ticket-141-test.mjs',
     'kpi-card-layout-test.mjs',

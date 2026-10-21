@@ -103,3 +103,114 @@
   window.KiwiSalesMath = Object.freeze({ tenderBucket, tenderAmounts, RECEIVABLE_METHODS,
     statsFromSales, statsFromSummary, hoursFromSales, hoursFromSummary });
 })();
+
+/* Optional historical read model. Only a trimming marker opts a ledger in. */
+(function () {
+  'use strict';
+  const tenants = new Map(), listeners = new Set();
+  const PREFIX = 'kiwiSalesSummary:v1:', LIMIT = 800, MAX_BYTES = 180000;
+  const merchant = () => window.KiwiLive?.merchant?.() || '';
+  const clock = () => window.KiwiDayReport;
+  function coverageStart(venueId) {
+    // No marker means all local rows remain authoritative, including refunds
+    // before the first sale. Feed completion alone must not change this path.
+    try {
+      const raw = localStorage.getItem('kiwiSalesCoverage:' + (venueId || merchant()));
+      const n = Number(raw);
+      return raw !== null && Number.isFinite(n) && n > 0 ? n : null;
+    } catch (_) { return null; }
+  }
+  function state(m) {
+    if (!tenants.has(m)) {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(PREFIX + m) || '[]'); } catch (_) {}
+      const days = new Map();
+      if (Array.isArray(saved)) saved.slice(-LIMIT).forEach(row => {
+        if (row && row.day && Number.isFinite(row.day.from) && row.day.to > row.day.from && Array.isArray(row.splits)) days.set(row.day.from, row);
+      });
+      tenants.set(m, { days, pending: new Set(), retry: new Map() });
+    }
+    return tenants.get(m);
+  }
+  function persist(m, s, stable) {
+    const rows = [...s.days.values()].filter(r => r.day.to <= stable).sort((a, b) => a.day.from - b.day.from).slice(-LIMIT);
+    let encoded = JSON.stringify(rows);
+    while (encoded.length > MAX_BYTES / 2 && rows.length) { rows.shift(); encoded = JSON.stringify(rows); }
+    try { localStorage.setItem(PREFIX + m, encoded); } catch (_) {}
+    // Bound memory too, without touching any other tenant's storage.
+    while (s.days.size > LIMIT) s.days.delete(s.days.keys().next().value);
+  }
+  async function load(m, s, bounds, stable) {
+    bounds.forEach(b => s.pending.add(b.from));
+    let timer;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    try {
+      const data = await Promise.race([
+        Promise.resolve().then(() => fetch('/api/sales-summary?merchant=' + encodeURIComponent(m) + '&from=' + bounds[0].from + '&to=' + bounds[bounds.length - 1].to,
+          { headers: { Accept: 'application/json' }, credentials: 'include', cache: 'no-store', signal: controller?.signal }))
+          .then(r => { if (!r?.ok) throw new Error('http'); return r.json(); }),
+        new Promise((_, reject) => { timer = setTimeout(() => { controller?.abort(); reject(new Error('timeout')); }, 12000); })
+      ]);
+      if (data.merchant !== m || !Array.isArray(data.days) || !Array.isArray(data.splits)) throw new Error('scope');
+      for (const b of bounds) {
+        const day = data.days.find(d => d.from === b.from && d.to === b.to);
+        if (!day || !day.methods || !day.whole || !day.refunds || !day.hours) throw new Error('shape');
+      }
+      bounds.forEach(b => s.days.set(b.from, { day: data.days.find(d => d.from === b.from),
+        splits: data.splits.filter(r => r.ts >= b.from && r.ts < b.to), at: Date.now() }));
+      persist(m, s, stable);
+      if (merchant() === m) listeners.forEach(fn => { try { fn(); } catch (_) {} });
+    } catch (_) {
+      bounds.forEach(b => s.retry.set(b.from, Date.now() + 30000));
+    } finally {
+      clearTimeout(timer);
+      bounds.forEach(b => s.pending.delete(b.from));
+    }
+  }
+  function get(from, to) {
+    const m = merchant(), R = clock();
+    if (!m || !R || !Number.isFinite(from) || !Number.isFinite(to) || to <= from) return null;
+    const s = state(m), bounds = [];
+    let b = R.dayBounds(R.businessDay(from, m), m);
+    const stable = R.dayBounds(R.businessDay(R.dayBounds(R.today(m), m).from - 1, m), m).from;
+    for (let i = 0; b.from < to && i < 4000; i++) {
+      bounds.push(b);
+      const next = R.dayBounds(R.businessDay(b.to, m), m);
+      if (next.from <= b.from) return null;
+      b = next;
+    }
+    if (!bounds.length || bounds[bounds.length - 1].to < to) return null;
+    let missing = false, batch = [];
+    function flush() { if (batch.length) load(m, s, batch, stable); batch = []; }
+    bounds.forEach(b => {
+      const row = s.days.get(b.from);
+      // Today's and yesterday's buckets are never persisted and refresh each minute.
+      const fresh = row && (b.to <= stable || Date.now() - row.at < 60000);
+      if (!fresh) {
+        missing = true;
+        if (!s.pending.has(b.from) && !(s.retry.get(b.from) > Date.now())) batch.push(b);
+        else flush();
+        if (batch.length === 400) flush();
+      } else flush();
+    });
+    flush();
+    if (missing) return null;
+    return { days: bounds.map(b => s.days.get(b.from).day), splits: bounds.flatMap(b => s.days.get(b.from).splits) };
+  }
+  function stats(sales, refunds, from, to, venueId) {
+    const M = window.KiwiSalesMath, boundary = coverageStart(venueId);
+    if (boundary === null || from >= boundary) return M.statsFromSales(sales, refunds, from, to);
+    const end = Math.min(to, boundary), summary = get(from, end);
+    const fallback = () => Object.assign(M.statsFromSales(sales, refunds, from, to), { partial: true });
+    if (!summary) return fallback();
+    try {
+      const old = M.statsFromSummary(summary.days, summary.splits, from, end);
+      const recent = M.statsFromSales(sales, refunds, Math.max(from, boundary), to);
+      Object.keys(old).forEach(k => { if (k !== 'basket') recent[k] += old[k]; });
+      recent.basket = recent.count ? recent.gross / recent.count : 0;
+      return recent;
+    } catch (_) { return fallback(); } // Partial-day windows cannot use daily totals.
+  }
+  window.KiwiSalesSummary = Object.freeze({ coverageStart, get, stats,
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } });
+})();
