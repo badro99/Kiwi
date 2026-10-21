@@ -1581,6 +1581,12 @@
   // Make the server-stored type authoritative for the current venue's sidebar
   // section + KPI band. Only ever changes anything when a real type is supplied
   // and it differs from what's shown, so a plain demo session is a no-op.
+  let lastServerTypeSig = '';
+  function serverTypeSig() {
+    const v = VENUES[currentVenue] || {};
+    const C = window.KiwiConfig || {};
+    return [currentVenue, getVenueType(), v.subtype || '', C.timezone || '', C.businessCutoff == null ? '' : C.businessCutoff].join('|');
+  }
   function applyServerType(subtypeOrBase) {
     const base = SUBTYPE_BASE[subtypeOrBase] ||
       (TYPE_BASES.indexOf(subtypeOrBase) >= 0 ? subtypeOrBase : null);
@@ -1597,7 +1603,15 @@
     }
     if (base === getVenueType() && (!exactSubtype || (active && active.subtype === exactSubtype))) {
       try { renderVerticalSection({ skipFade: true }); } catch (_) {}
-      subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+      /* The config is fetched again on every window focus, and applied twice
+         each time (now, and 500 ms later). Notifying every subscriber for an
+         unchanged store re-rendered the whole dashboard twice per return to
+         the tab: 1.2 s of frozen page on Santos (2026-10-22). Subscribers hear
+         it once per store, trade and day boundary, as they need to. */
+      if (serverTypeSig() !== lastServerTypeSig) {
+        lastServerTypeSig = serverTypeSig();
+        subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+      }
       return false;
     }
     typeOverride = base;
@@ -1612,7 +1626,12 @@
       if (exactSubtype) VENUES[currentVenue].subtype = exactSubtype;
     }
     try { renderVerticalSection({ skipFade: true }); } catch (_) {}
-    subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+    /* Same guard: a trade that is also a subtype profile (`restaurant`) on a
+       store that cannot hold a subtype lands here on every application. */
+    if (serverTypeSig() !== lastServerTypeSig) {
+      lastServerTypeSig = serverTypeSig();
+      subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+    }
     return true;
   }
 
