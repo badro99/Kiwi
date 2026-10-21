@@ -93,6 +93,26 @@ let checks = 0;
   checks += 4;
 }
 
+/* 2b. Vendus' comparison period across a DST change (Paris, 29 March 2026):
+   the business day of the 28th lasts 23 hours. The previous day must still
+   start at 05:00 on the 27th, not an hour later. */
+{
+  const paris = 'Europe/Paris';
+  const parisWindow = () => Object.assign(windowBase(), {
+    KiwiConfig: { timezone: paris },
+    KiwiVenue: { getVenue: () => merchant, isCustom: () => true, getCurrentVenueData: () => ({ ...venue, timezone: paris }) },
+  });
+  const R = load('assets/day-report.js', parisWindow()).KiwiDayReport;
+  assert.equal(R.dayBounds('2026-03-28', merchant).to - R.dayBounds('2026-03-28', merchant).from, 23 * 3600000, 'the fixture day is the 23-hour one');
+  const win = Object.assign(parisWindow(), { KiwiDayReport: R });
+  load('assets/sold-insights.js', win, { document: { documentElement: { lang: 'fr' } }, setTimeout: () => 1 });
+  const early27 = sale('S-27', Date.parse('2026-03-27T04:30:00Z'), 80); /* 05:30 Paris on the 27th */
+  const res = win.KiwiSoldInsights.analyze([early27, sale('S-28', Date.parse('2026-03-28T12:00:00Z'), 90)], { from: '2026-03-28', to: '2026-03-28' });
+  assert.equal(res.tickets, 1);
+  assert.equal(res.previousTickets, 1, 'a 05:30 sale on the 27th is in the previous day across the DST change');
+  checks += 3;
+}
+
 /* 3. Réimprimer: at 01:30 the evening's receipts are still in the list. */
 {
   const win = Object.assign(windowBase(), { KiwiDayReport: dayReport, KiwiLive: { merchant: () => merchant } });

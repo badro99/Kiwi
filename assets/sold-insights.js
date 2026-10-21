@@ -65,7 +65,11 @@
       if (first && last && first.getTime() <= last.getTime()) {
         var span = dayRange(dateKey(first), dateKey(last), first, last), from = span.from, to = span.to;
         var days = Math.round((Date.UTC(last.getFullYear(), last.getMonth(), last.getDate()) - Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())) / DAY) + 1;
-        return { days:days, from:from, to:to, previousFrom:from-(to-from), custom:{from:dateKey(first),to:dateKey(last)} };
+        /* The previous period starts the same number of civil days earlier, at
+           its own cutoff: subtracting a duration drifts an hour across a DST day. */
+        var prev = new Date(first.getFullYear(), first.getMonth(), first.getDate() - days);
+        var previousFrom = dayRange(dateKey(prev), dateKey(prev), prev, prev).from;
+        return { days:days, from:from, to:to, previousFrom:previousFrom, custom:{from:dateKey(first),to:dateKey(last)} };
       }
     }
     var count = Math.max(1, Math.round(Number(period) || 7));
@@ -202,7 +206,7 @@
   function pickerMarkup(till) {
     var p = till ? tillPicker : dashboardPicker;
     if (!p.open) return '';
-    var max = dateKey(new Date());
+    var max = businessToday();
     var fields = p.mode === 'day'
       ? '<div class="ksold-date-fields one"><label>'+L('Jour exact','Exact day','يوم محدد')+'<input type="date" max="'+max+'" value="'+esc(p.day)+'" data-ksold-day></label></div>'
       : '<div class="ksold-date-fields"><label>'+L('Du','From','من')+'<input type="date" max="'+max+'" value="'+esc(p.from)+'" data-ksold-from></label><label>'+L('Au','To','إلى')+'<input type="date" max="'+max+'" value="'+esc(p.to)+'" data-ksold-to></label></div>';
@@ -314,7 +318,7 @@
       var from, to;
       if(picker.mode==='day') { var one=root.querySelector('[data-ksold-day]');from=to=one&&one.value;picker.day=from||picker.day; }
       else { var first=root.querySelector('[data-ksold-from]'),last=root.querySelector('[data-ksold-to]');from=first&&first.value;to=last&&last.value;picker.from=from||picker.from;picker.to=to||picker.to; }
-      var a=parseDateKey(from),z=parseDateKey(to),today=parseDateKey(dateKey(new Date()));
+      var a=parseDateKey(from),z=parseDateKey(to),today=parseDateKey(businessToday());
       if(!a||!z){picker.error=L('Choisissez la date.','Choose a date.','اختر التاريخ.');rerender(false);return;}
       if(a>z){picker.error=L('La fin doit venir après le début.','The end must come after the start.','يجب أن تأتي النهاية بعد البداية.');rerender(false);return;}
       if(z>today){picker.error=L('La période ne peut pas finir dans le futur.','The period cannot end in the future.','لا يمكن أن تنتهي الفترة في المستقبل.');rerender(false);return;}
