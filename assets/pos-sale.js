@@ -358,7 +358,8 @@
        une panne du miroir ne doit jamais casser la vente au comptoir. */
     try {
       if (window.KiwiLive && window.KiwiLive.isOn && window.KiwiLive.isOn()) {
-        var queued = window.KiwiLive.postSale({
+        replayHeld();
+        var payload = {
           amount: total, method: entry.method, label: entry.label,
           ref: entry.ref, time: at, channel: entry.channel || '', idDay: entry.idDay,
           /* Le détail du panier suit la vente. Il était construit juste
@@ -369,7 +370,9 @@
              navigateur que le tableau de bord — jamais le cas quand la caisse
              est au comptoir et le tableau de bord dans l'arrière-boutique. */
           lines: entry.lines || null,
-        });
+        };
+        var queued = window.KiwiLive.postSale(payload);
+        holdSale(payload, queued, who);
         /* Linked ledgers (hotel folios today, other append-only journals
            tomorrow) need the exact idempotency key that /api/sale receives.
            Returning it here avoids rebuilding live-link's stableId recipe in
@@ -393,6 +396,63 @@
 
     return entry;
   }
+
+  /* ─── Une vente que la file de Live Link refuse repart ───
+     postSale() répond {ok:true, queued:true} quand sa file a pris la vente. Un
+     refus (stockage plein, caisse réappairée en plein service, commerce pas
+     encore résolu au démarrage) était ignoré : la vente restait au comptoir et
+     n'atteignait jamais le serveur, comme à la boutique jusqu'au 21 octobre
+     (retail-sale-hold.js). Le journal du jour ne peut pas la garder : il ne
+     relit que les lignes du jour et se réécrit à la vente suivante. Elle va
+     donc dans sa propre file, avec le commerce où elle a été encaissée : le
+     garde de postSale() ne la poste que là. postSale() en dérive le même
+     identifiant, un renvoi ne compte jamais deux fois. */
+  var HELD_KEY = 'kiwi:posHeld';
+  var HELD_MAX = 500;
+  function heldRead() {
+    try { var a = JSON.parse(localStorage.getItem(HELD_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+  }
+  function heldWrite(a) {
+    try {
+      if (a.length) localStorage.setItem(HELD_KEY, JSON.stringify(a.slice(-HELD_MAX)));
+      else localStorage.removeItem(HELD_KEY);
+    } catch (_) {}
+  }
+  function holdSale(payload, res, who) {
+    if (!payload || (res && res.ok === true && res.queued === true)) return false;
+    var unresolved = false;
+    try { unresolved = !(window.KiwiLive.merchant && window.KiwiLive.merchant()); } catch (_) { unresolved = true; }
+    if (!((res && res.ok === false) || (!res && unresolved))) return false;
+    var held = heldRead().filter(function (h) { return h && h.ref !== payload.ref; });
+    held.push(Object.assign({}, payload, {
+      merchant: payload.merchant || who || undefined,
+      time: +new Date(payload.time || Date.now()),
+    }));
+    heldWrite(held);
+    return true;
+  }
+  function replayHeld() {
+    if (!isReal()) return 0;
+    var Live = window.KiwiLive;
+    if (!Live || !Live.postSale || !Live.isOn || !Live.isOn()) return 0;
+    var held = heldRead();
+    if (!held.length) return 0;
+    var left = [], sent = 0;
+    held.forEach(function (h) {                  /* la plus ancienne d'abord : la file garde l'ordre */
+      var res = null;
+      try { res = Live.postSale(Object.assign({}, h, { time: new Date(h.time) })); } catch (_) {}
+      if (res && res.ok === true && res.queued === true) sent++;
+      else left.push(h);
+    });
+    if (left.length !== held.length) heldWrite(left);
+    return sent;
+  }
+  function heldCount() { return heldRead().length; }
+  try {
+    setTimeout(function () { try { replayHeld(); } catch (_) {} }, 4000);
+    setInterval(function () { try { if (heldRead().length) replayHeld(); } catch (_) {} }, 60000);
+    window.addEventListener('online', function () { try { replayHeld(); } catch (_) {} });
+  } catch (_) {}
 
   /* today(vertical) → les ventes d'aujourd'hui déjà encaissées sur ce terminal.
      À appeler au montage pour reconstruire les compteurs de la journée. */
@@ -707,5 +767,6 @@
     refMatcher: matcher, cleanLine: cleanLine,
     attachClient: attachClient, attachedClient: attachedClient,
     ingest: ingest, sync: sync, activate: activate, deactivate: deactivate,
+    replayHeld: replayHeld, heldCount: heldCount,
   };
 })();
