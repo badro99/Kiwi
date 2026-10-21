@@ -251,9 +251,7 @@ if (!cleanLinesFn) {
   // Test D1 persistence and subsequent append preserving formulaUid verbatim
   const db = new DatabaseSync(':memory:');
   const rawSchema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of rawSchema.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    db.exec(stmt);
-  }
+  db.exec(rawSchema);
 
   const orderId = 'ord-fml-test-1';
   const now = Date.now();

@@ -31,7 +31,7 @@ const AUTH_SECRET = 'course-retry-secret';
 
 function makeDb() {
   const sql = new DatabaseSync(':memory:');
-  for (const stmt of fs.readFileSync(path.join(root, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) sql.exec(stmt);
+  sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
   sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)')
     .run(MERCHANT, JSON.stringify({ orderpro: true }), 'Course Retry Bistro', Date.now());
   const DB = {

@@ -47,7 +47,7 @@ function check(label, condition, detail) {
 function makeDB() {
   const db = new DatabaseSync(':memory:');
   const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(stmt);
+  db.exec(raw);
   const prepare = (query) => {
     let args = [];
     const st = {

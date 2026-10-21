@@ -59,9 +59,7 @@ function makeDB() {
    * jour, c'est que schema.sql a cessé d'être auto-suffisant — exactement ce
    * que tools/d1-schema-test.mjs empêche. */
   const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    db.exec(stmt);
-  }
+  db.exec(raw);
   const facade = { _db: db, _afterSessionClose: null, _rejectSessionOrderUpdate: false };
   const prepare = (query) => {
     let args = [];

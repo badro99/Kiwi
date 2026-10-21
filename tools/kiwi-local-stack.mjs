@@ -49,13 +49,15 @@ const sqlite = new DatabaseSync(DB_FILE);
   const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
   try { sqlite.exec(schema); } catch (e) { console.error('[stack] schema.sql:', e.message); }
   const { parseSchema, diff } = await import(pathToFileURL(path.join(ROOT, 'tools/d1-schema.mjs')).href);
-  const live = { tables: new Map(), indexes: new Set() };
+  const live = { tables: new Map(), indexes: new Set(), triggers: new Set() };
   for (const t of sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()) {
     live.tables.set(t.name, new Set(sqlite.prepare(`PRAGMA table_info(${t.name})`).all().map((c) => c.name)));
   }
   for (const i of sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all()) live.indexes.add(i.name);
+  for (const t of sqlite.prepare("SELECT name FROM sqlite_master WHERE type='trigger'").all()) live.triggers.add(t.name);
   const gap = diff(parseSchema(schema), live);
   for (const c of gap.missingColumns) { try { sqlite.exec(c.sql); } catch (e) { console.error('[stack] column', c.table + '.' + c.column, e.message); } }
+  for (const t of gap.missingTriggers) { try { sqlite.exec(t.sql); } catch (e) { console.error('[stack] trigger', t.name, e.message); } }
   for (const b of gap.blocked) console.error('[stack] column not addable:', b.table + '.' + b.column, b.reason);
   const tables = sqlite.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get().n;
   if (tables < 10) throw new Error('local schema did not load (' + tables + ' tables)');

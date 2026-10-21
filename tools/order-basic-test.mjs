@@ -29,7 +29,7 @@ for (const l of ['en', 'fr', 'ar']) {
 
 console.log('■ the page, on the real menu');
 const sql = new DatabaseSync(':memory:');
-for (const stmt of read('schema.sql').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) sql.exec(stmt);
+sql.exec(read('schema.sql'));
 const DB = {
   prepare(query) {
     let args = [];

@@ -37,7 +37,7 @@ if (!bin) { console.log('○ skip: Chromium unavailable'); process.exit(process.
 const MERCHANT = 'pairs-serveur-bistro';
 const AUTH_SECRET = 'pairs-serveur-secret';
 const sql = new DatabaseSync(':memory:');
-for (const stmt of fs.readFileSync(path.join(root, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) sql.exec(stmt);
+sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
 const DB = {
   prepare(query) {
     let args = [];

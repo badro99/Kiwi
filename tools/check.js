@@ -1368,6 +1368,7 @@ section('Whole-project regressions');
     'feed-limit-test.mjs',
     'feed-window-test.mjs',
     'feed-voids-test.mjs',
+    'feed-changes-test.mjs',
     'sales-window-test.mjs',
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs',

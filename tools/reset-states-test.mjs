@@ -37,7 +37,7 @@ const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ 
 const SECRET = 'reset-states-test-secret-32-chars!!';
 const db = new DatabaseSync(':memory:');
 const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
-for (const st of schema.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(st);
+db.exec(schema);
 const norm = (sql) => String(sql).replace(/\s+/g, ' ').trim();
 /* A D1 over SQLite; `fail` names statements that throw, to reach the faults. */
 function makeD1(fail = () => false) {

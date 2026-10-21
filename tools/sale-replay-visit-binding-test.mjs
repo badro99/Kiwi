@@ -34,9 +34,7 @@ function check(label, condition, detail) {
 }
 
 const db = new DatabaseSync(':memory:');
-for (const stmt of fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-  db.exec(stmt);
-}
+db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 const facade = {
   prepare(query) {
     let args = [];

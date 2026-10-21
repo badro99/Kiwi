@@ -127,6 +127,7 @@ async function main() {
     const strippedPath = join(dir, 'schema-stripped.sql');
     await writeFile(strippedPath, stripComments(schemaText));
     await execFile('sqlite3', [aged, `.read '${strippedPath.replace(/'/g, "''")}'`]);
+    for (const name of expected.triggers.keys()) await sqlite(aged, `DROP TRIGGER IF EXISTS ${name};`);
     for (const name of SIMULATED_GAP.indexes) await sqlite(aged, `DROP INDEX IF EXISTS ${name};`);
     for (const name of SIMULATED_GAP.tables) await sqlite(aged, `DROP TABLE IF EXISTS ${name};`);
     for (const [table, column] of SIMULATED_GAP.columns) {
@@ -160,6 +161,7 @@ async function main() {
 
     const cols = await sqlite(aged, "SELECT name FROM pragma_table_info('orders')");
     check('orders.client_ref existe', cols.some((c) => c.name === 'client_ref'));
+    check('sales_change_log est réparé', (await sqlite(aged, "SELECT name FROM sqlite_master WHERE type='trigger' AND name='sales_change_log'")).length === 1);
     check('orders.session_id existe', cols.some((c) => c.name === 'session_id'));
     const idx = await sqlite(aged, "SELECT name FROM sqlite_master WHERE type = 'index'");
     check('l\'index orders_client_ref existe', idx.some((i) => i.name === 'orders_client_ref'));
@@ -205,7 +207,7 @@ async function main() {
      * exécution reposerait les mêmes ordres. */
     const empty = diff(expected, {
       tables: new Map([...expected.tables].map(([n, t]) => [n, new Set(t.columns.map((c) => c.name))])),
-      indexes: new Set(expected.indexes.keys()),
+      indexes: new Set(expected.indexes.keys()), triggers: new Set(expected.triggers.keys()),
     });
     check('aucun faux positif sur une base conforme',
       !empty.missingTables.length && !empty.missingColumns.length && !empty.missingIndexes.length);

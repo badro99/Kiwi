@@ -36,7 +36,7 @@ const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/C
 if (!bin) { console.log('○ skip: Chromium unavailable, browser assertions not executed'); process.exit(process.env.CI ? 1 : 0); }
 
 const sql = new DatabaseSync(':memory:');
-for (const stmt of fs.readFileSync(path.join(root, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) sql.exec(stmt);
+sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
 const DB = {
   prepare(query) {
     let args = [];

@@ -41,9 +41,7 @@ const SECRET = 'auth-hardening-2-secret-32-bytes!!';
 function freshEnv() {
   const db = new DatabaseSync(':memory:');
   const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    try { db.exec(stmt); } catch (_) { /* sans objet ici */ }
-  }
+  db.exec(raw);
   return {
     sql: db,
     AUTH_SECRET: SECRET,

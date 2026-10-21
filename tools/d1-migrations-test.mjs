@@ -51,7 +51,7 @@ check('au moins la baseline et la migration d\'écart', files.length >= 2, `${fi
 console.log('\n■ Contenu : ce que D1 accepte, ce qui touche aux données');
 for (const name of files) {
   const sql = stripComments(read(name));
-  check(`${name} n'ouvre pas de transaction`, !/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT)\b/i.test(sql),
+  check(`${name} n'ouvre pas de transaction`, !/^(?:[ \t]*)(?:BEGIN|COMMIT|ROLLBACK|SAVEPOINT)\b/im.test(sql),
     'wrangler enveloppe déjà chaque migration ; D1 refuse BEGIN/COMMIT explicites');
   const destructive = /\bDROP\s+(TABLE|COLUMN)\b|\bDELETE\s+FROM\b|\bALTER\s+TABLE\s+\w+\s+RENAME\b/i.test(sql);
   const approved = /^--\s*destructive:\s*approved by owner\b/im.test(read(name));
@@ -94,8 +94,12 @@ console.log('\n■ Le comparateur voit un écart');
   const drifted = applySchema(freshDb());
   drifted.exec('ALTER TABLE sales ADD COLUMN drift_probe TEXT');
   drifted.exec('DROP INDEX idx_sales_merchant');
+  drifted.exec('DROP TRIGGER sales_change_log');
   const gaps = compareShapes(want, shapeOf(drifted));
   check('une colonne en trop est signalée', gaps.some((g) => g.includes('sales.drift_probe')), gaps.join(' | '));
+  check('un trigger manquant est signalé', gaps.some(g => g.includes('trigger sales_change_log')), gaps.join(' | '));
+  drifted.exec('CREATE TRIGGER sales_change_log AFTER UPDATE ON sales BEGIN SELECT 1; END;');
+  check('un trigger modifié est signalé', compareShapes(want, shapeOf(drifted)).some(g => g.includes('trigger sales_change_log') && g.includes('différente')));
   check('un index manquant est signalé', gaps.some((g) => g.includes('idx_sales_merchant')), gaps.join(' | '));
 }
 

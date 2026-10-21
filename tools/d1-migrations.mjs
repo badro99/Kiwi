@@ -113,7 +113,9 @@ export function shapeOf(db) {
       }
     }
   }
-  return { tables, indexes };
+  const triggers = new Map(db.prepare("SELECT name, sql FROM sqlite_master WHERE type='trigger' ORDER BY name").all()
+    .map(row => [row.name, normalizeIndexSql(row.sql)]));
+  return { tables, indexes, triggers };
 }
 
 /* Chaque écart, dans le sens « ce que schema.sql veut » ← « ce que les
@@ -147,6 +149,11 @@ export function compareShapes(want, got) {
   for (const name of got.indexes.keys()) {
     if (!want.indexes.has(name)) out.push(`index ${name} : créé par les migrations, absent de schema.sql`);
   }
+  for (const [name, sql] of want.triggers || []) {
+    if (!got.triggers?.has(name)) out.push(`trigger ${name} : dans schema.sql, absent des migrations`);
+    else if (got.triggers.get(name) !== sql) out.push(`trigger ${name} : définition différente`);
+  }
+  for (const name of got.triggers?.keys() || []) if (!want.triggers?.has(name)) out.push(`trigger ${name} : absent de schema.sql`);
   return out;
 }
 
@@ -163,16 +170,18 @@ function rawCreateTable(schemaText, name) {
 
 export function draftNextMigration(db, schemaText) {
   const expected = parseSchema(schemaText);
-  const live = { tables: new Map(), indexes: new Set() };
+  const live = { tables: new Map(), indexes: new Set(), triggers: new Set() };
   for (const { name, type } of db.prepare("SELECT name, type FROM sqlite_master WHERE type IN ('table','index')").all()) {
     if (type === 'index') { live.indexes.add(name); continue; }
     live.tables.set(name, new Set(db.prepare('SELECT name FROM pragma_table_info(?)').all(name).map((c) => c.name)));
   }
+  for (const row of db.prepare("SELECT name FROM sqlite_master WHERE type='trigger'").all()) live.triggers.add(row.name);
   const result = diff(expected, live);
   const statements = [
     ...result.missingTables.map((t) => rawCreateTable(schemaText, t.name) || t.sql),
     ...result.missingColumns.map((c) => c.sql),
     ...result.missingIndexes.map((i) => i.sql),
+    ...result.missingTriggers.map((t) => t.sql),
   ];
   return { statements, blocked: result.blocked };
 }

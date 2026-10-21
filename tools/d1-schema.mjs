@@ -123,7 +123,11 @@ export function parseSchema(sqlText) {
     });
   }
 
-  return { tables, indexes };
+  const triggers = new Map();
+  for (const m of sql.matchAll(/CREATE\s+TRIGGER\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][\w]*)\b[\s\S]*?\bEND\s*;/gi)) {
+    triggers.set(m[1], { name: m[1], sql: m[0].trim() });
+  }
+  return { tables, indexes, triggers };
 }
 
 /* ═══════════════════ 2. LIRE LA BASE VIVANTE ══════════════════════════════ */
@@ -193,7 +197,8 @@ async function readLive(target, expected) {
     const cols = await target.query('SELECT name FROM pragma_table_info(?)', [name]);
     tables.set(name, new Set(cols.map((c) => c.name)));
   }
-  return { tables, indexes: new Set(indexRows.map((r) => r.name)) };
+  const triggerRows = await target.query("SELECT name FROM sqlite_master WHERE type='trigger'");
+  return { tables, indexes: new Set(indexRows.map((r) => r.name)), triggers: new Set(triggerRows.map(r => r.name)) };
 }
 
 /* ═══════════════════ 3. COMPARER ══════════════════════════════════════════ */
@@ -237,7 +242,8 @@ export function diff(expected, live) {
   for (const [name, index] of expected.indexes) {
     if (!live.indexes.has(name)) missingIndexes.push(index);
   }
-  return { missingTables, missingColumns, missingIndexes, blocked };
+  const missingTriggers = [...(expected.triggers || new Map()).values()].filter(t => !live.triggers?.has(t.name));
+  return { missingTables, missingColumns, missingIndexes, missingTriggers, blocked };
 }
 
 /* ═══════════════════ 4. RAPPORTER ET POSER ════════════════════════════════ */
@@ -259,8 +265,8 @@ const SILENT_FAILURES = {
 };
 
 function report(result, target) {
-  const { missingTables, missingColumns, missingIndexes, blocked } = result;
-  const total = missingTables.length + missingColumns.length + missingIndexes.length;
+  const { missingTables, missingColumns, missingIndexes, missingTriggers, blocked } = result;
+  const total = missingTables.length + missingColumns.length + missingIndexes.length + missingTriggers.length;
 
   console.log(`\n${BOLD}Schéma · ${target.label}${OFF}\n`);
 
@@ -297,6 +303,10 @@ function report(result, target) {
     }
     console.log('');
   }
+  if (missingTriggers.length) {
+    console.log(`Triggers absents (${missingTriggers.length})`);
+    for (const t of missingTriggers) console.log(`  ${RED}✗${OFF} ${t.name}`);
+  }
   if (blocked.length) {
     console.log(`${BOLD}À poser à la main (${blocked.length})${OFF}`);
     for (const b of blocked) console.log(`  ${YELLOW}!${OFF} ${b.table}.${b.column} — ${b.reason}`);
@@ -312,6 +322,7 @@ function plan(result) {
     ...result.missingTables.map((t) => t.sql),
     ...result.missingColumns.map((c) => c.sql),
     ...result.missingIndexes.map((i) => i.sql),
+    ...result.missingTriggers.map((t) => t.sql),
   ];
 }
 

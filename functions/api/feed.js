@@ -87,23 +87,58 @@ function fenceParam(raw) {
   if (!/^(0|[1-9][0-9]*)$/.test(raw || '') || !Number.isSafeInteger(Number(raw))) throw new RangeError('fence');
   return Number(raw);
 }
+async function replayBounds(env, merchant, legacy) {
+  // One statement snapshot captures the insert and mutation high-water marks together.
+  const row = await env.DB.prepare(
+    'SELECT (SELECT COALESCE(MAX(rowid), 0) FROM sales WHERE merchant IN (?, ?)) AS fence,' +
+    ' (SELECT COALESCE(MAX(seq), 0) FROM sale_changes WHERE merchant IN (?, ?)) AS changeFence,' +
+    " (SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name IN ('sales_change_log','sales_change_insert','sales_change_delete')) AS triggers"
+  ).bind(merchant, legacy || merchant, merchant, legacy || merchant).first();
+  if (Number(row?.triggers) !== 3 || !Number.isSafeInteger(row?.fence) || row.fence < 0 ||
+      !Number.isSafeInteger(row?.changeFence) || row.changeFence < 0) throw new Error('change-schema');
+  return row;
+}
 async function windowState(env, params, merchant, legacy, from, to) {
   const raw = params.get('after');
   const supplied = params.has('fence') ? fenceParam(params.get('fence')) : null;
+  const suppliedChange = params.has('changeFence') ? fenceParam(params.get('changeFence')) : null;
+  const current = await replayBounds(env, merchant, legacy);
   if (raw) {
     const a = await readCursor(env, raw);
-    if (!Array.isArray(a) || a.length !== 9 || a[0] !== 2 || a[1] !== 'window' || a[2] !== merchant || a[3] !== legacy || a[4] !== from || a[5] !== to ||
+    if (!Array.isArray(a) || a.length !== 10 || a[0] !== 3 || a[1] !== 'window' || a[2] !== merchant || a[3] !== legacy || a[4] !== from || a[5] !== to ||
         !Number.isSafeInteger(a[6]) || a[6] < 0 || (supplied !== null && supplied !== a[6]) ||
-        !Number.isFinite(a[7]) || a[7] < from || a[7] >= to || !Number.isSafeInteger(a[8]) || a[8] <= 0 || a[8] > a[6]) throw new RangeError('after');
-    return { fence: a[6], after: a.slice(7) };
+        !Number.isSafeInteger(a[7]) || a[7] < 0 || a[7] > current.changeFence || (suppliedChange !== null && suppliedChange !== a[7]) ||
+        !Number.isFinite(a[8]) || a[8] < from || a[8] >= to || !Number.isSafeInteger(a[9]) || a[9] <= 0 || a[9] > a[6]) throw new RangeError('after');
+    return { fence: a[6], changeFence: a[7], after: a.slice(8) };
   }
-  // Include voided rows and both entitled buckets, even outside this time window.
-  const row = await env.DB.prepare('SELECT COALESCE(MAX(rowid), 0) AS fence FROM sales WHERE merchant IN (?, ?)')
-    .bind(merchant, legacy || merchant).first();
-  const maximum = Number(row?.fence);
-  if (!Number.isSafeInteger(maximum) || maximum < 0) throw new Error('fence-db');
-  if (supplied !== null && supplied > maximum) throw new RangeError('fence');
-  return { fence: supplied ?? maximum, after: [from, 0] };
+  if (supplied !== null && supplied > current.fence || suppliedChange !== null && suppliedChange > current.changeFence) throw new RangeError('fence');
+  return { fence: supplied ?? current.fence, changeFence: suppliedChange ?? current.changeFence, after: [from, 0] };
+}
+async function changePage(env, params, merchant, legacy, limit) {
+  const maximum = (await replayBounds(env, merchant, legacy)).changeFence;
+  const raw = params.get('afterChange');
+  let after = 0;
+  if (raw && /^[0-9]+$/.test(raw)) after = fenceParam(raw);
+  else if (raw) {
+    const a = await readCursor(env, raw);
+    if (!Array.isArray(a) || a.length !== 5 || a[0] !== 1 || a[1] !== 'changes' || a[2] !== merchant || a[3] !== legacy || !Number.isSafeInteger(a[4]) || a[4] < 0) throw new RangeError('afterChange');
+    after = a[4];
+  }
+  if (after > maximum) throw new RangeError('afterChange');
+  const rs = await env.DB.prepare(
+    'SELECT c.seq, c.sale_rowid AS changedCursor, c.sale_id AS changedId, s.rowid AS cursor,' +
+    ' s.id, s.amount, s.amount_cents, s.gross_amount_cents, s.discount_amount_cents, s.discount_reason, s.discount_actor_id,' +
+    ' s.method, s.label, s.ref, s.ts, s.lines, s.channel, s.void_ts AS changeVoidTs' +
+    ' FROM (SELECT seq, sale_rowid, sale_id FROM sale_changes WHERE merchant IN (?, ?) AND seq > ? ORDER BY seq ASC' +
+    ` LIMIT ${limit + 1}) c LEFT JOIN sales s ON s.rowid = c.sale_rowid AND s.id IS c.sale_id AND s.merchant IN (?, ?)` +
+    ' ORDER BY c.seq ASC'
+  ).bind(merchant, legacy || merchant, after, merchant, legacy || merchant).all();
+  const entries = rs.results || [], more = entries.length > limit, consumed = entries.slice(0, limit);
+  const latest = new Map();
+  for (const row of consumed) latest.set(JSON.stringify([row.changedCursor, row.changedId]), row);
+  const position = consumed.length ? consumed[consumed.length - 1].seq : after;
+  const checkpoint = await signCursor(env, [1, 'changes', merchant, legacy, position]);
+  return { entries: [...latest.values()].sort((a, b) => a.seq - b.seq), next: more ? checkpoint : null, complete: !more, checkpoint };
 }
 async function voidPage(env, params, merchant, legacy, limit) {
   const raw = params.get('afterVoid');
@@ -164,12 +199,13 @@ async function windowRows(env, merchant, legacy, from, to, after, fence, limit) 
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  const voidRead = url.searchParams.get('voids') === '1' && url.searchParams.has('afterVoid');
-  const windowRead = !voidRead && url.searchParams.get('window') === '1' && url.searchParams.has('from') && url.searchParams.has('to');
+  const changeRead = url.searchParams.has('afterChange') || url.searchParams.get('changes') === '1';
+  const voidRead = !changeRead && url.searchParams.get('voids') === '1' && url.searchParams.has('afterVoid');
+  const windowRead = !changeRead && !voidRead && url.searchParams.get('window') === '1' && url.searchParams.has('from') && url.searchParams.has('to');
   const windowFrom = Number(url.searchParams.get('from')), windowTo = Number(url.searchParams.get('to'));
   if (windowRead && (!Number.isSafeInteger(windowFrom) || !Number.isSafeInteger(windowTo) || windowFrom <= 0 ||
       windowTo <= windowFrom || windowTo - windowFrom > 400 * 86400000 + 2 * 3600000)) return json({ error: 'range' }, 400);
-  if (!env || !env.DB) return windowRead || voidRead ? json({ error: 'db' }, 503) : json({ sales: [], cursor: 0 });
+  if (!env || !env.DB) return windowRead || voidRead || changeRead ? json({ error: 'db' }, 503) : json({ sales: [], cursor: 0 });
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
@@ -187,7 +223,7 @@ export async function onRequestGet({ request, env }) {
    * l'écriture. Une caisse ne peut toujours lire que la boutique où elle est
    * posée. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
-  if (!merchant) return windowRead || voidRead ? json({ error: 'unauthorized' }, 403) : json({ sales: [], cursor: since, merchant: '' });
+  if (!merchant) return windowRead || voidRead || changeRead ? json({ error: 'unauthorized' }, 403) : json({ sales: [], cursor: since, merchant: '' });
 
   /* Which buckets this store reads: its own, plus the account's pre-split one
    * when that is unambiguous. Binding `merchant` twice when there is no second
@@ -246,11 +282,12 @@ export async function onRequestGet({ request, env }) {
   const DAY_LIMIT = 2000;
   const requestedLimit = Number(url.searchParams.get('limit'));
   const limit = Number.isInteger(requestedLimit) ? Math.max(50, Math.min(500, requestedLimit)) : 50;
-  let replay;
-  if (windowRead || voidRead) {
+  let replay, changeResult;
+  if (windowRead || voidRead || changeRead) {
     try {
       if (voidRead) return json(await voidPage(env, url.searchParams, merchant, legacy, limit));
-      replay = await windowState(env, url.searchParams, merchant, legacy, windowFrom, windowTo);
+      if (changeRead) changeResult = await changePage(env, url.searchParams, merchant, legacy, limit);
+      else replay = await windowState(env, url.searchParams, merchant, legacy, windowFrom, windowTo);
     } catch (error) { return json({ error: error instanceof RangeError ? 'cursor' : 'db' }, error instanceof RangeError ? 400 : 500); }
   }
 
@@ -259,7 +296,7 @@ export async function onRequestGet({ request, env }) {
    * reserve a real range and describe its first value in the old protocol. New
    * clients call /api/ticket-sequence directly. This can be removed after v206
    * has aged out. */
-  if (!windowRead && url.searchParams.get('seq') === '1') {
+  if (!windowRead && !changeRead && url.searchParams.get('seq') === '1') {
     try {
       const lease = await reserveTicketRange(env, merchant, 500, 1000, new Date().getUTCFullYear());
       return json({ seq: lease.start - 1, merchant, legacyLeaseEnd: lease.end });
@@ -276,12 +313,14 @@ export async function onRequestGet({ request, env }) {
    * d'un cran ; tout le reste remonte en 500, parce qu'un flux vide servi en
    * silence est le pire des messages d'erreur. */
   try {
-    if (windowRead) {
+    if (changeRead) {
+      rows = changeResult.entries.filter(row => row.cursor !== null);
+    } else if (windowRead) {
       rows = await windowRows(env, merchant, legacy, windowFrom, windowTo, replay.after, replay.fence, limit);
       if (rows.length > limit) {
         rows = rows.slice(0, limit);
         const last = rows[rows.length - 1];
-        next = await signCursor(env, [2, 'window', merchant, legacy, windowFrom, windowTo, replay.fence, last.ts, last.cursor]);
+        next = await signCursor(env, [3, 'window', merchant, legacy, windowFrom, windowTo, replay.fence, replay.changeFence, last.ts, last.cursor]);
       }
     } else if (!voidsOnly) {
       const rs = byDay
@@ -296,7 +335,7 @@ export async function onRequestGet({ request, env }) {
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
     }
-    if (!windowRead) {
+    if (!windowRead && !changeRead) {
       const vs = await env.DB.prepare(
         'SELECT rowid AS cursor, id, ref, ts, void_ts FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
         'ORDER BY void_ts DESC LIMIT 500'
@@ -307,7 +346,7 @@ export async function onRequestGet({ request, env }) {
       }));
     }
   } catch (e) {
-    if (windowRead) return json({ error: 'db' }, 500);
+    if (windowRead || changeRead) return json({ error: 'db' }, 500);
     const msg = String((e && e.message) || e);
     const noVoid = msg.includes('void_ts');
     const noLines = msg.includes('lines');
@@ -485,7 +524,18 @@ export async function onRequestGet({ request, env }) {
   /* Une lecture par journée ne fait pas avancer le curseur : elle est triée à
      l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
      comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
-  if (windowRead) return json({ merchant, from: windowFrom, to: windowTo, sales: rows, next, complete: next === null, fence: replay.fence });
+  if (changeRead) {
+    const full = new Map(rows.map(row => [row.seq, row]));
+    const changes = changeResult.entries.map(entry => {
+      if (entry.cursor === null) return { seq: entry.seq, cursor: entry.changedCursor, id: entry.changedId, deleted: true };
+      const row = full.get(entry.seq);
+      row.voided = row.changeVoidTs !== null; row.voidTs = row.changeVoidTs;
+      delete row.changedCursor; delete row.changedId; delete row.changeVoidTs;
+      return row;
+    });
+    return json({ merchant, changes, next: changeResult.next, complete: changeResult.complete, checkpoint: changeResult.checkpoint });
+  }
+  if (windowRead) return json({ merchant, from: windowFrom, to: windowTo, sales: rows, next, complete: next === null, fence: replay.fence, changeFence: replay.changeFence });
   const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
   /* The till's heartbeat (order_desk, stamped by its authenticated queue poll
      every few seconds; kitchen and service screens excluded). The dashboard

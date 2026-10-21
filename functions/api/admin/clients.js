@@ -520,7 +520,9 @@ export async function onRequestDelete(context) {
   }
 
   try {
-    const deletes = tables.map((t) =>
+    // Delete the mutation log after sales triggers have emitted their tombstones.
+    const orderedTables = tables.filter((t) => t !== 'sale_changes').concat(tables.includes('sale_changes') ? ['sale_changes'] : []);
+    const deletes = orderedTables.map((t) =>
       env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
     if (deleteSupportMessages) deletes.unshift(deleteSupportMessages);
     if (owner && nextStore && slugMerchant(owner.business) === merchant) {

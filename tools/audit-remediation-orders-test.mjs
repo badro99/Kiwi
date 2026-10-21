@@ -24,7 +24,7 @@ const ok = (name, value, detail = '') => {
 function makeDB() {
   const db = new DatabaseSync(':memory:');
   const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const sql of schema.replace(/--[^\n]*/g, '').split(';').map((x) => x.trim()).filter(Boolean)) db.exec(sql);
+  db.exec(schema);
   const facade = { _db: db };
   facade.prepare = (sql) => {
     let args = [];

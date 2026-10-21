@@ -236,7 +236,7 @@ assert.equal(directFailure.calls.filter((call) => call.options && call.options.m
 function normalize(sql) { return String(sql).replace(/\s+/g, ' ').trim(); }
 const db = new DatabaseSync(':memory:');
 const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
-for (const statement of schema.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(statement);
+db.exec(schema);
 db.prepare("INSERT INTO merchant_config (merchant, features, status, till_epoch, updated_ts) VALUES (?, '{}', 'active', 0, ?)").run(MERCHANT, Date.now());
 db.prepare("INSERT INTO operators (id, label, salt, hash, created_ts) VALUES ('op-demo', 'Demo operator', 's', 'h', ?)").run(Date.now());
 const env = {

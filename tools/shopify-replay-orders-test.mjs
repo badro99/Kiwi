@@ -33,9 +33,7 @@ console.log('■ Shopify · commandes en ligne rattrapées (tools/shopify-replay
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sql = new DatabaseSync(':memory:');
 const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-  try { sql.exec(stmt); } catch (_) { /* sans objet ici */ }
-}
+sql.exec(raw);
 sql.prepare("INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES ('acc-rp','rp@t.ma','S','Maison Test','00','00',?)").run(Date.now());
 sql.prepare("INSERT INTO merchant_config (merchant,features,account_id,name,status,updated_ts) VALUES ('maison-test','{}','acc-rp','Maison Test','active',?)").run(Date.now());
 const DB = {

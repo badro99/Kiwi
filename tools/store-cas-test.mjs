@@ -40,9 +40,7 @@ const SHOP = 'cas-shop';
 function freshEnv() {
   const sql = new DatabaseSync(':memory:');
   const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    try { sql.exec(stmt); } catch (_) { /* sans objet ici */ }
-  }
+  sql.exec(raw);
   const now = Date.now();
   sql.prepare("INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES ('acc-cas','cas@t.ma','C','cas-shop','00','00',?)").run(now);
   sql.prepare("INSERT INTO merchant_config (merchant,features,account_id,name,updated_ts) VALUES (?,'{}','acc-cas','CAS',?)").run(SHOP, now);

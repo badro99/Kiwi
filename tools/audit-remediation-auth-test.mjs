@@ -39,7 +39,7 @@ function normalize(sql) { return String(sql).replace(/\s+/g, ' ').trim(); }
 
 const db = new DatabaseSync(':memory:');
 const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-for (const statement of schema.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(statement);
+db.exec(schema);
 /* schema.sql is now the parent integration surface and may already include
  * session_epoch. Keep this focused fixture able to exercise both a fresh
  * schema and the standalone existing-database migration without masking any

@@ -34,7 +34,7 @@ function check(label, condition, detail = '') {
 
 const db = new DatabaseSync(':memory:');
 const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-for (const statement of schema.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(statement);
+db.exec(schema);
 const normalize = (sql) => String(sql).replace(/\s+/g, ' ').trim();
 function makeD1() {
   return {

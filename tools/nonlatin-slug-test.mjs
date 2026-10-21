@@ -42,9 +42,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 function freshEnv() {
   const db = new DatabaseSync(':memory:');
   const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-  for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    try { db.exec(stmt); } catch (_) { /* index/alter déjà couverts : sans objet ici */ }
-  }
+  db.exec(raw);
   return {
     sql: db,
     AUTH_SECRET: 'nonlatin-slug-test-secret-32-bytes!',

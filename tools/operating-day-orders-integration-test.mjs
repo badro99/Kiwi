@@ -26,8 +26,7 @@ const now = Date.now();
 
 function makeDB() {
   const db = new DatabaseSync(':memory:');
-  for (const statement of fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8')
-    .replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) db.exec(statement);
+  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const prepare = (query) => {
     let args = [];
     const st = {

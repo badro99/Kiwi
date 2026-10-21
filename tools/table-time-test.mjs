@@ -50,7 +50,7 @@ console.log('\n■ The real /api/table-time handler');
 const SECRET = 'table-time-secret';
 const M = 'table-time-bistro', OTHER = 'table-time-ailleurs';
 const sql = new DatabaseSync(':memory:');
-for (const stmt of fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((x) => x.trim()).filter(Boolean)) sql.exec(stmt);
+sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 const DB = {
   prepare(query) {
     let args = [];

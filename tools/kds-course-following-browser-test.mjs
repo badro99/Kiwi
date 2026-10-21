@@ -38,10 +38,8 @@ const MERCHANT = 'course-follow-bistro';
 const AUTH_SECRET = 'kds-course-follow-secret';
 function makeDb(withFollowing) {
   const sql = new DatabaseSync(':memory:');
-  for (const stmt of fs.readFileSync(path.join(root, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-    if (!withFollowing && /order_following/.test(stmt)) continue;
-    sql.exec(stmt);
-  }
+  sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
+  if (!withFollowing) sql.exec('DROP TABLE order_following');
   sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)')
     .run(MERCHANT, JSON.stringify({ orderpro: true }), 'Course Follow Bistro', Date.now());
   const DB = {

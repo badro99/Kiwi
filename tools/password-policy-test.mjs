@@ -95,9 +95,7 @@ console.log('\n■ Endpoint Integration Tests (/auth/signup and /auth/reset)');
 const db = new DatabaseSync(':memory:');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const schemaRaw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
-for (const stmt of schemaRaw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
-  db.exec(stmt);
-}
+db.exec(schemaRaw);
 const env = {
   DB: {
     prepare(q) {

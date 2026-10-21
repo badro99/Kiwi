@@ -46,7 +46,7 @@ if (!bin) { console.log('○ skip: Chromium unavailable — browser assertions n
 const MERCHANT = 'kds-cards-browser-bistro';
 const AUTH_SECRET = 'kds-cards-browser-secret';
 const sql = new DatabaseSync(':memory:');
-for (const stmt of fs.readFileSync(path.join(root, 'schema.sql'), 'utf8').replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) sql.exec(stmt);
+sql.exec(fs.readFileSync(path.join(root, 'schema.sql'), 'utf8'));
 const DB = {
   prepare(query) {
     let args = [];
