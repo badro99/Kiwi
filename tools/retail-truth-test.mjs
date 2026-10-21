@@ -33,7 +33,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rd = (f) => readFileSync(path.join(ROOT, f), 'utf8');
-const PAGES = rd('assets/pages-pro.js');
+/* La section promos / retours se charge à part (assets/pages-pro/boutique-promos-returns.js). */
+const PAGES = rd('assets/pages-pro.js') + '\n' + rd('assets/pages-pro/boutique-promos-returns.js');
 const CATALOG = rd('assets/boutique-catalog.js');
 const PROMOS = rd('assets/promos.js');
 const BPD = rd('assets/boutique-promos-dashboard.js');

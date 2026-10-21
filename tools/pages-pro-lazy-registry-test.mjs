@@ -11,6 +11,7 @@ const registry = source.slice(regStart, source.indexOf('/* ═══ Section', r
 const REFERENCES = {
   'assets/pages-pro/spa-appointments.js': ['nav-appointments', 'tools/pages-pro-spa-reference.json'],
   'assets/pages-pro/spa-practitioners.js': ['nav-practitioners', 'tools/pages-pro-spa-practitioners-reference.json'],
+  'assets/pages-pro/boutique-promos-returns.js': ['nav-returns', 'tools/pages-pro-boutique-returns-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');

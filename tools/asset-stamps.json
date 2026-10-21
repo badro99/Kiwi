@@ -1036,8 +1036,12 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2166",
-    "sha": "805d7c95e013139e"
+    "v": "2167",
+    "sha": "48894240f0fad54b"
+  },
+  "assets/pages-pro/boutique-promos-returns.js": {
+    "v": "1",
+    "sha": "e8aced0ab3ee9a90"
   },
   "assets/pages-pro/spa-appointments.js": {
     "v": "1",

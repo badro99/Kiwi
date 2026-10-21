@@ -132,7 +132,7 @@ console.log('■ pavé responsable, pages et fiche client');
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
 ok(/function requireManager\(actionLabel, onApprove, authContext, opts\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?openAuthorization\(actionLabel, onApprove, 'manager', authContext, opts\);/.test(caisse),
   'requireManager transmet ses options (onCancel) au pavé');
-const pages = read('assets/pages-pro.js');
+const pages = read('assets/pages-pro/boutique-promos-returns.js'); // section retours, chargée au premier usage
 ok(/liveCreditsOwnerSlug && liveCreditsOwnerSlug !== slug\) \{ liveCredits = \[\]/.test(pages)
   && /if \(currentSlug\(\) !== slug\) return;/.test(pages),
   'le registre des avoirs du tableau de bord se vide au changement de commerce et jette une réponse tardive');
