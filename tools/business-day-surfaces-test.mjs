@@ -109,6 +109,27 @@ let checks = 0;
   checks += 1;
 }
 
+/* 3b. The boutique's « Échanges & avoirs » picker files a 01:15 sale under
+   the evening it belongs to, the same day its « aujourd'hui » header uses.
+   The two helpers are lifted from the shipped file and run as they are. */
+{
+  const src = read('assets/pos-boutique.js');
+  const grab = (name) => {
+    const at = src.indexOf(`  function ${name}(`);
+    assert.ok(at > 0, `${name} found in pos-boutique.js`);
+    return src.slice(at, src.indexOf('\n', at)); /* each helper is one line */
+  };
+  const win = { KiwiDayReport: dayReport };
+  const ctx = vm.createContext({ window: win, ...globals });
+  vm.runInContext(`${grab('retDayKey')}\n${grab('retShiftDay')}\nwindow.retDayKey = retDayKey; window.retShiftDay = retShiftDay;`, ctx);
+  assert.equal(win.retDayKey(lateNight), '2026-10-20', 'a 01:15 sale is the 20th in the returns picker');
+  assert.equal(win.retDayKey(NOW), '2026-10-20', '« Aujourd\'hui » at 01:30 is still the 20th');
+  assert.equal(win.retShiftDay('2026-10-20', -1), '2026-10-19');
+  assert.equal(win.retShiftDay('2026-10-01', -6), '2026-09-25');
+  assert.match(src, /const dateKey = retDayKey;/, 'renderEchanges files sales with the business-day key');
+  checks += 5;
+}
+
 /* 4. The dashboard loads report.js on demand. That URL must be the stamped
    one the page preloads, or a returning browser keeps the old report (and a
    root-absolute path breaks under the GitHub Pages sub-path). */

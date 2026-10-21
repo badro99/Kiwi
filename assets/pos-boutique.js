@@ -839,6 +839,8 @@
     const x = new Date(ts - 5 * 3600000);
     return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
   }
+  function retDayKey(ts) { const R = window.KiwiDayReport, t = +new Date(ts); try { const k = R && R.businessDay && R.businessDay(t); if (/^\d{4}-\d{2}-\d{2}$/.test(k)) return k; } catch (_) {} const x = new Date(t - 5 * 3600000); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }
+  function retShiftDay(key, delta) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key); return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + delta)).toISOString().slice(0, 10); }
   function isToday(d) {
     const t = +new Date(d);
     return !isNaN(t) && businessDayKey(t) === businessDayKey(Date.now());
@@ -1076,7 +1078,7 @@
     exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
-    retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+    retDate: retDayKey(Date.now()),
     clQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
@@ -3114,11 +3116,8 @@
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
-    const dateKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const oldest = new Date(today); oldest.setDate(oldest.getDate() - (RETAIN_DAYS - 1));
-    const todayKey = dateKey(today), yesterdayKey = dateKey(yesterday), oldestKey = dateKey(oldest);
+    const dateKey = retDayKey; /* journée commerciale (5 h), comme le Z : minuit rangeait 0 h 30 au lendemain */
+    const todayKey = retDayKey(Date.now()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(RETAIN_DAYS - 1));
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;

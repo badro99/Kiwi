@@ -1096,12 +1096,12 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "94",
+    "v": "95",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "94",
-    "sha": "bbab9a6cd7d7cfa2"
+    "v": "95",
+    "sha": "61da02bb4cb58e9a"
   },
   "assets/pos-coiffure.css": {
     "v": "9",
@@ -1112,8 +1112,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "131",
-    "sha": "e36bad41d7ad91d7"
+    "v": "132",
+    "sha": "d622d40acb9ad52b"
   },
   "assets/pos-epicerie.css": {
     "v": "17",
