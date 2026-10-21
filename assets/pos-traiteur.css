@@ -805,6 +805,20 @@
   .tr-bl-grid .tr-bl-col:last-child { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line-soft); }
   .tr-stats { grid-template-columns: 1fr; }
 }
+/* Phone (same breakpoint as pos-mobile.css). The due banner kept both buttons
+ * at full width and left its sentence a one-word-wide column, and each event
+ * card squeezed its name between the date and the total (2026-10-21): the
+ * buttons now take their own row, the total its own line. */
+@media (max-width: 860px),
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  .tr-duebar { flex-wrap: wrap; margin-inline: 16px; }
+  .tr-duebar-txt { flex: 1 1 calc(100% - 40px); }
+  .tr-duebar .tr-btn { flex: 1 1 0; justify-content: center; }
+  .tr-head .tr-search { flex: 1 1 100%; }
+  .tr-evscroll { padding-inline: 16px; }
+  .tr-evcard { flex-wrap: wrap; align-items: flex-start; gap: 12px 14px; }
+  .tr-evright { flex: 1 1 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+}
 @media (prefers-reduced-motion: reduce) {
   .tr-evcard, .tr-dish, .tr-payc, .tr-bl { animation: none !important; }
   .tr-dish-tick { animation: none !important; }

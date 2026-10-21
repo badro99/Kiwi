@@ -1096,8 +1096,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "118",
-    "sha": "5976b6ed905d4707"
+    "v": "119",
+    "sha": "ae897283f5a1bbcf"
   },
   "assets/pos-epicerie.css": {
     "v": "16",
@@ -1172,8 +1172,8 @@
     "sha": "9cae03a3a01f29dc"
   },
   "assets/pos-mobile.js": {
-    "v": "7",
-    "sha": "de898c74559fc037"
+    "v": "8",
+    "sha": "a8d378f212693a1d"
   },
   "assets/pos-pharmacie.css": {
     "v": "8",
@@ -1208,11 +1208,11 @@
     "sha": "635ad8bf4612b639"
   },
   "assets/pos-traiteur.css": {
-    "v": "9",
-    "sha": "45d7b1720fd65004"
+    "v": "10",
+    "sha": "51743f41937335bc"
   },
   "assets/pos-traiteur.js": {
-    "v": "9",
+    "v": "10",
     "sha": "4954734f1d52200c"
   },
   "assets/pos-workspaces.css": {

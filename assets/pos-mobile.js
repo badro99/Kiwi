@@ -35,10 +35,22 @@
     return out;
   }
 
+  /* Four registers name their ticket in their own trade's words, so the
+   * "-ticket" pattern never found it: on a phone the librairie's basket stayed
+   * docked beside the catalogue and squeezed the books into a 100px strip
+   * (2026-10-21). Listed by full class: a pattern such as "-cart" would also
+   * catch the scanner overlay's .krs-cart. */
+  var ALIASES = { ticket: ['lb-panier', 'tr-quote', 'fl-bouquet', 'gy-cart'] };
+
   function tagRoles(screen) {
     for (var r = 0; r < ROLES.length; r++) {
       var role = ROLES[r];
       var found = findAll(screen, role);
+      var extra = ALIASES[role] || [];
+      for (var x = 0; x < extra.length; x++) {
+        var named = screen.querySelectorAll('.' + extra[x]);
+        for (var n = 0; n < named.length; n++) found.push(named[n]);
+      }
       for (var i = 0; i < found.length; i++) found[i].classList.add('vx-' + role);
     }
   }
@@ -110,7 +122,16 @@
   /* ---- ticket bottom sheet (idempotent) -------------------------------- */
   function ensureTicket(screen) {
     var ticket = screen.querySelector('.vx-ticket');
-    if (!ticket || ticket.querySelector(':scope > .vx-peek')) return;
+    if (!ticket) return;
+    /* A register that rebuilds its ticket with innerHTML (the librairie does on
+     * every tap) wipes the peek with it. Put the same peek back: building a new
+     * one stacked another observer and another click listener per tap. */
+    var kept = ticket.__vxPeek;
+    if (kept) {
+      if (ticket.firstChild !== kept) ticket.insertBefore(kept, ticket.firstChild);
+      return;
+    }
+    if (ticket.querySelector(':scope > .vx-peek')) return;
 
     var peek = document.createElement('button');
     peek.className = 'vx-peek';
@@ -150,19 +171,28 @@
      * back was to spot that the top row is a button: to a cashier the till
      * looked jammed (ticket #0137). A tap anywhere outside the sheet now folds
      * it, and is consumed so it cannot also add the product under the finger.
-     * Dialogs opened from the ticket (customer search, payment) are left alone. */
-    screen.addEventListener('click', function (e) {
-      if (!screen.classList.contains('vx-ticket-open')) return;
-      var t = e.target;
-      if (!t || !t.closest || t.closest('.vx-ticket') || t.closest('[class*="modal"], [class*="veil"], [role="dialog"]')) return;
-      e.preventDefault(); e.stopPropagation();
-      screen.classList.remove('vx-ticket-open');
-      peek.setAttribute('aria-expanded', 'false');
-      peek.setAttribute('aria-label', 'Afficher le ticket');
-    }, true);
+     * Dialogs opened from the ticket (customer search, payment) are left alone.
+     * One listener per screen: a register that re-renders its whole ticket
+     * gets a new peek each time, and must not get a new listener with it. */
+    if (!screen.__vxFoldOnTap) {
+      screen.__vxFoldOnTap = true;
+      screen.addEventListener('click', function (e) {
+        if (!screen.classList.contains('vx-ticket-open')) return;
+        var t = e.target;
+        if (!t || !t.closest || t.closest('.vx-ticket') || t.closest('[class*="modal"], [class*="veil"], [role="dialog"]')) return;
+        e.preventDefault(); e.stopPropagation();
+        screen.classList.remove('vx-ticket-open');
+        var open = screen.querySelector('.vx-peek');
+        if (open) {
+          open.setAttribute('aria-expanded', 'false');
+          open.setAttribute('aria-label', 'Afficher le ticket');
+        }
+      }, true);
+    }
     /* First child, not last: the sheet rests translated down by exactly the
      * peek's height, so the peek has to be the strip left on screen. */
     ticket.insertBefore(peek, ticket.firstChild);
+    ticket.__vxPeek = peek;
   }
 
   /* ---- two-panel rows → stacked (idempotent, add-only) ------------------
