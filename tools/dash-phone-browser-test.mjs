@@ -37,6 +37,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { suite } from './browser-trace.mjs';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -63,6 +64,7 @@ const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ 
    (Explore the demo sets kiwiSkipOnboard, as shipped). */
 async function open(tr, ctx, { flag = true, width = 390, height = 844, lang = 'fr' } = {}) {
   const page = tr.watch(await ctx.newPage());
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h (tools/demo-clock.mjs)
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
   const phone = width < 900;

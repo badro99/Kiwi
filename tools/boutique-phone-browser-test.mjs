@@ -21,6 +21,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { suite } from './browser-trace.mjs';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -47,6 +48,7 @@ async function till(t, viewport = PHONE) {
   const ctx = await browser.createBrowserContext();
   t.defer(() => ctx.close());
   const page = t.watch(await ctx.newPage());
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h (tools/demo-clock.mjs)
   await page.setViewport(viewport);
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);

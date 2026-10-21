@@ -26,6 +26,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from './build-app-www.mjs';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -106,6 +107,7 @@ const browser = await puppeteer.launch({ executablePath: bin, headless: true, ar
 async function phone(lang, role) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h (tools/demo-clock.mjs)
   await page.setViewport({ width: 402, height: 874, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   await page.evaluateOnNewDocument(nativeStub, lang, role);
   const errors = [];

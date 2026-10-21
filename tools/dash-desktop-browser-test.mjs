@@ -38,6 +38,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { suite } from './browser-trace.mjs';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -64,6 +65,7 @@ const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ 
    worker kept out, /api/ answering 503 as offline. */
 async function open(tr, ctx, { flag = true, width = 1440, height = 900, theme = '', lang = '' } = {}) {
   const page = tr.watch(await ctx.newPage());
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h (tools/demo-clock.mjs)
   const fetched = [];
   await page.setViewport({ width, height });
   await page.setBypassServiceWorker(true);

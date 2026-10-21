@@ -28,6 +28,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -55,6 +56,7 @@ const norm = (s) => String(s || '').replace(/[\s  ]+/g, ' ').trim();
 async function openOrders(flag) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h (tools/demo-clock.mjs)
   const errors = [], fetched = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewport({ width: 1366, height: 1000 });
