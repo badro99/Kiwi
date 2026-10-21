@@ -92,7 +92,8 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=63',
+  '/assets/plan-catalog.js?v=1',
+  '/assets/interactive.js?v=64',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
   '/assets/invoicing.css?v=9',

@@ -1667,6 +1667,7 @@ section('Whole-project regressions');
     'waiter-queue-privacy-test.mjs',
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
+    'plan-catalog-test.mjs',
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',
     'tickets-taxonomy-test.mjs',

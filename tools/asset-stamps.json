@@ -492,8 +492,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "63",
-    "sha": "f01a153b2ad55628"
+    "v": "64",
+    "sha": "2f6a34634cb7df25"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -1038,6 +1038,10 @@
   "assets/phone.js": {
     "v": "1",
     "sha": "b26dcc02bc865757"
+  },
+  "assets/plan-catalog.js": {
+    "v": "1",
+    "sha": "14c90feed9cdcbd7"
   },
   "assets/planning-core.js": {
     "v": "8",
