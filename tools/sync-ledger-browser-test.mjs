@@ -691,6 +691,27 @@ async function bqHead(page) {
   const m = /(\d+)\s+ventes?\s+·\s+(.+?)\s*MAD/.exec(s);
   return { raw: s, tx: m ? Number(m[1]) : NaN, net: m ? cents(m[2]) : NaN };
 }
+/* The till's own receipts, compared with the server by z-reconciliation.js.
+   The boutique till never sent this comparison (Santos Store: 211 sales in two
+   weeks, no row in z_reconciliations), so a receipt that never arrived was
+   seen by nobody. The row is written by /api/z-reconciliation; poll it until
+   the till's last snapshot has been compared. */
+async function zMatched(t, slug, count, cents, label) {
+  t.step(label);
+  let row = null;
+  for (let i = 0; i < 45; i++) {
+    try {
+      row = stack.db.prepare('SELECT status, reported_count, reported_cents, server_count, server_cents, missing_count, mismatch_count FROM z_reconciliations WHERE merchant = ? ORDER BY updated_ts DESC LIMIT 1').get(slug);
+    } catch (_) { row = null; }
+    if (row && row.status === 'matched' && Number(row.reported_count) === count && Number(row.reported_cents) === cents) break;
+    await sleep(1000);
+  }
+  check(!!row && row.status === 'matched' && Number(row.reported_count) === count && Number(row.reported_cents) === cents
+    && Number(row.server_count) === count && Number(row.server_cents) === cents,
+    `${label} · ${count} receipts, ${mad(cents)} MAD, matched`,
+    row ? `z row ${row.status}: till ${row.reported_count} / ${mad(Number(row.reported_cents))} MAD, server ${row.server_count} / ${mad(Number(row.server_cents))} MAD, missing ${row.missing_count}, mismatched ${row.mismatch_count}` : 'no z_reconciliations row for this store');
+}
+
 /* One ticket on the boutique till: tap each article, add it, validate, pay. A
  * split takes « 50 % » on the first tender and the rest on the second. */
 async function bqSale(t, page, names, tender) {
@@ -782,6 +803,7 @@ await scenario('boutique · cash, card, split and an offline sale', async (t) =>
   compare('boutique till clôture', { tx: clo.tx, net: clo.net, card: clo.card, cash: clo.cash, basket: clo.basket }, want);
   const server = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(BOUT.slug);
   check(Number(server.c) === want.net && Number(server.n) === want.tx, `server ledger · ${want.tx} boutique sales, ${mad(want.net)} MAD`, `D1 has ${server.n} rows, ${mad(Number(server.c))} MAD`);
+  await zMatched(t, BOUT.slug, want.tx, want.net, 'boutique till · its receipts reconciled with the server');
 
   const dash = owners.boutique.page;
   await openDashboard(t, dash, BOUT);
@@ -922,6 +944,7 @@ await scenario('boutique · a return for store credit, then the credit spent', a
   compare('boutique till clôture after a return for credit', { tx: clo.tx, net: clo.net, card: clo.card, cash: clo.cash }, want);
   const server = stack.db.prepare('SELECT COUNT(*) AS n, SUM(COALESCE(amount_cents, amount * 100)) AS c FROM sales WHERE merchant = ? AND void_ts IS NULL').get(BOUT.slug);
   check(Number(server.c) === want.net, `server ledger · ${mad(want.net)} MAD kept after a return for credit`, `D1 sums ${mad(Number(server.c))} MAD over ${server.n} rows`);
+  await zMatched(t, BOUT.slug, want.tx, want.net, 'boutique till · receipts reconciled after a return for credit');
 
   const dash = owners.boutique.page;
   await openDashboard(t, dash, BOUT);

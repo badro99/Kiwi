@@ -7407,8 +7407,61 @@
      pendant le service, sans compter comme une clôture — même contrat que
      saveProvisional() côté restaurant. */
   let bqLastProv = 0;
+  /* Le rapprochement des ventes avec le serveur (z-reconciliation.js), que la
+     caisse restaurant fait depuis longtemps et que la boutique ne faisait pas :
+     Santos Store a encaissé 211 ventes en deux semaines sans qu'aucune ne soit
+     jamais comparée au registre. Chaque vente envoyée est décrite comme le
+     serveur la range : l'identifiant que postSale() lui donne, l'argent
+     réellement reçu (ni l'avoir, ni la livraison encore à encaisser) et le
+     moyen de paiement. Une vente réglée sans argent (avoir, livraison en
+     compte) n'apporte rien à comparer et reste dehors ; une vente annulée
+     part comme marque, pour retirer son identifiant d'un envoi précédent. */
+  function bqZJournal(slug) {
+    const Live = window.KiwiLive;
+    if (!Live || !Live.saleIdFor) return null;
+    const out = [];
+    SALES.forEach((s) => {
+      if (!s || !s.syncId || !isToday(s.at)) return;
+      const id = s.serverId ? String(s.serverId) : Live.saleIdFor({ id: s.syncId }, slug);
+      if (s.voided) { out.push({ id, origin: true, voided: true }); return; }
+      const parts = Array.isArray(s.parts) ? s.parts : [];
+      /* La part du dépôt-vente (Maison) n'est pas la recette du commerce :
+         postSale() la retire, la comparaison aussi. */
+      const received = parts.reduce((sum, p) => sum
+        + (p && p.m !== 'avoir' && p.m !== 'livraison' && (+p.amount || 0) > 0 ? +p.amount : 0), 0);
+      const cents = Math.round(Math.max(0, received - (+s.consigned || 0)) * 100);
+      if (!(cents > 0)) return;
+      out.push({ id, origin: true, time: new Date(s.at), amount: cents / 100, method: bqPaymentMethod(parts), kind: 'vente' });
+    });
+    return out;
+  }
+  /* Un échec ne bloque jamais la caisse : la vente est déjà au journal et dans
+     la file de Live Link. Le rapprochement ne fait que dire si elle est arrivée. */
+  function bqZQueue(closed) {
+    try {
+      const Z = window.KiwiZReconciliation, DR = window.KiwiDayReport;
+      if (IS_DEMO || !Z || !DR || !DR.isReal || !DR.isReal()) return Promise.resolve({ ok: false, reason: 'not-real' });
+      const slug = DR.storeSlug();
+      const journal = bqZJournal(slug);
+      if (!slug || !journal) return Promise.resolve({ ok: false, reason: 'unavailable' });
+      const day = DR.businessDay(Date.now());
+      /* Mêmes bornes que celles du module : une vente comptée ici et écartée
+         là ressortirait en « vente sans envoi », une fausse alerte. */
+      const bounds = DR.dayBounds(day, slug);
+      const sent = journal.filter((e) => !e.voided && +e.time >= bounds.from && +e.time < bounds.to);
+      const CS = window.KiwiCashSessions;
+      const report = {
+        store: { slug }, day, cutoff: DR.cutoff(slug),
+        terminalId: (CS && CS.terminalId && CS.terminalId()) || 'boutique',
+        txns: sent.length, net: sent.reduce((sum, e) => sum + Math.round(e.amount * 100), 0) / 100,
+      };
+      return Promise.resolve(closed ? Z.queueClose(report, journal) : Z.queueSnapshot(report, journal))
+        .catch(() => ({ ok: false, reason: 'queue-failed' }));
+    } catch (_) { return Promise.resolve({ ok: false, reason: 'queue-failed' }); }
+  }
   function bqSaveProvisional(force) {
     if (IS_DEMO || !window.KiwiDayReport || !bqShift) return;
+    bqZQueue(false);
     if (!force && Date.now() - bqLastProv < 90000) return;
     bqLastProv = Date.now();
     try {
@@ -7772,6 +7825,7 @@
       toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
       return;
     }
+    bqZQueue(true);
     bqShift = null;
     bqShiftPersist();
     if (report) bqShowPostClose(report); else bqFinishClose();

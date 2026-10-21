@@ -588,6 +588,7 @@ for (const test of [
   'identity-me-timeout-test.mjs',
   'z-alert-copy-test.mjs',
   'z-reconciliation-client-test.mjs',
+  'retail-z-reconciliation-test.mjs',
   'z-reconciliation-browser-test.mjs',
   'caisse-winter-clock-test.mjs',
   'device-timezone-test.mjs',
