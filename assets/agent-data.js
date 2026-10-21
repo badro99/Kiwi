@@ -513,10 +513,10 @@
   function sClientTop(spec, L) {
     var t = tr(L);
     var book = clientBook();
-    if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
+    if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
     var sorted = book.slice().sort(function (a, b) { return (+b.spend || 0) - (+a.spend || 0); });
     var c = sorted[0];
-    if (!(+c.spend > 0)) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
+    if (!(+c.spend > 0)) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
     var d = daysSince(c.lastSeen);
     var others = sorted.slice(1, 4);
     var stats = [
@@ -535,7 +535,7 @@
     var r = {
       text: t.cliTop(esc(c.name)), stats: stats,
       prov: { mod: 'clients', count: book.length, unit: 'entries' },
-      open: open1(L, 'pClients', 'nav-clients'),
+      open: open1(L, 'pClients', 'clients-directory'),
     };
     /* Le carnet ne retient qu'un cumul par client, jamais l'historique daté.
        « Mon meilleur client ce mois-ci » n'a donc pas de réponse propre : on
@@ -548,8 +548,8 @@
   function sClientPoints(spec, L) {
     var t = tr(L);
     var f = findClient(spec.raw || '');
-    if (!f.book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
-    if (!f.hit) return { text: t.cliWhich, open: open1(L, 'pClients', 'nav-clients') };
+    if (!f.book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
+    if (!f.hit) return { text: t.cliWhich, open: open1(L, 'pClients', 'clients-directory') };
     var c = f.hit;
     /* Le programme réel range seuil et récompense par modèle (amount.threshold,
      * visit.target…). On lisait cfg.on / cfg.threshold / cfg.reward, qui
@@ -575,7 +575,7 @@
         { l: t.cliLast, v: d == null ? '·' : t.cliDaysAgo(d), h: '' },
       ],
       prov: { mod: 'clients', count: f.book.length, unit: 'entries' },
-      open: open1(L, 'pClients', 'nav-clients'),
+      open: open1(L, 'pClients', 'clients-directory'),
     };
     if (!cfg || !on) r.note = t.cliNoLoyalty;
     else if (thr > 0) {
@@ -589,10 +589,10 @@
   function sClientDormant(L) {
     var t = tr(L);
     var book = clientBook();
-    if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
+    if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
     var sleep = book.filter(function (c) { var d = daysSince(c.lastSeen); return d != null && d > 30; })
       .sort(function (a, b) { return (+b.spend || 0) - (+a.spend || 0); });
-    if (!sleep.length) return { text: t.cliDormantNone, open: open1(L, 'pClients', 'nav-clients') };
+    if (!sleep.length) return { text: t.cliDormantNone, open: open1(L, 'pClients', 'clients-directory') };
     var top = sleep.slice(0, 4);
     return {
       text: t.cliDormant(sleep.length),
@@ -601,7 +601,7 @@
       }).concat(sleep.length > top.length ? [{ l: t.andMore(sleep.length - top.length), v: '·', h: '' }] : []),
       note: t.cliDormantNote,
       prov: { mod: 'clients', count: book.length, unit: 'entries' },
-      open: open1(L, 'pClients', 'nav-clients'),
+      open: open1(L, 'pClients', 'clients-directory'),
     };
   }
 
