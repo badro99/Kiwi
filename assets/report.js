@@ -142,6 +142,18 @@
     var a = parseIso(p[0]), b = parseIso(p[1]);
     if (!a || !b) return null;
     if (a > b) { var tmp = a; a = b; b = tmp; }
+    /* Same days as the dashboard and the Z: a business day runs from the
+       store's cutoff (05:00 by default) to the next, in the store's zone, so
+       a sale at 01:30 belongs to the evening before. Midnight only when the
+       day-report module is absent. */
+    var R = window.KiwiDayReport;
+    if (R && typeof R.dayBounds === 'function') {
+      var iso = function (d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
+      try {
+        var first = R.dayBounds(iso(a)), last = R.dayBounds(iso(b));
+        if (first && last && isFinite(first.from) && isFinite(last.to)) return [first.from, last.to];
+      } catch (_) {}
+    }
     return [a.getTime(), new Date(b.getFullYear(), b.getMonth(), b.getDate() + 1).getTime()];
   }
 

@@ -1332,6 +1332,7 @@ section('Whole-project regressions');
     'repeat-sale-guard-test.mjs',
     'shift-age-nudge-test.mjs',
     'audit-remediation-dashboard-test.mjs',
+    'business-day-surfaces-test.mjs',
     'audit-remediation-devices-test.mjs',
     'dashboard-analytics-toggle-test.mjs',
     'vexel-startup-test.mjs',

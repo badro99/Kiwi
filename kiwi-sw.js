@@ -69,7 +69,7 @@ var SHELL = [
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
-  '/assets/sold-insights.js?v=12',
+  '/assets/sold-insights.js?v=13',
   '/assets/design-2026.css?v=3',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -188,7 +188,7 @@ var SHELL = [
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=23',
-  '/assets/report.js?v=5',
+  '/assets/report.js?v=6',
   '/assets/day-report-dash.js?v=34',
   '/assets/day-report-export.js?v=12',
   '/assets/month-report.js?v=10',
@@ -438,7 +438,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=11',
+  '/assets/pos-reprint.js?v=12',
   '/assets/pressing-caisse.js?v=46',
   '/assets/pressing-caisse.css?v=46',
   '/assets/material-icons.js?v=3',

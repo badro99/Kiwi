@@ -218,7 +218,7 @@
       if (isNaN(d.getTime())) return false;
       /* Hors du jour : seulement avec le ticket figé. Sans lui, il faudrait le
        * recomposer avec l'en-tête d'aujourd'hui — voir plus haut. */
-      if (!sameDay(d, now) && !e.rc) return false;
+      if (!sameBusinessDay(d.getTime(), now.getTime()) && !e.rc) return false;
       /* Un montant nul ou négatif n'a pas de ticket à ressortir : un différé
        * n'a rien encaissé, et un remboursement porte son propre reçu. */
       return (+e.total || 0) > 0 && !e.voided;
@@ -382,7 +382,23 @@
    *    réseau n'est pas un secours (c'est aussi pourquoi ce fichier est dans la
    *    coquille hors ligne). */
   var serverDay = {};                             /* le dernier lot serveur, par métier */
-  function startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  /* The service's day, as on the Z: from the store's cutoff (05:00 by
+     default) to the next. At 01:30 the evening's receipts are still today's;
+     a calendar midnight dropped them from the list mid-service. Midnight only
+     when the day-report module is absent. */
+  function bizKey(t) {
+    var R = window.KiwiDayReport;
+    if (R && typeof R.businessDay === 'function') { try { return R.businessDay(t, merchant() || undefined); } catch (_) {} }
+    var d = new Date(t); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+  }
+  function sameBusinessDay(a, b) { return bizKey(a) === bizKey(b); }
+  function startOfToday() {
+    var R = window.KiwiDayReport;
+    if (R && typeof R.dayBounds === 'function' && typeof R.today === 'function') {
+      try { var m = merchant() || undefined, b = R.dayBounds(R.today(m), m); if (b && isFinite(b.from)) return b.from; } catch (_) {}
+    }
+    var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
   function merchant() {
     try {
       if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {

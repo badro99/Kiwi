@@ -240,8 +240,8 @@
     "sha": "5a2eb5b9bc652554"
   },
   "assets/dashboard-extra.js": {
-    "v": "13",
-    "sha": "f7e0e59eb287cc1e"
+    "v": "14",
+    "sha": "ec911db9a62088fa"
   },
   "assets/dashboard-native.js": {
     "v": "3",
@@ -1208,8 +1208,8 @@
     "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
-    "v": "11",
-    "sha": "2b3dd0013f1a750e"
+    "v": "12",
+    "sha": "0d9ce0ffc4763a60"
   },
   "assets/pos-sale.js": {
     "v": "14",
@@ -1316,8 +1316,8 @@
     "sha": "b05e56e9c4df0fb4"
   },
   "assets/report.js": {
-    "v": "5",
-    "sha": "4e42ba6726baa3ba"
+    "v": "6",
+    "sha": "c76f521b8d4411b7"
   },
   "assets/reservations.css": {
     "v": "9",
@@ -1392,12 +1392,12 @@
     "sha": "32870fad3e707bc4"
   },
   "assets/simple.js": {
-    "v": "10",
-    "sha": "80ea6310593d10ec"
+    "v": "11",
+    "sha": "1b73649bdcabc3e4"
   },
   "assets/sold-insights.js": {
-    "v": "12",
-    "sha": "08fe656f3ce62f1d"
+    "v": "13",
+    "sha": "6f4ea2553c62342f"
   },
   "assets/staff-roles.js": {
     "v": "1",

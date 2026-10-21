@@ -197,12 +197,23 @@
     const vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
     const tot = ownTotals(vid, 'septJours');
     const realSales = real ? ownSales(vid, 'septJours') : [];
+    /* Business days, as on the till's Z: from the store's cutoff (05:00 by
+       default) to the next, in its zone. A sale at 01:30 is last night's. */
+    const R = window.KiwiDayReport;
+    const bizToday = R && R.today && R.dayBounds && R.shiftDay ? R.today() : '';
     const days = real ? Array.from({ length: 7 }, (_, offset) => {
-      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offset);
-      const next = new Date(d); next.setDate(next.getDate() + 1);
+      let d, from, to;
+      if (bizToday) {
+        const key = R.shiftDay(bizToday, -offset), b = R.dayBounds(key);
+        d = new Date(key + 'T12:00:00'); from = b.from; to = b.to;
+      } else {
+        d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offset);
+        const next = new Date(d); next.setDate(next.getDate() + 1);
+        from = d.getTime(); to = next.getTime();
+      }
       const amount = realSales.reduce((sum, s) => {
         const ts = +s.ts || 0;
-        return sum + (ts >= d.getTime() && ts < next.getTime() ? Math.max(0, +s.amount || 0) : 0);
+        return sum + (ts >= from && ts < to ? Math.max(0, +s.amount || 0) : 0);
       }, 0);
       return {
         date: offset === 0 ? "Aujourd'hui" : offset === 1 ? 'Hier' : d.toLocaleDateString('fr-FR', { weekday: 'long' }),

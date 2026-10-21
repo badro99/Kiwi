@@ -33,8 +33,27 @@
     var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
   }
+  /* The store's business day (cutoff 05:00 by default, store zone): at 01:30
+     the service still running is yesterday's date, as on the Z. */
+  function businessToday() {
+    try {
+      var R = window.KiwiDayReport;
+      if (R && typeof R.today === 'function') { var d = R.today(slug()); if (parseDateKey(d)) return d; }
+    } catch (_) {}
+    return dateKey(new Date());
+  }
+  function dayRange(firstKey, lastKey, first, last) {
+    try {
+      var R = window.KiwiDayReport;
+      if (R && typeof R.dayBounds === 'function') {
+        var a = R.dayBounds(firstKey, slug()), b = R.dayBounds(lastKey, slug());
+        if (a && b && isFinite(a.from) && isFinite(b.to)) return { from:a.from, to:b.to };
+      }
+    } catch (_) {}
+    return { from:first.getTime(), to:new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() };
+  }
   function freshPicker() {
-    var today = dateKey(new Date());
+    var today = businessToday();
     return { open:false, mode:'day', day:today, from:today, to:today, error:'' };
   }
   var dashboardPicker = freshPicker();
@@ -44,8 +63,7 @@
     if (period && typeof period === 'object') {
       var first = parseDateKey(period.from), last = parseDateKey(period.to || period.from);
       if (first && last && first.getTime() <= last.getTime()) {
-        var from = first.getTime();
-        var to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime();
+        var span = dayRange(dateKey(first), dateKey(last), first, last), from = span.from, to = span.to;
         var days = Math.round((Date.UTC(last.getFullYear(), last.getMonth(), last.getDate()) - Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())) / DAY) + 1;
         return { days:days, from:from, to:to, previousFrom:from-(to-from), custom:{from:dateKey(first),to:dateKey(last)} };
       }
@@ -289,7 +307,7 @@
     var rerender = function(fetchMore){ if(till){renderTillNoFetch(root);if(fetchMore)fetchTill(root);}else{renderDashboard();} };
     var picker = till ? tillPicker : dashboardPicker;
     Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-days]'),function(b){ b.onclick=function(){ var d=Number(b.dataset.ksoldDays)||7;picker.open=false;picker.error='';if(till){tillDays=d;tillRange=null;}else{dashboardDays=d;dashboardRange=null;}rerender(true); }; });
-    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-custom]'),function(b){ b.onclick=function(){picker.open=!picker.open;picker.error='';rerender(false);}; });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-custom]'),function(b){ b.onclick=function(){picker.open=!picker.open;picker.error='';if(picker.open&&!picker.picked){picker.day=picker.from=picker.to=businessToday();}rerender(false);}; });
     Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-mode]'),function(b){ b.onclick=function(){picker.mode=b.dataset.ksoldMode;picker.error='';rerender(false);}; });
     var cancel = root.querySelector('[data-ksold-cancel]'); if(cancel) cancel.onclick=function(){picker.open=false;picker.error='';rerender(false);};
     var apply = root.querySelector('[data-ksold-apply]'); if(apply) apply.onclick=function(){
@@ -300,7 +318,7 @@
       if(!a||!z){picker.error=L('Choisissez la date.','Choose a date.','اختر التاريخ.');rerender(false);return;}
       if(a>z){picker.error=L('La fin doit venir après le début.','The end must come after the start.','يجب أن تأتي النهاية بعد البداية.');rerender(false);return;}
       if(z>today){picker.error=L('La période ne peut pas finir dans le futur.','The period cannot end in the future.','لا يمكن أن تنتهي الفترة في المستقبل.');rerender(false);return;}
-      var selected={from:dateKey(a),to:dateKey(z)};picker.open=false;picker.error='';if(till)tillRange=selected;else dashboardRange=selected;rerender(true);
+      var selected={from:dateKey(a),to:dateKey(z)};picker.picked=true;picker.open=false;picker.error='';if(till)tillRange=selected;else dashboardRange=selected;rerender(true);
     };
   }
   function installDashboard() {

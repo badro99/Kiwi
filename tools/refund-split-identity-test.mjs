@@ -86,7 +86,7 @@ const splitRemote = [
   { ref: 'Table 1', label: 'part 2', total: 5, ts: Date.now(), method: 'cash', saleId: 'cash-server' },
 ];
 const rowsContext = { providers: { restaurant: () => splitLocal }, serverDay: { restaurant: splitRemote },
-  window: {}, Date, Array, sameDay: () => true };
+  window: {}, Date, Array, sameDay: () => true, sameBusinessDay: () => true };
 vm.createContext(rowsContext);
 vm.runInContext(reprintSource.slice(rowsStart, rowsEnd), rowsContext);
 const displayed = vm.runInContext("rows('restaurant')", rowsContext);
