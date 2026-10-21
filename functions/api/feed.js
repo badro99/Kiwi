@@ -62,10 +62,50 @@ async function reconcileLinkedTestRefunds(env, merchant, legacy) {
   ).bind(ts, merchant, legacy || merchant).run();
 }
 
-export async function onRequestGet({ request, env }) {
-  if (!env || !env.DB) return json({ sales: [], cursor: 0 });
+/* Window cursors are opaque routing state, never authorization. Bind them to
+ * the served tenant and exact window; every page rechecks entitlement. */
+function windowCursor(merchant, from, to, row) {
+  return btoa(JSON.stringify([1, merchant, from, to, row.ts, row.cursor]))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function readWindowCursor(raw, merchant, from, to) {
+  if (!raw) return [from, 0];
+  if (raw.length > 1024 || !/^[A-Za-z0-9_-]+$/.test(raw)) throw new Error('after');
+  const a = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/')));
+  if (!Array.isArray(a) || a.length !== 6 || a[0] !== 1 || a[1] !== merchant || a[2] !== from || a[3] !== to ||
+      !Number.isFinite(a[4]) || a[4] < from || a[4] >= to || !Number.isSafeInteger(a[5]) || a[5] <= 0) throw new Error('after');
+  return a.slice(4);
+}
+async function windowRows(env, merchant, legacy, from, to, after, limit) {
+  const optional = ['amount_cents', 'gross_amount_cents', 'discount_amount_cents', 'discount_reason', 'discount_actor_id', 'lines', 'channel'];
+  for (let attempt = 0; attempt <= 7; attempt++) {
+    const cols = optional.join(', ');
+    try {
+      const rs = await env.DB.prepare(
+        'SELECT rowid AS cursor, id, amount, method, label, ref, ts' + (cols ? ', ' + cols : '') +
+        ' FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND ts < ? AND void_ts IS NULL' +
+        ' AND (ts > ? OR (ts = ? AND rowid > ?))' +
+        ` ORDER BY ts ASC, rowid ASC LIMIT ${limit + 1}`
+      ).bind(merchant, legacy || merchant, from, to, after[0], after[0], after[1]).all();
+      return rs.results || [];
+    } catch (e) {
+      // Unlike legacy modes, never claim completeness without void exclusion.
+      const missing = /no such column: ([a-z_]+)\b/.exec(String(e?.message || e));
+      const index = missing ? optional.indexOf(missing[1]) : -1;
+      if (index < 0) throw e;
+      optional.splice(index, 1);
+    }
+  }
+  throw new Error('window-schema');
+}
 
+export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
+  const windowRead = url.searchParams.get('window') === '1' && url.searchParams.has('from') && url.searchParams.has('to');
+  const windowFrom = Number(url.searchParams.get('from')), windowTo = Number(url.searchParams.get('to'));
+  if (windowRead && (!Number.isSafeInteger(windowFrom) || !Number.isSafeInteger(windowTo) || windowFrom <= 0 ||
+      windowTo <= windowFrom || windowTo - windowFrom > 400 * 86400000 + 2 * 3600000)) return json({ error: 'range' }, 400);
+  if (!env || !env.DB) return windowRead ? json({ error: 'db' }, 503) : json({ sales: [], cursor: 0 });
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
@@ -83,7 +123,12 @@ export async function onRequestGet({ request, env }) {
    * l'écriture. Une caisse ne peut toujours lire que la boutique où elle est
    * posée. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
-  if (!merchant) return json({ sales: [], cursor: since, merchant: '' });
+  if (!merchant) return windowRead ? json({ error: 'unauthorized' }, 403) : json({ sales: [], cursor: since, merchant: '' });
+  let after;
+  if (windowRead) {
+    try { after = readWindowCursor(url.searchParams.get('after'), merchant, windowFrom, windowTo); }
+    catch (_) { return json({ error: 'after' }, 400); }
+  }
 
   /* Which buckets this store reads: its own, plus the account's pre-split one
    * when that is unambiguous. Binding `merchant` twice when there is no second
@@ -148,7 +193,7 @@ export async function onRequestGet({ request, env }) {
    * reserve a real range and describe its first value in the old protocol. New
    * clients call /api/ticket-sequence directly. This can be removed after v206
    * has aged out. */
-  if (url.searchParams.get('seq') === '1') {
+  if (!windowRead && url.searchParams.get('seq') === '1') {
     try {
       const lease = await reserveTicketRange(env, merchant, 500, 1000, new Date().getUTCFullYear());
       return json({ seq: lease.start - 1, merchant, legacyLeaseEnd: lease.end });
@@ -158,13 +203,20 @@ export async function onRequestGet({ request, env }) {
   }
 
   let rows = [];
+  let next = null;
   let voided = [];
   /* Une seule tentative par forme de schéma, de la plus récente à la plus
    * ancienne. Chaque `catch` ne rattrape QUE la colonne qui manque et retombe
    * d'un cran ; tout le reste remonte en 500, parce qu'un flux vide servi en
    * silence est le pire des messages d'erreur. */
   try {
-    if (!voidsOnly) {
+    if (windowRead) {
+      rows = await windowRows(env, merchant, legacy, windowFrom, windowTo, after, limit);
+      if (rows.length > limit) {
+        rows = rows.slice(0, limit);
+        next = windowCursor(merchant, windowFrom, windowTo, rows[rows.length - 1]);
+      }
+    } else if (!voidsOnly) {
       const rs = byDay
         ? await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
@@ -177,15 +229,18 @@ export async function onRequestGet({ request, env }) {
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
     }
-    const vs = await env.DB.prepare(
-      'SELECT rowid AS cursor, id, ref, ts, void_ts FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
-      'ORDER BY void_ts DESC LIMIT 500'
-    ).bind(merchant, legacy || merchant).all();
-    voided = ((vs && vs.results) || []).map((r) => Object.assign({ c: r.cursor, i: r.id || '', r: r.ref || '' }, {
-      vts: r.void_ts != null ? Number(r.void_ts) : null,
-      ts: r.ts != null ? Number(r.ts) : null,
-    }));
+    if (!windowRead) {
+      const vs = await env.DB.prepare(
+        'SELECT rowid AS cursor, id, ref, ts, void_ts FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
+        'ORDER BY void_ts DESC LIMIT 500'
+      ).bind(merchant, legacy || merchant).all();
+      voided = ((vs && vs.results) || []).map((r) => Object.assign({ c: r.cursor, i: r.id || '', r: r.ref || '' }, {
+        vts: r.void_ts != null ? Number(r.void_ts) : null,
+        ts: r.ts != null ? Number(r.ts) : null,
+      }));
+    }
   } catch (e) {
+    if (windowRead) return json({ error: 'db' }, 500);
     const msg = String((e && e.message) || e);
     const noVoid = msg.includes('void_ts');
     const noLines = msg.includes('lines');
@@ -363,6 +418,7 @@ export async function onRequestGet({ request, env }) {
   /* Une lecture par journée ne fait pas avancer le curseur : elle est triée à
      l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
      comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
+  if (windowRead) return json({ merchant, from: windowFrom, to: windowTo, sales: rows, next, complete: next === null });
   const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
   /* The till's heartbeat (order_desk, stamped by its authenticated queue poll
      every few seconds; kitchen and service screens excluded). The dashboard

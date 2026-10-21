@@ -149,7 +149,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/sales-history.js?v=2',
+  '/assets/sales-history.js?v=3',
   '/assets/dateRange.js?v=87',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',

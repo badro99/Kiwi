@@ -1366,6 +1366,8 @@ section('Whole-project regressions');
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',
+    'feed-window-test.mjs',
+    'sales-window-test.mjs',
     'sales-summary-test.mjs',
     'sales-history-parity-test.mjs',
     'sales-summary-store-test.mjs',

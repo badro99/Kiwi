@@ -214,3 +214,65 @@
   window.KiwiSalesSummary = Object.freeze({ coverageStart, get, stats,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } });
 })();
+
+/* Complete raw windows for detail readers. No writes to the durable ledger. */
+(function () {
+  'use strict';
+  const cache = new Map(), pending = new Map(), MAX_SPAN = 400 * 86400000 + 7200000;
+  const merchant = () => window.KiwiLive?.merchant?.() || '';
+  const copy = rows => JSON.parse(JSON.stringify(rows));
+  async function read(url) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timer;
+    try {
+      return await Promise.race([
+        Promise.resolve().then(() => fetch(url, { headers: { Accept: 'application/json' },
+          credentials: 'include', cache: 'no-store', signal: controller?.signal }))
+          .then(r => { if (!r?.ok) throw new Error('http'); return r.json(); }),
+        new Promise((_, reject) => { timer = setTimeout(() => { controller?.abort(); reject(new Error('timeout')); }, 12000); })
+      ]);
+    } finally { clearTimeout(timer); }
+  }
+  async function collect(m, from, to) {
+    const sales = [], cursors = new Set(), tokens = new Set();
+    let after = '', lastTs = from, lastCursor = 0;
+    for (let page = 0; page < 20; page++) {
+      const data = await read('/api/feed?window=1&merchant=' + encodeURIComponent(m) + '&from=' + from + '&to=' + to + '&limit=500'
+        + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (merchant() !== m || data?.merchant !== m || data.from !== from || data.to !== to ||
+          !Array.isArray(data.sales) || data.sales.length > 500 || typeof data.complete !== 'boolean' ||
+          (data.complete ? data.next !== null : typeof data.next !== 'string' || !data.next || !data.sales.length)) throw new Error('shape');
+      for (const row of data.sales) {
+        if (!row || !Number.isFinite(row.ts) || row.ts < from || row.ts >= to ||
+            !Number.isSafeInteger(row.cursor) || row.cursor <= 0 || cursors.has(row.cursor) ||
+            row.ts < lastTs || (row.ts === lastTs && row.cursor <= lastCursor) ||
+            !Number.isFinite(row.amountCents ?? row.amount)) throw new Error('row');
+        cursors.add(row.cursor); lastTs = row.ts; lastCursor = row.cursor; sales.push(row);
+      }
+      if (data.complete) return sales;
+      if (tokens.has(data.next)) throw new Error('cursor');
+      tokens.add(data.next); after = data.next;
+    }
+    return null; // Never present a prefix as a complete window.
+  }
+  function fetchRaw(from, to) {
+    try {
+      const m = merchant();
+      if (!m || !Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from <= 0 || to <= from || to - from > MAX_SPAN) return Promise.resolve(null);
+      const key = JSON.stringify([m, from, to]), hit = cache.get(key);
+      if (hit && Date.now() - hit.at < 60000) return Promise.resolve(copy(hit.rows));
+      if (pending.has(key)) return pending.get(key).then(rows => rows === null ? null : copy(rows));
+      const task = collect(m, from, to).then(rows => {
+        if (rows !== null && merchant() === m) {
+          cache.delete(key); cache.set(key, { rows, at: Date.now() });
+          while (cache.size > 4) cache.delete(cache.keys().next().value);
+          return rows;
+        }
+        return null;
+      }).catch(() => null).finally(() => pending.delete(key));
+      pending.set(key, task);
+      return task.then(rows => rows === null ? null : copy(rows));
+    } catch (_) { return Promise.resolve(null); }
+  }
+  window.KiwiSalesWindow = Object.freeze({ fetchRaw });
+})();
