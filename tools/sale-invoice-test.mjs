@@ -325,7 +325,8 @@ const venuesFn = new Function('window', 'localStorage', 'document', 'location', 
 const KiwiSales = venuesFn(fakeVenuesWin, fakeVenuesWin.localStorage, fakeVenuesWin.document, fakeVenuesWin.location);
 
 // Simulation de l'ingestion live-link avec le fragment de code réel de live-link.js
-const addCallMatch = liveLinkSource.match(/window\.KiwiSales\.add\(vid,\s*(\{[\s\S]*?\})\s*\)/);
+/* The bridge queues each new sale (fresh.push) and stores the batch with KiwiSales.addMany. */
+const addCallMatch = liveLinkSource.match(/fresh\.push\(\s*(\{[\s\S]*?\})\s*\)/);
 const feedRow = { id: 'sale-ref-x', ref: 'T-1', orderRef: 'Table 4', amount: 50, ts: 1770000000000, cursor: 42 };
 let mappedSale = null;
 if (addCallMatch) {

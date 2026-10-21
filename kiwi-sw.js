@@ -110,7 +110,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=52',
+  '/assets/venues.js?v=53',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=10',
@@ -181,7 +181,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=65',
+  '/assets/live-link.js?v=66',
   '/assets/channel-sales.js?v=4',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois

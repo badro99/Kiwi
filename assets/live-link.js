@@ -1448,6 +1448,9 @@
     try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = e; }); } catch (_) {}
     var haveRefund = {};
     try { (window.KiwiRefunds.list(vid) || []).forEach(function (e) { if (e && e.cursor) haveRefund[e.cursor] = e; }); } catch (_) {}
+    /* New sales are stored in one batch after the loop: one write, one redraw
+       (KiwiSales.addMany). One add() per sale redrew the dashboard per sale. */
+    var fresh = [];
     feedSales.forEach(function (row) {
       if (row.tenant !== tenant) return;             // another store's money — never this one's
       var s = row.s;
@@ -1496,15 +1499,20 @@
          the money and the ticket summary only, so assets/agent-data.js fell back
          to its honest refusal on "quel est mon produit le plus vendu" for every
          merchant whose caisse is not in this same browser. */
-      try { window.KiwiSales.add(vid, {
+      fresh.push({
         amount: amt, amountCents: amtCents, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
         server: s.server || '', channel: s.channel || '', lines: s.lines,
         paymentParts: s.paymentParts || null, tipCents: s.tipCents,
         saleId: s.id || s.saleId || '', grossAmountCents: s.grossAmountCents,
         discountAmountCents: s.discountAmountCents, discountReason: s.discountReason || '', actorId: s.actorId || '',
-      }); have[cur] = 1; } catch (_) {}
+      });
+      have[cur] = 1;
     });
+    if (fresh.length) {
+      if (window.KiwiSales.addMany) { try { window.KiwiSales.addMany(vid, fresh); } catch (_) {} }
+      else fresh.forEach(function (sale) { try { window.KiwiSales.add(vid, sale); } catch (_) {} });
+    }
     /* Fail closed once the full entitled history is known. Any server-backed
        local row absent from it is foreign (or voided), including rows copied by
        the former shared-placeholder migration. */

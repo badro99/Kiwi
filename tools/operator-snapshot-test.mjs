@@ -31,7 +31,8 @@ function harness(pages, { identity = { operator: true }, store = true, brokenSto
   }
   const queued = JSON.stringify([{ id: 'old-operator-outbox', merchant: tenant, amount: 99, ts }]);
   const storage = new Map([['kiwiLive', '1'], ['kiwiSaleQueue', queued]]);
-  const localStorage = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: k => storage.delete(k) };
+  const writes = new Map();
+  const localStorage = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => { writes.set(k, (writes.get(k) || 0) + 1); storage.set(k, String(v)); }, removeItem: k => storage.delete(k) };
   const ledger = cached.slice(), refunds = [];
   function salesStore(rows) {
     return {
@@ -86,11 +87,13 @@ function harness(pages, { identity = { operator: true }, store = true, brokenSto
     const end = venues.indexOf('  function salesTotals(', start);
     assert.ok(start >= 0 && end > start);
     vm.runInContext("const TRANSIENT_IDS = []; const currentVenue = 'custom-santos'; const slugOf = () => 'santos-store';\n" +
-      venues.slice(start, end) + '\nwindow.KiwiSales = { add: salesAdd, list: salesList, retainCursors: salesRetainCursors };' +
+      venues.slice(start, end) + '\nwindow.KiwiSales = { add: salesAdd, list: salesList, retainCursors: salesRetainCursors,' +
+      ' addMany: typeof salesAddMany === "function" ? salesAddMany : undefined,' +
+      ' subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); } };' +
       '\nwindow.KiwiRefunds = { add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors };', context);
   }
   return {
-    window, document, context, timers, requests, events, ids, selectors, node, ledger,
+    window, document, context, timers, requests, events, ids, selectors, node, ledger, writes,
     state: () => window.KiwiLive.status().snapshot,
     boot: async () => { document.dispatchEvent({ type: 'DOMContentLoaded' }); await settle(); },
     next: async () => { const [id, timer] = timers.entries().next().value; timers.delete(id); timer.fn(); await settle(); },
@@ -257,8 +260,17 @@ for (const sales of [[], [sale(1)]]) {
 const many = Array.from({ length: 1051 }, (_, i) => sale(i + 1, i === 1050 ? -20 : 10));
 const manyPages = [];
 for (let i = 0; i < many.length; i += 50) manyPages.push(page(many.slice(i, i + 50)));
-const retained = harness(manyPages, { realStore: true }); await retained.boot();
+const retained = harness(manyPages, { realStore: true });
+/* A cold history is stored in one batch: every sale stored one by one
+   re-wrote the whole ledger and redrew the dashboard once per sale, which
+   froze Santos Store's page for minutes on a first open (2 848 sales). */
+let redraws = 0;
+retained.window.KiwiSales.subscribe(() => { redraws++; });
+await retained.boot();
 while (retained.timers.size) await retained.next();
+const salesWrites = [...retained.writes].filter(([k]) => /^kiwiSales/.test(k)).reduce((n, [, c]) => n + c, 0);
+assert.ok(redraws <= 3, `a 1 050-sale history redraws the dashboard ${redraws} times, not once per sale`);
+assert.ok(salesWrites <= 3, `a 1 050-sale history writes the ledger ${salesWrites} times, not once per sale`);
 assert.equal(retained.state().phase, 'complete', 'actual store retains and verifies full history');
 assert.equal(retained.window.KiwiSales.list('custom-santos').length, 1050);
 assert.equal(retained.window.KiwiRefunds.list('custom-santos').length, 1);

@@ -3976,6 +3976,27 @@
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);
+    const entry = salesEntry(sale);
+    list.push(entry);
+    salesWrite(id, list);
+    salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    return entry;
+  }
+  /* A history arriving all at once (first open on a device, a stale cache):
+     one read, one write and one redraw for the whole batch. Adding 2 848
+     sales one by one re-read and re-wrote the ledger and redrew the
+     dashboard 2 848 times, which froze Santos Store's page for minutes. */
+  function salesAddMany(id, sales) {
+    id = id || currentVenue;
+    const rows = Array.isArray(sales) ? sales : [];
+    if (!rows.length) return [];
+    const list = salesList(id), out = [];
+    for (let i = 0; i < rows.length; i++) { const entry = salesEntry(rows[i]); list.push(entry); out.push(entry); }
+    salesWrite(id, list);
+    salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    return out;
+  }
+  function salesEntry(sale) {
     const entry = { ts: (sale && +sale.ts) || Date.now(), amount: Math.max(0, +(sale && sale.amount) || 0), method: (sale && sale.method) || 'card' };
     // What was actually sold. The till sends it and the live card shows it, but it
     // used to stop there — so the Ventes list read "Vente · Vente · Vente" and the
@@ -4056,9 +4077,6 @@
       }).filter(function (l) { return l.qty > 0; });
       if (!entry.lines.length) delete entry.lines;
     }
-    list.push(entry);
-    salesWrite(id, list);
-    salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return entry;
   }
   function salesAnnotate(id, cursor, meta) {
@@ -4211,6 +4229,7 @@
 
   window.KiwiSales = {
     add: salesAdd,
+    addMany: salesAddMany,
     annotate: salesAnnotate,
     list: salesList,
     remove: salesRemove,

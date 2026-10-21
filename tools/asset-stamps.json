@@ -864,8 +864,8 @@
     "sha": "36b1e6ca0472a20e"
   },
   "assets/live-link.js": {
-    "v": "65",
-    "sha": "9c8ad528ff9f1cde"
+    "v": "66",
+    "sha": "806a10dd7a477824"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -1480,8 +1480,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "52",
-    "sha": "706109cdd0affe98"
+    "v": "53",
+    "sha": "40cd043f4f4e711a"
   },
   "assets/vertical-state.js": {
     "v": "5",
