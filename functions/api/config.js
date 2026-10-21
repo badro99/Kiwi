@@ -298,7 +298,7 @@ export async function onRequestGet(context) {
     if (cfg && cfg.type) type = cfg.type;
     if (cfg) {
       const rawPlan = String(cfg.plan || '').trim().toLowerCase();
-      planExplicit = ['basic', 'pro', 'ultra', 'ultimate'].includes(rawPlan);
+      planExplicit = ['basic', 'plus', 'pro', 'ultra', 'ultimate'].includes(rawPlan);
       plan = planExplicit
         ? rawPlan
         : 'basic';
@@ -443,13 +443,13 @@ export async function onRequestPost(context) {
         const activeCount = rows.length;
         const explicitPlans = rows
           .map((r) => String(r.plan || '').trim().toLowerCase())
-          .filter((p) => ['basic', 'pro', 'ultra', 'ultimate'].includes(p));
+          .filter((p) => ['basic', 'plus', 'pro', 'ultra', 'ultimate'].includes(p));
 
         const isUltraOrUltimate = explicitPlans.includes('ultra') || explicitPlans.includes('ultimate');
-        const isExplicitBasicOrPro = !isUltraOrUltimate && (explicitPlans.includes('basic') || explicitPlans.includes('pro'));
+        const isExplicitBasicOrPro = !isUltraOrUltimate && (explicitPlans.includes('basic') || explicitPlans.includes('plus') || explicitPlans.includes('pro'));
 
         if (isExplicitBasicOrPro && activeCount >= 1) {
-          const tier = explicitPlans.includes('pro') ? 'pro' : 'basic';
+          const tier = explicitPlans.includes('pro') ? 'pro' : (explicitPlans.includes('plus') ? 'plus' : 'basic');
           return json({ error: 'plan-limit-exceeded', limit: 'venues', max: 1, tier }, 403);
         }
       } catch (_) { /* fail-soft permissif */ }

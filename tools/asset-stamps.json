@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "31",
-    "sha": "0ac62f0c6a8ca3d4"
+    "v": "32",
+    "sha": "5a5cc2b8f142168c"
   },
   "assets/accounting.js": {
     "v": "4",
@@ -256,8 +256,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "83",
-    "sha": "2748120243474b0a"
+    "v": "84",
+    "sha": "f301dd9de2b39007"
   },
   "assets/day-report-dash.js": {
     "v": "34",
@@ -268,7 +268,7 @@
     "sha": "9779aebc95b1b6f8"
   },
   "assets/day-report.js": {
-    "v": "22",
+    "v": "23",
     "sha": "cea922015e83836c"
   },
   "assets/delivery-collect.js": {
@@ -492,8 +492,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "62",
-    "sha": "70c32232a635fdff"
+    "v": "63",
+    "sha": "f01a153b2ad55628"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -800,8 +800,8 @@
     "sha": "ae1031a15dc813f1"
   },
   "assets/kiwi-health.js": {
-    "v": "1",
-    "sha": "a96426f68aa4ec09"
+    "v": "2",
+    "sha": "93f6ff72be482d0e"
   },
   "assets/kiwi-report.css": {
     "v": "2",
@@ -904,8 +904,8 @@
     "sha": "741c0a2e08bf8694"
   },
   "assets/merchant-config.js": {
-    "v": "280",
-    "sha": "3bdcb33314c3d988"
+    "v": "281",
+    "sha": "fa77d7451cdef1f7"
   },
   "assets/merchant-health.css": {
     "v": "3",

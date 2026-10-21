@@ -5,7 +5,8 @@
  *   node tools/plan-tier-test.mjs
  *
  * Règles :
- *   1. Kiwi Basic (199 MAD)  → 1 établissement max à la création
+ *   1. Kiwi Basic (150 MAD)  → 1 établissement max à la création
+ *   1b. Kiwi Plus (300 MAD)  → 1 établissement max à la création
  *   2. Kiwi Pro (399 MAD)    → 1 établissement max à la création (même que Basic)
  *   3. Kiwi Ultra (1 499 MAD)→ Illimité
  *   4. Kiwi Ultimate         → Illimité
@@ -122,7 +123,7 @@ function makeMockDB() {
 async function runTests() {
   console.log('■ Plafonds d\'établissements par offre (Plan Tier Enforcement)');
 
-  // 1. Basic Plan (199 MAD) - 1 venue limit
+  // 1. Basic Plan (150 MAD) - 1 venue limit
   {
     const db = makeMockDB();
     const aid = 'acc-basic-1';
@@ -168,6 +169,26 @@ async function runTests() {
       env: { DB: db, AUTH_SECRET: SECRET }
     });
     assert('Basic syncing existing store 1 -> Allowed', resSync.status === 200);
+  }
+
+  // 1b. Plus Plan (300 MAD) - 1 venue limit, like Basic and Pro
+  {
+    const db = makeMockDB();
+    const aid = 'acc-plus-1';
+    db._state.accounts[aid] = { business: 'Boutique Plus', email: 'plus@test.ma', created_ts: Date.now() };
+    const sess = await makeSession(aid, SECRET);
+    const headers = { Cookie: sessionCookie(sess).split(';')[0], 'content-type': 'application/json' };
+    const post = (body) => postConfig({
+      request: new Request('https://kiwi-os.com/api/config', { method: 'POST', headers, body: JSON.stringify(body) }),
+      env: { DB: db, AUTH_SECRET: SECRET }
+    });
+    const r1 = await post({ fresh: true, name: 'Boutique Plus', merchant: 'boutique-plus' });
+    assert('Plus 0 store -> 1st store created', r1.status === 200);
+    const s1 = db._state.merchant_config.find(m => m.merchant === 'boutique-plus');
+    if (s1) s1.plan = 'plus';
+    const r2 = await post({ fresh: true, name: 'Boutique Plus Deux', merchant: 'boutique-plus-deux' });
+    const d2 = await r2.json();
+    assert('Plus 1 store -> 2nd store blocked with 403', r2.status === 403 && d2.error === 'plan-limit-exceeded' && d2.tier === 'plus' && d2.max === 1, JSON.stringify(d2));
   }
 
   // 2. Pro Plan (399 MAD) - 1 venue limit
@@ -315,6 +336,7 @@ async function runTests() {
       { aid: 'acc-get-legacy', business: 'Legacy House', plan: null, wantPlan: 'basic', wantExplicit: false },
       { aid: 'acc-get-empty', business: 'Empty Plan House', plan: '', wantPlan: 'basic', wantExplicit: false },
       { aid: 'acc-get-basic', business: 'Basic House', plan: 'basic', wantPlan: 'basic', wantExplicit: true },
+      { aid: 'acc-get-plus', business: 'Plus House', plan: 'plus', wantPlan: 'plus', wantExplicit: true },
       { aid: 'acc-get-pro', business: 'Pro House', plan: 'pro', wantPlan: 'pro', wantExplicit: true },
       { aid: 'acc-get-ultra', business: 'Ultra House', plan: 'ultra', wantPlan: 'ultra', wantExplicit: true },
     ];

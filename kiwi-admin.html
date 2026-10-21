@@ -869,7 +869,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
             <label>Offre commerciale
               <select class="inp" id="biz-plan" aria-label="Offre commerciale">
                 <option value="">Conditions à renseigner</option>
-                <option value="basic">Kiwi Basic (199 MAD · 1 étab.)</option>
+                <option value="basic">Kiwi Basic (150 MAD · 1 étab.)</option>
+                <option value="plus">Kiwi Plus (300 MAD · 1 étab.)</option>
                 <option value="pro">Kiwi Pro (399 MAD · 1 étab.)</option>
                 <option value="ultra">Kiwi Ultra (1 499 MAD · illimité)</option>
                 <option value="ultimate">Kiwi Ultimate (sur devis)</option>
@@ -1364,8 +1365,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
      rang du jour) plutôt que par Math.random(), pour que la courbe soit la
      même à chaque rendu. Une courbe qui bouge à chaque clic se lit comme une
      donnée vivante alors qu'elle ne l'est pas. */
-  var TIER_PRICE = { basic:199, pro:399, ultra:1499 };
-  var TIER_ORDER = ['basic','pro','ultra','ultimate'];
+  var TIER_PRICE = { basic:150, plus:300, pro:399, ultra:1499 };
+  var TIER_ORDER = ['basic','plus','pro','ultra','ultimate'];
   function hash32(s){
     var h = 2166136261;
     for (var i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
@@ -2422,7 +2423,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var notes = ['Démos exclues.'];
     notes.push(o.voidAware ? 'Ventes sorties des livres exclues.'
                            : 'Les ventes de test ne peuvent pas encore être isolées sur cet environnement.');
-    notes.push('MRR = montant convenu quand il est saisi, sinon le tarif du palier (basic 199 · pro 399 · ultra 1 499). Ultimate est sur devis : sans montant saisi, l’établissement est compté « sans tarif », pas zéro.');
+    notes.push('MRR = montant convenu quand il est saisi, sinon le tarif du palier (basic 150 · plus 300 · pro 399 · ultra 1 499). Ultimate est sur devis : sans montant saisi, l’établissement est compté « sans tarif », pas zéro.');
     notes.push('Suspendus retirés du MRR.');
     body.appendChild(h('p', { class:'ov-note', text:notes.join(' ') }));
 

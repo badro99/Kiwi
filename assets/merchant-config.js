@@ -611,7 +611,7 @@
            must never be interpreted as a paid tier. planExplicit mirrors the
            row: only an explicitly stored tier counts for venue-count gates
            (ticket #0010) — legacy rows read as Basic for display only. */
-        cfg.plan = /^(basic|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
+        cfg.plan = /^(basic|plus|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
           ? String(data.plan).toLowerCase()
           : '';
         cfg.planExplicit = data.planExplicit === true;

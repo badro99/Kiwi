@@ -164,7 +164,7 @@
   }
 
   /* ── MRR par palier, villes ────────────────────────────────────────────── */
-  var TIER = { basic: 'Basic', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate', '·': 'Sans palier' };
+  var TIER = { basic: 'Basic', plus: 'Plus', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate', '·': 'Sans palier' };
   function bars(rows) {
     var max = Math.max.apply(null, rows.map(function (r) { return r.value; }).concat([1]));
     return '<ul class="kh-bars">' + rows.map(function (r) {

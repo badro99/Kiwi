@@ -248,9 +248,10 @@
   const fmtMAD = (n) => (window.KiwiNumber?.format(Number(n), {}) ?? Number(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
   /* ── Subscription ladder (mirrors the 4-tier model) ── */
-  const PLAN_LADDER = ['basic', 'pro', 'ultra', 'ultimate'];
+  const PLAN_LADDER = ['basic', 'plus', 'pro', 'ultra', 'ultimate'];
   const PLAN_INFO = {
-    basic: { name: 'Kiwi Basic', price: '199 MAD' },
+    basic: { name: 'Kiwi Basic', price: '150 MAD' },
+    plus: { name: 'Kiwi Plus', price: '300 MAD' },
     pro: { name: 'Kiwi Pro', price: '399 MAD' },
     ultra: { name: 'Kiwi Ultra', price: '1 499 MAD' },
     ultimate: { name: 'Kiwi Ultimate', price: '·' },

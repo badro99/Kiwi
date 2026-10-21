@@ -92,7 +92,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=62',
+  '/assets/interactive.js?v=63',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
   '/assets/invoicing.css?v=9',
@@ -142,14 +142,14 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=83',
+  '/assets/dateRange.js?v=84',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
   '/assets/liquid-lens.js?v=10',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=6',
-  '/assets/account.js?v=31',
+  '/assets/account.js?v=32',
   '/assets/production-action-guard.js?v=3',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -180,7 +180,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=22',
+  '/assets/day-report.js?v=23',
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=34',
   '/assets/day-report-export.js?v=12',
@@ -203,7 +203,7 @@ var SHELL = [
   '/assets/receipt.js?v=9',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=16',
-  '/assets/merchant-config.js?v=280',
+  '/assets/merchant-config.js?v=281',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=4',
   '/assets/staff-roles.js?v=1',

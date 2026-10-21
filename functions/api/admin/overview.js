@@ -31,8 +31,8 @@ import policy from '../../../assets/admin-policy.js';
  * merchant_config.mrr existe — l'opérateur y inscrit le montant convenu. Un
  * établissement Ultimate sans montant saisi n'est pas compté 0, il est compté
  * comme non tarifé et la vue le réclame. */
-const TIER_PRICE = { basic: 199, pro: 399, ultra: 1499 };
-const TIER_ORDER = ['basic', 'pro', 'ultra', 'ultimate'];
+const TIER_PRICE = { basic: 150, plus: 300, pro: 399, ultra: 1499 };
+const TIER_ORDER = ['basic', 'plus', 'pro', 'ultra', 'ultimate'];
 
 const DAY = 86400000;
 

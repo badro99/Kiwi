@@ -4707,7 +4707,7 @@
     }
   }
 
-  const PLAN_NAME = { basic: 'Basic', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate' };
+  const PLAN_NAME = { basic: 'Basic', plus: 'Plus', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate' };
   const PLAN_ACTIVE = { fr: 'Plan en cours', en: 'Current plan', ar: 'الخطة الحالية' };
   const PLAN_PENDING = { fr: 'Plan en cours de vérification', en: 'Plan being verified', ar: 'جارٍ التحقق من الخطة' };
   function renderMixPlan(custom, lang) {

@@ -3530,31 +3530,54 @@ ar: {
          plan actuel » to every account and recommend Ultra to everyone. */
       const realAcct = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
       const planRaw = String(window.KiwiVenue?.getPlan?.() || window.KiwiConfig?.plan || '').toLowerCase();
-      const known = ['basic', 'pro', 'ultra', 'ultimate'].find((id) => planRaw.includes(id)) || '';
+      const known = ['basic', 'plus', 'pro', 'ultra', 'ultimate'].find((id) => planRaw.includes(id)) || '';
       const current = realAcct ? known : 'pro';
       const reco = realAcct ? '' : 'ultra';
+      /* Same tiers, prices and lists as the landing page
+         (content/landing-pricing.json, owner 2026-10-16 and 2026-10-21). */
       const PLANS = [
-        { id: 'basic', name: 'KIWI BASIC', price: '199 MAD', unit: '/mois', tagline: `Logiciel seul · sur votre matériel`, cta: 'Choisir Basic', feats: [
-          `Logiciel Kiwi complet · tous les modules`,
-          `Appareils illimités · 1 établissement`,
-          `S'intègre à votre caisse / TPE existant`,
-          `Formation sur site + guides inclus`,
-          `Demandes de support suivies` ] },
-        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + support prioritaire + Kiwi IQ avancé`, cta: current === 'pro' ? 'Plan actuel' : 'Choisir Pro', feats: [
-          `Tout Kiwi Basic inclus`,
-          `Support prioritaire · réponse plus rapide`,
-          `Kiwi IQ avancé` ] },
-        { id: 'ultra', name: 'KIWI ULTRA', price: '1 499 MAD', unit: '/mois', tagline: `Sur-mesure · multi-pays · 24/7`, cta: 'Passer à Ultra →', feats: [
-          `Tout Kiwi Pro inclus`,
+        { id: 'basic', name: 'KIWI BASIC', price: '150 MAD', unit: '/mois', tagline: `La caisse simple des petits commerces et épiceries`, cta: current === 'basic' ? 'Plan actuel' : 'Choisir Basic', feats: [
+          `Caisse avec scan de codes-barres`,
+          `Suivi du stock`,
+          `Tickets de caisse`,
+          `Carnet de crédit client`,
+          `Rapport journalier`,
+          `Caisse utilisable hors ligne`,
+          `Un établissement` ] },
+        { id: 'plus', name: 'KIWI PLUS', price: '300 MAD', unit: '/mois', tagline: `Tout Basic + la gestion de boutique`, cta: current === 'plus' ? 'Plan actuel' : 'Choisir Plus', feats: [
+          `Tout Basic`,
+          `Catalogue par tailles et couleurs`,
+          `Retours, échanges et avoirs`,
+          `Promotions et offres`,
+          `Loyalty+`,
+          `Fiches clients`,
+          `Suivi des ventes et des marges`,
+          `Un établissement` ] },
+        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Plus + la salle, la cuisine et l'équipe`, cta: current === 'pro' ? 'Plan actuel' : 'Choisir Pro', feats: [
+          `Tout Plus`,
+          `Plan de salle interactif`,
+          `Prise de commande par les serveurs`,
+          `Écran cuisine`,
+          `OrderPro Restaurant`,
+          `Carte multilingue`,
+          `Lien de réservation`,
+          `Recettes, ingrédients et coût matière`,
+          `Accès employés avec permissions`,
+          `Planning, pointage et paie`,
+          `Kiwi IQ avancé`,
+          `Support prioritaire sur WhatsApp`,
+          `Un établissement` ] },
+        { id: 'ultra', name: 'KIWI ULTRA', price: '1 499 MAD', unit: '/mois', tagline: `Plusieurs établissements, plusieurs pays`, cta: current === 'ultra' ? 'Plan actuel' : 'Passer à Ultra →', feats: [
+          `Tout Pro`,
           `Établissements illimités`,
-          `Multi-pays`,
-          `API enterprise`,
-          `Account manager dédié 24/7` ] },
-        { id: 'ultimate', name: 'KIWI ULTIMATE', price: 'Sur devis', unit: '', tagline: `Sur-mesure total · on en parle`, cta: 'Demander un devis →', feats: [
-          `Tout Kiwi Ultra inclus`,
+          `Pilotage multi-établissements`,
+          `Gestion multi-pays`,
+          `API entreprise`,
+          `Account manager dédié` ] },
+        { id: 'ultimate', name: 'KIWI ULTIMATE', price: 'Sur devis', unit: '', tagline: `Un périmètre sur mesure, pour un besoin qu’aucun palier ne couvre`, cta: current === 'ultimate' ? 'Plan actuel' : 'Demander un devis →', feats: [
+          `Périmètre défini avec vous`,
+          `Nombre d’appareils et de caissiers convenu ensemble`,
           `Fonctionnalités développées pour vous`,
-          `Nombre de caisses & d'appareils négocié`,
-          `SLA & intégrations dédiés`,
           `Tarif défini ensemble` ] },
       ];
       const card = (p) => `
@@ -3568,13 +3591,15 @@ ar: {
         </div>`;
       return modal({
         tag: 'ABONNEMENTS KIWI',
-        title: 'Quatre paliers. Le vôtre évolue avec votre activité.',
-        desc: `Du logiciel seul, intégré à votre caisse, avec formation, à l'entreprise sur-mesure. Le support et l'accompagnement s'étoffent palier par palier.`,
-        width: 1040,
+        title: 'Cinq formules. La vôtre évolue avec votre activité.',
+        desc: `De la caisse simple à l'entreprise sur mesure. Un abonnement, jamais une commission sur vos ventes.`,
+        width: 1180,
         body: `
           <style>
-            .kup-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:stretch; }
+            .kup-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; align-items:stretch; }
+            @media (max-width:1080px){ .kup-grid{ grid-template-columns:repeat(3,1fr); } }
             @media (max-width:880px){ .kup-grid{ grid-template-columns:repeat(2,1fr); } }
+            @media (max-width:520px){ .kup-grid{ grid-template-columns:1fr; } }
             .kup-card { display:flex; flex-direction:column; border:1px solid var(--n-200); border-radius:14px; padding:18px 14px 14px; background:var(--surface); position:relative; }
             .kup-card.is-current { background:var(--paper-soft); }
             .kup-card.is-reco { background:linear-gradient(165deg,#0c4a35,#08311f); border-color:transparent; color:#fff; box-shadow:0 14px 34px -18px rgba(11,110,79,0.55); }
@@ -3603,8 +3628,8 @@ ar: {
           <div class="kup-tip">
             <div style="color:var(--atlas); flex-shrink:0; margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
             <div style="flex:1;">${realAcct
-              ? `Choisir un palier envoie une demande à l'équipe Kiwi, avec une référence. Elle vous répond par e-mail ; rien ne change ni n'est facturé avant votre accord. Basic et Pro couvrent un établissement, Ultra en ouvre autant que vous voulez.`
-              : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
+              ? `Choisir un palier envoie une demande à l'équipe Kiwi, avec une référence. Elle vous répond par e-mail ; rien ne change ni n'est facturé avant votre accord. Basic, Plus et Pro couvrent un établissement, Ultra en ouvre autant que vous voulez.`
+              : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic, Plus et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
           </div>
         `,
         foot: `<button class="kb ghost" data-dismiss>Plus tard</button>`,
@@ -3617,7 +3642,7 @@ ar: {
        * was a toast: nothing was sent, no one was told. A plan request is now a
        * support ticket (/api/support/tickets), the same queue the help centre
        * writes to, with a reference the merchant can quote. */
-      const names = { basic: 'Kiwi Basic', pro: 'Kiwi Pro', ultra: 'Kiwi Ultra', ultimate: 'Kiwi Ultimate' };
+      const names = { basic: 'Kiwi Basic', plus: 'Kiwi Plus', pro: 'Kiwi Pro', ultra: 'Kiwi Ultra', ultimate: 'Kiwi Ultimate' };
       const name = names[plan] || 'Kiwi Ultra';
       document.querySelectorAll('.kiwi-backdrop').forEach((b) => { const c = b.querySelector('.kiwi-modal-close'); if (c) c.click(); });
       const realAcct = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
