@@ -548,6 +548,7 @@ for (const test of [
   'd1-variable-limit-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',
+  'queue-open-visit-unpaid-test.mjs',
   'planning-core-test.mjs',
   'planning-layout-test.mjs',
   /* Le planning sur un téléphone (390 × 844) : un jour à la fois, une ligne

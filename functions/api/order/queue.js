@@ -130,6 +130,7 @@ function readPageCursor(raw, now) {
 }
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
+const OPEN_VISIT_RECOVERY_MS = 7 * 24 * 60 * 60 * 1000;
 // Archive changes are tombstones for tills with a saved shift. They must be
 // delivered even when the original order is older than the kitchen window.
 const ARCHIVED_TOMBSTONE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -422,12 +423,21 @@ export async function onRequestGet(context) {
    * gardent un service tardif à travers minuit, mais empêchent qu'un bon oublié
    * ou un ancien état `ready` ne revienne les jours suivants. Les `pending`
    * ont leur règle plus stricte de trente minutes juste au-dessus. */
-  const WHERE = `FROM orders
+  // The till must rebuild an unpaid bill even after its kitchen ticket ages
+  // out. Match PRESENCE's unpaid definition (paid_ts IS NULL, not truthiness);
+  // accepted/ready already exclude rejected. Keep this inside the same cursor
+  // window and LIMIT so a fresh since=0 poll drains every recovery row.
+  const tillRole = role !== 'kitchen' && role !== 'service';
+  const recovery = `OR (status IN ('accepted','ready') AND paid_ts IS NULL
+                AND EXISTS (SELECT 1 FROM table_sessions s
+                  WHERE s.id = orders.session_id AND s.merchant = orders.merchant
+                    AND s.status = 'open' AND s.opened_ts >= ?))`;
+  const where = (recover) => `FROM orders
         WHERE merchant = ? AND updated_ts > ? AND updated_ts <= ?
           ${pageCursor ? 'AND (updated_ts > ? OR (updated_ts = ? AND id > ?))' : ''}
           AND ((status = 'archived' AND updated_ts >= ?)
             OR (status IN ('pending','accepted','ready','served')
-              AND (status = 'pending' OR created_ts >= ?)
+              AND (status = 'pending' OR created_ts >= ? ${recover ? recovery : ''})
               AND (status <> 'served' OR created_ts >= ?)))
         ORDER BY updated_ts, id
         LIMIT ?`;
@@ -435,14 +445,21 @@ export async function onRequestGet(context) {
   let rows = null;
   let degraded = [];
   for (let i = 0; i < COL_SETS.length; i++) {
-    try {
-      rows = await env.DB.prepare(`SELECT ${COL_SETS[i]} ${WHERE}`)
-        .bind(merchant, since, pageEnd,
-          ...(pageCursor ? [pageCursor.ts, pageCursor.ts, pageCursor.id] : []),
-          now - ARCHIVED_TOMBSTONE_MS, kitchenCutoff, today, MAX_ROWS + 1).all();
-      degraded = COL_SET_MISSING[i];
-      break;
-    } catch (_) { rows = null; }
+    // Missing session/payment columns (or table_sessions) must retain the
+    // existing TTL query instead of turning a legacy till's queue empty.
+    const variants = tillRole && COL_SETS[i].includes('paid_ts') ? [true, false] : [false];
+    for (const recover of variants) {
+      try {
+        rows = await env.DB.prepare(`SELECT ${COL_SETS[i]} ${where(recover)}`)
+          .bind(merchant, since, pageEnd,
+            ...(pageCursor ? [pageCursor.ts, pageCursor.ts, pageCursor.id] : []),
+            now - ARCHIVED_TOMBSTONE_MS, kitchenCutoff,
+            ...(recover ? [now - OPEN_VISIT_RECOVERY_MS] : []), today, MAX_ROWS + 1).all();
+        degraded = COL_SET_MISSING[i];
+        break;
+      } catch (_) { rows = null; }
+    }
+    if (rows) break;
   }
   // Table pas migrée du tout → une file vide, jamais une erreur que la caisse
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
