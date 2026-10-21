@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const start = source.indexOf('function cancelOrderProTakeaway(o, authorizedWho = null)');
 const end = source.indexOf('function settleVrapPayment()', start);
 assert.ok(start >= 0 && end > start, 'the guarded cancellation function is present');

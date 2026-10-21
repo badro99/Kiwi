@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Focused regression coverage for the operating-day split UI in kiwi-caisse.html.
  * This executes the production functions from the inline caisse script with
  * small deterministic DOM/payment seams. It does not load or mutate a browser
@@ -11,7 +12,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 let passed = 0;
 
 function ok(condition, message) {

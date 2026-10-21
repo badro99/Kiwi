@@ -25,12 +25,14 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
-const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const PAGES = fs.readFileSync(path.join(ROOT, 'assets', 'pages-pro.js'), 'utf8');
 const VENUES = fs.readFileSync(path.join(ROOT, 'assets', 'venues.js'), 'utf8');
 const STORE = fs.readFileSync(path.join(ROOT, 'functions', 'api', 'store.js'), 'utf8');

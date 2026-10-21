@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * TABLEAU DE BORD · CE QUE LES CARTES AFFIRMENT
  *
@@ -103,7 +104,7 @@ ok('loyalty runs only once the merchant chose a programme (store, till, assistan
   assert.ok(/function loyaltyOn\(book\)[\s\S]{0,260}return !!\(c && c\.model && !c\.auto\);/.test(CS), 'an auto default is not a programme');
   assert.ok(/if \(!loyaltyOn\(book\)\) \{[\s\S]{0,80}\} else if \(cfg\.model === 'amount'\)/.test(CS), 'recordPurchase accrues nothing without one');
   assert.ok(/if \(!loyaltyOn\(book\)\) return rec;/.test(CS), 'redeem burns nothing without one');
-  assert.ok(/if \(KC\.loyaltyOn && !KC\.loyaltyOn\(\)\) return '';/.test(read('kiwi-caisse.html')), 'the till shows no "0/10"');
+  assert.ok(/if \(KC\.loyaltyOn && !KC\.loyaltyOn\(\)\) return '';/.test(caisseTestSource(read('kiwi-caisse.html'))), 'the till shows no "0/10"');
   const AG = read('assets/agent-data.js').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.ok(!/cfg\.on\b/.test(AG) && /window\.KiwiClients\.loyaltyOn/.test(AG), 'the assistant reads the real switch');
 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/serveur-kitchen-truth-test.mjs · l'app serveur, le passe et la cuisine
  * de la caisse disent ce qui est vrai.
  *
@@ -29,7 +30,7 @@ const serveur = read('kiwi-serveur.html') + '\n' + read('assets/serveur-shell.cs
 // Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
 const serveurLang = read('assets/serveur-lang.js');
 const cuisine = read('kiwi-cuisine.html');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 let checks = 0;
 const ok = (cond, label, detail) => { assert.ok(cond, label + (detail ? ' · ' + JSON.stringify(detail) : '')); checks++; };
 

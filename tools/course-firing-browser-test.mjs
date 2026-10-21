@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* « À suivre » et « Envoyer la suite » (kiwi-caisse.html · sendTableToKitchen),
  * dans la vraie caisse de démo, au vrai clic.
  *
@@ -185,7 +186,7 @@ check(!(await lineOf(B, main.id)).sent, 'second table: the held main waits');
 const paid = await page.evaluate((t) => { const r = dispatchTableUnsentToKitchen(t, true); return !!(r && r.local); }, B);
 await flush();
 check(paid && (await lineOf(B, main.id)).sent, 'the payment dispatch sends the held dish too');
-const src = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const src = caisseTestSource(fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8'));
 check(/if \(selectedId\) return dispatchTableUnsentToKitchen\(selectedId, true\);/.test(src), 'and that is the dispatch the payment path calls (paid = true)');
 
 check(problems.length === 0, 'no page error' + (problems.length ? ': ' + problems[0] : ''));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · la caisse restaurant dit ce qui est vrai
  *
  *   node tools/till-truth-test.mjs
@@ -31,7 +32,7 @@ const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 let pass = 0; const fails = [];
 const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + (detail ? ' · ' + detail : '')); };
 
-const CAISSE = R('kiwi-caisse.html');
+const CAISSE = caisseTestSource(R('kiwi-caisse.html'));
 const body = (name) => {
   const start = CAISSE.indexOf('\n    function ' + name + '(');
   if (start < 0) return '';

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
@@ -11,7 +13,7 @@ function ok(value, label) { if (!value) throw new Error('FAIL · ' + label); n++
 
 const venues = read('assets/venues.js');
 const dash = read('dashboard.html');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const sw = read('kiwi-sw.js');
 const posDispatch = read('assets/pos-dispatch.js');
 const css = read('assets/trade-workspaces.css') + read('assets/pos-workspaces.css') + read('assets/pos-autre.css');

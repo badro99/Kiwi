@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Modifier & Allergy Fidelity, Waitlist & TableSplits
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -132,7 +133,7 @@ check('kiwi-serveur.html relays formula identity and slot metadata',
     && serveurHtml.includes('if (l.formulaSlotId) linePayload.formulaSlotId = l.formulaSlotId'));
 
 // 5. Inspect kiwi-caisse.html for tableSplits migration & unassigned waitlist seating
-const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseHtml = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 check('caisse KDS and kitchen paper keep formula parents, options, and components',
   caisseHtml.includes("items: (o.lines || []).map(l =>")
     && caisseHtml.includes('visuals: ownVisuals.slice()')

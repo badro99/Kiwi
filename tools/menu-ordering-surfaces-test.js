@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 'use strict';
+
+const caisseTestSource = require('./caisse-test-source.cjs');
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
@@ -7,7 +9,7 @@ const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 let failed = 0;
 function ok(label, value) { if (value) console.log('✓ ' + label); else { console.error('✗ ' + label); failed++; } }
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const serveur = read('kiwi-serveur.html');
 const orderpro = read('OrderPro.html');
 

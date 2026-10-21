@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Local-only field acceptance audit. Runs shipped browser functions and real
 // handlers against in-memory SQLite. Known acceptance gaps intentionally fail.
 // Run directly: node tools/field-orderpro-acceptance-test.mjs
@@ -12,7 +13,7 @@ import { onRequestPost as order } from '../functions/api/order/index.js';
 import { onRequestGet as queue } from '../functions/api/order/queue.js';
 
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8');
-const phoneSource = read('OrderPro.html'), caisseSource = read('kiwi-caisse.html');
+const phoneSource = read('OrderPro.html'), caisseSource = caisseTestSource(read('kiwi-caisse.html'));
 function slice(source, start, end) {
   const a = source.indexOf(start), b = source.indexOf(end, a + start.length);
   assert.ok(a >= 0 && b > a, 'production slice exists: ' + start);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · quatre garde-fous d'encaissement qui ne doivent plus lâcher.
  *
  *  1. Restaurant : après un split, « Encaisser » du panneau de commande
@@ -15,7 +16,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 let passed = 0;
 const ok = (cond, label) => { assert.ok(cond, label); passed++; };
 const eq = (a, b, label) => { assert.deepEqual(a, b, label); passed++; };

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
@@ -25,7 +26,7 @@ const launchStoryboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboar
 const sceneDelegate = read('app/ios/App/App/SceneDelegate.swift');
 const swiftNativeShell = read('app/ios/App/App/KiwiNativeShell.swift');
 const composeNativeShell = read('app/android/app/src/main/java/com/kiwios/pro/MainActivity.kt');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const capacitorConfig = read('app/capacitor.config.ts');
 const appPackage = JSON.parse(read('app/package.json'));
 const androidStyles = read('app/android/app/src/main/res/values/styles.xml');

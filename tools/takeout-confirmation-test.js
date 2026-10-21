@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 /* Regression contract for the two confirmation boundaries:
  *  1. paying a fresh caisse takeaway dispatches it before clearing the cart;
  *  2. an OrderPro ticket prints only after the server accepts it. */
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const INBOX = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
 const LIVE = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 let failed = 0;

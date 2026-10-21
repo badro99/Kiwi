@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* App-wide audit sweep (2026-10-09): the bugs found across the till, the
  * kitchen screen, the waiter app, the customer order page and the dashboard,
  * pinned so they cannot come back silently.
@@ -32,7 +33,7 @@ ok('every register stepper is 44 px under the thumb on a phone', () => {
   assert.match(read('assets/pos-mobile.css'), /\.vx-root \[class\*="-qty"\] button \{\n    min-width: 44px; min-height: 44px;/);
 });
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 ok('cash tendered is compared in cents, so a remise cannot block an exact payment', () => {
   assert.equal((caisse.match(/const got = Math\.round\(\(parseFloat\(String\(cashInput\.value\)\.replace\(',', '\.'\)\) \|\| 0\) \* 100\) \/ 100;/g) || []).length, 2);
 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Formules (Menus Composés) Protocol, Model & Explosion Gate
  *
@@ -506,7 +507,7 @@ if (!serveurHarness) {
 
 // ── 5. KDS / Kitchen Screen & Ticket Extraction ─────────────────────────────
 const cuisineSource = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
-const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 // A. kiwi-cuisine.html card() extraction
 const cardMatch = cuisineSource.match(/function card\(o, kind\) \{[\s\S]*?\n  \}/);

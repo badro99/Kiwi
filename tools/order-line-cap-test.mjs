@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* #0064 · « les commandes de plus de 60 lignes sont tronquées en silence ».
  *
  * `cleanLines` coupe à MAX_LINES. Le bon de caisse passait par là sans aucun
@@ -18,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const queue = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
-const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  ✓ ${label}`); };

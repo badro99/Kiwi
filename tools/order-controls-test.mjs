@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +13,7 @@ const cancel = read('functions/api/sale/cancel.js');
 const reprint = read('assets/pos-reprint.js');
 const dateRange = read('assets/dateRange.js');
 const interactive = read('assets/interactive.js');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const alternate = read('assets/pos-autre.js');
 const boutique = read('assets/pos-boutique.js');
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
@@ -107,7 +108,7 @@ const inboxSource = fs.readFileSync(new URL('../assets/orderpro-inbox.js', impor
 assert.match(inboxSource,
   /var terminal = cancelled\.map[\s\S]{0,240}status: 'rejected'[\s\S]{0,160}bridge\(delta\.concat\(terminal\)\)/,
   'mixed-version cancelled payloads are normalized and ingested once');
-const caisseSource = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const attach = caisseSource.match(/function attachOrderProTable\(o\)\s*\{[\s\S]{0,14000}?\n {4}\}/)?.[0] || '';
 assert.ok(attach.indexOf("o.status === 'rejected'") < attach.indexOf('const activeSeat ='),
   'terminal cleanup runs before current-session validation');

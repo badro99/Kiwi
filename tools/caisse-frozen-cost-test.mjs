@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* La caisse restaurant gèle le coût de chaque plat au moment de la vente.
  *
  * Avant, aucune ligne de la caisse restaurant ne portait de coût : l'Analyse
@@ -15,7 +16,7 @@ import { createRequire } from 'node:module';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const { loadCost } = require('./kiwi-cost-harness.js');
-const html = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const html = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, label, extra) => { if (c) { pass++; console.log('  ✓ ' + label); } else { fail++; console.log('  ✗ ' + label + (extra != null ? '\n      ' + String(extra).slice(0, 400) : '')); } };
 console.log('■ Caisse restaurant · coût gelé à la vente (tools/caisse-frozen-cost-test.mjs)');

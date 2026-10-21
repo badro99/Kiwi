@@ -13,8 +13,9 @@
     "assets/team.js": 5035,
     "assets/venues.js": 5075,
     "dashboard.html": 2406,
-    "kiwi-caisse.html": 19486,
-    "kiwi-serveur.html": 8246
+    "kiwi-caisse.html": 1948,
+    "kiwi-serveur.html": 8246,
+    "assets/caisse-app.js": 17536
   },
   "scripts": {
     "dashboard.html": 159,

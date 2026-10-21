@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Gardes d'identité de locataire et d'intégrité comptable
  *
@@ -399,7 +400,7 @@ function invoiceEnv(sale) {
 
 /* ── 10 · La caisse échappe avec une fonction qui existe ──────────────────── */
 {
-  const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
   const calls = caisse.match(/(?<![A-Za-z0-9_$])esc\(/g) || [];
   ok('plus aucun appel à une fonction d\'échappement inexistante', calls.length === 0,
     `${calls.length} appel(s) restant(s)`);

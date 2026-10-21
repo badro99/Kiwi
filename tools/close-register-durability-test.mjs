@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Execute the shipped restaurant close function with a failing report store.
  * A toast or a static source check cannot prove the journal survives quota and
  * write failures: the shift must still be present and the count sheet usable. */
@@ -6,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = caisseTestSource(readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const start = source.indexOf('    let registerClosed = false;');
 const end = source.indexOf('    const clockinBtn', start);
 assert.ok(start >= 0 && end > start, 'real close function is available');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* #0063 · « la réimpression manuelle d'un bon de cuisine ne marche pas ».
  *
  * Deux ruptures dans la même chaîne :
@@ -23,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
-const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  ✓ ${label}`); };

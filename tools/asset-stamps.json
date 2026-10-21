@@ -99,9 +99,9 @@
     "v": "22",
     "sha": "3acb98bc91dad1b9"
   },
-  "assets/caisse-attendance-code.js": {
-    "v": "3",
-    "sha": "d079d527100e2c16"
+  "assets/caisse-app.js": {
+    "v": "1",
+    "sha": "a4477d616431ee56"
   },
   "assets/caisse-dna.css": {
     "v": "6",
@@ -148,8 +148,8 @@
     "sha": "7609b693c25d4ae9"
   },
   "assets/caisse-refresh.js": {
-    "v": "2",
-    "sha": "046824221d7614a7"
+    "v": "3",
+    "sha": "b26a2ab16a8fc1d1"
   },
   "assets/caisse-shell.css": {
     "v": "1",

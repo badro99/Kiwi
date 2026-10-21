@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Regression: a local takeaway split token must never be treated as a D1 visit. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -114,7 +115,7 @@ const emitted = outboxPayloads.find(x => x.channel === 'takeaway' && x.amountCen
 assert.ok(emitted); assert.equal(emitted.session, undefined);
 console.log('✓ live-link outbox execution strips only the local flow token');
 
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 assert.match(caisse, /if \(!splitState\.isVrap && splitState\.flow && splitState\.flow\.session/);
 console.log('✓ takeaway split producer no longer attaches local flow token as session');
 db.close();

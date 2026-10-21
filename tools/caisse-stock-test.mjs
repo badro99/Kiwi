@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · une addition réglée au restaurant sort sa marchandise
  *
@@ -40,7 +41,7 @@ const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + 
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 /* ── I · le câblage, lu dans la caisse elle-même ─────────────────────────── */
-const CAISSE = R('kiwi-caisse.html');
+const CAISSE = caisseTestSource(R('kiwi-caisse.html'));
 
 /* Le corps d'une fonction de premier niveau du script de caisse : de sa
    signature jusqu'à la prochaine déclaration au même niveau d'indentation. */

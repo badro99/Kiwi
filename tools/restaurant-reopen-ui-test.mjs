@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
@@ -6,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 const base = process.env.REOPEN_BASELINE === '1';
 const source = file => base ? execFileSync('git', ['show', `HEAD:${file}`], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 })
   : fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
-const till = source('kiwi-caisse.html');
+const till = caisseTestSource(source('kiwi-caisse.html'));
 const reprint = source('assets/pos-reprint.js');
 const waiter = source('kiwi-serveur.html');
 const queue = source('functions/api/order/queue.js');

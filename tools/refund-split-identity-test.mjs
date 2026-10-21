@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Exercise the shipped refund selector with split receipts sharing one printed
  * table reference. A display ref is never sufficient payment identity. */
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8'));
 function extract(start, end) {
   const from = source.indexOf(start);
   const to = source.indexOf(end, from + start.length);

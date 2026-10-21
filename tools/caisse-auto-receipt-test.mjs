@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -56,7 +57,7 @@ assert.equal(jobs.length, 2, 'room charges and credit do not print as settled pa
 assert.equal(api.record('boulangerie', { total: 0, method: 'especes', ref: 'B-44' }), null);
 assert.equal(jobs.length, 2, 'zero-value deferred checkout does not print');
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 assert.doesNotMatch(caisse, /id="cash-step-success"/, 'restaurant cash has no third confirmation screen');
 assert.match(caisse, /const sale = lastSaleEntry\(\);\s*closeCashModal\(\);\s*openCashDrawer\(\);[\s\S]{0,130}printSaleTicket\(sale\)/);
 assert.match(caisse, /const sale = lastSaleEntry\(\);\s*closeCardModal\(\);\s*printSaleTicket\(sale\)/);

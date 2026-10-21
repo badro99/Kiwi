@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 'use strict';
 
 import fs from 'fs';
@@ -11,7 +12,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 const ADMIN = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
 const CONFIG_JS = fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8');
-const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
 const BOUTIQUE = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 

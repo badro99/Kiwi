@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Split Bill Cash Drawer & Itemized Receipt Printing Test Suite
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -12,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const CAISSE_SRC = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE_SRC = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 let failed = 0;

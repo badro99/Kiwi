@@ -1,7 +1,8 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const manifest = fs.readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
 const tablerLicense = fs.readFileSync(new URL('../assets/icons/tabler/LICENSE.txt', import.meta.url), 'utf8');
 

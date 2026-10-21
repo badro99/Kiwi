@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Test suite: Biometric Unlock & Inactivity Relock (Criterion #4)
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const nativeRuntime = fs.readFileSync(path.join(ROOT, 'app/src/native-runtime.js'), 'utf8');
 const swiftPlugin = fs.readFileSync(path.join(ROOT, 'app/plugins/kiwi-printer-socket/ios/Sources/KiwiPrinterSocket/KiwiPrinterSocketPlugin.swift'), 'utf8');
 const javaPlugin = fs.readFileSync(path.join(ROOT, 'app/plugins/kiwi-printer-socket/android/src/main/java/com/kiwios/printersocket/KiwiPrinterSocketPlugin.java'), 'utf8');
-const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseHtml = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 const EXPECTED = 10;

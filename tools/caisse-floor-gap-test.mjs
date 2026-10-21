@@ -1,7 +1,8 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/caisse-shell.css', import.meta.url), 'utf8') + '</style>');
+const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/caisse-shell.css', import.meta.url), 'utf8') + '</style>');
 const setup = caisse.match(/function setupRealSalle\(\) \{[\s\S]*?const plan = caisseFloorPlan\(\);/)?.[0];
 assert.ok(setup, 'real-store floor-plan setup exists');
 assert.match(setup, /if \(!storeIsReal\(\)\) return;/, 'demo floor plan remains separate');

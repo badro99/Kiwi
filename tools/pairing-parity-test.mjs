@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LES DEUX PORTES D'APPAIRAGE LAISSENT LE MÊME ÉTAT
  * ---------------------------------------------------------------------------
@@ -233,7 +234,7 @@ function residueOfA() {
  * la migration de l'ancienne clé kiwi-caisse-shift est assurée, et un décalage
  * d'établissement au rechargement ne détruit jamais le service stocké. */
 {
-  const CAISSE_HTML = read('kiwi-caisse.html');
+  const CAISSE_HTML = caisseTestSource(read('kiwi-caisse.html'));
 
   ok(/function\s+kcStoreKey\(/.test(CAISSE_HTML),
     'kiwi-caisse.html définit kcStoreKey pour compartimenter le shift');

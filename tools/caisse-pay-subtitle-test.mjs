@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * LE SOUS-TITRE DES FENÊTRES DE PAIEMENT
  *
@@ -17,7 +18,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const SRC = caisseTestSource(readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 function grab(name) {
   const i = SRC.indexOf('function ' + name + '(');

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 'use strict';
+
+const caisseTestSource = require('./caisse-test-source.cjs');
 const fs = require('fs');
 const path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8');
+const src = caisseTestSource(fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8'));
 let pass = 0; const failures = [];
 function ok(name, yes) { if (yes) pass++; else failures.push(name); }
 

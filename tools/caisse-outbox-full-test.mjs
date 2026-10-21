@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/caisse-outbox-full-test.mjs · a paid sale when the till's storage is full.
  *   node tools/caisse-outbox-full-test.mjs
  *
@@ -29,7 +30,7 @@ import { onRequestPost as salePost } from '../functions/api/sale.js';
 import { tillToken, TILL_COOKIE, staffToken, GATE_COOKIE } from '../functions/auth/_lib.js';
 
 const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
-const page = read('kiwi-caisse.html'), live = read('assets/live-link.js');
+const page = caisseTestSource(read('kiwi-caisse.html')), live = read('assets/live-link.js');
 const extract = name => {
   const start = page.indexOf('    function ' + name + '(');
   const end = page.indexOf('\n    }', start);

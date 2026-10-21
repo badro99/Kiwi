@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -134,7 +135,7 @@ ok(K2.isPaired() === true, 'helper isPaired() is true for live Santos Store fixt
 // Case I: Direct Module Execution on Actual Files (Both With and Without KiwiPlatform)
 // Rather than testing only the helper, load each actual migrated money/transaction module
 // in a sandboxed VM and verify it resolves the correct merchant under both runtime states.
-const readAsset = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const readAsset = (rel) => caisseTestSource(fs.readFileSync(path.join(root, rel), 'utf8'));
 
 // 1. assets/inventory-ledger.js (window.KiwiInventory.merchant())
 function testInventoryLedger(withPlatform) {

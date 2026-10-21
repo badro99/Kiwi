@@ -1,10 +1,11 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source = fs.readFileSync(new URL('../assets/phone.js', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const booking = fs.readFileSync(new URL('../booking.html', import.meta.url), 'utf8');
 const listeners = {};
 class InputEvent {

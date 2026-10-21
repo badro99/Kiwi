@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -11,7 +12,7 @@ const escpos = read('assets/escpos.js');
 const invoice = read('assets/invoicing.js');
 const qr = read('assets/order-qr.js');
 const report = read('assets/report.js');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const dashboard = read('dashboard.html');
 const sw = read('kiwi-sw.js');
 const bridgeSrv = read('bridge/server.js');

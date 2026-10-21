@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -545,9 +546,9 @@ ok(serviceSource.includes("lifetimeXP: 0")
   && serviceSource.includes("bestNight: 0")
   && !serviceSource.includes("lifetimeXP: 2400"),
   'un nouveau compte commence sans grade ni records de démonstration');
-const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const dispatchSource = fs.readFileSync(path.join(ROOT, 'assets/pos-dispatch.js'), 'utf8');
-const attendanceCodeSource = fs.readFileSync(path.join(ROOT, 'assets/caisse-attendance-code.js'), 'utf8');
+const attendanceCodeSource = fs.readFileSync(path.join(ROOT, 'assets/caisse-refresh.js'), 'utf8');
 ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
   && serviceSource.includes('Object.keys(data.states || {})'),
@@ -688,7 +689,7 @@ ok(caisseSource.includes('id="open-attendance-code"')
   && caisseSource.includes("action: 'generate-attendance-code'")
   && caisseSource.includes('Valide encore'),
   'la caisse possède un bouton séparé qui régénère et chronomètre le code de pointage');
-ok(/assets\/caisse-attendance-code\.js\?v=\d+/.test(caisseSource)
+ok(/assets\/caisse-refresh\.js\?v=\d+/.test(caisseSource)
   && dispatchSource.includes('window.KiwiCaisseAttendanceCode.mount(root)')
   && attendanceCodeSource.includes("action: 'generate-attendance-code'")
   && attendanceCodeSource.includes('button[id$="-lock"]')

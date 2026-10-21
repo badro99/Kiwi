@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // #102 · the till's Clients page reads like its neighbours (KPI strip, segment tabs, one list card).
 // #105 · a customer's boutique credit and returned pieces show on their profile and at checkout.
 import assert from 'node:assert/strict';
@@ -17,7 +18,7 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
 ].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium is required for the Clients page regression');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
-const caisseInlineCss = [...fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+const caisseInlineCss = [...caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
   .map((match) => match[1]).join('\n');
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);

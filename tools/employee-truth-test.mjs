@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * APP EMPLOYÉ · CE QUE L'ÉCRAN AFFIRME
  *
@@ -304,7 +305,7 @@ let saraCookie = '';
   ok('…et ne promet plus « une demande suivie » sans la montrer',
     !/Une demande suivie|A tracked request|طلب متابع/.test(HELP));
 
-  const CAISSE = readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const CAISSE = caisseTestSource(readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   ok('le bouton du tiroir message dit ce qu’il fait (il envoie, il ne copie pas)',
     /id="msg-send"[^>]*>\s*<i data-lucide="send"><\/i> Envoyer le message/.test(CAISSE) && !/Copier le message/.test(CAISSE));
   ok('« 1 serveur en service », au singulier', /serveur\$\{n > 1 \? 's' : ''\} en service/.test(CAISSE));

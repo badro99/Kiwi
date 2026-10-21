@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Executes the production queue/course SQL against memory-only SQLite and the
 // actual caisse functions in a VM. No network or merchant data is accessed.
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ import { recordOrderCourse } from '../functions/api/order/_course.js';
 
 process.env.TZ = 'Africa/Casablanca';
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
-const page = read('kiwi-caisse.html');
+const page = caisseTestSource(read('kiwi-caisse.html'));
 const extract = (name) => {
   const start = page.indexOf('    function ' + name + '(');
   const end = page.indexOf('\n    }', start);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -53,7 +54,7 @@ assert.equal(doc.lines.reduce((sum, line) => sum + line.total, 0), 52,
   'itemised rows must equal the amount paid; the supplement is never counted twice');
 assert.equal(doc.totals.total, 52, 'the settled total remains authoritative');
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const orderLib = read('functions/api/order/_lib.js');
 const liveLink = read('assets/live-link.js');
 const saleApi = read('functions/api/sale.js');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LE RELAIS CUISINE — le bon quitte enfin l'appareil
  *
@@ -97,7 +98,7 @@ const deskSeen = () => {
   return r ? r.seen_ts : 0;
 };
 
-const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const RELAY = fs.readFileSync(path.join(ROOT, 'assets/kitchen-relay.js'), 'utf8');
 const PRINT_QUEUE = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
 const INBOX = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');

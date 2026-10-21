@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/menu-i18n-test.mjs — la carte dans la langue de chacun, sans perdre
  * celle du patron (assets/menu-i18n.js v2, 2026-08-22).
  *
@@ -156,7 +157,7 @@ assert(!/data-action="rmw-menu-translate" style="display:none;"/.test(ws), 'work
 for (const l of ['en', 'ar', 'fr']) assert(new RegExp(`    ${l}: \\{[\\s\\S]*?tabI18n: '`).test(ws), `workspace : clés UI i18n en ${l}`);
 
 /* ── surfaces ────────────────────────────────────────────────────────── */
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 assert(/i18n: it\.i18n \|\| null,/.test(caisse) && /carteState\.catI18n = catI18n;/.test(caisse) && /window\.KiwiMenuI18n\.index\(\{ cats: cats, items: allItems/.test(caisse), 'caisse : i18n projeté et index posé à la relecture de la carte');
 assert(/function menuName\(m\)/.test(caisse) && /<span class="menu-item-name">\$\{escTeam\(menuName\(m\)\)\}<\/span>/.test(caisse), 'caisse : tuile dans la langue de la caisse');
 assert(/\$\{escTeam\(catLabelL\(c\)\)\}<span class="count mono">/.test(caisse) && /escTeam\(subLabelL\(m\) \|\| catLabelL\(m\.cat\)/.test(caisse), 'caisse : pastilles de catégorie et sous-catégorie localisées');

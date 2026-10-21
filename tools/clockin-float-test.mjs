@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Audit design-2026-10 · the opening float was pre-selected at 500 MAD, so one
  * tap on "Open till" recorded 500 whatever was in the drawer.
  *
@@ -16,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
-const html = R('kiwi-caisse.html').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + R('assets/caisse-shell.css') + '</style>');
+const html = caisseTestSource(R('kiwi-caisse.html')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + R('assets/caisse-shell.css') + '</style>');
 let n = 0;
 const ok = (name, fn) => { try { fn(); n++; console.log('  ✓ ' + name); } catch (e) { console.log('  ✗ ' + name + '\n    ' + e.message); process.exitCode = 1; } };
 

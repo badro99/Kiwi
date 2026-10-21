@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // iPhone pass 4: one source-level guard per fix, so a later edit that quietly
 // undoes one of them goes red here instead of on the tester's phone.
 // Static reads only: no browser, no network, no credentials.
@@ -15,7 +16,7 @@ const shell = read('app/src/native-shell.js');
 const shellHtml = read('app/src/index.html');
 const swift = read('app/ios/App/App/KiwiNativeShell.swift');
 const clients = read('assets/clients-directory.js');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const caisseLang = read('assets/caisse-lang.js');
 const cuisine = read('kiwi-cuisine.html');
 const serveur = read('kiwi-serveur.html');

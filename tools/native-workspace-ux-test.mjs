@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -200,7 +201,7 @@ ok(source.includes('if (more.textContent !== copy.actions) more.textContent = co
   'cart observer does not rewrite its own observed action label on every mutation');
 const tokens = fs.readFileSync(new URL('../assets/tokens.css', import.meta.url), 'utf8');
 const swift = fs.readFileSync(new URL('../app/ios/App/App/KiwiNativeShell.swift', import.meta.url), 'utf8');
-const till = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const till = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 ok(till.includes("const activeSource = (mode !== 'vrap' && selectedId)") && till.includes("if (document.documentElement.classList.contains('kiwi-native')) renderMenu();"),
   'product quantities come from the selected table and refresh when the table changes');
 ok(/function renderCart\(\)\s*\{[^]*?persistShift\(\)/.test(till) && /function renderOrderPanel\(tableId\)\s*\{[^]*?persistShift\(\)/.test(till),
@@ -214,7 +215,7 @@ const mint = tokens.match(/--mint:\s*#([0-9a-f]{6})/i)?.[1].toUpperCase();
 const nativeMint = swift.match(/private let kiwiMint = Color\(red: (\d+) \/ 255, green: (\d+) \/ 255, blue: (\d+) \/ 255\)/);
 ok(!!mint && !!nativeMint && nativeMint.slice(1).map(part => Number(part).toString(16).padStart(2, '0').toUpperCase()).join('') === mint, 'Swift mint stays equal to the locked brand token');
 
-const caisseHtml = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisseHtml = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const buildScript = fs.readFileSync(new URL('./build-app-www.mjs', import.meta.url), 'utf8');
 ok(!/(?:>|['"`])\s*(?:Nouvelle mesa|Ouvrir la mesa|Annuler mesa|Encaisser la mesa)/.test(caisseHtml.replace(/<!--[\s\S]*?-->/g, '')), 'the till says "table", never the Spanish "mesa", on screen');
 ok(/function enterShellDirectly\(\)[\s\S]{0,900}renderMenu\(\); renderCart\(\);/.test(caisseHtml), 'a restored draft repaints its tile badges, not only the bill');

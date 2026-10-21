@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Retours et avoirs côté caisse (pos-boutique.js, pos-maison.js).
  *
  *   1. Le prix RENDU est ce que la cliente a payé : la récompense fidélité baisse
@@ -127,7 +128,7 @@ for (const [label, file] of [['boutique', 'assets/pos-boutique.js'], ['maison', 
 }
 
 console.log('■ pavé responsable, pages et fiche client');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 ok(/function requireManager\(actionLabel, onApprove, authContext, opts\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?openAuthorization\(actionLabel, onApprove, 'manager', authContext, opts\);/.test(caisse),
   'requireManager transmet ses options (onCancel) au pavé');
 const pages = read('assets/pages-pro.js');

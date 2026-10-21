@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Inventory Waste Management Test (tools/inventory-waste-test.mjs)
  * ---------------------------------------------------------------------------
@@ -22,7 +23,7 @@ function ok(cond, msg) {
 
 console.log("■ Gestion des pertes de stock (tools/inventory-waste-test.mjs)");
 
-const caisseSrc = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSrc = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const stockSyncSrc = fs.readFileSync(path.join(ROOT, 'assets/caisse-stock-sync.js'), 'utf8');
 const stockDashSrc = fs.readFileSync(path.join(ROOT, 'assets/stock.js'), 'utf8');
 const ledgerSrc = fs.readFileSync(path.join(ROOT, 'assets/inventory-ledger.js'), 'utf8');

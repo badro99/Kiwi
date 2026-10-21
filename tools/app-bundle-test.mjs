@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/app-bundle-test.mjs — le bundle embarqué dans l'app native est-il sain ?
  *
  * Wired dans tools/check.js (un fichier de test que check.js ne nomme pas ne
@@ -71,7 +72,7 @@ if (first) {
     assert(!/rel=["']manifest["']/i.test(html), `${page} : aucun <link rel="manifest">`);
     assert(!/fonts\.(?:googleapis|gstatic)\.com/i.test(html), `${page} : aucune police réseau`);
   }
-  const caisse = fs.readFileSync(path.join(first.out, 'kiwi-caisse.html'), 'utf8');
+  const caisse = caisseTestSource(fs.readFileSync(path.join(first.out, 'kiwi-caisse.html'), 'utf8'));
   const setMode = caisse.match(/function setMode\(newMode\) \{[\s\S]*?\n    \}/)?.[0] || '';
   assert(/if \(window\.lucide\) lucide\.createIcons\(\);/.test(setMode), 'caisse : reprendre un service avant le runtime d’icônes reste non bloquant');
   // Chaque page embarquée rapporte ses plantages (POST /api/error via api-base) : la

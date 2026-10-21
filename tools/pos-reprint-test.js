@@ -21,6 +21,8 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -289,7 +291,7 @@ const SALE = {
 
 /* L'entrée « Annuler une vente » de la caisse demande bien le mode annulation. */
 {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8');
+  const html = caisseTestSource(fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8'));
   const at0 = html.indexOf("a === 'cancel-sale'");
   const seg = html.slice(at0, at0 + 1200);
   ok('kiwi-caisse.html : cancel-sale ouvre le panneau en mode cancel', /KiwiPosReprint\?\.open\?\.\('restaurant', \{ mode: 'cancel' \}\)/.test(seg));

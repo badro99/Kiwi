@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · le relais OrderPro — prix, présence, session, transitions.
  *
@@ -150,7 +151,7 @@ async function get(fn, qs, headers = {}) {
   const line = (id, qty = 1) => ({ id, qty });
 
   const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
-  const caissePage = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const caissePage = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
   ok('OrderPro affiche OPD sur le retrait',
     /orderNumber\s*=\s*'OPD-'\s*\+\s*String\(res\.number/.test(orderProPage));

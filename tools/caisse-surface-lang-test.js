@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 /* L'imprimante et la clôture parlent la langue du comptoir.
  *
  * Deux écrans de la caisse sont restés en français sur un iPhone réglé en
@@ -232,7 +234,7 @@ const printerFr = audit('Imprimante', jsStrings(setup).concat(jsStrings(discover
 check(printerFr.length >= 120, `le dialogue d'imprimante est lu en entier (${printerFr.length} phrases ≥ 120)`);
 
 /* ── 2 · la clôture, le Z, l'ouverture hors horaires ───────────────────── */
-const html = read('kiwi-caisse.html').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
+const html = caisseTestSource(read('kiwi-caisse.html')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const markup = between(html, '<div class="cloture-veil" id="cloture-modal"', '<!-- ============ TEAM DRAWER', 'kiwi-caisse.html · voiles de clôture')
   .replace(/<!--[\s\S]*?-->/g, '');
 const markupText = [];

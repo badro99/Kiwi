@@ -4,11 +4,13 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 
-const CAISSE_SRC = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE_SRC = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 let failed = 0;

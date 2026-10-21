@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/table-visit-reuse-test.mjs — une nouvelle tablée ne doit jamais
  * hériter de la visite réglée de la précédente.
  *
@@ -24,7 +25,7 @@ import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const relaySource = fs.readFileSync(path.join(ROOT, 'assets/kitchen-relay.js'), 'utf8');
 function fn(name, indent = 4) {
   const start = source.search(new RegExp(`^ {${indent}}(?:async )?function ${name}\\(`, 'm'));

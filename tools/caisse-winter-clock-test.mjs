@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { businessDate, businessBoundary } from '../functions/api/_business-day.js';
 
-const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const start = source.indexOf('    function tickClock() {');
 const end = source.indexOf('    tickClock();', start);
 assert.ok(start > 0 && end > start);

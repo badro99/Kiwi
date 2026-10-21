@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* #0069 · Pasta Corner, 00h55 : « tout l'écran est blanc, on rafraîchit, et
  * toutes les commandes ont disparu ».
  *
@@ -20,7 +21,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 const START = '    /* On load · if a recent shift was saved, resume straight into the shell */';
 const END = '    /* Autosave · covers refresh, tab close and crashes.';

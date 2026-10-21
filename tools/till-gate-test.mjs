@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · a paired till opens the caisse without the owner's password.
  *
  * Since 2026-08-05 (a403201d) the site gate only opened the caisse page to an
@@ -131,7 +132,7 @@ const out = await logout({ request: new Request('https://k.invalid/auth/logout?n
 check(out.headers.get('Location') === '/kiwi-caisse', 'returns to the caisse');
 const evil = await logout({ request: new Request('https://k.invalid/auth/logout?next=https://evil.invalid/') });
 check(evil.headers.get('Location') === '/', 'any other destination falls back to the home page');
-const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 check(caisse.includes('href="/auth/logout?next=/kiwi-caisse" title="Se déconnecter"'), 'the caisse button uses it');
 
 console.log('\nThe store cookie reaches existing tills');

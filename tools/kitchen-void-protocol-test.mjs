@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Kitchen Two-Tier Void Protocol & Waste Tracking
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -798,7 +799,7 @@ exec('DROP TRIGGER fail_void_audit');
 check('Audit failure rolls back the bill instead of silently removing food', auditFailure.status === 503
   && db._db.prepare("SELECT total FROM orders WHERE id='ord-formula-immediate'").get().total === 50);
 
-const cashierSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const cashierSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const relaySource = fs.readFileSync(path.join(ROOT, 'assets', 'kitchen-relay.js'), 'utf8');
 check('Cashier and server cancellation calls are bounded instead of freezing indefinitely',
   cashierSource.includes('async function postCaisseCancellation')

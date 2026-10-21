@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -47,7 +48,7 @@ for (const [file, trade] of Object.entries(integrations)) {
   ok(text.includes('KiwiFoodProductionPrint.enqueue'), `${trade} uses the shared production queue`);
   ok(text.includes(`trade: '${trade}'`), `${trade} identifies its workflow explicitly`);
 }
-const caisseContent = source('kiwi-caisse.html');
+const caisseContent = caisseTestSource(source('kiwi-caisse.html'));
 const swContent = source('kiwi-sw.js');
 const foodStampMatch = caisseContent.match(/assets\/food-production-print\.js\?v=(\d+)/);
 ok(!!foodStampMatch, 'caisse loads the adapter before specialist modules');

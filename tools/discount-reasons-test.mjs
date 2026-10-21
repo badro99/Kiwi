@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* discount-reasons-test · the discount reasons, chip to server (stage 4,
  * §10.31, §21.1 row 4).
  *
@@ -43,7 +44,7 @@ ok(`the chips and the server's set are the same four (${chips.join(', ')})`, () 
   assert.equal(chips.length, 4);
 });
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const mapSrc = /const TILL_KIT_REASON = (\{[^;]+\});/.exec(caisse);
 const codeSrc = /function discountReasonCode\(value\) \{[\s\S]*?\n    \}/.exec(caisse);
 assert.ok(mapSrc && codeSrc, 'kiwi-caisse.html carries TILL_KIT_REASON and discountReasonCode');

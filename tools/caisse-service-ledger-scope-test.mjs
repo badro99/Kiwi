@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 
-const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const block = source.match(/function ingestSettledCloudSales\(sales\)[\s\S]*?function startEmployeeSaleJournalSync\(\)/)?.[0] || '';
 const ok = (condition, message) => {
   if (!condition) throw new Error(message);

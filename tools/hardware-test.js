@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 /* Production honesty gate for assets/caisse-hardware.js.
  * A normal card tender may be recorded against a standalone external TPE, but
  * must say that no bank authorization occurred. Authorization-only operations,
@@ -99,7 +101,7 @@ function ok(condition, label) {
     const body = fs.readFileSync(path.join(ROOT, 'assets', 'pos-' + name + '.js'), 'utf8');
     ok(body.includes('.authorizeCard('), name + ': card tender uses the shared external/connected-terminal verdict');
   });
-  const main = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const main = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   ok(main.includes('hw.authorizeCard(currentTotal() + payTipAmount()'),
     'restaurant checkout uses the shared external/connected-terminal verdict');
   ok(/settled = await finalizeTender\(cardTenderMethod\)/.test(main) &&

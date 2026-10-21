@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
@@ -5,7 +6,7 @@ const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8')
 const interactive = read('assets/interactive.js');
 const hotel = read('assets/hotel.js');
 const report = read('assets/day-report-dash.js');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const live = read('assets/live-link.js');
 
 assert.doesNotMatch(interactive, /KiwiSales\.add\s*\(/, 'dashboard must never create browser-only money');

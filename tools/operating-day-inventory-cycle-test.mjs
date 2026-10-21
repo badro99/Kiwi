@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /*
  * Kiwi · operating-day inventory cycle (isolated production-path test)
  *
@@ -278,7 +279,7 @@ const accepted = db.prepare('SELECT COUNT(*) AS n FROM inventory_movements').get
 for (const row of rows) insert.run(row.id, row.itemId, row.qty);
 assert.equal(db.prepare('SELECT COUNT(*) AS n FROM inventory_movements').get().n, accepted, 'isolated SQLite movement acceptance is retry-safe');
 
-const caisseSource = read('kiwi-caisse.html');
+const caisseSource = caisseTestSource(read('kiwi-caisse.html'));
 const countSource = read('assets/pos-inventory-count.js');
 const countApiSource = read('functions/api/inventory/counts.js');
 assert.match(caisseSource, /KiwiCaisseStock\.move\(it\.id, stockQty, 'receipt'/, 'normal receive handler uses CaisseStock.move(receipt)');

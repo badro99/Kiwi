@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Kiwi follows the time of the device at the store. The paired till uses its
 // own zone and reports it; the server, the dashboard and the reports read the
 // stored store zone; a God Mode session never moves a store's day.
@@ -98,7 +99,7 @@ check(surface({ path: '/dashboard.html', device: 'America/New_York' }) === 'Amer
   'no store zone yet: the device zone, not Casablanca');
 
 // 4. The till clock and the zone report are wired.
-const caisse = fs.readFileSync(new URL('kiwi-caisse.html', ROOT), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(new URL('kiwi-caisse.html', ROOT), 'utf8'));
 check(/function tickClock\(\)[\s\S]{0,900}resolvedOptions\(\)\.timeZone/.test(caisse), 'till clock falls back to the device zone');
 const config = fs.readFileSync(new URL('assets/merchant-config.js', ROOT), 'utf8');
 check(/function reportTillZone[\s\S]{0,900}\/api\/timezone/.test(config) && /op=1/.test(config), 'paired till reports its zone, never in God Mode');

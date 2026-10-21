@@ -2,6 +2,8 @@
 /* Kiwi · rendering and spreadsheet-export injection regressions. */
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -20,7 +22,7 @@ ok('server POS no longer renders a raw merchant menu item name',
 ok('server POS does not interpolate merchant ids into a CSS selector',
   !server.includes('data-menu-id="${item.id}"'));
 
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 ok('kitchen greeting escapes the merchant store name',
   caisse.includes('${escTeam(storeName())} <em>·</em> file de préparation'));
 const clients = read('assets/clients-book.js');

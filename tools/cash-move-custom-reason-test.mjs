@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const caisseHtml = fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(__dirname, '..', 'assets/caisse-shell.css'), 'utf8') + '</style>');
+const caisseHtml = caisseTestSource(fs.readFileSync(path.join(__dirname, '..', 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(__dirname, '..', 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const pairingJs = fs.readFileSync(path.join(__dirname, '..', 'assets', 'caisse-pairing.js'), 'utf8');
 
 // 1. Markup exists & enforces required

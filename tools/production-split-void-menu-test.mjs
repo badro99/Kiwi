@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Production Split Payment, Authoritative Void & Menu Resolution Test
  *
@@ -50,7 +51,7 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
 const orderProHtml = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
-const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseHtml = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const dayReportSrc = fs.readFileSync(path.join(ROOT, 'assets/day-report.js'), 'utf8');
 const posSaleSrc = fs.readFileSync(path.join(ROOT, 'assets/pos-sale.js'), 'utf8');
 

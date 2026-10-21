@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* tools/order-delivery-test.mjs — aucune commande ne se perd en chemin.
  *
  * Trois pertes silencieuses, toutes de la même famille : la commande EXISTE en
@@ -109,7 +110,7 @@ async function poll(since, role, cookie) {
  * qu'une fois) sont réellement exécutées. Si le bloc déménage, l'extraction
  * échoue bruyamment — ce qui est le bon comportement. */
 function extractReconciliation() {
-  const src = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const src = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   const ingest = src.indexOf('ingest(delta, all, sessions, closedSessions, expired)');
   const start = src.indexOf('(all || []).forEach(o => {', ingest);
   const end = src.indexOf('const pend = new Map();', start);
@@ -225,7 +226,7 @@ async function main() {
       order('ord-nowhere', { table: '9' }),
     ],
   };
-  const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   const context = vm.createContext(world);
   for (const name of ['locallySettledVisit', 'canRecoverCaisseTable', 'attachOrderProTable']) {
     const match = caisseSource.match(new RegExp(`^    function ${name}\\([^]*?^    }`, 'm'));

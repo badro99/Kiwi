@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · OrderPro Session Reorder, Accidental Touch Prevention & Caisse Timer Test
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -12,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
 const ORDERPRO_SRC = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
-const CAISSE_SRC   = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
+const CAISSE_SRC   = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const SESSION_SRC  = fs.readFileSync(path.join(ROOT, 'functions/api/order/session.js'), 'utf8');
 const INBOX_SRC    = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
 const QUEUE_SRC    = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');

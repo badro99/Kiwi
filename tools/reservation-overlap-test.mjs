@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Une chambre, une réservation · un tiroir, un seul chiffre
  *                                                   (tickets #0048, #0046)
@@ -27,7 +28,7 @@ import { reservationOverlapConflict } from '../functions/api/hotel/_reservation-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const STORE = fs.readFileSync(path.join(ROOT, 'functions/api/store.js'), 'utf8');
-const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 const failures = [];

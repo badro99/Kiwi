@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Le code à quatre chiffres ne quitte pas la base.
  *
  * /api/config sert le ROSTER d'une boutique — qui y travaille — et servait
@@ -62,7 +63,7 @@ ok('la réponse GET ne fabrique pas de champ pin',
 const surfaces = {
   'assets/merchant-config.js': read('assets/merchant-config.js'),
   'assets/caisse-pairing.js': read('assets/caisse-pairing.js'),
-  'kiwi-caisse.html': read('kiwi-caisse.html'),
+  'kiwi-caisse.html': caisseTestSource(read('kiwi-caisse.html')),
   'kiwi-serveur.html': read('kiwi-serveur.html'),
 };
 /* dashboard.html ne garde plus AUCUNE lecture de `x.code || x.pin` : c'était

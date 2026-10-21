@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const fn = (name, next) => source.match(new RegExp(`function ${name}\\([^]*?(?=\\n    function ${next}\\()`))?.[0] || '';
 const matchBody = fn('journalEntryMatchesCloudSale', 'reconcileCloudSaleInJournal');
 const reconcileBody = fn('reconcileCloudSaleInJournal', 'ingestSettledCloudSales');

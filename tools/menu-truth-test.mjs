@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * MENU & MODIFICATEURS · CE QUE LA CARTE ET LA CAISSE AFFIRMENT
  *
@@ -25,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RMW = readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
-const CAISSE = readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CAISSE = caisseTestSource(readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const I18N = readFileSync(path.join(ROOT, 'assets/i18n.js'), 'utf8');
 
 function grab(src, start) {

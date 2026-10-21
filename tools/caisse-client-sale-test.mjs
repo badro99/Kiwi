@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Tickets #0166, #0167, #0168 · the till's customer page and the end of a sale.
  *
  * #0166: a paid boutique sale left the phone ticket sheet open on « The sale is
@@ -25,7 +26,7 @@ async function ok(label, fn) {
 const pm = read('assets/pos-mobile.js');
 const bq = read('assets/pos-boutique.js');
 const cb = read('assets/clients-book.js');
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const lang = read('assets/caisse-lang.js');
 
 await ok('#0166 the boutique announces the end of a paid sale', () => {

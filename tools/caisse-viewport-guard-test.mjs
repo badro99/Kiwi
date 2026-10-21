@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // #0091 · after the iPad keyboard closes, the till must not stay scrolled,
 // or every tap lands below the finger. Headless Chrome cannot raise a real
 // keyboard, so this reproduces its effect: a displaced page while a field is
@@ -9,7 +10,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
-const html = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const html = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 const tag = html.match(/<script src="assets\/caisse-viewport\.js\?v=(\d+)" defer><\/script>/);
 assert.ok(tag, 'kiwi-caisse.html loads the viewport guard');

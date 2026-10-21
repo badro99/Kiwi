@@ -22,6 +22,8 @@
  * ═════════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+const caisseTestSource = require('./caisse-test-source.cjs');
+
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -30,7 +32,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`);
 
-const caisse  = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
+const caisse  = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 const menuCatalogSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
 
@@ -562,7 +564,7 @@ eq(plain.opts.length, 0, 'un produit sans options n\'en invente aucune : il s\'a
 
 /* Le tri à l'usage : un identifiant orphelin (groupe supprimé au bureau, ou
    groupe vide) ne doit pas ouvrir une question sans réponse. */
-const caisseSrc = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSrc = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 ok(/return ids\.map\(id => lib\.find\(g => g && g\.id === id\)\)\.filter\(Boolean\)/.test(caisseSrc),
   'itemOptGroups écarte un groupe disparu plutôt que de bloquer la vente');
 ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOptSheet/.test(caisseSrc),

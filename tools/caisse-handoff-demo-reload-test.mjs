@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * LA CAISSE D'UN VRAI CAFÉ QUI S'OUVRAIT SUR LA CARTE DE DÉMO
  *
@@ -24,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pairing = readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8');
-const caisse = readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

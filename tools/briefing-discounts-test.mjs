@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
@@ -7,7 +8,7 @@ const sale = fs.readFileSync(new URL('../functions/api/sale.js', import.meta.url
 const feed = fs.readFileSync(new URL('../functions/api/feed.js', import.meta.url), 'utf8');
 const live = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const pairing = fs.readFileSync(new URL('../assets/caisse-pairing.js', import.meta.url), 'utf8');
 const schema = fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
 const audit = fs.readFileSync(new URL('../docs/audits/AUDIT_AI.md', import.meta.url), 'utf8');

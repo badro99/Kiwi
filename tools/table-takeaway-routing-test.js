@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+const caisseTestSource = require('./caisse-test-source.cjs');
 "use strict";
 
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const CAISSE = fs.readFileSync(path.join(ROOT, "kiwi-caisse.html"), "utf8");
+const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, "kiwi-caisse.html"), "utf8"));
 
 let pass = 0;
 const fails = [];

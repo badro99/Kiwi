@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · RELAIS D'IMPRESSION — l'iPad imprime par le pont du comptoir
  * ---------------------------------------------------------------------------
@@ -383,7 +384,7 @@ if (DatabaseSync) {
   ok(/id="kpr-relay-pair"/.test(pb) && /id="kpr-relay-pair-local"/.test(pb) && /\/kiwi\/relay\/pair/.test(pb), 'C2 · le modal propose « Associer un pont » et l’association directe du pont local');
   ok(/r === 'relay-offline'/.test(pb), 'C2 · frReason explique relay-offline');
 
-  const caisse = read('kiwi-caisse.html'), dash = read('dashboard.html'), sw = read('kiwi-sw.js');
+  const caisse = caisseTestSource(read('kiwi-caisse.html')), dash = read('dashboard.html'), sw = read('kiwi-sw.js');
   const stamp = (src) => (src.match(/printer-bridge\.js\?v=(\d+)/) || [])[1];
   ok(stamp(caisse) && stamp(caisse) === stamp(dash) && stamp(caisse) === stamp(sw), 'C3 · printer-bridge.js porte le même tampon en caisse, dashboard et SW (' + stamp(caisse) + '/' + stamp(dash) + '/' + stamp(sw) + ')');
   ok(Number(stamp(caisse)) >= 4, 'C3 · le tampon a bougé avec le relais (≥ 4)');

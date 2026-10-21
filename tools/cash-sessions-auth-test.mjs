@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Regression for the real pairing/operator boundary. This executes the
  * shipped cash-session client and route; it does not reimplement either auth
  * decision. */
@@ -315,7 +316,7 @@ const emptyDrawerClose = await postCashSession({
   }), `kiwi_till=${till}; kiwi_terminal=${terminal}`),
 });
 assert.equal(emptyDrawerClose.status, 201, 'an explicitly counted empty drawer is a valid close');
-const caisseSource = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8'));
 const closeStart = caisseSource.indexOf('async function closeRegister()');
 const beforeCloseMutation = caisseSource.slice(closeStart, caisseSource.indexOf("$('#cloture-modal').classList.remove('is-open');", closeStart));
 assert.match(beforeCloseMutation, /countedRaw === ''[\s\S]*return;/,

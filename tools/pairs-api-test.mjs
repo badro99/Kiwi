@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* « Souvent avec… » côté serveur et côté caisse, sans navigateur.
  *
  *   1 · functions/api/pairs.js sur une vraie base SQLite bâtie depuis
@@ -183,7 +184,7 @@ function sandbox({ paired = true, merchant = M, live = 'someone-else', body = ok
   check('reset() forgets the dismissals of that order only', P.suggest(['it_msemen'], all, 'table:4').id === 'it_the');
 }
 {
-  const CA0 = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const CA0 = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   check('an emptied take-away order resets its dismissals before showing the empty till',
     /if \(cart\.length === 0\) \{\s*try \{ window\.KiwiPairs && KiwiPairs\.reset\('cart'\); \}/.test(CA0));
   check('so does an emptied table order', /KiwiPairs\.reset\('table:' \+ tableId\)/.test(CA0));
@@ -207,7 +208,7 @@ function sandbox({ paired = true, merchant = M, live = 'someone-else', body = ok
 }
 
 console.log('\n■ Wiring in kiwi-caisse.html');
-const CA = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const CA = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 check('the till loads the module', /<script src="assets\/caisse-pairs\.js\?v=\d+" defer><\/script>/.test(CA));
 check('take-away and table orders both offer it', /pairSuggestHtml\(cart, 'cart'\)/.test(CA) && /pairSuggestHtml\(order, 'table:' \+ tableId\)/.test(CA));
 check('never on the demo till', /if \(IS_DEMO \|\| !window\.KiwiPairs/.test(CA));

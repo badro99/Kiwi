@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* #0070 · « il me manque 330 dirhams ».
  *
  * Le Z de MixMax du 11/09 imprimait, l'un sous l'autre :
@@ -92,7 +93,7 @@ ok('l’encodeur navigateur applique la même correction',
 
 /* Et l'écran de la caisse, qui affichait la même contradiction : « Encaissé
  * 12 651 » au-dessus de « Moyens de paiement · Espèces 12 321 ». */
-const caisse = read('kiwi-caisse.html');
+const caisse = caisseTestSource(read('kiwi-caisse.html'));
 ok('l’écran Résumé annonce le net après remboursements sans appeler une créance encaissée',
   caisse.includes("+ kpi('Net après remboursements', fmtMAD(r.net), '', true)")
   && caisse.includes('<em>${rpEsc(fmtMAD(collected))}</em>'));

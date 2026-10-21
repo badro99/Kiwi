@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · L'INVENTAIRE PHYSIQUE EN CAISSE (assets/pos-inventory-count.js)
  *
@@ -189,7 +190,7 @@ const callers = [
   ['kiwi-caisse.html', 'ledger'],
 ];
 callers.forEach(([file, engine]) => {
-  const s = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const s = caisseTestSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   const asked = Array.from(new Set(
     Array.from(s.matchAll(/KiwiPosInventoryCount[\s\S]{0,80}?engine:\s*'([a-z-]+)'/g)).map((m) => m[1])
   ));

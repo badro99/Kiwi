@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -8,7 +9,7 @@ let checks = 0;
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
 
 const sale = fs.readFileSync('assets/pos-sale.js', 'utf8');
-const caisse = fs.readFileSync('kiwi-caisse.html', 'utf8');
+const caisse = caisseTestSource(fs.readFileSync('kiwi-caisse.html', 'utf8'));
 const pos = fs.readFileSync('assets/pos-hotel.js', 'utf8');
 const dash = fs.readFileSync('assets/hotel.js', 'utf8');
 const admin = fs.readFileSync('functions/api/admin/sales.js', 'utf8');

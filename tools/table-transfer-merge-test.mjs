@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Table Transfer & Merge Protocol with Audit Trail
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -110,7 +111,7 @@ async function postQueue(body, cookieHeader) {
 
 console.log('\n■ Table Transfer & Merge Behavioural Tests (tools/table-transfer-merge-test.mjs)');
 
-const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const tableToolMerchantPayloads = caisseSource.match(/merchant:\s*currentMerchantSlug\(\),\s*\n\s*(?:transferTable|mergeTables):/g) || [];
 check('caisse transfer and merge use the authoritative paired merchant', tableToolMerchantPayloads.length === 2);
 check('caisse table tools no longer depend on the retired KiwiSales merchant helper',

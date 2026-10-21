@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const page = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const page = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const saleApi = fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
 let failed = 0;
 function check(label, condition) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Working-source regressions: real queue handler + scoped production caisse VM.
 // All assertions require healthy outcomes. No network or disk database.
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ import * as queue from '../functions/api/order/queue.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readSource = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
-const source = readSource('kiwi-caisse.html');
+const source = caisseTestSource(readSource('kiwi-caisse.html'));
 const inbox = readSource('assets/orderpro-inbox.js');
 function fn(name, src = source, indent = 4) {
   const start = src.search(new RegExp(`^ {${indent}}(?:async )?function ${name}\\(`, 'm'));

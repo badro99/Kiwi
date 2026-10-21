@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
@@ -8,7 +9,7 @@ function ok(value, label) {
 }
 
 const source = fs.readFileSync(new URL('../assets/retail-scan.js', import.meta.url), 'utf8');
-const html = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const html = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const dispatch = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
 const sale = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');

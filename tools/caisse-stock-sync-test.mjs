@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Caisse and dashboard must share one catalog document and one quantity ledger. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -68,7 +69,7 @@ item = S.items().find((row) => row.id === id);
 ok('caisse edits dashboard metadata and stock together', item.par === 25 && item.reorder === 7 && item.cost === 10 && item.stock === 9);
 const after = JSON.parse(localStorage.getItem('kiwi:stockOverlay:amira-cafe'));
 ok('metadata edits are timestamped item overrides', after.itemOv[id].parLevel === 25 && after.itemOv[id].updatedAt > 0);
-const caisse = R('kiwi-caisse.html'); const dashboard = R('assets/stock.js');
+const caisse = caisseTestSource(R('kiwi-caisse.html')); const dashboard = R('assets/stock.js');
 ok('caisse shell loads the bridge after the ledger', caisse.indexOf('inventory-ledger.js') < caisse.indexOf('caisse-stock-sync.js'));
 ok('all caisse quantity entry paths use the bridge', /KiwiCaisseStock\.move/.test(caisse) && /KiwiCaisseStock\.count/.test(caisse) && /KiwiCaisseStock\.updateItem/.test(caisse));
 ok('dashboard repaints from cross-tab ledger changes', /KiwiInventory\?\.subscribe\?\.\(repaintFromSharedStock\)/.test(dashboard));

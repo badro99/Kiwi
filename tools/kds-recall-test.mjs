@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · RAPPELER UN BON MARQUÉ PRÊT PAR ERREUR (serveur)
  *
@@ -199,7 +200,7 @@ console.log('\n■ 6. Another tenant cannot recall our tickets');
 
 console.log('\n■ 7. Every surface that bumps a ticket can take it back');
 {
-  const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   const cuisine = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
   check('the caisse KDS has kdsRecall', /function kdsRecall\(/.test(caisse));
   check('kdsRecall pushes the named recall gesture', /function kdsRecall[\s\S]{0,1600}opPush\(o,\s*'recall'/.test(caisse));

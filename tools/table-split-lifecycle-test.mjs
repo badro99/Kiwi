@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* A completed split belongs to one visit, never to the next party at a table.
  * Run the shipped till functions, not a reimplementation of their behavior. */
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 const baseline = process.env.SPLIT_BASELINE === '1';
 const source = baseline
   ? execFileSync('git', ['show', 'HEAD:kiwi-caisse.html'], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 })
-  : fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  : caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const section = (start, end) => {
   const at = source.indexOf(start);
   if (at < 0) throw new Error('Missing till function: ' + start);

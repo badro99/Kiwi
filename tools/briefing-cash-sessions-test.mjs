@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -79,7 +80,7 @@ ok(transport.includes('if (saved) flush();'), 'transport starts only after saved
 ok(transport.includes(".catch(function () { lastError = 'network'; })"), 'transport fails soft and records network failure');
 ok(!/return\s+[^;]*slice\(-200\)/.test(transport), 'unacknowledged outbox is not truncated');
 ok(transport.includes("credentials: 'same-origin'"), 'signed cookies sent');
-const caisse = source('kiwi-caisse.html');
+const caisse = caisseTestSource(source('kiwi-caisse.html'));
 for (const type of ['open', 'movement', 'handover', 'close']) ok(caisse.includes("eventType: '" + type + "'"), type + ' emitted');
 ok(caisse.includes("movementReason: 'Ouverture sans vente'"), 'no-sale drawer opening motivated');
 ok(caisse.includes('counterpartyActorId:'), 'handover actors recorded');

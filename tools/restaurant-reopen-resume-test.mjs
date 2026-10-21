@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* A paid split can be resumed after a reload before its last tender. The last
  * receipt must retain the original bill, or void-and-reopen loses its lines. */
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 const baseline = process.env.REOPEN_RESUME_BASELINE === '1';
 const html = baseline
   ? execFileSync('git', ['show', 'HEAD:kiwi-caisse.html'], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 })
-  : fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  : caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const reprint = baseline
   ? execFileSync('git', ['show', 'HEAD:assets/pos-reprint.js'], { encoding: 'utf8' })
   : fs.readFileSync(new URL('../assets/pos-reprint.js', import.meta.url), 'utf8');

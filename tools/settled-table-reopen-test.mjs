@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* #0068 · The physical evidence is a cashier receipt for table 13 #154 at
  * 00:04, the same 60 MAD still due on the tablet at 00:27, and the same
  * reference in the journal at 00:52. OrderPro was not used. Exercise the
@@ -11,7 +12,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 const START = '    function attachOrderProTable(o) {';
 const END = "\n    /* Une commande du serveur → un ticket d'ici.";

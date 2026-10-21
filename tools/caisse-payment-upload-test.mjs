@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Local investigation: execute the actual caisse payment/persistence functions,
 // complete Live Link module, middleware and API handlers against memory SQLite.
 // No HTTP server, external requests, production secrets or merchant state.
@@ -14,7 +15,7 @@ import { onRequestPost as orderPost } from '../functions/api/order/queue.js';
 import { tillToken, TILL_COOKIE, staffToken, GATE_COOKIE } from '../functions/auth/_lib.js';
 
 const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
-const page = read('kiwi-caisse.html'), live = read('assets/live-link.js');
+const page = caisseTestSource(read('kiwi-caisse.html')), live = read('assets/live-link.js');
 const extract = name => {
   const start = page.indexOf('    function ' + name + '(');
   const end = page.indexOf('\n    }', start);

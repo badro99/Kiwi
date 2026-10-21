@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · automatic kitchen-paper queue
  * Durable paper is tested separately from the network order relay: a retry
  * must not become a duplicate, a refresh must remember completed jobs, and a
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
-const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const bridge = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
 const receipt = fs.readFileSync(path.join(ROOT, 'assets/receipt.js'), 'utf8');
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');

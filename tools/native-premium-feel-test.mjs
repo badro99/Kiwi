@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Premium feel, Tier 1 (docs/roadmaps/2026-10-10-premium-feel.md) and the
  * Orders cards that painted white before turning dark (2026-10-10).
  * Local bundled build, demo account, stubbed native plugins, real touches.
@@ -37,7 +38,7 @@ check(/func presentNativeSheet/.test(swift) && /sheet\.prefersGrabberVisible = t
 check(/window\.__kiwiHostCaps=Object\.freeze\(\{sheet:1(,push:1)?\}\)/.test(scene) && /injectionTime: \.atDocumentStart/.test(scene), 'the host announces the native sheet before any page script runs');
 check(/if \(nativeSheetAvailable\(\)\) \{\s*nativeSheet\(\{ title: c\.offerTitle, message: c\.offerBody, icon: 'faceid'/.test(runtime) && /if \(choice === 'enable'\) enable\(\); else decline\(\);/.test(runtime), 'the Face ID offer is a native sheet; swiping it away counts as Later');
 check(/#if DEBUG[\s\S]*KiwiSheetDemo[\s\S]*#endif/.test(swift), 'the simulator sheet demo is compiled out of release builds');
-check(/kiwi:sale-paid[\s\S]{0,120}haptic: false/.test(read('kiwi-caisse.html')), 'restaurant till announces the paid moment (its own haptic already played)');
+check(/kiwi:sale-paid[\s\S]{0,120}haptic: false/.test(caisseTestSource(read('kiwi-caisse.html'))), 'restaurant till announces the paid moment (its own haptic already played)');
 check(/function ticketDone\(total, method\)[\s\S]*kiwi:sale-paid/.test(read('assets/pos-sale.js')) && /if \(!delivery\) \{ try \{ window\.dispatchEvent\(new CustomEvent\('kiwi:sale-paid'/.test(read('assets/pos-boutique.js')), 'every other register and the boutique announce it too, never a delivery still to collect');
 
 /* ── browser ────────────────────────────────────────────────────────────── */

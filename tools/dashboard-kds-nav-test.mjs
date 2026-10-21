@@ -1,10 +1,11 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 const root = path.resolve(process.cwd());
 const venues = fs.readFileSync(path.join(root, 'assets/venues.js'), 'utf8');
-const caisse = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;
 function ok(condition, message) {

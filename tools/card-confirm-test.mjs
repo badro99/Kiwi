@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · « Carte » sans lecteur n'écrit jamais la vente toute seule.
  *
  * Sur une vraie caisse sans terminal certifié, readCard() rend un verdict
@@ -116,7 +117,7 @@ const button = (dom) => [...dom.mounted][0];
 
 /* 6 · le restaurant, qui a son propre bouton, le dit à l'adaptateur */
 {
-  const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
   ok(/hw\.authorizeCard\(currentTotal\(\) \+ payTipAmount\(\), reader\.disc, reader\.status, \{ cashierConfirmed: true \}\)/.test(caisse), 'restaurant: its confirm button passes cashierConfirmed');
 }
 

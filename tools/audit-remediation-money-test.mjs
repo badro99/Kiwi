@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 /* Focused regressions for the 2026-09-08 money audit.
  *
  * This file intentionally runs the shipped cash-session module and sale routes,
@@ -311,7 +312,7 @@ audit('a duplicate void is rejected without a second audit event',
   && sqlite.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id='audit-void-sale' AND action='void'").get().n === 1);
 
 /* ── F04 · actual caisse picker / state rules ────────────────────────────── */
-const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisseSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 audit('refund picker excludes voided originals',
   caisseSource.includes(".filter(e => !e.voided && e.kind !== 'refund' && e.amount > 0)")
   || caisseSource.includes(".filter(e => !e.voided && e.kind !== 'refund' && e.amount > 0)"));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // Real one-tap item cancellation flow against the actual queue API + SQLite.
 // No merchant data or production writes.
 import assert from 'node:assert/strict';
@@ -18,7 +19,7 @@ catch { console.log('○ skip: puppeteer-core unavailable (browser assertions no
 const executablePath = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(p => fs.existsSync(p));
 if (!executablePath) { console.log('○ skip: Chromium unavailable'); process.exit(process.env.CI ? 1 : 0); }
 
-const source = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const source = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const handlers = source.slice(source.indexOf('    async function postCaisseCancellation'), source.indexOf('    /* ---- table order management ---- */'));
 const groups = source.slice(source.indexOf('    function formulaGroup('), source.indexOf('    function removeGroupedLine('));
 const MERCHANT = 'test-item-cancel', SECRET = 'test-cancellation-browser-secret';

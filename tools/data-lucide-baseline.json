@@ -3,8 +3,9 @@
   "assets/agent-action-center.js": 1,
   "assets/agent.js": 5,
   "assets/boutique-promos-dashboard.js": 23,
-  "assets/caisse-attendance-code.js": 1,
+  "assets/caisse-app.js": 85,
   "assets/caisse-menu-availability.js": 3,
+  "assets/caisse-refresh.js": 1,
   "assets/dateRange.js": 6,
   "assets/employee-trade-shell.js": 8,
   "assets/food-production-print.js": 1,
@@ -33,6 +34,6 @@
   "assets/team.js": 1,
   "assets/venues.js": 2,
   "cafe-atlas-qr.html": 5,
-  "kiwi-caisse.html": 175,
+  "kiwi-caisse.html": 90,
   "kiwi-serveur.html": 91
 }

@@ -1,3 +1,4 @@
+import caisseTestSource from './caisse-test-source.cjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -159,7 +160,7 @@ test('new visit between ownership check and floor UPDATE is protected', async ()
 });
 
 test('reference-authority void survives a delayed active response', () => {
-  const html = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  const html = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
   const start = html.indexOf('    function journalEntryMatchesCloudSale(');
   const end = html.indexOf('    /* Reconcile this OPEN SERVICE', start);
   const now = Date.now();

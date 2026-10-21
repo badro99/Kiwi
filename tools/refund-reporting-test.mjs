@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -231,7 +232,7 @@ ok('feed bridge keeps refunds out of product sales and in the refund ledger',
   bridgedSales.length === 1 && bridgedSales[0].amount === 90
   && bridgedRefunds.length === 1 && bridgedRefunds[0].amount === 35);
 
-const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const offlineDb = fs.readFileSync(path.join(ROOT, 'assets/offline-db.js'), 'utf8');
 const dashboard = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 const report = fs.readFileSync(path.join(ROOT, 'assets/report.js'), 'utf8');

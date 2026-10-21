@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import caisseTestSource from './caisse-test-source.cjs';
 // A paid pickup from yesterday may be filed away, but neither its sale nor its
 // handover history may be invented or erased. Exercise the real queue SQL and
 // the caisse's archived-ticket ingestion against an in-memory production schema.
@@ -107,7 +108,7 @@ const after = await poll();
 assert.deepEqual(after.orders.filter(o => o.status === 'archived').map(o => o.number).sort(), [134, 135],
   'old archived orders reach other tills as terminal tombstones');
 
-const page = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const page = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 function extract(name) {
   const start = page.indexOf('    function ' + name + '(');
   const end = page.indexOf('\n    }', start);
