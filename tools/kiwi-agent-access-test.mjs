@@ -9,6 +9,7 @@ import { createServer } from 'node:http';
 import { makeSession, sessionCookie, operatorToken, operatorIdToken, OP_COOKIE, OPID_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestGet as listKeys, onRequestPost as changeKeys } from '../functions/api/agent/keys.js';
 import { onRequestPost as query } from '../functions/api/agent/query.js';
+import { businessDate } from '../functions/api/_business-day.js';
 import { onRequestPost as action } from '../functions/api/agent/action.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -89,7 +90,7 @@ const otherList=await out(await listKeys({env,request:req('/api/agent/keys?merch
 check(otherList.status===401,'no cross-merchant listing');
 const overview=await runQuery({tool:'merchant_overview',merchant:'other-shop'},token);
 check(overview.status===200 && overview.data.merchant==='agent-shop','body merchant ignored');
-const day=new Date(now).toISOString().slice(0,10);
+const day=businessDate(now); /* the agent answers in the store's business days (05:00, Casablanca) */
 const sales=await runQuery({tool:'sales_summary',from:day,to:day},token);
 check(sales.status===200 && sales.data.rows.length===1 && sales.data.rows[0].amount_cents===10000,'sales tenant-bound');
 const orders=await runQuery({tool:'orders_list',from:day,to:day,merchant:'other-shop'},token);

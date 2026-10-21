@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { businessDate } from '../functions/api/_business-day.js';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost as register } from '../functions/api/agent/oauth/register.js';
 import { onRequestGet as authGet, onRequestPost as authPost } from '../functions/api/agent/oauth/authorize.js';
@@ -118,7 +119,7 @@ check((await call({ jsonrpc: '2.0', method: 'notifications/initialized' })).stat
 const list = await call({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
 const names = list.data.result.tools.map(t => t.name).sort();
 check(names.join() === 'merchant_overview,sales_summary', 'tools/list shows only granted tools');
-const day = new Date(now).toISOString().slice(0, 10);
+const day = businessDate(now); /* the agent answers in the store's business days (05:00, Casablanca) */
 const sales = await call({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'sales_summary', arguments: { from: day, to: day, merchant: 'mcp-other' } } });
 const sc = sales.data.result.structuredContent;
 check(!sales.data.result.isError && sc.merchant === 'mcp-shop' && sc.rows.length === 1 && sc.rows[0].amount_cents === 12000, 'tool call tenant-bound; merchant argument ignored');
