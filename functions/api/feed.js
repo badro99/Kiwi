@@ -172,6 +172,8 @@ export async function onRequestGet({ request, env }) {
   const from = Number(url.searchParams.get('from')) || 0;
   const byDay = from > 0;
   const DAY_LIMIT = 2000;
+  const requestedLimit = Number(url.searchParams.get('limit'));
+  const limit = Number.isInteger(requestedLimit) ? Math.max(50, Math.min(500, requestedLimit)) : 50;
 
   /* Compatibility for tills that still have the previous service-worker bundle
    * open during deployment. That client asks for a maximum then uses `seq + 1`;
@@ -203,7 +205,7 @@ export async function onRequestGet({ request, env }) {
         ).bind(merchant, legacy || merchant, from).all()
         : await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
-          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
+          `FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT ${limit}`
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
     }
@@ -225,14 +227,14 @@ export async function onRequestGet({ request, env }) {
     if (!noVoid && !noLines && !noChannel && !noAmountCents && !noDiscount) {
       return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
     }
-    if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
+    if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [], ...(!byDay ? { limit } : {}) });
     const cols = 'rowid AS cursor, id, amount'
       + (noAmountCents ? '' : ', amount_cents')
       + (noDiscount ? '' : ', gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id')
       + ', method, label, ref, ts'
       + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
     const where = byDay ? 'ts >= ?' : 'rowid > ?';
-    const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : 'rowid ASC LIMIT 50';
+    const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : `rowid ASC LIMIT ${limit}`;
     const bound = byDay ? from : since;
     try {
       const rs = await env.DB.prepare(
@@ -287,15 +289,17 @@ export async function onRequestGet({ request, env }) {
 
   // The receipt cursor remains one sale. Tender detail lives on that row and
   // can be absent on old deployments/receipts without hiding the money feed.
-  if (rows.length) {
+  // Batch optional receipt details within D1's bound-parameter budget.
+  for (let offset = 0; offset < rows.length; offset += 75) {
+    const detailRows = rows.slice(offset, offset + 75);
     try {
-      const ids = rows.map(row => String(row.id || '')).filter(Boolean);
+      const ids = detailRows.map(row => String(row.id || '')).filter(Boolean);
       const marks = ids.map(() => '?').join(',');
       const details = await env.DB.prepare(
         `SELECT id, payment_parts FROM sales WHERE merchant IN (?, ?) AND id IN (${marks})`
       ).bind(merchant, legacy || merchant, ...ids).all();
       const byId = new Map((details.results || []).map(row => [String(row.id), row.payment_parts]));
-      rows.forEach(row => {
+      detailRows.forEach(row => {
         try {
           const parts = JSON.parse(byId.get(String(row.id)) || 'null');
           if (Array.isArray(parts)) row.paymentParts = parts;
@@ -305,13 +309,13 @@ export async function onRequestGet({ request, env }) {
     /* Le pourboire saisi à l'encaissement (sale.js › tip_cents). Colonne absente
        sur une base pas encore guérie : le flux reste, sans pourboire. */
     try {
-      const ids = rows.map(row => String(row.id || '')).filter(Boolean);
+      const ids = detailRows.map(row => String(row.id || '')).filter(Boolean);
       const marks = ids.map(() => '?').join(',');
       const tips = await env.DB.prepare(
         `SELECT id, tip_cents FROM sales WHERE merchant IN (?, ?) AND id IN (${marks}) AND tip_cents > 0`
       ).bind(merchant, legacy || merchant, ...ids).all();
       const byId = new Map((tips.results || []).map(row => [String(row.id), Math.round(Number(row.tip_cents))]));
-      rows.forEach(row => { const t = byId.get(String(row.id)); if (Number.isSafeInteger(t) && t > 0) row.tipCents = t; });
+      detailRows.forEach(row => { const t = byId.get(String(row.id)); if (Number.isSafeInteger(t) && t > 0) row.tipCents = t; });
     } catch (_) { /* Old schema without tip_cents. */ }
   }
 
@@ -402,5 +406,5 @@ export async function onRequestGet({ request, env }) {
     const desk = await env.DB.prepare('SELECT seen_ts FROM order_desk WHERE merchant = ?').bind(merchant).first();
     tillSeen = Math.max(0, Number(desk && desk.seen_ts) || 0);
   } catch (_) {}
-  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now() });
+  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now(), ...(!byDay ? { limit } : {}) });
 }

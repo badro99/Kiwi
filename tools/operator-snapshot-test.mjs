@@ -187,6 +187,25 @@ await terminalFailure('stuck full page cursor', [page(full(), 0)], 'error', 'cur
 await terminalFailure('repeated full page', [page(full()), page(full())], 'incomplete', 'invalid-sales');
 await terminalFailure('malformed final page', [page(full()), {}], 'incomplete', 'invalid-feed');
 
+for (const total of [2848, 1000]) {
+  const pages = [];
+  for (let offset = 0; offset < total; offset += 500) {
+    pages.push({ ...page(Array.from({ length: Math.min(500, total - offset) }, (_, i) => sale(offset + i + 1))), limit: 500 });
+  }
+  if (total % 500 === 0) pages.push({ ...page([], total), limit: 500 });
+  const h = harness(pages); await h.boot();
+  while (h.timers.size) await h.next();
+  assert.equal(h.state().phase, 'complete');
+  assert.equal(h.state().rows, total);
+  assert.equal(h.state().pages, Math.floor(total / 500) + 1);
+  assert.ok(h.requests.every(r => r.url.endsWith('&limit=500')));
+  h.assertReadOnly(); cases++;
+}
+await terminalFailure('oversized negotiated page', [{ ...page(Array.from({ length: 501 }, (_, i) => sale(i + 1))), limit: 500 }], 'error', 'invalid-feed');
+for (const limit of [undefined, '500', 49, 501, 50.5]) {
+  await terminalFailure('invalid page size falls back to 50', [{ ...page(Array.from({ length: 51 }, (_, i) => sale(i + 1))), limit }], 'error', 'invalid-feed');
+}
+
 for (const pages of [[page()], [page([sale(1)])], [page(full()), page([sale(51)])], [page(full()), page([], 50)],
   [page([sale(1, 100), sale(2, -20)])]]) {
   const h = harness(pages), r = renderers(h); await h.boot();
@@ -220,7 +239,7 @@ for (const pages of [[page()], [page([sale(1)])], [page(full()), page([sale(51)]
   }
   assert.equal(h.window.KiwiLive.status().backfillComplete, true); assert.equal(h.requests.length, pages.length);
   assert.match(h.ids.get('kiwi-op-snapshot').textContent, /santos-store.*historique autorisé.*Instantané complet.*reçu le.*hors direct/);
-  assert.ok(h.requests.at(-1).url.endsWith('since=' + (pages.length > 1 ? 50 : 0)));
+  assert.ok(h.requests.at(-1).url.endsWith('since=' + (pages.length > 1 ? 50 : 0) + '&limit=500'));
   const copy = h.state(); copy.phase = 'error'; assert.equal(h.state().phase, 'complete', 'status is a copy');
   h.window.KiwiVenue.getVenue = () => 'other-venue'; assert.equal(r.pending(), true, 'different venue stays guarded');
   h.assertReadOnly(); cases++;

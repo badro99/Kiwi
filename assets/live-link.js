@@ -1102,8 +1102,8 @@
   }
   /* A short page is evidence only when it is a valid response for this scope.
      Do not interpret a login page, missing DB response, or stuck cursor as zero. */
-  function validateSnapshotPage(data, tenant, since) {
-    if (!data || data.error || !Array.isArray(data.sales) || data.sales.length > 50 ||
+  function validateSnapshotPage(data, tenant, since, pageSize) {
+    if (!data || data.error || !Array.isArray(data.sales) || data.sales.length > pageSize ||
         !Array.isArray(data.voided)) throw new Error('invalid-feed');
     if (!tenant || data.merchant !== tenant) throw new Error('scope');
     var cursor = since;
@@ -1166,17 +1166,18 @@
       var tenant = merchant();
       if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
       if (!tenant) { busy = false; arm(); return; }
-      readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since)
+      readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since + (backfill || oneShot ? '&limit=500' : ''))
         .then(function (data) {
           if (stopped) return;
           // A response started under the previous store cannot advance this
           // store's cursor or be described as a fresh successful read.
           if (merchant() !== tenant || (data && data.merchant && data.merchant !== tenant)) throw new Error('scope');
           if (!data || data.error || !Array.isArray(data.sales)) throw new Error('invalid-feed');
+          var pageSize = (Number.isInteger(data.limit) && data.limit >= 50 && data.limit <= 500) ? data.limit : 50;
           lastFeedError = '';
           if (oneShot) {
             if (tenant !== state.merchant || merchant() !== tenant) throw new Error('scope');
-            validateSnapshotPage(data, tenant, since);
+            validateSnapshotPage(data, tenant, since, pageSize);
           }
           lastSync = Date.now();
           if (!oneShot && typeof data.tillSeen === 'number') publishTill(tenant, data.tillSeen, data.now);
@@ -1189,9 +1190,9 @@
           if (Array.isArray(data.voided) && !oneShot) applyVoids(data.voided, tenant);
           if (Array.isArray(data.sales)) {
             if (data.sales.length) since = data.cursor || since;
-            /* /api/feed pages at 50. A shorter page proves the complete
+            /* /api/feed echoes its effective page size. A shorter page proves the complete
                entitled history has arrived, so local reconciliation is safe. */
-            if (data.sales.length < 50) {
+            if (data.sales.length < pageSize) {
               var firstComplete = !feedComplete[tenant];
               feedComplete[tenant] = true;
               if (firstComplete && !oneShot) {
@@ -1203,13 +1204,13 @@
               if (applied && applied.venue) state.venue = applied.venue;
             }
             else { try { onSales(data.sales, backfill, tenant); } catch (_) {} }
-            /* The feed is paginated at 50 rows. A full first page does NOT end
+            /* The feed is paginated at the negotiated page size. A full first page does NOT end
                startup history: every following page is still old ledger data
                and must stay silent. Drain full pages immediately, and unlock
                notifications only after a short (or empty) page proves we have
                reached the live edge. This also handles histories containing an
-               exact multiple of 50 rows, whose final proof is an empty page. */
-            drainBackfill = data.sales.length === 50;
+               exact multiple of the page size, whose final proof is an empty page. */
+            drainBackfill = data.sales.length === pageSize;
             if (backfill && !drainBackfill) backfill = false;
             if (oneShot) {
               state.pages++; state.rows += data.sales.length; state.cursor = since;
