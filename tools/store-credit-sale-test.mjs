@@ -122,7 +122,7 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
 
 /* ═══ La caisse maison l'envoie, et seulement quand il le faut ════════════ */
 {
-  const post = MAISON.slice(MAISON.indexOf('const creditIn = (parts || [])'), MAISON.indexOf('window.KiwiLive.postSale(payload);') + 40);
+  const post = MAISON.slice(MAISON.indexOf('const creditIn = (parts || [])'), MAISON.indexOf('bqPost(sale, payload);') + 40);
   ok(/creditIn = \(parts \|\| \[\]\)\.reduce/.test(post), 'la caisse calcule l\'avoir réellement consommé');
   ok(/cashIn <= 0 && creditIn > 0 && basket\.length/.test(post),
     'et ne marque le règlement par avoir que si rien n\'est entré en caisse');
@@ -183,7 +183,7 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   };
   vm.createContext(sandbox);
   /* originalSalePayload envoie ses lignes par bqLineTotals (le panier au centime), défini plus bas dans le fichier. */
-  const lineTotalsSrc = src.slice(src.indexOf('  function bqLineTotals('), src.indexOf('  function bqZJournal('));
+  const lineTotalsSrc = src.slice(src.indexOf('  function bqFoldBasket('), src.indexOf('  function bqZJournal('));
   vm.runInContext(lineTotalsSrc + src.slice(from, to).replace(/\n\s*refreshRemoteAvoirs\(\);\s*\n/g, '\n') +
     '\n;this.api = { creditFromServer, creditRequest, stableCreditIssueId, originalSalePayload, creditErrorDetail };', sandbox);
   const api = sandbox.api;

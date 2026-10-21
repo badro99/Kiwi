@@ -82,7 +82,7 @@ function tillContext(globals) {
     grabStatement(/const lineBase {0,2}= [^\n]+\n/),
     grabStatement(/const lineUnit {0,2}= [^\n]+\n/),
     grabStatement(/const lineTotal = [^\n]+\n/),
-    grabFn('function bqLineTotals('),
+    grabFn('function bqLineTotals('), grabFn('function bqFoldBasket('),
     grabFn('function originalSalePayload('),
     /* le correctif « argent qui rentre » peut avoir ajouté une aide à caToday */
     (SRC.match(/const notCashedOf = [\s\S]*?;\n/) || [''])[0],
@@ -419,7 +419,7 @@ console.log('■ Prix d’une ligne de caisse Maison');
     return { id: '1000', tenderVersion: 2, parts, total, consigned, own: total - consigned, lines, at: new Date(), kind: 'vente' };
   });
   const MAISON_DAY = [
-    mFn('function bqLineTotals('),
+    mFn('function bqLineTotals('), mFn('function bqFoldBasket('),
     mFn('function originalSalePayload('),
     mStatement(/const notCashedOf = [\s\S]*?;\n/),
     mStatement(/const cashedOf = [\s\S]*?;\n/),

@@ -58,4 +58,22 @@ for (const [name, src] of [['boutique', boutique], ['maison', maison]]) {
   ok(/bqLineTotals\(\(sale\.lines \|\| \[\]\)[\s\S]{0,140}Number\(sale\.balanceTotal\) \|\|/.test(src),
     `${name}: a replayed deposit spreads over the whole ticket, not over the deposit`);
 }
+
+/* A ticket of more than 40 lines: /api/sale keeps 40, and the rest used to
+   vanish while the money stayed whole. bqFoldBasket folds it into one line. */
+const fold = grab(boutique, 'bqFoldBasket');
+ok(fold === grab(maison, 'bqFoldBasket'), 'boutique and Maison share the same bqFoldBasket');
+const fctx = {}; vm.createContext(fctx); vm.runInContext(fold + '\nthis.f = bqFoldBasket;', fctx);
+const long = Array.from({ length: 45 }, (_, i) => ({ itemId: 'p' + i, name: 'Article ' + i, qty: 1 + (i % 2), total: 10.1 }));
+const folded = fctx.f(long);
+ok(folded.length === 40, 'a 45-line ticket goes out as 40 lines, the most /api/sale keeps');
+ok(sum(folded.map((l) => l.total)) === sum(long.map((l) => l.total)), 'and its lines still add up to the ticket, to the centime');
+ok(folded[39].name === '6 autres articles' && folded[39].qty === long.slice(39).reduce((q, l) => q + l.qty, 0),
+  'the last line says how many articles it holds, and their pieces');
+ok(!folded[39].itemId && !folded[39].variantId, 'it names no article, so a return never puts it back into the wrong stock');
+ok(fctx.f(long.slice(0, 40)).length === 40 && fctx.f(long.slice(0, 40))[39].name === 'Article 39', 'a ticket of 40 lines is left as it is');
+for (const [name, src] of [['boutique', boutique], ['maison', maison]]) {
+  ok((src.match(/bqFoldBasket\(/g) || []).length === 3 && !/lines\.slice\(0, 40\)\.map\(\((?:ln|line), i\)/.test(src),
+    `${name}: the live sale and the replayed sale both fold, none slices at 40`);
+}
 console.log(`retail-basket-cents: ${n} controls passed`);

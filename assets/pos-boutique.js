@@ -730,6 +730,52 @@
     if (code === 'manager-required') return 'L’accord d’un responsable est nécessaire pour émettre un avoir. Rien n’a été remis en stock.';
     return 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
   }
+  /* postSale() répond {ok:true, queued:true} quand la file de Live Link a pris
+     la vente. Toute autre réponse (stockage plein, commerce pas encore résolu
+     au démarrage) était ignorée : le panier se vidait, le ticket sortait, et le
+     serveur n'entendait jamais parler de la vente. La caisse restaurant la
+     garde et la renvoie ; la boutique fait de même. On garde la charge exacte
+     sur la vente, au journal du jour, et on la renvoie plus tard : postSale()
+     en dérive le même identifiant, un renvoi ne compte donc jamais deux fois.
+     Une vente que postSale() écarte exprès (rien à remonter, ticket à zéro)
+     n'est pas retenue : elle repartirait pour rien toutes les minutes. */
+  function bqHoldPost(sale, payload, res) {
+    if (!sale || !payload) return true;
+    if (res && res.ok === true && res.queued === true) {
+      if (sale.pendingPost) { delete sale.pendingPost; persistDay(); }
+      return true;
+    }
+    let unresolved = false;
+    try { unresolved = !(window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()); } catch (_) { unresolved = true; }
+    if ((res && res.ok === false) || (!res && unresolved)) {
+      sale.pendingPost = { ...payload, merchant: payload.merchant || merchantSlug() || undefined, time: +new Date(payload.time || sale.at) };
+      persistDay();
+      return false;
+    }
+    return true;
+  }
+  function bqReplayHeld() {
+    if (IS_DEMO) return 0;
+    const Live = window.KiwiLive;
+    if (!Live || !Live.postSale || !Live.isOn || !Live.isOn()) return 0;
+    let sent = 0, changed = false;
+    SALES.slice().reverse().forEach((s) => {           // le plus ancien d'abord : la file garde l'ordre
+      if (!s || !s.pendingPost) return;
+      if (s.voided) { delete s.pendingPost; changed = true; return; }
+      let res = null;
+      try { res = Live.postSale({ ...s.pendingPost, time: new Date(s.pendingPost.time || s.at) }); } catch (_) {}
+      if (res && res.ok === true && res.queued === true) { delete s.pendingPost; sent++; changed = true; }
+    });
+    if (changed) persistDay();
+    return sent;
+  }
+  function bqPost(sale, payload) {
+    bqReplayHeld();                      // les ventes retenues d'abord, dans l'ordre
+    let res = null;
+    try { res = window.KiwiLive.postSale(payload); } catch (_) { res = { ok: false, reason: 'post-threw' }; }
+    bqHoldPost(sale, payload, res);
+    return res;
+  }
   /* Le ticket d'origine, reconstruit depuis la vente figée de la caisse : le
      registre refuse un avoir qui ne s'adosse pas à une vente qu'il connaît. */
   function originalSalePayload(sale) {
@@ -744,12 +790,12 @@
     const total = Math.max(0, Number(sale.total) || (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
     const cashIn = Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0));
     const lineTotals = bqLineTotals((sale.lines || []).map((line) => (+line.unit || 0) * Math.max(1, Number(line.qty) || 1)), Number(sale.balanceTotal) || sale.total);
-    const lines = (sale.lines || []).slice(0, 40).map((line, i) => ({
+    const lines = bqFoldBasket((sale.lines || []).map((line, i) => ({
       itemId: line.pid || '', variantId: [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
       qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
       cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
-    }));
+    })));
     const payload = {
       id: sale.serverId || sale.syncId || sale.id,
       merchant: merchantSlug(), amount: cashIn, amountCents: Math.round(cashIn * 100),
@@ -992,7 +1038,17 @@
   function remoteLine(line) {
     if (!line) return null;
     const raw = String(line.name || '').trim();
-    let item = line.pid && P[line.pid] ? P[line.pid] : null;
+    /* /api/sale garde l'article et la variante exacte (itemId et
+       « pid:taille:couleur »). On ne les lisait pas : la ligne était rattachée
+       par son nom imprimé, puis au premier modèle de la taille, si bien qu'une
+       chemise bleue rendue sur l'autre caisse revenait en stock en blanc. */
+    const itemKey = String(line.itemId || line.pid || '');
+    let item = itemKey && P[itemKey] ? P[itemKey] : null;
+    const vKey = String(line.variantId || '');
+    const vRest = item && vKey.indexOf(itemKey + ':') === 0 ? vKey.slice(itemKey.length + 1) : '';
+    const vCut = vRest.indexOf(':');
+    const vSize = vCut >= 0 ? vRest.slice(0, vCut) : '';
+    const vColor = vCut >= 0 ? vRest.slice(vCut + 1) : '';
     if (!item && raw) {
       const low = raw.toLocaleLowerCase('fr');
       const uniq = [];
@@ -1005,11 +1061,13 @@
     if (!item) return null;
     const suffix = raw.slice(String(item.name || '').length).trim();
     const sizes = sizesOf(item);
-    const size = String(line.size || (sizes.includes(suffix) ? suffix : '') || sizes[0] || 'TU');
-    const variant = (item._variants || []).find((v) => String(v.size) === size) || (item._variants || [])[0];
+    const size = String(line.size || vSize || (sizes.includes(suffix) ? suffix : '') || sizes[0] || 'TU');
+    const vs = item._variants || [];
+    const variant = (vColor && vs.find((v) => String(v.size) === size && String(v.colorId) === vColor))
+      || vs.find((v) => String(v.size) === size) || vs[0];
     const qty = Math.max(1, Number(line.qty) || 1);
     return {
-      pid: item.id, size, color: String(line.color || (variant && variant.colorId) || ''), qty,
+      pid: item.id, size, color: String(line.color || vColor || (variant && variant.colorId) || ''), qty,
       remise: 0, unit: Number(line.unit) || ((Number(line.total) || 0) / qty),
       returned: false, note: '', name: item.name,
     };
@@ -1560,7 +1618,7 @@
     if (!mount._netBound) {
       mount._netBound = true;
       const refresh = () => syncNetworkState();
-      window.addEventListener('online', refresh);
+      window.addEventListener('online', () => { refresh(); try { bqReplayHeld(); } catch (_) {} });
       window.addEventListener('offline', refresh);
       window.addEventListener('kiwi:sale-queue', (e) => syncNetworkState(e && e.detail));
       window.addEventListener('storage', (e) => {
@@ -1699,6 +1757,14 @@
     renderAll();
     syncReturnSales();
     ensureReturnCloud();
+    /* Une vente retenue (voir bqHoldPost) repart dès que le commerce est
+       résolu, puis à chaque minute tant qu'il en reste. */
+    if (!IS_DEMO && !mount._heldTimer) {
+      setTimeout(() => { try { bqReplayHeld(); } catch (_) {} }, 4000);
+      mount._heldTimer = setInterval(() => {
+        try { if (SALES.some((s) => s && s.pendingPost)) bqReplayHeld(); } catch (_) {}
+      }, 60000);
+    }
 
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
@@ -3621,7 +3687,7 @@
                   const isDelivery = pm.indexOf('livraison') >= 0;
                   const method = bqPaymentMethod(parts);
                   const cashIn = (parts || []).reduce((s, x) => s + (x.m === 'avoir' || x.m === 'livraison' ? 0 : (+x.amount || 0)), 0);
-                  window.KiwiLive.postSale({
+                  bqPost(rec, {
                     id: rec.syncId,
                     amount: cashIn,
                     method,
@@ -3981,7 +4047,7 @@
                rapport de fin de journée même si le rayon est renommé plus tard.
                Bornes identiques à celles de /api/sale : 40 lignes, 60 signes. */
             const lineTotals = bqLineTotals(frozen.lines.map((ln) => ln.unit * ln.qty), total);
-            const basket = frozen.lines.slice(0, 40).map((ln, i) => ({
+            const basket = bqFoldBasket(frozen.lines.map((ln, i) => ({
               itemId: ln.pid,
               variantId: [ln.pid, ln.size || '', ln.color || ''].join(':'),
               name: ln.name + (ln.size ? ' ' + ln.size : ''),
@@ -3990,7 +4056,7 @@
               cat: ln.rayon,
               unit: 'piece',
               kind: 'product',
-            }));
+            })));
             const payload = {
               id: sale.syncId,
               amount: cashIn,
@@ -4013,7 +4079,7 @@
               payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
                 .reduce((sum, x) => sum + (+x.amount || 0), 0) * 100);
             }
-            window.KiwiLive.postSale(payload);
+            bqPost(sale, payload);
           }
         } catch (_) {}
         let ptsLine = '';
@@ -4175,7 +4241,7 @@
         if (!saved) { toast('Règlement non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
         bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0);
         SALES.unshift(sale); persistDay(); bqSaveProvisional(true);
-        try { if (window.KiwiLive && window.KiwiLive.isOn()) window.KiwiLive.postSale({
+        try { if (window.KiwiLive && window.KiwiLive.isOn()) bqPost(sale, {
           id: syncId, amount, amountCents: Math.round(amount * 100), method,
           paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(amount * 100),
           label: 'Règlement acompte', ref: row.ticketRef, time: at, channel: 'counter',
@@ -7466,6 +7532,21 @@
      moyen de paiement. Une vente réglée sans argent (avoir, livraison en
      compte) n'apporte rien à comparer et reste dehors ; une vente annulée
      part comme marque, pour retirer son identifiant d'un envoi précédent. */
+  /* /api/sale garde 40 lignes. Les tickets plus longs perdaient le reste en
+     silence : la recette restait entière, mais les lignes ne faisaient plus le
+     ticket et les articles du bout n'existaient nulle part. Au-delà de 39, le
+     reste part en une seule ligne « N autres articles », au centime près. Elle
+     ne porte aucun identifiant d'article : rien n'est rendu au mauvais stock. */
+  function bqFoldBasket(lines) {
+    if (!Array.isArray(lines) || lines.length <= 40) return lines;
+    const rest = lines.slice(39);
+    return lines.slice(0, 39).concat([{
+      name: rest.length + ' autres articles',
+      qty: rest.reduce((n, l) => n + Math.max(0, Number(l && l.qty) || 0), 0),
+      total: Math.round(rest.reduce((s, l) => s + Math.round((Number(l && l.total) || 0) * 100), 0)) / 100,
+      cat: '', unit: 'piece', kind: 'product',
+    }]);
+  }
   /* LE PANIER AU CENTIME, ET À LA VALEUR DU TICKET. Deux écarts entre ce que
      la caisse encaissait et ce que ses lignes disaient au serveur. Un : chaque
      ligne était arrondie au dirham (Math.round), donc un caftan à 249,90 partait

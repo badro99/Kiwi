@@ -590,6 +590,7 @@ for (const test of [
   'z-reconciliation-client-test.mjs',
   'retail-z-reconciliation-test.mjs',
   'retail-basket-cents-test.mjs',
+  'retail-sale-hold-test.mjs',
   'z-reconciliation-browser-test.mjs',
   'caisse-winter-clock-test.mjs',
   'device-timezone-test.mjs',
