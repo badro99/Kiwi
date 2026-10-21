@@ -1676,6 +1676,54 @@
     });
   })();
 
+  /* La caisse boutique en arabe et en anglais (2026-10-21) : la fenêtre
+     d'encaissement, l'inventaire, les toasts qui portent un nom d'article, les
+     info-bulles du rail et le réglage des imprimantes restaient en français. */
+  (function () {
+    var R = {
+      'Montant…': ['Amount…', 'المبلغ…'],
+      'Rendu calculé, flous comptés une fois': ['Change worked out, cash counted once', 'الباقي محسوب، والنقود تُعدّ مرة واحدة'],
+      'Terminal de la banque, montant à saisir dessus': ['Bank terminal, enter the amount on it', 'جهاز البنك، يُدخَل المبلغ عليه'],
+      'Virement / Versement': ['Bank transfer / Deposit', 'تحويل / إيداع'],
+      'Confirmer uniquement après réception en banque': ['Confirm only once it reaches the bank', 'لا تؤكد إلا بعد وصوله إلى البنك'],
+      'Chèque': ['Cheque', 'شيك'],
+      'Confirmer après réception du chèque': ['Confirm once the cheque is received', 'أكّد بعد استلام الشيك'],
+      'Vente enregistrée, paiement à recevoir du transporteur': ['Sale recorded, payment to collect from the courier', 'البيع مسجل، والمبلغ يُستلم من شركة التوصيل'],
+      'Code d’avoir': ['Credit note code', 'رمز سند الرصيد'],
+      "Code d'avoir": ['Credit note code', 'رمز سند الرصيد'],
+      'Scanner ou saisir le code du bon': ['Scan or type the voucher code', 'امسح رمز السند أو أدخله'],
+      'Partager le paiement': ['Split the payment', 'تقسيم الدفع'],
+      'Kiwi affiche, le lecteur encaisse': ['Kiwi shows the amount, the card reader takes the payment', 'يعرض Kiwi المبلغ، ويستخلص الجهاز الدفع'],
+      'stock par taille en direct': ['live stock by size', 'المخزون حسب المقاس مباشرة'],
+      'Valeur de stock': ['Stock value', 'قيمة المخزون'],
+      'Stock bas / rupture': ['Low / out of stock', 'مخزون منخفض / نافد'],
+      '{n} coul.': ['{n} col.', 'ألوان: {n}'],
+      '{n} taille': ['{n} size', 'مقاسات: {n}'],
+      '{n} tailles': ['{n} sizes', 'مقاسات: {n}'],
+      '{n}/{n} codes-barres': ['{n}/{n} barcodes', 'الباركود: {n}/{n}'],
+      'Scannez un article, ou tapez un code…': ['Scan an item or type a code…', 'امسح منتجًا أو اكتب رمزًا…'],
+      'Imprimer toutes les étiquettes': ['Print all labels', 'طباعة كل الملصقات'],
+      'N° de ticket ou téléphone…': ['Ticket number or phone…', 'رقم التذكرة أو الهاتف…'],
+      'Dates': ['Dates', 'التواريخ'],
+      'Tester la douchette': ['Test the scanner', 'اختبار قارئ الباركود'],
+      'Configurer les imprimantes': ['Set up printers', 'إعداد الطابعات'],
+      'Simuler une coupure réseau': ['Simulate a network outage', 'محاكاة انقطاع الشبكة'],
+      'Imprimante de la caisse': ['Till printer', 'طابعة الصندوق'],
+      'Imprimante de la caisse:': ['Till printer:', 'طابعة الصندوق:'],
+      'Imprimante par défaut (actuelle)': ['Default printer (current)', 'الطابعة الافتراضية (الحالية)'],
+      'Même imprimante que la caisse': ['Same printer as the till', 'نفس طابعة الصندوق'],
+      /* Les toasts qui portent un nom d'article : le nom passe tel quel. */
+      '{x}, sur le ticket': ['{x}, on the ticket', '{x}، أُضيف إلى التذكرة'],
+      '{x}, plus de stock, dernière pièce déjà sur le ticket': ['{x}, out of stock, the last piece is already on the ticket', '{x}، نفد المخزون، وآخر قطعة موجودة في التذكرة'],
+      '{x}, épuisé': ['{x}, sold out', '{x}، نفد'],
+      'Bip, {x}': ['Beep, {x}', 'تم المسح، {x}'],
+    };
+    Object.keys(R).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = R[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = R[k][1];
+    });
+  })();
+
   /* Le scan continu (assets/retail-scan.js), partagé par la boutique,
      l'épicerie et les autres commerces de détail : la caméra, le panier,
      l'encaissement en parts et la création d'un produit au scan (2026-10-21). */
@@ -1938,6 +1986,22 @@
     if (!d) return null;
     if (d[core]) return d[core];
 
+    /* Un morceau qui COMMENCE par le séparateur : la fiche d'un article écrit
+       « · stock par taille en direct » dans son propre nœud, après le nom.
+       Sans cette découpe, la phrase connue restait en français. */
+    var lead = /^·\s+/.exec(core);
+    if (lead) {
+      var rest = translateCore(core.slice(lead[0].length));
+      return rest == null ? null : lead[0] + rest;
+    }
+    /* Et l'inverse : une option de liste écrite « · Même imprimante que la
+       caisse · » arrive, une fois découpée, avec son séparateur de fin. */
+    var tail = /\s+·$/.exec(core);
+    if (tail) {
+      var head = translateCore(core.slice(0, tail.index));
+      return head == null ? null : head + tail[0];
+    }
+
     // 1 · segments séparés par « · » — la ponctuation maison de la caisse.
     if (core.indexOf(' · ') >= 0) {
       var any = false;
@@ -1990,16 +2054,24 @@
      dictionnaire, on ne regarde que les gabarits qui commencent par le même
      mot que le segment. Construit une fois par langue — tous les blocs du
      dictionnaire sont fusionnés au chargement, avant le premier balayage.
-     Une clé qui COMMENCE par {x} n'a pas de mot d'ancrage : elle n'est pas
-     acceptée, sinon chaque nom propre deviendrait candidat. */
+     Une clé qui COMMENCE par {x} n'a pas de mot d'ancrage : elle va dans une
+     courte liste à part, lue par la FIN du segment, et seulement si cette fin
+     est une vraie phrase (une virgule ou une espace, puis sept caractères au
+     moins). C'est la forme des toasts de la boutique : « Caftan Fassi · M,
+     sur le ticket », où le nom de l'article vient avant la phrase. */
   var holes = {};
+  var SUFFIX = '\u0000fin';
   function holeIndex(d) {
     if (holes[cur]) return holes[cur];
     var idx = Object.create(null);
     Object.keys(d).forEach(function (k) {
       var at = k.indexOf('{x}');
-      if (at <= 0) return;
+      if (at < 0) return;
       var pre = k.slice(0, at), suf = k.slice(at + 3);
+      if (at === 0) {
+        if (suf.length >= 7 && /^[,\s]/.test(suf) && suf.indexOf('{x}') < 0) (idx[SUFFIX] = idx[SUFFIX] || []).push({ pre: '', suf: suf, key: k });
+        return;
+      }
       var w = pre.split(/\s/)[0];
       (idx[w] = idx[w] || []).push({ pre: pre, suf: suf, key: k });
     });
@@ -2010,16 +2082,20 @@
     return (holes[cur] = idx);
   }
   function translateHole(seg, d) {
-    var list = holeIndex(d)[seg.split(/\s/)[0]];
-    if (!list) return null;
-    for (var i = 0; i < list.length; i++) {
-      var t = list[i];
-      if (seg.length > t.pre.length + t.suf.length && seg.startsWith(t.pre) && seg.endsWith(t.suf)) {
-        /* Le trou garde la donnée telle quelle, sauf si c'est une date entière
-           (« dernière vente 20 oct. ») : ses jetons de jour et de mois suivent. */
-        var x = seg.slice(t.pre.length, seg.length - t.suf.length);
-        var xd = translateDate(x);
-        return d[t.key].replace('{x}', xd != null ? xd : x);
+    var idx = holeIndex(d);
+    var lists = [idx[seg.split(/\s/)[0]], idx[SUFFIX]];
+    for (var j = 0; j < 2; j++) {
+      var list = lists[j];
+      if (!list) continue;
+      for (var i = 0; i < list.length; i++) {
+        var t = list[i];
+        if (seg.length > t.pre.length + t.suf.length && seg.startsWith(t.pre) && seg.endsWith(t.suf)) {
+          /* Le trou garde la donnée telle quelle, sauf si c'est une date entière
+             (« dernière vente 20 oct. ») : ses jetons de jour et de mois suivent. */
+          var x = seg.slice(t.pre.length, seg.length - t.suf.length);
+          var xd = translateDate(x);
+          return d[t.key].replace('{x}', xd != null ? xd : x);
+        }
       }
     }
     return null;

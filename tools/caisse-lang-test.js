@@ -183,7 +183,9 @@ const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'F
   // Le dialogue d'imprimante et la clôture (2026-10-12) : l'arabe change, l'anglais non.
   'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions',
   // Le rail et l'encaissement de la caisse restaurant (2026-10-13).
-  'Menu', 'Stock', 'Exact']);
+  'Menu', 'Stock', 'Exact',
+  // La vue Vendus de la boutique (2026-10-21).
+  'Dates']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 /* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne
@@ -225,5 +227,28 @@ for (const fr of ['· vente au comptoir', 'Commandes à emporter', 'Montant libr
 check(L.tr('Service depuis 15:35') === 'On shift since 15:35', 'le début de service se traduit, l\'heure reste');
 check(L.tr('Carte 47% · Cash 53%') === 'Card 47% · Cash 53%', 'la répartition carte / espèces se traduit, les pourcentages restent');
 check(L.tr('7 catégories') === '7 categories', 'le compte de catégories se traduit');
+/* La caisse boutique (2026-10-21) : la fenêtre d'encaissement, l'inventaire
+   et les toasts qui portent un nom d'article restaient en français en arabe
+   et en anglais. Les toasts mettent le nom AVANT la phrase : la clé commence
+   donc par {x}, lue par la fin du segment. */
+for (const fr of ['Montant…', 'Rendu calculé, flous comptés une fois', 'Terminal de la banque, montant à saisir dessus',
+  'Virement / Versement', 'Confirmer uniquement après réception en banque', 'Chèque', 'Confirmer après réception du chèque',
+  'Vente enregistrée, paiement à recevoir du transporteur', 'Code d’avoir', 'Scanner ou saisir le code du bon', 'Partager le paiement',
+  'Kiwi affiche, le lecteur encaisse', 'Valeur de stock', 'Stock bas / rupture', 'Scannez un article, ou tapez un code…',
+  'Imprimer toutes les étiquettes', 'N° de ticket ou téléphone…', 'Tester la douchette', 'Configurer les imprimantes']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse boutique traduite : « ${fr} »`);
+}
+L.set('en');
+check(L.tr('Caftan Fassi · M, sur le ticket') === 'Caftan Fassi · M, on the ticket', 'le toast d\'ajout se traduit, le nom et la taille restent');
+check(L.tr('Bip, Caftan Fassi · M, sur le ticket · 2 400 MAD') === 'Beep, Caftan Fassi · M, on the ticket · 2 400 MAD', 'le toast du scan se traduit, le prix reste');
+check(L.tr('Caftan Fassi · Rouge · M, épuisé') === 'Caftan Fassi · Rouge · M, sold out', 'le toast d\'article épuisé se traduit');
+check(L.tr('· stock par taille en direct') === '· live stock by size', 'un morceau qui commence par « · » se traduit');
+check(L.tr('Caftans · 4 coul. · 4 tailles · 16/16 codes-barres') === 'Caftans · 4 col. · 4 sizes · 16/16 barcodes', 'la ligne d\'inventaire se traduit, la catégorie reste');
+check(L.tr('Imprimante de la caisse: · Imprimante par défaut (actuelle) ·') === 'Till printer: · Default printer (current) ·', 'une info-bulle qui finit par « · » se traduit');
+check(L.tr('Robe, sur') === 'Robe, sur', 'une fin trop courte n\'est jamais prise pour une phrase');
+check(L.tr(', sur le ticket') === ', sur le ticket', 'le trou d\'une clé par la fin n\'est jamais vide');
+L.set('ar');
+check(L.tr('Caftan Fassi · M, sur le ticket') === 'Caftan Fassi · M، أُضيف إلى التذكرة', 'le toast d\'ajout se lit en arabe, le nom reste');
+L.set('en');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);
