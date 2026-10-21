@@ -358,6 +358,26 @@ section('Génération des codes-barres manquants');
   eq(coded, 2, 'chaque variante a son code');
 }
 
+/* ── 12b · un gros import = une écriture, un réaffichage ──
+ * Chaque produit, variante et code réécrivait tout le catalogue et réaffichait
+ * la caisse : 200 articles en tailles S/M/L avec codes, plus de mille écritures. */
+{
+  freshVenue();
+  const rows = ['produit,categorie,couleur,taille,prix_mad,stock,code_barres'];
+  for (let i = 0; i < 200; i++) ['S', 'M', 'L'].forEach((t, j) => rows.push(`Article ${i},Rayon ${i % 7},Noir,${t},${100 + i},3,${String(6111000000000 + i * 3 + j)}`));
+  const plan = IMP.analyseBoutique(IMP.parse(rows.join('\n') + '\n'));
+  let writes = 0, redraws = 0;
+  const ls = window.localStorage, set = ls.setItem;
+  ls.setItem = (k, v) => { writes++; return set(k, v); };
+  const off = CAT.subscribe(() => { redraws++; });
+  const r = IMP.applyBoutique(plan, {});
+  off(); ls.setItem = set;
+  eq([r.products, r.variants], [200, 600], 'gros import · 200 articles, 600 variantes');
+  eq(CAT.listProducts().length, 200, 'gros import · tout est dans le catalogue');
+  truthy(redraws === 1, `gros import · un seul réaffichage (${redraws})`);
+  truthy(writes <= 3, `gros import · ${writes} écriture(s) du stockage, pas une par ligne`);
+}
+
 /* ── 13 · la carte (KiwiMenuStore) ── */
 section('Import carte');
 {

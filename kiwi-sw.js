@@ -110,7 +110,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=54',
+  '/assets/venues.js?v=55',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=10',
@@ -181,7 +181,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=66',
+  '/assets/live-link.js?v=67',
   '/assets/channel-sales.js?v=4',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -293,7 +293,7 @@ var SHELL = [
   '/assets/restaurant-menu-workspace.js?v=114',
   '/assets/menu-promos-dashboard.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=10',
+  '/assets/catalog-import.js?v=11',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',

@@ -4100,14 +4100,10 @@
     }
     return entry;
   }
-  function salesAnnotate(id, cursor, meta) {
-    id = id || currentVenue;
-    cursor = Number(cursor) || 0;
-    if (!cursor) return false;
-    const list = salesList(id).slice();
-    const at = list.findIndex((sale) => Number(sale && sale.cursor) === cursor);
-    if (at < 0) return false;
-    const entry = list[at] = Object.assign({}, list[at]);
+  /* Copie l'entrée et y pose les métadonnées du serveur. Rend la copie si
+   * quelque chose a changé, sinon null (l'entrée d'origine, gelée, est intacte). */
+  function annotatedEntry(original, meta) {
+    const entry = Object.assign({}, original);
     let changed = false;
     [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['channel', 24], ['saleId', 80]].forEach(([key, limit]) => {
       const value = String(meta && (meta[key] || (key === 'saleId' ? (meta.saleId || meta.id) : '')) || '').trim().slice(0, limit);
@@ -4119,13 +4115,34 @@
       })).filter(part => /^[a-z-]{1,16}$/.test(part.method) && Number.isSafeInteger(part.amountCents) && part.amountCents > 0);
       changed = true;
     }
-    if (!changed) return false;
+    return changed ? entry : null;
+  }
+  function salesAnnotate(id, cursor, meta) {
+    return salesAnnotateMany(id, [{ cursor, meta }]) > 0;
+  }
+  /* Plusieurs annotations, une écriture, un seul réaffichage. Un registre ancien
+   * à qui il manque un champ du serveur en réclamait une par vente : 2 848
+   * réécritures de 1,2 Mo et autant de réaffichages, le gel du tableau de bord.
+   * Rend le nombre de ventes modifiées. */
+  function salesAnnotateMany(id, patches) {
+    id = id || currentVenue;
+    const list = salesList(id).slice();
+    const at = new Map();
+    list.forEach((sale, i) => { const c = Number(sale && sale.cursor) || 0; if (c && !at.has(c)) at.set(c, i); });
+    let changed = 0;
+    (Array.isArray(patches) ? patches : []).forEach((p) => {
+      const i = at.get(Number(p && p.cursor) || 0);
+      if (i == null) return;
+      const entry = annotatedEntry(list[i], p.meta);
+      if (entry) { list[i] = entry; changed++; }
+    });
+    if (!changed) return 0;
     /* Passe par salesWrite comme les autres écritures : la clé d'un locataire
      * non résolu est vide, et `localStorage.setItem('', …)` rangerait la vente
      * dans un seau partagé par tout le navigateur. */
-    if (!salesWrite(id, list)) return false;
+    if (!salesWrite(id, list)) return 0;
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
-    return true;
+    return changed;
   }
   /* ═══ RETIRER UNE VENTE DU MAGASIN LOCAL ═══
    * Une vente de test sortie des livres par la console opérateur cesse d'être
@@ -4252,6 +4269,7 @@
     add: salesAdd,
     addMany: salesAddMany,
     annotate: salesAnnotate,
+    annotateMany: salesAnnotateMany,
     list: salesList,
     remove: salesRemove,
     retainCursors: salesRetainCursors,

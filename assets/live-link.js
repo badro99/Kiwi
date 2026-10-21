@@ -1451,6 +1451,7 @@
     /* New sales are stored in one batch after the loop: one write, one redraw
        (KiwiSales.addMany). One add() per sale redrew the dashboard per sale. */
     var fresh = [];
+    var annotations = [];                          // same rule for metadata: one write, one redraw
     feedSales.forEach(function (row) {
       if (row.tenant !== tenant) return;             // another store's money — never this one's
       var s = row.s;
@@ -1483,9 +1484,7 @@
           return patch[key] && String(existing[key] || '') !== String(patch[key]);
         });
         if (!changed) return;
-        try {
-          if (window.KiwiSales.annotate) window.KiwiSales.annotate(vid, cur, patch);
-        } catch (_) {}
+        annotations.push({ cursor: cur, meta: patch });
         return;
       }
       var amt = s.amountCents != null
@@ -1512,6 +1511,10 @@
     if (fresh.length) {
       if (window.KiwiSales.addMany) { try { window.KiwiSales.addMany(vid, fresh); } catch (_) {} }
       else fresh.forEach(function (sale) { try { window.KiwiSales.add(vid, sale); } catch (_) {} });
+    }
+    if (annotations.length) {
+      if (window.KiwiSales.annotateMany) { try { window.KiwiSales.annotateMany(vid, annotations); } catch (_) {} }
+      else if (window.KiwiSales.annotate) annotations.forEach(function (a) { try { window.KiwiSales.annotate(vid, a.cursor, a.meta); } catch (_) {} });
     }
     /* Fail closed once the full entitled history is known. Any server-backed
        local row absent from it is foreign (or voided), including rows copied by

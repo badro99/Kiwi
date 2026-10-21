@@ -401,6 +401,9 @@
     const CAT = window.KiwiBoutiqueCatalog;
     const res = { products: 0, variants: 0, codes: 0, generated: 0, failed: [] };
     if (!CAT || !plan || !plan.ok) return res;
+    /* One import, one catalogue write and one redraw. Each product, variant
+       and barcode used to rewrite the whole catalogue and redraw the till. */
+    if (CAT.batch && !opts._inBatch) return CAT.batch(() => applyBoutique(plan, Object.assign({}, opts, { _inBatch: true })));
 
     // Categories first, so every product can point at a real one.
     const catId = new Map(CAT.listCategories().map((c) => [keyName(c.name), c.id]));

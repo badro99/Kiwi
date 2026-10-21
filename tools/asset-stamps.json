@@ -176,8 +176,8 @@
     "sha": "4cb11e74a39c8216"
   },
   "assets/catalog-import.js": {
-    "v": "10",
-    "sha": "fbf48efe62bb1209"
+    "v": "11",
+    "sha": "e1767564d53fded0"
   },
   "assets/catalog-workspace.css": {
     "v": "24",
@@ -864,8 +864,8 @@
     "sha": "36b1e6ca0472a20e"
   },
   "assets/live-link.js": {
-    "v": "66",
-    "sha": "806a10dd7a477824"
+    "v": "67",
+    "sha": "15fb0f84e794d1a4"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -1480,8 +1480,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "54",
-    "sha": "49fc802ce3c6cdb6"
+    "v": "55",
+    "sha": "200190ece2a4c12a"
   },
   "assets/vertical-state.js": {
     "v": "5",

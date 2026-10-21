@@ -89,6 +89,7 @@ function harness(pages, { identity = { operator: true }, store = true, brokenSto
     vm.runInContext("const TRANSIENT_IDS = []; const currentVenue = 'custom-santos'; const slugOf = () => 'santos-store';\n" +
       venues.slice(start, end) + '\nwindow.KiwiSales = { add: salesAdd, list: salesList, retainCursors: salesRetainCursors,' +
       ' addMany: typeof salesAddMany === "function" ? salesAddMany : undefined,' +
+      ' annotate: salesAnnotate, annotateMany: typeof salesAnnotateMany === "function" ? salesAnnotateMany : undefined,' +
       ' subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); } };' +
       '\nwindow.KiwiRefunds = { add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors };', context);
   }
@@ -275,5 +276,27 @@ assert.equal(retained.state().phase, 'complete', 'actual store retains and verif
 assert.equal(retained.window.KiwiSales.list('custom-santos').length, 1050);
 assert.equal(retained.window.KiwiRefunds.list('custom-santos').length, 1);
 retained.assertReadOnly(); cases++;
+
+/* A browser whose stored history predates a server field (here receiptRef)
+   gets every sale annotated (1 001 sales: the last page is short, so the
+   history completes) on the next replay. One annotate() per sale was
+   the same freeze: a full ledger rewrite and a redraw per sale. */
+{
+  const tagged = Array.from({ length: 1001 }, (_, i) => ({ ...sale(i + 1), receiptRef: 'R-' + (i + 1) }));
+  const tPages = [];
+  for (let i = 0; i < tagged.length; i += 50) tPages.push(page(tagged.slice(i, i + 50)));
+  const old = harness(tPages, { realStore: true });
+  old.window.KiwiSales.addMany('custom-santos', tagged.map((e) => ({ amount: e.amount, method: 'cash', cursor: e.cursor, ts: e.ts })));
+  const before = [...old.writes].filter(([k]) => /^kiwiSales/.test(k)).reduce((n, [, c]) => n + c, 0);
+  let redraws = 0;
+  old.window.KiwiSales.subscribe(() => { redraws++; });
+  await old.boot();
+  while (old.timers.size) await old.next();
+  const w = [...old.writes].filter(([k]) => /^kiwiSales/.test(k)).reduce((n, [, c]) => n + c, 0) - before;
+  assert.equal(old.window.KiwiSales.list('custom-santos').filter((e) => e.receiptRef).length, 1001, 'every stored sale gets its receipt number');
+  assert.ok(redraws <= 3, `annotating 1 001 stored sales redraws ${redraws} times, not once per sale`);
+  assert.ok(w <= 3, `annotating 1 001 stored sales writes the ledger ${w} times, not once per sale`);
+  old.assertReadOnly(); cases++;
+}
 
 console.log(`operator-snapshot-test: ${cases} behavioral scenarios passed`);

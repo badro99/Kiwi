@@ -20,7 +20,7 @@ const window = { localStorage };
 const ctx = vm.createContext({ window, localStorage, JSON: CountingJSON, console, Date, Math, Number, String, Array, Object, Set, Map });
 vm.runInContext("'use strict'; const TRANSIENT_IDS = []; const currentVenue = 'v1'; const slugOf = () => 'shop';\n"
   + venues.slice(start, end)
-  + '\nwindow.S = { add: salesAdd, addMany: salesAddMany, list: salesList, annotate: salesAnnotate, remove: salesRemove, retain: salesRetainCursors, key: SALES_KEY };'
+  + '\nwindow.S = { add: salesAdd, addMany: salesAddMany, list: salesList, annotate: salesAnnotate, annotateMany: salesAnnotateMany, subscribe: (fn) => { salesSubs.add(fn); return () => salesSubs.delete(fn); }, remove: salesRemove, retain: salesRetainCursors, key: SALES_KEY };'
   + '\nwindow.R = { add: refundsAdd, list: refundsList, retain: refundsRetainCursors };', ctx);
 const { S, R } = window;
 let checks = 0;
@@ -54,6 +54,23 @@ const key = S.key('v1');
 const other = JSON.parse(storage.get(key)); other.push({ ts: 1, amount: 7, method: 'cash', cursor: 999 });
 storage.set(key, JSON.stringify(other));
 ok(S.list('v1').some((e) => e.cursor === 999), "another tab's write is seen on the next read");
+
+/* A ledger missing a server field used to be annotated one sale at a time:
+   one full rewrite and one dashboard redraw per sale (the freeze shape).
+   annotateMany applies them all with one write and one redraw. */
+{
+  const cursors = S.list('v1').map((e) => e.cursor).slice(0, 250);
+  let writes = 0, redraws = 0;
+  const set = localStorage.setItem;
+  localStorage.setItem = (k, v) => { writes++; return set(k, v); };
+  const off = S.subscribe(() => { redraws++; });
+  const n = S.annotateMany('v1', cursors.map((c) => ({ cursor: c, meta: { receiptRef: 'R-' + c, origin: 'caisse' } })).concat([{ cursor: 123456, meta: { ref: 'nobody' } }]));
+  off(); localStorage.setItem = set;
+  ok(n === 250, `annotateMany changed 250 sales (${n}); an unknown cursor is ignored`);
+  ok(writes === 1 && redraws === 1, `one write and one redraw for 250 annotations (${writes}, ${redraws})`);
+  ok(S.list('v1').filter((e) => e.receiptRef && e.receiptRef.startsWith('R-')).length === 250, 'every annotation is persisted');
+  ok(S.annotateMany('v1', cursors.map((c) => ({ cursor: c, meta: { receiptRef: 'R-' + c } }))) === 0, 'nothing new, nothing written');
+}
 
 /* Refunds share the cache rules. */
 ok(R.add('v1', { amount: 20, cursor: 50, ts: 2 }) === true && R.list('v1').length === 1, 'refunds add and list');
