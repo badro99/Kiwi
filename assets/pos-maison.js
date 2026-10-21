@@ -5283,6 +5283,7 @@
     openPay({
       amount: total,
       customerId: c ? c.id : null,
+      beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#mz-pay-veil'); } }).confirm(),
       title: 'Encaissement',
       subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       ref: t.num,
@@ -5464,7 +5465,7 @@
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.
             if (rewardUsed && window.KiwiClients.redeem) {
-              try { window.KiwiClients.redeem(c.id); } catch (_) {}
+              try { window.KiwiClients.redeem(c.id, null, t.reward && t.reward.reservation); } catch (_) {}
             }
           }
           if (!useKiwiCl()) {
@@ -5912,6 +5913,7 @@
         }
       }
       committed = true;
+      if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
       const creditParts = parts.filter((part) => part.m === 'avoir');
       try {
         let remote = null;

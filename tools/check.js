@@ -1321,6 +1321,7 @@ section('Whole-project regressions');
     'audit-remediation-inventory-loyalty-test.mjs',
     'loyalty-truth-test.mjs',
     'loyalty-refused-redemption-test.mjs',
+    'loyalty-reserve-test.mjs',
     'audit-remediation-dashboard-test.mjs',
     'audit-remediation-devices-test.mjs',
     'dashboard-analytics-toggle-test.mjs',

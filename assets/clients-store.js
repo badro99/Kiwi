@@ -511,7 +511,7 @@
   }
 
   // burn a filled stamp card (staff hands over the reward).
-  function redeem(id, book) {
+  function redeem(id, book, reservation) {
     book = book || bookId();
     var d = readBook(book);
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
@@ -532,10 +532,12 @@
     }
     rec.updated = now();
     writeBook(d, book);
-    var ref = 'redemption:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36);
+    var ref = reservation ? reservation.ref : redemptionRef(id);
     var event = { ref: ref, clientId: id, points: pointsDelta, stamps: stampsDelta, created: rec.updated };
-    redemptionAdd(book, event);
-    redemptionPush(book, event);
+    if (!reservation || !reservation.accepted) {
+      redemptionAdd(book, event);
+      if (!reservation) redemptionPush(book, event);
+    }
     return rec;
   }
 
@@ -741,38 +743,47 @@
       }
     } catch (_) {}
   }
-  function redemptionPush(book, event, afterClientCreate) {
-    if (!syncable(book) || !event || !event.ref) return;
-    try {
-      fetch('/api/clients', {
+  function redemptionRef(id) {
+    return 'redemption:' + id + ':' + now() + ':' + Math.abs(hash(String(Math.random()))).toString(36);
+  }
+  function reserveRedemption(id, book, event) {
+    book = book || bookId();
+    event = event || { ref: redemptionRef(id), clientId: id };
+    return redemptionPush(book, event, false, true).then(function (result) {
+      return { ref: event.ref, accepted: result === 'accepted', refused: result === 'refused' };
+    });
+  }
+  function redemptionPush(book, event, afterClientCreate, probe) {
+    if (!syncable(book) || !event || !event.ref || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve('retry');
+    return Promise.resolve().then(function () {
+      return fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify({ merchant: book, redemption: { clientId: event.clientId, ref: event.ref } }),
-      }).then(function (r) {
-        if (r && r.ok) { redemptionDrop(book, event.ref); return; }
-        if (!r || !(r.status >= 400 && r.status < 500) || [401, 403, 408, 429].indexOf(r.status) !== -1) return;
-        return r.json().then(function (data) {
-          var code = data && data.error;
-          /* Un client créé à la caisse peut arriver au serveur après sa
-             récompense : on le crée, puis on retente une fois, comme un achat. */
-          if (code === 'client-not-found' && !afterClientCreate) {
-            var created = pushClient(get(event.clientId, book), book);
-            if (created && typeof created.then === 'function') {
-              created.then(function (ok) { if (ok) redemptionPush(book, event, true); });
-            }
-            return;
-          }
-          /* Les points qui rendaient la récompense prête peuvent être dans un
-             achat encore en file : le refus n'est définitif qu'une fois les
-             achats de ce client arrivés. */
-          if (code === 'reward-not-ready' && purchaseRead(book).some(function (e) {
-            return e && e.kind !== 'refund' && e.clientId === event.clientId;
-          })) return;
-          if (['reward-not-ready', 'loyalty-off', 'client-not-found', 'ref-conflict', 'client-and-ref-required'].indexOf(code) !== -1) {
-            redemptionRefuse(book, event, code);
-          }
-        });
-      }).catch(function () {});
-    } catch (_) {}
+      });
+    }).then(function (r) {
+      if (r && r.ok) { redemptionDrop(book, event.ref); return 'accepted'; }
+      if (!r || !(r.status >= 400 && r.status < 500) || [401, 403, 408, 429].indexOf(r.status) !== -1) return 'retry';
+      return r.json().then(function (data) {
+        var code = data && data.error;
+        if (code === 'client-not-found' && !afterClientCreate) {
+          return pushClient(get(event.clientId, book), book).then(function (ok) {
+            return ok ? redemptionPush(book, event, true, probe) : 'retry';
+          });
+        }
+        /* Les points qui rendent la récompense prête peuvent être dans un achat
+           encore en file : tant que les achats de ce client ne sont pas arrivés,
+           ce n'est pas un refus, ni pour la file ni pour la vérification d'avant
+           paiement (qui garde alors la récompense, comme hors ligne). */
+        if (code === 'reward-not-ready' && purchaseRead(book).some(function (e) {
+          return e && e.kind !== 'refund' && e.clientId === event.clientId;
+        })) return 'retry';
+        if (['reward-not-ready', 'loyalty-off', 'client-not-found', 'ref-conflict', 'client-and-ref-required'].indexOf(code) !== -1) {
+          if (!probe) redemptionRefuse(book, event, code);
+          return 'refused';
+        }
+        return 'retry';
+      });
+    }).catch(function () { return 'retry'; });
   }
   function flushRedemptions(book) {
     redemptionRead(book).slice(0, 25).forEach(function (event) { redemptionPush(book, event); });
@@ -964,7 +975,7 @@
     // reads
     list: list, get: get, refusedRedemptions: refusedRedemptions, findByPhone: findByPhone, count: count,
     // writes
-    upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, remove: remove,
+    upsert: upsert, recordPurchase: recordPurchase, recordRefund: recordRefund, redeem: redeem, redemptionRef: redemptionRef, reserveRedemption: reserveRedemption, remove: remove,
     // fidelity config
     config: config, setConfig: setConfig, defaultModel: defaultModel, loyaltyOn: loyaltyOn,
     // analytics

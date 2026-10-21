@@ -695,6 +695,7 @@
       'table remise à zéro': ['table reset', 'تمت إعادة ضبط الطاولة'],
       'Aucune table en cours': ['No open table', 'لا توجد طاولة مفتوحة'],
       'Table déjà encaissée': ['Table already paid', 'تم دفع الطاولة بالفعل'],
+      'Récompense indisponible. Confirmez le paiement au plein tarif.': ['Reward unavailable. Confirm payment at full price.', 'المكافأة غير متاحة. أكّد الدفع بالسعر الكامل.'],
       'Récompense refusée par le serveur': ['Reward refused by the server', 'رفض الخادم المكافأة'],
       'Peut-être déjà utilisée sur une autre caisse. Vérifiez la fiche du client.': ['Possibly already used at another till. Check the customer record.', 'ربما استُخدمت بالفعل في صندوق آخر. تحقق من بطاقة العميل.'],
       /* ── modules coupés pour l'établissement (plus de « God Mode » devant le caissier) ── */

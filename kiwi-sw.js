@@ -245,12 +245,13 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=46',
+  '/assets/caisse-lang.js?v=47',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=1',
+  '/assets/loyalty-reserve.js?v=2',
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
@@ -266,7 +267,7 @@ var SHELL = [
   '/assets/cost.js?v=7',
   '/assets/charges-engine.js?v=2',
   '/assets/charges.js?v=3',
-  '/assets/clients-store.js?v=14',
+  '/assets/clients-store.js?v=15',
   '/assets/clients-book.js?v=28',
   '/assets/clients-directory.js?v=23',
   '/assets/customer-retention.js?v=10',
@@ -305,7 +306,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=13',
-  '/assets/pos-dispatch.js?v=128',
+  '/assets/pos-dispatch.js?v=129',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -389,8 +390,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=91',
-  '/assets/pos-boutique.js?v=91',
+  '/assets/pos-boutique.css?v=92',
+  '/assets/pos-boutique.js?v=92',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -422,8 +423,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=81',
-  '/assets/pos-maison.js?v=81',
+  '/assets/pos-maison.css?v=82',
+  '/assets/pos-maison.js?v=82',
   '/assets/caisse-pairing.js?v=36',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

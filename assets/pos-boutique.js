@@ -3891,6 +3891,7 @@
     const beginPay = () => openPay({
       amount: total,
       customerId: c ? c.id : null,
+      beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
       title: 'Encaissement',
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead
@@ -4069,7 +4070,7 @@
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.
             if (rewardUsed && window.KiwiClients.redeem) {
-              try { window.KiwiClients.redeem(c.id); } catch (_) {}
+              try { window.KiwiClients.redeem(c.id, null, t.reward && t.reward.reservation); } catch (_) {}
             }
           }
           if (!useKiwiCl()) {
@@ -4588,6 +4589,7 @@
         toast('Acompte : une cliente et un seul règlement sont requis'); return;
       }
       committed = true;
+      if (opts.beforePaid && !await opts.beforePaid()) { committed = false; return; }
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
       const paidNow = Math.round(parts.reduce((sum, part) => sum + (+part.amount || 0), 0) * 100) / 100;
       const avp = parts.find((x) => x.m === 'avoir');
