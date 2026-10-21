@@ -120,8 +120,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "42",
-    "sha": "681fc7638341cb67"
+    "v": "43",
+    "sha": "ec11f7b0beba1eaf"
   },
   "assets/caisse-link.js": {
     "v": "18",
@@ -1192,8 +1192,8 @@
     "sha": "e4f87f9b3e7a7628"
   },
   "assets/pos-reprint.js": {
-    "v": "10",
-    "sha": "01aae34603997776"
+    "v": "11",
+    "sha": "2b3dd0013f1a750e"
   },
   "assets/pos-sale.js": {
     "v": "13",

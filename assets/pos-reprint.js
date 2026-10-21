@@ -90,6 +90,25 @@
     return v.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' MAD';
   }
 
+  /* Le mode de paiement tel que la caissière le dit. Le serveur garde le code
+   * (cash, card, delivery…) ; affiché brut, il se lisait « card · sale-ref-
+   * 827e7680… » au milieu d'un écran en français, et le traducteur de la
+   * caisse ne pouvait rien en faire. */
+  var METHOD_FR = {
+    cash: 'Espèces', 'espèces': 'Espèces', especes: 'Espèces', card: 'Carte', carte: 'Carte',
+    delivery: 'Livraison', livraison: 'Livraison', wallet: 'Wallet', credit: 'Crédit', 'crédit': 'Crédit',
+    split: 'Partagé', mixed: 'Partagé', transfer: 'Virement', virement: 'Virement',
+    cheque: 'Chèque', 'chèque': 'Chèque', avoir: 'Avoir', tap: 'Kiwi Tap', qr: 'QR',
+  };
+  function methodLabel(m) {
+    var k = String(m || '').trim();
+    return METHOD_FR[k.toLowerCase()] || k || 'mode inconnu';
+  }
+  /* Le numéro que la caissière a sous les yeux (« Table 9 #99 », « 10392 »),
+   * pas l'identifiant interne (« employee-3760…-emp », « sale-ref-4925… »)
+   * qui sert à retrouver la vente sur le serveur. */
+  function ticketNo(e) { return String((e && (e.ref || e.saleId)) || ''); }
+
   function hm(ts) {
     var d = new Date(ts);
     if (isNaN(d.getTime())) return '--:--';
@@ -445,8 +464,8 @@
         + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
         + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>' + cancelBtn + reopenBtn;
     box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || 'Ticket') + '</h3>'
-      + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + (entry.method || 'mode inconnu'))
-      + ' · ' + esc(mad(entry.total)) + '</p><p>Ticket ' + esc(entry.saleId || entry.ref || 'identifiant indisponible') + '</p></div>'
+      + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + methodLabel(entry.method))
+      + ' · ' + esc(mad(entry.total)) + '</p><p>Ticket ' + esc(ticketNo(entry) || 'identifiant indisponible') + '</p></div>'
       + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
       + '<div class="kx-rp-ticket-actions">' + actions + '</div></div>';
     box.setAttribute('data-kx-rp-mode', mode);
@@ -501,8 +520,8 @@
         + '>Table ' + esc(table) + (occupied ? ' · occupée / reprise existante' : '') + '</option>';
     }).join('');
     box.innerHTML = '<div class="kx-rp-head"><h3>' + (reopening ? 'Annuler et rouvrir la note' : 'Confirmer l’annulation') + '</h3>'
-      + '<p>' + esc((entry.label || entry.ref || 'Ticket') + ' · ' + (entry.method || 'mode inconnu') + ' · ' + mad(entry.total))
-      + '<br>Ticket ' + esc(entry.saleId || 'identifiant indisponible')
+      + '<p>' + esc((entry.label || entry.ref || 'Ticket') + ' · ' + methodLabel(entry.method) + ' · ' + mad(entry.total))
+      + '<br>Ticket ' + esc(entry.saleId ? ticketNo(entry) : 'identifiant indisponible')
       + '<br>Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.</p></div>'
       + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code manager à 4 chiffres">'
       + (reopening ? '<p>Table pour la note rouverte</p><select data-kx-rp-table aria-label="Table pour la note rouverte">'
@@ -589,7 +608,7 @@
         body += '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '">'
           + '<span class="kx-rp-t">' + esc(hm(e.ts)) + '</span>'
           + '<span class="kx-rp-m"><span class="kx-rp-l">' + esc(e.label || 'Vente') + '</span>'
-          + '<span class="kx-rp-r">' + esc((e.method || 'mode inconnu') + ' · ' + (e.saleId || e.ref || 'sans numéro')) + '</span></span>'
+          + '<span class="kx-rp-r">' + esc(methodLabel(e.method) + ' · ' + (ticketNo(e) || 'sans numéro')) + '</span></span>'
           + '<span class="kx-rp-a">' + esc(mad(e.total)) + '</span></button>';
       });
     } else {

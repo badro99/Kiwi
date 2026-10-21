@@ -244,7 +244,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=16',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=42',
+  '/assets/caisse-lang.js?v=43',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=1',
@@ -428,7 +428,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js?v=10',
+  '/assets/pos-reprint.js?v=11',
   '/assets/pressing-caisse.js?v=46',
   '/assets/pressing-caisse.css?v=46',
   '/assets/material-icons.js?v=3',

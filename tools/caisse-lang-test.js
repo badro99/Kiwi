@@ -184,8 +184,8 @@ const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'F
   'Type', 'Port', 'Transactions', '{n} mm', '{n} mm (standard)', '{n}h {n}', 'Terminal + {n} MAD', '{n} transaction', '{n} transactions',
   // Le rail et l'encaissement de la caisse restaurant (2026-10-13).
   'Menu', 'Stock', 'Exact',
-  // La vue Vendus de la boutique (2026-10-21).
-  'Dates']);
+  // La vue Vendus de la boutique, la cuisine du restaurant (2026-10-21).
+  'Dates', 'Table {n}']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 /* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne
@@ -268,5 +268,43 @@ for (const [fr, en] of [
   ['Caftan Vente ajouté', 'Caftan Vente added'],
 ]) check(L.tr(fr) === en, `toast boutique traduit : « ${fr} » → « ${L.tr(fr)} »`);
 check(L.tr('Robe Rouge 2024') === 'Robe Rouge 2024', 'un nom d\'article avec un nombre ne devient pas un gabarit');
+/* La caisse restaurant (2026-10-21) : passation, remise, tiroir, cuisine,
+   Stock & appro, équipe et disponibilité du menu restaient en français. */
+for (const fr of ['Passation de caisse', 'Poste ouvert à', 'Fond du poste', 'Espèces comptées dans le tiroir', "Écart avec l'attendu",
+  'Caissier entrant', 'Recompte les espèces', 'Ouvrir le tiroir sans vente', 'Autorisation manager', 'Pourcentage de remise',
+  'Appliquer la remise', 'Client habitué', "Prêtes aujourd'hui", 'Stock & appro', 'Réceptionner du stock', 'Alertes stock',
+  "Message à toute l'équipe", 'Donner une pause', 'Masquez immédiatement les articles épuisés', 'Disponibilité du menu',
+  'Jusqu’à la fin du service', 'Tout est disponible']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse restaurant traduite : « ${fr} »`);
+}
+L.set('en');
+for (const [fr, en] of [
+  ['Othmane N. termine son poste, compte le tiroir.', 'Othmane N. is ending the shift and counts the drawer.'],
+  ['File de préparation · mise à jour en direct', 'Prep queue · live updates'],
+  ['Prête 13:46', 'Ready 13:46'],
+  ['En service depuis 08:12 · 4 tables actives', 'On shift since 08:12 · 4 active tables'],
+  ['0 kg en stock · niveau par 12 kg · Boucherie Zerktouni', '0 kg in stock · par level 12 kg · Boucherie Zerktouni'],
+  ['Harira masqué sur OrderPro et l’app équipe · revient à 15:30', 'Harira hidden on OrderPro and the team app · back at 15:30'],
+  ['Passation enregistrée · Salma T. prend la caisse', 'Handover saved · Salma T. takes over the till'],
+  ['Addition 45 MAD', 'Bill 45 MAD'],
+  ['Bonjour Othmane,', 'Hello Othmane,'],
+]) check(L.tr(fr) === en, `caisse restaurant : « ${fr} » → « ${L.tr(fr)} »`);
+check(L.tr('mercredi 21 octobre') === 'Wednesday 21 October', 'la date du rail, en minuscule, se traduit');
+check(L.tr('mercredi') === 'mercredi', 'un jour seul en minuscule reste tel quel');
+check(L.tr('Bonjour Salma / Reda') === 'Bonjour Salma / Reda', 'un « Bonjour » sans sa virgule reste tel quel');
+/* « Annuler une vente » affichait le code brut du serveur et l'identifiant
+   interne : « card · sale-ref-827e7680-seed-46 ». Le mode de paiement passe
+   maintenant par methodLabel (en français, donc traduisible) et la ligne montre
+   le numéro de ticket (« Table 9 #99 »), pas l'identifiant. */
+{
+  const rp = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-reprint.js'), 'utf8');
+  const ctxRp = {};
+  vm.createContext(ctxRp);
+  vm.runInContext(rp.slice(rp.indexOf('  var METHOD_FR = {'), rp.indexOf('  function hm(ts) {')) + ';this.methodLabel = methodLabel; this.ticketNo = ticketNo;', ctxRp);
+  check(ctxRp.methodLabel('card') === 'Carte' && ctxRp.methodLabel('cash') === 'Espèces' && ctxRp.methodLabel('delivery') === 'Livraison', 'le mode de paiement s\'affiche en français, pas en code serveur');
+  check(ctxRp.methodLabel('') === 'mode inconnu', 'un mode absent se dit « mode inconnu »');
+  check(ctxRp.ticketNo({ saleId: 'employee-3760-emp', ref: 'Table 9 #99' }) === 'Table 9 #99', 'la ligne montre le numéro de ticket, pas l\'identifiant interne');
+  check(!/e\.method \|\| 'mode inconnu'|entry\.method \|\| 'mode inconnu'/.test(rp), 'aucune ligne n\'affiche plus le code de paiement brut');
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);
