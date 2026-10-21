@@ -1502,6 +1502,7 @@ section('Whole-project regressions');
     'format-vectors-test.mjs',
     'format-vectors-ios.mjs',
     'business-day-default-test.mjs',
+    'day-report-formatter-cache-test.mjs',
     'merchant-hour-test.mjs',
     'config-business-day-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
