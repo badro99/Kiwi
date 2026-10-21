@@ -3878,7 +3878,8 @@
   .cf-z-expected { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px; background: linear-gradient(135deg, rgba(11,110,79,0.08), rgba(125,242,176,0.06)); border-radius: 11px; border: 1px solid rgba(11,110,79,0.18); }
   .cf-z-expected-l { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--atlas); font-family: var(--mono); font-weight: 700; }
   .cf-z-expected-v { font-size: 22px; font-weight: 600; color: var(--atlas); font-feature-settings: "tnum" 1; letter-spacing: -0.015em; }
-  .cf-z-denoms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* A count row needs ~270 px; two forced side by side ran 7 px past an iPad in landscape (2026-10-21). */
+  .cf-z-denoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 8px; }
   @media (max-width: 540px) { .cf-z-denoms { grid-template-columns: 1fr; } }
   .cf-z-denom { display: grid; grid-template-columns: 60px 14px 70px 14px 1fr; gap: 6px; align-items: center; padding: 8px 10px; background: var(--paper); border-radius: 9px; font-size: 13px; }
   .cf-z-denom-val { font-family: var(--mono); font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; }
