@@ -85,6 +85,21 @@ await ok('fields are bounded and typed: an unknown slot, trade or language becom
   assert.deepEqual([v.slot_day, v.slot_part, v.trade, v.lang], ['', 'any', '', '']);
   assert.equal(slotText(v), 'à convenir');
 });
+await ok('« demain » carries its real date: the team reads a request days later', () => {
+  /* Friday 23 October, 23:30 in Morocco. Read on Monday, a bare « demain » would
+     point at Tuesday; the line now names Saturday. */
+  const fri = Date.UTC(2026, 9, 23, 22, 30);
+  assert.equal(slotText({ slot_day: 'today', slot_part: 'morning', created_ts: fri }), 'aujourd’hui, ven. 23 oct., le matin');
+  assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'afternoon', created_ts: fri }), 'demain, sam. 24 oct., l’après-midi');
+  assert.equal(slotText({ slot_day: 'week', slot_part: 'any', created_ts: fri }), 'cette semaine, jusqu’au dim. 25 oct.');
+  assert.equal(slotText({ slot_day: 'later', slot_part: 'evening', created_ts: fri }), 'plus tard, en fin de journée');
+  // 23:30 UTC on the 21st is already the 22nd in Casablanca.
+  assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'any' }, Date.UTC(2026, 9, 21, 23, 30)), 'demain, ven. 23 oct.');
+  // An older row with no timestamp keeps the relative label alone.
+  assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'evening' }), 'demain, en fin de journée');
+  const route = fs.readFileSync(path.join(root, 'functions/api/demo-request.js'), 'utf8');
+  assert.equal((route.match(/slotText\(v, now\)/g) || []).length, 2, 'the e-mail and the partner lead both date the slot from the request time');
+});
 await ok('references are readable over the phone and dated in Casablanca', () => {
   assert.match(demoReference(Date.UTC(2026, 9, 12, 23, 30)), /^D-1310-[A-HJ-NP-Z2-9]{4}$/);
 });
@@ -158,7 +173,7 @@ await ok('the console button sits in God Mode, stamped, and counts the new reque
   assert.match(js, /req\('\/api\/admin\/demo-requests\?status=new'\)/);
 });
 await ok('the console writes on WhatsApp to the international number, in the visitor\'s language', () => {
-  const ctx = { window: {}, document: { getElementById: () => ({ addEventListener() {}, setAttribute() {}, set innerHTML(_) {} }) }, setTimeout: () => 0, encodeURIComponent, JSON, String, Number, Date, Object };
+  const ctx = { window: {}, document: { getElementById: () => ({ addEventListener() {}, setAttribute() {}, set innerHTML(_) {} }) }, setTimeout: () => 0, encodeURIComponent, JSON, String, Number, Date, Object, Intl };
   ctx.window.window = ctx.window;
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'assets/admin-demo-requests.js'), 'utf8'), ctx);
@@ -168,6 +183,13 @@ await ok('the console writes on WhatsApp to the international number, in the vis
   assert.ok(fr.startsWith('https://wa.me/212612345678?text=Bonjour Salma') && fr.includes('D-1310-ABCD'));
   assert.match(decodeURIComponent(C._waLink({ phone: '0612345678', first_name: 'Sam', reference: 'R', lang: 'en' })), /text=Hello Sam/);
   assert.equal(C._slot({ slot_day: '', slot_part: 'any' }), 'à convenir');
+  // The console dates the slot by the same rule as the server's e-mail.
+  const fri = Date.UTC(2026, 9, 23, 22, 30);
+  for (const [day, part] of [['today', 'morning'], ['tomorrow', 'afternoon'], ['week', 'any'], ['later', 'evening'], ['tomorrow', 'any']]) {
+    const row = { slot_day: day, slot_part: part, created_ts: fri };
+    assert.equal(C._slot(row), slotText(row), `console and e-mail agree for ${day}/${part}`);
+  }
+  assert.equal(C._slot({ slot_day: 'tomorrow', slot_part: 'any', created_ts: Date.UTC(2026, 9, 21, 23, 30) }), 'demain, ven. 23 oct.');
 });
 
 console.log('■ demo request · the gate');

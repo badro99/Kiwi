@@ -107,8 +107,31 @@ export function demoReference(now = Date.now()) {
 export const DAY_LABELS = { today: 'aujourd’hui', tomorrow: 'demain', week: 'cette semaine', later: 'plus tard' };
 export const PART_LABELS = { morning: 'le matin', afternoon: 'l’après-midi', evening: 'en fin de journée', any: 'à tout moment' };
 
-export function slotText(row) {
+/* « Demain » ne veut rien dire trois jours plus tard. Le visiteur choisit un
+ * jour relatif au moment où il écrit ; l'équipe lit la demande le lendemain
+ * matin, ou après le week-end. On écrit donc la vraie date à côté, au jour
+ * civil du Maroc (le site dit « Heure du Maroc ») de l'envoi :
+ *   aujourd'hui, mer. 21 oct., le matin
+ *   demain, jeu. 22 oct., l'après-midi
+ *   cette semaine, jusqu'au dim. 25 oct.
+ * Sans horodatage (une ancienne ligne), le libellé relatif seul, comme avant.
+ * La console (assets/admin-demo-requests.js) applique la même règle ;
+ * tools/demo-request-api-test.mjs compare les deux. */
+export function slotDate(slotDay, ts) {
+  if (!Number(ts) || !['today', 'tomorrow', 'week'].includes(slotDay)) return '';
+  const civil = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(Number(ts)).map((x) => [x.type, x.value]));
+  const day = new Date(Date.UTC(Number(civil.year), Number(civil.month) - 1, Number(civil.day), 12));
+  if (slotDay === 'tomorrow') day.setUTCDate(day.getUTCDate() + 1);
+  if (slotDay === 'week') day.setUTCDate(day.getUTCDate() + ((7 - day.getUTCDay()) % 7));
+  const text = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(day);
+  return slotDay === 'week' ? 'jusqu’au ' + text : text;
+}
+
+export function slotText(row, ts = row && row.created_ts) {
   const day = DAY_LABELS[row.slot_day] || '';
+  const date = day ? slotDate(row.slot_day, ts) : '';
   const part = row.slot_part && row.slot_part !== 'any' ? PART_LABELS[row.slot_part] : '';
-  return [day, part].filter(Boolean).join(', ') || 'à convenir';
+  return [day, date, part].filter(Boolean).join(', ') || 'à convenir';
 }

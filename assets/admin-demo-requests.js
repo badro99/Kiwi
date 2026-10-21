@@ -12,8 +12,14 @@
   var LANGS={fr:'français',en:'anglais',ar:'arabe',de:'allemand',es:'espagnol',it:'italien',nl:'néerlandais'};
   var state={status:'new',requests:[],counts:{},selected:''};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function dt(ts){return ts?new Date(Number(ts)).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'·';}
-  function slot(r){var d=DAYS[r.slot_day]||'',p=PARTS[r.slot_part]||'';return [d,p].filter(Boolean).join(', ')||'à convenir';}
+  /* L'heure du Maroc, celle que le site annonce au visiteur, quel que soit le
+     fuseau de l'ordinateur de l'opérateur. */
+  function dt(ts){return ts?new Date(Number(ts)).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Casablanca'}):'·';}
+  /* « Demain » est relatif à l'envoi : lu trois jours plus tard, il désigne un
+     autre jour. La vraie date s'écrit à côté, au jour civil du Maroc de
+     l'envoi (même règle que slotDate() dans functions/api/_demo-requests.js). */
+  function slotDate(d,ts){if(!Number(ts)||['today','tomorrow','week'].indexOf(d)<0)return'';var c={};new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(Number(ts)).forEach(function(x){c[x.type]=x.value;});var day=new Date(Date.UTC(+c.year,+c.month-1,+c.day,12));if(d==='tomorrow')day.setUTCDate(day.getUTCDate()+1);if(d==='week')day.setUTCDate(day.getUTCDate()+((7-day.getUTCDay())%7));var t=new Intl.DateTimeFormat('fr-FR',{timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).format(day);return d==='week'?'jusqu’au '+t:t;}
+  function slot(r){var d=DAYS[r.slot_day]||'',p=PARTS[r.slot_part]||'';return [d,d?slotDate(r.slot_day,r.created_ts):'',p].filter(Boolean).join(', ')||'à convenir';}
   var FAMILIES={restaurant:'Restauration',boutique:'Commerce',spa:'Beauté et bien-être',hotel:'Hôtel ou riad'};
   function trade(r){var t=window.KiwiTrades&&window.KiwiTrades.LIST&&window.KiwiTrades.LIST.filter(function(x){return x.id===r.trade;})[0];return t?(t.label&&(t.label.fr||t.label.en))||t.id:(FAMILIES[r.trade]||r.trade||'');}
   /* 06 12 34 56 78 → 212612345678 ; +212… et 00212… gardent leur indicatif. */

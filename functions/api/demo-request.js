@@ -73,7 +73,7 @@ export async function onRequestPost(context) {
       'Commerce : ' + v.business + (v.trade ? ' (' + v.trade + ')' : ''),
       'Téléphone : ' + v.phone,
       v.email ? 'E-mail : ' + v.email : '',
-      'Rappel souhaité : ' + slotText(v),
+      'Rappel souhaité : ' + slotText(v, now),
       v.note ? 'Précisions : ' + v.note : '',
       '',
       'À traiter dans la console Kiwi, rubrique Démos.',
@@ -87,7 +87,7 @@ export async function onRequestPost(context) {
       state = sent.some((r) => r && r.ok) ? 'sent' : 'failed';
     }
     await mirrorLead(env, { kind: 'demo', reference, name: v.first_name, business: v.business,
-      trade: v.trade, phone: v.phone, email: v.email || '', slot: slotText(v), note: v.note, ts: now });
+      trade: v.trade, phone: v.phone, email: v.email || '', slot: slotText(v, now), note: v.note, ts: now });
     try {
       await env.DB.prepare('UPDATE demo_requests SET notified = ? WHERE id = ?').bind(state, id).run();
     } catch (_) {}

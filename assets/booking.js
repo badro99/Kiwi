@@ -13,7 +13,7 @@
      pendant que la cliente est encore devant le champ. `type=email` accepte
      « marie@gmail » : sans domaine complet, personne ne pourra la joindre. */
   function emailOk(v){return /^[^\s@,;:<>()[\]\\"]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/.test(String(v||'').trim().toLowerCase())}
-  function badEmailMsg(){return state.lang==='ar'?'تحقّق من بريدك الإلكتروني: لا يمكن إرسال التأكيد إلى هذا العنوان.':state.lang==='en'?'Check your email address — a confirmation cannot be delivered to it.':'Vérifiez votre e-mail : une confirmation ne peut pas être remise à cette adresse.'}
+  function badEmailMsg(){return state.lang==='ar'?'تحقّق من بريدك الإلكتروني: لا يمكن إرسال التأكيد إلى هذا العنوان.':state.lang==='en'?'Check your email address: a confirmation cannot be delivered to it.':'Vérifiez votre e-mail : une confirmation ne peut pas être remise à cette adresse.'}
   /* Les créneaux sont calculés à l'heure de l'établissement (Casablanca).
      Ils s'affichaient à l'heure du VISITEUR : depuis Paris, une table de
      11:00 se lisait 12:00, et la dernière avant la fermeture passait après.
