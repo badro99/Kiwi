@@ -54,7 +54,7 @@
       deferred.userChoice.finally(function () { deferred = null; b.remove(); });
     });
     /* En tête du pied : c'est un réglage d'appareil, comme « Mode nuit » et
-       « Plein écran » — et jamais entre « Fin d'service » et « Sortir ». */
+       « Plein écran » — et jamais entre « Fin de service » et « Sortir ». */
     if (foot) foot.insertBefore(b, foot.firstChild); else document.body.appendChild(b);
   }
   window.addEventListener('appinstalled', function () {
