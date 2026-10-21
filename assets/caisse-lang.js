@@ -1940,6 +1940,46 @@
     });
   })();
 
+  /* Les écrans profonds de la boutique (2026-10-21) : l'inventaire physique,
+     le champ de scan, le rail et le réglage des imprimantes. Relevé en
+     demandant au traducteur chaque phrase affichée. */
+  (function () {
+    var R = {
+      'Boutique': ['Shop', 'المتجر'],
+      'Imprimantes': ['Printers', 'الطابعات'],
+      'navigation': ['navigation', 'التنقل'],
+      'Profils': ['Profiles', 'الملفات'],
+      'ou': ['or', 'أو'],
+      'Scannez ou tapez un code-barres…': ['Scan or type a barcode…', 'امسح أو اكتب رمز الباركود…'],
+      'Date': ['Date', 'التاريخ'],
+      /* L'inventaire physique */
+      "Saisie à l'aveugle des quantités réelles. La transmission sera soumise à la validation du propriétaire.": ['Blind entry of the real quantities. The owner approves the submission.', 'إدخال الكميات الفعلية دون رؤية المتوقَّع. يخضع الإرسال لموافقة المالك.'],
+      'Employé :': ['Employee:', 'الموظف:'],
+      '{n} / {n} articles ({n}%)': ['{n} / {n} items ({n}%)', '{n} / {n} مادة ({n}%)'],
+      'Tous ({n})': ['All ({n})', 'الكل ({n})'],
+      'Comptés ({n})': ['Counted ({n})', 'المعدودة ({n})'],
+      'Restants ({n})': ['Remaining ({n})', 'المتبقية ({n})'],
+      'Emplacement': ['Location', 'الموقع'],
+      'Article': ['Item', 'المادة'],
+      'Déclinaison / Réf': ['Variant / Ref', 'المتغير / المرجع'],
+      'État': ['Status', 'الحالة'],
+      'Enregistrer le brouillon': ['Save the draft', 'حفظ المسودة'],
+      'Sauvegarde locale hors ligne': ['Saved locally, offline', 'حفظ محلي دون اتصال'],
+      'Vérifier et transmettre ({n})': ['Review and submit ({n})', 'مراجعة وإرسال ({n})'],
+      'Catégorie: {x}': ['Category: {x}', 'الفئة: {x}'],
+      'Emplacement: {x}': ['Location: {x}', 'الموقع: {x}'],
+      /* Le réglage des imprimantes */
+      'Largeur papier: {x}': ['Paper width: {x}', 'عرض الورق: {x}'],
+      "Format d'étiquette: {x}": ['Label size: {x}', 'مقاس الملصق: {x}'],
+      'Modèle: {x}': ['Model: {x}', 'الطراز: {x}'],
+      'Générique (ESC/POS)': ['Generic (ESC/POS)', 'عام (ESC/POS)'],
+    };
+    Object.keys(R).forEach(function (k) {
+      if (!DICT.en[k]) DICT.en[k] = R[k][0];
+      if (!DICT.ar[k]) DICT.ar[k] = R[k][1];
+    });
+  })();
+
   /* Le scan continu (assets/retail-scan.js), partagé par la boutique,
      l'épicerie et les autres commerces de détail : la caméra, le panier,
      l'encaissement en parts et la création d'un produit au scan (2026-10-21). */
@@ -2091,7 +2131,9 @@
     '^(?:(lun|mar|mer|jeu|ven|sam|dim)\\.|auj\\.|hier|demain|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)?\\s*' +
     '(?:\\d{1,2})?\\s*' +
     '(?:(janv|févr|avr|juil|sept|oct|nov|déc)\\.|mars|mai|juin|août|janvier|février|avril|juillet|septembre|octobre|novembre|décembre)?\\s*' +
-    '(?:\\d{1,2}:\\d{2})?$');
+    /* « mer. 21 oct., 06:03 » : la liste Vendus de la boutique met une virgule
+       avant l'heure. */
+    ',?\\s*(?:\\d{1,2}:\\d{2})?$');
   var DATE_TOK = /(lun|mar|mer|jeu|ven|sam|dim|janv|févr|avr|juil|sept|oct|nov|déc|auj)\.|\b(mars|mai|juin|août|hier|demain|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|janvier|février|avril|juillet|septembre|octobre|novembre|décembre)(?![A-Za-zÀ-ÿ])/g;
 
   /* ───────────────────────── état ───────────────────────── */

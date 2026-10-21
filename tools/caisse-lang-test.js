@@ -185,7 +185,7 @@ const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'F
   // Le rail et l'encaissement de la caisse restaurant (2026-10-13).
   'Menu', 'Stock', 'Exact',
   // La vue Vendus de la boutique, la cuisine du restaurant (2026-10-21).
-  'Dates', 'Table {n}']);
+  'Dates', 'Table {n}', 'navigation', 'Date']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 /* Une paire mal tapée (['Ready'] sans l'arabe, ou une chaîne vide) fusionne
@@ -306,5 +306,15 @@ check(L.tr('Bonjour Salma / Reda') === 'Bonjour Salma / Reda', 'un « Bonjour »
   check(ctxRp.ticketNo({ saleId: 'employee-3760-emp', ref: 'Table 9 #99' }) === 'Table 9 #99', 'la ligne montre le numéro de ticket, pas l\'identifiant interne');
   check(!/e\.method \|\| 'mode inconnu'|entry\.method \|\| 'mode inconnu'/.test(rp), 'aucune ligne n\'affiche plus le code de paiement brut');
 }
+/* L'inventaire physique de la boutique et ses voisins (2026-10-21). */
+L.set('en');
+for (const [fr, en] of [
+  ['0 / 191 articles (0%)', '0 / 191 items (0%)'],
+  ['Vérifier et transmettre (0)', 'Review and submit (0)'],
+  ['Catégorie: Tous', 'Category: All'],
+  ['Largeur papier: 80 mm (standard)', 'Paper width: 80 mm (standard)'],
+  ['mer. 21 oct., 06:03', 'Wed 21 Oct, 06:03'],
+  ['Saisie à l\'aveugle des quantités réelles. La transmission sera soumise à la validation du propriétaire.', 'Blind entry of the real quantities. The owner approves the submission.'],
+]) check(L.tr(fr) === en, `boutique : « ${fr} » → « ${L.tr(fr)} »`);
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);
