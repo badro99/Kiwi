@@ -33,7 +33,7 @@ import { suite } from './browser-trace.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-const caisse = read('kiwi-caisse.html');
+const caisse = read('kiwi-caisse.html').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const inbox = read('assets/orderpro-inbox.js');
 const pairing = read('assets/caisse-pairing.js');
 const lang = read('assets/caisse-lang.js');

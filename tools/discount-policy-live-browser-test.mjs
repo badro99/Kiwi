@@ -44,7 +44,7 @@ const env = { DB, AUTH_SECRET: SECRET };
 const ownerCookie = `kiwi_gate=1; ${SESS_COOKIE}=${await makeSession(ACCOUNT, SECRET, 0)}`;
 const tillCookie = `kiwi_gate=1; ${TILL_COOKIE}=${await tillToken(SECRET, MERCHANT, 0)}`;
 
-const till = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const till = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 const styles = [...till.matchAll(/<style[^>]*>[\s\S]*?<\/style>/g)].map(m => m[0]).join('\n');
 const links = [...till.matchAll(/<link rel="stylesheet" href="([^"]+)"[^>]*>/g)].map(m => `<link rel="stylesheet" href="/${m[1]}">`).join('');
 const modalStart = till.indexOf('<div class="modal-veil" id="remise-modal"');

@@ -394,7 +394,7 @@ ok('une addition demandée hors ligne échoue tout de suite, sans basculer la ta
 
 /* ══ 8 · Les pulsations ne repeignent plus ═══════════════════════════════ */
 {
-  const css = html.slice(0, html.indexOf('</style>'));
+  const css = fs.readFileSync(path.join(ROOT, 'assets/serveur-shell.css'), 'utf8');
   const frames = new Map([...css.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?\})\s*\}/g)].map((m) => [m[1], m[2]]));
   const infinite = [...css.matchAll(/animation:\s*([\w-]+)[^;]*infinite/g)].map((m) => m[1]);
   ok('aucun pouls infini n’anime box-shadow ou background-color',

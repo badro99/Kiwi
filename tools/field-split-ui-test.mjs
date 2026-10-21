@@ -10,7 +10,7 @@ const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required for the split UI');
-const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/caisse-shell.css', import.meta.url), 'utf8') + '</style>');
 const between = (a,b) => source.slice(source.indexOf(a), source.indexOf(b, source.indexOf(a) + a.length));
 const fn = name => between('    function ' + name + '(', '\n    function ');
 const html = between('  <div class="modal-veil" id="split-modal"', '  <!-- ============',);

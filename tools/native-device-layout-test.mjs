@@ -12,7 +12,7 @@ const puppeteer = require('puppeteer-core');
 const binary = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 if (!binary) throw new Error('Chromium required for native device layout verification');
 const browser = await puppeteer.launch({ executablePath: binary, headless: true, args: ['--no-sandbox'] });
-const source = read('kiwi-caisse.html');
+const source = read('kiwi-caisse.html').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n') + '\n' + read('assets/caisse-skin.css') + '\n' + read('app/src/native-runtime.css');
 let checks = 0;
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-native-devices-'));

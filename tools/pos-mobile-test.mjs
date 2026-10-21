@@ -7,7 +7,7 @@ const css = read('assets/pos-mobile.css');
 const skin = read('assets/caisse-skin.css');
 const js = read('assets/pos-mobile.js');
 const scan = read('assets/retail-scan.css');
-const html = read('kiwi-caisse.html');
+const html = read('kiwi-caisse.html').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const sw = read('kiwi-sw.js');
 
 let controls = 0;

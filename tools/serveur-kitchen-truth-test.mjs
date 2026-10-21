@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
-const serveur = read('kiwi-serveur.html');
+const serveur = read('kiwi-serveur.html') + '\n' + read('assets/serveur-shell.css');
 // Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
 const serveurLang = read('assets/serveur-lang.js');
 const cuisine = read('kiwi-cuisine.html');

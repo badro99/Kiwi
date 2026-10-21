@@ -214,8 +214,14 @@ section('Forbidden patterns');
   const INK_SCOPE = [...CSS_FILES, ...JS_FILES, path.join(ROOT, 'dashboard.html')];
   const inkCounts = [];
   for (const f of INK_SCOPE) {
-    const n = (read(f).match(/background(?:-color)?\s*:\s*var\(--ink\)/g) || []).length;
-    if (n) inkCounts.push(`${path.relative(ROOT, f)}: ${n}`);
+    // CSS comments can document the forbidden spelling without painting it.
+    const src = f.endsWith('.css') ? read(f).replace(/\/\*[\s\S]*?\*\//g, '') : read(f);
+    const n = (src.match(/background(?:-color)?\s*:\s*var\(--ink\)/g) || []).length;
+    // assets/caisse-shell.css was the caisse's inline <style> until 2026-10-21,
+    // outside this scope, and came out with five of these (the caisse's own
+    // --ink token). They may go down, never up.
+    const allowed = path.relative(ROOT, f) === 'assets/caisse-shell.css' ? 5 : 0;
+    if (n > allowed) inkCounts.push(`${path.relative(ROOT, f)}: ${n}${allowed ? ` (allowed ${allowed})` : ''}`);
   }
   if (inkCounts.length) fail(`background:var(--ink) is back (use var(--inverse-surface) + var(--inverse-ink), or a fixed colour) — ${inkCounts.join(' · ')}`);
   else ok('no background:var(--ink) in dark-mode surfaces');

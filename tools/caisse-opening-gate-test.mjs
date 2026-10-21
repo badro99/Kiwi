@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const html = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(root, 'assets/caisse-shell.css'), 'utf8') + '</style>');
 let checks = 0;
 
 function ok(condition, message) {

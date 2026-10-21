@@ -151,6 +151,10 @@
     "v": "2",
     "sha": "046824221d7614a7"
   },
+  "assets/caisse-shell.css": {
+    "v": "1",
+    "sha": "8db1ab4d2595c0a0"
+  },
   "assets/caisse-skin.css": {
     "v": "3",
     "sha": "509b94e540471caf"
@@ -1366,6 +1370,10 @@
   "assets/serveur-lang.js": {
     "v": "1",
     "sha": "cebe19526bbe2a6f"
+  },
+  "assets/serveur-shell.css": {
+    "v": "1",
+    "sha": "d30bdf9665b7b613"
   },
   "assets/service-requests.js": {
     "v": "2",

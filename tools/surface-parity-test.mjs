@@ -73,7 +73,7 @@ function styleOf(src) {
   return (m ? m[1] : '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 const CUISINE_CSS = styleOf(CUISINE);
-const SERVEUR_CSS = styleOf(SERVEUR);
+const SERVEUR_CSS = read('assets/serveur-shell.css').replace(/\/\*[\s\S]*?\*\//g, '') + styleOf(SERVEUR);
 
 /* Déclarations seules — la partie droite d'une propriété CSS, jamais une
    définition de jeton (`--x: #abc`) ni un commentaire. */

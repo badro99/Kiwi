@@ -453,7 +453,8 @@ ok(configClientSource.includes('scopeConfirmed = true')
   && configClientSource.includes("v.id === 'scoped'")
   && configClientSource.includes('v.slug === urlScope'),
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
-const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')
+  + '\n' + fs.readFileSync(path.join(ROOT, 'assets/serveur-shell.css'), 'utf8');
 const employeePlanningSource = fs.readFileSync(path.join(ROOT, 'assets/employee-planning.js'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');

@@ -5,7 +5,7 @@
     "assets/agent.js": 5943,
     "assets/dateRange.js": 6724,
     "assets/hotel.js": 10284,
-    "assets/interactive.js": 5253,
+    "assets/interactive.js": 5241,
     "assets/pages-pro.js": 20938,
     "assets/pos-boutique.js": 7882,
     "assets/pos-maison.js": 9456,
@@ -13,8 +13,8 @@
     "assets/team.js": 5035,
     "assets/venues.js": 5075,
     "dashboard.html": 6855,
-    "kiwi-caisse.html": 24915,
-    "kiwi-serveur.html": 12341
+    "kiwi-caisse.html": 19486,
+    "kiwi-serveur.html": 8246
   },
   "scripts": {
     "dashboard.html": 159,

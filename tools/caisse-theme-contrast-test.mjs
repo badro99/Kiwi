@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const html = readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + readFileSync(new URL('../assets/caisse-shell.css', import.meta.url), 'utf8') + '</style>');
 const sw = readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const caissePwa = readFileSync(new URL('../assets/caisse-pwa.js', import.meta.url), 'utf8');
 const dashboardPwa = readFileSync(new URL('../assets/dashboard-pwa.js', import.meta.url), 'utf8');

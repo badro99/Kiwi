@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/caisse-shell.css', import.meta.url), 'utf8') + '</style>');
 const panel = caisse.split('<!-- --------- RIGHT BILL PANEL --------- -->')[1]
   ?.split('<!-- ============ FULL ORDER REVIEW MODAL ============ -->')[0];
 assert.ok(panel, 'shared caisse order panel exists');
