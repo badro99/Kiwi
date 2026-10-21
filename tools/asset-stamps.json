@@ -328,8 +328,8 @@
     "sha": "82de15c3ff760b26"
   },
   "assets/employee-pwa.js": {
-    "v": "1",
-    "sha": "0dbe7672198d2ae2"
+    "v": "2",
+    "sha": "c82a630e4de03b99"
   },
   "assets/employee-trade-shell.css": {
     "v": "2",
@@ -1346,6 +1346,10 @@
   "assets/scan-wedge.js": {
     "v": "1",
     "sha": "f5b140fee5f04dc7"
+  },
+  "assets/serveur-lang.js": {
+    "v": "1",
+    "sha": "cebe19526bbe2a6f"
   },
   "assets/service-requests.js": {
     "v": "2",

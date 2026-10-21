@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+/* Le dictionnaire et ses motifs vivent dans assets/serveur-lang.js. */
+const serveurLang = fs.readFileSync(path.join(ROOT, 'assets', 'serveur-lang.js'), 'utf8');
 
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  ✓ ${label}`); };
@@ -371,11 +373,12 @@ ok('une addition demandée hors ligne échoue tout de suite, sans basculer la ta
   ];
   const keyed = (s) => {
     const q = s.includes("'") ? `"${s}"` : `'${s}'`;
-    return html.split(q + ':').length - 1;
+    return serveurLang.split(q + ':').length - 1;
   };
   const missing = fr.filter((s) => keyed(s) < 2);
   ok('chaque nouveau texte a sa traduction anglaise et arabe', missing.length === 0 || assert.fail('sans traduction : ' + missing.join(' | ')));
-  const pats = vm.runInNewContext('(' + slice('    const EMPLOYEE_PATTERNS = [', '\n    ];').replace('    const EMPLOYEE_PATTERNS = ', '') + '\n    ])');
+  const pa = serveurLang.indexOf('  const EMPLOYEE_PATTERNS = ['), pb = serveurLang.indexOf('\n  ];', pa);
+  const pats = vm.runInNewContext('(' + serveurLang.slice(pa, pb).replace('  const EMPLOYEE_PATTERNS = ', '') + '\n  ])');
   const tr = (s, l) => { for (const [re, en, ar] of pats) if (re.test(s)) return s.replace(re, l === 'en' ? en : ar); return null; };
   ok('« Hors ligne · dernière mise à jour HH:MM » en anglais et en arabe',
     tr('Hors ligne · dernière mise à jour 21:07', 'en') === 'Offline · last updated 21:07'

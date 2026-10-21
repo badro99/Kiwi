@@ -26,6 +26,8 @@ import vm from 'node:vm';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const serveur = read('kiwi-serveur.html');
+// Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
+const serveurLang = read('assets/serveur-lang.js');
 const cuisine = read('kiwi-cuisine.html');
 const caisse = read('kiwi-caisse.html');
 let checks = 0;
@@ -133,7 +135,7 @@ function grab(src, startRe, label) {
 {
   ok(/\.cash-grid\[hidden\]\s*\{\s*display:\s*none/.test(serveur), 'l\'étape « confirmée » reste cachée tant que rien n\'est confirmé');
   ok(!/Flous reçu/.test(serveur), 'plus de « Flous reçu » dans l\'interface française');
-  ok(/Montant reçu/.test(serveur) && /'Montant reçu': 'Amount received'/.test(serveur), '« Montant reçu » existe en FR et EN');
+  ok(/Montant reçu/.test(serveur) && /'Montant reçu': 'Amount received'/.test(serveurLang), '« Montant reçu » existe en FR et EN');
   ok(!/toast\('Ticket en impression…'\)/.test(serveur), 'aucun bouton serveur n\'annonce une impression sans imprimer');
   ok(!/toast\('Envoyé · SMS \/ WhatsApp'\)/.test(serveur), 'aucun bouton serveur n\'annonce un envoi sans envoyer');
   ok(!/<span>SMS \/ WA<\/span>/.test(serveur), 'les boutons Ticket / SMS ont disparu de la feuille');

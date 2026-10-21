@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
 const page = fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8');
+// Le dictionnaire et ses motifs vivent dans assets/serveur-lang.js.
+const lang = fs.readFileSync(path.join(root, 'assets', 'serveur-lang.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');
 const manifest = fs.readFileSync(path.join(root, 'serveur.webmanifest'), 'utf8');
 let checks = 0;
@@ -19,9 +21,9 @@ ok(/data-employee-language="en"[^>]*>English</.test(page), 'English selector is 
 ok(/data-employee-language="ar"[^>]*[\s\S]*?العربية</.test(page), 'standard Arabic selector is available in Profile');
 ok(/kiwi-employee-language:/.test(page), 'preference is persisted per venue');
 ok(/localStorage\.setItem\(EMPLOYEE_LANGUAGE_KEY, language\)/.test(page), 'language changes are persisted');
-ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ar:/.test(page), 'English and standard Arabic dictionaries exist');
+ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ar:/.test(lang) && /window\.KiwiServeurLang\.translations/.test(page), 'English and standard Arabic dictionaries exist');
 ok(/saved === 'ary'\) return 'ar'/.test(page), 'legacy Darija preference migrates to standard Arabic');
-ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page), 'Darija wording no longer leaks into the Serveur app');
+ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page + lang), 'Darija wording no longer leaks into the Serveur app');
 ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and Spanish labels no longer leak into French UI');
 ok(/document\.documentElement\.dir = employeeLanguage === 'ar' \? 'rtl' : 'ltr'/.test(page), 'standard Arabic uses the correct reading direction');
 ok(/function setEmployeeLanguage[\s\S]*?renderSchedule\(\)[\s\S]*?renderHours\(\)/.test(page), 'changing language immediately redraws schedule and hours');

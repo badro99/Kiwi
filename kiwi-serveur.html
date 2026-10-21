@@ -5046,6 +5046,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js?v=2" defer></script>
+  <script src="assets/serveur-lang.js?v=1"></script>
 
   <script>
     /* =========================================================
@@ -5122,400 +5123,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        deliberately independent from clock-in state so a reload, logout or a
        new shift never sends the employee back to French. */
     const EMPLOYEE_LANGUAGE_KEY = 'kiwi-employee-language:' + (svMerchant() || 'demo');
-    const EMPLOYEE_TRANSLATIONS = {
-      en: {
-        "Annulation déjà en attente de la cuisine": "Cancellation already waiting for the kitchen",
-        "Annulation en cours · attendez la réponse du serveur": "Cancelling · waiting for the server",
-        "Article non vendable individuellement": "This item cannot be sold on its own",
-        "Choisissez les options obligatoires": "Choose the required options",
-        "Choix dupliqués pour toutes les portions": "Choices copied to every portion",
-        "Commande en attente envoyée · cuisine": "Held order sent · kitchen",
-        "Commande envoyée en cuisine": "Order sent to the kitchen",
-        "Commande introuvable": "Order not found",
-        "Complétez tous les choix obligatoires": "Complete every required choice",
-        "Copié": "Copied",
-        "Envoyé · SMS / WhatsApp": "Sent · SMS / WhatsApp",
-        "Plat déjà en cuisine · parlez au chef ou annulez": "Dish already in the kitchen · talk to the chef or cancel",
-        "Pointage non synchronisé · vérifiez la connexion": "Clock-in not synced · check the connection",
-        "Reprenez le service pour prendre une commande": "Resume your shift to take an order",
-        "Pointez votre arrivée pour prendre une commande ou un paiement": "Clock in to take an order or a payment",
-        "Saisissez le code de la caisse pour pointer le départ": "Enter the till code to clock out",
-        "Session de service expirée · reconnectez-vous": "Service session expired · sign in again",
-        "Session fermée": "Signed out",
-        "Split annulé": "Split cancelled",
-        "Ticket en impression…": "Printing receipt…",
-        "Pas vous ? Changer d'employé": "Not you? Switch employee",
-        "Cet établissement est suspendu": "This establishment is suspended",
-        "Service momentanément indisponible": "Service temporarily unavailable",
-        "Code de pointage incorrect ou expiré": "Clock-in code is incorrect or expired",
-        "Trop d'essais · réessayez plus tard": "Too many attempts · try again later",
-        "Email ou code personnel incorrect": "Incorrect email or personal code",
-        "Email ou code personnel incorrect.": "Incorrect email or personal code.",
-        "Entrez votre email et votre code à 4 chiffres.": "Enter your email and your 4-digit code.",
-        "Trop d’essais. Réessayez dans quelques minutes.": "Too many attempts. Try again in a few minutes.",
-        "Cet établissement est suspendu.": "This establishment is suspended.",
-        "Cet email existe dans plusieurs établissements. Contactez votre responsable.": "This email exists in several establishments. Contact your manager.",
-        "Service momentanément indisponible. Réessayez.": "Service temporarily unavailable. Try again.",
-        "Connexion indisponible. Vérifiez le réseau et réessayez.": "Connection unavailable. Check the network and try again.",
-        "Session expirée · reconnectez-vous": "Session expired · sign in again",
-        "Pointage non enregistré · réessayez": "Clock-in not recorded · try again",
-        "Connexion indisponible · vérifiez le réseau": "Connection unavailable · check the network",
-        "Opération impossible · réessayez": "Could not complete · try again",
-        "Code saisi · il sera vérifié au pointage": "Code entered · it is checked when you clock",
-        "Équipe": "Team",
-        "Bonjour": "Hello",
-        "Entrez votre code": "Enter your code",
-        "Votre compte est créé par votre responsable dans Équipe": "Your manager creates your account in Team",
-        "Connexion équipe": "Team sign in",
-        "Email professionnel": "Work email",
-        "Code personnel": "Personal code",
-        "Se connecter": "Sign in",
-        "Saisissez le code affiché dans la caisse": "Enter the code displayed on the till",
-        "Saisissez le code de la caisse pour ouvrir le service": "Enter the till code to start your shift",
-        "Saisissez le code de la caisse pour terminer le service": "Enter the till code to end your shift",
-        "Pointer l'arrivée": "Clock in",
-        "Pointer l’arrivée": "Clock in",
-        "Pointer le départ": "Clock out",
-        "Consulter sans pointer": "View without clocking in",
-        "Consulter l'application sans pointer": "View without clocking in",
-        "Apparence": "Appearance",
-        "Jour": "Light",
-        "Nuit": "Dark",
-        "Système": "System",
-        "Apparence de l'application": "App appearance",
-        "Apparence : jour": "Appearance: light",
-        "Apparence : nuit": "Appearance: dark",
-        "Apparence : suivre le système": "Appearance: system",
-        "Connexion PIN": "Code sign in",
-        "Clavier numérique": "Number pad",
-        "Effacer": "Delete",
-        "Code de pointage à six chiffres": "Six-digit clock-in code",
-        "Application équipe": "Team app",
-        "Rafraîchir": "Refresh",
-        'Notifications': 'Notifications',
-        'Tables': 'Tables',
-        "Rafraîchir l'application": 'Refresh app',
-        'Votre service en direct': 'Your shift live',
-        "Vous n'êtes pas en service": 'You are not on shift',
-        'Consultation seulement · pointez votre arrivée pour commencer.': 'View only · clock in to start.',
-        'Pointer mon arrivée': 'Clock in',
-        'Se déconnecter': 'Log out',
-        'Début de service': 'Shift started',
-        'Durée actuelle': 'Current duration',
-        'Tables actives': 'Active tables',
-        'Tables réglées': 'Paid tables',
-        'Cette semaine': 'This week',
-        'Voir le mois': 'View month',
-        'Prochain service': 'Next shift',
-        'Heures travaillées': 'Hours worked',
-        'Historique': 'History',
-        "Aujourd'hui": 'Today',
-        'Ce mois': 'This month',
-        'Grade': 'Rank',
-        'Aucun grade': 'No rank yet',
-        'XP totale': 'Total XP',
-        'Records personnels': 'Personal records',
-        'Vos records apparaîtront après votre première table réglée.': 'Your records will appear after your first paid table.',
-        'À établir': 'Pending',
-        'Meilleur soir': 'Best evening',
-        'Tables en série': 'Tables in a row',
-        'Vitesse moyenne': 'Average speed',
-        '+ Nouveau record': '+ New record',
-        'Défi du soir': "Tonight's challenge",
-        'Pause gérée depuis la caisse': 'Break managed from the register',
-        'En pause · gérée depuis la caisse': 'On break · managed from the register',
-        'Pointer le départ': 'Clock out',
-        "Langue de l'application": 'App language',
-        'Mes tables': 'My tables',
-        'Toutes les tables': 'All tables',
-        'Afficher toutes les tables': 'Show all tables',
-        'Vos tables ce matin': 'Your tables this morning',
-        'Vos tables ce midi': 'Your tables at lunch',
-        'Vos tables cet après-midi': 'Your tables this afternoon',
-        'Vos tables ce soir': 'Your tables tonight',
-        'Vos tables cette nuit': 'Your tables tonight',
-        'Disponible': 'Available',
-        'Libre': 'Available',
-        'À commander': 'To order',
-        'En cours': 'In progress',
-        'Addition demandée': 'Bill requested',
-        'Paiement…': 'Payment…',
-        'Réglée': 'Paid',
-        'Menu': 'Menu',
-        'Profil': 'Profile',
-        'Planning du mois': 'Monthly schedule',
-        'Vos services planifiés par votre responsable.': 'Your shifts scheduled by your manager.',
-        'Mois précédent': 'Previous month',
-        'Mois suivant': 'Next month',
-        'Fermer': 'Close',
-        'Historique des heures': 'Hours history',
-        'Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.': 'Hours from your Kiwi time clock, saved separately and shared with the dashboard.',
-        'Total du mois': 'Monthly total',
-        'Aucune heure enregistrée pour ce mois.': 'No hours recorded this month.',
-        'Aucune notification': 'No notifications',
-        'Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.': 'Seated tables, OrderPro orders, ready dishes and bills will appear here.',
-        'Ajouter articles': 'Add items',
-        'Prendre la commande': 'Take order',
-        'Addition': 'Bill',
-        'Encaisser': 'Take payment',
-        'Annuler': 'Cancel',
-        'Ouvrir': 'Open',
-        'Combien de couverts?': 'How many guests?',
-        'Client & fidélité': 'Customer & loyalty',
-        'Client de passage': 'Walk-in customer',
-        'Payer par carte': 'Pay by card',
-        'Payer en espèces': 'Pay cash',
-        "Partager l'addition": 'Split bill',
-        'Confirmer': 'Confirm',
-        'Rendu': 'Change',
-        'Rendu au client': 'Change due',
-        'Espèces confirmées': 'Cash confirmed',
-        'Montant reçu': 'Amount received',
-        'Encaissez sur le terminal carte, puis confirmez': 'Take the card payment on the terminal, then confirm',
-        'Paiement reçu': 'Payment received',
-        'Paiement carte confirmé': 'Card payment confirmed',
-        'Nom ou téléphone': 'Name or phone',
-        'Retour': 'Back',
-        'Repos': 'Off',
-        'Toutes': 'All',
-        'Occupées': 'Occupied',
-        'Libres': 'Available',
-        'Filtrer les tables': 'Filter tables',
-        'Aucune table ici': 'No tables here',
-        'Modifiez le filtre pour retrouver vos tables.': 'Change the filter to find your tables.',
-        'En service': 'On shift',
-        'Hors service': 'Off shift'
-        ,'Mon planning':'My schedule'
-        ,'Disponibilités & congés':'Availability & leave'
-        ,'Envoyez une demande au responsable sans message séparé.':'Send a request to your manager without a separate message.'
-        ,'Mes disponibilités':'My availability'
-        ,'Demander un congé':'Request leave'
-        ,'Aucune demande envoyée.':'No request sent.'
-        ,'Indiquer mes disponibilités':'Set my availability'
-        ,'Date de début':'Start date'
-        ,'Date de fin':'End date'
-        ,'Jours concernés':'Days concerned'
-        ,'Je suis disponible ces jours':'I am available on these days'
-        ,'À partir de':'From'
-        ,'Jusqu’à':'Until'
-        ,'Note au responsable (facultatif)':'Note to manager (optional)'
-        ,'Envoyer la demande':'Send request'
-        ,'En attente':'Pending'
-        ,'Approuvée':'Approved'
-        ,'Refusée':'Rejected'
-        ,'Annulée':'Cancelled'
-        ,'Hors ligne · pas encore synchronisé':'Offline · not synced yet'
-        ,'Chargement de la carte…':'Loading the menu…'
-        ,"Impossible de charger la carte. Elle s'affichera au retour du réseau.":'Could not load the menu. It will appear when the network is back.'
-        ,'Synchronisation des tables…':'Syncing tables…'
-        ,"Serveur injoignable · l'état des tables n'est peut-être pas à jour":'Server unreachable · table status may be out of date'
-        ,'Chargement des tables…':'Loading tables…'
-        ,'Le plan de salle arrive du serveur.':'The floor plan is coming from the server.'
-        ,'Serveur injoignable':'Server unreachable'
-        ,"Les tables s'afficheront au retour du réseau.":'Tables will appear when the network is back.'
-        ,'Aucune table dans le plan de salle':'No tables in the floor plan'
-        ,'Le responsable compose le plan de salle depuis le tableau de bord.':'A manager sets up the floor plan from the dashboard.'
-        ,'Envoi en cours…':'Sending…'
-        ,"Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.":'No network. The payment is not recorded, try again when the network is back.'
-        ,"Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.":'No network. The bill request was not sent, try again when the network is back.'
-      },
-      ar: {
-        "Annulation déjà en attente de la cuisine": "الإلغاء بانتظار المطبخ",
-        "Annulation en cours · attendez la réponse du serveur": "جارٍ الإلغاء · بانتظار الخادم",
-        "Article non vendable individuellement": "لا يمكن بيع هذا الصنف منفرداً",
-        "Choisissez les options obligatoires": "اختر الخيارات الإلزامية",
-        "Choix dupliqués pour toutes les portions": "نُسخت الاختيارات لكل الحصص",
-        "Commande en attente envoyée · cuisine": "أُرسل الطلب المعلّق · المطبخ",
-        "Commande envoyée en cuisine": "أُرسل الطلب إلى المطبخ",
-        "Commande introuvable": "الطلب غير موجود",
-        "Complétez tous les choix obligatoires": "أكمل كل الاختيارات الإلزامية",
-        "Copié": "تم النسخ",
-        "Envoyé · SMS / WhatsApp": "أُرسل · SMS / واتساب",
-        "Plat déjà en cuisine · parlez au chef ou annulez": "الطبق في المطبخ · كلّم الشيف أو ألغِ",
-        "Pointage non synchronisé · vérifiez la connexion": "لم تتم مزامنة التسجيل · تحقّق من الاتصال",
-        "Reprenez le service pour prendre une commande": "استأنف ورديتك لأخذ طلب",
-        "Pointez votre arrivée pour prendre une commande ou un paiement": "سجّل حضورك لأخذ طلب أو تسجيل دفعة",
-        "Saisissez le code de la caisse pour pointer le départ": "أدخل رمز الصندوق لتسجيل الخروج",
-        "Session de service expirée · reconnectez-vous": "انتهت جلسة الخدمة · سجّل الدخول مجدداً",
-        "Session fermée": "تم تسجيل الخروج",
-        "Split annulé": "أُلغي التقسيم",
-        "Ticket en impression…": "جارٍ طباعة الإيصال…",
-        "Pas vous ? Changer d'employé": "لست أنت؟ غيّر الموظف",
-        "Cet établissement est suspendu": "هذا الفرع موقوف",
-        "Service momentanément indisponible": "الخدمة غير متاحة مؤقتاً",
-        "Code de pointage incorrect ou expiré": "رمز بدء الوردية غير صحيح أو منتهي الصلاحية",
-        "Trop d'essais · réessayez plus tard": "محاولات كثيرة · أعد المحاولة لاحقاً",
-        "Email ou code personnel incorrect": "البريد الإلكتروني أو الرمز الشخصي غير صحيح",
-        "Email ou code personnel incorrect.": "البريد الإلكتروني أو الرمز الشخصي غير صحيح.",
-        "Entrez votre email et votre code à 4 chiffres.": "أدخل بريدك الإلكتروني ورمزك المكوّن من 4 أرقام.",
-        "Trop d’essais. Réessayez dans quelques minutes.": "محاولات كثيرة. أعد المحاولة بعد دقائق.",
-        "Cet établissement est suspendu.": "هذا الفرع موقوف.",
-        "Cet email existe dans plusieurs établissements. Contactez votre responsable.": "هذا البريد موجود في عدة فروع. تواصل مع مسؤولك.",
-        "Service momentanément indisponible. Réessayez.": "الخدمة غير متاحة مؤقتاً. أعد المحاولة.",
-        "Connexion indisponible. Vérifiez le réseau et réessayez.": "لا يوجد اتصال. تحقّق من الشبكة وأعد المحاولة.",
-        "Session expirée · reconnectez-vous": "انتهت الجلسة · سجّل الدخول من جديد",
-        "Pointage non enregistré · réessayez": "لم يُسجَّل الحضور · أعد المحاولة",
-        "Connexion indisponible · vérifiez le réseau": "لا يوجد اتصال · تحقّق من الشبكة",
-        "Opération impossible · réessayez": "تعذّر إتمام العملية · أعد المحاولة",
-        "Code saisi · il sera vérifié au pointage": "تم إدخال الرمز · سيُتحقَّق منه عند التسجيل",
-        "Équipe": "الفريق",
-        "Bonjour": "مرحباً",
-        "Entrez votre code": "أدخل رمزك",
-        "Votre compte est créé par votre responsable dans Équipe": "ينشئ مديرك حسابك في قسم الفريق",
-        "Connexion équipe": "تسجيل دخول الفريق",
-        "Email professionnel": "البريد الإلكتروني للعمل",
-        "Code personnel": "الرمز الشخصي",
-        "Se connecter": "تسجيل الدخول",
-        "Saisissez le code affiché dans la caisse": "أدخل الرمز المعروض على الصندوق",
-        "Saisissez le code de la caisse pour ouvrir le service": "أدخل رمز الصندوق لبدء الوردية",
-        "Saisissez le code de la caisse pour terminer le service": "أدخل رمز الصندوق لإنهاء الوردية",
-        "Pointer l'arrivée": "بدء الوردية",
-        "Pointer l’arrivée": "بدء الوردية",
-        "Pointer le départ": "إنهاء الوردية",
-        "Consulter sans pointer": "عرض دون بدء الوردية",
-        "Consulter l'application sans pointer": "عرض دون بدء الوردية",
-        "Apparence": "المظهر",
-        "Jour": "فاتح",
-        "Nuit": "داكن",
-        "Système": "النظام",
-        "Apparence de l'application": "مظهر التطبيق",
-        "Apparence : jour": "المظهر: فاتح",
-        "Apparence : nuit": "المظهر: داكن",
-        "Apparence : suivre le système": "المظهر: النظام",
-        "Connexion PIN": "تسجيل الدخول بالرمز",
-        "Clavier numérique": "لوحة الأرقام",
-        "Effacer": "مسح",
-        "Code de pointage à six chiffres": "رمز بدء الوردية من ستة أرقام",
-        "Application équipe": "تطبيق الفريق",
-        "Rafraîchir": "تحديث",
-        'Notifications': 'الإشعارات',
-        'Tables': 'الطاولات',
-        "Rafraîchir l'application": 'تحديث التطبيق',
-        'Votre service en direct': 'حالة ورديتك مباشرة',
-        "Vous n'êtes pas en service": 'لست في وردية عمل الآن',
-        'Consultation seulement · pointez votre arrivée pour commencer.': 'العرض فقط · سجّل حضورك للبدء.',
-        'Pointer mon arrivée': 'تسجيل الحضور',
-        'Se déconnecter': 'تسجيل الخروج من الحساب',
-        'Début de service': 'بداية الوردية',
-        'Durée actuelle': 'المدة الحالية',
-        'Tables actives': 'الطاولات النشطة',
-        'Tables réglées': 'الطاولات المسددة',
-        'Cette semaine': 'هذا الأسبوع',
-        'Voir le mois': 'عرض الشهر',
-        'Prochain service': 'الوردية القادمة',
-        'Heures travaillées': 'ساعات العمل',
-        'Historique': 'السجل',
-        "Aujourd'hui": 'اليوم',
-        'Ce mois': 'هذا الشهر',
-        'Grade': 'المستوى',
-        'Aucun grade': 'لا يوجد مستوى بعد',
-        'XP totale': 'إجمالي نقاط الخبرة',
-        'Records personnels': 'الأرقام القياسية الشخصية',
-        'Vos records apparaîtront après votre première table réglée.': 'ستظهر أرقامك القياسية بعد تسديد أول طاولة.',
-        'À établir': 'قيد الاحتساب',
-        'Meilleur soir': 'أفضل وردية مسائية',
-        'Tables en série': 'الطاولات المتتالية',
-        'Vitesse moyenne': 'متوسط السرعة',
-        '+ Nouveau record': '+ رقم قياسي جديد',
-        'Défi du soir': 'تحدي الوردية',
-        'Pause gérée depuis la caisse': 'الاستراحة تُدار من نقطة البيع',
-        'En pause · gérée depuis la caisse': 'في استراحة · تُدار من نقطة البيع',
-        'Pointer le départ': 'تسجيل الانصراف',
-        "Langue de l'application": 'لغة التطبيق',
-        'Mes tables': 'طاولاتي',
-        'Toutes les tables': 'جميع الطاولات',
-        'Afficher toutes les tables': 'عرض جميع الطاولات',
-        'Vos tables ce matin': 'طاولاتك هذا الصباح',
-        'Vos tables ce midi': 'طاولاتك وقت الظهيرة',
-        'Vos tables cet après-midi': 'طاولاتك بعد الظهر',
-        'Vos tables ce soir': 'طاولاتك هذا المساء',
-        'Vos tables cette nuit': 'طاولاتك هذه الليلة',
-        'Disponible': 'متاحة',
-        'Libre': 'شاغرة',
-        'À commander': 'بانتظار الطلب',
-        'En cours': 'قيد الخدمة',
-        'Addition demandée': 'طُلبت الفاتورة',
-        'Paiement…': 'جارٍ الدفع…',
-        'Réglée': 'مسددة',
-        'Menu': 'القائمة',
-        'Profil': 'الملف الشخصي',
-        'Planning du mois': 'جدول الشهر',
-        'Vos services planifiés par votre responsable.': 'وردياتك التي حددها المسؤول.',
-        'Mois précédent': 'الشهر السابق',
-        'Mois suivant': 'الشهر التالي',
-        'Fermer': 'إغلاق',
-        'Historique des heures': 'سجل ساعات العمل',
-        'Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.': 'ساعات العمل المسجلة عبر نظام الحضور في Kiwi، محفوظة بشكل مستقل ومشتركة مع لوحة التحكم.',
-        'Total du mois': 'إجمالي الشهر',
-        'Aucune heure enregistrée pour ce mois.': 'لا توجد ساعات مسجلة لهذا الشهر.',
-        'Aucune notification': 'لا توجد إشعارات',
-        'Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.': 'ستظهر هنا الطاولات المشغولة وطلبات OrderPro والأطباق الجاهزة والفواتير.',
-        'Ajouter articles': 'إضافة أصناف',
-        'Prendre la commande': 'أخذ الطلب',
-        'Addition': 'الفاتورة',
-        'Encaisser': 'تحصيل الدفع',
-        'Annuler': 'إلغاء',
-        'Ouvrir': 'فتح',
-        'Combien de couverts?': 'كم عدد الضيوف؟',
-        'Client & fidélité': 'العميل والولاء',
-        'Client de passage': 'عميل عابر',
-        'Payer par carte': 'الدفع بالبطاقة',
-        'Payer en espèces': 'الدفع نقداً',
-        "Partager l'addition": 'تقسيم الفاتورة',
-        'Confirmer': 'تأكيد',
-        'Rendu': 'الباقي',
-        'Rendu au client': 'الباقي للعميل',
-        'Espèces confirmées': 'تم تأكيد الدفع النقدي',
-        'Montant reçu': 'المبلغ المستلم',
-        'Encaissez sur le terminal carte, puis confirmez': 'حصّل الدفع على جهاز البطاقة ثم أكّد',
-        'Paiement reçu': 'تم استلام الدفع',
-        'Paiement carte confirmé': 'تم تأكيد الدفع بالبطاقة',
-        'Nom ou téléphone': 'الاسم أو رقم الهاتف',
-        'Retour': 'رجوع',
-        'Repos': 'عطلة',
-        'Toutes': 'الكل',
-        'Occupées': 'المشغولة',
-        'Libres': 'الشاغرة',
-        'Filtrer les tables': 'تصفية الطاولات',
-        'Aucune table ici': 'لا توجد طاولات هنا',
-        'Modifiez le filtre pour retrouver vos tables.': 'غيّر عامل التصفية لعرض الطاولات.',
-        'En service': 'في الوردية',
-        'Hors service': 'خارج الوردية'
-        ,'Mon planning':'جدولي'
-        ,'Disponibilités & congés':'أوقات التوفر والإجازات'
-        ,'Envoyez une demande au responsable sans message séparé.':'أرسل طلبك إلى المسؤول مباشرة من التطبيق.'
-        ,'Mes disponibilités':'أوقات توفري'
-        ,'Demander un congé':'طلب إجازة'
-        ,'Aucune demande envoyée.':'لم يتم إرسال أي طلب.'
-        ,'Indiquer mes disponibilités':'تحديد أوقات التوفر'
-        ,'Date de début':'تاريخ البداية'
-        ,'Date de fin':'تاريخ النهاية'
-        ,'Jours concernés':'الأيام المعنية'
-        ,'Je suis disponible ces jours':'أنا متاح في هذه الأيام'
-        ,'À partir de':'من الساعة'
-        ,'Jusqu’à':'إلى الساعة'
-        ,'Note au responsable (facultatif)':'ملاحظة للمسؤول (اختيارية)'
-        ,'Envoyer la demande':'إرسال الطلب'
-        ,'En attente':'قيد المراجعة'
-        ,'Approuvée':'تمت الموافقة'
-        ,'Refusée':'مرفوضة'
-        ,'Annulée':'ملغاة'
-        ,'Hors ligne · pas encore synchronisé':'غير متصل · لم تتم المزامنة بعد'
-        ,'Chargement de la carte…':'جارٍ تحميل القائمة…'
-        ,"Impossible de charger la carte. Elle s'affichera au retour du réseau.":'تعذّر تحميل القائمة. ستظهر عند عودة الشبكة.'
-        ,'Synchronisation des tables…':'جارٍ مزامنة الطاولات…'
-        ,"Serveur injoignable · l'état des tables n'est peut-être pas à jour":'تعذّر الوصول إلى الخادم · قد لا تكون حالة الطاولات محدّثة'
-        ,'Chargement des tables…':'جارٍ تحميل الطاولات…'
-        ,'Le plan de salle arrive du serveur.':'مخطط القاعة قادم من الخادم.'
-        ,'Serveur injoignable':'تعذّر الوصول إلى الخادم'
-        ,"Les tables s'afficheront au retour du réseau.":'ستظهر الطاولات عند عودة الشبكة.'
-        ,'Aucune table dans le plan de salle':'لا توجد طاولات في مخطط القاعة'
-        ,'Le responsable compose le plan de salle depuis le tableau de bord.':'يُعِدّ المسؤول مخطط القاعة من لوحة التحكم.'
-        ,'Envoi en cours…':'جارٍ الإرسال…'
-        ,"Pas de réseau. Le paiement n'est pas enregistré, réessayez au retour du réseau.":'لا توجد شبكة. لم يُسجَّل الدفع، أعد المحاولة عند عودة الشبكة.'
-        ,"Pas de réseau. L'addition n'est pas transmise, réessayez au retour du réseau.":'لا توجد شبكة. لم يُرسَل طلب الفاتورة، أعد المحاولة عند عودة الشبكة.'
-      }
-    };
+    /* Le dictionnaire et les motifs vivent dans assets/serveur-lang.js. */
+    const EMPLOYEE_TRANSLATIONS = (window.KiwiServeurLang && window.KiwiServeurLang.translations) || { en: {}, ar: {} };
     let employeeLanguage = (() => {
       try {
         // On iOS the app locale wins over old venue defaults. Web remains venue-scoped.
@@ -5534,30 +5143,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const employeeI18nOriginal = new WeakMap();
     const employeeI18nLast = new WeakMap();
     const employeeI18nAttrs = new WeakMap();
-    const EMPLOYEE_PATTERNS = [
-      [/^Table (.+?) · réglée ✓$/, 'Table $1 · paid ✓', 'الطاولة $1 · مدفوعة ✓'],
-      [/^Table (.+?) déjà réglée$/, 'Table $1 already paid', 'الطاولة $1 مدفوعة مسبقاً'],
-      [/^Table (.+?) · rien de nouveau à envoyer$/, 'Table $1 · nothing new to send', 'الطاولة $1 · لا جديد للإرسال'],
-      [/^Table (.+?) · paiement impossible$/, 'Table $1 · payment failed', 'الطاولة $1 · تعذّر الدفع'],
-      [/^Table (.+?) · paiement non enregistré, réessayez$/, 'Table $1 · payment not saved, try again', 'الطاولة $1 · لم يُسجَّل الدفع، أعد المحاولة'],
-      [/^Table (.+?) · addition non transmise, réessayez$/, 'Table $1 · bill not sent, try again', 'الطاولة $1 · لم تُرسل الفاتورة، أعد المحاولة'],
-      [/^Table (.+?) déplacée vers Table (.+)$/, 'Table $1 moved to Table $2', 'نُقلت الطاولة $1 إلى الطاولة $2'],
-      [/^Table (.+?) fusionnée dans Table (.+)$/, 'Table $1 merged into Table $2', 'دُمجت الطاولة $1 في الطاولة $2'],
-      [/^Addition demandée pour (.+)$/, 'Bill requested for $1', 'طُلبت الفاتورة لـ $1'],
-      [/^\+1 (.+) ajouté$/, '+1 $1 added', '+1 $1 أُضيف'],
-      [/^(.+) ajouté$/, '$1 added', 'أُضيف $1'],
-      [/^(.+) annulé en cuisine$/, '$1 cancelled in the kitchen', 'أُلغي $1 في المطبخ'],
-      [/^(.+) · fidélité mise à jour$/, '$1 · loyalty updated', '$1 · تم تحديث الوفاء'],
-      [/^Erreur réseau : (.+)$/, 'Network error: $1', 'خطأ في الشبكة: $1'],
-      [/^Hors ligne · dernière mise à jour (\d{1,2}:\d{2})$/, 'Offline · last updated $1', 'غير متصل · آخر تحديث $1'],
-      [/^Table (.+?) · paiement non confirmé, réessayez$/, 'Table $1 · payment not confirmed, try again', 'الطاولة $1 · لم يتأكد الدفع، أعد المحاولة'],
-      [/^Table (.+?) · paiement non confirmé, ne repassez pas la carte, réessayez$/, 'Table $1 · payment not confirmed, do not run the card again, just retry', 'الطاولة $1 · لم يتأكد الدفع، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط'],
-      [/^Table (.+?) · hors ligne · commande NON envoyée, réessayez$/, 'Table $1 · offline · order NOT sent, try again', 'الطاولة $1 · غير متصل · لم يُرسَل الطلب، أعد المحاولة'],
-      [/^Table (.+?) · pas de réponse du serveur · commande NON confirmée, réessayez$/, 'Table $1 · no answer from the server · order NOT confirmed, try again', 'الطاولة $1 · لا رد من الخادم · لم يتأكد الطلب، أعد المحاولة'],
-      [/^Table (.*?) · part (\d+) non confirmée, réessayez$/, 'Table $1 · share $2 not confirmed, try again', 'الطاولة $1 · لم يتأكد الجزء $2، أعد المحاولة'],
-      [/^Table (.*?) · part (\d+) non confirmée, ne repassez pas la carte, réessayez$/, 'Table $1 · share $2 not confirmed, do not run the card again, just retry', 'الطاولة $1 · لم يتأكد الجزء $2، لا تمرّر البطاقة مرة أخرى، أعد المحاولة فقط'],
-      [/^Table (.*?) · part (\d+) non enregistrée, réessayez$/, 'Table $1 · share $2 not saved, try again', 'الطاولة $1 · لم يُسجَّل الجزء $2، أعد المحاولة'],
-    ];
+    const EMPLOYEE_PATTERNS = (window.KiwiServeurLang && window.KiwiServeurLang.patterns) || [];
     function employeeTranslation(value) {
       if (employeeLanguage === 'fr') return value;
       const direct = (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value];
@@ -5565,7 +5151,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       for (const [pattern, en, ar] of EMPLOYEE_PATTERNS) {
         if (pattern.test(value)) return value.replace(pattern, employeeLanguage === 'ar' ? ar : en);
       }
-      if (/^Bonjour(?:\s|$)/.test(value)) return value.replace(/^Bonjour/, employeeLanguage === 'en' ? 'Hello' : 'مرحباً');
+      if (/^Bonjour(?=[\s,!]|$)/.test(value)) return value.replace(/^Bonjour/, employeeLanguage === 'en' ? 'Hello' : 'مرحباً');
       return (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value] || value;
     }
     function employeeLocale() {
@@ -5574,6 +5160,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     function employeeHello(name) {
       const greeting = employeeLanguage === 'en' ? 'Hello' : employeeLanguage === 'ar' ? 'مرحباً' : 'Bonjour';
       return name ? `${greeting} ${name}` : greeting;
+    }
+    /* Ce que le navigateur affiche lui-même (confirm, partage) ne passe pas par
+       le traducteur du DOM : la phrase se choisit à la source. */
+    function employeePick(fr, en, ar) {
+      return employeeLanguage === 'en' ? en : employeeLanguage === 'ar' ? ar : fr;
     }
     function employeeShiftWish() {
       return employeeLanguage === 'en' ? 'have a good shift' : employeeLanguage === 'ar' ? 'نتمنى لك وردية موفقة' : 'bon service';
@@ -5597,11 +5188,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       let textNode;
       while ((textNode = walker.nextNode())) translateEmployeeTextNode(textNode);
-      const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll('[placeholder],[aria-label]')] : [...root.querySelectorAll('[placeholder],[aria-label]')];
-      elements.forEach((el) => {
+      const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll(EMPLOYEE_I18N_ATTR_SELECTOR)] : [...root.querySelectorAll(EMPLOYEE_I18N_ATTR_SELECTOR)];
+      elements.forEach(translateEmployeeAttrs);
+    }
+    /* Les libellés que lit un lecteur d'écran (aria-label), l'info-bulle (title)
+       et l'invite d'un champ (placeholder) se traduisent comme le texte. Un
+       rendu qui réécrit l'un d'eux est vu par l'observateur (attributeFilter),
+       sinon il restait en français jusqu'au prochain changement de langue. */
+    const EMPLOYEE_I18N_ATTRS = ['placeholder', 'aria-label', 'title'];
+    const EMPLOYEE_I18N_ATTR_SELECTOR = '[placeholder],[aria-label],[title]';
+    function translateEmployeeAttrs(el) {
+      if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
         let originals = employeeI18nAttrs.get(el);
         if (!originals) { originals = {}; employeeI18nAttrs.set(el, originals); }
-        ['placeholder', 'aria-label'].forEach((attr) => {
+        EMPLOYEE_I18N_ATTRS.forEach((attr) => {
           if (!el.hasAttribute(attr)) return;
           const current = el.getAttribute(attr) || '';
           const marker = attr + ':last';
@@ -5610,7 +5210,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           originals[marker] = next;
           if (current !== next) el.setAttribute(attr, next);
         });
-      });
     }
     function renderEmployeeLanguage() {
       document.documentElement.lang = employeeLanguage;
@@ -5693,7 +5292,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         new MutationObserver((mutations) => mutations.forEach((mutation) => {
           mutation.addedNodes.forEach(translateEmployeeElement);
           if (mutation.type === 'characterData') translateEmployeeTextNode(mutation.target);
-        })).observe(document.body, { childList: true, characterData: true, subtree: true });
+          if (mutation.type === 'attributes') translateEmployeeAttrs(mutation.target);
+        })).observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: EMPLOYEE_I18N_ATTRS });
       }
     });
 
@@ -8346,6 +7946,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           ? { salle:'Dining room', terrasse:'Terrace', etage:'Upper floor', étage:'Upper floor', comptoir:'Counter', patio:'Patio', jardin:'Garden' }
           : { salle:'Salle', terrasse:'Terrasse', etage:'Étage', étage:'Étage', comptoir:'Comptoir', patio:'Patio', jardin:'Jardin' };
       const supplied = String(table && table.zoneLabel || '').trim();
+      /* « Salle », « Terrasse »… : le nom par défaut d'une zone est un mot, pas
+         un nom propre ; il suit la langue de l'app quelle que soit sa clé. */
+      const FR_ZONES = { salle:'Salle', terrasse:'Terrasse', etage:'Étage', comptoir:'Comptoir', patio:'Patio', jardin:'Jardin' };
+      const frKey = employeeLanguage !== 'fr' && Object.keys(FR_ZONES).find((k) => FR_ZONES[k].toLowerCase() === supplied.toLowerCase());
+      if (frKey) return labels[frKey];
       return supplied && !(supplied === 'Salle' && (key !== 'salle' || employeeLanguage !== 'fr')) ? supplied : (labels[key] || supplied || labels.salle);
     }
 
@@ -8995,7 +8600,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           toast(`Table ${id} · visite non synchronisée, réessayez`, 5200);
           return;
         }
-        if (!confirm(`Annuler toute la table ${id} ? Les commandes envoyées seront retirées et la cuisine prévenue. Aucun paiement ne sera enregistré.`)) return;
+        if (!confirm(employeePick(
+          `Annuler toute la table ${id} ? Les commandes envoyées seront retirées et la cuisine prévenue. Aucun paiement ne sera enregistré.`,
+          `Cancel the whole table ${id}? Orders already sent will be withdrawn and the kitchen told. No payment will be recorded.`,
+          `إلغاء الطاولة ${id} بالكامل؟ ستُسحب الطلبات المرسلة ويُبلَّغ المطبخ. لن يُسجَّل أي دفع.`))) return;
         btn.disabled = true;
         let result;
         if (!SV_DEMO) {
@@ -9036,8 +8644,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const sp = tableSplits.get(id);
         const paidCount = sp ? sp.paidCount : 0;
         const confirmMsg = paidCount > 0
-          ? `Annuler le split? ${paidCount} part${paidCount > 1 ? 's' : ''} déjà réglée${paidCount > 1 ? 's' : ''} ne ${paidCount > 1 ? 'seront' : 'sera'} pas remboursée${paidCount > 1 ? 's' : ''}.`
-          : 'Annuler le split en cours?';
+          ? employeePick(
+              `Annuler le split? ${paidCount} part${paidCount > 1 ? 's' : ''} déjà réglée${paidCount > 1 ? 's' : ''} ne ${paidCount > 1 ? 'seront' : 'sera'} pas remboursée${paidCount > 1 ? 's' : ''}.`,
+              `Cancel the split? ${paidCount} share${paidCount > 1 ? 's' : ''} already paid will not be refunded.`,
+              `إلغاء التقسيم؟ ${paidCount > 1 ? paidCount + ' حصص مدفوعة لن تُسترد' : 'حصة واحدة مدفوعة لن تُسترد'}.`)
+          : employeePick('Annuler le split en cours?', 'Cancel the split in progress?', 'إلغاء التقسيم الجاري؟');
         if (!confirm(confirmMsg)) return;
         tableSplits.delete(id);
         // Restore table to bgha-ykhlass so the cashier can encaisser normally
@@ -12509,36 +12120,52 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       /* --- Carte du soir : pick the best thing about tonight --- */
       function kgBestHighlight(snap) {
+        /* La carte du soir compose ses phrases (un chiffre au milieu, un grade
+           en italique) : elles se choisissent ici dans la langue de l'app, le
+           traducteur du DOM ne sait pas recoller des morceaux. */
+        const P = employeePick;
         const startIdx = kgRankIdxFor(kgState.lifetimeXP);
         if (snap.rank && snap.rankIdx > startIdx) {
-          return { label: 'Niveau débloqué', icon: 'trending-up',
-                   text: 'Tu passes <em>' + snap.rank.name + '</em> ce soir.',
-                   share: 'Niveau ' + snap.rank.name + ' débloqué' };
+          const r = kgRankName(snap.rank);
+          return { label: P('Niveau débloqué', 'Level unlocked', 'مستوى جديد'), icon: 'trending-up',
+                   text: P('Tu passes <em>' + r + '</em> ce soir.', 'You move up to <em>' + r + '</em> tonight.', 'ترتقي إلى <em>' + r + '</em> هذا المساء.'),
+                   share: P('Niveau ' + r + ' débloqué', 'Level ' + r + ' unlocked', 'مستوى ' + r + ' مفتوح') };
         }
         if (snap.paid > kgState.records.bestNight) {
-          return { label: 'Nouveau record', icon: 'trophy',
-                   text: '<em>' + snap.paid + ' tables</em> réglées, ton meilleur soir.',
-                   share: 'Nouveau record · ' + snap.paid + ' tables réglées' };
+          return { label: P('Nouveau record', 'New record', 'رقم قياسي جديد'), icon: 'trophy',
+                   text: P('<em>' + snap.paid + ' tables</em> réglées, ton meilleur soir.', '<em>' + snap.paid + ' tables</em> paid, your best night.', '<em>' + snap.paid + ' طاولات</em> مدفوعة، أفضل مساء لك.'),
+                   share: P('Nouveau record · ' + snap.paid + ' tables réglées', 'New record · ' + snap.paid + ' tables paid', 'رقم قياسي جديد · ' + snap.paid + ' طاولات مدفوعة') };
         }
         if (snap.speed != null && snap.speed > 0 && (kgState.records.bestSpeed == null || snap.speed < kgState.records.bestSpeed)) {
-          return { label: 'Nouveau record', icon: 'zap',
-                   text: '<em>' + snap.speed + ' mn</em> par table, jamais aussi rapide.',
-                   share: 'Record de vitesse · ' + snap.speed + ' mn par table' };
+          return { label: P('Nouveau record', 'New record', 'رقم قياسي جديد'), icon: 'zap',
+                   text: P('<em>' + snap.speed + ' mn</em> par table, jamais aussi rapide.', '<em>' + snap.speed + ' min</em> per table, your fastest yet.', '<em>' + snap.speed + ' د</em> لكل طاولة، الأسرع حتى الآن.'),
+                   share: P('Record de vitesse · ' + snap.speed + ' mn par table', 'Speed record · ' + snap.speed + ' min per table', 'رقم قياسي في السرعة · ' + snap.speed + ' د لكل طاولة') };
         }
         if (kgDefiProgress().done) {
-          return { label: 'Défi accompli', icon: 'flag',
-                   text: 'Défi du soir relevé, <em>' + kgDefi().text.toLowerCase() + '</em>.',
-                   share: 'Défi du soir accompli' };
+          const d = kgChallengeText(kgDefi()).toLocaleLowerCase(employeeLocale());
+          return { label: P('Défi accompli', 'Challenge done', 'تم التحدي'), icon: 'flag',
+                   text: P('Défi du soir relevé, <em>' + d + '</em>.', "Tonight's challenge done, <em>" + d + '</em>.', 'أُنجز تحدي المساء، <em>' + d + '</em>.'),
+                   share: P('Défi du soir accompli', "Tonight's challenge done", 'أُنجز تحدي المساء') };
         }
-        const lines = [
+        const lines = P([
           'Service propre, du début à la fin.',
           'Chaque table comptée, beau travail.',
           'Un service de plus, bien mené.',
           'Régulier et solide, c\'est ça le métier.',
-        ];
-        return { label: 'Ce soir', icon: 'sparkles',
+        ], [
+          'A clean service, start to finish.',
+          'Every table counted, nice work.',
+          'One more service, well run.',
+          "Steady and solid, that's the job.",
+        ], [
+          'خدمة نظيفة من البداية إلى النهاية.',
+          'كل طاولة محسوبة، عمل جميل.',
+          'خدمة أخرى أُديرت جيداً.',
+          'منتظم وثابت، هذه هي المهنة.',
+        ]);
+        return { label: P('Ce soir', 'Tonight', 'هذا المساء'), icon: 'sparkles',
                  text: lines[(snap.paid + employeeCivilDate().getDate()) % lines.length],
-                 share: 'Service bouclé' };
+                 share: P('Service bouclé', 'Shift wrapped', 'انتهت الخدمة') };
       }
 
       /* --- Carte du soir : open the shift report --- */
@@ -12549,8 +12176,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
         const now = employeeCivilDate();
         const metaEl = document.getElementById('kg-sc-meta');
+        const dayLine = now.toLocaleDateString(employeeLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
         if (metaEl) metaEl.textContent = (svName('Café Atlas') ? svName('Café Atlas') + ' · ' : '') +
-          dafrDays[now.getDay()] + ' ' + now.getDate() + ' ' + monthsEn[now.getMonth()];
+          dayLine.charAt(0).toLocaleUpperCase(employeeLocale()) + dayLine.slice(1);
 
         const rows = [
           ['Tables servies',          String(snap.served),                            false],
@@ -12558,7 +12186,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           ['Revenu encaissé',         kgNum(snap.revenue) + ' MAD',                   true ],
           ['Ticket moyen',            kgNum(snap.ticket) + ' MAD',                    true ],
           ['Durée du service',        kgFmtDur(snap.durMin),                          false],
-          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed + ' mn' : '·'), false],
+          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed + employeePick(' mn', ' min', ' د') : '·'), false],
         ];
         const rowsEl = document.getElementById('kg-sc-rows');
         if (rowsEl) rowsEl.innerHTML = rows.map(function (r, i) {
@@ -12610,11 +12238,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       /* --- share the shift card --- */
       function shareShiftCard() {
         const snap = kgSnapshot();
-        const txt = ('Mon service ce soir' + (svName('Café Atlas') ? ' au ' + svName('Café Atlas') : '')) + '\n' +
-                    '• ' + snap.served + ' tables servies\n' +
-                    '• ' + kgNum(snap.revenue) + ' MAD encaissés\n' +
-                    '• ' + kgShareLine + '\n' +
-                    'via Kiwi';
+        const place = svName('Café Atlas');
+        const txt = employeePick(
+          'Mon service ce soir' + (place ? ' au ' + place : '') + '\n• ' + snap.served + ' tables servies\n• ' + kgNum(snap.revenue) + ' MAD encaissés\n• ' + kgShareLine + '\nvia Kiwi',
+          'My shift tonight' + (place ? ' at ' + place : '') + '\n• ' + snap.served + ' tables served\n• ' + kgNum(snap.revenue) + ' MAD collected\n• ' + kgShareLine + '\nvia Kiwi',
+          'خدمتي هذا المساء' + (place ? ' في ' + place : '') + '\n• ' + snap.served + ' طاولات مخدومة\n• ' + kgNum(snap.revenue) + ' MAD محصّلة\n• ' + kgShareLine + '\nعبر Kiwi');
         if (navigator.share) {
           navigator.share({ text: txt }).catch(function () {});
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -12707,7 +12335,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       });
     }
   </script>
-  <script src="assets/employee-pwa.js?v=1" defer></script>
+  <script src="assets/employee-pwa.js?v=2" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
 </body>
 </html>

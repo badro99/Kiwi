@@ -1952,6 +1952,9 @@ section('Whole-project regressions');
     'dashboard-notification-isolation-test.js',
     'day-report-menu-group-test.mjs',
     'employee-language-test.js',
+    /* L'app serveur en anglais et en arabe : chaque texte du balisage et les
+       phrases composées au rendu se traduisent, attributs compris. */
+    'serveur-lang-coverage-test.mjs',
     'field-split-ui-test.mjs',
     'hospitality-plus-test.mjs',
     'maison-return-ledger-test.mjs',

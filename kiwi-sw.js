@@ -225,6 +225,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=18',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
+  '/assets/serveur-lang.js?v=1',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=6',
   '/assets/caisse-viewport.js?v=1',

@@ -249,6 +249,8 @@ let saraCookie = '';
 /* ── 5. Côté écran de l'employé ───────────────────────────────────────────── */
 {
   const HTML = readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+  // Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
+  const SERVEUR_LANG = readFileSync(path.join(ROOT, 'assets', 'serveur-lang.js'), 'utf8');
   const grab = (start) => {
     const i = HTML.indexOf(start);
     assert.ok(i >= 0, start + ' introuvable');
@@ -287,7 +289,7 @@ let saraCookie = '';
     'Connexion indisponible. Vérifiez le réseau et réessayez.', 'Service momentanément indisponible. Réessayez.'];
   const missing = [];
   for (const key of NEW) {
-    const n = HTML.split(JSON.stringify(key) + ':').length - 1;
+    const n = SERVEUR_LANG.split(JSON.stringify(key) + ':').length - 1;
     if (n < 2) missing.push(key);
   }
   ok('chaque message nouveau a sa traduction EN et AR', missing.length === 0, missing.join(' | '));
