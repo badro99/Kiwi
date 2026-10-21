@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import policy from '../assets/admin-policy.js';
@@ -113,6 +114,46 @@ check('a blocked sale is not also counted as merely unconfirmed',!health.problem
 check('a regular store gone quiet is « à surveiller »',policy.storeHealth({merchant:'q',last_ts:now-3*86400000},{activity:[{active_days_7d:4,last_ts:now-3*86400000}]},now).level==='warn');
 check('a store without sales or tills is inactive, not alarming',policy.storeHealth({merchant:'i'},{},now).level==='idle');
 check('matched Z and confirmed sales are normal',policy.storeHealth({merchant:'n',last_ts:now},{caisseSync:[{app:'caisse',deviceId:'t',updated_ts:now,sync:{total:0,blocked:0}}],zChecks:[{status:'matched'}],activity:[{active_days_7d:6,last_ts:now}]},now).level==='good');
+// Money signals: synthetic tenants only, exact centimes and escaped rendering.
+for (const m of ['shop-a','shop-b']) {
+  db.prepare(`INSERT INTO shopify_connections(merchant,shop_domain,access_token_enc,connected_ts,updated_ts,last_error)
+    VALUES(?,?,?,?,?,?)`).run(m,m+'.myshopify.com','SECRET-OAUTH',now,now,'Connexion <refusée>');
+  db.prepare(`INSERT INTO channel_links(id,merchant,channel,hash,config,created_ts,last_ts,last_err)
+    VALUES(?,?,'shopify',?,?, ?,?,?)`).run('link-'+m,m,'SECRET-HASH','SECRET-CONFIG',now,now,'Domaine <inattendu>');
+}
+for (const [id,m,age,cents,channel,voided] of [
+  ['due-old','shop-a',10,40099,'delivery',null],['due-paid','shop-a',10,10000,'delivery',null],
+  ['due-new','shop-a',1,10000,'delivery',null],['due-other','shop-b',10,10000,'delivery',null],
+  ['due-void','shop-a',10,10000,'delivery',now],['due-store','shop-a',10,10000,'counter',null]]) {
+  db.prepare(`INSERT INTO sales(id,merchant,amount,amount_cents,method,payment_parts,channel,ref,ts,void_ts)
+    VALUES(?,?,0,0,'delivery',?,?,?,?,?)`).run(id,m,JSON.stringify([{method:'delivery',amountCents:cents}]),channel,'T-'+id,now-age*86400000,voided);
+}
+db.prepare(`INSERT INTO delivery_collections(merchant,collection_sale_id,sale_id,method,amount_cents,ts)
+  VALUES('shop-a','col-paid','due-paid','cash',10000,?),('shop-a','col-part','due-old','cash',50,?),
+  ('shop-b','col-neighbour','due-old','cash',40099,?)`).run(now,now,now);
+const moneyWorkspace=await call(workspace,'GET',{},'?merchant=shop-a');
+check('only old outstanding courier delivery returned',moneyWorkspace.sources.receivables?.available&&moneyWorkspace.sources.receivables.rows.length===1&&moneyWorkspace.sources.receivables.rows[0].id==='due-old');
+check('partial collections keep exact outstanding centimes',moneyWorkspace.sources.receivables.rows[0].total_cents===40099&&moneyWorkspace.sources.receivables.rows[0].remaining_cents===40049);
+check('other merchant delivery stays scoped',(await call(workspace,'GET',{},'?merchant=shop-b')).sources.receivables.rows.every(r=>r.merchant==='shop-b'));
+check('both Shopify error paths returned',moneyWorkspace.sources.shopifyLink?.available&&moneyWorkspace.sources.shopifyLink.rows.length===2);
+check('Shopify errors are scoped',moneyWorkspace.sources.shopifyLink.rows.every(r=>r.merchant==='shop-a'));
+check('Shopify projections exclude credentials',!/SECRET-(OAUTH|HASH|CONFIG)/.test(JSON.stringify(moneyWorkspace))&&moneyWorkspace.sources.shopifyLink.rows.every(r=>Object.keys(r).every(k=>!/token|secret|hash|config/i.test(k))));
+// Keep all production functions and renderers, replacing only event bootstrap.
+const uiSource=fs.readFileSync(new URL('../assets/admin-workspace.js',import.meta.url),'utf8');
+const ui=uiSource.slice(0,uiSource.indexOf("  document.addEventListener('click'"))+`
+  window.testWorkspace={render:function(data){state.data=data;state.clients=[{merchant:'shop-a'}];return taskRows('shop-a');},signals:allSignals};
+})();`;
+const win={KiwiAdminPolicy:policy,KiwiOperator:{}};
+vm.runInNewContext(ui,{window:win,document:{getElementById(){return {};}}});
+const rendered=win.testWorkspace.render(moneyWorkspace);
+check('Shopify alerts render both escaped errors',rendered.includes('Shopify signale une erreur')&&rendered.includes('Connexion &lt;refusée&gt;')&&rendered.includes('Domaine &lt;inattendu&gt;')&&!rendered.includes('<refusée>'));
+check('delivery alert renders centimes, ticket, age and action',rendered.includes((400.49).toLocaleString('fr-MA',{maximumFractionDigits:2})+' MAD')&&rendered.includes('T-due-old')&&rendered.includes('10 jours')&&rendered.includes('Acomptes ou Créances'));
+check('delivery alert has priority two',win.testWorkspace.signals().some(s=>s.title==='Livraison non encaissée'&&s.priority===2));
+check('Shopify alerts carry priority and recovery action',win.testWorkspace.signals().filter(s=>s.title==='Shopify signale une erreur').every(s=>s.priority===1&&s.detail.includes('depuis le 21 octobre')));
+db.exec('DROP TABLE delivery_collections');
+check('missing delivery collections unavailable',(await call(workspace,'GET')).sources.receivables.available===false);
+db.exec('DROP TABLE channel_links');
+check('missing Shopify links unavailable',(await call(workspace,'GET')).sources.shopifyLink.available===false);
 db.exec('DROP TABLE client_errors');
 check('missing telemetry is unavailable',(await call(workspace,'GET')).sources.errors.available===false);
 const err=await call(errors,'GET');check('error route does not return healthy empty result',err.status===503&&err.errors===null);

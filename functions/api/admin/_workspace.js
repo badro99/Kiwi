@@ -1,3 +1,4 @@
+import { owedCents } from '../receivables.js';
 import { isOperator, json, slugMerchant } from '../../auth/_lib.js';
 
 export async function guard({request,env}, write = false) {
@@ -37,9 +38,34 @@ export async function source(env, name, sql, binds = [], limit = 200) {
   } catch (error) { return readFailure(name, error); }
 }
 
+// Apply the receivables endpoint's money rule before the 200-row result cap.
+// Page candidates so collected deliveries cannot crowd out older unpaid ones.
+async function deliveryReceivables(env, now, where, binds) {
+  const open = [];
+  for (let offset = 0; offset < 201 * 20; offset += 201) {
+    const page = await source(env, 'receivables', `SELECT s.merchant,s.id,s.ref AS ticket_ref,
+        s.amount,s.amount_cents,s.method,s.payment_parts,r.gross_ticket_cents,s.ts AS created_ts,
+        COALESCE((SELECT SUM(c.amount_cents) FROM delivery_collections c
+          WHERE c.merchant=s.merchant AND c.sale_id=s.id),0) AS collected_cents
+      FROM sales s LEFT JOIN sale_receipts r ON r.merchant=s.merchant AND r.sale_id=s.id
+      WHERE s.void_ts IS NULL AND s.channel='delivery' AND s.ts<?${where.replace('merchant=?','s.merchant=?')}
+      ORDER BY s.ts ASC,s.id ASC LIMIT 201 OFFSET ?`, [now-3*86400000,...binds,offset], 201);
+    if (!page.available) return page;
+    for (const row of page.rows) {
+      const total = owedCents(row), remaining = Math.max(0,total-Number(row.collected_cents));
+      if (remaining > 0) open.push({merchant:row.merchant,id:row.id,ticket_ref:row.ticket_ref,
+        total_cents:total,remaining_cents:remaining,created_ts:row.created_ts});
+      if (open.length > 200) return {available:true,rows:open.slice(0,200),truncated:true};
+    }
+    if (page.rows.length < 201) return {available:true,rows:open,truncated:false};
+  }
+  return {available:true,rows:open,truncated:true};
+}
+
 export async function workspace(env, merchant = '') {
   const now = Date.now(), where = merchant ? ' AND merchant=?' : '', binds = merchant ? [merchant] : [];
   const definitions = {
+    receivables: () => deliveryReceivables(env, now, where, binds),
     bridges:[`SELECT id,merchant,name,platform,version,last_seen_ts FROM print_bridges WHERE revoked_ts IS NULL${where} ORDER BY last_seen_ts DESC LIMIT 201`, binds],
     print:[`SELECT id,merchant,bridge_id,kind,status,created_ts,done_ts FROM print_jobs WHERE created_ts>=?${where} ORDER BY created_ts DESC LIMIT 201`, [now-86400000,...binds]],
     errors:[`SELECT id,merchant,message,file,version,count,first_seen_ts,last_seen_ts FROM client_errors WHERE last_seen_ts>=?${where} ORDER BY last_seen_ts DESC LIMIT 201`,[now-7*86400000,...binds]],
@@ -69,6 +95,11 @@ export async function workspace(env, merchant = '') {
      * books; the signal is about who applied it and whether a till is stale. */
     discountPolicy:[`SELECT merchant,sale_id AS id,reason,note,amount_cents,method,ref,sale_ts,ts AS updated_ts
       FROM sale_audit WHERE action='discount-policy' AND ts>=?${where} ORDER BY ts DESC LIMIT 201`,[now-14*86400000,...binds]],
+    shopifyLink:[`SELECT merchant,'connection' AS id,status,last_error,updated_ts FROM shopify_connections
+      WHERE TRIM(COALESCE(last_error,''))!=''${where}
+      UNION ALL SELECT merchant,id,status,last_err AS last_error,COALESCE(last_ts,created_ts) AS updated_ts FROM channel_links
+      WHERE channel='shopify' AND TRIM(COALESCE(last_err,''))!=''${where}
+      ORDER BY updated_ts DESC LIMIT 201`,[...binds,...binds]],
     shopify:[`SELECT id,merchant,status,attempts,updated_ts FROM shopify_sync_outbox WHERE status!='done'${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     tasks:[`SELECT * FROM operator_tasks WHERE 1=1${where} ORDER BY (status='resolved'), priority, updated_ts DESC LIMIT 501`,binds,500],
     notes:[`SELECT id,merchant,body,actor,ts FROM operator_notes WHERE 1=1${where} ORDER BY ts DESC LIMIT 101`,binds,100],
@@ -77,7 +108,11 @@ export async function workspace(env, merchant = '') {
   };
   /* The product board (kiwi-os.com/tickets) is not merchant-scoped. */
   if (!merchant) definitions.board = [`SELECT id,status,kind,area,money_at_risk,substr(body,1,160) AS summary,created_ts,updated_ts FROM kiwi_tickets WHERE status!='done' ORDER BY money_at_risk DESC,id DESC LIMIT 101`,[],100];
-  const entries = await Promise.all(Object.entries(definitions).map(async ([name,[sql,args,limit]]) => [name,await source(env,name,sql,args,limit)]));
+  const entries = await Promise.all(Object.entries(definitions).map(async ([name,definition]) => {
+    if (typeof definition === 'function') return [name,await definition()];
+    const [sql,args,limit] = definition;
+    return [name,await source(env,name,sql,args,limit)];
+  }));
   const sources = Object.fromEntries(entries);
   /* The first line of the error, never its stack. E-mail addresses and long
    * digit runs (codes, tokens, card or phone numbers) are masked. */
