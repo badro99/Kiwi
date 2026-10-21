@@ -183,6 +183,46 @@ try {
     await page.waitForFunction(() => document.body.textContent.includes('Crédit boutique émis'), {timeout:5000});
     assert.equal(await count(),1,'second returns handler reuses the chunk');
   });
+  /* Fourth chunk: restaurant prep stations, menu + kitchen display (assets/pages-pro/restaurant-stations.js). */
+  await S.run('demo kitchen display first use', async t => {
+    const ctx = await browser.createBrowserContext();
+    t.defer(() => ctx.close());
+    const page = t.watch(await ctx.newPage());
+    const base = `http://127.0.0.1:${server.address().port}`;
+    await page.setViewport({width:1366,height:1000});
+    await page.setBypassServiceWorker(true);
+    await page.setRequestInterception(true);
+    page.on('request', r => {
+      if (r.url().startsWith(base + '/api/')) return r.respond({status:503,contentType:'application/json',body:'{"error":"offline"}'});
+      return r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort();
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('kiwiLang','fr');
+      try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
+    });
+    await page.goto(base + '/dashboard.html',{waitUntil:'load'});
+    const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/restaurant-stations.js?')).length);
+    const printRef = process.env.KIWI_PRINT_REF === '1';
+    if (!printRef) assert.equal(await count(),0,'stations chunk absent at boot');
+    await page.waitForSelector('[data-explore]', {visible:true});
+    await page.click('[data-explore]');
+    const skip = await page.$('[data-kiwi-skip]');
+    if (skip && await skip.evaluate(e => !!e.offsetParent)) await skip.click();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.Kiwi.handlers['nav-kds']());
+    await page.waitForFunction(() => document.querySelector('.kit-screen [data-kit-new] .kit-col-stack')?.children.length > 0, {timeout:10000});
+    /* Painted queue, with clock readings masked (the screen ticks every second). */
+    const painted = await page.evaluate(() => document.querySelector('.kit-screen').innerHTML.replace(/\d{1,2}:\d{2}/g, 'T'));
+    const paintSha = crypto.createHash('sha256').update(painted).digest('hex');
+    if (printRef) { console.log('KDS_REF ' + paintSha); return; }
+    assert.equal(await count(),1,'chunk loaded on first use');
+    const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-restaurant-stations-reference.json'),'utf8'));
+    assert.equal(paintSha,reference.paintSha,'same painted kitchen queue as the unsplit file');
+    /* A station pill repaints the queue through the loaded code. */
+    await page.click('.kit-screen [data-kit-st="boissons"]');
+    await page.waitForFunction(() => document.querySelector('.kit-screen [data-kit-st="boissons"]')?.classList.contains('on'), {timeout:5000});
+    assert.equal(await count(),1,'second use reuses the chunk');
+  });
   process.exitCode = await S.finish({exit:false});
 } finally {
   await browser?.close(); server.closeAllConnections(); await new Promise(r=>server.close(r));

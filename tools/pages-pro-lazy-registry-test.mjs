@@ -12,6 +12,8 @@ const REFERENCES = {
   'assets/pages-pro/spa-appointments.js': ['nav-appointments', 'tools/pages-pro-spa-reference.json'],
   'assets/pages-pro/spa-practitioners.js': ['nav-practitioners', 'tools/pages-pro-spa-practitioners-reference.json'],
   'assets/pages-pro/boutique-promos-returns.js': ['nav-returns', 'tools/pages-pro-boutique-returns-reference.json'],
+  /* Its menu page is a full page; the kitchen display is checked painted, in the browser test. */
+  'assets/pages-pro/restaurant-stations.js': ['nav-menu', 'tools/pages-pro-restaurant-stations-reference.json'],
 };
 const entries = [...registry.matchAll(/url: '([^']+)', handlers: (\[[^\]]+\])/g)];
 assert.ok(entries.length >= 1, 'registry lists its chunks');
@@ -26,7 +28,13 @@ for (const [, url, list] of entries) {
   // Render against the frozen unsplit output without a DOM or browser.
   let output;
   const originalH = {};
-  vm.runInNewContext(chunk, {window:{Kiwi:{handlers:originalH,appPage:(_name,opts)=>{output=opts; return {el:{}};}}},document:{documentElement:{lang:'fr'},getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],createElement:()=>({}),head:{appendChild(){}}},setTimeout(){}});
+  /* A do-nothing element: enough for a page to wire its listeners after rendering. */
+  const node = () => ({ innerHTML: '', textContent: '', value: '', dataset: {}, style: { setProperty() {} }, hidden: false,
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    querySelector: () => node(), querySelectorAll: () => [], addEventListener() {}, removeEventListener() {},
+    appendChild() {}, remove() {}, setAttribute() {}, getAttribute: () => null, closest: () => null, focus() {} });
+  const capture = (opts) => { output = opts; return { el: node(), close() {} }; };
+  vm.runInNewContext(chunk, {window:{Kiwi:{handlers:originalH,appPage:(_name,opts)=>capture(opts),fullpage:capture,drawer:capture,modal:capture,toast(){}}},document:{documentElement:{lang:'fr'},body:node(),getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],createElement:()=>node(),head:{appendChild(){}}},setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},requestAnimationFrame(){}});
   originalH[navName]();
   assert.equal(crypto.createHash('sha256').update(JSON.stringify(output)).digest('hex'),JSON.parse(fs.readFileSync(refFile,'utf8')).sha, file + ' renders like the unsplit file');
   assert.deepEqual(JSON.parse(list).sort(), [...chunk.matchAll(/handlers\['([^']+)'\]\s*=/g)].map(m => m[1]).sort());

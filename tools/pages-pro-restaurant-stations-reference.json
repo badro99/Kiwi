@@ -1,0 +1,5 @@
+{
+  "description": "Restaurant prep-stations section (pages-pro.js before the split). sha: SHA-256 of the nav-menu fullpage options rendered in vm, default French locale. paintSha: SHA-256 of the demo kitchen display's painted .kit-screen in the browser, clock readings masked.",
+  "sha": "d54eab70ffd1b3ce64230e1ac82defc7be5e8a2ac5b2820d2de7e155a741d08b",
+  "paintSha": "cba3388da82c0bda7f4b6ff358fe332d7118374d358c3f036c4d7ba9808af849"
+}
