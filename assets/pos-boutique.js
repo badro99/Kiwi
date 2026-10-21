@@ -1581,6 +1581,8 @@
     });
     const closeDay = $('#bq-close-day', root);
     if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
+    if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'boutique@' + merchantSlug(),
+      openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#bq-net', root).addEventListener('click', toggleOffline);
     if (!mount._netBound) {
       mount._netBound = true;

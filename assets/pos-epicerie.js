@@ -967,10 +967,11 @@
   /* ═══════════════════════ PAYMENT (espèces / carte / ardoise) ═══════════════════════
      Reuses the caisse kit: .modal-title/.modal-subtle/.modal-amount, .cash-grid
      for espèces, .reader-stage/.reader-disc for carte. */
-  function openPay() {
+  function openPay(repeatConfirmed) {
     const el = $('#ep-paym', root);
     const t = state.ticket;
     const total = ticketTotal(t);
+    if (!repeatConfirmed && window.KiwiRepeatSale && window.KiwiRepeatSale.epicerie({ ticket: t, items: ITEMS, total, el: $('#ep-paym', root), open: () => openVeil('#ep-pay-veil'), close: () => closeVeil('#ep-pay-veil'), go: () => state.ticket === t && openPay(true) })) return;
 
     const step1 = () => {
       el.innerHTML = `
@@ -1000,7 +1001,7 @@
           const m = b.dataset.epM;
           if (m === 'especes') stepCash();
           else if (m === 'carte') stepCard();
-          else { closeVeil('#ep-pay-veil'); openCarnetPick(); }
+          else { closeVeil('#ep-pay-veil'); openCarnetPick(true); }
         };
       });
     };
@@ -1073,6 +1074,7 @@
       const total = ticketTotal(state.ticket);
       decrementStock(state.ticket);
       recordSaleToDay(state.ticket, method);
+      if (window.KiwiRepeatSale) window.KiwiRepeatSale.epicerieRemember(state.ticket, ITEMS, total);
       closeVeil('#ep-pay-veil');
       const label = method === 'carte' ? 'carte' : 'espèces';
       ticketSeq++;
@@ -1143,10 +1145,11 @@
   }
 
   /* ═══════════════════════ CARNET PICK (attacher le panier à une ardoise) ═══════════════════════ */
-  function openCarnetPick() {
+  function openCarnetPick(repeatConfirmed) {
     const el = $('#ep-carnetpickm', root);
     const t = state.ticket;
     const total = ticketTotal(t);
+    if (!repeatConfirmed && window.KiwiRepeatSale && window.KiwiRepeatSale.epicerie({ ticket: t, items: ITEMS, total, el: $('#ep-paym', root), open: () => openVeil('#ep-pay-veil'), close: () => closeVeil('#ep-pay-veil'), go: () => state.ticket === t && openCarnetPick(true) })) return;
     let mode = 'pick';
     const basketLabel = () => {
       if (t.lines.length === 1) return ITEMS[t.lines[0].itemId].label;
@@ -1219,6 +1222,7 @@
     day.creditAdded = r2(day.creditAdded + total);
     decrementStock(t);
     day.tickets++;
+    if (window.KiwiRepeatSale) window.KiwiRepeatSale.epicerieRemember(t, ITEMS, total);
     closeVeil('#ep-carnetpick-veil');
     ticketSeq++;
     freshTicket();

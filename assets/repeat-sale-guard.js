@@ -73,14 +73,15 @@
       var el = o && o.el;
       if (!el) { resolve(true); return; }
       var hit = o.hit || {};
+      var c = o.classes || { x: 'bq-modal-x', foot: 'bq-sheet-foot', no: 'bq-btn secondary', yes: 'cash-confirm' };
       el.innerHTML =
-        '<button class="bq-modal-x" data-rs-no aria-label="Fermer">×</button>' +
+        '<button class="' + esc(c.x) + '" data-rs-no aria-label="Fermer">×</button>' +
         '<h3 class="modal-title">Même panier encaissé il y a ' + esc(hit.agoSec || 1) + ' s</h3>' +
         '<p class="modal-subtle">' + (hit.num ? 'Ticket ' + esc(hit.num) + ', mêmes articles, même total.' : 'Mêmes articles, même total.') + '</p>' +
         '<p class="modal-subtle">Encaissez à nouveau seulement pour une autre cliente.</p>' +
-        '<div class="bq-sheet-foot">' +
-        '<button class="bq-btn secondary" data-rs-no>Ne pas encaisser</button>' +
-        '<button class="cash-confirm" data-rs-yes>Encaisser à nouveau</button>' +
+        '<div class="' + esc(c.foot) + '">' +
+        '<button class="' + esc(c.no) + '" data-rs-no>Ne pas encaisser</button>' +
+        '<button class="' + esc(c.yes) + '" data-rs-yes>Encaisser à nouveau</button>' +
         '</div>';
       var done = false;
       function finish(go) {
@@ -95,7 +96,7 @@
       var yes = el.querySelector('[data-rs-yes]');
       if (yes) yes.addEventListener('click', function () { finish(true); });
       try { if (o.open) o.open(); } catch (_) {}
-      try { var no = el.querySelector('.bq-btn.secondary'); if (no) no.focus(); } catch (_) {}
+      try { var no = el.querySelector('[data-rs-no]:not([aria-label])'); if (no) no.focus(); } catch (_) {}
     });
   }
 
@@ -106,11 +107,100 @@
     var hit = recent(o.scope, o.sig);
     if (!hit) return false;
     o.busy(true);
-    ask({ el: o.el, hit: hit, open: o.open, close: o.close }).then(function (yes) {
+    ask({ el: o.el, hit: hit, open: o.open, close: o.close, classes: o.classes }).then(function (yes) {
       if (!(yes && o.go() !== false)) o.busy(false);
     });
     return true;
   }
 
-  window.KiwiRepeatSale = { signature: signature, recent: recent, remember: remember, ask: ask, confirmRepeat: confirmRepeat, WINDOW_MS: WINDOW_MS };
+  // Grocery lines carry itemId and weight/qty; prices live in the item catalog.
+  function epicerieSignature(t, items, total) {
+    /* A line whose item left the catalogue must never break checkout. */
+    return signature(((t && t.lines) || []).map(function (ln) {
+      var it = (items && items[ln.itemId]) || {};
+      return { pid: ln.itemId, qty: ln.weight != null ? ln.weight : ln.qty, unit: it.price };
+    }), total);
+  }
+  function epicerieRemember(t, items, total) {
+    remember('epicerie', epicerieSignature(t, items, total), t.num);
+  }
+  function epicerie(o) {
+    return confirmRepeat({ scope: 'epicerie', sig: epicerieSignature(o.ticket, o.items, o.total),
+      el: o.el, open: o.open, close: o.close, go: o.go, busy: function () {},
+      classes: { x: 'ep-modal-x', foot: 'ep-weigh-foot', no: 'ep-btn secondary', yes: 'ep-btn primary' } });
+  }
+
+  window.KiwiRepeatSale = { epicerie: epicerie, epicerieRemember: epicerieRemember, epicerieSignature: epicerieSignature, signature: signature, recent: recent, remember: remember, ask: ask, confirmRepeat: confirmRepeat, WINDOW_MS: WINDOW_MS };
+})();
+
+/* Shared shift reminder. Kept beside the repeat guard because the till shell
+   has reached its script ceiling. A notice, never a payment gate. */
+(function () {
+  'use strict';
+  var entries = Object.create(null), dismissed = Object.create(null);
+  function check(o) {
+    var previous = entries[o.scope];
+    if (previous) { clearInterval(previous.timer); if (previous.el) previous.el.remove(); }
+    var entry = entries[o.scope] = { el: null };
+    function tick() {
+      var host = o.host;
+      var DR = window.KiwiDayReport;
+      var at = typeof o.openedAt === 'function' ? o.openedAt() : o.openedAt;
+      var dayOf = o.businessDay || (DR && DR.businessDay);
+      var today = typeof o.today === 'function' ? o.today() : (o.today || (dayOf && dayOf(Date.now())));
+      var key = 'kiwi:shiftAgeLater:' + o.scope;
+      var later = dismissed[key];
+      try { if (later !== today) later = window.localStorage.getItem(key) || later; } catch (_) {}
+      var eligible = host && host.isConnected && host.getClientRects().length && at > 0 && dayOf && dayOf(at) < today && later !== today;
+      var busy = (o.isBusy && o.isBusy()) || document.querySelector('.modal-veil.is-open, .cloture-veil.is-open, .clockin-screen.is-visible');
+      if (!eligible || busy) {
+        if (entry.el) { entry.el.remove(); entry.el = null; }
+        return;
+      }
+      if (entry.el) return;
+      var prefix = o.scope.indexOf('maison@') === 0 ? 'mz' : 'bq';
+      var el = document.createElement('section');
+      el.id = 'kiwi-shift-age-nudge';
+      el.className = 'kiwi-shift-nudge';
+      el.setAttribute('role', 'status');
+      /* Inline, just above the scan bar: a floating card covered the rail's
+         last buttons (Acomptes, En ligne, Verrouiller) on a 1024 px iPad. */
+      el.style.cssText = 'margin:0 0 12px;padding:12px 14px;border:1px solid var(--n-200);border-radius:14px;background:var(--paper);color:var(--ink);font-style:normal;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between';
+      var text = document.createElement('span');
+      text.textContent = 'Caisse ouverte depuis le ' + new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ', tiroir pas encore compté';
+      var close = document.createElement('button');
+      close.className = prefix + '-btn primary';
+      close.dataset.shiftClose = '';
+      close.textContent = 'Clôturer la caisse';
+      var postpone = document.createElement('button');
+      postpone.className = prefix + '-btn secondary';
+      postpone.dataset.shiftLater = '';
+      postpone.textContent = 'Plus tard';
+      close.onclick = function () {
+        if ((o.isBusy && o.isBusy()) || document.querySelector('.modal-veil.is-open, .cloture-veil.is-open')) return;
+        el.remove(); entry.el = null; o.open();
+      };
+      postpone.onclick = function () {
+        dismissed[key] = today;
+        try { window.localStorage.setItem(key, today); } catch (_) {}
+        el.remove(); entry.el = null;
+      };
+      var actions = document.createElement('span');
+      actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+      close.style.whiteSpace = postpone.style.whiteSpace = 'nowrap';
+      actions.append(close, postpone);
+      el.append(text, actions);
+      var anchor = host.querySelector('.' + prefix + '-sell-scan');
+      if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(el, anchor);
+        /* Same side margins as the scan bar it sits on. */
+        try { var cs = window.getComputedStyle(anchor); el.style.marginLeft = cs.marginLeft; el.style.marginRight = cs.marginRight; } catch (_) {}
+      } else host.appendChild(el);
+      entry.el = el;
+    }
+    tick();
+    entry.timer = setInterval(tick, 5000);
+    if (entry.timer && entry.timer.unref) entry.timer.unref();
+  }
+  window.KiwiShiftNudge = { check: check };
 })();

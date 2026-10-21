@@ -3,8 +3,8 @@
 // Santos Store rang an identical ticket again within a minute, on consecutive
 // ticket numbers (one was voided later, a 500 MAD Trench never was). The till
 // now asks before charging the same basket again within two minutes.
-// Part 1 drives assets/repeat-sale-guard.js in a vm; part 2 clicks through the
-// real boutique till on the synthetic retail fixture (no merchant data).
+// VM checks cover the guard and épicerie wiring, including carnet commits.
+// Browser checks click through Boutique and Maison on synthetic fixtures.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,11 +52,71 @@ const eq = (a, b, m) => { assert.deepEqual(plain(a), b, m); checks++; };
     eq(log, ['busy:true', 'go'], 'it holds the till busy, then opens payment once confirmed');
     G.remember('boutique', a, '11209', t0);
   }
+  const grocery = {num:'E-1',lines:[{itemId:'olives',weight:0.25,qty:1}]};
+  const items = {olives:{price:30}};
+  const grocerySig = G.epicerieSignature(grocery, items, 7.5);
+  G.epicerieRemember(grocery, items, 7.5);
+  ok(G.recent('epicerie', grocerySig), 'weighed grocery sale is remembered');
+  grocery.lines[0].weight = 0.5;
+  ok(G.epicerieSignature(grocery, items, 7.5) !== grocerySig, 'weight changes signature even with same total');
+  grocery.lines[0].weight = 0.25; items.olives.price = 31;
+  ok(G.epicerieSignature(grocery, items, 7.5) !== grocerySig, 'unit price changes signature even with same total');
+  grocery.lines = [{itemId:'olives',qty:2}];
+  ok(G.epicerieSignature(grocery, items, 62).includes('olives|||2|3100'), 'unit items use quantity and catalog price');
+  for (const accepted of [false, true]) {
+    const listeners = {};
+    const no = {addEventListener:(_, fn)=>{listeners.no=fn;},focus:()=>{}};
+    const yes = {addEventListener:(_, fn)=>{listeners.yes=fn;}};
+    const el = {innerHTML:'',querySelectorAll:()=>[no],querySelector:q=>q==='[data-rs-yes]'?yes:no};
+    let closed = false;
+    const answer = G.ask({el, hit:{num:'E-1',agoSec:51}, close:()=>{closed=true;},
+      classes:{x:'ep-modal-x',foot:'ep-weigh-foot',no:'ep-btn secondary',yes:'ep-btn primary'}});
+    ok(el.innerHTML.includes('class="ep-weigh-foot"') && el.innerHTML.includes('class="ep-btn secondary"'), 'native grocery confirmation classes render');
+    listeners[accepted?'yes':'no']();
+    eq(await answer, accepted, 'confirmation returns cashier choice');
+    ok(closed, 'confirmation closes the modal');
+  }
   store.clear();
   eq(G.recent('boutique', a, t0 + 10_000), { num: '11209', agoSec: 10 }, 'storage blocked: memory still remembers');
 }
 
-/* ── 2 · the boutique till, real clicks ────────────────────────────────── */
+// Exercise the actual épicerie entry points in a VM: no DOM fixture is needed.
+{
+  const source = fs.readFileSync(path.join(ROOT, 'assets/pos-epicerie.js'), 'utf8');
+  const functionSource = name => {
+    const start = source.indexOf('  function ' + name + '(');
+    const end = source.indexOf('\n  function ', start + 1);
+    return source.slice(start, end < 0 ? source.length : end).replace(/\n  \/\*[\s\S]*$/, '');
+  };
+  ok(functionSource('openPay').includes('KiwiRepeatSale.epicerie('), 'cash entry invokes the guard');
+  ok(functionSource('openCarnetPick').includes('KiwiRepeatSale.epicerie('), 'direct carnet entry invokes the guard');
+  const maisonSource = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+  ok(maisonSource.includes("RS.remember('maison', repeatSig, sale.id)"), 'Maison remembers committed sales');
+  ok(maisonSource.includes("scope: 'maison', sig: repeatSig"), 'Maison asks before payment');
+  const calls = [];
+  const ticket = {num:'E-1', lines:[{itemId:'olives',weight:0.25,qty:1}]};
+  const context = vm.createContext({window:{KiwiRepeatSale:{epicerie:o=>{calls.push(o);return true;}}},
+    state:{ticket}, ITEMS:{olives:{price:30}}, ticketTotal:()=>7.5, root:{}, $:()=>({}),
+    openVeil:()=>{}, closeVeil:()=>{}});
+  vm.runInContext(functionSource('openPay') + '\n' + functionSource('openCarnetPick'), context);
+  vm.runInContext('openPay(); openCarnetPick();', context);
+  eq(calls.length, 2, 'épicerie cash and direct carnet both stop at the repeat guard');
+  ok(source.includes("KiwiRepeatSale.epicerieRemember(t, ITEMS, total)"), 'carnet commits remember the basket');
+  ok(source.includes("KiwiRepeatSale.epicerieRemember(state.ticket, ITEMS, total)"), 'cash/card commits remember the basket');
+  const committed = [];
+  Object.assign(context, {CRED:{}, day:{creditAdded:0,tickets:0}, r2:n=>n,
+    ticketCount:()=>1, histEntry:(...args)=>args, decrementStock:()=>{},
+    ticketSeq:1, freshTicket:()=>{},renderTicket:()=>{},renderGrid:()=>{},renderBadges:()=>{},
+    icons:()=>{},queueIfOffline:()=>{},toast:()=>{},fmtMAD2:String,fmtMAD:String,balanceOf:()=>7.5,focusScan:()=>{}});
+  context.ITEMS.olives.label = 'Olives';
+  context.window.KiwiRepeatSale.epicerieRemember = (...args)=>committed.push(args);
+  vm.runInContext(functionSource('attachBasket') + '\nattachBasket({name:"Fixture",hist:[]});', context);
+  eq(committed.length, 1, 'actual carnet commit remembers exactly once');
+  eq(committed[0][0].num, 'E-1', 'carnet remembers the committed ticket before reset');
+
+}
+
+/* ── 2 · Boutique and Maison tills, real clicks ────────────────────────────────── */
 const require = createRequire(import.meta.url);
 let puppeteer = null;
 try { puppeteer = require(require.resolve('puppeteer-core', { paths: [path.join(ROOT, 'app'), ROOT] })); } catch (_) {}
@@ -79,18 +139,19 @@ async function button(page, label) {
 }
 const visible = (page, text) => page.evaluate(t => [...document.querySelectorAll('.modal-veil.is-open')]
   .some(v => v.innerText.includes(t)), text);
-const last = page => page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:boutique') || '{}').num || '');
+const last = page => page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num || '');
 // The pay window closes once the sale is recorded; a new ticket number is the proof.
 async function settled(page, prev = '') {
   await page.waitForFunction(p => {
-    const n = JSON.parse(localStorage.getItem('kiwi:lastCharge:boutique') || '{}').num || '';
+    const n = JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num || '';
     return n && n !== p && !document.querySelector('.modal-veil.is-open');
   }, { timeout: 8000 }, prev);
 }
 async function ring(page, pid) {
-  await page.click(`[data-bq-item="${pid}"]`);
-  await page.waitForSelector('#bq-sheet-add:not([disabled])', { visible: true, timeout: 5000 });
-  await page.click('#bq-sheet-add');
+  const prefix = await page.evaluate(() => window.__repeatScope === 'maison' ? 'mz' : 'bq');
+  await page.click(`[data-${prefix}-item="${pid}"]`);
+  await page.waitForSelector(`#${prefix}-sheet-add:not([disabled])`, { visible: true, timeout: 5000 });
+  await page.click(`#${prefix}-sheet-add`);
 }
 try {
   const base = await new Promise((resolve, reject) => {
@@ -126,7 +187,7 @@ try {
   const before = await last(page);
   await button(page, 'Espèces'); await button(page, 'Confirmer');
   await settled(page, before);
-  const firstRef = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:boutique') || '{}').num || '');
+  const firstRef = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num || '');
   ok(firstRef, 'the till remembers the ticket it just charged');
 
   // Same piece again: the till asks, and "Ne pas encaisser" charges nothing.
@@ -140,7 +201,7 @@ try {
   await button(page, 'Ne pas encaisser');
   ok(!(await page.evaluate(() => document.querySelector('.modal-veil.is-open'))), 'the window closes');
   ok(await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.getClientRects().length && b.innerText.includes('Encaisser ·'))), 'the basket stays on the ticket');
-  const stillFirst = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:boutique') || '{}').num);
+  const stillFirst = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num);
   eq(stillFirst, firstRef, 'nothing new was charged');
 
   // A second customer for the same piece: one more tap, then the usual payment.
@@ -150,11 +211,66 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll('.modal-veil.is-open button')].some(b => b.innerText.includes('Espèces')), { timeout: 5000 });
   await button(page, 'Espèces'); await button(page, 'Confirmer');
   await settled(page, firstRef);
-  const second = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:boutique') || '{}').num);
+  const second = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num);
   ok(second && second !== firstRef, `the second sale gets its own ticket (${firstRef} then ${second})`);
   eq(errors, [], 'no script errors');
   await page.close();
-  console.log(`✓ repeat-sale guard: ${checks} checks, guard unit and boutique till real clicks`);
+  {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 900 });
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.setRequestInterception(true);
+  page.on('request', req => (req.url().startsWith(base + '/') || req.url().startsWith('data:') ? req.continue() : req.abort()).catch(() => {}));
+  await page.goto(`${base}/maison.html`, { waitUntil: 'load' });
+  await page.evaluate(() => { window.__repeatScope = 'maison'; try { Object.keys(localStorage).filter(k => k.startsWith('kiwi:lastCharge:')).forEach(k => localStorage.removeItem(k)); } catch (_) {} });
+  const pid = await page.$eval('[data-mz-item]:not(.is-out)', el => el.dataset.mzItem);
+
+  // Whatever the fixture seeded is charged first, so the next sale starts clean.
+  if (await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.getClientRects().length && b.innerText.includes('Encaisser ·')))) {
+    await button(page, 'Encaisser ·');
+    if (await visible(page, 'Même panier')) await button(page, 'Encaisser à nouveau');
+    await button(page, 'Espèces'); await button(page, 'Confirmer');
+    await settled(page);
+  }
+
+  // Sale 1: one piece, cash.
+  await ring(page, pid);
+  await button(page, 'Encaisser ·');
+  ok(!(await visible(page, 'Même panier')), 'a first sale is not questioned');
+  const before = await last(page);
+  await button(page, 'Espèces'); await button(page, 'Confirmer');
+  await settled(page, before);
+  const firstRef = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num || '');
+  ok(firstRef, 'the till remembers the ticket it just charged');
+
+  // Same piece again: the till asks, and "Ne pas encaisser" charges nothing.
+  await ring(page, pid);
+  await button(page, 'Encaisser ·');
+  await page.waitForFunction(() => [...document.querySelectorAll('.modal-veil.is-open')].some(v => v.innerText.includes('Même panier')), { timeout: 5000 });
+  const sheet = await page.evaluate(() => [...document.querySelectorAll('.modal-veil.is-open')].map(v => v.innerText).join(' '));
+  ok(sheet.includes(`Ticket ${firstRef}`), `the question names the earlier ticket (${firstRef})`);
+  ok(/il y a \d+ s/.test(sheet), 'and how long ago');
+  ok(!sheet.includes('Espèces'), 'no payment method is offered before the cashier answers');
+  await button(page, 'Ne pas encaisser');
+  ok(!(await page.evaluate(() => document.querySelector('.modal-veil.is-open'))), 'the window closes');
+  ok(await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.getClientRects().length && b.innerText.includes('Encaisser ·'))), 'the basket stays on the ticket');
+  const stillFirst = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num);
+  eq(stillFirst, firstRef, 'nothing new was charged');
+
+  // A second customer for the same piece: one more tap, then the usual payment.
+  await button(page, 'Encaisser ·');
+  await page.waitForFunction(() => [...document.querySelectorAll('.modal-veil.is-open')].some(v => v.innerText.includes('Même panier')), { timeout: 5000 });
+  await button(page, 'Encaisser à nouveau');
+  await page.waitForFunction(() => [...document.querySelectorAll('.modal-veil.is-open button')].some(b => b.innerText.includes('Espèces')), { timeout: 5000 });
+  await button(page, 'Espèces'); await button(page, 'Confirmer');
+  await settled(page, firstRef);
+  const second = await page.evaluate(() => JSON.parse(localStorage.getItem('kiwi:lastCharge:' + (window.__repeatScope || 'boutique')) || '{}').num);
+  ok(second && second !== firstRef, `the second sale gets its own ticket (${firstRef} then ${second})`);
+  eq(errors, [], 'no script errors');
+  await page.close();
+  }
+  console.log(`✓ repeat-sale guard: ${checks} checks, guard unit, épicerie VM wiring, boutique and Maison till real clicks`);
 } finally {
   if (browser) await browser.close();
   fixture.kill();

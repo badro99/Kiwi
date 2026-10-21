@@ -1847,6 +1847,8 @@
     });
     const closeDay = $('#mz-close-day', root);
     if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
+    if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'maison@' + merchantSlug(),
+      openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#mz-net', root).addEventListener('click', toggleOffline);
     if (!mount._netBound) {
       mount._netBound = true;
@@ -5280,7 +5282,8 @@
     const tot = ticketTotals(t);
     const total = tot.total;
     const c = ticketClient();
-    openPay({
+    const RS = window.KiwiRepeatSale, repeatSig = RS ? RS.signature(t.lines.map(ln => Object.assign({}, ln, { unit: lineUnit(ln) })), total) : '';
+    const beginPay = () => openPay({
       amount: total,
       customerId: c ? c.id : null,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#mz-pay-veil'); } }).confirm(),
@@ -5476,6 +5479,7 @@
           c.achats += 1;
           ptsLine = (pts ? ` · +${pts} pts pour ${firstName(c.name)}` : '') + (rewardUsed ? ` · récompense ${t.reward.label}` : '');
         }
+        if (RS) RS.remember('maison', repeatSig, sale.id);
         queueIfOffline(`Vente ${sale.id}`);
         freshTicket();
         $('#mz-today', root).textContent = headSubVente();
@@ -5486,6 +5490,7 @@
           : `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };
       },
     });
+    if (!(RS && RS.confirmRepeat({ scope: 'maison', sig: repeatSig, el: $('#mz-paym', root), open: () => openVeil('#mz-pay-veil'), close: () => closeVeil('#mz-pay-veil'), busy: () => {}, go: () => state.ticket === t && beginPay(), classes: { x: 'mz-modal-x', foot: 'mz-sheet-foot', no: 'mz-btn secondary', yes: 'cash-confirm' } }))) beginPay();
   }
 
   /* ── UNE VENTE, PLUSIEURS RÈGLEMENTS ──────────────────────────────────────

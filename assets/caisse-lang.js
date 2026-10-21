@@ -695,6 +695,8 @@
       'table remise à zéro': ['table reset', 'تمت إعادة ضبط الطاولة'],
       'Aucune table en cours': ['No open table', 'لا توجد طاولة مفتوحة'],
       'Table déjà encaissée': ['Table already paid', 'تم دفع الطاولة بالفعل'],
+      'Caisse ouverte depuis le {x}, tiroir pas encore compté': ['Register open since {x}, drawer not counted yet', 'الصندوق مفتوح منذ {x}، ولم يُعَدّ نقد الدرج بعد'],
+      'Clôturer la caisse': ['Close the register', 'إغلاق الصندوق'],
       'Même panier encaissé il y a {n} s': ['Same basket charged {n} s ago', 'السلة نفسها دُفعت قبل {n} ثانية'],
       'Ticket {x}, mêmes articles, même total.': ['Ticket {x}, same items, same total.', 'التذكرة {x}، المواد نفسها والمجموع نفسه.'],
       'Mêmes articles, même total.': ['Same items, same total.', 'المواد نفسها والمجموع نفسه.'],
