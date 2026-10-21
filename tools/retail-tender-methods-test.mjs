@@ -150,6 +150,7 @@ const dashContext = vm.createContext({ window: dashWindow,
   localStorage: storage, CustomEvent: class {}, Date, Map, Set, Intl, Math, Number, String, Array, Object,
   Infinity, requestAnimationFrame() {}, setTimeout() {}, clearTimeout() {}, console,
 });
+vm.runInContext(read('sales-history.js'), dashContext);
 vm.runInContext(read('dateRange.js'), dashContext);
 const mix = dashWindow.KiwiDateRange._truth.realMixRows('fr', 'aujourdhui');
 assert.equal(mix.total, 85, 'dashboard payment total matches the three accepted receipts');

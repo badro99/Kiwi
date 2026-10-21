@@ -145,6 +145,7 @@ const feedContext = vm.createContext({
   setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {}, requestAnimationFrame: () => 1,
 });
 feedWindow.window = feedWindow;
+vm.runInContext(read('assets/sales-history.js'), feedContext);
 vm.runInContext(feedSource, feedContext, { filename: 'assets/dateRange.js' });
 feedWindow.__auditDashboard.renderFeed();
 assert.match(feedNodes.sub.textContent, /1 commande aujourd'hui/);

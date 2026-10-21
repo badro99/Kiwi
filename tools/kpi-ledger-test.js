@@ -101,7 +101,7 @@ ok('un CA réel sans baseline ne fabrique pas 0 %',
  * Le total exact existait déjà dans realSalesTotals() et n'était transmis à
  * personne. Ces trois lignes sont ce qui l'amène jusqu'aux tuiles. */
 ok('realSalesTotals additionne bien un revenu',
-  /return \{ revenue, gross, refunds, collected, receivable, count, basket:/.test(SRC));
+  /KiwiSalesMath\.statsFromSales\(realSalesList\(\), realRefundList\(\), from, to\)/.test(SRC));
 ok('le chemin réel transmet ce total sous `revenue`',
   /revenue:\s*\{\s*value:\s*t\.revenue,/.test(SRC),
   'data.revenue n\'est plus alimenté depuis les ventes');
@@ -175,10 +175,10 @@ ok('« tauxRetour » sans vente sur la période : un point médian, pas un zéro
   const vm = require('vm');
   const sales = [{ ts: 100, amount: 200, method: 'cash' }, { ts: 150, amount: 300, method: 'card' }, { ts: 900, amount: 999, method: 'cash' }];
   const refunds = [{ ts: 160, amount: -50, method: 'card' }, { ts: 50, amount: -70, method: 'cash' }];
-  const ctx = vm.createContext({ Math, String, realSalesList: () => sales, realRefundList: () => refunds,
-    tenderBucket: (m) => (m === 'cash' || m === 'card' ? m : ''), tenderAmounts: (e) => [{ key: e.method, amount: +e.amount }],
+  const ctx = vm.createContext({ window: {}, Math, String, realSalesList: () => sales, realRefundList: () => refunds,
     /* Livraisons dues (assets/delivery-receivables.js) : 450 MAD vendus à 0 MAD dans la fenêtre. */
     deliveryDue: (f, t) => (f <= 120 && 120 < t ? 450 : 0) });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/sales-history.js'), 'utf8'), ctx);
   vm.runInContext(SRC.slice(wFrom, wTo), ctx);
   const w = ctx.realWindowStats(100, 500);
   ok('la fenêtre compte les remboursements faits dans la période, et seulement eux',

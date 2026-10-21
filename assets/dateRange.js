@@ -2037,87 +2037,20 @@
   const deliveryDue = (from, to) => {
     try { return Math.max(0, +(window.KiwiDeliveries && window.KiwiDeliveries.dueIn(from, to)) || 0); } catch (_) { return 0; }
   };
-  // Windowed revenue / count / basket from the merchant's real sales.
+  /* assets/sales-history.js loads just before this file. Read it on use, so a
+     page that loads dateRange.js alone still boots and only the totals wait. */
+  const salesMath = () => window.KiwiSalesMath;
+  const tenderBucket = (m) => salesMath().tenderBucket(m);
+  const tenderAmounts = (e) => salesMath().tenderAmounts(e);
   function realSalesTotals(range) {
     const [from, to] = rangeBounds(range == null ? currentRange : range);
-    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0;
-    realSalesList().forEach(e => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
-      revenue += amt; gross += amt; count++;
-      if (tenderBucket(e.method)) collected += amt;
-      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
-    });
-    realRefundList().forEach(e => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.abs(+e.amount || 0);
-      revenue -= Math.abs(+e.amount || 0); refunds += amt;
-      if (tenderBucket(e.method)) collected -= amt;
-      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
-    });
-    receivable += deliveryDue(from, to);
-    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0 };
+    const { card, cash, ...totals } = realWindowStats(from, to);
+    return totals;
   }
-  /* Keep tender attribution deliberately conservative. A value the ledger does
-   * not identify is "other", never a bank card; customer credit and delivery
-   * receivables are not collected money and therefore stay out of the payment
-   * donut entirely. */
-  function tenderBucket(method) {
-    const m = String(method || '').trim().toLowerCase();
-    if (['cash', 'especes', 'espèces'].includes(m)) return 'cash';
-    if (['card', 'carte', 'visa', 'mc', 'mastercard'].includes(m)) return 'card';
-    if (m === 'tap') return 'tap';
-    if (['qr', 'wallet'].includes(m)) return 'qr';
-    if (m === 'link') return 'link';
-    if (['virement', 'transfer', 'bank_transfer'].includes(m)) return 'transfer';
-    if (['chèque', 'cheque', 'check'].includes(m)) return 'cheque';
-    if (['split', 'partage', 'partagé'].includes(m)) return 'split';
-    if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(m)) return null;
-    return 'other';
-  }
-  function tenderAmounts(entry) {
-    const amount = Math.max(0, +entry.amount || 0);
-    const parts = Array.isArray(entry.paymentParts) ? entry.paymentParts.filter(part =>
-      part && tenderBucket(part.method) && Number.isSafeInteger(+part.amountCents) && +part.amountCents > 0) : [];
-    if (!parts.length) return [{ key: tenderBucket(entry.method), amount }];
-    const received = parts.reduce((sum, part) => sum + +part.amountCents, 0);
-    // Dashboard revenue excludes consigned liability; preserve that measure
-    // while attributing its received part to the actual tender(s).
-    return parts.map(part => ({ key: tenderBucket(part.method), amount: amount * +part.amountCents / received }));
-  }
-  /* Same numbers over an EXPLICIT window, plus the tender split. Every
-   * real-venue comparison below is built on this one primitive so the KPI
-   * band, the hero deltas and the card/cash tile can never disagree. */
   function realWindowStats(from, to) {
-    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0, card = 0, cash = 0;
-    realSalesList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
-      revenue += amt; gross += amt; count++;
-      const tender = tenderBucket(e.method);
-      if (tender) collected += amt;
-      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
-      tenderAmounts(e).forEach(part => {
-        if (part.key === 'cash') cash += part.amount;
-        if (part.key === 'card' || part.key === 'tap') card += part.amount;
-      });
-    });
-    realRefundList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.abs(+e.amount || 0);
-      revenue -= Math.abs(+e.amount || 0); refunds += amt;
-      const tender = tenderBucket(e.method);
-      if (tender) collected -= amt;
-      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
-      if (tender === 'cash') cash -= amt;
-      if (tender === 'card' || tender === 'tap') card -= amt;
-    });
-    receivable += deliveryDue(from, to);
-    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0, card, cash };
+    const totals = window.KiwiSalesMath.statsFromSales(realSalesList(), realRefundList(), from, to);
+    totals.receivable += deliveryDue(from, to);
+    return totals;
   }
 
   /* One read model for every headline and insight sentence. Nothing falls back
@@ -2141,21 +2074,17 @@
       return ts >= from && ts < to;
     });
     let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0;
-    const byHour = {}, byTender = {};
+    const byHour = window.KiwiSalesMath.hoursFromSales(rows, from, to, saleHour), byTender = {};
     rows.forEach((e) => {
       const amount = Math.max(0, +e.amount || 0);
       revenue += amount; gross += amount;
-      if (amount) {
-        const hour = saleHour(+e.ts || 0);
-        byHour[hour] = (byHour[hour] || 0) + amount;
-      }
       const tender = tenderBucket(e && e.method);
       if (tender && amount) {
         tenderAmounts(e).forEach(part => {
           if (part.key) byTender[part.key] = (byTender[part.key] || 0) + part.amount;
         });
         collected += amount;
-      } else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) {
+      } else if (salesMath().RECEIVABLE_METHODS.includes(String(e && e.method || '').trim().toLowerCase())) {
         receivable += amount;
       }
     });
@@ -2168,7 +2097,7 @@
       byHour[hour] = (byHour[hour] || 0) - amount;
       const tender = tenderBucket(e && e.method);
       if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
-      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
+      else if (salesMath().RECEIVABLE_METHODS.includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
     });
     receivable += deliveryDue(from, to);
     const topKey = (obj) => Object.keys(obj).reduce((best, key) =>

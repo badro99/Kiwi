@@ -40,7 +40,8 @@ assert.equal(auckland.hourOf(ts), 12, 'le fuseau configuré du commerce fait foi
 // Les sites qui buckétaient avec getHours() passent par le fuseau du commerce.
 const dr = read('assets/dateRange.js');
 assert.ok(/function saleHour\(ts\)/.test(dr) && /R\.hourOf\(ts\)/.test(dr), 'dateRange lit l\'heure via KiwiDayReport.hourOf');
-assert.equal((dr.match(/saleHour\(/g) || []).length, 4, 'les trois buckets horaires l\'utilisent (+ la définition)');
+assert.equal((dr.match(/saleHour\(/g) || []).length, 3, 'les buckets directs utilisent le commerce');
+assert.match(dr, /hoursFromSales\(rows, from, to, saleHour\)/, 'le bucket partagé reçoit aussi le fuseau du commerce');
 assert.ok(!/const hour = new Date\([^)]*\)\.getHours\(\)/.test(dr), 'plus de getHours() dans le résumé d\'insight');
 assert.ok(!/const h = new Date\(ts\)\.getHours\(\);\s*byHour\[h\]/.test(dr), 'ni dans la plage d\'ouverture');
 for (const f of ['assets/agent-truth.js', 'assets/agent.js']) {

@@ -264,8 +264,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "84",
-    "sha": "f301dd9de2b39007"
+    "v": "85",
+    "sha": "c3af913b22c4807d"
   },
   "assets/day-report-dash.js": {
     "v": "34",
@@ -1362,6 +1362,10 @@
   "assets/rtl-numbers.js": {
     "v": "1",
     "sha": "8abf8684b022329c"
+  },
+  "assets/sales-history.js": {
+    "v": "1",
+    "sha": "254de0cae1b21f0c"
   },
   "assets/salle-scan.js": {
     "v": "2",

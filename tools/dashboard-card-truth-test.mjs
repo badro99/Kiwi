@@ -23,6 +23,7 @@ const context = {
   Date, Map, Set, Intl, Math, Number, String, Array, Object, Infinity,
   requestAnimationFrame() {}, setTimeout() {}, clearTimeout() {}, console,
 };
+vm.runInNewContext(fs.readFileSync(new URL('../assets/sales-history.js', import.meta.url), 'utf8'), context);
 vm.runInNewContext(source, context, { filename: 'assets/dateRange.js' });
 const truth = window.KiwiDateRange._truth;
 

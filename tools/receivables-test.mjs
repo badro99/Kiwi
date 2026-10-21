@@ -218,7 +218,7 @@ console.log('■ Tableau de bord · KiwiDeliveries');
 }
 {
   const DR = fs.readFileSync(new URL('../assets/dateRange.js', import.meta.url), 'utf8');
-  ok((DR.match(/receivable \+= deliveryDue\(from, to\);/g) || []).length === 3, 'the three dashboard totals add open deliveries to Créances');
+  ok((DR.match(/receivable \+= deliveryDue\(from, to\);/g) || []).length === 2 && /const \{ card, cash, \.\.\.totals \} = realWindowStats\(from, to\)/.test(DR), 'dashboard totals add open deliveries once, with realSalesTotals delegating');
   ok(/layout\.includes\('receivable'\)[\s\S]{0,200}deriveTile\('receivable'\)/.test(DR), 'a default band shows Créances while money is owed');
   ok(/addEventListener\('kiwi:deliveries', \(\) => \{ renderKpiBand\(\); renderHero\(\); \}\)/.test(DR), 'the band redraws when deliveries change');
   const HTML = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
