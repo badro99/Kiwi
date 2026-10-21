@@ -19,6 +19,8 @@
  *   · the peek opens the sheet;
  *   · the traiteur's due banner and event names keep a readable width, and
  *     nothing on its events screen reaches past the edge;
+ *   · in a payment dialog on a 375 × 667 phone, the scan launcher no longer
+ *     sits on the pharmacy's « Encaisser » button;
  *   · no page error.
  *
  * KIWI_ROOT=<dir> runs it against another checkout (to prove it fails before
@@ -85,12 +87,12 @@ const widthOf = (page, sel) => page.evaluate((s) => {
   return el ? Math.round(el.getBoundingClientRect().width) : 0;
 }, sel);
 
-async function open(tr, lang, trade, ready) {
+async function open(tr, lang, trade, ready, vp = { width: 390, height: 844 }) {
   const ctx = await browser.createBrowserContext(); tr.defer(() => ctx.close());
   const page = tr.watch(await ctx.newPage());
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await page.setViewport({ ...vp, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await page.setBypassServiceWorker(true);
   await page.setRequestInterception(true);
   page.on('request', (r) => (r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort()));
@@ -164,6 +166,26 @@ try {
       check(errors.length === 0, `${trade}: no page error` + (errors.length ? ' · ' + errors.slice(0, 3).join(' | ') : ''));
     });
   }
+
+  /* The scan launcher sat above every dialog: on a 375 × 667 phone it hid half
+   * of the pharmacy's « Encaisser » button. Every point of that button must
+   * land on the button itself. */
+  await S.run('pharmacie · 375 × 667', async (tr) => {
+    const { page, errors } = await open(tr, 'fr', 'pharmacie', '.ph-card', { width: 375, height: 667 });
+    tr.step('sell one box and open the payment');
+    await tap(page, '.ph-card:not(.is-out)');
+    await tap(page, '#ph-sheet-add');
+    await tap(page, '#ph-validate');
+    await page.waitForFunction(() => document.querySelector('#ph-rc-pay'), { timeout: 15000 });
+    await sleep(400);
+    const hit = await page.evaluate(() => {
+      const b = document.querySelector('#ph-rc-pay').getBoundingClientRect();
+      const pts = [[0.1, 0.2], [0.5, 0.5], [0.9, 0.2], [0.1, 0.85], [0.9, 0.85]];
+      return pts.map(([x, y]) => { const e = document.elementFromPoint(b.left + b.width * x, b.top + b.height * y); return e && e.closest('#ph-rc-pay') ? 'pay' : (e && e.closest('.krs-launch') ? 'scan' : (e ? e.className.toString().slice(0, 24) : 'none')); });
+    });
+    check(hit.every((h) => h === 'pay'), `the payment button takes every tap on it (${hit.join(', ')})`);
+    check(errors.length === 0, 'pharmacie: no page error' + (errors.length ? ' · ' + errors.slice(0, 3).join(' | ') : ''));
+  });
 } finally {
   await browser.close().catch(() => {});
   server.closeAllConnections();
