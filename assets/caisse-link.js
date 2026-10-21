@@ -297,17 +297,17 @@
    * kiwiPairedVenue from a code, and removing the backend would unbind them. */
   function panelBody(biz) {
     return '' +
-      '<p class="kcl-lead">La caisse est là où vos ventes entrent. Reliez votre terminal à ce commerce : chaque encaissement remontera aussitôt sur ce tableau de bord.</p>' +
+      '<p class="kcl-lead">' + esc(dt('panelLead')) + '</p>' +
       '<section class="kcl-status" id="kcl-status" role="status" aria-live="polite">' +
         '<div class="kcl-route" aria-hidden="true">' +
-          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.75" width="14" height="18.5" rx="2.5"/><path d="M9 6.75h6M9 17.25h6"/></svg></span><span>Caisse</span></span>' +
+          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.75" width="14" height="18.5" rx="2.5"/><path d="M9 6.75h6M9 17.25h6"/></svg></span><span>' + esc(dt('till')) + '</span></span>' +
           '<span class="kcl-track"><span class="kcl-track-dot"></span></span>' +
-          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2.5"/><path d="M3 9h18M8 9v10"/></svg></span><span>Tableau de bord</span></span>' +
+          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2.5"/><path d="M3 9h18M8 9v10"/></svg></span><span>' + esc(dt('dashboard')) + '</span></span>' +
         '</div>' +
-        '<div class="kcl-state"><span class="kcl-d kcl-pulse"></span><span class="kcl-state-copy"><strong id="kcl-status-t">Connexion en attente</strong><small id="kcl-status-detail">Ouvrez Kiwi Caisse sur votre terminal</small></span><span class="kcl-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span></div>' +
+        '<div class="kcl-state"><span class="kcl-d kcl-pulse"></span><span class="kcl-state-copy"><strong id="kcl-status-t">' + esc(dt('waiting')) + '</strong><small id="kcl-status-detail">' + esc(dt('waitingDetail')) + '</small></span><span class="kcl-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span></div>' +
       '</section>' +
-      '<button class="kcl-open" type="button" id="kcl-open">Ouvrir la caisse sur cet appareil</button>' +
-      '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>' +
+      '<button class="kcl-open" type="button" id="kcl-open">' + esc(dt('openHere')) + '</button>' +
+      '<p class="kcl-hint">' + esc(dt('hintA')) + '<strong>' + esc(biz.name) + '</strong>' + esc(dt('hintB')) + '</p>' +
       '<section class="kcl-devices" id="kcl-devices" hidden></section>';
   }
 
@@ -328,6 +328,24 @@
     confirm: ['Confirmer le retrait', 'Confirm removal', 'تأكيد الإزالة'],
     none: ['Aucune caisse appairée sous son nom pour l’instant. Une caisse déjà en service apparaît ici à sa prochaine ouverture.', 'No till paired under its own name yet. A till already in use appears here the next time it opens.', 'لا يوجد صندوق مقترن باسمه بعد. يظهر الصندوق المستخدم هنا عند فتحه في المرة القادمة.'],
     failed: ['Retrait impossible pour l’instant. Réessayez.', 'Could not remove the device. Try again.', 'تعذرت الإزالة الآن. أعد المحاولة.'],
+    /* The panel and the sidebar chip. */
+    panelLead: ['La caisse est là où vos ventes entrent. Reliez votre terminal à ce commerce : chaque encaissement remontera aussitôt sur ce tableau de bord.', 'The till is where your sales come in. Link your terminal to this business: every payment will show up on this dashboard right away.', 'الصندوق هو حيث تدخل مبيعاتك. اربط جهازك بهذا المتجر: ستظهر كل عملية تحصيل فورا على لوحة التحكم هذه.'],
+    dashboard: ['Tableau de bord', 'Dashboard', 'لوحة التحكم'],
+    waiting: ['Connexion en attente', 'Waiting for the till', 'في انتظار الاتصال'],
+    waitingDetail: ['Ouvrez Kiwi Caisse sur votre terminal', 'Open Kiwi Caisse on your terminal', 'افتح Kiwi Caisse على جهازك'],
+    openHere: ['Ouvrir la caisse sur cet appareil', 'Open the till on this device', 'فتح الصندوق على هذا الجهاز'],
+    hintA: ['Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra ', 'On another device (tablet, terminal), open the till with this same Kiwi account. The terminal will become ', 'على جهاز آخر (لوحي أو طرفي)، افتح الصندوق بحساب Kiwi نفسه. سيصبح الجهاز '],
+    hintB: ['.', '.', '.'],
+    drawerTitle: ['Connectez votre caisse', 'Connect your till', 'اربط صندوقك'],
+    linked: ['Liaison établie', 'Linked', 'تم الربط'],
+    liveFlow: ['flux de ventes actif', 'sales feed live', 'تدفق المبيعات نشط'],
+    linkedTitle: ['Votre caisse est reliée', 'Your till is linked', 'صندوقك مرتبط'],
+    localOnly: ['Connexion locale uniquement', 'Local connection only', 'اتصال محلي فقط'],
+    localOnlyDetail: ['Utilisez « Ouvrir la caisse sur cet appareil » ci-dessous.', 'Use « Open the till on this device » below.', 'استخدم « فتح الصندوق على هذا الجهاز » أدناه.'],
+    copied: ['Copié', 'Copied', 'تم النسخ'],
+    chipOn: ['Caisse connectée', 'Till connected', 'الصندوق متصل'],
+    chipAway: ['Caisse hors ligne', 'Till offline', 'الصندوق غير متصل'],
+    chipOff: ['Connecter la caisse', 'Connect the till', 'ربط الصندوق'],
   };
   function dt(key) { var i = { fr: 0, en: 1, ar: 2 }[devLang()]; return DEV_T[key][i]; }
   function devDate(ts) {
@@ -397,7 +415,7 @@
     // generating one would be a pointless server round-trip every time.
     var code = connected || '';
 
-    var d = Kiwi.drawer({ title: 'Connectez votre caisse', subtitle: biz.name, body: panelBody(biz), width: 440 });
+    var d = Kiwi.drawer({ title: dt('drawerTitle'), subtitle: biz.name, body: panelBody(biz), width: 440 });
     var el = d.el, cur = code, tick = null, connectedPainted = false;
     // Operator support has a fixed ownership banner above every client page.
     // Keep this drawer immediately below its measured height so the confirmation
@@ -422,9 +440,9 @@
         if (!connectedPainted) { st.classList.add('kcl-arrive'); connectedPainted = true; }
       }
       var dot = st && st.querySelector('.kcl-d'); if (dot) dot.classList.remove('kcl-pulse');
-      var t = $('#kcl-status-t'); if (t) t.textContent = 'Liaison établie';
-      var detail = $('#kcl-status-detail'); if (detail) detail.textContent = biz.name + ' · flux de ventes actif';
-      var heading = $('.kiwi-drawer-head h3'); if (heading) heading.textContent = 'Votre caisse est reliée';
+      var t = $('#kcl-status-t'); if (t) t.textContent = dt('linked');
+      var detail = $('#kcl-status-detail'); if (detail) detail.textContent = biz.name + ' · ' + dt('liveFlow');
+      var heading = $('.kiwi-drawer-head h3'); if (heading) heading.textContent = dt('linkedTitle');
       updateChip();
     }
     // Reflect whether a cross-device pair is actually possible from here. Only the
@@ -436,14 +454,14 @@
       if (state === 'reject') {
         if (st) st.classList.add('kcl-warn');
         if (dot) dot.classList.remove('kcl-pulse');
-        if (t) t.textContent = 'Connexion locale uniquement';
-        if (detail) detail.textContent = 'Utilisez « Ouvrir la caisse sur cet appareil » ci-dessous.';
+        if (t) t.textContent = dt('localOnly');
+        if (detail) detail.textContent = dt('localOnlyDetail');
         if (hint) hint.style.display = 'none';            // the "type this code on another device" path won't work
       } else {
         if (st) st.classList.remove('kcl-warn');
         if (dot) dot.classList.add('kcl-pulse');
-        if (t) t.textContent = 'Connexion en attente';
-        if (detail) detail.textContent = 'Ouvrez Kiwi Caisse sur votre terminal';
+        if (t) t.textContent = dt('waiting');
+        if (detail) detail.textContent = dt('waitingDetail');
         if (hint) hint.style.display = '';
       }
     }
@@ -464,7 +482,7 @@
       if (rv) { revokeDevice($('#kcl-devices'), biz.merchant, rv); return; }
       if (e.target.closest('#kcl-copy')) {
         try { navigator.clipboard.writeText(cur); } catch (_) {}
-        var b = $('#kcl-copy'); if (b) { var o = b.textContent; b.textContent = 'Copié'; setTimeout(function () { b.textContent = o; }, 1400); }
+        var b = $('#kcl-copy'); if (b) { var o = b.textContent; b.textContent = dt('copied'); setTimeout(function () { b.textContent = o; }, 1400); }
         return;
       }
       if (e.target.closest('#kcl-regen')) { var n = generateCode(true); if (n) { setCode(n); refresh(); } return; }
@@ -523,7 +541,7 @@
       b.id = 'kcl-chip'; b.type = 'button';
       b.innerHTML = '<span class="kcl-dot"></span>' +
         '<span class="kcl-mobile-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 11h8M9 16h.01M12 16h.01M15 16h.01"/></svg></span>' +
-        '<span class="kcl-t">Connecter la caisse</span>';
+        '<span class="kcl-t">' + esc(dt('chipOff')) + '</span>';
       b.addEventListener('click', openPanel);
     }
     placeChip(b);
@@ -546,7 +564,7 @@
     var state = isPaired() ? 'on' : 'off';
     if (p && p.fresh) state = 'on';
     else if (p && p.seen) state = 'away';
-    var label = state === 'on' ? 'Caisse connectée' : state === 'away' ? 'Caisse hors ligne' : 'Connecter la caisse';
+    var label = dt(state === 'on' ? 'chipOn' : state === 'away' ? 'chipAway' : 'chipOff');
     b.setAttribute('data-state', state);
     var t = b.querySelector('.kcl-t'); if (t) t.textContent = label;
     b.setAttribute('aria-label', label);

@@ -84,7 +84,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=5',
-  '/assets/i18n.js?v=27',
+  '/assets/i18n.js?v=28',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -93,7 +93,7 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
   '/assets/plan-catalog.js?v=1',
-  '/assets/interactive.js?v=64',
+  '/assets/interactive.js?v=65',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
   '/assets/invoicing.css?v=9',
@@ -223,7 +223,7 @@ var SHELL = [
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
   '/assets/identity.js?v=11',
-  '/assets/caisse-link.js?v=18',
+  '/assets/caisse-link.js?v=19',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/serveur-lang.js?v=1',
@@ -371,7 +371,7 @@ var SHELL = [
   '/assets/kit/controls/keypad.js?v=1',
   '/assets/kit/controls/stepper.js?v=1',
   '/assets/kit/controls/switch.js?v=1',
-  '/assets/kit/elements.js?v=1',
+  '/assets/kit/elements.js?v=2',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=3',
   '/assets/kit/till.js?v=11',

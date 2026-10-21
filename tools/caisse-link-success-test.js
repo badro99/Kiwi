@@ -17,9 +17,10 @@ function ok(condition, label) {
 }
 
 ok(!/Kiwi\.confetti|\bconfetti\s*\(/.test(link), 'caisse connection never launches the global confetti layer');
-ok(link.includes('class="kcl-route"') && link.includes('Caisse</span>') && link.includes('Tableau de bord</span>'), 'shared drawer renders the terminal-to-dashboard route');
-ok(link.includes("t.textContent = 'Liaison établie'") && link.includes("' · flux de ventes actif'"), 'connected state names the live establishment and active sales feed');
-ok(link.includes("heading.textContent = 'Votre caisse est reliée'"), 'connected drawer heading no longer asks the merchant to connect again');
+ok(link.includes('class="kcl-route"') && link.includes("esc(dt('till')) + '</span>") && link.includes("esc(dt('dashboard')) + '</span>")
+  && link.includes("dashboard: ['Tableau de bord', 'Dashboard', 'لوحة التحكم']"), 'shared drawer renders the terminal-to-dashboard route, in the dashboard language');
+ok(link.includes("t.textContent = dt('linked')") && link.includes("biz.name + ' · ' + dt('liveFlow')") && link.includes("liveFlow: ['flux de ventes actif',"), 'connected state names the live establishment and active sales feed');
+ok(link.includes("heading.textContent = dt('linkedTitle')") && link.includes("linkedTitle: ['Votre caisse est reliée',"), 'connected drawer heading no longer asks the merchant to connect again');
 ok(link.includes('connectedPainted = false') && link.includes('if (!connectedPainted)'), 'the success transition runs only once despite the one-second poll');
 ok(link.includes('@media (prefers-reduced-motion:reduce)') && link.includes('animation:none'), 'reduced-motion users receive the settled state without animation');
 ok(link.includes('@media (max-width:420px)') && link.includes('.kcl-track{min-width:28px}'), 'connection route compresses safely on narrow phones');

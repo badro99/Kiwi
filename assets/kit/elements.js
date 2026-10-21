@@ -501,8 +501,12 @@
       return '<li class="li' + (i === n - 1 ? ' last' : '') + '" data-id="' + esc(r.id) + '"' + (r.radio || sel ? ' role="none"' : '') + '>' + swipe +
         '<' + mainTag + (mainTag === 'button' ? ' type="button" data-row' : '') + ' class="r k-in' + (two ? ' two' : '') + (r.avatar ? ' avr' : '') + (r.selected && !r.radio ? ' sel' : '') + (r.disabled ? ' dis' : '') + '"' +
         (mainTag === 'button' ? role + ' aria-label="' + esc(name) + '"' + (r.disabled ? ' aria-disabled="true"' : '') : '') + '>' +
+        /* The spaces between title, subtitle and value are not painted (every
+           container here is a flexbox) but they give the row's text its word
+           breaks: without them a screen reader and axe read « T614:48 » while
+           the label says « T6, 14:48 » (label-content-name-mismatch). */
         lead + '<span class="tx"><span class="k-body ti' + (r.disabled ? ' k-ink3' : '') + '">' + esc(r.title) + '</span>' +
-        (two ? '<span class="k-foot k-ink2 su">' + esc(r.subtitle) + '</span>' : '') + '</span>' +
+        (two ? ' <span class="k-foot k-ink2 su">' + esc(r.subtitle) + '</span>' : '') + '</span> ' +
         '<span class="tr">' + trail + '</span></' + mainTag + '>' + more + '</li>';
     },
     render: function () {

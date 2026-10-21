@@ -70,15 +70,20 @@ ok('unlock listener is attached where dashboard.html dispatches it (window)', ()
     }
     return '';
   };
-  const run = ({ paired, presence }) => {
+  /* The chip's words come from the panel's own three-language table. */
+  const devT = (() => { const i = src.indexOf('var DEV_T = {'); let d = 0;
+    for (let k = src.indexOf('{', i); k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1) + ';'; }
+    return ''; })();
+  const run = ({ paired, presence, lang = 'fr' }) => {
     const chip = { attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, t: { textContent: '' }, querySelector() { return this.t; } };
     const ctx = vm.createContext({
       window: { KiwiTillPresence: presence },
-      document: { getElementById: () => chip },
+      document: { getElementById: () => chip, documentElement: { lang } },
+      localStorage: { getItem: (k) => (k === 'kiwiLang' ? lang : null) },
       currentBiz: () => ({ merchant: 'cafe' }),
       isPaired: () => paired,
     });
-    vm.runInContext(grab('tillPresence') + '\n' + grab('updateChip') + '\nupdateChip();', ctx);
+    vm.runInContext(grab('devLang') + '\n' + devT + '\n' + grab('dt') + '\n' + grab('tillPresence') + '\n' + grab('updateChip') + '\nupdateChip();', ctx);
     return chip.attrs['data-state'] + ' ' + chip.t.textContent;
   };
   ok('fresh heartbeat → connected, even if paired from another device', () =>
@@ -91,6 +96,11 @@ ok('unlock listener is attached where dashboard.html dispatches it (window)', ()
   });
   ok('another store\'s heartbeat is ignored', () =>
     assert.equal(run({ paired: false, presence: { merchant: 'other', seen: 1, fresh: true } }), 'off Connecter la caisse'));
+  ok('the chip speaks the dashboard language (English, Arabic)', () => {
+    assert.equal(run({ paired: false, presence: { merchant: 'cafe', seen: 1, fresh: true }, lang: 'en' }), 'on Till connected');
+    assert.equal(run({ paired: true, presence: { merchant: 'cafe', seen: 1, fresh: false }, lang: 'en' }), 'away Till offline');
+    assert.equal(run({ paired: false, presence: null, lang: 'ar' }), 'off ربط الصندوق');
+  });
   const live = readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
   const feed = readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
   ok('/api/feed returns the till heartbeat and live-link publishes it', () => {

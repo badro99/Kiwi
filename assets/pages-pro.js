@@ -20087,7 +20087,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const SPARK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
 
   /* What each destination will become — phrased to fit any trade. */
-  const STARTERS = {
+  const STARTERS_FR = {
     transactions:  { t: 'Ventes',             d: 'L\'historique complet de vos encaissements, en temps réel.',
                      b: ['Chaque vente apparaît ici à la seconde où elle est encaissée', 'Filtres par moyen de paiement, remboursements inclus', 'Annulations et remboursements tracés, avec leur auteur'] },
     reglements:    { t: 'Règlements',          d: 'Kiwi ne détient pas votre argent : vos paiements carte arrivent par votre banque ou votre TPE.',
@@ -20129,6 +20129,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     clients:       { t: 'Fiches clients',     d: 'Votre fichier client, construit vente après vente.',
                      b: ['Une fiche créée automatiquement par client', 'Historique, préférences et notes', 'Fidélité par visites ou par tampons'] },
   };
+  /* English and Arabic come from assets/starter-copy.js; French, or a missing
+     entry, reads the table above. */
+  const STARTERS = new Proxy(STARTERS_FR, {
+    get(o, k) {
+      const fr = o[k];
+      if (!fr || typeof k !== 'string') return fr;
+      const lang = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+      const tr = lang !== 'fr' && window.KiwiStarterCopy && window.KiwiStarterCopy[lang] && window.KiwiStarterCopy[lang][k];
+      return tr && tr.t && tr.d && Array.isArray(tr.b) ? Object.assign({}, fr, tr) : fr;
+    },
+  });
 
   /* Destinations that now have a REAL per-venue, persistent UI — they render
      their functional page for custom (onboarded) venues too, NOT a starter
@@ -20747,7 +20758,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const startingUp = T({ fr: 'Historique des opérations', en: 'Operations history', ar: 'سجل العمليات' });
     const page = window.Kiwi.appPage('transactions', {
       title: T({ fr: 'Ventes & activité', en: 'Sales & activity', ar: 'المبيعات والنشاط' }),
-      subtitle: `${vd.name || 'Votre établissement'} · ${startingUp}`,
+      subtitle: `${vd.name || T({ fr: 'Votre établissement', en: 'Your business', ar: 'منشأتك' })} · ${startingUp}`,
       body: `
         <div data-real-tx class="rtx">
           <div class="rtx-head">
@@ -20837,7 +20848,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
     window.Kiwi.appPage(nav, {
       title: starterTitle(nav, meta),
-      subtitle: `${vd.name || 'Votre établissement'} · ${startingUp}`,
+      subtitle: `${vd.name || T({ fr: 'Votre établissement', en: 'Your business', ar: 'منشأتك' })} · ${startingUp}`,
       body: `
         <div class="gp-starter" data-starter-nav="${nav}">
           <div class="gp-starter-ic">${SPARK}</div>

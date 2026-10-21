@@ -1668,6 +1668,7 @@ section('Whole-project regressions');
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
     'plan-catalog-test.mjs',
+    'starter-copy-test.mjs',
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',
     'tickets-taxonomy-test.mjs',

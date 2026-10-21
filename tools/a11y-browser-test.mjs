@@ -25,6 +25,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { suite } from './browser-trace.mjs';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const req = createRequire(path.join(root, 'app/package.json'));
@@ -58,6 +59,7 @@ async function open(t, url, storage, { width = 1440, height = 900 } = {}) {
   const ctx = await browser.createBrowserContext();
   t.defer(() => ctx.close());
   const page = t.watch(await ctx.newPage());
+  await pinTradingHour(page);   // « aujourd'hui » de la démo, à 15 h : le nombre de lignes ne dépend plus de l'heure (tools/demo-clock.mjs)
   await page.setViewport({ width, height });
   await page.setBypassServiceWorker(true);
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);

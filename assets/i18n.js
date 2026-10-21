@@ -319,6 +319,8 @@
        * must carry the icon too — a bare string would delete the SVG. */
       'dash.lock.switch': '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg> Switch account',
       'dash.lock.caisse': '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Z"/></svg> Open the till',
+      'dash.lock.caisseAria': 'Open the till',
+      'dash.lock.switchAria': 'Sign out and switch account',
       'dash.sidebar.logout': 'Sign out',
       'dash.more.show': 'More analytics',
       'dash.more.hide': 'Show less',
@@ -975,6 +977,8 @@
       'dash.lock.skip': 'ادخل إلى العرض ←',
       'dash.lock.switch': '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg> تغيير الحساب',
       'dash.lock.caisse': '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Z"/></svg> فتح الصندوق',
+      'dash.lock.caisseAria': 'افتح الصندوق',
+      'dash.lock.switchAria': 'تسجيل الخروج وتغيير الحساب',
       'dash.sidebar.logout': 'تسجيل الخروج',
       'dash.more.show': 'تحليلات إضافية',
       'dash.more.hide': 'إظهار أقل',

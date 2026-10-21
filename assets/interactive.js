@@ -1995,7 +1995,7 @@ ar: {
       };
       const fmtN = (n) => (window.KiwiNumber?.format((+n || 0), {}) ?? (+n || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
-      const venueTitle = escape((vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? 'Mon établissement' : 'Café Atlas · Maarif'));
+      const venueTitle = escape((vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? tr({ fr: 'Mon établissement', en: 'My business', ar: 'منشأتي' }) : 'Café Atlas · Maarif'));
       const tradeLabel = escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Restauration & Boissons', en: 'Food & Beverage', ar: 'المطاعم والمشروبات' }));
 
       return appPage('settings', {

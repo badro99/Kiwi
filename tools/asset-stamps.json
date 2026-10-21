@@ -124,8 +124,8 @@
     "sha": "36c40380f0f67f92"
   },
   "assets/caisse-link.js": {
-    "v": "18",
-    "sha": "7c1f8e08351b2b30"
+    "v": "19",
+    "sha": "9d12396dd2520713"
   },
   "assets/caisse-menu-availability.js": {
     "v": "7",
@@ -448,8 +448,8 @@
     "sha": "dd47fdc87e59c3f4"
   },
   "assets/i18n.js": {
-    "v": "27",
-    "sha": "0832118d4bdfd775"
+    "v": "28",
+    "sha": "073f1a8a955362b6"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -492,8 +492,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "64",
-    "sha": "2f6a34634cb7df25"
+    "v": "65",
+    "sha": "9ddceac60da8fff8"
   },
   "assets/inventory-consumption.js": {
     "v": "13",
@@ -604,8 +604,8 @@
     "sha": "49de4dea3a09d83d"
   },
   "assets/kit/elements.js": {
-    "v": "1",
-    "sha": "9474ffaeffa93f34"
+    "v": "2",
+    "sha": "05c214dfbfd6c6b5"
   },
   "assets/kit/format.js": {
     "v": "1",
@@ -1024,8 +1024,8 @@
     "sha": "6034d25dcb90c82e"
   },
   "assets/pages-pro.js": {
-    "v": "2161",
-    "sha": "8cef2ae1c5019cb0"
+    "v": "2162",
+    "sha": "461cd1399e3be749"
   },
   "assets/pages.js": {
     "v": "12",
@@ -1374,6 +1374,10 @@
   "assets/staff-roles.js": {
     "v": "1",
     "sha": "f5ff14add73eba1e"
+  },
+  "assets/starter-copy.js": {
+    "v": "1",
+    "sha": "0c097c4e84861c5f"
   },
   "assets/stock-identity.js": {
     "v": "2",
