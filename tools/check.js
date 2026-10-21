@@ -1364,6 +1364,7 @@ section('Whole-project regressions');
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',
+    'sales-summary-test.mjs',
     'ticket-141-test.mjs',
     'kpi-card-layout-test.mjs',
     'dashboard-card-truth-test.mjs',

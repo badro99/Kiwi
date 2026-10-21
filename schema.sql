@@ -140,6 +140,8 @@ CREATE INDEX IF NOT EXISTS retail_balance_receipts_by_balance
 -- (You cannot name rowid in CREATE INDEX — SQLite rejects it.)
 CREATE INDEX IF NOT EXISTS idx_sales_merchant ON sales (merchant);
 CREATE INDEX IF NOT EXISTS idx_sales_merchant_seller_ts ON sales (merchant, seller_id, ts);
+-- /api/sales-summary and /api/feed?from= read one store over a date window.
+CREATE INDEX IF NOT EXISTS idx_sales_merchant_ts ON sales (merchant, ts);
 
 -- Numeric receipt references are allocated independently from the money ledger.
 -- `next_value` is the first number that has never been reserved. A till advances
