@@ -1918,6 +1918,10 @@ section('Whole-project regressions');
     'weather-test.mjs',
     'briefing-card-placement-test.mjs',
     'dark-fixes-gradient-test.mjs',
+    /* Démarrage en sombre : la passe de contraste lit puis écrit, un second
+       regard par image, et les compteurs animés gardent leurs éléments. */
+    'dark-fixes-batch-test.mjs',
+    'dark-startup-browser-test.mjs',
     'action-center-loop-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',

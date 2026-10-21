@@ -150,7 +150,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
   '/assets/sales-history.js?v=1',
-  '/assets/dateRange.js?v=85',
+  '/assets/dateRange.js?v=86',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',

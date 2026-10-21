@@ -1765,6 +1765,39 @@
     return `${sign}${formatted} %`;
   };
 
+  /* One frame of a count-up. When the markup keeps its shape and only the
+   * digits move, the text is updated in place: rebuilding the spans every
+   * frame made each counter add new elements sixty times a second, and in
+   * dark mode every new element is re-checked for contrast (dark-fixes.js),
+   * about 0.9 s of a dashboard start on its own. */
+  const numberShape = (html) => html.replace(/>[^<]*</g, '><').replace(/^[^<]*|[^>]*$/g, '');
+  function textNodesOf(root) {
+    const out = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (w.nextNode()) out.push(w.currentNode);
+    return out;
+  }
+  function paintNumber(el, html) {
+    const shape = numberShape(html);
+    const mine = el.__kiwiNumText;
+    /* Reuse only what this function wrote and nobody has replaced since: any
+     * other write (a plain re-render, the '…' placeholder) detaches these. */
+    if (mine && el.__kiwiNumShape === shape) {
+      const live = textNodesOf(el);
+      if (live.length === mine.length && live.every((t, i) => t === mine[i])) {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html;
+        const next = textNodesOf(tpl.content);
+        if (next.length === live.length) {
+          next.forEach((t, i) => { if (live[i].data !== t.data) live[i].data = t.data; });
+          return;
+        }
+      }
+    }
+    el.innerHTML = html;
+    el.__kiwiNumShape = shape;
+    el.__kiwiNumText = textNodesOf(el);
+  }
+
   function animateNumber(el, from, to, { duration = 800, format } = {}) {
     if (!el) return;
     if (operatorLedgerPending()) { el.textContent = '…'; return; }
@@ -1777,9 +1810,9 @@
       if (operatorLedgerPending()) { el.textContent = '…'; return; }
       const p = Math.min(1, (now - start) / duration);
       const v = from + (to - from) * ease(p);
-      el.innerHTML = format(v);
+      paintNumber(el, format(v));
       if (p < 1) requestAnimationFrame(tick);
-      else el.innerHTML = format(to);
+      else paintNumber(el, format(to));
     }
     requestAnimationFrame(tick);
   }

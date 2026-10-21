@@ -72,25 +72,40 @@
    * remettre des barres encre sur fond noir. */
   const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn, .bqx-vr-bc svg';
 
-  function fix(root) {
-    if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;
-    /* The added node itself counts: a card appended on its own is the root. */
-    const els = root === document.body ? root.querySelectorAll('*') : [root, ...root.querySelectorAll('*')];
-    // Pass 1 — darken near-white card/panel/input backgrounds (and their light borders).
-    els.forEach((el) => {
+  /* Each pass reads every element first, then writes the tags. Reading a
+   * computed style right after a class was added forces the browser to
+   * restyle the page again; interleaving the two made a pass cost one restyle
+   * per tag. The decisions are the same: pass 1 reads backgrounds and borders,
+   * which tagging a neighbour never changes, and pass 2 runs after pass 1 is
+   * applied so effBg sees the darkened cards. A child whose ink colour comes
+   * from a parent that pass 2 tags is tagged too, with the same var(--ink):
+   * the colour that paints does not change. */
+  function elementsOf(root) {
+    return root === document.body ? root.querySelectorAll('*') : [root, ...root.querySelectorAll('*')];
+  }
+  function fixAll(roots) {
+    if (!roots.length || document.documentElement.getAttribute('data-theme') !== 'dark') return;
+    const lists = roots.map(elementsOf);
+    // Pass 1: near-white card/panel/input backgrounds, and their light borders.
+    const cards = [], borders = [];
+    lists.forEach((els) => els.forEach((el) => {
       if (el.closest(SKIP)) return;              // QR tiles + already-themed controls
       const cs = getComputedStyle(el);
-      if (isNearWhite(parse(cs.backgroundColor))) el.classList.add('dkfix-card');
-      if (parseFloat(cs.borderTopWidth) > 0 && isNearWhite(parse(cs.borderTopColor))) el.classList.add('dkfix-bd');
-    });
-    // Pass 2 — lighten dark text now sitting on a dark background (the getComputedStyle
-    // calls above already flushed pass-1 so effBg is current).
-    els.forEach((el) => {
+      if (isNearWhite(parse(cs.backgroundColor))) cards.push(el);
+      if (parseFloat(cs.borderTopWidth) > 0 && isNearWhite(parse(cs.borderTopColor))) borders.push(el);
+    }));
+    cards.forEach((el) => el.classList.add('dkfix-card'));
+    borders.forEach((el) => el.classList.add('dkfix-bd'));
+    // Pass 2: dark text now sitting on a dark background.
+    const texts = [];
+    lists.forEach((els) => els.forEach((el) => {
       if (el.closest(SKIP) || !hasDirectText(el)) return;
       const col = parse(getComputedStyle(el).color);
-      if (isDarkText(col) && lum(effBg(el)) < 0.22) el.classList.add('dkfix-text');
-    });
+      if (isDarkText(col) && lum(effBg(el)) < 0.22) texts.push(el);
+    }));
+    texts.forEach((el) => el.classList.add('dkfix-text'));
   }
+  function fix(root) { if (root) fixAll([root]); }
 
   const MARKS = ['dkfix-card', 'dkfix-bd', 'dkfix-text'];
 
@@ -112,28 +127,54 @@
    * page and card painted white first, then flipped to dark (Orders summary
    * cards, 2026-10-10). Transitions are off for the frame the tags land in,
    * or a card with `transition: all` would fade from white instead. */
+  /* The class stays on until two frames pass with no new tagging. It used to
+   * be added and removed per pass: during a count-up animation that is
+   * hundreds of toggles a second, and a later pass could lose it mid-frame. */
+  let instantSeq = 0, instantWaiting = false;
   function instant() {
     const html = document.documentElement;
     if (!html || !html.classList) return;
-    html.classList.add('dkfix-instant');
-    requestAnimationFrame(() => requestAnimationFrame(() => html.classList.remove('dkfix-instant')));
+    instantSeq++;
+    if (!html.classList.contains('dkfix-instant')) html.classList.add('dkfix-instant');
+    if (instantWaiting) return;
+    instantWaiting = true;
+    const settle = (seq) => requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (seq !== instantSeq) { settle(instantSeq); return; }
+      instantWaiting = false;
+      html.classList.remove('dkfix-instant');
+    }));
+    settle(instantSeq);
   }
+
+  /* The second look, one frame later, is shared: every root themed during a
+   * frame is looked at again in one batch, so the page is restyled once for
+   * all of them instead of once per root. */
+  const again = new Set();
+  let againQueued = false;
+  function lookAgain(root) {
+    again.add(root);
+    if (againQueued) return;
+    againQueued = true;
+    requestAnimationFrame(() => {
+      againQueued = false;
+      const roots = Array.from(again);
+      again.clear();
+      fixAll(roots.filter((n) => document.contains(n)
+        && !roots.some((r) => r !== n && r.contains && r.contains(n))));
+    });
+  }
+
   function run(root) {
     clear(root);
     if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
     instant();
     fix(root);
-    requestAnimationFrame(() => fix(root));
+    lookAgain(root);
   }
 
-  // Re-theme each surface as it opens (overlays + the live order drawer), and the
-  // whole page when dark mode is switched on with surfaces already open.
-  const SURFACE = '.kiwi-drawer-backdrop, .kiwi-backdrop';
-  new MutationObserver((muts) => {
-    muts.forEach((m) => m.addedNodes.forEach((n) => {
-      if (n.nodeType === 1 && n.matches && n.matches(SURFACE)) run(n);
-    }));
-  }).observe(document.body, { childList: true });
+  /* Surfaces (overlays, the live order drawer) are children of the body, so
+   * the subtree watcher below themes them as they open. A second watcher used
+   * to run them again in the same task. */
 
   // Unguarded on purpose: the light transition is the one that has to strip the
   // tags, so run() decides — not the caller.

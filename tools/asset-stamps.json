@@ -236,8 +236,8 @@
     "sha": "46cb4dd578d3f866"
   },
   "assets/dark-fixes.js": {
-    "v": "4",
-    "sha": "5a2eb5b9bc652554"
+    "v": "5",
+    "sha": "0c45c96d5cbb7cb2"
   },
   "assets/dashboard-extra.js": {
     "v": "14",
@@ -264,8 +264,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "85",
-    "sha": "c3af913b22c4807d"
+    "v": "86",
+    "sha": "e511a8dbd96df1c3"
   },
   "assets/day-report-dash.js": {
     "v": "34",
