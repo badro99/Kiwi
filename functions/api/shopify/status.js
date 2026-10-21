@@ -3,6 +3,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
+import { replayShopifyOrders } from './_replay-orders.js';
 import {
   buildExactVariantMapping, connectionFor, enqueueStockChanges,
   flushShopifyOutbox, listLocations, listShopifyVariants,
@@ -370,6 +371,18 @@ export async function onRequestPost({ request, env, waitUntil }) {
     if (action === 'configure-imports') {
       const configured = await configureImportedProducts(env, merchant, body && body.products);
       return json({ ok: true, action, updated: configured.updated, preview: previewPayload(configured.preview), ...(await health(env, merchant)) });
+    }
+
+    /* Les commandes en ligne que Kiwi n'a jamais reçues (voir _replay-orders.js).
+     * Depuis la connexion, ou plus tard si on le demande ; jamais avant, il n'y
+     * avait alors aucun lien de variante. dryRun d'abord, pour dire ce qui
+     * serait retiré avant de le retirer. */
+    if (action === 'replay-orders') {
+      const connection = await connectionFor(env, merchant);
+      if (!connection) throw new Error('shopify-not-connected');
+      const sinceTs = Math.max(Number(connection.connected_ts) || 0, Number(body && body.since) || 0);
+      const result = await replayShopifyOrders(env, merchant, { sinceTs, dryRun: !!(body && body.dryRun) });
+      return json({ ok: true, action, result, ...(await health(env, merchant)) });
     }
 
     if (action === 'retry') {

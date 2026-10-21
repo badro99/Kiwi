@@ -145,6 +145,9 @@
       missingIdentifier: 'Ajoutez un SKU ou un code-barres dans Shopify', duplicateIdentifier: 'SKU ou code-barres dupliqué', identifierUsed: 'Identifiant déjà utilisé dans Kiwi',
       activateWarn: 'Shopify prendra les quantités Kiwi pour les variantes liées. Les lignes sans correspondance ne seront pas modifiées.',
       active: 'Synchronisation active', pending: 'en attente', failed: 'en erreur', drift: 'écarts détectés', missing: 'introuvables sur Shopify',
+      replay: 'Rattraper les commandes en ligne', replayNone: 'Aucune commande en ligne à rattraper.',
+      replayAsk: 'Commandes en ligne depuis la connexion : {o}. Kiwi retirera {p} pièce(s) de son stock ({l} ligne(s)). Déjà comptées à l’inventaire : {c}. Sans correspondance : {u}. Appliquer ?',
+      replayDone: '{p} pièce(s) retirée(s) du stock Kiwi. Réconciliez ensuite pour aligner Shopify.',
       reconcile: 'Réconcilier maintenant', retry: 'Réessayer', refresh: 'Actualiser les correspondances',
       working: 'Connexion en cours…', error: 'Connexion Shopify impossible', invalid: 'Vérifiez le domaine et réessayez.',
       oauthFail: 'Shopify n’a pas terminé l’autorisation. Réessayez depuis Kiwi.', done: 'Shopify est connecté. Choisissez maintenant l’emplacement à synchroniser.',
@@ -175,6 +178,9 @@
       missingIdentifier: 'Add a SKU or barcode in Shopify', duplicateIdentifier: 'Duplicate SKU or barcode', identifierUsed: 'Identifier already used in Kiwi',
       activateWarn: 'Shopify will use Kiwi quantities for linked variants. Unmatched rows will not be changed.',
       active: 'Sync active', pending: 'pending', failed: 'failed', drift: 'drift detected', missing: 'no longer on Shopify',
+      replay: 'Catch up online orders', replayNone: 'No online order to catch up.',
+      replayAsk: 'Online orders since connection: {o}. Kiwi will remove {p} piece(s) from its stock ({l} line(s)). Already counted in a stock count: {c}. Without a match: {u}. Apply?',
+      replayDone: '{p} piece(s) removed from Kiwi stock. Reconcile next to align Shopify.',
       reconcile: 'Reconcile now', retry: 'Retry', refresh: 'Refresh matches',
       working: 'Connecting…', error: 'Could not connect Shopify', invalid: 'Check the store domain and try again.',
       oauthFail: 'Shopify did not complete authorization. Try again from Kiwi.', done: 'Shopify is connected. Now choose the location to synchronize.',
@@ -205,6 +211,9 @@
       missingIdentifier: 'أضف SKU أو باركود في Shopify', duplicateIdentifier: 'SKU أو باركود مكرر', identifierUsed: 'المعرّف مستخدم بالفعل في Kiwi',
       activateWarn: 'ستستخدم Shopify كميات Kiwi للمتغيرات المرتبطة. لن تتغير الأسطر غير المتطابقة.',
       active: 'المزامنة نشطة', pending: 'قيد الانتظار', failed: 'أخطاء', drift: 'اختلافات مكتشفة', missing: 'غير موجودة على Shopify',
+      replay: 'استدراك الطلبات الإلكترونية', replayNone: 'لا توجد طلبات إلكترونية لاستدراكها.',
+      replayAsk: 'الطلبات الإلكترونية منذ الربط: {o}. سيخصم Kiwi {p} قطعة من مخزونه ({l} سطر). محسوبة سابقًا في جرد: {c}. بلا مطابقة: {u}. هل تريد التطبيق؟',
+      replayDone: 'تم خصم {p} قطعة من مخزون Kiwi. قم بالمطابقة بعد ذلك لمواءمة Shopify.',
       reconcile: 'مطابقة الآن', retry: 'إعادة المحاولة', refresh: 'تحديث المطابقات',
       working: 'جارٍ الربط…', error: 'تعذر ربط Shopify', invalid: 'تحقق من عنوان المتجر وحاول مجددًا.',
       oauthFail: 'لم تكتمل موافقة Shopify. حاول مجددًا من Kiwi.', done: 'تم ربط Shopify. اختر الآن الموقع المراد مزامنته.',
@@ -497,6 +506,24 @@
       var actions = document.createElement('div'); actions.className = 'shp-actions';
       if (linkedCount) actions.appendChild(shopButton(s.reconcile, function () { if (!window.confirm(s.reconcileConfirm)) return; return shopApi('reconcile').then(reload); }));
       if (status.queue.failed) actions.appendChild(shopButton(s.retry, function () { return shopApi('retry').then(reload); }, true));
+      /* Des commandes en ligne que Kiwi n'a jamais reçues (webhooks refusés) :
+         on les relit chez Shopify, on montre ce qui serait retiré, puis on le
+         retire une seule fois. Voir functions/api/shopify/_replay-orders.js. */
+      if (linkedCount) actions.appendChild(shopButton(s.replay, function () {
+        var fill = function (t, r) {
+          return t.replace('{o}', r.orders).replace('{p}', r.pieces).replace('{l}', r.lines)
+            .replace('{c}', r.counted).replace('{u}', r.unmatched);
+        };
+        return shopApi('replay-orders', { dryRun: true }).then(function (out) {
+          var r = out.result || {};
+          if (!r.lines) { window.alert(s.replayNone); return; }
+          if (!window.confirm(fill(s.replayAsk, r))) return;
+          return shopApi('replay-orders').then(function (done) {
+            window.alert(fill(s.replayDone, done.result || r));
+            return reload();
+          });
+        });
+      }, true));
       root.appendChild(actions);
     }
     if (connection.lastError) {

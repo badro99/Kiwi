@@ -33,23 +33,25 @@ const grab = (src, name) => {
 };
 const boutique = fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8');
 const maison = fs.readFileSync(path.join(root, 'assets/pos-maison.js'), 'utf8');
-const NAMES = ['bqHoldPost', 'bqReplayHeld', 'bqPost'];
-const helpers = NAMES.map((name) => grab(boutique, name)).join('\n');
-ok(helpers === NAMES.map((name) => grab(maison, name)).join('\n'), 'boutique and Maison share the same hold and replay helpers');
+const kit = fs.readFileSync(path.join(root, 'assets/retail-sale-hold.js'), 'utf8');
+for (const [name, src] of [['boutique', boutique], ['maison', maison]]) {
+  ok(/window\.KiwiRetailSaleHold\.create\(\{ sales: \(\) => SALES, persist: \(\) => persistDay\(\), isDemo: IS_DEMO/.test(src),
+    `${name}: the till hands its own journal to the shared hold module`);
+}
 
 function sandbox({ merchant = 'santos', on = true, answer } = {}) {
   const calls = [];
   const ctx = {
     IS_DEMO: false, SALES: [], persisted: 0,
-    merchantSlug: () => merchant,
     window: { KiwiLive: {
       isOn: () => on, merchant: () => merchant,
       postSale: (p) => { calls.push(p); return typeof answer === 'function' ? answer(p) : answer; },
     } },
   };
   vm.createContext(ctx);
-  vm.runInContext('function persistDay() { persisted++; }\n' + helpers
-    + '\nthis.hold = bqHoldPost; this.replay = bqReplayHeld; this.post = bqPost;', ctx);
+  vm.runInContext(kit, ctx);
+  vm.runInContext(`const h = window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => { persisted++; }, isDemo: IS_DEMO, slug: () => ${JSON.stringify(merchant)} });
+    this.hold = h.hold; this.replay = h.replay; this.post = h.post;`, ctx);
   ctx.calls = calls;
   ctx.setAnswer = (a) => { answer = a; };
   return ctx;

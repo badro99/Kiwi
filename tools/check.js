@@ -624,6 +624,7 @@ for (const test of [
   /* Shopify « don d'identifiants » : les webhooks se vérifient avec le secret de l'app. */
   'shopify-direct-webhook-test.mjs',
   'shopify-shop-domain-test.mjs',
+  'shopify-replay-orders-test.mjs',
   /* Quiz : une question sans réponse ne vaut jamais un point. */
   'quiz-unanswered-test.mjs',
   'service-interconnectivity-test.mjs',

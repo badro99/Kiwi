@@ -738,52 +738,19 @@
     return `refund:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 64);
   }
 
-  /* postSale() répond {ok:true, queued:true} quand la file de Live Link a pris
-     la vente. Toute autre réponse (stockage plein, commerce pas encore résolu
-     au démarrage) était ignorée : le panier se vidait, le ticket sortait, et le
-     serveur n'entendait jamais parler de la vente. La caisse restaurant la
-     garde et la renvoie ; la boutique fait de même. On garde la charge exacte
-     sur la vente, au journal du jour, et on la renvoie plus tard : postSale()
-     en dérive le même identifiant, un renvoi ne compte donc jamais deux fois.
-     Une vente que postSale() écarte exprès (rien à remonter, ticket à zéro)
-     n'est pas retenue : elle repartirait pour rien toutes les minutes. */
-  function bqHoldPost(sale, payload, res) {
-    if (!sale || !payload) return true;
-    if (res && res.ok === true && res.queued === true) {
-      if (sale.pendingPost) { delete sale.pendingPost; persistDay(); }
-      return true;
-    }
-    let unresolved = false;
-    try { unresolved = !(window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()); } catch (_) { unresolved = true; }
-    if ((res && res.ok === false) || (!res && unresolved)) {
-      sale.pendingPost = { ...payload, merchant: payload.merchant || merchantSlug() || undefined, time: +new Date(payload.time || sale.at) };
-      persistDay();
-      return false;
-    }
-    return true;
-  }
-  function bqReplayHeld() {
-    if (IS_DEMO) return 0;
-    const Live = window.KiwiLive;
-    if (!Live || !Live.postSale || !Live.isOn || !Live.isOn()) return 0;
-    let sent = 0, changed = false;
-    SALES.slice().reverse().forEach((s) => {           // le plus ancien d'abord : la file garde l'ordre
-      if (!s || !s.pendingPost) return;
-      if (s.voided) { delete s.pendingPost; changed = true; return; }
-      let res = null;
-      try { res = Live.postSale({ ...s.pendingPost, time: new Date(s.pendingPost.time || s.at) }); } catch (_) {}
-      if (res && res.ok === true && res.queued === true) { delete s.pendingPost; sent++; changed = true; }
-    });
-    if (changed) persistDay();
-    return sent;
-  }
+  /* Une vente que la file de Live Link refuse est gardée sur la vente et
+     renvoyée plus tard, une seule fois (assets/retail-sale-hold.js). */
+  let bqHoldKit = null;
+  const bqHold = () => bqHoldKit || (bqHoldKit = window.KiwiRetailSaleHold
+    ? window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => persistDay(), isDemo: IS_DEMO, slug: () => merchantSlug() })
+    : null);
+  function bqReplayHeld() { const h = bqHold(); return h ? h.replay() : 0; }
   function bqPost(sale, payload) {
-    bqReplayHeld();                      // les ventes retenues d'abord, dans l'ordre
-    let res = null;
-    try { res = window.KiwiLive.postSale(payload); } catch (_) { res = { ok: false, reason: 'post-threw' }; }
-    bqHoldPost(sale, payload, res);
-    return res;
+    const h = bqHold();
+    if (h) return h.post(sale, payload);
+    try { return window.KiwiLive.postSale(payload); } catch (_) { return null; }
   }
+
   /* Rebuild the immutable cloud receipt from the frozen local sale. This is
      also the migration path for tickets sold before gross receipt values were
      stored separately from owner revenue. */
