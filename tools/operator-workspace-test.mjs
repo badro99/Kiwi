@@ -131,7 +131,22 @@ for (const [id,m,age,cents,channel,voided] of [
 db.prepare(`INSERT INTO delivery_collections(merchant,collection_sale_id,sale_id,method,amount_cents,ts)
   VALUES('shop-a','col-paid','due-paid','cash',10000,?),('shop-a','col-part','due-old','cash',50,?),
   ('shop-b','col-neighbour','due-old','cash',40099,?)`).run(now,now,now);
+// Tables closed with orders never paid (Pasta Corner, 15 October: 131 MAD).
+for (const [id,m,closedBy,age,paid,sale,cancelled] of [
+  ['tsx-unpaid','shop-a','caisse',1,null,false,''],['tsx-paid','shop-a','service-payment',1,now,true,''],
+  ['tsx-settled','shop-a','caisse',1,null,true,''],['tsx-cancel','shop-a','caisse',1,null,false,'Rim'],
+  ['tsx-old','shop-a','caisse',20,null,false,''],['tsx-other','shop-b','caisse',1,null,false,'']]) {
+  db.prepare(`INSERT INTO table_sessions(id,merchant,mode,table_no,status,closed_by,closed_actor_name,opened_ts,seen_ts,closed_ts)
+    VALUES(?,?,'table','2','closed',?,'Yassine <s>',?,?,?)`).run(id,m,closedBy,now-age*86400000-3600000,now-age*86400000,now-age*86400000);
+  for (const [n,total] of [[1,69],[2,62]]) db.prepare(`INSERT INTO orders(id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id,paid_ts,cancel_actor_name)
+    VALUES(?,?,?,'table','2',?,'[]','accepted',?,?,?,?,?)`).run(id+'-o'+n,m,n,total,now-age*86400000,now-age*86400000,id,paid,cancelled);
+  if (sale) db.prepare(`INSERT INTO sales(id,merchant,amount,amount_cents,method,ts,session_id) VALUES(?,?,131,13100,'cash',?,?)`).run('sale-'+id,m,now-age*86400000,id);
+}
 const moneyWorkspace=await call(workspace,'GET',{},'?merchant=shop-a');
+{const t=moneyWorkspace.sources.unpaidTables;
+check('only the table closed with unpaid orders, no sale, last 14 days',t?.available&&t.rows.length===1&&t.rows[0].id==='tsx-unpaid');
+check('its unpaid total and order count',t.rows[0].unpaid_mad===131&&t.rows[0].orders===2);
+check('unpaid tables stay in their store dossier',(await call(workspace,'GET',{},'?merchant=shop-b')).sources.unpaidTables.rows.every(r=>r.merchant==='shop-b'));}
 check('only old outstanding courier delivery returned',moneyWorkspace.sources.receivables?.available&&moneyWorkspace.sources.receivables.rows.length===1&&moneyWorkspace.sources.receivables.rows[0].id==='due-old');
 check('partial collections keep exact outstanding centimes',moneyWorkspace.sources.receivables.rows[0].total_cents===40099&&moneyWorkspace.sources.receivables.rows[0].remaining_cents===40049);
 check('other merchant delivery stays scoped',(await call(workspace,'GET',{},'?merchant=shop-b')).sources.receivables.rows.every(r=>r.merchant==='shop-b'));
@@ -148,6 +163,8 @@ vm.runInNewContext(ui,{window:win,document:{getElementById(){return {};}}});
 const rendered=win.testWorkspace.render(moneyWorkspace);
 check('Shopify alerts render both escaped errors',rendered.includes('Shopify signale une erreur')&&rendered.includes('Connexion &lt;refusée&gt;')&&rendered.includes('Domaine &lt;inattendu&gt;')&&!rendered.includes('<refusée>'));
 check('delivery alert renders centimes, ticket, age and action',rendered.includes((400.49).toLocaleString('fr-MA',{maximumFractionDigits:2})+' MAD')&&rendered.includes('T-due-old')&&rendered.includes('10 jours')&&rendered.includes('Acomptes ou Créances'));
+check('unpaid table alert: table, amount, count, who closed it (escaped)',rendered.includes('Table fermée sans encaissement')&&rendered.includes('Table 2 · 131 MAD')&&rendered.includes('(2)')&&rendered.includes('Yassine &lt;s&gt;')&&!rendered.includes('Yassine <s>'));
+check('unpaid table alert has priority two',win.testWorkspace.signals().some(s=>s.title==='Table fermée sans encaissement'&&s.priority===2));
 check('delivery alert has priority two',win.testWorkspace.signals().some(s=>s.title==='Livraison non encaissée'&&s.priority===2));
 check('Shopify alerts carry priority and recovery action',win.testWorkspace.signals().filter(s=>s.title==='Shopify signale une erreur').every(s=>s.priority===1&&s.detail.includes('depuis le 21 octobre')));
 db.exec('DROP TABLE delivery_collections');

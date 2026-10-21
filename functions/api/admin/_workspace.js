@@ -95,6 +95,18 @@ export async function workspace(env, merchant = '') {
      * books; the signal is about who applied it and whether a till is stale. */
     discountPolicy:[`SELECT merchant,sale_id AS id,reason,note,amount_cents,method,ref,sale_ts,ts AS updated_ts
       FROM sale_audit WHERE action='discount-policy' AND ts>=?${where} ORDER BY ts DESC LIMIT 201`,[now-14*86400000,...binds]],
+    /* A table closed from the till or by a server while its orders were never
+     * paid. Closing is free on purpose (colleagues cover each other) and the
+     * till says what stayed unpaid at that moment; this is the day after view.
+     * Seen at Pasta Corner on 15 October: 131 MAD of orders, table closed the
+     * next day, no sale. orders.total is whole MAD. */
+    unpaidTables:[`SELECT t.merchant,t.id,t.table_no,t.closed_by,t.closed_actor_name,t.opened_ts,t.closed_ts AS updated_ts,
+        COUNT(o.id) AS orders,SUM(o.total) AS unpaid_mad
+      FROM table_sessions t JOIN orders o ON o.merchant=t.merchant AND o.session_id=t.id
+      WHERE t.status='closed' AND t.mode='table' AND t.closed_ts>=? AND t.closed_by NOT IN ('service-payment','settled-at-till')
+        AND o.paid_ts IS NULL AND o.status NOT IN ('rejected','archived') AND COALESCE(o.cancel_actor_name,'')='' AND o.total>0
+        AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.merchant=t.merchant AND s.session_id=t.id AND s.void_ts IS NULL)${where.replace('merchant=?','t.merchant=?')}
+      GROUP BY t.id ORDER BY t.closed_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     shopifyLink:[`SELECT merchant,'connection' AS id,status,last_error,updated_ts FROM shopify_connections
       WHERE TRIM(COALESCE(last_error,''))!=''${where}
       UNION ALL SELECT merchant,id,status,last_err AS last_error,COALESCE(last_ts,created_ts) AS updated_ts FROM channel_links
