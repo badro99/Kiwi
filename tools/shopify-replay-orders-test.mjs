@@ -6,7 +6,8 @@
  * les ventes en ligne ont baissé le stock Shopify, jamais le stock Kiwi.
  * L'action « replay-orders » relit les commandes chez Shopify et retire chaque
  * pièce une seule fois, datée de la commande ; une variante comptée après la
- * commande est sautée ; dryRun ne touche à rien.
+ * commande est sautée ; une variante ne passe jamais sous zéro (la pièce déjà
+ * sortie de Kiwi n'est pas retirée deux fois) ; dryRun ne touche à rien.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -18,6 +19,8 @@ import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestPost as connectDirect } from '../functions/api/shopify/connect-direct.js';
 import { onRequestPost as status } from '../functions/api/shopify/status.js';
 import { planReplay } from '../functions/api/shopify/_replay-orders.js';
+import { __test as catalogFns } from '../functions/api/catalog.js';
+const catalogMaterialize = catalogFns.materialize;
 
 let failures = 0;
 function ok(label, cond, detail) {
@@ -147,6 +150,28 @@ try {
   const plan = planReplay({ variants: [{ id: 'v-a', baseAt: 0 }], moves: [{ id: 'so-5001-9001', vid: 'v-a', d: -2, at: T0 }] },
     new Map([['gid://shopify/ProductVariant/701', 'v-a']]), orders.slice(0, 1));
   ok('une commande déjà reçue par webhook n\'est pas rejouée', plan.apply.length === 0 && plan.already === 1);
+
+  /* Vu sur Maison 121 le 21 octobre : 16 variantes déjà à 0 chez Kiwi avaient une
+     commande en ligne. La pièce était sortie (caisse ou correction) : on ne la
+     retire pas une deuxième fois, et le stock ne passe jamais sous zéro. */
+  const mk = (id, line, vid, qty, at) => ({ id: `gid://shopify/Order/${id}`, name: `#${id}`, createdAt: new Date(at).toISOString(),
+    cancelledAt: null, test: false, lineItems: { nodes: [{ id: `gid://shopify/LineItem/${line}`, currentQuantity: qty, variant: { id: `gid://shopify/ProductVariant/${vid}` } }] } });
+  const links2 = new Map([['gid://shopify/ProductVariant/801', 'v-zero'], ['gid://shopify/ProductVariant/802', 'v-one']]);
+  const cat2 = () => ({ variants: [{ id: 'v-zero', base: 0, baseAt: 0, stock: 0 }, { id: 'v-one', base: 1, baseAt: 0, stock: 1 }], moves: [] });
+  const zero = planReplay(cat2(), links2, [mk(6001, 9101, 801, 1, T0 + 1000)]);
+  ok('une variante déjà à 0 chez Kiwi n\'est pas retirée encore, la pièce est dite déjà sortie',
+    zero.apply.length === 0 && zero.pieces === 0 && zero.short === 1 && zero.shortLines === 1, JSON.stringify(zero));
+  const partial = planReplay(cat2(), links2, [mk(6002, 9102, 802, 3, T0 + 1000)]);
+  ok('une commande de 3 sur un stock de 1 n\'en retire qu\'une',
+    partial.apply.length === 1 && partial.apply[0].qty === 1 && partial.pieces === 1 && partial.short === 2, JSON.stringify(partial));
+  const seq = planReplay(cat2(), links2, [mk(6003, 9103, 802, 1, T0 + 1000), mk(6004, 9104, 802, 1, T0 + 2000)]);
+  ok('deux commandes sur la dernière pièce : la plus ancienne la retire, la seconde est déjà sortie',
+    seq.apply.length === 1 && seq.apply[0].order === '#6003' && seq.short === 1, JSON.stringify(seq));
+  const neg = cat2(); neg.moves.push({ id: 'x', vid: 'v-one', d: -1, at: T0, why: 'vente' });
+  catalogMaterialize(neg);
+  const afterSale = planReplay(neg, links2, [mk(6005, 9105, 802, 1, T0 + 1000)]);
+  ok('le stock lu est celui que Kiwi montre après ses ventes, pas la base de l\'inventaire',
+    afterSale.apply.length === 0 && afterSale.short === 1, JSON.stringify(afterSale));
 } finally {
   globalThis.fetch = realFetch;
 }

@@ -16,6 +16,8 @@
  *    chiffre : la ligne est sautée et dite « déjà comptée » ;
  *  · la quantité est la quantité COURANTE de la ligne (après retours et
  *    retraits), une commande annulée ou de test ne compte pas ;
+ *  · une variante ne descend jamais sous zéro : ce que Kiwi n'a plus est
+ *    « déjà sorti » (`short`), pas retiré une deuxième fois ;
  *  · `dryRun` dit tout ce qui serait fait, sans rien écrire.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -51,7 +53,15 @@ export async function listShopifyOrdersSince(env, merchant, sinceTs) {
 export function planReplay(data, links, orders) {
   const existing = new Set((data.moves || []).map((m) => String(m.id)));
   const byId = new Map((data.variants || []).map((v) => [v.id, v]));
-  const plan = { orders: 0, skippedOrders: 0, apply: [], counted: [], already: 0, unmatched: 0, pieces: 0 };
+  /* Le stock que Kiwi montre aujourd'hui (data matérialisé), consommé ligne
+     après ligne, de la plus ancienne commande à la plus récente. Vu sur Maison 121
+     le 21 octobre : 16 variantes à 0 chez Kiwi avaient une commande en ligne,
+     la pièce était donc déjà sortie de Kiwi (passée en caisse, ou corrigée à la
+     main). La retirer encore aurait mis le stock sous zéro et fait disparaître
+     le prochain réassort. On ne retire que ce que Kiwi a encore ; le reste est
+     compté dans `short` et dit à l'écran. */
+  const left = new Map((data.variants || []).map((v) => [v.id, Math.max(0, Math.round(Number(v.stock) || 0))]));
+  const plan = { orders: 0, skippedOrders: 0, apply: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0 };
   for (const o of orders || []) {
     if (!o || o.cancelledAt || o.test) { plan.skippedOrders++; continue; }
     const at = Date.parse(o.createdAt);
@@ -68,8 +78,14 @@ export function planReplay(data, links, orders) {
       if (existing.has(moveId)) { plan.already++; continue; }
       const row = { moveId, vid: kiwiVariantId, qty, at, order: String(o.name || ref).slice(0, 40), ref };
       if (Number(variant.baseAt || variant.stockAt || 0) >= at) { plan.counted.push(row); continue; }
+      const have = left.get(kiwiVariantId) || 0;
+      const take = Math.min(qty, have);
+      if (take < qty) { plan.short += qty - take; plan.shortLines++; }
+      if (!take) continue;
+      left.set(kiwiVariantId, have - take);
+      row.qty = take;
       plan.apply.push(row);
-      plan.pieces += qty;
+      plan.pieces += take;
       existing.add(moveId);
     }
   }
@@ -96,7 +112,7 @@ export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {
     const summary = {
       since: Number(sinceTs) || 0, orders: plan.orders, skippedOrders: plan.skippedOrders,
       lines: plan.apply.length, pieces: plan.pieces, counted: plan.counted.length,
-      already: plan.already, unmatched: plan.unmatched,
+      already: plan.already, unmatched: plan.unmatched, short: plan.short, shortLines: plan.shortLines,
       sample: plan.apply.slice(0, 20).map((x) => ({ order: x.order, variant: x.vid, qty: x.qty, at: x.at })),
     };
     if (dryRun || !plan.apply.length) return { ...summary, applied: 0, dryRun: !!dryRun };
