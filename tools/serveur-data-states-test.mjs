@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* L'app serveur (kiwi-serveur.html) : ce qu'elle affirme doit être vrai, même
  * quand le réseau ment.
  *
@@ -22,7 +23,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const html = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const html = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 /* Le dictionnaire et ses motifs vivent dans assets/serveur-lang.js. */
 const serveurLang = fs.readFileSync(path.join(ROOT, 'assets', 'serveur-lang.js'), 'utf8');
 

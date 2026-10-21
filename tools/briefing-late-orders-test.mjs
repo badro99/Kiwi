@@ -1,3 +1,4 @@
+import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -57,7 +58,7 @@ ok(queue.includes('acceptedAt: now, sentAt: now'), 'accepted dispatch records bo
 ok(queue.includes('readyAt: nextTs'), 'station-ready durable');
 ok(queue.includes("status === 'served' ? { servedAt: now }"), 'served durable');
 ok(queue.includes('closeOrderCourses(env'), 'closed durable');
-const server = src('kiwi-serveur.html');
+const server = serveurTestSource(src('kiwi-serveur.html'));
 ok(server.includes("fetch('/api/order/queue'"), 'serveur remains emitting surface');
 ok(server.includes("merchant: slug, create: true, mode: 'table'"), 'documented create payload');
 const api = src('functions/api/order-course.js');

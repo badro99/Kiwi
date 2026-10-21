@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const serveurTestSource = require('./serveur-test-source.cjs');
 'use strict';
 
 const caisseTestSource = require('./caisse-test-source.cjs');
@@ -10,7 +11,7 @@ let failed = 0;
 function ok(label, value) { if (value) console.log('✓ ' + label); else { console.error('✗ ' + label); failed++; } }
 
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 const orderpro = read('OrderPro.html');
 
 ok('caisse preserves published subcategory identity', /subId: sub \? sub\.id/.test(caisse) && /subPills\.id = 'subcat-pills'/.test(caisse));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* tools/serveur-kitchen-truth-test.mjs · l'app serveur, le passe et la cuisine
  * de la caisse disent ce qui est vrai.
@@ -26,7 +27,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
-const serveur = read('kiwi-serveur.html') + '\n' + read('assets/serveur-shell.css');
+const serveur = serveurTestSource(read('kiwi-serveur.html')) + '\n' + read('assets/serveur-shell.css');
 // Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
 const serveurLang = read('assets/serveur-lang.js');
 const cuisine = read('kiwi-cuisine.html');

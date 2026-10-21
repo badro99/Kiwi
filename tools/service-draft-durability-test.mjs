@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Ce qui est saisi survit, ce qui est imprimé dit vrai
@@ -25,7 +26,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const SERVEUR = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const SERVEUR = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const RELAY = fs.readFileSync(path.join(ROOT, 'assets/kitchen-relay.js'), 'utf8');
 

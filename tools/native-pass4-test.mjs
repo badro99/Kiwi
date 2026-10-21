@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 // iPhone pass 4: one source-level guard per fix, so a later edit that quietly
 // undoes one of them goes red here instead of on the tester's phone.
@@ -19,7 +20,7 @@ const clients = read('assets/clients-directory.js');
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const caisseLang = read('assets/caisse-lang.js');
 const cuisine = read('kiwi-cuisine.html');
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 const printQueue = read('assets/kitchen-print-queue.js');
 const account = read('assets/account.js');
 const vexel = read('assets/design-vexel.css');

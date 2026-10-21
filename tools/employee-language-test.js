@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+const serveurTestSource = require('./serveur-test-source.cjs');
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const page = fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8');
+const page = serveurTestSource(fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8'));
 // Le dictionnaire et ses motifs vivent dans assets/serveur-lang.js.
 const lang = fs.readFileSync(path.join(root, 'assets', 'serveur-lang.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');

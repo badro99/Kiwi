@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Modifier & Allergy Fidelity, Waitlist & TableSplits
@@ -124,7 +125,7 @@ check('standalone KDS keeps formula parents in station routing and status',
     && !cuisineHtml.includes("l.kind !== 'formula' && l.station === S.station"));
 
 // 4. Inspect kiwi-serveur.html svSendOrder
-const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveurHtml = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 check('kiwi-serveur.html attaches visuals in svSendOrder delta payload',
   serveurHtml.includes('visuals: visuals') || serveurHtml.includes('visuals,'));
 check('kiwi-serveur.html relays formula identity and slot metadata',

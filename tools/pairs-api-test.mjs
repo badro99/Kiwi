@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* « Souvent avec… » côté serveur et côté caisse, sans navigateur.
  *
@@ -239,7 +240,7 @@ check('names are escaped, in the till language (menuName), words from KiwiPairs.
     / pour cette commande$/.test(say('fr').dismiss('B')) && / pour cette table$/.test(say('fr').dismiss('B', 'table')) && / for this ticket$/.test(say('en').dismiss('B', 'ticket')));
   check('no em dash in any of the copy', !/\u2014/.test(JSON.stringify(['fr', 'en', 'ar'].map((l) => [say(l).lead('a', 'b'), say(l).why(1, 'a'), say(l).add('b'), say(l).dismiss('b'), say(l).dismiss('b', 'table'), say(l).dismiss('b', 'ticket')]))));
 }
-const SV = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const SV = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 check('the waiter app loads the module and declares its store only outside the demo',
   /<script src="assets\/caisse-pairs\.js\?v=\d+" defer><\/script>/.test(SV) && /window\.KiwiPairsMerchant = function \(\) \{ return svReal\(\) \? svMerchant\(\) : ''; \};/.test(SV));
 check('it shows the chip above the order bar, never in the demo', /if \(order && order\.length && !SV_DEMO && window\.KiwiPairs/.test(SV));

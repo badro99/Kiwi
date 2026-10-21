@@ -1,3 +1,4 @@
+import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -37,7 +38,7 @@ ok(api.usesTradeWorkspace({ store:{ type:'' }, employee:{ role:'Vendeur' }, floo
 ok(api.usesTradeWorkspace({ store:{ type:'pressing' }, employee:{ role:'Accueil' }, floor:{ tables:[] } }), 'an explicit specialist venue keeps its trade workspace');
 ok(!api.usesTradeWorkspace({ store:{ type:'' }, employee:{ role:'Manager' }, floor:{ tables:[{ id:'T1' }] } }), 'a manager with a real floor and legacy metadata keeps the dining workspace');
 
-const server = source('kiwi-serveur.html');
+const server = serveurTestSource(source('kiwi-serveur.html'));
 ok(server.includes("tabs: ['tables', 'notifications', 'profil']"), 'non-dining staff receive self-service tabs without menu');
 ok(server.includes('tradeWorkspace: true'), 'role explicitly identifies trade workspace');
 const jsStamp = (file) => (source(file).match(/assets\/employee-trade-shell\.js\?v=(\d+)/) || [])[1];

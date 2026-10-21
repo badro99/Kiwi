@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* L'app serveur (kiwi-serveur.html) en anglais et en arabe : plus un mot de
  * français sur ce que le serveur voit.
  *
@@ -25,7 +26,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const page = fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8');
+const page = serveurTestSource(fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8'));
 const fails = [];
 let checks = 0;
 const ok = (cond, msg) => { checks++; if (!cond) fails.push(msg); };

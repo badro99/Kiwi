@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LES SURFACES DU PERSONNEL PARLENT LA LANGUE DU PRODUIT
  * ---------------------------------------------------------------------------
@@ -52,7 +53,7 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
 const TOKENS = read('assets/tokens.css');
 const CUISINE = read('kiwi-cuisine.html');
-const SERVEUR = read('kiwi-serveur.html');
+const SERVEUR = serveurTestSource(read('kiwi-serveur.html'));
 /* Sans commentaires : le cartouche de ce fichier CITE la phrase qu'il a
    corrigée, et un contrôle qui lit les notes repart en rouge sur sa propre
    documentation. On interroge ce qui s'applique, jamais ce qui raconte. */

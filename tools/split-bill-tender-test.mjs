@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Split Bill Cash Drawer & Itemized Receipt Printing Test Suite
@@ -194,7 +195,7 @@ ok('Printed receipt method is card', printedTicket.method === 'card');
 
 // Execute the actual employee payment function with deferred HTTP responses.
 // These scenarios also run against mutations to prove they detect the defects.
-const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveur = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 const start = serveur.indexOf('    async function markSplitPartPaid(');
 const paymentSource = serveur.slice(start, serveur.indexOf("    $('#split-modal').addEventListener", start));
 const saveStart = serveur.indexOf('    function saveSplitFlow(');

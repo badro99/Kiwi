@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · LE RELAIS CUISINE — le bon quitte enfin l'appareil
@@ -317,7 +318,7 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('une nouvelle caisse ne recharge pas les tables du service précédent',
     /shiftOpenedAt\.getTime\(\) - 30 \* 60 \* 1000/.test(CAISSE));
   ok('le téléphone ne réaffiche pas un snapshot de service expiré',
-    /state\.ts[\s\S]{0,100}?Date\.now\(\) - 12 \* 60 \* 60 \* 1000/.test(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
+    /state\.ts[\s\S]{0,100}?Date\.now\(\) - 12 \* 60 \* 60 \* 1000/.test(serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'))));
   ok('la caisse sonde la file même sans Order Pro (sinon « prêt » ne revient jamais)',
     /!orderProOn\(\) && !hasKitchen\(\)/.test(INBOX));
   ok('…et « hasKitchen » désigne bien la caisse à écran cuisine',

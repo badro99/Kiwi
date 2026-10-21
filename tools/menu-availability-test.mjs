@@ -1,3 +1,4 @@
+import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const api = read('functions/api/menu/availability.js');
 const caisse = read('assets/caisse-menu-availability.js');
 const orderPro = read('OrderPro.html');
-const server = read('kiwi-serveur.html');
+const server = serveurTestSource(read('kiwi-serveur.html'));
 
 assert.match(api, /tenantFor\(request, env, asked, \{ strict: true \}\)/, 'availability writes must require an exact authenticated tenant');
 assert.match(api, /WHERE merchant = \? AND updated_ts = \?/, 'availability writes must use compare-and-swap');

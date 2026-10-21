@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const serveurTestSource = require('./serveur-test-source.cjs');
 /* Kiwi · rendering and spreadsheet-export injection regressions. */
 'use strict';
 
@@ -12,7 +13,7 @@ let passed = 0;
 const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
-const server = read('kiwi-serveur.html');
+const server = serveurTestSource(read('kiwi-serveur.html'));
 [
   '${esc(r.name)}', '${esc(l.name)}', '${esc(m.name)}',
   '${esc(catLabels[m.cat] || \'\')}', '${esc(s.name)}',

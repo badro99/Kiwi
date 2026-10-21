@@ -1,3 +1,4 @@
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -81,7 +82,7 @@ check('Zero-value and sub-centime equal splits cannot enter payment flow', () =>
   }
 });
 check('Employee split also blocks unassigned dishes and preserves whole-item payment', () => {
-  const employee = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+  const employee = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
   const h = harness({ perConvive: { 1: { Water: 1 }, 2: { Water: 1 } } });
   for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(fn(name, employee), h.context);
   h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, true);

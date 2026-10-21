@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * APP EMPLOYÉ · CE QUE L'ÉCRAN AFFIRME
@@ -249,7 +250,7 @@ let saraCookie = '';
 
 /* ── 5. Côté écran de l'employé ───────────────────────────────────────────── */
 {
-  const HTML = readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+  const HTML = serveurTestSource(readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
   // Le dictionnaire EN/AR de l'app serveur vit dans assets/serveur-lang.js.
   const SERVEUR_LANG = readFileSync(path.join(ROOT, 'assets', 'serveur-lang.js'), 'utf8');
   const grab = (start) => {

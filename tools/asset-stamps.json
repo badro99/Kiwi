@@ -1371,6 +1371,10 @@
     "v": "1",
     "sha": "f5b140fee5f04dc7"
   },
+  "assets/serveur-app.js": {
+    "v": "1",
+    "sha": "a9c1da690aa0fc84"
+  },
   "assets/serveur-lang.js": {
     "v": "1",
     "sha": "cebe19526bbe2a6f"

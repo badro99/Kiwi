@@ -1,3 +1,4 @@
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Vente au comptoir · le comptoir ne joue plus au client absent
  * ───────────────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ import assert from 'assert';
 let checks = 0;
 async function check(name, fn) { await fn(); checks++; console.log(`✓ ${name}`); }
 
-const serveur = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+const serveur = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
 const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 
 /* ── 1 · l'envoi cuisine ne peut plus mentir ─────────────────────────────── */

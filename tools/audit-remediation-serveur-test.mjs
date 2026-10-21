@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* O02 regression: execute the production serveur sender in a VM and hold the
  * real fetch promises open to model a double tap plus a line added mid-flight. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const source = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+const source = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
 const start = source.indexOf('    const svPendingRef = new Map();');
 const end = source.indexOf('    /* ---------- Generated orders for occupied tables ---------- */', start);
 assert.ok(start >= 0 && end > start, 'production sender block remains extractable');

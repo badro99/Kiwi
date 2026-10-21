@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 // Ticket #92: staff dates and timestamps follow the store's IANA zone, not
 // Casablanca or the employee device's zone, including across a live rollover.
 import fs from 'node:fs';
@@ -47,7 +48,7 @@ const planning = browser('assets/employee-planning.js', 'planning', data);
 check(planning.todayKey() === '2026-09-27', 'planning rolls to store date without reload');
 check(planning.futureSchedule().length === 1 && planning.futureSchedule()[0].day === '2026-09-27', 'planning hides past store day');
 check(/setInterval\(redrawOnDayChange, 60000\)/.test(src('assets/employee-planning.js')), 'planning redraws after midnight while open');
-const waiter = src('kiwi-serveur.html');
+const waiter = serveurTestSource(src('kiwi-serveur.html'));
 const tick = waiter.match(/    function tickClock\(\) \{[\s\S]*?\n    \}\n    tickClock\(\);/);
 check(Boolean(tick), 'waiter app has a live clock');
 if (tick) {

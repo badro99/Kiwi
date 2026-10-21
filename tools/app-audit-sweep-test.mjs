@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* App-wide audit sweep (2026-10-09): the bugs found across the till, the
  * kitchen screen, the waiter app, the customer order page and the dashboard,
@@ -82,7 +83,7 @@ ok('order page: no invented ticket number on a live order', () => {
   assert.doesNotMatch(order, /orderNumber = [^;\n]*Math\.random/);
 });
 
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 ok('waiter app: background refreshes wait for the finger and the keyboard', () => {
   assert.match(serveur, /function svWhenIdle\(key, fn\)/);
   assert.match(serveur, /svWhenIdle\('all', \(\) => \{ try \{ renderAll\(\); \} catch \(_\) \{\} \}\);/);

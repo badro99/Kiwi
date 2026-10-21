@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* Android native shell (app/android, Capacitor 8) · static contract.
  *
  * No JDK runs in check.js, so nothing here compiles Kotlin or Java. What it
@@ -33,7 +34,7 @@ const buildGradle = read('app/android/app/capacitor.build.gradle');
 const runtime = read('app/src/native-runtime.js');
 const runtimeCss = read('app/src/native-runtime.css');
 const shell = read('app/src/native-shell.js');
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 const swiftShell = read('app/ios/App/App/KiwiNativeShell.swift');
 const tokens = read('assets/tokens.css');
 const printerJava = read('app/plugins/kiwi-printer-socket/android/src/main/java/com/kiwios/printersocket/KiwiPrinterSocketPlugin.java');

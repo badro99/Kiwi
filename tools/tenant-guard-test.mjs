@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Gardes d'identité de locataire et d'intégrité comptable
@@ -393,7 +394,7 @@ function invoiceEnv(sale) {
     /if \(b && b\.closeSession\) \{[^]{0,120}403\)/.test(block), 'garde absente du bloc employé');
   ok('seule une fermeture pour règlement marque les commandes payées',
     /if \(closeSession && why === 'settle'\) \{[^]{0,300}UPDATE orders SET paid_ts/.test(queue));
-  const serveur = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+  const serveur = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
   ok('aucune surface employé n\'envoie closeSession (sinon la garde casserait le métier)',
     !/body: JSON\.stringify\(\{[^}]*closeSession/.test(serveur));
 }

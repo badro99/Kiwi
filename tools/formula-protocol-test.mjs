@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Formules (Menus Composés) Protocol, Model & Explosion Gate
@@ -35,7 +36,7 @@ console.log('■ Formules (Menus Composés) Protocol & Explosion Gate');
 const menuApiSource = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
 const menuCatalogSource = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
-const serveurSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveurSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 
 // ── 1. functions/api/menu.js: sanitizeMenu & sanitizeFormula ─────────────────
 /* Le banc reconstruisait sanitizeMenu à coups d'expressions régulières, en

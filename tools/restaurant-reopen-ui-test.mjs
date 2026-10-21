@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -9,7 +10,7 @@ const source = file => base ? execFileSync('git', ['show', `HEAD:${file}`], { en
   : fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const till = caisseTestSource(source('kiwi-caisse.html'));
 const reprint = source('assets/pos-reprint.js');
-const waiter = source('kiwi-serveur.html');
+const waiter = serveurTestSource(source('kiwi-serveur.html'));
 const queue = source('functions/api/order/queue.js');
 let passed = 0, failed = 0;
 function check(label, ok) { if (ok) passed++; else { failed++; console.error('FAIL ' + label); } }

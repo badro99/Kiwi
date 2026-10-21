@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* tools/menu-i18n-test.mjs — la carte dans la langue de chacun, sans perdre
  * celle du patron (assets/menu-i18n.js v2, 2026-08-22).
@@ -163,7 +164,7 @@ assert(/function menuName\(m\)/.test(caisse) && /<span class="menu-item-name">\$
 assert(/\$\{escTeam\(catLabelL\(c\)\)\}<span class="count mono">/.test(caisse) && /escTeam\(subLabelL\(m\) \|\| catLabelL\(m\.cat\)/.test(caisse), 'caisse : pastilles de catégorie et sous-catégorie localisées');
 assert((caisse.match(/rp-item-name">\$\{lineName\(l\)\}/g) || []).length === 4, 'caisse : les 4 rendus de ligne de note localisés (affichage seulement)');
 assert(/KiwiCaisseLang\.subscribe\(function \(\) \{ try \{ renderCatPills\(\); renderMenu\(\); renderCart\(\); \}/.test(caisse), 'caisse : re-rendu au changement de langue');
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 assert(/i18n: it\.i18n \|\| null,/.test(serveur) && /window\.KiwiMenuI18n\.index\(\{ cats, items: allItems/.test(serveur), 'serveur : i18n projeté et index posé');
 assert(/window\.KiwiMenuI18n\.name\(it, employeeLanguage\)/.test(serveur) && /const svLineName = /.test(serveur) && (serveur.match(/svLineName\(l\)/g) || []).length >= 4, 'serveur : grille et lignes de commande dans la langue de l’employé');
 const cuisine = read('kiwi-cuisine.html');

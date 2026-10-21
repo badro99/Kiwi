@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · le relais OrderPro — prix, présence, session, transitions.
@@ -172,7 +173,7 @@ async function get(fn, qs, headers = {}) {
     /var employeePrefix = serverInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(kitchenPage));
   ok('le paiement employé envoie la référence commande au journal de caisse',
     /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
-      fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
+      serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'))));
   /* Le QR public est OrderPro depuis l'étape 3c (kiwi-order.html redirige
      vers lui) : ces garanties portent donc sur son code. */
   ok('le QR public ouvre une session de visite avant la commande',

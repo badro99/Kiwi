@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · « Le serveur autorise une commande OrderPro » — garde de comportement
  *
@@ -74,7 +75,7 @@ ok(!!guard && /!validStatus/.test(guard[0]),
   'la garde 403 « floor-table-required » tient compte de validStatus');
 
 /* ── 3 · Le repérage de la commande en attente, extrait du serveur ───────── */
-const serveurSrc = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveurSrc = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 const pendingMatch = serveurSrc.match(/function svPendingOrderFor\([\s\S]*?\n    \}/);
 let svPendingOrderFor = null;
 if (!pendingMatch) ok(false, 'svPendingOrderFor introuvable dans kiwi-serveur.html');

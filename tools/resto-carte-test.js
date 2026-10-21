@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const serveurTestSource = require('./serveur-test-source.cjs');
 /* ═════════════════════════════════════════════════════════════════════════════
  * Kiwi · GARDE-FOU de la carte du restaurant / café
  * ---------------------------------------------------------------------------
@@ -33,7 +34,7 @@ const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + 
 const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`);
 
 const caisse  = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>');
-const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveur = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 const menuCatalogSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
 
 /* ── 1. la frontière démo / réel est posée, et sur TOUT ────────────────────── */

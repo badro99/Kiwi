@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+const source = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
 const applyStart = source.indexOf('    function svApplyCarte(d) {');
 const applyEnd = source.indexOf('    function svRebuildCarte()', applyStart);
 const fetchStart = source.indexOf('    function svFetchCarte() {', applyEnd);

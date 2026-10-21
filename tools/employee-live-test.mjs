@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -454,7 +455,7 @@ ok(configClientSource.includes('scopeConfirmed = true')
   && configClientSource.includes("v.id === 'scoped'")
   && configClientSource.includes('v.slug === urlScope'),
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
-const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')
+const serviceSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'))
   + '\n' + fs.readFileSync(path.join(ROOT, 'assets/serveur-shell.css'), 'utf8');
 const employeePlanningSource = fs.readFileSync(path.join(ROOT, 'assets/employee-planning.js'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');

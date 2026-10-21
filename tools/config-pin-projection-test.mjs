@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Le code à quatre chiffres ne quitte pas la base.
  *
@@ -64,7 +65,7 @@ const surfaces = {
   'assets/merchant-config.js': read('assets/merchant-config.js'),
   'assets/caisse-pairing.js': read('assets/caisse-pairing.js'),
   'kiwi-caisse.html': caisseTestSource(read('kiwi-caisse.html')),
-  'kiwi-serveur.html': read('kiwi-serveur.html'),
+  'kiwi-serveur.html': serveurTestSource(read('kiwi-serveur.html')),
 };
 /* dashboard.html ne garde plus AUCUNE lecture de `x.code || x.pin` : c'était
  * `kiwiPins`, l'écriture en clair de l'assistant d'installation dans CE

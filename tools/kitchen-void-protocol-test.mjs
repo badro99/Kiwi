@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BEHAVIOURAL TEST: Kitchen Two-Tier Void Protocol & Waste Tracking
@@ -366,7 +367,7 @@ check('Chef acceptance was preserved (stationAccepted remains true)', raceLinesA
 
 // 5f. Waiter Stepper UI Integration Logic Check
 // Verify kiwi-serveur.html contains the sent-line stepper wiring
-const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveurHtml = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 check('Serveur HTML wires editLine to sent-line stepper',
   serveurHtml.includes('editLine:') && serveurHtml.includes('newQty <= 0') && serveurHtml.includes('openVoidReasonModal') && serveurHtml.includes('appendedLine'));
 
@@ -803,7 +804,7 @@ const cashierSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-cai
 const relaySource = fs.readFileSync(path.join(ROOT, 'assets', 'kitchen-relay.js'), 'utf8');
 check('Cashier and server cancellation calls are bounded instead of freezing indefinitely',
   cashierSource.includes('async function postCaisseCancellation')
-  && fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8').includes('async function postServiceCancellation'));
+  && serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')).includes('async function postServiceCancellation'));
 check('Kitchen acknowledgement waits for authoritative server lines and has a timeout',
   kitchenSource.includes('if (!result || !result.ok || !Array.isArray(result.lines))')
   && relaySource.includes('controller.abort(); }, 12000)')

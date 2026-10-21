@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 /* Focused behavioural gate for the O01-O07 order remediation. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -141,7 +142,7 @@ printContext.KiwiKitchenPrint.setHub(true);
 const hub = printContext.KiwiKitchenPrint.enqueue([{ id: 'remote-1', createdAt: Date.now(), payload: { items: [] } }], { remote: 'connected' });
 ok('O06 connected-printer jobs still require the exclusive print hub', noHub.skipped === 'not-print-hub' && hub.accepted === 1);
 
-const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const serveur = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 ok('O02 persists immutable pending batches and acknowledges by uid', serveur.includes('kiwi:service-pending-v1:')
   && serveur.includes('pending.lines') && serveur.includes('line.uid') && serveur.includes('svForgetPending'));
 

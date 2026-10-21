@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Retours et avoirs côté caisse (pos-boutique.js, pos-maison.js).
  *
@@ -138,7 +139,7 @@ ok(/liveCreditsOwnerSlug && liveCreditsOwnerSlug !== slug\) \{ liveCredits = \[\
 const book = read('assets/clients-book.js');
 ok(/kiwi:bqAvoirs@' \+ \(creditMerchant\(\)/.test(book) && !/getItem\('kiwi:bqAvoirs'\)/.test(book),
   'la fiche client lit le cache du commerce regardé');
-const serveur = read('kiwi-serveur.html');
+const serveur = serveurTestSource(read('kiwi-serveur.html'));
 ok(/saleId: String\(\(saved && saved\.id\) \|\| paymentId\)/.test(serveur), 'l\'app serveur lie la fidélité à la vente qu\'elle vient d\'enregistrer');
 
 /* 5. Mesuré le 2026-10-19 : une robe rendue contre avoir puis réglée avec cet
