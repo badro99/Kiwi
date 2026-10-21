@@ -2494,6 +2494,8 @@ section('Kiwi 2027 · le tableau de bord sur le kit');
     ['epicerie-phone-browser-test.mjs', 'epicerie-phone-browser-test'],
     /* Librairie, traiteur, fleuriste, gym à 390 de large : leur ticket (panier, devis, bouquet, panier) devient la feuille du bas. */
     ['trade-tickets-phone-browser-test.mjs', 'trade-tickets-phone-browser-test'],
+    /* L'écran cuisine livré, de 1920 à 390 de large : chaque bon garde son bouton entier (≥ 52 px), même dans une colonne courte. */
+    ['kds-cards-browser-test.mjs', 'kds-cards-browser-test'],
   ];
   for (const [file, label] of gates) {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

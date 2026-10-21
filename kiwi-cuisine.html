@@ -484,6 +484,13 @@
     }
     .stack { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 22px; display: flex; flex-direction: column; gap: 12px; }
     .col--cook .stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); align-content: start; }
+    /* Same promise when the stack is a grid (« En préparation », and every
+       column under 900 px). A bon has overflow: hidden, so a grid row could
+       fall to its minimum (zero) in a short column: on an iPad in landscape
+       the « Prête » button was a thin strip, on a phone every bon showed only
+       its first line and no button (2026-10-21). A row is as tall as its bon;
+       the column scrolls. */
+    .stack { grid-auto-rows: max-content; }
 
     /* ── Un bon ─────────────────────────────────────────────────────────────── */
     .tk {
