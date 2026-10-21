@@ -1350,6 +1350,7 @@ section('Whole-project regressions');
     'operating-day-drawers-test.mjs',
     'operating-day-stock-test.mjs',
     'operating-day-ai-context-test.mjs',
+    'agent-month-business-day-test.mjs',
     'operating-day-split-ui-test.mjs',
     'operating-day-operator-test.mjs',
     'operating-day-orders-integration-test.mjs',

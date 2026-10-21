@@ -196,17 +196,27 @@
      sans remise à zéro). Toute projection bâtie dessus était fausse d'un facteur
      égal au nombre de jours d'activité. On additionne donc les ventes du mois
      courant, et on divise par les jours ÉCOULÉS de ce mois. */
+  /* The month runs on the store's business days (05:00, store zone), as on
+     the dashboard and the Z: at 02:00 on the 1st the evening still belongs to
+     last month. The device calendar only without the day-report module. */
+  function monthEdges() {
+    const now = new Date(), R = window.KiwiDayReport;
+    try {
+      const slug = R.storeSlug(), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(R.today(slug));
+      const first = (y, mo) => new Date(Date.UTC(y, mo - 1, 1)).toISOString().slice(0, 10);
+      if (m) return { cur: R.dayBounds(first(+m[1], +m[2]), slug).from, prev: R.dayBounds(first(+m[1], +m[2] - 1), slug).from, day: +m[3], daysInMonth: new Date(Date.UTC(+m[1], +m[2], 0)).getUTCDate() };
+    } catch (_) {}
+    return { cur: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), prev: new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime(), day: now.getDate(), daysInMonth: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() };
+  }
   function monthToDate(vid) {
-    const now = new Date();
-    const first = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const edges = monthEdges(), first = edges.cur, daysInMonth = edges.daysInMonth;
     let revenue = 0;
     try {
       (window.KiwiSales && window.KiwiSales.list ? (window.KiwiSales.list(vid) || []) : []).forEach((e) => {
         if (e && +e.ts >= first) revenue += Math.max(0, +e.amount || 0);
       });
     } catch (_) { revenue = 0; }
-    return { mtdRevenue: revenue, mtdDays: now.getDate(), daysInMonth };
+    return { mtdRevenue: revenue, mtdDays: edges.day, daysInMonth };
   }
   function syncProfile() { B = buildProfile(); return B; }
   function salesWindowEvidence(profile) {
@@ -4483,9 +4493,7 @@
       if (tot > 0) Object.keys(byMethod).forEach((m) => { const p = byMethod[m] / tot * 100; add(p); add(100 - p); });
       /* La croissance d'un mois sur l'autre — la seule tendance qu'un journal
          de ventes suffit à établir. */
-      const now = new Date();
-      const cur = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const { cur, prev: prevStart } = monthEdges();
       let a = 0, b = 0;
       rows.forEach((e) => {
         const ts = +((e && e.ts) || 0), amt = Math.max(0, +((e && e.amount) || 0));
