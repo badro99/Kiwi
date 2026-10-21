@@ -298,6 +298,16 @@ export async function shopifyGraphQL(env, merchant, query, variables) {
   return { row, data: payload.data || {} };
 }
 
+/* Une boutique Shopify a deux noms en .myshopify.com : celui que le commerçant
+ * tape à la connexion (maison121.myshopify.com, qui redirige) et son domaine
+ * PERMANENT (qtrh13-p1.myshopify.com), le seul que Shopify écrit dans
+ * X-Shopify-Shop-Domain. Les deux ouvrent l'API ; seul le second signe les
+ * webhooks. On le demande à Shopify, jamais on ne le devine. */
+export async function shopPermanentDomain(env, merchant) {
+  const out = await shopifyGraphQL(env, merchant, 'query KiwiShopDomain { shop { myshopifyDomain } }');
+  return normalizeShopDomain(out.data && out.data.shop && out.data.shop.myshopifyDomain) || '';
+}
+
 export async function listLocations(env, merchant) {
   const q = `query KiwiLocations { locations(first: 100, includeInactive: false) { nodes { id name isActive } } }`;
   const out = await shopifyGraphQL(env, merchant, q, {});

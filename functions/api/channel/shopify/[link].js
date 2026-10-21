@@ -41,6 +41,7 @@ import { startOfWeek } from '../../order/_lib.js';
 import { merchantZone } from '../../_business-day.js';
 import { __test as catalogFns } from '../../catalog.js';
 import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
+import { shopPermanentDomain } from '../../shopify/_lib.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -180,6 +181,33 @@ async function rememberWebhook(env, shop, id, topic) {
       `INSERT OR IGNORE INTO shopify_webhook_events (shop_domain, webhook_id, topic, received_ts) VALUES (?, ?, ?, ?)`
     ).bind(shop, id, topic, Date.now()).run();
   } catch (_) {}
+}
+
+/* Le domaine tapé à la connexion n'est pas forcément celui que Shopify met
+ * dans ses webhooks (voir shopPermanentDomain). Vu en production le
+ * 21 octobre : Maison 121, reliée sous maison121.myshopify.com, refusait
+ * depuis le 6 septembre CHAQUE webhook signé par qtrh13-p1.myshopify.com,
+ * son domaine permanent. Aucune commande en ligne n'atteignait le stock
+ * Kiwi, et chaque envoi de stock suivant butait sur une quantité Shopify
+ * qui avait bougé (37 variantes en écart). La signature reste la porte ; on
+ * demande une fois à Shopify, avec le jeton de ce commerce, quel est le vrai
+ * domaine, et on le garde sur la ligne du canal. Un domaine déjà connu et
+ * différent est refusé sans appel. */
+async function samePermanentShop(env, link, cfg, shop) {
+  const cached = str(cfg && cfg.myshopifyDomain, 120).toLowerCase();
+  if (cached) return cached === shop;
+  let real = '';
+  try { real = await shopPermanentDomain(env, link.merchant); } catch (_) { return false; }
+  if (!real) return false;
+  try {
+    /* Un seul champ, et seulement sur la ligne telle qu'on l'a lue : une
+       reconnexion écrite entre-temps n'est jamais écrasée par cette copie. */
+    await env.DB.prepare(
+      `UPDATE channel_links SET config = json_set(config, '$.myshopifyDomain', ?)
+        WHERE id = ? AND config IS ? AND json_valid(config)`
+    ).bind(real, link.id, link.config).run();
+  } catch (_) {}
+  return real === shop;
 }
 
 async function observeInventoryLevel(env, merchant, payload) {
@@ -341,7 +369,7 @@ export async function onRequestPost(context) {
    * à l'autre. */
   const shop = str(request.headers.get('X-Shopify-Shop-Domain'), 120).toLowerCase();
   const known = str(cfg && cfg.shop, 120).toLowerCase();
-  if (known && shop && known !== shop) {
+  if (known && shop && known !== shop && !(await samePermanentShop(env, link, cfg, shop))) {
     await mark(env, link.id, false, 'boutique inattendue : ' + shop);
     return json({ error: 'wrong-shop' }, 401);
   }

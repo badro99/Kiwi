@@ -27,7 +27,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import {
   encryptToken, exchangeClientCredentials, normalizeShopDomain,
-  registerWebhooks, sha256Hex,
+  registerWebhooks, sha256Hex, shopPermanentDomain,
 } from './_lib.js';
 
 export async function onRequestPost({ request, env }) {
@@ -139,6 +139,17 @@ export async function onRequestPost({ request, env }) {
     }
     await env.DB.batch(writes);
   } catch (_) { return json({ error: 'save-failed' }, 503); }
+
+  /* Le domaine permanent, celui qui signera les webhooks (voir
+   * shopPermanentDomain) : connu dès la connexion, la porte des webhooks n'a
+   * pas à le découvrir sur le premier envoi. */
+  try {
+    const permanent = await shopPermanentDomain(env, merchant);
+    if (permanent && permanent !== shop) {
+      await env.DB.prepare('UPDATE channel_links SET config = ? WHERE id = ?')
+        .bind(JSON.stringify({ oauth: false, grant: 'client_credentials', shop, myshopifyDomain: permanent }), linkId).run();
+    }
+  } catch (_) {}
 
   const webhookError = await registerWebhooks(env, merchant, linkId, request);
   if (webhookError) {
