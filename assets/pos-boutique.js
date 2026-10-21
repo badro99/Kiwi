@@ -3888,6 +3888,7 @@
         };
       }),
     };
+    const RS = window.KiwiRepeatSale, repeatSig = RS ? RS.signature(frozen.lines, total) : ''; // même panier qu'il y a < 2 min
     const beginPay = () => openPay({
       amount: total,
       customerId: c ? c.id : null,
@@ -4082,6 +4083,7 @@
           ptsLine = (pts ? ` · +${pts} pts pour ${firstName(c.name)}` : '') + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
         }
         queueIfOffline(`Vente · ${sale.id}`);
+        if (RS) RS.remember('boutique', repeatSig, sale.id);
         freshTicket();
         $('#bq-today', root).textContent = headSubVente();
         renderTicket(); renderGrid(); renderBadges(); icons();
@@ -4103,6 +4105,7 @@
        the Encaisser button and this panel. When that request never settled, a
        stocked shop was trapped forever behind the stock-verification screen. Network
        synchronization must never be a prerequisite for taking payment. */
+    if (RS && RS.confirmRepeat({ scope: 'boutique', sig: repeatSig, el: $('#bq-paym', root), open: () => openVeil('#bq-pay-veil'), close: () => closeVeil('#bq-pay-veil'), busy: (b) => { state.checkoutBusy = b; }, go: () => state.ticket === t && beginPay() })) return;
     state.checkoutBusy = true;
     beginPay();
   }

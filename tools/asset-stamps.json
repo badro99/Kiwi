@@ -120,8 +120,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "47",
-    "sha": "bb8bf0ce40cab62b"
+    "v": "48",
+    "sha": "9e4617e64fa90195"
   },
   "assets/caisse-link.js": {
     "v": "19",
@@ -1088,12 +1088,12 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "92",
+    "v": "93",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "92",
-    "sha": "b55c5059348104c5"
+    "v": "93",
+    "sha": "3db9ec99165d01da"
   },
   "assets/pos-coiffure.css": {
     "v": "9",
@@ -1104,8 +1104,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "129",
-    "sha": "e7e21fb69e8b50f1"
+    "v": "130",
+    "sha": "c69d885f1ccafb19"
   },
   "assets/pos-epicerie.css": {
     "v": "16",
@@ -1302,6 +1302,10 @@
   "assets/receipt.js": {
     "v": "9",
     "sha": "dd12b1b75a9d5856"
+  },
+  "assets/repeat-sale-guard.js": {
+    "v": "1",
+    "sha": "1d4ed54952fd7bbd"
   },
   "assets/report.js": {
     "v": "5",

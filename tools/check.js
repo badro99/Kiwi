@@ -1322,6 +1322,7 @@ section('Whole-project regressions');
     'loyalty-truth-test.mjs',
     'loyalty-refused-redemption-test.mjs',
     'loyalty-reserve-test.mjs',
+    'repeat-sale-guard-test.mjs',
     'audit-remediation-dashboard-test.mjs',
     'audit-remediation-devices-test.mjs',
     'dashboard-analytics-toggle-test.mjs',
