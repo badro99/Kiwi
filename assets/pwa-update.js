@@ -200,7 +200,38 @@
     /* Un changement de contrôleur n'annonce une mise à jour que si un autre
        worker contrôlait déjà la page. */
     if (hadController) navigator.serviceWorker.addEventListener('controllerchange', show, { once: true });
+    poll(registration);
   }
 
-  window.KiwiPWAUpdate = { watch: watch, show: show };
+  /* Le navigateur ne cherche une nouvelle version qu'en chargeant une page. Une
+     caisse reste ouverte des jours sans navigation : celle de Santos Store
+     tournait encore, le 21 octobre au soir, le code d'avant le correctif du
+     matin. On demande toutes les 30 minutes, au retour sur l'onglet et au
+     retour du réseau. La mise à jour trouvée s'annonce par l'avis ci-dessus ;
+     rien ne recharge la page pendant un encaissement. */
+  var POLL_MS = 30 * 60000;
+  var polling = false;
+  var lastCheck = Date.now();
+  function check() {
+    if (!reg || shown) return;
+    lastCheck = Date.now();
+    try {
+      var p = reg.update();
+      if (p && p.catch) p.catch(function () {});
+    } catch (_) {}
+  }
+  function poll(registration) {
+    if (polling || !registration) return;
+    polling = true;
+    try {
+      var t = setInterval(check, POLL_MS);
+      if (t && t.unref) t.unref();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && Date.now() - lastCheck > 5 * 60000) check();
+      });
+      window.addEventListener('online', check);
+    } catch (_) {}
+  }
+
+  window.KiwiPWAUpdate = { watch: watch, show: show, check: check, POLL_MS: POLL_MS };
 })();
