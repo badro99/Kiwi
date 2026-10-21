@@ -257,7 +257,7 @@ var SHELL = [
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=1',
   '/assets/loyalty-reserve.js?v=2',
-  '/assets/repeat-sale-guard.js?v=2',
+  '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */

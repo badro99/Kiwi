@@ -19,6 +19,21 @@ const plain = v => (v == null ? v : JSON.parse(JSON.stringify(v)));
 const eq = (a, b, m) => { assert.deepEqual(plain(a), b, m); checks++; };
 
 /* ── 1 · the guard on its own ───────────────────────────────────────────── */
+/* Storage that reads but no longer writes (full, or Safari private mode),
+   with an older charge still in it: the charge just made must win. */
+{
+  const store = new Map();
+  const win = { localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) } };
+  const ctx = vm.createContext({ window: win, Date, Math, JSON, Object, String, Array, Promise });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/repeat-sale-guard.js'), 'utf8'), ctx);
+  const G = win.KiwiRepeatSale, t0 = 1_800_000_000_000;
+  const A = G.signature([{ pid: 'a', qty: 1, unit: 100 }], 100), B = G.signature([{ pid: 'b', qty: 1, unit: 200 }], 200);
+  G.remember('boutique', A, '1', t0);
+  win.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+  G.remember('boutique', B, '2', t0 + 10_000);
+  eq(G.recent('boutique', B, t0 + 20_000), { num: '2', agoSec: 10 }, 'storage full: the newer charge in memory still flags a repeat');
+  eq(G.recent('boutique', A, t0 + 20_000), null, 'and the older stored one no longer does');
+}
 {
   const store = new Map();
   const win = { localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) } };

@@ -99,14 +99,20 @@ export async function workspace(env, merchant = '') {
      * paid. Closing is free on purpose (colleagues cover each other) and the
      * till says what stayed unpaid at that moment; this is the day after view.
      * Seen at Pasta Corner on 15 October: 131 MAD of orders, table closed the
-     * next day, no sale. orders.total is whole MAD. */
-    unpaidTables:[`SELECT t.merchant,t.id,t.table_no,t.closed_by,t.closed_actor_name,t.opened_ts,t.closed_ts AS updated_ts,
-        COUNT(o.id) AS orders,SUM(o.total) AS unpaid_mad
-      FROM table_sessions t JOIN orders o ON o.merchant=t.merchant AND o.session_id=t.id
-      WHERE t.status='closed' AND t.mode='table' AND t.closed_ts>=? AND t.closed_by NOT IN ('service-payment','settled-at-till')
-        AND o.paid_ts IS NULL AND o.status NOT IN ('rejected','archived') AND COALESCE(o.cancel_actor_name,'')='' AND o.total>0
-        AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.merchant=t.merchant AND s.session_id=t.id AND s.void_ts IS NULL)${where.replace('merchant=?','t.merchant=?')}
-      GROUP BY t.id ORDER BY t.closed_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
+     * next day, no sale. orders.total is whole MAD. What is owed is the
+     * orders minus what the visit's sales charged (gross, so a discount is
+     * not a debt): a split bill paid for one part only still shows its
+     * remainder, a visit paid in full without its orders stamped does not. */
+    unpaidTables:[`SELECT * FROM (SELECT t.merchant,t.id,t.table_no,t.closed_by,t.closed_actor_name,t.opened_ts,t.closed_ts AS updated_ts,
+        (SELECT COUNT(*) FROM orders o WHERE o.merchant=t.merchant AND o.session_id=t.id AND o.paid_ts IS NULL
+          AND o.status NOT IN ('rejected','archived') AND COALESCE(o.cancel_actor_name,'')='' AND o.total>0) AS orders,
+        ROUND((SELECT COALESCE(SUM(o.total),0) FROM orders o WHERE o.merchant=t.merchant AND o.session_id=t.id
+          AND o.status NOT IN ('rejected','archived') AND COALESCE(o.cancel_actor_name,'')='' AND o.total>0)
+        - (SELECT COALESCE(SUM(COALESCE(s.gross_amount_cents,s.amount_cents)),0) FROM sales s
+          WHERE s.merchant=t.merchant AND s.session_id=t.id AND s.void_ts IS NULL)/100.0,2) AS unpaid_mad
+      FROM table_sessions t
+      WHERE t.status='closed' AND t.mode='table' AND t.closed_ts>=? AND t.closed_by NOT IN ('service-payment','settled-at-till')${where.replace('merchant=?','t.merchant=?')})
+      WHERE orders>0 AND unpaid_mad>=1 ORDER BY updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     shopifyLink:[`SELECT merchant,'connection' AS id,status,last_error,updated_ts FROM shopify_connections
       WHERE TRIM(COALESCE(last_error,''))!=''${where}
       UNION ALL SELECT merchant,id,status,last_err AS last_error,COALESCE(last_ts,created_ts) AS updated_ts FROM channel_links

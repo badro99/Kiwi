@@ -35,12 +35,19 @@
     return parts.join(';') + '#' + Math.round((+total || 0) * 100);
   }
 
+  /* The newer of memory and storage: when a write fails (storage full,
+     private mode), memory holds the last charge and must win over an older
+     record still sitting in storage. */
   function read(scope) {
+    var stored = null;
     try {
       var raw = window.localStorage.getItem(PREFIX + scope);
-      if (raw) return JSON.parse(raw);
+      if (raw) stored = JSON.parse(raw);
     } catch (_) {}
-    return mem[scope] || null;
+    var m = mem[scope] || null;
+    if (!stored) return m;
+    if (!m) return stored;
+    return (+m.at || 0) >= (+stored.at || 0) ? m : stored;
   }
 
   function remember(scope, sig, num, now) {

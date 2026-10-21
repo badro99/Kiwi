@@ -142,6 +142,15 @@ for (const [id,m,closedBy,age,paid,sale,cancelled] of [
     VALUES(?,?,?,'table','2',?,'[]','accepted',?,?,?,?,?)`).run(id+'-o'+n,m,n,total,now-age*86400000,now-age*86400000,id,paid,cancelled);
   if (sale) db.prepare(`INSERT INTO sales(id,merchant,amount,amount_cents,method,ts,session_id) VALUES(?,?,131,13100,'cash',?,?)`).run('sale-'+id,m,now-age*86400000,id);
 }
+/* A split bill paid for one part only (50 of 131 MAD), then the table closed;
+   and a table paid in full with a 10 % discount (gross 131, charged 117,90). */
+for (const [id,cents,gross] of [['tsx-split',5000,null],['tsx-disc',11790,13100]]) {
+  db.prepare(`INSERT INTO table_sessions(id,merchant,mode,table_no,status,closed_by,closed_actor_name,opened_ts,seen_ts,closed_ts)
+    VALUES(?,'shop-c','table','5','closed','caisse','Yassine',?,?,?)`).run(id,now-2*3600000,now-3600000,now-3600000);
+  for (const [n,total] of [[1,69],[2,62]]) db.prepare(`INSERT INTO orders(id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id,paid_ts,cancel_actor_name)
+    VALUES(?,'shop-c',?,'table','5',?,'[]','accepted',?,?,?,NULL,'')`).run(id+'-o'+n,n,total,now-3600000,now-3600000,id);
+  db.prepare(`INSERT INTO sales(id,merchant,amount,amount_cents,gross_amount_cents,method,ts,session_id) VALUES(?,'shop-c',?,?,?,'cash',?,?)`).run('sale-'+id,cents/100,cents,gross,now-3600000,id);
+}
 // A till that found an update and never took it (Santos Store, 21 October).
 for (const [id,device,ready,seen] of [['hb-stale','till-stale',now-8*3600000,now-60000],['hb-fresh','till-fresh',now-3600000,now-60000],['hb-gone','till-gone',now-30*3600000,now-5*3600000]])
   db.prepare("INSERT INTO operational_commands(id,merchant,domain,action,status,idempotency_key,payload,created_ts,updated_ts) VALUES(?,?,'device','heartbeat','completed',?,?,?,?)")
@@ -153,6 +162,10 @@ check('heartbeat projection drops unknown fields',!JSON.stringify(moneyWorkspace
 {const t=moneyWorkspace.sources.unpaidTables;
 check('only the table closed with unpaid orders, no sale, last 14 days',t?.available&&t.rows.length===1&&t.rows[0].id==='tsx-unpaid');
 check('its unpaid total and order count',t.rows[0].unpaid_mad===131&&t.rows[0].orders===2);
+const tc=(await call(workspace,'GET',{},'?merchant=shop-c')).sources.unpaidTables,ids=(tc?.rows||[]).map(r=>r.id);
+const sp=tc.rows.find(r=>r.id==='tsx-split');
+check('a split bill paid for one part shows what is still owed',sp&&sp.unpaid_mad===81&&sp.orders===2);
+check('a discounted bill paid in full is not a debt',!ids.includes('tsx-disc'));
 check('unpaid tables stay in their store dossier',(await call(workspace,'GET',{},'?merchant=shop-b')).sources.unpaidTables.rows.every(r=>r.merchant==='shop-b'));}
 check('only old outstanding courier delivery returned',moneyWorkspace.sources.receivables?.available&&moneyWorkspace.sources.receivables.rows.length===1&&moneyWorkspace.sources.receivables.rows[0].id==='due-old');
 check('partial collections keep exact outstanding centimes',moneyWorkspace.sources.receivables.rows[0].total_cents===40099&&moneyWorkspace.sources.receivables.rows[0].remaining_cents===40049);
