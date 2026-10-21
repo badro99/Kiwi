@@ -5,7 +5,7 @@
 // auth/_lib.js; this module only adds the account's pre-split bucket when that
 // is unambiguous.
 
-import { readSession, readCookie, SESS_COOKIE, accountSlug } from '../auth/_lib.js';
+import { activeAccountSession, accountSlug, storeOwner, slugClaimedByOther, LEGACY_SLUG } from '../auth/_lib.js';
 
 /* ── THE PRE-SPLIT BUCKET ─────────────────────────────────────────────────────
  * Before stores had their own tenant, every sale an account rang up landed under
@@ -32,16 +32,24 @@ export async function preSplitBucket(env, aid, merchant, accSlug) {
 }
 
 /* The second bucket for an already-entitled store, or '' (own bucket only).
- * No session (operator, demo, paired till) → own bucket only. */
+ *
+ * Only for the OWNER reading one of their OWN stores. A browser often holds an
+ * owner session while it reads another store some other way (operator console,
+ * paired till, demo slug); unioning that owner's old account bucket into the
+ * other store's money would mix two tenants. So the session must be live (not
+ * revoked), the store must be registered to that account, and no other account
+ * may claim the account slug (nor may it be the shared LEGACY_SLUG). Anything
+ * else → own bucket only. */
 export async function legacyBucketFor(request, env, merchant) {
   try {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (sess && sess.aid) {
-      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-      if (acc && acc.business) {
-        return await preSplitBucket(env, sess.aid, merchant, await accountSlug(env, acc.business, sess.aid));
-      }
-    }
-  } catch (_) { /* fall through */ }
-  return '';
+    const sess = await activeAccountSession(request, env);
+    if (!sess || !sess.aid || !merchant) return '';
+    if ((await storeOwner(env, merchant)) !== sess.aid) return '';
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (!(acc && acc.business)) return '';
+    const accSlug = await accountSlug(env, acc.business, sess.aid);
+    /* LEGACY_SLUG is shared by every old non-Latin account: never a bucket of one. */
+    if (!accSlug || accSlug === LEGACY_SLUG || (await slugClaimedByOther(env, accSlug, sess.aid))) return '';
+    return await preSplitBucket(env, sess.aid, merchant, accSlug);
+  } catch (_) { return ''; }
 }
