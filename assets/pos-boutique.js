@@ -1409,6 +1409,8 @@
   const notCashedOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
     .reduce((s, p) => s + (p && (p.m === 'avoir' || p.m === 'livraison') ? (+p.amount || 0) : 0), 0);
   const caToday = () => salesToday().reduce((s, x) => s + Math.max(0, (+x.total || 0) - notCashedOf(x)), 0);
+  /* Le libellé s'écrit « Vente · MM-1208 » : le mot et le numéro restent deux
+     morceaux, que la caisse en arabe et en anglais sait lire séparément. */
   function queueIfOffline(label) {
     if (!state.offline) return false;
     try {
@@ -3420,7 +3422,7 @@
     };
     AVOIRS.unshift(av);
     persistAvoirs();                          // un bon émis doit survivre au rechargement de la caisse
-    queueIfOffline(`Avoir ${av.code}`);
+    queueIfOffline(`Avoir · ${av.code}`);
     toast(`${av.code} émis, ${fmtMAD(amount)}, pièces remises en stock`);
     renderBadges();
     return av;
@@ -3559,7 +3561,7 @@
       recordReturn(sale, [ex.idx], paidUnit(sale, ln), ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
-      queueIfOffline(`Échange ${sale.id}`);
+      queueIfOffline(`Échange · ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
       if (!oldRestored) toast('Échange enregistré, retour à rapprocher', 'La variante d’origine a été supprimée du catalogue.');
       return true;
@@ -4043,7 +4045,7 @@
           c.achats += 1;
           ptsLine = (pts ? ` · +${pts} pts pour ${firstName(c.name)}` : '') + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
         }
-        queueIfOffline(`Vente ${sale.id}`);
+        queueIfOffline(`Vente · ${sale.id}`);
         freshTicket();
         $('#bq-today', root).textContent = headSubVente();
         renderTicket(); renderGrid(); renderBadges(); icons();

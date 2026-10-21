@@ -250,5 +250,23 @@ check(L.tr(', sur le ticket') === ', sur le ticket', 'le trou d\'une clé par la
 L.set('ar');
 check(L.tr('Caftan Fassi · M, sur le ticket') === 'Caftan Fassi · M، أُضيف إلى التذكرة', 'le toast d\'ajout se lit en arabe, le nom reste');
 L.set('en');
+/* Le reste des toasts de la boutique (2026-10-21) : stock insuffisant, avoirs
+   émis, échanges, inventaire. Le nom d'article, le code et le montant passent
+   tels quels ; un mot connu dans le trou (« Étiquette ») suit la langue. */
+L.set('en');
+for (const [fr, en] of [
+  ['Caftan Fassi · Vert · M, stock insuffisant', 'Caftan Fassi · Vert · M, not enough stock'],
+  ['Caftan Fassi · Vert · M, 2 en stock, pas plus', 'Caftan Fassi · Vert · M, only 2 in stock'],
+  ['Vente · MM-1208, enregistré sur cette caisse (3 ventes à synchroniser)', 'Sale · MM-1208, saved on this till (3 sales to sync)'],
+  ['Remise −10 %, accord Salma', 'Discount −10 %, approved by Salma'],
+  ['AV-0042 émis, 1 200 MAD, pièces remises en stock', 'AV-0042 issued, 1 200 MAD, pieces back in stock'],
+  ['AV-0042 appliqué, reste 300 MAD à payer', 'AV-0042 applied, 300 MAD left to pay'],
+  ['Code 2000000000015 inconnu, aucun article ne le porte', 'Unknown code 2000000000015, no item carries it'],
+  ["Caftan Neuf ajouté à l'inventaire", 'Caftan Neuf added to the inventory'],
+  ['3 pièces · taille M · code fournisseur conservé', '3 pieces · size M · supplier code kept'],
+  ["Étiquette envoyée à l'imprimante", 'Label sent to the printer'],
+  ['Caftan Vente ajouté', 'Caftan Vente added'],
+]) check(L.tr(fr) === en, `toast boutique traduit : « ${fr} » → « ${L.tr(fr)} »`);
+check(L.tr('Robe Rouge 2024') === 'Robe Rouge 2024', 'un nom d\'article avec un nombre ne devient pas un gabarit');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

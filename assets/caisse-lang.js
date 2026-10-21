@@ -1717,6 +1717,49 @@
       '{x}, plus de stock, dernière pièce déjà sur le ticket': ['{x}, out of stock, the last piece is already on the ticket', '{x}، نفد المخزون، وآخر قطعة موجودة في التذكرة'],
       '{x}, épuisé': ['{x}, sold out', '{x}، نفد'],
       'Bip, {x}': ['Beep, {x}', 'تم المسح، {x}'],
+      '{x}, stock insuffisant': ['{x}, not enough stock', '{x}، المخزون غير كافٍ'],
+      '{x}, {n} en stock, pas plus': ['{x}, only {n} in stock', '{x}، {n} فقط في المخزون'],
+      '{x}, épuisé dans toutes les tailles': ['{x}, sold out in every size', '{x}، نفد بكل المقاسات'],
+      '{x}, enregistré sur cette caisse': ['{x}, saved on this till', '{x}، محفوظ على هذا الصندوق'],
+      '{x}, enregistré sur cette caisse ({n} vente à synchroniser)': ['{x}, saved on this till ({n} sale to sync)', '{x}، محفوظ على هذا الصندوق ({n} عملية بيع للمزامنة)'],
+      '{x}, enregistré sur cette caisse ({n} ventes à synchroniser)': ['{x}, saved on this till ({n} sales to sync)', '{x}، محفوظ على هذا الصندوق ({n} عمليات بيع للمزامنة)'],
+      'Remise −{n} %, accord {x}': ['Discount −{n} %, approved by {x}', 'خصم −{n} %، بموافقة {x}'],
+      "{x} n'est pas habilitée, seule la gérante approuve une remise": ['{x} is not authorised, only the manager approves a discount', '{x} غير مخوّلة، المسؤولة وحدها توافق على الخصم'],
+      'Fiche créée, {x}': ['Record created, {x}', 'أُنشئت البطاقة، {x}'],
+      'Code {x} inconnu, enregistrez-le sur un article': ['Unknown code {x}, add it to an item', 'الرمز {x} غير معروف، سجّله على منتج'],
+      'Code {x} inconnu, aucun article ne le porte': ['Unknown code {x}, no item carries it', 'الرمز {x} غير معروف، لا يحمله أي منتج'],
+      'Code {x} inconnu, à enregistrer': ['Unknown code {x}, to be added', 'الرمز {x} غير معروف، يجب تسجيله'],
+      "Échange {x}, choisissez l'article de remplacement dans la grille": ['Exchange {x}, pick the replacement item in the grid', 'تبديل {x}، اختر المنتج البديل من الشبكة'],
+      '{x} émis, {n} MAD': ['{x} issued, {n} MAD', 'صدر {x}، {n} MAD'],
+      '{x} émis, {n} MAD, pièces remises en stock': ['{x} issued, {n} MAD, pieces back in stock', 'صدر {x}، {n} MAD، وأُعيدت القطع إلى المخزون'],
+      'Reste {n} MAD à régler': ['{n} MAD still to pay', 'يتبقى {n} MAD للأداء'],
+      '{x} appliqué, reste {n} MAD à payer': ['{x} applied, {n} MAD left to pay', 'طُبّق {x}، يتبقى {n} MAD للأداء'],
+      'Avoir {x} inutilisable': ['Credit note {x} cannot be used', 'سند الرصيد {x} غير قابل للاستعمال'],
+      'Bon introuvable en caisse.': ['Voucher not found on this till.', 'السند غير موجود في الصندوق.'],
+      'Bon expiré entre-temps.': ['The voucher expired in the meantime.', 'انتهت صلاحية السند في الأثناء.'],
+      'Solde insuffisant, montants recalculés.': ['Balance too low, amounts recalculated.', 'الرصيد غير كافٍ، أُعيد حساب المبالغ.'],
+      '{x} supprimée, prix pleins rétablis': ['{x} deleted, full prices restored', 'حُذف {x}، وعادت الأسعار الكاملة'],
+      "{x} ajouté à l'inventaire": ['{x} added to the inventory', 'أُضيف {x} إلى المخزون'],
+      '{n} pièce': ['{n} piece', '{n} قطعة'],
+      '{n} pièces': ['{n} pieces', '{n} قطع'],
+      'taille {x}': ['size {x}', 'المقاس {x}'],
+      'code fournisseur conservé': ['supplier code kept', 'رمز المورّد محفوظ'],
+      'code Kiwi généré': ['Kiwi code generated', 'تم توليد رمز Kiwi'],
+      'code à ajouter plus tard': ['code to add later', 'رمز يُضاف لاحقًا'],
+      'Déjà utilisé par {x}': ['Already used by {x}', 'مستعمل من قبل {x}'],
+      'Code {x} enregistré': ['Code {x} saved', 'حُفظ الرمز {x}'],
+      '{n} article, {n} pièce': ['{n} item, {n} piece', '{n} منتج، {n} قطعة'],
+      '{n} article, {n} pièces': ['{n} item, {n} pieces', '{n} منتج، {n} قطع'],
+      '{n} articles, {n} pièces': ['{n} items, {n} pieces', '{n} منتجات، {n} قطع'],
+      '{x} enregistré': ['{x} saved', 'حُفظ {x}'],
+      'code {x} conservé': ['code {x} kept', 'الرمز {x} محفوظ'],
+      'Code déjà porté par {x}': ['Code already on {x}', 'الرمز موجود على {x}'],
+      '{x} ajouté': ['{x} added', 'أُضيف {x}'],
+      'Échange': ['Exchange', 'تبديل'],
+      'Fiche cliente': ['Customer record', 'بطاقة الزبونة'],
+      'Étiquette': ['Label', 'الملصق'],
+      '{n} étiquette(s)': ['{n} label(s)', 'ملصقات: {n}'],
+      "{x} envoyée à l'imprimante": ['{x} sent to the printer', 'أُرسل {x} إلى الطابعة'],
     };
     Object.keys(R).forEach(function (k) {
       if (!DICT.en[k]) DICT.en[k] = R[k][0];
@@ -2060,16 +2103,33 @@
      moins). C'est la forme des toasts de la boutique : « Caftan Fassi · M,
      sur le ticket », où le nom de l'article vient avant la phrase. */
   var holes = {};
-  var SUFFIX = '\u0000fin';
+  /* Les gabarits qui ne se lisent pas par leur premier mot — ceux qui
+     COMMENCENT par la donnée (« {x}, sur le ticket ») et ceux qui portent aussi
+     un nombre (« {x} émis, {n} MAD ») — deviennent une expression régulière,
+     compilée une fois par langue. Le nombre suit la même définition que le
+     gabarit {n} ordinaire ; la donnée garde ses lettres telles quelles. */
+  var RX = '\u0000rx';
+  var NUM_SRC = '(\\d[\\d\\s\\u202f\\u00a0.,]*\\d|\\d)';
+  function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function holeIndex(d) {
     if (holes[cur]) return holes[cur];
     var idx = Object.create(null);
     Object.keys(d).forEach(function (k) {
       var at = k.indexOf('{x}');
-      if (at < 0) return;
+      if (at < 0 || k.indexOf('{x}', at + 3) >= 0) return;
       var pre = k.slice(0, at), suf = k.slice(at + 3);
-      if (at === 0) {
-        if (suf.length >= 7 && /^[,\s]/.test(suf) && suf.indexOf('{x}') < 0) (idx[SUFFIX] = idx[SUFFIX] || []).push({ pre: '', suf: suf, key: k });
+      if (at === 0 || k.indexOf('{n}') >= 0) {
+        /* Sans mot d'ancrage, la fin doit être une vraie phrase : une virgule
+           ou une espace, puis sept caractères au moins hors nombres. Sinon
+           chaque nom d'article deviendrait candidat. */
+        if (at === 0 && !(suf.replace(/\{n\}/g, '').length >= 7 && /^[,\s]/.test(suf))) return;
+        var order = [];
+        var src = k.split(/(\{x\}|\{n\})/).map(function (part) {
+          if (part === '{x}') { order.push('x'); return '([\\s\\S]+?)'; }
+          if (part === '{n}') { order.push('n'); return NUM_SRC; }
+          return escRx(part);
+        }).join('');
+        (idx[RX] = idx[RX] || []).push({ rx: new RegExp('^' + src + '$'), order: order, key: k, digits: k.indexOf('{n}') >= 0 });
         return;
       }
       var w = pre.split(/\s/)[0];
@@ -2077,26 +2137,45 @@
     });
     // Le gabarit le plus long d'abord : « Imprimante du poste {x} » avant « Imprimante {x} ».
     Object.keys(idx).forEach(function (w) {
-      idx[w].sort(function (a, b) { return (b.pre.length + b.suf.length) - (a.pre.length + a.suf.length); });
+      if (w === RX) idx[w].sort(function (a, b) { return b.key.length - a.key.length; });
+      else idx[w].sort(function (a, b) { return (b.pre.length + b.suf.length) - (a.pre.length + a.suf.length); });
     });
     return (holes[cur] = idx);
   }
+  function fillHole(d, key, x) {
+    /* Le trou garde la donnée telle quelle, sauf si c'est une date entière
+       (« dernière vente 20 oct. ») : ses jetons de jour et de mois suivent. */
+    var xd = translateDate(x);
+    /* Une donnée qui est elle-même une phrase connue (« Étiquette »,
+       « Fiche cliente », « 3 étiquettes ») suit la langue ; un nom d'article
+       ne correspond à aucune clé et passe tel quel. Le segment est toujours
+       plus court que celui qui le contient : la récursion s'arrête. */
+    if (xd == null) xd = translateSegment(x, d);
+    return d[key].replace('{x}', xd != null ? xd : x);
+  }
   function translateHole(seg, d) {
     var idx = holeIndex(d);
-    var lists = [idx[seg.split(/\s/)[0]], idx[SUFFIX]];
-    for (var j = 0; j < 2; j++) {
-      var list = lists[j];
-      if (!list) continue;
+    var list = idx[seg.split(/\s/)[0]];
+    if (list) {
       for (var i = 0; i < list.length; i++) {
         var t = list[i];
         if (seg.length > t.pre.length + t.suf.length && seg.startsWith(t.pre) && seg.endsWith(t.suf)) {
-          /* Le trou garde la donnée telle quelle, sauf si c'est une date entière
-             (« dernière vente 20 oct. ») : ses jetons de jour et de mois suivent. */
-          var x = seg.slice(t.pre.length, seg.length - t.suf.length);
-          var xd = translateDate(x);
-          return d[t.key].replace('{x}', xd != null ? xd : x);
+          return fillHole(d, t.key, seg.slice(t.pre.length, seg.length - t.suf.length));
         }
       }
+    }
+    var rxs = idx[RX];
+    if (!rxs) return null;
+    var hasDigit = /\d/.test(seg);
+    for (var j = 0; j < rxs.length; j++) {
+      var r = rxs[j];
+      if (r.digits && !hasDigit) continue;
+      var m = r.rx.exec(seg);
+      if (!m) continue;
+      var x = '', nums = [];
+      for (var g = 0; g < r.order.length; g++) { if (r.order[g] === 'x') x = m[g + 1]; else nums.push(m[g + 1]); }
+      var out = fillHole(d, r.key, x), q = 0;
+      return out.replace(/\{n\}/g, function () { return nums[q] != null ? nums[q++] : ''; });
     }
     return null;
   }
