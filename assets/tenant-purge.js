@@ -47,7 +47,10 @@
   var TENANT_PREFIXES = ['kiwi:', 'kiwiSales:', 'kiwiBoutiqueCatalog:', 'kiwiLiveIngested:',
     'kiwiBarcodeSeq:', 'kiwiSet:biz:', 'kiwi-caisse-shift:',
     /* IA : consentement serveur et exécution directe, par compte (et par magasin). */
-    'kiwiAiCloud:', 'kiwiAiAutoAct:'];
+    'kiwiAiCloud:', 'kiwiAiAutoAct:',
+    /* Remboursements (le pendant de kiwiSales:), totaux journaliers du serveur
+       et début de l'historique local (sales-history.js) : données d'un magasin. */
+    'kiwiRefunds:', 'kiwiSalesSummary:', 'kiwiSalesCoverage:'];
   // Chrome de l'appareil / préférences d'affichage : ce n'est PAS la donnée d'un
   // commerçant, et ça doit survivre au changement.
   var PRESERVE = {
