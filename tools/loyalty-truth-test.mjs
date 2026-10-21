@@ -118,6 +118,24 @@ console.log('\nPoints : arrondis vers le bas, comme les prix');
   check(r.status === 409 && r.body.error === 'reward-not-ready', '99 points do not unlock a 100-point reward');
 }
 
+console.log('\nRetour après une récompense : le solde et l\'historique restent égaux');
+{
+  const s = store({ model: 'amount', amount: { perMad: 1, threshold: 100, reward: '−10 %' } });
+  await s.post({ purchase: { clientId: 'c1', ref: 'p:b1', amount: 300, saleRef: 'B1', items: [{ name: 'Caftan', qty: 1, total: 300 }] } });
+  const red = await s.post({ redemption: { clientId: 'c1', ref: 'redemption:b1' } });
+  const spent = 300 - Number(s.row().points);
+  check(red.status === 200 && spent > 0, `the reward is redeemed (${spent} points spent)`);
+  const r = await s.post({ refund: { clientId: 'c1', ref: 'refund:c1:b1', amount: 300, saleRef: 'B1' } });
+  const ledger = () => {
+    const e = s.raw.prepare('SELECT COALESCE(SUM(points),0) AS p FROM client_purchase_events WHERE merchant=? AND client_id=?').get(MERCHANT, 'c1').p;
+    const w = s.raw.prepare('SELECT COALESCE(SUM(points_delta),0) AS p FROM client_reward_events WHERE merchant=? AND client_id=?').get(MERCHANT, 'c1').p;
+    return Number(e) - Number(w);
+  };
+  check(r.status === 200 && Number(s.row().points) === 0, 'returning the whole ticket empties the card, never below zero');
+  check(Number(r.body.points) === -(300 - spent), `the return takes back what the card still held (${300 - spent}), not the 300 the ticket earned`);
+  check(ledger() === Number(s.row().points), `history (${ledger()}) equals the balance (${Number(s.row().points)})`);
+}
+
 console.log('\nRécompense : rien à remettre sans programme');
 for (const [label, cfg] of [['no programme saved', null], ['the till\'s deduced default', { auto: true, model: 'amount', amount: { perMad: 1, threshold: 100 } }]]) {
   const s = store(cfg);

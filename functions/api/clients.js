@@ -447,7 +447,7 @@ async function applyRefund(env, merchant, raw) {
     return json({ ok: true, replayed: true, spend: Number(previous.amount || 0), points: Number(previous.points || 0) });
   }
   const client = await env.DB.prepare(
-    'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
+    'SELECT id, points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
   const sale = await env.DB.prepare(
@@ -478,21 +478,30 @@ async function applyRefund(env, merchant, raw) {
       ? Math.min(stampsLeft, qualifyingQty(cfg, lines))
       : (whole ? stampsLeft : 0);
   }
+  /* Never take back more than the card still holds. A customer who earned
+   * 300 points, spent 100 on a reward, then returned the ticket has 200 left:
+   * the return takes 200, and the event says 200. The balance used to be
+   * floored at 0 while the event recorded the full 300, so the history summed
+   * below the balance forever after. The guard on the UPDATE keeps the two
+   * equal if the balance moved since the read: nothing is written, and the
+   * till retries against the new balance. */
+  const pointsTake = Math.min(claw, Math.max(0, Number(client.points) || 0));
+  const stampsTake = Math.min(unstamp, Math.max(0, Number(client.stamps) || 0));
   const now = Date.now();
   if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
   try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
   const cursor = clientCursorSql();
   const results = await env.DB.batch([
     ...clientCursorStatements(env, merchant, now),
-    env.DB.prepare(`UPDATE clients SET points = MAX(0, points - ?), stamps = MAX(0, stamps - ?),
+    env.DB.prepare(`UPDATE clients SET points = points - ?, stamps = stamps - ?,
       spend = MAX(0, spend - ?), updated_ts = ?, srv_ts = ${cursor}
-      WHERE merchant = ? AND id = ? AND deleted = 0
+      WHERE merchant = ? AND id = ? AND deleted = 0 AND points >= ? AND stamps >= ?
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-      .bind(claw, unstamp, take, now, merchant, merchant, clientId, merchant, ref),
+      .bind(pointsTake, stampsTake, take, now, merchant, merchant, clientId, pointsTake, stampsTake, merchant, ref),
     env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
       SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', ?, ? WHERE changes() > 0`)
-      .bind(merchant, ref, clientId, -take, -claw, -unstamp, now, merchant, items, saleRef),
+      .bind(merchant, ref, clientId, -take, -pointsTake, -stampsTake, now, merchant, items, saleRef),
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
     const replay = await env.DB.prepare('SELECT client_id FROM client_purchase_events WHERE merchant = ? AND ref = ?')
@@ -501,7 +510,7 @@ async function applyRefund(env, merchant, raw) {
     return json({ error: 'refund-write-failed' }, 503);
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) return json({ error: 'refund-write-failed' }, 503);
-  return json({ ok: true, spend: -take, points: -claw, stamps: -unstamp });
+  return json({ ok: true, spend: -take, points: -pointsTake, stamps: -stampsTake });
 }
 
 async function applyRedemption(env, merchant, raw) {
