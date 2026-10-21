@@ -65,11 +65,61 @@ try {
     assert.equal(crypto.createHash('sha256').update(rendered).digest('hex'),reference.sha,'same appPage DOM input as unsplit file');
     await page.click('[data-action="appt-filter"]');
     assert.equal(await count(),1,'second spa handler reuses chunk');
-    assert.ok(await page.evaluate(()=>document.body.textContent.includes('Praticienne, service, statut')));
+    /* The toast lands asynchronously: wait for it rather than read the next line. */
+    await page.waitForFunction(() => document.body.textContent.includes('Praticienne, service, statut'), {timeout:5000});
     // venues.js captures nav-accueil and calls origAccueil.apply(this, arguments).
     await page.click('.sidebar [data-nav="accueil"]');
     await page.waitForFunction(() => !document.body.classList.contains('page-appointments'));
     assert.equal(await count(),1);
+  });
+  /* Second chunk: Spa practitioners (assets/pages-pro/spa-practitioners.js). */
+  await S.run('demo practitioners first use', async t => {
+    const ctx = await browser.createBrowserContext();
+    t.defer(() => ctx.close());
+    const page = t.watch(await ctx.newPage());
+    const base = `http://127.0.0.1:${server.address().port}`;
+    await page.setViewport({width:1366,height:1000});
+    await page.setBypassServiceWorker(true);
+    await page.setRequestInterception(true);
+    page.on('request', r => {
+      if (new URL(r.url()).pathname === '/assets/trade-workspaces.js') return r.respond({status:200,contentType:'text/javascript',body:'/* legacy Spa harness */'});
+      if (r.url().startsWith(base + '/api/')) return r.respond({status:503,contentType:'application/json',body:'{"error":"offline"}'});
+      return r.url().startsWith(base) || r.url().startsWith('data:') ? r.continue() : r.abort();
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('kiwiLang','fr');
+      try { Object.defineProperty(navigator.serviceWorker,'register',{value:()=>new Promise(()=>{}),configurable:true}); } catch (_) {}
+    });
+    await page.goto(base + '/dashboard.html',{waitUntil:'load'});
+    const count = () => page.evaluate(() => performance.getEntriesByType('resource').filter(r=>r.name.includes('/pages-pro/spa-practitioners.js?')).length);
+    const printRef = process.env.KIWI_PRINT_REF === '1';
+    if (!printRef) assert.equal(await count(),0,'practitioners chunk absent at boot');
+    await page.waitForSelector('[data-explore]', {visible:true});
+    await page.click('[data-explore]');
+    const skip = await page.$('[data-kiwi-skip]');
+    if (skip && await skip.evaluate(e => !!e.offsetParent)) await skip.click();
+    await page.keyboard.press('Escape');
+    await page.click('[data-action="venue-toggle"]');
+    await page.waitForSelector('[data-action="venue-pick"][data-venue="spaBahia"]',{visible:true});
+    await page.click('[data-action="venue-pick"][data-venue="spaBahia"]');
+    await page.waitForSelector('.sidebar [data-nav="practitioners"]',{visible:true});
+    await page.evaluate(() => {
+      const appPage = Kiwi.appPage;
+      Kiwi.appPage = function(name,opts) { if(name==='practitioners') window.__pracOptions=JSON.stringify(opts); return appPage.apply(this,arguments); };
+    });
+    await page.click('.sidebar [data-nav="practitioners"]');
+    await page.waitForFunction(() => !!window.__pracOptions, {timeout:10000});
+    const sha = crypto.createHash('sha256').update(await page.evaluate(()=>window.__pracOptions)).digest('hex');
+    if (printRef) { console.log('PRACTITIONERS_REF ' + sha); return; }
+    assert.equal(await count(),1,'chunk loaded on first use');
+    const reference = JSON.parse(fs.readFileSync(path.join(root,'tools/pages-pro-spa-practitioners-reference.json'),'utf8'));
+    assert.equal(sha,reference.sha,'same appPage input as the unsplit file');
+    /* The page's own buttons work after a lazy load (local delegation)… */
+    await page.click('.dash-genpage [data-action="prac-add"]');
+    await page.waitForSelector('.kiwi-drawer-backdrop, .kiwi-backdrop', {visible:true, timeout:5000});
+    /* …and another registered entry point reuses the loaded chunk. */
+    await page.evaluate(() => window.Kiwi.handlers['practitioner-commission']());
+    assert.equal(await count(),1,'second practitioners handler reuses the chunk');
   });
   process.exitCode = await S.finish({exit:false});
 } finally {
