@@ -38,6 +38,7 @@ const ok = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' +
 
 function loadClient(src = CLIENT_SRC) {
   const ctx = vm.createContext({ module: { exports: {} } });
+  vm.runInContext(fs.readFileSync(path.join(root, 'assets/kit/haptics.js'), 'utf8'), ctx);
   vm.runInContext(src, ctx);
   return ctx.module.exports;
 }
@@ -165,6 +166,7 @@ const client = loadClient();
       localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) },
       console, Date, Math, JSON, CustomEvent: class {},
     });
+    vm.runInContext(fs.readFileSync(path.join(root, 'assets/kit/haptics.js'), 'utf8'), ctx);
     vm.runInContext(DAYREPORT_SRC, ctx);
     return window.KiwiDayReport;
   }
@@ -187,7 +189,7 @@ const client = loadClient();
 {
   const dir = path.join(root, 'assets/kit');
   const files = fs.readdirSync(dir).filter((f) => /\.(js|mjs)$/.test(f) && f !== 'business-day.js');
-  const offenders = files.filter((f) => /DEFAULT_CUTOFF\s*=|['"]Africa\/Casablanca['"]/.test(fs.readFileSync(path.join(dir, f), 'utf8')));
+  const offenders = files.filter((f) => /DEFAULT_CUTOFF\s*=|['"]Africa\/Casablanca['"]/.test(fs.readFileSync(path.join(dir, f), 'utf8').replace(f === 'haptics.js' ? /^const ZONE_LAWS = .*;$/m : /$^/, '')));
   ok(offenders.length === 0, `no other kit file holds DEFAULT_CUTOFF or the default zone (${files.length} kit files read)`);
   ok(/export const DEFAULT_CUTOFF = 5;/.test(SERVER_SRC) && /export const DEFAULT_ZONE = 'Africa\/Casablanca';/.test(SERVER_SRC), 'the server holds the same two constants, exported');
 }

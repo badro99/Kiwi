@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // GET /api/sales-summary?merchant=<slug>&from=<ms>&to=<ms>
 //
 // A store's sales, already added up per business day, so the dashboard can
@@ -36,7 +37,7 @@ const DAY = 86400000;
 const hourClocks = new Map();
 function hourOf(ts, zone) {
   if (!hourClocks.has(zone)) {
-    hourClocks.set(zone, new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' }));
+    hourClocks.set(zone, new DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' }));
   }
   const h = Number(hourClocks.get(zone).formatToParts(ts).find((p) => p.type === 'hour').value);
   return h >= 0 && h < 24 ? h : 0;

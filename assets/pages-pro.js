@@ -201,7 +201,7 @@ handlers['nav-transactions'] = () => {
     const sales = activeRange === 'aujourdhui' ? clock?.getDaySales?.()
       : activeRange === 'hier' ? clock?.getDaySales?.(yesterday)
       : clock?.getSales?.(activeRange === 'sept' ? 7 : 30);
-    return (sales || []).map(s => ({ ...s, sale:s, t: new Date(s.ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',timeZone:window.KiwiDayReport?.timezone?.()}),
+    return (sales || []).map(s => ({ ...s, sale:s, t: new Date(s.ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',timeZone:(globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), s.ts) || window.KiwiDayReport?.timezone?.())}),
       simIdx:s.ts, n:s.method === 'cash' ? T.cash : s.method === 'wallet' ? 'Kiwi Wallet' : T.cards,
       mask:'', cat:s.method === 'cash' ? T.cash : s.method === 'wallet' ? T.mobile : T.cards,
       c:s.customer, amt:s.amount, status:'ok' }));
@@ -234,7 +234,7 @@ handlers['nav-transactions'] = () => {
         return {
           id: r.id, time: r.t, method: r.n, staff: r.sale?.staff || '', ref: r.sale?.ref || '', table: r.sale?.table ?? null,
           kind: r.amt < 0 ? 'refund' : r.sale?.method === 'wallet' ? 'other' : r.cat === T.cash ? 'cash' : 'card',
-          group: oneDay ? hour : new Date(r.sale?.ts ?? r.simIdx).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', timeZone: tz }) + ' · ' + hour,
+          group: oneDay ? hour : new Date(r.sale?.ts ?? r.simIdx).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(tz, r.sale?.ts ?? r.simIdx) || tz) }) + ' · ' + hour,
           amountText: (r.amt < 0 ? '−' : '') + fmt2(r.amt) + ' MAD'
         };
       })
@@ -377,7 +377,7 @@ handlers['nav-transactions'] = () => {
     const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const sheet=modal({title:sale.ref,tag:L.demo,body:`
       <div class="tx-detail-hero"><div class="amt">${fmt2(sale.amount)} MAD</div></div>
-      <dl class="tx-detail-grid"><dt>${L.payment}</dt><dd>${esc(row.n)}</dd><dt>${L.time}</dt><dd>${esc(new Date(sale.ts).toLocaleString(lang==='en'?'en-GB':lang==='ar'?'ar-MA':'fr-FR',{timeZone:window.KiwiDayReport?.timezone?.()}))}</dd><dt>${L.table}</dt><dd>${esc(sale.table)}</dd><dt>${L.staff}</dt><dd>${esc(sale.staff)}</dd></dl>
+      <dl class="tx-detail-grid"><dt>${L.payment}</dt><dd>${esc(row.n)}</dd><dt>${L.time}</dt><dd>${esc(new Date(sale.ts).toLocaleString(lang==='en'?'en-GB':lang==='ar'?'ar-MA':'fr-FR',{timeZone:(globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), sale.ts) || window.KiwiDayReport?.timezone?.())}))}</dd><dt>${L.table}</dt><dd>${esc(sale.table)}</dd><dt>${L.staff}</dt><dd>${esc(sale.staff)}</dd></dl>
       <h4>${L.items}</h4>${sale.lines.map(line=>`<p>${line.qty} × ${esc(line.name)} <b>${fmt2(line.total)} MAD</b></p>`).join('')}
       <p role="status" data-tx-detail-status></p>`,foot:`<button type="button" class="kb ghost" data-tx-refund>${L.refund}</button><button type="button" class="kb atlas" data-tx-print>${L.print}</button>`});
     sheet.el.classList.add('kiwi-native-order-sheet');
@@ -2625,8 +2625,8 @@ handlers['nav-reservations'] = () => {
   const escV = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   /* 7-day strip anchored on the real current date — labels follow the UI language. */
   const LOC = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
-  const dShort = new Intl.DateTimeFormat(LOC[lang] || 'fr-FR', { weekday: 'short', day: 'numeric' });
-  const dLong = new Intl.DateTimeFormat(LOC[lang] || 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dShort = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOC[lang] || 'fr-FR', { weekday: 'short', day: 'numeric' });
+  const dLong = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOC[lang] || 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const now = new Date();
   const COVERS = [38, 41, 52, 28, 32, 22, 18];
   const BLOCKS = [
@@ -16730,11 +16730,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const zone = (() => {
       const candidate = R?.timezone?.() || vd.timezone || vd.timeZone || vd.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone
         || (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return ''; } })() || 'Africa/Casablanca';
-      try { new Intl.DateTimeFormat('en-CA', { timeZone: candidate }).format(); return candidate; } catch (_) { return 'Africa/Casablanca'; }
+      try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: candidate }).format(); return candidate; } catch (_) { return 'Africa/Casablanca'; }
     })();
     const partsAt = (ts) => {
       const out = {};
-      new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+      new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
         .formatToParts(new Date(ts)).forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; });
       return out;
     };
@@ -16796,7 +16796,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     ].map(([kind, label]) => `<button class="rtx-method${selectedKind === kind ? ' on' : ''}" type="button" data-action="sales-kind" data-arg="${kind}" aria-pressed="${selectedKind === kind}">${escS(label)}</button>`).join('');
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
-      : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'short' }).format(selectedDay);
+      : new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'short' }).format(selectedDay);
     const methodLabels = {
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
@@ -16812,7 +16812,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
-      const hh = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang, { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+      const hh = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang, { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
       const when = hh;
       const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (L[salesMethodKey(s)] || L.unknown);
       const ref = String(s.ref || s.label || '').trim();

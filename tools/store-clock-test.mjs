@@ -22,8 +22,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log('  ✓ ' + msg); } else { fail++; console.log('  ✗ ' + msg); } };
 
+const lawZone = (zone, t) => ['Africa/Casablanca', 'Africa/El_Aaiun'].includes(zone) && t >= Date.parse('2026-09-20T01:00:00Z') ? 'UTC' : zone;
 const civil = (t, zone) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
-  timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+  timeZone: lawZone(zone, t), year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
   hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
 }).formatToParts(t).map((p) => [p.type, p.value]));
 const ymd = (t, zone) => { const c = civil(t, zone); return `${c.year}-${c.month}-${c.day}`; };

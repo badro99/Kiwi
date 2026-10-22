@@ -212,7 +212,7 @@
   }
   function clock(ts) {
     try {
-      return new Intl.DateTimeFormat(currentLang === 'en' ? 'en-GB' : 'fr-FR', {
+      return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(currentLang === 'en' ? 'en-GB' : 'fr-FR', {
         timeZone: (G.data && G.data.zone) || 'Africa/Casablanca', hour: '2-digit', minute: '2-digit',
       }).format(new Date(ts));
     } catch (_) { return ''; }
@@ -644,7 +644,7 @@
       if (agg.has(key)) agg.get(key).qty += l.qty; else agg.set(key, { ...l });
     });
     let when = '';
-    try { when = new Intl.DateTimeFormat(currentLang === 'en' ? 'en-GB' : currentLang === 'ar' ? 'ar-MA' : 'fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: (G.data && G.data.zone) || undefined }).format(new Date()); } catch (_) {}
+    try { when = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(currentLang === 'en' ? 'en-GB' : currentLang === 'ar' ? 'ar-MA' : 'fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: (G.data && G.data.zone) || undefined }).format(new Date()); } catch (_) {}
     const rows = [...agg.values()].map((l) => `${l.qty}× ${nameOf(l.id)} · ${money(l.qty * l.unitPrice)}`);
     return [`${STORE.name || ''} · ${t('gx_status_table')} ${tableNumber}`, when, '', ...rows, '',
       `${t('gx_wa_subtotal')} · ${money(sessionTotal)}`, t('gx_wa_scope')].join('\n');

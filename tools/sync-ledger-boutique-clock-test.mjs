@@ -30,7 +30,7 @@ async function scenario(f,at,{prepare=true,offset=0,part='boutique',closed=false
  const live={merchant:()=>f.merchant,saleIdFor:e=>e.id,canonicalSaleId:(_s,id)=>id};ctx.KiwiLive=live;ctx.KiwiCaissePairing={pairedVenue:()=>({merchant:f.merchant})};
  ctx.KiwiOffline={available:()=>true,enqueue:async(_channel,_scope,payload)=>{jobs.push({id:'job',leaseToken:'lease',payload});},claim:async()=>jobs.shift()||null,acknowledge:async()=>completed(),reject:async()=>completed()};
  ctx.fetch=async(url,opts)=>{assert.equal(url,'/api/z-reconciliation');const body=JSON.parse(opts.body),r=await f.call('z',body);requests.push({body,result:r});return new Response(JSON.stringify(r.body),{status:r.status,headers:{'Content-Type':'application/json'}});};
- for(const file of ['assets/day-report.js','assets/kit/business-day.js','assets/kit/ledger.js','assets/z-reconciliation.js'])new vm.Script(read(file),{filename:file}).runInContext(ctx);
+ for(const file of ['assets/kit/haptics.js','assets/day-report.js','assets/kit/business-day.js','assets/kit/ledger.js','assets/z-reconciliation.js'])new vm.Script(read(file),{filename:file}).runInContext(ctx);
  const R=ctx.KiwiDayReport;
  const cutoff=R.cutoff(f.merchant),zone=R.timezone(f.merchant),ts=ctx.Date.now();
  check(cutoff===5&&zone==='Africa/Casablanca','till keeps cutoff 5 / Casablanca');
@@ -51,16 +51,16 @@ const f=await fixture(ROOT);
 try{
  // La vraie route lit NULL puis Africa/Casablanca ; seule sa table ICU est simulée.
  const raw=await scenario(f,BASE,{prepare:false});
- assert.deepEqual([raw.tillDay,raw.serverDay],['2026-10-21','2026-10-22']);
- assert.deepEqual([raw.result.status,raw.result.serverCount,raw.result.serverCents,raw.result.missing.length,raw.result.mismatched.length],['mismatch',0,0,6,0]);checks++;
- assert.equal(raw.bounds.to,RealDate.parse('2026-10-22T05:00:00Z'));assert.equal(raw.serverBounds.to,RealDate.parse('2026-10-22T04:00:00Z'));checks+=2;
- console.log('✓ witness 04:45Z: till day 21 (ends 05Z), server day 22 (day 21 ends 04Z): 6 / 108500 versus 0 / 0, missing 6');
+ assert.deepEqual([raw.tillDay,raw.serverDay],['2026-10-21','2026-10-21']);
+ assert.deepEqual([raw.result.status,raw.result.serverCount,raw.result.serverCents,raw.result.missing.length,raw.result.mismatched.length],['matched',6,108500,0,0]);checks++;
+ assert.equal(raw.bounds.to,RealDate.parse('2026-10-22T05:00:00Z'));assert.equal(raw.serverBounds.to,RealDate.parse('2026-10-22T05:00:00Z'));checks+=2;
+ console.log('✓ witness 04:45Z: stale and current ICU both reconcile day 21 ending 05Z: 6 / 108500, missing 0');
  for(const iso of ['2026-10-22T04:45:00Z','2026-10-22T03:50:00Z','2026-10-22T04:00:00Z','2026-10-22T04:59:59Z','2026-10-22T05:00:00Z']){
   const r=await scenario(f,RealDate.parse(iso));check(r.result.status==='matched'&&r.result.serverCount===6&&r.result.serverCents===108500&&r.result.missing.length===0,'prepared boutique trading hour reconciles at '+iso);check(r.tillDay===r.serverDay,'prepared day agrees at '+iso);
  }
  const aligned=await scenario(f,BASE,{prepare:false,offset:1});check(aligned.result.status==='matched','same tzdata on both sides matches without any clock pin');
  const close=await scenario(f,BASE,{closed:true});check(close.result.status==='matched'&&close.result.closed===true,'closing Z matches too');
- const restaurant=await scenario(f,BASE,{part:'resto'});check(restaurant.ts===BASE,'restaurant explicit-clock scenarios are not pinned');check(restaurant.result.status==='mismatch','raw tzdata skew remains visible, not patched in product');
+ const restaurant=await scenario(f,BASE,{part:'resto'});check(restaurant.ts===BASE,'restaurant explicit-clock scenarios are not pinned');check(restaurant.result.status==='matched','product law corrects raw restaurant tzdata skew too');
  check(src.includes("if (PART === 'boutique') await setClock(page, BOUTIQUE_TRADING_AT);"),'browser suite reuses its existing clock helper');
  console.log(`✓ boutique clock: ${checks} checks; real DayReport, boutique journal, ledger, Z outbox, timezone, sale and Z handlers; no socket`);
 }finally{f.close();globalThis.Date=RealDate;globalThis.Intl=RealIntl;if(hostTZ==null)delete process.env.TZ;else process.env.TZ=hostTZ;}

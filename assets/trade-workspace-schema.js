@@ -150,7 +150,7 @@
   function zoneParts(ts) {
     const out = {};
     try {
-      new Intl.DateTimeFormat('en-CA', { timeZone: venueZone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: venueZone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
         .formatToParts(new Date(ts == null ? Date.now() : ts)).forEach((p) => { out[p.type] = p.value; });
     } catch (_) {
       const d = new Date(ts == null ? Date.now() : ts), z = (n) => String(n).padStart(2, '0');

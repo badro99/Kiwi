@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 /* Kiwi · la page d'accueil du client Order Pro, le calcul pur.
  *
  * Sans dépendance ni base, pour que les routes (guest.js, game.js), le
@@ -307,7 +308,7 @@ export function sunsetUtc(y, m, d, lat, lon) {
 
 /* La date civile d'un instant dans le fuseau du magasin. */
 export function civilDate(ts, zone) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone || 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' })
+  const parts = new DateTimeFormat('en-CA', { timeZone: zone || 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' })
     .formatToParts(new Date(ts));
   const get = (k) => +parts.find((p) => p.type === k).value;
   return { y: get('year'), m: get('month'), d: get('day') };

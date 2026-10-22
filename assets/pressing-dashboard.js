@@ -75,8 +75,8 @@
     var loc = l === 'en' ? 'en-GB' : l === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR';
     try {
       var zone = venueZone();
-      return d.toLocaleDateString(loc, { day: '2-digit', month: 'short', timeZone: zone }) + ' · ' +
-        d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: zone });
+      return d.toLocaleDateString(loc, { day: '2-digit', month: 'short', timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(zone, d) || zone) }) + ' · ' +
+        d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(zone, d) || zone) });
     } catch (_) {
       return d.toLocaleDateString(loc, { day: '2-digit', month: 'short' }) + ' · ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
     }

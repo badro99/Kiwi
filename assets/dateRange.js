@@ -1943,12 +1943,12 @@
     try {
       const vd = window.KiwiVenue?.getCurrentVenueData?.();
       const zone = vd?.timezone || vd?.timeZone || vd?.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone;
-      if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
+      if (zone) { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone }).format(); return zone; }
     } catch (_) {}
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_MERCHANT_TZ; } catch (_) { return DEFAULT_MERCHANT_TZ; }
   }
   function merchantParts(ts, slug) {
-    const f = new Intl.DateTimeFormat('en-CA', {
+    const f = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {
       timeZone: merchantTimeZone(slug), year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
     });
@@ -4168,7 +4168,7 @@
     // each Monday (on each first of the month past a hundred days).
     if (daily && keys && N > 10) {
       const monthly = N > 100, by = baseY;
-      const fmt = new Intl.DateTimeFormat(LOCALE[lang] || 'fr-FR', monthly ? { month: 'short', timeZone: 'UTC' } : { day: 'numeric', month: 'short', timeZone: 'UTC' });
+      const fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOCALE[lang] || 'fr-FR', monthly ? { month: 'short', timeZone: 'UTC' } : { day: 'numeric', month: 'short', timeZone: 'UTC' });
       let lastX = -Infinity;
       xLabelsHtml = keys.map((k, i) => {
         const d = new Date(k + 'T12:00:00Z');
@@ -4310,7 +4310,7 @@
     function dayName(i, shift) {
       if (!keys?.[0]) return shift ? '' : localDayTick(data.xLabels[i] || '');
       const t = Date.parse(keys[0] + 'T12:00:00Z') + (i + shift) * 864e5;
-      const s = new Intl.DateTimeFormat(LOCALE[lang] || 'fr-FR', { weekday: 'long', day: 'numeric', month: shift ? 'short' : 'long', timeZone: 'UTC' }).format(t);
+      const s = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOCALE[lang] || 'fr-FR', { weekday: 'long', day: 'numeric', month: shift ? 'short' : 'long', timeZone: 'UTC' }).format(t);
       return s.charAt(0).toUpperCase() + s.slice(1);
     }
     function compact(v) {
@@ -4977,7 +4977,7 @@
       server:sale.staff, covers:1, serviceMinutes:0,
       items:sale.lines.map(line => ({n:line.name, name:line.name, q:line.qty, qty:line.qty, p:line.price, price:line.price, total:line.total})),
       subtotal:fmt(sale.amount), tva:fmt(0), tvaRate:0, total:fmt(sale.amount),
-      t:new Date(sale.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:window.KiwiDayReport?.timezone?.()}), isNew:slot===0
+      t:new Date(sale.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:(globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), sale.ts) || window.KiwiDayReport?.timezone?.())}), isNew:slot===0
     }));
   }
 
@@ -5584,7 +5584,7 @@
       ar: { on: 'في الحراسة', until: (x) => `حتى ${x}`, since: (x) => `منذ ${x}`, next: 'الحراسة القادمة', open: 'فتح الحراسة والتسليم' },
     }[lang] || null;
     const L2 = S2 || { on: 'EN GARDE', until: (x) => `jusqu’à ${x}`, since: (x) => `depuis ${x}`, next: 'PROCHAINE GARDE', open: 'Ouvrir Gardes & relève' };
-    const fmt = (k) => { try { return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(String(k).slice(0, 16) + ':00')); } catch (_) { return String(k); } };
+    const fmt = (k) => { try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(String(k).slice(0, 16) + ':00')); } catch (_) { return String(k); } };
     const cta = `<div class="instant" data-action="${BAND_NAV.duty}"><div style="font-weight:500;">${L2.open}</div></div>`;
     const hand = (x) => (x.v.handover ? `<div style="font-size:12px;opacity:.7;margin-top:8px;line-height:1.45;">${escTxt(String(x.v.handover).slice(0, 160))}</div>` : '');
     if (cur) {
@@ -5665,7 +5665,7 @@
           `<div style="margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);display:flex;flex-direction:column;gap:9px;">` +
           active.slice(0, 3).map((b) => {
             const status = b.status === 'requested' ? L.pending : (L[b.status] || L.confirmed);
-            const at = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(+b.startAt));
+            const at = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(+b.startAt));
             const place = resource.get(String(b.resourceId));
             return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:center;font-size:12px;">` +
               `<span style="font-family:var(--mono);color:var(--mint);font-weight:600;">${escTxt(at)}</span>` +
@@ -6046,8 +6046,8 @@
   const shiftMonth = (y, m, n) => { const t = new Date(y, m + n, 1); return { y: t.getFullYear(), m: t.getMonth() }; };
   const capFirst = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
   const monthOnly = (d, lang, style) =>
-    new Intl.DateTimeFormat(LOCALES[lang] || LOCALES.fr, { month: style }).format(d);
-  const monthLabel = (y, m, lang) => capFirst(new Intl.DateTimeFormat(
+    new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOCALES[lang] || LOCALES.fr, { month: style }).format(d);
+  const monthLabel = (y, m, lang) => capFirst(new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(
     LOCALES[lang] || LOCALES.fr, { month: 'long', year: 'numeric' }).format(new Date(y, m, 1)));
 
   /* Human span — "14 mai 2026" · "1 – 14 mai 2026" · "28 avr. – 3 mai 2026"
@@ -6159,7 +6159,7 @@
       const mon = addDays(today, -((today.getDay() + 6) % 7));
       let h = '';
       for (let i = 0; i < 7; i++) {
-        const wd = new Intl.DateTimeFormat(LOCALES[lang] || LOCALES.fr, { weekday: 'short' })
+        const wd = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(LOCALES[lang] || LOCALES.fr, { weekday: 'short' })
           .format(addDays(mon, i)).replace('.', '');
         h += `<span class="drp-wd">${dpEsc(wd)}</span>`;
       }
@@ -6393,7 +6393,7 @@
     }[lang] || ["Aujourd'hui", 'Hier', 'Avant-hier', 'Choisir une date'];
     const relative = offsets.find(n => shift(n) === chosen);
     const custom = relative == null;
-    const customLabel = custom ? new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang,
+    const customLabel = custom ? new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang === 'ar' ? 'ar-MA' : lang,
       { day: 'numeric', month: 'short', year: 'numeric' }).format(isoToDate(chosen)) : labels[3];
     host.innerHTML = `<div class="dr-control dr-day-control"><div class="dr-pills" role="group" aria-label="${dpEsc(options.ariaLabel || labels[3])}">`
       + offsets.map(n => `<button type="button" class="dr-pill${relative === n ? ' on' : ''}" data-dr-day-offset="${n}" aria-pressed="${relative === n}">${dpEsc(labels[n])}</button>`).join('')
@@ -6704,7 +6704,7 @@
     selectedBusinessDay: (range = currentRange) => {
       // Same civil timezone/cutoff as functions/api/_business-day.js, including
       // boutiques. This reference must not inherit a midnight chart cutoff.
-      const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      const parts = Object.fromEntries(new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {
         timeZone:merchantTimeZone(activeMerchantSlug()),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
       }).formatToParts(new Date()).map(p => [p.type,p.value]));
       const civil = `${parts.year}-${parts.month}-${parts.day}`;

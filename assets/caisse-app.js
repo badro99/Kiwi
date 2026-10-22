@@ -33,7 +33,7 @@
       const zone = window.KiwiDayReport?.timezone?.(currentMerchantSlug())
         || (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return ''; } })()
         || 'Africa/Casablanca';
-      const t = new Intl.DateTimeFormat('fr-FR', {
+      const t = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('fr-FR', {
         timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
       }).format(now);
       /* The date follows the till language: the native app's locale, or the
@@ -41,7 +41,7 @@
       const nativeLang = document.documentElement.classList.contains('kiwi-native') ? document.documentElement.lang
         : ((window.KiwiCaisseLang && window.KiwiCaisseLang.get()) || 'fr');
       const dateLocale = nativeLang === 'ar' ? 'ar-MA' : nativeLang === 'en' ? 'en-GB' : 'fr-FR';
-      const dateStr = new Intl.DateTimeFormat(dateLocale, {
+      const dateStr = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(dateLocale, {
         timeZone: zone, weekday: 'long', day: 'numeric', month: 'long'
       }).format(now);
       $('#clock-time').textContent = t;

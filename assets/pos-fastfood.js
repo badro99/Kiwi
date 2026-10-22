@@ -368,7 +368,7 @@
   /* Heure du COMMERCE (Casablanca), pas celle de l'appareil. */
   const casaSlot = (ts) => {
     try {
-      const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(ts));
+      const p = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('fr-FR', { timeZone: 'Africa/Casablanca', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(ts));
       const h = +(p.find((x) => x.type === 'hour') || {}).value % 24, m = +(p.find((x) => x.type === 'minute') || {}).value;
       return h * 2 + (m >= 30 ? 1 : 0);
     } catch (_) { const d = new Date(ts); return d.getHours() * 2 + (d.getMinutes() >= 30 ? 1 : 0); }

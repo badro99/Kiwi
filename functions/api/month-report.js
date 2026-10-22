@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // Read-only, owner-authorized source reader for the monthly accountant dossier.
 // No DDL, repairs, settlements, closure writes, rounded daily-total aggregation,
 // external uploads or public financial data. Pagination has no total-row cap.
@@ -19,7 +20,7 @@ export const SOURCES = Object.freeze({
 });
 export const DOCUMENTS = ['business', 'receipt', 'costs', 'recipes', 'expenses', 'procurement', 'suppliers', 'dayreports', 'monthreport', 'reservations', 'payroll'];
 export function clockLabels(values, zone, cutoff) {
-  const clock = new Intl.DateTimeFormat('en-GB', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }), result = {};
+  const clock = new DateTimeFormat('en-GB', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }), result = {};
   for (const ts of new Set(values)) { if (ts == null || !Number.isFinite(ts)) continue; const p = Object.fromEntries(clock.formatToParts(ts).map(p => [p.type,p.value])); result[ts] = { civil: `${p.year}-${p.month}-${p.day}`, local: `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}:${p.second}`, day: businessDate(ts, cutoff, zone) }; }
   return result;
 }

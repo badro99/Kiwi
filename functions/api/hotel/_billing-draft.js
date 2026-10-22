@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // Detailed pre-invoices only. No payment, tax approval or accounting posting.
 import { dateOK, text, problem } from './_commercial.js';
 export const draftIdOK = v => typeof v === 'string' && /^[A-Za-z0-9:_-]{8,64}$/.test(v);
@@ -37,7 +38,7 @@ export function draftSource(stays, accounts = [], roomCharges = []) {
     const b = staysById.get(c.stayId), amount = Number(c.amountCents), occurredTs = Number(c.occurredTs);
     if (!b || !c.id || c.roomId !== b.resourceId || !cents(amount) || amount < 1 || !Number.isSafeInteger(occurredTs) || occurredTs < 1) problem('billing-bad-room-charge');
     const payer = payerFor(payers, b);
-    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(occurredTs));
+    const date = new DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(occurredTs));
     lines.push({ id:'charge:'+c.id, stayId:b.id, date, roomId:b.resourceId, occupants:0,
       label:text(c.label, 120)||'Consommation chambre', quantity:1, amountCents:amount, kind:'room_charge', payer });
   }

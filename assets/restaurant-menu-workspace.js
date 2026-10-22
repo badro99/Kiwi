@@ -1931,7 +1931,7 @@
   }
   function rangeLabel(w){
     if(!w.exact)return ui('daysCount',{n:w.days});
-    const fmt=(day)=>{const [y,m,d]=day.split('-').map(Number);return new Intl.DateTimeFormat(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)));};
+    const fmt=(day)=>{const [y,m,d]=day.split('-').map(Number);return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)));};
     return ui('rangeLabel',{from:fmt(w.first),to:fmt(w.last)});
   }
   /* Le flux du tableau de bord ne sert l'historique qu'au rythme de ses pages
@@ -2237,7 +2237,7 @@
   }
   function salesRangeLabel(w){
     if(!w.exact)return ui(SALES_LABEL[w.id]||'salesPreset30');
-    if(w.first===w.last){const [y,m,d]=w.first.split('-').map(Number);return ui('salesDayLabel',{day:new Intl.DateTimeFormat(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)))});}
+    if(w.first===w.last){const [y,m,d]=w.first.split('-').map(Number);return ui('salesDayLabel',{day:new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang()==='ar'?'ar-MA':lang()==='en'?'en-GB':'fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d)))});}
     return rangeLabel(w);
   }
   function salesData(id){
@@ -2352,7 +2352,7 @@
   function merchantMinute(ts){
     const zone=(()=>{try{return window.KiwiDayReport?.timezone?.()||'';}catch(_){return '';}})();
     if(!zone){const d=new Date(ts);return d.getHours()*60+d.getMinutes();}
-    if(!zoneClock||zoneClockZone!==zone){try{zoneClock=new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});zoneClockZone=zone;}catch(_){zoneClock=null;const d=new Date(ts);return d.getHours()*60+d.getMinutes();}}
+    if(!zoneClock||zoneClockZone!==zone){try{zoneClock=new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});zoneClockZone=zone;}catch(_){zoneClock=null;const d=new Date(ts);return d.getHours()*60+d.getMinutes();}}
     const parts=zoneClock.formatToParts(new Date(ts));let h=0,m=0;parts.forEach(x=>{if(x.type==='hour')h=+x.value;if(x.type==='minute')m=+x.value;});return (h%24)*60+m;
   }
   function minuteInService(ts,service){const plain=merchantMinute(ts),m=service.to>1440&&plain<service.to-1440?plain+1440:plain;return m>=service.from&&m<service.to;}

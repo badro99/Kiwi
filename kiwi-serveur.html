@@ -3,6 +3,7 @@
 <head>
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
   <meta charset="utf-8" />
+<script src="assets/kit/haptics.js?v=6"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Kiwi · Équipe</title>
   <meta name="description" content="Application mobile Kiwi pour le service, le planning et le pointage de l'équipe" />
@@ -85,7 +86,6 @@
   <script src="assets/err-reporter.js?v=1"></script>
   <script src="assets/kiwi-env.js?v=2"></script>
   <script src="assets/material-icons.js?v=3" defer></script>
-  <script src="assets/kit/haptics.js?v=3" defer></script>
   <!-- Design 2027, stage 3a (spec §21.1, §18.10): the team sign-in and the
        attendance code on the kit's pad, behind the team app's flag only
        (localStorage kiwiSkin2027:team = '1', or ?skin=2027 for one load). Off,
@@ -109,7 +109,7 @@
         js("assets/kit/strings/team.en.js?v=1") +
         js("assets/kit/strings/team.ar.js?v=1") +
         js("assets/kit/strings.js?v=2") +
-        js("assets/kit/format.js?v=1") +
+        js("assets/kit/format.js?v=3") +
         js("assets/kit/core.js?v=1") +
         js("assets/kit/pin.js?v=3") +
         js("assets/kit/pin-flow.js?v=1") +
@@ -936,9 +936,9 @@
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=366" defer></script>
   <script src="assets/employee-live.js?v=602" defer></script>
-  <script src="assets/employee-planning.js?v=14" defer></script>
+  <script src="assets/employee-planning.js?v=16" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
-  <script src="assets/employee-trade-shell.js?v=4" defer></script>
+  <script src="assets/employee-trade-shell.js?v=6" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, le serveur relit dès qu'une table change en caisse, au lieu
        d'attendre son prochain tour. Absent → sondage d'origine, inchangé. -->
@@ -946,14 +946,14 @@
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
-  <script src="assets/menu-promos.js?v=1" defer></script>
+  <script src="assets/menu-promos.js?v=3" defer></script>
   <script src="assets/caisse-pairs.js?v=3" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js?v=2" defer></script>
   <script src="assets/serveur-lang.js?v=1"></script>
 
-  <script src="assets/serveur-app.js?v=1"></script>
+  <script src="assets/serveur-app.js?v=3"></script>
   <script src="assets/employee-pwa.js?v=2" defer></script>
   <script src="assets/service-requests.js?v=2" defer></script>
 </body>

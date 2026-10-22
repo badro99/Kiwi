@@ -93,15 +93,15 @@ await ok('« demain » carries its real date: the team reads a request days late
   assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'afternoon', created_ts: fri }), 'demain, sam. 24 oct., l’après-midi');
   assert.equal(slotText({ slot_day: 'week', slot_part: 'any', created_ts: fri }), 'cette semaine, jusqu’au dim. 25 oct.');
   assert.equal(slotText({ slot_day: 'later', slot_part: 'evening', created_ts: fri }), 'plus tard, en fin de journée');
-  // 23:30 UTC on the 21st is already the 22nd in Casablanca.
-  assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'any' }, Date.UTC(2026, 9, 21, 23, 30)), 'demain, ven. 23 oct.');
+  // 23:30 UTC on the 21st is still the 21st in Casablanca.
+  assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'any' }, Date.UTC(2026, 9, 21, 23, 30)), 'demain, jeu. 22 oct.');
   // An older row with no timestamp keeps the relative label alone.
   assert.equal(slotText({ slot_day: 'tomorrow', slot_part: 'evening' }), 'demain, en fin de journée');
   const route = fs.readFileSync(path.join(root, 'functions/api/demo-request.js'), 'utf8');
   assert.equal((route.match(/slotText\(v, now\)/g) || []).length, 2, 'the e-mail and the partner lead both date the slot from the request time');
 });
 await ok('references are readable over the phone and dated in Casablanca', () => {
-  assert.match(demoReference(Date.UTC(2026, 9, 12, 23, 30)), /^D-1310-[A-HJ-NP-Z2-9]{4}$/);
+  assert.match(demoReference(Date.UTC(2026, 9, 12, 23, 30)), /^D-1210-[A-HJ-NP-Z2-9]{4}$/);
 });
 
 console.log('■ demo request · POST /api/demo-request');
@@ -176,6 +176,7 @@ await ok('the console writes on WhatsApp to the international number, in the vis
   const ctx = { window: {}, document: { getElementById: () => ({ addEventListener() {}, setAttribute() {}, set innerHTML(_) {} }) }, setTimeout: () => 0, encodeURIComponent, JSON, String, Number, Date, Object, Intl };
   ctx.window.window = ctx.window;
   vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(root, 'assets/kit/haptics.js'), 'utf8'), ctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'assets/admin-demo-requests.js'), 'utf8'), ctx);
   const C = ctx.window.KiwiDemoConsole;
   assert.deepEqual(['0612345678', '+212612345678', '00212612345678', '33612345678'].map(C._intl), ['212612345678', '212612345678', '212612345678', '33612345678']);
@@ -189,7 +190,7 @@ await ok('the console writes on WhatsApp to the international number, in the vis
     const row = { slot_day: day, slot_part: part, created_ts: fri };
     assert.equal(C._slot(row), slotText(row), `console and e-mail agree for ${day}/${part}`);
   }
-  assert.equal(C._slot({ slot_day: 'tomorrow', slot_part: 'any', created_ts: Date.UTC(2026, 9, 21, 23, 30) }), 'demain, ven. 23 oct.');
+  assert.equal(C._slot({ slot_day: 'tomorrow', slot_part: 'any', created_ts: Date.UTC(2026, 9, 21, 23, 30) }), 'demain, jeu. 22 oct.');
 });
 
 console.log('■ demo request · the gate');

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { DateTimeFormat } from '../functions/api/_zone-law.js';
 import { summarize, saleCents } from '../functions/api/sales-summary.js';
 import { businessBoundary, addBusinessDays } from '../functions/api/_business-day.js';
 
@@ -10,7 +11,7 @@ vm.runInContext(fs.readFileSync(new URL('../assets/sales-history.js', import.met
 const math = context.window.KiwiSalesMath;
 const zone = 'Africa/Casablanca', cutoff = 5;
 const boundary = n => businessBoundary(addBusinessDays('2026-09-01', n), cutoff, zone);
-const clock = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' });
+const clock = new DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' });
 const hourOf = ts => +clock.formatToParts(ts).find(p => p.type === 'hour').value;
 const methods = ['cash', 'card', 'tap', 'qr', 'credit', 'livraison', 'mystery', 'split', 'wallet', 'transfer', 'compte', 'delivery'];
 const parts = [null, [], [{ method: 'cash', amountCents: 300 }, { method: 'tap', amountCents: 700 }],

@@ -1,3 +1,4 @@
+if (typeof module === 'object' && typeof require === 'function') require('./haptics.js');
 /* Kiwi · kit/ledger.js : KiwiLedger, in SHADOW MODE (design 2027, §17 and §21.2).
  *
  * One reader for every figure, on each store's business day. Stage 1 adds the
@@ -61,7 +62,7 @@
   var clocks = {};
   function clock(zone) {
     if (!clocks[zone]) {
-      clocks[zone] = new Intl.DateTimeFormat('en-GB', {
+      clocks[zone] = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', {
         timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
       });

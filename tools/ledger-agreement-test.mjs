@@ -217,7 +217,7 @@ section('A business day spanning the Ramadan clock change');
 {
   const rd = stores.find((x) => x.id === 'fx-ramadan');
   const L = inst(rd);
-  check(rd.changeAt, 'the zone has a clock change in the first quarter of 2027');
+  check(rd.changeAt, 'the zone has a clock change in the first quarter of 2026');
   const win = (day) => F.businessBoundary(F.addBusinessDays(day, 1), 5, 'Africa/Casablanca') - F.businessBoundary(day, 5, 'Africa/Casablanca');
   eq(win(rd.changeDay) / 3600000, 25, 'the day the clocks go back is 25 hours long');
   let total = 0;
@@ -228,7 +228,7 @@ section('A business day spanning the Ramadan clock change');
   eq(total, rd.sales.length, 'no sale is lost or counted twice across the change');
   eq(L.get('orders', { day: rd.changeDay }).value, 50, 'a 25-hour day holds 50 half-hours');
   /* The forward change, a year-style 23-hour day, from the same zone. */
-  const fwd = F.firstClockChange('Africa/Casablanca', '2027-03-01', '2027-04-01');
+  const fwd = F.firstClockChange('Africa/Casablanca', '2026-03-01', '2026-04-01');
   const fday = F.businessDate(fwd, 5, 'Africa/Casablanca');
   eq(win(fday) / 3600000, 23, 'the day the clocks go forward is 23 hours long');
   done('25 h and 23 h days: windows follow the wall clock, nothing lost, nothing doubled');

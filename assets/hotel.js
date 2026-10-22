@@ -2507,7 +2507,7 @@
   function nowLabel() {
     const sim = window.KiwiDemoClock?.getSimState?.();
     if (!isCustomHotel() && sim) return sim.simHourLabel.replace('h', 'h') + String(sim.simMinute).padStart(2, '0');
-    return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
+    return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
   }
   function postCharge(room, label, amt, src, silent) {
     const f = F()[room];
@@ -3232,7 +3232,7 @@
   }
   async function cuRefreshReception() {
     const scope = cuStayScope();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const day = cuReceptionSelection().date || today;
     // An independent status read includes overdue in-house stays outside the selected day.
     const work = Promise.all([cuFetchStaysForWindow(day, day), cuFetchInHouseStays()]);
@@ -3262,7 +3262,7 @@
   }
   function cuReceptionBody() {
     const allStaysMap = cuAllStays();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
     const activeStays = Array.from(allStaysMap.values()).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show');
 
@@ -3688,7 +3688,7 @@
     ar: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
   };
   function cuToday() {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   }
   /* Qui occupe réellement chaque chambre, d'après les séjours.
    *
@@ -3853,7 +3853,7 @@
   function cuWarmStays() {
     if (!isCustomHotel() || cuWarmState.loading || Date.now() - cuWarmState.at < 30000) return;
     cuWarmState.loading = true;
-    const day = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
+    const day = (n) => new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
     cuFetchStaysForWindow(day(-60), day(1)).finally(() => {
       cuWarmState.loading = false; cuWarmState.at = Date.now();
       try { window.dispatchEvent(new CustomEvent('kiwi-hotel-stays-loaded')); } catch (_) {}
@@ -4145,7 +4145,7 @@
       const roomCards = matchedRooms.map((r) => {
         const status = cuRoomStatus(r);
         const type = roomTypeOf(r.n);
-        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const roomStay = cuRoomLive(r)?.stay || null;
         const roomErrs = roomStay ? cuEvaluateStayExceptions(roomStay, today) : [];
         const exChip = roomErrs.length ? `<span class="hx-exc-chip" title="${esc(roomErrs.map((e) => e.label).join(' · '))}">${tx('Incomplet')}</span>` : '';
@@ -4466,7 +4466,7 @@
    * l'Accueil, voir functions/api/hotel/_performance.js). */
   const cuPerfByScope = new Map();
   const cuPerfWindows = () => {
-    const day = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
+    const day = (n) => new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + n * 86400000));
     return { past: { from: day(-30), to: day(-1) }, ahead: { from: day(0), to: day(29) } };
   };
   function cuPerfState() {
@@ -4606,7 +4606,7 @@
     const allStaysMap = cuAllStays();
     const active = { requested: 1, confirmed: 1, checked_in: 1 };
     const channels = { direct: tx('Direct'), booking: 'Booking.com', airbnb: 'Airbnb', expedia: 'Expedia', walkin: tx('Walk-in'), other: tx('Autre OTA') };
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const distance = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
     const start = add(today, cuTapeOffset);
@@ -4617,7 +4617,7 @@
     const matched = new Set(real.map((b) => b.resourceId));
     const walkins = Object.values(st.folios || {}).filter((f) => f && !matched.has(st.rooms?.[f.room]?.id)).map((f) => {
       const room = st.rooms?.[f.room], stamp = +f.updatedAt || Date.now();
-      const cin = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(stamp));
+      const cin = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(stamp));
       return room ? { id: 'folio:' + room.id, resourceId: room.id, customer: { name: f.guest || room.guest || tx('Walk-in') }, status: 'checked_in', hotel: { checkIn: cin, checkOut: add(cin, +f.nights || 1), channel: 'walkin', roomTypeName: roomTypeOf(room.n).name } } : null;
     }).filter(Boolean);
     const stays = real.concat(walkins);
@@ -4651,7 +4651,7 @@
    * the tape chart.  Keep the old room-by-room tape available as a sibling
    * view so reception can switch without losing context. */
   function cuSejoursAvailabilityBody() {
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     if (!cuDispoMonth) cuDispoMonth = today.slice(0, 7);
     const days = cuDispoMonthDays(cuDispoMonth);
     return `<div class="hx-page">
@@ -4673,7 +4673,7 @@
   const cuDispoAddDays = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   function cuDispoBody(ym, days) {
     const st = cuState();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const rooms = Object.values(st.rooms || {});
     const byId = new Map(rooms.map((r) => [r.id, r]));
     const sellable = rooms.filter((r) => r.status !== 'hs');
@@ -4700,14 +4700,14 @@
       }
     }
     const occIn = (catRooms, d) => catRooms.filter((r) => occ.has(d + '|' + r.id)).length;
-    const head = days.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<th class="${d === today ? 'today' : ''}"><b>${new Intl.DateTimeFormat(hxLocale(), { weekday: 'narrow', timeZone: 'UTC' }).format(dt)}</b><span>${dt.getUTCDate()}</span></th>`; }).join('');
+    const head = days.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<th class="${d === today ? 'today' : ''}"><b>${new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(hxLocale(), { weekday: 'narrow', timeZone: 'UTC' }).format(dt)}</b><span>${dt.getUTCDate()}</span></th>`; }).join('');
     const catRows = visibleCats.map((c) => `<tr><th scope="row">${esc(c.name)}<small>${c.rooms.length}</small></th>${days.map((d) => `<td class="${d === today ? 'today' : ''}" title="${tx('{n} occupée(s) sur {total}', { n: occIn(c.rooms, d), total: c.rooms.length })}">${occIn(c.rooms, d) || ''}</td>`).join('')}</tr>`).join('');
     const totals = days.map((d) => {
       const o = visibleCats.reduce((s, c) => s + occIn(c.rooms, d), 0);
       const s = visibleCats.reduce((sum, c) => sum + c.rooms.length, 0);
       return { o, f: Math.max(0, s - o), s };
     });
-    const monthLabel = new Intl.DateTimeFormat(hxLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(days[0] + 'T12:00:00Z'));
+    const monthLabel = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(hxLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(days[0] + 'T12:00:00Z'));
     const loadErr = tx((cuStayLoads.get(cuStayScope()) || {}).error || '');
     const sellableCount = visibleCats.reduce((s, c) => s + c.rooms.length, 0);
     return `<div class="hx-dispo-bar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -4743,7 +4743,7 @@
     });
   }
   async function cuDispoOpen() {
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     cuDispoMonth = today.slice(0, 7);
     cuDispoCat = 'all';
     const m = K().modal({ tag: tx('DISPONIBILITÉS'), title: tx('Chambres libres et occupées par jour'), desc: tx('Par catégorie, avec totaux Libres et Occupées pour chaque jour du mois.'), width: 1080,
@@ -5293,7 +5293,7 @@
     };
     const currentStatus = booking?.status || 'confirmed';
     const statusChoices = booking ? (nextStatuses[currentStatus] || [currentStatus]) : ['requested', 'confirmed', 'checked_in'];
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const typeId = booking?.serviceId || types[0].id;
     const existingGuests = Array.isArray(booking?.guests) && booking.guests.length ? booking.guests : (
@@ -5652,7 +5652,7 @@
     await cuLoadCommercial();
     if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug()) return;
     const commState = cuCommercialState();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const tomorrow = add(today, 1);
 
@@ -8036,7 +8036,7 @@
   function cuProductionState() {
     const scope = cuStayScope();
     if (!cuProductionByScope.has(scope)) cuProductionByScope.set(scope, {
-      month: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7),
+      month: new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7),
       report: null, loading: false, error: '', request: 0,
     });
     return cuProductionByScope.get(scope);
@@ -8903,7 +8903,7 @@
 
         const monthStays = Array.from(allMonthStays.values()).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show' && b.hotel.checkIn < mEnd && b.hotel.checkOut > mStart);
 
-        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const todayStr = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
         const exceptions = [];
         monthStays.forEach((b) => {
@@ -9074,7 +9074,7 @@
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
   handlers['hx-tape-prev'] = async () => {
     cuTapeOffset -= 14;
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const start = add(today, cuTapeOffset);
     const end = add(start, 14);
@@ -9085,7 +9085,7 @@
   };
   handlers['hx-tape-next'] = async () => {
     cuTapeOffset += 14;
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const start = add(today, cuTapeOffset);
     const end = add(start, 14);
@@ -9106,7 +9106,7 @@
   handlers['hx-dispo'] = () => {
     if (!isCustomHotel()) return;
     cuStayView = 'availability';
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     cuDispoMonth = today.slice(0, 7); cuDispoCat = 'all';
     cuDispoRefreshPage();
   };
@@ -9121,7 +9121,7 @@
   };
   handlers['hx-dispo-today'] = (el) => {
     const host = cuDispoHost(el); if (!host) return;
-    cuDispoMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).slice(0, 7);
+    cuDispoMonth = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).slice(0, 7);
     if (host.closest('.kiwi-modal')) cuDispoPaint(host, false); else rerender();
   };
   handlers['hx-dispo-refresh'] = (el) => { const host = cuDispoHost(el); if (host?.closest('.kiwi-modal')) cuDispoPaint(host, true); else cuDispoRefreshPage(); };

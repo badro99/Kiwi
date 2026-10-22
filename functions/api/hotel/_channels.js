@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // Shared OTA calendar importer for Pages Functions and the scheduled Worker.
 // Feed URLs are bearer secrets: D1 receives authenticated ciphertext only and
 // the browser receives connection metadata, never the URL.
@@ -103,7 +104,7 @@ async function sha(value) {
 function parseJson(v, fallback) { try { const x = JSON.parse(v); return x && typeof x === 'object' ? x : fallback; } catch (_) { return fallback; } }
 function daysBetween(a, b) { return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000); }
 function dateParts(epoch) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Africa/Casablanca', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(epoch));
+  const parts = new DateTimeFormat('en-CA', { timeZone:'Africa/Casablanca', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(epoch));
   const out = {}; parts.forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; }); return out;
 }
 function at(date, time) {

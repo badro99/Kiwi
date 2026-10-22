@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // A store's business day follows the civil clock of the place it trades in,
 // never the host's TZ. That place is learned from the store's own till (see
 // functions/api/timezone.js): a till in Paris books Paris days. Stores that
@@ -12,12 +13,12 @@ const clocks = new Map();
 export function validZone(zone) {
   const z = String(zone || '').trim();
   if (!z || z.length > 64 || !/^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$|^UTC$/.test(z)) return '';
-  try { new Intl.DateTimeFormat('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
+  try { new DateTimeFormat('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
 }
 function clock(zone) {
   const z = validZone(zone) || DEFAULT_ZONE;
   if (!clocks.has(z)) {
-    clocks.set(z, new Intl.DateTimeFormat('en-GB', {
+    clocks.set(z, new DateTimeFormat('en-GB', {
       timeZone: z, year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
     }));

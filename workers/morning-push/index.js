@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../../functions/api/_zone-law.js';
 // « Le point du matin » : Worker planifié. Il ne fait qu'une chose, POSTer sur
 // https://kiwi-os.com/api/push/morning avec le secret partagé. Toute la logique
 // (journée commerciale, idempotence, APNs) vit dans les Pages Functions.
@@ -13,7 +14,7 @@ const DEFAULT_URL = 'https://kiwi-os.com/api/push/morning';
 const ZONE = 'Africa/Casablanca';
 
 export function casablancaTime(date) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+  const parts = Object.fromEntries(new DateTimeFormat('en-GB', {
     timeZone: ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(date).map((p) => [p.type, p.value]));
   return { hour: Number(parts.hour), minute: Number(parts.minute) };

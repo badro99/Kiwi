@@ -101,7 +101,7 @@
     for (var i = 0; i < tags.length && !made; i++) {
       try {
         if (kind === 'n') made = new Intl.NumberFormat(tags[i], opts);
-        else if (kind === 'd') made = new Intl.DateTimeFormat(tags[i], opts);
+        else if (kind === 'd') made = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(tags[i], opts);
         else made = new Intl.RelativeTimeFormat(tags[i], opts);
       } catch (e) { err = e; }
     }
@@ -344,7 +344,7 @@
     if ('zone' in o) {
       var z = String(o.zone || '').trim();
       var ok = '';
-      if (z) { try { new Intl.DateTimeFormat('en-GB', { timeZone: z }).format(0); ok = z; } catch (_) {} }
+      if (z) { try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: z }).format(0); ok = z; } catch (_) {} }
       state.zone = ok;
     }
     if ('lang' in o) state.lang = normLang(o.lang);

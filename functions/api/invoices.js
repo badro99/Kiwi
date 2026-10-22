@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // GET  /api/invoices — factures, avoirs et devis saisis d'un établissement.
 // POST /api/invoices — créer, émettre, encaisser, créditer, convertir.
 //
@@ -88,7 +89,7 @@ function addDays(day, n) {
 }
 function todayIn(zone) {
   try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return new DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   } catch (_) { return new Date().toISOString().slice(0, 10); }
 }
 

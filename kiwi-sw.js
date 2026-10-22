@@ -22,7 +22,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=3',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=4',
-  '/assets/caisse-app.js?v=4',
+  '/assets/caisse-app.js?v=6',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -30,7 +30,7 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=1',
-  '/assets/serveur-app.js?v=1',
+  '/assets/serveur-app.js?v=3',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -41,7 +41,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=22',
+  '/assets/booking.js?v=24',
   '/assets/booking.css?v=13',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
@@ -104,7 +104,7 @@ var SHELL = [
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
   '/assets/invoicing.css?v=9',
-  '/assets/invoicing.js?v=14',
+  '/assets/invoicing.js?v=16',
   '/assets/order-qr.js?v=5',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -113,14 +113,14 @@ var SHELL = [
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues.js?v=59',
   '/assets/phone.js?v=1',
-  '/assets/trade-workspace-schema.js?v=7',
+  '/assets/trade-workspace-schema.js?v=9',
   '/assets/trade-workspaces.js?v=10',
   '/assets/delivery-receivables.js?v=2',
-  '/assets/reservations.js?v=27',
+  '/assets/reservations.js?v=29',
   '/assets/pressing-ops.js?v=9',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=8',
-  '/assets/pressing-dashboard.js?v=17',
+  '/assets/pressing-dashboard.js?v=19',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -151,7 +151,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
   '/assets/sales-history.js?v=5',
-  '/assets/dateRange.js?v=92',
+  '/assets/dateRange.js?v=94',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -189,21 +189,21 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=26',
-  '/assets/report.js?v=6',
+  '/assets/day-report.js?v=28',
+  '/assets/report.js?v=9',
   '/assets/day-report-dash.js?v=35',
   '/assets/day-report-export.js?v=12',
-  '/assets/month-report.js?v=10',
-  '/assets/month-report-tools.js?v=5',
+  '/assets/month-report.js?v=12',
+  '/assets/month-report-tools.js?v=7',
   '/assets/month-report-csv.js?v=4',
-  '/assets/month-report-pdf.js?v=12',
-  '/assets/month-report-ui.js?v=7',
+  '/assets/month-report-pdf.js?v=14',
+  '/assets/month-report-ui.js?v=9',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js?v=4',
+  '/assets/hours.js?v=6',
   '/assets/morocco-holidays.js?v=1',
   '/assets/hours-ui.js?v=2',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
@@ -249,14 +249,14 @@ var SHELL = [
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promos.js?v=5',
+  '/assets/promos.js?v=7',
   '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=49',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
-  '/assets/menu-promos.js?v=1',
+  '/assets/menu-promos.js?v=3',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=1',
   '/assets/loyalty-reserve.js?v=2',
@@ -285,14 +285,14 @@ var SHELL = [
   '/assets/restaurant-recipes.js?v=9',
   '/assets/restaurant-units.js?v=1',
   '/assets/employee-live.js?v=602',
-  '/assets/employee-planning.js?v=14',
+  '/assets/employee-planning.js?v=16',
   '/assets/employee-trade-shell.css?v=2',
-  '/assets/employee-trade-shell.js?v=4',
+  '/assets/employee-trade-shell.js?v=6',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=12',
   '/assets/team.js?v=312',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=114',
+  '/assets/restaurant-menu-workspace.js?v=116',
   '/assets/menu-promos-dashboard.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=11',
@@ -302,7 +302,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
-  '/assets/orderpro-guestpage.js?v=1',
+  '/assets/orderpro-guestpage.js?v=3',
   '/assets/orderpro-inbox.js?v=37',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
@@ -315,11 +315,11 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=140',
+  '/assets/pos-dispatch.js?v=141',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/kit/haptics.js?v=3',
+  '/assets/kit/haptics.js?v=6',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
   '/assets/icons/material/sprite.till.svg?v=5',
@@ -333,8 +333,8 @@ var SHELL = [
   '/assets/kit/strings/till.en.js?v=6',
   '/assets/kit/strings/till.ar.js?v=6',
   '/assets/kit/strings.js?v=2',
-  '/assets/kit/format.js?v=1',
-  '/assets/kit/business-day.js?v=1',
+  '/assets/kit/format.js?v=3',
+  '/assets/kit/business-day.js?v=3',
   '/assets/kit/core.js?v=1',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
@@ -411,8 +411,8 @@ var SHELL = [
   '/assets/pos-spa.js?v=10',
   '/assets/pos-hotel.css?v=19',
   '/assets/pos-hotel.js?v=19',
-  '/assets/pos-fastfood.css?v=13',
-  '/assets/pos-fastfood.js?v=13',
+  '/assets/pos-fastfood.css?v=15',
+  '/assets/pos-fastfood.js?v=15',
   '/assets/pos-boulangerie.css?v=12',
   '/assets/pos-boulangerie.js?v=12',
   '/assets/pos-pizzeria.css?v=7',

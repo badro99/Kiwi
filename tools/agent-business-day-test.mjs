@@ -18,10 +18,10 @@ sql.prepare(`INSERT INTO agent_keys (id,merchant,account_id,account_epoch,label,
   VALUES (?,?,?,?,?,?,?,?,?)`).run(id, merchant, 'owner', 0, 'fixture', await hash(token),
     JSON.stringify(['sales:read', 'payments:read']), now, now + 3600000);
 for (const [id, time, cents] of [
-  ['early', '2026-10-21T01:15:00+01:00', 1200],
-  ['late', '2026-10-21T10:00:00+01:00', 3400],
-  ['before', '2026-10-20T04:59:59+01:00', 5600],
-  ['boundary', '2026-10-21T05:00:00+01:00', 7800],
+  ['early', '2026-10-21T01:15:00+00:00', 1200],
+  ['late', '2026-10-21T10:00:00+00:00', 3400],
+  ['before', '2026-10-20T04:59:59+00:00', 5600],
+  ['boundary', '2026-10-21T05:00:00+00:00', 7800],
 ]) sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,ts) VALUES (?,?,?,?,?,?)')
   .run(id, merchant, cents / 100, cents, 'cash', Date.parse(time));
 const env = { AUTH_SECRET: 'fixture-only', DB: { prepare(query) {

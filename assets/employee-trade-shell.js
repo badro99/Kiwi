@@ -106,7 +106,7 @@
     };
   }
   function dateKey() {
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca' }).format(new Date()); }
+    try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca' }).format(new Date()); }
     catch (_) { return new Date().toISOString().slice(0, 10); }
   }
   function dateLabel(day) {
@@ -116,7 +116,7 @@
   function timeLabel(ts) {
     var n = Number(ts);
     if (!n) return '';
-    try { return new Date(n).toLocaleTimeString(locale(), { timeZone: lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca', hour: '2-digit', minute: '2-digit' }); }
+    try { return new Date(n).toLocaleTimeString(locale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone((lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca'), n) || (lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca')), hour: '2-digit', minute: '2-digit' }); }
     catch (_) { return ''; }
   }
   function nextShift(data) {

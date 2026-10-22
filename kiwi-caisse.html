@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
+<script src="assets/kit/haptics.js?v=6"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Kiwi Caisse, Démo commerçant</title>
   <meta name="description" content="Écran caissier, démo Kiwi POS" />
@@ -127,11 +128,10 @@
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promos.js?v=5" defer></script>
+  <script src="assets/promos.js?v=7" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=9" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=3" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
-  <script src="assets/kit/haptics.js?v=3" defer></script>
   <!-- Design 2027, stage 3a (spec §21.1): the till's code doors on the kit's pad,
        behind the till's flag only (localStorage kiwiSkin2027:till = '1', or
        ?skin=2027 for one load). Off, nothing below loads and the till keeps its
@@ -160,8 +160,8 @@
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
         js("assets/kit/strings.js?v=2") +
-        js("assets/kit/format.js?v=1") +
-        js("assets/kit/business-day.js?v=1") +
+        js("assets/kit/format.js?v=3") +
+        js("assets/kit/business-day.js?v=3") +
         js("assets/kit/core.js?v=1") +
         js("assets/kit/overlays.js?v=2") +
         js("assets/kit/pin.js?v=3") +
@@ -194,7 +194,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=140" defer></script>
+  <script src="assets/pos-dispatch.js?v=141" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=6" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -299,19 +299,19 @@
   <script src="assets/cloud-doc.js?v=11" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
-  <script src="assets/trade-workspace-schema.js?v=7" defer></script>
+  <script src="assets/trade-workspace-schema.js?v=9" defer></script>
   <script src="assets/pos-workspaces.js?v=8" defer></script>
   <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=26" defer></script>
+  <script src="assets/day-report.js?v=28" defer></script>
   <script src="assets/z-reconciliation.js?v=25" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
   <script src="assets/discount-policy.js?v=4" defer></script>
-  <script src="assets/menu-promos.js?v=1" defer></script>
+  <script src="assets/menu-promos.js?v=3" defer></script>
   <script src="assets/vertical-state.js?v=5" defer></script>
   <script src="assets/image-proof.js?v=1" defer></script>
   <script src="assets/operational-print.js?v=4" defer></script>
@@ -327,7 +327,7 @@
        dérogation nommée, et la journée commerciale du Z suit l'heure de
        fermeture réelle au lieu d'un seuil fixe. Après venue-store.js, dont il
        tient sa fiche par établissement. -->
-  <script src="assets/hours.js?v=4" defer></script>
+  <script src="assets/hours.js?v=6" defer></script>
   <!-- Le reçu. La caisse ne fabrique plus le sien : elle demande celui que le
        propriétaire a réglé sur le tableau de bord · mentions légales comprises,
        qu'elle n'avait aucun moyen de connaître avant (elle imprimait un ICE de
@@ -1943,6 +1943,6 @@
   </div>
 
   <script src="assets/caisse-accounting.js?v=4"></script>
-  <script src="assets/caisse-app.js?v=4"></script>
+  <script src="assets/caisse-app.js?v=6"></script>
 </body>
 </html>

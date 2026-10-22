@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // GET /api/comptable/books?month=YYYY-MM            (ou)
 // GET /api/comptable/books?from=YYYY-MM-DD&to=YYYY-MM-DD   (jours d'activité, bornes incluses)
 //
@@ -48,7 +49,7 @@ async function columnsOf(db, table) {
 }
 
 function localClock(zone) {
-  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+  const fmt = new DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   return (ts) => fmt.format(ts);
 }
 

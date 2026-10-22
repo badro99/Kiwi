@@ -98,6 +98,22 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+/* Le chargeur de rapport participe au bump et à sa cascade, comme pages-pro. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-report-stamp-'));
+  fixture(dir);
+  fs.writeFileSync(path.join(dir, 'assets/report.js'), '// rapport\n');
+  fs.writeFileSync(path.join(dir, 'assets/dashboard-extra.js'), "new URL('assets/report.js?v=1', document.baseURI);\n");
+  fs.appendFileSync(path.join(dir, 'dashboard.html'), '<link rel="preload" href="assets/report.js?v=1" as="script"><script src="assets/dashboard-extra.js?v=1"></script>');
+  run(dir, ['--sync']);
+  fs.appendFileSync(path.join(dir, 'assets/report.js'), '// modifié\n');
+  ok(run(dir, ['assets/report.js']).status === 0, 'report bump succeeds');
+  ok(rd(dir, 'assets/dashboard-extra.js').includes('report.js?v=2'), 'report loader URL moves with preload');
+  ok(rd(dir, 'dashboard.html').includes('dashboard-extra.js?v=2'), 'report loader stamp cascades');
+  ok(spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' }).status === 0, 'report loader and preload seal together');
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 /* B · le hook juge l'index, jamais l'arbre de travail */
 {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-hook-'));

@@ -138,7 +138,7 @@
   function zoneShift(t, zone) {
     try {
       var z = zoneOf(zone);
-      var fmt = zoneFmts[z] || (zoneFmts[z] = new Intl.DateTimeFormat('en-US', { timeZone: z, hourCycle: 'h23',
+      var fmt = zoneFmts[z] || (zoneFmts[z] = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-US', { timeZone: z, hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       var o = {};
       fmt.formatToParts(new Date(t)).forEach(function (x) { o[x.type] = +x.value; });

@@ -31,8 +31,8 @@ const WEEK = {
   fri: day(false, []), sat: day(false, []), sun: day(false, []),
 };
 const HOURS = { v: 1, week: WEEK, exceptions: [{ from: '2026-10-20', to: '2026-10-20', kind: 'closed', label: 'Inventaire', periods: [] }] };
-/* Casablanca est à UTC+1 toute l'année hors ramadan ; Paris à UTC+2 en octobre. */
-const casa = (iso) => Date.parse(iso + '+01:00');
+/* Casablanca est à UTC depuis le 20 septembre 2026 ; Paris à UTC+2 en octobre. */
+const casa = (iso) => Date.parse(iso + 'Z');
 
 console.log('\nHoraires publiés · règle de la page, côté serveur');
 ok('lundi 13:00 à Casablanca : ouvert', hoursOpenAt(HOURS, casa('2026-10-12T13:00:00'), 'Africa/Casablanca') === true);

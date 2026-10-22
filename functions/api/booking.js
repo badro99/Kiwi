@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // Public Kiwi booking surface. It exposes availability, never another client's details.
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
@@ -86,7 +87,7 @@ function safeDoc(raw) {
   return out;
 }
 function dateParts(epoch, tz = TZ) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23', weekday:'short' }).formatToParts(new Date(epoch));
+  const parts = new DateTimeFormat('en-CA', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23', weekday:'short' }).formatToParts(new Date(epoch));
   const o = {}; parts.forEach((p) => { if (p.type !== 'literal') o[p.type] = p.value; }); return o;
 }
 function zonedEpoch(date, time, tz = TZ) {

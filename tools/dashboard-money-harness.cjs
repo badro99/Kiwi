@@ -16,7 +16,7 @@ function world(zone='UTC'){
    localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)},
    document:{addEventListener:no,dispatchEvent:e=>events.push(e),querySelector:()=>({})},location:{pathname:'/dashboard.html',search:''},
    navigator:{onLine:true},CustomEvent:class{constructor(type,opts){this.type=type;this.detail=opts?.detail;}},setTimeout:no,clearTimeout:no,setInterval:no};
- const report=vm.createContext({...common});vm.runInContext(body('assets/day-report.js'),report);
+ const report=vm.createContext({...common});vm.runInContext(read('assets/kit/haptics.js'),report);common.KiwiZoneLaw=report.KiwiZoneLaw;vm.runInContext(body('assets/day-report.js'),report);
  // Execute named entrypoints in the initialized scope, preserving their helpers.
  load(report,'assets/day-report.js',['businessDay','dayBounds','build']);window.KiwiDayReport.businessDay=report.businessDay;window.KiwiDayReport.dayBounds=report.dayBounds;window.KiwiDayReport.build=report.build;
  const store=vm.createContext({...common,currentVenue:'scoped',TRANSIENT_IDS:['own','scoped'],slugOf:()=> 'property-shop',ledgerCache:new Map(),salesSubs:new Set(),refundSubs:new Set()});

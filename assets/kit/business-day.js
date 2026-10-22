@@ -1,3 +1,4 @@
+if (typeof module === 'object' && typeof require === 'function') require('./haptics.js');
 /* Kiwi · business-day.js , la journée commerciale d'un magasin, côté client.
  *
  * Direction 2027, §17.1 : une seule règle pour dire « quel jour est ce
@@ -43,7 +44,7 @@
   function validZone(zone) {
     var z = String(zone == null ? '' : zone).trim();
     if (!z || z.length > 64 || !/^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$|^UTC$/.test(z)) return '';
-    try { new Intl.DateTimeFormat('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
+    try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: z }).format(0); return z; } catch (_) { return ''; }
   }
   /* Une heure de bascule : un entier de 0 à 12, sinon -1. */
   function validCutoff(value) {
@@ -54,7 +55,7 @@
   function clock(zone) {
     var z = validZone(zone) || DEFAULT_ZONE;
     if (!clocks[z]) {
-      clocks[z] = new Intl.DateTimeFormat('en-GB', {
+      clocks[z] = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', {
         timeZone: z, year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
       });

@@ -1,3 +1,4 @@
+if (typeof module === 'object' && typeof require === 'function') require('./kit/haptics.js');
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · RAPPORT JOURNALIER — window.KiwiDayReport
  * ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@
     if (Object.prototype.hasOwnProperty.call(FORMATTERS, zone)) return FORMATTERS[zone];
     var f = null;
     try {
-      f = new Intl.DateTimeFormat('en-CA', {
+      f = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {
         timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
       });

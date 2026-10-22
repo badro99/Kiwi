@@ -114,13 +114,13 @@
       if (window.KiwiDayReport && window.KiwiDayReport.timezone) return window.KiwiDayReport.timezone();
       var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
       var zone = vd && (vd.timezone || vd.timeZone || vd.tz);
-      if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
+      if (zone) { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone }).format(); return zone; }
     } catch (_) {}
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Casablanca'; } catch (_) { return 'Africa/Casablanca'; }
   }
   function merchantParts(epoch) {
     var out = {};
-    new Intl.DateTimeFormat('en-CA', { timeZone: merchantTimezone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: merchantTimezone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
       .formatToParts(new Date(epoch)).forEach(function (p) { if (p.type !== 'literal') out[p.type] = p.value; });
     return out;
   }
@@ -174,7 +174,7 @@
     var to = open ? nowMs : +bounds[1];
     var endForDate = Math.max(from, to - 1);
     var a = new Date(from), b = new Date(endForDate);
-    var df = new Intl.DateTimeFormat(locale(lang), { timeZone: merchantTimezone(), day: 'numeric', month: 'long', year: 'numeric' });
+    var df = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(locale(lang), { timeZone: merchantTimezone(), day: 'numeric', month: 'long', year: 'numeric' });
     var startIso = merchantIsoDate(from), endIso = merchantIsoDate(endForDate);
     var dateText = startIso === endIso ? df.format(a) : (COPY[lang].from + ' ' + df.format(a) + ' ' + COPY[lang].to + ' ' + df.format(b));
     return {
@@ -290,7 +290,7 @@
     var labels = values.map(function (_, i) {
       if (hourly) return pad2(+merchantParts(period.from + i * 3600000).hour) + ':00';
       var d = new Date(period.from + i * DAY);
-      return new Intl.DateTimeFormat(locale(language()), { timeZone: merchantTimezone(), day: '2-digit', month: '2-digit' }).format(d);
+      return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(locale(language()), { timeZone: merchantTimezone(), day: '2-digit', month: '2-digit' }).format(d);
     });
     return { values: values, labels: labels };
   }
@@ -458,7 +458,7 @@
     var l = snapshot.lang, c = snapshot.copy;
     var dir = l === 'ar' ? 'rtl' : 'ltr';
     var logo = new URL('assets/kiwi-logo.svg', document.baseURI).href;
-    var generated = new Intl.DateTimeFormat(locale(l), { dateStyle: 'long', timeStyle: 'short' }).format(snapshot.generatedAt);
+    var generated = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(locale(l), { dateStyle: 'long', timeStyle: 'short' }).format(snapshot.generatedAt);
     var metricRows = snapshot.metrics.map(function (m) {
       return '<tr><th scope="row">' + esc(m.label) + '</th><td class="num">' + esc(metricValue(m, l)) + '</td><td class="num change">' + esc(formatNumber(m.delta, { kind: 'percent', digits: 1, lang: l })) + '</td></tr>';
     }).join('');

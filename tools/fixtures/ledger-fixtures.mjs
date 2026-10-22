@@ -47,6 +47,7 @@ export function resolverFor(defaults) {
 export function wall(day, hhmm, zone) {
   const [h, m] = hhmm.split(':').map(Number);
   const target = Date.parse(day + 'T00:00:00Z') + (h * 60 + m) * 60000;
+  if (['Africa/Casablanca', 'Africa/El_Aaiun'].includes(zone) && target >= Date.parse('2026-09-20T01:00:00Z')) return target;
   const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   let guess = target;
   for (let i = 0; i < 5; i++) {
@@ -61,7 +62,7 @@ export function wall(day, hhmm, zone) {
 /* The first clock change of a zone inside [fromDay, toDay): the hour at which the offset moves. */
 export function firstClockChange(zone, fromDay, toDay) {
   const f = new Intl.DateTimeFormat('en-GB', { timeZone: zone, timeZoneName: 'longOffset' });
-  const off = (t) => f.format(t).split(', ')[1];
+  const off = (t) => ['Africa/Casablanca', 'Africa/El_Aaiun'].includes(zone) && t >= Date.parse('2026-09-20T01:00:00Z') ? 'GMT' : f.format(t).split(', ')[1];
   let prev = off(Date.parse(fromDay + 'T00:00:00Z'));
   for (let t = Date.parse(fromDay + 'T00:00:00Z'); t < Date.parse(toDay + 'T00:00:00Z'); t += 3600000) {
     const o = off(t);
@@ -137,9 +138,9 @@ export async function buildStores(defaults) {
   /* Two Z reports for one day that disagree on the cutoff (z-reconciliation's cutoffConflict). */
   stores.push({ ...ch, id: 'fx-conflict', zReports: { '2026-10-10': [{ cutoff: 5 }, { cutoff: 7 }] } });
 
-  /* A business day spanning the Ramadan clock change (the first one after 1 January 2027). */
+  /* A business day spanning the Ramadan clock change (historical February 2026, before permanent UTC). */
   const zr = 'Africa/Casablanca';
-  const change = firstClockChange(zr, '2027-01-01', '2027-04-01');
+  const change = firstClockChange(zr, '2026-01-01', '2026-04-01');
   const changeDay = businessDate(change, 5, zr);          // the business day the change falls in
   const rd = { id: 'fx-ramadan', config: { businessCutoff: 5, timezone: zr }, resolve, sales: [], refunds: [], zReports: {},
     days: [addBusinessDays(changeDay, -1), changeDay, addBusinessDays(changeDay, 1)], changeAt: change, changeDay,

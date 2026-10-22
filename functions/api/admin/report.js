@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // GET /api/admin/report?merchant=<slug>&month=YYYY-MM — le rapport du mois d'un
 // établissement, tel qu'on le remet au commerçant (kiwi-report.html).
 //
@@ -38,7 +39,7 @@ function monthBounds(month, cutoff, zone) {
 }
 
 function hourIn(ts, zone) {
-  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' }).format(ts));
+  return Number(new DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' }).format(ts));
 }
 function weekdayIn(day) {
   return new Date(day + 'T12:00:00Z').getUTCDay(); // 0 = dimanche, sur la date commerciale

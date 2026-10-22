@@ -34,9 +34,9 @@ const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey
 const PEM = `-----BEGIN PRIVATE KEY-----\n${pkcs8.match(/.{1,64}/g).join('\n')}\n-----END PRIVATE KEY-----`;
 const APNS = { APNS_KEY_ID: 'KEYID12345', APNS_TEAM_ID: 'TEAMID6789', APNS_PRIVATE_KEY: PEM };
 
-// Casablanca est à UTC+1 en octobre : 05:35 le 14/10/2026 = 04:35Z. La journée
-// close est donc le 13/10 : [13/10 04:00Z, 14/10 04:00Z).
-const NOW = Date.parse('2026-10-14T04:35:00Z');
+// Casablanca est à UTC en octobre : 05:35 le 14/10/2026 = 05:35Z. La journée
+// close est donc le 13/10 : [13/10 05:00Z, 14/10 05:00Z).
+const NOW = Date.parse('2026-10-14T05:35:00Z');
 const iso = (s) => Date.parse(s);
 
 function database({ legacyTokens = false } = {}) {
@@ -74,15 +74,15 @@ function token(db, merchant, tok, role = 'dashboard', platform = 'ios', lang = n
 }
 function seed(db) {
   // shop-a : 1 000 + 3 230,50 + 50 (ancienne ligne en MAD entiers) - 20 (remboursement) = 4 260,50, 3 ventes
-  sale(db, 'shop-a', iso('2026-10-13T04:00:00Z'), 100000);           // 05:00 pile : dans la journée
+  sale(db, 'shop-a', iso('2026-10-13T05:00:00Z'), 100000);           // 05:00 pile : dans la journée
   sale(db, 'shop-a', iso('2026-10-14T02:00:00Z'), 323050);           // 03:00 le 14 : encore la journée du 13
   sale(db, 'shop-a', iso('2026-10-13T12:00:00Z'), 5000, { legacy: true });
   sale(db, 'shop-a', iso('2026-10-13T13:00:00Z'), -2000);            // remboursement : net, non compté
-  sale(db, 'shop-a', iso('2026-10-13T03:59:59Z'), 99900);            // 04:59:59 : veille, exclue
-  sale(db, 'shop-a', iso('2026-10-14T04:00:00Z'), 50000);            // 05:00 le 14 : aujourd'hui, exclue
+  sale(db, 'shop-a', iso('2026-10-13T04:59:59Z'), 99900);            // 04:59:59 : veille, exclue
+  sale(db, 'shop-a', iso('2026-10-14T05:00:00Z'), 50000);            // 05:00 le 14 : aujourd'hui, exclue
   sale(db, 'shop-a', iso('2026-10-13T15:00:00Z'), 77700, { void: true }); // annulée : hors livres
   // shop-b : rien hier, une vente aujourd'hui
-  sale(db, 'shop-b', iso('2026-10-14T04:10:00Z'), 12000);
+  sale(db, 'shop-b', iso('2026-10-14T05:10:00Z'), 12000);
   // shop-c : une vente hier, appareil en anglais
   sale(db, 'shop-c', iso('2026-10-13T10:00:00Z'), 12000);
   token(db, 'shop-a', TOK.a, 'dashboard', 'ios', '');
@@ -318,14 +318,14 @@ try {
       && morning.morningMessage('en', 123456, 2).body === 'Yesterday: 1,234.56 MAD · 2 sales');
     ok('langue inconnue : français', morning.morningMessage('de', 100, 1).title === 'Le point du matin');
     const at = (s) => worker.inSendWindow(new Date(s));
-    ok('hors Ramadan : 04:30Z (05:30 à Casablanca) passe, 05:30Z (06:30) non', at('2026-10-14T04:30:00Z') && !at('2026-10-14T05:30:00Z'));
+    ok('après réforme : 05:30Z passe, 04:30Z non', at('2026-10-14T05:30:00Z') && !at('2026-10-14T04:30:00Z'));
     ok('Ramadan (UTC+0) : 04:30Z (04:30) non, 05:30Z (05:30) passe', !at('2026-03-10T04:30:00Z') && at('2026-03-10T05:30:00Z'));
     const calls = stubFetch(() => Response.json({ ok: true, sent: 3 }));
-    let r = await worker.run({ MORNING_PUSH_SECRET: SECRET }, new Date('2026-10-14T04:31:00Z'));
+    let r = await worker.run({ MORNING_PUSH_SECRET: SECRET }, new Date('2026-10-14T05:31:00Z'));
     ok('dans la fenêtre : un POST avec le secret et rien d\'autre',
       r.sent === 3 && calls.length === 1 && calls[0].url === 'https://kiwi-os.com/api/push/morning'
       && calls[0].init.method === 'POST' && calls[0].init.headers['X-Kiwi-Morning-Secret'] === SECRET && !calls[0].init.body);
-    r = await worker.run({ MORNING_PUSH_SECRET: SECRET }, new Date('2026-10-14T05:31:00Z'));
+    r = await worker.run({ MORNING_PUSH_SECRET: SECRET }, new Date('2026-10-14T06:31:00Z'));
     ok('hors fenêtre : aucun appel', r.skipped === 'outside-window' && calls.length === 1);
     let threw = false;
     try { await worker.run({}, new Date('2026-10-14T04:31:00Z')); } catch (_) { threw = true; }

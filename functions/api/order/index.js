@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // /api/order — the PUBLIC half of the order relay (a customer's phone).
 //
 //   POST { merchant, mode, table, session?, ref?, lines:[{id,qty,options,note}] }
@@ -171,7 +172,7 @@ export async function onRequestPost(context) {
       return json({ error: 'ftour-unavailable' }, 409);
     }
     ftour = iftar;
-    const hhmm = new Intl.DateTimeFormat('fr-FR', { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(new Date(iftar));
+    const hhmm = new DateTimeFormat('fr-FR', { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(new Date(iftar));
     priced.lines.forEach((l) => {
       l.note = ('Pour le ftour · ' + hhmm + (l.note ? ' · ' + l.note : '')).slice(0, 200);
     });

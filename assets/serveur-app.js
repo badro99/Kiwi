@@ -253,7 +253,7 @@
     /* ---------- Live clock ---------- */
     let employeeStoreZone = '';
     function employeeDayKey() {
-      try { return new Intl.DateTimeFormat('en-CA', { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+      try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
       catch (_) { return new Date().toISOString().slice(0, 10); }
     }
     function employeeCivilDate() { return new Date(employeeDayKey() + 'T12:00:00'); }
@@ -261,10 +261,10 @@
     function tickClock() {
       const now = new Date();
       const zone = employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const t = now.toLocaleTimeString(employeeLocale(), { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      const t = now.toLocaleTimeString(employeeLocale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(zone, now) || zone), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
       const ciTime = $('#ci-time'); if (ciTime) ciTime.textContent = t;
       const ciDate = $('#ci-date');
-      if (ciDate) ciDate.textContent = now.toLocaleDateString(employeeLocale(), { timeZone: zone, weekday: 'long', day: 'numeric', month: 'long' });
+      if (ciDate) ciDate.textContent = now.toLocaleDateString(employeeLocale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(zone, now) || zone), weekday: 'long', day: 'numeric', month: 'long' });
     }
     tickClock();
     setInterval(tickClock, 1000);
@@ -309,7 +309,7 @@
 
     /* ---------- Time-of-day greeting helper ---------- */
     function timeOfDay() {
-      const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+      const h = Number(new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
       const period = h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 15 ? 'lunch' : h >= 15 && h < 18 ? 'afternoon' : h >= 18 && h < 23 ? 'evening' : 'night';
       const copy = {
         fr: { morning:'ce matin', lunch:'ce midi', afternoon:'cet après-midi', evening:'ce soir', night:'cette nuit' },
@@ -5116,7 +5116,7 @@
       }
 
       // More than 59 min ago: show exact time (e.g. 14:32)
-      return d.toLocaleTimeString(employeeLocale(), { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString(employeeLocale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone((employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone), d) || (employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone)), hour: '2-digit', minute: '2-digit' });
     }
 
     function notificationOrigin(type) {
@@ -5206,7 +5206,7 @@
     function renderProfil() {
       if (!shiftStart) return;
       renderPauseControl();
-      $('#profil-shift-start').textContent = shiftStart.toLocaleTimeString(employeeLocale(), { timeZone: employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      $('#profil-shift-start').textContent = shiftStart.toLocaleTimeString(employeeLocale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone((employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone), shiftStart) || (employeeStoreZone || Intl.DateTimeFormat().resolvedOptions().timeZone)), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
       const totalMin = Math.floor(shiftElapsedMs() / 60000);
       const h = Math.floor(totalMin / 60);
@@ -5337,7 +5337,7 @@
       // jours, avec l'heure du commerce.
       const nowMin = (() => {
         try {
-          const parts = new Intl.DateTimeFormat('en-GB', { timeZone: employeeStoreZone || undefined, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+          const parts = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: employeeStoreZone || undefined, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
           const get = (type) => Number((parts.find((x) => x.type === type) || {}).value) || 0;
           return get('hour') * 60 + get('minute');
         } catch (_) { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }

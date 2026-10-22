@@ -10,7 +10,7 @@
   var object = function (v) { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (_) { return {}; } } return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; };
   var unique = function (a, key) { var seen = new Map(); a.forEach(function (r, i) { var id = key(r) || ('unidentified-' + i); if (!seen.has(id)) seen.set(id, r); }); return Array.from(seen.values()); };
   function shiftMonth(month, n) { var y = +month.slice(0, 4), m = +month.slice(5) - 1 + n; var d = new Date(Date.UTC(y, m, 1)); return d.toISOString().slice(0, 7); }
-  function civil(ts, zone) { var p = new Intl.DateTimeFormat('en-GB', {timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(ts); var o={};p.forEach(function(x){o[x.type]=x.value;});return {day:o.year+'-'+o.month+'-'+o.day,hour:+o.hour}; }
+  function civil(ts, zone) { var p = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', {timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(ts); var o={};p.forEach(function(x){o[x.type]=x.value;});return {day:o.year+'-'+o.month+'-'+o.day,hour:+o.hour}; }
   function day(ts, data) { if(data.clock&&data.clock[ts])return data.clock[ts].day;var p = civil(ts, data.zone); return p.hour < data.cutoff ? new Date(Date.parse(p.day + 'T00:00:00Z') - 86400000).toISOString().slice(0,10) : p.day; }
   function stamp(r, fields) { for (var i=0;i<fields.length;i++) { var v=r[fields[i]], n=N(v); if(n!=null)return n; if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)) { var parsed=Date.parse(v); if(Number.isFinite(parsed))return parsed; } } return null; }
   function inside(ts, data) { return ts!=null&&ts>=data.from&&ts<data.to&&ts<=data.asOf; }

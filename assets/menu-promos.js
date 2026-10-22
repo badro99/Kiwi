@@ -57,7 +57,7 @@
   var fmt = null;
   function wall(now) {
     if (!fmt) {
-      fmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hourCycle: 'h23',
+      fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: TZ, hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
     var p = {};

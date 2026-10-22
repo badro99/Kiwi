@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 // La météo du commerce, sans service payant.
 //
 // Source : MET Norway (api.met.no, Institut météorologique norvégien). Gratuit,
@@ -102,7 +103,7 @@ export function cityCoords(value) {
   return null;
 }
 
-const DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
+const DAY_FMT = new DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
 export function localParts(ms) {
   const p = DAY_FMT.formatToParts(new Date(ms));
   const g = (t) => (p.find((x) => x.type === t) || {}).value;

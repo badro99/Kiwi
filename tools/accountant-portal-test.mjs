@@ -64,14 +64,14 @@ function database({ dropZ = false } = {}) {
     extra.label || null, extra.ref || ('R-' + id), iso(ts), extra.channel || null, extra.parts || null,
     extra.voidTs || null, extra.reason || null, extra.note || null);
   S('s0', SHOP, 99900, 'cash', '2026-09-30T12:00:00Z');                    // septembre : hors période
-  S('s1', SHOP, 1000, 'cash', '2026-10-10T03:59:59Z');                     // 04:59:59 locale : jour du 9
-  S('s2', SHOP, 2000, 'card', '2026-10-10T04:00:00Z', { label: 'Mme Client 0612345678' }); // 05:00:00 : jour du 10
+  S('s1', SHOP, 1000, 'cash', '2026-10-10T04:59:59Z');                     // 04:59:59 locale : jour du 9
+  S('s2', SHOP, 2000, 'card', '2026-10-10T05:00:00Z', { label: 'Mme Client 0612345678' }); // 05:00:00 : jour du 10
   S('s3', SHOP, 5000, 'cash', '2026-10-10T15:00:00Z', { legacy: 50 });     // ligne d'avant les centimes
   S('s4', SHOP, -500, 'cash', '2026-10-10T16:00:00Z', { channel: 'refund' });
   S('s5', SHOP, 700, 'cash', '2026-10-10T17:00:00Z', { voidTs: iso('2026-10-10T18:00:00Z'), reason: 'doublon', note: 'secret note interne' });
   S('s6', SHOP, 3000, 'split', '2026-10-11T09:00:00Z', { parts: JSON.stringify([{ method: 'cash', amountCents: 1500 }, { method: 'card', amountCents: 1500 }]) });
   S('s8', SHOP, 400, 'card', '2026-11-01T03:30:00Z');                      // 04:30 le 1er nov. : encore le 31 octobre
-  S('s9', SHOP, 800, 'card', '2026-11-01T04:00:00Z');                      // 05:00 le 1er nov. : novembre
+  S('s9', SHOP, 800, 'card', '2026-11-01T05:00:00Z');                      // 05:00 le 1er nov. : novembre
   S('x1', OTHER, 77777, 'cash', '2026-10-10T10:00:00Z');                   // un autre magasin
 
   const inv = db.prepare(`INSERT INTO sale_invoices (merchant,seq,number,sale_id,customer,snapshot,created_ts) VALUES (?,?,?,?,?,?,?)`);
@@ -216,7 +216,7 @@ let oct;
   oct = r.json;
   ok('lecture du mois (200, lecture seule)', r.status === 200 && oct.ok && oct.readOnly === true && oct.merchant === SHOP, r.text.slice(0, 200));
   ok('le magasin est nommé', oct.store.name === 'Compta Shop');
-  ok('le jour d\'activité commence à 05:00 locale (borne du 10 octobre = 04:00Z)', oct.range.fromTs === iso('2026-10-01T04:00:00Z') && oct.range.cutoffHour === 5, String(oct.range.fromTs));
+  ok('le jour d\'activité commence à 05:00 locale (borne du 10 octobre = 05:00Z)', oct.range.fromTs === iso('2026-10-01T05:00:00Z') && oct.range.cutoffHour === 5, String(oct.range.fromTs));
   const refs = oct.sales.journal.map((j) => j.ref);
   ok('04:59:59 appartient au jour précédent (le 9)', oct.sales.journal.find((j) => j.ref === 'R-s1').day === '2026-10-09');
   ok('05:00:00 ouvre le jour suivant (le 10)', oct.sales.journal.find((j) => j.ref === 'R-s2').day === '2026-10-10');

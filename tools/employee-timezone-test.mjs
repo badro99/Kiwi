@@ -67,6 +67,6 @@ if (tick) {
 check(waiter.includes('employeeStoreZone = data.store && data.store.timezone'), 'waiter refresh updates zone from server payload');
 check(waiter.includes('const monday = employeeCivilDate()') && waiter.includes('const key = employeeCivilKey(d)'), 'waiter schedule uses store-local civil keys');
 check(waiter.includes('hmap[employeeCivilKey(d)]'), 'waiter weekly hours do not convert civil days through UTC');
-check(waiter.includes('shiftStart.toLocaleTimeString(employeeLocale(), { timeZone: employeeStoreZone'), 'pointage start is shown in store time');
+check(waiter.includes('shiftStart.toLocaleTimeString(employeeLocale(), { timeZone: (globalThis.KiwiZoneLaw?.effectiveZone((employeeStoreZone'), 'pointage start is shown in store time');
 console.log(`employee timezone: ${pass} passed, ${fail} failed`);
 if (fail) process.exitCode = 1;

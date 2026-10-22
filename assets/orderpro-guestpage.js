@@ -133,7 +133,7 @@
       .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '').slice(0, 40);
   }
   function clock(ts, zone) {
-    try { return new Intl.DateTimeFormat(lang() === 'en' ? 'en-GB' : 'fr-FR', { timeZone: zone || 'Africa/Casablanca', hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); }
+    try { return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(lang() === 'en' ? 'en-GB' : 'fr-FR', { timeZone: zone || 'Africa/Casablanca', hour: '2-digit', minute: '2-digit' }).format(new Date(ts)); }
     catch (_) { return ''; }
   }
 

@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
@@ -159,7 +160,7 @@ function safeRooms(raw) {
   return { baseRate: d.baseRate == null ? null : num(d.baseRate, 0, 1000000, null), types, rooms, folios };
 }
 function dateParts(epoch) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(epoch));
+  const parts = new DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(epoch));
   const out = {}; parts.forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; }); return out;
 }
 function isCalendarDate(date) {

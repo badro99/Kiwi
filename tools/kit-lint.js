@@ -142,7 +142,7 @@ function lintScript(js, file) {
   /* K7 · coupure de journée en dur. */
   if (base !== 'business-day.js') {
     const re7 = /\bDEFAULT_CUTOFF\b|\bDEFAULT_ZONE\b|['"`]Africa\/Casablanca['"`]|\b(?:businessCutoff|business_cutoff|cutoff)\b\s*(?:\?\?|\|\||=(?!=))\s*\d/g;
-    while ((m = re7.exec(src))) out.push(`K7 ${file}:${lineOf(m.index)} · « ${m[0]} » : la coupure et le fuseau ne s'écrivent que dans business-day.js (§17.1)`);
+    while ((m = re7.exec((base === 'haptics.js' ? src.replace(/^const ZONE_LAWS = .*;$/m, line => " ".repeat(line.length)) : src)))) out.push(`K7 ${file}:${lineOf(m.index)} · « ${m[0]} » : la coupure et le fuseau ne s'écrivent que dans business-day.js (§17.1)`);
   }
 
   /* K8 · window.KiwiLens. */

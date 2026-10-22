@@ -123,7 +123,7 @@
   var wallFmt = null;
   function businessMoment(now) {
     if (!wallFmt) {
-      wallFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hourCycle: 'h23',
+      wallFmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-GB', { timeZone: TZ, hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
     var parts = {};

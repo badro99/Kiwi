@@ -6,11 +6,11 @@ import { onRequestGet } from '../functions/api/sales-summary.js';
 
 const DAY = 86400000;
 const ms = (s) => Date.parse(s);
-const from = ms('2026-10-20T05:00:00+01:00');
-const to = ms('2026-10-22T05:00:00+01:00');
-const evening = ms('2026-10-20T20:00:00+01:00');
-const night = ms('2026-10-21T01:15:00+01:00');
-const morning = ms('2026-10-21T10:00:00+01:00');
+const from = ms('2026-10-20T05:00:00+00:00');
+const to = ms('2026-10-22T05:00:00+00:00');
+const evening = ms('2026-10-20T20:00:00+00:00');
+const night = ms('2026-10-21T01:15:00+00:00');
+const morning = ms('2026-10-21T10:00:00+00:00');
 const merchant = 'summary-store', secret = 'sales-summary-test-only';
 
 function fixture() {
@@ -55,8 +55,8 @@ const cases = [
     const { status, data } = await f.get(); assert.equal(status, 200);
     assert.equal(data.zone, 'Africa/Casablanca'); assert.equal(data.cutoff, 5);
     assert.deepEqual(data.days.map(({ day, from, to, count, cents }) => ({ day, from, to, count, cents })), [
-      { day: '2026-10-20', from, to: ms('2026-10-21T05:00:00+01:00'), count: 2, cents: 3500 },
-      { day: '2026-10-21', from: ms('2026-10-21T05:00:00+01:00'), to, count: 1, cents: 3400 },
+      { day: '2026-10-20', from, to: ms('2026-10-21T05:00:00+00:00'), count: 2, cents: 3500 },
+      { day: '2026-10-21', from: ms('2026-10-21T05:00:00+00:00'), to, count: 1, cents: 3400 },
     ]);
   }],
   ['Store-clock hours', async (f) => {
@@ -137,11 +137,11 @@ const cases = [
     }
   }],
   ['Partial business day', async (f) => {
-    const start = ms('2026-10-20T19:30:00+01:00');
+    const start = ms('2026-10-20T19:30:00+00:00');
     f.sale({ ts: start - 1, cents: 9999 }); f.sale({ ts: start, cents: 1111 });
     f.sale({ cents: 2222 }); f.sale({ ts: to, cents: 8888 });
     const { data } = await f.get({ start });
-    assert.equal(data.days[0].from, start); assert.equal(data.days[0].to, ms('2026-10-21T05:00:00+01:00'));
+    assert.equal(data.days[0].from, start); assert.equal(data.days[0].to, ms('2026-10-21T05:00:00+00:00'));
     assert.equal(data.days[0].count, 2); assert.equal(total(data), 3333);
   }],
   ['Paris DST and early sale', async (f) => {

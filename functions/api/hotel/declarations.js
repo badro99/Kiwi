@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // Kiwi — Hotel Monthly Internal Review & Revisions Ledger
 //
 // INTERNAL integrity snapshot, not an official declaration. The locked spec
@@ -64,7 +65,7 @@ function isDirectionRole(role) {
 }
 
 function todayCasa() {
-  return new Intl.DateTimeFormat('en-CA', {
+  return new DateTimeFormat('en-CA', {
     timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
 }

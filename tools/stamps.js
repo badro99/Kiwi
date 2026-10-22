@@ -205,6 +205,12 @@ function scan() {
     }
   }
 
+  // Le rapport différé partage l'URL estampillée du preload.
+  if (exists('assets/dashboard-extra.js')) {
+    for (const m of read('assets/dashboard-extra.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/dashboard-extra.js', kind: 'lazy', stamp: m[2] });
+  }
+
   // Retail modules share live bindings; every import URL is a stamp site.
   const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js'];
   for (const dir of ['assets/pos-maison', 'assets/pos-boutique']) {
@@ -242,6 +248,7 @@ function referenceFiles(asset) {
     }
   }
   if (exists('assets/pages-pro.js') && read('assets/pages-pro.js').includes(asset + '?v=')) files.push('assets/pages-pro.js');
+  if (exists('assets/dashboard-extra.js') && read('assets/dashboard-extra.js').includes(asset + '?v=')) files.push('assets/dashboard-extra.js');
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;
 }

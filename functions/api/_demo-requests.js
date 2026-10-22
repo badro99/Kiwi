@@ -1,3 +1,4 @@
+import { DateTimeFormat } from './_zone-law.js';
 /* Demandes de démo du site public · ce que la route publique et la console
  * opérateur partagent.
  *
@@ -93,7 +94,7 @@ export function sanitizeDemoRequest(body) {
  * (le Maroc est passé de UTC+1 à UTC+0 en 2026), pas celui du serveur : une
  * demande faite à 00 h 30 porte la date du visiteur. */
 export function demoReference(now = Date.now()) {
-  const civil = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+  const civil = Object.fromEntries(new DateTimeFormat('en-GB', {
     timeZone: 'Africa/Casablanca', day: '2-digit', month: '2-digit',
   }).formatToParts(now).map((x) => [x.type, x.value]));
   const d = { getUTCDate: () => Number(civil.day), getUTCMonth: () => Number(civil.month) - 1 };
@@ -119,13 +120,13 @@ export const PART_LABELS = { morning: 'le matin', afternoon: 'l’après-midi', 
  * tools/demo-request-api-test.mjs compare les deux. */
 export function slotDate(slotDay, ts) {
   if (!Number(ts) || !['today', 'tomorrow', 'week'].includes(slotDay)) return '';
-  const civil = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+  const civil = Object.fromEntries(new DateTimeFormat('en-GB', {
     timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(Number(ts)).map((x) => [x.type, x.value]));
   const day = new Date(Date.UTC(Number(civil.year), Number(civil.month) - 1, Number(civil.day), 12));
   if (slotDay === 'tomorrow') day.setUTCDate(day.getUTCDate() + 1);
   if (slotDay === 'week') day.setUTCDate(day.getUTCDate() + ((7 - day.getUTCDay()) % 7));
-  const text = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(day);
+  const text = new DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(day);
   return slotDay === 'week' ? 'jusqu’au ' + text : text;
 }
 

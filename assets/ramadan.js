@@ -28,7 +28,7 @@
   const DAY = 864e5;
   let fmt = null;
   try {
-    fmt = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' });
+    fmt = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-u-ca-islamic-umalqura', { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' });
     if (fmt.resolvedOptions().calendar !== 'islamic-umalqura') fmt = null;
   } catch (_) { fmt = null; }
 
@@ -73,7 +73,7 @@
     return casablanca(ts - 5 * 3600e3).day;
   }
   function casablanca(ts) {
-    const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(ts));
+    const p = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(ts));
     const g = (t) => (p.find((x) => x.type === t) || {}).value;
     return { day: `${g('year')}-${g('month')}-${g('day')}`, hour: +g('hour') };
   }

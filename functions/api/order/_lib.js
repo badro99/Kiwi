@@ -1,3 +1,4 @@
+import { DateTimeFormat } from '../_zone-law.js';
 // functions/api/order/_lib.js — ce que les trois moitiés du relais partagent.
 //
 // Le relais OrderPro a trois portes : /api/order (le téléphone dépose),
@@ -279,7 +280,7 @@ function hSpan(p) {
 function wallClock(ts, zone) {
   try {
     const o = {};
-    new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    new DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
       .formatToParts(new Date(ts)).forEach((x) => { o[x.type] = +x.value; });
     return Date.UTC(o.year, o.month - 1, o.day, o.hour % 24, o.minute);
   } catch (_) { return null; }

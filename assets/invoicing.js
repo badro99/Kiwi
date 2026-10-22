@@ -271,15 +271,15 @@
     for (const z of [window.KiwiConfig?.timezone, window.KiwiConfig?.timeZone]) {
       const zone = String(z || '').trim();
       if (!zone) continue;
-      try { new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(0); return zone; } catch (_) {}
+      try { new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {timeZone: zone}).format(0); return zone; } catch (_) {}
     }
     return 'Africa/Casablanca';
   };
-  const dayIn = (ts) => new Intl.DateTimeFormat('en-CA', {timeZone: storeZone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(Number(ts) || Date.parse(ts) || Date.now()));
+  const dayIn = (ts) => new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {timeZone: storeZone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(Number(ts) || Date.parse(ts) || Date.now()));
   const today = () => dayIn(Date.now());
   const shift = (days, from) => { const d = new Date((from || today()) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
   const locale = () => (lang() === 'ar' ? 'ar-MA' : lang() + '-MA');
-  const fmtDate = (value) => value ? new Intl.DateTimeFormat(locale(), {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(value + 'T12:00:00')) : '·';
+  const fmtDate = (value) => value ? new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)(locale(), {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(value + 'T12:00:00')) : '·';
   const dmy = (value) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
   /* Amounts read « 2 000,00 » in French and Arabic (Moroccan business practice, Latin
    digits), « 2,000.00 » in English: fr-MA would print « 2.000,00 », a dot a

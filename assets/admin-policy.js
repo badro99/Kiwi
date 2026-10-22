@@ -1,3 +1,4 @@
+if (typeof module === 'object' && typeof require === 'function') require('./kit/haptics.js');
 /* Shared operator definitions. Pure: no browser, database, or clock side effects. */
 (function(root, factory){
   var policy = factory();
@@ -9,7 +10,7 @@
     if (c.status === 'suspended' || c.store_status === 'suspended') return 'suspended';
     return c.store_status === 'pending' || c.subscription === 'pending' ? 'pending' : 'active';
   }
-  function civilDate(now){ return new Intl.DateTimeFormat('en-CA', {timeZone:'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now)); }
+  function civilDate(now){ return new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', {timeZone:'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now)); }
   function commercial(c, now){
     var a = access(c), today = civilDate(now);
     if (a !== 'active') return a;
