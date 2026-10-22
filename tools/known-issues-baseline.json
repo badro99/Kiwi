@@ -2,10 +2,6 @@
   "version": 1,
   "issues": [
     {
-      "suite": "auth-properties-test.mjs",
-      "label": "AUTH-K1"
-    },
-    {
       "suite": "booking-properties-test.mjs",
       "label": "BK-1"
     },
@@ -110,14 +106,6 @@
       "label": "retention policy: node trimming may discard previous month closed days; archival/overflow rule needed"
     },
     {
-      "suite": "economat-properties-test.mjs",
-      "label": "four-decimal blended rate can lose centimes on large transfers"
-    },
-    {
-      "suite": "employee-properties-test.mjs",
-      "label": "EP-1"
-    },
-    {
       "suite": "hotel-properties-test.mjs",
       "label": "status checkout has no server payment ledger or balance gate, policy needs owner decision"
     },
@@ -136,10 +124,6 @@
     {
       "suite": "live-link-queue-properties-test.mjs",
       "label": "LQ-1"
-    },
-    {
-      "suite": "live-link-queue-properties-test.mjs",
-      "label": "LQ-2"
     },
     {
       "suite": "menu-analysis-properties-test.mjs",
@@ -167,10 +151,6 @@
     },
     {
       "suite": "operator-properties-test.mjs",
-      "label": "operator credentials have no server TTL, only browser Max-Age; session migration policy needed"
-    },
-    {
-      "suite": "operator-properties-test.mjs",
       "label": "operator PIN creation has no audit trail (schema/policy decision)"
     },
     {
@@ -188,10 +168,6 @@
     {
       "suite": "operator-properties-test.mjs",
       "label": "support status change has no durable actor event"
-    },
-    {
-      "suite": "payroll-properties-test.mjs",
-      "label": "PM-1"
     },
     {
       "suite": "payroll-properties-test.mjs",
@@ -243,27 +219,7 @@
     },
     {
       "suite": "serveur-money-properties-test.mjs",
-      "label": "WM-3"
-    },
-    {
-      "suite": "serveur-money-properties-test.mjs",
       "label": "WM-4"
-    },
-    {
-      "suite": "serveur-money-properties-test.mjs",
-      "label": "WM-6"
-    },
-    {
-      "suite": "shopify-sync-properties-test.mjs",
-      "label": "SH-1"
-    },
-    {
-      "suite": "stock-money-properties-test.mjs",
-      "label": "ST-2"
-    },
-    {
-      "suite": "stock-money-properties-test.mjs",
-      "label": "ST-3"
     },
     {
       "suite": "tickets-properties-test.mjs",
