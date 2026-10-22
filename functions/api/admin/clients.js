@@ -214,26 +214,43 @@ export async function onRequestPatch(context) {
    *
    * Rien n'est effacé dans les deux cas. Une suspension retire le droit d'agir,
    * pas les données : la boutique rouvre intacte à la réactivation. */
+  /* Chaque geste et sa ligne d'account_audit (opérateur nommé par sa session,
+   * établissement ou compte, geste, état d'avant, heure) partent dans le MÊME
+   * batch D1 : l'INSERT … SELECT lit l'état d'avant dans la ligne visée, puis
+   * l'UPDATE l'écrit. Une table d'audit absente fait donc échouer le geste au
+   * lieu de laisser une suspension sans auteur. */
+  const actor = await operatorActor(request, env), ts = Date.now();
+  const AUDIT_INSERT = `INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)`;
   if (merchant) {
+    const detail = status === 'suspended' ? 'suspension établissement' : 'réactivation établissement';
     try {
-      const r = await env.DB.prepare(
-        'UPDATE merchant_config SET status = ?, updated_ts = ? WHERE merchant = ?'
-      ).bind(status, Date.now(), merchant).run();
+      const [, r] = await env.DB.batch([
+        env.DB.prepare(`${AUDIT_INSERT}
+          SELECT '', merchant, 'store-status', COALESCE(status, ''), ?, '', ?, ?, ?, ?
+            FROM merchant_config WHERE merchant = ?`
+        ).bind(status, actor.label, actor.id, detail, ts, merchant),
+        env.DB.prepare('UPDATE merchant_config SET status = ?, updated_ts = ? WHERE merchant = ?').bind(status, ts, merchant),
+      ]);
       if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'not-found' }, 404);
     } catch (e) {
-      // Colonne absente = base pas encore migrée. Le dire, plutôt que de
-      // répondre « c'est fait » à un geste qui n'a rien fait.
+      // Colonne ou journal absents = base pas encore migrée. Le dire, plutôt que
+      // de répondre « c'est fait » à un geste qui n'a rien fait (le batch a tout
+      // annulé).
       return json({ error: 'store-status-unavailable', detail: String(e) }, 503);
     }
-    await logStoreAction(context, merchant, 'store-status', status,
-      status === 'suspended' ? 'suspension établissement' : 'réactivation établissement');
     return json({ ok: true, merchant, status });
   }
 
   if (!email) return json({ error: 'email-or-merchant-required' }, 400);
 
+  const detail = status === 'suspended' ? 'suspension compte' : 'réactivation compte';
   try {
-    const r = await env.DB.prepare('UPDATE accounts SET status = ? WHERE email = ?').bind(status, email).run();
+    const [, r] = await env.DB.batch([
+      env.DB.prepare(`${AUDIT_INSERT}
+        SELECT id, '', 'account-status', COALESCE(status, ''), ?, '', ?, ?, ?, ? FROM accounts WHERE email = ?`
+      ).bind(status, actor.label, actor.id, detail, ts, email),
+      env.DB.prepare('UPDATE accounts SET status = ? WHERE email = ?').bind(status, email),
+    ]);
     if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'not-found' }, 404);
   } catch (e) {
     return json({ error: 'update-failed', detail: String(e) }, 500);
@@ -241,8 +258,9 @@ export async function onRequestPatch(context) {
   return json({ ok: true, email, status });
 }
 
-/* Le journal des gestes d'opérateur. Jamais bloquant : une table d'audit absente
- * ne doit pas faire échouer une suspension qui, elle, a bien eu lieu. */
+/* Le journal des gestes d'opérateur hors statut (suppression d'un établissement).
+ * Jamais bloquant : une table d'audit absente ne doit pas faire échouer une
+ * suppression qui, elle, a bien eu lieu. */
 async function logStoreAction(context, merchant, action, next, detail) {
   try {
     const actor = await operatorActor(context.request, context.env);

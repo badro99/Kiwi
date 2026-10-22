@@ -78,17 +78,41 @@ await strict('operator status changes enforce sale and employee writes and suspe
  }finally{f.close();}}));
 // Pending stores intentionally retain screen reads (_private.js); no invented
 // transition graph or separate operator roles: isSeniorOperator == isOperator.
-await knownIssue('legacy config PUT intentionally succeeds when module audit insert fails',fc.asyncProperty(fc.boolean(),async enabled=>{const f=await setup();try{
+// Ex-known : la configuration et ses lignes de config_audit partent dans le même batch.
+await strict('config PUT changes nothing when its module audit insert fails',fc.asyncProperty(fc.boolean(),async enabled=>{const f=await setup();try{
  f.sql.exec("CREATE TRIGGER property_audit_failure BEFORE INSERT ON config_audit BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END");
- const r=await f.callAdmin('config','PUT',{merchant:f.merchant,features:{menu:enabled}});
- return r.status!==200;
+ const before=snapshot(f);const r=await f.callAdmin('config','PUT',{merchant:f.merchant,features:{menu:enabled}});
+ assert.notEqual(r.status,200);assert.equal(snapshot(f),before);
  }finally{f.close();}}));
 await knownIssue('status retries append duplicate audit rows; transition policy is not specified',fc.asyncProperty(fc.constantFrom('pending','active','suspended'),async status=>{const f=await setup();try{for(let i=0;i<2;i++)await f.callAdmin('clients','PATCH',{merchant:f.merchant,status});return f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
-await knownIssue('operator PIN creation has no audit trail (schema/policy decision)',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{await f.callAdmin('pins','POST',{merchant:f.merchant,pin:String(1000),name:'Synthetic'});return f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
+// Ex-known : créer ou retirer un code d'équipe écrit, dans le même batch, une ligne
+// d'account_audit qui nomme l'opérateur et ne contient jamais le code.
+await strict('operator staff code creation and removal are audited atomically without the code',fc.asyncProperty(fc.integer({min:1000,max:9999}),async value=>{const f=await setup();try{const pin=String(value),audit=()=>f.sql.prepare('SELECT * FROM account_audit ORDER BY id').all();
+ const r=await f.callAdmin('pins','POST',{merchant:f.merchant,pin,name:'Synthetic',role:'manager'});assert.equal(r.status,200);
+ const d=await f.callAdmin('pins','DELETE',{id:r.body.pin.id});assert.equal(d.status,200);
+ const rows=audit();assert.deepEqual(rows.map(x=>x.action),['staff-pin-create','staff-pin-delete']);
+ assert.ok(rows.every(x=>x.merchant===f.merchant&&x.actor==='Property Operator'&&x.actor_id==='money-operator'&&x.ts>0&&!Object.values(x).some(v=>String(v).includes(pin))));
+ f.sql.exec("CREATE TRIGGER property_audit_failure BEFORE INSERT ON account_audit BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END");
+ const before=snapshot(f);assert.notEqual((await f.callAdmin('pins','POST',{merchant:f.merchant,pin,name:'Synthetic'})).status,200);assert.equal(snapshot(f),before);
+ }finally{f.close();}}));
 // Ex-known : l'échéance est signée dans kiwi_op_id (v2) et vérifiée par le serveur.
 await strict('operator credentials expire server-side, whatever the browser keeps',fc.asyncProperty(fc.integer({min:1,max:29}),async days=>{const f=await setup();try{const secret=f.env.AUTH_SECRET,op=`kiwi_op=${await auth.operatorToken(secret)}; kiwi_op_id=`,at=Date.now;assert.equal((await f.callAdmin('operators','GET',{},'expiredOperator')).status,403);let token;try{Date.now=()=>at()-days*86400000;token=await auth.operatorIdToken(secret,'money-operator');}finally{Date.now=at;}f.cookies.recent=op+token;assert.equal((await f.callAdmin('operators','GET',{},'recent')).status,200);try{Date.now=()=>at()+(31-days)*86400000;assert.equal((await f.callAdmin('operators','GET',{},'recent')).status,403);}finally{Date.now=at;}f.cookies.v1=op+'money-operator.'+createHmac('sha256',secret).update('kiwi-operator-id-v1:money-operator').digest('hex');assert.equal((await f.callAdmin('operators','GET',{},'v1')).status,403);}finally{f.close();}}));
-await knownIssue('account-wide suspension succeeds without any actor audit',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{const r=await f.callAdmin('clients','PATCH',{email:'money@example.test',status:'suspended'});return r.status!==200||f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
-await knownIssue('support status change has no durable actor event',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{f.sql.prepare("INSERT INTO support_tickets(id,reference,merchant,category,priority,channel,contact,summary,created_ts,updated_ts) VALUES('synthetic-ticket','SYNTHETIC',?,'materiel','normal','email','synthetic@example.test','Synthetic',1,1)").run(f.merchant);const r=await f.callAdmin('support','PATCH',{id:'synthetic-ticket',action:'status',status:'resolved'});return r.status!==200||f.sql.prepare('SELECT COUNT(*) n FROM support_messages').get().n===1;}finally{f.close();}}));
+// Ex-known : suspendre ou réactiver (compte ou établissement) écrit son relevé dans le même batch.
+await strict('account and store status changes are audited atomically with the operator',fc.asyncProperty(fc.constantFrom('pending','active','suspended'),fc.boolean(),async(status,whole)=>{const f=await setup();try{const body=whole?{email:'money@example.test',status}:{merchant:f.merchant,status};
+ const r=await f.callAdmin('clients','PATCH',body);assert.equal(r.status,200);
+ const rows=f.sql.prepare('SELECT * FROM account_audit').all();assert.equal(rows.length,1);const[a]=rows;
+ assert.equal(a.action,whole?'account-status':'store-status');assert.equal(a.next,status);assert.equal(a.actor,'Property Operator');assert.equal(a.actor_id,'money-operator');assert.ok(a.ts>0);
+ if(whole)assert.equal(a.account_id,'money-owner');else assert.equal(a.merchant,f.merchant);
+ f.sql.exec("CREATE TRIGGER property_audit_failure BEFORE INSERT ON account_audit BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END");
+ const before=snapshot(f);assert.notEqual((await f.callAdmin('clients','PATCH',{...body,status:status==='suspended'?'active':'suspended'})).status,200);assert.equal(snapshot(f),before);
+ }finally{f.close();}}));
+// Ex-known : le statut d'une demande et son événement d'auteur partent dans le même batch.
+await strict('support status change writes a durable actor event atomically',fc.asyncProperty(fc.constantFrom('open','waiting-client','resolved','closed'),async status=>{const f=await setup();try{f.sql.prepare("INSERT INTO support_tickets(id,reference,merchant,category,priority,channel,contact,summary,created_ts,updated_ts) VALUES('synthetic-ticket','SYNTHETIC',?,'materiel','normal','email','synthetic@example.test','Synthetic',1,1)").run(f.merchant);
+ const r=await f.callAdmin('support','PATCH',{id:'synthetic-ticket',action:'status',status});assert.equal(r.status,200);
+ const rows=f.sql.prepare('SELECT * FROM support_messages').all();assert.equal(rows.length,1);assert.equal(rows[0].kind,'status');assert.equal(rows[0].channel,'internal');assert.equal(rows[0].author,'Property Operator');assert.ok(rows[0].body.endsWith(status));
+ f.sql.exec("CREATE TRIGGER property_audit_failure BEFORE INSERT ON support_messages BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END");
+ const before=snapshot(f);await f.callAdmin('support','PATCH',{id:'synthetic-ticket',action:'status',status:status==='closed'?'open':'closed'}).catch(()=>{});assert.equal(snapshot(f),before);
+ }finally{f.close();}}));
 // attendance-link intentionally issues a signed NFC URL. Reset is account-scoped,
 // not store-scoped; delivery above uses a local fetch stub and never sends mail.
 console.log(`operator properties: ${passed} held, ${failed} failed, ${known} known`);if(failed)process.exitCode=1;

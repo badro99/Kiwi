@@ -57,11 +57,10 @@ async function ensureCommercialColumns(env) {
  *
  * `prev` absent et `next` présent compte comme un changement : c'est le passage
  * d'un défaut implicite à une décision explicite, et c'est précisément le geste
- * qu'on veut pouvoir retrouver. Jamais bloquant : si la table n'existe pas
- * encore sur cette base, la configuration est quand même enregistrée. */
-async function logChanges(context, merchant, prev, next) {
-  const actor = await actorOf(context);
-  const ts = Date.now();
+ * qu'on veut pouvoir retrouver. Ces lignes partent dans le MÊME batch que la
+ * configuration (voir onRequestPut) : si le journal ne peut pas s'écrire, le
+ * module ne change pas non plus. */
+function auditStatements(context, actor, merchant, prev, next, ts) {
   const stmts = [];
   for (const k of Object.keys(next)) {
     if (prev[k] === next[k]) continue;
@@ -69,8 +68,7 @@ async function logChanges(context, merchant, prev, next) {
       'INSERT INTO config_audit (merchant, feature, enabled, actor, actor_id, ts) VALUES (?,?,?,?,?,?)'
     ).bind(merchant, k, next[k] ? 1 : 0, actor.label, actor.id, ts));
   }
-  if (!stmts.length) return;
-  try { await context.env.DB.batch(stmts); } catch (_) { /* table absente → on n'échoue pas l'enregistrement */ }
+  return stmts;
 }
 
 async function guard(context, senior) {
@@ -236,9 +234,11 @@ export async function onRequestPut(context) {
      modules, eux, doivent s'enregistrer. La réponse dit alors `columns.city:
      false`, et la console affiche que la ville n'a PAS été retenue au lieu de
      laisser croire à un enregistrement complet. */
+  const actor = await actorOf(context), ts = Date.now();
+  const audits = auditStatements(context, actor, merchant, prev, clean, ts);
   let columns = { city: true, mrr: true, lifecycle: true };
   try {
-    await context.env.DB.prepare(
+    await context.env.DB.batch([context.env.DB.prepare(
       `INSERT INTO merchant_config (merchant, features, plan, type, account_id, city, mrr,
          subscription_kind, billing_cycle, subscription_start, subscription_end,
          trial_start, trial_end, trial_days, updated_ts)
@@ -260,20 +260,23 @@ export async function onRequestPut(context) {
          updated_ts = excluded.updated_ts`
     ).bind(merchant, JSON.stringify(clean), plan, type, accountId, city, mrr,
       subscriptionKind, billingCycle, subscriptionStart, subscriptionEnd,
-      trialStart, trialEnd, trialDays, Date.now()).run();
+      trialStart, trialEnd, trialDays, ts), ...audits]);
   } catch (_) {
     columns = { city: false, mrr: false, lifecycle: false };
-    await context.env.DB.prepare(
-      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
-       ON CONFLICT(merchant) DO UPDATE SET
-         features = excluded.features,
-         plan = excluded.plan,
-         type = COALESCE(excluded.type, merchant_config.type),
-         account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
-         updated_ts = excluded.updated_ts`
-    ).bind(merchant, JSON.stringify(clean), plan, type, accountId, Date.now()).run();
+    /* Même batch, même règle : si c'est le journal qui refuse, ce second essai
+       échoue aussi et rien n'est enregistré. */
+    try {
+      await context.env.DB.batch([context.env.DB.prepare(
+        `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
+         ON CONFLICT(merchant) DO UPDATE SET
+           features = excluded.features,
+           plan = excluded.plan,
+           type = COALESCE(excluded.type, merchant_config.type),
+           account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
+           updated_ts = excluded.updated_ts`
+      ).bind(merchant, JSON.stringify(clean), plan, type, accountId, ts), ...audits]);
+    } catch (_) { return json({ error: 'config-storage-unavailable' }, 503); }
   }
-  await logChanges(context, merchant, prev, clean);
   return json({
     ok: true, features: clean, plan, type: type,
     accountId: hasOwner ? accountId : undefined,

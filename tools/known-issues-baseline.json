@@ -115,18 +115,6 @@
     },
     {
       "suite": "operator-properties-test.mjs",
-      "label": "account-wide suspension succeeds without any actor audit"
-    },
-    {
-      "suite": "operator-properties-test.mjs",
-      "label": "legacy config PUT intentionally succeeds when module audit insert fails"
-    },
-    {
-      "suite": "operator-properties-test.mjs",
-      "label": "operator PIN creation has no audit trail (schema/policy decision)"
-    },
-    {
-      "suite": "operator-properties-test.mjs",
       "label": "operators can read staff codes in the console list (Afficher button; owner decision, codes stay operator-readable like the team doc)"
     },
     {
@@ -136,10 +124,6 @@
     {
       "suite": "operator-properties-test.mjs",
       "label": "status retries append duplicate audit rows; transition policy is not specified"
-    },
-    {
-      "suite": "operator-properties-test.mjs",
-      "label": "support status change has no durable actor event"
     },
     {
       "suite": "payroll-properties-test.mjs",

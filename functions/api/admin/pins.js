@@ -7,7 +7,14 @@
 // PINs are role selectors the caisse/serveur pad resolves — not secrets. A
 // merchant with no rows here ⇒ the app keeps its hardcoded defaults.
 
-import { isOperator, isSeniorOperator, json } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_lib.js';
+
+/* Le journal d'un geste sur un code d'équipe. Il nomme l'opérateur (session
+ * opérateur, jamais un code), l'établissement, le geste et l'heure ; il ne porte
+ * JAMAIS le code lui-même : `next` reçoit le nom de la personne, `detail` l'id
+ * de la ligne et le rôle. Le relevé part dans le MÊME batch D1 que l'écriture :
+ * un code créé sans trace, ou une trace sans code, n'existe pas. */
+const AUDIT_INSERT = `INSERT INTO account_audit (account_id, merchant, action, prev, next, reason, actor, actor_id, detail, ts)`;
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -49,9 +56,16 @@ export async function onRequestPost(context) {
   if (dupe) return json({ error: 'pin-exists' }, 409);
 
   const id = 'pin-' + crypto.randomUUID();
-  await context.env.DB.prepare(
-    `INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)`
-  ).bind(id, merchant, pin, name, role, Date.now()).run();
+  const actor = await operatorActor(context.request, context.env), ts = Date.now();
+  try {
+    await context.env.DB.batch([
+      context.env.DB.prepare(
+        `INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)`
+      ).bind(id, merchant, pin, name, role, ts),
+      context.env.DB.prepare(`${AUDIT_INSERT} VALUES ('', ?, 'staff-pin-create', '', ?, '', ?, ?, ?, ?)`)
+        .bind(merchant, name, actor.label, actor.id, JSON.stringify({ id, role }), ts),
+    ]);
+  } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
   return json({ ok: true, pin: { id, pin, name, role } });
 }
 
@@ -61,6 +75,16 @@ export async function onRequestDelete(context) {
   let id = (url.searchParams.get('id') || '').trim();
   if (!id) { try { id = ((await context.request.json()).id || '').toString().trim(); } catch (_) {} }
   if (!id) return json({ error: 'id-required' }, 400);
-  await context.env.DB.prepare(`DELETE FROM staff_pins WHERE id = ?`).bind(id).run();
+  /* Le relevé est lu dans la ligne AVANT qu'elle disparaisse (même batch) : un id
+     inconnu n'écrit rien, ni suppression ni trace. */
+  const actor = await operatorActor(context.request, context.env), ts = Date.now();
+  try {
+    await context.env.DB.batch([
+      context.env.DB.prepare(`${AUDIT_INSERT}
+        SELECT '', merchant, 'staff-pin-delete', name, '', '', ?, ?, json_object('id', id, 'role', role), ?
+          FROM staff_pins WHERE id = ?`).bind(actor.label, actor.id, ts, id),
+      context.env.DB.prepare(`DELETE FROM staff_pins WHERE id = ?`).bind(id),
+    ]);
+  } catch (_) { return json({ error: 'pin-storage-unavailable' }, 503); }
   return json({ ok: true });
 }

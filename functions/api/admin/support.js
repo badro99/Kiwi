@@ -46,7 +46,12 @@ export async function onRequestPatch({request,env}){
   }else if(action==='status'){
     const status=['open','waiting-client','resolved','closed'].includes(b.status)?b.status:'';
     if(!status)return json({error:'bad-status'},400);
-    await env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=?,closed_ts=? WHERE id=?`).bind(status,now,status==='closed'?now:null,id).run();
+    /* Le changement de statut et sa trace (qui, quand, de quoi vers quoi) partent
+       dans le même batch : un statut changé sans auteur n'existe pas. */
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=?,closed_ts=? WHERE id=?`).bind(status,now,status==='closed'?now:null,id),
+      env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'status','internal',actor,'Statut : '+(ticket.status||'')+' → '+status,'',now),
+    ]);
   }else if(action==='note'){
     const body=cleanText(b.body,5000); if(!body)return json({error:'body-required'},400);
     await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'note','internal',actor,body,'',now).run();
