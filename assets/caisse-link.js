@@ -366,9 +366,21 @@
   }
   function loadDevices(host, merchant) {
     if (!host || !merchant || typeof fetch !== 'function') return;
-    fetch('/api/pair/devices?merchant=' + encodeURIComponent(merchant), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { if (j && j.ok) renderDevices(host, merchant, j.devices); })
+    // Le serveur rend 100 caisses par page et un curseur (nextCursor) tant qu'il
+    // en reste : on suit les pages (20 au plus) avant d'afficher la liste entière.
+    var all = [], seen = {};
+    function page(cursor, n) {
+      return fetch('/api/pair/devices?merchant=' + encodeURIComponent(merchant) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
+        { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || !j.ok) return n ? all : null;
+          (j.devices || []).forEach(function (d) { if (!seen[d.id]) { seen[d.id] = 1; all.push(d); } });
+          return j.nextCursor && n < 19 ? page(j.nextCursor, n + 1) : all;
+        });
+    }
+    page('', 0)
+      .then(function (list) { if (list) renderDevices(host, merchant, list); })
       .catch(function () { /* hors ligne, ou hébergement statique : la section reste cachée */ });
   }
   function revokeDevice(host, merchant, button) {

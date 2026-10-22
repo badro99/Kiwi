@@ -88,6 +88,48 @@ console.log('■ Caisses · retirer un appareil, les autres continuent');
   ok('un nouveau code rend B à la caisse', (await lib.tillVerification(req('https://k/', `kiwi_till=${tokB}`), env, SHOP)).ok);
 }
 
+console.log('■ Caisses · liste paginée par curseur, au-delà de 100');
+{
+  const { db, env } = database();
+  const owner = lib.sessionCookie(await lib.makeSession('acc-d', SECRET)).split(';')[0];
+  const ins = db.prepare('INSERT INTO till_devices (merchant, device_id, label, paired_ts, last_seen_ts, revoked_ts) VALUES (?,?,?,?,?,?)');
+  // 250 caisses, dont des égalités de date (même seconde) et des retirées.
+  for (let i = 0; i < 250; i++) ins.run(SHOP, 'term_' + String(i).padStart(16, '0'), '', 1000, i % 7 ? 2000 + (i % 13) : null, i % 11 ? null : 3000 + (i % 3));
+  ins.run('autre-shop', 'term_zzzzzzzzzzzzzzzz', '', 1, 1, null);
+  const get = async (q) => devices.onRequestGet({ request: req(`https://k/api/pair/devices?merchant=${SHOP}${q}`, owner), env });
+  let res = await get('');
+  let body = await res.json();
+  ok('première page : forme d’origine, 100 caisses, un curseur', res.status === 200 && body.ok === true && body.merchant === SHOP && body.devices.length === 100 && typeof body.nextCursor === 'string', JSON.stringify(Object.keys(body)));
+  const seen = body.devices.map((d) => d.id);
+  let pages = 1;
+  while (body.nextCursor && pages < 10) {
+    res = await get('&cursor=' + encodeURIComponent(body.nextCursor));
+    body = await res.json();
+    seen.push(...body.devices.map((d) => d.id));
+    pages++;
+  }
+  ok('toutes les caisses, une seule fois, en 3 pages, dernière page sans curseur', seen.length === 250 && new Set(seen).size === 250 && pages === 3 && body.nextCursor === null, `${seen.length} / ${pages}`);
+  const one = await (await get('')).json();
+  const sorted = [...one.devices].sort((a, b) => ((a.revokedAt || 0) - (b.revokedAt || 0)) || ((b.lastSeenAt || b.pairedAt) - (a.lastSeenAt || a.pairedAt)) || (a.id < b.id ? -1 : 1));
+  ok('ordre conservé : actives d’abord, vues récemment d’abord', JSON.stringify(sorted.map((d) => d.id)) === JSON.stringify(one.devices.map((d) => d.id)));
+  ok('aucune caisse d’un autre magasin', !seen.includes('term_zzzzzzzzzzzzzzzz'));
+  res = await get('&limit=40');
+  ok('limit borne la page', (await res.json()).devices.length === 40);
+  res = await get('&cursor=n%27importe%20quoi');
+  ok('curseur illisible : 400', res.status === 400);
+
+  // Le vrai appelant du tableau de bord (assets/caisse-link.js › loadDevices),
+  // extrait tel quel et branché sur la vraie route : il suit les pages.
+  const src = fs.readFileSync(path.join(ROOT, 'assets/caisse-link.js'), 'utf8');
+  const fn = src.slice(src.indexOf('  function loadDevices('), src.indexOf('  function revokeDevice('));
+  let rendered = null;
+  const fetchStub = async (u) => devices.onRequestGet({ request: req('https://k' + u, owner), env });
+  const loadDevices = new Function('fetch', 'renderDevices', fn + '; return loadDevices;')(fetchStub, (_h, _m, list) => { rendered = list; });
+  loadDevices({}, SHOP);
+  for (let i = 0; i < 50 && !rendered; i++) await new Promise((r) => setTimeout(r, 5));
+  ok('le tableau de bord affiche les 250 caisses, pas seulement les 100 premières', rendered && rendered.length === 250 && new Set(rendered.map((d) => d.id)).size === 250, rendered && String(rendered.length));
+}
+
 console.log('■ Ancien jeton · renouvelé au nom de l’appareil');
 {
   const { db, env } = database();
