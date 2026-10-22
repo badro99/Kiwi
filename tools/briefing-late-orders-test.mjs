@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let checks = 0;
@@ -52,7 +53,7 @@ ok(helper.includes('ON CONFLICT (merchant, order_id) DO UPDATE'), 'idempotent te
 for (const col of ['accepted_ts', 'sent_ts', 'ready_ts', 'served_ts', 'closed_ts']) ok(helper.includes(col + ' = COALESCE'), col + ' write once');
 ok(!helper.includes('elapsed'), 'elapsed never reused');
 ok(!helper.includes('customer'), 'no customer data');
-const queue = src('functions/api/order/queue.js');
+const queue = queueTestSource();
 ok(queue.includes('context.waitUntil(safe)'), 'milestone mirror does not delay response');
 ok(queue.includes('acceptedAt: now, sentAt: now'), 'accepted dispatch records both facts');
 ok(queue.includes('readyAt: nextTs'), 'station-ready durable');

@@ -16,9 +16,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const queue = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queue = queueTestSource();
 const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 
 let passed = 0;

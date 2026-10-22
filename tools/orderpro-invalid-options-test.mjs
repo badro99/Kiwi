@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const orderProSource = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
 const orderLibSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/_lib.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/index.js'), 'utf8');
-const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queueSource = queueTestSource();
 
 // 1. i18n dictionaries: FR, EN, and AR must all provide the new keys
 for (const key of ['order_options_changed', 'order_menu_updated', 'order_item_fallback']) {

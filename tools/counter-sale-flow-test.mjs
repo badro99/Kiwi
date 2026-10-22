@@ -20,6 +20,7 @@ import caisseTestSource from './caisse-test-source.cjs';
  * rebranche les deux boutons sur une vente du comptoir. */
 import fs from 'fs';
 import assert from 'assert';
+import queueTestSource from './queue-test-source.cjs';
 
 let checks = 0;
 async function check(name, fn) { await fn(); checks++; console.log(`✓ ${name}`); }
@@ -99,7 +100,7 @@ await check('paying a counter sale hands it over, so no session is left open', (
 await check('the server still accepts served straight from accepted', () => {
   /* Le point d'appui de tout ce qui précède : sans lui, encaisser une vente
    * encore en cuisine répondrait 409 et la carte resterait EN COURS. */
-  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  const queue = queueTestSource();
   assert.match(queue, /served:\s*\['ready', 'accepted'\],/);
 });
 
@@ -119,7 +120,7 @@ await check('a takeaway void names its order, since it has no table', () => {
   assert.match(caisse, /\.\.\.\(scope\.orderId \|\| line\.canonicalOrderId \|\| owner\?\.id \? \{ orderId: scope\.orderId \|\| line\.canonicalOrderId \|\| owner\.id \} : \{\}\)/);
   assert.match(caisse, /\.\.\.\(tableId \? \{ table: tableId \} : \{\}\)/);
   /* Le serveur sait déjà viser une commande par son id — rien de neuf côté API. */
-  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  const queue = queueTestSource();
   assert.match(queue, /if \(b\.voidLine\.orderId\) \{/);
 });
 
@@ -139,7 +140,7 @@ await check('cancelling an item is not a refund path', () => {
    * NON encaissées. Tant qu'aucun argent n'est pris, il n'y a rien à rendre —
    * et une fois encaissé, rendre l'argent EST un remboursement, par
    * définition. Ce contrôle fige la frontière plutôt que de la franchir. */
-  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  const queue = queueTestSource();
   /* On vise les marqueurs UNIQUES du gestionnaire : le bloc d'autorisation,
    * plus haut, commence par les mêmes mots et donnerait une tranche vide. */
   const voidBlock = queue.slice(queue.indexOf("if (b && b.voidLine && typeof b.voidLine === 'object')"), queue.indexOf("if (b && b.editLine && typeof b.editLine === 'object')"));

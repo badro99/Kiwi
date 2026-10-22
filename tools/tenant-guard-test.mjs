@@ -26,6 +26,7 @@ import { reserveTicketRange } from '../functions/api/ticket-sequence.js';
 import { priceOrder } from '../functions/api/order/_lib.js';
 import { verifyStaffPin, targetKey } from '../functions/auth/_lib.js';
 import fs from 'node:fs';
+import queueTestSource from './queue-test-source.cjs';
 
 const SECRET = 'tenant-guard-test-secret-32-bytes!!';
 let failures = 0;
@@ -387,7 +388,7 @@ function invoiceEnv(sale) {
 
 /* ── 9 · `closeSession` est le signal de la caisse, pas d'un employé ──────── */
 {
-  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  const queue = queueTestSource();
   const block = queue.slice(queue.indexOf('if (employee && !await isTillFor(request, env, merchant)) {'),
     queue.indexOf("error: 'floor-table-required'"));
   ok('le bloc employé refuse closeSession avant tout autre contrôle',

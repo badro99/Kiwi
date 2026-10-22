@@ -8,6 +8,7 @@ import { onRequestPost as queuePost } from '../functions/api/order/queue.js';
 import { onRequestGet as activityGet } from '../functions/api/order/activity.js';
 import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE, readTillActorProof } from '../functions/auth/_lib.js';
+import queueTestSource from './queue-test-source.cjs';
 
 const db = new DatabaseSync(':memory:');
 db.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
@@ -204,7 +205,7 @@ check('takeaway handover no longer asks for a code, while cancellation still doe
   assert.match(inbox, /extra\.actorProof/);
 });
 
-const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+const queue = queueTestSource();
 check('the server stopped refusing an unsigned handover, and records it without an actor', () => {
   /* On vise le `return`, pas la chaîne : le commentaire qui explique la levée
    * mentionne l'ancien code d'erreur, et il doit pouvoir rester. */

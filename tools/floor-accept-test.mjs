@@ -10,6 +10,7 @@ import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -19,7 +20,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failures.push(msg); conso
 console.log('■ Autorisation OrderPro depuis la salle');
 
 /* ── 1 · La décision serveur, extraite de queue.js et exécutée ───────────── */
-const queueSrc = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queueSrc = queueTestSource();
 const decisionMatch = queueSrc.match(/function floorMayAcceptOrder\([\s\S]*?\n\}/);
 const orderIdMatch = queueSrc.match(/const ORDER_ID = [^\n]+/);
 const orderLibSrc = fs.readFileSync(path.join(ROOT, 'functions/api/order/_lib.js'), 'utf8');

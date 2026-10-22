@@ -4,10 +4,11 @@ import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import queueTestSource from './queue-test-source.cjs';
 
 const caisse = caisseTestSource(fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
 const serveur = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
-const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+const queue = queueTestSource();
 let checks = 0;
 function ok(condition, label) {
   assert.ok(condition, label);

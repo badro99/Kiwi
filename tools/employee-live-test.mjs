@@ -6,6 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import queueTestSource from './queue-test-source.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
@@ -459,7 +460,7 @@ const serviceSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-se
   + '\n' + fs.readFileSync(path.join(ROOT, 'assets/serveur-shell.css'), 'utf8');
 const employeePlanningSource = fs.readFileSync(path.join(ROOT, 'assets/employee-planning.js'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
-const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queueSource = queueTestSource();
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('id="table-filters"')
   && serviceSource.includes("activeFilter = btn.dataset.filter")

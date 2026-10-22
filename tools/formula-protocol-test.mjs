@@ -35,7 +35,7 @@ console.log('■ Formules (Menus Composés) Protocol & Explosion Gate');
 
 const menuApiSource = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
 const menuCatalogSource = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
-const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
+const queueSource = queueTestSource();
 const serveurSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
 
 // ── 1. functions/api/menu.js: sanitizeMenu & sanitizeFormula ─────────────────
@@ -46,6 +46,7 @@ const serveurSource = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-se
    aurait pu faire passer un contrôle que le vrai code échoue. La fonction est
    exportée : on prend celle qui tourne. */
 import { sanitizeMenu as sanitizeMenuFn } from '../functions/api/menu.js';
+import queueTestSource from './queue-test-source.cjs';
 
 ok(typeof sanitizeMenuFn === 'function', 'sanitizeMenu importée depuis le module réel');
 

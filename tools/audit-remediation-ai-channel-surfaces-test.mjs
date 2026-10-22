@@ -7,6 +7,7 @@ import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost as genericOrder } from '../functions/api/channel/order.js';
 import { onRequestPost as shopifyOrder, __test as shopify } from '../functions/api/channel/shopify/[link].js';
 import { onRequestGet as queueGet } from '../functions/api/order/queue.js';
+import queueTestSource from './queue-test-source.cjs';
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
@@ -110,7 +111,7 @@ const invalidShopifyResponse = await shopifyOrder({
 check(invalidShopifyResponse.status === 400, 'Shopify webhook refuses non-finite line prices before order persistence');
 shopifyDb.close();
 
-const queueSource = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+const queueSource = queueTestSource();
 check(queueSource.includes('unitPrice: displayMoney(l && l.unitPrice)'),
   'rejected ticket reconstruction keeps centimes');
 check(queueSource.includes('Number.isFinite(amount)'),
