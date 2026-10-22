@@ -4588,6 +4588,30 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-active-cmp {
   stroke-width: 2;
 }
 
+/* Daily line marks on paper. The card is near-white, not bone, so the label
+ * halo follows the card or it prints a beige ring around every figure. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row :is(.rev-avg-lbl, .rev-best-lbl) {
+  stroke: #FCFDFC;
+}
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row :is(.rev-best-dot, .rev-end-dot) {
+  fill: #087856;
+}
+
+/* No previous period: the delta chip has nothing to say, and an empty chip
+ * still drew its tinted capsule under the figure. The chip's own display is
+ * forced to inline-flex, flagged important, by both modes, so hiding it has
+ * to be flagged too. */
+/* The previous period is context, not a second series: thinner and quieter
+ * than the line it sits behind, in both modes. */
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-cmp {
+  stroke-width: 1.5;
+  stroke-opacity: 0.5;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta.is-empty {
+  display: none !important;
+}
+
 /* The live pulse marks "now"; the active dot marks "where you are pointing".
  * Both on screen at once gave the card two competing current-value markers —
  * in the reported screenshot the pulse sat one hour to the right of the dot and
@@ -5246,6 +5270,29 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-label {
 
 body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
   fill: var(--ink);
+}
+
+/* Daily line marks on black: bone for the reading aids, the accent for the
+ * best day, and a halo cut from the card so labels stay legible over the fill. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-week {
+  stroke: rgba(255, 255, 255, 0.24);
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-avg {
+  stroke: var(--paper);
+  stroke-opacity: 0.32;
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row :is(.rev-avg-lbl, .rev-best-lbl) {
+  stroke: var(--vx-card-halo, #0d1210);
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-best-lbl {
+  fill: var(--vx-accent);
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row :is(.rev-best-dot, .rev-end-dot) {
+  fill: var(--vx-accent);
+  stroke: #0d1210;
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-best-halo {
+  fill: var(--vx-accent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

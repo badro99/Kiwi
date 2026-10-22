@@ -2452,7 +2452,7 @@
     range = range == null ? currentRange : range;
     const list = realMoneyList();
     const hourly = (range === 'aujourdhui' || range === 'hier');
-    let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
+    let rev = [], prev = [], xLabels = [], visibleXIdx = [], dayKeys = null, sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
 
     if (hourly) {
       const slug = activeMerchantSlug();
@@ -2487,7 +2487,8 @@
       rev = dailyTotals(list, start, days);
       const previousStart = merchantDayBounds(addMerchantDays(startDay, -days), activeMerchantSlug()).from;
       prev = dailyTotals(list, previousStart, days);
-      for (let i = 0; i < days; i++) { const d = new Date(Date.parse(addMerchantDays(startDay, i) + 'T12:00:00Z')); xLabels.push(DAY_ABBR[d.getUTCDay()] + ' ' + d.getUTCDate()); }
+      dayKeys = [];
+      for (let i = 0; i < days; i++) { dayKeys.push(addMerchantDays(startDay, i)); const d = new Date(Date.parse(dayKeys[i] + 'T12:00:00Z')); xLabels.push(DAY_ABBR[d.getUTCDay()] + ' ' + d.getUTCDate()); }
       const step = Math.max(1, Math.round(days / 6));
       for (let i = 0; i < days; i += step) visibleXIdx.push(i);
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
@@ -2507,7 +2508,7 @@
     const legendPrimary = (hourly ? 'Cumul' : ('Total ' + rev.length + ' jours')) + ' · ' + frInt(total) + ' MAD';
     return {
       rev, revPrev: hasPrev ? prev : null, total, prevTotal: hasPrev ? prevTotal : null,
-      yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
+      yTicks, xLabels, visibleXIdx, dayKeys, sub, rangeBadge, legendPrimary,
       legendCompare: hasPrev ? (cmpPrefix + ' · ' + frInt(prevTotal) + ' MAD') : '',
     };
   }
@@ -3963,18 +3964,33 @@
     svg.classList.toggle('no-anim', suppressAnim);
     svg.classList.toggle('cmp-toggle', isCmpToggle);
 
-    const PAD = { left: 20, right: 26, top: 26, bottom: 40 };
+    // Hourly ranges plot a running total; daily ranges plot one total per
+    // business day, and their hover snaps to whole days. It used to read out
+    // « Mar 6 · 14h », a value interpolated between two days that nobody sold.
+    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
+    const N = data.rev.length;
+    const daily = !isHourly && N > 1;
+    const PAD = { left: 20, right: 26, top: daily ? 34 : 26, bottom: 40 };
     const innerW = W - PAD.left - PAD.right;
     const innerH = H - PAD.top - PAD.bottom;
-    const N = data.rev.length;
+    const slot = innerW / Math.max(1, N - 1);
     const xAt = i => PAD.left + (N <= 1 ? innerW / 2 : (i * innerW) / (N - 1));
     const xs = data.rev.map((_, i) => xAt(i));
 
     const yTicks = data.yTicks;
-    const yMin = Math.min(...yTicks);
+    let yMin = Math.min(...yTicks);
     // Guard the all-zero case (empty user-created venue) — yMax===yMin would
     // make yScale divide by zero.
-    const yMax = Math.max(...yTicks) || (yMin + 1);
+    let yMax = Math.max(...yTicks) || (yMin + 1);
+    // A daily line is read for its shape, and the hero carries the amount: fit
+    // the box to the days' own range (both periods, so « Comparer » never
+    // rescales), never below zero. From zero, ±15 % days drew a flat rule.
+    if (daily) {
+      const vals = data.rev.concat(data.revPrev || []).filter(v => v != null).map(Number);
+      const lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || hi || 1;
+      yMin = Math.max(0, lo - span * 0.45);
+      yMax = hi + span * 0.32;
+    }
     const yScale = v => PAD.top + innerH * (1 - (v - yMin) / (yMax - yMin));
     const baseY = yScale(yMin);
 
@@ -4046,10 +4062,6 @@
     // and for positioning the live pulse on the live-truncated curve.
     let lastIdx = -1;
     for (let i = 0; i < N; i++) { if (data.rev[i] != null) lastIdx = i; }
-    // True if the x-axis labels are hourly (e.g. "11h"). Hourly ranges
-    // get per-minute interpolation; daily ranges (7j / 30j) get per-hour
-    // interpolation so the hover feels equally fluid.
-    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
 
     // Resting hero readout:
     // - On hourly ranges (aujourdhui / hier), points are cumulative so the last
@@ -4103,6 +4115,13 @@
     const liveX = showLive ? xForIdx(liveIdx) : 0;
     const liveY = (showLive && data.rev[liveIdx] != null) ? yScale(data.rev[liveIdx]) : 0;
 
+    const AVG_LBL = { fr: 'Moyenne', en: 'Average', ar: 'المتوسط' };
+    const SO_FAR = { fr: 'en cours', en: 'so far', ar: 'حتى الآن' };
+    const LOCALE = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+    const keys = daily ? (data.dayKeys || keysFromLabels(data.xLabels)) : null;
+    const sold = daily ? data.rev.filter(v => +v > 0) : [];
+    const bestIdx = sold.length >= 2 ? data.rev.reduce((b, v, i) => ((+v || 0) > (+data.rev[b] || 0) ? i : b), 0) : -1;
+    const todayIdx = daily && data.dayKeys && data.dayKeys[N - 1] === merchantDayKey(Date.now(), activeMerchantSlug()) ? N - 1 : -1;
     // Demo/partial series can have fewer points than the template's tick list.
     // Ignore stale ticks rather than aborting every language-change subscriber.
     const allIdx = (data.visibleXIdx || data.rev.map((_, i) => i))
@@ -4110,9 +4129,26 @@
     // Keep at least ~34px per label so hour ticks never touch on a phone.
     const labelStep = Math.max(1, Math.ceil(allIdx.length / Math.max(1, Math.floor(W / 34))));
     const visibleIdx = labelStep === 1 ? allIdx : allIdx.filter((_, k) => k % labelStep === 0);
-    const xLabelsHtml = visibleIdx.map(i =>
+    let xLabelsHtml = visibleIdx.map(i =>
       `<text x="${xs[i].toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle">${localDayTick(data.xLabels[i] || '')}</text>`
     ).join('');
+    // Past ten days the axis is read by the week: a date and a short tick on
+    // each Monday (on each first of the month past a hundred days).
+    if (daily && keys && N > 10) {
+      const monthly = N > 100, by = baseY;
+      const fmt = new Intl.DateTimeFormat(LOCALE[lang] || 'fr-FR', monthly ? { month: 'short', timeZone: 'UTC' } : { day: 'numeric', month: 'short', timeZone: 'UTC' });
+      let lastX = -Infinity;
+      xLabelsHtml = keys.map((k, i) => {
+        const d = new Date(k + 'T12:00:00Z');
+        if (i === 0 || (monthly ? d.getUTCDate() !== 1 : d.getUTCDay() !== 1)) return '';
+        const x = xs[i], txt = fmt.format(d);
+        if (x - lastX < (monthly ? 34 : 52)) return '';
+        lastX = x;
+        const tx = Math.max(PAD.left + 18, Math.min(W - PAD.right - 18, x));
+        return `<line class="rev-week" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${(by + 4).toFixed(1)}" y2="${(by + 9).toFixed(1)}" stroke="rgba(247,245,240,0.25)"/>` +
+          `<text x="${tx.toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle">${txt}</text>`;
+      }).join('');
+    }
     // Robinhood-clean: no y-axis labels — the hero readout + scrubber carry
     // the exact figures, so the line floats free of gridline clutter.
     const yLabelsHtml = '';
@@ -4151,6 +4187,7 @@
       <!-- Halo: wider, blurred sibling of the line, Apple Stocks soft glow -->
       <path class="rev-line-halo" d="${linePath}" stroke="#7DF2B0" stroke-width="5" stroke-opacity="0.20" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#rev-line-glow)" pathLength="1"/>
       <path class="rev-line" d="${linePath}" stroke="#7DF2B0" stroke-width="2.25" fill="none" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>
+      ${daily ? dailyMarks() : ''}
       ${showLive ? `
       <g class="rev-live" transform="translate(${liveX.toFixed(1)} ${liveY.toFixed(1)})">
         <circle class="rev-live-ring" cx="0" cy="0" r="4"/>
@@ -4163,7 +4200,7 @@
       </g>
       <g class="rev-tip">
         <rect class="rev-tip-rect" rx="14" ry="14" fill="url(#rev-tip-gradient)" stroke="rgba(125,242,176,0.18)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
-        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="10" fill="#7DF2B0" letter-spacing="0.1em" opacity="0.92"></text>
+        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="12" fill="#7DF2B0" opacity="0.92"></text>
         <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
         <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
       </g>
@@ -4196,7 +4233,9 @@
       const vEl = document.querySelector('[data-rev-hero-val]');
       const dEl = document.querySelector('[data-rev-hero-delta]');
       if (vEl) {
-        const fmtV = (v) => `${frMoney(v)}<span class="rev-hero-cur">${curUnit()}</span>`;
+        // The group space is U+202F; at the hero's tight tracking it closed up
+        // and 944 489,70 read as 944489,70. It gets its own untracked span.
+        const fmtV = (v) => `${String(frMoney(v)).replace(/[\u202F\u00A0 ]/g, '<span class="rev-hero-sep">\u202F</span>')}<span class="rev-hero-cur">${curUnit()}</span>`;
         if (animate) animateNumber(vEl, parseAmountFromEl(vEl), val, { duration: 720, format: fmtV });
         else vEl['inner' + 'HTML'] = fmtV(val);
       }
@@ -4207,12 +4246,95 @@
           dEl.className = 'rev-hero-delta ' + (up ? 'up' : 'down');
           dEl['inner' + 'HTML'] = `${arrowSvg(up)}<span>${up ? '+' : '−'}${frInt(Math.abs(diff))} MAD · ${fmtDeltaPct(val, prev)}</span><span class="lbl">${captionShort || 'vs préc.'}</span>`;
         } else {
-          dEl.className = 'rev-hero-delta';
+          dEl.className = 'rev-hero-delta is-empty';
           dEl['inner' + 'HTML'] = '';
         }
       }
     }
 
+    /* ── Daily columns ──────────────────────────────────────────────────
+     * Rest state: every day a quiet column, the best day solid and named,
+     * a dashed line at the average of the days that sold. Comparing adds a
+     * thin mark per day at the previous period's same day. The pointer
+     * snaps to whole days and lights one column. */
+    // Demo series carry « Mar 22 » ticks and no dates: walk back from today to
+    // the last tick's weekday and day of month, then count backwards.
+    function keysFromLabels(labels) {
+      const m = /^(dim|lun|mar|mer|jeu|ven|sam)\.?\s+(\d{1,2})$/i.exec(labels?.[labels.length - 1] || '');
+      if (!m) return null;
+      let t = Date.parse(merchantDayKey(Date.now(), activeMerchantSlug()) + 'T12:00:00Z');
+      for (let k = 0; k < 40; k++, t -= 864e5) {
+        const d = new Date(t);
+        if (d.getUTCDate() === +m[2] && d.getUTCDay() === DAY_ABBR.findIndex(a => a.toLowerCase() === m[1].toLowerCase())) {
+          return labels.map((_, i) => new Date(t - (labels.length - 1 - i) * 864e5).toISOString().slice(0, 10));
+        }
+      }
+      return null;
+    }
+    function dayName(i, shift) {
+      if (!keys?.[0]) return shift ? '' : localDayTick(data.xLabels[i] || '');
+      const t = Date.parse(keys[0] + 'T12:00:00Z') + (i + shift) * 864e5;
+      const s = new Intl.DateTimeFormat(LOCALE[lang] || 'fr-FR', { weekday: 'long', day: 'numeric', month: shift ? 'short' : 'long', timeZone: 'UTC' }).format(t);
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    function compact(v) {
+      return v >= 10000 ? (window.KiwiNumber?.number?.(v / 1000, 1) ?? (v / 1000).toFixed(1)) + ' k' : frInt(v);
+    }
+    /* Rest-state reading of a daily line: a dashed average of the days that
+     * sold, the best day marked and named, and the last day closed by a dot. */
+    function dailyMarks() {
+      let out = '';
+      if (sold.length >= 2) {
+        const mean = sold.reduce((a, v) => a + (+v), 0) / sold.length, ay = yScale(mean).toFixed(1);
+        out += `<line class="rev-avg" x1="${PAD.left}" x2="${(W - PAD.right).toFixed(1)}" y1="${ay}" y2="${ay}" stroke="rgba(247,245,240,0.4)" stroke-dasharray="2 5"/>` +
+          `<text class="rev-avg-lbl" x="${(W - PAD.right).toFixed(1)}" y="${(+ay - 8).toFixed(1)}" text-anchor="end">${AVG_LBL[lang] || AVG_LBL.fr} · ${frInt(mean)} ${curUnit()}</text>`;
+      }
+      if (bestIdx >= 0) {
+        const bx = xs[bestIdx], by = yScale(+data.rev[bestIdx]);
+        const lx = Math.max(PAD.left + 20, Math.min(W - PAD.right - 20, bx));
+        out += `<circle class="rev-best-halo" cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="9" fill="#7DF2B0" fill-opacity="0.16"/>` +
+          `<circle class="rev-best-dot" cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="4" fill="#7DF2B0" stroke="#053B2C" stroke-width="2"/>` +
+          `<text class="rev-best-lbl" x="${lx.toFixed(1)}" y="${(by - 15).toFixed(1)}" text-anchor="middle">${compact(+data.rev[bestIdx])}</text>`;
+      }
+      if (lastIdx >= 0 && lastIdx !== bestIdx) {
+        out += `<circle class="rev-end-dot" cx="${xs[lastIdx].toFixed(1)}" cy="${yScale(+data.rev[lastIdx] || 0).toFixed(1)}" r="3.5" fill="#7DF2B0" stroke="#053B2C" stroke-width="2"/>`;
+      }
+      return `<g class="rev-marks" font-family="Inter Tight" font-size="10.5" font-weight="600" fill="rgba(247,245,240,0.7)">${out}</g>`;
+    }
+    function moveDaily(evt) {
+      const rect = svg.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const xVB = ((evt.clientX - rect.left) / rect.width) * W;
+      const i = Math.max(0, Math.min(N - 1, Math.round((xVB - PAD.left) / slot)));
+      if (data.rev[i] == null) { leave(); return; }
+      const v = +data.rev[i] || 0;
+      const p = data.revPrev ? (+data.revPrev[i] || 0) : null;
+      const cmpOn = !!showComparison && p != null;
+      const sx = xs[i], sy = yScale(v);
+      aDot.setAttribute('cx', sx.toFixed(1)); aDot.setAttribute('cy', sy.toFixed(1));
+      aCmp.style.display = cmpOn ? '' : 'none';
+      if (cmpOn) { aCmp.setAttribute('cx', sx.toFixed(1)); aCmp.setAttribute('cy', yScale(p).toFixed(1)); }
+      cross?.setAttribute('x1', sx.toFixed(1)); cross?.setAttribute('x2', sx.toFixed(1));
+      tipLabel.textContent = dayName(i, 0) + (i === todayIdx ? ' · ' + (SO_FAR[lang] || SO_FAR.fr) : '');
+      tipValue.textContent = `${frMoney(v)} ${curUnit()}`;
+      tipCmp.style.display = cmpOn ? '' : 'none';
+      if (cmpOn) {
+        const d = fmtDeltaPct(v, p);
+        tipCmp.innerHTML = `<tspan class="rev-tip-muted" fill="rgba(199,234,212,0.8)">${dayName(i, -(N)) || captionShort} · ${frInt(p)} ${curUnit()}</tspan>` +
+          (d ? `<tspan class="rev-tip-delta ${v >= p ? 'up' : 'down'}" dx="8" font-weight="600" fill="${v >= p ? '#7DF2B0' : '#FCA597'}">${d}</tspan>` : '');
+      }
+      const tipW = Math.ceil(Math.max(tipLabel.getComputedTextLength(), tipValue.getComputedTextLength(), cmpOn ? tipCmp.getComputedTextLength() + 8 : 0)) + 32;
+      // Beside the day, never over its point: right of it, left near the end.
+      const tipH = cmpOn ? 76 : 56, GAP = 14;
+      const tx = sx + GAP + tipW <= W - 4 ? sx + GAP + tipW / 2 : sx - GAP - tipW / 2;
+      const ty = Math.max(4, Math.min(H - PAD.bottom - tipH, sy - tipH / 2));
+      tipRect.setAttribute('x', (-tipW / 2).toFixed(1)); tipRect.setAttribute('y', '0');
+      tipRect.setAttribute('width', tipW); tipRect.setAttribute('height', tipH);
+      tipLabel.setAttribute('y', '22'); tipValue.setAttribute('y', '44'); tipCmp.setAttribute('y', '64');
+      tip.setAttribute('transform', `translate(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
+      svg.classList.add('is-hover');
+      setHero(v, null, false);
+    }
     function move(evt) {
       const rect = svg.getBoundingClientRect();
       if (rect.width === 0) return;
@@ -4274,56 +4396,11 @@
         timeLabel = `${String(safeHour).padStart(2, '0')}h${String(minWithin).padStart(2, '0')}`;
         refIdx = hourIdx;
       } else {
-        // ─── DAILY (7j / 30j): per-hour interpolation between day points.
-        // The chart only has daily totals, so we lerp the value linearly
-        // between two adjacent days and show "Mar 23 · 14h" as the label.
-        // Visually identical fluidity to the hourly path. ───
-        const fx = Math.max(0, Math.min(1, (xVB - PAD.left) / innerW));
-        const dayCount = xs.length - 1;
-        if (dayCount <= 0) {
-          // Single-point fallback (shouldn't happen in practice)
-          sx = xs[0]; sy = yScale(data.rev[0]);
-          valueAtCursor = data.rev[0]; prevAtCursor = data.revPrev ? data.revPrev[0] : null;
-          timeLabel = data.xLabels[0] || ''; refIdx = 0;
-        } else {
-          const TOTAL_H = dayCount * 24;
-          let totalH = Math.round(fx * TOTAL_H);
-          let dayIdx = Math.min(xs.length - 1, Math.floor(totalH / 24));
-          let hourWithin = totalH - dayIdx * 24;
-          if (dayIdx >= xs.length - 1) { dayIdx = xs.length - 1; hourWithin = 0; }
-
-          const vLow  = data.rev[dayIdx];
-          const vHigh = data.rev[dayIdx + 1];
-          if (vLow == null) { svg.classList.remove('is-hover'); return; }
-
-          if (vHigh == null || dayIdx >= xs.length - 1) {
-            valueAtCursor = vLow;
-          } else {
-            valueAtCursor = vLow + (vHigh - vLow) * (hourWithin / 24);
-          }
-
-          if (data.revPrev) {
-            const pLow  = data.revPrev[dayIdx];
-            const pHigh = data.revPrev[dayIdx + 1];
-            if (pLow != null && pHigh != null && dayIdx < xs.length - 1) {
-              prevAtCursor = pLow + (pHigh - pLow) * (hourWithin / 24);
-            } else if (pLow != null) {
-              prevAtCursor = pLow;
-            }
-          }
-
-          const fSnap = totalH / TOTAL_H;
-          sx = PAD.left + fSnap * innerW;
-          sy = yScale(valueAtCursor);
-          cmpY = (prevAtCursor != null) ? yScale(prevAtCursor) : null;
-
-          // "Mar 23 · 14h" — append hour only when between day boundaries
-          const dayLabel = data.xLabels[dayIdx] || '';
-          timeLabel = (hourWithin > 0 && dayIdx < xs.length - 1)
-            ? `${dayLabel} · ${hourWithin}h`
-            : dayLabel;
-          refIdx = dayIdx;
-        }
+        // Single-day series (a one-day custom range): no columns to snap to.
+        sx = xs[0]; sy = yScale(data.rev[0] || 0);
+        valueAtCursor = data.rev[0] || 0; prevAtCursor = data.revPrev ? data.revPrev[0] : null;
+        cmpY = prevAtCursor != null ? yScale(prevAtCursor) : null;
+        timeLabel = localDayTick(data.xLabels[0] || ''); refIdx = 0;
       }
 
       const showCmpNow = !!showComparison && cmpY != null;
@@ -4382,7 +4459,7 @@
       tip.setAttribute('transform', `translate(${(sx + tipDx).toFixed(1)}, ${tipDy.toFixed(1)})`);
 
       // Content — time label + interpolated value
-      tipLabel.textContent = timeLabel.toUpperCase();
+      tipLabel.textContent = timeLabel;
       tipValue.textContent = `${frInt(valueAtCursor)} ${curUnit()}`;
       if (showCmpNow && prevAtCursor != null) {
         const delta = fmtDeltaPct(valueAtCursor, prevAtCursor);
@@ -4402,8 +4479,8 @@
       svg.classList.remove('is-hover');
       setHero(restingVal, restingPrev, false);
     }
-    hit.addEventListener('pointermove', move);
-    hit.addEventListener('pointerenter', move);
+    hit.addEventListener('pointermove', daily ? moveDaily : move);
+    hit.addEventListener('pointerenter', daily ? moveDaily : move);
     hit.addEventListener('pointerleave', leave);
 
     // Hero readout — latest cumulative figure + delta vs the comparison.

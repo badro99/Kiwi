@@ -256,16 +256,16 @@
     "sha": "efb670b3b79f79fd"
   },
   "assets/dashboard-shell.css": {
-    "v": "1",
-    "sha": "90fecbfa2c3af213"
+    "v": "2",
+    "sha": "0be5ae84e44a06ae"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "87",
-    "sha": "f1cce78b6b359f1e"
+    "v": "88",
+    "sha": "aec0f920fe08c4be"
   },
   "assets/day-report-dash.js": {
     "v": "34",
@@ -312,8 +312,8 @@
     "sha": "2e69827806c46eb6"
   },
   "assets/design-vexel.css": {
-    "v": "2122",
-    "sha": "393c866af8bf2363"
+    "v": "2123",
+    "sha": "f37595e4df8b5ab5"
   },
   "assets/design-vexel.js": {
     "v": "2078",

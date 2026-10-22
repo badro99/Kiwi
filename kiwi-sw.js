@@ -19,7 +19,7 @@
 var CACHE = 'kiwi-app-v663';
 var SHELL = [
   '/dashboard.html',
-  '/assets/dashboard-shell.css?v=1',
+  '/assets/dashboard-shell.css?v=2',
   '/kiwi-caisse.html',
   '/assets/caisse-app.js?v=1',
   '/assets/caisse-refresh.js?v=4',
@@ -150,7 +150,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
   '/assets/sales-history.js?v=3',
-  '/assets/dateRange.js?v=87',
+  '/assets/dateRange.js?v=88',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',

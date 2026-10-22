@@ -857,6 +857,28 @@
    * that creates an Apple Stocks-style soft glow under the line. */
   .rev-line-halo { pointer-events: none; }
 
+  /* Daily line marks (7 jours, 30 jours, personnalisé) · dateRange.js
+   * dailyMarks(). They arrive after the line has drawn and step back while
+   * the pointer reads a day. */
+  .rev-marks { pointer-events: none; animation: rev-marks-in 520ms ease-out 900ms both; transition: opacity 160ms ease-out; }
+  @keyframes rev-marks-in { from { opacity: 0; } }
+  .chart-wrap.no-anim .rev-marks,
+  .chart-wrap.cmp-toggle .rev-marks { animation: none; }
+  .chart-wrap.is-hover .rev-marks { opacity: 0.25; }
+  .rev-avg { stroke: var(--ink); stroke-opacity: 0.28; }
+  .rev-week { stroke: rgba(10, 15, 13, 0.22); }
+  .rev-avg-lbl, .rev-best-lbl {
+    fill: var(--n-500); font-variant-numeric: tabular-nums;
+    paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round;
+  }
+  .rev-best-lbl { fill: var(--atlas); }
+  .rev-best-dot, .rev-end-dot { fill: var(--atlas); stroke: #fff; }
+  .rev-best-halo { fill: var(--atlas); }
+  .rev-hero-sep { letter-spacing: 0; margin-inline: 0.06em; }
+  @media (prefers-reduced-motion: reduce) {
+    .rev-marks { animation: none; }
+  }
+
   /* Suppress entrance animations on resize-only re-renders */
   .chart-wrap.no-anim .rev-line,
   .chart-wrap.no-anim .rev-area,

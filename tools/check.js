@@ -1931,6 +1931,7 @@ section('Whole-project regressions');
        regard par image, et les compteurs animés gardent leurs éléments. */
     'dark-fixes-batch-test.mjs',
     'dark-startup-browser-test.mjs',
+    'rev-chart-daily-browser-test.mjs',
     'venue-type-refocus-browser-test.mjs',
     'action-center-loop-test.mjs',
     'err-reporter-silence-test.mjs',
