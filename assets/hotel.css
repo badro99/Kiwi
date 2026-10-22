@@ -589,6 +589,8 @@
 [data-theme="dark"] .hx-room.st-libre { background: var(--n-100); }
 [data-theme="dark"] .hx-donut::after { background: var(--n-100); }
 [data-theme="dark"] .hx-kpi { background: var(--n-100); }
+/* --riad text on --mint-soft goes dark on dark: the ok pill takes the accent instead. */
+[data-theme="dark"] .hx-pill.ok { color: var(--mint); }
 
 /* ── Live custom-hotel tape chart ────────────────────────────────────── */
 .hx-cu-tape { padding:18px; overflow:hidden; }
@@ -905,18 +907,23 @@
   gap:24px;
   padding:24px;
   border-radius:20px;
-  color:var(--paper);
-  background:radial-gradient(circle at 88% 8%,color-mix(in srgb,var(--mint) 30%,transparent),transparent 34%),linear-gradient(135deg,var(--riad),var(--atlas));
-  box-shadow:0 22px 52px -38px var(--riad);
+  /* Always a deep green surface: the skins redefine --mint, --paper and
+     --atlas (light Vexel turns --mint into atlas green, dark turns --paper
+     black), which left the label, title and receive button invisible here.
+     The brand values from tokens.css are pinned for this surface only. */
+  --eco-deep:#053B2C; --eco-green:#0B6E4F; --eco-on:#F7F5F0; --eco-lit:#7DF2B0;
+  color:var(--eco-on);
+  background:radial-gradient(circle at 88% 8%,color-mix(in srgb,var(--eco-lit) 30%,transparent),transparent 34%),linear-gradient(135deg,var(--eco-deep),var(--eco-green));
+  box-shadow:0 22px 52px -38px var(--eco-deep);
 }
-.hx-eco-hero .eyebrow { font:650 10px var(--mono); letter-spacing:.11em; text-transform:uppercase; color:var(--mint); }
-.hx-eco-hero h2 { margin:7px 0 5px; font-size:clamp(24px,3vw,38px); line-height:1; letter-spacing:-.035em; color:var(--paper); }
-.hx-eco-hero p { max-width:680px; margin:0; color:color-mix(in srgb,var(--paper) 78%,transparent); font-size:13px; line-height:1.55; }
+.hx-eco-hero .eyebrow { font:650 10px var(--mono); letter-spacing:.11em; text-transform:uppercase; color:var(--eco-lit); }
+.hx-eco-hero h2 { margin:7px 0 5px; font-size:clamp(24px,3vw,38px); line-height:1; letter-spacing:-.035em; color:var(--eco-on); }
+.hx-eco-hero p { max-width:680px; margin:0; color:color-mix(in srgb,var(--eco-on) 78%,transparent); font-size:13px; line-height:1.55; }
 .hx-eco-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .hx-eco-actions .hx-btn { border-color:rgba(255,255,255,.24); }
-.hx-eco-actions .hx-btn.ghost { background:rgba(255,255,255,.1); color:var(--paper); }
-.hx-eco-actions .hx-btn.atlas { background:var(--mint); color:var(--riad); box-shadow:none; }
-.hx-eco-actions .hx-btn.atlas:hover { background:var(--paper); }
+.hx-eco-actions .hx-btn.ghost { background:rgba(255,255,255,.1); color:var(--eco-on); }
+.hx-eco-actions .hx-btn.atlas { background:var(--eco-lit); color:var(--eco-deep); box-shadow:none; }
+.hx-eco-actions .hx-btn.atlas:hover { background:var(--eco-on); }
 .hx-eco-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr); gap:14px; }
 .hx-eco-card { min-width:0; padding:18px; border:1px solid var(--n-200); border-radius:17px; background:var(--surface,var(--paper)); box-shadow:var(--hx-lift); }
 .hx-eco-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding-bottom:13px; border-bottom:1px solid var(--n-100); }

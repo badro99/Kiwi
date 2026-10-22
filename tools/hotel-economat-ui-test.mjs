@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
-const EXPECTED = 13;
+const EXPECTED = 14;
 let checks = 0;
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
 
@@ -66,6 +66,15 @@ await check('the field packet keeps Discovery D evidence-blocked', async () => {
   assert.match(field, /without coaching/i);
   assert.match(field, /all five scenarios/i);
   assert.match(field, /Do not create the live `hotel-units` registry during discovery/);
+});
+
+await check('the storeroom hero stays readable whatever the skin does to --mint and --paper', async () => {
+  const css = fs.readFileSync('assets/hotel.css', 'utf8');
+  const hero = css.slice(css.indexOf('.hx-eco-hero {'), css.indexOf('.hx-eco-grid'));
+  assert.match(hero, /--eco-deep:#053B2C; --eco-green:#0B6E4F; --eco-on:#F7F5F0; --eco-lit:#7DF2B0;/);
+  // Light Vexel sets --mint to atlas green and dark sets --paper to black: none may colour this surface.
+  assert.doesNotMatch(hero, /var\(--(mint|paper|riad|atlas)\)/);
+  assert.match(css, /\[data-theme="dark"\] \.hx-pill\.ok \{ color: var\(--mint\); \}/);
 });
 
 assert.equal(checks, EXPECTED, `expected ${EXPECTED} checks, ran ${checks}`);
