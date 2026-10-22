@@ -1389,6 +1389,12 @@ section('Whole-project regressions');
     'operating-day-inventory-cycle-test.mjs',
     'operating-day-split-session-test.mjs',
     'cash-sessions-auth-test.mjs',
+    /* Le tiroir : un attendu honnête n'est jamais retouché (remboursements,
+       manquants signés au passage de caisse), un attendu trop bas l'est. */
+    'cash-session-properties-test.mjs',
+    /* Deux caisses qui réservent leurs numéros au même instant ne reçoivent
+       jamais le même ticket. */
+    'ticket-sequence-properties-test.mjs',
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',

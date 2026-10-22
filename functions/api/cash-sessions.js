@@ -158,19 +158,44 @@ export async function onRequestPost({ request, env }) {
     if (expected != null && eventType !== 'open') {
       try {
         const chain = await env.DB.prepare(
-          `SELECT event_type, expected_cents, movement_kind, movement_amount_cents
+          `SELECT id, event_type, expected_cents, gap_cents, movement_kind, movement_amount_cents
              FROM cash_session_events
             WHERE merchant = ? AND terminal_id = ? AND session_id = ?`
         ).bind(merchant, terminalId, sessionId).all();
         let floorCents = 0;
         ((chain && chain.results) || []).forEach((row) => {
+          if (row.id === id) return;   // a replay never counts itself
           if (row.event_type === 'open') floorCents += Number(row.expected_cents) || 0;
           else if (row.event_type === 'movement') {
             const amount = Number(row.movement_amount_cents) || 0;
             if (row.movement_kind === 'in') floorCents += amount;
             else if (row.movement_kind === 'out') floorCents -= amount;
+          } else if (row.event_type === 'handover') {
+            /* Un passage de caisse signé qui a trouvé un manquant le reporte
+             * dans l'attendu du poste (drawerExpected côté caisse). Jusqu'au
+             * 22 octobre 2026 le plancher l'ignorait : l'attendu honnête
+             * passait SOUS lui, le serveur le remontait, et la clôture
+             * comptait une seconde fois le manquant déjà signé. */
+            floorCents += Number(row.gap_cents) || 0;
           }
         });
+        /* Les remboursements en espèces sortent du tiroir sans être des
+         * mouvements : un retour en début de service fait légitimement passer
+         * l'attendu sous ouverture + entrées − sorties. La table des ventes ne
+         * porte pas le poste, donc on retire tous ceux du commerce sur la
+         * période (et les ventes espèces d'avant annulées pendant) : le
+         * plancher ne peut que baisser, jamais inventer un manquant. */
+        const since = Number(openedAt) || 0, until = Number(occurredAt) + 600000;
+        const outflow = await env.DB.prepare(
+          `SELECT
+             COALESCE((SELECT SUM(-amount_cents) FROM sales
+                WHERE merchant = ? AND amount_cents < 0 AND ts BETWEEN ? AND ?
+                  AND (method = 'cash' OR payment_parts LIKE '%cash%')), 0)
+           + COALESCE((SELECT SUM(amount_cents) FROM sales
+                WHERE merchant = ? AND amount_cents > 0 AND void_ts BETWEEN ? AND ?
+                  AND (method = 'cash' OR payment_parts LIKE '%cash%')), 0) AS c`
+        ).bind(merchant, since, until, merchant, since, until).first();
+        floorCents -= Number(outflow && outflow.c) || 0;
         if (Number.isFinite(floorCents) && floorCents > expectedFinal) {
           expectedFinal = Math.min(floorCents, MAX_CENTS);
           if (counted != null) gapFinal = counted - expectedFinal;
