@@ -305,6 +305,22 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
+  /* Repère des modifications EN PLACE (pourboire ou détail du paiement posés
+   * après la vente). Le curseur rowid ne repasse jamais sur une vente déjà
+   * servie : sans ce repère, un navigateur qui la connaît ne saurait pas qu'elle
+   * a changé. Lu AVANT les lignes : une modification arrivée entre les deux se
+   * retrouve au sondage suivant, jamais perdue. Absent sur une base sans le
+   * journal des modifications : le flux reste celui d'avant. Rendu seulement à
+   * qui le demande (`cf=1`) : la réponse des autres clients ne change pas d'un octet. */
+  let changeFence = null;
+  if (!windowRead && !changeRead && url.searchParams.get('cf') === '1') {
+    try {
+      const mark = await env.DB.prepare('SELECT COALESCE(MAX(seq), 0) AS f FROM sale_changes WHERE merchant IN (?, ?)')
+        .bind(merchant, legacy || merchant).first();
+      if (Number.isSafeInteger(mark && mark.f) && mark.f >= 0) changeFence = mark.f;
+    } catch (_) { changeFence = null; }
+  }
+
   let rows = [];
   let next = null;
   let voided = [];
@@ -547,5 +563,5 @@ export async function onRequestGet({ request, env }) {
     const desk = await env.DB.prepare('SELECT seen_ts FROM order_desk WHERE merchant = ?').bind(merchant).first();
     tillSeen = Math.max(0, Number(desk && desk.seen_ts) || 0);
   } catch (_) {}
-  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now(), ...(!byDay ? { limit } : {}) });
+  return json({ sales: rows, cursor, merchant, voided, tillSeen, now: Date.now(), ...(changeFence !== null ? { changeFence } : {}), ...(!byDay ? { limit } : {}) });
 }

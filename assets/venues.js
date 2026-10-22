@@ -4135,6 +4135,10 @@
       })).filter(part => /^[a-z-]{1,16}$/.test(part.method) && Number.isSafeInteger(part.amountCents) && part.amountCents > 0);
       changed = true;
     }
+    /* Le pourboire peut être posé APRÈS la vente (reprise d'un dépôt déjà
+     * enregistré) : une vente déjà copiée le reçoit ici, jamais à la baisse. */
+    const tip = Math.round(Number(meta && meta.tipCents));
+    if (Number.isSafeInteger(tip) && tip > (Number(entry.tipCents) || 0)) { entry.tipCents = tip; changed = true; }
     return changed ? entry : null;
   }
   function salesAnnotate(id, cursor, meta) {

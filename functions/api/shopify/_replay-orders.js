@@ -18,6 +18,9 @@
  *    retraits), une commande annulée ou de test ne compte pas ;
  *  · une variante ne descend jamais sous zéro : ce que Kiwi n'a plus est
  *    « déjà sorti » (`short`), pas retiré une deuxième fois ;
+ *  · une ligne arrivée sur un stock déjà à zéro laisse un mouvement à zéro
+ *    (« solde-shopify ») : réglée une fois pour toutes, un réassort ne la fait
+ *    pas retirer plus tard ;
  *  · `dryRun` dit tout ce qui serait fait, sans rien écrire.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -61,7 +64,7 @@ export function planReplay(data, links, orders) {
      le prochain réassort. On ne retire que ce que Kiwi a encore ; le reste est
      compté dans `short` et dit à l'écran. */
   const left = new Map((data.variants || []).map((v) => [v.id, Math.max(0, Math.round(Number(v.stock) || 0))]));
-  const plan = { orders: 0, skippedOrders: 0, apply: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0 };
+  const plan = { orders: 0, skippedOrders: 0, apply: [], settle: [], counted: [], already: 0, unmatched: 0, pieces: 0, short: 0, shortLines: 0 };
   for (const o of orders || []) {
     if (!o || o.cancelledAt || o.test) { plan.skippedOrders++; continue; }
     const at = Date.parse(o.createdAt);
@@ -81,7 +84,14 @@ export function planReplay(data, links, orders) {
       const have = left.get(kiwiVariantId) || 0;
       const take = Math.min(qty, have);
       if (take < qty) { plan.short += qty - take; plan.shortLines++; }
-      if (!take) continue;
+      if (!take) {
+        /* Rien à retirer : la ligne est « réglée » quand même. Un mouvement à zéro
+           garde sa trace dans le journal, pour qu'un rattrapage fait après un
+           réassort ne consomme pas la nouvelle marchandise pour cette vieille commande. */
+        plan.settle.push({ ...row, qty: 0 });
+        existing.add(moveId);
+        continue;
+      }
       left.set(kiwiVariantId, have - take);
       row.qty = take;
       plan.apply.push(row);
@@ -115,9 +125,12 @@ export async function replayShopifyOrders(env, merchant, { sinceTs, dryRun } = {
       already: plan.already, unmatched: plan.unmatched, short: plan.short, shortLines: plan.shortLines,
       sample: plan.apply.slice(0, 20).map((x) => ({ order: x.order, variant: x.vid, qty: x.qty, at: x.at })),
     };
-    if (dryRun || !plan.apply.length) return { ...summary, applied: 0, dryRun: !!dryRun };
+    if (dryRun || !(plan.apply.length || plan.settle.length)) return { ...summary, applied: 0, dryRun: !!dryRun };
     for (const x of plan.apply) {
       data.moves.push({ id: x.moveId, vid: x.vid, d: -x.qty, at: x.at, why: 'vente', ref: `shopify:${x.ref}`.slice(0, 64) });
+    }
+    for (const x of plan.settle) {
+      data.moves.push({ id: x.moveId, vid: x.vid, d: 0, at: x.at, why: 'solde-shopify', ref: `shopify:${x.ref}`.slice(0, 64) });
     }
     catalogFns.materialize(data);
     const next = Number(row.rev || 0) + 1;

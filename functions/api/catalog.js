@@ -97,7 +97,11 @@ function sanitize(raw) {
       if (m && m.ref) row.ref = str(m.ref, 64);
       return row;
     })
-    .filter((m) => m.id && m.vid && m.d && m.at)
+    /* Une ligne Shopify arrivée sur un stock Kiwi déjà à zéro n'enlève rien mais
+       reste consignée (d = 0, why « solde-shopify ») : sans cette trace, un
+       rattrapage fait après un réassort retirerait de la nouvelle marchandise
+       pour une vieille commande. Aucun autre mouvement à zéro n'est gardé. */
+    .filter((m) => m.id && m.vid && m.at && (m.d || m.why === 'solde-shopify'))
     .sort((a, b) => b.at - a.at)
     .slice(0, 12000);
 

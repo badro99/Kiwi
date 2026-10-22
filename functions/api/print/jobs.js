@@ -34,6 +34,15 @@ async function refDigest(merchant, clientRef) {
   const hash = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(hash)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+/* Un ticket visé sur un pont précis garde ce pont jusqu'au bout. La colonne
+   bridge_id ne le dit plus une fois le ticket réclamé (elle prend alors le pont
+   qui l'a réclamé), donc le dépôt écrit la visée dans la cible, sous `_pin`,
+   et elle n'est jamais rendue au pont. */
+function publicTarget(t) {
+  if (!t || typeof t !== 'object' || !('_pin' in t)) return t;
+  const { _pin, ...rest } = t;
+  return rest;
+}
 const RETRY_DELAY_MS = 10000;
 const CLAIM_LEASE_MS = 30000;
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000, ACTIVE_POLL_MS = 1000, IDLE_POLL_MS = 5000;
@@ -92,7 +101,7 @@ export async function onRequestGet(context) {
           RETURNING id, kind, target, data_b64`
       ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t).all();
       const jobs = (rs.results || []).map((j) => ({
-        id: j.id, kind: j.kind || 'other', target: safeJsonParse(j.target, {}), dataB64: j.data_b64,
+        id: j.id, kind: j.kind || 'other', target: publicTarget(safeJsonParse(j.target, {})), dataB64: j.data_b64,
       }));
       /* Every bridge calls here around the clock, so its idle rate is most
        * of the relay's cost. Stay at 1 s while the counter is printing (a job
@@ -155,9 +164,11 @@ export async function onRequestPost(context) {
        * A failed printer write is re-queued with the same id after the same
        * 10-second backoff the browser queue historically used. This lets the
        * browser release independent station tickets immediately without
-       * weakening delivery or losing retries on navigation/reload. Keep the
-       * claimant bridge id: it both preserves an explicitly targeted bridge
-       * and lets that same bridge reclaim an untargeted job safely. */
+       * weakening delivery or losing retries on navigation/reload. A job aimed
+       * at one bridge (`_pin` in its target) keeps that bridge. An untargeted
+       * job that the printer refused is released (bridge_id NULL) so any healthy
+       * bridge of the store, including the same one, can take the retry; the
+       * old claimant's duplicate ACK no longer matches and changes nothing. */
       const r = outcome === 'printed'
         ? await env.DB.prepare(
           `UPDATE print_jobs SET status = 'done', done_ts = ?, bytes = ?, error = NULL
@@ -173,9 +184,12 @@ export async function onRequestPost(context) {
               SET status = CASE WHEN expires_ts <= ? OR ? = 1 THEN 'failed' ELSE 'queued' END,
                   done_ts = CASE WHEN expires_ts <= ? THEN ? ELSE NULL END,
                   claimed_ts = CASE WHEN expires_ts <= ? OR ? = 1 THEN claimed_ts ELSE ? END,
+                  bridge_id = CASE WHEN expires_ts <= ? OR ? = 1 THEN bridge_id
+                                   WHEN json_extract(target, '$._pin') IS NULL THEN NULL
+                                   ELSE bridge_id END,
                   bytes = 0, error = ?
             WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
-        ).bind(t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t, t, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t + RETRY_DELAY_MS, error, id, bridge.merchant, bridge.id).run();
+        ).bind(t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t, t, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t + RETRY_DELAY_MS, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, error, id, bridge.merchant, bridge.id).run();
       return relayJson({ ok: true, updated: !!(r && r.meta && r.meta.changes) }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
@@ -241,7 +255,7 @@ export async function onRequestPost(context) {
       env.DB.prepare(
         `INSERT OR IGNORE INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts)
          VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`
-      ).bind(id, merchant, bridgeId, kind, JSON.stringify(target), dataB64, t, t + ttl),
+      ).bind(id, merchant, bridgeId, kind, JSON.stringify(bridgeId ? { ...target, _pin: bridgeId } : target), dataB64, t, t + ttl),
       // Ménage opportuniste : les tickets de plus de 24 h ne servent plus à personne.
       env.DB.prepare('DELETE FROM print_jobs WHERE merchant = ? AND created_ts < ?').bind(merchant, t - 86400000),
     ]);

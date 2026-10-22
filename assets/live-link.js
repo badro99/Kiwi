@@ -1140,6 +1140,7 @@
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
     var drainBackfill = false;
     var lastTenant = null, covered = null, coveredKey = null;
+    var changeSeen = null;                 // dernier repère de modification lu (journal du flux), par commerce
     var bound = [];
     var state = { phase: 'loading', merchant: merchant(), pages: 0, rows: 0, cursor: 0,
       startedAt: Date.now(), lastPageAt: 0, completedAt: 0, error: null };
@@ -1157,6 +1158,39 @@
       if (timer) { clearTimeout(timer); timer = null; }
       if (!stopped) timer = setTimeout(tick, ms == null ? delay() : ms);
     }
+    /* Le curseur rowid ne repasse jamais sur une vente déjà servie : un pourboire
+       posé après coup (dépôt repris avec son pourboire) ne l'atteindrait jamais.
+       Le flux expose le journal de ses modifications (`changeFence`, lu avant les
+       lignes) : quand il avance, on relit ce journal et l'on remet à jour les
+       ventes que ce navigateur a déjà. Les nouvelles viennent par le curseur. */
+    function followChanges(tenant, fence) {
+      if (!Number.isSafeInteger(fence) || fence < 0) return Promise.resolve();   // serveur sans journal
+      if (changeSeen == null) { changeSeen = fence; return Promise.resolve(); }
+      if (fence <= changeSeen) return Promise.resolve();
+      function page(after) {
+        return readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&changes=1&afterChange=' + after + '&limit=500')
+          .then(function (d) {
+            if (stopped || merchant() !== tenant) return;
+            if (!d || d.error || d.merchant !== tenant || !Array.isArray(d.changes)) throw new Error('changes');
+            var pos = after, touched = false;
+            d.changes.forEach(function (c) {
+              if (c && Number.isSafeInteger(c.seq) && c.seq > pos) pos = c.seq;
+              if (!c || c.deleted || c.voided || !(c.tipCents > 0)) return;
+              var cur = Number(c.cursor) || 0;
+              if (!cur || !feedSeen[tenant + '#' + cur]) return;       // inconnue ici : le curseur la servira
+              feedSales.forEach(function (row) {
+                if (row && row.tenant === tenant && row.s && Number(row.s.cursor) === cur && !(Number(row.s.tipCents) >= c.tipCents)) {
+                  row.s.tipCents = c.tipCents; touched = true;
+                }
+              });
+            });
+            changeSeen = Math.max(Number(changeSeen) || 0, pos);
+            if (touched) bridgeToStore();
+            if (!d.complete && pos > after) return page(pos);
+          });
+      }
+      return page(changeSeen).catch(function () { /* au prochain sondage : le repère n'a pas bougé */ });
+    }
     function tick() {
       if (stopped) return;
       if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
@@ -1169,7 +1203,7 @@
        * cursor carried over from the previous one would skip the new store's
        * whole history — it starts again from the beginning of its own feed. */
       var tenant = merchant();
-      if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
+      if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; changeSeen = null; }
       if (!tenant) { busy = false; arm(); return; }
       var helper = window.KiwiSalesReconcile;
       var venue = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
@@ -1184,7 +1218,7 @@
         }
         request = covered.cycle().then(function (replay) { return { covered: replay }; });
       } else { if (covered) { since = 0; backfill = true; } covered = null; coveredKey = null;
-        request = readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since + (backfill || oneShot ? '&limit=500' : ''));
+        request = readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since + (backfill || oneShot ? '&limit=500' : '') + (oneShot ? '' : '&cf=1'));
       }
       request
         .then(function (data) {
@@ -1238,6 +1272,7 @@
             });
             applyVoids(data.voided, tenant);
           }
+          var followed = null;
           if (Array.isArray(data.sales)) {
             if (data.sales.length) since = data.cursor || since;
             /* /api/feed echoes its effective page size. A shorter page proves the complete
@@ -1254,6 +1289,7 @@
               if (applied && applied.venue) state.venue = applied.venue;
             }
             else { try { onSales(data.sales, backfill, tenant); } catch (_) {} }
+            if (!oneShot) followed = followChanges(tenant, data.changeFence);
             /* The feed is paginated at the negotiated page size. A full first page does NOT end
                startup history: every following page is still old ledger data
                and must stay silent. Drain full pages immediately, and unlock
@@ -1276,6 +1312,7 @@
               report();
             }
           }
+          return followed;
         })
         .catch(function (err) {
           if (stopped) return;
@@ -1539,6 +1576,7 @@
           origin: s.origin || '', server: s.server || '', channel: s.channel || '',
           saleId: s.id || s.saleId || '',
           paymentParts: s.paymentParts || null,
+          tipCents: Number(s.tipCents) > 0 ? Math.round(Number(s.tipCents)) : 0,
         };
         /* annotate() rereads and searches the persisted ledger. Calling it for
            every already-current row turns a full replay into quadratic work. */

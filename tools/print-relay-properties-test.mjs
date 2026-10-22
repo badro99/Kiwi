@@ -30,8 +30,8 @@ const till = auth.TILL_COOKIE + '=' + await auth.tillToken(env.AUTH_SECRET, merc
 const otherTill = auth.TILL_COOKIE + '=' + await auth.tillToken(env.AUTH_SECRET, 'server-other-shop');
 const BRIDGES = ['a', 'b', 'x'].map((k, i) => ({ key: k, id: 'pb_' + String(i + 1).repeat(16), token: 'kpb_' + String(i + 1).repeat(64), merchant: k === 'x' ? 'server-other-shop' : merchant }));
 
-async function deposit(k, cookie = till) {
-  const res = await jobs.onRequestPost({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, target: { ip: '192.168.1.50', port: 9100 }, dataB64: 'S2l3aSB0aWNrZXQ=', kind: 'receipt', clientRef: 'ticket-' + String(k).padStart(4, '0') }) }) });
+async function deposit(k, cookie = till, bridgeId) {
+  const res = await jobs.onRequestPost({ env, request: new Request('https://kiwi.test/api/print/jobs?merchant=' + merchant, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, target: { ip: '192.168.1.50', port: 9100 }, dataB64: 'S2l3aSB0aWNrZXQ=', kind: 'receipt', clientRef: 'ticket-' + String(k).padStart(4, '0'), ...(bridgeId ? { bridgeId } : {}) }) }) });
   return { status: res.status, body: await res.json() };
 }
 async function poll(b) {
@@ -160,13 +160,42 @@ try {
     assert.equal(rows()[0].status, 'queued');
   }));
 
-  /* Owner question. A ticket goes to whichever bridge of the store asks first,
-   * and stays with it: a retry after a failure, and a « printer not saved on
-   * this bridge » refusal, never reach the store's other bridge. On production
-   * no store has two bridges online at once today (extra bridges are earlier
-   * pairings), but Amira Cafe did from 31 August to 2 September, and its second
-   * bridge failed 26 tickets it could not reach. */
-  await knownIssue('PR-1', 'with two bridges online, a ticket the first one cannot print never reaches the second', fc.asyncProperty(fc.constantFrom('EHOSTUNREACH', 'printer-target-not-saved'), async (error) => {
+  /* Un ticket sans pont visé va au premier pont qui le réclame ; si l'imprimante
+   * de ce pont le refuse (échec définitif, ticket remis en file), il doit pouvoir
+   * partir sur l'autre pont du commerce. Un ticket visé sur un pont précis
+   * garde ce pont, et la visée n'est jamais rendue au pont dans la cible. */
+  await strict('an untargeted ticket the first bridge\'s printer refused is taken by the store\'s other bridge', fc.asyncProperty(fc.constantFrom('EHOSTUNREACH', 'ECONNREFUSED', 'printer-timeout'), async (error) => {
+    reset();
+    assert.equal((await deposit(1)).status, 200);
+    const got = await poll(BRIDGES[0]); assert.equal(got.jobs.length, 1);
+    await ack(BRIDGES[0], got.jobs[0].id, 'failed', error);
+    assert.equal((await poll(BRIDGES[1])).jobs.length, 0, 'taken before its pause');
+    clock += 10001;
+    const r = await poll(BRIDGES[1]); assert.equal(r.jobs.length, 1);
+    assert.equal(r.jobs[0].id, got.jobs[0].id);
+    assert.deepEqual(r.jobs[0].target, { ip: '192.168.1.50', port: 9100 });
+    assert.equal((await ack(BRIDGES[0], got.jobs[0].id, 'failed', error)).updated, false, 'the old claimant closed the new attempt');
+    assert.equal(rows()[0].bridge_id, BRIDGES[1].id);
+    assert.equal((await ack(BRIDGES[1], r.jobs[0].id, 'printed')).updated, true);
+  }));
+
+  await strict('a ticket aimed at one bridge keeps that bridge after a printer failure, and the pin never reaches the bridge', fc.asyncProperty(fc.constantFrom('EHOSTUNREACH', 'ECONNREFUSED'), async (error) => {
+    reset();
+    assert.equal((await deposit(2, till, BRIDGES[0].id)).status, 200);
+    assert.equal((await poll(BRIDGES[1])).jobs.length, 0, 'a ticket aimed at a is visible to b');
+    const got = await poll(BRIDGES[0]); assert.equal(got.jobs.length, 1);
+    assert.deepEqual(got.jobs[0].target, { ip: '192.168.1.50', port: 9100 });
+    await ack(BRIDGES[0], got.jobs[0].id, 'failed', error);
+    for (let i = 0; i < 3; i++) { clock += 10001; assert.equal((await poll(BRIDGES[1])).jobs.length, 0, 'an aimed ticket failed over'); }
+    assert.equal(rows()[0].bridge_id, BRIDGES[0].id);
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 1);
+  }));
+
+  /* Toujours une question pour le propriétaire : « imprimante non enregistrée sur
+   * ce pont » est un refus PERMANENT (le ticket passe à failed, il n'est pas remis
+   * en file), donc l'autre pont ne le voit jamais. Basculer vers l'autre pont
+   * changerait la règle des erreurs permanentes ; non modifié. */
+  await knownIssue('PR-1', 'a permanent « printer not saved on this bridge » refusal never reaches the store\'s other bridge', fc.asyncProperty(fc.constantFrom('printer-target-not-saved'), async (error) => {
     reset();
     assert.equal((await deposit(1)).status, 200);
     const got = await poll(BRIDGES[0]); assert.equal(got.jobs.length, 1);
