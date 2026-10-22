@@ -213,8 +213,8 @@ export async function onRequestPut(context) {
     let last = null;
     try {
       last = await env.DB.prepare(
-        `SELECT prev FROM account_audit WHERE account_id = ? AND action IN ('email','contact','billing')
-          ORDER BY ts DESC, id DESC LIMIT 1`).bind(accountId).first();
+        `SELECT prev FROM account_audit WHERE account_id = ? AND action = ?
+          ORDER BY ts DESC, id DESC LIMIT 1`).bind(accountId, field === 'login' ? 'email' : field).first();
     } catch (_) { return json({ error: 'no-history' }, 409); }
     if (!last || !last.prev) return json({ error: 'no-history' }, 409);
     next = normEmail(last.prev);
