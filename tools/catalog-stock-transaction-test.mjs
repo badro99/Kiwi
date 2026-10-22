@@ -82,7 +82,9 @@ ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')
 ok(pos.includes('stockCheck: () => ticketStockIssue({ lines: frozen.lines })')
     && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente')"),
   'la variante exacte est revérifiée au paiement puis débitée avec la référence du ticket imprimé');
-const client = retailSource(fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8'));
+// Les réservations d'un encaissement vivent dans assets/boutique-catalog-io.js.
+const client = ['assets/boutique-catalog-io.js', 'assets/boutique-catalog.js']
+  .map((f) => retailSource(fs.readFileSync(path.join(ROOT, f), 'utf8'))).join('\n');
 ok(client.includes("reason === 'catalog-missing'") && client.includes("reason === 'unmigrated'"),
   'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');
 ok(/state\.checkoutBusy \|\| \(root && \$\$\('\.modal-veil\.is-open'/.test(pos),

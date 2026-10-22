@@ -31,6 +31,8 @@ function load(file) {
 
 load('assets/barcode.js');
 load('assets/color-palette.js');
+load('assets/boutique-catalog-ledger.js');
+load('assets/boutique-catalog-io.js');
 load('assets/boutique-catalog.js');
 
 const colors = window.KiwiColors;

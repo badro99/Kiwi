@@ -63,6 +63,8 @@ function boot() {
     fetch: () => Promise.reject(new Error('offline')),
   });
   vm.runInContext(R('assets/inventory-ledger.js'), ctx, { filename: 'inventory-ledger.js' });
+  vm.runInContext(R('assets/boutique-catalog-ledger.js'), ctx, { filename: 'boutique-catalog-ledger.js' });
+  vm.runInContext(R('assets/boutique-catalog-io.js'), ctx, { filename: 'boutique-catalog-io.js' });
   vm.runInContext(R('assets/boutique-catalog.js'), ctx, { filename: 'boutique-catalog.js' });
   win.KiwiStoreTemplates = { currentTrade: () => 'maison' };
   vm.runInContext(R('assets/maison-stock-movements.js'), ctx, { filename: 'maison-stock-movements.js' });

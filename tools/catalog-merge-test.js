@@ -84,6 +84,8 @@ function load(win, file) {
 const win = makeWindow();
 load(win, 'assets/barcode.js');
 load(win, 'assets/color-palette.js');
+load(win, 'assets/boutique-catalog-ledger.js');
+load(win, 'assets/boutique-catalog-io.js');
 load(win, 'assets/boutique-catalog.js');
 const C = win.KiwiBoutiqueCatalog;
 if (!C || !C._merge) {
@@ -102,6 +104,8 @@ if (!C || !C._merge) {
   paired.localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: 'santos-store', name: 'Santos Store' }));
   load(paired, 'assets/barcode.js');
   load(paired, 'assets/color-palette.js');
+  load(paired, 'assets/boutique-catalog-ledger.js');
+  load(paired, 'assets/boutique-catalog-io.js');
   load(paired, 'assets/boutique-catalog.js');
   paired.KiwiBoutiqueCatalog.use('santos-store');
   ok(calls.some((u) => String(u).includes('/api/catalog?merchant=santos-store')),
@@ -112,6 +116,8 @@ if (!C || !C._merge) {
   foreign.localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: 'autre-store' }));
   load(foreign, 'assets/barcode.js');
   load(foreign, 'assets/color-palette.js');
+  load(foreign, 'assets/boutique-catalog-ledger.js');
+  load(foreign, 'assets/boutique-catalog-io.js');
   load(foreign, 'assets/boutique-catalog.js');
   foreign.KiwiBoutiqueCatalog.use('santos-store');
   eq(foreignCalls.length, 0, 'l’appairage d’un autre magasin ne déclenche aucune lecture');
@@ -121,8 +127,10 @@ if (!C || !C._merge) {
  * movement that never retries is still lost to the other device, and a failed
  * first read must never authorize a blind overwrite. */
 {
-  const source = retailSource(fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8'));
-  const valid = source.indexOf('if (!res || slug !== VENUE) return false;');
+  // La copie serveur vit dans assets/boutique-catalog-io.js ; batch() reste dans le principal.
+  const source = ['assets/boutique-catalog-io.js', 'assets/boutique-catalog.js']
+    .map((f) => retailSource(fs.readFileSync(path.join(ROOT, f), 'utf8'))).join('\n');
+  const valid = source.indexOf('if (!res || slug !== core.VENUE) return false;');
   const mark = source.indexOf('cloud.read[slug] = 1;', valid);
   ok(valid >= 0 && mark > valid, 'un GET serveur en erreur ne valide jamais la lecture avant écriture');
   ok(source.includes("window.addEventListener('online'") && source.includes('if (cloud.dirty) schedulePush(0)'),

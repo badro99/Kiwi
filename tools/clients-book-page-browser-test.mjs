@@ -33,7 +33,7 @@ const server = http.createServer((req, res) => {
       <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-boutique.js?v=${boutiqueRev}"></script>
+      <script src="/assets/boutique-catalog-ledger.js"></script><script src="/assets/boutique-catalog-io.js"></script><script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-boutique.js?v=${boutiqueRev}"></script>
       </head><body class="is-pos-boutique"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-boutique"></div>
       <script type="module">import "/assets/pos-boutique.js?v=${boutiqueRev}";window.__spec.mount(document.getElementById('pos-boutique'));window.KiwiCaisseDna.enhance(document.getElementById('pos-boutique'),'boutique');</script></body></html>`);
     return;

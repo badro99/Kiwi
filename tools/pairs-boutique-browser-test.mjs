@@ -78,7 +78,7 @@ const ID = {};
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   await page.goto(base + '/__blank');
-  for (const f of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog.js']) await page.addScriptTag({ url: '/' + f });
+  for (const f of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-ledger.js', 'assets/boutique-catalog-io.js', 'assets/boutique-catalog.js']) await page.addScriptTag({ url: '/' + f });
   const doc = await page.evaluate(() => { window.KiwiBoutiqueCatalog.use('maisonMansour'); return localStorage.getItem('kiwiBoutiqueCatalog:v1:maisonMansour'); });
   assert.ok(doc && JSON.parse(doc).products.length > 5, 'the catalogue module wrote its seed');
   sql.prepare('INSERT INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, 1, ?)').run(MERCHANT, doc, now);

@@ -26,7 +26,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
-const catSrc = readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
+// Le catalogue tient en trois fichiers : le journal et les échanges serveur AVANT le principal.
+const catSrc = ['assets/boutique-catalog-ledger.js', 'assets/boutique-catalog-io.js', 'assets/boutique-catalog.js']
+  .map((f) => readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

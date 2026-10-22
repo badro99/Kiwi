@@ -70,6 +70,8 @@ function load(win, file) {
 const win = makeWindow();
 load(win, 'assets/barcode.js');
 load(win, 'assets/color-palette.js');
+load(win, 'assets/boutique-catalog-ledger.js');
+load(win, 'assets/boutique-catalog-io.js');
 load(win, 'assets/boutique-catalog.js');
 load(win, 'assets/pos-sale.js');
 
