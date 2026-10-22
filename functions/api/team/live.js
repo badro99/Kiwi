@@ -110,6 +110,24 @@ function pointedHours(attendance, now, zone, gone = new Map(), cutoff = DEFAULT_
   return hoursByDay(items, (ts) => dateKey(ts, zone, cutoff), (ts) => dateKey(ts, zone, 0));
 }
 
+/* Pointages envoyés plus tard depuis le téléphone : par employé et par jour du
+   magasin, avec le délai que le téléphone a déclaré. Le gérant les voit sur la
+   grille des heures pour pouvoir les questionner. */
+function deferredPunches(attendance, zone) {
+  const out = {};
+  (Array.isArray(attendance && attendance.entries) ? attendance.entries : []).forEach((entry) => {
+    if (!entry || !entry.deferred) return;
+    const memberId = String(entry.memberId || entry.staffId || '');
+    if (!memberId) return;
+    [['in', entry.inTs, entry.inDeferredMs], ['out', entry.outTs, entry.outDeferredMs]].forEach(([kind, ts, delay]) => {
+      if (!(Number(delay) > 0) || !(Number(ts) > 0)) return;
+      const day = dateKey(Number(ts), zone);
+      ((out[memberId] = out[memberId] || {})[day] = out[memberId][day] || []).push({ kind, delayMs: Number(delay) });
+    });
+  });
+  return out;
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   const asked = String(new URL(request.url).searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 64);
@@ -134,7 +152,10 @@ export async function onRequestGet({ request, env }) {
         name: String(entry && entry.name || 'Employé'),
         inTs: Number(entry && entry.inTs) || 0,
         outTs: Number(entry && entry.outTs) || 0,
+        inDeferredMs: Number(entry && entry.deferred && entry.inDeferredMs) || 0,
+        outDeferredMs: Number(entry && entry.deferred && entry.outDeferredMs) || 0,
       })),
+    deferredPunches: deferredPunches(attendance.data, zone),
     messages: (Array.isArray(messages.data.messages) ? messages.data.messages : []).slice(-MAX_MESSAGES),
     now: Date.now(),
   }, 200, { 'Cache-Control': 'no-store' });

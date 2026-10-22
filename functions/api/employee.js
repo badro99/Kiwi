@@ -25,8 +25,10 @@ const MESSAGES_FEATURE = 'team-messages';
 const MESSAGE_WINDOW_MS = 24 * 3600000;
 const PROGRESS_FEATURE = 'employee-progress';
 const MAX_ATTENDANCE = 5000;
-// Un pointage gardé sur le téléphone vaut au plus 24 h ; au-delà, le gérant corrige.
-const CAPTURE_MAX_AGE_MS = 24 * 3600000;
+// Un pointage gardé sur le téléphone vaut au plus 12 h ; au-delà, le gérant corrige.
+const CAPTURE_MAX_AGE_MS = 12 * 3600000;
+// Même plafond par défaut que le planning (planning-core.js, settings.maxDailyHours).
+const DEFAULT_MAX_DAILY_HOURS = 12;
 // Délai d'acheminement toléré après la fin de vie du code, pour un pointage différé seulement.
 const CAPTURE_CODE_GRACE_MS = 10 * 1000;
 
@@ -283,6 +285,8 @@ async function mutateDoc(env, merchant, feature, fallback, change) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const row = await readDoc(env, merchant, feature, fallback);
     const next = change(row.data);
+    // Rien à écrire (pointage différé refusé) : on n'écrit rien.
+    if (!next) return null;
     const text = JSON.stringify(next);
     const now = Date.now();
     try {
@@ -547,12 +551,21 @@ export async function onRequestPost({ request, env }) {
   const codeTs = Number(presenceCode.createdTs) || now;
   // En direct, l'heure du serveur, exactement comme avant ; différé, l'heure du geste.
   const at = deferred ? capturedTs : now;
+  /* Un pointage différé n'est cru que dans ses bornes : il AJOUTE un pointage,
+   * il ne déplace jamais un pointage déjà enregistré, ne passe pas avant le
+   * précédent et ne fait pas un service plus long que le plafond quotidien du
+   * planning. Il porte la mention `deferred` et le délai déclaré, que le
+   * gérant voit dans les heures et les derniers pointages. */
+  const settings = (teamRow.data && teamRow.data.planning && teamRow.data.planning.settings) || {};
+  const maxShiftMs = (settings.maxDailyHours == null ? DEFAULT_MAX_DAILY_HOURS : Math.max(0, Number(settings.maxDailyHours) || 0)) * 3600000;
+  let refusal = '';
   let changedEntry = null;
   let replay = false;
   const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
     // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
     changedEntry = null;
     replay = false;
+    refusal = '';
     const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
     const mine = entries.filter((e) => e && e.staffId === auth.pin.id);
     const open = mine.slice().reverse().find((e) => !e.outTs);
@@ -563,12 +576,15 @@ export async function onRequestPost({ request, env }) {
       replay = true;
       changedEntry = { ...replayed };
     } else if (action === 'clock-in') {
+      if (deferred && !open && at < lastOut) { refusal = 'attendance-capture-overlaps'; return null; }
       const inTs = Math.min(now, Math.max(at, lastOut));
-      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}) };
+      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs, outTs: 0, clockInCodeTs: codeTs, ...(opId ? { clockInOpId: opId } : {}), ...(deferred ? { deferred: true, inDeferredMs: capturedAgo } : {}) };
       if (!open) entries.push(changedEntry);
     } else if (action === 'clock-out' && open) {
       const floor = Math.max(Number(open.inTs) || 0, Number(open.pauseTs) || 0,
         ...(Array.isArray(open.breaks) ? open.breaks : []).map((b) => Number(b && b.outTs) || 0));
+      if (deferred && at < floor) { refusal = 'attendance-capture-overlaps'; return null; }
+      if (deferred && maxShiftMs && at - (Number(open.inTs) || at) > maxShiftMs) { refusal = 'attendance-shift-too-long'; return null; }
       const outTs = Math.min(now, Math.max(at, floor)) || now;
       if (open.pauseTs) {
         open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
@@ -578,10 +594,12 @@ export async function onRequestPost({ request, env }) {
       open.outTs = Math.max(outTs, Number(open.inTs) || outTs);
       open.clockOutCodeTs = codeTs;
       if (opId) open.clockOutOpId = opId;
+      if (deferred) { open.deferred = true; open.outDeferredMs = capturedAgo; }
       changedEntry = { ...open };
     }
     return { entries: entries.slice(-MAX_ATTENDANCE) };
   });
+  if (refusal) return json({ error: refusal }, 409);
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
   if (action === 'clock-out' && !replay && changedEntry && changedEntry.outTs > changedEntry.inTs) {
     /* Le service se crédite par le calcul même de la paie (_worked-hours.js),

@@ -260,14 +260,26 @@ try { (function () {
   function clock(ts, fallback) {
     return Number(ts) ? new Date(Number(ts)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : fallback;
   }
+  /* Pointage envoyé plus tard depuis le téléphone : le délai déclaré reste
+     visible pour que le gérant puisse le questionner. */
+  function deferredNote(entry) {
+    var ms = Math.max(Number(entry && entry.inDeferredMs) || 0, Number(entry && entry.outDeferredMs) || 0);
+    if (!ms) return '';
+    var total = Math.max(1, Math.round(ms / 60000)), h = Math.floor(total / 60), m = total % 60;
+    var lang = String((document.documentElement && document.documentElement.lang) || 'fr').slice(0, 2);
+    var text = lang === 'ar' ? 'أُرسل لاحقاً من الهاتف · التأخير المصرَّح به ' + (h ? h + ' س ' + m + ' د' : m + ' د')
+      : lang === 'en' ? 'Sent later from the phone · declared delay ' + (h ? h + ' h ' + m + ' min' : m + ' min')
+      : 'Envoyé plus tard depuis le téléphone · délai déclaré ' + (h ? h + ' h ' + String(m).padStart(2, '0') : m + ' min');
+    return '<div class="team-meta" data-kx-deferred>' + esc(text) + '</div>';
+  }
   function renderHistory(entries) {
     var host = veil && veil.querySelector('[data-kx-attendance-history]');
     if (!host) return;
     var rows = (Array.isArray(entries) ? entries : []).slice(0, 5);
     host.innerHTML = rows.length ? '<div class="team-section-label">Derniers pointages</div>' + rows.map(function (entry) {
-      return '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;"><b>'
+      return '<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;"><div style="display:flex;justify-content:space-between;gap:12px;"><b>'
         + esc(entry.name || 'Employé') + '</b><span>' + esc(clock(entry.inTs, '·')) + ' → '
-        + esc(clock(entry.outTs, 'En service')) + '</span></div>';
+        + esc(clock(entry.outTs, 'En service')) + '</span></div>' + deferredNote(entry) + '</div>';
     }).join('') : '<div class="team-meta">Aucun pointage enregistré.</div>';
   }
   function renderExpiry() {

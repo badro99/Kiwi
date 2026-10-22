@@ -36,6 +36,28 @@
   let payTab = 'planning';
   /* Quelle semaine de la période le planning montre — voir weekChunks(). */
   let planWeekIdx = 0;
+  /* Pointage envoyé plus tard depuis le téléphone (réseau coupé) : le serveur
+   * l'a daté avec le délai que le téléphone a déclaré. On le marque dans la
+   * case du jour, délai compris, pour que le gérant puisse le questionner. */
+  function deferredDelay(ms, lang) {
+    const total = Math.max(1, Math.round((Number(ms) || 0) / 60000)), h = Math.floor(total / 60), m = total % 60;
+    if (lang === 'ar') return h ? `${h} س ${m} د` : `${m} د`;
+    if (lang === 'en') return h ? `${h} h ${m} min` : `${m} min`;
+    return h ? `${h} h ${pad(m)}` : `${m} min`;
+  }
+  function deferredLabel(list, lang = trLang()) {
+    const delay = deferredDelay(Math.max(...list.map((p) => Number(p && p.delayMs) || 0)), lang);
+    if (lang === 'ar') return `أُرسل لاحقاً من الهاتف · التأخير المصرَّح به ${delay}`;
+    if (lang === 'en') return `Sent later from the phone · declared delay ${delay}`;
+    return `Envoyé plus tard depuis le téléphone · délai déclaré ${delay}`;
+  }
+  function deferredMark(venueType, mid, day) {
+    const list = ((((window.__kiwiTeamV2 || {}).deferredByVenue || {})[venueType] || {})[mid] || {})[day];
+    if (!Array.isArray(list) || !list.length) return '';
+    const label = esc(deferredLabel(list));
+    return `<span class="kt-deferred" data-kt-deferred title="${label}" aria-label="${label}" role="img"><i data-icon="smartphone" style="width:12px;height:12px" aria-hidden="true"></i></span>`;
+  }
+
   /* ═══════════════ HOURS PANE ═══════════════ */
   function renderHoursPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
@@ -65,7 +87,7 @@
         total += v;
         const isToday = (d === toISO(new Date()));
         return `<td class="kt-day-cell${isToday ? ' today' : ''}${locked ? ' locked' : ''}">
-          <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
+          <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />${deferredMark(venueType, m.id, d)}
         </td>`;
       }).join('');
       /* Sans taux horaire, Kiwi ne calcule rien : « 0 MAD » pour une semaine

@@ -40,19 +40,48 @@ await strict('mixed two-device punch retries keep at most one open shift and non
 // EP-1 tient : chaque pointage d'arrivée porte l'identité du geste (opId), gardée pour ses nouvelles tentatives.
 await strict('EP-1 · a delayed clock-in retry after clock-out returns the shift it opened; a new tap opens the next one',fc.asyncProperty(fc.integer({min:1,max:3}),async retries=>{await reset();const opId=crypto.randomUUID();ok(await call({action:'clock-in',attendanceCode,opId}));ok(await call({action:'clock-out',attendanceCode}));for(let i=0;i<retries;i++){const r=await call({action:'clock-in',attendanceCode,opId});ok(r);assert.ok(r.body.entry.outTs>0);}assert.equal(doc('attendance').entries.length,1);ok(await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID()}));const es=doc('attendance').entries;assert.equal(es.length,2);assert.equal(es.filter(e=>!e.outTs).length,1);}));
 // EP-2 · un pointage gardé hors ligne garde son heure réelle, bornée : jamais dans le futur,
-// jamais plus de 24 h (refusé sans écriture), jamais avant le pointage précédent.
+// jamais plus de 12 h, jamais avant le pointage précédent (refusé sans écriture), et il porte
+// la mention `deferred` avec le délai déclaré, que le gérant voit.
 const H=3600000;
-await strict('EP-2 · a deferred punch keeps its captured time, never in the future, never older than 24 h, never before the previous punch',fc.asyncProperty(fc.integer({min:-2*H,max:30*H}),fc.integer({min:0,max:20*H}),fc.integer({min:0,max:H}),async(agoIn,prevOutAgo,stay)=>{
+await strict('EP-2 · a deferred punch keeps its captured time, is marked deferred with its declared delay, never in the future, never older than 12 h, never before the previous punch',fc.asyncProperty(fc.integer({min:-2*H,max:16*H}),fc.integer({min:0,max:14*H}),fc.integer({min:0,max:H}),async(agoIn,prevOutAgo,stay)=>{
   await reset();const t=Date.now(),prevOut=t-prevOutAgo;
   // Un code de présence dont la fenêtre couvre tout l'essai : seules les bornes d'heure sont en jeu.
   put('attendance-code',{code:attendanceCode,createdTs:t-31*H,expiresTs:t+H});
   put('attendance',{entries:[{id:'prev',staffId:'a',memberId:'a',inTs:prevOut-H,outTs:prevOut}]});
   const before=doc('attendance'),t0=Date.now(),r=await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoIn}),t1=Date.now();
-  if(agoIn>24*H){assert.equal(r.status,409);assert.equal(r.body.error,'attendance-capture-too-old');assert.deepEqual(doc('attendance'),before);return;}
-  ok(r);const ago=Math.max(0,agoIn),inTs=r.body.entry.inTs;
+  const unchanged=error=>{assert.equal(r.status,409);assert.equal(r.body.error,error);assert.deepEqual(doc('attendance'),before);};
+  if(agoIn>12*H)return unchanged('attendance-capture-too-old');
+  const ago=Math.max(0,agoIn);
+  if(ago>0&&t1-ago<prevOut)return unchanged('attendance-capture-overlaps');
+  if(ago>0&&t0-ago<prevOut)return;
+  ok(r);const e=r.body.entry,inTs=e.inTs;
   assert.ok(inTs<=t1&&inTs>=prevOut);assert.ok(inTs>=Math.max(t0-ago,prevOut)&&inTs<=Math.max(t1-ago,prevOut));
+  if(ago>0){assert.equal(e.deferred,true);assert.equal(e.inDeferredMs,ago);}else assert.ok(!e.deferred&&!e.inDeferredMs);
   const agoOut=Math.max(0,ago-stay),o=await call({action:'clock-out',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoOut}),t2=Date.now();
-  ok(o);const outTs=o.body.entry.outTs;assert.ok(outTs<=t2&&outTs>=inTs);assert.ok(outTs>=Math.max(t1-agoOut,inTs)&&outTs<=Math.max(t2-agoOut,inTs));}));
+  ok(o);const x=o.body.entry,outTs=x.outTs;assert.ok(outTs<=t2&&outTs>=inTs);assert.ok(outTs>=Math.max(t1-agoOut,inTs)&&outTs<=Math.max(t2-agoOut,inTs));
+  if(agoOut>0){assert.equal(x.deferred,true);assert.equal(x.outDeferredMs,agoOut);}else assert.ok(!x.outDeferredMs);}));
+// EP-5 · un départ différé ne fait pas un service plus long que le plafond quotidien du planning.
+await strict('EP-5 · a deferred clock-out never makes a shift longer than the planning maximum daily hours',fc.asyncProperty(fc.integer({min:4,max:12}),fc.integer({min:1,max:14}),fc.integer({min:1,max:60}),async(maxH,openH,agoMin)=>{
+  await reset();const t=Date.now(),team=doc('team');team.planning={...team.planning,settings:{maxDailyHours:maxH}};put('team',team);
+  put('attendance-code',{code:attendanceCode,createdTs:t-31*H,expiresTs:t+H});
+  put('attendance',{entries:[{id:'open',staffId:'a',memberId:'a',inTs:t-openH*H,outTs:0}]});
+  const before=doc('attendance'),hours=JSON.stringify(doc('team').hours),r=await call({action:'clock-out',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoMin*60000});
+  const shift=openH*H-agoMin*60000;
+  if(shift>maxH*H+5000){assert.equal(r.status,409);assert.equal(r.body.error,'attendance-shift-too-long');assert.deepEqual(doc('attendance'),before);assert.equal(JSON.stringify(doc('team').hours),hours);}
+  else if(shift<maxH*H-5000){ok(r);assert.ok(r.body.entry.outTs>0);}}));
+// EP-6 · un pointage différé ajoute, il ne déplace jamais un pointage déjà enregistré, et
+// quand il est accepté il porte exactement l'heure déclarée.
+await strict('EP-6 · a deferred punch only adds: recorded punches never move, and an accepted one carries its declared time',fc.asyncProperty(fc.array(fc.record({action:fc.constantFrom('clock-in','clock-out'),ago:fc.oneof(fc.constant(0),fc.integer({min:1,max:3*H}))}),{minLength:1,maxLength:8}),async steps=>{
+  await reset();const t=Date.now();put('attendance-code',{code:attendanceCode,createdTs:t-31*H,expiresTs:t+H});
+  for(const step of steps){
+    const snap=doc('attendance').entries||[],t0=Date.now(),r=await call({action:step.action,attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:step.ago}),t1=Date.now();
+    const now=doc('attendance').entries||[];
+    for(const e of snap){const k=now.find(x=>x.id===e.id);assert.ok(k);assert.equal(k.inTs,e.inTs);if(e.outTs)assert.equal(k.outTs,e.outTs);}
+    if(!step.ago||r.status!==200||!r.body.entry)continue;
+    const fresh=step.action==='clock-in'?!snap.some(e=>e.id===r.body.entry.id):!snap.find(e=>e.id===r.body.entry.id)?.outTs;
+    if(!fresh)continue;
+    const ts=step.action==='clock-in'?r.body.entry.inTs:r.body.entry.outTs;
+    assert.ok(ts>=t0-step.ago&&ts<=t1-step.ago);}}));
 // EP-3 · différé, le code de présence se vérifie à l'instant du geste : le code remplacé ne
 // vaut que dans SA fenêtre, et en direct seul le code courant passe.
 await strict('EP-3 · a deferred punch is checked against the presence code that was live when it was captured',fc.asyncProperty(fc.oneof(fc.constant(0),fc.integer({min:2*H-7*60000,max:2*H+60000}),fc.integer({min:1,max:3*H})),fc.boolean(),async(ago,useOld)=>{

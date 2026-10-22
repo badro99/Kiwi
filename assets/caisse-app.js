@@ -8512,7 +8512,14 @@
         ${rows.map((entry) => {
           const arrival = entry.inTs ? new Date(entry.inTs).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) : '·';
           const departure = entry.outTs ? new Date(entry.outTs).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) : 'En service';
-          return `<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;"><b>${escTeam(entry.name || 'Employé')}</b><span>${arrival} → ${departure}</span></div>`;
+          /* Envoyé plus tard depuis le téléphone : délai déclaré visible pour le gérant. */
+          const ms = Math.max(Number(entry.inDeferredMs) || 0, Number(entry.outDeferredMs) || 0);
+          const total = Math.max(1, Math.round(ms / 60000)), h = Math.floor(total / 60), m = total % 60;
+          const lang = String(document.documentElement.lang || 'fr').slice(0, 2);
+          const note = !ms ? '' : lang === 'ar' ? `أُرسل لاحقاً من الهاتف · التأخير المصرَّح به ${h ? `${h} س ${m} د` : `${m} د`}`
+            : lang === 'en' ? `Sent later from the phone · declared delay ${h ? `${h} h ${m} min` : `${m} min`}`
+            : `Envoyé plus tard depuis le téléphone · délai déclaré ${h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`}`;
+          return `<div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;"><div style="display:flex;justify-content:space-between;gap:12px;"><b>${escTeam(entry.name || 'Employé')}</b><span>${arrival} → ${departure}</span></div>${note ? `<div class="team-meta" data-attendance-deferred>${escTeam(note)}</div>` : ''}</div>`;
         }).join('')}` : '<div class="team-meta">Aucun pointage enregistré.</div>';
     }
     function renderAttendanceCodeExpiry() {

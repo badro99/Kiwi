@@ -942,5 +942,55 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     'au retour du réseau, le départ en attente part et ferme le service');
 }
 
+/* Le gérant voit un pointage envoyé plus tard depuis le téléphone : /api/team/live
+   le signale (par jour, délai déclaré compris), la grille des heures
+   (assets/team-hours.js) le marque dans la case du jour en FR/EN/AR, et les
+   derniers pointages de la caisse l'écrivent sous la ligne. */
+{
+  const liveState = await (await teamLiveGet()).json();
+  const saraDeferred = (liveState.deferredPunches || {})['mem-sara'] || {};
+  const deferredDays = Object.keys(saraDeferred);
+  ok(deferredDays.length > 0 && Object.values(saraDeferred).flat().every((p) => p.delayMs > 0 && ['in', 'out'].includes(p.kind))
+    && (liveState.recentAttendance || []).some((e) => e.memberId === 'mem-sara' && (e.inDeferredMs > 0 || e.outDeferredMs > 0)),
+  'la caisse et le tableau de bord reçoivent les pointages envoyés plus tard, avec le délai déclaré');
+
+  const hoursSource = fs.readFileSync(path.join(ROOT, 'assets/team-hours.js'), 'utf8');
+  function renderHours(lang, deferredByVenue) {
+    const fn = () => '';
+    const base = {
+      Kiwi: {}, handlers: {}, live: {}, hours: {}, AVATAR_COLORS: {}, IC: {},
+      trLang: () => lang, esc: (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`),
+      pad: (n) => String(n).padStart(2, '0'), toISO: (d) => new Date(d).toISOString().slice(0, 10),
+      fmtHours: (v) => String(v), buildPeriod: () => ({ days: ['2026-10-20', '2026-10-21'], startFr: '', endFr: '' }),
+      getHours: () => ({}), memberFullName: (m) => m.firstName, initials: () => 'S', jobName: (v) => v,
+      hourlyPayFor: () => 0, periodPillsHtml: fn, periodNavigatorHtml: fn, svgIcon: fn,
+    };
+    const core = new Proxy(base, { get: (t, k) => (k in t ? t[k] : fn) });
+    const T = new Proxy({}, { get: () => Object.assign(() => '', { toString: () => '' }) });
+    const window = { Kiwi: { __teamCore: core }, __kiwiTeamV2: { periodKind: 'week', deferredByVenue } };
+    const document = { addEventListener() {}, removeEventListener() {}, documentElement: { lang }, querySelector: () => null, querySelectorAll: () => [] };
+    vm.runInNewContext(hoursSource, { window, document, setTimeout, clearTimeout, console });
+    return core.hours.renderHoursPane(T, {}, 'scoped:amira-cafe', [{ id: 'mem-sara', firstName: 'Sara' }]);
+  }
+  const marks = { 'scoped:amira-cafe': { 'mem-sara': { '2026-10-21': [{ kind: 'in', delayMs: 130 * 60000 }] } } };
+  const fr = renderHours('fr', marks), en = renderHours('en', marks), ar = renderHours('ar', marks), none = renderHours('fr', {});
+  const cell = (html, day) => (html.match(new RegExp(`data-day="${day}"[^>]*/>([\\s\\S]*?)</td>`)) || [])[1] || '';
+  ok(cell(fr, '2026-10-21').includes('data-kt-deferred') && cell(fr, '2026-10-21').includes('data-icon="smartphone"')
+    && fr.includes('Envoyé plus tard depuis le téléphone · délai déclaré 2 h 10')
+    && en.includes('Sent later from the phone · declared delay 2 h 10 min')
+    && ar.includes('أُرسل لاحقاً من الهاتف') && ar.includes('2 س 10 د')
+    && !cell(fr, '2026-10-20').includes('data-kt-deferred') && !none.includes('data-kt-deferred'),
+  'la grille des heures marque le jour du pointage envoyé plus tard, délai déclaré compris, en français, anglais et arabe');
+  const teamSourceNow = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+  ok(/deferredByVenue[\s\S]{0,80}\[venueKey\] = data\.deferredPunches/.test(teamSourceNow)
+    && teamSourceNow.includes('data.deferredPunches || {}]);'),
+  'le tableau de bord range les pointages envoyés plus tard du magasin pour la grille des heures');
+  const caisseRefresh = fs.readFileSync(path.join(ROOT, 'assets/caisse-refresh.js'), 'utf8');
+  const caisseApp = fs.readFileSync(path.join(ROOT, 'assets/caisse-app.js'), 'utf8');
+  ok(caisseRefresh.includes('deferredNote(entry)') && caisseRefresh.includes('Envoyé plus tard depuis le téléphone')
+    && caisseApp.includes('data-attendance-deferred') && caisseApp.includes('Sent later from the phone'),
+  'les derniers pointages de la caisse disent quand un pointage a été envoyé plus tard depuis le téléphone');
+}
+
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');
