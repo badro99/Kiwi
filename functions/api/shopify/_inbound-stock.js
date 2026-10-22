@@ -14,7 +14,7 @@ export async function enqueueInboundStock(env, merchant, order) {
   await ensure(env.DB);
   const ref = String(order.id || order.name || '').slice(0, 96);
   if (!ref) throw new Error('order-ref-required');
-  const payload = JSON.stringify({ id: ref, line_items: (order.line_items || []).map(line => ({
+  const payload = JSON.stringify({ id: ref, created_at: order.created_at, line_items: (order.line_items || []).map(line => ({
     id: String(line.id || line.variant_id || ''), variant_id: String(line.variant_id || ''), quantity: line.quantity,
   })) });
   await env.DB.prepare(`INSERT INTO shopify_inbound_stock

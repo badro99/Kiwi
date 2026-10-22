@@ -272,6 +272,10 @@ async function applyShopifyOrderStock(env, merchant, order) {
     data = catalogFns.sanitize(rawData);
     catalogFns.materialize(data);
     const existing = new Set((data.moves || []).map((m) => String(m.id)));
+    // The materialized stock is shared by all lines in this attempt. Never
+    // journal pieces Kiwi no longer has, including repeated variant lines.
+    const left = new Map(data.variants.map((v) => [v.id, Math.max(0, Number(v.stock) || 0)]));
+    const orderedAt = Date.parse(order.created_at);
     let applied = 0, unmatched = 0, at = Date.now();
     for (const line of lines) {
       const shopifyVariantId = String(line && line.variant_id || '');
@@ -284,8 +288,14 @@ async function applyShopifyOrderStock(env, merchant, order) {
       if (existing.has(moveId)) continue;
       const variant = (data.variants || []).find((v) => v.id === kiwiVariantId);
       if (!variant) { unmatched++; continue; }
-      at = Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
-      data.moves.push({ id: moveId, vid: kiwiVariantId, d: -qty, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
+      // A later physical count already includes this historical order, just
+      // as in catch-up. Older retry payloads without a date retain the fallback.
+      if (Number.isFinite(orderedAt) && Number(variant.baseAt || variant.stockAt || 0) >= orderedAt) continue;
+      const take = Math.min(qty, left.get(kiwiVariantId) || 0);
+      if (!take) continue;
+      left.set(kiwiVariantId, left.get(kiwiVariantId) - take);
+      at = Number.isFinite(orderedAt) ? orderedAt : Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
+      data.moves.push({ id: moveId, vid: kiwiVariantId, d: -take, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
       existing.add(moveId); applied++;
     }
     if (!applied) return { applied: 0, unmatched };
