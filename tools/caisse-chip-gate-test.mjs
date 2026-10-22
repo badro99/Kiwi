@@ -105,7 +105,7 @@ ok('unlock listener is attached where dashboard.html dispatches it (window)', ()
   const feed = readFileSync(path.join(ROOT, 'functions/api/feed.js'), 'utf8');
   ok('/api/feed returns the till heartbeat and live-link publishes it', () => {
     assert.ok(/SELECT seen_ts FROM order_desk WHERE merchant = \?/.test(feed));
-    assert.ok(/json\(\{ sales: rows, cursor, merchant, voided, tillSeen, now: Date\.now\(\), \.\.\.\(!byDay \? \{ limit \} : \{\}\) \}\)/.test(feed));
+    assert.ok(/json\(\{ sales: rows, cursor, merchant, voided, tillSeen, now: Date\.now\(\),[^\n]*\.\.\.\(!byDay \? \{ limit \} : \{\}\) \}\)/.test(feed));
     assert.ok(/publishTill\(tenant, data\.tillSeen, data\.now\)/.test(live));
     assert.ok(/kiwi:till-presence/.test(src), 'the chip listens for presence updates');
   });

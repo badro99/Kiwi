@@ -70,7 +70,7 @@ async function scenario(total, pageSize, echoLimit) {
   for (let i = 0; i < historyPages; i++) {
     if (i) await runNextTimer();
     assert.equal(seen[i].backfill, true, 'every historical page suppresses notifications');
-    assert.match(requests[i], /&limit=500$/, 'backfill opts in');
+    assert.match(requests[i], /&limit=500(&|$)/, 'backfill opts in');
     assert.equal(window.KiwiLive.status().backfillComplete, i === historyPages - 1);
     if (i < historyPages - 1) assert.equal(timers[0]?.ms, 0, 'full page drains immediately');
   }

@@ -17,15 +17,18 @@ const first = await firstResponse.json();
 const pairRows = h.rows("SELECT * FROM inventory_movements WHERE merchant = ? AND ref_id = ? ORDER BY srv_ts", MERCHANT, first.transferRef);
 await check('confirmation writes exactly one linked movement pair', () => {
   assert.equal(firstResponse.status, 200);
-  assert.equal(pairRows.length, 2);
+  /* Une paire par lot (22 octobre : le coût mélangé à quatre décimales ne
+     tenait pas le centime) ; ici deux lots FEFO, donc deux paires. */
+  assert.equal(pairRows.length, 4);
   assert.equal(new Set(pairRows.map((row) => row.ref_id)).size, 1);
-  assert.deepEqual(pairRows.map((row) => row.reason), ['transfer-out', 'transfer-in']);
+  assert.deepEqual(pairRows.map((row) => row.reason), ['transfer-out', 'transfer-in', 'transfer-out', 'transfer-in']);
+  assert.equal(pairRows.filter((row) => row.reason === 'transfer-in').reduce((n, row) => n + Number(row.qty_milli), 0), 12000);
 });
 const replayResponse = await confirm(h, 'pair', 4, 'confirm:pair', 'whisky', 12);
 const replay = await replayResponse.json();
 await check('confirming twice is idempotent and leaves balances unchanged', () => {
   assert.equal(replay.replayed, true);
-  assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ? AND ref_id = ?", MERCHANT, first.transferRef).length, 2);
+  assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ? AND ref_id = ?", MERCHANT, first.transferRef).length, 4);
 });
 
 const wrong = await createHotelRequestHarness();
@@ -47,14 +50,14 @@ await check('the transfer preserves the hotel-wide balance in SQL and the seeded
   const afterHotel = h.balance('whisky', 'u-economat') + h.balance('whisky', 'u-bar-rooftop');
   assert.equal(afterHotel, beforeHotel);
   const seeded = createHotelTenant({ merchant: MERCHANT });
-  assert.equal(seeded.ledger.acknowledge(first.movements), 2);
+  assert.equal(seeded.ledger.acknowledge(first.movements), 4);
   assert.equal(seeded.balanceHotel('whisky'), 18);
   assert.equal(seeded.balanceAt('economat', 'whisky'), 0);
   assert.equal(seeded.balanceAt('bar-rooftop', 'whisky'), 18);
 });
-await check('both movements retain the non-zero blended source rate', () => {
-  assert.deepEqual(pairRows.map((row) => Number(row.unit_cost_cents)), [13500, 13500]);
-  assert.deepEqual(first.movements.map((movement) => movement.unitCost), [135, 135]);
+await check('each lot keeps its own non-zero source rate, averaging the old blended 135', () => {
+  assert.deepEqual(pairRows.map((row) => Number(row.unit_cost_cents)), [12000, 12000, 15000, 15000]);
+  assert.deepEqual(first.movements.map((movement) => movement.unitCost), [120, 120, 150, 150]);
 });
 
 const unknown = await createHotelRequestHarness();
@@ -67,18 +70,25 @@ await check('unknown source cost refuses the confirmation and writes nothing', a
   assert.equal(unknown.rows("SELECT * FROM inventory_movements WHERE merchant = ?", MERCHANT).length, unknownBefore);
   assert.equal(unknown.one("SELECT state FROM hotel_internal_requests WHERE id = 'unknown-cost'").state, 'open');
 });
-await check('several FEFO lots still produce one pair at one blended rate', () => {
-  assert.equal(pairRows.length, 2);
-  assert.equal(new Set(pairRows.map((row) => row.unit_cost_cents)).size, 1);
+await check('several FEFO lots move as one pair per lot, each at its own cost and expiry', () => {
+  assert.equal(pairRows.length, 4);
+  const ins = pairRows.filter((row) => row.reason === 'transfer-in');
+  for (const row of ins) {
+    const meta = JSON.parse(row.meta), lot = meta.allocationBreakdown[0];
+    assert.equal(Number(row.unit_cost_cents), Math.round(lot.unitCost * 100));
+    assert.equal(meta.expiresAt, lot.expiresAt);
+  }
+  assert.equal(new Set(ins.map((row) => row.unit_cost_cents)).size, 2);
 });
 const offlineReplay = await confirm(h, 'pair', 4, 'confirm:pair', 'whisky', 12);
 await check('an offline replay is a no-op after server acknowledgement', async () => {
   assert.equal((await offlineReplay.json()).replayed, true);
-  assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ? AND ref_id = ?", MERCHANT, first.transferRef).length, 2);
+  assert.equal(h.rows("SELECT * FROM inventory_movements WHERE merchant = ? AND ref_id = ?", MERCHANT, first.transferRef).length, 4);
 });
 await check('cursor reservation consumes one ordered cursor per movement', () => {
   assert.equal(Number(pairRows[1].srv_ts) - Number(pairRows[0].srv_ts), 1);
-  assert.equal(new Set(pairRows.map((row) => row.srv_ts)).size, 2);
+  assert.equal(new Set(pairRows.map((row) => row.srv_ts)).size, 4);
+  assert.equal(Number(pairRows[3].srv_ts) - Number(pairRows[0].srv_ts), 3);
 });
 
 const rollback = await createHotelRequestHarness();

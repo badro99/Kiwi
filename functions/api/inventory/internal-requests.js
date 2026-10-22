@@ -471,6 +471,10 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
       )
     )
   )`).join('\n');
+  const sliceExpiry = (slice) => {
+    const dates = (slice.allocations || []).map((entry) => Number(entry.expiresAt)).filter((n) => Number.isFinite(n) && n > 0);
+    return dates.length ? Math.min(...dates) : null;
+  };
   const movementCount = transfers.reduce((sum, transfer) => sum + transfer.allocation.pieces.length * 2, 0);
   let cursor;
   try { cursor = await reserveCursors(env, merchant, movementCount, now); }
@@ -497,9 +501,11 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
           line: transfer.index,
           reviewRevision: current.request.reviewRevision,
           allocationBreakdown: slice.allocations,
-          ...(isOut || transfer.allocation.expiresAt == null
+          /* Chaque lot arrive avec SA date : la plus proche du transfert
+             entier donnait au second lot la péremption du premier. */
+          ...(isOut || sliceExpiry(slice) == null
             ? {}
-            : { expiresAt: transfer.allocation.expiresAt }),
+            : { expiresAt: sliceExpiry(slice) }),
         },
       };
       movements.push(movement);
