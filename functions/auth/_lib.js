@@ -698,13 +698,11 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
     return {
       id: memberId,
       merchant: match.merchant,
-      pin,
       name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
       role: String(match.member.function || match.member.department || 'staff'),
       status: cfg.status || 'active',
       type: cfg.type,
       authVersion: revision.version,
-      member: match.member,
     };
   } catch (_) { return null; }
 }
@@ -1647,6 +1645,9 @@ export async function verifyAccountPin(request, env, pin) {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
     if (acc && acc.business) accSlug = await accountSlug(env, acc.business, sess.aid);
   } catch (_) {}
+
+  // A legacy business name cannot widen access into a registered foreign store.
+  if (accSlug && await slugClaimedByOther(env, accSlug, sess.aid)) accSlug = '';
 
   const identity = `sess:${sess.aid}`;
   const blocked = await limitCheck(request, env, 'pin:account', identity);

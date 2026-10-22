@@ -1600,6 +1600,7 @@ section('Whole-project regressions');
     'clients-properties-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
+    'auth-properties-test.mjs',
     'orderpro-properties-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',

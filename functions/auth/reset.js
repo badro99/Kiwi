@@ -117,8 +117,8 @@ export async function onRequestPost(context) {
   const now = Date.now();
   try {
     const r = await env.DB.prepare(
-      'UPDATE reset_tokens SET used_ts = ? WHERE selector = ? AND used_ts IS NULL'
-    ).bind(now, row.selector).run();
+      'UPDATE reset_tokens SET used_ts = ? WHERE selector = ? AND used_ts IS NULL AND expires_ts > ?'
+    ).bind(now, row.selector, now).run();
     if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'invalid' }, 400);
   } catch (_) { return json({ error: 'invalid' }, 400); }
 
