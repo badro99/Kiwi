@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * CAISSES MÉTIER, GROUPE A · CE QU'UN COMMERÇANT RÉEL VOIT, ET CE QUI EST VRAI
  *
@@ -33,7 +34,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (f) => readFileSync(path.join(ROOT, f), 'utf8');
+const read = (f) => retailSource(readFileSync(path.join(ROOT, f), 'utf8'));
 const VS = read('assets/vertical-state.js');
 const MOD = {};
 ['pharmacie', 'librairie', 'epicerie', 'boulangerie', 'foodtruck', 'fastfood', 'pizzeria', 'traiteur']

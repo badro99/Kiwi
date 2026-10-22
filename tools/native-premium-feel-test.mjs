@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Premium feel, Tier 1 (docs/roadmaps/2026-10-10-premium-feel.md) and the
  * Orders cards that painted white before turning dark (2026-10-10).
@@ -15,7 +16,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => retailSource(fs.readFileSync(path.join(root, p), 'utf8'));
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 

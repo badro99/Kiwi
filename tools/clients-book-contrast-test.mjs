@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Ticket #0154/#0156/#0160 · Clients-book dark-mode contrast guard.
  *
  * The caisse paints dark via html[data-caisse-theme="dark"], NOT the
@@ -16,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'assets/clients-book.js'), 'utf8');
+const src = retailSource(readFileSync(path.join(ROOT, 'assets/clients-book.js'), 'utf8'));
 
 let passed = 0, failed = 0;
 function ok(label, fn) {
@@ -89,7 +90,7 @@ for (const [sel, fg] of seen) {
 }
 
 /* ── tickets #0152/#0158 · the inventaire (bqi) injected stylesheet ── */
-const bqSrc = readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const bqSrc = retailSource(readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 const bqiAnchor = bqSrc.indexOf("st.id = 'bqi-css'");
 assert.ok(bqiAnchor !== -1, 'bqi stylesheet anchor found');
 const bqiStart = bqSrc.indexOf('st.textContent = `', bqiAnchor);

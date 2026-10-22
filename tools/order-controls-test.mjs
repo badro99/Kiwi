@@ -1,10 +1,11 @@
+import retailSource from './pos-retail-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const read = (file) => retailSource(fs.readFileSync(path.join(root, file), 'utf8'));
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };

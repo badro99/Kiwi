@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Tickets #0166, #0167, #0168 · the till's customer page and the end of a sale.
  *
@@ -16,7 +17,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => retailSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 let passed = 0, failed = 0;
 async function ok(label, fn) {
   try { await fn(); passed++; console.log(`  ✓ ${label}`); }

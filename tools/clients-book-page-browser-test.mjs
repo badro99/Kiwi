@@ -17,6 +17,7 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium',
 ].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium is required for the Clients page regression');
+const boutiqueRev = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'))['assets/pos-boutique.js'].v;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const caisseInlineCss = [...caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(path.join(ROOT, 'assets/caisse-shell.css'), 'utf8') + '</style>').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
   .map((match) => match[1]).join('\n');
@@ -32,9 +33,9 @@ const server = http.createServer((req, res) => {
       <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-boutique.js"></script>
+      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-boutique.js?v=${boutiqueRev}"></script>
       </head><body class="is-pos-boutique"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-boutique"></div>
-      <script>window.__spec.mount(document.getElementById('pos-boutique'));window.KiwiCaisseDna.enhance(document.getElementById('pos-boutique'),'boutique');</script></body></html>`);
+      <script type="module">import "/assets/pos-boutique.js?v=${boutiqueRev}";window.__spec.mount(document.getElementById('pos-boutique'));window.KiwiCaisseDna.enhance(document.getElementById('pos-boutique'),'boutique');</script></body></html>`);
     return;
   }
   if (pathname === '/caisse-inline.css') { res.writeHead(200, { 'Content-Type': TYPES['.css'] }); res.end(caisseInlineCss); return; }

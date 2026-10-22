@@ -205,10 +205,12 @@ function scan() {
     }
   }
 
-  // Maison modules share live bindings; every import URL is a stamp site.
-  const maison = ['assets/pos-maison.js'];
-  if (exists('assets/pos-maison')) maison.push(...fs.readdirSync(path.join(ROOT, 'assets/pos-maison')).filter(f => f.endsWith('.js')).map(f => 'assets/pos-maison/' + f));
-  for (const file of maison.filter(exists)) {
+  // Retail modules share live bindings; every import URL is a stamp site.
+  const retail = ['assets/pos-maison.js', 'assets/pos-boutique.js'];
+  for (const dir of ['assets/pos-maison', 'assets/pos-boutique']) {
+    if (exists(dir)) retail.push(...fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).map(f => dir + '/' + f));
+  }
+  for (const file of retail.filter(exists)) {
     for (const m of read(file).matchAll(/from\s+'(\.\.?\/[^']+\.js)\?v=([0-9]+)'/g)) {
       const asset = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
       note(asset, m[2], { file, kind: 'module', stamp: m[2] });

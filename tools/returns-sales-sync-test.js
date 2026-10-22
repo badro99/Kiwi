@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8');
+const src = retailSource(fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8'));
 // La page Retours du tableau de bord vit dans sa section chargée au premier usage.
 const dash = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pages-pro', 'boutique-promos-returns.js'), 'utf8');
 const feed = fs.readFileSync(path.join(__dirname, '..', 'functions', 'api', 'feed.js'), 'utf8');

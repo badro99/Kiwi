@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 /* ═════════════════════════════════════════════════════════════════════════════
  * Kiwi · GARDE-FOU de la fusion du catalogue boutique
  * ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ function makeWindow(opts) {
 }
 
 function load(win, file) {
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const src = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   const fn = new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout',
     'fetch', 'CustomEvent', 'navigator', 'self', 'console', src);
   fn(win, win.document, win.localStorage, win.setTimeout, win.clearTimeout,
@@ -120,7 +121,7 @@ if (!C || !C._merge) {
  * movement that never retries is still lost to the other device, and a failed
  * first read must never authorize a blind overwrite. */
 {
-  const source = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
+  const source = retailSource(fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8'));
   const valid = source.indexOf('if (!res || slug !== VENUE) return false;');
   const mark = source.indexOf('cloud.read[slug] = 1;', valid);
   ok(valid >= 0 && mark > valid, 'un GET serveur en erreur ne valide jamais la lecture avant écriture');

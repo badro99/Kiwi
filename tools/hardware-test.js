@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 'use strict';
 
 const caisseTestSource = require('./caisse-test-source.cjs');
@@ -11,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const src = fs.readFileSync(path.join(__dirname, '..', 'assets', 'caisse-hardware.js'), 'utf8');
+const src = retailSource(fs.readFileSync(path.join(__dirname, '..', 'assets', 'caisse-hardware.js'), 'utf8'));
 
 function runtime(real, printer) {
   const ctx = {
@@ -98,10 +99,10 @@ function ok(condition, label) {
     'fleuriste', 'epicerie', 'pizzeria', 'librairie', 'boulangerie', 'hotel',
   ];
   guardedPos.forEach((name) => {
-    const body = fs.readFileSync(path.join(ROOT, 'assets', 'pos-' + name + '.js'), 'utf8');
+    const body = retailSource(fs.readFileSync(path.join(ROOT, 'assets', 'pos-' + name + '.js'), 'utf8'));
     ok(body.includes('.authorizeCard('), name + ': card tender uses the shared external/connected-terminal verdict');
   });
-  const main = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
+  const main = caisseTestSource(retailSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
   ok(main.includes('hw.authorizeCard(currentTotal() + payTipAmount()'),
     'restaurant checkout uses the shared external/connected-terminal verdict');
   ok(/settled = await finalizeTender\(cardTenderMethod\)/.test(main) &&
@@ -113,7 +114,7 @@ function ok(condition, label) {
     'record-only card tender saves the sale without opening or increasing the cash drawer');
   ok(/recordSale\(tenderBase, method, saleLabel, tenderTip, lines/.test(main),
     'card tender reaches the ordinary sale journal used by KPIs and analytics');
-  const boutique = fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8');
+  const boutique = retailSource(fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8'));
   ok(boutique.includes("ok.onclick = () => settle({ m: 'carte', amount })"),
     'boutique external-reader flow requires explicit cashier confirmation');
 

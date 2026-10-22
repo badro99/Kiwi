@@ -36,8 +36,8 @@ function maisonPage() {
 
 function boutiquePage() {
   return maisonPage()
-    .replaceAll('type="module"', '')
-    .replace(/import "[^"]+";/, '')
+    .replaceAll('pos-maison.js?v=' + stamps['assets/pos-maison.js'].v, 'pos-maison.js?v=' + stamps['assets/pos-boutique.js'].v)
+    .replaceAll('pos-maison.css?v=' + stamps['assets/pos-maison.css'].v, 'pos-maison.css?v=' + stamps['assets/pos-boutique.css'].v)
     .replaceAll('pos-maison', 'pos-boutique')
     .replaceAll('__maisonSpec', '__boutiqueSpec')
     .replaceAll("'maison'", "'boutique'")

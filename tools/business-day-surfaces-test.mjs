@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* The report's custom range, « Vendus » and the reprint list count a sale by
    the store's business day (cutoff 05:00, store zone), like the Z and the
    dashboard. Before, each one cut at the device's calendar midnight, so a
@@ -13,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 process.env.TZ = 'Europe/Berlin';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => retailSource(fs.readFileSync(path.join(root, p), 'utf8'));
 
 const merchant = 'business-day-surfaces';
 const zone = 'Africa/Casablanca';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Kiwi · contract for authoritative boutique stock checkout. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,8 +67,8 @@ const transparentSale = T.stockMutation(stockedTransparent, {
 ok(transparentSale.ok && stockedTransparent.variants[0].stock === 275,
   'une variante Transparent · TU avec 276 unités est réservable et descend exactement à 275');
 
-const api = fs.readFileSync(path.join(ROOT, 'functions/api/catalog.js'), 'utf8');
-const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const api = retailSource(fs.readFileSync(path.join(ROOT, 'functions/api/catalog.js'), 'utf8'));
+const pos = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 ok(/UPDATE catalogs SET data = \?, rev = \?, updated_ts = \?[\s\S]*WHERE merchant = \? AND rev = \?/.test(api),
   'le write catalogue est un compare-and-swap atomique');
 ok(api.includes('scheduleShopifySync(env, merchant, before, data, next, waitUntil);'),
@@ -81,7 +82,7 @@ ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')
 ok(pos.includes('stockCheck: () => ticketStockIssue({ lines: frozen.lines })')
     && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente')"),
   'la variante exacte est revérifiée au paiement puis débitée avec la référence du ticket imprimé');
-const client = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
+const client = retailSource(fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8'));
 ok(client.includes("reason === 'catalog-missing'") && client.includes("reason === 'unmigrated'"),
   'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');
 ok(/state\.checkoutBusy \|\| \(root && \$\$\('\.modal-veil\.is-open'/.test(pos),

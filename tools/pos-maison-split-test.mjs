@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { retailCoreUrl } from './pos-retail-module-url-check.mjs';
 if (!vm.SourceTextModule) {
   const child = spawnSync(process.execPath, ['--experimental-vm-modules', fileURLToPath(import.meta.url)], { stdio: 'inherit' });
   process.exit(child.status ?? 1);
@@ -48,9 +48,7 @@ async function modules(context) {
     if (!cache.has(url.href)) cache.set(url.href, new vm.SourceTextModule(read(fileURLToPath(url)), { context, identifier: url.href }));
     return cache.get(url.href);
   }
-  const stamps = JSON.parse(read('tools/asset-stamps.json'));
-  const url = pathToFileURL(path.resolve('assets/pos-maison.js'));
-  url.search = '?v=' + stamps['assets/pos-maison.js'].v;
+  const url = retailCoreUrl('maison');
   const entry = get(url);
   await entry.link((specifier, owner) => get(new URL(specifier, owner.identifier)));
   await entry.evaluate();
@@ -81,7 +79,7 @@ for (const module of [false, true]) {
   const context = vm.createContext({ apps, loading, Promise, Error, encodeURIComponent,
     document: { createElement: tag => ({ tag }), head: { appendChild: el => tags.push(el) } } });
   vm.runInContext(loader + '\nthis.load = ensureLoaded;', context);
-  const entry = { id: 'maison', file: 'pos-maison', rev: '84', module };
+  const entry = { id: 'maison', file: 'pos-maison', rev: retailCoreUrl('maison').searchParams.get('v'), module };
   const pending = context.load(entry);
   assert.equal(context.load(entry), pending, 'deduplicated load');
   const script = tags.find(t => t.tag === 'script');

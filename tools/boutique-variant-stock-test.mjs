@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Kiwi · une vente ne peut consommer que produit × taille × couleur choisie. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,7 +41,7 @@ function browser() {
 }
 
 function load(win, rel) {
-  const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+  const src = retailSource(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
   const run = new Function('window', 'document', 'localStorage', 'CustomEvent', 'navigator',
     'setTimeout', 'clearTimeout', 'fetch', 'self', 'console', src);
   run(win, win.document, win.localStorage, win.CustomEvent, win.navigator,
@@ -81,7 +82,7 @@ eq(C.adjustVariantStock(product.id, 'S', 'bleu', 1), false,
 eq(C.variantStock(product.id, 'S', 'blanc'), 6,
   'le retour à rapprocher laisse le stock blanc intact');
 
-const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const pos = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 ok(pos.includes('availableStock(pid, cfg.size, cfg.color, state.ticket)'),
   'l’ajout au ticket vérifie couleur × taille');
 ok(pos.includes('const stockIssue = ticketStockIssue(t);'),

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Ticket #0154 · Till and dashboard share ONE client book per venue.
  *
  * Issue found:
@@ -31,7 +32,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
+const read = (rel) => retailSource(readFileSync(path.join(ROOT, rel), 'utf8'));
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 /* ═════════════════════════════════════════════════════════════════════════════
  * Kiwi · GARDE-FOU du stock rendu par une vente sortie des livres
  * ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ function makeWindow() {
 }
 
 function load(win, file) {
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const src = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   const fn = new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout',
     'fetch', 'CustomEvent', 'navigator', 'self', 'console', src);
   fn(win, win.document, win.localStorage, win.setTimeout, win.clearTimeout,

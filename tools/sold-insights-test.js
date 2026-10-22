@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +24,7 @@ const window = {
 };
 const context = { window, document:{ getElementById(){return null;} }, localStorage:{getItem(){return null;}}, console, Date, Intl, Number, String, Math, Set, Array, Object, JSON, Promise, fetch:undefined, setTimeout(){} };
 vm.createContext(context);
-vm.runInContext(fs.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8'), context);
+vm.runInContext(retailSource(fs.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8')), context);
 
 const now = Date.now();
 const sales = [
@@ -49,9 +50,9 @@ ok('exact calendar day includes the whole selected day', exact.tickets === 1 && 
 const period = window.KiwiSoldInsights.analyze(dated, { from:'2026-09-10', to:'2026-09-11' });
 ok('calendar period includes both endpoints and excludes the next day', period.tickets === 2 && period.revenue === 300);
 
-const src = fs.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8');
-const venues = fs.readFileSync(path.join(ROOT,'assets','venues.js'),'utf8');
-const caisse = fs.readFileSync(path.join(ROOT,'assets','pos-boutique.js'),'utf8');
+const src = retailSource(fs.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8'));
+const venues = retailSource(fs.readFileSync(path.join(ROOT,'assets','venues.js'),'utf8'));
+const caisse = retailSource(fs.readFileSync(path.join(ROOT,'assets','pos-boutique.js'),'utf8'));
 ok('dashboard reads existing KiwiSales ledger', /KiwiSales\.list/.test(src));
 ok('cashier backfills authenticated store feed', /api\/feed\?merchant=/.test(src) && /credentials:'same-origin'/.test(src));
 ok('cashier rejects a differently stamped local journal', /b\.m\s*&&\s*slug\(\)\s*&&\s*b\.m\s*!==\s*slug\(\)/.test(src));

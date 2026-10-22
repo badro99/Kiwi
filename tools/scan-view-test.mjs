@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Ticket #0157 · Boutique scan view keeps phone clearance + honest camera note.
  *
  * Root causes guarded here:
@@ -19,8 +20,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const bq = readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
-const lang = readFileSync(path.join(ROOT, 'assets/caisse-lang.js'), 'utf8');
+const bq = retailSource(readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
+const lang = retailSource(readFileSync(path.join(ROOT, 'assets/caisse-lang.js'), 'utf8'));
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

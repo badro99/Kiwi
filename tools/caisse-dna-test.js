@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 'use strict';
 
 const caisseTestSource = require('./caisse-test-source.cjs');
@@ -6,7 +7,7 @@ const caisseTestSource = require('./caisse-test-source.cjs');
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => retailSource(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 const js = read('assets/caisse-dna.js');
 const css = read('assets/caisse-dna.css');
 const page = caisseTestSource(read('kiwi-caisse.html'));

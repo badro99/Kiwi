@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const retailSource = require('./pos-retail-test-source.cjs');
 'use strict';
 
 const assert = require('assert');
@@ -23,7 +24,7 @@ const window = { document, localStorage, addEventListener() {}, removeEventListe
 window.window = window;
 
 function load(file) {
-  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const src = retailSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout', 'fetch', 'CustomEvent', 'navigator', 'self', src)(
     window, document, localStorage, setTimeout, clearTimeout, window.fetch, window.CustomEvent, window.navigator, window);
 }
@@ -42,7 +43,7 @@ assert.match(customPicker, /data-kc-more/, 'picker exposes the plus button');
 assert.match(customPicker, /data-kc-name-input/, 'custom picker lets the merchant name the colour');
 assert.match(customPicker, /data-kc-more[^>]*aria-expanded="false"/, 'custom colour trigger exposes its collapsed state');
 assert.match(customPicker, /<\/div><div class="kc-custom-pop" data-kc-pop hidden>/, 'custom editor is outside the swatch row so it cannot be anchored off-dialog');
-const paletteSource = fs.readFileSync(path.join(ROOT, 'assets/color-palette.js'), 'utf8');
+const paletteSource = retailSource(fs.readFileSync(path.join(ROOT, 'assets/color-palette.js'), 'utf8'));
 assert.match(paletteSource, /\.kc-custom-pop \{[^}]*position:static;[^}]*width:100%/, 'custom editor expands inline to the picker width instead of using an absolute 430px overlay');
 assert.match(paletteSource, /more\.closest\('\[data-kc-picker\]'\)/, 'custom trigger resolves the inline editor from the full picker');
 assert.match(paletteSource, /more\.setAttribute\('aria-expanded', pop\.hidden \? 'false' : 'true'\)/, 'custom trigger announces whether its editor is open');
@@ -76,12 +77,12 @@ assert.equal(renamed[0].barcodes[0].code, code, 'rename preserves barcodes');
 assert.equal(C.listVariants(p.id).find((x) => x.id === other.id).colorLabel, 'Bleu voisin', 'nearby custom hex is not renamed');
 assert.equal(C.renameColor('bleu', 'Bleu maison'), 0, 'built-in family labels cannot be overwritten per venue');
 
-const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const pos = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 assert.match(pos, /productVisual\(p\)/, 'caisse cards use the shared product media renderer');
 assert.match(pos, /hit\.colorId && p\.colors\.includes\(hit\.colorId\)/, 'barcode scans retain exact custom colour identity');
 assert.match(pos, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'caisse inventory renders the exact custom swatch');
 assert.match(pos, /function variantSource\(v\)/, 'caisse suppresses a duplicate custom colour subtitle');
-const pages = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const pages = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
 assert.match(pages, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'dashboard variant rows render the exact custom swatch');
 assert.match(pages, /function _bqxColorSource\(v\)/, 'dashboard suppresses a duplicate custom colour subtitle');
 assert.match(pages, /data-bqx-vcname/, 'dashboard exposes the custom colour name field');

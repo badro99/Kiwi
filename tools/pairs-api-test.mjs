@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* « Souvent avec… » côté serveur et côté caisse, sans navigateur.
@@ -28,7 +29,7 @@ let failures = 0, passed = 0;
 const check = (label, ok, detail) => { if (ok) { passed++; console.log('  ✓ ' + label); } else { failures++; console.log('  ✗ ' + label + (detail ? '\n      ' + detail : '')); } };
 
 const sql = new DatabaseSync(':memory:');
-sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+sql.exec(retailSource(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8')));
 const DB = {
   reads: 0,
   prepare(query) {
@@ -143,7 +144,7 @@ const qty0 = computePairs(Array.from({ length: 20 }, () => [THE(), { ...MSEMEN()
 check('a line at quantity 0 is not in the basket', !JSON.stringify(qty0.pairs).includes('it_msemen'));
 
 console.log('\n■ assets/caisse-pairs.js');
-const MOD = fs.readFileSync(path.join(ROOT, 'assets/caisse-pairs.js'), 'utf8');
+const MOD = retailSource(fs.readFileSync(path.join(ROOT, 'assets/caisse-pairs.js'), 'utf8'));
 function sandbox({ paired = true, merchant = M, live = 'someone-else', body = ok.body, store = {} } = {}) {
   const calls = [];
   const window = {
@@ -185,7 +186,7 @@ function sandbox({ paired = true, merchant = M, live = 'someone-else', body = ok
   check('reset() forgets the dismissals of that order only', P.suggest(['it_msemen'], all, 'table:4').id === 'it_the');
 }
 {
-  const CA0 = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
+  const CA0 = caisseTestSource(retailSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
   check('an emptied take-away order resets its dismissals before showing the empty till',
     /if \(cart\.length === 0\) \{\s*try \{ window\.KiwiPairs && KiwiPairs\.reset\('cart'\); \}/.test(CA0));
   check('so does an emptied table order', /KiwiPairs\.reset\('table:' \+ tableId\)/.test(CA0));
@@ -209,7 +210,7 @@ function sandbox({ paired = true, merchant = M, live = 'someone-else', body = ok
 }
 
 console.log('\n■ Wiring in kiwi-caisse.html');
-const CA = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
+const CA = caisseTestSource(retailSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
 check('the till loads the module', /<script src="assets\/caisse-pairs\.js\?v=\d+" defer><\/script>/.test(CA));
 check('take-away and table orders both offer it', /pairSuggestHtml\(cart, 'cart'\)/.test(CA) && /pairSuggestHtml\(order, 'table:' \+ tableId\)/.test(CA));
 check('never on the demo till', /if \(IS_DEMO \|\| !window\.KiwiPairs/.test(CA));
@@ -240,7 +241,7 @@ check('names are escaped, in the till language (menuName), words from KiwiPairs.
     / pour cette commande$/.test(say('fr').dismiss('B')) && / pour cette table$/.test(say('fr').dismiss('B', 'table')) && / for this ticket$/.test(say('en').dismiss('B', 'ticket')));
   check('no em dash in any of the copy', !/\u2014/.test(JSON.stringify(['fr', 'en', 'ar'].map((l) => [say(l).lead('a', 'b'), say(l).why(1, 'a'), say(l).add('b'), say(l).dismiss('b'), say(l).dismiss('b', 'table'), say(l).dismiss('b', 'ticket')]))));
 }
-const SV = serveurTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8'));
+const SV = serveurTestSource(retailSource(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
 check('the waiter app loads the module and declares its store only outside the demo',
   /<script src="assets\/caisse-pairs\.js\?v=\d+" defer><\/script>/.test(SV) && /window\.KiwiPairsMerchant = function \(\) \{ return svReal\(\) \? svMerchant\(\) : ''; \};/.test(SV));
 check('it shows the chip above the order bar, never in the demo', /if \(order && order\.length && !SV_DEMO && window\.KiwiPairs/.test(SV));
@@ -249,7 +250,7 @@ check('« + » goes through the same path as a tap on the dish (formula, options
 check('leaving the menu or emptying the table hides it and resets what was dismissed',
   /currentTab !== 'menu'\) \{\s*bar\.classList\.remove\('is-visible'\);\s*svRenderPair\(null\);/.test(SV) && /KiwiPairs\.reset\('table:' \+ menuContextId\)/.test(SV));
 
-const BQ = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const BQ = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 check('the boutique ticket offers it after its lines, never in the demo nor in an exchange',
   /lineRow\(ln, i\)\)\.join\(''\) \+ pairRow\(t\)/.test(BQ) && /if \(isDemoStore\(\) \|\| state\.exchange \|\| !window\.KiwiPairs/.test(BQ));
 check('boutique « + » opens the article sheet (size, colour, stock), like a tap in the grid',

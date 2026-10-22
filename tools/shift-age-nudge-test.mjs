@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,7 +8,7 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { suite } from './browser-trace.mjs';
 const ROOT = path.resolve(import.meta.dirname, '..');
-const source = fs.readFileSync(process.env.KIWI_SHIFT_SOURCE || path.join(ROOT, 'assets/repeat-sale-guard.js'), 'utf8');
+const source = retailSource(fs.readFileSync(process.env.KIWI_SHIFT_SOURCE || path.join(ROOT, 'assets/repeat-sale-guard.js'), 'utf8'));
 let checks = 0;
 const ok = (v, m) => { assert.ok(v, m); checks++; };
 function harness(throwing = false) {
@@ -70,7 +71,7 @@ try {
         // replacement of the production shift code. All requests stay loopback.
         await req.respond({ status:200, contentType:'text/html', body:html.replace('isReal:()=>false','isReal:()=>true') });
       } else if (process.env.KIWI_SHIFT_OLD_TILL && req.url().includes('/assets/pos-boutique.js')) {
-        await req.respond({ status:200, contentType:'text/javascript', body:fs.readFileSync(process.env.KIWI_SHIFT_OLD_TILL,'utf8') });
+        await req.respond({ status:200, contentType:'text/javascript', body:retailSource(fs.readFileSync(process.env.KIWI_SHIFT_OLD_TILL,'utf8')) });
       } else await (req.url().startsWith(base + '/') || req.url().startsWith('data:') ? req.continue() : req.abort());
     });
     await page.goto(base + '/boutique.html', { waitUntil:'load' });

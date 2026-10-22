@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import retailSource from './pos-retail-test-source.cjs';
 /* Kiwi · receipt sequence allocation regression gate.
  *
  * Proves that two tills never receive the same numeric range, migration starts
@@ -134,9 +135,9 @@ ok('la séquence repart à quatre chiffres pour la nouvelle année', nextYear.bo
 const get = await onRequestGet();
 ok('GET ne peut pas consommer de numéro', get.status === 405);
 
-const boutique = fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8');
-const feed = fs.readFileSync(path.join(ROOT, 'functions', 'api', 'feed.js'), 'utf8');
-const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+const boutique = retailSource(fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8'));
+const feed = retailSource(fs.readFileSync(path.join(ROOT, 'functions', 'api', 'feed.js'), 'utf8'));
+const schema = retailSource(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 ok('la caisse réserve une plage dédiée', boutique.includes("fetch('/api/ticket-sequence'") && boutique.includes('TICKET_LEASE_KEY'));
 ok('le ticket attend son numéro avant encaissement', boutique.includes('t.lines.length && t.num') && boutique.includes('assignTicketNumber(t)'));
 ok('la vente envoie un UUID distinct de sa référence',
@@ -147,7 +148,7 @@ ok('la compatibilité de déploiement réserve elle aussi une vraie plage',
   feed.includes('reserveTicketRange(env, merchant, 500, 1000,'));
 ok('le compteur fait partie du schéma durable', schema.includes('CREATE TABLE IF NOT EXISTS ticket_sequences'));
 ok('la limite visible de cinq chiffres est gardée des deux côtés',
-  boutique.includes('n > 99999') && fs.readFileSync(path.join(ROOT, 'functions', 'api', 'ticket-sequence.js'), 'utf8').includes('LAST_TICKET = 99999'));
+  boutique.includes('n > 99999') && retailSource(fs.readFileSync(path.join(ROOT, 'functions', 'api', 'ticket-sequence.js'), 'utf8')).includes('LAST_TICKET = 99999'));
 ok('un numéro n’est jamais consommé si son successeur ne peut pas être persisté',
   boutique.includes('if (!saveTicketLease())') && boutique.includes('lease.next = previousNext') &&
   boutique.includes('ticketStorageError: false'));

@@ -1112,12 +1112,24 @@
     "sha": "abb9c37694ef9e6a"
   },
   "assets/pos-boutique.css": {
-    "v": "95",
+    "v": "97",
     "sha": "2149c77f6f533962"
   },
   "assets/pos-boutique.js": {
-    "v": "95",
-    "sha": "61da02bb4cb58e9a"
+    "v": "97",
+    "sha": "6e27418341a5bb19"
+  },
+  "assets/pos-boutique/checkout.js": {
+    "v": "3",
+    "sha": "f320e5c6267b3b41"
+  },
+  "assets/pos-boutique/inventory.js": {
+    "v": "3",
+    "sha": "89dbd97a26ab4e87"
+  },
+  "assets/pos-boutique/sales.js": {
+    "v": "3",
+    "sha": "d4e8cd4e5f3db8b7"
   },
   "assets/pos-coiffure.css": {
     "v": "9",
@@ -1128,8 +1140,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "133",
-    "sha": "f9afeb5122022fb9"
+    "v": "135",
+    "sha": "6920aacb318f8af7"
   },
   "assets/pos-epicerie.css": {
     "v": "17",

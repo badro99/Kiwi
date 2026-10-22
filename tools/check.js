@@ -60,7 +60,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(list(path.join(ROOT, 'assets/pos-maison'), '.js'));
+const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(...['assets/pos-maison', 'assets/pos-boutique'].map(dir => list(path.join(ROOT, dir), '.js')));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
@@ -1544,6 +1544,7 @@ section('Whole-project regressions');
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
     'pos-maison-split-test.mjs',
+    'pos-boutique-split-test.mjs',
     'pos-maison-split-browser-test.mjs',
     'maison-caisse-browser-test.mjs',
     'maison-shelf-price-browser-test.mjs',
