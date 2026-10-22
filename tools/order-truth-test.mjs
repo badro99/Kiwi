@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * COMMANDE PAR QR / LIEN + RAPPORT MENSUEL · CE QUE LES PAGES AFFIRMENT
  *
@@ -31,7 +32,7 @@ import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => (p === 'OrderPro.html' ? orderProTestSource(ROOT) : readFileSync(path.join(ROOT, p), 'utf8'));
 const HTML = read('OrderPro.html');
 const OM = read('assets/orderpro-menu.js');
 const REPORT_JS = read('assets/kiwi-report.js');

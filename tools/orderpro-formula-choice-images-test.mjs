@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,7 +27,7 @@ assert.equal(sanitized.items.find((item) => item.id === 'legacy').showPhotoInFor
 
 const catalog = read('assets/menu-catalog.js');
 const workspace = read('assets/restaurant-menu-workspace.js');
-const orderPro = read('OrderPro.html');
+const orderPro = orderProTestSource(ROOT);
 const dashboard = read('dashboard.html');
 
 for (const [surface, source] of [['menu catalogue', catalog], ['restaurant workspace', workspace]]) {

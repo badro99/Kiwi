@@ -255,8 +255,11 @@ section('Forbidden patterns');
     const n = (src.match(/background(?:-color)?\s*:\s*var\(--ink\)/g) || []).length;
     // assets/caisse-shell.css was the caisse's inline <style> until 2026-10-21,
     // outside this scope, and came out with five of these (the caisse's own
-    // --ink token). They may go down, never up.
-    const allowed = path.relative(ROOT, f) === 'assets/caisse-shell.css' ? 5 : 0;
+    // --ink token). They may go down, never up. assets/orderpro-page.css est
+    // de même le <style> de OrderPro.html sorti tel quel le 2026-10-22, avec
+    // ses sept (le --ink propre à la page invité, qui reste claire).
+    const INK_ALLOWED = { 'assets/caisse-shell.css': 5, 'assets/orderpro-page.css': 7 };
+    const allowed = INK_ALLOWED[path.relative(ROOT, f)] || 0;
     if (n > allowed) inkCounts.push(`${path.relative(ROOT, f)}: ${n}${allowed ? ` (allowed ${allowed})` : ''}`);
   }
   if (inkCounts.length) fail(`background:var(--ink) is back (use var(--inverse-surface) + var(--inverse-ink), or a fixed colour) — ${inkCounts.join(' · ')}`);

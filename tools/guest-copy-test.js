@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const orderProTestSource = require('./orderpro-test-source.cjs');
 /* Guest-page copy · design 2027, §9.6.
  *
  *   node tools/guest-copy-test.js
@@ -16,7 +17,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 let failures = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) { passed++; console.log('  ✓ ' + msg); } else { failures++; console.log('  ✗ ' + msg); } };
-const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const read = (f) => (f === 'OrderPro.html' ? orderProTestSource(ROOT) : fs.readFileSync(path.join(ROOT, f), 'utf8'));
 
 /* kiwi-order.html is a redirect to OrderPro since stage 3c; one guest app. */
 const GUEST_PAGES = ['OrderPro.html'];

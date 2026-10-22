@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(ROOT, name), 'utf8');
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
-const orderPro = read('OrderPro.html');
+const orderPro = orderProTestSource(ROOT);
 const serveur = serveurTestSource(read('kiwi-serveur.html'));
 
 function extractFunction(source, name) {

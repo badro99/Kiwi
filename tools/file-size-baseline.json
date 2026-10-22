@@ -1,7 +1,7 @@
 {
   "note": "Pins for tools/file-size-ratchet-test.mjs. A pin only goes down (KIWI_UPDATE_SIZE_BASELINE=1 after a split). Never raise one to make a red run go away.",
   "lines": {
-    "OrderPro.html": 6885,
+    "OrderPro.html": 657,
     "assets/agent.js": 5943,
     "assets/dateRange.js": 6649,
     "assets/hotel.js": 10284,

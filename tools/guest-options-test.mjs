@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * COMMANDE PAR QR · LES OPTIONS NE SE CHOISISSENT PAS TOUTES SEULES
  *
@@ -29,7 +30,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => (p === 'OrderPro.html' ? orderProTestSource(ROOT) : readFileSync(path.join(ROOT, p), 'utf8'));
 
 function grab(src, start) {
   const i = src.indexOf(start);

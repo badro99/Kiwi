@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 /* La page QR ne traduit jamais en direct : elle lit les langues publiées,
  * choisit celle du navigateur et résout la carte déjà traduite. */
 import fs from 'node:fs';
@@ -13,7 +14,7 @@ const fail = [];
 const ok = (cond, label) => { if (cond) pass++; else fail.push(label); };
 /* La page QR est OrderPro depuis l'étape 3c (kiwi-order.html y redirige) ;
    sa logique de langues vit dans assets/orderpro-menu.js. */
-const html = read('OrderPro.html');
+const html = orderProTestSource(ROOT);
 const om = read('assets/orderpro-menu.js');
 
 ok(/data-lazy="menu-i18n" src="assets\/menu-i18n\.js\?v=\d+"/.test(html) && /data-lazy="ui-langs" src="assets\/order-ui-langs\.js\?v=\d+"/.test(html), 'la page charge à la demande le résolveur et le dictionnaire statique');

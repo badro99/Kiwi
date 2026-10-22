@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* tools/menu-i18n-test.mjs — la carte dans la langue de chacun, sans perdre
@@ -26,7 +27,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = (rel) => (rel === 'OrderPro.html' ? orderProTestSource(ROOT) : fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 let failures = 0;
 const ok = (m) => console.log(`  ✓ ${m}`);
 const bad = (m) => { failures++; console.log(`  ✗ ${m}`); };

@@ -1,5 +1,5 @@
 {
-  "OrderPro.html": 30,
+  "OrderPro.html": 24,
   "assets/agent-action-center.js": 1,
   "assets/agent.js": 5,
   "assets/boutique-promos-dashboard.js": 23,
@@ -10,6 +10,7 @@
   "assets/dateRange.js": 6,
   "assets/employee-trade-shell.js": 8,
   "assets/food-production-print.js": 1,
+  "assets/orderpro-page.js": 6,
   "assets/pages-pro.js": 1,
   "assets/pages-pro/restaurant-stations.js": 4,
   "assets/pages-pro/spa-appointments.js": 1,

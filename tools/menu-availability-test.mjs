@@ -1,3 +1,4 @@
+import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,7 +8,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const api = read('functions/api/menu/availability.js');
 const caisse = read('assets/caisse-menu-availability.js');
-const orderPro = read('OrderPro.html');
+const orderPro = orderProTestSource(root);
 const server = serveurTestSource(read('kiwi-serveur.html'));
 
 assert.match(api, /tenantFor\(request, env, asked, \{ strict: true \}\)/, 'availability writes must require an exact authenticated tenant');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import teamTestSource from './team-test-source.cjs';
 import maisonSource from './pos-maison-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
@@ -71,7 +72,7 @@ ok('kitchen: one poll at a time', () => {
 });
 
 /* The guest order page is OrderPro since stage 3c (kiwi-order.html redirects to it). */
-const order = read('OrderPro.html');
+const order = maisonSource(orderProTestSource());
 ok('order page: a double tap sends one order', () => {
   assert.match(order, /const btn = \$\('#send-btn'\);\s*if \(btn\.classList\.contains\('is-loading'\)\) return;/);
   assert.match(order, /\.send-btn\.is-loading::after \{/);

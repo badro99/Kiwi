@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const orderProTestSource = require('./orderpro-test-source.cjs');
 const serveurTestSource = require('./serveur-test-source.cjs');
 'use strict';
 
@@ -12,7 +13,7 @@ function ok(label, value) { if (value) console.log('✓ ' + label); else { conso
 
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
 const serveur = serveurTestSource(read('kiwi-serveur.html'));
-const orderpro = read('OrderPro.html');
+const orderpro = orderProTestSource(root);
 
 ok('caisse preserves published subcategory identity', /subId: sub \? sub\.id/.test(caisse) && /subPills\.id = 'subcat-pills'/.test(caisse));
 ok('caisse filters the selected subcategory', /!activeSub \|\| m\.subId === activeSub/.test(caisse));

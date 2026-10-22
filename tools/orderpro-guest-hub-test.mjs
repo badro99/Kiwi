@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 // OrderPro · la page d'accueil du client (assets/orderpro-guest.js).
 //
 // Exécute le module livré dans un bac à sable, sans navigateur :
@@ -18,7 +19,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const src = fs.readFileSync(new URL('../assets/orderpro-guest.js', import.meta.url), 'utf8');
-const page = fs.readFileSync(new URL('../OrderPro.html', import.meta.url), 'utf8');
+const page = orderProTestSource();
 
 let passed = 0, failed = 0;
 function ok(name, run) {

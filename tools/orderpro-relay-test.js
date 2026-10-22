@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -151,7 +152,7 @@ async function get(fn, qs, headers = {}) {
   ok('le vérificateur PIN fournit une preuve d’acteur pour la remise comptoir', pinResponse.status === 200 && !!actorProof);
   const line = (id, qty = 1) => ({ id, qty });
 
-  const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  const orderProPage = orderProTestSource(ROOT);
   const caissePage = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
   const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
   ok('OrderPro affiche OPD sur le retrait',

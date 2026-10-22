@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 // OrderPro · ce que le client voit de SES commandes (audit 2026-10-14).
 //
 // Exécute les fonctions livrées de OrderPro.html dans un bac à sable :
@@ -14,7 +15,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const src = fs.readFileSync(new URL('../OrderPro.html', import.meta.url), 'utf8');
+const src = orderProTestSource();
 function slice(start, end) {
   const a = src.indexOf(start), b = src.indexOf(end, a + start.length);
   assert.ok(a >= 0 && b > a, 'production slice exists: ' + start.trim().slice(0, 40));

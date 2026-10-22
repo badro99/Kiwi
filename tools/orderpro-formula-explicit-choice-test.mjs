@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+const source = orderProTestSource(ROOT);
 
 function extractFunction(name) {
   const start = source.indexOf(`function ${name}(`);

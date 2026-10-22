@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import orderProTestSource from './orderpro-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -224,7 +225,7 @@ assert.match(adminSource, /key:'menuNutrition'/, 'God Mode expose le flag restau
 /* La carte client est OrderPro depuis l'étape 3c ; son rendu nutrition vit
    dans assets/orderpro-menu.js (kiwi-order.html n'est plus qu'une redirection). */
 const orderSource = fs.readFileSync(new URL('../assets/orderpro-menu.js', import.meta.url), 'utf8');
-const proSource = fs.readFileSync(new URL('../OrderPro.html', import.meta.url), 'utf8');
+const proSource = orderProTestSource();
 assert.match(orderSource, /function infoButton\(item, name, t\) \{\s*if \(!\(item && item\.nutrition\)\) return '';/, 'sans valeurs publiées, la tuile n’a pas de bouton « i »');
 assert.doesNotMatch(orderSource, /kcal<\/bdi><span aria-hidden/, 'la tuile ne porte plus de chiffres : ils sont derrière le « i »');
 assert.match(orderSource, /function nutritionDetail\(item, t\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt/, 'la fiche client rend les six valeurs');
