@@ -133,7 +133,8 @@ const dashCtx = vm.createContext({
   } },
 });
 vm.runInContext([
-  "var VENUE_TZ='Africa/Casablanca';",
+  "var VENUE_TZ='Africa/Casablanca', venueClock=null, venueClockZone='';",
+  grab(DASH, 'function venueZone('),
   grab(DASH, 'function venueParts('),
   grab(DASH, 'function venueWall('),
   grab(DASH, 'function venueEpoch('),

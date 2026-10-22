@@ -1,4 +1,6 @@
 import { DateTimeFormat } from './_zone-law.js';
+import { merchantZone } from './_business-day.js';
+import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
 // Public Kiwi booking surface. It exposes availability, never another client's details.
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
@@ -59,6 +61,7 @@ function safeDoc(raw) {
   const out = blank(), s = d.settings || {};
   out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: num(s.minNoticeMinutes, 0, 10080, 60), windowDays: num(s.windowDays, 1, 365, 60), cancellationHours: num(s.cancellationHours, 0, 720, 12), slotStep: [5,10,15,20,30,60].includes(+s.slotStep) ? +s.slotStep : 15, staffingEnabled: !!s.staffingEnabled, tablesPerStaff: num(s.tablesPerStaff, 1, 12, 4), updatedAt: +s.updatedAt || 0 };
   out.services = (Array.isArray(d.services) ? d.services : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), duration: num(x?.duration, 5, 1440, 30), price: num(x?.price, 0, 1000000, 0), deposit: num(x?.deposit, 0, 1000000, 0), capacity: num(x?.capacity, 1, 999, 1), resourceIds: (Array.isArray(x?.resourceIds) ? x.resourceIds : []).slice(0, 60).map((z) => str(z, 64)).filter(Boolean), active: x?.active !== false, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
+  out.services.forEach(x => { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
   out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
@@ -91,10 +94,7 @@ function dateParts(epoch, tz = TZ) {
   const o = {}; parts.forEach((p) => { if (p.type !== 'literal') o[p.type] = p.value; }); return o;
 }
 function zonedEpoch(date, time, tz = TZ) {
-  if (!DATE.test(date) || !HHMM.test(time)) return 0;
-  const target = Date.parse(date + 'T' + time + ':00Z'); let guess = target;
-  for (let i = 0; i < 3; i++) { const p = dateParts(guess, tz); const seen = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:00Z`); guess += target - seen; }
-  return guess;
+  return bookingEpoch(date, time, tz);
 }
 function dayKey(date) { const d = new Date(date + 'T12:00:00Z'); return ['sun','mon','tue','wed','thu','fri','sat'][d.getUTCDay()]; }
 function addDays(date, count) { const d = new Date(date + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + count); return d.toISOString().slice(0,10); }
@@ -134,39 +134,37 @@ function safeTeam(raw) {
 }
 function roleText(m) { return str([m?.role,m?.function,m?.department].filter(Boolean).join(' '),180).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function floorMember(m) { return /serveur|server|waiter|service|salle|rang|maitre|barista|barman|accueil|host|manager|proprietaire|owner|staff|equipier/.test(roleText(m)); }
-function teamCoverage(team, startAt, endAt) {
-  const p = dateParts(startAt,TZ), day = `${p.year}-${p.month}-${p.day}`, days = [addDays(day,-1),day];
+function teamCoverage(team, startAt, endAt, zone = TZ) {
+  const p = dateParts(startAt,zone), day = `${p.year}-${p.month}-${p.day}`, days = [addDays(day,-1),day];
   const members = team?.members || [], shifts = team?.shifts || {};
   const configuredToday = members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m?.id] || {},day));
   const active = members.filter(floorMember).filter((m) => days.some((d) => {
     const s=(shifts[m?.id]||{})[d]; if(!s||s.off||!HHMM.test(s.start)||!HHMM.test(s.end))return false;
-    const a=zonedEpoch(d,s.start,TZ),from=timeMin(s.start),to=timeMin(s.end),duration=to>from?to-from:1440-from+to,z=a+duration*60000;
+    const a=zonedEpoch(d,s.start,zone),z=zonedEpoch(timeMin(s.end)>timeMin(s.start)?d:addDays(d,1),s.end,zone);
     return a<=startAt&&z>=endAt;
   }));
   return { configured:configuredToday||active.length>0, count:active.length };
 }
-function staffAllows(doc, team, startAt, endAt) {
+function staffAllows(doc, team, startAt, endAt, zone = TZ) {
   if(!doc.settings.staffingEnabled)return true;
-  const coverage=teamCoverage(team,startAt,endAt);if(!coverage.configured)return true;
+  const coverage=teamCoverage(team,startAt,endAt,zone);if(!coverage.configured)return true;
   const concurrent=doc.bookings.filter((b)=>ACTIVE.has(b.status)&&overlaps(startAt,endAt,b.startAt,b.endAt)).length;
   return coverage.count>0&&concurrent<coverage.count*doc.settings.tablesPerStaff;
 }
-function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(null)) {
+function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(null), zone = TZ) {
   partySize = num(partySize, 1, 999, 1);
   const step = doc.settings.slotStep, now = Date.now(), earliest = now + doc.settings.minNoticeMinutes * 60000;
   const last = now + doc.settings.windowDays * 86400000, out = new Map();
   for (const r of candidates(doc, svc, asked, partySize)) {
     for (const p of periodsFor(date, r, hours)) {
-      let a = timeMin(p.from), z = timeMin(p.to); if (a == null || z == null) continue; if (z <= a) z += 1440;
-      for (let m = a; m + svc.duration <= z; m += step) {
-        const hh = String(Math.floor((m % 1440) / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-        const startAt = zonedEpoch(addDays(date, Math.floor(m / 1440)), hh), endAt = startAt + svc.duration * 60000;
-        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt) || !staffAllows(doc,team,startAt,endAt)) continue;
-        const old = out.get(startAt); if (!old) out.set(startAt, { startAt, endAt, resourceIds:[r.id] }); else old.resourceIds.push(r.id);
+      for (const startAt of openingSlots(date, p.from, p.to, step, svc.duration, zone)) {
+        const endAt = startAt + svc.duration * 60000;
+        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt) || !staffAllows(doc,team,startAt,endAt,zone)) continue;
+        const old = out.get(startAt); if (!old) out.set(startAt, { startAt, endAt, resourceIds:[r.id] }); else if (!old.resourceIds.includes(r.id)) old.resourceIds.push(r.id);
       }
     }
   }
-  return [...out.values()].sort((a,b) => a.startAt - b.startAt).slice(0, 160);
+  return [...out.values()].sort((a,b) => a.startAt - b.startAt);
 }
 function safeHotel(raw) {
   let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
@@ -188,31 +186,31 @@ function safeHotel(raw) {
   return { baseRate:d.baseRate == null ? null : num(d.baseRate,0,1000000,null), types, rooms, folios };
 }
 function hotelTrade(meta) { return /hotel|riad/.test(str(meta?.type,60).toLowerCase()); }
-function stayRange(checkIn, checkOut, settings) {
-  if (!DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn) return null;
+function stayRange(checkIn, checkOut, settings, zone = TZ) {
+  if (!calendarDate(checkIn) || !calendarDate(checkOut) || checkOut <= checkIn) return null;
   const nights = Math.round((Date.parse(checkOut+'T12:00:00Z')-Date.parse(checkIn+'T12:00:00Z'))/86400000);
   if (nights < 1 || nights > 365) return null;
-  const startAt=zonedEpoch(checkIn,'15:00'), endAt=zonedEpoch(checkOut,'11:00'), now=Date.now();
+  const startAt=zonedEpoch(checkIn,'15:00',zone), endAt=zonedEpoch(checkOut,'11:00',zone), now=Date.now();
   if (!startAt || !endAt || startAt < now + settings.minNoticeMinutes*60000 || startAt > now + settings.windowDays*86400000) return null;
   return { checkIn, checkOut, nights, startAt, endAt };
 }
-function currentRoomFree(hotel, room, startAt, endAt) {
+function currentRoomFree(hotel, room, startAt, endAt, zone = TZ) {
   if (room.status === 'hs') return false;
   if (!['occ','depart','arrivee'].includes(room.status)) return true;
   /* Room.updatedAt is the check-in transition. A folio's updatedAt moves every
    * time restaurant, spa or minibar posts a charge, so using it here would
    * silently extend the stay and hide inventory after each room charge. */
   const folio=hotel.folios.find((x)=>x.room===room.n), stamp=room.updatedAt||folio?.updatedAt;
-  const p=dateParts(stamp||Date.now(),TZ), day=`${p.year}-${p.month}-${p.day}`;
-  const busyStart=zonedEpoch(day,'15:00'), busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00');
+  const p=dateParts(stamp||Date.now(),zone), day=`${p.year}-${p.month}-${p.day}`;
+  const busyStart=zonedEpoch(day,'15:00',zone), busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00',zone);
   return !overlaps(startAt,endAt,busyStart,busyEnd);
 }
-function hotelCategories(doc, hotel, stay, guests, onlyType='', d1BusyRooms = null) {
+function hotelCategories(doc, hotel, stay, guests, onlyType='', d1BusyRooms = null, zone = TZ) {
   guests=num(guests,1,12,1);
   return hotel.types.filter((t)=>t.public&&t.maxGuests>=guests&&(!onlyType||t.id===onlyType)).map((t)=>{
     const rate=t.rate == null ? hotel.baseRate : t.rate;
-    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt)&&(!d1BusyRooms||!d1BusyRooms.has(r.id))&&free(doc,r.id,stay.startAt,stay.endAt));
-    return { ...t, rate, total:rate == null ? null : Math.round(rate*stay.nights), rooms };
+    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt,zone)&&(!d1BusyRooms||!d1BusyRooms.has(r.id))&&free(doc,r.id,stay.startAt,stay.endAt));
+    return { ...t, rate, total:rate == null ? null : Math.round(rate*100)*stay.nights/100, rooms };
 
   }).filter((t)=>t.rate != null);
 }
@@ -284,7 +282,7 @@ async function readRows(env, merchant) {
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'rooms'").bind(merchant),
   ]);
   const first = (r) => r?.results?.[0] || null;
-  return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data), hotel:safeHotel(first(rows[4])?.data) };
+  return { zone: await merchantZone(env, merchant), reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data), hotel:safeHotel(first(rows[4])?.data) };
 }
 /* Une boutique peut ouvrir la réservation en ligne sans avoir saisi un seul
    horaire : la page publique proposait alors quatorze jours, tous « Aucun
@@ -295,7 +293,7 @@ function hasBookableHours(hours, doc) {
     || (hours?.exceptions || []).some((x) => x && x.kind === 'hours' && Array.isArray(x.periods) && x.periods.length);
 }
 function publicConfig(merchant, meta, doc, slots, hoursSet = true) {
-  return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), hoursSet, settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
+  return { ok:true, merchant, tz:meta?.timezone || TZ, name:str(meta?.name,100), trade:str(meta?.type,60), hoursSet, settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
 }
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
@@ -316,7 +314,7 @@ export async function onRequestGet({ request, env }) {
     if (!rec) { try { rec = await findStayByKey(env, merchant, 'manageToken', manage); } catch (_) { return json({ error:'unavailable' },503); } }
     if (!rec) return json({ error:'not-found' },404);
     return json({
-      ok:true, kind:'manage', merchant, name:str(rows.merchant?.name,100), trade:str(rows.merchant?.type,60),
+      ok:true, kind:'manage', merchant, tz:rows.zone, name:str(rows.merchant?.name,100), trade:str(rows.merchant?.type,60),
       booking:publicBooking(rec),
       cancellableUntil:cancellableAt(rec, doc.settings),
       cancellationHours:num(doc.settings.cancellationHours,0,720,12),
@@ -327,7 +325,7 @@ export async function onRequestGet({ request, env }) {
     const checkIn=str(u.searchParams.get('checkIn'),10), checkOut=str(u.searchParams.get('checkOut'),10), guests=num(u.searchParams.get('guests'),1,12,2);
     let stay=null,categories=[];
     if (checkIn||checkOut) {
-      stay=stayRange(checkIn,checkOut,doc.settings);
+      stay=stayRange(checkIn,checkOut,doc.settings,rows.zone);
       if(!stay)return json({error:'invalid-dates'},400);
       let d1BusyRooms = null;
       if (await hotelReservationsTableExists(env)) {
@@ -342,16 +340,16 @@ export async function onRequestGet({ request, env }) {
         }
 
       }
-      categories=hotelCategories(doc,rows.hotel,stay,guests,'',d1BusyRooms).map(publicHotelCategory);
+      categories=hotelCategories(doc,rows.hotel,stay,guests,'',d1BusyRooms,rows.zone).map(publicHotelCategory);
     }
     else categories=rows.hotel.types.filter((t)=>t.public&&t.maxGuests>=guests).map((t)=>publicHotelCategory({...t,rate:t.rate==null?rows.hotel.baseRate:t.rate,total:null,rooms:[]})).filter((t)=>t.rate!=null);
-    return json({ok:true,kind:'hotel',merchant,name:str(rows.merchant.name,100),trade:str(rows.merchant.type,60),settings:{confirmation:doc.settings.confirmation,cancellationHours:doc.settings.cancellationHours,windowDays:doc.settings.windowDays},hotel:{checkIn:stay?.checkIn||'',checkOut:stay?.checkOut||'',nights:stay?.nights||0,guests,categories}},200,{'Cache-Control':'no-store'});
+    return json({ok:true,kind:'hotel',merchant,tz:rows.zone,name:str(rows.merchant.name,100),trade:str(rows.merchant.type,60),settings:{confirmation:doc.settings.confirmation,cancellationHours:doc.settings.cancellationHours,windowDays:doc.settings.windowDays},hotel:{checkIn:stay?.checkIn||'',checkOut:stay?.checkOut||'',nights:stay?.nights||0,guests,categories}},200,{'Cache-Control':'no-store'});
   }
 
   const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
-  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
-  return json(publicConfig(merchant, rows.merchant, doc, slots, hasBookableHours(rows.hours, doc)),200,{ 'Cache-Control':'no-store' });
+  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team,rows.zone); }
+  return json(publicConfig(merchant, {...rows.merchant, timezone:rows.zone}, doc, slots, hasBookableHours(rows.hours, doc)),200,{ 'Cache-Control':'no-store' });
 }
 /* Annulation par la cliente. Le jeton de gestion est le SEUL justificatif —
  * il n'est jamais renvoyé par une consultation, il n'est pas devinable, et il
@@ -449,7 +447,7 @@ export async function onRequestPost({ request, env }) {
     const activeFuture=doc.bookings.filter((x)=>ACTIVE.has(x.status)&&x.endAt>now).length;
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
     if(hotelTrade(rows.merchant)){
-      const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings);if(!stay)return json({error:'invalid-dates'},400);
+      const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings,rows.zone);if(!stay)return json({error:'invalid-dates'},400);
       let d1BusyRooms = null;
       if (await hotelReservationsTableExists(env)) {
         try {
@@ -463,12 +461,12 @@ export async function onRequestPost({ request, env }) {
         }
 
       }
-      const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid,d1BusyRooms),category=categories[0];
+      const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid,d1BusyRooms,rows.zone),category=categories[0];
       if(!category||!category.rooms.length)return json({error:'room-unavailable'},409);
       /* The displayed quote is the guest's price agreement. A concurrent
          rate edit must send them back to review, not silently book at the new
          price. Older cached pages omit expectedTotal and remain compatible. */
-      if(b?.expectedTotal!==undefined&&(!Number.isSafeInteger(+b.expectedTotal)||+b.expectedTotal!==category.total))
+      if(b?.expectedTotal!==undefined&&(!Number.isFinite(+b.expectedTotal)||+b.expectedTotal!==category.total))
         return json({error:'rate-changed',total:category.total},409);
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
       const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
@@ -487,10 +485,13 @@ export async function onRequestPost({ request, env }) {
       continue;
     }
 
-    if(!startAt)return json({error:'invalid'},400);
+    if(!Number.isFinite(startAt)||startAt<=0)return json({error:'invalid'},400);
+    // Refuser la borne avant Intl, qui lève sur les dates hors plage.
+    if(startAt<now+doc.settings.minNoticeMinutes*60000||startAt>now+doc.settings.windowDays*86400000)return json({error:'slot-unavailable'},409);
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);
-    const endAt=startAt+svc.duration*60000, date=dateParts(startAt,TZ), ymd=`${date.year}-${date.month}-${date.day}`;
-    const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked,partySize,rows.team).find((x)=>x.startAt===startAt);
+    const endAt=startAt+svc.duration*60000, date=dateParts(startAt,rows.zone), ymd=`${date.year}-${date.month}-${date.day}`;
+    // Le créneau après minuit appartient encore à l'ouverture de la veille.
+    const validSlot=[ymd,addDays(ymd,-1)].flatMap(day=>slotsFor(doc,svc,day,rows.hours,asked,partySize,rows.team,rows.zone)).find((x)=>x.startAt===startAt);
     if(!validSlot)return json({error:'slot-unavailable'},409);
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');

@@ -264,6 +264,7 @@
     var s = r.settings || {};
     out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: number(s.minNoticeMinutes, 0, 10080, 60), windowDays: number(s.windowDays, 1, 365, 60), cancellationHours: number(s.cancellationHours, 0, 720, 12), slotStep: [5, 10, 15, 20, 30, 60].indexOf(+s.slotStep) >= 0 ? +s.slotStep : 15, staffingEnabled: !!s.staffingEnabled, tablesPerStaff: number(s.tablesPerStaff, 1, 12, 4), updatedAt: +s.updatedAt || 0 };
     out.services = (Array.isArray(r.services) ? r.services : []).slice(0, 120).map(function (x) { return { id: cleanText(x && x.id, 64) || id('svc'), name: cleanText(x && x.name, 100), duration: number(x && x.duration, 5, 1440, 30), price: number(x && x.price, 0, 1000000, 0), deposit: number(x && x.deposit, 0, 1000000, 0), capacity: number(x && x.capacity, 1, 999, 1), resourceIds: (Array.isArray(x && x.resourceIds) ? x.resourceIds : []).slice(0, 60).map(function (z) { return cleanText(z, 64); }).filter(Boolean), active: x && x.active !== false, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
+    out.services.forEach(function (x) { x.price = Math.round(x.price * 100) / 100; x.deposit = Math.min(x.price, Math.round(x.deposit * 100) / 100); });
     out.resources = (Array.isArray(r.resources) ? r.resources : []).slice(0, 120).map(function (x) { var kind = ['person', 'room', 'table'].indexOf(x && x.kind) >= 0 ? x.kind : 'person'; return { id: cleanText(x && x.id, 64) || id('res'), name: cleanText(x && x.name, 100), kind: kind, capacity: number(x && x.capacity, 1, 999, 1), active: x && x.active !== false, week: x && typeof x.week === 'object' ? clone(x.week) : null, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
     out.blocked = (Array.isArray(r.blocked) ? r.blocked : []).slice(-500).map(function (x) { return { id: cleanText(x && x.id, 64) || id('blk'), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, reason: cleanText(x && x.reason, 120), updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.startAt && x.endAt > x.startAt; });
     out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).slice(-4000).map(function (x) {
@@ -321,22 +322,32 @@
     return !doc.blocked.some(function (b) { return (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt); });
   }
   function withinHours(resource, startAt, endAt) {
-    var d = venueWall(startAt), periods = [];
-    if (resource && resource.week) {
-      var keys = ['sun','mon','tue','wed','thu','fri','sat'], day = resource.week[keys[d.getDay()]] || {};
-      periods = day.open === false ? [] : (day.periods || []);
-    } else if (window.KiwiHours && window.KiwiHours.periodsOn) {
-      /* periodsOn rend { periods, exception }, pas un tableau. Lu comme un
-         tableau, il n'avait jamais de longueur : dès que les horaires étaient
-         renseignés, toute réservation saisie au tableau de bord répondait
-         « Ce créneau vient d'être pris », agenda vide ou non. */
-      var on = window.KiwiHours.periodsOn(d, venueId());
-      periods = Array.isArray(on) ? on : ((on && on.periods) || []);
+    var H = window.KiwiHours, configured = !!(resource && resource.week) || !!(H && H.isConfigured && H.isConfigured(venueId()));
+    if (!configured) return true;
+    // Vérifier les minutes réelles : nuit précédente et changement d'heure compris.
+    function openAt(ts) {
+      var d = venueWall(ts), mins = d.getHours() * 60 + d.getMinutes();
+      return [0, 1].some(function (back) {
+        var day = new Date(d.getFullYear(), d.getMonth(), d.getDate() - back, 12), periods;
+        if (resource && resource.week) {
+          var w = resource.week[['sun','mon','tue','wed','thu','fri','sat'][day.getDay()]];
+          periods = w && w.open !== false ? w.periods || [] : [];
+        } else {
+          var on = H && H.periodsOn ? H.periodsOn(day, venueId()) : [];
+          periods = Array.isArray(on) ? on : on && on.periods || [];
+        }
+        return periods.some(function (p) {
+          if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(p.from) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(p.to)) return false;
+          var a = +p.from.slice(0, 2) * 60 + +p.from.slice(3), z = +p.to.slice(0, 2) * 60 + +p.to.slice(3);
+          if (z <= a) z += 1440;
+          return mins + back * 1440 >= a && mins + back * 1440 < z;
+        });
+      });
     }
-    if (!periods.length) return !(window.KiwiHours && window.KiwiHours.isConfigured && window.KiwiHours.isConfigured(venueId()));
-    var mins = d.getHours() * 60 + d.getMinutes(), end = mins + Math.round((endAt - startAt) / 60000);
-    return periods.some(function (p) { var a = window.KiwiHours ? window.KiwiHours.toMin(p.from) : null, z = window.KiwiHours ? window.KiwiHours.toMin(p.to) : null; if (a == null || z == null) return false; if (z <= a) z += 1440; return mins >= a && end <= z; });
+    for (var t0 = startAt; t0 < endAt; t0 += 60000) if (!openAt(t0)) return false;
+    return openAt(endAt - 1);
   }
+
   function chooseResource(doc, svc, rid, startAt, endAt, ignoreId, partySize) { return resourceCandidates(doc, svc, rid, partySize).find(function (r) { return withinHours(r, startAt, endAt) && resourceFree(doc, r.id, startAt, endAt, ignoreId); }) || null; }
   function staffingAllows(doc, startAt, endAt, ignoreId) {
     if (!doc.settings.staffingEnabled || !window.KiwiTeam || !window.KiwiTeam.bookingCoverage) return true;
@@ -362,10 +373,21 @@
      l'API comptent en Africa/Casablanca ; un tableau de bord ouvert depuis un
      autre fuseau affichait 12:00 pour une table gardée à 11:00, et une heure
      saisie tombait une heure à côté. */
-  var VENUE_TZ = 'Africa/Casablanca';
+  var VENUE_TZ = 'Africa/Casablanca', venueClock = null, venueClockZone = '';
+  function venueZone() {
+    // Sans fuseau publié, garder le défaut serveur, jamais celui du visiteur.
+    try {
+      var v = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData() || {};
+      var c = window.KiwiConfig || {}, p = window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue() || {};
+      return v.timezone || v.timeZone || v.tz || c.timezone || c.timeZone || p.timezone || p.timeZone || p.tz || VENUE_TZ;
+    } catch (_) { return VENUE_TZ; }
+  }
+
   function venueParts(ts) {
     try {
-      var o = {}; new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: VENUE_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(ts)).forEach(function (p) { if (p.type !== 'literal') o[p.type] = +p.value; });
+      var zone = venueZone();
+      if (!venueClock || venueClockZone !== zone) { venueClockZone = zone; venueClock = new (globalThis.KiwiZoneLaw?.DateTimeFormat || Intl.DateTimeFormat)('en-CA', { timeZone: zone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }); }
+      var o = {}; venueClock.formatToParts(new Date(ts)).forEach(function (p) { if (p.type !== 'literal') o[p.type] = +p.value; });
       return { y:o.year, m:o.month, d:o.day, h:o.hour % 24, mi:o.minute };
     } catch (_) { var l = new Date(ts); return { y:l.getFullYear(), m:l.getMonth()+1, d:l.getDate(), h:l.getHours(), mi:l.getMinutes() }; }
   }
@@ -375,9 +397,10 @@
   function venueEpoch(y, m, d, h, mi) {
     var target = Date.UTC(y, m - 1, d, h || 0, mi || 0), guess = target;
     for (var i = 0; i < 3; i++) { var p = venueParts(guess); guess += target - Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi); }
-    return guess;
+    var check = venueParts(guess);
+    return check.y === y && check.m === m && check.d === d && check.h === (h || 0) && check.mi === (mi || 0) ? guess : 0;
   }
-  function dateLabel(ts, withDate) { var o = withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }, l = lang() === 'ar' ? 'ar-MA' : lang(); try { return new Date(ts).toLocaleString(l, Object.assign({ timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(VENUE_TZ, ts) || VENUE_TZ) }, o)); } catch (_) { try { return new Date(ts).toLocaleString(l, o); } catch (__) { return ''; } } }
+  function dateLabel(ts, withDate) { var o = withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }, l = lang() === 'ar' ? 'ar-MA' : lang(); try { return new Date(ts).toLocaleString(l, Object.assign({ timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(venueZone(), ts) || venueZone()) }, o)); } catch (_) { try { return new Date(ts).toLocaleString(l, o); } catch (__) { return ''; } } }
   function money(n) { try { return Number(n || 0).toLocaleString(lang() === 'ar' ? 'ar-MA' : 'fr-FR') + ' MAD'; } catch (_) { return n + ' MAD'; } }
   /* Le « jour » d'un agenda est la JOURNÉE COMMERCIALE (bascule à 5 h par
      défaut), pas le jour civil : une table réservée à 23 h 30 ou à 00 h 30

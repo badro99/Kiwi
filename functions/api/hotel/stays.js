@@ -1,4 +1,6 @@
 import { DateTimeFormat } from '../_zone-law.js';
+import { merchantZone } from '../_business-day.js';
+import { bookingEpoch } from '../_booking-clock.js';
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
@@ -159,8 +161,8 @@ function safeRooms(raw) {
   const folios = (Array.isArray(d.folios) ? d.folios : []).slice(0, 1000).map((x) => ({ room: num(x?.room, 1, 9999, 0), nights: num(x?.nights, 1, 365, 1), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.room);
   return { baseRate: d.baseRate == null ? null : num(d.baseRate, 0, 1000000, null), types, rooms, folios };
 }
-function dateParts(epoch) {
-  const parts = new DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(epoch));
+function dateParts(epoch, zone = TZ) {
+  const parts = new DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(epoch));
   const out = {}; parts.forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; }); return out;
 }
 function isCalendarDate(date) {
@@ -169,12 +171,10 @@ function isCalendarDate(date) {
   // Date.parse normalizes e.g. February 30 into March instead of rejecting it.
   return Number.isFinite(epoch) && new Date(epoch).toISOString().slice(0, 10) === date;
 }
-function zonedEpoch(date, time) {
-  if (!isCalendarDate(date)) return 0;
-  const target = Date.parse(`${date}T${time}:00Z`); let guess = target;
-  for (let i = 0; i < 3; i++) { const p = dateParts(guess); const seen = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:00Z`); guess += target - seen; }
-  return guess;
+function zonedEpoch(date, time, zone = TZ) {
+  return isCalendarDate(date) ? bookingEpoch(date, time, zone) : 0;
 }
+
 function addDays(date, count) { const d = new Date(date + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + count); return d.toISOString().slice(0, 10); }
 
 /* Direct-guest pricing (no commercial account): the hotel's own configured
@@ -236,12 +236,12 @@ function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
 function canTransition(from, to) {
   return from === to || !!STATUS_TRANSITIONS.get(from)?.has(to);
 }
-function currentRoomFree(hotel, room, startAt, endAt) {
+function currentRoomFree(hotel, room, startAt, endAt, zone = TZ) {
   if (room.status === 'hs') return false;
   if (!['occ', 'depart', 'arrivee'].includes(room.status)) return true;
   const folio = hotel.folios.find((x) => x.room === room.n), stamp = room.updatedAt || folio?.updatedAt;
-  const p = dateParts(stamp || Date.now()), day = `${p.year}-${p.month}-${p.day}`;
-  return !overlaps(startAt, endAt, zonedEpoch(day, '15:00'), zonedEpoch(addDays(day, folio?.nights || 1), '11:00'));
+  const p = dateParts(stamp || Date.now(), zone), day = `${p.year}-${p.month}-${p.day}`;
+  return !overlaps(startAt, endAt, zonedEpoch(day, '15:00', zone), zonedEpoch(addDays(day, folio?.nights || 1), '11:00', zone));
 }
 export const MAX_DOC_BOOKINGS = 250;
 export const HARD_DOC_LIMIT = 300;
@@ -297,8 +297,8 @@ export function pruneReservationsDoc(doc, now = Date.now()) {
   return doc;
 }
 
-function roomFree(doc, hotel, room, startAt, endAt, ignoreId) {
-  if (!currentRoomFree(hotel, room, startAt, endAt)) return false;
+function roomFree(doc, hotel, room, startAt, endAt, ignoreId, zone = TZ) {
+  if (!currentRoomFree(hotel, room, startAt, endAt, zone)) return false;
   return !doc.bookings.some((b) => b.id !== ignoreId && ACTIVE.has(b.status) && b.resourceId === room.id && overlaps(startAt, endAt, b.startAt, b.endAt));
 }
 
@@ -353,6 +353,7 @@ export async function onRequestGet({ request, env }) {
   const merchantParam = str(u.searchParams.get('merchant'), 64);
   const merchant = await tenantFor(request, env, merchantParam, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const zone = await merchantZone(env, merchant);
 
   const fromParam = str(u.searchParams.get('from'), 32);
   const toParam = str(u.searchParams.get('to'), 32);
@@ -372,10 +373,10 @@ export async function onRequestGet({ request, env }) {
   }
 
   const fromEpoch = DATE.test(fromParam)
-    ? zonedEpoch(fromParam, '00:00')
+    ? zonedEpoch(fromParam, '00:00', zone)
     : (Number.isFinite(+fromParam) && +fromParam > 0 ? +fromParam : 0);
   const toEpoch = DATE.test(toParam)
-    ? zonedEpoch(toParam, '23:59')
+    ? zonedEpoch(toParam, '23:59', zone)
     : (Number.isFinite(+toParam) && +toParam > 0 ? +toParam : Number.MAX_SAFE_INTEGER);
 
   let hasResTable = false;
@@ -454,6 +455,7 @@ export async function onRequestPost({ request, env }) {
   let b; try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const zone = await merchantZone(env, merchant);
   const action = str(b?.action || 'save', 16), existingId = str(b?.id, 64);
   const actor = await resolveStayActor(request, env, merchant, str(b?.terminalId, 96));
 
@@ -569,8 +571,8 @@ export async function onRequestPost({ request, env }) {
     if (dayUse && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(arrivalTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(departureTime) || arrivalTime >= departureTime)) return json({ error: 'invalid-day-use' }, 400);
     if (old && !!old.hotel.dayUse !== dayUse) return json({ error: 'stay-mode-locked' }, 409);
     if (dayUse && old?.hotel?.feedId) return json({ error: 'feed-day-use-unsupported' }, 409);
-    const startAt = zonedEpoch(checkIn, arrivalTime), endAt = zonedEpoch(checkOut, departureTime);
-    if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt) return json({ error: 'invalid-day-use' }, 400);
+    const startAt = zonedEpoch(checkIn, arrivalTime, zone), endAt = zonedEpoch(checkOut, departureTime, zone);
+    if (!startAt || !endAt || !Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt) return json({ error: 'invalid-day-use' }, 400);
     if (!old) {
       // Future stays may live only in D1. publicRef is stored in raw_json,
       // not a public_ref column; never let pruning defeat the form's retry key.
@@ -648,7 +650,7 @@ export async function onRequestPost({ request, env }) {
     let room = null;
     if (hasResTable) {
       if (askedRoom) {
-        const candidate = hotel.rooms.find((r) => r.id === askedRoom && r.typeId === typeId && currentRoomFree(hotel, r, startAt, endAt) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+        const candidate = hotel.rooms.find((r) => r.id === askedRoom && r.typeId === typeId && currentRoomFree(hotel, r, startAt, endAt, zone) && roomFree(doc, hotel, r, startAt, endAt, existingId, zone));
         if (!candidate) return json({ error: 'room-unavailable' }, 409);
         let isFree = false;
         try {
@@ -665,12 +667,12 @@ export async function onRequestPost({ request, env }) {
         } catch (_) {
           return json({ error: 'service-unavailable' }, 503);
         }
-        const candidates = hotel.rooms.filter((r) => r.typeId === typeId && !busyRooms.has(r.id) && currentRoomFree(hotel, r, startAt, endAt) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+        const candidates = hotel.rooms.filter((r) => r.typeId === typeId && !busyRooms.has(r.id) && currentRoomFree(hotel, r, startAt, endAt, zone) && roomFree(doc, hotel, r, startAt, endAt, existingId, zone));
         if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
         room = candidates[0];
       }
     } else {
-      const candidates = hotel.rooms.filter((r) => r.typeId === typeId && (!askedRoom || r.id === askedRoom) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+      const candidates = hotel.rooms.filter((r) => r.typeId === typeId && (!askedRoom || r.id === askedRoom) && roomFree(doc, hotel, r, startAt, endAt, existingId, zone));
       if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
       room = candidates[0];
     }
