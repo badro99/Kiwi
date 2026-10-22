@@ -52,6 +52,11 @@ const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
  * mais un client qui déraille ne doit pas pouvoir gonfler la ligne. Toute forme
  * inattendue est ramenée à du vide plutôt que rejetée — sauf le garde-fou de
  * forme dans onRequestPost, qui refuse un document qui n'est pas un catalogue. */
+/* Les bornes du document, partagées par sanitize() (garde-fou en lecture) et
+ * onRequestPost (refus explicite en écriture). */
+const CATALOG_LIMITS = [['categories', 200], ['products', 5000], ['variants', 20000]];
+const LIMIT = Object.fromEntries(CATALOG_LIMITS);
+
 function sanitize(raw) {
   const out = { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {}, moves: [] };
   if (!raw || typeof raw !== 'object') return out;
@@ -111,7 +116,7 @@ function sanitize(raw) {
   // `colorLabel`/`colorHex` (l'étiquette couleur affichée) et surtout le drapeau
   // `primary` d'un code-barres (celui qu'on imprime sur l'étiquette) en font
   // partie — les perdre casserait l'impression sans rien afficher d'anormal.
-  out.categories = (Array.isArray(raw.categories) ? raw.categories.slice(0, 200) : [])
+  out.categories = (Array.isArray(raw.categories) ? raw.categories.slice(0, LIMIT.categories) : [])
     .map((c) => ({
       id: str(c && c.id, 40),
       name: str(c && c.name, 80),
@@ -121,7 +126,7 @@ function sanitize(raw) {
     }))
     .filter((c) => c.id);
 
-  out.products = (Array.isArray(raw.products) ? raw.products.slice(0, 5000) : [])
+  out.products = (Array.isArray(raw.products) ? raw.products.slice(0, LIMIT.products) : [])
     .map((p) => ({
       id: str(p && p.id, 40),
       legacyId: str(p && p.legacyId, 40),
@@ -152,7 +157,7 @@ function sanitize(raw) {
     }))
     .filter((p) => p.id && p.name);
 
-  out.variants = (Array.isArray(raw.variants) ? raw.variants.slice(0, 20000) : [])
+  out.variants = (Array.isArray(raw.variants) ? raw.variants.slice(0, LIMIT.variants) : [])
     .map((v) => ({
       id: str(v && v.id, 40),
       productId: str(v && v.productId, 40),
@@ -451,6 +456,16 @@ export async function onRequestPost(context) {
    * sales. */
   if (Array.isArray(raw.moves) && raw.moves.length > 12000) {
     return json({ error: 'moves-uncompacted', max: 12000 }, 413);
+  }
+  /* Même règle pour les bornes du catalogue lui-même : sanitize() coupait en
+   * silence au-delà de 200 catégories, 5 000 produits et 20 000 déclinaisons, et
+   * le serveur répondait « ok » — l'article 5 001 disparaissait des autres
+   * appareils sans un mot. On refuse, en nommant la borne : le client garde sa
+   * copie locale et le dit au commerçant. */
+  for (const [field, max] of CATALOG_LIMITS) {
+    if (Array.isArray(raw[field]) && raw[field].length > max) {
+      return json({ error: 'catalog-too-large', field, max, count: raw[field].length }, 413);
+    }
   }
 
   const data = sanitize(raw);

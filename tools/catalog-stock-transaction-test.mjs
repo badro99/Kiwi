@@ -4,7 +4,9 @@ import retailSource from './pos-retail-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { __test as T } from '../functions/api/catalog.js';
+import { __test as T, onRequestPost as catalogPost } from '../functions/api/catalog.js';
+import { fixture } from './server-money-fixture.mjs';
+import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0;
@@ -89,5 +91,34 @@ ok(client.includes("reason === 'catalog-missing'") && client.includes("reason ==
   'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');
 ok(/state\.checkoutBusy \|\| \(root && \$\$\('\.modal-veil\.is-open'/.test(pos),
   'la douchette ne peut pas modifier un ticket derrière le paiement');
+
+/* Bornes du document : refus explicite (413), jamais une troncature muette.
+ * sanitize() coupait à 200 catégories, 5 000 produits, 20 000 déclinaisons et
+ * le serveur répondait « ok » : l'article 5 001 n'atteignait jamais l'autre
+ * appareil. */
+{
+  const f = await fixture(ROOT);
+  try {
+    const cookie = `${SESS_COOKIE}=${await makeSession('money-owner', f.env.AUTH_SECRET)}`;
+    const post = async (data, baseRev = 0) => {
+      const res = await catalogPost({ request: new Request('https://kiwi.test/api/catalog', { method: 'POST',
+        headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant: f.merchant, baseRev, data }) }), env: f.env, waitUntil() {} });
+      return { status: res.status, j: await res.json() };
+    };
+    const doc = (n = {}) => ({ v: 2, seq: 1, removed: {}, moves: [],
+      categories: Array.from({ length: n.c || 0 }, (_, i) => ({ id: 'c' + i, name: 'C' + i })),
+      products: Array.from({ length: n.p || 0 }, (_, i) => ({ id: 'p' + i, name: 'P' + i, priceMAD: 10 })),
+      variants: Array.from({ length: n.v || 0 }, (_, i) => ({ id: 'v' + i, productId: 'p0', colorId: 'noir', size: 'S', stock: 1 })) });
+    const rows = () => f.sql.prepare('SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ?').get(f.merchant).n;
+    for (const [field, key, max] of [['products', 'p', 5000], ['variants', 'v', 20000], ['categories', 'c', 200]]) {
+      const r = await post(doc({ p: 1, [key]: max + 1 }));
+      ok(r.status === 413 && r.j.error === 'catalog-too-large' && r.j.field === field && r.j.max === max && r.j.count === max + 1,
+        `${max + 1} ${field} : refus 413 explicite (catalog-too-large), pas de troncature — obtenu ${r.status} ${JSON.stringify(r.j).slice(0, 120)}`);
+      eq(rows(), 0, `${field} hors borne : rien n'est écrit en ligne`);
+    }
+    const atMax = await post(doc({ p: 5000, v: 1, c: 200 }));
+    ok(atMax.status === 200 && atMax.j.products === 5000, 'exactement 5 000 produits et 200 catégories passent, entiers');
+  } finally { f.close(); }
+}
 
 if (!process.exitCode) console.log(`✓ stock boutique transactionnel : ${pass} contrôles`);

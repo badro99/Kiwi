@@ -672,6 +672,34 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
       .catch(() => false);   // hors ligne → la copie locale reste la vérité
   }
 
+  /* Un refus 413 du serveur (functions/api/catalog.js : « catalog-too-large »
+     ou « moves-uncompacted »). Un seul avertissement par borne et par page : la
+     remontée suivante retombera sur le même refus tant que rien ne change. */
+  const tooLargeSaid = Object.create(null);
+  function tooLarge(j) {
+    const field = String(j.field || j.error || 'catalog');
+    cloud.refused = { error: String(j.error || 'too-large'), field, max: +j.max || 0, count: +j.count || 0 };
+    if (tooLargeSaid[field]) return;
+    tooLargeSaid[field] = 1;
+    let lang = 'fr';
+    try { lang = localStorage.getItem('kiwiLang') || (document.documentElement && document.documentElement.lang) || 'fr'; } catch (_) {}
+    const L = lang === 'en' ? 1 : lang === 'ar' ? 2 : 0;
+    const max = String(+j.max || 0).replace(/\B(?=(\d{3})+(?!\d))/g, L === 1 ? ',' : ' ');
+    const what = ({
+      products: ['produits', 'products', 'منتج'],
+      variants: ['déclinaisons', 'variants', 'متغير'],
+      categories: ['catégories', 'categories', 'فئة'],
+    }[field] || ['mouvements de stock', 'stock movements', 'حركة مخزون'])[L];
+    const title = ['Catalogue non synchronisé', 'Catalogue not synced', 'لم تتم مزامنة الكتالوج'][L];
+    const desc = [
+      'Plus de ' + max + ' ' + what + ' : le serveur refuse ce catalogue. Tout reste sur cet appareil. Archivez ou supprimez des articles, puis réessayez.',
+      'More than ' + max + ' ' + what + ': the server refuses this catalogue. Everything stays on this device. Archive or delete items, then try again.',
+      'أكثر من ' + max + ' ' + what + ': الخادم يرفض هذا الكتالوج. تبقى كل البيانات على هذا الجهاز. أرشف بعض المنتجات أو احذفها ثم أعد المحاولة.',
+    ][L];
+    try { window.Kiwi && window.Kiwi.toast && window.Kiwi.toast(title, { type: 'error', force: true, desc }); } catch (_) {}
+    try { window.dispatchEvent && window.dispatchEvent(new CustomEvent('kiwi:catalog-refused', { detail: cloud.refused })); } catch (_) {}
+  }
+
   function schedulePush(delay) {
     if (!cloudOn()) return;
     if (!cloud.dirty || !dirtyToken(core.VENUE)) markCatalogDirty();
@@ -706,6 +734,7 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
              drapeau baissé sur un envoi refusé perdrait la vente silencieusement. */
           clearCatalogDirty(slug, sentDirty);
           cloud.tries = 0;
+          if (cloud.refused) { cloud.refused = null; Object.keys(tooLargeSaid).forEach((k) => { delete tooLargeSaid[k]; }); }
           return;
         }
         // 409 : le serveur a bougé (ou a refusé un envoi vide). Il nous rend sa
@@ -720,6 +749,10 @@ window.__kiwiBoutiqueCatalogParts.sync = function (core, ledger) {
           persist(); writeRev(slug, cloud.rev); healSeq(); notify();
           cloud.again = true;
         }
+        // 413 : le catalogue dépasse une borne du serveur. Rien n'a été écrit en
+        // ligne ; la copie locale reste entière, le drapeau « à remonter » aussi.
+        // Le serveur ne tronque plus en silence : on le dit au commerçant.
+        if (res.status === 413) { tooLarge(res.j || {}); return; }
         // 401 / 503 / 500 → on garde tout en local et on retentera plus tard.
       })
       .catch(() => { /* hors ligne : la vente continue, la remontée attendra */ })

@@ -424,8 +424,39 @@ const vr = (stock, stockAt) => ({ id: 'var_1', productId: 'prod_1', size: 'M', s
   ok(C._ahead().theirs === true, 'mais elle est bien apprise');
 }
 
+/* ═══ UN REFUS 413 SE VOIT ════════════════════════════════════════════════
+ * Le serveur refuse maintenant un catalogue hors bornes (catalog-too-large)
+ * au lieu de le tronquer en silence. Le client doit le dire au commerçant, une
+ * fois, et garder sa copie locale « à remonter ». */
+async function tooLargeIsShown() {
+  const toasts = [], posts = [];
+  const w = makeWindow({ fetch: (url, init) => {
+    if (init && init.method === 'POST') {
+      posts.push(url);
+      return Promise.resolve({ ok: false, status: 413, json: () => Promise.resolve({ error: 'catalog-too-large', field: 'products', max: 5000, count: 5001 }) });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ merchant: 'grand-store', data: null, rev: 0 }) });
+  } });
+  w.Kiwi = { toast: (title, o) => toasts.push({ title, desc: (o || {}).desc, type: (o || {}).type }) };
+  load(w, 'assets/barcode.js');
+  load(w, 'assets/color-palette.js');
+  load(w, 'assets/boutique-catalog.js');
+  const cat = w.KiwiBoutiqueCatalog;
+  cat.use('grand-store');
+  await new Promise((r) => setTimeout(r, 20));
+  cat.addProduct({ name: 'Polo', priceMAD: 100 });
+  for (let i = 0; i < 60 && !posts.length; i++) await new Promise((r) => setTimeout(r, 50));
+  await new Promise((r) => setTimeout(r, 20));
+  ok(posts.length >= 1, 'le catalogue tente sa remontée');
+  ok(toasts.length === 1 && toasts[0].type === 'error' && /5 000 produits/.test(toasts[0].desc || '') && !/—/.test(toasts[0].desc + toasts[0].title),
+    'un catalogue refusé (413 catalog-too-large) est annoncé au commerçant, avec la borne : ' + JSON.stringify(toasts));
+  ok(!!w.localStorage.getItem('kiwiCatalogDirty:v1:grand-store'), 'la copie locale reste « à remonter » après le refus');
+}
+
+tooLargeIsShown().catch((e) => ok(false, 'refus 413 : ' + (e && e.message))).then(() => {
 if (fail) {
   console.log(`\n  ${fail} contrôle(s) en échec sur ${pass + fail}`);
   process.exit(1);
 }
 console.log(`  ✓ fusion du catalogue boutique (${pass} contrôles : la vente remonte, la suppression tient, ce que l'autre ajoute arrive)`);
+});
