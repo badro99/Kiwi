@@ -106,14 +106,6 @@
       "label": "LQ-1"
     },
     {
-      "suite": "menu-analysis-properties-test.mjs",
-      "label": "MA-1 deep acyclic recipes"
-    },
-    {
-      "suite": "menu-analysis-properties-test.mjs",
-      "label": "MA-2 manual cost behind an uncosted recipe"
-    },
-    {
       "suite": "operator-properties-test.mjs",
       "label": "operators can read staff codes in the console list (Afficher button; owner decision, codes stay operator-readable like the team doc)"
     },

@@ -261,8 +261,14 @@
     // 1 · fiche technique (phase 6 — le crochet existe, le moteur viendra)
     const rec = key && d.recipes ? d.recipes[key] : null;
     if (rec && rec.status === 'complete') {
-      const c = recipeCost(rec, d);
+      const c = recipeCost(rec, d, key);
       if (c != null) return { mad: r2(c), src: 'recipe', at: +rec.at || 0 };
+      /* Une fiche déclarée complète qui ne se chiffre plus (un prix d'achat
+       * effacé depuis, une sous-recette perdue) ne retombe PAS sur le coût
+       * forfaitaire tapé pour le plat : la fiche a pris la main, et le chiffre
+       * à la louche qu'elle remplaçait afficherait une marge qui a l'air
+       * mesurée. On dit « non chiffré », et la fiche indique quoi compléter. */
+      return { mad: null, src: null, at: 0 };
     }
 
     // 2 · le prix d'achat d'un produit boutique, déjà saisi et déjà synchronisé
@@ -294,18 +300,35 @@
   /* Coût d'une fiche technique. Rend null dès qu'UN ingrédient manque : une
    * fiche à moitié chiffrée qui rendrait un coût partiel serait pire qu'aucune
    * — elle donnerait une marge trop belle, avec l'air d'être mesurée. */
-  function recipeCost(rec, d, depth) {
-    if (!rec || !Array.isArray(rec.lines) || !rec.lines.length) return null;
-    if ((depth || 0) > 3) return null;              // garde-fou anti-boucle
+  function recipeCost(rec, d, key) {
     const ing = new Map();
     (d.ingredients || []).forEach((x) => { if (x && x.id) ing.set(String(x.id), x); });
+    return recipeCostIn(rec, d, ing, new Set(key ? [String(key)] : []), new Map());
+  }
+  /* Aucune limite de profondeur : une sauce dans une base dans une garniture
+   * dans un plat se chiffre jusqu'au bout. Seul un cycle (une recette qui se
+   * contient elle-même, directement ou par détour) s'arrête, sur `path`, la
+   * chaîne en cours de descente. `memo` garde le coût de chaque sous-recette
+   * déjà calculée, pour qu'un losange de sous-recettes partagées ne se
+   * recalcule pas en exponentielle. */
+  function recipeCostIn(rec, d, ing, path, memo) {
+    if (!rec || !Array.isArray(rec.lines) || !rec.lines.length) return null;
     let sum = 0;
     for (const ln of rec.lines) {
       if (!ln) return null;
       if (ln.sub) {
-        const sr = d.recipes && d.recipes[String(ln.sub)];
+        const sid = String(ln.sub);
+        const sr = d.recipes && d.recipes[sid];
         if (!sr || sr.status !== 'complete') return null;
-        const c = recipeCost(sr, d, (depth || 0) + 1);
+        if (path.has(sid)) return null;              // cycle : jamais de valeur
+        let c;
+        if (memo.has(sid)) c = memo.get(sid);
+        else {
+          path.add(sid);
+          c = recipeCostIn(sr, d, ing, path, memo);
+          path.delete(sid);
+          memo.set(sid, c);
+        }
         if (c == null) return null;
         sum += c * (+ln.qty || 0);
         continue;

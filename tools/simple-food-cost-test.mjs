@@ -42,6 +42,10 @@ const document = {
   addEventListener: (t, fn) => { (listeners[t] ||= []).push(fn); },
 };
 const nav = { onLine: true };
+/* localStorage partagé : c'est lui qui survit au « rechargement » simulé plus bas. */
+const disk = new Map();
+const makeStorage = () => ({ getItem: (k) => (disk.has(k) ? disk.get(k) : null), setItem: (k, v) => { disk.set(k, String(v)); }, removeItem: (k) => { disk.delete(k); } });
+disk.set('kiwiAccountKey', 'Owner@Resto.ma');
 const calls = [];
 let reply = () => ({ status: 200, body: { enabled: true, canEdit: true, sheets: [] } });
 const fetch = async (url, opts) => {
@@ -63,7 +67,7 @@ const win = {
   confirm: () => confirmAnswer,
 };
 win.window = win;
-const ctx = vm.createContext({ window: win, document, navigator: nav, fetch, console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, Blob: class { constructor(p) { this.p = p; } } });
+const ctx = vm.createContext({ window: win, document, navigator: nav, fetch, localStorage: makeStorage(), console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, Blob: class { constructor(p) { this.p = p; } } });
 vm.runInContext(R('assets/restaurant-units.js'), ctx, { filename: 'restaurant-units.js' });
 vm.runInContext(R('assets/simple-food-cost.js'), ctx, { filename: 'simple-food-cost.js' });
 const F = win.KiwiSimpleFoodCost;
@@ -166,8 +170,49 @@ ok(calls.filter((x) => x.body && x.body.action === 'save').pop().body.baseVersio
 nav.onLine = false;
 await click({ 'data-sfc': 'save' });
 ok(/Hors ligne/.test(root.innerHTML), 'hors ligne : le calcul reste, l’enregistrement attend');
+
+/* hors ligne, puis rechargement : la saisie n'est pas perdue */
+input('sheet.portions', '6', null);
+await click({ 'data-sfc': 'save' });
+const DKEY = 'kiwi:sfcDraft:owner@resto.ma@resto-test';
+const kept = JSON.parse(disk.get(DKEY) || 'null');
+ok(kept && kept.draft.portions === 6 && kept.pendingSave === true && kept.openId === 'fc-1' && kept.baseVersion === 5,
+  'hors ligne : la saisie non enregistrée (6 portions) est gardée sur l’appareil, par compte et par magasin, avec la demande d’enregistrement', disk.get(DKEY));
+/* Un second exemplaire du module, sur le même stockage : c'est un rechargement. */
+async function reboot(account, answer) {
+  disk.set('kiwiAccountKey', account);
+  const L = {}, out = { calls: [], root: stub(), L };
+  out.root.querySelector = () => null;
+  const doc2 = { ...document, querySelector: (sel) => (sel === '[data-sfc-root]' ? out.root : null), addEventListener: (t, fn) => { (L[t] ||= []).push(fn); } };
+  const w2 = { ...win, KiwiConfig: { features: { simple_food_cost: true } }, KiwiI18n: { getLang: () => 'fr' }, addEventListener: (t, fn) => { (L['w:' + t] ||= []).push(fn); } };
+  delete w2.KiwiSimpleFoodCost; delete w2.KiwiRestaurantUnits;
+  w2.window = w2;
+  const f2 = async (url, opts) => { const body = opts && opts.body ? JSON.parse(opts.body) : null; out.calls.push({ url, body }); const r = answer(url, body); return { status: r.status, json: async () => r.body }; };
+  const c2 = vm.createContext({ window: w2, document: doc2, navigator: { onLine: true }, fetch: f2, localStorage: makeStorage(), console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: ctx.URL, Blob: ctx.Blob });
+  vm.runInContext(R('assets/restaurant-units.js'), c2, { filename: 'restaurant-units.js' });
+  vm.runInContext(R('assets/simple-food-cost.js'), c2, { filename: 'simple-food-cost.js' });
+  w2.KiwiSimpleFoodCost.panel();
+  await flush(); await flush(); await flush();
+  return out;
+}
+const SHEET5 = { ...SHEET, version: 5 };
+const other = await reboot('autre@ailleurs.ma', () => ({ status: 200, body: { enabled: true, canEdit: true, sheets: [SHEET5] } }));
+ok(other.calls.length === 1 && /Tajine poulet/.test(other.root.innerHTML) && !/Calcul non enregistré retrouvé/.test(other.root.innerHTML) && !other.calls.some((x) => x.body) && disk.has(DKEY),
+  'un autre compte sur le même navigateur ne retrouve pas la saisie, et ne l’efface pas');
+const back = await reboot('owner@resto.ma', (url, body) => (body && body.action === 'save'
+  ? { status: 200, body: { sheet: { ...SHEET, version: 6, data: body.sheet } } }
+  : { status: 200, body: { enabled: true, canEdit: true, sheets: [SHEET5] } }));
+const resumed = back.calls.find((x) => x.body && x.body.action === 'save');
+ok(resumed && resumed.body.baseVersion === 5 && resumed.body.sheet.id === 'fc-1' && resumed.body.sheet.portions === 6,
+  'après rechargement en ligne : la saisie revient et l’enregistrement demandé hors ligne part, sur la version lue (5)', String(JSON.stringify(resumed ? resumed.body : null)).slice(0, 200));
+ok(/Enregistrée · version 6/.test(back.root.innerHTML) && !disk.has(DKEY), 'enregistrée : la copie locale est effacée', back.root.innerHTML.slice(0, 200));
+disk.set('kiwiAccountKey', 'Owner@Resto.ma');
+
 nav.onLine = true;
+input('sheet.portions', '7', null);
+const typed = disk.has(DKEY);
 await click({ 'data-sfc': 'back' });
+ok(typed && !disk.has(DKEY), 'quitter la fiche en abandonnant la saisie efface la copie locale');
 reply = () => ({ status: 200, body: { enabled: false, canEdit: false, sheets: [SHEET] } });
 await click({ 'data-sfc': 'retry' });
 ok(/data-sfc-state="readonly"/.test(root.innerHTML) && !/Nouvelle fiche/.test(root.innerHTML), 'option éteinte : lecture seule dite, pas de création');

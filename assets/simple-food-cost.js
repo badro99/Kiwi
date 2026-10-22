@@ -38,6 +38,7 @@
       loading: 'Chargement des fiches…', loadError: 'Les fiches n’ont pas pu être lues. Rien n’a été modifié.', retry: 'Réessayer',
       forbidden: 'Réservé au propriétaire du magasin ou à un opérateur Kiwi.',
       offline: 'Hors ligne : vous pouvez calculer, l’enregistrement attendra la connexion.',
+      restored: 'Calcul non enregistré retrouvé sur cet appareil. Enregistrez-le pour le garder.',
       readOnly: 'Option désactivée pour ce magasin : les fiches restent lisibles, rien n’a été effacé.',
       empty: 'Aucune fiche pour l’instant', emptyDesc: 'Créez une fiche pour un plat : prix d’achat, quantités utilisées, emballages. Le coût par portion se calcule pendant la saisie.',
       back: 'Toutes les fiches', name: 'Nom de la fiche', kindTemplate: 'Modèle',
@@ -76,6 +77,7 @@
       loading: 'Loading sheets…', loadError: 'The sheets could not be read. Nothing was changed.', retry: 'Retry',
       forbidden: 'Reserved for the store owner or a Kiwi operator.',
       offline: 'Offline: you can calculate, saving will wait for the connection.',
+      restored: 'Unsaved calculation recovered on this device. Save it to keep it.',
       readOnly: 'This option is turned off for this store: sheets stay readable, nothing was deleted.',
       empty: 'No sheets yet', emptyDesc: 'Create a sheet for a dish: purchase prices, quantities used, packaging. The cost per portion updates as you type.',
       back: 'All sheets', name: 'Sheet name', kindTemplate: 'Template',
@@ -114,6 +116,7 @@
       loading: 'جارٍ تحميل البطاقات…', loadError: 'تعذرت قراءة البطاقات. لم يتغير شيء.', retry: 'إعادة المحاولة',
       forbidden: 'مخصص لصاحب المتجر أو لمشغّل Kiwi.',
       offline: 'غير متصل: يمكنك الحساب، والحفظ ينتظر عودة الاتصال.',
+      restored: 'تم استرجاع حساب غير محفوظ على هذا الجهاز. احفظه للاحتفاظ به.',
       readOnly: 'هذا الخيار متوقف لهذا المتجر: البطاقات تبقى مقروءة، ولم يُحذف شيء.',
       empty: 'لا توجد بطاقات بعد', emptyDesc: 'أنشئ بطاقة لطبق: أسعار الشراء، الكميات المستعملة، التغليف. تُحسب التكلفة لكل حصة أثناء الإدخال.',
       back: 'كل البطاقات', name: 'اسم البطاقة', kindTemplate: 'نموذج',
@@ -218,7 +221,7 @@
   const S = {
     status: 'idle', enabled: false, canEdit: false, sheets: [], merchant: '', showArchived: false,
     openId: null, draft: null, baseVersion: 0, dirty: false, saving: false, message: '', messageKind: '',
-    conflict: null, history: null, snapshot: null,
+    conflict: null, history: null, snapshot: null, pendingSave: false,
   };
   const units = () => window.KiwiRestaurantUnits;
   const convert = (q, a, b) => { try { return units() ? units().convert(q, a, b) : (a === b ? q : null); } catch (_) { return null; } };
@@ -228,6 +231,37 @@
     try { return (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug()) || (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).slug) || ''; } catch (_) { return ''; }
   }
   const online = () => { try { return navigator.onLine !== false; } catch (_) { return true; } };
+  /* La saisie non enregistrée survit au rechargement. Hors ligne, « l’enregistrement
+     attendra la connexion » doit être vrai : sans copie locale, un rechargement
+     effaçait le calcul en silence. Une clé par compte (kiwiAccountKey) ET par
+     magasin, sous le préfixe `kiwi:` que tenant-purge.js efface au changement de
+     commerçant : la fiche d’un magasin ne réapparaît jamais dans un autre. */
+  function draftKey() {
+    if (!S.merchant) return '';
+    let acct = '';
+    try { acct = String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { acct = ''; }
+    return 'kiwi:sfcDraft:' + acct + '@' + S.merchant;
+  }
+  function rememberDraft() {
+    const k = draftKey();
+    if (!k || !S.draft) return;
+    try {
+      if (S.dirty) localStorage.setItem(k, JSON.stringify({ openId: S.openId, baseVersion: S.baseVersion, draft: S.draft, pendingSave: !!S.pendingSave, at: Date.now() }));
+      else localStorage.removeItem(k);
+    } catch (_) {}
+  }
+  function forgetDraft() { const k = draftKey(); if (k) { try { localStorage.removeItem(k); } catch (_) {} } }
+  function restoreDraft() {
+    const k = draftKey();
+    if (!k || S.draft || !editable()) return false;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { saved = null; }
+    if (!saved || !saved.draft || typeof saved.draft !== 'object' || !Array.isArray(saved.draft.lines)) return false;
+    S.openId = saved.openId || null; S.draft = saved.draft; S.baseVersion = +saved.baseVersion || 0;
+    S.dirty = true; S.pendingSave = !!saved.pendingSave; S.conflict = null; S.history = null; S.snapshot = null;
+    S.message = tr('restored'); S.messageKind = 'warn';
+    return true;
+  }
   function available() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && !window.KiwiEnv.isReal()) return false;
@@ -295,8 +329,12 @@
       else if (r.status !== 200) { S.status = 'error'; }
       else { S.status = 'ready'; S.enabled = r.data.enabled === true; S.canEdit = r.data.canEdit === true; S.sheets = Array.isArray(r.data.sheets) ? r.data.sheets : []; }
     } catch (_) { S.status = online() ? 'error' : 'offline-empty'; }
+    const restored = S.status === 'ready' && restoreDraft();
     paint();
     changed();
+    /* Un enregistrement demandé hors ligne part dès que la connexion est là ;
+       un 409 éventuel passe par l’écran de conflit, comme à la main. */
+    if (restored && S.pendingSave && online()) save(false);
   }
   /* La Performance lit les estimations : elle se redessine quand elles bougent. */
   function changed() { try { window.dispatchEvent(new CustomEvent('kiwi:simple-food-cost')); } catch (_) {} }
@@ -310,7 +348,7 @@
      l'emporte. null tant que les fiches ne sont pas lues : jamais un 0. */
   function estimates() {
     if (!available()) return null;
-    if (S.merchant && S.merchant !== merchant()) { S.status = 'idle'; S.sheets = []; S.draft = null; S.openId = null; }
+    if (S.merchant && S.merchant !== merchant()) { S.status = 'idle'; S.sheets = []; S.draft = null; S.openId = null; S.pendingSave = false; }
     if (S.status === 'idle') { S.status = 'loading'; setTimeout(load, 0); }
     if (S.status !== 'ready') return null;
     const out = {};
@@ -328,13 +366,14 @@
     S.openId = sheet ? sheet.id : null;
     S.draft = sheet ? JSON.parse(JSON.stringify(sheet.data)) : blankSheet();
     S.baseVersion = sheet ? sheet.version : 0;
-    S.dirty = !sheet; S.conflict = null; S.history = null; S.snapshot = null; S.message = '';
+    S.dirty = !sheet; S.pendingSave = false; S.conflict = null; S.history = null; S.snapshot = null; S.message = '';
     paint();
   }
   async function save(force) {
     if (!S.draft || S.saving) return;
     if (!String(S.draft.name || '').trim()) { S.message = tr('nameRequired'); S.messageKind = 'warn'; paint(); return; }
-    if (!online()) { S.message = tr('offline'); S.messageKind = 'warn'; paint(); return; }
+    if (!online()) { S.pendingSave = true; S.message = tr('offline'); S.messageKind = 'warn'; paint(); return; }
+    S.pendingSave = false;
     S.saving = true; S.message = ''; paint();
     const base = force && S.conflict ? S.conflict.version : S.baseVersion;
     try {
@@ -489,13 +528,14 @@
   }
   function paint() {
     style();
+    rememberDraft();
     const root = document.querySelector('[data-sfc-root]');
     if (root) root.innerHTML = inner();
   }
   function panel() {
     style();
     if (S.status === 'idle' || (S.merchant && S.merchant !== merchant())) {
-      S.status = 'idle'; S.sheets = []; S.draft = null; S.openId = null;
+      S.status = 'idle'; S.sheets = []; S.draft = null; S.openId = null; S.pendingSave = false;
       setTimeout(load, 0);
     }
     return `<div class="rmw-analysis-panel"><section class="mi-section sfc" data-sfc-root>${inner()}</section></div>`;
@@ -505,6 +545,7 @@
      le champ en cours garde le focus et le curseur. */
   function repaintFigures() {
     const root = document.querySelector('[data-sfc-root]');
+    rememberDraft();
     if (!root || !S.draft) return;
     const c = calc(S.draft);
     c.lines.forEach((r, i) => { const cellEl = root.querySelector(`[data-sfc-linecost="${i}"]`); if (cellEl) cellEl.innerHTML = lineCostCell(r); });
@@ -550,13 +591,13 @@
     if (act === 'open') return openSheet(sheet);
     if (act === 'use-template' && sheet) {
       const d = JSON.parse(JSON.stringify(sheet.data));
-      S.openId = null; S.draft = { ...d, kind: 'sheet', name: tr('copyName', { name: sheet.name }) }; S.baseVersion = 0; S.dirty = true; S.history = null; S.conflict = null; S.message = '';
+      S.openId = null; S.draft = { ...d, kind: 'sheet', name: tr('copyName', { name: sheet.name }) }; S.baseVersion = 0; S.dirty = true; S.pendingSave = false; S.history = null; S.conflict = null; S.message = '';
       return paint();
     }
     if (act === 'toggle-archived') { S.showArchived = !S.showArchived; return paint(); }
     if (act === 'export-all') return exportAll();
     if (act === 'export-sheet') return exportSheet();
-    if (act === 'back') { if (!confirmLeave()) return; S.draft = null; S.openId = null; S.dirty = false; S.history = null; S.message = ''; S.conflict = null; return paint(); }
+    if (act === 'back') { if (!confirmLeave()) return; forgetDraft(); S.pendingSave = false; S.draft = null; S.openId = null; S.dirty = false; S.history = null; S.message = ''; S.conflict = null; return paint(); }
     if (!S.draft) return;
     if (act === 'add-food' || act === 'add-pack') {
       S.draft.lines = S.draft.lines || [];
@@ -582,7 +623,10 @@
     document.addEventListener('input', onInput);
     document.addEventListener('change', onInput);
     document.addEventListener('click', onClick);
-    window.addEventListener('online', () => { if (document.querySelector('[data-sfc-root]')) paint(); });
+    window.addEventListener('online', () => {
+      if (S.pendingSave && S.dirty && S.draft && editable()) { save(false); return; }
+      if (document.querySelector('[data-sfc-root]')) paint();
+    });
     window.addEventListener('offline', () => { if (document.querySelector('[data-sfc-root]')) paint(); });
     window.addEventListener('kiwi:langchange', () => { if (document.querySelector('[data-sfc-root]')) paint(); });
     /* L'option arrive avec /api/config : l'onglet apparaît sans recharger. */
