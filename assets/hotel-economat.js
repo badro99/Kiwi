@@ -13,17 +13,17 @@
     fr: {
       title:'Économat', eyebrow:'STOCK CENTRAL · HÔTEL', intro:'Linge, boissons, produits d’accueil et consommables, avec les réceptions et mouvements en attente au même endroit.',
       sync:'Synchroniser', receive:'Réceptionner', products:'Articles suivis', low:'Stock bas', queued:'Mouvements en attente', orders:'Commandes ouvertes', stock:'Stock disponible', stockSub:'Quantités du périmètre autorisé', activity:'Réceptions & commandes', activitySub:'Dernières opérations d’approvisionnement', noStock:'Aucun stock dans cet Économat', noStockD:'Réceptionnez un premier article pour démarrer le suivi.', noActivity:'Aucune opération récente', noActivityD:'Les réceptions et commandes fournisseurs apparaîtront ici.',
-      healthy:'Disponible', lowState:'À commander', out:'Rupture', location:'Emplacement', receiptTitle:'Réceptionner une livraison', receiptTag:'BON DE RÉCEPTION', item:'Article ou référence', qty:'Quantité reçue', cost:'Coût unitaire · MAD', supplier:'Fournisseur', reference:'Bon / facture', cancel:'Annuler', confirm:'Ajouter au stock', invalid:'Article, quantité et coût positif requis.', saved:'Réception enregistrée', syncOk:'Stock synchronisé', syncFail:'Synchronisation indisponible', unavailable:'Économat indisponible pour cet établissement', unit:'unité', pending:'En cours', received:'Reçu', outlets:'Points de vente'
+      healthy:'Disponible', lowState:'À commander', out:'Rupture', location:'Emplacement', receiptTitle:'Réceptionner une livraison', receiptTag:'BON DE RÉCEPTION', item:'Article ou référence', qty:'Quantité reçue', cost:'Coût unitaire · MAD', supplier:'Fournisseur', reference:'Bon / facture', cancel:'Annuler', confirm:'Ajouter au stock', invalid:'Article, quantité et coût positif requis.', saved:'Réception enregistrée', syncOk:'Stock synchronisé', syncFail:'Synchronisation indisponible', unavailable:'Économat indisponible pour cet établissement', unit:'unité', pending:'En cours', received:'Reçu', outlets:'Points de vente', hidden:'{n} autres lignes non affichées. Les totaux ci-dessus les comptent.'
     },
     en: {
       title:'Central storeroom', eyebrow:'CENTRAL STOCK · HOTEL', intro:'Linen, drinks, guest supplies and consumables, with receipts and pending movements in one place.',
       sync:'Sync', receive:'Receive delivery', products:'Tracked items', low:'Low stock', queued:'Queued movements', orders:'Open orders', stock:'Available stock', stockSub:'Quantities in the authorised scope', activity:'Receipts & orders', activitySub:'Recent procurement operations', noStock:'No stock in this storeroom', noStockD:'Receive the first item to start tracking it.', noActivity:'No recent operation', noActivityD:'Supplier receipts and orders will appear here.',
-      healthy:'Available', lowState:'Reorder', out:'Out of stock', location:'Location', receiptTitle:'Receive a delivery', receiptTag:'GOODS RECEIPT', item:'Item or reference', qty:'Quantity received', cost:'Unit cost · MAD', supplier:'Supplier', reference:'Delivery note / invoice', cancel:'Cancel', confirm:'Add to stock', invalid:'Item, positive quantity and cost are required.', saved:'Receipt recorded', syncOk:'Stock synced', syncFail:'Sync unavailable', unavailable:'Storeroom unavailable for this property', unit:'unit', pending:'Pending', received:'Received', outlets:'Outlets'
+      healthy:'Available', lowState:'Reorder', out:'Out of stock', location:'Location', receiptTitle:'Receive a delivery', receiptTag:'GOODS RECEIPT', item:'Item or reference', qty:'Quantity received', cost:'Unit cost · MAD', supplier:'Supplier', reference:'Delivery note / invoice', cancel:'Cancel', confirm:'Add to stock', invalid:'Item, positive quantity and cost are required.', saved:'Receipt recorded', syncOk:'Stock synced', syncFail:'Sync unavailable', unavailable:'Storeroom unavailable for this property', unit:'unit', pending:'Pending', received:'Received', outlets:'Outlets', hidden:'{n} more rows not shown. The totals above include them.'
     },
     ar: {
       title:'المخزن المركزي', eyebrow:'المخزون المركزي · الفندق', intro:'البياضات والمشروبات ولوازم الضيوف والمواد الاستهلاكية، مع الاستلامات والحركات المعلّقة في مكان واحد.',
       sync:'مزامنة', receive:'استلام توريد', products:'المواد المتتبعة', low:'مخزون منخفض', queued:'حركات معلّقة', orders:'طلبات مفتوحة', stock:'المخزون المتاح', stockSub:'الكميات ضمن النطاق المسموح', activity:'الاستلامات والطلبات', activitySub:'آخر عمليات التوريد', noStock:'لا يوجد مخزون في هذا المستودع', noStockD:'استلم أول مادة لبدء التتبع.', noActivity:'لا توجد عملية حديثة', noActivityD:'ستظهر الاستلامات وطلبات الموردين هنا.',
-      healthy:'متاح', lowState:'يجب طلبه', out:'نفد', location:'الموقع', receiptTitle:'استلام توريد', receiptTag:'وصل استلام', item:'المادة أو المرجع', qty:'الكمية المستلمة', cost:'تكلفة الوحدة · درهم', supplier:'المورد', reference:'وصل / فاتورة', cancel:'إلغاء', confirm:'إضافة للمخزون', invalid:'المادة والكمية والتكلفة الإيجابية مطلوبة.', saved:'تم تسجيل الاستلام', syncOk:'تمت مزامنة المخزون', syncFail:'المزامنة غير متاحة', unavailable:'المخزن غير متاح لهذا الفندق', unit:'وحدة', pending:'قيد المعالجة', received:'مستلم', outlets:'نقاط البيع'
+      healthy:'متاح', lowState:'يجب طلبه', out:'نفد', location:'الموقع', receiptTitle:'استلام توريد', receiptTag:'وصل استلام', item:'المادة أو المرجع', qty:'الكمية المستلمة', cost:'تكلفة الوحدة · درهم', supplier:'المورد', reference:'وصل / فاتورة', cancel:'إلغاء', confirm:'إضافة للمخزون', invalid:'المادة والكمية والتكلفة الإيجابية مطلوبة.', saved:'تم تسجيل الاستلام', syncOk:'تمت مزامنة المخزون', syncFail:'المزامنة غير متاحة', unavailable:'المخزن غير متاح لهذا الفندق', unit:'وحدة', pending:'قيد المعالجة', received:'مستلم', outlets:'نقاط البيع', hidden:'{n} سطرًا إضافيًا غير معروض، والمجاميع أعلاه تحتسبها.'
     }
   };
 
@@ -35,6 +35,28 @@
   function qty(value) { var n = Number(value); return Number.isFinite(n) ? n : 0; }
   function fmt(value) { return qty(value).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits:3 }); }
 
+  /* Seuil de repli quand l'article n'a pas de seuil de réapprovisionnement
+   * renseigné dans le catalogue du stock. */
+  var LOW_FALLBACK = 5;
+  /* Seule la liste affichée est bornée ; les compteurs lisent toutes les lignes. */
+  var DISPLAY_LIMIT = 120;
+
+  /* Catalogue du stock (assets/stock.js) indexé par id : nom, unité et seuil
+   * de réapprovisionnement propres à chaque article. */
+  function catalogueIndex() {
+    var list;
+    try { list = window.KiwiStockOperatingDay && window.KiwiStockOperatingDay.catalogue ? window.KiwiStockOperatingDay.catalogue() : []; } catch (_) { list = []; }
+    var map = Object.create(null);
+    (Array.isArray(list) ? list : []).forEach(function (item) {
+      if (item && typeof item === 'object' && item.id != null && !(String(item.id) in map)) map[String(item.id)] = item;
+    });
+    return map;
+  }
+  function reorderLevel(item) { var n = Number(item && item.reorderLevel); return Number.isFinite(n) && n > 0 ? n : null; }
+  /* Même règle que la page Stock (stockAlertState) : bas sous le seuil de
+   * l'article ; sans seuil, l'ancienne règle « 5 ou moins » s'applique. */
+  function isLow(row) { return row.threshold != null ? row.qty < row.threshold : row.qty <= LOW_FALLBACK; }
+
   function inventoryRows() {
     var inv = window.KiwiInventory;
     var raw;
@@ -45,13 +67,21 @@
       source = Object.keys(map).filter(function (key) {
         var value = map[key];
         return typeof value === 'number' || (value && typeof value === 'object' && ('itemId' in value || 'qty' in value || 'balance' in value || 'onHand' in value));
-      }).map(function (key) { var value = map[key]; return typeof value === 'number' ? { itemId:key.split('|')[0], qty:value } : Object.assign({ itemId:key.split('|')[0] }, value); });
+      }).map(function (key) {
+        /* Clé du registre : article|variante|emplacement. */
+        var parts = key.split('|'), value = map[key], base = { itemId:parts[0], locationId:parts[2] || '' };
+        return typeof value === 'number' ? Object.assign(base, { qty:value }) : Object.assign(base, value);
+      });
     }
+    var catalogue = catalogueIndex();
     return (source || []).map(function (row, index) {
       row = row && typeof row === 'object' ? row : {};
       var id = String(row.itemId || row.id || row.sku || ('article-' + (index + 1))).slice(0, 100);
-      return { id:id, name:String(row.name || row.itemName || row.label || id).slice(0, 140), location:String(row.locationId || row.location || '').slice(0, 100), qty:qty(row.qty != null ? row.qty : row.balance != null ? row.balance : row.onHand != null ? row.onHand : row.quantity) };
-    }).sort(function (a, b) { return (a.qty <= 5 ? -1 : 1) - (b.qty <= 5 ? -1 : 1) || a.name.localeCompare(b.name); }).slice(0, 120);
+      var item = catalogue[id] || null;
+      var out = { id:id, name:String((item && item.name) || row.name || row.itemName || row.label || id).slice(0, 140), unit:String((item && item.unit) || row.unit || '').slice(0, 40), location:String(row.locationId || row.location || '').slice(0, 100), qty:qty(row.qty != null ? row.qty : row.balance != null ? row.balance : row.onHand != null ? row.onHand : row.quantity), threshold:reorderLevel(item) };
+      out.low = isLow(out);
+      return out;
+    }).sort(function (a, b) { return (a.low ? -1 : 1) - (b.low ? -1 : 1) || a.name.localeCompare(b.name); });
   }
 
   function procurement() {
@@ -64,20 +94,21 @@
     var doc = procurement();
     var orders = Array.isArray(doc.orders) ? doc.orders : [];
     var receipts = Array.isArray(doc.receipts) ? doc.receipts : [];
-    return { rows:rows, low:rows.filter(function (row) { return row.qty <= 5; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
+    return { rows:rows, shown:rows.slice(0, DISPLAY_LIMIT), low:rows.filter(function (row) { return row.low; }).length, queued:inv && inv.pending ? qty(inv.pending()) : 0, orders:orders, receipts:receipts, openOrders:orders.filter(function (order) { return ['draft','sent','partial'].indexOf(order && order.status) >= 0; }).length, location:inv && inv.locationId ? String(inv.locationId() || '') : '' };
   }
 
   function pill(row, T) {
     if (row.qty <= 0) return '<span class="hx-pill late hx-eco-state">' + esc(T.out) + '</span>';
-    if (row.qty <= 5) return '<span class="hx-pill pend hx-eco-state">' + esc(T.lowState) + '</span>';
+    if (row.low) return '<span class="hx-pill pend hx-eco-state">' + esc(T.lowState) + '</span>';
     return '<span class="hx-pill ok hx-eco-state">' + esc(T.healthy) + '</span>';
   }
 
   function stockHtml(s, T) {
     if (!s.rows.length) return '<div class="hx-eco-empty"><b>' + esc(T.noStock) + '</b><p>' + esc(T.noStockD) + '</p></div>';
-    return '<div class="hx-eco-table">' + s.rows.map(function (row) {
-      return '<div class="hx-eco-row"><div class="hx-eco-item"><b>' + esc(row.name) + '</b><small>' + esc(row.id) + (row.location ? ' · ' + esc(row.location) : '') + '</small></div><div class="hx-eco-qty">' + fmt(row.qty) + '</div>' + pill(row, T) + '</div>';
-    }).join('') + '</div>';
+    var hidden = s.rows.length - s.shown.length;
+    return '<div class="hx-eco-table">' + s.shown.map(function (row) {
+      return '<div class="hx-eco-row"><div class="hx-eco-item"><b>' + esc(row.name) + '</b><small>' + esc(row.id) + (row.unit ? ' · ' + esc(row.unit) : '') + (row.location ? ' · ' + esc(row.location) : '') + '</small></div><div class="hx-eco-qty">' + fmt(row.qty) + '</div>' + pill(row, T) + '</div>';
+    }).join('') + '</div>' + (hidden > 0 ? '<p class="hx-eco-more" role="note">' + esc(T.hidden.replace('{n}', fmt(hidden))) + '</p>' : '');
   }
 
   function activityHtml(s, T) {
@@ -117,7 +148,7 @@
   };
 
   handlers['eco-receive'] = function () {
-    var T = text(), rows = inventoryRows();
+    var T = text(), rows = inventoryRows().slice(0, DISPLAY_LIMIT);
     modalRef = Kiwi.modal({
       tag:T.receiptTag, title:T.receiptTitle, width:580,
       body:'<div class="hx-eco-form"><label class="wide">' + esc(T.item) + '<input id="eco-item" list="eco-items" autocomplete="off"><datalist id="eco-items">' + rows.map(function (row) { return '<option value="' + esc(row.id) + '">' + esc(row.name) + '</option>'; }).join('') + '</datalist></label><label>' + esc(T.qty) + '<input id="eco-qty" type="number" min="0.001" step="0.001" inputmode="decimal"></label><label>' + esc(T.cost) + '<input id="eco-cost" type="number" min="0.01" step="0.01" inputmode="decimal"></label><label>' + esc(T.supplier) + '<input id="eco-supplier" autocomplete="organization"></label><label>' + esc(T.reference) + '<input id="eco-ref" autocomplete="off"></label></div>',

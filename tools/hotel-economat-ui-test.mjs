@@ -2,9 +2,10 @@
 import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
-const EXPECTED = 14;
+const EXPECTED = 17;
 let checks = 0;
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
 
@@ -75,6 +76,57 @@ await check('the storeroom hero stays readable whatever the skin does to --mint 
   // Light Vexel sets --mint to atlas green and dark sets --paper to black: none may colour this surface.
   assert.doesNotMatch(hero, /var\(--(mint|paper|riad|atlas)\)/);
   assert.match(css, /\[data-theme="dark"\] \.hx-pill\.ok \{ color: var\(--mint\); \}/);
+});
+
+/* L'écran Économat exécuté pour de vrai (vm, sans navigateur) : on lit les
+ * compteurs et la liste qu'il rend à partir d'un registre et d'un catalogue. */
+const economatSource = fs.readFileSync('assets/hotel-economat.js', 'utf8');
+function renderEconomat({ snapshot, catalogue = [] }) {
+  const pages = [];
+  const window = {
+    Kiwi: { handlers: {}, appPage: (id, page) => pages.push(page), toast: () => {}, activePage: 'economat' },
+    KiwiVenue: { getCurrentVenueData: () => ({ type: 'hotel', name: 'Hôtel test' }) },
+    KiwiInventory: { snapshot: () => snapshot, pending: () => 0, locationId: () => 'u-economat' },
+    KiwiProcurement: { doc: () => ({}) },
+    KiwiStockOperatingDay: { catalogue: () => catalogue },
+  };
+  vm.runInNewContext(economatSource, { window });
+  window.Kiwi.handlers['nav-economat']();
+  const body = pages.at(-1).body;
+  const kpi = (label) => Number(body.match(new RegExp('<div class="l">' + label + '</div><div class="v">(\\d+)</div>'))?.[1]);
+  return { body, tracked: kpi('Articles suivis'), low: kpi('Stock bas'), rows: (body.match(/class="hx-eco-row"/g) || []).length };
+}
+
+await check('counts read every storeroom row; only the list is bounded and says how many it hides', async () => {
+  const snapshot = {};
+  for (let i = 0; i < 150; i += 1) snapshot[`item-${String(i).padStart(3, '0')}||u-economat`] = i < 130 ? 2 : 50;
+  const view = renderEconomat({ snapshot });
+  assert.equal(view.tracked, 150);
+  assert.equal(view.low, 130);
+  assert.equal(view.rows, 120);
+  assert.match(view.body, /30 autres lignes non affichées/);
+  assert.doesNotMatch(renderEconomat({ snapshot: { 'a||u-economat': 1 } }).body, /non affichées/);
+});
+await check('low stock follows the item reorder level, the old 5 only when none is set', async () => {
+  const view = renderEconomat({
+    snapshot: { 'draps||u-economat': 30, 'serviettes||u-economat': 8, 'savon||u-economat': 3, 'eau||u-economat': 4 },
+    catalogue: [
+      { id: 'draps', name: 'Draps', unit: 'unite', reorderLevel: 40 },
+      { id: 'serviettes', name: 'Serviettes', unit: 'unite', reorderLevel: 10 },
+      { id: 'savon', name: 'Savon', unit: 'unite', reorderLevel: 2 },
+    ],
+  });
+  // draps 30 < 40 et serviettes 8 < 10 : bas ; savon 3 ≥ 2 : disponible ; eau sans seuil, 4 ≤ 5 : bas.
+  assert.equal(view.low, 3);
+  assert.match(view.body, /<b>Draps<\/b>[^]*?À commander/);
+  assert.match(view.body, /<b>Savon<\/b><small>[^<]*<\/small><\/div><div class="hx-eco-qty">3<\/div><span class="hx-pill ok/);
+});
+await check('rows show the catalogue name, unit and ledger location, not the bare id', async () => {
+  const view = renderEconomat({
+    snapshot: { 'it-7f3a||u-bar': 12 },
+    catalogue: [{ id: 'it-7f3a', name: 'Eau minérale 1,5 L', unit: 'bouteille' }],
+  });
+  assert.match(view.body, /<b>Eau minérale 1,5 L<\/b><small>it-7f3a · bouteille · u-bar<\/small>/);
 });
 
 assert.equal(checks, EXPECTED, `expected ${EXPECTED} checks, ran ${checks}`);
