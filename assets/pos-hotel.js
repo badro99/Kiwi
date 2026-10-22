@@ -324,12 +324,13 @@
   }
   const POSTED_CHARGE_LOCK = 'Charge déjà enregistrée : modification indisponible sans annulation liée à la vente.';
   function stayTotals(st) {
-    const nuitees = stayRate(st) * st.nights;
-    const taxe = TPT * st.adults * st.nights;
-    const extras = st.charges.reduce((s, c) => s + chargeAmt(c), 0);
+    const nuitees = Math.round(stayRate(st) * 100) * st.nights;
+    const taxe = Math.round(TPT * 100) * st.adults * st.nights;
+    const extras = st.charges.reduce((s, c) => s + Math.round(chargeAmt(c) * 100), 0);
     const total = nuitees + taxe + extras;
-    const paid = st.payments.reduce((s, p) => s + p.amount, 0);
-    return { nuitees, taxe, extras, total, paid, due: Math.max(0, total - paid) };
+    const paid = st.payments.reduce((s, p) => s + Math.round(p.amount * 100), 0);
+    return { nuitees: nuitees / 100, taxe: taxe / 100, extras: extras / 100,
+      total: total / 100, paid: paid / 100, due: Math.max(0, total - paid) / 100 };
   }
   const arrivalForRoom = (n) => ARRIVALS.find((a) => a.room === n && !a.done);
 

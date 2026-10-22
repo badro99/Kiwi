@@ -534,6 +534,17 @@ export async function onRequestPost({ request, env }) {
         if ((await entitledMerchant(request, env, merchant)) !== merchant) {
           return json({ error: 'reopen-forbidden' }, 403);
         }
+        // Reopening consumes capacity again. Unlike an arrival on an existing
+        // confirmed stay, it must respect every active reservation sold since
+        // checkout, including those not yet checked in.
+        try {
+          if (doc.bookings.some(other => other.id !== old.id && ACTIVE.has(other.status)
+            && other.resourceId === old.resourceId
+            && overlaps(old.startAt, old.endAt, other.startAt, other.endAt))
+            || (hasResTable && !await d1RoomFree(env, merchant, old.resourceId, old.startAt, old.endAt, old.id))) {
+            return json({ error: 'room-occupied', roomId: old.resourceId }, 409);
+          }
+        } catch (_) { return json({ error: 'service-unavailable' }, 503); }
       }
       if (next === 'checked_in') {
         try {
