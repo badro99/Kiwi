@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
-const EXPECTED = 17;
+const EXPECTED = 20;
 let checks = 0;
 async function check(name, fn) { await fn(); checks += 1; process.stdout.write(`  ok ${checks} - ${name}\n`); }
 
@@ -81,20 +81,31 @@ await check('the storeroom hero stays readable whatever the skin does to --mint 
 /* L'écran Économat exécuté pour de vrai (vm, sans navigateur) : on lit les
  * compteurs et la liste qu'il rend à partir d'un registre et d'un catalogue. */
 const economatSource = fs.readFileSync('assets/hotel-economat.js', 'utf8');
-function renderEconomat({ snapshot, catalogue = [] }) {
+function renderEconomat({ snapshot, catalogue = [], doc = {} }) {
   const pages = [];
+  const listeners = {};
+  const nodes = {};
+  const node = (key) => (nodes[key] = nodes[key] || { innerHTML: '' });
+  const document = {
+    addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
+    querySelector: (sel) => (sel === '[data-eco-stock]' ? node('stock') : null),
+    getElementById: (id) => (id === 'eco-items' ? node('datalist') : null),
+  };
+  const modals = [];
   const window = {
-    Kiwi: { handlers: {}, appPage: (id, page) => pages.push(page), toast: () => {}, activePage: 'economat' },
+    Kiwi: { handlers: {}, appPage: (id, page) => pages.push(page), toast: () => {}, activePage: 'economat', modal: (m) => { modals.push(m); const d = m.body.match(/<datalist id="eco-items">([^]*?)<\/datalist>/); if (d) node('datalist').innerHTML = d[1]; return { close() {} }; } },
     KiwiVenue: { getCurrentVenueData: () => ({ type: 'hotel', name: 'Hôtel test' }) },
     KiwiInventory: { snapshot: () => snapshot, pending: () => 0, locationId: () => 'u-economat' },
-    KiwiProcurement: { doc: () => ({}) },
+    KiwiProcurement: { doc: () => doc },
     KiwiStockOperatingDay: { catalogue: () => catalogue },
   };
-  vm.runInNewContext(economatSource, { window });
+  vm.runInNewContext(economatSource, { window, document, setTimeout: () => 0 });
   window.Kiwi.handlers['nav-economat']();
   const body = pages.at(-1).body;
   const kpi = (label) => Number(body.match(new RegExp('<div class="l">' + label + '</div><div class="v">(\\d+)</div>'))?.[1]);
-  return { body, tracked: kpi('Articles suivis'), low: kpi('Stock bas'), rows: (body.match(/class="hx-eco-row"/g) || []).length };
+  /* Taper dans un champ : l'écouteur délégué de la page reçoit l'événement. */
+  const type = (target) => (listeners.input || []).forEach((fn) => fn({ target }));
+  return { body, tracked: kpi('Articles suivis'), low: kpi('Stock bas'), rows: (body.match(/class="hx-eco-row"/g) || []).length, window, nodes, node, type, modals };
 }
 
 await check('counts read every storeroom row; only the list is bounded and says how many it hides', async () => {
@@ -127,6 +138,46 @@ await check('rows show the catalogue name, unit and ledger location, not the bar
     catalogue: [{ id: 'it-7f3a', name: 'Eau minérale 1,5 L', unit: 'bouteille' }],
   });
   assert.match(view.body, /<b>Eau minérale 1,5 L<\/b><small>it-7f3a · bouteille · u-bar<\/small>/);
+});
+
+await check('every storeroom item can be found by search, beyond the first 120 rows', async () => {
+  const snapshot = {};
+  for (let i = 0; i < 300; i += 1) snapshot[`item-${String(i).padStart(3, '0')}||u-economat`] = 50;
+  const view = renderEconomat({ snapshot, catalogue: [{ id: 'item-287', name: 'Peignoir brodé', unit: 'unite' }] });
+  assert.match(view.body, /data-eco-search/, 'a search field sits above the list');
+  assert.doesNotMatch(view.body, /Peignoir brodé/, 'item 287 is past the first 120 rows');
+  const field = { value: 'peignoir', matches: (sel) => sel === '[data-eco-search]', closest: () => null };
+  view.type(field);
+  const stock = view.node('stock').innerHTML;
+  assert.match(stock, /<b>Peignoir brodé<\/b><small>item-287/, 'the search reaches a row the list hid');
+  assert.equal((stock.match(/class="hx-eco-row"/g) || []).length, 1);
+  field.value = 'zzz-rien';
+  view.type(field);
+  assert.match(view.node('stock').innerHTML, /Aucun article ne correspond/);
+});
+await check('the receipt form suggests any item, not only the first 120', async () => {
+  const snapshot = {};
+  for (let i = 0; i < 300; i += 1) snapshot[`item-${String(i).padStart(3, '0')}||u-economat`] = 50;
+  const view = renderEconomat({ snapshot, catalogue: [{ id: 'item-287', name: 'Peignoir brodé', unit: 'unite' }] });
+  view.window.Kiwi.handlers['eco-receive']();
+  assert.doesNotMatch(view.node('datalist').innerHTML, /item-287/);
+  view.type({ id: 'eco-item', value: 'Peignoir', matches: () => false, closest: () => null });
+  assert.match(view.node('datalist').innerHTML, /<option value="item-287">Peignoir brodé<\/option>/);
+  view.type({ id: 'eco-item', value: 'item-29', matches: () => false, closest: () => null });
+  assert.equal((view.node('datalist').innerHTML.match(/<option /g) || []).length, 10, 'item-290 … item-299');
+});
+await check('recent activity merges orders and receipts and shows the newest first', async () => {
+  const t0 = Date.UTC(2026, 9, 1);
+  const day = (n) => t0 + n * 86400000;
+  const doc = {
+    // Quatre vieilles commandes en tête de liste, puis la plus récente en cinquième.
+    orders: [1, 2, 3, 4].map((n) => ({ id: 'po' + n, number: 'BC-0000' + n, status: 'sent', createdAt: day(n), updatedAt: day(n) }))
+      .concat([{ id: 'po9', number: 'BC-00009', status: 'sent', createdAt: day(20), updatedAt: day(20) }]),
+    receipts: [5, 6, 7, 8, 18].map((n) => ({ id: 'grn' + n, number: 'BR-0000' + n, receivedAt: day(n), createdAt: day(n) })),
+  };
+  const view = renderEconomat({ snapshot: {}, doc });
+  const shown = [...view.body.matchAll(/<div class="hx-eco-event[^"]*"><i><\/i><div><b>([^<]+)<\/b>/g)].map((m) => m[1]);
+  assert.deepEqual(shown, ['BC-00009', 'BR-000018', 'BR-00008', 'BR-00007', 'BR-00006', 'BR-00005']);
 });
 
 assert.equal(checks, EXPECTED, `expected ${EXPECTED} checks, ran ${checks}`);

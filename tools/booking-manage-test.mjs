@@ -160,6 +160,45 @@ console.log('■ Réservation publique · gestion et joignabilité');
     'le lien de gestion est dessiné, pas posé nu dans la page');
 }
 
+/* ═══ Stockage refusé · la page démarre quand même ═══════════════════════
+ * Safari en navigation privée stricte, un navigateur aux cookies bloqués, un
+ * iframe tiers : y toucher `localStorage` lève une SecurityError. La page
+ * publique lisait la langue mémorisée sans garde, et ne s'affichait pas du
+ * tout. Le vrai assets/booking.js tourne ici dans un bac à sable dont les deux
+ * stockages lèvent à chaque accès. */
+await (async () => {
+  const denied = () => { const e = new Error('The operation is insecure.'); e.name = 'SecurityError'; throw e; };
+  const langButtons = ['fr', 'en', 'ar'].map((l) => ({ dataset: { closedLang: l }, onclick: null }));
+  let html = '';
+  const app = {
+    get innerHTML() { return html; }, set innerHTML(v) { html = String(v); },
+    querySelectorAll: (sel) => (sel === '[data-closed-lang]' ? langButtons : []),
+    querySelector: () => null,
+  };
+  const docEl = { lang: 'fr', dir: 'ltr' };
+  const win = {
+    document: { getElementById: (id) => (id === 'booking-app' ? app : null), documentElement: docEl },
+    location: { search: '' },           // aucun établissement : l'écran « fermé »
+    URLSearchParams, Promise, console,
+    fetch: () => Promise.reject(new Error('offline')),
+  };
+  win.window = win;
+  win.__denied = denied;
+  const ctx = vm.createContext(win);
+  // Comme un navigateur qui refuse : lire la propriété lève (posé DANS le
+  // contexte, sinon vm ne voit pas l'accesseur).
+  vm.runInContext("for (const k of ['localStorage', 'sessionStorage']) Object.defineProperty(globalThis, k, { get: __denied, configurable: true });", ctx);
+  let boot = null;
+  try { vm.runInContext(UI, ctx); } catch (e) { boot = e; }
+  await new Promise((r) => setTimeout(r, 0));
+  ok(!boot, `stockage refusé : la page démarre sans lever (${boot && boot.name}: ${boot && boot.message})`);
+  ok(/<section class="bk-closed"/.test(html), 'stockage refusé : la page s\'affiche (écran publié, pas une page blanche)');
+  ok(docEl.lang === 'fr', 'stockage refusé : la langue par défaut reste le français');
+  let clickErr = null;
+  try { const ar = langButtons[2]; if (typeof ar.onclick === 'function') ar.onclick(); } catch (e) { clickErr = e; }
+  ok(!clickErr && docEl.lang === 'ar' && docEl.dir === 'rtl', 'stockage refusé : changer de langue marche encore (arabe, rtl), sans mémoire');
+})();
+
 if (failures.length) {
   console.error(`\n✗ ${failures.length} échec(s) sur ${passed + failures.length} contrôles`);
   process.exit(1);

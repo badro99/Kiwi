@@ -213,6 +213,7 @@
 .inv-status.paid { color: #087653; background: #e6f7f0; }
 .inv-status.overdue { color: #b43b2c; background: #fff0ed; }
 .inv-empty { padding: 48px 24px; text-align: center; }
+.inv-more { display: flex; justify-content: center; padding: 14px 0 4px; }
 .inv-empty-mark { width: 54px; height: 54px; display: grid; place-items: center; margin: 0 auto 13px; color: var(--inv-green); border-radius: 17px; background: color-mix(in srgb, var(--inv-green) 10%, var(--inv-paper)); }
 .inv-empty h4 { margin: 0; font-size: 16px; }
 .inv-empty p { max-width: 380px; margin: 7px auto 15px; color: var(--inv-muted); font-size: 12px; line-height: 1.55; }

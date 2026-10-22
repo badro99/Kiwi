@@ -366,5 +366,56 @@ await strict('a peer record stamped years ahead or non-finite is merged, and an 
     }
   }), 150);
 
+/* ── the degraded barcode path: barcode.js absent, two devices, same millisecond ──
+ * genEan() falls back when window.KiwiBarcode (the store counter) is missing.
+ * The old fallback was '20' + the last ten digits of Date.now() + '0': two
+ * devices labelling an item in the same millisecond printed the SAME code (and
+ * a check digit that was usually wrong). Each device now carries a stable tag
+ * of its own; the property runs two pocket devices WITHOUT barcode.js, whose
+ * clocks read the same instant, and makes each one label several items. */
+function bareDevice(at, tagSeed, storeIn) {
+  const store = storeIn || new Map();
+  const el = () => ({ id: '', textContent: '', style: {}, setAttribute() {}, appendChild() {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, classList: { add() {}, remove() {} } });
+  class FixedDate extends Date { constructor(...a) { if (a.length) super(...a); else super(at); } static now() { return at; } }
+  let r = tagSeed >>> 0;
+  const win = {
+    localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k), get length() { return store.size; }, key: (i) => Array.from(store.keys())[i] },
+    document: { addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true, visibilityState: 'visible', readyState: 'complete', getElementById: () => null, createElement: el, querySelector: () => null, querySelectorAll: () => [], head: el(), body: el() },
+    addEventListener() {}, removeEventListener() {},
+    KiwiEnv: { isReal: () => true, local: false, hosted: true, demosAllowed: false },
+    setTimeout: () => 0, clearTimeout() {}, fetch: () => Promise.reject(new Error('hors ligne')),
+    CustomEvent: class { constructor(t, o) { this.type = t; this.detail = (o || {}).detail; } },
+    navigator: { userAgent: 'node' },
+    // Le hasard de l'appareil, rejouable : deux appareils, deux graines.
+    crypto: { getRandomValues: (a) => { for (let i = 0; i < a.length; i++) { r = (Math.imul(r ^ (r >>> 15), 2246822519) + 0x9e3779b9) >>> 0; a[i] = r; } return a; } },
+  };
+  win.window = win;
+  for (const file of ['assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']) {
+    new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout', 'fetch', 'CustomEvent', 'navigator', 'self', 'console', 'Date',
+      fs.readFileSync(path.join(ROOT, file), 'utf8'))(win, win.document, win.localStorage, win.setTimeout, win.clearTimeout, win.fetch, win.CustomEvent, win.navigator, win, console, FixedDate);
+  }
+  assert.ok(!win.KiwiBarcode, 'barcode.js must be absent here');
+  return { K: win.KiwiBoutiqueCatalog, store };
+}
+const ean13Ok = (s) => /^\d{13}$/.test(s) && (10 - [...s.slice(0, 12)].reduce((t, d, i) => t + (+d) * (i % 2 ? 3 : 1), 0) % 10) % 10 === +s[12];
+await strict('without barcode.js, two devices labelling items in the same millisecond never print the same code', fc.property(
+  fc.integer({ min: 0, max: 4102444800000 }), fc.tuple(fc.nat(), fc.nat()).filter(([a, b]) => a !== b), fc.integer({ min: 1, max: 6 }), fc.integer({ min: 1, max: 6 }),
+  (at, [seedA, seedB], nA, nB) => {
+    const a = bareDevice(at, seedA), b = bareDevice(at, seedB);
+    assert.equal(typeof a.K._genEan, 'function', 'genEan exposed for this property');
+    const codes = [];
+    for (let i = 0; i < nA; i++) codes.push(a.K._genEan());
+    for (let i = 0; i < nB; i++) codes.push(b.K._genEan());
+    // Le même appareil rechargé (même stockage) garde son étiquette et ne réimprime rien.
+    const again = bareDevice(at, seedA ^ 0x5bd1e995, a.store);
+    codes.push(again.K._genEan());
+    for (const c of codes) {
+      assert.ok(ean13Ok(c), 'valid EAN-13: ' + c);
+      assert.ok(/^2[1-9]/.test(c), 'in-store range 21-29, never the 20 counter range: ' + c);
+    }
+    assert.equal(new Set(codes).size, codes.length, 'collision: ' + codes.join(' '));
+    assert.equal(codes.at(-1).slice(2, 8), codes[0].slice(2, 8), 'the device tag is stable across reloads');
+  }), 200);
+
 console.log(`${failed ? '✗' : '✓'} catalog-merge-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 process.exit(failed ? 1 : 0);

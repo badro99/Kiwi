@@ -458,19 +458,37 @@ async function read(ctx, url) {
   if (from && !validDay(from)) throw fail(400, 'invalid-from', 'Date de début invalide.');
   if (to && !validDay(to)) throw fail(400, 'invalid-to', 'Date de fin invalide.');
 
+  const rawCursor = url.searchParams.get('cursor');
+  const cursor = rawCursor ? readListCursor(rawCursor) : null;
+  if (rawCursor && !cursor) throw fail(400, 'bad-cursor', 'Curseur de liste invalide.');
+  const asked = Number(url.searchParams.get('limit'));
+  const limit = Number.isInteger(asked) && asked > 0 ? Math.min(asked, MAX_LIST) : MAX_LIST;
+
   const where = ['d.merchant = ?'];
   const params = [ctx.merchant];
   if (type) { where.push('d.type = ?'); params.push(type); }
   if (from) { where.push('d.issue_date >= ?'); params.push(from); }
   if (to) { where.push('d.issue_date <= ?'); params.push(to); }
+  /* Pagination par curseur (clé composée, stable même si des documents
+   * s'ajoutent entre deux pages) : date d'émission, puis création, puis
+   * identifiant, du plus récent au plus ancien. Toujours DANS le magasin
+   * (d.merchant = ? reste la première condition) : un curseur n'est qu'une
+   * position, jamais une permission. */
+  if (cursor) {
+    where.push(`(COALESCE(d.issue_date, '') < ? OR (COALESCE(d.issue_date, '') = ? AND (d.created_ts < ? OR (d.created_ts = ? AND d.id < ?))))`);
+    params.push(cursor.day, cursor.day, cursor.ts, cursor.ts, cursor.id);
+  }
   const rows = await ctx.db.prepare(
     `SELECT d.id, d.type, d.status, d.number, d.issue_date, d.due_date, d.valid_until, d.customer, d.ttc_cents,
             d.legacy_ref, d.original_id, d.source_quote_id, d.created_ts, o.number AS original_number
        FROM invoice_docs d LEFT JOIN invoice_docs o ON o.id = d.original_id AND o.merchant = d.merchant
       WHERE ${where.join(' AND ')}
-      ORDER BY d.issue_date DESC, d.created_ts DESC LIMIT ${MAX_LIST}`
+      ORDER BY COALESCE(d.issue_date, '') DESC, d.created_ts DESC, d.id DESC LIMIT ${limit + 1}`
   ).bind(...params).all();
-  const list = (rows && rows.results) || [];
+  const all = (rows && rows.results) || [];
+  const list = all.slice(0, limit);
+  const lastRow = list[list.length - 1];
+  const nextCursor = all.length > limit && lastRow ? writeListCursor(lastRow) : null;
 
   const paid = new Map();
   const credited = new Map();
@@ -501,7 +519,31 @@ async function read(ctx, url) {
     if (r.legacy_ref) out.legacyRef = r.legacy_ref;
     return out;
   });
-  return json({ ok: true, docs });
+  /* `nextCursor` vaut null sur la dernière page. Un client qui n'envoie pas de
+   * curseur reçoit la même première page qu'avant (500 au plus) et peut
+   * ignorer ce champ. */
+  return json({ ok: true, docs, nextCursor });
+}
+
+/* Le curseur est opaque pour le client : base64url de [jour, création, id]
+ * de la dernière ligne rendue, relu et validé strictement. */
+function writeListCursor(r) {
+  const raw = JSON.stringify([String(r.issue_date || ''), Number(r.created_ts) || 0, String(r.id)]);
+  return btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function readListCursor(raw) {
+  const s = String(raw || '');
+  if (!/^[A-Za-z0-9_-]{8,400}$/.test(s)) return null;
+  try {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const v = JSON.parse(decodeURIComponent(escape(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)))));
+    if (!Array.isArray(v) || v.length !== 3) return null;
+    const [day, ts, id] = v;
+    if (typeof day !== 'string' || (day && !DAY_RE.test(day))) return null;
+    if (!Number.isSafeInteger(ts) || ts < 0) return null;
+    if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(id)) return null;
+    return { day, ts, id };
+  } catch (_) { return null; }
 }
 
 /* ─────────────────────────── POST ─────────────────────────── */

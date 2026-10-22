@@ -338,7 +338,50 @@
 
   function genEan() {
     if (window.KiwiBarcode && window.KiwiBarcode.nextInStoreEan) return window.KiwiBarcode.nextInStoreEan();
-    return '20' + String(Date.now()).slice(-10) + '0'; // degraded fallback (shouldn't happen)
+    return fallbackEan();
+  }
+
+  /* Repli dégradé, quand barcode.js (le compteur du magasin) n'est pas chargé.
+   * L'ancien repli était « 20 » + les dix derniers chiffres de Date.now() + « 0 » :
+   * deux appareils qui étiquetaient un article dans la même milliseconde
+   * imprimaient le MÊME code, dans la plage du compteur, avec une clé de
+   * contrôle le plus souvent fausse. Désormais :
+   *   « 29 » (plage interne GS1 20-29, jamais celle du compteur « 20 »)
+   *   + une étiquette de six chiffres tirée au hasard UNE fois par appareil et
+   *     gardée (deux appareils diffèrent, à une chance sur un million près)
+   *   + un compteur de quatre chiffres propre à l'appareil (amorcé sur l'heure)
+   *   + la vraie clé EAN-13.
+   * L'heure ne départage donc plus deux appareils : c'est leur étiquette. Et
+   * generateBarcode() saute toujours un code déjà connu du catalogue. */
+  const FALLBACK_TAG_KEY = 'kiwiBarcodeDevice';
+  const FALLBACK_SEQ_KEY = 'kiwiBarcodeFallbackSeq';
+  let fallbackMem = null;   // si le stockage est refusé : la session seule
+  function randomDigits(n) {
+    const out = [];
+    const c = window.crypto || (typeof crypto !== 'undefined' ? crypto : null);
+    const buf = new Uint32Array(n);
+    if (c && c.getRandomValues) c.getRandomValues(buf);
+    else for (let i = 0; i < n; i++) buf[i] = Math.floor(Math.random() * 4294967296);
+    for (let i = 0; i < n; i++) out.push(String(buf[i] % 10));
+    return out.join('');
+  }
+  function fallbackState() {
+    let tag = null, seq = null;
+    try { tag = localStorage.getItem(FALLBACK_TAG_KEY); seq = localStorage.getItem(FALLBACK_SEQ_KEY); } catch (_) {}
+    if (!/^\d{6}$/.test(String(tag || ''))) tag = fallbackMem ? fallbackMem.tag : randomDigits(6);
+    const n = parseInt(seq, 10);
+    seq = Number.isFinite(n) ? n : (fallbackMem ? fallbackMem.seq : Date.now() % 10000);
+    return { tag, seq };
+  }
+  function fallbackEan() {
+    const st = fallbackState();
+    const seq = (st.seq + 1) % 10000;
+    fallbackMem = { tag: st.tag, seq };
+    try { localStorage.setItem(FALLBACK_TAG_KEY, st.tag); localStorage.setItem(FALLBACK_SEQ_KEY, String(seq)); } catch (_) {}
+    const body = '29' + st.tag + String(seq).padStart(4, '0');
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += (+body[i]) * (i % 2 === 0 ? 1 : 3);
+    return body + String((10 - (sum % 10)) % 10);
   }
 
   function seed() {
@@ -1211,6 +1254,9 @@
        simplement au commerçant un stock qu'il croyait avoir corrigé. */
     _merge: (mine, theirs) => mergeDocs(mine, theirs),
     _doc: () => (load(), db),
+    /* Exposé pour tools/catalog-merge-properties-test.mjs : le repli sans
+       barcode.js ne doit jamais imprimer le code d'un autre appareil. */
+    _genEan: () => genEan(),
     /* Ce que la dernière fusion a appris, et de qui. Exposé pour que le garde-fou
        puisse vérifier qu'un appareil sans rien à dire ne republie pas — la boucle
        qui a porté le document d'un client à la révision 165. */

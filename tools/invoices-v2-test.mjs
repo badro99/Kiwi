@@ -645,5 +645,54 @@ console.log('■ Schéma · tables créées au premier usage, DDL fidèle à sch
   }
 }
 
+/* ───────────────────────────── 11. liste par pages (curseur) ───────────────────────────── */
+console.log('■ Liste · au-delà de 500 documents, un curseur mène à tous');
+{
+  const { db, env } = database();
+  const c = client(env);
+  // 1 203 factures de ce magasin (dates et horodatages en partie égaux, pour
+  // éprouver l'ordre stable) et 7 d'un autre magasin, qui ne doivent jamais
+  // apparaître.
+  const ins = db.prepare(`INSERT INTO invoice_docs (id,merchant,type,status,number,issue_date,customer,lines,totals,ttc_cents,created_ts,updated_ts)
+    VALUES (?,?,?,'issued',?,?,'{"name":"Client"}','[]','{}',100,?,?)`);
+  const N = 1203;
+  db.exec('BEGIN');
+  for (let i = 0; i < N; i++) {
+    const day = `2025-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 7)).padStart(2, '0')}`;
+    ins.run(`inv_p${String(i).padStart(5, '0')}`, SHOP, 'invoice', `F-2025-${String(i + 1).padStart(4, '0')}`, day, now - (i % 5), now);
+  }
+  for (let i = 0; i < 7; i++) ins.run(`inv_x${i}`, OTHER, 'invoice', `F-2025-${i + 1}`, '2025-06-01', now, now);
+  db.exec('COMMIT');
+
+  const first = await c.get('type=invoice');
+  ok('sans curseur : la première page garde sa forme et ses 500 documents', first.status === 200 && first.json.docs.length === 500, String(first.json && first.json.docs && first.json.docs.length));
+  ok('…et annonce la page suivante (nextCursor opaque)', typeof first.json.nextCursor === 'string' && first.json.nextCursor.length > 0 && !/inv_p|2025-/.test(first.json.nextCursor), String(first.json.nextCursor));
+  const seen = first.json.docs.map((d) => d.id);
+  let cursor = first.json.nextCursor, pages = 1;
+  while (cursor && pages < 10) {
+    const r = await c.get(`type=invoice&cursor=${encodeURIComponent(cursor)}`);
+    if (r.status !== 200) { ok('page suivante lisible', false, r.text.slice(0, 200)); break; }
+    seen.push(...r.json.docs.map((d) => d.id));
+    cursor = r.json.nextCursor; pages++;
+  }
+  ok('toutes les pages réunies : chaque facture une fois, aucune perdue', seen.length === N && new Set(seen).size === N, `${seen.length} / ${new Set(seen).size}`);
+  ok('…en trois pages, la dernière sans nextCursor', pages === 3 && cursor === null, `${pages} ${cursor}`);
+  ok('…jamais un document d’un autre magasin', !seen.some((id) => id.startsWith('inv_x')));
+  const order = db.prepare(`SELECT id FROM invoice_docs WHERE merchant = ? ORDER BY issue_date DESC, created_ts DESC, id DESC`).all(SHOP).map((r) => r.id);
+  ok('…dans l’ordre de la liste (date, création, identifiant), du plus récent au plus ancien', seen.join() === order.join());
+
+  // Un document ajouté entre deux pages ne décale ni ne double rien.
+  const p1 = await c.get('type=invoice&limit=10');
+  ok('limit borne la page', p1.json.docs.length === 10 && !!p1.json.nextCursor);
+  ins.run('inv_new0', SHOP, 'invoice', 'F-2026-9999', '2099-01-01', now, now);
+  const p2 = await c.get(`type=invoice&limit=10&cursor=${encodeURIComponent(p1.json.nextCursor || '')}`);
+  ok('…un ajout entre deux pages ne fait ni doublon ni trou', p2.status === 200 && p2.json.docs.length === 10 && !p2.json.docs.some((d) => p1.json.docs.some((x) => x.id === d.id)) && p2.json.docs[0].id === order[10]);
+
+  const bad = await c.get('type=invoice&cursor=pas-un-curseur');
+  ok('un curseur illisible : 400 bad-cursor', bad.status === 400 && bad.json && bad.json.error === 'bad-cursor', bad.text.slice(0, 120));
+  const cb = await client(env, ownerB, OTHER).get(`type=invoice&cursor=${encodeURIComponent(first.json.nextCursor || '')}`);
+  ok('le curseur d’un magasin ne lit rien chez un autre', cb.status === 200 && cb.json.docs.every((d) => d.id.startsWith('inv_x')));
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

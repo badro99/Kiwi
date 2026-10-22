@@ -626,6 +626,31 @@ try {
     await click(page, '.inv-sheet [data-sheet-cancel]');
   });
 
+  /* 3 bis · Liste par pages : les documents au-delà de la première page ──── */
+  await S.run('compte réel · « Afficher les documents plus anciens » charge la page suivante', async (tr) => {
+    const doc = (i) => ({ id: 'inv_pg' + i, type: 'invoice', status: 'issued', displayStatus: 'issued', number: `F-2024-${String(i).padStart(4, '0')}`,
+      issueDate: '2024-0' + (1 + (i % 9)) + '-10', dueDate: '2030-01-01', customer: { name: 'Client page ' + i, ice: '' }, totals: { ttcCents: 1000 * i }, balanceCents: 1000 * i, paidCents: 0 });
+    const asked = [];
+    const paged = { st: { calls: [], offline: false, docs: [] }, handle(method, u) {
+      if (method !== 'GET') return { status: 400, body: { error: 'invalid-action' } };
+      const ty = u.searchParams.get('type'), cur = u.searchParams.get('cursor');
+      if (ty !== 'invoice') return { status: 200, body: { ok: true, docs: [], nextCursor: null } };
+      asked.push(cur || '');
+      if (!cur) return { status: 200, body: { ok: true, docs: [1, 2, 3].map(doc), nextCursor: 'page-2' } };
+      if (cur === 'page-2') return { status: 200, body: { ok: true, docs: [4, 5].map(doc), nextCursor: null } };
+      return { status: 400, body: { error: 'bad-cursor' } };
+    } };
+    const { page } = await dashboard(tr, { real: true, fake: paged });
+    await openInvoicing(page);
+    check((await page.$$('[data-inv-table] tbody tr')).length === 3, 'la première page : 3 documents');
+    check(/Afficher les documents plus anciens/.test(await text(page, '[data-inv-act="more"]')), 'un bouton propose les documents plus anciens');
+    await click(page, '[data-inv-act="more"]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-inv-table] tbody tr').length === 5, { timeout: 6000 });
+    check(/Client page 5/.test(await text(page, '[data-inv-table]')), 'la page suivante s’ajoute à la liste (5 documents)');
+    eq(asked, ['', 'page-2'], 'le client renvoie le curseur reçu, tel quel');
+    check(!(await page.$('[data-inv-act="more"]')), 'la dernière page atteinte, le bouton disparaît');
+  });
+
   /* 4 · Téléphone : le composer tient dans l’écran ────────────────────────── */
   await S.run('téléphone · pas de défilement horizontal', async (tr) => {
     const { page } = await dashboard(tr, { width: 390 });

@@ -930,6 +930,9 @@
 .hx-eco-card-head b,.hx-eco-card-head span { display:block; }
 .hx-eco-card-head b { color:var(--ink); font-size:14px; }
 .hx-eco-card-head span { margin-top:3px; color:var(--n-500); font-size:11px; }
+.hx-eco-search { display:block; margin-top:12px; }
+.hx-eco-search input { min-height:40px; box-sizing:border-box; width:100%; border:1px solid var(--n-200); border-radius:11px; background:var(--surface,var(--paper)); color:var(--ink); padding:0 12px; font:500 13px var(--sans); }
+.hx-eco-search input:focus { border-color:var(--atlas); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 30%,transparent); }
 .hx-eco-table { margin-top:4px; }
 .hx-eco-row { display:grid; grid-template-columns:minmax(0,1fr) 90px 92px; align-items:center; gap:12px; min-height:52px; padding:0 7px; border-bottom:1px solid var(--n-100); }
 .hx-eco-row:last-child { border-bottom:0; }

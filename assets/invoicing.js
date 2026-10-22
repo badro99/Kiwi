@@ -47,6 +47,7 @@
       emptyQuote: 'Aucun devis ici', emptyQuoteSub: 'Préparez un devis, envoyez-le, puis transformez-le en facture en un clic.',
       emptyCredit: 'Aucun avoir ici', emptyCreditSub: 'Un avoir corrige une facture émise. Ouvrez la facture, puis choisissez « Créer un avoir ».',
       emptyFilter: 'Aucun résultat pour ce filtre',
+      loadMore: 'Afficher les documents plus anciens',
       loading: 'Chargement…', offline: 'Hors ligne · dernière liste enregistrée sur cet appareil',
       authError: 'Accès réservé au propriétaire du compte. Reconnectez-vous pour voir vos documents.',
       legacyBanner: '{n} factures enregistrées sur cet appareil', legacyOne: '1 facture enregistrée sur cet appareil',
@@ -124,6 +125,7 @@
       emptyQuote: 'No quotes here', emptyQuoteSub: 'Prepare a quote, send it, then turn it into an invoice in one click.',
       emptyCredit: 'No credit notes here', emptyCreditSub: 'A credit note corrects an issued invoice. Open the invoice, then choose “Create credit note”.',
       emptyFilter: 'No results for this filter',
+      loadMore: 'Show older documents',
       loading: 'Loading…', offline: 'Offline · last list saved on this device',
       authError: 'Access is reserved to the account owner. Sign in again to see your documents.',
       legacyBanner: '{n} invoices saved on this device', legacyOne: '1 invoice saved on this device',
@@ -197,6 +199,7 @@
       emptyQuote: 'لا توجد عروض أسعار هنا', emptyQuoteSub: 'حضّر عرض سعر وأرسله ثم حوّله إلى فاتورة بنقرة واحدة.',
       emptyCredit: 'لا توجد إشعارات دائنة هنا', emptyCreditSub: 'يصحح الإشعار الدائن فاتورة صادرة. افتح الفاتورة ثم اختر «إنشاء إشعار دائن».',
       emptyFilter: 'لا نتائج لهذا المرشح',
+      loadMore: 'عرض المستندات الأقدم',
       loading: 'جارٍ التحميل…', offline: 'دون اتصال · آخر قائمة محفوظة على هذا الجهاز',
       authError: 'الدخول محجوز لمالك الحساب. سجّل الدخول مجدداً لرؤية مستنداتك.',
       legacyBanner: '{n} فواتير محفوظة على هذا الجهاز', legacyOne: 'فاتورة واحدة محفوظة على هذا الجهاز',
@@ -560,6 +563,11 @@
   /* ── état de l'écran ───────────────────────────────────────────────────── */
   let overlay = null;
   const cache = {invoice: [], quote: [], credit_note: []};
+  /* Curseur de la page suivante, par type (null : tout est chargé). Le serveur
+     rend 500 documents par page ; les plus anciens restent accessibles par
+     « Afficher les documents plus anciens ». */
+  const nextCursor = {invoice: null, quote: null, credit_note: null};
+  let loadingMore = false;
   let tab = 'invoice';          // invoice | quote | credit_note | sales
   let filter = 'all';
   let query = '';
@@ -856,7 +864,28 @@
       const msg = tab === 'sales' ? [t.salesSub, ''] : hasAny ? [t.emptyFilter, ''] : ({invoice: [t.emptyInvoice, t.emptyInvoiceSub], quote: [t.emptyQuote, t.emptyQuoteSub], credit_note: [t.emptyCredit, t.emptyCreditSub]}[tab]);
       html = `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(msg[0])}</h4><p>${esc(msg[1])}</p>${tab === 'credit_note' || hasAny ? '' : `<button class="inv-btn primary" type="button" data-inv-act="new">${ICON.plus}${esc(newLabel())}</button>`}</div>`;
     }
+    if (tab !== 'sales' && nextCursor[tab] && !(loadingList && !rows.length)) {
+      html += `<div class="inv-more"><button class="inv-btn" type="button" data-inv-act="more"${loadingMore ? ' disabled aria-busy="true"' : ''}>${esc(loadingMore ? t.loading : t.loadMore)}</button></div>`;
+    }
     root.querySelector('[data-inv-table]').innerHTML = html;
+  }
+  async function loadMore() {
+    const ty = tab, cursor = nextCursor[ty];
+    if (ty === 'sales' || !cursor || loadingMore) return;
+    const token = refreshToken;
+    loadingMore = true; paintRegister();
+    try {
+      const res = await api('GET', {type: ty, cursor});
+      if (token !== refreshToken || !overlay) return;
+      const known = new Set(cache[ty].map(r => r.id));
+      cache[ty] = cache[ty].concat((res.docs || []).map(normRow).filter(r => !known.has(r.id)));
+      nextCursor[ty] = res.nextCursor || null;
+    } catch (err) {
+      if (token === refreshToken) toast(errText(err));
+    } finally {
+      loadingMore = false;
+      if (token === refreshToken) paintAll();
+    }
   }
   function paintAll() { if (!overlay || currentView !== 'list') return; paintNotices(); paintStats(); paintRegister(); }
 
@@ -877,7 +906,7 @@
     if (token !== refreshToken || !overlay) return;
     let failed = 0; authBlocked = false;
     results.forEach((r, i) => {
-      if (r.status === 'fulfilled') cache[TYPES[i]] = (r.value.docs || []).map(normRow);
+      if (r.status === 'fulfilled') { cache[TYPES[i]] = (r.value.docs || []).map(normRow); nextCursor[TYPES[i]] = r.value.nextCursor || null; }
       else { failed++; if (r.reason && (r.reason.code === 'unauthorized' || r.reason.code === 'forbidden')) authBlocked = true; }
     });
     offline = failed > 0 && !authBlocked;
@@ -1420,6 +1449,7 @@
       case 'export': return exportCsv();
       case 'tab': return setTab(v);
       case 'filter': filter = v; overlay.querySelectorAll('.inv-filter').forEach(b => b.classList.toggle('on', b.dataset.v === v)); return paintRegister();
+      case 'more': return loadMore();
       case 'open': return openDoc(id);
       case 'open-doc': return openDoc(id);
       case 'sale-open': { const m = getSaleInvoices().find(x => x.id === id); if (m && m.rawDoc && window.KiwiInvoice) window.KiwiInvoice.open(m.rawDoc, 'pdf'); return; }
