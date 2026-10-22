@@ -309,6 +309,16 @@
   .merchant-chevron { display:block;width:20px;height:20px;background:currentColor;-webkit-mask:url("icons/material/chevron_right.svg") center/contain no-repeat;mask:url("icons/material/chevron_right.svg") center/contain no-repeat; }
   .merchant:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
   html[dir="rtl"] .merchant .m-caret { transform:scaleX(-1); }
+  /* Se déconnecter · it carried its own inline colour, var(--n-500), which the
+   * Vexel skin turns into the dark sidebar's pale text: on the light 2027
+   * sidebar it read 1.08:1, a link nobody could see. Inline style also beat the
+   * 2027 rule in dash-desktop.css. It inherits the sidebar's ink here instead. */
+  .sidebar .merchant-logout { display: block; margin: 8px 4px 0; padding: 6px 10px; font-size: 12px; color: inherit; text-decoration: none; text-align: center; border-radius: 8px; border: 1px solid transparent; transition: background 120ms, border-color 120ms; }
+  .sidebar .merchant-logout:hover { background: rgba(11,110,79,.06); border-color: var(--n-200,#e7e3da); }
+  .sidebar .merchant-logout:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+  /* Centre d'aide sat in the footer line as green text alone, 1.4:1 against
+   * the grey around it: an underline is what tells it apart as a link. */
+  [data-footer-line] a { text-decoration: underline; text-underline-offset: 2px; }
 
   /* ─────────────── MAIN ─────────────── */
   /* min-width:0 · a grid item defaults to min-width:auto, which refuses to

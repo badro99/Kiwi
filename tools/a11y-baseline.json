@@ -3,11 +3,7 @@
     "color-contrast": 16
   },
   "dashboard": {
-    "aria-input-field-name": 1,
-    "aria-required-children": 1,
-    "color-contrast": 2,
-    "label-content-name-mismatch": 3,
-    "link-in-text-block": 1
+    "label-content-name-mismatch": 1
   },
   "onboarding": {},
   "caisse": {}

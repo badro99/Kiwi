@@ -2056,6 +2056,7 @@
     const sw = document.querySelector('.loc-switch');
     if (dd) dd.classList.toggle('open', dropdownOpen);
     if (sw) sw.classList.toggle('open', dropdownOpen);
+    if (sw) sw.setAttribute('aria-expanded', dropdownOpen ? 'true' : 'false');
   }
 
   /* Click-outside + Escape closers (registered once) */

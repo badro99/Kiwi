@@ -19,7 +19,7 @@
 var CACHE = 'kiwi-app-v663';
 var SHELL = [
   '/dashboard.html',
-  '/assets/dashboard-shell.css?v=3',
+  '/assets/dashboard-shell.css?v=4',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=4',
   '/assets/caisse-app.js?v=7',
@@ -91,7 +91,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=5',
-  '/assets/i18n.js?v=29',
+  '/assets/i18n.js?v=30',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -111,7 +111,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=59',
+  '/assets/venues.js?v=60',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=9',
   '/assets/trade-workspaces.js?v=10',
@@ -230,7 +230,7 @@ var SHELL = [
   /* Le verrou d'une caisse dépairée ou réappairée en plein service. Sans lui
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
-  '/assets/identity.js?v=11',
+  '/assets/identity.js?v=12',
   '/assets/caisse-link.js?v=19',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',

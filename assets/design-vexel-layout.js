@@ -105,7 +105,9 @@
     var profile = source.cloneNode(true);
     profile.classList.add('vexel-topbar-merchant');
     profile.dataset.action = 'profile-menu';
-    profile.setAttribute('aria-label', (profile.querySelector('.n') || {}).textContent || 'Compte');
+    /* Its name comes from what it shows (name, role): a label of the name
+     * alone left the visible role out of what a screen reader says. */
+    profile.removeAttribute('aria-label');
     return profile;
   }
 

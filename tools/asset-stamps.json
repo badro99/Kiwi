@@ -260,8 +260,8 @@
     "sha": "efb670b3b79f79fd"
   },
   "assets/dashboard-shell.css": {
-    "v": "3",
-    "sha": "9c9a5f6d4b22d914"
+    "v": "4",
+    "sha": "4a563e65d36307ad"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -312,8 +312,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2095",
-    "sha": "b804a64653a03322"
+    "v": "2096",
+    "sha": "c632bbcb74c60a31"
   },
   "assets/design-vexel.css": {
     "v": "2124",
@@ -460,8 +460,8 @@
     "sha": "e41f82cc7143441b"
   },
   "assets/i18n.js": {
-    "v": "29",
-    "sha": "cac08ccf529cf159"
+    "v": "30",
+    "sha": "448c06881189965a"
   },
   "assets/icons/material/sprite.access.svg": {
     "v": "1",
@@ -488,8 +488,8 @@
     "sha": "0c4cb444508fc7f7"
   },
   "assets/identity.js": {
-    "v": "11",
-    "sha": "7e98a0900d248d91"
+    "v": "12",
+    "sha": "26bd8c22ae534f02"
   },
   "assets/idle-lock.js": {
     "v": "2",
@@ -1528,8 +1528,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "59",
-    "sha": "f1178efdf44cb6b3"
+    "v": "60",
+    "sha": "8b80f20b25d82a99"
   },
   "assets/vertical-state.js": {
     "v": "5",

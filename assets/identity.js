@@ -181,7 +181,7 @@
     if (id.name) {
       document.querySelectorAll('.merchant .n').forEach(el => setText(el, id.name));
       document.querySelectorAll('.merchant .avatar').forEach(el => { el.textContent = initialsOf(id.name); });
-      document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.setAttribute('aria-label', id.name); });
+      document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.removeAttribute('aria-label'); });
     }
   }
 
@@ -208,7 +208,7 @@
     for (var i = 0; i < greets.length; i++) { greets[i].textContent = helloFor(''); if (greets[i].removeAttribute) greets[i].removeAttribute('data-i18n'); }
     try { if (biz && window.__kiwiLock && window.__kiwiLock.setGreetPlace) window.__kiwiLock.setGreetPlace(biz); } catch (_) {}
     document.querySelectorAll('.merchant .n, .merchant .avatar').forEach(el => { el.textContent = '·'; });
-    document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.setAttribute('aria-label', '·'); });
+    document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.removeAttribute('aria-label'); });
   }
   function runNeutral() {
     var go = function () {
