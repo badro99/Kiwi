@@ -4004,9 +4004,18 @@
   function hourlyPayFor(m, h, days) {
     const rate = +(m && m.hourlyRate) || 0;
     if (!(rate > 0) || !(h > 0)) return 0;
-    if (!((+m.baseSalary || 0) > 0)) return h * rate;
-    const covered = contractWeekHours(m) * (days ? days.length : 7) / 7;
-    return Math.max(0, h - covered) * rate;
+    // Centièmes de minute et centimes : arrondi unique, demi-centime supérieure.
+    const worked = BigInt(Math.round(h * 6000)) * 7n;
+    const covered = (+m.baseSalary || 0) > 0
+      ? BigInt(Math.round(contractWeekHours(m) * 6000)) * BigInt(days ? days.length : 7) : 0n;
+    const excess = worked > covered ? worked - covered : 0n;
+    // Conserver aussi les taux importés plus précis qu'un centime par heure.
+    const [mantissa, exponent = '0'] = String(rate).toLowerCase().split('e');
+    const decimals = (mantissa.split('.')[1] || '').length - Number(exponent);
+    const scale = 10n ** BigInt(Math.max(0, decimals));
+    const rateCents = BigInt(mantissa.replace('.', '')) * 100n * (10n ** BigInt(Math.max(0, -decimals)));
+    const denominator = 42000n * scale;
+    return Number((excess * rateCents * 2n + denominator) / (denominator * 2n)) / 100;
   }
   function payrollFigures(members, venueType, period) {
     const hours = getHours(venueType);

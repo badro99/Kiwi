@@ -503,6 +503,8 @@ export async function onRequestPost({ request, env }) {
   const now = Date.now();
   let changedEntry = null;
   const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
+    // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
+    changedEntry = null;
     const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
     const open = entries.slice().reverse().find((e) => e && e.staffId === auth.pin.id && !e.outTs);
     if (action === 'clock-in') {

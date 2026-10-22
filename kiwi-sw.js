@@ -274,7 +274,7 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=7',
-  '/assets/charges-engine.js?v=2',
+  '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=15',
   '/assets/clients-book.js?v=28',
@@ -290,7 +290,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=12',
-  '/assets/team.js?v=311',
+  '/assets/team.js?v=312',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=114',
   '/assets/menu-promos-dashboard.js?v=2',

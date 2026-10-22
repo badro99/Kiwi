@@ -199,10 +199,12 @@
    * aux journées) plus les charges sociales patronales au taux réglé. */
   function staffFor(labour, socialRate) {
     if (!labour) return null;
-    const base = Math.max(0, num(labour.baseDue));
-    const variable = Math.max(0, num(labour.variablePay));
+    // Les composantes affichées sont aussi celles qui portent les charges.
+    const base = Math.max(0, Math.floor(num(labour.baseDue) * 100 + 0.5000001)) / 100;
+    const variable = Math.max(0, Math.floor(num(labour.variablePay) * 100 + 0.5000001)) / 100;
     const rate = socialRate == null ? 0 : num(socialRate);
-    const social = (base + variable) * rate / 100;
+    // Centimes et centièmes de taux : la demi-centime reste exacte.
+    const social = Math.floor(((Math.round(base * 100) + Math.round(variable * 100)) * Math.round(rate * 100) + 5000) / 10000) / 100;
     return {
       base: r2(base), variable: r2(variable), social: r2(social), total: r2(base + variable + social),
       salaried: num(labour.salaried), rated: num(labour.rated), members: num(labour.members),
