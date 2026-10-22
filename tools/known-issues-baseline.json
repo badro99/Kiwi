@@ -19,10 +19,6 @@
     },
     {
       "suite": "books-money-properties-test.mjs",
-      "label": "BP-2"
-    },
-    {
-      "suite": "books-money-properties-test.mjs",
       "label": "BP-3"
     },
     {
