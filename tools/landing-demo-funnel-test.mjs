@@ -46,10 +46,65 @@ const F = W.KiwiDemoFunnel;
 const keys = (o, p = '') => Object.keys(o).sort().flatMap((k) => (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) ? keys(o[k], p + k + '.') : [p + k]));
 const fill = (F, v) => Object.assign(F._state(), { firstName: '', business: '', family: '', trade: '', phone: '', email: '', day: '', part: '', note: '', website: '' }, v);
 
-ok('copy exists in French, English and Arabic with the same keys', () => {
-  assert.deepEqual(Object.keys(F.STR).sort(), ['ar', 'en', 'fr']);
-  assert.deepEqual(keys(F.STR.en), keys(F.STR.fr));
-  assert.deepEqual(keys(F.STR.ar), keys(F.STR.fr));
+/* The landing ships seven locales (content/landing-pricing.json); the sheet
+   used to carry fr/en/ar only and showed English on /de/, /es/, /it/, /nl/. */
+const LOCALES = ['fr', 'en', 'ar', 'de', 'es', 'it', 'nl'];
+const leaves = (o, p = '') => Object.keys(o).flatMap((k) => (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])
+  ? leaves(o[k], p + k + '.')
+  : Array.isArray(o[k]) ? o[k].map((v, i) => [p + k + '.' + i, v]) : [[p + k, o[k]]]));
+ok('copy exists in all seven landing languages with the same keys, none empty', () => {
+  assert.deepEqual(Object.keys(F.STR).sort(), [...LOCALES].sort());
+  for (const l of LOCALES) {
+    assert.deepEqual(keys(F.STR[l]), keys(F.STR.fr), l);
+    assert.equal(F.STR[l].doneSteps.length, F.STR.fr.doneSteps.length, l);
+    for (const [k, v] of leaves(F.STR[l])) assert.ok(typeof v === 'string' && v.trim(), `${l}.${k}`);
+  }
+});
+/* A string identical to the English one (and not to the French) is English
+   pasted in. The few listed here are the same word in that language. */
+const SAME_AS_EN = new Set(['phonePh', 'firstNamePh', 'businessPh', 'de.optional', 'de.wa.note', 'nl.wa.note']);
+ok('de, es, it and nl are written in their language, not copied from English', () => {
+  for (const l of ['de', 'es', 'it', 'nl']) {
+    const en = Object.fromEntries(leaves(F.STR.en));
+    const fr = Object.fromEntries(leaves(F.STR.fr));
+    const copied = leaves(F.STR[l]).filter(([k, v]) => v === en[k] && v !== fr[k] && !SAME_AS_EN.has(k) && !SAME_AS_EN.has(l + '.' + k));
+    assert.deepEqual(copied.map(([k]) => k), [], l);
+  }
+});
+ok('the page language picks its own copy, the sheet, the payload and WhatsApp follow', () => {
+  for (const l of LOCALES) {
+    const G = load(l).KiwiDemoFunnel;
+    fill(G, { firstName: 'Salma', business: 'TEST KIWI', family: 'restaurant', trade: 'cafe', phone: '0600000000' });
+    assert.equal(G._payload().lang, l, l);
+    assert.ok(G._waText('').startsWith(G.STR[l].wa.hello), l);
+    const chips = G._tradeChips();
+    assert.ok(chips.includes('>' + G.STR[l].families.restaurant + '<'), l + ' family heading');
+    G._state().day = '';
+    assert.equal(Object.keys(G._validate()).length, 0, l);
+    fill(G, {});
+    assert.equal(G._validate().firstName, G.STR[l].required, l + ' error message');
+  }
+  const un = load('pt').KiwiDemoFunnel;
+  fill(un, { firstName: 'Sam', business: 'TEST KIWI', family: 'boutique', phone: '0600000000' });
+  assert.equal(un._payload().lang, 'en', 'an unknown language still reads English');
+});
+ok('every business type is named in all seven languages (trades.js)', () => {
+  for (const t of W.KiwiTrades.LIST) for (const l of LOCALES) assert.ok(t.label && String(t.label[l] || '').trim(), `${t.id}.${l}`);
+  for (const l of ['de', 'es', 'it', 'nl']) {
+    const html = load(l).KiwiDemoFunnel._tradeChips();
+    for (const t of W.KiwiTrades.LIST) {
+      if (t.label[l] === t.label.en) continue;
+      assert.ok(html.includes('<span>' + t.label[l].replace(/&/g, '&amp;') + '</span>'), `${l} ${t.id}`);
+    }
+  }
+});
+ok('the call slot reads inside the sentence; German keeps its capital nouns', () => {
+  const de = load('de').KiwiDemoFunnel;
+  fill(de, { firstName: 'Salma', business: 'TEST KIWI', family: 'restaurant', phone: '0600000000', day: 'week', part: 'evening' });
+  assert.ok(de._waText('').includes('diese Woche, gegen Abend'), de._waText(''));
+  const es = load('es').KiwiDemoFunnel;
+  fill(es, { firstName: 'Salma', business: 'TEST KIWI', family: 'restaurant', phone: '0600000000', day: 'tomorrow', part: 'morning' });
+  assert.ok(es._waText('').includes('mañana, por la mañana'));
 });
 ok('no em dash and no italics in the copy or the sheet', () => {
   assert.doesNotMatch(src, /—/);
@@ -116,7 +171,7 @@ ok('the honeypot is out of reach for people and never saved', () => {
   assert.match(src, /if \(f !== 'website'\) save\(\);/);
 });
 ok('never claims a booked appointment, only a call to confirm', () => {
-  for (const l of ['fr', 'en', 'ar']) assert.ok(F.STR[l].doneSteps && F.STR[l].doneSteps.length === 3, l);
+  for (const l of LOCALES) assert.ok(F.STR[l].doneSteps && F.STR[l].doneSteps.length === 3, l);
   assert.doesNotMatch(F.STR.fr.doneLead + F.STR.fr.doneSteps.join(' '), /réservé|rendez-vous confirmé/i);
 });
 ok('the existing business number is kept, and only demo buttons open the sheet', () => {
