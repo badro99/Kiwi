@@ -119,7 +119,7 @@ var SHELL = [
   '/assets/reservations.js?v=31',
   '/assets/pressing-ops.js?v=9',
   '/assets/pressing-garment-icons.js?v=2',
-  '/assets/pressing-catalog.js?v=8',
+  '/assets/pressing-catalog.js?v=9',
   '/assets/pressing-dashboard.js?v=19',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=49',
+  '/assets/caisse-lang.js?v=53',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=145',
+  '/assets/pos-dispatch.js?v=150',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -409,8 +409,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=10',
   '/assets/pos-spa.js?v=10',
-  '/assets/pos-hotel.css?v=20',
-  '/assets/pos-hotel.js?v=20',
+  '/assets/pos-hotel.css?v=23',
+  '/assets/pos-hotel.js?v=23',
   '/assets/pos-fastfood.css?v=15',
   '/assets/pos-fastfood.js?v=15',
   '/assets/pos-boulangerie.css?v=12',
@@ -447,8 +447,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=49',
-  '/assets/pressing-caisse.css?v=49',
+  '/assets/pressing-caisse.js?v=54',
+  '/assets/pressing-caisse.css?v=54',
   '/assets/material-icons.js?v=3',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

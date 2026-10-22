@@ -42,6 +42,8 @@
   const fmtDT   = (d) => `${fmtDay(d)} · ${pad2(d.getHours())}h${pad2(d.getMinutes())}`;
   const DAY_MS  = 24 * 3600 * 1000;
 
+  function dataText(value) { return '<span data-nolang>' + esc(value) + '</span>'; }
+
   function toast(msg, ms) {
     const stack = $('#toast-stack');
     if (!stack) return;
@@ -579,7 +581,7 @@
     return `<div class="ht-arr ${a.done ? 'is-done' : ''}" style="--i:${i}">
       <div class="ht-arr-time"><b>${a.t}</b><span>${a.done ? 'arrivé' : 'ETA'}</span></div>
       <div class="ht-arr-mid">
-        <div class="ht-arr-name">${esc(a.guest)}
+        <div class="ht-arr-name">${dataText(a.guest)}
           ${a.repeat ? '<span class="ht-pill mint"><i data-lucide="heart"></i>fidèle</span>' : ''}
         </div>
         <div class="ht-arr-meta">
@@ -590,7 +592,7 @@
           <span class="ht-pill"><i data-lucide="users"></i>${a.pax}</span>
           ${a.acompte ? `<span class="ht-pill ok">acompte ${fmtMAD(a.acompte)}</span>` : ''}
         </div>
-        ${a.note ? `<div class="ht-arr-note"><i data-lucide="sticky-note"></i>${esc(a.note)}</div>` : ''}
+        ${a.note ? `<div class="ht-arr-note"><i data-lucide="sticky-note"></i>${dataText(a.note)}</div>` : ''}
         ${!a.done && blocked ? `<div class="ht-arr-note"><i data-lucide="clock"></i>${esc(blockReason(a.room))}</div>` : ''}
       </div>
       <div class="ht-arr-right">
@@ -757,7 +759,7 @@
     const el = $('#ht-roomm', root);
     let info = '', actions = '';
     if (r.status === 'menage') {
-      info = `<div class="ht-rs-info warn"><b>Ménage en cours</b>, ${esc(HOUSEKEEPERS[n % HOUSEKEEPERS.length])}.${arr ? `<br>${esc(arr.guest)} attendu·e à ${arr.t}.` : ''}</div>`;
+      info = `<div class="ht-rs-info warn"><b>Ménage en cours</b>, ${esc(HOUSEKEEPERS[n % HOUSEKEEPERS.length])}.${arr ? `<br>${dataText(arr.guest)} attendu·e à ${arr.t}.` : ''}</div>`;
       actions = `
         <button class="ht-btn primary" data-ht-rs="clean"><i data-lucide="sparkles"></i>Ménage terminé, chambre propre</button>
         <button class="ht-btn ghost" data-ht-rs="hs">Signaler hors service</button>`;
@@ -766,7 +768,7 @@
       actions = `<button class="ht-btn primary" data-ht-rs="enable"><i data-lucide="check"></i>Remettre en service</button>`;
     } else { /* libre */
       info = arr
-        ? `<div class="ht-rs-info mint"><b>Réservée ce soir</b>, ${esc(arr.guest)} · arrivée ${arr.t} · ${SRC[arr.src].label} · ${arr.nights} nuit${arr.nights > 1 ? 's' : ''}.</div>`
+        ? `<div class="ht-rs-info mint"><b>Réservée ce soir</b>, ${dataText(arr.guest)} · arrivée ${arr.t} · ${SRC[arr.src].label} · ${arr.nights} nuit${arr.nights > 1 ? 's' : ''}.</div>`
         : `<div class="ht-rs-info">Libre ce soir, propre, prête à vendre. ${fmtMAD(roomRate(n))} / nuit.</div>`;
       actions = `
         ${arr ? `<button class="ht-btn primary" data-ht-rs="checkin"><i data-lucide="user-check"></i>Check-in maintenant, ${esc(arr.guest.split(' ')[0])}</button>` : ''}
@@ -866,7 +868,7 @@
       <div class="ht-ci-guest">
         <span class="ava">${esc(initialsOf(a.guest))}</span>
         <span class="mid">
-          <span class="nm">${esc(a.guest)} ${a.repeat ? '<span class="ht-pill mint"><i data-lucide="heart"></i>fidèle ×2</span>' : ''}</span>
+          <span class="nm">${dataText(a.guest)} ${a.repeat ? '<span class="ht-pill mint"><i data-lucide="heart"></i>fidèle ×2</span>' : ''}</span>
           <span class="sb">Ch. ${a.room} · ${esc(roomName(a.room))} · ${a.nights} nuit${a.nights > 1 ? 's' : ''} · ${a.pax} pers. · ${SRC[a.src].label}${a.acompte ? ` · acompte ${fmtMAD(a.acompte)} réglé` : ''}</span>
         </span>
       </div>`;
@@ -884,13 +886,13 @@
         <p class="modal-subtle">Arrivée ${a.t} · ${SRC[a.src].label} · la fiche de police est obligatoire, le scan la pré-remplit.</p>
         ${steps(1)}
         ${guestCard()}
-        ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-lucide="sticky-note"></i>${esc(a.note)}</div>` : ''}
+        ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-lucide="sticky-note"></i>${dataText(a.note)}</div>` : ''}
         <div class="ht-ci-f">
           <div class="ht-ci-lbl">Hospitality+ <span class="opt">· informations utiles pendant et après le séjour</span></div>
           <div class="ht-ci-profile-grid">
             <label><span>Téléphone</span><input class="ht-in" id="ht-ci-phone" inputmode="tel" value="${esc(ci.profile.phone)}" placeholder="06… / +33…"></label>
             <label><span>Email</span><input class="ht-in" id="ht-ci-email" type="email" value="${esc(ci.profile.email)}" placeholder="nom@email.com"></label>
-            <label><span>Type de pièce</span><select class="ht-in" id="ht-ci-doc-type">${['Passeport','CIN','Carte de séjour','Autre'].map((v) => `<option ${ci.profile.documentType === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+            <label><span>Type de pièce</span><select class="ht-in" id="ht-ci-doc-type">${['Passeport','CIN','Carte de séjour','Autre'].map((v) => `<option value="${v}" ${ci.profile.documentType === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
             <label><span>Numéro passeport / ID</span><input class="ht-in" id="ht-ci-doc-number" value="${esc(ci.profile.documentNumber)}" placeholder="N° du document"></label>
             <label><span>Nationalité</span><input class="ht-in" id="ht-ci-nationality" value="${esc(ci.profile.nationality)}" placeholder="Nationalité"></label>
             <label><span>Langue préférée</span><input class="ht-in" id="ht-ci-language" value="${esc(ci.profile.preferredLanguage)}" placeholder="Français, العربية…"></label>
@@ -935,7 +937,7 @@
       el.innerHTML = `
         <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Caution &amp; accueil</h3>
-        <p class="modal-subtle">${esc(a.guest)} · Ch. ${a.room} · fiche ${ci.police}</p>
+        <p class="modal-subtle">${dataText(a.guest)} · Ch. ${a.room} · fiche ${ci.police}</p>
         ${steps(2)}
         ${guestCard()}
         <div class="ht-ci-f">
@@ -1068,7 +1070,7 @@
               ${departing ? '<span class="ht-pill due">départ aujourd’hui</span>' : `<span class="ht-pill">j${st.day}/${st.nights}</span>`}
             </div>
             <div>
-              <div class="ht-focard-guest">${esc(st.guest)}</div>
+              <div class="ht-focard-guest" data-nolang>${dataText(st.guest)}</div>
               <div class="ht-focard-sub">${SRC[st.src].label} · ${st.pax} pers. · ${fmtDay(st.inAt)} → ${fmtDay(st.outAt)}</div>
             </div>
             <div class="ht-focard-foot">
@@ -1128,7 +1130,7 @@
           <header class="ht-head" style="align-items:flex-start;flex-direction:column;gap:4px;">
             <button class="ht-fo-back" id="ht-fo-back"><i data-lucide="x"></i>Tous les folios</button>
             <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;width:100%;">
-              <div><h1>Folio · Ch. ${n}</h1><div class="ht-head-sub">${esc(st.guest)} · ${esc(roomName(n))} · touchez un extra pour le poster sur la note</div></div>
+              <div><h1>Folio · Ch. ${n}</h1><div class="ht-head-sub">${dataText(st.guest)} · ${esc(roomName(n))} · touchez un extra pour le poster sur la note</div></div>
             </div>
           </header>
           <div class="ht-charges-scroll">
@@ -1146,7 +1148,7 @@
         </div>
         <aside class="ht-folio-panel">
           <div class="ht-fp-head">
-            <div class="ht-fp-row1"><span class="ht-fp-title">${esc(st.guest)}</span><span class="ht-fp-room">Ch. ${n}</span></div>
+            <div class="ht-fp-row1"><span class="ht-fp-title" data-nolang>${dataText(st.guest)}</span><span class="ht-fp-room">Ch. ${n}</span></div>
             <div class="ht-fp-sub">
               ${srcPill(st.src)}
               <span class="ht-pill"><i data-lucide="calendar"></i>${fmtDay(st.inAt)} → ${fmtDay(st.outAt)}</span>
@@ -1167,7 +1169,7 @@
               return `<div class="ht-fline">
                 <span class="ht-fline-art">${ART[c.cid] || ''}</span>
                 <span class="ht-fline-mid">
-                  <span class="ht-fline-name">${esc(def.label)}${c.note ? ` · ${esc(c.note)}` : ''}</span>
+                  <span class="ht-fline-name">${esc(def.label)}${c.note ? ` · ${dataText(c.note)}` : ''}</span>
                   <span class="ht-fline-sub">${esc(c.at)} · ${fmtMAD(Number.isFinite(c.unit) ? c.unit : def.unit)}</span>
                   ${c.saleId ? `<span class="ht-fline-sub">${esc(POSTED_CHARGE_LOCK)}</span>` : ''}
                 </span>
@@ -1250,7 +1252,7 @@
       } else if (sheet.stage === 'reveal') {
         el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
           <div class="ht-verify-kicker">Nom attendu · chambre ${roomN}</div>
-          <div class="ht-verify-name">${esc(st.guest)}</div>
+          <div class="ht-verify-name" data-nolang>${dataText(st.guest)}</div>
           <p class="ht-verify-copy">Comparez exactement avec la réponse donnée, sans lire le nom à voix haute.</p>
           <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-lucide="check"></i>Le nom correspond</button></div>`;
       } else {
@@ -1331,7 +1333,7 @@
     const recapRows = () => `
       <div class="ht-co-recap">
         <div class="ht-co-row"><span class="nm">Nuitées · ${esc(roomName(n))} × ${st.nights}</span><span class="v">${fmtMAD(t.nuitees)}</span></div>
-        ${st.charges.map((c) => `<div class="ht-co-row"><span class="nm">${esc(CHARGE[c.cid].label)} × ${c.qty}${c.note ? `<small>${esc(c.note)}</small>` : ''}</span><span class="v">${fmtMAD(chargeAmt(c))}</span></div>`).join('')}
+        ${st.charges.map((c) => `<div class="ht-co-row"><span class="nm">${esc(CHARGE[c.cid].label)} × ${c.qty}${c.note ? `<small>${dataText(c.note)}</small>` : ''}</span><span class="v">${fmtMAD(chargeAmt(c))}</span></div>`).join('')}
         <div class="ht-co-row taxe"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. × ${st.nights} nuit${st.nights > 1 ? 's' : ''}</span><span class="v">${fmtMAD(t.taxe)}</span></div>
         <div class="ht-co-row tot"><span class="nm">Total séjour</span><span class="v">${fmtMAD(t.total)}</span></div>
         ${st.payments.map((p) => `<div class="ht-co-row paid"><span class="nm">${esc(p.label)}</span><span class="v">−${fmtMAD(p.amount)}</span></div>`).join('')}
@@ -1341,7 +1343,7 @@
       el.innerHTML = `
         <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Check-out, Ch. ${n}</h3>
-        <p class="modal-subtle">${esc(st.guest)} · ${fmtDay(st.inAt)} → ${fmtDay(st.outAt)} · ${st.nights} nuit${st.nights > 1 ? 's' : ''}</p>
+        <p class="modal-subtle">${dataText(st.guest)} · ${fmtDay(st.inAt)} → ${fmtDay(st.outAt)} · ${st.nights} nuit${st.nights > 1 ? 's' : ''}</p>
         ${recapRows()}
         ${t.due > 0 ? `
           <div class="modal-amount size-md">${fmtMAD(t.due)}</div>
@@ -1387,7 +1389,7 @@
       el.innerHTML = `
         <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(t.due)}</h3>
-        <p class="modal-subtle">Ch. ${n} · ${esc(st.guest)}</p>
+        <p class="modal-subtle">Ch. ${n} · ${dataText(st.guest)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
             <label class="cash-input-label" for="ht-cash-in">Espèces reçues</label>
@@ -1500,14 +1502,14 @@
       <hr>
       <div class="row"><span>${provisional ? 'Note provisoire' : 'Facture'}</span><span class="b">${num}</span></div>
       <div class="row"><span>Chambre</span><span>Ch. ${st.room} · ${esc(roomName(st.room))}</span></div>
-      <div class="row"><span>Client</span><span>${esc(st.guest)}</span></div>
+      <div class="row"><span>Client</span><span>${dataText(st.guest)}</span></div>
       <div class="row"><span>Canal</span><span>${SRC[st.src].label}</span></div>
       <div class="row"><span>Arrivée</span><span>${fmtDay(st.inAt)}</span></div>
       <div class="row"><span>Départ</span><span>${fmtDay(st.outAt)} · ${st.nights} nuit${st.nights > 1 ? 's' : ''} · ${st.pax} pers.</span></div>
       ${st.police ? `<div class="row"><span>Fiche police</span><span>${st.police}</span></div>` : ''}
       <hr>
       <div class="row"><span class="nm">Nuitées · ${esc(roomName(st.room))} ×${st.nights}</span><span>${t.nuitees}</span></div>
-      ${st.charges.map((c) => `<div class="row"><span class="nm">${c.at ? `${esc(c.at)} · ` : ''}${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
+      ${st.charges.map((c) => `<div class="row"><span class="nm">${c.at ? `${esc(c.at)} · ` : ''}${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${dataText(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
       <div class="row b"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. ×${st.nights} nuit${st.nights > 1 ? 's' : ''}</span><span>${t.taxe}</span></div>
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${t.total} MAD</span></div>

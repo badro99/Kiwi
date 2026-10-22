@@ -323,6 +323,12 @@
   }
   loadCatalog();
 
+  function dataText(value) { return '<span data-nolang>' + esc(value) + '</span>'; }
+
+  function catalogLabel(row) {
+    return window.KiwiPressingCatalog?.labelHTML?.(row) || esc(row.label || '');
+  }
+
   function priceTable(item, variantId) {
     if (item.variants) {
       const v = item.variants.find((x) => x.id === variantId) || item.variants[0];
@@ -1168,7 +1174,7 @@
     $('#px-cats', root).innerHTML =
       `<button class="px-cat ${state.cat === 'tous' ? 'on' : ''}" data-px-cat="tous">Tous <span class="px-cat-ct">${all}</span></button>` +
       visible.map((c) =>
-        `<button class="px-cat ${state.cat === c.id ? 'on' : ''}" data-px-cat="${c.id}">${esc(c.label)} <span class="px-cat-ct">${counts[c.id]}</span></button>`
+        `<button class="px-cat ${state.cat === c.id ? 'on' : ''}" data-px-cat="${c.id}">${catalogLabel(c)} <span class="px-cat-ct">${counts[c.id]}</span></button>`
       ).join('');
     $('#px-cats', root).onclick = (e) => {
       const b = e.target.closest('[data-px-cat]');
@@ -1193,8 +1199,8 @@
       <div class="px-grid px-grid-all">${rows.map(({ category, item: it }) => `
         <button class="px-card" data-px-item="${it.id}" style="--i:${i++}">
           <span class="px-card-art">${garmentIcon(it)}</span>
-          <span class="px-card-cat">${esc(category.label)}</span>
-          <span class="px-card-name">${esc(it.label)}</span>
+          <span class="px-card-cat">${catalogLabel(category)}</span>
+          <span class="px-card-name">${catalogLabel(it)}</span>
           <span class="px-card-price">dès ${fmtMAD(minPrice(it))}${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
@@ -1238,7 +1244,7 @@
     const c = t.customer.type === 'known' ? CUST[t.customer.id] : t.customer;
     const prefs = (c.prefs && c.prefs.length) ? ` · ${c.prefs[0]}` : '';
     return `<button class="px-tk-row is-set" id="px-tk-client"><i data-lucide="user-check"></i>
-      <span class="l"><b>${esc(c.name)}</b><span>${esc(c.phone || 'sans téléphone')}${c.orders ? ` · ${c.orders} commandes` : ' · nouveau'}${esc(prefs)}</span></span>
+      <span class="l"><b>${dataText(c.name)}</b><span>${esc(c.phone || 'sans téléphone')}${c.orders ? ` · ${c.orders} commandes` : ' · nouveau'}${esc(prefs)}</span></span>
       ${c.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
       <span class="edit">Changer</span></button>`;
   }
@@ -1304,7 +1310,7 @@
     return `<div class="px-line">
         <span class="px-line-art">${garmentIcon({ ...item, variantId: ln.variantId })}</span>
       <span class="px-line-mid">
-        <span class="px-line-name">${esc(ln.label || item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
+        <span class="px-line-name">${catalogLabel({ ...item, label: ln.label || item.label })}${variant ? ` · ${esc(variant.label)}` : ''}</span>
         <span class="px-line-sub">
           <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
           <span class="svc">${svcCodes(ln.services)}</span> ${esc(svcShorts(ln.services))}
@@ -1360,7 +1366,7 @@
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-sheet-head">
         <span class="px-sheet-art">${garmentIcon({ ...item, variantId: sheet.variantId })}</span>
-        <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
+        <span class="px-sheet-title"><h3>${catalogLabel(item)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
         <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${fmtMAD(unit)} × ${sheet.qty}</span></span>
       </div>
 
@@ -1375,7 +1381,7 @@
         ${item.variants ? `<div class="px-f">
           <div class="px-f-lbl">${item.id === 'costume' ? 'Pièces du costume' : 'Taille'}</div>
           <div class="px-seg" data-lens-demo id="px-var-seg">
-            ${item.variants.map((v) => `<button class="px-seg-it ${v.id === sheet.variantId ? 'on' : ''}" data-lens-item data-px-var="${v.id}">${esc(v.label)}${v.pieces ? `<small>${v.pieces.length} étiquettes</small>` : ''}</button>`).join('')}
+            ${item.variants.map((v) => `<button class="px-seg-it ${v.id === sheet.variantId ? 'on' : ''}" data-lens-item data-px-var="${v.id}">${catalogLabel(v)}${v.pieces ? `<small>${v.pieces.length} étiquettes</small>` : ''}</button>`).join('')}
           </div>
         </div>` : ''}
         <div class="px-f">
@@ -1551,7 +1557,7 @@
               <button class="px-cl-row" data-px-cl="${c.id}">
                 <span class="px-cl-ava ${c.b2b ? 'b2b' : ''}">${c.b2b ? '<i data-lucide="building-2"></i>' : esc(initials(c.name))}</span>
                 <span class="px-cl-mid">
-                  <span class="px-cl-name">${esc(c.name)} ${c.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}</span>
+                  <span class="px-cl-name" data-nolang>${dataText(c.name)} ${c.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}</span>
                   <span class="px-cl-sub">${esc(c.phone)}</span>
                 </span>
                 <span class="px-cl-right"><b>${c.orders} cmd</b>${dueOf(c) ? `<span class="due">solde ${fmtMAD(dueOf(c))}</span>` : ''}</span>
@@ -1623,7 +1629,7 @@
   function recoPanel(c) {
     const hist = ORDERS.filter((o) => o.custId === c.id).slice(0, 2);
     return `<div class="px-reco">
-      <div class="px-reco-head"><i data-lucide="sparkles"></i>${esc(c.name)}, client reconnu</div>
+      <div class="px-reco-head"><i data-lucide="sparkles"></i>${dataText(c.name)}, client reconnu</div>
       <div class="px-reco-rows">
         ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
         ${c.contact ? `<div class="px-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
@@ -1762,7 +1768,7 @@
       ${receiptHead()}
       <hr>
       <div class="row"><span>Commande</span><span class="b">${publicOrderNo(o)}</span></div>
-      <div class="row"><span>Client</span><span>${esc(c.name)}</span></div>
+      <div class="row"><span>Client</span><span>${dataText(c.name)}</span></div>
       ${c.phone ? `<div class="row"><span>Tél</span><span>${esc(c.phone)}</span></div>` : ''}
       <div class="row"><span>Déposé</span><span>${fmtDT(o.droppedAt)}</span></div>
       <div class="row b"><span>PRÊT LE</span><span>${fmtDT(o.readyAt)}</span></div>
@@ -1770,7 +1776,7 @@
       ${o.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
         const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
-        return `<div class="row"><span class="nm">${ln.qty} × ${esc(ln.label || item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
+        return `<div class="row"><span class="nm">${ln.qty} × ${catalogLabel({ ...item, label: ln.label || item.label })}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
       }).join('')}
       <hr>
       <div class="row"><span>Sous-total</span><span>${fmtMAD(sub)}</span></div>
@@ -1791,9 +1797,9 @@
     const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
       <div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
-      <div class="px-tag-item"><strong>${esc(p.label)}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
+      <div class="px-tag-item"><strong>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
       ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
-      <div class="px-tag-client">${esc(customer.name)}</div>
+      <div class="px-tag-client" data-nolang>${dataText(customer.name)}</div>
       <div class="px-tag-id">${publicPieceNo(o, p)}</div>
     </div>`;
   }
@@ -1945,7 +1951,7 @@
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${settle ? 'Encaisser le solde' : 'Encaissement'}</h3>
-        <p class="modal-subtle">${order.id} · ${esc(cust.name)}</p>
+        <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="modal-amount size-md">${fmtMAD(amountBase)}</div>
         <div class="px-pay-opts">
           ${settle ? '' : `
@@ -1966,7 +1972,7 @@
           ${cust.b2b ? `
           <button class="px-pay-opt" data-px-paymode="compte">
             <span class="ic"><i data-lucide="building-2"></i></span>
-            <span class="l"><b>Sur compte B2B</b><span>${esc(cust.name)}, facture fin de mois</span></span>
+            <span class="l"><b>Sur compte B2B</b><span>${dataText(cust.name)}, facture fin de mois</span></span>
           </button>` : ''}`}
           ${settle ? `
           <button class="px-pay-opt" data-px-method="especes">
@@ -2059,7 +2065,7 @@
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${mode === 'acompte' ? 'Acompte' : 'Paiement'} · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${order.id} · ${esc(cust.name)}</p>
+        <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="px-pay-opts" style="margin-top:8px;">
           <button class="px-pay-opt" data-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
@@ -2082,7 +2088,7 @@
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${order.id} · ${esc(cust.name)}</p>
+        <p class="modal-subtle">${order.id} · ${dataText(cust.name)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
             <label class="cash-input-label" for="px-cash-in">Espèces reçues</label>
@@ -2312,7 +2318,7 @@
       </div>
       <div class="px-ocard-top"><span class="px-ocard-num">${publicOrderNo(o)}</span>
         <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN ATTENTE DE RETRAIT · ' : ''}${esc(when)}</span></div>
-      <div class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</div>
+      <div class="px-ocard-client" data-nolang><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${dataText(c.name)}</div>
       <div class="px-ocard-meta">
         <span class="px-pill"><i data-lucide="tag"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
         <span class="px-pill ${st === 'trait' ? 'warn' : st === 'pret' ? 'ok' : ''}">${STATUS[st].label}</span>
@@ -2415,14 +2421,14 @@
       <div class="px-dt-head">
         <div>
           <h3>${publicOrderNo(o)}</h3>
-          <div class="px-dt-sub">${esc(c.name)} ${c.phone ? `<span class="tel">${esc(c.phone)}</span>` : ''}
+          <div class="px-dt-sub">${dataText(c.name)} ${c.phone ? `<span class="tel">${esc(c.phone)}</span>` : ''}
             ${o.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
             <span class="px-pill ${st === 'pret' ? 'ok' : st === 'trait' ? 'warn' : ''}">${STATUS[st].label}</span>
             ${isLate(o) ? '<span class="px-pill due">En attente de retrait</span>' : ''}
             ${payPill(o)}
             ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
           </div>
-          <div class="px-dt-sub" style="margin-top:5px;">Déposé ${fmtDT(o.droppedAt)} · promis ${fmtDT(o.readyAt)}${o.collectedAt ? ` · retiré ${fmtDT(o.collectedAt)}` : ''}</div>
+          <div class="px-dt-sub" style="margin-top:5px;"><span>Déposé ${fmtDT(o.droppedAt)}</span> · <span>promis ${fmtDT(o.readyAt)}</span>${o.collectedAt ? ` · <span>retiré ${fmtDT(o.collectedAt)}</span>` : ''}</div>
         </div>
       </div>
       ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
@@ -2436,7 +2442,7 @@
           <div class="px-piece">
             <span class="px-piece-art">${garmentIcon({ ...(ITEMS[p.itemId] || {}), variantId: p.variantId })}</span>
             <span class="px-piece-mid">
-              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
+              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
               <span class="px-piece-id">${publicPieceNo(o, p)}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
               ${care.length ? `<span class="px-piece-care"><i data-lucide="triangle-alert"></i>${care.map(esc).join(' · ')}</span>` : ''}
             </span>
@@ -2596,6 +2602,7 @@
     const first = c.b2b ? c.name : c.name.split(' ')[0];
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
+    // Sent to the customer, so it does not follow the cashier's screen language.
     return `Bonjour ${first}, votre commande ${publicOrderNo(o)} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${fmtMAD(due)}.` : '')
@@ -2610,7 +2617,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">WhatsApp, c'est prêt</h3>
-      <p class="modal-subtle">${esc(c.name)} ${c.phone ? `· ${esc(c.phone)}` : '· numéro manquant (passage)'}</p>
+      <p class="modal-subtle">${dataText(c.name)} ${c.phone ? `· ${esc(c.phone)}` : '· numéro manquant (passage)'}</p>
       <div class="px-wa-bubblewrap">
         <div class="px-wa-bubble">
           <textarea id="px-wa-text">${esc(waMessage(o))}</textarea>
@@ -2750,13 +2757,13 @@
     const early = st !== 'pret';
     return `<div class="px-rt-card">
       <div class="px-rt-top">
-        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
+        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${dataText(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
         ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>·</b><span>non rangé</span>'}</div>`}
       </div>
       <div class="px-rt-pieces">
         ${o.pieces.map((p) => {
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
-          return `<div class="px-rt-piece"><i data-lucide="${early ? 'clock' : 'check-circle-2'}"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
+          return `<div class="px-rt-piece"><i data-lucide="${early ? 'clock' : 'check-circle-2'}"></i><span>${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
         }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
@@ -2890,8 +2897,8 @@
   function tagInner(p, o) {
     const c = custOf(o);
     return `<div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
-      <div class="px-tag-client">${esc(c.name)}</div>
-      <div class="px-tag-item">${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
+      <div class="px-tag-client" data-nolang>${dataText(c.name)}</div>
+      <div class="px-tag-item">${catalogLabel({ ...ITEMS[p.itemId], label: p.label })} · <span class="svc">${svcCodes(p.svcs)}</span></div>
       <div class="px-tag-id">${publicPieceNo(o, p)}</div>`;
   }
 
@@ -2925,7 +2932,7 @@
           ${queue.map((o) => `
             <button class="px-qcard ${sel === o.id ? 'on' : ''}" data-px-q="${o.id}">
               <div class="num">${publicOrderNo(o)}</div>
-              <div class="who">${esc(custOf(o).name)}</div>
+              <div class="who">${dataText(custOf(o).name)}</div>
               <div class="sub">${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · ${o.notified ? 'client notifié' : 'pas encore notifié'}</div>
             </button>`).join('') || '<div class="px-rack-hint">Rien à ranger.<br>Quand une commande passe « prête », elle arrive ici.</div>'}
           ${queue.length ? `<div class="px-rack-hint">${sel ? 'Touchez un emplacement libre →' : 'Sélectionnez une commande, puis son emplacement.'}</div>` : ''}

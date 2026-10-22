@@ -212,6 +212,17 @@
     return cloud.bind();
   }
 
+  // Only shipped catalogue labels are interface copy. A merchant's own
+  // label may itself be a dictionary word (for example, “Total”).
+  function labelHTML(row, field) {
+    field = field || 'label';
+    var shipped = DEFAULTS.items.concat(DEFAULTS.categories, DEFAULTS.services);
+    DEFAULTS.items.forEach(function (item) { shipped = shipped.concat(item.variants || []); });
+    var builtin = shipped.some(function (item) { return item.id === row.id && item[field] === row[field]; });
+    var text = esc(row[field] || '');
+    return builtin ? text : '<span data-nolang>' + text + '</span>';
+  }
+
   function priceInputs(item, variant, services) {
     var prices = variant ? variant.prices : item.prices;
     return services.map(function (s) {
@@ -244,7 +255,7 @@
     var category = doc.categories.find(function (c) { return c.id === item.cat; }) || { label:item.cat };
     var open = state.expanded === item.id;
     var prices = item.variants && item.variants.length
-      ? '<div class="pce-variants">' + item.variants.map(function (v) { return '<div class="pce-variant"><b>' + esc(v.label) + '</b><div class="pce-prices">' + priceInputs(item,v,doc.services) + '</div></div>'; }).join('') + '</div>'
+      ? '<div class="pce-variants">' + item.variants.map(function (v) { return '<div class="pce-variant"><b>' + labelHTML(v) + '</b><div class="pce-prices">' + priceInputs(item,v,doc.services) + '</div></div>'; }).join('') + '</div>'
       : '<div class="pce-prices">' + priceInputs(item,null,doc.services) + '</div>';
     var min = itemMin(item);
     /* « À la caisse » doit dire vrai : la caisse n'affiche un article que s'il a
@@ -253,7 +264,7 @@
     var sellable = item.active && itemServiceCount(item) > 0;
     return '<article class="pce-item' + (item.active ? '' : ' is-hidden') + (open ? ' is-open' : '') + '" data-pce-item="' + esc(item.id) + '">' +
       '<button type="button" class="pce-summary" data-pce-toggle aria-expanded="' + (open ? 'true' : 'false') + '">' +
-        '<span class="pce-item-photo">' + garmentPhoto(item) + '</span><span class="pce-summary-copy"><b>' + esc(item.label) + '</b><small>' + esc(category.label) + '</small></span>' +
+        '<span class="pce-item-photo">' + garmentPhoto(item) + '</span><span class="pce-summary-copy"><b>' + labelHTML(item) + '</b><small>' + labelHTML(category) + '</small></span>' +
         '<span class="pce-summary-price"><b>' + (min ? 'dès ' + esc(fmtMoney(min)) + ' MAD' : 'Sans prix') + '</b><small>' + itemServiceCount(item) + ' traitement' + (itemServiceCount(item) < 2 ? '' : 's') + '</small></span>' +
         '<span class="pce-status ' + (sellable ? 'is-live' : '') + '">' + (!item.active ? 'Masqué' : sellable ? 'À la caisse' : 'Absent de la caisse') + '</span>' + mi('more','pce-chevron') + '</button>' +
       (open ? '<div class="pce-item-body"><div class="pce-item-main"><label><span>Nom affiché</span><input class="pce-name" maxlength="100" value="' + esc(item.label) + '" data-pce-name></label>' +
@@ -339,6 +350,6 @@
   window.addEventListener('storage', function (e) { if (e.key === key()) emit(read()); });
   window.KiwiPressingCatalog = {
     read: read, bind: bind, subscribe: subscribe, updateItem: updateItem, addItem: addItem,
-    mountEditor: renderEditor, scope: scope, _merge: merge, _defaults: function () { return clone(DEFAULTS); }
+    mountEditor: renderEditor, labelHTML: labelHTML, scope: scope, _merge: merge, _defaults: function () { return clone(DEFAULTS); }
   };
 })();

@@ -851,6 +851,20 @@ section('Imprimante et clôture en FR/EN/AR (tools/caisse-surface-lang-test.js)'
   }
 }
 
+/* Specialist till language coverage, source extraction and rendered patterns. */
+section('Pressing et hôtel en FR/EN/AR (tools/caisse-pressing-hotel-lang-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-pressing-hotel-lang-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.trim().split('\n').pop().replace(/^✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`caisse-pressing-hotel-lang-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4e · production action honesty ────────────────────────────────────────
  * Presentation workflows must fail honestly for a real merchant, even if a
  * later navigation change accidentally exposes one of their buttons. */

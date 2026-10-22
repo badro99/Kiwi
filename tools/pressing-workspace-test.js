@@ -91,7 +91,7 @@ ok(!garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).incl
 ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
 ok(caisseJs.includes("receiptHTML(order, 'DUPLICATA · ATELIER')") && caisseJs.includes("copy: 'DUPLICATA · ATELIER'") && caisseJs.includes('KP.printReceipt(duplicate)'), 'every pressing print job includes a clearly marked workshop duplicate');
-ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client">${esc(customer.name)}</div>') && caisseJs.includes('hideBarcode: true'), 'garment labels prioritize order number while retaining operational references');
+ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client" data-nolang>${dataText(customer.name)}</div>') && caisseJs.includes('hideBarcode: true'), 'garment labels prioritize order number while retaining operational references');
 ok(caisseCss.includes('--kiwi-dna-rail-w: 272px') && caisseJs.includes('id="px-theme"') && caisseJs.includes('KiwiCaisseTheme.toggle()') && caisseJs.includes('id="px-fullscreen"'), 'pressing uses a full-width rail with theme and fullscreen terminal controls');
 const whatsappDraftOpen = caisseJs.indexOf("window.open('', '_blank')");
 const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsappDraftOpen);
@@ -174,5 +174,8 @@ older.items.find((x) => x.id === 'chemise').updatedAt = 10;
 newer.items.find((x) => x.id === 'chemise').label = 'Nom récent';
 newer.items.find((x) => x.id === 'chemise').updatedAt = 20;
 ok(context.KiwiPressingCatalog._merge(older,newer).items.find((x) => x.id === 'chemise').label === 'Nom récent', 'cross-device catalogue merge keeps the latest row');
+
+const waBody = caisseJs.slice(caisseJs.indexOf('function waMessage'), caisseJs.indexOf('function openWa'));
+ok(waBody.includes('Bonjour ${first}') && !waBody.includes('KiwiCaisseLang'), 'the ready message goes to the customer in French, whatever language the cashier\'s screen uses');
 
 console.log('\n✓ pressing workspace gate green (' + n + ' checks)');

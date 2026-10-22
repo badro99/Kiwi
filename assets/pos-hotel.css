@@ -446,7 +446,7 @@
 
 /* ═══════════════ MODALS ═══════════════ */
 .ht-modal-x {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; top: 14px; inset-inline-end: 14px;
   width: 32px; height: 32px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-3);

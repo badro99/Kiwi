@@ -31,7 +31,7 @@ await check('the caisse context never exports an unlock PIN', async () => {
 });
 await check('the client asks for the name before revealing the stored guest', async () => {
   const flow = pos.slice(pos.indexOf('function openChargeSheet'), pos.indexOf('/* ═══════════════════════ CHECK-OUT'));
-  assert.ok(flow.indexOf('Demandez au client de dire son nom') < flow.indexOf('esc(st.guest)'));
+  assert.ok(flow.indexOf('Demandez au client de dire son nom') < flow.indexOf('dataText(st.guest)'));
   assert.match(flow, /Le nom correspond/);
 });
 await check('room charge transport is durable and retries after the sale queue', async () => {
