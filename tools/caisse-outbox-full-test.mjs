@@ -76,7 +76,7 @@ async function fixture(t, opts = {}) {
   /* `full`: localStorage refuses EVERY write, as a real quota does, so the
      shift blob fails too. `idbEnqueue`: 'ok' | 'reject' for the IndexedDB
      outbox; its meta shelf keeps working (a separate, larger quota). */
-  const state = { full: false, idbEnqueue: 'ok', ...opts };
+  const state = { full: false, idbEnqueue: 'ok', metaFail: false, ...opts };
   const values = new Map([['kiwiLive', '1'], ['kiwiPairedVenue', JSON.stringify({ merchant })]]);
   const rows = new Map(), meta = new Map(), requests = [];
   let events = [];
@@ -99,7 +99,7 @@ async function fixture(t, opts = {}) {
     async acknowledge(id) { rows.delete(id); },
     async reject(id) { rows.get(id).nextAt = Date.now() + 3000; },
     async getMeta(key) { return meta.has(key) ? JSON.parse(meta.get(key)) : null; },
-    async putMeta(key, value) { meta.set(key, JSON.stringify(value)); return true; },
+    async putMeta(key, value) { if (state.metaFail) return false; meta.set(key, JSON.stringify(value)); return true; },
   };
   function boot() {
     const handlers = new Map();
@@ -200,6 +200,7 @@ async function fixture(t, opts = {}) {
 }
 
 const saysRecorded = toasts => toasts.some(m => /enregistrée sur cette caisse/.test(m) && /ne pas encaisser à nouveau/.test(m));
+const saysNotSaved = toasts => toasts.some(m => /NON sauvegardée/.test(m) && /ne pas encaisser à nouveau/i.test(m));
 const saysFailed = toasts => toasts.some(m => /Échec|échec|failed|réessayez/i.test(m));
 
 test('the success haptic probe works: a healthy takeaway buzzes once and reaches the API once', async t => {
@@ -225,8 +226,11 @@ test('takeaway · localStorage full, no IndexedDB: one entry, no haptic, no re-c
   assert.equal(f.ctx.journal[0].saleHeldLocal, true);
   assert.equal(f.ctx.journal[0].saleSyncError, 'queue-storage-full');
   assert.equal(f.haptics(), 0, 'no success haptic while the queue refused it');
-  assert.ok(saysRecorded(f.toasts()), 'the cashier is told it is recorded, not to charge again');
-  assert.ok(!saysFailed(f.toasts()), 'nothing says it failed');
+  /* localStorage full and no IndexedDB: the sale lives in memory only. Saying
+     "recorded" would be false (a reload loses it), so the till says it is NOT
+     saved, still without inviting a second charge. */
+  assert.ok(saysNotSaved(f.toasts()), 'the cashier is told the sale is NOT durably saved, and not to charge again');
+  assert.ok(!saysRecorded(f.toasts()), 'it is not reported as recorded');
   assert.equal(f.held(), 1, 'the indicator counts it');
   assert.equal(f.count(), 0, 'nothing reached the API yet');
 
@@ -262,7 +266,8 @@ test('table · localStorage full: IndexedDB takes it on its own; a second tap bo
   assert.equal(f.ctx.journal.length, 1, 'exactly one journal entry');
   assert.equal(f.ctx.journal[0].table, '5');
   assert.equal(f.haptics(), 0, 'no success haptic at the refused write-ahead');
-  assert.ok(saysRecorded(f.toasts()) && !saysFailed(f.toasts()));
+  await drain();
+  assert.ok(saysRecorded(f.toasts()) && !saysFailed(f.toasts()) && !saysNotSaved(f.toasts()), 'IndexedDB holds it: genuinely recorded');
 
   /* localStorage stays full; IndexedDB's own quota is not. */
   await drain();
@@ -338,4 +343,21 @@ test('a held sale from a closed shift is replayed to the queue but never added t
   await f.tick(); await drain();
   assert.equal(f.held(), 0);
   assert.equal(f.count(), 1, 'still reaches the API once');
+});
+
+test('table · localStorage full AND the IndexedDB shelf refuses: the till says the sale is not saved, never recorded', async t => {
+  const f = await fixture(t, { indexed: true });
+  f.session();
+  f.ctx.mode = 'salle'; f.ctx.selectedId = '5'; f.ctx.amount = 95;
+  f.state.full = true; f.state.idbEnqueue = 'reject'; f.state.metaFail = true;
+  assert.equal(await f.ctx.finalizeTender('cash'), 'complete');
+  await drain();
+  assert.equal(f.ctx.journal.length, 1, 'still exactly one entry in memory');
+  assert.equal(f.haptics(), 0);
+  assert.ok(saysNotSaved(f.toasts()), 'a clear message says the sale is not saved');
+  assert.ok(!saysRecorded(f.toasts()), 'it is not reported as recorded');
+  /* Storage frees up while the page is still open: the beat sends it once. */
+  f.state.full = false; f.state.idbEnqueue = 'ok'; f.state.metaFail = false;
+  await f.tick(); await drain();
+  assert.equal(f.count(), 1);
 });

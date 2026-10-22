@@ -480,7 +480,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
      renvoyée plus tard, une seule fois (assets/retail-sale-hold.js). */
   let bqHoldKit = null;
   const bqHold = () => bqHoldKit || (bqHoldKit = window.KiwiRetailSaleHold
-    ? window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => persistDay(), isDemo: IS_DEMO, slug: () => merchantSlug() })
+    ? window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => persistDay(), isDemo: IS_DEMO, slug: () => merchantSlug(),
+      onLost: () => toast('Vente NON sauvegardée : stockage de la tablette plein et serveur injoignable. Ne rechargez pas la page, notez le ticket.', 15000, 'warn') })
     : null);
   function bqReplayHeld() { const h = bqHold(); return h ? h.replay() : 0; }
   function bqPost(sale, payload) {
@@ -700,7 +701,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
       localStorage.setItem(DAY_KEY, JSON.stringify({
         v: 1, m: merchantSlug(), s: SALES.filter((s) => s && withinRetention(s.at)),
       }));
-    } catch (_) {}
+      return true;
+    } catch (_) { return false; }
   }
   (function restoreDay() {
     if (IS_DEMO) return;

@@ -1066,10 +1066,10 @@ function pdsMergePlans(mine, theirs, union) {
      * annulait donc, à sa prochaine fusion, la table que l'autre venait de
      * déplacer. Quand les deux copies portent le même identifiant, celle dont
      * `updatedAt` est le plus récent l'emporte ; un `updatedAt` absent vaut 0
-     * (le plus ancien), et à égalité cet appareil garde la main, comme avant.
+     * (le plus ancien), et à égalité le contenu canonique le plus grand gagne
+     * (identique sur tous les appareils, voir plus bas).
      * Le statut de service et son horodatage (live, propres à l'appareil) ne
-     * suivent jamais la copie de l'autre. Les plans sans aucun horodatage se
-     * fusionnent donc exactement comme avant. */
+     * suivent jamais la copie de l'autre. */
     ['tables', 'elements', 'zones'].forEach(key => {
       if (!out || !Array.isArray(out[key]) || !Array.isArray(mine[key]) || !Array.isArray(theirs[key])) return;
       const mineBy = {}, theirBy = {};
@@ -1079,7 +1079,15 @@ function pdsMergePlans(mine, theirs, union) {
         if (!x || x.id == null) return x;
         const id = String(x.id), m = mineBy[id], t = theirBy[id];
         if (!m || !t) return x;
-        if ((+t.updatedAt || 0) <= (+m.updatedAt || 0)) return m;
+        const mAt = +m.updatedAt || 0, tAt = +t.updatedAt || 0;
+        if (tAt < mAt) return m;
+        /* À horodatage égal, jamais « cet appareil gagne » : deux appareils aux
+         * copies différentes gardaient chacun la leur pour toujours. On départage
+         * sur le contenu canonique (clés triées, sans statut live ni champ
+         * d'éditeur) : la plus grande chaîne l'emporte, quel que soit l'appareil
+         * qui fusionne, donc le résultat est le même partout. Contenus égaux :
+         * rien à choisir, on garde la copie locale (statut live compris). */
+        if (tAt === mAt && JSON.stringify(pdsCanon(t)) <= JSON.stringify(pdsCanon(m))) return m;
         const w = Object.assign({}, t);
         if (key === 'tables') {
           ['status', 'since'].forEach(f => {

@@ -17,6 +17,7 @@
  * Usage, dans la caisse :
  *   const hold = window.KiwiRetailSaleHold.create({
  *     sales: () => SALES, persist: persistDay, isDemo: IS_DEMO, slug: merchantSlug,
+ *     onLost: (sale) => toast(...),   // la vente n'a pu être écrite nulle part
  *   });
  *   hold.post(sale, payload);   // à la place de KiwiLive.postSale(payload)
  *   hold.replay();              // au démarrage, chaque minute, au retour du réseau
@@ -26,7 +27,9 @@
   function create(ctx) {
     const live = () => window.KiwiLive;
     const sales = () => (ctx && typeof ctx.sales === 'function' ? ctx.sales() : []) || [];
-    const persist = () => { try { if (ctx && ctx.persist) ctx.persist(); } catch (_) {} };
+    /* Faux seulement si l'écriture du journal a ÉCHOUÉ (persist() renvoie
+       false ou lève) : un persist() sans valeur de retour reste un succès. */
+    const persist = () => { try { return !(ctx && ctx.persist && ctx.persist() === false); } catch (_) { return false; } };
     const slug = () => { try { return (ctx && ctx.slug && ctx.slug()) || ''; } catch (_) { return ''; } };
 
     function hold(sale, payload, res) {
@@ -42,7 +45,11 @@
           merchant: payload.merchant || slug() || undefined,
           time: +new Date(payload.time || sale.at),
         });
-        persist();
+        /* Ni la file ni le journal du jour ne l'ont gardée (stockage plein ou
+           indisponible) : la vente ne vit qu'en mémoire et disparaît au
+           rechargement. On ne la laisse pas passer pour acceptée : la caisse
+           doit le dire (onLost). Elle reste réessayée tant que la page vit. */
+        if (!persist()) { try { if (ctx && ctx.onLost) ctx.onLost(sale); } catch (_) {} }
         return false;
       }
       return true;

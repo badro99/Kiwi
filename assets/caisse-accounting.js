@@ -498,12 +498,20 @@
       } catch (_) {}
       return heldSalesCache.rows;
     }
+    /* Renvoie true si localStorage a pris l'écriture, sinon une promesse qui
+       dit si IndexedDB l'a prise. false = la vente ne vit qu'en mémoire. */
     function saveHeldSales(rows) {
       const key = heldSalesKey();
-      if (!key) return;
+      if (!key) return Promise.resolve(false);
       heldSalesCache = { key, rows };
-      try { if (rows.length) localStorage.setItem(key, JSON.stringify(rows)); else localStorage.removeItem(key); } catch (_) {}
-      try { window.KiwiOffline?.putMeta?.(key, rows); } catch (_) {}
+      let local = false;
+      try { if (rows.length) localStorage.setItem(key, JSON.stringify(rows)); else localStorage.removeItem(key); local = true; } catch (_) {}
+      let idb = Promise.resolve(false);
+      try {
+        const put = window.KiwiOffline?.putMeta?.(key, rows);
+        if (put && typeof put.then === 'function') idb = put.then(done => done === true, () => false);
+      } catch (_) {}
+      return local ? true : idb;
     }
     function holdSaleLocally(entry, reason) {
       entry.saleSyncPending = true;
@@ -513,8 +521,9 @@
       let copy = null;
       try { copy = JSON.parse(JSON.stringify(entry)); } catch (_) {}
       if (copy) rows.push({ entry: copy, shift: shiftOpenedAt ? shiftOpenedAt.toISOString() : '', at: Date.now() });
-      saveHeldSales(rows);
+      const durable = saveHeldSales(rows);
       paintHeldSales();
+      return durable;
     }
     function releaseHeldSale(id) {
       const rows = heldSaleRows();
@@ -588,8 +597,16 @@
     function saleRecordConfirmed(entry) {
       return !!entry && !entry.saleHeldLocal;
     }
-    function warnSaleHeld() {
-      toast('Vente enregistrée sur cette caisse · envoi en attente, ne pas encaisser à nouveau', 6000, 'warn');
+    /* `durable` : ce que holdSaleLocally() a renvoyé. Si ni localStorage ni
+       IndexedDB n'ont pris la vente et que la file l'a refusée, elle ne vit
+       qu'en mémoire : dire « enregistrée » serait faux (rechargement = perdue). */
+    function warnSaleHeld(durable) {
+      const recorded = () => toast('Vente enregistrée sur cette caisse · envoi en attente, ne pas encaisser à nouveau', 6000, 'warn');
+      if (durable === true || durable === undefined) { recorded(); return; }
+      Promise.resolve(durable).then((saved) => {
+        if (saved) recorded();
+        else toast('Vente NON sauvegardée : stockage de la caisse plein et serveur injoignable. Ne rechargez pas la page ni ne fermez la caisse, notez le ticket. Ne pas encaisser à nouveau.', 15000, 'warn');
+      }, recorded);
     }
 
     function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
@@ -803,9 +820,9 @@
             /* Refused by the queue (storage full): the money is taken, so the
                sale stays, once, and is held for replay. The cashier is told it
                is recorded, never that it failed, or the customer pays twice. */
-            holdSaleLocally(entry, posted.reason || 'sale-enqueue-failed');
+            const durable = holdSaleLocally(entry, posted.reason || 'sale-enqueue-failed');
             try { persistShift(); } catch (_) {}
-            warnSaleHeld();
+            warnSaleHeld(durable);
           } else {
             entry.saleSyncPending = true;
             entry.saleSyncError = String((posted && posted.reason) || 'sale-sync-unavailable').slice(0, 96);
@@ -813,9 +830,9 @@
           }
         }
       } catch (_) {
-        holdSaleLocally(entry, 'sale-enqueue-failed');
+        const durable = holdSaleLocally(entry, 'sale-enqueue-failed');
         try { persistShift(); } catch (_) {}
-        warnSaleHeld();
+        warnSaleHeld(durable);
       }
       /* Once the receipt is journaled, optional UI/loyalty failures must not
          skip markPaid() and leave the same cash sale payable again. */

@@ -141,4 +141,38 @@ for (const [name, src] of [['boutique', boutique], ['maison', maison]]) {
   ok(alien && alien.color === 'blanc', `${name}: a variant id of another article is not trusted`);
 }
 
+/* Stockage indisponible : ni la file ni le journal du jour ne gardent la vente. */
+function fragile({ persistResult, answer }) {
+  const lost = [];
+  const ctx = { SALES: [], lost, persistResult, window: { KiwiLive: { isOn: () => true, merchant: () => 'santos', postSale: () => answer } } };
+  vm.createContext(ctx);
+  vm.runInContext(kit, ctx);
+  vm.runInContext(`const h = window.KiwiRetailSaleHold.create({ sales: () => SALES, persist: () => persistResult(), isDemo: false, slug: () => 'santos', onLost: (s) => lost.push(s.id) });
+    this.hold = h.hold; this.post = h.post;`, ctx);
+  return ctx;
+}
+{
+  const s = fragile({ persistResult: () => false, answer: { ok: false, reason: 'storage-full' } });
+  const sale = { id: 'BQ-8', at }; s.SALES.push(sale);
+  s.post(sale, payload('a8'));
+  ok(s.lost.length === 1 && s.lost[0] === 'BQ-8', 'queue refused AND day journal unwritable: the till is told the sale is not saved');
+  ok(!!sale.pendingPost, 'the sale is still retried while the page lives');
+}
+{
+  const s = fragile({ persistResult: () => { throw new Error('QuotaExceededError'); }, answer: { ok: false, reason: 'storage-full' } });
+  const sale = { id: 'BQ-9', at }; s.SALES.push(sale);
+  s.post(sale, payload('a9'));
+  ok(s.lost.length === 1, 'a journal write that throws counts as unwritable too');
+}
+{
+  const s = fragile({ persistResult: () => true, answer: { ok: false, reason: 'storage-full' } });
+  const sale = { id: 'BQ-10', at }; s.SALES.push(sale);
+  s.post(sale, payload('a10'));
+  ok(s.lost.length === 0 && !!sale.pendingPost, 'queue refused but the day journal holds it: nothing alarming, replayed later');
+  const t = fragile({ persistResult: () => false, answer: { ok: true, queued: true, id: 'srv' } });
+  const ok2 = { id: 'BQ-11', at }; t.SALES.push(ok2);
+  t.post(ok2, payload('a11'));
+  ok(t.lost.length === 0, 'online path unchanged: a queued sale never raises the alarm');
+}
+
 console.log(`\nretail-sale-hold: ${n} passed, 0 failed`);

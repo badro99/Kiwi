@@ -377,6 +377,13 @@
      n'atteindrait jamais le comptoir. On arbitre donc par `updatedAt`, et deux
      suppressions s'additionnent au lieu de s'annuler (même raison que
      `delItems` dans assets/stock.js). */
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    }
+    return JSON.stringify(v) || 'null';
+  }
   function merge(mine, theirs) {
     if (!theirs) return mine;
     if (!mine) return theirs;
@@ -396,7 +403,12 @@
       (Array.isArray(arr) ? arr : []).forEach(function (raw) {
         var p = normalize(raw);
         var cur = by[p.id];
-        if (!cur || p.updatedAt > cur.updatedAt) by[p.id] = p;
+        /* À `updatedAt` égal, le premier venu gagnait : « mine » sur un appareil,
+           « theirs » sur l'autre, donc deux copies différentes ne convergeaient
+           jamais. On départage sur le contenu (clés triées) : la plus grande
+           chaîne l'emporte, identique sur tous les appareils. */
+        if (!cur || p.updatedAt > cur.updatedAt ||
+            (p.updatedAt === cur.updatedAt && canon(p) > canon(cur))) by[p.id] = p;
       });
     });
     var promos = Object.keys(by)

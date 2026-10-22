@@ -9,8 +9,8 @@
  * sa prochaine fusion, la table qu'un autre venait de déplacer. Les éléments
  * (tables, éléments de décor, zones) portent maintenant `updatedAt`, posé par
  * pdsStampPlan à chaque vraie modification ; à identifiant égal, le plus récent
- * gagne, un horodatage absent vaut 0 (le plus ancien), et à égalité l'appareil
- * local garde la main comme avant. C'est de la LOGIQUE de fusion : rien ne
+ * gagne, un horodatage absent vaut 0 (le plus ancien), et à égalité le contenu
+ * canonique le plus grand gagne (même résultat sur tous les appareils). C'est de la LOGIQUE de fusion : rien ne
  * change à l'écran. Fonctions extraites du fichier livré.
  * ═════════════════════════════════════════════════════════════════ */
 import assert from 'node:assert/strict';
@@ -69,11 +69,20 @@ ok('horodatage absent = le plus ancien (un plan d’avant le correctif cède à 
   assert.equal(byId(F.pdsMergePlans(plan([T('t1', 100)]), plan([T('t1', 500, 5)]), union), 't1').x, 500);
   assert.equal(byId(F.pdsMergePlans(plan([T('t1', 100, 5)]), plan([T('t1', 500)]), union), 't1').x, 100);
 });
-ok('aucun horodatage des deux côtés : cet appareil garde la main, comme avant', () => {
-  assert.equal(byId(F.pdsMergePlans(plan([T('t1', 100)]), plan([T('t1', 500)]), union), 't1').x, 100);
+ok('aucun horodatage des deux côtés : les deux appareils retiennent la MÊME copie', () => {
+  const a = plan([T('t1', 100)]), b = plan([T('t1', 500)]);
+  assert.equal(byId(F.pdsMergePlans(a, b, union), 't1').x, byId(F.pdsMergePlans(b, a, union), 't1').x);
 });
-ok('égalité : cet appareil garde la main', () => {
-  assert.equal(byId(F.pdsMergePlans(plan([T('t1', 100, 7)]), plan([T('t1', 500, 7)]), union), 't1').x, 100);
+ok('égalité d’horodatage, copies différentes : même résultat quel que soit l’appareil qui fusionne', () => {
+  const a = plan([T('t1', 100, 7)]), b = plan([T('t1', 500, 7)]);
+  assert.equal(byId(F.pdsMergePlans(a, b, union), 't1').x, byId(F.pdsMergePlans(b, a, union), 't1').x);
+  const ea = plan([T('t1', 1, 1)], { elements: [{ id: 'e1', x: 1, updatedAt: 9 }] }), eb = plan([T('t1', 1, 1)], { elements: [{ id: 'e1', x: 2, updatedAt: 9 }] });
+  assert.equal(F.pdsMergePlans(ea, eb, union).elements[0].x, F.pdsMergePlans(eb, ea, union).elements[0].x);
+});
+ok('égalité d’horodatage, contenus identiques : l’appareil garde son statut live', () => {
+  const mine = plan([T('t1', 100, 7, { status: 'occupied', since: 3 })]), theirs = plan([T('t1', 100, 7, { status: 'free' })]);
+  const t = byId(F.pdsMergePlans(mine, theirs, union), 't1');
+  assert.equal(t.status, 'occupied'); assert.equal(t.since, 3);
 });
 ok('le statut de service reste celui de CET appareil quand la copie de l’autre gagne', () => {
   const mine = plan([T('t1', 100, 1000, { status: 'occupied', since: 42 })]);

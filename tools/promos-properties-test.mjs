@@ -159,6 +159,19 @@ strict('merging rules is order-free and idempotent', fc.property(editArb, (edits
   assert.deepEqual(view(PR.merge(ab, ab)), view(ab));
 }));
 
+strict('two devices that saved different rules at the very same updatedAt converge on the same rule, whichever side merges', fc.property(fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 1000 }), (v1, v2, at) => {
+  const mk = (value) => ({ v: 1, promos: [PR.normalize({ id: 'pr0', kind: 'percent', value, scope: { type: 'tout' }, createdAt: 1, updatedAt: at })], deleted: [] });
+  const a = mk(v1), b = mk(v2);
+  assert.deepEqual(view(PR.merge(a, b)), view(PR.merge(b, a)));
+  assert.equal(PR.merge(a, b).promos[0].value, PR.merge(b, a).promos[0].value);
+}));
+
+strict('two devices that saved different rules at the very same updatedAt converge on the same rule, whichever side merges', fc.property(fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 1000 }), (v1, v2, at) => {
+  const mk = (value) => ({ v: 1, promos: [PR.normalize({ id: 'pr0', kind: 'percent', value, scope: { type: 'tout' }, createdAt: 1, updatedAt: at })], deleted: [] });
+  const a = mk(v1), b = mk(v2);
+  assert.equal(PR.merge(a, b).promos[0].value, PR.merge(b, a).promos[0].value);
+}));
+
 strict('after both devices merge, the latest gesture on each rule wins: an edit, a deletion, or a rule saved again after a deletion', fc.property(editArb, (edits) => {
   const { devs: [a, b], last } = devicesFrom(edits);
   const out = PR.merge(a, b);

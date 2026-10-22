@@ -496,6 +496,7 @@ function run(opts) {
   const CORE = fs.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
   const Core = new Function(
     'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+    + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n' + extractFn(CORE, 'pdsCanon') + '\n'
     + extractFn(CORE, 'pdsBury') + '\n' + extractFn(CORE, 'pdsUnbury') + '\n'
     + extractFn(CORE, 'pdsGoneOf') + '\n' + extractFn(CORE, 'pdsMergePlans')
     + '\nreturn { pdsBury, pdsUnbury, pdsGoneOf, pdsMergePlans };'
