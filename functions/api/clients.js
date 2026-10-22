@@ -749,7 +749,8 @@ export async function onRequestPost(context) {
          source = excluded.source, first_seen = excluded.first_seen,
          last_seen = excluded.last_seen, updated_ts = excluded.updated_ts,
          srv_ts = excluded.srv_ts, deleted = 0
-       WHERE excluded.updated_ts >= clients.updated_ts`
+       -- Profile sync must never restore a tombstone, even with a future device clock.
+       WHERE clients.deleted = 0 AND excluded.updated_ts >= clients.updated_ts`
     ).bind(
       merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
       c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,

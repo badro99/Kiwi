@@ -62,6 +62,7 @@ export async function onRequestPost({ request, env }) {
   if (saleId) ref = ('employee-sale:' + saleId).slice(0, 96);
   if (!id || !ref) return json({ error: 'client-and-ref-required' }, 400);
   let amount = Math.max(0, Math.min(MAX_AMOUNT_MAD, Math.round(Number(body.amount) || 0)));
+  let spend = amount;
   try {
     await ensureEvents(env);
     if (saleId) {
@@ -74,6 +75,8 @@ export async function onRequestPost({ request, env }) {
       if (!(cents > 0)) return json({ error: 'sale-not-eligible' }, 409);
       if (Date.now() - Number(sale.ts || 0) > SALE_WINDOW_MS) return json({ error: 'sale-too-old' }, 409);
       amount = Math.min(MAX_AMOUNT_MAD, Math.round(cents / 100));
+      // Spend is money, not the legacy whole-dirham loyalty basis.
+      spend = Math.min(MAX_AMOUNT_MAD, cents / 100);
     }
     const client = await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0')
       .bind(employee.merchant, id).first();
@@ -109,12 +112,12 @@ export async function onRequestPost({ request, env }) {
       visits = visits + 1, spend = spend + ?, last_seen = ?, updated_ts = ?, srv_ts = ?
       WHERE merchant = ? AND id = ? AND deleted = 0
         AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)`)
-      .bind(points, stamps, amount, now, now, srv, employee.merchant, id, employee.merchant, ref),
+      .bind(points, stamps, spend, now, now, srv, employee.merchant, id, employee.merchant, ref),
     env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
       (merchant, ref, client_id, amount, created_ts)
       SELECT ?, ?, ?, ?, ?
        WHERE changes() > 0`)
-      .bind(employee.merchant, ref, id, amount, now)];
+      .bind(employee.merchant, ref, id, spend, now)];
     const results = await env.DB.batch(statements);
     if (!Number(results[0] && results[0].meta && results[0].meta.changes)) {
       const replay = await env.DB.prepare(
