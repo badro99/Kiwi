@@ -394,7 +394,7 @@ var SHELL = [
   '/assets/caisse-dna.css?v=6',
   '/assets/caisse-dna.js?v=3',
   '/assets/pos-mobile.js?v=8',
-  '/assets/pos-workspaces.css?v=4',
+  '/assets/pos-workspaces.css?v=5',
   '/assets/pos-workspaces.js?v=8',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après

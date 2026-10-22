@@ -21,3 +21,5 @@
     transition: none;
   }
 }
+/* In a vertical's rail (.px-nav, a grid with its own 8px gap) the launcher lines up with its neighbours instead of sitting 10px in with doubled gaps. */
+.px-nav>.twpos-launch{width:auto;margin:0}
