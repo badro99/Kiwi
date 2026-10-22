@@ -142,8 +142,10 @@
   function notify() { subs.forEach((fn) => { try { fn(); } catch (_) {} }); }
   store.subscribe(() => notify());
 
-  const num = (v) => { const n = +v; return Number.isFinite(n) && n >= 0 ? n : null; };
-  const r2 = (n) => Math.round(n * 100) / 100;
+  // A blank or missing price is unknown, never 0 (+null and +'' both read 0).
+  const num = (v) => { if (v == null || (typeof v === 'string' && !v.trim())) return null; const n = +v; return Number.isFinite(n) && n >= 0 ? n : null; };
+  // Equivalent recipe arithmetic must round a floating half-cent consistently.
+  const r2 = (n) => Math.round(n * 100 + Number.EPSILON * Math.abs(n * 100)) / 100;
   const r4 = (n) => Math.round(n * 10000) / 10000;
   const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
 

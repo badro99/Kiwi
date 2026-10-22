@@ -65,7 +65,7 @@
   function stockFor(ingredient, id) { return stockForRows(ingredient, inventory(id)); }
   function ingredientInfo(ingredient, id) {
     const stock = stockFor(ingredient, id);
-    const cost = stock && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
+    const cost = stock && stock.costPerUnit != null && String(stock.costPerUnit).trim() !== '' && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
     const stockUnit = units()?.normalize?.(stock?.unit, '') || clean(stock?.unit);
     const recipeUnit = units()?.normalize?.(ingredient.unit || stockUnit, '') || clean(ingredient.unit || stockUnit);
     const quantityInStockUnit = units()?.convert

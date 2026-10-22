@@ -273,7 +273,7 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=7',
+  '/assets/cost.js?v=9',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=3',
   '/assets/clients-store.js?v=15',
@@ -282,7 +282,7 @@ var SHELL = [
   '/assets/customer-retention.js?v=10',
   '/assets/menu-catalog.js?v=30',
   '/assets/stock-identity.js?v=2',
-  '/assets/restaurant-recipes.js?v=9',
+  '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
   '/assets/employee-live.js?v=602',
   '/assets/employee-planning.js?v=16',

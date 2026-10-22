@@ -232,8 +232,8 @@
     "sha": "907d8bcdeba074bd"
   },
   "assets/cost.js": {
-    "v": "7",
-    "sha": "5a65f0b28432ba19"
+    "v": "9",
+    "sha": "35452fc8d7d4b8c3"
   },
   "assets/customer-retention.js": {
     "v": "10",
@@ -1376,8 +1376,8 @@
     "sha": "8c92332949f854d9"
   },
   "assets/restaurant-recipes.js": {
-    "v": "9",
-    "sha": "76cf1d0bb91c5494"
+    "v": "10",
+    "sha": "db724a75c110deea"
   },
   "assets/restaurant-units.js": {
     "v": "1",
