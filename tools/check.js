@@ -1803,6 +1803,7 @@ section('Whole-project regressions');
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',
     'tickets-taxonomy-test.mjs',
+    'tickets-i18n-test.mjs',
     'tickets-storage-purge-test.mjs',
     'error-redaction-test.mjs',
     'supplier-actions-test.mjs',
