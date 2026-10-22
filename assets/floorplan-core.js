@@ -1041,20 +1041,29 @@ const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;
  * geste fait APRÈS avoir vu celui d'un autre appareil est toujours daté après
  * lui, quelle que soit l'heure affichée. Les champs restent des nombres en
  * millisecondes : les plans déjà rangés (serveur, appareils) se fusionnent
- * comme avant. */
+ * comme avant.
+ * Garde-fou : un instant vu qui n'est pas un nombre fini, ou qui dépasse de
+ * plus de 24 h l'heure de cet appareil (un appareil réglé en 2099, un plan
+ * abîmé), ne fait PAS avancer l'horloge ; sinon un seul appareil faux
+ * entraînait tous les autres dans son futur, pour toujours, et les pierres
+ * tombales n'expiraient plus. L'élément reste dans le plan et la fusion
+ * l'arbitre comme avant ; il ne date simplement plus les gestes des autres. */
 let PDS_HLC = 0;
-function pdsSeenMax(doc) {
+const PDS_CLOCK_AHEAD = 24 * 3600 * 1000;
+function pdsSane(t, lim) { t = +t; return (Number.isFinite(t) && t > 0 && t <= lim) ? t : 0; }
+function pdsSeenMax(doc, lim) {
   let m = 0;
   if (!doc || typeof doc !== 'object') return m;
   ['tables', 'elements', 'zones'].forEach(key => {
-    if (Array.isArray(doc[key])) doc[key].forEach(x => { const t = +(x && x.updatedAt) || 0; if (t > m) m = t; });
+    if (Array.isArray(doc[key])) doc[key].forEach(x => { const t = pdsSane(x && x.updatedAt, lim); if (t > m) m = t; });
   });
   const g = doc.gone;
-  if (g && typeof g === 'object' && !Array.isArray(g)) Object.keys(g).forEach(id => { const t = +g[id] || 0; if (t > m) m = t; });
+  if (g && typeof g === 'object' && !Array.isArray(g)) Object.keys(g).forEach(id => { const t = pdsSane(g[id], lim); if (t > m) m = t; });
   return m;
 }
 function pdsTick(a, b) {
-  const t = Math.max(Date.now(), pdsSeenMax(a) + 1, pdsSeenMax(b) + 1, PDS_HLC + 1);
+  const wall = Date.now(), lim = wall + PDS_CLOCK_AHEAD;
+  const t = Math.max(wall, pdsSeenMax(a, lim) + 1, pdsSeenMax(b, lim) + 1, pdsSane(PDS_HLC, lim) + 1);
   PDS_HLC = t;
   return t;
 }
@@ -1179,7 +1188,14 @@ function pdsStampPlan(state, prevRaw) {
         if (!(+x.updatedAt > 0) && +p.updatedAt > 0) x.updatedAt = p.updatedAt;
         return;
       }
-      if ((+x.updatedAt || 0) === (+p.updatedAt || 0)) x.updatedAt = now();
+      /* L'élément touché passe toujours après sa propre copie, même datée au-delà
+       * des 24 h (un appareil honnête mais mal réglé de deux jours) : sinon le
+       * geste fait ici céderait devant la copie qu'il modifie. Cet instant-là
+       * ne nourrit pas l'horloge (pdsSeenMax l'écarte). */
+      if ((+x.updatedAt || 0) === (+p.updatedAt || 0)) {
+        const own = +p.updatedAt;
+        x.updatedAt = Number.isFinite(own) && own >= now() ? own + 1 : now();
+      }
     });
   });
   return state;

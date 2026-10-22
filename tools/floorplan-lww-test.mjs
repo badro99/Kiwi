@@ -39,7 +39,7 @@ function grab(src, start) {
   throw new Error('unbalanced ' + start);
 }
 /* l'horloge hybride (PDS_HLC, pdsSeenMax, pdsTick) : chaque extraction a la sienne */
-const CLOCK = CORE.match(/let PDS_HLC = [^;]+;/)[0] + '\n' + ['pdsSeenMax', 'pdsTick'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n') + '\n';
+const CLOCK = CORE.match(/let PDS_HLC = [^;]+;/)[0] + '\n' + CORE.match(/const PDS_CLOCK_AHEAD = [^;]+;/)[0] + '\n' + ['pdsSane', 'pdsSeenMax', 'pdsTick'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n') + '\n';
 const F = new Function(
   'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n' + CLOCK
   + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
@@ -172,20 +172,20 @@ ok('KiwiFloorCore expose stamp', () => assert.ok(/stamp: pdsStampPlan/.test(CORE
  * affichée. fast-check (dépendance de développement de app/). */
 let fc = null; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch (e) { fc = null; }
 if (!fc) console.log('  ○ fast-check absent : propriété d’horloge non exécutée');
-else ok('un appareil décalé de quelques heures ou de plusieurs mois l’emporte avec un geste fait APRÈS avoir vu l’autre (déplacer, renommer, créer, supprimer)', () => {
-  const body = 'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n' + CLOCK
-    + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
-    + ['pdsBury', 'pdsGoneOf', 'pdsMergePlans', 'pdsCanon', 'pdsStampPlan'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n')
-    + '\nreturn { pdsBury, pdsMergePlans, pdsStampPlan };';
-  const device = (clock, offset, start) => {
-    class SkewDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock.t + offset); } static now() { return clock.t + offset; } }
-    const core = new Function('Date', body)(SkewDate);
-    const d = { core, state: JSON.parse(JSON.stringify(start)), stored: null };
-    d.stored = JSON.stringify(d.state);
-    d.edit = (fn) => { fn(d.state); core.pdsStampPlan(d.state, d.stored); d.stored = JSON.stringify(d.state); };
-    d.pull = (o) => { d.state = core.pdsMergePlans(JSON.parse(d.stored), JSON.parse(o.stored), union); d.stored = JSON.stringify(d.state); };
-    return d;
-  };
+const body = 'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n' + CLOCK
+  + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
+  + ['pdsBury', 'pdsGoneOf', 'pdsMergePlans', 'pdsCanon', 'pdsStampPlan'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n')
+  + '\nreturn { pdsBury, pdsMergePlans, pdsStampPlan };';
+const device = (clock, offset, start) => {
+  class SkewDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock.t + offset); } static now() { return clock.t + offset; } }
+  const core = new Function('Date', body)(SkewDate);
+  const d = { core, state: JSON.parse(JSON.stringify(start)), stored: null };
+  d.stored = JSON.stringify(d.state);
+  d.edit = (fn) => { fn(d.state); core.pdsStampPlan(d.state, d.stored); d.stored = JSON.stringify(d.state); };
+  d.pull = (o) => { d.state = core.pdsMergePlans(JSON.parse(d.stored), JSON.parse(o.stored), union); d.stored = JSON.stringify(d.state); };
+  return d;
+};
+if (fc) ok('un appareil décalé de quelques heures l’emporte avec un geste fait APRÈS avoir vu l’autre (déplacer, renommer, créer, supprimer)', () => {
   const opArb = fc.oneof(
     fc.record({ kind: fc.constant('move'), dev: fc.nat(1), id: fc.constantFrom('t1', 't2'), x: fc.integer({ min: 0, max: 900 }) }),
     fc.record({ kind: fc.constant('zone'), dev: fc.nat(1), name: fc.constantFrom('Salle', 'Terrasse', 'Mezzanine') }),
@@ -194,17 +194,10 @@ else ok('un appareil décalé de quelques heures ou de plusieurs mois l’emport
     fc.record({ kind: fc.constant('drop'), dev: fc.nat(1), id: fc.constantFrom('t1', 't2') }),
   ).chain((o) => fc.integer({ min: 1, max: 5 * 60e3 }).map((wait) => ({ ...o, wait })));
   /* Décalage de l'horloge de l'un des deux appareils : quelques heures, en
-   * retard ou en avance (fuseau mal réglé), ou un retard plus long que la vie
-   * d'une pierre tombale (30 jours : tablette à la pile d'horloge morte, date
-   * réglée à la main). Avant l'horloge hybride, la suppression faite sur
-   * l'appareil en retard arrivait déjà expirée chez l'autre : la table restait
-   * sur un appareil et disparaissait de l'autre. (Une AVANCE de plus de 30
-   * jours n'est pas couverte : l'appareil en avance juge expirées les pierres
-   * tombales fraîches des autres, et aucune horloge locale ne peut le savoir.) */
-  const skewArb = fc.oneof(
-    fc.tuple(fc.integer({ min: 1, max: 12 }), fc.boolean()).map(([h, ahead]) => (ahead ? 1 : -1) * h * 3600e3),
-    fc.integer({ min: 31, max: 400 }).map((dd) => -dd * 86400e3),
-  );
+   * retard ou en avance (fuseau mal réglé). Au-delà de 24 h, un instant reçu
+   * ne fait plus avancer l'horloge (voir la propriété suivante) : un retard de
+   * plusieurs jours n'est donc plus rattrapé que par l'élément touché. */
+  const skewArb = fc.tuple(fc.integer({ min: 1, max: 12 }), fc.boolean()).map(([h, ahead]) => (ahead ? 1 : -1) * h * 3600e3);
   const r = fc.check(fc.property(skewArb, fc.boolean(), fc.array(opArb, { minLength: 1, maxLength: 12 }), (skew, slowFirst, ops) => {
     const clock = { t: Date.UTC(2026, 9, 22, 10) }, t0 = clock.t - 3600e3;
     const start = plan([T('t1', 100, t0), T('t2', 200, t0)], { zones: [{ id: 'z1', name: 'Salle', updatedAt: t0 }], elements: [{ id: 'e1', x: 10, updatedAt: t0 }] });
@@ -228,6 +221,36 @@ else ok('un appareil décalé de quelques heures ou de plusieurs mois l’emport
       assert.equal(d.state.elements[0].x, model.deco);
     }
   }), { numRuns: Number(process.env.KIWI_PROPERTY_RUNS) || 300, seed: Number(process.env.KIWI_PROPERTY_SEED) || 20261022 });
+  assert.ok(!r.failed, fc.stringify(r.counterexample || '').slice(0, 600) + ' ' + (r.errorInstance && r.errorInstance.message));
+});
+
+/* ── un pair qui vient du futur (ou d'un plan abîmé) n'entraîne personne ───
+ * Une copie reçue porte une table datée de plusieurs années d'avance, ou d'un
+ * instant qui n'est pas un nombre fini, et une pierre tombale datée de même.
+ * Elle est fusionnée (la table reste, sur les deux appareils), mais le geste
+ * suivant d'un appareil honnête est daté à moins de 24 h de l'heure réelle, et
+ * l'emporte toujours sur la modification honnête plus ancienne de l'autre. */
+if (fc) ok('une copie datée de plusieurs années d’avance ou d’un instant non fini est fusionnée sans entraîner l’horloge des appareils honnêtes', () => {
+  const rogueArb = fc.oneof(fc.integer({ min: 1, max: 80 }).map((y) => ({ years: y })), fc.constantFrom('1e400', '-1e400', 'NaN', 'demain'));
+  const r = fc.check(fc.property(rogueArb, fc.boolean(), fc.tuple(fc.integer({ min: 0, max: 900 }), fc.integer({ min: 0, max: 900 })).filter(([b, a]) => a !== b), (rogue, viaA, [xb, xa]) => {
+    const clock = { t: Date.UTC(2026, 9, 22, 10) }, t0 = clock.t - 3600e3;
+    const start = plan([T('t1', 100, t0), T('t2', 200, t0)]);
+    const A = device(clock, 0, start), B = device(clock, 0, start);
+    const at = typeof rogue === 'object' ? clock.t + rogue.years * 365 * 86400e3 : rogue;
+    const peer = { stored: JSON.stringify(plan([T('t1', 100, t0), T('t2', 200, t0), T('rg', 7, at)], { gone: { ghost: at } })) };
+    clock.t += 60e3; B.edit((s) => { byId(s, 't2').x = xb; });
+    A.pull(B); B.pull(A);
+    (viaA ? A : B).pull(peer); A.pull(B); B.pull(A);
+    clock.t += 60e3; A.edit((s) => { byId(s, 't2').x = xa; });
+    const st = byId(A.state, 't2').updatedAt;
+    assert.ok(Number.isFinite(st) && st >= clock.t && st <= clock.t + 24 * 3600e3, 'horodatage du geste honnête : ' + st);
+    A.pull(B); B.pull(A);
+    for (const d of [A, B]) {
+      assert.equal(byId(d.state, 't2').x, xa, 'le geste honnête le plus récent l’emporte');
+      assert.ok(byId(d.state, 'rg'), 'la table du pair reste dans le plan');
+    }
+    assert.deepEqual(A.state.tables.map((t) => [t.id, t.x]).sort(), B.state.tables.map((t) => [t.id, t.x]).sort());
+  }), { numRuns: Number(process.env.KIWI_PROPERTY_RUNS) || 300, seed: Number(process.env.KIWI_PROPERTY_SEED) || 20261023 });
   assert.ok(!r.failed, fc.stringify(r.counterexample || '').slice(0, 600) + ' ' + (r.errorInstance && r.errorInstance.message));
 });
 

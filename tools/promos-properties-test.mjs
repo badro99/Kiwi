@@ -225,5 +225,36 @@ strict('a device whose clock is hours behind still wins with a gesture made afte
   }
 }));
 
+/* ── a peer from the future (or a damaged document) drags nobody along ──────
+ * A copy arrives carrying a rule and a tombstone stamped years ahead, or with a
+ * stamp that is not a finite number. It is merged (the rule stays on both
+ * devices), but the next gesture of an honest device is stamped within 24 h of
+ * real time, and still wins over the older honest edit of the other device. */
+strict('a peer record stamped years ahead or non-finite is merged, and an honest device still stamps its next edit within 24 h and wins', fc.property(
+  fc.oneof(fc.integer({ min: 1, max: 80 }).map((y) => ({ years: y })), fc.constantFrom('1e400', '-1e400', 'NaN', 'demain')),
+  fc.nat(1), fc.tuple(fc.integer({ min: 1, max: 90 }), fc.integer({ min: 1, max: 90 })).filter(([b, a]) => a !== b),
+  (rogue, via, [vb, va]) => {
+    const clock = { t: Date.UTC(2026, 9, 22, 10) };
+    const devs = [device(clock, 0), device(clock, 0)];
+    const syncAll = () => { devs[1].pull(devs[0]); devs[0].pull(devs[1]); };
+    devs[0].P.save({ id: 'pr0', name: 'pr0', kind: 'percent', value: 5, scope: { type: 'tout' } });
+    syncAll();
+    clock.t += MIN; devs[1].P.save({ ...devs[1].P.get('pr0'), value: vb });
+    syncAll();
+    const at = typeof rogue === 'object' ? clock.t + rogue.years * 365 * DAY : rogue;
+    const peer = { v: 1, promos: [{ id: 'rg', name: 'rg', kind: 'percent', value: 3, scope: { type: 'tout' }, createdAt: at, updatedAt: at }], deleted: [{ id: 'ghost', at }] };
+    const h = devs[via].hooks();
+    h.write(h.merge(JSON.parse(JSON.stringify(h.read())), JSON.parse(JSON.stringify(peer))));
+    syncAll();
+    clock.t += MIN;
+    const mine = devs[0].P.save({ ...devs[0].P.get('pr0'), value: va });
+    assert.ok(Number.isFinite(mine.updatedAt) && mine.updatedAt >= clock.t && mine.updatedAt <= clock.t + DAY, 'honest stamp ' + mine.updatedAt);
+    syncAll();
+    for (const d of devs) {
+      assert.equal(d.P.get('pr0').value, va, 'the latest honest edit wins');
+      assert.ok(d.P.get('rg'), 'the peer rule stays');
+    }
+  }));
+
 console.log(`${failed ? '✗' : '✓'} promos-properties-test · ${passed} held, ${failed} failed`);
 process.exit(failed ? 1 : 0);

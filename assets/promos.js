@@ -242,20 +242,39 @@
      tout ce que porte le document, donc tout ce que la fusion nous a appris).
      Un geste fait APRÈS avoir vu celui d'un autre appareil est donc toujours
      daté après lui, quelle que soit l'heure affichée. Le champ reste un nombre :
-     les documents d'avant se fusionnent comme avant. */
+     les documents d'avant se fusionnent comme avant.
+     Garde-fou : un instant vu qui n'est pas un nombre fini, ou qui dépasse de
+     plus de 24 h l'heure de cet appareil (un poste réglé en 2099, un document
+     abîmé), ne fait PAS avancer l'horloge. Sans ça, un seul appareil faux
+     entraînait toutes les caisses dans son futur, pour toujours. L'enregistrement
+     reste dans les données et la fusion l'arbitre comme avant ; il ne date
+     simplement plus les gestes des autres. */
   var hlc = 0;
-  function seenMax(d) {
+  var CLOCK_AHEAD = 24 * 3600 * 1000;
+  function sane(t, lim) { t = +t; return (Number.isFinite(t) && t > 0 && t <= lim) ? t : 0; }
+  function seenMax(d, lim) {
     var m = 0;
-    ((d && d.promos) || []).forEach(function (p) { var t = num(p && p.updatedAt, 0); if (t > m) m = t; });
-    ((d && d.deleted) || []).forEach(function (x) { var t = num(x && x.at, 0); if (t > m) m = t; });
+    ((d && d.promos) || []).forEach(function (p) { var t = sane(p && p.updatedAt, lim); if (t > m) m = t; });
+    ((d && d.deleted) || []).forEach(function (x) { var t = sane(x && x.at, lim); if (t > m) m = t; });
     return m;
   }
   function stamp() {
     load();
-    var t = Math.max(Date.now(), seenMax(db) + 1, hlc + 1);
+    var wall = Date.now(), lim = wall + CLOCK_AHEAD;
+    var t = Math.max(wall, seenMax(db, lim) + 1, sane(hlc, lim) + 1);
     hlc = t;
     return t;
   }
+  /* La règle touchée, elle, passe toujours après sa propre copie, même datée
+     au-delà des 24 h (un poste honnête mais mal réglé de deux jours) : sinon
+     le geste fait ici céderait devant la copie qu'il vient de modifier. Cet
+     instant-là ne nourrit pas l'horloge. */
+  function stampAbove() {
+    var t = stamp();
+    for (var i = 0; i < arguments.length; i++) { var x = +arguments[i]; if (Number.isFinite(x) && x >= t) t = x + 1; }
+    return t;
+  }
+  function tombAt(id) { var at = 0; db.deleted.forEach(function (d) { if (d && d.id === id) at = Math.max(at, num(d.at, 0)); }); return at; }
 
   function list() { load(); return db.promos.map(normalize); }
   function get(id) { load(); var p = db.promos.find(function (x) { return x.id === id; }); return p ? normalize(p) : null; }
@@ -264,8 +283,8 @@
   function save(patch) {
     load();
     var next = normalize(patch);
-    next.updatedAt = stamp();
     var i = db.promos.findIndex(function (x) { return x.id === next.id; });
+    next.updatedAt = stampAbove(i >= 0 ? db.promos[i].updatedAt : 0, tombAt(next.id));
     if (i >= 0) { next.createdAt = num(db.promos[i].createdAt, next.createdAt); db.promos[i] = next; }
     else db.promos.push(next);
     /* Ressusciter une promotion supprimée ailleurs : on lève la pierre tombale,
@@ -282,7 +301,8 @@
     load();
     /* Daté AVANT de retirer la règle : son propre `updatedAt` compte parmi ce
        que l'appareil a vu, et la pierre tombale doit passer après lui. */
-    var at = stamp();
+    var cur = db.promos.find(function (x) { return x.id === id; });
+    var at = stampAbove(cur ? cur.updatedAt : 0);
     var before = db.promos.length;
     db.promos = db.promos.filter(function (x) { return x.id !== id; });
     if (db.promos.length === before) return false;
@@ -295,7 +315,7 @@
     var p = db.promos.find(function (x) { return x.id === id; });
     if (!p) return null;
     p.paused = !!val;
-    p.updatedAt = stamp();
+    p.updatedAt = stampAbove(p.updatedAt);
     commit();
     return normalize(p);
   }

@@ -116,10 +116,16 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
      onglet ou du serveur) et tout ce que mergeDocs a reçu de l'autre côté. Un
      geste fait APRÈS avoir vu celui d'un autre appareil passe après lui, quelle
      que soit l'heure affichée. Les champs restent des nombres : un document
-     d'avant se fusionne comme avant. */
+     d'avant se fusionne comme avant.
+     Garde-fou : un instant vu qui n'est pas un nombre fini, ou qui dépasse de
+     plus de 24 h l'heure de cet appareil (un poste réglé en 2099, un document
+     abîmé), ne fait PAS avancer l'horloge ; sinon un seul appareil faux
+     entraînait tous les comptoirs dans son futur, pour toujours. La fiche reste
+     dans les données et la fusion l'arbitre comme avant. */
   var lastNow = 0;
   var seenDoc = null;
-  function observe(t) { t = +t; if (t > lastNow && isFinite(t)) lastNow = t; }
+  var CLOCK_AHEAD = 24 * 3600 * 1000;
+  function observe(t) { t = +t; if (t > lastNow && isFinite(t) && t <= Date.now() + CLOCK_AHEAD) lastNow = t; }
   function observeDoc(doc) {
     if (!doc || typeof doc !== 'object') return;
     var at = function (x) { observe(x); };
@@ -142,7 +148,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
        chaque écriture : un import de mille lignes ne le parcourt pas mille fois. */
     if (core.db && core.db !== seenDoc) { seenDoc = core.db; observeDoc(core.db); }
     var t = Date.now();
-    if (t <= lastNow) t = lastNow + 1;
+    if (t <= lastNow && isFinite(lastNow) && lastNow <= t + CLOCK_AHEAD) t = lastNow + 1;
     lastNow = t;
     return t;
   }

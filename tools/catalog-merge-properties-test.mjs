@@ -330,5 +330,41 @@ await strict('a counter whose clock is hours behind still wins with a gesture ma
   }
 }), 150);
 
+/* ── a peer from the future (or a damaged document) drags nobody along ──────
+ * A copy arrives carrying a product and a deletion stamped years ahead, or with
+ * a stamp that is not a finite number. It is merged (the product stays on both
+ * counters), but the next gesture of an honest counter is stamped within 24 h
+ * of real time, and still wins over the older honest edit of the other one. */
+await strict('a peer record stamped years ahead or non-finite is merged, and an honest counter still stamps its next edit within 24 h and wins', fc.property(
+  fc.oneof(fc.integer({ min: 1, max: 80 }).map((y) => ({ years: y })), fc.constantFrom('1e400', '-1e400', 'NaN', 'demain')),
+  fc.nat(1), fc.tuple(fc.constantFrom('ourlet', 'coupe large', 'retouche', 'vitrine'), fc.constantFrom('ourlet', 'coupe large', 'retouche', 'vitrine')).filter(([b, a]) => a !== b),
+  (rogue, via, [nb, na]) => {
+    const clock = { t: Date.now() };
+    const devs = [counter(clock, 0), counter(clock, 0)];
+    const t0 = clock.t - 3600e3;
+    const start = { v: 1, seq: 0, removed: {}, moves: [], categories: [{ id: 'c0', name: 'Rayon', metaAt: t0 }],
+      products: [{ id: 'p0', name: 'Article', categoryId: 'c0', priceMAD: 100, photo: '', video: '', metaAt: t0 }],
+      variants: [{ id: 'v0', productId: 'p0', size: 'S', colorId: 'noir', note: '', stock: 3, base: 3, baseAt: t0, metaAt: t0, barcodes: [], barcodeRemoved: {} }] };
+    devs.forEach((d) => d.seed(clone(start)));
+    const sync = () => { devs[1].pull(devs[0]); devs[0].pull(devs[1]); };
+    clock.t += 60e3; devs[1].K.updateVariant('v0', { note: nb });
+    sync();
+    const at = typeof rogue === 'object' ? clock.t + rogue.years * 365 * 86400e3 : rogue;
+    const peer = clone(devs[via].K._doc());
+    peer.products.push({ id: 'prg', name: 'Futur', categoryId: 'c0', priceMAD: 50, photo: '', video: '', metaAt: at });
+    peer.removed = Object.assign({}, peer.removed, { ghost: at });
+    devs[via].land(devs[via].K._merge(clone(devs[via].K._doc()), peer));
+    sync();
+    clock.t += 60e3; devs[0].K.updateVariant('v0', { note: na });
+    const st = devs[0].K._doc().variants.find((v) => v.id === 'v0').metaAt;
+    assert.ok(Number.isFinite(st) && st >= clock.t && st <= clock.t + 86400e3, 'honest stamp ' + st);
+    sync();
+    for (const d of devs) {
+      const doc = d.K._doc();
+      assert.equal(doc.variants.find((v) => v.id === 'v0').note, na, 'the latest honest edit wins');
+      assert.ok(doc.products.find((x) => x.id === 'prg'), 'the peer product stays');
+    }
+  }), 150);
+
 console.log(`${failed ? '✗' : '✓'} catalog-merge-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 process.exit(failed ? 1 : 0);
