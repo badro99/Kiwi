@@ -14,6 +14,7 @@ import {
 } from '../auth/_lib.js';
 import { storeOperationalState } from './_private.js';
 import { businessDate, merchantZone } from './_business-day.js';
+import { hoursByDay } from './_worked-hours.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
@@ -150,20 +151,17 @@ function attendanceView(doc, staffId) {
   return { open, recent: mine.slice(-31).reverse() };
 }
 function pointedHours(doc, memberId, staffId, zone) {
-  const out = {};
+  const items = [];
   (Array.isArray(doc && doc.entries) ? doc.entries : []).forEach((entry) => {
     if (!entry || !entry.outTs) return;
     if (String(entry.memberId || '') !== String(memberId || '') && String(entry.staffId || '') !== String(staffId || '')) return;
-    const start = Number(entry.inTs) || 0, end = Number(entry.outTs) || 0;
-    if (!start || end <= start) return;
-    const pauseMs = (Array.isArray(entry.breaks) ? entry.breaks : []).reduce((sum, pause) => {
-      const a = Number(pause && pause.inTs) || 0, b = Number(pause && pause.outTs) || 0;
-      return sum + (a && b > a ? b - a : 0);
-    }, 0);
-    const key = dateKey(start, zone);
-    out[key] = Math.round(((Number(out[key]) || 0) + Math.max(0, end - start - pauseMs) / 3600000) * 100) / 100;
+    items.push({
+      key: 'me', id: entry.id, closed: true,
+      start: Number(entry.inTs) || 0, end: Number(entry.outTs) || 0,
+      breaks: (Array.isArray(entry.breaks) ? entry.breaks : []).map((pause) => [Number(pause && pause.inTs) || 0, Number(pause && pause.outTs) || 0]),
+    });
   });
-  return out;
+  return hoursByDay(items, (ts) => dateKey(ts, zone)).me || {};
 }
 function safeProgress(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};

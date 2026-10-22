@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {declaration} from './js-declarations.cjs';
 import {fixture} from './server-money-fixture.mjs';
 import {businessDate} from '../functions/api/_business-day.js';
+import {hoursByDay} from '../functions/api/_worked-hours.js';
 import {employeeToken,EMPLOYEE_COOKIE,makeSession,SESS_COOKIE} from '../functions/auth/_lib.js';
 import {onRequestPost as employee} from '../functions/api/employee.js';
 import {onRequestGet as teamGet} from '../functions/api/team/live.js';
@@ -12,7 +13,7 @@ export const ROOT=process.env.KIWI_ROOT||path.resolve(import.meta.dirname,'..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
 function named(text,name){const m=new RegExp('(?:^|\\n)[ \\t]*(?:async\\s+)?(?:function\\s+'+name+'\\s*\\(|(?:const|let|var)\\s+'+name+'\\s*=)').exec(text);if(!m)throw Error(name);return declaration(text.slice(m.index).trimStart(),name);}
 function load(file,names,stubs={}){const c=vm.createContext(stubs);c.window=c;new vm.Script(names.map(n=>named(read(file),n)+'\nglobalThis['+JSON.stringify(n)+']='+n+';').join('\n')).runInContext(c);return c;}
-export function clients(){let hours={};const team=load('assets/team.js',['hhmmToMin','normShift','shiftMinutes','shiftHours','shiftIsNextDay','contractWeekHours','hourlyPayFor','periodMonthShare','payrollFigures'],{HHMM_RE:/^(?:[01]\d|2[0-3]):[0-5]\d$/,getHours:()=>hours,Date,Math,Number});const stubs={businessDate,Map,Math,Number,String};return{team,setHours:v=>hours=v,employee:load('functions/api/employee.js',['dateKey','pointedHours'],stubs),live:load('functions/api/team/live.js',['dateKey','pointedHours'],{...stubs}),charges:load('assets/charges-engine.js',['num','r2','staffFor'])};}
+export function clients(){let hours={};const team=load('assets/team.js',['hhmmToMin','normShift','shiftMinutes','shiftHours','shiftIsNextDay','contractWeekHours','hourlyPayFor','periodMonthShare','payrollFigures'],{HHMM_RE:/^(?:[01]\d|2[0-3]):[0-5]\d$/,getHours:()=>hours,Date,Math,Number});const stubs={businessDate,hoursByDay,Map,Math,Number,String};return{team,setHours:v=>hours=v,employee:load('functions/api/employee.js',['dateKey','pointedHours'],stubs),live:load('functions/api/team/live.js',['dateKey','pointedHours'],{...stubs}),charges:load('assets/charges-engine.js',['num','r2','staffFor'])};}
 export async function server(){const f=await fixture(ROOT);const cookie=`${EMPLOYEE_COOKIE}=${await employeeToken(f.env.AUTH_SECRET,{merchant:f.merchant,staffId:'staff'})}`,owner=`${SESS_COOKIE}=${await makeSession('money-owner',f.env.AUTH_SECRET)}`;
  function put(feature,data){f.sql.prepare('INSERT OR REPLACE INTO store_docs(merchant,feature,data,rev,updated_ts) VALUES(?,?,?,1,?)').run(f.merchant,feature,JSON.stringify(data),Date.now());}
  function get(feature){return JSON.parse(f.sql.prepare('SELECT data FROM store_docs WHERE merchant=? AND feature=?').get(f.merchant,feature).data);}

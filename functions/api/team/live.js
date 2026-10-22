@@ -6,6 +6,7 @@
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { storeOperationalState } from '../_private.js';
 import { businessDate, merchantZone } from '../_business-day.js';
+import { hoursByDay } from '../_worked-hours.js';
 
 const TEAM = 'team';
 const ACCESS = 'employee-access';
@@ -92,7 +93,7 @@ function removedAt(team) {
   return at;
 }
 function pointedHours(attendance, now, zone, gone = new Map()) {
-  const hours = {};
+  const items = [];
   (Array.isArray(attendance && attendance.entries) ? attendance.entries : []).forEach((entry) => {
     if (!entry || !entry.inTs) return;
     const memberId = String(entry.memberId || entry.staffId || '');
@@ -100,17 +101,11 @@ function pointedHours(attendance, now, zone, gone = new Map()) {
     const start = Number(entry.inTs) || 0;
     const cut = gone.get(memberId);
     const end = Number(entry.outTs) || (cut ? Math.max(start, Math.min(now, cut)) : now);
-    if (end <= start) return;
-    let pauseMs = (Array.isArray(entry.breaks) ? entry.breaks : []).reduce((sum, pause) => {
-      const a = Number(pause && pause.inTs) || 0, b = Number(pause && pause.outTs) || 0;
-      return sum + (a && b > a ? b - a : 0);
-    }, 0);
-    if (!entry.outTs && entry.pauseTs) pauseMs += Math.max(0, end - Number(entry.pauseTs));
-    const day = dateKey(start, zone);
-    const row = hours[memberId] || (hours[memberId] = {});
-    row[day] = Math.round(((Number(row[day]) || 0) + Math.max(0, end - start - pauseMs) / 3600000) * 100) / 100;
+    const breaks = (Array.isArray(entry.breaks) ? entry.breaks : []).map((pause) => [Number(pause && pause.inTs) || 0, Number(pause && pause.outTs) || 0]);
+    if (!entry.outTs && entry.pauseTs) breaks.push([Number(entry.pauseTs), end]);
+    items.push({ key: memberId, id: entry.id, closed: !!entry.outTs, start, end, breaks });
   });
-  return hours;
+  return hoursByDay(items, (ts) => dateKey(ts, zone));
 }
 
 export async function onRequestGet({ request, env }) {
