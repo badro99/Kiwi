@@ -178,7 +178,12 @@
   const validReady = (value, now) => !!value && typeof value.getTime === 'function'
     && Number.isFinite(value.getTime()) && value.getTime() > +(now || Date.now());
 
-  /* Public order / piece number handling (4-digit format) */
+  /* Public order / piece number handling (4-digit format)
+     Un bon numéroté en ligne garde ses quatre chiffres (« 0042 »). Un bon fait
+     quand la caisse ne peut pas obtenir du serveur un numéro confirmé porte en
+     plus la lettre de SA caisse (« 0042-B ») : deux caisses coupées du réseau
+     ne peuvent plus imprimer le même numéro. isTicketNo accepte les deux. */
+  function isTicketNo(value) { return /^\d{4}(?:-[A-Z][A-Z0-9]{0,2})?$/.test(String(value == null ? '' : value)); }
   function normalizeOrderNo(value) {
     const raw = String(value == null ? '' : value).trim();
     if (!raw) return '';
@@ -189,10 +194,18 @@
     if (digits.length >= 4) return digits.slice(0, 4);
     return digits.padStart(4, '0');
   }
+  /* Le numéro complet, lettre de caisse comprise : « p-0042-b-1 » → « 0042-B ».
+     Une étiquette de pièce (« 1037-1 », chiffre après le tiret) n'est pas une
+     lettre de caisse et retombe sur les quatre chiffres. */
+  function normalizeTicketNo(value) {
+    const raw = String(value == null ? '' : value).trim().toUpperCase();
+    const m = raw.match(/(\d{4})-([A-Z][A-Z0-9]{0,2})(?![A-Z0-9])/);
+    return m ? `${m[1]}-${m[2]}` : normalizeOrderNo(raw);
+  }
 
   function publicOrderNo(order) {
     if (!order) return '';
-    if (order.displayNo && /^\d{4}$/.test(String(order.displayNo))) return String(order.displayNo);
+    if (order.displayNo && isTicketNo(order.displayNo)) return String(order.displayNo);
     return normalizeOrderNo(order.id) || '0000';
   }
 
@@ -202,26 +215,110 @@
     return `${base}-${n}`;
   }
 
-  function nextAvailableOrderNo(seq, orders) {
-    const used = new Set((orders || []).map((o) => publicOrderNo(o)));
+  /* `suffix` = lettre de la caisse pour un bon numéroté hors ligne. Les quatre
+     chiffres déjà portés par un bon, avec ou sans lettre, ne sont jamais
+     redonnés : « 42 » au comptoir ne doit désigner qu'un seul bon par caisse. */
+  function nextAvailableOrderNo(seq, orders, suffix) {
+    const tail = suffix ? `-${suffix}` : '';
+    const used = new Set((orders || []).map((o) => publicOrderNo(o).slice(0, 4)));
     let candidate = (Number(seq) || 1) % 10000;
     if (candidate === 0) candidate = 1;
     let attempts = 0;
     while (attempts < 10000) {
       const formatted = String(candidate).padStart(4, '0');
-      if (!used.has(formatted)) return formatted;
+      if (!used.has(formatted)) return formatted + tail;
       candidate = (candidate + 1) % 10000;
       if (candidate === 0) candidate = 1;
       attempts++;
     }
-    return String((Number(seq) || 1) % 10000).padStart(4, '0');
+    return String((Number(seq) || 1) % 10000).padStart(4, '0') + tail;
+  }
+  /* Le compteur qui suit un numéro donné : celui dont le prochain candidat est
+     le numéro d'après. Remonté au serveur, il réserve ce numéro pour les autres
+     caisses (elles repartent au-delà). */
+  function seqAfterOrderNo(seq, num) {
+    const n = +normalizeOrderNo(num) || 0;
+    const s = Math.max(1, Math.floor(Number(seq) || 1));
+    let next = s - (s % 10000) + n + 1;
+    if (next < s) next += 10000;
+    return next;
+  }
+
+  /* Lettres de caisse. Chaque caisse appairée inscrit sa lettre dans le
+     document partagé du pressing (`tills`, clé = empreinte de son identifiant
+     d'appareil, jamais l'identifiant lui-même). Le serveur tient ce registre en
+     ajout seul et refuse (409) une lettre déjà prise : une lettre qu'il a
+     acceptée est donc unique pour ce commerce et ne change plus. */
+  const TILL_LETTERS = 'abcdefghjklmnpqrstuvwxyz'.toUpperCase();   /* sans I ni O, illisibles sur un ticket */
+  function tillLetterAt(i) {
+    if (i < TILL_LETTERS.length) return TILL_LETTERS[i];
+    const j = i - TILL_LETTERS.length;
+    return TILL_LETTERS[Math.floor(j / TILL_LETTERS.length) % TILL_LETTERS.length] + TILL_LETTERS[j % TILL_LETTERS.length];
+  }
+  function mergeTills(mine, theirs) {
+    const out = {};
+    const owner = Object.create(null);
+    const rows = (m) => Object.keys(m && typeof m === 'object' ? m : {})
+      .map((k) => [k, m[k]]).filter(([k, r]) => /^d[a-z0-9]{6,24}$/.test(k) && r && /^[A-Z]{1,2}$/.test(String(r.letter || '')))
+      .sort((x, y) => (+x[1].at || 0) - (+y[1].at || 0) || (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+    /* La copie serveur d'abord : une lettre déjà attribuée ne change jamais de
+       caisse ; une revendication locale ne passe que sur une lettre libre. */
+    rows(theirs).concat(rows(mine)).forEach(([k, r]) => {
+      const letter = String(r.letter);
+      if (out[k] || owner[letter]) return;
+      out[k] = { letter, at: +r.at || 0 };
+      owner[letter] = k;
+    });
+    return out;
+  }
+  function freeTillLetter(tills) {
+    const taken = new Set(Object.keys(tills || {}).map((k) => tills[k].letter));
+    for (let i = 0; i < 600; i++) if (!taken.has(tillLetterAt(i))) return tillLetterAt(i);
+    return TILL_LETTERS.slice(-1).repeat(2);
+  }
+  function claimTill(tills, key, at) {
+    const out = mergeTills(tills, {});
+    if (key && !out[key]) out[key] = { letter: freeTillLetter(out), at: +at || Date.now() };
+    return out;
+  }
+  function tillHash(text) {
+    let a = 2166136261, b = 5381;
+    for (const ch of String(text || '')) {
+      const c = ch.charCodeAt(0);
+      a = Math.imul(a ^ c, 16777619) >>> 0;
+      b = (Math.imul(b, 33) + c) >>> 0;
+    }
+    return a.toString(36) + b.toString(36);
+  }
+
+  /* Deux bons distincts sous le même numéro (une ancienne caisse, un cas
+     limite) : aucun n'est fusionné dans l'autre. L'identité d'un bon est son
+     heure de dépôt, fixée à la création ; celui que le serveur porte déjà garde
+     son numéro, l'autre est renuméroté de façon visible et déterministe
+     (« 0042-RK »), ses étiquettes avec lui, et garde la trace de l'ancien. */
+  function orderIdentity(o) {
+    const t = o && o.droppedAt != null ? new Date(o.droppedAt).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  }
+  function renumberedOrder(o) {
+    const A = 'abcdefghjklmnpqrstuvwxyz23456789'.toUpperCase();
+    const h = tillHash(String(orderIdentity(o)) + ':' + String(o.id));
+    const base = normalizeOrderNo(o.id) || '0000';
+    let id = `${base}-R${A[parseInt(h.slice(0, 6), 36) % 32]}`;
+    if (id === String(o.id)) id = `${base}-R${A[parseInt(h.slice(-6), 36) % 32]}${A[parseInt(h.slice(0, 6), 36) % 32]}`;
+    const old = String(o.id);
+    return {
+      ...o, id, displayNo: id, renumberedFrom: o.renumberedFrom || publicOrderNo(o),
+      pieces: Array.isArray(o.pieces) ? o.pieces.map((p) => (p && typeof p.pid === 'string' && p.pid.indexOf(old + '-') === 0
+        ? { ...p, pid: id + p.pid.slice(old.length) } : p)) : o.pieces,
+    };
   }
 
   function ensurePublicOrderNumbers(orders) {
     if (!Array.isArray(orders)) return;
     const used = new Set();
     orders.forEach((o, i) => {
-      let num = o.displayNo ? normalizeOrderNo(o.displayNo) : normalizeOrderNo(o.id);
+      let num = o.displayNo ? normalizeTicketNo(o.displayNo) : normalizeTicketNo(o.id);
       if (!num || used.has(num)) {
         let candidate = ((i + 1) % 10000) || 1;
         while (used.has(String(candidate).padStart(4, '0'))) {
@@ -652,6 +749,43 @@
   let pressingCloudHandle = null;
   const persistedOrderHashes = Object.create(null);
   const persistedCustomerHashes = Object.create(null);
+  /* La lettre de CETTE caisse (voir mergeTills). La clé du registre est une
+     empreinte de l'identifiant d'appareil que la caisse présente déjà à
+     l'appairage : même tablette, même lettre, même après un réappairage. */
+  const TILL_CONFIRMED_PREFIX = 'kiwi:pressing-till:v1:';
+  let pressingTills = {};
+  function tillKey() {
+    let id = '';
+    try { id = (window.KiwiCaissePairing && window.KiwiCaissePairing.terminalId && window.KiwiCaissePairing.terminalId()) || ''; } catch (_) {}
+    if (!id) { try { id = localStorage.getItem('kiwi:caisse:terminal-id:v1') || ''; } catch (_) {} }
+    return id ? 'd' + tillHash('kiwi-till:' + id).padStart(12, '0').slice(0, 16) : '';
+  }
+  function confirmedTillLetter() {
+    const key = tillKey(), scope = pressingScope();
+    if (!key || !scope) return '';
+    try {
+      const v = JSON.parse(localStorage.getItem(TILL_CONFIRMED_PREFIX + scope) || 'null');
+      return v && v.key === key && /^[A-Z]{1,2}$/.test(String(v.letter || '')) ? v.letter : '';
+    } catch (_) { return ''; }
+  }
+  /* Une lettre n'est « confirmée » que lue dans une copie que le serveur porte
+     (relue, ou acceptée à la remontée) : lui seul garantit qu'aucune autre
+     caisse du commerce ne l'a. */
+  function noteServerTills(tills) {
+    const key = tillKey(), scope = pressingScope();
+    const row = key && tills && typeof tills === 'object' ? tills[key] : null;
+    if (!row || !scope || !/^[A-Z]{1,2}$/.test(String(row.letter || ''))) return;
+    try { localStorage.setItem(TILL_CONFIRMED_PREFIX + scope, JSON.stringify({ key, letter: row.letter })); } catch (_) {}
+  }
+  /* Lettre d'un bon numéroté sans confirmation du serveur. Une caisse qui n'a
+     encore jamais vu sa lettre acceptée prend deux lettres tirées de son
+     empreinte : jamais l'une des lettres simples du registre. */
+  function offlineSuffix() {
+    const confirmed = confirmedTillLetter();
+    if (confirmed) return confirmed;
+    const h = parseInt(tillHash('kiwi-till-fallback:' + (tillKey() || 'anon')).slice(0, 6), 36) || 0;
+    return TILL_LETTERS[h % 24] + TILL_LETTERS[Math.floor(h / 24) % 24];
+  }
   const state = {
     view: 'comptoir',
     cat: 'tous',
@@ -687,12 +821,12 @@
       ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0);
       state.ticket = d.ticket || null;
       if (state.ticket?.ready) state.ticket.ready = new Date(state.ticket.ready);
-      if (state.ticket && !/^\d{4}$/.test(String(state.ticket.displayNo || ''))) state.ticket.displayNo = nextAvailableOrderNo(ticketSeq, ORDERS);
+      if (state.ticket && !isTicketNo(state.ticket.displayNo)) state.ticket.displayNo = nextAvailableOrderNo(ticketSeq, ORDERS);
       (state.ticket?.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
     },
   });
   function freshTicket() {
-    const num = nextAvailableOrderNo(ticketSeq, ORDERS);
+    const num = nextAvailableOrderNo(ticketSeq, ORDERS, pvReal() && browserOffline() ? offlineSuffix() : '');
     state.ticket = { num, displayNo: num, lines: [], customer: null, ready: suggestReady() };
   }
   function suggestReady(value) {
@@ -717,6 +851,7 @@
     return {
       id: String(o.id || '').slice(0, 40),
       displayNo: publicOrderNo(o),
+      ...(o.renumberedFrom ? { renumberedFrom: String(o.renumberedFrom).slice(0, 12) } : {}),
       custId: o.custId || null,
       guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
       b2b: !!o.b2b,
@@ -768,7 +903,8 @@
       return row;
     });
     const cancellations = orders.filter((o) => o.cancelledAt).map((o) => ({ id: o.id, cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null }));
-    return { customers, orders, cancellations, rackConflicts: rackConflicts.slice(0, 100), seq: ticketSeq, updatedAt: now };
+    pressingTills = claimTill(pressingTills, tillKey());
+    return { customers, orders, cancellations, rackConflicts: rackConflicts.slice(0, 100), seq: ticketSeq, tills: pressingTills, updatedAt: now };
   }
   function readPressingDocument() {
     const k = pressingStoreKey();
@@ -802,7 +938,8 @@
       if (!lines.length) return;
       const o = {
         id: String(raw.id).slice(0, 40),
-        displayNo: normalizeOrderNo(raw.displayNo || raw.id),
+        displayNo: normalizeTicketNo(raw.displayNo || raw.id),
+        renumberedFrom: raw.renumberedFrom ? normalizeTicketNo(raw.renumberedFrom) : null,
         custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
         guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
         b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
@@ -829,6 +966,7 @@
     try { mirrorAllClients(); } catch (_) {}
     Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
     rackConflicts = Array.isArray(doc.rackConflicts) ? doc.rackConflicts.slice(0, 100) : [];
+    pressingTills = mergeTills(doc.tills, {});
     ORDERS.forEach((o) => {
       if (!isLiveOrder(o) || !o.rack) { o.rack = null; return; }
       if (!rackSlots[o.rack]) rackSlots[o.rack] = o.id;
@@ -853,23 +991,43 @@
        The collected copy wins whole (its payment with it); otherwise a garment
        handed over in either copy stays handed over. */
     const collected = (o) => !!o.collectedAt || (Array.isArray(o.pieces) && o.pieces.length > 0 && o.pieces.every((p) => p && p.status === 'livre'));
-    const mergeOrders = (a, b) => {
-      const byId = Object.create(null);
+    const reconcile = (old, row) => {
+      const newer = (+row.updatedAt || 0) >= (+old.updatedAt || 0);
+      let win = newer ? row : old; const lose = newer ? old : row;
+      const at = Math.max(+row.updatedAt || 0, +old.updatedAt || 0);
+      if (collected(lose) && !collected(win) && !win.cancelledAt) win = { ...lose, updatedAt: at };
+      else if (Array.isArray(win.pieces) && Array.isArray(lose.pieces) && win.pieces.length === lose.pieces.length
+        && lose.pieces.some((p, i) => p && p.status === 'livre' && win.pieces[i] && win.pieces[i].status !== 'livre')) {
+        win = { ...win, pieces: win.pieces.map((p, i) => (lose.pieces[i] && lose.pieces[i].status === 'livre' && p ? { ...p, status: 'livre' } : p)) };
+      }
+      return win;
+    };
+    /* Même numéro = même bon SEULEMENT si l'heure de dépôt concorde (ou manque,
+       données anciennes). Deux bons distincts sous un numéro restent deux bons :
+       celui que porte déjà la copie serveur (`theirs`, lue en premier) garde le
+       numéro, l'autre est renuméroté (renumberedOrder, qui ne dépend que du bon
+       lui-même : toute caisse qui le renumérote lui donne le même numéro). */
+    const mergeOrders = (a, b, depth) => {
+      const groups = Object.create(null);
       (b || []).concat(a || []).forEach((row) => {
         if (!row || !row.id) return;
-        const old = byId[row.id];
-        if (!old) { byId[row.id] = row; return; }
-        const newer = (+row.updatedAt || 0) >= (+old.updatedAt || 0);
-        let win = newer ? row : old; const lose = newer ? old : row;
-        const at = Math.max(+row.updatedAt || 0, +old.updatedAt || 0);
-        if (collected(lose) && !collected(win) && !win.cancelledAt) win = { ...lose, updatedAt: at };
-        else if (Array.isArray(win.pieces) && Array.isArray(lose.pieces) && win.pieces.length === lose.pieces.length
-          && lose.pieces.some((p, i) => p && p.status === 'livre' && win.pieces[i] && win.pieces[i].status !== 'livre')) {
-          win = { ...win, pieces: win.pieces.map((p, i) => (lose.pieces[i] && lose.pieces[i].status === 'livre' && p ? { ...p, status: 'livre' } : p)) };
-        }
-        byId[row.id] = win;
+        const g = groups[row.id] || (groups[row.id] = []);
+        const t = orderIdentity(row);
+        const slot = g.find((x) => x.t === null || t === null || x.t === t);
+        if (!slot) { g.push({ t, row }); return; }
+        if (slot.t === null) slot.t = t;
+        slot.row = reconcile(slot.row, row);
       });
-      return Object.values(byId);
+      let renamed = false;
+      const out = [];
+      Object.keys(groups).forEach((id) => {
+        const g = groups[id];
+        out.push(g[0].row);
+        g.slice(1).forEach((x) => { renamed = true; out.push(renumberedOrder(x.row)); });
+      });
+      /* Un bon renuméroté peut retrouver sa propre copie déjà renumérotée par
+         l'autre appareil : une passe de plus les réunit. */
+      return renamed && (depth || 0) < 4 ? mergeOrders(out, [], (depth || 0) + 1) : out;
     };
     const orders = mergeOrders(mine && mine.orders, theirs && theirs.orders).map((o) => {
       const tombstone = cancellations.find((c) => c.id === o.id);
@@ -890,6 +1048,7 @@
       cancellations,
       rackConflicts,
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      tills: mergeTills(mine && mine.tills, theirs && theirs.tills),
       updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0),
     };
   }
@@ -906,11 +1065,64 @@
     pressingCloudHandle = KiwiCloudDoc.attach({
       feature: 'pressing-orders', slug: () => pressingScope(), localKey: pressingStoreKey,
       read: () => readPressingDocument() || { customers: [], orders: [], seq: ticketSeq, updatedAt: 0 },
-      write: (doc) => writePressingDocument(doc, true), merge: mergePressingDocuments,
+      write: (doc) => writePressingDocument(doc, true), merge: mergeFromServer,
       isEmpty: (doc) => !doc || (!doc.orders?.length && !doc.customers?.length && !doc.cancellations?.length),
       onPulled: () => { if (root) { renderBadges(); refreshOps(); } },
+      onPushed: (doc) => noteServerTills(doc && doc.tills),
     });
     return pressingCloudHandle;
+  }
+  /* `theirs` est toujours la copie serveur (relecture ou réponse 409). */
+  function mergeFromServer(mine, theirs) {
+    noteServerTills(theirs && theirs.tills);
+    const next = mergePressingDocuments(mine, theirs);
+    next.tills = claimTill(next.tills, tillKey());
+    return next;
+  }
+
+  /* Numéro d'un nouveau bon. En ligne, la caisse le fait CONFIRMER : elle
+     remonte le document, compteur avancé au-delà de ce numéro, sur la révision
+     qu'elle a lue. Le serveur n'accepte qu'une écriture par révision : de deux
+     caisses qui visent le même numéro, l'une passe, l'autre reçoit un 409,
+     fusionne et prend le suivant. Le numéro reste alors à quatre chiffres,
+     comme avant. Sans réponse à temps (hors ligne, réseau lent, serveur qui
+     refuse), le bon prend la lettre de la caisse : « 0042-B ». */
+  const NUMBER_TIMEOUT = 4000;
+  function allocateTicketNo() {
+    const cloud = pressingCloud();
+    const lettered = () => nextAvailableOrderNo(ticketSeq, ORDERS, offlineSuffix());
+    if (!cloud || browserOffline() || !pressingStoreKey()) return Promise.resolve(lettered());
+    const deadline = Date.now() + NUMBER_TIMEOUT;
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const within = (p) => Promise.race([Promise.resolve(p), wait(Math.max(0, deadline - Date.now())).then(() => null)]);
+    let baseRev = null;
+    const attempt = (tries) => {
+      if (tries > 4 || Date.now() >= deadline) return Promise.resolve(null);
+      const num = nextAvailableOrderNo(ticketSeq, ORDERS);
+      const doc = pressingDocument();
+      doc.seq = Math.max(+doc.seq || 0, seqAfterOrderNo(ticketSeq, num));
+      try { localStorage.setItem(pressingStoreKey(), JSON.stringify(doc)); } catch (_) {}
+      const o = { explicit: true, noAutoMerge: true, data: doc };
+      if (baseRev != null) o.baseRev = baseRev;
+      return within(cloud.pushNow(o)).then((res) => {
+        if (res && res.ok) {
+          ticketSeq = Math.max(ticketSeq, doc.seq);
+          noteServerTills(doc.tills);
+          return num;
+        }
+        if (res && res.status === 409 && res.data && typeof res.data === 'object') {
+          baseRev = res.rev;
+          writePressingDocument(mergeFromServer(readPressingDocument(), res.data), true);
+          return attempt(tries + 1);
+        }
+        if (res && (res.error === 'busy' || res.error === 'unread')) {
+          if (res.error === 'unread') { try { cloud.bind(); } catch (_) {} }
+          return wait(300).then(() => attempt(tries + 1));
+        }
+        return null;
+      }, () => null);
+    };
+    return attempt(0).then((num) => num || lettered(), () => lettered());
   }
   function persistPressing() {
     if (!pvReal()) return;
@@ -1781,11 +1993,27 @@
     chooseReady();
   }
 
+  let numbering = null;
   function finalizeTicket() {
     const t = state.ticket;
     if (!t || !t.lines.length || !t.customer) return;
     if (!validReady(t.ready)) { openDate({ onSelected: finalizeTicket }); toast('Choisissez une date de retrait dans le futur'); return; }
-    const num = normalizeOrderNo(t.displayNo || t.num) || nextAvailableOrderNo(ticketSeq, ORDERS);
+    /* Démo : numérotation locale, comme toujours. */
+    if (!pvReal()) { openFreshOrder(t, normalizeOrderNo(t.displayNo || t.num) || nextAvailableOrderNo(ticketSeq, ORDERS)); return; }
+    /* Un numéro déjà obtenu pour CE bon (encaissement abandonné puis repris)
+       reste le sien : il a pu être imprimé. */
+    const kept = t.reserved && isTicketNo(t.reserved) && !ORDERS.some((o) => publicOrderNo(o) === t.reserved) ? t.reserved : '';
+    if (kept) { openFreshOrder(t, kept); return; }
+    if (numbering) return;
+    numbering = allocateTicketNo().then((num) => {
+      numbering = null;
+      t.reserved = t.num = t.displayNo = num;
+      if (state.ticket !== t) return;
+      renderTicket(); icons();
+      openFreshOrder(t, num);
+    }, () => { numbering = null; });
+  }
+  function openFreshOrder(t, num) {
     const order = {
       id: num,
       displayNo: num,
@@ -2285,7 +2513,7 @@
         /* Persist the NEXT available number, never the one just printed. This
            matters most for pay-at-pickup tickets: no sale journal entry exists
            yet to rescue nextSeq() after a reload. */
-        ticketSeq++;
+        ticketSeq = Math.max(ticketSeq, seqAfterOrderNo(ticketSeq, order.id));
         syncOwnerOps();
         freshTicket();
         renderTicket();
@@ -2873,12 +3101,20 @@
   function findScannedOrder(raw) {
     const code = String(raw || '').trim().toUpperCase().replace(/^\*|\*$/g, '');
     if (!code) return null;
-    const norm = normalizeOrderNo(code);
-    return ORDERS.find((o) => publicOrderNo(o) === code
+    const exact = ORDERS.find((o) => publicOrderNo(o) === code
       || String(o.id).toUpperCase() === code
-      || (norm && (publicOrderNo(o) === norm || String(o.id).toUpperCase() === norm))
       || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code
-        || publicPieceNo(o, p).toUpperCase() === code)) || null;
+        || publicPieceNo(o, p).toUpperCase() === code));
+    if (exact) return exact;
+    /* « P-0042-B » ou « 0042-b » : le numéro complet, lettre de caisse comprise. */
+    const full = normalizeTicketNo(code);
+    if (!full) return null;
+    const byFull = ORDERS.find((o) => publicOrderNo(o) === full || String(o.id).toUpperCase() === full);
+    if (byFull) return byFull;
+    /* Quatre chiffres tapés seuls retrouvent un bon lettré s'il est le seul. */
+    if (!/^\d{4}$/.test(full)) return null;
+    const same = ORDERS.filter((o) => publicOrderNo(o).slice(0, 4) === full);
+    return same.length === 1 ? same[0] : null;
   }
   function acceptScan(raw) {
     const target = findScannedOrder(raw);
@@ -3145,6 +3381,7 @@
       suggestReady,
       findScannedOrder,
       barcode,
+      allocateTicketNo,
       maxQty: MAX_QTY,
     }),
   };

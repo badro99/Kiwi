@@ -141,4 +141,50 @@ assert.match(source, /new window\.BarcodeDetector/, 'scanner uses BarcodeDetecto
 assert.doesNotMatch(source, /state\.offline\s*=\s*!state\.offline/, 'network status cannot be manually faked');
 assert.doesNotMatch(source, /action.*synchronis[ée]/i, 'UI does not claim unconfirmed synchronization success');
 
-console.log(`✓ pressing edges (${validPhones.size + internationalPhones.size + 45} controls)`);
+/* Numérotation d'une vraie caisse : en ligne le serveur confirme un numéro à
+   quatre chiffres (un 409 fait fusionner puis prendre le suivant) ; sans
+   confirmation, le bon prend la lettre de la caisse. */
+const tillStore = new Map();
+const pushes = [];
+let replies = [];
+const tillWindow = {
+  addEventListener: () => {},
+  KiwiPosDispatch: { register: () => {}, unlockById: () => {}, lock: () => {} },
+  KiwiPressingCatalog: context.window.KiwiPressingCatalog,
+  KiwiConfig: context.window.KiwiConfig,
+  KiwiEnv: { isReal: () => true },
+  KiwiPlatform: { isPaired: () => true, pairedVenue: () => ({ merchant: 'press-a', name: 'Pressing A' }) },
+  KiwiCaissePairing: { terminalId: () => 'term_0123456789abcdef' },
+  KiwiCloudDoc: { attach: () => ({ bind: () => Promise.resolve(false), push: () => {}, pull: () => Promise.resolve(false),
+    pushNow: (o) => { pushes.push(JSON.parse(JSON.stringify(o.data))); return Promise.resolve(replies.shift() || { ok: false, status: 0, offline: true }); } }) },
+};
+const tillContext = {
+  ...context, window: tillWindow, navigator: { onLine: true },
+  localStorage: { getItem: (k) => (tillStore.has(k) ? tillStore.get(k) : null), setItem: (k, v) => tillStore.set(k, String(v)), removeItem: (k) => tillStore.delete(k) },
+};
+tillContext.KiwiCloudDoc = tillWindow.KiwiCloudDoc;   /* dans un navigateur, window est l'objet global */
+tillWindow.window = tillWindow; tillWindow.localStorage = tillContext.localStorage; tillWindow.navigator = tillContext.navigator; tillWindow.document = context.document;
+vm.createContext(tillContext);
+vm.runInContext(phoneSource, tillContext, { filename: 'phone.js' });
+vm.runInContext(source, tillContext, { filename: 'pressing-caisse.js' });
+const till = tillWindow.KiwiPressing.rules;
+replies = [{ ok: true, status: 200, rev: 2 }];
+const first = await till.allocateTicketNo();
+assert.equal(first, '0001', 'online confirmed number keeps the plain four digits');
+assert.equal(pushes[0].seq, 2, 'the confirming push reserves the number by moving the shared counter past it');
+const myKey = Object.keys(pushes[0].tills)[0];
+assert.equal(pushes[0].tills[myKey].letter, 'A', 'the till claims the first free letter with its confirming push');
+assert.ok(!JSON.stringify(pushes[0].tills).includes('0123456789abcdef'), 'the shared registry never carries the raw device id');
+const server = { customers: [], orders: [{ id: '0002', displayNo: '0002', lines: [{ itemId: 'chemise', services: ['sec'], qty: 1, unitPrice: 25 }], pieces: [{ pid: '0002-1', status: 'recu' }], droppedAt: '2026-10-22T09:00:00.000Z', readyAt: '2026-10-23T18:00:00.000Z', pay: { mode: 'pickup', paid: 0 }, updatedAt: 5 }], cancellations: [], seq: 3, tills: { ...pushes[0].tills, dother0000001: { letter: 'B', at: 9 } } };
+replies = [{ ok: false, status: 409, error: 'stale', rev: 3, data: server }, { ok: true, status: 200, rev: 4 }];
+const second = await till.allocateTicketNo();
+assert.equal(second, '0003', 'a till that lost the race merges the server copy and takes the next free number');
+assert.equal(pushes.at(-1).seq, 4);
+replies = [{ ok: false, status: 0, offline: true }];
+assert.equal(await till.allocateTicketNo(), '0004-A', 'without a server answer the ticket carries the confirmed letter of this till');
+tillContext.navigator.onLine = false;
+const before = pushes.length;
+assert.equal(await till.allocateTicketNo(), '0004-A', 'offline the till does not wait for the network');
+assert.equal(pushes.length, before, 'offline numbering sends nothing');
+
+console.log(`✓ pressing edges (${validPhones.size + internationalPhones.size + 52} controls)`);

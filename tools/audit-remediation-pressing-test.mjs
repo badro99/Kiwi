@@ -251,7 +251,10 @@ function runRackTest() {
   const status = functionSource(source, 'orderStatus');
   const live = functionSource(source, 'isLiveOrder');
   const merge = functionSource(source, 'mergePressingDocuments');
-  const mergePressingDocuments = new Function(`${effective}\n${status}\n${live}\n${merge}\nreturn mergePressingDocuments;`)();
+  /* La fusion garde deux bons distincts sous un même numéro : ses aides. */
+  const numbering = ['isTicketNo', 'normalizeOrderNo', 'publicOrderNo', 'tillHash', 'orderIdentity', 'renumberedOrder', 'mergeTills']
+    .map((name) => functionSource(source, name)).join('\n');
+  const mergePressingDocuments = new Function(`${effective}\n${status}\n${live}\n${numbering}\n${merge}\nreturn mergePressingDocuments;`)();
   const rackSlots = Object.create(null);
   const toasts = [];
   const assignSlot = new Function('rackSlots', 'syncOwnerOps', 'toast', `${functionSource(source, 'assignSlot')}\nreturn assignSlot;`)(rackSlots, () => {}, (message) => toasts.push(message));

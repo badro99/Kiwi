@@ -159,12 +159,6 @@
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "number allocation design: disconnected devices choose the same public ticket number",
-      "kind": "decision",
-      "severity": "data"
-    },
-    {
-      "suite": "pressing-money-properties-test.mjs",
       "label": "refund policy: cancellation preserves deposit but issues no refund or refund-due record",
       "kind": "decision",
       "severity": "money"

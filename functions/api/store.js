@@ -439,6 +439,62 @@ function validatePressingSnapshot(current, incoming) {
   return null;
 }
 
+/* Deux bons distincts ne partagent jamais un numéro sur le serveur. Une copie
+ * qui porterait, sous le numéro d'un bon déjà enregistré, un AUTRE bon (heure
+ * de dépôt différente) l'effacerait : on la renvoie fusionner (409 + copie
+ * serveur). La fusion des caisses garde alors les deux, le second renuméroté. */
+function pressingDroppedAt(order) {
+  const t = order && order.droppedAt != null ? new Date(order.droppedAt).getTime() : NaN;
+  return Number.isFinite(t) ? t : null;
+}
+function pressingIdentityConflict(current, incoming) {
+  const before = new Map();
+  for (const order of (current && Array.isArray(current.orders) ? current.orders : [])) {
+    if (order && order.id) before.set(String(order.id), order);
+  }
+  for (const order of (incoming && Array.isArray(incoming.orders) ? incoming.orders : [])) {
+    if (!order || !order.id) continue;
+    const old = before.get(String(order.id));
+    if (!old) continue;
+    const a = pressingDroppedAt(old), b = pressingDroppedAt(order);
+    if (a !== null && b !== null && a !== b) return { id: String(order.id) };
+  }
+  return null;
+}
+
+/* Lettres des caisses du pressing (« 0042-B » pour un bon numéroté hors
+ * ligne). Registre en ajout seul : une caisse garde sa première lettre, une
+ * copie qui l'oublie ne l'efface pas, et une lettre déjà tenue par une autre
+ * caisse est refusée (409 + copie serveur, la caisse en reprend une libre).
+ * Une lettre que le serveur a acceptée est donc unique pour ce commerce. */
+const PRESSING_TILL_KEY = /^d[a-z0-9]{6,24}$/;
+const PRESSING_TILL_LETTER = /^[A-Z]{1,2}$/;
+function pressingTillRows(doc) {
+  const tills = doc && doc.tills;
+  if (!tills || typeof tills !== 'object' || Array.isArray(tills)) return [];
+  return Object.entries(tills).filter(([key, row]) => PRESSING_TILL_KEY.test(key) && row
+    && typeof row === 'object' && PRESSING_TILL_LETTER.test(String(row.letter || '')));
+}
+function pressingTills(current, incoming) {
+  const tills = {};
+  const owner = new Map();
+  for (const [key, row] of pressingTillRows(current)) {
+    const letter = String(row.letter);
+    if (owner.has(letter)) continue;
+    tills[key] = { letter, at: Number(row.at) || 0 };
+    owner.set(letter, key);
+  }
+  for (const [key, row] of pressingTillRows(incoming)) {
+    if (tills[key]) continue;
+    const letter = String(row.letter);
+    if (owner.has(letter)) return { conflict: { key, letter } };
+    if (owner.size >= 200) continue;
+    tills[key] = { letter, at: Number(row.at) || 0 };
+    owner.set(letter, key);
+  }
+  return { tills };
+}
+
 function pressingRackConflict(doc) {
   const owners = new Map();
   for (const order of (doc && doc.orders) || []) {
@@ -929,6 +985,11 @@ export async function onRequestPost(context) {
     }
     const snapshotError = validatePressingSnapshot(mine, clean.value);
     if (snapshotError) return json({ error: snapshotError.error, feature, id: snapshotError.id }, 409);
+    const identity = pressingIdentityConflict(mine, clean.value);
+    if (identity) return json({ error: 'pressing-order-identity-conflict', feature, id: identity.id, rev: serverRev, data: view(mine) }, 409);
+    const tills = pressingTills(mine, clean.value);
+    if (tills.conflict) return json({ error: 'pressing-till-letter-taken', feature, letter: tills.conflict.letter, rev: serverRev, data: view(mine) }, 409);
+    if (Object.keys(tills.tills).length || clean.value.tills !== undefined) clean.value.tills = tills.tills;
     clean.value = preservePressingCancellations(mine, clean.value);
     const conflict = pressingRackConflict(clean.value);
     if (conflict) return json({ error: 'rack-conflict', feature, ...conflict }, 409);
