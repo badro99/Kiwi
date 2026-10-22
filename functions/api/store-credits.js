@@ -379,10 +379,14 @@ export async function onRequestPost({ request, env }) {
   } else {
     await env.DB.batch([
       env.DB.prepare(
+        /* The event records the balance read above as the amount written
+           off. A till spending part of the credit in between would make the
+           ledger write off money already spent, so the cancel holds only
+           against that exact balance; otherwise it is refused and retried. */
         `UPDATE store_credits SET balance_cents = 0, status = 'cancelled', last_event_id = ?, updated_ts = ?
-          WHERE merchant = ? AND code = ? AND status = 'active'
+          WHERE merchant = ? AND code = ? AND status = 'active' AND balance_cents = ?
             AND NOT EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND id = ?)`
-      ).bind(eventId, at, merchant, code, merchant, eventId),
+      ).bind(eventId, at, merchant, code, Number(credit.balance_cents || 0), merchant, eventId),
       env.DB.prepare(
         `INSERT OR IGNORE INTO store_credit_events
            (id, merchant, credit_id, code, action, amount_cents, balance_after_cents, ref_id, actor, detail, ts)
@@ -396,7 +400,9 @@ export async function onRequestPost({ request, env }) {
   const saved = await env.DB.prepare('SELECT * FROM store_credits WHERE merchant = ? AND code = ?').bind(merchant, code).first();
   if (!event || !saved) {
     const reason = Number(credit.expires_ts) < at ? 'credit-expired'
-      : credit.status !== 'active' ? `credit-${credit.status}` : 'insufficient-balance';
+      : credit.status !== 'active' ? `credit-${credit.status}`
+      : saved && (saved.status !== credit.status || Number(saved.balance_cents) !== Number(credit.balance_cents)) ? 'credit-changed'
+      : 'insufficient-balance';
     return json({ error: reason }, 409);
   }
   try { await poke(env, merchant, action === 'redeem' ? 'store-credit-redeemed' : action === 'adjust' ? 'store-credit-adjusted' : 'store-credit-cancelled'); } catch (_) {}

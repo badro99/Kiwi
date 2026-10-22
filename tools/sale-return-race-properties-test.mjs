@@ -116,7 +116,7 @@ function freshSale(ticket) { const id = 'race-sale-' + (++saleSerial); f.insert(
 console.log('sale-return-race-properties-test');
 try {
   await strict('two devices taking value back from one ticket at the same moment, paused at every step of the first: a voided ticket keeps no refund or credit, refunds plus credits stay within the ticket, and every answer matches the books', fc.asyncProperty(
-    ticketArb, actionArb, actionArb, fc.integer({ min: 1, max: 16 }), async (ticket, a, b, at) => {
+    ticketArb, actionArb, actionArb, fc.integer({ min: 1, max: 24 }), async (ticket, a, b, at) => {
       const saleId = freshSale(ticket);
       const first = action(a, saleId, ticket), second = action(b, saleId, ticket);
       const done = [];
@@ -132,6 +132,42 @@ try {
       const done = [];
       for (const a of acts) { const x = action(a, saleId, ticket); done.push({ ...x, res: await x.run(f.env) }); }
       check(saleId, ticket, done);
+    }));
+
+  /* A credit's own ledger: what was issued, plus adjustments, equals what was
+     spent, plus what was cancelled, plus what is left, whatever two tills do
+     to it at the same moment. */
+  const creditOp = fc.oneof(
+    fc.record({ kind: fc.constant('redeem'), share: fc.integer({ min: 1, max: 120 }) }),
+    fc.record({ kind: fc.constant('redeem-batch'), share: fc.integer({ min: 1, max: 120 }) }),
+    fc.record({ kind: fc.constant('adjust'), share: fc.integer({ min: -120, max: 120 }).filter((x) => x !== 0) }),
+    fc.constant({ kind: 'cancel' }),
+  );
+  const creditCall = (op, code, value) => {
+    const id = `${op.kind}-${code}-${++serial}`, cents = Math.max(1, Math.round(value * Math.abs(op.share || 0) / 100));
+    const body = op.kind === 'redeem' ? { action: 'redeem', id, code, amountCents: cents, saleId: 'next-' + id }
+      : op.kind === 'redeem-batch' ? { action: 'redeem-batch', id, saleId: 'next-' + id, credits: [{ code, amountCents: cents }] }
+      : op.kind === 'adjust' ? { action: 'adjust', id, code, deltaCents: Math.sign(op.share) * cents, reason: 'Correction' }
+      : { action: 'cancel', id, code, reason: 'Erreur' };
+    return (env) => post(creditRoute, '/api/store-credits', body, env);
+  };
+  await strict('a store credit\'s ledger always balances (issued plus adjustments equals spent plus cancelled plus what is left), with two tills acting on it at every step', fc.asyncProperty(
+    ticketArb, creditOp, creditOp, fc.integer({ min: 1, max: 24 }), async (value, a, b, at) => {
+      const saleId = freshSale(value);
+      const issued = await post(creditRoute, '/api/store-credits', { action: 'issue', id: 'iss-' + saleId, originalSaleId: saleId, amountCents: value, reason: 'Retour' }, f.env);
+      assert.equal(issued.status, 200, JSON.stringify(issued.body));
+      const code = issued.body.credit.code;
+      const first = creditCall(a, code, value), second = creditCall(b, code, value);
+      const db = pausingDB(f.env.DB, at, async () => { await second(f.env); });
+      await first({ ...f.env, DB: db });
+      if (!db.fired) await second(f.env);
+      const row = sql.prepare('SELECT id, balance_cents, status FROM store_credits WHERE merchant = ? AND code = ?').get(merchant, code);
+      const ev = sql.prepare('SELECT action, amount_cents FROM store_credit_events WHERE merchant = ? AND credit_id = ?').all(merchant, row.id);
+      const sum = (k) => ev.filter((e) => e.action === k).reduce((t, e) => t + Number(e.amount_cents), 0);
+      assert.ok(row.balance_cents >= 0, 'negative balance ' + row.balance_cents);
+      if (row.status === 'cancelled') assert.equal(row.balance_cents, 0);
+      assert.equal(sum('issue') + sum('adjust'), sum('redeem') + sum('cancel') + Number(row.balance_cents),
+        `issued ${sum('issue')} + adjusted ${sum('adjust')} ≠ spent ${sum('redeem')} + cancelled ${sum('cancel')} + left ${row.balance_cents}`);
     }));
 
   console.log(`${failed ? '✗' : '✓'} sale-return-race-properties-test · ${passed} held, ${failed} failed`);

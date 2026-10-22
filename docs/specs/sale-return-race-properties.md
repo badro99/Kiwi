@@ -19,6 +19,7 @@ share of the ticket, up to 120 %, so most fit and the guards decide.
 |---|---|
 | Two requests on one ticket, the first paused at every step: a voided ticket keeps no refund or credit, refunds plus credits stay within the ticket, and every answer matches the books | money leaves a ticket once, even when two devices race |
 | Ordinary sequences of up to five voids, refunds and credits keep the same rules | the everyday path |
+| A store credit's ledger balances (issued plus adjustments equals spent plus cancelled plus what is left) while two requests (spend, batch spend, adjust, cancel) race at every step | the written-off amount of a cancelled credit is what was really left |
 
 ## Defect found (2026-10-22)
 
@@ -41,3 +42,12 @@ both voided and credited, none both voided and refunded.
 
 Mutations caught: the void's new credit guard removed, the credit issue's
 `void_ts IS NULL` removed, the refund's `void_ts IS NULL` removed.
+
+## Second defect found (2026-10-22)
+
+Cancelling a store credit recorded as written off the balance it had read at
+the start of the request. A spend landing between that read and the cancel
+(step 17 of the route) left a ledger of 100 issued, 1 spent, 100 cancelled.
+The cancel now holds only against the balance it read; if the credit moved it
+answers `credit-changed` and changes nothing. No screen calls cancel today, and
+production holds one credit event ever (its issue).
