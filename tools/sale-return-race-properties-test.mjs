@@ -18,6 +18,7 @@
  * A second property plays ordinary sequences of up to five of these actions
  * with no overlap, under the same three checks. */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fixture } from './server-money-fixture.mjs';
@@ -31,6 +32,11 @@ let fc; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-chec
 const RUNS = Number(process.env.KIWI_PROPERTY_RUNS) || 200, SEED = Number(process.env.KIWI_PROPERTY_SEED) || 20261022;
 let passed = 0, failed = 0;
 async function strict(label, p) { if (process.env.KIWI_PROPERTY_ONLY && !new RegExp(process.env.KIWI_PROPERTY_ONLY).test(label)) return; const r = await fc.check(p, { numRuns: RUNS, seed: SEED }); if (r.failed) { failed++; console.error('✗ ' + label, fc.stringify(r.counterexample).slice(0, Number(process.env.KIWI_WITNESS_CHARS) || 1500), r.errorInstance && r.errorInstance.message); } else { passed++; console.log('✓ ' + label); } }
+
+async function knownIssue(label, property) {
+  const result = await fc.check(property, {numRuns: RUNS, seed: SEED});
+  console.log(result.failed ? '○ known: ' + label : '! known now holds: ' + label + '; promote to strict');
+}
 
 const f = await fixture(ROOT), { sql, merchant } = f;
 const secret = f.env.AUTH_SECRET;
@@ -133,6 +139,74 @@ try {
       for (const a of acts) { const x = action(a, saleId, ticket); done.push({ ...x, res: await x.run(f.env) }); }
       check(saleId, ticket, done);
     }));
+
+  await strict('a return pays back money first in the till\'s method, then restores the original customer credit for the rest, exactly once, including zero-money tickets', fc.asyncProperty(
+    fc.integer({ min: 1, max: 20000 }), fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), fc.array(fc.integer({min:1,max:30000}), {minLength:1,maxLength:5}), async (credit, cash, card, asks) => {
+      const saleId = freshSale(cash+card), creditId = 'voucher-' + saleId;
+      sql.prepare("UPDATE sales SET method=?, payment_parts=? WHERE id=?").run(cash+card ? 'split' : 'credit', JSON.stringify([{method:'cash',amountCents:cash},{method:'card',amountCents:card},{method:'credit',amountCents:credit}]), saleId);
+      sql.prepare("INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,status,expires_ts,created_ts,updated_ts) VALUES(?,?,?,'client-fixture',?,0,'consumed',?,1,1)").run(creditId,merchant,creditId,credit,Date.now()+86400000);
+      sql.prepare("INSERT INTO store_credit_events(id,merchant,credit_id,code,action,amount_cents,balance_after_cents,ref_id,ts) VALUES(?,?,?,?,'redeem',?,0,?,1)").run('spent-'+saleId,merchant,creditId,creditId,credit,saleId);
+      let returned=0;
+      for (const [i, amount] of [...asks, credit+cash+card].entries()) {
+        const id='return-'+saleId+'-'+i;
+        const approval=await managerRefundProof(secret,{merchant,staffId:'manager-fixture',staffName:'Fixture Manager',staffRole:'manager',refundId:id,originalSaleId:saleId,amountCents:amount});
+        const run=()=>post(refundRoute,'/api/sale/refund',{id,originalSaleId:saleId,amountCents:amount,approval},f.env);
+        const res=await run();
+        if(amount<=credit+cash+card-returned){assert.equal(res.status,200,JSON.stringify(res.body));returned+=amount;assert.equal((await run()).status,200);}
+        else assert.equal(res.status,409);
+        const row=sql.prepare('SELECT balance_cents,customer_id FROM store_credits WHERE id=?').get(creditId);
+        /* L'argent d'abord (ce que le tiroir rend), l'avoir pour ce qui dépasse. */
+        assert.equal(row.balance_cents,Math.max(0,returned-(cash+card)));assert.equal(row.customer_id,'client-fixture');
+        const out=sql.prepare("SELECT COALESCE(-SUM(amount_cents),0) AS c FROM sales WHERE merchant=? AND channel='refund' AND id LIKE ?").get(merchant,'return-'+saleId+'-%').c;
+        assert.equal(out,Math.min(returned,cash+card));
+      }
+    }));
+
+  /* Le tiroir et les rapports disent la même chose : ce que la caisse demande
+     dans un moyen, tant que l'argent encaissé le couvre, sort entier dans ce
+     moyen, même sur un ticket payé en partie par avoir. */
+  await strict('within the money actually paid, the till\'s requested method and amount are what the books record', fc.asyncProperty(
+    fc.integer({ min: 1, max: 20000 }), fc.integer({ min: 1, max: 20000 }), fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 1, max: 40000 }), async (cash, card, credit, ask) => {
+      const amount = Math.min(ask, cash + card);
+      const saleId = freshSale(cash + card), creditId = 'drawer-voucher-' + saleId;
+      sql.prepare("UPDATE sales SET method='split', payment_parts=? WHERE id=?").run(JSON.stringify([{method:'cash',amountCents:cash},{method:'card',amountCents:card},{method:'credit',amountCents:credit}]), saleId);
+      if (credit) {
+        sql.prepare("INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,status,expires_ts,created_ts,updated_ts) VALUES(?,?,?,'client-fixture',?,0,'consumed',?,1,1)").run(creditId,merchant,creditId,credit,Date.now()+86400000);
+        sql.prepare("INSERT INTO store_credit_events(id,merchant,credit_id,code,action,amount_cents,balance_after_cents,ref_id,ts) VALUES(?,?,?,?,'redeem',?,0,?,1)").run('drawer-spent-'+saleId,merchant,creditId,creditId,credit,saleId);
+      }
+      const id = 'drawer-return-' + saleId;
+      const approval = await managerRefundProof(secret,{merchant,staffId:'manager-fixture',staffName:'Fixture Manager',staffRole:'manager',refundId:id,originalSaleId:saleId,amountCents:amount,refundMethod:'cash'});
+      const res = await post(refundRoute,'/api/sale/refund',{id,originalSaleId:saleId,amountCents:amount,refundMethod:'cash',approval},f.env);
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      const row = sql.prepare('SELECT amount_cents, method FROM sales WHERE merchant=? AND id=?').get(merchant, id);
+      assert.equal(row.amount_cents, -amount); assert.equal(row.method, 'cash');
+      if (credit) assert.equal(sql.prepare('SELECT balance_cents FROM store_credits WHERE id=?').get(creditId).balance_cents, 0);
+    }));
+
+  await strict('a foreign or voided original cannot move either merchant books', fc.asyncProperty(ticketArb, async cents => {
+    const saleId = freshSale(cents);
+    sql.prepare('UPDATE sales SET void_ts=1 WHERE id=?').run(saleId);
+    assert.equal((await f.refund('void-return-'+saleId,saleId,cents)).status,404);
+    const foreign='foreign-'+saleId;
+    f.insert(foreign,cents,{merchant:'server-other-shop'});
+    const before=sql.prepare('SELECT COUNT(*) AS n FROM sale_audit').get().n;
+    assert.equal((await f.refund('foreign-return-'+saleId,foreign,cents)).status,404);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM sale_audit').get().n,before);
+  }));
+
+  await strict('a redemption pointing at another merchant credit is refused without changing it', fc.asyncProperty(ticketArb, async cents => {
+    const saleId=freshSale(0), id='foreign-credit-'+saleId;
+    sql.prepare("INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,status,expires_ts,created_ts,updated_ts) VALUES(?,'server-other-shop',?,'foreign-customer',?,0,'consumed',?,1,1)").run(id,id,cents,Date.now()+86400000);
+    sql.prepare("INSERT INTO store_credit_events(id,merchant,credit_id,code,action,amount_cents,balance_after_cents,ref_id,ts) VALUES(?,?,?,?,'redeem',?,0,?,1)").run('bad-'+id,merchant,id,id,cents,saleId);
+    assert.equal((await f.refund('foreign-credit-return-'+saleId,saleId,cents)).status,409);
+    assert.equal(sql.prepare('SELECT balance_cents FROM store_credits WHERE id=?').get(id).balance_cents,0);
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id=?").get(saleId).n,0);
+  }));
+
+  await knownIssue('Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout', fc.property(fc.constant(null), () => {
+    const source=fs.readFileSync(path.join(ROOT,'assets/pos-maison/checkout.js'),'utf8');
+    return !source.includes("const preferred = ['carte', 'espèces', 'virement', 'chèque']");
+  }));
 
   /* A credit's own ledger: what was issued, plus adjustments, equals what was
      spent, plus what was cancelled, plus what is left, whatever two tills do
