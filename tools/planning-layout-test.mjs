@@ -66,7 +66,7 @@ assert.match(css, /@media\(max-width:420px\)[^{]*\{[^}]*kt-plan-intelligence/, '
  * défaut à attraper, c'est un tampon avancé dans dashboard.html mais oublié
  * dans le précache du service worker : le navigateur télécharge alors la
  * nouvelle version pendant que le SW ressert l'ancienne. */
-['assets/morocco-holidays.js', 'assets/planning-ui.css', 'assets/planning-core.js', 'assets/team.js', 'assets/merchant-config.js'].forEach((asset) => {
+['assets/hours-ui.js', 'assets/planning-ui.css', 'assets/planning-core.js', 'assets/team.js', 'assets/merchant-config.js'].forEach((asset) => {
   const stamp = new RegExp(`${asset.replace(/[./]/g, '\\$&')}\\?v=(\\d+)`);
   const inDashboard = dashboard.match(stamp);
   const inSw = sw.match(stamp);

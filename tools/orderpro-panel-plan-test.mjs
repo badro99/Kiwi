@@ -10,9 +10,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import mergedPart from './merged-source.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(root, 'assets/orderpro-panel.js'), 'utf8');
+// orderpro-panel.js porte aussi l'éditeur de page client depuis le 22 octobre 2026 : seul le panneau.
+const src = mergedPart('assets/orderpro-panel.js');
 let checks = 0;
 const ok = (yes, msg) => { assert.ok(yes, msg); checks++; };
 

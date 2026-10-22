@@ -13,9 +13,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import mergedPart from './merged-source.cjs';
 import { CITIES, nickKey, cleanGuestDoc } from '../functions/api/order/_guest.js';
 
-const src = fs.readFileSync(new URL('../assets/orderpro-guestpage.js', import.meta.url), 'utf8');
+// L'éditeur vit à la suite de orderpro-panel.js depuis le 22 octobre 2026 (tools/merged-source.cjs).
+const src = mergedPart('assets/orderpro-panel.js', 'assets/orderpro-guestpage.js');
 const gate = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const menu = fs.readFileSync(new URL('../assets/menu-catalog.js', import.meta.url), 'utf8');
 const dash = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
@@ -101,9 +103,9 @@ ok('le panneau s’ouvre par un gestionnaire couvert par la porte « orderpro »
   assert.equal(typeof handlers['orderpro-guestpage'], 'function');
   assert.match(gate, /orderpro:\s*\[[^\]]*'orderpro-guestpage'/, 'merchant-config gate names the handler');
   assert.match(menu, /data-action="orderpro-guestpage"/, 'the menu has a « Page client » tab');
-  const tag = dash.match(/<script src="assets\/orderpro-guestpage\.js\?v=(\d+)"/);
+  const tag = dash.match(/<script src="assets\/orderpro-panel\.js\?v=(\d+)"/);
   assert.ok(tag, 'dashboard.html loads the module');
-  assert.ok(sw.includes("'/assets/orderpro-guestpage.js?v=" + tag[1] + "'"), 'kiwi-sw.js precaches the same stamp');
+  assert.ok(sw.includes("'/assets/orderpro-panel.js?v=" + tag[1] + "'"), 'kiwi-sw.js precaches the same stamp');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import maisonSource from './pos-maison-test-source.cjs';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import mergedPart from './merged-source.cjs'; // loyalty-reserve.js vit dans retail-sale-hold.js depuis le 22 octobre 2026
 const read = p => maisonSource(readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 const book = 'reserve-test', key = 'kiwi:clients-redemptions:v1:' + book;
 async function scenario(mode, status = 200, code = '', pendingPurchase = false) {
@@ -28,7 +29,7 @@ async function scenario(mode, status = 200, code = '', pendingPurchase = false) 
       return { ok: status === 200, status, json: async () => ({ error: code }) };
     } });
   vm.runInContext(read('assets/clients-store.js'), context);
-  vm.runInContext(read('assets/loyalty-reserve.js'), context);
+  vm.runInContext(mergedPart('assets/retail-sale-hold.js', 'assets/loyalty-reserve.js'), context);
   const ticket = { reward: { clientId: 'c1', label: '20 MAD' } };
   const kit = window.KiwiLoyaltyReserve.create({ ticket, client: { id: 'c1' }, isDemo: mode === 'demo',
     render: () => { total = ticket.reward ? 80 : 100; }, close: () => { closed = true; } });

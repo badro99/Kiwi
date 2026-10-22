@@ -12,9 +12,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
 const html = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
-const tag = html.match(/<script src="assets\/caisse-viewport\.js\?v=(\d+)" defer><\/script>/);
+// Le garde vit à la suite de caisse-motion.js depuis le 22 octobre 2026.
+const tag = html.match(/<script src="assets\/caisse-motion\.js\?v=(\d+)" defer><\/script>/);
 assert.ok(tag, 'kiwi-caisse.html loads the viewport guard');
-assert.ok(sw.includes(`'/assets/caisse-viewport.js?v=${tag[1]}'`), 'the service worker precaches the same guard stamp');
+assert.ok(sw.includes(`'/assets/caisse-motion.js?v=${tag[1]}'`), 'the service worker precaches the same guard stamp');
 console.log('  ✓ caisse loads and precaches the viewport guard');
 
 const puppeteer = require(require.resolve('puppeteer-core', { paths: [path.join(ROOT, 'app'), ROOT] }));
@@ -28,7 +29,7 @@ try {
   await page.setViewport({ width: 1024, height: 700 });
   // A page that CAN be displaced, like Safari lifting a field over the keyboard.
   await page.setContent('<style>body{margin:0}.tall{height:2400px}</style><input id="f"><button id="b">Créer</button><div class="tall"></div>');
-  await page.addScriptTag({ path: path.join(ROOT, 'assets/caisse-viewport.js') });
+  await page.addScriptTag({ path: path.join(ROOT, 'assets/caisse-motion.js') });
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   await page.focus('#f');

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import mergedPart from './merged-source.cjs';
 
-const source=fs.readFileSync(new URL('../assets/morocco-holidays.js',import.meta.url),'utf8');
+// Le calendrier vit en tête de hours-ui.js depuis le 22 octobre 2026 (tools/merged-source.cjs).
+const source=mergedPart('assets/hours-ui.js','assets/morocco-holidays.js');
 const context=vm.createContext({console,Date,Object,String,Array,Number});
 vm.runInContext(source,context,{filename:'morocco-holidays.js'});
 const C=context.KiwiMoroccoCalendar;

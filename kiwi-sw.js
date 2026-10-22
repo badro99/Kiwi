@@ -202,7 +202,6 @@ var SHELL = [
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
   '/assets/hours.js?v=6',
-  '/assets/morocco-holidays.js?v=1',
   '/assets/hours-ui.js?v=2',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
@@ -235,7 +234,6 @@ var SHELL = [
   '/assets/serveur-lang.js?v=2',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=6',
-  '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=14',
   '/assets/printer-bridge.js?v=26',
@@ -258,7 +256,6 @@ var SHELL = [
   '/assets/menu-promos.js?v=4',
   '/assets/retail-balances.js?v=4',
   '/assets/retail-sale-hold.js?v=2',
-  '/assets/loyalty-reserve.js?v=2',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -302,7 +299,6 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
-  '/assets/orderpro-guestpage.js?v=3',
   '/assets/orderpro-inbox.js?v=38',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.

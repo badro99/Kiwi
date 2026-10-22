@@ -66,7 +66,7 @@ const api = src('functions/api/order-course.js');
 ok(api.includes('WHERE merchant = ? AND sent_ts >= ?'), 'dashboard read tenant scoped');
 ok(api.includes('redacted: true'), 'unauthorized read redacted');
 ok(!api.includes('onRequestPost'), 'dashboard endpoint read only');
-const transport = src('assets/order-course.js');
+const transport = src('assets/cancellation-history.js'); // order-course.js y est réuni depuis le 22 octobre 2026
 ok(transport.includes('ready: function () { return isReady; }'), 'reader distinguishes ready from empty');
 ok(transport.includes(".catch(function () { isReady = false; return []; })"), 'reader fails soft');
 const schema = src('schema.sql');

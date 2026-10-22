@@ -4,7 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'design-ios27.js'), 'utf8');
+// design-ios27.js vit à la suite de design-2026.js depuis le 22 octobre 2026 (tools/merged-source.cjs).
+const source = require('./merged-source.cjs')('assets/design-2026.js', 'assets/design-ios27.js');
 const css = fs.readFileSync(path.join(__dirname, '..', 'assets', 'design-ios27.css'), 'utf8');
 
 function load(saved) {
