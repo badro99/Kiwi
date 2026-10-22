@@ -1591,6 +1591,7 @@ section('Whole-project regressions');
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',
     'dayreport-properties-test.mjs',
+    'briefing-properties-test.mjs',
     'server-money-properties-test.mjs',
     'trades-money-properties-test.mjs',
     'live-link-queue-properties-test.mjs',

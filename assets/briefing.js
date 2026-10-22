@@ -97,14 +97,31 @@
   /* A store's briefing holds that store's days and nothing else: every path
    * in (local read, server pull, merge, write) goes through here, so a day
    * filed under another venue is dropped instead of carried. */
+  // Stable tie-breaks make equal-clock local/cloud copies converge.
+  function stableJSON(value) {
+    if (!value || typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) return '[' + value.map(stableJSON).join(',') + ']';
+    return '{' + Object.keys(value).sort().map(function (key) {
+      return JSON.stringify(key) + ':' + stableJSON(value[key]);
+    }).join(',') + '}';
+  }
   function safeDoc(value, venue) {
     value = value && typeof value === 'object' ? value : {};
     venue = venue == null ? slug() : String(venue);
     var days = Array.isArray(value.days) ? value.days.filter(function (x) {
       return x && x.id && x.day && venue && x.venue === venue;
     }) : [];
-    days.sort(function (a, b) { return (+b.updatedAt || 0) - (+a.updatedAt || 0); });
-    return { days: days.slice(0, MAX_DAYS) };
+    days.sort(function (a, b) {
+      var clock = (+b.updatedAt || 0) - (+a.updatedAt || 0);
+      if (clock) return clock;
+      var left = stableJSON(a), right = stableJSON(b);
+      return left < right ? -1 : left > right ? 1 : 0;
+    });
+    var seen = Object.create(null);
+    return { days: days.filter(function (row) {
+      if (seen[row.day]) return false;
+      seen[row.day] = true; return true;
+    }).slice(0, MAX_DAYS) };
   }
   function readLocal() {
     var venue = slug();
@@ -125,13 +142,9 @@
     render();
   }
   function mergeDocs(a, b) {
-    var rows = Object.create(null);
-    safeDoc(a).days.concat(safeDoc(b).days).forEach(function (x) {
-      var old = rows[x.id];
-      if (!old || (+x.updatedAt || 0) >= (+old.updatedAt || 0)) rows[x.id] = x;
-    });
-    return safeDoc({ days: Object.keys(rows).map(function (k) { return rows[k]; }) });
+    return safeDoc({ days: safeDoc(a).days.concat(safeDoc(b).days) });
   }
+
   function normalizeEvidence(value) {
     if (!value || typeof value !== 'object') return null;
     var count = Number(value.count);
@@ -177,10 +190,12 @@
     var revenue = 0, count = 0;
     rows.forEach(function (row) {
       var ts = Number(row && row.ts) || 0;
-      if (ts < from || ts >= to) return;
-      revenue += Math.max(0, Number(row.amount) || 0); count++;
+      if (ts < from || ts >= to || row.voided || row.void_ts) return;
+      var cents = row.amountCents != null ? Number(row.amountCents) : Math.round((Number(row.amount) || 0) * 100);
+      if (!Number.isFinite(cents)) return;
+      revenue += cents; if (cents >= 0) count++;
     });
-    return { revenue: Math.round(revenue * 100) / 100, count: count };
+    return { revenue: revenue / 100, count: count };
   }
   function median(values) {
     var a = values.slice().sort(function (x, y) { return x - y; });
@@ -259,9 +274,11 @@
     var day = businessDay(now);
     var end = new Date(currentBounds.from + elapsed);
     var time = String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
-    var cur = (window.KiwiNumber?.format(Math.round(current.revenue), {}) ?? Math.round(current.revenue).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
-    var wd = (window.KiwiNumber?.format(Math.round(weekdayMedian), {}) ?? Math.round(weekdayMedian).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
-    var tr7 = (window.KiwiNumber?.format(Math.round(trailingMedian), {}) ?? Math.round(trailingMedian).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
+    var money = function (value) {
+      var opts = { maximumFractionDigits: 2 };
+      return window.KiwiNumber?.format(value, opts) ?? value.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', opts);
+    };
+    var cur = money(current.revenue), wd = money(weekdayMedian), tr7 = money(trailingMedian);
     return {
       id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
       copy: {
@@ -393,11 +410,15 @@
       if (!m || m.off) return;
       spans(m.start, m.end).forEach(function (range) { shifts.push({ from: range[0], to: range[1], firstName: String(m.firstName || '').slice(0, 40) }); });
     });
+    shifts.sort(function (a, b) { return a.from - b.from; });
     var gap = openings.some(function (opening) {
-      for (var at = opening[0]; at < opening[1]; at += 15) {
-        if (!shifts.some(function (shift) { return shift.from <= at && shift.to >= Math.min(at + 15, opening[1]); })) return true;
+      var coveredTo = opening[0];
+      for (var i = 0; i < shifts.length && coveredTo < opening[1]; i++) {
+        if (shifts[i].to <= coveredTo) continue;
+        if (shifts[i].from > coveredTo) return true;
+        coveredTo = shifts[i].to;
       }
-      return false;
+      return coveredTo < opening[1];
     });
     if (!gap) return null;
     return {
