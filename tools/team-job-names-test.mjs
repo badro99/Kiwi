@@ -7,6 +7,7 @@
  * là aujourd'hui ») et le planning disaient « Caissier », « Salle »,
  * « Propriétaire » : 128 intitulés, tous en français, sans traduction nulle part.
  */
+import teamTestSource from './team-test-source.cjs';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,7 +15,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const src = fs.readFileSync(path.join(root, 'assets/team.js'), 'utf8');
+const src = teamTestSource();
 let checks = 0;
 const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ ' + msg); };
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
@@ -433,7 +434,7 @@ ok(history.progress.lifetimeXP === 102 && history.progress.records.bestNight ===
 const anon = await get('');
 ok(anon.status === 401, 'planning, collègues et salle restent privés sans session employé');
 
-const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+const teamSource = teamTestSource();
 ok(teamSource.includes('function fmtHours(value)')
   && teamSource.includes('Math.round((Number(value) || 0) * 60)')
   && teamSource.includes('value="${esc(fmtHours(v))}"')

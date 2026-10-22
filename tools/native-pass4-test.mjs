@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import teamTestSource from './team-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 // iPhone pass 4: one source-level guard per fix, so a later edit that quietly
@@ -102,7 +103,7 @@ const agent = read('assets/agent.js');
 const privacy = read('app/src/native-privacy.js');
 const mobileNav = read('assets/mobile-nav.js');
 const vexelLayout = read('assets/design-vexel-layout.js');
-const team = read('assets/team.js');
+const team = teamTestSource();
 ok(/r\.res\.status === 401 \? 'auth'/.test(voice), 'a 401 on dictation says "sign in", not a generic failure');
 ok(/audioBitsPerSecond: 32000/.test(voice), 'dictation records at speech bitrate, so a long question stays under the 2 MB cap');
 ok(/P\.allowed && P\.allowed\(\) \? Promise\.resolve\(true\) : P\.show\(\)/.test(voice) && /allowed:function \(\) \{ return choice\(\) === .allowed.; \}/.test(privacy), 'the mic starts recording right after AI consent is given');

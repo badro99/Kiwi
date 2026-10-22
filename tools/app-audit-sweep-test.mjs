@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import teamTestSource from './team-test-source.cjs';
 import maisonSource from './pos-maison-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
@@ -102,7 +103,7 @@ ok('dashboard: no fake iftar countdown', () => {
   assert.doesNotMatch(read('assets/features.js'), /data-iftar/);
 });
 ok('dashboard: staff form stacks on a phone and its tags follow the theme', () => {
-  const team = read('assets/team.js');
+  const team = teamTestSource();
   assert.match(team, /\[data-kt-form\] \.kt-fgrid-2, \[data-kt-form\] \.kt-fgrid-3, \.kt-qe-form \.kt-fgrid-2 \{ grid-template-columns: 1fr; \}/);
   assert.doesNotMatch(team, /#FFF4E3/);
 });

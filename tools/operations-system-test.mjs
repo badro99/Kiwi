@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import teamTestSource from './team-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import http from 'node:http';
@@ -11,7 +12,7 @@ import { makeSession, tillToken, employeeToken, slugMerchant } from '../function
 const browserSource = fs.readFileSync(new URL('../assets/operations.js', import.meta.url), 'utf8');
 const uiSource = fs.readFileSync(new URL('../assets/operations-ui.js', import.meta.url), 'utf8');
 const apiSource = fs.readFileSync(new URL('../functions/api/operations.js', import.meta.url), 'utf8');
-const teamSource = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const teamSource = teamTestSource();
 const agentSource = fs.readFileSync(new URL('../assets/agent.js', import.meta.url), 'utf8');
 const dashboardExtraSource = fs.readFileSync(new URL('../assets/dashboard-extra.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');

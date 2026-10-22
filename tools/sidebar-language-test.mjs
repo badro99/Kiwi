@@ -10,6 +10,7 @@
  *  · chaque durée de l'équipe se lisait « 7 h 30 ».
  * Exécute les vraies fonctions de assets/venues.js et assets/team.js.
  */
+import teamTestSource from './team-test-source.cjs';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -46,7 +47,7 @@ check(real.style.display === 'none' && real.textContent === '', 'a real store\'s
 check(demo.style.display === '' && demo.textContent === 'AAA', 'the demo keeps its badge');
 
 /* 3 · Les durées de l'équipe */
-const team = read('assets/team.js');
+const team = teamTestSource();
 const grab = (name) => {
   const start = team.indexOf(`  function ${name}(`);
   assert.ok(start > 0, name + ' is still in team.js');

@@ -20,6 +20,7 @@
  * Les fonctions testées sont celles de team.js et de cloud-doc.js, extraites des
  * fichiers livrés, pas des copies.
  * ═══════════════════════════════════════════════════════════════════════════ */
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,7 +28,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TEAM = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+const TEAM = teamTestSource();
 const CLOUD = fs.readFileSync(path.join(ROOT, 'assets/cloud-doc.js'), 'utf8');
 
 let passed = 0;

@@ -10,13 +10,14 @@
  * roster's « Ajouter un membre » button re-opened the page instead.
  *   node tools/team-member-editor-test.mjs
  */
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const team = readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+const team = teamTestSource();
 const lens = readFileSync(path.join(ROOT, 'assets/liquid-lens.js'), 'utf8');
 
 let passed = 0, failed = 0;

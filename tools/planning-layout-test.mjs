@@ -1,7 +1,8 @@
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const team = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const team = teamTestSource();
 const css = fs.readFileSync(new URL('../assets/planning-ui.css', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + fs.readFileSync(new URL('../assets/dashboard-shell.css', import.meta.url), 'utf8') + '</style>');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
@@ -39,9 +40,21 @@ assert.match(team, /'public-holiday'/, 'public-holiday shifts raise a compensati
  * doigts du gérant dès qu'un employé est pointé (pointedHours est un temps
  * écoulé, donc la signature du serveur change toute seule). */
 assert.doesNotMatch(team, /liveTeamSignature = signature;\s*if \(pageActive\) render\(\);/, 'the live poll never repaints straight from the network callback');
-assert.match(team, /function teamIsBeingEdited\(\)[\s\S]{0,200}if \(shiftPop\) return true;/, 'an open shift editor counts as editing');
+/* L'éditeur vit dans team-hours.js depuis le 22 octobre : team.js le
+ * demande par le pont, et team-hours.js répond avec son propre shiftPop. */
+assert.match(team, /function teamIsBeingEdited\(\)[\s\S]{0,200}if \(teamHours\.isShiftPopOpen && teamHours\.isShiftPopOpen\(\)\) return true;/, 'an open shift editor counts as editing');
+assert.match(team, /isShiftPopOpen: \(\) => !!shiftPop,/, 'team-hours.js answers with the open shift editor');
+/* Chaque nom que team-hours.js prend dans Kiwi.__teamCore y est bien posé :
+ * un oubli ne casserait rien au chargement, seulement au premier clic. */
+{
+  const names = (s) => s.split(',').map((x) => x.trim().split(':')[0].trim()).filter(Boolean);
+  const offered = new Set(names(team.match(/Kiwi\.__teamCore = \{([\s\S]*?)\};/)[1]));
+  const taken = names(team.match(/const \{\n([^}]*)\} = core;/)[1]);
+  assert.ok(taken.length > 40, 'team-hours.js reads team.js through Kiwi.__teamCore');
+  taken.forEach((n) => assert.ok(offered.has(n), `Kiwi.__teamCore offers ${n} to team-hours.js`));
+}
 assert.match(team, /function applyLiveTeam\(\)\s*\{\s*if \(teamIsBeingEdited\(\)\) \{ liveTeamPendingRender = true; return; \}/, 'a live update lands only once the merchant has stopped typing');
-assert.match(team, /if \(liveTeamPendingRender\) applyLiveTeam\(\);/, 'the deferred repaint is flushed when the editor closes');
+assert.match(team, /if \(live\.liveTeamPendingRender\) applyLiveTeam\(\);/,'the deferred repaint is flushed when the editor closes');
 assert.match(team, /if \(touched\) persistTeams\(\);/, 'unchanged pointed hours do not write to localStorage every second');
 assert.match(css, /\.kt-planning-command\{[^}]*container-type:inline-size/, 'toolbar reacts to its actual content width');
 assert.match(css, /@container\(max-width:1050px\)/, 'advanced tools respond to the card width');

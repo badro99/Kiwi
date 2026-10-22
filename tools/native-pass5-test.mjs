@@ -2,6 +2,7 @@
 // iPhone pass 5 (tickets #0107 to #0114): one source-level guard per fix, so a
 // later edit that quietly undoes one of them goes red here instead of on the
 // tester's phone. Static reads only: no browser, no network, no credentials.
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -18,7 +19,7 @@ const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="a
 const pages = read('assets/pages.js');
 const pagesPro = read('assets/pages-pro.js');
 const menu = read('assets/restaurant-menu-workspace.js');
-const team = read('assets/team.js');
+const team = teamTestSource();
 const stock = read('assets/stock.js');
 
 // #0107 · date range reachable and swipeable

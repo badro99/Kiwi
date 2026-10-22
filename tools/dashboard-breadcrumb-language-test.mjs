@@ -223,7 +223,7 @@ try {
   await ctx.close();
 
   /* ── 3 · Plus aucun « Accueil » écrit en dur dans le fil ────────────── */
-  const files = ['assets/team.js', 'assets/stock.js', 'assets/conformite.js', 'assets/finance.js', 'assets/venues.js',
+  const files = ['assets/team.js', 'assets/team-hours.js', 'assets/stock.js', 'assets/conformite.js', 'assets/finance.js', 'assets/venues.js',
     'assets/restaurant-menu-workspace.js', 'assets/hotel.js', 'assets/interactive.js', 'dashboard.html'];
   const offenders = files.filter((f) => {
     const src = fs.readFileSync(path.join(root, f), 'utf8');

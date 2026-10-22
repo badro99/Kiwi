@@ -18,6 +18,7 @@
  *
  *   node tools/team-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -25,7 +26,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+const SRC = teamTestSource();
 
 function grabBlock(start) {
   const i = SRC.indexOf(start);
