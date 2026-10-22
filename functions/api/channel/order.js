@@ -37,8 +37,10 @@
 
 import { json } from '../../auth/_lib.js';
 import { startOfWeek } from '../order/_lib.js';
+import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { merchantZone } from '../_business-day.js';
 
+const MAX_BODY = 256 * 1024;
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
 const MAX_PENDING = 60;            // une file qu'aucun personnel ne pourrait traiter
@@ -111,14 +113,42 @@ export async function onRequestPost(context) {
   // approche.
   if (!link) return json({ error: 'unauthorized' }, 401);
 
+  const merchant = String(link.merchant || '').toLowerCase();
+  const channel = CHANNELS[link.channel] ? link.channel : 'generic';
+  if (await storeSuspended(env, merchant) || await storeSubscriptionPending(env, merchant)) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+
+  // Borner les octets réellement lus, même sans Content-Length.
+  if (Number(request.headers.get('Content-Length')) > MAX_BODY) {
+    return json({ error: 'too-large' }, 413);
+  }
   let b;
-  try { b = await request.json(); } catch (_) {
+  try {
+    const reader = request.body && request.body.getReader();
+    const chunks = [];
+    let size = 0;
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > MAX_BODY) {
+          await reader.cancel();
+          return json({ error: 'too-large' }, 413);
+        }
+        chunks.push(value);
+      }
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    b = JSON.parse(new TextDecoder().decode(bytes));
+  } catch (_) {
     await mark(env, link.id, false, 'corps JSON illisible');
     return json({ error: 'bad-json' }, 400);
   }
 
-  const merchant = String(link.merchant || '').toLowerCase();
-  const channel = CHANNELS[link.channel] ? link.channel : 'generic';
 
   const total = Math.round(Number(b && b.total) * 100) / 100;
   if (!Number.isFinite(total) || total <= 0 || total > MAX_TOTAL) {

@@ -16,7 +16,7 @@
 // commerçant ; et « je l'ai perdu » se répare en créant une clé et en
 // supprimant l'ancienne, ce qui est de toute façon le bon geste.
 
-import { json } from '../../auth/_lib.js';
+import { json, activeAccountSession, isOperator, TILL_COOKIE } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 
 const CHANNELS = { glovo: 1, yassir: 1, shopify: 1, generic: 1 };
@@ -37,6 +37,14 @@ function mintSecret() {
   return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+// Les clés appartiennent au propriétaire ou à l'opérateur, jamais au terminal.
+function managementRequest(request) {
+  const headers = new Headers(request.headers);
+  headers.set('Cookie', (headers.get('Cookie') || '').split(';')
+    .filter((part) => part.trim().split('=')[0] !== TILL_COOKIE).join(';'));
+  return new Request(request.url, { headers });
+}
+
 const shape = (r) => ({
   id: r.id, channel: r.channel, label: r.label || '', status: r.status,
   created_ts: r.created_ts || 0, last_ts: r.last_ts || 0, last_err: r.last_err || '',
@@ -45,7 +53,10 @@ const shape = (r) => ({
 export async function onRequestGet(context) {
   const { request, env } = context;
   if (!env.DB) return json({ ok: true, keys: [] });
-  const merchant = await tenantFor(request, env, new URL(request.url).searchParams.get('merchant'));
+  if (!(await activeAccountSession(request, env)) && !(await isOperator(request, env))) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  const merchant = await tenantFor(managementRequest(request), env, new URL(request.url).searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   try {
     const rs = await env.DB.prepare(
@@ -67,7 +78,10 @@ export async function onRequestPost(context) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, b && b.merchant, { strict: true });
+  if (!(await activeAccountSession(request, env)) && !(await isOperator(request, env))) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  const merchant = await tenantFor(managementRequest(request), env, b && b.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   /* ── Modifier une clé existante ──────────────────────────────────────────
