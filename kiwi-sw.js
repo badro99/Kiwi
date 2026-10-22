@@ -21,7 +21,8 @@ var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=3',
   '/kiwi-caisse.html',
-  '/assets/caisse-app.js?v=1',
+  '/assets/caisse-accounting.js?v=1',
+  '/assets/caisse-app.js?v=2',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS

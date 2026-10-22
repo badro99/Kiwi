@@ -99,9 +99,13 @@
     "v": "22",
     "sha": "3acb98bc91dad1b9"
   },
-  "assets/caisse-app.js": {
+  "assets/caisse-accounting.js": {
     "v": "1",
-    "sha": "a4477d616431ee56"
+    "sha": "bb2781f5400fc8e2"
+  },
+  "assets/caisse-app.js": {
+    "v": "2",
+    "sha": "5a0dc2d5fcb18fe2"
   },
   "assets/caisse-dna.css": {
     "v": "6",
