@@ -1659,6 +1659,8 @@
   }
 
   function confirmPunch(cu, ctx) {
+    // Un double clic sur la dernière séance ne crée pas une séance supplémentaire.
+    if (!cu || cu.used >= cu.size) return;
     cu.used++;
     const c = CL[cu.clientId];
     c.visits++; c.lastDays = 0;

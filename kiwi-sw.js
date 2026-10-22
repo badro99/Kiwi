@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=139',
+  '/assets/pos-dispatch.js?v=140',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -407,8 +407,8 @@ var SHELL = [
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=8',
-  '/assets/pos-spa.js?v=8',
+  '/assets/pos-spa.css?v=10',
+  '/assets/pos-spa.js?v=10',
   '/assets/pos-hotel.css?v=19',
   '/assets/pos-hotel.js?v=19',
   '/assets/pos-fastfood.css?v=13',

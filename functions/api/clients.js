@@ -428,7 +428,7 @@ async function applyPurchase(env, merchant, raw) {
  * les retours déjà passés, et ses points au prorata de ceux réellement gagnés
  * (le programme a pu changer depuis). Un ticket que le registre ne connaît pas
  * est acquitté sans effet : rien n'avait été compté, rien n'est repris. */
-async function applyRefund(env, merchant, raw) {
+async function applyRefund(env, merchant, raw, attempt = 0) {
   const refund = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(refund.clientId || refund.client_id, 64);
   const ref = str(refund.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
@@ -461,8 +461,9 @@ async function applyRefund(env, merchant, raw) {
   ).bind(merchant, clientId, saleRef).first();
   const paid = Number(sale && sale.paid || 0), earned = Number(sale && sale.earned || 0);
   const take = Math.max(0, Math.min(amount, Math.round((paid - Number(sale && sale.refunded || 0)) * 100) / 100));
+  // Le prorata cumulé récupère aussi le dernier point après plusieurs petits retours.
   const claw = paid > 0 && earned > 0
-    ? Math.max(0, Math.min(Math.round(earned * take / paid), earned - Number(sale && sale.clawed || 0))) : 0;
+    ? Math.max(0, Math.min(Math.round(earned * (Number(sale && sale.refunded || 0) + take) / paid) - Number(sale && sale.clawed || 0), earned - Number(sale && sale.clawed || 0))) : 0;
   /* Les tampons de CE ticket suivent le retour : sur une carte produit, autant
    * que d'articles choisis rendus ; sinon (carte passages, retour sans lignes),
    * seulement quand le ticket est rendu en entier. Jamais plus que gagné. */
@@ -496,8 +497,11 @@ async function applyRefund(env, merchant, raw) {
     env.DB.prepare(`UPDATE clients SET points = points - ?, stamps = stamps - ?,
       spend = MAX(0, spend - ?), updated_ts = ?, srv_ts = ${cursor}
       WHERE merchant = ? AND id = ? AND deleted = 0 AND points >= ? AND stamps >= ?
-        AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
-      .bind(pointsTake, stampsTake, take, now, merchant, merchant, clientId, pointsTake, stampsTake, merchant, ref),
+        AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)
+        AND ROUND(COALESCE((SELECT -SUM(amount) FROM client_purchase_events
+          WHERE merchant = ? AND client_id = ? AND sale_ref = ? AND ref LIKE 'refund:%'), 0) * 100) = ?`)
+      .bind(pointsTake, stampsTake, take, now, merchant, merchant, clientId, pointsTake, stampsTake, merchant, ref,
+        merchant, clientId, saleRef, Math.round(Number(sale && sale.refunded || 0) * 100)),
     env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
       (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
       SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', ?, ? WHERE changes() > 0`)
@@ -507,6 +511,8 @@ async function applyRefund(env, merchant, raw) {
     const replay = await env.DB.prepare('SELECT client_id FROM client_purchase_events WHERE merchant = ? AND ref = ?')
       .bind(merchant, ref).first();
     if (replay && replay.client_id === clientId) return json({ ok: true, replayed: true });
+    // Relire après une concurrence : ne jamais reprendre le plafond périmé.
+    if (attempt < 3) return applyRefund(env, merchant, raw, attempt + 1);
     return json({ error: 'refund-write-failed' }, 503);
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) return json({ error: 'refund-write-failed' }, 503);
@@ -571,7 +577,7 @@ async function applyRedemption(env, merchant, raw) {
     if (replay && replay.client_id === clientId) {
       return json({ ok: true, replayed: true, pointsDelta: Number(replay.points_delta || 0), stampsDelta: Number(replay.stamps_delta || 0) });
     }
-    return json({ error: 'reward-write-failed' }, 503);
+    return json({ error: 'reward-not-ready' }, 409);
   }
   if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
     return json({ error: 'reward-write-failed' }, 503);
