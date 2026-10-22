@@ -107,7 +107,9 @@ async function route(r, kitFetched) {
   const u = r.url();
   if (!u.startsWith(base)) return u.startsWith('data:') ? r.continue() : r.abort();
   const url = new URL(u);
-  if (/^\/assets\/kit\//.test(url.pathname)) kitFetched.push(url.pathname);
+  // haptics.js also carries the zone law (KiwiZoneLaw) and loads with the flag
+  // off on purpose; it draws nothing, so it is not a kit file for this check.
+  if (/^\/assets\/kit\//.test(url.pathname) && !/\/haptics\.js$/.test(url.pathname)) kitFetched.push(url.pathname);
   if (url.pathname === '/kiwi-sw.js') return r.respond({ status: 404, contentType: 'text/javascript', body: '' });
   if (!url.pathname.startsWith('/api/')) return r.continue();
   if (url.pathname !== '/api/order/queue') return r.respond({ status: 404, contentType: 'application/json', body: '{"error":"not-found"}' });

@@ -83,7 +83,12 @@ const browser = await puppeteer.launch({
  * the restaurant + OrderPro scenarios here, the boutique ones in
  * sync-ledger-boutique-browser-test.mjs (which sets KIWI_SYNC_PART). */
 const PART = process.env.KIWI_SYNC_PART === 'boutique' ? 'boutique' : 'resto';
-const BOUTIQUE_TRADING_AT = Date.parse(new Date().toISOString().slice(0, 10) + 'T12:00:00Z');
+/* Mid-day trading, but never ahead of the server: /api/cash-sessions refuses an
+ * event stamped more than 10 minutes in the future, so a noon pin run at 06:00Z
+ * lost the shift's opening and close. Before noon the till keeps the real time;
+ * the zone law (functions/api/_zone-law.js) keeps Node and Chrome on the same
+ * Casablanca day either way. */
+const BOUTIQUE_TRADING_AT = Math.min(Date.parse(new Date().toISOString().slice(0, 10) + 'T12:00:00Z'), Date.now() - 60000);
 const S = suite(PART === 'boutique' ? 'sync-ledger-boutique' : 'sync-ledger', { browser });
 process.on('exit', () => { try { stack.stop(); } catch (_) {} });
 
