@@ -54,7 +54,21 @@ const fetch = async (url, opts) => {
   const r = reply(url, body);
   return { status: r.status, json: async () => r.body };
 };
-let confirmAnswer = true;
+/* Plus de boîte native : un window.confirm appelé est compté, et c'est un
+   échec. La question passe par Kiwi.modal (la fenêtre partagée du tableau de
+   bord), simulée ici : chaque fenêtre ouverte est gardée avec son bouton
+   « oui » cliquable ; « non » ferme la fenêtre sans rien faire, comme
+   Annuler, Échap ou le fond dans interactive.js. */
+let nativeAsked = 0;
+const modals = [];
+const fakeModal = (o) => {
+  const yesFns = [];
+  const m = { o, closed: false, close() { m.closed = true; },
+    el: { querySelector: (sel) => (/data-sfc-ask="yes"/.test(sel) ? { addEventListener: (t, fn) => { if (t === 'click') yesFns.push(fn); } } : null) },
+    answer: async (yes) => { if (yes) yesFns.forEach((fn) => fn()); else m.close(); await flush(); await flush(); } };
+  modals.push(m);
+  return m;
+};
 const win = {
   KiwiEnv: { isReal: () => true },
   KiwiConfig: { features: {} },
@@ -64,7 +78,8 @@ const win = {
   KiwiReceipt: { config: () => ({ vat: { mode: 'rate', rate: 10, included: true } }) },
   KiwiDayReport: { today: () => '2026-10-11' },
   addEventListener: (t, fn) => { (listeners['w:' + t] ||= []).push(fn); },
-  confirm: () => confirmAnswer,
+  confirm: () => { nativeAsked++; return true; },
+  Kiwi: { modal: fakeModal },
 };
 win.window = win;
 const ctx = vm.createContext({ window: win, document, navigator: nav, fetch, localStorage: makeStorage(), console, setTimeout: (fn) => fn(), clearTimeout() {}, Intl, URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }, Blob: class { constructor(p) { this.p = p; } } });
@@ -211,8 +226,17 @@ disk.set('kiwiAccountKey', 'Owner@Resto.ma');
 nav.onLine = true;
 input('sheet.portions', '7', null);
 const typed = disk.has(DKEY);
+let asked = modals.length;
 await click({ 'data-sfc': 'back' });
-ok(typed && !disk.has(DKEY), 'quitter la fiche en abandonnant la saisie efface la copie locale');
+const leaveQ = modals[asked];
+ok(leaveQ && /Modifications non enregistrées/.test(leaveQ.o.title) && /data-sfc-ask="no" data-dismiss data-autofocus>Annuler</.test(leaveQ.o.foot) && /Quitter sans enregistrer/.test(leaveQ.o.foot),
+  'quitter une fiche modifiée : la question passe par la fenêtre partagée, focus sur Annuler', leaveQ && JSON.stringify(leaveQ.o));
+await leaveQ.answer(false);
+ok(disk.has(DKEY) && F._state.draft && String(F._state.draft.portions) === '7' && F._state.dirty, 'Annuler : la fiche reste ouverte et la saisie (7 portions) est gardée');
+asked = modals.length;
+await click({ 'data-sfc': 'back' });
+await modals[asked].answer(true);
+ok(typed && !disk.has(DKEY) && F._state.draft === null, 'quitter la fiche en abandonnant la saisie efface la copie locale');
 reply = () => ({ status: 200, body: { enabled: false, canEdit: false, sheets: [SHEET] } });
 await click({ 'data-sfc': 'retry' });
 ok(/data-sfc-state="readonly"/.test(root.innerHTML) && !/Nouvelle fiche/.test(root.innerHTML), 'option éteinte : lecture seule dite, pas de création');
@@ -225,6 +249,9 @@ ok(/data-sfc-state="forbidden"/.test(root.innerHTML) && /propriétaire/.test(roo
 reply = () => ({ status: 503, body: { error: 'storage' } });
 await click({ 'data-sfc': 'retry' });
 ok(/data-sfc-state="error"/.test(root.innerHTML) && /Rien n’a été modifié/.test(root.innerHTML), 'erreur : dite, sans chiffre inventé');
+
+ok(nativeAsked === 0, 'aucune boîte native (window.confirm) n’est ouverte');
+ok(!/\bconfirm\(/.test(R('assets/simple-food-cost.js')), 'simple-food-cost.js n’appelle plus confirm()');
 
 /* ── 5 · export, stock ── */
 const rows = F._exportRows({ ...base, name: '=HYPERLINK("x")', lines: [{ ...base.lines[0], name: '+cmd' }] });

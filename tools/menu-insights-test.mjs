@@ -213,29 +213,45 @@ const sheet = (id, itemId, perPortion, priceDate, extra = {}) => ({
     'brouillon : lignes alimentaires nommées seulement, quantité brute (400 g à 80 % → 500 g), unité gardée', JSON.stringify(ing));
   ok(r.packaging === 1 && r.seed.portions === 4 && r.seed.note === 'Dressage froid' && !ing.some((x) => x.stockId), 'emballage compté à part, portions et note reprises, aucun lien de stock inventé');
 
-  const modals = [];
+  /* La question passe par Kiwi.modal (plus de window.confirm) : la fenêtre
+     de la question porte data-sfc-ask, l'éditeur de recette non. « Non »
+     ferme sans rien faire (Annuler, Échap, le fond). */
+  const modals = [], questions = [];
   const stub = () => ({ classList: { add() {} }, addEventListener() {}, querySelector: () => stub(), querySelectorAll: () => [], innerHTML: '', value: '', dataset: {}, focus() {} });
-  B.win.Kiwi.modal = (o) => { modals.push(o); return { el: stub(), close() {} }; };
-  let asked = null, answer = false;
-  B.win.confirm = (t) => { asked = t; return answer; };
+  B.win.Kiwi.modal = (o) => {
+    if (/data-sfc-ask/.test(o.foot || '')) {
+      const yes = [];
+      const q = { o, closed: false, close() { q.closed = true; }, el: { querySelector: (sel) => (/data-sfc-ask="yes"/.test(sel) ? { addEventListener: (t, fn) => yes.push(fn) } : null) } };
+      q.answer = (ok) => { if (ok) yes.forEach((fn) => fn()); else q.close(); };
+      questions.push(q); return q;
+    }
+    modals.push(o); return { el: stub(), close() {} };
+  };
+  let native = 0;
+  B.win.confirm = () => { native++; return true; };
+  const asked = () => { const q = questions[questions.length - 1]; return q ? q.o.title + ' ' + q.o.body : ''; };
   F._state.draft = d;
-  ok(F._toRecipe() === false && modals.length === 0 && /Salade/.test(asked || '') && /2 ingrédient/.test(asked) && /1 ligne\(s\) d’emballage/.test(asked),
-    'refus à la confirmation : aucun éditeur ouvert, la question dit ce qui sera repris', asked);
-  answer = true;
-  ok(F._toRecipe() === true && modals.length === 1, 'confirmé : l’éditeur de recette s’ouvre');
+  ok(F._toRecipe() === true && questions.length === 1 && modals.length === 0 && /Salade/.test(asked()) && /2 ingrédient/.test(asked()) && /1 ligne\(s\) d’emballage/.test(asked()),
+    'la question s’ouvre dans la fenêtre partagée et dit ce qui sera repris ; aucun éditeur avant la réponse', asked());
+  ok(/data-sfc-ask="no" data-dismiss data-autofocus>Annuler</.test(questions[0].o.foot) && /Ouvrir le brouillon/.test(questions[0].o.foot), 'Annuler a le focus par défaut, le oui dit ce qu’il fait');
+  questions[0].answer(false);
+  ok(modals.length === 0 && RR.saves.length === 0, 'Annuler : aucun éditeur ouvert, rien d’écrit');
+  F._toRecipe(); questions[1].answer(true);
+  ok(modals.length === 1, 'confirmé : l’éditeur de recette s’ouvre');
   const body = modals[0].body || '';
   ok(/data-recipe-draft/.test(body) && /Brouillon, non enregistré/.test(body) && /Salade du chef/.test(body), 'l’éditeur dit « Brouillon, non enregistré » et nomme la fiche');
   ok(/value="Tomate"/.test(body) && /value="500"/.test(body) && /value="Huile"/.test(body) && /data-portions value="4"/.test(body), 'pré-rempli : ingrédients, quantités brutes, portions');
   ok(RR.saves.length === 0, 'rien n’est écrit dans les recettes avant Enregistrer');
 
   F._state.draft = { ...d, menuItemId: 'tajine', menuItemName: 'Tajine' };
-  asked = null; answer = false; F._toRecipe();
-  ok(/déjà une recette/.test(asked || ''), 'un plat qui a déjà une recette : la question le dit');
-  answer = true; F._toRecipe();
+  F._toRecipe();
+  ok(/déjà une recette/.test(asked()), 'un plat qui a déjà une recette : la question le dit');
+  questions[questions.length - 1].answer(true);
   ok(/La recette actuelle reste en place/.test(modals[modals.length - 1].body), 'et l’éditeur rappelle que la recette actuelle reste en place');
   F._state.draft = { ...d, lines: [d.lines[3]] };
-  const n = modals.length; asked = null; F._toRecipe();
-  ok(modals.length === n && asked === null && /Aucune ligne alimentaire/.test(F._state.message), 'aucune ligne alimentaire : ni question ni éditeur, le motif est dit');
+  const n = modals.length, nq = questions.length; F._toRecipe();
+  ok(modals.length === n && questions.length === nq && /Aucune ligne alimentaire/.test(F._state.message), 'aucune ligne alimentaire : ni question ni éditeur, le motif est dit');
+  ok(native === 0, 'aucune boîte native (window.confirm)');
   F._state.draft = { ...d, menuItemId: '' };
   ok(F._toRecipe() === false, 'fiche liée à aucun plat : pas de brouillon');
 }

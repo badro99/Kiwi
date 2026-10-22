@@ -2553,6 +2553,7 @@
       moveNotFound: 'Mouvement introuvable',
       cancelLossConfirm: (q) => `Annuler la perte de ${q} pour cet article ? Un contre-mouvement sera écrit dans le registre.`,
       lossCancelledToast: 'Perte annulée · contre-mouvement enregistré',
+      keepLoss: 'Garder la perte', lossCancelFailed: 'La perte n’a pas pu être annulée. Rien n’a changé dans le registre.',
       // Déclarer une perte
       declareTitle: 'Déclarer une perte de stock',
       declareSub: 'Déduction immédiate du registre et traçabilité dans le journal des pertes.',
@@ -2618,6 +2619,7 @@
       moveNotFound: 'Movement not found',
       cancelLossConfirm: (q) => `Cancel the loss of ${q} for this item? A reversing movement will be written to the ledger.`,
       lossCancelledToast: 'Loss cancelled · reversing movement recorded',
+      keepLoss: 'Keep the loss', lossCancelFailed: 'The loss could not be cancelled. Nothing changed in the ledger.',
       declareTitle: 'Record a stock loss',
       declareSub: 'Deducted from the ledger at once and traced in the waste journal.',
       declareItem: 'Item concerned', declareQty: 'Quantity lost', declareReason: 'Reason for the loss',
@@ -2678,6 +2680,7 @@
       moveNotFound: 'الحركة غير موجودة',
       cancelLossConfirm: (q) => `إلغاء خسارة ${q} لهذا المنتج؟ ستُكتب حركة عكسية في السجل.`,
       lossCancelledToast: 'أُلغيت الخسارة · سُجّلت حركة عكسية',
+      keepLoss: 'الإبقاء على الخسارة', lossCancelFailed: 'تعذّر إلغاء الخسارة. لم يتغير شيء في السجل.',
       declareTitle: 'تسجيل خسارة في المخزون',
       declareSub: 'تُخصم فورًا من السجل وتبقى قابلة للتتبع في سجل الهدر.',
       declareItem: 'المنتج المعني', declareQty: 'الكمية المفقودة', declareReason: 'سبب الخسارة',
@@ -2996,15 +2999,27 @@
     const history = window.KiwiInventory.history() || [];
     const m = history.find(r => r.id === movementId);
     if (!m) { window.Kiwi?.toast?.(ct('moveNotFound'), { type: 'warn' }); return; }
-    if (!confirm(ct('cancelLossConfirm', ctNum(Math.abs(m.qty))))) {
-      return;
-    }
-    const rev = window.KiwiInventory.reverse(m, 'manual', `Annulation perte ${m.refId || m.id}`);
-    if (rev) {
+    /* La question passe par la fenêtre partagée (Kiwi.modal), comme l'achat et
+       la réception : traduite, focus dedans puis rendu au bouton d'origine,
+       Échap, la croix ou le fond ferment sans rien écrire. Le focus part sur
+       « Garder la perte » : le choix sûr est celui par défaut. Plus de boîte
+       native (confirm). Sans Kiwi.modal, rien n'est écrit. */
+    const K = window.Kiwi;
+    if (!K || typeof K.modal !== 'function') return;
+    const md = K.modal({
+      title: ct('cancelLossTitle'),
+      width: 480,
+      body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(ct('cancelLossConfirm', ctNum(Math.abs(m.qty))))}</p>`,
+      foot: `<button class="st-btn" type="button" data-dismiss data-autofocus data-stock-loss-keep>${esc(ct('keepLoss'))}</button><button class="st-btn primary" type="button" data-stock-loss-reverse>${esc(ct('cancelLossTitle'))}</button>`,
+    });
+    md?.el?.querySelector('[data-stock-loss-reverse]')?.addEventListener('click', () => {
+      md.close();
+      const rev = window.KiwiInventory.reverse(m, 'manual', `Annulation perte ${m.refId || m.id}`);
+      if (!rev) { window.Kiwi?.toast?.(ct('lossCancelFailed'), { type: 'warn' }); return; }
       window.KiwiInventory.sync();
       window.Kiwi?.toast?.(ct('lossCancelledToast'), { type: 'success' });
       if (stPageActive) render();
-    }
+    });
   }
 
   function openDeclareWasteModal(prefill) {

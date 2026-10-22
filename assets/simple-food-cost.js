@@ -60,6 +60,7 @@
       nameRequired: 'Donnez un nom à la fiche.', saveError: 'Enregistrement impossible. Votre saisie est gardée ici.', disabledError: 'L’option Coût simple est désactivée pour ce magasin.',
       conflict: 'Cette fiche a été modifiée ailleurs ({who}, {when}). Votre saisie est gardée ici.', reloadServer: 'Prendre la version en ligne', keepMine: 'Enregistrer ma version par-dessus',
       unsaved: 'Des modifications ne sont pas enregistrées. Quitter quand même ?',
+      leaveTitle: 'Modifications non enregistrées', leaveYes: 'Quitter sans enregistrer', cancel: 'Annuler', toRecipeYes: 'Ouvrir le brouillon',
       historyTitle: 'Versions enregistrées', version: 'Version {v}', view: 'Voir', close: 'Fermer', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Version figée, lecture seule.',
       toRecipe: 'Créer un brouillon de recette', toRecipeConfirm: 'Créer un brouillon de recette pour « {item} » à partir de cette fiche ?\n\n· {n} ingrédient(s) repris, en quantité brute (le rendement est appliqué).\n· {pack} ligne(s) d’emballage non reprises.\n· Rien n’est enregistré : l’éditeur de recette s’ouvre, vous vérifiez, puis vous enregistrez.\n· Une fois enregistrée, la recette pilote le stock et le coût théorique. Cette fiche ne change pas.', toRecipeExisting: '\n· Ce plat a déjà une recette : elle reste en place tant que vous n’enregistrez pas le brouillon.', toRecipeEmpty: 'Aucune ligne alimentaire nommée à reprendre.',
       copyName: '{name} (copie)', templateName: 'Modèle · {name}', newName: 'Nouvelle fiche',
@@ -99,6 +100,7 @@
       nameRequired: 'Give the sheet a name.', saveError: 'Could not save. Your input is kept here.', disabledError: 'Simple cost is turned off for this store.',
       conflict: 'This sheet was changed elsewhere ({who}, {when}). Your input is kept here.', reloadServer: 'Take the online version', keepMine: 'Save my version over it',
       unsaved: 'Some changes are not saved. Leave anyway?',
+      leaveTitle: 'Unsaved changes', leaveYes: 'Leave without saving', cancel: 'Cancel', toRecipeYes: 'Open the draft',
       historyTitle: 'Saved versions', version: 'Version {v}', view: 'View', close: 'Close', snapshotOf: 'Version {v} · {when} · {who}', frozen: 'Frozen version, read only.',
       toRecipe: 'Create a draft recipe', toRecipeConfirm: 'Create a draft recipe for "{item}" from this sheet?\n\n· {n} ingredient(s) carried over, as gross quantities (yield applied).\n· {pack} packaging line(s) left out.\n· Nothing is saved: the recipe editor opens, you check, then you save.\n· Once saved, the recipe drives stock and theoretical cost. This sheet does not change.', toRecipeExisting: '\n· This dish already has a recipe: it stays in place until you save the draft.', toRecipeEmpty: 'No named food line to carry over.',
       copyName: '{name} (copy)', templateName: 'Template · {name}', newName: 'New sheet',
@@ -138,6 +140,7 @@
       nameRequired: 'أعطِ البطاقة اسماً.', saveError: 'تعذر الحفظ. إدخالك محفوظ هنا.', disabledError: 'خيار التكلفة المبسطة متوقف لهذا المتجر.',
       conflict: 'عُدّلت هذه البطاقة في مكان آخر ({who}، {when}). إدخالك محفوظ هنا.', reloadServer: 'أخذ النسخة المحفوظة', keepMine: 'حفظ نسختي فوقها',
       unsaved: 'هناك تعديلات غير محفوظة. المغادرة رغم ذلك؟',
+      leaveTitle: 'تعديلات غير محفوظة', leaveYes: 'المغادرة دون حفظ', cancel: 'إلغاء', toRecipeYes: 'فتح المسودة',
       historyTitle: 'النسخ المحفوظة', version: 'النسخة {v}', view: 'عرض', close: 'إغلاق', snapshotOf: 'النسخة {v} · {when} · {who}', frozen: 'نسخة مثبتة، للقراءة فقط.',
       toRecipe: 'إنشاء مسودة وصفة', toRecipeConfirm: 'إنشاء مسودة وصفة لـ «{item}» انطلاقاً من هذه البطاقة؟\n\n· {n} مكوّن منقول، بالكمية الإجمالية (مع تطبيق المردود).\n· {pack} سطر تغليف غير منقول.\n· لا يُحفظ شيء: يُفتح محرر الوصفة، تتحقق ثم تحفظ.\n· بعد الحفظ، تتحكم الوصفة في المخزون والتكلفة النظرية. هذه البطاقة لا تتغير.', toRecipeExisting: '\n· لهذا الطبق وصفة: تبقى كما هي حتى تحفظ المسودة.', toRecipeEmpty: 'لا يوجد سطر غذائي مسمّى لنقله.',
       copyName: '{name} (نسخة)', templateName: 'نموذج · {name}', newName: 'بطاقة جديدة',
@@ -306,8 +309,30 @@
     let existing = false;
     try { existing = !!(window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.get && window.KiwiRestaurantRecipes.get(it.id, it.name)); } catch (_) { existing = false; }
     const text = tr('toRecipeConfirm', { item: it.name, n: r.seed.ingredients.length, pack: r.packaging }) + (existing ? tr('toRecipeExisting') : '');
-    if (!window.confirm(text)) return false;
-    return bridge.recipeFromSheet(it.id, r.seed, { sheet: d.name || '' });
+    /* La question passe par la fenêtre partagée : l'éditeur de recette ne
+       s'ouvre que sur « Ouvrir le brouillon » ; Annuler, Échap ou le fond ne
+       font rien. Renvoie vrai quand la question est posée. */
+    return ask({ title: tr('toRecipe'), body: text, yes: tr('toRecipeYes') }, () => { bridge.recipeFromSheet(it.id, r.seed, { sheet: d.name || '' }); });
+  }
+
+  /* ── question oui / non ─────────────────────────────────────────────────
+     Plus de boîte native (window.confirm) : elle sortait de la langue du
+     tableau de bord et de sa gestion du focus. Kiwi.modal (interactive.js)
+     met le focus dans la fenêtre, le rend au bouton d'origine à la fermeture,
+     et Échap, la croix ou le fond ferment sans rien faire. Le focus part sur
+     Annuler : le choix sûr est celui par défaut. Sans Kiwi.modal, rien ne se
+     passe (la saisie reste). */
+  function ask(o, onYes) {
+    const K = window.Kiwi;
+    if (!K || typeof K.modal !== 'function') return false;
+    const m = K.modal({
+      title: o.title, width: 480,
+      body: `<p style="margin:0;line-height:1.55;">${esc(o.body).replace(/\n/g, '<br>')}</p>`,
+      foot: `<button type="button" class="kb ghost" data-sfc-ask="no" data-dismiss data-autofocus>${esc(tr('cancel'))}</button><button type="button" class="kb" data-sfc-ask="yes">${esc(o.yes)}</button>`,
+    });
+    const yes = m && m.el && m.el.querySelector('[data-sfc-ask="yes"]');
+    if (yes) yes.addEventListener('click', () => { m.close(); onYes(); });
+    return true;
   }
 
   /* ── réseau ──────────────────────────────────────────────────────────── */
@@ -580,7 +605,12 @@
     S.dirty = true;
     repaintFigures();
   }
-  function confirmLeave() { return !S.dirty || window.confirm(tr('unsaved')); }
+  /* Quitter une fiche modifiée : la question passe par ask() ; sans
+     modification, on part tout de suite. */
+  function leaveThen(run) {
+    if (!S.dirty) return run();
+    ask({ title: tr('leaveTitle'), body: tr('unsaved'), yes: tr('leaveYes') }, run);
+  }
   async function onClick(e) {
     const b = e.target && e.target.closest && e.target.closest('[data-sfc]');
     if (!b || !b.closest('[data-sfc-root]')) return;
@@ -597,7 +627,7 @@
     if (act === 'toggle-archived') { S.showArchived = !S.showArchived; return paint(); }
     if (act === 'export-all') return exportAll();
     if (act === 'export-sheet') return exportSheet();
-    if (act === 'back') { if (!confirmLeave()) return; forgetDraft(); S.pendingSave = false; S.draft = null; S.openId = null; S.dirty = false; S.history = null; S.message = ''; S.conflict = null; return paint(); }
+    if (act === 'back') return leaveThen(() => { forgetDraft(); S.pendingSave = false; S.draft = null; S.openId = null; S.dirty = false; S.history = null; S.message = ''; S.conflict = null; paint(); });
     if (!S.draft) return;
     if (act === 'add-food' || act === 'add-pack') {
       S.draft.lines = S.draft.lines || [];
@@ -610,9 +640,9 @@
     if (act === 'save') return save(false);
     if (act === 'keep-mine') return save(true);
     if (act === 'take-server' && S.conflict) { const srv = S.conflict; S.conflict = null; return openSheet(srv); }
-    if (act === 'duplicate' && sheet) { if (!confirmLeave()) return; const copy = await action({ action: 'duplicate', id: sheet.id, kind: 'sheet', name: tr('copyName', { name: sheet.name }) }); if (copy) openSheet(copy); return; }
+    if (act === 'duplicate' && sheet) return leaveThen(async () => { const copy = await action({ action: 'duplicate', id: sheet.id, kind: 'sheet', name: tr('copyName', { name: sheet.name }) }); if (copy) openSheet(copy); });
     if (act === 'save-template' && sheet) { const copy = await action({ action: 'duplicate', id: sheet.id, kind: 'template', name: tr('templateName', { name: sheet.name }) }); if (copy) { S.message = tr('saved', { v: copy.version }); S.messageKind = 'ok'; paint(); } return; }
-    if (act === 'archive' && sheet) { if (S.dirty && !confirmLeave()) return; const upd = await action({ action: 'archive', id: sheet.id, archived: !sheet.archived, baseVersion: sheet.version }); if (upd) openSheet(upd); return; }
+    if (act === 'archive' && sheet) return leaveThen(async () => { const upd = await action({ action: 'archive', id: sheet.id, archived: !sheet.archived, baseVersion: sheet.version }); if (upd) openSheet(upd); });
     if (act === 'history') return loadHistory();
     if (act === 'close-history') { S.history = null; S.snapshot = null; return paint(); }
     if (act === 'view-version') return loadSnapshot(+b.getAttribute('data-v'));

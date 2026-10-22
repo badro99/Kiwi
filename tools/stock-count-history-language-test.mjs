@@ -99,7 +99,7 @@ const WASTE = () => [
 ];
 
 function world(lang, over = {}) {
-  const spies = { toasts: [], modals: [], openModal: [], adds: [], blobs: [], downloads: [], confirms: [], fetches: [], reverses: [] };
+  const spies = { toasts: [], modals: [], modalHandles: [], openModal: [], adds: [], blobs: [], downloads: [], confirms: [], fetches: [], reverses: [] };
   const formEls = {
     'st-wf-item': { value: '501' }, 'st-wf-qty': { value: '1.5' }, 'st-wf-reason': { value: 'casse' }, 'st-wf-note': { value: '' },
   };
@@ -112,13 +112,23 @@ function world(lang, over = {}) {
     },
     Kiwi: {
       toast: (msg, o) => { spies.toasts.push({ msg, type: o && o.type }); },
-      modal: (o) => { spies.modals.push(o); return { el: { querySelector: () => null } }; },
+      /* La fenêtre partagée (Kiwi.modal) : seul le bouton qui annule une perte
+         est cliquable ici ; « Garder la perte » ferme sans rien faire, comme
+         Échap, la croix ou le fond dans interactive.js. */
+      modal: (o) => {
+        spies.modals.push(o);
+        const fns = [];
+        const m = { o, closed: false, close() { m.closed = true; }, click: () => fns.forEach((f) => f()),
+          el: { querySelector: (sel) => (sel === '[data-stock-loss-reverse]' ? { addEventListener: (t, f) => { if (t === 'click') fns.push(f); } } : null) } };
+        spies.modalHandles.push(m);
+        return m;
+      },
     },
     KiwiInventory: {
       history: () => WASTE(),
       add: (m) => { spies.adds.push(m); return m; },
       sync: async () => true,
-      reverse: (m, reason, note) => { spies.reverses.push({ id: m.id, note }); return { id: 'r1' }; },
+      reverse: (m, reason, note) => { spies.reverses.push({ id: m.id, note }); return over.reverseFails ? null : { id: 'r1' }; },
     },
     KiwiBoutiqueCatalog: { sync: () => {} },
   };
@@ -275,14 +285,54 @@ if (sourceError) {
     }
   });
 
-  await ok('cancelling a loss: confirm and toast in the screen language, ledger note unchanged', () => {
-    for (const lang of ['en', 'ar']) {
+  await ok('cancelling a loss: the question opens in the shared modal, in the screen language, never a native confirm', () => {
+    const yes = { fr: 'Annuler cette perte', en: 'Cancel this loss', ar: 'إلغاء هذه الخسارة' };
+    const keep = { fr: 'Garder la perte', en: 'Keep the loss', ar: 'الإبقاء على الخسارة' };
+    for (const lang of ['fr', 'en', 'ar']) {
       const w = world(lang, { real: true });
       w.run("cancelWasteMovement('9001')");
-      assert.equal(w.spies.reverses[0].note, 'Annulation perte 9001', lang + ': stored reversal note');
-      const said = w.spies.confirms[0] + ' ' + w.spies.toasts.map((t) => t.msg).join(' ');
-      if (lang === 'en') assertNotFrench(said, 'cancel'); else assertNoLatin(said, 'cancel');
+      assert.equal(w.spies.confirms.length, 0, lang + ': no native confirm');
+      assert.equal(w.spies.modals.length, 1, lang + ': one shared modal');
+      const o = w.spies.modals[0];
+      assert.equal(o.title, yes[lang], lang + ': title');
+      assert.ok(o.foot.includes(`data-dismiss data-autofocus data-stock-loss-keep>${keep[lang]}<`), lang + ': the safe choice holds the focus and closes the modal');
+      assert.equal(w.spies.reverses.length, 0, lang + ': nothing written before the answer');
+      const said = readable(o.title + ' ' + o.body + ' ' + o.foot);
+      if (lang === 'en') assertNotFrench(said, 'cancel'); else if (lang === 'ar') assertNoLatin(said.replace(/\d|[.,]/g, ''), 'cancel');
     }
+  });
+
+  await ok('cancelling a loss: keep leaves the ledger alone, confirm writes the reversal with its stored note', () => {
+    const done = { fr: 'Perte annulée · contre-mouvement enregistré', en: 'Loss cancelled · reversing movement recorded', ar: 'أُلغيت الخسارة · سُجّلت حركة عكسية' };
+    for (const lang of ['fr', 'en', 'ar']) {
+      const kept = world(lang, { real: true });
+      kept.run("cancelWasteMovement('9001')");
+      kept.spies.modalHandles[0].close();
+      assert.equal(kept.spies.reverses.length, 0, lang + ': keep writes nothing');
+      assert.equal(kept.spies.toasts.length, 0, lang + ': keep says nothing');
+      const w = world(lang, { real: true });
+      w.run("cancelWasteMovement('9001')");
+      w.spies.modalHandles[0].click();
+      assert.equal(w.spies.modalHandles[0].closed, true, lang + ': the modal closes');
+      assert.equal(w.spies.reverses.length, 1, lang + ': one reversal');
+      assert.equal(w.spies.reverses[0].note, 'Annulation perte 9001', lang + ': stored reversal note');
+      assert.deepEqual(w.spies.toasts, [{ msg: done[lang], type: 'success' }], lang + ': toast');
+    }
+  });
+
+  await ok('cancelling a loss: a refused reversal says so in the screen language', () => {
+    const fail = { fr: 'La perte n’a pas pu être annulée. Rien n’a changé dans le registre.', en: 'The loss could not be cancelled. Nothing changed in the ledger.', ar: 'تعذّر إلغاء الخسارة. لم يتغير شيء في السجل.' };
+    for (const lang of ['fr', 'en', 'ar']) {
+      const w = world(lang, { real: true, reverseFails: true });
+      w.run("cancelWasteMovement('9001')");
+      w.spies.modalHandles[0].click();
+      assert.deepEqual(w.spies.toasts, [{ msg: fail[lang], type: 'warn' }], lang + ': failure toast');
+    }
+  });
+
+  await ok('stock.js no longer calls a native confirm()', () => {
+    assert.ok(!/(^|[^\w.])confirm\(/m.test(src), 'a bare confirm( call remains in assets/stock.js');
+    assert.ok(!/window\.confirm\(/.test(src), 'window.confirm( remains in assets/stock.js');
   });
 
   await ok('stored counts keep their French placeholders under EN and AR', () => {

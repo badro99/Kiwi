@@ -1017,9 +1017,10 @@
    * doit se suffire à lui-même, sinon il est muet sur la seule surface où il
    * compte · le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
   /* Ce module écrit en français et laisse la caisse traduire : son balayage
-   * (assets/caisse-lang.js) relit tout ce qui entre dans la page. Une boîte
-   * native (confirm) n'entre pas dans la page · on la passe donc au même
-   * dictionnaire nous-mêmes. Sans caisse-lang.js, le français reste. */
+   * (assets/caisse-lang.js) relit tout ce qui entre dans la page, mais après
+   * coup. Une question peinte à la volée (« Dissocier ce pont ? ») passe donc
+   * au même dictionnaire nous-mêmes, pour ne jamais s'afficher d'abord en
+   * français. Sans caisse-lang.js, le français reste. */
   function say(fr) {
     try { return window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(fr) : fr; } catch (_) { return fr; }
   }
@@ -1407,6 +1408,10 @@
       '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
       '.kpr-relay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(10,15,13,.08);}' +
       '.kpr-relay-row:first-child{border-top:0;} .kpr-relay-row small{color:#5b6660;flex:1;} .kpr-relay-row .kpr-d.on{background:#0B6E4F;}' +
+      '.kpr-ask{margin:2px 0 8px;padding:12px 14px;border:1px solid #f2cdc8;border-radius:12px;background:#fbeceb;color:#8f2c1e;}' +
+      '.kpr-ask p{margin:0 0 10px;font-size:.86rem;line-height:1.45;}' +
+      '.kpr-ask-btns{display:flex;gap:8px;}.kpr-ask-btns .kpr-btn{padding:10px;}' +
+      '.kpr-ask-yes{background:#c0392b;color:#fff;}.kpr-ask-yes:disabled{opacity:.6;cursor:default;}' +
       '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:94vw;max-height:92vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
       '#kpr-card h2{font-size:1.16rem;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:8px;}' +
       '.kpr-sub{margin:0 0 16px;color:var(--ink,#0A0F0D);opacity:.65;font-size:.9rem;line-height:1.5;}' +
@@ -2005,15 +2010,51 @@
             '<button type="button" class="kpr-prof-del" data-relay-revoke="' + esc(b.id) + '" aria-label="Dissocier">×</button></div>';
         }).join('');
         list.querySelectorAll('[data-relay-revoke]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            if (!confirm(say('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.'))) return;
-            relayRevoke(this.getAttribute('data-relay-revoke')).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
-          });
+          b.addEventListener('click', function () { askRevoke(this); });
         });
         // Le pont local n'est pas encore relais : on peut l'associer d'un clic, sans code à taper.
         if (local) local.style.display = (localPing && localPing.relay && !localPing.relay.paired) ? '' : 'none';
         return rs;
       });
+    }
+    /* Dissocier un pont : la question s'ouvre sous la ligne, DANS ce panneau.
+       Plus de boîte native (confirm) : elle sortait de la langue de la caisse
+       et de son focus. Pas Kiwi.modal non plus : la caisse ne l'a pas, et sur
+       le tableau de bord il peindrait sous ce panneau (z-index 9990 < 9998).
+       Le focus part sur Annuler (le choix sûr), Échap ou Annuler referment
+       sans rien faire et rendent le focus au × d'origine ; seul « Dissocier »
+       appelle le relais. Les textes passent par say(), comme le reste. */
+    var askSeq = 0;
+    function askRevoke(btn) {
+      var row = btn.closest('.kpr-relay-row');
+      if (!row || (row.nextElementSibling && row.nextElementSibling.classList.contains('kpr-ask'))) return;
+      var id = btn.getAttribute('data-relay-revoke');
+      var qid = 'kpr-ask-q' + (++askSeq);
+      var box = document.createElement('div');
+      box.className = 'kpr-ask';
+      box.setAttribute('role', 'alertdialog');
+      box.setAttribute('aria-labelledby', qid);
+      box.innerHTML = '<p id="' + qid + '">' + esc(say('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.')) + '</p>' +
+        '<div class="kpr-ask-btns"><button type="button" class="kpr-btn kpr-test" data-relay-keep>' + esc(say('Annuler')) + '</button>' +
+        '<button type="button" class="kpr-btn kpr-ask-yes" data-relay-confirm>' + esc(say('Dissocier')) + '</button></div>';
+      row.parentNode.insertBefore(box, row.nextSibling);
+      btn.setAttribute('aria-expanded', 'true');
+      function end() {
+        if (box.parentNode) box.parentNode.removeChild(box);
+        btn.setAttribute('aria-expanded', 'false');
+        try { btn.focus(); } catch (_) {}
+      }
+      box.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        e.preventDefault(); e.stopPropagation(); end();
+      });
+      box.querySelector('[data-relay-keep]').addEventListener('click', end);
+      var yes = box.querySelector('[data-relay-confirm]');
+      yes.addEventListener('click', function () {
+        yes.disabled = true;
+        relayRevoke(id).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
+      });
+      try { box.querySelector('[data-relay-keep]').focus(); } catch (_) {}
     }
     function showPairCode(j) {
       var box = $('#kpr-relay-code'); if (!box) return;

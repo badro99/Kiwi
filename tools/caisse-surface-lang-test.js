@@ -176,6 +176,7 @@ function fragments(lits) {
 /* Ce qui n'est PAS de l'interface, et pourquoi. */
 const NOT_UI = new Set([
   'Content-Type',                       // en-tête HTTP
+  'Escape',                             // nom de touche clavier (e.key), jamais affiché
   'Test reçu client', 'Article test',   // imprimé sur le papier du ticket test, pas à l'écran
   'Test', 'Poste', 'Caisse',            // valeurs par défaut d'une donnée (nom, poste) : elles voyagent dans un {x}
   'Café Atlas', 'Othmane N.',            // gabarit de #clo-meta, remplacé au premier rendu
@@ -289,7 +290,64 @@ check(/\.clo-row\.is-sub \.clo-row-label \{ padding-inline-start: 14px;/.test(ht
 check(/\[lang="ar"\] \.clo-eyebrow, \[lang="ar"\] \.clo-drawer-title \{ letter-spacing: 0; \}/.test(html), 'pas d\'espacement des lettres sur l\'arabe de la clôture');
 check(/vocab\(undefined, carteLang\(\)\)/.test(html), 'le Z compte « plats » ou « dishes » selon la langue de la caisse');
 check(/KH\.summary\(Date\.now\(\), undefined, carteLang\(\)\)/.test(html), 'l\'ouverture hors horaires dit les horaires dans la langue de la caisse');
-check(/confirm\(say\('Dissocier ce pont/.test(pb), 'la boîte native « Dissocier ce pont ? » passe aussi par le dictionnaire');
+
+/* ── 5 · « Dissocier ce pont ? » : plus de boîte native ────────────────────
+   La question s'ouvre dans le panneau (askRevoke), ses textes passent par
+   say(), le focus part sur Annuler, Échap ou Annuler ne touchent pas au relais
+   et rendent le focus au ×, seul « Dissocier » appelle relayRevoke. La VRAIE
+   fonction tourne ici, sur un DOM de poche. */
+check(!/(^|[^\w.])confirm\(/m.test(pb) && !/window\.confirm\(/.test(pb), 'printer-bridge.js n\'ouvre plus aucune boîte native confirm()');
+{
+  const askSrc = between(pb, 'var askSeq = 0;', '    function showPairCode(j) {', 'printer-bridge.js · askRevoke');
+  let focused = null;
+  const node = (tag) => {
+    const n = { tag, attrs: {}, listeners: {}, className: '', disabled: false, parentNode: null,
+      setAttribute(k, v) { n.attrs[k] = String(v); }, getAttribute(k) { return n.attrs[k] == null ? null : n.attrs[k]; },
+      addEventListener(t, fn) { (n.listeners[t] ||= []).push(fn); },
+      fire(t, e) { (n.listeners[t] || []).forEach((fn) => fn.call(n, e || {})); },
+      focus() { focused = n; },
+      classList: { contains: (c) => n.className.split(/\s+/).includes(c) } };
+    let html = '';
+    Object.defineProperty(n, 'innerHTML', { get: () => html, set: (v) => {
+      html = v; n.kids = {};
+      ['data-relay-keep', 'data-relay-confirm'].forEach((a) => { if (v.includes(a)) n.kids[a] = node('button'); });
+    } });
+    n.querySelector = (sel) => { const a = (sel.match(/^\[([\w-]+)\]$/) || [])[1]; return (n.kids && n.kids[a]) || null; };
+    return n;
+  };
+  const list = { kids: [], insertBefore(x, ref) { const i = ref ? list.kids.indexOf(ref) : -1; x.parentNode = list; if (i < 0) list.kids.push(x); else list.kids.splice(i, 0, x); },
+    removeChild(x) { list.kids = list.kids.filter((k) => k !== x); x.parentNode = null; } };
+  const row = node('div'); row.className = 'kpr-relay-row'; row.parentNode = list; list.kids.push(row);
+  Object.defineProperty(row, 'nextSibling', { get: () => list.kids[list.kids.indexOf(row) + 1] || null });
+  Object.defineProperty(row, 'nextElementSibling', { get: () => list.kids[list.kids.indexOf(row) + 1] || null });
+  const x = node('button'); x.setAttribute('data-relay-revoke', 'b-7'); x.closest = (sel) => (sel === '.kpr-relay-row' ? row : null);
+  const calls = { revoke: [], toast: [], paint: 0 };
+  const ctx = vm.createContext({
+    document: { createElement: node },
+    esc: (v) => String(v),
+    say: (fr) => '«' + tr('en', fr) + '»',
+    relayRevoke: (id) => { calls.revoke.push(id); return { then: (fn) => fn(true) }; },
+    toast: (m) => calls.toast.push(m), paintRelay: () => { calls.paint++; }, refreshStatus: () => {},
+  });
+  vm.runInContext(askSrc + '\nthis.askRevoke = askRevoke;', ctx, { filename: 'printer-bridge.js#askRevoke' });
+  const open = () => { focused = x; ctx.askRevoke(x); return list.kids[1]; };
+
+  let box = open();
+  check(box && box.getAttribute('role') === 'alertdialog' && /«Unlink this bridge\? It will no longer receive tickets from your tablets\.»/.test(box.innerHTML)
+    && /data-relay-keep>«Cancel»/.test(box.innerHTML) && /data-relay-confirm>«Unlink»/.test(box.innerHTML),
+    'Dissocier : la question s\'ouvre dans le panneau, ses trois textes passent par say() (EN : Unlink / Cancel)');
+  check(focused === box.kids['data-relay-keep'] && x.getAttribute('aria-expanded') === 'true', 'le focus entre dans la question, sur Annuler (le choix sûr)');
+  let stopped = false;
+  box.fire('keydown', { key: 'Escape', preventDefault() {}, stopPropagation() { stopped = true; } });
+  check(list.kids.length === 1 && focused === x && stopped && calls.revoke.length === 0, 'Échap : la question se ferme, rien n\'est dissocié, le focus revient au ×');
+  box = open();
+  box.kids['data-relay-keep'].fire('click');
+  check(list.kids.length === 1 && focused === x && calls.revoke.length === 0 && x.getAttribute('aria-expanded') === 'false', 'Annuler : le pont reste associé, le focus revient au ×');
+  box = open(); ctx.askRevoke(x);
+  check(list.kids.length === 2, 'un second clic sur × n\'ouvre pas une seconde question');
+  box.kids['data-relay-confirm'].fire('click');
+  check(calls.revoke.join() === 'b-7' && box.kids['data-relay-confirm'].disabled && calls.toast[0] === 'Pont dissocié' && calls.paint === 1, 'Dissocier : relayRevoke une fois sur ce pont, puis le relais se repeint');
+}
 
 if (failed) { console.error(`\n✗ ${failed} vérification(s) en échec sur l'imprimante et la clôture.`); process.exit(1); }
 console.log(`✓ ${ran} vérifications · imprimante et clôture en FR/EN/AR.`);
