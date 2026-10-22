@@ -38,8 +38,10 @@ function grab(src, start) {
   }
   throw new Error('unbalanced ' + start);
 }
+/* l'horloge hybride (PDS_HLC, pdsSeenMax, pdsTick) : chaque extraction a la sienne */
+const CLOCK = CORE.match(/let PDS_HLC = [^;]+;/)[0] + '\n' + ['pdsSeenMax', 'pdsTick'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n') + '\n';
 const F = new Function(
-  'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+  'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n' + CLOCK
   + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
   + ['pdsGoneOf', 'pdsMergePlans', 'pdsCanon', 'pdsStampPlan'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n')
   + '\nreturn { pdsMergePlans, pdsStampPlan };'
@@ -170,8 +172,8 @@ ok('KiwiFloorCore expose stamp', () => assert.ok(/stamp: pdsStampPlan/.test(CORE
  * affichée. fast-check (dépendance de développement de app/). */
 let fc = null; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch (e) { fc = null; }
 if (!fc) console.log('  ○ fast-check absent : propriété d’horloge non exécutée');
-else ok('un appareil en retard de plusieurs heures l’emporte avec un geste fait APRÈS avoir vu l’autre (déplacer, renommer, créer, supprimer)', () => {
-  const body = 'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+else ok('un appareil décalé de quelques heures ou de plusieurs mois l’emporte avec un geste fait APRÈS avoir vu l’autre (déplacer, renommer, créer, supprimer)', () => {
+  const body = 'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n' + CLOCK
     + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
     + ['pdsBury', 'pdsGoneOf', 'pdsMergePlans', 'pdsCanon', 'pdsStampPlan'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n')
     + '\nreturn { pdsBury, pdsMergePlans, pdsStampPlan };';
@@ -191,10 +193,22 @@ else ok('un appareil en retard de plusieurs heures l’emporte avec un geste fai
     fc.record({ kind: fc.constant('add'), dev: fc.nat(1), x: fc.integer({ min: 0, max: 900 }) }),
     fc.record({ kind: fc.constant('drop'), dev: fc.nat(1), id: fc.constantFrom('t1', 't2') }),
   ).chain((o) => fc.integer({ min: 1, max: 5 * 60e3 }).map((wait) => ({ ...o, wait })));
-  const r = fc.check(fc.property(fc.integer({ min: 1, max: 12 }), fc.boolean(), fc.array(opArb, { minLength: 1, maxLength: 12 }), (hours, slowFirst, ops) => {
+  /* Décalage de l'horloge de l'un des deux appareils : quelques heures, en
+   * retard ou en avance (fuseau mal réglé), ou un retard plus long que la vie
+   * d'une pierre tombale (30 jours : tablette à la pile d'horloge morte, date
+   * réglée à la main). Avant l'horloge hybride, la suppression faite sur
+   * l'appareil en retard arrivait déjà expirée chez l'autre : la table restait
+   * sur un appareil et disparaissait de l'autre. (Une AVANCE de plus de 30
+   * jours n'est pas couverte : l'appareil en avance juge expirées les pierres
+   * tombales fraîches des autres, et aucune horloge locale ne peut le savoir.) */
+  const skewArb = fc.oneof(
+    fc.tuple(fc.integer({ min: 1, max: 12 }), fc.boolean()).map(([h, ahead]) => (ahead ? 1 : -1) * h * 3600e3),
+    fc.integer({ min: 31, max: 400 }).map((dd) => -dd * 86400e3),
+  );
+  const r = fc.check(fc.property(skewArb, fc.boolean(), fc.array(opArb, { minLength: 1, maxLength: 12 }), (skew, slowFirst, ops) => {
     const clock = { t: Date.UTC(2026, 9, 22, 10) }, t0 = clock.t - 3600e3;
     const start = plan([T('t1', 100, t0), T('t2', 200, t0)], { zones: [{ id: 'z1', name: 'Salle', updatedAt: t0 }], elements: [{ id: 'e1', x: 10, updatedAt: t0 }] });
-    const devs = slowFirst ? [device(clock, -hours * 3600e3, start), device(clock, 0, start)] : [device(clock, 0, start), device(clock, -hours * 3600e3, start)];
+    const devs = slowFirst ? [device(clock, skew, start), device(clock, 0, start)] : [device(clock, 0, start), device(clock, skew, start)];
     const model = { tables: { t1: 100, t2: 200 }, zone: 'Salle', deco: 10 };
     let n = 0;
     for (const o of ops) {

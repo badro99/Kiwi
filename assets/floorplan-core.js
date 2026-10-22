@@ -1027,10 +1027,41 @@ function pdsGeneratePlan(a, variant) {
  * `union` = KiwiCloudDoc.mergeDefault, passé par l'appelant pour que ce fichier
  * reste sans dépendance. Les tombales expirent après 30 jours. */
 const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;
+/* ─── L'horloge des écritures (horloge hybride) ────────────────────────────
+ * Les horodatages du plan (`updatedAt` des éléments, `gone[id]` des pierres
+ * tombales) venaient de l'horloge murale de l'appareil. Une tablette dont
+ * l'heure retarde de plus de 30 jours (pile d'horloge morte, date réglée à la
+ * main) posait donc une pierre tombale DÉJÀ expirée aux yeux des autres
+ * appareils : la table qu'elle venait de supprimer, après avoir vu le plan des
+ * autres, restait sur le portable du patron pour toujours, et les deux copies
+ * divergeaient. Même famille que les promotions et le catalogue boutique.
+ * Chaque écriture prend donc le plus grand de l'heure murale, du plus grand
+ * instant déjà vu + 1 (vu = tout ce que portent les copies en main, donc tout
+ * ce que la fusion nous a appris) et de la dernière écriture d'ici + 1. Un
+ * geste fait APRÈS avoir vu celui d'un autre appareil est toujours daté après
+ * lui, quelle que soit l'heure affichée. Les champs restent des nombres en
+ * millisecondes : les plans déjà rangés (serveur, appareils) se fusionnent
+ * comme avant. */
+let PDS_HLC = 0;
+function pdsSeenMax(doc) {
+  let m = 0;
+  if (!doc || typeof doc !== 'object') return m;
+  ['tables', 'elements', 'zones'].forEach(key => {
+    if (Array.isArray(doc[key])) doc[key].forEach(x => { const t = +(x && x.updatedAt) || 0; if (t > m) m = t; });
+  });
+  const g = doc.gone;
+  if (g && typeof g === 'object' && !Array.isArray(g)) Object.keys(g).forEach(id => { const t = +g[id] || 0; if (t > m) m = t; });
+  return m;
+}
+function pdsTick(a, b) {
+  const t = Math.max(Date.now(), pdsSeenMax(a) + 1, pdsSeenMax(b) + 1, PDS_HLC + 1);
+  PDS_HLC = t;
+  return t;
+}
 function pdsBury(state, ids) {
   if (!state) return;
   if (!state.gone || typeof state.gone !== 'object' || Array.isArray(state.gone)) state.gone = {};
-  const now = Date.now();
+  const now = pdsTick(state);
   (Array.isArray(ids) ? ids : [ids]).forEach(id => { if (id != null && id !== '') state.gone[String(id)] = now; });
 }
 function pdsUnbury(state, ids) {
@@ -1132,7 +1163,10 @@ function pdsStampPlan(state, prevRaw) {
   if (!state || typeof state !== 'object') return state;
   let prev = null;
   try { prev = typeof prevRaw === 'string' ? JSON.parse(prevRaw) : prevRaw; } catch (e) { prev = null; }
-  const now = Date.now();
+  /* Daté une seule fois par écriture, et seulement s'il y a quelque chose à
+   * dater : ouvrir la page ne fait pas avancer l'horloge. */
+  let at = 0;
+  const now = () => at || (at = pdsTick(state, prev));
   ['tables', 'elements', 'zones'].forEach(key => {
     if (!Array.isArray(state[key])) return;
     const before = {};
@@ -1140,12 +1174,12 @@ function pdsStampPlan(state, prevRaw) {
     state[key].forEach(x => {
       if (!x || typeof x !== 'object' || x.id == null) return;
       const p = before[String(x.id)];
-      if (!p) { if (!(+x.updatedAt > 0)) x.updatedAt = now; return; }
+      if (!p) { if (!(+x.updatedAt > 0)) x.updatedAt = now(); return; }
       if (JSON.stringify(pdsCanon(p)) === JSON.stringify(pdsCanon(x))) {
         if (!(+x.updatedAt > 0) && +p.updatedAt > 0) x.updatedAt = p.updatedAt;
         return;
       }
-      if ((+x.updatedAt || 0) === (+p.updatedAt || 0)) x.updatedAt = Math.max(now, (+p.updatedAt || 0) + 1);
+      if ((+x.updatedAt || 0) === (+p.updatedAt || 0)) x.updatedAt = now();
     });
   });
   return state;
