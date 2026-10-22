@@ -36,6 +36,7 @@ import {
 import { employeeAuthVersion } from './_private.js';
 
 const VALID_PIN = /^\d{4}$/;
+const MAX_ROSTER = 200;
 
 function accountOwnerRole(value) {
   let role = String(value || '').trim().toLowerCase();
@@ -543,6 +544,12 @@ export async function onRequestPost(context) {
 
   // ── PINs (only when the client actually sent a list) ───────────────────────
   if (Array.isArray(body && body.pins)) {
+    /* La liste s'arrêtait à vingt, sans un mot : le 21e membre et les suivants
+     * perdaient leur code de caisse et leur accès à l'app employé au premier
+     * enregistrement, et la route répondait ok. Rien ne limite une équipe à
+     * vingt. La borne reste (une liste de mille est une erreur, pas une
+     * équipe) mais au-delà on refuse à voix haute, sans rien toucher. */
+    if (body.pins.length > MAX_ROSTER) return json({ error: 'too-many-members', max: MAX_ROSTER }, 413);
     const seen = new Set();
     const clean = [];
     for (const p of body.pins) {
@@ -562,7 +569,6 @@ export async function onRequestPost(context) {
         department: String(p.department || '').trim().slice(0, 40),
         venueSlug: String(p.venueSlug || '').trim().slice(0, 96),
       });
-      if (clean.length >= 20) break;
     }
     // Atomic replace. created_ts is offset per index so the GET's ORDER BY
     // created_ts preserves the submitted order.

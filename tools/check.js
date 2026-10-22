@@ -641,6 +641,7 @@ for (const test of [
   'face-unlock-test.mjs',
   'config-pin-projection-test.mjs',
   'team-doc-redaction-test.mjs',
+  'team-roster-cap-test.mjs',
   /* Les très gros fichiers ne grossissent plus : pages-pro.js, kiwi-caisse.html… plafonnés à leur taille (+200), les scripts des coquilles (+3). */
   'file-size-ratchet-test.mjs',
   'pages-pro-lazy-registry-test.mjs',
