@@ -476,6 +476,47 @@ ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/$
   ok(av.number === 'AV-2026-0001' && dv.number === 'D-2026-0001', 'v2: credit notes and quotes have their own series');
 }
 
+// ── 10. La langue du tableau de bord habille l'aperçu et les messages ─────────
+// La facture A4 elle-même reste en français (document légal) ; seul ce qui l'entoure suit la langue.
+{
+  const T = {
+    en: { 'invoice.doc': 'Invoice', 'invoice.printPdf': 'Print / PDF', 'invoice.close': 'Close', 'invoice.afterSync': 'Invoice available once the sale has synced' },
+    ar: { 'invoice.doc': 'فاتورة', 'invoice.printPdf': 'طباعة / PDF', 'invoice.close': 'إغلاق', 'invoice.afterSync': 'تتوفر الفاتورة بعد مزامنة عملية البيع' },
+  };
+  const make = (lang) => {
+    const toasts = [];
+    const body = [];
+    const el = () => ({ attrs: {}, style: {}, children: [], textContent: '', setAttribute(k, v) { this.attrs[k] = v; }, appendChild(c) { this.children.push(c); }, remove() {}, focus() {} });
+    const doc = { baseURI: 'https://app.kiwi-pos.com/', createElement: () => el(), body: { appendChild: (c) => body.push(c) }, activeElement: null };
+    const w = {
+      KiwiI18n: { T, getLang: () => lang },
+      Kiwi: { toast: (m) => toasts.push(m) },
+      KiwiReceipt: { business: () => ({ name: 'Café', ice: '001234567000089' }), config: () => ({ vat: { mode: 'included', rate: 20 } }) },
+      KiwiLive: { merchant: () => 'cafe-gare' },
+      document: doc, localStorage: { getItem: () => null, setItem: () => {} },
+    };
+    const inv = new Function('window', 'document', 'localStorage', `${invoiceSource}; return window.KiwiInvoice;`)(w, doc, w.localStorage);
+    return { inv, toasts, body };
+  };
+  const sale = { ref: 'T-1', ts: Date.parse('2026-03-04T10:00:00Z'), total: 100, lines: [{ name: 'Café', qty: 1, price: 100 }] };
+  for (const lang of ['en', 'ar']) {
+    const { inv, toasts, body } = make(lang);
+    await inv.generate({ ref: 'T-1' }, 'print');
+    ok(toasts[0] === T[lang]['invoice.afterSync'], `${lang}: the "after sync" message follows the dashboard language`);
+    inv.open(inv.build(sale, { number: 'F-2026-0009' }), 'print');
+    const overlay = body[0];
+    ok(overlay && overlay.attrs['aria-label'] === T[lang]['invoice.doc'] + ' F-2026-0009', `${lang}: the preview dialog is named in the dashboard language`);
+    const labels = overlay ? overlay.children[0].children.map((c) => c.textContent) : [];
+    ok(labels.includes(T[lang]['invoice.printPdf']) && labels.includes(T[lang]['invoice.close']), `${lang}: the preview buttons follow the dashboard language`);
+  }
+  const fr = make('fr');
+  await fr.inv.generate({ ref: 'T-1' }, 'print');
+  fr.inv.open(fr.inv.build(sale, { number: 'F-2026-0009' }), 'print');
+  ok(fr.toasts[0] === 'Facture disponible après synchronisation de la vente' && fr.body[0].attrs['aria-label'] === 'Facture F-2026-0009',
+    'fr: the original French wording is unchanged');
+  ok(/Date d’émission/.test(fr.inv.html(fr.inv.build(sale, { number: 'F-2026-0009' }))), 'the printed invoice stays in French');
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);

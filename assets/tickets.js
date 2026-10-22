@@ -19,6 +19,7 @@
     tickets: [], files: [], followupFiles: [], followupTicketId: null,
     taxonomy: null, filters: readFilters(),
     loading: true, saving: false, savingFollowup: false, savingClassification: false,
+    publishAttempt: null,
   };
   const $ = (id) => document.getElementById(id);
   const board = $('ticketBoard');
@@ -598,6 +599,11 @@
     renderFollowupImages();
   }
 
+  function newIdempotencyKey() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (_) {}
+    return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  }
+
   async function publish(event) {
     event.preventDefault();
     if (state.saving) return;
@@ -620,12 +626,22 @@
     if (!$('ticketSubkindField').hidden && $('ticketSubkind').value) data.append('subkind', $('ticketSubkind').value);
     data.append('money_at_risk', $('ticketMoneyRisk').checked ? '1' : '0');
     state.files.forEach((file) => data.append('images', file, file.name));
+    /* Une clé par envoi : le même contenu renvoyé après une réponse perdue
+       retrouve le premier ticket au lieu d'en créer un second. Un contenu
+       modifié reçoit une clé neuve. */
+    const fingerprint = [text, $('ticketKind').value, $('ticketArea').value, $('ticketSubkind').value,
+      $('ticketMoneyRisk').checked, ...state.files.map((file) => file.name + ':' + file.size)].join('\u0001');
+    if (!state.publishAttempt || state.publishAttempt.fingerprint !== fingerprint) {
+      state.publishAttempt = { fingerprint, key: newIdempotencyKey() };
+    }
+    data.append('idempotency_key', state.publishAttempt.key);
     try {
       const response = await fetch(API, { method: 'POST', body: data });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
       composer.close();
       resetComposer();
+      state.publishAttempt = null;
       showToast(result.classificationStored === false
         ? `${result.number} published; classification will be available after the database update`
         : `${result.number} published`);

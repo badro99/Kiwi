@@ -2037,12 +2037,17 @@ CREATE TABLE IF NOT EXISTS kiwi_tickets (
   created_ts   INTEGER NOT NULL,
   updated_ts   INTEGER NOT NULL,
   completed_ts INTEGER,
-  expires_ts   INTEGER
+  expires_ts   INTEGER,
+  -- Clé d'idempotence fournie par le tableau : un renvoi identique après une
+  -- réponse perdue retrouve le premier ticket au lieu d'en créer un second.
+  client_key   TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_status_expiry
   ON kiwi_tickets (status, expires_ts);
 CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_filters
   ON kiwi_tickets (status, money_at_risk DESC, kind, area, id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kiwi_tickets_client_key
+  ON kiwi_tickets (client_key);
 
 CREATE TABLE IF NOT EXISTS kiwi_ticket_followups (
   id         TEXT PRIMARY KEY,

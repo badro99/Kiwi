@@ -20,6 +20,18 @@
     }[c]));
   }
 
+  /* Le document A4 (html()) est une facture légale : libellés, montants et dates
+     y restent en français, quelle que soit la langue du tableau de bord, comme
+     le veut le droit comptable marocain. Seul l'habillage autour d'elle (aperçu,
+     messages, fiche client) suit la langue active. FR est le texte d'origine ;
+     EN et AR viennent des clés invoice.* de assets/i18n.js. */
+  function L(key, fr) {
+    try {
+      const i18n = window.KiwiI18n;
+      return i18n?.T?.[i18n.getLang?.()]?.['invoice.' + key] || fr;
+    } catch (_) { return fr; }
+  }
+
   function round2(n) {
     return Math.round((+n || 0) * 100) / 100;
   }
@@ -545,7 +557,7 @@
     if (nativeInvoice()) return null;
     try {
       const win = window.open('', '_blank');
-      if (win) win.document.write('<!doctype html><title>Facture</title><p>Préparation de la facture…</p>');
+      if (win) win.document.write('<!doctype html><title>' + esc(L('doc', 'Facture')) + '</title><p>' + esc(L('preparing', 'Préparation de la facture…')) + '</p>');
       return win;
     } catch (_) { return null; }
   }
@@ -557,20 +569,20 @@
     overlay.className = 'kiwi-invoice-preview';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Facture ' + (doc.number || ''));
+    overlay.setAttribute('aria-label', L('doc', 'Facture') + ' ' + (doc.number || ''));
     overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:#F7F5F0;color:#10251d;padding:16px;gap:12px;';
     const bar = document.createElement('div');
     bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;';
-    const title = document.createElement('strong'); title.textContent = doc.number || 'Facture';
-    const print = document.createElement('button'); print.type = 'button'; print.textContent = 'Imprimer / PDF';
-    const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Fermer';
+    const title = document.createElement('strong'); title.textContent = doc.number || L('doc', 'Facture');
+    const print = document.createElement('button'); print.type = 'button'; print.textContent = L('printPdf', 'Imprimer / PDF');
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = L('close', 'Fermer');
     [print, close].forEach(b => { b.style.cssText = 'min-height:44px;padding:8px 14px;font:inherit;'; });
     const frame = document.createElement('iframe');
-    frame.title = doc.number || 'Facture';
+    frame.title = doc.number || L('doc', 'Facture');
     frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
     frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
     frame.srcdoc = html(doc, { autoPrint: false });
-    print.onclick = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) { toast('Impression indisponible sur cet appareil.', 'warning'); } };
+    print.onclick = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) { toast(L('printUnavailable', 'Impression indisponible sur cet appareil.'), 'warning'); } };
     const previousFocus = document.activeElement;
     const dismiss = () => { overlay.remove(); previousFocus?.focus?.(); };
     close.onclick = dismiss;
@@ -586,7 +598,7 @@
     const native = nativeInvoice();
     if (native) {
       return native.exportInvoice({ html: html(doc, { autoPrint: false }), name: num }).then(() => true).catch(() => {
-        toast('La facture est créée. Réessayez son export PDF.', 'warning');
+        toast(L('exportRetry', 'La facture est créée. Réessayez son export PDF.'), 'warning');
         return preview(doc);
       });
     }
@@ -598,7 +610,7 @@
       win.document.write(html(doc));
       win.document.close();
       win.document.title = num;
-      if (mode === 'pdf') toast('Choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.');
+      if (mode === 'pdf') toast(L('choosePdf', 'Choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.'));
       return true;
     } catch (_) { return preview(doc); }
   }
@@ -612,26 +624,26 @@
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
       overlay.innerHTML = `
         <div class="modal" role="dialog" style="background:#fff;border-radius:12px;max-width:380px;width:100%;padding:20px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);color:#0f172a;font-family:inherit;">
-          <h3 style="margin:0 0 6px;font-size:16px;font-weight:700;">Facture pour la vente ${esc(saleRef || '')}</h3>
-          <p style="margin:0 0 14px;font-size:12.5px;color:#64748b;line-height:1.45;">Renseignez les informations de facturation du client (facultatif).</p>
+          <h3 style="margin:0 0 6px;font-size:16px;font-weight:700;">${esc(L('forSale', 'Facture pour la vente'))} ${esc(saleRef || '')}</h3>
+          <p style="margin:0 0 14px;font-size:12.5px;color:#64748b;line-height:1.45;">${esc(L('custHint', 'Renseignez les informations de facturation du client (facultatif).'))}</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div>
-              <label for="inv-cust-name" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Nom ou Raison sociale</label>
-              <input id="inv-cust-name" data-inv-cust-name class="st-mb-input" placeholder="Ex. Société Maghreb Tech" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <label for="inv-cust-name" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custName', 'Nom ou Raison sociale'))}</label>
+              <input id="inv-cust-name" data-inv-cust-name class="st-mb-input" placeholder="${esc(L('custNameEx', 'Ex. Société Maghreb Tech'))}" maxlength="80" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
             <div>
-              <label for="inv-cust-ice" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">ICE (15 chiffres)</label>
+              <label for="inv-cust-ice" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custIce', 'ICE (15 chiffres)'))}</label>
               <input id="inv-cust-ice" data-inv-cust-ice class="st-mb-input mono" placeholder="001234567000062" maxlength="24" inputmode="numeric" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
-              <div data-inv-ice-error style="color:#dc2626;font-size:11px;margin-top:2px;display:none;">L'ICE doit comporter exactement 15 chiffres.</div>
+              <div data-inv-ice-error style="color:#dc2626;font-size:11px;margin-top:2px;display:none;">${esc(L('custIceError', "L'ICE doit comporter exactement 15 chiffres."))}</div>
             </div>
             <div>
-              <label for="inv-cust-if" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">Identifiant Fiscal (IF)</label>
-              <input id="inv-cust-if" data-inv-cust-if class="st-mb-input mono" placeholder="Ex. 12345678" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+              <label for="inv-cust-if" style="display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;">${esc(L('custIf', 'Identifiant Fiscal (IF)'))}</label>
+              <input id="inv-cust-if" data-inv-cust-if class="st-mb-input mono" placeholder="${esc(L('custIfEx', 'Ex. 12345678'))}" maxlength="30" style="box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
-            <button type="button" data-inv-cust-skip class="st-btn" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:6px;background:transparent;cursor:pointer;font-size:12.5px;">Passer</button>
-            <button type="button" data-inv-cust-confirm class="st-btn primary" style="padding:7px 14px;border:none;border-radius:6px;background:#087653;color:#fff;font-weight:600;cursor:pointer;font-size:12.5px;">Créer la facture</button>
+            <button type="button" data-inv-cust-skip class="st-btn" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:6px;background:transparent;cursor:pointer;font-size:12.5px;">${esc(L('skip', 'Passer'))}</button>
+            <button type="button" data-inv-cust-confirm class="st-btn primary" style="padding:7px 14px;border:none;border-radius:6px;background:#087653;color:#fff;font-weight:600;cursor:pointer;font-size:12.5px;">${esc(L('create', 'Créer la facture'))}</button>
           </div>
         </div>`;
 
@@ -711,7 +723,7 @@
     const saleId = String(sale.saleId || sale.id || '').trim();
 
     if (!saleId) {
-      toast('Facture disponible après synchronisation de la vente', 'warning');
+      toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), 'warning');
       return null;
     }
 
@@ -753,7 +765,7 @@
     const docDraft = build(sale, { customer, saleId });
 
     // 4. Appel serveur obligatoire pour la numérotation séquentielle D1
-    toast('Numérotation de la facture…');
+    toast(L('numbering', 'Numérotation de la facture…'));
     try {
       const { res, data } = await requestInvoice({ merchant: m, saleId, customer, snapshot: docDraft });
 
@@ -761,12 +773,12 @@
         const err = data;
         if (err?.error === 'invalid-ice') {
           abandon();
-          toast(err.detail ? 'ICE client · ' + err.detail : 'ICE client invalide (15 chiffres requis).', 'error');
+          toast(err.detail ? L('iceClient', 'ICE client') + ' · ' + err.detail : L('iceInvalid', 'ICE client invalide (15 chiffres requis).'), 'error');
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {
           abandon();
-          toast('Facture disponible après synchronisation de la vente', 'warning');
+          toast(L('afterSync', 'Facture disponible après synchronisation de la vente'), 'warning');
           return null;
         }
         throw new Error(err?.detail || err?.error || 'server-refusal');
@@ -799,7 +811,7 @@
       return finalDoc;
     } catch (e) {
       abandon();
-      toast('Connexion requise pour numéroter la facture', 'warning');
+      toast(L('needConnection', 'Connexion requise pour numéroter la facture'), 'warning');
       return null;
     }
   }

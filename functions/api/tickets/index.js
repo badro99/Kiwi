@@ -104,6 +104,43 @@ export async function onRequestGet({ env }) {
   }
 }
 
+/* Clé d'idempotence : en-tête Idempotency-Key ou champ de formulaire
+   idempotency_key. Absente, la création garde son comportement d'avant. */
+const CLIENT_KEY = /^[A-Za-z0-9_-]{8,80}$/;
+function readClientKey(request, form) {
+  const raw = request.headers.get('Idempotency-Key') || form.get('idempotency_key');
+  if (raw == null || raw === '') return { key: null };
+  const key = String(raw).trim();
+  return CLIENT_KEY.test(key) ? { key } : { error: true };
+}
+
+/* Le premier ticket créé sous cette clé. Avant la migration, la colonne n'existe
+   pas : on répond « aucun » et la création se fait comme avant. */
+async function ticketForKey(env, key) {
+  try {
+    return await env.DB.prepare(
+      `SELECT id, kind, area, subkind, money_at_risk FROM kiwi_tickets WHERE client_key = ?`
+    ).bind(key).first();
+  } catch (error) {
+    if (schemaError(error)) return null;
+    throw error;
+  }
+}
+
+function replayed(row) {
+  return json({
+    ok: true,
+    id: Number(row.id),
+    number: ticketNumber(row.id),
+    replayed: true,
+    classificationStored: true,
+    classification: {
+      kind: row.kind || 'unsorted', area: row.area || null, subkind: row.subkind || null,
+      money_at_risk: Number(row.money_at_risk || 0) === 1,
+    },
+  }, 200);
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const declared = Number(request.headers.get('Content-Length') || 0);
@@ -139,28 +176,56 @@ export async function onRequestPost({ request, env }) {
   });
   if (!classification.ok) return json({ error: classification.error, field: classification.field }, 400);
 
+  const idem = readClientKey(request, form);
+  if (idem.error) return json({ error: 'bad-idempotency-key' }, 400);
+  const clientKey = idem.key;
+  if (clientKey) {
+    const first = await ticketForKey(env, clientKey);
+    if (first) return replayed(first);
+  }
+
   const now = Date.now();
   let ticketId = null;
   const storedKeys = [];
   try {
     let inserted;
     let classificationStored = true;
-    try {
-      inserted = await env.DB.prepare(
-        `INSERT INTO kiwi_tickets
-         (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk)
-         VALUES (?, 'problem', ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        body, now, now, classification.value.kind, classification.value.area,
-        classification.value.subkind, classification.value.money_at_risk ? 1 : 0,
-      ).run();
-    } catch (error) {
-      if (!schemaError(error)) throw error;
-      classificationStored = false;
-      inserted = await env.DB.prepare(
-        `INSERT INTO kiwi_tickets (body, status, created_ts, updated_ts)
-         VALUES (?, 'problem', ?, ?)`
-      ).bind(body, now, now).run();
+    const values = [
+      body, now, now, classification.value.kind, classification.value.area,
+      classification.value.subkind, classification.value.money_at_risk ? 1 : 0,
+    ];
+    if (clientKey) {
+      try {
+        inserted = await env.DB.prepare(
+          `INSERT INTO kiwi_tickets
+           (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk, client_key)
+           VALUES (?, 'problem', ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(...values, clientKey).run();
+      } catch (error) {
+        /* Deux envois simultanés : le second perd l'index unique et rend le premier. */
+        if (/UNIQUE constraint failed.*client_key/i.test(String((error && error.message) || ''))) {
+          const first = await ticketForKey(env, clientKey);
+          if (first) return replayed(first);
+        }
+        /* Colonne pas encore migrée : on crée comme avant, sans la clé. */
+        if (!schemaError(error)) throw error;
+      }
+    }
+    if (!inserted) {
+      try {
+        inserted = await env.DB.prepare(
+          `INSERT INTO kiwi_tickets
+           (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk)
+           VALUES (?, 'problem', ?, ?, ?, ?, ?, ?)`
+        ).bind(...values).run();
+      } catch (error) {
+        if (!schemaError(error)) throw error;
+        classificationStored = false;
+        inserted = await env.DB.prepare(
+          `INSERT INTO kiwi_tickets (body, status, created_ts, updated_ts)
+           VALUES (?, 'problem', ?, ?)`
+        ).bind(body, now, now).run();
+      }
     }
     ticketId = Number(inserted.meta && inserted.meta.last_row_id);
     if (!Number.isInteger(ticketId) || ticketId < 1) throw new Error('Ticket number was not created');

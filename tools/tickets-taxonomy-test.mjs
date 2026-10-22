@@ -137,6 +137,8 @@ check('the board receives taxonomy from GET instead of embedding category ids', 
   && !html.includes('value="wrong-figures"') && !html.includes('value="caisse"'));
 check('the board exposes quick composer classification and cross-column filters', html.includes('id="ticketKind"')
   && html.includes('id="kindFilters"') && html.includes('id="areaFilters"') && html.includes('id="moneyFilters"'));
+check('the board sends one idempotency key per submission and drops it once published', client.includes("data.append('idempotency_key', state.publishAttempt.key)")
+  && client.includes('state.publishAttempt = null') && client.includes('fingerprint'));
 check('the MCP derives validation from the API taxonomy and exposes classification', mcp.includes('validateClassification(taxonomy')
   && mcp.includes("name: 'classify_ticket'") && mcp.includes("case 'classify_ticket'"));
 

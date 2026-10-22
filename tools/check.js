@@ -1628,6 +1628,7 @@ section('Whole-project regressions');
     'employee-properties-test.mjs',
     'orderpro-properties-test.mjs',
     'channel-properties-test.mjs',
+    'known-issues-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',

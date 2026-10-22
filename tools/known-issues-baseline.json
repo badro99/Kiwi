@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "issues": [
+    {
+      "suite": "auth-properties-test.mjs",
+      "label": "AUTH-K1"
+    },
+    {
+      "suite": "booking-properties-test.mjs",
+      "label": "BK-1"
+    },
+    {
+      "suite": "booking-properties-test.mjs",
+      "label": "BK-2"
+    },
+    {
+      "suite": "booking-properties-test.mjs",
+      "label": "BK-3"
+    },
+    {
+      "suite": "books-money-properties-test.mjs",
+      "label": "BP-1"
+    },
+    {
+      "suite": "books-money-properties-test.mjs",
+      "label": "BP-2"
+    },
+    {
+      "suite": "books-money-properties-test.mjs",
+      "label": "BP-3"
+    },
+    {
+      "suite": "briefing-properties-test.mjs",
+      "label": "policy: net-zero closed days currently send no morning notification"
+    },
+    {
+      "suite": "channel-properties-test.mjs",
+      "label": "channel total is authoritative, reconciliation with line sum needs a product rule"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-1"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-2"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-3"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-4"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-5"
+    },
+    {
+      "suite": "clients-properties-test.mjs",
+      "label": "CL-6"
+    },
+    {
+      "suite": "customer-balance-properties-test.mjs",
+      "label": "CB-1"
+    },
+    {
+      "suite": "customer-balance-properties-test.mjs",
+      "label": "CB-2"
+    },
+    {
+      "suite": "customer-balance-properties-test.mjs",
+      "label": "CB-5"
+    },
+    {
+      "suite": "customer-balance-properties-test.mjs",
+      "label": "CB-6"
+    },
+    {
+      "suite": "dashboard-money-properties-test.mjs",
+      "label": "DM-1"
+    },
+    {
+      "suite": "dashboard-money-properties-test.mjs",
+      "label": "DM-2"
+    },
+    {
+      "suite": "dashboard-money-properties-test.mjs",
+      "label": "DM-5"
+    },
+    {
+      "suite": "dashboard-money-properties-test.mjs",
+      "label": "DM-6"
+    },
+    {
+      "suite": "dashboard-money-properties-test.mjs",
+      "label": "DM-7"
+    },
+    {
+      "suite": "dayreport-properties-test.mjs",
+      "label": "byte cap: node budget alone cannot fit long product names into 1.5 MB"
+    },
+    {
+      "suite": "dayreport-properties-test.mjs",
+      "label": "policy: month totals include original sales without a closed Z"
+    },
+    {
+      "suite": "dayreport-properties-test.mjs",
+      "label": "retention policy: node trimming may discard previous month closed days; archival/overflow rule needed"
+    },
+    {
+      "suite": "economat-properties-test.mjs",
+      "label": "four-decimal blended rate can lose centimes on large transfers"
+    },
+    {
+      "suite": "employee-properties-test.mjs",
+      "label": "EP-1"
+    },
+    {
+      "suite": "hotel-properties-test.mjs",
+      "label": "status checkout has no server payment ledger or balance gate, policy needs owner decision"
+    },
+    {
+      "suite": "hotel-properties-test.mjs",
+      "label": "tax and payment reconciliation remain unconfigured preinvoice policy"
+    },
+    {
+      "suite": "invoice-vat-properties-test.mjs",
+      "label": "IV-3"
+    },
+    {
+      "suite": "invoice-vat-properties-test.mjs",
+      "label": "IV-4"
+    },
+    {
+      "suite": "live-link-queue-properties-test.mjs",
+      "label": "LQ-1"
+    },
+    {
+      "suite": "live-link-queue-properties-test.mjs",
+      "label": "LQ-2"
+    },
+    {
+      "suite": "menu-analysis-properties-test.mjs",
+      "label": "MA-1 deep acyclic recipes"
+    },
+    {
+      "suite": "menu-analysis-properties-test.mjs",
+      "label": "MA-2 manual cost behind an uncosted recipe"
+    },
+    {
+      "suite": "menu-properties-test.mjs",
+      "label": "price lists are not stored with the menu"
+    },
+    {
+      "suite": "menu-properties-test.mjs",
+      "label": "scheduled/channel price lists"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "account-wide suspension succeeds without any actor audit"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "legacy config PUT intentionally succeeds when module audit insert fails"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "operator credentials have no server TTL, only browser Max-Age; session migration policy needed"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "operator PIN creation has no audit trail (schema/policy decision)"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "operators can read staff codes in the console list (Afficher button; owner decision, codes stay operator-readable like the team doc)"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "PIN creation echoes the code to the operator who just typed it (same owner decision)"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "status retries append duplicate audit rows; transition policy is not specified"
+    },
+    {
+      "suite": "operator-properties-test.mjs",
+      "label": "support status change has no durable actor event"
+    },
+    {
+      "suite": "payroll-properties-test.mjs",
+      "label": "PM-1"
+    },
+    {
+      "suite": "payroll-properties-test.mjs",
+      "label": "PM-4"
+    },
+    {
+      "suite": "payroll-properties-test.mjs",
+      "label": "PM-5"
+    },
+    {
+      "suite": "payroll-properties-test.mjs",
+      "label": "PM-6"
+    },
+    {
+      "suite": "pressing-money-properties-test.mjs",
+      "label": "number allocation design: disconnected devices choose the same public ticket number"
+    },
+    {
+      "suite": "pressing-money-properties-test.mjs",
+      "label": "ready-date zone policy: slots use device civil time rather than the configured store zone"
+    },
+    {
+      "suite": "pressing-money-properties-test.mjs",
+      "label": "refund policy: cancellation preserves deposit but issues no refund or refund-due record"
+    },
+    {
+      "suite": "pressing-money-properties-test.mjs",
+      "label": "workflow policy: promised time automatically marks unprocessed garments ready"
+    },
+    {
+      "suite": "print-relay-properties-test.mjs",
+      "label": "PR-1"
+    },
+    {
+      "suite": "receivables-properties-test.mjs",
+      "label": "policy: cancelling a collected original leaves collections booked; choose linked reversal or refuse cancellation"
+    },
+    {
+      "suite": "receivables-properties-test.mjs",
+      "label": "policy: refunding original deposit leaves unpaid delivery collectible; define debt reduction on returns"
+    },
+    {
+      "suite": "server-money-properties-test.mjs",
+      "label": "SM-2"
+    },
+    {
+      "suite": "server-money-properties-test.mjs",
+      "label": "SM-3"
+    },
+    {
+      "suite": "serveur-money-properties-test.mjs",
+      "label": "WM-3"
+    },
+    {
+      "suite": "serveur-money-properties-test.mjs",
+      "label": "WM-4"
+    },
+    {
+      "suite": "serveur-money-properties-test.mjs",
+      "label": "WM-6"
+    },
+    {
+      "suite": "shopify-sync-properties-test.mjs",
+      "label": "SH-1"
+    },
+    {
+      "suite": "stock-money-properties-test.mjs",
+      "label": "ST-2"
+    },
+    {
+      "suite": "stock-money-properties-test.mjs",
+      "label": "ST-3"
+    },
+    {
+      "suite": "tickets-properties-test.mjs",
+      "label": "shared board has no merchant ownership or actor identity; isolation and human-only closure need a product decision"
+    },
+    {
+      "suite": "trades-money-properties-test.mjs",
+      "label": "TM-P1"
+    },
+    {
+      "suite": "trades-money-properties-test.mjs",
+      "label": "TM-P2"
+    }
+  ]
+}
