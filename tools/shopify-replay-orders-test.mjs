@@ -82,7 +82,7 @@ globalThis.fetch = async (url, init) => {
   const q = String((init && init.body) || '');
   if (q.includes('KiwiMissedOrders')) {
     orderCalls++;
-    return new Response(JSON.stringify({ data: { orders: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: orders } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ data: { orders: { pageInfo: { hasNextPage: false, endCursor: 'c:' + (orders.length - 1) }, nodes: orders, edges: orders.map((node, i) => ({ cursor: 'c:' + i, node })) } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   if (q.includes('myshopifyDomain')) return new Response(JSON.stringify({ data: { shop: { myshopifyDomain: 'maison-test.myshopify.com' } } }), { status: 200 });
   return new Response(JSON.stringify({ data: { webhookSubscriptionCreate: { userErrors: [] } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });

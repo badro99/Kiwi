@@ -26,7 +26,11 @@ const realFetch=globalThis.fetch;
 globalThis.fetch=async(url,opts)=>{
  assert.match(String(url),/^https:\/\/properties\.myshopify\.com\/admin\/api\//);
  const body=JSON.parse(opts.body);
- if(body.query.includes('KiwiMissedOrders'))return Response.json({data:{orders:{nodes:orders,pageInfo:{hasNextPage:false}}}});
+ // Pages réelles de Shopify : 50 commandes par page (curseur par commande), 100 lignes
+ // par commande, la suite d'une commande par KiwiOrderLines. `nodes` et `edges` sont
+ // servis tous les deux : Shopify rend ce que la requête demande.
+ if(body.query.includes('KiwiMissedOrders')){const v=body.variables||{},start=v.after?+String(v.after).slice(2)+1:0,slice=orders.slice(start,start+50).map(linePage);return Response.json({data:{orders:{nodes:slice,edges:slice.map((node,i)=>({cursor:'o:'+(start+i),node})),pageInfo:{hasNextPage:start+50<orders.length,endCursor:slice.length?'o:'+(start+slice.length-1):null}}}});}
+ if(body.query.includes('KiwiOrderLines')){const v=body.variables||{},o=orders.find(x=>x.id===v.id),all=o?o.lineItems.nodes:[],start=+String(v.after).slice(2)+1,nodes=all.slice(start,start+100);return Response.json({data:{order:o?{lineItems:{nodes,pageInfo:{hasNextPage:start+100<all.length,endCursor:'l:'+(start+nodes.length-1)}}}:null}});}
  assert.ok(body.query.includes('inventorySetQuantities'));
  calls.push(body.variables);
  if(gone&&body.variables.input.quantities[0].inventoryItemId===gid('InventoryItem',1))return Response.json({data:{inventorySetQuantities:{userErrors:[{code:'INVALID_INVENTORY_ITEM',message:'missing fixture item'}]}}});
@@ -46,6 +50,9 @@ function reset(stock=10){
 }
 const doc=(m=merchant)=>JSON.parse(f.sql.prepare('SELECT data FROM catalogs WHERE merchant=?').get(m).data);
 function order(q=1,cents=123){return{id:501,name:'#501',created_at:new Date(T).toISOString(),currency:'MAD',total_price:(cents/100).toFixed(2),line_items:[{id:901,variant_id:1,title:'Fixture',quantity:q,price:(cents/100).toFixed(2)}]};}
+function linePage(o){const all=o.lineItems.nodes;return{...o,lineItems:{nodes:all.slice(0,100),pageInfo:{hasNextPage:all.length>100,endCursor:'l:'+(Math.min(all.length,100)-1)}}};}
+function bulk(n,lines=1,first=0){return Array.from({length:n},(_,i)=>({id:gid('Order',10000+first+i),createdAt:new Date(T+first+i).toISOString(),lineItems:{nodes:Array.from({length:lines},(_,j)=>({id:gid('LineItem',(first+i)*1000+j),currentQuantity:1,variant:{id:gid('ProductVariant',1+(j+i)%2)}}))}}));}
+const onHand=()=>{const d=doc();return Object.fromEntries(d.variants.map(x=>[x.id,x.base+d.moves.filter(m=>m.vid===x.id&&m.at>x.baseAt).reduce((n,m)=>n+m.d,0)]));};
 function replayOrder(o){return{id:gid('Order',o.id),createdAt:o.created_at,lineItems:{nodes:o.line_items.map(l=>({id:gid('LineItem',l.id),currentQuantity:l.quantity,variant:l.variant_id?{id:gid('ProductVariant',l.variant_id)}:null}))}};}
 async function hook(o,signature='valid',shop='properties.myshopify.com',topic='orders/create'){
  const raw=JSON.stringify(o),headers={'X-Shopify-Topic':topic,'X-Shopify-Shop-Domain':shop,'Content-Type':'application/json'};
@@ -71,5 +78,13 @@ await strict('replay dry run respects counts current quantity cancellations and 
 // Une ligne arrivée sur un stock Kiwi déjà à zéro laisse un mouvement à zéro :
 // un rattrapage fait après un réassort ne consomme pas la nouvelle marchandise.
 await strict('SH-1 historical shortage stays settled after replenishment',fc.asyncProperty(qty,async(q)=>{reset(0);orders=[replayOrder(order(q))];const first=await replayShopifyOrders(f.env,merchant);assert.equal(first.applied,0);assert.equal(first.short,q);const d=doc();d.moves.push({id:'receipt',vid:'v',d:q,at:T+1000,why:'achat'});f.sql.prepare('UPDATE catalogs SET data=?,rev=rev+1 WHERE merchant=?').run(JSON.stringify(d),merchant);const again=await replayShopifyOrders(f.env,merchant);assert.equal(again.applied,0);assert.equal(again.already,1);const d2=doc();assert.equal(d2.variants[0].base+d2.moves.filter(m=>m.vid==="v"&&m.at>d2.variants[0].baseAt).reduce((n,m)=>n+m.d,0),q);const plan=planReplay(doc(),new Map([[gid('ProductVariant',1),'v']]),orders);assert.equal(plan.apply.length,0);}));
+// Rattrapage plus long que la borne d'un appel (1 000 commandes, 30 appels Shopify) :
+// le curseur gardé reprend APRÈS la dernière commande traitée, chaque ligne ne sort qu'une fois.
+await strict('catch-up past the per-call order bound resumes after the last processed order and moves each line once',fc.asyncProperty(fc.integer({min:1,max:120}),async(extra)=>{reset(5000);const n=1000+extra;orders=bulk(n);const a=await replayShopifyOrders(f.env,merchant);const b=await replayShopifyOrders(f.env,merchant);const h=onHand();assert.equal(h.v+h.w,10000-n);assert.equal(new Set(doc().moves.map(m=>m.id)).size,n);assert.equal(a.applied,1000);assert.equal(a.more,true);assert.equal(b.applied,extra);assert.equal(b.more,false);assert.equal(b.cursor,null);const c=await replayShopifyOrders(f.env,merchant),d=await replayShopifyOrders(f.env,merchant);assert.equal(c.applied+d.applied,0);assert.equal(c.already+d.already,n);assert.equal(doc().moves.length,n);const dry=await replayShopifyOrders(f.env,merchant,{dryRun:true});assert.equal(dry.already,1000);assert.equal(dry.more,true);assert.equal((await replayShopifyOrders(f.env,merchant,{dryRun:true})).already,1000);}));
+// Une commande de plus de 100 lignes : les lignes suivantes sont lues page après page.
+await strict('order with more than 100 lines pages every mapped line into catch-up stock once',fc.asyncProperty(fc.integer({min:101,max:330}),async(lines)=>{reset(1000);orders=bulk(1,lines);const r=await replayShopifyOrders(f.env,merchant);assert.equal(r.lines,lines);const h=onHand();assert.equal(h.v,1000-Math.ceil(lines/2));assert.equal(h.w,1000-Math.floor(lines/2));assert.equal((await replayShopifyOrders(f.env,merchant)).applied,0);assert.deepEqual(onHand(),h);}));
+// Beaucoup de grosses commandes : la borne d'appels coupe entre deux commandes, jamais dans une ;
+// les appels suivants finissent le travail et chaque ligne sort une fois.
+await strict('call budget stops between whole orders and later runs finish every line once',fc.asyncProperty(fc.integer({min:1,max:24}),fc.integer({min:101,max:330}),async(k,lines)=>{reset(10000);orders=bulk(k,lines);let runs=0,r;do{r=await replayShopifyOrders(f.env,merchant);runs++;}while(r.more&&runs<40);assert.equal(r.more,false);const h=onHand();assert.equal(h.v+h.w,20000-k*lines);assert.equal(doc().moves.length,k*lines);assert.equal(new Set(doc().moves.map(m=>m.ref)).size,k);}));
 }finally{globalThis.fetch=realFetch;f.close();}
 console.log(`Shopify properties: ${passed} strict, ${known} known, ${failed} failures; runs=${RUNS}; seed=${SEED}`);if(failed)process.exitCode=1;

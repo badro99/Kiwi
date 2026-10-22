@@ -514,15 +514,28 @@
           return t.replace('{o}', r.orders).replace('{p}', r.pieces).replace('{l}', r.lines)
             .replace('{c}', r.counted).replace('{u}', r.unmatched).replace('{s}', r.short || 0);
         };
-        return shopApi('replay-orders', { dryRun: true }).then(function (out) {
-          var r = out.result || {};
-          if (!r.lines) { window.alert(s.replayNone); return; }
-          if (!window.confirm(fill(s.replayAsk, r))) return;
-          return shopApi('replay-orders').then(function (done) {
-            window.alert(fill(s.replayDone, done.result || r));
-            return reload();
+        /* Un passage lit au plus 1 000 commandes et garde sa position côté serveur
+           (`more`) : un lot sans rien à retirer est passé pour aller au suivant,
+           un lot appliqué enchaîne sur l'aperçu du suivant. Borné, au cas où. */
+        var rounds = 0, applied = false;
+        var step = function () {
+          return shopApi('replay-orders', { dryRun: true }).then(function (out) {
+            var r = out.result || {};
+            if (!r.lines) {
+              if (r.more && ++rounds < 40) return shopApi('replay-orders').then(step);
+              if (applied) return reload();
+              window.alert(s.replayNone); return;
+            }
+            if (!window.confirm(fill(s.replayAsk, r))) return applied ? reload() : undefined;
+            return shopApi('replay-orders').then(function (done) {
+              applied = true;
+              window.alert(fill(s.replayDone, done.result || r));
+              if (done.result && done.result.more && ++rounds < 40) return step();
+              return reload();
+            });
           });
-        });
+        };
+        return step();
       }, true));
       root.appendChild(actions);
     }
