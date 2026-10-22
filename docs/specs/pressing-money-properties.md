@@ -31,6 +31,12 @@ The tests do not assert card-terminal or physical cash outcomes.
 Restoring each runtime file from HEAD made its selected strict property red;
 restoring the corrections made the full suite green. No commits were made.
 
+- Merge delivered updatedAt=1 with stale received updatedAt=2: received won, so
+  a device that missed a pickup could undo it by editing the ticket later and
+  the till asked for the balance again. A handover is now final in the merge,
+  like a cancellation tombstone: the collected copy wins whole with its payment,
+  and a garment handed over in either copy stays handed over (Claude, 22 October).
+
 ## Known guarantees that do not hold
 
 These remain executable knownIssue checks, not launch clearance:
@@ -42,10 +48,6 @@ These remain executable knownIssue checks, not launch clearance:
 - A received garment with readyAt=1 becomes ready at epoch 2 without an
   atelier action. Existing auto-ready tests require this behavior. Changing
   that operational promise requires a product decision.
-- Merge delivered updatedAt=1 with stale received updatedAt=2: received wins.
-  Whole-row last-writer-wins cannot enforce per-garment transitions. Resolving
-  concurrent edits needs a defined per-garment merge/transition protocol,
-  including the accepted early handover path and collection payments.
 - Two disconnected devices starting at seq=1 both allocate 0001. The retained
   local-number guarantee holds; global uniqueness needs an allocation policy
   for offline devices and the finite four-digit namespace.

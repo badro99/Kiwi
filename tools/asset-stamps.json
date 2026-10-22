@@ -1144,8 +1144,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "144",
-    "sha": "2341661a5a0d1dbe"
+    "v": "145",
+    "sha": "78dd489cc9401943"
   },
   "assets/pos-epicerie.css": {
     "v": "19",
@@ -1284,12 +1284,12 @@
     "sha": "17341b476ffb0fb3"
   },
   "assets/pressing-caisse.css": {
-    "v": "48",
+    "v": "49",
     "sha": "8ce1d04a07359a11"
   },
   "assets/pressing-caisse.js": {
-    "v": "48",
-    "sha": "61779afcc9e691ba"
+    "v": "49",
+    "sha": "b93a572d3fd0c2a3"
   },
   "assets/pressing-catalog.css": {
     "v": "4",

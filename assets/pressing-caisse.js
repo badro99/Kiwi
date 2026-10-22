@@ -775,7 +775,30 @@
     };
     const cancellations = mergeRows(mine && mine.cancellations, theirs && theirs.cancellations);
     const rackConflicts = [];
-    const orders = mergeRows(mine && mine.orders, theirs && theirs.orders).map((o) => {
+    /* A handover is final, like a cancellation: a copy that missed it must not
+       undo it by being edited later, or the till asks for the balance again.
+       The collected copy wins whole (its payment with it); otherwise a garment
+       handed over in either copy stays handed over. */
+    const collected = (o) => !!o.collectedAt || (Array.isArray(o.pieces) && o.pieces.length > 0 && o.pieces.every((p) => p && p.status === 'livre'));
+    const mergeOrders = (a, b) => {
+      const byId = Object.create(null);
+      (b || []).concat(a || []).forEach((row) => {
+        if (!row || !row.id) return;
+        const old = byId[row.id];
+        if (!old) { byId[row.id] = row; return; }
+        const newer = (+row.updatedAt || 0) >= (+old.updatedAt || 0);
+        let win = newer ? row : old; const lose = newer ? old : row;
+        const at = Math.max(+row.updatedAt || 0, +old.updatedAt || 0);
+        if (collected(lose) && !collected(win) && !win.cancelledAt) win = { ...lose, updatedAt: at };
+        else if (Array.isArray(win.pieces) && Array.isArray(lose.pieces) && win.pieces.length === lose.pieces.length
+          && lose.pieces.some((p, i) => p && p.status === 'livre' && win.pieces[i] && win.pieces[i].status !== 'livre')) {
+          win = { ...win, pieces: win.pieces.map((p, i) => (lose.pieces[i] && lose.pieces[i].status === 'livre' && p ? { ...p, status: 'livre' } : p)) };
+        }
+        byId[row.id] = win;
+      });
+      return Object.values(byId);
+    };
+    const orders = mergeOrders(mine && mine.orders, theirs && theirs.orders).map((o) => {
       const tombstone = cancellations.find((c) => c.id === o.id);
       return tombstone ? { ...o, cancelledAt: tombstone.cancelledAt, cancelledBy: tombstone.cancelledBy || null, rack: null, updatedAt: Math.max(+o.updatedAt || 0, Date.parse(tombstone.cancelledAt || '') || 0) } : o;
     });
