@@ -1621,6 +1621,7 @@ section('Whole-project regressions');
     'serveur-money-properties-test.mjs',
     'pressing-money-properties-test.mjs',
     'operator-properties-test.mjs',
+    'tickets-properties-test.mjs',
     'auth-properties-test.mjs',
     'employee-properties-test.mjs',
     'orderpro-properties-test.mjs',
