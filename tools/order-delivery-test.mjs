@@ -327,11 +327,19 @@ async function main() {
   const closeVisit = raw(
     "SELECT id, seen_ts FROM table_sessions WHERE merchant=? AND table_no='7' AND mode='table' AND status='open' ORDER BY opened_ts DESC LIMIT 1",
     MERCHANT)[0];
-  const closing = await post({ merchant: MERCHANT, closeTable: '7',
+  const unconfirmed = await post({ merchant: MERCHANT, closeTable: '7',
     expectedSession: closeVisit && closeVisit.id,
     expectedRevision: closeVisit && closeVisit.seen_ts,
     closedBy: 'service' }, cookie);
-  check('la table se libère', closing.status === 200 && closing.body.ok);
+  check('sans confirmation, une table qui doit encore de l\'argent reste ouverte et le reste est chiffré',
+    unconfirmed.status === 409 && unconfirmed.body.error === 'visit-unpaid' && unconfirmed.body.owedCents > 0
+      && raw("SELECT status FROM table_sessions WHERE id = ?", closeVisit.id)[0].status === 'open',
+    JSON.stringify(unconfirmed.body));
+  const closing = await post({ merchant: MERCHANT, closeTable: '7',
+    expectedSession: closeVisit && closeVisit.id,
+    expectedRevision: closeVisit && closeVisit.seen_ts,
+    closedBy: 'service', force: true }, cookie);
+  check('la table se libère (abandon confirmé)', closing.status === 200 && closing.body.ok);
   check('…et la réponse annonce ce qui restait impayé',
     Number(closing.body.unpaid) >= 1, JSON.stringify(closing.body));
   check('fermer n\'invente pas une recette (rien n\'est soldé)',

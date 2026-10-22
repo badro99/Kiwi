@@ -1206,9 +1206,18 @@
       }
       return tableOrders[id];
     }
+    /* Ce que le serveur sait déjà encaissé sur la visite ouverte de la table
+       sans avoir soldé de commande (parts d'une addition partagée, acomptes
+       d'une table fusionnée ici). L'addition proposée en est diminuée : une
+       table fusionnée après un paiement partiel proposait de nouveau le total
+       réuni, et l'acompte était encaissé deux fois. */
+    const serviceVisitCredit = new Map();   // tableId → centimes
     function getTableTotal(id) {
       const o = tableOrders[id] || buildInitialOrder(id, tables[id]);
-      return o.reduce((s, l) => s + l.price * l.qty, 0);
+      const bill = o.reduce((s, l) => s + l.price * l.qty, 0);
+      const credit = Math.max(0, Number(serviceVisitCredit.get(id)) || 0);
+      if (!credit) return bill;
+      return Math.max(0, Math.round(bill * 100) - credit) / 100;
     }
 
     /* ---------- State ---------- */
@@ -1856,6 +1865,7 @@
       ((data.service && data.service.pausedTables) || []).forEach((id) => servicePausedTables.add(serviceTableId(id) || String(id)));
       serviceTableSessions.clear();
       serviceTableSessionRevisions.clear();
+      serviceVisitCredit.clear();
       /* « En cours · N mn » vient de l'heure d'ouverture que le serveur a
          écrite (`opened_ts`), pas d'un compteur local. Le compteur repartait
          de zéro à chaque rechargement, et une table ouverte depuis une heure
@@ -1871,6 +1881,8 @@
         if (id && session.id) {
           serviceTableSessions.set(id, String(session.id));
           serviceTableSessionRevisions.set(id, Number(session.seen_ts) || 0);
+          if (Number(session.creditCents) > 0) serviceVisitCredit.set(id, Math.round(Number(session.creditCents)));
+          else serviceVisitCredit.delete(id);
           if (tables[id] && Number(session.opened_ts) > 0) {
             tables[id].openedTs = Number(session.opened_ts);
             tables[id].elapsed = Math.max(0, Math.floor((Date.now() - tables[id].openedTs) / 60000));
@@ -4123,6 +4135,10 @@
         tableSplits.set(to, tableSplits.get(from));
         tableSplits.delete(from);
       }
+      // L'acompte suit la visite déplacée, comme son partage.
+      if (serviceVisitCredit.has(from)) serviceVisitCredit.set(to, serviceVisitCredit.get(from));
+      else serviceVisitCredit.delete(to);
+      serviceVisitCredit.delete(from);
       if (serviceTableSessions.has(from)) {
         const movedRevision = serviceTableSessionRevisions.get(to) || serviceTableSessionRevisions.get(from) || 0;
         serviceTableSessions.set(to, serviceTableSessions.get(from));
@@ -4220,6 +4236,7 @@
       const targetT = tables[target];
       if (!sourceT || !targetT) return;
 
+      let merged = null;
       if (!SV_DEMO) {
         try {
           const res = await fetch('/api/order/queue', {
@@ -4235,6 +4252,7 @@
           });
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+          merged = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`, 4800);
@@ -4252,6 +4270,26 @@
         dirtyOrders.delete(source);
         dirtyOrders.add(target);
       }
+
+      /* Ce qui a déjà été payé sur l'une ou l'autre table suit la visite
+         fusionnée : on facture le reste que le serveur vient de calculer, et
+         les partages en cours, bâtis sur l'ancienne addition de chaque table,
+         n'ont plus de sens. Un partage repris rejouerait des parts déjà
+         payées ; un nouveau partage se fait sur le reste. */
+      if (merged && Number.isFinite(Number(merged.creditCents))) {
+        if (Number(merged.creditCents) > 0) serviceVisitCredit.set(target, Math.round(Number(merged.creditCents)));
+        else serviceVisitCredit.delete(target);
+      }
+      serviceVisitCredit.delete(source);
+      [source, target].forEach((id) => {
+        tableSplits.delete(id);
+        const session = serviceTableSessions.get(id);
+        if (!session || SV_DEMO) return;
+        try {
+          const refs = empPayRefsRead(), key = 'split:' + empPayRefKey('visit') + ':' + session;
+          if (refs[key]) { delete refs[key]; localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(refs)); }
+        } catch (_) {}
+      });
 
       // Clear Source Table
       sourceT.status = 'khawya';
@@ -6207,7 +6245,8 @@
       // Aggregate per unique item name (so the pool shows one row per
       // dish with its remaining count, not one card per unit)
       const itemTotals = splitItemTotals(order);
-      const total = order.reduce((s, l) => s + l.price * l.qty, 0);
+      // Le reste dû : un acompte déjà encaissé sur la visite n'est pas repartagé.
+      const total = getTableTotal(tableId);
       Object.assign(splitState, {
         tableId, total, itemTotals,
         splitMode: 'egal',
@@ -6485,6 +6524,13 @@
           </div>` : '');
     }
     function launchSplitFlow() {
+      /* Le partage par article attribue des plats entiers : avec un acompte
+         déjà encaissé sur la visite, il ferait payer ces plats une seconde
+         fois. Le reste se partage à parts égales. */
+      if (splitState.splitMode !== 'egal' && Number(serviceVisitCredit.get(splitState.tableId)) > 0) {
+        toast('Un acompte est déjà réglé sur cette table · partagez le reste à parts égales');
+        return;
+      }
       if (splitState.splitMode !== 'egal') {
         const allocation = splitArticleAllocation();
         if (!allocation.ok) { toast(allocation.message); return; }

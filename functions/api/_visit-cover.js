@@ -38,3 +38,35 @@ export async function settleCoveredOrders(env, merchant, sessionId, now) {
     return null; // An unreadable check keeps the settlement as it was.
   }
 }
+
+/* What has been paid on each open visit and not yet matched to a settled
+ * order: the parts of a shared bill already taken, the deposits that followed
+ * a merge onto this visit. The waiter's phone bills the orders still open, so
+ * without this figure a merged table offered its whole combined bill again
+ * after one of the two tables had been partly paid. Returns a Map
+ * session id → cents (only visits with a credit); an unreadable ledger
+ * returns null, so a caller never mistakes "unknown" for "nothing paid". */
+export async function visitCredits(env, merchant, sessionIds) {
+  const ids = Array.from(new Set((sessionIds || []).map(String).filter(Boolean))).slice(0, 200);
+  const credits = new Map();
+  if (!ids.length) return credits;
+  try {
+    const marks = ids.map(() => '?').join(',');
+    const paid = await env.DB.prepare(
+      `SELECT session_id AS id, COALESCE(SUM(COALESCE(gross_amount_cents, amount_cents)), 0) AS cents FROM sales
+        WHERE merchant = ? AND void_ts IS NULL AND session_id IN (${marks}) GROUP BY session_id`
+    ).bind(merchant, ...ids).all();
+    const settled = await env.DB.prepare(
+      `SELECT session_id AS id, COALESCE(SUM(CAST(ROUND(total * 100) AS INTEGER)), 0) AS cents FROM orders
+        WHERE merchant = ? AND paid_ts IS NOT NULL AND status <> 'rejected' AND session_id IN (${marks}) GROUP BY session_id`
+    ).bind(merchant, ...ids).all();
+    const used = new Map(((settled && settled.results) || []).map(r => [String(r.id), Number(r.cents) || 0]));
+    for (const row of (paid && paid.results) || []) {
+      const left = (Number(row.cents) || 0) - (used.get(String(row.id)) || 0);
+      if (left > 0) credits.set(String(row.id), left);
+    }
+    return credits;
+  } catch (_) {
+    return null;
+  }
+}

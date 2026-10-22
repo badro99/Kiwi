@@ -32,6 +32,7 @@ function harness(overrides = {}) {
     $: id => { if (!elements.has(id)) elements.set(id, { hidden: false, disabled: false, textContent: '', title: '' }); return elements.get(id); },
     renderSplitFlow: () => calls.render++, lucide: { createIcons() {} },
     renderConvivesChips() {}, renderConvivesTabs() {}, renderPool() {}, renderConviveCart() {},
+    serviceVisitCredit: new Map(),
   });
   for (const name of ['remainingQty', 'assignUnit', 'unassignUnit', 'splitArticleAllocation', 'renderArticleMode', 'shareMoney', 'shareWeighted', 'launchSplitFlow']) vm.runInContext(fn(name), context);
   return { context, state, calls, elements };
@@ -90,5 +91,14 @@ check('Employee split also blocks unassigned dishes and preserves whole-item pay
   h.context.assignUnit('Pasta'); h.context.renderArticleMode(); assert.equal(h.elements.get('#split-launch').disabled, false);
   h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amount), [75,15]);
   assert.ok(h.state.flow.parts.flatMap(p => p.lines).every(l => Number.isInteger(l.qty) && !l.name.includes('1/')));
+});
+check('Employee whole-item split is refused once a deposit is already paid on the visit (no dish paid twice)', () => {
+  const employee = serveurTestSource(fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8'));
+  const h = harness({ perConvive: { 1: { Pasta: 1, Water: 1 }, 2: { Water: 1 } } });
+  for (const name of ['splitArticleAllocation', 'renderArticleMode', 'launchSplitFlow']) vm.runInContext(fn(name, employee), h.context);
+  h.context.serviceVisitCredit.set('T7', 2000);
+  h.context.launchSplitFlow(); assert.equal(h.state.flow, null); assert.match(h.calls.toast.at(-1), /parts égales/);
+  h.context.serviceVisitCredit.delete('T7');
+  h.context.launchSplitFlow(); assert.deepEqual(Array.from(h.state.flow.parts, p => p.amount), [75,15]);
 });
 console.log(`Whole-item split: ${checks} production-function checks passed.`);

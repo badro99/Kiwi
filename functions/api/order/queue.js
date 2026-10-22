@@ -46,7 +46,7 @@ import { json, entitledMerchant, activeServiceEmployee, isTillFor, readTillActor
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, CURSOR_LAG_MS, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 import { merchantZone } from '../_business-day.js';
-import { settleCoveredOrders } from '../_visit-cover.js';
+import { settleCoveredOrders, visitCredits } from '../_visit-cover.js';
 
 function deferCourse(context, promise) {
   const safe = Promise.resolve(promise).catch(() => false);
@@ -600,6 +600,15 @@ export async function onRequestGet(context) {
    * Never graft the old paid order onto this visit: split parts that remain
    * paid would become payable twice. */
   const reopenedBills = service ? await reopenedFloorBills(env, merchant, sessions, now) : [];
+
+  /* Ce qui a déjà été encaissé sur une visite ouverte sans solder de commande
+   * (parts d'une addition partagée, acomptes d'une table fusionnée ici). Le
+   * téléphone le retranche de l'addition : sans ce chiffre, une table
+   * fusionnée après un paiement partiel proposait de nouveau le total. */
+  if (service) {
+    const credits = await visitCredits(env, merchant, sessions.map((s) => s.id));
+    if (credits) sessions.forEach((s) => { if (credits.has(String(s.id))) s.creditCents = credits.get(String(s.id)); });
+  }
 
   /* ── CE QUE LE TTL A TUÉ, LA CAISSE DOIT LE VOIR ──────────────────────────
    * Le rejet automatique (trente minutes sans validation, plus haut) est
@@ -1414,6 +1423,10 @@ export async function onRequestPost(context) {
         mergePaidLeft = Number((paid && paid.n) || 0);
       } catch (_) { mergePaidLeft = 0; }
 
+      /* Les acomptes des deux tables suivent la visite fusionnée : l'appareil
+       * qui fusionne doit facturer le reste, pas le total réuni. */
+      const credits = await visitCredits(env, merchant, [targetSessionId]);
+
       return json({
         ok: true,
         mergeId,
@@ -1422,6 +1435,7 @@ export async function onRequestPost(context) {
         targetSessionId,
         ordersMerged: movedOrders,
         paidLeftBehind: mergePaidLeft,
+        creditCents: credits ? (credits.get(String(targetSessionId)) || 0) : undefined,
         now,
       });
     } catch (e) {
@@ -2002,6 +2016,44 @@ export async function onRequestPost(context) {
           ).bind(merchant, expectedSession).first();
       unpaid = Number((pending && pending.n) || 0);
     } catch (_) { unpaid = 0; }   // colonnes absentes ⇒ on ne prétend pas savoir
+    /* ── LIBÉRER UNE TABLE QUI DOIT ENCORE DE L'ARGENT SE CONFIRME ──────────
+     * `closeTable` ne solde rien (voir l'asymétrie plus bas) : une visite
+     * fermée avec un reste dû laisse une dette que plus aucun plan de salle ne
+     * montre. Un geste accidentel suffisait, et la réponse `unpaid` n'arrivait
+     * qu'après coup. Le serveur exige donc `force: true`, que seul un appelant
+     * ayant fait confirmer l'abandon envoie ; sans lui, rien n'est fermé et la
+     * réponse chiffre le reste pour que l'écran pose la question.
+     *
+     * « Doit » se juge à l'argent, pas au seul drapeau `paid_ts` : un
+     * encaissement déjà enregistré sur la visite (vente complète dont la
+     * clôture est restée en attente, acomptes d'une addition partagée) compte.
+     * Une lecture impossible ne vaut pas preuve de solde : sans `force`, on
+     * refuse aussi. */
+    if (closeTable && b.force !== true) {
+      try {
+        const bill = await env.DB.prepare(
+          `SELECT COALESCE(SUM(CASE WHEN paid_ts IS NULL THEN 1 ELSE 0 END), 0) AS open_n,
+                  COALESCE(SUM(CAST(ROUND(total * 100) AS INTEGER)), 0) AS bill
+             FROM orders WHERE merchant = ? AND session_id = ? AND status <> 'rejected'`
+        ).bind(merchant, expectedSession).first();
+        const openOrders = Number((bill && bill.open_n) || 0);
+        if (openOrders > 0) {
+          let paid = 0;
+          try {
+            const money = await env.DB.prepare(
+              `SELECT COALESCE(SUM(COALESCE(gross_amount_cents, amount_cents)), 0) AS paid FROM sales
+                WHERE merchant = ? AND session_id = ? AND void_ts IS NULL`
+            ).bind(merchant, expectedSession).first();
+            paid = Number((money && money.paid) || 0);
+          } catch (_) { paid = 0; }   // pas de lien vente → visite : rien n'est prouvé payé
+          const owedCents = (Number((bill && bill.bill) || 0)) - paid;
+          if (owedCents > 1) return json({ error: 'visit-unpaid', confirm: 'force', unpaid: openOrders,
+            owedCents, sessionId: expectedSession }, 409);
+        }
+      } catch (_) {
+        return json({ error: 'visit-unpaid-unverified', confirm: 'force' }, 409);
+      }
+    }
     try {
       const res = closeSession
         ? await env.DB.prepare(

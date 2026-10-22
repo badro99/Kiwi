@@ -362,9 +362,16 @@ ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
 const closeVisit = db.prepare(
   "SELECT id, seen_ts FROM table_sessions WHERE merchant=? AND table_no='1' AND mode='table' AND status='open' ORDER BY opened_ts DESC LIMIT 1"
 ).get(merchant);
+// La visite a encore des commandes impayées : la libérer exige la confirmation explicite.
 result = await qpost(saraCookie, {
   merchant, closeTable: '1', expectedSession: closeVisit && closeVisit.id,
   expectedRevision: closeVisit && closeVisit.seen_ts, closedBy: 'service',
+});
+ok(result.response.status === 409 && result.body.error === 'visit-unpaid',
+  'libérer une table qui doit encore de l\'argent sans confirmation est refusé');
+result = await qpost(saraCookie, {
+  merchant, closeTable: '1', expectedSession: closeVisit && closeVisit.id,
+  expectedRevision: closeVisit && closeVisit.seen_ts, closedBy: 'service', force: true,
 });
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
   'fermer côté serveur coupe aussi la session OrderPro qui rouvrait la table');

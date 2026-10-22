@@ -1044,7 +1044,11 @@ async function get(fn, qs, headers = {}) {
     JSON.stringify(again.body));
   ok('…et la cuisine n\'a qu\'un ticket',
     DB._db.prepare("SELECT COUNT(*) n FROM orders WHERE merchant=? AND table_no='T10'").get(SALLE).n === 1);
-  await post(queuePost, { merchant: SALLE, closeTable: 'T10', expectedSession: svFirst.body.session, closedBy: 'service' }, asSalle);
+  // Aucun paiement n'est enregistré ici : libérer la table impayée exige la confirmation explicite.
+  const unconfirmed = await post(queuePost, { merchant: SALLE, closeTable: 'T10', expectedSession: svFirst.body.session, closedBy: 'service' }, asSalle);
+  ok('libérer une table qui doit encore de l\'argent sans confirmation est refusé',
+    unconfirmed.status === 409 && unconfirmed.body.error === 'visit-unpaid', JSON.stringify(unconfirmed.body));
+  await post(queuePost, { merchant: SALLE, closeTable: 'T10', expectedSession: svFirst.body.session, closedBy: 'service', force: true }, asSalle);
   const lateReplay = await post(queuePost, {
     merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
     lines: [{ id: 'i1', qty: 1 }],
