@@ -736,8 +736,11 @@ export async function onRequestPost(context) {
     const employeeMergeTarget = b && b.mergeTables ? normTable(b.mergeTables.targetTable || b.mergeTables.target) : '';
     const validMerge = employeeMergeSource && employeeMergeTarget && scope && scope.allTables.has(employeeMergeSource) && scope.allTables.has(employeeMergeTarget);
 
+    /* La table qui décide est celle de la commande stockée dès qu'un orderId
+     * est donné : celle que le corps déclare ne servait qu'à défaut, et un
+     * serveur pouvait nommer sa table à côté de la commande d'une autre. */
     let employeeVoidTable = b && b.voidLine ? normTable(b.voidLine.tableNo || b.voidLine.table) : '';
-    if (b && b.voidLine && b.voidLine.orderId && !employeeVoidTable && env.DB) {
+    if (b && b.voidLine && b.voidLine.orderId && env.DB) {
       try {
         const ord = await env.DB.prepare('SELECT table_no FROM orders WHERE id = ? AND merchant = ?').bind(b.voidLine.orderId, merchant).first();
         if (ord && ord.table_no) employeeVoidTable = normTable(ord.table_no);
@@ -746,7 +749,7 @@ export async function onRequestPost(context) {
     const validVoid = b && b.voidLine && employeeVoidTable && scope && scope.allTables.has(employeeVoidTable);
 
     let employeeEditTable = b && b.editLine ? normTable(b.editLine.tableNo || b.editLine.table) : '';
-    if (b && b.editLine && b.editLine.orderId && !employeeEditTable && env.DB) {
+    if (b && b.editLine && b.editLine.orderId && env.DB) {
       try {
         const ord = await env.DB.prepare('SELECT table_no FROM orders WHERE id = ? AND merchant = ?').bind(b.editLine.orderId, merchant).first();
         if (ord && ord.table_no) employeeEditTable = normTable(ord.table_no);
@@ -758,7 +761,7 @@ export async function onRequestPost(context) {
     const validCancelTable = employeeCancelTable && scope && scope.allTables.has(employeeCancelTable);
 
     let employeeAckTable = b && b.ackVoid ? normTable(b.ackVoid.tableNo || b.ackVoid.table) : '';
-    if (b && b.ackVoid && b.ackVoid.orderId && !employeeAckTable && env.DB) {
+    if (b && b.ackVoid && b.ackVoid.orderId && env.DB) {
       try {
         const ord = await env.DB.prepare('SELECT table_no FROM orders WHERE id = ? AND merchant = ?').bind(b.ackVoid.orderId, merchant).first();
         if (ord && ord.table_no) employeeAckTable = normTable(ord.table_no);
@@ -803,6 +806,14 @@ export async function onRequestPost(context) {
      * employé n'a donc rien à y faire. */
     if (b && b.closeSession) {
       return json({ error: 'settlement-is-till-only' }, 403);
+    }
+    /* Le bon de caisse (`create` objet) porte des prix tapés au comptoir : il
+     * appartient à la caisse appairée, comme le règlement. Il passait derrière
+     * n'importe quel geste de salle valide (une acceptation de commande, par
+     * exemple), parce que la répartition plus bas le traite avant d'avancer
+     * l'état. La salle crée ses bons par `create: true`, au prix du menu. */
+    if (b && b.create && typeof b.create === 'object') {
+      return json({ error: 'till-ticket-is-till-only' }, 403);
     }
 
     if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit && !validCancelTable && !validStatus) {

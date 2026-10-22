@@ -798,6 +798,45 @@ exec('DROP TRIGGER fail_void_audit');
 check('Audit failure rolls back the bill instead of silently removing food', auditFailure.status === 503
   && db._db.prepare("SELECT total FROM orders WHERE id='ord-formula-immediate'").get().total === 50);
 
+/* 22 octobre : la garde employé lisait la table que le corps DÉCLARE, pas
+ * celle de la commande. Un serveur nommait l'une de ses tables à côté du
+ * numéro d'une commande d'une autre table, et modifiait ou acquittait ses
+ * lignes. Et un bon de caisse (create objet, prix tapés) passait derrière une
+ * acceptation légitime. La table qui compte est celle de la commande stockée,
+ * et le bon de caisse reste à la caisse. */
+exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+      VALUES ('ses-x9', ?, '9', 'table', 'open', ?, ?)`, MERCHANT, now - 5000, now - 5000);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+      VALUES ('ord-other-table9', ?, 409, 'table', '9', 80, ?, 'accepted', 'ses-x9', ?, ?)`,
+  MERCHANT, JSON.stringify([{ id: 'item-tagine', name: 'Tajine', qty: 2, unitPrice: 40, stationAccepted: true,
+    voidAlert: { reason: 'client_change', qty: 1, ts: now } }]), now - 4000, now - 4000);
+const before9 = db._db.prepare("SELECT total, lines FROM orders WHERE id='ord-other-table9'").get();
+const foreignEdit = await postQueue({ merchant: MERCHANT, editLine: { orderId: 'ord-other-table9', table: '1',
+  lineId: 'item-tagine', qty: 1, reason: 'edit_reduction' } }, employeeCookie);
+check('A server cannot edit another table\'s order by naming one of their own tables', foreignEdit.status === 403,
+  JSON.stringify(foreignEdit));
+const foreignAck = await postQueue({ merchant: MERCHANT, ackVoid: { orderId: 'ord-other-table9', table: '2',
+  action: 'accept', isWaste: 1 } }, employeeCookie);
+check('A server cannot acknowledge a void on another table\'s order by naming one of their own tables',
+  foreignAck.status === 403, JSON.stringify(foreignAck));
+const foreignVoid = await postQueue({ merchant: MERCHANT, voidLine: { orderId: 'ord-other-table9', table: '1',
+  itemId: 'item-tagine', qty: 1, reason: 'client_change', isWaste: 0 } }, employeeCookie);
+check('A server cannot cancel a line of another table\'s order by naming one of their own tables',
+  foreignVoid.status === 403 || foreignVoid.data.error === 'wrong-table', JSON.stringify(foreignVoid));
+const after9 = db._db.prepare("SELECT total, lines FROM orders WHERE id='ord-other-table9'").get();
+check('The other table\'s order is untouched', after9.total === before9.total && after9.lines === before9.lines);
+
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+      VALUES ('ord-pending-table1', ?, 410, 'table', '1', 30, ?, 'pending', 'ses-v1', ?, ?)`,
+  MERCHANT, JSON.stringify([{ id: 'item-the', name: 'Thé', qty: 1, unitPrice: 30 }]), now - 3000, now - 3000);
+const smuggled = await postQueue({ merchant: MERCHANT, status: 'accepted', id: 'ord-pending-table1',
+  create: { id: 'ord-smuggled-ticket', mode: 'table', table: '2', lines: [{ id: 'item-x', name: 'Plat', qty: 5, unitPrice: 0.01 }] } },
+  employeeCookie);
+check('A server cannot slip a till ticket with typed prices behind an order acceptance', smuggled.status === 403
+  && !db._db.prepare("SELECT 1 FROM orders WHERE id='ord-smuggled-ticket'").get(), JSON.stringify(smuggled));
+const accepted = await postQueue({ merchant: MERCHANT, status: 'accepted', id: 'ord-pending-table1' }, employeeCookie);
+check('The same server still accepts an order of their own table', accepted.status === 200, JSON.stringify(accepted));
+
 const cashierSource = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
 const relaySource = fs.readFileSync(path.join(ROOT, 'assets', 'kitchen-relay.js'), 'utf8');
 check('Cashier and server cancellation calls are bounded instead of freezing indefinitely',
