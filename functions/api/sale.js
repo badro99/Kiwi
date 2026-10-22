@@ -759,7 +759,9 @@ export async function onRequestPost({ request, env }) {
   // part de partage reprise) ne figure pas telle quelle au manifeste de la
   // caisse : elle ne porte jamais l'auteur qui certifie, le Z la laisse informative.
   const signed = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
-  const author = signed && signed.startsWith('till:') && id !== suppliedId ? signed + '#rekeyed' : signed;
+  // Seul un id de visite que le serveur a réellement remplacé perd l'auteur qui certifie ;
+  // une vente envoyée sans id reste à l'appareil qui l'a écrite (sinon une caisse se soustrairait au Z).
+  const author = signed && signed.startsWith('till:') && isLegacyVisitId && id !== requestedId ? signed + '#rekeyed' : signed;
   if (hasDiscount) {
     try {
       await env.DB.prepare(

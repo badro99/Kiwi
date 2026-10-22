@@ -118,6 +118,12 @@ await strict('SM-3 · two legacy visit-keyed payments from one device till are r
  /* Le manifeste avec les ids accusés par le serveur (alias gardés) : rapproché, rien d'oublié. */
  sql.exec('DELETE FROM z_reconciliations');const r=await z(acked);ok(r);assert.equal(r.body.status,'matched');assert.deepEqual(r.body.unreported,[]);
 }));
+/* Une vente envoyée sans id reçoit un id du serveur mais reste à l'appareil qui l'a écrite : omettre l'id ne soustrait pas une vente au Z. */
+await strict('SM-3 · a device till sale sent without an id keeps its certifying author and a Z that leaves it out is a mismatch',fc.asyncProperty(positive,async(cents)=>{
+ await f.reset();const day='2026-02-14';sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',f.merchant);const ts=businessBoundary(day,5,'UTC')+3600000,A=f.devices.a;
+ const sent=body('',cents,{ts});delete sent.id;sent.ref='Comptoir';const r=await f.call('sale',sent,'deviceA');ok(r);assert.equal(f.row(r.body.id).written_by,'till:'+A);
+ sql.exec('DELETE FROM z_reconciliations');const z=await f.call('z',{day,cutoff:5,terminalId:A,sales:[],count:0,totalCents:0},'deviceA');ok(z);assert.deepEqual(z.body.unreported,[r.body.id]);assert.equal(z.body.status,'mismatch');
+}));
 /* La production n'a pas encore migrations/0010 : sans la colonne, la vente s'écrit quand même et le Z garde son comportement d'avant (informatif). */
 const g=await fixture(ROOT);try{g.sql.exec('ALTER TABLE sales DROP COLUMN written_by');
 await strict('SM-3 · without the written_by column (prod before migration 0010) sales still write and the Z stays informational',fc.asyncProperty(positive,positive,async(kept,dropped)=>{
