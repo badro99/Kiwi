@@ -23,12 +23,17 @@
       return data;
     });
   }
+  function newOpId() {
+    try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (_) {}
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
   window.KiwiEmployeeLive = {
     login: function (email, pin) {
       return call('POST', { action: 'login', email: email, pin: pin }).then(function () { return call('GET'); }).then(remember);
     },
     refresh: function () { return call('GET').then(remember); },
-    clockIn: function (attendanceCode) { return call('POST', { action: 'clock-in', attendanceCode: attendanceCode || '' }).then(remember); },
+    // Un geste, une identité : une arrivée rejouée en retard ne rouvre pas de service.
+    clockIn: function (attendanceCode, opId) { return call('POST', { action: 'clock-in', attendanceCode: attendanceCode || '', opId: opId || newOpId() }).then(remember); },
     clockOut: function (progress, attendanceCode) { return call('POST', { action: 'clock-out', progress: progress || null, attendanceCode: attendanceCode || '' }).then(remember); },
     requestPlanning: function (request) { return call('POST', Object.assign({ action: 'planning-request' }, request || {})); },
     cancelPlanningRequest: function (requestId) { return call('POST', { action: 'planning-request-cancel', requestId: requestId }); },

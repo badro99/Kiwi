@@ -2,7 +2,9 @@
 // One person cannot be paid twice for the same minute: a punch that was
 // imported or synced twice (same id) counts once, and two overlapping punches
 // of the same person count their union. Each stretch keeps the day of the
-// punch it started in, as before, and every day is rounded once to 0.01 h.
+// punch it started in, as before. Each day keeps its exact worked seconds
+// (hours = seconds / 3600): rounding to 0.01 h here paid 1 min 12 s for a
+// one-minute punch. Rounding belongs to display and to the final pay figure.
 //
 // items: [{ key, id, start, end, closed, breaks: [[from, to], ...] }]
 // dayOf(epoch) -> 'YYYY-MM-DD'
@@ -50,7 +52,7 @@ export function hoursByDay(items, dayOf) {
     });
     flush();
     const row = out[key] = {};
-    Object.keys(ms).forEach((day) => { row[day] = Math.round(ms[day] / 36000) / 100; });
+    Object.keys(ms).forEach((day) => { row[day] = Math.round(ms[day] / 1000) / 3600; });
   });
   return out;
 }

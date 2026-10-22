@@ -259,6 +259,42 @@
     return null;
   }
 
+  /* Un taux moyen arrondi à quatre décimales ne porte pas la valeur exacte
+   * d'une grosse sortie : 1 unité à 0,01 + 150 à 0,02 = 3,01 MAD, mais
+   * 0,0199 × 151 = 3,00. Quand la sortie traverse des lots de taux différents,
+   * on la découpe en tranches au taux gelé de chaque lot (lots consécutifs de
+   * même taux regroupés) : la somme des tranches vaut exactement le coût sorti.
+   * null quand une part n'a pas de coût connu ou qu'une seule tranche suffit :
+   * l'appelant garde alors le mouvement unique d'avant. */
+  function allocatePieces(itemId, qty, defaultUnitCost, opts) {
+    var milli = Math.round(Math.max(0, +qty || 0) * 1000);
+    if (!(milli > 0)) return null;
+    var lots = opts && opts.lots || deriveLots(itemId, opts || {});
+    var fallback = defaultUnitCost != null && Number.isFinite(+defaultUnitCost) && +defaultUnitCost > 0 ? +defaultUnitCost : null;
+    var pieces = [];
+    function push(takeMilli, cost) {
+      var last = pieces[pieces.length - 1];
+      if (last && last.unitCost === cost) last.milli += takeMilli;
+      else pieces.push({ milli: takeMilli, unitCost: cost });
+    }
+    var remaining = milli;
+    for (var i = 0; i < lots.length && remaining > 0; i++) {
+      var available = Math.round(Math.max(0, lots[i].remainingQty) * 1000);
+      if (!(available > 0)) continue;
+      var take = Math.min(available, remaining);
+      var cost = lots[i].unitCost != null ? lots[i].unitCost : fallback;
+      if (cost == null) return null;
+      push(take, cost);
+      remaining -= take;
+    }
+    if (remaining > 0) {
+      if (fallback == null) return null;
+      push(remaining, fallback);
+    }
+    if (pieces.length < 2) return null;
+    return pieces.map(function (p) { return { qty: p.milli / 1000, unitCost: p.unitCost }; });
+  }
+
   function movementId(ref, lineIndex, itemId, part) {
     var merchant = window.KiwiInventory?.merchant?.() || '';
     return 'inv-sale-' + hash([merchant, ref, lineIndex, itemId, part || 0].join('|'));
@@ -344,33 +380,49 @@
           ? { lots: lots.map(function (l) { return Object.assign({}, l); }) }
           : { locationId: locationId });
         // Arrondir la consommation positive avant le signe : -0,5 ne doit pas devenir zéro.
-        var raw = {
-          id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
-          variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -Math.round(x.qty * 1000 + 1e-9) / 1000,
-          reason: 'sale', refType: 'sale', refId: ref,
-          unitCost: realizedCost,
-          occurredTs: n(sale.ts || sale.time) || Date.now(),
-          note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
-          meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: part, lineQty: n(line.qty || line.quantity || 1) },
-        };
+        var movedQty = Math.round(x.qty * 1000 + 1e-9) / 1000;
+        var pieces = allocatePieces(x.itemId, movedQty, baseCost, batched
+          ? { lots: lots.map(function (l) { return Object.assign({}, l); }) }
+          : { locationId: locationId }) || [{ qty: movedQty, unitCost: realizedCost }];
+        // La première tranche garde l'identifiant historique de la ligne.
+        var raws = pieces.map(function (piece, k) {
+          var tag = k ? part + ':' + k : part;
+          return {
+            id: movementId(ref, idx, x.itemId, tag), itemId: x.itemId,
+            variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -piece.qty,
+            reason: 'sale', refType: 'sale', refId: ref,
+            unitCost: piece.unitCost,
+            occurredTs: n(sale.ts || sale.time) || Date.now(),
+            note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
+            meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: tag, lineQty: n(line.qty || line.quantity || 1) },
+          };
+        });
+        // Une vente rejouée trouve sa première tranche déjà écrite : rien d'autre ne sort.
+        var replayed = batched
+          ? batch.has(raws[0].id)
+          : raws.length > 1 && typeof I.history === 'function' && I.history(x.itemId).some(function (r) { return r.id === raws[0].id; });
+        if (replayed) raws = raws.slice(0, 1);
         if (batched) {
-          var duplicate = batch.has(raw.id);
-          var appended = batch(raw);
-          var roundedQty = appended ? appended.qty : 0;
-          if (roundedQty && !duplicate && appended.itemId === x.itemId) {
+          var appendedRows = [];
+          raws.forEach(function (raw) {
+            var appended = batch(raw);
+            if (appended && appended.qty) { written++; if (!replayed && appended.itemId === x.itemId) appendedRows.push(appended); }
+          });
+          if (appendedRows.length) {
+            var occurredTs = appendedRows[0].occurredTs;
+            var roundedQty = appendedRows.reduce(function (sum, r) { return Math.round((sum - r.qty) * 1000) / 1000; }, 0);
             // Backdated sales must be inserted into history before replaying:
             // later receipts/restitutions can change the next allocation.
-            if ((latest.get(x.itemId) || 0) > appended.occurredTs) {
-              rows.push(appended); byItem.set(x.itemId, rows);
+            if ((latest.get(x.itemId) || 0) > occurredTs) {
+              appendedRows.forEach(function (r) { rows.push(r); }); byItem.set(x.itemId, rows);
               states.set(x.itemId, deriveLots(x.itemId, { rows: rows }));
             } else {
-              allocateCost(x.itemId, Math.abs(roundedQty), baseCost, { lots: lots });
-              rows.push(appended); byItem.set(x.itemId, rows);
+              allocateCost(x.itemId, roundedQty, baseCost, { lots: lots });
+              appendedRows.forEach(function (r) { rows.push(r); }); byItem.set(x.itemId, rows);
             }
-            latest.set(x.itemId, Math.max(latest.get(x.itemId) || 0, appended.occurredTs));
+            latest.set(x.itemId, Math.max(latest.get(x.itemId) || 0, occurredTs));
           }
-          if (roundedQty) written++;
-        } else if (I.add(raw)) written++;
+        } else raws.forEach(function (raw) { if (I.add(raw)) written++; });
       });
     });
     return { written: written, skipped: skipped };

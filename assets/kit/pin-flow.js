@@ -229,6 +229,10 @@
    *   onSuccess(who, verdict) · onAction(id) · log(entry)
    *   fetch, now, setTimeout, clearTimeout (tests)
    */
+  function opIdentity() {
+    try { if (root.crypto && typeof root.crypto.randomUUID === 'function') return root.crypto.randomUUID(); } catch (_) {}
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
   function attach(pad, opts) {
     opts = opts || {};
     var use = opts.use, spec = USES[use];
@@ -250,7 +254,7 @@
       if (use === 'dashboard') return { pin: code };
       if (use === 'pair' || use === 'store') return { code: code };
       if (use === 'team') return { action: 'login', email: opts.email || '', pin: code };
-      if (use === 'clock') return { action: opts.clockAction || 'clock-in', attendanceCode: code };
+      if (use === 'clock') return { action: opts.clockAction || 'clock-in', attendanceCode: code, opId: state.opId };
       var b = { merchant: opts.merchant || '', pin: code };
       if (opts.act && opts.act.server) b.action = opts.act.server;
       return b;
@@ -366,6 +370,9 @@
         return request(false);
       }
       state.code = code; state.typedAt = now(); state.lastCause = '';
+      /* One typed code is one punch: its retries, automatic or not, carry the
+         same identity, so a late duplicate cannot open a second shift. */
+      state.opId = opIdentity();
       return request(false);
     };
     function onAction(ev) {

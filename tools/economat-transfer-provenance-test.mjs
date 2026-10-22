@@ -101,7 +101,7 @@ await check('partial return and spoilage conserve destination quantity and value
 await check('both transfer directions persist the immutable allocation breakdown', () => {
   const route = fs.readFileSync(path.join(root, 'functions/api/inventory/internal-requests.js'), 'utf8');
   assert.match(route, /SELECT id, qty_milli/);
-  assert.match(route, /allocationBreakdown: transfer\.allocation\.allocations/);
+  assert.match(route, /allocationBreakdown: slice\.allocations/);
   assert.match(route, /expiresAt: transfer\.allocation\.expiresAt/);
 });
 

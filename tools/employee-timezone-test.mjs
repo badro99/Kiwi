@@ -24,7 +24,7 @@ for (const file of ['functions/api/employee.js', 'functions/api/team/live.js']) 
 const employee = src('functions/api/employee.js');
 check(/planningState\(teamRow\.data, me\.id, me\.role \|\| me\.department, zone\)/.test(employee), 'planning filters on store date');
 check(/pointedHours\(attendanceRow\.data, me\.id, auth\.pin\.id, zone\)/.test(employee), 'employee hours keyed to store date');
-check(/dateKey\(changedEntry\.inTs, zone\)/.test(employee), 'clock-out hours persisted on store date');
+check(/pointedHours\(\{ entries: \[changedEntry\] \}, memberId, auth\.pin\.id, zone\)/.test(employee), 'clock-out hours persisted on store date');
 check(/store: \{[^\n]*timezone: zone/.test(employee), 'employee client receives store zone');
 const live = src('functions/api/team/live.js');
 check(/pointedHours\(attendance\.data, Date\.now\(\), zone[,)]/.test(live), 'manager hours keyed to store date');

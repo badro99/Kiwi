@@ -23,8 +23,10 @@ function hash(value) {
   return (h >>> 0).toString(36);
 }
 
-function transferMovementId(merchant, refId, lineNo, itemId, direction) {
-  return `inv-transfer-${hash([merchant, refId, lineNo, itemId, direction].join('|'))}`;
+function transferMovementId(merchant, refId, lineNo, itemId, direction, piece = 0) {
+  // La première tranche garde l'identifiant historique ; les suivantes sont suffixées.
+  const leg = piece ? `${direction}:${piece}` : direction;
+  return `inv-transfer-${hash([merchant, refId, lineNo, itemId, leg].join('|'))}`;
 }
 
 function parseMeta(raw) {
@@ -88,9 +90,25 @@ export function allocateTransferAllocation(rowsValue, requestedMilli) {
   }
   if (remaining > 0) return null;
   const expiries = allocations.map((entry) => entry.expiresAt).filter(Number.isFinite);
+  /* Un seul taux moyen arrondi à quatre décimales ne peut pas porter la valeur
+   * exacte d'un gros transfert : 1 bouteille à 0,01 + 150 à 0,02 = 3,01 MAD,
+   * mais 0,0199 × 151 = 3,00. On écrit donc une tranche par taux de lot
+   * source (lots consécutifs de même taux regroupés) : chaque tranche garde le
+   * taux gelé du lot, et la somme des tranches vaut exactement ce qui sort. */
+  const pieces = [];
+  for (const entry of allocations) {
+    const last = pieces[pieces.length - 1];
+    if (last && last.unitCost === entry.unitCost) {
+      last.qtyMilli += entry.qtyMilli;
+      last.allocations.push(entry);
+    } else {
+      pieces.push({ qtyMilli: entry.qtyMilli, unitCost: entry.unitCost, allocations: [entry] });
+    }
+  }
   return {
     unitCost: Math.round((value / requested) * 10000) / 10000,
     allocations,
+    pieces,
     expiresAt: expiries.length ? Math.min(...expiries) : null,
   };
 }
@@ -453,7 +471,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
       )
     )
   )`).join('\n');
-  const movementCount = transfers.length * 2;
+  const movementCount = transfers.reduce((sum, transfer) => sum + transfer.allocation.pieces.length * 2, 0);
   let cursor;
   try { cursor = await reserveCursors(env, merchant, movementCount, now); }
   catch (_) { return json({ error: 'cursor-failed' }, 503); }
@@ -461,16 +479,16 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
   const movementStatements = [];
   const hasCostRate = await inventoryHasColumn(env, 'unit_cost_rate');
   for (const transfer of transfers) {
-    for (const direction of ['out', 'in']) {
+    for (const [piece, slice] of transfer.allocation.pieces.entries()) for (const direction of ['out', 'in']) {
       const isOut = direction === 'out';
       const movement = {
-        id: transferMovementId(merchant, transferRef, transfer.index, transfer.itemId, direction),
+        id: transferMovementId(merchant, transferRef, transfer.index, transfer.itemId, direction, piece),
         itemId: transfer.itemId,
         variantId: '',
         locationId: isOut ? sourceLocation : destinationLocation,
-        qty: (isOut ? -1 : 1) * transfer.deltaMilli / 1000,
+        qty: (isOut ? -1 : 1) * slice.qtyMilli / 1000,
         reason: isOut ? 'transfer-out' : 'transfer-in',
-        unitCost: transfer.unitCost,
+        unitCost: slice.unitCost,
         currency: 'MAD', refType: 'transfer', refId: transferRef,
         note: transfer.line.note || '', actor: context.actor.name,
         occurredTs: now, cursor: cursor++, reversalOf: '',
@@ -478,7 +496,7 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
           requestId: id,
           line: transfer.index,
           reviewRevision: current.request.reviewRevision,
-          allocationBreakdown: transfer.allocation.allocations,
+          allocationBreakdown: slice.allocations,
           ...(isOut || transfer.allocation.expiresAt == null
             ? {}
             : { expiresAt: transfer.allocation.expiresAt }),

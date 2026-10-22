@@ -64,6 +64,17 @@ await strict('competing requests cannot overbook; cancellation releases holds on
   assert.equal(h.one('SELECT COALESCE(SUM(qty_milli),0) n FROM inventory_request_reservations').n,held*1000);assert.equal(h.balance('whisky','u-economat'),12);
  }
 })));
-// Product decision: exact extended centimes need a stored amount or residual policy.
-await knownIssue('four-decimal blended rate can lose centimes on large transfers',fc.property(fc.integer({min:1,max:200}),n=>{const a=allocateTransferAllocation([{id:'a',qty_milli:1000,unit_cost_cents:1},{id:'b',qty_milli:n*1000,unit_cost_cents:2}],(n+1)*1000);return Math.round(a.unitCost*(n+1)*100)===1+2*n;}),[[101]]);
+// Une tranche par taux de lot source : la valeur qui arrive au bar est, au centime près, celle qui sort de l'économat.
+await strict('a large transfer moves the exact source value, one slice per source rate',fc.asyncProperty(fc.integer({min:1,max:200}),async n=>using(async h=>{
+ h.raw.exec('ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate INTEGER');
+ h.addMovement({id:'drain',itemId:'cola',qty:-24});h.addMovement({id:'cheap',itemId:'cola',qty:1,unitCost:.01,reason:'receipt'});h.addMovement({id:'dear',itemId:'cola',qty:n,unitCost:.02,reason:'receipt'});
+ const ready=await h.ready('exact','cola',n+1);
+ const b={action:'confirm',id:'exact',revision:ready.request.revision,idempotencyKey:'confirm:exact',data:{lines:[{itemId:'cola',qtyReceived:n+1}]}};
+ assert.equal((await post(h,b)).status,200);assert.equal((await post(h,b)).status,200);
+ const value=reason=>h.rows("SELECT qty_milli,unit_cost_rate FROM inventory_movements WHERE ref_type='transfer' AND reason=?",reason).reduce((s,r)=>s+r.qty_milli*r.unit_cost_rate,0);
+ assert.equal(value('transfer-in'),(1+2*n)*100*1000);assert.equal(value('transfer-out'),-(1+2*n)*100*1000);
+ assert.equal(h.balance('cola','u-bar-rooftop'),n+1);assert.equal(h.balance('cola','u-economat'),0);
+ const a=allocateTransferAllocation(h.rows("SELECT * FROM inventory_movements WHERE item_id='cola' AND location_id='u-bar-rooftop'"),(n+1)*1000);
+ assert.equal(a.pieces.reduce((s,p)=>s+p.qtyMilli*Math.round(p.unitCost*10000),0),(1+2*n)*100*1000);
+})),[[150],[101]]);
 console.log(`economat properties: ${passed} strict, ${known} known, ${failed} failures; runs=${RUNS}; seed=${SEED}`);if(failed)process.exitCode=1;

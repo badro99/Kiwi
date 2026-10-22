@@ -503,14 +503,23 @@ export async function onRequestPost({ request, env }) {
   const member = memberFor(teamRow.data, auth.pin);
   const memberId = String((member && member.id) || auth.pin.id);
   const now = Date.now();
+  /* Identité du geste : l'application en tire une par pointage d'arrivée et la
+   * garde pour ses nouvelles tentatives. Une arrivée rejouée en retard, après
+   * le départ, retrouve le service qu'elle a déjà ouvert au lieu d'en ouvrir
+   * un second. Sans identité (ancien client), la règle d'avant s'applique. */
+  const opId = String(body.opId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
   let changedEntry = null;
   const attendance = await mutateDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }, (doc) => {
     // Un essai CAS perdu ne doit pas créditer les heures du gagnant une seconde fois.
     changedEntry = null;
     const entries = Array.isArray(doc.entries) ? doc.entries.slice() : [];
     const open = entries.slice().reverse().find((e) => e && e.staffId === auth.pin.id && !e.outTs);
-    if (action === 'clock-in') {
-      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs: now, outTs: 0, clockInCodeTs: Number(codeData.createdTs) || now };
+    const replayed = action === 'clock-in' && opId
+      ? entries.find((e) => e && e.staffId === auth.pin.id && e.clockInOpId === opId) : null;
+    if (replayed) {
+      changedEntry = { ...replayed };
+    } else if (action === 'clock-in') {
+      changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs: now, outTs: 0, clockInCodeTs: Number(codeData.createdTs) || now, ...(opId ? { clockInOpId: opId } : {}) };
       if (!open) entries.push(changedEntry);
     } else if (action === 'clock-out' && open) {
       if (open.pauseTs) {
@@ -526,19 +535,18 @@ export async function onRequestPost({ request, env }) {
   });
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
   if (action === 'clock-out' && changedEntry && changedEntry.outTs > changedEntry.inTs) {
-    const pauseMs = (Array.isArray(changedEntry.breaks) ? changedEntry.breaks : []).reduce((sum, pause) => {
-      const start = Number(pause && pause.inTs) || 0;
-      const end = Number(pause && pause.outTs) || 0;
-      return sum + (start && end > start ? end - start : 0);
-    }, 0);
-    const hours = Math.round((Math.max(0, changedEntry.outTs - changedEntry.inTs - pauseMs) / 3600000) * 100) / 100;
-    const day = dateKey(changedEntry.inTs, zone);
+    /* Le service se crédite par le calcul même de la paie (_worked-hours.js),
+     * à la seconde : arrondir chaque pointage au centième d'heure avant de les
+     * additionner faisait dériver les heures, donc le salaire. */
+    const credited = pointedHours({ entries: [changedEntry] }, memberId, auth.pin.id, zone);
     await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
       doc.members = Array.isArray(doc.members) ? doc.members : [];
       doc.hours = doc.hours && typeof doc.hours === 'object' ? doc.hours : {};
       doc.shifts = doc.shifts && typeof doc.shifts === 'object' ? doc.shifts : {};
       if (!doc.hours[memberId]) doc.hours[memberId] = {};
-      doc.hours[memberId][day] = Math.round(((Number(doc.hours[memberId][day]) || 0) + hours) * 100) / 100;
+      Object.keys(credited).forEach((day) => {
+        doc.hours[memberId][day] = (Number(doc.hours[memberId][day]) || 0) + credited[day];
+      });
       return doc;
     });
     const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
