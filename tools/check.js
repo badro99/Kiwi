@@ -2038,6 +2038,7 @@ section('Whole-project regressions');
     'trade-workspaces-test.js',
     'vertical-state-test.mjs',
     'credit-book-test.mjs',
+    'credit-book-dashboard-browser-test.mjs',
     'receivables-test.mjs',
     'vexel-insights-card-dna-test.mjs',
   ];
