@@ -246,7 +246,7 @@ blocking classic preludes, between `caisse-accounting.js` and `caisse-app.js`:
 | File | Functions | From (lines of caisse-app.js before this slice) |
 | --- | --- | --- |
 | `assets/caisse-floor.js` | 80 | floor plan rendering and mirror, floor/mode switching, toast, bill panel (345–1834); new table, waitlist, transfer and merge, table orders (5200–6205) |
-| `assets/caisse-kitchen.js` | 108 | sending the room to the kitchen (6206–6738), kitchen-display PIN mode (7522–7625), KDS (10249–11074), one ticket per station, takeaway board and the phone-order bridge (11810–13785) |
+| `assets/caisse-kitchen.js` | 108 | sending the room to the kitchen (6206–6738), kitchen-display lock screen (7522–7625), KDS (10249–11074), one ticket per station, takeaway board and the phone-order bridge (11810–13785) |
 
 `tools/fixtures/caisse-app/split-2.json` records the 30 runs of moved
 declarations and, for each, a text anchor in `caisse-app.js` it used to

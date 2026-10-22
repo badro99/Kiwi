@@ -134,7 +134,7 @@ function fragments(lits) {
     t.split(' · ').forEach((piece) => {
       const f = piece.replace(/&nbsp;/g, ' ').replace(PUNCT, '').trim();
       if (f.length < 2) return;
-      if (f === 'use strict' || f === 'Content-Type' || ['MAD', 'POST', 'NFD', 'SEC', 'LAV', 'REP', 'DET', 'RET', 'FP', 'PRO', 'RY'].includes(f) || /^[Mm][\d-].*[qQzZ]/.test(f) || /^\.[a-z-]/.test(f)) return;
+      if (f === 'use strict' || f === 'Content-Type' || ['MAD', 'POST', 'NFD', 'SEC', 'LAV', 'REP', 'DET', 'RET', 'FP', 'PRO', 'RY'].includes(f) || /^[Mm][\d-].*[qQzZ]/.test(f) || /^\.[a-z-]/.test(f) || /^[A-Z][a-z]+\/[A-Za-z_]+$/.test(f)) return; // … et les fuseaux IANA (Africa/Casablanca)
       if (!/[a-zà-ÿœ]/i.test(f)) return;                         // TEST CAISSE, POST, #TEST
       if (!/\s/.test(f) && !/^[A-ZÀ-ÝŒ]/.test(f)) return;       // identifiants : none, block, kpr-status
       if (/^(kpr-|data-|aria-)|[{}#;]|https?:|^\/|\.js\b|\.json\b/.test(f) || (f.includes('=') && !f.includes(' = '))) return;
