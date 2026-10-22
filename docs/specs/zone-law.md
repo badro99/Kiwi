@@ -79,6 +79,7 @@ All listed consumers now use the twin, including cached formatters.
 | `functions/api/month-report.js:23` | B,H,D | clockLabels and business-day report bounds |
 | `functions/api/order/_guest.js:311` | B | store-zone civil date |
 | `functions/api/order/_lib.js:283` | B,H | civil parts, zoned boundaries, opening hours, day/week numbering |
+| `functions/api/order/_lib.js:21` | B,H | publishes the law as `globalThis.KiwiZoneLaw` for `assets/menu-promos.js`, so `priceOrder` opens a happy hour on the legal clock, like the till |
 | `functions/api/order/index.js:175` | H,D | iftar wall clock |
 | `functions/api/sales-summary.js:40` | B,H | business-day windows and cached hourClocks |
 | `order-tv.html:180` | D | inline clock |

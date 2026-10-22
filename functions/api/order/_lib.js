@@ -1,4 +1,4 @@
-import { DateTimeFormat } from '../_zone-law.js';
+import { DateTimeFormat, ZONE_LAWS, effectiveZone } from '../_zone-law.js';
 // functions/api/order/_lib.js — ce que les trois moitiés du relais partagent.
 //
 // Le relais OrderPro a trois portes : /api/order (le téléphone dépose),
@@ -16,6 +16,14 @@ import { DateTimeFormat } from '../_zone-law.js';
 import '../../../assets/menu-promos.js';
 import { merchantZone, businessDate, businessBoundary, addBusinessDays, DEFAULT_ZONE } from '../_business-day.js';
 const MenuPromos = () => globalThis.KiwiMenuPromos;
+/* menu-promos.js reads its Casablanca wall clock through globalThis.KiwiZoneLaw,
+ * which the kit publishes in the browser before the till loads the rule. The
+ * Worker has no kit, so the rule fell back to the runtime's own time zone data:
+ * a runtime older than the 20 September 2026 reform still puts Morocco at +01,
+ * and the server opened a 17:00 happy hour at 16:00 while the till waited for
+ * 17:00. Same law on both sides (docs/specs/zone-law.md); the rule reads it on
+ * its first price, after this module has run. */
+if (!globalThis.KiwiZoneLaw) globalThis.KiwiZoneLaw = { ZONE_LAWS, effectiveZone, DateTimeFormat };
 
 /* ── Le jour d'ouverture ───────────────────────────────────────────────────
  * Les limites de file repartent à 1 chaque jour, à minuit à l'heure civile du

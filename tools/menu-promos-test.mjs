@@ -8,14 +8,20 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/* Every runtime that ships the rule hands it the zone law first (the kit in
+   the browser, order/_lib.js on the server). Without it the answer would depend
+   on this node's own time zone data. */
+const law = await import(pathToFileURL(path.join(root, 'functions/api/_zone-law.js')).href);
+globalThis.KiwiZoneLaw = { ZONE_LAWS: law.ZONE_LAWS, effectiveZone: law.effectiveZone, DateTimeFormat: law.DateTimeFormat };
 await import(pathToFileURL(path.join(root, 'assets/menu-promos.js')).href);
 const P = globalThis.KiwiMenuPromos;
 
 let passed = 0, failed = 0;
 const ok = (label, fn) => { try { fn(); passed++; console.log('  ✓ ' + label); } catch (e) { failed++; console.log('  ✗ ' + label + '\n      ' + String(e.message).split('\n')[0]); } };
 
-/* Casablanca is UTC+1 outside Ramadan; every instant below is in October. */
-const at = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h - 1, mi);
+/* Casablanca has been on UTC+0 all year since 20 September 2026; every
+   instant below is in October 2026. */
+const at = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h, mi);
 const FRI_18 = at(2026, 10, 16, 18, 0);      /* Friday 16 October, 18:00 */
 
 const MENU = {

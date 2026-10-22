@@ -12,8 +12,8 @@ import { sanitizeMenu } from '../functions/api/menu.js';
 let passed = 0, failed = 0;
 const ok = async (label, fn) => { try { await fn(); passed++; console.log('  ✓ ' + label); } catch (e) { failed++; console.log('  ✗ ' + label + '\n      ' + String(e.message).split('\n')[0]); } };
 
-/* Casablanca is UTC+1 in October. */
-const at = (d, h, mi = 0) => Date.UTC(2026, 9, d, h - 1, mi);
+/* Casablanca has been on UTC+0 all year since 20 September 2026. */
+const at = (d, h, mi = 0) => Date.UTC(2026, 9, d, h, mi);
 const THU_18 = at(15, 18), THU_20 = at(15, 20);
 
 const RAW = {
@@ -90,6 +90,12 @@ await ok('no promotions: every line priced exactly as before, at any hour', asyn
   assert.deepEqual(a.lines.map((l) => l.unitPrice), [30, 45, 180]);
   assert.deepEqual(a.lines, b.lines);
   assert.ok(a.lines.every((l) => !('promo' in l)));
+});
+await ok('the server reads the legal clock: 16:30 is before a 17:00 happy hour, 18:59 is inside, whatever the runtime\'s time zone data', async () => {
+  for (const [now, inside] of [[at(15, 16, 30), false], [at(15, 16, 59), false], [at(15, 18, 59), true], [at(15, 19, 0), false]]) {
+    const r = await priceOrder(env, 'm', [{ id: 'the', qty: 1 }], { now });
+    assert.equal('promo' in r.lines[0], inside, new Date(now).toISOString());
+  }
 });
 await ok('a promotion naming a deleted category drops out on read', async () => {
   const stale = envFor({ ...published, promos: [{ ...published.promos[0], cats: ['gone'] }] });
