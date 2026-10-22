@@ -1,7 +1,5 @@
 {
-  "landing": {
-    "color-contrast": 16
-  },
+  "landing": {},
   "dashboard": {},
   "onboarding": {},
   "caisse": {}

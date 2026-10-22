@@ -156,3 +156,13 @@ html.kdf-lock, html.kdf-lock body { overflow: hidden; }
   .kdf-back, .kdf, .kdf-primary, .kdf-secondary, .kdf-seg button, .kdf-chip { transition: none; }
   .kdf { transform: none; }
 }
+
+/* Contraste du ticket Kiwi et du sélecteur de métiers (axe-core, WCAG 2 AA :
+   4,5 pour 1). Le Tailwind compilé de la page (_next/static/chunks) les peint
+   en blanc à 40 % ou 45 % sur noir : 3,65 à 4,42 pour 1, et 3,99 pour 1 sur le
+   vert presque noir du ticket. Même blanc, un peu plus opaque ; la page ne
+   change pas autrement. Cette feuille est chargée par chaque page d'accueil
+   après le Tailwind, à spécificité égale elle l'emporte. */
+.text-white\/40 { color: rgb(255 255 255 / .5); }
+.text-white\/45 { color: rgb(255 255 255 / .52); }
+.border-white\/\[0\.08\] > span[aria-hidden="true"] { color: rgb(255 255 255 / .58); }
