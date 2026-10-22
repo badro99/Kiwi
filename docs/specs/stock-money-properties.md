@@ -69,12 +69,15 @@ client and D1. Should movements additionally freeze total cost in centimes?
 The Stock costing/expiry screens can expose this at large quantities. No schema
 or costing-policy migration is made here.
 
-ST-3: a receipt at 0.01, recipe now priced 0.02, one sold portion with no frozen
-line cost: inventory consumption costs 0.01 but dashboard coverage costs 0.02.
-Dashboard explicitly supports current-recipe fallback and gross costed revenue;
-it is not a realized movement COGS/net-sales report. Should that report instead
-join frozen ingredient movements and refunds? This pass does not silently change
-that policy or claim exact agreement between those different measures.
+ST-3 (fixed 22/10): a receipt at 0.01, recipe now priced 0.02, one sold portion
+with no frozen line cost: inventory consumption costs 0.01 and the dashboard
+coverage used to cost 0.02 (current recipe price applied to the past). `KiwiCost.ledger`
+now reads the cost the consumption ledger recorded for that ticket line (sale
+movements of the ticket, line rank in `meta.line`) before any current price; a
+missing or unknown cost, a reversed movement or a quantity that no longer matches
+makes the line unusable, and it falls back to today's recipe, still counted in
+`todayCostQty`. A strict property pins it. Gross costed revenue and refunds keep
+their dashboard policy.
 
 Recipe modifiers consume their own explicitly identified recipe lines; arbitrary
 modifier text is not interpreted as extra ingredient stock. Hotel internal-request

@@ -16,6 +16,13 @@ export const SOURCES = Object.freeze({
   purchaseOrders: { table: 'purchase_orders', time: 'created_ts', history: true, columns: 'id merchant seq number supplier status currency expected_date total_cents invoiced_cents created_ts updated_ts' },
   purchaseLines: { table: 'purchase_order_lines', time: 'created_ts', history: true, columns: 'id merchant number line_no sku label item_id variant_id location_id unit qty unit_cents received_qty returned_qty created_ts' },
   creditEvents: { table: 'store_credit_events', time: 'ts', columns: 'id merchant credit_id action amount_cents balance_after_cents ref_id actor detail ts' },
+  // Factures et avoirs émis à la main (invoice_docs, hors factures de ticket qui
+  // vivent dans sale_invoices). Seuls les documents numérotés comptent : un
+  // brouillon ou un devis n'est pas une écriture comptable. Registre complet
+  // jusqu'à l'instant du dossier, comme sale_invoices : un avoir du mois renvoie
+  // à une facture d'un mois antérieur, et la suite des numéros se lit en entier.
+  // internal_note (note privée du commerçant) et created_by restent hors export.
+  invoiceDocs: { table: 'invoice_docs', time: 'created_ts', history: true, allTime: true, filter: { columns: ['type', 'number'], sql: "type IN ('invoice','credit_note') AND number IS NOT NULL" }, columns: 'id merchant type status number seq issue_date due_date terms_days customer seller lines totals ttc_cents payment_method note exemption_mention original_id reason created_ts updated_ts issued_ts cancelled_ts legacy_ref' },
   balanceReceipts: { table: 'retail_balance_receipts', time: 'created_ts', columns: 'merchant balance_id sale_id amount_cents method status created_ts' },
 });
 export const DOCUMENTS = ['business', 'receipt', 'costs', 'recipes', 'expenses', 'procurement', 'suppliers', 'dayreports', 'monthreport', 'reservations', 'payroll'];
@@ -31,6 +38,10 @@ export function documentTimes(value) {
   visit(value); return values;
 }
 export function nextMonth(month) { const [y, m] = month.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; }
+// Condition propre à une source (ex. documents numérotés seulement), appliquée
+// seulement si la table porte les colonnes qu'elle lit : une table plus ancienne
+// reste lisible en entier plutôt que de faire échouer tout le dossier.
+const sourceFilter = (spec, names) => spec.filter && spec.filter.columns.every(c => names.has(c)) ? ` AND (${spec.filter.sql})` : '';
 const integer = v => /^\d+$/.test(String(v)) && Number.isSafeInteger(Number(v)) ? Number(v) : null;
 export async function manifest(env, merchant, from, to, asOf) {
   const sources = {};
@@ -41,11 +52,11 @@ export async function manifest(env, merchant, from, to, asOf) {
     if (!names.has('merchant')) throw new Error('source-schema-unavailable');
     const selected = spec.columns.split(' ').filter(c => names.has(c));
     const timeKnown = names.has(spec.time);
-    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '');
+    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '') + sourceFilter(spec, names);
     const values = !timeKnown ? [merchant] : spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
     // Detect concurrent changes at the end instead of claiming a frozen SQL
     // snapshot across paginated requests. rowid fences exclude later inserts.
-    const sums = ['amount_cents', 'amount', 'void_ts', 'updated_ts', 'qty_milli', 'total_cents', 'counted_cents', 'expected_cents', 'gap_cents'].filter(c => names.has(c));
+    const sums = ['amount_cents', 'amount', 'void_ts', 'updated_ts', 'qty_milli', 'total_cents', 'ttc_cents', 'counted_cents', 'expected_cents', 'gap_cents'].filter(c => names.has(c));
     const stat = await env.DB.prepare(`SELECT COUNT(*) AS count, COALESCE(MAX(rowid),0) AS maxRowid, COALESCE(SUM(rowid),0) AS rowSum, ${timeKnown ? `MAX(${spec.time})` : 'NULL'} AS lastTs${sums.map(c => `, TOTAL(${c}) AS ${c}`).join('')} FROM ${spec.table} WHERE ${where}`).bind(...values).first();
     sources[key] = { status: 'available', ...stat, columns: selected, periodStatus: timeKnown ? 'dated' : 'unassignable', missingColumns: spec.columns.split(' ').filter(c => !names.has(c)) };
   }
@@ -77,7 +88,7 @@ export async function onRequestGet({ request, env }) {
       const names = new Set(cols.map(c => c.name));
       const selected = spec.columns.split(' ').filter(c => names.has(c));
       const timeKnown = names.has(spec.time);
-    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '');
+    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '') + sourceFilter(spec, names);
       const args = !timeKnown ? [merchant] : spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
       const result = await env.DB.prepare(`SELECT rowid AS _rowid, ${selected.join(',')} FROM ${spec.table} WHERE ${where} AND rowid > ? AND rowid <= ? ORDER BY rowid LIMIT 501`).bind(...args, cursor, fence).all();
       const rows = result.results || [], more = rows.length > 500;

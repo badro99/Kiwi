@@ -464,7 +464,7 @@ console.log('\nfeature-truth · frais de livraison, compteurs clients, options d
 const COST = read('assets/cost.js');
 ok('marges : une ligne `fee` (livraison) rejoint les frais, jamais « à chiffrer »', () => {
   assert.match(PZ, /category: 'livraison', qty: 1, unit: 'service', kind: 'fee', total \}/);
-  const at = COST.indexOf('rows.forEach(({ l, qty, listed }) => {'); assert.ok(at > 0); const body = COST.slice(at, at + 2400);
+  const at = COST.indexOf('rows.forEach(({ l, lineNo, qty, listed }) => {'); assert.ok(at > 0); const body = COST.slice(at, at + 2400);
   assert.match(body, /=== 'fee'\) \{ out\.unitemisedAmt \+= collected; out\.feeAmt \+= collected; return; \}/);
   assert.ok(body.indexOf("=== 'fee'") < body.indexOf('out.lines.push(row)'), 'la ligne de frais sort avant d\'entrer au registre des marges');
 });

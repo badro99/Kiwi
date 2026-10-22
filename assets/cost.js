@@ -337,10 +337,12 @@
    *     sur les lignes de CE ticket, comme le fait la base de TVA, et son
    *     montant est déclaré ; un ticket encaissé au-dessus de ses lignes
    *     (frais, pourboire) n'augmente jamais une ligne ;
-   *   · le coût d'une ligne : coût gelé sur la ligne à la vente, sinon la
-   *     fiche technique (opts.lineCost, puis of()), sinon le coût forfaitaire,
-   *     sinon null. Jamais zéro. Un coût qui n'était pas gelé est le coût
-   *     d'aujourd'hui appliqué au passé : compté à part (`todayCostQty`) ;
+   *   · le coût d'une ligne : coût gelé sur la ligne à la vente, sinon le coût
+   *     que le grand livre de stock a enregistré en sortant la marchandise de
+   *     CE ticket (consumedUnitCost), sinon la fiche technique (opts.lineCost,
+   *     puis of()), sinon le coût forfaitaire, sinon null. Jamais zéro. Un coût
+   *     qui n'était ni gelé ni lu au grand livre est le coût d'aujourd'hui
+   *     appliqué au passé : compté à part (`todayCostQty`) ;
    *   · une ligne à 0 MAD (un choix dans une formule) garde sa quantité, sans
    *     chiffre d'affaires ni coût : la formule porte les deux. */
   const saleAmount = (s) => {
@@ -352,6 +354,53 @@
   const lineQtyOf = (l) => Math.max(0, +(l && (l.qty != null ? l.qty : l.q)) || 0);
   const lineIdOf = (l) => String((l && (l.itemId != null ? l.itemId : l.id != null ? l.id : l.i)) || '');
   const lineNameOf = (l) => String((l && (l.name || l.n || l.baseName || l.bn)) || '');
+  /* LE COÛT QUE LE GRAND LIVRE A DÉJÀ ENREGISTRÉ POUR UN TICKET.
+   * Quand la ligne de vente n'a pas gelé son coût, le grand livre de stock
+   * (inventory-consumption.js) en a pourtant gardé la trace : chaque sortie
+   * « sale » porte le prix de revient réellement alloué ce jour-là, par lot, et
+   * le rang de la ligne dans le ticket (meta.line). Relire les prix de la fiche
+   * d'aujourd'hui pour une vente d'il y a trois mois réécrirait la marge passée
+   * à chaque hausse du beurre. On additionne donc les sorties de la ligne.
+   * Prudence : un seul coût inconnu, une sortie annulée en cuisine ou un
+   * ticket dont la quantité ne concorde plus rendent la ligne inutilisable
+   * (jamais un coût partiel, qui donnerait une marge trop belle) ; l'appelant
+   * retombe alors sur la fiche d'aujourd'hui, comptée dans `todayCostQty`. */
+  function consumptionIndex() {
+    const out = new Map();
+    try {
+      const I = window.KiwiInventory;
+      if (!I || typeof I.history !== 'function') return out;
+      if (typeof I.isReal === 'function' && !I.isReal()) return out;
+      const rows = I.history(null) || [];
+      const reversed = new Set();
+      rows.forEach((r) => { if (r && r.reversalOf) reversed.add(String(r.reversalOf)); });
+      rows.forEach((r) => {
+        if (!r || r.reason !== 'sale' || r.refType !== 'sale' || !r.refId) return;
+        const m = r.meta || {};
+        if (m.line == null) return;
+        const key = String(r.refId) + '|' + m.line;
+        const g = out.get(key) || { cost: 0, ok: true, item: '', lineQty: null };
+        const qty = Math.abs(+r.qty), unit = r.unitCost == null || r.unitCost === '' ? NaN : +r.unitCost;
+        if (!(+r.qty < 0) || !Number.isFinite(unit) || unit < 0 || reversed.has(String(r.id))) g.ok = false;
+        else g.cost += qty * unit;
+        if (m.sourceItemId) g.item = String(m.sourceItemId);
+        if (m.lineQty != null && Number.isFinite(+m.lineQty)) g.lineQty = +m.lineQty;
+        out.set(key, g);
+      });
+    } catch (_) { return new Map(); }
+    return out;
+  }
+  function consumedUnitCost(index, refs, lineNo, qty, itemId) {
+    for (const ref of refs) {
+      const g = index.get(ref + '|' + lineNo);
+      if (!g) continue;
+      if (!g.ok || !(g.cost > 0) || !(qty > 0)) return null;
+      if (g.lineQty != null && Math.abs(g.lineQty - qty) > 1e-9) return null;
+      if (itemId && g.item && g.item !== itemId) return null;
+      return g.cost / qty;
+    }
+    return null;
+  }
   function ledger(sales, opts) {
     const o = opts || {};
     const from = o.from, to = o.to;
@@ -372,6 +421,7 @@
       sales: [],
     };
     const seenId = new Set(), seenKey = new Set(), seenRefund = new Set();
+    let consumed = null;                     // lu une fois, seulement si une ligne n'a pas de coût gelé
     const refund = (e) => {
       const id = String(e.saleId || e.id || e.cursor || '');
       if (id) { if (seenRefund.has(id)) return; seenRefund.add(id); }
@@ -386,13 +436,13 @@
        * ticket offert) compte ses quantités, sans chiffre d'affaires. */
       const hasAmt = e.amountCents != null || e.amount_cents != null || e.amount != null || e.total != null;
       const lines = Array.isArray(e.lines) ? e.lines : [];
-      const rows = lines.map((l) => {
+      const rows = lines.map((l, lineNo) => {
         const qty = lineQtyOf(l);
         const t = Number(l && (l.total != null ? l.total : l.t));
         const u = Number(l && (l.unitPrice != null ? l.unitPrice : l.unit != null ? l.unit : l.u != null ? l.u : l.price));
         let listed = Number.isFinite(t) && t >= 0 ? t : (Number.isFinite(u) && u >= 0 ? u * qty : null);
         if (listed == null) { const f = o.fallbackPrice ? num(o.fallbackPrice(l)) : null; listed = (f || 0) * qty; }
-        return { l, qty, listed };
+        return { l, lineNo, qty, listed };
       }).filter((r) => r.qty > 0);
       const sum = rows.reduce((n, r) => n + r.listed, 0);
       const amt = hasAmt ? saleAmount(e) : sum;
@@ -411,7 +461,7 @@
       const ratio = sum > 0 ? Math.min(1, amt / sum) : 1;
       if (sum > amt) out.discounts += sum - amt;
       else out.unitemisedAmt += amt - sum;       // frais, service : encaissé, pas dans une ligne
-      rows.forEach(({ l, qty, listed }) => {
+      rows.forEach(({ l, lineNo, qty, listed }) => {
         const collected = listed * ratio;
         /* Une ligne `fee` (frais de livraison d'une zone) est encaissée mais
          * n'est pas une marchandise : elle n'a pas de coût d'achat à saisir.
@@ -426,6 +476,14 @@
           const frozen = num(l && (l.unitCost != null ? l.unitCost : l.k));
           let hit = null;
           if (frozen != null && frozen > 0) hit = { mad: frozen, src: 'frozen' };
+          if (!hit) {
+            if (!consumed) consumed = consumptionIndex();
+            if (consumed.size) {
+              const refs = [e.ref, e.receiptRef, e.id, e.saleId].filter(Boolean).map((x) => String(x).slice(0, 100));
+              const spent = consumedUnitCost(consumed, refs, lineNo, qty, itemId);
+              if (spent != null && spent > 0) hit = { mad: spent, src: 'frozen' };   // coût d'origine relu au grand livre
+            }
+          }
           if (!hit && o.lineCost) { try { hit = o.lineCost(l, itemId); } catch (_) { hit = null; } }
           if (!hit || hit.mad == null) hit = of({ kind: row.kind, id: itemId, variantId: (l && l.variantId) || '', name }, ctx);
           if (hit && hit.mad != null && hit.mad > 0) {

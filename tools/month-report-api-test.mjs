@@ -10,8 +10,19 @@ db.exec('CREATE TABLE accounts (id TEXT, business TEXT, status TEXT, session_epo
 db.prepare('INSERT INTO accounts VALUES(?,?,?,?)').run('synthetic-owner','synthetic-month','active',0);
 db.prepare('INSERT INTO merchant_config VALUES(?,?,?,?,?,?,?)').run(d.merchant,'synthetic-owner','Synthetic QA only','restaurant',d.zone,d.cutoff,'active');
 for(const feature of DOCUMENTS)if(d.docs[feature])db.prepare('INSERT INTO store_docs VALUES(?,?,?,?,?)').run(d.merchant,feature,JSON.stringify(d.docs[feature]),1,d.from-1);
-const numeric=new Set('amount amount_cents gross_amount_cents discount_amount_cents ts sale_ts void_ts seq created_ts occurred_ts srv_ts opened_ts expected_cents counted_cents gap_cents movement_amount_cents qty_milli unit_cost_cents unit_cost_rate submitted_at reviewed_at applied_at updated_ts total_lines total_counted total_system total_diff total_variance_cost_mad abs_variance_cost_mad total_cents invoiced_cents line_no qty unit_cents received_qty returned_qty balance_after_cents gross_ticket_cents consigned_cents'.split(' '));
+const numeric=new Set('amount amount_cents gross_amount_cents discount_amount_cents ts sale_ts void_ts seq created_ts occurred_ts srv_ts opened_ts expected_cents counted_cents gap_cents movement_amount_cents qty_milli unit_cost_cents unit_cost_rate submitted_at reviewed_at applied_at updated_ts total_lines total_counted total_system total_diff total_variance_cost_mad abs_variance_cost_mad total_cents invoiced_cents line_no qty unit_cents received_qty returned_qty balance_after_cents gross_ticket_cents consigned_cents ttc_cents issued_ts cancelled_ts'.split(' '));
 for(const [key,spec] of Object.entries(SOURCES)){const cols=spec.columns.split(' ');db.exec(`CREATE TABLE ${spec.table} (${cols.map(c=>c+' '+(numeric.has(c)?'REAL':'TEXT')).join(',')})`);for(const r of d.rows[key]||[]){db.prepare(`INSERT INTO ${spec.table} (${cols.join(',')}) VALUES (${cols.map(()=>'?').join(',')})`).run(...cols.map(c=>r[c]==null?null:typeof r[c]==='object'?JSON.stringify(r[c]):r[c]));}}
+// Registre de facturation manuelle : factures et avoirs numérotés du commerçant,
+// jamais les brouillons, devis ou documents d'un autre commerce.
+db.exec('ALTER TABLE invoice_docs ADD COLUMN internal_note TEXT');
+{const ins=db.prepare('INSERT INTO invoice_docs (id,merchant,type,status,number,seq,issue_date,ttc_cents,original_id,created_ts,issued_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+ins.run('INV-1',d.merchant,'invoice','issued','F-2026-0001',1,'2026-09-03',12000,null,d.from+1000,d.from+1000);
+ins.run('CN-1',d.merchant,'credit_note','issued','AV-2026-0001',1,'2026-09-10',-3000,'INV-1',d.from+2000,d.from+2000);
+ins.run('INV-OLD',d.merchant,'invoice','cancelled','F-2026-0000',0,'2026-08-20',5000,null,d.from-86400000*5,d.from-86400000*5);
+ins.run('DRAFT-1',d.merchant,'invoice','draft',null,null,null,999,null,d.from+3000,null);
+ins.run('QUOTE-1',d.merchant,'quote','issued','D-2026-0001',1,'2026-09-04',777,null,d.from+4000,d.from+4000);
+db.exec("UPDATE invoice_docs SET internal_note='note privee du commerçant'");
+ins.run('INV-OTHER',"another-owner",'invoice','issued','F-2026-0001',1,'2026-09-03',55555,null,d.from+1000,d.from+1000);}
 const secret='synthetic-only-session-fixture',cookie=sessionCookie(await makeSession('synthetic-owner',secret)).split(';')[0];
 const queries=[];const env={AUTH_SECRET:secret,DB:{prepare(sql){assert.match(sql,/^\s*(SELECT|PRAGMA)\b/i,'report must never issue a write');queries.push(sql);let args=[];return{bind(...v){args=v;return this;},async first(){return db.prepare(sql).get(...args)||null;},async all(){return {results:db.prepare(sql).all(...args)};},run(){throw Error('No writes allowed');}};}}};
 async function get(query='',auth=cookie,environment=env){return onRequestGet({request:new Request('https://synthetic.invalid/api/month-report?merchant='+d.merchant+'&month='+d.month+query,{headers:auth?{Cookie:auth}:{}}),env:environment});}
@@ -29,6 +40,11 @@ response=await onRequestGet({request:new Request('https://synthetic.invalid/api/
 db.exec('DROP TABLE inventory_counts');data=await (await get()).json();check(data.sources.counts.status==='not-recorded'&&data.sources.counts.count===null,'missing ledger not represented as zero');
 db.prepare('INSERT INTO sales (id,merchant,ts) VALUES(?,?,NULL)').run('SYN-UNDATED',d.merchant);data=await (await get()).json();check(data.sources.sales.count===1108,'undated source preserved for unassignable annex');
 db.exec('ALTER TABLE sales DROP COLUMN ts');data=await (await get()).json();check(data.sources.sales.count===1108&&data.sources.sales.periodStatus==='unassignable'&&data.sources.sales.missingColumns.includes('ts'),'missing timestamp preserves source records for an unassignable annex, not zero or an aborted dossier');
+{const inv=await (await get()).json();check(inv.sources.invoiceDocs.status==='available'&&inv.sources.invoiceDocs.count===3,'invoice ledger counts issued invoices and credit notes only, from this merchant');
+let page=await (await get(`&asOf=${inv.asOf}&source=invoiceDocs&cursor=0&fence=${inv.sources.invoiceDocs.maxRowid}`)).json();
+check(page.rows.map(r=>r.id).sort().join()==='CN-1,INV-1,INV-OLD','manual invoices, credit notes and earlier cancelled invoice exported; draft, quote and other tenant excluded');
+check(page.rows.every(r=>r.merchant===d.merchant&&!('internal_note' in r)),'invoice rows tenant-scoped and private note never exported');
+check(page.rows.find(r=>r.id==='CN-1').original_id==='INV-1'&&page.rows.find(r=>r.id==='CN-1').type==='credit_note','credit note keeps its link to the original invoice');}
 check(queries.every(q=>/^(SELECT|PRAGMA)/.test(q)),'generation only performed reads including auth');
 const src=fs.readFileSync(ROOT+'/functions/api/store.js','utf8');check(src.includes("'discountpolicy', 'monthreport'")&&src.includes('validateMonthReportPolicy(clean.value, mine'),'configuration separately owner-gated and historical periods validated');
 // Real store handler, isolated writable synthetic database. Report reads above
