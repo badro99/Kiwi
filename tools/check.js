@@ -40,6 +40,23 @@ if (process.env.KIWI_CHROMIUM_BIN && !process.env.CHROME_BIN) process.env.CHROME
 
 /* One run at a time, and no child test can hang the gate (tools/check-guard.js). */
 if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
+/* The money, payroll, books and accessibility suites need fast-check and
+ * axe-core from app/node_modules; without them each one prints "○ skip" and
+ * exits 0, so a fresh worktree passed the gate with no money property run
+ * (found 22 October). The full gate refuses to start without them; the fast
+ * tier only says so. KIWI_ALLOW_PROPERTY_SKIP=1 lets a full run go on anyway. */
+{
+  const missing = ['fast-check', 'axe-core', 'puppeteer-core']
+    .filter((m) => !fs.existsSync(path.join(ROOT, 'app', 'node_modules', m, 'package.json')));
+  if (missing.length) {
+    const fix = `npm --prefix app ci, or in a worktree: ln -s <main checkout>/app/node_modules app/node_modules`;
+    if (process.env.KIWI_CHECK_TIER !== 'fast' && process.env.KIWI_ALLOW_PROPERTY_SKIP !== '1') {
+      console.log(`✗ app/node_modules lacks ${missing.join(', ')}: the money and accessibility suites would skip and still read green.\n  Fix: ${fix}\n  (KIWI_ALLOW_PROPERTY_SKIP=1 runs anyway, knowingly.)`);
+      process.exit(1);
+    }
+    console.log(`⚠ app/node_modules lacks ${missing.join(', ')}: money and accessibility properties will skip (${fix})`);
+  }
+}
 /* The machine-wide lock exists so two runs do not drown the machine in headless
  * browsers; the fast tier launches none, so it never waits behind a full run. */
 if (process.env.KIWI_CHECK_TIER !== 'fast') require('./check-guard').acquireLock();

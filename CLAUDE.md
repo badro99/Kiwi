@@ -235,8 +235,11 @@ fast-check against the real boutique pricing and revenue code and the real
 store-credit ledger; `tools/a11y-browser-test.mjs` runs axe-core on the landing,
 the demo dashboard, the onboarding wizard and the demo till. Both packages are
 dev dependencies of `app/` (next to puppeteer-core), so the root `package.json`
-stays dependency-free: `npm --prefix app ci` once per clone, or both suites
-skip green. The money suite keeps a short list of **known** properties, defects
+stays dependency-free: `npm --prefix app ci` once per clone. Without them
+every property suite prints `○ skip` and exits 0, so the full gate now refuses
+to start (a fresh worktree passed it with no money property run, 22 October):
+in a worktree, `ln -s <main checkout>/app/node_modules app/node_modules`.
+`--fast` only warns; `KIWI_ALLOW_PROPERTY_SKIP=1` overrides, knowingly. The money suite keeps a short list of **known** properties, defects
 already logged and awaiting a decision or fix: they print their counterexample
 without failing, and say `! known … tient maintenant` once they hold. When you
 see that, move the property to `strict()`, or the guarantee is lost. The a11y
