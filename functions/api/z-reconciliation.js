@@ -41,7 +41,7 @@ export async function onRequestPost({ request, env }) {
   if (!validDay(day) || !/^[A-Za-z0-9:_-]{1,64}$/.test(terminalId)
     || !Array.isArray(sales) || sales.length > 5000
     || !Number.isSafeInteger(body.count) || body.count < 0
-    || !Number.isSafeInteger(body.totalCents) || body.totalCents < -20000000 || body.totalCents > 100000000000
+    || !Number.isSafeInteger(body.totalCents) || Math.abs(body.totalCents) > 100000000000
     || (body.cutoff != null && (!Number.isInteger(body.cutoff) || body.cutoff < 0 || body.cutoff > 12))
     || (body.unqueuedCount != null && (!Number.isSafeInteger(body.unqueuedCount) || body.unqueuedCount < 0 || body.unqueuedCount > 5000))
     || (body.unqueuedCents != null && (!Number.isSafeInteger(body.unqueuedCents) || Math.abs(body.unqueuedCents) > 100000000)))

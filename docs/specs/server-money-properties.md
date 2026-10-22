@@ -130,7 +130,9 @@ money. Honest complete manifests pass strict exact checks. A stronger guarantee
 would require trusted per-sale terminal provenance or another complete manifest
 contract; this suite makes no production/protocol change.
 
-### SM-4: valid refund days can exceed the Z negative envelope
+### SM-4: valid refund days can exceed the Z negative envelope (fixed 22/10)
+
+**Fixed:** `z-reconciliation.js` now bounds `totalCents` symmetrically (|total| ≤ 100,000,000,000 cents, the existing positive cap); each sale keeps its own ±200,000 MAD cap. SM-4 is strict with witness `[5]`.
 
 Shrunk witness `[5]`: five previous-day tickets paid at 50,000 MAD each are
 refunded today through the real refund handler. All five refunds succeed, but
