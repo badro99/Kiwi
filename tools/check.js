@@ -1505,6 +1505,9 @@ section('Whole-project regressions');
     'scan-wedge-browser-test.mjs',
     'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
+    /* Deux comptoirs, un stock : fusion, suppression, comptage et repli du
+       journal contre un modèle de ce que la boutique a fait. */
+    'catalog-merge-properties-test.mjs',
     'inventory-ledger-test.mjs',
     'inventory-consumption-batch-test.mjs',
     'inventory-queue-unblock-test.mjs',

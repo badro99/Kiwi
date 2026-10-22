@@ -238,6 +238,22 @@ function compactForWrite(data) {
   const foldable = moves.filter((m) => m && m.why !== 'reserve')
     .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
   const foldIds = new Set(foldable.slice(0, Math.max(0, moves.length - 10000)).map((m) => m.id));
+  /* Le socle replié prend l'instant du plus récent mouvement replié, et tout
+   * mouvement de même date ou plus ancien cesse alors de compter. Un mouvement
+   * GARDÉ plus ancien (une réservation en ligne, jamais repliée, ou un ex aequo
+   * à la milliseconde) serait donc effacé du stock : jusqu'au 22 octobre 2026 la
+   * pièce réservée revenait en vente, puis une seconde fois à la libération. On
+   * ne replie, par déclinaison, que ce qui précède strictement son plus ancien
+   * mouvement gardé. */
+  const keptFrom = new Map();
+  for (const m of moves) {
+    if (!m || foldIds.has(m.id)) continue;
+    const at = Number(m.at || 0);
+    if (!keptFrom.has(m.vid) || at < keptFrom.get(m.vid)) keptFrom.set(m.vid, at);
+  }
+  for (const m of foldable) {
+    if (foldIds.has(m.id) && keptFrom.has(m.vid) && Number(m.at || 0) >= keptFrom.get(m.vid)) foldIds.delete(m.id);
+  }
   const folded = new Map();
   for (const m of moves) {
     if (!foldIds.has(m.id)) continue;
