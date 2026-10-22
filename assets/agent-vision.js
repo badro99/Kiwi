@@ -66,7 +66,12 @@
       analyzingSub: 'Détection automatique du type de pièce et extraction des montants.',
       defaultPrompt: 'Analyse cette photo ou ce document et dis-moi directement ce qu’il faut faire.',
       uploaded: 'Document joint :',
-      executed: 'Action enregistrée',
+      executed: 'Ouvert, à confirmer',
+      actionFailed: 'L’action n’a pas abouti. Réessayez.',
+      unavailable: 'Cette action n’est pas disponible ici.',
+      reviewTag: 'À vérifier',
+      reviewTitle: 'Lecture incertaine',
+      reviewSub: 'Kiwi n’a pas pu lire ce document de façon fiable. Rien n’a été enregistré : vérifiez-le à la main.',
       error: 'Erreur lors de l’analyse du document.',
     },
     en: {
@@ -75,7 +80,12 @@
       analyzingSub: 'Automatic document classification and amount extraction.',
       defaultPrompt: 'Analyze this photo or document and tell me what to do.',
       uploaded: 'Attached document:',
-      executed: 'Action recorded',
+      executed: 'Opened, confirm there',
+      actionFailed: 'The action did not go through. Try again.',
+      unavailable: 'This action is not available here.',
+      reviewTag: 'Needs review',
+      reviewTitle: 'Uncertain reading',
+      reviewSub: 'Kiwi could not read this document reliably. Nothing was recorded: check it by hand.',
       error: 'Error during document analysis.',
     },
     ar: {
@@ -84,7 +94,12 @@
       analyzingSub: 'الكشف التلقائي عن نوع المستند واستخراج المبالغ.',
       defaultPrompt: 'قم بتحليل هذه الصورة أو المستند وأخبرني بما يجب فعله.',
       uploaded: 'مستند مرفق:',
-      executed: 'تم تسجيل الإجراء',
+      executed: 'فُتح، أكّد هناك',
+      actionFailed: 'لم يكتمل الإجراء. أعد المحاولة.',
+      unavailable: 'هذا الإجراء غير متاح هنا.',
+      reviewTag: 'للمراجعة',
+      reviewTitle: 'قراءة غير مؤكدة',
+      reviewSub: 'لم يتمكن Kiwi من قراءة هذا المستند بشكل موثوق. لم يُسجَّل أي شيء: تحقق منه يدوياً.',
       error: 'حدث خطأ أثناء تحليل المستند.',
     },
   };
@@ -252,6 +267,23 @@
   function renderVisionResult(data, thread, scrollDown) {
     if (!thread) return;
 
+    /* Lecture illisible côté serveur : une carte « à vérifier », sans fiabilité
+       ni bouton d'action. Le texte brut du modèle n'est qu'une donnée (esc). */
+    if (data && data.reviewNeeded) {
+      var rv = document.createElement('div');
+      rv.className = 'fa-msg agent kv-msg-result kv-msg-review';
+      rv.innerHTML =
+        '<div class="fa-bubble">' +
+          '<div class="kv-res-header"><span class="kv-res-tag kv-tag-review">' + esc(T().reviewTag) + '</span></div>' +
+          '<div class="kv-res-title">' + esc(T().reviewTitle) + '</div>' +
+          '<div class="kv-res-summary">' + esc(T().reviewSub) + '</div>' +
+          (data.summary ? '<div class="kv-res-raw">' + esc(data.summary) + '</div>' : '') +
+        '</div>';
+      thread.appendChild(rv);
+      scrollDown();
+      return rv;
+    }
+
     var badgeClass = 'kv-tag-' + String(data.docType || 'doc').replace(/[^A-Za-z0-9_-]/g, '');
     var ent = data.entities || {};
 
@@ -305,7 +337,9 @@
       '<div class="fa-bubble">' +
         '<div class="kv-res-header">' +
           '<span class="kv-res-tag ' + badgeClass + '">' + esc(data.categoryLabel || 'Document') + '</span>' +
-          '<span class="kv-res-conf">Fiabilité ' + Math.round((data.confidence || 0.9) * 100) + ' %</span>' +
+          /* La fiabilité est celle que le modèle a donnée : 0 reste 0, absente on ne l'affiche pas. */
+          (typeof data.confidence === 'number' && isFinite(data.confidence)
+            ? '<span class="kv-res-conf">Fiabilité ' + Math.round(data.confidence * 100) + ' %</span>' : '') +
         '</div>' +
         '<div class="kv-res-title">' + esc(data.title || 'Analyse terminée') + '</div>' +
         '<div class="kv-res-summary">' + esc(data.summary || '') + '</div>' +
@@ -316,6 +350,7 @@
 
     thread.appendChild(msg);
     scrollDown();
+    var result = msg;
 
     /* Câblage des boutons d'actions */
     msg.querySelectorAll('[data-kv-action]').forEach(function (btn) {
@@ -328,39 +363,81 @@
         handleActionResult(btn, actionType, payload);
       });
     });
+    return result;
   }
 
   /* ── Exécution des actions directes 1-clic ────────────────────────────── */
-  function handleActionResult(btn, type, data) {
-    btn.disabled = true;
-    btn.innerHTML = SVG_CHECK + ' ' + T().executed;
-    btn.classList.add('done');
+  /* Chaque action vise un handler réel de Kiwi.handlers. Le bouton ne passe à
+     « fait » qu'APRÈS que ce handler a terminé sans erreur (promesse résolue
+     comprise). Handler absent, exception ou promesse rejetée : état d'échec,
+     message traduit, et le bouton reste cliquable pour réessayer. Plus jamais
+     de toast « enregistré » quand rien n'a tourné. */
+  var ACTION_HANDLERS = {
+    'stock-receive': 'stock-scan-invoice',
+    'expense-add': 'depenses-new',
+    'menu-import': 'menu-import-open',
+  };
 
+  function actionLabel(btn) {
+    var l = btn.getAttribute('data-kv-label');
+    if (l == null) { l = btn.textContent || ''; btn.setAttribute('data-kv-label', l); }
+    return l;
+  }
+
+  function actionStatus(btn, msg) {
     try {
-      if (type === 'stock-receive') {
-        if (window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['stock-scan-invoice']) {
-          window.Kiwi.handlers['stock-scan-invoice'](data);
-        } else {
-          toast('Réception enregistrée avec succès.');
-        }
-      } else if (type === 'expense-add') {
-        if (window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['depenses-new']) {
-          window.Kiwi.handlers['depenses-new'](data);
-        } else {
-          toast('Dépense de ' + (data.totalMad || 0) + ' MAD ajoutée.');
-        }
-      } else if (type === 'menu-import') {
-        if (window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['menu-import-open']) {
-          window.Kiwi.handlers['menu-import-open'](data);
-        } else {
-          toast('Catalogue mis à jour avec ' + (data.items ? data.items.length : 0) + ' articles.');
-        }
-      } else {
-        toast('Action exécutée.');
+      var box = btn.closest && btn.closest('.kv-card-actions');
+      if (!box) return;
+      var st = box.querySelector('.kv-act-status');
+      if (!msg) { if (st) st.remove(); return; }
+      if (!st) {
+        st = document.createElement('div');
+        st.className = 'kv-act-status';
+        st.setAttribute('role', 'status');
+        box.appendChild(st);
       }
-    } catch (_) {
-      toast('Action enregistrée.');
-    }
+      st.textContent = msg;
+    } catch (_) {}
+  }
+
+  function actionFailed(btn, label, msg) {
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    btn.classList.remove('done');
+    btn.classList.add('failed');
+    btn.innerHTML = esc(label);
+    actionStatus(btn, msg);
+    toast(msg);
+    return false;
+  }
+
+  function handleActionResult(btn, type, data) {
+    if (btn.getAttribute('aria-busy') === 'true' || btn.classList.contains('done')) return Promise.resolve(false);
+    var label = actionLabel(btn);
+    var name = ACTION_HANDLERS[type];
+    var H = window.Kiwi && window.Kiwi.handlers;
+    var fn = name && H && typeof H[name] === 'function' ? H[name] : null;
+    if (!fn) return Promise.resolve(actionFailed(btn, label, T().unavailable));
+
+    btn.classList.remove('failed');
+    actionStatus(btn, '');
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = SVG_SPIN + ' ' + esc(label);
+
+    var run;
+    try { run = Promise.resolve(fn(data)); } catch (err) { run = Promise.reject(err); }
+    return run.then(function (out) {
+      /* Un handler qui répond explicitement false a refusé : ce n'est pas fait. */
+      if (out === false) return actionFailed(btn, label, T().actionFailed);
+      btn.removeAttribute('aria-busy');
+      btn.disabled = true;
+      btn.innerHTML = SVG_CHECK + ' ' + esc(T().executed);
+      btn.classList.add('done');
+      return true;
+    }, function () {
+      return actionFailed(btn, label, T().actionFailed);
+    });
   }
 
   /* ── Création et Pose du Bouton d'Attachement ─────────────────────────── */
@@ -528,6 +605,11 @@
       '.kv-act-btn:hover{background:color-mix(in srgb,var(--atlas) 6%,transparent);border-color:var(--atlas);color:var(--atlas);transform:translateY(-1px);}' +
       '.kv-act-btn.primary{background:var(--atlas);color:var(--paper);border-color:var(--atlas);box-shadow:0 2px 8px color-mix(in srgb,var(--atlas) 25%,transparent);}' +
       '.kv-act-btn.primary:hover{background:var(--atlas-700);}' +
+      '.kv-act-btn.failed{border-color:var(--danger);color:var(--danger);}' +
+      '.kv-act-btn[aria-busy="true"]{cursor:progress;}' +
+      '.kv-act-status{flex-basis:100%;font-size:12px;color:var(--danger);}' +
+      '.kv-tag-review{background:var(--warn-soft);color:var(--warn-ink);}' +
+      '.kv-res-raw{font-size:12px;line-height:1.5;color:var(--n-600);white-space:pre-wrap;max-height:160px;overflow:auto;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.02);border:1px solid rgba(0,0,0,.05);}' +
       '.kv-act-btn.done{background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--atlas-700);border-color:color-mix(in srgb,var(--success) 30%,transparent);cursor:default;transform:none;}';
     var st = document.createElement('style');
     st.textContent = css;
@@ -552,5 +634,9 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.KiwiVision = { sweep: sweep, setAttachment: setAttachment, clearAttachment: clearAttachment };
+  window.KiwiVision = {
+    sweep: sweep, setAttachment: setAttachment, clearAttachment: clearAttachment,
+    /* Exposés pour tools/agent-vision-test.mjs : le rendu d'une lecture et l'exécution d'une action. */
+    renderResult: renderVisionResult, runAction: handleActionResult,
+  };
 })();

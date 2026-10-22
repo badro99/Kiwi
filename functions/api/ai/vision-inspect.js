@@ -7,7 +7,7 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk, DAILY_CAPS } from './_quota.js';
-import { GATEWAY_OPTS, runAiWithGateway } from './_run.js';
+import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runVisionPair } from './_vision.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -154,6 +154,42 @@ export function validateVisionData(raw) {
   };
 }
 
+/* Ce que le modèle a répondu, lu honnêtement. Un JSON lisible passe par le
+ * validateur ; une réponse illisible (texte libre, JSON cassé, rien du tout)
+ * n'est PAS un document « traité avec succès » : elle revient marquée
+ * « à vérifier », sans confiance inventée (null, jamais 0,8) et sans aucune
+ * action 1-clic, pour que l'écran ne dise jamais « fait » sur une lecture ratée. */
+export function interpretVisionOutput(content) {
+  const text = typeof content === 'string' ? content : '';
+  let parsed = null;
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) parsed = JSON.parse(match[0]);
+  } catch (_) {}
+  const validated = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? validateVisionData(parsed) : null;
+  if (validated) return { status: 'parsed', data: validated };
+  return {
+    status: 'review-needed',
+    data: {
+      reviewNeeded: true,
+      docType: 'general_document',
+      categoryLabel: '',
+      title: '',
+      confidence: null,
+      summary: text.trim().slice(0, 800),
+      entities: { totalMad: 0, items: [] },
+      suggestedActions: [],
+    },
+  };
+}
+
+/* Un passage complet : le duo vision, puis la lecture ci-dessus. Exporté pour
+ * les tests, qui simulent env.AI (aucun modèle réel n'est appelé). */
+export async function inspectImage(env, dataUrl, promptText) {
+  const { result, model } = await runVisionInspect(env, dataUrl, promptText);
+  return { model, ...interpretVisionOutput(aiText(result)) };
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.AI) return json({ ok: false, error: 'unbound' }, 503);
@@ -173,26 +209,8 @@ export async function onRequestPost(context) {
   if (image.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-large' }, 413);
 
   try {
-    const { result, model } = await runVisionInspect(env, image, b?.prompt);
-    const content = result?.response || result?.choices?.[0]?.message?.content || (typeof result === 'string' ? result : '');
-
-    let parsed = null;
-    try {
-      const match = content.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-    } catch (_) {}
-
-    const validated = validateVisionData(parsed) || {
-      docType: 'general_document',
-      categoryLabel: 'Document analysé',
-      title: 'Analyse visuelle',
-      confidence: 0.8,
-      summary: content ? String(content).slice(0, 800) : 'Document traité avec succès.',
-      entities: { totalMad: 0, items: [] },
-      suggestedActions: [],
-    };
-
-    return json({ ok: true, data: validated, model }, 200, {
+    const { data, model, status } = await inspectImage(env, image, b?.prompt);
+    return json({ ok: true, status, data, model }, 200, {
       'x-kiwi-ai-model': model,
     });
   } catch (err) {
