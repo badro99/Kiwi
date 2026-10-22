@@ -24,7 +24,7 @@ has(interactive, '${desc ? `<p>${desc}</p>` : \'\'}', 'Kiwi.modal garde `desc` c
 
 const pages = pagesProSource();
 has(pages, 'desc: T.removeDesc(esc(`${t.model} · ${locName(t.loc)}`)),', 'terminal retiré : modèle et lieu échappés');
-has(pages, 'desc: T.deleteZoneDesc(pdsEsc(z.name), count),', 'plan de salle : nom de zone échappé');
+has(pages, 'desc: T.deleteZoneDesc(pdsEsc(pdsZoneName(z)), count),', 'plan de salle : nom de zone échappé');
 has(pages, 'desc: _catL(`« ${_esc(c.name)} » contient', 'boutique : nom de catégorie échappé');
 has(pages, '`"${_esc(c.name)}" contains', 'boutique : nom de catégorie échappé (anglais)');
 has(pages, '`«${_esc(c.name)}» تحتوي', 'boutique : nom de catégorie échappé (arabe)');
