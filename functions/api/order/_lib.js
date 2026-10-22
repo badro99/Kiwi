@@ -586,7 +586,15 @@ export async function priceOrder(env, merchant, rawLines, opts = {}) {
       }
       if (assigned.size !== children.length) valid = false;
     }
-    formulaContexts.set(uid, { valid, extra, choiceExtras, parentId: String((parent && parent.id) || '') });
+    /* Deux lignes « menu » qui se disent le même menu : chaque passage
+     * écrasait le contexte du précédent, si bien que le sort de la commande
+     * dépendait de l'ordre des lignes (refusée dans un ordre, acceptée et
+     * facturée autrement dans l'autre, la seconde ligne portant le supplément
+     * du vrai menu). Une caisse, l'app serveur et le téléphone tirent un uid par
+     * menu ; un uid partagé est ambigu, on refuse la composition entière. */
+    formulaContexts.set(uid, formulaContexts.has(uid)
+      ? { valid: false, extra: 0, choiceExtras: new Map(), parentId: '' }
+      : { valid, extra, choiceExtras, parentId: String((parent && parent.id) || '') });
   }
 
   for (const l of rawLines) {
