@@ -919,6 +919,7 @@ CREATE TABLE IF NOT EXISTS clients (
   updated_ts    INTEGER NOT NULL DEFAULT 0,  -- horloge de la FICHE → arbitrage
   srv_ts        INTEGER NOT NULL DEFAULT 0,  -- horloge SERVEUR → curseur
   deleted       INTEGER NOT NULL DEFAULT 0,
+  tags          TEXT NOT NULL DEFAULT '[]', -- étiquettes du carnet (JSON, « vip », « grossiste »…)
   PRIMARY KEY (merchant, id)
 );
 -- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».

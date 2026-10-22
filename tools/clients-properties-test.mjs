@@ -43,7 +43,7 @@ function syncDevice(skew) {
  }});
  vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8'),context);
  const book=window.KiwiClients;
- return {book,queue,pull:()=>new Promise(resolve=>book.pull(f.merchant,resolve)),flush:async()=>{while(queue.length)await queue.shift()();}};
+ return {book,queue,storage,pull:()=>new Promise(resolve=>book.pull(f.merchant,resolve)),flush:async()=>{while(queue.length)await queue.shift()();}};
 }
 const number=fc.integer({min:600000000,max:799999999}),cents=fc.integer({min:1,max:1999999});
 try{
@@ -69,6 +69,15 @@ await strict('shipped browser devices preserve independent queued edits and conv
  assert.equal(phone.digits(f.rowClient().phone),'212700000000');assert.equal(f.rowClient().notes,'Device B');
  for(const d of [a,b]){await d.pull();const row=d.book.get('client-fixture',f.merchant);assert.equal(phone.digits(row.phone),'212700000000');assert.equal(row.notes,'Device B');}
 }));
+/* Une caisse hors ligne longtemps : la file des fiches à renvoyer est regroupée
+ * par client et ne perd aucun jeton, même au-delà de 500 fiches en souffrance. */
+{const label='offline profile outbox keeps one token per client and drops none past 500 clients',n=520;try{
+ await reset();const d=syncDevice(0);await d.pull();const outbox=()=>JSON.parse(d.storage.get('kiwi:clients-out:v1:'+f.merchant)||'[]');
+ const ids=[];for(let i=0;i<n;i++)ids.push(d.book.upsert({name:'Offline '+i,phone:'06'+String(10000000+i)},f.merchant).id);
+ for(let i=0;i<3;i++)d.book.upsert({id:ids[0],notes:'Edit '+i},f.merchant);
+ assert.equal(outbox().length,n);assert.deepEqual([...outbox()].sort(),[...ids].sort());
+ await d.flush();assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM clients WHERE merchant=? AND name LIKE 'Offline %'").get(f.merchant).n,n);assert.equal(outbox().length,0);
+passed++;console.log('✓ '+label);}catch(e){failed++;console.error('✗ '+label,e);}}
 await strict('ordinary profile snapshots cannot overwrite ledger fields, including financial import retries',fc.asyncProperty(cents,async amount=>{
  await reset();ok(await request(post,{purchase:{clientId:'client-fixture',ref:'ledger',amount:amount/100}}));const before=f.rowClient();
  ok(await request(post,{id:'client-fixture',name:'Edited',points:999999,stamps:999999,spend:999999,visits:999999,balance:999999,credit:999999,financialImport:true,updated:1e15}));
@@ -80,7 +89,17 @@ await strict('same field follows server arrival for current browsers and future 
  * entre-temps depuis le tableau de bord, ne l'écrase pas. */
 await strict('a legacy whole-record replay older than the stored record does not overwrite it',fc.asyncProperty(fc.integer({min:1,max:3600000}),async age=>{await reset();const fixedAt=Date.now();ok(await request(post,{id:'client-fixture',name:'Fixed',updated:fixedAt,profileBase:{name:'Before'}}));ok(await request(post,{id:'client-fixture',name:'Stale',updated:fixedAt-age}));assert.equal(f.rowClient().name,'Fixed')}))
 await knownIssue('CL-2','no duplicate merge contract exists: union of visits/spend/notes/tags and reverse-merge semantics require design',fc.asyncProperty(cents,async amount=>{await reset();ok(await request(post,{id:'duplicate',name:'Duplicate',notes:'Second',tags:['second']}));const r=await request(post,{merge:{from:'duplicate',to:'client-fixture'}});return r.status===200&&f.sql.prepare("SELECT deleted FROM clients WHERE id='duplicate'").get().deleted===1;}));
-await knownIssue('CL-3','tags are local-only: server projection has no tag column or sync contract',fc.asyncProperty(fc.constant('vip'),async tag=>{await reset();ok(await request(post,{id:'client-fixture',tags:[tag]}));const row=ok(await request(get,{},'till','GET')).clients[0];return row.tags?.includes(tag)===true;}));
+/* CL-3 · les étiquettes voyagent : écrites par une caisse, lues par l'autre, jamais
+ * effacées par un tirage, vidées avec la fiche supprimée ; avant la migration 0009
+ * les routes répondent comme avant et l'appareil garde les siennes. */
+await strict('CL-3 tags persist on the server, reach a second device and survive pulls',fc.asyncProperty(fc.array(fc.constantFrom('vip','grossiste','famille','Riad 3'),{minLength:1,maxLength:3}),async tags=>{await reset();ok(await request(post,{id:'client-fixture',tags}));const want=[...new Set(tags)];assert.deepEqual(ok(await request(get,{},'till','GET')).clients[0].tags,want);
+ const a=syncDevice(0),b=syncDevice(0);await a.pull();await b.pull();assert.deepEqual(a.book.get('client-fixture',f.merchant).tags,want);
+ a.book.upsert({id:'client-fixture',tags:['nouveau']},f.merchant);await a.pull();assert.deepEqual(a.book.get('client-fixture',f.merchant).tags,['nouveau']);await a.flush();await b.pull();await a.pull();
+ for(const d of [a,b])assert.deepEqual(d.book.get('client-fixture',f.merchant).tags,['nouveau']);
+ ok(await request(post,{id:'client-fixture',name:'Sans étiquette',profileBase:{name:'x'}}));assert.equal(f.rowClient().tags,'["nouveau"]');
+ ok(await request(del,{id:'client-fixture'},'till','DELETE'));assert.equal(f.rowClient().tags,'[]');f.sql.exec("UPDATE clients SET deleted=0 WHERE id='client-fixture'");
+ f.sql.exec('ALTER TABLE clients DROP COLUMN tags');try{const c=syncDevice(0);await c.pull();c.book.upsert({id:'client-fixture',tags:['local']},f.merchant);await c.flush();await c.pull();assert.deepEqual(c.book.get('client-fixture',f.merchant).tags,['local']);assert.equal(ok(await request(get,{},'till','GET')).clients[0].tags,undefined);ok(await request(del,{id:'client-fixture'},'till','DELETE'));}finally{f.sql.exec("ALTER TABLE clients ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");}
+}),[[['vip']]]);
 await knownIssue('CL-4','on-shift service role can enumerate search results without a distinct export permission; no export route exists',fc.asyncProperty(fc.constant(''),async q=>{await reset();return (await request(employeeGet,{q,export:true},'employee','GET')).status===403;}));
 await knownIssue('CL-6','employee purchases use a separate event ledger, so sale void does not reverse their spend; unifying flows requires a migration decision',fc.asyncProperty(cents,async amount=>{await reset();f.insert('linked',amount);ok(await request(employeePost,{clientId:'client-fixture',saleId:'linked'},'employee'));ok(await f.call('admin',{ids:['linked'],action:'void',reason:'formation',force:true},'operator'));return C(f.rowClient().spend)===0;}));
 await knownIssue('CL-5','API identity is client id: phone dedup is browser-local, not cross-device server uniqueness',fc.asyncProperty(number,async n=>{await reset();ok(await request(post,{id:'a',phone:'0'+n}));ok(await request(post,{id:'b',phone:'+212'+n}));return ok(await request(get,{},'till','GET')).clients.filter(c=>phone.same(c.phone,'0'+n)).length===1;}));

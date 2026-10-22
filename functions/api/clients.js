@@ -105,6 +105,25 @@ function hospitalityJson(value) {
   });
 }
 
+/* Étiquettes du carnet (« vip », « grossiste »…) : un tableau JSON de 20
+ * libellés au plus, 40 caractères chacun, sans vide ni doublon. */
+function tagsJson(value) {
+  const out = [];
+  for (const tag of Array.isArray(value) ? value : []) {
+    const label = str(typeof tag === 'string' || typeof tag === 'number' ? tag : '', 40).trim();
+    if (label && !out.includes(label)) out.push(label);
+    if (out.length >= 20) break;
+  }
+  return JSON.stringify(out);
+}
+function tagsList(value) {
+  try { return JSON.parse(tagsJson(JSON.parse(value || '[]'))); } catch (_) { return []; }
+}
+/* La colonne `tags` arrive par migrations/0009_client_tags.sql. Tant qu'elle
+ * n'est pas appliquée en production, lecture et écriture retombent sur
+ * l'ancienne forme : les étiquettes restent locales, comme avant, rien ne casse. */
+const missingColumn = (error) => /no such column|has no column named/i.test(String((error && error.message) || error || ''));
+
 /* Bornage d'une fiche. Le carnet appartient au commerçant : on ne juge pas le
  * contenu, on borne la taille. Les champs sont énumérés parce que ce sont des
  * COLONNES — ici, contrairement à /api/store, en oublier un ne le fait pas
@@ -121,6 +140,7 @@ function sanitize(raw) {
     address: str(raw && raw.address, 240),
     notes: str(raw && raw.notes, 1000),
     hospitality: hospitalityJson(raw && raw.hospitality),
+    tags: tagsJson(raw && raw.tags),
     points: int(raw && raw.points, 1e9),
     stamps: int(raw && raw.stamps, 1e6),
     visits: int(raw && raw.visits, 1e6),
@@ -218,8 +238,8 @@ export async function onRequestGet(context) {
   try {
     await ensurePurchaseEvents(env);
     await ensureRewardEvents(env);
-    const res = await env.DB.prepare(
-      `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,
+    const readPage = (tags) => env.DB.prepare(
+      `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,${tags ? ' tags,' : ''}
               points, stamps, visits, spend, consent, consent_email, source,
               first_seen, last_seen, updated_ts, srv_ts, deleted
          FROM clients
@@ -227,6 +247,9 @@ export async function onRequestGet(context) {
         ORDER BY srv_ts ASC
         LIMIT ?`
     ).bind(merchant, since, PAGE).all();
+    let res;
+    try { res = await readPage(true); }
+    catch (error) { if (!missingColumn(error)) throw error; res = await readPage(false); }
 
     const rows = (res && res.results) || [];
     let cursor = since;
@@ -297,6 +320,8 @@ export async function onRequestGet(context) {
     return json({
       merchant,
       clients: rows.map((row) => ({ ...row,
+        // Colonne pas encore migrée : pas de champ, l'appareil garde ses étiquettes.
+        tags: Object.hasOwn(row, 'tags') ? tagsList(row.tags) : undefined,
         purchase_refs: refsByClient.get(row.id) || [],
         reward_refs: rewardRefsByClient.get(row.id) || [],
         purchase_history: historyByClient.get(row.id) || [],
@@ -389,6 +414,25 @@ async function receivedCentsFor(env, merchant, clientId, ref, saleRef) {
   return null;
 }
 
+/* Vente pas (encore) au serveur : l'appareil reste seule source du montant,
+ * mais pas contre ce qu'il déclare lui-même. Un règlement annoncé tout entier
+ * en avoir, en crédit, en livraison à encaisser ou offert n'a fait rentrer
+ * aucun argent : il compte zéro, exactement ce que le livre des ventes
+ * donnerait une fois la vente arrivée (MONEY_IN). Les libellés de la caisse
+ * (« avoir », « livraison », « crédit », « offert ») valent ceux du serveur.
+ * Un règlement mixte ou une méthode inconnue garde le montant de l'appareil. */
+const NO_MONEY = new Set(['credit', 'delivery', 'complimentary', 'avoir', 'livraison', 'offert']);
+function declaredNoMoney(method) {
+  const parts = String(method || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .split(/\s*[+,/]\s*/).map((part) => part.trim()).filter(Boolean);
+  return parts.length > 0 && parts.every((part) => NO_MONEY.has(part));
+}
+async function receivedOrDeclared(env, merchant, clientId, ref, saleRef, method) {
+  const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
+  if (received != null) return received;
+  return declaredNoMoney(method) ? 0 : null;
+}
+
 async function applyPurchase(env, merchant, raw) {
   const purchase = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(purchase.clientId || purchase.client_id, 64);
@@ -412,7 +456,7 @@ async function applyPurchase(env, merchant, raw) {
      * reprise. */
     const stored = Math.round(Number(previous.amount || 0) * 100);
     if (stored !== Math.round(claimed * 100)) {
-      const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
+      const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
       if (received == null || stored !== Math.min(Math.round(claimed * 100), received)) {
         return json({ error: 'ref-conflict' }, 409);
       }
@@ -423,7 +467,7 @@ async function applyPurchase(env, merchant, raw) {
     'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
-  const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
+  const received = await receivedOrDeclared(env, merchant, clientId, ref, saleRef, method);
   if (received != null) amount = Math.min(claimed, received / 100);
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
@@ -785,7 +829,7 @@ export async function onRequestPost(context) {
   const profileColumns = {
     name: 'name', phone: 'phone', email: 'email', birthday: 'birthday',
     gender: 'gender', city: 'city', address: 'address', notes: 'notes',
-    hospitality: 'hospitality', consent: 'consent', consentEmail: 'consent_email',
+    hospitality: 'hospitality', tags: 'tags', consent: 'consent', consentEmail: 'consent_email',
     source: 'source', firstSeen: 'first_seen', lastSeen: 'last_seen',
   };
   const base = body.profileBase && typeof body.profileBase === 'object'
@@ -807,23 +851,25 @@ export async function onRequestPost(context) {
     c.updated_ts = Math.min(int(body.updated || body.updated_ts, 1e15) || now, now);
   }
 
+  const upsert = (tags) => env.DB.prepare(
+    `INSERT INTO clients (merchant, id, name, phone, email, birthday, gender, city,
+                          address, notes, hospitality, points, stamps, visits, spend, consent,
+                          consent_email, source, first_seen, last_seen, updated_ts,
+                          srv_ts, deleted${tags ? ', tags' : ''})
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0${tags ? ', ?' : ''})
+     ON CONFLICT(merchant, id) DO UPDATE SET
+       ${tags ? edits : edits.replace('tags = excluded.tags,', '')}
+       updated_ts = excluded.updated_ts, srv_ts = excluded.srv_ts
+     -- Profile sync must never restore a tombstone, even with a future device clock.
+     WHERE clients.deleted = 0 AND (? = 0 OR excluded.updated_ts >= clients.updated_ts)`
+  ).bind(
+    merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
+    c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,
+    c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv, ...(tags ? [c.tags] : []), legacy
+  ).run();
   try {
-    await env.DB.prepare(
-      `INSERT INTO clients (merchant, id, name, phone, email, birthday, gender, city,
-                            address, notes, hospitality, points, stamps, visits, spend, consent,
-                            consent_email, source, first_seen, last_seen, updated_ts,
-                            srv_ts, deleted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-       ON CONFLICT(merchant, id) DO UPDATE SET
-         ${edits}
-         updated_ts = excluded.updated_ts, srv_ts = excluded.srv_ts
-       -- Profile sync must never restore a tombstone, even with a future device clock.
-       WHERE clients.deleted = 0 AND (? = 0 OR excluded.updated_ts >= clients.updated_ts)`
-    ).bind(
-      merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
-      c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,
-      c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv, legacy
-    ).run();
+    try { await upsert(true); }
+    catch (error) { if (!missingColumn(error)) throw error; await upsert(false); }
   } catch (_) {
     // Table absente → 503. Le client garde la fiche dans sa file et retentera :
     // rien n'est perdu, la remontée est seulement remise à plus tard.
@@ -854,14 +900,16 @@ export async function onRequestDelete(context) {
     // le nom et le téléphone d'un client supprimé « pour la synchro » serait
     // exactement ce que la suppression était censée empêcher. Il ne reste que
     // l'identifiant, le temps que les autres appareils apprennent.
-    await env.DB.prepare(
+    const erase = (tags) => env.DB.prepare(
       `UPDATE clients
           SET deleted = 1, name = '', phone = '', email = '', birthday = '',
-              gender = '', city = '', address = '', notes = '', hospitality = '{}',
+              gender = '', city = '', address = '', notes = '', hospitality = '{}',${tags ? " tags = '[]'," : ''}
               updated_ts = CASE WHEN updated_ts >= ? THEN updated_ts + 1 ELSE ? END,
               srv_ts = ?
         WHERE merchant = ? AND id = ?`
     ).bind(Date.now(), Date.now(), srv, merchant, id).run();
+    try { await erase(true); }
+    catch (error) { if (!missingColumn(error)) throw error; await erase(false); }
   } catch (_) {
     return json({ error: 'unmigrated' }, 503);
   }

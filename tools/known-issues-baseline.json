@@ -31,10 +31,6 @@
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-3"
-    },
-    {
-      "suite": "clients-properties-test.mjs",
       "label": "CL-4"
     },
     {
@@ -48,10 +44,6 @@
     {
       "suite": "customer-balance-properties-test.mjs",
       "label": "CB-1"
-    },
-    {
-      "suite": "customer-balance-properties-test.mjs",
-      "label": "CB-2"
     },
     {
       "suite": "customer-balance-properties-test.mjs",

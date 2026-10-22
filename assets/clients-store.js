@@ -615,10 +615,15 @@
     catch (_) { return []; }
   }
   function outWrite(book, a) {
-    // Plafonné : une caisse hors ligne pendant des jours ne doit pas remplir le
-    // localStorage. Les plus anciens sortent — ils restent dans le carnet local
-    // de toute façon, et le prochain passage du client les remettra en file.
-    try { localStorage.setItem(outKey(book), JSON.stringify(a.slice(-500))); } catch (_) {}
+    // Pas de plafond. La file est déjà regroupée par fiche (un jeton par client,
+    // '-<id>' pour une suppression, outAdd ne double jamais) : dix modifications
+    // d'une même fiche y tiennent une place, et sa taille suit le nombre de
+    // clients en souffrance, pas le nombre d'éditions. Quelques octets par
+    // client, quand le carnet local en garde des centaines. L'ancien plafond à
+    // 500 sortait les plus anciens jetons en silence : une fiche modifiée hors
+    // ligne, ou une suppression, n'était plus jamais rejouée tant que le client
+    // ne repassait pas en caisse, et l'autre appareil ne l'apprenait pas.
+    try { localStorage.setItem(outKey(book), JSON.stringify(a)); } catch (_) {}
   }
   function outAdd(book, token) {
     if (!syncable(book) || !token) return;
@@ -795,7 +800,7 @@
   function profileSnapshot(rec) {
     var out = {};
     ['name', 'phone', 'email', 'birthday', 'gender', 'city', 'address', 'notes',
-      'hospitality', 'consent', 'consentEmail', 'source', 'firstSeen', 'lastSeen'].forEach(function (k) {
+      'hospitality', 'tags', 'consent', 'consentEmail', 'source', 'firstSeen', 'lastSeen'].forEach(function (k) {
       if (rec[k] !== undefined) out[k] = rec[k];
     });
     return JSON.parse(JSON.stringify(out));
@@ -863,9 +868,9 @@
   function fromServer(r) {
     var hospitality = {};
     try { hospitality = JSON.parse(r.hospitality || '{}') || {}; } catch (_) {}
-    return {
+    var out = {
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
-      gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '', tags: [],
+      gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '',
       hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
       points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
@@ -876,6 +881,11 @@
         return { ref: row.saleRef || row.ref || '', ts: +row.createdAt || 0, amount: money(row.amount), method: String(row.method || ''), items: Array.isArray(row.items) ? row.items : [] };
       }),
     };
+    /* Les étiquettes voyagent avec la fiche. Un serveur dont la colonne n'est
+     * pas encore migrée n'en envoie pas : on n'écrase alors pas celles du carnet
+     * local par une liste vide, comme le faisait l'ancien `tags: []`. */
+    if (Array.isArray(r.tags)) out.tags = r.tags.map(String);
+    return out;
   }
   function pendingPurchaseDelta(book, id) {
     var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
@@ -915,7 +925,10 @@
       // Pulls accept server order, while preserving fields still queued locally.
       if (local && local.profileBase) {
         Object.keys(profileSnapshot(local)).forEach(function (key) {
-          if (JSON.stringify(local[key]) !== JSON.stringify(local.profileBase[key])) sc[key] = local[key];
+          var base = local.profileBase[key];
+          // Une base relevée avant que les étiquettes ne voyagent n'en a pas : c'était [].
+          if (key === 'tags' && base === undefined) base = [];
+          if (JSON.stringify(local[key]) !== JSON.stringify(base)) sc[key] = local[key];
         });
       }
       sc.purchaseRefs.forEach(function (ref) { purchaseDrop(book, ref); });
@@ -934,6 +947,7 @@
         sc.updated = Math.max(Number(sc.updated || 0), Number(local.updated || 0));
       }
       if (!local) {
+        if (!Array.isArray(sc.tags)) sc.tags = [];
         d.list.push(sc); byId[sc.id] = sc; changed = true;
         var mm = /^c(\d+)_/.exec(sc.id); if (mm) { var n = parseInt(mm[1], 10); if (n > (d.seq || 0)) d.seq = n; }
       } else if (local.profileBase || (sc.updated || 0) >= (local.updated || 0)) {
