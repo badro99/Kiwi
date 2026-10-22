@@ -350,11 +350,53 @@ export function stampsFor(cfg, items) {
   return Array.isArray(items) && items.length ? qualifyingQty(cfg, items) : 1;
 }
 
+/* L'argent réellement reçu pour une vente, lu dans le livre des ventes et non
+ * dans le corps envoyé par l'appareil. La caisse boutique envoyait la valeur du
+ * ticket : un ticket réglé en avoir (bon, carte cadeau), en livraison à encaisser
+ * ou en dépôt-vente comptait comme argent encaissé, et la cliente gagnait des
+ * points sur de l'argent qui n'était pas rentré. Les parts de règlement figées
+ * par /api/sale (espèces, carte, virement, chèque) font foi ; `amount_cents` y
+ * est déjà net du bon et du dépôt-vente. Retourne des centimes, ou null quand la
+ * vente n'est pas (encore) au serveur : l'appareil reste alors seule source. */
+const MONEY_IN = (method) => method !== 'credit' && method !== 'delivery';
+async function receivedCentsFor(env, merchant, clientId, ref, saleRef) {
+  const prefix = 'purchase:' + clientId + ':';
+  const keys = [];
+  if (ref.startsWith(prefix) && ref.length > prefix.length) keys.push(ref.slice(prefix.length));
+  if (saleRef) keys.push(saleRef);
+  for (const key of keys) {
+    let row = null;
+    try {
+      row = await env.DB.prepare(
+        'SELECT amount, amount_cents, payment_parts FROM sales WHERE merchant = ? AND id = ? LIMIT 1'
+      ).bind(merchant, key).first();
+    } catch (_) {
+      try {
+        row = await env.DB.prepare('SELECT amount, amount_cents FROM sales WHERE merchant = ? AND id = ? LIMIT 1')
+          .bind(merchant, key).first();
+      } catch (_2) { row = null; }
+    }
+    if (!row) continue;
+    let cents = row.amount_cents != null ? Number(row.amount_cents) : Math.round(Number(row.amount || 0) * 100);
+    if (!Number.isFinite(cents)) cents = 0;
+    let parts = null;
+    try { parts = JSON.parse(row.payment_parts || 'null'); } catch (_) { parts = null; }
+    if (Array.isArray(parts) && parts.length) {
+      const paid = parts.reduce((sum, part) =>
+        sum + (part && MONEY_IN(String(part.method || '')) ? Math.max(0, Number(part.amountCents) || 0) : 0), 0);
+      cents = Math.min(cents, paid);
+    }
+    return Math.max(0, cents);
+  }
+  return null;
+}
+
 async function applyPurchase(env, merchant, raw) {
   const purchase = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(purchase.clientId || purchase.client_id, 64);
   const ref = str(purchase.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
-  const amount = money(purchase.amount, 1e9);
+  const claimed = money(purchase.amount, 1e9);
+  let amount = claimed;
   const method = str(purchase.method, 32);
   const saleRef = str(purchase.saleRef || purchase.sale_ref, 80);
   const items = JSON.stringify((Array.isArray(purchase.items) ? purchase.items : []).slice(0, 100).map((item) => ({
@@ -367,8 +409,15 @@ async function applyPurchase(env, merchant, raw) {
   ).bind(merchant, ref).first();
   if (previous) {
     if (previous.client_id !== clientId) return json({ error: 'ref-conflict' }, 409);
-    if (Math.round(Number(previous.amount || 0) * 100) !== Math.round(amount * 100)) {
-      return json({ error: 'ref-conflict' }, 409);
+    /* Le montant gardé peut être celui du livre des ventes, plus bas que la
+     * somme annoncée par l'appareil : une reprise de la même annonce reste une
+     * reprise. */
+    const stored = Math.round(Number(previous.amount || 0) * 100);
+    if (stored !== Math.round(claimed * 100)) {
+      const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
+      if (received == null || stored !== Math.min(Math.round(claimed * 100), received)) {
+        return json({ error: 'ref-conflict' }, 409);
+      }
     }
     return json({ ok: true, replayed: true, points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
   }
@@ -376,6 +425,8 @@ async function applyPurchase(env, merchant, raw) {
     'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
   ).bind(merchant, clientId).first();
   if (!client) return json({ error: 'client-not-found' }, 404);
+  const received = await receivedCentsFor(env, merchant, clientId, ref, saleRef).catch(() => null);
+  if (received != null) amount = Math.min(claimed, received / 100);
   const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
     .bind(merchant).first();
   const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();

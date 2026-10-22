@@ -37,4 +37,12 @@ const controls = [
 ];
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);
-console.log(`agent-vision-test: ${controls.length} controls passed`);
+
+// La confiance : 0 reste 0, hors bornes se ramène à 0..1, absent ou illisible garde 0,9.
+const { validateVisionData } = await import('../functions/api/ai/vision-inspect.js');
+const conf = (v) => validateVisionData(v === undefined ? {} : { confidence: v }).confidence;
+for (const [input, expected] of [[0, 0], ['0', 0], [0.4, 0.4], [1, 1], [7, 1], [-2, 0],
+  [undefined, 0.9], [null, 0.9], ['', 0.9], ['abc', 0.9], [NaN, 0.9], [true, 0.9]]) {
+  assert.equal(conf(input), expected, `confidence ${JSON.stringify(input)} -> ${expected}`);
+}
+console.log(`agent-vision-test: ${controls.length} controls + confidence cases passed`);

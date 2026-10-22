@@ -102,7 +102,11 @@ export function validateVisionData(raw) {
   const title = String(raw.title || 'Document analysé').slice(0, 140);
   const summary = String(raw.summary || '').slice(0, 1000);
   const categoryLabel = String(raw.categoryLabel || 'Document').slice(0, 80);
-  const confidence = Math.min(1, Math.max(0, Number(raw.confidence) || 0.9));
+  /* Une confiance de 0 est une réponse (« je ne suis pas sûr du tout »), pas une
+   * valeur absente : seule une valeur manquante ou non numérique prend le défaut. */
+  const rawConfidence = typeof raw.confidence === 'string' && raw.confidence.trim() === '' ? NaN : Number(raw.confidence);
+  const confidence = raw.confidence == null || typeof raw.confidence === 'boolean' || !Number.isFinite(rawConfidence)
+    ? 0.9 : Math.min(1, Math.max(0, rawConfidence));
 
   const entities = typeof raw.entities === 'object' && raw.entities ? raw.entities : {};
   const totalMad = Math.max(0, Math.round((Number(entities.totalMad) || 0) * 100) / 100);
