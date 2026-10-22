@@ -2284,6 +2284,7 @@
     if (!book) return null;
     const [from, to] = rangeBounds(range == null ? currentRange : range);
     const slug = activeMerchantSlug();
+    const coverage = window.KiwiSalesReconcile?.coverage();
     const first = merchantDayKey(from + 1, slug);
     const last = to === Infinity ? merchantDayKey(Date.now(), slug) : merchantDayKey(to - 1, slug);
     let sum = 0, days = 0;
@@ -2303,12 +2304,15 @@
       const cents = Math.round(Number(e && e.tipCents));
       if (!(cents > 0)) return;
       const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
+      if (ts < from || ts >= to || (coverage != null && ts < coverage)) return;
       const day = merchantDayKey(ts, slug);
       if (closed.has(day)) return;
       live.add(day);
       sum += cents / 100;
     });
+    const old = window.KiwiSalesHistory?.oldTips(from, to, closed);
+    if (old?.partial) return { partial: true };
+    sum += old?.sum || 0; days += old?.days || 0;
     days += live.size;
     return { sum: Math.round(sum * 100) / 100, days, liveDays: live.size };
   }
@@ -3105,6 +3109,7 @@
                     if (ownData()) {
                       const real = realClosedTips(ctx.range);
                       if (!real) return null;
+                      if (real.partial) return { text: '…', value: 0, unit: '', delta: null };
                       return real.days ? { value: real.sum, unit: 'MAD', fmt: 'int', delta: null } : { text: '·', value: 0, unit: '', fmt: 'int', delta: null };
                     }
                     const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0;

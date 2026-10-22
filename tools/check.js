@@ -1374,6 +1374,7 @@ section('Whole-project regressions');
     'sales-history-parity-test.mjs',
     'sales-summary-store-test.mjs',
     'sales-reconcile-test.mjs',
+    'sales-trim-test.mjs',
     'sales-scope-test.mjs',
     'ticket-141-test.mjs',
     'kpi-card-layout-test.mjs',

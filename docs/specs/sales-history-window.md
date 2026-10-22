@@ -1,6 +1,6 @@
 # Sales history: bounded reads and slice B design
 
-Status: B2 reconciliation is coverage-gated. No production marker writer or trimming ships here. Without a marker the legacy feed path is unchanged.
+Status: B3 trimming is OFF by default. Without opt-in or a marker, the legacy feed path is unchanged.
 
 ## Server contracts delivered through B2a
 
@@ -56,14 +56,14 @@ reconciliation because it cannot represent restoration. Index 0005 is unchanged.
    been applied; replay is idempotent after crashes. Never discard pending/manual
    entries. On 400 discard the proof, invalidate only that scope's history caches,
    and restart bootstrap; do not erase merchant ledgers or other tenant keys.
-Before deletion, choose a server-defined upper time bound covering accepted sales. `KiwiSalesWindow.fetchRaw` stays unchanged (20 pages, memory-only).
+Deletion candidates require a fresh identity/timestamp/centime match in the read-only bootstrap. `KiwiSalesWindow.fetchRaw` stays unchanged (20 pages, memory-only).
 
 Implementation: `KiwiSalesReconcile` in sales-history.js stages the complete replay
 before applying it. Scope comes from `KiwiSales.scope()` (the exact SALES_KEY suffix).
 Checkpoint key: `kiwiSalesChangeCheckpoint:<scope>`, written after ledger verification.
 A scoped offline debt read is required; missing/unavailable debt proof stops reconciliation.
 Historical cache invalidation covers the merchant: tombstones lack dates and revisions can move days.
-The bootstrap upper bound is now +2 hours; the server-bound policy remains a prerequisite to deletion.
+Bootstrap ends at now +2 hours. Trimming proves every old candidate, not unrelated future-dated sales.
 
 ## Reconciliation changes for slice B
 
@@ -81,46 +81,52 @@ old rows out of both the replay accumulator and local ledger once coverage exist
 a venue change can re-add them. `applyVoids` (:1369) and change application must invalidate historical
 summary/raw caches even when the affected cursor no longer exists locally.
 
-## Confirmation, scope, and trim safety
+## B3 trim contract
 
-`paymentCompletion` (`assets/live-link.js:439`) accepts only a successful JSON
-body with `ok` and no `settlementPending`. The durable outbox is acknowledged at :652 through `KiwiOffline.acknowledge` (`assets/offline-db.js:183`).
-`moneySignal` (:210) emits per-ID acceptance/aliases, but `kiwi:sale-ack:<merchant>`
-is only a last-success timestamp: it does not confirm every ledger row. A canonical feed row supplies `cursor` and `id`; `bridgeToStore` copies these as
-`cursor` and `saleId`, and `salesEntry` (`assets/venues.js:4066`) persists cursor.
-Require a fresh scoped server match on cursor, canonical ID, timestamp and cents
-for each deletion candidate, with no pending/sending/blocked debt for that ID.
-A cursor alone, an old event, an empty outbox, or backfillComplete alone is insufficient. Manual rows remain without proof; apply the same rule to refunds.
+Opt in for this browser: run `localStorage.setItem('kiwiSalesTrim', '1')` in its
+console, then reload the dashboard. Turn it off with `localStorage.removeItem('kiwiSalesTrim')`.
+There is no server trim flag. `KiwiSalesHistory.trimEnabled(scope)` defaults false.
+No work runs on the till/serveur; work is scheduled on idle after feed completion.
 
-Resolve the exact ledger scope through `SALES_KEY` (`assets/venues.js:3948`) and
-`salesTenant` (:3935). Use its suffix, e.g. `scoped@merchant`, for both coverage and last-trim markers; never shared `own`/`scoped`. Update the summary reader's
-scope resolver at the same time. Never wipe other namespaces or trim demo ledgers.
+Cut is `dayBounds(shiftDay(today,-120)).from` in the store zone/cutoff. Scope is
+exactly the SALES_KEY suffix. The trimmer reuses B2 `create(...,{readOnly:true})`:
+no ledger/checkpoint/marker writes during proof. Windows chunk at 399 business days,
+retain the first F/CF pair, and consume changes plus rowid catch-up to completion.
+All deletion candidates must match fresh server identity, cursor, timestamp and cents.
+Upload debt must be readable and zero; any unconfirmed old sale/refund defers the scope.
+Summary days must match local sale/refund counts and centimes through KiwiSalesMath;
+valid tipCents/channels are required, including exact local tips and channel totals.
+The first differing business day is logged. Failures never write coverage/delete rows.
 
-1. After initial rendering, schedule idle work with a timeout fallback. Attempt
-   at most once per business day per scope; retry transient failures the next day.
-2. Use navigator.locks.request with ifAvailable or a short acquisition timeout;
-   every ledger writer/feed bridge must share the scope lock. Reread identity,
-   coverage, rows and upload debt while holding it. Missing Web Locks or a busy
-   lock means no trim. Never substitute an unsafe localStorage spin lock.
-3. Compute C with `KiwiDayReport.shiftDay(today,-119)` and `dayBounds(...).from`:
-   today plus 119 preceding business dates remain. Use store cutoff/zone, never
-   subtract 120 fixed 24-hour durations. Keep empty boundary days too.
-4. Require every candidate below C, including refunds, to have the fresh server
-   proof above. Any unmatched/pending candidate aborts the entire scope's trim;
-   invalid timestamps, missing identity/clock/proof, or storage errors also abort.
-5. Store/read back `kiwiSalesCoverage:<scope>=C` before deleting confirmed rows.
-   If marker persistence fails, delete nothing. If ledger writes fail afterward,
-   the marker plus an untrimmed superset is safe: totals ignore old local rows.
-   Keep the marker, finish pruning on a later attempt, and do not roll it back
-   after either sales or refund deletion. Notify only after the coherent update.
-6. Writers/bridges must honor coverage after reload. A newly pending backdated
-   row below C suspends historical completeness until reconciled; preserve it,
-   show partial state, and do not silently hide it behind server-only summaries.
-   A late confirmed server row stays archived and invalidates historical caches.
+Row-local protections (unknown fields/values always protect the row):
+- `method` and `parts[].m` / `paymentParts[].method`: credit, avoir, delivery,
+  livraison, unpaid, compte and unknown tenders protect; paid split parts must cover money.
+- `pending`, `syncPending`, `manual`, `synced:false`, `paid:false`, `settled:false`;
+  `kind` acompte/acompte-reglement, `acompte`, `partial`, unsettled `status`/`settlementKind`.
+- Nonzero/unreadable `balanceDue`, `dueCents`, `pendingCents`, `outstandingCents`,
+  `creditAmountCents`, `creditBalance`, `balance`; `receivedAmount < total`; malformed monetary fields and `lines[].consigned`/consignment kind.
+- Missing server ID/cursor defers the scope. Missing/unclosed day-report archive
+  retains that day's rows. Shifts read scoped restaurant state, legacy restaurant
+  state and boutique/maison `kiwi:bqShift`: unreadable state or an open start before cut defers all.
 
-## Approved decisions and remaining questions
+These cover dateRange's receivable methods and deliveryDue, boutique/maison parts,
+store-credit settlement and acompte balance/pending readers. External debt lists
+are deliberately not used as proof. Tip totals prefer closed reports, then summary;
+channel detail requests a complete raw historical window and explicitly loads/fails offline.
+Boutique return search fetches `/api/feed?from=` for its retained return period and
+shows “Rien pour…” when absent; it does not dereference a missing search result.
+It is still the existing byDay capped lookup, not a new all-history return lookup.
 
-Approved: fenced bootstrap and paginated changes before deletion; any unconfirmed
-old sale/refund defers the entire scope; no Web Locks means no trim. Backdated
-pending entries remain visibly partial until confirmation; never rewind coverage. Remaining: which server upper-time bound should slice B use? Atomic change
-logging now closes the restoration/revision gap; B2 client wiring ships only behind existing coverage markers.
+`kiwiSalesTrimAt:<scope>` limits attempts to once/24h. The synchronous final task
+rereads localStorage, revalidates fresh rows/shifts/scope, writes coverage FIRST,
+then sales in one batch, then refunds; exact readback verifies all kept rows/counts/sums.
+`kiwiSalesTrimPending:<scope>` marks crash recovery: a written marker with an unfinished
+trim may retry on the next load despite the attempt cooldown. A marker failure deletes
+nothing. A crash leaves a safe untrimmed superset; coverage is never rewound.
+No per-row redraws. Protected rows may remain below coverage and are never double-counted.
+
+No cross-tab lock protocol. A stale tab may resurrect old rows; B2 ignores them below
+coverage and the next eligible trim removes them. A stale writer can drop another
+writer's newly added row: a known pre-existing localStorage read/modify/write limit,
+not repaired by B3. venues.js has no storage-event listener; cachedLedger rereads the
+stored text on every read and reparses when it changes. No listener is added here.

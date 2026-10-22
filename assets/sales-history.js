@@ -314,6 +314,7 @@
     // Invalidate only this merchant, including in-flight historical reads.
     window.KiwiSalesSummary?.invalidate?.(merchant);
     window.KiwiSalesWindow?.invalidate?.(merchant);
+    window.KiwiSalesHistory?.invalidate?.(merchant);
   }
   function inside(row, proof) {
     return Number.isSafeInteger(row?.cursor) && row.cursor > 0 && row.cursor <= proof.fence &&
@@ -357,14 +358,15 @@
     if (!matches(sales, 1) || !matches(refunds, -1)) throw new Error('ledger');
     return { pending: count };
   }
-  function create(merchant, venue, read, active) {
-    const from = coverage(venue), ledgerScope = scope(venue);
+  function create(merchant, venue, read, active, options) {
+    const readOnly = !!options?.readOnly;
+    const from = readOnly ? options.from : coverage(venue), ledgerScope = scope(venue);
     if (from === null || !ledgerScope) throw new Error('coverage');
     const checkpointKey = 'kiwiSalesChangeCheckpoint:' + ledgerScope;
     let committed = null;
     function check() {
       if (!active() || (window.KiwiVenue?.getVenue && window.KiwiVenue.getVenue() !== venue) ||
-          scope(venue) !== ledgerScope || coverage(venue) !== from) throw new Error('scope');
+          scope(venue) !== ledgerScope || (!readOnly && coverage(venue) !== from)) throw new Error('scope');
     }
     function sale(row) {
       if (!row || !id(row) || !Number.isSafeInteger(row.cursor) || row.cursor <= 0 ||
@@ -373,7 +375,7 @@
     async function cycle() {
       check();
       const next = committed ? Object.assign({}, committed, { rows: new Map(committed.rows), removed: [] }) :
-        { from, to: Date.now() + 7200000, fence: null, changeFence: null, cursor: 0, rows: new Map(), removed: [], checkpoint: null };
+        { from, to: readOnly && options.to ? options.to : Date.now() + 7200000, fence: null, changeFence: null, cursor: 0, rows: new Map(), removed: [], checkpoint: null };
       let pages = 0, changed = false;
       const base = '/api/feed?merchant=' + encodeURIComponent(merchant);
       async function page(query) {
@@ -418,7 +420,8 @@
       if (!committed) {
         let after = '', lastTs = from, lastCursor = 0, seen = new Set(), cursors = new Set(), identities = new Set();
         do {
-          const data = await page('&window=1&from=' + from + '&to=' + next.to + '&limit=500' + (after ? '&after=' + encodeURIComponent(after) : ''));
+          const data = await page('&window=1&from=' + from + '&to=' + next.to + '&limit=500' + (after ? '&after=' + encodeURIComponent(after) : '')
+            + (readOnly && options.fence != null && !after ? '&fence=' + options.fence + '&changeFence=' + options.changeFence : ''));
           completion(data);
           if (data.from !== from || data.to !== next.to || !Array.isArray(data.sales) || data.sales.length > 500 ||
               !Number.isSafeInteger(data.fence) || data.fence < 0 || !Number.isSafeInteger(data.changeFence) || data.changeFence < 0) throw new Error('invalid-feed');
@@ -436,7 +439,7 @@
         } while (true);
         // Replay the offline checkpoint too, so archived corrections invalidate caches.
         let saved = null;
-        try { saved = localStorage.getItem(checkpointKey); } catch (_) {}
+        if (!readOnly) { try { saved = localStorage.getItem(checkpointKey); } catch (_) {} }
         await changes(saved || next.changeFence);
       }
       // Inserts after F, including backdated inserts during bootstrap.
@@ -464,7 +467,7 @@
       const result = Object.assign({}, next, { rows: [...next.rows.values()], scope: ledgerScope,
         pending: next.pendingIds.length, changed, bootstrap: !committed });
       return { result, commit() {
-        check(); committed = next;
+        check(); if (readOnly) throw new Error('read-only-proof'); committed = next;
         proofs.set(ledgerScope, result);
         if (changed || result.bootstrap) invalidate(merchant);
         // Caller persists only after ledger effects and verification have succeeded.
@@ -476,4 +479,221 @@
   }
   window.KiwiSalesReconcile = Object.freeze({ scope, coverage, invalidate, inside, retain, reconcile, verify, create,
     proof(venue) { return proofs.get(scope(venue)); } });
+})();
+
+/* Opt-in retention. Only the final synchronous task can write coverage. */
+(function () {
+  'use strict';
+  const DAY = 86400000, running = new Set(), reasons = new Map();
+  const identity = row => String(row.saleId || row.id || row.serverId || '');
+  const cents = row => Math.round(Number(row.amountCents ?? Number(row.amount) * 100));
+  const known = new Set(('ts amount amountCents method label ref receiptRef origin server channel saleId id serverId cursor lines paymentParts tipCents grossAmountCents discountAmountCents discountReason actorId kind pending syncPending manual synced status settlementKind balanceDue dueCents pendingCents outstandingCents creditAmountCents creditBalance balance receivedAmount total parts methods acompte partial paid settled').split(' '));
+  function trimEnabled() {
+    try { return localStorage.getItem('kiwiSalesTrim') === '1'; } catch (_) { return false; }
+  }
+  function settled(row) {
+    if (!row || !identity(row) || !Number.isSafeInteger(row.cursor) || row.cursor <= 0 ||
+        row.pending || row.syncPending || row.manual || row.synced === false || row.partial || row.acompte ||
+        row.paid === false || row.settled === false || Object.keys(row).some(key => !known.has(key))) return false;
+    if (row.lines != null && (!Array.isArray(row.lines) || row.lines.some(line => line?.consigned || line?.kind === 'consignment'))) return false;
+    for (const key of ['total', 'receivedAmount', 'tipCents', 'grossAmountCents', 'discountAmountCents']) {
+      if (row[key] != null && (!Number.isFinite(Number(row[key])) || Number(row[key]) < 0)) return false;
+    }
+    if (row.kind && !['sale', 'vente', 'refund'].includes(row.kind)) return false;
+    if (row.status && !['paid', 'settled', 'complete', 'completed', 'synced'].includes(row.status)) return false;
+    if (row.settlementKind && !['paid', 'settled', 'sale'].includes(row.settlementKind)) return false;
+    for (const key of ['balanceDue', 'dueCents', 'pendingCents', 'outstandingCents', 'creditAmountCents', 'creditBalance', 'balance']) {
+      if (row[key] != null && (!Number.isFinite(Number(row[key])) || Number(row[key]) !== 0)) return false;
+    }
+    if (row.total != null && row.receivedAmount != null && Number(row.receivedAmount) < Number(row.total)) return false;
+    const method = value => {
+      const key = window.KiwiSalesMath.tenderBucket(value);
+      return key !== null && key !== 'other' && key !== 'split';
+    };
+    const parts = row.parts || row.paymentParts;
+    if (parts != null) {
+      if (!Array.isArray(parts) || !parts.length || parts.some(p => !method(p?.method || p?.m) ||
+          !Number.isSafeInteger(Number(p.amountCents ?? Number(p.amount) * 100)) || Number(p.amountCents ?? Number(p.amount) * 100) <= 0)) return false;
+      if (parts.reduce((n, p) => n + Number(p.amountCents ?? Number(p.amount) * 100), 0) < Math.abs(cents(row))) return false;
+    } else if (!method(row.method)) return false;
+    return !row.methods || row.methods.split(' + ').every(method);
+  }
+  async function read(url) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timeout;
+    try {
+      return await Promise.race([
+        Promise.resolve().then(() => fetch(url, { headers: { Accept: 'application/json' }, credentials: 'include',
+          cache: 'no-store', signal: controller?.signal })).then(r => { if (!r?.ok) throw Error('http'); return r.json(); }),
+        new Promise((_, reject) => { timeout = setTimeout(() => { controller?.abort(); reject(Error('timeout')); }, 12000); })
+      ]);
+    } finally { clearTimeout(timeout); }
+  }
+  function ledger(key) {
+    const rows = JSON.parse(localStorage.getItem(key) || '[]');
+    if (!Array.isArray(rows) || rows.some(r => !r || !Number.isSafeInteger(r.ts) || r.ts <= 0 || !Number.isSafeInteger(cents(r)))) throw Error('ledger-unreadable');
+    return rows;
+  }
+  function shifts(merchant, cut) {
+    for (const key of ['kiwi-caisse-shift:' + merchant, 'kiwi-caisse-shift', 'kiwi:bqShift']) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      const shift = JSON.parse(raw);
+      if (shift === null) continue;
+      const start = typeof shift.openedAt === 'number' ? shift.openedAt : Date.parse(shift.openedAt);
+      if (!Number.isFinite(start) || start <= 0) throw Error('shift-unreadable');
+      if (start < cut) throw Error('old-open-shift');
+    }
+  }
+  async function run(venue) {
+    const H = window.KiwiSalesReconcile, R = window.KiwiDayReport, scope = H?.scope(venue);
+    if (!scope || !window.KiwiSalesHistory.trimEnabled(scope) || running.has(scope)) return false;
+    running.add(scope);
+    const skip = reason => { if (reasons.get(scope) !== reason) console.info('[Kiwi sales trim] ' + scope + ': ' + reason); reasons.set(scope, reason); return false; };
+    try {
+      const merchant = window.KiwiLive?.merchant?.();
+      if (!merchant || !window.KiwiEnv?.isReal?.() || /kiwi-caisse|kiwi-serveur/.test(location.pathname || '')) return skip('not-dashboard');
+      const atKey = 'kiwiSalesTrimAt:' + scope, pendingKey = 'kiwiSalesTrimPending:' + scope;
+      const last = Number(localStorage.getItem(atKey)), resume = localStorage.getItem(pendingKey);
+      if (last > 0 && Date.now() - last < DAY && (!resume || localStorage.getItem('kiwiSalesCoverage:' + scope) !== resume)) return skip('24h');
+      localStorage.setItem(atKey, String(Date.now()));
+      if (!R?.today || !R.shiftDay || !R.dayBounds) return skip('clock-unavailable');
+      const cut = R.dayBounds(R.shiftDay(R.today(merchant), -120, merchant), merchant).from;
+      const markerKey = 'kiwiSalesCoverage:' + scope, previous = localStorage.getItem(markerKey);
+      if (previous !== null && (!Number.isSafeInteger(Number(previous)) || Number(previous) > cut)) return skip('coverage-ahead');
+      const salesKey = 'kiwiSales:' + scope, refundKey = 'kiwiRefunds:' + scope;
+      const initial = ledger(salesKey).concat(ledger(refundKey));
+      if (!initial.some(r => r.ts < cut)) {
+        if (resume && previous === resume) localStorage.removeItem(pendingKey);
+        return skip('nothing-old');
+      }
+      const first = R.dayBounds(R.businessDay(Math.min(...initial.map(r => r.ts)), merchant), merchant).from;
+      shifts(merchant, cut);
+      const active = () => H.scope(venue) === scope && window.KiwiVenue?.getVenue?.() === venue && window.KiwiLive?.merchant?.() === merchant;
+      // A fresh proof includes deletion candidates; no marker or ledger writes.
+      const images = new Map(); let proof = null;
+      const upper = Date.now() + 7200000;
+      for (let start = first; start < upper;) {
+        let end = start;
+        for (let i = 0; i < 399 && end < upper; i++) end = Math.min(upper, R.dayBounds(R.businessDay(end, merchant), merchant).to);
+        if (end <= start) throw Error('clock-unavailable');
+        const part = (await H.create(merchant, venue, read, active, { readOnly: true, from: start, to: end,
+          fence: proof?.fence, changeFence: proof?.changeFence }).cycle()).result;
+        if (proof && (part.fence !== proof.fence || part.changeFence !== proof.changeFence)) throw Error('bootstrap-fences');
+        for (const row of part.rows.concat(part.removed)) {
+          if (row.deleted || row.voided) images.delete(identity(row)); else images.set(identity(row), row);
+        }
+        proof = part; start = end;
+      }
+      if (!active()) return skip('scope-changed');
+      proof.rows = [...images.values()];
+      if (!Number.isSafeInteger(proof.fence) || !Number.isSafeInteger(proof.changeFence)) return skip('bootstrap-incomplete');
+      const summary = { days: [], splits: [] };
+      for (let start = first; start < cut;) {
+        let end = start;
+        for (let i = 0; i < 399 && end < cut; i++) end = Math.min(cut, R.dayBounds(R.businessDay(end, merchant), merchant).to);
+        if (end <= start) throw Error('clock-unavailable');
+        const page = await read('/api/sales-summary?merchant=' + encodeURIComponent(merchant) + '&from=' + start + '&to=' + end);
+        if (page?.merchant !== merchant || !Array.isArray(page.days) || !Array.isArray(page.splits)) throw Error('summary-unavailable');
+        summary.days.push(...page.days); summary.splits.push(...page.splits); start = end;
+      }
+      const debt = await window.KiwiOffline.list('sale', merchant);
+      if (!Array.isArray(debt) || debt.length) return skip('upload-debt');
+      if (!active()) return skip('scope-changed');
+      // No await below: fresh read, validation, marker, batched writes, readback.
+      if (window.KiwiLive.status?.().backfillComplete === false) return skip('bootstrap-busy');
+      shifts(merchant, cut);
+      const sales = ledger(salesKey), refunds = ledger(refundKey);
+      const rows = sales.concat(refunds);
+      if (rows.some(r => r.ts < first)) return skip('ledger-changed-before-proof');
+      const server = new Map(proof.rows.map(r => [identity(r), r]));
+      const reports = JSON.parse(localStorage.getItem('kiwi:dayreports:v1:' + merchant) || '{"days":{}}');
+      if (!reports || !reports.days || typeof reports.days !== 'object') return skip('reports-unreadable');
+      for (const row of rows.filter(r => r.ts < cut)) {
+        if (!identity(row) || !row.cursor || row.pending || row.syncPending || row.manual || row.synced === false) return skip('unconfirmed-old-row');
+        const saved = server.get(identity(row));
+        const signed = refunds.includes(row) ? -Math.abs(cents(row)) : cents(row);
+        if (!saved || saved.cursor !== row.cursor || saved.ts !== row.ts || cents(saved) !== signed) return skip('server-mismatch');
+      }
+      for (let day = first; day < cut;) {
+        const bounds = R.dayBounds(R.businessDay(day, merchant), merchant), bucket = summary.days.find(d => d.from === day && d.to === bounds.to);
+        if (!bucket || !Number.isSafeInteger(bucket.tipCents) || !bucket.channels || typeof bucket.channels !== 'object' || Array.isArray(bucket.channels)) return skip('summary-tips-channels');
+        const local = window.KiwiSalesMath.statsFromSales(sales, refunds, day, bounds.to);
+        const remote = window.KiwiSalesMath.statsFromSummary([bucket], summary.splits, day, bounds.to);
+        if (Math.round(local.gross * 100) !== bucket.cents || local.count !== remote.count || Math.round(local.gross * 100) !== Math.round(remote.gross * 100) ||
+            Math.round(local.refunds * 100) !== Math.round(remote.refunds * 100) || refunds.filter(r => r.ts >= day && r.ts < bounds.to).length !== bucket.refundCount) return skip('summary-mismatch:' + bucket.day);
+        const channelRows = Object.values(bucket.channels);
+        if (channelRows.some(c => !Number.isSafeInteger(c.count) || c.count < 0 || !Number.isSafeInteger(c.cents) || c.cents < 0) ||
+            channelRows.reduce((n, c) => n + c.count, 0) !== bucket.count || channelRows.reduce((n, c) => n + c.cents, 0) !== bucket.cents) return skip('summary-channels-mismatch:' + bucket.day);
+        const tips = sales.filter(r => r.ts >= day && r.ts < bounds.to).reduce((n, r) => n + (Number(r.tipCents) || 0), 0);
+        if (tips !== bucket.tipCents) return skip('summary-tips-mismatch:' + bucket.day);
+        day = bounds.to;
+      }
+      const removable = row => row.ts < cut && settled(row) && reports.days[R.businessDay(row.ts, merchant)]?.closed === true;
+      const keptSales = sales.filter(r => !removable(r)), keptRefunds = refunds.filter(r => !removable(r));
+      if (keptSales.length === sales.length && keptRefunds.length === refunds.length) {
+        if (resume && previous === resume) localStorage.removeItem(pendingKey);
+        return skip('all-old-rows-protected');
+      }
+      const currentCoverage = localStorage.getItem(markerKey);
+      if (currentCoverage !== null && (!Number.isSafeInteger(Number(currentCoverage)) || Number(currentCoverage) > cut)) return skip('coverage-ahead');
+      localStorage.setItem(pendingKey, String(cut));
+      localStorage.setItem(markerKey, String(cut));
+      if (localStorage.getItem(markerKey) !== String(cut)) throw Error('marker-readback');
+      window.KiwiSales.trimWrite(venue, keptSales, keptRefunds, scope);
+      if (JSON.stringify(ledger(salesKey)) !== JSON.stringify(keptSales) || JSON.stringify(ledger(refundKey)) !== JSON.stringify(keptRefunds)) throw Error('ledger-readback');
+      localStorage.removeItem(pendingKey);
+      localStorage.setItem(atKey, String(Date.now()));
+      H.invalidate(merchant);
+      return true;
+    } catch (error) { return skip(String(error?.message || 'unavailable')); }
+    finally { running.delete(scope); }
+  }
+  function schedule() {
+    const venue = window.KiwiVenue?.getVenue?.(), scope = window.KiwiSalesReconcile?.scope(venue);
+    if (!scope || !window.KiwiSalesHistory.trimEnabled(scope)) return;
+    const work = () => run(venue);
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(work, { timeout: 15000 });
+    else setTimeout(work, 2000);
+  }
+  window.KiwiSalesHistory = Object.freeze({ trimEnabled, run, settled, schedule });
+  if (typeof document !== 'undefined') document.addEventListener('kiwi:live-backfill-complete', schedule);
+})();
+
+/* Historical detail readers: keep unknown channels honest, using raw windows. */
+(function () {
+  'use strict';
+  const cache = new Map();
+  function channels(rows, refunds, ids, from, to, trades, trade) {
+    const cut = window.KiwiSalesReconcile.coverage();
+    if (cut == null || from >= cut) return window.KiwiChannelSales.breakdown(rows, ids, from, to, trades, trade, refunds);
+    const merchant = window.KiwiLive.merchant(), end = Math.min(cut, to), key = JSON.stringify([merchant, from, end]);
+    let hit = cache.get(key);
+    if (!hit || (hit.failed && Date.now() - hit.at > 30000)) {
+      hit = { rows: null, at: Date.now() }; cache.set(key, hit);
+      window.KiwiSalesWindow.fetchRaw(from, end).then(raw => {
+        if (cache.get(key) !== hit) return;
+        hit.rows = raw; hit.failed = raw === null;
+        try { document.dispatchEvent(new CustomEvent('kiwi:history-ready')); } catch (_) {}
+      });
+      while (cache.size > 4) cache.delete(cache.keys().next().value);
+    }
+    if (!hit.rows) return { partial: true, amounts: {}, total: 0, classified: 0, unknown: 0 };
+    const oldSales = hit.rows.filter(r => Number(r.amountCents ?? r.amount * 100) > 0).map(r => ({ ...r,
+      amount: Number(r.amountCents ?? r.amount * 100) / 100, saleId: r.id }));
+    const oldRefunds = hit.rows.filter(r => Number(r.amountCents ?? r.amount * 100) < 0).map(r => ({
+      ts: r.ts, amount: Math.abs(Number(r.amountCents ?? r.amount * 100)) / 100, method: r.method, saleId: r.id }));
+    return window.KiwiChannelSales.breakdown(oldSales.concat(rows.filter(r => r.ts >= cut)), ids, from, to, trades, trade,
+      oldRefunds.concat(refunds.filter(r => r.ts >= cut)));
+  }
+  function oldTips(from, to, closed) {
+    const cut = window.KiwiSalesReconcile.coverage();
+    if (cut == null || from >= cut) return { sum: 0, days: 0 };
+    const end = Math.min(to, cut), summary = window.KiwiSalesSummary.get(from, end);
+    if (!summary || summary.days.some(d => d.from < from || d.to > end || !Number.isSafeInteger(d.tipCents))) return { partial: true };
+    const days = summary.days.filter(d => !closed.has(d.day) && d.tipCents > 0);
+    return { sum: days.reduce((n, d) => n + d.tipCents, 0) / 100, days: days.length };
+  }
+  window.KiwiSalesHistory = Object.freeze({ ...window.KiwiSalesHistory, channels, oldTips,
+    invalidate(merchant) { for (const key of cache.keys()) if (JSON.parse(key)[0] === merchant) cache.delete(key); } });
 })();

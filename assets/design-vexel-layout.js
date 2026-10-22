@@ -549,7 +549,9 @@
     var ids = channels.map(function (c) { return c.id; });
     var refunds = [];
     try { refunds = (window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list(venue)) || []; } catch (_) { refunds = []; }
-    return window.KiwiChannelSales.breakdown(rows, ids, from, to, window.KiwiTrades, activeTrade(), refunds);
+    return window.KiwiSalesHistory?.channels
+      ? window.KiwiSalesHistory.channels(rows, refunds, ids, from, to, window.KiwiTrades, activeTrade())
+      : window.KiwiChannelSales.breakdown(rows, ids, from, to, window.KiwiTrades, activeTrade(), refunds);
   }
 
   /* Poids de démonstration, un par canal du registre métier. Ils ne sont pas
@@ -635,6 +637,11 @@
     var clientCopy = CLIENT_STR[l] || CLIENT_STR.fr;
     var channels = currentChannels();
     var split = channelAmounts(channels);
+    if (split.partial) {
+      setText(card.querySelector('[data-vexel-service-sub]'), { fr: 'Chargement / indisponible hors ligne', en: 'Loading / unavailable offline', ar: 'جار التحميل / غير متاح دون اتصال' }[l] || '…');
+      var rings = card.querySelector('.vexel-rings'); if (rings) rings.textContent = '…';
+      state.goalSignature = ''; return;
+    }
     var amounts = split.amounts;
     if (!Object.keys(amounts).length && !split.total) amounts = demoChannelAmounts(channels);
     var hasAmounts = Object.keys(amounts).length > 0;
@@ -1105,6 +1112,7 @@
     }).observe(pool, { attributes: true, attributeFilter: ['hidden'], subtree: true });
   }
 
+  document.addEventListener('kiwi:history-ready', function () { if (state.active) scheduleBackfill(true); });
   function start() {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();

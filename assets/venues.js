@@ -4311,6 +4311,12 @@
   window.KiwiSales = {
     scope: id => SALES_KEY(id).replace(/^kiwiSales:/, ''),
     reconcile: salesReconcile,
+    trimWrite(id, sales, refunds, scope) {
+      if (window.KiwiSalesReconcile?.scope(id) !== scope || window.KiwiSalesReconcile.coverage(id) == null) throw new Error('scope');
+      if (!salesWrite(id, sales) || !refundsWrite(id, refunds)) throw new Error('ledger');
+      salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+      refundSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    },
     add: salesAdd,
     addMany: salesAddMany,
     annotate: salesAnnotate,
