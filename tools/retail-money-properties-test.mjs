@@ -96,7 +96,7 @@ for(const vertical of ['boutique','maison']){
    const row={id:'remote',ref:'ticket',ts:TS,method:'card',amountCents:value,lines:[{itemId:'p',name:'Article',qty:1,total:value/100}]};
    c.fetch=async()=>({ok:true,json:async()=>({sales:[row,row]})});assert.equal(await c.syncReturnSales(),1);assert.equal(await c.syncReturnSales(),0);assert.equal(c.SALES.length,1);assert.equal(C(c.caToday()),value);
  }));
- await knownIssue('RM-2-'+vertical,'imported unpaid delivery/store-credit must remain outside header and daily money-in',fc.asyncProperty(positive,fc.constantFrom('delivery','credit'),async(value,method)=>{
+ await strict('RM-2-'+vertical+' (corrigé 22/10) · imported unpaid delivery/store-credit must remain outside header and daily money-in',fc.asyncProperty(positive,fc.constantFrom('delivery','credit'),async(value,method)=>{
    const c=feedWorld.c;c.SALES=[];c.IS_DEMO=false;c.P={p:{id:'p',name:'Article'}};c.AVOIRS=[];
    c.fetch=async()=>({ok:true,json:async()=>({sales:[{id:'remote',ref:'unpaid',ts:TS,method,amountCents:0,lines:[{itemId:'p',name:'Article',qty:1,total:value/100}]}]})});
    await c.syncReturnSales();return C(c.caToday())===0&&C(c.bqDayTotals().moneyIn)===0;
@@ -114,7 +114,7 @@ for(const vertical of ['boutique','maison']){
 }
 for(const vertical of ['boutique','maison']){
  const w=world(vertical),c=w.c;
- await knownIssue('RM-1-'+vertical,'explicit free reward ticket must send zero-valued lines and return zero credit',fc.property(fc.integer({min:100,max:5000000}),price=>{
+ await strict('RM-1-'+vertical+' (corrigé 22/10) · explicit free reward ticket must send zero-valued lines and return zero credit',fc.property(fc.integer({min:100,max:5000000}),price=>{
    const unit=c.shelf(price/100),sale={id:'free',total:0,reward:{kind:'percent',value:100},lines:[{pid:'p',unit,qty:1}],parts:[],tenderVersion:2};
    const payload=c.originalSalePayload(sale);return C(c.paidUnit(sale,sale.lines[0]))===0&&sum(Array.from(payload.lines,l=>C(l.total)))===0&&payload.ticketAmountCents===0;
  }),[[100]]);

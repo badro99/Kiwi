@@ -44,7 +44,7 @@ function world(vertical) {
   const core=`assets/pos-${vertical}.js`, checkout=`assets/pos-${vertical}/checkout.js`;
   load(c,`assets/pos-${vertical}/sales.js`,['shelf']);
   load(c,core,['lineBase','lineUnit','lineTotal','rewardDiscount',...(vertical==='maison'?['isConsigned','consignedOf']:[]),'ticketTotals',
-    'RETAIN_DAYS','srvMethod','remoteLine','syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
+    'RETAIN_DAYS','srvMethod','remoteLine',...(vertical==='boutique'?['remoteMoney']:[]),'syncReturnSales','bqLineTotals','bqFoldBasket','BQ_SRV_METHOD','bqPaymentParts','bqPaymentMethod','originalSalePayload',
     'businessDayKey','isToday','salesToday','notCashedOf',...(vertical==='maison'?['cashedOf']:[]),'caToday','bqMoneyParts','bqDayTotals','bqZJournal']);
   load(c,checkout,['lineReturnedQty','lineAvailableQty','pickedQty','markLineReturned','returnRatio','paidUnit','doAvoir','openExchSummary','openPay',...(vertical==='boutique'?['recordDeliveryCash']:[])]);
   const api={c,prefix,nodes,storage,timers,events,panel,exchange,$,$$};

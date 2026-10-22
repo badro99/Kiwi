@@ -1,6 +1,6 @@
-import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=2';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=2';
-import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=2';
+import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=3';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=3';
+import { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=3';
 
   'use strict';
 
@@ -502,7 +502,8 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
     const creditIn = parts.reduce((sum, part) => sum + (part && part.m === 'avoir' ? (+part.amount || 0) : 0), 0);
     const delivery = parts.some((part) => part && part.m === 'livraison');
     const consigned = Math.max(0, Number(sale.consigned) || (sale.lines || []).reduce((sum, line) => sum + (line && line.consigned ? (+line.unit || 0) * (+line.qty || 0) : 0), 0));
-    const total = Math.max(0, Number(sale.total) || (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
+    /* Un ticket à 0 (tout offert) reste à 0 : seul un total absent retombe sur les lignes. */
+    const total = Math.max(0, sale.total != null && sale.total !== '' && Number.isFinite(+sale.total) ? +sale.total : (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
     const cashIn = sale.remote && sale.receivedAmount != null
       ? Math.max(0, Number(sale.receivedAmount) || 0)
       : Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0) - consigned);
@@ -2248,7 +2249,10 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
         .map((p) => ({ m: p.m, amount: +p.amount }));
     }
     const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
-    return names.length && +s.total > 0 ? [{ m: names[0], amount: +s.total }] : [];
+    /* Vente importée : seul ce que le serveur a reçu est de l'argent. Un ticket
+       réglé par avoir arrivait en « credit » à 0 et comptait sa valeur entière. */
+    const amount = s.remote && Number.isFinite(+s.receivedAmount) ? Math.min(+s.total || 0, +s.receivedAmount) : +s.total;
+    return names.length && amount > 0 && !(s.remote && names[0] === 'livraison') ? [{ m: names[0], amount }] : [];
   }
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
   function bqPaymentParts(parts) {
@@ -2441,8 +2445,13 @@ import { intake, renderMovements, renderInventaire } from './pos-maison/inventor
   function bqLineTotals(amounts, ticket) {
     const c = (amounts || []).map((x) => Math.max(0, Math.round((+x || 0) * 100)));
     const sum = c.reduce((a, b) => a + b, 0);
-    const want = Math.round((+ticket || 0) * 100);
-    if (!(want > 0) || want >= sum) return c.map((x) => x / 100);
+    /* Ticket inconnu → lignes telles quelles. Ticket explicitement à 0 (une
+       récompense fidélité qui offre tout) → lignes à 0 : elles partaient au
+       serveur à leur prix plein sur une vente à 0. */
+    if (ticket == null || ticket === '' || !Number.isFinite(+ticket)) return c.map((x) => x / 100);
+    const want = Math.max(0, Math.round(+ticket * 100));
+    if (want >= sum) return c.map((x) => x / 100);
+    if (want === 0) return c.map(() => 0);
     const out = c.map((x) => Math.floor(x * want / sum));
     let rest = want - out.reduce((a, b) => a + b, 0);
     const order = c.map((_, i) => i).sort((a, b) => c[b] - c[a] || a - b);

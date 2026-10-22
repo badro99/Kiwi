@@ -1,6 +1,6 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=3';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=3';
-import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay } from './pos-boutique/sales.js?v=4';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-boutique/checkout.js?v=4';
+import { intake, renderInventaire } from './pos-boutique/inventory.js?v=4';
 
   'use strict';
 
@@ -492,7 +492,8 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
       : (methods.includes('carte') ? 'card' : (methods.includes('espèces') ? 'cash' : 'wallet'));
     const creditIn = parts.reduce((sum, part) => sum + (part && part.m === 'avoir' ? (+part.amount || 0) : 0), 0);
     const delivery = parts.some((part) => part && part.m === 'livraison');
-    const total = Math.max(0, Number(sale.total) || (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
+    /* Un ticket à 0 (tout offert) reste à 0 : seul un total absent retombe sur les lignes. */
+    const total = Math.max(0, sale.total != null && sale.total !== '' && Number.isFinite(+sale.total) ? +sale.total : (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
     const cashIn = Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0));
     const lineTotals = bqLineTotals((sale.lines || []).map((line) => (+line.unit || 0) * Math.max(1, Number(line.qty) || 1)), Number(sale.balanceTotal) || sale.total);
     const lines = bqFoldBasket((sale.lines || []).map((line, i) => ({
@@ -779,6 +780,19 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
       returned: false, note: '', name: item.name,
     };
   }
+  /* Ce que le serveur a vraiment reçu pour une vente importée. Elle ne portait
+     que ses lignes : une livraison à crédit ou un ticket réglé par avoir, reçus
+     à 0 au serveur, entraient dans « X MAD aujourd'hui » comme de l'argent
+     encaissé dès qu'une autre tablette relisait l'historique. */
+  function remoteMoney(row, total) {
+    const back = { cash: 'espèces', card: 'carte', transfer: 'virement', cheque: 'chèque', credit: 'avoir', delivery: 'livraison' };
+    const parts = (Array.isArray(row.paymentParts) ? row.paymentParts : [])
+      .map((p) => ({ m: back[p && p.method] || String((p && p.method) || 'paiement'), amount: Math.max(0, Math.round(Number(p && p.amountCents) || 0)) / 100 }))
+      .filter((p) => p.amount > 0);
+    const cents = row.amountCents != null && Number.isFinite(Number(row.amountCents)) ? Math.round(Number(row.amountCents)) : Math.round((Number(row.amount) || 0) * 100);
+    const received = Math.max(0, Math.min(Math.round(total * 100), cents)) / 100;
+    return parts.length ? { parts, received } : { received };
+  }
   function syncReturnSales() {
     if (IS_DEMO || typeof fetch !== 'function') return Promise.resolve(0);
     const merchant = merchantSlug();
@@ -794,10 +808,11 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
         if (!ref || SALES.some((s) => s && s.id === ref)) return;
         const lines = (Array.isArray(row.lines) ? row.lines : []).map(remoteLine).filter(Boolean);
         if (!lines.length) return; // sans article identifiable, aucun échange honnête à proposer
+        const total = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
         SALES.push({
           id: ref, serverId: String(row.id || ''), at: new Date(Number(row.ts) || Date.now()),
           clientId: null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
-          total: lines.reduce((sum, l) => sum + l.unit * l.qty, 0), remote: true,
+          total, remote: true, ...remoteMoney(row, total),
         });
         added++;
       });
@@ -1174,7 +1189,7 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
      (créance) et le Z la range sous « Livraisons · à recevoir ». */
   const notCashedOf = (x) => (Array.isArray(x.parts) ? x.parts : [])
     .reduce((s, p) => s + (p && (p.m === 'avoir' || p.m === 'livraison') ? (+p.amount || 0) : 0), 0);
-  const caToday = () => salesToday().reduce((s, x) => s + Math.max(0, (+x.total || 0) - notCashedOf(x)), 0);
+  const caToday = () => salesToday().reduce((s, x) => s + (x.remote && Number.isFinite(x.received) ? x.received : Math.max(0, (+x.total || 0) - notCashedOf(x))), 0);
   /* Le libellé s'écrit « Vente · MM-1208 » : le mot et le numéro restent deux
      morceaux, que la caisse en arabe et en anglais sait lire séparément. */
   function queueIfOffline(label) {
@@ -2018,7 +2033,9 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
         .map((p) => ({ m: p.m, amount: +p.amount }));
     }
     const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
-    return names.length && +s.total > 0 ? [{ m: names[0], amount: +s.total }] : [];
+    /* Vente importée sans détail : seul ce que le serveur a reçu est de l'argent. */
+    const amount = s.remote && Number.isFinite(s.received) ? s.received : +s.total;
+    return names.length && amount > 0 && !(s.remote && names[0] === 'livraison') ? [{ m: names[0], amount }] : [];
   }
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
   function bqPaymentParts(parts) {
@@ -2213,8 +2230,13 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=3';
   function bqLineTotals(amounts, ticket) {
     const c = (amounts || []).map((x) => Math.max(0, Math.round((+x || 0) * 100)));
     const sum = c.reduce((a, b) => a + b, 0);
-    const want = Math.round((+ticket || 0) * 100);
-    if (!(want > 0) || want >= sum) return c.map((x) => x / 100);
+    /* Ticket inconnu → lignes telles quelles. Ticket explicitement à 0 (une
+       récompense fidélité qui offre tout) → lignes à 0 : elles partaient au
+       serveur à leur prix plein sur une vente à 0. */
+    if (ticket == null || ticket === '' || !Number.isFinite(+ticket)) return c.map((x) => x / 100);
+    const want = Math.max(0, Math.round(+ticket * 100));
+    if (want >= sum) return c.map((x) => x / 100);
+    if (want === 0) return c.map(() => 0);
     const out = c.map((x) => Math.floor(x * want / sum));
     let rest = want - out.reduce((a, b) => a + b, 0);
     const order = c.map((_, i) => i).sort((a, b) => c[b] - c[a] || a - b);

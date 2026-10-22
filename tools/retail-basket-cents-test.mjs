@@ -46,7 +46,10 @@ ok(sum(three) === 2000, 'three equal lines on a 20,00 ticket add up to 20,00 (' 
 ok(three.every((x) => Math.round(x * 100) === x * 100), 'every share is a whole number of centimes');
 const odd = f([33.33, 49.99, 120.5], 180.01);
 ok(sum(odd) === 18001, 'awkward prices still add up to the centime (' + odd.join(' + ') + ')');
-eq(f([50, 40], 0), [50, 40], 'an unknown ticket (0) leaves the lines whole, never at zero');
+/* 22/10 : 0 n'est plus « inconnu ». Les appelants passent la valeur du ticket ;
+   0 n'arrive que quand une récompense offre tout, et les lignes doivent dire 0. */
+eq(f([50, 40], 0), [0, 0], 'a ticket made free by a reward sends its lines at zero');
+eq(f([50, 40], NaN), [50, 40], 'a ticket that is not a number leaves the lines whole');
 eq(f([50, 40], undefined), [50, 40], 'an absent ticket leaves the lines whole');
 eq(f([50, 40], 120), [50, 40], 'a ticket above its lines changes nothing');
 eq(f([], 30), [], 'an empty basket stays empty');
