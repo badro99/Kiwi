@@ -941,6 +941,17 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
   function drawerKey(r) {
     return (r && r.terminalId || '') + ':' + (r && r.sessionId || 'legacy:' + (r && r.openedAt || ''));
   }
+  // Stable tie-breaks and conflict identities must not depend on pull order.
+  function stableSnapshot(value) {
+    if (Array.isArray(value)) return '[' + value.map(stableSnapshot).join(',') + ']';
+    if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(function (k) {
+      return JSON.stringify(k) + ':' + stableSnapshot(value[k]);
+    }).join(',') + '}';
+    return JSON.stringify(value);
+  }
+  function tiedSnapshot(a, b) {
+    return stableSnapshot(a) >= stableSnapshot(b) ? a : b;
+  }
   function preferDrawer(a, b) {
     if (!a) return b;
     if (!b) return a;
@@ -951,7 +962,8 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
        let a clock-skewed snapshot with a later builtAt erase it. */
     if (!a.closedBy && b.closedBy) return b;
     if (a.closedBy && !b.closedBy) return a;
-    return num(b.builtAt) >= num(a.builtAt) ? b : a;
+    if (num(b.builtAt) !== num(a.builtAt)) return num(b.builtAt) > num(a.builtAt) ? b : a;
+    return tiedSnapshot(a, b);
   }
   function drawerSessions(report) {
     if (!report) return [];
@@ -1026,7 +1038,8 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     if (y.closedRows !== x.closedRows) return y.closedRows > x.closedRows ? b : a;
     if (y.latestClosedAt !== x.latestClosedAt) return y.latestClosedAt > x.latestClosedAt ? b : a;
     if (y.latestOpenedAt !== x.latestOpenedAt) return y.latestOpenedAt > x.latestOpenedAt ? b : a;
-    return y.builtAt > x.builtAt ? b : a;
+    if (y.builtAt !== x.builtAt) return y.builtAt > x.builtAt ? b : a;
+    return tiedSnapshot(a, b);
   }
   function cashMetric(row, key) {
     return row && row.cash && row.cash[key] != null ? num(row.cash[key]) : null;
@@ -1062,7 +1075,13 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     if (!m) return t;
     if (!t) return m;
     var keep = preferSnapshot(m, t), revs = mergedRevisions(m, t);
-    var conflicts = (m.snapshotConflicts || []).concat(t.snapshotConflicts || [], snapshotConflicts(m, t)).slice(-12);
+    var conflictMap = Object.create(null);
+    (m.snapshotConflicts || []).concat(t.snapshotConflicts || [], snapshotConflicts(m, t)).forEach(function (c) {
+      var sides = [c.left, c.right].sort(function (a, b) { var x = stableSnapshot(a), y = stableSnapshot(b); return x < y ? -1 : x > y ? 1 : 0; });
+      var normalized = { key: c.key, left: sides[0], right: sides[1] };
+      conflictMap[stableSnapshot(normalized)] = normalized;
+    });
+    var conflicts = Object.keys(conflictMap).sort().slice(-12).map(function (k) { return conflictMap[k]; });
     keep = Object.assign({}, keep, {
       drawerSessions: drawerSessions({ drawerSessions: drawerSessions(m).concat(drawerSessions(t)) }),
       revisions: revs,
