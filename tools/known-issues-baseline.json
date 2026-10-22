@@ -7,10 +7,6 @@
     },
     {
       "suite": "booking-properties-test.mjs",
-      "label": "BK-2"
-    },
-    {
-      "suite": "booking-properties-test.mjs",
       "label": "BK-3"
     },
     {
@@ -80,10 +76,6 @@
     {
       "suite": "dashboard-money-properties-test.mjs",
       "label": "DM-7"
-    },
-    {
-      "suite": "dayreport-properties-test.mjs",
-      "label": "byte cap: node budget alone cannot fit long product names into 1.5 MB"
     },
     {
       "suite": "dayreport-properties-test.mjs",

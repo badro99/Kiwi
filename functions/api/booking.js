@@ -243,6 +243,17 @@ function publicBooking(rec) {
 function cancellableAt(rec, settings) {
   return rec.startAt - (num(settings.cancellationHours, 0, 720, 12) * 3600000);
 }
+/* Le lien de gestion n'est pas éternel. Trente jours après la fin de la
+   réservation, son jeton ne lit ni ne modifie plus rien : la réponse est la
+   même que pour un jeton inconnu, pour ne rien révéler. Une ancienne
+   réservation reste dans les livres de l'établissement, pas derrière un lien
+   d'e-mail transféré ou retrouvé des mois plus tard. Sans aucune heure connue
+   on ne peut pas dater la fin : la règle ne s'applique pas. */
+const MANAGE_TTL_MS = 30 * 86400000;
+function manageExpired(rec, now = Date.now()) {
+  const end = +rec?.endAt || +rec?.startAt || 0;
+  return end > 0 && now > end + MANAGE_TTL_MS;
+}
 async function confirmationMail(env, request, merchant, meta, rec) {
   if (!rec.customer.email) return { ok: false, reason: 'no-recipient' };
   const venue = str(meta?.name, 100) || 'Votre établissement';
@@ -312,7 +323,7 @@ export async function onRequestGet({ request, env }) {
     /* Au-delà de la fenêtre chaude le séjour n'est plus dans le document, il
        reste dans hotel_reservations : le lien reçu par e-mail doit le retrouver. */
     if (!rec) { try { rec = await findStayByKey(env, merchant, 'manageToken', manage); } catch (_) { return json({ error:'unavailable' },503); } }
-    if (!rec) return json({ error:'not-found' },404);
+    if (!rec || manageExpired(rec)) return json({ error:'not-found' },404);
     return json({
       ok:true, kind:'manage', merchant, tz:rows.zone, name:str(rows.merchant?.name,100), trade:str(rows.merchant?.type,60),
       booking:publicBooking(rec),
@@ -371,7 +382,7 @@ export async function onRequestDelete({ request, env }) {
     const index = doc.bookings.findIndex((x) => x.manageToken && x.manageToken === token);
     let rec = index >= 0 ? doc.bookings[index] : null;
     if (!rec) { try { rec = await findStayByKey(env, merchant, 'manageToken', token); } catch (_) { return json({ error:'unavailable' },503); } }
-    if (!rec) { await limitFail(request,env,'booking'); return json({ error:'not-found' },404); }
+    if (!rec || manageExpired(rec)) { await limitFail(request,env,'booking'); return json({ error:'not-found' },404); }
     await limitClear(request,env,'booking');
     /* Déjà annulée : on répond ok. Une cliente qui reclique sur son lien après
        une coupure ne doit pas lire un message d'erreur pour un geste qui a
