@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { DateTimeFormat as ZoneLawDateTimeFormat } from '../functions/api/_zone-law.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const lib = await import(pathToFileURL(path.join(ROOT, 'functions/auth/_lib.js')).href);
@@ -40,7 +41,9 @@ const SECRET = 'invoices-v2-secret-0123456789';
 const SHOP = 'facture-shop', OTHER = 'autre-shop';
 const BASE = 'https://kiwi-os.com';
 const now = Date.now();
-const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+/* Same clock as the server (zone law): Node's own data may still put Morocco
+   at +01, and then « today » ran a day ahead from 23:00 to 00:00 UTC. */
+const TODAY = new ZoneLawDateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const YEAR = TODAY.slice(0, 4);
 const num = (prefix, seq) => `${prefix}-${YEAR}-${String(seq).padStart(4, '0')}`;
 

@@ -28,6 +28,7 @@ import {
   OP_COOKIE, OPID_COOKIE,
 } from '../functions/auth/_lib.js';
 import { onRequestGet, onRequestPost, canonicalJson, sha256Hex, aggregateMonth } from '../functions/api/hotel/declarations.js';
+import { DateTimeFormat as ZoneLawDateTimeFormat } from '../functions/api/_zone-law.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sql = new DatabaseSync(':memory:');
@@ -41,7 +42,9 @@ let controls = 0;
 function ok(value, label) { assert.ok(value, label); controls++; }
 
 const now = Date.now(), secret = 'hotel-decl-test-secret-0123456789';
-const casaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+/* Same clock as the server (zone law): Node's own data may still put Morocco
+   at +01, and then « today » ran a day ahead from 23:00 to 00:00 UTC. */
+const casaToday = () => new ZoneLawDateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const isoDay = (d) => d.toISOString().slice(0, 10);
 const addDays = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return isoDay(d); };
 const monthOf = (ymd) => ymd.slice(0, 7);
