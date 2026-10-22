@@ -13,6 +13,7 @@ import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
 let puppeteer;
@@ -103,7 +104,7 @@ async function toLock(page) {
 
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 {
-  const dash = read('dashboard.html'), mc = read('assets/merchant-config.js'), rt = read('app/src/native-runtime.js');
+  const dash = read('dashboard.html'), mc = read('assets/merchant-config.js'), rt = readNativeRuntime(root);
   check(/unlockAs\(identity\) \{\n\s+const access = identity && identity\.access;\n\s+if \(unlocked \|\| !\/\^\(owner\|manager\|staff\)\$\/\.test/.test(dash), 'unlockAs accepts only a known access tier, once');
   check(/if \(!reserved && hit && matched && val\)[^\n]*\n?[^\n]*kiwi:code-unlocked/.test(dash) || /kiwi:code-unlocked', \{ detail: \{ access: role, name: hit\.name \|\| '', faceMark: hit\.faceMark \|\| '' \} \}/.test(dash), 'only a real code announces itself, with the server\'s mark and without the code');
   check(/function isPreviewCode[\s\S]{0,400}classList\.contains\('kiwi-native'\)\) return false;/.test(dash), 'the native app accepts no preview code');

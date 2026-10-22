@@ -5,12 +5,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime();
 const css = read('app/src/native-runtime.css');
 const dateRange = read('assets/dateRange.js');
 const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');

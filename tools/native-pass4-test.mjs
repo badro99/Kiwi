@@ -6,12 +6,13 @@ import caisseTestSource from './caisse-test-source.cjs';
 // Static reads only: no browser, no network, no credentials.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime();
 const runtimeCss = read('app/src/native-runtime.css');
 const shell = read('app/src/native-shell.js');
 const shellHtml = read('app/src/index.html');

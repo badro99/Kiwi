@@ -15,13 +15,14 @@ import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (p) => retailSource(fs.readFileSync(path.join(root, p), 'utf8'));
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 
 /* ── source ─────────────────────────────────────────────────────────────── */
-const runtime = read('app/src/native-runtime.js');
+const runtime = retailSource(readNativeRuntime(root));
 const css = read('app/src/native-runtime.css');
 const dark = read('assets/dark-fixes.js');
 const pro = read('assets/pages-pro.js');

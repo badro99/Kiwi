@@ -48,9 +48,18 @@ const BUNDLE_MANIFEST = JSON.parse(fs.readFileSync(new URL('./app-bundle-manifes
 /* La page d'accueil native et ses deux fichiers (app/src/ → racine du bundle). */
 export const SHELL = BUNDLE_MANIFEST.shell;
 export const API_BASE_TAG = '<script src="assets/api-base.js"></script>';
-export const NATIVE_RUNTIME_TAGS = '<link rel="stylesheet" href="native-runtime.css" />\n<script src="native-runtime.js" defer></script>';
+/* Le runtime natif est découpé par sujet (entrée, appairage, cycle de vie,
+ * navigation…) : des scripts classiques `defer`, exécutés dans l'ordre de
+ * runtimeScripts, qui partagent window.__kiwiNativeRuntime le temps du
+ * démarrage. Aucune étape de build : chaque fichier part tel quel. */
+export const NATIVE_RUNTIME_SCRIPTS = BUNDLE_MANIFEST.runtimeScripts;
+export const NATIVE_RUNTIME_TAGS = '<link rel="stylesheet" href="native-runtime.css" />\n'
+  + NATIVE_RUNTIME_SCRIPTS.map((name) => `<script src="${name}" defer></script>`).join('\n');
 const NATIVE_LOCALE_TAG = '<script src="native-locale.js"></script>';
 const NATIVE_RUNTIME = BUNDLE_MANIFEST.nativeRuntime;
+if (!NATIVE_RUNTIME_SCRIPTS.length || NATIVE_RUNTIME_SCRIPTS[0] !== 'native-runtime.js' || NATIVE_RUNTIME_SCRIPTS.some((name) => !NATIVE_RUNTIME.includes(name))) {
+  throw new Error('app-bundle-manifest.json : runtimeScripts commence par native-runtime.js et chaque script est aussi dans nativeRuntime');
+}
 /* Inter Tight et IBM Plex Sans Arabic ne sont plus ici : leurs fichiers vivent
  * dans assets/fonts/ (dossier de BUNDLE_MANIFEST.bundledFolders, copié avec
  * assets/), et les @font-face de native-runtime.css et native-shell.css y

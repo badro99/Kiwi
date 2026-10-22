@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0, passed = 0;
@@ -57,7 +58,7 @@ ok(!hits.uikit.length, 'no UIKit feedback generator outside app/plugins/kiwi-hap
 ok(!hits.android.length, 'no Android vibrator outside app/plugins/kiwi-haptics/' + (hits.android.length ? ': ' + hits.android.join(', ') : ''));
 ok(!hits.haptics.length, 'no stock `Haptics` call, handle or import in JS or HTML outside ' + KIT + (hits.haptics.length ? ': ' + hits.haptics.join(', ') : ''));
 
-const runtime = fs.readFileSync(path.join(ROOT, 'app/src/native-runtime.js'), 'utf8');
+const runtime = readNativeRuntime(ROOT);
 ok(!/kiwi:toast/.test(runtime), 'the kiwi:toast haptic hook is removed from the native runtime (toasts never buzz, §15.6)');
 const swift = fs.readFileSync(path.join(ROOT, 'app/ios/App/App/KiwiNativeShell.swift'), 'utf8');
 ok(!/FeedbackGenerator/.test(swift), 'the native shell plays no UIKit generator (send, presentSheet and the confirm panel are silent)');

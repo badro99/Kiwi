@@ -6,9 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { runNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const nativeRuntime = fs.readFileSync(path.join(ROOT, 'app/src/native-runtime.js'), 'utf8');
 const swiftPlugin = fs.readFileSync(path.join(ROOT, 'app/plugins/kiwi-printer-socket/ios/Sources/KiwiPrinterSocket/KiwiPrinterSocketPlugin.swift'), 'utf8');
 const javaPlugin = fs.readFileSync(path.join(ROOT, 'app/plugins/kiwi-printer-socket/android/src/main/java/com/kiwios/printersocket/KiwiPrinterSocketPlugin.java'), 'utf8');
 const caisseHtml = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
@@ -147,7 +147,7 @@ function runtimeHarness({
     getComputedStyle: () => ({ display: 'none', visibility: 'visible' }),
     fetch: fetchStub, navigator: { onLine: true },
   });
-  new vm.Script(nativeRuntime, { filename: 'app/src/native-runtime.js' }).runInContext(context);
+  runNativeRuntime(context, ROOT);
 
   return {
     api: window.KiwiNative,

@@ -3,8 +3,9 @@ import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { readNativeRuntime, runNativeRuntime } from './native-runtime-source.mjs';
 
-const source = fs.readFileSync(new URL('../app/src/native-runtime.js', import.meta.url), 'utf8');
+const source = readNativeRuntime();
 const hapticsSource = fs.readFileSync(new URL('../assets/kit/haptics.js', import.meta.url), 'utf8');
 let controls = 0;
 const ok = (condition, label) => { assert.ok(condition, label); controls++; console.log('  ✓ ' + label); };
@@ -92,7 +93,7 @@ const context = vm.createContext({ window, document, location, history, localSto
   MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: node.opacity || '1' }) });
 /* Every haptic goes through KiwiHaptics (design 2027 §15, §20.3): load it first, as the shells do. */
 new vm.Script(hapticsSource, { filename: 'assets/kit/haptics.js' }).runInContext(context);
-new vm.Script(source, { filename: 'app/src/native-runtime.js' }).runInContext(context);
+runNativeRuntime(context);
 // Workspace context is intentionally withheld until the two launch-paint frames.
 for (let i = 0; i < 40 && !hostContexts.length; i++) await new Promise(resolve => setTimeout(resolve, 5));
 

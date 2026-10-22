@@ -3,10 +3,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime();
 const css = read('app/src/native-runtime.css');
 const config = read('app/capacitor.config.ts');
 const storyboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard');

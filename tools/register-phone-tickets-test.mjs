@@ -26,6 +26,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
@@ -97,7 +98,7 @@ function loadApiBase({ native }) {
 }
 
 /* ── #0137 #0138 · no restaurant capsule over a register, a way out ───────── */
-const nr = read('app/src/native-runtime.js');
+const nr = readNativeRuntime(ROOT);
 const nrCss = read('app/src/native-runtime.css');
 ok('the host tab list is empty while a register is open', () => {
   assert.match(nr, /function nativeRegisterOpen\(\)[\s\S]{0,160}classList\.contains\('is-pos'\)/);

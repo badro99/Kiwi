@@ -14,9 +14,10 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'app/src/native-runtime.js'), 'utf8');
+const src = readNativeRuntime(ROOT);
 const css = readFileSync(path.join(ROOT, 'app/src/native-runtime.css'), 'utf8');
 let n = 0;
 const ok = (name, fn) => { try { fn(); n++; console.log('  ✓ ' + name); } catch (e) { console.log('  ✗ ' + name + '\n    ' + e.message); process.exitCode = 1; } };

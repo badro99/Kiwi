@@ -7,7 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import {createRequire} from 'node:module';
-import {build} from './build-app-www.mjs';
+import {build,NATIVE_RUNTIME_SCRIPTS} from './build-app-www.mjs';
 const root=path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require=createRequire(path.join(root,'app/package.json'));
 const puppeteer=require('puppeteer-core');
@@ -16,7 +16,7 @@ build({out:dir,quiet:true});
 const server=http.createServer((req,res)=>{
   if(req.url.startsWith('/fixture/')) {
     res.setHeader('Content-Type','text/html');
-    res.end('<!doctype html><html class="kiwi-native"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/native-runtime.css"><script src="/native-privacy.js"></script><script src="/native-runtime.js" defer></script></head><body><button id="before">Before</button></body></html>');return;
+    res.end('<!doctype html><html class="kiwi-native"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/native-runtime.css"><script src="/native-privacy.js"></script>'+NATIVE_RUNTIME_SCRIPTS.map(s=>'<script src="/'+s+'" defer></script>').join('')+'</head><body><button id="before">Before</button></body></html>');return;
   }
   const file=path.resolve(dir,'.'+new URL(req.url,'http://local').pathname);
   if(!file.startsWith(dir+path.sep)) {res.writeHead(403);res.end();return;}

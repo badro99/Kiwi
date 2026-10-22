@@ -15,13 +15,14 @@ import caisseTestSource from './caisse-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
 let controls = 0;
 function check(label, value) { assert.ok(value, label); controls++; console.log('  ✓ ' + label); }
 
 const apiBase = read('assets/api-base.js');
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime();
 const runtimeCss = read('app/src/native-runtime.css');
 const shellJs = read('app/src/native-shell.js');
 const swift = read('app/ios/App/App/KiwiNativeShell.swift');

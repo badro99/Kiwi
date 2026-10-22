@@ -34,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from './build-app-www.mjs';
 import { suite } from './browser-trace.mjs';
 import { pinTradingHour } from './demo-clock.mjs';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -41,7 +42,7 @@ const check = (yes, msg) => { assert.ok(yes, msg); console.log('  ✓ ' + msg); 
 console.log('dynamic-type-200-browser-test');
 
 /* ── source contract ───────────────────────────────────────────────────── */
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime(root);
 const shellJs = read('app/src/native-shell.js');
 const css = read('app/src/native-runtime.css');
 const swift = read('app/plugins/kiwi-dynamic-type/ios/Sources/KiwiDynamicType/KiwiDynamicTypePlugin.swift');

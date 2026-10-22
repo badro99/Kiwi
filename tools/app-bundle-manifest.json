@@ -1,5 +1,6 @@
 {
-  "nativeRuntime": ["native-runtime.js", "native-runtime.css", "native-privacy.js", "native-locale.js"],
+  "nativeRuntime": ["native-runtime.js", "native-pairing.js", "native-lifecycle.js", "native-account.js", "native-navigation.js", "native-chrome.js", "native-owner.js", "native-workspace.js", "native-boot.js", "native-feel.js", "native-session.js", "native-files.js", "native-runtime.css", "native-privacy.js", "native-locale.js"],
+  "runtimeScripts": ["native-runtime.js", "native-pairing.js", "native-lifecycle.js", "native-account.js", "native-navigation.js", "native-chrome.js", "native-owner.js", "native-workspace.js", "native-boot.js", "native-feel.js", "native-session.js", "native-files.js"],
   "shell": ["index.html", "native-shell.js", "native-shell.css"],
   "servedAtRoot": "app/src/",
   "bundledFolders": ["assets/fonts/"]

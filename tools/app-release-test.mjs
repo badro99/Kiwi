@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime();
 const appShell = read('app/src/index.html');
 const nativeShell = read('app/src/native-shell.js');
 const nativeRuntimeCss = read('app/src/native-runtime.css');

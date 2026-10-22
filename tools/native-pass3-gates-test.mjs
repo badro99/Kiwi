@@ -8,7 +8,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import { build } from './build-app-www.mjs';
+import { build, NATIVE_RUNTIME_SCRIPTS } from './build-app-www.mjs';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
@@ -88,7 +88,7 @@ try {
         document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
         history.replaceState(null,'',file);
       },{raw,file,id,lang,base});
-      await page.addScriptTag({url:base+'/native-runtime.js'});await sleep(500);
+      for(const s of NATIVE_RUNTIME_SCRIPTS) await page.addScriptTag({url:base+'/'+s});await sleep(500);
       const exit='#'+id+' .kiwi-native-role-back';
       if(id==='screen-clockin') { await page.setViewport({width:402,height:450,isMobile:true,hasTouch:true}); check(await page.$eval(exit,e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<innerHeight;}),lang+': clock-in escape stays above the form at keyboard height'); }
       check(await page.evaluate(()=>__host.tabs.length===0),id+': host blocked');

@@ -8,7 +8,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import { build } from './build-app-www.mjs';
+import { build, NATIVE_RUNTIME_SCRIPTS } from './build-app-www.mjs';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
@@ -238,7 +238,7 @@ try {
         }));
         history.replaceState(null,'',screen==='screen-main'?'kiwi-serveur.html':'kiwi-cuisine.html');
       },{raw,screen,lang,dark,base});
-      await page.addScriptTag({url:base+'/native-runtime.js'}); await sleep(500);
+      for (const s of NATIVE_RUNTIME_SCRIPTS) await page.addScriptTag({url:base+'/'+s}); await sleep(500);
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${role} ${lang}: isolated phone fixture has no horizontal overflow`);
       check(await page.evaluate(()=>{const b=document.querySelector('.kiwi-native-burger');if(!b)return false;b.click();return document.body.classList.contains('kiwi-native-menu-open')&&[...document.querySelectorAll('.kiwi-native-menu [data-kno-account]')].map(x=>x.dataset.knoAccount).join(',')==='change-role,sign-out';}),`${role} ${lang}: the header menu opens the account drawer, without account deletion or AI privacy (owner-only)`);
       await page.evaluate(()=>document.querySelector('.kiwi-native-menu-close').click());

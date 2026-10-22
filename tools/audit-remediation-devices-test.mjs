@@ -18,6 +18,7 @@ import vm from 'node:vm';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { runNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -294,8 +295,7 @@ function memoryStorage(seed = {}) {
 }
 
 async function nativeRevocationTest() {
-  const nativeSource = read('app/src/native-runtime.js');
-  const localStorage = memoryStorage({
+    const localStorage = memoryStorage({
     kiwiPaired: '1', kiwiPairedVenue: JSON.stringify({ merchant: 'old-shop' }), kiwiLiveMerchant: 'old-shop', kiwiLive: '1',
     'kiwi:native:identity-revoked:v1': '1', 'kiwiSales:unsynced': JSON.stringify([{ id: 'sale-1' }]),
   });
@@ -325,7 +325,7 @@ async function nativeRevocationTest() {
   };
   window.window = window;
   const context = vm.createContext({ window, document, localStorage, sessionStorage, location: window.location, Promise, Date, JSON, Math, String, Number, Error, MutationObserver: class { observe() {} }, requestAnimationFrame: fn => setTimeout(fn, 0), setTimeout, clearTimeout, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) });
-  new vm.Script(nativeSource, { filename: 'app/src/native-runtime.js' }).runInContext(context);
+  runNativeRuntime(context, ROOT);
   await sleep(0);
   check(secureRemoves >= 1 && secure.get('pairing-v1') === undefined, 'D03 native revocation removes secure pairing-v1');
   check(localStorage.getItem('kiwiPaired') === null && localStorage.getItem('kiwiPairedVenue') === null && localStorage.getItem('kiwiSales:unsynced'), 'D03 native revocation clears venue identity but preserves unsynced evidence');

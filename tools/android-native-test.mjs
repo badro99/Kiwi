@@ -13,6 +13,7 @@ import serveurTestSource from './serveur-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const exists = (rel) => fs.existsSync(path.join(root, rel));
@@ -31,7 +32,7 @@ const manifest = read('app/android/app/src/main/AndroidManifest.xml');
 const gradle = read('app/android/app/build.gradle');
 const settingsGradle = read('app/android/capacitor.settings.gradle');
 const buildGradle = read('app/android/app/capacitor.build.gradle');
-const runtime = read('app/src/native-runtime.js');
+const runtime = readNativeRuntime(root);
 const runtimeCss = read('app/src/native-runtime.css');
 const shell = read('app/src/native-shell.js');
 const serveur = serveurTestSource(read('kiwi-serveur.html'));

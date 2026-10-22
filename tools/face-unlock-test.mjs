@@ -30,6 +30,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { onRequestPost as facePost } from '../functions/api/pin/face.js';
 import { makeSession, sessionCookie, faceMarkState } from '../functions/auth/_lib.js';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -247,7 +248,7 @@ console.log('\n6 · Sessions');
 
 console.log('\n7 · The native client (app/src/native-runtime.js) and the dashboard vault');
 {
-  const rt = read('app/src/native-runtime.js');
+  const rt = readNativeRuntime(ROOT);
   const dash = read('dashboard.html');
   const vault = read('assets/dashboard-pin-vault.js');
   const vaultTtl = /var TTL = 7 \* 24 \* 60 \* 60 \* 1000;/.test(vault);

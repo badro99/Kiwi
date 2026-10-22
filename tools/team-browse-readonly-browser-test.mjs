@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { createRequire } from 'node:module';
+import { readNativeRuntime } from './native-runtime-source.mjs';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
@@ -177,7 +178,7 @@ try {
   await out.context.close();
 
   /* Hôte natif : pas de capsule d'onglets en consultation. */
-  const native = fs.readFileSync(path.join(root, 'app/src/native-runtime.js'), 'utf8');
+  const native = readNativeRuntime(root);
   check(/teamReady = function \(\)[^;]*!document\.body\.classList\.contains\('is-browse-mode'\)/.test(native),
     'native-runtime.js ne pousse aucun onglet d\'équipe en consultation (cohérent avec le verrou)');
 
