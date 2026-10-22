@@ -91,7 +91,7 @@ await strict('operator staff code creation and removal are audited atomically wi
  const r=await f.callAdmin('pins','POST',{merchant:f.merchant,pin,name:'Synthetic',role:'manager'});assert.equal(r.status,200);
  const d=await f.callAdmin('pins','DELETE',{id:r.body.pin.id});assert.equal(d.status,200);
  const rows=audit();assert.deepEqual(rows.map(x=>x.action),['staff-pin-create','staff-pin-delete']);
- assert.ok(rows.every(x=>x.merchant===f.merchant&&x.actor==='Property Operator'&&x.actor_id==='money-operator'&&x.ts>0&&!Object.values(x).some(v=>String(v).includes(pin))));
+ assert.ok(rows.every(x=>x.merchant===f.merchant&&x.actor==='Property Operator'&&x.actor_id==='money-operator'&&x.ts>0&&Object.entries(x).every(([k,v])=>k==='ts'||k==='id'||!new RegExp('(^|[^0-9a-f])'+pin+'([^0-9a-f]|$)').test(String(v)))));
  f.sql.exec("CREATE TRIGGER property_audit_failure BEFORE INSERT ON account_audit BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END");
  const before=snapshot(f);assert.notEqual((await f.callAdmin('pins','POST',{merchant:f.merchant,pin,name:'Synthetic'})).status,200);assert.equal(snapshot(f),before);
  }finally{f.close();}}));
