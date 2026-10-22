@@ -52,8 +52,18 @@ async function load(env,merchant,id){
   // is left untouched and the next save overwrites it through the normal CAS.
   let saved=null, savedWarning=null;
   if (stored) { try { saved=JSON.parse(stored.data); if(!saved?.draft||saved.draft.kind!=='preinvoice'||!saved.input) throw new Error('bad-shape'); } catch(_) { saved=null; savedWarning='saved-unreadable'; } }
+  // Dashboard folios linked by stayId are the only payments the server can
+  // attribute to a stay. They inform paymentStatus, not the CAS digest: a
+  // payment never makes a saved draft's lines stale. Unreadable → null, and
+  // the draft says so instead of calling the stay unpaid.
+  let folios=null;
+  try {
+    const roomsRow=await env.DB.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='rooms'").bind(merchant).first();
+    const roomsDoc=roomsRow?.data ? JSON.parse(roomsRow.data) : {};
+    folios=Array.isArray(roomsDoc?.folios) ? roomsDoc.folios : (roomsDoc?.folios == null ? [] : null);
+  } catch(_) { folios=null; }
   let source, billingError=directoryError;
-  try { source=draftSource(stays,directory.accounts,roomCharges); }
+  try { source=draftSource(stays,directory.accounts,roomCharges,folios); }
   catch(e) { source=draftRooms(stays,directory.accounts); billingError=billingError||e.code||'billing-source-invalid'; }
   return {raw,chargeRaw,ledger,source,feature,rev:stored?Number(stored.rev):0,saved,savedWarning,sourceDigest:await digest(raw+'\n'+chargeRaw),directoryRev:directory.rev,billingError};
 }

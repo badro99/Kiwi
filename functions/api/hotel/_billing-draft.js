@@ -1,12 +1,15 @@
 import { DateTimeFormat } from '../_zone-law.js';
 // Detailed pre-invoices only. No payment, tax approval or accounting posting.
+// The draft now says WHY it is not final: which line lacks which tax fact,
+// and what the server knows of the payments. It still issues nothing.
 import { dateOK, text, problem } from './_commercial.js';
+import { VAT_RATES } from '../invoices.js';
 export const draftIdOK = v => typeof v === 'string' && /^[A-Za-z0-9:_-]{8,64}$/.test(v);
 const cents = v => Number.isSafeInteger(v) && v >= 0 && v <= 10000000000;
 export async function digest(value) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-export function draftSource(stays, accounts = [], roomCharges = []) {
+export function draftSource(stays, accounts = [], roomCharges = [], folios = null) {
   const lines = [], payers = basePayers(accounts), rooms = [];
   for (const b of stays) {
     const h=b.hotel, total=Math.round(Number(h?.total)*100);
@@ -43,7 +46,62 @@ export function draftSource(stays, accounts = [], roomCharges = []) {
       label:text(c.label, 120)||'Consommation chambre', quantity:1, amountCents:amount, kind:'room_charge', payer });
   }
   if(lines.length>2000) problem('billing-limit');
-  return {lines,payers:[...payers.values()],rooms};
+  return {lines,payers:[...payers.values()],rooms,payments:paymentFacts(stays,folios)};
+}
+/* What the server itself knows was paid for these stays. Only a dashboard
+ * folio explicitly linked by stayId counts (same rule as stayBalance): a room
+ * number alone can name a later guest, and the hotel till journals its
+ * payments as day sales that carry no stay. Anything the server cannot see
+ * is listed as an issue, never guessed as paid or as owed. */
+function paymentFacts(stays, folios) {
+  if (!Array.isArray(folios)) return {paidCents:0,issues:[{stayId:null,issue:'folios-unavailable'}]};
+  let paidCents=0; const issues=[];
+  const money=v=>{const n=Math.round(Number(v)*100);return Number.isSafeInteger(n)?n:null;};
+  for (const b of stays) {
+    if (!['confirmed','checked_in','completed'].includes(b.status)) continue;
+    const own=folios.filter(f=>f && f.stayId===b.id);
+    if (!own.length) { issues.push({stayId:b.id,issue:'no-linked-folio'}); continue; }
+    let outside=0, outsideLines=0, unconfirmed=0, unreadable=false;
+    for (const f of own) {
+      for (const l of Array.isArray(f.lines)?f.lines:[]) {
+        const amount=money(l?.amt);
+        if (amount===null) { unreadable=true; continue; }
+        if (l.paid===true) paidCents+=amount;
+        if (l.src!=='room') { outside+=amount; outsideLines++; }
+      }
+      // A closed folio's departure balance went through the client's sale
+      // queue under an id the server cannot rebuild: real, but unconfirmed.
+      const settled=money(f.settlementAmount||0);
+      if (settled===null) unreadable=true;
+      else if (f.closedAt && settled) unconfirmed+=settled;
+    }
+    if (unreadable) issues.push({stayId:b.id,issue:'folio-unreadable'});
+    if (outsideLines) issues.push({stayId:b.id,issue:'folio-lines-outside-draft',amountCents:outside});
+    if (unconfirmed) issues.push({stayId:b.id,issue:'settlement-unconfirmed',amountCents:unconfirmed});
+  }
+  if (!Number.isSafeInteger(paidCents)) return {paidCents:0,issues:[{stayId:null,issue:'folio-unreadable'}]};
+  return {paidCents,issues};
+}
+/* Tax facts per line. No hotel line carries a VAT rate today (stay prices are
+ * accepted TTC without a rate, till room charges and extras neither), and the
+ * server has no taxe de séjour rule: the till and the dashboard each hold
+ * their own figure. Each line says exactly what is missing. */
+function taxIssues(lines) {
+  const issues=[];
+  for (const l of lines) {
+    const missing=[];
+    if (!VAT_RATES.includes(l.vatRate)) missing.push('vatRate');
+    if (l.kind==='lodging') missing.push('touristTax');
+    if (missing.length) issues.push({lineId:l.id,missing});
+  }
+  return issues;
+}
+function paymentState(payments, totalCents) {
+  const p=payments||{paidCents:0,issues:[{stayId:null,issue:'folios-unavailable'}]};
+  if (p.issues.length) return {paymentStatus:'not-reconciled',paidCents:null,owedCents:null,paymentIssues:p.issues};
+  if (p.paidCents===totalCents) return {paymentStatus:'reconciled',paidCents:p.paidCents,owedCents:0,paymentIssues:[]};
+  if (p.paidCents<totalCents) return {paymentStatus:'partial',paidCents:p.paidCents,owedCents:totalCents-p.paidCents,paymentIssues:[]};
+  return {paymentStatus:'not-reconciled',paidCents:p.paidCents,owedCents:null,paymentIssues:[{stayId:null,issue:'paid-exceeds-total',amountCents:p.paidCents-totalCents}]};
 }
 /* Rooms without money. Same cards as draftSource, but lenient: a stay whose
  * billing material is broken (legacy row, bad status, stale quote) still
@@ -103,7 +161,12 @@ export function buildDraft(source, input) {
   if(!cents(totalCents)) problem('billing-limit');
   const totals=new Map();
   for(const l of lines) for(const p of l.parts)totals.set(p.payer,(totals.get(p.payer)||0)+p.amountCents);
+  const taxes=taxIssues(lines);
+  // finalizable stays false: issuing a numbered invoice from a stay waits on
+  // owner decisions (who may finalize, whether an unpaid or account stay may
+  // be invoiced), not only on these two checks.
   return {v:1,kind:'preinvoice',currency:'MAD',lines,totalCents,
     payers:[...totals].map(([id,amountCents])=>({...payers.get(id),amountCents})),
-    note:text(input.note,1000),taxStatus:'unverified',paymentStatus:'not-reconciled',finalizable:false};
+    note:text(input.note,1000),taxStatus:taxes.length?'unverified':'verified',taxIssues:taxes,
+    ...paymentState(source.payments,totalCents),finalizable:false};
 }

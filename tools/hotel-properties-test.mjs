@@ -114,6 +114,34 @@ await strict('restaurant charges retry once on their stay and refuse closed or o
 await strict('tenant stay lookup and owner-only drafts declarations reveal no guest identity to outsiders',fc.asyncProperty(fc.integer({min:0,max:10000}),async i=>{reset();const a=await create(payload(i));for(const [handler,p]of [[getStays,{id:a.id,merchant:other}],[billing,{dossierId:a.id,merchant:other}],[billing,{dossierId:a.id}],[declarations,{month:'2026-11'}]]){const role=p.merchant?'owner':'till',r=await call(handler,p,role,true);assert.ok([401,403,404].includes(r.status),JSON.stringify(r));assert.ok(!JSON.stringify(r.body).includes('SYNTHETIC'));}}));
 await strict('Morocco business date switches at 05:00 UTC after zone law',fc.property(fc.integer({min:0,max:29}),fc.integer({min:0,max:59}),(d,m)=>{const date=day(d),ts=Date.parse(date+'T04:'+String(m).padStart(2,'0')+':00Z');assert.equal(businessDate(ts,5,'Africa/Casablanca'),day(d-1));assert.equal(businessDate(ts+3600000,5,'Africa/Casablanca'),date);}));
 await knownIssue('tax and payment reconciliation remain unconfigured preinvoice policy',fc.property(fc.integer({min:1,max:10000}),total=>{const s=draftSource([{id:'stay-test',status:'confirmed',customer:{name:'Guest'},hotel:{checkIn:day(0),checkOut:day(1),total:total/100}}]);const d=buildDraft(s,{extras:[],allocations:[]});return d.taxStatus==='verified'&&d.paymentStatus==='reconciled';}));
+await strict('preinvoice names each line missing a VAT rate or tourist tax and never verifies without them',fc.property(fc.integer({min:1,max:30}),fc.array(fc.integer({min:1,max:100000}),{maxLength:5}),(n,charges)=>{const b={id:'stay-tax',status:'checked_in',resourceId:'room:1',customer:{name:'Guest'},hotel:{checkIn:day(0),checkOut:day(n),total:n}};const ev=charges.map((a,i)=>({id:'charge-'+i,kind:'room-charge',stayId:b.id,roomId:'room:1',amountCents:a,occurredTs:Date.parse(day(0)+'T12:00:00Z')}));const d=buildDraft(draftSource([b],[],ev,[]),{extras:[],allocations:[]});assert.equal(d.taxStatus,'unverified');assert.equal(d.finalizable,false);assert.deepEqual(d.taxIssues.map(i=>i.lineId),d.lines.map(l=>l.id));for(const i of d.taxIssues)assert.deepEqual(i.missing,i.lineId.startsWith('stay:')?['vatRate','touristTax']:['vatRate']);}));
+await strict('payment status reconciles linked folio centimes exactly and lists what the server cannot see',fc.property(fc.integer({min:1,max:1000000}),fc.integer({min:0,max:1000000}),fc.integer({min:1,max:5}),(total,paid,n)=>{
+  const b={id:'stay-pay',status:'completed',resourceId:'room:1',customer:{name:'Guest'},hotel:{checkIn:day(0),checkOut:day(n),total:total/100}};
+  const split=[Math.floor(paid/2),paid-Math.floor(paid/2)];
+  const linked={room:1,stayId:b.id,lines:split.map(c=>({amt:c/100,src:'room',paid:true})).concat([{amt:total/100,src:'room'}])};
+  const run=f=>buildDraft(draftSource([b],[],[],f),{extras:[],allocations:[]});
+  const d=run([linked,{room:1,stayId:'later-guest',lines:[{amt:total/100,src:'room',paid:true}]}]);
+  if(paid===total){assert.equal(d.paymentStatus,'reconciled');assert.equal(d.owedCents,0);}
+  else if(paid<total){assert.equal(d.paymentStatus,'partial');assert.equal(d.owedCents,total-paid);assert.equal(d.paidCents,paid);}
+  else{assert.equal(d.paymentStatus,'not-reconciled');assert.deepEqual(d.paymentIssues,[{stayId:null,issue:'paid-exceeds-total',amountCents:paid-total}]);}
+  assert.equal(run([{...linked,stayId:'other'}]).paymentIssues[0].issue,'no-linked-folio');
+  assert.equal(run(null).paymentIssues[0].issue,'folios-unavailable');
+  assert.deepEqual(run([{...linked,closedAt:1,settlementAmount:0.01}]).paymentIssues,[{stayId:b.id,issue:'settlement-unconfirmed',amountCents:1}]);
+  assert.deepEqual(run([{...linked,lines:[...linked.lines,{amt:0.25,src:'taxe'},{amt:-0.25,src:'fee'}]}]).paymentIssues,[{stayId:b.id,issue:'folio-lines-outside-draft',amountCents:0}]);
+  for(const x of [run(null),run([linked])])assert.equal(x.finalizable,false);
+}),[[100,100,1],[100,99,1],[100,101,1]]);
+await strict('billing API reads payments only from this tenant folio linked to the stay',fc.asyncProperty(fc.integer({min:0,max:20000}),async paid=>{
+  reset();const a=await create(payload(1));
+  const folio={room:1,stayId:a.id,lines:[{amt:paid/100,src:'room',paid:true}]};
+  doc('rooms',{folios:[{room:1,stayId:a.id,lines:[{amt:200,src:'room',paid:true}]}]},other);
+  const before=await call(billing,{dossierId:a.id},'owner',true);ok(before);assert.equal(before.body.preview.paymentStatus,'not-reconciled');assert.deepEqual(before.body.preview.paymentIssues,[{stayId:a.id,issue:'no-linked-folio'}]);
+  doc('rooms',{baseRate:100,roomTypes:[{id:'type-basic',name:'Basic',rate:100,maxGuests:4}],rooms:[1,2].map(n=>({id:'room:'+n,n,typeId:'type-basic',status:'libre'})),folios:[folio]});
+  const r=await call(billing,{dossierId:a.id},'owner',true);ok(r);const p=r.body.preview;
+  assert.equal(p.totalCents,20000);assert.equal(p.paymentStatus,paid===20000?'reconciled':'partial');assert.equal(p.owedCents,20000-paid);assert.equal(p.finalizable,false);
+  assert.equal(before.body.sourceDigest,r.body.sourceDigest);
+  sql.prepare("UPDATE store_docs SET data='{' WHERE merchant=? AND feature='rooms'").run(merchant);
+  const broken=await call(billing,{dossierId:a.id},'owner',true);ok(broken);assert.equal(broken.body.preview.paymentIssues[0].issue,'folios-unavailable');
+}),[[20000],[0]]);
 await strict('a charge arriving between balance read and checkout write is rechecked',fc.asyncProperty(fc.integer({min:1,max:1000000}),async amount=>{
   reset(0);const a=await create();ok(await call(stays,{action:'status',id:a.id,status:'checked_in'}));
   const roomDoc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='rooms'").get(merchant).data);
