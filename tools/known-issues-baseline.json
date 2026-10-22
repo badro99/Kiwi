@@ -14,10 +14,6 @@
       "label": "BP-1"
     },
     {
-      "suite": "books-money-properties-test.mjs",
-      "label": "BP-3"
-    },
-    {
       "suite": "briefing-properties-test.mjs",
       "label": "policy: net-zero closed days currently send no morning notification"
     },

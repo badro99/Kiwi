@@ -76,12 +76,26 @@
       if(amounts){var pieces=s.lines.map(function(l,i){var cfg=configured(l.cat||l.category||l.c),lr=N(l.taxRate!=null?l.taxRate:l.vatRate);if(lr==null&&cfg)lr=N(cfg.rate);if(lr==null)return null;var h=includedHT(amounts[i],lr);return{ht:h,vat:amounts[i]-h,ttc:amounts[i],rate:lr,basis:cfg?'configuration datée '+cfg.effectiveFrom+' · '+cfg.id:'taux figé de ligne'};});if(pieces.every(Boolean))return{ht:pieces.reduce(function(a,p){return a+p.ht;},0),vat:pieces.reduce(function(a,p){return a+p.vat;},0),pieces:pieces,basis:'ventilation par ligne'};return null;}
       var cfg=configured(s.lines.length&&s.lines.every(function(l){return String(l.cat||l.category||l.c||'')===String(s.lines[0].cat||s.lines[0].category||s.lines[0].c||'');})?(s.lines[0].cat||s.lines[0].category||s.lines[0].c):null);if(!cfg||s.cents==null)return null;rate=N(cfg.rate);if(rate==null)return null;var htC=includedHT(s.cents,rate);return{ht:htC,vat:s.cents-htC,rate:rate,basis:'configuration datée '+cfg.effectiveFrom+' · '+cfg.id};
     }
+    // Retour en plusieurs fois : la TVA d’un retour lié se calcule sur le cumul
+    // retourné de la vente d’origine (par taux), moins ce qui est déjà extourné.
+    // L’arrondi ne s’accumule pas : retour complet = HT et TVA de l’origine, au
+    // centime. Montants figés (snapshot, facture) repris tels quels, comptés au cumul.
+    var taxes=new Map(),originTax=new Map(),reversed=new Map();
+    active.filter(function(s){return s.cents!=null&&s.cents>=0;}).forEach(function(s){var tx=taxFor(s),g=new Map();taxes.set(s,tx);if(!tx)return;(tx.pieces||[{rate:tx.rate,ht:tx.ht,ttc:s.cents}]).forEach(function(p){if(p.rate==null)return;var o=g.get(p.rate)||{ttc:0,ht:0};o.ttc+=p.ttc;o.ht+=p.ht;g.set(p.rate,o);});originTax.set(String(s.id),g);});
+    active.filter(function(s){return s.cents!=null&&s.cents<0;}).sort(function(a,b){return N(a.ts)-N(b.ts)||(String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0);}).forEach(function(s){
+      var tx=taxFor(s),origin=refundOrigin.get(String(s.id));taxes.set(s,tx);if(!tx||origin==null)return;
+      var frozen=tx.basis==='snapshot de vente'||/^facture figée/.test(tx.basis),og=originTax.get(origin);
+      (tx.pieces||[tx]).forEach(function(p){var ttc=tx.pieces?p.ttc:s.cents;if(p.rate==null)return;var key=origin+'|'+p.rate,r=reversed.get(key)||{ttc:0,ht:0};r.ttc+=ttc;
+        if(!frozen){var o=og&&og.get(p.rate),h=(o&&r.ttc===-o.ttc?-o.ht:includedHT(r.ttc,p.rate))-r.ht;if(h<=0&&h>=ttc){p.ht=h;p.vat=ttc-h;}}
+        r.ht+=p.ht;reversed.set(key,r);});
+      if(tx.pieces){tx.ht=tx.pieces.reduce(function(a,p){return a+p.ht;},0);tx.vat=tx.pieces.reduce(function(a,p){return a+p.vat;},0);}
+    });
 
     var theoreticalCost=0,costedLines=0,lineCount=0,costedRevenue=0,taxed=0,htTotal=0,vatTotal=0;
     active.forEach(function(s){
       if(s.cents==null){warn('missing-amount',s.id,'Montant source incomplet.');return;}
       if(s.amount_cents==null&&s.amountCents==null)warn('legacy-precision',s.id,'Montant historique sans centimes : précision limitée à celle du registre original.');
-      var tx=taxFor(s);s.tax=tx;if(tx){taxed++;htTotal+=tx.ht;vatTotal+=tx.vat;(tx.pieces||[Object.assign({ttc:s.cents},tx)]).forEach(function(t){var group=String(t.rate==null?'Montants figés, taux absent':t.rate+' %'),g=taxGroups.get(group)||{rate:group,ht:0,vat:0,ttc:0,count:0};g.ht+=t.ht;g.vat+=t.vat;g.ttc+=t.ttc;g.count++;taxGroups.set(group,g);});}else warn('missing-tax',s.ref||s.id,'Taux/ventilation historique non enregistré dans Kiwi. Le réglage courant sans date n’est pas utilisé.');
+      var tx=taxes.get(s);s.tax=tx;if(tx){taxed++;htTotal+=tx.ht;vatTotal+=tx.vat;(tx.pieces||[Object.assign({ttc:s.cents},tx)]).forEach(function(t){var group=String(t.rate==null?'Montants figés, taux absent':t.rate+' %'),g=taxGroups.get(group)||{rate:group,ht:0,vat:0,ttc:0,count:0};g.ht+=t.ht;g.vat+=t.vat;g.ttc+=t.ttc;g.count++;taxGroups.set(group,g);});}else warn('missing-tax',s.ref||s.id,'Taux/ventilation historique non enregistré dans Kiwi. Le réglage courant sans date n’est pas utilisé.');
       add(channels,s.channel,s.cents);
       var parts=list(s.payment_parts||s.paymentParts), received=parts.filter(function(p){return !/^(credit|delivery|deferred)$/i.test(p.method||'');}),partSum=knownSum(received,cents);
       if(parts.length&&partSum===s.cents)received.forEach(function(p){add(methods,p.method,cents(p));});
