@@ -21,8 +21,8 @@ var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=3',
   '/kiwi-caisse.html',
-  '/assets/caisse-accounting.js?v=1',
-  '/assets/caisse-app.js?v=2',
+  '/assets/caisse-accounting.js?v=2',
+  '/assets/caisse-app.js?v=4',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -189,7 +189,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=24',
+  '/assets/day-report.js?v=25',
   '/assets/report.js?v=6',
   '/assets/day-report-dash.js?v=35',
   '/assets/day-report-export.js?v=12',

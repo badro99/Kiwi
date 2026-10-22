@@ -746,7 +746,11 @@
 
     var cashSales = round2(num(methods.cash));   /* déjà net des remboursements espèces */
     var opening = num(sess.openingFloat);
-    var expected = round2(opening + cashSales + cashTips + movesIn - movesOut);
+    /* Une passation signée a compté le tiroir : son écart passe dans l'attendu,
+       comme sur le tiroir de la caisse (drawerExpected). Sans lui, la caisse
+       annonçait 100,01 et le Z 100 pour le même tiroir. */
+    var handoverGap = (sess.handovers || []).reduce(function (n, h) { return n + num(h && h.ecart); }, 0);
+    var expected = round2(opening + cashSales + cashTips + movesIn - movesOut + handoverGap);
     var counted = (sess.countedCash == null || sess.countedCash === '') ? null : round2(sess.countedCash);
     var ecart = counted == null ? null : round2(counted - expected);
 

@@ -2254,7 +2254,7 @@
       const d = vrapDiscount;
       if (!d) return 0;
       const amt = d.kind === 'pct'
-        ? money(gross * (d.value || 0) / 100)
+        ? Math.round(minor(gross) * (d.value || 0) / 100 + 1e-9) / 100 /* centimes entiers : 5 % de 43 871,10 vaut 2 193,555 */
         : money(d.value || 0);
       return money(Math.max(0, Math.min(amt, money(gross))));
     }
@@ -4577,7 +4577,10 @@
     function payTipAmount() {
       /* money(), pas Math.round : un pourboire de 5 % sur 47,50 doit rendre
          2,38 · l'arrondi au dirham entier faussait le rendu au centime près. */
-      return money(currentTotal() * payTipPct() / 100);
+      /* En centimes entiers : 21,35 × 10 / 100 vaut 2,13499… en virgule
+         flottante et rendait 2,13 au lieu de 2,14. */
+      const cents = Math.round(money(currentTotal()) * 100);
+      return Math.round(cents * payTipPct() / 100 + 1e-9) / 100;
     }
     /* Itemised lines for the receipt of the sale being tendered (non-split).
        Table → generateOrder; vente rapida → the cart. */
@@ -7134,7 +7137,7 @@
         if (!allocation.ok) { toast(allocation.message); return; }
       }
       const parts = [];
-      const tipTotal = money(splitState.total * effectiveTipPct() / 100);
+      const tipTotal = Math.round(minor(splitState.total) * effectiveTipPct() / 100 + 1e-9) / 100;
       if (splitState.splitMode === 'egal') {
         const tipPct = effectiveTipPct();
         const baseShares = shareMoney(splitState.total, splitState.numParts);
@@ -7163,8 +7166,18 @@
             shareDen: splitState.numParts,
           };
         });
+        /* Le total de chaque ligne se partage au centime : 47,50 en trois faisait
+           15,83 × 3 = 47,49 au rapport Z. Les centimes de reste tournent d'une
+           part à l'autre, ligne après ligne, comme ceux de la note. */
+        const nParts = splitState.numParts, lineCents = Object.entries(splitState.itemTotals).map(([, info]) => minor(money((info.totalQty || 0) * (info.unitPrice || 0))));
+        let turn = 0;
+        const lineShares = lineCents.map((c) => {
+          const out = new Array(nParts).fill(Math.floor(c / nParts));
+          for (let r = c - out[0] * nParts; r > 0; r--) { out[turn] += 1; turn = (turn + 1) % nParts; }
+          return out;
+        });
         for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, lines: shareLines.map(l => ({ ...l })), paid: false, payMethod: null });
+          parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, lines: shareLines.map((l, k) => ({ ...l, total: major(lineShares[k][i]) })), paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -9112,7 +9125,7 @@
       const d = tables[id] && tables[id].discount;
       if (!d) return 0;
       let amt = d.kind === 'pct'
-        ? money(gross * (d.value || 0) / 100)
+        ? Math.round(minor(gross) * (d.value || 0) / 100 + 1e-9) / 100 /* centimes entiers : 5 % de 43 871,10 vaut 2 193,555 */
         : money(d.value || 0);
       return money(Math.max(0, Math.min(amt, money(gross))));
     }
@@ -9583,7 +9596,8 @@
       const o = refundState.orig;
       if (!o) return;
       let amt = money(parseFloat($('#rf-amount').value) || 0);
-      amt = Math.max(0.01, Math.min(amt, refundableLeft(o)));
+      const left = refundableLeft(o);
+      amt = left <= 0 ? 0 : Math.max(0.01, Math.min(amt, left));
       refundState.amount = money(amt);
     }
     function confirmRefund() {
@@ -9599,6 +9613,11 @@
       window.KiwiAuthAct?.({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } });
       requireManager('Remboursement', () => {
         if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
+        /* Un autre remboursement du même ticket a pu être accepté pendant la
+           validation : le montant validé dépasserait alors ce qui reste. */
+        if (Math.round(amount * 100) > Math.round(refundableLeft(orig) * 100)) {
+          toast('Le ticket a changé pendant la validation · relancez le remboursement'); return;
+        }
         const manager = window.KiwiCaissePairing?.lastManager?.() || {};
         // NEGATIVE journal entry · NOT via recordSale (it rejects amount<=0).
         const entry = {

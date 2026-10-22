@@ -13,8 +13,9 @@ const RUNS = Number(process.env.KIWI_PROPERTY_RUNS) || 300;
 const SEED = process.env.KIWI_PROPERTY_SEED ? Number(process.env.KIWI_PROPERTY_SEED) : 20261022;
 const options = extra => ({ numRuns: RUNS, seed: SEED, ...extra });
 let passed = 0, failed = 0, known = 0;
-async function strict(label, property) {
-  const result = await fc.check(property, options());
+/* examples : le témoin réduit d'un défaut corrigé reste rejoué à chaque run. */
+async function strict(label, property, examples) {
+  const result = await fc.check(property, options(examples ? { examples } : {}));
   if (result.failed) { failed++; console.error('✗ ' + label, fc.stringify(result.counterexample), result.errorInstance || result.error); }
   else { passed++; console.log('✓ ' + label); }
 }
@@ -95,7 +96,7 @@ await strict('table and takeaway discounts are bounded, rounded and agree',fc.pr
   const d={kind:percent?'pct':'amount',value:percent?pct:fixed/100};c.tables={T1:{discount:d}};c.vrapDiscount=d;
   const expected=Math.min(gross,percent?Math.round(gross*pct/100):fixed);
   assert.equal(cents(c.discountAmountFor('T1',gross/100)),expected);assert.equal(cents(c.vrapDiscountAmount(gross/100)),expected);
-}));
+}),[[4387110,5,0,true]]); /* 5 % de 43 871,10 : 2 193,56, pas ,55 (corrigé 22/10) */
 await strict('discount metadata reconciles up to 60 lines with net ticket cents',fc.property(linesArb,fc.integer({min:0,max:100}),(lines,pct)=>{
   const gross=add(lines.map(l=>cents(l.total))),cut=Math.round(gross*pct/100);c.mode='salle';c.tables={T1:{discount:{kind:'pct',value:pct}}};
   const d=c.activeSaleDiscount((gross-cut)/100,lines,'T1');if(!cut||!gross)assert.equal(d,null);else{assert.equal(d.grossAmountCents,gross);assert.equal(d.discountAmountCents,cut);}
@@ -200,22 +201,22 @@ await strict('Z net/method/tips/drawer totals match journal rollup and counted m
   assert.equal(cents(r.cash.expected),float+e.cashC+e.cashTipsC+e.movesInC-e.movesOutC);assert.equal(cents(r.cash.ecart),counted-cents(r.cash.expected));
 }));
 // Known failures are intentionally not production fixes. Replay examples prevent green-by-luck.
-await knownIssue('CM-1','equal-split line totals should conserve the undiscounted ticket',fc.property(positive,fc.constantFrom(2,3,4,5,6,8),(base,n)=>{
+await strict('CM-1 (corrigé 22/10) · equal-split line totals should conserve the undiscounted ticket',fc.property(positive,fc.constantFrom(2,3,4,5,6,8),(base,n)=>{
   if(base<n)return true;const f=flow(base,n);return add(Array.from(f.parts,p=>add(Array.from(p.lines,l=>cents(l.total)))))===base;
 }),[[3,2]]);
-await knownIssue('CM-2','standalone refund clamp should not exceed a zero remaining balance',fc.property(amount,(paid)=>{
+await strict('CM-2 (corrigé 22/10) · standalone refund clamp should not exceed a zero remaining balance',fc.property(amount,(paid)=>{
   const t=context({refundState:{orig:{amount:paid/100,refundedAmount:paid/100}}});t.$('#rf-amount').value='1';t.c.clampRefundAmount();return cents(t.c.refundState.amount)<=0;
 }),[[0]]);
-await knownIssue('CM-3','Z expected cash should equal the live drawer after signed handover gaps',fc.property(fc.integer({min:-MAX,max:MAX}),(gap)=>{
+await strict('CM-3 (corrigé 22/10) · Z expected cash should equal the live drawer after signed handover gaps',fc.property(fc.integer({min:-MAX,max:MAX}),(gap)=>{
   report.c.journal=[];report.c.cashMovements=[];report.c.openingFloat=100;report.c.handovers=[{id:'h1',time:new Date(TS),fromName:'A',toName:'B',expected:100,counted:100+gap/100,ecart:gap/100}];const r=report.c.buildDayReport(null,0);return cents(r.cash.expected)===cents(report.c.drawerExpected());
 }),[[1]]);
-await knownIssue('CM-4','percentage tips on fractional MAD tickets round half cents upward',fc.property(positive,fc.integer({min:0,max:100}),(base,pct)=>{
+await strict('CM-4 (corrigé 22/10) · percentage tips on fractional MAD tickets round half cents upward',fc.property(positive,fc.integer({min:0,max:100}),(base,pct)=>{
   c.currentTotal=()=>base/100;c.payTipMode='autre';c.payTipCustom=pct;c.splitPayCallback=null;return cents(c.payTipAmount())===Math.round(base*pct/100);
 }),[[2135,10]]);
-await knownIssue('CM-5','a fresh journal import must preserve server tipCents outside revenue',fc.property(positive,(tip)=>{
+await strict('CM-5 (corrigé 22/10) · a fresh journal import must preserve server tipCents outside revenue',fc.property(positive,(tip)=>{
   const r=c.cloudSaleJournalEntry({id:'server-sale',ts:TS,amount:1,amountCents:100,method:'cash',tipCents:tip});return cents(r.tip)===tip;
 }),[[1]]);
-await knownIssue('CM-6','a pending manager approval must re-clamp after another refund is accepted',fc.property(fc.integer({min:2,max:MAX}),(paid)=>{
+await strict('CM-6 (corrigé 22/10) · a pending manager approval must re-clamp after another refund is accepted',fc.property(fc.integer({min:2,max:MAX}),(paid)=>{
   const orig={id:'original',ref:'ref',label:'Table',amount:paid/100,method:'cash',refundedAmount:0};
   const old={id:'old-refund',kind:'refund',refundOfId:'original',amount:-0.01,method:'cash',refundSyncStatus:'pending',refundLedgerReversed:true};
   let t;t=context({journal:[orig,old],refundState:{orig,reason:'Return'},requireManager(_label,approve){old.refundSyncStatus='accepted';t.c.applyAcceptedRefund(old);approve();}});

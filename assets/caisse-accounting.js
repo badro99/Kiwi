@@ -835,7 +835,10 @@
         amountCents: sale.amountCents, time: new Date(Number(sale.ts) || Date.now()),
         label: String(sale.orderRef || sale.label || 'Vente'), amount: money(sale.amount),
         method: String(sale.method || 'cash'), ref: String(sale.receiptRef || sale.ref || sale.id),
-        tip: 0, cashier: String(sale.server || sourceLabel),
+        /* /api/feed joint tip_cents (hors montant) : une vente pourboirée sur un
+           autre poste gardait 0 de pourboire ici, au Z comme au tiroir. */
+        tip: Number.isSafeInteger(Number(sale.tipCents)) && Number(sale.tipCents) > 0 ? Number(sale.tipCents) / 100 : 0,
+        cashier: String(sale.server || sourceLabel),
         channel: String(sale.channel || ''), origin: origin,
       };
       if (Array.isArray(sale.lines) && sale.lines.length) {
