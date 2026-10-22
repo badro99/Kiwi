@@ -29,6 +29,19 @@ import { invSetModal, offerRegister } from './inventory.js?v=4';
      de cette année ou du suivant — et c'est le seul chiffre qui décide si la
      cliente est remboursée ou renvoyée. Les dates d'avoir portent l'année. */
   const fmtDayY = (d) => `${fmtDay(d)} ${d.getFullYear()}`;
+  /* Dernière journée commerciale où un avoir reste utilisable. Le serveur le fait
+     expirer à la bascule (05:00 par défaut) qui CLÔT cette journée : la date civile
+     de cet instant serait le lendemain. On lit donc la journée commerciale de
+     l'instant qui le précède, avec la bascule et le fuseau du magasin
+     (KiwiDayReport), comme le tableau de bord. */
+  const creditLastDay = (until) => {
+    const t = +new Date(until);
+    let day = '';
+    try { if (window.KiwiDayReport && window.KiwiDayReport.businessDay) day = String(window.KiwiDayReport.businessDay(t - 1)); } catch (_) {}
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
+  };
+  const fmtValidUntil = (until) => fmtDayY(creditLastDay(until));
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
@@ -1234,7 +1247,7 @@ import { invSetModal, offerRegister } from './inventory.js?v=4';
         `<small style="display:block;margin-top:4px;color:var(--ink-3);">${event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : esc(event.action)} · ${fmtMAD((event.amountCents || 0) / 100)} · ${whenLabel(event.ts)} · ${esc(event.actor || 'Caisse')} · solde ${fmtMAD((event.balanceAfterCents || 0) / 100)}</small>`
       ).join('');
       return `<div class="mz-fhist-row" style="align-items:flex-start;">
-        <span class="when">${whenLabel(credit.at)}<small style="display:block;">expire ${fmtDayY(credit.until)}</small></span>
+        <span class="when">${whenLabel(credit.at)}<small style="display:block;">expire ${fmtValidUntil(credit.until)}</small></span>
         <span class="what"><b>${esc(credit.code)}</b> · vente ${esc(credit.from || '·')}<small style="display:block;">${lines.length ? esc(lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' + ')) : esc(credit.motif || 'Retour')} · ${esc(issued.actor || 'Caisse')}</small>${eventRows}</span>
         <span class="amt">${fmtMAD(credit.amount)}<small style="display:block;color:var(--ink-3);">reste ${fmtMAD(credit.balance)}</small></span>
       </div>`;
@@ -2502,4 +2515,4 @@ import { invSetModal, offerRegister } from './inventory.js?v=4';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };
+export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };

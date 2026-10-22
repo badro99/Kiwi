@@ -28,6 +28,19 @@ import { offerRegister } from './inventory.js?v=5';
      de cette année ou du suivant — et c'est le seul chiffre qui décide si la
      cliente est remboursée ou renvoyée. Les dates d'avoir portent l'année. */
   const fmtDayY = (d) => `${fmtDay(d)} ${d.getFullYear()}`;
+  /* Dernière journée commerciale où un avoir reste utilisable. Le serveur le fait
+     expirer à la bascule (05:00 par défaut) qui CLÔT cette journée : la date civile
+     de cet instant serait le lendemain. On lit donc la journée commerciale de
+     l'instant qui le précède, avec la bascule et le fuseau du magasin
+     (KiwiDayReport), comme le tableau de bord. */
+  const creditLastDay = (until) => {
+    const t = +new Date(until);
+    let day = '';
+    try { if (window.KiwiDayReport && window.KiwiDayReport.businessDay) day = String(window.KiwiDayReport.businessDay(t - 1)); } catch (_) {}
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
+  };
+  const fmtValidUntil = (until) => fmtDayY(creditLastDay(until));
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
@@ -1508,4 +1521,4 @@ import { offerRegister } from './inventory.js?v=5';
       lookupScan(code);
     }, 620);
   }
-export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };
+export { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtValidUntil, fmtMAD, iconPickerHtml, icons, isDemoStore, lens, lookupScan, moveCaretEnd, openCamScan, pad2, rayonOf, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderTicket, shelf, useKiwiCl, variantColor, variantSource, wireIconPicker };

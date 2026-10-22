@@ -8,7 +8,12 @@
 //
 // items: [{ key, id, start, end, closed, breaks: [[from, to], ...] }]
 // dayOf(epoch) -> 'YYYY-MM-DD'
-export function hoursByDay(items, dayOf) {
+// formerDayOf(epoch) -> 'YYYY-MM-DD', optional: the day an older version filed
+// the same punch under. When it differs from dayOf, that day is still
+// reported (at its true total, 0 if nothing else starts on it), so a client
+// that MERGES these figures day by day (Dashboard -> Equipe) overwrites the
+// stale copy instead of paying the punch on both days.
+export function hoursByDay(items, dayOf, formerDayOf) {
   const kept = [];
   const byId = new Map();
   (Array.isArray(items) ? items : []).forEach((item) => {
@@ -25,6 +30,7 @@ export function hoursByDay(items, dayOf) {
   byId.forEach((item) => kept.push(item));
 
   const stretches = new Map();
+  const former = new Map();
   kept.forEach((item) => {
     const start = Number(item.start) || 0, end = Number(item.end) || 0;
     if (!start || end <= start) return;
@@ -35,6 +41,8 @@ export function hoursByDay(items, dayOf) {
         : [[s, Math.min(e, a)], [Math.max(s, b), e]].filter(([x, y]) => y > x));
     });
     const day = dayOf(start);
+    const was = typeof formerDayOf === 'function' ? formerDayOf(start) : day;
+    if (was && was !== day) { if (!former.has(item.key)) former.set(item.key, new Set()); former.get(item.key).add(was); }
     const list = stretches.get(item.key) || [];
     parts.forEach(([s, e]) => list.push([s, e, day]));
     stretches.set(item.key, list);
@@ -53,6 +61,7 @@ export function hoursByDay(items, dayOf) {
     flush();
     const row = out[key] = {};
     Object.keys(ms).forEach((day) => { row[day] = Math.round(ms[day] / 1000) / 3600; });
+    (former.get(key) || []).forEach((day) => { if (!(day in row)) row[day] = 0; });
   });
   return out;
 }

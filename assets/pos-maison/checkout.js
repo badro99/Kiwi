@@ -1,5 +1,5 @@
 import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-maison.js?v=86';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=4';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=4';
 import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=4';
 
 
@@ -452,7 +452,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtDayY(av.until)}</span></div>
+      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
       <div class="c">${barcode(av.code + '-MM', 26)}</div>
       <div class="mz-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -483,7 +483,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       P.printText({ title:`Avoir ${av.code}`, paper:'80', lines:[
         { label:'Cliente', value:av.holderName }, { label:'Montant', value:fmtMAD(av.amount || av.balance) },
         { label:'Solde disponible', value:fmtMAD(av.balance) }, { label:'Motif', value:av.motif },
-        { label:'Valable jusqu’au', value:fmtDayY(av.until) },
+        { label:'Valable jusqu’au', value:fmtValidUntil(av.until) },
       ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
     };
   }
@@ -1087,7 +1087,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           ${avs.map((a) => `
             <button class="mz-pay-opt" data-mz-av-use="${a.code}">
               <span class="ic"><i data-lucide="scan-line"></i></span>
-              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtDayY(a.until)}</span></span>
+              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtValidUntil(a.until)}</span></span>
               <span class="amt">−${fmtMAD(Math.min(a.balance, portion()))}</span>
             </button>`).join('')}
         </div>

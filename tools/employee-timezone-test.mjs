@@ -4,30 +4,39 @@ import serveurTestSource from './serveur-test-source.cjs';
 // Casablanca or the employee device's zone, including across a live rollover.
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { businessDate } from '../functions/api/_business-day.js';
+import { businessDate, DEFAULT_CUTOFF } from '../functions/api/_business-day.js';
 
 let pass = 0, fail = 0;
 function check(value, label) { if (value) { pass++; } else { fail++; console.error('  ✗ ' + label); } }
-const at = Date.parse('2026-09-26T12:30:00Z'); // Auckland: 27th; Casablanca: 26th.
+const at = Date.parse('2026-09-26T12:30:00Z'); // Auckland: 27th, 00:30; Casablanca: 26th.
+const day = Date.parse('2026-09-26T18:30:00Z'); // Auckland: 27th, 06:30; Casablanca: 26th.
 const src = file => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 for (const file of ['functions/api/employee.js', 'functions/api/team/live.js']) {
   const code = src(file);
   const match = code.match(/function dateKey\([^)]*\) \{[\s\S]*?\n\}/);
   check(Boolean(match), file + ' exposes date key logic');
   if (match) {
-    const dateKey = vm.runInNewContext(`(${match[0]})`, { Intl, Date, businessDate });
-    check(dateKey(at, 'Pacific/Auckland') === '2026-09-27', file + ' uses the store date');
-    check(dateKey(at, 'Africa/Casablanca') === '2026-09-26', file + ' preserves Casablanca fallback');
+    const dateKey = vm.runInNewContext(`(${match[0]})`, { Intl, Date, businessDate, DEFAULT_CUTOFF });
+    check(dateKey(day, 'Pacific/Auckland') === '2026-09-27', file + ' uses the store date');
+    check(dateKey(day, 'Africa/Casablanca') === '2026-09-26', file + ' preserves Casablanca fallback');
+    // 00:30 au magasin : le pointage appartient au service de la veille (bascule 05:00).
+    check(dateKey(at, 'Pacific/Auckland') === '2026-09-26', file + ' files a 00:30 clock-in on the previous business day');
   }
   check(code.includes('merchantZone(env, merchant)'), file + ' reads the merchant zone');
 }
 const employee = src('functions/api/employee.js');
 check(/planningState\(teamRow\.data, me\.id, me\.role \|\| me\.department, zone\)/.test(employee), 'planning filters on store date');
-check(/pointedHours\(attendanceRow\.data, me\.id, auth\.pin\.id, zone\)/.test(employee), 'employee hours keyed to store date');
-check(/pointedHours\(\{ entries: \[changedEntry\] \}, memberId, auth\.pin\.id, zone\)/.test(employee), 'clock-out hours persisted on store date');
+check(/pointedHours\(attendanceRow\.data, me\.id, auth\.pin\.id, zone, cutoff\)/.test(employee), 'employee hours keyed to store business date');
+check(/pointedHours\(\{ entries: \[changedEntry\] \}, memberId, auth\.pin\.id, zone, cutoff\)/.test(employee), 'clock-out hours persisted on store business date');
+check(employee.includes('merchantCutoff(env, merchant)'), 'employee reads the store business cutoff');
+{
+  const planningDay = vm.runInNewContext(`(${employee.match(/function planningDay\([^)]*\) \{[\s\S]*?\n\}/)[0]})`, { businessDate });
+  check(planningDay(at, 'Pacific/Auckland') === '2026-09-27', 'planning stays on the store civil date, like employee-planning.js');
+}
 check(/store: \{[^\n]*timezone: zone/.test(employee), 'employee client receives store zone');
 const live = src('functions/api/team/live.js');
-check(/pointedHours\(attendance\.data, Date\.now\(\), zone[,)]/.test(live), 'manager hours keyed to store date');
+check(/pointedHours\(attendance\.data, Date\.now\(\), zone, removedAt\(team\.data\), cutoff\)/.test(live), 'manager hours keyed to store business date');
+check(live.includes('merchantCutoff(env, merchant)'), 'manager live reads the store business cutoff');
 
 function browser(file, apiName, data) {
   const code = src(file).replace(/\}\)\(\);\s*$/, `window.__tzTest = { dateKey: typeof dateKey === 'function' ? dateKey : null, todayKey: typeof todayKey === 'function' ? todayKey : null, timeLabel: typeof timeLabel === 'function' ? timeLabel : null, nextShift: typeof nextShift === 'function' ? nextShift : null, futureSchedule: typeof futureSchedule === 'function' ? futureSchedule : null, setData: d => { lastData = d; } };})();`);

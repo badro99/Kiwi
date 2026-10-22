@@ -22,6 +22,15 @@
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  /* Dernière journée commerciale où un avoir reste utilisable : le serveur le
+     fait expirer à la bascule (05:00) qui clôt cette journée, dont la date civile
+     serait le lendemain. Même lecture que la caisse (pos-boutique et pos-maison, sales.js). */
+  function creditLastDay(until) {
+    var t = Number(until) || 0, day = '';
+    try { if (window.KiwiDayReport && window.KiwiDayReport.businessDay) day = String(window.KiwiDayReport.businessDay(t - 1)); } catch (_) {}
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
+  }
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
   function hospitalityMode() {
     try {
@@ -362,7 +371,7 @@
                 + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
             }).join('');
             var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
-            var expiry = credit.expiresAt ? new Date(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
+            var expiry = credit.expiresAt ? creditLastDay(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
             var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? 'annulé' : 'utilisé');
             return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
               + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD' + esc(used) + '</b>'

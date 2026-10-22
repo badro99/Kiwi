@@ -5,7 +5,7 @@
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { storeOperationalState } from '../_private.js';
-import { businessDate, merchantZone } from '../_business-day.js';
+import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 import { hoursByDay } from '../_worked-hours.js';
 
 const TEAM = 'team';
@@ -79,8 +79,10 @@ function liveMembers(roster, attendance) {
     };
   });
 }
-function dateKey(ts, zone) {
-  return businessDate(ts, 0, zone);
+/* Même journée que /api/employee et que les ventes : un pointage commencé
+   avant la bascule (05:00 par défaut) appartient au service de la veille. */
+function dateKey(ts, zone, cutoff = DEFAULT_CUTOFF) {
+  return businessDate(ts, cutoff, zone);
 }
 /* Un pointage resté ouvert pour un salarié retiré (écrit avant que /api/store
  * ne le close au retrait) s'arrête à l'heure du retrait, pas à « maintenant ». */
@@ -92,7 +94,7 @@ function removedAt(team) {
   });
   return at;
 }
-function pointedHours(attendance, now, zone, gone = new Map()) {
+function pointedHours(attendance, now, zone, gone = new Map(), cutoff = DEFAULT_CUTOFF) {
   const items = [];
   (Array.isArray(attendance && attendance.entries) ? attendance.entries : []).forEach((entry) => {
     if (!entry || !entry.inTs) return;
@@ -105,7 +107,7 @@ function pointedHours(attendance, now, zone, gone = new Map()) {
     if (!entry.outTs && entry.pauseTs) breaks.push([Number(entry.pauseTs), end]);
     items.push({ key: memberId, id: entry.id, closed: !!entry.outTs, start, end, breaks });
   });
-  return hoursByDay(items, (ts) => dateKey(ts, zone));
+  return hoursByDay(items, (ts) => dateKey(ts, zone, cutoff), (ts) => dateKey(ts, zone, 0));
 }
 
 export async function onRequestGet({ request, env }) {
@@ -113,7 +115,7 @@ export async function onRequestGet({ request, env }) {
   const asked = String(new URL(request.url).searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 64);
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
-  const zone = await merchantZone(env, merchant);
+  const [zone, cutoff] = await Promise.all([merchantZone(env, merchant), merchantCutoff(env, merchant)]);
   const [team, access, attendance, messages] = await Promise.all([
     readDoc(env, merchant, TEAM, { members: [] }),
     readDoc(env, merchant, ACCESS, { members: [] }),
@@ -124,7 +126,7 @@ export async function onRequestGet({ request, env }) {
     ok: true,
     merchant,
     members: liveMembers(rosterFor(team.data, access.data), attendance.data),
-    pointedHours: pointedHours(attendance.data, Date.now(), zone, removedAt(team.data)),
+    pointedHours: pointedHours(attendance.data, Date.now(), zone, removedAt(team.data), cutoff),
     recentAttendance: (Array.isArray(attendance.data.entries) ? attendance.data.entries : [])
       .slice(-20).reverse().map((entry) => ({
         id: String(entry && entry.id || ''),

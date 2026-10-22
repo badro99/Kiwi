@@ -11,6 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { businessBoundary } from '../functions/api/_business-day.js';
+import { DateTimeFormat } from '../functions/api/_zone-law.js';
 
 process.env.TZ = 'Europe/Berlin';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -160,6 +162,48 @@ let checks = 0;
   assert.ok(preload && loader, 'report.js preload and loader found');
   assert.equal(loader[1], preload[1], 'the on-demand report loader asks for the preloaded, stamped URL');
   checks += 1;
+}
+
+/* 5. Un avoir expire à la bascule qui clôt sa dernière journée (05:00 le
+   lendemain, functions/api/store-credits.js). La caisse (bon imprimé, liste
+   des avoirs) et le tableau de bord (registre des avoirs, fiche cliente)
+   affichent tous la même date : cette dernière journée commerciale, lue dans
+   le fuseau du magasin et non à la date civile de l'instant d'expiration, qui
+   serait le lendemain. Les avoirs plus anciens, à un instant quelconque,
+   gardent leur journée commerciale. */
+{
+  const report = load('assets/day-report.js', windowBase(), { KiwiZoneLaw: { DateTimeFormat } }).KiwiDayReport;
+  const helper = /(?:const creditLastDay = \(until\) => \{[\s\S]*?\n  \};|function creditLastDay\(until\) \{[\s\S]*?\n  \})/;
+  const surfaces = {
+    'assets/pos-boutique/sales.js': [/fmtDayY\((?:av|a|credit)\.until\)/],
+    'assets/pos-maison/sales.js': [/fmtDayY\((?:av|a|credit)\.until\)/],
+    'assets/pages-pro/boutique-promos-returns.js': [/new Date\(Number\(credit\.expiresAt\)[^)]*\)\.toLocaleDateString/],
+    'assets/clients-book.js': [/new Date\(credit\.expiresAt\)\.toLocaleDateString/],
+  };
+  const sameDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const cases = [
+    [businessBoundary('2026-10-21', 5, zone), '2026-10-20', 'server expiry at 05:00 on the 21st shows the 20th'],
+    [Date.parse('2026-10-20T14:23:00Z'), '2026-10-20', 'a legacy afternoon expiry keeps its day'],
+    [Date.parse('2026-10-21T01:00:00Z'), '2026-10-20', 'a legacy 01:00 expiry belongs to the previous service'],
+  ];
+  for (const [file, banned] of Object.entries(surfaces)) {
+    const text = fs.readFileSync(path.join(root, file), 'utf8');
+    const m = helper.exec(text);
+    assert.ok(m, `${file} defines creditLastDay`);
+    const ctx = vm.createContext({ window: { KiwiDayReport: report }, Date, Number, String, RegExp });
+    const lastDay = vm.runInContext(`${m[0]}; creditLastDay`, ctx);
+    for (const [until, want, why] of cases) assert.equal(sameDay(lastDay(until)), want, `${file}: ${why}`);
+    const fallback = vm.runInContext(`${m[0]}; creditLastDay`, vm.createContext({ window: {}, Date, Number, String, RegExp }));
+    assert.equal(fallback(businessBoundary('2026-10-21', 5, 'UTC')).getTime() < businessBoundary('2026-10-21', 5, 'UTC'), true, `${file}: without the report the fallback stays before the expiry`);
+    for (const re of banned) assert.ok(!re.test(text), `${file} no longer shows the raw expiry instant`);
+    checks += cases.length + 2;
+  }
+  for (const file of ['assets/pos-boutique/checkout.js', 'assets/pos-maison/checkout.js']) {
+    const text = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.ok(!/fmtDayY\((?:av|a)\.until\)/.test(text), `${file} prints the voucher validity through fmtValidUntil`);
+    assert.equal((text.match(/fmtValidUntil\((?:av|a)\.until\)/g) || []).length, 3, `${file} uses fmtValidUntil on the voucher, its receipt and the voucher list`);
+    checks += 2;
+  }
 }
 
 console.log(`business-day surfaces · ${checks} checks green`);

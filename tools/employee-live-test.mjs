@@ -138,7 +138,9 @@ const state = await stateRes.json();
 ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient du roster cloud du magasin');
 // The same UTC pointage belongs to different civil days in Auckland and
 // Casablanca. Both the employee and manager APIs must key it to the store.
-const crossZoneTs = Date.parse('2026-09-26T12:30:00Z');
+// 06:30 in Auckland, after the 05:00 business cutoff: the 27th there, the
+// 26th in Casablanca.
+const crossZoneTs = Date.parse('2026-09-26T18:30:00Z');
 put("UPDATE merchant_config SET timezone='Pacific/Auckland' WHERE merchant='amira-cafe'");
 put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
   'amira-cafe', 'attendance', JSON.stringify({ entries:[{

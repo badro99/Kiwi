@@ -10,6 +10,7 @@ import {
 } from '../auth/_lib.js';
 import { storeSubscriptionPending, storeSuspended } from './_private.js';
 import { poke } from './_live.js';
+import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
 
 const MAX_CENTS = 20000000;
 const clean = (value, max = 120) => String(value == null ? '' : value).trim().slice(0, max);
@@ -230,7 +231,13 @@ export async function onRequestPost({ request, env }) {
     const reason = clean(body && body.reason, 160) || 'Retour';
     const originalRef = clean(body && body.originalRef, 40);
     const detail = JSON.stringify({ lines: Array.isArray(body && body.lines) ? body.lines.slice(0, 40) : [], resellable: body && body.resellable !== false }).slice(0, 12000);
-    const expiresAt = Math.min(at + 730 * 86400000, Math.max(at + 86400000, Number(body && body.expiresAt) || at + 182 * 86400000));
+    /* Un avoir « valable jusqu'au J » reste utilisable toute la journée
+       commerciale J du magasin, donc jusqu'à la bascule (05:00 par défaut) du
+       lendemain dans le fuseau du magasin, et non jusqu'à l'instant arbitraire
+       (heure de la caisse + 182 jours) que le client a envoyé. */
+    const requested = Math.min(at + 730 * 86400000, Math.max(at + 86400000, Number(body && body.expiresAt) || at + 182 * 86400000));
+    const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
+    const expiresAt = businessBoundary(addBusinessDays(businessDate(requested, cutoff, zone), 1), cutoff, zone);
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const code = generatedCode();
       await env.DB.batch([

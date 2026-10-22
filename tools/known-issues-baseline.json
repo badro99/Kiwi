@@ -43,10 +43,6 @@
     },
     {
       "suite": "customer-balance-properties-test.mjs",
-      "label": "CB-1"
-    },
-    {
-      "suite": "customer-balance-properties-test.mjs",
       "label": "CB-6"
     },
     {
@@ -108,10 +104,6 @@
     {
       "suite": "operator-properties-test.mjs",
       "label": "status retries append duplicate audit rows; transition policy is not specified"
-    },
-    {
-      "suite": "payroll-properties-test.mjs",
-      "label": "PM-4"
     },
     {
       "suite": "payroll-properties-test.mjs",

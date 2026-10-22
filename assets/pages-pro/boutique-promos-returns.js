@@ -37,6 +37,16 @@
   const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   /* fr / en / ar pick for the returns page (the language helper of the inventory IIFE is not in reach here). */
   const _rL = (fr, en, ar) => { const l = window.KiwiI18n?.getLang?.(); return l === 'en' ? en : l === 'ar' ? ar : fr; };
+  /* Dernière journée commerciale où un avoir reste utilisable : le serveur le
+     fait expirer à la bascule (05:00) qui clôt cette journée, dont la date civile
+     serait le lendemain. Même lecture que la caisse (pos-boutique et pos-maison, sales.js). */
+  const creditLastDay = (until) => {
+    const t = Number(until) || Date.now();
+    let day = '';
+    try { if (window.KiwiDayReport && window.KiwiDayReport.businessDay) day = String(window.KiwiDayReport.businessDay(t - 1)); } catch (_) {}
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
+  };
 
   /* ═══════════════════ Inline SVG icon set ═══════════════════ */
   /* Material Symbols (Outlined, 400) recopiées depuis assets/icons/material/.
@@ -672,7 +682,7 @@
       return `<div class="rx-row rx-credit" data-credit-row data-credit-search="${esc(search)}">
         <span class="rx-when"><b>${esc(credit.code)}</b><small>${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
         <span class="rx-what"><b>${esc(credit.customerName || _rL('Porteur du bon', 'Voucher holder', 'حامل القسيمة'))}</b><small>${_rL('Vente', 'Sale', 'عملية البيع')} ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</small></span>
-        <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-who">${esc(issued.actor || credit.issuedBy || _rL('Caisse', 'Till', 'الصندوق'))}<small>${_rL('expire le', 'expires', 'تنتهي في')} ${creditLastDay(credit.expiresAt).toLocaleDateString('fr-FR')}</small></span>
         <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>${_rL('sur', 'of', 'من')} ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
         <span class="rx-state">${tag}
           ${credit.status !== 'cancelled' ? `<button class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">${_rL('Corriger', 'Correct', 'تصحيح')}</button>` : ''}
