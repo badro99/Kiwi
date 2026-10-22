@@ -785,7 +785,9 @@
       // dashboard via /api/sale. No-op unless kiwiLive is on. Never blocks the sale.
       try {
         if (window.KiwiLive) {
-          const posted = window.KiwiLive.postSale(entry);
+          // Le reçu reste détaillé ; le miroir conserve le solde au-delà de 40 lignes.
+          const mirrored = window.KiwiPosSale?.foldLines ? Object.assign({}, entry, { lines: window.KiwiPosSale.foldLines(entry.lines) }) : entry;
+          const posted = window.KiwiLive.postSale(mirrored);
           if (posted && posted.ok === true && posted.queued === true && posted.id) {
             entry.serverSaleId = posted.id;
             // Queue durability is not server acceptance. Only kiwi:money-sync

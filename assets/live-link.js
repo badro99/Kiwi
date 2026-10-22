@@ -904,7 +904,9 @@
     var lines = null;
     try {
       if (Array.isArray(entry.lines) && entry.lines.length) {
-        lines = entry.lines.slice(0, 40).map(function (l) {
+        // Une reprise du journal peut encore porter plus de 40 lignes.
+        var boundedLines = window.KiwiPosSale?.foldLines ? window.KiwiPosSale.foldLines(entry.lines) : entry.lines;
+        lines = boundedLines.slice(0, 40).map(function (l) {
           l = l || {};
           var o = {
             n: String(l.name || 'Article').slice(0, 60),

@@ -207,13 +207,18 @@
   function buildTranches(ev) {
     const { total } = evTotals(ev);
     const tm = termsOf(ev);
-    const t1 = Math.round(total * tm.c / 100);
-    const t2 = Math.round(total * tm.j7 / 100);
+    /* Les acomptes restent au dirham rond (30 % de 1 875 = 563, comme on les
+       encaisse au comptoir), calculés en centimes entiers ; le solde garde le
+       reste exact du devis et ne passe jamais sous zéro. */
+    const cents = Math.round(total * 100);
+    const c1 = Math.min(cents, Math.round(cents * tm.c / 10000 + 1e-9) * 100);
+    const c2 = Math.min(cents - c1, Math.round(cents * tm.j7 / 10000 + 1e-9) * 100);
+    const t1 = c1 / 100, t2 = c2 / 100;
     const j7 = new Date(ev.date.getTime() - tm.off * DAY);       /* « J−n » : n se règle sur le devis (7 par défaut) */
     return [
       { id: 't1', pct: tm.c, label: 'À la confirmation', amount: t1,             due: ev.confirmedAt || null, paid: null },
       { id: 't2', pct: tm.j7, label: `À J−${tm.off}`, amount: t2,             due: j7,                     paid: null },
-      { id: 't3', pct: tm.solde, label: 'Le jour J · solde', amount: total - t1 - t2, due: ev.date,               paid: null },
+      { id: 't3', pct: tm.solde, label: 'Le jour J · solde', amount: (cents - c1 - c2) / 100, due: ev.date,               paid: null },
     ];
   }
   function trancheState(ev, t) {

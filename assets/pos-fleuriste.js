@@ -316,7 +316,8 @@
     const rd = (x) => (pvReal() ? Math.round(x * 100) / 100 : Math.round(x));
     const sub = rd(stems + presets + wrap);
     const b2b = b.customer && b.customer.type === 'known' && CUST[b.customer.id] && CUST[b.customer.id].b2b;
-    const remise = b2b ? rd(sub * B2B_REMISE) : 0;
+    // Remise sur les centimes : une demi-unité ne doit pas perdre un centime.
+    const remise = b2b ? (pvReal() ? Math.round(Math.round(sub * 100) * Math.round(B2B_REMISE * 100) / 100 + 1e-9) / 100 : rd(sub * B2B_REMISE)) : 0;
     return { stems: rd(stems), presets, wrap, sub, remise, total: rd(sub - remise), b2b };
   }
   function bqSize(n) {
@@ -333,7 +334,7 @@
   function saleActive(stemId) { return !!saleState[stemId]; }
   function unitPrice(stemId) {
     const base = STEM[stemId].price;
-    return saleActive(stemId) ? (pvReal() ? Math.round(base * (1 - SALE_RATE) * 100) / 100 : Math.round(base * (1 - SALE_RATE))) : base;
+    return saleActive(stemId) ? (pvReal() ? Math.round(Math.round(base * 100) * (100 - Math.round(SALE_RATE * 100)) / 100 + 1e-9) / 100 : Math.round(base * (1 - SALE_RATE))) : base;
   }
 
   function findDelivery(id) { return DELIVERIES.find((d) => d.id === id); }
@@ -384,7 +385,9 @@
     const gross = rows.reduce((s, r) => s + r.base, 0);
     let allocated = 0;
     return rows.map((r, i) => {
-      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      let total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      // Ne jamais répartir plus de centimes que le règlement reçu.
+      total = Math.min(total, Math.max(0, Math.round((received - allocated) * 100) / 100));
       allocated += total;
       return { itemId: r.id, name: r.name, category: r.category, qty: r.qty, unit: r.unit, kind: 'product', total };
     });

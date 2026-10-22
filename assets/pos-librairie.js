@@ -534,9 +534,11 @@
     let allocated = 0;
     return c.lines.map((l, i) => {
       const it = ITEM[l.key];
-      const total = i === c.lines.length - 1
+      let total = i === c.lines.length - 1
         ? Math.max(0, received - allocated)
         : Math.round((received * bases[i] / Math.max(1, baseTotal)) * 100) / 100;
+      // Ne jamais répartir plus de centimes que le règlement reçu.
+      total = Math.min(total, Math.max(0, Math.round((received - allocated) * 100) / 100));
       allocated += total;
       return { itemId: it.id, name: it.title, category: it.rayon, qty: l.qty, unit: 'piece', kind: 'product', total };
     });

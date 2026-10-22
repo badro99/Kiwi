@@ -17,7 +17,7 @@ ok(/order\.canonicalNumberPromise\s*=\s*relayToKitchen\(order\)/.test(source.mat
   'a new takeaway exposes its permanent-number promise to payment');
 ok(/tenderOrder\s*\?\s*'À emporter #'\s*\+\s*ticketNo\(tenderOrder\)/.test(source),
   'payment labels use the permanent order number, not the local sequence');
-ok(/persistShift\(\)/.test(source.match(/const posted = window\.KiwiLive\.postSale\(entry\)[^]*?(?=\n\s*}\s*catch)/)?.[0] || ''),
+ok(/persistShift\(\)/.test(source.match(/const posted = window\.KiwiLive\.postSale\((?:entry|mirrored)\)[^]*?(?=\n\s*}\s*catch)/)?.[0] || ''),
   'the server sale identity is persisted immediately');
 
 const journal = [

@@ -225,7 +225,7 @@ ok('librairie : plus d’ISBN inventé « EAN-n » en réel, un livre sans prix 
 ok('prix au poids : arrondi au centime, pas de dérive flottante', () => {
   const ctx = run(
     `const r2 = (n) => Math.round(n * 100) / 100; const ITEMS = { t: { price: 7.5 }, o: { price: 32 }, e: { price: 6.5 } };
-     ${grab(EPI, 'function lineTotal(')}; ${grab(EPI, 'function ticketTotal(')}; globalThis.lt = lineTotal; globalThis.tt = ticketTotal;`,
+     ${grab(EPI, 'function weighedTotal(')}; ${grab(EPI, 'function lineTotal(')}; ${grab(EPI, 'function ticketTotal(')}; globalThis.lt = lineTotal; globalThis.tt = ticketTotal;`,
     { Math },
   );
   assert.equal(ctx.lt({ itemId: 't', weight: 0.5 }), 3.75);

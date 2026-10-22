@@ -444,9 +444,11 @@
     return o.lines.map((ln, idx) => {
       const item = ITEMS[ln.itemId] || { label: 'Article', cat: '' };
       const raw = lineTotal(ln) * (o.b2b ? (1 - B2B_REMISE) : 1) * factor;
-      const total = idx === o.lines.length - 1
+      let total = idx === o.lines.length - 1
         ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
         : Math.max(0, Math.round(raw * 100) / 100);
+      // Ne jamais répartir plus de centimes que le règlement reçu.
+      total = Math.min(total, Math.max(0, Math.round((received - allocated) * 100) / 100));
       allocated += total;
       return {
         itemId: ln.itemId,

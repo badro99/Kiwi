@@ -232,9 +232,11 @@
     return o.lines.map((ln, idx) => {
       const it = ITEM[ln.itemId] || {};
       const raw = lineTotal(ln) * factor;
-      const total = idx === o.lines.length - 1
+      let total = idx === o.lines.length - 1
         ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
         : Math.max(0, Math.round(raw * 100) / 100);
+      // Ne jamais répartir plus de centimes que le règlement reçu.
+      total = Math.min(total, Math.max(0, Math.round((received - allocated) * 100) / 100));
       allocated += total;
       const options = [];
       if (ln.combo) options.push({ id: 'menu', qty: ln.qty }, { id: `boisson:${ln.drink || 'coca'}`, qty: ln.qty });

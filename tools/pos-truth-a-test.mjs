@@ -400,9 +400,9 @@ ok('traiteur : l’échéancier suit les conditions choisies et ne perd pas un d
   const date = new Date('2026-11-10T18:00:00Z');
   for (const [terms, total] of [[undefined, 3500], [{ c: 50, j7: 20, valid: 7 }, 3500], [{ c: 33, j7: 33, valid: 7 }, 1001], [{ c: 10, j7: 10, valid: 30 }, 77]]) {
     const tr = ctx.build({ __total: total, terms, date, confirmedAt: null });
-    assert.equal(tr.reduce((s, x) => s + x.amount, 0), total, 'somme = total');
+    assert.equal(tr.reduce((s, x) => s + Math.round(x.amount * 100), 0), Math.round(total * 100), 'somme au centime = total');
     assert.equal(tr.reduce((s, x) => s + x.pct, 0), 100);
-    assert.equal(tr[0].amount, Math.round(total * tr[0].pct / 100));
+    assert.equal(tr[0].amount, Math.round(Math.round(total * 100) * tr[0].pct / 100 + 1e-9) / 100);
   }
   const tr = ctx.build({ __total: 3500, terms: { c: 50, j7: 20, valid: 7 }, date, confirmedAt: null });
   assert.deepEqual(Array.from(tr, (x) => x.amount), [1750, 700, 1050]);

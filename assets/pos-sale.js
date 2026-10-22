@@ -181,6 +181,16 @@
    * modules readable; live-link compacts them for its offline queue and the API
    * stores the equivalent short-key wire form.  Legacy callers that only know
    * name/qty/total continue to produce the exact same useful subset. */
+  /* Au-delà de 40 lignes, conserver chaque centime dans une ligne de solde. */
+  function foldLines(lines) {
+    if (!Array.isArray(lines) || lines.length <= 40) return lines;
+    var rest = lines.slice(39);
+    return lines.slice(0, 39).concat([{
+      name: rest.length + ' autres articles',
+      qty: rest.reduce(function (n, l) { return n + Math.max(0, Number(l && l.qty) || 0); }, 0),
+      total: rest.reduce(function (n, l) { return n + Math.round((Number(l && l.total) || 0) * 100); }, 0) / 100,
+    }]);
+  }
   function cleanLine(l) {
     l = l || {};
     var qty = Math.round(Math.max(0, Math.min(1000000, +(l.qty ?? l.q ?? l.quantity) || 0)) * 1000) / 1000;
@@ -331,7 +341,7 @@
     var saleChannel = String(sale.channel || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
     if (saleChannel) entry.channel = saleChannel;
     if (Array.isArray(sale.lines) && sale.lines.length) {
-      entry.lines = sale.lines.slice(0, 40).map(cleanLine);
+      entry.lines = sale.lines.map(cleanLine);
     }
     if (Array.isArray(sale.parts) && sale.parts.length) {
       entry.parts = sale.parts.slice(0, 8).map(function (p) {
@@ -369,8 +379,24 @@
              vendu » n'avait de réponse que si la caisse tournait dans le même
              navigateur que le tableau de bord — jamais le cas quand la caisse
              est au comptoir et le tableau de bord dans l'arrière-boutique. */
-          lines: entry.lines || null,
+          // Garder le détail local pour le reçu et le stock, borner seulement le miroir.
+          lines: foldLines(entry.lines) || null,
         };
+        /* Le reçu et le serveur gardent la même ventilation, mais seulement quand
+           le serveur peut l'accepter telle quelle : de l'argent reçu (espèces,
+           carte, virement, chèque) qui fait exactement le ticket. Une part sur
+           l'ardoise rend le montant reçu inférieur au ticket, et /api/sale
+           refuserait la vente entière (400) : elle part alors comme avant, sans
+           ventilation, plutôt que d'être perdue. */
+        var MONEY = { cash: 1, card: 1, transfer: 1, cheque: 1 };
+        var wireParts = (entry.parts || []).map(function (p) { return { method: p.method, amountCents: Math.round(p.amount * 100) }; });
+        var wireSum = wireParts.reduce(function (n, p) { return n + p.amountCents; }, 0);
+        var wireMethod = wireParts.length > 1 ? 'split' : (wireParts[0] && wireParts[0].method);
+        if (wireParts.length && wireParts.every(function (p) { return MONEY[p.method] && p.amountCents > 0; })
+            && wireSum === Math.round(total * 100) && wireMethod === entry.method) {
+          payload.paymentParts = wireParts;
+          payload.ticketAmountCents = wireSum;
+        }
         var queued = window.KiwiLive.postSale(payload);
         holdSale(payload, queued, who);
         /* Linked ledgers (hotel folios today, other append-only journals
@@ -765,6 +791,7 @@
   }
 
   window.KiwiPosSale = {
+    foldLines: foldLines,
     record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,

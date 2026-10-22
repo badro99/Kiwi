@@ -721,9 +721,14 @@
     focusScan();
   }
 
+  // Même arrondi pour la balance, le ticket et le serveur.
+  function weighedTotal(price, weight) {
+    return Math.round(Math.round(price * 100) * Math.round(weight * 1000) / 1000 + 1e-9) / 100;
+  }
   function lineTotal(ln) {
     const it = ITEMS[ln.itemId];
-    if (ln.weight != null) return r2(it.price * ln.weight);
+    // Prix au centime et poids au gramme : éviter les demi-centimes flottants.
+    if (ln.weight != null) return weighedTotal(it.price, ln.weight);
     return r2(it.price * ln.qty);
   }
   function ticketTotal(t) { return r2(t.lines.reduce((s, ln) => s + lineTotal(ln), 0)); }
@@ -923,17 +928,17 @@
         </div>
         <div class="ep-weigh-result">
           <span class="lbl">À payer <span class="calc" id="ep-weigh-calc">${fmtKg(weight)} ${it.weighUnit === 'l' ? 'L' : 'kg'} × ${fmtMAD2(it.price)}</span></span>
-          <span class="val" id="ep-weigh-val">${fmtMAD2(it.price * weight)}</span>
+          <span class="val" id="ep-weigh-val">${fmtMAD2(weighedTotal(it.price, weight))}</span>
         </div>
         <div class="ep-weigh-foot">
           <button class="ep-btn secondary" data-ep-close>Annuler</button>
-          <button class="ep-btn primary" id="ep-weigh-ok"><i data-lucide="check"></i>${reweighIdx != null ? 'Mettre à jour' : 'Ajouter au ticket'} · <span id="ep-weigh-cta">${fmtMAD2(it.price * weight)}</span></button>
+          <button class="ep-btn primary" id="ep-weigh-ok"><i data-lucide="check"></i>${reweighIdx != null ? 'Mettre à jour' : 'Ajouter au ticket'} · <span id="ep-weigh-cta">${fmtMAD2(weighedTotal(it.price, weight))}</span></button>
         </div>`;
       icons();
       const refresh = () => {
         $('#ep-scale-kg', el).textContent = fmtKg(weight);
-        $('#ep-weigh-val', el).textContent = fmtMAD2(it.price * weight);
-        $('#ep-weigh-cta', el).textContent = fmtMAD2(it.price * weight);
+        $('#ep-weigh-val', el).textContent = fmtMAD2(weighedTotal(it.price, weight));
+        $('#ep-weigh-cta', el).textContent = fmtMAD2(weighedTotal(it.price, weight));
         $('#ep-weigh-calc', el).textContent = `${fmtKg(weight)} ${it.weighUnit === 'l' ? 'L' : 'kg'} × ${fmtMAD2(it.price)}`;
         $$('[data-ep-w]', el).forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.epW - weight) < 0.0005));
       };
@@ -952,10 +957,10 @@
         if (reweighIdx != null && state.ticket.lines[reweighIdx]) {
           state.ticket.lines[reweighIdx].weight = w;
           renderTicket(); icons();
-          toast(`${it.label}, ${fmtKg(w)} kg · ${fmtMAD2(it.price * w)}`);
+          toast(`${it.label}, ${fmtKg(w)} kg · ${fmtMAD2(weighedTotal(it.price, w))}`);
         } else {
           addItem(it.id, { weight: w });
-          toast(`${it.label}, ${fmtKg(w)} kg · ${fmtMAD2(it.price * w)}`);
+          toast(`${it.label}, ${fmtKg(w)} kg · ${fmtMAD2(weighedTotal(it.price, w))}`);
         }
       };
     };

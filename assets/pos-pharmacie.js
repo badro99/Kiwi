@@ -796,10 +796,12 @@
   }
   function lineSplit(ln) {
     const it = ITEMS[ln.itemId];
-    const gross = it.price * ln.qty;
+    const grossCents = Math.round(it.price * 100) * ln.qty;
+    const gross = grossCents / 100;
     if (!lineCovered(ln)) return { gross, mut: 0, pat: gross };
     /* Au centime : 12,50 × 70 % = 8,75. L'ancien arrondi à l'unité faisait payer 3,50 au patient. */
-    const mut = r2(it.price * ln.qty * ticketMut().rate);
+    // Part calculée sur les centimes, sans double arrondi flottant.
+    const mut = Math.round(grossCents * Math.round(ticketMut().rate * 100) / 100 + 1e-9) / 100;
     return { gross: r2(gross), mut, pat: r2(gross - mut) };
   }
   function ticketSplit() {
