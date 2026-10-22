@@ -428,9 +428,11 @@
     return lineUnit(ln) * ln.qty;
   }
   function orderTotals(o) {
-    const sub = o.lines.reduce((s, ln) => s + lineTotal(ln), 0);
-    const remise = o.b2b ? Math.round(sub * B2B_REMISE) : 0;
-    return { sub, remise, total: sub - remise };
+    const cents = o.lines.reduce((s, ln) => s + Math.round(lineTotal(ln) * 100), 0);
+    // B2B discount stays rounded to the whole dirham (declared policy, see
+    // docs/specs/trades-money-properties.md TM-P1); lines add up in centimes.
+    const discount = o.b2b ? Math.round((cents / 100) * B2B_REMISE) * 100 : 0;
+    return { sub: cents / 100, remise: discount / 100, total: (cents - discount) / 100 };
   }
   /* Snapshot the operational truth that already exists on the pressing ticket.
    * Payments can be deposits or balances, so line totals are allocated pro-rata
@@ -1195,10 +1197,8 @@
     }, 0);
   }
   function ticketTotals(t) {
-    const sub = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
     const b2b = t.customer && t.customer.type === 'known' && CUST[t.customer.id] && CUST[t.customer.id].b2b;
-    const remise = b2b ? Math.round(sub * B2B_REMISE) : 0;
-    return { sub, remise, total: sub - remise, b2b };
+    return { ...orderTotals({ lines: t.lines, b2b }), b2b };
   }
 
   function customerRow(t) {
@@ -2752,6 +2752,12 @@
   function deliverOrder(orderId) {
     const o = findOrder(orderId);
     if (!o) return;
+    const status = orderStatus(o);
+    if (o.collectedAt || status === 'livre' || status === 'annule') return;
+    if (o.pay.mode !== 'compte' && Math.round(orderTotals(o).total * 100) > Math.round(o.pay.paid * 100)) {
+      toast('Encaissez le solde avant de remettre la commande');
+      return;
+    }
     o.pieces.forEach((p) => { p.status = 'livre'; });
     o.collectedAt = new Date();
     releaseSlot(o);

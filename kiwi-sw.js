@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=142',
+  '/assets/pos-dispatch.js?v=143',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -447,8 +447,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=47',
-  '/assets/pressing-caisse.css?v=47',
+  '/assets/pressing-caisse.js?v=48',
+  '/assets/pressing-caisse.css?v=48',
   '/assets/material-icons.js?v=3',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

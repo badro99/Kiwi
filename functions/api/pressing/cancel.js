@@ -84,6 +84,9 @@ export async function onRequestPost(context) {
   if (order.cancelledAt) {
     return json({ ok: true, alreadyCancelled: true, orderId, actor: order.cancelledBy || actor, cancelledAt: order.cancelledAt, rev: current.rev || 0 });
   }
+  if (order.collectedAt || (Array.isArray(order.pieces) && order.pieces.some((piece) => piece && piece.status === 'livre'))) {
+    return json({ error: 'order-already-collected' }, 409);
+  }
 
   const cancelledAt = new Date().toISOString();
   doc.orders = doc.orders.map((row) => row && row.id === orderId
