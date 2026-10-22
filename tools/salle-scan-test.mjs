@@ -14,6 +14,7 @@
  * Discipline : contrôles exécutés = code EXTRAIT des fichiers livrés.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'fs';
+import vm from 'vm';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -93,8 +94,67 @@ ok((pro.match(/scanSalle:/g) || []).length === 3 && (pro.match(/scanUnavailable:
 const tagOf = (src, p) => { const m = src.match(new RegExp(p.replace(/[./]/g, '\\$&') + '\\?v=(\\d+)')); return m ? m[1] : null; };
 ok(tagOf(html, 'assets/salle-scan.js') != null && tagOf(html, 'assets/salle-scan.js') === tagOf(sw, 'assets/salle-scan.js'), 'salle-scan.js : estampille identique entre dashboard.html et kiwi-sw.js');
 
+// ── 4b. Langue et clavier : le modal suit FR / EN / AR, la zone de dépôt
+// s'active au clavier. Exécuté : le fichier livré tourne dans un bac à sable,
+// avec le vrai dictionnaire de assets/i18n.js et un Kiwi.modal factice. ──────
+const i18nSrc = fs.readFileSync(path.join(ROOT, 'assets/i18n.js'), 'utf8');
+const i18nWin = {};
+vm.runInNewContext(i18nSrc, { window: i18nWin, document: { readyState: 'loading', addEventListener() {} }, localStorage: { getItem() { return null; } } });
+const DICT = i18nWin.KiwiI18n.T;
+const usedKeys = [...new Set([...scan.matchAll(/\bL\('(\w+)'/g)].map((m) => m[1]))];
+const missingKeys = usedKeys.filter((k) => typeof DICT.en['salleScan.' + k] !== 'string' || typeof DICT.ar['salleScan.' + k] !== 'string');
+ok(usedKeys.length >= 20 && !missingKeys.length, `salle-scan.js : ${usedKeys.length} libellés passent par salleScan.*, chacun présent en EN et en AR` + (missingKeys.length ? ` (manquent : ${missingKeys.join(', ')})` : ''));
+// Commentaires en tête de ligne seulement : accept="image/*" n'en ouvre pas un.
+const noL = scan.replace(/^\s*\/\*[\s\S]*?\*\//gm, '').replace(/^\s*\/\/.*$/gm, '').replace(/\bL\('\w+',\s*'(?:\\.|[^'\\])*'/g, '');
+const FR_LEFT = ['Choisir des photos', 'Prendre une photo', 'Annuler', 'Scanner ma salle', 'Lecture', 'repérée', 'Compte Kiwi requis', 'Scan impossible', 'Placez-vous', 'Photo illisible', 'Vérifiez'].filter((p) => noL.includes(p));
+ok(!FR_LEFT.length, 'salle-scan.js : aucun texte français écrit hors de L() ' + (FR_LEFT.length ? `(reste : ${FR_LEFT.join(', ')})` : ''));
+
+function runModal(lang) {
+  const listeners = {};
+  const attrs = {};
+  let picked = 0;
+  let modalOpts = null;
+  const fileInput = { click() { picked++; } };
+  const stageEl = { innerHTML: '' };
+  const el = {
+    setAttribute(k, v) { attrs[k] = String(v); },
+    addEventListener(n, fn) { (listeners[n] = listeners[n] || []).push(fn); },
+    querySelector(sel) { return sel === '[data-kss-stage]' ? stageEl : (sel === '[data-kss-file]' ? fileInput : { click() {} }); },
+  };
+  const win = {
+    KiwiI18n: { getLang: () => lang, T: DICT },
+    Kiwi: { modal(o) { modalOpts = o; return { el, close() {} }; }, toast() {} },
+  };
+  win.window = win;
+  const doc = { getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } };
+  vm.runInNewContext(scan, Object.assign(win, { document: doc, Kiwi: win.Kiwi, KiwiI18n: win.KiwiI18n }));
+  win.KiwiSalleScan.open({});
+  const fire = (key, target) => {
+    let prevented = false;
+    (listeners.keydown || []).forEach((fn) => fn({ key, target, preventDefault() { prevented = true; } }));
+    return prevented;
+  };
+  return { attrs, modalOpts, stage: stageEl.innerHTML, fire, picks: () => picked };
+}
+const zone = { matches: (s) => s === '[data-kss-drop]' };
+const innerBtn = { matches: (s) => s === '[data-kss-pick]' };
+const ar = runModal('ar');
+ok(ar.attrs.dir === 'rtl' && ar.attrs.lang === 'ar', 'modal en arabe : dir="rtl" et lang="ar" posés sur le modal');
+ok(ar.modalOpts.title === DICT.ar['salleScan.title'] && ar.modalOpts.foot.includes(DICT.ar['salleScan.cancel'])
+  && ar.stage.includes(DICT.ar['salleScan.pick']) && !/Choisir|Prendre|Placez/.test(ar.stage), 'modal en arabe : titre, bouton, zone et conseils viennent du dictionnaire AR, plus un mot de français');
+const en = runModal('en');
+ok(en.attrs.dir === 'ltr' && en.stage.includes(DICT.en['salleScan.dropS'].replace('{max}', '4')), 'modal en anglais : dir="ltr", {max} remplacé par 4 après traduction');
+const fr = runModal('fr');
+ok(fr.modalOpts.title === 'Scanner ma salle' && fr.stage.includes('Choisir des photos'), 'modal en français : le texte d\'origine, écrit dans salle-scan.js');
+const enter = fr.fire('Enter', zone);
+const space = fr.fire(' ', zone);
+ok(enter && space && fr.picks() === 2, 'zone de dépôt focalisée : Entrée et Espace ouvrent le choix des photos');
+const onBtn = fr.fire('Enter', innerBtn);
+const other = fr.fire('a', zone);
+ok(!onBtn && !other && fr.picks() === 2, 'Entrée sur un bouton intérieur reste native, une autre touche ne fait rien');
+
 // ── 5. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 27;
+const EXPECTED_COUNT = 35;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

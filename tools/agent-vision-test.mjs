@@ -2,7 +2,7 @@
 // l'endpoint est fermé (session, quota, models @cf/), le client gère le drop/coller/resize,
 // et le câblage HTML/SW porte le nouveau fichier avec estampille.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const vision = read('assets/agent-vision.js');
@@ -28,6 +28,19 @@ const controls = [
   ['preview chip allows user to review and remove attachment before sending', vision.includes('kv-attach-chip') && vision.includes('kv-attach-del')],
   ['result renders interactive 1-click action buttons', vision.includes('data-kv-action') && vision.includes('handleActionResult')],
   ['drawer composer born after load is still wired', vision.includes('MutationObserver')],
+  // ── la marque : icônes Material, couleurs des jetons (CLAUDE.md §4) ───
+  ['no hand-drawn icon: no <path>, <polyline>, <circle> or 24-grid <svg> in the file', !/<path|<polyline|<circle|<line\b|viewBox="0 0 24 24"/.test(vision)],
+  ['every icon comes from KiwiIcon.svg with a vendored Material Symbol', (() => {
+    const names = [...vision.matchAll(/KiwiIcon\.svg\(\s*'([a-z0-9_]+)'|\bKI\.svg\(\s*'([a-z0-9_]+)'/g)].map((m) => m[1] || m[2]);
+    return names.length >= 4 && ['attach_file', 'progress_activity', 'check', 'close'].every((n) => names.includes(n))
+      && names.every((n) => existsSync(new URL(`../assets/icons/material/${n}.svg`, import.meta.url)));
+  })()],
+  ['no hardcoded colour: no hex literal, every brand tint is a color-mix of a token', !/#[0-9A-Fa-f]{3,8}\b/.test(vision) && !/rgba\(\s*(?!0\s*,\s*0\s*,\s*0\s*,)/.test(vision)],
+  ['every var(--x) the file paints with is a token tokens.css (or the agent skin) defines', (() => {
+    const defined = new Set([...(read('assets/tokens.css') + read('assets/agent-skin.css')).matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
+    const used = [...new Set([...vision.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]))];
+    return used.length > 5 && used.every((v) => defined.has(v));
+  })()],
   // ── le câblage : la coquille et le HTML s'accordent ───────────────────
   ['dashboard loads the vision layer with a stamp', /assets\/agent-vision\.js\?v=\d+/.test(dashboard)],
   ['the offline shell precaches the same stamped URL', (() => {

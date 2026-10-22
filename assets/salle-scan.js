@@ -22,6 +22,20 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (t, o) => { try { window.Kiwi && Kiwi.toast && Kiwi.toast(t, o); } catch (_) {} };
 
+  /* Langue : le texte français est l'original, écrit ici ; l'anglais et
+   * l'arabe viennent des clés salleScan.* de assets/i18n.js, comme le fait
+   * invoice.js pour son habillage. {n}, {max}… sont remplacés après la
+   * traduction, pour que chaque langue place le nombre où elle veut. */
+  const lang = () => { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
+  function L(key, fr, vars) {
+    let s = fr;
+    try {
+      const d = window.KiwiI18n && KiwiI18n.T && KiwiI18n.T[lang()];
+      if (d && typeof d['salleScan.' + key] === 'string') s = d['salleScan.' + key];
+    } catch (_) {}
+    return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
+  }
+
   const MAX_FILES = 4;        // une photo par espace (salle, terrasse, étage…)
   const MAX_IMG_EDGE = 1600;  // px — assez pour compter les chaises, léger à envoyer
 
@@ -117,14 +131,16 @@
     return data;
   }
 
+  /* Lus à l'affichage, pas au chargement : la langue peut changer entre-temps. */
   const FAIL_MSGS = {
-    auth: ['Compte Kiwi requis', 'Le scan AI fonctionne avec un compte connecté. Le questionnaire reste disponible.'],
-    quota: ['Limite du jour atteinte', 'Réessayez demain, ou passez par le questionnaire.'],
-    'not-a-room': ['Ce n\'est pas une salle', 'La photo ne montre pas un espace de restauration. Photographiez la salle, ou un croquis du plan.'],
-    unparsed: ['Photo illisible', 'Le modèle n\'a pas reconnu de tables. Essayez une photo plus large, prise d\'un angle de la salle.'],
+    auth: () => [L('authT', 'Compte Kiwi requis'), L('authD', 'Le scan AI fonctionne avec un compte connecté. Le questionnaire reste disponible.')],
+    quota: () => [L('quotaT', 'Limite du jour atteinte'), L('quotaD', 'Réessayez demain, ou passez par le questionnaire.')],
+    'not-a-room': () => [L('roomT', 'Ce n\'est pas une salle'), L('roomD', 'La photo ne montre pas un espace de restauration. Photographiez la salle, ou un croquis du plan.')],
+    unparsed: () => [L('unparsedT', 'Photo illisible'), L('unparsedD', 'Le modèle n\'a pas reconnu de tables. Essayez une photo plus large, prise d\'un angle de la salle.')],
   };
   function failToast(err) {
-    const [t, d] = FAIL_MSGS[err && err.message] || ['Scan impossible', 'Réessayez, ou passez par le questionnaire.'];
+    const pick = Object.prototype.hasOwnProperty.call(FAIL_MSGS, err && err.message) ? FAIL_MSGS[err.message] : null;
+    const [t, d] = pick ? pick() : [L('failT', 'Scan impossible'), L('failD', 'Réessayez, ou passez par le questionnaire.')];
     toast(t, { type: 'warn', desc: d });
   }
 
@@ -143,21 +159,21 @@
 
   function stage1Html() {
     return [
-      '<div class="st-dropzone" data-kss-drop tabindex="0" role="button">',
-      '  <div class="st-dropzone-t">Photo de votre salle · ou d\'un croquis du plan</div>',
-      '  <div class="st-dropzone-s">Une photo par espace (salle, terrasse…), jusqu\'à ' + MAX_FILES + '</div>',
+      '<div class="st-dropzone" data-kss-drop tabindex="0" role="button" aria-label="' + esc(L('pick', 'Choisir des photos')) + '">',
+      '  <div class="st-dropzone-t">' + esc(L('dropT', 'Photo de votre salle · ou d\'un croquis du plan')) + '</div>',
+      '  <div class="st-dropzone-s">' + esc(L('dropS', 'Une photo par espace (salle, terrasse…), jusqu\'à {max}', { max: MAX_FILES })) + '</div>',
       '  <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">',
-      '    <button class="st-btn" type="button" data-kss-pick>Choisir des photos</button>',
-      '    <button class="st-btn" type="button" data-kss-cam>Prendre une photo</button>',
+      '    <button class="st-btn" type="button" data-kss-pick>' + esc(L('pick', 'Choisir des photos')) + '</button>',
+      '    <button class="st-btn" type="button" data-kss-cam>' + esc(L('cam', 'Prendre une photo')) + '</button>',
       '  </div>',
       '</div>',
       '<input type="file" hidden multiple accept="image/*" data-kss-file />',
       '<input type="file" hidden accept="image/*" capture="environment" data-kss-camfile />',
       '<ul class="kss-tips">',
-      '  <li>Placez-vous dans un angle de la salle, pour voir un maximum de tables.</li>',
-      '  <li>Kiwi AI compte les tables, les formes et les places · vous ajustez ensuite.</li>',
+      '  <li>' + esc(L('tip1', 'Placez-vous dans un angle de la salle, pour voir un maximum de tables.')) + '</li>',
+      '  <li>' + esc(L('tip2', 'Kiwi AI compte les tables, les formes et les places · vous ajustez ensuite.')) + '</li>',
       '</ul>',
-      '<div class="kss-note">Analyse par Kiwi AI (hébergée Cloudflare). Trois plans vous seront proposés · rien n\'est remplacé sans votre confirmation.</div>',
+      '<div class="kss-note">' + esc(L('note', 'Analyse par Kiwi AI (hébergée Cloudflare). Trois plans vous seront proposés · rien n\'est remplacé sans votre confirmation.')) + '</div>',
     ].join('');
   }
 
@@ -167,10 +183,15 @@
     if (!window.Kiwi || !Kiwi.modal) return;
 
     const m = Kiwi.modal({
-      tag: 'Kiwi AI', title: 'Scanner ma salle', width: 560,
+      tag: 'Kiwi AI', title: L('title', 'Scanner ma salle'), width: 560,
       body: '<div data-kss-stage></div>',
-      foot: '<button class="st-btn" data-kss-cancel type="button">Annuler</button>',
+      foot: '<button class="st-btn" data-kss-cancel type="button">' + esc(L('cancel', 'Annuler')) + '</button>',
     });
+    /* Le modal porte sa propre langue et son sens de lecture : en arabe, de
+     * droite à gauche, même si la page ne l'a pas encore basculée. */
+    const lg = lang();
+    m.el.setAttribute('lang', lg);
+    m.el.setAttribute('dir', lg === 'ar' ? 'rtl' : 'ltr');
     const stage = m.el.querySelector('[data-kss-stage]');
     let busy = false;
 
@@ -185,8 +206,8 @@
         const results = [];
         for (let i = 0; i < list.length; i++) {
           stage.innerHTML = busyHtml(
-            list.length > 1 ? 'Lecture ' + (i + 1) + ' / ' + list.length : 'Lecture de la photo…',
-            'Kiwi AI compte les tables et les places.'
+            list.length > 1 ? L('readingN', 'Lecture {i} / {total}', { i: i + 1, total: list.length }) : L('reading1', 'Lecture de la photo…'),
+            L('readingSub', 'Kiwi AI compte les tables et les places.')
           );
           results.push(await callApi(await downscaleImage(list[i])));
         }
@@ -195,9 +216,9 @@
         /* Les faits partent dans le questionnaire du plan — et CE modal se
          * ferme : le générateur devient la seule surface, pas une pile. */
         m.close();
-        toast(facts.tables + ' table' + (facts.tables > 1 ? 's' : '') + ' repérée' + (facts.tables > 1 ? 's' : ''), {
+        toast(facts.tables > 1 ? L('foundN', '{n} tables repérées', { n: facts.tables }) : L('found1', '{n} table repérée', { n: facts.tables }), {
           type: 'success',
-          desc: 'Vérifiez les réponses pré-remplies, puis générez le plan.',
+          desc: L('foundD', 'Vérifiez les réponses pré-remplies, puis générez le plan.'),
         });
         if (opts.onFacts) opts.onFacts(facts);
       } catch (err) { failToast(err); render(); }
@@ -208,6 +229,15 @@
       if (e.target.closest('[data-kss-cancel]')) { m.close(); return; }
       if (e.target.closest('[data-kss-cam]')) { m.el.querySelector('[data-kss-camfile]').click(); return; }
       if (e.target.closest('[data-kss-pick]') || e.target.closest('[data-kss-drop]')) { m.el.querySelector('[data-kss-file]').click(); return; }
+    });
+    /* La zone de dépôt est un role="button" focusable : Entrée et Espace
+     * l'activent comme un clic. Ses deux vrais boutons gardent leur
+     * comportement natif (la cible doit être la zone elle-même). */
+    m.el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      if (!e.target.matches || !e.target.matches('[data-kss-drop]')) return;
+      e.preventDefault();
+      m.el.querySelector('[data-kss-file]').click();
     });
     m.el.addEventListener('change', (e) => {
       if (e.target.matches('[data-kss-file]') || e.target.matches('[data-kss-camfile]')) runFiles(e.target.files || []);
