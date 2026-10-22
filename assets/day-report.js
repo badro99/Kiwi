@@ -83,9 +83,18 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
    * 185 000 sur un an — au-delà du plafond. `pruneToBudget()` élague donc les
    * journées les plus ANCIENNES jusqu'à tenir, au lieu de laisser le serveur
    * refuser tout le classeur. Un magasin ordinaire (20 à 40 références par jour)
-   * garde ses 370 journées sans jamais approcher le budget. */
+   * garde ses 370 journées sans jamais approcher le budget.
+   *
+   * Le serveur borne AUSSI la taille du texte : `max` de `dayreports`, 1 500 000
+   * caractères de JSON. Les nœuds ne la tiennent pas : un produit compte 4 nœuds
+   * quelle que soit la longueur de son nom, et une boutique dont les variantes
+   * s'appellent « Pantalon chino slim coton stretch bleu marine T42 » dépasse
+   * 1,5 Mo bien avant 90 000 nœuds (60 journées de 300 références à 60
+   * caractères : 75 000 nœuds, 1,7 Mo). Le refus est le même, aussi muet.
+   * `pruneToBudget()` mesure donc aussi le JSON sérialisé, au même 75 %. */
   var KEEP_DAYS = 370;
   var NODE_BUDGET = 90000;                /* 75 % du plafond serveur : la marge est volontaire */
+  var BYTE_BUDGET = 1125000;              /* 75 % des 1 500 000 caractères de `max` (functions/api/store.js) */
 
   /* La clé de regroupement des produits dont on ne connaît pas la catégorie.
      Une clé MACHINE, jamais affichée : le rapport sort avec un vrai libellé
@@ -916,6 +925,15 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       var oldest = keys.shift();
       total -= nodeCost(doc.days[oldest]);
       delete doc.days[oldest];
+    }
+    /* Puis la taille du texte, mesurée comme le serveur la mesure
+       (JSON.stringify(...).length). Retirer une journée retire exactement
+       `"clé":valeur` et une virgule. */
+    var size = JSON.stringify(doc).length;
+    while (size > BYTE_BUDGET && keys.length > 1) {
+      var old = keys.shift();
+      size -= JSON.stringify(old).length + String(JSON.stringify(doc.days[old]) || '').length + 2;
+      delete doc.days[old];
     }
     return doc;
   }
