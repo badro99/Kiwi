@@ -22,7 +22,9 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=4',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=5',
-  '/assets/caisse-app.js?v=9',
+  '/assets/caisse-floor.js?v=1',
+  '/assets/caisse-kitchen.js?v=1',
+  '/assets/caisse-app.js?v=10',
   '/assets/caisse-refresh.js?v=5',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -82,7 +84,7 @@ var SHELL = [
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js?v=11',
   '/assets/agent-action-center.js?v=4',
-  '/assets/cancellation-history.js?v=2',
+  '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
   '/assets/briefing.js?v=23',
   '/assets/ai-telemetry.js?v=1',
@@ -173,7 +175,7 @@ var SHELL = [
   '/assets/pwa-update.js?v=366',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
-  '/assets/caisse-motion.js?v=4',
+  '/assets/caisse-motion.js?v=5',
   '/assets/caisse-pwa.js?v=618',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=10',
@@ -202,7 +204,7 @@ var SHELL = [
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
   '/assets/hours.js?v=6',
-  '/assets/hours-ui.js?v=2',
+  '/assets/hours-ui.js?v=3',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
@@ -255,7 +257,7 @@ var SHELL = [
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
   '/assets/retail-balances.js?v=4',
-  '/assets/retail-sale-hold.js?v=2',
+  '/assets/retail-sale-hold.js?v=3',
   '/assets/repeat-sale-guard.js?v=3',
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
@@ -298,7 +300,7 @@ var SHELL = [
   '/assets/salle-scan.js?v=3',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',
-  '/assets/orderpro-panel.js?v=4',
+  '/assets/orderpro-panel.js?v=5',
   '/assets/orderpro-inbox.js?v=38',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
@@ -311,7 +313,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=155',
+  '/assets/pos-dispatch.js?v=156',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -444,8 +446,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=56',
-  '/assets/pressing-caisse.css?v=56',
+  '/assets/pressing-caisse.js?v=57',
+  '/assets/pressing-caisse.css?v=57',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
