@@ -33,7 +33,7 @@ import {
   json, activeAccountSession, slugMerchant, accountSlug, teamRemovedIds, isOperator, isTillFor,
   employeeRoleOpensTill,
 } from '../auth/_lib.js';
-import { employeeAuthVersion } from './_private.js';
+import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
 
 const VALID_PIN = /^\d{4}$/;
 const MAX_ROSTER = 200;
@@ -594,90 +594,112 @@ export async function onRequestPost(context) {
         });
       } catch (_) {}
     }
-    const keepMarks = keepIds.map(() => '?').join(',');
-    const stmts = [keepIds.length
-      ? env.DB.prepare(
-          'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ')'
-        ).bind(merchant, ...keepIds)
-      : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
-    tillPins.forEach((p, i) => {
-      stmts.push(env.DB.prepare(
-        'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
-      ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
-    });
-    /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
-     * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de
-     * l'ordre de lecture. La comparaison reste ENTIÈREMENT dans SQL — aucun
-     * code ne remonte en JavaScript (voir config-pin-projection-test.mjs). */
-    if (keepIds.length) {
-      stmts.push(env.DB.prepare(
-        'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ') '
-        + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
-      ).bind(merchant, ...keepIds, ...keepIds));
-    }
-    // Keep a private, exact employee-login roster beside the cashier PINs.
-    // Replacing it in the same D1 batch means a deleted employee loses access
-    // immediately and an employee can log in even when the larger Team document
-    // is still waiting to sync from the dashboard device.
-    let previousAccess = { members: [] };
-    try {
-      const previousRow = await env.DB.prepare(
-        "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
-      ).bind(merchant).first();
-      if (previousRow && previousRow.data) {
-        const parsed = JSON.parse(previousRow.data);
-        if (parsed && Array.isArray(parsed.members)) previousAccess = parsed;
-      }
-    } catch (_) {
-      return json({ error: 'employee-access-unavailable' }, 503);
-    }
-    const previousById = new Map(previousAccess.members.map((member) => [
-      String(member && member.id || ''), member,
-    ]));
-    /* Les pierres tombales du document team font foi : une publication de codes
-     * venue d'un appareil resté sur l'ancien roster ne remet pas au miroir
-     * d'accès une personne que le propriétaire a retirée. */
-    let removedIds = new Set();
-    try {
-      const teamRow = await env.DB.prepare(
-        "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'"
-      ).bind(merchant).first();
-      if (teamRow && teamRow.data) removedIds = teamRemovedIds(JSON.parse(teamRow.data));
-    } catch (_) { /* pas de document team lisible : rien à retrancher */ }
-    const accessMembers = [];
-    for (const p of clean.filter((item) => item.email)) {
-      const id = p.memberId || `employee-${p.code}`;
-      if (removedIds.has(String(id))) continue;
-      const previous = previousById.get(id);
-      const previousPin = String(previous && (previous.pinCode || previous.password) || '');
-      const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));
-      const seedVersion = previousVersion + (previous && previousPin !== p.code ? 1 : 0);
-      const revision = await employeeAuthVersion(env, merchant, id, p.code, seedVersion);
-      if (!revision.ok) return json({ error: 'employee-access-unavailable' }, 503);
-      accessMembers.push({
-        id,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        email: p.email,
-        pinCode: p.code,
-        password: p.code,
-        authVersion: revision.version,
-        function: p.role,
-        department: p.department,
-        venueSlug: merchant,
+    /* Les révisions de connexion s'écrivent dans le lot (_employee-auth.js) ;
+     * si une autre sauvegarde les a bougées entre notre lecture et notre lot,
+     * le lot échoue entier et on recommence sur l'état neuf. */
+    let written = false;
+    for (let attempt = 0; attempt < 3 && !written; attempt++) {
+      const keepMarks = keepIds.map(() => '?').join(',');
+      const stmts = [keepIds.length
+        ? env.DB.prepare(
+            'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ')'
+          ).bind(merchant, ...keepIds)
+        : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
+      tillPins.forEach((p, i) => {
+        stmts.push(env.DB.prepare(
+          'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
+        ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
       });
+      /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
+       * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de
+       * l'ordre de lecture. La comparaison reste ENTIÈREMENT dans SQL — aucun
+       * code ne remonte en JavaScript (voir config-pin-projection-test.mjs). */
+      if (keepIds.length) {
+        stmts.push(env.DB.prepare(
+          'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ') '
+          + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
+        ).bind(merchant, ...keepIds, ...keepIds));
+      }
+      // Keep a private, exact employee-login roster beside the cashier PINs.
+      // Replacing it in the same D1 batch means a deleted employee loses access
+      // immediately and an employee can log in even when the larger Team document
+      // is still waiting to sync from the dashboard device.
+      let fingerprint;
+      try { fingerprint = await authFingerprint(env, merchant); }
+      catch (_) { return json({ error: 'employee-access-unavailable' }, 503); }
+      let previousAccess = { members: [] };
+      try {
+        const previousRow = await env.DB.prepare(
+          "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
+        ).bind(merchant).first();
+        if (previousRow && previousRow.data) {
+          const parsed = JSON.parse(previousRow.data);
+          if (parsed && Array.isArray(parsed.members)) previousAccess = parsed;
+        }
+      } catch (_) {
+        return json({ error: 'employee-access-unavailable' }, 503);
+      }
+      const previousById = new Map(previousAccess.members.map((member) => [
+        String(member && member.id || ''), member,
+      ]));
+      /* Les pierres tombales du document team font foi : une publication de codes
+       * venue d'un appareil resté sur l'ancien roster ne remet pas au miroir
+       * d'accès une personne que le propriétaire a retirée. */
+      let removedIds = new Set();
+      try {
+        const teamRow = await env.DB.prepare(
+          "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'"
+        ).bind(merchant).first();
+        if (teamRow && teamRow.data) removedIds = teamRemovedIds(JSON.parse(teamRow.data));
+      } catch (_) { /* pas de document team lisible : rien à retrancher */ }
+      const accessMembers = [];
+      const planned = new Map();
+      for (const p of clean.filter((item) => item.email)) {
+        const id = p.memberId || `employee-${p.code}`;
+        if (removedIds.has(String(id))) continue;
+        const previous = previousById.get(id);
+        const previousPin = String(previous && (previous.pinCode || previous.password) || '');
+        const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));
+        const seedVersion = previousVersion + (previous && previousPin !== p.code ? 1 : 0);
+        if (planned.has(id)) continue;
+        const revision = await planEmployeeAuth(env, merchant, id, p.code, seedVersion);
+        if (!revision.ok) return json({ error: 'employee-access-unavailable' }, 503);
+        planned.set(id, revision);
+        accessMembers.push({
+          id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          email: p.email,
+          pinCode: p.code,
+          password: p.code,
+          authVersion: revision.version,
+          function: p.role,
+          department: p.department,
+          venueSlug: merchant,
+        });
+      }
+      const access = { members: accessMembers };
+      const accessText = JSON.stringify(access);
+      stmts.push(env.DB.prepare(
+        `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+         VALUES (?, 'employee-access', ?, 1, ?)
+         ON CONFLICT(merchant, feature) DO UPDATE SET
+           data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+      ).bind(merchant, accessText, base));
+      const guard = { sql: "EXISTS (SELECT 1 FROM store_docs WHERE merchant = ? AND feature = 'employee-access' AND updated_ts = ? AND data = ?)", binds: [merchant, base, accessText] };
+      planned.forEach((plan) => stmts.push(writeEmployeeAuth(env, merchant, plan, base, guard)));
+      try {
+        await env.DB.batch([authSentinel(env, merchant, fingerprint), ...stmts]);
+        written = true;
+        result.employees = access.members.length;
+      } catch (error) {
+        let moved = authMoved(error);
+        if (!moved) { try { moved = (await authFingerprint(env, merchant)) !== fingerprint; } catch (_) {} }
+        if (!moved) return json({ error: 'write-failed' }, 500);
+      }
     }
-    const access = { members: accessMembers };
-    stmts.push(env.DB.prepare(
-      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-       VALUES (?, 'employee-access', ?, 1, ?)
-       ON CONFLICT(merchant, feature) DO UPDATE SET
-         data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
-    ).bind(merchant, JSON.stringify(access), base));
-    try { await env.DB.batch(stmts); }
-    catch (_) { return json({ error: 'write-failed' }, 500); }
+    if (!written) return json({ error: 'concurrent-update', retry: true }, 409);
     result.pins = tillPins.length + keepIds.length;
-    result.employees = access.members.length;
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─

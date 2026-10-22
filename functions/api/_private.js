@@ -191,34 +191,6 @@ export async function storeSubscriptionPending(env, slug) {
   } catch (_) { return false; }
 }
 
-/* Persist the employee credential revision outside the replaceable Team and
- * employee-access JSON documents. The upsert compares a digest in SQLite and
- * increments in the same statement, so two concurrent different PIN changes
- * cannot both publish revision 1. A missing auth-revision table is an explicit
- * release prerequisite, not a reason to silently reset a credential to zero. */
-export async function employeeAuthVersion(env, merchant, memberId, pin, fallbackVersion = 0) {
-  const fallback = Math.max(0, Math.round(Number(fallbackVersion) || 0));
-  const text = `${String(merchant || '')}\u0000${String(memberId || '')}\u0000${String(pin || '')}`;
-  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  const digest = Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, '0')).join('');
-  try {
-    const row = await env.DB.prepare(
-      `INSERT INTO employee_auth_versions (merchant, member_id, auth_version, pin_digest, updated_ts)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(merchant, member_id) DO UPDATE SET
-         auth_version = employee_auth_versions.auth_version
-           + CASE WHEN employee_auth_versions.pin_digest = excluded.pin_digest THEN 0 ELSE 1 END,
-         pin_digest = excluded.pin_digest,
-         updated_ts = excluded.updated_ts
-       RETURNING auth_version`
-    ).bind(String(merchant || ''), String(memberId || ''), fallback, digest, Date.now()).first();
-    if (!row || !Number.isFinite(Number(row.auth_version))) return { ok: false };
-    return { ok: true, version: Math.max(0, Math.round(Number(row.auth_version))) };
-  } catch (_) {
-    return { ok: false };
-  }
-}
-
 export async function tenantFor(request, env, asked, opts) {
   /* `strict` — pour les ÉCRITURES. Deux règles s'y ajoutent, et aucune des deux
    * ne doit gêner une lecture :

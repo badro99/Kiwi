@@ -36,7 +36,8 @@
 import { cleanGuestDoc } from './order/_guest.js';
 import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant } from '../auth/_lib.js';
-import { employeeAuthVersion, tenantFor, storeSubscriptionPending } from './_private.js';
+import { tenantFor, storeSubscriptionPending } from './_private.js';
+import { authFingerprint, authSentinel, planEmployeeAuth, writeEmployeeAuth, authMoved } from './_employee-auth.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
 import { poke } from './_live.js';
 import {
@@ -720,22 +721,23 @@ async function employeeAccessFromTeam(env, team, merchant) {
   const previousById = new Map(previous.members.map((member) => [String(member && member.id || ''), member]));
   const seen = new Set();
   const access = [];
+  const plans = [];
   for (const member of members) {
     if (!member) continue;
     const id = String(member.id || '').trim().slice(0, 96);
     const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
     const pin = String(member.pinCode || member.password || '').trim();
     if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
-    const key = `${email}:${id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (seen.has(id)) continue;
+    seen.add(id);
     const prior = previousById.get(id);
     const priorPin = String(prior && (prior.pinCode || prior.password) || '');
     const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
-    const revision = await employeeAuthVersion(
+    const revision = await planEmployeeAuth(
       env, merchant, id, pin, priorVersion + (prior && priorPin !== pin ? 1 : 0)
     );
     if (!revision.ok) return null;
+    plans.push(revision);
     access.push({
       id,
       firstName: String(member.firstName || '').trim().slice(0, 60),
@@ -749,7 +751,7 @@ async function employeeAccessFromTeam(env, team, merchant) {
       venueSlug: merchant,
     });
   }
-  return { members: access };
+  return { doc: { members: access }, plans };
 }
 
 export async function onRequestGet(context) {
@@ -1064,21 +1066,40 @@ export async function onRequestPost(context) {
       return typeof c === 'number' ? c !== 1 : CAS_FEATURES.has(feature);
     };
     if (feature === 'team') {
-      const access = await employeeAccessFromTeam(env, clean.value, merchant);
-      if (!access) return json({ error: 'employee-access-unavailable' }, 503);
-      const accessText = JSON.stringify(access);
-      /* Le miroir d'accès n'est écrit QUE si le document team vient d'être écrit
-       * (révision, instant ET contenu sont les nôtres) : un lot D1 est atomique mais ne s'arrête pas
-       * sur une ligne à zéro changement, et un team périmé aurait sinon réécrit
-       * les codes de connexion des employés. */
-      const writeAccess = env.DB.prepare(
-        `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-         SELECT ?, 'employee-access', ?, 1, ?
-          WHERE EXISTS (SELECT 1 FROM store_docs WHERE merchant = ? AND feature = 'team' AND rev = ? AND updated_ts = ? AND data = ?)
-         ON CONFLICT(merchant, feature) DO UPDATE SET
-           data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
-      ).bind(merchant, accessText, now, merchant, rev, now, text);
-      const results = await env.DB.batch([writeDoc, writeAccess]);
+      /* Révisions de connexion écrites dans ce lot, gardées par l'écriture du
+       * document team (_employee-auth.js) : un enregistrement qui perd sa
+       * révision ne monte plus celle d'un employé, et une autre sauvegarde qui
+       * les a bougées entre-temps fait recommencer le calcul. */
+      let results = null;
+      for (let attempt = 0; attempt < 3 && !results; attempt++) {
+        let fingerprint;
+        try { fingerprint = await authFingerprint(env, merchant); }
+        catch (_) { return json({ error: 'employee-access-unavailable' }, 503); }
+        const built = await employeeAccessFromTeam(env, clean.value, merchant);
+        if (!built) return json({ error: 'employee-access-unavailable' }, 503);
+        const accessText = JSON.stringify(built.doc);
+        /* Le miroir d'accès n'est écrit QUE si le document team vient d'être écrit
+         * (révision, instant ET contenu sont les nôtres) : un lot D1 est atomique mais ne s'arrête pas
+         * sur une ligne à zéro changement, et un team périmé aurait sinon réécrit
+         * les codes de connexion des employés. */
+        const writeAccess = env.DB.prepare(
+          `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+           SELECT ?, 'employee-access', ?, 1, ?
+            WHERE EXISTS (SELECT 1 FROM store_docs WHERE merchant = ? AND feature = 'team' AND rev = ? AND updated_ts = ? AND data = ?)
+           ON CONFLICT(merchant, feature) DO UPDATE SET
+             data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+        ).bind(merchant, accessText, now, merchant, rev, now, text);
+        const guard = { sql: "EXISTS (SELECT 1 FROM store_docs WHERE merchant = ? AND feature = 'team' AND rev = ? AND updated_ts = ? AND data = ?)", binds: [merchant, rev, now, text] };
+        try {
+          results = (await env.DB.batch([authSentinel(env, merchant, fingerprint), writeDoc, writeAccess,
+            ...built.plans.map((plan) => writeEmployeeAuth(env, merchant, plan, now, guard))])).slice(1);
+        } catch (error) {
+          let moved = authMoved(error);
+          if (!moved) { try { moved = (await authFingerprint(env, merchant)) !== fingerprint; } catch (_) {} }
+          if (!moved) throw error;
+        }
+      }
+      if (!results) return lost();
       if (notApplied(results && results[0])) return lost();
       try { await closeRemovedShifts(env, merchant, clean.value.removed); } catch (_) {}
     } else {
