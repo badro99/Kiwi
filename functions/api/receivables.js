@@ -206,17 +206,22 @@ export async function onRequestPost({ request, env }) {
           (merchant, collection_sale_id, sale_id, method, amount_cents, ts, collected_by_id, collected_by_name)
         SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE ? <= ? - COALESCE((SELECT SUM(amount_cents) FROM delivery_collections
           WHERE merchant = ? AND sale_id = ?), 0)
+          AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL)
         ON CONFLICT DO NOTHING`)
-        .bind(merchant, collectionId, saleId, method, amount, now, byId || null, byName || null, amount, owed, merchant, saleId),
+        .bind(merchant, collectionId, saleId, method, amount, now, byId || null, byName || null, amount, owed, merchant, saleId, merchant, saleId),
       /* INSERT simple, jamais OR IGNORE : sales.id est unique pour TOUS les
        * commerces. Si un autre encaissement (ou une autre vente, d'un autre
        * magasin) porte déjà cet identifiant, l'écriture échoue et tout le lot
        * est annulé. Avec OR IGNORE la ligne d'encaissement resterait, le dû
        * baisserait, et aucune vente ne serait écrite. */
+      /* Le panier va au premier encaissement décidé DANS le lot : deux caisses
+       * qui encaissent en même temps ont pu toutes deux le lire avant. */
       env.DB.prepare(`INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel)
-        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 'delivery' WHERE EXISTS (SELECT 1 FROM delivery_collections
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?,
+          CASE WHEN (SELECT COUNT(*) FROM delivery_collections WHERE merchant = ? AND sale_id = ?) = 1
+            THEN ? ELSE NULL END, 'delivery' WHERE EXISTS (SELECT 1 FROM delivery_collections
           WHERE merchant = ? AND collection_sale_id = ? AND ts = ?)`)
-        .bind(collectionId, merchant, Math.round(amount / 100), amount, method, label, row.ref || null, now, lines,
+        .bind(collectionId, merchant, Math.round(amount / 100), amount, method, label, row.ref || null, now, merchant, saleId, lines,
           merchant, collectionId, now),
     ]);
   } catch (error) {

@@ -1610,6 +1610,7 @@ section('Whole-project regressions');
     'dayreport-properties-test.mjs',
     'briefing-properties-test.mjs',
     'server-money-properties-test.mjs',
+    'receivables-properties-test.mjs',
     'trades-money-properties-test.mjs',
     'live-link-queue-properties-test.mjs',
     'invoice-vat-properties-test.mjs',
