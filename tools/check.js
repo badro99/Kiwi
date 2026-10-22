@@ -1597,6 +1597,7 @@ section('Whole-project regressions');
     'customer-balance-properties-test.mjs',
     'books-money-properties-test.mjs',
     'serveur-money-properties-test.mjs',
+    'orderpro-properties-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',

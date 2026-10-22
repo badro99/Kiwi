@@ -2051,7 +2051,7 @@ export async function onRequestPost(context) {
         if (!owed) {
           await env.DB.prepare(
             `UPDATE orders SET paid_ts = ?, updated_ts = ?
-              WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+              WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL AND status <> 'rejected'`
           ).bind(now, now, merchant, closeSession).run();
         }
       }
