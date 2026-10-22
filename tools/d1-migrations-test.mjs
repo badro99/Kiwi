@@ -14,7 +14,14 @@
  *      tables, colonnes (type, NOT NULL, défaut, clé), index, clés étrangères ;
  *   4. 0001 est rejouable sur une base déjà à jour — c'est ce qui la rend sans
  *      effet sur la production, qui l'a déjà ;
- *   5. le comparateur voit bien un écart quand il y en a un.
+ *   5. le comparateur voit bien un écart quand il y en a un ;
+ *   6. MISE À NIVEAU D'UNE BASE REMPLIE : une base à la baseline, avec des lignes
+ *      synthétiques dans les tables qui portent l'argent et les clients, reçoit
+ *      toutes les migrations suivantes (celles qui existent, dans l'ordre) :
+ *      aucune ligne ne disparaît ni ne change de valeur, et toute colonne
+ *      ajoutée NOT NULL porte son défaut sur les lignes déjà là. Le point 3
+ *      prouve la forme sur une base vide, il ne voit pas une migration qui
+ *      efface ou réécrit des lignes.
  *
  * `node tools/d1-migrations-test.mjs`
  */
@@ -86,6 +93,184 @@ if (migrated) {
   } catch (error) {
     check(`${baseline} rejouée sur une base à jour`, false, error.message);
   }
+}
+
+console.log('\n■ Mise à niveau d\'une base remplie : les lignes survivent');
+
+/* Valeurs entièrement synthétiques : aucun commerce, aucun code, aucun hash réel. */
+const SEED = {
+  accounts: [
+    { id: 'acc-synth-1', email: 'synth-1@example.test', name: 'Synth Un', business: 'Boutique Synth', salt: 'synth-salt', hash: 'synth-hash', created_ts: 1760000000000, status: 'active', session_epoch: 3 },
+    { id: 'acc-synth-2', email: 'synth-2@example.test', name: null, business: null, salt: 'synth-salt', hash: 'synth-hash', created_ts: 1760000001000, status: 'suspended', session_epoch: 0 },
+  ],
+  merchant_config: [
+    { merchant: 'synth-shop-a', features: '{"stock":true}', plan: 'basic', updated_ts: 1760000002000, account_id: 'acc-synth-1', name: 'Synth A', status: 'active', mrr: 15000, till_epoch: 2, timezone: 'Africa/Casablanca', business_cutoff: 5 },
+    { merchant: 'synth-shop-b', features: '{}', plan: null, updated_ts: 1760000003000, account_id: 'acc-synth-2' },
+  ],
+  sales: [
+    { id: 'sale-synth-1', merchant: 'synth-shop-a', amount: 120, method: 'cash', label: 'Synth', ref: 'R-1', ts: 1760000010000, lines: '[{"id":"p1","qty":2,"price":60}]', amount_cents: 12000, gross_amount_cents: 12000, discount_amount_cents: 0, payment_parts: '[{"method":"cash","amount_cents":12000}]', tip_cents: 0, seller_id: 'sel-1', seller_name: 'Vendeuse' },
+    { id: 'sale-synth-2', merchant: 'synth-shop-a', amount: 99, method: 'split', ts: 1760000020000, amount_cents: 9950, gross_amount_cents: 10000, discount_amount_cents: 50, discount_reason: 'synth', payment_parts: '[{"method":"cash","amount_cents":5000},{"method":"card","amount_cents":4950}]', tip_cents: 200 },
+    { id: 'sale-synth-3', merchant: 'synth-shop-b', amount: 10, method: 'card', ts: 1760000030000, amount_cents: 1000, void_ts: 1760000040000, void_reason: 'synth', void_actor_id: 'sel-9', channel: 'till' },
+  ],
+  sale_receipts: [
+    { merchant: 'synth-shop-a', sale_id: 'sale-synth-1', gross_ticket_cents: 12000, consigned_cents: 0, created_ts: 1760000011000 },
+    { merchant: 'synth-shop-a', sale_id: 'sale-synth-2', gross_ticket_cents: 10000, consigned_cents: 300, created_ts: 1760000021000 },
+  ],
+  sale_audit: [
+    { merchant: 'synth-shop-b', sale_id: 'sale-synth-3', action: 'void', amount: 10, ts: 1760000040000, amount_cents: 1000 },
+  ],
+  clients: [
+    { merchant: 'synth-shop-a', id: 'cli-synth-1', name: 'Cliente Synth', phone: '0600000000', points: 40, stamps: 2, visits: 5, spend: 25000, consent: 1, first_seen: 1759000000000, last_seen: 1760000010000, updated_ts: 1760000010000, srv_ts: 1760000010001, hospitality: '{"room":"12"}' },
+    { merchant: 'synth-shop-a', id: 'cli-synth-2', name: 'Client Supprimé', deleted: 1, srv_ts: 1760000012000 },
+    { merchant: 'synth-shop-b', id: 'cli-synth-1', name: 'Même id, autre magasin', srv_ts: 1760000013000 },
+  ],
+  store_docs: [
+    { merchant: 'synth-shop-a', feature: 'menu', data: '{"items":[{"id":"i1","price":12.5}]}', rev: 4, updated_ts: 1760000050000 },
+    { merchant: 'synth-shop-a', feature: 'stock', data: '{"n":1}', rev: 1, updated_ts: 1760000051000 },
+    { merchant: 'synth-shop-b', feature: 'menu', data: '{}', rev: 0, updated_ts: 1760000052000 },
+  ],
+  inventory_movements: [
+    { id: 'mov-synth-1', merchant: 'synth-shop-a', item_id: 'i1', qty_milli: -2000, reason: 'sale', ref_type: 'sale', ref_id: 'sale-synth-1', occurred_ts: 1760000010000, srv_ts: 1760000010002, created_ts: 1760000010002, unit_cost_cents: 3000 },
+  ],
+  hotel_stay_events: [
+    { merchant: 'synth-shop-a', id: 'hev-synth-1', stay_id: 'stay-synth-1', event_type: 'check_in', payload_json: '{"room":"12"}', occurred_ts: 1760000060000, srv_cursor: 1, event_ordinal: 0, actor_id: 'sel-1', actor_role: 'reception' },
+    { merchant: 'synth-shop-a', id: 'hev-synth-2', stay_id: 'stay-synth-1', event_type: 'check_out', payload_json: '{}', occurred_ts: 1760000070000, srv_cursor: 2, event_ordinal: 0, actor_id: 'sel-1', actor_role: 'reception' },
+  ],
+  hotel_room_charge_events: [
+    { merchant: 'synth-shop-a', id: 'rce-synth-1', kind: 'charge', sale_id: 'sale-synth-1', outlet_id: 'bar', shift_id: 'sh-1', cashier_id: 'sel-1', cashier_name: 'Vendeuse', amount_cents: 12000, occurred_ts: 1760000010000 },
+    { merchant: 'synth-shop-a', id: 'rce-synth-2', kind: 'reversal', sale_id: 'sale-synth-1', outlet_id: 'bar', shift_id: 'sh-1', cashier_id: 'sel-1', amount_cents: 12000, occurred_ts: 1760000080000, reversal_of: 'rce-synth-1' },
+  ],
+  hotel_internal_requests: [
+    { merchant: 'synth-shop-a', id: 'req-synth-1', unit_id: 'unit-1', state: 'submitted', revision: 2, create_key: 'ck-synth-1', created_ts: 1760000090000, updated_ts: 1760000091000, submitted_ts: 1760000091000 },
+  ],
+  hotel_internal_request_lines: [
+    { merchant: 'synth-shop-a', request_id: 'req-synth-1', line_no: 1, item_id: 'i1', unit: 'kg', conversion_snapshot: '{"factor":1}', qty_requested_base_milli: 2500, qty_requested: 2.5, substitute_for: '' },
+    { merchant: 'synth-shop-a', request_id: 'req-synth-1', line_no: 2, item_id: 'i2', unit: 'pc', conversion_snapshot: '{}', qty_requested_base_milli: 4000, qty_requested: 4, qty_approved: 3, resolution: 'partial', note: 'synth' },
+  ],
+  print_jobs: [
+    { id: 'job-synth-1', merchant: 'synth-shop-a', bridge_id: null, kind: 'receipt', target: '{"ip":"192.0.2.10","port":9100}', data_b64: 'U1lOVEg=', status: 'queued', created_ts: 1760000100000, expires_ts: 1760000700000 },
+    { id: 'job-synth-2', merchant: 'synth-shop-a', bridge_id: 'br-synth', kind: 'kitchen', target: '{"osPrinter":"synth"}', data_b64: 'U1lOVEg=', status: 'done', created_ts: 1760000101000, expires_ts: 1760000701000, claimed_ts: 1760000102000, done_ts: 1760000103000, bytes: 5 },
+  ],
+  push_tokens: [
+    { merchant: 'synth-shop-a', token: 'tok-synth-1', role: 'caisse', platform: 'ios', created_at: 1760000110000, updated_at: 1760000110000 },
+    { merchant: 'synth-shop-a', token: 'tok-synth-2', role: 'employee', employee_id: 'emp-1', platform: 'web', device_id: 'dev-1', created_at: 1760000111000, updated_at: 1760000112000 },
+  ],
+};
+
+const columnsOf = (db, table) => db.prepare('SELECT * FROM pragma_table_info(?)').all(table);
+const rowKey = (row) => JSON.stringify(Object.keys(row).sort().map((k) => [k, row[k]]));
+
+function insertAll(db, seed) {
+  for (const [table, rows] of Object.entries(seed)) {
+    for (const row of rows) {
+      const cols = Object.keys(row);
+      db.prepare(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`).run(...cols.map((c) => row[c]));
+    }
+  }
+}
+
+/* Lit chaque table semée telle qu'elle est à la baseline : toutes ses colonnes
+ * d'alors, chaque ligne en clé stable (l'ordre des lignes peut changer si une
+ * future migration reconstruit la table). */
+function snapshot(db, seed) {
+  const out = new Map();
+  for (const table of Object.keys(seed)) {
+    const cols = columnsOf(db, table).map((c) => c.name);
+    const rows = db.prepare(`SELECT ${cols.join(',')} FROM ${table}`).all().map((r) => rowKey(r));
+    out.set(table, { cols, rows: rows.sort() });
+  }
+  return out;
+}
+
+/* Met à niveau une base remplie avec `laterSqls` (dans l'ordre) et rend les écarts. */
+function upgradeProblems(baselineSql, laterSqls, seed = SEED) {
+  const db = freshDb();
+  db.exec(baselineSql);
+  insertAll(db, seed);
+  const before = snapshot(db, seed);
+  const colsBefore = new Map([...before.keys()].map((t) => [t, new Set(columnsOf(db, t).map((c) => c.name))]));
+  for (const sql of laterSqls) db.exec(sql);
+
+  const problems = [];
+  const added = new Map();
+  for (const [table, { cols, rows }] of before) {
+    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) {
+      problems.push(`${table} : la table a disparu`); continue;
+    }
+    const nowCols = new Set(columnsOf(db, table).map((c) => c.name));
+    const lost = cols.filter((c) => !nowCols.has(c));
+    if (lost.length) { problems.push(`${table} : colonne(s) retirée(s) ${lost.join(', ')}`); continue; }
+    const count = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
+    if (count !== rows.length) problems.push(`${table} : ${rows.length} ligne(s) avant, ${count} après`);
+    const after = new Set(db.prepare(`SELECT ${cols.join(',')} FROM ${table}`).all().map((r) => rowKey(r)));
+    const missing = rows.filter((r) => !after.has(r));
+    if (missing.length) problems.push(`${table} : ${missing.length} ligne(s) changée(s) ou perdue(s), par ex. ${missing[0].slice(0, 160)}`);
+
+    /* Colonnes ajoutées : NOT NULL ne doit jamais rester NULL sur l'existant,
+     * et un défaut littéral doit y être posé. */
+    for (const c of columnsOf(db, table).filter((col) => !colsBefore.get(table).has(col.name))) {
+      added.set(`${table}.${c.name}`, c);
+      if (c.notnull) {
+        const nulls = db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${c.name} IS NULL`).get().n;
+        if (nulls) problems.push(`${table}.${c.name} : NOT NULL mais NULL sur ${nulls} ligne(s) déjà là`);
+      }
+      if (c.dflt_value != null) {
+        const off = db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${c.name} IS NOT (${c.dflt_value})`).get().n;
+        if (off) problems.push(`${table}.${c.name} : défaut ${c.dflt_value} absent de ${off} ligne(s) déjà là`);
+      }
+    }
+  }
+  return { problems, db, added };
+}
+
+if (baseline) {
+  const baselineSql = read(baseline);
+  const laterSqls = files.filter((n) => n !== baseline).map(read);
+  const real = upgradeProblems(baselineSql, laterSqls);
+  check(`${laterSqls.length} migration(s) après la baseline gardent chaque ligne de ${Object.keys(SEED).length} tables`,
+    !real.problems.length, real.problems.slice(0, 8).join('\n      '));
+  check('le test sème bien des lignes dans chaque table',
+    Object.values(SEED).every((rows) => rows.length > 0));
+
+  /* Les colonnes que 0002 ajoute sur des tables déjà peuplées prouvent que la
+   * vérification regarde vraiment les colonnes ajoutées. */
+  for (const key of ['push_tokens.lang', 'hotel_room_charge_events.stay_id', 'hotel_internal_request_lines.substitute_unit']) {
+    const col = real.added.get(key);
+    check(`${key} (ajoutée sur des lignes existantes) est examinée : NOT NULL avec défaut`,
+      !!col && col.notnull === 1 && col.dflt_value != null, col ? `notnull=${col.notnull} default=${col.dflt_value}` : 'colonne ajoutée introuvable');
+  }
+  check('les lignes d\'avant lisent le défaut des colonnes ajoutées (lang vide, substitute_conversion_snapshot « {} »)',
+    real.db.prepare("SELECT COUNT(*) AS n FROM push_tokens WHERE lang = ''").get().n === SEED.push_tokens.length
+    && real.db.prepare("SELECT COUNT(*) AS n FROM hotel_internal_request_lines WHERE substitute_conversion_snapshot = '{}'").get().n === SEED.hotel_internal_request_lines.length);
+
+  /* Les ventes d'avant restent lisibles avec leurs montants et leurs parts de
+   * paiement, et le journal de changements suit les écritures d'après. */
+  const sale = real.db.prepare('SELECT amount_cents, payment_parts, tip_cents FROM sales WHERE id = ?').get('sale-synth-2');
+  check('une vente mixte garde amount_cents, payment_parts et tip_cents',
+    !!sale && sale.amount_cents === 9950 && sale.tip_cents === 200
+    && JSON.parse(sale.payment_parts).reduce((sum, part) => sum + part.amount_cents, 0) === 9950);
+  const receipts = real.db.prepare('SELECT SUM(gross_ticket_cents) AS g, SUM(consigned_cents) AS c FROM sale_receipts').get();
+  check('les reçus gardent leurs sommes au centime', receipts.g === 22000 && receipts.c === 300);
+  if (real.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sale_changes'").get()) {
+    real.db.prepare("UPDATE sales SET label = 'après mise à niveau' WHERE id = 'sale-synth-1'").run();
+    const logged = real.db.prepare("SELECT COUNT(*) AS n FROM sale_changes WHERE sale_id = 'sale-synth-1'").get().n;
+    check('une écriture sur une vente d\'avant est enregistrée dans sale_changes', logged >= 1);
+  }
+
+  /* Le contrôle doit voir une migration qui abîme les données. */
+  const hurts = (sql) => upgradeProblems(baselineSql, [...laterSqls, sql]).problems;
+  check('une migration qui efface des ventes est signalée',
+    hurts("DELETE FROM sales WHERE id = 'sale-synth-3'").some((p) => p.startsWith('sales :')));
+  check('une migration qui réécrit un montant est signalée',
+    hurts("UPDATE sales SET amount_cents = amount_cents + 1 WHERE id = 'sale-synth-1'").some((p) => p.startsWith('sales :')));
+  check('une migration qui retire une colonne est signalée',
+    hurts('ALTER TABLE clients DROP COLUMN hospitality').some((p) => p.includes('clients : colonne')));
+  check('une colonne ajoutée dont le défaut manque sur l\'existant est signalée',
+    hurts("ALTER TABLE accounts ADD COLUMN probe TEXT NOT NULL DEFAULT 'x'; UPDATE accounts SET probe = 'y' WHERE id = 'acc-synth-1'")
+      .some((p) => p.includes('accounts.probe')));
+  check('une table reconstruite en perdant des lignes est signalée',
+    hurts("CREATE TABLE print_jobs_new AS SELECT * FROM print_jobs WHERE status = 'queued'; DROP TABLE print_jobs; ALTER TABLE print_jobs_new RENAME TO print_jobs")
+      .some((p) => p.startsWith('print_jobs :')));
 }
 
 console.log('\n■ Le comparateur voit un écart');

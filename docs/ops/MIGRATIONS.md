@@ -11,7 +11,7 @@ Since 2026-10-19 the database changes through **`wrangler d1 migrations`**:
 | --- | --- |
 | `migrations/NNNN_name.sql` | The history. Wrangler records each applied file in a `d1_migrations` table in the database and applies only the ones it has not seen. |
 | `schema.sql` | The portrait: the whole database as it should be, readable in one file. |
-| `tools/d1-migrations-test.mjs` | Applies every migration to an empty in-memory SQLite and fails `check.js` unless the result equals `schema.sql`: tables, columns (type, NOT NULL, default, key), indexes and foreign keys. Fast tier, no network. |
+| `tools/d1-migrations-test.mjs` | Applies every migration to an empty in-memory SQLite and fails `check.js` unless the result equals `schema.sql`: tables, columns (type, NOT NULL, default, key), indexes and foreign keys. It also upgrades a POPULATED database (synthetic rows in accounts, sales, receipts, clients, store docs, hotel and print tables, built at the baseline) through every later migration and fails if a row disappears or changes, or an added NOT NULL column misses its default. Fast tier, no network. |
 | `wrangler.d1.toml` | Wrangler config for migrations only. It is not called `wrangler.toml` on purpose: Cloudflare Pages reads that name when deploying kiwi-os.com. |
 | `migrations/legacy/` | The old dated files, kept because tests read them. Wrangler does not read subfolders, so nothing in there is ever applied. |
 

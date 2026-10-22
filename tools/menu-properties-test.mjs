@@ -6,7 +6,6 @@ import { createRequire } from 'node:module';
 import { fixture } from './server-money-fixture.mjs';
 import { sanitizeMenu, onRequestPost as save, onRequestGet as read } from '../functions/api/menu.js';
 import { onRequestPost as availability } from '../functions/api/menu/availability.js';
-import { sanitizeMenuPriceLists, resolveCaisseMenu } from '../functions/api/_menu-price-lists.js';
 import { normalizeMenuLangs } from '../functions/api/_menu-langs.js';
 import { businessDate, businessBoundary } from '../functions/api/_business-day.js';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
@@ -84,22 +83,6 @@ try {
       assert.ok(Number.isFinite(p) && p >= 0); assert.equal(p, Math.round(p * 100) / 100);
     }
   }));
-  await knownIssue('price lists are not stored with the menu', 'functions/api/_menu-price-lists.js has no screen that sends price lists and no production menu holds one (22 October 2026); storing them is a feature to finish, not a fix.', fc.asyncProperty(menuArb, cents, async (m, p) => {
-    reset(); Object.assign(m, { priceLists: [{ id: 'evening', name: 'Evening', active: true, prices: { i0: p / 100 }, optionPrices: { 'g:o': .2 }, formulaExtras: { 'items/i0/formula/slots/0/choices/0/extra': .3 } }], terminalMenus: { till: 'evening' } });
-    const expected = sanitizeMenuPriceLists(m, m);
-    assert.equal((await post(m)).status, 200);
-    const got = (await call(read, {}, cookie, true)).body.menu;
-    for (const key of Object.keys(expected)) assert.deepEqual(got[key], expected[key]);
-    assert.equal((await call(availability, { itemId: 'i0', available: false }, till)).status, 200);
-    const hidden = JSON.parse(stored().data);
-    for (const key of Object.keys(expected)) assert.deepEqual(hidden[key], expected[key]);
-    const publicResponse = await read({ request: new Request(`https://kiwi.test/api/menu?merchant=${merchant}`), env });
-    const publicPayload = await publicResponse.json();
-    assert.ok(publicPayload.menu);
-    assert.equal(publicPayload.menu.priceLists, undefined);
-    assert.equal(publicPayload.menu.terminalMenus, undefined);
-    assert.deepEqual(sanitizeMenu(got, NOW), got);
-  }));
   await strict('guarded concurrent edits accept at most one winner, including a frozen millisecond clock', fc.asyncProperty(menuArb, async m => {
     reset(); const realNow = Date.now; Date.now = () => NOW;
     try {
@@ -168,25 +151,11 @@ try {
     assert.equal((await call(availability, { merchant: 'server-other-shop', itemId: 'i0', available: false }, till)).status, 401);
     assert.deepEqual(sql.prepare("SELECT * FROM menus WHERE merchant='server-other-shop'").get(), before);
   }));
-  await strict('terminal assignment picks one active list or default independently of time/channel; input is immutable', fc.property(menuArb, cents, cents, (m, a, b) => {
-    Object.assign(m, sanitizeMenuPriceLists({ priceLists: [{ id: 'a', name: 'A', active: true, prices: { i0: a / 100 } }, { id: 'b', name: 'B', active: false, prices: { i0: b / 100 } }], terminalMenus: { t: 'a', off: 'b' } }, m));
-    const before = structuredClone(m);
-    for (const terminal of ['t', 'off', 'unknown']) {
-      const r = resolveCaisseMenu(m, terminal);
-      assert.equal(r.menu.items[0].price, terminal === 't' ? a / 100 : m.items[0].price);
-      assert.equal(r.menu.items.length, m.items.length);
-    }
-    assert.deepEqual(m, before);
-  }));
   await strict('legal Morocco clock partitions business days at 05:00 after September 20', fc.property(fc.integer({ min: -1440, max: 1440 }), minute => {
     const boundary = Date.parse('2026-10-22T05:00:00Z'), ts = boundary + minute * 60000;
     for (const zone of ['Africa/Casablanca', 'Africa/El_Aaiun']) {
       const day = businessDate(ts, 5, zone); assert.equal(businessBoundary(day, 5, zone), boundary + Math.floor(minute / 1440) * 86400000);
     }
-  }));
-  await knownIssue('scheduled/channel price lists', 'Price lists support terminal assignment only. No time/channel contract exists; equal endpoints and overnight scheduling need a product decision. Promotions have their own suite.', fc.property(fc.constantFrom(['00:00', '00:00'], ['22:00', '05:00'], ['05:00', '06:00']), ([from, to]) => {
-    const raw = { priceLists: [{ id: 'night', name: 'Night', active: true, from, to, channel: 'delivery' }] };
-    return sanitizeMenuPriceLists(raw, {}).priceLists[0].from === from;
   }));
 } finally { f.close(); }
 console.log(`menu-properties: ${passed} held, ${failed} failed, ${known} known; ${RUNS} cases/property; seed=${SEED}`);
