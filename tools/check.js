@@ -564,6 +564,7 @@ for (const test of [
   'hotel-properties-test.mjs',
   'stock-money-properties-test.mjs',
   'menu-analysis-properties-test.mjs',
+  'economat-properties-test.mjs',
   'shopify-sync-properties-test.mjs',
   'kitchen-properties-test.mjs',
   'booking-manage-test.mjs',

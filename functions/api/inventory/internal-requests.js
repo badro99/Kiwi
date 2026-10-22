@@ -312,10 +312,15 @@ export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
   if (!locations.length) return { sql: ' AND 0', args: [] };
   const clauses = [];
   const args = [];
+  const proposedByItem = new Map();
   next.lines.forEach((line, index) => {
     const receivedMilli = approvedBaseMilli(current.lines[index], 'qtyReceived') || 0;
     const proposedMilli = Math.max(0, (approvedBaseMilli(line) || 0) - receivedMilli);
     if (!proposedMilli) return;
+    const itemId = fulfilmentItemId(line);
+    proposedByItem.set(itemId, (proposedByItem.get(itemId) || 0) + proposedMilli);
+  });
+  for (const [fulfilmentItem, proposedMilli] of proposedByItem) {
     const marks = locations.map(() => '?').join(',');
     clauses.push(`? <=
       (SELECT COALESCE(SUM(qty_milli), 0) FROM inventory_movements
@@ -324,10 +329,9 @@ export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
            FROM inventory_request_reservations
           WHERE merchant = ? AND item_id = ? AND location_id IN (${marks})
             AND request_id <> ?)`);
-    const fulfilmentItem = fulfilmentItemId(line);
     args.push(proposedMilli, merchant, fulfilmentItem, ...locations,
       merchant, fulfilmentItem, ...locations, next.request.id);
-  });
+  }
   return { sql: clauses.length ? ` AND ${clauses.map((clause) => `(${clause})`).join(' AND ')}` : '', args };
 }
 
@@ -768,7 +772,11 @@ export async function onRequestPost({ request, env }) {
       ? await loadRequest(env, merchant, idempotencyKey, true)
       : await replayFor(env, merchant, idempotencyKey);
   } catch (_) { return json({ error: 'db' }, 503); }
-  if (replay) return json({ ok: true, replayed: true, ...replay });
+  if (replay) {
+    const context = await requestContext(request, env, merchant, replay.request.unitId);
+    if (context.error) return json({ error: context.error }, context.status);
+    return json({ ok: true, replayed: true, ...replay });
+  }
   return action === 'create'
     ? createDraft(request, env, body, merchant, idempotencyKey)
     : command(request, env, body, merchant, action, idempotencyKey);
