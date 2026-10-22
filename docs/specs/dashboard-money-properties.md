@@ -82,19 +82,21 @@ points would double-count. Longer ranges contain daily, non-cumulative totals.
 
 ## Known witnesses and owner visibility
 
-All production code is unchanged. These distinguish defects from policy choices.
+These distinguish defects from policy choices. Four were defects and are fixed
+(22/10): DM-3, DM-4, DM-8 and DM-9 now run as strict properties with their
+witnesses as explicit examples. DM-1, DM-2, DM-5, DM-6 and DM-7 are policy.
 
 | ID | Shrunk witness | Result and reachability |
 | --- | --- | --- |
 | DM-1 | `[2,0]`: sale 2 cents, refund 1 cent | Basket remains 2 cents instead of requested net 1 cent. Home KPI uses gross/count deliberately. Ordinary analogue: one 100 MAD sale and a 50 MAD refund. **Gross versus net basket policy**, not an unexplained ledger loss. |
 | DM-2 | `[1]`: unpaid delivery ticket, received zero | Orders is 0 instead of requested 1 because bridge drops zero-amount rows. Owner: ring a delivery-on-credit ticket, open Home. Normal whole-dirham delivery tickets have the same result. Summary also excludes zero rows. **Received-sale versus all-order count policy.** |
-| DM-3 | `[1,"Europe/Paris"]` (also explicit Casablanca example) | Final 04:59 sale disappears from the hourly chart on a 25-hour business day: net is 1 cent, plotted total is 0. Paris business day 2026-10-24; Casablanca business day 2026-02-14. Owner: next morning select Yesterday. `hourlyCumul` rejects offset 24. Day-report net is correct, but its hourly detail has the same 24-offset limit. |
-| DM-4 | `[1]`: refund 1 cent, then void it | Standalone `watchVoids`/`applyVoids` leaves refund debt until a completed feed bridge runs refund retention. Owner: admin voids a refund, dashboard receives only the void refresh while feed is incomplete/unavailable. **Transient reconciliation gap**; completed-feed repair is strict-tested, not claimed broken. |
-| DM-5 | `[1,0]`: 1-cent counter sale, 2-cent old-sale refund | Channel total clamps to 0 while classified remains 1 cent; net revenue is -1 cent. Ordinary analogue: 100 MAD counter revenue, 200 MAD refund against an older delivery. Owner sees Home channel ring disagree with revenue. Nonnegative channel display policy does not preserve conservation in this case. |
+| DM-3 | `[1,"Europe/Paris"]` (also explicit Casablanca example) | Final 04:59 sale disappears from the hourly chart on a 25-hour business day: net is 1 cent, plotted total is 0. Paris business day 2026-10-24; Casablanca business day 2026-02-14. Owner: next morning select Yesterday. `hourlyCumul` rejects offset 24. Day-report net is correct, but its hourly detail has the same 24-offset limit. **Fixed:** the chart keeps all `ceil(span/1h)` slots; the day report keeps offset 24 and labels each slot with the merchant's own clock, the two « 02h » of the change sharing one row. |
+| DM-4 | `[1]`: refund 1 cent, then void it | Standalone `watchVoids`/`applyVoids` leaves refund debt until a completed feed bridge runs refund retention. Owner: admin voids a refund, dashboard receives only the void refresh while feed is incomplete/unavailable. **Transient reconciliation gap**; completed-feed repair is strict-tested, not claimed broken. **Fixed:** `applyVoids` now also removes the voided cursors from `KiwiRefunds` (`refundsRemove` in venues.js). |
+| DM-5 | `[1,0]`: 1-cent counter sale, 2-cent old-sale refund | Channel total clamps to 0 while classified remains 1 cent; net revenue is -1 cent. Ordinary analogue: 100 MAD counter revenue, 200 MAD refund against an older delivery. Owner sees Home channel ring disagree with revenue. Nonnegative channel display policy does not preserve conservation in this case. **Policy, kept:** a ring cannot draw a negative net, which stays on the revenue band; and an unmatched refund is never charged to a channel it cannot prove (channel-percentage-test). The split now runs in whole centimes, a strict property pins total = max(0, net) with no negative part, and the ring divides by max(total, classified) so no ring reads above 100 % (`[100,50,'delivery']` used to read 200 %). |
 | DM-6 | `[1]`: one trading hour elapsed | Today's baseline ends yesterday at the same elapsed hour, not immediately before today's start. Owner sees “vs hier”. **Intentional matched-trading-time policy**; it violates the requested adjacency contract, not its existing documented behavior. |
 | DM-7 | `[1]`: January 2026, previous-month preset | December has 31 days; baseline November has 30. Owner sees previous month versus its predecessor. **Intentional calendar-month policy**, not equal rolling duration. |
-| DM-8 | `[100,101]`: two tickets, 1 MAD and 1.01 MAD | Average is 1.005 MAD; tile produces 1.00 instead of half-up 1.01. Owner sees Home average basket. Reachable with ordinary fractional restaurant prices; stress found larger examples too. |
-| DM-9 | `[80,73]`: previous 80 cents, current 73 cents | Exact -8.75% should round toward +infinity at the tie to -8.7%; float arithmetic yields -8.8%. Owner sees the revenue comparison badge. Fractional-MAD period totals are valid; this is the same half-boundary class as DM-8, not a change to base-window selection. |
+| DM-8 | `[100,101]`: two tickets, 1 MAD and 1.01 MAD | Average is 1.005 MAD; tile produces 1.00 instead of half-up 1.01. Owner sees Home average basket. Reachable with ordinary fractional restaurant prices; stress found larger examples too. **Fixed:** `basketCents` divides the centime total by the ticket count in integers, half up. |
+| DM-9 | `[80,73]`: previous 80 cents, current 73 cents | Exact -8.75% should round toward +infinity at the tie to -8.7%; float arithmetic yields -8.8%. Owner sees the revenue comparison badge. Fractional-MAD period totals are valid; this is the same half-boundary class as DM-8, not a change to base-window selection. **Fixed:** `deltaTenths` compares two centime amounts in integers; rates without centimes keep the float path. |
 
 DM-8 and DM-9 first failed during 3,000-run stress, not the default run. Their
 explicit examples now keep the fast gate sensitive to both witnesses. After a
@@ -107,7 +109,7 @@ Every strict property runs uncapped at 3,000 cases with seeds 20261024, 43 and
 987654321. The fast gate also runs the default fixed-seed suite. See the final
 report for results and EPERM baseline comparison.
 
-Validated: 19 strict passes on each seed, zero strict failures (171,000 strict
+Validated 22/10 after the fixes: 24 strict passes on each seed at 3,000 runs, zero strict failures (216,000 strict cases). Earlier: 19 strict passes on each seed, zero strict failures (171,000 strict
 cases total); all nine known witnesses reproduced. `check.js --fast` had only
 the established EPERM-blocked suites, also reproduced on untouched HEAD:
 operations-system, audit-remediation-devices, economat-real-d1-transfer,

@@ -2383,7 +2383,34 @@
     const base = pick(stats(baseBounds[0], baseBounds[1]));
     if (!base) return null;
     const cur = pick(stats(from, to));
+    return deltaTenths(cur, base);
+  }
+  /* round(num / den), une demie vers le haut, en entiers : 2,01 MAD sur deux
+     tickets fait 1,005, que le flottant range sous 1,005 et arrondit à 1,00. */
+  function halfUpDiv(num, den) {
+    if (den < 0) { num = -num; den = -den; }
+    const n = 2 * num + den, d = 2 * den;
+    let q = Math.floor(n / d);
+    if (q * d > n) q--; else if ((q + 1) * d <= n) q++;
+    return q;
+  }
+  /* L'écart en dixièmes de pour cent. Deux montants au centime se comparent en
+     centimes entiers : 0,80 → 0,79 fait −1,25 %, que (0,79 − 0,80) / 0,80 en
+     flottant poussait à −1,3. Un taux (part carte, fidèles…) garde le calcul
+     flottant, il n'a pas de centime. */
+  function deltaTenths(cur, base) {
+    const c = Math.round(cur * 100), b = Math.round(base * 100);
+    const onCents = (v, k) => Math.abs(v * 100 - k) <= 1e-6 * Math.max(1, Math.abs(k));
+    const num = (c - b) * 1000;
+    if (b && onCents(cur, c) && onCents(base, b) && Number.isSafeInteger(2 * num + 2 * Math.abs(b))) {
+      return halfUpDiv(num, b) / 10;
+    }
     return Math.round(((cur - base) / base) * 1000) / 10;
+  }
+  // Le panier moyen au centime, une demie vers le haut, depuis la somme en centimes.
+  function basketCents(s) {
+    const n = s && s.count > 0 ? s.count : 0;
+    return n ? halfUpDiv(Math.round(s.basket * n * 100), n) : Math.round(((s && s.basket) || 0) * 100);
   }
   // Round a max value up to a clean axis ceiling (1/2/5 × 10ⁿ).
   function niceCeil(v) {
@@ -2419,7 +2446,7 @@
       const ts = +e.ts || 0;
       if (ts >= base && ts < end) {
         const idx = Math.floor((ts - base) / 3600000);
-        if (idx >= 0 && idx < 24) per[idx] += (+e.amount || 0);
+        if (idx >= 0 && idx < hours) per[idx] += (+e.amount || 0);
       }
     });
     const out = [];
@@ -3437,7 +3464,7 @@
                   delta: txNow ? realDeltaPct(rng, (s) => s.count, undefined, pressingStats) : realDeltaPct(rng, (s) => s.count) },
         /* Au centime, comme le rouleau de la caisse : 424,50 / 5 tickets se lit
                   84,90, pas 85 (la tuile l'écrit par KiwiNumber.amount). */
-        panier: { ...(data.panier || {}), value: Math.round((txNow ? txNow.basket : t.basket) * 100) / 100,
+        panier: { ...(data.panier || {}), value: basketCents(txNow || t) / 100,
                   delta: txNow ? realDeltaPct(rng, (s) => s.basket, undefined, pressingStats) : realDeltaPct(rng, (s) => s.basket) },
         /* Le CA EXACT, additionné vente par vente. Il n'était pas transmis, si
          * bien que revOf() le reconstituait à partir du panier arrondi

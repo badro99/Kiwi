@@ -196,8 +196,8 @@
     "sha": "7a2011280d4ae4b9"
   },
   "assets/channel-sales.js": {
-    "v": "4",
-    "sha": "72e74d89f0626637"
+    "v": "5",
+    "sha": "0f80a58aabc1c0da"
   },
   "assets/charges-engine.js": {
     "v": "2",
@@ -268,8 +268,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "91",
-    "sha": "496724519a9638ab"
+    "v": "92",
+    "sha": "c07058ecec4e271a"
   },
   "assets/day-report-dash.js": {
     "v": "35",
@@ -280,8 +280,8 @@
     "sha": "9779aebc95b1b6f8"
   },
   "assets/day-report.js": {
-    "v": "25",
-    "sha": "bce8307f2017875d"
+    "v": "26",
+    "sha": "516c9a9ab29352ab"
   },
   "assets/delivery-collect.js": {
     "v": "2",
@@ -312,8 +312,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2094",
-    "sha": "17ef2898da5180de"
+    "v": "2095",
+    "sha": "b804a64653a03322"
   },
   "assets/design-vexel.css": {
     "v": "2124",
@@ -868,8 +868,8 @@
     "sha": "36b1e6ca0472a20e"
   },
   "assets/live-link.js": {
-    "v": "69",
-    "sha": "a63e05408668b3a4"
+    "v": "70",
+    "sha": "8120e5727db61e80"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -1528,8 +1528,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "58",
-    "sha": "53d1d0a5e5a78641"
+    "v": "59",
+    "sha": "f1178efdf44cb6b3"
   },
   "assets/vertical-state.js": {
     "v": "5",

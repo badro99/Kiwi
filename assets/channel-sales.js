@@ -72,6 +72,13 @@
    * Without it a day with a 20,40 card refund showed Salle on 425 while every
    * other figure on the screen said 404,10. A refund whose sale cannot be found
    * leaves the total and stays unclassified. No channel goes below zero. */
+  /* En centimes entiers d'un bout à l'autre : la somme des parts égale le total
+   * au centime, sans dérive de flottant. */
+  function cents(value) {
+    var n = Math.round((+value || 0) * 100);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function breakdown(rows, channelIds, from, to, tradeRegistry, tradeId, refunds) {
     var amounts = Object.create(null);
     var total = 0;
@@ -80,7 +87,7 @@
     list.forEach(function (sale) {
       var ts = +(sale && sale.ts) || 0;
       if (ts < from || ts >= to) return;
-      var amount = Math.max(0, +(sale && sale.amount) || 0);
+      var amount = Math.max(0, cents(sale && sale.amount));
       if (!(amount > 0)) return;
       total += amount;
       var channel = key(sale, channelIds, tradeRegistry, tradeId);
@@ -92,7 +99,7 @@
     (Array.isArray(refunds) ? refunds : []).forEach(function (refund) {
       var ts = +(refund && refund.ts) || 0;
       if (ts < from || ts >= to) return;
-      var amount = Math.abs(+(refund && refund.amount) || 0);
+      var amount = Math.abs(cents(refund && refund.amount));
       if (!(amount > 0)) return;
       if (!byId) {
         byId = Object.create(null);
@@ -106,12 +113,18 @@
       total -= amount;
       if (!channel || !(amounts[channel] > 0)) return;
       var take = Math.min(amount, amounts[channel]);
-      amounts[channel] = Math.round((amounts[channel] - take) * 100) / 100;
+      amounts[channel] -= take;
       classified -= take;
     });
-    total = Math.max(0, Math.round(total * 100) / 100);
-    classified = Math.max(0, Math.round(classified * 100) / 100);
-    return { amounts: amounts, total: total, classified: classified, unknown: Math.max(0, Math.round((total - classified) * 100) / 100) };
+    /* Un net négatif ne se dessine pas en anneau : le total s'arrête à 0, et le
+     * net signé reste celui du bandeau. Un remboursement sans vente prouvée
+     * dans un canal ne s'impute à aucun : les parts classées peuvent alors
+     * dépasser le total, et l'anneau prend leur somme pour base. */
+    total = Math.max(0, total);
+    classified = Math.max(0, classified);
+    var out = Object.create(null);
+    Object.keys(amounts).forEach(function (k) { out[k] = amounts[k] / 100; });
+    return { amounts: out, total: total / 100, classified: classified / 100, unknown: Math.max(0, total - classified) / 100 };
   }
 
   root.KiwiChannelSales = { key: key, breakdown: breakdown };

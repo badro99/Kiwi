@@ -1455,6 +1455,7 @@
           var vid = null;
           try { vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || null; } catch (_) {}
           window.KiwiSales.remove(vid, cursors);
+          if (window.KiwiRefunds && window.KiwiRefunds.remove) window.KiwiRefunds.remove(vid, cursors);
         }
       } catch (_) {}
     }

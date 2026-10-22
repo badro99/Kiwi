@@ -650,8 +650,12 @@
        tomber APRÈS celui de 22h, pas dix-neuf cases avant lui. L'heure lisible
        repart de l'offset au moment de l'écriture. Tableau creux : un commerce
        ouvre douze heures, pas vingt-quatre, et chaque case coûte au budget. */
-    var hours = new Array(24);
+    var hours = new Array(25);
     var cut = cutoff(slug);
+    /* Le jour où l'on recule l'heure dure 25 heures : sa dernière vente tombe à
+       l'offset 24. L'étiquette se lit dans le fuseau du commerce, et les deux
+       « 02h » du recul partagent une seule ligne. */
+    var slotOf = new Array(25), labelOf = new Array(25), firstOff = Object.create(null);
     /* Qui a encaissé quoi. Ne sort que si les ventes portent un nom — le
        clavier de la caisse en met un, une commande OrderPro non. */
     var byCashier = Object.create(null);
@@ -676,8 +680,13 @@
       if (m === 'cash') cashTips += s.tip;
 
       var off = Math.floor((s.ts - b.from) / 3600000);
-      if (off >= 0 && off < 24) {
-        var H = hours[off] || (hours[off] = { h: (cut + off) % 24, net: 0, txns: 0 });
+      if (off >= 0 && off < 25) {
+        if (slotOf[off] == null) {
+          var lbl = hourOf(b.from + off * 3600000, slug);
+          slotOf[off] = lbl in firstOff ? firstOff[lbl] : (firstOff[lbl] = off);
+          labelOf[off] = lbl;
+        }
+        var H = hours[slotOf[off]] || (hours[slotOf[off]] = { h: labelOf[off], net: 0, txns: 0 });
         H.net += isRefund ? -mag : s.amount;
         if (!isRefund) H.txns++;
       }

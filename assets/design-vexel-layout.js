@@ -650,6 +650,9 @@
       return sum + (amounts[channel.id] > 0 ? amounts[channel.id] : 0);
     }, 0);
     var total = split.total > 0 ? split.total : classifiedTotal;
+    /* Un remboursement non imputé laisse les parts classées au-dessus du net :
+     * les anneaux se lisent alors sur leur somme, jamais au-delà de 100 %. */
+    var shareBase = Math.max(total, classifiedTotal);
 
     /* Le rendu est relancé à chaque mutation du tableau de bord ; réécrire les
      * anneaux à l'identique casserait leur animation d'arc en boucle. */
@@ -685,7 +688,7 @@
     rank.forEach(function (channelIndex, position) { toneFor[channelIndex] = tones[Math.min(position, tones.length - 1)]; });
     var rings = channels.map(function (channel, index) {
       var amount = hasAmounts && amounts[channel.id] != null ? amounts[channel.id] : null;
-      return ringMarkup(amount, total > 0 && amount != null ? amount / total : 0, channel.label, toneFor[index], 'MAD');
+      return ringMarkup(amount, shareBase > 0 && amount != null ? amount / shareBase : 0, channel.label, toneFor[index], 'MAD');
     });
     var ringHost = card.querySelector('.vexel-rings');
     ringHost.innerHTML = rings.join('');

@@ -95,6 +95,8 @@ const outside = truth.breakdown([{ ts: 110, amount: 100, saleId: 's-3', channel:
 assert.equal(outside.total, 60, 'a refund paid after the window stays out; one whose sale is unknown still leaves the total');
 assert.equal(outside.amounts.dining, 100, 'an unmatched refund is never charged to a channel it cannot prove');
 assert.equal(outside.unknown, 0, 'unknown never goes below zero');
+assert.match(layout, /var shareBase = Math\.max\(total, classifiedTotal\);/, 'an unmatched refund leaves classified above the net: rings divide by the larger, never past 100 %');
+assert.match(layout, /amount \/ shareBase/, 'each ring reads its share of shareBase');
 const over = truth.breakdown([{ ts: 110, amount: 30, saleId: 's-4', channel: 'dining' }], ids, 100, 200, restaurant, 'restaurant',
   [{ ts: 150, amount: 80, saleId: 's-4' }]);
 assert.equal(over.amounts.dining, 0, 'a channel never goes below zero');

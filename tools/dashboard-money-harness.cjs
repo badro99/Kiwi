@@ -20,8 +20,8 @@ function world(zone='UTC'){
  // Execute named entrypoints in the initialized scope, preserving their helpers.
  load(report,'assets/day-report.js',['businessDay','dayBounds','build']);window.KiwiDayReport.businessDay=report.businessDay;window.KiwiDayReport.dayBounds=report.dayBounds;window.KiwiDayReport.build=report.build;
  const store=vm.createContext({...common,currentVenue:'scoped',TRANSIENT_IDS:['own','scoped'],slugOf:()=> 'property-shop',ledgerCache:new Map(),salesSubs:new Set(),refundSubs:new Set()});
- load(store,'assets/venues.js',['salesTenant','SALES_KEY','deepFreeze','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRetainCursors']);
- window.KiwiSales={list:store.salesList,add:store.salesAdd,addMany:store.salesAddMany,remove:store.salesRemove,annotateMany:store.salesAnnotateMany,retainCursors:store.salesRetainCursors,scope:()=>state.scope};window.KiwiRefunds={list:store.refundsList,add:store.refundsAdd,retainCursors:store.refundsRetainCursors};
+ load(store,'assets/venues.js',['salesTenant','SALES_KEY','deepFreeze','cachedLedger','salesList','salesWrite','salesEntry','salesAdd','salesAddMany','annotatedEntry','salesAnnotateMany','salesRemove','salesRetainCursors','REFUNDS_KEY','refundsList','refundsWrite','refundsAdd','refundsRetainCursors','refundsRemove']);
+ window.KiwiSales={list:store.salesList,add:store.salesAdd,addMany:store.salesAddMany,remove:store.salesRemove,annotateMany:store.salesAnnotateMany,retainCursors:store.salesRetainCursors,scope:()=>state.scope};window.KiwiRefunds={list:store.refundsList,add:store.refundsAdd,remove:store.refundsRemove,retainCursors:store.refundsRetainCursors};
  const history=vm.createContext({...common,fetch:(...args)=>{requests.push(args);return common.fetch(...args);}});
  vm.runInContext(read('assets/sales-history.js'),history);
  // Named copies are checked against the actual exported closure, never substituted.
@@ -33,7 +33,7 @@ function world(zone='UTC'){
    frInt:String,getLang:()=> 'fr',getSim:()=>null,ownData:()=>true,isLiveDemo:()=>false,guardOperatorFigures:()=>false,
    kpiByVenue:{},vData:()=>({tx:{},panier:{}}),KPI_DELTA_SUFFIX:{fr:{}},screenBook:()=>null,realGrossProfit:()=>null});
  load(c,'assets/dateRange.js',['DEFAULT_MERCHANT_TZ','z2','dateToIso','RANGE_DAYS','DAY_ABBR','salesMath','tenderBucket','tenderAmounts','deliveryDue',
-   'activeMerchantSlug','merchantTimeZone','merchantParts','addMerchantDays','merchantBoundary','merchantDayKey','merchantDayBounds','dayCutoffH','dayStartMs','realSalesList','realRefundList','realMoneyList','calendarStartKey','calendarBounds','rangeBounds','closedBounds','shiftedBusinessBounds','realWindowStats','realSalesTotals','windowDays','realClientMix','realDeltaPct','niceCeil','hourlyCumul','dailyTotals','realRevSeries','renderKpiBand']);
+   'activeMerchantSlug','merchantTimeZone','merchantParts','addMerchantDays','merchantBoundary','merchantDayKey','merchantDayBounds','dayCutoffH','dayStartMs','realSalesList','realRefundList','realMoneyList','calendarStartKey','calendarBounds','rangeBounds','closedBounds','shiftedBusinessBounds','realWindowStats','realSalesTotals','windowDays','realClientMix','realDeltaPct','halfUpDiv','deltaTenths','basketCents','niceCeil','hourlyCumul','dailyTotals','realRevSeries','renderKpiBand']);
  let tiles;const stop={};Object.defineProperty(c,'lastBand',{set(v){tiles=v;throw stop;},configurable:true});
  vm.runInContext(read('assets/channel-sales.js'),vm.createContext(common));
  const channel=vm.createContext({...common,realSession:()=>true,activeTrade:()=> 'boutique'});

@@ -4327,8 +4327,24 @@
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
   };
+  /* Un remboursement annulé sur le serveur quitte le journal local tout de
+   * suite, comme une vente annulée : sinon il pèse sur le net jusqu'à la fin du
+   * prochain flux complet. */
+  function refundsRemove(id, cursors) {
+    id = id || currentVenue;
+    const kill = new Set((cursors || []).map(Number).filter(Boolean));
+    if (!kill.size) return 0;
+    const rows = refundsList(id);
+    const clean = rows.filter((r) => !(r && r.cursor && kill.has(Number(r.cursor))));
+    const gone = rows.length - clean.length;
+    if (gone && refundsWrite(id, clean)) {
+      refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+      salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    }
+    return gone;
+  }
   window.KiwiRefunds = {
-    add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors,
+    add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors, remove: refundsRemove,
     subscribe: fn => { refundSubs.add(fn); return () => refundSubs.delete(fn); },
   };
   // Keep the sidebar "Commandes" badge in lockstep with recorded sales.
