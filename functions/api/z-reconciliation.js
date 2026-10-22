@@ -93,14 +93,16 @@ export async function onRequestPost({ request, env }) {
   for (const [id, row] of server) {
     if (!local.has(id)) extra.push(id);
   }
-  // Un Z FERMÉ certifie la journée du commerce, pas seulement les tickets que
-  // ce poste a listés : un reçu durable que le manifeste omet doit
-  // rendre le Z non conforme. Le grand livre ne porte pas le poste d'origine,
-  // donc un reçu n'est « à un autre poste » que si le manifeste déposé par un
-  // autre poste du MÊME commerce, pour le MÊME jour, le revendique. Le reste est
-  // compté ici (serverCount/serverCents) et nommé dans `omitted`. Un instantané
-  // ouvert garde la portée de ses propres reçus : les autres caisses n'ont pas
-  // encore parlé. La lecture n'a lieu que s'il y a des reçus hors manifeste.
+  // Reçus durables qu'AUCUN manifeste du jour ne revendique : ce poste, ni le
+  // Z déposé par un autre poste du MÊME commerce pour le MÊME jour. Ils sont
+  // nommés dans `omitted`, à titre d'information seulement : le statut n'en
+  // dépend pas. Le grand livre ne dit pas quelle surface a créé un reçu (pas de
+  // colonne poste/source ; id, canal et libellé sont choisis par le client, et
+  // /api/sale ré-identifie les paiements de table, `visit-…-emp` compris, quel
+  // que soit l'appareil). Un paiement pris sur le téléphone d'un serveur, une
+  // collecte de livraison ou un remboursement du tableau de bord rendraient donc
+  // chaque soir un Z non conforme à tort. Lu seulement s'il y a des reçus hors
+  // manifeste et pour un Z fermé (un instantané ouvert garde sa propre portée).
   const closedReport = body.closed !== false;
   const omitted = [];
   let omittedCents = 0;
@@ -122,8 +124,6 @@ export async function onRequestPost({ request, env }) {
       if (claimed.has(id)) continue;
       const stored = server.get(id);
       omitted.push(id); omittedCents += stored.amountCents;
-      serverCount++;
-      serverCents += stored.amountCents;
     }
   }
   // A missing receipt alone does NOT make a permanent rejection retryable.
@@ -146,7 +146,7 @@ export async function onRequestPost({ request, env }) {
     serverCount, serverCents, missing, missingCents, mismatched, extra, omitted, omittedCents,
     closed: closedReport,
     gapCents: body.totalCents - serverCents,
-    status: missing.length || mismatched.length || omitted.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
+    status: missing.length || mismatched.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
   try {
     await schema(env.DB);
     await env.DB.prepare(`INSERT INTO z_reconciliations
