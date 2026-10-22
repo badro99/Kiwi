@@ -98,6 +98,15 @@ boot without the kit; every shipped named-zone consumer loads the kit first.
 
 ## Regression and expectation changes
 
+`node tools/clock-sweep.mjs` runs `check.js --fast` with every node process and
+every vm sandbox pinned (via `tools/clock-pin.mjs`) to 14:00, 22:15, 23:30,
+00:30, 04:30 and 05:10 UTC, the hours where a test's own clock (this machine's
+zone, or Node's pre-2026c data at +01) and the store's clock disagree. On
+2026-10-22 it found `invoices-v2-test` red every night from 23:00 to 00:00 UTC
+and `orderpro-guest-api-test` red every day before iftar; both now read the
+law. Not part of the gate: a few minutes per hour swept.
+
+
 `tools/zone-law-test.mjs` checks exact twin drift, unconditional bundle tags,
 simulated stale/current ICU, both Moroccan zones, pre/post cutover and the fold,
 server/browser bounds and business dates, ledger dates, KiwiFormat, actual
