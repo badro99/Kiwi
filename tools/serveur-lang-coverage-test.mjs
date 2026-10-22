@@ -105,6 +105,8 @@ const RUNTIME = [
   'Carte du soir', 'Fin de service', 'Ce soir', 'Partager', 'Plus tard', 'Copié', 'bon service.', 'Bonjour,',
   'Lancer le split', 'Encaisser les parts', 'Annuler le split', 'Tout khlass!', "L'addition est soldée · choukran",
   'Carte approuvée', 'Approchez la carte ou le téléphone', 'Même chose pour tous', 'Aucun client trouvé.',
+  'Pointage enregistré sur ce téléphone · envoi dès le retour du réseau', 'Pointage du téléphone envoyé',
+  'Pointage du téléphone refusé · voyez avec votre responsable',
 ];
 for (const s of RUNTIME) for (const lang of ['en', 'ar']) {
   const out = tr(s, lang);

@@ -2444,6 +2444,7 @@
             return;
           }
           const saved = await window.KiwiEmployeeLive.clockIn(attendanceCode);
+          if (saved && saved.queued) toast(PUNCH_SAVED, 3200);
           cloudStart = saved && saved.entry && saved.entry.inTs ? new Date(saved.entry.inTs) : new Date();
           if (liveEmployeeState && liveEmployeeState.attendance) liveEmployeeState.attendance.open = saved.entry || null;
           consumeAttendanceCode();
@@ -2706,10 +2707,19 @@
 
     async function finishClockOut() {
       if (!SV_DEMO && window.KiwiEmployeeLive) {
-        await window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null, attendanceCode);
+        const saved = await window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null, attendanceCode);
+        if (saved && saved.queued) toast(PUNCH_SAVED, 3200);
       }
       await afterClockOut();
     }
+    /* Pointage gardé sur le téléphone (réseau coupé) : l'employé le sait, puis
+       apprend qu'il est parti, ou qu'il a été refusé (assets/employee-live.js). */
+    const PUNCH_SAVED = 'Pointage enregistré sur ce téléphone · envoi dès le retour du réseau';
+    document.addEventListener('kiwi-employee-punch-queue', (event) => {
+      const d = (event && event.detail) || {};
+      if (d.rejected && d.rejected.length) toast('Pointage du téléphone refusé · voyez avec votre responsable', 4200);
+      else if (d.sent && !d.pending) toast('Pointage du téléphone envoyé', 2400);
+    });
     async function afterClockOut() {
       if (!SV_DEMO && window.KiwiEmployeeLive) {
         consumeAttendanceCode();

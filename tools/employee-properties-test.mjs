@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fixture} from './server-money-fixture.mjs';
-import {employeeToken,employeeCookie} from '../functions/auth/_lib.js';
+import {employeeToken,employeeCookie,tillToken,TILL_COOKIE} from '../functions/auth/_lib.js';
+import {onRequestPost as teamLive} from '../functions/api/team/live.js';
 import {onRequestGet as get,onRequestPost as post} from '../functions/api/employee.js';
 import {onRequestGet as storeGet,onRequestPost as storePost} from '../functions/api/store.js';
 const ROOT=path.resolve(import.meta.dirname,'..');
@@ -38,6 +39,40 @@ await strict('mixed two-device punch retries keep at most one open shift and non
 // Existing payroll suite owns same-action clock races and paid minute arithmetic.
 // EP-1 tient : chaque pointage d'arrivée porte l'identité du geste (opId), gardée pour ses nouvelles tentatives.
 await strict('EP-1 · a delayed clock-in retry after clock-out returns the shift it opened; a new tap opens the next one',fc.asyncProperty(fc.integer({min:1,max:3}),async retries=>{await reset();const opId=crypto.randomUUID();ok(await call({action:'clock-in',attendanceCode,opId}));ok(await call({action:'clock-out',attendanceCode}));for(let i=0;i<retries;i++){const r=await call({action:'clock-in',attendanceCode,opId});ok(r);assert.ok(r.body.entry.outTs>0);}assert.equal(doc('attendance').entries.length,1);ok(await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID()}));const es=doc('attendance').entries;assert.equal(es.length,2);assert.equal(es.filter(e=>!e.outTs).length,1);}));
+// EP-2 · un pointage gardé hors ligne garde son heure réelle, bornée : jamais dans le futur,
+// jamais plus de 24 h (refusé sans écriture), jamais avant le pointage précédent.
+const H=3600000;
+await strict('EP-2 · a deferred punch keeps its captured time, never in the future, never older than 24 h, never before the previous punch',fc.asyncProperty(fc.integer({min:-2*H,max:30*H}),fc.integer({min:0,max:20*H}),fc.integer({min:0,max:H}),async(agoIn,prevOutAgo,stay)=>{
+  await reset();const t=Date.now(),prevOut=t-prevOutAgo;
+  // Un code de présence dont la fenêtre couvre tout l'essai : seules les bornes d'heure sont en jeu.
+  put('attendance-code',{code:attendanceCode,createdTs:t-31*H,expiresTs:t+H});
+  put('attendance',{entries:[{id:'prev',staffId:'a',memberId:'a',inTs:prevOut-H,outTs:prevOut}]});
+  const before=doc('attendance'),t0=Date.now(),r=await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoIn}),t1=Date.now();
+  if(agoIn>24*H){assert.equal(r.status,409);assert.equal(r.body.error,'attendance-capture-too-old');assert.deepEqual(doc('attendance'),before);return;}
+  ok(r);const ago=Math.max(0,agoIn),inTs=r.body.entry.inTs;
+  assert.ok(inTs<=t1&&inTs>=prevOut);assert.ok(inTs>=Math.max(t0-ago,prevOut)&&inTs<=Math.max(t1-ago,prevOut));
+  const agoOut=Math.max(0,ago-stay),o=await call({action:'clock-out',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:agoOut}),t2=Date.now();
+  ok(o);const outTs=o.body.entry.outTs;assert.ok(outTs<=t2&&outTs>=inTs);assert.ok(outTs>=Math.max(t1-agoOut,inTs)&&outTs<=Math.max(t2-agoOut,inTs));}));
+// EP-3 · différé, le code de présence se vérifie à l'instant du geste : le code remplacé ne
+// vaut que dans SA fenêtre, et en direct seul le code courant passe.
+await strict('EP-3 · a deferred punch is checked against the presence code that was live when it was captured',fc.asyncProperty(fc.oneof(fc.constant(0),fc.integer({min:2*H-7*60000,max:2*H+60000}),fc.integer({min:1,max:3*H})),fc.boolean(),async(ago,useOld)=>{
+  await reset();sql.exec("DELETE FROM store_docs WHERE feature='attendance-code'");
+  const till=TILL_COOKIE+'='+await tillToken(f.env.AUTH_SECRET,merchant);
+  const draw=async()=>(await teamLive({env:f.env,request:new Request('https://kiwi.test/api/team/live',{method:'POST',headers:{Cookie:till,'Content-Type':'application/json'},body:JSON.stringify({merchant,action:'generate-attendance-code'})})})).json();
+  // A a vécu il y a deux heures ; la caisse l'a remplacé depuis par B.
+  const A=await draw(),lived=doc('attendance-code');lived.createdTs-=2*H;lived.expiresTs-=2*H;put('attendance-code',lived);
+  const B=await draw(),aStart=A.createdTs-2*H,aEnd=A.expiresTs-2*H;
+  assert.ok(A.code!==B.code);assert.ok(!('recent' in B));
+  const t0=Date.now(),r=await call({action:'clock-in',attendanceCode:useOld?A.code:B.code,opId:crypto.randomUUID(),capturedAgoMs:ago}),t1=Date.now();
+  const lo=t0-ago,hi=t1-ago,refused=()=>{assert.equal(r.status,403);assert.equal(doc('attendance').entries.length,0);};
+  if(useOld){
+    if(ago>0&&lo>=aStart&&hi<=aEnd){ok(r);assert.ok(r.body.entry.inTs>=lo&&r.body.entry.inTs<=hi);}
+    else if(ago===0||hi<aStart||lo>aEnd+10000)refused();
+  }else if(ago===0)ok(r);
+  // Le code lu maintenant ne date pas un geste d'avant sa naissance.
+  else if(hi<B.createdTs)refused();}));
+// EP-4 · un départ rejoué (réponse perdue) ne ferme pas le service suivant et ne crédite pas deux fois.
+await strict('EP-4 · a replayed clock-out returns the shift it closed; it never closes the next shift or credits hours twice',fc.asyncProperty(fc.integer({min:1,max:3}),async retries=>{await reset();put('attendance-code',{code:attendanceCode,createdTs:Date.now()-3*H,expiresTs:Date.now()+H});const out=crypto.randomUUID();ok(await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID(),capturedAgoMs:2*H}));ok(await call({action:'clock-out',attendanceCode,opId:out,capturedAgoMs:H}));const hours=JSON.stringify(doc('team').hours),xp=JSON.stringify(doc('employee-progress'));ok(await call({action:'clock-in',attendanceCode,opId:crypto.randomUUID()}));for(let i=0;i<retries;i++){const r=await call({action:'clock-out',attendanceCode,opId:out,capturedAgoMs:H});ok(r);assert.ok(r.body.entry.outTs>0);}const es=doc('attendance').entries;assert.equal(es.length,2);assert.equal(es.filter(e=>!e.outTs).length,1);assert.equal(JSON.stringify(doc('team').hours),hours);assert.equal(JSON.stringify(doc('employee-progress')),xp);}));
 // No per-member suspension field or owner action exists in the team model.
 // Revocation is tested above via tombstones and durable auth revisions.
 }finally{f.close();}

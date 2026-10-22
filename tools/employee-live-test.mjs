@@ -797,5 +797,150 @@ ok(!/markTablePaid\([^)]*['"]split['"]\)/.test(serviceSource)
 ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session de service expirée/.test(serviceSource),
   "une session absente refuse la part au lieu de l'afficher payée sans écriture cloud");
 
+/* File durable des pointages (assets/employee-live.js) : le vrai client, branché
+   sur les vrais gestionnaires, avec un réseau qu'on coupe, une réponse perdue,
+   une réouverture de l'app et un autre employé sur le même téléphone. */
+{
+  const liveSource = fs.readFileSync(path.join(ROOT, 'assets/employee-live.js'), 'utf8');
+  const storage = new Map();
+  const localStorage = {
+    getItem: (k) => (storage.has(k) ? storage.get(k) : null),
+    setItem: (k, v) => { storage.set(k, String(v)); },
+    removeItem: (k) => { storage.delete(k); },
+  };
+  const net = { offline: false, loseResponse: false, jar: '', posts: [] };
+  async function fakeFetch(url, opts = {}) {
+    if (net.offline) throw new TypeError('Failed to fetch');
+    const method = opts.method || 'GET';
+    const request = new Request('https://kiwi.test' + url, {
+      method, headers: { ...(opts.headers || {}), ...(net.jar ? { Cookie: net.jar } : {}) }, body: opts.body,
+    });
+    if (method === 'POST') net.posts.push(JSON.parse(opts.body));
+    const res = await (method === 'GET' ? API.onRequestGet : API.onRequestPost)({ env, request });
+    const set = String(res.headers.get('set-cookie') || '');
+    if (set.startsWith('kiwi_employee=')) net.jar = /Max-Age=0/i.test(set) ? '' : set.split(';')[0];
+    // Réponse perdue après écriture : seul un pointage (POST) la subit, pas une relecture en vol.
+    if (net.loseResponse && method === 'POST') { net.loseResponse = false; throw new TypeError('Failed to fetch'); }
+    return res;
+  }
+  function boot() {
+    const timers = new Map(); let timerId = 0;
+    const listeners = {}; const events = [];
+    const window = { localStorage, crypto, addEventListener(t, fn) { (listeners[t] = listeners[t] || []).push(fn); } };
+    const document = { visibilityState: 'visible', addEventListener() {}, dispatchEvent(e) { events.push(e); } };
+    const context = {
+      window, document, navigator: {}, location: { protocol: 'file:' }, fetch: fakeFetch,
+      CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
+      setTimeout(fn) { timers.set(++timerId, fn); return timerId; }, clearTimeout(id) { timers.delete(id); },
+    };
+    vm.runInNewContext(liveSource, context);
+    const app = window.KiwiEmployeeLive;
+    return {
+      live: app, events,
+      queueEvents: () => events.filter((e) => e.type === 'kiwi-employee-punch-queue').map((e) => e.detail),
+      async tick() { const fns = [...timers.values()]; timers.clear(); fns.forEach((fn) => fn()); if (app.flushPunches) await app.flushPunches(); },
+      fire(t) { (listeners[t] || []).forEach((fn) => fn()); },
+    };
+  }
+  const attendanceDoc = () => JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance'").get().data);
+  const codeDoc = () => JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance-code'").get().data);
+  const progressShifts = () => {
+    const row = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='employee-progress'").get();
+    return Number(row && JSON.parse(row.data).members?.['mem-sara']?.shifts) || 0;
+  };
+  const QKEY = 'kiwiEmployeePunchQueue:amira-cafe:mem-sara';
+  const queued = () => JSON.parse(storage.get(QKEY) || '[]');
+  const flushAll = async (app) => { if (app.flushPunches) await app.flushPunches(); };
+
+  /* Les services pointés plus haut ont fini à l'instant ; « jamais avant le
+     pointage précédent » les ferait passer devant un geste daté d'il y a dix
+     minutes. On les recule d'un jour pour jouer une vraie coupure. */
+  const earlier = attendanceDoc();
+  earlier.entries.forEach((e) => { if (e.staffId === 'mem-sara') { e.inTs -= 24 * 3600000; if (e.outTs) e.outTs -= 24 * 3600000; } });
+  put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(earlier));
+  const A = boot();
+  await A.live.login('sara@amira.test', '2468');
+  const startEntries = attendanceDoc().entries.length;
+  const code1 = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+
+  // 1. Réseau coupé : l'arrivée est gardée sur le téléphone, avec son heure et son identité.
+  net.offline = true;
+  let offlineIn = null;
+  try { offlineIn = await A.live.clockIn(code1.code); } catch (_) { offlineIn = null; }
+  const savedIn = queued()[0] || {};
+  ok(offlineIn && offlineIn.queued === true && queued().length === 1 && savedIn.kind === 'clock-in'
+    && savedIn.opId && savedIn.at > 0 && attendanceDoc().entries.length === startEntries
+    && A.queueEvents().some((d) => d.queued === 'clock-in'),
+  "hors ligne, l'arrivée est enregistrée sur le téléphone (heure réelle, identité du geste) sans rien écrire au serveur");
+
+  // 2. Dix minutes plus tard, la caisse a changé de code ; l'app est rouverte et le réseau revient.
+  const items = queued();
+  if (items[0]) { items[0].at -= 10 * 60000; storage.set(QKEY, JSON.stringify(items)); }
+  const lived = codeDoc(); lived.createdTs -= 10 * 60000; lived.expiresTs -= 10 * 60000;
+  put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance-code'", JSON.stringify(lived));
+  const code2 = await (await teamLivePost({ action: 'generate-attendance-code' })).json();
+  net.offline = false;
+  const B = boot();
+  await B.live.refresh();
+  await B.tick();
+  const opened = attendanceDoc().entries.filter((e) => savedIn.opId && e.clockInOpId === savedIn.opId);
+  ok(!storage.has(QKEY) && opened.length === 1 && !opened[0].outTs
+    && Math.abs(opened[0].inTs - items[0].at) < 5000
+    && B.queueEvents().some((d) => d.sent === 1 && d.pending === 0),
+  "à la réouverture, l'arrivée part une seule fois, datée de son vrai geste et vérifiée contre le code qui valait alors");
+
+  // 3. Départ appliqué mais réponse perdue ; l'employé repointe ailleurs ; le départ rejoué ne ferme pas ce nouveau service.
+  const shiftsBefore = progressShifts();
+  net.loseResponse = true;
+  let lostOut = null;
+  try { lostOut = await B.live.clockOut({ paid: 2, revenue: 100, turnMinutes: 40 }, code2.code); } catch (_) { lostOut = null; }
+  const lostItem = queued()[0] || {};
+  const firstShift = attendanceDoc().entries.filter((e) => savedIn.opId && e.clockInOpId === savedIn.opId)[0];
+  ok(lostOut && lostOut.queued === true && lostItem.kind === 'clock-out' && firstShift && firstShift.outTs > 0,
+    'un départ dont la réponse se perd reste sur le téléphone');
+  const otherDevice = await post({ action: 'clock-in', attendanceCode: code2.code, opId: crypto.randomUUID() }, net.jar);
+  ok(otherDevice.status === 200, "l'employé repointe son arrivée depuis un autre appareil");
+  await flushAll(B.live);
+  const mine = attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara');
+  ok(!storage.has(QKEY) && mine.filter((e) => !e.outTs).length === 1
+    && mine.filter((e) => lostItem.opId && e.clockOutOpId === lostItem.opId).length === 1
+    && progressShifts() === shiftsBefore + 1,
+  'le départ rejoué retrouve le service déjà fermé : le nouveau reste ouvert, heures et progression créditées une fois');
+
+  // 4. La file d'un autre employé du même téléphone ne part jamais sous cette session.
+  const NKEY = 'kiwiEmployeePunchQueue:amira-cafe:mem-nora';
+  storage.set(NKEY, JSON.stringify([{ kind: 'clock-in', opId: 'nora-op', at: Date.now(), code: code2.code }]));
+  await flushAll(B.live);
+  ok(storage.has(NKEY) && !net.posts.some((p) => p.opId === 'nora-op'),
+    "la file d'un autre employé reste rangée sous son nom et n'est jamais envoyée sous cette session");
+  storage.delete(NKEY);
+
+  // 5. Refus définitifs : un code faux, un geste de plus de 24 h. Retirés, signalés, rien d'écrit.
+  const before = JSON.stringify(attendanceDoc());
+  net.offline = true;
+  await B.live.clockOut(null, '000000').catch(() => {});
+  await B.live.clockOut(null, code2.code).catch(() => {});
+  const two = queued();
+  if (two[1]) { two[1].at = Date.now() - 25 * 3600000; storage.set(QKEY, JSON.stringify(two)); }
+  net.offline = false;
+  await flushAll(B.live);
+  const rejected = B.queueEvents().filter((d) => d.rejected && d.rejected.length).flatMap((d) => d.rejected).map((r) => r.error);
+  ok(two.length === 2 && !storage.has(QKEY) && JSON.stringify(attendanceDoc()) === before
+    && rejected.includes('attendance-capture-too-old') && rejected.includes('attendance-code-invalid'),
+  "un pointage refusé (trop ancien, code faux) quitte la file, est signalé à l'employé et n'écrit rien");
+
+  // 6. Hors ligne avec un départ en attente, la déconnexion garde la session qui l'enverra.
+  net.offline = true;
+  await B.live.clockOut(null, code2.code).catch(() => {});
+  const loggedOut = await B.live.logout().catch((e) => ({ thrown: e }));
+  ok(loggedOut && loggedOut.ok === false && loggedOut.pending === 1 && net.jar.startsWith('kiwi_employee='),
+    'hors ligne, la déconnexion ne perd ni le départ en attente ni la session qui doit le porter');
+  net.offline = false;
+  B.fire('online');
+  await B.tick();
+  ok(!storage.has(QKEY) && attendanceDoc().entries.filter((e) => e.staffId === 'mem-sara' && !e.outTs).length === 0,
+    'au retour du réseau, le départ en attente part et ferme le service');
+}
+
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

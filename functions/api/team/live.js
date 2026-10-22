@@ -165,11 +165,25 @@ export async function onRequestPost({ request, env }) {
     const createdTs = Date.now();
     return { code, createdTs, expiresTs: createdTs + 5 * 60 * 1000 };
   };
+  /* Le code remplacé reste connu 24 h, borné à SA fenêtre (fin = l'instant où
+     il a été remplacé) : un pointage gardé hors ligne sur le téléphone de
+     l'employé se vérifie contre le code qui valait au moment du geste. En
+     direct, /api/employee n'accepte toujours que le code courant. */
+  const withRecent = (previous, next) => {
+    const now = next.createdTs;
+    const recent = (Array.isArray(previous && previous.recent) ? previous.recent : [])
+      .filter((c) => c && /^\d{6}$/.test(String(c.code || '')) && Number(c.endTs) > now - 24 * 3600000);
+    if (previous && /^\d{6}$/.test(String(previous.code || '')) && Number(previous.createdTs) > 0) {
+      recent.push({ code: String(previous.code), createdTs: Number(previous.createdTs),
+        endTs: Math.min(Number(previous.expiresTs) || now, now) });
+    }
+    return { ...next, recent: recent.slice(-400) };
+  };
 
   if (action === 'generate-attendance-code') {
     const previous = await readDoc(env, merchant, ATTENDANCE_CODE, {});
     const { code, createdTs, expiresTs } = drawCode(previous.data && previous.data.code);
-    const saved = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, () => ({
+    const saved = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, (doc) => withRecent(doc, {
       code, createdTs, expiresTs,
     }));
     return saved
@@ -191,7 +205,7 @@ export async function onRequestPost({ request, env }) {
     if (!current) {
       current = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, (doc) => {
         reused = live(doc);
-        return reused ? doc : drawCode(doc && doc.code);
+        return reused ? doc : withRecent(doc, drawCode(doc && doc.code));
       });
     }
     return current
