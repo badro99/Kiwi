@@ -15,6 +15,11 @@ try {
     const map = JSON.parse(fs.readFileSync(path.join(root,dir,'split.json'),'utf8'));
     for (const file of Object.keys(map.splitFiles)) files.add(file);
   }
+  // Les modules découpés peuvent importer un voisin partagé (import '../refund-split.js?v=N') : on le copie aussi.
+  for (const file of [...files].filter(f=>f.endsWith('.js'))) {
+    for (const m of fs.readFileSync(path.join(root,file),'utf8').matchAll(/(?:from|import)\s+'(\.\.?\/[^'?]+\.js)(?:\?v=[0-9]+)?'/g))
+      files.add(path.posix.normalize(path.posix.join(path.posix.dirname(file),m[1])));
+  }
   for (const file of files) {
     const target = path.join(temp,file); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.copyFileSync(path.join(root,file),target);
   }
