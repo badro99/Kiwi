@@ -136,6 +136,17 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     }
   }
 
+  // Un détail HT/TVA fourni doit rester positif et retomber sur le TTC.
+  if (snap.totals && (snap.totals.ht != null || snap.totals.tva != null)) {
+    const { ht, tva, ttc } = snap.totals;
+    if (![ht, tva, ttc].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0)
+        || Math.round(ht * 100) + Math.round(tva * 100) !== Math.round(ttc * 100)) {
+      const err = new Error('tax-total-mismatch');
+      err.status = 409;
+      throw err;
+    }
+  }
+
   /* Le numéro vient de l'allocateur commun (functions/api/_invoice-series.js) :
    * la série F est PARTAGÉE avec les factures saisies au tableau de bord
    * (invoices.js). La réservation dans `invoice_series` et l'INSERT de la

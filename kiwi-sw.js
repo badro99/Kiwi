@@ -21,7 +21,7 @@ var SHELL = [
   '/dashboard.html',
   '/assets/dashboard-shell.css?v=3',
   '/kiwi-caisse.html',
-  '/assets/caisse-accounting.js?v=3',
+  '/assets/caisse-accounting.js?v=4',
   '/assets/caisse-app.js?v=4',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -104,7 +104,7 @@ var SHELL = [
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
   '/assets/invoicing.css?v=9',
-  '/assets/invoicing.js?v=13',
+  '/assets/invoicing.js?v=14',
   '/assets/order-qr.js?v=5',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -209,9 +209,9 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=9',
+  '/assets/receipt.js?v=10',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=16',
+  '/assets/invoice.js?v=17',
   '/assets/merchant-config.js?v=281',
   '/assets/entitlements.css?v=7',
   '/assets/entitlements-v2.js?v=4',

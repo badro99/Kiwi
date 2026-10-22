@@ -130,7 +130,7 @@ simulates that callback ordering; it does not claim the server accepts the
 excess. Server authorization/refund enforcement and real network timing are not
 executed here. The known issue is the local journal/remaining-balance invariant.
 
-### CM-7: legacy receipt fallback prints negative VAT
+### CM-7: legacy receipt fallback prints negative VAT (fixed)
 
 Witness `[55]`: positive sale 0.55 MAD, no tip. When receiptDocFor returns no
 document, renderReceipt computes HT as Math.round(gross / 1.10), in **whole
@@ -139,7 +139,8 @@ paid total, but violates nonnegative tax components. Ordinary receipts use the
 KiwiReceipt engine instead; this input reaches the fallback only if that engine
 is missing/unavailable or cannot produce a document. The test explicitly forces
 that branch, so it is not presented as a normal successful-load till bug.
-The suite does not change receipt code or apply a tax-policy fix.
+The original suite did not change receipt code. Invoice/VAT properties now
+fix the centime arithmetic and promote CM-7 to strict, without changing the rate.
 
 ## Results
 
@@ -153,3 +154,6 @@ operations-system, audit-remediation-devices, economat-real-d1-transfer,
 kiwi-agent-access, invoicing-v2-real-server-browser, retail-tender-browser,
 retail-acompte-browser and print-relay. All eight independently reproduce EPERM
 against an untouched a55899e4 export.
+
+CM-7 is now strict: the invoice/VAT property work rounds fallback HT to centimes.
+See [invoice-vat-properties.md](invoice-vat-properties.md) for the retained witness.

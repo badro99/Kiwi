@@ -320,7 +320,9 @@
   /* ── montants : calcul d'aperçu (le serveur reste l'autorité) ──────────── */
   function lineHT(l) {
     const disc = Math.min(100, Math.max(0, Number(l.discountPct) || 0));
-    return Math.round((Number(l.qty) || 0) * (Number(l.unitHT) || 0) * (1 - disc / 100));
+    // Même arrondi entier que le serveur, y compris à la demi-centime.
+    const numerator = BigInt(Math.round((Number(l.qty) || 0) * 1000)) * BigInt(Math.round(Number(l.unitHT) || 0)) * BigInt(10000 - Math.round(disc * 100));
+    return Number((numerator * 2n + 10000000n) / 20000000n);
   }
   function computeTotals(lines) {
     const groups = new Map();

@@ -1493,7 +1493,7 @@
 
       /* amount is signed for refunds · work off the magnitude for TVA math. */
       const gross = Math.abs(entry.amount);
-      const ht    = Math.round(gross / 1.10);  /* TVA marocaine restauration = 10 % */
+      const ht    = Math.floor((Math.round(gross * 100) * 100 + 55) / 110) / 100;  /* TVA 10 %, arrondie au centime. */
       const tva   = gross - ht;
       const tip   = !isRefund && entry.tip > 0 ? entry.tip : 0;
       const sign  = isRefund ? '− ' : '';  /* minus sign */

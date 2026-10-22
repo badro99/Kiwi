@@ -548,9 +548,11 @@
 
     var totals = { subtotal: subtotal, discount: discount, promo: promo, promoLabel: promoLabel, tip: tip, total: total, vat: null };
     if (cfg.vat.mode === 'rate' && total > 0) {
-      var r = cfg.vat.rate / 100;
-      var ht = cfg.vat.included ? total / (1 + r) : total;
-      var tva = cfg.vat.included ? total - ht : total * r;
+      // Centimes entiers ; la TVA incluse est le résidu du HT arrondi.
+      var cents = Math.round(total * 100), rate = Math.round(cfg.vat.rate * 100);
+      var htCents = cfg.vat.included ? Math.floor((cents * 10000 + (10000 + rate) / 2) / (10000 + rate)) : cents;
+      var ht = htCents / 100;
+      var tva = (cfg.vat.included ? cents - htCents : Math.floor((cents * rate + 5000) / 10000)) / 100;
       totals.vat = { rate: cfg.vat.rate, ht: round2(ht), tva: round2(tva), included: cfg.vat.included };
     }
 

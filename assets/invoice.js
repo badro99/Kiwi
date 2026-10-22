@@ -261,7 +261,8 @@
     let ht = totalTTC;
     let tva = 0;
     if (tvaRate > 0) {
-      ht = round2(totalTTC / (1 + tvaRate / 100));
+      // Arrondi du HT en centimes : aucun flottant ne décide la demi-centime.
+      ht = Math.floor((Math.round(totalTTC * 100) * 100 + (100 + tvaRate) / 2) / (100 + tvaRate)) / 100;
       tva = round2(totalTTC - ht);
     }
 

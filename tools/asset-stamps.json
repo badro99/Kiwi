@@ -100,8 +100,8 @@
     "sha": "3acb98bc91dad1b9"
   },
   "assets/caisse-accounting.js": {
-    "v": "3",
-    "sha": "6624c15c6e36b396"
+    "v": "4",
+    "sha": "2ab1a6257cf16246"
   },
   "assets/caisse-app.js": {
     "v": "4",
@@ -516,16 +516,16 @@
     "sha": "15a820ecb5b9acf3"
   },
   "assets/invoice.js": {
-    "v": "16",
-    "sha": "fe4a4885d1ba712a"
+    "v": "17",
+    "sha": "14a2b6e66b9489ee"
   },
   "assets/invoicing.css": {
     "v": "9",
     "sha": "3c1f0c85303f5018"
   },
   "assets/invoicing.js": {
-    "v": "13",
-    "sha": "33277338bf128fe2"
+    "v": "14",
+    "sha": "f6f97fbc77582d65"
   },
   "assets/kit/access-reset.js": {
     "v": "1",
@@ -1352,8 +1352,8 @@
     "sha": "66ae233c079d385a"
   },
   "assets/receipt.js": {
-    "v": "9",
-    "sha": "dd12b1b75a9d5856"
+    "v": "10",
+    "sha": "dd0b5c4f97c47178"
   },
   "assets/repeat-sale-guard.js": {
     "v": "3",

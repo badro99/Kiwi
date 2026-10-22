@@ -222,7 +222,7 @@ await strict('CM-6 (corrigé 22/10) · a pending manager approval must re-clamp 
   let t;t=context({journal:[orig,old],refundState:{orig,reason:'Return'},requireManager(_label,approve){old.refundSyncStatus='accepted';t.c.applyAcceptedRefund(old);approve();}});
   t.$('#rf-amount').value=(paid/100).toFixed(2);t.c.confirmRefund();return cents(orig.refundedAmount)<=paid;
 }),[[2]]);
-await knownIssue('CM-7','legacy receipt fallback must not print negative VAT for a positive sale',fc.property(positive,(base)=>{
+await strict('CM-7 · legacy receipt fallback must not print negative VAT for a positive sale',fc.property(positive,(base)=>{
   const r=fallbackReceipt(base,0);return r['TVA 10 %']>=0&&r['Total HT']<=base;
 }),[[55]]);
 console.log(`caisse-money-properties: ${passed} strict passed, ${failed} strict failed, ${known} known failures; ${RUNS} runs/property; seed=${SEED}`);
