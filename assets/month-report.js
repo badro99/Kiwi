@@ -18,6 +18,8 @@
   // transaction. Do not shift its invoice date to the preceding business day.
   function recordInside(r, fields, data) { for(var f of fields){var v=r[f];if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v))return v.slice(0,7)===data.month;if(stamp(r,[f])!=null)return inside(stamp(r,[f]),data);}return false; }
   function allocate(amount, weights) { if(amount==null||!weights.length||weights.some(function(v){return v==null||v<0;})||!weights.reduce(function(a,b){return a+b;},0))return null;var sum=weights.reduce(function(a,b){return a+b;},0), sign=amount<0?-1:1, parts=weights.map(function(v,i){var exact=Math.abs(amount)*v/sum;return {i:i,value:Math.floor(exact),remainder:exact-Math.floor(exact)};}),left=Math.abs(amount)-parts.reduce(function(a,p){return a+p.value;},0);parts.slice().sort(function(a,b){return b.remainder-a.remainder||a.i-b.i;}).slice(0,left).forEach(function(p){p.value++;});return parts.map(function(p){return p.value*sign;}); }
+  // Arrondi HT au centime, symétrique : un remboursement annule exactement la vente.
+  function includedHT(cents,rate) { var d=100+rate;return Math.sign(cents)*Math.floor((Math.abs(cents)*100+d/2)/d); }
   function pct(n,d) { return d ? n / d * 100 : null; }
   function knownSum(rows, f) { if(!rows.length)return null;var sum=0;for(var i=0;i<rows.length;i++){var v=f(rows[i]);if(v==null)return null;sum+=v;}return sum; }
   function build(data) {
@@ -67,12 +69,12 @@
       if(s.cents<0&&N(snap.tvaRate)!=null)rate=N(snap.tvaRate);
       var effectiveTs=s.cents<0?refundDates.get(String(s.id)):s.ts;if(effectiveTs==null)return null;var date=data.clock?.[effectiveTs]?.civil||civil(effectiveTs,data.zone).day;
       function configured(category){return periods.filter(function(p){return p.effectiveFrom<=date&&(!p.effectiveTo||date<p.effectiveTo)&&(p.category==='*'||(category&&p.category===category));}).sort(function(a,b){return (a.category==='*'?1:0)-(b.category==='*'?1:0)||b.effectiveFrom.localeCompare(a.effectiveFrom);})[0];}
-      if(rate!=null){var h=Math.round(s.cents/(1+rate/100));return{ht:h,vat:s.cents-h,rate:rate,basis:'taux figé de la vente/facture d’origine'};}
+      if(rate!=null){var h=includedHT(s.cents,rate);return{ht:h,vat:s.cents-h,rate:rate,basis:'taux figé de la vente/facture d’origine'};}
       var weights=s.lines.map(function(l){var t=N(l.total!=null?l.total:l.t);return t==null?null:Math.abs(t);}),amounts=allocate(s.cents,weights);
       // Mixed categories use their own dated rates, after discounts allocated
       // in integer centimes. An unknown line never receives a guessed rate.
-      if(amounts){var pieces=s.lines.map(function(l,i){var cfg=configured(l.cat||l.category||l.c),lr=N(l.taxRate!=null?l.taxRate:l.vatRate);if(lr==null&&cfg)lr=N(cfg.rate);if(lr==null)return null;var h=Math.round(amounts[i]/(1+lr/100));return{ht:h,vat:amounts[i]-h,ttc:amounts[i],rate:lr,basis:cfg?'configuration datée '+cfg.effectiveFrom+' · '+cfg.id:'taux figé de ligne'};});if(pieces.every(Boolean))return{ht:pieces.reduce(function(a,p){return a+p.ht;},0),vat:pieces.reduce(function(a,p){return a+p.vat;},0),pieces:pieces,basis:'ventilation par ligne'};return null;}
-      var cfg=configured(s.lines.length&&s.lines.every(function(l){return String(l.cat||l.category||l.c||'')===String(s.lines[0].cat||s.lines[0].category||s.lines[0].c||'');})?(s.lines[0].cat||s.lines[0].category||s.lines[0].c):null);if(!cfg||s.cents==null)return null;rate=N(cfg.rate);if(rate==null)return null;var htC=Math.round(s.cents/(1+rate/100));return{ht:htC,vat:s.cents-htC,rate:rate,basis:'configuration datée '+cfg.effectiveFrom+' · '+cfg.id};
+      if(amounts){var pieces=s.lines.map(function(l,i){var cfg=configured(l.cat||l.category||l.c),lr=N(l.taxRate!=null?l.taxRate:l.vatRate);if(lr==null&&cfg)lr=N(cfg.rate);if(lr==null)return null;var h=includedHT(amounts[i],lr);return{ht:h,vat:amounts[i]-h,ttc:amounts[i],rate:lr,basis:cfg?'configuration datée '+cfg.effectiveFrom+' · '+cfg.id:'taux figé de ligne'};});if(pieces.every(Boolean))return{ht:pieces.reduce(function(a,p){return a+p.ht;},0),vat:pieces.reduce(function(a,p){return a+p.vat;},0),pieces:pieces,basis:'ventilation par ligne'};return null;}
+      var cfg=configured(s.lines.length&&s.lines.every(function(l){return String(l.cat||l.category||l.c||'')===String(s.lines[0].cat||s.lines[0].category||s.lines[0].c||'');})?(s.lines[0].cat||s.lines[0].category||s.lines[0].c):null);if(!cfg||s.cents==null)return null;rate=N(cfg.rate);if(rate==null)return null;var htC=includedHT(s.cents,rate);return{ht:htC,vat:s.cents-htC,rate:rate,basis:'configuration datée '+cfg.effectiveFrom+' · '+cfg.id};
     }
 
     var theoreticalCost=0,costedLines=0,lineCount=0,costedRevenue=0,taxed=0,htTotal=0,vatTotal=0;

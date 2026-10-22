@@ -1557,6 +1557,7 @@ section('Whole-project regressions');
     'invoice-vat-properties-test.mjs',
     'payroll-properties-test.mjs',
     'customer-balance-properties-test.mjs',
+    'books-money-properties-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',

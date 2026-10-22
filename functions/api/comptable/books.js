@@ -72,6 +72,7 @@ function methodParts(row, amountCents) {
   return null;
 }
 function addTo(map, key, value) { map[key] = (map[key] || 0) + value; }
+const knownAdd = (a, b) => a == null || b == null ? null : a + b;
 
 async function readSales(db, merchant, fromTs, toTs, cutoff, zone) {
   const cols = await columnsOf(db, 'sales');
@@ -132,14 +133,17 @@ async function readSales(db, merchant, fromTs, toTs, cutoff, zone) {
 }
 
 async function readInvoices(db, merchant, fromTs, toTs, cutoff, zone) {
+  // Filtrer la date d’émission AVANT le plafond, même pour une facture antidatée.
+  const issued = `COALESCE(NULLIF(CASE WHEN json_valid(snapshot) THEN CASE WHEN json_valid(json_extract(snapshot, '$.issuedTs')) THEN CAST(json_extract(snapshot, '$.issuedTs') AS REAL) END END, 0), created_ts)`;
   const res = await db.prepare(
     `SELECT seq, number, customer, snapshot, created_ts FROM sale_invoices
-      WHERE merchant = ? AND created_ts >= ? ORDER BY seq LIMIT ${INVOICE_CAP + 1}`
-  ).bind(merchant, fromTs).all();
+      WHERE merchant = ? AND ${issued} >= ? AND ${issued} < ? ORDER BY seq LIMIT ${INVOICE_CAP + 1}`
+  ).bind(merchant, fromTs, toTs).all();
   let rows = (res && res.results) || [];
   const truncated = rows.length > INVOICE_CAP;
   if (truncated) rows = rows.slice(0, INVOICE_CAP);
-  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(n * 100) : null; };
+  // Une TVA inconnue n’est pas une TVA à zéro.
+  const num = (v) => { if (v == null || v === '' || typeof v === 'boolean') return null; const n = Number(v); return Number.isFinite(n) ? Math.round(n * 100) : null; };
   const invoices = [];
   const vat = { source: 'invoices', byRate: {}, htCents: 0, tvaCents: 0, ttcCents: 0, invoiceCount: 0 };
   for (const row of rows) {
@@ -151,7 +155,7 @@ async function readInvoices(db, merchant, fromTs, toTs, cutoff, zone) {
     if (!(issuedTs >= fromTs && issuedTs < toTs)) continue;
     const totals = snap.totals && typeof snap.totals === 'object' ? snap.totals : {};
     const ht = num(totals.ht), tva = num(totals.tva), ttc = num(totals.ttc);
-    const rate = Number(snap.tvaRate);
+    const rate = snap.tvaRate == null || snap.tvaRate === '' ? NaN : Number(snap.tvaRate);
     const tvaRate = Number.isFinite(rate) && rate >= 0 ? rate : null;
     invoices.push({
       seq: Number(row.seq), number: String(row.number || ''), day: businessDate(issuedTs, cutoff, zone), issuedTs,
@@ -160,13 +164,13 @@ async function readInvoices(db, merchant, fromTs, toTs, cutoff, zone) {
     });
     if (ttc != null) {
       vat.invoiceCount++; vat.ttcCents += ttc;
-      if (ht != null) vat.htCents += ht;
-      if (tva != null) vat.tvaCents += tva;
+      vat.htCents = knownAdd(vat.htCents, ht);
+      vat.tvaCents = knownAdd(vat.tvaCents, tva);
       const key = tvaRate == null ? 'inconnu' : String(tvaRate);
       const bucket = vat.byRate[key] || (vat.byRate[key] = { htCents: 0, tvaCents: 0, ttcCents: 0, count: 0 });
       bucket.count++; bucket.ttcCents += ttc;
-      if (ht != null) bucket.htCents += ht;
-      if (tva != null) bucket.tvaCents += tva;
+      bucket.htCents = knownAdd(bucket.htCents, ht);
+      bucket.tvaCents = knownAdd(bucket.tvaCents, tva);
     }
   }
   return { invoices, vat, truncated };
@@ -224,12 +228,12 @@ function addDocsToVat(vat, rows) {
   for (const r of rows) {
     const sign = r.type === 'credit_note' ? -1 : 1;
     vat.invoiceCount++;
-    vat.htCents += sign * r.htCents; vat.tvaCents += sign * r.vatCents; vat.ttcCents += sign * r.ttcCents;
+    vat.htCents = knownAdd(vat.htCents, sign * r.htCents); vat.tvaCents = knownAdd(vat.tvaCents, sign * r.vatCents); vat.ttcCents += sign * r.ttcCents;
     for (const g of r.byRate) {
       const key = String(g.rate);
       const bucket = vat.byRate[key] || (vat.byRate[key] = { htCents: 0, tvaCents: 0, ttcCents: 0, count: 0 });
       bucket.count++;
-      bucket.htCents += sign * g.baseCents; bucket.tvaCents += sign * g.vatCents; bucket.ttcCents += sign * (g.baseCents + g.vatCents);
+      bucket.htCents = knownAdd(bucket.htCents, sign * g.baseCents); bucket.tvaCents = knownAdd(bucket.tvaCents, sign * g.vatCents); bucket.ttcCents += sign * (g.baseCents + g.vatCents);
     }
   }
 }
