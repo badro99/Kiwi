@@ -1395,6 +1395,9 @@ section('Whole-project regressions');
     /* Deux caisses qui réservent leurs numéros au même instant ne reçoivent
        jamais le même ticket. */
     'ticket-sequence-properties-test.mjs',
+    /* Promotions boutique : la meilleure seule s'applique, jamais au-dessus du
+       rayon, sur la journée d'exploitation ; deux appareils convergent. */
+    'promos-properties-test.mjs',
     'operating-day-sync-status-test.mjs',
     'live-feed-backfill-test.mjs',
     'feed-limit-test.mjs',
