@@ -1,10 +1,11 @@
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p) => maisonSource(fs.readFileSync(path.join(root, p), 'utf8'));
 let n = 0;
 function ok(label, value) {
   if (!value) throw new Error('FAIL: ' + label);

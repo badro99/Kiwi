@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import maisonSource from './pos-maison-test-source.cjs';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = p => maisonSource(readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 const book = 'reserve-test', key = 'kiwi:clients-redemptions:v1:' + book;
 async function scenario(mode, status = 200, code = '', pendingPurchase = false) {
   const storage = new Map([['kiwiLive', '1'], ['kiwiLiveMerchant', book]]), calls = [], toasts = [];

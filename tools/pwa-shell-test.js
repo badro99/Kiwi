@@ -24,6 +24,20 @@ entries.forEach(({ base, rev }) => {
   });
 });
 
+// Module dependencies are part of the offline vertical, not optional extras.
+const visited = new Set(), moduleUrls = new Set();
+function moduleClosure(file) {
+  if (visited.has(file)) return; visited.add(file);
+  for (const m of read(file).matchAll(/from\s+'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
+    const url = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
+    ok(url + ' is pre-cached', sw.includes("'/" + url + "'"));
+    moduleUrls.add('/' + url);
+    const target = url.split('?')[0]; ok(target + ' exists', fs.existsSync(path.join(ROOT, target)));
+    moduleClosure(target);
+  }
+}
+entries.forEach(({base}) => moduleClosure('assets/' + base + '.js'));
+
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
 /* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page
    sur son URL canonique SANS .html et renvoie 308 sur la forme .html — et une
@@ -59,7 +73,7 @@ const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
   const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
   const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
-  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || onDemand.includes(`'assets/${url.slice(8)}'`));
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || moduleUrls.has(url) || onDemand.includes(`'assets/${url.slice(8)}'`));
 });
 
 if (failed.length) {

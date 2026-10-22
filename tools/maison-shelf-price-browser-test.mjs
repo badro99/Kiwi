@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { suite } from './browser-trace.mjs';
 
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const maisonRev = JSON.parse(fs.readFileSync(path.join(root, 'tools/asset-stamps.json'), 'utf8'))['assets/pos-maison.js'].v;
 let puppeteer;
 try { puppeteer = createRequire(path.join(root, 'app/package.json'))('puppeteer-core'); }
 catch { console.log('○ skip: puppeteer-core unavailable, browser assertions not executed'); process.exit(process.env.CI ? 1 : 0); }
@@ -45,9 +46,9 @@ const PAGE = `<!doctype html><html><head>
   <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
   <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
   <script src="/assets/boutique-catalog.js"></script><script src="/assets/promos.js"></script>
-  <script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
+  <script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-maison.js?v=${maisonRev}"></script>
 </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
-  <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));</script>
+  <script type="module">import "/assets/pos-maison.js?v=${maisonRev}";window.__maisonSpec.mount(document.getElementById('pos-maison'));</script>
 </body></html>`;
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png' };
 const server = http.createServer((req, res) => {

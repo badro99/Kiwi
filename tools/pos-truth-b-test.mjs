@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* ═════════════════════════════════════════════════════════════════
  * CAISSES MÉTIER (SALLE DE SPORT, HÔTEL, COIFFURE, FLEURISTE, SPA)
  * CE QU'ELLES AFFIRMENT À UN COMMERCE RÉEL
@@ -38,7 +39,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = (f) => readFileSync(path.join(ROOT, 'assets', f), 'utf8');
+const SRC = (f) => maisonSource(readFileSync(path.join(ROOT, 'assets', f), 'utf8'));
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

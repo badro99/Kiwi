@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* App-wide audit sweep (2026-10-09): the bugs found across the till, the
@@ -10,7 +11,7 @@ import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => maisonSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 let passed = 0, failed = 0;
 function ok(label, fn) {
   try { fn(); passed++; console.log(`  ✓ ${label}`); }

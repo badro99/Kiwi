@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · La vente réglée entièrement en avoir  (ticket #0020)
  *
@@ -25,10 +26,10 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const LIVE = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
-const SALE = fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8');
-const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
-const BOUTIQUE = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const LIVE = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8'));
+const SALE = maisonSource(fs.readFileSync(path.join(ROOT, 'functions/api/sale.js'), 'utf8'));
+const MAISON = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
+const BOUTIQUE = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 
 let passed = 0;
 const failures = [];

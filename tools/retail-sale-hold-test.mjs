@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* retail-sale-hold-test · a boutique or Maison sale the Live Link queue refused is kept and sent again.
  *
  *   node tools/retail-sale-hold-test.mjs
@@ -31,9 +32,9 @@ const grab = (src, name) => {
   const end = src.indexOf('\n  }\n', at);
   return src.slice(at, end + 4);
 };
-const boutique = fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8');
-const maison = fs.readFileSync(path.join(root, 'assets/pos-maison.js'), 'utf8');
-const kit = fs.readFileSync(path.join(root, 'assets/retail-sale-hold.js'), 'utf8');
+const boutique = maisonSource(fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8'));
+const maison = maisonSource(fs.readFileSync(path.join(root, 'assets/pos-maison.js'), 'utf8'));
+const kit = maisonSource(fs.readFileSync(path.join(root, 'assets/retail-sale-hold.js'), 'utf8'));
 for (const [name, src] of [['boutique', boutique], ['maison', maison]]) {
   ok(/window\.KiwiRetailSaleHold\.create\(\{ sales: \(\) => SALES, persist: \(\) => persistDay\(\), isDemo: IS_DEMO/.test(src),
     `${name}: the till hands its own journal to the shared hold module`);

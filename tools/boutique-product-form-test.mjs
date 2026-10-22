@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Inventaire boutique · la fiche produit garde le prix au centime et dit vrai.
  *
  * 2026-10-12. The « Nouveau produit » / « Modifier le produit » modals read the
@@ -16,8 +17,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
-const tills = ['assets/pos-boutique.js', 'assets/pos-maison.js'].map((f) => readFileSync(path.join(ROOT, f), 'utf8'));
+const src = maisonSource(readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
+const tills = ['assets/pos-boutique.js', 'assets/pos-maison.js'].map((f) => maisonSource(readFileSync(path.join(ROOT, f), 'utf8')));
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 let passed = 0, failed = 0;

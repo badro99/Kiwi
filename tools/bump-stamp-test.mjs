@@ -260,5 +260,24 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
+/* Relative cyclic module imports use one stamp per file. */
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-stamp-modules-'));
+  try {
+    fixture(dir);
+    fs.mkdirSync(path.join(dir, 'assets/pos-maison'));
+    fs.writeFileSync(path.join(dir, 'assets/pos-maison.js'), "import { feature } from './pos-maison/sales.js?v=1';\nexport const core = () => feature;\n");
+    fs.writeFileSync(path.join(dir, 'assets/pos-maison/sales.js'), "import { core } from '../pos-maison.js?v=1';\nexport const feature = () => core;\n");
+    fs.appendFileSync(path.join(dir, 'kiwi-sw.js'), "const modules = ['/assets/pos-maison.js?v=1','/assets/pos-maison/sales.js?v=1'];\n");
+    ok(run(dir, ['--sync']).status === 0, 'modules: seal initial graph');
+    fs.appendFileSync(path.join(dir, 'assets/pos-maison/sales.js'), '// changed\n');
+    ok(run(dir, ['assets/pos-maison/sales.js']).status === 0, 'modules: bump feature and cascade through cycle');
+    ok(rd(dir, 'assets/pos-maison.js').includes("./pos-maison/sales.js?v=2"), 'modules: core import follows feature stamp');
+    ok(rd(dir, 'assets/pos-maison/sales.js').includes("../pos-maison.js?v=2"), 'modules: cyclic import follows core stamp');
+    const check = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { env: env(dir), encoding: 'utf8' });
+    ok(check.status === 0, 'modules: graph and precache stamps stay sealed');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 console.log(`\n${failures.length ? '✗' : '✓'} ${passed} passed · ${failures.length} failed`);
 if (failures.length) { failures.forEach((f) => console.log(`  ✗ ${f}`)); process.exit(1); }

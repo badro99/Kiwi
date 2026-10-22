@@ -1,0 +1,4126 @@
+{
+  "sha256": "9bc48d42264a46b4e5b694a74e5f5871216e13f33d1dde04d42d0610b17726a6",
+  "prefix": "/* ═══════════════════════════════════════════════════════════════════════════\n * Kiwi · BOUTIQUE MODE — Maison Mansour (PIN 0002), mode & artisanat.\n * ---------------------------------------------------------------------------\n * Loaded lazily by assets/pos-dispatch.js, which owns the PIN choreography\n * and provides the root <div class=\"vx-screen\" id=\"pos-boutique\">. This file\n * builds the whole app inside it and self-registers on window.KiwiPosDispatch.\n *\n * The boutique story: caftans, takchitas et babouches vendus au toucher —\n * une grille visuelle par rayon, la taille avec le stock par taille sous le\n * doigt, la remise sous accord gérante. Le différenciateur métier :\n * ÉCHANGES & AVOIRS — on retrouve la vente par n° de ticket ou téléphone,\n * on échange la pièce ou on émet un avoir code-barres qui revient en caisse\n * comme moyen de paiement. V1 = couche opérationnelle : la carte part au\n * lecteur partenaire, Kiwi n'encaisse pas.\n * ═══════════════════════════════════════════════════════════════════════════ */\n(function () {",
+  "suffix": "})();\n",
+  "chunks": [
+    {
+      "file": "assets/pos-maison.js",
+      "lead": "import { $, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, pad2, fmtHM, DAYS, icons, renderTicket, looseOf, camSupported, $$, commitEan, openCamScan, renderCats, holdStock, renderGrid, renderExchNote, renderCasse, renderScan, renderSuppliers, renderClientes, fmtDT, esc, updateRegistryContribution, useKiwiCl, fmtDay } from './pos-maison/sales.js?v=2';\nimport { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay } from './pos-maison/checkout.js?v=2';\nimport { intake, renderMovements, renderInventaire } from './pos-maison/inventory.js?v=2';\n",
+      "tail": "\nexport { AVOIRS, BY_EAN, CL, CLIENTES, IS_DEMO, P, RAYONS, RETAIN_DAYS, SALES, STAFF, _bqKey, activeAvoirs, assignTicketNumber, avoirExpired, bqMoney, bqPaymentMethod, bqPaymentParts, bqPost, bqSaveProvisional, businessDateKey, checkout, closeVeil, creditErrorDetail, creditFromServer, creditIntent, creditRequest, depotOn, ensureOriginalSale, ensureStockJournal, findSale, firstFree, firstName, freshTicket, headSubVente, initials, isConsignedProduct, isOfflineRef, issueAvoir, lineDeal, linePromo, lineUnit, merchantSlug, newSaleId, nextStandaloneTicketNumber, openVeil, payExistingBalance, persistAvoirs, persistDay, persistStock, pieceUnitPrice, promoFor, promoForLine, pruneTicket, pvPaired, pvReal, queueIfOffline, rebuildCatalog, recordReturn, refreshOps, refreshRemoteAvoirs, renderAll, renderBadges, root, saleClient, salesToday, shiftDateKey, sizeWord, sizesOf, stableCreditIssueId, stableRefundId, state, stockAdd, stockOf, switchView, ticketClient, ticketCount, ticketTotals, toast, whenLabel };\n",
+      "fragments": [
+        {
+          "start": 1053,
+          "end": 1069,
+          "name": null,
+          "lines": [
+            16,
+            17
+          ]
+        },
+        {
+          "start": 3280,
+          "end": 3778,
+          "name": "pvPaired",
+          "lines": [
+            46,
+            52
+          ]
+        },
+        {
+          "start": 3778,
+          "end": 4422,
+          "name": "bqMoney",
+          "lines": [
+            52,
+            63
+          ]
+        },
+        {
+          "start": 4422,
+          "end": 4586,
+          "name": "pvReal",
+          "lines": [
+            63,
+            64
+          ]
+        },
+        {
+          "start": 4586,
+          "end": 4762,
+          "name": null,
+          "lines": [
+            64,
+            67
+          ]
+        },
+        {
+          "start": 4762,
+          "end": 5865,
+          "name": "realFallbackKey",
+          "lines": [
+            67,
+            83
+          ]
+        },
+        {
+          "start": 5865,
+          "end": 6589,
+          "name": "adoptLegacySharedCatalogue",
+          "lines": [
+            83,
+            98
+          ]
+        },
+        {
+          "start": 6589,
+          "end": 7703,
+          "name": "toast",
+          "lines": [
+            98,
+            117
+          ]
+        },
+        {
+          "start": 33154,
+          "end": 33752,
+          "name": null,
+          "lines": [
+            290,
+            299
+          ]
+        },
+        {
+          "start": 33752,
+          "end": 33971,
+          "name": "rebuildCatalog",
+          "lines": [
+            299,
+            304
+          ]
+        },
+        {
+          "start": 33971,
+          "end": 33991,
+          "name": null,
+          "lines": [
+            304,
+            305
+          ]
+        },
+        {
+          "start": 33991,
+          "end": 34041,
+          "name": null,
+          "lines": [
+            305,
+            307
+          ]
+        },
+        {
+          "start": 34041,
+          "end": 34116,
+          "name": null,
+          "lines": [
+            307,
+            308
+          ]
+        },
+        {
+          "start": 34116,
+          "end": 34224,
+          "name": null,
+          "lines": [
+            308,
+            309
+          ]
+        },
+        {
+          "start": 34224,
+          "end": 36449,
+          "name": "ensureStockJournal",
+          "lines": [
+            309,
+            338
+          ]
+        },
+        {
+          "start": 36449,
+          "end": 39049,
+          "name": "persistStock",
+          "lines": [
+            338,
+            377
+          ]
+        },
+        {
+          "start": 39049,
+          "end": 43360,
+          "name": "reconcileVoids",
+          "lines": [
+            377,
+            456
+          ]
+        },
+        {
+          "start": 43360,
+          "end": 43470,
+          "name": null,
+          "lines": [
+            456,
+            458
+          ]
+        },
+        {
+          "start": 43470,
+          "end": 43545,
+          "name": null,
+          "lines": [
+            458,
+            459
+          ]
+        },
+        {
+          "start": 43545,
+          "end": 44251,
+          "name": null,
+          "lines": [
+            459,
+            473
+          ]
+        },
+        {
+          "start": 44251,
+          "end": 44935,
+          "name": "syncTillStaff",
+          "lines": [
+            473,
+            487
+          ]
+        },
+        {
+          "start": 44935,
+          "end": 46679,
+          "name": null,
+          "lines": [
+            487,
+            507
+          ]
+        },
+        {
+          "start": 46679,
+          "end": 46744,
+          "name": null,
+          "lines": [
+            507,
+            508
+          ]
+        },
+        {
+          "start": 46744,
+          "end": 46860,
+          "name": null,
+          "lines": [
+            508,
+            509
+          ]
+        },
+        {
+          "start": 46860,
+          "end": 46946,
+          "name": null,
+          "lines": [
+            509,
+            510
+          ]
+        },
+        {
+          "start": 49753,
+          "end": 49786,
+          "name": null,
+          "lines": [
+            558,
+            559
+          ]
+        },
+        {
+          "start": 49786,
+          "end": 49966,
+          "name": null,
+          "lines": [
+            559,
+            562
+          ]
+        },
+        {
+          "start": 49966,
+          "end": 50196,
+          "name": null,
+          "lines": [
+            562,
+            567
+          ]
+        },
+        {
+          "start": 50196,
+          "end": 51191,
+          "name": null,
+          "lines": [
+            567,
+            579
+          ]
+        },
+        {
+          "start": 51191,
+          "end": 51279,
+          "name": null,
+          "lines": [
+            579,
+            580
+          ]
+        },
+        {
+          "start": 51279,
+          "end": 51546,
+          "name": null,
+          "lines": [
+            580,
+            584
+          ]
+        },
+        {
+          "start": 51546,
+          "end": 52084,
+          "name": null,
+          "lines": [
+            584,
+            591
+          ]
+        },
+        {
+          "start": 52084,
+          "end": 52449,
+          "name": null,
+          "lines": [
+            591,
+            597
+          ]
+        },
+        {
+          "start": 52449,
+          "end": 52469,
+          "name": null,
+          "lines": [
+            597,
+            598
+          ]
+        },
+        {
+          "start": 52469,
+          "end": 52719,
+          "name": null,
+          "lines": [
+            598,
+            601
+          ]
+        },
+        {
+          "start": 52719,
+          "end": 52860,
+          "name": null,
+          "lines": [
+            601,
+            602
+          ]
+        },
+        {
+          "start": 52860,
+          "end": 53504,
+          "name": null,
+          "lines": [
+            602,
+            612
+          ]
+        },
+        {
+          "start": 53504,
+          "end": 54168,
+          "name": "avoirKey",
+          "lines": [
+            612,
+            621
+          ]
+        },
+        {
+          "start": 54168,
+          "end": 54489,
+          "name": "persistAvoirs",
+          "lines": [
+            621,
+            629
+          ]
+        },
+        {
+          "start": 54489,
+          "end": 55240,
+          "name": null,
+          "lines": [
+            629,
+            647
+          ]
+        },
+        {
+          "start": 55240,
+          "end": 55803,
+          "name": "creditFromServer",
+          "lines": [
+            647,
+            658
+          ]
+        },
+        {
+          "start": 55803,
+          "end": 56586,
+          "name": "creditRequest",
+          "lines": [
+            658,
+            676
+          ]
+        },
+        {
+          "start": 56586,
+          "end": 57004,
+          "name": "refreshRemoteAvoirs",
+          "lines": [
+            676,
+            687
+          ]
+        },
+        {
+          "start": 57004,
+          "end": 58210,
+          "name": "avoirApproval",
+          "lines": [
+            687,
+            704
+          ]
+        },
+        {
+          "start": 58210,
+          "end": 58444,
+          "name": "creditIntent",
+          "lines": [
+            704,
+            709
+          ]
+        },
+        {
+          "start": 58444,
+          "end": 59040,
+          "name": "creditErrorDetail",
+          "lines": [
+            709,
+            719
+          ]
+        },
+        {
+          "start": 59040,
+          "end": 59621,
+          "name": "stableCreditIssueId",
+          "lines": [
+            719,
+            729
+          ]
+        },
+        {
+          "start": 59621,
+          "end": 60191,
+          "name": "stableRefundId",
+          "lines": [
+            729,
+            739
+          ]
+        },
+        {
+          "start": 60191,
+          "end": 60363,
+          "name": null,
+          "lines": [
+            739,
+            743
+          ]
+        },
+        {
+          "start": 60363,
+          "end": 60588,
+          "name": null,
+          "lines": [
+            743,
+            746
+          ]
+        },
+        {
+          "start": 60588,
+          "end": 60665,
+          "name": "bqReplayHeld",
+          "lines": [
+            746,
+            747
+          ]
+        },
+        {
+          "start": 60665,
+          "end": 60850,
+          "name": "bqPost",
+          "lines": [
+            747,
+            752
+          ]
+        },
+        {
+          "start": 60850,
+          "end": 63800,
+          "name": "originalSalePayload",
+          "lines": [
+            752,
+            794
+          ]
+        },
+        {
+          "start": 63800,
+          "end": 64766,
+          "name": "ensureOriginalSale",
+          "lines": [
+            794,
+            815
+          ]
+        },
+        {
+          "start": 64766,
+          "end": 64792,
+          "name": null,
+          "lines": [
+            815,
+            817
+          ]
+        },
+        {
+          "start": 64792,
+          "end": 65334,
+          "name": "ticketPrefix",
+          "lines": [
+            817,
+            831
+          ]
+        },
+        {
+          "start": 65334,
+          "end": 65363,
+          "name": null,
+          "lines": [
+            831,
+            832
+          ]
+        },
+        {
+          "start": 65363,
+          "end": 65642,
+          "name": null,
+          "lines": [
+            832,
+            836
+          ]
+        },
+        {
+          "start": 65642,
+          "end": 65690,
+          "name": null,
+          "lines": [
+            836,
+            837
+          ]
+        },
+        {
+          "start": 65690,
+          "end": 66505,
+          "name": null,
+          "lines": [
+            837,
+            849
+          ]
+        },
+        {
+          "start": 66505,
+          "end": 66999,
+          "name": "businessDayKey",
+          "lines": [
+            849,
+            858
+          ]
+        },
+        {
+          "start": 66999,
+          "end": 67129,
+          "name": "isToday",
+          "lines": [
+            858,
+            862
+          ]
+        },
+        {
+          "start": 67129,
+          "end": 67786,
+          "name": "businessDateKey",
+          "lines": [
+            862,
+            873
+          ]
+        },
+        {
+          "start": 67786,
+          "end": 68034,
+          "name": "shiftDateKey",
+          "lines": [
+            873,
+            878
+          ]
+        },
+        {
+          "start": 68034,
+          "end": 69570,
+          "name": null,
+          "lines": [
+            878,
+            903
+          ]
+        },
+        {
+          "start": 69570,
+          "end": 69834,
+          "name": "withinRetention",
+          "lines": [
+            903,
+            911
+          ]
+        },
+        {
+          "start": 69834,
+          "end": 70066,
+          "name": null,
+          "lines": [
+            911,
+            914
+          ]
+        },
+        {
+          "start": 70066,
+          "end": 70646,
+          "name": "whenLabel",
+          "lines": [
+            914,
+            927
+          ]
+        },
+        {
+          "start": 70646,
+          "end": 72302,
+          "name": "merchantSlug",
+          "lines": [
+            927,
+            957
+          ]
+        },
+        {
+          "start": 72302,
+          "end": 72535,
+          "name": "persistDay",
+          "lines": [
+            957,
+            965
+          ]
+        },
+        {
+          "start": 72535,
+          "end": 75260,
+          "name": null,
+          "lines": [
+            965,
+            1019
+          ]
+        },
+        {
+          "start": 75260,
+          "end": 76184,
+          "name": null,
+          "lines": [
+            1019,
+            1032
+          ]
+        },
+        {
+          "start": 76184,
+          "end": 78658,
+          "name": "remoteLine",
+          "lines": [
+            1032,
+            1077
+          ]
+        },
+        {
+          "start": 78658,
+          "end": 80274,
+          "name": "syncReturnSales",
+          "lines": [
+            1077,
+            1109
+          ]
+        },
+        {
+          "start": 80274,
+          "end": 81457,
+          "name": null,
+          "lines": [
+            1109,
+            1140
+          ]
+        },
+        {
+          "start": 81457,
+          "end": 81692,
+          "name": null,
+          "lines": [
+            1140,
+            1145
+          ]
+        },
+        {
+          "start": 81692,
+          "end": 81715,
+          "name": null,
+          "lines": [
+            1145,
+            1146
+          ]
+        },
+        {
+          "start": 81715,
+          "end": 81747,
+          "name": null,
+          "lines": [
+            1146,
+            1147
+          ]
+        },
+        {
+          "start": 81747,
+          "end": 82032,
+          "name": null,
+          "lines": [
+            1147,
+            1154
+          ]
+        },
+        {
+          "start": 82032,
+          "end": 82213,
+          "name": "persistReturnLog",
+          "lines": [
+            1154,
+            1158
+          ]
+        },
+        {
+          "start": 82213,
+          "end": 82755,
+          "name": "ensureReturnCloud",
+          "lines": [
+            1158,
+            1172
+          ]
+        },
+        {
+          "start": 82755,
+          "end": 83814,
+          "name": "recordReturn",
+          "lines": [
+            1172,
+            1196
+          ]
+        },
+        {
+          "start": 83814,
+          "end": 84429,
+          "name": null,
+          "lines": [
+            1196,
+            1204
+          ]
+        },
+        {
+          "start": 84429,
+          "end": 84623,
+          "name": null,
+          "lines": [
+            1204,
+            1207
+          ]
+        },
+        {
+          "start": 84623,
+          "end": 84806,
+          "name": null,
+          "lines": [
+            1207,
+            1210
+          ]
+        },
+        {
+          "start": 84806,
+          "end": 84832,
+          "name": null,
+          "lines": [
+            1210,
+            1211
+          ]
+        },
+        {
+          "start": 84832,
+          "end": 84865,
+          "name": null,
+          "lines": [
+            1211,
+            1212
+          ]
+        },
+        {
+          "start": 84865,
+          "end": 84898,
+          "name": null,
+          "lines": [
+            1212,
+            1213
+          ]
+        },
+        {
+          "start": 84898,
+          "end": 84962,
+          "name": "ticketPeriod",
+          "lines": [
+            1213,
+            1215
+          ]
+        },
+        {
+          "start": 84962,
+          "end": 85146,
+          "name": "syncTicketPeriod",
+          "lines": [
+            1215,
+            1222
+          ]
+        },
+        {
+          "start": 85146,
+          "end": 85591,
+          "name": "newSaleId",
+          "lines": [
+            1222,
+            1233
+          ]
+        },
+        {
+          "start": 85591,
+          "end": 86234,
+          "name": "cleanLeaseQueue",
+          "lines": [
+            1233,
+            1244
+          ]
+        },
+        {
+          "start": 86234,
+          "end": 86469,
+          "name": "leaseRemaining",
+          "lines": [
+            1244,
+            1251
+          ]
+        },
+        {
+          "start": 86469,
+          "end": 87058,
+          "name": "readTicketLease",
+          "lines": [
+            1251,
+            1265
+          ]
+        },
+        {
+          "start": 87058,
+          "end": 87338,
+          "name": "saveTicketLease",
+          "lines": [
+            1265,
+            1276
+          ]
+        },
+        {
+          "start": 87338,
+          "end": 88753,
+          "name": "takeTicketNumber",
+          "lines": [
+            1276,
+            1315
+          ]
+        },
+        {
+          "start": 88753,
+          "end": 89887,
+          "name": "topUpTicketLease",
+          "lines": [
+            1315,
+            1339
+          ]
+        },
+        {
+          "start": 89887,
+          "end": 90734,
+          "name": "requestTicketRange",
+          "lines": [
+            1339,
+            1359
+          ]
+        },
+        {
+          "start": 90734,
+          "end": 91556,
+          "name": "ensureTicketLease",
+          "lines": [
+            1359,
+            1378
+          ]
+        },
+        {
+          "start": 91556,
+          "end": 92145,
+          "name": "withTicketLock",
+          "lines": [
+            1378,
+            1391
+          ]
+        },
+        {
+          "start": 92145,
+          "end": 93390,
+          "name": "claimTicketNumber",
+          "lines": [
+            1391,
+            1419
+          ]
+        },
+        {
+          "start": 93390,
+          "end": 93441,
+          "name": null,
+          "lines": [
+            1419,
+            1421
+          ]
+        },
+        {
+          "start": 93441,
+          "end": 93964,
+          "name": "offlineDeviceTag",
+          "lines": [
+            1421,
+            1435
+          ]
+        },
+        {
+          "start": 93964,
+          "end": 94508,
+          "name": "takeOfflineRef",
+          "lines": [
+            1435,
+            1451
+          ]
+        },
+        {
+          "start": 94508,
+          "end": 94581,
+          "name": "isOfflineRef",
+          "lines": [
+            1451,
+            1453
+          ]
+        },
+        {
+          "start": 94581,
+          "end": 95806,
+          "name": "assignTicketNumber",
+          "lines": [
+            1453,
+            1480
+          ]
+        },
+        {
+          "start": 95806,
+          "end": 95945,
+          "name": "nextStandaloneTicketNumber",
+          "lines": [
+            1480,
+            1485
+          ]
+        },
+        {
+          "start": 95945,
+          "end": 96600,
+          "name": "freshTicket",
+          "lines": [
+            1485,
+            1502
+          ]
+        },
+        {
+          "start": 96600,
+          "end": 96733,
+          "name": "ticketClient",
+          "lines": [
+            1502,
+            1506
+          ]
+        },
+        {
+          "start": 96733,
+          "end": 97714,
+          "name": "promoFor",
+          "lines": [
+            1506,
+            1524
+          ]
+        },
+        {
+          "start": 97714,
+          "end": 98413,
+          "name": "pieceUnitPrice",
+          "lines": [
+            1524,
+            1538
+          ]
+        },
+        {
+          "start": 98413,
+          "end": 99205,
+          "name": "promoForLine",
+          "lines": [
+            1538,
+            1553
+          ]
+        },
+        {
+          "start": 99205,
+          "end": 99348,
+          "name": "promoStockOf",
+          "lines": [
+            1553,
+            1557
+          ]
+        },
+        {
+          "start": 99348,
+          "end": 101208,
+          "name": "lineDeal",
+          "lines": [
+            1557,
+            1587
+          ]
+        },
+        {
+          "start": 101208,
+          "end": 101256,
+          "name": null,
+          "lines": [
+            1587,
+            1588
+          ]
+        },
+        {
+          "start": 101256,
+          "end": 101304,
+          "name": null,
+          "lines": [
+            1588,
+            1589
+          ]
+        },
+        {
+          "start": 101304,
+          "end": 101379,
+          "name": null,
+          "lines": [
+            1589,
+            1590
+          ]
+        },
+        {
+          "start": 101379,
+          "end": 101430,
+          "name": null,
+          "lines": [
+            1590,
+            1591
+          ]
+        },
+        {
+          "start": 101430,
+          "end": 102146,
+          "name": "rewardDiscount",
+          "lines": [
+            1591,
+            1603
+          ]
+        },
+        {
+          "start": 102146,
+          "end": 104527,
+          "name": "depotOn",
+          "lines": [
+            1603,
+            1641
+          ]
+        },
+        {
+          "start": 104527,
+          "end": 104641,
+          "name": null,
+          "lines": [
+            1641,
+            1642
+          ]
+        },
+        {
+          "start": 104641,
+          "end": 104728,
+          "name": null,
+          "lines": [
+            1642,
+            1643
+          ]
+        },
+        {
+          "start": 104728,
+          "end": 104840,
+          "name": null,
+          "lines": [
+            1643,
+            1644
+          ]
+        },
+        {
+          "start": 104840,
+          "end": 105733,
+          "name": "ticketTotals",
+          "lines": [
+            1644,
+            1660
+          ]
+        },
+        {
+          "start": 105733,
+          "end": 106189,
+          "name": "promoLabelForTicket",
+          "lines": [
+            1660,
+            1671
+          ]
+        },
+        {
+          "start": 106189,
+          "end": 106260,
+          "name": null,
+          "lines": [
+            1671,
+            1672
+          ]
+        },
+        {
+          "start": 106260,
+          "end": 107344,
+          "name": null,
+          "lines": [
+            1672,
+            1687
+          ]
+        },
+        {
+          "start": 107344,
+          "end": 107538,
+          "name": null,
+          "lines": [
+            1687,
+            1690
+          ]
+        },
+        {
+          "start": 107538,
+          "end": 107613,
+          "name": null,
+          "lines": [
+            1690,
+            1691
+          ]
+        },
+        {
+          "start": 107613,
+          "end": 108187,
+          "name": "queueIfOffline",
+          "lines": [
+            1691,
+            1705
+          ]
+        },
+        {
+          "start": 108187,
+          "end": 108269,
+          "name": null,
+          "lines": [
+            1705,
+            1708
+          ]
+        },
+        {
+          "start": 108269,
+          "end": 108844,
+          "name": "fsIsOn",
+          "lines": [
+            1708,
+            1716
+          ]
+        },
+        {
+          "start": 108844,
+          "end": 109296,
+          "name": "fsToggle",
+          "lines": [
+            1716,
+            1724
+          ]
+        },
+        {
+          "start": 109296,
+          "end": 110003,
+          "name": "paintFs",
+          "lines": [
+            1724,
+            1736
+          ]
+        },
+        {
+          "start": 110003,
+          "end": 110364,
+          "name": "setupFullscreenBtn",
+          "lines": [
+            1736,
+            1746
+          ]
+        },
+        {
+          "start": 110364,
+          "end": 125500,
+          "name": "mount",
+          "lines": [
+            1746,
+            1986
+          ]
+        },
+        {
+          "start": 125500,
+          "end": 126103,
+          "name": "seedDemoTicket",
+          "lines": [
+            1986,
+            2002
+          ]
+        },
+        {
+          "start": 126103,
+          "end": 126286,
+          "name": "pruneTicket",
+          "lines": [
+            2002,
+            2004
+          ]
+        },
+        {
+          "start": 126286,
+          "end": 126945,
+          "name": "refreshAfterCatalog",
+          "lines": [
+            2004,
+            2015
+          ]
+        },
+        {
+          "start": 126945,
+          "end": 127326,
+          "name": "onShow",
+          "lines": [
+            2015,
+            2026
+          ]
+        },
+        {
+          "start": 127326,
+          "end": 127416,
+          "name": "openVeil",
+          "lines": [
+            2026,
+            2028
+          ]
+        },
+        {
+          "start": 127416,
+          "end": 127514,
+          "name": "closeVeil",
+          "lines": [
+            2028,
+            2029
+          ]
+        },
+        {
+          "start": 127514,
+          "end": 128365,
+          "name": "switchView",
+          "lines": [
+            2029,
+            2047
+          ]
+        },
+        {
+          "start": 128365,
+          "end": 129149,
+          "name": "renderView",
+          "lines": [
+            2047,
+            2063
+          ]
+        },
+        {
+          "start": 129149,
+          "end": 129939,
+          "name": "renderBadges",
+          "lines": [
+            2063,
+            2079
+          ]
+        },
+        {
+          "start": 129939,
+          "end": 130233,
+          "name": "headSubVente",
+          "lines": [
+            2079,
+            2085
+          ]
+        },
+        {
+          "start": 130233,
+          "end": 130445,
+          "name": "renderAll",
+          "lines": [
+            2085,
+            2095
+          ]
+        },
+        {
+          "start": 130445,
+          "end": 130731,
+          "name": null,
+          "lines": [
+            2095,
+            2100
+          ]
+        },
+        {
+          "start": 130731,
+          "end": 130909,
+          "name": null,
+          "lines": [
+            2100,
+            2106
+          ]
+        },
+        {
+          "start": 130909,
+          "end": 131001,
+          "name": "refreshOps",
+          "lines": [
+            2106,
+            2112
+          ]
+        },
+        {
+          "start": 279694,
+          "end": 281428,
+          "name": "issueAvoir",
+          "lines": [
+            4788,
+            4825
+          ]
+        },
+        {
+          "start": 304667,
+          "end": 319129,
+          "name": "checkout",
+          "lines": [
+            5262,
+            5494
+          ]
+        },
+        {
+          "start": 320296,
+          "end": 323013,
+          "name": "payExistingBalance",
+          "lines": [
+            5516,
+            5560
+          ]
+        },
+        {
+          "start": 522603,
+          "end": 523360,
+          "name": null,
+          "lines": [
+            8782,
+            8795
+          ]
+        },
+        {
+          "start": 523360,
+          "end": 523382,
+          "name": null,
+          "lines": [
+            8795,
+            8796
+          ]
+        },
+        {
+          "start": 523382,
+          "end": 523923,
+          "name": null,
+          "lines": [
+            8796,
+            8806
+          ]
+        },
+        {
+          "start": 523923,
+          "end": 524891,
+          "name": "bqSessionId",
+          "lines": [
+            8806,
+            8820
+          ]
+        },
+        {
+          "start": 524891,
+          "end": 525276,
+          "name": "bqAnnounceOpen",
+          "lines": [
+            8820,
+            8829
+          ]
+        },
+        {
+          "start": 525276,
+          "end": 525478,
+          "name": "bqActorId",
+          "lines": [
+            8829,
+            8834
+          ]
+        },
+        {
+          "start": 525478,
+          "end": 525945,
+          "name": "bqCashEvent",
+          "lines": [
+            8834,
+            8848
+          ]
+        },
+        {
+          "start": 525945,
+          "end": 525999,
+          "name": null,
+          "lines": [
+            8848,
+            8849
+          ]
+        },
+        {
+          "start": 525999,
+          "end": 526193,
+          "name": "bqShiftPersist",
+          "lines": [
+            8849,
+            8856
+          ]
+        },
+        {
+          "start": 526193,
+          "end": 527062,
+          "name": "bqMoneyParts",
+          "lines": [
+            8856,
+            8871
+          ]
+        },
+        {
+          "start": 527062,
+          "end": 527214,
+          "name": null,
+          "lines": [
+            8871,
+            8872
+          ]
+        },
+        {
+          "start": 527214,
+          "end": 527448,
+          "name": "bqPaymentParts",
+          "lines": [
+            8872,
+            8877
+          ]
+        },
+        {
+          "start": 527448,
+          "end": 527778,
+          "name": "bqPaymentMethod",
+          "lines": [
+            8877,
+            8883
+          ]
+        },
+        {
+          "start": 527778,
+          "end": 531006,
+          "name": "bqDayTotals",
+          "lines": [
+            8883,
+            8936
+          ]
+        },
+        {
+          "start": 531006,
+          "end": 533046,
+          "name": "bqReportSales",
+          "lines": [
+            8936,
+            8980
+          ]
+        },
+        {
+          "start": 533046,
+          "end": 533834,
+          "name": "bqReportSession",
+          "lines": [
+            8980,
+            8997
+          ]
+        },
+        {
+          "start": 533834,
+          "end": 534797,
+          "name": "bqBuildReport",
+          "lines": [
+            8997,
+            9017
+          ]
+        },
+        {
+          "start": 534797,
+          "end": 535013,
+          "name": null,
+          "lines": [
+            9017,
+            9021
+          ]
+        },
+        {
+          "start": 535013,
+          "end": 536653,
+          "name": "bqFoldBasket",
+          "lines": [
+            9021,
+            9046
+          ]
+        },
+        {
+          "start": 536653,
+          "end": 538238,
+          "name": "bqLineTotals",
+          "lines": [
+            9046,
+            9070
+          ]
+        },
+        {
+          "start": 538238,
+          "end": 539233,
+          "name": "bqZJournal",
+          "lines": [
+            9070,
+            9089
+          ]
+        },
+        {
+          "start": 539233,
+          "end": 540699,
+          "name": "bqZQueue",
+          "lines": [
+            9089,
+            9113
+          ]
+        },
+        {
+          "start": 540699,
+          "end": 541144,
+          "name": "bqSaveProvisional",
+          "lines": [
+            9113,
+            9126
+          ]
+        },
+        {
+          "start": 541144,
+          "end": 543053,
+          "name": "bqPrintReport",
+          "lines": [
+            9126,
+            9161
+          ]
+        },
+        {
+          "start": 543053,
+          "end": 543631,
+          "name": "bqFloatMemKey",
+          "lines": [
+            9161,
+            9172
+          ]
+        },
+        {
+          "start": 543631,
+          "end": 543650,
+          "name": null,
+          "lines": [
+            9172,
+            9173
+          ]
+        },
+        {
+          "start": 543650,
+          "end": 543747,
+          "name": "bqMaybeOpenScreen",
+          "lines": [
+            9173,
+            9177
+          ]
+        },
+        {
+          "start": 543747,
+          "end": 550833,
+          "name": "bqShowOpenScreen",
+          "lines": [
+            9177,
+            9316
+          ]
+        },
+        {
+          "start": 550833,
+          "end": 550925,
+          "name": null,
+          "lines": [
+            9316,
+            9319
+          ]
+        },
+        {
+          "start": 550925,
+          "end": 551050,
+          "name": "bqFmtDur",
+          "lines": [
+            9319,
+            9323
+          ]
+        },
+        {
+          "start": 551050,
+          "end": 551661,
+          "name": "bqUpdateEcart",
+          "lines": [
+            9323,
+            9334
+          ]
+        },
+        {
+          "start": 551661,
+          "end": 551691,
+          "name": null,
+          "lines": [
+            9334,
+            9335
+          ]
+        },
+        {
+          "start": 551691,
+          "end": 558434,
+          "name": "bqOpenCloture",
+          "lines": [
+            9335,
+            9455
+          ]
+        },
+        {
+          "start": 558434,
+          "end": 560558,
+          "name": "bqCloseRegister",
+          "lines": [
+            9455,
+            9498
+          ]
+        },
+        {
+          "start": 560558,
+          "end": 560771,
+          "name": "bqFinishClose",
+          "lines": [
+            9498,
+            9504
+          ]
+        },
+        {
+          "start": 560771,
+          "end": 563199,
+          "name": "bqShowPostClose",
+          "lines": [
+            9504,
+            9549
+          ]
+        },
+        {
+          "start": 563199,
+          "end": 565868,
+          "name": null,
+          "lines": [
+            9549,
+            9597
+          ]
+        },
+        {
+          "start": 565868,
+          "end": 566084,
+          "name": null,
+          "lines": [
+            9597,
+            9609
+          ]
+        }
+      ]
+    },
+    {
+      "file": "assets/pos-maison/sales.js",
+      "lead": "import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=84';\nimport { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=2';\nimport { invSetModal, offerRegister } from './inventory.js?v=2';\n",
+      "tail": "\nexport { $, $$, DAYS, KC, MIN, artOf, barcode, camSupported, canHoldStock, clById, clientList, colorDot, colorLabel, commitEan, esc, fmtDT, fmtDay, fmtDayY, fmtHM, fmtMAD, holdStock, iconPickerHtml, icons, isDemoStore, lens, lookupScan, looseOf, moveCaretEnd, openCamScan, pad2, printDeliveryNoteNow, rayonOf, releaseStock, renderCasse, renderCats, renderClientes, renderExchNote, renderGrid, renderScan, renderSuppliers, renderTicket, shelf, updateRegistryContribution, useKiwiCl, variantColor, wireIconPicker };\n",
+      "fragments": [
+        {
+          "start": 1069,
+          "end": 1195,
+          "name": null,
+          "lines": [
+            17,
+            20
+          ]
+        },
+        {
+          "start": 1195,
+          "end": 1267,
+          "name": null,
+          "lines": [
+            20,
+            21
+          ]
+        },
+        {
+          "start": 1267,
+          "end": 1425,
+          "name": null,
+          "lines": [
+            21,
+            23
+          ]
+        },
+        {
+          "start": 1425,
+          "end": 1535,
+          "name": null,
+          "lines": [
+            23,
+            24
+          ]
+        },
+        {
+          "start": 1535,
+          "end": 2141,
+          "name": null,
+          "lines": [
+            24,
+            32
+          ]
+        },
+        {
+          "start": 2141,
+          "end": 2238,
+          "name": null,
+          "lines": [
+            32,
+            33
+          ]
+        },
+        {
+          "start": 2238,
+          "end": 2334,
+          "name": null,
+          "lines": [
+            33,
+            34
+          ]
+        },
+        {
+          "start": 2334,
+          "end": 2409,
+          "name": null,
+          "lines": [
+            34,
+            35
+          ]
+        },
+        {
+          "start": 2409,
+          "end": 2527,
+          "name": null,
+          "lines": [
+            35,
+            36
+          ]
+        },
+        {
+          "start": 2527,
+          "end": 2579,
+          "name": null,
+          "lines": [
+            36,
+            37
+          ]
+        },
+        {
+          "start": 2579,
+          "end": 2713,
+          "name": null,
+          "lines": [
+            37,
+            38
+          ]
+        },
+        {
+          "start": 2713,
+          "end": 2799,
+          "name": null,
+          "lines": [
+            38,
+            39
+          ]
+        },
+        {
+          "start": 2799,
+          "end": 3182,
+          "name": null,
+          "lines": [
+            39,
+            44
+          ]
+        },
+        {
+          "start": 3182,
+          "end": 3255,
+          "name": null,
+          "lines": [
+            44,
+            45
+          ]
+        },
+        {
+          "start": 3255,
+          "end": 3280,
+          "name": null,
+          "lines": [
+            45,
+            46
+          ]
+        },
+        {
+          "start": 7703,
+          "end": 8298,
+          "name": "barcode",
+          "lines": [
+            117,
+            131
+          ]
+        },
+        {
+          "start": 8298,
+          "end": 8622,
+          "name": null,
+          "lines": [
+            131,
+            136
+          ]
+        },
+        {
+          "start": 8622,
+          "end": 28899,
+          "name": null,
+          "lines": [
+            136,
+            216
+          ]
+        },
+        {
+          "start": 28899,
+          "end": 29093,
+          "name": null,
+          "lines": [
+            216,
+            220
+          ]
+        },
+        {
+          "start": 29093,
+          "end": 29145,
+          "name": null,
+          "lines": [
+            220,
+            221
+          ]
+        },
+        {
+          "start": 29145,
+          "end": 30302,
+          "name": null,
+          "lines": [
+            221,
+            234
+          ]
+        },
+        {
+          "start": 30302,
+          "end": 31113,
+          "name": null,
+          "lines": [
+            234,
+            255
+          ]
+        },
+        {
+          "start": 31113,
+          "end": 31372,
+          "name": "iconPickerHtml",
+          "lines": [
+            255,
+            258
+          ]
+        },
+        {
+          "start": 31372,
+          "end": 31682,
+          "name": "wireIconPicker",
+          "lines": [
+            258,
+            265
+          ]
+        },
+        {
+          "start": 31682,
+          "end": 32351,
+          "name": null,
+          "lines": [
+            265,
+            275
+          ]
+        },
+        {
+          "start": 32351,
+          "end": 32416,
+          "name": null,
+          "lines": [
+            275,
+            276
+          ]
+        },
+        {
+          "start": 32416,
+          "end": 32501,
+          "name": "colorOf",
+          "lines": [
+            276,
+            277
+          ]
+        },
+        {
+          "start": 32501,
+          "end": 32557,
+          "name": "colorLabel",
+          "lines": [
+            277,
+            278
+          ]
+        },
+        {
+          "start": 32557,
+          "end": 32609,
+          "name": "colorHex",
+          "lines": [
+            278,
+            279
+          ]
+        },
+        {
+          "start": 32609,
+          "end": 32985,
+          "name": "colorDot",
+          "lines": [
+            279,
+            286
+          ]
+        },
+        {
+          "start": 32985,
+          "end": 33154,
+          "name": "variantColor",
+          "lines": [
+            286,
+            290
+          ]
+        },
+        {
+          "start": 46946,
+          "end": 47439,
+          "name": "isDemoStore",
+          "lines": [
+            510,
+            517
+          ]
+        },
+        {
+          "start": 47439,
+          "end": 47562,
+          "name": "useKiwiCl",
+          "lines": [
+            517,
+            518
+          ]
+        },
+        {
+          "start": 47562,
+          "end": 47932,
+          "name": "fromKiwi",
+          "lines": [
+            518,
+            524
+          ]
+        },
+        {
+          "start": 47932,
+          "end": 48235,
+          "name": "clientList",
+          "lines": [
+            524,
+            530
+          ]
+        },
+        {
+          "start": 48235,
+          "end": 48454,
+          "name": "clById",
+          "lines": [
+            530,
+            536
+          ]
+        },
+        {
+          "start": 48454,
+          "end": 49753,
+          "name": "clReward",
+          "lines": [
+            536,
+            558
+          ]
+        },
+        {
+          "start": 131001,
+          "end": 131287,
+          "name": "listAllDistinctMarques",
+          "lines": [
+            2112,
+            2119
+          ]
+        },
+        {
+          "start": 131287,
+          "end": 131471,
+          "name": "listAllDistinctMotifs",
+          "lines": [
+            2119,
+            2124
+          ]
+        },
+        {
+          "start": 131471,
+          "end": 131625,
+          "name": "countFragileItems",
+          "lines": [
+            2124,
+            2129
+          ]
+        },
+        {
+          "start": 131625,
+          "end": 136069,
+          "name": "renderCats",
+          "lines": [
+            2129,
+            2212
+          ]
+        },
+        {
+          "start": 136069,
+          "end": 136415,
+          "name": "cardFlag",
+          "lines": [
+            2212,
+            2220
+          ]
+        },
+        {
+          "start": 136415,
+          "end": 136770,
+          "name": "promoedIds",
+          "lines": [
+            2220,
+            2229
+          ]
+        },
+        {
+          "start": 136770,
+          "end": 139648,
+          "name": "renderGrid",
+          "lines": [
+            2229,
+            2277
+          ]
+        },
+        {
+          "start": 139648,
+          "end": 140502,
+          "name": "renderExchNote",
+          "lines": [
+            2277,
+            2298
+          ]
+        },
+        {
+          "start": 140502,
+          "end": 141881,
+          "name": "clientRow",
+          "lines": [
+            2298,
+            2321
+          ]
+        },
+        {
+          "start": 141881,
+          "end": 143098,
+          "name": "rewardRow",
+          "lines": [
+            2321,
+            2342
+          ]
+        },
+        {
+          "start": 143098,
+          "end": 148555,
+          "name": "renderTicket",
+          "lines": [
+            2342,
+            2445
+          ]
+        },
+        {
+          "start": 148555,
+          "end": 150463,
+          "name": "lineRow",
+          "lines": [
+            2445,
+            2476
+          ]
+        },
+        {
+          "start": 150463,
+          "end": 152098,
+          "name": null,
+          "lines": [
+            2476,
+            2501
+          ]
+        },
+        {
+          "start": 152098,
+          "end": 152118,
+          "name": null,
+          "lines": [
+            2501,
+            2502
+          ]
+        },
+        {
+          "start": 152118,
+          "end": 152375,
+          "name": "loadLoose",
+          "lines": [
+            2502,
+            2508
+          ]
+        },
+        {
+          "start": 152375,
+          "end": 152514,
+          "name": "saveLoose",
+          "lines": [
+            2508,
+            2511
+          ]
+        },
+        {
+          "start": 152514,
+          "end": 152566,
+          "name": null,
+          "lines": [
+            2511,
+            2512
+          ]
+        },
+        {
+          "start": 152566,
+          "end": 152647,
+          "name": "looseOf",
+          "lines": [
+            2512,
+            2513
+          ]
+        },
+        {
+          "start": 152647,
+          "end": 152799,
+          "name": "setLoose",
+          "lines": [
+            2513,
+            2518
+          ]
+        },
+        {
+          "start": 152799,
+          "end": 152865,
+          "name": null,
+          "lines": [
+            2518,
+            2519
+          ]
+        },
+        {
+          "start": 152865,
+          "end": 153178,
+          "name": null,
+          "lines": [
+            2519,
+            2523
+          ]
+        },
+        {
+          "start": 153178,
+          "end": 153694,
+          "name": "takeLoose",
+          "lines": [
+            2523,
+            2535
+          ]
+        },
+        {
+          "start": 153694,
+          "end": 154049,
+          "name": "giveLoose",
+          "lines": [
+            2535,
+            2544
+          ]
+        },
+        {
+          "start": 154049,
+          "end": 154887,
+          "name": "holdStock",
+          "lines": [
+            2544,
+            2560
+          ]
+        },
+        {
+          "start": 154887,
+          "end": 155098,
+          "name": "releaseStock",
+          "lines": [
+            2560,
+            2567
+          ]
+        },
+        {
+          "start": 155098,
+          "end": 155327,
+          "name": "stockAvailable",
+          "lines": [
+            2567,
+            2575
+          ]
+        },
+        {
+          "start": 155327,
+          "end": 155474,
+          "name": "sellableStockOf",
+          "lines": [
+            2575,
+            2580
+          ]
+        },
+        {
+          "start": 155474,
+          "end": 155898,
+          "name": "canHoldStock",
+          "lines": [
+            2580,
+            2591
+          ]
+        },
+        {
+          "start": 155898,
+          "end": 157868,
+          "name": "addToTicket",
+          "lines": [
+            2591,
+            2630
+          ]
+        },
+        {
+          "start": 157868,
+          "end": 158048,
+          "name": null,
+          "lines": [
+            2630,
+            2633
+          ]
+        },
+        {
+          "start": 158048,
+          "end": 158255,
+          "name": "defaultSize",
+          "lines": [
+            2633,
+            2639
+          ]
+        },
+        {
+          "start": 158255,
+          "end": 158704,
+          "name": "openSheet",
+          "lines": [
+            2639,
+            2655
+          ]
+        },
+        {
+          "start": 158704,
+          "end": 168553,
+          "name": "renderSheet",
+          "lines": [
+            2655,
+            2849
+          ]
+        },
+        {
+          "start": 168553,
+          "end": 169086,
+          "name": "markRemiseAuth",
+          "lines": [
+            2849,
+            2858
+          ]
+        },
+        {
+          "start": 169086,
+          "end": 171735,
+          "name": "openApprove",
+          "lines": [
+            2858,
+            2904
+          ]
+        },
+        {
+          "start": 171735,
+          "end": 171957,
+          "name": "foldClientText",
+          "lines": [
+            2904,
+            2909
+          ]
+        },
+        {
+          "start": 171957,
+          "end": 172719,
+          "name": "clienteHits",
+          "lines": [
+            2909,
+            2928
+          ]
+        },
+        {
+          "start": 172719,
+          "end": 172817,
+          "name": "clAvoirOf",
+          "lines": [
+            2928,
+            2931
+          ]
+        },
+        {
+          "start": 172817,
+          "end": 178265,
+          "name": "openClientModal",
+          "lines": [
+            2931,
+            3035
+          ]
+        },
+        {
+          "start": 178265,
+          "end": 178358,
+          "name": "moveCaretEnd",
+          "lines": [
+            3035,
+            3036
+          ]
+        },
+        {
+          "start": 178358,
+          "end": 180638,
+          "name": "renderClientes",
+          "lines": [
+            3036,
+            3083
+          ]
+        },
+        {
+          "start": 180638,
+          "end": 182196,
+          "name": "creditHistoryRows",
+          "lines": [
+            3083,
+            3100
+          ]
+        },
+        {
+          "start": 182196,
+          "end": 182750,
+          "name": "fillClientCreditHistory",
+          "lines": [
+            3100,
+            3113
+          ]
+        },
+        {
+          "start": 182750,
+          "end": 186994,
+          "name": "openFiche",
+          "lines": [
+            3113,
+            3177
+          ]
+        },
+        {
+          "start": 186994,
+          "end": 187396,
+          "name": "scanCycle",
+          "lines": [
+            3177,
+            3186
+          ]
+        },
+        {
+          "start": 187396,
+          "end": 187609,
+          "name": "rayonOf",
+          "lines": [
+            3186,
+            3192
+          ]
+        },
+        {
+          "start": 187609,
+          "end": 190063,
+          "name": "lookupCardHtml",
+          "lines": [
+            3192,
+            3243
+          ]
+        },
+        {
+          "start": 190063,
+          "end": 193491,
+          "name": "crossCardHtml",
+          "lines": [
+            3243,
+            3310
+          ]
+        },
+        {
+          "start": 193491,
+          "end": 194738,
+          "name": "askCross",
+          "lines": [
+            3310,
+            3336
+          ]
+        },
+        {
+          "start": 194738,
+          "end": 195478,
+          "name": null,
+          "lines": [
+            3336,
+            3346
+          ]
+        },
+        {
+          "start": 195478,
+          "end": 195654,
+          "name": "camSupported",
+          "lines": [
+            3346,
+            3350
+          ]
+        },
+        {
+          "start": 195654,
+          "end": 196390,
+          "name": "camBlip",
+          "lines": [
+            3350,
+            3368
+          ]
+        },
+        {
+          "start": 196390,
+          "end": 196414,
+          "name": null,
+          "lines": [
+            3368,
+            3370
+          ]
+        },
+        {
+          "start": 196414,
+          "end": 200811,
+          "name": "openCamScan",
+          "lines": [
+            3370,
+            3480
+          ]
+        },
+        {
+          "start": 200811,
+          "end": 200945,
+          "name": null,
+          "lines": [
+            3480,
+            3483
+          ]
+        },
+        {
+          "start": 200945,
+          "end": 203259,
+          "name": null,
+          "lines": [
+            3483,
+            3517
+          ]
+        },
+        {
+          "start": 203259,
+          "end": 203285,
+          "name": null,
+          "lines": [
+            3517,
+            3519
+          ]
+        },
+        {
+          "start": 203285,
+          "end": 203314,
+          "name": null,
+          "lines": [
+            3519,
+            3520
+          ]
+        },
+        {
+          "start": 203314,
+          "end": 204177,
+          "name": "registryStore",
+          "lines": [
+            3520,
+            3539
+          ]
+        },
+        {
+          "start": 204177,
+          "end": 204986,
+          "name": "loadRegistries",
+          "lines": [
+            3539,
+            3556
+          ]
+        },
+        {
+          "start": 204986,
+          "end": 205253,
+          "name": "saveRegistries",
+          "lines": [
+            3556,
+            3563
+          ]
+        },
+        {
+          "start": 205253,
+          "end": 205861,
+          "name": "updateRegistryContribution",
+          "lines": [
+            3563,
+            3579
+          ]
+        },
+        {
+          "start": 205861,
+          "end": 212157,
+          "name": "renderRegistries",
+          "lines": [
+            3579,
+            3704
+          ]
+        },
+        {
+          "start": 212157,
+          "end": 214462,
+          "name": "openNewRegistry",
+          "lines": [
+            3704,
+            3731
+          ]
+        },
+        {
+          "start": 214462,
+          "end": 216233,
+          "name": "openRegistryItem",
+          "lines": [
+            3731,
+            3757
+          ]
+        },
+        {
+          "start": 216233,
+          "end": 216563,
+          "name": null,
+          "lines": [
+            3757,
+            3763
+          ]
+        },
+        {
+          "start": 216563,
+          "end": 216678,
+          "name": "supplierName",
+          "lines": [
+            3763,
+            3764
+          ]
+        },
+        {
+          "start": 216678,
+          "end": 221676,
+          "name": "renderSuppliers",
+          "lines": [
+            3764,
+            3800
+          ]
+        },
+        {
+          "start": 221676,
+          "end": 223575,
+          "name": "openSupplierForm",
+          "lines": [
+            3800,
+            3806
+          ]
+        },
+        {
+          "start": 223575,
+          "end": 224649,
+          "name": "procurementLineFields",
+          "lines": [
+            3806,
+            3811
+          ]
+        },
+        {
+          "start": 224649,
+          "end": 225007,
+          "name": "procurementLine",
+          "lines": [
+            3811,
+            3812
+          ]
+        },
+        {
+          "start": 225007,
+          "end": 225241,
+          "name": "procurementVariant",
+          "lines": [
+            3812,
+            3816
+          ]
+        },
+        {
+          "start": 225241,
+          "end": 226155,
+          "name": "postMaisonProcurement",
+          "lines": [
+            3816,
+            3830
+          ]
+        },
+        {
+          "start": 226155,
+          "end": 228299,
+          "name": "openProcurementMove",
+          "lines": [
+            3830,
+            3836
+          ]
+        },
+        {
+          "start": 228299,
+          "end": 229305,
+          "name": "openPurchaseOrder",
+          "lines": [
+            3836,
+            3841
+          ]
+        },
+        {
+          "start": 229305,
+          "end": 229694,
+          "name": null,
+          "lines": [
+            3841,
+            3847
+          ]
+        },
+        {
+          "start": 229694,
+          "end": 229718,
+          "name": null,
+          "lines": [
+            3847,
+            3848
+          ]
+        },
+        {
+          "start": 229718,
+          "end": 230497,
+          "name": "loadCasseLog",
+          "lines": [
+            3848,
+            3862
+          ]
+        },
+        {
+          "start": 230497,
+          "end": 230653,
+          "name": "saveCasseLog",
+          "lines": [
+            3862,
+            3867
+          ]
+        },
+        {
+          "start": 230653,
+          "end": 233085,
+          "name": "recordCasse",
+          "lines": [
+            3867,
+            3920
+          ]
+        },
+        {
+          "start": 233085,
+          "end": 233712,
+          "name": "logCasse",
+          "lines": [
+            3920,
+            3940
+          ]
+        },
+        {
+          "start": 233712,
+          "end": 238737,
+          "name": "renderCasse",
+          "lines": [
+            3940,
+            4060
+          ]
+        },
+        {
+          "start": 238737,
+          "end": 243332,
+          "name": "openDeliveryModal",
+          "lines": [
+            4060,
+            4146
+          ]
+        },
+        {
+          "start": 243332,
+          "end": 247343,
+          "name": "printDeliveryNoteNow",
+          "lines": [
+            4146,
+            4206
+          ]
+        },
+        {
+          "start": 247343,
+          "end": 250942,
+          "name": "renderScan",
+          "lines": [
+            4206,
+            4272
+          ]
+        },
+        {
+          "start": 250942,
+          "end": 252918,
+          "name": "commitEan",
+          "lines": [
+            4272,
+            4311
+          ]
+        },
+        {
+          "start": 252918,
+          "end": 254747,
+          "name": "lookupScan",
+          "lines": [
+            4311,
+            4345
+          ]
+        },
+        {
+          "start": 254747,
+          "end": 255278,
+          "name": "mockScan",
+          "lines": [
+            4345,
+            4362
+          ]
+        }
+      ]
+    },
+    {
+      "file": "assets/pos-maison/checkout.js",
+      "lead": "import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-maison.js?v=84';\nimport { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=2';\nimport { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=2';\n",
+      "tail": "\nexport { armScanCapture, bqReal, catDB, disarmScanCapture, fmtNum, injectInvCss, installWedgeScanner, invScanHandle, lineAvailableQty, lineReturnedQty, normScan, openExchSummary, openPay, openScannerTest, openVoucher, renderAcomptes, renderEchanges, renderNet, syncNetworkState, toggleOffline };\n",
+      "fragments": [
+        {
+          "start": 255278,
+          "end": 255699,
+          "name": "saleMatches",
+          "lines": [
+            4362,
+            4373
+          ]
+        },
+        {
+          "start": 255699,
+          "end": 260591,
+          "name": "renderEchanges",
+          "lines": [
+            4373,
+            4457
+          ]
+        },
+        {
+          "start": 260591,
+          "end": 260664,
+          "name": null,
+          "lines": [
+            4457,
+            4459
+          ]
+        },
+        {
+          "start": 260664,
+          "end": 261088,
+          "name": "lineReturnedQty",
+          "lines": [
+            4459,
+            4468
+          ]
+        },
+        {
+          "start": 261088,
+          "end": 261195,
+          "name": "lineAvailableQty",
+          "lines": [
+            4468,
+            4469
+          ]
+        },
+        {
+          "start": 261195,
+          "end": 261382,
+          "name": "pickedQty",
+          "lines": [
+            4469,
+            4473
+          ]
+        },
+        {
+          "start": 261382,
+          "end": 261628,
+          "name": "markLineReturned",
+          "lines": [
+            4473,
+            4479
+          ]
+        },
+        {
+          "start": 261628,
+          "end": 262612,
+          "name": "returnRatio",
+          "lines": [
+            4479,
+            4495
+          ]
+        },
+        {
+          "start": 262612,
+          "end": 262794,
+          "name": "paidUnit",
+          "lines": [
+            4495,
+            4500
+          ]
+        },
+        {
+          "start": 262794,
+          "end": 267671,
+          "name": "saleCard",
+          "lines": [
+            4500,
+            4572
+          ]
+        },
+        {
+          "start": 267671,
+          "end": 272506,
+          "name": "doRefund",
+          "lines": [
+            4572,
+            4651
+          ]
+        },
+        {
+          "start": 272506,
+          "end": 273516,
+          "name": "togglePick",
+          "lines": [
+            4651,
+            4670
+          ]
+        },
+        {
+          "start": 273516,
+          "end": 274564,
+          "name": "doExchange",
+          "lines": [
+            4670,
+            4690
+          ]
+        },
+        {
+          "start": 274564,
+          "end": 277639,
+          "name": "doAvoir",
+          "lines": [
+            4690,
+            4747
+          ]
+        },
+        {
+          "start": 277639,
+          "end": 278292,
+          "name": "restoreLines",
+          "lines": [
+            4747,
+            4761
+          ]
+        },
+        {
+          "start": 278292,
+          "end": 279694,
+          "name": "markDamagedLines",
+          "lines": [
+            4761,
+            4788
+          ]
+        },
+        {
+          "start": 281428,
+          "end": 281911,
+          "name": "bqPaired",
+          "lines": [
+            4825,
+            4831
+          ]
+        },
+        {
+          "start": 281911,
+          "end": 282114,
+          "name": "bqReal",
+          "lines": [
+            4831,
+            4832
+          ]
+        },
+        {
+          "start": 282114,
+          "end": 282212,
+          "name": "bqName",
+          "lines": [
+            4832,
+            4833
+          ]
+        },
+        {
+          "start": 282212,
+          "end": 282314,
+          "name": "bqCity",
+          "lines": [
+            4833,
+            4834
+          ]
+        },
+        {
+          "start": 282314,
+          "end": 283769,
+          "name": "voucherHTML",
+          "lines": [
+            4834,
+            4856
+          ]
+        },
+        {
+          "start": 283769,
+          "end": 285472,
+          "name": "openVoucher",
+          "lines": [
+            4856,
+            4884
+          ]
+        },
+        {
+          "start": 285472,
+          "end": 296220,
+          "name": "openExchSummary",
+          "lines": [
+            4884,
+            5081
+          ]
+        },
+        {
+          "start": 296220,
+          "end": 296916,
+          "name": "requeueReceipt",
+          "lines": [
+            5081,
+            5094
+          ]
+        },
+        {
+          "start": 296916,
+          "end": 304667,
+          "name": "printReceiptNow",
+          "lines": [
+            5094,
+            5262
+          ]
+        },
+        {
+          "start": 319129,
+          "end": 320296,
+          "name": "renderAcomptes",
+          "lines": [
+            5494,
+            5516
+          ]
+        },
+        {
+          "start": 323013,
+          "end": 348873,
+          "name": "openPay",
+          "lines": [
+            5560,
+            6020
+          ]
+        },
+        {
+          "start": 348873,
+          "end": 349511,
+          "name": "syncNetworkState",
+          "lines": [
+            6020,
+            6035
+          ]
+        },
+        {
+          "start": 349511,
+          "end": 350135,
+          "name": "toggleOffline",
+          "lines": [
+            6035,
+            6049
+          ]
+        },
+        {
+          "start": 350135,
+          "end": 351319,
+          "name": "renderNet",
+          "lines": [
+            6049,
+            6070
+          ]
+        },
+        {
+          "start": 351319,
+          "end": 351913,
+          "name": null,
+          "lines": [
+            6070,
+            6079
+          ]
+        },
+        {
+          "start": 351913,
+          "end": 351996,
+          "name": null,
+          "lines": [
+            6079,
+            6080
+          ]
+        },
+        {
+          "start": 351996,
+          "end": 376165,
+          "name": "injectInvCss",
+          "lines": [
+            6080,
+            6338
+          ]
+        },
+        {
+          "start": 376165,
+          "end": 377945,
+          "name": null,
+          "lines": [
+            6338,
+            6362
+          ]
+        },
+        {
+          "start": 377945,
+          "end": 378155,
+          "name": "normScan",
+          "lines": [
+            6362,
+            6368
+          ]
+        },
+        {
+          "start": 378155,
+          "end": 378371,
+          "name": "wedgeChar",
+          "lines": [
+            6368,
+            6374
+          ]
+        },
+        {
+          "start": 378371,
+          "end": 378629,
+          "name": null,
+          "lines": [
+            6374,
+            6378
+          ]
+        },
+        {
+          "start": 378629,
+          "end": 381336,
+          "name": "installWedgeScanner",
+          "lines": [
+            6378,
+            6424
+          ]
+        },
+        {
+          "start": 381336,
+          "end": 382040,
+          "name": null,
+          "lines": [
+            6424,
+            6435
+          ]
+        },
+        {
+          "start": 382040,
+          "end": 382092,
+          "name": "armScanCapture",
+          "lines": [
+            6435,
+            6436
+          ]
+        },
+        {
+          "start": 382092,
+          "end": 382180,
+          "name": "disarmScanCapture",
+          "lines": [
+            6436,
+            6437
+          ]
+        },
+        {
+          "start": 382180,
+          "end": 383004,
+          "name": "unleak",
+          "lines": [
+            6437,
+            6454
+          ]
+        },
+        {
+          "start": 383004,
+          "end": 383416,
+          "name": "handleWedge",
+          "lines": [
+            6454,
+            6461
+          ]
+        },
+        {
+          "start": 383416,
+          "end": 390759,
+          "name": "openScannerTest",
+          "lines": [
+            6461,
+            6587
+          ]
+        },
+        {
+          "start": 390759,
+          "end": 391502,
+          "name": "invScanHandle",
+          "lines": [
+            6587,
+            6600
+          ]
+        },
+        {
+          "start": 391502,
+          "end": 391838,
+          "name": "intakeStartWith",
+          "lines": [
+            6600,
+            6608
+          ]
+        }
+      ]
+    },
+    {
+      "file": "assets/pos-maison/inventory.js",
+      "lead": "import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, IS_DEMO, whenLabel, depotOn, merchantSlug, bqMoney, rebuildCatalog, switchView, pruneTicket, STAFF, promoFor } from '../pos-maison.js?v=84';\nimport { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, variantColor, artOf, colorDot, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan } from './sales.js?v=2';\nimport { catDB, fmtNum, invScanHandle, disarmScanCapture, normScan, openScannerTest, armScanCapture } from './checkout.js?v=2';\n",
+      "tail": "\nexport { intake, intakeReset, intakeTake, invSetModal, offerRegister, openInvProduct, renderInventaire, renderMovements };\n",
+      "fragments": [
+        {
+          "start": 391838,
+          "end": 392625,
+          "name": null,
+          "lines": [
+            6608,
+            6622
+          ]
+        },
+        {
+          "start": 392625,
+          "end": 392668,
+          "name": null,
+          "lines": [
+            6622,
+            6623
+          ]
+        },
+        {
+          "start": 392668,
+          "end": 392699,
+          "name": null,
+          "lines": [
+            6623,
+            6625
+          ]
+        },
+        {
+          "start": 392699,
+          "end": 392799,
+          "name": null,
+          "lines": [
+            6625,
+            6626
+          ]
+        },
+        {
+          "start": 392799,
+          "end": 392904,
+          "name": null,
+          "lines": [
+            6626,
+            6627
+          ]
+        },
+        {
+          "start": 392904,
+          "end": 393942,
+          "name": "promoScopeText",
+          "lines": [
+            6627,
+            6648
+          ]
+        },
+        {
+          "start": 393942,
+          "end": 394414,
+          "name": null,
+          "lines": [
+            6648,
+            6655
+          ]
+        },
+        {
+          "start": 394414,
+          "end": 394514,
+          "name": null,
+          "lines": [
+            6655,
+            6656
+          ]
+        },
+        {
+          "start": 394514,
+          "end": 395163,
+          "name": "promoSlotText",
+          "lines": [
+            6656,
+            6667
+          ]
+        },
+        {
+          "start": 395163,
+          "end": 395334,
+          "name": "promoWhenText",
+          "lines": [
+            6667,
+            6672
+          ]
+        },
+        {
+          "start": 395334,
+          "end": 396062,
+          "name": "promoWhenBase",
+          "lines": [
+            6672,
+            6685
+          ]
+        },
+        {
+          "start": 396062,
+          "end": 396233,
+          "name": null,
+          "lines": [
+            6685,
+            6688
+          ]
+        },
+        {
+          "start": 396233,
+          "end": 396390,
+          "name": "promoCount",
+          "lines": [
+            6688,
+            6694
+          ]
+        },
+        {
+          "start": 396390,
+          "end": 400790,
+          "name": "renderPromos",
+          "lines": [
+            6694,
+            6776
+          ]
+        },
+        {
+          "start": 400790,
+          "end": 401183,
+          "name": "promoArticleCount",
+          "lines": [
+            6776,
+            6787
+          ]
+        },
+        {
+          "start": 401183,
+          "end": 402988,
+          "name": "promoCardHtml",
+          "lines": [
+            6787,
+            6817
+          ]
+        },
+        {
+          "start": 402988,
+          "end": 403961,
+          "name": null,
+          "lines": [
+            6817,
+            6830
+          ]
+        },
+        {
+          "start": 403961,
+          "end": 404363,
+          "name": "promoStarter",
+          "lines": [
+            6830,
+            6839
+          ]
+        },
+        {
+          "start": 404363,
+          "end": 405199,
+          "name": "promoEmptyHtml",
+          "lines": [
+            6839,
+            6858
+          ]
+        },
+        {
+          "start": 405199,
+          "end": 406944,
+          "name": "promoLabelPlan",
+          "lines": [
+            6858,
+            6895
+          ]
+        },
+        {
+          "start": 406944,
+          "end": 409307,
+          "name": "openPromoLabels",
+          "lines": [
+            6895,
+            6934
+          ]
+        },
+        {
+          "start": 409307,
+          "end": 410407,
+          "name": "confirmPromoDelete",
+          "lines": [
+            6934,
+            6956
+          ]
+        },
+        {
+          "start": 410407,
+          "end": 410831,
+          "name": null,
+          "lines": [
+            6956,
+            6963
+          ]
+        },
+        {
+          "start": 410831,
+          "end": 411291,
+          "name": "allowedPercents",
+          "lines": [
+            6963,
+            6972
+          ]
+        },
+        {
+          "start": 411291,
+          "end": 411562,
+          "name": "fitPolicy",
+          "lines": [
+            6972,
+            6978
+          ]
+        },
+        {
+          "start": 411562,
+          "end": 411987,
+          "name": "openPromoComposer",
+          "lines": [
+            6978,
+            6989
+          ]
+        },
+        {
+          "start": 411987,
+          "end": 412337,
+          "name": null,
+          "lines": [
+            6989,
+            6997
+          ]
+        },
+        {
+          "start": 412337,
+          "end": 413188,
+          "name": "promoDraftValid",
+          "lines": [
+            6997,
+            7009
+          ]
+        },
+        {
+          "start": 413188,
+          "end": 413340,
+          "name": null,
+          "lines": [
+            7009,
+            7011
+          ]
+        },
+        {
+          "start": 413340,
+          "end": 419493,
+          "name": "renderPromoComposer",
+          "lines": [
+            7011,
+            7126
+          ]
+        },
+        {
+          "start": 419493,
+          "end": 422009,
+          "name": "promoScopeControl",
+          "lines": [
+            7126,
+            7168
+          ]
+        },
+        {
+          "start": 422009,
+          "end": 426867,
+          "name": "wirePromoComposer",
+          "lines": [
+            7168,
+            7256
+          ]
+        },
+        {
+          "start": 426867,
+          "end": 427383,
+          "name": "promoAutoName",
+          "lines": [
+            7256,
+            7267
+          ]
+        },
+        {
+          "start": 427383,
+          "end": 428052,
+          "name": "movementRows",
+          "lines": [
+            7267,
+            7283
+          ]
+        },
+        {
+          "start": 428052,
+          "end": 428269,
+          "name": "movementSource",
+          "lines": [
+            7283,
+            7290
+          ]
+        },
+        {
+          "start": 428269,
+          "end": 429800,
+          "name": "movementTable",
+          "lines": [
+            7290,
+            7310
+          ]
+        },
+        {
+          "start": 429800,
+          "end": 430765,
+          "name": "updateMovementResults",
+          "lines": [
+            7310,
+            7327
+          ]
+        },
+        {
+          "start": 430765,
+          "end": 433848,
+          "name": "renderMovements",
+          "lines": [
+            7327,
+            7373
+          ]
+        },
+        {
+          "start": 433848,
+          "end": 436668,
+          "name": "openMovementPicker",
+          "lines": [
+            7373,
+            7413
+          ]
+        },
+        {
+          "start": 436668,
+          "end": 436870,
+          "name": "catalogueAdminEnabled",
+          "lines": [
+            7413,
+            7418
+          ]
+        },
+        {
+          "start": 436870,
+          "end": 437035,
+          "name": "inventoryValueVisible",
+          "lines": [
+            7418,
+            7421
+          ]
+        },
+        {
+          "start": 437035,
+          "end": 437232,
+          "name": "catalogDashboardOnly",
+          "lines": [
+            7421,
+            7425
+          ]
+        },
+        {
+          "start": 437232,
+          "end": 441621,
+          "name": "renderInventaire",
+          "lines": [
+            7425,
+            7477
+          ]
+        },
+        {
+          "start": 441621,
+          "end": 442504,
+          "name": "invRow",
+          "lines": [
+            7477,
+            7491
+          ]
+        },
+        {
+          "start": 442504,
+          "end": 443353,
+          "name": "invSetModal",
+          "lines": [
+            7491,
+            7512
+          ]
+        },
+        {
+          "start": 443353,
+          "end": 447299,
+          "name": "openInvProduct",
+          "lines": [
+            7512,
+            7554
+          ]
+        },
+        {
+          "start": 447299,
+          "end": 451508,
+          "name": "openStockMove",
+          "lines": [
+            7554,
+            7627
+          ]
+        },
+        {
+          "start": 451508,
+          "end": 453392,
+          "name": "invVarRow",
+          "lines": [
+            7627,
+            7644
+          ]
+        },
+        {
+          "start": 453392,
+          "end": 453670,
+          "name": "catSelectOptions",
+          "lines": [
+            7644,
+            7650
+          ]
+        },
+        {
+          "start": 453670,
+          "end": 453978,
+          "name": "kindSelectOptions",
+          "lines": [
+            7650,
+            7655
+          ]
+        },
+        {
+          "start": 453978,
+          "end": 455052,
+          "name": "ownershipField",
+          "lines": [
+            7655,
+            7671
+          ]
+        },
+        {
+          "start": 455052,
+          "end": 455366,
+          "name": "wireOwnershipField",
+          "lines": [
+            7671,
+            7676
+          ]
+        },
+        {
+          "start": 455366,
+          "end": 455804,
+          "name": "readOwnershipField",
+          "lines": [
+            7676,
+            7685
+          ]
+        },
+        {
+          "start": 455804,
+          "end": 456790,
+          "name": "productPhotoField",
+          "lines": [
+            7685,
+            7702
+          ]
+        },
+        {
+          "start": 456790,
+          "end": 457581,
+          "name": "photoUploadMessage",
+          "lines": [
+            7702,
+            7712
+          ]
+        },
+        {
+          "start": 457581,
+          "end": 459683,
+          "name": "wireProductPhoto",
+          "lines": [
+            7712,
+            7742
+          ]
+        },
+        {
+          "start": 459683,
+          "end": 462397,
+          "name": "openNewProduct",
+          "lines": [
+            7742,
+            7749
+          ]
+        },
+        {
+          "start": 462397,
+          "end": 464872,
+          "name": "openCategories",
+          "lines": [
+            7749,
+            7775
+          ]
+        },
+        {
+          "start": 464872,
+          "end": 468106,
+          "name": "openEditProduct",
+          "lines": [
+            7775,
+            7827
+          ]
+        },
+        {
+          "start": 468106,
+          "end": 469083,
+          "name": "confirmDeleteProduct",
+          "lines": [
+            7827,
+            7840
+          ]
+        },
+        {
+          "start": 469083,
+          "end": 470743,
+          "name": "confirmDeleteVariant",
+          "lines": [
+            7840,
+            7864
+          ]
+        },
+        {
+          "start": 470743,
+          "end": 471199,
+          "name": "colorPicker",
+          "lines": [
+            7864,
+            7876
+          ]
+        },
+        {
+          "start": 471199,
+          "end": 472928,
+          "name": "openVariantColor",
+          "lines": [
+            7876,
+            7905
+          ]
+        },
+        {
+          "start": 472928,
+          "end": 474980,
+          "name": "openAddVariant",
+          "lines": [
+            7905,
+            7935
+          ]
+        },
+        {
+          "start": 474980,
+          "end": 476724,
+          "name": "openRegisterOnVariant",
+          "lines": [
+            7935,
+            7961
+          ]
+        },
+        {
+          "start": 476724,
+          "end": 479040,
+          "name": "offerRegister",
+          "lines": [
+            7961,
+            7995
+          ]
+        },
+        {
+          "start": 479040,
+          "end": 480827,
+          "name": null,
+          "lines": [
+            7995,
+            8021
+          ]
+        },
+        {
+          "start": 480827,
+          "end": 480855,
+          "name": null,
+          "lines": [
+            8021,
+            8022
+          ]
+        },
+        {
+          "start": 480855,
+          "end": 481039,
+          "name": "intakeReset",
+          "lines": [
+            8022,
+            8027
+          ]
+        },
+        {
+          "start": 481039,
+          "end": 481215,
+          "name": "intakeNote",
+          "lines": [
+            8027,
+            8031
+          ]
+        },
+        {
+          "start": 481215,
+          "end": 481956,
+          "name": "intakeJudge",
+          "lines": [
+            8031,
+            8045
+          ]
+        },
+        {
+          "start": 481956,
+          "end": 482442,
+          "name": null,
+          "lines": [
+            8045,
+            8052
+          ]
+        },
+        {
+          "start": 482442,
+          "end": 482906,
+          "name": "symBadge",
+          "lines": [
+            8052,
+            8060
+          ]
+        },
+        {
+          "start": 482906,
+          "end": 483158,
+          "name": "openIntake",
+          "lines": [
+            8060,
+            8069
+          ]
+        },
+        {
+          "start": 483158,
+          "end": 483646,
+          "name": "intakeClose",
+          "lines": [
+            8069,
+            8081
+          ]
+        },
+        {
+          "start": 483646,
+          "end": 484193,
+          "name": "intakeHeader",
+          "lines": [
+            8081,
+            8096
+          ]
+        },
+        {
+          "start": 484193,
+          "end": 484770,
+          "name": "intakeLogHtml",
+          "lines": [
+            8096,
+            8108
+          ]
+        },
+        {
+          "start": 484770,
+          "end": 486921,
+          "name": "paintIntake",
+          "lines": [
+            8108,
+            8150
+          ]
+        },
+        {
+          "start": 486921,
+          "end": 487227,
+          "name": "intakeFocus",
+          "lines": [
+            8150,
+            8156
+          ]
+        },
+        {
+          "start": 487227,
+          "end": 487721,
+          "name": "intakeHint",
+          "lines": [
+            8156,
+            8166
+          ]
+        },
+        {
+          "start": 487721,
+          "end": 488342,
+          "name": "intakeTake",
+          "lines": [
+            8166,
+            8182
+          ]
+        },
+        {
+          "start": 488342,
+          "end": 495626,
+          "name": "intakeNew",
+          "lines": [
+            8182,
+            8301
+          ]
+        },
+        {
+          "start": 495626,
+          "end": 500124,
+          "name": "intakeVariant",
+          "lines": [
+            8301,
+            8379
+          ]
+        },
+        {
+          "start": 500124,
+          "end": 503953,
+          "name": "intakeLink",
+          "lines": [
+            8379,
+            8456
+          ]
+        },
+        {
+          "start": 503953,
+          "end": 509717,
+          "name": "intakeKnown",
+          "lines": [
+            8456,
+            8560
+          ]
+        },
+        {
+          "start": 509717,
+          "end": 515706,
+          "name": "intakeAddVariantHere",
+          "lines": [
+            8560,
+            8653
+          ]
+        },
+        {
+          "start": 515706,
+          "end": 518624,
+          "name": "intakeFix",
+          "lines": [
+            8653,
+            8706
+          ]
+        },
+        {
+          "start": 518624,
+          "end": 519885,
+          "name": "intakeConfirmPrice",
+          "lines": [
+            8706,
+            8729
+          ]
+        },
+        {
+          "start": 519885,
+          "end": 521029,
+          "name": "labelForVariant",
+          "lines": [
+            8729,
+            8751
+          ]
+        },
+        {
+          "start": 521029,
+          "end": 521515,
+          "name": "printVariantLabel",
+          "lines": [
+            8751,
+            8760
+          ]
+        },
+        {
+          "start": 521515,
+          "end": 522090,
+          "name": "printProductLabels",
+          "lines": [
+            8760,
+            8772
+          ]
+        },
+        {
+          "start": 522090,
+          "end": 522603,
+          "name": "labelToast",
+          "lines": [
+            8772,
+            8782
+          ]
+        }
+      ]
+    }
+  ],
+  "retained": [
+    "issueAvoir",
+    "checkout",
+    "payExistingBalance"
+  ]
+}

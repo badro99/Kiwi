@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import serveurTestSource from './serveur-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Retours et avoirs côté caisse (pos-boutique.js, pos-maison.js).
@@ -22,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let controls = 0;
 const ok = (value, message) => { assert.ok(value, message); controls += 1; console.log('  ✓ ' + message); };
-const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
+const read = (file) => maisonSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
 const slice = (src, from, to) => {
   const a = src.indexOf(from); const b = src.indexOf(to, a + 1);
   assert.ok(a >= 0 && b > a, `repère introuvable : ${from} → ${to}`);

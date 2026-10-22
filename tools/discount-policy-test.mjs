@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 // #93: the owner's policy must reach every till and the sale ingestion boundary.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const read = name => fs.readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+const read = name => maisonSource(fs.readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'));
 const policy = read('assets/discount-policy.js');
 const dashboard = read('assets/interactive.js');
 const boutique = read('assets/pos-boutique.js');

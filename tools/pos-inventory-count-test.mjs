@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · L'INVENTAIRE PHYSIQUE EN CAISSE (assets/pos-inventory-count.js)
@@ -31,7 +32,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failures.push(msg); conso
 
 console.log('■ Inventaire physique en caisse (pos-inventory-count)');
 
-const src = fs.readFileSync(path.join(ROOT, 'assets/pos-inventory-count.js'), 'utf8');
+const src = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-inventory-count.js'), 'utf8'));
 /* Le CODE seul. Les commentaires de ce fichier NOMMENT les deux méthodes
    fantômes pour expliquer pourquoi elles en sont sorties ; les chercher dans
    le texte brut ferait échouer la suite sur son propre récit. */
@@ -67,7 +68,7 @@ function browser() {
   const run = (file) => {
     const names = Object.keys(g);
     // eslint-disable-next-line no-new-func
-    new Function(...names, fs.readFileSync(path.join(ROOT, file), 'utf8'))(...names.map((n) => g[n]));
+    new Function(...names, maisonSource(fs.readFileSync(path.join(ROOT, file), 'utf8')))(...names.map((n) => g[n]));
   };
   return { window, run };
 }
@@ -190,7 +191,7 @@ const callers = [
   ['kiwi-caisse.html', 'ledger'],
 ];
 callers.forEach(([file, engine]) => {
-  const s = caisseTestSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+  const s = caisseTestSource(maisonSource(fs.readFileSync(path.join(ROOT, file), 'utf8')));
   const asked = Array.from(new Set(
     Array.from(s.matchAll(/KiwiPosInventoryCount[\s\S]{0,80}?engine:\s*'([a-z-]+)'/g)).map((m) => m[1])
   ));

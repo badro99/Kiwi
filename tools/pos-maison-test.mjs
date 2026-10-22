@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · POS Maison (Art de table & Décoration · Vogue Home) Unit Test Suite
  *
@@ -34,7 +35,7 @@ function ok(cond, msg) {
 console.log('■ POS Maison (Art de table & Décoration) Test Suite');
 
 // 1. Check dispatch registration
-const dispatchSrc = fs.readFileSync(path.join(ROOT, 'assets/pos-dispatch.js'), 'utf8');
+const dispatchSrc = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-dispatch.js'), 'utf8'));
 ok(dispatchSrc.includes("'0017':"), "PIN '0017' registered in pos-dispatch.js");
 ok(dispatchSrc.includes("id: 'maison'"), "id: 'maison' declared in pos-dispatch.js");
 ok(dispatchSrc.includes("file: 'pos-maison'"), "file: 'pos-maison' declared in pos-dispatch.js");
@@ -47,9 +48,9 @@ ok(fs.existsSync(jsPath), 'assets/pos-maison.js exists on disk');
 ok(fs.existsSync(cssPath), 'assets/pos-maison.css exists on disk');
 ok(fs.existsSync(catPath), 'assets/boutique-catalog.js exists on disk');
 
-const jsSrc = fs.readFileSync(jsPath, 'utf8');
-const cssSrc = fs.readFileSync(cssPath, 'utf8');
-const catSrc = fs.readFileSync(catPath, 'utf8');
+const jsSrc = maisonSource(fs.readFileSync(jsPath, 'utf8'));
+const cssSrc = maisonSource(fs.readFileSync(cssPath, 'utf8'));
+const catSrc = maisonSource(fs.readFileSync(catPath, 'utf8'));
 
 // Ensure valid JS syntax via Function constructor
 let syntaxOk = false;
@@ -338,7 +339,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
  * caisse ne peut créer qu'avec l'autorisation God Mode explicite ; sans elle,
  * le garde bloque le chemin avant toute mutation du catalogue. */
 {
-  const proSrc = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+  const proSrc = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
 
   // a) l'édition caisse reste fermée par défaut, et ne s'ouvre que sur true
   ok(/function openNewProduct\(\)\s*\{\s*if \(!catalogueAdminEnabled\(\)\) \{ catalogDashboardOnly\(\); return; \}/.test(jsSrc),
@@ -398,8 +399,8 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
  * tableau de bord qui pose la question, la caisse qui marque l'article. Une
  * seule qui oublie la garde, et l'option est « allumée » chez tout le monde. */
 {
-  const adminSrc = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
-  const proSrc2 = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+  const adminSrc = maisonSource(fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8'));
+  const proSrc2 = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
 
   // a) la console : un interrupteur, sur le métier boutique, éteint par défaut
   const optin = adminSrc.slice(adminSrc.indexOf('var OPTIN_MODULES'), adminSrc.indexOf('var ADDON_MODULES'));

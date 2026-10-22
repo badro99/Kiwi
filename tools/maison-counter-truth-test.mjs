@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Maison — trois vérités du comptoir  (tickets #0023, #0025, #0027)
  *
@@ -20,7 +21,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const read = (p) => maisonSource(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 
 const MAISON = read('assets/pos-maison.js');
 const BOUTIQUE = read('assets/pos-boutique.js');

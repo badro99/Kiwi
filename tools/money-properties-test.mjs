@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * L'ARGENT, ÉPROUVÉ SUR DES MILLIERS DE CAS (fast-check)
  *
@@ -58,7 +59,7 @@ async function knownIssue(id, label, property, extra) {
 }
 
 /* ── le vrai code de la caisse boutique ─────────────────────────────────── */
-const SRC = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const SRC = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 function grabFn(start) {
   const i = SRC.indexOf(start);
   if (i < 0) throw new Error(start + ' not found in assets/pos-boutique.js');
@@ -137,7 +138,7 @@ console.log('■ Moteur de promotions');
   const store = new Map();
   const localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
   const window = { localStorage };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'),
+  vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8')),
     { window, localStorage, console, Set, Map, Math, Date, JSON, Number, Object, Array, String, Intl }, { filename: 'promos.js' });
   const PR = window.KiwiPromos;
   const promo = fc.oneof(
@@ -209,7 +210,7 @@ const { makeSession, SESS_COOKIE } = await import(path.join(ROOT, 'functions/aut
 const MERCHANT = 'money-properties';
 const SECRET = 'money-properties-secret';
 const sqlite = new DatabaseSync(':memory:');
-sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+sqlite.exec(maisonSource(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8')));
 const DB = {
   prepare(sql) {
     let args = [];
@@ -287,7 +288,7 @@ sqlite.close();
    le prix et la promotion se recalculent à l'unité. */
 console.log('■ Prix d’une ligne de caisse Maison');
 {
-  const MSRC = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+  const MSRC = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
   const mFn = (start) => {
     const i = MSRC.indexOf(start);
     if (i < 0) throw new Error(start + ' not found in assets/pos-maison.js');

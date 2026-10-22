@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · la caisse restaurant dit ce qui est vrai
  *
@@ -28,7 +29,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const R = (p) => maisonSource(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 let pass = 0; const fails = [];
 const ok = (label, cond, detail) => { if (cond) pass++; else fails.push(label + (detail ? ' · ' + detail : '')); };
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 'use strict';
 
@@ -10,11 +11,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const ADMIN = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
-const CONFIG_JS = fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8');
-const CAISSE = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8'));
-const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
-const BOUTIQUE = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const ADMIN = maisonSource(fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8'));
+const CONFIG_JS = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8'));
+const CAISSE = caisseTestSource(maisonSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
+const MAISON = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
+const BOUTIQUE = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 
 let failed = 0;
 function check(label, ok) {

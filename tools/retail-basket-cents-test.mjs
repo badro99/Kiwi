@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* retail-basket-cents-test · a boutique or Maison receipt's lines add up to the ticket, to the centime.
  *
  *   node tools/retail-basket-cents-test.mjs
@@ -27,8 +28,8 @@ const grab = (src, name) => {
   const end = src.indexOf('\n  }\n', at);
   return src.slice(at, end + 4);
 };
-const boutique = fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8');
-const maison = fs.readFileSync(path.join(root, 'assets/pos-maison.js'), 'utf8');
+const boutique = maisonSource(fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8'));
+const maison = maisonSource(fs.readFileSync(path.join(root, 'assets/pos-maison.js'), 'utf8'));
 const fb = grab(boutique, 'bqLineTotals');
 ok(fb === grab(maison, 'bqLineTotals'), 'boutique and Maison share the same bqLineTotals');
 const ctx = {}; vm.createContext(ctx); vm.runInContext(fb + '\nthis.f = bqLineTotals;', ctx);

@@ -11,6 +11,7 @@ import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
+const maisonRev = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'))['assets/pos-maison.js'].v;
 let puppeteer;
 try {
   puppeteer = require(require.resolve('puppeteer-core', {
@@ -60,9 +61,9 @@ const server = http.createServer((req, res) => {
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
+      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-maison.js?v=${maisonRev}"></script>
     </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
-      <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
+      <script type="module">import "/assets/pos-maison.js?v=${maisonRev}";window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
     </body></html>`);
     return;
   }

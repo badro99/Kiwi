@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Maison · la page des retours range les ventes par journée commerciale.
  *
  * « Aujourd'hui » découpait à minuit (new Date().setHours(0)) alors que le
@@ -13,7 +14,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+const src = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
 const grab = (name) => {
   const at = src.indexOf(`  function ${name}(`);
   assert.ok(at >= 0, `${name} introuvable`);

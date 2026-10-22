@@ -40,9 +40,9 @@ const server = http.createServer((req, res) => {
       <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-${vertical}.js?v=${stamps[`assets/pos-${vertical}.js`].v}"></script>
+      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script ${vertical === 'maison' && !baseline ? 'type="module"' : ''} src="/assets/pos-${vertical}.js?v=${stamps[`assets/pos-${vertical}.js`].v}"></script>
       </head><body class="is-pos-${vertical}"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-${vertical}"></div>
-      <script>window.__spec.mount(document.getElementById('pos-${vertical}'));window.KiwiCaisseDna.enhance(document.getElementById('pos-${vertical}'),'${vertical}');</script></body></html>`);
+      <script type="module">${vertical === 'maison' && !baseline ? `import "/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}";` : ''}window.__spec.mount(document.getElementById('pos-${vertical}'));window.KiwiCaisseDna.enhance(document.getElementById('pos-${vertical}'),'${vertical}');</script></body></html>`);
     return;
   }
   if (pathname === '/caisse-inline.css') {

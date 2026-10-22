@@ -59,6 +59,10 @@ function replaceIn(rel, asset, next) {
     hits++;
     return `${ref}?v=${next}${quote}`;
   });
+  after = after.replace(/(from\s+')([.][.]?\/[^']+\.js)\?v=[0-9]+(')/g, (all, prefix, written, quote) => {
+    if (path.posix.normalize(path.posix.join(path.posix.dirname(rel), written)) !== asset) return all;
+    hits++; return prefix + written + '?v=' + next + quote;
+  });
   if (after === before) return 0;
   write(rel, after);
   touched.add(rel);

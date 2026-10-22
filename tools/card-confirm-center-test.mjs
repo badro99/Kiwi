@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Ticket #0155 · Card confirm button must center icon + label as one group.
  *
  * The green "Encaissement confirmé sur le lecteur" button centers its TEXT
@@ -22,7 +23,7 @@ function ok(label, fn) {
 }
 
 for (const [file, scope] of [['assets/pos-boutique.css', '.bq-card-confirm'], ['assets/pos-maison.css', '.mz-card-confirm']]) {
-  const css = readFileSync(path.join(ROOT, file), 'utf8');
+  const css = maisonSource(readFileSync(path.join(ROOT, file), 'utf8'));
   const m = css.match(new RegExp(scope.replace('.', '\\.') + '\\s+\\.cash-confirm\\s*\\{([^}]*)\\}'));
   ok(`${file}: grouped centering rule present`, () => {
     assert.ok(m, 'rule missing');

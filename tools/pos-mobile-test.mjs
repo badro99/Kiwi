@@ -1,9 +1,10 @@
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const root = new URL('../', import.meta.url);
-const read = (file) => fs.readFileSync(new URL(file, root), 'utf8');
+const read = (file) => maisonSource(fs.readFileSync(new URL(file, root), 'utf8'));
 const css = read('assets/pos-mobile.css');
 const skin = read('assets/caisse-skin.css');
 const js = read('assets/pos-mobile.js');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +17,7 @@ function ok(value, message) {
 }
 
 for (const file of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
-  const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const source = maisonSource(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   ok(/data-action="printer-connect"[^>]*>[\s\S]*?<i data-lucide="printer"><\/i><span>Imprimantes<\/span>/.test(source),
     `${file} exposes the shared printer configuration panel`);
 }

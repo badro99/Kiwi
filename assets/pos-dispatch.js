@@ -70,7 +70,7 @@
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '9', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '8', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '8', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '83', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '84', module: true, label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -183,6 +183,7 @@
       link.href = `assets/${entry.file}.css${rev}`;
       document.head.appendChild(link);
       sc = document.createElement('script');
+      if (entry.module) sc.type = 'module';
       sc.src = `assets/${entry.file}.js${rev}`;
       sc.onload = () => (apps[entry.id] ? resolve() : reject(new Error(`${entry.file}.js loaded but never registered "${entry.id}"`)));
       sc.onerror = () => reject(new Error(`assets/${entry.file}.js introuvable`));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Loyalty truth (2026-10-20). Runs the real /api/clients handlers on node:sqlite
  * and the real assets/clients-store.js in a vm, and holds four rules that were
  * broken in production code:
@@ -54,7 +55,7 @@ const owner = sessionCookie(await makeSession('loyalty-owner', SECRET)).split(';
 
 function store(cfg) {
   const raw = new DatabaseSync(':memory:');
-  raw.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  raw.exec(maisonSource(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8')));
   const now = Date.now();
   raw.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
     .run('loyalty-owner', 'loyalty@example.test', 'Owner', 'Store', 's', 'h', now);
@@ -160,7 +161,7 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
   const window = { localStorage, KiwiStore: { define, currentVenue: () => MERCHANT }, KiwiEnv: { isReal: () => true }, addEventListener: () => {} };
   const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage, console, Math, Date, JSON,
     setInterval: () => 1, clearInterval: () => {}, fetch: async () => ({ ok: false, json: async () => ({ clients: [], cursor: 0 }) }) };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'), context, { filename: 'assets/clients-store.js' });
+  vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), context, { filename: 'assets/clients-store.js' });
   const KC = context.window.KiwiClients;
   KC.setConfig({ model: 'product', product: { item: 'Café', target: 10, reward: '1 offert' } }, MERCHANT);
   const c = KC.upsert({ name: 'Client', phone: '0612345678' }, MERCHANT);
@@ -177,7 +178,7 @@ console.log('\nCaisse : la même règle avant la réponse du serveur');
 
 console.log('\nBoutique et maison : la remise fidélité et le toast');
 {
-  const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const read = (f) => maisonSource(fs.readFileSync(path.join(ROOT, f), 'utf8'));
   for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
     const src = read(f);
     const fn = src.slice(src.indexOf('function rewardDiscount('), src.indexOf('function rewardDiscount(') + 900);

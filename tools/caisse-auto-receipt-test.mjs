@@ -1,9 +1,10 @@
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const read = (name) => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8');
+const read = (name) => maisonSource(fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8'));
 const source = read('assets/pos-sale.js');
 const values = new Map([['kiwiPairedVenue', JSON.stringify({ merchant: 'receipt-test' })], ['kiwi:posDevice', 'A7']]);
 const localStorage = {

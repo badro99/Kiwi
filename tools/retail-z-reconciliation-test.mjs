@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Kiwi · retail-z-reconciliation-test
  *   node tools/retail-z-reconciliation-test.mjs
  *
@@ -19,7 +20,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => maisonSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 const zSource = read('assets/z-reconciliation.js');
 let passed = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); passed++; console.log('  ✓ ' + msg); };

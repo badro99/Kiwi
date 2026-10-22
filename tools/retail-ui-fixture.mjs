@@ -28,14 +28,16 @@ function maisonPage() {
     <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
     <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
     <script src="/assets/venue-store.js"></script><script src="/assets/discount-policy.js"></script><script src="/assets/retail-balances.js"></script><script src="/assets/retail-sale-hold.js"></script><script src="/assets/loyalty-reserve.js"></script><script src="/assets/repeat-sale-guard.js"></script><script src="/assets/day-report.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-    <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
+    <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script type="module" src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
   </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
-    <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>
+    <script type="module">import "/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}";window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>
   </body></html>`;
 }
 
 function boutiquePage() {
   return maisonPage()
+    .replaceAll('type="module"', '')
+    .replace(/import "[^"]+";/, '')
     .replaceAll('pos-maison', 'pos-boutique')
     .replaceAll('__maisonSpec', '__boutiqueSpec')
     .replaceAll("'maison'", "'boutique'")

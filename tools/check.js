@@ -60,7 +60,7 @@ const list = (dir, ext) => fs.readdirSync(dir)
   .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
-const JS_FILES = list(path.join(ROOT, 'assets'), '.js');
+const JS_FILES = list(path.join(ROOT, 'assets'), '.js').concat(list(path.join(ROOT, 'assets/pos-maison'), '.js'));
 const CSS_FILES = list(path.join(ROOT, 'assets'), '.css');
 const HTML_FILES = list(ROOT, '.html');
 
@@ -82,7 +82,11 @@ section('Syntax (vm.Script compile)');
 {
   let bad = 0;
   for (const f of JS_FILES) {
-    try { new vm.Script(read(f), { filename: f }); }
+    try {
+      const source = read(f);
+      if (/^import .* from /m.test(source)) require('child_process').execFileSync(process.execPath, ['--check', '--input-type=module'], { input: source, stdio: 'pipe' });
+      else new vm.Script(source, { filename: f });
+    }
     catch (e) { bad++; fail(path.relative(ROOT, f) + ' — ' + e.message); }
   }
   if (!bad) ok(`${JS_FILES.length} JS files parse clean`);
@@ -1539,6 +1543,8 @@ section('Whole-project regressions');
     'bump-stamp-test.mjs',
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
+    'pos-maison-split-test.mjs',
+    'pos-maison-split-browser-test.mjs',
     'maison-caisse-browser-test.mjs',
     'maison-shelf-price-browser-test.mjs',
     'maison-returns-business-day-test.mjs',

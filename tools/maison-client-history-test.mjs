@@ -1,3 +1,4 @@
+import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -47,7 +48,7 @@ const window = {
 };
 const context = { window, localStorage, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv,
   fetch, console, JSON, Math, Date, Promise, setInterval: () => 1, clearInterval: () => {} };
-vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8'), context,
+vm.runInNewContext(maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-store.js'), 'utf8')), context,
   { filename: 'assets/clients-store.js' });
 
 const client = window.KiwiClients.upsert({ name: 'Amira Test', phone: '0611111111' }, merchant);
@@ -71,12 +72,12 @@ ok(afterReplay.visits === beforeReplay.visits && afterReplay.spend === beforeRep
 ok(afterReplay.history.length === 1 && afterReplay.history[0].ref === '2001',
   'the local client fiche keeps one detailed ticket row');
 
-const caisse = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+const caisse = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8'));
 ok(caisse.includes('const syncedRefs = new Set') && caisse.includes('const spent = c.spent || 0'),
   'the caisse fiche deduplicates synced tickets and uses the canonical spend total');
 ok(caisse.includes('eventRef: sale.syncId'), 'checkout binds client history to the sale UUID');
 
-const boutique = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const boutique = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8'));
 ok(boutique.includes('history: Array.isArray(c.history) ? c.history.slice(0, 50) : []'),
   'boutique client adapters preserve server purchase history');
 ok(boutique.includes('const syncedRefs = new Set') && boutique.includes('const spent = c.spent || 0'),
@@ -84,7 +85,7 @@ ok(boutique.includes('const syncedRefs = new Set') && boutique.includes('const s
 ok(boutique.includes('method: sale.methods') && boutique.includes('eventRef: sale.syncId') && boutique.includes('items: sale.lines.map'),
   'boutique checkout records payment, stable ticket identity, and purchased items');
 
-const directory = fs.readFileSync(path.join(ROOT, 'assets/clients-directory.js'), 'utf8');
+const directory = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/clients-directory.js'), 'utf8'));
 ok(directory.includes('history: Array.isArray(c.history) ? c.history.slice(0, 50) : []'),
   'dashboard directory preserves purchase history returned by the shared store');
 ok(directory.includes('class="cd-history-row"') && directory.includes('entry.method') && directory.includes('entry.items') && directory.includes('entry.ref'),

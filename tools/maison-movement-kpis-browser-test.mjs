@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 // #90: the stock movement KPI strip must not be compressed to a sliver by the
 // results panel's fixed minimum height on a short/tablet caisse viewport.
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium',
 ].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium is required for the #90 layout regression');
-const stamps = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'));
+const stamps = JSON.parse(maisonSource(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8')));
 const cssAsset = `/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}`;
 
 const fixture = spawn(process.execPath, [path.join(ROOT, 'tools/retail-ui-fixture.mjs')], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });

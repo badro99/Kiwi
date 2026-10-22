@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 import caisseTestSource from './caisse-test-source.cjs';
 /* Kiwi · quatre garde-fous d'encaissement qui ne doivent plus lâcher.
  *
@@ -15,7 +16,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const read = (p) => maisonSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 const caisse = caisseTestSource(read('kiwi-caisse.html'));
 let passed = 0;
 const ok = (cond, label) => { assert.ok(cond, label); passed++; };

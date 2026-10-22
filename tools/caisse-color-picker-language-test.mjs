@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Caisse · le sélecteur de couleur de la fiche article parle la langue de la
  * caisse.
  *
@@ -22,16 +23,16 @@ const check = (yes, msg) => { assert.ok(yes, msg); checks++; console.log('  ✓ 
 const files = fs.readdirSync(path.join(root, 'assets')).filter((f) => /^pos-.*\.js$/.test(f));
 const calls = [];
 for (const f of files) {
-  const src = fs.readFileSync(path.join(root, 'assets', f), 'utf8');
+  const src = maisonSource(fs.readFileSync(path.join(root, 'assets', f), 'utf8'));
   for (const m of src.matchAll(/KC\(\)\.picker\(([^)]*\{[^}]*\})\)/g)) calls.push({ f, opts: m[1] });
 }
 check(calls.some((c) => c.f === 'pos-boutique.js') && calls.some((c) => c.f === 'pos-maison.js'), 'the boutique and maison registers still offer the colour picker');
 check(calls.every((c) => !/\blabel\s*:\s*['"`]/.test(c.opts)), 'no register forces a literal group name on the picker');
 check(calls.every((c) => !/\bhint\s*:\s*['"`]/.test(c.opts)), 'no register forces a literal hint on the picker');
 
-const palette = fs.readFileSync(path.join(root, 'assets/color-palette.js'), 'utf8');
+const palette = maisonSource(fs.readFileSync(path.join(root, 'assets/color-palette.js'), 'utf8'));
 check(/document\.documentElement\.getAttribute\('lang'\)/.test(palette), 'the palette names itself from <html lang>');
-const lang = fs.readFileSync(path.join(root, 'assets/caisse-lang.js'), 'utf8');
+const lang = maisonSource(fs.readFileSync(path.join(root, 'assets/caisse-lang.js'), 'utf8'));
 check(/el\.setAttribute\('lang', cur\)/.test(lang), 'and the caisse sets <html lang> to the register language');
 
 console.log(`\ncaisse-color-picker-language: ${checks} passed, 0 failed`);

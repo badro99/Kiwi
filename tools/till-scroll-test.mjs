@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import maisonSource from './pos-maison-test-source.cjs';
 /* Ticket #0159 · Till views must own their scroll + compact phone KPIs.
  *
  * Root cause: the till root and main column are overflow:hidden at viewport
@@ -22,8 +23,8 @@ function ok(label, fn) {
   catch (e) { failed++; console.log(`  ✗ ${label}\n      ${String(e.message).split('\n')[0]}`); }
 }
 
-const bq = readFileSync(path.join(ROOT, 'assets/pos-boutique.css'), 'utf8');
-const mz = readFileSync(path.join(ROOT, 'assets/pos-maison.css'), 'utf8');
+const bq = maisonSource(readFileSync(path.join(ROOT, 'assets/pos-boutique.css'), 'utf8'));
+const mz = maisonSource(readFileSync(path.join(ROOT, 'assets/pos-maison.css'), 'utf8'));
 
 for (const [name, css, v, a] of [
   ['boutique', bq, '[data-bq-panel="vendus"]', '[data-bq-panel="acomptes"]'],
