@@ -39,8 +39,8 @@ async function refDigest(merchant, clientRef) {
    qui l'a réclamé), donc le dépôt écrit la visée dans la cible, sous `_pin`,
    et elle n'est jamais rendue au pont. */
 function publicTarget(t) {
-  if (!t || typeof t !== 'object' || !('_pin' in t)) return t;
-  const { _pin, ...rest } = t;
+  if (!t || typeof t !== 'object' || !('_pin' in t || '_refused' in t)) return t;
+  const { _pin, _refused, ...rest } = t;
   return rest;
 }
 const RETRY_DELAY_MS = 10000;
@@ -97,9 +97,10 @@ export async function onRequestGet(context) {
                         WHERE merchant = ? AND status = 'queued' AND expires_ts > ?
                           AND (bridge_id IS NULL OR bridge_id = ?)
                           AND (claimed_ts IS NULL OR claimed_ts <= ?)
+                          AND NOT EXISTS (SELECT 1 FROM json_each(target, '$._refused') WHERE value = ?)
                         ORDER BY created_ts LIMIT ${CLAIM_BATCH})
           RETURNING id, kind, target, data_b64`
-      ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t).all();
+      ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t, bridge.id).all();
       const jobs = (rs.results || []).map((j) => ({
         id: j.id, kind: j.kind || 'other', target: publicTarget(safeJsonParse(j.target, {})), dataB64: j.data_b64,
       }));
@@ -160,6 +161,41 @@ export async function onRequestPost(context) {
     const bytes = Number(body.bytes) || 0;
     const error = outcome === 'printed' ? null : String(body.error || (outcome === 'uncertain' ? UNCERTAIN_OUTPUT : 'print-failed')).replace(/[\x00-\x1f]/g, ' ').slice(0, 300);
     try {
+      /* ── LE PONT N'A PAS CETTE IMPRIMANTE ─────────────────────────────────
+       * « printer-target-not-saved » / « not-local » disent : CE pont ne peut
+       * pas joindre cette imprimante. C'est définitif pour lui, pas pour le
+       * commerce. Un ticket non visé passe donc à un AUTRE pont en ligne du
+       * commerce, et ce pont-ci est noté sous `_refused` dans la cible (jamais
+       * rendue au pont) pour ne plus le réclamer. Plus aucun pont candidat, ou
+       * ticket visé, ou ticket périmé : échec définitif, comme avant. */
+      if (outcome === 'failed' && PERMANENT_BRIDGE_ERRORS.has(error)) {
+        const job = await env.DB.prepare(
+          `SELECT target, expires_ts FROM print_jobs WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+        ).bind(id, bridge.merchant, bridge.id).first();
+        if (!job) return relayJson({ ok: true, updated: false }, 200, request);
+        const target = safeJsonParse(job.target, {}) || {};
+        const refused = Array.isArray(target._refused) ? target._refused.filter((x) => typeof x === 'string') : [];
+        if (!refused.includes(bridge.id)) refused.push(bridge.id);
+        let other = 0;
+        if (!('_pin' in target) && Number(job.expires_ts) > t) {
+          const row = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM print_bridges
+              WHERE merchant = ? AND revoked_ts IS NULL AND last_seen_ts > ?
+                AND id NOT IN (SELECT value FROM json_each(?))`
+          ).bind(bridge.merchant, t - BRIDGE_ONLINE_MS, JSON.stringify(refused)).first();
+          other = Number(row && row.n) || 0;
+        }
+        const r = other
+          ? await env.DB.prepare(
+            `UPDATE print_jobs SET status = 'queued', bridge_id = NULL, claimed_ts = ?, done_ts = NULL, bytes = 0, error = ?, target = ?
+              WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+          ).bind(t, error, JSON.stringify({ ...target, _refused: refused.slice(-20) }), id, bridge.merchant, bridge.id).run()
+          : await env.DB.prepare(
+            `UPDATE print_jobs SET status = 'failed', done_ts = ?, bytes = 0, error = ?
+              WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+          ).bind(t, error, id, bridge.merchant, bridge.id).run();
+        return relayJson({ ok: true, updated: !!(r && r.meta && r.meta.changes) }, 200, request);
+      }
       /* Once a caisse has deposited a job, the durable relay owns retries.
        * A failed printer write is re-queued with the same id after the same
        * 10-second backoff the browser queue historically used. This lets the

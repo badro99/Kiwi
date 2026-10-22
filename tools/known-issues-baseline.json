@@ -138,10 +138,6 @@
       "label": "workflow policy: promised time automatically marks unprocessed garments ready"
     },
     {
-      "suite": "print-relay-properties-test.mjs",
-      "label": "PR-1"
-    },
-    {
       "suite": "receivables-properties-test.mjs",
       "label": "policy: cancelling a collected original leaves collections booked; choose linked reversal or refuse cancellation"
     },

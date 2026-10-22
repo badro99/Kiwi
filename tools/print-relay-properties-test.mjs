@@ -191,17 +191,42 @@ try {
     assert.equal((await poll(BRIDGES[0])).jobs.length, 1);
   }));
 
-  /* Toujours une question pour le propriétaire : « imprimante non enregistrée sur
-   * ce pont » est un refus PERMANENT (le ticket passe à failed, il n'est pas remis
-   * en file), donc l'autre pont ne le voit jamais. Basculer vers l'autre pont
-   * changerait la règle des erreurs permanentes ; non modifié. */
-  await knownIssue('PR-1', 'a permanent « printer not saved on this bridge » refusal never reaches the store\'s other bridge', fc.asyncProperty(fc.constantFrom('printer-target-not-saved'), async (error) => {
+  /* PR-1 · « imprimante non enregistrée sur ce pont » est définitif pour CE
+   * pont, pas pour le commerce : un ticket non visé passe à l'autre pont en
+   * ligne, le pont qui a refusé ne le reprend plus, la note `_refused` n'est
+   * jamais rendue au pont, et quand plus aucun pont ne peut l'imprimer il
+   * échoue (pas de boucle). Un ticket visé échoue tout de suite, comme avant. */
+  await strict('PR-1 an untargeted ticket refused as « printer not saved on this bridge » reaches the store\'s other bridge, and fails once no bridge is left', fc.asyncProperty(fc.constantFrom('printer-target-not-saved', 'printer-target-not-local'), fc.boolean(), async (error, aimed) => {
     reset();
-    assert.equal((await deposit(1)).status, 200);
+    assert.equal((await deposit(1, till, aimed ? BRIDGES[0].id : undefined)).status, 200);
     const got = await poll(BRIDGES[0]); assert.equal(got.jobs.length, 1);
-    await ack(BRIDGES[0], got.jobs[0].id, 'failed', error);
-    for (let i = 0; i < 70; i++) { clock += 10001; const r = await poll(BRIDGES[1]); if (r.jobs.length) return true; }
-    return false;
+    assert.equal((await ack(BRIDGES[0], got.jobs[0].id, 'failed', error)).updated, true);
+    if (aimed) {
+      assert.equal(rows()[0].status, 'failed');
+      for (let i = 0; i < 3; i++) { clock += 10001; assert.equal((await poll(BRIDGES[1])).jobs.length, 0); }
+      return;
+    }
+    assert.equal((await poll(BRIDGES[0])).jobs.length, 0, 'the refusing bridge took it back');
+    const r = await poll(BRIDGES[1]); assert.equal(r.jobs.length, 1, 'the other bridge never saw it');
+    assert.equal(r.jobs[0].id, got.jobs[0].id);
+    assert.deepEqual(r.jobs[0].target, { ip: '192.168.1.50', port: 9100 });
+    assert.equal((await ack(BRIDGES[0], got.jobs[0].id, 'failed', error)).updated, false, 'the old claimant closed the new attempt');
+    assert.equal((await ack(BRIDGES[1], r.jobs[0].id, 'failed', error)).updated, true);
+    assert.equal(rows()[0].status, 'failed', 'no bridge left: the ticket fails instead of looping');
+    clock += 10001;
+    assert.equal((await poll(BRIDGES[0])).jobs.length + (await poll(BRIDGES[1])).jobs.length, 0);
+  }));
+
+  await strict('PR-1 a ticket the other bridge prints after a « not saved » refusal is printed once', fc.asyncProperty(fc.integer({ min: 0, max: 5 }), async (k) => {
+    reset();
+    assert.equal((await deposit(k)).status, 200);
+    const got = await poll(BRIDGES[0]);
+    await ack(BRIDGES[0], got.jobs[0].id, 'failed', 'printer-target-not-saved');
+    const r = await poll(BRIDGES[1]);
+    assert.equal((await ack(BRIDGES[1], r.jobs[0].id, 'printed')).updated, true);
+    assert.equal(rows()[0].status, 'done');
+    clock += 10001;
+    assert.equal((await poll(BRIDGES[0])).jobs.length + (await poll(BRIDGES[1])).jobs.length, 0);
   }));
 
   console.log(`${failed ? '✗' : '✓'} print-relay-properties-test · ${passed} held, ${known} known, ${failed} failed`);
