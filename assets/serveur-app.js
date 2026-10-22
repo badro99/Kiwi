@@ -6099,6 +6099,21 @@
     }
 
     /* ---------- SPLIT BILL ---------- */
+    /* Regroupe l'addition par plat pour le partage. Deux plats du même nom à
+       des prix différents (une formule avec ou sans supplément) se fondaient
+       au prix du premier : chacun payait la moyenne et les lignes mentaient.
+       Un autre prix garde sa propre carte et son nom de base. */
+    function splitItemTotals(order) {
+      const itemTotals = {};
+      (order || []).forEach(l => {
+        const unitPrice = Number(l.price) || 0;
+        let key = l.name;
+        if (itemTotals[key] && Math.round(itemTotals[key].unitPrice * 100) !== Math.round(unitPrice * 100)) key = `${l.name} · ${fmtMADcents(unitPrice)}`;
+        if (!itemTotals[key]) itemTotals[key] = { totalQty: 0, unitPrice, ...(key !== l.name ? { baseName: l.name } : {}) };
+        itemTotals[key].totalQty += l.qty;
+      });
+      return itemTotals;
+    }
     const splitState = {
       tableId: null,
       total: 0,
@@ -6190,13 +6205,7 @@
       const order = ensureTableOrder(tableId);
       // Aggregate per unique item name (so the pool shows one row per
       // dish with its remaining count, not one card per unit)
-      const itemTotals = {};
-      order.forEach(l => {
-        if (!itemTotals[l.name]) {
-          itemTotals[l.name] = { totalQty: 0, unitPrice: l.price };
-        }
-        itemTotals[l.name].totalQty += l.qty;
-      });
+      const itemTotals = splitItemTotals(order);
       const total = order.reduce((s, l) => s + l.price * l.qty, 0);
       Object.assign(splitState, {
         tableId, total, itemTotals,
@@ -6528,8 +6537,9 @@
             .join(', ');
           const assignedLines = Object.entries(cart).map(([name, qty]) => {
             const unitPrice = splitState.itemTotals[name]?.unitPrice || 0;
+            const baseName = splitState.itemTotals[name]?.baseName;
             return {
-              name,
+              name, ...(baseName ? { baseName } : {}),
               qty,
               unit: unitPrice,
               price: unitPrice,

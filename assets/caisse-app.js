@@ -6779,6 +6779,26 @@
       payMeta(b);
     }
 
+    /* Le partage regroupe les articles par nom pour montrer « 4 × Tajine ».
+       Deux plats du même nom à des prix différents (une formule avec ou sans
+       supplément) se fondaient en une seule carte, au prix du premier : à 84
+       et 88 MAD, chacun des deux convives payait 86 et les deux lignes disaient
+       84 (Pasta Corner, 1er octobre). Un autre prix garde sa propre carte, et
+       son nom de base pour que le classement des produits les compte ensemble. */
+    function splitItemTotals(lines) {
+      const itemTotals = {};
+      (lines || []).forEach(l => {
+        const unitPrice = l.qty > 0 ? (l.total / l.qty) : l.total;
+        let key = l.name;
+        if (itemTotals[key] && minor(itemTotals[key].unitPrice) !== minor(unitPrice)) key = `${l.name} · ${fmtMADcents(unitPrice)}`;
+        if (!itemTotals[key]) {
+          itemTotals[key] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '', baseName: l.baseName || (key !== l.name ? l.name : '') };
+        }
+        itemTotals[key].totalQty += l.qty;
+      });
+      return itemTotals;
+    }
+
     const splitState = {
       tableId: null,
       isVrap: false,       // true when splitting an À emporter cart (no table)
@@ -6828,14 +6848,7 @@
 
       // Aggregate per unique item name: split-pool shows one card per dish
       // with remaining count, so 4× Tajine can be assigned to 4 different convives
-      const itemTotals = {};
-      lines.forEach(l => {
-        const unitPrice = l.qty > 0 ? (l.total / l.qty) : l.total;
-        if (!itemTotals[l.name]) {
-          itemTotals[l.name] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '', baseName: l.baseName || '' };
-        }
-        itemTotals[l.name].totalQty += l.qty;
-      });
+      const itemTotals = splitItemTotals(lines);
 
       Object.assign(splitState, {
         tableId: isVrap ? null : tableId,

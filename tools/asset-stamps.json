@@ -104,8 +104,8 @@
     "sha": "2ab1a6257cf16246"
   },
   "assets/caisse-app.js": {
-    "v": "7",
-    "sha": "1e923e4b3e8909b6"
+    "v": "8",
+    "sha": "f304d300d978296a"
   },
   "assets/caisse-dna.css": {
     "v": "6",
@@ -1420,8 +1420,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "9",
-    "sha": "c7cd4d9080d2747d"
+    "v": "10",
+    "sha": "37ffed8c4d1f9a1b"
   },
   "assets/serveur-lang.js": {
     "v": "1",

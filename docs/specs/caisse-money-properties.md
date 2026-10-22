@@ -55,6 +55,15 @@ refund approval enforcement, persistence, rendering and multi-tab concurrency
 are not claimed as integration-tested here. The strict approved-refund property
 uses a fixed balance; CM-6 exercises the real acceptance helper during approval.
 
+- Split pool by name (fixed 22 October 2026, till and waiter phone): the split
+  screen grouped dishes by name, so two « Prépare ton Plat » at 84 and 88 MAD
+  became one card at 84. Paid by articles, each guest paid 86 and both receipt
+  lines said 84 (Pasta Corner, 1 October; the total, 172, was right). A dish of
+  the same name at another price now keeps its own card, labelled with its
+  price, and its base name so product rankings still count them together.
+  Property: the pool always adds up to the bill, and a guest given dishes pays
+  exactly those dishes, lines included; red on the old grouping.
+
 ## Known properties, minimized witnesses and reachability
 
 All values below are centimes unless explicitly marked MAD. No code is fixed.

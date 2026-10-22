@@ -22,7 +22,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=4',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=4',
-  '/assets/caisse-app.js?v=7',
+  '/assets/caisse-app.js?v=8',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -30,7 +30,7 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=1',
-  '/assets/serveur-app.js?v=9',
+  '/assets/serveur-app.js?v=10',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau

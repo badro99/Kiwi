@@ -116,6 +116,15 @@ D1 rows and independently sum expected cents, tips and day buckets.
   phone billing the server remainder; turning the guard or the phone's removal
   of settled orders off makes each red.
 
+- Split pool by name (fixed 22 October 2026, till and waiter phone): the split
+  screen grouped dishes by name, so two « Prépare ton Plat » at 84 and 88 MAD
+  became one card at 84. Paid by articles, each guest paid 86 and both receipt
+  lines said 84 (Pasta Corner, 1 October; the total, 172, was right). A dish of
+  the same name at another price now keeps its own card, labelled with its
+  price, and its base name so product rankings still count them together.
+  Property: the pool always adds up to the bill, and a guest given dishes pays
+  exactly those dishes, lines included; red on the old grouping.
+
 ## Known contracts requiring owner decisions
 
 - WM-3, [1]: closeTable with one unpaid course succeeds without force:true.

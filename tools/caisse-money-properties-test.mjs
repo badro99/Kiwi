@@ -54,7 +54,7 @@ function movesOf(rows) { return rows.map(r=>({amount:r.amountC/100,type:r.input?
 const selected = ['recordSale','markSplitPartPaid','genRef','cashSessionId','cashTerminalId','shareMoney','shareWeighted','payTipPct','payTipAmount','updateRendu','vrapDiscountAmount','discountAmountFor',
   'activeSaleDiscount','discountReasonCode','accountActiveDiscount','refundedSoFar','refundableLeft','clampRefundAmount','confirmRefund','updateEcart','updateCardEcart',
   'refundOriginalFor','applyAcceptedRefund','markRejectedRefund','refundHasCashException','isReportableJournalEntry','rollupLedger','journalTotals','posteRollup','drawerExpected','handoverGapCents',
-  'renderReceipt','cloudSaleJournalEntry','receiptSaleFrom','dayReportSession','currentBusinessDay','buildDayReport','splitArticleAllocation','effectiveTipPct','launchSplitFlow',
+  'renderReceipt','cloudSaleJournalEntry','receiptSaleFrom','dayReportSession','currentBusinessDay','buildDayReport','splitArticleAllocation','effectiveTipPct','launchSplitFlow','splitItemTotals',
   'reconcileVoids','refreshOpenReconciliationModals'];
 function context(extra = {}) {
   const nodes = new Map(), timers = [];
@@ -186,6 +186,17 @@ await strict('real article split conserves a 60-line ticket without reassigning 
   const gross=add(lines.map(l=>cents(l.total)));const t=context({splitState:{total:gross/100,splitMode:'article',numConvives:n,perConvive,itemTotals,tipMode:'0',isVrap:true}});
   t.c.launchSplitFlow();const f=t.c.splitState.flow;assert.ok(f);assert.equal(add(Array.from(f.parts,p=>cents(p.base))),gross);assert.equal(add(Array.from(f.parts,p=>add(Array.from(p.lines,l=>l.qty)))),add(lines.map(l=>l.qty)));
 }));
+/* Pasta Corner, 1 October: two « Prépare ton Plat » at 84 and 88 MAD merged into one card at 84, so each guest paid 86 and the lines said 84 twice. */
+const sameNameLines=fc.array(fc.record({name:fc.constantFrom('Prépare ton Plat','Thé'),priceC:fc.constantFrom(100,8400,8800,1250),qty:fc.integer({min:1,max:3})}),{minLength:1,maxLength:12}).map(rows=>rows.map(r=>({name:r.name,qty:r.qty,price:r.priceC/100,total:r.priceC*r.qty/100})));
+await strict('split pool keeps dishes of the same name at their own price, and an article split charges each guest exactly their dishes',fc.property(sameNameLines,fc.integer({min:1,max:6}),(lines,n)=>{
+  const totals=c.splitItemTotals(lines),gross=add(lines.map(l=>cents(l.total)));
+  assert.equal(add(Object.values(totals).map(t=>Math.round(t.totalQty*cents(t.unitPrice)))),gross);
+  for(const l of lines)assert.ok(Object.entries(totals).some(([k,t])=>(k===l.name||t.baseName===l.name)&&cents(t.unitPrice)===cents(l.price)),l.name);
+  const perConvive={},owed={};Object.entries(totals).forEach(([k,t],i)=>{const g=i%n+1;(perConvive[g]??={})[k]=t.totalQty;owed[g]=(owed[g]||0)+t.totalQty*cents(t.unitPrice);});
+  const t=context({splitState:{total:gross/100,splitMode:'article',numConvives:n,perConvive,itemTotals:totals,tipMode:'0',isVrap:true}});t.c.launchSplitFlow();const f=t.c.splitState.flow;assert.ok(f);
+  assert.deepEqual(Array.from(f.parts,p=>cents(p.base)),Object.keys(owed).sort((a,b)=>a-b).map(g=>owed[g]));
+  for(const p of f.parts)assert.equal(add(Array.from(p.lines,l=>cents(l.total))),cents(p.base));
+}),[[[{name:'Prépare ton Plat',qty:1,price:84,total:84},{name:'Prépare ton Plat',qty:1,price:88,total:88}],2]]);
 await strict('cloud journal conversion preserves paid amount and line cents',fc.property(amount,linesArb,(base,lines)=>{
   const r=c.cloudSaleJournalEntry({id:'server-sale',ts:TS,amount:base/100,amountCents:base,method:'cash',lines});assert.equal(cents(r.amount),base);assert.equal(r.amountCents,base);assert.deepEqual(Array.from(r.lines,l=>cents(l.total)),lines.map(l=>cents(l.total)));
 }));
