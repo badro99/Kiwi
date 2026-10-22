@@ -200,12 +200,6 @@
       "severity": "money"
     },
     {
-      "suite": "sale-return-race-properties-test.mjs",
-      "label": "Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout",
-      "kind": "decision",
-      "severity": "display"
-    },
-    {
       "suite": "server-money-properties-test.mjs",
       "label": "SM-2",
       "kind": "decision",

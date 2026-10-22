@@ -8,6 +8,9 @@ import {
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
 import { poke } from '../_live.js';
 import { ensureCreditEvents } from '../_store-credit-ledger.js';
+/* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
+   Maison lit aussi pour annoncer le remboursement avant l'accord du responsable. */
+import RefundSplit from '../../../assets/refund-split.js';
 
 const MAX_AMOUNT_CENTS = 20000000;
 function cleanId(value, max = 80) {
@@ -82,9 +85,9 @@ export async function onRequestPost({ request, env }) {
   // Only persisted redemptions identify the voucher to restore. Client tender
   // labels are never authority to create a customer liability.
   const redeemed = (await env.DB.prepare(
-    `SELECT e.credit_id, SUM(e.amount_cents) AS cents FROM store_credit_events e
+    `SELECT e.credit_id, MIN(e.code) AS code, SUM(e.amount_cents) AS cents FROM store_credit_events e
       WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'redeem'
-      GROUP BY e.credit_id ORDER BY e.credit_id`
+      GROUP BY e.credit_id ORDER BY MIN(e.code), e.credit_id`
   ).bind(merchant, originalSaleId).all()).results || [];
   for (const redemption of redeemed) {
     const credit = await env.DB.prepare('SELECT id FROM store_credits WHERE merchant = ? AND id = ?')
@@ -119,29 +122,23 @@ export async function onRequestPost({ request, env }) {
    * 100, et la cliente garderait les deux. Un ticket payé en partie par avoir
    * n'était remboursable que pour sa part en argent ; au-delà, la part d'avoir
    * revient maintenant sur l'avoir d'origine, au centime, une fois. */
-  const spent = {};
-  for (const row of previous) {
+  const spent = RefundSplit.spentOf(previous.map((row) => {
     let entries;
     try { entries = JSON.parse(row.impact).allocations; } catch (_) {}
-    for (const part of entries || [{ method: row.method, amountCents: Number(row.amount_cents) }]) {
-      const key = part.method === 'credit' ? 'credit:' + part.creditId : 'money';
-      spent[key] = (spent[key] || 0) + Number(part.amountCents || 0);
-    }
-  }
-  const allocations = [];
-  let left = amountCents;
-  const moneyPart = Math.min(left, Math.max(0, moneyCents - (spent.money || 0)));
+    return entries || [{ method: row.method, amountCents: Number(row.amount_cents) }];
+  }));
   const chosenMethod = requestedMethod || String(original.method || 'cash');
-  if (requestedMethod && moneyPart > 0 && !paid[requestedMethod]) {
+  /* Les avoirs dans l'ordre de leur code : celui que la caisse connaît et
+     affiche dans son aperçu (assets/refund-split.js). */
+  const plan = RefundSplit.allocate({
+    amountCents, moneyCents, method: chosenMethod, spent,
+    credits: redeemed.map((r) => ({ id: r.credit_id, code: r.code, cents: Number(r.cents) })),
+  });
+  if (requestedMethod && plan.moneyCents > 0 && !paid[requestedMethod]) {
     return json({ error: 'bad-refund-method' }, 400);
   }
-  if (moneyPart > 0) allocations.push({ method: chosenMethod, amountCents: moneyPart });
-  left -= moneyPart;
-  for (const r of redeemed) {
-    const cents = Math.min(left, Math.max(0, Number(r.cents) - (spent['credit:' + r.credit_id] || 0)));
-    if (cents > 0) allocations.push({ method: 'credit', creditId: r.credit_id, amountCents: cents });
-    left -= cents;
-  }
+  const allocations = plan.allocations;
+  const left = plan.leftCents;
   if (left && !replay) return json({ error: 'refund-exceeds-sale' }, 409);
   const refundMethod = requestedMethod || String(original.method || 'cash');
   if (replay && (Number(replay.amount_cents) !== amountCents || String(replay.method) !== refundMethod)) {
@@ -251,5 +248,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   try { await poke(env, merchant, 'sale-refund'); } catch (_) {}
-  return json({ ok: true, id: refundId, originalSaleId, amountCents, ref: refundRef, ts });
+  /* Ce qui a réellement été fait, pour le reçu de la caisse : l'argent rendu
+     dans son moyen, et chaque avoir recrédité avec son code. */
+  const codeOf = Object.fromEntries(redeemed.map((r) => [r.credit_id, r.code || '']));
+  const done = actual.map((p) => (p.method === 'credit' ? { ...p, code: codeOf[p.creditId] || '' } : p));
+  return json({ ok: true, id: refundId, originalSaleId, amountCents, ref: refundRef, ts, allocations: done });
 }

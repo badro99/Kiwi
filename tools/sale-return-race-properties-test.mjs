@@ -26,6 +26,7 @@ import { makeSession, SESS_COOKIE, managerRefundProof } from '../functions/auth/
 import { onRequestPost as cancelRoute } from '../functions/api/sale/cancel.js';
 import { onRequestPost as refundRoute } from '../functions/api/sale/refund.js';
 import { onRequestPost as creditRoute } from '../functions/api/store-credits.js';
+import RefundSplit from '../assets/refund-split.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 let fc; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch { console.log('○ fast-check absent; sale return race properties not executed'); process.exit(0); }
@@ -203,10 +204,50 @@ try {
     assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM sale_audit WHERE sale_id=?").get(saleId).n,0);
   }));
 
-  await knownIssue('Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout', fc.property(fc.constant(null), () => {
-    const source=fs.readFileSync(path.join(ROOT,'assets/pos-maison/checkout.js'),'utf8');
-    return !source.includes("const preferred = ['carte', 'espèces', 'virement', 'chèque']");
-  }));
+  /* La caisse Maison annonce, avant l'accord du responsable, ce que le serveur
+     va faire : l'argent dans le moyen choisi, puis chaque avoir d'origine par
+     son code. L'aperçu (assets/refund-split.js, appelé par
+     assets/pos-maison/checkout.js) part de ce que la caisse sait du ticket :
+     ses parts au format Maison, l'argent encaissé et ce qu'elle a déjà rendu.
+     Il doit dire, remboursement après remboursement, exactement ce que la route
+     range dans sale_audit. Les identifiants des avoirs sont dans l'ordre
+     inverse de leurs codes : seul l'ordre par code, celui que la caisse
+     connaît, fait coïncider les deux. */
+  await strict('the Maison till previews exactly what the refund route records: money back in the chosen method, then each original voucher by its code, refund after refund', fc.asyncProperty(
+    fc.integer({ min: 0, max: 20000 }), fc.integer({ min: 0, max: 20000 }), fc.array(fc.integer({ min: 1, max: 15000 }), { maxLength: 3 }),
+    fc.array(fc.integer({ min: 1, max: 30000 }), { minLength: 1, maxLength: 4 }), async (cash, card, vouchers, asks) => {
+      const source = fs.readFileSync(path.join(ROOT, 'assets/pos-maison/checkout.js'), 'utf8');
+      assert.ok(source.includes("import '../refund-split.js"), 'the Maison till loads the shared split rule');
+      assert.ok(/split\.preview\(\{[\s\S]{0,200}split\.creditsFromParts\(sale\.parts\)/.test(source), 'the preview is computed by the shared rule from the ticket parts');
+      assert.ok(source.includes('Remboursement ${fmtMAD(amount)} · ${said} · ticket'), 'the manager approves the split, not a single payout');
+      assert.ok(!source.includes('}, [{ m: payout, amount }]);'), 'the receipt no longer prints a single payout');
+      const saleId = freshSale(cash + card);
+      const method = card ? 'card' : 'cash';
+      sql.prepare("UPDATE sales SET method='split', payment_parts=? WHERE id=?").run(JSON.stringify([{ method: 'cash', amountCents: cash }, { method: 'card', amountCents: card }, { method: 'credit', amountCents: vouchers.reduce((a, b) => a + b, 0) }]), saleId);
+      const parts = [{ m: 'espèces', amount: cash / 100 }, { m: 'carte', amount: card / 100 }];
+      const codeOf = {};
+      vouchers.forEach((cents, i) => {
+        const code = 'AV-' + saleId + '-' + 'abc'[i], id = 'zid-' + (vouchers.length - i) + '-' + saleId;
+        codeOf[id] = code;
+        parts.push({ m: 'avoir', code, amount: cents / 100 });
+        sql.prepare("INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,status,expires_ts,created_ts,updated_ts) VALUES(?,?,?,'client-fixture',?,0,'consumed',?,1,1)").run(id, merchant, code, cents, Date.now() + 86400000);
+        sql.prepare("INSERT INTO store_credit_events(id,merchant,credit_id,code,action,amount_cents,balance_after_cents,ref_id,ts) VALUES(?,?,?,?,'redeem',?,0,?,1)").run('spent-' + id, merchant, id, code, cents, saleId);
+      });
+      let previous = 0;
+      for (const [i, amount] of asks.entries()) {
+        const pv = RefundSplit.preview({ moneyCents: cash + card, credits: RefundSplit.creditsFromParts(parts), method, previousCents: previous, amountCents: amount });
+        const id = 'preview-return-' + saleId + '-' + i;
+        const approval = await managerRefundProof(secret, { merchant, staffId: 'manager-fixture', staffName: 'Fixture Manager', staffRole: 'manager', refundId: id, originalSaleId: saleId, amountCents: amount, refundMethod: method });
+        const res = await post(refundRoute, '/api/sale/refund', { id, originalSaleId: saleId, amountCents: amount, refundMethod: method, approval }, f.env);
+        if (pv.leftCents > 0) { assert.equal(res.status, 409, 'the preview said this passes the ticket: ' + JSON.stringify(res.body)); continue; }
+        assert.equal(res.status, 200, JSON.stringify(res.body));
+        const audit = sql.prepare("SELECT impact FROM sale_audit WHERE merchant=? AND action='refund' AND note=?").get(merchant, id);
+        const recorded = JSON.parse(audit.impact).allocations.map((p) => (p.method === 'credit' ? { ...p, creditId: codeOf[p.creditId] } : p));
+        assert.deepEqual(recorded, pv.allocations, 'preview ≠ books');
+        assert.deepEqual(res.body.allocations.map((p) => (p.method === 'credit' ? { method: p.method, creditId: p.code, amountCents: p.amountCents } : p)), pv.allocations, 'preview ≠ answer');
+        previous += amount;
+      }
+    }));
 
   /* A credit's own ledger: what was issued, plus adjustments, equals what was
      spent, plus what was cancelled, plus what is left, whatever two tills do

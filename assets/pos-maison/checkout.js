@@ -1,6 +1,7 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-maison.js?v=87';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=87';
 import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=5';
 import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=5';
+import '../refund-split.js?v=1';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -204,6 +205,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         <div class="mz-chips">
           ${MOTIFS.map((m) => `<button class="mz-chip ${ret.motif === m ? 'on' : ''}" data-mz-motif="${esc(m)}">${esc(m)}</button>`).join('')}
         </div>
+        ${refundPreviewHTML(s, ret, selVal)}
         <div class="mz-ret-actions">
           <button class="mz-btn secondary" data-mz-do-exch><i data-lucide="arrow-left-right"></i>Échanger la pièce</button>
           <button class="mz-btn secondary" data-mz-do-refund ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="credit-card"></i>Rembourser sur le moyen d’origine · ${fmtMAD(selVal)}</button>
@@ -211,6 +213,55 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         </div>
       </div>` : ''}
     </div>`;
+  }
+
+  /* ── CE QUE LE REMBOURSEMENT FERA, DIT AVANT L'ACCORD ──
+     Depuis le 22 octobre, le serveur rend l'argent dans le moyen choisi, puis
+     recrédite les avoirs qui avaient payé le ticket pour ce qui dépasse.
+     L'ancien écran annonçait un seul versement (« 120 MAD · carte ») alors que
+     le serveur pouvait écrire 80 carte + 40 sur l'avoir AV-… : la caissière
+     rendait au mauvais endroit. L'aperçu applique maintenant la MÊME règle que
+     le serveur (assets/refund-split.js) : l'argent du ticket tel que le serveur
+     l'a reçu (originalSalePayload), ses avoirs par code, et ce que ce ticket a
+     déjà rendu. Le reçu, lui, imprime ce que le serveur a réellement fait. */
+  const PAYOUT_SRV = { 'carte': 'card', 'espèces': 'cash', 'virement': 'transfer', 'chèque': 'cheque' };
+  const PAYOUT_FR = { card: 'carte', cash: 'espèces', transfer: 'virement', cheque: 'chèque' };
+  const PAYOUT_LABEL = { 'carte': 'Rendu sur la carte', 'espèces': 'Rendu en espèces', 'virement': 'Rendu par virement', 'chèque': 'Rendu par chèque' };
+  function refundPayout(sale) {
+    const paid = (sale.parts || []).filter(part => part && part.m !== 'avoir' && part.m !== 'livraison');
+    const preferred = ['carte', 'espèces', 'virement', 'chèque'].find(method => paid.some(part => part.m === method));
+    return preferred || (String(sale.methods || '').includes('carte') ? 'carte' : 'espèces');
+  }
+  /* Allocations (serveur ou aperçu) → lignes de reçu de la caisse. */
+  function refundRows(allocations) {
+    return (allocations || []).filter(p => p && Number(p.amountCents) > 0).map(p => p.method === 'credit'
+      ? { m: 'avoir', code: String(p.code || p.creditId || ''), amount: Number(p.amountCents) / 100 }
+      : { m: PAYOUT_FR[p.method] || 'espèces', amount: Number(p.amountCents) / 100 });
+  }
+  function refundPreview(sale, amount) {
+    const split = globalThis.KiwiRefundSplit;
+    if (!split || !sale || !(amount > 0)) return null;
+    const payout = refundPayout(sale);
+    let moneyCents = 0;
+    try { const payload = originalSalePayload(sale); moneyCents = payload ? Number(payload.amountCents) || 0 : 0; } catch (_) {}
+    const plan = split.preview({
+      moneyCents, credits: split.creditsFromParts(sale.parts), method: PAYOUT_SRV[payout],
+      previousCents: Number(sale.refundedCents) || 0, amountCents: Math.round(amount * 100),
+    });
+    return { payout, plan, rows: refundRows(plan.allocations) };
+  }
+  function refundPreviewHTML(sale, ret, amount) {
+    if (!ret || !ret.picks || sale.kind === 'acompte') return '';
+    if (Array.from(ret.picks).some(i => sale.lines[i] && sale.lines[i].consigned)) return '';
+    const pv = refundPreview(sale, amount);
+    if (!pv) return '';
+    const total = pv.rows.reduce((sum, r) => sum + r.amount, 0);
+    return `<div class="mz-ret-bar-lbl" style="margin-top:11px;">En cas de remboursement</div>
+        <div class="mz-pay-break" data-mz-refund-preview>
+          ${pv.rows.map(r => `<div class="row"><span>${r.m === 'avoir' ? `<span>Recrédité sur l’avoir</span> ${esc(r.code)}` : `<span>${PAYOUT_LABEL[r.m] || 'Rendu en espèces'}</span>`}</span><b>${fmtMAD(r.amount)}</b></div>`).join('')}
+          ${pv.plan.leftCents > 0 ? `<div class="row"><span>Déjà remboursé, refusé</span><b>${fmtMAD(pv.plan.leftCents / 100)}</b></div>` : ''}
+          <div class="row"><span>Total remboursé</span><b>${fmtMAD(total)}</b></div>
+        </div>`;
   }
 
   async function doRefund() {
@@ -242,21 +293,22 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       return;
     }
     const refundId = stableRefundId(sale, quantities, amount * 100);
-    const payout = (() => {
-      const paid = (sale.parts || []).filter(part => part && part.m !== 'avoir' && part.m !== 'livraison');
-      const preferred = ['carte', 'espèces', 'virement', 'chèque'].find(method => paid.some(part => part.m === method));
-      return preferred || (String(sale.methods || '').includes('carte') ? 'carte' : 'espèces');
-    })();
-    const refundMethod = ({ 'carte': 'card', 'espèces': 'cash', 'virement': 'transfer', 'chèque': 'cheque' })[payout];
+    const preview = refundPreview(sale, amount);
+    const payout = preview ? preview.payout : refundPayout(sale);
+    const refundMethod = PAYOUT_SRV[payout];
+    /* Le responsable accorde ce qui va se passer, pas un versement unique. */
+    const planned = preview && preview.rows.length ? preview.rows : [{ m: payout, amount }];
+    const said = planned.map(r => r.m === 'avoir' ? `avoir ${r.code} ${fmtMAD(r.amount)}` : `${r.m} ${fmtMAD(r.amount)}`).join(' + ');
     state.retBusy = false; renderEchanges(); icons();
     if (typeof window.requireManager !== 'function') {
       toast('Autorisation responsable indisponible', 5200, 'danger');
       return;
     }
     if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'refund', key: 'act.refund', args: { amount: fmtMAD(amount) } });
-    window.requireManager(`Remboursement ${fmtMAD(amount)} · ${payout} · ticket ${sale.id}`, async (manager) => {
+    window.requireManager(`Remboursement ${fmtMAD(amount)} · ${said} · ticket ${sale.id}`, async (manager) => {
       state.retBusy = true; renderEchanges(); icons();
       try {
+        let done = planned;
         if (!IS_DEMO) {
           const response = await fetch('/api/sale/refund', {
             method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -270,7 +322,12 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
             const error = new Error((data && data.error) || `http-${response.status}`);
             error.code = (data && data.error) || `http-${response.status}`; throw error;
           }
+          /* Le reçu dit ce que le serveur a fait, au centime, même si une autre
+             caisse avait déjà rendu une partie de ce ticket. */
+          if (Array.isArray(data.allocations) && data.allocations.length) done = refundRows(data.allocations);
+          if (done.some(r => r.m === 'avoir')) refreshRemoteAvoirs();
         }
+        sale.refundedCents = (Number(sale.refundedCents) || 0) + Math.round(amount * 100);
         if (resellable) restoreLines(sale, idxs, quantities, `remboursement (${motif.toLowerCase()})`);
         else markDamagedLines(sale, idxs, quantities, `retour non revendable (${motif.toLowerCase()})`);
         recordReturn(sale, idxs, amount, motif, resellable ? 'refund' : 'refund-damaged', refundId, quantities);
@@ -279,7 +336,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
           ref: `REM-${sale.id}`, title: 'Remboursement', amount,
           lines: idxs.map((i) => ({ qty: quantities.get(i), name: sale.lines[i].name || (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || 'Article', amount: paidUnit(sale, sale.lines[i]) * quantities.get(i), ref: sale.lines[i].pid })),
           customer: saleClient(sale) ? { name: saleClient(sale).name, phone: saleClient(sale).phone } : null,
-        }, [{ m: payout, amount }]);
+        }, done);
         toast('Remboursement enregistré', 4200, 'success', `${fmtMAD(amount)} · accord ${manager && manager.name ? manager.name : 'responsable'}`);
       } catch (error) {
         const detail = error && error.code === 'refund-exceeds-sale'
