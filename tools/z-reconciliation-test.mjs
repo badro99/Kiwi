@@ -72,6 +72,30 @@ assert.equal(readBody.dayReports, undefined, 'legacy aggregate is not a comparis
 const foreign = await endpoint.onRequestGet({ env, request: new Request(
   'https://kiwi.test/api/z-reconciliation?merchant=another-store', { headers: { Cookie: owner } }) });
 assert.equal(foreign.status, 403, 'owner cannot read another merchant Z');
+// A CLOSED Z certifies the merchant's day: a durable receipt that no manifest
+// claims cannot be left out. It is counted and named, never silently matched.
+result = await post(report);
+assert.equal(result.body.status, 'mismatch', 'closed Z cannot omit a durable receipt');
+assert.deepEqual(result.body.omitted, ['other-terminal-sale']);
+assert.equal(result.body.serverCents, 12000);
+assert.equal(result.body.gapCents, -2300);
+// Another merchant's manifest can never claim this merchant's receipt.
+db.prepare(`INSERT INTO z_reconciliations
+  (merchant,business_day,terminal_id,reported_count,reported_cents,server_count,server_cents,
+   missing_count,missing_cents,mismatch_count,extra_count,status,result_json,updated_ts)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run('another-store', day, 'till-two', 1, 2300, 0, 0, 1, 2300, 0, 0,
+    'mismatch', JSON.stringify({ closed: true, manifest: [{ id: 'other-terminal-sale', amountCents: 2300, method: 'cash' }] }), Date.now());
+result = await post(report);
+assert.deepEqual(result.body.omitted, ['other-terminal-sale'], 'tenant isolation: foreign Z claims nothing');
+// Once the other till of the SAME merchant declares it, the receipt is its own.
+result = await post({ terminalId: 'till-two', day, sales: [{ id: 'other-terminal-sale', amountCents: 2300, method: 'cash' }],
+  count: 1, totalCents: 2300 });
+assert.equal(result.body.status, 'matched', 'receipts claimed by the other till of this merchant are not omitted');
+assert.deepEqual(result.body.omitted, []);
+result = await post(report);
+assert.equal(result.body.status, 'matched');
+assert.deepEqual(result.body.omitted, []);
+assert.equal(result.body.serverCents, 9700);
 // A sale just before the next 05:00 boundary belongs to this day; the next
 // second does not. No fixed UTC offset may be used across the winter shift.
 db.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,10,1000,'cash',?)")

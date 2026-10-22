@@ -158,10 +158,6 @@
       "label": "SM-2"
     },
     {
-      "suite": "server-money-properties-test.mjs",
-      "label": "SM-3"
-    },
-    {
       "suite": "serveur-money-properties-test.mjs",
       "label": "WM-4"
     },

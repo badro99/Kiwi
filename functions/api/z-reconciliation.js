@@ -93,6 +93,39 @@ export async function onRequestPost({ request, env }) {
   for (const [id, row] of server) {
     if (!local.has(id)) extra.push(id);
   }
+  // Un Z FERMÉ certifie la journée du commerce, pas seulement les tickets que
+  // ce poste a listés : un reçu durable que le manifeste omet doit
+  // rendre le Z non conforme. Le grand livre ne porte pas le poste d'origine,
+  // donc un reçu n'est « à un autre poste » que si le manifeste déposé par un
+  // autre poste du MÊME commerce, pour le MÊME jour, le revendique. Le reste est
+  // compté ici (serverCount/serverCents) et nommé dans `omitted`. Un instantané
+  // ouvert garde la portée de ses propres reçus : les autres caisses n'ont pas
+  // encore parlé. La lecture n'a lieu que s'il y a des reçus hors manifeste.
+  const closedReport = body.closed !== false;
+  const omitted = [];
+  let omittedCents = 0;
+  if (closedReport && extra.length) {
+    const claimed = new Set();
+    try {
+      await schema(env.DB);
+      const others = (await env.DB.prepare(`SELECT result_json FROM z_reconciliations
+        WHERE merchant = ? AND business_day = ? AND terminal_id <> ? LIMIT 64`)
+        .bind(merchant, day, terminalId).all()).results || [];
+      for (const other of others) {
+        let parsed; try { parsed = JSON.parse(other.result_json || '{}'); } catch (_) { continue; }
+        for (const item of Array.isArray(parsed.manifest) ? parsed.manifest : []) {
+          if (item && item.id != null) claimed.add(String(item.id));
+        }
+      }
+    } catch (error) { return json({ error: 'db-read-failed' }, 503); }
+    for (const id of extra) {
+      if (claimed.has(id)) continue;
+      const stored = server.get(id);
+      omitted.push(id); omittedCents += stored.amountCents;
+      serverCount++;
+      serverCents += stored.amountCents;
+    }
+  }
   // A missing receipt alone does NOT make a permanent rejection retryable.
   // Only reasons removed by this release are eligible. Conflicting financial
   // identities and malformed payloads stay quarantined for human resolution.
@@ -110,10 +143,10 @@ export async function onRequestPost({ request, env }) {
   const result = { comparisonId, blocked, retryable,
     manifest: sales.map(row => ({ id: row.id, amountCents: row.amountCents, method: row.method })), day, terminalId, cutoff,
     unqueuedCount, unqueuedCents, reportedCount: body.count, reportedCents: body.totalCents,
-    serverCount, serverCents, missing, missingCents, mismatched, extra,
-    closed: body.closed !== false,
+    serverCount, serverCents, missing, missingCents, mismatched, extra, omitted, omittedCents,
+    closed: closedReport,
     gapCents: body.totalCents - serverCents,
-    status: missing.length || mismatched.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
+    status: missing.length || mismatched.length || omitted.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
   try {
     await schema(env.DB);
     await env.DB.prepare(`INSERT INTO z_reconciliations
