@@ -341,6 +341,7 @@
     if (input.id) rec = d.list.filter(function (c) { return c.id === input.id; })[0];
     if (!rec && input.phone) rec = d.list.filter(function (c) { return samePhone(c.phone, input.phone); })[0];
     if (rec) {
+      if (!rec.profileBase) rec.profileBase = profileSnapshot(rec);
       // merge editable fields onto the existing record.
       ['name', 'email', 'birthday', 'gender', 'city', 'address', 'notes'].forEach(function (k) {
         if (input[k] != null && input[k] !== '') rec[k] = input[k];
@@ -585,7 +586,7 @@
    * NEVER demo/seed books, and endpoint absence (404/503/offline) is a silent no-op.
    * localStorage stays the source of truth same-browser; the server carries the book
    * across devices (caisse tablet ⇄ dashboard laptop).
-   * Merge is last-write-wins on each record's `updated` clock. ─────────────────── */
+   * Profile edits merge by changed field; server arrival resolves conflicts. ─────────────────── */
   function realEnv() { try { return !!(window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()); } catch (_) { return false; } }
   function syncable(book) {
     return (ls('kiwiLive') === '1' || ls('kiwiPaired') === '1' || realEnv()) && !!book && !isDemoBook(book) && !SEED_VENUES[book];
@@ -789,15 +790,37 @@
     redemptionRead(book).slice(0, 25).forEach(function (event) { redemptionPush(book, event); });
   }
 
+  // Persist the last observed profile with the record, including while offline.
+  // Comparing against it distinguishes an edit from an unchanged stale field.
+  function profileSnapshot(rec) {
+    var out = {};
+    ['name', 'phone', 'email', 'birthday', 'gender', 'city', 'address', 'notes',
+      'hospitality', 'consent', 'consentEmail', 'source', 'firstSeen', 'lastSeen'].forEach(function (k) {
+      if (rec[k] !== undefined) out[k] = rec[k];
+    });
+    return JSON.parse(JSON.stringify(out));
+  }
+
   function pushClient(rec, book) {
     if (!syncable(book) || !rec || !rec.id) return Promise.resolve(false);
     var id = rec.id;
+    var sent = profileSnapshot(rec);
+    outAdd(book, id);
     try {
       return fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify(Object.assign({ merchant: book }, rec)),
       }).then(function (r) {
-        if (r && r.ok) { outDrop(book, id); return true; }
+        if (r && r.ok) {
+          var d = readBook(book), current = d.list.filter(function (c) { return c.id === id; })[0];
+          // An old acknowledgement must not clear a newer edit's outbox entry.
+          if (current && JSON.stringify(profileSnapshot(current)) === JSON.stringify(sent)) {
+            current.profileBase = sent;
+            clientsStore.set(d, book);
+            outDrop(book, id);
+          }
+          return true;
+        }
         outAdd(book, id);                    // 401 / 503 / 500 → on retentera
         return false;
       }).catch(function () { outAdd(book, id); return false; });
@@ -871,7 +894,7 @@
     });
     return out;
   }
-  // merge server rows into the local book, last-write-wins on `updated`.
+  // Merge server rows while retaining unacknowledged profile field edits.
   function mergeServer(book, rows) {
     var d = readBook(book), changed = false, byId = {};
     d.list.forEach(function (c) { byId[c.id] = c; });
@@ -888,6 +911,13 @@
         return;
       }
       var sc = fromServer(r), local = byId[sc.id];
+      sc.profileBase = profileSnapshot(sc);
+      // Pulls accept server order, while preserving fields still queued locally.
+      if (local && local.profileBase) {
+        Object.keys(profileSnapshot(local)).forEach(function (key) {
+          if (JSON.stringify(local[key]) !== JSON.stringify(local.profileBase[key])) sc[key] = local[key];
+        });
+      }
       sc.purchaseRefs.forEach(function (ref) { purchaseDrop(book, ref); });
       sc.rewardRefs.forEach(function (ref) { redemptionDrop(book, ref); });
       var pending = pendingPurchaseDelta(book, sc.id);
@@ -906,7 +936,7 @@
       if (!local) {
         d.list.push(sc); byId[sc.id] = sc; changed = true;
         var mm = /^c(\d+)_/.exec(sc.id); if (mm) { var n = parseInt(mm[1], 10); if (n > (d.seq || 0)) d.seq = n; }
-      } else if ((sc.updated || 0) >= (local.updated || 0)) {
+      } else if (local.profileBase || (sc.updated || 0) >= (local.updated || 0)) {
         if ((!sc.history || !sc.history.length) && Array.isArray(local.history)) sc.history = local.history;
         Object.assign(local, sc); changed = true;
       }

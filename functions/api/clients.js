@@ -22,10 +22,9 @@
 // Tenancy : la règle unique de _private.js. Jamais public — un carnet, c'est des
 // noms, des téléphones, des dates de naissance et des habitudes d'achat.
 //
-// Concurrence : dernier écrivain gagne, PAR CLIENT, sur l'horloge de la fiche
-// (`updated`). Une écriture plus ancienne que ce qui est en base est ignorée
-// plutôt qu'appliquée (le WHERE de l'upsert), donc une caisse qui rejoue sa file
-// d'attente après une coupure ne rétrograde pas une fiche corrigée entre-temps.
+// Concurrence : profileBase identifies fields actually edited by a device.
+// Only those fields move, atomically, in server write order. Device clocks
+// never arbitrate profile conflicts. Legacy partial payloads edit supplied keys.
 //
 // Curseur : `srv_ts`, une horloge SERVEUR strictement croissante par magasin —
 // pas l'horloge de la fiche. Une tablette mal réglée de trois jours écrirait
@@ -134,9 +133,8 @@ function sanitize(raw) {
     source: str(raw && raw.source, 24) || 'caisse',
     first_seen: int(raw && raw.firstSeen, 1e15),
     last_seen: int(raw && raw.lastSeen, 1e15),
-    // L'horloge de la FICHE, celle qui arbitre le dernier-écrivain-gagne. Une
-    // fiche sans horloge serait toujours perdante et ne s'écrirait jamais.
-    updated_ts: int(raw && (raw.updated || raw.updated_ts), 1e15) || Date.now(),
+    // Device timestamps are untrusted, including future clocks.
+    updated_ts: Date.now(),
   };
 }
 
@@ -784,6 +782,30 @@ export async function onRequestPost(context) {
   const initialSpend = preserveImportedTotals ? c.spend : 0;
 
   const srv = await nextSrvTs(env, merchant);
+  const profileColumns = {
+    name: 'name', phone: 'phone', email: 'email', birthday: 'birthday',
+    gender: 'gender', city: 'city', address: 'address', notes: 'notes',
+    hospitality: 'hospitality', consent: 'consent', consentEmail: 'consent_email',
+    source: 'source', firstSeen: 'first_seen', lastSeen: 'last_seen',
+  };
+  const base = body.profileBase && typeof body.profileBase === 'object'
+    && !Array.isArray(body.profileBase) ? sanitize(body.profileBase) : null;
+  // Column names come solely from this allowlist. No read/modify/write race:
+  // an untouched field is absent from the SQL assignment altogether.
+  const edits = Object.entries(profileColumns)
+    .filter(([key, column]) => Object.hasOwn(body, key) && (!base || c[column] !== base[column]))
+    .map(([, column]) => `${column} = excluded.${column},`).join('\n');
+  /* Une caisse encore sur l'ancienne version n'envoie pas profileBase : elle
+   * réécrit la fiche entière. Pour elle seule, l'ancienne règle tient (une
+   * écriture plus vieille que la fiche en base est ignorée), sinon sa file
+   * rejouée après une coupure écraserait une correction faite entre-temps.
+   * Son horloge est bornée à maintenant : une horloge en avance ne gagne plus
+   * pour toujours. */
+  const legacy = base ? 0 : 1;
+  if (legacy) {
+    const now = Date.now();
+    c.updated_ts = Math.min(int(body.updated || body.updated_ts, 1e15) || now, now);
+  }
 
   try {
     await env.DB.prepare(
@@ -793,19 +815,14 @@ export async function onRequestPost(context) {
                             srv_ts, deleted)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
        ON CONFLICT(merchant, id) DO UPDATE SET
-         name = excluded.name, phone = excluded.phone, email = excluded.email,
-         birthday = excluded.birthday, gender = excluded.gender, city = excluded.city,
-         address = excluded.address, notes = excluded.notes, hospitality = excluded.hospitality,
-         consent = excluded.consent, consent_email = excluded.consent_email,
-         source = excluded.source, first_seen = excluded.first_seen,
-         last_seen = excluded.last_seen, updated_ts = excluded.updated_ts,
-         srv_ts = excluded.srv_ts, deleted = 0
+         ${edits}
+         updated_ts = excluded.updated_ts, srv_ts = excluded.srv_ts
        -- Profile sync must never restore a tombstone, even with a future device clock.
-       WHERE clients.deleted = 0 AND excluded.updated_ts >= clients.updated_ts`
+       WHERE clients.deleted = 0 AND (? = 0 OR excluded.updated_ts >= clients.updated_ts)`
     ).bind(
       merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
       c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,
-      c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv
+      c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv, legacy
     ).run();
   } catch (_) {
     // Table absente → 503. Le client garde la fiche dans sa file et retentera :

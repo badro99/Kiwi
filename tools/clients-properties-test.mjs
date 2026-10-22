@@ -30,6 +30,21 @@ const stores={};const define=(name,opts)=>{const store={data:{},get(k){return st
 const device=vm.createContext({window:{KiwiStore:{define,currentVenue:()=>f.merchant},KiwiPhone:phone,addEventListener(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}},setInterval:()=>1,clearInterval(){},console,fetch:async()=>({ok:false})});
 device.KiwiStore=device.window.KiwiStore;
 vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8'),device);const book=device.window.KiwiClients;
+// Two independent VM devices execute the shipped store, with writes held in a
+// controllable network queue. No browser engine or replicated merge algorithm.
+function syncDevice(skew) {
+ const stores={},queue=[],storage=new Map();
+ const define=(name,opts)=>stores[name]={data:{},get(k){return this.data[k]||(opts.blank?opts.blank():null);},set(v,k){this.data[k]=JSON.parse(JSON.stringify(v));},subscribe(){return()=>{};}};
+ class DeviceDate extends Date {static now(){return Date.now()+skew;}}
+ const window={KiwiStore:{define,currentVenue:()=>f.merchant},KiwiEnv:{isReal:()=>true},KiwiPhone:phone,addEventListener(){}};
+ const context=vm.createContext({window,KiwiStore:window.KiwiStore,KiwiEnv:window.KiwiEnv,Date:DeviceDate,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},console,setInterval:()=>1,clearInterval(){},fetch:(url,opts)=>{
+  if(!opts||!opts.method)return f.request({},true);
+  return new Promise(resolve=>queue.push(async()=>{const result=await f.request(JSON.parse(opts.body));resolve(result);await new Promise(done=>setImmediate(done));}));
+ }});
+ vm.runInContext(fs.readFileSync(path.join(ROOT,'assets/clients-store.js'),'utf8'),context);
+ const book=window.KiwiClients;
+ return {book,queue,pull:()=>new Promise(resolve=>book.pull(f.merchant,resolve)),flush:async()=>{while(queue.length)await queue.shift()();}};
+}
 const number=fc.integer({min:600000000,max:799999999}),cents=fc.integer({min:1,max:1999999});
 try{
 await strict('Moroccan punctuation and country prefixes share one identity; distinct numbers never collide',fc.property(number,number,(n,m)=>{const variants=['0'+n,'+212'+n,'00212'+n,'+212 '+String(n).split('').join('.'),'0'+String(n).split('').join('-')];for(const v of variants)assert.equal(phone.digits(v),'212'+n);assert.equal(phone.same('0'+n,'+212'+m),n===m);}));
@@ -42,7 +57,28 @@ await strict('points and spend accrue only on money received: voucher, store cre
 await strict('book spend follows linked sale void/refund intent; visits remain historical and browser agrees',fc.asyncProperty(cents,fc.boolean(),async(amount,voided)=>{await reset();await b.reset({});f.insert('linked',amount);ok(await f.clients({purchase:{clientId:'client-fixture',ref:'purchase:client-fixture:linked',saleRef:'linked',amount:amount/100}}));if(voided)ok(await f.call('admin',{ids:['linked'],action:'void',reason:'formation',force:true},'operator'));else ok(await f.clients({refund:{clientId:'client-fixture',ref:'refund:local',saleRef:'linked',amount:amount/100}}));await b.pull();const row=f.rowClient();assert.equal(C(row.spend),0);assert.equal(row.visits,1);assert.equal(C(b.get().spend),0);assert.equal(b.get().visits,1);assert.equal(b.get().points,row.points);}));
 await strict('tenant isolation covers read/write/delete, employee routes and payload credential projection',fc.asyncProperty(number,async n=>{await reset();f.sql.prepare('INSERT INTO clients(merchant,id,name,phone) VALUES(?,?,?,?)').run('server-other-shop','foreign','Foreign','+212'+n);for(const [handler,method,body,role]of [[get,'GET',{},'owner'],[post,'POST',{id:'foreign',name:'Changed'},'owner'],[del,'DELETE',{id:'foreign'},'owner'],[get,'GET',{},'till'],[post,'POST',{id:'foreign',name:'Changed'},'till'],[del,'DELETE',{id:'foreign'},'till'],[employeeGet,'GET',{},'employee'],[employeePost,'POST',{clientId:'foreign',ref:'x',amount:1},'employee']]){const r=await request(handler,{...body,merchant:'server-other-shop'},role,method);if(handler===get&&role==='owner'&&r.status===200)assert.notEqual(r.body.merchant,'server-other-shop');else assert.ok([401,403].includes(r.status));assert.ok(!JSON.stringify(r.body).includes('+212'+n));}for(const [handler,role]of [[get,'till'],[employeeGet,'employee']]){const payload=JSON.stringify(ok(await request(handler,{},role,'GET')));for(const marker of ['synthetic-password-marker','synthetic-code-marker','pinCode','password'])assert.ok(!payload.includes(marker));}assert.equal(f.sql.prepare("SELECT name FROM clients WHERE id='foreign'").get().name,'Foreign');assert.equal((await request(get,{},'employee','GET')).status,401);}));
 await strict('unsupported self-merge refuses without changing totals',fc.asyncProperty(cents,async amount=>{await reset();const before=JSON.stringify(f.rowClient());assert.equal((await request(post,{merge:{from:'client-fixture',to:'client-fixture'},amount})).status,400);assert.equal(JSON.stringify(f.rowClient()),before);}));
-await knownIssue('CL-1','whole-record last-writer-wins silently loses independent device fields; conflict protocol is a product decision',fc.asyncProperty(fc.integer({min:2,max:100}),async updated=>{await reset();const base={id:'client-fixture',name:'Before',notes:'Before',updated};(await Promise.all([request(post,{...base,name:'Device A'}),request(post,{...base,notes:'Device B',updated:updated+1})])).forEach(ok);const r=f.rowClient();return r.name==='Device A'&&r.notes==='Device B';}));
+await strict('independent device fields survive either arrival order and arbitrary clock skew',fc.asyncProperty(fc.boolean(),fc.integer({min:-1000000000000000,max:1000000000000000}),async(reverse,skew)=>{await reset();const base={id:'client-fixture',name:'Before',phone:'0600000000',notes:'Before'};ok(await request(post,base));const edits=[{...base,phone:'0700000000',profileBase:base,updated:Date.now()+skew},{...base,notes:'Device B',profileBase:base,updated:1}];if(reverse)edits.reverse();for(const edit of edits)ok(await request(post,edit));const row=f.rowClient();assert.equal(row.phone,'0700000000');assert.equal(row.notes,'Device B');}));
+await strict('shipped browser devices preserve independent queued edits and converge despite skew',fc.asyncProperty(fc.boolean(),fc.integer({min:-1000000000000000,max:1000000000000000}),async(reverse,skew)=>{
+ await reset();ok(await request(post,{id:'client-fixture',name:'Before',phone:'0600000000',notes:'Before'}));
+ const a=syncDevice(skew),b=syncDevice(-skew);await a.pull();await b.pull();
+ a.book.upsert({id:'client-fixture',phone:'0700000000'},f.merchant);
+ b.book.upsert({id:'client-fixture',notes:'Device B'},f.merchant);
+ // A poll arriving before acknowledgement must retain the queued edit.
+ await a.pull();await b.pull();
+ for(const d of reverse?[b,a]:[a,b])await d.flush();
+ assert.equal(phone.digits(f.rowClient().phone),'212700000000');assert.equal(f.rowClient().notes,'Device B');
+ for(const d of [a,b]){await d.pull();const row=d.book.get('client-fixture',f.merchant);assert.equal(phone.digits(row.phone),'212700000000');assert.equal(row.notes,'Device B');}
+}));
+await strict('ordinary profile snapshots cannot overwrite ledger fields, including financial import retries',fc.asyncProperty(cents,async amount=>{
+ await reset();ok(await request(post,{purchase:{clientId:'client-fixture',ref:'ledger',amount:amount/100}}));const before=f.rowClient();
+ ok(await request(post,{id:'client-fixture',name:'Edited',points:999999,stamps:999999,spend:999999,visits:999999,balance:999999,credit:999999,financialImport:true,updated:1e15}));
+ const after=f.rowClient();for(const key of ['points','stamps','spend','visits'])assert.equal(after[key],before[key]);assert.ok(!Object.hasOwn(after,'balance'));assert.ok(!Object.hasOwn(after,'credit'));
+}));
+await strict('same field follows server arrival for current browsers and future clocks are clamped',fc.asyncProperty(fc.integer({min:1,max:1000000000000000}),async skew=>{await reset();ok(await request(post,{id:'client-fixture',name:'Future',updated:Date.now()+skew}));assert.ok(f.rowClient().updated_ts<=Date.now());ok(await request(post,{id:'client-fixture',name:'Later',updated:1,profileBase:{name:'Future'}}));assert.equal(f.rowClient().name,'Later');await reset();ok(await request(post,{id:'client-fixture',name:'Future',updated:Date.now()+skew}));ok(await request(post,{id:'client-fixture',name:'Honest',updated:Date.now()}));assert.equal(f.rowClient().name,'Honest')}))
+/* Une caisse restée sur l'ancienne version (pas de profileBase) rejoue sa file
+ * après une coupure : sa fiche entière, plus vieille que la correction faite
+ * entre-temps depuis le tableau de bord, ne l'écrase pas. */
+await strict('a legacy whole-record replay older than the stored record does not overwrite it',fc.asyncProperty(fc.integer({min:1,max:3600000}),async age=>{await reset();const fixedAt=Date.now();ok(await request(post,{id:'client-fixture',name:'Fixed',updated:fixedAt,profileBase:{name:'Before'}}));ok(await request(post,{id:'client-fixture',name:'Stale',updated:fixedAt-age}));assert.equal(f.rowClient().name,'Fixed')}))
 await knownIssue('CL-2','no duplicate merge contract exists: union of visits/spend/notes/tags and reverse-merge semantics require design',fc.asyncProperty(cents,async amount=>{await reset();ok(await request(post,{id:'duplicate',name:'Duplicate',notes:'Second',tags:['second']}));const r=await request(post,{merge:{from:'duplicate',to:'client-fixture'}});return r.status===200&&f.sql.prepare("SELECT deleted FROM clients WHERE id='duplicate'").get().deleted===1;}));
 await knownIssue('CL-3','tags are local-only: server projection has no tag column or sync contract',fc.asyncProperty(fc.constant('vip'),async tag=>{await reset();ok(await request(post,{id:'client-fixture',tags:[tag]}));const row=ok(await request(get,{},'till','GET')).clients[0];return row.tags?.includes(tag)===true;}));
 await knownIssue('CL-4','on-shift service role can enumerate search results without a distinct export permission; no export route exists',fc.asyncProperty(fc.constant(''),async q=>{await reset();return (await request(employeeGet,{q,export:true},'employee','GET')).status===403;}));
