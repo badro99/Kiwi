@@ -219,8 +219,28 @@ CREATE TABLE IF NOT EXISTS accounts (
   -- adresse pour sa facturation ou si personne n'a jamais posé la question.
   contact_email TEXT,                -- l'adresse à laquelle Kiwi écrit au commerce
   billing_email TEXT,                -- facturation / comptabilité, quand elle diffère
-  session_epoch INTEGER NOT NULL DEFAULT 0 -- password recovery revokes older signed sessions
+  session_epoch INTEGER NOT NULL DEFAULT 0, -- password recovery revokes older signed sessions
+  -- Le slug d'établissement réservé à l'inscription (functions/auth/signup.js).
+  -- Le contrôle « nom déjà pris » lisait puis écrivait en deux temps : deux
+  -- inscriptions simultanées sous deux e-mails pouvaient revendiquer le même
+  -- slug, donc le même locataire. L'index unique ci-dessous fait perdre la
+  -- seconde. NULL pour les comptes antérieurs (jamais recopié : les anciens
+  -- comptes « client » partagent ce slug, un index unique les refuserait) ;
+  -- le balayage de signup.js continue de les couvrir.
+  business_slug TEXT
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_business_slug ON accounts (business_slug) WHERE business_slug IS NOT NULL;
+
+-- Sessions propriétaire fermées par /auth/logout, par sid (le jeton est signé et
+-- sans état : sans cette ligne une copie restait valable jusqu'à son échéance).
+-- expires_ts = dernière échéance possible d'un jeton de la session ; au-delà la
+-- ligne ne sert plus et logout la purge.
+CREATE TABLE IF NOT EXISTS session_revocations (
+  sid        TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  expires_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_session_revocations_expires ON session_revocations (expires_ts);
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.

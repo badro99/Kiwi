@@ -53,6 +53,7 @@ function makeDB() {
           }
           if (q.startsWith('SELECT business FROM accounts')) return T.accounts[a[0]] || null;
           if (q.startsWith('SELECT status, session_epoch FROM accounts')) return T.accounts[a[0]] ? { status: 'active', session_epoch: 0 } : null;
+          if (q.startsWith('SELECT 1 AS revoked FROM session_revocations')) return null;
           if (q.startsWith('SELECT status FROM merchant_config')) {
             const r = T.merchant_config.find((x) => x.merchant === a[0]);
             return r ? { status: r.status || 'active' } : null;

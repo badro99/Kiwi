@@ -116,6 +116,7 @@ function makeEnv() {
             if (q.startsWith('SELECT status, session_epoch FROM accounts')) {
               return DB_ROWS.accounts[args[0]] ? { status: 'active', session_epoch: 0 } : null;
             }
+            if (q.startsWith('SELECT 1 AS revoked FROM session_revocations')) return null;
             if (q.startsWith('SELECT id FROM operators')) {
               return DB_ROWS.operators.includes(args[0]) ? { id: args[0] } : null;
             }

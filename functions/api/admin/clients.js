@@ -544,6 +544,16 @@ export async function onRequestDelete(context) {
   } catch (e) {
     return json({ error: 'delete-failed', detail: String(e) }, 500);
   }
+  /* Le compte a changé de nom : le slug réservé à son inscription (signup.js)
+   * ne doit pas garder pour toujours le nom d'un commerce supprimé. Hors du
+   * lot : une base pas encore migrée (0007) n'a pas la colonne, et la
+   * suppression ne doit pas en dépendre. */
+  if (owner && nextStore && slugMerchant(owner.business) === merchant) {
+    try {
+      await env.DB.prepare('UPDATE accounts SET business_slug = NULL WHERE id = ? AND business_slug = ?')
+        .bind(owner.id, merchant).run();
+    } catch (_) { /* colonne absente : rien à libérer */ }
+  }
 
   await logStoreAction(context, merchant, 'store-delete', 'deleted',
     'suppression définitive · ' + JSON.stringify(removed) + ' · r2 ' + JSON.stringify(r2));

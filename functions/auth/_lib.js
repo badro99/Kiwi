@@ -727,8 +727,17 @@ export async function operatorToken(authSecret) {
  * Absent ⇒ null, et l'appelant écrit une identité générique plutôt qu'un faux
  * nom (laissez-passer équipe, ou session ouverte avant cette version). */
 export const OPID_COOKIE = 'kiwi_op_id';
+/* Durée de vie d'une session opérateur, côté SERVEUR. Le cookie portait déjà
+ * Max-Age=30 jours, mais c'est le navigateur qui l'applique : une valeur copiée
+ * hors du navigateur restait valable indéfiniment, puisque le jeton ne contenait
+ * aucune date. L'échéance est donc signée DANS le jeton (v2 :
+ * "<id>.<exp>.<HMAC(secret, id.exp)>") et vérifiée à chaque lecture. Un jeton v1,
+ * sans échéance, n'est plus accepté : l'opérateur retape son code une fois. */
+export const OPERATOR_SESSION_MS = 30 * 86400 * 1000;
 export async function operatorIdToken(authSecret, opId) {
-  return String(opId) + '.' + (await hmacHex(authSecret, 'kiwi-operator-id-v1:' + String(opId)));
+  const exp = Date.now() + OPERATOR_SESSION_MS;
+  const body = String(opId) + '.' + exp;
+  return body + '.' + (await hmacHex(authSecret, 'kiwi-operator-id-v2:' + body));
 }
 export async function readOperatorId(request, env) {
   const secret = env && env.AUTH_SECRET;
@@ -736,9 +745,15 @@ export async function readOperatorId(request, env) {
   if (!secret || !raw) return null;
   const dot = raw.lastIndexOf('.');
   if (dot <= 0) return null;
-  const id = raw.slice(0, dot);
-  const want = await hmacHex(secret, 'kiwi-operator-id-v1:' + id);
-  return timingSafeEqualHex(raw.slice(dot + 1), want) ? id : null;
+  const body = raw.slice(0, dot);
+  const want = await hmacHex(secret, 'kiwi-operator-id-v2:' + body);
+  if (!timingSafeEqualHex(raw.slice(dot + 1), want)) return null;
+  const cut = body.lastIndexOf('.');
+  if (cut <= 0) return null;
+  const exp = Number(body.slice(cut + 1));
+  /* L'échéance est signée : seul le serveur a pu la poser. */
+  if (!Number.isFinite(exp) || exp <= Date.now()) return null;
+  return body.slice(0, cut);
 }
 
 /* A live, named operator session.
@@ -887,11 +902,21 @@ export async function sendMail(env, msg) {
   }
 }
 
-// Session token = base64url(JSON{aid,exp}) + "." + HMAC(secret, payload).
-export async function makeSession(accountId, secret, sessionVersion = 0) {
+// Session token = base64url(JSON{aid,sv,sid,exp}) + "." + HMAC(secret, payload).
+//
+// `sid` nomme LA session d'un navigateur et survit au renouvellement à mi-vie
+// (le middleware le recopie) : c'est la clé que /auth/logout inscrit dans
+// session_revocations. Sans elle, « Sortir » n'effaçait que le cookie : une copie
+// du jeton restait valable jusqu'à son échéance. On ne révoque pas par
+// session_epoch, qui couperait TOUS les appareils du compte (la caisse du
+// comptoir comme le téléphone du patron) pour un seul « Sortir ».
+const SID_RE = /^[0-9a-f]{32}$/;
+export async function makeSession(accountId, secret, sessionVersion = 0, sessionId = '') {
   const exp = Date.now() + SESS_DAYS * 86400 * 1000;
   const sv = Math.max(0, Math.round(Number(sessionVersion) || 0));
-  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, sv, exp })));
+  const sid = SID_RE.test(String(sessionId || '')) ? String(sessionId)
+    : toHex(crypto.getRandomValues(new Uint8Array(16)));
+  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, sv, sid, exp })));
   const sig = await hmacHex(secret, payload);
   return payload + '.' + sig;
 }
@@ -906,7 +931,51 @@ export async function readSession(token, secret) {
   let obj;
   try { obj = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
   if (!obj || typeof obj.exp !== 'number' || obj.exp < Date.now()) return null;
+  /* Jeton émis avant les sid : on lui en dérive un, stable, de sa charge signée.
+   * Il devient révocable lui aussi, et le renouvellement le recopie. */
+  if (!SID_RE.test(String(obj.sid || ''))) {
+    obj.sid = toHex(await crypto.subtle.digest('SHA-256', encoder.encode('kiwi-sid-v1:' + payload))).slice(0, 32);
+  }
   return obj;
+}
+
+/* ── RÉVOCATION D'UNE SESSION ─────────────────────────────────────────────────
+ * session_revocations garde le sid d'une session fermée par /auth/logout jusqu'à
+ * la dernière échéance possible d'un jeton de sa lignée. Lecture :
+ *   · ligne présente      → révoquée ;
+ *   · table absente       → pas révoquée (base pas encore migrée : on retombe
+ *                           sur le comportement d'avant plutôt que de couper
+ *                           toutes les sessions au déploiement) ;
+ *   · toute autre erreur  → indisponible, l'appelant refuse comme pour accounts. */
+export async function sessionRevocation(env, sess) {
+  if (!sess || !SID_RE.test(String(sess.sid || ''))) return { revoked: false };
+  try {
+    const row = await env.DB.prepare('SELECT 1 AS revoked FROM session_revocations WHERE sid = ?')
+      .bind(sess.sid).first();
+    return { revoked: !!row };
+  } catch (e) {
+    if (/no such table/i.test(String((e && e.message) || e))) return { revoked: false };
+    return { revoked: false, unavailable: true };
+  }
+}
+
+/* Inscrit la session présentée comme fermée. Au mieux : une déconnexion ne doit
+ * jamais échouer, elle efface les cookies quoi qu'il arrive. L'échéance retenue
+ * est celle du jeton le plus tardif que cette lignée ait pu recevoir jusqu'ici
+ * (un renouvellement à l'instant), pas celle du jeton présenté : une copie
+ * renouvelée avant la déconnexion vit plus longtemps que l'original. */
+export async function revokeSession(env, sess) {
+  if (!env || !env.DB || !sess || !sess.aid || !SID_RE.test(String(sess.sid || ''))) return false;
+  const now = Date.now();
+  try {
+    await env.DB.prepare(
+      'INSERT OR IGNORE INTO session_revocations (sid, account_id, expires_ts) VALUES (?, ?, ?)'
+    ).bind(sess.sid, String(sess.aid), now + SESS_DAYS * 86400 * 1000).run();
+  } catch (_) { return false; }
+  try {
+    await env.DB.prepare('DELETE FROM session_revocations WHERE expires_ts < ?').bind(now).run();
+  } catch (_) { /* ménage seulement */ }
+  return true;
 }
 
 /* A signed cookie proves integrity, not that the account is still active. Any
@@ -918,10 +987,12 @@ export async function activeAccountSession(request, env) {
   const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
   if (!session || !session.aid) return null;
   try {
-    const row = await env.DB.prepare(
-      'SELECT status, session_epoch FROM accounts WHERE id = ?'
-    ).bind(session.aid).first();
+    const [row, revocation] = await Promise.all([
+      env.DB.prepare('SELECT status, session_epoch FROM accounts WHERE id = ?').bind(session.aid).first(),
+      sessionRevocation(env, session),
+    ]);
     if (!row || String(row.status || 'active').trim().toLowerCase() === 'suspended') return null;
+    if (revocation.revoked || revocation.unavailable) return null;
     const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
     const presented = Math.max(0, Math.round(Number(session.sv) || 0));
     return expected === presented ? session : null;

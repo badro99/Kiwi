@@ -22,7 +22,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
-  makeSession, sessionCookie, sessionNeedsRefresh,
+  makeSession, sessionCookie, sessionNeedsRefresh, sessionRevocation,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
@@ -194,11 +194,16 @@ async function expectedToken(password) {
 // A revocation read is an authorization dependency. If it is unavailable, the
 // private request is denied; treating the error as active would keep a revoked
 // token alive during the exact outage in which the check cannot be trusted.
-async function accountActive(env, aid, sessionVersion = 0) {
+async function accountActive(env, aid, sessionVersion = 0, sess = null) {
   if (!env || !env.DB || !aid) return { ok: false, unavailable: true };
   try {
-    const row = await env.DB.prepare('SELECT status, session_epoch FROM accounts WHERE id = ?').bind(aid).first();
-    if (!row) return { ok: false };        // deleted
+    /* La session elle-même a pu être fermée par /auth/logout (sid révoqué). */
+    const [row, revocation] = await Promise.all([
+      env.DB.prepare('SELECT status, session_epoch FROM accounts WHERE id = ?').bind(aid).first(),
+      sessionRevocation(env, sess),
+    ]);
+    if (revocation.unavailable) return { ok: false, unavailable: true };
+    if (!row || revocation.revoked) return { ok: false };        // deleted, or this session logged out
     const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
     const presented = Math.max(0, Math.round(Number(sessionVersion) || 0));
     return { ok: String(row.status || 'active').trim().toLowerCase() !== 'suspended' && expected === presented };
@@ -652,7 +657,7 @@ async function routeRequest(context) {
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
       if (!(wantsDoc || isApi)) return next();         // asset → trust the token
-      const accountState = await accountActive(env, sess.aid, sess.sv);
+      const accountState = await accountActive(env, sess.aid, sess.sv, sess);
       if (accountState.ok) {
         /* Fenêtre glissante — voir sessionNeedsRefresh(). Uniquement sur un
          * CHARGEMENT DE PAGE arrivé à mi-vie : jamais sur un asset (le cookie
@@ -662,7 +667,7 @@ async function routeRequest(context) {
           const res = await next();
           if (res.status === 101) return res;
           const out = new Response(res.body, res);
-          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv)));
+          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv, sess.sid)));
           return out;
         }
         return next();

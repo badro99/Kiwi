@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createRequire} from 'node:module';
+import {createHmac} from 'node:crypto';
 import {fixture} from './server-money-fixture.mjs';
 import * as auth from '../functions/auth/_lib.js';
 import {onRequestGet as menuGet} from '../functions/api/menu.js';
@@ -84,7 +85,8 @@ await knownIssue('legacy config PUT intentionally succeeds when module audit ins
  }finally{f.close();}}));
 await knownIssue('status retries append duplicate audit rows; transition policy is not specified',fc.asyncProperty(fc.constantFrom('pending','active','suspended'),async status=>{const f=await setup();try{for(let i=0;i<2;i++)await f.callAdmin('clients','PATCH',{merchant:f.merchant,status});return f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
 await knownIssue('operator PIN creation has no audit trail (schema/policy decision)',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{await f.callAdmin('pins','POST',{merchant:f.merchant,pin:String(1000),name:'Synthetic'});return f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
-await knownIssue('operator credentials have no server TTL, only browser Max-Age; session migration policy needed',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{return (await f.callAdmin('operators','GET',{},'expiredOperator')).status===403;}finally{f.close();}}));
+// Ex-known : l'échéance est signée dans kiwi_op_id (v2) et vérifiée par le serveur.
+await strict('operator credentials expire server-side, whatever the browser keeps',fc.asyncProperty(fc.integer({min:1,max:29}),async days=>{const f=await setup();try{const secret=f.env.AUTH_SECRET,op=`kiwi_op=${await auth.operatorToken(secret)}; kiwi_op_id=`,at=Date.now;assert.equal((await f.callAdmin('operators','GET',{},'expiredOperator')).status,403);let token;try{Date.now=()=>at()-days*86400000;token=await auth.operatorIdToken(secret,'money-operator');}finally{Date.now=at;}f.cookies.recent=op+token;assert.equal((await f.callAdmin('operators','GET',{},'recent')).status,200);try{Date.now=()=>at()+(31-days)*86400000;assert.equal((await f.callAdmin('operators','GET',{},'recent')).status,403);}finally{Date.now=at;}f.cookies.v1=op+'money-operator.'+createHmac('sha256',secret).update('kiwi-operator-id-v1:money-operator').digest('hex');assert.equal((await f.callAdmin('operators','GET',{},'v1')).status,403);}finally{f.close();}}));
 await knownIssue('account-wide suspension succeeds without any actor audit',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{const r=await f.callAdmin('clients','PATCH',{email:'money@example.test',status:'suspended'});return r.status!==200||f.sql.prepare('SELECT COUNT(*) n FROM account_audit').get().n===1;}finally{f.close();}}));
 await knownIssue('support status change has no durable actor event',fc.asyncProperty(fc.constant(null),async()=>{const f=await setup();try{f.sql.prepare("INSERT INTO support_tickets(id,reference,merchant,category,priority,channel,contact,summary,created_ts,updated_ts) VALUES('synthetic-ticket','SYNTHETIC',?,'materiel','normal','email','synthetic@example.test','Synthetic',1,1)").run(f.merchant);const r=await f.callAdmin('support','PATCH',{id:'synthetic-ticket',action:'status',status:'resolved'});return r.status!==200||f.sql.prepare('SELECT COUNT(*) n FROM support_messages').get().n===1;}finally{f.close();}}));
 // attendance-link intentionally issues a signed NFC URL. Reset is account-scoped,

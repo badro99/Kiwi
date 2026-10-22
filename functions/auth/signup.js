@@ -93,14 +93,34 @@ export async function onRequestPost(context) {
   const id = 'acc-' + crypto.randomUUID();
   const ts = Date.now();
 
+  /* Le contrôle ci-dessus lit, l'INSERT écrit : entre les deux, une autre
+   * inscription (autre e-mail, même nom) pouvait passer le même contrôle et les
+   * deux comptes héritaient du même locataire. Le slug est donc réservé PAR
+   * l'INSERT lui-même (accounts.business_slug, index unique) : la seconde
+   * écriture échoue et reçoit la même réponse « nom pris ». */
+  const reservedSlug = business && wantedSlug ? wantedSlug : null;
   try {
     await env.DB.prepare(
-      'INSERT INTO accounts (id, email, name, business, salt, hash, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, email, name, business, salt, hash, ts).run();
+      'INSERT INTO accounts (id, email, name, business, salt, hash, created_ts, business_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, email, name, business, salt, hash, ts, reservedSlug).run();
   } catch (e) {
-    // UNIQUE(email) race → treat as already-registered.
-    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
-    return json({ error: 'exists' }, 409);
+    const msg = String((e && e.message) || e);
+    let fallbackOk = false;
+    if (/business_slug/i.test(msg) && /no column|no such column/i.test(msg)) {
+      /* Base pas encore migrée (0007) : l'INSERT d'avant, sans réservation. */
+      try {
+        await env.DB.prepare(
+          'INSERT INTO accounts (id, email, name, business, salt, hash, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, email, name, business, salt, hash, ts).run();
+        fallbackOk = true;
+      } catch (_) { /* course sur l'e-mail → « exists » ci-dessous */ }
+    }
+    if (!fallbackOk) {
+      if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+      // Course perdue sur le slug → nom pris ; sur l'e-mail → compte existant.
+      if (/business_slug/i.test(msg) && /UNIQUE/i.test(msg)) return json({ error: 'business-taken' }, 409);
+      return json({ error: 'exists' }, 409);
+    }
   }
 
   /* Effacer le compteur à chaque succès rendait la création de comptes
