@@ -898,7 +898,12 @@
 
     const reset = $('#fl-bq-reset', el);
     if (reset) reset.onclick = () => { freshBouquet(); afterBouquetChange(); toast('Bouquet vidé'); };
-    $('#fl-wrap-opts', el).onclick = (e) => {
+    /* Un vrai magasin sans au moins deux emballages au catalogue n'a pas de bloc
+       « Emballage » (voir plus haut) : sans cette garde, le onclick posé sur null
+       levait une TypeError, le rendu s'arrêtait avant « Valider », et le bouton
+       ne faisait plus rien. Aucun bouquet ne pouvait être encaissé. */
+    const wrapOpts = $('#fl-wrap-opts', el);
+    if (wrapOpts) wrapOpts.onclick = (e) => {
       const w = e.target.closest('[data-fl-wrap]');
       if (!w) return;
       b.wrap = w.dataset.flWrap;

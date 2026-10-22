@@ -97,6 +97,12 @@
      disparaître parce que la carte a bougé depuis. */
   const carteApi = window.KiwiVerticalCarte;
   let carteSkipped = 0;
+  /* Déclaré ICI, avant le premier applyCarte() : sur un vrai commerce la carte
+     s'applique dès le chargement du module, et `root` lu dans sa zone morte
+     (déclaré plus bas avec let) levait une ReferenceError. Le module ne
+     s'enregistrait jamais, et la tablette appairée d'un food truck ouvrait la
+     caisse restaurant à sa place. */
+  let root = null;
   const nameOf = (l) => l.name || (ITEM[l.id] ? ITEM[l.id].label : 'Article');
   const unitOf = (l) => (l.price != null ? (+l.price || 0) : (ITEM[l.id] ? ITEM[l.id].price : 0));
   function applyCarte(c) {
@@ -297,7 +303,7 @@
   }
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
-  let root = null;
+  /* `root` est déclaré plus haut, avant la carte. */
 
   function mount(rootEl) {
     truckOps?.hydrate?.();

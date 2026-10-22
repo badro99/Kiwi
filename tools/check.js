@@ -2044,6 +2044,13 @@ section('Whole-project regressions');
     /* 2026-10-20 · sa moitié boutique, séparée pour tenir sous les cinq
        minutes par suite. */
     'sync-ledger-boutique-browser-test.mjs',
+    /* 2026-10-22 · les douze caisses métier jamais servies à un vrai commerce :
+       inscription, assistant, catalogue au centime, caisse appairée, ventes au
+       toucher (espèces, carte), puis D1, l'Accueil et les Transactions. En trois
+       tiers (bouche, commerce de détail, soins) pour tenir sous cinq minutes. */
+    'trades-ledger-browser-test.mjs',
+    'trades-ledger-retail-browser-test.mjs',
+    'trades-ledger-care-browser-test.mjs',
     'restaurant-recipes-test.js',
     'retail-scan-test.mjs',
     'retail-stock-source-test.mjs',
