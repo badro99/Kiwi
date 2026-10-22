@@ -400,6 +400,14 @@ test('a capped in-house response warns without treating omitted guests as depart
   f.assertNetwork();
 });
 
+test('a reservation typed at the desk starts on the Direct channel, not on an OTA', () => {
+  const f = boot(), form = formFixture();
+  form.elements.channel.value = '';
+  f.forms.push(form);
+  f.handlers['hx-stay-new']();
+  assert.equal(form.elements.channel.value, 'direct');
+});
+
 test('editor-generated clientRef survives an ambiguous submit retry and blocks concurrent double submission', async () => {
   const f = boot(), form = formFixture(), pending = deferred();
   f.forms.push(form);

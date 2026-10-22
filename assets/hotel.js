@@ -5424,7 +5424,8 @@
     };
     form.elements.stayMode.addEventListener('change', toggleDayUse);
     form.elements.checkIn.addEventListener('change', toggleDayUse); toggleDayUse();
-    form.elements.channel.value = booking?.hotel?.channel || (booking?.source === 'public' ? 'direct' : 'other');
+    // A stay typed at the desk is direct unless staff pick an OTA; an older stay with no channel stays « Autre OTA ».
+    form.elements.channel.value = booking?.hotel?.channel || (!booking || booking.source === 'public' ? 'direct' : 'other');
     form.elements.status.value = booking?.status || 'confirmed';
     updateSubmitButton();
     const filterRooms = () => { const selected = form.elements.resourceId.value; Array.from(form.elements.resourceId.options).forEach((o, i) => { if (!i) return; o.hidden = o.dataset.type !== form.elements.roomTypeId.value; }); if (selected && form.elements.resourceId.selectedOptions[0]?.hidden) form.elements.resourceId.value = ''; };
