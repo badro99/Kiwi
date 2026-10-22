@@ -1551,6 +1551,7 @@ section('Whole-project regressions');
     'dashboard-money-properties-test.mjs',
     'server-money-properties-test.mjs',
     'trades-money-properties-test.mjs',
+    'live-link-queue-properties-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',

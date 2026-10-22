@@ -868,8 +868,8 @@
     "sha": "36b1e6ca0472a20e"
   },
   "assets/live-link.js": {
-    "v": "71",
-    "sha": "3ad569b09fe19d8f"
+    "v": "72",
+    "sha": "66c56e7af7bcfa0b"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -1256,8 +1256,8 @@
     "sha": "0d9ce0ffc4763a60"
   },
   "assets/pos-sale.js": {
-    "v": "15",
-    "sha": "23fd544cff1cedc4"
+    "v": "16",
+    "sha": "18f613d7b1b9abe0"
   },
   "assets/pos-spa.css": {
     "v": "8",

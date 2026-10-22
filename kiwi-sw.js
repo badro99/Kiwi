@@ -183,7 +183,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=71',
+  '/assets/live-link.js?v=72',
   '/assets/channel-sales.js?v=5',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -314,7 +314,7 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=17',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=15',
+  '/assets/pos-sale.js?v=16',
   '/assets/pos-dispatch.js?v=139',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',

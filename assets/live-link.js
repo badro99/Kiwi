@@ -1226,7 +1226,18 @@
              déjà recopié la vente. Appliqué à chaque sondage, quel que soit le
              curseur : idempotent, et un appareil neuf se retrouve d'aplomb au
              premier passage. */
-          if (Array.isArray(data.voided) && !oneShot) applyVoids(data.voided, tenant);
+          var restored = false;
+          if (Array.isArray(data.voided) && !oneShot) {
+            /* Le serveur ne renvoie que les 500 annulations les plus récentes :
+               une ancienne qui sort d'une liste pleine n'est pas une restauration. */
+            var full = data.voided.length >= 500;
+            var floor = full ? data.voided.reduce(function (m, v) { return Math.min(m, Number(v && v.vts) || 0); }, Infinity) : -Infinity;
+            restored = voidedEvents.some(function (e) {
+              return e && e.id && (!full || (Number(e.voidTs) || 0) > floor)
+                && !data.voided.some(function (v) { return v && String(v.i || '') === e.id; });
+            });
+            applyVoids(data.voided, tenant);
+          }
           if (Array.isArray(data.sales)) {
             if (data.sales.length) since = data.cursor || since;
             /* /api/feed echoes its effective page size. A shorter page proves the complete
@@ -1251,6 +1262,8 @@
                exact multiple of the page size, whose final proof is an empty page. */
             drainBackfill = data.sales.length === pageSize;
             if (backfill && !drainBackfill) backfill = false;
+            // Une restauration garde son rowid : relire le flux, sans fabriquer de vente.
+            if (restored) { since = 0; backfill = true; feedComplete[tenant] = false; drainBackfill = true; }
             if (oneShot) {
               state.pages++; state.rows += data.sales.length; state.cursor = since;
               state.lastPageAt = Date.now();

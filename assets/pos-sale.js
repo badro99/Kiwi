@@ -434,13 +434,13 @@
      garde de postSale() ne la poste que là. postSale() en dérive le même
      identifiant, un renvoi ne compte jamais deux fois. */
   var HELD_KEY = 'kiwi:posHeld';
-  var HELD_MAX = 500;
   function heldRead() {
     try { var a = JSON.parse(localStorage.getItem(HELD_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; }
   }
+  // Ne jamais effacer une ancienne recette qui attend encore son envoi.
   function heldWrite(a) {
     try {
-      if (a.length) localStorage.setItem(HELD_KEY, JSON.stringify(a.slice(-HELD_MAX)));
+      if (a.length) localStorage.setItem(HELD_KEY, JSON.stringify(a));
       else localStorage.removeItem(HELD_KEY);
     } catch (_) {}
   }
