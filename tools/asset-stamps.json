@@ -268,8 +268,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "94",
-    "sha": "0a0319a3ff8fdb4d"
+    "v": "95",
+    "sha": "882e032a7ecddf12"
   },
   "assets/day-report-dash.js": {
     "v": "35",
@@ -508,12 +508,12 @@
     "sha": "9ddceac60da8fff8"
   },
   "assets/inventory-consumption.js": {
-    "v": "14",
-    "sha": "b5d7b834078183f1"
+    "v": "16",
+    "sha": "4e7a93f3eaaa891f"
   },
   "assets/inventory-ledger.js": {
-    "v": "14",
-    "sha": "15a820ecb5b9acf3"
+    "v": "15",
+    "sha": "f0a113cb3feb92d5"
   },
   "assets/invoice.js": {
     "v": "18",

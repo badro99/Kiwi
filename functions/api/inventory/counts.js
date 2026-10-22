@@ -107,21 +107,14 @@ function countResponse(row, extra = {}) {
   }, extra);
 }
 
-async function nextCursor(env, merchant) {
-  const now = Date.now();
-  try {
-    await env.DB.prepare(
-      'INSERT OR IGNORE INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, 0)'
-    ).bind(merchant).run();
-    const row = await env.DB.prepare(
-      `UPDATE inventory_sync_sequences
-          SET last_ts = CASE WHEN last_ts >= ? THEN last_ts + 1 ELSE ? END
-        WHERE merchant = ? RETURNING last_ts AS value`
-    ).bind(now, now, merchant).first();
-    return Number(row && row.value) || now;
-  } catch (_) {
-    return now;
-  }
+// Le curseur devient visible dans le même lot atomique que le mouvement.
+function cursorStatements(env, merchant, now) {
+  return [
+    env.DB.prepare('INSERT OR IGNORE INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, 0)').bind(merchant),
+    env.DB.prepare(`UPDATE inventory_sync_sequences
+      SET last_ts = CASE WHEN last_ts >= ? THEN last_ts + 1 ELSE ? END
+      WHERE merchant = ?`).bind(now, now, merchant),
+  ];
 }
 
 /* Calcul du système actuel pour le moteur ledger par (item_id, variant_id, location_id) */
@@ -470,10 +463,11 @@ export async function onRequestPost({ request, env }) {
     const batchStmts = [];
 
     if (row.engine === 'ledger') {
-      const srvTs = await nextCursor(env, merchant);
-      lines.forEach((line) => {
+      for (const line of lines) {
         const diff = num(line.diff);
-        if (!diff) return;
+        if (!diff) continue;
+        // Un curseur par ligne : une page de 500 ne doit pas sauter la suite du comptage.
+        batchStmts.push(...cursorStatements(env, merchant, nowMs));
         const itemId = str(line.itemId, 80);
         const variantId = str(line.variantId, 80);
         const locationId = str(line.locationId, 80) || 'principal';
@@ -489,14 +483,14 @@ export async function onRequestPost({ request, env }) {
               id, merchant, item_id, variant_id, location_id, qty_milli, reason,
               unit_cost_cents, currency, ref_type, ref_id, note, actor,
               occurred_ts, srv_ts, reversal_of, meta, created_ts
-            ) VALUES (?, ?, ?, ?, ?, ?, 'count', ?, 'MAD', 'count', ?, ?, ?, ?, ?, '', ?, ?)`
+            ) VALUES (?, ?, ?, ?, ?, ?, 'count', ?, 'MAD', 'count', ?, ?, ?, ?, (SELECT last_ts FROM inventory_sync_sequences WHERE merchant = ?), '', ?, ?)`
           ).bind(
             movId, merchant, itemId, variantId, locationId, qtyMilli,
             unitCostCents, countId, lineNote, reviewerName,
-            nowMs, srvTs, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId }), nowMs
+            nowMs, merchant, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId }), nowMs
           )
         );
-      });
+      }
     } else if (row.engine === 'boutique' || row.engine === 'maison') {
       /* Pour Boutique / Maison : table `catalogs`.
        *

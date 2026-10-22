@@ -151,7 +151,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
   '/assets/sales-history.js?v=5',
-  '/assets/dateRange.js?v=94',
+  '/assets/dateRange.js?v=95',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -264,7 +264,7 @@ var SHELL = [
   '/assets/delivery-collect.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=14',
+  '/assets/inventory-ledger.js?v=15',
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',

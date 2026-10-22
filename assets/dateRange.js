@@ -5322,7 +5322,7 @@
         if (!items.length) return null;
         const configured = items.filter((it) => Number(it.reorderLevel) > 0);
         const rows = configured.map((it) => {
-          const stock = Math.max(0, Number(it.currentStock) || 0);
+          const stock = Number(it.currentStock) || 0; // Montrer aussi le déficit réel.
           const threshold = Math.max(0, Number(it.reorderLevel) || 0);
           const par = Math.max(threshold, Number(it.parLevel) || threshold);
           const suggested = Math.max(0, Math.round((par * 1.2 - stock) * 10) / 10);

@@ -430,7 +430,8 @@
     if (!movement || !movement.id || !movement.qty) return null;
     opts = opts || {};
     return add({
-      id: opts.id,
+      // Même contre-mouvement au double clic ou au rejeu.
+      id: opts.id || ('inv-reverse-' + hash(merchant() + '|' + movement.id)),
       itemId: movement.itemId, variantId: movement.variantId, locationId: movement.locationId,
       qty: -movement.qty, reason: reason || 'manual', unitCost: movement.unitCost,
       refType: movement.refType, refId: movement.refId, note: note || 'Contre-mouvement',

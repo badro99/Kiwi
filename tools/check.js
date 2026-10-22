@@ -561,6 +561,7 @@ section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
   'booking-api-test.mjs',
   'booking-properties-test.mjs',
+  'stock-money-properties-test.mjs',
   'booking-manage-test.mjs',
   'booking-hotel-beyond-window-test.mjs',
   'hotel-dossier-safety-test.mjs',

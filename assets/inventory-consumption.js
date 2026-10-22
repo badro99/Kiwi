@@ -252,7 +252,8 @@
       }
     }
 
-    if (coveredQty >= reqQty && reqQty > 0) {
+    // Le reliquat est arrondi au millième ; la somme flottante peut rester en dessous.
+    if (remainingReq === 0 && coveredQty > 0 && reqQty > 0) {
       return Math.round((totalCost / reqQty) * 10000) / 10000;
     }
     return null;
@@ -342,9 +343,10 @@
         var realizedCost = allocateCost(x.itemId, x.qty, baseCost, batched
           ? { lots: lots.map(function (l) { return Object.assign({}, l); }) }
           : { locationId: locationId });
+        // Arrondir la consommation positive avant le signe : -0,5 ne doit pas devenir zéro.
         var raw = {
           id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
-          variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -x.qty,
+          variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -Math.round(x.qty * 1000 + 1e-9) / 1000,
           reason: 'sale', refType: 'sale', refId: ref,
           unitCost: realizedCost,
           occurredTs: n(sale.ts || sale.time) || Date.now(),
@@ -376,11 +378,15 @@
 
   function reverse(ref, note) {
     var I = window.KiwiInventory; if (!I || !ref) return 0;
-    var rows = (I.history() || []).filter(function (r) { return r.reason === 'sale' && r.refId === String(ref); });
+    var history = I.history() || [];
+    var rows = history.filter(function (r) { return r.reason === 'sale' && r.refId === String(ref); });
     var nrows = 0;
     rows.forEach(function (r) {
       var id = 'inv-void-' + hash([I.merchant?.() || '', r.id].join('|'));
-      if (I.reverse(r, 'sale-reversal', note || 'Vente annulée', { id: id })) nrows++;
+      // Une annulation cuisine a pu déjà restituer une partie de cette sortie.
+      var restored = history.reduce(function (sum, m) { return m.reversalOf === r.id && m.qty > 0 ? sum + m.qty : sum; }, 0);
+      var remaining = Math.max(0, Math.round((-r.qty - restored) * 1000) / 1000);
+      if (remaining && I.reverse(Object.assign({}, r, { qty: -remaining }), 'sale-reversal', note || 'Vente annulée', { id: id })) nrows++;
     });
     return nrows;
   }
