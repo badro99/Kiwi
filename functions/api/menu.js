@@ -36,6 +36,8 @@ import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
 import { merchantZone } from './_business-day.js';
 
+// Normalize stored money once so arithmetic edits cannot persist sub-cent drift.
+const menuAmount = (value, max) => Math.round(Math.max(0, Math.min(max, Number(value) || 0)) * 100) / 100;
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const MENU_ALLERGENS = [
   'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
@@ -127,7 +129,7 @@ function sanitizeFormula(raw, blockedIds) {
     const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
     const choices = rawChoices.map((c) => ({
       itemId: str(c && c.itemId, 40),
-      extra: Math.max(0, Math.min(1e5, Number(c && c.extra) || 0)),
+      extra: menuAmount(c && c.extra, 1e5),
     })).filter((c) => c.itemId && (!blockedIds || !blockedIds.has(c.itemId)));
     return { id, label, min, max, choices };
   }).filter((s) => s && s.id && s.choices.length);
@@ -240,7 +242,7 @@ export function sanitizeMenu(raw, now = Date.now()) {
       // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
       // publiées avant cette clé continuent avec une chaîne vide.
       emoji: optionEmoji(c && c.emoji),
-      price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
+      price: menuAmount(c && c.price, 1e6),
     }, c, 60, 0)).filter((c) => c.id && c.name),
   }, g, 60, 0)).filter((g) => g.id && g.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
@@ -263,7 +265,7 @@ export function sanitizeMenu(raw, now = Date.now()) {
     const item = {
       id: str(it && it.id, 40),
       name: str(it && it.name, 120),
-      price: Math.max(0, Math.min(1e7, Number(it && it.price) || 0)),
+      price: menuAmount(it && it.price, 1e7),
       catId: str(it && it.catId, 40) || null,
       subId: str(it && it.subId, 40) || null,
       desc: str(it && it.desc, 400),
@@ -639,14 +641,22 @@ export async function onRequestPost(context) {
    * stock has a separate publisher and keeps its existing contract. */
   let currentMenu = null;
   let currentUpdatedTs = 0;
+  let currentRow = null;
   if (!shop) {
     try {
-      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+      const row = await env.DB.prepare('SELECT name, type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+      currentRow = row;
       if (row) {
         currentUpdatedTs = +row.updated_ts || 0;
         if (row.data && !isShop(row.type)) currentMenu = sanitizeMenu(JSON.parse(row.data));
       }
     } catch (_) { return json({ error: 'read-before-write-failed' }, 500); }
+    // A lost response may be retried with the original revision. Only the
+    // exact current document and metadata qualify as a no-op.
+    if (currentMenu && currentRow.name === name && currentRow.type === type
+        && JSON.stringify(currentMenu) === JSON.stringify(data)) {
+      return json({ ok: true, merchant, items: data.items.length, cats: data.cats.length, updatedTs: currentUpdatedTs });
+    }
     const expected = +(body && body.expectedUpdatedTs) || 0;
     if (currentUpdatedTs && expected !== currentUpdatedTs) {
       return json({ error: 'stale-menu', merchant, data: currentMenu, updatedTs: currentUpdatedTs }, 409);
@@ -702,9 +712,21 @@ export async function onRequestPost(context) {
   }
   await keepHistory(env, 'menu', merchant, 'menu');
 
-  const updatedTs = Date.now();
+  const updatedTs = shop ? Date.now() : Math.max(Date.now(), currentUpdatedTs + 1);
   try {
-    await env.DB.prepare(
+    if (!shop) {
+      const result = currentRow
+        ? await env.DB.prepare(
+          'UPDATE menus SET name = ?, type = ?, data = ?, updated_ts = ? WHERE merchant = ? AND updated_ts = ?'
+        ).bind(name, type, text, updatedTs, merchant, currentUpdatedTs).run()
+        : await env.DB.prepare(
+          'INSERT INTO menus (merchant, name, type, data, updated_ts) VALUES (?, ?, ?, ?, ?) ON CONFLICT(merchant) DO NOTHING'
+        ).bind(merchant, name, type, text, updatedTs).run();
+      if (!result || !result.meta || result.meta.changes !== 1) {
+        const latest = await env.DB.prepare('SELECT data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+        return json({ error: 'stale-menu', merchant, data: latest && latest.data ? sanitizeMenu(JSON.parse(latest.data)) : null, updatedTs: +(latest && latest.updated_ts) || 0 }, 409);
+      }
+    } else await env.DB.prepare(
       `INSERT INTO menus (merchant, name, type, data, updated_ts)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(merchant) DO UPDATE SET

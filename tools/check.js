@@ -1464,6 +1464,7 @@ section('Whole-project regressions');
     'print-relay-idempotency-test.mjs',
     'print-relay-properties-test.mjs',
     'order-pricing-properties-test.mjs',
+    'menu-properties-test.mjs',
     'print-slow-bridge-test.mjs',
     'print-hub-lease-test.mjs',
     'print-hub-resume-test.mjs',
