@@ -4203,6 +4203,10 @@
         <text class="rev-tip-label" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="12" fill="#7DF2B0" opacity="0.92"></text>
         <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
         <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
+        ${daily ? `<line class="rev-tip-rule" stroke="rgba(247,245,240,0.12)" stroke-width="1"/>
+        <line class="rev-tip-swatch" stroke="rgba(247,245,240,0.55)" stroke-width="1.5" stroke-linecap="round"/>
+        <rect class="rev-tip-pill" rx="9" ry="9" height="18"/>
+        <text class="rev-tip-delta" font-family="Inter Tight" font-weight="600" font-size="11" text-anchor="middle"></text>` : ''}
       </g>
       <rect class="rev-hit" x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="transparent" pointer-events="all"/>
     `;
@@ -4315,23 +4319,43 @@
       aCmp.style.display = cmpOn ? '' : 'none';
       if (cmpOn) { aCmp.setAttribute('cx', sx.toFixed(1)); aCmp.setAttribute('cy', yScale(p).toFixed(1)); }
       cross?.setAttribute('x1', sx.toFixed(1)); cross?.setAttribute('x2', sx.toFixed(1));
+      /* The day's card: date, then the amount with its unit set small. When
+       * comparing, a hairline, then the same day of the previous period keyed
+       * by a swatch of its line, with the change in a pill. */
+      const q = c => svg.querySelector(c);
+      const rule = q('.rev-tip-rule'), swatch = q('.rev-tip-swatch'), pill = q('.rev-tip-pill'), delta = q('.rev-tip-delta');
+      const d = cmpOn ? fmtDeltaPct(v, p) : '';
+      tip.classList.add('is-day');
+      tip.classList.toggle('is-cmp', cmpOn);
+      [tipLabel, tipValue, tipCmp].forEach(t => t.setAttribute('text-anchor', 'start'));
       tipLabel.textContent = dayName(i, 0) + (i === todayIdx ? ' · ' + (SO_FAR[lang] || SO_FAR.fr) : '');
-      tipValue.textContent = `${frMoney(v)} ${curUnit()}`;
-      tipCmp.style.display = cmpOn ? '' : 'none';
-      if (cmpOn) {
-        const d = fmtDeltaPct(v, p);
-        tipCmp.innerHTML = `<tspan class="rev-tip-muted" fill="rgba(199,234,212,0.8)">${dayName(i, -(N)) || captionShort} · ${frInt(p)} ${curUnit()}</tspan>` +
-          (d ? `<tspan class="rev-tip-delta ${v >= p ? 'up' : 'down'}" dx="8" font-weight="600" fill="${v >= p ? '#7DF2B0' : '#FCA597'}">${d}</tspan>` : '');
-      }
-      const tipW = Math.ceil(Math.max(tipLabel.getComputedTextLength(), tipValue.getComputedTextLength(), cmpOn ? tipCmp.getComputedTextLength() + 8 : 0)) + 32;
+      tipValue.innerHTML = `${frMoney(v)}<tspan class="rev-tip-cur" dx="5" font-size="11" font-weight="600" fill="rgba(247,245,240,0.55)">${curUnit()}</tspan>`;
+      tipCmp.textContent = cmpOn ? `${dayName(i, -N) || captionShort} · ${frInt(p)} ${curUnit()}` : '';
+      delta.textContent = d;
+      [tipCmp, rule, swatch].forEach(el => { el.style.display = cmpOn ? '' : 'none'; });
+      [pill, delta].forEach(el => { el.style.display = cmpOn && d ? '' : 'none'; });
+      pill.classList.toggle('down', v < p); delta.classList.toggle('down', v < p);
+      pill.setAttribute('fill', v < p ? 'rgba(252,165,151,0.16)' : 'rgba(125,242,176,0.16)');
+      delta.setAttribute('fill', v < p ? '#FCA597' : '#7DF2B0');
+      const PX = 16, pillW = d ? Math.ceil(delta.getComputedTextLength()) + 14 : 0;
+      const cmpW = cmpOn ? 18 + tipCmp.getComputedTextLength() + (pillW ? 12 + pillW : 0) : 0;
+      const tipW = Math.ceil(Math.max(150, tipLabel.getComputedTextLength(), tipValue.getComputedTextLength(), cmpW)) + PX * 2;
+      const tipH = cmpOn ? 100 : 66, GAP = 14;
       // Beside the day, never over its point: right of it, left near the end.
-      const tipH = cmpOn ? 76 : 56, GAP = 14;
-      const tx = sx + GAP + tipW <= W - 4 ? sx + GAP + tipW / 2 : sx - GAP - tipW / 2;
+      const left = sx + GAP + tipW <= W - 4 ? sx + GAP : sx - GAP - tipW;
       const ty = Math.max(4, Math.min(H - PAD.bottom - tipH, sy - tipH / 2));
-      tipRect.setAttribute('x', (-tipW / 2).toFixed(1)); tipRect.setAttribute('y', '0');
+      tipRect.setAttribute('x', '0'); tipRect.setAttribute('y', '0');
       tipRect.setAttribute('width', tipW); tipRect.setAttribute('height', tipH);
-      tipLabel.setAttribute('y', '22'); tipValue.setAttribute('y', '44'); tipCmp.setAttribute('y', '64');
-      tip.setAttribute('transform', `translate(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
+      tipLabel.setAttribute('x', PX); tipLabel.setAttribute('y', '25');
+      tipValue.setAttribute('x', PX); tipValue.setAttribute('y', '50');
+      if (cmpOn) {
+        rule.setAttribute('x1', PX); rule.setAttribute('x2', tipW - PX); rule.setAttribute('y1', '66.5'); rule.setAttribute('y2', '66.5');
+        swatch.setAttribute('x1', PX); swatch.setAttribute('x2', PX + 10); swatch.setAttribute('y1', '83'); swatch.setAttribute('y2', '83');
+        tipCmp.setAttribute('x', PX + 18); tipCmp.setAttribute('y', '87');
+        pill.setAttribute('x', tipW - PX - pillW); pill.setAttribute('y', '74'); pill.setAttribute('width', pillW);
+        delta.setAttribute('x', tipW - PX - pillW / 2); delta.setAttribute('y', '87');
+      }
+      tip.setAttribute('transform', `translate(${Math.max(4, left).toFixed(1)}, ${ty.toFixed(1)})`);
       svg.classList.add('is-hover');
       setHero(v, null, false);
     }

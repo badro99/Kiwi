@@ -4608,6 +4608,15 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-cmp {
   stroke-opacity: 0.5;
 }
 
+/* Day card. Both modes paint the hover chip dark, so one set of inks serves
+ * both; it outranks the per-mode mint label meant for the hourly chip. */
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-tip.is-day :is(.rev-tip-label, .rev-tip-cmp) {
+  fill: rgba(247, 245, 240, 0.62);
+}
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-tip.is-day .rev-tip-value {
+  fill: #F7F5F0;
+}
+
 body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta.is-empty {
   display: none !important;
 }

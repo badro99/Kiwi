@@ -107,7 +107,7 @@ for (const theme of ['light', 'dark']) {
       check(r.hover, `hover is on at ${fx}`);
       check(/^[A-ZÉ][a-zéû]+ \d{1,2} [a-zéûô]+$/.test(r.label), `the tooltip names a whole day in sentence case: « ${r.label} »`);
       check(!/\dh/.test(r.label), 'no hour is invented between two days');
-      check(/\d,\d\d MAD$/.test(r.value.replace(/[  ]/g, ' ')), `the amount is to the centime: « ${r.value} »`);
+      check(/\d,\d\d ?MAD$/.test(r.value.replace(/[  ]/g, ' ')), `the amount is to the centime: « ${r.value} »`);
       check(norm(r.value) === norm(r.hero), `the hero follows the hovered day (${r.value} / ${r.hero})`);
       check(r.tipOpacity > 0.9 && r.tipFill !== 'none' && !/rgba\(0, 0, 0, 0\)/.test(r.tipFill), 'the tooltip card is painted');
       seen.add(r.label);

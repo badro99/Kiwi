@@ -874,6 +874,12 @@
   .rev-best-lbl { fill: var(--atlas); }
   .rev-best-dot, .rev-end-dot { fill: var(--atlas); stroke: #fff; }
   .rev-best-halo { fill: var(--atlas); }
+  /* Day card (daily ranges): a quiet date over a large amount. */
+  .rev-tip.is-day .rev-tip-label,
+  .rev-tip.is-day .rev-tip-cmp { fill: rgba(247, 245, 240, 0.62); }
+  .rev-tip.is-day .rev-tip-value { fill: #F7F5F0; font-size: 19px; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .rev-tip.is-day .rev-tip-cmp,
+  .rev-tip.is-day .rev-tip-delta { font-variant-numeric: tabular-nums; }
   .rev-hero-sep { letter-spacing: 0; margin-inline: 0.06em; }
   @media (prefers-reduced-motion: reduce) {
     .rev-marks { animation: none; }
