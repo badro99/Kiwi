@@ -6,7 +6,7 @@ relay (`assets/kitchen-relay.js`) and the real paper queue
 (`assets/kitchen-print-queue.js`). Only clocks, transport and printers are
 simulated. Fast tier, about 7 seconds at 100 runs.
 
-## What holds (13 strict properties)
+## What holds (15 strict properties)
 
 - A state machine of send, resend, start, ready, served, recall, partial void,
   payment, table transfer and merge always leaves one ticket, the right status,
@@ -20,6 +20,10 @@ simulated. Fast tier, about 7 seconds at 100 runs.
   never voids more than was sent; a void accepted by the kitchen while cooking
   restores sent minus voided under retries.
 - Resending a ticket after its table was moved does not reopen the old table.
+- Two waiters asking the kitchen to void the same cooking dish at once leave
+  one pending alert, the one on the ticket; a pending void and a station
+  "ready" landing together both survive (the interleaving is forced by holding
+  the void's write until the other request lands).
 - A screen paired to one merchant can neither read nor change another's queue.
 - The counter relay recovers an answer lost after the server committed, across
   a reload, with one server ticket.
@@ -42,8 +46,10 @@ simulated. Fast tier, about 7 seconds at 100 runs.
    while the new one reported "queued".
 5. `kitchen-print-queue.js`: at 120 waiting tickets the oldest was dropped
    while the new one was counted as accepted.
+6. `queue.js`: a void needing the kitchen's approval wrote its alert and then
+   the ticket's lines with no revision check. Two waiters voiding the same
+   dish left a second, orphan alert; a station "ready" landing between the read
+   and the write was erased. Alert and lines now go in one guarded batch, and a
+   conflict answers `concurrent-update` (the waiter app already says
+   « un collègue vient de la modifier, réessayez »).
 
-## Not covered yet
-
-Codex noted that pending void alerts are written separately from the order
-revision. It was not turned into a property before its usage limit was hit.

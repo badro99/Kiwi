@@ -1439,6 +1439,10 @@ export async function onRequestPost(context) {
     }
   }
 
+  function pendingVoidResponse(r) {
+    if (r && r.conflict) { const status = r.conflict; delete r.conflict; return json(r, status); }
+    return json(r);
+  }
   async function dispatchPendingVoid(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason) {
     const list = Array.isArray(targetLines) ? targetLines : [targetLines];
     /* La quantité annulée est CELLE QUE L'APPELANT DEMANDE — le delta d'une
@@ -1452,6 +1456,14 @@ export async function onRequestPost(context) {
     const primaryQty = Math.max(1, Math.round(Number(primary && primary.qty) || 1));
     const ratio = Math.min(1, askedQty / primaryQty);
     let primaryVoidId = null;
+    /* L'alerte et le bon s'écrivent ensemble, et seulement si le bon n'a pas
+     * bougé depuis sa lecture. Écrits l'un après l'autre et sans garde, deux
+     * serveurs qui annulaient le même plat en cuisine laissaient deux alertes
+     * (la seconde orpheline), et un « prêt » de poste tombé entre la lecture
+     * et l'écriture était effacé par les lignes relues avant lui. */
+    const guard = 'id = ? AND merchant = ? AND updated_ts = ? AND lines = ?';
+    const guardArgs = [targetOrder.id, merchant, targetOrder.updated_ts, targetOrder.lines];
+    const statements = [];
     for (const tl of list) {
       const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
       if (!primaryVoidId) primaryVoidId = voidId;
@@ -1465,20 +1477,21 @@ export async function onRequestPost(context) {
         isWaste: isWaste ? 1 : 0,
         ts: now,
       };
-      try {
-        await env.DB.prepare(
-          `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
-        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no || '', tl.id || tl.uid || '', tl.name || '', voidQty, tl.unitPrice ?? tl.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now).run();
-      } catch (err) {
-        console.error('[queue] Failed to insert pending kitchen void alert', voidId, 'merchant', merchant);
-      }
+      statements.push(statement(env,
+        `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ? WHERE EXISTS (SELECT 1 FROM orders WHERE ${guard})`,
+        voidId, merchant, targetOrder.id, targetOrder.table_no || '', tl.id || tl.uid || '', tl.name || '', voidQty, tl.unitPrice ?? tl.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now, ...guardArgs));
     }
     const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
-
-    await env.DB.prepare(
-      `UPDATE orders SET lines = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
-    ).bind(JSON.stringify(lines), nextTs, targetOrder.id, merchant).run();
+    statements.push(statement(env,
+      `UPDATE orders SET lines = ?, updated_ts = ? WHERE ${guard}`,
+      JSON.stringify(lines), nextTs, ...guardArgs));
+    try {
+      const result = await atomicStatements(env, statements);
+      if (!Number(result[result.length - 1]?.meta?.changes)) return { error: 'concurrent-update', retry: true, conflict: 409 };
+    } catch (_) {
+      return { error: 'item-cancellation-write-failed', retry: true, conflict: 503 };
+    }
 
     return {
       ok: true,
@@ -1665,7 +1678,7 @@ export async function onRequestPost(context) {
         total: newTotal,
       });
     } else {
-      return json(await dispatchPendingVoid(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason));
+      return pendingVoidResponse(await dispatchPendingVoid(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason));
     }
   }
 
@@ -1725,7 +1738,7 @@ export async function onRequestPost(context) {
         return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
       }
       if (qtyDelta < 0) {
-        return json(await dispatchPendingVoid(targetOrder, affectedLines, lines, Math.abs(qtyDelta), isWaste, actor, reason));
+        return pendingVoidResponse(await dispatchPendingVoid(targetOrder, affectedLines, lines, Math.abs(qtyDelta), isWaste, actor, reason));
       }
       if (qtyDelta > 0) {
         const newLine = {
@@ -1797,7 +1810,7 @@ export async function onRequestPost(context) {
           return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
         }
         if (qtyDelta < 0) {
-          return json(await dispatchPendingVoid(freshOrder, freshAffected, freshLines, Math.abs(qtyDelta), isWaste, actor, reason));
+          return pendingVoidResponse(await dispatchPendingVoid(freshOrder, freshAffected, freshLines, Math.abs(qtyDelta), isWaste, actor, reason));
         }
         if (qtyDelta > 0) {
           const newLine = {
