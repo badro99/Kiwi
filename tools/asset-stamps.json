@@ -912,8 +912,8 @@
     "sha": "44d8171016d157a2"
   },
   "assets/menu-promos.js": {
-    "v": "3",
-    "sha": "18ab4cfba63066b8"
+    "v": "4",
+    "sha": "979478461068af01"
   },
   "assets/menu-scan.js": {
     "v": "2",
@@ -1420,8 +1420,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "3",
-    "sha": "007d4a93fa36fd5f"
+    "v": "8",
+    "sha": "22a825b0704254a1"
   },
   "assets/serveur-lang.js": {
     "v": "1",

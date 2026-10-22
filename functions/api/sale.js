@@ -523,6 +523,16 @@ export async function onRequestPost({ request, env }) {
   let linesMode = 'stored';
   let stored = false;
 
+  // Une part du même flux a une seule clé, même depuis deux téléphones.
+  if (splitFlowId) {
+    try {
+      const claim = await claimRestaurantBill(env, merchant, 'split',
+        'split:' + splitFlowId + ':' + split.index, '', id);
+      if (!claim || !claim.sale_id) return json({ error: 'settlement-key-unavailable' }, 503);
+      id = claim.sale_id;
+    } catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
+  }
+
   // ── IDEMPOTENCY VS CONFLICT CHECK ─────────────────────────────────────────
   // A replay of the exact same financial transaction is safe and idempotent.
   // But a retry claiming the same unique sale ID with conflicting money or

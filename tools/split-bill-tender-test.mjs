@@ -215,6 +215,8 @@ function paymentHarness(source = paymentSource, overrides = {}) {
     SV_DEMO: false, currentTab: 'tables', activeTableId: null,
     tableClients: new Map(), tableOrders: { '3': [{ qty: 1 }] }, dirtyOrders: new Set(),
     tableSplits: new Map(), tablesPaid: 0, employeePaymentRefForget() {},
+    localStorage: { setItem() {} }, EMP_PAY_REFS_KEY: 'test-payment-refs',
+    empPayRefsRead: () => ({}), empPayRefKey: id => 'test-restaurant::' + id, servicePaymentTally() {},
     publishServiceTableState() {}, returnToFloor() {}, renderTables() {}, renderNotifications() {},
     renderSplitFlow() {}, renderProfil() {}, lucide: { createIcons() {} },
     svBrowseMode: () => false, svBrowseGuard: () => false, toast: text => messages.push(text),
@@ -306,7 +308,8 @@ await assert.rejects(() => concurrency(raceMutation));
 ok('mutation: moving completion before HTTP is detected', true);
 const sessionMutation = paymentSource
   .replace('if (!SV_DEMO && (!merchant || !session))', 'if (false)')
-  .replace('if (!SV_DEMO) {', 'if (!SV_DEMO && merchant && session) {');
+  .replace('if (!SV_DEMO) {', 'if (!SV_DEMO && merchant && session) {')
+  .replace('if (!SV_DEMO && saveSplitFlow(state) === false)', 'if (false)');
 const unsafe = paymentHarness(sessionMutation, { serviceTableSessions: new Map() });
 assert.equal(await unsafe.ctx.markSplitPartPaid(0, 'cash'), true);
 ok('mutation: skipping a missing session reproduces the false payment', true);

@@ -1558,6 +1558,7 @@ section('Whole-project regressions');
     'payroll-properties-test.mjs',
     'customer-balance-properties-test.mjs',
     'books-money-properties-test.mjs',
+    'serveur-money-properties-test.mjs',
     'js-declarations-test.mjs',
     'split-edit-resilience-test.mjs',
     'pos-maison-split-browser-test.mjs',

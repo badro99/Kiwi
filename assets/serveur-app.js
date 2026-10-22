@@ -5545,6 +5545,7 @@
        stable while a payment is being retried, then a newly opened bill gets a
        new id. */
     const employeePaymentRefs = new Map();
+    let servicePaymentTally = () => {};
     /* ── L'IDENTIFIANT DE PAIEMENT DOIT SURVIVRE À UN RECHARGEMENT ───────────
      * C'est la clé d'idempotence de /api/sale : le même identifiant rejoué ne
      * crée pas de deuxième vente (INSERT OR IGNORE). Il ne vivait qu'en
@@ -5768,6 +5769,7 @@
     }
 
     function closeCardModal({ paid = false, tableId = null } = {}) {
+      paid = paid && cardApproved; // Fermer ne vaut jamais confirmation du terminal.
       cardModal.classList.remove('is-open');
       clearTimeout(cardSuccessTimer);
       clearTimeout(cardFootTimer);
@@ -6086,17 +6088,39 @@
 
     function saveSplitFlow(state = splitState) {
       if (!state.tableId || !state.flow) return;
-      tableSplits.set(state.tableId, {
+      const saved = {
         mode: state.splitMode,
         total: state.total,
         parts: state.flow.parts,
         paidCount: state.flow.paidCount,
         id: state.flow.id,
-      });
+      };
+      tableSplits.set(state.tableId, saved);
+      if (SV_DEMO) return true;
+      const session = serviceTableSessions.get(state.tableId);
+      if (!session) return false;
+      // Avant tout envoi : le flux et ses parts survivent au recyclage iOS.
+      try {
+        const refs = empPayRefsRead(), key = 'split:' + empPayRefKey('visit') + ':' + session;
+        for (const old of Object.keys(refs)) {
+          if (old !== key && old.startsWith('split:' + empPayRefKey('visit') + ':')
+            && Array.isArray(refs[old]?.parts) && refs[old].parts.every(p => p.paid)) delete refs[old];
+        }
+        refs[key] = saved;
+        localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(refs));
+        return true;
+      } catch (_) { return false; }
     }
 
     function loadSplitFlow(tableId) {
-      const saved = tableSplits.get(tableId);
+      let saved = tableSplits.get(tableId);
+      if (!saved && !SV_DEMO) {
+        const session = serviceTableSessions.get(tableId);
+        saved = session && empPayRefsRead()['split:' + empPayRefKey('visit') + ':' + session];
+        if (saved && (!Array.isArray(saved.parts) || !saved.id || !saved.parts.length
+          || saved.parts.some(p => !p || !Number.isFinite(p.amount) || p.amount < 0))) saved = null;
+        if (saved) tableSplits.set(tableId, saved);
+      }
       if (!saved) return false;
       splitState.tableId  = tableId;
       splitState.total    = saved.total;
@@ -6117,7 +6141,7 @@
 
       // If a split is already in progress for this table, resume it
       // directly on the payment-flow screen (skip setup).
-      if (tableSplits.has(tableId)) {
+      if (tableSplits.has(tableId) || loadSplitFlow(tableId)) {
         loadSplitFlow(tableId);
         $('#split-table-label').textContent = tableId;
         $('#split-setup').hidden = true;
@@ -6425,22 +6449,36 @@
       }
       const parts = [];
       if (splitState.splitMode === 'egal') {
-        const tipPct = effectiveTipPct();
-        const perPerson = (splitState.total * (1 + tipPct / 100)) / splitState.numParts;
-        const label = tipPct > 0 ? `+ pourboire ${tipPct}%` : 'Part égale';
-        const shareLines = Object.entries(splitState.itemTotals).map(([name, info]) => {
-          const unitPrice = info.unitPrice || 0;
-          const shareUnitPrice = Math.round((unitPrice / splitState.numParts) * 100) / 100;
-          return {
-            name: `${name} · 1/${splitState.numParts}`,
-            qty: info.totalQty,
-            unit: shareUnitPrice,
-            price: shareUnitPrice,
-            total: Math.round((info.totalQty * unitPrice / splitState.numParts) * 100) / 100,
-          };
-        });
-        for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ amount: perPerson, label, lines: shareLines.map(l => ({ ...l })), paid: false, payMethod: null });
+        const cents = Math.round(splitState.total * 100), n = splitState.numParts;
+        if (!Number.isInteger(n) || n < 1 || cents < n) { toast('Montant insuffisant pour ces parts'); return; }
+        // Le dernier convive reçoit le reliquat, le pourboire reste hors recette.
+        const pct = effectiveTipPct();
+        if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast('Pourboire invalide (0 à 100 %)'); return; }
+        const tips = Math.round(cents * pct / 100 + 1e-9);
+        const items = Object.entries(splitState.itemTotals);
+        const allocate = (total, weights) => {
+          const sum = weights.reduce((a, b) => a + b, 0);
+          const values = weights.map(w => sum ? Math.floor(total * w / sum) : 0);
+          let left = total - values.reduce((a, b) => a + b, 0);
+          for (let j = 0; left > 0; j = (j + 1) % values.length) {
+            if (weights[j] > 0) { values[j]++; left--; }
+          }
+          return values;
+        };
+        const weights = items.map(([, info]) => Math.round(info.totalQty * info.unitPrice * 100));
+        if (!weights.length || !weights.some(w => w > 0)) { toast('Addition sans article'); return; }
+        let remaining = allocate(cents, weights);
+        const bases = Array.from({ length: n }, (_, i) => i === n - 1 ? cents - Math.floor(cents / n) * (n - 1) : Math.floor(cents / n));
+        const tipShares = allocate(tips, bases);
+        for (let i = 0; i < n; i++) {
+          const base = bases[i], tipCents = tipShares[i];
+          const shares = allocate(base, remaining);
+          const lines = items.map(([name, info], j) => {
+            remaining[j] -= shares[j];
+            return { name: `${name} · 1/${n}`, qty: info.totalQty, unit: shares[j] / 100 / info.totalQty,
+              price: shares[j] / 100 / info.totalQty, total: shares[j] / 100 };
+          });
+          parts.push({ amount: base / 100, tipCents, label: tips ? 'Part égale · pourboire inclus' : 'Part égale', lines, paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -6490,7 +6528,7 @@
           return `<div class="split-part-card is-paid">
             <div class="split-part-num"><i data-lucide="check"></i></div>
             <div class="split-part-info">
-              <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
+              <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
               <div class="split-part-paid-label">Réglé · ${p.payMethod === 'carte' ? 'Carte' : 'Espèces'}</div>
             </div>
           </div>`;
@@ -6498,7 +6536,7 @@
         return `<div class="split-part-card">
           <div class="split-part-num">${idx + 1}</div>
           <div class="split-part-info">
-            <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
+            <div class="split-part-amount">${fmtMADcents(p.amount + (p.tipCents || 0) / 100)}</div>
             <div class="split-part-label">${esc(p.label)}</div>
           </div>
           <div class="split-part-btns">
@@ -6523,7 +6561,7 @@
       $('#split-modal').classList.remove('is-open');
 
       if (method === 'carte') {
-        $('#card-amount').textContent = fmtMADcents(part.amount);
+        $('#card-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         splitPayCallback = () => {
           markSplitPartPaid(partIdx, 'carte');
@@ -6542,7 +6580,7 @@
         lucide.createIcons();
         cardReaderArm(payTableId);
       } else {
-        cashAmountOverride = part.amount;
+        cashAmountOverride = part.amount + (part.tipCents || 0) / 100;
         $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
         cashPay = () => markSplitPartPaid(partIdx, 'cash');
         cashSettled = false;
@@ -6551,8 +6589,8 @@
         };
         cashStepInput.hidden = false;
         cashStepSuccess.hidden = true;
-        cashInput.value = part.amount;
-        $('#cash-amount').textContent = fmtMADcents(part.amount);
+        cashInput.value = cashAmountOverride;
+        $('#cash-amount').textContent = fmtMADcents(part.amount + (part.tipCents || 0) / 100);
         updateRendu();
         cashModal.classList.add('is-open');
         lucide.createIcons();
@@ -6594,6 +6632,10 @@
       let saved = null;
       let payTimer = null;
       const payCtl = (typeof AbortController === 'function' && typeof setTimeout === 'function') ? new AbortController() : null;
+      if (!SV_DEMO && saveSplitFlow(state) === false) {
+        toast('Stockage indisponible : paiement non envoyé, gardez cette addition ouverte', 6000);
+        return false;
+      }
       employeePaymentsInFlight.add(partFlightKey);
       try {
         if (!SV_DEMO) {
@@ -6612,6 +6654,7 @@
               split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
               amount: Math.round(p.amount * 100) / 100,
               amountCents: Math.round(p.amount * 100),
+              tipCents: p.tipCents || 0,
               method: payMethod,
               ts: Date.now(),
               label: (orderRef ? (orderRef + ' · ') : '') + `Part ${partIdx + 1}`,
@@ -6648,6 +6691,7 @@
       if (partPaymentId) p.saleId = (saved && saved.id) || partPaymentId;
       flow.paidCount = flow.parts.filter(part => part.paid).length;
       const completesTable = Boolean(tableId && flow.parts.every(part => part.paid));
+      try { servicePaymentTally(p.amount, completesTable ? (t && t.elapsed) || 0 : 0); } catch (_) {}
       const visibleFlow = splitState.flow && splitState.flow.parts === flow.parts;
       if (visibleFlow) splitState.flow.paidCount = flow.paidCount;
 
@@ -6700,13 +6744,7 @@
           employeePaymentRefForget(tableId);
           employeePaymentsInFlight.delete(tableId);
           tablesPaid++;
-
-          try {
-            if (typeof kgShiftRevenue !== 'undefined') kgShiftRevenue += (state.total || 0);
-            if (typeof kgShiftTurnMin !== 'undefined') kgShiftTurnMin += (t && t.elapsed) || 0;
-            if (typeof shiftStart !== 'undefined' && shiftStart && typeof kgRenderProfil === 'function') kgRenderProfil();
-            if (typeof kgUpdateRankChip === 'function') kgUpdateRankChip();
-          } catch (_) {}
+          try { servicePaymentTally(0); } catch (_) {} // Sauver aussi le nombre de tables réglées.
 
           if (activeTableId === tableId) {
             returnToFloor();
@@ -6907,6 +6945,17 @@
           try { localStorage.setItem(kgTallyKey(), now); } catch (_) {}
         }
       }
+
+      // Chaque part acquittée compte tout de suite, jamais le pourboire.
+      function kgRecordPayment(amount, minutes = 0) {
+        kgTallySync(); // Relire le cumul avant le premier ajout après rechargement.
+        kgShiftRevenue = (Math.round(kgShiftRevenue * 100) + Math.round(amount * 100)) / 100;
+        kgShiftTurnMin += minutes;
+        kgTallySync();
+        if (shiftStart) kgRenderProfil();
+        kgUpdateRankChip();
+      }
+      servicePaymentTally = kgRecordPayment;
 
       /* --- helpers --- */
       const kgNum = n => new Intl.NumberFormat(employeeLocale(), { useGrouping: true }).format(Math.round(n || 0));
@@ -7205,18 +7254,16 @@
       /* --- intercept markTablePaid: pass-through wrapper, tallies revenue only.
              The original runs unchanged — the payment flow is untouched. --- */
       const kgOrigMarkTablePaid = markTablePaid;
-      markTablePaid = function (id) {
+      markTablePaid = async function (id) {
         let rev = 0, occ = 0;
         try {
           rev = (typeof getTableTotal === 'function' && id) ? (getTableTotal(id) || 0) : 0;
           occ = (tables[id] && tables[id].elapsed) || 0;
         } catch (e) {}
-        const result = kgOrigMarkTablePaid.apply(this, arguments);
+        const result = await kgOrigMarkTablePaid.apply(this, arguments);
+        if (!result) return result; // Aucun encaissement sur refus ou délai réseau.
         try {
-          kgShiftRevenue += rev;
-          kgShiftTurnMin += occ;
-          if (shiftStart) kgRenderProfil();
-          kgUpdateRankChip();
+          servicePaymentTally(rev, occ);
         } catch (e) {}
         return result;
       };

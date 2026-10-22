@@ -1346,6 +1346,8 @@ export async function onRequestPost(context) {
       /* Merge is one state transition, not three awaited writes. The source
        * visit is closed only if its immutable revision still matches; the
        * order move and audit row are committed in the same SQLite/D1 batch. */
+      const saleColumns = await env.DB.prepare('PRAGMA table_info(sales)').all();
+      const hasPayments = (saleColumns.results || []).some(c => c.name === 'session_id');
       const nextRevision = Math.max(now, (Number(sourceSession.seen_ts) || 0) + 1);
       const batch = await atomicStatements(env, [
         statement(env,
@@ -1384,6 +1386,11 @@ export async function onRequestPost(context) {
                              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')`,
           targetTable, targetSessionId, now, merchant, sourceTable,
           mergeId, merchant, targetSessionId, merchant, targetTable),
+        // Les acomptes suivent la visite fusionnée, sans changer leur argent.
+        ...(hasPayments ? [statement(env,
+          `UPDATE sales SET session_id = ? WHERE merchant = ? AND session_id = ?
+             AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)`,
+          targetSessionId, merchant, sourceSessionId, mergeId, merchant)] : []),
       ]);
       const claimChanged = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
       const sourceChanged = Number(batch && batch[2] && batch[2].meta && batch[2].meta.changes) || 0;

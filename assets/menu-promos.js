@@ -158,7 +158,8 @@
 
   function priceWith(p, unit) {
     var base = money(unit), out = base;
-    if (p.kind === 'percent') out = base * (100 - p.value) / 100;
+    // Arrondir le prix net en centimes, sans perdre les demi-centimes binaires.
+    if (p.kind === 'percent') out = Math.round(Math.round(base * 100) * (100 - p.value) / 100 + 1e-9) / 100;
     else if (p.kind === 'amount') out = base - p.value;
     else out = Math.min(base, p.value);
     return Math.min(base, money(out));
