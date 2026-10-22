@@ -21,13 +21,14 @@ function check(label, condition) {
 }
 
 check('the testing card offers a distinct failed-test action',
-  client.includes("failed.dataset.action = 'test-failed'") && client.includes("'Test failed'"));
+  client.includes("failed.dataset.action = 'test-failed'") && client.includes("make('button', 'failed-test-button', t('action.failed'))"));
 check('the ticket board cache-busts the updated interface assets',
   +((html.match(/assets\/tickets\.css\?v=(\d+)/) || [])[1] || 0) >= 4 && +((html.match(/assets\/tickets\.js\?v=(\d+)/) || [])[1] || 0) >= 3);
 check('the failed-test action opens a linked follow-up panel',
   html.includes('id="followupComposer"') && html.includes('id="followupTicketNumber"') && client.includes('openFollowup(ticket)'));
 check('the follow-up requires notes and accepts optional images',
-  html.includes('id="followupBody"') && html.includes('id="followupImages"') && html.includes('More images <small>optional</small>'));
+  html.includes('id="followupBody"') && html.includes('id="followupImages"')
+  && html.includes('data-i18n="followup.moreImages"') && html.includes('<small data-i18n="common.optional">'));
 check('the client submits a multipart failed action to the same ticket',
   client.includes("data.append('action', 'failed')") && client.includes('state.followupFiles.forEach') && client.includes("method: 'PATCH'"));
 check('a failed test moves only a testing ticket back to problems',

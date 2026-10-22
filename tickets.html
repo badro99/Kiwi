@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr" dir="ltr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -16,99 +16,88 @@
   <link rel="stylesheet" href="assets/tickets.css?v=4" />
 </head>
 <body>
+  <!-- Texte par défaut en français ; assets/tickets.js le remplace selon la
+       langue (data-i18n pour le texte, data-i18n-attr pour les attributs). -->
   <header class="topbar">
-    <a class="brand" href="/tickets" aria-label="Kiwi Tickets home">
+    <a class="brand" href="/tickets" aria-label="Accueil Kiwi Tickets" data-i18n-attr="aria-label:brand.home">
       <img class="brand-logo" src="assets/kiwi-newlogo.svg" alt="Kiwi" />
       <span class="brand-divider" aria-hidden="true"></span>
-      <span class="brand-product">tickets</span>
+      <span class="brand-product" data-i18n="brand.product">tickets</span>
     </a>
     <button class="add-button" id="openComposer" type="button">
       <span class="button-plus" aria-hidden="true">+</span>
-      Add problem
+      <span data-i18n="add">Nouveau problème</span>
     </button>
   </header>
 
   <main class="workspace">
     <section class="workspace-head" aria-labelledby="pageTitle">
       <div>
-        <p class="eyebrow">Kiwi operations</p>
-        <h1 id="pageTitle">Problems, clearly handled.</h1>
+        <p class="eyebrow" data-i18n="head.eyebrow">Opérations Kiwi</p>
+        <h1 id="pageTitle" data-i18n="head.title">Les problèmes, bien suivis.</h1>
       </div>
-      <p class="workspace-note">Photos disappear after testing. Completed tickets disappear after 20 days.</p>
+      <p class="workspace-note" data-i18n="head.note">Les photos disparaissent après le test. Les tickets terminés disparaissent après 20 jours.</p>
     </section>
 
     <section class="ticket-filters" aria-labelledby="filterTitle">
       <div class="filter-heading">
         <div>
-          <p class="eyebrow">Focus the board</p>
-          <h2 id="filterTitle">Filter tickets</h2>
+          <p class="eyebrow" data-i18n="filters.eyebrow">Affiner le tableau</p>
+          <h2 id="filterTitle" data-i18n="filters.title">Filtrer les tickets</h2>
         </div>
-        <button class="filter-reset" id="resetFilters" type="button">Reset</button>
+        <button class="filter-reset" id="resetFilters" type="button" data-i18n="filters.reset">Réinitialiser</button>
       </div>
       <div class="filter-row">
-        <span class="filter-label">Type</span>
+        <span class="filter-label" data-i18n="field.type">Type</span>
         <div class="filter-pills" id="kindFilters" data-lens-demo></div>
       </div>
       <div class="filter-row">
-        <span class="filter-label">Area</span>
+        <span class="filter-label" data-i18n="field.area">Zone</span>
         <div class="filter-pills filter-pills-wide" id="areaFilters" data-lens-demo></div>
       </div>
       <div class="filter-row">
-        <span class="filter-label">Risk</span>
+        <span class="filter-label" data-i18n="field.risk">Risque</span>
         <div class="filter-pills" id="moneyFilters" data-lens-demo></div>
       </div>
     </section>
 
-    <nav class="mobile-tabs" id="mobileTabs" aria-label="Ticket status">
-      <button type="button" class="mobile-tab is-active" data-status="problem" aria-pressed="true">Problems <span id="tabCountProblem">1</span></button>
-      <button type="button" class="mobile-tab" data-status="testing" aria-pressed="false">Testing <span id="tabCountTesting">1</span></button>
-      <button type="button" class="mobile-tab" data-status="done" aria-pressed="false">Done <span id="tabCountDone">1</span></button>
+    <nav class="mobile-tabs" id="mobileTabs" aria-label="Statut des tickets" data-i18n-attr="aria-label:tabs.label">
+      <button type="button" class="mobile-tab is-active" data-status="problem" aria-pressed="true"><span data-i18n="tab.problem">Problèmes</span> <span class="tab-count" id="tabCountProblem">0</span></button>
+      <button type="button" class="mobile-tab" data-status="testing" aria-pressed="false"><span data-i18n="tab.testing">À tester</span> <span class="tab-count" id="tabCountTesting">0</span></button>
+      <button type="button" class="mobile-tab" data-status="done" aria-pressed="false"><span data-i18n="tab.done">Terminés</span> <span class="tab-count" id="tabCountDone">0</span></button>
     </nav>
 
     <div class="board" id="ticketBoard" data-mobile-status="problem" aria-live="polite">
       <section class="lane" data-lane="problem" aria-labelledby="laneProblemTitle">
         <header class="lane-head">
           <span class="lane-signal signal-problem" aria-hidden="true"></span>
-          <h2 id="laneProblemTitle">Problems</h2>
-          <span class="lane-count" id="countProblem">1</span>
+          <h2 id="laneProblemTitle" data-i18n="lane.problem">Problèmes</h2>
+          <span class="lane-count" id="countProblem">0</span>
         </header>
         <div class="ticket-list" id="listProblem">
-          <article class="ticket-card preview-card">
-            <div class="ticket-meta"><span class="ticket-number">#0012</span><span>Today, 10:42</span></div>
-            <div class="copy-row"><p>The takeaway receipt prints without the customer name.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
-            <div class="photo-placeholder"><span>Screenshot</span><button type="button" class="copy-button" disabled>Copy image</button></div>
-            <button type="button" class="move-button" disabled>Fixed</button>
-          </article>
+          <div class="loading-card"><span></span><span></span><span></span></div>
         </div>
       </section>
 
       <section class="lane" data-lane="testing" aria-labelledby="laneTestingTitle">
         <header class="lane-head">
           <span class="lane-signal signal-testing" aria-hidden="true"></span>
-          <h2 id="laneTestingTitle">Requiring testing</h2>
-          <span class="lane-count" id="countTesting">1</span>
+          <h2 id="laneTestingTitle" data-i18n="lane.testing">À tester</h2>
+          <span class="lane-count" id="countTesting">0</span>
         </header>
         <div class="ticket-list" id="listTesting">
-          <article class="ticket-card preview-card">
-            <div class="ticket-meta"><span class="ticket-number">#0011</span><span>Yesterday</span></div>
-            <div class="copy-row"><p>Confirm the stock warning stays visible after reopening the till.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
-            <button type="button" class="move-button move-testing" disabled>Tested</button>
-          </article>
+          <div class="loading-card"><span></span><span></span><span></span></div>
         </div>
       </section>
 
       <section class="lane" data-lane="done" aria-labelledby="laneDoneTitle">
         <header class="lane-head">
           <span class="lane-signal signal-done" aria-hidden="true"></span>
-          <h2 id="laneDoneTitle">Fixed and tested</h2>
-          <span class="lane-count" id="countDone">1</span>
+          <h2 id="laneDoneTitle" data-i18n="lane.done">Corrigés et testés</h2>
+          <span class="lane-count" id="countDone">0</span>
         </header>
         <div class="ticket-list" id="listDone">
-          <article class="ticket-card preview-card ticket-done">
-            <div class="ticket-meta"><span class="ticket-number">#0010</span><span>2 days ago</span></div>
-            <p>Order totals now stay aligned on smaller iPhone screens.</p>
-            <div class="expiry"><img class="material-icon" src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" />Deletes in 18 days</div>
-          </article>
+          <div class="loading-card"><span></span><span></span><span></span></div>
         </div>
       </section>
     </div>
@@ -117,38 +106,38 @@
   <dialog class="composer" id="composer" aria-labelledby="composerTitle">
     <form class="composer-panel" id="ticketForm" method="dialog">
       <header class="composer-head">
-        <div><p class="eyebrow">New ticket</p><h2 id="composerTitle">Add a problem</h2></div>
-        <button class="icon-button" id="closeComposer" type="button" aria-label="Close">
+        <div><p class="eyebrow" data-i18n="composer.eyebrow">Nouveau ticket</p><h2 id="composerTitle" data-i18n="composer.title">Signaler un problème</h2></div>
+        <button class="icon-button" id="closeComposer" type="button" aria-label="Fermer" data-i18n-attr="aria-label:common.close">
           <span aria-hidden="true">×</span>
         </button>
       </header>
-      <label class="field-label" for="ticketBody">What is the problem?</label>
-      <textarea id="ticketBody" name="body" rows="7" maxlength="4000" placeholder="Describe what happened, where you saw it, and what you expected…" required></textarea>
+      <label class="field-label" for="ticketBody" data-i18n="composer.bodyLabel">Quel est le problème&nbsp;?</label>
+      <textarea id="ticketBody" name="body" rows="7" maxlength="4000" placeholder="Décrivez ce qui s’est passé, où vous l’avez vu et ce que vous attendiez…" data-i18n-attr="placeholder:composer.placeholder" required></textarea>
       <section class="classification-block" aria-labelledby="classificationTitle">
         <div class="classification-heading">
-          <div><span class="field-label" id="classificationTitle">Classification</span><small>Optional</small></div>
-          <span>Text-only filing still works</span>
+          <div><span class="field-label" id="classificationTitle" data-i18n="class.title">Classement</span><small data-i18n="common.optional">Facultatif</small></div>
+          <span data-i18n="class.textOnly">Un texte seul suffit aussi</span>
         </div>
         <div class="classification-grid">
-          <label>Type<select id="ticketKind" name="kind"></select></label>
-          <label>Area<select id="ticketArea" name="area"></select></label>
-          <label id="ticketSubkindField" hidden>Sub-kind<select id="ticketSubkind" name="subkind"></select></label>
+          <label><span data-i18n="field.type">Type</span><select id="ticketKind" name="kind"></select></label>
+          <label><span data-i18n="field.area">Zone</span><select id="ticketArea" name="area"></select></label>
+          <label id="ticketSubkindField" hidden><span data-i18n="field.subkind">Sous-type</span><select id="ticketSubkind" name="subkind"></select></label>
         </div>
-        <label class="money-toggle"><input id="ticketMoneyRisk" name="money_at_risk" type="checkbox" value="1" /><span>Money at risk</span><small>Sales, cash, payments or refunds may be wrong</small></label>
+        <label class="money-toggle"><input id="ticketMoneyRisk" name="money_at_risk" type="checkbox" value="1" /><span data-i18n="money.label">Argent en jeu</span><small data-i18n="money.hint">Ventes, caisse, paiements ou remboursements peut-être faux</small></label>
       </section>
       <div class="upload-block">
-        <div class="upload-heading"><span>Images</span><span id="imageCounter">0 / 6</span></div>
+        <div class="upload-heading"><span data-i18n="upload.images">Images</span><span id="imageCounter">0 / 6</span></div>
         <label class="upload-target" for="ticketImages">
           <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
-          <span><strong>Add photos</strong><small>Choose from your library or take a photo</small></span>
+          <span><strong data-i18n="upload.add">Ajouter des photos</strong><small data-i18n="upload.hint">Choisissez dans votre galerie ou prenez une photo</small></span>
         </label>
         <input id="ticketImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
         <div class="selected-images" id="selectedImages"></div>
       </div>
       <p class="form-error" id="formError" role="alert"></p>
       <footer class="composer-actions">
-        <button class="cancel-button" id="cancelComposer" type="button">Cancel</button>
-        <button class="publish-button" id="publishTicket" type="submit">Publish problem</button>
+        <button class="cancel-button" id="cancelComposer" type="button" data-i18n="common.cancel">Annuler</button>
+        <button class="publish-button" id="publishTicket" type="submit" data-i18n="composer.publish">Publier le problème</button>
       </footer>
     </form>
   </dialog>
@@ -157,39 +146,39 @@
     <form class="composer-panel" id="followupForm" method="dialog">
       <header class="composer-head">
         <div>
-          <p class="eyebrow">Test failed · <span id="followupTicketNumber"></span></p>
-          <h2 id="followupTitle">What is still broken?</h2>
+          <p class="eyebrow"><span data-i18n="followup.eyebrow">Test échoué</span> · <span id="followupTicketNumber"></span></p>
+          <h2 id="followupTitle" data-i18n="followup.title">Qu’est-ce qui ne marche toujours pas&nbsp;?</h2>
         </div>
-        <button class="icon-button" id="closeFollowup" type="button" aria-label="Close">
+        <button class="icon-button" id="closeFollowup" type="button" aria-label="Fermer" data-i18n-attr="aria-label:common.close">
           <span aria-hidden="true">×</span>
         </button>
       </header>
-      <p class="followup-intro">Add what happened in this test. The note stays linked to the original problem and moves it back to Problems.</p>
-      <label class="field-label" for="followupBody">New test notes</label>
-      <textarea id="followupBody" name="note" rows="6" maxlength="4000" placeholder="Explain what still fails, where it happened, and what you expected…" required></textarea>
+      <p class="followup-intro" data-i18n="followup.intro">Notez ce qui s’est passé pendant ce test. La note reste liée au problème d’origine et le renvoie dans Problèmes.</p>
+      <label class="field-label" for="followupBody" data-i18n="followup.bodyLabel">Notes du nouveau test</label>
+      <textarea id="followupBody" name="note" rows="6" maxlength="4000" placeholder="Expliquez ce qui échoue encore, où, et ce que vous attendiez…" data-i18n-attr="placeholder:followup.placeholder" required></textarea>
       <div class="upload-block">
-        <div class="upload-heading"><span>More images <small>optional</small></span><span id="followupImageCounter">0 / 6</span></div>
+        <div class="upload-heading"><span><span data-i18n="followup.moreImages">Autres images</span> <small data-i18n="common.optional">Facultatif</small></span><span id="followupImageCounter">0 / 6</span></div>
         <label class="upload-target" for="followupImages">
           <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
-          <span><strong>Add new photos</strong><small>Choose from your library or take a photo</small></span>
+          <span><strong data-i18n="followup.addPhotos">Ajouter de nouvelles photos</strong><small data-i18n="upload.hint">Choisissez dans votre galerie ou prenez une photo</small></span>
         </label>
         <input id="followupImages" name="images" class="hidden-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
         <div class="selected-images" id="followupSelectedImages"></div>
       </div>
       <p class="form-error" id="followupError" role="alert"></p>
       <footer class="composer-actions">
-        <button class="cancel-button" id="cancelFollowup" type="button">Cancel</button>
-        <button class="publish-button failed-submit" id="publishFollowup" type="submit">Send back as still broken</button>
+        <button class="cancel-button" id="cancelFollowup" type="button" data-i18n="common.cancel">Annuler</button>
+        <button class="publish-button failed-submit" id="publishFollowup" type="submit" data-i18n="followup.submit">Renvoyer comme non résolu</button>
       </footer>
     </form>
   </dialog>
 
   <dialog class="image-copy-fallback" id="imageCopyFallback" aria-labelledby="copyFallbackTitle">
     <div class="image-copy-panel">
-      <h2 id="copyFallbackTitle">Touch and hold to copy</h2>
-      <p>Your browser blocked automatic image copying.</p>
-      <img id="copyFallbackImage" alt="Ticket attachment to copy" />
-      <button type="button" id="closeImageFallback">Done</button>
+      <h2 id="copyFallbackTitle" data-i18n="copyFallback.title">Appui long pour copier</h2>
+      <p data-i18n="copyFallback.body">Votre navigateur a bloqué la copie automatique de l’image.</p>
+      <img id="copyFallbackImage" alt="Pièce jointe du ticket à copier" data-i18n-attr="alt:copyFallback.alt" />
+      <button type="button" id="closeImageFallback" data-i18n="common.done">OK</button>
     </div>
   </dialog>
 
