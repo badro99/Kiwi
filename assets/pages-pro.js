@@ -1963,6 +1963,34 @@ function pdsCloud() {
   });
   return pdsDoc;
 }
+/* Les noms de zone semés par Kiwi (plan de démo et gabarits) sont stockés en
+   français. À l'écran, sous EN et AR, ils se lisent dans la langue de
+   l'interface ; un nom tapé par le commerçant reste tel quel, et l'état
+   stocké ne change pas (la caisse et le cloud lisent le même document). */
+const PDS_SEED_ZONES = {
+  'Salle principale': { en: 'Main room', ar: 'القاعة الرئيسية' },
+  'Salle':            { en: 'Dining room', ar: 'القاعة' },
+  'Terrasse':         { en: 'Terrace', ar: 'التراس' },
+  'Terrasse XL':      { en: 'Large terrace', ar: 'التراس الكبير' },
+  'Salon privé':      { en: 'Private room', ar: 'الصالون الخاص' },
+  'Comptoir':         { en: 'Counter', ar: 'الكونتوار' },
+  'Bar':              { en: 'Bar', ar: 'البار' },
+};
+function pdsZoneName(z) {
+  const n = z && z.name != null ? String(z.name) : '';
+  const tr = Object.prototype.hasOwnProperty.call(PDS_SEED_ZONES, n) ? PDS_SEED_ZONES[n] : null;
+  return (tr && tr[trLang()]) || n;
+}
+/* Libellé par défaut d'un élément de décor : COMPTOIR et CUISINE sont des mots
+   français écrits en dur dans floorplan-core ; sous EN et AR ils prennent le
+   nom traduit de l'élément. Le français et un libellé saisi restent tels quels. */
+function pdsFixLabel(e, K, T) {
+  if (e && e.label != null) return e.label;
+  const base = (K && K.label) || '';
+  if (!base || trLang() === 'fr' || !(e && (e.type === 'comptoir' || e.type === 'cuisine'))) return base;
+  const loc = T && T['fix' + e.type];
+  return loc ? loc.toLocaleUpperCase(trLang()) : base;
+}
 function pdsDefaultState() {
   /* A merchant-created store starts with an empty floor to design (one zone,
      no tables, no staff). The pre-seeded stores keep their full layout. */
@@ -2252,7 +2280,7 @@ function pdsPhoneBody(state, P, openSid) {
       state.zones.forEach(z => {
         const ts = state.tables.filter(t => t.zone === z.id).sort(byNum);
         if (!ts.length) return;
-        html += `<div class="pdsp-zone">${pdsEsc(z.name)}</div><div class="pdsp-grid">`;
+        html += `<div class="pdsp-zone">${pdsEsc(pdsZoneName(z))}</div><div class="pdsp-grid">`;
         ts.forEach(t => {
           const ids = pdsServerIds(t);
           const on = ids.includes(sid);
@@ -2476,7 +2504,7 @@ function pdsKpis(state, T) {
         ? `<div class="kx-kpi"><div class="l">${T.kpiCoversLive}</div><div class="v">${seated}</div><div class="d">${pdsEsc(T.kpiCoversD(capacity))}</div></div>
            <div class="kx-kpi${asked ? ' warn' : ''}"><div class="l">${T.kpiBills}</div><div class="v">${pdsEsc(T.mad(billCents / 100))}</div><div class="d">${pdsEsc(T.kpiBillsD(asked))}</div></div>`
         : `<div class="kx-kpi"><div class="l">${T.kpiCoversPlan}</div><div class="v">${capacity}</div><div class="d">${pdsEsc(T.kpiCoversPlanD(nTables))}</div></div>
-           <div class="kx-kpi"><div class="l">${T.kpiZones}</div><div class="v">${state.zones.length}</div><div class="d">${pdsEsc(state.zones.map(z => z.name).slice(0, 2).join(' · '))}${state.zones.length > 2 ? ' …' : ''}</div></div>`}
+           <div class="kx-kpi"><div class="l">${T.kpiZones}</div><div class="v">${state.zones.length}</div><div class="d">${pdsEsc(state.zones.map(pdsZoneName).slice(0, 2).join(' · '))}${state.zones.length > 2 ? ' …' : ''}</div></div>`}
       <div class="kx-kpi"><div class="l">${T.kpiServers}</div><div class="v">${onShift == null ? state.staff.length : onShift}</div><div class="d">${pdsEsc(T.kpiServersD(onShift, onShift == null ? state.staff.length : floorStaff.length))}</div></div>
     </div>`;
 }
@@ -2516,7 +2544,7 @@ function pdsRenderBody(state, T) {
         ${state.zones.map(z => `
           <button class="pds-zone ${z.id===state.activeZone?'active':''}" data-pds-zone="${pdsEsc(z.id)}"${z.color ? ` style="--zone:${pdsEsc(z.color)};"` : ''}>
             ${z.color ? '<i class="pds-zone-dot" aria-hidden="true"></i>' : ''}
-            <span>${pdsEsc(z.name)}</span>
+            <span>${pdsEsc(pdsZoneName(z))}</span>
             <em>${state.tables.filter(t => t.zone === z.id).length}</em>
           </button>
         `).join('')}
@@ -2980,7 +3008,7 @@ function pdsRenderStage(state, T) {
         <div class="pds-plan-canvas${PDS_ZOOM ? ' is-zoomed' : ''}" data-pds-backdrop
              style="${!noir && pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
           <div class="pds-plan-room" data-pds-room style="${pdsRoomSize(P)} aspect-ratio:${P.w} / ${P.h};">
-            <div class="pds-plan-label"${zone && zone.color ? ` style="--zone:${pdsEsc(zone.color)};"` : ''}>${pdsEsc(zone?.name || '')}</div>
+            <div class="pds-plan-label"${zone && zone.color ? ` style="--zone:${pdsEsc(zone.color)};"` : ''}>${pdsEsc(pdsZoneName(zone))}</div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
               <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -3153,7 +3181,9 @@ function pdsRenderLayoutRail(state, T) {
   const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
   const zi = state.zones.indexOf(zone);
   const dups = pdsDuplicateNums(state);
-  const grpName = (grp) => T['grp' + grp.charAt(0).toUpperCase() + grp.slice(1)] || PDS_FIX_GRP[grp];
+  /* Les clés sont en minuscules (grpsalle) : la recherche capitalisée tombait
+     toujours sur PDS_FIX_GRP, en français sous EN et AR. */
+  const grpName = (grp) => T['grp' + grp] || PDS_FIX_GRP[grp];
   return `
     ${dups.length ? `<div class="pds-rail-warn" role="status">
       <span>${pdsEsc(T.dupNums(dups.join(', ')))}</span>
@@ -3201,7 +3231,7 @@ function pdsRenderLayoutRail(state, T) {
     </section>
     <section class="pds-rail-card">
       <div class="pds-rail-head">
-        <h3 class="pds-rail-title">${pdsEsc(zone ? zone.name : '')}</h3>
+        <h3 class="pds-rail-title">${pdsEsc(zone ? pdsZoneName(zone) : '')}</h3>
         <span class="pds-rail-head-tools">
           <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="-1" title="${pdsEsc(T.zoneMoveL)}" aria-label="${pdsEsc(T.zoneMoveL)}"${zi <= 0 ? ' disabled' : ''}>${pdsIcon('chevron_left')}</button>
           <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="1" title="${pdsEsc(T.zoneMoveR)}" aria-label="${pdsEsc(T.zoneMoveR)}"${zi >= state.zones.length - 1 ? ' disabled' : ''}>${pdsIcon('chevron_right')}</button>
@@ -3436,7 +3466,7 @@ function pdsRenderLivePanel(state, T) {
     }).filter(x => x.turns || x.open);
     html += `<div class="pds-live-sec"><div class="pds-live-sub">${pdsEsc(T.liveToday)}</div>`;
     html += zones.length
-      ? zones.map(x => `<div class="pds-live-stat"><b>${pdsEsc(x.z.name)}</b>
+      ? zones.map(x => `<div class="pds-live-stat"><b>${pdsEsc(pdsZoneName(x.z))}</b>
           <span>${pdsEsc(T.liveTurns(x.turns))}${x.open ? ' · ' + pdsEsc(T.liveOpen(x.open)) : ''}${x.avg ? ' · ' + pdsEsc(T.liveAvg(x.avg)) : ''}</span>
           <em>${pdsEsc(T.liveRevSeat(T.mad(x.perSeat)))}</em></div>`).join('')
       : `<p class="pds-live-note">${pdsEsc(T.liveNoStats)}</p>`;
@@ -3523,7 +3553,7 @@ function pdsRenderInspector(state, T, obj) {
         <div class="pds-form-row">
           <label>${T.inspectorLabel}</label>
           <input class="kf-input pds-input" data-pds-field="label"
-                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="·"/>
+                 value="${pdsEsc(pdsFixLabel(obj, K, T))}" placeholder="·"/>
         </div>
       `}
 
@@ -4073,7 +4103,7 @@ function pdsRenderElement(e, state, T) {
   const c = pdsColor(e);
   const sel = PDS_SEL.has(e.id);
   const only = sel && PDS_SEL.size === 1;
-  const label = (e.label != null ? e.label : (K.label || ''));
+  const label = pdsFixLabel(e, K, T);
 
   /* Les deux vues dessinent les mêmes idéogrammes au trait (pdsNoirFixture
      choisit son encre selon la vue) — les gabarits peints de floorplan-core
@@ -5779,7 +5809,7 @@ function pdsExportSvg(state, zone, T) {
   }).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Inter Tight, Inter, system-ui, sans-serif">
     <rect width="${W}" height="${H}" fill="#F7F5F0"/>
-    <text x="${pad}" y="${pad}" font-size="20" font-weight="600" fill="#0A0F0D">${pdsEsc(zone.name)}</text>
+    <text x="${pad}" y="${pad}" font-size="20" font-weight="600" fill="#0A0F0D">${pdsEsc(pdsZoneName(zone))}</text>
     <rect x="${pad}" y="${pad + 30}" width="${P.w}" height="${P.h}" fill="${pdsEsc(r.floor || '#FBF7EE')}" stroke="#2C2520" stroke-width="${Math.max(2, r.wallW || 2)}"/>
     ${els}${tbls}
   </svg>`;
@@ -5911,7 +5941,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
             </button>
             <button class="pds-export-opt" data-pds-export="png">
               <span class="pds-export-ico">${pdsIcon('image')}</span>
-              <b>${pdsEsc(T.exportPng)}</b><em>${pdsEsc(T.exportPngDesc(zone ? zone.name : ''))}</em>
+              <b>${pdsEsc(T.exportPng)}</b><em>${pdsEsc(T.exportPngDesc(zone ? pdsZoneName(zone) : ''))}</em>
             </button>
           </div>`,
         foot: `<button class="kb ghost" data-dismiss>${T.cancel}</button>`,
@@ -6009,7 +6039,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       pdsPush(state);
       const nz = JSON.parse(JSON.stringify(z));
       nz.id = pdsNewZoneId(state);
-      nz.name = T.zoneCopy(z.name);
+      nz.name = T.zoneCopy(pdsZoneName(z));
       state.zones.splice(state.zones.indexOf(z) + 1, 0, nz);
       const used = new Set(state.tables.map(t => String(t.num)));
       let next = state.tables.reduce((m, t) => Math.max(m, parseInt(t.num, 10) || 0), 0);
@@ -6029,7 +6059,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       state.activeZone = nz.id;
       selection.clear();
       refresh();
-      toast(T.zoneDuplicated(z.name), { type: 'success' });
+      toast(T.zoneDuplicated(pdsZoneName(z)), { type: 'success' });
       break;
     }
     case 'renumber': {
@@ -6107,7 +6137,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         body: `
           <div class="kf-group">
             <label class="kf-label">${T.zoneName}</label>
-            <input class="kf-input" data-pds-zone-rename autofocus maxlength="40" value="${pdsEsc(z.name)}"/>
+            <input class="kf-input" data-pds-zone-rename autofocus maxlength="40" value="${pdsEsc(pdsZoneName(z))}"/>
           </div>
         `,
         foot: `
@@ -6123,7 +6153,8 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         const name = (input?.value || '').trim().slice(0, 40);
         if (!name) { m.close(); return; }
         pdsPush(state);
-        z.name = name;
+        /* Le champ montre le nom traduit ; s'il revient intact, le nom semé reste. */
+        if (name !== pdsZoneName(z)) z.name = name;
         m.close();
         refresh();
         toast(T.renameZone, { type: 'success', desc: T.zoneRenamedDesc(name) });
@@ -6141,7 +6172,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       const m = modal({
         tag: T.tagPdS,
         title: T.deleteZoneTitle,
-        desc: T.deleteZoneDesc(pdsEsc(z.name), count),
+        desc: T.deleteZoneDesc(pdsEsc(pdsZoneName(z)), count),
         width: 480,
         body: '',
         foot: `
@@ -6164,7 +6195,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         state.activeZone = state.zones[0]?.id;
         m.close();
         refresh();
-        toast(T.deleteZoneDone, { type: 'success', desc: z.name, action: { label: T.undoAction, onClick: () => { if (pdsUndo(state)) refresh(); } } });
+        toast(T.deleteZoneDone, { type: 'success', desc: pdsZoneName(z), action: { label: T.undoAction, onClick: () => { if (pdsUndo(state)) refresh(); } } });
       });
       break;
     }

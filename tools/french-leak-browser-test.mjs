@@ -17,10 +17,11 @@
  *
  * The check compares each language's UI count with tools/french-leak-baseline.json
  * and fails when it rises. When a fix brings a count down, lower the baseline
- * (KIWI_UPDATE_FRENCH_BASELINE=1); never raise it to make a red go away. What is
- * left at the baseline (2026-10-20): the demo floor plan's room names and its
- * « CUISINE » block (merchant data, the floor plan stays as shipped) and the
- * « Menu du jour » dish. The demo boutique till joined the sweep the same day:
+ * (KIWI_UPDATE_FRENCH_BASELINE=1); never raise it to make a red go away. The
+ * baseline is zero since 2026-10-23: the floor plan's seeded room names and its
+ * COMPTOIR / CUISINE blocks read in the interface language (pdsZoneName,
+ * pdsFixLabel), its « Salle » palette group found its key, and the demo
+ * dishes are named in the screen's language (demoClock.js). The demo boutique till joined the sweep on 2026-10-20:
  * Vente, Scan, Inventaire, Échanges, Vendus, Clientes and Acomptes, each by a
  * click on its rail.
  */

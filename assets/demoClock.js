@@ -60,11 +60,27 @@
     const venue = window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
     return TARGETS[venue] ? venue : null;
   }
+  /* Les trois plats de la démo, dans la langue de l'écran. Ce sont des
+     données de démonstration, pas la carte d'un commerçant : sous EN et AR,
+     « Menu du jour » restait le seul français du rapport journalier. */
+  const DEMO_DISHES = {
+    fr: ['Menu Atlas', 'Menu du jour', 'Menu dégustation'],
+    en: ['Atlas menu', 'Menu of the day', 'Tasting menu'],
+    ar: ['قائمة أطلس', 'قائمة اليوم', 'قائمة التذوق'],
+  };
+  function demoLang() {
+    let l = 'fr';
+    try { l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) {}
+    return DEMO_DISHES[l] ? l : 'fr';
+  }
+  function demoDishNames() { return DEMO_DISHES[demoLang()]; }
   function getDaySales(day) {
     const venue = demoVenue(), context = dayContext(day);
     if (!venue || !context) return [];
     const { from, to } = context, target = TARGETS[venue];
-    const key = venue + ':' + context.day + ':' + from + ':' + to;
+    /* La langue entre dans la clé : les plats de démo sont nommés dans la
+       langue de l'écran, et changer de langue doit relire le grand livre. */
+    const key = venue + ':' + context.day + ':' + from + ':' + to + ':' + demoLang();
     if (!ledgerCache.has(key)) {
       // Each business day gets its own deterministic volume (about ±9 %), so
       // "vs yesterday" reads like a real week instead of a flat 0 %.
@@ -73,7 +89,7 @@
       const swing = ((seed % 1000) / 1000 - 0.5) * 0.18, txSwing = (((seed >>> 10) % 1000) / 1000 - 0.5) * 0.12;
       const count = Math.max(1, Math.round(target.tx * (1 + txSwing)));
       const rows = [], cents = Math.round(target.revenue * (1 + swing) * 100);
-      const names = ['Menu Atlas', 'Menu du jour', 'Menu dégustation'];
+      const names = demoDishNames();
       const weights = Array.from({length:count}, (_, i) => 1 + (i * 37 % 9));
       const weightTotal = weights.reduce((sum, value) => sum + value, 0);
       let used = 0;

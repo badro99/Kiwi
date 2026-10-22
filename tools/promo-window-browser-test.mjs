@@ -164,7 +164,42 @@ try {
   });
   check(phone.wide.length === 0, 'nothing in the composer runs past the phone screen' + (phone.wide.length ? ' (' + phone.wide.join(', ') + ')' : ''));
   check(phone.saveInView && phone.onTop, '« Lancer la promotion » stays on screen and clickable while the form scrolls');
+
+  /* L'unité de la valeur (% ou MAD) se pose dans le champ, du côté où le texte
+     finit. Mesurée, pas lue dans la feuille de style : en français à droite,
+     en arabe à gauche, et le texte saisi ne passe jamais dessous. */
+  const valueBox = () => page.evaluate(() => {
+    const input = document.querySelector('[data-bpd-shell] .bpd-value-box input');
+    const unit = document.querySelector('[data-bpd-shell] .bpd-value-box .bpd-unit');
+    if (!input || !unit) return null;
+    const i = input.getBoundingClientRect(), u = unit.getBoundingClientRect(), cs = getComputedStyle(input);
+    return { dir: cs.direction, iL: i.left, iR: i.right, uL: u.left, uR: u.right,
+      padL: parseFloat(cs.paddingLeft), padR: parseFloat(cs.paddingRight) };
+  });
+  const fr = await valueBox();
+  check(fr && fr.dir === 'ltr' && fr.uL > (fr.iL + fr.iR) / 2 && fr.uR <= fr.iR && fr.uL >= fr.iR - fr.padR,
+    `in French the unit sits inside the input on its right, clear of the text (${JSON.stringify(fr)})`);
   await page.click('[data-bpd-cancel]');
+
+  console.log('\n■ En arabe, sur téléphone (375 px)');
+  await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
+  await page.evaluate(() => KiwiI18n.setLang('ar'));
+  await sleep(500);
+  await open();
+  const ar = await valueBox();
+  check(ar && ar.dir === 'rtl' && ar.uR < (ar.iL + ar.iR) / 2 && ar.uL >= ar.iL && ar.uR <= ar.iL + ar.padL,
+    `in Arabic the unit sits inside the input on its left, clear of the text (${JSON.stringify(ar)})`);
+  const arWide = await page.evaluate(() => {
+    const shell = document.querySelector('[data-bpd-shell]');
+    return [...shell.querySelectorAll('*')].filter((e) => {
+      if (e.closest('.bpd-seg')) return false; // la rangée d'onglets défile d'elle-même
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && (r.right > innerWidth + 1 || r.left < -1);
+    }).map((e) => String(e.className || e.tagName).slice(0, 30));
+  });
+  check(arWide.length === 0, 'nothing in the Arabic composer runs past a 375 px screen' + (arWide.length ? ' (' + arWide.slice(0, 5).join(', ') + ')' : ''));
+  await page.click('[data-bpd-cancel]');
+  await page.evaluate(() => KiwiI18n.setLang('fr'));
 
   check(errors.length === 0, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
   console.log(`\npromo-window-browser-test: ${checks} checks passed`);
