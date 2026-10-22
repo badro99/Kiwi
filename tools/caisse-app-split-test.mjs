@@ -22,10 +22,29 @@ assert.ok(map.fragments.filter(f => f.file === map.prelude).every(f => f.kind ==
 } else console.log('○ Caisse split proven at split time; files edited since, proof archived');
 const html = read('kiwi-caisse.html');
 if (pristine) assert.ok(caisseTestSource(html).includes('<script>' + original + '</script>'), 'legacy tests use actual production bodies in original order');
-const pair = html.match(/<script src="assets\/caisse-accounting\.js\?v=\d+"><\/script>\s*<script src="assets\/caisse-app\.js\?v=\d+"><\/script>/);
+/* Since 22 October 2026 the core is four scripts: three preludes of declarations
+   (caisse-accounting, caisse-floor, caisse-kitchen), then caisse-app.js. */
+const LIVE = caisseTestSource.FILES;
+const pair = html.match(new RegExp(LIVE.map(f => '<script src="' + f.replace(/[./]/g, '\\$&') + '(?:\\?v=\\d+)?"></script>').join('\\s*')));
 assert.ok(pair, 'adjacent blocking classic scripts, declarations before initializers');
 assert.ok(!/\b(?:async|defer|type=)/.test(pair[0]));
 for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'));
+/* Second split: runs of declarations moved to caisse-floor.js and caisse-kitchen.js,
+   anchored by text in tools/fixtures/caisse-app/split-2.json. */
+const map2 = JSON.parse(read('tools/fixtures/caisse-app/split-2.json'));
+const pristine2 = Object.entries(map2.splitFiles).every(([file, hash]) => createHash('sha256').update(fs.readFileSync(file)).digest('hex') === hash);
+if (pristine2) {
+  assert.equal(createHash('sha256').update(caisseTestSource.appBeforeSecondSplit()).digest('hex'), map2.sha256,
+    'second split: every run back before its anchor rebuilds caisse-app.js byte for byte');
+  for (const file of LIVE.slice(1, -1)) {
+    const scope = vm.createContext({});
+    vm.runInContext(read(file), scope, { filename: file });
+    assert.ok(Object.keys(scope).length && Object.values(scope).every(v => typeof v === 'function'), file + ': top-level declarations only, nothing runs at load');
+  }
+  console.log('PASS second caisse split: anchored runs rebuild caisse-app.js byte for byte; floor and kitchen hold declarations only');
+} else console.log(caisseTestSource.appBeforeSecondSplit() === null
+  ? '○ Second caisse split: an anchor moved, legacy tests read the live files in load order'
+  : '○ Second caisse split proven at split time; files edited since, anchors still rebuild the old order');
 if (pristine) {
 // Check all global function descriptors and sources without running DOM startup.
 const declarations = file => map.fragments.filter(f => f.kind === 'FunctionDeclaration' && (!file || f.file === file)).map(f => original.slice(f.start, f.end)).join('');
@@ -81,8 +100,7 @@ function realm(real) {
 for (const real of [false, true]) {
   const before = realm(real), after = realm(real);
   if (pristine) vm.runInContext(original, before.context, { filename: 'original-caisse-app.js' });
-  vm.runInContext(read(map.prelude), after.context, { filename: map.prelude });
-  vm.runInContext(read(map.core), after.context, { filename: map.core });
+  for (const file of LIVE) vm.runInContext(read(file), after.context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   for (const name of ['KiwiCaisseAccounting','KiwiCaisseCarte','KiwiCaisseKitchen','KiwiCaisseContext','KiwiCaisseHeldSales']) assert.ok(after.context[name], name + ' registered');
   assert.equal(typeof after.context.rollupLedger, 'function');

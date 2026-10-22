@@ -30,7 +30,7 @@ async function knownIssue(id, label, property, examples) {
 }
 // Extract declarations by name from current production files, never split offsets.
 const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
-const source = ['assets/caisse-accounting.js', 'assets/caisse-app.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+const source = createRequire(import.meta.url)('./caisse-test-source.cjs').FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 const cents = mad => Math.round(mad * 100);
 const add = rows => rows.reduce((a,b) => a+b, 0);
 const MAX = 5_000_000;

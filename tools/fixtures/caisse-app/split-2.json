@@ -1,0 +1,191 @@
+{
+  "note": "Deuxième découpage de caisse-app.js (22 octobre 2026) : déclarations de fonction sorties vers caisse-floor.js et caisse-kitchen.js. Chaque tronçon (start = son début, unique dans son fichier) reprend sa place dans caisse-app.js juste avant le texte « before » (unique dans caisse-app.js). tools/caisse-test-source.cjs s'en sert pour rendre aux tests l'ordre d'avant ; sha256 est celui de caisse-app.js d'avant, splitFiles ceux des trois fichiers juste après.",
+  "sha256": "f304d300d978296a210af61b6cb14066bcf116b15ecfcc6bfeb6ac8808326d0d",
+  "splitFiles": {
+    "assets/caisse-app.js": "97fa8ec7aebfed76856973122776bf048c2336ca88127937de32909bcbd8c3b9",
+    "assets/caisse-floor.js": "ef65fb270815a2a94786c1e63635face23abc317c8ecea3a21eb43390b006b54",
+    "assets/caisse-kitchen.js": "2a5f2ea06537572d9e0eaab86fb5b862d9ebd92ebb8973fb99b78e36816c9ee0"
+  },
+  "runs": [
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n    /* Le plan suit le thème de la caisse, jamais l'inverse",
+      "before": "\n\n    /* ── Café Atlas, redessiné au trait ─────────────────",
+      "functions": 10
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n    /* Injecte (une fois) le sol, le mobilier et les defs d",
+      "before": "\n    /* Phone-order state must exist before the first floor ",
+      "functions": 3
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n    function designedCovers(tb) {\n      if (tb && tb.seats ",
+      "before": "\n\n    /* ═══════════════════════════════════════════════════════════════════════\n       UNE table, D",
+      "functions": 15
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n    function markSelectedTable(id) {\n      $$(TBL_SEL).forE",
+      "before": "\n\n    /* Repaint from the CURRENT `tables` (live status from",
+      "functions": 3
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n    function renderRealGrid() {\n      const host = document",
+      "before": "\n\n    /* Le plan cuit ses couleurs (matières aplaties, annea",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    // Read the plan, (re)build `tables` from it, then pai",
+      "before": "\n\n    try { setupRealSalle(); } catch (_) {}\n    // A design",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    /* ---------- Floor switching (RDC ↔ 1er étage) ------",
+      "before": "\n    document.querySelectorAll('.floor-pill').forEach(p =>\n ",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function isFeatureOff(key) {\n      try {\n        if (w",
+      "before": "\n    document.addEventListener('kiwi-config', () => { syncAc",
+      "functions": 2
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function hasTables() {\n      if (isFeatureOff('salle')",
+      "before": "\n\n    $$('.mode-pill').forEach(btn => {\n      btn.addEventLi",
+      "functions": 2
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    /* ---------- Toast ---------- */\n    function toast(m",
+      "before": "\n    window.KiwiCaisseToast = toast;\n\n    /* ---------- Righ",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function setCaisseTableLock(tableId, action) {\n      i",
+      "before": "\n\n    /* ===========================================================\n       Vent",
+      "functions": 9
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    /* ===================================================",
+      "before": "\n\n    document.getElementById('new-table-modal').addEventLis",
+      "functions": 4
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function openWaitlistModal() {\n      wlDraft = { name:",
+      "before": "\n\n    $('#wl-add-btn') && $('#wl-add-btn').addEventListener(",
+      "functions": 10
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function caisseTableKitchenLocked(id) {\n      return (",
+      "before": "\n\n    let cmrgSourceId = null;\n    let cmrgSelectedTargetId ",
+      "functions": 6
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    function openCaisseMergeModal(tableId) {\n      if (!ha",
+      "before": "\n\n    $('#rp-transfer-table') && $('#rp-transfer-table').add",
+      "functions": 3
+    },
+    {
+      "file": "assets/caisse-floor.js",
+      "start": "\n\n    /* Never leave an item correction locked behind a stal",
+      "before": "\n\n    /* La reprise de file a fini par obtenir le numéro can",
+      "functions": 9
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* ═══════ LA SALLE PART EN CUISINE, ELLE AUSSI ══════",
+      "before": "\n\n    /* La reprise de file a fini par obtenir le numéro can",
+      "functions": 10
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* ═══════ REVENIR À LA SALLE · LA SORTIE QUI N'EXISTA",
+      "before": "\n\n    document.getElementById('validate-order').addEventList",
+      "functions": 8
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* ═══════ ROUVRIR LA COMMANDE D'UNE MESA INSTALLÉE ══",
+      "before": "\n    $('#rp-add-items').addEventListener('click', () => {\n  ",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* ===================================================",
+      "before": "\n\n    /* Reset the PIN state and replay the fade-in animatio",
+      "functions": 3
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n    function kdsStations() {\n      if (IS_DEMO) return KDS_",
+      "before": "\n    try { window.kdsStations = kdsStations; window.KiwiCais",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* La cuisine · le poste qui reçoit tout ce qu'aucune ",
+      "before": "\n\n    /* Recipe catalog for the KDS recipe popup. Keyed by d",
+      "functions": 3
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    function kdsHasRecipe(name) {\n      const r = KDS_RECI",
+      "before": "\n\n    const kdsOrders   = [];\n    /* La démo reprend sa numé",
+      "functions": 1
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n    function isDemoSeedOrder(o) {\n      if (!o) return fals",
+      "before": "\n\n    const KDS_SVG = {\n      clock: '<svg viewBox=\"0 0 24 2",
+      "functions": 11
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    function kdsTypeChip(o) {\n      if (o.type === 'glovo'",
+      "before": "\n\n    /* ── kiwiSkin2027:till · le board de la caisse sur le",
+      "functions": 10
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n    function kkt(k, a) { return String(window.KiwiKit.t(k, ",
+      "before": "\n\n    $('#open-kds').addEventListener('click', openKds);\n   ",
+      "functions": 14
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    /* ═══════════ UN BON PAR POSTE ══════════════════════",
+      "before": "\n    $('#rp-send-kitchen').addEventListener('click', sendToK",
+      "functions": 4
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    function setVrapView(v) {\n      vrapView = v;\n      co",
+      "before": "\n\n    $('#vrap-board').addEventListener('click', (e) => {\n  ",
+      "functions": 23
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    function archivedTakeawaySet() {\n      const merchant ",
+      "before": "\n\n    /* Ce que orderpro-inbox.js appelle à chaque tour de s",
+      "functions": 18
+    },
+    {
+      "file": "assets/caisse-kitchen.js",
+      "start": "\n\n    function sameMap(a, b, eq) {\n      if (a.size !== b.si",
+      "before": "\n\n    /* ===========================================================\n       === Persistence ===  (th",
+      "functions": 1
+    }
+  ]
+}

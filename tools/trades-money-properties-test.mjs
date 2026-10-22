@@ -59,7 +59,7 @@ await strict('traiteur tranche schedule conserves quote and paid debt never beco
 const bread=load('assets/pos-boulangerie.js',['effPrice','tkTotal'],{state:{lastHour:true,ticket:[]},LH_PCT:30,PROD:{}});
 await strict('boulangerie last-hour markdown follows declared floor-to-cent policy',fc.property(money,fc.integer({min:0,max:100}),(price,pct)=>{bread.LH_PCT=pct;assert.equal(C(bread.effPrice({price:price/100})),Math.floor(price*(100-pct)/100+1e-6));}));
 // Restaurant harness edges are shared with the existing money suite; functions stay real.
-const cs=read('assets/caisse-accounting.js')+'\n'+read('assets/caisse-app.js'),h=read('tools/caisse-money-properties-test.mjs');
+const cs=['assets/caisse-accounting.js','assets/caisse-floor.js','assets/caisse-kitchen.js','assets/caisse-app.js'].map(read).join('\n'),h=read('tools/caisse-money-properties-test.mjs');
 const selected=vm.runInNewContext(declaration(h,'selected')+';selected');
 const context=vm.runInNewContext(declaration(h,'context')+';context',{vm,declaration,source:cs,selected,TS:Date.parse('2026-10-22T12:00Z'),Clock:Date,console});
 const restaurantPosted=[],restaurant=context({KiwiPosSale:{foldLines:fold},KiwiLive:{postSale:p=>{restaurantPosted.push(p);return {ok:true,queued:true,id:'sale'};}}});

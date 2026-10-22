@@ -235,3 +235,26 @@ The new VM/structural suite passes. PWA: 787 checks, all 17 verticals complete
 offline. Stamps: 1,157 checks. Material icons: 30 checks. Size ratchet: 648 checks.
 Browser inventory above is for the owner; browser rendering/payment assertions
 were not executed here. No claim of browser parity is made.
+
+## Second slice (22 October 2026): floor and kitchen
+
+Same rule as the first slice: only top-level function declarations move, byte
+for byte and in their order; every `let`/`const`, every statement that runs at
+load and all state stay in `caisse-app.js` (14,619 → 9,783 lines). Two more
+blocking classic preludes, between `caisse-accounting.js` and `caisse-app.js`:
+
+| File | Functions | From (lines of caisse-app.js before this slice) |
+| --- | --- | --- |
+| `assets/caisse-floor.js` | 80 | floor plan rendering and mirror, floor/mode switching, toast, bill panel (345–1834); new table, waitlist, transfer and merge, table orders (5200–6205) |
+| `assets/caisse-kitchen.js` | 108 | sending the room to the kitchen (6206–6738), kitchen-display PIN mode (7522–7625), KDS (10249–11074), one ticket per station, takeaway board and the phone-order bridge (11810–13785) |
+
+`tools/fixtures/caisse-app/split-2.json` records the 30 runs of moved
+declarations and, for each, a text anchor in `caisse-app.js` it used to
+precede. `tools/caisse-test-source.cjs` puts the runs back before their anchors,
+so the legacy tests read exactly the source they read before (proven byte for
+byte by `caisse-app-split-test`, which also runs both preludes in an empty
+realm: functions only, nothing at load). An edit elsewhere keeps the anchors;
+if one is edited away the tests read the live files in load order. The VM
+startup parity (demo and real: startup calls, storage, financial state, DOM
+writes, globals and registrations) was checked against the pre-slice files at
+split time. The floor plan's look is untouched.

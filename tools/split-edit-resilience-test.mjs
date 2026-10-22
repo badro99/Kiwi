@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-split-proof-'));
 try {
@@ -15,6 +17,9 @@ try {
     const map = JSON.parse(fs.readFileSync(path.join(root,dir,'split.json'),'utf8'));
     for (const file of Object.keys(map.splitFiles)) files.add(file);
   }
+  // The restaurant core gained two preludes after its frozen split (22 October 2026).
+  for (const file of require('./caisse-test-source.cjs').FILES) files.add(file);
+  files.add('tools/fixtures/caisse-app/split-2.json');
   // Les modules découpés peuvent importer un voisin partagé (import '../refund-split.js?v=N') : on le copie aussi.
   for (const file of [...files].filter(f=>f.endsWith('.js'))) {
     for (const m of fs.readFileSync(path.join(root,file),'utf8').matchAll(/(?:from|import)\s+'(\.\.?\/[^'?]+\.js)(?:\?v=[0-9]+)?'/g))
@@ -46,7 +51,9 @@ try {
     }
     const caisse=require('./tools/caisse-test-source.cjs');
     const actual=caisse(fs.readFileSync('kiwi-caisse.html','utf8'));
-    const joined=['assets/caisse-accounting.js','assets/caisse-app.js'].map(f=>fs.readFileSync(f,'utf8')).join('\\n');
+    // Anchors intact: the second split's runs go back in place; otherwise the live files in load order.
+    const app=caisse.appBeforeSecondSplit();
+    const joined=app===null?caisse.FILES.map(f=>fs.readFileSync(f,'utf8')).join('\\n'):fs.readFileSync('assets/caisse-accounting.js','utf8')+'\\n'+app;
     assert.ok(actual.includes('<script>'+joined+'</script>'));new vm.Script(joined);
     assert.ok(caisse.declarations('payTipAmount').includes('function payTipAmount('));
   `],{cwd:temp,encoding:'utf8',timeout:30000});
