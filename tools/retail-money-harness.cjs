@@ -36,7 +36,7 @@ function world(vertical) {
     SALES:[],AVOIRS:[],P:{},state:{},STAFF:{caissiere:{name:'Test'}},bqOutstandingCents:0,
     renderEchanges:no,icons:no,openVeil:no,closeVeil:no,toast:no,persistDay:no,persistAvoirs:no,bqSaveProvisional:no,renderAll:no,
     creditIntent:()=> 'test-intent',IS_DEMO:true,activeAvoirs:()=>c.AVOIRS.filter(a=>a.balance>0),avoirExpired:()=>false,
-    printReceiptNow:(...args)=>events.push(['print',...args]),fmtMAD:n=>String(n),fmtDayY:()=>'',esc:s=>String(s??''),
+    printReceiptNow:(...args)=>events.push(['print',...args]),fmtMAD:n=>String(n),fmtDayY:()=>'',fmtValidUntil:()=>'',esc:s=>String(s??''),
     sizesOf:()=>['TU'],merchantSlug:()=> 'test-shop',rayonOf:()=>'',lineDeal:ln=>({price:ln.promoPrice}),
     depotOn:()=>false,artOf:()=>'',colorDot:()=>'',colorLabel:()=>'',saleClient:()=>({id:'customer',name:'Test'}),
     findSale:id=>c.SALES.find(s=>s.id===id),newSaleId:()=> 'new-sale',

@@ -122,7 +122,7 @@ const eq = (a, b, m) => { assert.deepEqual(plain(a), b, m); checks++; };
   Object.assign(context, {CRED:{}, day:{creditAdded:0,tickets:0}, r2:n=>n,
     ticketCount:()=>1, histEntry:(...args)=>args, decrementStock:()=>{},
     ticketSeq:1, freshTicket:()=>{},renderTicket:()=>{},renderGrid:()=>{},renderBadges:()=>{},
-    icons:()=>{},queueIfOffline:()=>{},toast:()=>{},fmtMAD2:String,fmtMAD:String,balanceOf:()=>7.5,focusScan:()=>{}});
+    icons:()=>{},queueIfOffline:()=>{},toast:()=>{},fmtMAD2:String,fmtMAD:String,balTxt:String,balanceOf:()=>7.5,focusScan:()=>{}});
   context.ITEMS.olives.label = 'Olives';
   context.window.KiwiRepeatSale.epicerieRemember = (...args)=>committed.push(args);
   vm.runInContext(functionSource('attachBasket') + '\nattachBasket({name:"Fixture",hist:[]});', context);
