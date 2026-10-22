@@ -9,6 +9,7 @@ import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSessi
 import { businessDate, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
 import { creditsIssuedCents, refundsIssuedCents } from '../_store-credit-ledger.js';
+import { voidSaleLoyalty } from '../clients.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
  * remboursement est une ligne négative qui reste dans le journal, l'annulation
@@ -184,6 +185,7 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
   } catch (error) {
     return json({ error: 'reopen-failed', detail: String(error && error.message || error) }, 503);
   }
+  await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' });
   if (actorId) {
     try { await env.DB.prepare(`INSERT OR IGNORE INTO sale_void_history
       (id,merchant,sale_id,ref,voided_ts,reason,actor_id,amount_cents) VALUES(?,?,?,?,?,?,?,?)`)
@@ -401,6 +403,7 @@ export async function onRequestPost({ request, env }) {
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
   }
+  await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' });
 
   /* The canonical void and its required audit row are committed above. This
      secondary index is analytics only; a missing migration must not turn an

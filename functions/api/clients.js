@@ -519,6 +519,99 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
   return json({ ok: true, spend: -take, points: -pointsTake, stamps: -stampsTake });
 }
 
+/* Une vente sortie des livres (console « void », annulation gérant, réouverture
+ * de table) ne laisse pas ses points sur la carte. Chaque achat fidélité de CE
+ * ticket est repris par un retour « refund:void:… » qui passe par applyRefund :
+ * même plafond (jamais plus que gagné, jamais plus que la carte ne tient),
+ * même idempotence, même registre. Remettre la vente aux livres rend
+ * exactement ce retour (« refund:unvoid:… »), donc le registre se somme
+ * toujours au solde, et un retour réel posé plus tard voit le ticket entier.
+ * Best effort : la vente est déjà sortie, un échec ici ne la remet pas. */
+function voidTail(clientId, saleId) {
+  const plain = `${clientId}:${saleId}`;
+  if (plain.length <= 90 && /^[A-Za-z0-9:_-]+$/.test(plain)) return plain;
+  let h = 2166136261;
+  for (const ch of plain) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return 'h' + h.toString(36);
+}
+/* Void number n of a sale follows its n-th restore, so void n and restore n
+ * share one key without relying on the clock, and a retried void replays. */
+async function voidRound(env, merchant, clientId, tail) {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM client_purchase_events
+      WHERE merchant = ? AND client_id = ? AND ref LIKE 'refund:unvoid:%' AND substr(ref, -?) = ?`
+  ).bind(merchant, clientId, tail.length + 1, ':' + tail).first();
+  return Number(row && row.n || 0);
+}
+async function saleLoyaltyGroups(env, merchant, sale) {
+  const id = String(sale && sale.id || ''), ref = String(sale && sale.ref || '');
+  if (!env || !env.DB || !merchant || !id) return [];
+  await ensurePurchaseEvents(env);
+  // The event named after this sale first: split payments of one receipt
+  // share its number, and voiding one part must not take back the others.
+  const own = await env.DB.prepare(
+    `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
+      WHERE merchant = ? AND ref NOT LIKE 'refund:%' AND sale_ref <> '' AND (ref = ? OR ref LIKE ?)
+      GROUP BY client_id, sale_ref`
+  ).bind(merchant, id, 'purchase:%:' + id).all();
+  if (own && own.results && own.results.length) return own.results;
+  const rows = await env.DB.prepare(
+    `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
+      WHERE merchant = ? AND ref NOT LIKE 'refund:%' AND (sale_ref = ? OR (? <> '' AND sale_ref = ?))
+      GROUP BY client_id, sale_ref`
+  ).bind(merchant, id, ref, ref).all();
+  return (rows && rows.results) || [];
+}
+export async function voidSaleLoyalty(env, merchant, sale) {
+  let taken = 0;
+  try {
+    for (const group of await saleLoyaltyGroups(env, merchant, sale)) {
+      if (!(Number(group.paid) > 0)) continue;
+      const tail = voidTail(group.client_id, sale.id);
+      const n = await voidRound(env, merchant, group.client_id, tail);
+      const res = await applyRefund(env, merchant, {
+        clientId: group.client_id, ref: `refund:void:${n}:${tail}`,
+        amount: Number(group.paid), saleRef: group.sale_ref,
+      });
+      if (res && res.ok) taken++;
+    }
+  } catch (_) { /* the void itself is already committed */ }
+  return taken;
+}
+export async function restoreSaleLoyalty(env, merchant, sale) {
+  let given = 0;
+  try {
+    if (typeof env.DB.batch !== 'function') return 0;
+    await ensureClientSyncSequence(env);
+    const cursor = clientCursorSql();
+    for (const group of await saleLoyaltyGroups(env, merchant, sale)) {
+      const tail = voidTail(group.client_id, sale.id);
+      const n = await voidRound(env, merchant, group.client_id, tail);
+      const ref = `refund:void:${n}:${tail}`, back = `refund:unvoid:${n}:${tail}`;
+      const ev = await env.DB.prepare(
+        'SELECT amount, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ? AND client_id = ?'
+      ).bind(merchant, ref, group.client_id).first();
+      if (!ev) continue;
+      const amount = -Number(ev.amount || 0), points = -Number(ev.points || 0), stamps = -Number(ev.stamps || 0);
+      const now = Date.now();
+      const results = await env.DB.batch([
+        ...clientCursorStatements(env, merchant, now),
+        env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?, spend = spend + ?,
+          updated_ts = ?, srv_ts = ${cursor}
+          WHERE merchant = ? AND id = ? AND deleted = 0
+            AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
+          .bind(points, stamps, amount, now, merchant, merchant, group.client_id, merchant, back),
+        env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
+          (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
+          SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', '[]', ? WHERE changes() > 0`)
+          .bind(merchant, back, group.client_id, amount, points, stamps, now, merchant, group.sale_ref),
+      ]);
+      if (Number(results[3] && results[3].meta && results[3].meta.changes)) given++;
+    }
+  } catch (_) { /* the restore itself is already committed */ }
+  return given;
+}
+
 async function applyRedemption(env, merchant, raw) {
   const redemption = raw && typeof raw === 'object' ? raw : {};
   const clientId = str(redemption.clientId || redemption.client_id, 64);

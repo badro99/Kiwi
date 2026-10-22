@@ -53,6 +53,7 @@ import {
   isOperator, isSeniorOperator, operatorActor, json,
 } from '../../auth/_lib.js';
 import { roomChargeId, roomChargeReversalId } from '../hotel/_room-charge-data.js';
+import { voidSaleLoyalty, restoreSaleLoyalty } from '../clients.js';
 
 /* Les motifs. Fermés côté serveur : un journal dont le motif est du texte libre
    se remplit de « test », « ok », « rien » et ne répond plus à la question qu'on
@@ -538,6 +539,12 @@ export async function onRequestPost(context) {
   } catch (e) {
     if (isMissingVoidColumn(e)) return json({ error: 'migration-needed' }, 503);
     return json({ error: 'update-failed', detail: String(e && e.message || e) }, 500);
+  }
+
+  // Points earned on a sale leave the card with it, and come back with it.
+  for (const r of rows) {
+    if (action === 'void') await voidSaleLoyalty(env, merchant, r);
+    else if (r.void_ts) await restoreSaleLoyalty(env, merchant, r);
   }
 
   /* Le journal, après coup et sans jamais faire échouer le geste : si la table
