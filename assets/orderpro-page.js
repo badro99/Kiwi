@@ -1093,7 +1093,7 @@
       const row = $('.menu-subtabs');
       if (!row) return;
       const subtabs = MENU_SUBTABS.get(String(categoryId)) || [];
-      row.innerHTML = subtabs.map(s => `<button class="menu-tab menu-subtab" data-tab="${escapeHtml(String(categoryId) + '::' + String(s.id))}">${escapeHtml(String(s.name || ''))}</button>`).join('');
+      row.innerHTML = subtabs.map(s => `<button class="menu-tab menu-subtab" role="tab" aria-selected="false" data-tab="${escapeHtml(String(categoryId) + '::' + String(s.id))}">${escapeHtml(String(s.name || ''))}</button>`).join('');
       row.classList.toggle('is-visible', subtabs.length > 0);
     }
 
@@ -2444,7 +2444,7 @@
     function restartMenu() {
       cart.clear();
       refreshCartUI();
-      $$('.menu-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'all'));
+      $$('.menu-tab').forEach(t => { t.classList.toggle('is-active', t.dataset.tab === 'all'); t.setAttribute('aria-selected', String(t.dataset.tab === 'all')); });
       renderMenuSubtabs('all');
       renderMenu('all');
       gotoScreen('screen-menu');
@@ -2930,10 +2930,10 @@
       const tabs = $('.menu-tabs');
       const parts = [];
       MENU_SUBTABS.clear();
-      parts.push(`<button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
+      parts.push(`<button class="menu-tab is-active" role="tab" aria-selected="true" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab
-        parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String((menuTr(c, currentLang) || c).name || ''))}</button>`);
+        parts.push(`<button class="menu-tab" role="tab" aria-selected="false" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String((menuTr(c, currentLang) || c).name || ''))}</button>`);
         const subtabs = (Array.isArray(c.sub) ? c.sub : []).filter(s =>
           MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id)));
         if (subtabs.length) MENU_SUBTABS.set(String(c.id), subtabs);
@@ -3105,11 +3105,13 @@
         const tab = e.target.closest('.menu-tab');
         if (tab) {
           if (tab.classList.contains('menu-subtab')) {
-            $$('.menu-subtab').forEach(t => t.classList.remove('is-active'));
+            $$('.menu-subtab').forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false'); });
             tab.classList.add('is-active');
+            tab.setAttribute('aria-selected', 'true');
           } else {
-            $$('.menu-tabs .menu-tab').forEach(t => t.classList.remove('is-active'));
+            $$('.menu-tabs .menu-tab').forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false'); });
             tab.classList.add('is-active');
+            tab.setAttribute('aria-selected', 'true');
             renderMenuSubtabs(tab.dataset.tab);
           }
           renderMenu(tab.dataset.tab);

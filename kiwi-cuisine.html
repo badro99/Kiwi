@@ -1156,7 +1156,9 @@
       });
     });
     var lb = $('lang');
-    if (lb) lb.textContent = LANG_LABEL[l];
+    /* « Langue de l’écran : FR » : le nom contient ce que la touche montre,
+       pour qui la commande à la voix (WCAG 2.5.3). */
+    if (lb) { lb.textContent = LANG_LABEL[l]; lb.setAttribute('aria-label', T('tool.lang') + ' : ' + LANG_LABEL[l]); }
     $('link-txt').textContent = linkText();
     buf = '';
     drawPad();

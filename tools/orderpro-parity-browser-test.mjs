@@ -218,7 +218,7 @@ try {
     const langs = await page.$$eval('#lang-picker .lang-btn', (b) => b.map((x) => x.dataset.lang));
     check(langs.length === 5 && ['fr', 'ar', 'en', 'es', 'de'].every((l) => langs.includes(l)), `the picker offers the five published languages (${langs.join(' ')})`);
     check(await page.evaluate(() => document.documentElement.lang === 'es'), 'the Spanish chosen on the QR page is kept');
-    check(await page.$eval('#lang-picker .lang-btn[data-lang="es"]', (b) => b.getAttribute('aria-pressed') === 'true' && b.getAttribute('aria-label') === 'Español'), 'its key is pressed and named in full');
+    check(await page.$eval('#lang-picker .lang-btn[data-lang="es"]', (b) => b.getAttribute('aria-pressed') === 'true' && b.getAttribute('aria-label') === 'Español, ES'), 'its key is pressed, named in full and says what it shows');
     check(!(await page.evaluate(() => document.body.classList.contains('ordering-off'))), 'ordering is on');
     await page.tap('.mode-card[data-mode="takeout"]');
     await page.waitForSelector('#screen-menu.is-active [data-card="tajine"]', { timeout: 8000 });

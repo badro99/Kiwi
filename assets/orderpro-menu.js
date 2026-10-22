@@ -149,8 +149,12 @@
     host.innerHTML = (globe ? '<button class="lang-globe" type="button" aria-expanded="false" aria-label="' +
       esc((STR[current] || STR.en).lang_choose) + '"><i data-icon="language"></i></button>' : '') + order.map(function (l) {
       var label = SHORT[l] || String(l).split('-')[0].toUpperCase();
+      /* Le nom dit la langue en entier ET contient ce que la touche montre
+         (« English, EN ») : qui pilote à la voix dit « EN » (WCAG 2.5.3). Un
+         seul signe (د, 日) ne se prononce pas, il n'est pas répété. */
+      var spoken = (names[l] || l) + (label.length > 1 && label !== (names[l] || l) ? ', ' + label : '');
       return '<button class="lang-btn' + (l === current ? ' is-active' : '') + '" type="button" data-lang="' + esc(l) +
-        '" lang="' + esc(l) + '" aria-label="' + esc(names[l] || l) + '" aria-pressed="' + (l === current) + '">' + esc(label) + '</button>';
+        '" lang="' + esc(l) + '" aria-label="' + esc(spoken) + '" aria-pressed="' + (l === current) + '">' + esc(label) + '</button>';
     }).join('');
     host.classList.toggle('is-many', order.length > 3 && !globe);
     host.classList.toggle('is-globe', globe);
