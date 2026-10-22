@@ -160,7 +160,11 @@ const placeholders = s => (s.match(/\{[nx]\}/g) || []).sort().join(',');
 let failed = 0;
 for (const name of files) {
   dictionaries(name === 'pos-hotel' ? 'hotel' : 'pressing');
-  const source = read('assets/' + name + '.js');
+  let source = read('assets/' + name + '.js');
+  // pressing-ops.js porte aussi, en fin de fichier, l'art des articles (ancien
+  // assets/pressing-garment-icons.js : des tracés et des identifiants de photo,
+  // aucun texte d'interface) ; on ne lit que la partie d'avant, comme avant.
+  if (name === 'pressing-ops') source = source.slice(0, source.indexOf('/* ── Garment product art'));
   const propertyLabels = [...source.matchAll(/\b(?:label|short|sub|flag):\s*(['"])(.*?)\1/g)].map(m => m[2]);
   const phrases = [...new Set(fragments(jsStrings(source)).concat(propertyLabels.flatMap(visibleText).flatMap(s => s.split(' · ')).map(s => s.trim()).filter(s => /[a-zà-ÿœ]/i.test(s) && s !== 'MAD')))].filter(f => !NOT_UI.has(f));
   const missing = phrases.filter(f => !covered(f));

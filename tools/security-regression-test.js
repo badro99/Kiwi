@@ -47,7 +47,7 @@ for (const header of ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Pol
  * them inline. Keep this list SHORT and justified — each entry is a promise that
  * the real escaping happens in the named module, which is itself checked below. */
 const DELEGATES = {
-  'assets/pages-pro.js': 'assets/boutique-catalog-io.js', // bqx-export → CAT().exportCsv()
+  'assets/pages-pro.js': 'assets/boutique-catalog-parts.js', // bqx-export → CAT().exportCsv()
 };
 
 /* Producers whose CSV contains NO merchant data, so there is nothing to escape.

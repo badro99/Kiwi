@@ -73,8 +73,7 @@ function bootTill() {
     fetch,
   });
   vm.runInContext(R('assets/inventory-ledger.js'), ctx, { filename: 'inventory-ledger.js' });
-  vm.runInContext(R('assets/boutique-catalog-ledger.js'), ctx, { filename: 'boutique-catalog-ledger.js' });
-  vm.runInContext(R('assets/boutique-catalog-io.js'), ctx, { filename: 'boutique-catalog-io.js' });
+  vm.runInContext(R('assets/boutique-catalog-parts.js'), ctx, { filename: 'boutique-catalog-parts.js' });
   vm.runInContext(R('assets/boutique-catalog.js'), ctx, { filename: 'boutique-catalog.js' });
   vm.runInContext(R('assets/maison-stock-movements.js'), ctx, { filename: 'maison-stock-movements.js' });
   const cat = win.KiwiBoutiqueCatalog;

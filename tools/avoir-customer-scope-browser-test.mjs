@@ -40,7 +40,7 @@ const server = http.createServer((req, res) => {
       <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-      <script src="/assets/boutique-catalog-ledger.js"></script><script src="/assets/boutique-catalog-io.js"></script><script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script ${!baseline ? 'type="module"' : ''} src="/assets/pos-${vertical}.js?v=${stamps[`assets/pos-${vertical}.js`].v}"></script>
+      <script src="/assets/boutique-catalog-parts.js"></script><script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script ${!baseline ? 'type="module"' : ''} src="/assets/pos-${vertical}.js?v=${stamps[`assets/pos-${vertical}.js`].v}"></script>
       </head><body class="is-pos-${vertical}"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-${vertical}"></div>
       <script type="module">${!baseline ? `import "/assets/pos-${vertical}.js?v=${stamps[`assets/pos-${vertical}.js`].v}";` : ''}window.__spec.mount(document.getElementById('pos-${vertical}'));window.KiwiCaisseDna.enhance(document.getElementById('pos-${vertical}'),'${vertical}');</script></body></html>`);
     return;

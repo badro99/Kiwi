@@ -188,11 +188,11 @@
      article supprimé revient à chaque synchronisation. */
   function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {}, moves: [] }; }
 
-  /* ── les deux fichiers satellites ──────────────────────────────────────────
-   * Le journal du stock (assets/boutique-catalog-ledger.js) et les échanges
-   * avec le serveur (assets/boutique-catalog-io.js) vivent à part, chargés
-   * AVANT ce fichier. Ils ne font que déclarer des fabriques : on les appelle
-   * ici, chacune à l'endroit où son code se trouvait, si bien que l'ordre de
+  /* ── le fichier satellite ───────────────────────────────────────────────────
+   * Le journal du stock et les échanges avec le serveur vivent à part, dans
+   * assets/boutique-catalog-parts.js, chargé AVANT ce fichier. Il ne fait que
+   * déclarer des fabriques : on les appelle ici, chacune à l'endroit où son
+   * code se trouvait, si bien que l'ordre de
    * démarrage et des écouteurs reste celui d'un seul fichier. `core` est tout ce
    * qu'ils voient d'ici : le document et le magasin actif, lus et écrits en
    * direct, et les quelques fonctions du noyau qu'ils appellent. */
@@ -211,7 +211,7 @@
     catById: (id) => catById(id),
     variantsOf: (pid) => variantsOf(pid),
   };
-  const ledger = part('ledger', 'assets/boutique-catalog-ledger.js')(core);
+  const ledger = part('ledger', 'assets/boutique-catalog-parts.js')(core);
   const { MOVE_MAX, now, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs } = ledger;
 
   // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
@@ -322,9 +322,9 @@
   });
 
   /* LE FILET (la copie serveur), les réservations d'un encaissement et « et dans
-     l'autre boutique ? » : assets/boutique-catalog-io.js. */
+     l'autre boutique ? » : assets/boutique-catalog-parts.js. */
   const { cloud, DIRTY_KEY, markCatalogDirty, schedulePush, pull, cloudBind,
-    reserveSale, confirmSale, releaseSale, crossStock, crossReset } = part('sync', 'assets/boutique-catalog-io.js')(core, ledger);
+    reserveSale, confirmSale, releaseSale, crossStock, crossReset } = part('sync', 'assets/boutique-catalog-parts.js')(core, ledger);
 
   /* ───────────────── seeding ───────────────── */
   function distribute(total, buckets) {
@@ -1157,8 +1157,8 @@
     };
   }
 
-  /* L'export CSV : assets/boutique-catalog-io.js. */
-  const { exportCsv } = part('csv', 'assets/boutique-catalog-io.js')(core);
+  /* L'export CSV : assets/boutique-catalog-parts.js. */
+  const { exportCsv } = part('csv', 'assets/boutique-catalog-parts.js')(core);
   /* Les fabriques ont servi : la page ne garde que window.KiwiBoutiqueCatalog,
      exactement comme quand tout tenait dans ce fichier. */
   try { delete window.__kiwiBoutiqueCatalogParts; } catch (e) {}

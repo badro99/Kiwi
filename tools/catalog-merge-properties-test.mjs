@@ -40,8 +40,8 @@ function pocketWindow() {
     navigator: { userAgent: 'node' },
   };
   win.window = win;
-  for (const file of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-ledger.js',
-    'assets/boutique-catalog-io.js', 'assets/boutique-catalog.js']) {
+  for (const file of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js',
+    'assets/boutique-catalog.js']) {
     new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout', 'fetch', 'CustomEvent', 'navigator', 'self', 'console',
       fs.readFileSync(path.join(ROOT, file), 'utf8'))(win, win.document, win.localStorage, setTimeout, clearTimeout, win.fetch, win.CustomEvent, win.navigator, win, console);
   }

@@ -118,7 +118,6 @@ var SHELL = [
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=31',
   '/assets/pressing-ops.js?v=9',
-  '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=9',
   '/assets/pressing-dashboard.js?v=19',
   '/assets/pressing-products/chemise.png',
@@ -195,7 +194,6 @@ var SHELL = [
   '/assets/day-report-export.js?v=12',
   '/assets/month-report.js?v=14',
   '/assets/month-report-tools.js?v=7',
-  '/assets/month-report-csv.js?v=4',
   '/assets/month-report-pdf.js?v=15',
   '/assets/month-report-ui.js?v=10',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse

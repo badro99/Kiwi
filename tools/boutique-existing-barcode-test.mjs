@@ -58,8 +58,7 @@ const KEYP = 'kiwiBoutiqueCatalog:v1:';
 const boot = (win) => {
   load(win, 'assets/barcode.js');
   load(win, 'assets/color-palette.js');
-  load(win, 'assets/boutique-catalog-ledger.js');
-  load(win, 'assets/boutique-catalog-io.js');
+  load(win, 'assets/boutique-catalog-parts.js');
   load(win, 'assets/boutique-catalog.js');
   return win.KiwiBoutiqueCatalog;
 };

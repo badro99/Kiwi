@@ -27,7 +27,10 @@ const dispatchJs = read('assets/pos-dispatch.js');
 const storeApi = read('functions/api/store.js');
 const catalogJs = read('assets/pressing-catalog.js');
 const catalogCss = read('assets/pressing-catalog.css');
-const garmentIcons = read('assets/pressing-garment-icons.js');
+// L'art des articles vit à la fin de assets/pressing-ops.js (ancien
+// assets/pressing-garment-icons.js, réuni tel quel) : on n'exécute que cette partie.
+const pressingOpsJs = read('assets/pressing-ops.js');
+const garmentIcons = pressingOpsJs.slice(pressingOpsJs.indexOf('/* ── Garment product art'));
 
 ok(/pressing:\s*\{\s*base:\s*'boutique'/.test(venues), 'pressing has an exact subtype profile');
 ['pressing-orders','pressing-workshop','pressing-pickup','pressing-services','pressing-quality','pressing-delivery']
@@ -60,7 +63,7 @@ ok(pdCssMatch && sw.includes(`'/assets/pressing-dashboard.css?v=${pdCssMatch[1]}
   && pdMatch && sw.includes(`'/assets/pressing-dashboard.js?v=${pdMatch[1]}'`), 'pressing workspace is available offline');
 const catMatch = dashboard.match(/assets\/pressing-catalog\.js\?v=(\d+)/);
 ok(catMatch && caisse.includes(`assets/pressing-catalog.js?v=${catMatch[1]}`) && sw.includes(`'/assets/pressing-catalog.js?v=${catMatch[1]}'`), 'dashboard and till load the same offline pressing catalogue');
-ok(dashboard.includes('assets/pressing-garment-icons.js?v=2') && caisse.includes('assets/pressing-garment-icons.js?v=2') && sw.includes("'/assets/pressing-garment-icons.js?v=2'"), 'dashboard and till load the same product artwork');
+ok(garmentIcons.startsWith('/* ── Garment product art') && opsMatch && sw.includes(`'/assets/pressing-ops.js?v=${opsMatch[1]}'`) && !dashboard.includes('pressing-garment-icons.js') && !caisse.includes('pressing-garment-icons.js'), 'dashboard and till load the same product artwork');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');
 ok(pressingJs.includes("window.addEventListener('click'") && pressingJs.includes('open.dataset.pxdOpen') && pressingJs.includes('page.dataset.pxdPage'), 'pressing subpage actions claim sidebar routing before the generic dashboard');
 ok(css.includes('@media (max-width: 390px)') && css.includes('@media (max-width: 760px)'), 'phone breakpoints cover narrow screens');
@@ -82,7 +85,7 @@ ok(venues.includes('MATERIAL_PRESSING') && dashboard.includes('viewBox="0 -960 9
 ok(garmentIcons.includes('KiwiPressingGarmentIcons') && garmentIcons.includes("['caftan', /caftan|takchita/") && garmentIcons.includes("['jupe', /jupe|skirt/"), 'the shared artwork resolves product-specific photography');
 ok(caisseJs.includes('shared.render(item, cls)') && catalogJs.includes("shared.render(item, 'pce-garment-art')") && pressingJs.includes('garmentPreview(o.pieces)'), 'caisse, dashboard catalogue and order lists reuse the shared photography');
 const garmentContext = { window: {} };
-vm.runInNewContext(garmentIcons, garmentContext, { filename: 'pressing-garment-icons.js' });
+vm.runInNewContext(garmentIcons, garmentContext, { filename: 'pressing-ops.js' });
 ok(garmentContext.window.KiwiPressingGarmentIcons.resolve({ id:'article-jupe', label:'Jupe plissée', art:'chemise', cat:'bas' }) === 'jupe' && garmentContext.window.KiwiPressingGarmentIcons.resolve({ id:'article-ca', label:'Takchita brodée', cat:'robes' }) === 'caftan', 'renamed and newly created products get representative photography');
 ok(garmentContext.window.KiwiPressingGarmentIcons.render({ id:'costume', variantId:'3p' }).includes('pressing-products/costume-3p.png') && garmentContext.window.KiwiPressingGarmentIcons.render({ id:'tapis', variantId:'m' }).includes('pressing-products/tapis-m.png'), 'product photography follows suit and carpet variants');
 ok(!garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).includes('<svg') && garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).includes('<img'), 'pressing items render product photos instead of garment icons');

@@ -109,10 +109,10 @@
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
   <script src="assets/pos-sale.js?v=16" defer></script>
-  <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
+  <!-- Garment workflow snapshot and garment product art, shared with the
+       pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=9" defer></script>
-  <script src="assets/pressing-garment-icons.js?v=2" defer></script>
   <script src="assets/pressing-catalog.js?v=9" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
@@ -123,10 +123,9 @@
        choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
        normaliser les variantes existantes. -->
   <script src="assets/color-palette.js?v=6" defer></script>
-  <!-- Le catalogue boutique tient en trois fichiers : le journal du stock et
+  <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et
        les échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-  <script src="assets/boutique-catalog-ledger.js" defer></script>
-  <script src="assets/boutique-catalog-io.js" defer></script>
+  <script src="assets/boutique-catalog-parts.js" defer></script>
   <script src="assets/boutique-catalog.js?v=11" defer></script>
   <script src="assets/sold-insights.js?v=14" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour

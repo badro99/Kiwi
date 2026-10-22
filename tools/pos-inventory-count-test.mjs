@@ -77,8 +77,7 @@ function browser() {
 const bare = browser();
 bare.run('assets/color-palette.js');
 bare.run('assets/barcode.js');
-bare.run('assets/boutique-catalog-ledger.js');
-bare.run('assets/boutique-catalog-io.js');
+bare.run('assets/boutique-catalog-parts.js');
 bare.run('assets/boutique-catalog.js');
 const CAT_API = bare.window.KiwiBoutiqueCatalog;
 ok(!!CAT_API, 'le vrai catalogue boutique se charge');
@@ -103,8 +102,7 @@ function seeded() {
   const b = browser();
   b.run('assets/color-palette.js');
   b.run('assets/barcode.js');
-  b.run('assets/boutique-catalog-ledger.js');
-  b.run('assets/boutique-catalog-io.js');
+  b.run('assets/boutique-catalog-parts.js');
   b.run('assets/boutique-catalog.js');
   const CAT = b.window.KiwiBoutiqueCatalog;
   /* Un magasin qui n'est pas la vitrine de démo : sinon le catalogue s'amorce

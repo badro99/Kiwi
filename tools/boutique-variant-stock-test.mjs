@@ -51,8 +51,7 @@ function load(win, rel) {
 const win = browser();
 load(win, 'assets/barcode.js');
 load(win, 'assets/color-palette.js');
-load(win, 'assets/boutique-catalog-ledger.js');
-load(win, 'assets/boutique-catalog-io.js');
+load(win, 'assets/boutique-catalog-parts.js');
 load(win, 'assets/boutique-catalog.js');
 const C = win.KiwiBoutiqueCatalog;
 const product = C.addProduct({ name: 'Polo Stretch test', priceMAD: 400 });

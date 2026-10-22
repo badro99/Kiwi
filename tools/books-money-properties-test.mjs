@@ -24,7 +24,7 @@ const sum=xs=>xs.reduce((a,b)=>a+b,0),plain=x=>JSON.parse(JSON.stringify(x)),C=x
 const rates=fc.constantFrom(0,7,10,14,20),money=fc.integer({min:1,max:20_000_000});
 const ht=(c,r)=>{const sign=c<0?-1n:1n,n=BigInt(Math.abs(c))*100n,d=BigInt(100+r);return Number(sign*((2n*n+d)/(2n*d)));};
 const ctx=vm.createContext({console,Intl,Date,Blob,File,TextEncoder,URL,window:{addEventListener(){}},localStorage:{getItem:()=>null},document:{getElementById:()=>true}});
-for(const p of ['kit/haptics','day-report','month-report','month-report-tools','month-report-csv','month-report-ui'])vm.runInContext(read('assets/'+p+'.js'),ctx);
+for(const p of ['kit/haptics','day-report','month-report','month-report-tools','month-report-ui'])vm.runInContext(read('assets/'+p+'.js'),ctx);
 // Only the PDF's file/font loader is stubbed; create(), rows and formatters are real.
 const pdfSource=read('assets/month-report-pdf.js'),dep=declaration(pdfSource.slice(pdfSource.indexOf('  async function dependencies')), 'dependencies');
 vm.runInContext(pdfSource.replace(dep,"async function dependencies(){return {}; }"),ctx);

@@ -90,8 +90,7 @@ function loadInto(ctx, rel) {
 
 const { ctx, window } = makeEnv();
 try {
-  loadInto(ctx, 'assets/boutique-catalog-ledger.js');
-  loadInto(ctx, 'assets/boutique-catalog-io.js');
+  loadInto(ctx, 'assets/boutique-catalog-parts.js');
   loadInto(ctx, 'assets/boutique-catalog.js');
   loadInto(ctx, 'assets/catalog-import.js');
 } catch (e) {
