@@ -28,7 +28,7 @@ entries.forEach(({ base, rev }) => {
 const visited = new Set(), moduleUrls = new Set();
 function moduleClosure(file) {
   if (visited.has(file)) return; visited.add(file);
-  for (const m of read(file).matchAll(/from\s+'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
+  for (const m of read(file).matchAll(/(?:from|import)\s+'(\.\.?\/[^']+\.js\?v=[0-9]+)'/g)) {
     const url = path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1]));
     ok(url + ' is pre-cached', sw.includes("'/" + url + "'"));
     moduleUrls.add('/' + url);

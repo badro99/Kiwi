@@ -242,17 +242,17 @@ var SHELL = [
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=2',
-  '/assets/boutique-catalog.js?v=12',
+  '/assets/boutique-catalog-parts.js?v=3',
+  '/assets/boutique-catalog.js?v=13',
   '/assets/store-templates.js?v=3',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promos.js?v=8',
+  '/assets/promos.js?v=9',
   '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=55',
+  '/assets/caisse-lang.js?v=56',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=153',
+  '/assets/pos-dispatch.js?v=155',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -435,11 +435,12 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=87',
-  '/assets/pos-maison/sales.js?v=5',
-  '/assets/pos-maison/checkout.js?v=5',
-  '/assets/pos-maison/inventory.js?v=5',
-  '/assets/pos-maison.js?v=87',
+  '/assets/pos-maison.css?v=89',
+  '/assets/pos-maison/sales.js?v=7',
+  '/assets/pos-maison/checkout.js?v=7',
+  '/assets/refund-split.js?v=2',
+  '/assets/pos-maison/inventory.js?v=7',
+  '/assets/pos-maison.js?v=89',
   '/assets/caisse-pairing.js?v=36',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

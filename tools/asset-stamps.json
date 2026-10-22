@@ -88,12 +88,12 @@
     "sha": "b2462b5a0ffeea29"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "2",
-    "sha": "1f414103bbbe3910"
+    "v": "3",
+    "sha": "4db39f799babb2f7"
   },
   "assets/boutique-catalog.js": {
-    "v": "12",
-    "sha": "806a7e30da9c23dc"
+    "v": "13",
+    "sha": "a761bdd751b0799d"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "17",
@@ -128,8 +128,8 @@
     "sha": "cb3a264322d858ae"
   },
   "assets/caisse-lang.js": {
-    "v": "55",
-    "sha": "c46f3f8a91ac4d04"
+    "v": "56",
+    "sha": "178d3009c88fcf83"
   },
   "assets/caisse-link.js": {
     "v": "20",
@@ -1024,16 +1024,16 @@
     "sha": "a937be370a38720b"
   },
   "assets/orderpro-menu.js": {
-    "v": "6",
-    "sha": "9244048d8ce8a7fa"
+    "v": "7",
+    "sha": "97b2b65a84876794"
   },
   "assets/orderpro-page.css": {
     "v": "1",
     "sha": "8955832b74db091b"
   },
   "assets/orderpro-page.js": {
-    "v": "1",
-    "sha": "322a9c3fd4f206d1"
+    "v": "2",
+    "sha": "df755085bfb621ed"
   },
   "assets/orderpro-panel.js": {
     "v": "4",
@@ -1152,8 +1152,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "153",
-    "sha": "429c14f3a203eec8"
+    "v": "155",
+    "sha": "270a85519b5003f0"
   },
   "assets/pos-epicerie.css": {
     "v": "20",
@@ -1216,24 +1216,24 @@
     "sha": "91f1f2fd2c703231"
   },
   "assets/pos-maison.css": {
-    "v": "87",
+    "v": "89",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "87",
-    "sha": "e08ef35b0953c8cb"
+    "v": "89",
+    "sha": "24d8c0c4863731b3"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "5",
-    "sha": "5c53e0f8518fbb96"
+    "v": "7",
+    "sha": "c20d279dadef8bd6"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "5",
-    "sha": "f5ea121ec0adf41a"
+    "v": "7",
+    "sha": "d4c6576fe41ce049"
   },
   "assets/pos-maison/sales.js": {
-    "v": "5",
-    "sha": "29550183be968dd3"
+    "v": "7",
+    "sha": "829811022b3d1a45"
   },
   "assets/pos-mobile.css": {
     "v": "9",
@@ -1336,8 +1336,8 @@
     "sha": "40e1323d45678bee"
   },
   "assets/promos.js": {
-    "v": "8",
-    "sha": "94f3aa874182ea19"
+    "v": "9",
+    "sha": "ca0ad37ab82c033c"
   },
   "assets/pwa-update.js": {
     "v": "366",
@@ -1358,6 +1358,10 @@
   "assets/receipt.js": {
     "v": "10",
     "sha": "dd0b5c4f97c47178"
+  },
+  "assets/refund-split.js": {
+    "v": "2",
+    "sha": "422d6def67a58025"
   },
   "assets/repeat-sale-guard.js": {
     "v": "3",
