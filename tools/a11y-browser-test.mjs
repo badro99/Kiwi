@@ -138,6 +138,29 @@ await S.run('caisse démo', async (t) => {
   compare('caisse', await audit(t, page));
 });
 
+/* 22 octobre : en parcourant l'hôtel de test, l'économat avait son bouton
+ * principal vert sur vert en clair et son titre noir sur vert en sombre. Aucune
+ * surface ci-dessus n'était en mode sombre ni dans une caisse de métier. */
+await S.run('tableau de bord démo, mode sombre', async (t) => {
+  const page = await open(t, '/dashboard.html', { ...DEMO, kiwiTheme: 'dark', kiwiDashTheme: 'dark' });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d|Explore the d/.test(x.textContent)); if (b) b.click(); });
+  await sleep(800);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !!document.querySelector('[data-kpi-band] .kpi-m'), { timeout: 20000 });
+  await sleep(900);
+  compare('dashboard-dark', await audit(t, page));
+});
+for (const [id, label] of [['pressing', 'caisse pressing'], ['hotel', 'caisse hôtel']]) {
+  await S.run(label, async (t) => {
+    const page = await open(t, '/kiwi-caisse.html', { kiwiLang: 'fr' }, { width: 1180, height: 820 });
+    await sleep(1200);
+    t.step('open the ' + id + ' till');
+    await page.evaluate((v) => window.KiwiPosDispatch.unlockById(v), id);
+    await sleep(1800);
+    compare('caisse-' + id, await audit(t, page));
+  });
+}
+
 if (UPDATE) fs.writeFileSync(BASELINE_FILE, JSON.stringify(measured, null, 2) + '\n');
 await browser.close();
 server.close();
