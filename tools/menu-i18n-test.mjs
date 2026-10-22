@@ -193,5 +193,94 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
 // Cards retain compact nutrition and option metadata without overlapping the action target.
 assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') && /\.catalog-item-meta \{ display:block;[^}]*text-overflow:ellipsis;white-space:nowrap;/.test(fs.readFileSync('assets/catalog-workspace.css','utf8')) && ws.includes('data-rmw-command="actions"'), 'card metadata remains compact and constrained beside a separate action button');
 
+/* ── l'éditeur de carte (assets/menu-catalog.js) dans la langue du patron ──
+ * L'éditeur de formule écrivait « aucun produit », « Sans section », « Monter »
+ * et « Descendre » en dur, hors de tr(T.…) : un patron en anglais ou en arabe
+ * les lisait en français. On rend ici, dans une fausse fenêtre et sans
+ * navigateur, chaque éditeur du module en EN puis en AR, et on cherche dans
+ * TOUT ce qu'il a écrit (corps, titres, infobulles, toasts, noms par défaut)
+ * les fragments français corrigés. */
+{
+  const FR_FRAGMENTS = ['aucun produit', 'Sans section', 'Monter', 'Descendre', 'Votre établissement',
+    'Import indisponible', 'Rechargez la page', '(copie)', 'Produit'];
+  function renderCatalogIn(lang) {
+    const written = [];
+    const keep = (v) => { if (v != null && v !== '') written.push(String(v)); };
+    class El {
+      constructor() { this._html = ''; this._q = new Map(); this._l = {}; this.value = ''; this.checked = false; this.hidden = false; this.dataset = {}; this.style = {}; this.className = ''; this.classList = { add() {}, remove() {}, toggle() {}, contains: () => false }; }
+      set innerHTML(v) { this._html = String(v); keep(v); }
+      get innerHTML() { return this._html; }
+      set textContent(v) { keep(v); }
+      get textContent() { return ''; }
+      addEventListener(type, fn) { (this._l[type] || (this._l[type] = [])).push(fn); }
+      fire(type, ev = {}) { for (const fn of this._l[type] || []) fn({ target: this, preventDefault() {}, stopPropagation() {}, ...ev }); }
+      querySelector(sel) { if (!this._q.has(sel)) this._q.set(sel, new El()); return this._q.get(sel); }
+      querySelectorAll() { return []; }
+      closest() { return null; }
+      setAttribute(k, v) { if (/^(title|aria-label|placeholder)$/.test(k)) keep(v); }
+      getAttribute() { return null; }
+      appendChild() {} remove() {} focus() {} select() {} click() {} contains() { return false; }
+    }
+    let menu = { seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
+    const subs = [];
+    const store = {
+      get: () => menu,
+      update(fn) { const next = fn(structuredClone(menu)); menu = next === undefined ? menu : next; subs.forEach((f) => f()); return menu; },
+      subscribe(fn) { subs.push(fn); return () => {}; },
+      isEmpty: () => !menu.cats.length && !menu.items.length,
+      loadExample() {},
+    };
+    const modals = [];
+    const w = {
+      console, setTimeout: () => 0, clearTimeout() {}, structuredClone,
+      localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+      KiwiI18n: { getLang: () => lang },
+      KiwiStore: { define: () => store },
+      KiwiVenue: { getCurrentVenueData: () => ({}) },
+      Kiwi: {
+        handlers: {},
+        modal(o) { for (const k of ['tag', 'title', 'desc', 'body', 'foot']) keep(o[k]); const el = new El(); modals.push(el); return { el, close() {} }; },
+        appPage(_id, o) { for (const k of ['title', 'subtitle', 'body']) keep(o[k]); },
+        toast(title, o) { keep(title); keep(o && o.desc); },
+      },
+      document: { readyState: 'loading', body: new El(), head: new El(), documentElement: { lang, getAttribute: () => lang }, createElement: () => new El(), getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
+      addEventListener() {},
+    };
+    w.window = w;
+    vm.runInContext(read('assets/menu-catalog.js'), vm.createContext(w), { filename: 'menu-catalog.js' });
+    const S = w.KiwiMenuStore;
+    S.render();                                        // page vide
+    S.promptAddCategory();
+    S.addCategory('Tajines');
+    S.addItem({ name: 'Atay', price: 12, catId: menu.cats[0].id });
+    S.addItem({ name: 'Msemen', price: 8, catId: 'nowhere' });          // sans catégorie connue
+    S.addItem({ name: '', price: 0, catId: menu.cats[0].id });           // nom par défaut
+    S.addItem({ name: 'Menu', price: 50, catId: menu.cats[0].id,
+      formula: { slots: [{ id: 'a', label: 'Boisson', min: 1, max: 1, choices: [{ itemId: menu.items[0].id, extra: 0 }] }] } });
+    S.render();                                        // carte remplie
+    const formulaId = menu.items[menu.items.length - 1].id;
+    S.openItem(formulaId);                             // éditeur de formule
+    const itemModal = modals[modals.length - 1];
+    itemModal.querySelector('[data-f-add-slot]').fire('click');   // étape vide : « aucun choix », deux étapes : monter/descendre
+    S.openItem(null);
+    S.duplicateItem(menu.items[0].id);
+    S.requestDeleteItem(menu.items[0].id);
+    S.openOptions(); S.openStations(); S.openCategoryRoute(menu.cats[0].id);
+    S.importMenu();                                    // module d'import absent
+    for (const it of menu.items) keep(it.name);
+    return { text: written.join('\n') };
+  }
+  for (const lang of ['en', 'ar']) {
+    let out;
+    try { out = renderCatalogIn(lang); } catch (e) { bad(`menu-catalog ${lang} : le rendu hors navigateur a échoué (${e.message})`); continue; }
+    const leaked = FR_FRAGMENTS.filter((f) => out.text.includes(f));
+    assert(leaked.length === 0, `menu-catalog ${lang} : éditeurs (formule, article, options, postes, import) sans fragment français → ${leaked.join(' · ') || 'aucun'}`);
+    const want = lang === 'en' ? ['Choices offered: no item yet', 'Uncategorised', 'Move up', 'Move down', 'Your business', 'Import unavailable', 'Product', '(copy)']
+      : ['الخيارات المقترحة: لا منتج بعد', 'بلا قسم', 'رفع', 'خفض', 'نشاطك', 'الاستيراد غير متاح', 'منتج', '(نسخة)'];
+    const missing = want.filter((s) => !out.text.includes(s));
+    assert(missing.length === 0, `menu-catalog ${lang} : les mêmes états sont bien rendus, traduits → ${missing.join(' · ') || 'tous présents'}`);
+  }
+}
+
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);

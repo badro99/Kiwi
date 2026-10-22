@@ -116,13 +116,21 @@ function sanitizeHours(raw) {
   return { v: 1, week, exceptions };
 }
 
-function sanitizeFormula(raw, blockedIds) {
+/* La formule suit EXACTEMENT les règles de cleanFormula dans
+ * assets/menu-catalog.js, qui l'écrit au tableau de bord : même identifiant
+ * d'étape, même libellé rogné, mêmes bornes, supplément au centime, et un choix
+ * ne survit que s'il désigne un article présent et non archivé de la carte. Le
+ * serveur gardait les choix « fantômes » (article supprimé) que le tableau de
+ * bord retirait déjà, et le tableau de bord ne ramenait pas le supplément au
+ * centime : les deux projections divergeaient. tools/menu-properties-test.mjs
+ * les compare sur des cartes générées. */
+function sanitizeFormula(raw, allowedIds) {
   if (!raw || typeof raw !== 'object') return null;
   const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
   const slots = rawSlots.map((s, idx) => {
     if (!s || typeof s !== 'object') return null;
     const id = str(s.id, 40) || ('sl_' + (idx + 1));
-    const label = str(s.label, 60);
+    const label = str(s.label, 400).trim().slice(0, 60);
     let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
     let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
     if (min > max) min = max;
@@ -130,7 +138,7 @@ function sanitizeFormula(raw, blockedIds) {
     const choices = rawChoices.map((c) => ({
       itemId: str(c && c.itemId, 40),
       extra: menuAmount(c && c.extra, 1e5),
-    })).filter((c) => c.itemId && (!blockedIds || !blockedIds.has(c.itemId)));
+    })).filter((c) => c.itemId && allowedIds.has(c.itemId));
     return { id, label, min, max, choices };
   }).filter((s) => s && s.id && s.choices.length);
   if (!slots.length) return null;
@@ -299,14 +307,14 @@ export function sanitizeMenu(raw, now = Date.now()) {
     return item;
   }).filter((it) => it.id && it.name);
   const rawItemsById = new Map(items.filter((it) => it && it.id).map((it) => [str(it.id, 40), it]));
-  const archivedFormulaIds = new Set(out.items.filter((it) => it.archived).map((it) => it.id));
+  const formulaItemIds = new Set(out.items.filter((it) => !it.archived).map((it) => it.id));
   out.items.forEach((item) => {
     const rawItem = rawItemsById.get(item.id);
-    const formula = sanitizeFormula(rawItem && rawItem.formula, archivedFormulaIds);
+    const formula = sanitizeFormula(rawItem && rawItem.formula, formulaItemIds);
     if (formula) item.formula = formula;
   });
   out.formulaTemplates = (Array.isArray(raw.formulaTemplates) ? raw.formulaTemplates.slice(0, 40) : []).map((t) => {
-    const formula = sanitizeFormula(t && t.formula, archivedFormulaIds);
+    const formula = sanitizeFormula(t && t.formula, formulaItemIds);
     return formula ? { id: str(t && t.id, 40), name: str(t && t.name, 80), formula } : null;
   }).filter((t) => t && t.id && t.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }

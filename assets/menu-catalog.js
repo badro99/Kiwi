@@ -182,6 +182,16 @@
       ar: 'جميع منتجات القائمة مقترحة بالفعل في هذه المرحلة.'
     },
     formulaTag:     { fr: 'Formule', en: 'Combo', ar: 'وجبة مركبة' },
+    /* Ces libellés étaient écrits en dur, en français, dans le rendu : un
+       patron en anglais ou en arabe lisait « aucun produit », « Sans section »,
+       « Monter » au milieu de son éditeur de formule. */
+    formulaNoChoice:{ fr: 'Choix proposés : aucun produit', en: 'Choices offered: no item yet', ar: 'الخيارات المقترحة: لا منتج بعد' },
+    uncategorized:  { fr: 'Sans section', en: 'Uncategorised', ar: 'بلا قسم' },
+    venueFallback:  { fr: 'Votre établissement', en: 'Your business', ar: 'نشاطك' },
+    productDefault: { fr: 'Produit', en: 'Product', ar: 'منتج' },
+    copySuffix:     { fr: 'copie', en: 'copy', ar: 'نسخة' },
+    importOff:      { fr: 'Import indisponible', en: 'Import unavailable', ar: 'الاستيراد غير متاح' },
+    importOffD:     { fr: 'Rechargez la page.', en: 'Reload the page.', ar: 'أعد تحميل الصفحة.' },
   };
 
   /* La palette des postes — exactement les sept teintes que l'écran cuisine de
@@ -256,22 +266,29 @@
   /* Une formule compose des choix parmi des articles existants de la carte.
    * RÈGLE DE LECTURE : un choix qui pointe un article supprimé est retiré dès
    * la lecture (pas de fantôme sélectionnable pour le serveur). */
+  /* MÊMES RÈGLES que sanitizeFormula dans functions/api/menu.js, qui relit la
+   * formule à la publication : identifiant d'étape, libellé rogné à 60, bornes,
+   * supplément arrondi au centime, choix limité aux articles présents et non
+   * archivés. tools/menu-properties-test.mjs passe les deux sur les mêmes
+   * cartes générées : une règle changée d'un seul côté le fait rougir. */
   function cleanFormula(formula, items) {
+    const fStr = (v, n) => String(v == null ? '' : v).slice(0, n);
+    const fAmount = (v, max) => Math.round(Math.max(0, Math.min(max, Number(v) || 0)) * 100) / 100;
     if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
-    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => i.id).filter(Boolean));
-    const rawSlots = Array.isArray(formula.slots) ? formula.slots.slice(0, 10) : [];
+    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => fStr(i.id, 40)).filter(Boolean));
+    const rawSlots = formula.slots.slice(0, 10);
     const slots = rawSlots.map((s, idx) => {
       if (!s || typeof s !== 'object') return null;
-      const id = String(s.id || ('sl_' + (idx + 1))).slice(0, 40);
-      const label = String(s.label || '').trim().slice(0, 60);
+      const id = fStr(s.id, 40) || ('sl_' + (idx + 1));
+      const label = fStr(s.label, 400).trim().slice(0, 60);
       let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
       let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
       if (min > max) min = max;
       const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
-      const choices = rawChoices.filter((c) => c && c.itemId && itemMap.has(c.itemId)).map((c) => ({
-        itemId: String(c.itemId).slice(0, 40),
-        extra: Math.max(0, Math.min(1e5, Number(c.extra) || 0)),
-      }));
+      const choices = rawChoices.map((c) => ({
+        itemId: fStr(c && c.itemId, 40),
+        extra: fAmount(c && c.extra, 1e5),
+      })).filter((c) => c.itemId && itemMap.has(c.itemId));
       return { id, label, min, max, choices };
     }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
     return slots.length ? { slots } : null;
@@ -585,7 +602,7 @@
       const formula = cleanFormula(data && data.formula, d.items);
       const item = {
         id: nid(d, 'it'),
-        name: String(data.name || 'Produit').trim() || 'Produit',
+        name: String(data.name || tr(T.productDefault)).trim() || tr(T.productDefault),
         price: Math.max(0, +data.price || 0),
         catId: data.catId || (d.cats[0] && d.cats[0].id) || null,
         subId: data.subId || null,
@@ -1044,7 +1061,7 @@
   function venueName() {
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
-    return vd.name || 'Votre établissement';
+    return vd.name || tr(T.venueFallback);
   }
 
   /* ───────────────── render ───────────────── */
@@ -1692,7 +1709,7 @@
         const availableToAdd = availableItems.filter((it) => !(slot.choices || []).some((c) => c.itemId === it.id));
         const pickerOption = (it, category) => {
           const sub = category && (category.sub || []).find((entry) => entry.id === it.subId);
-          const context = sub ? sub.name : (category ? category.name : tr(T.uncategorized || { fr: 'Sans section', en: 'Uncategorised', ar: 'بلا قسم' }));
+          const context = sub ? sub.name : (category ? category.name : tr(T.uncategorized));
           const search = `${it.name || ''} ${category ? category.name : ''} ${sub ? sub.name : ''}`.toLocaleLowerCase();
           return `<button type="button" class="mx-formula-picker-option" role="option" data-f-picker-item="${esc(it.id)}" data-f-picker-si="${si}" data-picker-search="${esc(search)}"><span class="mx-formula-picker-option-copy"><strong>${esc(it.name)}</strong><small>${esc(context)}</small></span><span class="mx-formula-picker-price">${fmt(it.price)} MAD</span><span class="mx-formula-picker-add">${PLUS}</span></button>`;
         };
@@ -1701,7 +1718,7 @@
           return items.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">${esc(category.name)}</div>${items.map((it) => pickerOption(it, category)).join('')}</section>` : '';
         }).join('');
         const uncategorized = availableToAdd.filter((it) => !(d.cats || []).some((category) => category.id === it.catId));
-        const pickerGroupsHtml = pickerGroups + (uncategorized.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">Sans section</div>${uncategorized.map((it) => pickerOption(it, null)).join('')}</section>` : '');
+        const pickerGroupsHtml = pickerGroups + (uncategorized.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">${esc(tr(T.uncategorized))}</div>${uncategorized.map((it) => pickerOption(it, null)).join('')}</section>` : '');
 
         let addChBarHtml = '';
         if (availableItems.length === 0) {
@@ -1736,11 +1753,11 @@
                 <label>${esc(tr(T.formulaMax))}</label>
                 <input type="number" min="1" max="10" data-f-slot-max="${si}" value="${slot.max != null ? slot.max : 1}" />
               </div>
-              ${si > 0 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},-1" title="Monter">↑</button>` : ''}
-              ${si < formulaSlots.length - 1 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},1" title="Descendre">↓</button>` : ''}
+              ${si > 0 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},-1" title="${esc(tr(T.moveUp))}" aria-label="${esc(tr(T.moveUp))}">↑</button>` : ''}
+              ${si < formulaSlots.length - 1 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},1" title="${esc(tr(T.moveDown))}" aria-label="${esc(tr(T.moveDown))}">↓</button>` : ''}
               <button type="button" class="mx-slot-del-btn" data-f-slot-del="${si}" title="${esc(tr(T.formulaDelSlot))}">${TRASH}</button>
             </div>
-            <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaChoices))} : aucun produit</div>`}</div>
+            <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaNoChoice))}</div>`}</div>
             ${addChBarHtml}
           </div>`;
       }).join('');
@@ -2092,7 +2109,7 @@
      * and shows what it found; we only re-render once it has written. */
     H['mx-import'] = () => {
       if (!window.KiwiCatalogImport) {
-        if (window.Kiwi.toast) window.Kiwi.toast('Import indisponible', { type: 'warn', desc: 'Rechargez la page.', force: true });
+        if (window.Kiwi.toast) window.Kiwi.toast(tr(T.importOff), { type: 'warn', desc: tr(T.importOffD), force: true });
         return;
       }
       window.KiwiCatalogImport.openMenu({ onDone: () => { activeCat = null; activeSub = null; render(); } });
@@ -2615,7 +2632,7 @@
     },
     duplicateItem: (id) => {
       const it = itemById(store.get(), id); if (!it) return;
-      addItem({ ...it, name: `${it.name} (copie)` });
+      addItem({ ...it, name: `${it.name} (${tr(T.copySuffix)})` });
     },
     requestDeleteItem: (id) => {
       const it = itemById(store.get(), id); if (!it) return;
@@ -2634,7 +2651,7 @@
     openStations: () => { injectCss(); stationsModal(); },
     openCategoryRoute: (id) => { injectCss(); categoryStationModal(id); },
     importMenu: () => {
-      if (!window.KiwiCatalogImport) return window.Kiwi?.toast?.('Import indisponible', { type: 'warn', desc: 'Rechargez la page.', force: true });
+      if (!window.KiwiCatalogImport) return window.Kiwi?.toast?.(tr(T.importOff), { type: 'warn', desc: tr(T.importOffD), force: true });
       window.KiwiCatalogImport.openMenu({ onDone: () => window.KiwiVenue?.refreshMenu?.() });
     },
     render,

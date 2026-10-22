@@ -85,7 +85,9 @@ if (!sanitizeMenuFn) {
           }
         ]
       }
-    }]
+    }, ...['m-012', 'm-013', 'm-020', 'm-021'].map((id) => ({ id, name: 'Choix ' + id, price: 10, catId: 'c1' }))]
+    /* Les articles choisis doivent exister : comme cleanFormula au tableau de
+     * bord, sanitizeMenu retire un choix qui désigne un article absent. */
   };
 
   const sanitized = sanitizeMenuFn(validMenu);
@@ -112,7 +114,8 @@ if (!sanitizeMenuFn) {
   }
 
   const bloatedRes = sanitizeMenuFn({
-    items: [{ id: 'it_big', name: 'Grand Menu', price: 150, formula: { slots: bloatedSlots } }]
+    items: [{ id: 'it_big', name: 'Grand Menu', price: 150, formula: { slots: bloatedSlots } },
+      ...Array.from({ length: 25 }, (_, j) => ({ id: 'it_' + j, name: 'Article ' + j, price: 1 }))]
   });
   const bloatedItem = bloatedRes.items && bloatedRes.items[0];
   ok(bloatedItem && bloatedItem.formula && bloatedItem.formula.slots.length === 10, 'slots capped at 10');

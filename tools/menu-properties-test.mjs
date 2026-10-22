@@ -2,6 +2,8 @@
 /* Stored restaurant documents only: real Pages handlers, local SQLite D1, no browser. */
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { fixture } from './server-money-fixture.mjs';
 import { sanitizeMenu, onRequestPost as save, onRequestGet as read } from '../functions/api/menu.js';
@@ -34,6 +36,33 @@ const menuArb = fc.tuple(fc.array(cents, { minLength: 1, maxLength: 12 }), cents
   items: prices.map((p, i) => ({ id: 'i' + i, name: 'Plat ' + i, catId: 'c', price: p / 100, opts: ['g'], ...(i ? {} : { formula: { slots: [{ id: 's', label: 'Plat', min: 1, max: 1, choices: [{ itemId: 'i0', extra: extra / 100 }] }] } }) })),
   opts: [{ id: 'g', name: 'Extras', kind: 'many', choices: [{ id: 'o', name: 'Extra', price: option / 100 }] }],
 }));
+/* Le cleanFormula du tableau de bord (assets/menu-catalog.js), chargé tel quel
+ * dans une fausse fenêtre : c'est lui qui écrit la formule avant qu'elle parte
+ * au serveur, et sanitizeMenu qui la relit. Deux règles parallèles qui doivent
+ * rendre la même chose sur la même carte. */
+function clientCleanFormula() {
+  const store = { get: () => ({}), update() {}, subscribe() {}, isEmpty: () => true, loadExample() {} };
+  const w = { console, setTimeout: () => 0, localStorage: { getItem: () => null }, KiwiStore: { define: () => store }, Kiwi: {},
+    document: { readyState: 'loading', documentElement: {}, addEventListener() {} }, addEventListener() {} };
+  w.window = w;
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8'), vm.createContext(w), { filename: 'menu-catalog.js' });
+  // Ramené dans ce royaume-ci : deepStrictEqual compare aussi les prototypes.
+  return (formula, items) => JSON.parse(JSON.stringify(w.KiwiMenuStore.cleanFormula(formula, items)));
+}
+const cleanFormula = clientCleanFormula();
+const oddId = fc.oneof(fc.constantFrom('i0', 'i1', 'i2', 'i3', 'ghost', '', 0, null, false, ' i1', 'x'.repeat(45)), fc.string({ maxLength: 6 }));
+const oddAmount = fc.oneof(fc.double({ min: -10, max: 2e5, noNaN: false }), fc.constantFrom(1.005, 0.125, 12.345, '7.5', null, Infinity));
+const slotArb = fc.record({
+  id: oddId, label: fc.oneof(fc.string({ maxLength: 8 }), fc.constantFrom(' Boisson ', 'x'.repeat(70) + ' ', null, 7)),
+  min: fc.oneof(fc.integer({ min: -2, max: 12 }), fc.constant(null)), max: fc.oneof(fc.integer({ min: -2, max: 12 }), fc.constant(null)),
+  choices: fc.array(fc.record({ itemId: oddId, extra: oddAmount }), { maxLength: 4 }),
+}, { requiredKeys: ['choices'] });
+const formulaMenuArb = fc.tuple(fc.array(fc.boolean(), { minLength: 1, maxLength: 4 }), fc.array(slotArb, { maxLength: 3 }), fc.array(slotArb, { maxLength: 3 }))
+  .map(([archived, slots, templateSlots]) => ({
+    cats: [{ id: 'c', name: 'Carte' }],
+    items: archived.map((a, i) => ({ id: 'i' + i, name: 'Plat ' + i, catId: 'c', price: 10, archived: a, ...(i ? {} : { formula: { slots } }) })),
+    formulaTemplates: [{ id: 't', name: 'Modèle', formula: { slots: templateSlots } }],
+  }));
 function reset() { sql.exec('DELETE FROM menus'); sql.exec('DELETE FROM doc_history'); }
 async function call(handler, body, auth = cookie, get = false) {
   const request = new Request(`https://kiwi.test/api/menu?mine=1&merchant=${merchant}`, { method: get ? 'GET' : 'POST', headers: { Cookie: auth, 'Content-Type': 'application/json' }, ...(get ? {} : { body: JSON.stringify({ merchant, name: 'Properties', type: 'restaurant', ...body }) }) });
@@ -82,6 +111,14 @@ try {
     for (const p of [clean.items[0].price, clean.opts[0].choices[0].price, clean.items[0].formula.slots[0].choices[0].extra]) {
       assert.ok(Number.isFinite(p) && p >= 0); assert.equal(p, Math.round(p * 100) / 100);
     }
+  }));
+  await strict('dashboard cleanFormula and server sanitizeMenu normalize the same formula identically (ids, labels, bounds, centimes, ghost and archived choices)', fc.property(formulaMenuArb, m => {
+    const server = sanitizeMenu(m, NOW);
+    assert.deepEqual(server.items[0].formula ?? null, cleanFormula(m.items[0].formula, m.items));
+    const template = server.formulaTemplates.find(t => t.id === 't');
+    assert.deepEqual(template ? template.formula : null, cleanFormula(m.formulaTemplates[0].formula, m.items));
+    const again = cleanFormula(m.items[0].formula, m.items);
+    if (again) assert.deepEqual(cleanFormula(again, server.items), again);
   }));
   await strict('guarded concurrent edits accept at most one winner, including a frozen millisecond clock', fc.asyncProperty(menuArb, async m => {
     reset(); const realNow = Date.now; Date.now = () => NOW;
