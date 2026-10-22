@@ -67,7 +67,7 @@ var SHELL = [
   '/assets/trade-workspaces.css?v=6',
   '/assets/reservations.css?v=9',
   '/assets/hotel.css?v=44',
-  '/assets/hotel-economat.js?v=3',
+  '/assets/hotel-economat.js?v=4',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
   '/assets/sold-insights.js?v=14',
@@ -90,15 +90,15 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
-  '/assets/agent-vision.js?v=5',
-  '/assets/i18n.js?v=31',
+  '/assets/agent-vision.js?v=6',
+  '/assets/i18n.js?v=32',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js?v=6',
+  '/assets/trades.js?v=7',
   '/assets/plan-catalog.js?v=1',
   '/assets/interactive.js?v=65',
   '/assets/view-link.js?v=1',
@@ -229,7 +229,7 @@ var SHELL = [
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
   '/assets/identity.js?v=12',
-  '/assets/caisse-link.js?v=19',
+  '/assets/caisse-link.js?v=20',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/serveur-lang.js?v=1',
@@ -242,7 +242,7 @@ var SHELL = [
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=1',
+  '/assets/boutique-catalog-parts.js?v=2',
   '/assets/boutique-catalog.js?v=12',
   '/assets/store-templates.js?v=3',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
@@ -252,7 +252,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=17',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=54',
+  '/assets/caisse-lang.js?v=55',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -272,11 +272,11 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=10',
+  '/assets/cost.js?v=11',
   '/assets/charges-engine.js?v=3',
   '/assets/charges.js?v=3',
-  '/assets/clients-store.js?v=16',
-  '/assets/clients-book.js?v=28',
+  '/assets/clients-store.js?v=17',
+  '/assets/clients-book.js?v=29',
   '/assets/clients-directory.js?v=23',
   '/assets/customer-retention.js?v=10',
   '/assets/menu-catalog.js?v=30',
@@ -298,7 +298,7 @@ var SHELL = [
   '/assets/catalog-import.js?v=11',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
-  '/assets/salle-scan.js?v=2',
+  '/assets/salle-scan.js?v=3',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=152',
+  '/assets/pos-dispatch.js?v=153',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -399,11 +399,11 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=99',
-  '/assets/pos-boutique/sales.js?v=5',
-  '/assets/pos-boutique/checkout.js?v=5',
-  '/assets/pos-boutique/inventory.js?v=5',
-  '/assets/pos-boutique.js?v=99',
+  '/assets/pos-boutique.css?v=100',
+  '/assets/pos-boutique/sales.js?v=6',
+  '/assets/pos-boutique/checkout.js?v=6',
+  '/assets/pos-boutique/inventory.js?v=6',
+  '/assets/pos-boutique.js?v=100',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -421,8 +421,8 @@ var SHELL = [
   '/assets/pos-traiteur.js?v=11',
   '/assets/pos-foodtruck.css?v=9',
   '/assets/pos-foodtruck.js?v=9',
-  '/assets/pos-epicerie.css?v=19',
-  '/assets/pos-epicerie.js?v=19',
+  '/assets/pos-epicerie.css?v=20',
+  '/assets/pos-epicerie.js?v=20',
   '/assets/pos-pharmacie.css?v=9',
   '/assets/pos-pharmacie.js?v=9',
   '/assets/pos-librairie.css?v=12',
@@ -435,11 +435,11 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=86',
-  '/assets/pos-maison/sales.js?v=4',
-  '/assets/pos-maison/checkout.js?v=4',
-  '/assets/pos-maison/inventory.js?v=4',
-  '/assets/pos-maison.js?v=86',
+  '/assets/pos-maison.css?v=87',
+  '/assets/pos-maison/sales.js?v=5',
+  '/assets/pos-maison/checkout.js?v=5',
+  '/assets/pos-maison/inventory.js?v=5',
+  '/assets/pos-maison.js?v=87',
   '/assets/caisse-pairing.js?v=36',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
@@ -449,7 +449,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=12',
   '/assets/pressing-caisse.js?v=56',
   '/assets/pressing-caisse.css?v=56',
-  '/assets/material-icons.js?v=3',
+  '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
      woff2 qu'elle nomme ne sont pas listés ici : un fichier à ?v= du SHELL doit
