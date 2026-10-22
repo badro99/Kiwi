@@ -83,6 +83,7 @@ const browser = await puppeteer.launch({
  * the restaurant + OrderPro scenarios here, the boutique ones in
  * sync-ledger-boutique-browser-test.mjs (which sets KIWI_SYNC_PART). */
 const PART = process.env.KIWI_SYNC_PART === 'boutique' ? 'boutique' : 'resto';
+const BOUTIQUE_TRADING_AT = Date.parse(new Date().toISOString().slice(0, 10) + 'T12:00:00Z');
 const S = suite(PART === 'boutique' ? 'sync-ledger-boutique' : 'sync-ledger', { browser });
 process.on('exit', () => { try { stack.stop(); } catch (_) {} });
 
@@ -110,6 +111,8 @@ async function preparePage(t, page, viewport = { width: 1180, height: 820 }) {
   /* The store is in Casablanca; the machine running this suite may not be.
    * Without this a 04:57 sale lands on the wrong side of the 05:00 turn. */
   await page.emulateTimezone('Africa/Casablanca');
+  // Service boutique stable malgré les tables tzdata différentes de Node et Chrome.
+  if (PART === 'boutique') await setClock(page, BOUTIQUE_TRADING_AT);
   page.on('dialog', (d) => d.dismiss().catch(() => {}));
   await page.evaluateOnNewDocument(() => {
     try { localStorage.setItem('kiwiDemos', '0'); localStorage.setItem('kiwiLang', 'fr'); } catch (_) {}

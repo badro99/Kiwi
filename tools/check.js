@@ -1498,6 +1498,7 @@ section('Whole-project regressions');
     'pairing-parity-test.mjs',
     'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
+    'sync-ledger-boutique-clock-test.mjs',
     /* Direction 2027, étape 1 : le formateur unique (KiwiFormat, §6.3) et la
        journée commerciale côté client (§17.1). format-vectors-test tient le
        tableau de vecteurs en Node et dans Chromium ; la moitié WebKit passe
