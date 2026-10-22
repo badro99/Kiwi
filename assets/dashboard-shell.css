@@ -29,7 +29,7 @@
   /* Kill the global SVG-noise grain overlay (defined in polish.css as
    * body::after, z-index 1000, mix-blend-mode: multiply). That was the
    * paper-grain look · replaced now by the ambient-blob system above. */
-  body::after { content: none !important; display: none !important; }
+  body::after { content: none !important; display: none; }
 
   /* Subtle 60 s breathing motion. The whole blob system gently drifts
    * scale ~1.03 + translate ~1 %, alternating ease-in-out, so the page
