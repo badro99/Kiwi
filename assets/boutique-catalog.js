@@ -712,7 +712,7 @@
       // One medium per product: a video supersedes a photo and vice-versa.
       photo: String(data.photo || ''),
       video: String(data.video || ''),
-      mediaAt: +data.mediaAt || ((data.photo || data.video) ? Date.now() : 0),
+      mediaAt: +data.mediaAt || ((data.photo || data.video) ? now() : 0),
       createdAt: Date.now(), archived: false, metaAt: now(),
     };
     db.products.push(p); ixAddProduct(p); commit(); return p;
@@ -739,7 +739,7 @@
         }
       }
     });
-    if (mediaPatch) p.mediaAt = Date.now();
+    if (mediaPatch) p.mediaAt = now();
     p.metaAt = now();
     commit(); return p;
   }

@@ -104,8 +104,43 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
      une hypothèse d'école. Le mouvement était alors réputé antérieur au socle,
      donc ignoré : la vente disparaissait sans un mot. Un compteur monotone
      suffit à rendre l'ordre des écritures locales indiscutable. */
+  /* Et une horloge qui n'écrit jamais SOUS ce qu'elle a déjà vu (horloge
+     hybride). La fusion arbitre l'édition (`metaAt`, `mediaAt`), le comptage
+     (`baseAt`) et la frontière des mouvements par ces instants ; pris tels quels
+     sur l'horloge de l'appareil, un comptoir en retard de trois heures datait
+     son inventaire physique SOUS les ventes qu'il venait de recevoir d'un poste
+     à l'heure : la fusion recomptait ces ventes par-dessus son comptage, et sa
+     correction de fiche cédait devant celle qu'il venait de lire. Chaque
+     instant rendu ici est donc au moins le plus grand instant connu + 1 : tout
+     ce que porte le document chargé (relu au démarrage, adopté d'un autre
+     onglet ou du serveur) et tout ce que mergeDocs a reçu de l'autre côté. Un
+     geste fait APRÈS avoir vu celui d'un autre appareil passe après lui, quelle
+     que soit l'heure affichée. Les champs restent des nombres : un document
+     d'avant se fusionne comme avant. */
   var lastNow = 0;
+  var seenDoc = null;
+  function observe(t) { t = +t; if (t > lastNow && isFinite(t)) lastNow = t; }
+  function observeDoc(doc) {
+    if (!doc || typeof doc !== 'object') return;
+    var at = function (x) { observe(x); };
+    ['categories', 'products', 'variants'].forEach(function (k) {
+      (Array.isArray(doc[k]) ? doc[k] : []).forEach(function (e) {
+        if (!e) return;
+        at(e.metaAt); at(e.mediaAt); at(e.baseAt); at(e.stockAt);
+        (Array.isArray(e.barcodes) ? e.barcodes : []).forEach(function (b) { if (b) at(b.at); });
+        var rm = e.barcodeRemoved;
+        if (rm && typeof rm === 'object') Object.keys(rm).forEach(function (c) { at(rm[c]); });
+      });
+    });
+    (Array.isArray(doc.moves) ? doc.moves : []).forEach(function (m) { if (m) at(m.at); });
+    var gone = doc.removed;
+    if (gone && typeof gone === 'object') Object.keys(gone).forEach(function (id) { at(gone[id]); });
+  }
   function now() {
+    /* Un document qui vient d'être posé (chargement, autre onglet, serveur) :
+       ses instants comptent comme vus. Relu une fois par document, pas à
+       chaque écriture : un import de mille lignes ne le parcourt pas mille fois. */
+    if (core.db && core.db !== seenDoc) { seenDoc = core.db; observeDoc(core.db); }
     var t = Date.now();
     if (t <= lastNow) t = lastNow + 1;
     lastNow = t;
@@ -291,6 +326,9 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
 
   function mergeDocs(mine, theirs) {
     ahead = { mine: false, theirs: false };
+    /* Tout ce que l'autre côté porte a été VU, y compris ce que la fusion va
+       écarter : le prochain geste d'ici se datera au-dessus. */
+    observeDoc(mine); observeDoc(theirs);
     /* Les suppressions des deux côtés, réunies : celle que l'autre appareil a
        faite compte autant que la nôtre. */
     const gone = pruneTombs(Object.assign(

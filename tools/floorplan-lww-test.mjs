@@ -17,6 +17,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CORE = fs.readFileSync(path.join(ROOT, 'assets/floorplan-core.js'), 'utf8');
@@ -157,6 +158,63 @@ ok('pdsWriteLocal date les modifications locales, pas la copie qui vient du serv
   assert.ok(/pdsWriteLocal\(pdsLive, true\);/.test(PAGES), 'resynchronisation du personnel : sans horodatage');
 });
 ok('KiwiFloorCore expose stamp', () => assert.ok(/stamp: pdsStampPlan/.test(CORE)));
+
+/* ── deux appareils réels, dont l'un retarde de plusieurs heures ────────────
+ * Chaque appareil a sa propre horloge murale, sa copie rangée (comme
+ * localStorage) et passe par les vraies fonctions : pdsStampPlan à chaque
+ * modification faite ici, pdsBury à chaque suppression, pdsMergePlans à chaque
+ * synchronisation (écrite sans horodatage, comme pdsWriteLocal(d, true)). Avant
+ * chaque geste les deux appareils se synchronisent : les gestes sont donc dans
+ * un ordre causal, et le dernier doit l'emporter quelle que soit l'heure
+ * affichée. fast-check (dépendance de développement de app/). */
+let fc = null; try { fc = createRequire(path.join(ROOT, 'app/package.json'))('fast-check'); } catch (e) { fc = null; }
+if (!fc) console.log('  ○ fast-check absent : propriété d’horloge non exécutée');
+else ok('un appareil en retard de plusieurs heures l’emporte avec un geste fait APRÈS avoir vu l’autre (déplacer, renommer, créer, supprimer)', () => {
+  const body = 'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+    + CORE.match(/const PDS_STAMP_SKIP = [^;]+;/)[0] + '\n'
+    + ['pdsBury', 'pdsGoneOf', 'pdsMergePlans', 'pdsCanon', 'pdsStampPlan'].map((n) => grab(CORE, 'function ' + n + '(')).join('\n')
+    + '\nreturn { pdsBury, pdsMergePlans, pdsStampPlan };';
+  const device = (clock, offset, start) => {
+    class SkewDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock.t + offset); } static now() { return clock.t + offset; } }
+    const core = new Function('Date', body)(SkewDate);
+    const d = { core, state: JSON.parse(JSON.stringify(start)), stored: null };
+    d.stored = JSON.stringify(d.state);
+    d.edit = (fn) => { fn(d.state); core.pdsStampPlan(d.state, d.stored); d.stored = JSON.stringify(d.state); };
+    d.pull = (o) => { d.state = core.pdsMergePlans(JSON.parse(d.stored), JSON.parse(o.stored), union); d.stored = JSON.stringify(d.state); };
+    return d;
+  };
+  const opArb = fc.oneof(
+    fc.record({ kind: fc.constant('move'), dev: fc.nat(1), id: fc.constantFrom('t1', 't2'), x: fc.integer({ min: 0, max: 900 }) }),
+    fc.record({ kind: fc.constant('zone'), dev: fc.nat(1), name: fc.constantFrom('Salle', 'Terrasse', 'Mezzanine') }),
+    fc.record({ kind: fc.constant('deco'), dev: fc.nat(1), x: fc.integer({ min: 0, max: 900 }) }),
+    fc.record({ kind: fc.constant('add'), dev: fc.nat(1), x: fc.integer({ min: 0, max: 900 }) }),
+    fc.record({ kind: fc.constant('drop'), dev: fc.nat(1), id: fc.constantFrom('t1', 't2') }),
+  ).chain((o) => fc.integer({ min: 1, max: 5 * 60e3 }).map((wait) => ({ ...o, wait })));
+  const r = fc.check(fc.property(fc.integer({ min: 1, max: 12 }), fc.boolean(), fc.array(opArb, { minLength: 1, maxLength: 12 }), (hours, slowFirst, ops) => {
+    const clock = { t: Date.UTC(2026, 9, 22, 10) }, t0 = clock.t - 3600e3;
+    const start = plan([T('t1', 100, t0), T('t2', 200, t0)], { zones: [{ id: 'z1', name: 'Salle', updatedAt: t0 }], elements: [{ id: 'e1', x: 10, updatedAt: t0 }] });
+    const devs = slowFirst ? [device(clock, -hours * 3600e3, start), device(clock, 0, start)] : [device(clock, 0, start), device(clock, -hours * 3600e3, start)];
+    const model = { tables: { t1: 100, t2: 200 }, zone: 'Salle', deco: 10 };
+    let n = 0;
+    for (const o of ops) {
+      devs[1].pull(devs[0]); devs[0].pull(devs[1]);
+      clock.t += o.wait;
+      const d = devs[o.dev];
+      if (o.kind === 'move' && o.id in model.tables) { d.edit((s) => { s.tables.find((t) => t.id === o.id).x = o.x; }); model.tables[o.id] = o.x; }
+      else if (o.kind === 'zone') { d.edit((s) => { s.zones[0].name = o.name; }); model.zone = o.name; }
+      else if (o.kind === 'deco') { d.edit((s) => { s.elements[0].x = o.x; }); model.deco = o.x; }
+      else if (o.kind === 'add') { const id = 'n' + (++n); d.edit((s) => { s.tables.push(T(id, o.x)); }); model.tables[id] = o.x; }
+      else if (o.kind === 'drop' && o.id in model.tables) { d.edit((s) => { s.tables = s.tables.filter((t) => t.id !== o.id); d.core.pdsBury(s, o.id); }); delete model.tables[o.id]; }
+    }
+    devs[1].pull(devs[0]); devs[0].pull(devs[1]);
+    for (const d of devs) {
+      assert.deepEqual(Object.fromEntries(d.state.tables.map((t) => [t.id, t.x]).sort()), Object.fromEntries(Object.entries(model.tables).sort()));
+      assert.equal(d.state.zones[0].name, model.zone);
+      assert.equal(d.state.elements[0].x, model.deco);
+    }
+  }), { numRuns: Number(process.env.KIWI_PROPERTY_RUNS) || 300, seed: Number(process.env.KIWI_PROPERTY_SEED) || 20261022 });
+  assert.ok(!r.failed, fc.stringify(r.counterexample || '').slice(0, 600) + ' ' + (r.errorInstance && r.errorInstance.message));
+});
 
 console.log(`\n${failed ? '✗' : '✓'} floorplan-lww : ${passed} ok, ${failed} en échec`);
 process.exit(failed ? 1 : 0);

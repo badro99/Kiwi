@@ -182,5 +182,48 @@ strict('after both devices merge, the latest gesture on each rule wins: an edit,
   }
 }));
 
+/* ── two real devices, one with a clock hours behind ────────────────────────
+ * Each device is its own copy of the module with its own storage and its own
+ * wall clock; they sync through the real cloud hooks (read, merge, write).
+ * Every gesture is made AFTER both devices have seen each other's state, so
+ * the gestures are causally ordered, and the latest one must win whatever the
+ * clocks say. */
+function device(clock, offset) {
+  const store = new Map();
+  const ls = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  class SkewDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock.t + offset); } static now() { return clock.t + offset; } }
+  let hooks = null;
+  const win = { localStorage: ls, KiwiCloudDoc: { attach: (cfg) => { hooks = cfg; return { push() {} }; }, currentSlug: () => 'test' } };
+  const c = vm.createContext({ window: win, localStorage: ls, console, Set, Map, Math, Date: SkewDate, JSON, Number, Object, Array, String, Intl });
+  vm.runInContext('globalThis.window = window;', c);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/kit/haptics.js'), 'utf8'), c, { filename: 'haptics.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/promos.js'), 'utf8'), c, { filename: 'promos.js' });
+  const P = win.KiwiPromos; P.cloud();
+  return { P, pull: (other) => hooks.write(hooks.merge(JSON.parse(JSON.stringify(hooks.read())), JSON.parse(JSON.stringify(other.hooks().read())))), hooks: () => hooks };
+}
+const skewOpArb = fc.record({ dev: fc.nat(1), op: fc.constantFrom('edit', 'pause', 'resume', 'delete', 'resave'), id: fc.constantFrom('pr0', 'pr1'), value: fc.integer({ min: 1, max: 90 }), wait: fc.integer({ min: 1, max: 5 * MIN }) });
+strict('a device whose clock is hours behind still wins with a gesture made after seeing the other device: edit, pause, deletion or rule saved again', fc.property(fc.integer({ min: 1, max: 12 }), fc.boolean(), fc.array(skewOpArb, { minLength: 1, maxLength: 10 }), (hours, slowFirst, ops) => {
+  const clock = { t: Date.UTC(2026, 9, 22, 10) };
+  const devs = slowFirst ? [device(clock, -hours * 3600e3), device(clock, 0)] : [device(clock, 0), device(clock, -hours * 3600e3)];
+  const model = {};
+  for (const id of ['pr0', 'pr1']) { devs[0].P.save({ id, name: id, kind: 'percent', value: 5, scope: { type: 'tout' } }); model[id] = { value: 5, paused: false }; }
+  const syncAll = () => { devs[1].pull(devs[0]); devs[0].pull(devs[1]); };
+  syncAll();
+  for (const o of ops) {
+    clock.t += o.wait;
+    const P = devs[o.dev].P, cur = P.get(o.id);
+    if (o.op === 'edit' && cur) { P.save({ ...cur, value: o.value }); model[o.id] = { ...model[o.id], value: o.value }; }
+    else if ((o.op === 'pause' || o.op === 'resume') && cur) { P.setPaused(o.id, o.op === 'pause'); model[o.id] = { ...model[o.id], paused: o.op === 'pause' }; }
+    else if (o.op === 'delete' && cur) { P.remove(o.id); model[o.id] = null; }
+    else if (o.op === 'resave') { P.save({ id: o.id, name: o.id, kind: 'percent', value: o.value, scope: { type: 'tout' } }); model[o.id] = { value: o.value, paused: false }; }
+    syncAll();
+  }
+  for (const d of devs) for (const id of ['pr0', 'pr1']) {
+    const p = d.P.get(id);
+    if (!model[id]) assert.equal(p, null, id + ' came back');
+    else { assert.ok(p, id + ' lost'); assert.equal(p.value, model[id].value, id + ' value'); assert.equal(p.paused, model[id].paused, id + ' pause'); }
+  }
+}));
+
 console.log(`${failed ? '✗' : '✓'} promos-properties-test · ${passed} held, ${failed} failed`);
 process.exit(failed ? 1 : 0);

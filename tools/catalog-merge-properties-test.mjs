@@ -253,5 +253,82 @@ await strict('the server folding an oversized ledger never changes a stock, pend
   assert.deepEqual(stockOf(merge(doc, after)), before);
 }), 40);
 
+/* ── two real counters, one with a clock hours behind ────────────────────────
+ * Each counter is its own copy of the module with its own storage and its own
+ * wall clock, and uses the real gestures (setStock, adjustStock, updateVariant,
+ * renameCategory, updateProduct). Before every gesture both counters sync: each
+ * merges the other's copy through the real mergeDocs and adopts the result the
+ * way a landed copy arrives (the storage path). Every gesture is therefore made
+ * after seeing everything before it, and the latest one must win, whatever the
+ * clocks say: an inventory count cancels every sale it saw, a later sale counts
+ * on top of it, the latest note, product name, photo and section name stay. */
+function counter(clock, offset) {
+  const store = new Map(), listeners = [];
+  class SkewDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock.t + offset); } static now() { return clock.t + offset; } }
+  const el = () => ({ id: '', textContent: '', style: {}, setAttribute() {}, appendChild() {}, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, classList: { add() {}, remove() {} } });
+  const win = {
+    localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k), get length() { return store.size; }, key: (i) => Array.from(store.keys())[i] },
+    document: { addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true, visibilityState: 'visible', readyState: 'complete', getElementById: () => null, createElement: el, querySelector: () => null, querySelectorAll: () => [], head: el(), body: el() },
+    addEventListener(type, fn) { if (type === 'storage') listeners.push(fn); }, removeEventListener() {},
+    KiwiEnv: { isReal: () => true, local: false, hosted: true, demosAllowed: false },
+    setTimeout: () => 0, clearTimeout() {}, fetch: () => Promise.reject(new Error('hors ligne')),
+    CustomEvent: class { constructor(t, o) { this.type = t; this.detail = (o || {}).detail; } },
+    navigator: { userAgent: 'node' },
+  };
+  win.window = win;
+  for (const file of ['assets/barcode.js', 'assets/color-palette.js', 'assets/boutique-catalog-parts.js', 'assets/boutique-catalog.js']) {
+    new Function('window', 'document', 'localStorage', 'setTimeout', 'clearTimeout', 'fetch', 'CustomEvent', 'navigator', 'self', 'console', 'Date',
+      fs.readFileSync(path.join(ROOT, file), 'utf8'))(win, win.document, win.localStorage, win.setTimeout, win.clearTimeout, win.fetch, win.CustomEvent, win.navigator, win, console, SkewDate);
+  }
+  const K = win.KiwiBoutiqueCatalog;
+  return {
+    K,
+    seed(doc) { win.localStorage.setItem(K._key, JSON.stringify(doc)); K.load(); },
+    land(doc) { const newValue = JSON.stringify(doc); win.localStorage.setItem(K._key, newValue); listeners.forEach((fn) => fn({ key: K._key, newValue })); },
+    pull(other) { this.land(K._merge(clone(K._doc()), clone(other.K._doc()))); },
+  };
+}
+const skewOpArb = fc.oneof(
+  fc.record({ kind: fc.constant('count'), dev: fc.nat(1), vid: fc.constantFrom('v0', 'v1'), n: fc.nat(30) }),
+  fc.record({ kind: fc.constant('move'), dev: fc.nat(1), vid: fc.constantFrom('v0', 'v1'), d: fc.integer({ min: -4, max: 4 }).filter((d) => d !== 0) }),
+  fc.record({ kind: fc.constant('note'), dev: fc.nat(1), vid: fc.constantFrom('v0', 'v1'), note: fc.constantFrom('ourlet', 'coupe large', 'retouche', 'vitrine') }),
+  fc.record({ kind: fc.constant('name'), dev: fc.nat(1), name: fc.constantFrom('Robe A', 'Robe B', 'Caftan') }),
+  fc.record({ kind: fc.constant('photo'), dev: fc.nat(1), photo: fc.constantFrom('', 'https://x.test/a.jpg', 'https://x.test/b.jpg') }),
+  fc.record({ kind: fc.constant('rayon'), dev: fc.nat(1), name: fc.constantFrom('Robes', 'Caftans', 'Soldes') }),
+).chain((o) => fc.integer({ min: 1, max: 5 * 60e3 }).map((wait) => ({ ...o, wait })));
+await strict('a counter whose clock is hours behind still wins with a gesture made after seeing the other: count, sale, note, name, photo, section', fc.property(fc.integer({ min: 1, max: 12 }), fc.boolean(), fc.tuple(fc.nat(25), fc.nat(25)), fc.array(skewOpArb, { minLength: 1, maxLength: 12 }), (hours, slowFirst, [n0, n1], ops) => {
+  const clock = { t: Date.now() };
+  const devs = slowFirst ? [counter(clock, -hours * 3600e3), counter(clock, 0)] : [counter(clock, 0), counter(clock, -hours * 3600e3)];
+  const t0 = clock.t - 3600e3;
+  const start = { v: 1, seq: 0, removed: {}, moves: [], categories: [{ id: 'c0', name: 'Rayon', metaAt: t0 }],
+    products: [{ id: 'p0', name: 'Article', categoryId: 'c0', priceMAD: 100, photo: '', video: '', metaAt: t0 }],
+    variants: [['v0', n0], ['v1', n1]].map(([id, n]) => ({ id, productId: 'p0', size: id === 'v0' ? 'S' : 'M', colorId: 'noir', note: '', stock: n, base: n, baseAt: t0, metaAt: t0, barcodes: [], barcodeRemoved: {} })) };
+  devs.forEach((d) => d.seed(clone(start)));
+  const model = { raw: { v0: n0, v1: n1 }, note: { v0: '', v1: '' }, name: 'Article', photo: '', rayon: 'Rayon' };
+  for (const o of ops) {
+    devs[1].pull(devs[0]); devs[0].pull(devs[1]);
+    clock.t += o.wait;
+    const K = devs[o.dev].K;
+    if (o.kind === 'count') { K.setStock(o.vid, o.n, 'comptage'); model.raw[o.vid] = o.n; }
+    else if (o.kind === 'move') { K.adjustStock(o.vid, o.d, 'vente'); model.raw[o.vid] += o.d; }
+    else if (o.kind === 'note') { K.updateVariant(o.vid, { note: o.note }); model.note[o.vid] = o.note; }
+    else if (o.kind === 'name') { K.updateProduct('p0', { name: o.name }); model.name = o.name; }
+    else if (o.kind === 'photo') { K.updateProduct('p0', { photo: o.photo }); model.photo = o.photo; }
+    else if (o.kind === 'rayon') { K.renameCategory('c0', o.name); model.rayon = o.name; }
+  }
+  devs[1].pull(devs[0]); devs[0].pull(devs[1]);
+  for (const d of devs) {
+    const doc = d.K._doc();
+    for (const vid of ['v0', 'v1']) {
+      const v = doc.variants.find((x) => x.id === vid);
+      assert.equal(v.stock, Math.max(0, model.raw[vid]), vid + ' stock');
+      assert.equal(v.note, model.note[vid], vid + ' note');
+    }
+    const p = doc.products.find((x) => x.id === 'p0');
+    assert.equal(p.name, model.name, 'product name'); assert.equal(p.photo || '', model.photo, 'photo');
+    assert.equal(doc.categories.find((c) => c.id === 'c0').name, model.rayon, 'section name');
+  }
+}), 150);
+
 console.log(`${failed ? '✗' : '✓'} catalog-merge-properties-test · ${passed} held, ${known} known, ${failed} failed`);
 process.exit(failed ? 1 : 0);

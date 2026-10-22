@@ -232,6 +232,31 @@
   }
   var isRunning = function (p, now) { return status(p, now) === 'active'; };
 
+  /* ───────────────────────── l'horloge des écritures ─────────────────────────
+     La fusion arbitre par `updatedAt` (et une pierre tombale par `at`). Pris tel
+     quel sur l'horloge de l'appareil, une caisse en retard de trois heures
+     datait sa modification SOUS celle qu'elle venait de recevoir du bureau : la
+     fusion suivante rendait l'ancienne règle, ou réactivait une promotion
+     qu'elle venait de mettre en pause. Horloge hybride : chaque écriture prend
+     le plus grand de l'heure murale et du plus grand instant déjà vu + 1 (vu =
+     tout ce que porte le document, donc tout ce que la fusion nous a appris).
+     Un geste fait APRÈS avoir vu celui d'un autre appareil est donc toujours
+     daté après lui, quelle que soit l'heure affichée. Le champ reste un nombre :
+     les documents d'avant se fusionnent comme avant. */
+  var hlc = 0;
+  function seenMax(d) {
+    var m = 0;
+    ((d && d.promos) || []).forEach(function (p) { var t = num(p && p.updatedAt, 0); if (t > m) m = t; });
+    ((d && d.deleted) || []).forEach(function (x) { var t = num(x && x.at, 0); if (t > m) m = t; });
+    return m;
+  }
+  function stamp() {
+    load();
+    var t = Math.max(Date.now(), seenMax(db) + 1, hlc + 1);
+    hlc = t;
+    return t;
+  }
+
   function list() { load(); return db.promos.map(normalize); }
   function get(id) { load(); var p = db.promos.find(function (x) { return x.id === id; }); return p ? normalize(p) : null; }
   function active(now) { return list().filter(function (p) { return isRunning(p, now); }); }
@@ -239,7 +264,7 @@
   function save(patch) {
     load();
     var next = normalize(patch);
-    next.updatedAt = Date.now();
+    next.updatedAt = stamp();
     var i = db.promos.findIndex(function (x) { return x.id === next.id; });
     if (i >= 0) { next.createdAt = num(db.promos[i].createdAt, next.createdAt); db.promos[i] = next; }
     else db.promos.push(next);
@@ -255,10 +280,13 @@
      exactement ce qui arrivait aux articles de stock.js avant `delItems`. */
   function remove(id) {
     load();
+    /* Daté AVANT de retirer la règle : son propre `updatedAt` compte parmi ce
+       que l'appareil a vu, et la pierre tombale doit passer après lui. */
+    var at = stamp();
     var before = db.promos.length;
     db.promos = db.promos.filter(function (x) { return x.id !== id; });
     if (db.promos.length === before) return false;
-    db.deleted.push({ id: id, at: Date.now() });
+    db.deleted.push({ id: id, at: at });
     commit();
     return true;
   }
@@ -267,7 +295,7 @@
     var p = db.promos.find(function (x) { return x.id === id; });
     if (!p) return null;
     p.paused = !!val;
-    p.updatedAt = Date.now();
+    p.updatedAt = stamp();
     commit();
     return normalize(p);
   }
