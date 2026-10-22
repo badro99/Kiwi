@@ -80,7 +80,7 @@
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
-  <script src="assets/floorplan-core.js?v=2052"></script>
+  <script src="assets/floorplan-core.js?v=2053"></script>
 
   <!-- Material Symbols Outlined, generated from assets/icons/material/ by
        tools/build-material-icons.mjs. Renders data-icon (Material names) and the
@@ -99,7 +99,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=14" defer></script>
-  <script src="assets/printer-bridge.js?v=26" defer></script>
+  <script src="assets/printer-bridge.js?v=27" defer></script>
   <script src="assets/caisse-hardware.js?v=6" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -112,7 +112,7 @@
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
-  <script src="assets/pressing-ops.js?v=10" defer></script>
+  <script src="assets/pressing-ops.js?v=11" defer></script>
   <script src="assets/pressing-catalog.js?v=9" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
@@ -125,13 +125,13 @@
   <script src="assets/color-palette.js?v=6" defer></script>
   <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et
        les échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-  <script src="assets/boutique-catalog-parts.js?v=3" defer></script>
-  <script src="assets/boutique-catalog.js?v=13" defer></script>
+  <script src="assets/boutique-catalog-parts.js?v=4" defer></script>
+  <script src="assets/boutique-catalog.js?v=14" defer></script>
   <script src="assets/sold-insights.js?v=14" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promos.js?v=9" defer></script>
+  <script src="assets/promos.js?v=10" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=9" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=3" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
@@ -191,13 +191,13 @@
   <script src="assets/retail-scan.js?v=11" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=56" defer></script>
+  <script src="assets/caisse-lang.js?v=57" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=156" defer></script>
+  <script src="assets/pos-dispatch.js?v=157" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=6" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>

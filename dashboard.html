@@ -71,13 +71,13 @@
 <link rel="stylesheet" href="assets/pages-pro.css?v=4" />
 <link rel="stylesheet" href="assets/catalog-workspace.css?v=24" />
 <link rel="stylesheet" href="assets/polish-dashboard.css" />
-<link rel="stylesheet" href="assets/hotel.css?v=44" />
+<link rel="stylesheet" href="assets/hotel.css?v=45" />
 <!-- Shared design language for the thirteen Kiwi.appPage() destinations.
      Loaded LAST on purpose: it wins equal-specificity ties against the
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
 <link rel="stylesheet" href="assets/genpage.css?v=5" />
-<link rel="stylesheet" href="assets/dashboard-shell.css?v=4" />
+<link rel="stylesheet" href="assets/dashboard-shell.css?v=5" />
 <link rel="stylesheet" href="assets/mobile.css?v=12" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
@@ -89,7 +89,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2124" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2125" />
 <link rel="stylesheet" href="assets/merchant-health.css?v=3" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
@@ -101,7 +101,7 @@
      glow if this never loads. -->
 <script src="assets/vexel-neon.js?v=2049" defer></script>
 <!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
-<link rel="stylesheet" href="assets/invoicing.css?v=9" />
+<link rel="stylesheet" href="assets/invoicing.css?v=10" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/dashboard-startup-gate.js?v=1"></script>
@@ -141,7 +141,7 @@
       '<link rel="stylesheet" href="assets/kit/tokens-2027.css?v=2">' +
       '<link rel="stylesheet" href="assets/kit/kit.css?v=40">' +
       /* The desktop layout (1024 and wider: sidebar, top bar, Home's grid), and the shipped page pieces dressed at every width. */
-      '<link rel="stylesheet" href="assets/kit/dash-desktop.css?v=5">' +
+      '<link rel="stylesheet" href="assets/kit/dash-desktop.css?v=6">' +
       js("assets/kit/strings/kit.fr.js?v=2") +
       js("assets/kit/strings/kit.en.js?v=2") +
       js("assets/kit/strings/kit.ar.js?v=2") +
@@ -1117,7 +1117,7 @@
 <script src="assets/view-link.js?v=1" defer></script>
 <script src="assets/features.js?v=14" defer></script>
 <script src="assets/invoice.js?v=19" defer></script>
-<script src="assets/invoicing.js?v=16" defer></script>
+<script src="assets/invoicing.js?v=17" defer></script>
 <script src="assets/depenses.js?v=5" defer></script>
 <script src="assets/oppo-cards.js?v=6" defer></script>
 <script src="assets/merchant-health.js?v=5" defer></script>
@@ -1147,10 +1147,10 @@
 <script src="assets/venues.js?v=61" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot
      and the garment product art (both in pressing-ops.js). -->
-<script src="assets/pressing-ops.js?v=10" defer></script>
+<script src="assets/pressing-ops.js?v=11" defer></script>
 <script src="assets/pressing-catalog.js?v=9" defer></script>
 <script src="assets/pressing-dashboard.js?v=19" defer></script>
-<script src="assets/demoClock.js?v=4" defer></script>
+<script src="assets/demoClock.js?v=5" defer></script>
 <script src="assets/sales-history.js?v=5" defer></script>
 <script src="assets/dateRange.js?v=95" defer></script>
 <script src="assets/mobile-nav.js?v=8" defer></script>
@@ -1192,7 +1192,7 @@
 <script src="assets/kit/motion.js?v=1" defer></script>
 <script src="assets/kit/lens.js?v=1" defer></script>
 <script src="assets/liquid-lens.js?v=10" defer></script>
-<script src="assets/onboarding.js?v=2093" defer></script>
+<script src="assets/onboarding.js?v=2094" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -1210,7 +1210,7 @@
 <script src="assets/ramadan.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/agent.js?v=37" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=9" defer fetchpriority="low"></script>
-<script src="assets/agent-vision.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/agent-vision.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/pages.js?v=12" defer fetchpriority="low"></script>
@@ -1226,11 +1226,11 @@
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=14" defer fetchpriority="low"></script>
-<script src="assets/printer-bridge.js?v=26" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=27" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-<script src="assets/boutique-catalog-parts.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/boutique-catalog.js?v=13" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog-parts.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog.js?v=14" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->
@@ -1243,7 +1243,7 @@
 <script src="assets/agent-action-center.js?v=4" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
      here; the caisse only consumes the resulting prices. -->
-<script src="assets/promos.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/promos.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/discount-policy.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
@@ -1301,7 +1301,7 @@
 <script src="assets/orderpro-panel.js?v=5" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
-<script src="assets/floorplan-core.js?v=2052" defer fetchpriority="low"></script>
+<script src="assets/floorplan-core.js?v=2053" defer fetchpriority="low"></script>
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
@@ -1311,8 +1311,8 @@
      section 1, puis les pages restaurant et le registre des pages au premier
      usage, puis l'inventaire boutique, puis le spa et les pages de départ. -->
 <script src="assets/pages-pro-office.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2173" defer fetchpriority="low"></script>
-<script src="assets/pages-pro-boutique.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2174" defer fetchpriority="low"></script>
+<script src="assets/pages-pro-boutique.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/pages-pro-spa-starter.js?v=1" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
@@ -1331,7 +1331,7 @@
 <script src="assets/menu-promos-dashboard.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/restaurant-menu-workspace.js?v=116" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=14" defer fetchpriority="low"></script>
-<script src="assets/boutique-promos-dashboard.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/boutique-promos-dashboard.js?v=18" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=31" defer fetchpriority="low"></script>
@@ -1342,7 +1342,7 @@
 <script src="assets/month-report-ui.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=35" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=79" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=80" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=12">
@@ -1353,8 +1353,8 @@
 <script src="assets/cancellation-history.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/cash-sessions.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/weather.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/briefing.js?v=23" defer fetchpriority="low"></script>
-<script src="assets/simple-food-cost.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/briefing.js?v=24" defer fetchpriority="low"></script>
+<script src="assets/simple-food-cost.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/finance.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/conformite.js?v=6" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
@@ -1376,7 +1376,7 @@
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
 <script src="assets/hotel.js?v=83" defer fetchpriority="low"></script>
-<script src="assets/hotel-economat.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/hotel-economat.js?v=5" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
 <script src="assets/trade-workspace-schema.js?v=9" defer fetchpriority="low"></script>

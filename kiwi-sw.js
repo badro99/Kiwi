@@ -19,7 +19,7 @@
 var CACHE = 'kiwi-app-v663';
 var SHELL = [
   '/dashboard.html',
-  '/assets/dashboard-shell.css?v=4',
+  '/assets/dashboard-shell.css?v=5',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=5',
   '/assets/caisse-floor.js?v=1',
@@ -43,7 +43,7 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=24',
+  '/assets/booking.js?v=25',
   '/assets/booking.css?v=13',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
@@ -68,8 +68,8 @@ var SHELL = [
   '/assets/pressing-dashboard.css?v=11',
   '/assets/trade-workspaces.css?v=6',
   '/assets/reservations.css?v=9',
-  '/assets/hotel.css?v=44',
-  '/assets/hotel-economat.js?v=4',
+  '/assets/hotel.css?v=45',
+  '/assets/hotel-economat.js?v=5',
   '/assets/genpage.css?v=5',
   '/assets/mobile.css?v=12',
   '/assets/sold-insights.js?v=14',
@@ -86,13 +86,13 @@ var SHELL = [
   '/assets/agent-action-center.js?v=4',
   '/assets/cancellation-history.js?v=3',
   '/assets/weather.js?v=1',
-  '/assets/briefing.js?v=23',
+  '/assets/briefing.js?v=24',
   '/assets/ai-telemetry.js?v=1',
   '/assets/agent-data.js?v=7',
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=9',
-  '/assets/agent-vision.js?v=6',
+  '/assets/agent-vision.js?v=7',
   '/assets/i18n.js?v=32',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -105,8 +105,8 @@ var SHELL = [
   '/assets/interactive.js?v=65',
   '/assets/view-link.js?v=1',
   '/assets/features.js?v=14',
-  '/assets/invoicing.css?v=9',
-  '/assets/invoicing.js?v=16',
+  '/assets/invoicing.css?v=10',
+  '/assets/invoicing.js?v=17',
   '/assets/order-qr.js?v=5',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -119,7 +119,7 @@ var SHELL = [
   '/assets/trade-workspaces.js?v=10',
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=31',
-  '/assets/pressing-ops.js?v=10',
+  '/assets/pressing-ops.js?v=11',
   '/assets/pressing-catalog.js?v=9',
   '/assets/pressing-dashboard.js?v=19',
   '/assets/pressing-products/chemise.png',
@@ -150,7 +150,7 @@ var SHELL = [
   '/assets/pressing-products/chaussures.png',
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
-  '/assets/demoClock.js?v=4',
+  '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=5',
   '/assets/dateRange.js?v=95',
   '/assets/mobile-nav.js?v=8',
@@ -164,7 +164,7 @@ var SHELL = [
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js?v=2052',
+  '/assets/floorplan-core.js?v=2053',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=6',
@@ -238,21 +238,21 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=6',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=14',
-  '/assets/printer-bridge.js?v=26',
+  '/assets/printer-bridge.js?v=27',
   '/assets/barcode.js?v=1',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=3',
-  '/assets/boutique-catalog.js?v=13',
+  '/assets/boutique-catalog-parts.js?v=4',
+  '/assets/boutique-catalog.js?v=14',
   '/assets/store-templates.js?v=3',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promos.js?v=9',
-  '/assets/boutique-promos-dashboard.js?v=17',
+  '/assets/promos.js?v=10',
+  '/assets/boutique-promos-dashboard.js?v=18',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=56',
+  '/assets/caisse-lang.js?v=57',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -266,7 +266,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=79',
+  '/assets/stock.js?v=80',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -313,7 +313,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=156',
+  '/assets/pos-dispatch.js?v=157',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -323,7 +323,7 @@ var SHELL = [
   '/assets/icons/material/sprite.till.svg?v=5',
   '/assets/kit/tokens-2027.css?v=2',
   '/assets/kit/kit.css?v=40',
-  '/assets/kit/dash-desktop.css?v=5',
+  '/assets/kit/dash-desktop.css?v=6',
   '/assets/kit/strings/kit.fr.js?v=2',
   '/assets/kit/strings/kit.en.js?v=2',
   '/assets/kit/strings/kit.ar.js?v=2',
@@ -397,11 +397,11 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=100',
-  '/assets/pos-boutique/sales.js?v=6',
-  '/assets/pos-boutique/checkout.js?v=6',
-  '/assets/pos-boutique/inventory.js?v=6',
-  '/assets/pos-boutique.js?v=100',
+  '/assets/pos-boutique.css?v=101',
+  '/assets/pos-boutique/sales.js?v=7',
+  '/assets/pos-boutique/checkout.js?v=7',
+  '/assets/pos-boutique/inventory.js?v=7',
+  '/assets/pos-boutique.js?v=101',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -433,12 +433,12 @@ var SHELL = [
   '/assets/pos-gym.js?v=8',
   '/assets/pos-autre.css?v=8',
   '/assets/pos-autre.js?v=8',
-  '/assets/pos-maison.css?v=89',
-  '/assets/pos-maison/sales.js?v=7',
-  '/assets/pos-maison/checkout.js?v=7',
+  '/assets/pos-maison.css?v=90',
+  '/assets/pos-maison/sales.js?v=8',
+  '/assets/pos-maison/checkout.js?v=8',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=7',
-  '/assets/pos-maison.js?v=89',
+  '/assets/pos-maison/inventory.js?v=8',
+  '/assets/pos-maison.js?v=90',
   '/assets/caisse-pairing.js?v=36',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
@@ -446,8 +446,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=57',
-  '/assets/pressing-caisse.css?v=57',
+  '/assets/pressing-caisse.js?v=58',
+  '/assets/pressing-caisse.css?v=58',
   '/assets/material-icons.js?v=4',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
