@@ -7,6 +7,7 @@ import { onRequestPost } from '../functions/api/order/queue.js';
 import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { readTillActorProof } from '../functions/auth/_lib.js';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const db = new DatabaseSync(':memory:');
@@ -132,7 +133,7 @@ check('unavailable history returns failure, never a misleading empty list', () =
 db.close();
 
 // Actual renderer and async history loader, with a deterministic server boundary.
-const source = read('assets/pages-pro.js');
+const source = pagesProSource();
 const fragment = source.slice(source.indexOf('  function ensureRtxStyles()'), source.indexOf('  function renderStarter(nav, meta)'));
 const nodes = new Map();
 let html = '', title = '', renderCount = 0, tenant = merchant, fail = false, sales = [{ id: 'sale1', amount: 50.25, ts: now, method: 'cash', lines: [] }];

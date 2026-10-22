@@ -83,7 +83,7 @@ assert.match(pos, /productVisual\(p\)/, 'caisse cards use the shared product med
 assert.match(pos, /hit\.colorId && p\.colors\.includes\(hit\.colorId\)/, 'barcode scans retain exact custom colour identity');
 assert.match(pos, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'caisse inventory renders the exact custom swatch');
 assert.match(pos, /function variantSource\(v\)/, 'caisse suppresses a duplicate custom colour subtitle');
-const pages = retailSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
+const pages = retailSource(require('./pages-pro-test-source.cjs')());
 assert.match(pages, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'dashboard variant rows render the exact custom swatch');
 assert.match(pages, /function _bqxColorSource\(v\)/, 'dashboard suppresses a duplicate custom colour subtitle');
 assert.match(pages, /data-bqx-vcname/, 'dashboard exposes the custom colour name field');

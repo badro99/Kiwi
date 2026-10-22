@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let passed = 0, failed = 0;
@@ -198,7 +199,7 @@ ok('every landing page loads trades.js, the sheet script and its stylesheet', ()
   }
 });
 
-const pp = read('assets/pages-pro.js');
+const pp = pagesProSource();
 const cw = read('assets/catalog-workspace.css');
 ok('#0169 inventory toolbar wraps on a phone, new product first', () => {
   assert.match(pp, /class="p-toolbar bqx-toolbar"/);

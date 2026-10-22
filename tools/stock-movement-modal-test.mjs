@@ -12,9 +12,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const src = pagesProSource();
 const mov = readFileSync(path.join(ROOT, 'assets/maison-stock-movements.js'), 'utf8');
 const lens = readFileSync(path.join(ROOT, 'assets/liquid-lens.js'), 'utf8');
 

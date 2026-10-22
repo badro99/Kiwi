@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
-const pages = fs.readFileSync(new URL('../assets/pages-pro.js', import.meta.url), 'utf8');
+const pages = pagesProSource();
 const dayReport = fs.readFileSync(new URL('../assets/day-report.js', import.meta.url), 'utf8');
 
 // 1. Static inspection: renderRealTransactions must use the shared merchant

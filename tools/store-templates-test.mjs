@@ -19,6 +19,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -28,7 +29,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failures.push(msg); conso
 console.log('■ Modèles de rayons (store-templates)');
 
 const src = fs.readFileSync(path.join(ROOT, 'assets/store-templates.js'), 'utf8');
-const proSrc = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const proSrc = pagesProSource();
 const onbSrc = fs.readFileSync(path.join(ROOT, 'assets/onboarding.js'), 'utf8');
 const shell = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');

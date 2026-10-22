@@ -10,6 +10,7 @@ import { onRequestPost as refundPost } from '../functions/api/sale/refund.js';
 import { onRequestPost as pinPost } from '../functions/api/pin/verify.js';
 import { onRequestGet as feedGet } from '../functions/api/feed.js';
 import { tillToken } from '../functions/auth/_lib.js';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
@@ -236,7 +237,7 @@ const caisse = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.htm
 const offlineDb = fs.readFileSync(path.join(ROOT, 'assets/offline-db.js'), 'utf8');
 const dashboard = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 const report = fs.readFileSync(path.join(ROOT, 'assets/report.js'), 'utf8');
-const transactions = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const transactions = pagesProSource();
 ok('provisional heartbeat heals sales skipped before merchant resolution', /reconcileJournalSales\(true\)/.test(caisse));
 ok('refund approval persists signed manager proof for crash-safe replay',
   /refundActor:\s*\{/.test(caisse) && /approval:\s*String\(manager\.approval/.test(caisse)

@@ -16,6 +16,7 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
 import { readNativeRuntime } from './native-runtime-source.mjs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const read = (p) => retailSource(fs.readFileSync(path.join(root, p), 'utf8'));
 let checks = 0;
@@ -25,7 +26,7 @@ const check = (value, label) => { assert.ok(value, label); checks++; console.log
 const runtime = retailSource(readNativeRuntime(root));
 const css = read('app/src/native-runtime.css');
 const dark = read('assets/dark-fixes.js');
-const pro = read('assets/pages-pro.js');
+const pro = pagesProSource();
 check(/<key>CADisableMinimumFrameDurationOnPhone<\/key>\s*<true\/>/.test(read('app/ios/App/App/Info.plist')), 'Info.plist opts native layers into 120 Hz');
 check(/var FLICK_MS = 320;/.test(runtime) && /if \(Date\.now\(\) - st > FLICK_MS\) return;/.test(runtime), 'period swipe needs a quick flick, a slow drag reads the chart');
 check(/Premium feel layer/.test(runtime) && /el\.animate\(\[\{ scale: '1' \}/.test(runtime), 'touch-down response animates `scale`, never an element\'s own transform');

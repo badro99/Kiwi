@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -84,7 +85,7 @@ const interactiveCode = read('assets/interactive.js');
 ok('le tiroir de commande dispatche la référence de commande',
   /^\s*const targetRef = String\(o\.ref \|\| o\.receiptNo/m.test(interactiveCode));
 
-const pagesProCode = read('assets/pages-pro.js');
+const pagesProCode = pagesProSource();
 ok('pages-pro reverse le stock sur kiwi-sales-voided et alerte si non recrédité',
   /^\s*reversed\s*=\s*window\.KiwiInventoryConsumption\.reverse/m.test(pagesProCode) && /stock non recrédité/.test(pagesProCode));
 

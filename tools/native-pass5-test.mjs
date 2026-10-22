@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { readNativeRuntime } from './native-runtime-source.mjs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
@@ -17,7 +18,7 @@ const css = read('app/src/native-runtime.css');
 const dateRange = read('assets/dateRange.js');
 const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
 const pages = read('assets/pages.js');
-const pagesPro = read('assets/pages-pro.js');
+const pagesPro = pagesProSource();
 const menu = read('assets/restaurant-menu-workspace.js');
 const team = teamTestSource();
 const stock = read('assets/stock.js');
@@ -102,8 +103,8 @@ numberScope.localStorage.lang = 'fr';
 ok(numberScope.window.KiwiNumber.number(15765.38, 2) === '15\u202f765,38', 'French numbers use narrow-space grouping and comma decimals');
 numberScope.localStorage.lang = 'ar';
 ok(numberScope.window.KiwiNumber.percent(70.2) === '70,2 %', 'Arabic keeps Latin digits with joined-script-safe number punctuation');
-ok(['assets/stock.js', 'assets/finance.js', 'assets/pages-pro.js', 'assets/dateRange.js', 'assets/interactive.js', 'assets/agent.js']
-  .every((file) => read(file).includes('KiwiNumber')), 'stock, finance, orders, terminals, home, notifications and AI use the shared rule');
+ok([read('assets/stock.js'), read('assets/finance.js'), pagesProSource(), read('assets/dateRange.js'), read('assets/interactive.js'), read('assets/agent.js')]
+  .every((src) => src.includes('KiwiNumber')), 'stock, finance, orders, terminals, home, notifications and AI use the shared rule');
 ok(/if \(spec\.fmt === 'pct2'\) return \(window\.KiwiNumber\?\.number\(v, 2\)/.test(dateRange)
   && /if \(spec\.fmt === 'pct1'\) return \(window\.KiwiNumber\?\.number\(v, 1\)/.test(dateRange)
   && /function serviceAmount\(value\) \{[\s\S]*?KiwiNumber\?\.number\(value\)/.test(read('assets/design-vexel-layout.js')), 'home KPI rates and service amounts follow the shared locale rule');

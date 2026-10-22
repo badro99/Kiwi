@@ -1,6 +1,7 @@
 import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const team = teamTestSource();
 const css = fs.readFileSync(new URL('../assets/planning-ui.css', import.meta.url), 'utf8');
@@ -9,7 +10,7 @@ const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const merchantConfig = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const i18n = fs.readFileSync(new URL('../assets/i18n.js', import.meta.url), 'utf8');
 const pages = fs.readFileSync(new URL('../assets/pages.js', import.meta.url), 'utf8');
-const pagesPro = fs.readFileSync(new URL('../assets/pages-pro.js', import.meta.url), 'utf8');
+const pagesPro = pagesProSource();
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 
 for (const action of ['fair', 'optimize', 'template-save', 'template-apply', 'coverage', 'open', 'publish']) {

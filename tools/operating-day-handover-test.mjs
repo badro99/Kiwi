@@ -9,6 +9,7 @@ import { onRequestGet as activityGet } from '../functions/api/order/activity.js'
 import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { makeSession, SESS_COOKIE, tillToken, TILL_COOKIE, readTillActorProof } from '../functions/auth/_lib.js';
 import queueTestSource from './queue-test-source.cjs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const db = new DatabaseSync(':memory:');
 db.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
@@ -179,7 +180,7 @@ check('legacy activity projection emits a distinct handover with order detail', 
   assert.equal(legacy.actor, ''); assert.equal(legacy.actorId, '');
 });
 
-const source = fs.readFileSync(new URL('../assets/pages-pro.js', import.meta.url), 'utf8');
+const source = pagesProSource();
 check('localized UI distinguishes handover from table closure and excludes it from closure count', () => {
   assert.match(source, /v\.kind === 'takeout-handover'/);
   assert.match(source, /Commande remise au client/); assert.match(source, /Order handed to customer/); assert.match(source, /سُلِّم الطلب إلى العميل/);

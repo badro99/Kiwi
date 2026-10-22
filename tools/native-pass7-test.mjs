@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { readNativeRuntime } from './native-runtime-source.mjs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 const read = p => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
@@ -39,7 +40,8 @@ ok(css.includes('.vexel-revenue-rail>.vexel-rail-card{height:auto!important'), '
 ok(css.includes('.kpi-m[data-kpi="ratio"] .v{direction:ltr!important;unicode-bidi:isolate'), 'card and cash retain their order together with the percent unit in RTL');
 ok(read('assets/i18n.js').includes('format: formatNumber'), 'KiwiNumber accepts precision options for display without changing fiscal output');
 for (const file of ['team','restaurant-menu-workspace','account','simple','clients-book','operations-ui','briefing','pages-pro']) {
-  ok(read('assets/'+file+'.js').includes('window.KiwiNumber?.format') || read('assets/'+file+'.js').includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
+  const src = file === 'pages-pro' ? pagesProSource() : read('assets/'+file+'.js');
+  ok(src.includes('window.KiwiNumber?.format') || src.includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
 }
 ok(read("assets/dateRange.js").includes("i < xs.length && Number.isFinite(xs[i])"), "partial chart series cannot abort locale rendering on a stale tick");
 ok(read("assets/restaurant-menu-workspace.js").includes("if(!d.cats.length){openCategory(null);return;}"), "empty-menu New item opens section creation instead of a dead button");

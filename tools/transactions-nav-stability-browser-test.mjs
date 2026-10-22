@@ -7,6 +7,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
+import pagesProSource from './pages-pro-test-source.cjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -17,15 +18,23 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
 assert.ok(executablePath, 'Chromium is required for the #98 browser regression');
 const pagesProAsset = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').match(/assets\/pages-pro\.js\?v=\d+/)?.[0];
 assert.ok(pagesProAsset, 'dashboard.html must version pages-pro.js');
+/* pages-pro.js tient en quatre fichiers depuis le 22 octobre 2026 (nav-transactions
+ * vit dans pages-pro-office.js). Une référence d'avant le découpage n'a que
+ * pages-pro.js : les trois autres y sont alors servis vides. */
 const baselinePagesPro = process.env.KIWI_TEST_SOURCE_REF
-  ? execFileSync('git', ['show', `${process.env.KIWI_TEST_SOURCE_REF}:assets/pages-pro.js`], { cwd: ROOT, encoding: 'utf8' }) : null;
+  ? new Map(pagesProSource.FILES.map((rel) => {
+    let body = '';
+    try { body = execFileSync('git', ['show', `${process.env.KIWI_TEST_SOURCE_REF}:${rel}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); }
+    catch (_) { if (rel === 'assets/pages-pro.js') throw _; }
+    return ['/' + rel, body];
+  })) : null;
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  if (baselinePagesPro && pathname === '/assets/pages-pro.js') {
+  if (baselinePagesPro && baselinePagesPro.has(pathname)) {
     res.writeHead(200, { 'Content-Type': TYPES['.js'], 'Cache-Control': 'no-store' });
-    res.end(baselinePagesPro);
+    res.end(baselinePagesPro.get(pathname));
     return;
   }
   if (pathname === '/kiwi-sw.js') { res.writeHead(404); res.end('fixture has no service worker'); return; }

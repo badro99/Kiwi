@@ -15,9 +15,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = maisonSource(readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
+const src = maisonSource(pagesProSource());
 const tills = ['assets/pos-boutique.js', 'assets/pos-maison.js'].map((f) => maisonSource(readFileSync(path.join(ROOT, f), 'utf8')));
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 

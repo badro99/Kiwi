@@ -11,13 +11,14 @@
  *   node tools/starter-copy-test.mjs */
 import fs from 'node:fs';
 import vm from 'node:vm';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = new URL('..', import.meta.url);
 const read = (p) => fs.readFileSync(new URL(p, ROOT), 'utf8');
 let n = 0; const fails = [];
 const check = (ok, label) => { n++; if (!ok) fails.push(label); };
 
-const pro = read('assets/pages-pro.js');
+const pro = pagesProSource();
 const a = pro.indexOf('  const STARTERS_FR = {');
 const b = pro.indexOf('\n  };', a);
 check(a > 0 && b > a, 'pages-pro.js keeps the French table as STARTERS_FR');

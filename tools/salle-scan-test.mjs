@@ -17,6 +17,7 @@ import fs from 'fs';
 import vm from 'vm';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -32,7 +33,7 @@ console.log('■ Salle scan test (tools/salle-scan-test.mjs)');
 
 const route = fs.readFileSync(path.join(ROOT, 'functions/api/ai/salle-import.js'), 'utf8');
 const scan = fs.readFileSync(path.join(ROOT, 'assets/salle-scan.js'), 'utf8');
-const pro = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const pro = pagesProSource();
 const quota = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
 const html = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');

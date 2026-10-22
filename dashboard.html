@@ -1306,7 +1306,14 @@
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/starter-copy.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2172" defer fetchpriority="low"></script>
+<!-- Les pages de la barre latérale, en quatre fichiers chargés dans cet ordre
+     (l'ancien pages-pro.js d'un seul tenant, sections recopiées à l'octet) :
+     section 1, puis les pages restaurant et le registre des pages au premier
+     usage, puis l'inventaire boutique, puis le spa et les pages de départ. -->
+<script src="assets/pages-pro-office.js" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2171" defer fetchpriority="low"></script>
+<script src="assets/pages-pro-boutique.js" defer fetchpriority="low"></script>
+<script src="assets/pages-pro-spa-starter.js" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>

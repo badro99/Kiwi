@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = (rel) => fs.readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
 let controls = 0;
@@ -21,7 +22,7 @@ const hasNot = (src, needle, label) => { assert.ok(!src.includes(needle), label)
 const interactive = read('assets/interactive.js');
 has(interactive, '${desc ? `<p>${desc}</p>` : \'\'}', 'Kiwi.modal garde `desc` comme balisage (des appelants en dépendent) : la barrière est chez l\'appelant');
 
-const pages = read('assets/pages-pro.js');
+const pages = pagesProSource();
 has(pages, 'desc: T.removeDesc(esc(`${t.model} · ${locName(t.loc)}`)),', 'terminal retiré : modèle et lieu échappés');
 has(pages, 'desc: T.deleteZoneDesc(pdsEsc(z.name), count),', 'plan de salle : nom de zone échappé');
 has(pages, 'desc: _catL(`« ${_esc(c.name)} » contient', 'boutique : nom de catégorie échappé');

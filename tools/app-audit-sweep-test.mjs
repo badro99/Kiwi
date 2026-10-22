@@ -12,6 +12,7 @@ import caisseTestSource from './caisse-test-source.cjs';
  */
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = (p) => maisonSource(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 let passed = 0, failed = 0;
@@ -47,7 +48,7 @@ ok('receipt and staff names are escaped', () => {
   }
 });
 ok('no em dash as an empty value on the till or the boutique pages', () => {
-  for (const f of ['kiwi-caisse.html', 'assets/pos-boutique.js', 'assets/pos-maison.js', 'assets/pages-pro.js']) {
+  for (const f of ['kiwi-caisse.html', 'assets/pos-boutique.js', 'assets/pos-maison.js', ...pagesProSource.FILES]) {
     assert.doesNotMatch(read(f), /'—'/, f);
   }
 });

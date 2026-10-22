@@ -5,9 +5,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const src = fs.readFileSync(path.join(ROOT, 'assets', 'pages-pro.js'), 'utf8');
+const src = pagesProSource();
 const start = src.indexOf("handlers['nav-transactions'] = () => {");
 assert.ok(start > 0, "handlers['nav-transactions'] must still exist");
 const end = src.indexOf('/* ═══', start);

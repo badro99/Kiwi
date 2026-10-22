@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pages-pro.js'), 'utf8');
+const source = require('./pages-pro-test-source.cjs')();
 
 const checks = [
   ["delivery: 'Livraison'", 'Livraison has an explicit payment label'],

@@ -32,6 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const R = (p) => maisonSource(fs.readFileSync(path.join(ROOT, p), 'utf8'));
@@ -237,7 +238,7 @@ ok('la caisse boutique journalise ses mouvements dans son propre métier',
   /KiwiMaisonStock\?\.enable\('boutique'\)/.test(BOUTIQUE_SRC));
 
 /* ── XII · la page ouvre sur tout l'historique, sans filtres redondants ───── */
-const PAGES_SRC = R('assets/pages-pro.js');
+const PAGES_SRC = maisonSource(pagesProSource());
 const MOVEMENTS_PAGE = PAGES_SRC.slice(PAGES_SRC.indexOf('const MZS ='), PAGES_SRC.indexOf('function _mzManualModal'));
 ok('la période initiale est Tout', /let _mzFilter = \{[^}]*days: 0/.test(MOVEMENTS_PAGE));
 ok('Tout est la première option de période', /\[\['0', 'Tout'\], \['7', '7 jours'\]/.test(MOVEMENTS_PAGE));

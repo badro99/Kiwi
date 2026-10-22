@@ -393,7 +393,7 @@ ok(/KP\.printKitchen\(/.test(caisse), 'le bon de cuisine part à l\'imprimante')
 
 /* ── 7. le signet de révision nomme la copie qu'il décrit ──────────────────── */
 
-const pagesPro = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const pagesPro = require('./pages-pro-test-source.cjs')();
 const pdsBlock = pagesPro.slice(pagesPro.indexOf("feature: 'floorplan'"), pagesPro.indexOf("feature: 'floorplan'") + 900);
 ok(/localKey:/.test(pdsBlock), 'le plan de salle du tableau de bord déclare sa clé locale');
 const caisseFp = caisse.slice(caisse.indexOf("feature: 'floorplan'"), caisse.indexOf("feature: 'floorplan'") + 900);

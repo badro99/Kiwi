@@ -15,6 +15,7 @@ import maisonSource from './pos-maison-test-source.cjs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -339,7 +340,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
  * caisse ne peut créer qu'avec l'autorisation God Mode explicite ; sans elle,
  * le garde bloque le chemin avant toute mutation du catalogue. */
 {
-  const proSrc = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
+  const proSrc = maisonSource(pagesProSource());
 
   // a) l'édition caisse reste fermée par défaut, et ne s'ouvre que sur true
   ok(/function openNewProduct\(\)\s*\{\s*if \(!catalogueAdminEnabled\(\)\) \{ catalogDashboardOnly\(\); return; \}/.test(jsSrc),
@@ -400,7 +401,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
  * seule qui oublie la garde, et l'option est « allumée » chez tout le monde. */
 {
   const adminSrc = maisonSource(fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8'));
-  const proSrc2 = maisonSource(fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8'));
+  const proSrc2 = maisonSource(pagesProSource());
 
   // a) la console : un interrupteur, sur le métier boutique, éteint par défaut
   const optin = adminSrc.slice(adminSrc.indexOf('var OPTIN_MODULES'), adminSrc.indexOf('var ADDON_MODULES'));

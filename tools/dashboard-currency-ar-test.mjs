@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const src = fs.readFileSync(path.join(root, 'assets/dateRange.js'), 'utf8');
@@ -33,7 +34,7 @@ check(/String\(spec\.unit === 'MAD' \? curUnit\(\) : spec\.unit\)/.test(src), 't
 check(/<span class="currency">\$\{curUnit\(\)\}<\/span>/.test(src) && /<span class="rev-hero-cur">\$\{curUnit\(\)\}<\/span>/.test(src), 'the hero amount and the revenue chart read it');
 check(/MIX_CENTER_ALL = \{ fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' \}/.test(src), 'and it agrees with the payment mix, which already said « درهم » in Arabic');
 
-const pp = fs.readFileSync(path.join(root, 'assets/pages-pro.js'), 'utf8');
+const pp = pagesProSource();
 check(/cur: 'درهم'/.test(pp), 'the product inventory the home must agree with says « درهم »');
 
 console.log(`\ndashboard-currency-ar: ${checks} passed, 0 failed`);

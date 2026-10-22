@@ -30,11 +30,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rd = (f) => readFileSync(path.join(ROOT, f), 'utf8');
 /* La section promos / retours se charge à part (assets/pages-pro/boutique-promos-returns.js). */
-const PAGES = rd('assets/pages-pro.js') + '\n' + rd('assets/pages-pro/boutique-promos-returns.js');
+const PAGES = pagesProSource() + '\n' + rd('assets/pages-pro/boutique-promos-returns.js');
 const CATALOG = rd('assets/boutique-catalog.js');
 const PROMOS = rd('assets/promos.js');
 const BPD = rd('assets/boutique-promos-dashboard.js');

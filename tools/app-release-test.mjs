@@ -2,6 +2,7 @@
 import caisseTestSource from './caisse-test-source.cjs';
 import fs from 'node:fs';
 import { readNativeRuntime } from './native-runtime-source.mjs';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const runtime = readNativeRuntime();
@@ -20,7 +21,7 @@ const appIgnore = read('app/.gitignore');
 const gate = read('functions/_middleware.js');
 const storeDoc = read('docs/ops/APP_STORE.md');
 const interactive = read('assets/interactive.js');
-const pagesPro = read('assets/pages-pro.js');
+const pagesPro = pagesProSource();
 const landingLocaleCss = read('assets/landing-locale-menu.css');
 const dashboard = read('dashboard.html');
 const launchStoryboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard');

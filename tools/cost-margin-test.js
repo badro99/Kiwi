@@ -313,7 +313,7 @@ const MENU = [
     /'kpi-detail':[\s\S]{0,1400}?KiwiEnv[\s\S]{0,120}?isReal[\s\S]{0,400}?const authored = real \? null : kpiData\[arg\]/.test(int),
     'un vrai commerçant ne doit pas voir le tiroir rédigé du Café Atlas');
 
-  const pp = R('assets/pages-pro.js');
+  const pp = require('./pages-pro-test-source.cjs')();
   ok('pages-pro : plus de « Marge 100 % » sur un produit non chiffré',
     !/const margin = p\.priceMAD \? Math\.round\(\(1 - \(p\.cost \|\| 0\)/.test(pp));
   ok('pages-pro : le produit non chiffré le dit',

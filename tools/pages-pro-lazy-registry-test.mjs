@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 const require = createRequire(import.meta.url);
-const source = fs.readFileSync('assets/pages-pro.js', 'utf8');
+const source = pagesProSource();
 const regStart = source.indexOf('/* First-use sections.');
 const registry = source.slice(regStart, source.indexOf('/* ═══ Section', regStart));
 /* Per chunk: the handler that renders a page, and the unsplit render it must match. */

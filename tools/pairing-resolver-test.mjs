@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = fs.readFileSync(path.join(root, 'assets/platform-kernel.js'), 'utf8');
@@ -721,7 +722,7 @@ function testPagesPro(withPlatform) {
     setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
   });
   if (withPlatform) vm.runInContext(src, ctx);
-  const pSrc = readAsset('assets/pages-pro.js');
+  const pSrc = pagesProSource();
   const match = pSrc.match(/function pairedDeviceLines\(nav\) \{([\s\S]*?)\n  \}/);
   if (!match) return null;
   const fn = new Function('window', 'localStorage', match[0] + '; return pairedDeviceLines("terminaux");');

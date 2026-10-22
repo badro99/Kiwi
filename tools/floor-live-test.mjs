@@ -24,6 +24,7 @@ import vm from 'node:vm';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestGet, assemble, tableKey } from '../functions/api/floor/live.js';
 import { businessDayStart, DEFAULT_ZONE } from '../functions/api/_business-day.js';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /* Les visites de banc remontent jusqu'à 130 minutes avant « maintenant », et la
@@ -175,7 +176,7 @@ const bk = FL.bookings(doc, tables.concat({ id: 't7', num: '7', seats: 4 }), now
 ok(bk.byTable.t4 && bk.byTable.t4.length === 1 && bk.byTable.t7 && bk.byTable.t7.length === 1, 'bookings · matched by template resource and by « Table 7 », cancelled ones dropped');
 
 /* ── The rotation is fair over a cycle (assets/pages-pro.js › pdsRotateStep) ── */
-const PRO = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const PRO = pagesProSource();
 ok(/liveOpen: \(n\) => `\$\{n\} en cours`/.test(PRO) && /x\.open \? ' · ' \+ pdsEsc\(T\.liveOpen\(x\.open\)\)/.test(PRO) && /\.filter\(x => x\.turns \|\| x\.open\)/.test(PRO),
   'the plan says "en cours" beside the turns, and a zone with only seated tables still shows');
 const grab = (name) => {

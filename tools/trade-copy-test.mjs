@@ -12,6 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EXPECTED_COUNT = 7;
@@ -30,7 +31,7 @@ console.log('■ Inventaire · Vocabulaire par métier (trade copy)');
 const pagesProPath = path.join(ROOT, 'assets/pages-pro.js');
 let pagesProSrc = '';
 try {
-  pagesProSrc = fs.readFileSync(pagesProPath, 'utf8');
+  pagesProSrc = pagesProSource();
 } catch (e) {
   console.error(`  ✗ Échec de lecture de assets/pages-pro.js: ${e.message}`);
   process.exit(1);

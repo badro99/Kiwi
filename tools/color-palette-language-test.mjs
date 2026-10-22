@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import {createRequire} from 'node:module';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const root = process.env.KIWI_ROOT || path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(root, 'app/package.json'));
@@ -105,7 +106,7 @@ try {
 
 /* D · le tableau de bord lit les noms, imprime et enregistre les libellés */
 {
-  const pp = fs.readFileSync(path.join(root, 'assets/pages-pro.js'), 'utf8');
+  const pp = pagesProSource();
   check(!/k\.picker\('bqx-color', sel, Object\.assign\(\{ optional: true, custom: true, label: 'Couleur' \}/.test(pp), 'the product sheet no longer forces a French group label on the picker');
   check(/function _bqxColorName\(c\)/.test(pp) && /function _bqxVarName\(v\)/.test(pp), 'the sheet has a read name next to the stored label');
   check(!/<span>\$\{_esc\(shown\.label\)\}<\/span>/.test(pp) && !/swatch\((?:shown|color|f\.color), \{ name: (?:shown|color|f\.color)\.label \}\)/.test(pp), 'no colour on the sheet is printed from its stored label');

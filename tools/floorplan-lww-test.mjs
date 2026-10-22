@@ -18,10 +18,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import pagesProSource from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CORE = fs.readFileSync(path.join(ROOT, 'assets/floorplan-core.js'), 'utf8');
-const PAGES = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const PAGES = pagesProSource();
 
 let passed = 0, failed = 0;
 function ok(label, fn) {

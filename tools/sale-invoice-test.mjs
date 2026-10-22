@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import * as ICE from '../functions/api/_ice.js';
 import * as SERIES from '../functions/api/_invoice-series.js';
+import pagesProText from './pages-pro-test-source.cjs'; // pages-pro.js en quatre fichiers depuis le 22 octobre 2026
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -365,7 +366,7 @@ ok(genMissingResult === null, 'Test (c): invoice.js generate() returns null imme
 ok(!fetchCalledOnMissingId, 'Test (c): invoice.js generate() makes zero network fetch when saleId is missing');
 
 // ── 4. Surface Ventes (assets/pages-pro.js) ──────────────────────────────────
-const pagesProSource = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+const pagesProSource = pagesProText();
 ok(pagesProSource.includes('data-action="sale-invoice-pdf"'), 'pages-pro.js contains sale-invoice-pdf action button');
 ok(pagesProSource.includes('data-action="sale-invoice-print"'), 'pages-pro.js contains sale-invoice-print action button');
 ok(pagesProSource.includes("H['sale-invoice-pdf']"), "pages-pro.js registers H['sale-invoice-pdf'] handler");
