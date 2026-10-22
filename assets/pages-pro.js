@@ -16703,7 +16703,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
-    const fmt = n => { try { return (Number(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { maximumFractionDigits: 2 }); } catch (_) { return String(Number(n) || 0); } };
+    /* Au centime, deux chiffres dès qu'il y a des centimes : 34,90 et non 34,9
+       (la caisse et le reçu écrivent 34,90). Un montant rond reste « 120 ». */
+    const fmt = n => { const v = Math.round((Number(n) || 0) * 100) / 100; const d = Number.isInteger(v) ? 0 : 2; try { return v.toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: d, maximumFractionDigits: 2 }); } catch (_) { return String(v); } };
     /* ── La MÊME fenêtre que le tableau de bord ────────────────────────────
      * Cette page additionnait tout l'historique du navigateur et imprimait le
      * résultat en gros, sous un tableau de bord qui, lui, affichait la période

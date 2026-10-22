@@ -366,8 +366,7 @@ const mad = (c) => (c / 100).toFixed(2).replace('.', ',');
 const madVariants = (c) => {
   const whole = Math.trunc(Math.abs(c) / 100), dec = Math.abs(c) % 100;
   const w = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  /* The Transactions list prints « 34,9 MAD » for 34,90: same centimes. */
-  return dec ? [`${w},${String(dec).padStart(2, '0')} MAD`, ...(dec % 10 ? [] : [`${w},${dec / 10} MAD`])] : [`${w} MAD`, `${w},00 MAD`];
+  return dec ? [`${w},${String(dec).padStart(2, '0')} MAD`] : [`${w} MAD`, `${w},00 MAD`];
 };
 function after(text, label, nth = 0) {
   const lines = String(text).split('\n').map((l) => l.trim()).filter(Boolean);
