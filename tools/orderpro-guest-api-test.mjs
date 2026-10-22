@@ -25,6 +25,7 @@ import { onRequestPost as openSession } from '../functions/api/order/session.js'
 import { BUILTIN_QUIZZES } from '../functions/api/order/_quizzes.js';
 import { cleanGuestDoc, iftarAt } from '../functions/api/order/_guest.js';
 import { GUEST_ACTIONS } from '../functions/api/service/events.js';
+import { DateTimeFormat } from '../functions/api/_zone-law.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SECRET = 'test-secret-not-a-real-key';
@@ -215,7 +216,10 @@ ok('mode Ramadan : l’heure du ftour de la ville sort', r.body.ramadan && r.bod
 r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '4', session: s1, ref: 'ftour-on', ftour: true, lines: [{ id: 'i1', qty: 1, note: 'sans sel' }] });
 const lead = iftar - Date.now();
 if (lead >= 2 * 60000 && lead <= 8 * 3600e3) {
-  const hhmm = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit' }).format(new Date(iftar));
+  /* The server writes the time through the zone law (Morocco on UTC+0 since
+     20 September 2026); Node's own data may still say +01, and then this
+     check failed every day in the hours before iftar. */
+  const hhmm = new DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit' }).format(new Date(iftar));
   ok('avant le ftour : l’heure part dans la note de la ligne, la note du client garde sa place',
     r.status === 200 && r.body.lines[0].note === 'Pour le ftour · ' + hhmm + ' · sans sel' && r.body.ftour === iftar, JSON.stringify(r.body));
 } else {
