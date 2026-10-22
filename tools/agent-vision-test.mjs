@@ -52,11 +52,12 @@ const controls = [
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);
 
-// La confiance : 0 reste 0, hors bornes se ramène à 0..1, absent ou illisible garde 0,9.
+// La confiance : 0 reste 0, hors bornes se ramène à 0..1, absente ou illisible
+// est INCONNUE (null) : plus de 0,9 inventé que l'écran afficherait comme une mesure.
 const { validateVisionData } = await import('../functions/api/ai/vision-inspect.js');
 const conf = (v) => validateVisionData(v === undefined ? {} : { confidence: v }).confidence;
 for (const [input, expected] of [[0, 0], ['0', 0], [0.4, 0.4], [1, 1], [7, 1], [-2, 0],
-  [undefined, 0.9], [null, 0.9], ['', 0.9], ['abc', 0.9], [NaN, 0.9], [true, 0.9]]) {
+  [undefined, null], [null, null], ['', null], ['abc', null], [NaN, null], [Infinity, null], [true, null]]) {
   assert.equal(conf(input), expected, `confidence ${JSON.stringify(input)} -> ${expected}`);
 }
 
@@ -85,6 +86,10 @@ for (const [label, reply] of [
   assert.equal(good.data.confidence, 0.42);
   assert.equal(good.data.entities.totalMad, 120);
   assert.equal(interpretVisionOutput(undefined).status, 'review-needed');
+  // JSON lisible mais sans confiance : lu, affiché neutre, aucune fiabilité inventée.
+  const noConf = await inspectImage(stubAI({ response: '{"docType":"expense_receipt","title":"Reçu","entities":{"totalMad":35}}' }), IMG, '');
+  assert.equal(noConf.status, 'parsed');
+  assert.equal(noConf.data.confidence, null, 'valid JSON without confidence: unknown, not 0.9');
 }
 
 // ── Le client : « fait » seulement après le travail réel ─────────────────────
