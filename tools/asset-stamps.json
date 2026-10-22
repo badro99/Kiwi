@@ -87,9 +87,13 @@
     "v": "24",
     "sha": "b2462b5a0ffeea29"
   },
+  "assets/boutique-catalog-parts.js": {
+    "v": "1",
+    "sha": "e18ab61edae23c0b"
+  },
   "assets/boutique-catalog.js": {
-    "v": "11",
-    "sha": "2e5d147c117e8db5"
+    "v": "12",
+    "sha": "806a7e30da9c23dc"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "17",
@@ -939,17 +943,13 @@
     "v": "12",
     "sha": "a7176b64a76ace86"
   },
-  "assets/month-report-csv.js": {
-    "v": "4",
-    "sha": "87b49ae78b04a480"
-  },
   "assets/month-report-pdf.js": {
     "v": "15",
     "sha": "642ceee80537a1fe"
   },
   "assets/month-report-tools.js": {
-    "v": "7",
-    "sha": "1be9142fb7e0eb19"
+    "v": "8",
+    "sha": "95b990a28d9d314f"
   },
   "assets/month-report-ui.js": {
     "v": "10",
@@ -1307,13 +1307,9 @@
     "v": "19",
     "sha": "84c3f5507fe69fd5"
   },
-  "assets/pressing-garment-icons.js": {
-    "v": "2",
-    "sha": "aecf3f8d0801f109"
-  },
   "assets/pressing-ops.js": {
-    "v": "9",
-    "sha": "cff73679e72e90ee"
+    "v": "10",
+    "sha": "84030add29571c07"
   },
   "assets/print-paper.css": {
     "v": "1",
@@ -1467,9 +1463,13 @@
     "v": "3",
     "sha": "6341af9080886677"
   },
+  "assets/team-hours.js": {
+    "v": "1",
+    "sha": "f468cbaf390c7c77"
+  },
   "assets/team.js": {
-    "v": "312",
-    "sha": "ada7cf0436613629"
+    "v": "313",
+    "sha": "8d6cef33ba6f0ca6"
   },
   "assets/tenant-purge.js": {
     "v": "5",
