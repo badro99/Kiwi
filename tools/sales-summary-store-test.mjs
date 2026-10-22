@@ -38,7 +38,7 @@ function setup({ fail = false, status = 200, storage = new Map() } = {}) {
   // Execute the actual production realWindowStats body, including lazy fallback.
   const body = source('dateRange.js').match(/  function realWindowStats\(from, to\) \{([\s\S]*?)\n  \}/)[1];
   Object.assign(c, { realSalesList: () => c.localSales, realRefundList: () => c.localRefunds,
-    activeMerchantSlug: () => tenant, deliveryDue: () => 0 });
+    activeMerchantSlug: () => tenant, getCurrentVenue: () => tenant, deliveryDue: () => 0 });
   vm.runInContext('function realWindowStats(from, to) {' + body + '\n}', c);
   c.localSales = sales; c.localRefunds = refunds;
   return { c, storage, store: c.window.KiwiSalesSummary, math: c.window.KiwiSalesMath,

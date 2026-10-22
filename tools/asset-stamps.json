@@ -264,12 +264,12 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "88",
-    "sha": "aec0f920fe08c4be"
+    "v": "89",
+    "sha": "4a400fbc4adaacdc"
   },
   "assets/day-report-dash.js": {
-    "v": "34",
-    "sha": "2a44d6a68ed636f4"
+    "v": "35",
+    "sha": "933f0a280140f1f3"
   },
   "assets/day-report-export.js": {
     "v": "12",
@@ -864,8 +864,8 @@
     "sha": "36b1e6ca0472a20e"
   },
   "assets/live-link.js": {
-    "v": "68",
-    "sha": "b08267e67facb54c"
+    "v": "69",
+    "sha": "a63e05408668b3a4"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -1380,8 +1380,8 @@
     "sha": "8abf8684b022329c"
   },
   "assets/sales-history.js": {
-    "v": "3",
-    "sha": "a1bf2c3b16e97b21"
+    "v": "4",
+    "sha": "b1e0f44780660ef5"
   },
   "assets/salle-scan.js": {
     "v": "2",
@@ -1500,8 +1500,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "56",
-    "sha": "bd900bd0ab32a913"
+    "v": "57",
+    "sha": "55a23dc76fac526b"
   },
   "assets/vertical-state.js": {
     "v": "5",

@@ -2082,7 +2082,7 @@
   }
   function realWindowStats(from, to) {
     const summary = window.KiwiSalesSummary;
-    const totals = summary ? summary.stats(realSalesList(), realRefundList(), from, to, activeMerchantSlug())
+    const totals = summary ? summary.stats(realSalesList(), realRefundList(), from, to, getCurrentVenue())
       : window.KiwiSalesMath.statsFromSales(realSalesList(), realRefundList(), from, to);
     totals.receivable += deliveryDue(from, to);
     return totals;

@@ -1082,7 +1082,10 @@
       return fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store',
         credentials: 'include', signal: controller ? controller.signal : undefined });
     }).then(function (r) {
-      if (!r || !r.ok) throw new Error(r && (r.status === 401 || r.status === 403) ? 'auth' : 'http');
+      if (!r || !r.ok) {
+        var error = new Error(r && (r.status === 401 || r.status === 403) ? 'auth' : 'http');
+        error.status = r && r.status; throw error;
+      }
       return r.json();
     });
     var timeout = new Promise(function (_resolve, reject) {
@@ -1134,7 +1137,7 @@
     var oneShot = !!(options && options.oneShot);
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
     var drainBackfill = false;
-    var lastTenant = null;
+    var lastTenant = null, covered = null, coveredKey = null;
     var bound = [];
     var state = { phase: 'loading', merchant: merchant(), pages: 0, rows: 0, cursor: 0,
       startedAt: Date.now(), lastPageAt: 0, completedAt: 0, error: null };
@@ -1166,9 +1169,43 @@
       var tenant = merchant();
       if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
       if (!tenant) { busy = false; arm(); return; }
-      readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since + (backfill || oneShot ? '&limit=500' : ''))
+      var helper = window.KiwiSalesReconcile;
+      var venue = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+      var boundary = helper && helper.coverage(venue);
+      var coverageKey = boundary != null ? helper.scope(venue) + ':' + boundary : null;
+      var request;
+      if (coverageKey) {
+        if (!covered || coveredKey !== coverageKey || tenant !== covered.tenant) {
+          feedComplete[tenant] = false;
+          covered = helper.create(tenant, venue, readFeed, function () { return merchant() === tenant; });
+          covered.tenant = tenant; coveredKey = coverageKey;
+        }
+        request = covered.cycle().then(function (replay) { return { covered: replay }; });
+      } else { if (covered) { since = 0; backfill = true; } covered = null; coveredKey = null;
+        request = readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since + (backfill || oneShot ? '&limit=500' : ''));
+      }
+      request
         .then(function (data) {
           if (stopped) return;
+          if (data && data.covered) {
+            var replay = data.covered, proof = replay.result;
+            if (merchant() !== tenant || !snapshotVenue(tenant)) throw new Error('scope');
+            var verified = window.KiwiSales.reconcile(venue, proof.rows, proof);
+            proof.pending = Math.max(verified.pending, proof.pending);
+            replay.commit();
+            feedSales = feedSales.filter(function (row) { return row.tenant !== tenant; });
+            Object.keys(feedSeen).forEach(function (key) { if (key.indexOf(tenant + '#') === 0) delete feedSeen[key]; });
+            accumulateFeed(proof.rows, tenant);
+            feedComplete[tenant] = true; since = proof.cursor; backfill = false;
+            lastSync = Date.now(); lastFeedError = '';
+            state.phase = 'complete'; state.completedAt = Date.now(); state.lastPageAt = lastSync;
+            state.cursor = since; state.rows = proof.rows.length; state.pages++;
+            state.pending = Math.max(verified.pending, proof.pending); state.coverage = proof.from;
+            state.fence = proof.fence; state.changeFence = proof.changeFence; state.error = null;
+            report();
+            if (!oneShot) { try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant, proof: proof } })); } catch (_) {} }
+            return;
+          }
           // A response started under the previous store cannot advance this
           // store's cursor or be described as a fresh successful read.
           if (merchant() !== tenant || (data && data.merchant && data.merchant !== tenant)) throw new Error('scope');
@@ -1227,6 +1264,10 @@
         })
         .catch(function (err) {
           if (stopped) return;
+          if (coverageKey) {
+            feedComplete[tenant] = false;
+            if (err && err.status === 400 && covered) covered.reset();
+          }
           lastFeedError = String(err && err.message || 'network-json');
           drainBackfill = false;
           if (!oneShot) return;
@@ -1368,6 +1409,7 @@
 
   function applyVoids(list, tenant) {
     if (!list) return;
+    if (window.KiwiSalesReconcile?.coverage() != null && list.length) window.KiwiSalesReconcile.invalidate(tenant);
     var cursors = [], refs = [], ids = [], events = [];
     list.forEach(function (v) {
       if (!v) return;
@@ -1424,6 +1466,8 @@
     (sales || []).forEach(function (s) {
       var cur = Number(s && s.cursor) || 0;
       if (!cur) return;
+      var boundary = window.KiwiSalesReconcile?.coverage();
+      if (boundary != null && s.ts < boundary) return;
       var k = tenant + '#' + cur;
       if (feedSeen[k]) return;
       feedSeen[k] = 1;
@@ -1432,6 +1476,7 @@
     });
   }
   function bridgeToStore() {
+    if (window.KiwiSalesReconcile?.coverage() != null) return;
     var KV = window.KiwiVenue;
     if (!window.KiwiSales || !window.KiwiSales.add) return;
     /* Real session OR user-created venue. isCustom() alone dropped every sale
@@ -1554,6 +1599,12 @@
   function verifySnapshotLedger(tenant) {
     var vid = snapshotVenue(tenant);
     if (!vid || !window.KiwiSales || !window.KiwiSales.list) throw new Error('ledger');
+    var proof = window.KiwiSalesReconcile?.proof(vid);
+    if (window.KiwiSalesReconcile?.coverage(vid) != null) {
+      if (!proof) throw new Error('ledger');
+      return Object.assign({ venue: vid }, window.KiwiSalesReconcile.verify(window.KiwiSales.list(vid),
+        window.KiwiRefunds.list(vid), proof.rows, proof));
+    }
     var expected = feedSales.filter(function (row) { return row.tenant === tenant; }).map(function (row) { return row.s; });
     function cents(s) { return s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount) * 100); }
     function matches(rows, sign) {
@@ -1580,7 +1631,7 @@
       if (state.phase === 'complete') {
         try {
           if (!snapshotVenue(state.merchant)) throw new Error('venue');
-          applyVoids(snapshotVoids, state.merchant);
+          if (window.KiwiSalesReconcile?.coverage() == null) applyVoids(snapshotVoids, state.merchant);
           bridgeToStore();
           state.venue = verifySnapshotLedger(state.merchant).venue;
         } catch (err) {
@@ -1627,7 +1678,8 @@
       'invalid-feed': 'Réponse du journal invalide', 'invalid-sales': 'Ventes illisibles',
       timeout: 'Le serveur ne répond pas, réessayez', cursor: 'Pagination invalide', ledger: 'Journal local non vérifié', identity: 'Identité non confirmée',
       venue: 'Journal reçu · établissement en attente de résolution' };
-    var progress = s.pages + ' page(s) · ' + s.rows + ' écriture(s) reçue(s)';
+    var progress = s.pages + ' page(s) · ' + s.rows + ' écriture(s) reçue(s)'
+      + (s.pending ? ' · ' + s.pending + ' écriture(s) locale(s) en attente' : '');
     var message = s.phase === 'complete'
       ? 'Instantané complet · ' + progress + ' · reçu le ' + new Date(s.completedAt).toLocaleString() + ' · hors direct'
       : s.phase === 'loading' ? 'Chargement du journal · ' + progress + ' · chiffres indisponibles'

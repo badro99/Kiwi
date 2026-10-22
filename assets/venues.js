@@ -4200,11 +4200,15 @@
    * replayed the complete authoritative feed, cursor-backed rows absent from
    * that feed cannot belong to this store. Local/manual rows have no cursor and
    * remain untouched. */
-  function salesRetainCursors(id, cursors) {
+  function salesRetainCursors(id, cursors, proof) {
     id = id || currentVenue;
+    if (!proof && window.KiwiSalesReconcile?.coverage(id) != null) return 0;
     const keep = new Set((cursors || []).map(Number).filter(Boolean));
     const list = salesList(id);
-    const clean = list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
+    const clean = proof
+      ? (window.KiwiSalesReconcile?.coverage(id) === proof.from && window.KiwiSalesReconcile.scope(id) === proof.scope
+        ? window.KiwiSalesReconcile.retain(list, cursors, proof) : list)
+      : list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
     const gone = list.length - clean.length;
     if (!gone) return 0;
     salesWrite(id, clean);
@@ -4246,17 +4250,37 @@
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return true;
   }
-  function refundsRetainCursors(id, cursors) {
+  function refundsRetainCursors(id, cursors, proof) {
     id = id || currentVenue;
+    if (!proof && window.KiwiSalesReconcile?.coverage(id) != null) return 0;
     const keep = new Set((cursors || []).map(Number).filter(Boolean));
     const rows = refundsList(id);
-    const clean = rows.filter((r) => !(r && r.cursor) || keep.has(Number(r.cursor)));
+    const clean = proof
+      ? (window.KiwiSalesReconcile?.coverage(id) === proof.from && window.KiwiSalesReconcile.scope(id) === proof.scope
+        ? window.KiwiSalesReconcile.retain(rows, cursors, proof) : rows)
+      : rows.filter((r) => !(r && r.cursor) || keep.has(Number(r.cursor)));
     const gone = rows.length - clean.length;
     if (gone && refundsWrite(id, clean)) {
       refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
       salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     }
     return gone;
+  }
+  function salesReconcile(id, raw, proof) {
+    const helper = window.KiwiSalesReconcile;
+    if (!helper || helper.coverage(id) !== proof.from || helper.scope(id) !== proof.scope) throw new Error('scope');
+    const sales = helper.reconcile(salesList(id), raw, proof, 1, salesEntry);
+    const refunds = helper.reconcile(refundsList(id), raw, proof, -1, row => ({
+      ts: row.ts, amount: row.amount, method: row.method, kind: 'refund',
+      label: row.label || 'Remboursement', ref: row.ref || '', cursor: row.cursor, saleId: row.saleId,
+    }));
+    const salesChanged = JSON.stringify(sales) !== JSON.stringify(salesList(id));
+    const refundsChanged = JSON.stringify(refunds) !== JSON.stringify(refundsList(id));
+    if ((salesChanged && !salesWrite(id, sales)) || (refundsChanged && !refundsWrite(id, refunds))) throw new Error('ledger');
+    const verified = helper.verify(salesList(id), refundsList(id), raw, proof);
+    if (salesChanged || refundsChanged) salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    if (refundsChanged) refundSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    return verified;
   }
   /* Bornes FACULTATIVES. Sans elles le total reste ce qu'il a toujours été —
    * tout l'historique — parce que plusieurs appelants veulent précisément ça :
@@ -4285,6 +4309,8 @@
    * sales while the KPI band showed today. */
 
   window.KiwiSales = {
+    scope: id => SALES_KEY(id).replace(/^kiwiSales:/, ''),
+    reconcile: salesReconcile,
     add: salesAdd,
     addMany: salesAddMany,
     annotate: salesAnnotate,

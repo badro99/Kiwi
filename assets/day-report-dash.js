@@ -385,7 +385,24 @@
     });
     return { net: Math.round(net * 100) / 100, gross: Math.round(gross * 100) / 100, txns: txns };
   }
-  function feedIsAuthoritative() {
+  function historyNotice() {
+    return T({ fr: 'Détails indisponibles hors ligne / chargement', en: 'Details unavailable offline / loading', ar: 'التفاصيل غير متاحة دون اتصال / جار التحميل' });
+  }
+  function archivedDay(day) {
+    var helper = window.KiwiSalesReconcile, d = DR();
+    var boundary = helper && helper.coverage();
+    if (boundary == null || !d) return false;
+    return d.dayBounds(day).to <= boundary;
+  }
+  function historicalReport(day) {
+    var d = DR(), bounds = d.dayBounds(day), S = window.KiwiSalesSummary;
+    var summary = S && S.get(bounds.from, bounds.to), stats = null;
+    if (summary) { try { stats = window.KiwiSalesMath.statsFromSummary(summary.days, summary.splits, bounds.from, bounds.to); } catch (_) {} }
+    return { day: day, historical: true, partial: !stats, detailsUnavailable: true,
+      net: stats ? stats.revenue : null, gross: stats ? stats.gross : null, txns: stats ? stats.count : null };
+  }
+  function feedIsAuthoritative(day) {
+    if (day && archivedDay(day)) return false;
     try {
       var status = window.KiwiLive && window.KiwiLive.status && window.KiwiLive.status();
       return !!(status && status.on && status.backfillComplete);
@@ -400,7 +417,7 @@
      retrait) ne prouve rien — synchronisation en retard, historique élagué —
      et l'instantané garde alors le dernier mot. */
   function snapMissesSales(snap, day) {
-    if (!snap) return false;
+    if (!snap || archivedDay(day)) return false;
     var f = feedTotals(day);
     if (!f) return false;
     return f.txns > (+snap.txns || 0) || f.gross > (+snap.gross || 0) + 0.005;
@@ -432,7 +449,8 @@
     var d = DR(); if (!d) return null;
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) return snap;
+    if (archivedDay(day)) return snap || historicalReport(day);
+    if (snap && !feedIsAuthoritative(day) && !snapMissesSales(snap, day)) return snap;
     var built = null;
     try {
       built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
@@ -459,7 +477,11 @@
     var d = DR(); if (!d) return { net: 0, gross: 0, txns: 0, has: false, closed: false };
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) {
+    if (archivedDay(day) && !snap) {
+      var history = historicalReport(day);
+      return { net: history.net, gross: history.gross, txns: history.txns, has: !!history.txns, closed: false, partial: history.partial };
+    }
+    if (snap && !feedIsAuthoritative(day) && !snapMissesSales(snap, day)) {
       return {
         net: +snap.net || 0, gross: +snap.gross || 0, txns: +snap.txns || 0,
         has: !!(snap.txns || (snap.refunds && snap.refunds.count)),
@@ -564,12 +586,13 @@
     var rows = days.map(function (day) { return { day: day, t: totalsFor(day) }; });
     var max = rows.reduce(function (m, r) { return Math.max(m, r.t.net); }, 0);
     var sum = rows.reduce(function (m, r) { return m + r.t.net; }, 0);
+    var partial = rows.some(function (r) { return r.t.partial; });
 
     var bars = rows.map(function (r) {
       var dd = dayDate(r.day);
       var pct = max > 0 ? Math.max(4, Math.round(r.t.net / max * 100)) : 0;
       var cls = 'kdr-sd' + (r.day === sel ? ' is-sel' : '') + (r.t.has ? '' : ' is-void');
-      var tip = shortLabel(r.day) + ' · ' + (r.t.has
+      var tip = shortLabel(r.day) + ' · ' + (r.t.partial ? historyNotice() : r.t.has
         ? money(r.t.net) + ' ' + CUR() + ' · ' + r.t.txns + ' ' + T(L.tx)
         : T(L.noSale));
       return '<button type="button" class="' + cls + '" data-kdr="day" data-day="' + esc(r.day) + '"'
@@ -581,7 +604,7 @@
 
     return '<div class="kdr-strip"><div class="kdr-strip-h">'
       + '<span>' + esc(T(L.history).replace('{n}', STRIP_DAYS)) + '</span>'
-      + '<em>' + esc(money(sum)) + ' ' + CUR() + '</em></div>'
+      + '<em>' + esc(partial ? '…' : money(sum)) + ' ' + CUR() + '</em></div>'
       + '<div class="kdr-bars">' + bars + '</div></div>';
   }
 
@@ -671,6 +694,9 @@
       + '<div class="kdr-top">' + cards + '</div></div>';
   }
 
+  if (window.KiwiSalesSummary?.subscribe) window.KiwiSalesSummary.subscribe(function () {
+    if (current && archivedDay(current) && document.querySelector('.dash-genpage [data-kdr]')) render(current);
+  });
   function render(day) {
     ensureStyles();
     idxMemo = null;
@@ -702,7 +728,7 @@
       + '<div data-kdr-day-selector></div>'
       + '<div class="kdr-day"><b>' + esc(dayLabel(current)) + '</b>' + (rel ? ' <span>· ' + esc(rel) + '</span>' : '') + '</div>'
       + '<div class="kdr-spacer"></div>';
-    if (hasSales) {
+    if (hasSales && !r.historical) {
       var chip = closed ? 'is-closed' : (isToday ? 'is-live' : 'is-open');
       var chipTxt = closed ? T(L.closed) : (isToday ? T(L.inProg) : T(L.notClosed));
       nav += '<span class="kdr-chip ' + chip + '">' + esc(chipTxt) + '</span>'
@@ -713,6 +739,16 @@
     nav += '</div>';
 
     var strip = stripHtml(current, todayD);
+    if (r && r.historical) {
+      var notice = historyNotice();
+      var historicalPage = window.Kiwi.appPage(NAV, { title: T(L.title), subtitle: dayLabel(current),
+        body: nav + strip + '<div class="kdr-empty" role="status">' + esc(notice) +
+          (r.partial ? '' : '<p>' + esc(T(L.net)) + ': ' + money(r.net) + ' · ' + esc(T(L.gross)) + ': ' + money(r.gross) + '</p>') + '</div>' });
+      bind(historicalPage, r);
+      kitPublish({ day: current, dayLabel: dayLabel(current), empty: notice,
+        emptyHint: r.partial ? '' : T(L.net) + ': ' + money(r.net) + ' · ' + T(L.gross) + ': ' + money(r.gross) });
+      return historicalPage;
+    }
 
     /* ── la journée vide ─────────────────────────────────────────────────
        Elle garde la frise : c'est justement là qu'on a besoin de voir où sont

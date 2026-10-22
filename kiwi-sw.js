@@ -110,7 +110,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=56',
+  '/assets/venues.js?v=57',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=7',
   '/assets/trade-workspaces.js?v=10',
@@ -149,8 +149,8 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/sales-history.js?v=3',
-  '/assets/dateRange.js?v=88',
+  '/assets/sales-history.js?v=4',
+  '/assets/dateRange.js?v=89',
   '/assets/mobile-nav.js?v=7',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -182,7 +182,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
   '/assets/operations-ui.js?v=23',
-  '/assets/live-link.js?v=68',
+  '/assets/live-link.js?v=69',
   '/assets/channel-sales.js?v=4',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -190,7 +190,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=24',
   '/assets/report.js?v=6',
-  '/assets/day-report-dash.js?v=34',
+  '/assets/day-report-dash.js?v=35',
   '/assets/day-report-export.js?v=12',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',

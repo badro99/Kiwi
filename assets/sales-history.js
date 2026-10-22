@@ -108,6 +108,7 @@
 (function () {
   'use strict';
   const tenants = new Map(), listeners = new Set();
+  const generations = new Map();
   const PREFIX = 'kiwiSalesSummary:v1:', LIMIT = 800, MAX_BYTES = 180000;
   const merchant = () => window.KiwiLive?.merchant?.() || '';
   const clock = () => window.KiwiDayReport;
@@ -115,7 +116,9 @@
     // No marker means all local rows remain authoritative, including refunds
     // before the first sale. Feed completion alone must not change this path.
     try {
-      const raw = localStorage.getItem('kiwiSalesCoverage:' + (venueId || merchant()));
+      const scope = window.KiwiSales?.scope ? window.KiwiSales.scope(venueId) : (venueId || merchant());
+      if (!scope) return null;
+      const raw = localStorage.getItem('kiwiSalesCoverage:' + scope);
       const n = Number(raw);
       return raw !== null && Number.isFinite(n) && n > 0 ? n : null;
     } catch (_) { return null; }
@@ -141,6 +144,7 @@
     while (s.days.size > LIMIT) s.days.delete(s.days.keys().next().value);
   }
   async function load(m, s, bounds, stable) {
+    const generation = generations.get(m);
     bounds.forEach(b => s.pending.add(b.from));
     let timer;
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
@@ -152,6 +156,7 @@
         new Promise((_, reject) => { timer = setTimeout(() => { controller?.abort(); reject(new Error('timeout')); }, 12000); })
       ]);
       if (data.merchant !== m || !Array.isArray(data.days) || !Array.isArray(data.splits)) throw new Error('scope');
+      if (generation !== generations.get(m)) return;
       for (const b of bounds) {
         const day = data.days.find(d => d.from === b.from && d.to === b.to);
         if (!day || !day.methods || !day.whole || !day.refunds || !day.hours) throw new Error('shape');
@@ -202,7 +207,7 @@
     if (boundary === null || from >= boundary) return M.statsFromSales(sales, refunds, from, to);
     const end = Math.min(to, boundary), summary = get(from, end);
     const fallback = () => Object.assign(M.statsFromSales(sales, refunds, from, to), { partial: true });
-    if (!summary) return fallback();
+    if (!summary || window.KiwiSalesReconcile?.proof(venueId)?.pending > 0) return fallback();
     try {
       const old = M.statsFromSummary(summary.days, summary.splits, from, end);
       const recent = M.statsFromSales(sales, refunds, Math.max(from, boundary), to);
@@ -212,6 +217,12 @@
     } catch (_) { return fallback(); } // Partial-day windows cannot use daily totals.
   }
   window.KiwiSalesSummary = Object.freeze({ coverageStart, get, stats,
+    invalidate(m) {
+      generations.set(m, (generations.get(m) || 0) + 1);
+      tenants.delete(m);
+      try { localStorage.removeItem(PREFIX + m); } catch (_) {}
+      if (merchant() === m) listeners.forEach(fn => { try { fn(); } catch (_) {} });
+    },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } });
 })();
 
@@ -221,6 +232,7 @@
   const cache = new Map(), pending = new Map(), MAX_SPAN = 400 * 86400000 + 7200000;
   const merchant = () => window.KiwiLive?.merchant?.() || '';
   const copy = rows => JSON.parse(JSON.stringify(rows));
+  const generations = new Map();
   async function read(url) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     let timer;
@@ -262,7 +274,9 @@
       const key = JSON.stringify([m, from, to]), hit = cache.get(key);
       if (hit && Date.now() - hit.at < 60000) return Promise.resolve(copy(hit.rows));
       if (pending.has(key)) return pending.get(key).then(rows => rows === null ? null : copy(rows));
+      const generation = generations.get(m);
       const task = collect(m, from, to).then(rows => {
+        if (generation !== generations.get(m)) return null;
         if (rows !== null && merchant() === m) {
           cache.delete(key); cache.set(key, { rows, at: Date.now() });
           while (cache.size > 4) cache.delete(cache.keys().next().value);
@@ -274,5 +288,192 @@
       return task.then(rows => rows === null ? null : copy(rows));
     } catch (_) { return Promise.resolve(null); }
   }
-  window.KiwiSalesWindow = Object.freeze({ fetchRaw });
+  window.KiwiSalesWindow = Object.freeze({ fetchRaw, invalidate(m) {
+    generations.set(m, (generations.get(m) || 0) + 1);
+    for (const key of cache.keys()) if (JSON.parse(key)[0] === m) cache.delete(key);
+  } });
+})();
+
+/* Coverage-gated reconciliation. A failed replay never publishes its prefix. */
+(function () {
+  'use strict';
+  const proofs = new Map();
+  const cents = row => row.amountCents != null ? row.amountCents : Math.round(row.amount * 100);
+  const id = row => String(row.saleId || row.id || '');
+  function scope(venue) { return window.KiwiSales?.scope?.(venue) || ''; }
+  function coverage(venue) {
+    const key = scope(venue);
+    if (!key) return null;
+    try {
+      const raw = localStorage.getItem('kiwiSalesCoverage:' + key), n = Number(raw);
+      return raw !== null && Number.isSafeInteger(n) && n > 0 ? n : null;
+    } catch (_) { return null; }
+  }
+  function invalidate(merchant) {
+    // A tombstone has no timestamp; a revision may move the original day.
+    // Invalidate only this merchant, including in-flight historical reads.
+    window.KiwiSalesSummary?.invalidate?.(merchant);
+    window.KiwiSalesWindow?.invalidate?.(merchant);
+  }
+  function inside(row, proof) {
+    return Number.isSafeInteger(row?.cursor) && row.cursor > 0 && row.cursor <= proof.fence &&
+      row.ts >= proof.from && row.ts < proof.to;
+  }
+  function pending(row, debt) {
+    return !row?.cursor || row.pending || row.syncPending || debt.has(id(row));
+  }
+  function retain(rows, cursors, proof) {
+    const keep = new Set(cursors.map(Number)), debt = new Set(proof.pendingIds || []);
+    return rows.filter(row => pending(row, debt) || !inside(row, proof) || keep.has(Number(row.cursor)));
+  }
+  function reconcile(rows, raw, proof, sign, make) {
+    const debt = new Set(proof.pendingIds || []);
+    const wanted = raw.filter(row => cents(row) * sign > 0);
+    const ids = new Set(raw.map(id)), cursors = new Set(raw.map(row => row.cursor));
+    // The proved interval may remove stale server rows, never manual/upload debt.
+    const kept = rows.filter(row => pending(row, debt) ||
+      (!inside(row, proof) && !ids.has(id(row)) && !cursors.has(row.cursor) &&
+       !(row.ts >= proof.from && (proof.removed || []).some(r => r.cursor === row.cursor && id(r) === id(row)))));
+    for (const row of wanted) {
+      if (row.ts < proof.from || debt.has(id(row))) continue;
+      kept.push(make(Object.assign({}, row, { amount: Math.abs(cents(row)) / 100,
+        saleId: id(row), ref: row.orderRef || row.ref || '', receiptRef: row.receiptRef || row.ref || '' })));
+    }
+    return kept;
+  }
+  function verify(sales, refunds, raw, proof) {
+    const debt = new Set(proof.pendingIds || []);
+    let count = 0;
+    function matches(rows, sign) {
+      count += rows.filter(row => pending(row, debt)).length;
+      const actual = rows.filter(row => !pending(row, debt) && inside(row, proof));
+      const expected = raw.filter(row => inside(row, proof) && cents(row) * sign > 0 && !debt.has(id(row)));
+      const saved = new Map(actual.map(row => [row.cursor, row]));
+      return saved.size === actual.length && actual.length === expected.length && expected.every(row => {
+        const entry = saved.get(row.cursor);
+        return entry && id(entry) === id(row) && entry.ts === row.ts && cents(entry) === cents(row) * sign;
+      });
+    }
+    if (!matches(sales, 1) || !matches(refunds, -1)) throw new Error('ledger');
+    return { pending: count };
+  }
+  function create(merchant, venue, read, active) {
+    const from = coverage(venue), ledgerScope = scope(venue);
+    if (from === null || !ledgerScope) throw new Error('coverage');
+    const checkpointKey = 'kiwiSalesChangeCheckpoint:' + ledgerScope;
+    let committed = null;
+    function check() {
+      if (!active() || (window.KiwiVenue?.getVenue && window.KiwiVenue.getVenue() !== venue) ||
+          scope(venue) !== ledgerScope || coverage(venue) !== from) throw new Error('scope');
+    }
+    function sale(row) {
+      if (!row || !id(row) || !Number.isSafeInteger(row.cursor) || row.cursor <= 0 ||
+          !Number.isSafeInteger(row.ts) || row.ts <= 0 || !Number.isSafeInteger(cents(row))) throw new Error('invalid-sales');
+    }
+    async function cycle() {
+      check();
+      const next = committed ? Object.assign({}, committed, { rows: new Map(committed.rows), removed: [] }) :
+        { from, to: Date.now() + 7200000, fence: null, changeFence: null, cursor: 0, rows: new Map(), removed: [], checkpoint: null };
+      let pages = 0, changed = false;
+      const base = '/api/feed?merchant=' + encodeURIComponent(merchant);
+      async function page(query) {
+        if (++pages > 200) throw new Error('cursor');
+        const data = await read(base + query); check();
+        if (!data || data.error || data.merchant !== merchant) throw new Error('scope');
+        return data;
+      }
+      function upsert(row) {
+        sale(row);
+        for (const [key, old] of next.rows) if (old.cursor === row.cursor || id(old) === id(row)) next.rows.delete(key);
+        if (row.ts >= from && !row.voided) next.rows.set(id(row), row);
+      }
+      function completion(data) {
+        if (typeof data.complete !== 'boolean' || (data.complete ? data.next !== null : typeof data.next !== 'string' || !data.next)) throw new Error('cursor');
+      }
+      async function changes(position) {
+        let token = String(position), seen = new Set(), seq = /^\d+$/.test(String(position)) ? Number(position) : -1;
+        do {
+          const data = await page('&changes=1&afterChange=' + encodeURIComponent(token) + '&limit=500');
+          completion(data);
+          if (!Array.isArray(data.changes) || data.changes.length > 500 || typeof data.checkpoint !== 'string' || !data.checkpoint ||
+              (!data.complete && (data.next !== data.checkpoint || data.next === token))) throw new Error('cursor');
+          for (const row of data.changes) {
+            if (!Number.isSafeInteger(row.seq) || row.seq <= seq) throw new Error('cursor');
+            seq = row.seq; changed = true;
+            next.removed.push(row);
+            if (row.deleted === true) {
+              if (!id(row) || !Number.isSafeInteger(row.cursor) || row.cursor <= 0) throw new Error('invalid-sales');
+              for (const [key, old] of next.rows) if (id(old) === id(row) && old.cursor === row.cursor) next.rows.delete(key);
+            } else {
+              if (typeof row.voided !== 'boolean') throw new Error('invalid-sales');
+              upsert(row);
+            }
+          }
+          next.checkpoint = data.checkpoint;
+          if (data.complete) break;
+          if (seen.has(data.next)) throw new Error('cursor');
+          seen.add(data.next); token = data.next;
+        } while (true);
+      }
+      if (!committed) {
+        let after = '', lastTs = from, lastCursor = 0, seen = new Set(), cursors = new Set(), identities = new Set();
+        do {
+          const data = await page('&window=1&from=' + from + '&to=' + next.to + '&limit=500' + (after ? '&after=' + encodeURIComponent(after) : ''));
+          completion(data);
+          if (data.from !== from || data.to !== next.to || !Array.isArray(data.sales) || data.sales.length > 500 ||
+              !Number.isSafeInteger(data.fence) || data.fence < 0 || !Number.isSafeInteger(data.changeFence) || data.changeFence < 0) throw new Error('invalid-feed');
+          if (next.fence === null) { next.fence = data.fence; next.changeFence = data.changeFence; next.cursor = data.fence; }
+          if (next.fence !== data.fence || next.changeFence !== data.changeFence) throw new Error('cursor');
+          for (const row of data.sales) {
+            sale(row);
+            if (row.ts < from || row.ts >= next.to || row.cursor > next.fence || cursors.has(row.cursor) || identities.has(id(row)) ||
+                row.ts < lastTs || (row.ts === lastTs && row.cursor <= lastCursor)) throw new Error('cursor');
+            cursors.add(row.cursor); identities.add(id(row)); lastTs = row.ts; lastCursor = row.cursor; upsert(row);
+          }
+          if (data.complete) break;
+          if (!data.sales.length || seen.has(data.next)) throw new Error('cursor');
+          seen.add(data.next); after = data.next;
+        } while (true);
+        // Replay the offline checkpoint too, so archived corrections invalidate caches.
+        let saved = null;
+        try { saved = localStorage.getItem(checkpointKey); } catch (_) {}
+        await changes(saved || next.changeFence);
+      }
+      // Inserts after F, including backdated inserts during bootstrap.
+      do {
+        const data = await page('&since=' + next.cursor + '&limit=500');
+        if (!Array.isArray(data.sales) || !Array.isArray(data.voided) || !Number.isSafeInteger(data.cursor)) throw new Error('invalid-feed');
+        const limit = Number.isInteger(data.limit) && data.limit >= 50 && data.limit <= 500 ? data.limit : 50;
+        if (data.sales.length > limit) throw new Error('invalid-feed');
+        let cursor = next.cursor;
+        for (const row of data.sales) { sale(row); if (row.cursor <= cursor) throw new Error('cursor'); cursor = row.cursor; upsert(row); }
+        if (data.cursor !== cursor) throw new Error('cursor');
+        next.cursor = cursor;
+        if (data.sales.length < limit) break;
+      } while (true);
+      // Also closes mutations between the bootstrap change drain and rowid catch-up.
+      await changes(next.checkpoint);
+      check();
+      const offline = window.KiwiOffline;
+      // Do not reconcile away rows when the device cannot inspect its upload debt.
+      if (!offline?.list) throw new Error('pending-proof');
+      const debt = await offline.list('sale', merchant); check();
+      if (!Array.isArray(debt)) throw new Error('pending-proof');
+      next.pendingIds = debt.map(row => String(row.saleId || row.id || row.payload?.id || ''));
+      if (next.pendingIds.some(key => !key)) throw new Error('pending-proof');
+      const result = Object.assign({}, next, { rows: [...next.rows.values()], scope: ledgerScope,
+        pending: next.pendingIds.length, changed, bootstrap: !committed });
+      return { result, commit() {
+        check(); committed = next;
+        proofs.set(ledgerScope, result);
+        if (changed || result.bootstrap) invalidate(merchant);
+        // Caller persists only after ledger effects and verification have succeeded.
+        localStorage.setItem(checkpointKey, next.checkpoint);
+      } };
+    }
+    return { cycle, reset() { committed = null; proofs.delete(ledgerScope); invalidate(merchant);
+      try { localStorage.removeItem(checkpointKey); } catch (_) {} } };
+  }
+  window.KiwiSalesReconcile = Object.freeze({ scope, coverage, invalidate, inside, retain, reconcile, verify, create,
+    proof(venue) { return proofs.get(scope(venue)); } });
 })();

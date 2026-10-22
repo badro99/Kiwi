@@ -1,6 +1,6 @@
 # Sales history: bounded reads and slice B design
 
-Status: prerequisite only. This change does not trim data or alter reconciliation. References below identify current functions; client behavior is proposed.
+Status: B2 reconciliation is coverage-gated. No production marker writer or trimming ships here. Without a marker the legacy feed path is unchanged.
 
 ## Server contracts delivered through B2a
 
@@ -41,7 +41,7 @@ is logged above CF, so catch-up repairs it. No writer can omit an application ev
 
 Legacy rowid/byDay and `voids=1` without afterVoid keep their exact response bytes.
 The earlier `afterVoid` stream remains for existing tooling/tests, superseded for
-reconciliation because it cannot represent restoration. Index 0005 is unchanged. No client changes or production migration ships here.
+reconciliation because it cannot represent restoration. Index 0005 is unchanged. Server migration deployment remains owner-managed.
 
 ## Client algorithm for slice B
 
@@ -57,6 +57,13 @@ reconciliation because it cannot represent restoration. Index 0005 is unchanged.
    entries. On 400 discard the proof, invalidate only that scope's history caches,
    and restart bootstrap; do not erase merchant ledgers or other tenant keys.
 Before deletion, choose a server-defined upper time bound covering accepted sales. `KiwiSalesWindow.fetchRaw` stays unchanged (20 pages, memory-only).
+
+Implementation: `KiwiSalesReconcile` in sales-history.js stages the complete replay
+before applying it. Scope comes from `KiwiSales.scope()` (the exact SALES_KEY suffix).
+Checkpoint key: `kiwiSalesChangeCheckpoint:<scope>`, written after ledger verification.
+A scoped offline debt read is required; missing/unavailable debt proof stops reconciliation.
+Historical cache invalidation covers the merchant: tombstones lack dates and revisions can move days.
+The bootstrap upper bound is now +2 hours; the server-bound policy remains a prerequisite to deletion.
 
 ## Reconciliation changes for slice B
 
@@ -116,4 +123,4 @@ scope resolver at the same time. Never wipe other namespaces or trim demo ledger
 Approved: fenced bootstrap and paginated changes before deletion; any unconfirmed
 old sale/refund defers the entire scope; no Web Locks means no trim. Backdated
 pending entries remain visibly partial until confirmation; never rewind coverage. Remaining: which server upper-time bound should slice B use? Atomic change
-logging now closes the restoration/revision gap; B2 client wiring is still pending.
+logging now closes the restoration/revision gap; B2 client wiring ships only behind existing coverage markers.

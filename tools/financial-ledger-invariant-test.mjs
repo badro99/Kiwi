@@ -13,8 +13,8 @@ assert.doesNotMatch(interactive, /KiwiSales\.add\s*\(/, 'dashboard must never cr
 assert.doesNotMatch(hotel, /KiwiSales\.add\s*\(/, 'hotel must never create browser-only money');
 assert.match(interactive, /KiwiLive\?\.postSale\?\.\(sale\)/, 'dashboard money enters central ledger');
 assert.match(hotel, /live\.postSale\(/, 'hotel money enters central ledger');
-assert.match(report, /feedIsAuthoritative\(\)/, 'daily report recognizes completed central feed');
-assert.match(report, /snap && !feedIsAuthoritative\(\)/, 'a stale Z snapshot cannot override completed ledger totals');
+assert.match(report, /feedIsAuthoritative\(day\)/, 'daily report recognizes completed central feed');
+assert.match(report, /snap && !feedIsAuthoritative\(day\)/, 'a stale Z snapshot cannot override completed ledger totals');
 assert.match(caisse, /reconcileJournalSales\(\)/, 'close reconciles the service before clearing');
 assert.match(live, /WRITE-AHEAD COPY/, 'payment queue has synchronous crash protection');
 
