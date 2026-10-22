@@ -30,7 +30,7 @@ flow checks stored tender methods, lines, tip_cents, revenue, closed visits and
 paid flags, including repeated taps. Summary tests use the real summarize() on
 D1 rows and independently sum expected cents, tips and day buckets.
 
-## 30 strict properties
+## Strict properties (33 since WM-5 was fixed)
 
 - Equal splits conserve cents, final part absorbs the remainder; sub-cent parts
   cannot be launched. Item lines sum to each part and to each original dish,
@@ -96,6 +96,26 @@ D1 rows and independently sum expected cents, tips and day buckets.
   per-unit net rounding rule is preserved (not replaced with discount rounding).
   The real priceOrder property was red before this shared browser/server fix.
 
+- sale.js settleCoveredOrders / serveur-app keepServiceBillOpen (WM-5, fixed
+  22 October 2026): a course ordered after the bill was taken (a dessert between
+  two parts of a split, or while a queued payment was still travelling) was
+  stamped paid with the rest of the visit and the table closed. Production,
+  read-only: Pasta Corner, table 1 on 24 September, 202 MAD of dishes marked
+  paid with no receipt; table 11 on 12 September looks the same (119 MAD); a
+  35 MAD course on table 8 on 2 October was probably rung again as takeaway.
+  Now, when the visit's receipts pay exactly its oldest orders (to the
+  centime), those are settled and the later ones stay payable: the table stays
+  open, the answer carries billOpen, remainingCents and settledOrders, and the
+  phone keeps the table at « addition demandée » with only the remainder and a
+  fresh payment id (the old one would be deduplicated as the same sale). Amounts
+  decide, not device clocks. Any other shortfall (a discount the till did not
+  file, a payment never linked to the visit) settles exactly as before. This
+  takes the « shared remainder » answer to the question WM-5 asked; freezing
+  courses once a payment starts remains possible on top of it. Red witnesses:
+  the WM-5 split case, a queued full payment followed by a course, and the
+  phone billing the server remainder; turning the guard or the phone's removal
+  of settled orders off makes each red.
+
 ## Known contracts requiring owner decisions
 
 - WM-3, [1]: closeTable with one unpaid course succeeds without force:true.
@@ -107,14 +127,6 @@ D1 rows and independently sum expected cents, tips and day buckets.
   zero on its shift card. That card is a device-local gamification tally, not a
   server-derived staff ledger. Which employee owns shared-table payments and how
   should multiple devices share a shift? A server attribution contract is needed.
-- WM-5, [1]: phone A prepares a 50 MAD equal split, takes the first 25 MAD;
-  phone B adds an accepted 50 MAD course; A takes its final 25 MAD. The visit
-  closes and both orders are stamped paid although 50 MAD is still owed.
-  This is reachable through ordinary course/split screens, without a forged
-  payload. Completion trusts receipt count rather than outstanding bill money.
-  Should additional courses be frozen once a payment starts, or should a shared
-  remainder create another flow? Discount/force proof also needs a contract;
-  accepting already-taken money must remain distinct from closing the visit.
 - WM-6, [1]: merging a 50 MAD source (one cent already paid) into a 50 MAD target
   keeps both receipts/lines and now their visit link, but the phone offers 100 MAD
   again. Which shared remainder/allocation contract should merge two live split

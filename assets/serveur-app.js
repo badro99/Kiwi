@@ -5606,6 +5606,34 @@
       delete stored[empPayRefKey(tableId)];
       empPayRefsWrite(stored);
     }
+    /* Le serveur a encaissé ce qui était dû au moment du paiement, mais une
+       commande est arrivée entre-temps (un dessert entre deux parts d'un
+       partage, une vente en file d'attente) : il solde les commandes payées et
+       garde la table ouverte pour le reste. On ne libère donc rien : la table
+       repasse en « addition demandée » avec le seul reste, et le prochain
+       encaissement prend un identifiant neuf (rejouer l'ancien serait
+       dédupliqué comme la même vente). */
+    function keepServiceBillOpen(tableId, saved) {
+      const t = tables[tableId];
+      (Array.isArray(saved.settledOrders) ? saved.settledOrders : [])
+        .forEach((orderId) => serviceCanonicalOrders.delete(String(orderId)));
+      employeePaymentRefForget(tableId);
+      employeePaymentsInFlight.delete(tableId);
+      tableSplits.delete(tableId);
+      const session = serviceTableSessions.get(tableId);
+      if (session && !SV_DEMO) {
+        try {
+          const refs = empPayRefsRead(), key = 'split:' + empPayRefKey('visit') + ':' + session;
+          if (refs[key]) { delete refs[key]; localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(refs)); }
+        } catch (_) {}
+      }
+      if (t) t.status = 'bgha-ykhlass';
+      try { reconcileCanonicalServiceBill(tableId); } catch (_) {}
+      if (currentTab === 'tables') renderTables();
+      if (activeTableId === tableId) renderTableDetail();
+      const rest = Math.max(0, Number(saved.remainingCents) || 0) / 100;
+      toast(`Table ${tableId} · reste ${fmtMADcents(rest)} : une commande est arrivée pendant l'encaissement`, 6500);
+    }
     function employeePaymentRefsForgetAll() {
       employeePaymentRefs.clear();
       try { localStorage.removeItem(EMP_PAY_REFS_KEY); } catch (_) {}
@@ -6034,6 +6062,10 @@
         }).then((r) => r.ok ? r.json() : null).then((data) => {
           if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);
         }).catch(() => {});
+      }
+      if (saved && saved.billOpen) {
+        keepServiceBillOpen(id, saved);
+        return true;
       }
       tableClients.delete(id);
       t.status = 'khawya';
@@ -6703,6 +6735,13 @@
       if (currentTab === 'tables') renderTables();
       if (currentTab === 'notifications') renderNotifications();
 
+      if (completesTable && saved && saved.billOpen) {
+        for (let i = 0; i < flow.parts.length; i++) employeePaymentRefForget(tableId + ':split:' + i);
+        if (visibleFlow) splitState.flow = null;
+        keepServiceBillOpen(tableId, saved);
+        if (visibleFlow) closeSplitModal({ skipRevert: true });
+        return true;
+      }
       if (completesTable) {
         if (visibleFlow) {
           $('#split-parts-list').style.opacity = '0.45';
