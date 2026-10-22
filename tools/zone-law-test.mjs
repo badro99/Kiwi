@@ -74,7 +74,7 @@ try {
       await f.reset();
       const ts = to - 1, id = 'zone-law-sale';
       f.sql.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,1,100,\'cash\',?)').run(id, f.merchant, ts);
-      const route = vm.createContext({ Request, Response, console, Date, crypto, isTillFor: async () => true,
+      const route = vm.createContext({ Request, Response, console, Date, crypto, isTillFor: async () => true, tillVerification: async () => ({ ok: true, legacy: true }),
         businessDate: s.businessDate, businessBoundary: s.businessBoundary, addBusinessDays: s.addBusinessDays,
         merchantZone: async () => 'Africa/Casablanca', merchantCutoff: async () => 5 });
       vm.runInContext(read('functions/api/z-reconciliation.js').replace(/^import .*;\n/gm, '').replace(/export /g, ''), route);

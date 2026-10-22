@@ -7,7 +7,7 @@
 // Requires a D1 binding named DB (see wrangler.toml / docs/ops/LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
-import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification } from '../auth/_lib.js';
+import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
@@ -42,6 +42,43 @@ async function ensureVisitLink(env) {
       catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
     }
   }
+}
+/* ── QUI A ÉCRIT LA VENTE (sales.written_by) ────────────────────────────────
+ * Lu dans l'identité AUTHENTIFIÉE de la requête, jamais dans le corps : l'id, le
+ * canal et le libellé sont choisis par le client, et cette route ré-identifie
+ * les paiements de table. Le Z d'une caisse (z-reconciliation.js) ne certifie
+ * que les reçus 'till:<son appareil>'. Une caisse dont le navigateur porte aussi
+ * une session de compte ou d'employé valide (tableau de bord ou app serveur
+ * ouverts sur la même tablette) écrit 'shared:<appareil>' : on ne sait pas
+ * quelle page a vendu, donc le Z n'en fera pas une alerte. */
+async function writtenBy(request, env, merchant) {
+  const secret = env && env.AUTH_SECRET;
+  if (!secret) return null;
+  let till = null, employee = null, session = null;
+  try { till = await tillVerification(request, env, merchant); } catch (_) { till = null; }
+  try { employee = await readEmployee(request, env); } catch (_) { employee = null; }
+  try { session = await readSession(readCookie(request, SESS_COOKIE), secret); } catch (_) { session = null; }
+  if (till && till.ok) {
+    if (!till.deviceId) return 'till';
+    return (employee || session ? 'shared:' : 'till:') + till.deviceId;
+  }
+  return employee && employee.merchant === merchant ? 'employee' : 'account';
+}
+/* La colonne arrive par migrations/0011 ; tant que la production ne l'a pas,
+ * la vente s'écrit sans elle (le Z garde alors son comportement d'avant). Une
+ * présence constatée vaut pour toute la vie de l'isolat, une absence est
+ * revérifiée au plus toutes les cinq minutes. */
+const writtenByColumn = new WeakMap();
+async function hasWrittenBy(env) {
+  const known = writtenByColumn.get(env.DB);
+  if (known && (known.ok || Date.now() - known.at < 300000)) return known.ok;
+  let ok = false;
+  try {
+    const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
+    ok = ((columns && columns.results) || []).some(column => column.name === 'written_by');
+  } catch (_) { ok = false; }
+  writtenByColumn.set(env.DB, { ok, at: Date.now() });
+  return ok;
 }
 async function recordSaleConflict(env, merchant, id, amountCents, method) {
   try {
@@ -717,13 +754,16 @@ export async function onRequestPost({ request, env }) {
     if (claimError) return claimError;
   }
 
+  // Auteur authentifié de l'écriture ; rien tant que la colonne manque.
+  const author = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
   if (hasDiscount) {
     try {
       await env.DB.prepare(
-        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id) VALUES (${Array(hasVisitLink ? 16 : 14).fill('?').join(', ')})`
+        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 16 : 14) + (author ? 1 : 0)).fill('?').join(', ')})`
       ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
              ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
-             grossAmountCents, discountAmountCents, discountReason, discountActorId]).run();
+             grossAmountCents, discountAmountCents, discountReason, discountActorId,
+             ...(author ? [author] : [])]).run();
       stored = true;
     } catch (discountError) {
       const message = String((discountError && discountError.message) || discountError);
@@ -734,9 +774,10 @@ export async function onRequestPost({ request, env }) {
   }
   if (!stored) try {
     await env.DB.prepare(
-      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}) VALUES (${Array(hasVisitLink ? 12 : 10).fill('?').join(', ')})`
+      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}${author ? ', written_by' : ''}) VALUES (${Array((hasVisitLink ? 12 : 10) + (author ? 1 : 0)).fill('?').join(', ')})`
     ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
-      ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : [])]).run();
+      ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
+      ...(author ? [author] : [])]).run();
   } catch (e) {
     const missing = String((e && e.message) || e);
     if (missing.includes('channel')) {

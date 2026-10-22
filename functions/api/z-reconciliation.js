@@ -1,7 +1,7 @@
 // Read-only comparison of a till's closed Z with the authoritative sales ledger.
 // Missing receipts are never fabricated here: only the originating till can
 // requeue their full, locally preserved payment payloads.
-import { entitledMerchant, isTillFor } from '../auth/_lib.js';
+import { entitledMerchant, tillVerification } from '../auth/_lib.js';
 import { businessDate, businessBoundary, addBusinessDays, merchantZone, merchantCutoff } from './_business-day.js';
 
 function json(value, status = 200) {
@@ -34,9 +34,14 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = String(body?.merchant || '').slice(0, 64);
-  if (!merchant || !await isTillFor(request, env, merchant)) return json({ error: 'till-required' }, 403);
+  const till = merchant ? await tillVerification(request, env, merchant) : null;
+  if (!till || !till.ok) return json({ error: 'till-required' }, 403);
   const day = String(body.day || '');
   const terminalId = String(body.terminalId || '').trim().slice(0, 64);
+  // Le poste certifié : seulement quand le jeton d'appareil qui signe ce Z est
+  // celui du terminal déclaré. Un ancien jeton sans appareil, ou un autre
+  // appareil, ne certifie rien : ses reçus hors manifeste restent informatifs.
+  const ownAuthor = till.deviceId && till.deviceId === terminalId ? 'till:' + terminalId : '';
   const sales = body.sales;
   if (!validDay(day) || !/^[A-Za-z0-9:_-]{1,64}$/.test(terminalId)
     || !Array.isArray(sales) || sales.length > 5000
@@ -70,14 +75,21 @@ export async function onRequestPost({ request, env }) {
   const from = businessBoundary(day, cutoff, zone);
   const to = businessBoundary(addBusinessDays(day, 1), cutoff, zone);
   let remote;
-  try {
-    remote = (await env.DB.prepare(`SELECT id, amount, amount_cents, method FROM sales
+  const readDay = columns => env.DB.prepare(`SELECT ${columns} FROM sales
       WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL ORDER BY ts LIMIT 5001`)
-      .bind(merchant, from, to).all()).results || [];
-  } catch (error) { return json({ error: 'db-read-failed' }, 503); }
+      .bind(merchant, from, to).all();
+  try {
+    remote = (await readDay('id, amount, amount_cents, method, written_by')).results || [];
+  } catch (error) {
+    // Base pas encore migrée (migrations/0011) : sans auteur, rien n'est certifié.
+    if (!/written_by/.test(String((error && error.message) || error))) return json({ error: 'db-read-failed' }, 503);
+    try { remote = (await readDay('id, amount, amount_cents, method')).results || []; }
+    catch (_) { return json({ error: 'db-read-failed' }, 503); }
+  }
   if (remote.length > 5000) return json({ error: 'day-too-large' }, 409);
   const server = new Map(remote.map(row => [row.id, {
     amountCents: row.amount_cents == null ? Number(row.amount) * 100 : Number(row.amount_cents), method: row.method,
+    author: String(row.written_by || ''),
   }]));
   const missing = [], mismatched = [], extra = [];
   let missingCents = 0, serverCents = 0, serverCount = 0;
@@ -94,18 +106,21 @@ export async function onRequestPost({ request, env }) {
     if (!local.has(id)) extra.push(id);
   }
   // Reçus durables qu'AUCUN manifeste du jour ne revendique : ce poste, ni le
-  // Z déposé par un autre poste du MÊME commerce pour le MÊME jour. Ils sont
-  // nommés dans `omitted`, à titre d'information seulement : le statut n'en
-  // dépend pas. Le grand livre ne dit pas quelle surface a créé un reçu (pas de
-  // colonne poste/source ; id, canal et libellé sont choisis par le client, et
-  // /api/sale ré-identifie les paiements de table, `visit-…-emp` compris, quel
-  // que soit l'appareil). Un paiement pris sur le téléphone d'un serveur, une
-  // collecte de livraison ou un remboursement du tableau de bord rendraient donc
-  // chaque soir un Z non conforme à tort. Lu seulement s'il y a des reçus hors
-  // manifeste et pour un Z fermé (un instantané ouvert garde sa propre portée).
+  // Z déposé par un autre poste du MÊME commerce pour le MÊME jour.
+  // - Écrits par CET appareil (sales.written_by = 'till:<terminal>', posé par
+  //   /api/sale depuis le jeton d'appareil, jamais depuis le corps) : le Z les
+  //   a oubliés, c'est un vrai écart. Ils entrent dans `unreported`, dans le
+  //   compte et le montant serveur, et le statut devient `mismatch`.
+  // - Tous les autres (app serveur, tableau de bord, autre caisse, tablette
+  //   partagée, ancien jeton, lignes d'avant la colonne) restent dans
+  //   `omitted`, à titre d'information seulement : id, canal et libellé sont
+  //   choisis par le client et /api/sale ré-identifie les paiements de table,
+  //   donc rien d'autre ne dit quelle surface a créé le reçu.
+  // Lu seulement s'il y a des reçus hors manifeste et pour un Z fermé (un
+  // instantané ouvert garde sa propre portée).
   const closedReport = body.closed !== false;
-  const omitted = [];
-  let omittedCents = 0;
+  const omitted = [], unreported = [];
+  let omittedCents = 0, unreportedCents = 0;
   if (closedReport && extra.length) {
     const claimed = new Set();
     try {
@@ -123,7 +138,10 @@ export async function onRequestPost({ request, env }) {
     for (const id of extra) {
       if (claimed.has(id)) continue;
       const stored = server.get(id);
-      omitted.push(id); omittedCents += stored.amountCents;
+      if (ownAuthor && stored.author === ownAuthor) {
+        unreported.push(id); unreportedCents += stored.amountCents;
+        serverCount++; serverCents += stored.amountCents;
+      } else { omitted.push(id); omittedCents += stored.amountCents; }
     }
   }
   // A missing receipt alone does NOT make a permanent rejection retryable.
@@ -144,9 +162,10 @@ export async function onRequestPost({ request, env }) {
     manifest: sales.map(row => ({ id: row.id, amountCents: row.amountCents, method: row.method })), day, terminalId, cutoff,
     unqueuedCount, unqueuedCents, reportedCount: body.count, reportedCents: body.totalCents,
     serverCount, serverCents, missing, missingCents, mismatched, extra, omitted, omittedCents,
+    unreported, unreportedCents,
     closed: closedReport,
     gapCents: body.totalCents - serverCents,
-    status: missing.length || mismatched.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
+    status: missing.length || mismatched.length || unreported.length || unqueuedCount || unqueuedCents || body.totalCents !== serverCents ? 'mismatch' : 'matched' };
   try {
     await schema(env.DB);
     await env.DB.prepare(`INSERT INTO z_reconciliations

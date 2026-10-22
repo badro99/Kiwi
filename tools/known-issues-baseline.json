@@ -194,12 +194,6 @@
       "severity": "money"
     },
     {
-      "suite": "server-money-properties-test.mjs",
-      "label": "SM-3",
-      "kind": "defect",
-      "severity": "money"
-    },
-    {
       "suite": "serveur-money-properties-test.mjs",
       "label": "WM-4",
       "kind": "decision",

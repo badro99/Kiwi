@@ -71,7 +71,24 @@ CREATE TABLE IF NOT EXISTS sales (
   -- pour que schema.sql décrive la base réelle ; les retirer serait effacer des
   -- données, donc c'est une décision du propriétaire, pas d'une migration.
   seller_id   TEXT,
-  seller_name TEXT
+  seller_name TEXT,
+
+  -- ── QUI A ÉCRIT LA VENTE ───────────────────────────────────────────────────
+  -- Lu par /api/sale dans l'identité AUTHENTIFIÉE de la requête, jamais dans le
+  -- corps (id, canal et libellé sont choisis par le client) :
+  --   'till:<appareil>'   une caisse appairée prouvée par son jeton d'appareil,
+  --                       sans autre identité dans le même navigateur ;
+  --   'shared:<appareil>' la même caisse, mais le navigateur porte aussi une
+  --                       session de compte ou d'employé (tableau de bord ou
+  --                       app serveur ouverts sur la tablette : indiscernables) ;
+  --   'till'              un ancien jeton de caisse, sans appareil ;
+  --   'employee'          l'app employé (serveur en service) ;
+  --   'account'           le propriétaire ou un opérateur.
+  -- NULL pour toute vente écrite avant cette colonne, et pour les
+  -- remboursements et encaissements de livraison (autres routes). Le Z d'une
+  -- caisse ne certifie que les reçus 'till:<son appareil>' : tout le reste reste
+  -- une information (z-reconciliation.js), jamais une fausse alerte.
+  written_by  TEXT
 );
 
 -- Atomic invalidations for every sales mutation, including rowid reuse.
