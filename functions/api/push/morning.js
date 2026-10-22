@@ -14,9 +14,19 @@
 // coupure du magasin quand ils sont connus). Mêmes ventes que le Z : les ventes
 // annulées (void_ts) sont hors livres, les remboursements s'y soustraient.
 //
-// Idempotent : une ligne (merchant, day) dans push_morning_sent est posée AVANT
-// l'envoi ; un second appel du même jour ne renvoie rien. La table est créée à
-// la première utilisation (la base de production retarde sur schema.sql).
+// Idempotent, appareil par appareil (table push_morning_sent, créée à la
+// première utilisation car la base de production retarde sur schema.sql) :
+// - chaque jeton est réservé AVANT l'envoi par une ligne (merchant,
+//   « jour#empreinte du jeton ») dont sent_ts est NÉGATIF : un bail. Un bail
+//   abandonné (processus mort entre la réservation et l'envoi) expire au bout
+//   de LEASE_MS et l'appel suivant reprend l'appareil ;
+// - l'envoi réussi, ou refusé pour de bon (jeton mort), rend la ligne
+//   définitive (sent_ts positif) : cet appareil ne reçoit plus rien ce jour-là ;
+// - une panne passagère supprime la ligne : l'appel suivant réessaie CET
+//   appareil seulement, jamais ceux déjà servis ;
+// - quand tous les appareils du magasin sont définitifs, la ligne (merchant,
+//   day) est posée et les lignes par appareil retirées : un second appel du
+//   même jour ne renvoie rien.
 //
 // Fail-soft : sans APNS_KEY_ID / APNS_TEAM_ID / APNS_PRIVATE_KEY rien n'est
 // envoyé et rien n'échoue. Les jetons et les montants ne sont jamais journalisés.
@@ -65,6 +75,35 @@ async function ensureSentTable(env) {
     sent_ts  INTEGER NOT NULL,
     PRIMARY KEY (merchant, day)
   )`).run();
+}
+
+/* Empreinte du jeton (SHA-256, 24 caractères hexadécimaux) : le jeton
+   lui-même n'est jamais écrit dans la table des marqueurs. */
+async function fingerprint(token) {
+  const bytes = await digest(token);
+  let hex = '';
+  for (let i = 0; i < 12; i++) hex += bytes[i].toString(16).padStart(2, '0');
+  return hex;
+}
+
+/* Réserve un appareil pour la journée. Vrai si cet appel doit envoyer : ligne
+   neuve, ou bail d'un appel mort expiré et repris (comparaison-échange sur
+   l'ancien sent_ts, donc un seul preneur). Une ligne définitive (sent_ts > 0)
+   ou un bail encore vivant : faux. */
+const LEASE_MS = 5 * 60 * 1000;
+async function claimToken(env, merchant, day, key, now) {
+  // Une seule instruction : rien n'est réservé si la journée a été close entre
+  // temps par un appel concurrent (qui retire ensuite les lignes par appareil).
+  const res = await env.DB.prepare(`INSERT OR IGNORE INTO push_morning_sent (merchant, day, sent_ts)
+      SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM push_morning_sent WHERE merchant = ? AND day = ?)`)
+    .bind(merchant, key, -now, merchant, day).run();
+  if (Number(res && res.meta && res.meta.changes || 0) > 0) return true;
+  const row = await env.DB.prepare('SELECT sent_ts FROM push_morning_sent WHERE merchant = ? AND day = ?').bind(merchant, key).first();
+  const ts = Number(row && row.sent_ts);
+  if (!row || !(ts < 0) || now + ts < LEASE_MS) return false;
+  const took = await env.DB.prepare('UPDATE push_morning_sent SET sent_ts = ? WHERE merchant = ? AND day = ? AND sent_ts = ?')
+    .bind(-now, merchant, key, ts).run();
+  return Number(took && took.meta && took.meta.changes || 0) > 0;
 }
 
 async function dashboardTokens(env) {
@@ -116,23 +155,48 @@ export async function runMorningPush(env, now = Date.now()) {
     try { totals = await yesterdayTotals(env, merchant, now); } catch (_) { skip('sales-unavailable'); continue; }
     if (!totals.count && !totals.cents) { skip('no-sales'); continue; }
     if (totals.cents <= 0) { skip('no-positive-total'); continue; }
-    let claimed;
+    let done;
     try {
-      const res = await env.DB.prepare('INSERT OR IGNORE INTO push_morning_sent (merchant, day, sent_ts) VALUES (?, ?, ?)')
-        .bind(merchant, totals.day, now).run();
-      claimed = Number(res && res.meta && res.meta.changes || 0) > 0;
+      done = await env.DB.prepare('SELECT 1 AS x FROM push_morning_sent WHERE merchant = ? AND day = ?').bind(merchant, totals.day).first();
     } catch (_) { skip('marker-unavailable'); continue; }
-    if (!claimed) { skip('already-sent'); continue; }
-    const result = await sendApnsToTokens(env, merchant, tokens,
-      (t) => ({ ...morningMessage(t.lang, totals.cents, totals.count), data: { kiwi: { kind: 'morning', day: totals.day } } }));
-    out.sent += result.sent;
-    out.removed += result.removed;
-    if (!result.sent && result.failed) {
-      // Rien n'est parti à cause d'une panne passagère : on rend la main pour
-      // qu'un nouvel appel du même jour puisse réessayer.
-      try { await env.DB.prepare('DELETE FROM push_morning_sent WHERE merchant = ? AND day = ?').bind(merchant, totals.day).run(); } catch (_) { /* ignore */ }
-      skip('delivery-failed');
+    if (done) { skip('already-sent'); continue; }
+    const keyed = [];
+    for (const t of tokens) keyed.push({ ...t, key: totals.day + '#' + await fingerprint(t.token) });
+    const mine = [];
+    try {
+      for (const t of keyed) if (await claimToken(env, merchant, totals.day, t.key, now)) mine.push(t);
+    } catch (_) { skip('marker-unavailable'); continue; }
+    let failed = 0;
+    if (mine.length) {
+      const result = await sendApnsToTokens(env, merchant, mine,
+        (t) => ({ ...morningMessage(t.lang, totals.cents, totals.count), data: { kiwi: { kind: 'morning', day: totals.day } } }));
+      out.sent += result.sent;
+      out.removed += result.removed;
+      failed = result.failed;
+      for (const t of mine) {
+        // Réussi ou mort : définitif. Panne passagère : la ligne est rendue
+        // pour qu'un nouvel appel du même jour réessaie cet appareil.
+        const final = result.byToken.get(t.token) !== 'failed';
+        try {
+          if (final) await env.DB.prepare('UPDATE push_morning_sent SET sent_ts = ? WHERE merchant = ? AND day = ?').bind(now, merchant, t.key).run();
+          else await env.DB.prepare('DELETE FROM push_morning_sent WHERE merchant = ? AND day = ?').bind(merchant, t.key).run();
+        } catch (_) { /* le bail expirera de lui-même */ }
+      }
     }
+    // Tous les appareils définitifs : la journée est close pour ce magasin.
+    let closed = false;
+    try {
+      const keys = keyed.map((t) => t.key);
+      const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_morning_sent WHERE merchant = ? AND sent_ts > 0 AND day IN (${keys.map(() => '?').join(',')})`)
+        .bind(merchant, ...keys).first();
+      if (Number(row && row.n) === keys.length) {
+        await env.DB.prepare('INSERT OR IGNORE INTO push_morning_sent (merchant, day, sent_ts) VALUES (?, ?, ?)').bind(merchant, totals.day, now).run();
+        closed = true;
+        await env.DB.prepare('DELETE FROM push_morning_sent WHERE merchant = ? AND day >= ? AND day < ?').bind(merchant, totals.day + '#', totals.day + '$').run();
+      }
+    } catch (_) { /* les lignes par appareil suffisent à ne rien renvoyer */ }
+    if (failed) skip('delivery-failed');
+    else if (!mine.length) skip(closed ? 'already-sent' : 'in-flight');
   }
   return out;
 }

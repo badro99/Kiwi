@@ -1904,10 +1904,13 @@ CREATE TABLE IF NOT EXISTS push_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_push_tokens_target ON push_tokens (merchant, role);
 
--- « Le point du matin » (POST /api/push/morning) : une ligne par magasin et par
--- journée commerciale déjà notifiée. Elle est posée AVANT l'envoi, ce qui rend
--- un second appel du même jour inoffensif. Créée aussi à la volée par la route
--- (la base de production retarde sur ce fichier).
+-- « Le point du matin » (POST /api/push/morning) : une ligne (merchant, day) par
+-- magasin et par journée commerciale close, posée quand chaque appareil a reçu
+-- l'envoi ou l'a refusé pour de bon ; un second appel du même jour est alors
+-- inoffensif. Avant cela, une ligne par appareil (day = « AAAA-MM-JJ#empreinte
+-- SHA-256 du jeton ») : sent_ts négatif = bail en cours, positif = définitif.
+-- Créée aussi à la volée par la route (la base de production retarde sur ce
+-- fichier).
 CREATE TABLE IF NOT EXISTS push_morning_sent (
   merchant TEXT NOT NULL,
   day      TEXT NOT NULL,        -- journée commerciale notifiée, AAAA-MM-JJ

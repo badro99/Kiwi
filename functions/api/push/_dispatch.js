@@ -116,22 +116,27 @@ async function dropToken(env, merchant, token) {
 }
 
 /* Envoie à une liste de jetons iOS et supprime ceux qu'Apple déclare morts.
-   Par lots de 10 pour ne pas ouvrir une rafale de connexions. */
+   Par lots de 10 pour ne pas ouvrir une rafale de connexions. `byToken` rend
+   l'issue de chaque jeton ('sent' | 'removed' | 'failed') à qui doit savoir
+   lequel réessayer. */
 export async function sendApnsToTokens(env, merchant, tokens, message) {
   let sent = 0, removed = 0, failed = 0;
+  const byToken = new Map();
   for (let i = 0; i < tokens.length; i += 10) {
     const batch = tokens.slice(i, i + 10);
     const results = await Promise.all(batch.map((t) => sendApns(env, t.token, typeof message === 'function' ? message(t) : message)));
     results.forEach((r, k) => {
-      if (r.ok) sent++;
-      else if (r.dead) removed++;
+      const outcome = r.ok ? 'sent' : r.dead ? 'removed' : 'failed';
+      if (outcome === 'sent') sent++;
+      else if (outcome === 'removed') removed++;
       else failed++;
+      byToken.set(batch[k].token, outcome);
     });
     for (let k = 0; k < batch.length; k++) {
       if (results[k].dead) await dropToken(env, merchant, batch[k].token);
     }
   }
-  return { sent, removed, failed };
+  return { sent, removed, failed, byToken };
 }
 
 export async function dispatchPushEvent(env, merchant, options = {}) {
