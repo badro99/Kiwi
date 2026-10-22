@@ -440,6 +440,7 @@ async function tooLargeIsShown() {
   w.Kiwi = { toast: (title, o) => toasts.push({ title, desc: (o || {}).desc, type: (o || {}).type }) };
   load(w, 'assets/barcode.js');
   load(w, 'assets/color-palette.js');
+  load(w, 'assets/boutique-catalog-parts.js');
   load(w, 'assets/boutique-catalog.js');
   const cat = w.KiwiBoutiqueCatalog;
   cat.use('grand-store');
