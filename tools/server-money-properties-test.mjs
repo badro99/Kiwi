@@ -107,9 +107,20 @@ await strict('SM-3 (corrigé 22/10) · a device-proved till Z certifies exactly 
  for(const[role,terminalId]of[['till',A],['deviceB',A],['deviceA','terminal-other']]){sql.exec('DELETE FROM z_reconciliations');const legacy=await z(manifest,role,terminalId);ok(legacy);assert.deepEqual(legacy.body.unreported,[]);assert.equal(legacy.body.status,'matched');assert.deepEqual(legacy.body.omitted,[...gone,...informational]);}
  return true;
 }),[[[{cents:1,reported:true},{cents:1,reported:false}],1]]);
-/* La production n'a pas encore migrations/0011 : sans la colonne, la vente s'écrit quand même et le Z garde son comportement d'avant (informatif). */
+/* Un ancien id de visite (`visit-<session>-emp`) est ré-identifié par /api/sale : la ligne ne vit pas sous l'id que la caisse a envoyé, elle ne doit donc jamais porter l'auteur qui certifie. */
+await strict('SM-3 · two legacy visit-keyed payments from one device till are re-keyed and never become unreported receipts of its Z',fc.asyncProperty(positive,positive,async(first,second)=>{
+ await f.reset();sql.exec('DELETE FROM table_sessions');const day='2026-02-14';sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',f.merchant);const ts=businessBoundary(day,5,'UTC')+3600000,A=f.devices.a,visit='tsx-fixture-visit',sent='visit-'+visit+'-emp';
+ sql.prepare("INSERT INTO table_sessions(id,merchant,mode,table_no,status,opened_ts,seen_ts) VALUES(?,?,'table','4','open',?,?)").run(visit,f.merchant,ts-60000,ts);
+ const acked=[];for(const[i,cents]of[[0,first],[1,second]]){const r=await f.call('sale',body(sent,cents,{ref:'Table 4',session:visit,table:'4',ts:ts+i}),'deviceA');ok(r);assert.notEqual(r.body.id,sent);acked.push({id:r.body.id,amountCents:cents,method:'cash'});assert.equal(f.row(r.body.id).written_by,'till:'+A+'#rekeyed');}
+ const z=m=>f.call('z',{day,cutoff:5,terminalId:A,sales:m,count:m.length,totalCents:sum(m.map(x=>x.amountCents))},'deviceA');
+ /* Le manifeste dit exactement ce que la caisse a envoyé : l'id de visite (alias perdu). Il manque au serveur, signal d'avant ; les lignes ré-identifiées restent informatives. */
+ sql.exec('DELETE FROM z_reconciliations');const raw=await z([{id:sent,amountCents:first,method:'cash'}]);ok(raw);assert.deepEqual(raw.body.unreported,[]);assert.deepEqual(raw.body.missing,[sent]);assert.deepEqual(raw.body.omitted,acked.map(x=>x.id));
+ /* Le manifeste avec les ids accusés par le serveur (alias gardés) : rapproché, rien d'oublié. */
+ sql.exec('DELETE FROM z_reconciliations');const r=await z(acked);ok(r);assert.equal(r.body.status,'matched');assert.deepEqual(r.body.unreported,[]);
+}));
+/* La production n'a pas encore migrations/0010 : sans la colonne, la vente s'écrit quand même et le Z garde son comportement d'avant (informatif). */
 const g=await fixture(ROOT);try{g.sql.exec('ALTER TABLE sales DROP COLUMN written_by');
-await strict('SM-3 · without the written_by column (prod before migration 0011) sales still write and the Z stays informational',fc.asyncProperty(positive,positive,async(kept,dropped)=>{
+await strict('SM-3 · without the written_by column (prod before migration 0010) sales still write and the Z stays informational',fc.asyncProperty(positive,positive,async(kept,dropped)=>{
  await g.reset();const day='2026-02-14';g.sql.prepare('UPDATE merchant_config SET timezone=? WHERE merchant=?').run('UTC',g.merchant);const from=businessBoundary(day,5,'UTC'),A=g.devices.a;
  ok(await g.call('sale',body('kept',kept,{ts:from}),'deviceA'));ok(await g.call('sale',body('dropped',dropped,{ts:from+1}),'deviceA'));assert.equal(g.row('dropped').amount_cents,dropped);
  const r=await g.call('z',{day,cutoff:5,terminalId:A,sales:[{id:'kept',amountCents:kept,method:'cash'}],count:1,totalCents:kept},'deviceA');ok(r);assert.equal(r.body.status,'matched');assert.deepEqual(r.body.unreported,[]);assert.deepEqual(r.body.omitted,['dropped']);assert.equal(r.body.serverCents,kept);

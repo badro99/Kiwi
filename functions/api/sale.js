@@ -64,7 +64,7 @@ async function writtenBy(request, env, merchant) {
   }
   return employee && employee.merchant === merchant ? 'employee' : 'account';
 }
-/* La colonne arrive par migrations/0011 ; tant que la production ne l'a pas,
+/* La colonne arrive par migrations/0010 ; tant que la production ne l'a pas,
  * la vente s'écrit sans elle (le Z garde alors son comportement d'avant). Une
  * présence constatée vaut pour toute la vie de l'isolat, une absence est
  * revérifiée au plus toutes les cinq minutes. */
@@ -754,8 +754,12 @@ export async function onRequestPost({ request, env }) {
     if (claimError) return claimError;
   }
 
-  // Auteur authentifié de l'écriture ; rien tant que la colonne manque.
-  const author = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
+  // Auteur authentifié de l'écriture ; rien tant que la colonne manque. Une
+  // ligne rangée sous un autre id que celui envoyé (id de visite ré-identifié,
+  // part de partage reprise) ne figure pas telle quelle au manifeste de la
+  // caisse : elle ne porte jamais l'auteur qui certifie, le Z la laisse informative.
+  const signed = await hasWrittenBy(env) ? await writtenBy(request, env, merchant) : null;
+  const author = signed && signed.startsWith('till:') && id !== suppliedId ? signed + '#rekeyed' : signed;
   if (hasDiscount) {
     try {
       await env.DB.prepare(
