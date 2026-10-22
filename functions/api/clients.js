@@ -527,20 +527,19 @@ async function applyRefund(env, merchant, raw, attempt = 0) {
  * exactement ce retour (« refund:unvoid:… »), donc le registre se somme
  * toujours au solde, et un retour réel posé plus tard voit le ticket entier.
  * Best effort : la vente est déjà sortie, un échec ici ne la remet pas. */
-function voidTail(clientId, saleId) {
-  const plain = `${clientId}:${saleId}`;
-  if (plain.length <= 90 && /^[A-Za-z0-9:_-]+$/.test(plain)) return plain;
-  let h = 2166136261;
-  for (const ch of plain) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
-  return 'h' + h.toString(36);
+/* SHA-256 of client and sale: fixed length, no separator ambiguity, no
+ * practical collision, so one sale's take-back can never replay another's. */
+async function voidTail(clientId, saleId) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${clientId}\u0000${saleId}`));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 /* Void number n of a sale follows its n-th restore, so void n and restore n
  * share one key without relying on the clock, and a retried void replays. */
 async function voidRound(env, merchant, clientId, tail) {
   const row = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM client_purchase_events
-      WHERE merchant = ? AND client_id = ? AND ref LIKE 'refund:unvoid:%' AND substr(ref, -?) = ?`
-  ).bind(merchant, clientId, tail.length + 1, ':' + tail).first();
+      WHERE merchant = ? AND client_id = ? AND substr(ref, 1, 14) = 'refund:unvoid:' AND substr(ref, -65) = ?`
+  ).bind(merchant, clientId, ':' + tail).first();
   return Number(row && row.n || 0);
 }
 async function saleLoyaltyGroups(env, merchant, sale) {
@@ -549,15 +548,24 @@ async function saleLoyaltyGroups(env, merchant, sale) {
   await ensurePurchaseEvents(env);
   // The event named after this sale first: split payments of one receipt
   // share its number, and voiding one part must not take back the others.
+  // Exact matches only: no LIKE pattern built from an id.
   const own = await env.DB.prepare(
     `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
-      WHERE merchant = ? AND ref NOT LIKE 'refund:%' AND sale_ref <> '' AND (ref = ? OR ref LIKE ?)
+      WHERE merchant = ? AND substr(ref, 1, 7) <> 'refund:' AND sale_ref <> ''
+        AND (ref = ? OR (substr(ref, 1, 9) = 'purchase:' AND substr(ref, -length(?)) = ?))
       GROUP BY client_id, sale_ref`
-  ).bind(merchant, id, 'purchase:%:' + id).all();
+  ).bind(merchant, id, ':' + id, ':' + id).all();
   if (own && own.results && own.results.length) return own.results;
+  /* Older tills named the event after the receipt only. Use the receipt
+   * number just when no other sale of this store carries it. */
+  if (ref && ref !== id) {
+    const holders = await env.DB.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND ref = ?')
+      .bind(merchant, ref).first();
+    if (Number(holders && holders.n || 0) > 1) return [];
+  }
   const rows = await env.DB.prepare(
     `SELECT client_id, sale_ref, COALESCE(SUM(amount), 0) AS paid FROM client_purchase_events
-      WHERE merchant = ? AND ref NOT LIKE 'refund:%' AND (sale_ref = ? OR (? <> '' AND sale_ref = ?))
+      WHERE merchant = ? AND substr(ref, 1, 7) <> 'refund:' AND (sale_ref = ? OR (? <> '' AND sale_ref = ?))
       GROUP BY client_id, sale_ref`
   ).bind(merchant, id, ref, ref).all();
   return (rows && rows.results) || [];
@@ -567,7 +575,7 @@ export async function voidSaleLoyalty(env, merchant, sale) {
   try {
     for (const group of await saleLoyaltyGroups(env, merchant, sale)) {
       if (!(Number(group.paid) > 0)) continue;
-      const tail = voidTail(group.client_id, sale.id);
+      const tail = await voidTail(group.client_id, sale.id);
       const n = await voidRound(env, merchant, group.client_id, tail);
       const res = await applyRefund(env, merchant, {
         clientId: group.client_id, ref: `refund:void:${n}:${tail}`,
@@ -585,7 +593,7 @@ export async function restoreSaleLoyalty(env, merchant, sale) {
     await ensureClientSyncSequence(env);
     const cursor = clientCursorSql();
     for (const group of await saleLoyaltyGroups(env, merchant, sale)) {
-      const tail = voidTail(group.client_id, sale.id);
+      const tail = await voidTail(group.client_id, sale.id);
       const n = await voidRound(env, merchant, group.client_id, tail);
       const ref = `refund:void:${n}:${tail}`, back = `refund:unvoid:${n}:${tail}`;
       const ev = await env.DB.prepare(
