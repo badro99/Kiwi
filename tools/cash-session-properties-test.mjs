@@ -97,6 +97,23 @@ try {
     }
   }));
 
+  await strict('a till forging an old opening time cannot borrow earlier refunds, and only the cash share of a split refund counts', fc.asyncProperty(
+    fc.integer({ min: 1000, max: 100000 }), fc.array(fc.integer({ min: 100, max: 50000 }), { minLength: 1, maxLength: 4 }),
+    fc.integer({ min: 100, max: 5000 }), fc.integer({ min: 100, max: 5000 }), fc.integer({ min: 1, max: 5000 }),
+    async (float, oldRefunds, cashPart, cardPart, cut) => {
+      sql.exec('DELETE FROM cash_session_events; DELETE FROM sales'); terminalCookie = '';
+      const session = 'sess-forge-' + (++serial), openedAt = Date.now() - 2 * 3600e3;
+      oldRefunds.forEach((c, i) => f.insert('old-rfd-' + session + i, -c, { method: 'cash', ts: openedAt - (i + 1) * 3 * 3600e3, channel: 'refund' }));
+      f.insert('split-rfd-' + session, -(cashPart + cardPart), { method: 'split', ts: openedAt + 60e3, channel: 'refund', parts: [{ method: 'cash', amountCents: cashPart }, { method: 'card', amountCents: cardPart }] });
+      assert.equal((await send({ id: session + '-open', sessionId: session, eventType: 'open', actorId: 'cashier-a', openedAt, occurredAt: openedAt, expectedCents: float })).status, 201);
+      const floor = float - cashPart, said = Math.max(0, floor - cut), counted = said;
+      const r = await send({ id: session + '-close', sessionId: session, eventType: 'close', actorId: 'cashier-a', openedAt: 1, occurredAt: Date.now(), expectedCents: said, countedCents: counted, gapCents: 0 });
+      assert.equal(r.status, 201, JSON.stringify(r));
+      const row = stored(session + '-close');
+      assert.ok(row.expected_cents >= floor || floor <= said, `expected ${row.expected_cents} under floor ${floor}`);
+      assert.ok(row.gap_cents < 0 || floor <= said, 'the shortage vanished');
+    }));
+
   await strict('replaying any event of a shift changes nothing', fc.asyncProperty(shiftArb, async (s) => {
     const truth = await shift(s, (expected) => expected);
     const before = sql.prepare('SELECT * FROM cash_session_events ORDER BY id').all();

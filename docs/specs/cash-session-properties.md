@@ -14,7 +14,8 @@ a shortage behind a low expected.
 
 1. An honest till keeps exactly the expected cash and gap it declared, cash refunds and signed handover shortages included.
 2. A till announcing less than float + in − out + signed handover gaps − cash refunds has its expected raised, and the gap shows the shortage.
-3. Replaying any event of a shift changes nothing.
+3. A till forging an old opening time cannot borrow earlier refunds, and only the cash share of a split refund counts.
+4. Replaying any event of a shift changes nothing.
 
 ## Defect fixed on 22 October 2026
 
@@ -28,9 +29,16 @@ only. Two honest situations put the real expected below it:
 The server raised the expected to its floor and recorded a shortage that did
 not exist, or counted a signed shortage a second time at the close. The floor
 now adds the stored handover gaps and subtracts the store's cash refunds and
-the cash sales voided during the shift. Those last two are counted for the
-whole store because a sale row does not name its terminal, so the floor can
-only get lower than before, never invent a shortage.
+the cash sales from before the shift that were voided during it. Those are
+counted for the whole store because a sale row does not name its terminal, so
+the floor can only get lower than before, never invent a shortage.
+
+The refund window is read from the open event the server already stored, never
+from the request, ends no later than the server's clock and never covers more
+than 24 hours. A first version took the window from the request: a till could
+announce an ancient opening time, sweep in months of refunds and hide the very
+shortage the floor exists to catch. Property 3 holds that line. Only the cash
+share of a split payment counts.
 
 Production was not hit: of the 55 closes recorded by 22 October, none had a
 cash refund or a handover gap during its shift.

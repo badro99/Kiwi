@@ -158,7 +158,7 @@ export async function onRequestPost({ request, env }) {
     if (expected != null && eventType !== 'open') {
       try {
         const chain = await env.DB.prepare(
-          `SELECT id, event_type, expected_cents, gap_cents, movement_kind, movement_amount_cents
+          `SELECT id, event_type, expected_cents, gap_cents, movement_kind, movement_amount_cents, occurred_ts
              FROM cash_session_events
             WHERE merchant = ? AND terminal_id = ? AND session_id = ?`
         ).bind(merchant, terminalId, sessionId).all();
@@ -185,17 +185,35 @@ export async function onRequestPost({ request, env }) {
          * porte pas le poste, donc on retire tous ceux du commerce sur la
          * période (et les ventes espèces d'avant annulées pendant) : le
          * plancher ne peut que baisser, jamais inventer un manquant. */
-        const since = Number(openedAt) || 0, until = Number(occurredAt) + 600000;
+        /* La fenêtre ne vient PAS du corps de la requête : un poste qui
+         * annoncerait une ouverture ancienne ramasserait des mois de
+         * remboursements et effacerait le manquant que ce plancher doit voir.
+         * Elle part de l'ouverture ENREGISTRÉE, ne dépasse pas l'horloge du
+         * serveur, et ne couvre jamais plus de 24 heures. */
+        const openRow = ((chain && chain.results) || []).find((row) => row.event_type === 'open' && row.id !== id);
+        const until = Math.min(Number(occurredAt) || 0, Date.now()) + 600000;
+        const since = Math.max(Number(openRow && openRow.occurred_ts) || until, until - 24 * 3600000);
         const outflow = await env.DB.prepare(
-          `SELECT
-             COALESCE((SELECT SUM(-amount_cents) FROM sales
-                WHERE merchant = ? AND amount_cents < 0 AND ts BETWEEN ? AND ?
-                  AND (method = 'cash' OR payment_parts LIKE '%cash%')), 0)
-           + COALESCE((SELECT SUM(amount_cents) FROM sales
-                WHERE merchant = ? AND amount_cents > 0 AND void_ts BETWEEN ? AND ?
-                  AND (method = 'cash' OR payment_parts LIKE '%cash%')), 0) AS c`
-        ).bind(merchant, since, until, merchant, since, until).first();
-        floorCents -= Number(outflow && outflow.c) || 0;
+          `SELECT amount_cents, method, payment_parts FROM sales
+            WHERE merchant = ?
+              AND ((amount_cents < 0 AND ts BETWEEN ? AND ?)
+                OR (amount_cents > 0 AND ts < ? AND void_ts BETWEEN ? AND ?))
+              AND (method = 'cash' OR payment_parts LIKE '%cash%')
+            LIMIT 2000`
+        ).bind(merchant, since, until, since, since, until).all();
+        let cashOut = 0;
+        ((outflow && outflow.results) || []).forEach((sale) => {
+          const whole = Math.abs(Number(sale.amount_cents) || 0);
+          if (sale.method === 'cash') { cashOut += whole; return; }
+          let part = 0;
+          try {
+            (JSON.parse(sale.payment_parts) || []).forEach((p) => {
+              if (p && p.method === 'cash') part += Math.abs(Number(p.amountCents) || 0);
+            });
+          } catch (_) { part = 0; }
+          cashOut += Math.min(part, whole);   // seule la part espèces sort du tiroir
+        });
+        floorCents -= cashOut;
         if (Number.isFinite(floorCents) && floorCents > expectedFinal) {
           expectedFinal = Math.min(floorCents, MAX_CENTS);
           if (counted != null) gapFinal = counted - expectedFinal;
