@@ -1311,6 +1311,7 @@
       const gone = code === 'employee-session-required' || status === 401;
       const msg = gone ? 'Session expirée · reconnectez-vous'
         : code === 'store-suspended' ? 'Cet établissement est suspendu'
+        : code === 'subscription-required' ? 'Abonnement en attente de validation'
         : (code === 'not-configured' || code === 'rate-limit-unavailable') ? 'Service momentanément indisponible'
         : code === 'attendance-code-invalid' ? 'Code de pointage incorrect ou expiré'
         : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'

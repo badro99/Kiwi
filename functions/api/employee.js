@@ -48,6 +48,9 @@ function safeMember(m, pinRow) {
 }
 function memberFor(team, pinRow) {
   const members = Array.isArray(team && team.members) ? team.members : [];
+  // Signed staff identity takes priority over legacy PIN/name matching.
+  const byId = members.find((m) => m && String(m.id || '') === String(pinRow.id || ''));
+  if (byId) return byId;
   const pin = String(pinRow.pin || '');
   const byPin = members.find((m) => memberPin(m) === pin);
   if (byPin) return byPin;
@@ -365,6 +368,7 @@ export async function onRequestPost({ request, env }) {
   const storeState = await storeOperationalState(env, merchant);
   if (!storeState.ok) return json({ error: 'auth-verification-unavailable' }, 503);
   if (storeState.suspended) return json({ error: 'store-suspended' }, 403);
+  if (storeState.pending) return json({ error: 'subscription-required' }, 402);
   if (action === 'planning-request' || action === 'planning-request-cancel') {
     const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
     const member = memberFor(teamRow.data, auth.pin);
