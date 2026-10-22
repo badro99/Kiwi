@@ -8,6 +8,7 @@ import {createRequire} from 'node:module';
 import {server,browser,ROOT} from './customer-balance-harness.mjs';
 import {onRequestPost as post,onRequestGet as get,onRequestDelete as del} from '../functions/api/clients.js';
 import {onRequestPost as employeePost,onRequestGet as employeeGet} from '../functions/api/employee-clients.js';
+import {phoneKey as serverPhoneKey} from '../functions/api/_phone.js';
 import {makeSession,SESS_COOKIE,tillToken,TILL_COOKIE,employeeToken,EMPLOYEE_COOKIE} from '../functions/auth/_lib.js';
 let fc;try{fc=createRequire(path.join(ROOT,'app/package.json'))('fast-check');}catch{console.log('○ fast-check unavailable; clients properties skipped');process.exit(0);}
 const RUNS=Number(process.env.KIWI_PROPERTY_RUNS)||100,SEED=Number(process.env.KIWI_PROPERTY_SEED)||20261022;
@@ -102,6 +103,30 @@ await strict('CL-3 tags persist on the server, reach a second device and survive
 }),[[['vip']]]);
 await knownIssue('CL-4','on-shift service role can enumerate search results without a distinct export permission; no export route exists',fc.asyncProperty(fc.constant(''),async q=>{await reset();return (await request(employeeGet,{q,export:true},'employee','GET')).status===403;}));
 await knownIssue('CL-6','employee purchases use a separate event ledger, so sale void does not reverse their spend; unifying flows requires a migration decision',fc.asyncProperty(cents,async amount=>{await reset();f.insert('linked',amount);ok(await request(employeePost,{clientId:'client-fixture',saleId:'linked'},'employee'));ok(await f.call('admin',{ids:['linked'],action:'void',reason:'formation',force:true},'operator'));return C(f.rowClient().spend)===0;}));
-await knownIssue('CL-5','API identity is client id: phone dedup is browser-local, not cross-device server uniqueness',fc.asyncProperty(number,async n=>{await reset();ok(await request(post,{id:'a',phone:'0'+n}));ok(await request(post,{id:'b',phone:'+212'+n}));return ok(await request(get,{},'till','GET')).clients.filter(c=>phone.same(c.phone,'0'+n)).length===1;}));
+/* CL-5 · un même numéro, une seule fiche au serveur : la seconde caisse qui écrit
+ * le numéro autrement rejoint la première, garde ce qu'elle seule savait, n'efface
+ * rien, et ses achats en file sous l'ancien id arrivent sur la fiche gardée. */
+await strict('CL-5 server phone identity matches KiwiPhone.digits for every input',fc.property(fc.oneof(number.map(n=>'0'+n),number.map(n=>'+212 '+n),number.map(n=>'00212'+String(n).split('').join('.')),fc.string({maxLength:30}),fc.stringMatching(/^[+0-9 ().-]{0,24}$/)),s=>{assert.equal(serverPhoneKey(s),phone.digits(s));}));
+await strict('CL-5 a second device creating the same phone written differently joins the first profile without losing or blanking a field, only within its shop',fc.asyncProperty(number,fc.constantFrom('0','+212','00212','+212 ','0'),async(n,prefix)=>{
+ await reset();f.sql.prepare('INSERT INTO clients(merchant,id,name,phone) VALUES(?,?,?,?)').run('server-other-shop','foreign','Foreign','0'+n);
+ ok(await request(post,{id:'a',name:'Amina',phone:'0'+n,notes:'Première caisse',city:''}));
+ const r=ok(await request(post,{id:'b',name:'',phone:prefix+n,email:'amina@example.test',city:'Fès',notes:'Deuxième caisse',tags:['vip'],consent:true}));assert.equal(r.mergedInto,'a');
+ const live=ok(await request(get,{},'till','GET')).clients.filter(c=>!c.deleted&&phone.same(c.phone,'0'+n));assert.equal(live.length,1);const row=live[0];
+ assert.equal(row.id,'a');assert.equal(row.name,'Amina');assert.equal(row.email,'amina@example.test');assert.equal(row.city,'Fès');assert.equal(row.consent,1);
+ assert.ok(row.notes.includes('Première caisse')&&row.notes.includes('Deuxième caisse'));assert.deepEqual(row.tags,['vip']);
+ const alias=f.sql.prepare("SELECT * FROM clients WHERE merchant=? AND id='b'").get(f.merchant);assert.equal(alias.deleted,1);for(const k of ['name','phone','email','city','notes'])assert.equal(alias[k],'');
+ ok(await request(post,{id:'b',name:'Autre nom',phone:prefix+n,address:'Derb 3'}));ok(await request(post,{purchase:{clientId:'b',ref:'purchase:b:x',amount:12.5}}));ok(await request(post,{purchase:{clientId:'b',ref:'purchase:b:x',amount:12.5}}));
+ const a=f.sql.prepare("SELECT * FROM clients WHERE merchant=? AND id='a'").get(f.merchant);assert.equal(a.name,'Amina');assert.equal(a.address,'Derb 3');assert.equal(C(a.spend),1250);assert.equal(a.visits,1);
+ assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM clients WHERE merchant=? AND deleted=0 AND id IN ('a','b')").get(f.merchant).n,1);
+ const foreign=f.sql.prepare("SELECT * FROM clients WHERE merchant='server-other-shop' AND id='foreign'").get();assert.equal(foreign.deleted,0);assert.equal(foreign.name,'Foreign');assert.equal(foreign.email,'');
+ ok(await request(post,{id:'c',name:'Voisin',phone:'0'+(n===799999999?600000000:n+1)}));assert.equal(f.sql.prepare("SELECT deleted FROM clients WHERE merchant=? AND id='c'").get(f.merchant).deleted,0);
+}),[[612345678,'+212 ']]);
+// Barrière : les deux recherches de numéro partent avant toute écriture, comme
+// deux caisses au même instant ; chacune crée donc sa fiche avant de voir l'autre.
+async function phoneRace(work){const db=f.env.DB,orig=db.prepare;let n=0,timer;const waits=[],release=()=>{clearTimeout(timer);waits.splice(0).forEach(fn=>queueMicrotask(fn));};db.prepare=function(sql){const st=orig.call(db,sql);if(!String(sql).includes('REPLACE(REPLACE('))return st;const wrap=s=>({bind:(...a)=>wrap(s.bind(...a)),first:(...a)=>s.first(...a),run:(...a)=>s.run(...a),all:(...a)=>{if(n++>=2)return s.all(...a);return new Promise(res=>{waits.push(()=>res(s.all(...a)));if(waits.length===2)release();else timer=setTimeout(release,2000);});}});return wrap(st);};try{return await work();}finally{db.prepare=orig;clearTimeout(timer);}}
+await strict('CL-5 two tills creating the same phone at once keep one live profile with both fields',fc.asyncProperty(number,async n=>{
+ await reset();await phoneRace(()=>Promise.all([request(post,{id:'x',name:'Sara',phone:'0'+n}),request(post,{id:'y',phone:'+212'+n,email:'sara@example.test'})])).then(rs=>rs.forEach(ok));
+ const live=f.sql.prepare("SELECT * FROM clients WHERE merchant=? AND deleted=0 AND id IN ('x','y')").all(f.merchant);assert.equal(live.length,1);assert.equal(live[0].name,'Sara');assert.equal(live[0].email,'sara@example.test');
+}));
 }finally{f.close();}
 console.log(`clients-properties: ${passed} strict passed, ${failed} failed, ${known} known; runs=${RUNS}; seed=${SEED}`);if(failed)process.exitCode=1;

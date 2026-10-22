@@ -40,6 +40,7 @@
 
 import { json } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
+import { phoneKey } from './_phone.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -150,7 +151,9 @@ function sanitize(raw) {
     spend: money(raw && raw.spend, 1e10),
     consent: (raw && raw.consent) ? 1 : 0,
     consent_email: (raw && raw.consentEmail) ? 1 : 0,
-    source: str(raw && raw.source, 24) || 'caisse',
+    // « merged:<id> » est réservé aux fiches fusionnées par le serveur (voir
+    // mergeIntoTwin) : un appareil ne peut pas fabriquer un alias.
+    source: (str(raw && raw.source, 24).startsWith('merged:') ? '' : str(raw && raw.source, 24)) || 'caisse',
     first_seen: int(raw && raw.firstSeen, 1e15),
     last_seen: int(raw && raw.lastSeen, 1e15),
     // Device timestamps are untrusted, including future clocks.
@@ -435,7 +438,8 @@ async function receivedOrDeclared(env, merchant, clientId, ref, saleRef, method)
 
 async function applyPurchase(env, merchant, raw) {
   const purchase = raw && typeof raw === 'object' ? raw : {};
-  const clientId = str(purchase.clientId || purchase.client_id, 64);
+  // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
+  const clientId = await resolveClientId(env, merchant, str(purchase.clientId || purchase.client_id, 64));
   const ref = str(purchase.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
   const claimed = money(purchase.amount, 1e9);
   let amount = claimed;
@@ -523,7 +527,8 @@ async function applyPurchase(env, merchant, raw) {
  * est acquitté sans effet : rien n'avait été compté, rien n'est repris. */
 async function applyRefund(env, merchant, raw, attempt = 0) {
   const refund = raw && typeof raw === 'object' ? raw : {};
-  const clientId = str(refund.clientId || refund.client_id, 64);
+  // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
+  const clientId = await resolveClientId(env, merchant, str(refund.clientId || refund.client_id, 64));
   const ref = str(refund.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
   const amount = money(refund.amount, 1e9);
   const saleRef = str(refund.saleRef || refund.sale_ref, 80);
@@ -715,7 +720,8 @@ export async function restoreSaleLoyalty(env, merchant, sale) {
 
 async function applyRedemption(env, merchant, raw) {
   const redemption = raw && typeof raw === 'object' ? raw : {};
-  const clientId = str(redemption.clientId || redemption.client_id, 64);
+  // Un id fusionné dans une autre fiche (CL-5) écrit sur celle-ci.
+  const clientId = await resolveClientId(env, merchant, str(redemption.clientId || redemption.client_id, 64));
   const ref = str(redemption.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
   if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
   await ensureRewardEvents(env);
@@ -779,6 +785,117 @@ async function applyRedemption(env, merchant, raw) {
   return json({ ok: true, pointsDelta, stampsDelta });
 }
 
+/* ── Un même téléphone, une seule fiche (CL-5) ───────────────────────────────
+ * L'identité d'une fiche est son id, généré par l'appareil. Deux caisses qui
+ * enregistraient la même cliente, l'une en « 0612… », l'autre en « +212 612… »,
+ * créaient deux fiches au serveur : le dédoublonnage n'existait que dans le
+ * carnet local de chaque appareil. Désormais, une fiche NOUVELLE dont le
+ * téléphone (règle de _phone.js, la même que KiwiPhone) appartient déjà à une
+ * fiche vivante du même magasin rejoint celle-ci :
+ *   · les champs que la fiche existante n'avait pas sont repris ; un champ
+ *     rempli n'est jamais remplacé, un vide n'efface jamais rien ; notes et
+ *     étiquettes s'additionnent, consentements et dates de passage aussi ;
+ *   · l'id de l'appareil devient une pierre tombale-alias (deleted = 1, aucune
+ *     donnée personnelle, source « merged:<id cible> ») : l'appareil la voit au
+ *     prochain tirage, retire son doublon local et reçoit la fiche fusionnée ;
+ *     ses achats, retours et récompenses encore en file sous l'ancien id
+ *     s'appliquent à la fiche cible au lieu de tomber en 404.
+ * Jamais d'un magasin à l'autre : chaque requête est bornée à `merchant`. Deux
+ * fiches qui existent déjà ne sont pas fusionnées ici (contrat de fusion, CL-2). */
+const ALIAS = 'merged:';
+function aliasOf(row) {
+  return row && Number(row.deleted) === 1 && typeof row.source === 'string' && row.source.startsWith(ALIAS)
+    ? row.source.slice(ALIAS.length) : '';
+}
+/* L'id auquel une écriture du registre s'applique : le sien, ou celui de la
+ * fiche dans laquelle il a été fusionné. */
+async function resolveClientId(env, merchant, id) {
+  if (!id) return id;
+  try {
+    const row = await env.DB.prepare('SELECT deleted, source FROM clients WHERE merchant = ? AND id = ?')
+      .bind(merchant, id).first();
+    return aliasOf(row) || id;
+  } catch (_) { return id; }
+}
+/* Les fiches vivantes du magasin qui portent ce numéro, la plus ancienne au
+ * curseur d'abord. Le SQL présélectionne sur les huit derniers chiffres,
+ * séparateurs ôtés ; la règle complète tranche ensuite. */
+async function phoneTwins(env, merchant, phone, exceptId) {
+  const key = phoneKey(phone);
+  if (!key) return [];
+  const res = await env.DB.prepare(
+    `SELECT id, phone, srv_ts FROM clients
+      WHERE merchant = ? AND deleted = 0 AND id <> ? AND phone <> ''
+        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '.', ''), '-', ''), '(', ''), ')', '') LIKE ?
+      ORDER BY srv_ts ASC, id ASC
+      LIMIT 50`
+  ).bind(merchant, exceptId, '%' + key.slice(-8)).all();
+  return ((res && res.results) || []).filter((r) => phoneKey(r.phone) === key);
+}
+function mergedText(current, incoming, max) {
+  const a = String(current || ''), b = String(incoming || '');
+  if (!b || a === b || a.includes(b)) return a;
+  return a ? (a + '\n' + b).slice(0, max) : b.slice(0, max);
+}
+function mergedHospitality(current, incoming) {
+  const parse = (v) => { try { return JSON.parse(v || '{}') || {}; } catch (_) { return {}; } };
+  const out = JSON.parse(hospitalityJson(parse(current))), add = JSON.parse(hospitalityJson(parse(incoming)));
+  for (const key of Object.keys(out)) if (!out[key] && add[key]) out[key] = add[key];
+  return JSON.stringify(out);
+}
+/* Verse la fiche `c` (envoyée sous `selfId`) dans `targetId`, puis fait de
+ * `selfId` un alias. Écriture optimiste : la fiche cible est relue et réécrite
+ * seulement si personne ne l'a touchée entre-temps (même srv_ts), sinon on
+ * recommence. `replaceSelf` : `selfId` vient d'être créée par cette requête
+ * (deux caisses au même instant) ; elle ne devient alias que si aucun achat ne
+ * l'a encore touchée. Rend null si la cible a disparu. */
+async function mergeIntoTwin(env, merchant, targetId, c, selfId, replaceSelf) {
+  if (!targetId || targetId === selfId || typeof env.DB.batch !== 'function') return null;
+  await ensureClientSyncSequence(env);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const t = await env.DB.prepare('SELECT * FROM clients WHERE merchant = ? AND id = ? AND deleted = 0')
+      .bind(merchant, targetId).first();
+    if (!t) return null;
+    const hasTags = Object.hasOwn(t, 'tags');
+    const set = {};
+    for (const column of ['name', 'phone', 'email', 'birthday', 'gender', 'city', 'address']) {
+      if (!t[column] && c[column]) set[column] = c[column];
+    }
+    set.notes = mergedText(t.notes, c.notes, 1000);
+    set.hospitality = mergedHospitality(t.hospitality, c.hospitality);
+    if (hasTags) set.tags = tagsJson([...tagsList(t.tags), ...tagsList(c.tags)]);
+    set.consent = Math.max(Number(t.consent) || 0, c.consent);
+    set.consent_email = Math.max(Number(t.consent_email) || 0, c.consent_email);
+    const seen = [Number(t.first_seen) || 0, c.first_seen].filter((n) => n > 0);
+    set.first_seen = seen.length ? Math.min(...seen) : 0;
+    set.last_seen = Math.max(Number(t.last_seen) || 0, c.last_seen);
+    const columns = Object.keys(set);          // noms tirés de la liste ci-dessus, jamais du corps
+    const now = Date.now(), cursor = clientCursorSql();
+    const results = await env.DB.batch([
+      ...clientCursorStatements(env, merchant, now),
+      env.DB.prepare(`UPDATE clients SET ${columns.map((k) => `${k} = ?`).join(', ')},
+          updated_ts = ?, srv_ts = ${cursor}
+        WHERE merchant = ? AND id = ? AND deleted = 0 AND srv_ts = ?`)
+        .bind(...columns.map((k) => set[k]), now, merchant, merchant, targetId, t.srv_ts),
+      env.DB.prepare(`INSERT INTO clients (merchant, id, deleted, source, updated_ts, srv_ts)
+         SELECT ?, ?, 1, ?, ?, ${cursor} WHERE changes() > 0
+         ON CONFLICT(merchant, id) DO UPDATE SET
+           deleted = 1, name = '', phone = '', email = '', birthday = '', gender = '', city = '',
+           address = '', notes = '', hospitality = '{}',${hasTags ? " tags = '[]'," : ''}
+           source = excluded.source, updated_ts = excluded.updated_ts, srv_ts = excluded.srv_ts
+         WHERE clients.deleted = 1
+            OR (? = 1 AND clients.points = 0 AND clients.stamps = 0 AND clients.visits = 0 AND clients.spend = 0)`)
+        .bind(merchant, selfId, ALIAS + targetId, now, merchant, replaceSelf ? 1 : 0),
+    ]);
+    if (Number(results[2] && results[2].meta && results[2].meta.changes)) {
+      const row = await env.DB.prepare('SELECT srv_ts FROM clients WHERE merchant = ? AND id = ?')
+        .bind(merchant, targetId).first();
+      return { id: targetId, cursor: Number(row && row.srv_ts) || 0 };
+    }
+  }
+  return null;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
@@ -824,6 +941,24 @@ export async function onRequestPost(context) {
   const initialStamps = preserveImportedTotals ? c.stamps : 0;
   const initialVisits = preserveImportedTotals ? c.visits : 0;
   const initialSpend = preserveImportedTotals ? c.spend : 0;
+
+  /* CL-5 · une fiche nouvelle dont le téléphone appartient déjà à une fiche
+   * vivante du magasin la rejoint, et un id déjà fusionné y renvoie (voir
+   * mergeIntoTwin). En cas d'échec, l'ancien chemin reste : rien n'est perdu. */
+  let existing = null, known = false;
+  try {
+    existing = await env.DB.prepare('SELECT deleted, source FROM clients WHERE merchant = ? AND id = ?')
+      .bind(merchant, c.id).first();
+    known = true;
+  } catch (_) {}
+  const fresh = known && !existing && !!phoneKey(c.phone);
+  if (known) {
+    try {
+      const twin = aliasOf(existing) || (fresh ? ((await phoneTwins(env, merchant, c.phone, c.id))[0] || {}).id : '');
+      const merged = twin ? await mergeIntoTwin(env, merchant, twin, c, c.id, false) : null;
+      if (merged) return json({ ok: true, merchant, id: c.id, mergedInto: merged.id, cursor: merged.cursor });
+    } catch (_) {}
+  }
 
   const srv = await nextSrvTs(env, merchant);
   const profileColumns = {
@@ -874,6 +1009,19 @@ export async function onRequestPost(context) {
     // Table absente → 503. Le client garde la fiche dans sa file et retentera :
     // rien n'est perdu, la remontée est seulement remise à plus tard.
     return json({ error: 'unmigrated' }, 503);
+  }
+
+  /* Deux caisses ont créé la même cliente au même instant : chacune a passé le
+   * contrôle avant l'écriture de l'autre. La plus récente au curseur rejoint
+   * la plus ancienne ; l'ordre du curseur est le même pour les deux requêtes,
+   * donc une seule fiche survit. */
+  if (fresh) {
+    try {
+      const older = (await phoneTwins(env, merchant, c.phone, c.id))
+        .find((r) => Number(r.srv_ts) < srv || (Number(r.srv_ts) === srv && r.id < c.id));
+      const merged = older ? await mergeIntoTwin(env, merchant, older.id, c, c.id, true) : null;
+      if (merged) return json({ ok: true, merchant, id: c.id, mergedInto: merged.id, cursor: merged.cursor });
+    } catch (_) {}
   }
 
   return json({ ok: true, merchant, id: c.id, cursor: srv });

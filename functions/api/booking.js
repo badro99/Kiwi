@@ -5,6 +5,7 @@ import { bookingEpoch, openingSlots, calendarDate } from './_booking-clock.js';
 import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
+import { normalizePhone, phoneKey } from './_phone.js';
 import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists, findStayByKey } from './hotel/_stay-events.js';
 import { pruneReservationsDoc } from './hotel/stays.js';
 import { commercialSnapshot } from './hotel/_commercial.js';
@@ -32,24 +33,6 @@ function normalizeEmail(value) {
 }
 const TOKEN = /^[a-f0-9]{16,80}$/;
 const num = (v, min, max, fallback) => Number.isFinite(+v) ? Math.max(min, Math.min(max, +v)) : fallback;
-function normalizePhone(value) {
-  let s = str(value, 32);
-  if (!s) return '';
-  if (/[A-Za-z]/.test(s)) return '';
-  s = s.replace(/^(\+|00)(\d{1,3})\s*\(0\)/, '$1$2');
-  if ((s.match(/\+/g) || []).length > 1 || s.indexOf('+') > 0) return '';
-  s = s.replace(/[\s().-]/g, '');
-  const explicit = s.startsWith('+') || s.startsWith('00');
-  let digits = s.replace(/^\+|^00/, '');
-  if (/^212[567]\d{8}$/.test(digits)) digits = '0' + digits.slice(3);
-  else if (/^[567]\d{8}$/.test(digits)) digits = '0' + digits;
-  if (/^0[567]\d{8}$/.test(digits)) return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
-  return explicit && /^[1-9]\d{6,14}$/.test(digits) ? '+' + digits : '';
-}
-function phoneKey(value) {
-  const phone = normalizePhone(value), digits = phone.replace(/\D/g, '');
-  return /^0[567]\d{8}$/.test(digits) ? '212' + digits.slice(1) : digits;
-}
 
 function blank() {
   return { v: 1, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, staffingEnabled: false, tablesPerStaff: 4 }, services: [], resources: [], blocked: [], bookings: [] };

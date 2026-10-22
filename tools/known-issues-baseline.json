@@ -45,12 +45,6 @@
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-5",
-      "kind": "defect",
-      "severity": "data"
-    },
-    {
-      "suite": "clients-properties-test.mjs",
       "label": "CL-6",
       "kind": "defect",
       "severity": "data"
