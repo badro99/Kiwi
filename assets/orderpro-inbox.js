@@ -379,6 +379,35 @@
       .then(function () { return flushCloses(); })
       .catch(closeStorageWarning);
   }
+  /* Le serveur ne solde que ce que les tickets de la visite ont payé : une
+   * commande arrivée pendant l'encaissement reste due (owedCents). La table
+   * est libérée ici, donc on le dit tout de suite, avec la table et le
+   * montant, une seule fois par visite même si la fermeture est rejouée. */
+  var owedWarned = {};
+  function warnOwed(payload, answer) {
+    try {
+      var cents = Math.round(Number(answer && answer.owedCents) || 0);
+      var session = payload && payload.closeSession ? String(payload.closeSession) : '';
+      if (cents <= 0 || !session || owedWarned[session]) return;
+      owedWarned[session] = 1;
+      var table = '';
+      var known = state.orders || {};
+      Object.keys(known).some(function (id) {
+        var o = known[id];
+        if (o && String(o.session || '') === session && o.table) { table = String(o.table); return true; }
+        return false;
+      });
+      var amount = (cents % 100 ? (cents / 100).toFixed(2).replace('.', ',') : String(cents / 100)) + ' MAD';
+      var stack = document.getElementById('toast-stack');
+      if (!stack) return;
+      var el = document.createElement('div'); el.className = 'toast';
+      el.textContent = (table ? 'Table ' + normCloseTable(table) + ' · ' : '') + amount +
+        ' restent dus : une commande est arrivée après l’addition';
+      stack.appendChild(el);
+      setTimeout(function () { el.classList.add('fade'); }, 12000);
+      setTimeout(function () { el.remove(); }, 12300);
+    } catch (_) {}
+  }
   function closeStorageWarning() {
     try { window.dispatchEvent(new CustomEvent('kiwi:outbox', { detail: { type: 'storage-error', channel: CLOSE_CHANNEL } })); } catch (_) {}
     try {
@@ -420,6 +449,9 @@
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row.payload),
       }).then(function (response) {
         if (!response.ok) throw new Error('HTTP ' + response.status);
+        return typeof response.json === 'function' ? response.json().catch(function () { return null; }) : null;
+      }).then(function (answer) {
+        warnOwed(row.payload, answer);
         state.since = 0;
         return pull().then(function (fresh) {
           if (fresh < 0 || closeIsOpen(row.payload)) throw new Error('close-unconfirmed');

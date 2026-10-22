@@ -303,7 +303,7 @@ var SHELL = [
   '/assets/orderpro-publish.js?v=7',
   '/assets/orderpro-panel.js?v=4',
   '/assets/orderpro-guestpage.js?v=3',
-  '/assets/orderpro-inbox.js?v=37',
+  '/assets/orderpro-inbox.js?v=38',
   '/assets/service-requests.js?v=2',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de

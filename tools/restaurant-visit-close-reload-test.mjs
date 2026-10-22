@@ -48,3 +48,34 @@ await new Promise(resolve => setTimeout(resolve, 20));
 assert.equal(posts, 1, 'new instance replayed close');
 assert.equal(rows.size, 0, 'removed only after server snapshot confirmed close');
 console.log('✓ restaurant visit close survives reload and is acknowledged after server proof');
+
+/* The server pays only what the visit's receipts covered. When it answers that
+   money is still owed, the till names the table and the amount, once. */
+const toasts = [];
+const stack = { appendChild(el) { toasts.push(el.textContent); } };
+function owedInstance(answer) {
+  const state = { sessions: [{ id: 'visit-owed', table: '4' }], since: 1,
+    orders: { a: { session: 'visit-owed', table: 'Table 4', mode: 'table' } } };
+  const context = vm.createContext({
+    state, Promise, setTimeout: () => 0, navigator: { onLine: true }, window: { KiwiOffline: offline, dispatchEvent() {} },
+    merchant: () => 'fixture', CustomEvent: class {},
+    document: { getElementById: id => (id === 'toast-stack' ? stack : null),
+      createElement: () => ({ className: '', textContent: '', classList: { add() {} }, remove() {} }) },
+    fetch: async () => ({ ok: true, json: async () => answer }),
+    pull: async () => { state.sessions = []; return 0; },
+  });
+  vm.runInContext(closeCode, context);
+  return context;
+}
+const owed = owedInstance({ ok: true, closed: 1, owedCents: 5250, owedOrders: 1 });
+owed.closeSession({ session: 'visit-owed', why: 'settle' });
+await new Promise(resolve => setTimeout(resolve, 20));
+assert.equal(rows.size, 0, 'an owed answer still acknowledges the close');
+assert.deepEqual(toasts, ['Table 4 · 52,50 MAD restent dus : une commande est arrivée après l’addition']);
+owed.warnOwed({ closeSession: 'visit-owed' }, { owedCents: 5250 });
+assert.equal(toasts.length, 1, 'a replayed close does not repeat the warning');
+const settled = owedInstance({ ok: true, closed: 1 });
+settled.closeSession({ session: 'visit-paid', why: 'settle' });
+await new Promise(resolve => setTimeout(resolve, 20));
+assert.equal(toasts.length, 1, 'a fully paid visit says nothing');
+console.log('✓ a close the server answers with money still owed names the table and the amount, once');

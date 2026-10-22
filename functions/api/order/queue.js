@@ -46,6 +46,7 @@ import { json, entitledMerchant, activeServiceEmployee, isTillFor, readTillActor
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, CURSOR_LAG_MS, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 import { merchantZone } from '../_business-day.js';
+import { settleCoveredOrders } from '../_visit-cover.js';
 
 function deferCourse(context, promise) {
   const safe = Promise.resolve(promise).catch(() => false);
@@ -2034,12 +2035,25 @@ export async function onRequestPost(context) {
      * table depuis minuit », il ne solde que la visite en cours. Une commande
      * laissée impayée par un `closeTable` reste donc impayée — visible comme
      * telle — au lieu d'être ramassée par le paiement de la tablée suivante. */
+    /* Mais « réglée » ne vaut que pour ce que les tickets de la visite ont
+     * payé. Une commande arrivée après l'addition (un QR, un serveur qui
+     * envoie le dessert pendant l'encaissement) était estampillée payée ici
+     * et partait gratuite sans que personne le voie. Quand les tickets paient
+     * exactement les plus anciennes commandes, seules celles-ci passent
+     * payées ; le reste demeure dû, et la réponse le chiffre pour que la
+     * caisse le dise. Sans ticket encore arrivé (la fermeture a doublé le
+     * paiement), ou avec un écart qui ne tombe sur aucune commande, rien ne
+     * change : tout est soldé comme avant. */
+    let owed = null;
     try {
       if (closeSession && why === 'settle') {
-        await env.DB.prepare(
-          `UPDATE orders SET paid_ts = ?, updated_ts = ?
-            WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, closeSession).run();
+        owed = await settleCoveredOrders(env, merchant, closeSession, now);
+        if (!owed) {
+          await env.DB.prepare(
+            `UPDATE orders SET paid_ts = ?, updated_ts = ?
+              WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+          ).bind(now, now, merchant, closeSession).run();
+        }
       }
     } catch (_) {}
     deferCourse(context, closeOrderCourses(env, {
@@ -2047,7 +2061,9 @@ export async function onRequestPost(context) {
     }));
     return json({ ok: true, closed, sessionId: closeSession || expectedSession,
       revision: targetSession ? Number(targetSession.seen_ts) || 0 : undefined,
-      unpaid: unpaid || undefined });
+      unpaid: unpaid || undefined,
+      owedCents: owed ? owed.remainingCents : undefined,
+      owedOrders: owed ? owed.owedOrders : undefined });
   }
 
   /* ── Déposer un bon venu de la caisse ─────────────────────────────────────

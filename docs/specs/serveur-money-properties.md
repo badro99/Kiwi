@@ -30,7 +30,7 @@ flow checks stored tender methods, lines, tip_cents, revenue, closed visits and
 paid flags, including repeated taps. Summary tests use the real summarize() on
 D1 rows and independently sum expected cents, tips and day buckets.
 
-## Strict properties (33 since WM-5 was fixed)
+## Strict properties (35 since WM-7 was fixed)
 
 - Equal splits conserve cents, final part absorbs the remainder; sub-cent parts
   cannot be launched. Item lines sum to each part and to each original dish,
@@ -115,6 +115,25 @@ D1 rows and independently sum expected cents, tips and day buckets.
   the WM-5 split case, a queued full payment followed by a course, and the
   phone billing the server remainder; turning the guard or the phone's removal
   of settled orders off makes each red.
+
+- order/queue.js closeSession settle (WM-7, fixed 22 October 2026, till): the
+  till closes a paid table with closedBy « settle », in parallel with its
+  receipt, and that close stamped every order of the visit paid, whatever the
+  receipt covered. WM-5 had closed the hole for the waiter phone only: a till
+  payment answered billOpen, then the till's own close paid the late course
+  anyway. The rule now lives in one place, functions/api/_visit-cover.js, used
+  by /api/sale and by the close: when the visit's receipts pay exactly its
+  oldest orders, only those are stamped paid, the visit still closes (the till
+  has freed the table), the late course stays owed and shows in the console's
+  « closed with money owed » list, and the answer carries owedCents and
+  owedOrders. The till's close outbox (orderpro-inbox.js) turns that into a
+  toast naming the table and the amount, once per visit. Unchanged on purpose:
+  a close that reaches the server before any receipt, or a shortfall that
+  lands on no order boundary, settles everything as before (production, since 21 September: no till close
+  ever found its visit still open, so the receipt always arrived first).
+  Red witness: the till property with a full payment for the first course;
+  removing the close's guard makes it red, and removing the toast makes
+  restaurant-visit-close-reload-test red.
 
 - Split pool by name (fixed 22 October 2026, till and waiter phone): the split
   screen grouped dishes by name, so two « Prépare ton Plat » at 84 and 88 MAD
