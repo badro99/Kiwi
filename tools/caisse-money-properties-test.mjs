@@ -27,18 +27,9 @@ async function knownIssue(id, label, property, examples) {
     known++; console.log(`◦ known ${id} · ${label}\n  shrunk: ${fc.stringify(result.counterexample)}; seed=${result.seed}; path=${result.counterexamplePath}`);
   } else console.log(`! known ${id} holds now: promote to strict in tools/caisse-money-properties-test.mjs`);
 }
-// The split manifest gives exact declaration boundaries, including template literals.
-// Read current production fragments, never the frozen reference or copied math.
-const map = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/caisse-app/split.json'), 'utf8'));
-const texts = new Map([map.prelude, map.core].map(f => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]));
-const offsets = new Map(), functions = new Map(), statements = [];
-for (const fragment of map.fragments) {
-  const offset = offsets.get(fragment.file) || 0, length = fragment.end - fragment.start;
-  const source = texts.get(fragment.file).slice(offset, offset + length);
-  offsets.set(fragment.file, offset + length); statements.push(source);
-  if (fragment.kind === 'FunctionDeclaration') functions.set(fragment.name, source);
-}
-for (const [file, text] of texts) assert.equal(offsets.get(file) + (file === map.prelude ? 1 : 0), text.length, 'update split map after source edits');
+// Extract declarations by name from current production files, never split offsets.
+const { declaration } = createRequire(import.meta.url)('./js-declarations.cjs');
+const source = ['assets/caisse-accounting.js', 'assets/caisse-app.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 const cents = mad => Math.round(mad * 100);
 const add = rows => rows.reduce((a,b) => a+b, 0);
 const MAX = 5_000_000;
@@ -76,9 +67,9 @@ function context(extra = {}) {
     setTimeout:fn=>{timers.push(fn);return 1;}, clearTimeout(){}, ...extra });
   c.window = c;
   for(const name of ['money','minor','major','fmtMAD','fmtMADcents']) {
-    const statement = statements.find(s=>new RegExp('\\bconst '+name+'\\s*=').test(s)); assert.ok(statement,name); vm.runInContext(statement,c);
+    vm.runInContext(declaration(source, name),c);
   }
-  vm.runInContext(selected.map(name=>{assert.ok(functions.has(name),name);return functions.get(name);}).join('\n'),c);
+  vm.runInContext(selected.map(name=>declaration(source,name)).join('\n'),c);
   return { c, nodes, timers, $ };
 }
 const { c } = context();

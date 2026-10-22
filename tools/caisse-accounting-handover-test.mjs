@@ -39,6 +39,8 @@ const caisseHtml = caisseTestSource(fs.readFileSync(path.join(ROOT, 'kiwi-caisse
 
 /* Extract helpers and accounting functions verbatim from kiwi-caisse.html */
 function extractBody(src, startMarker, endMarker) {
+  if (startMarker === 'function refreshOpenReconciliationModals() {') return caisseTestSource.declarations('refreshOpenReconciliationModals','activeCloudSaleIds','reconcileVoids');
+  if (startMarker === 'let clotureExpected = 0;') return caisseTestSource.declarations('clotureExpected', 'clotureCardExpected', 'terminalCardTotal', 'updateEcart', 'updateCardEcart', 'openCloture', 'openTableBills', 'renderOpenTableBills', 'renderCloture');
   const sIdx = src.indexOf(startMarker);
   if (sIdx === -1) throw new Error(`Could not find start marker: ${startMarker}`);
   const eIdx = src.indexOf(endMarker, sIdx);

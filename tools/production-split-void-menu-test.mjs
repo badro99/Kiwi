@@ -56,6 +56,8 @@ const dayReportSrc = fs.readFileSync(path.join(ROOT, 'assets/day-report.js'), 'u
 const posSaleSrc = fs.readFileSync(path.join(ROOT, 'assets/pos-sale.js'), 'utf8');
 
 function extractBody(src, startMarker, endMarker) {
+  if (startMarker === 'function refreshOpenReconciliationModals() {') return caisseTestSource.declarations('refreshOpenReconciliationModals','activeCloudSaleIds','reconcileVoids');
+  if (startMarker === 'let clotureExpected = 0;') return caisseTestSource.declarations('clotureExpected', 'clotureCardExpected', 'terminalCardTotal', 'updateEcart', 'updateCardEcart', 'openCloture', 'openTableBills', 'renderOpenTableBills', 'renderCloture');
   const sIdx = src.indexOf(startMarker);
   if (sIdx === -1) throw new Error(`Could not find start marker: ${startMarker}`);
   const eIdx = src.indexOf(endMarker, sIdx);

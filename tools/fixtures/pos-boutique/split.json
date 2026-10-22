@@ -1,6 +1,6 @@
 {
   "sha256": "61da02bb4cb58e9aecc0a4b16558a2004bad6cc721ebceeff247759d6ad6626f",
-  "prefix": "/* ═══════════════════════════════════════════════════════════════════════════\n * Kiwi · BOUTIQUE MODE — Maison Mansour (PIN 0002), mode & artisanat.\n * ---------------------------------------------------------------------------\n * Loaded lazily by assets/pos-dispatch.js, which owns the PIN choreography\n * and provides the root <div class=\"vx-screen\" id=\"pos-boutique\">. This file\n * builds the whole app inside it and self-registers on window.KiwiPosDispatch.\n *\n * The boutique story: caftans, takchitas et babouches vendus au toucher —\n * une grille visuelle par rayon, la taille avec le stock par taille sous le\n * doigt, la remise sous accord gérante. Le différenciateur métier :\n * ÉCHANGES & AVOIRS — on retrouve la vente par n° de ticket ou téléphone,\n * on échange la pièce ou on émet un avoir code-barres qui revient en caisse\n * comme moyen de paiement. V1 = couche opérationnelle : la carte part au\n * lecteur partenaire, Kiwi n'encaisse pas.\n * ═══════════════════════════════════════════════════════════════════════════ */\n(function () {",
+  "prefix": "/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n * Kiwi \u00b7 BOUTIQUE MODE \u2014 Maison Mansour (PIN 0002), mode & artisanat.\n * ---------------------------------------------------------------------------\n * Loaded lazily by assets/pos-dispatch.js, which owns the PIN choreography\n * and provides the root <div class=\"vx-screen\" id=\"pos-boutique\">. This file\n * builds the whole app inside it and self-registers on window.KiwiPosDispatch.\n *\n * The boutique story: caftans, takchitas et babouches vendus au toucher \u2014\n * une grille visuelle par rayon, la taille avec le stock par taille sous le\n * doigt, la remise sous accord g\u00e9rante. Le diff\u00e9renciateur m\u00e9tier :\n * \u00c9CHANGES & AVOIRS \u2014 on retrouve la vente par n\u00b0 de ticket ou t\u00e9l\u00e9phone,\n * on \u00e9change la pi\u00e8ce ou on \u00e9met un avoir code-barres qui revient en caisse\n * comme moyen de paiement. V1 = couche op\u00e9rationnelle : la carte part au\n * lecteur partenaire, Kiwi n'encaisse pas.\n * \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */\n(function () {",
   "suffix": "})();\n",
   "chunks": [
     {
@@ -3420,5 +3420,11 @@
     "issueAvoir",
     "checkout",
     "payExistingBalance"
-  ]
+  ],
+  "splitFiles": {
+    "assets/pos-boutique.js": "6e27418341a5bb1950b87949e7781159ae958c42bca0618af83d4676de72b6e2",
+    "assets/pos-boutique/sales.js": "d4e8cd4e5f3db8b764dbe6808cf237f6a07da039035855d1ff4beb7707f2c64e",
+    "assets/pos-boutique/checkout.js": "f320e5c6267b3b41c78af99005314e3f7e7740faecf50c43509fd51d2ad5a295",
+    "assets/pos-boutique/inventory.js": "89dbd97a26ab4e87d83c4ef13cc3ea93b4df0044fb5fef639bc9f6b2e001f3a7"
+  }
 }

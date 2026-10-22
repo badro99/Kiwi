@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { declaration } from './js-declarations.cjs';
 import maisonSource from './pos-maison-test-source.cjs';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · La vente réglée entièrement en avoir  (ticket #0020)
@@ -148,7 +149,8 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   const src = BOUTIQUE;
   ok(/action: 'issue'/.test(src), 'boutique : l\'émission d\'un avoir passe par /api/store-credits');
   ok(/action: 'redeem-batch'/.test(src), 'boutique : la consommation est une seule écriture serveur');
-  const doAv = src.slice(src.indexOf('async function doAvoir'), src.indexOf('async function issueAvoir'));
+  const checkout = fs.readFileSync(new URL('../assets/pos-boutique/checkout.js', import.meta.url), 'utf8').replace(/^(?:import .*;\n)+/, '').replace(/\nexport \{[^\n]+\};\n$/, '');
+  const doAv = declaration(checkout, 'doAvoir');
   ok(doAv.indexOf('await issueAvoir') > 0 && doAv.indexOf('await issueAvoir') < doAv.indexOf('restoreLines('),
     'boutique : l\'avoir est inscrit AVANT que le stock bouge (un refus ne remet rien en rayon)');
   ok(/catch \(error\) \{\s*toast\('Avoir non émis'/.test(doAv), 'boutique : un refus du registre le dit, sans retour enregistré');

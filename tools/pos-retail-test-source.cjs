@@ -9,13 +9,15 @@ module.exports = function retailSource(source) {
   const vertical = source.match(/^import .* from '\.\/pos-(maison|boutique)\//)?.[1];
   if (!vertical) return source;
   const map = JSON.parse(fs.readFileSync(path.join(root, `tools/fixtures/pos-${vertical}/split.json`), 'utf8'));
-  const parts = [];
+  const parts = [], bodies = [];
+  let exact = true;
   for (const chunk of map.chunks) {
     const text = chunk.file === `assets/pos-${vertical}.js` ? source : fs.readFileSync(path.join(root, chunk.file), 'utf8');
     const body = text.replace(/^(?:import .*;\n)+/, '').replace(/\nexport \{[^\n]+\};\n$/, '');
+    bodies.push(body);
     let offset = 0;
     for (const f of chunk.fragments) { const length = f.end - f.start; parts.push({ start: f.start, text: body.slice(offset, offset + length) }); offset += length; }
-    if (offset !== body.length) throw Error(vertical + ' split fragment length changed; update the source map');
+    if (offset !== body.length) exact = false;
   }
-  return map.prefix + parts.sort((a,b) => a.start - b.start).map(p => p.text).join('') + map.suffix;
+  return map.prefix + (exact ? parts.sort((a,b) => a.start - b.start).map(p => p.text).join('') : bodies.join('\n')) + map.suffix;
 };

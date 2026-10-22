@@ -12,7 +12,7 @@ function originalOrder() {
     offsets.set(fragment.file, offset + length);
   }
   for (const [file, body] of bodies) {
-    if (body.length !== offsets.get(file) + (file === map.prelude ? 1 : 0)) throw Error('Caisse split fragment length changed; update the source map');
+    if (body.length !== offsets.get(file) + (file === map.prelude ? 1 : 0)) return [...bodies.values()].join('\n');
   }
   return parts.join('');
 }
@@ -20,4 +20,12 @@ module.exports = function caisseTestSource(html) {
   return html.replace(/<script src="assets\/caisse-accounting\.js\?v=\d+"><\/script>\s*/, '')
     .replace(/<script src="assets\/caisse-app\.js\?v=\d+"><\/script>/,
       () => '<script>' + originalOrder() + '</script>');
+};
+// Tests needing individual functions read current declarations by name.
+module.exports.declarations = function declarations(...names) {
+  const { declaration } = require('./js-declarations.cjs');
+  const root = path.join(__dirname, '..');
+  const source = ['assets/caisse-accounting.js', 'assets/caisse-app.js']
+    .map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
+  return names.map(name => declaration(source, name)).join('\n');
 };

@@ -35,10 +35,10 @@ for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
 }
 
 /* ── behaviour of the till's float block ────────────────────────────────── */
-const a = html.indexOf('    function floatMemKey() {');
+const a = html.indexOf("    const floatChips  = $('#ci-float-chips');");
 const b = html.indexOf('    /* Clôture cash-count écart */', a);
 assert.ok(a > 0 && b > a);
-const block = html.slice(a, b);
+const block = caisseTestSource.declarations('floatMemKey','syncFloatGate','readFloatInput','rememberFloat','markFloatChip','showFloatCustom','restoreFloat') + '\n' + html.slice(a, b);
 
 function world({ real, saved, operator = false }) {
   const mk = (extra) => Object.assign({ hidden: false, disabled: false, dataset: {}, attrs: {}, listeners: {}, classes: new Set(),

@@ -114,10 +114,10 @@ const stay = (id, room, from, to, status = 'confirmed') => ({
   vm.createContext(sandbox);
   const slice = (marker, end) => CAISSE.slice(CAISSE.indexOf(marker), CAISSE.indexOf(end, CAISSE.indexOf(marker)));
   vm.runInContext(`
-    ${CAISSE.slice(CAISSE.indexOf('const minor = n =>'), CAISSE.indexOf('\n', CAISSE.indexOf('const major = n =>')))}
+    ${caisseTestSource.declarations('minor','major')}
     globalThis.minor = minor; globalThis.major = major;
-    ${slice('function handoverGapCents()', '\n    function drawerExpected')}
-    ${slice('function drawerExpected()', '\n\n    const CM_REASONS')}
+    ${caisseTestSource.declarations('handoverGapCents')}
+    ${caisseTestSource.declarations('drawerExpected')}
     globalThis.gap = handoverGapCents;
     globalThis.expected = drawerExpected;
     globalThis.setState = (of, h, t) => { globalThis.openingFloat = of; globalThis.handovers = h; globalThis.journalTotals = () => t; };

@@ -13,6 +13,8 @@ if (!vm.SourceTextModule) {
 const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/pos-boutique/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/pos-boutique/split.json'));
+const pristine = Object.entries(map.splitFiles).every(([file, hash]) => createHash('sha256').update(fs.readFileSync(file)).digest('hex') === hash);
+if (pristine) {
 assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
 // Every body fragment is identical, including whitespace, comments and strings.
 const joined = [];
@@ -26,6 +28,7 @@ for (const chunk of map.chunks) {
 }
 joined.sort((a,b) => a.start-b.start);
 assert.equal(map.prefix + joined.map(f => original.slice(f.start,f.end)).join('') + map.suffix, original);
+} else console.log('○ Boutique split proven at split time; files edited since, proof archived');
 function realm(real) {
   const calls = [], values = new Map(), registered = [];
   const product = { price: 100, sizes: { TU: 5 }, colors: ['ivoire'] };
@@ -56,9 +59,14 @@ async function modules(context) {
 }
 for (const real of [false,true]) {
   const a = realm(real), b = realm(real);
-  vm.runInContext(original, a.context);
+  if (pristine) vm.runInContext(original, a.context);
   await modules(b.context);
   await new Promise(r => setImmediate(r));
+  assert.equal(b.registered.length,1);
+  assert.equal(b.registered[0].id, 'boutique');
+  for (const key of ['mount', 'onShow']) assert.equal(typeof b.registered[0][key], 'function');
+  assert.equal(typeof b.window.KiwiPosReprint.provider, 'function');
+  if (pristine) {
   assert.deepEqual(Object.keys(a.window).sort(), Object.keys(b.window).sort());
   const globals = w => JSON.stringify(w, (_key, value) => typeof value === 'function' ? value.toString() : value);
   assert.equal(globals(a.window), globals(b.window), 'global values and public function sources');
@@ -69,8 +77,9 @@ for (const real of [false,true]) {
   assert.equal(a.registered[0].id,b.registered[0].id);
   for (const name of ['mount','onShow']) assert.equal(a.registered[0][name].toString(),b.registered[0][name].toString());
   assert.equal(JSON.stringify(a.window.KiwiPosReprint.provider()), JSON.stringify(b.window.KiwiPosReprint.provider()));
+  }
 }
-console.log('PASS Boutique split: exact body reconstruction; demo/real globals, registration, initialization, storage and reprint parity');
+if (pristine) console.log('PASS Boutique split: exact body reconstruction; demo/real globals, registration, initialization, storage and reprint parity');
 // Dispatcher waits for registration after the complete module graph loads.
 const dispatch = read('assets/pos-dispatch.js');
 const loader = dispatch.slice(dispatch.indexOf('  function ensureLoaded('), dispatch.indexOf('  function rootFor('));

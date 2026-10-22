@@ -26,9 +26,9 @@ const extract = name => {
    function: take it whole, from its banner to recordSale. */
 const heldBlock = (() => {
   const start = page.indexOf('    /* ── VENDUE ICI, PAS ENCORE DANS LA FILE');
-  const end = page.indexOf('    function recordSale(', start);
+  const end = page.indexOf('    /* Every completed payment already exists', start);
   assert.ok(start >= 0 && end > start, 'held-sales block exists');
-  return page.slice(start, end);
+  return caisseTestSource.declarations('heldSalesKey','heldSaleRows','saveHeldSales','holdSaleLocally','releaseHeldSale','adoptHeldSalesIntoJournal','retryHeldSales','retryHeldSalesSafely','paintHeldSales','saleRecordConfirmed','warnSaleHeld') + '\n' + page.slice(start,end);
 })();
 const drain = async () => { for (let i = 0; i < 40; i++) await new Promise(r => setImmediate(r)); };
 const merchant = 'receipt-upload-test';

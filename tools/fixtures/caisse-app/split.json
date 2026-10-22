@@ -9715,5 +9715,9 @@
       "last": 17536,
       "file": "assets/caisse-app.js"
     }
-  ]
+  ],
+  "splitFiles": {
+    "assets/caisse-accounting.js": "bb2781f5400fc8e267b7050cf32cfe714dc64b4bc18ce877f74a301a0bbec470",
+    "assets/caisse-app.js": "5a0dc2d5fcb18fe2292fc097af1ec7cb749bee6cbddedee2941f920a87ec9b30"
+  }
 }

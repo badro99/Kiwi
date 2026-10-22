@@ -8,16 +8,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = caisseTestSource(readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8'));
-const start = source.indexOf('    let registerClosed = false;');
-const end = source.indexOf('    const clockinBtn', start);
-assert.ok(start >= 0 && end > start, 'real close function is available');
-const openStart = source.indexOf('    function openTableBills() {');
-const openEnd = source.indexOf('    function renderCloture(', openStart);
-assert.ok(openStart >= 0 && openEnd > openStart, 'real open-bill guard is available');
-const closeSource = source.slice(openStart, openEnd) + source.slice(start, end);
-const provisionalStart = source.indexOf('    let lastProvisional = 0;');
-const provisionalEnd = source.indexOf('    /* Les libellés du ticket.', provisionalStart);
-assert.ok(provisionalStart >= 0 && provisionalEnd > provisionalStart, 'real provisional snapshot function is available');
+const closeSource = caisseTestSource.declarations('openTableBills','renderOpenTableBills','registerClosed','closeGapReason','tillKitCount','CLOSE_STEP_TIMEOUT_MS','closeStepWithin','setCloseBusy','closeRegister','closeRegisterSteps');
+const provisionalSource = caisseTestSource.declarations('lastProvisional','saveProvisional');
 
 async function exercise(persist, opts = {}) {
   const calls = { cleared: 0, shown: 0, events: 0, finished: 0, toasts: [], sheetOpen: false, zJournal: null, timers: [] };
@@ -87,7 +79,7 @@ const provisionalContext = vm.createContext({
     queueSnapshot: (_report, entries) => { provisionalEntries = entries; return Promise.resolve({ ok: true }); },
   } }, toast() {}, Date,
 });
-vm.runInContext(source.slice(provisionalStart, provisionalEnd), provisionalContext, { filename: 'kiwi-caisse.html:saveProvisional' });
+vm.runInContext(provisionalSource, provisionalContext, { filename: 'kiwi-caisse.html:saveProvisional' });
 provisionalContext.saveProvisional(true);
 assert.deepEqual(provisionalEntries.map((entry) => entry.id), ['paid', 'cancelled'],
   'provisional Z snapshot also receives void evidence from the full journal');

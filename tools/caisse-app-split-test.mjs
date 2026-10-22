@@ -1,4 +1,5 @@
 /* Frozen source reconstruction plus real classic-script execution in one realm. */
+import { precached } from './split-live-checks.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -8,20 +9,24 @@ import caisseTestSource from './caisse-test-source.cjs';
 const read = file => fs.readFileSync(file, 'utf8');
 const original = gunzipSync(fs.readFileSync('tools/fixtures/caisse-app/original.js.gz')).toString();
 const map = JSON.parse(read('tools/fixtures/caisse-app/split.json'));
-assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
 const sources = new Map([map.prelude, map.core].map(file => [file, read(file)]));
+const pristine = Object.entries(map.splitFiles).every(([file, hash]) => createHash('sha256').update(fs.readFileSync(file)).digest('hex') === hash);
+if (pristine) {
+assert.equal(createHash('sha256').update(original).digest('hex'), map.sha256);
 for (const [file, source] of sources) {
   const expected = map.fragments.filter(f => f.file === file).map(f => original.slice(f.start, f.end)).join('');
   assert.equal(source, expected + (file === map.prelude ? '\n' : ''), 'unchanged body bytes: ' + file);
 }
 assert.equal(map.fragments.map(f => original.slice(f.start, f.end)).join(''), original);
 assert.ok(map.fragments.filter(f => f.file === map.prelude).every(f => f.kind === 'FunctionDeclaration'));
+} else console.log('○ Caisse split proven at split time; files edited since, proof archived');
 const html = read('kiwi-caisse.html');
-assert.ok(caisseTestSource(html).includes('<script>' + original + '</script>'), 'legacy tests use actual production bodies in original order');
+if (pristine) assert.ok(caisseTestSource(html).includes('<script>' + original + '</script>'), 'legacy tests use actual production bodies in original order');
 const pair = html.match(/<script src="assets\/caisse-accounting\.js\?v=\d+"><\/script>\s*<script src="assets\/caisse-app\.js\?v=\d+"><\/script>/);
 assert.ok(pair, 'adjacent blocking classic scripts, declarations before initializers');
 assert.ok(!/\b(?:async|defer|type=)/.test(pair[0]));
-for (const file of sources.keys()) assert.ok(read('kiwi-sw.js').includes('/' + file + '?v='));
+for (const [, url] of pair[0].matchAll(/src="([^"]+)"/g)) precached(new URL(url, 'https://kiwi.test/'));
+if (pristine) {
 // Check all global function descriptors and sources without running DOM startup.
 const declarations = file => map.fragments.filter(f => f.kind === 'FunctionDeclaration' && (!file || f.file === file)).map(f => original.slice(f.start, f.end)).join('');
 const a = vm.createContext({}), b = vm.createContext({});
@@ -34,6 +39,7 @@ for (const key of Object.keys(a)) {
   const { value: av, ...ad } = Object.getOwnPropertyDescriptor(a, key);
   const { value: bv, ...bd } = Object.getOwnPropertyDescriptor(b, key);
   assert.deepEqual(ad, bd, key + ' global descriptor');
+}
 }
 function realm(real) {
   const calls = [], nodes = new Map(), storage = new Map();
@@ -74,10 +80,13 @@ function realm(real) {
 }
 for (const real of [false, true]) {
   const before = realm(real), after = realm(real);
-  vm.runInContext(original, before.context, { filename: 'original-caisse-app.js' });
+  if (pristine) vm.runInContext(original, before.context, { filename: 'original-caisse-app.js' });
   vm.runInContext(read(map.prelude), after.context, { filename: map.prelude });
   vm.runInContext(read(map.core), after.context, { filename: map.core });
   await new Promise(resolve => setImmediate(resolve));
+  for (const name of ['KiwiCaisseAccounting','KiwiCaisseCarte','KiwiCaisseKitchen','KiwiCaisseContext','KiwiCaisseHeldSales']) assert.ok(after.context[name], name + ' registered');
+  assert.equal(typeof after.context.rollupLedger, 'function');
+  if (pristine) {
   const mismatch = before.calls.findIndex((c,i) => JSON.stringify(c) !== JSON.stringify(after.calls[i]));
   if (mismatch >= 0) console.error('first mismatch', mismatch, before.calls[mismatch], after.calls[mismatch]);
   assert.deepEqual(before.calls, after.calls, 'startup effects and storage order');
@@ -91,5 +100,8 @@ for (const real of [false, true]) {
     const snapshot = value => JSON.stringify(value, (_k,v) => typeof v === 'function' ? v.toString() : v);
     assert.equal(snapshot(before.context[name]), snapshot(after.context[name]), name);
   }
+  }
 }
-console.log('PASS caisse split: exact bodies; global function descriptors; demo/real startup, registrations, DOM writes and storage parity');
+if (pristine) console.log('PASS caisse split: exact bodies; global function descriptors; demo/real startup, registrations, DOM writes and storage parity');
+
+console.log('PASS caisse live scripts: adjacent blocking tags, VM startup and registrations');

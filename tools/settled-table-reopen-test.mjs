@@ -220,7 +220,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
     renderShiftStats() {}, refreshOpenReconciliationModals() {},
     $: () => ({ classList: { contains: () => false } }), Date,
   });
-  vm.runInContext(source.slice(start, end), saleCtx);
+  vm.runInContext(caisseTestSource.declarations('recordSale'), saleCtx);
   const first = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
     [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
   firstReceipt = first;
@@ -259,7 +259,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
     attachReceipt() {}, persistShift() {}, creditSaleToClient() {}, renderShiftStats() {},
     refreshOpenReconciliationModals() {}, $: () => ({ classList: { contains: () => false } }), Date,
   });
-  vm.runInContext(source.slice(helperStart, helperEnd) + '\n' + source.slice(saleStart, saleEnd), ctx);
+  vm.runInContext(source.slice(helperStart, helperEnd) + '\n' + caisseTestSource.declarations('recordSale'), ctx);
   const replay = ctx.recordSale(60, 'cash', 'Table 13 #154', 0, [], '13');
   ok('a sessionless repeat of #154 reuses its first receipt', replay === journal[0] && journal.length === 1);
   tables[13].orderNo = '155';
