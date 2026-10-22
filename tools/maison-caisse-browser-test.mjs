@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { pinTradingHour } from './demo-clock.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -83,6 +84,9 @@ let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('✓ ' + label); };
 try {
   const page = await browser.newPage();
+  /* Les ventes de démo vivent sur la journée commerciale (seuil 5 h) : avant
+     5 h, « aujourd'hui » est vide et l'écran des échanges n'a rien à rendre. */
+  await pinTradingHour(page);
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));

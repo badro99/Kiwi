@@ -63,7 +63,7 @@ function run(range, liveEnd) {
     rangeBounds: () => liveEnd,
     realWindowStats: (a, b) => ({ revenue: SALES.filter((s) => s.ts >= a && s.ts < b).reduce((n, s) => n + s.amount, 0) }),
   });
-  vm.runInContext([grab('closedBounds'), grab('shiftedBusinessBounds'), grab('calendarStartKey'), grab('calendarBounds'), grab('realDeltaPct')].join('\n')
+  vm.runInContext([grab('closedBounds'), grab('shiftedBusinessBounds'), grab('calendarStartKey'), grab('calendarBounds'), grab('realDeltaPct'), grab('halfUpDiv'), grab('deltaTenths')].join('\n')
     + '\nthis.f = realDeltaPct;', ctx);
   return ctx.f(range, (s) => s.revenue);
 }

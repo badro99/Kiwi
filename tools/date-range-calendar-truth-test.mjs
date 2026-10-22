@@ -77,7 +77,7 @@ function load(nowIso, sales, opts = {}) {
     fn('trStr'), fn('trTemplate'), fn('arDays'), fn('trLegend'),
     block('const REV_BADGE = {'), block('const REV_SUB = {'), block('const LEGEND_PREFIX = {'),
     fn('calendarStartKey'), fn('calendarBounds'), fn('rangeBounds'), fn('closedBounds'),
-    fn('shiftedBusinessBounds'), fn('windowDays'), fn('openDays'), fn('realDeltaPct'), fn('niceCeil'),
+    fn('shiftedBusinessBounds'), fn('windowDays'), fn('openDays'), fn('realDeltaPct'), fn('halfUpDiv'), fn('deltaTenths'), fn('niceCeil'),
     fn('hourlyCumul'), fn('dailyTotals'), fn('realRevSeries'),
     'this.api = { rangeBounds, realDeltaPct, windowDays, openDays, realRevSeries, trStr, trLegend, REV_BADGE, REV_SUB, LEGEND_PREFIX };',
   ].join('\n'), ctx);
