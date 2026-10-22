@@ -288,6 +288,15 @@
       });
     }
 
+    /* Les lignes portent le prix affiché, le total ce qui a été encaissé. Après
+       une remise sur le ticket (ou un arrondi), la facture listait des lignes
+       dont la somme dépassait son propre total. Une ligne explicite comble
+       l'écart au centime, pour que le détail se lise jusqu'au total. */
+    if (lines.length) {
+      const gap = Math.round(totalTTC * 100) - lines.reduce((n, l) => n + Math.round(l.totalTTC * 100), 0);
+      if (gap) lines.push({ name: gap < 0 ? 'Remise' : 'Ajustement', qty: 1, unitTTC: gap / 100, totalTTC: gap / 100 });
+    }
+
     if (!lines.length) {
       const label = saleRef ? `Vente ${saleRef}` : (sale?.label || 'Vente comptoir');
       lines = [{
