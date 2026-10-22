@@ -2944,9 +2944,14 @@
 
   // Specialist vocabulary only applies while that till is active. In other
   // tills, words such as garment colours may be merchant data.
+  // A page without the dispatcher, or with a partial one, keeps the shared words.
+  function activeTill() {
+    var d = window.KiwiPosDispatch;
+    try { return d && typeof d.current === 'function' ? d.current() : null; } catch (_) { return null; }
+  }
   function dict() {
     if (!DICT[cur]) return null;
-    var id = window.KiwiPosDispatch && window.KiwiPosDispatch.current();
+    var id = activeTill();
     if (!VERTICAL_DICT[id]) return DICT[cur];
     var key = id + ':' + cur;
     return verticalCache[key] || (verticalCache[key] = Object.assign({}, DICT[cur], VERTICAL_DICT[id][cur]));
@@ -3143,7 +3148,7 @@
   var NUM_SRC = '(\\d[\\d\\s\\u202f\\u00a0.,]*\\d|\\d)';
   function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function holeIndex(d) {
-    var id = window.KiwiPosDispatch && window.KiwiPosDispatch.current();
+    var id = activeTill();
     var cacheKey = (id || '') + ':' + cur;
     if (holes[cacheKey]) return holes[cacheKey];
     var idx = Object.create(null);
