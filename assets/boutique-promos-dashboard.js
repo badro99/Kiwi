@@ -38,6 +38,36 @@
 
   function CAT() { return window.KiwiBoutiqueCatalog; }
   function PRM() { return window.KiwiPromos; }
+
+  /* Ce que l'écran a le droit d'annoncer après une écriture, selon
+     KiwiPromos.lastCommit() : `local` (la copie de cet appareil a pris) et
+     `res`, la réponse du serveur une fois ATTENDUE (null sans copie serveur,
+     error 'disabled' en démonstration).
+       ok      · tout ce qu'on annonçait avant est vrai
+       pending · gardée ici, pas encore au serveur : la caisse ne l'a pas
+       sent    · au serveur, mais pas sur cet appareil
+       lost    · ni ici ni au serveur : seule la page ouverte la porte */
+  function saveVerdict(local, res) {
+    var noCloud = !res || res.error === 'disabled';
+    var sent = !!(res && res.ok === true);
+    if (local) return (sent || noCloud) ? 'ok' : 'pending';
+    return sent ? 'sent' : 'lost';
+  }
+  /* `title` dit ce qui est vrai quand tout a pris (« la caisse est à jour ») ;
+     `plain` ne promet que ce que cet appareil sait. Le toast attend la
+     réponse du serveur avant de parler. */
+  function announce(title, plain, type) {
+    var c = PRM() && PRM().lastCommit ? PRM().lastCommit() : null;
+    if (!c) { K.toast(title, { type: type }); return Promise.resolve('ok'); }
+    return Promise.resolve(c.server).then(null, function () { return { ok: false }; }).then(function (res) {
+      var v = saveVerdict(c.local !== false, res);
+      if (v === 'ok') K.toast(title, { type: type });
+      else if (v === 'pending') K.toast(plain, { type: 'warn', desc: L('Enregistrée sur cet appareil. Envoi au serveur en attente : la caisse la recevra au retour du réseau.', 'Saved on this device. Sending to the server is pending: the till will get it when the network is back.', 'حُفظ على هذا الجهاز. الإرسال إلى الخادم معلّق: سيستلمه الصندوق عند عودة الشبكة.') });
+      else if (v === 'sent') K.toast(plain, { type: 'warn', duration: 9000, desc: L('Reçue par le serveur, mais pas enregistrée sur cet appareil : le stockage du navigateur est plein ou bloqué.', 'Received by the server, but not saved on this device: browser storage is full or blocked.', 'استلمه الخادم، لكنه لم يُحفظ على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور.') });
+      else K.toast(L('Non enregistrée sur cet appareil', 'Not saved on this device', 'لم يُحفظ على هذا الجهاز'), { type: 'warn', duration: 12000, desc: L('Stockage du navigateur plein ou bloqué, et serveur injoignable. Gardez cette page ouverte jusqu’au retour du réseau.', 'Browser storage is full or blocked, and the server is unreachable. Keep this page open until the network is back.', 'تخزين المتصفح ممتلئ أو محظور، والخادم غير متاح. أبقِ هذه الصفحة مفتوحة حتى عودة الشبكة.') });
+      return v;
+    });
+  }
   /* Only the boutique and maison tills read KiwiPromos at checkout. The page is
    * also offered to épicerie, pharmacie, librairie, fleuriste and autre, where
    * « Synchronisé avec la caisse » and « la caisse est à jour » were false. */
@@ -462,7 +492,7 @@
     var hStart=el.querySelector('#bpd-start');if(hStart)hStart.onchange=function(){d.start=hStart.value||'';redraw();};
     var hEnd=el.querySelector('#bpd-end');if(hEnd)hEnd.onchange=function(){d.end=hEnd.value||'';redraw();};
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
-    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name):(tillApplies()?L(d.name+' lancée, la caisse est à jour',d.name+' launched, the till is up to date','تم إطلاق '+d.name+'، الصندوق محدّث'):L(d.name+' enregistrée · la remise se saisit au comptoir',d.name+' saved · enter the discount at the counter','تم حفظ '+d.name+' · يُدخل الخصم عند المنضدة')),{type:'success'});renderPage();};
+    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();announce(composer.editing?L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name):(tillApplies()?L(d.name+' lancée, la caisse est à jour',d.name+' launched, the till is up to date','تم إطلاق '+d.name+'، الصندوق محدّث'):L(d.name+' enregistrée · la remise se saisit au comptoir',d.name+' saved · enter the discount at the counter','تم حفظ '+d.name+' · يُدخل الخصم عند المنضدة')),L(d.name+' enregistrée',d.name+' saved','تم حفظ '+d.name),'success');renderPage();};
   }
 
   function labelFor(ctx, pid, variant) {
@@ -484,7 +514,7 @@
   H['bpd-new'] = function () { openComposer(null); };
   H['bpd-starter'] = function (_el,arg) { openComposer(starter(arg)); };
   H['bpd-edit'] = function (_el,arg) { var p=PRM().get(arg);if(p)openComposer(p); };
-  H['bpd-toggle'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;PRM().setPaused(arg,!p.paused);K.toast(p.paused?L(p.name+' reprend',p.name+' resumes','تم استئناف '+p.name):L(p.name+' mise en pause',p.name+' paused','تم إيقاف '+p.name+' مؤقتًا'),{type:p.paused?'success':'warn'});renderPage(); };
-  H['bpd-delete'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;var m=K.modal({title:L('Supprimer « '+p.name+' » ?','Delete "'+p.name+'"?','حذف « '+p.name+' »؟'),desc:L('Les articles repassent immédiatement au prix plein. Les ventes encaissées ne changent pas.','Items go back to full price immediately. Completed sales do not change.','تعود الأصناف فورًا إلى السعر الكامل. لا تتغير المبيعات المحصّلة.'),width:470,foot:'<button class="kb ghost" data-cancel>'+L('Garder','Keep','إبقاء')+'</button><button class="kb danger" data-delete>'+L('Supprimer','Delete','حذف')+'</button>'});m.el.querySelector('[data-cancel]').onclick=m.close;m.el.querySelector('[data-delete]').onclick=function(){PRM().remove(arg);m.close();K.toast(L(p.name+' supprimée',p.name+' deleted','تم حذف '+p.name),{type:'warn'});renderPage();}; };
+  H['bpd-toggle'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;PRM().setPaused(arg,!p.paused);var said=p.paused?L(p.name+' reprend',p.name+' resumes','تم استئناف '+p.name):L(p.name+' mise en pause',p.name+' paused','تم إيقاف '+p.name+' مؤقتًا');announce(said,said,p.paused?'success':'warn');renderPage(); };
+  H['bpd-delete'] = function (_el,arg) { var p=PRM().get(arg);if(!p)return;var m=K.modal({title:L('Supprimer « '+p.name+' » ?','Delete "'+p.name+'"?','حذف « '+p.name+' »؟'),desc:L('Les articles repassent immédiatement au prix plein. Les ventes encaissées ne changent pas.','Items go back to full price immediately. Completed sales do not change.','تعود الأصناف فورًا إلى السعر الكامل. لا تتغير المبيعات المحصّلة.'),width:470,foot:'<button class="kb ghost" data-cancel>'+L('Garder','Keep','إبقاء')+'</button><button class="kb danger" data-delete>'+L('Supprimer','Delete','حذف')+'</button>'});m.el.querySelector('[data-cancel]').onclick=m.close;m.el.querySelector('[data-delete]').onclick=function(){PRM().remove(arg);m.close();var gone=L(p.name+' supprimée',p.name+' deleted','تم حذف '+p.name);announce(gone,gone,'warn');renderPage();}; };
   H['bpd-print'] = function (_el,arg) { var plan=labelPlan(arg);if(!plan.promo)return;var n=plan.labels.length;var m=K.modal({title:L('Étiquettes · ','Labels · ','الملصقات · ')+plan.promo.name,desc:n?L('Chaque étiquette portera le prix réellement appliqué en caisse.','Each label will carry the price actually applied at the till.','سيحمل كل ملصق السعر المطبّق فعليًا في الصندوق.'):L('Aucun article en stock avec un code-barres.','No item in stock with a barcode.','لا يوجد صنف في المخزون له رمز شريطي.'),width:520,body:n?'<div class="bpd-print-summary"><b>'+n+'</b><span>'+L('étiquette'+(n>1?'s':'')+' · '+plan.products+' article'+(plan.products>1?'s':'')+' concerné'+(plan.products>1?'s':''),'label'+(n===1?'':'s')+' · '+plan.products+' item'+(plan.products===1?'':'s')+' affected',arN(n,['ملصق','ملصقان','ملصقات','ملصقًا'],'ملصق واحد')+' · الأصناف المعنية: '+plan.products)+'</span></div>':'',foot:'<button class="kb ghost" data-cancel>'+ (n?L('Annuler','Cancel','إلغاء'):L('Fermer','Close','إغلاق')) +'</button>'+(n?'<button class="kb atlas" data-print><i data-lucide="printer"></i>'+L('Imprimer ','Print ','طباعة ')+n+'</button>':'')});m.el.querySelector('[data-cancel]').onclick=m.close;var b=m.el.querySelector('[data-print]');if(b)b.onclick=function(){m.close();window.KiwiBarcode.printLabels(plan.labels,{copies:1});};icons(); };
 })();

@@ -75,11 +75,53 @@
     return db;
   }
 
+  /* Ce que la dernière écriture a vraiment donné. Avant, l'exception de
+     localStorage (quota plein, navigation privée) était avalée et la remontée
+     partait sans qu'on l'attende : l'écran annonçait « la caisse est à jour »
+     pour une promotion qui pouvait n'exister ni sur cet appareil ni au
+     serveur. Désormais :
+       · `localKept`  : la copie locale a-t-elle pris ? (lue par durable())
+       · lastCommit() : { local, server } ; `server` est la PROMESSE du
+         résultat de l'envoi (cloud-doc pushNow), null sans copie serveur.
+     Un échec local émet « kiwi:local-save » { store:'promos', durable:false },
+     et la première écriture qui reprend émet { durable:true }. La mémoire, elle,
+     garde toujours la promotion : la caisse continue de l'appliquer. */
+  var localKept = true;
+  var last = { local: true, server: Promise.resolve(null) };
+  function writeLocal() {
+    var ok = false;
+    try { localStorage.setItem(KEY, JSON.stringify(db)); ok = true; } catch (_) {}
+    var was = localKept;
+    localKept = ok;
+    if (!(ok && was)) {
+      try {
+        if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'promos', key: KEY, durable: ok } }));
+        }
+      } catch (_) {}
+    }
+    return ok;
+  }
+  function pushServer() {
+    if (!doc) return Promise.resolve(null);
+    /* pushNow rend la réponse du serveur ; on lit d'abord sa copie (bind) pour
+       ne jamais pousser à l'aveugle. Une poignée qui ne sait que push() (plus
+       ancienne, ou un banc d'essai) garde l'envoi différé, sans résultat. */
+    if (typeof doc.pushNow === 'function') {
+      return Promise.resolve()
+        .then(function () { return typeof doc.bind === 'function' ? doc.bind() : null; })
+        .then(function () { return doc.pushNow(); }, function () { return doc.pushNow(); })
+        .then(function (res) { return res || null; }, function (e) { return { ok: false, status: 0, error: String(e) }; });
+    }
+    if (doc.push) { try { doc.push(); } catch (_) {} }
+    return Promise.resolve(null);
+  }
   function commit() {
-    if (batching) { dirty = true; return; }
-    try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {}
+    if (batching) { dirty = true; return last; }
+    var ok = writeLocal();
     subs.forEach(function (fn) { try { fn(); } catch (_) {} });
-    if (doc && doc.push) { try { doc.push(); } catch (_) {} }
+    last = { local: ok, server: pushServer() };
+    return last;
   }
   function batch(fn) {
     batching++;
@@ -486,7 +528,7 @@
       write: function (d) {
         db = (d && Array.isArray(d.promos)) ? d : blank();
         if (!Array.isArray(db.deleted)) db.deleted = [];
-        try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {}
+        writeLocal();
         subs.forEach(function (fn) { try { fn(); } catch (_) {} });
       },
       merge: merge,
@@ -517,6 +559,8 @@
     nextWindow: nextWindow, hasWindow: hasWindow, businessMoment: businessMoment,
     matches: matches, applyTo: applyTo, priceFor: priceFor, preview: preview, stockOf: stockOf,
     merge: merge, isEmpty: isEmpty, cloud: cloud, stats: stats,
+    durable: function () { return localKept; },
+    lastCommit: function () { return last; },
     reset: function () { db = blank(); commit(); },
   };
 })();

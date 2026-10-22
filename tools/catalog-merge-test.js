@@ -454,7 +454,89 @@ async function tooLargeIsShown() {
   ok(!!w.localStorage.getItem('kiwiCatalogDirty:v1:grand-store'), 'la copie locale reste « à remonter » après le refus');
 }
 
-tooLargeIsShown().catch((e) => ok(false, 'refus 413 : ' + (e && e.message))).then(() => {
+/* ═══ UN STOCKAGE LOCAL QUI LÈVE SE DIT ═══════════════════════════════════
+ * Quota plein, navigation privée : localStorage.setItem lève. persist()
+ * avalait l'exception, commit() prévenait les abonnés et la vente comme la
+ * saisie de stock semblaient enregistrées, alors qu'un rechargement les
+ * perdait. Attendu : la mémoire garde la modification, la remontée serveur
+ * part quand même, commit() rend faux, durable() aussi, et un événement
+ * « kiwi:local-save » le dit à la surface ; une écriture qui reprend le
+ * rétablit. */
+async function storageFailureIsSaid() {
+  const posts = [], events = [];
+  const w = makeWindow({ fetch: (url, init) => {
+    if (init && init.method === 'POST') {
+      posts.push(JSON.parse(init.body));
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, rev: posts.length }) });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ merchant: 'plein-store', data: null, rev: 0 }) });
+  } });
+  w.dispatchEvent = (e) => { events.push(e); return true; };
+  load(w, 'assets/barcode.js');
+  load(w, 'assets/color-palette.js');
+  load(w, 'assets/boutique-catalog-parts.js');
+  load(w, 'assets/boutique-catalog.js');
+  const cat = w.KiwiBoutiqueCatalog;
+  cat.use('plein-store');
+  await new Promise((r) => setTimeout(r, 20));
+  const pr = cat.addProduct({ name: 'Caftan', priceMAD: 900 });
+  const pid = (pr && (pr.id || (pr.product && pr.product.id))) || cat.listProducts()[0].id;
+  const v = cat.addVariant({ productId: pid, colorId: 'noir', size: 'M', stock: 5 });
+  const vid = (v && (v.id || (v.variant && v.variant.id))) || cat.listVariants(pid)[0].id;
+  ok(typeof cat.durable === 'function' && cat.durable() === true, 'une écriture locale réussie est annoncée durable');
+
+  let heard = 0;
+  cat.subscribe(() => { heard++; });
+  const realSet = w.localStorage.setItem;
+  w.localStorage.setItem = (k, val) => {
+    if (String(k).indexOf('kiwiBoutiqueCatalog:v1:') === 0) { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; }
+    return realSet(k, val);
+  };
+  events.length = 0;
+  let threw = null;
+  try { cat.adjustStock(vid, -1, 'vente'); } catch (e) { threw = e; }
+  ok(!threw, 'un stockage plein ne bloque jamais la vente');
+  eq(cat.listVariants(pid)[0].stock, 4, 'la baisse de stock reste en mémoire');
+  ok(heard >= 1, 'les abonnés sont prévenus du changement');
+  ok(cat.durable() === false, 'durable() dit que la baisse ne vit qu\'en mémoire');
+  const said = events.filter((e) => e.type === 'kiwi:local-save');
+  ok(said.length === 1 && said[0].detail && said[0].detail.store === 'catalog' && said[0].detail.durable === false,
+    'un événement kiwi:local-save { durable:false } prévient la surface : ' + JSON.stringify(said.map((e) => e.detail)));
+  for (let i = 0; i < 60 && !posts.some((d) => (d.data.variants || []).some((x) => x.id === vid && x.stock === 4)); i++) await new Promise((r) => setTimeout(r, 50));
+  ok(posts.some((d) => (d.data.variants || []).some((x) => x.id === vid && x.stock === 4)),
+    'la baisse part quand même au serveur');
+
+  w.localStorage.setItem = realSet;
+  events.length = 0;
+  cat.adjustStock(vid, 2, 'reception');
+  ok(cat.durable() === true, 'la première écriture qui reprend rétablit durable()');
+  const back = events.filter((e) => e.type === 'kiwi:local-save');
+  ok(back.length === 1 && back[0].detail.durable === true, 'et le retour à la normale est annoncé une fois');
+  ok(JSON.parse(w.localStorage.getItem('kiwiBoutiqueCatalog:v1:plein-store')).variants.some((x) => x.id === vid && x.stock === 6),
+    'la copie locale rattrape tout ce que la mémoire portait');
+
+  /* Et les surfaces l'entendent : les deux caisses (traduites par
+     caisse-lang.js) et l'inventaire du tableau de bord (FR / EN / AR). */
+  const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const lang = read('assets/caisse-lang.js');
+  for (const f of ['assets/pos-boutique.js', 'assets/pos-maison.js']) {
+    const s = read(f);
+    ok(/addEventListener\('kiwi:local-save'[\s\S]{0,400}d\.store !== 'catalog'[\s\S]{0,600}toast\('Stock non enregistré sur cette caisse', 9000, 'warn'/.test(s),
+      f + ' avertit, sans bloquer, quand le stock n\'a pas pris sur la tablette');
+  }
+  for (const fr of ['Stock non enregistré sur cette caisse', 'Stock de nouveau enregistré sur cette caisse',
+    'La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.']) {
+    ok(lang.includes(`'${fr}': ['`), 'caisse-lang traduit « ' + fr.slice(0, 40) + ' » en anglais et en arabe');
+  }
+  const dash = read('assets/pages-pro-boutique.js');
+  ok(/window\.addEventListener\('kiwi:local-save'[\s\S]{0,300}d\.store !== 'catalog'[\s\S]{0,500}toast\(t\.unsaved, \{ desc: t\.unsavedDesc, type: 'warn'/.test(dash),
+    'l\'inventaire du tableau de bord avertit aussi');
+  ok((dash.match(/^\s+unsaved: '/gm) || []).length === 3 && (dash.match(/^\s+unsavedDesc: '/gm) || []).length === 3 && (dash.match(/^\s+resaved: '/gm) || []).length === 3,
+    'son avertissement existe en français, en anglais et en arabe');
+}
+
+tooLargeIsShown().catch((e) => ok(false, 'refus 413 : ' + (e && e.message)))
+  .then(() => storageFailureIsSaid()).catch((e) => ok(false, 'stockage plein : ' + (e && e.stack))).then(() => {
 if (fail) {
   console.log(`\n  ${fail} contrôle(s) en échec sur ${pass + fail}`);
   process.exit(1);

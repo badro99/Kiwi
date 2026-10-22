@@ -554,6 +554,9 @@ const _BQX_INV = {
     left: (n) => `${n} restant${n > 1 ? 's' : ''}`,
     inStock: (n) => `${n} en stock`,
     kSomeCost: (a, b) => ` · ${a} produit${a < 2 ? '' : 's'} sur ${b} au coût d’achat`,
+    unsaved: 'Non enregistré sur cet appareil',
+    unsavedDesc: 'Le stockage du navigateur est plein ou bloqué. La modification part au serveur dès que la connexion le permet. Libérez du stockage avant de recharger la page.',
+    resaved: 'Catalogue de nouveau enregistré sur cet appareil',
   },
   en: {
     title: 'Product inventory', store: 'Store', shared: ' · shared with the till', cur: 'MAD',
@@ -603,6 +606,9 @@ const _BQX_INV = {
     left: (n) => `${n} left`,
     inStock: (n) => `${n} in stock`,
     kSomeCost: (a, b) => ` · ${a} of ${b} products at cost`,
+    unsaved: 'Not saved on this device',
+    unsavedDesc: 'Browser storage is full or blocked. The change is sent to the server as soon as the connection allows. Free up storage before reloading the page.',
+    resaved: 'Catalogue saved on this device again',
   },
   ar: {
     title: 'جرد المنتجات', store: 'المتجر', shared: ' · مشتركة مع الصندوق', cur: 'درهم',
@@ -652,8 +658,29 @@ const _BQX_INV = {
     left: (n) => `المتبقي: ${n}`,
     inStock: (n) => `في المخزون: ${n}`,
     kSomeCost: (a, b) => ` · ${a} من ${b} بالتكلفة`,
+    unsaved: 'لم يُحفظ على هذا الجهاز',
+    unsavedDesc: 'تخزين المتصفح ممتلئ أو محظور. يُرسل التعديل إلى الخادم فور توفر الاتصال. حرّر مساحة التخزين قبل إعادة تحميل الصفحة.',
+    resaved: 'عاد حفظ الكتالوج على هذا الجهاز',
   },
 };
+/* Le catalogue n'a pas pris sur ce navigateur (voir sayKept() dans
+   assets/boutique-catalog.js) : la modification vit en mémoire et part au
+   serveur, mais un rechargement la perdrait. On le dit sans bloquer, à chaque
+   échec (au plus une fois par 30 s), puis une fois au retour à la normale. */
+let _bqxUnsavedAt = 0;
+window.addEventListener('kiwi:local-save', (e) => {
+  const d = (e && e.detail) || {};
+  if (d.store !== 'catalog') return;
+  const t = _bqxInvT();
+  if (d.durable) {
+    if (_bqxUnsavedAt) { _bqxUnsavedAt = 0; toast(t.resaved, { type: 'success' }); }
+    return;
+  }
+  const now = Date.now();
+  if (_bqxUnsavedAt && now - _bqxUnsavedAt < 30000) return;
+  _bqxUnsavedAt = now;
+  toast(t.unsaved, { desc: t.unsavedDesc, type: 'warn', duration: 9000 });
+});
 function _bqxInvT() { return _BQX_INV[_bqxPfLang()]; }
 /* Ce que la grille montre en ce moment : filtre de rayon (ou « Archivés »),
    recherche et couleur. « Tout sélectionner » s'appuie dessus, pour ne jamais

@@ -200,5 +200,67 @@ check(PR.status(datedOut, at('2026-10-14T11:30:00Z')) === 'ended', 'après sa da
 check(PR.nextWindow(datedOut, at('2026-10-13T13:30:00Z')) === null, 'et elle n\'annonce pas un créneau qui n\'arrivera pas');
 check(PR.status(PR.normalize({ name: 'x', kind: 'percent', value: 10 }), at('2026-10-14T03:00:00Z')) === 'active', 'sans créneau, rien ne change : active à toute heure');
 
-if (failed) { console.error(`\n✗ ${failed} vérification(s) de promotions en échec.`); process.exit(1); }
-console.log(`\n✓ ${ran} règles de promotions vérifiées.`);
+/* ── un stockage local qui lève ne se fait pas passer pour un enregistrement ──
+   Quota plein ou navigation privée : localStorage.setItem lève. commit()
+   avalait l'exception et lançait la remontée sans l'attendre ; l'écran
+   annonçait « la caisse est à jour » sans rien savoir. Attendu : la promotion
+   reste en mémoire et s'applique, lastCommit() dit { local:false } et rend la
+   PROMESSE de la réponse serveur, durable() est faux, un événement
+   kiwi:local-save le dit, et la première écriture qui reprend rétablit tout. */
+async function storageFailure() {
+  const mem = new Map();
+  let full = true;
+  const ls = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => { if (full && /^kiwi:bqPromos:/.test(k)) { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; } mem.set(k, String(v)); },
+    removeItem: (k) => mem.delete(k),
+  };
+  const events = [], posted = [];
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const w = {
+    localStorage: ls,
+    dispatchEvent: (e) => { events.push(e); return true; },
+    KiwiCloudDoc: {
+      currentSlug: () => 'plein',
+      attach: () => ({
+        bind: () => Promise.resolve(true),
+        push() { posted.push('push'); },
+        pushNow: () => { posted.push('pushNow'); return gate.then(() => ({ ok: true, status: 200, rev: 1 })); },
+      }),
+    },
+  };
+  class CustomEvent { constructor(type, o) { this.type = type; this.detail = (o || {}).detail; } }
+  vm.runInNewContext(source, { window: w, localStorage: ls, CustomEvent, console, Set, Math, Date, JSON, Number, Object, Array, String, Intl, Promise }, { filename: 'promos.js' });
+  const P = w.KiwiPromos;
+  P.cloud(() => 'plein');
+  let threw = null;
+  try { P.save({ id: 'q', name: 'Quota', kind: 'percent', value: 20, scope: { type: 'tout' } }); } catch (e) { threw = e; }
+  check(!threw, 'un stockage plein ne fait pas échouer l\'enregistrement d\'une promotion');
+  check(P.priceFor(item(), { now }).price === 800, 'la promotion reste en mémoire et s\'applique');
+  const c = typeof P.lastCommit === 'function' ? P.lastCommit() : null;
+  check(!!c && c.local === false, 'lastCommit() dit que la copie locale n\'a pas pris');
+  check(typeof P.durable === 'function' && P.durable() === false, 'durable() est faux tant que rien n\'a pris sur l\'appareil');
+  const said = events.filter((e) => e.type === 'kiwi:local-save');
+  check(said.length === 1 && said[0].detail.store === 'promos' && said[0].detail.durable === false, 'un événement kiwi:local-save { durable:false } prévient la surface');
+  let settled = null;
+  if (c && c.server && typeof c.server.then === 'function') c.server.then((r) => { settled = r; });
+  await new Promise((r) => setTimeout(r, 10));
+  check(posted.includes('pushNow'), 'la promotion part quand même au serveur');
+  check(settled === null, 'la réponse serveur n\'est pas présumée : elle n\'arrive qu\'avec le serveur');
+  release();
+  await new Promise((r) => setTimeout(r, 10));
+  check(!!settled && settled.ok === true, 'lastCommit().server rend la réponse du serveur une fois attendue');
+
+  full = false;
+  events.length = 0;
+  P.setPaused('q', true);
+  check(P.durable() === true && P.lastCommit().local === true, 'la première écriture qui reprend rétablit durable()');
+  check(events.length === 1 && events[0].detail.durable === true, 'et le retour à la normale est annoncé une fois');
+  check(JSON.parse(mem.get('kiwi:bqPromos:v1:maisonMansour')).promos.some((p) => p.id === 'q'), 'la copie locale rattrape la promotion');
+}
+
+storageFailure().catch((e) => check(false, 'stockage plein : ' + (e && e.stack))).then(() => {
+  if (failed) { console.error(`\n✗ ${failed} vérification(s) de promotions en échec.`); process.exit(1); }
+  console.log(`\n✓ ${ran} règles de promotions vérifiées.`);
+});

@@ -267,19 +267,43 @@
     notify();
   }
 
+  /* `localKept` : la dernière écriture locale a-t-elle pris ? Quota plein,
+     navigation privée, stockage refusé : setItem lève, et avant ce drapeau
+     l'exception était avalée pendant que tout le monde croyait le stock
+     enregistré. La mémoire garde la modification, la remontée serveur part
+     quand même (schedulePush ne lit que la mémoire) ; ce qui manque, c'est
+     qu'un rechargement la perdrait. On le DIT : persist() rend vrai ou faux,
+     durable() le lit, et l'événement « kiwi:local-save » prévient la surface
+     à chaque échec, puis une fois au retour à la normale. */
+  let localKept = true;
+  function sayKept(ok) {
+    const was = localKept;
+    localKept = ok;
+    if (ok && was) return;
+    try {
+      if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'catalog', key: KEY, durable: ok } }));
+      }
+    } catch (e) {}
+  }
   function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
+    let ok = false;
+    try { localStorage.setItem(KEY, JSON.stringify(db)); ok = true; } catch (e) {}
+    sayKept(ok);
+    return ok;
   }
 
   // Any mutation goes through here: persist + notify same-page subscribers, and
   // mirror the change up so the stock survives this browser (voir LE FILET plus
   // bas). L'écriture locale reste synchrone : la caisse ne doit jamais attendre
-  // le réseau pour encaisser.
+  // le réseau pour encaisser. Rend vrai si la copie locale a pris, faux si la
+  // modification ne vit qu'en mémoire (et en route vers le serveur).
   function commit() {
-    if (batchDepth > 0) { batchDirty = true; return; }
+    if (batchDepth > 0) { batchDirty = true; return localKept; }
     if (Array.isArray(db.moves) && db.moves.length > MOVE_MAX) { compact(db); materialize(db); }
     markCatalogDirty();      // une mutation locale : nous avons quelque chose à dire
-    persist(); notify(); schedulePush();
+    const ok = persist(); notify(); schedulePush();
+    return ok;
   }
 
   /* ── batch() : un geste métier = une écriture ────────────────────────────────
@@ -1214,6 +1238,10 @@
     load, reset, use, currentVenue: () => VENUE, demoVenue: DEMO_VENUE,
     batch: (fn) => (load(), batch(fn)),   // un geste métier = une seule écriture
     subscribe(fn) { load(); subs.add(fn); return () => subs.delete(fn); },
+    /* Faux tant que la dernière écriture n'a pas pris sur cet appareil : un
+       abonné qui vient d'être prévenu sait si ce qu'il affiche survivra à un
+       rechargement. */
+    durable: () => localKept,
     // reference data — one palette, the general families, shared with the caisse
     // and the public page. `colorsInUse` is what a filter row should offer: only
     // the families this store actually stocks, which is also how "transparent"

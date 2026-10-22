@@ -93,5 +93,61 @@ ok('la porte l’entend et cesse de se croire en installation', () => {
   assert.match(ENT, /addEventListener\('kiwi-onboarded',function\(\)\{onboarded=true;identitySettled=true;refreshPill\(\);\}\)/);
 });
 
+/* Un brouillon qui n'a pas pris (quota plein, stockage refusé) était avalé :
+   le commerçant avançait, rechargeait, et repartait de zéro sans savoir
+   pourquoi. Exécute les vraies saveDraft() et paintDraftNote(). */
+function draftRun(fails, lang) {
+  const events = [];
+  const card = {
+    note: null,
+    querySelector(sel) { return sel === '[data-draft-note]' ? this.note : sel === '.kob-foot' ? { foot: true } : null; },
+    insertBefore(n) { this.note = n; n.remove = () => { card.note = null; }; },
+  };
+  const LS = {
+    set(k, v) {
+      if (fails()) return false;
+      store[k] = v; return true;
+    },
+  };
+  const store = {};
+  const ctx = vm.createContext({
+    S: { step: 2, ownerName: 'Salma', bizName: 'Atlas', typeId: 'boutique', venueCount: 1, city: '', teamSize: 1, teamGiven: false, goals: [], dailyGoal: '', pins: [owner()] },
+    GOALS: [], LS, DRAFT_KEY: 'kiwiOnboardingDraft:v1',
+    tr: (o) => (o == null ? '' : (o[lang] ?? o.fr ?? '')),
+    root: { querySelector: (s) => (s === '.kob-card' ? card : null) },
+    document: { createElement: () => ({ className: '', textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }) },
+    window: { dispatchEvent: (e) => { events.push(e); return true; } },
+    CustomEvent: class { constructor(type, o) { this.type = type; this.detail = (o || {}).detail; } },
+  });
+  vm.runInContext('var draftKept = true;\n' + grab(OB, 'const DRAFT_NOTE = {').replace(/^const /, 'var ') + ';\n'
+    + grab(OB, 'function saveDraft(') + '\n' + grab(OB, 'function paintDraftNote('), ctx);
+  return { ctx, card, events, store };
+}
+ok('un brouillon qui ne prend pas le dit, sans bloquer l’assistant', () => {
+  let full = true;
+  const r = draftRun(() => full, 'fr');
+  const first = vm.runInContext('saveDraft()', r.ctx);
+  assert.equal(first, false, 'saveDraft() rend faux quand le stockage refuse');
+  assert.ok(r.card.note, 'une ligne apparaît sous la carte');
+  assert.match(r.card.note.textContent, /Brouillon non enregistré sur cet appareil/);
+  assert.equal(r.card.note.attrs.role, 'status', 'annoncée sans voler le focus');
+  assert.deepEqual(r.events.map((e) => [e.type, e.detail.store, e.detail.durable]), [['kiwi:local-save', 'onboarding', false]]);
+  full = false;
+  assert.equal(vm.runInContext('saveDraft()', r.ctx), true, 'la première écriture qui reprend rend vrai');
+  assert.equal(r.card.note, null, 'et la ligne disparaît');
+  assert.ok(r.store['kiwiOnboardingDraft:v1'], 'le brouillon est rangé');
+  assert.equal(r.events.length, 2, 'le retour à la normale est annoncé une fois');
+});
+ok('l’avertissement du brouillon est traduit', () => {
+  for (const [lang, word] of [['en', 'Draft not saved on this device'], ['ar', 'لم تُحفظ المسودة على هذا الجهاز']]) {
+    const r = draftRun(() => true, lang);
+    vm.runInContext('saveDraft()', r.ctx);
+    assert.ok(r.card.note && r.card.note.textContent.includes(word), lang);
+  }
+});
+ok('chaque rendu de l’assistant repeint l’avertissement', () => {
+  assert.match(grab(OB, 'function render('), /kob-foot">\$\{def\.foot\}<\/div>`;\s*paintDraftNote\(\);/);
+});
+
 console.log(`\nonboarding-truth: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

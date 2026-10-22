@@ -1449,6 +1449,28 @@ import { intake, renderInventaire } from './pos-boutique/inventory.js?v=6';
         if (root) { pruneTicket(); refreshAfterCatalog(); }
       });
     }
+    /* Le stock que la caisse vient de toucher n'a pas pris sur cette tablette
+       (stockage plein ou refusé) : la vente continue et la baisse part au
+       serveur, mais un rechargement la perdrait. On le dit sans bloquer, à
+       chaque échec (au plus une fois par 30 s), puis une fois au retour à la
+       normale. Voir sayKept() dans assets/boutique-catalog.js. */
+    if (window.KiwiBoutiqueCatalog && !window.__kiwiCatalogSaveWarn) {
+      window.__kiwiCatalogSaveWarn = true;
+      let lastWarn = 0;
+      window.addEventListener('kiwi:local-save', (e) => {
+        const d = (e && e.detail) || {};
+        if (d.store !== 'catalog') return;
+        if (d.durable) {
+          if (lastWarn) { lastWarn = 0; toast('Stock de nouveau enregistré sur cette caisse', 3200, 'success'); }
+          return;
+        }
+        const now = Date.now();
+        if (lastWarn && now - lastWarn < 30000) return;
+        lastWarn = now;
+        toast('Stock non enregistré sur cette caisse', 9000, 'warn',
+          'La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.');
+      });
+    }
     installWedgeScanner();
 
     /* Les ventes sorties des livres par la console opérateur. On écoute la

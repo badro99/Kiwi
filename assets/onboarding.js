@@ -36,7 +36,7 @@
 
   const LS = {
     get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } },
     del(k) { try { localStorage.removeItem(k); } catch (_) {} },
   };
 
@@ -117,7 +117,39 @@
         name: String((p && p.name) || '').slice(0, 20), code: '',
       })),
     };
-    LS.set(DRAFT_KEY, JSON.stringify(safe));
+    /* Rend vrai si le brouillon a pris sur cet appareil. Quota plein ou
+       stockage refusé : avant, l'échec était avalé et le commerçant avançait
+       en croyant pouvoir reprendre plus tard, puis perdait tout au
+       rechargement. L'assistant continue (rien n'est bloqué), mais il le dit
+       sous la carte tant qu'une écriture n'a pas repris. */
+    const ok = LS.set(DRAFT_KEY, JSON.stringify(safe)) === true;
+    const was = draftKept;
+    draftKept = ok;
+    if (!(ok && was)) {
+      try { window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'onboarding', key: DRAFT_KEY, durable: ok } })); } catch (_) {}
+    }
+    paintDraftNote();
+    return ok;
+  }
+  let draftKept = true;
+  const DRAFT_NOTE = {
+    fr: 'Brouillon non enregistré sur cet appareil : le stockage du navigateur est plein ou bloqué. Terminez la configuration sans recharger la page.',
+    en: 'Draft not saved on this device: browser storage is full or blocked. Finish setup without reloading the page.',
+    ar: 'لم تُحفظ المسودة على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور. أكمل الإعداد دون إعادة تحميل الصفحة.',
+  };
+  function paintDraftNote() {
+    const card = root && root.querySelector && root.querySelector('.kob-card');
+    if (!card) return;
+    let note = card.querySelector('[data-draft-note]');
+    if (draftKept) { if (note) note.remove(); return; }
+    if (!note) {
+      note = document.createElement('p');
+      note.className = 'kob-err';
+      note.setAttribute('data-draft-note', '');
+      note.setAttribute('role', 'status');
+      card.insertBefore(note, card.querySelector('.kob-foot'));
+    }
+    note.textContent = tr(DRAFT_NOTE);
   }
   function restoreDraft() {
     let d = null;
@@ -568,6 +600,7 @@
       </div>
       <div class="kob-body">${def.body}</div>
       <div class="kob-foot">${def.foot}</div>`;
+    paintDraftNote();
     const first = root.querySelector('.kob-body input[type="text"], .kob-body input:not([type])');
     if (first && !first.value && (S.step === 1 || S.step === 2)) setTimeout(() => { try { first.focus(); } catch (_) {} }, 340);
   }
@@ -1083,7 +1116,8 @@
     goals: () => GOALS.map((g) => ({ id: g.id, icon: g.icon })),
     dailyGoal: () => parsedDailyGoal(),
     codeProblem: kitCodeProblem,
-    save: saveDraft,
+    save: saveDraft,              // vrai si le brouillon a pris sur cet appareil
+    draftSaved: () => draftKept,
     finish: () => finish({ kit: true }),
     enter: () => enterApp(),
     done: () => { opened = false; },

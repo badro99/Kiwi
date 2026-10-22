@@ -28,7 +28,8 @@ const window = {
   KiwiAgentTier: () => 'manager', addEventListener() {}
 };
 window.window = window;
-vm.runInNewContext(source, { window, document, localStorage, console, Date, setTimeout, clearTimeout }, { filename: 'assets/briefing.js' });
+const sandbox = { window, document, localStorage, console, Date, setTimeout, clearTimeout };
+vm.runInNewContext(source, sandbox, { filename: 'assets/briefing.js' });
 const B = window.KiwiBriefing;
 
 assert.ok(B, 'briefing API is exposed');
@@ -51,6 +52,40 @@ assert.equal(B._test.visibleLines([withEvidence], 'owner').length, 1, 'role filt
 const empty = B._test.compute([]);
 assert.ok(empty && empty.lines.length === 0, 'zero rules produce a calm empty briefing');
 assert.ok(memory['kiwi:briefing:v1:acc-7:amira-cafe:2026-08-20'], 'empty result is cached for the business day');
+
+/* A throwing localStorage (quota full, storage denied) used to be swallowed:
+   « Traité » / « Masquer » looked saved and vanished on reload. Now the doc
+   stays in memory, durable() turns false, kiwi:local-save says so, the card
+   carries a translated « not saved on this device » line, and the first write
+   that lands again clears it. */
+{
+  const events = [];
+  window.dispatchEvent = (e) => { events.push(e); return true; };
+  sandbox.CustomEvent = class { constructor(type, o) { this.type = type; this.detail = (o || {}).detail; } };
+  const realSet = localStorage.setItem;
+  localStorage.setItem = () => { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; };
+  let row = null;
+  assert.doesNotThrow(() => { row = B._test.compute([]); }, 'a full storage never breaks the briefing');
+  assert.ok(row && B._test.read().days.some((d) => d.id === row.id), 'the briefing row stays in memory');
+  assert.equal(typeof B.durable, 'function', 'durable() is exposed');
+  assert.equal(B.durable(), false, 'durable() reports the failed local write');
+  const said = events.filter((e) => e.type === 'kiwi:local-save');
+  assert.equal(said.length, 1, 'one kiwi:local-save event per failure transition');
+  assert.deepEqual([said[0].detail.store, said[0].detail.durable], ['briefing', false], 'the event names the store and says not durable');
+  for (const [l, word] of [['fr', 'Non enregistré sur cet appareil'], ['en', 'Not saved on this device'], ['ar', 'لم يُحفظ على هذا الجهاز']]) {
+    document.documentElement.lang = l;
+    assert.ok(B._test.unsavedNote(B._test.copy()).includes(word), `the card says it in ${l}`);
+  }
+  document.documentElement.lang = 'fr';
+  localStorage.setItem = realSet;
+  events.length = 0;
+  B._test.compute([]);
+  assert.equal(B.durable(), true, 'the next landed write clears the warning');
+  assert.equal(B._test.unsavedNote(B._test.copy()), '', 'and the card line disappears');
+  assert.equal(events.length, 1, 'recovery is announced once');
+  assert.equal(events[0].detail.durable, true, 'recovery says durable');
+  delete window.dispatchEvent;
+}
 
 window.KiwiEnv.isReal = () => false;
 assert.equal(B._test.compute([]), null, 'demo mode computes no briefing');

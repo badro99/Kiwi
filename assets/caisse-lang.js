@@ -805,6 +805,10 @@
       'Saisissez les espèces comptées (0 si le tiroir est vide)': ['Enter the cash counted (0 if the drawer is empty)', 'أدخل النقد المعدود (0 إذا كان الدرج فارغًا)'],
       'Saisissez le total carte du Z terminal (0 si aucune carte)': ['Enter the card total from the terminal Z (0 if no cards)', 'أدخل مجموع البطاقات من Z الجهاز (0 إذا لم توجد بطاقات)'],
       'Clôture non enregistrée': ['Close-out not saved', 'لم يتم حفظ الإغلاق'],
+      /* Le catalogue n'a pas pris sur la tablette (assets/pos-boutique.js). */
+      'Stock non enregistré sur cette caisse': ['Stock not saved on this till', 'لم يُحفظ المخزون على هذا الصندوق'],
+      'La vente continue et le stock part au serveur dès que le réseau le permet. Libérez du stockage avant de recharger la page.': ['The sale goes on and the stock is sent to the server as soon as the network allows. Free up storage before reloading the page.', 'يستمر البيع ويُرسل المخزون إلى الخادم فور توفر الشبكة. حرّر مساحة التخزين قبل إعادة تحميل الصفحة.'],
+      'Stock de nouveau enregistré sur cette caisse': ['Stock saved on this till again', 'عاد حفظ المخزون على هذا الصندوق'],
       'poste conservé. Vérifiez le stockage puis réessayez.': ['shift kept. Check storage, then try again.', 'تم الاحتفاظ بالوردية. تحقق من التخزين ثم أعد المحاولة.'],
       'Rapprochement Z non protégé': ['Z reconciliation not secured', 'مطابقة Z غير محمية'],
       'Écart Z conservé': ['Z discrepancy kept', 'تم الاحتفاظ بفرق Z'],

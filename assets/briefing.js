@@ -29,6 +29,7 @@
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
       waitingLabel: 'Signaux bloqués', waiting: 'Aucun',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
+      unsaved: 'Non enregistré sur cet appareil : le stockage du navigateur est plein ou bloqué. Kiwi l’envoie au serveur dès que la connexion le permet.',
       handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer',
       wToday: 'Aujourd’hui', wTomorrow: 'Demain', wSource: 'Météo MET Norway',
       wKinds: { clear: 'beau temps', cloudy: 'nuageux', rain: 'pluie', storm: 'orage', snow: 'neige', fog: 'brouillard' }
@@ -40,6 +41,7 @@
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
       waitingLabel: 'Blocked signals', waiting: 'None',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
+      unsaved: 'Not saved on this device: browser storage is full or blocked. Kiwi sends it to the server as soon as the connection allows.',
       handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose',
       wToday: 'Today', wTomorrow: 'Tomorrow', wSource: 'Weather by MET Norway',
       wKinds: { clear: 'fair', cloudy: 'cloudy', rain: 'rain', storm: 'thunderstorm', snow: 'snow', fog: 'fog' }
@@ -51,6 +53,7 @@
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
       waitingLabel: 'إشارات محجوبة', waiting: 'لا شيء',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
+      unsaved: 'لم يُحفظ على هذا الجهاز: تخزين المتصفح ممتلئ أو محظور. يرسله Kiwi إلى الخادم فور توفر الاتصال.',
       handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح',
       wToday: 'اليوم', wTomorrow: 'غدا', wSource: 'الطقس من MET Norway',
       wKinds: { clear: 'صحو', cloudy: 'غائم', rain: 'مطر', storm: 'عاصفة رعدية', snow: 'ثلج', fog: 'ضباب' }
@@ -135,11 +138,34 @@
     if (docSlug !== slug()) doc = readLocal();
     return doc;
   }
+  /* La dernière écriture locale a-t-elle pris ? « Traité » ou « Masquer » sur
+     un signal, c'est un choix du commerçant : si localStorage lève (quota
+     plein, stockage refusé), la mémoire et la remontée serveur le gardent,
+     mais un rechargement avant la synchronisation le perdrait. L'exception
+     était avalée sans rien dire ; désormais la carte affiche une ligne
+     « Non enregistré sur cet appareil » jusqu'à la prochaine écriture qui
+     prend, durable() le lit, et « kiwi:local-save » le signale. */
+  var localKept = true;
   function writeLocal(value) {
     var venue = slug();
     doc = safeDoc(value, venue); docSlug = venue;
-    if (venue) { try { localStorage.setItem(localKey(), JSON.stringify(doc)); } catch (_) {} }
+    if (venue) {
+      var ok = false;
+      try { localStorage.setItem(localKey(), JSON.stringify(doc)); ok = true; } catch (_) {}
+      var was = localKept;
+      localKept = ok;
+      if (!(ok && was)) {
+        try {
+          if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('kiwi:local-save', { detail: { store: 'briefing', key: localKey(), durable: ok } }));
+          }
+        } catch (_) {}
+      }
+    }
     render();
+  }
+  function unsavedNote(t) {
+    return localKept ? '' : '<p class="briefing-unsaved" role="status">' + esc(t.unsaved) + '</p>';
   }
   function mergeDocs(a, b) {
     return safeDoc({ days: safeDoc(a).days.concat(safeDoc(b).days) });
@@ -801,6 +827,8 @@
       '.briefing-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}',
       '.briefing-status.is-alert{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 40%,transparent);background:color-mix(in srgb,var(--atlas) 7%,transparent)}',
       '.briefing-status.is-alert::before{background:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}',
+      /* Rien n'a pris sur cet appareil : une ligne posée, pas une alerte rouge. */
+      '.briefing-unsaved{margin:0;font:500 12px/1.4 var(--sans);color:var(--n-600)}',
       '@keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
       '@media (max-width:720px){.briefing-line{grid-template-columns:1fr}.briefing-actions{grid-column:1;grid-row:auto;justify-content:flex-start;margin-top:4px}.briefing-status{position:static;align-self:flex-start;margin-top:-6px}}',
       '@media (prefers-reduced-motion:reduce){.briefing-line{animation:none}}'
@@ -829,7 +857,7 @@
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
     var day = dayLabel();
-    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body;
+    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + weatherChip(t) + '</div>' + body + unsavedNote(t);
     try { if (el.querySelector('[data-icon]') && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
     statusBadge(el, t, lines.length);
   }
@@ -887,7 +915,8 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
+    durable: function () { return localKept; },
+    _test: { unsavedNote: unsavedNote, copy: function () { return tr(); }, businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, actorName: actorName, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, weatherRule: weatherRule, weatherChip: weatherChip, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());
