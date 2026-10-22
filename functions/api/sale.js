@@ -428,7 +428,16 @@ export async function onRequestPost({ request, env }) {
        * Vide si absente, jamais inventée : le rapport distingue « pas de
        * catégorie connue » de « catégorie Divers », et ne prétend pas classer
        * l'historique écrit avant cette ligne. */
-      const clean = raw.slice(0, 40).map((l) => {
+      /* An older till sends every line; keep 39 and fold the rest into one
+       * « N autres articles » line, as pos-sale.js foldLines does, so the
+       * stored ticket keeps all of its money instead of losing lines 41+. */
+      const tail = raw.length > 40 ? raw.slice(39) : [];
+      const kept = tail.length ? raw.slice(0, 39).concat([{
+        n: tail.length + ' autres articles',
+        q: tail.reduce((n, l) => n + Math.max(0, Math.min(1000000, Number(l && (l.q ?? l.qty ?? l.quantity)) || 0)), 0),
+        t: tail.reduce((n, l) => n + Math.round(Math.max(0, Math.min(100000000, Number(l && (l.t ?? l.total)) || 0)) * 100), 0) / 100,
+      }]) : raw;
+      const clean = kept.map((l) => {
         const qty = Math.round(Math.max(0, Math.min(1000000,
           Number(l && (l.q ?? l.qty ?? l.quantity)) || 0)) * 1000) / 1000;
         const o = {
