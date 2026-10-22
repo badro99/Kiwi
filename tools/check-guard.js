@@ -215,4 +215,49 @@ function acquireLock(opts) {
   return release;
 }
 
-module.exports = { install, acquireLock, prefetch, reusedCount, isSlow, tier, skipped, takeSkip, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };
+/* ── Browser preflight ─────────────────────────────────────────────────────
+ * Every browser suite looks for Chromium the same way (KIWI_CHROMIUM_BIN, then
+ * the usual macOS and Linux paths) and, finding none, prints "○ skip" and
+ * exits 0. The dependency check above it only proves puppeteer-core is on disk,
+ * so a machine with no browser used to finish the full gate green with every
+ * browser assertion unrun. This finds the executable the suites would use and
+ * launches it once (headless, throwaway profile, short timeout): a binary that
+ * exists but cannot start is as absent as one that does not exist.
+ * Returns { ok, bin, reason }. Never throws. */
+const BROWSER_CANDIDATES = [
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  '/usr/bin/chromium', '/usr/bin/google-chrome', '/usr/bin/chromium-browser',
+];
+function findBrowser(env) {
+  env = env || process.env;
+  const explicit = env.KIWI_CHROMIUM_BIN || env.CHROME_BIN;
+  if (explicit) return explicit;               // what the suites will use, existing or not
+  return BROWSER_CANDIDATES.find((f) => fs.existsSync(f)) || null;
+}
+function browserPreflight(opts) {
+  opts = opts || {};
+  const env = opts.env || process.env;
+  const timeoutMs = opts.timeoutMs || 30000;
+  const bin = findBrowser(env);
+  if (!bin) return { ok: false, bin: null, reason: 'no Chromium or Chrome executable found (set KIWI_CHROMIUM_BIN)' };
+  if (!fs.existsSync(bin)) return { ok: false, bin, reason: `${bin} does not exist` };
+  let profile = null;
+  try { profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-preflight-')); } catch (_) {}
+  try {
+    const args = ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      '--dump-dom', 'about:blank'];
+    if (profile) args.unshift('--user-data-dir=' + profile);
+    const r = (opts.spawnSync || require('child_process').spawnSync)(bin, args, { encoding: 'utf8', timeout: timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] });
+    if (r.error && r.error.code === 'ETIMEDOUT') return { ok: false, bin, reason: `${bin} did not start and exit within ${Math.round(timeoutMs / 1000)}s` };
+    if (r.error) return { ok: false, bin, reason: `${bin} could not be launched (${r.error.code || r.error.message})` };
+    /* The rendered DOM is the proof, not the exit code: on macOS Chrome prints
+       the page, then its teardown watchdog kills it with exit 2. */
+    if (/<html/i.test(r.stdout || '')) return { ok: true, bin, reason: '' };
+    return { ok: false, bin, reason: `${bin} did not render a page on a headless launch (exit ${r.status == null ? r.signal : r.status})` };
+  } finally {
+    if (profile) { try { fs.rmSync(profile, { recursive: true, force: true }); } catch (_) {} }
+  }
+}
+
+module.exports = { install, acquireLock, prefetch, reusedCount, isSlow, tier, skipped, takeSkip, findBrowser, browserPreflight, DEFAULT_TIMEOUT_MS, SLOW_MS, ENV_EXIT };

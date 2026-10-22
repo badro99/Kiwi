@@ -57,6 +57,21 @@ if (process.argv.includes('--fast')) process.env.KIWI_CHECK_TIER = 'fast';
     console.log(`⚠ app/node_modules lacks ${missing.join(', ')}: money and accessibility properties will skip (${fix})`);
   }
 }
+/* …and puppeteer-core on disk is not a browser. Without a Chromium that starts,
+ * every browser suite prints "○ skip" and exits 0, and the full gate read green
+ * with none of them run. The full run finds the executable the suites would use
+ * and launches it once; the fast tier launches no browser suite and only warns.
+ * KIWI_ALLOW_BROWSER_SKIP=1 lets a full run go on anyway, knowingly. */
+if (process.env.KIWI_CHECK_TIER !== 'fast' && process.env.KIWI_ALLOW_BROWSER_SKIP !== '1') {
+  const b = require('./check-guard').browserPreflight();
+  if (!b.ok) {
+    console.log(`✗ no working Chromium: ${b.reason}.\n  Every browser suite would skip and still read green.\n  Fix: install Chrome or Chromium, or point KIWI_CHROMIUM_BIN at one that starts.\n  (KIWI_ALLOW_BROWSER_SKIP=1 runs anyway, knowingly; --fast needs no browser.)`);
+    process.exit(1);
+  }
+} else if (process.env.KIWI_CHECK_TIER === 'fast') {
+  const bin = require('./check-guard').findBrowser();
+  if (!bin || !fs.existsSync(bin)) console.log(`⚠ no Chromium found${bin ? ' at ' + bin : ''}: a full run will refuse to start until one is (KIWI_CHROMIUM_BIN)`);
+}
 /* The machine-wide lock exists so two runs do not drown the machine in headless
  * browsers; the fast tier launches none, so it never waits behind a full run. */
 if (process.env.KIWI_CHECK_TIER !== 'fast') require('./check-guard').acquireLock();

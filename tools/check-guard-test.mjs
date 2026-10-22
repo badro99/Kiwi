@@ -164,5 +164,56 @@ ok('the fast tier is opt-in, never says "all checks passed", and never waits beh
   assert.equal(pkg.scripts['check:full'], 'node tools/check.js');
 });
 
+/* Browser preflight, proven without a browser: fake executables and a path that
+ * does not exist, handed over the variable every browser suite reads. */
+const BIN_ENV = 'KIWI_CHROMIUM_BIN';
+const nowhere = path.join(dir, 'no-such-browser');
+ok('browser preflight: a configured executable that does not exist fails, and says so', () => {
+  cp.spawnSync = realSpawnSync;
+  const r = guard.browserPreflight({ env: { [BIN_ENV]: nowhere } });
+  assert.equal(r.ok, false);
+  assert.equal(r.bin, nowhere, 'the configured path is the one judged, never a fallback');
+  assert.match(r.reason, /does not exist/);
+});
+if (process.platform !== 'win32') {
+  const fake = (name, body) => { const f = path.join(dir, name); writeFileSync(f, '#!/bin/sh\n' + body + '\n', { mode: 0o755 }); return f; };
+  ok('browser preflight: an executable that starts and renders a page passes, whatever its exit code', () => {
+    cp.spawnSync = realSpawnSync;
+    const r = guard.browserPreflight({ env: { [BIN_ENV]: fake('renders', 'echo "<html><head></head><body></body></html>"; exit 2') } });
+    assert.equal(r.ok, true, r.reason);
+  });
+  ok('browser preflight: an executable that exits without rendering fails', () => {
+    cp.spawnSync = realSpawnSync;
+    const r = guard.browserPreflight({ env: { [BIN_ENV]: fake('crashes', 'echo "dyld: missing library" >&2; exit 1') } });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /did not render a page/);
+  });
+  ok('browser preflight: an executable that hangs is killed at the timeout and fails', () => {
+    cp.spawnSync = realSpawnSync;
+    const t0 = Date.now();
+    const r = guard.browserPreflight({ timeoutMs: 500, env: { [BIN_ENV]: fake('hangs', 'sleep 30') } });
+    assert.ok(Date.now() - t0 < 5000, 'returned promptly');
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /within 1s|did not render/);
+  });
+}
+ok('check.js: the full run refuses to start without a working browser; the fast tier only warns', () => {
+  const env = { ...process.env, [BIN_ENV]: nowhere, KIWI_ALLOW_PROPERTY_SKIP: '1', KIWI_CHECK_NO_LOCK: '1' };
+  delete env.CHROME_BIN; delete env.KIWI_CHECK_TIER; delete env.KIWI_ALLOW_BROWSER_SKIP;
+  const t0 = Date.now();
+  const r = realSpawnSync(process.execPath, [path.join(ROOT, 'tools/check.js')], { env, encoding: 'utf8', timeout: 20000, killSignal: 'SIGKILL' });
+  assert.ok(Date.now() - t0 < 15000, 'refused before running anything');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /no working Chromium/);
+  assert.match(r.stdout, /does not exist/);
+  assert.match(r.stdout, /KIWI_ALLOW_BROWSER_SKIP=1/);
+  const src = readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
+  const at = src.indexOf('browserPreflight()');
+  const block = src.slice(at - 200, at + 900);
+  assert.match(block, /KIWI_CHECK_TIER !== 'fast' && process\.env\.KIWI_ALLOW_BROWSER_SKIP !== '1'/, 'only the full run refuses');
+  assert.match(block, /else if \(process\.env\.KIWI_CHECK_TIER === 'fast'\)[\s\S]*findBrowser\(\)[\s\S]*⚠/, 'the fast tier warns');
+  assert.ok(at < src.indexOf('.acquireLock();'), 'the refusal comes before the lock and every suite');
+});
+
 console.log(`\ncheck-guard: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -3,163 +3,243 @@
   "issues": [
     {
       "suite": "booking-properties-test.mjs",
-      "label": "BK-1"
+      "label": "BK-1",
+      "kind": "decision",
+      "severity": "data"
     },
     {
       "suite": "booking-properties-test.mjs",
-      "label": "BK-3"
+      "label": "BK-3",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "books-money-properties-test.mjs",
-      "label": "BP-1"
+      "label": "BP-1",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "briefing-properties-test.mjs",
-      "label": "policy: net-zero closed days currently send no morning notification"
+      "label": "policy: net-zero closed days currently send no morning notification",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "channel-properties-test.mjs",
-      "label": "channel total is authoritative, reconciliation with line sum needs a product rule"
+      "label": "channel total is authoritative, reconciliation with line sum needs a product rule",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-2"
+      "label": "CL-2",
+      "kind": "decision",
+      "severity": "data"
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-4"
+      "label": "CL-4",
+      "kind": "decision",
+      "severity": "security"
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-5"
+      "label": "CL-5",
+      "kind": "defect",
+      "severity": "data"
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-6"
+      "label": "CL-6",
+      "kind": "defect",
+      "severity": "data"
     },
     {
       "suite": "customer-balance-properties-test.mjs",
-      "label": "CB-6"
+      "label": "CB-6",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "dashboard-money-properties-test.mjs",
-      "label": "DM-1"
+      "label": "DM-1",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dashboard-money-properties-test.mjs",
-      "label": "DM-2"
+      "label": "DM-2",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dashboard-money-properties-test.mjs",
-      "label": "DM-5"
+      "label": "DM-5",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dashboard-money-properties-test.mjs",
-      "label": "DM-6"
+      "label": "DM-6",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dashboard-money-properties-test.mjs",
-      "label": "DM-7"
+      "label": "DM-7",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dayreport-properties-test.mjs",
-      "label": "policy: month totals include original sales without a closed Z"
+      "label": "policy: month totals include original sales without a closed Z",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "dayreport-properties-test.mjs",
-      "label": "retention policy: node trimming may discard previous month closed days; archival/overflow rule needed"
+      "label": "retention policy: node trimming may discard previous month closed days; archival/overflow rule needed",
+      "kind": "decision",
+      "severity": "data"
     },
     {
       "suite": "hotel-properties-test.mjs",
-      "label": "early departure has no actual departure date or agreed cancellation fee policy; booked nights remain"
+      "label": "early departure has no actual departure date or agreed cancellation fee policy; booked nights remain",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "hotel-properties-test.mjs",
-      "label": "tax and payment reconciliation remain unconfigured preinvoice policy"
+      "label": "tax and payment reconciliation remain unconfigured preinvoice policy",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "invoice-vat-properties-test.mjs",
-      "label": "IV-3"
+      "label": "IV-3",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "invoice-vat-properties-test.mjs",
-      "label": "IV-4"
+      "label": "IV-4",
+      "kind": "decision",
+      "severity": "data"
     },
     {
       "suite": "live-link-queue-properties-test.mjs",
-      "label": "LQ-1"
+      "label": "LQ-1",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "operator-properties-test.mjs",
-      "label": "operators can read staff codes in the console list (Afficher button; owner decision, codes stay operator-readable like the team doc)"
+      "label": "operators can read staff codes in the console list (Afficher button; owner decision, codes stay operator-readable like the team doc)",
+      "kind": "decision",
+      "severity": "security"
     },
     {
       "suite": "operator-properties-test.mjs",
-      "label": "PIN creation echoes the code to the operator who just typed it (same owner decision)"
+      "label": "PIN creation echoes the code to the operator who just typed it (same owner decision)",
+      "kind": "decision",
+      "severity": "security"
     },
     {
       "suite": "operator-properties-test.mjs",
-      "label": "status retries append duplicate audit rows; transition policy is not specified"
+      "label": "status retries append duplicate audit rows; transition policy is not specified",
+      "kind": "decision",
+      "severity": "data"
     },
     {
       "suite": "payroll-properties-test.mjs",
-      "label": "PM-5"
+      "label": "PM-5",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "payroll-properties-test.mjs",
-      "label": "PM-6"
+      "label": "PM-6",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "number allocation design: disconnected devices choose the same public ticket number"
+      "label": "number allocation design: disconnected devices choose the same public ticket number",
+      "kind": "defect",
+      "severity": "data"
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "ready-date zone policy: slots use device civil time rather than the configured store zone"
+      "label": "ready-date zone policy: slots use device civil time rather than the configured store zone",
+      "kind": "defect",
+      "severity": "display"
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "refund policy: cancellation preserves deposit but issues no refund or refund-due record"
+      "label": "refund policy: cancellation preserves deposit but issues no refund or refund-due record",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "workflow policy: promised time automatically marks unprocessed garments ready"
+      "label": "workflow policy: promised time automatically marks unprocessed garments ready",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "receivables-properties-test.mjs",
-      "label": "policy: cancelling a collected original leaves collections booked; choose linked reversal or refuse cancellation"
+      "label": "policy: cancelling a collected original leaves collections booked; choose linked reversal or refuse cancellation",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "receivables-properties-test.mjs",
-      "label": "policy: refunding original deposit leaves unpaid delivery collectible; define debt reduction on returns"
+      "label": "policy: refunding original deposit leaves unpaid delivery collectible; define debt reduction on returns",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "sale-return-race-properties-test.mjs",
-      "label": "Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout"
+      "label": "Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "server-money-properties-test.mjs",
-      "label": "SM-2"
+      "label": "SM-2",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "server-money-properties-test.mjs",
-      "label": "SM-3"
+      "label": "SM-3",
+      "kind": "defect",
+      "severity": "money"
     },
     {
       "suite": "serveur-money-properties-test.mjs",
-      "label": "WM-4"
+      "label": "WM-4",
+      "kind": "decision",
+      "severity": "display"
     },
     {
       "suite": "tickets-properties-test.mjs",
-      "label": "shared board has no merchant ownership or actor identity; isolation and human-only closure need a product decision"
+      "label": "shared board has no merchant ownership or actor identity; isolation and human-only closure need a product decision",
+      "kind": "decision",
+      "severity": "security"
     },
     {
       "suite": "trades-money-properties-test.mjs",
-      "label": "TM-P1"
+      "label": "TM-P1",
+      "kind": "decision",
+      "severity": "money"
     },
     {
       "suite": "trades-money-properties-test.mjs",
-      "label": "TM-P2"
+      "label": "TM-P2",
+      "kind": "decision",
+      "severity": "money"
     }
   ]
 }
