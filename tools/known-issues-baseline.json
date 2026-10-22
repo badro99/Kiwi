@@ -31,10 +31,6 @@
     },
     {
       "suite": "clients-properties-test.mjs",
-      "label": "CL-1"
-    },
-    {
-      "suite": "clients-properties-test.mjs",
       "label": "CL-2"
     },
     {
@@ -60,10 +56,6 @@
     {
       "suite": "customer-balance-properties-test.mjs",
       "label": "CB-2"
-    },
-    {
-      "suite": "customer-balance-properties-test.mjs",
-      "label": "CB-5"
     },
     {
       "suite": "customer-balance-properties-test.mjs",
@@ -103,7 +95,7 @@
     },
     {
       "suite": "hotel-properties-test.mjs",
-      "label": "status checkout has no server payment ledger or balance gate, policy needs owner decision"
+      "label": "early departure has no actual departure date or agreed cancellation fee policy; booked nights remain"
     },
     {
       "suite": "hotel-properties-test.mjs",
@@ -128,14 +120,6 @@
     {
       "suite": "menu-analysis-properties-test.mjs",
       "label": "MA-2 manual cost behind an uncosted recipe"
-    },
-    {
-      "suite": "menu-properties-test.mjs",
-      "label": "price lists are not stored with the menu"
-    },
-    {
-      "suite": "menu-properties-test.mjs",
-      "label": "scheduled/channel price lists"
     },
     {
       "suite": "operator-properties-test.mjs",
@@ -204,6 +188,10 @@
     {
       "suite": "receivables-properties-test.mjs",
       "label": "policy: refunding original deposit leaves unpaid delivery collectible; define debt reduction on returns"
+    },
+    {
+      "suite": "sale-return-race-properties-test.mjs",
+      "label": "Maison refund preview assumes a single payout; product copy must explain voucher restoration and split payouts before broad UI rollout"
     },
     {
       "suite": "server-money-properties-test.mjs",
