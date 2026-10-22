@@ -1,3 +1,4 @@
+import { checkoutBalance } from './_stay-balance.js';
 import { DateTimeFormat } from '../_zone-law.js';
 import { merchantZone } from '../_business-day.js';
 import { bookingEpoch } from '../_booking-clock.js';
@@ -124,6 +125,7 @@ function safeDoc(raw) {
       manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: h,
       guests, roomSegments, commercial: commercialSnapshot(x?.commercial),
       ...(safePricing(x?.pricing) ? { pricing: safePricing(x?.pricing) } : {}),
+      ...(x?.checkout ? { checkout: x.checkout } : {}),
       createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0,
     };
   }).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
@@ -553,7 +555,14 @@ export async function onRequestPost({ request, env }) {
           }
         } catch (_) { return json({ error: 'service-unavailable' }, 503); }
       }
+      let checkout = null;
+      if (next === 'completed') {
+        try { checkout = await checkoutBalance(env, merchant, old, rows.rooms?.data, hasResTable); }
+        catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
+        if (checkout.linked && checkout.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...checkout }, 409);
+      }
       const previous = { ...old, hotel: { ...old.hotel } };
+      if (checkout) old.checkout = { ...checkout, forced: checkout.linked && checkout.owedCents > 0, actor, at: now };
       old.status = next; old.updatedAt = now;
       const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
       if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
@@ -561,7 +570,7 @@ export async function onRequestPost({ request, env }) {
          l'unique copie et l'élaguer détruirait des séjours confirmés. */
       if (hasResTable) pruneReservationsDoc(doc, now);
       try {
-        const written = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous, current: old, action: 'status' }] });
+        const written = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, balanceGuard: checkout?.guard, events: [{ previous, current: old, action: 'status' }] });
         if (written) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: written, booking: old }); }
       } catch (_) { return json({ error: 'write-failed' }, 503); }
       continue;
@@ -865,6 +874,7 @@ export async function onRequestPost({ request, env }) {
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
       guests: saveGuests, commercial,
       ...(pricing && pricing.kind === 'direct' ? { pricing } : {}),
+      ...(old?.checkout ? { checkout: old.checkout } : {}),
       ...(pricingHistory.length ? { pricingHistory } : (old && Array.isArray(old.pricingHistory) && old.pricingHistory.length ? { pricingHistory: old.pricingHistory.slice(-10) } : {})),
       roomSegments: saveRoomSegments,
       hotel: {
@@ -880,6 +890,13 @@ export async function onRequestPost({ request, env }) {
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };
+    let balance;
+    if (status === 'completed' && old?.status !== 'completed') {
+      try { balance = await checkoutBalance(env, merchant, rec, rows.rooms?.data, hasResTable); }
+      catch (_) { return json({ error: 'stay-balance-unavailable' }, 503); }
+      if (balance.linked && balance.owedCents > 0 && b.force !== true) return json({ error: 'stay-unpaid', confirm: 'force', ...balance }, 409);
+      rec.checkout = { ...balance, forced: balance.linked && balance.owedCents > 0, actor, at: now };
+    }
     rec.hotel.dossierId ||= rec.id;
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
@@ -889,7 +906,7 @@ export async function onRequestPost({ request, env }) {
        à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
     if (hasResTable) pruneReservationsDoc(doc, now);
     try {
-      const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous: old, current: rec, action: old ? 'update' : 'create' }] });
+      const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, balanceGuard: balance?.guard, events: [{ previous: old, current: rec, action: old ? 'update' : 'create' }] });
       if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); }
     } catch (_) { return json({ error: 'write-failed' }, 503); }
   }

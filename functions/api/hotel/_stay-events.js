@@ -1,3 +1,4 @@
+import { chargeBalanceSQL } from './_stay-balance.js';
 import {
   SESS_COOKIE, isOperator, isTerminalFor, isTillFor,
   operatorActor, readCookie, readSession,
@@ -82,6 +83,7 @@ export function stayEventPayload(booking) {
     v: 1,
     stayId: text(booking?.id, 64),
     status: text(booking?.status, 24),
+    ...(booking?.checkout ? { checkout: booking.checkout } : {}),
     source: text(booking?.source, 16),
     roomTypeId: text(booking?.serviceId, 64),
     roomId: text(booking?.resourceId, 64),
@@ -253,7 +255,12 @@ function reservationUpsertStatement(env, merchant, stay, now, next, docText) {
   );
 }
 
-function writeStatement(env, merchant, textValue, rev, next, now) {
+function writeStatement(env, merchant, textValue, rev, next, now, guard) {
+  if (guard && rev) {
+    const chargeCheck = guard.ledger ? ` AND (SELECT COALESCE(json_group_array(json_object('id',id,'kind',kind,'amount_cents',amount_cents,'reversal_of',reversal_of)),'[]') FROM (${chargeBalanceSQL}))=?` : '';
+    return env.DB.prepare("UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature='reservations' AND rev=? AND (SELECT data FROM store_docs WHERE merchant=? AND feature='rooms') IS ?" + chargeCheck)
+      .bind(textValue, next, now, merchant, rev, merchant, guard.roomsData, ...(guard.ledger ? [merchant, guard.stayId, guard.charges] : []));
+  }
   return rev
     ? env.DB.prepare("UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature='reservations' AND rev=?")
       .bind(textValue, next, now, merchant, rev)
@@ -265,7 +272,7 @@ export async function writeReservationWithEvents(env, options) {
   const merchant = text(options?.merchant, 64), rev = Math.max(0, Number(options?.rev) || 0);
   const now = Math.max(1, Number(options?.now) || Date.now()), next = rev + 1;
   const docText = JSON.stringify(options?.doc || {}), actor = options?.actor || {};
-  const write = writeStatement(env, merchant, docText, rev, next, now);
+  const write = writeStatement(env, merchant, docText, rev, next, now, options?.balanceGuard);
   const rawEvents = Array.isArray(options?.events) ? options.events : [];
 
   const hasEventsTable = await eventTableExists(env);

@@ -1395,6 +1395,7 @@
     "Départ soldé · à remettre à blanc": { en: "Departure settled · to be turned over", ar: "مغادرة مسدَّدة · بانتظار التجهيز" },
     "Départ enregistré · Ch. {n}": { en: "Check-out saved · room {n}", ar: "سُجّلت المغادرة · الغرفة {n}" },
     "Règlement ajouté à la file de synchronisation. Vérifiez sa confirmation dans les transactions.": { en: "Payment added to the sync queue. Check its confirmation in transactions.", ar: "أُضيف الأداء إلى قائمة المزامنة. تحقّق من تأكيده في المعاملات." },
+    "Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?": { en: "{amount} MAD remains due. Confirm checkout with this unpaid balance?", ar: "يتبقى {amount} درهم للدفع. هل تؤكد المغادرة بهذا الرصيد غير المدفوع؟" },
     "Solde nul. Le dernier folio clôturé est conservé dans les données de la chambre.": { en: "Zero balance. The last closed folio is kept in the room's data.", ar: "الرصيد صفر. آخر فاتورة مغلقة محفوظة في بيانات الغرفة." },
     "Ch. {n} → à remettre à blanc": { en: "Room {n} → to be turned over", ar: "الغرفة {n} ← بانتظار التجهيز" },
     "Marquez-la propre depuis Ménage pour la revendre ce soir.": { en: "Mark it clean from Housekeeping to sell it again tonight.", ar: "ضع عليها علامة نظيفة من التنظيف لبيعها الليلة." },
@@ -3796,12 +3797,14 @@
       return data.booking;
     } catch (_) { return null; }
   }
-  async function cuStayStatus(id, status) {
+  async function cuStayStatus(id, status, force = false) {
     const slug = cuMerchantSlug();
     if (!slug || !id) return false;
     try {
-      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status }) });
+      const res = await fetch('/api/hotel/stays', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', merchant: slug, id, status, force }) });
       const data = await res.json().catch(() => ({}));
+      if (cuMerchantSlug() !== slug) return false;
+      if (res.status === 409 && data.error === 'stay-unpaid' && !force && confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(data.owedCents) }))) return cuStayStatus(id, status, true);
       if (res.ok && data.booking) { try { cuStayCache().set(data.booking.id, data.booking); } catch (_) {} cuStaysChanged(); return true; }
     } catch (_) {}
     return false;
@@ -7549,7 +7552,7 @@
    * enregistrer. On passe par l'action `status`, qui ne touche que le statut :
    * un `save` complet reconstruit le dossier à partir de ce qu'on envoie et
    * effacerait le téléphone, l'e-mail ou les voyageurs non renvoyés. */
-  async function cuMoveStayStatus(id, next, button, reopen) {
+  async function cuMoveStayStatus(id, next, button, reopen, force = false) {
     const slug = cuMerchantSlug();
     if (!slug || !id) return;
     const scope = cuStayScope(), cache = cuStayCache();
@@ -7570,12 +7573,17 @@
     try {
       const res = await fetch('/api/hotel/stays', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next,
+        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next, force,
           /* Réouverture d'un dossier clos : un geste explicite, jamais un
              effet de bord d'un changement de statut ordinaire. */
           ...(reopen ? { reopen: true } : {}) }),
       });
       const body = await res.json().catch(() => ({}));
+      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) return;
+      if (res.status === 409 && body.error === 'stay-unpaid' && !force) {
+        if (confirm(tx('Il reste {amount} MAD à régler. Confirmer le départ avec ce solde impayé ?', { amount: cuDraftMoney(body.owedCents) }))) return await cuMoveStayStatus(id, next, button, reopen, true);
+        return;
+      }
       if (!res.ok || !body.booking) {
         toast(words.fail, {
           type: 'warn',
@@ -9993,8 +10001,11 @@
         const st = cuState();
         st.closedFolios = (st.closedFolios || []).filter((x) => +x.room !== room);
         st.closedFolios.push({ ...f, closedAt, updatedAt: closedAt, settlementAmount: due, settlementMethod: due > 0 ? method : null, settlementState: due > 0 ? 'queued' : 'previously-recorded' });
-        /* le walk-in inscrit au registre y termine son séjour, comme une réservation */
-        if (f.stayId) cuStayStatus(f.stayId, 'completed');
+        /* le walk-in inscrit au registre y termine son séjour, comme une réservation.
+           Le solde vient d'être encaissé ici même : le départ est confirmé (force),
+           le serveur ne connaît pas encore le folio réglé et demanderait sinon
+           confirmation d'un impayé qui n'existe plus. */
+        if (f.stayId) cuStayStatus(f.stayId, 'completed', true);
         const r = R()[room];
         r.status = 'sale'; r.hk = 'dirty'; r.guest = null;
         r.meta = txk('Départ soldé · à remettre à blanc'); r.updatedAt = cuStamp();

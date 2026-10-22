@@ -31,6 +31,7 @@ class Statement {
     }
     const r = sql.prepare(this.text).run(...this.args); return { success:true, meta:{ changes:Number(r.changes) } };
   }
+  async all() { return this.rows(); }
   rows() { return { results: sql.prepare(this.text).all(...this.args) }; }
 }
 const DB = {
@@ -130,7 +131,7 @@ ok(movedBody.booking.customer.phone === '0655667788' && movedBody.booking.custom
 const moveEvent = sql.prepare("SELECT event_type FROM hotel_stay_events WHERE merchant='riad-test' AND stay_id=? ORDER BY srv_cursor DESC").get(moveId);
 ok(moveEvent.event_type === 'status_checked_in', 'the arrival is appended to the event ledger');
 
-move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'completed' });
+move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'completed', force: true });
 ok(move.status === 200 && (await move.json()).booking.status === 'completed', 'check-out closes the stay');
 
 const beforeAtomicRev = sql.prepare("SELECT rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get().rev;

@@ -297,6 +297,8 @@ console.log('\n■ 5b. Edit lifecycle: preservation, explicit reprice, transitio
   // completed stay: note edit allowed, pricing frozen
   const doneId = r.body.booking.id;
   for (const st of ['checked_in', 'completed']) {
+    /* Pas de folio du tableau de bord lié : le serveur ne connaît pas les
+       paiements (la caisse hôtel garde les siens) et ne bloque pas le départ. */
     const rs = await J(await post(editBody(await getById(doneId), { status: st })));
     assert.equal(rs.status, 200, `transition to ${st} works`);
   }
