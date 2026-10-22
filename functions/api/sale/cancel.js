@@ -8,7 +8,7 @@
 import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
 import { businessDate, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
-import { creditsIssuedCents, refundsIssuedCents } from '../_store-credit-ledger.js';
+import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents } from '../_store-credit-ledger.js';
 import { voidSaleLoyalty } from '../clients.js';
 
 /* Une vente déjà remboursée, ou transformée en avoir, ne s'annule plus : le
@@ -156,16 +156,20 @@ async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, acto
        AND EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND status = 'closed')
        AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks}) AND mode = 'table' AND status = 'open')`
   ).bind(newVisitId, merchant, target, ts, ts, id, merchant, visit.id, merchant, merchant, ...aliases);
+  /* Same credit guard as a plain void (see the main route below). */
+  const reopenCreditGuard = (await ensureCreditEvents(env))
+    ? `AND NOT EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND ref_id = ? AND action = 'issue')` : '';
   const update = env.DB.prepare(
     `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
        WHERE id = ? AND merchant = ? AND void_ts IS NULL AND EXISTS
          (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks})
            AND id <> ? AND mode = 'table' AND status = 'open')
-         AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')`
+         AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
+         ${reopenCreditGuard}`
   ).bind(ts, reason, actor, actorId, id, merchant, newVisitId, merchant,
     sameOpenVisit ? String(visit.table_no) : target,
-    merchant, ...aliases, newVisitId, merchant, id);
+    merchant, ...aliases, newVisitId, merchant, id, ...(reopenCreditGuard ? [merchant, id] : []));
   function audit(withCents, action, condition) {
     const cols = `merchant,sale_id,action,reason,note,actor,actor_id,amount,${withCents ? 'amount_cents,' : ''}method,ref,sale_ts,impact,ts`;
     const values = withCents ? '?,?,?,?,?,?,?,?,?,?,?,?,?,?' : '?,?,?,?,?,?,?,?,?,?,?,?,?';
@@ -341,6 +345,16 @@ export async function onRequestPost({ request, env }) {
     const returned = await alreadyReturned(env, merchant, id);
     if (returned.totalCents > 0) return refundedResponse(returned);
   }
+  /* That read only answers early. Another till can issue a store credit on
+     this ticket between it and the void, so the void's own UPDATE refuses a
+     ticket with a credit, exactly as it refuses one with a refund. The table
+     can be missing on a database that has never issued one: create it, or
+     the guard would fail the void instead of passing it. A database that
+     cannot hold the table cannot hold a credit either; there the guard is
+     left out rather than failing every void. */
+  const creditGuard = (await ensureCreditEvents(env))
+    ? `AND NOT EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND ref_id = ? AND action = 'issue')` : '';
+  const creditArgs = creditGuard ? [merchant, id] : [];
 
   reason = boundedReason(body && body.reason, reason);
   const saleAmountCents = sale.amount_cents != null
@@ -372,8 +386,9 @@ export async function onRequestPost({ request, env }) {
     const update = env.DB.prepare(
       `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
         WHERE id = ? AND merchant = ? AND void_ts IS NULL
-          AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')`
-    ).bind(ts, reason, actor, actorId, id, merchant, merchant, id);
+          AND NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'refund')
+          ${creditGuard}`
+    ).bind(ts, reason, actor, actorId, id, merchant, merchant, id, ...creditArgs);
     const auditWithCents = env.DB.prepare(
       `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
                                amount, amount_cents, method, ref, sale_ts, impact, ts)
