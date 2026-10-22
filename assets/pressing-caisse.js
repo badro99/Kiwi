@@ -31,6 +31,19 @@
   /* Les tarifs du catalogue acceptent les centimes (12,50). Arrondir à l'entier
      faisait lire 13 à la caisse un article vendu 12,50 : on garde deux décimales
      dès qu'il y en a, jamais de « 12.5 ». */
+
+  /* Montants proposés au-dessus du dû, façon caisse principale : un tap RÈGLE
+   * « Espèces reçues » (il n'ajoute plus au dû déjà inscrit, qui faisait rendre
+   * 100 MAD de trop à qui tapait « +100 » pour un billet de 100). */
+  function cashSuggestions(due) {
+    const out = [];
+    [20, 50, 100, 200].forEach((step) => {
+      let v = Math.ceil(due / step) * step;
+      if (v <= due) v += step;
+      if (out.indexOf(v) < 0) out.push(v);
+    });
+    return out.sort((a, b) => a - b).slice(0, 3);
+  }
   const fmtMAD  = (n) => {
     n = Math.round((Number(n) || 0) * 100) / 100;
     const whole = Math.abs(n - Math.round(n)) < 0.005;
@@ -1629,7 +1642,7 @@
   function recoPanel(c) {
     const hist = ORDERS.filter((o) => o.custId === c.id).slice(0, 2);
     return `<div class="px-reco">
-      <div class="px-reco-head"><i data-lucide="sparkles"></i>${dataText(c.name)}, client reconnu</div>
+      <div class="px-reco-head"><i data-lucide="sparkles"></i><span>${dataText(c.name)}, client reconnu</span></div>
       <div class="px-reco-rows">
         ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
         ${c.contact ? `<div class="px-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
@@ -2094,11 +2107,9 @@
             <label class="cash-input-label" for="px-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="px-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
-          <div class="cash-presets" aria-label="Ajout rapide">
-            <button class="cash-preset" data-add="20">+20</button>
-            <button class="cash-preset" data-add="50">+50</button>
-            <button class="cash-preset" data-add="100">+100</button>
-            <button class="cash-preset" data-add="200">+200</button>
+          <div class="cash-presets" aria-label="Montant reçu">
+            <button class="cash-preset" data-set="${amount}">Exact</button>
+            ${cashSuggestions(amount).map((v) => `<button class="cash-preset" data-set="${v}">${new Intl.NumberFormat('fr-FR').format(v)}</button>`).join('')}
           </div>
           <div class="cash-rendu"><span class="lbl">Rendu</span><span class="val mono" id="px-cash-rendu">0 MAD</span></div>
           <button class="cash-confirm" id="px-cash-ok">Confirmer</button>
@@ -2110,8 +2121,8 @@
       };
       $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $('#px-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
-      $$('[data-add]', el).forEach((b) => {
-        b.onclick = () => { received += +b.dataset.add; $('#px-cash-in', el).value = received; refresh(); };
+      $$('[data-set]', el).forEach((b) => {
+        b.onclick = () => { received = +b.dataset.set; $('#px-cash-in', el).value = received; refresh(); };
       });
       refresh();
       $('#px-cash-ok', el).onclick = () => done(amount, 'especes', mode, Math.max(0, received - amount));

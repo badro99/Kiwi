@@ -315,7 +315,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=150',
+  '/assets/pos-dispatch.js?v=151',
   '/assets/retail-scan.css?v=9',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -409,8 +409,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=10',
   '/assets/pos-spa.js?v=10',
-  '/assets/pos-hotel.css?v=23',
-  '/assets/pos-hotel.js?v=23',
+  '/assets/pos-hotel.css?v=24',
+  '/assets/pos-hotel.js?v=24',
   '/assets/pos-fastfood.css?v=15',
   '/assets/pos-fastfood.js?v=15',
   '/assets/pos-boulangerie.css?v=12',
@@ -447,8 +447,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=12',
-  '/assets/pressing-caisse.js?v=54',
-  '/assets/pressing-caisse.css?v=54',
+  '/assets/pressing-caisse.js?v=56',
+  '/assets/pressing-caisse.css?v=56',
   '/assets/material-icons.js?v=3',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers

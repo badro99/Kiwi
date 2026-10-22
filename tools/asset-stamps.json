@@ -1144,8 +1144,8 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "150",
-    "sha": "af9d4587d10d6856"
+    "v": "151",
+    "sha": "da71d235b9b85374"
   },
   "assets/pos-epicerie.css": {
     "v": "19",
@@ -1188,12 +1188,12 @@
     "sha": "63c0963cdd3ea26d"
   },
   "assets/pos-hotel.css": {
-    "v": "23",
+    "v": "24",
     "sha": "7309984974e9c0f2"
   },
   "assets/pos-hotel.js": {
-    "v": "23",
-    "sha": "3e64a11873f43820"
+    "v": "24",
+    "sha": "116d916ffdc12034"
   },
   "assets/pos-inventory-count.js": {
     "v": "9",
@@ -1284,12 +1284,12 @@
     "sha": "17341b476ffb0fb3"
   },
   "assets/pressing-caisse.css": {
-    "v": "54",
-    "sha": "a23cff2b69715dc1"
+    "v": "56",
+    "sha": "30e5969d75d012d0"
   },
   "assets/pressing-caisse.js": {
-    "v": "54",
-    "sha": "eca134ea5eed3167"
+    "v": "56",
+    "sha": "5c0eaab950a5d526"
   },
   "assets/pressing-catalog.css": {
     "v": "4",

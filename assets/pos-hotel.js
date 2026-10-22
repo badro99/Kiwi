@@ -24,6 +24,19 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /* centimes visibles quand il y en a (« 14,50 MAD », jamais « 15 ») */
+
+  /* Montants proposés au-dessus du dû, façon caisse principale : un tap RÈGLE
+   * « Espèces reçues » (il n'ajoute plus au dû déjà inscrit, qui faisait rendre
+   * 100 MAD de trop à qui tapait « +100 » pour un billet de 100). */
+  function cashSuggestions(due) {
+    const out = [];
+    [20, 50, 100, 200].forEach((step) => {
+      let v = Math.ceil(due / step) * step;
+      if (v <= due) v += step;
+      if (out.indexOf(v) < 0) out.push(v);
+    });
+    return out.sort((a, b) => a - b).slice(0, 3);
+  }
   const fmtMAD = (n) => { const v = Math.round((+n || 0) * 100) / 100; return new Intl.NumberFormat('fr-FR', { useGrouping: true, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v) + ' MAD'; };
   const icons   = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -1395,11 +1408,9 @@
             <label class="cash-input-label" for="ht-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ht-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${t.due}" />
           </div>
-          <div class="cash-presets" aria-label="Ajout rapide">
-            <button class="cash-preset" data-add="50">+50</button>
-            <button class="cash-preset" data-add="100">+100</button>
-            <button class="cash-preset" data-add="200">+200</button>
-            <button class="cash-preset" data-add="500">+500</button>
+          <div class="cash-presets" aria-label="Montant reçu">
+            <button class="cash-preset" data-set="${t.due}">Exact</button>
+            ${cashSuggestions(t.due).map((v) => `<button class="cash-preset" data-set="${v}">${new Intl.NumberFormat('fr-FR').format(v)}</button>`).join('')}
           </div>
           <div class="cash-rendu"><span class="lbl">Rendu</span><span class="val mono" id="ht-cash-rendu">0 MAD</span></div>
           <button class="cash-confirm" id="ht-cash-ok">Confirmer</button>
@@ -1414,8 +1425,8 @@
       };
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkout-veil'); });
       $('#ht-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
-      $$('[data-add]', el).forEach((b) => {
-        b.onclick = () => { received += +b.dataset.add; $('#ht-cash-in', el).value = received; refresh(); };
+      $$('[data-set]', el).forEach((b) => {
+        b.onclick = () => { received = +b.dataset.set; $('#ht-cash-in', el).value = received; refresh(); };
       });
       $('#ht-cash-back', el).onclick = step1;
       refresh();
