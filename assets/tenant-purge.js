@@ -50,7 +50,11 @@
     'kiwiAiCloud:', 'kiwiAiAutoAct:',
     /* Remboursements (le pendant de kiwiSales:), totaux journaliers du serveur
        et début de l'historique local (sales-history.js) : données d'un magasin. */
-    'kiwiRefunds:', 'kiwiSalesSummary:', 'kiwiSalesCoverage:'];
+    'kiwiRefunds:', 'kiwiSalesSummary:', 'kiwiSalesCoverage:',
+    /* Point de reprise du flux de changements et état de l'allègement du
+       registre : propres au magasin, comme sa couverture. L'interrupteur
+       kiwiSalesTrim, lui, est un réglage du navigateur et reste. */
+    'kiwiSalesChangeCheckpoint:', 'kiwiSalesTrimAt:', 'kiwiSalesTrimPending:'];
   // Chrome de l'appareil / préférences d'affichage : ce n'est PAS la donnée d'un
   // commerçant, et ça doit survivre au changement.
   var PRESERVE = {
