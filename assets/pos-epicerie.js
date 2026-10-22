@@ -262,8 +262,8 @@
   const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
   function balanceOf(c) {
     /* Au centime : 12,10 + 3,20 donnait 15,2999…, et un règlement complet
-       laissait −0,0000001 sur l'ardoise. */
-    return r2(c.hist.reduce((s, h) => s + (h.type === 'debt' ? h.amt : -h.amt), 0));
+       laissait −0,0000001 sur l'ardoise. On additionne des centimes entiers. */
+    return c.hist.reduce((s, h) => s + (h.type === 'debt' ? 1 : -1) * Math.round((+h.amt || 0) * 100), 0) / 100;
   }
   function oldestDebt(c) {
     /* date de la plus ancienne dette tant que le solde reste > 0 (FIFO) */
@@ -284,11 +284,98 @@
      moins chez les autres : le total à recevoir ne compte que ce qui est dû. */
   function totalCredit() { return r2(CARNET.reduce((s, c) => s + Math.max(0, balanceOf(c)), 0)); }
   const advanceTxt = (bal) => `Avance ${fmtMAD(-bal)}`;
+  /* Un solde sous zéro ne s'affiche jamais nu (« solde −20 MAD ») : c'est une
+     avance due au voisin, on le dit. */
+  const balTxt = (bal) => (bal < 0 ? advanceTxt(bal) : fmtMAD(bal));
   /* Une ligne d'ardoise porte son propre identifiant : la synchronisation
      additionne alors les lignes de deux caisses au lieu de garder le carnet de
      la dernière (KiwiVerticalState.mergeLedger, assets/vertical-state.js). */
   const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   function histEntry(type, label, amt) { return { id: uid('h'), type, label, amt, at: new Date() }; }
+
+  /* ───────────── règlement : la ligne du carnet et l'argent, ensemble ─────────────
+     Un règlement s'écrit à deux endroits : la ligne « pay » du carnet (ce que le
+     voisin doit encore) et la recette du jour (KiwiPosSale, ce qui est entré au
+     tiroir et part au serveur). Écrits l'un après l'autre sans lien, un
+     stockage plein ou un onglet tué entre les deux laissait soit l'argent sans
+     la ligne (le voisin redoit ce qu'il a payé), soit la ligne sans l'argent.
+     Ordre d'écriture, sur ce terminal seulement :
+       1. une intention dans un petit journal local (kiwi:epicerieRepay:<commerce>),
+          relue pour vérifier qu'elle est bien écrite, sinon rien n'est fait ;
+       2. la recette, avec une référence ARD-… propre à ce règlement ;
+       3. l'intention passe « payée », puis la ligne entre au carnet.
+     Au chargement, recoverRepayments() relit ce journal : un règlement payé
+     dont la ligne manque au carnet y revient ; une intention dont l'argent n'est
+     jamais entré est oubliée. Les deux, ou aucun. La démo n'écrit rien. */
+  const REPAY_PREFIX = 'kiwi:epicerieRepay:';
+  function repayKey() { return REPAY_PREFIX + ((epicerieOps && epicerieOps.venue && epicerieOps.venue()) || ''); }
+  function repayLog() {
+    try { const a = JSON.parse(localStorage.getItem(repayKey()) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+  }
+  function repayLogWrite(rows) {
+    const key = repayKey(), text = rows.length ? JSON.stringify(rows) : null;
+    try {
+      if (text) localStorage.setItem(key, text); else localStorage.removeItem(key);
+      return localStorage.getItem(key) === text;
+    } catch (_) { return false; }
+  }
+  function journalHas(ref) {
+    try { return !!ref && !!window.KiwiPosSale && window.KiwiPosSale.today('epicerie').some((s) => s && s.ref === ref); } catch (_) { return false; }
+  }
+  /* commitRepayment(id, pay) → { c, entry } ou { error: 'changed' | 'storage' }.
+     Le client et son solde sont relus ICI : une fiche reçue d'une autre caisse
+     pendant que la feuille était ouverte remplace les objets du carnet, et le
+     règlement s'écrivait dans une copie que plus personne ne lisait. Un montant
+     au-dessus du solde du moment (un autre téléphone a encaissé entre-temps)
+     est refusé : la feuille se rouvre sur le vrai solde. */
+  function commitRepayment(id, pay) {
+    const c = CRED[id];
+    if (!c) return { error: 'changed' };
+    const bal = balanceOf(c), payC = Math.round((+pay || 0) * 100), balC = Math.round(bal * 100);
+    if (!(payC > 0) || payC > balC) return { error: 'changed', c };
+    const amt = payC / 100;
+    const entry = histEntry('pay', payC >= balC ? 'Règlement (soldé)' : 'Règlement partiel', amt);
+    const lines = [{ itemId: 'reglement-ardoise', name: 'Règlement ardoise', kind: 'payment', unit: 'payment', qty: 1, total: amt }];
+    if (pvReal() && window.KiwiPosSale) {
+      try { entry.ref = window.KiwiPosSale.stamp('ARD-' + entry.id.slice(1)); } catch (_) { entry.ref = 'ARD-' + entry.id.slice(1); }
+      const before = repayLog();
+      const intent = { cid: c.id, name: c.name, stage: 'intent', entry: Object.assign({}, entry, { at: entry.at.toISOString() }) };
+      if (!repayLogWrite(before.concat([intent]))) return { error: 'storage', c };
+      const rec = postDay(amt, 'especes', `Ardoise · ${c.name}`, entry.ref, lines);
+      if (!rec && !journalHas(entry.ref)) { repayLogWrite(before); return { error: 'storage', c }; }
+      intent.stage = 'paid';
+      repayLogWrite(before.concat([intent]));
+    } else {
+      postDay(amt, 'especes', `Ardoise · ${c.name}`, '', lines);
+    }
+    c.hist.push(entry);
+    /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir : la
+       recette du jour le compte (et la relit du journal au rechargement). */
+    day.especes = Math.round((+day.especes || 0) * 100 + payC) / 100;
+    return { c, entry };
+  }
+  /* Au chargement, après lecture du carnet enregistré. → nombre de lignes reprises. */
+  function recoverRepayments() {
+    if (!pvReal() || !epicerieOps || !epicerieOps.venue || !epicerieOps.venue()) return 0;
+    const log = repayLog();
+    if (!log.length) return 0;
+    const keep = [];
+    log.forEach((w) => {
+      const e = w && w.entry;
+      if (!e || !e.id || !w.cid) return;
+      const c = CRED[w.cid];
+      if (c && c.hist.some((h) => h && h.id === e.id)) return;          /* les deux sont là */
+      if (w.stage !== 'paid' && !journalHas(e.ref)) return;              /* l'argent n'est jamais entré : ni l'un ni l'autre */
+      let to = c;
+      if (!to) { to = { id: w.cid, name: String(w.name || ''), phone: '', note: '', hist: [] }; CARNET.push(to); CRED[to.id] = to; }
+      to.hist.push(Object.assign({}, e, { at: new Date(e.at) }));
+      /* gardée jusqu'au prochain chargement qui la trouvera au carnet */
+      keep.push(Object.assign({}, w, { stage: 'paid' }));
+    });
+    if (keep.length) epicerieOps.save('Règlement repris');
+    repayLogWrite(keep);
+    return keep.length;
+  }
 
   /* ───────────────────────── journée (recette du jour, seed mid-shift) ─────
      Il est ~17h : la recette tourne déjà. On garde un agrégat réaliste + on y
@@ -509,6 +596,7 @@
   let root = null;
   function mount(rootEl) {
     if (epicerieOps) epicerieOps.hydrate();
+    try { recoverRepayments(); } catch (_) {}
     bindReal(); rebuildReal();
     root = rootEl;
     root.innerHTML = `
@@ -1148,10 +1236,12 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
+  /* → l'entrée journalisée, ou null (démo, rien pris, panne). */
   function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines });
+      if (window.KiwiPosSale) return window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines }) || null;
     } catch (_) {}
+    return null;
   }
 
   /* ═══════════════════════ CARNET PICK (attacher le panier à une ardoise) ═══════════════════════ */
@@ -1179,7 +1269,7 @@
                 <span class="ep-cp-name">${esc(c.name)}</span>
                 <span class="ep-cp-sub">${esc(c.phone)}</span>
               </span>
-              <span class="ep-cp-bal ${bal > 0 ? 'due' : 'zero'}">${bal > 0 ? fmtMAD(bal) : 'à jour'}</span>
+              <span class="ep-cp-bal ${bal > 0 ? 'due' : 'zero'}">${bal > 0 ? fmtMAD(bal) : bal < 0 ? advanceTxt(bal) : 'à jour'}</span>
             </button>`;
           }).join('')}
         </div>
@@ -1238,7 +1328,7 @@
     freshTicket();
     renderTicket(); renderGrid(); renderBadges(); icons();
     queueIfOffline('Ardoise');
-    toast(`Sur l'ardoise de ${c.name} · +${fmtMAD2(total)} · solde ${fmtMAD(balanceOf(c))}`);
+    toast(`Sur l'ardoise de ${c.name} · +${fmtMAD2(total)} · solde ${balTxt(balanceOf(c))}`);
     focusScan();
   }
 
@@ -1416,7 +1506,7 @@
       day.creditAdded = r2(day.creditAdded + amt);
       closeVeil('#ep-pay-veil');
       queueIfOffline('Ardoise');
-      toast(`Sur l'ardoise de ${c.name} · +${fmtMAD(amt)} · solde ${fmtMAD(balanceOf(c))}`);
+      toast(`Sur l'ardoise de ${c.name} · +${fmtMAD(amt)} · solde ${balTxt(balanceOf(c))}`);
       renderBadges();
       openArdoise(c.id);
     };
@@ -1514,18 +1604,23 @@
       $('#ep-settle-ok', el).onclick = () => {
         const rendu = Math.max(0, received - pay);
         /* Le règlement au centime, comme la dette : arrondi, « tout régler »
-           sur 12,50 notait 13 payés, et l'ardoise passait à −0,50. */
-        c.hist.push(histEntry('pay', pay >= bal - 0.004 ? 'Règlement (soldé)' : 'Règlement partiel', r2(pay)));
-        /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir.
-           Le toast l'annonçait déjà, mais ni la recette du jour ni le tableau
-           de bord n'en voyaient la couleur : la journée était sous-comptée de
-           tout ce que les voisins venaient rembourser. */
-        day.especes += pay;
-        postDay(pay, 'especes', `Ardoise · ${c.name}`, '',
-          [{ itemId: 'reglement-ardoise', name: 'Règlement ardoise', kind: 'payment', unit: 'payment', qty: 1, total: pay }]);
+           sur 12,50 notait 13 payés, et l'ardoise passait à −0,50. La ligne du
+           carnet et la recette du jour s'écrivent ensemble (commitRepayment). */
+        const done = commitRepayment(c.id, pay);
         closeVeil('#ep-pay-veil');
+        if (done.error === 'storage') {
+          toast('Règlement non enregistré, rien n\'a été noté · réessayez');
+          openArdoise(c.id);
+          return;
+        }
+        if (done.error) {
+          const live = CRED[c.id];
+          toast('Le solde a changé sur une autre caisse · vérifiez le montant');
+          if (live && balanceOf(live) > 0) openSettle(live); else openArdoise(c.id);
+          return;
+        }
         queueIfOffline('Règlement');
-        const newBal = balanceOf(c);
+        const newBal = balanceOf(done.c);
         toast(newBal > 0
           ? `Encaissé · ${fmtMAD(pay)} · reste ${fmtMAD(newBal)} sur l'ardoise${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`
           : `Ardoise soldée · ${esc(c.name)} · l'lah ikhellik${rendu > 0.0001 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);

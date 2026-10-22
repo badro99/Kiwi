@@ -160,7 +160,8 @@ console.log('\ncarnet · la caisse');
 ok('chaque ligne d\'ardoise naît avec un identifiant', () => {
   assert.match(EP, /function histEntry\(type, label, amt\) \{ return \{ id: uid\('h'\), type, label, amt, at: new Date\(\) \}; \}/);
   assert.doesNotMatch(EP, /hist\.push\(\{/, 'aucune ligne poussée à la main sans identifiant');
-  assert.equal((EP.match(/hist\.push\(histEntry\(/g) || []).length, 4);
+  assert.equal((EP.match(/hist\.push\(histEntry\(/g) || []).length, 3, 'trois chemins de dette');
+  assert.equal((EP.match(/histEntry\('pay'/g) || []).length, 1, 'un seul chemin de règlement : commitRepayment');
 });
 ok('une nouvelle ardoise ne partage jamais son identifiant avec celle d\'une autre caisse', () => {
   assert.match(EP, /const c = \{ id: uid\('kx'\), name, phone: tel/);
@@ -255,7 +256,7 @@ ok('aucune ligne d\'ardoise n\'est arrondie au dirham', () => {
   assert.ok(!/histEntry\([^;]*Math\.round/.test(EP), 'histEntry fed a Math.round amount');
   assert.ok(!/creditAdded \+= Math\.round/.test(EP), 'day total rounded to the dirham');
   assert.equal((EP.match(/histEntry\('debt', [^;]*r2\(/g) || []).length, 3, 'three debt paths keep the centimes');
-  assert.ok(/histEntry\('pay', [^;]*r2\(pay\)\)/.test(EP), 'repayment keeps the centimes');
+  assert.ok(/const amt = payC \/ 100;\s*const entry = histEntry\('pay', [^;]*, amt\);/.test(EP), 'repayment keeps the centimes');
 });
 ok('un panier de 12,50 reste 12,50 sur l\'ardoise, et un règlement complet la solde à 0', () => {
   const c = balanceRuntime();
@@ -266,6 +267,165 @@ ok('un panier de 12,50 reste 12,50 sur l\'ardoise, et un règlement complet la s
 });
 ok('« la moitié » ne dépasse jamais ce qui est dû', () => {
   assert.ok(/pay = v === 'half' \? Math\.min\(bal, Math\.round\(bal \/ 2 \/ 5\) \* 5\)/.test(EP));
+});
+
+/* ── 6. trop-perçu à la fusion : jamais un solde négatif sans le dire ──
+   Deux caisses hors ligne encaissent chacune toute la dette : les deux
+   règlements restent (l'argent est entré deux fois) et le solde passe sous
+   zéro. Partout où la caisse affiche ce solde, c'est une « Avance ». */
+console.log('\ncarnet · trop-perçu après fusion');
+function labelRuntime() {
+  const c = vm.createContext({ Intl, Math });
+  vm.runInContext([
+    grab(EP, 'const fmtMAD2 = (n) =>') + ';', 'const fmtMAD = (n) => fmtMAD2(n);',
+    grab(EP, 'function balanceOf('), EP.match(/const advanceTxt = .*;/)[0], EP.match(/const balTxt = .*;/)[0],
+    'this.balTxt = balTxt; this.bal = balanceOf;',
+  ].join('\n'), c);
+  return c;
+}
+ok('deux caisses qui encaissent toute la dette : le solde fusionné se lit « Avance », jamais « −50 »', () => {
+  const debt = { id: 'd', type: 'debt', label: 'Courses', amt: 50, at: at(0) };
+  const m = merge(clone(doc(t0 + 10, 'a', [rkia([debt, { id: 'pA', type: 'pay', label: 'R', amt: 50, at: at(1) }])])),
+    clone(doc(t0 + 20, 'b', [rkia([debt, { id: 'pB', type: 'pay', label: 'R', amt: 50, at: at(2) }])]))).verticals.epicerie.data.carnet[0];
+  const L = labelRuntime();
+  assert.equal(L.bal(m), -50);
+  assert.match(L.balTxt(L.bal(m)), /^Avance 50 MAD$/);
+  assert.match(L.balTxt(12.5), /^12,50 MAD$/);
+});
+ok('aucun affichage de solde ne montre un négatif nu', () => {
+  assert.doesNotMatch(EP, /solde \$\{fmtMAD\(balanceOf\(c\)\)\}/, 'les toasts passent par balTxt');
+  assert.match(EP, /<span class="ep-cp-bal [^\n]*">\$\{bal > 0 \? fmtMAD\(bal\) : bal < 0 \? advanceTxt\(bal\) : 'à jour'\}/, 'le choix du voisin dit « Avance », pas « à jour »');
+  assert.equal((EP.match(/bal < 0 \? advanceTxt\(bal\)/g) || []).length, 4, 'liste, fiche, choix du voisin et balTxt');
+});
+ok('le solde se compte en centimes entiers', () => {
+  const L = labelRuntime();
+  const c = { hist: [0.1, 0.2, 0.3, 0.4, 0.05, 0.07].map((amt) => ({ type: 'debt', amt })).concat([{ type: 'pay', amt: 1.12 }]) };
+  assert.ok(Object.is(L.bal(c), 0) || L.bal(c) === 0, 'got ' + L.bal(c));
+});
+
+/* ── 7. règlement : la ligne du carnet et l'argent, ensemble ou pas du tout ──
+   Le vrai code de pos-epicerie.js (commitRepayment, recoverRepayments) sur un
+   stockage simulé qui peut refuser une écriture (plein) ou s'arrêter net après
+   N écritures (onglet tué, batterie). Après rechargement et reprise, chaque
+   règlement au journal du jour a sa ligne au carnet, et réciproquement. */
+console.log('\ncarnet · règlement atomique');
+const REPAY_SRC = [
+  grab(EP, 'function balanceOf('), EP.match(/const uid = .*;/)[0], grab(EP, 'function histEntry('),
+  EP.match(/const REPAY_PREFIX = .*;/)[0], grab(EP, 'function repayKey()'), grab(EP, 'function repayLog()'),
+  grab(EP, 'function repayLogWrite('), grab(EP, 'function journalHas('), grab(EP, 'function postDay('),
+  grab(EP, 'function commitRepayment('), grab(EP, 'function recoverRepayments()'),
+  'this.api = { commitRepayment, recoverRepayments, balanceOf };',
+].join('\n');
+const JKEY = 'kiwi:posDay:epicerie', CKEY = 'carnet', MKEY = 'serveur', WKEY = 'kiwi:epicerieRepay:epicerie-test';
+function till(disk, { failKey = '', crashAfter = Infinity, recordMode = 'ok', real = true } = {}) {
+  let writes = 0;
+  const ls = {
+    getItem: (k) => (disk.has(k) ? disk.get(k) : null),
+    setItem: (k, v) => { if (failKey === '*' || failKey === k) throw new Error('QuotaExceededError'); if (writes++ < crashAfter) disk.set(k, String(v)); },
+    removeItem: (k) => { if (writes++ < crashAfter) disk.delete(k); },
+  };
+  const today = () => JSON.parse(ls.getItem(JKEY) || '[]');
+  const Pos = {
+    stamp: (r) => (/-A7$/.test(r) ? r : r + '-A7'), today,
+    record(v, sale) {
+      if (recordMode === 'null' || !real) return null;      /* la démo ne journalise rien (pos-sale.js) */
+      if (recordMode === 'throw') throw new Error('panne');
+      const rows = today(); const e = { ref: sale.ref, total: sale.total, label: sale.label };
+      /* comme pos-sale.js : journal local (écriture avalée si elle échoue), puis miroir serveur */
+      rows.push(e); try { ls.setItem(JKEY, JSON.stringify(rows)); } catch (_) {}
+      try { ls.setItem(MKEY, JSON.stringify(JSON.parse(ls.getItem(MKEY) || '[]').concat([e]))); } catch (_) {}
+      if (recordMode === 'throwAfter') throw new Error('panne après écriture');
+      return e;
+    },
+  };
+  const CARNET = JSON.parse(disk.get(CKEY) || 'null') || [{ id: 'k1', name: 'TEST KIWI Rkia', phone: '', note: '', hist: [{ id: 'h0', type: 'debt', label: 'Courses', amt: 80.5, at: at(0) }] }];
+  CARNET.forEach((c) => c.hist.forEach((h) => { h.at = new Date(h.at); }));
+  const CRED = Object.fromEntries(CARNET.map((c) => [c.id, c]));
+  const ops = { venue: () => 'epicerie-test', save: () => { try { ls.setItem(CKEY, JSON.stringify(CARNET)); } catch (_) {} return true; } };
+  const ctx = vm.createContext({ Math, JSON, Date, Object, Array, String, CARNET, CRED, day: { especes: 0 }, pvReal: () => real, epicerieOps: ops, localStorage: ls, window: { KiwiPosSale: Pos } });
+  vm.runInContext(REPAY_SRC, ctx);
+  if (!disk.has(CKEY) && crashAfter === Infinity && !failKey) ops.save();
+  return { ...ctx.api, CARNET, CRED, ctx, ops, journal: today };
+}
+const cents = (n) => Math.round(n * 100);
+function consistent(disk) {
+  /* l'argent enregistré = journal du jour ∪ miroir serveur, une fois par référence */
+  const money = new Map(JSON.parse(disk.get(JKEY) || '[]').concat(JSON.parse(disk.get(MKEY) || '[]')).filter((s) => /^ARD-/.test(s.ref)).map((s) => [s.ref, s]));
+  const journal = [...money.values()];
+  const lines = JSON.parse(disk.get(CKEY) || '[]').flatMap((c) => c.hist).filter((h) => h.type === 'pay' && h.ref);
+  assert.deepEqual(journal.map((s) => s.ref).sort(), lines.map((h) => h.ref).sort(), 'chaque règlement encaissé a sa ligne au carnet, et réciproquement');
+  assert.equal(journal.reduce((n, s) => n + cents(s.total), 0), lines.reduce((n, h) => n + cents(h.amt), 0));
+  return journal.length;
+}
+ok('règlement normal : une ligne au carnet, la même somme au journal, la même référence', () => {
+  const disk = new Map(); const t = till(disk);
+  const r = t.commitRepayment('k1', 30.25);
+  assert.ok(!r.error, r.error);
+  t.ops.save();
+  assert.equal(consistent(disk), 1);
+  assert.equal(t.balanceOf(t.CRED.k1), 50.25);
+  assert.equal(t.ctx.day.especes, 30.25);
+});
+ok('fiche reçue d\'une autre caisse pendant la saisie : le règlement va au carnet lu, pas à la copie périmée', () => {
+  const disk = new Map(); const t = till(disk);
+  const stale = t.CRED.k1;
+  const fresh = clone(stale); fresh.hist.forEach((h) => { h.at = new Date(h.at); });
+  t.CARNET.splice(0, 1, fresh); t.CRED.k1 = fresh;
+  assert.ok(!t.commitRepayment('k1', 10).error);
+  assert.equal(stale.hist.length, 1, 'rien dans la copie périmée');
+  assert.equal(fresh.hist.length, 2);
+});
+ok('un règlement au-delà du solde du moment (encaissé ailleurs entre-temps) est refusé, rien n\'est écrit', () => {
+  const disk = new Map(); const t = till(disk);
+  t.CRED.k1.hist.push({ id: 'hR', type: 'pay', label: 'Règlement', amt: 80.5, at: new Date() });
+  const r = t.commitRepayment('k1', 80.5);
+  assert.equal(r.error, 'changed');
+  assert.equal(t.journal().length, 0);
+  assert.equal(t.CRED.k1.hist.length, 2);
+});
+ok('stockage plein ou miroir en panne : ni ligne ni recette', () => {
+  for (const [failKey, recordMode] of [['kiwi:epicerieRepay:epicerie-test', 'ok'], ['', 'null'], ['', 'throw']]) {
+    const disk = new Map(); const t = till(disk); const f = till(disk, { failKey, recordMode });
+    const r = f.commitRepayment('k1', 20);
+    assert.equal(r.error, 'storage', failKey + recordMode);
+    assert.equal(f.CRED.k1.hist.length, 1);
+    assert.equal(consistent(disk), 0);
+    void t;
+  }
+});
+ok('démo : aucune écriture de journal, le comportement reste celui d\'avant', () => {
+  const disk = new Map(); const t = till(disk, { real: false });
+  const before = new Map(disk);
+  assert.ok(!t.commitRepayment('k1', 5).error);
+  assert.deepEqual([...disk.keys()].sort(), [...before.keys()].sort());
+});
+ok('arrêt brutal à chaque écriture, panne à chaque endroit : après reprise, les deux ou aucun', () => {
+  let cases = 0, recovered = 0;
+  for (const recordMode of ['ok', 'null', 'throw', 'throwAfter'])
+    for (const failKey of ['', '*', WKEY, CKEY])
+      for (let crashAfter = 0; crashAfter <= 7; crashAfter++) {
+        const disk = new Map(); till(disk);                      /* le carnet enregistré avant la vente */
+        const t = till(disk, { failKey, crashAfter, recordMode });
+        const r = t.commitRepayment('k1', 12.5);
+        if (!r.error) t.ops.save();                              /* queueIfOffline */
+        const after = till(disk);                                /* rechargement : seul le disque survit */
+        recovered += after.recoverRepayments();
+        try { consistent(disk); } catch (e) { e.message = `[${recordMode} · ${failKey || 'aucune panne'} · arrêt après ${crashAfter}] ` + e.message; throw e; }
+        const again = till(disk);
+        assert.equal(again.recoverRepayments(), 0, 'la reprise ne rajoute rien une deuxième fois');
+        consistent(disk);
+        assert.ok(again.balanceOf(again.CRED.k1) >= 80.5 - 12.5 && again.balanceOf(again.CRED.k1) <= 80.5);
+        cases++;
+      }
+  assert.equal(cases, 128);
+  assert.ok(recovered > 0, 'au moins un cas repris par la relecture au chargement');
+});
+ok('journal local plein mais vente partie au serveur : la ligne entre quand même au carnet', () => {
+  const disk = new Map(); till(disk);
+  const t = till(disk, { failKey: JKEY });
+  assert.ok(!t.commitRepayment('k1', 7.25).error);
+  t.ops.save();
+  assert.equal(consistent(disk), 1);
 });
 
 console.log(`\ncredit-book-test · ${passed} passed, ${failed} failed`);
