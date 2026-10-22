@@ -1144,16 +1144,16 @@
     "sha": "9bbe149047eba2d1"
   },
   "assets/pos-dispatch.js": {
-    "v": "141",
-    "sha": "75b6ecd6de080ecb"
+    "v": "142",
+    "sha": "51492735a752003a"
   },
   "assets/pos-epicerie.css": {
-    "v": "18",
+    "v": "19",
     "sha": "9e5d46709ec53871"
   },
   "assets/pos-epicerie.js": {
-    "v": "18",
-    "sha": "d098c2ca600e1ba3"
+    "v": "19",
+    "sha": "a3c1e3120e3a7415"
   },
   "assets/pos-fastfood.css": {
     "v": "15",

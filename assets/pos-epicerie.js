@@ -278,7 +278,12 @@
     }
     return debts.length ? debts[debts.length - 1].at : null;
   }
-  function totalCredit() { return CARNET.reduce((s, c) => s + balanceOf(c), 0); }
+  /* Deux caisses hors ligne peuvent chacune encaisser le même règlement : à la
+     fusion les deux paiements restent (l'argent est bien entré deux fois) et le
+     solde passe sous zéro. C'est une avance due au client, pas une dette en
+     moins chez les autres : le total à recevoir ne compte que ce qui est dû. */
+  function totalCredit() { return r2(CARNET.reduce((s, c) => s + Math.max(0, balanceOf(c)), 0)); }
+  const advanceTxt = (bal) => `Avance ${fmtMAD(-bal)}`;
   /* Une ligne d'ardoise porte son propre identifiant : la synchronisation
      additionne alors les lignes de deux caisses au lieu de garder le carnet de
      la dernière (KiwiVerticalState.mergeLedger, assets/vertical-state.js). */
@@ -1301,7 +1306,7 @@
     const bal = balanceOf(c);
     const oldest = oldestDebt(c);
     const old = oldest && (Date.now() - oldest.getTime()) > 14 * DAY && bal > 0;
-    const sinceTxt = bal > 0 && oldest ? `depuis ${sinceLabel(oldest)}` : 'à jour';
+    const sinceTxt = bal > 0 && oldest ? `depuis ${sinceLabel(oldest)}` : bal < 0 ? 'trop-perçu, à rendre ou à déduire' : 'à jour';
     return `<button class="ep-ardoise ${old ? 'is-old' : ''} ${bal <= 0 ? 'is-paid' : ''}" data-ep-ard="${c.id}">
       <div class="ep-ard-top">
         <span class="ep-ard-ava">${esc(initials(c.name))}</span>
@@ -1310,13 +1315,13 @@
           <span class="ep-ard-meta">${esc(c.phone)}</span>
         </span>
         <span class="ep-ard-bal ${bal <= 0 ? 'zero' : ''}">
-          <span class="amt">${bal > 0 ? fmtMAD(bal) : '0 MAD'}</span>
+          <span class="amt">${bal > 0 ? fmtMAD(bal) : bal < 0 ? advanceTxt(bal) : '0 MAD'}</span>
           <span class="since">${c.hist.length} mouvement${c.hist.length > 1 ? 's' : ''}</span>
         </span>
       </div>
       <div class="ep-ard-foot">
         <span class="ep-ard-since-chip ${old ? 'old' : bal <= 0 ? 'zero' : ''}">
-          <i data-lucide="${bal <= 0 ? 'check' : 'clock'}"></i>${esc(sinceTxt)}
+          <i data-lucide="${bal < 0 ? 'hand-coins' : bal <= 0 ? 'check' : 'clock'}"></i>${esc(sinceTxt)}
         </span>
         <span class="ep-ard-go">Ouvrir <i data-lucide="chevron-right"></i></span>
       </div>
@@ -1340,8 +1345,8 @@
           <span class="sub">${esc(c.phone)}${c.note ? ` · ${esc(c.note)}` : ''}</span>
         </span>
         <span class="ep-dt-bal ${bal <= 0 ? 'zero' : ''}">
-          <span class="amt">${bal > 0 ? fmtMAD(bal) : '0 MAD'}</span>
-          <span class="lbl">${bal > 0 ? `dû ${oldest ? 'depuis ' + sinceLabel(oldest) : ''}` : 'à jour'}</span>
+          <span class="amt">${bal > 0 ? fmtMAD(bal) : bal < 0 ? advanceTxt(bal) : '0 MAD'}</span>
+          <span class="lbl">${bal > 0 ? `dû ${oldest ? 'depuis ' + sinceLabel(oldest) : ''}` : bal < 0 ? 'payé en trop, à rendre ou à déduire de la prochaine dette' : 'à jour'}</span>
         </span>
       </div>
       <div class="ep-dt-hist">
