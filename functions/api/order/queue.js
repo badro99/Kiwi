@@ -2256,7 +2256,9 @@ export async function onRequestPost(context) {
       });
       if (!matched) return json({ error: 'station-not-on-order' }, 400);
       const allReady = lines.length > 0 && lines.every((line) => line && line.stationReady === true);
-      const nextStatus = allReady ? 'ready' : 'accepted';
+      // Un bon déjà prêt (« Toutes ») le reste : un appui de poste rejoué en retard
+      // ne le fait jamais reculer en préparation.
+      const nextStatus = allReady || current.status === 'ready' ? 'ready' : 'accepted';
       const previousTs = Number(current.updated_ts) || 0;
       const nextTs = Math.max(now, previousTs + 1);
       let changed = null;
@@ -2270,6 +2272,12 @@ export async function onRequestPost(context) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
       if (changed) {
+        // Le dernier poste prêt pose le jalon « prêt » du bon (temps de préparation).
+        if (changed.status === 'ready' && current.status !== 'ready') {
+          deferCourse(context, recordOrderCourse(env, {
+            merchant, orderId: changed.id, orderNumber: changed.number, readyAt: nextTs,
+          }));
+        }
         return json({ ok: true, id: changed.id, status: changed.status,
                       number: changed.number, station: readyStation, lines });
       }
@@ -2666,6 +2674,19 @@ async function createTicket(context, env, merchant, c, now) {
    * ferme ici SANS toucher `paid_ts` · fermer ne prouve aucun paiement, et la
    * vente de l'ancienne tablée soldera ses propres bons en arrivant (sale.js
    * ne solde que sa session quand une visite plus récente existe). */
+  /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
+   * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
+   * marquée prête en cuisine entre-temps, et un UPDATE la ferait reculer.
+   * Et AVANT d'ouvrir une visite : la table du bon a pu être transférée depuis,
+   * et ouvrir sa visite ici assoyait une tablée fantôme à l'ancienne table. */
+  try {
+    const dup = await env.DB.prepare(
+      'SELECT * FROM orders WHERE id = ? AND merchant = ?'
+    ).bind(id, merchant).first();
+    if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status,
+      session: dup.session_id || undefined, replayed: true });
+  } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
+
   const settledVisits = mode === 'table' && table && Array.isArray(c.settledSessions)
     ? [...new Set(c.settledSessions.map((s) => String(s || '').trim()).filter((s) => SESSION_ID.test(s)))].slice(0, 20)
     : [];
@@ -2683,17 +2704,6 @@ async function createTicket(context, env, merchant, c, now) {
   const sessionId = ticketSession && ticketSession.id ? ticketSession.id : null;
   const total = lines.reduce((s, l) => s + Math.round(l.unitPrice * 100) * l.qty, 0) / 100;
   const linesJson = JSON.stringify(lines);
-
-  /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
-   * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
-   * marquée prête en cuisine entre-temps, et un UPDATE la ferait reculer. */
-  try {
-    const dup = await env.DB.prepare(
-      'SELECT * FROM orders WHERE id = ? AND merchant = ?'
-    ).bind(id, merchant).first();
-    if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status,
-      session: dup.session_id || undefined, replayed: true });
-  } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
 
   /* L'annonce s'écrit AVANT le bon : la cuisine sonde par `updated_ts`, et un
    * bon lu avant son annonce ne serait jamais relu. Une annonce dont le bon

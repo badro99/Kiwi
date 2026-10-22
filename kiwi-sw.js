@@ -22,7 +22,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=3',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=4',
-  '/assets/caisse-app.js?v=6',
+  '/assets/caisse-app.js?v=7',
   '/assets/caisse-refresh.js?v=4',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
@@ -308,11 +308,11 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=13',
+  '/assets/kitchen-relay.js?v=14',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=17',
+  '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
   '/assets/pos-dispatch.js?v=142',

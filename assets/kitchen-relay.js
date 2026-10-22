@@ -122,6 +122,10 @@
   }
   function enqueue(body) {
     var q = readQ().filter(function (x) { return x && x.create && x.create.id !== body.create.id; });
+    /* File pleine : writeQ gardait les 60 derniers, donc le plus ancien bon
+       encore jamais parti en cuisine disparaissait sans un mot pendant que le
+       nouveau se disait « en file ». On refuse le nouveau, à voix haute. */
+    if (q.length >= MAX_QUEUED) { schedule(); return 'full'; }
     q.push({ merchant: body.merchant, create: body.create, at: Date.now() });
     var durable = writeQ(q);
     schedule();
@@ -158,7 +162,8 @@
     var timer = controller ? setTimeout(function () { controller.abort(); }, SEND_TIMEOUT_MS) : null;
     function later(extra) {
       var queued = isRetry ? true : enqueue(body);
-      var out = { ok: false, retryLater: true, queued: queued };
+      var out = { ok: false, retryLater: true, queued: queued === true };
+      if (queued === 'full') out.full = true;
       if (extra) for (var k in extra) out[k] = extra[k];
       return out;
     }

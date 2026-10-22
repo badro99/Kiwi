@@ -104,8 +104,8 @@
     "sha": "2ab1a6257cf16246"
   },
   "assets/caisse-app.js": {
-    "v": "6",
-    "sha": "6c085d4f7f87e544"
+    "v": "7",
+    "sha": "1e923e4b3e8909b6"
   },
   "assets/caisse-dna.css": {
     "v": "6",
@@ -796,12 +796,12 @@
     "sha": "c9aa7ba3d485d350"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "17",
-    "sha": "f7cc0970172989b9"
+    "v": "18",
+    "sha": "46b4edaa4a341a39"
   },
   "assets/kitchen-relay.js": {
-    "v": "13",
-    "sha": "f23b901addc34e53"
+    "v": "14",
+    "sha": "a436f63c3efda891"
   },
   "assets/kiwi-env.js": {
     "v": "2",

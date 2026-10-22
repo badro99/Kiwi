@@ -554,7 +554,7 @@
      * intact pour le chemin automatique · aucun sondage, aucun rechargement ne
      * peut rejouer un bon · et le papier demandé à la main sort toujours. */
     var force = options.force === true;
-    var q = readQueue(), done = readDone(), accepted = 0;
+    var q = readQueue(), done = readDone(), accepted = 0, refused = 0;
     var doneIds = Object.create(null), queuedIds = Object.create(null);
     done.forEach(function (x) { if (x && x.id) doneIds[x.id] = 1; });
     q.forEach(function (x) { if (x && x.id) queuedIds[x.id] = 1; });
@@ -566,6 +566,11 @@
       if (!id) return;
       if (force) id = cleanId(id + ':r' + Date.now().toString(36) + '-' + accepted);
       else if (doneIds[id] || queuedIds[id]) return;
+      /* File pleine : l'écriture gardait les 120 derniers, donc le plus vieux
+         bon en attente sortait de la file pendant que le nouveau se disait
+         accepté. Le plus vieux est la table qui attend depuis le plus
+         longtemps ; c'est le nouveau qu'on refuse, et on le dit tout de suite. */
+      if (q.length >= MAX_JOBS) { refused++; record('refused-overflow', { id: id, type: raw.type }); return; }
       q.push({
         id: id,
         type: raw.type === 'receipt' ? 'receipt' : 'kitchen',
@@ -587,8 +592,19 @@
          au lieu d'annoncer une impression qui n'arrivera jamais. */
       return { accepted: 0, skipped: 'storage-full', pending: readQueue().length };
     }
+    if (refused) {
+      lastError = 'queue-overflow';
+      try {
+        if (window.KiwiCaisseToast) window.KiwiCaisseToast(
+          'File d’impression pleine', 7000, 'warn',
+          refused + ' bon(s) non mis en file : imprimez depuis l’aperçu ou annoncez-le à la cuisine.'
+        );
+      } catch (_) {}
+    }
     if (accepted) { schedule(); flush(); }
-    return { accepted: accepted, pending: readQueue().length };
+    return refused
+      ? { accepted: accepted, refused: refused, skipped: accepted ? undefined : 'queue-full', pending: readQueue().length }
+      : { accepted: accepted, pending: readQueue().length };
   }
 
   function enqueueReceipt(saleId, payload, intent) {

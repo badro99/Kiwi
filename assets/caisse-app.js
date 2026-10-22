@@ -6398,7 +6398,8 @@
           /* #0064 · voir tooLongForKitchen. */
           if (r && r.error === 'too-many-lines') tooLongForKitchen(r);
           // #0163 · queue only in memory (disk full): a reload would lose it.
-          if (r && r.queued === false) toast('Bon en attente du réseau · ne rechargez pas la caisse', 'danger');
+          if (r && r.full) toast('Cuisine injoignable et file pleine · annoncez ce bon à la cuisine', 'danger');
+          else if (r && r.queued === false) toast('Bon en attente du réseau · ne rechargez pas la caisse', 'danger');
           /* Le numéro du serveur devient le numéro affiché. C'est le SEUL que
              les deux écrans puissent connaître : la cuisine ne voit pas le
              compteur local de ce comptoir. Sans ça, un cuisinier annonçant
