@@ -135,12 +135,18 @@ try {
   await page.evaluate(() => window.__kiwiLock.hide());
   await page.waitForFunction(() => /maison/i.test(document.querySelector('[data-hai-input]')?.placeholder || ''));
   await page.waitForFunction(() => document.querySelector('[data-bench-card]')?.classList.contains('is-empty-state'));
-  await page.waitForSelector('button[aria-label="Notifications"] [data-z-badge]');
+  await page.waitForSelector('button[data-mobile-notifications] [data-z-badge]');
+  await page.waitForFunction(() => {
+    const bell = document.querySelector('button[data-mobile-notifications]');
+    const shown = [...bell.querySelectorAll('.badge')].filter((b) => getComputedStyle(b).display !== 'none').map((b) => b.textContent.trim()).join(' ');
+    return shown && bell.getAttribute('aria-label') === 'Notifications ' + shown;
+  });
+  ok(true, 'the bell says the count it shows (« Notifications 1 »), not just « Notifications »');
   // The toast now opens this day's sales directly. Open the bell independently
   // to inspect the persistent notification, rather than expecting a dead-end CTA.
   await page.waitForSelector('.kiwi-toast.warn .ta');
   await page.evaluate(() => document.querySelector('.kiwi-toast.warn').remove());
-  await page.click('button[aria-label="Notifications"]');
+  await page.click('button[data-mobile-notifications]');
   await page.waitForFunction(() => /1.?193,00 MAD/.test(document.querySelector('#kiwi-z-reconciliation-alert')?.textContent || ''));
   ok(!!await page.$('#kiwi-z-reconciliation-alert'), 'Amira dashboard puts the synthetic closed-Z mismatch in the notifications drawer');
   await page.keyboard.press('Escape');

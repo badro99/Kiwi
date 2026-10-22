@@ -2,9 +2,7 @@
   "landing": {
     "color-contrast": 16
   },
-  "dashboard": {
-    "label-content-name-mismatch": 1
-  },
+  "dashboard": {},
   "onboarding": {},
   "caisse": {}
 }

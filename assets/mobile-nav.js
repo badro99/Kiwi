@@ -95,7 +95,27 @@
       topbarInner.querySelector('.kw-topbar-brand').setAttribute('aria-label', words[1]);
       sidebar?.setAttribute('aria-label', words[2]);
       const notifications = topbarInner.querySelector('.icon-btn[aria-label="Notifications"], .icon-btn[data-mobile-notifications]');
-      if (notifications) { notifications.setAttribute('data-mobile-notifications', ''); notifications.setAttribute('data-action', 'notifications'); notifications.setAttribute('aria-label', words[3]); }
+      if (notifications) {
+        notifications.setAttribute('data-mobile-notifications', ''); notifications.setAttribute('data-action', 'notifications');
+        bellWord = words[3]; labelBell(notifications);
+        if (!bellWatch && window.MutationObserver) {
+          bellWatch = new MutationObserver(() => labelBell(notifications));
+          bellWatch.observe(notifications, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'hidden'] });
+        }
+      }
+    }
+    /* The bell shows a count. Its spoken name has to carry that count too, or
+       a screen reader announces « Notifications » over a visible « 3 »
+       (axe label-content-name-mismatch). Badges come and go from three files
+       (dateRange.js, z-reconciliation.js), so the name follows the
+       DOM rather than each writer. */
+    let bellWord = 'Notifications', bellWatch = null;
+    function labelBell(bell) {
+      const count = [...bell.querySelectorAll('.badge')]
+        .filter((b) => !b.hidden && b.style.display !== 'none')
+        .map((b) => b.textContent.trim()).filter(Boolean).join(' ');
+      const name = count ? bellWord + ' ' + count : bellWord;
+      if (bell.getAttribute('aria-label') !== name) bell.setAttribute('aria-label', name);
     }
     syncNavLabels();
     new MutationObserver(syncNavLabels).observe(document.documentElement, { attributes:true, attributeFilter:['lang'] });
