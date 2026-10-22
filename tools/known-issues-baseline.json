@@ -166,7 +166,7 @@
     {
       "suite": "pressing-money-properties-test.mjs",
       "label": "number allocation design: disconnected devices choose the same public ticket number",
-      "kind": "defect",
+      "kind": "decision",
       "severity": "data"
     },
     {
