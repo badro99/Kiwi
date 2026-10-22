@@ -22,15 +22,15 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=4',
   '/kiwi-caisse.html',
   '/assets/caisse-accounting.js?v=5',
-  '/assets/caisse-app.js?v=8',
-  '/assets/caisse-refresh.js?v=4',
+  '/assets/caisse-app.js?v=9',
+  '/assets/caisse-refresh.js?v=5',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
      c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
      dans la coquille · en silence, puisque install() avale l'échec. Et c'est
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=1',
-  '/assets/serveur-app.js?v=12',
+  '/assets/serveur-app.js?v=13',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -232,7 +232,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=20',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
-  '/assets/serveur-lang.js?v=1',
+  '/assets/serveur-lang.js?v=2',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=6',
   '/assets/caisse-viewport.js?v=1',
@@ -283,14 +283,14 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=10',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=603',
+  '/assets/employee-live.js?v=604',
   '/assets/employee-planning.js?v=16',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=6',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=12',
-  '/assets/team.js?v=313',
-  '/assets/team-hours.js?v=1',
+  '/assets/team.js?v=314',
+  '/assets/team-hours.js?v=2',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=116',
   '/assets/menu-promos-dashboard.js?v=2',

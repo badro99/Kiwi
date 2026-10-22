@@ -108,8 +108,8 @@
     "sha": "8eb3fe5595e9eba4"
   },
   "assets/caisse-app.js": {
-    "v": "8",
-    "sha": "f304d300d978296a"
+    "v": "9",
+    "sha": "e932421436dc583d"
   },
   "assets/caisse-dna.css": {
     "v": "6",
@@ -156,8 +156,8 @@
     "sha": "7609b693c25d4ae9"
   },
   "assets/caisse-refresh.js": {
-    "v": "4",
-    "sha": "c003cbac8f2a0fae"
+    "v": "5",
+    "sha": "5cb1cd5d756bd135"
   },
   "assets/caisse-shell.css": {
     "v": "1",
@@ -336,8 +336,8 @@
     "sha": "b43d5f8055c17c85"
   },
   "assets/employee-live.js": {
-    "v": "603",
-    "sha": "2cc6790fe93d713f"
+    "v": "604",
+    "sha": "5e1f33e4eceb47bb"
   },
   "assets/employee-planning.js": {
     "v": "16",
@@ -1027,6 +1027,14 @@
     "v": "6",
     "sha": "9244048d8ce8a7fa"
   },
+  "assets/orderpro-page.css": {
+    "v": "1",
+    "sha": "8955832b74db091b"
+  },
+  "assets/orderpro-page.js": {
+    "v": "1",
+    "sha": "322a9c3fd4f206d1"
+  },
   "assets/orderpro-panel.js": {
     "v": "4",
     "sha": "69c945ba95973a64"
@@ -1416,12 +1424,12 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "12",
-    "sha": "edb82ce0c6e5d152"
+    "v": "13",
+    "sha": "ffa0a450374cdea7"
   },
   "assets/serveur-lang.js": {
-    "v": "1",
-    "sha": "cebe19526bbe2a6f"
+    "v": "2",
+    "sha": "202aa842881fc803"
   },
   "assets/serveur-shell.css": {
     "v": "1",
@@ -1464,12 +1472,12 @@
     "sha": "6341af9080886677"
   },
   "assets/team-hours.js": {
-    "v": "1",
-    "sha": "f468cbaf390c7c77"
+    "v": "2",
+    "sha": "50f8d008e97cc4f7"
   },
   "assets/team.js": {
-    "v": "313",
-    "sha": "8d6cef33ba6f0ca6"
+    "v": "314",
+    "sha": "19619af5138cd484"
   },
   "assets/tenant-purge.js": {
     "v": "5",
