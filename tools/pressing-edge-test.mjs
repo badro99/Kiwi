@@ -35,6 +35,10 @@ const context = {
     KiwiPressingCatalog: {
       read: () => ({ services: fixtureServices, categories: [{ id: 'test', label: 'Test' }], items: fixtureItems }),
     },
+    /* Les créneaux suivent le fuseau du magasin. Ici le magasin est déclaré
+       dans le fuseau de la machine, pour que les dates construites en heure
+       locale ci-dessous soient des heures du magasin. */
+    KiwiConfig: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
   },
 };
 context.window.window = context.window;

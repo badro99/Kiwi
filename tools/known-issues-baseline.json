@@ -171,12 +171,6 @@
     },
     {
       "suite": "pressing-money-properties-test.mjs",
-      "label": "ready-date zone policy: slots use device civil time rather than the configured store zone",
-      "kind": "defect",
-      "severity": "display"
-    },
-    {
-      "suite": "pressing-money-properties-test.mjs",
       "label": "refund policy: cancellation preserves deposit but issues no refund or refund-due record",
       "kind": "decision",
       "severity": "money"

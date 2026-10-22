@@ -72,8 +72,56 @@
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const pad2    = (n) => String(n).padStart(2, '0');
-  const fmtDT   = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  const fmtDay  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  /* L'heure du magasin, pas celle de l'appareil (même règle que hours.js) :
+     le fuseau déclaré par la caisse du magasin (KiwiConfig, /api/timezone),
+     sinon Casablanca, lu à travers la loi des fuseaux (UTC permanent au Maroc
+     depuis le 20 septembre 2026, même avec un ICU ancien). Une tablette restée
+     à l'heure de Berlin, ou dont le tzdata croit encore Casablanca à +01,
+     promettait sinon 18:00 à son heure à elle. storeWall rend l'horloge
+     murale du magasin dans les champs UTC d'une Date ; storeInstant fait
+     l'inverse. Sur un appareil réglé sur le fuseau du magasin, rien ne change. */
+  const STORE_ZONE = 'Africa/Casablanca';
+  const ZONE_FMTS = Object.create(null);
+  function zoneFormatter(zone) {
+    if (Object.prototype.hasOwnProperty.call(ZONE_FMTS, zone)) return ZONE_FMTS[zone];
+    let f = null;
+    try {
+      f = new ((typeof KiwiZoneLaw !== 'undefined' && KiwiZoneLaw.DateTimeFormat) || Intl.DateTimeFormat)('en-US', {
+        timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
+    } catch (_) {}
+    ZONE_FMTS[zone] = f;
+    return f;
+  }
+  function storeZone() {
+    try {
+      const c = window.KiwiConfig;
+      const z = c && String(c.timezone || c.timeZone || '').trim();
+      if (z && zoneFormatter(z)) return z;
+    } catch (_) {}
+    return STORE_ZONE;
+  }
+  function storeWall(value) {
+    const t = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    if (!Number.isFinite(t)) return new Date(NaN);
+    const o = {};
+    zoneFormatter(storeZone()).formatToParts(new Date(t)).forEach((p) => { if (p.type !== 'literal') o[p.type] = +p.value; });
+    return new Date(Date.UTC(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second, t % 1000));
+  }
+  function storeInstant(wall) {
+    const target = +wall;
+    if (!Number.isFinite(target)) return new Date(NaN);
+    let guess = target;
+    for (let i = 0; i < 6; i++) {
+      const seen = +storeWall(guess);
+      if (seen === target) break;
+      guess += target - seen;
+    }
+    return new Date(guess);
+  }
+  const fmtDT   = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]} · ${pad2(w.getUTCHours())}:${pad2(w.getUTCMinutes())}`; };
+  const fmtDay  = (d) => { const w = storeWall(d); return `${DAYS[w.getUTCDay()]} ${w.getUTCDate()} ${MONTHS[w.getUTCMonth()]}`; };
   const H = 3600 * 1000;
   const MAX_QTY = 99;
 
@@ -187,27 +235,29 @@
   }
 
   /* The counter promises clock times, not vague 24/48-hour offsets. Building
-     from local calendar days keeps noon and 18:00 stable across DST changes.
-     Sunday was already excluded by the pressing flow; keep that operational
-     rule while making the label honest whenever "tomorrow" becomes Monday. */
+     from the store's calendar days keeps noon and 18:00 stable across DST
+     changes and whatever zone the device is set to. Sunday was already
+     excluded by the pressing flow; keep that operational rule while making the
+     label honest whenever "tomorrow" becomes Monday. pressingServiceDay rend
+     un jour du magasin (horloge murale en champs UTC), pressingSlot l'instant. */
   function pressingServiceDay(from, count) {
-    const d = new Date(from);
-    d.setHours(0, 0, 0, 0);
+    const d = storeWall(from);
+    d.setUTCHours(0, 0, 0, 0);
     let left = Math.max(0, Math.floor(+count || 0));
     while (left > 0) {
-      d.setDate(d.getDate() + 1);
-      if (d.getDay() !== 0) left--;
+      d.setUTCDate(d.getUTCDate() + 1);
+      if (d.getUTCDay() !== 0) left--;
     }
     return d;
   }
   function pressingSlot(from, serviceDays, hour) {
     const d = pressingServiceDay(from, serviceDays);
-    d.setHours(hour, 0, 0, 0);
-    return d;
+    d.setUTCHours(hour, 0, 0, 0);
+    return storeInstant(d);
   }
   function relativeServiceDay(date, now) {
-    const a = new Date(now); a.setHours(0, 0, 0, 0);
-    const b = new Date(date); b.setHours(0, 0, 0, 0);
+    const a = storeWall(now); a.setUTCHours(0, 0, 0, 0);
+    const b = storeWall(date); b.setUTCHours(0, 0, 0, 0);
     const days = Math.round((b - a) / (24 * H));
     if (days === 0) return "Aujourd'hui";
     if (days === 1) return 'Demain';
@@ -218,7 +268,7 @@
     const now = value && typeof value.getTime === 'function' && Number.isFinite(value.getTime())
       ? new Date(value.getTime())
       : new Date();
-    const beforeCutoff = now.getHours() < 13;
+    const beforeCutoff = storeWall(now).getUTCHours() < 13;
     const nextNoon = pressingSlot(now, 1, 12);
     const nextEvening = pressingSlot(now, 1, 18);
     const followingNoon = pressingSlot(now, 2, 12);
@@ -233,12 +283,16 @@
           { key: 'next-evening', d: nextEvening, sub: 'Service standard', recommended: true },
           { key: 'following-noon', d: followingNoon, sub: 'Délai confortable' },
         ];
-    return options.map((option) => ({
-      ...option,
-      day: relativeServiceDay(option.d, now),
-      time: `${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
-      label: `${relativeServiceDay(option.d, now)} · ${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
-    }));
+    return options.map((option) => {
+      const w = storeWall(option.d);
+      const time = `${pad2(w.getUTCHours())}:${pad2(w.getUTCMinutes())}`;
+      return {
+        ...option,
+        day: relativeServiceDay(option.d, now),
+        time,
+        label: `${relativeServiceDay(option.d, now)} · ${time}`,
+      };
+    });
   }
 
   function toast(msg, ms) {
@@ -1701,13 +1755,15 @@
     });
     $('#px-date-ok', el).onclick = () => {
       const v = $('#px-date-input', el).value;
-      const ready = v ? new Date(v) : null;
+      /* Le champ « Autre date » se lit, lui aussi, à l'heure du magasin. */
+      const ready = v ? storeInstant(new Date(v + (v.length === 16 ? ':00Z' : 'Z'))) : null;
       if (!validReady(ready)) { toast('La date de retrait doit être dans le futur'); return; }
       completeSelection(ready);
     };
   }
   function localDT(d) {
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    const w = storeWall(d);
+    return `${w.getUTCFullYear()}-${pad2(w.getUTCMonth() + 1)}-${pad2(w.getUTCDate())}T${pad2(w.getUTCHours())}:${pad2(w.getUTCMinutes())}`;
   }
 
   /* ═══════════════════════ VALIDATE → TAGS + RECEIPT ═══════════════════════ */
