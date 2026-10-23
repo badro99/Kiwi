@@ -46,7 +46,8 @@ const removed = ['agent-vision.js', 'agent-skin.js', 'month-report-tools.js', 'm
 const expectedTags = hotelParts.scriptsBefore.filter(tag => !removed.some(file => tag.includes('/' + file + '?v=')));
 const hotelAt = expectedTags.findIndex(tag => tag.includes('assets/hotel.js?'));
 expectedTags.splice(hotelAt, 0, ...hotelParts.parts.map(p => '<script src="' + p.file + '?v=1" defer fetchpriority="low"></script>'));
-assert.deepEqual(html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g), expectedTags, 'all surviving shell tags retain their exact order and attributes');
+const unstamped = tags => tags.map(tag => tag.replace(/\?v=\d+/, '?v=N'));
+assert.deepEqual(unstamped(html.match(/<script\b[^>]*\bsrc=[^>]*><\/script>/g)), unstamped(expectedTags), 'all surviving shell tags retain their exact order and attributes (stamps move freely)');
 const tags = hotelFiles.map(file => '<script src="' + file + '?v=');
 let last = -1;
 for (let i = 0; i < tags.length; i++) {

@@ -123,7 +123,7 @@ Object.assign(doc, { readyState: 'complete', head: fakeEl('head'), body: fakeEl(
 const win = { document: doc, Kiwi: { toast: (m) => toasts.push(m), handlers: {} }, KiwiLang: { get: () => 'fr' } };
 win.window = win;
 const sandbox = vm.createContext({ window: win, document: doc, MutationObserver: class { observe() {} }, Promise, console, setTimeout });
-vm.runInContext(read('assets/agent-vision.js'), sandbox, { filename: 'agent-vision.js' });
+vm.runInContext(vision, sandbox, { filename: 'agent-vision.js' });
 const KV = win.KiwiVision;
 assert.equal(typeof KV.runAction, 'function', 'KiwiVision.runAction exposed');
 const tick = () => new Promise((r) => setImmediate(r));
