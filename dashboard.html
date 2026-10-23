@@ -1167,7 +1167,7 @@
 <!-- Establish the signed account/operator identity before any tenant-scoped
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
-<script defer src="assets/tenant-purge.js?v=5"></script>
+<script defer src="assets/tenant-purge.js?v=6"></script>
 <script defer src="assets/dashboard-pin-vault.js?v=4"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <script defer src="assets/live-link.js?v=73"></script>
@@ -1228,8 +1228,8 @@
 <script src="assets/printer-bridge.js?v=30" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-<script src="assets/boutique-catalog-parts.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/boutique-catalog.js?v=15" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog-parts.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog.js?v=16" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->

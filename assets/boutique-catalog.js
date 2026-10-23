@@ -215,6 +215,16 @@
   const { MOVE_MAX, now, materialize, journal, setAbsolute, move, compact, tomb, mergeDocs } = ledger;
 
   const well = part('well', 'assets/boutique-catalog-parts.js')();
+  /* À qui appartient une copie de secours : le compte connecté et le magasin
+     appairé, deux clés que le catalogue n'écrit pas (lisibles même quand le
+     stockage refuse nos écritures) et qui changent quand l'appareil change de
+     commerçant. */
+  function wellOwner() {
+    let acc = '', paired = '';
+    try { acc = String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (e) {}
+    try { paired = String((JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null') || {}).merchant || ''); } catch (e) {}
+    return acc + '|' + paired;
+  }
   let loadEpoch = 0, saveEpoch = 0;
 
   // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
@@ -237,6 +247,10 @@
     // La lecture précède toute écriture du document vide de démarrage.
     well.read(key).then(copy => {
       if (epoch !== loadEpoch || key !== KEY || !copy || !copy.doc) return;
+      /* Une copie d'un autre locataire (autre compte, caisse ré-appairée : les
+         identifiants transitoires comme « own » se réutilisent) n'est jamais
+         fusionnée ; elle est effacée. */
+      if (copy.owner !== wellOwner()) { well.save(key, null, () => {}); return; }
       db = mergeDocs(db, copy.doc);
       materialize(db); dropIndex(); migrate();
       persist(); notify(); schedulePush();
@@ -306,7 +320,7 @@
     sayKept(ok);
     if (!ok && !startingEmpty) well.save(key, db, kept => {
       if (key === KEY && epoch === saveEpoch && load === loadEpoch) sayKept(kept);
-    });
+    }, wellOwner());
     else if (ok && !startingEmpty) well.save(key, null, () => {});
     return ok;
   }

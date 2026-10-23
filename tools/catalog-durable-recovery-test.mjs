@@ -43,7 +43,7 @@ function browser(idb, storage, venue = 'recovery-a') {
 }
 function storage() {
   const data = new Map();
-  return { refusing: true, getItem: k => data.get(k) || null, setItem(k, v) { if (this.refusing) throw Object.assign(Error('quota'), { name: 'QuotaExceededError' }); data.set(k, String(v)); }, removeItem: k => data.delete(k) };
+  return { refusing: true, data, getItem: k => data.get(k) || null, setItem(k, v) { if (this.refusing) throw Object.assign(Error('quota'), { name: 'QuotaExceededError' }); data.set(k, String(v)); }, removeItem: k => data.delete(k) };
 }
 async function settle() { for (let i = 0; i < 25; i++) await tick(); }
 function create(K) {
@@ -85,6 +85,32 @@ assert.equal(switched.K.listProducts().length, 1);
 assert.equal(switched.K._doc().variants[0].barcodes[0].code, second.v.barcodes[0].code);
 switched.K.use('recovery-a'); await settle();
 assert.equal(switched.K._doc().variants[0].barcodes[0].code, first.v.barcodes[0].code);
+/* Another tenant never inherits the copy: the account or the pairing changed
+   (transient venue ids such as « own » are reused), so the copy is ignored and
+   erased; and the tenant purge drops the whole database. */
+{
+  const disk = makeIDB(), local = storage();
+  local.data.set('kiwiAccountKey', 'first@example.com');
+  const a = browser(disk, local, 'own'); create(a.K); await settle();
+  assert.equal(a.K.durable(), true);
+  local.data.set('kiwiAccountKey', 'second@example.com');
+  const bTenant = browser(disk, local, 'own'); await settle();
+  assert.equal(bTenant.K.listProducts().length, 0, 'another account never sees the previous tenant copy');
+  const gone = await new Promise(resolve => { const r = disk.open('kiwi-catalog', 1); r.onsuccess = () => { const tx = r.result.transaction('docs', 'readonly'); const q = tx.objectStore('docs').get(bTenant.K._key); q.onsuccess = () => resolve(q.result); }; });
+  assert.equal(gone, undefined, 'the foreign copy is erased');
+  local.data.set('kiwiAccountKey', 'first@example.com');
+  local.data.set('kiwiPairedVenue', JSON.stringify({ merchant: 'store-1' }));
+  const c = browser(disk, local, 'own'); create(c.K); await settle();
+  local.data.set('kiwiPairedVenue', JSON.stringify({ merchant: 'store-2' }));
+  const d = browser(disk, local, 'own'); await settle();
+  assert.equal(d.K.listProducts().length, 0, 'a till paired to another store never sees the copy');
+  const deleted = [];
+  const pw = { localStorage: { length: 0, key: () => null, removeItem() {}, getItem: () => null }, indexedDB: { deleteDatabase: n => deleted.push(n) } };
+  pw.window = pw; vm.createContext(pw);
+  vm.runInContext(fs.readFileSync(new URL('../assets/tenant-purge.js', import.meta.url), 'utf8'), pw);
+  pw.KiwiTenantPurge.purge();
+  assert.deepEqual(deleted, ['kiwi-catalog'], 'the tenant purge deletes the catalogue fallback database');
+}
 let fc; try { fc = require('fast-check'); } catch {}
 if (fc) await fc.assert(fc.asyncProperty(fc.array(fc.record({ kind: fc.constantFrom('create', 'sell', 'receive'), refuse: fc.boolean() }), { minLength: 1, maxLength: 25 }), async ops => {
   const disk = makeIDB(), local = storage(); let x = browser(disk, local); const ids = [];

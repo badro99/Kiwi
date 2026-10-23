@@ -86,6 +86,11 @@
         }
       }
       kill.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+      /* Le second puits du catalogue (IndexedDB, utilisé quand localStorage
+         refuse) part aussi. La suppression est asynchrone et la page se
+         recharge juste après : chaque copie porte donc aussi son locataire, et
+         une copie qui n'est pas celle du locataire courant n'est jamais lue. */
+      try { if (window.indexedDB) window.indexedDB.deleteDatabase('kiwi-catalog'); } catch (_) {}
       return kill.length + TENANT_KEYS.length;
     } catch (_) { return 0; }
   }

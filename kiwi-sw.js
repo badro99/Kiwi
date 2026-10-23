@@ -220,7 +220,7 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js?v=5',
+  '/assets/tenant-purge.js?v=6',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
   '/assets/dashboard-pin-vault.js?v=4',
@@ -245,8 +245,8 @@ var SHELL = [
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=5',
-  '/assets/boutique-catalog.js?v=15',
+  '/assets/boutique-catalog-parts.js?v=6',
+  '/assets/boutique-catalog.js?v=16',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine

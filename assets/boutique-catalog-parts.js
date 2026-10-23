@@ -1115,15 +1115,15 @@ window.__kiwiBoutiqueCatalogParts.well = function () {
     }));
   }
   function enqueue(fn) { const job = tail.then(fn); tail = job.catch(() => {}); return job; }
-  function save(key, doc, done) {
+  function save(key, doc, done, owner) {
     if (doc == null && !copies.has(key)) return;
     if (doc != null) copies.add(key);
-    const job = { doc: doc == null ? null : JSON.parse(JSON.stringify(doc)), done };
+    const job = { doc: doc == null ? null : JSON.parse(JSON.stringify(doc)), done, owner: String(owner || '') };
     if (pending.has(key)) { pending.set(key, job); return; }
     pending.set(key, job);
     enqueue(() => {
       const next = pending.get(key); pending.delete(key);
-      return transaction(key, next.doc == null ? 'delete' : 'put', { doc: next.doc, at: Date.now() })
+      return transaction(key, next.doc == null ? 'delete' : 'put', { doc: next.doc, at: Date.now(), owner: next.owner })
         .then(() => { if (next.doc == null && !pending.has(key)) copies.delete(key); next.done(true); }, () => next.done(false));
     });
   }

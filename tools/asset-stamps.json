@@ -80,12 +80,12 @@
     "sha": "03af9fcffdd5e6df"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "5",
-    "sha": "28faa409c2512f8d"
+    "v": "6",
+    "sha": "c5f2588eef631d9e"
   },
   "assets/boutique-catalog.js": {
-    "v": "15",
-    "sha": "1e45746a28150e46"
+    "v": "16",
+    "sha": "eab74a7f8ce21ced"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "19",
@@ -1516,8 +1516,8 @@
     "sha": "572f0c2342c9a56e"
   },
   "assets/tenant-purge.js": {
-    "v": "5",
-    "sha": "130beecb6db2661c"
+    "v": "6",
+    "sha": "15fe10ef28cff9ee"
   },
   "assets/theme.css": {
     "v": "2",
