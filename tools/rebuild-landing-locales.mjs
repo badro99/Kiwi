@@ -122,6 +122,9 @@ for (const localePath of localePaths) {
 
   const output = source
     .replace('<html lang="en" dir="ltr">', `<html lang="${locale}" dir="ltr">`)
+    // React re-renders <html> from the Flight payload after a hydration
+    // mismatch; an English lang there undid the static one (23 Oct 2026).
+    .replace('\\"html\\",null,{\\"lang\\":\\"en\\"', `\\"html\\",null,{\\"lang\\":\\"${locale}\\"`)
     .split('https://kiwi-os.com/en/').join(`https://kiwi-os.com/${locale}/`)
     .replace(`hrefLang="en" href="https://kiwi-os.com/${locale}/"`, 'hrefLang="en" href="https://kiwi-os.com/en/"')
     .replace(`\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/${locale}/\\"`, `\\"hrefLang\\":\\"en\\",\\"href\\":\\"https://kiwi-os.com/en/\\"`)

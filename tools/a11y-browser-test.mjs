@@ -178,6 +178,20 @@ await S.run('page d’accueil, arabe', async (t) => {
   const phone = await open(t, '/ar/index.html', { kiwiLang: 'ar' }, { width: 390, height: 844, mobile: true });
   compare('landing-ar', union(desk, await audit(t, phone)));
 });
+/* Les cinq autres langues publiées, bureau et téléphone, avec le même passage
+ * au clavier : une page traduite ne doit pas perdre un nom, un contraste ou un
+ * ordre de Tab que le français a. */
+for (const lang of ['en', 'es', 'de', 'it', 'nl']) {
+  await S.run('page d’accueil · ' + lang, async (t) => {
+    const desk = await open(t, `/${lang}/index.html`, { kiwiLang: lang });
+    if (await desk.evaluate(() => document.documentElement.lang) .then((l) => !String(l).startsWith(lang))) throw new Error(`la page ${lang} ne déclare pas sa langue`);
+    const a = await audit(t, desk);
+    const phone = await open(t, `/${lang}/index.html`, { kiwiLang: lang }, { width: 390, height: 844, mobile: true });
+    const b = await audit(t, phone);
+    await keyboardWalk(t, phone);
+    compare('landing-' + lang, union(a, b));
+  });
+}
 await S.run('tableau de bord démo', async (t) => {
   const page = await open(t, '/dashboard.html', DEMO);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d|Explore the d/.test(x.textContent)); if (b) b.click(); });
