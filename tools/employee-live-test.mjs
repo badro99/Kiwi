@@ -942,6 +942,72 @@ ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session
     'au retour du réseau, le départ en attente part et ferme le service');
 }
 
+/* Deux magasins durables simulés, conservés entre deux ouvertures du client. */
+{
+  const source = fs.readFileSync(path.join(ROOT, 'assets/employee-live.js'), 'utf8');
+  const disk = new Map(), local = new Map();
+  let failLocal = false, failIDB = false, offline = true;
+  const posts = [];
+  // Les requêtes réussissent avant la transaction : seule oncomplete garantit l'écriture.
+  const indexedDB = { open() {
+    const req = {};
+    queueMicrotask(() => {
+      if (failIDB) { req.onerror?.(); return; }
+      req.result = {
+        objectStoreNames: { contains: () => true }, createObjectStore() {}, close() {},
+        transaction() {
+          const tx = { objectStore() { return {
+            get(key) { const r = {}; queueMicrotask(() => { r.result = structuredClone(disk.get(key)); r.onsuccess?.(); queueMicrotask(() => tx.oncomplete?.()); }); return r; },
+            put(value, key) { queueMicrotask(() => { disk.set(key, structuredClone(value)); tx.oncomplete?.(); }); },
+          }; } };
+          return tx;
+        },
+      };
+      req.onsuccess?.();
+    });
+    return req;
+  } };
+  function boot() {
+    const window = { indexedDB, crypto, localStorage: {
+      getItem: (key) => local.get(key),
+      setItem(key, value) { if (failLocal) throw Error('storage unavailable'); local.set(key, value); },
+      removeItem(key) { if (failLocal) throw Error('storage unavailable'); local.delete(key); },
+    }, addEventListener() {} };
+    vm.runInNewContext(source, {
+      window, navigator: {}, location: { protocol: 'file:' },
+      document: { addEventListener() {}, dispatchEvent() {} },
+      setTimeout: () => 1, clearTimeout() {},
+      fetch: async (_, opts) => {
+        if (offline) throw TypeError('Failed to fetch');
+        if (opts.method === 'POST') {
+          posts.push(JSON.parse(opts.body).opId);
+          if (posts.length > 3) throw TypeError('retry loop bounded by test');
+        }
+        return { ok: true, json: async () => ({ merchant: 'test-store', employee: { id: 'test-employee' } }) };
+      },
+    });
+    return window.KiwiEmployeeLive;
+  }
+  for (const mode of ['idb-only', 'both', 'stale-local', 'neither']) {
+    disk.clear(); local.clear(); posts.length = 0;
+    failLocal = mode === 'idb-only' || mode === 'neither'; failIDB = mode === 'neither'; offline = false;
+    const a = boot(); await a.refresh(); offline = true;
+    let result;
+    try { result = await a.clockIn('', 'durable-' + mode); } catch (_) {}
+    ok(mode === 'neither' ? !result : result?.queued === true,
+      'durabilité ' + mode + ' : accepté seulement avec une copie durable');
+    if (mode === 'both' || mode === 'stale-local') {
+      ok(local.size === 1 && disk.size === 1, 'le geste est écrit dans les deux magasins');
+    }
+    if (mode === 'stale-local') failLocal = true;
+    offline = false;
+    const b = boot(); await b.refresh(); await b.flushPunches(); await b.flushPunches();
+    const c = boot(); await c.refresh(); await c.flushPunches();
+    ok(posts.length === (mode === 'neither' ? 0 : 1),
+      'durabilité ' + mode + ' : après réouvertures, un seul envoi');
+  }
+}
+
 /* Le gérant voit un pointage envoyé plus tard depuis le téléphone : /api/team/live
    le signale (par jour, délai déclaré compris), la grille des heures
    (assets/team-hours.js) le marque dans la case du jour en FR/EN/AR, et les

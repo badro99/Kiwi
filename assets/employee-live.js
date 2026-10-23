@@ -53,20 +53,75 @@
   var retryTimer = null;
   var retryDelay = 0;
   function store() { try { return window.localStorage || null; } catch (_) { return null; } }
-  function readQueue(owner) {
-    try {
-      var list = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]');
-      return Array.isArray(list) ? list.filter(function (i) { return i && i.opId && (i.kind === 'clock-in' || i.kind === 'clock-out'); }) : [];
-    } catch (_) { return []; }
+  var copies = {};
+  var saving = Promise.resolve();
+  function saveTask(fn) {
+    var task = saving.then(fn, fn);
+    saving = task.catch(function () {});
+    return task;
+  }
+  function valid(items) {
+    return Array.isArray(items) ? items.filter(function (i) { return i && i.opId && (i.done || i.kind === 'clock-in' || i.kind === 'clock-out'); }) : [];
+  }
+  function merge(a, b) {
+    var byId = new Map();
+    valid(a).concat(valid(b)).forEach(function (i) {
+      var old = byId.get(i.opId);
+      if (!old || i.done) byId.set(i.opId, i);
+    });
+    return Array.from(byId.values()).sort(function (a, b) { return a.at - b.at; });
+  }
+  // Une transaction terminée, pas seulement une requête réussie, confirme la copie.
+  function idb(owner, items) {
+    return new Promise(function (resolve) {
+      var request;
+      try { request = window.indexedDB.open('kiwiEmployeePunchQueue', 1); } catch (_) { resolve(null); return; }
+      request.onerror = request.onblocked = function () { resolve(null); };
+      request.onupgradeneeded = function () { request.result.createObjectStore('queues'); };
+      request.onsuccess = function () {
+        var db = request.result, tx, read;
+        try {
+          tx = db.transaction('queues', items ? 'readwrite' : 'readonly');
+          var bucket = tx.objectStore('queues');
+          if (items) bucket.put(items, QUEUE_PREFIX + owner);
+          else read = bucket.get(QUEUE_PREFIX + owner);
+          tx.oncomplete = function () { db.close(); resolve(items ? true : valid(read.result)); };
+          tx.onerror = tx.onabort = function () { db.close(); resolve(null); };
+        } catch (_) { db.close(); resolve(null); }
+      };
+    });
+  }
+  function records(owner) {
+    var local = [];
+    try { local = JSON.parse((store() && store().getItem(QUEUE_PREFIX + owner)) || '[]'); } catch (_) {}
+    return merge(local, copies[owner] || []);
+  }
+  function readQueue(owner) { return records(owner).filter(function (i) { return !i.done; }); }
+  function loadQueue(owner) {
+    return idb(owner).then(function (items) { copies[owner] = merge(records(owner), items || []); });
   }
   function writeQueue(owner, items) {
+    var saved = false;
+    // Les accusés empêchent une ancienne copie de ressusciter un geste déjà envoyé.
+    items = merge(items, records(owner).filter(function (i) { return i.done; }));
+    // Un accusé de plus de 24 h ne protège plus rien (le serveur refuse au-delà de 12 h).
+    var horizon = Date.now() - 86400000;
+    items = items.filter(function (i) { return !i.done || Number(i.at) > horizon; });
+    var pending = items.filter(function (i) { return !i.done; });
     try {
-      if (items.length) store().setItem(QUEUE_PREFIX + owner, JSON.stringify(items));
+      if (pending.length) store().setItem(QUEUE_PREFIX + owner, JSON.stringify(pending));
       else store().removeItem(QUEUE_PREFIX + owner);
-      return true;
-    } catch (_) { return false; }
+      saved = true;
+    } catch (_) {}
+    return idb(owner, items).then(function (stored) {
+      if (saved || stored) copies[owner] = items;
+      return saved || !!stored;
+    });
   }
-  function dropItem(owner, opId) { writeQueue(owner, readQueue(owner).filter(function (i) { return i.opId !== opId; })); }
+  function dropItem(owner, opId) {
+    var items = records(owner).map(function (i) { return i.opId === opId ? { opId: opId, at: i.at, done: true } : i; });
+    return writeQueue(owner, items).then(function () { copies[owner] = items; });
+  }
   function bodyFor(item) {
     return { action: item.kind, attendanceCode: item.code || '', opId: item.opId, progress: item.progress || null,
       capturedAgoMs: Math.max(0, Date.now() - (Number(item.at) || Date.now())) };
@@ -91,20 +146,22 @@
       var item = readQueue(owner)[0];
       if (!item) { lastBlock = null; return Promise.resolve(); }
       return call('POST', bodyFor(item)).then(function (data) {
-        dropItem(owner, item.opId);
-        outcomes[item.opId] = { data: data };
-        sent++;
-        return step();
+        return dropItem(owner, item.opId).then(function () {
+          outcomes[item.opId] = { data: data };
+          sent++;
+          return step();
+        });
       }, function (err) {
         if (keeps(err)) { lastBlock = err; return; }
         // Refus définitif (code faux, pointage trop ancien) : retiré et signalé.
-        dropItem(owner, item.opId);
-        outcomes[item.opId] = { error: err };
-        rejected.push({ action: item.kind, error: err.code || 'employee-request-failed', at: item.at });
-        return step();
+        return dropItem(owner, item.opId).then(function () {
+          outcomes[item.opId] = { error: err };
+          rejected.push({ action: item.kind, error: err.code || 'employee-request-failed', at: item.at });
+          return step();
+        });
       });
     }
-    return step().then(function () {
+    return loadQueue(owner).then(step).then(function () {
       var pending = readQueue(owner).length;
       if (pending && lastBlock && lastBlock.status !== 401) {
         retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 15000);
@@ -122,19 +179,26 @@
     var item = { kind: kind, opId: opId || newOpId(), at: Date.now(), code: String(attendanceCode || ''), progress: progress || null };
     var owner = queueOwner;
     // Sans identité connue ni stockage durable : envoi direct, comme avant.
-    if (!owner || !writeQueue(owner, readQueue(owner).concat([item]))) return call('POST', bodyFor(item)).then(remember);
-    return flush().then(function () {
-      var out = outcomes[item.opId];
-      delete outcomes[item.opId];
-      if (out && out.error) throw out.error;
-      if (out) return remember(out.data);
-      var err = lastBlock;
-      // Session perdue ou essais épuisés : ce geste-ci est refusé à l'écran, comme avant.
-      if (err && !transient(err)) { dropItem(owner, item.opId); throw err; }
-      notify({ pending: readQueue(owner).length, queued: kind });
-      var open = lastData && lastData.attendance && lastData.attendance.open;
-      return { ok: true, queued: true, action: kind,
-        entry: kind === 'clock-in' ? { inTs: item.at, outTs: 0, pending: true } : Object.assign({}, open || {}, { outTs: item.at, pending: true }) };
+    if (!owner) return call('POST', bodyFor(item)).then(remember);
+    return saveTask(function () {
+      return loadQueue(owner).then(function () {
+        return writeQueue(owner, readQueue(owner).concat([item]));
+      });
+    }).then(function (saved) {
+      if (!saved) return call('POST', bodyFor(item)).then(remember);
+      return flush().then(function () {
+        var out = outcomes[item.opId];
+        delete outcomes[item.opId];
+        if (out && out.error) throw out.error;
+        if (out) return remember(out.data);
+        var err = lastBlock;
+        // Session perdue ou essais épuisés : ce geste-ci est refusé à l'écran, comme avant.
+        if (err && !transient(err)) return dropItem(owner, item.opId).then(function () { throw err; });
+        notify({ pending: readQueue(owner).length, queued: kind });
+        var open = lastData && lastData.attendance && lastData.attendance.open;
+        return { ok: true, queued: true, action: kind,
+          entry: kind === 'clock-in' ? { inTs: item.at, outTs: 0, pending: true } : Object.assign({}, open || {}, { outTs: item.at, pending: true }) };
+      });
     });
   }
   try {
