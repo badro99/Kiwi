@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const paper = read('assets/print-paper.css');
-const printer = read('assets/printer-bridge.js');
+const printer = read('assets/printer-bridge.js') + '\n' + read('assets/printer/pairing-ui.js');
 const barcode = read('assets/barcode.js');
 const receipt = read('assets/receipt.js');
 const operational = read('assets/image-proof.js'); // operational-print.js y est réuni depuis le 22 octobre 2026

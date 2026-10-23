@@ -371,7 +371,7 @@ if (DatabaseSync) {
   ok(/method === 'POST' && path === '\/api\/print\/bridges'\) return next\(\);/.test(mw), 'C1 · POST /api/print/bridges est ouvert (le handler exige un code vivant)');
   ok(!/startsWith\('\/api\/print/.test(mw), 'C1 · aucun préfixe /api/print ouvert');
 
-  const pb = read('assets/printer-bridge.js');
+  const pb = read('assets/printer-bridge.js') + '\n' + read('assets/printer/pairing-ui.js');
   ok(/nativeFailureCount < 3/.test(pb) && /printQueueIdle\(\)/.test(pb), 'C2 · la redécouverte native attend trois échecs et une file au repos');
   ok(/plugin\.probe\([^]*plugin\.scan\(/.test(pb), 'C2 · la dernière IP est sondée avant tout scan du sous-réseau');
   ok(/hosts\.length === 1[^]*setConfig\(\{ ip: hosts\[0\]\.host/.test(pb) && /multiple-printers/.test(pb), 'C2 · une seule imprimante est reprise automatiquement, plusieurs exigent un choix');

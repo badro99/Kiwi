@@ -30,7 +30,7 @@ const plugin = read('app/plugins/kiwi-printer-socket/ios/Sources/KiwiPrinterSock
 const pluginTs = read('app/plugins/kiwi-printer-socket/src/definitions.ts');
 const caisse = caisseTestSource(read('kiwi-caisse.html')).replace(/<link rel="stylesheet" href="assets\/caisse-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/caisse-shell.css') + '</style>');
 const dashboard = read('dashboard.html').replace(/<link rel="stylesheet" href="assets\/dashboard-shell\.css\?v=\d+"\s*\/?>/, () => '<style>' + read('assets/dashboard-shell.css') + '</style>');
-const bridge = read('assets/printer-bridge.js');
+const bridge = read('assets/printer-bridge.js') + '\n' + read('assets/printer/pairing-ui.js');
 const build = read('tools/build-app-www.mjs');
 const plist = read('app/ios/App/App/Info.plist');
 

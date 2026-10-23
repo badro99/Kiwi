@@ -1,0 +1,123 @@
+{
+  "sha256": "2026de3260da662b4ead092aef1f0b4f47df9ba063738184874e0b000118d221",
+  "start": 73590,
+  "end": 133304,
+  "prefix": "/* Pairing UI, loaded on demand by assets/printer-bridge.js. The core hands\n * over its helpers on one private object; the two values bridge discovery\n * changes later (mode, capability) arrive through onBridgeState. Moved\n * function bodies are byte-identical to the original (tools/printer-split-test.mjs). */\n(function (core) {\n  'use strict';\n  var BRIDGE_DOWNLOAD = core.BRIDGE_DOWNLOAD,\n    MODELS = core.MODELS,\n    bridgeBase = core.bridgeBase,\n    bridgeHeaders = core.bridgeHeaders,\n    bridgePrintBytes = core.bridgePrintBytes,\n    bt = core.bt,\n    btConnected = core.btConnected,\n    connectBluetooth = core.connectBluetooth,\n    connectUsb = core.connectUsb,\n    esc = core.esc,\n    fallbackNotice = core.fallbackNotice,\n    getConfig = core.getConfig,\n    getPrepStations = core.getPrepStations,\n    getStationConfig = core.getStationConfig,\n    labelOptions = core.labelOptions,\n    modelDriver = core.modelDriver,\n    modelNote = core.modelNote,\n    nativeSocket = core.nativeSocket,\n    nativeSocketSend = core.nativeSocketSend,\n    pairLocalBridge = core.pairLocalBridge,\n    paperOptions = core.paperOptions,\n    ping = core.ping,\n    printBytes = core.printBytes,\n    printBytesToTarget = core.printBytesToTarget,\n    printQueueIdle = core.printQueueIdle,\n    reconnectUsb = core.reconnectUsb,\n    relayPairCode = core.relayPairCode,\n    relayProbe = core.relayProbe,\n    relayRevoke = core.relayRevoke,\n    saveBridgeTarget = core.saveBridgeTarget,\n    say = core.say,\n    setConfig = core.setConfig,\n    setStationConfig = core.setStationConfig,\n    usb = core.usb,\n    usbConnected = core.usbConnected,\n    usbSupported = core.usbSupported,\n    withTimeout = core.withTimeout;\n  var initial = core.bridgeState();\n  var bridgeMode = initial.mode, bridgeCapability = initial.capability;\n  core.onBridgeState(function (mode, capability) { bridgeMode = mode; bridgeCapability = capability; });\n\n",
+  "suffix": "  core.install({ openSetup: openSetup });\n})(window.KiwiPrinter.__core);\n",
+  "moved": [
+    {
+      "name": "injectCss",
+      "start": 73674,
+      "end": 82188,
+      "sha256": "1571fa19171f0f77da028e38521cf690b63b170349670fd58b3a2db6ee6d5eb6"
+    },
+    {
+      "name": "openSetup",
+      "start": 82192,
+      "end": 133302,
+      "sha256": "64af91fa50a98a81ab06f4cd8c4a258c40e723160aaea7102d2d0417c714d79b"
+    },
+    {
+      "name": "readForm",
+      "start": 95747,
+      "end": 96096,
+      "sha256": "ca788fffc857c178a321a08d4e9d3e05ab9e5eef37cdcde29a50e462d1a9653c"
+    },
+    {
+      "name": "close",
+      "start": 96101,
+      "end": 96134,
+      "sha256": "0ec0b83e492cc6cd2a4bcd0efdb570ce05a54283ed781ee45510b35f355a730f"
+    },
+    {
+      "name": "toast",
+      "start": 96294,
+      "end": 96412,
+      "sha256": "7fcb4e740e91bf0d20a342952a1fff9badbf0ff8bf255fc600ef17b2bd5a8a5d"
+    },
+    {
+      "name": "validIp",
+      "start": 96418,
+      "end": 96738,
+      "sha256": "204ad61b079df96335c61884b58e7ec82f263e07fc1f6c626ed53379ad29d5e1"
+    },
+    {
+      "name": "validPort",
+      "start": 96743,
+      "end": 96839,
+      "sha256": "3683c4ed664fdc67a0e267c3190656cdbc78e6b4581a132793fdf4753cf3bd2b"
+    },
+    {
+      "name": "frReason",
+      "start": 96845,
+      "end": 98921,
+      "sha256": "836d9abc005060abe93c61a193f66ca4e71ca2fbea6419413ce1d559e03fa5db"
+    },
+    {
+      "name": "paintTarget",
+      "start": 98927,
+      "end": 99298,
+      "sha256": "1becda04bf490b6bbd963d58397c3e09501191bd61d17ee97437d2cfcb17ce03"
+    },
+    {
+      "name": "paintHubStatus",
+      "start": 99303,
+      "end": 99793,
+      "sha256": "fa548e99e358578b2f15ae8edaa1538505beb4884340ac9343bc0061d7b4909c"
+    },
+    {
+      "name": "renderProfilesChips",
+      "start": 100274,
+      "end": 101757,
+      "sha256": "5add3296d7e8cdd945f823ad0809551580f107c8d4172d0215b445e7e69c0414"
+    },
+    {
+      "name": "renderStationRows",
+      "start": 101763,
+      "end": 106809,
+      "sha256": "f389593c16372a05b494cc5b902a6ad1bca48c88fef290659ce827b521bfd987"
+    },
+    {
+      "name": "loadOsPrinters",
+      "start": 111439,
+      "end": 112451,
+      "sha256": "d456d0e1a3fcf03ccab0ef959e25f983514c3cf3776f16133cfb948c133ac613"
+    },
+    {
+      "name": "refreshStatus",
+      "start": 112574,
+      "end": 115164,
+      "sha256": "47ded4ff64ccbb6ca4f13720b9fe1ca91f2b6ee1df138d4cdc7724bcd99df8ca"
+    },
+    {
+      "name": "fmtAgo",
+      "start": 115251,
+      "end": 115516,
+      "sha256": "ba9f37ee387689a04d58b5a201798a64c10728227c2724ac025e7571a51d9693"
+    },
+    {
+      "name": "paintRelay",
+      "start": 115521,
+      "end": 117396,
+      "sha256": "65674fb36a7126ae9f2d3d7253079ee1bcc0fc15b956e8c245ba85cbfde6595e"
+    },
+    {
+      "name": "askRevoke",
+      "start": 117966,
+      "end": 119695,
+      "sha256": "367f60230c9d7800c41c23952f327b50b7894f79a3a3bdd0b595fe2278d0a22f"
+    },
+    {
+      "name": "end",
+      "start": 118932,
+      "end": 119111,
+      "sha256": "491d36e12d146facd7208d411bdd74c2b57b52b59739db666ecf792a9a1e5bc4"
+    },
+    {
+      "name": "showPairCode",
+      "start": 119700,
+      "end": 120177,
+      "sha256": "e614038383e336da00d2fa708395e494ee764ee9f4237f3bc53ac8c5412b4c65"
+    }
+  ]
+}

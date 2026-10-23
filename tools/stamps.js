@@ -205,6 +205,12 @@ function scan() {
     }
   }
 
+  // Interface imprimante, chargée à la demande et préchauffée au repos.
+  if (exists('assets/printer-bridge.js')) {
+    for (const m of read('assets/printer-bridge.js').matchAll(SHELL_RE()))
+      note(m[1], m[2], { file: 'assets/printer-bridge.js', kind: 'lazy', stamp: m[2] });
+  }
+
   // Parties privées du stock, chargées au premier geste.
   if (exists('assets/stock.js')) {
     for (const m of read('assets/stock.js').matchAll(SHELL_RE()))
@@ -256,6 +262,7 @@ function referenceFiles(asset) {
   if (exists('assets/pages-pro.js') && read('assets/pages-pro.js').includes(asset + '?v=')) files.push('assets/pages-pro.js');
   if (exists('assets/dashboard-extra.js') && read('assets/dashboard-extra.js').includes(asset + '?v=')) files.push('assets/dashboard-extra.js');
   if (exists('assets/stock.js') && read('assets/stock.js').includes(asset + '?v=')) files.push('assets/stock.js');
+  if (exists('assets/printer-bridge.js') && read('assets/printer-bridge.js').includes(asset + '?v=')) files.push('assets/printer-bridge.js');
   if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
   return files;
 }

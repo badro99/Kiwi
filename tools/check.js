@@ -1848,6 +1848,7 @@ section('Whole-project regressions');
     'relay-print-verdict-test.mjs',
     'station-printer-routing-test.mjs',
     'printer-station-unicode-test.mjs',
+    'printer-split-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur
        /api/print/jobs et le pont du comptoir vient le chercher. */

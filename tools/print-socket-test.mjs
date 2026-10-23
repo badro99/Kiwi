@@ -11,7 +11,7 @@ function ok(value, message) {
   pass++;
 }
 
-const bridge = read('assets/printer-bridge.js');
+const bridge = read('assets/printer-bridge.js') + '\n' + read('assets/printer/pairing-ui.js');
 const socketIndex = bridge.indexOf('return nativeSocketFirst(bytes, null, viaWebTransports)');
 const relayIndex = bridge.indexOf('function viaRelayOrFail');
 ok(socketIndex > 0 && relayIndex > 0, 'le transport socket natif et le relais existent');

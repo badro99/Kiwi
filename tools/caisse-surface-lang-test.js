@@ -215,8 +215,10 @@ function audit(label, lits) {
 }
 
 /* ── 1 · le dialogue d'imprimante ───────────────────────────────────────── */
-const pb = read('assets/printer-bridge.js');
-const setup = between(pb, 'function openSetup(context)', "document.addEventListener('click', function (e) {", 'printer-bridge.js · openSetup');
+const pbCore = read('assets/printer-bridge.js');
+const pbUi = read('assets/printer/pairing-ui.js');
+const pb = pbCore + '\n' + pbUi;
+const setup = between(pbUi, 'function openSetup(context)', 'core.install(', 'printer-bridge.js · openSetup');
 const discovery = between(pb, "window.addEventListener('kiwi:printer-discovery'", 'try { reconnectUsb(); }', 'printer-bridge.js · avis de découverte');
 const models = between(pb, 'var MODELS = [', 'function modelNote(id)', 'printer-bridge.js · MODELS');
 /* Les fabricants (Epson, Rongta, Zebra…) sont des noms propres. On lit la mise

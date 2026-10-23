@@ -727,6 +727,7 @@
       'Ajouter au ticket': ['Add to the sale', 'أضف إلى التذكرة'],
       'Saisissez un montant supérieur à zéro.': ['Enter an amount above zero.', 'أدخل مبلغًا أكبر من الصفر.'],
       'Touchez un article.': ['Tap an item.', 'المس منتجًا.'],
+      'Impossible de charger les réglages de l’imprimante. Réessayez.': ['Unable to load printer settings. Try again.', 'تعذر تحميل إعدادات الطابعة. حاول مرة أخرى.'],
       'Retirer': ['Remove', 'إزالة'],
       'Vente encaissée': ['Sale paid', 'تم تحصيل البيع'],
       'Ventes': ['Sales', 'المبيعات'],
