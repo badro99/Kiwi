@@ -54,7 +54,7 @@ var SHELL = [
   '/cuisine.webmanifest',
   '/serveur.webmanifest',
   '/assets/tokens.css?v=2053',
-  '/assets/caisse-shell.css?v=1',
+  '/assets/caisse-shell.css?v=2',
   '/assets/theme.css?v=2',
   '/assets/print-paper.css?v=1',
   '/assets/polish.css',
@@ -169,7 +169,7 @@ var SHELL = [
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js?v=2053',
+  '/assets/floorplan-core.js?v=2054',
   // The Plan de salle's live-room poller (fail-soft without network).
   '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=6',
@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=159',
+  '/assets/pos-dispatch.js?v=160',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -342,7 +342,7 @@ var SHELL = [
   '/assets/kit/strings.js?v=2',
   '/assets/kit/format.js?v=3',
   '/assets/kit/business-day.js?v=3',
-  '/assets/kit/core.js?v=1',
+  '/assets/kit/core.js?v=2',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
   '/assets/kit/pin-flow.js?v=3',
@@ -416,8 +416,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=10',
   '/assets/pos-spa.js?v=10',
-  '/assets/pos-hotel.css?v=24',
-  '/assets/pos-hotel.js?v=24',
+  '/assets/pos-hotel.css?v=25',
+  '/assets/pos-hotel.js?v=25',
   '/assets/pos-fastfood.css?v=15',
   '/assets/pos-fastfood.js?v=15',
   '/assets/pos-boulangerie.css?v=12',
