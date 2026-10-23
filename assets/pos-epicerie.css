@@ -14,9 +14,23 @@
   --ep-ok-bg: rgba(31, 93, 60, 0.10);
   --ep-due-bg: rgba(184, 82, 69, 0.10);
   --ep-due-edge: rgba(184, 82, 69, 0.26);
+  /* --danger-mute en petit texte : 4,45:1 sur le papier, 4,19:1 sur la
+     pastille rouge (axe, 23 octobre). Un cran plus sombre le jour ; la nuit
+     garde le --danger-mute clair du thème sombre. */
+  --ep-due-ink: #AE4A3E;
   font-family: var(--sans);
   color: var(--ink);
 }
+html[data-caisse-theme="dark"] #pos-epicerie { --ep-due-ink: var(--danger-mute); --ep-warn: #F0C877; }
+/* La nuit, --forest devient #17B98A : sous du blanc, 2,5:1 (« Encaisser »,
+   « Règlement »), et l'ambre #8A6210 du stock bas tombe à 2,7:1 sur sa
+   pastille. Encre sombre sur le vert vif, ambre clair (axe, 23 octobre). */
+html[data-caisse-theme="dark"] #pos-epicerie .ep-pay,
+html[data-caisse-theme="dark"] #pos-epicerie .ep-btn.primary { color: var(--ink-bg); }
+html[data-caisse-theme="dark"] #pos-epicerie .ep-pay:hover,
+html[data-caisse-theme="dark"] #pos-epicerie .ep-btn.primary:hover { background: var(--emerald); }
+/* La feuille reçoit le focus à l'ouverture (pos-epicerie.js › focusModal) : pas d'anneau autour d'elle. */
+#pos-epicerie .modal[tabindex="-1"]:focus { outline: none; }
 
 /* ═══════════════ LEFT RAIL (dark) ═══════════════ */
 .ep-rail {
@@ -478,7 +492,7 @@
   display: flex; flex-direction: column; align-items: flex-end;
   font-size: 11px; color: var(--ink-3);
 }
-.ep-carnet-total b { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--danger-mute); }
+.ep-carnet-total b { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--ep-due-ink); }
 .ep-carnet-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 22px 26px; }
 .ep-carnet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .ep-ardoise {
@@ -490,7 +504,9 @@
 }
 .ep-ardoise:hover { transform: translateY(-1.5px); box-shadow: var(--shadow-1); border-color: var(--ink-4); }
 .ep-ardoise.is-old { border-color: var(--ep-due-edge); }
-.ep-ardoise.is-paid { opacity: 0.7; }
+/* Une ardoise soldée n'est plus voilée (opacity 0.7) : le voile faisait
+   tomber nom, téléphone et pastille sous 3:1. Le « 0 MAD » vert et la
+   pastille « à jour » la distinguent déjà. */
 .ep-ard-top { display: flex; align-items: center; gap: 11px; }
 .ep-ard-ava {
   width: 42px; height: 42px; border-radius: 50%;
@@ -513,7 +529,7 @@
   background: var(--paper-mute); color: var(--ink-2);
 }
 .ep-ard-since-chip svg { width: 11px; height: 11px; }
-.ep-ard-since-chip.old { background: var(--ep-due-bg); color: var(--danger-mute); }
+.ep-ard-since-chip.old { background: var(--ep-due-bg); color: var(--ep-due-ink); }
 .ep-ard-since-chip.zero { background: var(--ep-ok-bg); color: var(--forest); }
 .ep-ard-go { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--forest); display: inline-flex; align-items: center; gap: 4px; }
 .ep-ard-go svg { width: 13px; height: 13px; }

@@ -65,6 +65,7 @@
       toRecipe: 'Créer un brouillon de recette', toRecipeConfirm: 'Créer un brouillon de recette pour « {item} » à partir de cette fiche ?\n\n· {n} ingrédient(s) repris, en quantité brute (le rendement est appliqué).\n· {pack} ligne(s) d’emballage non reprises.\n· Rien n’est enregistré : l’éditeur de recette s’ouvre, vous vérifiez, puis vous enregistrez.\n· Une fois enregistrée, la recette pilote le stock et le coût théorique. Cette fiche ne change pas.', toRecipeExisting: '\n· Ce plat a déjà une recette : elle reste en place tant que vous n’enregistrez pas le brouillon.', toRecipeEmpty: 'Aucune ligne alimentaire nommée à reprendre.',
       copyName: '{name} (copie)', templateName: 'Modèle · {name}', newName: 'Nouvelle fiche',
       csvSheet: 'Fiche', csvTotal: 'Total du lot', csvPortion: 'Par portion',
+      lineN: 'Ligne {n}',
     },
     en: {
       tab: 'Simple cost',
@@ -105,6 +106,7 @@
       toRecipe: 'Create a draft recipe', toRecipeConfirm: 'Create a draft recipe for "{item}" from this sheet?\n\n· {n} ingredient(s) carried over, as gross quantities (yield applied).\n· {pack} packaging line(s) left out.\n· Nothing is saved: the recipe editor opens, you check, then you save.\n· Once saved, the recipe drives stock and theoretical cost. This sheet does not change.', toRecipeExisting: '\n· This dish already has a recipe: it stays in place until you save the draft.', toRecipeEmpty: 'No named food line to carry over.',
       copyName: '{name} (copy)', templateName: 'Template · {name}', newName: 'New sheet',
       csvSheet: 'Sheet', csvTotal: 'Batch total', csvPortion: 'Per portion',
+      lineN: 'Line {n}',
     },
     ar: {
       tab: 'التكلفة المبسطة',
@@ -145,6 +147,7 @@
       toRecipe: 'إنشاء مسودة وصفة', toRecipeConfirm: 'إنشاء مسودة وصفة لـ «{item}» انطلاقاً من هذه البطاقة؟\n\n· {n} مكوّن منقول، بالكمية الإجمالية (مع تطبيق المردود).\n· {pack} سطر تغليف غير منقول.\n· لا يُحفظ شيء: يُفتح محرر الوصفة، تتحقق ثم تحفظ.\n· بعد الحفظ، تتحكم الوصفة في المخزون والتكلفة النظرية. هذه البطاقة لا تتغير.', toRecipeExisting: '\n· لهذا الطبق وصفة: تبقى كما هي حتى تحفظ المسودة.', toRecipeEmpty: 'لا يوجد سطر غذائي مسمّى لنقله.',
       copyName: '{name} (نسخة)', templateName: 'نموذج · {name}', newName: 'بطاقة جديدة',
       csvSheet: 'البطاقة', csvTotal: 'مجموع الدفعة', csvPortion: 'لكل حصة',
+      lineN: 'السطر {n}',
     },
   };
   const lang = () => {
@@ -499,6 +502,17 @@
     return `<option value=""${sel ? '' : ' selected'}>·</option>` + list.map((u) => `<option value="${esc(u.id)}"${u.id === sel ? ' selected' : ''}>${esc(u.id)}</option>`).join('');
   }
   const inp = (field, value, attrs) => `<input data-sfc-field="${field}" value="${esc(value == null ? '' : value)}"${attrs || ''}${editable() ? '' : ' disabled'}>`;
+  /* Les champs d'une ligne n'avaient pour nom que l'en-tête de leur colonne,
+     que le lecteur d'écran ne relie pas au champ (et que le téléphone masque) :
+     des « Prix du lot » indiscernables d'une ligne à l'autre. Chacun porte
+     désormais l'ingrédient ET le champ, « Poulet · Prix du lot », dans la
+     langue de l'écran (axe, 23 octobre). */
+  const lineWho = (l, i) => String((l && l.name) || '').trim() || tr('lineN', { n: i + 1 });
+  const lineLabel = (l, i, key) => (key === 'lName' ? `${tr('lName')} · ${lineWho(l, i)}` : `${lineWho(l, i)} · ${tr(key)}`);
+  const named = (l, i, key) => ` data-sfc-label="${key}" aria-label="${esc(lineLabel(l, i, key))}"`;
+  function relabelLine(row, l, i) {
+    row.querySelectorAll('[data-sfc-label]').forEach((el) => el.setAttribute('aria-label', lineLabel(l, i, el.getAttribute('data-sfc-label'))));
+  }
   const numIn = (field, value, extra) => inp(field, value, ` type="number" inputmode="decimal" step="any" min="0"${extra || ''}`);
   function lineCostCell(r) {
     if (r.cost != null) return `${money(r.cost)}${r.stale ? `<small class="warn">${esc(tr('oldPrice', { days: r.age }))}</small>` : r.undated ? `<small>${esc(tr('undated'))}</small>` : ''}`;
@@ -520,7 +534,7 @@
     const priceHint = it && isNum(it.price) && +it.price !== +d.sellingPrice ? `<small class="sfc-hint">${esc(tr('menuPriceNow', { amount: money(it.price) }))} ${editable() ? `<button type="button" class="sfc-link" data-sfc="use-menu-price">${esc(tr('usePrice'))}</button>` : ''}</small>` : '';
     const conflict = S.conflict ? `<div class="sfc-note warn" data-sfc-state="conflict"><p>${esc(tr('conflict', { who: S.conflict.updatedBy || '·', when: when(S.conflict.updatedTs) }))}</p><button type="button" class="sfc-btn" data-sfc="take-server">${esc(tr('reloadServer'))}</button> <button type="button" class="sfc-btn" data-sfc="keep-mine">${esc(tr('keepMine'))}</button></div>` : '';
     const msg = S.message ? `<p class="sfc-note ${S.messageKind === 'ok' ? 'ok' : 'warn'}" role="status">${esc(S.message)}</p>` : '';
-    const lines = (d.lines || []).map((l, i) => `<tr data-sfc-line="${i}"><td>${inp('name', l.name, ` maxlength="120" aria-label="${esc(tr('lName'))}"`)}</td><td data-sfc-linecost="${i}">${lineCostCell(c.lines[i])}</td><td><select data-sfc-field="type"${editable() ? '' : ' disabled'}><option value="food"${l.type !== 'packaging' ? ' selected' : ''}>${esc(tr('food'))}</option><option value="packaging"${l.type === 'packaging' ? ' selected' : ''}>${esc(tr('packaging'))}</option></select></td><td>${numIn('packPrice', l.packPrice)}</td><td>${numIn('packQty', l.packQty)}</td><td><select data-sfc-field="packUnit"${editable() ? '' : ' disabled'}>${unitOptions(l.packUnit)}</select></td><td>${numIn('useQty', l.useQty)}</td><td><select data-sfc-field="useUnit"${editable() ? '' : ' disabled'}>${unitOptions(l.useUnit || l.packUnit)}</select></td><td>${numIn('yieldPct', l.yieldPct == null ? 100 : l.yieldPct, ' max="100"')}</td><td>${inp('priceDate', l.priceDate, ' type="date"')}</td><td>${editable() ? `<button type="button" class="sfc-btn ghost" data-sfc="remove-line" data-i="${i}" aria-label="${esc(tr('remove'))}">${esc(tr('remove'))}</button>` : ''}</td></tr>`).join('');
+    const lines = (d.lines || []).map((l, i) => `<tr data-sfc-line="${i}"><td>${inp('name', l.name, ` maxlength="120"${named(l, i, 'lName')}`)}</td><td data-sfc-linecost="${i}">${lineCostCell(c.lines[i])}</td><td><select data-sfc-field="type"${named(l, i, 'lType')}${editable() ? '' : ' disabled'}><option value="food"${l.type !== 'packaging' ? ' selected' : ''}>${esc(tr('food'))}</option><option value="packaging"${l.type === 'packaging' ? ' selected' : ''}>${esc(tr('packaging'))}</option></select></td><td>${numIn('packPrice', l.packPrice, named(l, i, 'lPackPrice'))}</td><td>${numIn('packQty', l.packQty, named(l, i, 'lPackQty'))}</td><td><select data-sfc-field="packUnit"${named(l, i, 'lPackUnit')}${editable() ? '' : ' disabled'}>${unitOptions(l.packUnit)}</select></td><td>${numIn('useQty', l.useQty, named(l, i, 'lUseQty'))}</td><td><select data-sfc-field="useUnit"${named(l, i, 'lUseUnit')}${editable() ? '' : ' disabled'}>${unitOptions(l.useUnit || l.packUnit)}</select></td><td>${numIn('yieldPct', l.yieldPct == null ? 100 : l.yieldPct, ' max="100"' + named(l, i, 'lYield'))}</td><td>${inp('priceDate', l.priceDate, ' type="date"' + named(l, i, 'lDate'))}</td><td>${editable() ? `<button type="button" class="sfc-btn ghost" data-sfc="remove-line" data-i="${i}" data-sfc-label="remove" aria-label="${esc(lineLabel(l, i, 'remove'))}">${esc(tr('remove'))}</button>` : ''}</td></tr>`).join('');
     const lbl = ['lName', 'lCost', 'lType', 'lPackPrice', 'lPackQty', 'lPackUnit', 'lUseQty', 'lUseUnit', 'lYield', 'lDate'].map((k, i) => `--l${i + 1}:${JSON.stringify(tr(k))}`).join(';');
     const history = S.history ? `<div class="sfc-history" data-sfc-history><div class="sfc-history-h"><b>${esc(tr('historyTitle'))}</b><button type="button" class="sfc-btn ghost" data-sfc="close-history">${esc(tr('close'))}</button></div>${S.history.map((h) => `<div class="sfc-hrow"><span>${esc(tr('version', { v: h.version }))} · ${esc(when(h.ts))} · ${esc(h.actor || '')}</span><button type="button" class="sfc-btn ghost" data-sfc="view-version" data-v="${h.version}">${esc(tr('view'))}</button></div>`).join('')}${S.snapshot ? snapshotView(S.snapshot) : ''}</div>` : '';
     const actions = `<div class="sfc-actions">${editable() ? `<button type="button" class="sfc-btn primary" data-sfc="save"${S.saving ? ' disabled' : ''}>${esc(tr(S.saving ? 'saving' : 'save'))}</button>` : ''}${sheet && editable() ? `<button type="button" class="sfc-btn" data-sfc="duplicate">${esc(tr('duplicate'))}</button><button type="button" class="sfc-btn" data-sfc="save-template">${esc(tr('saveTemplate'))}</button><button type="button" class="sfc-btn" data-sfc="archive">${esc(tr(sheet.archived ? 'unarchive' : 'archive'))}</button>` : ''}${d.kind !== 'template' && it && recipeBridge() ? `<button type="button" class="sfc-btn" data-sfc="to-recipe">${esc(tr('toRecipe'))}</button>` : ''}${sheet ? `<button type="button" class="sfc-btn" data-sfc="history">${esc(tr('history'))}</button>` : ''}<button type="button" class="sfc-btn" data-sfc="export-sheet">${esc(tr('exportSheet'))}</button></div>`;
@@ -601,6 +615,8 @@
       if (!line) return;
       line[field] = v;
       if (field === 'packUnit' && !line.useUnit) line.useUnit = v;
+      /* le nom tapé passe dans le nom de chaque champ de la ligne, sans redessiner */
+      if (field === 'name' && row.querySelectorAll) relabelLine(row, line, +row.getAttribute('data-sfc-line'));
     }
     S.dirty = true;
     repaintFigures();

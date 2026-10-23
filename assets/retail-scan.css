@@ -23,6 +23,9 @@ body:has(.drawer-veil.is-open) .krs-launch {
   display: grid; place-items: center; background: #7DF2B0; color: #053B2C;
   font: 800 12px/1 var(--mono, monospace);
 }
+/* « display: grid » l'emportait sur l'attribut hidden : un panier vide
+   affichait un « 0 », lu dans le nom du bouton (axe, 23 octobre). */
+.krs-launch-count[hidden] { display: none; }
 
 /* Maison keeps a permanent checkout column on the right.  The launcher used
    the viewport edge, so it sat directly over “Encaisser” (ticket #0078).

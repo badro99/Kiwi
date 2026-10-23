@@ -707,6 +707,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .employee-login button:hover:not(:disabled) { background: var(--forest-deep); }
     .employee-login button:disabled { opacity: .55; cursor: wait; }
+    /* La nuit, --on-forest devient sombre (pour les aplats menthe) mais ce
+       bouton restait vert forêt : encre sombre sur vert, 2,5:1 (axe, 23 octobre).
+       Il prend le couple du bouton principal de l'app, comme « Pointer ». */
+    html[data-theme="dark"] .employee-login button { background: var(--btn-primary-bg); color: var(--btn-primary-ink); }
+    html[data-theme="dark"] .employee-login button:hover:not(:disabled) { background: var(--btn-primary-bg); }
     .employee-login-error {
       min-height: 18px;
       margin: 0;

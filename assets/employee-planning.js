@@ -21,6 +21,7 @@
        Le fichier consomme désormais les jetons de kiwi-serveur.html, son unique
        hôte, et n'a plus de palette sombre à lui : elle divergeait de celle de
        l'app, et de toute façon elle n'a jamais été lue. */
+    .kep-sheet:focus{outline:none}
     .kep-card{border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;background:var(--surface);color:var(--ink);margin-top:16px;box-shadow:var(--rim)}
     .kep-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
     .kep-title{font-size:19px;font-weight:700}
@@ -124,20 +125,39 @@
       ${swaps.length?`<section class="kep-section"><div class="kep-section-head"><b>${esc(C.swaps)}</b><span class="kep-count">${swaps.length}</span></div><div class="kep-list">${swaps.map((item)=>`<div class="kep-row"><div class="kep-row-main"><b>${esc(prettyDay(item.day))} · ${esc(item.shift.start||'')}–${esc(item.shift.end||'')}</b><span>${esc((lastData.colleagues||[]).find((person)=>person.id===item.memberId)?.name||'')}</span></div><div class="kep-row-actions">${item.mine||item.claimantId?`<em class="kep-status ${esc(item.status)}">${esc(statusLabel(item.status))}</em>${['open','claimed'].includes(item.status)?`<button class="kep-btn" data-kep-op-cancel="${esc(item.id)}">${esc(C.cancel)}</button>`:''}`:`<button class="kep-btn primary" data-kep-swap-claim="${esc(item.id)}">${esc(C.offer)}</button>`}</div></div>`).join('')}</div></section>`:''}
       <section class="kep-section"><div class="kep-section-head"><b>${esc(C.requests)}</b><span class="kep-count">${visible.length}</span></div>${visible.length ? `<div class="kep-requests">${visible.map((request)=>`<div class="kep-request"><div><b>${esc(requestLabel(request))}</b>${request.reason ? `<span>${esc(request.reason)}</span>` : ''}</div><div class="kep-row-actions"><em class="kep-status ${esc(request.status)}">${esc(statusLabel(request.status))}</em>${request.status === 'pending' ? `<button class="kep-btn" type="button" data-kep-cancel="${esc(request.id)}">${esc(C.cancel)}</button>` : ''}</div></div>`).join('')}</div>` : `<div class="kep-empty">${esc(C.empty)}</div>`}</section>`;
   }
-  function closeSheet() { document.querySelector('.kep-overlay')?.remove(); }
+  /* Une feuille ouverte prend le focus et le rend au bouton qui l'a ouverte ;
+     Échap la ferme. Sans cela, au clavier ou avec un lecteur d'écran, on
+     restait derrière le voile (axe, 23 octobre). Le focus va à la feuille,
+     pas à son premier champ : sur un téléphone, un champ date ouvrirait son
+     sélecteur avant que l'employé ait lu la feuille. */
+  let sheetOpener = null;
+  function closeSheet() {
+    const open = document.querySelector('.kep-overlay');
+    if (!open) return;
+    open.remove();
+    const back = sheetOpener; sheetOpener = null;
+    if (back && back.isConnected) { try { back.focus(); } catch (_) {} }
+  }
+  function focusSheet(overlay) {
+    sheetOpener = document.activeElement && document.activeElement !== document.body ? document.activeElement : sheetOpener;
+    overlay.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); closeSheet(); } });
+    const form = overlay.querySelector('form');
+    if (form) { form.setAttribute('tabindex', '-1'); try { form.focus({ preventScroll: true }); } catch (_) {} }
+  }
   function opportunitySheet(kind, id) {
     closeSheet(); const C=copy(), overlay=document.createElement('div'); overlay.className='kep-overlay';
     const choices=futureSchedule();
-    overlay.innerHTML=`<form class="kep-sheet" data-kep-op-form="${esc(kind)}" data-kep-id="${esc(id)}"><div class="kep-sheet-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><h2>${esc(kind==='open'?C.claim:C.offer)}</h2></div><button class="kep-close" type="button" data-kep-close aria-label="${esc(C.close)}">×</button></div>${kind==='swap'?`<div class="kep-field"><label>${esc(C.chooseShift)}</label><select name="offeredDay" required><option value=""></option>${choices.map((shift)=>`<option value="${esc(shift.day)}">${esc(prettyDay(shift.day))} · ${esc(shift.start)}–${esc(shift.end)}</option>`).join('')}</select></div>`:`<p class="kep-sub">${esc(C.claim)}</p>`}<div class="kep-error" data-kep-error hidden></div><div class="kep-sheet-foot"><button class="kep-btn" type="button" data-kep-close>${esc(C.cancel)}</button><button class="kep-btn primary" type="submit">${esc(C.send)}</button></div></form>`;
+    overlay.innerHTML=`<form class="kep-sheet" data-kep-op-form="${esc(kind)}" data-kep-id="${esc(id)}" role="dialog" aria-modal="true" aria-labelledby="kep-sheet-title"><div class="kep-sheet-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><h2 id="kep-sheet-title">${esc(kind==='open'?C.claim:C.offer)}</h2></div><button class="kep-close" type="button" data-kep-close aria-label="${esc(C.close)}">×</button></div>${kind==='swap'?`<div class="kep-field"><label for="kep-f-shift">${esc(C.chooseShift)}</label><select id="kep-f-shift" name="offeredDay" required><option value=""></option>${choices.map((shift)=>`<option value="${esc(shift.day)}">${esc(prettyDay(shift.day))} · ${esc(shift.start)}–${esc(shift.end)}</option>`).join('')}</select></div>`:`<p class="kep-sub">${esc(C.claim)}</p>`}<div class="kep-error" data-kep-error hidden></div><div class="kep-sheet-foot"><button class="kep-btn" type="button" data-kep-close>${esc(C.cancel)}</button><button class="kep-btn primary" type="submit">${esc(C.send)}</button></div></form>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click',(event)=>{ if(event.target===overlay||event.target.closest('[data-kep-close]'))closeSheet(); });
     overlay.querySelector('form').addEventListener('submit',submitOpportunity);
+    focusSheet(overlay);
   }
   function sheet(type) {
     closeSheet();
     const overlay = document.createElement('div'); overlay.className='kep-overlay';
     const C=copy(), days=C.dayShorts, today=todayKey();
-    overlay.innerHTML = `<form class="kep-sheet" data-kep-form="${type}"><div class="kep-sheet-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><h2>${esc(type === 'leave' ? C.leaveTitle : C.availabilityTitle)}</h2></div><button class="kep-close" type="button" data-kep-close aria-label="${esc(C.close)}">×</button></div>${type === 'leave' ? `<div class="kep-field"><label>${esc(C.startDate)}</label><input type="date" name="startDate" min="${esc(today)}" required></div><div class="kep-field"><label>${esc(C.endDate)}</label><input type="date" name="endDate" min="${esc(today)}" required></div>` : `<div class="kep-field"><span class="kep-label">${esc(C.concernedDays)}</span><div class="kep-days">${days.map((day,index)=>`<button class="kep-day${index>=1&&index<=5?' on':''}" type="button" data-kep-day="${index}" aria-pressed="${index>=1&&index<=5?'true':'false'}">${esc(day)}</button>`).join('')}</div></div><label class="kep-check"><input type="checkbox" name="available" checked><span>${esc(C.availableCheck)}</span></label><div data-kep-times><div class="kep-field"><label>${esc(C.from)}</label><input type="time" name="start" value="09:00"></div><div class="kep-field"><label>${esc(C.until)}</label><input type="time" name="end" value="18:00"></div></div>`}<div class="kep-field"><label>${esc(C.note)}</label><textarea name="reason" maxlength="240" rows="3"></textarea></div><div class="kep-error" data-kep-error hidden></div><div class="kep-sheet-foot"><button class="kep-btn" type="button" data-kep-close>${esc(C.cancel)}</button><button class="kep-btn primary" type="submit">${esc(C.send)}</button></div></form>`;
+    overlay.innerHTML = `<form class="kep-sheet" data-kep-form="${type}" role="dialog" aria-modal="true" aria-labelledby="kep-sheet-title"><div class="kep-sheet-head"><div><div class="kg-eyebrow">${esc(C.eyebrow)}</div><h2 id="kep-sheet-title">${esc(type === 'leave' ? C.leaveTitle : C.availabilityTitle)}</h2></div><button class="kep-close" type="button" data-kep-close aria-label="${esc(C.close)}">×</button></div>${type === 'leave' ? `<div class="kep-field"><label for="kep-f-start">${esc(C.startDate)}</label><input id="kep-f-start" type="date" name="startDate" min="${esc(today)}" required></div><div class="kep-field"><label for="kep-f-end">${esc(C.endDate)}</label><input id="kep-f-end" type="date" name="endDate" min="${esc(today)}" required></div>` : `<div class="kep-field"><span class="kep-label" id="kep-f-days">${esc(C.concernedDays)}</span><div class="kep-days" role="group" aria-labelledby="kep-f-days">${days.map((day,index)=>`<button class="kep-day${index>=1&&index<=5?' on':''}" type="button" data-kep-day="${index}" aria-pressed="${index>=1&&index<=5?'true':'false'}">${esc(day)}</button>`).join('')}</div></div><label class="kep-check"><input type="checkbox" name="available" checked><span>${esc(C.availableCheck)}</span></label><div data-kep-times><div class="kep-field"><label for="kep-f-from">${esc(C.from)}</label><input id="kep-f-from" type="time" name="start" value="09:00"></div><div class="kep-field"><label for="kep-f-until">${esc(C.until)}</label><input id="kep-f-until" type="time" name="end" value="18:00"></div></div>`}<div class="kep-field"><label for="kep-f-note">${esc(C.note)}</label><textarea id="kep-f-note" name="reason" maxlength="240" rows="3"></textarea></div><div class="kep-error" data-kep-error hidden></div><div class="kep-sheet-foot"><button class="kep-btn" type="button" data-kep-close>${esc(C.cancel)}</button><button class="kep-btn primary" type="submit">${esc(C.send)}</button></div></form>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay || event.target.closest('[data-kep-close]')) closeSheet();
@@ -146,6 +166,7 @@
     });
     overlay.querySelector('[name="available"]')?.addEventListener('change', (event) => { overlay.querySelector('[data-kep-times]').hidden = !event.target.checked; });
     overlay.querySelector('form').addEventListener('submit', submit);
+    focusSheet(overlay);
   }
   async function onCardClick(event) {
     const cancel=event.target.closest('[data-kep-cancel]');

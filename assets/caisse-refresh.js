@@ -185,7 +185,9 @@ try { (function () {
     b.type = 'button';
     b.className = (className ? className + ' ' : '') + 'kx-refresh';
     b.title = 'Recharger la caisse · dépannage uniquement, synchronisation automatique';
-    b.setAttribute('aria-label', 'Recharger la page de la caisse · dépannage');
+    /* Pas d'aria-label : le nom est le mot affiché (« Rafraîchir », traduit),
+       le title en donne le détail. Un nom qui ne contient pas le mot visible
+       trompe la commande vocale (axe, label-content-name-mismatch). */
     b.innerHTML = ICON + '<span>' + label + '</span>';
     b.addEventListener('click', function () { click(b); });
     return b;

@@ -3361,7 +3361,9 @@
     return LANGS.map(function (l) {
       return '<button type="button" class="kcl-it' + (l.id === cur ? ' on' : '') + '"'
         + ' data-kcl="' + l.id + '" lang="' + l.id + '" title="' + l.label + '"'
-        + ' aria-label="' + l.label + '" aria-pressed="' + (l.id === cur) + '" data-nolang>'
+        /* Le nom commence par le code affiché (« FR · Français ») : la commande
+           vocale dit ce qu'elle voit (axe, label-content-name-mismatch). */
+        + ' aria-label="' + (l.label.indexOf(l.code) >= 0 ? l.label : l.code + ' · ' + l.label) + '" aria-pressed="' + (l.id === cur) + '" data-nolang>'
         + l.code + '</button>';
     }).join('');
   }

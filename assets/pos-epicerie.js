@@ -662,6 +662,13 @@
     if (pvReal() && window.KiwiVerticalNet) { window.KiwiVerticalNet.watch(syncNet); syncNet(); }
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
+      /* Échap fait ce que fait la croix de la feuille (elle sait où revenir). */
+      v.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !v.classList.contains('is-open')) return;
+        e.preventDefault();
+        const x = $('.modal [data-ep-close]', v);
+        if (x) x.click(); else closeVeil(v);
+      });
     });
 
     /* scan field — the heart of a hanout, always ready */
@@ -697,11 +704,41 @@
     icons();
   }
 
-  function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
-  function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
+  /* Une feuille ouverte se déclare dialogue, porte son titre et prend le
+     focus ; fermée, elle le
+     rend au bouton qui l'a ouverte. Sans cela le clavier et le lecteur
+     d'écran restaient derrière le voile (axe, 23 octobre). */
+  let veilOpener = null;
+  function focusModal(m) {
+    if (!m) return;
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    const title = m.querySelector('h3');
+    if (title) { if (!title.id) title.id = m.id + '-title'; m.setAttribute('aria-labelledby', title.id); }
+    else m.removeAttribute('aria-labelledby');
+    if (!m.hasAttribute('tabindex')) m.setAttribute('tabindex', '-1');
+    /* La feuille elle-même, pas son premier champ : sur la tablette, un champ
+       qui prend le focus ouvrirait le clavier par-dessus les montants. */
+    try { m.focus({ preventScroll: true }); } catch (_) {}
+  }
+  function openVeil(id) {
+    const v = $(id, root);
+    const active = document.activeElement;
+    if (active && active !== document.body && !active.closest('.modal-veil')) veilOpener = active;
+    v.classList.add('is-open');
+    focusModal($('.modal', v));
+    return v;
+  }
+  function closeVeil(v) {
+    (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open');
+    if ($('.modal-veil.is-open', root)) return;
+    const back = veilOpener;
+    if (back && back.isConnected && back.offsetParent !== null) { try { back.focus({ preventScroll: true }); } catch (_) {} }
+  }
   function focusScan() {
     if (state.view !== 'caisse') return;
-    setTimeout(() => { const i = $('#ep-scan-input', root); if (i) i.focus(); }, 40);
+    /* jamais sous une feuille ouverte : le champ de scan lui volait le focus */
+    setTimeout(() => { const i = $('#ep-scan-input', root); if (i && !$('.modal-veil.is-open', root)) i.focus(); }, 40);
   }
 
   /* ═══════════════════════ NAV ═══════════════════════ */
@@ -1126,6 +1163,8 @@
           <button class="cash-confirm" id="ep-cash-ok">Confirmer l’encaissement</button>
         </div>`;
       icons();
+      /* la feuille déjà ouverte change d'étape : le focus suit */
+      if ($('#ep-pay-veil', root).classList.contains('is-open')) focusModal(el);
       const box = $('#ep-cash-rendu-box', el);
       const refresh = () => {
         const rendu = received - total;
@@ -1575,6 +1614,8 @@
           <button class="cash-confirm" id="ep-settle-ok">Encaisser le règlement</button>
         </div>`;
       icons();
+      /* la feuille déjà ouverte change d'étape : le focus suit */
+      if ($('#ep-pay-veil', root).classList.contains('is-open')) focusModal(el);
       const box = $('#ep-settle-rendu-box', el);
       const refresh = () => {
         const rendu = received - pay;

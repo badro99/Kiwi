@@ -152,6 +152,39 @@ await click({ 'data-sfc': 'open', 'data-id': 'fc-1' });
 ok(/data-sfc-field="sheet.name" value="Tajine poulet"/.test(root.innerHTML) && /data-sfc-summary/.test(root.innerHTML), 'ouvrir : l’éditeur montre la fiche et son résumé');
 ok(/Version 2/.test(root.innerHTML) && /o\*\*\*@resto\.ma/.test(root.innerHTML), 'l’éditeur dit la version, quand et qui');
 
+/* Chaque champ d'une ligne porte l'ingrédient ET le champ (2026-10-23) : les
+   en-têtes de colonne ne nomment pas un champ pour un lecteur d'écran, et le
+   téléphone les masque. Une ligne sans nom se dit « Ligne N ». */
+const LINE_KEYS = { name: 'lName', type: 'lType', packPrice: 'lPackPrice', packQty: 'lPackQty', packUnit: 'lPackUnit', useQty: 'lUseQty', useUnit: 'lUseUnit', yieldPct: 'lYield', priceDate: 'lDate' };
+function lineNames(html) {
+  const out = [];
+  for (const [, n, row] of html.matchAll(/<tr data-sfc-line="(\d+)">([\s\S]*?)<\/tr>/g)) {
+    for (const [tag] of row.matchAll(/<(?:input|select)\b[^>]*data-sfc-field="[^"]+"[^>]*>/g)) {
+      out.push({ line: +n, field: tag.match(/data-sfc-field="([^"]+)"/)[1], label: (tag.match(/aria-label="([^"]*)"/) || [])[1] || '' });
+    }
+  }
+  return out;
+}
+function namesSay(html, labels, who) {
+  const fields = lineNames(html);
+  const bad = fields.filter((f) => !f.label.includes(who[f.line]) || !f.label.includes(labels[LINE_KEYS[f.field]]));
+  return { ok: fields.length === Object.keys(LINE_KEYS).length * who.length && !bad.length, bad, n: fields.length };
+}
+let named = namesSay(root.innerHTML, { lName: 'Produit', lType: 'Type', lPackPrice: 'Prix du lot', lPackQty: 'Qté du lot', lPackUnit: 'Unité du lot', lUseQty: 'Qté utilisée', lUseUnit: 'Unité', lYield: 'Rendement %', lDate: 'Date du prix' }, ['Poulet', 'Barquette']);
+ok(named.ok, `FR : les ${named.n} champs des deux lignes disent l’ingrédient et le champ (« Poulet · Prix du lot »)`, JSON.stringify(named.bad.slice(0, 3)));
+ok(/aria-label="Poulet · Prix du lot"/.test(root.innerHTML) && /aria-label="Produit · Barquette"/.test(root.innerHTML) && /aria-label="Barquette · Retirer"/.test(root.innerHTML), 'FR : « Poulet · Prix du lot », « Produit · Barquette », « Barquette · Retirer »');
+{
+  /* le nom tapé passe dans le nom des champs de la ligne, sans redessiner */
+  const seen = [];
+  const fake = (key) => ({ getAttribute: (k) => (k === 'data-sfc-label' ? key : null), setAttribute: (k, v) => seen.push([key, v]) });
+  const row = { getAttribute: () => '0', querySelectorAll: () => [fake('lName'), fake('lPackPrice')] };
+  const el = { type: 'text', value: 'Volaille', checked: false, getAttribute: (k) => (k === 'data-sfc-field' ? 'name' : null),
+    closest: (sel) => (sel === '[data-sfc-field]' ? el : sel === '[data-sfc-root]' ? root : sel === '[data-sfc-line]' ? row : null) };
+  listeners.input.forEach((fn) => fn({ target: el }));
+  ok(JSON.stringify(seen) === JSON.stringify([['lName', 'Produit · Volaille'], ['lPackPrice', 'Volaille · Prix du lot']]), 'renommer la ligne renomme ses champs (« Volaille · Prix du lot »)', JSON.stringify(seen));
+  el.value = 'Poulet'; listeners.input.forEach((fn) => fn({ target: el }));
+}
+
 /* saisie : seuls les chiffres se redessinent */
 const before = root.innerHTML;
 const input = (field, value, line, type = 'number') => {
@@ -270,6 +303,25 @@ await click({ 'data-sfc': 'retry' });
 reply = () => ({ status: 200, body: { enabled: true, canEdit: true, sheets: [SHEET] } });
 await click({ 'data-sfc': 'retry' });
 ok(/Cost per portion/.test(root.innerHTML) && /New sheet/.test(root.innerHTML), 'EN : la liste en anglais');
+await click({ 'data-sfc': 'open', 'data-id': 'fc-1' });
+const langT = (l, k) => (src.match(new RegExp(`\\n    ${l}: \\{[\\s\\S]*?\\b${k}: '([^']*)'`)) || [])[1];
+named = namesSay(root.innerHTML, Object.fromEntries(Object.values(LINE_KEYS).map((k) => [k, langT('en', k)])), ['Poulet', 'Barquette']);
+ok(named.ok && langT('en', 'lPackPrice') === 'Pack price', 'EN : chaque champ de ligne dit l’ingrédient et le champ (« Poulet · Pack price »)', JSON.stringify(named.bad.slice(0, 3)));
+win.KiwiI18n.getLang = () => 'ar';
+await click({ 'data-sfc': 'back' });
+await click({ 'data-sfc': 'open', 'data-id': 'fc-1' });
+const arT = (k) => langT('ar', k);
+named = namesSay(root.innerHTML, Object.fromEntries(Object.values(LINE_KEYS).map((k) => [k, arT(k)])), ['Poulet', 'Barquette']);
+ok(named.ok && !!arT('lPackPrice'), `AR : chaque champ de ligne dit l’ingrédient et le champ (« Poulet · ${arT('lPackPrice')} »)`, JSON.stringify(named.bad.slice(0, 3)));
+{
+  const blank = { ...SHEET, data: { ...base, lines: [{ ...base.lines[0], name: '' }] } };
+  win.KiwiI18n.getLang = () => 'fr';
+  reply = () => ({ status: 200, body: { enabled: true, canEdit: true, sheets: [blank] } });
+  await click({ 'data-sfc': 'back' });
+  await click({ 'data-sfc': 'retry' });
+  await click({ 'data-sfc': 'open', 'data-id': 'fc-1' });
+  ok(/aria-label="Ligne 1 · Prix du lot"/.test(root.innerHTML) && /aria-label="Produit · Ligne 1"/.test(root.innerHTML), 'une ligne sans nom se dit « Ligne 1 · Prix du lot »');
+}
 
 /* ── finance.js : l'onglet suit l'option ── */
 const fin = R('assets/finance.js');

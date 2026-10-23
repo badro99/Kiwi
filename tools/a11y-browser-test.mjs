@@ -8,7 +8,11 @@
  * voyait. axe-core (MPL-2.0, dépendance de développement de app/) passe sur la
  * page d'accueil, le tableau de bord démo, l'assistant d'installation et la
  * caisse démo, et relève les violations WCAG 2.1 A/AA « critical » et
- * « serious ».
+ * « serious ». Depuis le 23 octobre aussi : l'accueil sur téléphone et en
+ * arabe (avec un passage au clavier), la console opérateur sur tablette et sa
+ * boîte de suppression, l'app équipe (connexion, pointage, congé) en FR/EN/AR,
+ * le carnet de crédit de l'épicerie et l'éditeur « Coût simple ». Une feuille
+ * ouverte doit aussi avoir pris le focus.
  *
  * Les violations déjà présentes sont inscrites dans tools/a11y-baseline.json,
  * par surface et par règle, avec leur nombre de nœuds. La suite échoue sur une
@@ -82,18 +86,20 @@ async function open(t, url, storage, { width = 1440, height = 900, mobile = fals
   return page;
 }
 
-/* Les violations sérieuses de la page, ramenées à { règle: nœuds }. */
-async function audit(t, page) {
-  t.step('run axe-core');
-  await page.evaluate(axeSource);
-  const found = await page.evaluate(async () => {
-    const r = await window.axe.run(document, {
+/* Les violations sérieuses de la page, ramenées à { règle: nœuds }. `within`
+   borne l'audit à une partie de la page (l'éditeur posé dans le tableau de
+   bord démo, déjà audité ailleurs) ; les cibles restent celles du document. */
+async function audit(t, page, within) {
+  t.step('run axe-core' + (within ? ' on ' + within : ''));
+  if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(axeSource);
+  const found = await page.evaluate(async (sel) => {
+    const r = await window.axe.run(sel ? { include: [[sel]] } : document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
       resultTypes: ['violations'],
     });
     return r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')
       .map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, targets: v.nodes.map((n) => n.target.join(' ')), sample: v.nodes.slice(0, 2).map((n) => n.target.join(' ')) }));
-  });
+  }, within || null);
   return found;
 }
 /* Plusieurs états d'une même surface (une feuille ouverte, puis le panier) :
@@ -117,6 +123,7 @@ function compare(surface, found) {
   worse.forEach((v) => {
     regressions++;
     console.log(`  ✗ ${surface} · ${v.id} (${v.impact}) ${v.help} · ${v.nodes} nœud(s), base ${was[v.id] || 0} · ex. ${v.sample.join(' | ')}`);
+    if (process.env.KIWI_A11Y_VERBOSE === '1') v.targets.forEach((x) => console.log('      · ' + x));
   });
   const better = Object.entries(was).filter(([id, n]) => (measured[surface][id] || 0) < n);
   better.forEach(([id, n]) => console.log(`  ! ${surface} · ${id} : ${measured[surface][id] || 0} nœud(s) au lieu de ${n}, resserrez la base (KIWI_UPDATE_A11Y_BASELINE=1)`));
@@ -129,6 +136,47 @@ const DEMO = { kiwiSkin2027: '1', 'kiwiSkin2027:dashboard': '1', kiwiSkipOnboard
 await S.run('page d’accueil', async (t) => {
   const page = await open(t, '/index.html', { kiwiLang: 'fr' });
   compare('landing', await audit(t, page));
+});
+
+/* 23 octobre : la page d'accueil est publiée en sept langues et lue surtout sur
+ * un téléphone, mais l'audit n'ouvrait que le français sur un bureau. On ajoute
+ * le téléphone (français), l'arabe de droite à gauche (bureau et téléphone), et
+ * le clavier : chaque arrêt de Tab tombe sur un élément visible, hors d'une
+ * zone aria-hidden, et l'ordre avance sans boucler sur place. */
+async function keyboardWalk(t, page, stops = 40) {
+  t.step('walk the page with Tab');
+  await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); window.scrollTo(0, 0); });
+  const seen = [];
+  for (let i = 0; i < stops; i++) {
+    await page.keyboard.press('Tab');
+    const f = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const r = el.getBoundingClientRect();
+      const name = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('title') || el.getAttribute('alt') || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+      return { tag: el.tagName.toLowerCase(), name, visible: r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden',
+        hidden: !!el.closest('[aria-hidden="true"],[inert]'), key: el.tagName + '|' + (el.id || '') + '|' + Math.round(r.top + scrollY) + '|' + Math.round(r.left) };
+    });
+    if (!f) break;
+    if (!f.visible || f.hidden) throw new Error(`Tab ${i + 1} : ${f.tag} « ${f.name} » ${f.hidden ? 'dans une zone aria-hidden' : 'invisible'}`);
+    seen.push(f.key);
+  }
+  if (seen.length < 5) throw new Error(`le clavier n'atteint que ${seen.length} élément(s)`);
+  if (new Set(seen).size < Math.min(seen.length, 5)) throw new Error('le Tab tourne sur place');
+  console.log(`  ✓ clavier : ${seen.length} arrêts visibles, aucun dans une zone masquée`);
+}
+await S.run('page d’accueil, téléphone', async (t) => {
+  const page = await open(t, '/index.html', { kiwiLang: 'fr' }, { width: 390, height: 844, mobile: true });
+  compare('landing-phone', await audit(t, page));
+  await keyboardWalk(t, page);
+});
+await S.run('page d’accueil, arabe', async (t) => {
+  const page = await open(t, '/ar/index.html', { kiwiLang: 'ar' });
+  if (await page.evaluate(() => document.documentElement.dir) !== 'rtl') throw new Error('la page arabe ne se lit pas de droite à gauche');
+  const desk = await audit(t, page);
+  await keyboardWalk(t, page);
+  const phone = await open(t, '/ar/index.html', { kiwiLang: 'ar' }, { width: 390, height: 844, mobile: true });
+  compare('landing-ar', union(desk, await audit(t, phone)));
 });
 await S.run('tableau de bord démo', async (t) => {
   const page = await open(t, '/dashboard.html', DEMO);
@@ -264,6 +312,192 @@ await S.run('écran de cuisine', async (t) => {
   await page.waitForFunction(() => document.querySelectorAll('.tk .tk-act').length >= 4, { timeout: 20000 });
   await sleep(800);
   compare('kds', await audit(t, page));
+});
+
+/* 23 octobre : cinq écrans relevés par une revue à l'aveugle comme absents de
+ * cet audit. Chacun sur des données de démonstration ou fabriquées ici, jamais
+ * un vrai commerce ; aucun code d'équipe saisi.
+ *
+ * Après une ouverture de feuille, le focus doit y être entré : un lecteur
+ * d'écran ou un clavier qui reste derrière le voile ne sait pas qu'elle existe. */
+const focusMisses = [];
+async function focusInside(page, sel, what) {
+  const inside = await page.evaluate((s) => { const box = document.querySelector(s); return !!(box && document.activeElement && box.contains(document.activeElement)); }, sel);
+  if (!inside) { focusMisses.push(`${what} : le focus reste hors de la feuille ouverte (${sel})`); console.log('  ✗ ' + focusMisses[focusMisses.length - 1]); }
+}
+/* Les violations axe d'abord (le nombre compte pour la base), le focus ensuite. */
+function compareThenFocus(surface, found) {
+  const misses = focusMisses.splice(0);
+  compare(surface, found);
+  if (misses.length) throw new Error(misses.join(' ; '));
+}
+
+/* La console opérateur (kiwi-admin.html) en mode démo local : sur 127.0.0.1,
+ * /api/admin hors ligne, elle tourne sur son jeu fictif (seedMock). Tablette
+ * étroite, puis la boîte de suppression d'un établissement, le geste le plus
+ * destructeur qu'elle offre. La console n'existe qu'en français (outil interne
+ * de l'équipe Kiwi) : pas d'audit arabe ici. */
+await S.run('console opérateur, tablette, suppression', async (t) => {
+  const page = await open(t, '/kiwi-admin.html', {}, { width: 768, height: 1024, mobile: true, pin: false });
+  t.step('wait for the roster');
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Supprimer'), { timeout: 20000 });
+  await sleep(600);
+  const list = await audit(t, page);
+  t.step('open the delete dialog');
+  await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Supprimer').click());
+  await page.waitForSelector('.md-back .md-card', { timeout: 5000 });
+  await sleep(400);
+  await focusInside(page, '.md-card', 'console · suppression');
+  const dialog = await audit(t, page);
+  t.step('Escape closes it');
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  if (await page.evaluate(() => !!document.querySelector('.md-back'))) throw new Error('console · Échap ne ferme pas la boîte de suppression');
+  compareThenFocus('console', union(list, dialog));
+});
+
+/* L'app équipe (kiwi-serveur.html) : connexion, pointage, puis la demande de
+ * congé, en français, anglais et arabe. /api/employee est simulé ici, avec une
+ * employée fabriquée (example.com) ; la session est ouverte côté « serveur »
+ * du test, aucun code n'est tapé. « Consulter sans pointer » mène à l'app. */
+for (const lang of ['fr', 'en', 'ar']) {
+  await S.run('app équipe · ' + lang, async (t) => {
+    const MERCHANT = 'a11y-equipe';
+    const st = { session: false };
+    const payload = () => ({ ok: true, merchant: MERCHANT, employee: { id: 'e_a11y', name: 'Salma Test', firstName: 'Salma', initials: 'ST', role: 'serveur' },
+      store: { type: 'restaurant', timezone: 'Africa/Casablanca', name: 'Bistro A11y' }, attendance: { open: null }, colleagues: [], messages: [],
+      schedule: {}, planning: { requests: [], openShifts: [], swapRequests: [], notices: [] } });
+    const api = (r) => {
+      const u = new URL(r.url());
+      const json = (status, body) => r.respond({ status, contentType: 'application/json', body: JSON.stringify(body) });
+      if (u.pathname === '/api/employee' && r.method() === 'GET') return st.session ? json(200, payload()) : json(401, { error: 'employee-session-required' });
+      return json(503, { error: 'offline' });
+    };
+    const url = '/kiwi-serveur.html?merchant=' + MERCHANT;
+    /* L'app suit le thème du téléphone : on pose les deux, sinon l'audit
+       dépendrait du réglage clair/sombre de la machine qui le lance. */
+    const states = [];
+    for (const theme of ['light', 'dark']) {
+      const storage = { ['kiwi-employee-language:' + MERCHANT]: lang, kiwiTheme: theme };
+      st.session = false;
+      const login = await open(t, url, storage, { width: 390, height: 844, mobile: true, api });
+      t.step(`sign-in (${theme})`);
+      await login.waitForSelector('#screen-pin.is-active #employee-login', { timeout: 20000 });
+      await sleep(500);
+      if (lang === 'ar' && await login.evaluate(() => document.documentElement.dir) !== 'rtl') throw new Error('app équipe · l’arabe ne passe pas de droite à gauche');
+      states.push(await audit(t, login));
+      st.session = true;
+      const app = await open(t, url, storage, { width: 390, height: 844, mobile: true, api });
+      t.step(`the clock-in screen (${theme})`);
+      await app.waitForSelector('#screen-clockin.is-active', { timeout: 20000 });
+      await sleep(600);
+      states.push(await audit(t, app));
+      t.step(`browse without clocking in, the profile, then leave (${theme})`);
+      await app.click('#ci-browse-link');
+      await app.waitForSelector('#screen-main.is-active', { timeout: 10000 });
+      await app.evaluate(() => document.querySelector('.bt-btn[data-tab="profil"]').click());
+      await app.waitForSelector('#kep-card [data-kep="leave"]', { timeout: 10000 });
+      await app.evaluate(() => document.querySelector('#kep-card [data-kep="leave"]').click());
+      await app.waitForSelector('.kep-overlay .kep-sheet', { timeout: 5000 });
+      await sleep(500);
+      await focusInside(app, '.kep-sheet', `app équipe · congé (${theme})`);
+      states.push(await audit(t, app));
+      await app.keyboard.press('Escape');
+      await sleep(200);
+      if (await app.evaluate(() => !!document.querySelector('.kep-overlay'))) focusMisses.push(`app équipe · Échap ne ferme pas la demande de congé (${theme})`);
+    }
+    compareThenFocus('employee-' + lang, union(...states));
+  });
+}
+
+/* Le carnet de crédit de l'épicerie (assets/pos-epicerie.js) dans la caisse
+ * démo, avec ses voisins fictifs : la liste, une ardoise en dette ancienne, une
+ * ardoise à jour, le règlement (total puis partiel), une dette ajoutée à la
+ * main, et le choix d'une ardoise pour un panier. En français (clair) et en
+ * arabe (sombre). Échap ferme la feuille ouverte. */
+for (const lang of ['fr', 'ar']) {
+  await S.run('carnet de crédit · ' + lang + (lang === 'ar' ? ', sombre' : ''), async (t) => {
+    /* le français en clair, l'arabe en sombre : les deux thèmes de la caisse */
+    const page = await open(t, '/kiwi-caisse.html', { kiwiLang: lang, kiwiCaisseLang: lang, kiwiCaisseTheme: lang === 'ar' ? 'dark' : 'light' }, { width: 1180, height: 820 });
+    await sleep(1200);
+    t.step('open the épicerie till, the credit book');
+    await page.evaluate(() => window.KiwiPosDispatch.unlockById('epicerie'));
+    await page.waitForSelector('[data-ep-view="carnet"]', { timeout: 15000 });
+    await page.evaluate(() => document.querySelector('[data-ep-view="carnet"]').click());
+    await page.waitForSelector('[data-ep-ard="k1"]', { timeout: 5000 });
+    await sleep(500);
+    const states = [await audit(t, page)];
+    const sheet = async (label, sel, act) => {
+      t.step(label);
+      await page.evaluate(act);
+      await page.waitForSelector(sel + '.is-open', { timeout: 5000 });
+      await sleep(350);
+      await focusInside(page, sel + ' .modal', 'carnet · ' + label);
+      states.push(await audit(t, page));
+    };
+    await sheet('a debt, the detail', '#ep-ard-veil', () => document.querySelector('[data-ep-ard="k1"]').click());
+    await sheet('settle', '#ep-pay-veil', () => document.querySelector('#ep-ard-settle').click());
+    await sheet('settle in part', '#ep-pay-veil', () => document.querySelector('[data-ep-settle="partial"]').click());
+    await sheet('back, then add a debt', '#ep-pay-veil', () => { document.querySelector('#ep-paym [data-ep-close]').click(); document.querySelector('#ep-ard-add').click(); });
+    await sheet('a settled tab', '#ep-ard-veil', () => { document.querySelector('#ep-paym [data-ep-close]').click(); document.querySelector('#ep-ardm [data-ep-close]').click(); document.querySelector('[data-ep-ard="k6"]').click(); });
+    t.step('a basket put on a tab');
+    await page.evaluate(() => { document.querySelector('#ep-ardm [data-ep-close]').click(); document.querySelector('[data-ep-view="caisse"]').click(); });
+    await page.evaluate(() => document.querySelector('#ep-scan-mock').click());
+    await page.waitForFunction(() => { const b = document.querySelector('#ep-credit'); return b && !b.disabled && !document.querySelector('#ep-scan-veil.is-open'); }, { timeout: 8000 });
+    await sheet('the tab picker', '#ep-carnetpick-veil', () => document.querySelector('#ep-credit').click());
+    t.step('Escape closes it');
+    await page.keyboard.press('Escape');
+    await sleep(200);
+    if (await page.evaluate(() => !!document.querySelector('#ep-carnetpick-veil.is-open'))) focusMisses.push('carnet · Échap ne ferme pas la feuille');
+    compareThenFocus('caisse-carnet-' + lang, union(...states));
+  });
+}
+
+/* L'éditeur « Coût simple » (assets/simple-food-cost.js), dans la coquille
+ * Kiwi.appPage du tableau de bord démo, comme l'onglet d'Analyse du menu le
+ * pose. /api/foodcost est simulé : une fiche fabriquée, deux ingrédients et un
+ * emballage. L'option n'existe que sur un compte réel ; on appelle le panneau
+ * directement plutôt que de faire passer la démo pour un vrai compte. */
+await S.run('coût simple · fr, en, ar', async (t) => {
+  const sheetFixture = { id: 'sfc-a11y', name: 'Tajine poulet', kind: 'sheet', version: 2, updatedTs: Date.now() - 86400000, updatedBy: 'test', archived: false,
+    data: { name: 'Tajine poulet', kind: 'sheet', menuItemId: '', menuItemName: '', sellingPrice: 110, vatIncluded: true, vatRate: 10, portions: 4, targetPct: 30, note: '',
+      lines: [
+        { id: 'a', name: 'Poulet', type: 'food', packPrice: 60, packQty: 1, packUnit: 'kg', useQty: 800, useUnit: 'g', yieldPct: 80, priceDate: '2026-10-01' },
+        { id: 'b', name: 'Oignons', type: 'food', packPrice: null, packQty: 1, packUnit: 'kg', useQty: 300, useUnit: 'g', yieldPct: 100, priceDate: '' },
+        { id: 'c', name: 'Barquette', type: 'packaging', packPrice: 50, packQty: 100, packUnit: 'unité', useQty: 4, useUnit: 'unité', yieldPct: 100, priceDate: '2026-09-01' },
+      ] } };
+  const api = (r) => {
+    const u = new URL(r.url());
+    if (u.pathname === '/api/foodcost' && r.method() === 'GET') return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: true, canEdit: true, sheets: [sheetFixture] }) });
+    return r.respond({ status: 503, contentType: 'application/json', body: '{"error":"offline"}' });
+  };
+  const page = await open(t, '/dashboard.html', DEMO, { api });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button,a')].find((x) => /Explorer la d|Explore the d/.test(x.textContent)); if (b) b.click(); });
+  await sleep(800);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !!(window.KiwiSimpleFoodCost && window.Kiwi && window.Kiwi.appPage), { timeout: 20000 });
+  t.step('mount the editor, open the sheet');
+  /* La démo n'a pas de commerce nommé : le panneau lit un identifiant fabriqué. */
+  await page.evaluate(() => { const cd = window.KiwiCloudDoc || (window.KiwiCloudDoc = {}); cd.currentSlug = () => 'a11y-cout'; });
+  await page.evaluate(() => window.Kiwi.appPage('a11y-cost', { title: 'Coût simple', subtitle: '', body: window.KiwiSimpleFoodCost.panel() }));
+  await page.waitForSelector('[data-sfc-root] [data-sfc="open"]', { timeout: 10000 });
+  await page.evaluate(() => document.querySelector('[data-sfc-root] [data-sfc="open"]').click());
+  await page.waitForSelector('[data-sfc-root] [data-sfc-line="2"]', { timeout: 5000 });
+  await sleep(400);
+  const states = [];
+  for (const lang of ['fr', 'en', 'ar']) {
+    t.step('editor in ' + lang);
+    await page.evaluate((l) => window.KiwiI18n.setLang(l), lang);
+    await page.waitForFunction((l) => document.documentElement.lang === l && !!document.querySelector('[data-sfc-root] [data-sfc-line="2"]'), { timeout: 5000 }, lang);
+    await sleep(400);
+    /* Chaque champ d'une ligne dit l'ingrédient ET le champ : « Poulet · Prix du lot ». */
+    const unnamed = await page.evaluate(() => [...document.querySelectorAll('[data-sfc-root] [data-sfc-line] [data-sfc-field]')]
+      .filter((el) => { const row = el.closest('[data-sfc-line]'); const who = row.querySelector('[data-sfc-field="name"]').value; const n = el.getAttribute('aria-label') || ''; return !who || !n.includes(who) || n.trim() === who; })
+      .map((el) => el.getAttribute('data-sfc-field')));
+    if (unnamed.length) { focusMisses.push(`coût simple (${lang}) : ${unnamed.length} champ(s) de ligne sans nom « ingrédient · champ » (${[...new Set(unnamed)].join(', ')})`); console.log('  ✗ ' + focusMisses[focusMisses.length - 1]); }
+    states.push(await audit(t, page, '[data-sfc-root]'));
+  }
+  compareThenFocus('foodcost', union(...states));
 });
 
 if (UPDATE) fs.writeFileSync(BASELINE_FILE, JSON.stringify(measured, null, 2) + '\n');

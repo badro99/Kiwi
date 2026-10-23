@@ -144,7 +144,7 @@ const escape = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').rep
 // Clone only the landing's client components. Translate their exact string
 // literals too: static HTML alone disagrees with React on its first render.
 // Content-addressed URLs keep these locale-specific exports cache-safe.
-const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-6c65cbb3.js'];
+const clientPaths = ['/_next/static/chunks/216g4fzfwrgwn.js', '/_next/static/chunks/2c2tj5hx4r2-w-d7bac407.js'];
 const scriptPaths = new Map();
 fs.mkdirSync('es/chunks', { recursive: true });
 for (const clientPath of clientPaths) {

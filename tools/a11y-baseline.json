@@ -1,8 +1,20 @@
 {
   "landing": {},
+  "landing-phone": {},
+  "landing-ar": {},
   "dashboard": {},
   "onboarding": {},
   "caisse": {},
+  "dashboard-dark": {},
+  "caisse-pressing": {},
+  "caisse-hotel": {},
   "orderpro": {},
-  "kds": {}
+  "kds": {},
+  "console": {},
+  "employee-fr": {},
+  "employee-en": {},
+  "employee-ar": {},
+  "caisse-carnet-fr": {},
+  "caisse-carnet-ar": {},
+  "foodcost": {}
 }

@@ -1084,20 +1084,36 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
      console n'en avait pas : tout y était un bouton et un toast, ce qui va très
      bien pour couper un module et pas du tout pour effacer un établissement.
      Retourne { el, body, close } — l'appelant remplit `body`. */
+  /* 23 octobre : la boîte n'était qu'un calque. Un lecteur d'écran n'y voyait
+     pas de dialogue et le focus restait sur le bouton derrière le voile : au
+     clavier, on tabulait dans la liste au lieu de la boîte de suppression.
+     Elle se déclare dialogue, porte son titre, prend le focus (le champ que
+     l'appelant y pose, sinon la croix) et le rend au bouton d'origine. */
+  var modalSeq = 0;
   function modal(title, desc){
+    var id = 'md-' + (++modalSeq);
+    var back = document.activeElement;
     var body = h('div', { class:'md-body' });
-    var card = h('div', { class:'md-card' },
-      h('div', { class:'md-title' }, title),
-      desc ? h('div', { class:'md-desc' }, desc) : null,
+    var card = h('div', { class:'md-card', role:'dialog', 'aria-modal':'true', 'aria-labelledby':id + '-t', 'aria-describedby':desc ? id + '-d' : null },
+      h('div', { class:'md-title', id:id + '-t' }, title),
+      desc ? h('div', { class:'md-desc', id:id + '-d' }, desc) : null,
       body);
     var el = h('div', { class:'md-back' }, card);
-    function close(){ if (el.parentNode) el.parentNode.removeChild(el); }
+    function esc(e){ if (e.key === 'Escape') close(); }
+    function close(){
+      document.removeEventListener('keydown', esc);
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (back && back.isConnected && back.focus) { try { back.focus(); } catch(_){} }
+    }
     el.addEventListener('click', function(e){ if (e.target === el) close(); });
-    document.addEventListener('keydown', function esc(e){
-      if (e.key === 'Escape'){ close(); document.removeEventListener('keydown', esc); }
-    });
-    card.appendChild(h('button', { class:'md-x', title:'Fermer', onClick:close }, '×'));
+    document.addEventListener('keydown', esc);
+    card.appendChild(h('button', { class:'md-x', title:'Fermer', 'aria-label':'Fermer', onClick:close }, '×'));
     document.body.appendChild(el);
+    setTimeout(function(){
+      if (!el.parentNode) return;
+      var first = card.querySelector('input, select, textarea') || card.querySelector('.md-x');
+      if (first) first.focus();
+    }, 0);
     return { el:el, body:body, close:close };
   }
   function fmt(n){ try { return (Math.round(n)||0).toLocaleString('fr-FR'); } catch(_) { return String(Math.round(n)||0); } }
@@ -2208,7 +2224,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       'Cet établissement et TOUT ce qu’il contient · ventes, clôtures, catalogue, '
       + 'carte, clients, codes équipe, appairages · seront effacés définitivement. '
       + 'Les journaux d’opérateur sont conservés. Recopiez son identifiant pour confirmer.');
-    var input = h('input', { class:'inp', placeholder:c.merchant, style:'width:100%;margin:10px 0' });
+    var input = h('input', { class:'inp', placeholder:c.merchant, 'aria-label':'Identifiant à recopier : ' + c.merchant, autocomplete:'off', style:'width:100%;margin:10px 0' });
     var go = h('button', { class:'mini danger', disabled:true }, 'Supprimer définitivement');
     input.addEventListener('input', function(){ go.disabled = input.value.trim() !== c.merchant; });
     go.addEventListener('click', async function(){
