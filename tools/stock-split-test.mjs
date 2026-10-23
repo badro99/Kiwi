@@ -86,6 +86,10 @@ for (const real of [false, true]) {
     assert.equal(scope[name](), before.context.__scope[name](), name + ' : rendu identique');
   }
   assert.equal(scope.normalizeMatchStr(' Café  Atlas '), before.context.__scope.normalizeMatchStr(' Café  Atlas '));
+  // Une date lue sur une facture (PDF, modèle) ne sort jamais de son attribut.
+  const hostile = scope.renderRealReceiptReview({ parsed: { date: '"><img src=x onerror=alert(1)>', lines: [{ name: 'x', qty: '1"><b>', unitCost: '2"><i>' }] } });
+  assert.ok(!/<img|<b>|<i>/.test(hostile), 'réception : date et lignes lues échappées');
+  assert.match(hostile, /type="date" value="\d{4}-\d{2}-\d{2}"/, 'une date invalide retombe sur aujourd’hui');
   for (const s of [scope, before.context.__scope]) {
     assert.equal(s.stReviewBusyTake([], null), true);
     assert.equal(s.stReviewBusyTake([], null), false);

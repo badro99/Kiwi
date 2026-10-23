@@ -1068,7 +1068,7 @@ window.KiwiStockInternal.install('intake', (S) => {
 
     const supName = parsed?.supplier?.name || preSupplier?.name || '';
     const today = new Date().toISOString().slice(0, 10);
-    const invoiceDate = parsed?.date || today;
+    const invoiceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(parsed?.date || '')) ? parsed.date : today;
     const invoiceNum = parsed?.number || '';
 
     const matches = parsed?.lines ? matchInvoiceLines(parsed.lines, items) : [];
@@ -1098,7 +1098,7 @@ window.KiwiStockInternal.install('intake', (S) => {
           preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
         );
         const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
-        return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}" ${isSel ? 'selected' : ''}>${esc(it.name)} (${esc(it.unit || 'unité')})</option>`;
+        return `<option value="${esc(it.id)}" data-default-cost="${esc(defaultCost)}" ${isSel ? 'selected' : ''}>${esc(it.name)} (${esc(it.unit || 'unité')})</option>`;
       }).join('');
 
       return `
@@ -1108,10 +1108,10 @@ window.KiwiStockInternal.install('intake', (S) => {
             <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
           </td>
           <td class="r" style="width:90px;">
-            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${lineQty}" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${esc(lineQty)}" style="font-size:12px;" />
           </td>
           <td class="r" style="width:100px;">
-            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${lineCost}" style="font-size:12px;" />
+            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${esc(lineCost)}" style="font-size:12px;" />
           </td>
           <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
@@ -1149,7 +1149,7 @@ window.KiwiStockInternal.install('intake', (S) => {
       ${opts?.intakeDocId ? `<input type="hidden" data-stock-intake-doc value="${esc(String(opts.intakeDocId))}" /><div class="st-notice info" style="margin-top:8px;">${svg('receipt', 14)}<div>${esc(t('mScanArchived'))} · <span class="mono">${esc(String(opts.intakeDocId).slice(0, 12))}…</span></div></div>` : ''}
       <div class="st-mb-row three" style="margin-top:12px;">
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
-        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${invoiceDate}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${esc(invoiceDate)}" /></div>
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" value="${esc(invoiceNum)}" /></div>
       </div>
       <div style="overflow-x:auto;max-height:360px;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
