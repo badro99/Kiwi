@@ -2276,7 +2276,8 @@ section('Surface matrix (tools/surface-matrix-browser-test.mjs)');
  * screen size, FR/EN/AR: one file per size so the pool runs them side by side. */
 for (const file of ['surface-matrix-dash-desktop-browser-test.mjs', 'surface-matrix-dash-tablet-browser-test.mjs', 'surface-matrix-dash-phone-browser-test.mjs',
   'surface-matrix-till-desktop-browser-test.mjs', 'surface-matrix-till-tablet-browser-test.mjs', 'surface-matrix-till-phone-browser-test.mjs',
-  'surface-matrix-apps-browser-test.mjs']) {
+  'surface-matrix-apps-browser-test.mjs', 'keyboard-floor-booking-browser-test.mjs',
+  'surface-matrix-states-boutique-browser-test.mjs', 'surface-matrix-states-ops-browser-test.mjs']) {
   section(`Surface matrix (tools/${file})`);
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8', timeout: 420000 });

@@ -1,6 +1,6 @@
-import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=101';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=7';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=7';
+import { saleClient, root, state, retDayKey, retShiftDay, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN } from '../pos-boutique.js?v=102';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=8';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=8';
 
 
   /* ═══════════════════════ ÉCHANGES & AVOIRS (signature) ═══════════════════ */
@@ -1331,7 +1331,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqi-pill.on { background: var(--atlas); color: #fff; border-color: var(--atlas); }
       .bqi-kpis { display: flex; gap: 10px; padding: 6px 22px 10px; }
       .bqi-kpi { flex: 1; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
-      .bqi-kpi .l { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #77807b; }
+      .bqi-kpi .l { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #5E6762; }
       .bqi-kpi .v { font-size: 18px; font-weight: 600; font-family: var(--mono); }
       .bqi-kpi.warn { border-color: #E7B24D; background: #FBF3E2; }
       .bqi-list { padding: 4px 22px; display: flex; flex-direction: column; gap: 8px; }
@@ -1341,19 +1341,19 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqi-art svg { width: 40px; height: 40px; }
       .bqi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
       .bqi-info b { font-size: 14.5px; }
-      .bqi-info span { font-size: 12px; color: #77807b; }
+      .bqi-info span { font-size: 12px; color: #5E6762; }
       .bqi-stock { font-family: var(--mono); font-size: 15px; font-weight: 600; min-width: 34px; text-align: right; }
-      .bqi-stock.bas { color: #B8860B; } .bqi-stock.rupture { color: #9B2F22; }
+      .bqi-stock.bas { color: #8A6406; } .bqi-stock.rupture { color: #9B2F22; }
       .bqi-price { font-family: var(--mono); font-size: 14px; min-width: 90px; text-align: right; }
       .bqi-mini { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(10,15,13,.14); background: var(--paper); cursor: pointer; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
       .bqi-mini:hover { background: #f0eee7; } .bqi-mini svg { width: 16px; height: 16px; }
       .bqi-mini.danger { color: #9B2F22; }
       .bq-invm { width: min(720px, 94vw); max-height: 88vh; overflow-y: auto; padding: 0; }
       .bqi-modh { display: flex; align-items: center; gap: 14px; padding: 22px 24px 14px; border-bottom: 1px solid rgba(10,15,13,.08); }
-      .bqi-modh h3 { margin: 0; font-size: 18px; } .bqi-modh > div { flex: 1; } .bqi-modh > div span { font-size: 12.5px; color: #77807b; }
+      .bqi-modh h3 { margin: 0; font-size: 18px; } .bqi-modh > div { flex: 1; } .bqi-modh > div span { font-size: 12.5px; color: #5E6762; }
       .bqi-vtable-wrap { padding: 8px 24px; }
       .bqi-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-      .bqi-vtable th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; padding: 8px 6px; }
+      .bqi-vtable th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #5E6762; padding: 8px 6px; }
       .bqi-vtable td { padding: 9px 6px; border-top: 1px solid rgba(10,15,13,.07); vertical-align: middle; }
       .bqi-dot { display: inline-block; width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); vertical-align: -1px; margin-right: 6px; }
       .bqi-stk { display: inline-flex; align-items: center; gap: 5px; }
@@ -1394,7 +1394,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqsd-t th { text-align: left; font-weight: 500; color: var(--n-500, #7c8a80); padding: 4px 8px; border-bottom: 1px solid var(--n-200, #e7e3da); }
       .bqsd-t td { padding: 3px 8px; border-bottom: 1px solid rgba(0,0,0,.04); }
       .bqi-form { padding: 20px 24px 8px; }
-      .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
+      .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #5E6762; margin-bottom: 6px; }
       .bqi-fg input, .bqi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .bqi-frow { display: flex; gap: 12px; } .bqi-frow .bqi-fg { flex: 1; }
       /* Le sélecteur de couleur vient de color-palette.js (.kc-*) · rien à
@@ -1402,7 +1402,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
          ligne variante et le rappel discret de la nuance d'origine. */
       .bqi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
       .bqi-cbtn:hover { background: rgba(125,242,176,.14); }
-      .bqi-dashboard-only { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(10,15,13,.12); border-radius: 9px; background: var(--paper-soft, #f3f1eb); color: #77807b; font: 600 11px var(--sans, sans-serif); white-space: nowrap; }
+      .bqi-dashboard-only { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(10,15,13,.12); border-radius: 9px; background: var(--paper-soft, #f3f1eb); color: #5E6762; font: 600 11px var(--sans, sans-serif); white-space: nowrap; }
       .bqi-cbtn.is-locked, .bqi-mini.is-locked { opacity: .72; cursor: not-allowed; }
       .bqi-csrc { font-style: normal; font-size: 11px; opacity: .6; margin-left: 5px; }
       .bqi-iconpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 168px; overflow-y: auto; padding: 8px; border: 1px solid rgba(10,15,13,.14); border-radius: 12px; background: var(--paper); }
@@ -1410,7 +1410,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqi-icon:hover { border-color: rgba(11,110,79,.5); }
       .bqi-icon.on { border-color: var(--atlas); border-width: 2px; background: #EAF5EF; }
       .bqi-icon .bq-art { width: 100%; height: 100%; }
-      .bqi-help { font-size: 12px; color: #77807b; margin-top: -6px; margin-bottom: 12px; }
+      .bqi-help { font-size: 12px; color: #5E6762; margin-top: -6px; margin-bottom: 12px; }
       .bqi-help.is-good { color: var(--atlas); }
       .bqi-help.is-bad  { color: #9B2F22; }
       /* .bqi-help remonte de 6px pour se coller sous un <input> nu ; sous une
@@ -1427,10 +1427,10 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqx-head { display: flex; align-items: center; gap: 16px; padding: 20px 24px 14px; border-bottom: 1px solid rgba(10,15,13,.08); }
       .bqx-head-t { flex: 1; min-width: 0; }
       .bqx-head-t h3 { margin: 0 0 2px; font-size: 18px; }
-      .bqx-head-t span { font-size: 12.5px; color: #77807b; line-height: 1.45; display: block; }
+      .bqx-head-t span { font-size: 12.5px; color: #5E6762; line-height: 1.45; display: block; }
       .bqx-tally { display: flex; align-items: baseline; gap: 6px; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 12px; padding: 8px 14px; flex: 0 0 auto; }
       .bqx-tally b { font-family: var(--mono); font-size: 19px; font-weight: 600; color: var(--atlas); }
-      .bqx-tally span { font-size: 11px; color: #77807b; }
+      .bqx-tally span { font-size: 11px; color: #5E6762; }
       .bqx-tally i { width: 1px; height: 18px; background: rgba(10,15,13,.12); margin: 0 4px; }
       .bqx-body { padding: 18px 24px 6px; }
       .bqx-scanbox { display: flex; align-items: center; gap: 12px; background: var(--paper); border: 2px solid var(--atlas); border-radius: 14px; padding: 15px 17px; }
@@ -1441,7 +1441,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqx-scanbox.slim input { font-size: 15px; }
       .bqx-mini { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 9px; border: 0; background: var(--atlas); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
       .bqx-mini svg { width: 17px; height: 17px; }
-      .bqx-hint { font-size: 12.5px; color: #77807b; margin: 9px 2px 0; line-height: 1.45; }
+      .bqx-hint { font-size: 12.5px; color: #5E6762; margin: 9px 2px 0; line-height: 1.45; }
       .bqx-hint.is-good { color: var(--atlas); }
       .bqx-hint.is-bad  { color: #9B2F22; font-weight: 500; }
       .bqx-hint.is-warn { color: #8A6210; }
@@ -1474,22 +1474,22 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqx-linkhead .bqi-art, .bqx-linkhead .bqi-art svg { width: 28px; height: 28px; flex: 0 0 28px; }
       .bqx-linkhead > div { flex: 1; min-width: 0; }
       .bqx-linkhead b { display: block; font-size: 14px; }
-      .bqx-linkhead span { font-size: 11.5px; color: #77807b; }
+      .bqx-linkhead span { font-size: 11.5px; color: #5E6762; }
       .bqx-chip.is-pick { cursor: pointer; font: inherit; font-size: 12.5px; color: var(--ink); }
       .bqx-chip.is-pick:hover { border-color: var(--atlas); background: rgba(11,110,79,.08); }
       .bqx-chain b { display: block; font-size: 13.5px; }
-      .bqx-chain span { font-size: 12px; color: #77807b; line-height: 1.45; }
+      .bqx-chain span { font-size: 12px; color: #5E6762; line-height: 1.45; }
       .bqx-common { display: flex; align-items: baseline; gap: 10px; margin: 12px 24px 0; padding: 10px 14px; background: var(--paper); border-radius: 11px; }
-      .bqx-common span { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; }
+      .bqx-common span { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #5E6762; }
       .bqx-common b { font-size: 13.5px; }
       .bqx-known-card { display: flex; align-items: center; gap: 15px; padding: 16px 24px 8px; }
       .bqx-known-card > div { flex: 1; min-width: 0; }
       .bqx-known-card b { font-size: 16px; display: block; }
-      .bqx-known-card span { display: block; font-size: 12.5px; color: #77807b; margin-top: 2px; }
+      .bqx-known-card span { display: block; font-size: 12.5px; color: #5E6762; margin-top: 2px; }
       .bqx-thisvar { display: flex !important; align-items: center; gap: 7px; margin-top: 5px !important; }
       .bqx-thisvar i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: 0 0 12px; }
       .bqx-existing { padding: 8px 24px 4px; }
-      .bqx-existing > span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 7px; }
+      .bqx-existing > span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #5E6762; margin-bottom: 7px; }
       .bqx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
       .bqx-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--paper); border: 1px solid rgba(10,15,13,.10); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; }
       .bqx-chip.on { border-color: var(--atlas); background: rgba(11,110,79,.08); }
@@ -1501,13 +1501,13 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqx-act-h { display: flex; align-items: center; gap: 8px; }
       .bqx-act-h svg { width: 16px; height: 16px; color: var(--atlas); }
       .bqx-act-h b { font-size: 13.5px; }
-      .bqx-act p { margin: 4px 0 10px; font-size: 12px; color: #77807b; line-height: 1.45; }
+      .bqx-act p { margin: 4px 0 10px; font-size: 12px; color: #5E6762; line-height: 1.45; }
       .bqx-qtyrow { display: flex; align-items: center; gap: 7px; }
       .bqx-qtyrow input { width: 62px; text-align: center; font-family: var(--mono); font-size: 16px; padding: 8px; border: 1px solid rgba(10,15,13,.16); border-radius: 9px; background: var(--surface, #fff); color: var(--ink); }
       .bqx-qtyrow .bq-btn { margin-left: 4px; }
       .bqx-pricediff { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 20px 24px; }
       .bqx-pricediff > div { text-align: center; }
-      .bqx-pricediff span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; }
+      .bqx-pricediff span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #5E6762; }
       .bqx-pricediff b { font-family: var(--mono); font-size: 19px; }
       .bqx-pricediff .next b { color: var(--atlas); }
       .bqx-pricediff > svg { width: 18px; height: 18px; color: #99a; }
@@ -1519,7 +1519,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
       .bqx-opt.on { border-color: var(--atlas); background: rgba(11,110,79,.07); }
       .bqx-opt svg { width: 17px; height: 17px; color: var(--atlas); margin-bottom: 3px; }
       .bqx-opt b { font-size: 13px; }
-      .bqx-opt span { font-size: 11.5px; color: #77807b; line-height: 1.38; }
+      .bqx-opt span { font-size: 11.5px; color: #5E6762; line-height: 1.38; }
       /* Quand la lentille liquide est attachée (assets/liquid-lens.js ajoute
          data-kw-lens), c'est ELLE qui porte le fond · dégradé atlas → riad. La
          pastille passe donc en transparent et son texte en clair, sinon on lit
@@ -1587,7 +1587,7 @@ import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './
         .bqi-art { grid-row: 1 / 3; align-self: start; }
         .bqi-info { grid-column: 2 / 5; }
         .bqi-stock { grid-column: 2; min-width: 0; text-align: left; }
-        .bqi-stock::after { content: ' en stock'; font-family: var(--sans); font-size: 12px; font-weight: 400; color: #77807b; }
+        .bqi-stock::after { content: ' en stock'; font-family: var(--sans); font-size: 12px; font-weight: 400; color: #5E6762; }
         .bqi-price { grid-column: 3; min-width: 0; }
         .bqi-mini { grid-column: 4; }
       }

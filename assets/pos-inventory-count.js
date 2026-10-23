@@ -303,7 +303,7 @@
 
           <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="ma-btn secondary" id="pos-cnt-back-btn" style="padding:10px 18px;">← Revenir au comptage</button>
-            <button class="ma-btn primary" id="pos-cnt-submit-btn" style="padding:10px 24px;background:#059669;border-color:#047857;">Transmettre au propriétaire</button>
+            <button class="ma-btn primary" id="pos-cnt-submit-btn" style="padding:10px 24px;background:var(--atlas,#0B6E4F);border-color:var(--riad,#053B2C);">Transmettre au propriétaire</button>
           </div>
         </div>
       `;
@@ -386,7 +386,7 @@
               <button class="ma-btn secondary" id="pos-cnt-save-btn" style="padding:10px 18px;">Enregistrer le brouillon</button>
               <span style="font-size:11px;color:var(--n-500);">${countState.draftSavedAt ? `Sauvé à ${new Date(countState.draftSavedAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}` : 'Sauvegarde locale hors ligne'}</span>
             </div>
-            <button class="ma-btn primary" id="pos-cnt-review-btn" style="padding:10px 24px;background:#059669;border-color:#047857;" ${countedCount === 0 ? 'disabled' : ''}>
+            <button class="ma-btn primary" id="pos-cnt-review-btn" style="padding:10px 24px;background:var(--atlas,#0B6E4F);border-color:var(--riad,#053B2C);" ${countedCount === 0 ? 'disabled' : ''}>
               Vérifier et transmettre (${countedCount})
             </button>
           </div>
