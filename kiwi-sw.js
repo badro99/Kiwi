@@ -106,9 +106,9 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=7',
   '/assets/plan-catalog.js?v=1',
-  '/assets/interactive.js?v=66',
+  '/assets/interactive.js?v=67',
   '/assets/view-link.js?v=1',
-  '/assets/features.js?v=15',
+  '/assets/features.js?v=16',
   '/assets/invoicing.css?v=10',
   '/assets/invoicing.js?v=18',
   '/assets/order-qr.js?v=6',
@@ -117,10 +117,10 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=62',
+  '/assets/venues.js?v=63',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=9',
-  '/assets/trade-workspaces.js?v=11',
+  '/assets/trade-workspaces.js?v=12',
   '/assets/delivery-receivables.js?v=2',
   '/assets/reservations.js?v=32',
   '/assets/pressing-ops.js?v=11',
@@ -156,7 +156,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=5',
-  '/assets/dateRange.js?v=96',
+  '/assets/dateRange.js?v=97',
   '/assets/mobile-nav.js?v=9',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -195,7 +195,7 @@ var SHELL = [
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=31',
-  '/assets/report.js?v=9',
+  '/assets/report.js?v=10',
   '/assets/day-report-dash.js?v=36',
   '/assets/day-report-export.js?v=13',
   '/assets/month-report.js?v=16',
@@ -319,7 +319,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=158',
+  '/assets/pos-dispatch.js?v=159',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -399,7 +399,7 @@ var SHELL = [
   '/assets/caisse-dna.js?v=3',
   '/assets/pos-mobile.js?v=8',
   '/assets/pos-workspaces.css?v=5',
-  '/assets/pos-workspaces.js?v=8',
+  '/assets/pos-workspaces.js?v=9',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
@@ -435,10 +435,10 @@ var SHELL = [
   '/assets/pos-fleuriste.js?v=15',
   '/assets/pos-coiffure.css?v=9',
   '/assets/pos-coiffure.js?v=9',
-  '/assets/pos-gym.css?v=8',
-  '/assets/pos-gym.js?v=8',
-  '/assets/pos-autre.css?v=8',
-  '/assets/pos-autre.js?v=8',
+  '/assets/pos-gym.css?v=9',
+  '/assets/pos-gym.js?v=9',
+  '/assets/pos-autre.css?v=9',
+  '/assets/pos-autre.js?v=9',
   '/assets/pos-maison.css?v=90',
   '/assets/pos-maison/sales.js?v=8',
   '/assets/pos-maison/checkout.js?v=8',

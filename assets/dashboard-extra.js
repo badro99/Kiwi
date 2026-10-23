@@ -991,7 +991,7 @@
     if (reportReady) return reportReady;
     reportReady = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = new URL('assets/report.js?v=9', document.baseURI).href;
+      script.src = new URL('assets/report.js?v=10', document.baseURI).href;
       script.async = true;
       script.dataset.kiwiReport = '1';
       script.onload = () => window.KiwiReport ? resolve(window.KiwiReport) : reject(new Error('KiwiReport unavailable'));
