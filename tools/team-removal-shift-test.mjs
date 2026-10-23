@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import teamTestSource from './team-test-source.cjs';
 /* Équipe · retirer quelqu'un en plein service clôt son pointage.
  *
  * 2026-10-12. Un salarié retiré pendant son service gardait son pointage
@@ -126,7 +127,7 @@ const gone2 = now - 5 * M;
 
 /* 5 · Le tableau de bord prévient, et ne refusionne pas les heures d'un retiré */
 {
-  const src = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+  const src = teamTestSource();
   const onDuty = [...src.matchAll(/delOnDuty:\s*\(hm\)\s*=>\s*`([^`]*)`/g)].map((m) => m[1]);
   check(onDuty.length === 3 && onDuty.every((s) => s.includes('${hm}')), 'the remove dialog says « on duty since HH:MM » in FR, EN and AR');
   check(/const live = \(liveTeam\.members \|\| \[\]\)\.find\(\(x\) => x && x\.id === id\);/.test(src) && /\$\{esc\(T\.delDesc\)\}<\/p>\$\{onDuty\}/.test(src), 'and shows it only for a member the live channel reports on duty');

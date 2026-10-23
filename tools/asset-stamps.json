@@ -1500,8 +1500,12 @@
     "sha": "b7510a6f723d8016"
   },
   "assets/team.js": {
-    "v": "315",
-    "sha": "f1a6103a273bff96"
+    "v": "316",
+    "sha": "30ee64d8e954a8f9"
+  },
+  "assets/team/profile-ui.js": {
+    "v": "1",
+    "sha": "572f0c2342c9a56e"
   },
   "assets/tenant-purge.js": {
     "v": "5",

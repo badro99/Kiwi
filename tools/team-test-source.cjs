@@ -1,16 +1,19 @@
-/* Le code de la page Équipe tient en deux fichiers depuis le 22 octobre :
- * assets/team.js (roster, éditeur de membre, codes publiés vers la caisse) et
- * assets/team-hours.js (heures, planning, paie), sorti de team.js bloc par
- * bloc, à l'identique. Les tests qui lisent la source pour y chercher une
- * fonction ou un motif lisent les deux, dans l'ordre de chargement : une
- * fonction déplacée reste trouvée, et une interdiction (« aucun toast ne
- * cite un code ») couvre aussi la moitié paie. */
+/* Reconstruct the original lexical order from the current split bodies. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const FILES = ['assets/team.js', 'assets/team-hours.js'];
+const FILES = ['assets/team.js', 'assets/team/profile-ui.js', 'assets/team-hours.js'];
 module.exports = function teamSource() {
-  return FILES.map((rel) => fs.readFileSync(path.join(root, rel), 'utf8')).join('\n');
+  let source = fs.readFileSync(path.join(root, FILES[0]), 'utf8');
+  const part = fs.readFileSync(path.join(root, FILES[1]), 'utf8');
+  const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/team/split.json'), 'utf8'));
+  for (const segment of map.segments) {
+    const start = '  /* team-part:' + segment.name + ' */\n';
+    const end = '  /* /team-part:' + segment.name + ' */';
+    const body = part.slice(part.indexOf(start) + start.length, part.indexOf(end));
+    source = source.replace(segment.relay, () => body);
+  }
+  return source + '\n' + fs.readFileSync(path.join(root, FILES[2]), 'utf8');
 };
 module.exports.FILES = FILES;

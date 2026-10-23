@@ -27,6 +27,7 @@ import caisseTestSource from './caisse-test-source.cjs';
  *
  *   node tools/employee-truth-test.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
@@ -211,7 +212,7 @@ let saraCookie = '';
 
 /* ── 4. Côté navigateur : la fusion respecte les pierres tombales ──────────── */
 {
-  const SRC = readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+  const SRC = teamTestSource();
   const grab = (start) => {
     const i = SRC.indexOf(start);
     assert.ok(i >= 0, start + ' introuvable');

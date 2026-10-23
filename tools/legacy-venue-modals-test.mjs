@@ -16,6 +16,7 @@
  * toute règle CSS .eq-*, .mi-* ou .pay-* que plus rien n'affiche.
  */
 import { fileURLToPath } from 'node:url';
+import teamTestSource from './team-test-source.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,7 +60,7 @@ check(/getStationState: \(s\) => miStationState\(s\)/.test(venues) && /getStatio
   'KiwiVenue still exports getStationState, getStations and getMenuItems');
 
 /* 3 · Équipe et Paie appartiennent à team.js seul. */
-const team = read('assets/team.js');
+const team = teamTestSource();
 check(/H\['nav-equipe'\] = \(\) => showPage\(\);/.test(team) && /window\.addEventListener\('load', \(\) => setTimeout\(installNavHandlers, 0\)\);/.test(team),
   'team.js installs nav-equipe and nav-payroll at load and again after every load listener');
 check(!/H\['nav-(?:equipe|payroll)'\]\s*=/.test(venues), 'venues.js no longer claims nav-equipe or nav-payroll, at start or on load');
@@ -183,7 +184,7 @@ const PFX = '(?:eq|mi|pay)-[a-z0-9][a-z0-9-]*';
 const listFiles = (dir, rx) => fs.readdirSync(path.join(root, dir)).filter((f) => rx.test(f)).map((f) => path.posix.join(dir, f));
 const stripStyles = (s) => s.replace(/<style[^>]*>[\s\S]*?<\/style>/g, ' ');
 const emitters = [...listFiles('assets', /\.js$/), ...listFiles('.', /\.html$/)]
-  .map((f) => (f.endsWith('.html') ? stripStyles(read(f)) : read(f))).join('\n');
+  .map((f) => (f === 'assets/team.js' ? team : f.endsWith('.html') ? stripStyles(read(f)) : read(f))).join('\n');
 const emitted = new Set(emitters.match(new RegExp(`(?<![a-z0-9-])${PFX}(?![a-z0-9-])`, 'g')) || []);
 const dynamic = [...emitters.matchAll(new RegExp(`(${PFX}-)\\$\\{`, 'g'))].map((m) => m[1]);
 const cssFiles = ['dashboard.html', ...listFiles('assets', /\.css$/)];
