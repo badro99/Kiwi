@@ -95,3 +95,5 @@
 .bk-manage-note{margin:18px 0 0;color:var(--n-500);font-size:12.5px;line-height:1.5}
 /* La date en cours de chargement : l'ancienne liste pâlit aussi quand elle était vide. */
 .bk-empty[data-stale]{opacity:.4;transition:opacity 160ms}
+
+#booking-app :focus-visible{outline:2px solid var(--atlas);outline-offset:-2px}

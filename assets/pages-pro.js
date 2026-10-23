@@ -2298,6 +2298,7 @@ function pdsPhoneBody(state, P, openSid) {
   return html + '</div></div>';
 }
 const PDS_PHONE_CSS = `
+.pdsp :focus-visible{outline:2px solid var(--atlas);outline-offset:-2px}
 .pdsp{display:flex;flex-direction:column;gap:12px;padding-bottom:8px}
 .pdsp-live{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--n-200)}
 .pdsp-live > .pds-live-badge{align-self:flex-start}
@@ -2385,10 +2386,12 @@ function pdsOpenPhoneAssign(state, v) {
     prevClose();
   };
   const paint = () => {
+    const restoreFocus = pdsRememberFocus(dr.el);
     const body = dr.el.querySelector('.kiwi-drawer-body');
     if (body) body.innerHTML = pdsPhoneBody(state, P, openSid);
     const sub = dr.el.querySelector('.kiwi-drawer-head p');
     if (sub) sub.textContent = `${v.name} · ${P.sub(state.tables.length, free())}`;
+    restoreFocus();
   };
   dr.el.addEventListener('click', (e) => {
     const head = e.target.closest('[data-pdsp-srv]');
@@ -3195,9 +3198,9 @@ function pdsRenderLayoutRail(state, T) {
       <div class="pds-pal-seats">
         <span>${pdsEsc(T.paletteSeats)}</span>
         <div class="pds-step">
-          <button class="pds-step-btn" data-pds-action="pal-seats" data-pds-delta="-1" aria-label="−">−</button>
+          <button class="pds-step-btn" data-pds-action="pal-seats" data-pds-delta="-1" aria-label="${pdsEsc(T.inspectorSeats)} −">−</button>
           <output class="pds-step-out" data-pds-pal-seats>${PDS_PAL_SEATS}</output>
-          <button class="pds-step-btn" data-pds-action="pal-seats" data-pds-delta="1" aria-label="+">+</button>
+          <button class="pds-step-btn" data-pds-action="pal-seats" data-pds-delta="1" aria-label="${pdsEsc(T.inspectorSeats)} +">+</button>
         </div>
       </div>
       <div class="pds-palette pds-palette-shapes">
@@ -3545,9 +3548,9 @@ function pdsRenderInspector(state, T, obj) {
         <div class="pds-form-row">
           <label>${T.inspectorSeats}</label>
           <div class="pds-step">
-            <button class="pds-step-btn" data-pds-action="seats-down" data-pds-id="${obj.id}" aria-label="−">−</button>
+            <button class="pds-step-btn" data-pds-action="seats-down" data-pds-id="${obj.id}" aria-label="${pdsEsc(T.inspectorSeats)} −">−</button>
             <input class="kf-input pds-input pds-step-val" type="number" min="0" max="24" data-pds-field="seats" value="${g.seats}"/>
-            <button class="pds-step-btn" data-pds-action="seats-up" data-pds-id="${obj.id}" aria-label="+">+</button>
+            <button class="pds-step-btn" data-pds-action="seats-up" data-pds-id="${obj.id}" aria-label="${pdsEsc(T.inspectorSeats)} +">+</button>
           </div>
         </div>
       ` : `
@@ -4449,6 +4452,15 @@ function pdsSetSubtitle(root, text) {
 }
 
 /* ═══ INTERACTIVITY ═════════════════════════════════════════════════ */
+/* Keep keyboard focus on the equivalent control when a panel is repainted. */
+function pdsRememberFocus(root) {
+  const el = document.activeElement;
+  if (!el || !root.contains(el)) return () => {};
+  const attrs = [...el.attributes].filter(a => /^(data-pds-|data-pdsp-|name$|type$)/.test(a.name) && !/wired|sig/.test(a.name));
+  const sel = el.tagName + attrs.map(a => `[${a.name}="${CSS.escape(a.value)}"]`).join('');
+  const i = [...root.querySelectorAll(sel)].indexOf(el);
+  return () => { if (!el.isConnected) root.querySelectorAll(sel)[i]?.focus(); };
+}
 function pdsAttach(root, state, T, dr) {
   /* La vue nuit est une classe sur la racine du tiroir : tout le squelette
      pds- en hérite, et la bascule ne re-rend que le corps. */
@@ -4456,6 +4468,7 @@ function pdsAttach(root, state, T, dr) {
   /* Re-renders body + foot in-place, then re-binds events. Used after
    * every state mutation. */
   const refresh = () => {
+    const restoreFocus = pdsRememberFocus(root);
     pdsExpireReservations(state);
     const body = root.querySelector('[data-pds-body]');
     /* A full re-render keeps the merchant where they were in the page and
@@ -4476,6 +4489,7 @@ function pdsAttach(root, state, T, dr) {
     if (insp && selection.size === 1) insp.innerHTML = pdsRenderInspector(state, T, pdsFind(state, [...selection][0]).o);
     else if (insp && selection.size > 1) insp.innerHTML = pdsRenderBulkInspector(state, T, [...selection]);
     bind();
+    restoreFocus();
     pdsMeasureChrome(root);
     try { pdsSave(state); } catch (_) {} /* auto-save every change per store — a design is never lost */
     pdsUndoPersist();
@@ -4495,6 +4509,17 @@ function pdsAttach(root, state, T, dr) {
 
   /* ── Event bindings ───────────────────────────────────────────── */
   const bind = () => {
+    root.querySelectorAll('input,select,textarea').forEach(el => {
+      if (el.getAttribute('aria-label') || [...(el.labels || [])].some(l => l.textContent.trim())) return;
+      const row = el.closest('.pds-form-row,.pds-room-row');
+      const label = row?.querySelector('label')?.textContent.trim() || el.closest('[title]')?.title;
+      if (label) el.setAttribute('aria-label', label);
+      if (el.type === 'color' && el.closest('.pds-sw-custom')) {
+        const sw = el.closest('.pds-sw-custom');
+        el.tabIndex = -1; sw.tabIndex = 0; sw.setAttribute('role', 'button'); sw.setAttribute('aria-label', label || T.customColor);
+        sw.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (el.showPicker) el.showPicker(); else el.click(); } };
+      }
+    });
     root.querySelectorAll('details[data-pds-fold]').forEach(d => {
       d.ontoggle = () => { PDS_FOLD[d.getAttribute('data-pds-fold')] = d.open; };
     });
@@ -4531,7 +4556,9 @@ function pdsAttach(root, state, T, dr) {
         ev.stopPropagation();
         const action = btn.getAttribute('data-pds-action');
         btn.closest('details[data-pds-more]')?.removeAttribute('open');
+        const returnId = action === 'deselect' ? [...selection][0] : null;
         pdsHandleAction(action, btn, state, T, root, dr, refresh, selection);
+        if (returnId) root.querySelector(`[data-pds-table="${CSS.escape(returnId)}"],[data-pds-el="${CSS.escape(returnId)}"]`)?.focus();
       };
     });
 
@@ -4893,12 +4920,14 @@ function pdsAttach(root, state, T, dr) {
 
   /* Open inspector for any object id — table or fixture. */
   const openInspector = (id, opts) => {
+    const restoreFocus = pdsRememberFocus(root);
     const f = pdsFind(state, id);
     const inspector = root.querySelector('[data-pds-inspector]');
     if (!inspector) return;
     if (!f) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
     inspector.innerHTML = pdsRenderInspector(state, T, f.o);
     bind();
+    restoreFocus();
     /* Sous 1100px l'inspecteur passe sous le plan : sélectionner un objet
        ouvrait alors un panneau qu'on ne voyait pas. 'nearest' ne bouge rien
        quand il est déjà à l'écran, donc la colonne large ne saute pas.
@@ -5034,16 +5063,40 @@ function pdsAttach(root, state, T, dr) {
        behind the overlay (the lock screen's PIN box) must not eat ⌘Z. */
     const typing = tgt && root.contains(tgt) && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName));
     const mod = ev.metaKey || ev.ctrlKey;
+    const cell = tgt?.closest('[data-pds-table],[data-pds-el]');
+    if (cell && root.contains(cell) && (ev.key === 'Enter' || ev.key === ' ')) {
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      const id = cell.getAttribute('data-pds-table') || cell.getAttribute('data-pds-el');
+      if (state._groupPickFrom && cell.hasAttribute('data-pds-table')) {
+        cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      } else if (ev.shiftKey) {
+        if (selection.has(id)) selection.delete(id); else selection.add(id);
+        refresh(); openBulkInspector();
+      } else { selection.clear(); selection.add(id); refresh(); openInspector(id); }
+
+      root.querySelector('[data-pds-inspector] button')?.focus();
+      return;
+    }
     if (ev.key === 'Escape') {
-      if (typing || selection.size === 0) return; /* let the drawer close itself */
+      if (selection.size === 0) return; /* let the drawer close itself */
+      const id = [...selection][0];
+      state._groupPickFrom = null;
       selection.clear();
       root.querySelectorAll('.is-selected').forEach(el => el.classList.remove('is-selected'));
       refresh();
-      ev.stopPropagation(); ev.stopImmediatePropagation();
+      root.querySelector(`[data-pds-table="${CSS.escape(id)}"],[data-pds-el="${CSS.escape(id)}"]`)?.focus();
+      ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
       return;
     }
     if (typing) return;
-    if (ev.code === 'Space' && state.mode !== 'rotate' && PDS_ZOOM) {
+    const tab = tgt?.closest('[data-pds-mode],[data-pds-zone]');
+    if (tab && ['ArrowLeft','ArrowRight','Home','End'].includes(ev.key)) {
+      const tabs = [...tab.parentElement.querySelectorAll(tab.hasAttribute('data-pds-mode') ? '[data-pds-mode]' : '[data-pds-zone]')];
+      const delta = (ev.key === 'ArrowRight' ? 1 : -1) * (trLang() === 'ar' ? -1 : 1);
+      const i = ev.key === 'Home' ? 0 : ev.key === 'End' ? tabs.length - 1 : (tabs.indexOf(tab) + delta + tabs.length) % tabs.length;
+      ev.preventDefault(); tabs[i]?.focus(); return;
+    }
+    if (ev.code === 'Space' && !tgt?.closest('button,summary,[role=button]') && state.mode !== 'rotate' && PDS_ZOOM) {
       root.classList.add('is-panning'); ev.preventDefault(); return;
     }
     if (mod && (ev.key === 'z' || ev.key === 'Z')) {
@@ -6951,6 +7004,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
 /* ═══ INLINE CSS · scoped to .pds-* ══════════════════════════════════ */
 const PDS_INLINE_CSS = `
+  .pds-host :focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
   .pds-kpis { margin-bottom: 14px; }
   .pds-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
   .pds-modes { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:11px; }
@@ -7161,7 +7215,7 @@ const PDS_INLINE_CSS = `
   }
   .pds-tbl-cell:hover { transform: translateY(-1px); filter: brightness(1.02); }
   .pds-tbl-cell:active { transform: translateY(0); }
-  .pds-tbl-cell:focus-visible { outline: 2px solid #1F5D3C; outline-offset: 3px; border-radius: 8px; }
+  .pds-tbl-cell:focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; border-radius: 8px; }
 
   .pds-tbl-chairs {
     position:absolute;

@@ -174,6 +174,8 @@ await (async () => {
     get innerHTML() { return html; }, set innerHTML(v) { html = String(v); },
     querySelectorAll: (sel) => (sel === '[data-closed-lang]' ? langButtons : []),
     querySelector: () => null,
+    addEventListener: () => {},  // a real element has both; the keyboard
+    contains: () => false,       // handlers and focus restore use them
   };
   const docEl = { lang: 'fr', dir: 'ltr' };
   const win = {
