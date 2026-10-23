@@ -32,7 +32,19 @@ D1 Edit on the account.
    npx wrangler d1 migrations list kiwi-sales --remote -c wrangler.d1.toml
    ```
 
-3. Apply them (wrangler shows the list and asks for confirmation first):
+3. Before you apply, stop writes from tills, integrations and staff. Keep writes
+   paused until validation finishes. Export a pre-upgrade backup outside the repo:
+
+   ```bash
+   mkdir -p "$HOME/kiwi-backups"
+   npx wrangler d1 export kiwi-sales --remote --output "$HOME/kiwi-backups/kiwi-sales-before-upgrade.sql" -c wrangler.d1.toml
+   ```
+
+   Use a new dated filename for each upgrade. Keep the dump private: it contains
+   merchant and authentication data. Record the migration list alongside it and
+   verify the dump by importing it into a fresh recovery database as below.
+
+4. Apply them (wrangler shows the list and asks for confirmation first):
 
    ```bash
    npx wrangler d1 migrations apply kiwi-sales --remote -c wrangler.d1.toml
@@ -40,7 +52,7 @@ D1 Edit on the account.
 
    `npm run db:status` and `npm run db:migrate` are the same two commands.
 
-4. Check again. `node tools/d1-schema.mjs` should exit 0.
+5. Check again. `node tools/d1-schema.mjs` should exit 0.
 
 Each migration file runs as one batch: if a statement fails, nothing from that
 file is applied, and wrangler stops before the next one.
@@ -63,10 +75,54 @@ Production has no `d1_migrations` table yet, so the first `apply` runs every fil
 the six columns can be created by running code before you apply:
 `push_tokens.lang`, by `functions/api/push/register.js`. If step 1 shows that a
 column listed in 0002 already exists in production, wrangler will stop on
-`duplicate column name` and apply nothing from 0002. In that case, and only
-because 0002 has never been applied anywhere: delete that one `ALTER` line from
-`0002_close_prod_gap.sql`, commit, and apply again. Never edit a migration that
-production has already recorded.
+`duplicate column name` and apply nothing from 0002. In that case, stop and have
+the owner reconcile the live schema and migration history. Files 0001 through 0010 are applied history and must not be
+edited, nor should a failed file be blindly marked as applied.
+
+## If it fails halfway
+
+These commands are for the owner. Agents never execute remote exports, imports or
+migrations. There is no transaction across files: earlier successful files and
+entries in `d1_migrations` remain committed. A statement failure rolls back the
+current file. Keep writes paused and save the error and migration list. Do not
+rerun individual SQL fragments on the damaged database.
+
+Restore the pre-upgrade SQL dump into a **fresh** database, never over the existing
+one:
+
+```bash
+npx wrangler d1 create kiwi-sales-recovery -c wrangler.d1.toml
+```
+
+Copy `wrangler.d1.toml` to a private recovery config, replace its database name and
+UUID with `kiwi-sales-recovery` and the UUID returned by create, and retain
+`migrations_dir = "migrations"`. Then:
+
+```bash
+npx wrangler d1 execute kiwi-sales-recovery --remote --file "$HOME/kiwi-backups/kiwi-sales-before-upgrade.sql" -c wrangler.d1.recovery.toml
+npx wrangler d1 migrations list kiwi-sales-recovery --remote -c wrangler.d1.recovery.toml
+npx wrangler d1 migrations apply kiwi-sales-recovery --remote -c wrangler.d1.recovery.toml
+npx wrangler d1 execute kiwi-sales-recovery --remote --command "PRAGMA foreign_key_check" -c wrangler.d1.recovery.toml
+```
+
+The dump includes `d1_migrations`; retain that history so only pending files run.
+Before applying, compare restored table counts and contents with the backup.
+After applying, verify schema, receipts, money totals, customers, staff and stock.
+The owner then switches the application's D1 binding to the recovered UUID and
+redeploys before reopening writes. Retain the old database for investigation.
+Writes accepted after the backup require reconciliation before cutover.
+
+`node tools/d1-restore-rehearsal-test.mjs` rehearses this locally with synthetic
+rows in every baseline table, SQL export/import, counts, SHA-256 hashes and exact
+row comparisons. It injects a failure inside 0002 and separately tests every
+statement prefix of every file, including loss of a success acknowledgement.
+Partial replay is **not safe** for `0002_close_prod_gap.sql`,
+`0007_auth_slug_reservation_session_revocations.sql`, `0008_ticket_client_key.sql`,
+`0009_client_tags.sql` and `0010_sales_written_by.sql`: their unguarded ALTERs
+raise duplicate-column errors. This prefix probe is a harsher interruption model,
+not a claim that D1 commits half a failed batch. Restore the backup rather than
+editing applied migrations. The rehearsal models SQLite transactions and dump
+syntax; it does not exercise Cloudflare's service or deployment cutover.
 
 ## Change the schema
 
@@ -106,7 +162,7 @@ destructive migration and needs the owner's go-ahead.
   NOT EXISTS` at request time (`functions/api/operations.js`,
   `functions/api/foodcost.js`, `functions/api/agent/_oauth.js`, …). When such a
   route runs before a migration, production gets the route's version of the
-  table and the migration's `IF NOT EXISTS` leaves it alone. Step 4 above
+  table and the migration's `IF NOT EXISTS` leaves it alone. Step 5 above
   (`node tools/d1-schema.mjs`) is how you notice.
 - **Production itself.** The test proves migrations equal `schema.sql`. Only
   `d1-schema.mjs` and `wrangler d1 migrations list --remote` look at production.
