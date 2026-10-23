@@ -95,7 +95,11 @@ check('a stalled acknowledgement times out, releases the sender and preserves th
 h.state.bodyHold=false; h.wake('online'); await drain(); assert.equal(h.window.KiwiLive.pending(),0);
 h = harness(); h.state.status=422; h.online(); h.wake('online'); await drain(); h.wake('online'); await drain();
 check('structurally invalid commands stay retained and blocked across reconnects', () => {
-  assert.equal(h.requests.length,1); assert.equal(h.window.KiwiLive.queueStatus().blocked,1);
+  // The sale itself is never resent; its copy is offered once to the owner's
+  // custody (/api/quarantine), which this fixture refuses, so it stays blocked here.
+  const sales = h.requests.filter(r => r.action !== 'upload' && r.action !== 'status');
+  assert.equal(sales.length,1); assert.equal(h.window.KiwiLive.queueStatus().blocked,1);
+  assert.equal(h.requests.filter(r => r.action === 'upload').length,1,'one custody upload, throttled across reconnects');
 });
 h = harness({online:true,fetchFailure:true}); await drain();
 check('a tablet Fetch failure falls back to XHR and drains the same durable receipt', () => {

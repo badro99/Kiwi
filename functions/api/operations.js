@@ -2502,6 +2502,7 @@ export async function onRequestPost({ request, env }) {
     const id = clean(body.commandId, 128), wanted = clean(body.transition, 32);
     const row = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?').bind(id, merchant).first();
     if (!row) return json({ error: 'not-found' }, 404);
+    if (row.domain === 'quarantine') return json({ error: 'owner-settlement-required' }, 403);
     /* Moving a command through its lifecycle costs the same permission as
        creating it.  A paired till may write its own device heartbeat, but it may
        not approve, cancel or complete a purchase order: state transitions are

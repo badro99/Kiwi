@@ -65,12 +65,17 @@ async function deliveryReceivables(env, now, where, binds) {
 export async function workspace(env, merchant = '') {
   const now = Date.now(), where = merchant ? ' AND merchant=?' : '', binds = merchant ? [merchant] : [];
   const definitions = {
+    quarantine:[`SELECT merchant,json_extract(payload,'$.operation.id') AS id,
+      json_extract(payload,'$.operation.kind') AS kind,json_extract(payload,'$.operation.amountCents') AS amount_cents,
+      json_extract(payload,'$.operation.method') AS method,json_extract(payload,'$.operation.ts') AS ts,
+      json_extract(payload,'$.reason') AS reason,status,last_error,updated_ts
+      FROM operational_commands WHERE domain='quarantine' AND status IN ('pending','approving')${where} ORDER BY created_ts ASC LIMIT 201`,binds],
     receivables: () => deliveryReceivables(env, now, where, binds),
     bridges:[`SELECT id,merchant,name,platform,version,last_seen_ts FROM print_bridges WHERE revoked_ts IS NULL${where} ORDER BY last_seen_ts DESC LIMIT 201`, binds],
     print:[`SELECT id,merchant,bridge_id,kind,status,created_ts,done_ts FROM print_jobs WHERE created_ts>=?${where} ORDER BY created_ts DESC LIMIT 201`, [now-86400000,...binds]],
     errors:[`SELECT id,merchant,message,file,version,count,first_seen_ts,last_seen_ts FROM client_errors WHERE last_seen_ts>=?${where} ORDER BY last_seen_ts DESC LIMIT 201`,[now-7*86400000,...binds]],
     support:[`SELECT id,merchant,reference,summary,priority,status,assignee,created_ts,updated_ts FROM support_tickets WHERE status NOT IN ('closed','resolved')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
-    integrations:[`SELECT id,merchant,status,attempt_count,domain,action,updated_ts FROM operational_commands WHERE status NOT IN ('succeeded','completed','cancelled')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
+    integrations:[`SELECT id,merchant,status,attempt_count,domain,action,updated_ts FROM operational_commands WHERE domain!='quarantine' AND status NOT IN ('succeeded','completed','cancelled')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     /* One row per till: its latest heartbeat of the last 14 days. Tills append
      * a heartbeat row every few minutes (≈650/day in 2026-09), so the latest
      * 500 rows were one or two devices repeated and quieter tills vanished. */

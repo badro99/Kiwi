@@ -23,6 +23,8 @@ const storeSubscriptionPending = async () => false;
 const startOfDay = () => 0;
 const settleServiceTable = async () => ({ ok: true });
 const poke = async () => {};
+// Owner custody of refused operations has its own suite (quarantine-settlement-test).
+const quarantineGuard = async () => ({ sql: '', args: [] });
 // This harness exercises legacy sale baskets without tender detail. The new
 // retail tender validator has its own end-to-end D1 test in check.js.
 const validateRetailTenders = () => null;

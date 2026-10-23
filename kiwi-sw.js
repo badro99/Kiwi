@@ -98,7 +98,7 @@ var SHELL = [
   '/assets/agent-features.js?v=5',
   '/assets/agent-truth.js?v=10',
   '/assets/agent-voice.js?v=10',
-  '/assets/i18n.js?v=33',
+  '/assets/i18n.js?v=34',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -157,7 +157,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=5',
   '/assets/sales-history.js?v=5',
-  '/assets/dateRange.js?v=97',
+  '/assets/dateRange.js?v=98',
   '/assets/mobile-nav.js?v=9',
   '/assets/kit/motion.js?v=1',
   '/assets/kit/lens.js?v=1',
@@ -181,15 +181,15 @@ var SHELL = [
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=5',
-  '/assets/caisse-pwa.js?v=619',
+  '/assets/caisse-pwa.js?v=620',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=10',
+  '/assets/offline-db.js?v=11',
   '/assets/platform-kernel.js?v=6',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=16',
-  '/assets/operations-ui.js?v=24',
-  '/assets/live-link.js?v=74',
+  '/assets/operations-ui.js?v=26',
+  '/assets/live-link.js?v=75',
   '/assets/channel-sales.js?v=5',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -210,7 +210,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=10',
+  '/assets/receipt.js?v=11',
   '/assets/receipt-ui.js?v=2',
   '/assets/invoice.js?v=20',
   '/assets/merchant-config.js?v=282',
@@ -232,7 +232,7 @@ var SHELL = [
      hors ligne, rien ne retiendrait le service d'origine au retour du réseau. */
   '/assets/till-tenant.js?v=3',
   '/assets/identity.js?v=12',
-  '/assets/caisse-link.js?v=20',
+  '/assets/caisse-link.js?v=21',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/serveur-lang.js?v=2',
@@ -255,7 +255,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=20',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=61',
+  '/assets/caisse-lang.js?v=62',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/menu-promos.js?v=4',
@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=162',
+  '/assets/pos-dispatch.js?v=163',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -406,11 +406,11 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=104',
-  '/assets/pos-boutique/sales.js?v=10',
-  '/assets/pos-boutique/checkout.js?v=10',
-  '/assets/pos-boutique/inventory.js?v=10',
-  '/assets/pos-boutique.js?v=104',
+  '/assets/pos-boutique.css?v=107',
+  '/assets/pos-boutique/sales.js?v=13',
+  '/assets/pos-boutique/checkout.js?v=13',
+  '/assets/pos-boutique/inventory.js?v=13',
+  '/assets/pos-boutique.js?v=107',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -442,12 +442,12 @@ var SHELL = [
   '/assets/pos-gym.js?v=9',
   '/assets/pos-autre.css?v=9',
   '/assets/pos-autre.js?v=9',
-  '/assets/pos-maison.css?v=92',
-  '/assets/pos-maison/sales.js?v=10',
-  '/assets/pos-maison/checkout.js?v=10',
+  '/assets/pos-maison.css?v=95',
+  '/assets/pos-maison/sales.js?v=13',
+  '/assets/pos-maison/checkout.js?v=13',
   '/assets/refund-split.js?v=2',
-  '/assets/pos-maison/inventory.js?v=10',
-  '/assets/pos-maison.js?v=92',
+  '/assets/pos-maison/inventory.js?v=13',
+  '/assets/pos-maison.js?v=95',
   '/assets/caisse-pairing.js?v=37',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste

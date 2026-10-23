@@ -794,6 +794,59 @@
   };
   function dict(l) { return DICT[l] || DICT.fr; }
 
+  /* Le bon d'avoir : ses propres mots, à part du dictionnaire du reçu. */
+  var VOUCHER = {
+    fr: { title: 'BON D\'AVOIR', issuedFor: 'Émis pour', left: 'solde restant', code: 'Code', client: 'Cliente', reason: 'Motif', origin: 'Vente d\'origine', issued: 'Émis le', until: 'Valable jusqu\'au', use: 'Utilisable en caisse, en une ou plusieurs fois.', noCash: 'Ni repris, ni remboursé en espèces.' },
+    en: { title: 'STORE CREDIT', issuedFor: 'Issued for', left: 'balance left', code: 'Code', client: 'Customer', reason: 'Reason', origin: 'Original sale', issued: 'Issued', until: 'Valid until', use: 'Use it at the till, in one or several purchases.', noCash: 'Not exchangeable or refundable for cash.' },
+    ar: { title: 'سند رصيد', issuedFor: 'صدر بمبلغ', left: 'الرصيد المتبقي', code: 'الرمز', client: 'الزبونة', reason: 'السبب', origin: 'البيع الأصلي', issued: 'تاريخ الإصدار', until: 'صالح حتى', use: 'يُستعمل في الصندوق، مرة واحدة أو عدة مرات.', noCash: 'لا يُسترجع ولا يُصرف نقداً.' },
+  };
+
+  /* Un bon d'avoir sort du même papier que le reçu : l'enseigne, le logo, les
+   * mentions légales, la largeur du rouleau et la langue réglés une fois dans
+   * Réglages → Reçu. Il passait par l'impression système et finissait en PDF.
+   *   v = { code, amount, balance, holderName, motif, from, at, until } */
+  function voucher(v, opts) {
+    v = v || {};
+    var doc = build({ ts: v.at || Date.now() }, opts);
+    var V = VOUCHER[doc.lang] || VOUCHER.fr;
+    // `until` is the instant the credit expires, at the business-day boundary:
+    // the last valid day is the business day just before it (like the till's
+    // fmtValidUntil, whose text the tills pass as untilText).
+    var lastDay = function (t) {
+      var d = '';
+      try { if (window.KiwiDayReport && window.KiwiDayReport.businessDay) d = String(window.KiwiDayReport.businessDay(t - 1)); } catch (_) {}
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+      return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : new Date(t - 5 * 3600000 - 1);
+    };
+    var at = new Date(v.at || Date.now()), until = v.until ? lastDay(+new Date(v.until)) : null;
+    var day = function (d) { return d && !isNaN(d.getTime()) ? pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() : ''; };
+    var balance = Math.abs(num(v.balance != null ? v.balance : v.amount));
+    var amount = Math.abs(num(v.amount != null ? v.amount : balance));
+    doc.kind = 'voucher';
+    doc.voucher = {
+      V: V, code: str(v.code, 40), balance: balance, amount: amount,
+      holder: str(v.holderName, 60), reason: str(v.motif, 80), origin: str(v.from, 40),
+      issued: day(at), until: v.untilText ? str(v.untilText, 40) : day(until),
+    };
+    return doc;
+  }
+  /* Comme le reçu de la boutique : d'abord la file d'impression durable (elle
+   * relance si l'imprimante est éteinte et sert l'iPad par le relais), sinon le
+   * thermique direct, l'impression système en dernier recours. */
+  var vouchersSent = {};
+  function printVoucher(v, opts) {
+    var doc = voucher(v, opts), key = 'avoir:' + doc.voucher.code;
+    var queue = window.KiwiKitchenPrint;
+    if (doc.voucher.code && queue && typeof queue.enqueueReceipt === 'function') {
+      try {
+        var queued = queue.enqueueReceipt(key, doc, vouchersSent[key] ? 'manual-reprint' : 'original');
+        vouchersSent[key] = 1;
+        if (queued && (queued.accepted || queued.pending)) return Promise.resolve({ ok: true, queued: true });
+      } catch (_) {}
+    }
+    return print(doc, opts);
+  }
+
   /* ═══════════════════ l'argent, écrit ═══════════════════ */
   function money(n, doc) {
     var v = num(n);
@@ -846,6 +899,29 @@
        ticket de vente. */
     if (doc.summary) b.feed(1).bold(true).size(1, 2).line(doc.summary.title).size(1, 1).bold(false);
     if (doc.copy) b.bold(true).line('·' + doc.copy + '·').bold(false);
+
+    if (doc.voucher) {
+      var vo = doc.voucher, V = vo.V;
+      b.feed(1).bold(true).size(2, 2).line(V.title).line(moneyMAD(vo.balance, doc)).size(1, 1).bold(false);
+      if (vo.balance !== vo.amount) b.line(V.issuedFor + ' ' + moneyMAD(vo.amount, doc) + ', ' + V.left);
+      b.align('left'); rule();
+      row(V.code, vo.code, true);
+      if (vo.holder) row(V.client, vo.holder);
+      if (vo.reason) row(V.reason, vo.reason);
+      if (vo.origin) row(V.origin, vo.origin);
+      if (vo.issued) row(V.issued, vo.issued);
+      if (vo.until) row(V.until, vo.until, true);
+      rule();
+      /* Le code lui-même, en Code 128 : le champ « Scanner ou saisir AV-… » de
+         l'encaissement le reçoit tel quel d'une douchette. */
+      if (vo.code) b.feed(1).barcode(vo.code, { format: 'code128', height: 64, module: doc.paper === '58' ? 1 : 2 });
+      b.align('center').feed(1);
+      wrapText(V.use, cols).forEach(function (l) { b.line(l); });
+      wrapText(V.noCash, cols).forEach(function (l) { b.line(l); });
+      b.feed(1).line(PLATFORM_CREDIT);
+      b.feed(2).cut();
+      return b.bytes();
+    }
 
     /* — quoi, quand, qui — */
     b.align('left'); rule();
@@ -1000,6 +1076,28 @@
     if (doc.acompte) P('kr-banner', doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) P('kr-banner', doc.summary.title);
     if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');
+
+    if (doc.voucher) {
+      var vh = doc.voucher, VH = vh.V;
+      P('kr-banner', VH.title);
+      P('kr-c kr-total', moneyMAD(vh.balance, doc));
+      if (vh.balance !== vh.amount) P('kr-c kr-sm', VH.issuedFor + ' ' + moneyMAD(vh.amount, doc) + ', ' + VH.left);
+      out.push('<div class="kr-rule"></div>');
+      Rh(VH.code, code(vh.code), 'kr-total');
+      if (vh.holder) R(VH.client, vh.holder);
+      if (vh.reason) R(VH.reason, vh.reason);
+      if (vh.origin) Rh(VH.origin, code(vh.origin));
+      if (vh.issued) Rh(VH.issued, code(vh.issued));
+      if (vh.until) Rh(VH.until, code(vh.until), 'kr-total');
+      out.push('<div class="kr-rule"></div>');
+      var KB = window.KiwiBarcode;
+      if (vh.code && KB && KB.svg) Ph('kr-c', KB.svg(vh.code, { format: 'code128', height: 48 }));
+      P('kr-c kr-sm', VH.use);
+      P('kr-c kr-sm', VH.noCash);
+      P('kr-c kr-xs kr-kiwi', PLATFORM_CREDIT);
+      out.push('</div>');
+      return out.join('');
+    }
 
     out.push('<div class="kr-rule"></div>');
     if (doc.meta.ref) Rh(T.no, code(doc.meta.ref));
@@ -1516,7 +1614,7 @@
     config: getConfig, saveConfig: setConfig, blankConfig: blankConfig,
     normalizeConfig: normalizeConfig, isConfigured: isConfigured,
     /* construire / rendre */
-    build: build, buildSummary: buildSummary,
+    build: build, buildSummary: buildSummary, voucher: voucher, printVoucher: printVoucher,
     html: html, escpos: escpos, text: text, print: print,
     ensureCSS: ensureCSS, sample: sample,
     /* figer / rouvrir */

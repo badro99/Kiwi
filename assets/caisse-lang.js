@@ -66,6 +66,14 @@
 
       "Mouvements": "Stock movements",
       // Cashier errors and confirmed loyalty redemption.
+      // Bon d'avoir imprimé sur la thermique (boutique, maison).
+      "Impression de l’avoir…": "Printing the store credit…",
+      "Avoir envoyé à l’imprimante": "Store credit sent to the printer",
+      "Avoir imprimé": "Store credit printed",
+      "Avoir ouvert dans l’impression système": "Store credit opened in system printing",
+      "Imprimante injoignable · avoir ouvert dans l’impression système": "Printer unreachable · store credit opened in system printing",
+      "Impression échouée": "Printing failed",
+      "Impression indisponible sur cet appareil": "Printing is not available on this device",
       "Confirmation en cours…": "Confirming…",
       "Récompense refusée": "Reward refused",
       "Récompense offerte": "Reward redeemed",
@@ -462,6 +470,14 @@
 
       "Mouvements": "حركات المخزون",
       // Cashier errors and confirmed loyalty redemption.
+      // Bon d'avoir imprimé sur la thermique (boutique, maison).
+      "Impression de l’avoir…": "جارٍ طباعة سند الرصيد…",
+      "Avoir envoyé à l’imprimante": "أُرسل سند الرصيد إلى الطابعة",
+      "Avoir imprimé": "طُبع سند الرصيد",
+      "Avoir ouvert dans l’impression système": "فُتح سند الرصيد في طباعة النظام",
+      "Imprimante injoignable · avoir ouvert dans l’impression système": "الطابعة غير متاحة · فُتح سند الرصيد في طباعة النظام",
+      "Impression échouée": "فشلت الطباعة",
+      "Impression indisponible sur cet appareil": "الطباعة غير متاحة على هذا الجهاز",
       "Confirmation en cours…": "جارٍ التأكيد…",
       "Récompense refusée": "تم رفض المكافأة",
       "Récompense offerte": "تم صرف المكافأة",

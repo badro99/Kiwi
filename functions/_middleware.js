@@ -518,7 +518,7 @@ async function routeRequest(context) {
    * et rejettent tout accès illégitime en 403. POST seulement — les lectures
    * d'audit (GET /api/sale/cancel) restent gardées derrière la session propriétaire. */
   if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel'
-    || path === '/api/pressing/cancel')) return next();
+    || path === '/api/pressing/cancel' || path === '/api/quarantine')) return next();
   // The till reports its device time zone; the handler accepts only a till
   // proven for that merchant (isTillFor) and writes nothing else.
   if (method === 'POST' && path === '/api/timezone') return next();

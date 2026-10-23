@@ -1,6 +1,6 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=92';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=10';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=10';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=95';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=13';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=13';
 import '../refund-split.js?v=2';
 
 
@@ -511,7 +511,7 @@ import '../refund-split.js?v=2';
       <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
       <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtValidUntil(av.until)}</span></div>
       <hr>
-      <div class="c">${barcode(av.code + '-MM', 26)}</div>
+      <div class="c">${window.KiwiBarcode && window.KiwiBarcode.svg ? window.KiwiBarcode.svg(av.code, { format: 'code128', height: 40, showText: false }) : barcode(av.code + '-MM', 26)}</div>
       <div class="mz-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
       <div class="c mut" style="margin-top:6px;">Utilisable en caisse, en une ou plusieurs fois.<br>Ni repris, ni remboursé en espèces.</div>
     </div>`;
@@ -535,13 +535,18 @@ import '../refund-split.js?v=2';
     icons();
     $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-avoir-veil'); });
     $('#mz-av-print', el).onclick = () => {
-      const P = window.KiwiOperationalPrint;
-      if (!P) { toast('Impression indisponible'); return; }
-      P.printText({ title:`Avoir ${av.code}`, paper:'80', lines:[
-        { label:'Cliente', value:av.holderName }, { label:'Montant', value:fmtMAD(av.amount || av.balance) },
-        { label:'Solde disponible', value:fmtMAD(av.balance) }, { label:'Motif', value:av.motif },
-        { label:'Valable jusqu’au', value:fmtValidUntil(av.until) },
-      ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+      /* Le même papier que le reçu (thermique, file durable), plus l'impression
+         système qui le transformait en PDF. Code-barres Code 128 scannable. */
+      const K = window.KiwiReceipt;
+      if (!K || !K.printVoucher) { toast('Impression indisponible sur cet appareil'); return; }
+      toast('Impression de l’avoir…');
+      K.printVoucher({ code: av.code, amount: av.amount, balance: av.balance, holderName: av.holderName,
+        motif: av.motif, from: av.from, at: av.at, until: av.until, untilText: fmtValidUntil(av.until) }).then(
+        (r) => toast(!r || !r.ok ? 'Impression échouée'
+          : r.queued ? 'Avoir envoyé à l’imprimante'
+          : r.thermalFailed ? 'Imprimante injoignable · avoir ouvert dans l’impression système'
+          : r.via === 'pdf' || r.via === 'browser' ? 'Avoir ouvert dans l’impression système' : 'Avoir imprimé'),
+        () => toast('Impression échouée'));
     };
   }
 

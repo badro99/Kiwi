@@ -2771,9 +2771,11 @@
       const empty = { fr: 'Vos heures creuses apparaîtront ici dès vos premières ventes.', en: 'Your quiet hours will appear here once you record sales.', ar: 'ستظهر ساعاتك الهادئة هنا بمجرد تسجيل مبيعاتك.' };
       if (titleEl) titleEl.textContent = '';
       if (obsEl)   obsEl.textContent = empty[getLang()] || empty.fr;
-      if (ctaEl)   ctaEl.textContent = '';
+      // An empty link has no name for a screen reader: hide it with its text.
+      if (ctaEl)   { ctaEl.textContent = ''; ctaEl.hidden = true; ctaEl.style.display = 'none'; }
       return;
     }
+    if (ctaEl)   { ctaEl.hidden = false; ctaEl.style.display = ''; }
     if (titleEl) titleEl.textContent = rec.title;
     if (obsEl)   obsEl.textContent = rec.obs;
     if (ctaEl)   ctaEl.textContent = rec.cta;

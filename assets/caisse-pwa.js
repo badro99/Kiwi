@@ -208,9 +208,9 @@
       tone = '#9F3028';
       label = held + (held > 1 ? ' ventes non envoyées' : ' vente non envoyée');
       detail = (held > 1 ? 'Enregistrées sur cette caisse' : 'Enregistrée sur cette caisse') + ' · ne pas encaisser à nouveau';
-    } else if (q.storageError || cashJournal.storageError || q.blocked) {
+    } else if (q.storageError || cashJournal.storageError) {
       tone = '#9F3028';
-      label = q.storageError || cashJournal.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
+      label = 'Protection locale à vérifier';
       detail = 'À vérifier avec le support · rien n’est supprimé';
     } else if (cashJournal.repairRequired) {
       tone = '#9F3028';
@@ -266,6 +266,13 @@
       tone = '#A56A16';
       label = 'Journal caisse · synchronisation en attente';
       detail = cashJournal.pendingCount + ' événement(s) conservé(s) · reprise automatique';
+    } else if (q.blocked) {
+      var lang = 'fr';
+      try { lang = localStorage.getItem('kiwiCaisseLang') || 'fr'; } catch (_) {}
+      var pendingCopy = {"fr": ["Transmission des opérations conservées", "En attente d’envoi au propriétaire · copie locale conservée"], "en": ["Uploading preserved operations", "Waiting to send to the owner · local copy preserved"], "ar": ["إرسال العمليات المحفوظة", "في انتظار الإرسال إلى المالك · النسخة المحلية محفوظة"]};
+      tone = 'var(--atlas)';
+      label = (pendingCopy[lang] || pendingCopy.fr)[0] + ' · ' + q.blocked;
+      detail = (pendingCopy[lang] || pendingCopy.fr)[1];
     } else {
       tone = '#287B55';
       label = 'Synchronisé';
@@ -275,7 +282,7 @@
     if (dot && txt) {
       /* Nominal : le pied reste calme — pastille verte, libellé discret. Les
          trois états anormaux réclament une action, donc la ligne se peint. */
-      var nominal = tone === '#287B55';
+      var nominal = tone === '#287B55' || tone === 'var(--atlas)';
       dot.style.background = tone;
       d.style.background = nominal ? 'transparent' : tone;
       d.style.borderColor = nominal ? 'transparent' : 'rgba(255,255,255,.14)';
@@ -322,7 +329,7 @@
         var dialog = document.createElement('dialog');
         dialog.style.cssText = 'max-width:min(620px,90vw);max-height:80vh;overflow:auto;border:1px solid #9F3028;border-radius:16px;padding:24px';
         var title = document.createElement('h2');
-        title.textContent = qNow.blocked + ' reçu(s) payé(s) non enregistré(s) · contacter le support';
+        title.textContent = qNow.blocked + ' opération(s) à transmettre au propriétaire';
         dialog.appendChild(title);
         (qNow.blockedEntries || []).forEach(function (b) {
           var line = document.createElement('p');

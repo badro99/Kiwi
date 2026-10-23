@@ -2267,3 +2267,105 @@
   }
   boot();
 })();
+
+/* Owner review is independent of date filters: old refusals must stay visible. */
+(function () {
+  'use strict';
+  var host, entries = [], tenant = '', loading = false, busy = false, painted = '';
+  function text(key) {
+    var i = window.KiwiI18n, lang = i && i.getLang() || 'fr';
+    return i && ((i.T[lang] || {})['quarantine.' + key] || (i.T.fr || {})['quarantine.' + key]) || key;
+  }
+  function el(tag, content) { var node = document.createElement(tag); if (content) node.textContent = content; return node; }
+  function message(reason) {
+    if (reason === 'manager-required') return text('manager');
+    if (reason === 'refund-exceeds-sale') return text('cap');
+    if (reason === 'sale-not-found') return text('missing');
+    if (/conflict/.test(reason || '')) return text('conflict');
+    return text('unknown');
+  }
+  function button(label, fn) {
+    var b = el('button', label); b.type = 'button'; b.className = 'kb ghost';
+    b.style.cssText = 'white-space:normal;min-height:44px';
+    b.addEventListener('click', fn); return b;
+  }
+  function mount() {
+    if (host) return true;
+    var main = document.querySelector('#kw-main'); if (!main) return false;
+    host = el('section'); host.className = 'block is-in'; host.setAttribute('aria-labelledby', 'quarantine-title');
+    host.style.cssText = 'margin:16px 0;padding:20px;border:1px solid var(--atlas);border-radius:16px;background:var(--paper);color:var(--ink);min-width:0';
+    host.hidden = true;
+    var top = main.querySelector('.topbar');
+    if (top) top.after(host); else main.prepend(host);
+    return true;
+  }
+  function render(error) {
+    if (!mount()) return;
+    var signature = JSON.stringify([tenant, document.documentElement.lang, entries, !!error]);
+    if (signature === painted) return;
+    painted = signature;
+    host.replaceChildren(); host.hidden = !entries.length && !error;
+    if (host.hidden) return;
+    var title = el('h2', text('title')); title.id = 'quarantine-title'; host.append(title, el('p', text('intro')));
+    if (error) { var alert = el('p', text('unavailable')); alert.setAttribute('role', 'status'); host.append(alert); }
+    host.append(button(text('refresh'), load));
+    var list = el('ul'); list.style.cssText = 'list-style:none;padding:0;margin:12px 0;display:grid;gap:16px';
+    entries.forEach(function (row) {
+      var item = el('li'); item.style.cssText = 'padding-block:12px;border-block-start:1px solid var(--atlas);overflow-wrap:anywhere';
+      var lang = document.documentElement.lang || 'fr';
+      var amount = new Intl.NumberFormat(lang, {style:'currency',currency:'MAD'}).format(row.amountCents / 100);
+      var date = Number(row.ts) > 0 ? new Date(Number(row.ts)).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' }) : '';
+      var title = el('strong', text(row.kind) + ' · ' + amount); title.dir = 'auto'; title.style.cssText = 'display:block;font-size:15px';
+      var receipt = el('small', text('receipt') + ' · ' + row.ref + (row.originalSaleId ? ' · ' + text('original') + ' · ' + row.originalSaleId : ''));
+      receipt.dir = 'auto'; receipt.style.cssText = 'display:block;margin-top:2px;color:var(--n-600,#55524C)';
+      item.append(title, receipt, el('p', date + ' · ' + text(/^(cash|card|transfer|cheque|credit)$/.test(row.method) ? row.method : 'other')),
+        el('p', message(row.reason)));
+      if (row.lastError) item.append(el('p', message(row.lastError)));
+      if (row.status === 'approving' && !row.lastError) item.append(el('p', text('processing')));
+      item.querySelectorAll('p').forEach(function (p) { p.style.margin = '6px 0'; });
+      var actions = el('div'); actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px';
+      actions.append(button(text(row.status === 'approving' ? 'retry' : 'approve'), function () { decide(row, 'approve'); }));
+      var decline = button(text('decline'), function () { decide(row, 'decline'); });
+      decline.disabled = row.status === 'approving' && !row.lastError; actions.append(decline); item.append(actions); list.append(item);
+    });
+    host.append(list);
+  }
+  async function decide(row, action) {
+    if (busy || !window.confirm(text(action === 'decline' ? 'declineConfirm' : row.kind === 'refund' ? 'approveRefund' : 'approveSale'))) return;
+    busy = true;
+    host.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    var selected = tenant;
+    try {
+      var response = await fetch('/api/quarantine', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({merchant:selected,id:row.id,action:action})});
+      var data = await response.json();
+      if (selected !== window.KiwiPlatform.tenant()) return;
+      if (!response.ok || !data.ok) window.alert(text('error') + ' ' + message(data.error));
+    } catch (_) { window.alert(text('error')); }
+    finally { busy = false; painted = ''; await load(); }
+  }
+  async function load() {
+    var K = window.KiwiPlatform;
+    if (!K || loading || busy || !mount()) return;
+    var selected = K.tenant();
+    if (!selected || window.KiwiEnv && !window.KiwiEnv.isReal()) { entries=[]; render(); return; }
+    if (selected !== tenant) { tenant=selected; entries=[]; render(); }
+    loading=true;
+    try {
+      var response=await fetch('/api/quarantine?merchant='+encodeURIComponent(selected),{credentials:'same-origin',cache:'no-store'});
+      if (selected !== K.tenant()) return;
+      if (response.status === 403) { entries=[]; render(); return; }
+      var data=await response.json();
+      if (!response.ok || !data.ok || data.merchant !== selected) throw new Error('unavailable');
+      entries=data.entries.filter(function (r) { return ['pending','approving'].includes(r.status); }); render();
+    } catch (_) {
+      // Unreachable server with nothing known: stay quiet, as every other card
+      // does offline. Known operations stay listed, with the notice.
+      if (selected === K.tenant() && entries.length) render(true);
+    }
+    finally { loading=false; }
+  }
+  window.addEventListener('kiwi:langchange', function () { render(); });
+  window.addEventListener('online', load);
+  setTimeout(load, 1800); setInterval(load, 30000);
+})();

@@ -10,6 +10,7 @@
 import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification, readEmployee } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
+import { quarantineGuard } from './_quarantine-guard.js';
 import { poke } from './_live.js';
 import { settleCoveredOrders } from './_visit-cover.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
@@ -130,7 +131,7 @@ function json(obj, status) {
   });
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, quarantineSettlement = '' }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
 
   let b;
@@ -426,6 +427,8 @@ export async function onRequestPost({ request, env }) {
   const suppliedId = String((b && b.id) || '').slice(0, 64);
   const requestedId = splitIds.length ? legacySplit : (suppliedId || legacyBase || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
   const isLegacyVisitId = requestedId === legacyBase || requestedId === legacySplit;
+  const custody = await quarantineGuard(env, merchant, suppliedId || requestedId, quarantineSettlement);
+  if (custody.response) return custody.response;
   let id = requestedId;
   if (isLegacyVisitId) {
     // Deployed tills already have visit-keyed debts. Never mutate their queued

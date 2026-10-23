@@ -112,7 +112,7 @@ try{
  const detail=await till.$eval('dialog',n=>n.textContent);
  assert.match(detail,/57.00 MAD · card/);checks++;
  assert.match(detail,/sale-conflict/);checks++;
- assert.match(detail,/contacter le support/);checks++;
+ assert.match(detail,/transmettre au propriétaire/);checks++;
  assert.equal(await till.evaluate(()=>window.__flushes),0,'opening debt details must not resend money');checks++;
  if(process.env.KIWI_TEST_SCREENSHOT) await till.screenshot({path:process.env.KIWI_TEST_SCREENSHOT.replace('.png','-till.png')});
  await till.click('dialog button');await till.waitForFunction(()=>!document.querySelector('dialog'));assert.equal(await till.$('dialog'),null);checks++;

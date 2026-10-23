@@ -6,6 +6,7 @@ import {
   entitledMerchant, employeeRoleOpensDashboard, readManagerRefundProof, json,
 } from '../../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from '../_private.js';
+import { quarantineGuard } from '../_quarantine-guard.js';
 import { poke } from '../_live.js';
 import { ensureCreditEvents } from '../_store-credit-ledger.js';
 /* La règle du partage argent / avoirs vit dans un seul fichier, que la caisse
@@ -29,7 +30,7 @@ function cleanLines(raw) {
   } catch (_) { return []; }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, quarantineSettlement = '' }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
 
   let body;
@@ -51,6 +52,9 @@ export async function onRequestPost({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   if (await storeSuspended(env, merchant)) return json({ error: 'store-suspended', merchant }, 423);
   if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required', merchant }, 402);
+
+  const custody = await quarantineGuard(env, merchant, refundId, quarantineSettlement);
+  if (custody.response) return custody.response;
 
   /* The browser cannot assert that a manager approved a refund. /api/pin/verify
      signs a ten-minute capability bound to this exact command; the PIN itself
@@ -188,10 +192,10 @@ export async function onRequestPost({ request, env }) {
           ), 0) AND (? = 1 OR ? = COALESCE((SELECT SUM(amount_cents) FROM sale_audit
              WHERE merchant = ? AND sale_id = ? AND action = 'refund'), 0)) AND EXISTS (
             SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL
-          )`
+          )${custody.sql}`
       ).bind(refundId, merchant, storedAmount, -moneyOut, refundMethod,
              label, refundRef, ts, JSON.stringify(actual.filter(p => p.method !== 'credit')), merchant, refundId, amountCents, originalCents, merchant, originalSaleId,
-             merchant, originalSaleId, !creditCents ? 1 : 0, returned, merchant, originalSaleId, merchant, originalSaleId),
+             merchant, originalSaleId, !creditCents ? 1 : 0, returned, merchant, originalSaleId, merchant, originalSaleId, ...custody.args),
       env.DB.prepare(
         `INSERT INTO sale_audit
            (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents,

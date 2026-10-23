@@ -268,6 +268,28 @@
       return false;
     }
   }
+  function quarantineRows() {
+    var active = merchant(), O = window.KiwiOffline;
+    var legacy = qRead().filter(function (r) { return r && r.merchant === active && r._blocked; });
+    var read = O && O.available() && O.list ? O.list(OUTBOX_CHANNEL, active) : Promise.resolve([]);
+    return read.then(function (rows) {
+      return legacy.concat(rows.filter(function (r) { return r.state === 'blocked'; }).map(function (r) {
+        return Object.assign({}, r.payload, { _error: r.lastError, _status: r.lastStatus });
+      }));
+    });
+  }
+  function quarantineUpdate(id, tenant, settled) {
+    var O = window.KiwiOffline;
+    var update = O && O.available() && O.quarantineState
+      ? O.quarantineState(OUTBOX_CHANNEL, tenant, id, settled) : Promise.resolve(false);
+    return update.then(function () {
+      var rows = qRead();
+      if (settled) rows = rows.filter(function (r) { return !(r.id === id && r.merchant === tenant && r._blocked); });
+      else rows.forEach(function (r) { if (r.id === id && r.merchant === tenant && r._blocked) r._serverHeld = true; });
+      qWrite(rows);
+      return refreshOutboxStatus();
+    });
+  }
   function blockedDetails(rows) {
     return rows.filter(function (r) { return r && r._blocked; }).map(function (r) {
       return { id: r.id, amountCents: Number(r.amountCents) || Math.round(Number(r.amount)*100) || 0,
@@ -283,12 +305,13 @@
       var fallback = qRead();
       var activeTenant = merchant();
       var localDebt = fallback.filter(function (row) { return row && row.merchant === activeTenant; });
-      var localBlocked = localDebt.filter(function (row) { return row._blocked; }).length;
+      var localBlocked = localDebt.filter(function (row) { return row._blocked && !row._serverHeld; }).length;
       var oldest = Math.min(outboxStatus.oldestPendingAt || Infinity,
         localDebt.reduce(function (at, row) { return Math.min(at, Number(row.ts) || Infinity); }, Infinity));
       return {
         blockedEntries: (outboxStatus.blockedEntries || []).concat(blockedDetails(localDebt)),
-        pending: (outboxStatus.pending || 0) + localDebt.length - localBlocked,
+        pending: (outboxStatus.pending || 0) + localDebt.filter(function (row) { return !row._blocked; }).length,
+        held: (outboxStatus.held || 0) + localDebt.filter(function (row) { return row._blocked && row._serverHeld; }).length,
         blocked: (outboxStatus.blocked || 0) + localBlocked,
         sending: outboxStatus.sending,
         foreign: fallback.length - localDebt.length,
@@ -308,7 +331,8 @@
     return {
       blockedEntries: blockedDetails(current),
       pending: current.filter(function (r) { return !r._blocked; }).length,
-      blocked: current.filter(function (x) { return x && x._blocked; }).length,
+      blocked: current.filter(function (x) { return x && x._blocked && !x._serverHeld; }).length,
+      held: current.filter(function (x) { return x && x._blocked && x._serverHeld; }).length,
       foreign: q.length - current.length,
       total: current.length,
       storageError: !!queueStorageError,
@@ -696,6 +720,13 @@
   }
 
   function flushQueue(force) {
+    var sent = flushQueueNow(force);
+    // Refused operations go to the owner's custody after each send attempt.
+    var hand = function () { if (window.KiwiQuarantine) window.KiwiQuarantine.kick(); };
+    if (sent && typeof sent.then === 'function') sent.then(hand, hand); else hand();
+    return sent;
+  }
+  function flushQueueNow(force) {
     if (force === true && !flushing) {
       authRetryAt = 0;
       const pending = qRead();
@@ -1935,6 +1966,9 @@
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, retrySale: retrySale, retryBlockedSales: retryBlockedSales,
     pending: function () { return queueStatus().total; },
+    quarantineRows: quarantineRows,
+    quarantineHeld: function (id, tenant) { return quarantineUpdate(id, tenant, false); },
+    quarantineSettled: function (id, tenant) { return quarantineUpdate(id, tenant, true); },
     queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
        enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */
@@ -1968,4 +2002,53 @@
     },
   };
   window.KiwiLiveLink = window.KiwiLive;
+})();
+
+/* Transfer custody without discarding an unresolved money operation. */
+(function () {
+  'use strict';
+  var running = null;
+  function clean(value) {
+    if (Array.isArray(value)) return value.map(clean);
+    if (!value || typeof value !== 'object') return value;
+    var out = Object.create(null);
+    Object.keys(value).forEach(function (key) {
+      if (!key.startsWith('_') && !/approval|password|pin|token|secret|credential|pairing|staffcode/i.test(key)) out[key] = clean(value[key]);
+    });
+    return out;
+  }
+  function sync() {
+    if (running) return running;
+    var live = window.KiwiLive;
+    if (!live || !live.quarantineRows) return Promise.resolve();
+    running = live.quarantineRows().then(async function (rows) {
+      for (var row of rows) {
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
+        try {
+          var body = row._serverHeld ? { action: 'status', merchant: row.merchant, id: row.id }
+            : { action: 'upload', merchant: row.merchant, payload: clean(row), reason: row._error };
+          var response = await fetch('/api/quarantine', { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller ? controller.signal : undefined });
+          if (!response.ok) continue;
+          var data = await response.json();
+          if (!data.ok || data.id !== row.id) continue;
+          if (['approved', 'declined'].includes(data.status)) await live.quarantineSettled(row.id, row.merchant);
+          else if (['pending', 'approving'].includes(data.status)) await live.quarantineHeld(row.id, row.merchant);
+        } catch (_) { /* Local custody remains intact until a verified response. */ }
+        finally { if (timer != null) clearTimeout(timer); }
+      }
+    }).catch(function () {}).finally(function () { running = null; });
+    return running;
+  }
+  // No timers of its own: the till's send cycle (boot, reconnect, every feed
+  // poll) calls kick(), which syncs at most every 30 s.
+  var lastKick = 0;
+  function kick() {
+    var now = Date.now();
+    if (running || now - lastKick < 30000) return;
+    lastKick = now;
+    sync();
+  }
+  window.KiwiQuarantine = { sync: sync, kick: kick };
 })();

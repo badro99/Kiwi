@@ -273,12 +273,31 @@
     });
   }
 
+  // Only a scoped blocked row can be marked as held or retired by settlement.
+  function quarantineState(channel, tenant, id, settled) {
+    return ready().then(function (ok) {
+      if (!ok) return false;
+      return db.transaction('rw', db.outbox, function () {
+        return db.outbox.get(id).then(function (row) {
+          if (!row || row.channel !== channel || row.tenant !== tenant || row.state !== 'blocked') return false;
+          if (settled) return db.outbox.delete(id).then(function () { return true; });
+          row.payload._serverHeld = true;
+          return db.outbox.put(row).then(function () { return true; });
+        });
+      });
+    }).then(function (changed) {
+      if (changed) signal({ type: 'quarantine', tenant: tenant, channel: channel, id: id });
+      return changed;
+    });
+  }
+
   function stats(channel, tenant) {
     return list(channel, tenant).then(function (rows) {
       return rows.reduce(function (out, row) {
         out.total++;
         if (row.state === 'blocked') {
-          out.blocked++;
+          if (!(row.payload || {})._serverHeld) out.blocked++;
+          else out.held++;
           var p = row.payload || {};
           out.blockedEntries.push({ id: row.id, amountCents: Number(p.amountCents) || Math.round(Number(p.amount) * 100) || 0,
             method: String(p.method || ''), ts: Number(p.ts) || row.createdAt,
@@ -291,9 +310,9 @@
         if ((+row.lastAttemptAt || 0) > out.lastAttemptAt) out.lastAttemptAt = +row.lastAttemptAt;
         if (!out.oldestPendingAt || (+row.createdAt || 0) < out.oldestPendingAt) out.oldestPendingAt = +row.createdAt || 0;
         return out;
-      }, { blockedEntries: [], pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 });
+      }, { blockedEntries: [], pending: 0, blocked: 0, held: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 });
     }).catch(function () {
-      return { blockedEntries: [], pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 };
+      return { blockedEntries: [], pending: 0, blocked: 0, held: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 };
     });
   }
 
@@ -385,6 +404,7 @@
     reactivate: reactivate,
     list: list,
     stats: stats,
+    quarantineState: quarantineState,
     migrateLegacy: migrateLegacy,
     getMeta: getMeta,
     putMeta: putMeta,
