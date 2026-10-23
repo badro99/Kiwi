@@ -91,7 +91,7 @@ console.log('2 · le coffre');
 const vaultSrc = read('assets/dashboard-pin-vault.js');
 const store = new Map();
 let now = Date.UTC(2026, 9, 13, 10, 0, 0);
-function load(preset = {}) {
+function load(preset = {}, cryptoImpl = webcrypto) {
   store.clear();
   for (const [k, v] of Object.entries(preset)) store.set(k, v);
   const localStorage = {
@@ -100,7 +100,7 @@ function load(preset = {}) {
     removeItem: (k) => { store.delete(k); },
   };
   const FakeDate = class extends Date { static now() { return now; } };
-  const sandbox = { localStorage, crypto: webcrypto, TextEncoder, Date: FakeDate, Promise, JSON, Array, Object, String, Number, Uint8Array };
+  const sandbox = { localStorage, crypto: cryptoImpl, TextEncoder, Date: FakeDate, Promise, JSON, Array, Object, String, Number, Uint8Array };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(vaultSrc, sandbox);
@@ -122,7 +122,7 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   ok([...store.keys()].filter((k) => /dashboard/.test(k)).every((k) => k.startsWith('kiwi:')), 'la clé est sous kiwi: (la purge de locataire l\'emporte)');
   ok(scopeKey(v).endsWith(encodeURIComponent('owner@example.com')), 'la clé nomme le compte, en minuscules');
   const row = JSON.parse(store.get(scopeKey(v)))[0];
-  ok(/^[0-9a-f]{64}$/.test(row.digest) && /^[0-9a-f]{32}$/.test(row.salt), 'une ligne = sel de 16 octets + SHA-256');
+  ok(/^[0-9a-f]{64}$/.test(row.digest) && /^[0-9a-f]{32}$/.test(row.salt), 'une ligne = sel de 16 octets + condensat de 32 octets');
   ok(row.expiresAt - now === 7 * 24 * 3600 * 1000, 'valable 7 jours depuis la preuve');
   ok(v.count() === 1, 'count() lit sans rien hacher');
   const who = await v.verify(CODE);
@@ -215,6 +215,50 @@ const allStored = () => [...store.entries()].map(([k, v]) => `${k}=${v}`).join('
   vm.createContext(sandbox);
   vm.runInContext(vaultSrc, sandbox);
   ok(await sandbox.window.KiwiDashPinVault.remember(CODE, OWNER) === false, 'sans SubtleCrypto, remember n\'écrit rien (jamais le code à la place)');
+}
+
+{
+  /* PBKDF2 : un million de tours, un sel par compte, une dérivation par essai,
+     et l'ancienne ligne SHA-256 qui ouvre encore puis se réécrit sans repousser
+     son échéance. */
+  let n = 0;
+  const counting = {
+    getRandomValues: (a) => webcrypto.getRandomValues(a),
+    subtle: {
+      digest: (...a) => webcrypto.subtle.digest(...a), importKey: (...a) => webcrypto.subtle.importKey(...a),
+      deriveBits: (...a) => { n++; return webcrypto.subtle.deriveBits(...a); },
+    },
+  };
+  const v = load({ kiwiAccountKey: 'kdf@x.com' }, counting);
+  for (const [c, id] of [['1111', 'a'], ['2222', 'b'], ['3333', 'c']]) await v.remember(c, { id, name: id, role: 'manager' });
+  let rows = JSON.parse(store.get(scopeKey(v)));
+  ok(rows.length === 3 && rows.every((r) => r.it >= 1000000), 'chaque ligne neuve est PBKDF2-SHA-256 à un million de tours au moins');
+  ok(new Set(rows.map((r) => r.salt)).size === 1, 'un seul sel par compte');
+  const key = await webcrypto.subtle.importKey('raw', new TextEncoder().encode('dashboard:kdf@x.com:1111'), 'PBKDF2', false, ['deriveBits']);
+  const want = Buffer.from(await webcrypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(rows[0].salt, 'hex'), iterations: rows[0].it }, key, 256)).toString('hex');
+  ok(rows.find((r) => r.staff.id === 'a').digest === want, 'le condensat est bien PBKDF2(dashboard:compte:code, sel, tours)');
+  n = 0;
+  ok((await v.verify('3333')).id === 'c' && n === 1, 'trois lignes, une seule dérivation par essai');
+  const salt = Buffer.from(webcrypto.getRandomValues(new Uint8Array(16))).toString('hex');
+  const old = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode('dashboard:kdf@x.com:' + salt + ':4444'))).toString('hex');
+  const exp = now + 3 * 24 * 3600 * 1000;
+  store.set(scopeKey(v), JSON.stringify([{ salt, digest: old, expiresAt: exp, staff: { id: 'd', name: 'd', role: 'manager' } }]));
+  ok(await v.verify('4445') === null && JSON.parse(store.get(scopeKey(v)))[0].digest === old, 'un mauvais code ne migre rien');
+  ok((await v.verify('4444')).id === 'd', 'une ancienne ligne SHA-256 ouvre encore');
+  for (let i = 0; i < 100 && !JSON.parse(store.get(scopeKey(v)))[0].it; i++) await new Promise((r) => setTimeout(r, 25));
+  rows = JSON.parse(store.get(scopeKey(v)));
+  ok(rows.length === 1 && rows[0].it >= 1000000 && rows[0].expiresAt === exp, 'puis se réécrit en PBKDF2, sans repousser son échéance');
+  const t0 = performance.now();
+  for (let i = 0; i < 10; i++) await webcrypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(rows[0].salt, 'hex'), iterations: rows[0].it }, key, 256);
+  const minutes = (performance.now() - t0) / 10 * 10000 / 60000;
+  console.log(`    (dix mille essais sur un stockage copié : ${minutes.toFixed(1)} min sur cette machine)`);
+  ok(minutes > 10, 'énumérer les dix mille codes d\'un stockage copié prend plus de dix minutes ici');
+  /* Le compte change pendant le calcul : rien ne s'écrit pour l'ancien. */
+  const w = load({ kiwiAccountKey: 'first@x.com' }, counting);
+  const firstKey = scopeKey(w);
+  const pending = w.remember('5555', { id: 'e', name: 'e', role: 'owner' });
+  store.set('kiwiAccountKey', 'second@x.com');
+  ok(await pending === false && !store.has(firstKey), 'un compte changé pendant le calcul : aucune ligne pour l\'ancien');
 }
 
 /* ── 3 · la porte : l'ordre des juges ───────────────────────────────────── */

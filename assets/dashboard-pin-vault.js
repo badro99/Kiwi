@@ -106,11 +106,29 @@
   function hex(bytes) {
     return Array.prototype.map.call(new Uint8Array(bytes), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
   }
-  function digestOf(sc, salt, code) {
+  /* Une ligne v2 porte `it` : PBKDF2-SHA-256, un million de tours, le sel en
+     octets (la même règle que la caisse, assets/caisse-pairing.js). Énumérer
+     les dix mille codes d'un stockage copié prend alors des minutes, plus des
+     millisecondes. Toutes les lignes d'un compte partagent un sel : vérifier
+     un code coûte UNE dérivation, quel que soit le nombre de lignes. Une ligne
+     sans `it` est l'ancien SHA-256 salé : elle ouvre encore, puis se réécrit. */
+  var ITER = 1000000;
+  function digestOf(sc, salt, code, it) {
     var c = webcrypto();
     if (!(c && c.subtle && typeof TextEncoder !== 'undefined')) return Promise.resolve('');
-    var material = new TextEncoder().encode('dashboard:' + sc + ':' + salt + ':' + code);
-    return c.subtle.digest('SHA-256', material).then(hex, function () { return ''; });
+    if (!it) {
+      var material = new TextEncoder().encode('dashboard:' + sc + ':' + salt + ':' + code);
+      return c.subtle.digest('SHA-256', material).then(hex, function () { return ''; });
+    }
+    if (!/^[a-f0-9]{32}$/.test(salt) || it < ITER || it > 2000000) return Promise.resolve('');
+    var bytes = new Uint8Array(salt.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    return c.subtle.importKey('raw', new TextEncoder().encode('dashboard:' + sc + ':' + code), 'PBKDF2', false, ['deriveBits'])
+      .then(function (key) { return c.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes, iterations: it }, key, 256); })
+      .then(hex, function () { return ''; });
+  }
+  function sharedSalt(sc) {
+    var r = readRows(sc).find(function (x) { return x.it === ITER && /^[a-f0-9]{32}$/.test(x.salt); });
+    return r ? r.salt : freshSalt();
   }
   function freshSalt() {
     try { return hex(webcrypto().getRandomValues(new Uint8Array(16))); } catch (_) { return ''; }
@@ -118,8 +136,11 @@
 
   /* Pour chaque ligne : son condensat est-il celui de ce code ? */
   function matching(sc, rows, code) {
+    var memo = {};
     return Promise.all(rows.map(function (r) {
-      return digestOf(sc, r.salt, code).then(function (d) { return !!d && d === r.digest; });
+      var k = (r.it || 0) + ':' + r.salt;
+      if (!memo[k]) memo[k] = digestOf(sc, r.salt, code, r.it || 0);
+      return memo[k].then(function (d) { return !!d && d === r.digest; });
     }));
   }
   function digestsWhere(rows, flags) {
@@ -131,14 +152,17 @@
   /* Le serveur vient de prouver ce code : la ligne est (ré)écrite. Une personne
      n'a qu'une ligne (un code changé remplace l'ancien) et un code n'a qu'une
      identité. Résout true si une ligne est bien écrite. */
-  function remember(code, staff) {
+  function remember(code, staff, keepExpiry) {
     code = String(code || '');
     var sc = scope();
     if (!sc || !CODE.test(code) || !staff) return Promise.resolve(false);
-    var salt = freshSalt();
+    var salt = sharedSalt(sc);
     if (!salt) return Promise.resolve(false);
-    return digestOf(sc, salt, code).then(function (digest) {
+    return digestOf(sc, salt, code, ITER).then(function (digest) {
       if (!digest) return false;
+      /* Le calcul a pris un moment : si le compte de ce navigateur a changé
+         (déconnexion, autre compte, purge), rien ne s'écrit pour l'ancien. */
+      if (scope() !== sc) return false;
       var before = readRows(sc);
       return matching(sc, before, code).then(function (same) {
         var stale = digestsWhere(before, same);
@@ -148,7 +172,7 @@
           return !stale[r.digest] && !(id && String(r.staff.id || '') === id);
         });
         kept.push({
-          salt: salt, digest: digest, expiresAt: Date.now() + TTL,
+          salt: salt, digest: digest, it: ITER, expiresAt: keepExpiry || Date.now() + TTL,
           staff: {
             id: id.slice(0, 80), name: String(staff.name || '').slice(0, 80),
             role: String(staff.role || '').slice(0, 80),
@@ -169,7 +193,13 @@
     if (!rows.length) return Promise.resolve(null);
     if (lockedFor() > 0) return Promise.resolve(null);       // pause : on ne hache même pas
     return matching(sc, rows, code).then(function (same) {
-      for (var i = 0; i < rows.length; i++) if (same[i]) { writeFails(sc, { n: 0, until: 0 }); return rows[i].staff; }
+      for (var i = 0; i < rows.length; i++) if (same[i]) {
+        writeFails(sc, { n: 0, until: 0 });
+        /* Une ancienne ligne se réécrit en v2, derrière, sans repousser son échéance :
+           seul le serveur prolonge une preuve. */
+        if (!rows[i].it) remember(code, rows[i].staff, rows[i].expiresAt);
+        return rows[i].staff;
+      }
       noteMiss(sc);
       return null;
     }).catch(function () { return null; });

@@ -116,6 +116,18 @@ const ms = (performance.now() - start) / 20;
 const minutes = ms * 10000 / 60000;
 console.log(`PBKDF2 ${row.it}: ${ms.toFixed(1)} ms/derivation; 10 000 guesses: ${minutes.toFixed(1)} minutes (20 samples)`);
 assert.ok(minutes > 10, 'copied cache enumeration must exceed 10 minutes on this machine');
+/* A till unpaired (or moved to another store) while the verifier was being
+   derived: the old store's verifier must not reappear after its purge. */
+online = true;
+storage.delete(key);
+slowNext = 600;
+assert.equal(await api.authorizeTill(code), true);
+storage.set('kiwiPairedVenue', JSON.stringify({ merchant: 'another-store', name: 'Another', type: 'restaurant' }));
+await new Promise((r) => setTimeout(r, 1200));
+assert.ok(!storage.has(key), 'a verifier finished after a store switch is not written for the old store');
+storage.set('kiwiPairedVenue', JSON.stringify({ merchant: 'offline-fixture', name: 'Offline Fixture', type: 'restaurant' }));
+await api.authorizeTill(code);
+await until(() => storage.has(key), 'verifier written again once paired back');
 await new Promise((r) => setTimeout(r, 300));
 const cached = storage.get(key);
 context.crypto = undefined;

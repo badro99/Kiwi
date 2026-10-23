@@ -103,6 +103,11 @@
       });
       var salt = shared ? shared.salt : bytesHex(window.crypto.getRandomValues(new Uint8Array(16)));
       return pinDigest(merchant, salt, code, PIN_ITERATIONS).then(function (hash) {
+        /* The derivation ran behind the unlock: if the till was unpaired or
+           moved to another store meanwhile, this store's verifier must not
+           come back after its purge. */
+        var still = activeVenue();
+        if (!still || String(still.merchant || '') !== String(merchant)) return staff;
         var rows = offlinePinRows(merchant).filter(function (row) {
           return String(row.staff && row.staff.id || '') !== String(staff.id || '');
         });
