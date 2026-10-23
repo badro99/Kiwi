@@ -415,7 +415,6 @@
       personnalise: { hier: 'مقابل أمس', semaine: 'مقابل الأسبوع', mois: 'مقابل الشهر الماضي' },
     },
   };
-  const NET_LABEL = { fr: 'NET APRÈS KIWI', en: 'NET AFTER KIWI', ar: 'الصافي بعد كيوي' };
 
   const KPI_DELTA_SUFFIX = {
     fr: { aujourdhui: 'vs hier', hier: 'vs avant-hier', septJours: 'vs 7 jours préc.', trenteJours: 'vs 30 jours préc.', moisDernier: 'vs mois préc.', trimestre: 'vs trimestre préc.', annee: 'vs année préc.', personnalise: 'vs hier' },
@@ -1740,7 +1739,6 @@
     const separator = getLang() === 'en' ? '.' : ',';
     return `${frInt(int)}<span class="cents">${separator}${String(cents).padStart(2,'0')}</span><span class="currency">${curUnit()}</span>`;
   }
-  const fmtNetAmount = v => `${frInt(v)} ${curUnit()}`;
   const fmtSettleAmount = v => `${frInt(v)} <span style="font-size:0.42em; opacity: 0.7;">${curUnit()}</span>`;
   /* Design 2027, étape 5 (kiwiSkin2027:dashboard) : l'accueil du kit dessine
    * les chiffres que CES rendus calculent, et aucun autre. Chaque rendu dépose
@@ -2987,32 +2985,6 @@
     return (spec.unit === 'MAD' ? frMoney(v) : frInt(v)) + unit;
   }
 
-  // Per-key icon glyphs (single SVG path per key, restyled per render).
-  const KPI_ICONS = {
-    tx:           '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
-    panier:       '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V5a4 4 0 018 0v3"/>',
-    tips:         '<path d="M12 2v20M15 5H9.5a2.5 2.5 0 000 5h5a2.5 2.5 0 010 5H8"/>',
-    marge:        '<path d="M19 5L5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
-    success:      '<path d="M5 12l5 5L20 7"/>',
-    ratio:        '<circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/>',
-    regulars:     '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/>',
-    tauxRetour:   '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
-    revenue:      '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>',
-    profit:       '<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>',
-    cogs:         '<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"/>',
-    retention:    '<path d="M12 21s-7-4.5-9.5-9A5 5 0 0112 5a5 5 0 019.5 7c-2.5 4.5-9.5 9-9.5 9z"/>',
-    newClients:   '<circle cx="9" cy="8" r="4"/><path d="M3 21v-2a4 4 0 014-4h4M18 9v6M15 12h6"/>',
-    revPerDay:    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
-    txPerDay:     '<path d="M4 6h16M4 12h16M4 18h10"/>',
-    tempsTable:   '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-    // hotel (custom 0000 venues — see assets/hotel.js)
-    occupation:   '<path d="M3 18v-7"/><path d="M3 16h18v-3a2 2 0 00-2-2h-9v5"/><circle cx="6.5" cy="11.5" r="1.5"/><path d="M21 18v-2"/>',
-    adr:          '<path d="M20.6 13.4L11 3.8A2 2 0 009.6 3H5a2 2 0 00-2 2v4.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.6z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-    revpar:       '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
-    arrdep:       '<path d="M7 4v12"/><path d="M3 12l4 4 4-4"/><path d="M17 20V8"/><path d="M13 12l4-4 4 4"/>',
-    menage:       '<path d="M11 4l1.2 3.4 3.4 1.2-3.4 1.2L11 13.2 9.8 9.8 6.4 8.6l3.4-1.2z"/><path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z"/>',
-    mixRev:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
-  };
   const KPI_MATERIAL_ICONS = {
     tx: 'credit-card', panier: 'shopping-bag', tips: 'hand-coins', marge: 'percent',
     success: 'check-circle-2', ratio: 'pie-chart', regulars: 'users',
@@ -3880,13 +3852,6 @@
   }
 
   /* ═══════════════ RENDER: REVENUE LINE CHART ═══════════════ */
-
-  function fmtYTick(v) {
-    if (v === 0) return '0';
-    if (v >= 1000000) return (window.KiwiNumber?.number((v / 1000000), v >= 10000000 ? 0 : 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:v >= 10000000 ? 0 : 1,maximumFractionDigits:v >= 10000000 ? 0 : 1}).format((v / 1000000))) + 'M';
-    if (v >= 1000) return Math.round(v / 1000) + 'k';
-    return String(v);
-  }
 
   function renderRevChart() {
     if (guardOperatorFigures('[data-rev-svg], [data-rev-legend], [data-rev-hero-delta], [data-rev-range-badge], [data-rev-compare-caption]')) {

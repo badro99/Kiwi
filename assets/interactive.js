@@ -3873,45 +3873,6 @@ ar: {
   };
 
   /* ─── Helpers for rendering ─── */
-  // On-brand line-art icons for the settings rows, keyed by the legacy emoji so
-  // call sites don't change. Unmapped keys fall back to the emoji in the chip.
-  const KSET_ICONS = {
-    'store': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
-    'hours': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
-    'goal': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
-    'receipt': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
-    'payment': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
-    'currency': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
-    'lang': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
-    'glass': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
-    'theme': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
-    'notifications': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
-    'pin': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
-    'encryption': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-    'export': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
-    'delivery': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
-    'glovo': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
-    'yassir': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-    'accounting': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>',
-    '🏪': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
-    '⏰': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
-    '🎯': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
-    '🧾': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
-    '💳': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
-    '💰': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
-    '🌍': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
-    '🧊': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
-    '🌙': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
-    '🔔': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
-    '🔑': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
-    '🛡️': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-    '🛡': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-    '📤': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
-    '🔌': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
-    '🟠': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
-    '🔵': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-    '📊': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>'
-  };
   /* Google Material Symbols · Outlined 400. Official paths from Google's
      open-source Material Symbols set, kept inline so settings work offline. */
   const MATERIAL_SETTINGS_ICONS = Object.freeze({
@@ -4800,19 +4761,6 @@ ar: {
   const aiResponses = (AI_RESPONSES_STR[kiwiLang()] || AI_RESPONSES_STR.fr);
 
   /* ═══════════════════════ UNIVERSAL ROUTER ═══════════════════════ */
-  /* Elements that OWN their own click handling — the fallback must not touch them */
-  const SKIP_FALLBACK_ATTRS = ['data-close', 'data-dismiss', 'data-confirm', 'data-save', 'data-next', 'data-prev', 'data-pay', 'data-activate', 'data-send', 'data-sms', 'data-agent-approve', 'data-agent-dismiss', 'data-agent-run-all', 'data-filter-apply', 'data-mark-read', 'data-contact-go', 'data-login-go', 'data-to-signup', 'data-biz', 'data-en', 'data-amt', 'data-cap', 'data-rec', 'data-from', 'data-f', 'data-r', 'data-m', 'data-key', 'data-method', 'data-copy', 'data-share', 'data-upgrade', 'data-refund', 'data-print', 'data-new', 'data-gen', 'data-confirm-settle', 'data-ai-send', 'data-copilot-send', 'data-bubble-close', 'data-kiwi-skip'];
-  const SKIP_FALLBACK_CONTAINERS = '.kiwi-modal, .kiwi-drawer, .kiwi-menu, .kp, .ai-drawer, .amount-pad, .mode-tg';
-
-  function shouldSkipFallback(el) {
-    if (!el) return true;
-    if (el.closest(SKIP_FALLBACK_CONTAINERS)) return true;
-    for (const attr of SKIP_FALLBACK_ATTRS) {
-      if (el.hasAttribute(attr) || el.closest('[' + attr + ']')) return true;
-    }
-    return false;
-  }
-
   /* Keyboard activation — div-based "buttons" (KPI tiles, feed/tx rows,
    * non-<button> [data-action] elements) aren't natively focusable-clickable.
    * Enter / Space on a focused one fires a real click, which the delegated

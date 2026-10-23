@@ -832,15 +832,6 @@
     });
     return (it) => (byId.get(String(it.id)) || 0) + (byName.get(norm(it.name)) || 0);
   }
-  function finCoverage() {
-    const C = window.KiwiCost;
-    const items = finMenuItems();
-    let done = 0;
-    items.forEach((it) => {
-      try { const c = C && C.of ? C.of({ kind: 'menu', id: it.id, name: it.name }) : null; if (c && c.mad != null && c.mad > 0) done++; } catch (_) {}
-    });
-    return { total: items.length, done };
-  }
   function finEmpty() {
     const c = rt();
     return `<div class="fin-page"><div class="fin-empty" style="padding:56px 24px;text-align:center;max-width:520px;margin:0 auto;">
