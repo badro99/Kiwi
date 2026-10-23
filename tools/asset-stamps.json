@@ -1424,8 +1424,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "13",
-    "sha": "ffa0a450374cdea7"
+    "v": "14",
+    "sha": "38a263ce74fcc15f"
   },
   "assets/serveur-lang.js": {
     "v": "2",
@@ -1434,6 +1434,10 @@
   "assets/serveur-shell.css": {
     "v": "2",
     "sha": "8e7d3451be835f28"
+  },
+  "assets/serveur/service.js": {
+    "v": "1",
+    "sha": "cafd57448889a388"
   },
   "assets/service-requests.js": {
     "v": "2",

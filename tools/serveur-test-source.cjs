@@ -1,7 +1,11 @@
 // Rebuild the original classic-script position for source assertions and VM extraction.
-const fs = require('node:fs');
-const path = require('node:path');
+const source = require('./serveur-source.cjs');
+const map = require('./fixtures/serveur/split.json');
 module.exports = function serveurTestSource(html) {
+  for (const file of map.parts) {
+    const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    html = html.replace(new RegExp('<script src="' + escaped + '\\?v=\\d+"></script>'), '');
+  }
   return html.replace(/<script src="assets\/serveur-app\.js\?v=\d+"><\/script>/,
-    () => '<script>' + fs.readFileSync(path.join(__dirname, '../assets/serveur-app.js'), 'utf8') + '</script>');
+    () => '<script>' + source() + '</script>');
 };

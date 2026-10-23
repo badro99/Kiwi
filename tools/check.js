@@ -1625,6 +1625,7 @@ section('Whole-project regressions');
     'pos-maison-split-test.mjs',
     'pos-boutique-split-test.mjs',
     'caisse-app-split-test.mjs',
+    'serveur-split-test.mjs',
     'caisse-money-properties-test.mjs',
     'retail-money-properties-test.mjs',
     'dashboard-money-properties-test.mjs',

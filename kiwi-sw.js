@@ -32,7 +32,8 @@ var SHELL = [
      bien /kiwi-serveur que l'application ouvre partout ailleurs. */
   '/kiwi-serveur',
   '/assets/serveur-shell.css?v=2',
-  '/assets/serveur-app.js?v=13',
+  '/assets/serveur/service.js?v=1',
+  '/assets/serveur-app.js?v=14',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais · mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau

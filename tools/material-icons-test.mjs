@@ -6,6 +6,7 @@
 // that silently drew a "?", a page still loading the old Rounded shim, and new
 // `data-lucide` call sites. Static reads only: no browser, no network.
 import assert from 'node:assert/strict';
+import serveurSource from './serveur-source.cjs';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
@@ -172,8 +173,10 @@ const baseline = JSON.parse(read(BASELINE_FILE));
 const grew = [];
 const shrank = [];
 let total = 0;
-for (const f of files) {
-  const n = countDataLucide(read(f));
+// Count moved waiter call sites at their original path; the split proof checks every byte.
+const serveurParts = new Set(serveurSource.fragments().map(m => m.file));
+for (const f of files.filter(file => !serveurParts.has(file))) {
+  const n = countDataLucide(f === 'assets/serveur-app.js' ? serveurSource() : read(f));
   total += n;
   const was = baseline[f] || 0;
   if (n > was) grew.push(`${f} ${was} → ${n}`);

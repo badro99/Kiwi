@@ -6,6 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {createRequire} from 'node:module';
 import {fixture} from './server-money-fixture.mjs';
+import serveurSource from './serveur-source.cjs';
 import {declaration} from './js-declarations.cjs';
 import {priceOrder} from '../functions/api/order/_lib.js';
 import {onRequestPost as cancel} from '../functions/api/sale/cancel.js';
@@ -23,7 +24,7 @@ const RUNS=Number(process.env.KIWI_PROPERTY_RUNS)||100,SEED=Number(process.env.K
 let passed=0,failed=0,known=0;
 async function strict(label,property,examples=[]){if(process.env.KIWI_PROPERTY_ONLY&&!new RegExp(process.env.KIWI_PROPERTY_ONLY).test(label))return;const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(r.failed){failed++;console.error('✗ '+label,fc.stringify(r.counterexample),r.errorInstance);}else{passed++;console.log('✓ '+label);}}
 async function knownIssue(id,label,property,examples=[]){if(process.env.KIWI_PROPERTY_ONLY)return;const r=await fc.check(property,{numRuns:RUNS,seed:SEED,examples});if(!r.failed){failed++;console.error('✗ '+id+' holds now; promote to strict');}else if(r.errorInstance?.message!=='Property failed by returning false'){failed++;console.error('✗ '+id+' unexpected exception',r.errorInstance);}else{known++;console.log(`◦ ${id} ${label}; witness ${fc.stringify(r.counterexample)}; seed=${r.seed}; path=${r.counterexamplePath}`);}}
-const text=fs.readFileSync(path.join(ROOT,'assets/serveur-app.js'),'utf8');
+const text=serveurSource();
 function named(name){const m=new RegExp('(?:async\\s+)?function '+name+'\\s*\\(').exec(text);assert.ok(m,name);return declaration(text.slice(m.index),name);}
 const names=['launchSplitFlow','splitArticleAllocation','effectiveTipPct','getTableTotal','reconcileCanonicalServiceBill','empPayRefsRead','empPayRefsWrite','empPayRefKey','employeePaymentId','saveSplitFlow','loadSplitFlow','markSplitPartPaid','cardReaderArm','closeCardModal','kgSnapshot','kgRecordPayment','paySplitPart','confirmMergeTable','currentPayAmount','keepServiceBillOpen','employeePaymentRefForget','splitItemTotals'];
 const functions=names.map(named).join('\n');

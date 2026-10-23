@@ -1,0 +1,1349 @@
+{
+  "sha256": "ffa0a450374cdea7a8561eb14c48bb664ab27301a62e50a1c8e5ce8e2833c308",
+  "parts": [
+    "assets/serveur/service.js"
+  ],
+  "moved": [
+    {
+      "name": "serviceNorm",
+      "start": 94577,
+      "end": 94792,
+      "file": "assets/serveur/service.js",
+      "offset": 0,
+      "length": 215,
+      "sha256": "a8855bd2d23df7eb3c603afaed22c28f9f67f554480ad58d76712c6776dc14b7"
+    },
+    {
+      "name": "serviceTableId",
+      "start": 94793,
+      "end": 95034,
+      "file": "assets/serveur/service.js",
+      "offset": 217,
+      "length": 241,
+      "sha256": "a80e1828197389119183d9b28142e13321bf6e3d4ff6fc1ce61b7951a6c5ff7f"
+    },
+    {
+      "name": "serviceHistoryStorageKey",
+      "start": 95035,
+      "end": 95270,
+      "file": "assets/serveur/service.js",
+      "offset": 460,
+      "length": 235,
+      "sha256": "9e63286dd65908e1d3c9c07240884e3ffebef4bfd84c360281128f9cb35e4539"
+    },
+    {
+      "name": "loadServiceHistory",
+      "start": 95271,
+      "end": 95853,
+      "file": "assets/serveur/service.js",
+      "offset": 697,
+      "length": 582,
+      "sha256": "3f770a97714997102187122247f2466397c5f3c453ef92cf9f4ad5197b58198a"
+    },
+    {
+      "name": "saveServiceHistory",
+      "start": 95854,
+      "end": 96053,
+      "file": "assets/serveur/service.js",
+      "offset": 1281,
+      "length": 199,
+      "sha256": "b9643f788b41d0a52def614f0387aad66a73a90cbb6353e549b908fa076bd260"
+    },
+    {
+      "name": "publishServiceTableState",
+      "start": 96054,
+      "end": 98609,
+      "file": "assets/serveur/service.js",
+      "offset": 1482,
+      "length": 2555,
+      "sha256": "9cd5e34ec3cb75d623292a31b25f7b73cc13e97069c9f61b452dea7846e3a088"
+    },
+    {
+      "name": "setTableLock",
+      "start": 98643,
+      "end": 99292,
+      "file": "assets/serveur/service.js",
+      "offset": 4039,
+      "length": 649,
+      "sha256": "c24dc7c84f526a0cb43941d9b14e703ea00372692e72aff505cb830defad5a16"
+    },
+    {
+      "name": "serviceNotify",
+      "start": 99293,
+      "end": 100475,
+      "file": "assets/serveur/service.js",
+      "offset": 4690,
+      "length": 1182,
+      "sha256": "016dd8b7448b0c04f713777e4da2c0e859e5590703008522966faf01baeaff7d"
+    },
+    {
+      "name": "pollServiceOrders",
+      "start": 100476,
+      "end": 101506,
+      "file": "assets/serveur/service.js",
+      "offset": 5874,
+      "length": 1030,
+      "sha256": "1f9a10c03617ea5454a17b0cfd524a4f7fc6ae6321771010aee0c403567b11a4"
+    },
+    {
+      "name": "ingestServiceOrders",
+      "start": 101507,
+      "end": 105882,
+      "file": "assets/serveur/service.js",
+      "offset": 6906,
+      "length": 4375,
+      "sha256": "f3e1af72570e01acff4b2ec002f3e50a61a30b43bc5f262d0a93adfd47dd3a99"
+    },
+    {
+      "name": "reconcileCanonicalServiceBill",
+      "start": 105884,
+      "end": 108110,
+      "file": "assets/serveur/service.js",
+      "offset": 11283,
+      "length": 2226,
+      "sha256": "eebf0989db932d3286e8d4ea337261a171f6e4214d27f0245d643957b444d084"
+    },
+    {
+      "name": "ingestServiceEvents",
+      "start": 108111,
+      "end": 114355,
+      "file": "assets/serveur/service.js",
+      "offset": 13511,
+      "length": 6244,
+      "sha256": "56530b9f4329f8fbe30ed52a6066cf0d7a55c5ca2db7f138e008f75c101209c4"
+    },
+    {
+      "name": "pollServiceSync",
+      "start": 114356,
+      "end": 117006,
+      "file": "assets/serveur/service.js",
+      "offset": 19757,
+      "length": 2650,
+      "sha256": "ebf7186b2dfbd809d4dec148112be1bbf9cec5de0cd2fb1ba2720edba4c6cd13"
+    },
+    {
+      "name": "svSyncMark",
+      "start": 117682,
+      "end": 118199,
+      "file": "assets/serveur/service.js",
+      "offset": 22409,
+      "length": 517,
+      "sha256": "3ada568a8a121f08c6b31d6e7b5fe22353e5b4b45f059aa6a2d16354b3363dd2"
+    },
+    {
+      "name": "svSyncReset",
+      "start": 118200,
+      "end": 118335,
+      "file": "assets/serveur/service.js",
+      "offset": 22928,
+      "length": 135,
+      "sha256": "f1583128bd77ada8be8cb151bce0c9a5d46db1c112e113e33d6034ce7d5e1d76"
+    },
+    {
+      "name": "svDataStale",
+      "start": 118336,
+      "end": 118994,
+      "file": "assets/serveur/service.js",
+      "offset": 23065,
+      "length": 658,
+      "sha256": "5cc74dc7eb6871b35f3670c61bcc2f76e1de01366e8eddeb1af83b867b8243c2"
+    },
+    {
+      "name": "svClock",
+      "start": 118995,
+      "end": 119157,
+      "file": "assets/serveur/service.js",
+      "offset": 23725,
+      "length": 162,
+      "sha256": "93c7ba42ba1e57154e067350a0480e5cf70f6bfe6858e843d489aa4a5e182cfe"
+    },
+    {
+      "name": "svRenderSyncStatus",
+      "start": 119158,
+      "end": 119920,
+      "file": "assets/serveur/service.js",
+      "offset": 23889,
+      "length": 762,
+      "sha256": "a8f31c7581f957ce53cf5fc9800e85f0d35204b513854f5cb44831a31bf273ec"
+    },
+    {
+      "name": "svFloorNoteHTML",
+      "start": 122253,
+      "end": 122878,
+      "file": "assets/serveur/service.js",
+      "offset": 24653,
+      "length": 625,
+      "sha256": "6fc1cc83cb668fe3038615dcfcd4a6fab49e6c11e2f73c379a7e92e6590fae59"
+    },
+    {
+      "name": "svFloorEmptyHTML",
+      "start": 122879,
+      "end": 123818,
+      "file": "assets/serveur/service.js",
+      "offset": 25280,
+      "length": 939,
+      "sha256": "be26c03343050505829ffabd33f4f9bbe3740bfee554a34f7edbd59d02a7405e"
+    },
+    {
+      "name": "joinServiceSocket",
+      "start": 124719,
+      "end": 125013,
+      "file": "assets/serveur/service.js",
+      "offset": 26221,
+      "length": 294,
+      "sha256": "02aeed599928d7f98832e20bbef1828ba44426cfc1307030026492f7ff894539"
+    },
+    {
+      "name": "svDrainPendingBatches",
+      "start": 125755,
+      "end": 127134,
+      "file": "assets/serveur/service.js",
+      "offset": 26517,
+      "length": 1379,
+      "sha256": "062971c545ed04e8fb0200cad790b3a14a25d4a32aa62255a7d7857bcd2273be"
+    },
+    {
+      "name": "startServiceSync",
+      "start": 127135,
+      "end": 127664,
+      "file": "assets/serveur/service.js",
+      "offset": 27898,
+      "length": 529,
+      "sha256": "b8fc9ba8f96f53f00dc2f288a4c8b5c238cafe38fc423c2d43b33d7deea5ac09"
+    },
+    {
+      "name": "stopServiceSync",
+      "start": 128143,
+      "end": 128870,
+      "file": "assets/serveur/service.js",
+      "offset": 28429,
+      "length": 727,
+      "sha256": "400ecc9beb4ad4c93e02c4f95f61fd9c31b3b6404327fcf12f6ce2b25f8d3ead"
+    },
+    {
+      "name": "clearEmployeeOperationalState",
+      "start": 129353,
+      "end": 130020,
+      "file": "assets/serveur/service.js",
+      "offset": 29158,
+      "length": 667,
+      "sha256": "215c51930aa716b7d421f585b963d9f155af8d59296d0ec501d4b6dff9755d12"
+    },
+    {
+      "name": "prepareAttendanceGate",
+      "start": 130448,
+      "end": 131288,
+      "file": "assets/serveur/service.js",
+      "offset": 29827,
+      "length": 840,
+      "sha256": "ecf1741c5bcfbaa2337b50fc56846146e19babf15e8a5f4b3751e194260f5737"
+    },
+    {
+      "name": "resetNfc",
+      "start": 131289,
+      "end": 131696,
+      "file": "assets/serveur/service.js",
+      "offset": 30669,
+      "length": 407,
+      "sha256": "620286d84bd6d16bec84cc295eb6bdc57bd9e1979d4df0c77308c4158b0cfbd5"
+    },
+    {
+      "name": "fireNfcTap",
+      "start": 131697,
+      "end": 132610,
+      "file": "assets/serveur/service.js",
+      "offset": 31078,
+      "length": 913,
+      "sha256": "db517126ddda28c391fb92bebe3bdf38b33eff51a155dc1d9159f76f5a711b08"
+    },
+    {
+      "name": "enterServiceAfterClockIn",
+      "start": 134321,
+      "end": 135841,
+      "file": "assets/serveur/service.js",
+      "offset": 31993,
+      "length": 1520,
+      "sha256": "c7cb91027e7f653250f471bdbf36d38b65916f27cb15f88b760dff75bb8dd43b"
+    },
+    {
+      "name": "enterBrowseMode",
+      "start": 136521,
+      "end": 137393,
+      "file": "assets/serveur/service.js",
+      "offset": 33515,
+      "length": 872,
+      "sha256": "fbb18d99129a2010274dfa68ba82843b80fcd07678deeb9c0098becae487a851"
+    },
+    {
+      "name": "exitBrowseMode",
+      "start": 137395,
+      "end": 137690,
+      "file": "assets/serveur/service.js",
+      "offset": 34389,
+      "length": 295,
+      "sha256": "b2a9a04433ba8e333b7167471aa2268ab9a03ea72933caa351440e9c7040946a"
+    },
+    {
+      "name": "runGreetingFlash",
+      "start": 138388,
+      "end": 141999,
+      "file": "assets/serveur/service.js",
+      "offset": 34686,
+      "length": 3611,
+      "sha256": "730a8ebde0697603fc4733d346408a6efd797c99a926fed86d173539f8c49961"
+    },
+    {
+      "name": "updateWelcomeCopy",
+      "start": 142001,
+      "end": 142703,
+      "file": "assets/serveur/service.js",
+      "offset": 38299,
+      "length": 702,
+      "sha256": "4d9f2e9ff03b35e3b85b5a5f12ec8bb143609aab6b315dcfef825ed5b80df621"
+    },
+    {
+      "name": "showWelcomeBanner",
+      "start": 142705,
+      "end": 142988,
+      "file": "assets/serveur/service.js",
+      "offset": 39003,
+      "length": 283,
+      "sha256": "1cb532dc07b3cfb00ec627e7ab266657fbd32d679078eb4172bf42c3aa6d21d9"
+    },
+    {
+      "name": "resetToEmployeePortal",
+      "start": 142990,
+      "end": 143385,
+      "file": "assets/serveur/service.js",
+      "offset": 39288,
+      "length": 395,
+      "sha256": "6865a38c74a3d712315b287cde6f99c57d2ab8f5ff2071417b24bb1c3c8661a7"
+    },
+    {
+      "name": "pinGreetLastEmployee",
+      "start": 143624,
+      "end": 144153,
+      "file": "assets/serveur/service.js",
+      "offset": 39685,
+      "length": 529,
+      "sha256": "0cd5f77e9dcae1f3fcb80062470966ae877fbe38b3af3f135bfcac2006ddf3c6"
+    },
+    {
+      "name": "logoutEmployeeSession",
+      "start": 144471,
+      "end": 144963,
+      "file": "assets/serveur/service.js",
+      "offset": 40216,
+      "length": 492,
+      "sha256": "21f26cebf7ad469b0c61c82de3c2b49e02d51b49fcce327deaa9a5ef992b4fe2"
+    },
+    {
+      "name": "finishClockOut",
+      "start": 144965,
+      "end": 145269,
+      "file": "assets/serveur/service.js",
+      "offset": 40710,
+      "length": 304,
+      "sha256": "c4964559653c42abd7373d685dc04067ea1cf6cb31629d77a4d920ad8a7b657b"
+    },
+    {
+      "name": "afterClockOut",
+      "start": 145858,
+      "end": 146191,
+      "file": "assets/serveur/service.js",
+      "offset": 41016,
+      "length": 333,
+      "sha256": "364791fc9358f529d2fff663812f11d8b9eb8eb0760327dbe37107d44900ff06"
+    },
+    {
+      "name": "teamKit",
+      "start": 146616,
+      "end": 146683,
+      "file": "assets/serveur/service.js",
+      "offset": 41351,
+      "length": 67,
+      "sha256": "ea1993ef71b06f43af17c75a4485f45169b2ce4f43c94cbdfddbfa7b27a75e4f"
+    },
+    {
+      "name": "mountTeamSignIn",
+      "start": 146684,
+      "end": 146899,
+      "file": "assets/serveur/service.js",
+      "offset": 41420,
+      "length": 215,
+      "sha256": "fda84518f6e09e92eebc76f8a2eb46e9e74dfc01136fe43a61ea205a0fdc1935"
+    },
+    {
+      "name": "mountTeamClock",
+      "start": 146900,
+      "end": 147910,
+      "file": "assets/serveur/service.js",
+      "offset": 41637,
+      "length": 1010,
+      "sha256": "d897857814b780680f5f29944607c9c155168a199c070a0eecdb091c9a81336a"
+    },
+    {
+      "name": "clockOut",
+      "start": 148047,
+      "end": 148410,
+      "file": "assets/serveur/service.js",
+      "offset": 42649,
+      "length": 363,
+      "sha256": "c4c75bd1ac932fce63be865901a0cc578387c88cfe9cee71466f3dcd8b3a7da2"
+    },
+    {
+      "name": "moveBtPill",
+      "start": 148665,
+      "end": 149845,
+      "file": "assets/serveur/service.js",
+      "offset": 43014,
+      "length": 1180,
+      "sha256": "20ac4e69647937266fabd024540ba4a1781a2d63cb4c852070d016bb4481ff5e"
+    },
+    {
+      "name": "setTab",
+      "start": 149910,
+      "end": 150979,
+      "file": "assets/serveur/service.js",
+      "offset": 44196,
+      "length": 1069,
+      "sha256": "4a898537ca9fb55fe6024140e698669da1d6691dd10a674decc9e06707e7f80b"
+    },
+    {
+      "name": "updateFilterCounts",
+      "start": 151382,
+      "end": 151456,
+      "file": "assets/serveur/service.js",
+      "offset": 45267,
+      "length": 74,
+      "sha256": "880d1ed8788b02ce0f0e3c9138403d0f78b6d09dee0e17fb0529f51ef023d039"
+    },
+    {
+      "name": "updateNotificationBadge",
+      "start": 151458,
+      "end": 151697,
+      "file": "assets/serveur/service.js",
+      "offset": 45343,
+      "length": 239,
+      "sha256": "3e6c3d3b5045514b7ce7f476d0c5c62546deb1a12418f4386ae58fb75c9c03c6"
+    },
+    {
+      "name": "filterMatches",
+      "start": 151699,
+      "end": 152060,
+      "file": "assets/serveur/service.js",
+      "offset": 45584,
+      "length": 361,
+      "sha256": "4847de3d8175a6f41e1f3731b92adf6f323cbbf64057253518b2a523b0be9880"
+    },
+    {
+      "name": "tableCardHTML",
+      "start": 152062,
+      "end": 154965,
+      "file": "assets/serveur/service.js",
+      "offset": 45947,
+      "length": 2903,
+      "sha256": "dfa2a4108f48294d735308681adde515e6424c13761ffd5e52efc1445bd0bfd0"
+    },
+    {
+      "name": "zoneDisplayLabel",
+      "start": 154967,
+      "end": 156278,
+      "file": "assets/serveur/service.js",
+      "offset": 48852,
+      "length": 1311,
+      "sha256": "3c91834ba4b2931a2bae4e09f51c61165f32635206b57b4cf2e039efa1fc7716"
+    },
+    {
+      "name": "renderTables",
+      "start": 156280,
+      "end": 158081,
+      "file": "assets/serveur/service.js",
+      "offset": 50165,
+      "length": 1801,
+      "sha256": "af56fee92832580706eb1ece4455b8d7424869e669bf0aca5236bd21037681bb"
+    },
+    {
+      "name": "renderOwnTables",
+      "start": 158083,
+      "end": 160947,
+      "file": "assets/serveur/service.js",
+      "offset": 51968,
+      "length": 2864,
+      "sha256": "a4c24b3a77ff0f9df212b81c67af7c8037036d480512afe77351b57d875d8b14"
+    },
+    {
+      "name": "renderAllTables",
+      "start": 160949,
+      "end": 163632,
+      "file": "assets/serveur/service.js",
+      "offset": 54834,
+      "length": 2683,
+      "sha256": "85cbadc224387b5399fc1bcdc582c629201a2e8f6480c12755e7c32f5a6479b1"
+    },
+    {
+      "name": "openTableDetail",
+      "start": 164699,
+      "end": 165766,
+      "file": "assets/serveur/service.js",
+      "offset": 57519,
+      "length": 1067,
+      "sha256": "b53b14d3d030add00872f4ebecba320326a4a3a8c48d89d354a5e98c6e158a85"
+    },
+    {
+      "name": "renderTableDetail",
+      "start": 165768,
+      "end": 178094,
+      "file": "assets/serveur/service.js",
+      "offset": 58588,
+      "length": 12326,
+      "sha256": "927fa2e83273bf11ee3cf297749b21edf03038c6ea655d8121480da4a1502560"
+    },
+    {
+      "name": "renderTableDetailSplit",
+      "start": 178160,
+      "end": 180776,
+      "file": "assets/serveur/service.js",
+      "offset": 70916,
+      "length": 2616,
+      "sha256": "f9da43daf4ebae27b68009fa86ce0aa19e2ca1c3c3e2ee3df00355a6d1deb3ba"
+    },
+    {
+      "name": "returnToFloor",
+      "start": 181323,
+      "end": 181622,
+      "file": "assets/serveur/service.js",
+      "offset": 73534,
+      "length": 299,
+      "sha256": "15b57c9b1806609a55d57f1f0ba2b93aee3f27db53116b5cff9f6595177de458"
+    },
+    {
+      "name": "svPendingOrderFor",
+      "start": 191455,
+      "end": 191765,
+      "file": "assets/serveur/service.js",
+      "offset": 73835,
+      "length": 310,
+      "sha256": "38708bf7a10b24ceece7527d7d6a4834572874d569b7d269d00eae30715d4846"
+    },
+    {
+      "name": "postServiceCancellation",
+      "start": 195907,
+      "end": 196718,
+      "file": "assets/serveur/service.js",
+      "offset": 74147,
+      "length": 811,
+      "sha256": "729f6c161a1ffcde6db2d20567ffa46cb7d14a63af427bc607bac9e27c01eafa"
+    },
+    {
+      "name": "applyGroupedLineQtyDelta",
+      "start": 196957,
+      "end": 197560,
+      "file": "assets/serveur/service.js",
+      "offset": 74960,
+      "length": 603,
+      "sha256": "6ef4b79669909da3cc6da1c21603ba45c4b16c20fa7db016d6957b59e573ba85"
+    },
+    {
+      "name": "openVoidReasonModal",
+      "start": 197562,
+      "end": 198173,
+      "file": "assets/serveur/service.js",
+      "offset": 75565,
+      "length": 611,
+      "sha256": "9d2c777aea5792e14dd15ecfff6a32bd9e0e0b40bb391299fe5b0f210eded3d1"
+    },
+    {
+      "name": "confirmVoidLine",
+      "start": 198175,
+      "end": 199831,
+      "file": "assets/serveur/service.js",
+      "offset": 76178,
+      "length": 1656,
+      "sha256": "c763aeb82d779ad602425f7a83097318324228352c3f2c9faf778c4b72850460"
+    },
+    {
+      "name": "changeOrderQty",
+      "start": 200779,
+      "end": 205507,
+      "file": "assets/serveur/service.js",
+      "offset": 77836,
+      "length": 4728,
+      "sha256": "6cd3b2b6b18bb9bc1a361f44dd4cd6dfdbf8be5684d416692beb156f38472390"
+    },
+    {
+      "name": "openNewTableModal",
+      "start": 205613,
+      "end": 205947,
+      "file": "assets/serveur/service.js",
+      "offset": 82566,
+      "length": 334,
+      "sha256": "2b60896594bd53b32437ece305367d5dc14dcdca9add511cd84dc73d2392209e"
+    },
+    {
+      "name": "renderNewTableChips",
+      "start": 205948,
+      "end": 206188,
+      "file": "assets/serveur/service.js",
+      "offset": 82902,
+      "length": 240,
+      "sha256": "ac562ac6a9db41c2c6ad018bb136888f0d1e10a7bf0e36906ffd666587202bd4"
+    },
+    {
+      "name": "confirmNewTable",
+      "start": 206189,
+      "end": 208068,
+      "file": "assets/serveur/service.js",
+      "offset": 83144,
+      "length": 1879,
+      "sha256": "10121e038778ad23ab87ded898e5802eeb3217ff1c9a151687334d9fa194cb7a"
+    },
+    {
+      "name": "serviceTableKitchenLocked",
+      "start": 208634,
+      "end": 208957,
+      "file": "assets/serveur/service.js",
+      "offset": 85025,
+      "length": 323,
+      "sha256": "c5556be5e7b36b8a2027c574a773cf7e9663f7a8bd619fa82ed71c31e2e92cbc"
+    },
+    {
+      "name": "openTransferTableModal",
+      "start": 208959,
+      "end": 209424,
+      "file": "assets/serveur/service.js",
+      "offset": 85350,
+      "length": 465,
+      "sha256": "93ddc5d496aa8dedd9882504e661eb1b2ef3a004e2666110cb42e5c86576b6f3"
+    },
+    {
+      "name": "renderTransferTableGrid",
+      "start": 209426,
+      "end": 210287,
+      "file": "assets/serveur/service.js",
+      "offset": 85817,
+      "length": 861,
+      "sha256": "628a53353767f1a1c8a1b2b7b9cb84cd27bc177fa0222770ea231738b7652687"
+    },
+    {
+      "name": "confirmTransferTable",
+      "start": 210289,
+      "end": 213728,
+      "file": "assets/serveur/service.js",
+      "offset": 86680,
+      "length": 3439,
+      "sha256": "24c1278f94154faac5a62c0eeef9bd8db48986259096bbac178dd1aad8102fa3"
+    },
+    {
+      "name": "openMergeTableModal",
+      "start": 214575,
+      "end": 215040,
+      "file": "assets/serveur/service.js",
+      "offset": 90121,
+      "length": 465,
+      "sha256": "b3c688614b903e43d367785cd07b70434592e10fb06e072af9e585a1910aca31"
+    },
+    {
+      "name": "renderMergeTableGrid",
+      "start": 215042,
+      "end": 216024,
+      "file": "assets/serveur/service.js",
+      "offset": 90588,
+      "length": 982,
+      "sha256": "6bcddad0a10a4b9c9b6f7bc3eb8b824b14b1dd84c183c553f552f5b8780bd755"
+    },
+    {
+      "name": "confirmMergeTable",
+      "start": 216026,
+      "end": 219925,
+      "file": "assets/serveur/service.js",
+      "offset": 91572,
+      "length": 3899,
+      "sha256": "eaf8ff444cc1a7cd5a3cb2bbf057b8400263fd8a758b8c14da53ae2acf56dca7"
+    },
+    {
+      "name": "renderMenuContext",
+      "start": 220700,
+      "end": 221779,
+      "file": "assets/serveur/service.js",
+      "offset": 95473,
+      "length": 1079,
+      "sha256": "47a69e5f46f43a4a9a1fed94bf2bc1c1552a172107d6be70908d79172a6a16c8"
+    },
+    {
+      "name": "svMenuEmptyHTML",
+      "start": 222159,
+      "end": 223002,
+      "file": "assets/serveur/service.js",
+      "offset": 96554,
+      "length": 843,
+      "sha256": "3aee0dea54d4d9aa0c1b518a4a13821f65fb6237ccab7896ad4f611aa1693242"
+    },
+    {
+      "name": "renderCatPills",
+      "start": 223004,
+      "end": 224435,
+      "file": "assets/serveur/service.js",
+      "offset": 97399,
+      "length": 1431,
+      "sha256": "2215a7f7df660d169362c471178fea3b4245da17e4713f9ad823d7802023d1e9"
+    },
+    {
+      "name": "renderMenu",
+      "start": 224437,
+      "end": 226803,
+      "file": "assets/serveur/service.js",
+      "offset": 98832,
+      "length": 2366,
+      "sha256": "38ea0fa21b8683c94b89135ae38dd50d08ebe01300fdfb18dae2868a3ff82c1e"
+    },
+    {
+      "name": "renderCartBar",
+      "start": 226805,
+      "end": 227605,
+      "file": "assets/serveur/service.js",
+      "offset": 101200,
+      "length": 800,
+      "sha256": "64c0788c74cc92c3969586579088a31658610846aca05062e91a11463ab6ef77"
+    },
+    {
+      "name": "svPairSellable",
+      "start": 228000,
+      "end": 228317,
+      "file": "assets/serveur/service.js",
+      "offset": 102002,
+      "length": 317,
+      "sha256": "ab71307aa2f69641479ecdbddb80209071af0fed3852c19b952931974b81d3a0"
+    },
+    {
+      "name": "svRenderPair",
+      "start": 228318,
+      "end": 229833,
+      "file": "assets/serveur/service.js",
+      "offset": 102321,
+      "length": 1515,
+      "sha256": "3771eed161bab5633ef8508b774bfc77d2c8821d92c86d6fc82575275da8acc5"
+    },
+    {
+      "name": "addToTableOrder",
+      "start": 229835,
+      "end": 231475,
+      "file": "assets/serveur/service.js",
+      "offset": 103838,
+      "length": 1640,
+      "sha256": "5da4e26933f15da9fcb416ef01a4c90a8aa8aff4ba791b84151c935b551afdb6"
+    },
+    {
+      "name": "openOptionsSheet",
+      "start": 231653,
+      "end": 232113,
+      "file": "assets/serveur/service.js",
+      "offset": 105480,
+      "length": 460,
+      "sha256": "75e63ae3b878b1c72e2d1d3342a52e29623889584ba541ea7326c3606ab8240d"
+    },
+    {
+      "name": "closeOptionsSheet",
+      "start": 232115,
+      "end": 232229,
+      "file": "assets/serveur/service.js",
+      "offset": 105942,
+      "length": 114,
+      "sha256": "82da067ee93263a0d2a54edea86554ee62a825851a9070df607f40e50dd82c02"
+    },
+    {
+      "name": "renderOptionsSheet",
+      "start": 232231,
+      "end": 234680,
+      "file": "assets/serveur/service.js",
+      "offset": 106058,
+      "length": 2449,
+      "sha256": "a4596f56fb5ab10e8e4ddf2b44bba44a2277797bbf2355e4d2da7f516ea842ae"
+    },
+    {
+      "name": "confirmOptions",
+      "start": 234682,
+      "end": 235190,
+      "file": "assets/serveur/service.js",
+      "offset": 108509,
+      "length": 508,
+      "sha256": "03c84648dccdd9b0296076c44de7f2ab6893ce683f3d26a9e7e4278cabb8736a"
+    },
+    {
+      "name": "addConfiguredLine",
+      "start": 235280,
+      "end": 236424,
+      "file": "assets/serveur/service.js",
+      "offset": 109019,
+      "length": 1144,
+      "sha256": "cc175b5c530b2ef8d14f413ac38e414b804ed25b3c5d378ca3015659eca9463f"
+    },
+    {
+      "name": "itemHasFormula",
+      "start": 237218,
+      "end": 237413,
+      "file": "assets/serveur/service.js",
+      "offset": 110165,
+      "length": 195,
+      "sha256": "b07c16199295af4ce581d8ae627a3f8c238af9da193135542f8563f5c7fbbb19"
+    },
+    {
+      "name": "isFmlSlotSatisfied",
+      "start": 237415,
+      "end": 237592,
+      "file": "assets/serveur/service.js",
+      "offset": 110362,
+      "length": 177,
+      "sha256": "cc4452d6aecd01fc6b8e18892879149e27a58b76aa049677180339ada1ca6dda"
+    },
+    {
+      "name": "isFmlUnitSatisfied",
+      "start": 237594,
+      "end": 237789,
+      "file": "assets/serveur/service.js",
+      "offset": 110541,
+      "length": 195,
+      "sha256": "cb839adb236f9953b339f5012e63b6e4a312842e325da351ac43b94bd6dde6f2"
+    },
+    {
+      "name": "fmlChildGroups",
+      "start": 238408,
+      "end": 238917,
+      "file": "assets/serveur/service.js",
+      "offset": 110738,
+      "length": 509,
+      "sha256": "d1e3ede789624a92358c34a8b0c3345e8176a2c828136f8573e614ea48a6985b"
+    },
+    {
+      "name": "fmlChildSel",
+      "start": 238918,
+      "end": 239135,
+      "file": "assets/serveur/service.js",
+      "offset": 111249,
+      "length": 217,
+      "sha256": "0261a1bbf3f9c50a2149058c4d8ed454d48ca641145fc2b1b9be9a63b3218b0f"
+    },
+    {
+      "name": "fmlChildMissing",
+      "start": 239136,
+      "end": 239398,
+      "file": "assets/serveur/service.js",
+      "offset": 111468,
+      "length": 262,
+      "sha256": "380dae553b6dec81f4c2d55c16bd2bb62f6496172e58d48fd330fdfb4c68b163"
+    },
+    {
+      "name": "fmlChildOptsHTML",
+      "start": 239399,
+      "end": 240534,
+      "file": "assets/serveur/service.js",
+      "offset": 111732,
+      "length": 1135,
+      "sha256": "6ef8c86569c1a8803247b8069d7f1d7eb6ecfb13a7ca4a1aeee72500a875bef2"
+    },
+    {
+      "name": "isFmlDraftSatisfied",
+      "start": 240536,
+      "end": 240884,
+      "file": "assets/serveur/service.js",
+      "offset": 112869,
+      "length": 348,
+      "sha256": "8a22e14b4e24c20f4746bc8fa5abb24a8a1824f580b5db28a3f0b0090c61c7c6"
+    },
+    {
+      "name": "computeFmlUnitExtra",
+      "start": 240886,
+      "end": 241210,
+      "file": "assets/serveur/service.js",
+      "offset": 113219,
+      "length": 324,
+      "sha256": "6415c8a812b93c6a8d3c02bd61f035862962b93e1244859243c9db3901c8b4b2"
+    },
+    {
+      "name": "openFormulaSheet",
+      "start": 241212,
+      "end": 243032,
+      "file": "assets/serveur/service.js",
+      "offset": 113545,
+      "length": 1820,
+      "sha256": "8b45ade4cdb72160329251568564de0f8dbb58e36d67f666207259ca302c7fcc"
+    },
+    {
+      "name": "closeFormulaSheet",
+      "start": 243034,
+      "end": 243152,
+      "file": "assets/serveur/service.js",
+      "offset": 115367,
+      "length": 118,
+      "sha256": "1351c947a92fb269b0fdf2ec74c3694ddbca50bece08f9104d0383cbf7233872"
+    },
+    {
+      "name": "renderFormulaSheet",
+      "start": 243154,
+      "end": 249038,
+      "file": "assets/serveur/service.js",
+      "offset": 115487,
+      "length": 5884,
+      "sha256": "43f6cb73dd1e0559b8f361cdc6b1d91306620e8050e3f56f7f8efafce1f61756"
+    },
+    {
+      "name": "confirmFormula",
+      "start": 249040,
+      "end": 252597,
+      "file": "assets/serveur/service.js",
+      "offset": 121373,
+      "length": 3557,
+      "sha256": "59fe85cd1acc0c14f0df56ff53fd97e9b59b612f3e9bc4b9457991afa54b04b4"
+    },
+    {
+      "name": "changeMenuQty",
+      "start": 256354,
+      "end": 257079,
+      "file": "assets/serveur/service.js",
+      "offset": 124932,
+      "length": 725,
+      "sha256": "443d0fccd981a2e1a1171ea320f39004ed02ca12f3ba9dbacf86de62a30d8a19"
+    },
+    {
+      "name": "empPayRefsRead",
+      "start": 283944,
+      "end": 284164,
+      "file": "assets/serveur/service.js",
+      "offset": 125659,
+      "length": 220,
+      "sha256": "903d6619327379a9e96eff71d4df75effc3ec88abde33fbebafb85b8ca36c595"
+    },
+    {
+      "name": "empPayRefsWrite",
+      "start": 284165,
+      "end": 284294,
+      "file": "assets/serveur/service.js",
+      "offset": 125881,
+      "length": 129,
+      "sha256": "4a44e09408c9489bec433bac9043a245fe2260713352eae659cde89bbeee545a"
+    },
+    {
+      "name": "empPayRefKey",
+      "start": 284453,
+      "end": 284640,
+      "file": "assets/serveur/service.js",
+      "offset": 126012,
+      "length": 187,
+      "sha256": "07c03b174009a0affb825e196f623ddf40a76672ac173f68cf937e44a3541c13"
+    },
+    {
+      "name": "employeePaymentId",
+      "start": 284641,
+      "end": 285631,
+      "file": "assets/serveur/service.js",
+      "offset": 126201,
+      "length": 990,
+      "sha256": "01c64bf20ea1858ed05ca8254863c52bd3ba817e1da1213eb8756f146089e3dc"
+    },
+    {
+      "name": "employeePaymentRefForget",
+      "start": 285632,
+      "end": 285900,
+      "file": "assets/serveur/service.js",
+      "offset": 127193,
+      "length": 268,
+      "sha256": "fd33db73c420753a168db68e1ad0da113110a9ba8d311837c91ba0e2d061cffc"
+    },
+    {
+      "name": "keepServiceBillOpen",
+      "start": 286400,
+      "end": 287510,
+      "file": "assets/serveur/service.js",
+      "offset": 127463,
+      "length": 1110,
+      "sha256": "210beadfd3fee75f8322688667f26f87b76ac7cf1f94e51f442636c1da7ec9ec"
+    },
+    {
+      "name": "employeePaymentRefsForgetAll",
+      "start": 287511,
+      "end": 287667,
+      "file": "assets/serveur/service.js",
+      "offset": 128575,
+      "length": 156,
+      "sha256": "7cc1eb24b872f2601f543c9192a3204c39fbae555581f4e631dc894098ed59f8"
+    },
+    {
+      "name": "renderPayClient",
+      "start": 287700,
+      "end": 287930,
+      "file": "assets/serveur/service.js",
+      "offset": 128733,
+      "length": 230,
+      "sha256": "18cae9f70eccf09147ad64390179560c3a1f9cd8406494e1c4449dcc41e5ea03"
+    },
+    {
+      "name": "renderServiceClients",
+      "start": 287931,
+      "end": 288679,
+      "file": "assets/serveur/service.js",
+      "offset": 128965,
+      "length": 748,
+      "sha256": "93eb47a2ca57a42eb65c868f5292ebcdb7cd65920ceefb9c4bf11815ebeb5d34"
+    },
+    {
+      "name": "openServiceClients",
+      "start": 288680,
+      "end": 289425,
+      "file": "assets/serveur/service.js",
+      "offset": 129715,
+      "length": 745,
+      "sha256": "1f29b070c5b46fdff811db451229fb23d266660dcb7ebaead01bec7d944f48df"
+    },
+    {
+      "name": "openPayChoice",
+      "start": 289426,
+      "end": 289754,
+      "file": "assets/serveur/service.js",
+      "offset": 130462,
+      "length": 328,
+      "sha256": "860a09afef89d8358c63add2e38485b19a0752448ec1447760bf77c654f6f89d"
+    },
+    {
+      "name": "closePayChoice",
+      "start": 289755,
+      "end": 289850,
+      "file": "assets/serveur/service.js",
+      "offset": 130792,
+      "length": 95,
+      "sha256": "7e2c780f6f7cbbaad572e2c5e6db9244b97b8112ee56a3286185b663c3bb472b"
+    },
+    {
+      "name": "cardReaderArm",
+      "start": 292423,
+      "end": 292889,
+      "file": "assets/serveur/service.js",
+      "offset": 130889,
+      "length": 466,
+      "sha256": "eca1f406a0cd9afad5cdb32bfaf57c648aebbb3ea265936e69d9361cc43c0918"
+    },
+    {
+      "name": "openCardModal",
+      "start": 292994,
+      "end": 294323,
+      "file": "assets/serveur/service.js",
+      "offset": 131357,
+      "length": 1329,
+      "sha256": "a488cd8fc2847959eecab443db76e5250de7fb654cf1ec0fe16534617981d725"
+    },
+    {
+      "name": "triggerCardSuccess",
+      "start": 294325,
+      "end": 295183,
+      "file": "assets/serveur/service.js",
+      "offset": 132688,
+      "length": 858,
+      "sha256": "f60b8f6761b2eb6e2b65ac05d1ac3778dbeab33e2845de90ce4fb086c883f46d"
+    },
+    {
+      "name": "closeCardModal",
+      "start": 295185,
+      "end": 296380,
+      "file": "assets/serveur/service.js",
+      "offset": 133548,
+      "length": 1195,
+      "sha256": "c1515b667d5cdf93c694903074afd20a658f59f956c4618a6f2799784e75a1c4"
+    },
+    {
+      "name": "currentPayAmount",
+      "start": 297182,
+      "end": 297361,
+      "file": "assets/serveur/service.js",
+      "offset": 134745,
+      "length": 179,
+      "sha256": "78a823b71a2a83814cf288775b022df96942c890fcd7d21ea28efab44515d26d"
+    },
+    {
+      "name": "updateRendu",
+      "start": 297362,
+      "end": 297943,
+      "file": "assets/serveur/service.js",
+      "offset": 134926,
+      "length": 581,
+      "sha256": "1f0b6d4d08418ce8126ab4b6d356901188ac19288c30567e6142bd3818440fa4"
+    },
+    {
+      "name": "openCashModal",
+      "start": 297944,
+      "end": 298887,
+      "file": "assets/serveur/service.js",
+      "offset": 135509,
+      "length": 943,
+      "sha256": "914ba3920b4c249b7398cacdcf6a2c2d6b4897a8e982d943735ca129cd74d3ea"
+    },
+    {
+      "name": "closeCashModal",
+      "start": 298888,
+      "end": 300074,
+      "file": "assets/serveur/service.js",
+      "offset": 136454,
+      "length": 1186,
+      "sha256": "97de372737829ebad52285f487da594ed0a6a25613ea53c9232b288a7555073f"
+    },
+    {
+      "name": "markTablePaid",
+      "start": 302074,
+      "end": 309271,
+      "file": "assets/serveur/service.js",
+      "offset": 137642,
+      "length": 7197,
+      "sha256": "2748bab3046a0b746a2011c31c76f6fe52dbf579955b95e8ff11c5b892eee081"
+    },
+    {
+      "name": "splitItemTotals",
+      "start": 309616,
+      "end": 310155,
+      "file": "assets/serveur/service.js",
+      "offset": 144841,
+      "length": 539,
+      "sha256": "89148b36cfbf4707b0beba776d2d4b48e28e777b03a98b96d9276796d936fb1d"
+    },
+    {
+      "name": "saveSplitFlow",
+      "start": 310795,
+      "end": 311846,
+      "file": "assets/serveur/service.js",
+      "offset": 145382,
+      "length": 1051,
+      "sha256": "9b24f45ca401e3ca236d873d40b5263ad38058c56db97b76f581087d83d7c6c6"
+    },
+    {
+      "name": "loadSplitFlow",
+      "start": 311848,
+      "end": 312659,
+      "file": "assets/serveur/service.js",
+      "offset": 146435,
+      "length": 811,
+      "sha256": "496ed590b70937513b812a1a200851b4bb9614cfb664a16446d1ae437199f93a"
+    },
+    {
+      "name": "effectiveTipPct",
+      "start": 312660,
+      "end": 312822,
+      "file": "assets/serveur/service.js",
+      "offset": 147248,
+      "length": 162,
+      "sha256": "172f4ad8f3a34bfe5faa9ee3dbae81ad0170377ae4434663605291deee17e9e5"
+    },
+    {
+      "name": "openSplitModal",
+      "start": 312823,
+      "end": 314693,
+      "file": "assets/serveur/service.js",
+      "offset": 147412,
+      "length": 1870,
+      "sha256": "c6cae2c93c79f80d3ee3300947b87de7f4ac3c71c5e4cd2e8556b4e38b01fca7"
+    },
+    {
+      "name": "closeSplitModal",
+      "start": 314694,
+      "end": 315813,
+      "file": "assets/serveur/service.js",
+      "offset": 149284,
+      "length": 1119,
+      "sha256": "0816e077d885785dbe9990c35a7f43c774fa6464a30cbb9c94314be46c3903e9"
+    },
+    {
+      "name": "renderSplitSetup",
+      "start": 315814,
+      "end": 316463,
+      "file": "assets/serveur/service.js",
+      "offset": 150405,
+      "length": 649,
+      "sha256": "6f32ec26f29ddb7c885841e53cde211a041f3b06f9d38b13e018698bb339ee8c"
+    },
+    {
+      "name": "remainingQty",
+      "start": 316505,
+      "end": 316787,
+      "file": "assets/serveur/service.js",
+      "offset": 151056,
+      "length": 282,
+      "sha256": "f0f63a144c42c96f65d0a33ba44dbd570d4dfdf1fd564d0892bce019cef2fe31"
+    },
+    {
+      "name": "conviveTotal",
+      "start": 316788,
+      "end": 317025,
+      "file": "assets/serveur/service.js",
+      "offset": 151340,
+      "length": 237,
+      "sha256": "bfea3f49f842d173f9bed93e26c58ec646c914ef6cd26258e7f4a3269562aad4"
+    },
+    {
+      "name": "assignUnit",
+      "start": 317026,
+      "end": 317359,
+      "file": "assets/serveur/service.js",
+      "offset": 151579,
+      "length": 333,
+      "sha256": "544c68f93f5f83e0158573ebb6ff22ae72ceaaad618d11a61e7738e538fc9804"
+    },
+    {
+      "name": "unassignUnit",
+      "start": 317360,
+      "end": 317606,
+      "file": "assets/serveur/service.js",
+      "offset": 151914,
+      "length": 246,
+      "sha256": "0b4cbde093d01b7e2584e6a65dcee9040795645f0287efd5c1bbc8a24364244f"
+    },
+    {
+      "name": "renderArticleMode",
+      "start": 317650,
+      "end": 318096,
+      "file": "assets/serveur/service.js",
+      "offset": 152162,
+      "length": 446,
+      "sha256": "d58818c9625488664508af133314dc380f59a93aa7cde43922179f5e7d4a99ee"
+    },
+    {
+      "name": "splitArticleAllocation",
+      "start": 318098,
+      "end": 319378,
+      "file": "assets/serveur/service.js",
+      "offset": 152610,
+      "length": 1280,
+      "sha256": "8b71ff7e083f18220d5cb9c665ed7c195cce2fb7d76465d012f748e31675f6d5"
+    },
+    {
+      "name": "renderConvivesTabs",
+      "start": 319380,
+      "end": 319922,
+      "file": "assets/serveur/service.js",
+      "offset": 153892,
+      "length": 542,
+      "sha256": "d350d22e42f2be562d0c3d8a455bb97a723e6a2e521e9e4066d6a87aee8d7ba1"
+    },
+    {
+      "name": "renderPool",
+      "start": 319924,
+      "end": 320704,
+      "file": "assets/serveur/service.js",
+      "offset": 154436,
+      "length": 780,
+      "sha256": "11badfbb1081b719d7ad5d62ce5fa2e0346712e0c8d40da471dddc370deed855"
+    },
+    {
+      "name": "renderConviveCart",
+      "start": 320706,
+      "end": 322118,
+      "file": "assets/serveur/service.js",
+      "offset": 155218,
+      "length": 1412,
+      "sha256": "a2cdf7adc1d2fa323dc1d6d5f2b713a90c0074f792e9ed2709c6541f400b4d95"
+    },
+    {
+      "name": "renderArticleItems",
+      "start": 322175,
+      "end": 322233,
+      "file": "assets/serveur/service.js",
+      "offset": 156632,
+      "length": 58,
+      "sha256": "8ad88ec3935a52e40d63ff349fe89a710de7dc79f4f2b8bd9d0ec94b13828b05"
+    },
+    {
+      "name": "updateArticleTotals",
+      "start": 322234,
+      "end": 322317,
+      "file": "assets/serveur/service.js",
+      "offset": 156692,
+      "length": 83,
+      "sha256": "b36c355b100d5f6fcfdd373326d89758eaab944059bba7db0c503dbff41cf1e3"
+    },
+    {
+      "name": "renderPartsChips",
+      "start": 322318,
+      "end": 322557,
+      "file": "assets/serveur/service.js",
+      "offset": 156777,
+      "length": 239,
+      "sha256": "5e607d82dd96f678b3812257b1327a0e1f40fbb86ff486060440884938316bc9"
+    },
+    {
+      "name": "renderTipChips",
+      "start": 322558,
+      "end": 323177,
+      "file": "assets/serveur/service.js",
+      "offset": 157018,
+      "length": 619,
+      "sha256": "ac78f83bc0332141f9abd4df7c1ba6dbd5e7172bf6103137eef5cbf31b2ed30e"
+    },
+    {
+      "name": "updateSplitSummary",
+      "start": 323178,
+      "end": 323959,
+      "file": "assets/serveur/service.js",
+      "offset": 157639,
+      "length": 781,
+      "sha256": "0a339b929168cf78df6802374a0be56b4bdabd776eab72c52b0f5accfe1aae46"
+    },
+    {
+      "name": "renderConvivesChips",
+      "start": 323960,
+      "end": 324211,
+      "file": "assets/serveur/service.js",
+      "offset": 158422,
+      "length": 251,
+      "sha256": "88a07de1efb1222e232fd3f8ec24c5e2794650851fe5cf387603788b9bbde83b"
+    },
+    {
+      "name": "renderArticleItems",
+      "start": 324212,
+      "end": 325319,
+      "file": "assets/serveur/service.js",
+      "offset": 158675,
+      "length": 1107,
+      "sha256": "620ada46b907ac1ac6a860ac2f845db6de7edf82b25cb0ca9b80fad3772c6e64"
+    },
+    {
+      "name": "updateArticleTotals",
+      "start": 325320,
+      "end": 326287,
+      "file": "assets/serveur/service.js",
+      "offset": 159784,
+      "length": 967,
+      "sha256": "eb2ba7f50e396f308db0ec061acb434b5d28e8d372057f0cf75da7a3340757d9"
+    },
+    {
+      "name": "launchSplitFlow",
+      "start": 326288,
+      "end": 330579,
+      "file": "assets/serveur/service.js",
+      "offset": 160753,
+      "length": 4291,
+      "sha256": "e9f6900b3e4cb9e855977fb4cea43b67ce72a25136c57d0b60a10e199e2be269"
+    },
+    {
+      "name": "renderSplitFlow",
+      "start": 330580,
+      "end": 332067,
+      "file": "assets/serveur/service.js",
+      "offset": 165046,
+      "length": 1487,
+      "sha256": "ca6b2579a5994ed38444173938b0b12ff5476d74cba2e711ffe83cf831fd5ccd"
+    },
+    {
+      "name": "paySplitPart",
+      "start": 332068,
+      "end": 334177,
+      "file": "assets/serveur/service.js",
+      "offset": 166535,
+      "length": 2109,
+      "sha256": "0125ff9bd9899f0e541f05ecac25403c292ff9fc05ffae7eca8c2c5a19f9d5ea"
+    },
+    {
+      "name": "markSplitPartPaid",
+      "start": 334178,
+      "end": 341973,
+      "file": "assets/serveur/service.js",
+      "offset": 168646,
+      "length": 7795,
+      "sha256": "3f795ab80db6ef03e92448617382d90edeeb645145d37b57d393ab0fa93c77c9"
+    }
+  ]
+}
