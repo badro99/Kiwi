@@ -44,8 +44,8 @@ var SHELL = [
      ligne recevait le tableau de bord du patron. Elle est légère (une page,
      un script, deux feuilles) et n'a pas de session à protéger. */
   '/booking.html',
-  '/assets/booking.js?v=26',
-  '/assets/booking.css?v=14',
+  '/assets/booking.js?v=29',
+  '/assets/booking.css?v=15',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
   '/assets/kiwi-env.js?v=2',
@@ -268,7 +268,7 @@ var SHELL = [
   '/assets/inventory-ledger.js?v=15',
   '/assets/maison-stock-movements.js?v=6',
   '/assets/caisse-stock-sync.js?v=10',
-  '/assets/pos-inventory-count.js?v=9',
+  '/assets/pos-inventory-count.js?v=10',
   '/assets/stock.js?v=81',
   '/assets/stock/loss.js?v=1',
   '/assets/stock/counts.js?v=1',
@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=18',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=16',
-  '/assets/pos-dispatch.js?v=160',
+  '/assets/pos-dispatch.js?v=161',
   '/assets/retail-scan.css?v=10',
   '/assets/retail-balances.css?v=3',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -406,11 +406,11 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=101',
-  '/assets/pos-boutique/sales.js?v=7',
-  '/assets/pos-boutique/checkout.js?v=7',
-  '/assets/pos-boutique/inventory.js?v=7',
-  '/assets/pos-boutique.js?v=101',
+  '/assets/pos-boutique.css?v=102',
+  '/assets/pos-boutique/sales.js?v=8',
+  '/assets/pos-boutique/checkout.js?v=8',
+  '/assets/pos-boutique/inventory.js?v=8',
+  '/assets/pos-boutique.js?v=102',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
