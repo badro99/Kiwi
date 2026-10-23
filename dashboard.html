@@ -149,7 +149,7 @@
       js("assets/kit/format.js?v=3") +
       js("assets/kit/core.js?v=1") +
       js("assets/kit/pin.js?v=3") +
-      js("assets/kit/pin-flow.js?v=2") +
+      js("assets/kit/pin-flow.js?v=3") +
       js("assets/kit/dash-pin.js?v=1") +
       /* Stage 5 (§18.1): Home on the kit, over the shipped figures. */
       js("assets/kit/strings/dashboard.fr.js?v=2") +
@@ -1168,7 +1168,7 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=5"></script>
-<script defer src="assets/dashboard-pin-vault.js?v=3"></script>
+<script defer src="assets/dashboard-pin-vault.js?v=4"></script>
 <script defer src="assets/identity.js?v=12"></script>
 <script defer src="assets/live-link.js?v=73"></script>
 <script defer src="assets/channel-sales.js?v=5"></script>
@@ -1228,8 +1228,8 @@
 <script src="assets/printer-bridge.js?v=30" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique tient en deux fichiers : le journal du stock et les
      échanges avec le serveur, AVANT le fichier principal qui les appelle. -->
-<script src="assets/boutique-catalog-parts.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/boutique-catalog.js?v=14" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog-parts.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/boutique-catalog.js?v=15" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->

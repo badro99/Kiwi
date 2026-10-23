@@ -20,8 +20,8 @@
     "sha": "a11e007869b4b084"
   },
   "assets/admin-support.js": {
-    "v": "8",
-    "sha": "2c6d0cef79b6379b"
+    "v": "9",
+    "sha": "c79d879fb8e60c6a"
   },
   "assets/admin-workspace.css": {
     "v": "4",
@@ -80,12 +80,12 @@
     "sha": "03af9fcffdd5e6df"
   },
   "assets/boutique-catalog-parts.js": {
-    "v": "4",
-    "sha": "4af7296df577e2bf"
+    "v": "5",
+    "sha": "28faa409c2512f8d"
   },
   "assets/boutique-catalog.js": {
-    "v": "14",
-    "sha": "2ce30ad0fe33e87f"
+    "v": "15",
+    "sha": "1e45746a28150e46"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "19",
@@ -144,8 +144,8 @@
     "sha": "2e173ea6dbb3aefb"
   },
   "assets/caisse-pairing.js": {
-    "v": "36",
-    "sha": "6f225b1c419d32ff"
+    "v": "37",
+    "sha": "97b764bcea52574f"
   },
   "assets/caisse-pairs.js": {
     "v": "3",
@@ -252,8 +252,8 @@
     "sha": "af0244365422a41f"
   },
   "assets/dashboard-pin-vault.js": {
-    "v": "3",
-    "sha": "4322360317391fab"
+    "v": "4",
+    "sha": "f2b4d7294e6f0c1a"
   },
   "assets/dashboard-pwa.js": {
     "v": "603",
@@ -688,8 +688,8 @@
     "sha": "11e20910aad27197"
   },
   "assets/kit/pin-flow.js": {
-    "v": "2",
-    "sha": "f32dbcfb675c3e5c"
+    "v": "3",
+    "sha": "a9e3e4f27599c703"
   },
   "assets/kit/pin.js": {
     "v": "3",

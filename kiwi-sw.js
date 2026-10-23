@@ -223,7 +223,7 @@ var SHELL = [
   '/assets/tenant-purge.js?v=5',
   /* La porte du dashboard hors ligne : des lignes salées que le serveur a prouvées,
      jamais un code. Absent de la coquille, un patron hors ligne ne rentrerait plus. */
-  '/assets/dashboard-pin-vault.js?v=3',
+  '/assets/dashboard-pin-vault.js?v=4',
   /* Le geste qui pose un appairage · et qui déclenche la purge ci-dessus. La
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
@@ -245,8 +245,8 @@ var SHELL = [
   '/assets/barcode.js?v=2',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=6',
-  '/assets/boutique-catalog-parts.js?v=4',
-  '/assets/boutique-catalog.js?v=14',
+  '/assets/boutique-catalog-parts.js?v=5',
+  '/assets/boutique-catalog.js?v=15',
   '/assets/store-templates.js?v=4',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -345,7 +345,7 @@ var SHELL = [
   '/assets/kit/core.js?v=1',
   '/assets/kit/overlays.js?v=2',
   '/assets/kit/pin.js?v=3',
-  '/assets/kit/pin-flow.js?v=2',
+  '/assets/kit/pin-flow.js?v=3',
   '/assets/kit/till-pin.js?v=2',
   /* and the dashboard lock, behind kiwiSkin2027:dashboard. */
   '/assets/icons/material/sprite.dashboard.svg?v=9',
@@ -448,7 +448,7 @@ var SHELL = [
   '/assets/refund-split.js?v=2',
   '/assets/pos-maison/inventory.js?v=8',
   '/assets/pos-maison.js?v=90',
-  '/assets/caisse-pairing.js?v=36',
+  '/assets/caisse-pairing.js?v=37',
   '/assets/caisse-doctor.js?v=1',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
