@@ -513,7 +513,9 @@ export async function onRequestPost(context) {
   // The employee ledger is created lazily by employee-clients. Its existing
   // columns also hold reversal markers; no migration is needed. Keep the debit
   // and marker in the sale transaction, so a retry cannot lose or repeat it.
-  const employeeEvents = action === 'void';
+  // Restoring a sale gives the debit back and removes its marker, so a
+  // void, restore, void cycle debits exactly once per voided state.
+  const employeeEvents = action === 'void' || rows.some((r) => r.void_ts);
   if (employeeEvents) await ensureEmployeeLoyaltyEvents(env);
   const srv = employeeEvents ? await nextSrvTs(env, merchant) : 0;
 
@@ -557,6 +559,17 @@ export async function onRequestPost(context) {
         `UPDATE sales SET void_ts = NULL, void_reason = NULL, void_note = NULL, void_actor = NULL, void_actor_id = NULL
           WHERE id = ? AND merchant = ?`
       ).bind(r.id, merchant));
+      if (r.void_ts) {
+        const reversed = 'employee-void.' + r.id;
+        stmts.push(env.DB.prepare(`UPDATE clients SET
+          spend = ROUND((spend - (SELECT amount FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?)) * 100) / 100.0, updated_ts = ?, srv_ts = ?
+          WHERE merchant = ? AND id = (SELECT client_id FROM employee_loyalty_events
+            WHERE merchant = ? AND ref = ?)`)
+          .bind(merchant, reversed, ts, srv, merchant, merchant, reversed));
+        stmts.push(env.DB.prepare(`DELETE FROM employee_loyalty_events WHERE merchant = ? AND ref = ?`)
+          .bind(merchant, reversed));
+      }
     }
   });
 
